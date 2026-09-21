@@ -77,7 +77,7 @@ class StreamFetcher {
     }[];
     /** Per-addon outcome map used by per-user analytics. */
     dispositions: AddonDispositionMap;
-    /** Total time spent in resolveRemuxDbMediaInfo across all addon groups. */
+    /** Summed across addon groups. */
     remuxDbMs: number;
   }> {
     const { type, id, queryType } = context;
@@ -252,18 +252,14 @@ class StreamFetcher {
       await this.precompute.precomputeSeaDexOnly(groupStreams, context);
 
       const remuxDbStart = Date.now();
-      const enrichedStreams = await resolveRemuxDbMediaInfo(
-        groupStreams,
-        context,
-        this.userData
-      );
+      await resolveRemuxDbMediaInfo(groupStreams, context, this.userData);
       remuxDbMs += Date.now() - remuxDbStart;
 
       // Blocklist runs before dedup so a flagged candidate never survives
       // as a failover variant harvested from discarded duplicates.
       const filteredStreams = await this.deduplicate.deduplicate(
         await this.filter.filterBlocklisted(
-          await this.filter.filter(enrichedStreams, context)
+          await this.filter.filter(groupStreams, context)
         )
       );
 

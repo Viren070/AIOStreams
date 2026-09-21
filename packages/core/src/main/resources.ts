@@ -285,8 +285,15 @@ export async function processStreams(
   let limitMs = 0;
   let selMs = 0;
 
+  const withRemuxDb = async (streams: ParsedStream[]) => {
+    const start = Date.now();
+    await resolveRemuxDbMediaInfo(streams, context, ctx.userData);
+    remuxDbMs += Date.now() - start;
+  };
+
   if (isMeta) {
     await ctx.precomputer.precomputeSeaDexOnly(processedStreams, context);
+    await withRemuxDb(processedStreams);
     const metaFilterStart = Date.now();
     processedStreams = await ctx.filterer.filter(processedStreams, context);
     metaFilterMs = Date.now() - metaFilterStart;
@@ -308,21 +315,18 @@ export async function processStreams(
   }
 
   if (resolvedResults.hasNewStreams) {
+    await withRemuxDb(
+      processedStreams.filter((s) => !preServiceWrapIds.has(s.id))
+    );
     const filterStart = Date.now();
     processedStreams = await ctx.filterer.filter(processedStreams, context);
     filterMs = Date.now() - filterStart;
   }
 
-  // Fetcher path already did this; only meta/service-wrap streams bypass it.
+  // The fetcher path already blocklist-filtered its streams; this pass only
+  // covers streams that appeared after it (meta requests and service
+  // wrapping), and runs before dedup for the same failover-variant reason.
   if (isMeta || resolvedResults.hasNewStreams) {
-    const remuxDbStart = Date.now();
-    processedStreams = await resolveRemuxDbMediaInfo(
-      processedStreams,
-      context,
-      ctx.userData
-    );
-    remuxDbMs = Date.now() - remuxDbStart;
-
     processedStreams = await ctx.filterer.filterBlocklisted(processedStreams);
   }
 

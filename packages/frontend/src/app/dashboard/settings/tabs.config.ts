@@ -7,6 +7,7 @@ import {
   BiFolderOpen,
   BiData,
   BiDownload,
+  BiFilm,
   BiGroup,
   BiHistory,
   BiInfoCircle,
@@ -397,7 +398,7 @@ export const TAB_MANIFEST: Record<string, Omit<TabDef, 'section'>> = {
     order: 330,
   },
 
-  // --- ways in other than Stremio -------------------------------------------
+  // --- other apps and services ----------------------------------------------
   jellyfin: {
     label: 'Jellyfin',
     icon: BiTv,
@@ -409,6 +410,12 @@ export const TAB_MANIFEST: Record<string, Omit<TabDef, 'section'>> = {
     icon: BiHistory,
     group: 'Integrations',
     order: 420,
+  },
+  remuxdb: {
+    label: 'RemuxDB',
+    icon: BiFilm,
+    group: 'Integrations',
+    order: 430,
   },
 };
 

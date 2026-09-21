@@ -1,9 +1,8 @@
 import type { ParsedStream } from '../db/schemas.js';
 import { decodeProxyToken, ProxyDataSchema } from '../proxy/token.js';
 import type { MediaInfo } from '../utils/media-info.js';
-import type { MediaProbeVersion, TrackDetail } from './client.js';
+import type { MediaProbeVersion, ProbeSource, TrackDetail } from './client.js';
 
-/** Unwraps AIOStreams' own `/proxy/{mode}.{auth}.{data}` url to the real url it wraps. Input unchanged if it isn't one. */
 function unwrapProxyUrl(nzbUrl: string): string {
   try {
     const segments = new URL(nzbUrl).pathname.split('/');
@@ -18,7 +17,6 @@ function unwrapProxyUrl(nzbUrl: string): string {
   }
 }
 
-/** `id` query param, or a hex guid embedded in the path. Bare guid if not a URL at all. */
 export function extractNzbGuid(nzbUrl: string | undefined): string | undefined {
   if (!nzbUrl) return undefined;
   const realUrl = unwrapProxyUrl(nzbUrl);
@@ -33,21 +31,30 @@ export function extractNzbGuid(nzbUrl: string | undefined): string | undefined {
   }
 }
 
-/** Matches by torrent hash+fileIdx, then nzb indexer_guid. No filename/size fallback. */
+const baseName = (path: string | null | undefined) =>
+  path?.split('/').pop()?.toLowerCase();
+
+/** Filename goes before fileIdx, as RemuxDB can number a torrent's files differently. */
 export function matchEntry(
   versions: MediaProbeVersion[],
   stream: ParsedStream
 ): MediaProbeVersion | undefined {
   const hash = stream.torrent?.infoHash?.toLowerCase();
   if (hash) {
+    const inTorrent = (s: ProbeSource) =>
+      s.torrent_info_hash?.toLowerCase() === hash;
+    const name = baseName(stream.filename);
     const fileIdx = stream.torrent?.fileIdx;
-    const match = versions.find((v) =>
-      v.sources.some(
-        (s) =>
-          s.torrent_info_hash?.toLowerCase() === hash &&
-          (s.torrent_file_idx ?? undefined) === fileIdx
-      )
-    );
+    const match =
+      (name &&
+        versions.find((v) =>
+          v.sources.some((s) => inTorrent(s) && baseName(s.filename) === name)
+        )) ||
+      versions.find((v) =>
+        v.sources.some(
+          (s) => inTorrent(s) && (s.torrent_file_idx ?? undefined) === fileIdx
+        )
+      );
     if (match) return match;
   }
 
@@ -67,7 +74,6 @@ function deriveHdrTags(track: TrackDetail): string[] {
   return [];
 }
 
-/** Adapts a RemuxDB entry into the wire shape parseMediaInfo() already knows how to parse. */
 export function toWireMediaInfo(entry: MediaProbeVersion): MediaInfo {
   const videoTrack = entry.tracks.find((t) => t.kind === 'video');
   const audioTracks = entry.tracks.filter((t) => t.kind === 'audio');
@@ -100,6 +106,6 @@ export function toWireMediaInfo(entry: MediaProbeVersion): MediaInfo {
       s: entry.size ?? 0,
       br: entry.bitrate ?? 0,
     },
-    has_chapters: (entry.chapters?.length ?? 0) > 0,
+    has_chapters: entry.has_chapters,
   };
 }

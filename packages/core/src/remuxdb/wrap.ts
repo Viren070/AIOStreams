@@ -8,45 +8,61 @@ import {
 } from '../utils/index.js';
 import { matchEntry, toWireMediaInfo } from './adapter.js';
 import { fetchProbeVersions } from './client.js';
+import type { MediaProbeVersion } from './client.js';
 
 const logger = createLogger('remuxdb');
 
-/** Backfills probe data from RemuxDB for streams that don't have any yet. No-op unless the user has opted in. */
+const lookups = new WeakMap<StreamContext, Promise<MediaProbeVersion[]>>();
+
+async function lookupVersions(
+  context: StreamContext
+): Promise<MediaProbeVersion[]> {
+  const imdbId = context.parsedId
+    ? resolveCrossProviderIds(
+        context.parsedId,
+        context.animeEntry,
+        context.type === 'movie' ? 'movie' : 'series'
+      ).imdbId
+    : undefined;
+  if (!imdbId) return [];
+
+  const season = context.parsedId?.season
+    ? Number(context.parsedId.season)
+    : undefined;
+  const episode = context.parsedId?.episode
+    ? Number(context.parsedId.episode)
+    : undefined;
+  // RemuxDB rejects a season or episode on its own.
+  if ((season === undefined) !== (episode === undefined)) return [];
+  const versions = await fetchProbeVersions(imdbId, season, episode);
+  logger.debug(
+    `imdb ${imdbId}${season ? ` S${season}E${episode}` : ''}: ${versions.length} remuxdb versions`
+  );
+  return versions;
+}
+
 export async function resolveRemuxDbMediaInfo(
   streams: ParsedStream[],
   context: StreamContext,
   userData: UserData
-): Promise<ParsedStream[]> {
-  if (!userData.remuxDb?.enabled) return streams;
+): Promise<void> {
+  if (!userData.remuxDb?.enabled) return;
 
   try {
-    const imdbId = context.parsedId
-      ? resolveCrossProviderIds(
-          context.parsedId,
-          context.animeEntry,
-          context.type === 'movie' ? 'movie' : 'series'
-        ).imdbId
-      : undefined;
-    if (!imdbId) return streams;
-
     const eligible = streams.filter(
       (s) =>
         (s.torrent?.infoHash || s.nzbUrl) &&
         s.parsedFile?.mediaInfoQuality !== 'probe'
     );
-    if (eligible.length === 0) return streams;
+    if (eligible.length === 0) return;
 
-    const season = context.parsedId?.season
-      ? Number(context.parsedId.season)
-      : undefined;
-    const episode = context.parsedId?.episode
-      ? Number(context.parsedId.episode)
-      : undefined;
-    const versions = await fetchProbeVersions(imdbId, season, episode);
-    logger.debug(
-      `imdb ${imdbId}${season ? ` S${season}E${episode}` : ''}: ${eligible.length} eligible streams, ${versions.length} remuxdb versions`
-    );
-    if (versions.length === 0) return streams;
+    let lookup = lookups.get(context);
+    if (!lookup) {
+      lookup = lookupVersions(context);
+      lookups.set(context, lookup);
+    }
+    const versions = await lookup;
+    if (versions.length === 0) return;
 
     let matched = 0;
     for (const stream of eligible) {
@@ -91,6 +107,4 @@ export async function resolveRemuxDbMediaInfo(
   } catch (error) {
     logger.debug(`remuxdb wrap failed: ${error}`);
   }
-
-  return streams;
 }

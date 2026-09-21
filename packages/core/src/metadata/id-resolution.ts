@@ -13,7 +13,6 @@ export interface ResolvedIds {
   tvdbId?: number;
 }
 
-/** Resolves imdb/tmdb/tvdb ids via the anime entry's own mappings, then the cross-provider id-mappings dataset. */
 export function resolveCrossProviderIds(
   parsedId: ParsedId,
   animeEntry: AnimeEntry | null,

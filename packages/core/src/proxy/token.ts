@@ -11,7 +11,6 @@ export const ProxyDataSchema = z.object({
 });
 export type ProxyData = z.infer<typeof ProxyDataSchema>;
 
-/** Decodes a `{mode}.{auth}.{data}` (or legacy `{auth}.{data}`, mode 'e') proxy path segment. Null on any malformed input. */
 export function decodeProxyToken(
   token: string
 ): { rawAuth: string; rawData: string } | null {

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
 import type { ParsedStream } from '../db/schemas.js';
 import { extractNzbGuid, matchEntry, toWireMediaInfo } from './adapter.js';
+import { MediaProbeVersionSchema } from './client.js';
 import type { MediaProbeVersion, TrackDetail } from './client.js';
 
 function track(overrides: Partial<TrackDetail> = {}): TrackDetail {
@@ -21,7 +22,7 @@ function track(overrides: Partial<TrackDetail> = {}): TrackDetail {
 function version(
   overrides: Partial<MediaProbeVersion> = {}
 ): MediaProbeVersion {
-  return { sources: [], tracks: [], ...overrides };
+  return { sources: [], tracks: [], has_chapters: false, ...overrides };
 }
 
 function stream(overrides: Partial<ParsedStream> = {}): ParsedStream {
@@ -186,10 +187,10 @@ describe('toWireMediaInfo', () => {
   });
 
   test('has_chapters reflects chapters length', () => {
-    assert.equal(toWireMediaInfo(version()).has_chapters, false);
-    assert.equal(
-      toWireMediaInfo(version({ chapters: [{}] })).has_chapters,
-      true
-    );
+    const parse = (chapters?: unknown[]) =>
+      MediaProbeVersionSchema.parse({ sources: [], tracks: [], chapters });
+    assert.equal(toWireMediaInfo(parse()).has_chapters, false);
+    assert.equal(toWireMediaInfo(parse([{}])).has_chapters, true);
+    assert.equal('chapters' in parse([{}]), false);
   });
 });

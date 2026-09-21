@@ -155,7 +155,7 @@ export function buildStatistics(
         `📥 Fetch: ${fmtMs(fetchMs)}`,
         `🔗 Service Wrap: ${fmtMs(pipelineTimings.serviceWrapMs)}`,
       ];
-      if (pipelineTimings.remuxDbMs > 0) {
+      if (userData.remuxDb?.enabled) {
         lines.push(`🎞️ RemuxDB: ${fmtMs(pipelineTimings.remuxDbMs)}`);
       }
       // Show accumulated filter total (fetcher + optional re-filter pass)

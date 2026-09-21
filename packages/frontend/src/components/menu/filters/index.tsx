@@ -4200,6 +4200,23 @@ function Content() {
                     }}
                   />
                 </SettingsCard>
+                <SettingsCard
+                  id="remuxDb"
+                  title="RemuxDB Integration"
+                  description="Fill in missing audio and subtitle languages, channels, HDR and resolution from RemuxDB's database of probed files. Each lookup sends the title's IMDb ID (and season and episode) to RemuxDB."
+                >
+                  <Switch
+                    label="Enable"
+                    side="right"
+                    value={userData.remuxDb?.enabled ?? false}
+                    onValueChange={(value) => {
+                      setUserData((prev) => ({
+                        ...prev,
+                        remuxDb: { ...prev.remuxDb, enabled: value },
+                      }));
+                    }}
+                  />
+                </SettingsCard>
                 {mode === 'pro' && userData.excludeSeasonPacks && (
                   <SettingsCard
                     id="excludeSeasonPacks"

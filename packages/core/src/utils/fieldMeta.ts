@@ -169,6 +169,7 @@ export const FIELD_META: Omit<Record<keyof UserData, FieldMeta>, IgnoredKeys> = 
   syncedRankedStreamExpressionUrls: { label: 'Synced Ranked Expression URLs', group: 'filters', type: 'list', menu: 'filters', subTab: 'stream-expression' },
 
   enableSeadex: { label: 'SeaDex', group: 'filters', type: 'scalar', menu: 'filters', subTab: 'miscellaneous', keywords: ['anime', 'releases.moe'] },
+  remuxDb: { label: 'RemuxDB', group: 'filters', type: 'scalar', menu: 'filters', subTab: 'miscellaneous', keywords: ['probe', 'media info'] },
   excludeSeasonPacks: { label: 'Exclude Season Packs', group: 'filters', type: 'scalar', menu: 'filters', subTab: 'miscellaneous', ignoreForCommandPalette: true },
 
   excludeCached: { label: 'Exclude Cached Streams', group: 'filters', type: 'scalar', menu: 'filters', subTab: 'cache' },
@@ -234,7 +235,6 @@ export const FIELD_META: Omit<Record<keyof UserData, FieldMeta>, IgnoredKeys> = 
   preloadStreams: { label: 'Preload Streams', group: 'misc', type: 'scalar', menu: 'miscellaneous', subTab: 'background' },
   precacheSelector: { label: 'Precache Selector', group: 'misc', type: 'scalar', menu: 'miscellaneous', subTab: 'background' },
   precacheSingleStream: { label: 'Precache Single Stream', group: 'misc', type: 'scalar', menu: 'miscellaneous', subTab: 'background' },
-  remuxDb: { label: 'RemuxDB', group: 'misc', type: 'scalar', menu: 'miscellaneous', subTab: 'background' },
 
   dynamicAddonFetching: { label: 'Dynamic Addon Fetching', group: 'misc', type: 'scalar', menu: 'addons', subTab: 'addons', sectionId: 'fetchStrategy', keywords: ['exit condition', 'dynamic fetching', 'fetch strategy'] },
   addonCategoryColors: { label: 'Addon Category Colors', group: 'misc', type: 'scalar', menu: 'addons', subTab: 'addons' },

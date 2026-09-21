@@ -1173,7 +1173,6 @@ export const UserDataSchema = z.object({
   jellyfin: JellyfinSettings.optional(),
   remuxDb: z
     .object({
-      /** Opt-in to RemuxDB probe-data backfill. */
       enabled: z.boolean().optional(),
     })
     .optional(),

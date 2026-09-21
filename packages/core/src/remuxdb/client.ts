@@ -56,25 +56,23 @@ export const TrackDetailSchema = z.looseObject({
 });
 export type TrackDetail = z.infer<typeof TrackDetailSchema>;
 
-export const ChapterDetailSchema = z.looseObject({
-  id: nullableNumber,
-  title: nullableString,
-  start_time: nullableNumber,
-  end_time: nullableNumber,
-});
-export type ChapterDetail = z.infer<typeof ChapterDetailSchema>;
-
-export const MediaProbeVersionSchema = z.looseObject({
-  content_hash: nullableString,
-  container: nullableString,
-  duration: nullableNumber,
-  size: nullableNumber,
-  bitrate: nullableNumber,
-  virtual_chapters: z.boolean().optional(),
-  chapters: z.array(ChapterDetailSchema).optional(),
-  sources: z.array(ProbeSourceSchema),
-  tracks: z.array(TrackDetailSchema),
-});
+export const MediaProbeVersionSchema = z
+  .looseObject({
+    content_hash: nullableString,
+    container: nullableString,
+    duration: nullableNumber,
+    size: nullableNumber,
+    bitrate: nullableNumber,
+    virtual_chapters: z.boolean().optional(),
+    chapters: z.array(z.unknown()).optional(),
+    sources: z.array(ProbeSourceSchema),
+    tracks: z.array(TrackDetailSchema),
+  })
+  // Only chapter presence is used, and the lists bloat the cache.
+  .transform(({ chapters, ...version }) => ({
+    ...version,
+    has_chapters: (chapters?.length ?? 0) > 0,
+  }));
 export type MediaProbeVersion = z.infer<typeof MediaProbeVersionSchema>;
 
 const probeCache = Cache.getInstance<string, MediaProbeVersion[]>(
@@ -88,18 +86,19 @@ function cacheKey(imdbId: string, season?: number, episode?: number): string {
 
 async function cacheVersions(
   key: string,
-  versions: MediaProbeVersion[]
+  versions: MediaProbeVersion[] | null
 ): Promise<void> {
   await probeCache.set(
     key,
-    versions,
-    versions.length > 0
-      ? appConfig.remuxdb.cacheTtl
-      : appConfig.remuxdb.negativeCacheTtl
+    versions ?? [],
+    versions === null
+      ? appConfig.remuxdb.errorCacheTtl
+      : versions.length > 0
+        ? appConfig.remuxdb.cacheTtl
+        : appConfig.remuxdb.negativeCacheTtl
   );
 }
 
-/** Fire-and-forget, rate-limited per key. Skips writing back an empty result, since that could just mean the refresh itself failed. */
 function triggerBackgroundRefresh(
   key: string,
   imdbId: string,
@@ -113,13 +112,13 @@ function triggerBackgroundRefresh(
     await bgRefreshCache.set(key, Date.now(), intervalS);
 
     const versions = await fetchFromApi(imdbId, season, episode);
-    if (versions.length > 0) await cacheVersions(key, versions);
+    // A failed or empty refresh never replaces what's cached.
+    if (versions?.length) await cacheVersions(key, versions);
   })().catch((error) =>
     logger.debug(`remuxdb background refresh failed for ${key}: ${error}`)
   );
 }
 
-/** Looks up known probe versions for a title. Never throws; [] on failure. */
 export async function fetchProbeVersions(
   imdbId: string,
   season?: number,
@@ -134,15 +133,15 @@ export async function fetchProbeVersions(
 
   const versions = await fetchFromApi(imdbId, season, episode);
   await cacheVersions(key, versions);
-  return versions;
+  return versions ?? [];
 }
 
-/** Coalesces concurrent requests for the same key into a single call. */
+/** Failure is `null`, not `undefined`: a memory-lock waiter that arrives late treats `undefined` as still pending. */
 async function fetchFromApi(
   imdbId: string,
   season?: number,
   episode?: number
-): Promise<MediaProbeVersion[]> {
+): Promise<MediaProbeVersion[] | null> {
   const { result } = await DistributedLock.getInstance().withLock(
     `remuxdb:fetch:${cacheKey(imdbId, season, episode)}`,
     () => _fetchFromApi(imdbId, season, episode),
@@ -155,7 +154,7 @@ async function _fetchFromApi(
   imdbId: string,
   season?: number,
   episode?: number
-): Promise<MediaProbeVersion[]> {
+): Promise<MediaProbeVersion[] | null> {
   try {
     const url = new URL(`${appConfig.remuxdb.baseUrl}/api/media/info`);
     url.searchParams.set('imdb_id', imdbId);
@@ -167,10 +166,13 @@ async function _fetchFromApi(
       timeout: 5000,
       headers: { 'x-client-id': instanceId() },
     });
-    if (!response.ok) return [];
+    if (!response.ok) {
+      logger.debug(`remuxdb lookup for ${imdbId} returned ${response.status}`);
+      return null;
+    }
     return z.array(MediaProbeVersionSchema).parse(await response.json());
   } catch (error) {
     logger.debug(`remuxdb lookup failed for ${imdbId}: ${error}`);
-    return [];
+    return null;
   }
 }

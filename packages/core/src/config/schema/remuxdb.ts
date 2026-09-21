@@ -29,11 +29,22 @@ export const remuxdbSchema = {
     requiresRestart: false,
     secret: false,
   },
+  errorCacheTtl: {
+    schema: seconds,
+    default: 60,
+    label: 'RemuxDB error cache TTL (s)',
+    description:
+      'How long to wait before retrying a lookup that failed (timeout or error response).',
+    env: 'REMUXDB_ERROR_CACHE_TTL',
+    requiresRestart: false,
+    secret: false,
+  },
   minimumBackgroundRefreshInterval: {
     schema: seconds,
     default: 30 * 60,
     label: 'RemuxDB minimum background refresh interval (s)',
-    description: 'Minimum interval between background refreshes of a cached lookup.',
+    description:
+      'Minimum interval between background refreshes of a cached lookup.',
     env: 'REMUXDB_MINIMUM_BACKGROUND_REFRESH_INTERVAL',
     requiresRestart: false,
     secret: false,
