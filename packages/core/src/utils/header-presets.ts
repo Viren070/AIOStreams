@@ -13,20 +13,20 @@ export const HEADER_PRESETS: Record<string, Record<string, string>> = {
   },
   sonarr: {
     Accept: 'application/rss+xml, text/rss+xml, application/xml, text/xml',
-    'User-Agent': 'Sonarr/4.0.19.2979 (alpine 3.24.1)',
+    'User-Agent': 'Sonarr/4.0.20.3014 (alpine 3.24.2)',
   },
   radarr: {
     Accept: 'application/rss+xml, text/rss+xml, application/xml, text/xml',
-    'User-Agent': 'Radarr/6.3.0.10514 (alpine 3.24.1)',
+    'User-Agent': 'Radarr/6.4.4.10685 (alpine 3.24.2)',
   },
   prowlarr: {
     Accept: 'application/rss+xml, text/rss+xml, application/xml, text/xml',
-    'User-Agent': 'Prowlarr/2.5.2.5491 (alpine 3.24.1)',
+    'User-Agent': 'Prowlarr/2.6.5.5623 (alpine 3.24.2)',
   },
   nzbhydra2: {
     Accept: 'application/xml',
     'Content-Type': 'application/xml',
-    'User-Agent': 'NZBHydra2 8.9.0',
+    'User-Agent': 'NZBHydra2 9.0.2',
   },
   chrome: {
     'User-Agent':
