@@ -1,8 +1,9 @@
-﻿import type { ParsedStream, UserData } from '../db/schemas.js';
+﻿import type { MediaTrack, ParsedStream, UserData } from '../db/schemas.js';
 import * as constants from '../utils/constants.js';
 import { formatHours, makeSmall } from './utils.js';
 import { languageToCode, languageToEmoji } from '../utils/languages.js';
 import { compileTemplate as engineCompileTemplate } from './engine/compile.js';
+import { canonicaliseField } from './engine/fields.js';
 import { NEW_LINE_SENTINEL, REMOVE_LINE_SENTINEL } from './engine/sentinels.js';
 import { comparatorFunctions } from './engine/comparators.js';
 
@@ -34,6 +35,30 @@ import { comparatorFunctions } from './engine/comparators.js';
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
+type FormatterTrack = {
+  [K in keyof MediaTrack]-?: NonNullable<MediaTrack[K]> | null;
+};
+
+// stored tracks omit unset fields, which would read as unknown properties
+const TRACK_DEFAULTS: FormatterTrack = {
+  lang: null,
+  codec: null,
+  tag: null,
+  channels: null,
+  title: null,
+  default: false,
+  forced: false,
+  commentary: false,
+  dub: false,
+  original: false,
+  hearingImpaired: false,
+  visualImpaired: false,
+};
+
+function formatterTracks(tracks: MediaTrack[] | undefined): FormatterTrack[] {
+  return (tracks ?? []).map((track) => ({ ...TRACK_DEFAULTS, ...track }));
+}
 
 export interface FormatterConfig {
   name: string;
@@ -76,6 +101,8 @@ export interface ParseValue {
     uWedontknowwhatakilometeris: string[] | null;
     visualTags: string[] | null;
     audioTags: string[] | null;
+    audioTracks: FormatterTrack[];
+    subtitleTracks: FormatterTrack[];
     releaseGroup: string | null;
     regexMatched: string | null;
     rankedRegexMatched: string[];
@@ -95,6 +122,7 @@ export interface ParseValue {
     upscaled: boolean;
     hasChapters: boolean;
     network: string | null;
+    site: string | null;
     container: string | null;
     extension: string | null;
     indexer: string | null;
@@ -163,6 +191,20 @@ export interface ParseValue {
     malId: number | null;
     hasSeaDex: boolean;
   };
+  user?: {
+    languages: string[];
+    subtitles: string[];
+    resolutions: string[];
+    qualities: string[];
+    visualTags: string[];
+    audioTags: string[];
+    audioChannels: string[];
+    encodes: string[];
+    streamTypes: string[];
+    releaseGroups: string[];
+    keywords: string[];
+  };
+  track?: FormatterTrack;
   service?: {
     id: string | null;
     shortName: string | null;
@@ -178,6 +220,21 @@ export interface ParseValue {
     json: string | null;
     jsonf: string | null;
   };
+}
+
+/** Reads a `section.property` path off the parse value. */
+function readField(source: string, parseValue: unknown): unknown {
+  const [section, property] = source.trim().split('.');
+  if (!section || !property) return undefined;
+  const canonical = canonicaliseField(section, property);
+  if (!canonical) return undefined;
+  return (parseValue as any)?.[canonical[0]]?.[canonical[1]];
+}
+
+interface CachedTemplate {
+  compiled: CompiledParseFunction;
+  chars: number;
+  uses: number;
 }
 
 /**
@@ -249,25 +306,71 @@ export abstract class BaseFormatter {
     );
   }
 
-  private static compiledTemplates = new Map<string, CompiledParseFunction>();
-  private static readonly MAX_CACHED_TEMPLATES = 200;
+  /**
+   * Compiled templates, least-recently-used first. Budgeted by source length
+   * because a compiled template costs roughly 40 bytes of heap per character.
+   */
+  private static compiledTemplates = new Map<string, CachedTemplate>();
+  private static cachedTemplateChars = 0;
+  /** ~40 MiB of compiled templates, whatever the per-template limit is. */
+  private static readonly MAX_CACHED_TEMPLATE_CHARS = 1_000_000;
+  private static readonly EVICTION_SAMPLE = 16;
 
   private async getCompiledTemplate(
     template: string
   ): Promise<CompiledParseFunction> {
-    const cached = BaseFormatter.compiledTemplates.get(template);
-    if (cached) return cached;
+    const cache = BaseFormatter.compiledTemplates;
+    const cached = cache.get(template);
+    if (cached) {
+      cached.uses += 1;
+      // re-inserting moves it to the end, so it is evicted last
+      cache.delete(template);
+      cache.set(template, cached);
+      return cached.compiled;
+    }
 
     const compiled = await this.compileTemplate(template);
 
-    // templates are user-supplied, so the map is bounded
-    if (
-      BaseFormatter.compiledTemplates.size >= BaseFormatter.MAX_CACHED_TEMPLATES
-    ) {
-      BaseFormatter.compiledTemplates.clear();
+    if (template.length > BaseFormatter.MAX_CACHED_TEMPLATE_CHARS) {
+      return compiled;
     }
-    BaseFormatter.compiledTemplates.set(template, compiled);
+
+    cache.set(template, { compiled, chars: template.length, uses: 1 });
+    BaseFormatter.cachedTemplateChars += template.length;
+    while (
+      BaseFormatter.cachedTemplateChars >
+      BaseFormatter.MAX_CACHED_TEMPLATE_CHARS
+    ) {
+      if (!BaseFormatter.evictOne()) break;
+    }
     return compiled;
+  }
+
+  /**
+   * Least-used of the oldest few, so one-off configurations cannot push out a
+   * shared template. Surviving a scan costs a use, which ages out stale ones.
+   */
+  private static evictOne(): boolean {
+    const cache = BaseFormatter.compiledTemplates;
+    const sample: [string, CachedTemplate][] = [];
+    for (const entry of cache) {
+      sample.push(entry);
+      if (sample.length >= BaseFormatter.EVICTION_SAMPLE) break;
+    }
+    if (!sample.length) return false;
+
+    // strict `<` leaves ties with the oldest, where the walk started
+    let [victimKey, victim] = sample[0];
+    for (const [key, entry] of sample) {
+      if (entry.uses < victim.uses) [victimKey, victim] = [key, entry];
+    }
+    for (const [key, entry] of sample) {
+      if (key !== victimKey && entry.uses > 1) entry.uses -= 1;
+    }
+
+    cache.delete(victimKey);
+    BaseFormatter.cachedTemplateChars -= victim.chars;
+    return true;
   }
 
   public async format(
@@ -332,6 +435,10 @@ export abstract class BaseFormatter {
           []) as string[]),
       ];
     };
+
+    const uniqueFieldValues = (field: string): string[] => [
+      ...new Set(getFieldValues(field)),
+    ];
 
     const sortByUserPreference = <T extends string>(
       items: T[] | undefined,
@@ -469,6 +576,23 @@ export abstract class BaseFormatter {
           : userSpecifiedLanguages
       )
     );
+    // Original is resolved above, so these compare against stream values as-is
+    const userLists = memo(() => ({
+      languages: userSpecifiedLanguages,
+      subtitles: userSpecifiedSubtitles.length
+        ? userSpecifiedSubtitles
+        : userSpecifiedLanguages,
+      resolutions: uniqueFieldValues('resolutions'),
+      qualities: uniqueFieldValues('qualities'),
+      visualTags: uniqueFieldValues('visualTags'),
+      audioTags: uniqueFieldValues('audioTags'),
+      audioChannels: uniqueFieldValues('audioChannels'),
+      encodes: uniqueFieldValues('encodes'),
+      streamTypes: uniqueFieldValues('streamTypes'),
+      releaseGroups: uniqueFieldValues('releaseGroups'),
+      keywords: uniqueFieldValues('keywords'),
+    }));
+
     const sortedAudioChannels = sortByUserPreference(
       stream.parsedFile?.audioChannels,
       getFieldValues('audioChannels')
@@ -484,6 +608,9 @@ export abstract class BaseFormatter {
 
     const formattedAge = stream.age ? formatHours(stream.age) : null;
     const parseValue: ParseValue = {
+      get user() {
+        return userLists();
+      },
       config: {
         addonName:
           this.userData.addonName ||
@@ -558,6 +685,8 @@ export abstract class BaseFormatter {
         },
         visualTags: sortedVisualTags,
         audioTags: sortedAudioTags,
+        audioTracks: formatterTracks(stream.parsedFile?.audioTracks),
+        subtitleTracks: formatterTracks(stream.parsedFile?.subtitleTracks),
         releaseGroup: stream.parsedFile?.releaseGroup || null,
         regexMatched:
           stream.regexMatched?.name || stream.rankedRegexesMatched?.[0] || null,
@@ -623,6 +752,7 @@ export abstract class BaseFormatter {
         upscaled: stream.parsedFile?.upscaled ?? false,
         hasChapters: stream.parsedFile?.hasChapters ?? false,
         network: stream.parsedFile?.network || null,
+        site: stream.parsedFile?.site || null,
         container: stream.parsedFile?.container || null,
         extension: stream.parsedFile?.extension || null,
         seadex: stream.seadex?.isSeadex ?? false,
@@ -741,10 +871,15 @@ export abstract class BaseFormatter {
   private compileWithEngine(str: string): CompiledParseFunction {
     return engineCompileTemplate<ParseValue>(str, {
       resolveVariable: (source, parseValue) => {
-        // only used for replace({section.property}, 'x')
-        const [section, property] = source.split('.');
-        const value = (parseValue as any)?.[section]?.[property];
+        const value = readField(source, parseValue);
         return value == null ? undefined : String(value);
+      },
+      resolveValues: (source, parseValue) => {
+        const value = readField(source, parseValue);
+        if (value == null) return undefined;
+        return Array.isArray(value)
+          ? value.filter((item): item is string => typeof item === 'string')
+          : [String(value)];
       },
       comparators: comparatorFunctions,
       onDepthExceeded: (max) =>

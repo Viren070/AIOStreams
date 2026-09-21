@@ -4,6 +4,8 @@ import {
   config as appConfig,
   getEnvironmentServiceDetails,
   PresetManager,
+  segmentProviders,
+  segmentsEnabled,
   SelAccess,
   UserRepository,
 } from '@aiostreams/core';
@@ -43,6 +45,19 @@ const statusInfo = async (): Promise<StatusResponse> => {
           : undefined,
       alternateDesign: appConfig.branding.alternateDesign,
       protected: appConfig.api.authRequired,
+      jellyfin: {
+        enabled: appConfig.jellyfin.enabled === true,
+        maxVersions: appConfig.jellyfin.maxVersions,
+        resolveOnOpen: appConfig.jellyfin.resolveOnOpen,
+        maxCatalogItems: appConfig.jellyfin.maxCatalogItems,
+        maxLibraries: appConfig.jellyfin.maxLibraries,
+        maxPersonas: appConfig.jellyfin.maxPersonas,
+        maxTrackers: appConfig.watchState.maxSinks,
+        segments: {
+          enabled: segmentsEnabled(),
+          providers: segmentProviders(),
+        },
+      },
       community: {
         formatters: appConfig.community.formatters,
         templates: appConfig.community.templates,
@@ -65,6 +80,9 @@ const statusInfo = async (): Promise<StatusResponse> => {
           apiKey: !!appConfig.metadata.tvdb.apiKey,
         },
       },
+      remuxdb: {
+        enabled: appConfig.remuxdb.enabled,
+      },
       regexAccess: {
         level: appConfig.userLimits.regex.access,
         ...allowedRegexes,
@@ -77,8 +95,7 @@ const statusInfo = async (): Promise<StatusResponse> => {
         access: appConfig.userLimits.variants.access,
         max: appConfig.userLimits.variants.max,
         maxScriptLength: appConfig.userLimits.variants.maxScriptLength,
-        maxInstructions: appConfig.userLimits.variants.maxInstructions,
-        maxActive: appConfig.userLimits.variants.maxActive,
+        maxTotalInstructions: appConfig.userLimits.variants.maxTotalInstructions,
         maxValueDepth: appConfig.userLimits.variants.maxValueDepth,
         maxPathSegments: appConfig.userLimits.variants.maxPathSegments,
         maxPathMatches: appConfig.userLimits.variants.maxPathMatches,
@@ -165,6 +182,7 @@ const statusInfo = async (): Promise<StatusResponse> => {
         maxFailoverAttempts: appConfig.userLimits.maxFailoverAttempts,
         maxParallelAttempts: appConfig.userLimits.maxParallelAttempts,
         maxBackgroundPings: appConfig.userLimits.maxBackgroundPings,
+        maxLinkedAccounts: appConfig.linkedAccounts.maxPerUser,
       },
     },
   };

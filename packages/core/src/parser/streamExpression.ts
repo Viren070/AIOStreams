@@ -13,6 +13,7 @@ import { parseBitrate } from './utils.js';
 import { createLogger } from '../logging/logger.js';
 import { ExpressionContext } from '../streams/context.js';
 import { formRegexFromKeywordsSync } from '../utils/regex.js';
+import { ObjectFilter, compileObjectFilter } from '../utils/object-filter.js';
 
 const logger = createLogger('stream-expression');
 
@@ -861,6 +862,75 @@ export abstract class StreamExpressionEngine {
     };
 
     this.parser.functions.subtitles = this.parser.functions.subtitle;
+
+    const trackFilter = (
+      key: 'audioTracks' | 'subtitleTracks',
+      label: string
+    ) =>
+      function (streams: ParsedStream[], ...conditions: string[]) {
+        if (!Array.isArray(streams) || streams.some((stream) => !stream.type)) {
+          throw new Error('Your streams input must be an array of streams');
+        } else if (conditions.some((c) => typeof c !== 'string')) {
+          throw new Error(`${label}: conditions must be strings`);
+        }
+        let matches: ObjectFilter;
+        try {
+          matches = compileObjectFilter(conditions);
+        } catch (error) {
+          throw new Error(`${label}: ${(error as Error).message}`);
+        }
+        return streams.filter((stream) =>
+          (stream.parsedFile?.[key] ?? []).some((track) => matches(track))
+        );
+      };
+
+    this.parser.functions.audioTrack = trackFilter('audioTracks', 'audioTrack');
+    this.parser.functions.subtitleTrack = trackFilter(
+      'subtitleTracks',
+      'subtitleTrack'
+    );
+
+    const parsedValueFilter = (
+      label: string,
+      read: (stream: ParsedStream) => readonly string[] | string | undefined
+    ) =>
+      function (streams: ParsedStream[], ...values: string[]) {
+        if (!Array.isArray(streams) || streams.some((stream) => !stream.type)) {
+          throw new Error('Your streams input must be an array of streams');
+        } else if (
+          values.length === 0 ||
+          values.some((v) => typeof v !== 'string')
+        ) {
+          throw new Error(
+            `${label}: you must provide one or more string parameters`
+          );
+        }
+        const wanted = new Set(values.map((v) => v.toLowerCase()));
+        return streams.filter((stream) => {
+          const found = read(stream);
+          const list = Array.isArray(found) ? found : found ? [found] : [];
+          return (list.length ? list : ['Unknown']).some((v) =>
+            wanted.has(v.toLowerCase())
+          );
+        });
+      };
+
+    this.parser.functions.editions = parsedValueFilter(
+      'editions',
+      (stream) => stream.parsedFile?.editions
+    );
+    this.parser.functions.network = parsedValueFilter(
+      'network',
+      (stream) => stream.parsedFile?.network
+    );
+    this.parser.functions.container = parsedValueFilter(
+      'container',
+      (stream) => stream.parsedFile?.container
+    );
+    this.parser.functions.extension = parsedValueFilter(
+      'extension',
+      (stream) => stream.parsedFile?.extension
+    );
 
     this.parser.functions.mediaInfoQuality = function (
       streams: ParsedStream[],

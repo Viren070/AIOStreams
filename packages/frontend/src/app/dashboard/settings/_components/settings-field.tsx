@@ -10,6 +10,7 @@ import { IconButton } from '@/components/ui/button';
 import type { SettingsKey } from '../queries';
 import {
   KeyValueListField,
+  EnumListField,
   StringListField,
   JsonField,
   BoolOrListField,
@@ -204,6 +205,17 @@ function SettingsFieldControl({ k }: { k: SettingsKey }) {
           label={k.label}
           help={help}
           disabled={disabled}
+        />
+      );
+    case 'multiEnum':
+      return (
+        <EnumListField
+          name={name}
+          label={k.label}
+          help={help}
+          disabled={disabled}
+          options={k.ui.options ?? []}
+          orderable={k.ui.orderable}
         />
       );
     case 'map':

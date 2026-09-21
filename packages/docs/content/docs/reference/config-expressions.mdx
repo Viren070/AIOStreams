@@ -97,7 +97,7 @@ Comma-separate to combine. They apply left to right, so later instructions win:
 .../v/phone,rd2/manifest.json
 ```
 
-An unknown or disabled id is an error, surfaced as an error stream, rather than a silent fall back to the base config.
+An unknown or disabled id is an error, surfaced as an error stream, rather than a silent fall back to the base config. Ids are not case-sensitive and repeats are ignored.
 
 The selector also works on ChillLink and the Seanime extension URLs.
 
@@ -109,7 +109,7 @@ The configure page always edits the **base** config, even when a variant is sele
 
 ## Conditional activation
 
-A variant can also decide for itself. Give it an **activation condition** and it applies whenever that condition matches the incoming request, with nothing added to the URL. One install serves a phone a different config from a TV.
+A variant can also decide for itself. Give it an **activation condition** and it applies whenever that condition matches the incoming request, with nothing added to the URL: one install serves a phone a different config from a TV. Conditions are checked on every request, whichever link it arrived on, so a match applies on top of whatever that link selected.
 
 The condition is a [stream expression](/reference/stream-expressions) that evaluates to true or false, using a [limited set of functions](/reference/stream-expressions#variant-condition-functions):
 
@@ -117,7 +117,11 @@ The condition is a [stream expression](/reference/stream-expressions) that evalu
 includes(userAgent, 'android')
 ```
 
-Selecting a variant in the URL still applies it, condition or not. Where both happen, matched variants apply first and the URL's selection wins on anything they both write to.
+Naming a variant in the URL applies it whether or not its condition matches. [What applies, in what order](#what-applies-in-what-order) covers the case where both happen.
+
+<Callout type="warn">
+Selecting a conditional variant applies it to every request, not only those its condition matches. A "Real-Debrid down" variant picked on the install page keeps Real-Debrid disabled.
+</Callout>
 
 ### What a condition can read
 
@@ -166,6 +170,28 @@ Every check a configuration defines is resolved once per request, so one request
 
 ---
 
+## What applies, in what order
+
+Several variants can apply to one request: every one you selected, and every one whose condition matched. They are layered onto a single copy of your configuration, in this order:
+
+1. Variants whose **condition matched**, in the order they are listed in **Miscellaneous → Variants**.
+2. Variants **named in the URL**, left to right.
+
+Inside a script, instructions run top to bottom, and `use variant` runs that variant's instructions at the point it appears. The last write to a field wins, so `set` replaces whatever an earlier variant put there, while `add`, `remove` and `insert` build on it. Prefer those in a variant meant to combine with others.
+
+| Request                                        | Applies                                     |
+| ---------------------------------------------- | ------------------------------------------- |
+| `/v/phone,rd2`                                 | `phone`, then `rd2`                         |
+| No selector, `phone` and `rd-down` both match  | whichever is listed first, then the other   |
+| `/v/no-dv` while `rd-down` matches             | `rd-down`, then `no-dv`                     |
+| `/v/rd-down` while `rd-down` also matches      | once only, in its position in the URL       |
+
+A request may run 5000 instructions across everything it applies, including those `use variant` reaches. One that runs out stops there and says so.
+
+A variant that `use variant` pulls in runs again even if it already applied on its own. Most instructions land the same way twice, so this is usually invisible.
+
+---
+
 ## Syntax
 
 One instruction per line. `#` starts a comment, except inside a string. Object and array literals may span lines.
@@ -190,6 +216,9 @@ merge deduplicator = {
 | `clear <path>`                     | Empty a list or object.                                                             |
 | `add <path> <value>, ...`          | Append to a list, skipping values already present. Creates the list if absent.      |
 | `prepend <path> <value>, ...`      | The same, inserted at the front.                                                    |
+| `insert <path> = <value>, ...`     | Insert at the position the path names. The value lands there and the rest shift down. |
+| `insert after <path> = <value>`    | The same, placed just past the addressed entry. `insert before` spells out the default. |
+| `insert <n> after <path> = <value>` | `n` places from the addressed entry: `2 after` leaves one entry in between. `before` counts backwards. |
 | `remove <path> <value>, ...`       | Remove matching values from a list.                                                 |
 | `remove <path>`                    | With no values, the path itself selects the elements to remove.                     |
 | `enable <path>` / `disable <path>` | Shorthand for `set <path>.enabled = true` / `false`.                                |
@@ -220,7 +249,8 @@ A path starts with a configuration field and drills in.
 | `.name`         | An object property                             | `deduplicator.enabled`                |
 | `[0]`           | A list element by position                     | `sortCriteria.global[0]`              |
 | `[-1]`          | Counting back from the end                     | `sortCriteria.global[-1]`             |
-| `[*]`           | Every element                                  | `presets[*].options.timeout`          |
+| `[*]`           | Every element of a list                        | `presets[*].options.timeout`          |
+| `[*]`           | Every value of an object                       | `sortCriteria[*]`                     |
 | `[key=value]`   | Elements whose property equals a value         | `services[id=realdebrid]`             |
 | `[key!=value]`  | Elements whose property does not equal it      | `presets[type!=torrentio]`            |
 | `[key*=value]`  | Elements whose property contains the text      | `rankedRegexPatterns[name*="german"]` |
@@ -228,6 +258,8 @@ A path starts with a configuration field and drills in.
 | `[=value]`      | Plain list entries, comparing the entry itself | `excludedKeywords[="cam"]`            |
 
 A selector may match several elements, in which case the instruction applies to all of them: `disable presets[type=torrentio]` disables every Torrentio instance.
+
+`[*]` is the one segment that also walks an object, which is how a single instruction reaches all twelve sort lists: `add sortCriteria[*] { "key": "resolution", "direction": "desc" }` appends the same criterion to every one you have defined. The `[key=value]` selectors stay list-only, since an object's members are addressed by name.
 
 `=` and `!=` are exact and case-sensitive. `*=` and `!*=` are substring matches that ignore case.
 
@@ -286,6 +318,52 @@ disable excludedStreamExpressions[0]
 
 <Callout type="info">
 `enable` and `disable` set an `enabled` property. `regexOverrides` and `selOverrides` use an inverted `disabled` flag instead, so for those write `set regexOverrides[name*="hdr"].disabled = true`.
+</Callout>
+
+---
+
+## Inserting at a position
+
+`add` and `prepend` reach the ends of a list. `insert` reaches everywhere else: the path names a position and the value lands there.
+
+```
+insert excludedStreamExpressions[5] = { "expression": "/*No 4K*/ resolution(streams, '2160p')", "enabled": true }
+```
+
+The new entry becomes number 5 and the one that was there moves down. `insert before` is the same instruction spelled out.
+
+Positions shift when you reorder the list, so anchor on a selector instead. `after` is usually the one you want, because it reads in the order the list runs:
+
+```
+insert after excludedStreamExpressions[expression*="Torbox Download Limit"] = {
+  "expression": "/*No 4K*/ resolution(streams, '2160p')",
+  "enabled": true
+}
+```
+
+Count further out when the neighbouring slot is not the place you mean. `1 after` is the slot next to the entry, `2 after` leaves one entry in between, and `before` counts the same way backwards. A count has to say which way it goes, so it always comes with one of the two keywords:
+
+```
+insert 2 after excludedStreamExpressions[expression*="Torbox Download Limit"] = { "expression": "/*No 4K*/ resolution(streams, '2160p')" }
+insert 3 before rankedStreamExpressions[expression*="4K bonus"] = { "expression": "visualTag(streams, 'HDR')", "score": 100 }
+```
+
+`[-1]` keeps the meaning it has everywhere else, the last entry, so the two ends are:
+
+```
+insert excludedKeywords[0] = "cam"          # the front, where prepend puts it
+insert after excludedKeywords[-1] = "cam"   # the end, where add puts it
+```
+
+Several values at once keep their order. Unlike `add`, nothing is skipped for being already present, which is what makes moving an entry work:
+
+```
+unset excludedKeywords[="cam"]
+insert excludedKeywords[0] = "cam"
+```
+
+<Callout type="info">
+An insert names one place per list. A path that reaches several lists, such as `presets[*].options.<list>`, writes one value into each of them, the way `add` does. Within a list, a selector that matches several entries uses the first and says so in the editor preview. A position that falls outside a list is skipped rather than clamped, and a trailing `[*]` is rejected.
 </Callout>
 
 ---
@@ -367,6 +445,12 @@ set sortCriteria.global = [
 ]
 ```
 
+Or slot one criterion into second place in every sort list you have defined, leaving the rest of each list alone:
+
+```
+insert sortCriteria[*][1] = { "key": "resolution", "direction": "desc" }
+```
+
 **Layering.** Either reference one variant from another:
 
 ```
@@ -374,7 +458,7 @@ use variant phone
 add excludedVisualTags "3D"
 ```
 
-or keep them independent and combine at install time with `/v/phone,no3d`.
+or keep them independent and combine at install time with `/v/phone,no3d`. Either way, [order decides](#what-applies-in-what-order) which one wins where both write to the same field.
 
 ---
 
@@ -388,9 +472,7 @@ Operators can tune these; defaults shown.
 | Variants per config             | 10       | `MAX_VARIANTS`                                   |
 | Characters per script           | 4000     | `MAX_VARIANT_SCRIPT_LENGTH`                      |
 | Characters across all scripts   | 20000    | `MAX_VARIANT_TOTAL_SCRIPT_CHARACTERS`            |
-| Instructions per script         | 100      | `MAX_VARIANT_INSTRUCTIONS`                       |
-| Variants per request            | 4        | `MAX_ACTIVE_VARIANTS`                            |
-| `use variant` nesting depth     | 5        | `MAX_VARIANT_DEPTH`                              |
+| Instructions run per request    | 5000     | `MAX_VARIANT_TOTAL_INSTRUCTIONS`                 |
 | Elements one instruction writes | 200      | `MAX_VARIANT_PATH_MATCHES`                       |
 | Health checks: availability     | everyone | `HEALTH_CHECK_ACCESS` (`all`, `trusted`, `none`) |
 | Health checks per config        | 5        | `MAX_HEALTH_CHECKS`                              |

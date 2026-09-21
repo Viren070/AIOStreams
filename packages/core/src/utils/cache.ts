@@ -336,8 +336,20 @@ export class Cache<K, V> {
     return result;
   }
 
-  async get(key: K, updateTTL: boolean = false): Promise<V | undefined> {
+  /**
+   * @param updateTTL Re-arm the entry's expiry on read. Pass the TTL in
+   * seconds; `true` only slides on the memory backend, which is the one that
+   * still knows what the original was.
+   */
+  async get(
+    key: K,
+    updateTTL: boolean | number = false
+  ): Promise<V | undefined> {
     return this.backend.get(key, updateTTL);
+  }
+
+  async getMany(keys: K[]): Promise<(V | undefined)[]> {
+    return this.backend.getMany(keys);
   }
 
   /**

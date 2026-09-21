@@ -82,6 +82,8 @@ export interface PlayChainRecord {
   sameReleaseLimit: number;
   /** Delay between launching same-release variant attempts (ms). */
   duplicateStaggerMs: number;
+  /** When true, only same-release variants of the clicked item are ever tried. */
+  onlySameReleaseFailover: boolean;
 }
 
 /** Build-time options derived from the user's `failover` config. */
@@ -102,6 +104,8 @@ export interface BuildPlayChainOptions {
   sameReleaseLimit: number;
   /** Delay between launching same-release variant attempts (ms). */
   duplicateStaggerMs: number;
+  /** When true, only same-release variants of the clicked item are ever tried. */
+  onlySameReleaseFailover: boolean;
 }
 
 function chainCache() {
@@ -170,13 +174,6 @@ export async function buildPlayChain(
       isOwnedPlayback(s) ||
       (opts.includeExternal && isExternalDebridFailover(s))
   );
-  if (eligible.length < 2) {
-    logger.debug(
-      { uuid, eligible: eligible.length, total: streams.length },
-      'no play chain built: fewer than 2 streams eligible for failover'
-    );
-    return;
-  }
 
   const items: PlayChainItem[] = eligible.map((s) => {
     const variants: PlayChainItem[] = (s.failoverVariants ?? [])
@@ -200,6 +197,14 @@ export async function buildPlayChain(
     };
   });
 
+  if (items.length < 2 && !items.some((it) => it.variants?.length)) {
+    logger.debug(
+      { uuid, eligible: items.length, total: streams.length },
+      'no play chain built: no fallback candidates'
+    );
+    return;
+  }
+
   const listKey = buildFallbackKey(
     uuid,
     eligible.map(streamIdentity).join('|')
@@ -215,6 +220,7 @@ export async function buildPlayChain(
     proxyConfig: opts.proxyConfig?.enabled ? opts.proxyConfig : undefined,
     sameReleaseLimit: opts.sameReleaseLimit,
     duplicateStaggerMs: opts.duplicateStaggerMs,
+    onlySameReleaseFailover: opts.onlySameReleaseFailover,
   };
   await chainCache().set(
     listKey,
@@ -356,16 +362,18 @@ export async function getPlayChain(
   addVariants(clickedItem?.variants, 0);
 
   // Then each subsequent distinct release (increasing rank) + its variants.
-  let rank = 1;
-  for (const item of record.items.slice(decoded.index + 1)) {
-    if (fallbacks.length >= maxAttempts) break;
-    if (!passesFilter(item)) continue;
-    const key = targetIdentity(item);
-    if (seen.has(key)) continue; // already covered (e.g. as a clicked variant)
-    seen.add(key);
-    fallbacks.push({ ...item, rank, isVariant: false });
-    addVariants(item.variants, rank);
-    rank++;
+  if (!record.onlySameReleaseFailover) {
+    let rank = 1;
+    for (const item of record.items.slice(decoded.index + 1)) {
+      if (fallbacks.length >= maxAttempts) break;
+      if (!passesFilter(item)) continue;
+      const key = targetIdentity(item);
+      if (seen.has(key)) continue; // already covered (e.g. as a clicked variant)
+      seen.add(key);
+      fallbacks.push({ ...item, rank, isVariant: false });
+      addVariants(item.variants, rank);
+      rank++;
+    }
   }
 
   if (fallbacks.length === 0 && record.items.length > 1) {

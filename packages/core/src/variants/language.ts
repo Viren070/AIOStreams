@@ -46,6 +46,15 @@ export type CelStatement = {
   | { op: 'set' | 'merge'; path: CelPath; value: CelLiteral }
   | { op: 'unset' | 'clear' | 'enable' | 'disable'; path: CelPath }
   | { op: 'add' | 'prepend' | 'remove'; path: CelPath; values: CelLiteral[] }
+  | {
+      op: 'insert';
+      path: CelPath;
+      values: CelLiteral[];
+      /** Which side of the addressed entry the values land on. */
+      placement: 'before' | 'after';
+      /** How many places from it, counting the adjacent gap as one. */
+      count: number;
+    }
   | { op: 'useFormatter'; name: string }
   | { op: 'useVariant'; id: string }
 );
@@ -63,6 +72,7 @@ export type CelDiagnosticCategory =
   | 'denied-field'
   | 'limit'
   | 'no-match'
+  | 'ambiguous'
   | 'unknown-formatter'
   | 'unknown-variant';
 
@@ -81,7 +91,8 @@ export interface CelDiagnostic {
 
 export interface CelLimits {
   maxScriptLength: number;
-  maxInstructions: number;
+  /** Across every variant one request applies, `use variant` included. */
+  maxTotalInstructions: number;
   maxValueDepth: number;
   maxPathSegments: number;
   maxPathMatches: number;
@@ -89,11 +100,13 @@ export interface CelLimits {
 
 export const DEFAULT_CEL_LIMITS: CelLimits = {
   maxScriptLength: 4000,
-  maxInstructions: 100,
+  maxTotalInstructions: 5000,
   maxValueDepth: 10,
   maxPathSegments: 12,
   maxPathMatches: 200,
 };
+
+const MAX_NOTES = 100;
 
 /**
  * Roots present in `FIELD_META` that must never be writable. `variants`, or one
@@ -106,6 +119,9 @@ export const DENIED_ROOT_KEYS: ReadonlySet<string> = new Set([
   'variants',
   'healthChecks',
 ]);
+
+/** Nested fields no variant may write: the persona list decides which variant applies. */
+export const DENIED_PATHS: ReadonlySet<string> = new Set(['jellyfin.personas']);
 
 const FORBIDDEN_KEYS: ReadonlySet<string> = new Set([
   '__proto__',
@@ -127,10 +143,14 @@ const VERBS: ReadonlySet<string> = new Set([
   'add',
   'prepend',
   'remove',
+  'insert',
   'enable',
   'disable',
   'use',
 ]);
+
+/** Optional placement keywords between `insert` and its path. */
+const PLACEMENTS: ReadonlySet<string> = new Set(['before', 'after']);
 
 export const VARIANT_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,31}$/;
 
@@ -527,7 +547,16 @@ function parsePath(s: Scanner, limits: CelLimits): CelPath {
   while (!s.eof) {
     if (s.peek() === '.') {
       s.advance();
-      segments.push({ kind: 'key', name: readIdent(s) });
+      const keyStart = s.pos;
+      const name = readIdent(s);
+      if (!segments.length && DENIED_PATHS.has(`${root}.${name}`)) {
+        s.fail(`"${root}.${name}" cannot be changed by a variant`, {
+          index: keyStart,
+          source: name,
+          category: 'denied-field',
+        });
+      }
+      segments.push({ kind: 'key', name });
     } else if (s.peek() === '[') {
       s.advance();
       s.skipTrivia();
@@ -654,6 +683,48 @@ function parseStatement(s: Scanner, limits: CelLimits): CelStatement {
       }
       return { op: keyword, path, values, index, line };
     }
+    case 'insert': {
+      let placement: 'before' | 'after' = 'before';
+      let count = 1;
+      const countStart = s.pos;
+      if (isDigit(s.peek())) {
+        count = readNumber(s);
+        if (!Number.isInteger(count) || count < 1) {
+          s.fail('an insert count must be a whole number of places, from 1', {
+            index: countStart,
+            source: s.src.slice(countStart, s.pos),
+          });
+        }
+        s.skipTrivia();
+      }
+      const word = peekIdent(s);
+      // A config root is never named `before` or `after`, so no lookahead.
+      if (word && PLACEMENTS.has(word)) {
+        s.advance(word.length);
+        placement = word as 'before' | 'after';
+        s.skipTrivia();
+      } else if (s.pos !== countStart) {
+        s.fail('a count needs "before" or "after" after it', {
+          index: countStart,
+          source: s.src.slice(countStart, s.pos),
+        });
+      }
+      const path = parsePath(s, limits);
+      if (path.segments[path.segments.length - 1]?.kind === 'all') {
+        s.fail('insert needs a single position, not "[*]"', {
+          index: path.index,
+          source: path.raw,
+        });
+      }
+      s.skipTrivia();
+      if (s.peek() !== '=') s.fail('expected "=" after the path in insert');
+      s.advance();
+      const values = parseValueList(s, limits);
+      if (values.length === 0) {
+        s.fail('insert requires at least one value', { index });
+      }
+      return { op: keyword, path, values, placement, count, index, line };
+    }
     default: {
       const kindStart = s.pos;
       const kind = readIdent(s);
@@ -715,17 +786,6 @@ export function parseCelScript(
       statements.push(statement);
       if (statement.op === 'useVariant') {
         referencedVariants.push(statement.id);
-      }
-      if (statements.length > limits.maxInstructions) {
-        diagnostics.push({
-          index,
-          source: script.slice(index, s.pos),
-          line,
-          message: `script exceeds the maximum of ${limits.maxInstructions} instructions`,
-          category: 'limit',
-          severity: 'error',
-        });
-        break;
       }
     } catch (error) {
       if (error instanceof CelSyntaxError) {
@@ -798,6 +858,7 @@ export function tokenizeCel(src: string): CelToken[] {
   let atLineStart = true;
   let afterVerb = false;
   let afterDot = false;
+  let verb = '';
 
   const push = (kind: CelTokenKind, start: number, end: number) =>
     tokens.push({ kind, start, end });
@@ -841,7 +902,8 @@ export function tokenizeCel(src: string): CelToken[] {
       while (pos < src.length && /[0-9.eE+-]/.test(src[pos])) pos++;
       push('number', start, pos);
       atLineStart = false;
-      afterVerb = false;
+      // An insert count sits between the verb and its placement keyword.
+      if (verb !== 'insert') afterVerb = false;
       afterDot = false;
       continue;
     }
@@ -852,14 +914,16 @@ export function tokenizeCel(src: string): CelToken[] {
       if (LITERAL_KEYWORDS.has(word)) push('keyword', start, pos);
       else if (atLineStart && VERBS.has(word)) {
         push('verb', start, pos);
+        verb = word;
         afterVerb = true;
       } else if (afterVerb && !afterDot) {
-        push(
-          word === 'formatter' || word === 'variant' ? 'verb' : 'root',
-          start,
-          pos
-        );
-        afterVerb = word === 'formatter' || word === 'variant';
+        // Words that extend the verb rather than start the path.
+        const continuation =
+          word === 'formatter' ||
+          word === 'variant' ||
+          (verb === 'insert' && PLACEMENTS.has(word));
+        push(continuation ? 'verb' : 'root', start, pos);
+        afterVerb = continuation;
       } else {
         push('property', start, pos);
       }
@@ -893,8 +957,25 @@ export interface CelApplyOptions {
   resolveVariant?: (id: string) => CelProgram | undefined;
   /** Variant ids already active, which `use variant` must not re-apply. */
   activeVariants?: Iterable<string>;
-  maxDepth?: number;
+  /** Shared with the other programs of a request; omit for a fresh one. */
+  budget?: CelBudget;
   limits?: CelLimits;
+}
+
+/**
+ * Bounds `use variant`, which expands as includes per script to the power of
+ * the nesting depth.
+ */
+export interface CelBudget {
+  instructions: number;
+  /** Set once the allowance runs out, so the cut is reported once. */
+  exhausted: boolean;
+}
+
+export function createCelBudget(
+  limits: CelLimits = DEFAULT_CEL_LIMITS
+): CelBudget {
+  return { instructions: limits.maxTotalInstructions, exhausted: false };
 }
 
 export interface CelApplyResult {
@@ -1023,6 +1104,7 @@ function step(nodes: any[], segment: CelPathSegment, seed: any): any[] {
       }
       case 'all':
         if (Array.isArray(node)) out.push(...node);
+        else if (isPlainObject(node)) out.push(...Object.values(node));
         break;
       case 'filter':
         if (Array.isArray(node)) {
@@ -1070,6 +1152,10 @@ function resolveTargets(config: any, path: CelPath, create: boolean): Target[] {
       case 'all':
         if (Array.isArray(node)) {
           node.forEach((_, i) => targets.push({ container: node, key: i }));
+        } else if (isPlainObject(node)) {
+          for (const key of Object.keys(node)) {
+            targets.push({ container: node, key });
+          }
         }
         break;
       case 'filter':
@@ -1084,6 +1170,115 @@ function resolveTargets(config: any, path: CelPath, create: boolean): Target[] {
     }
   }
   return targets;
+}
+
+interface InsertPosition {
+  array: any[];
+  index: number;
+}
+
+type InsertResolution =
+  | {
+      kind: 'ok';
+      /** One per list the path reaches, in path order. */
+      positions: InsertPosition[];
+      /** Set when a list matched more entries than the one written to. */
+      ambiguity?: { count: number };
+    }
+  | { kind: 'no-match' }
+  | { kind: 'not-a-list' };
+
+/**
+ * Gaps, not elements: `n before` and `n after` are symmetric around the entry
+ * the path addressed, and the slot past the end is a position like any other.
+ */
+function gapFor(
+  anchor: number,
+  placement: 'before' | 'after',
+  count: number
+): number {
+  return placement === 'after' ? anchor + count : anchor - (count - 1);
+}
+
+/**
+ * Resolves a path to the positions an `insert` addresses: one per list it
+ * reaches, as `add` writes to every list. Separate from `resolveTargets`
+ * because a position is not an element, and may sit past the end.
+ */
+function resolveInsertion(
+  config: any,
+  path: CelPath,
+  placement: 'before' | 'after',
+  count: number
+): InsertResolution {
+  const segments: CelPathSegment[] = [
+    { kind: 'key', name: path.root },
+    ...path.segments,
+  ];
+  const last = segments[segments.length - 1];
+
+  let nodes: any[] = [config];
+  for (let i = 0; i < segments.length - 1; i++) {
+    const seed = segments[i + 1].kind === 'key' ? {} : [];
+    nodes = step(nodes, segments[i], seed);
+    if (nodes.length === 0) return { kind: 'no-match' };
+  }
+
+  let notAList = false;
+  let matched = 0;
+  const positions: InsertPosition[] = [];
+  for (const node of nodes) {
+    let array: any[];
+    let anchor: number;
+    let hits = 1;
+
+    if (last.kind === 'key') {
+      // The path names the list itself, so it anchors on the nearest end.
+      if (!isPlainObject(node)) continue;
+      let list = node[last.name];
+      if (list === undefined) {
+        list = [];
+        assign(node, last.name, list);
+      }
+      if (!Array.isArray(list)) {
+        notAList = true;
+        continue;
+      }
+      array = list;
+      anchor = placement === 'after' ? list.length - 1 : 0;
+    } else if (!Array.isArray(node)) {
+      notAList = true;
+      continue;
+    } else if (last.kind === 'index') {
+      array = node;
+      anchor = last.index < 0 ? node.length + last.index : last.index;
+    } else if (last.kind === 'filter') {
+      const indices: number[] = [];
+      node.forEach((element, i) => {
+        if (matchesFilter(element, last)) indices.push(i);
+      });
+      if (indices.length === 0) continue;
+      array = node;
+      anchor = indices[0];
+      hits = indices.length;
+    } else {
+      continue;
+    }
+
+    const index = gapFor(anchor, placement, count);
+    if (index < 0 || index > array.length) continue;
+    positions.push({ array, index });
+    matched += hits;
+  }
+
+  if (positions.length === 0) {
+    return notAList ? { kind: 'not-a-list' } : { kind: 'no-match' };
+  }
+  return {
+    kind: 'ok',
+    positions,
+    ambiguity: matched > positions.length ? { count: matched } : undefined,
+  };
 }
 
 /** Splices by descending index so earlier removals do not shift later ones. */
@@ -1122,32 +1317,45 @@ function note(
   };
 }
 
+interface RunState {
+  notes: CelDiagnostic[];
+  touchedRoots: Set<string>;
+  visiting: Set<string>;
+  budget: CelBudget;
+}
+
 function runProgram(
   config: any,
   program: CelProgram,
   options: CelApplyOptions,
-  notes: CelDiagnostic[],
-  touchedRoots: Set<string>,
-  visiting: Set<string>,
-  depth: number
+  state: RunState
 ): void {
-  const maxDepth = options.maxDepth ?? 5;
   const limits = options.limits ?? DEFAULT_CEL_LIMITS;
+  const { notes, touchedRoots, visiting, budget } = state;
+  const addNote = (diagnostic: CelDiagnostic) => {
+    if (notes.length < MAX_NOTES) notes.push(diagnostic);
+  };
 
   for (const statement of program.statements) {
-    if (statement.op === 'useVariant') {
-      if (depth >= maxDepth) {
+    if (budget.instructions <= 0) {
+      // Not capped: it is what explains the missing instructions.
+      if (!budget.exhausted) {
+        budget.exhausted = true;
         notes.push(
           note(
             statement,
-            `variant nesting exceeds the maximum depth of ${maxDepth}`,
+            `this request ran past the limit of ${limits.maxTotalInstructions} variant instructions; everything after this was skipped`,
             'limit'
           )
         );
-        continue;
       }
+      return;
+    }
+    budget.instructions--;
+
+    if (statement.op === 'useVariant') {
       if (visiting.has(statement.id)) {
-        notes.push(
+        addNote(
           note(
             statement,
             `variant "${statement.id}" is already being applied`,
@@ -1158,7 +1366,7 @@ function runProgram(
       }
       const nested = options.resolveVariant?.(statement.id);
       if (!nested) {
-        notes.push(
+        addNote(
           note(
             statement,
             `unknown variant "${statement.id}"`,
@@ -1168,15 +1376,7 @@ function runProgram(
         continue;
       }
       visiting.add(statement.id);
-      runProgram(
-        config,
-        nested,
-        options,
-        notes,
-        touchedRoots,
-        visiting,
-        depth + 1
-      );
+      runProgram(config, nested, options, state);
       visiting.delete(statement.id);
       continue;
     }
@@ -1184,7 +1384,7 @@ function runProgram(
     if (statement.op === 'useFormatter') {
       const saved = config?.formatter?.definitions?.saved?.[statement.name];
       if (!saved) {
-        notes.push(
+        addNote(
           note(
             statement,
             `no saved formatter named "${statement.name}"`,
@@ -1203,6 +1403,54 @@ function runProgram(
         },
       };
       touchedRoots.add('formatter');
+      continue;
+    }
+
+    if (statement.op === 'insert') {
+      const resolution = resolveInsertion(
+        config,
+        statement.path,
+        statement.placement,
+        statement.count
+      );
+      if (resolution.kind === 'not-a-list') {
+        addNote(
+          note(
+            statement,
+            `"${statement.path.raw}" is not a list, insert skipped`,
+            'no-match'
+          )
+        );
+        continue;
+      }
+      if (resolution.kind === 'no-match') {
+        addNote(
+          note(
+            statement,
+            `"${statement.path.raw}" matched no position, instruction skipped`,
+            'no-match'
+          )
+        );
+        continue;
+      }
+      if (resolution.ambiguity) {
+        const where =
+          resolution.positions.length > 1
+            ? 'inserted at the first in each list'
+            : 'inserted at the first';
+        addNote(
+          note(
+            statement,
+            `"${statement.path.raw}" matched ${resolution.ambiguity.count} entries, ${where}`,
+            'ambiguous'
+          )
+        );
+      }
+      for (const { array, index } of resolution.positions) {
+        // Cloned per list so the copies never share a reference.
+        array.splice(index, 0, ...statement.values.map(cloneLiteral));
+      }
+      touchedRoots.add(statement.path.root);
       continue;
     }
 
@@ -1227,7 +1475,7 @@ function runProgram(
 
     const targets = resolveTargets(config, path, create);
     if (targets.length === 0) {
-      notes.push(
+      addNote(
         note(
           statement,
           `"${statement.path.raw}" matched nothing, instruction skipped`,
@@ -1237,7 +1485,7 @@ function runProgram(
       continue;
     }
     if (targets.length > limits.maxPathMatches) {
-      notes.push(
+      addNote(
         note(
           statement,
           `"${statement.path.raw}" matched ${targets.length} places, over the limit of ${limits.maxPathMatches}`,
@@ -1278,7 +1526,7 @@ function runProgram(
           else if (isPlainObject(current)) {
             assign(target.container, target.key, {});
           } else {
-            notes.push(
+            addNote(
               note(
                 statement,
                 `"${statement.path.raw}" is not a list or object, clear skipped`,
@@ -1297,7 +1545,7 @@ function runProgram(
             assign(target.container, target.key, current);
           }
           if (!Array.isArray(current)) {
-            notes.push(
+            addNote(
               note(
                 statement,
                 `"${statement.path.raw}" is not a list, ${statement.op} skipped`,
@@ -1324,7 +1572,7 @@ function runProgram(
         for (const target of targets) {
           const current = target.container[target.key];
           if (!Array.isArray(current)) {
-            notes.push(
+            addNote(
               note(
                 statement,
                 `"${statement.path.raw}" is not a list, remove skipped`,
@@ -1361,15 +1609,12 @@ export function runCelProgram(
 ): Omit<CelApplyResult, 'userData'> {
   const notes: CelDiagnostic[] = [];
   const touchedRoots = new Set<string>();
-  runProgram(
-    config,
-    program,
-    options,
+  runProgram(config, program, options, {
     notes,
     touchedRoots,
-    new Set<string>(options.activeVariants ?? []),
-    0
-  );
+    visiting: new Set<string>(options.activeVariants ?? []),
+    budget: options.budget ?? createCelBudget(options.limits),
+  });
   return { notes, touchedRoots };
 }
 

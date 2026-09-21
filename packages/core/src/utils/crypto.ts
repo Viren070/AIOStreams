@@ -4,9 +4,10 @@ import {
   createCipheriv,
   createDecipheriv,
   createHash,
-  pbkdf2Sync,
+  pbkdf2,
   randomUUID,
 } from 'crypto';
+import { promisify } from 'util';
 import { genSalt, hash, compare } from 'bcrypt';
 import { deflateSync, inflateSync } from 'zlib';
 import { createLogger } from '../logging/logger.js';
@@ -14,6 +15,8 @@ import { fromUrlSafeBase64, toUrlSafeBase64 } from './general.js';
 const logger = createLogger('crypto');
 
 const saltRounds = 10;
+
+const pbkdf2Async = promisify(pbkdf2);
 
 export const compressData = (data: string): Buffer => {
   return deflateSync(Buffer.from(data, 'utf-8'), {
@@ -181,7 +184,7 @@ export async function deriveKey(
   salt?: string
 ): Promise<{ key: Buffer; salt: string }> {
   salt = salt || (await genSalt(saltRounds));
-  const key = pbkdf2Sync(
+  const key = await pbkdf2Async(
     Buffer.from(password, 'utf-8'),
     Buffer.from(salt, 'hex'),
     100000,

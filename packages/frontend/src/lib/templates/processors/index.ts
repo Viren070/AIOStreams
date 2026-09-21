@@ -18,9 +18,9 @@ export const parsePlaceholder = (
     return { isPlaceholder: false, required: false };
 
   const placeholderPatterns = [
-    { pattern: /<required_template_placeholder>/gi, required: true },
-    { pattern: /<optional_template_placeholder>/gi, required: false },
-    { pattern: /<template_placeholder>/gi, required: true },
+    { pattern: /<required_template_placeholder>/i, required: true },
+    { pattern: /<optional_template_placeholder>/i, required: false },
+    { pattern: /<template_placeholder>/i, required: true },
   ];
 
   for (const { pattern, required } of placeholderPatterns) {
@@ -31,6 +31,141 @@ export const parsePlaceholder = (
 
   return { isPlaceholder: false, required: false };
 };
+
+const inputTypeOf = (type: string | undefined): AllowedInputType =>
+  type === 'password' || type === 'url' ? type : 'string';
+
+/** Skips `services`: those input paths are read as `services.<id>.<credential>`. */
+const findPlaceholders = (
+  value: any,
+  path: string[],
+  found: Map<string, boolean>
+): void => {
+  if (typeof value === 'string') {
+    const placeholder = parsePlaceholder(value);
+    if (placeholder.isPlaceholder) {
+      found.set(path.join('.'), placeholder.required);
+    }
+    return;
+  }
+  if (!value || typeof value !== 'object') return;
+  // Paths inside a directive only exist once it resolves.
+  if ('__switch' in value || '__value' in value || '__remove' in value) return;
+  for (const [key, child] of Object.entries(value)) {
+    if (path.length === 0 && key === 'services') continue;
+    findPlaceholders(child, [...path, key], found);
+  }
+};
+
+const optionChain = (options: Option[] | undefined, ids: string[]) => {
+  const chain: Option[] = [];
+  let current = options;
+  for (const id of ids) {
+    const option = current?.find((o) => o.id === id);
+    if (!option) return [];
+    chain.push(option);
+    current = option.subOptions as Option[] | undefined;
+  }
+  return chain;
+};
+
+type FieldInfo = Pick<
+  TemplateInput,
+  'key' | 'label' | 'description' | 'type'
+> & { optionRequired?: boolean };
+
+const describeField = (
+  path: string,
+  config: any,
+  status: StatusResponse | null
+): FieldInfo => {
+  const [head, ...rest] = path.split('.');
+
+  if (head === 'proxy' && rest.length === 1) {
+    const field = rest[0];
+    const proxy =
+      constants.PROXY_SERVICE_DETAILS[
+        config?.proxy?.id as keyof typeof constants.PROXY_SERVICE_DETAILS
+      ];
+    const name = proxy?.name ?? 'Proxy';
+    const fields: Record<string, Omit<FieldInfo, 'key'>> = {
+      url: {
+        label: `${name} URL`,
+        description: `The URL of your ${name} instance`,
+        type: 'url',
+      },
+      publicUrl: {
+        label: `${name} Public URL`,
+        description: `The public URL of your ${name} instance (if different from URL)`,
+        type: 'url',
+      },
+      credentials: {
+        label: `${name} Credentials`,
+        description: proxy?.credentialDescription,
+        type: 'password',
+      },
+      publicIp: {
+        label: `${name} Public IP`,
+        description: `Public IP address of your ${name} instance`,
+        type: 'string',
+      },
+    };
+    if (fields[field]) return { key: `proxy_${field}`, ...fields[field] };
+  }
+
+  if (
+    rest.length === 0 &&
+    Object.hasOwn(constants.TOP_LEVEL_OPTION_DETAILS, head)
+  ) {
+    const detail =
+      constants.TOP_LEVEL_OPTION_DETAILS[
+        head as keyof typeof constants.TOP_LEVEL_OPTION_DETAILS
+      ];
+    return {
+      key: `toplevel_${head}`,
+      label: detail.name,
+      description: detail.description,
+      type: detail.type,
+    };
+  }
+
+  if (head === 'presets' && rest[1] === 'options') {
+    const preset = asConfigArray(config?.presets)[Number(rest[0])];
+    const presetMeta = status?.settings?.presets?.find(
+      (p: any) => p.ID === preset?.type
+    );
+    const ids = rest.slice(2);
+    const chain = optionChain(presetMeta?.OPTIONS, ids);
+    const option = chain.at(-1);
+    if (preset) {
+      // Every Debridio preset shares the one key.
+      if (chain.length === 1 && option?.id === 'debridioApiKey') {
+        return {
+          key: 'debridioApiKey',
+          label: option.name,
+          description: option.description,
+          type: 'password',
+          optionRequired: option.required === true,
+        };
+      }
+      return {
+        key: `preset_${preset.instanceId}_${ids.join('_')}`,
+        label: [
+          preset.options?.name || preset.type,
+          ...(option ? chain.map((o) => o.name || o.id) : ids),
+        ].join(' - '),
+        description: option?.description,
+        type: inputTypeOf(option?.type),
+        optionRequired: option?.required === true,
+      };
+    }
+  }
+
+  return { key: `path_${path}`, label: path, type: 'string' };
+};
+
+const getPath = (obj: any, path: string): any =>
+  path.split('.').reduce((acc, part) => acc?.[part], obj);
 
 /**
  * Process a template to extract all credential inputs and determine service handling.
@@ -72,168 +207,68 @@ export const processTemplate = (
     }
   }
 
-  // Parse proxy fields
-  if (template.config?.proxy && template.config.proxy.id) {
-    const id = template.config.proxy
-      .id as keyof typeof constants.PROXY_SERVICE_DETAILS;
-    const proxyDetails = constants.PROXY_SERVICE_DETAILS[id];
-    const proxyFields = [
-      'url',
-      'publicUrl',
-      'credentials',
-      'publicIp',
-    ] as const;
+  const config = template.config;
+  const requiredByPath = new Map<string, boolean>();
+  findPlaceholders(config, [], requiredByPath);
 
-    proxyFields.forEach((field) => {
-      const value = template.config.proxy?.[field];
-      const placeholder = parsePlaceholder(value);
-
-      if (placeholder.isPlaceholder) {
-        const fieldLabels: Record<string, string> = {
-          url: `${proxyDetails.name} URL`,
-          publicUrl: `${proxyDetails.name} Public URL`,
-          credentials: `${proxyDetails.name} Credentials`,
-          publicIp: `${proxyDetails.name} Public IP`,
-        };
-
-        const fieldDescriptions: Record<string, string> = {
-          url: `The URL of your ${proxyDetails.name} instance`,
-          publicUrl: `The public URL of your ${proxyDetails.name} instance (if different from URL)`,
-          credentials: proxyDetails.credentialDescription,
-          publicIp: `Public IP address of your ${proxyDetails.name} instance`,
-        };
-
-        inputs.push({
-          key: `proxy_${field}`,
-          path: `proxy.${field}`,
-          label: fieldLabels[field] || field,
-          description: fieldDescriptions[field],
-          type: field === 'credentials' ? 'password' : 'string',
-          required: placeholder.required,
-          value: userData?.proxy?.[field] || '',
-        });
+  asConfigArray(config?.presets).forEach((preset: any, presetIndex: number) => {
+    const presetMeta = status?.settings?.presets?.find(
+      (p: any) => p.ID === preset?.type
+    );
+    presetMeta?.OPTIONS?.forEach((option: Option) => {
+      const path = `presets.${presetIndex}.options.${option.id}`;
+      if (
+        ['string', 'password', 'url'].includes(option.type) &&
+        option.required &&
+        !preset.options?.[option.id] &&
+        !requiredByPath.has(path)
+      ) {
+        requiredByPath.set(path, true);
       }
     });
-  }
-
-  // Parse top-level API keys
-  const topLevelFields = [
-    'tmdbApiKey',
-    'tmdbAccessToken',
-    'tvdbApiKey',
-    'rpdbApiKey',
-    'topPosterApiKey',
-    'aioratingsApiKey',
-    'aioratingsProfileId',
-    'openposterdbApiKey',
-    'openposterdbUrl',
-    'openposterdbParameters',
-  ] as const;
+  });
 
   // The server falls back to these at call time, so an empty value is fine.
-  const instanceProvided: Partial<
-    Record<(typeof topLevelFields)[number], boolean>
-  > = {
+  const instanceProvided: Record<string, boolean | undefined> = {
     tmdbApiKey: !!status?.settings?.metadata?.tmdb?.apiKey,
     tmdbAccessToken: !!status?.settings?.metadata?.tmdb?.accessToken,
     tvdbApiKey: !!status?.settings?.metadata?.tvdb?.apiKey,
+    pmdbApiKey: status?.settings?.jellyfin?.segments.providers.some(
+      (p) => p.id === 'pmdb' && p.key === 'instance'
+    ),
   };
 
-  topLevelFields.forEach((field) => {
-    const value = template.config?.[field];
-    const placeholder = parsePlaceholder(value);
+  requiredByPath.forEach((placeholderRequired, path) => {
+    const { optionRequired, ...field } = describeField(path, config, status);
+    const provided = instanceProvided[path] === true;
+    const required = (placeholderRequired || !!optionRequired) && !provided;
 
-    if (placeholder.isPlaceholder) {
-      const detail = constants.TOP_LEVEL_OPTION_DETAILS?.[field];
-      const provided = instanceProvided[field] === true;
-      const description = provided
+    const existing = inputs.find((input) => input.key === field.key);
+    if (existing) {
+      existing.path = [existing.path, path].flat();
+      existing.required ||= required;
+      return;
+    }
+
+    const current = getPath(userData, path);
+    inputs.push({
+      ...field,
+      description: provided
         ? [
-            detail?.description,
+            field.description,
             'This instance provides a default. Leave blank to use it, or enter your own to override.',
           ]
             .filter(Boolean)
             .join(' ')
-        : detail?.description;
-      // Most top-level fields are API keys/tokens (secret), but a few are plain
-      // config values that should not be masked in the template input UI.
-      const type: AllowedInputType =
-        field === 'aioratingsProfileId' ||
-        field === 'openposterdbUrl' ||
-        field === 'openposterdbParameters'
-          ? 'string'
-          : 'password';
-      inputs.push({
-        key: `toplevel_${field}`,
-        path: field,
-        label: detail?.name || field,
-        description,
-        type,
-        required: placeholder.required && !provided,
-        value: userData?.[field] || '',
-      });
-    }
+        : field.description,
+      path,
+      required,
+      value:
+        typeof current === 'string' && !parsePlaceholder(current).isPlaceholder
+          ? current
+          : '',
+    });
   });
-
-  // Parse preset options
-  asConfigArray(template.config?.presets).forEach(
-    (preset: any, presetIndex: number) => {
-      const presetMeta = status?.settings?.presets?.find(
-        (p: any) => p.ID === preset.type
-      );
-
-      if (!presetMeta) return;
-
-      presetMeta.OPTIONS?.forEach((option: any) => {
-        if (option.type === 'string' || option.type === 'password') {
-          const currentValue = preset.options?.[option.id];
-          const placeholder = parsePlaceholder(currentValue);
-
-          if (placeholder.isPlaceholder || (option.required && !currentValue)) {
-            if (option.id === 'debridioApiKey') {
-              const debridioApiKeyInput = inputs.find(
-                (input) => input.key === 'debridioApiKey'
-              );
-              if (debridioApiKeyInput) {
-                if (Array.isArray(debridioApiKeyInput.path)) {
-                  debridioApiKeyInput.path.push(
-                    `presets.${presetIndex}.options.${option.id}`
-                  );
-                } else {
-                  debridioApiKeyInput.path = [
-                    debridioApiKeyInput.path,
-                    `presets.${presetIndex}.options.${option.id}`,
-                  ];
-                }
-              } else {
-                inputs.push({
-                  key: 'debridioApiKey',
-                  path: `presets.${presetIndex}.options.${option.id}`,
-                  label: 'Debridio API Key',
-                  description: option.description,
-                  type: 'password',
-                  required: true,
-                  value:
-                    userData?.presets?.[presetIndex]?.options?.[option.id] ||
-                    '',
-                });
-              }
-            } else {
-              inputs.push({
-                key: `preset_${preset.instanceId}_${option.id}`,
-                path: `presets.${presetIndex}.options.${option.id}`,
-                label: `${preset.options?.name || preset.type} - ${option.name || option.id}`,
-                description: option.description,
-                type: option.type === 'password' ? 'password' : 'string',
-                required: placeholder.required || option.required || false,
-                value:
-                  userData?.presets?.[presetIndex]?.options?.[option.id] || '',
-              });
-            }
-          }
-        }
-      });
-    }
-  );
 
   return {
     template,

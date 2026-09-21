@@ -647,6 +647,33 @@ export const builtinsSchema = {
       requiresRestart: false,
       secret: false,
     },
+    maxResults: {
+      schema: positiveInt,
+      default: 1000,
+      label: 'Newznab/Torznab max results per request',
+      env: 'BUILTIN_NAB_MAX_RESULTS',
+      description:
+        'Most results taken from a single Newznab/Torznab response. The ' +
+        'requested `limit` is capped to this, and parsing stops here even ' +
+        'when an indexer ignores `limit` and returns everything it has. ' +
+        'Raising it costs CPU and cache space on indexers that return ' +
+        'thousands of results per query.',
+      requiresRestart: false,
+      secret: false,
+    },
+    maxResponseBytes: {
+      schema: byteSize,
+      default: 10 * MB,
+      label: 'Newznab/Torznab max response size',
+      env: 'BUILTIN_NAB_MAX_RESPONSE_BYTES',
+      description:
+        'Largest Newznab/Torznab response body downloaded. Past this the ' +
+        'download is cut off and only the whole results received so far are ' +
+        'used, rather than failing the search. Accepts plain bytes or ' +
+        '`10MB`-style strings.',
+      requiresRestart: false,
+      secret: false,
+    },
     zyclopsHealthProxyEndpoint: {
       schema: urlString,
       default: 'https://zyclops.elfhosted.com',

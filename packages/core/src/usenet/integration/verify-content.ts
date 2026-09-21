@@ -5,6 +5,7 @@ import {
   type UsenetLibraryEntry,
   type UsenetLibraryFile,
 } from '../../db/index.js';
+import type { Nzb, UsenetEngine } from '../index.js';
 import { detectFileType, isMediaCategory } from '../pool/file-type.js';
 import { libraryFileName, libraryFileToken } from './library.js';
 import { openUsenetStream } from './stream-session.js';
@@ -25,8 +26,16 @@ const logger = createLogger('usenet/verify');
 
 /** Enough for every signature we know, ISO's volume descriptor included. */
 const HEAD_BYTES = 40 * 1024;
+const IMPORT_CONCURRENCY = 4;
 
 export type ContentVerdict = 'ok' | 'bad' | 'inconclusive';
+
+export const CONTENT_MISMATCH = {
+  code: 'content_mismatch',
+  reason:
+    'File contents do not match the release: the articles are all there, ' +
+    'but they do not assemble into the media this claims to be',
+};
 
 /** Extensions whose container we can positively identify from the head. */
 const KNOWN_CONTAINERS = new Set([
@@ -51,9 +60,107 @@ const KNOWN_CONTAINERS = new Set([
   'aiff',
 ]);
 
+const SIGNATURE_AT_START = new Set([
+  'mkv',
+  'webm',
+  'mka',
+  'avi',
+  'wav',
+  'flac',
+  'ogg',
+  'oga',
+  'opus',
+  'aiff',
+]);
+
 function extensionOf(name: string): string | undefined {
   const match = /\.([a-z0-9]+)$/i.exec(name);
   return match?.[1]?.toLowerCase();
+}
+
+function isKnownContainer(name: string): boolean {
+  const ext = extensionOf(name);
+  return ext !== undefined && KNOWN_CONTAINERS.has(ext);
+}
+
+/**
+ * Check one file's head. A head that matches any container we recognise
+ * passes: a `.mkv` that is really an MP4 is mislabelled, not damaged, and the
+ * players we serve do not care. A head that matches nothing at all condemns
+ * only containers whose signature always sits at byte 0.
+ */
+function judgeHead(
+  nzbHash: string,
+  name: string,
+  head: Buffer
+): ContentVerdict {
+  if (head.length < 12) return 'inconclusive';
+  // Magic only: the name would vouch for any head.
+  const detected = detectFileType(head);
+  if (isMediaCategory(detected.category)) return 'ok';
+  if (
+    detected.category === 'other' &&
+    !SIGNATURE_AT_START.has(extensionOf(name) ?? '')
+  ) {
+    return 'inconclusive';
+  }
+  // Archives and par2 blocks are legitimate members of a release, just not
+  // of a file calling itself an .mkv: that is the assembly going wrong.
+  logger.warn(
+    { nzbHash, file: name, detected: detected.format ?? detected.category },
+    'file head is not the container its name claims'
+  );
+  return 'bad';
+}
+
+/**
+ * Check an import's playback targets before the entry is served, so a resolve
+ * can fail over instead. Stops at the first bad file.
+ */
+export async function verifyImportContent(
+  engine: UsenetEngine,
+  nzb: Nzb,
+  files: UsenetLibraryFile[],
+  signal?: AbortSignal
+): Promise<ContentVerdict> {
+  if (!appConfig.usenet.verifyContent) return 'inconclusive';
+  const checkable = files.filter((f) =>
+    isKnownContainer(f.name ?? f.path ?? '')
+  );
+  let verdict: ContentVerdict = 'inconclusive';
+  let next = 0;
+  const worker = async (): Promise<void> => {
+    while (verdict !== 'bad' && next < checkable.length) {
+      const file = checkable[next++];
+      const name = file.name ?? file.path ?? '';
+      try {
+        const head = await engine.readTargetHead(
+          nzb,
+          { index: file.index, layout: file.layout },
+          HEAD_BYTES,
+          signal
+        );
+        if (!head) continue;
+        const fileVerdict = judgeHead(nzb.hash, name, head);
+        if (fileVerdict === 'bad' || verdict === 'inconclusive') {
+          verdict = fileVerdict;
+        }
+      } catch (err) {
+        if (signal?.aborted) throw err;
+        logger.debug(
+          { nzbHash: nzb.hash, file: name, err: (err as Error)?.message },
+          'content verification could not read a file'
+        );
+      }
+    }
+  };
+  await Promise.all(
+    Array.from(
+      { length: Math.min(IMPORT_CONCURRENCY, checkable.length) },
+      worker
+    )
+  );
+  return verdict;
 }
 
 async function readHead(
@@ -81,37 +188,15 @@ async function readHead(
   return total > 0 ? Buffer.concat(chunks) : undefined;
 }
 
-/**
- * Check one file's head. A head that matches any container we recognise
- * passes: a `.mkv` that is really an MP4 is mislabelled, not damaged, and the
- * players we serve do not care. Only a file whose extension promises a
- * container we know, whose head matches nothing at all, is condemned.
- */
 async function verifyFile(
   entry: UsenetLibraryEntry,
   file: UsenetLibraryFile,
   signal?: AbortSignal
 ): Promise<ContentVerdict> {
   const name = libraryFileName(entry, file);
-  const ext = extensionOf(name);
-  if (!ext || !KNOWN_CONTAINERS.has(ext)) return 'inconclusive';
-
+  if (!isKnownContainer(name)) return 'inconclusive';
   const head = await readHead(entry, file, signal);
-  if (!head || head.length < 12) return 'inconclusive';
-
-  const detected = detectFileType(head, name);
-  if (isMediaCategory(detected.category)) return 'ok';
-  // Archives and par2 blocks are legitimate members of a release, just not
-  // of a file calling itself an .mkv: that is the assembly going wrong.
-  logger.warn(
-    {
-      nzbHash: entry.nzbHash,
-      file: name,
-      detected: detected.format ?? detected.category,
-    },
-    'file head is not the container its name claims'
-  );
-  return 'bad';
+  return head ? judgeHead(entry.nzbHash, name, head) : 'inconclusive';
 }
 
 /**
@@ -163,10 +248,9 @@ export async function verifyEntryContentAndMark(
   if (verdict === 'bad') {
     await UsenetLibraryRepository.markFailed(
       nzbHash,
-      'File contents do not match the release: the articles are all there, ' +
-        'but they do not assemble into the media this claims to be',
+      CONTENT_MISMATCH.reason,
       entry.name,
-      'content_mismatch'
+      CONTENT_MISMATCH.code
     );
     logger.warn(
       { nzbHash, name: entry.name },

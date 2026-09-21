@@ -7,7 +7,9 @@ import {
   BiFolderOpen,
   BiData,
   BiDownload,
+  BiFilm,
   BiGroup,
+  BiHistory,
   BiInfoCircle,
   BiKey,
   BiListUl,
@@ -18,6 +20,7 @@ import {
   BiShareAlt,
   BiSitemap,
   BiTachometer,
+  BiTv,
   BiTransferAlt,
   BiUserCheck,
 } from 'react-icons/bi';
@@ -393,6 +396,26 @@ export const TAB_MANIFEST: Record<string, Omit<TabDef, 'section'>> = {
     icon: BiPlayCircle,
     group: 'Traffic',
     order: 330,
+  },
+
+  // --- other apps and services ----------------------------------------------
+  jellyfin: {
+    label: 'Jellyfin',
+    icon: BiTv,
+    group: 'Integrations',
+    order: 410,
+  },
+  watchState: {
+    label: 'Watch State',
+    icon: BiHistory,
+    group: 'Integrations',
+    order: 420,
+  },
+  remuxdb: {
+    label: 'RemuxDB',
+    icon: BiFilm,
+    group: 'Integrations',
+    order: 430,
   },
 };
 

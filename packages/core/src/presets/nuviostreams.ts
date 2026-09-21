@@ -243,6 +243,12 @@ export class NuvioStreamsPreset extends Preset {
       OPTIONS: options,
       SUPPORTED_STREAM_TYPES: [constants.HTTP_STREAM_TYPE],
       SUPPORTED_RESOURCES: supportedResources,
+      DISABLED: {
+        reason:
+          'Addon is deprecated. Its instance now redirects to a notice pointing users at other addons.',
+        removed: true,
+        disabled: true,
+      },
     };
   }
 

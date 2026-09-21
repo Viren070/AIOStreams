@@ -5,6 +5,7 @@ import {
   VolumeBlock,
   ENDARC_SKIP_BYTES,
   MAX_BLOCKS_PER_VOLUME,
+  VolumeSizeMismatchError,
 } from './types.js';
 import { findSignature } from './scan.js';
 import { parseRar5Block, blockKeyFromCrypt } from './rar5.js';
@@ -111,9 +112,18 @@ export async function walkVolume(
       abs = re.dataStart;
     }
   }
+  let error: Error | undefined;
+  if (ctx.perVolume && out.length > 0) {
+    const last = out[out.length - 1].fragment;
+    const dataEnd = last.offset + last.length;
+    if (dataEnd > ctx.range.end) {
+      error = new VolumeSizeMismatchError(ctx.range.end, dataEnd);
+    }
+  }
   return {
     version,
     blocks: out,
+    error,
     encrypted: encrypted || undefined,
     volumeNumber,
   };

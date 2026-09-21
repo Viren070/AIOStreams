@@ -10,17 +10,6 @@ import { config as appConfig } from '../../config/index.js';
 import z from 'zod';
 import { searchWithBackgroundRefresh } from '../utils/general.js';
 
-interface ResponseMeta {
-  headers: Record<string, string>;
-  status: number;
-  statusText: string;
-}
-
-interface ProwlarrApiResponse<T> {
-  data: T;
-  meta: ResponseMeta;
-}
-
 interface ProwlarrConfig {
   baseUrl: string;
   apiKey: string;
@@ -65,13 +54,11 @@ const ProwlarrApiIndexersListSchema = z.array(ProwlarrApiIndexerSchema);
 
 const ProwlarrApiSearchItemSchema = z.object({
   guid: z.string().optional(), // can sometimes be the raw magnet url
-  age: z.number(), // in days
+  ageHours: z.number(),
   size: z.number(),
-  indexerId: z.number(),
   indexer: z.string(),
   title: z.string(),
   downloadUrl: z.url().optional(),
-  indexerFlags: z.array(z.string()),
   magnetUrl: z.url().optional(),
   infoHash: z
     .string()
@@ -92,18 +79,20 @@ class ProwlarrApi {
 
   private readonly baseApiPath = '/api/v1';
 
+  // v2: the cached value is the result list, no longer wrapped with the
+  // upstream response headers.
   private readonly searchCache = Cache.getInstance<
     string,
-    ProwlarrApiResponse<ProwlarrApiSearchItem[]>
-  >('prowlarr-api:search');
+    ProwlarrApiSearchItem[]
+  >('prowlarr-api:search:v2');
 
   private readonly indexersCache = Cache.getInstance<
     string,
     ProwlarrApiIndexer[]
-  >('prowlarr-api:indexers');
+  >('prowlarr-api:indexers:v2');
 
   private readonly tagsCache = Cache.getInstance<string, ProwlarrApiTagItem[]>(
-    'prowlarr-api:tags'
+    'prowlarr-api:tags:v2'
   );
 
   #headers: Record<string, string>;
@@ -120,7 +109,7 @@ class ProwlarrApi {
     this.#timeout = config.timeout;
   }
 
-  async tags(): Promise<ProwlarrApiResponse<ProwlarrApiTagItem[]>> {
+  async tags(): Promise<ProwlarrApiTagItem[]> {
     return this.tagsCache.wrap(
       () =>
         this.request<ProwlarrApiTagItem[]>(
@@ -133,7 +122,7 @@ class ProwlarrApi {
     );
   }
 
-  async indexers(): Promise<ProwlarrApiResponse<ProwlarrApiIndexer[]>> {
+  async indexers(): Promise<ProwlarrApiIndexer[]> {
     return this.indexersCache.wrap(
       () =>
         this.request<ProwlarrApiIndexer[]>(
@@ -159,7 +148,7 @@ class ProwlarrApi {
     type: 'search';
     limit?: number;
     offset?: number;
-  }): Promise<ProwlarrApiResponse<ProwlarrApiSearchItem[]>> {
+  }): Promise<ProwlarrApiSearchItem[]> {
     const cacheKey = `${this.baseUrl}:${type}:${query}:${indexerIds.join(',')}:${limit}:${offset}`;
 
     return searchWithBackgroundRefresh({
@@ -179,7 +168,7 @@ class ProwlarrApi {
           },
           ProwlarrApiSearchSchema
         ),
-      isEmptyResult: (result) => result.data.length === 0,
+      isEmptyResult: (result) => result.length === 0,
       logger,
     });
   }
@@ -196,7 +185,7 @@ class ProwlarrApi {
     > = {},
     schema: z.ZodType<T>,
     timeout?: number
-  ): Promise<ProwlarrApiResponse<T>> {
+  ): Promise<T> {
     const { result } = await DistributedLock.getInstance().withLock(
       `${this.getPath(endpoint)}:${JSON.stringify(params)}`,
       () => this._request(endpoint, params, schema, timeout),
@@ -216,7 +205,7 @@ class ProwlarrApi {
     > = {},
     schema: z.ZodType<T>,
     timeout?: number
-  ): Promise<ProwlarrApiResponse<T>> {
+  ): Promise<T> {
     const url = new URL(this.getPath(endpoint));
     const headers = this.#headers;
 
@@ -238,12 +227,6 @@ class ProwlarrApi {
       headers,
       timeout: timeout ?? this.#timeout,
     });
-
-    const meta: ResponseMeta = {
-      headers: Object.fromEntries(response.headers.entries()),
-      status: response.status,
-      statusText: response.statusText,
-    };
 
     if (!response.ok) {
       try {
@@ -271,10 +254,7 @@ class ProwlarrApi {
       );
     }
 
-    return {
-      data,
-      meta,
-    };
+    return data;
   }
 }
 

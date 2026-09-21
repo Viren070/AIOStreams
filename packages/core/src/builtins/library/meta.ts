@@ -14,7 +14,7 @@ import {
 import { Meta } from '../../db/schemas.js';
 import { formatSmartBytes } from '../../formatters/utils.js';
 import { parseTorrentTitleCached } from '../../parser/title.js';
-import { LIBRARY_ID_PREFIX } from './catalog.js';
+import { LIBRARY_ID_PREFIX, buildLibraryId } from './catalog.js';
 
 const logger = createLogger('library:meta');
 
@@ -38,8 +38,16 @@ export function parseLibraryId(id: string): {
   return {
     serviceId: parts[1] as BuiltinServiceId,
     itemType: parts[2] as 'torrent' | 'usenet' | 'action',
-    itemId: parts.slice(3).join('.'),
+    itemId: decodeItemId(parts.slice(3).join('.')),
   };
+}
+
+function decodeItemId(itemId: string): string {
+  try {
+    return decodeURIComponent(itemId);
+  } catch {
+    return itemId;
+  }
 }
 
 export async function fetchItem(
@@ -95,7 +103,8 @@ export function buildMeta(
   itemType: 'torrent' | 'usenet'
 ): Meta {
   logger.debug({ item, id }, 'Building library meta for item');
-  const videos = buildVideos(item, id);
+  const { serviceId, itemId } = parseLibraryId(id);
+  const videos = buildVideos(item, buildLibraryId(serviceId, itemType, itemId));
   const parsed = parseTorrentTitleCached(item.name ?? '');
   const descriptionParts: string[] = [];
 

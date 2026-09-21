@@ -18,7 +18,7 @@ export class AnimeToshoNewPreset extends TorznabPreset {
         id: 'apiKey',
         name: 'API Key',
         description:
-          'Anime Tosho (New) API key. Register a free account and find this in your profile settings.',
+          'Anime Tosho (New) API key. Register a free account and find this in your [profile settings](https://animetosho.xyz/profile).',
         type: 'password',
         required: true,
       },

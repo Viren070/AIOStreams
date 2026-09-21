@@ -20,7 +20,49 @@ export type FetchRemoteResult =
   | { notModified: true }
   | { notModified: false; status: number; body: Buffer; etag: string | null };
 
-async function readBodyCapped(
+export interface CappedBody {
+  body: Buffer;
+  bytes: number;
+  /** The body was longer than `maxBytes`; everything past it was dropped. */
+  truncated: boolean;
+}
+
+/**
+ * Reads at most `maxBytes`, then stops and cancels the rest of the stream.
+ * Unlike {@link readBodyCapped} an over-long body is not an error: the caller
+ * gets the prefix that fit and decides what a partial answer is worth.
+ */
+export async function readBodyUpTo(
+  res: Response,
+  maxBytes: number
+): Promise<CappedBody> {
+  if (!res.body) return { body: Buffer.alloc(0), bytes: 0, truncated: false };
+  const chunks: Buffer[] = [];
+  let total = 0;
+  let truncated = false;
+  for await (const chunk of res.body as AsyncIterable<Uint8Array>) {
+    const room = maxBytes - total;
+    if (chunk.byteLength > room) {
+      if (room > 0) {
+        chunks.push(Buffer.from(chunk.subarray(0, room)));
+        total += room;
+      }
+      truncated = true;
+      // Leaving the loop cancels the underlying stream.
+      break;
+    }
+    chunks.push(Buffer.from(chunk));
+    total += chunk.byteLength;
+  }
+  return { body: Buffer.concat(chunks, total), bytes: total, truncated };
+}
+
+/**
+ * Reads a response body, refusing it above `maxBytes` on the declared length
+ * and again as the bytes arrive. Throws rather than truncating, so a caller
+ * cannot mistake a short read for a complete answer.
+ */
+export async function readBodyCapped(
   res: Response,
   maxBytes: number
 ): Promise<Buffer> {
@@ -28,17 +70,11 @@ async function readBodyCapped(
   if (declared > maxBytes) {
     throw new Error(`response exceeds the ${maxBytes} byte limit`);
   }
-  if (!res.body) return Buffer.alloc(0);
-  const chunks: Buffer[] = [];
-  let total = 0;
-  for await (const chunk of res.body as AsyncIterable<Uint8Array>) {
-    total += chunk.byteLength;
-    if (total > maxBytes) {
-      throw new Error(`response exceeds the ${maxBytes} byte limit`);
-    }
-    chunks.push(Buffer.from(chunk));
+  const { body, truncated } = await readBodyUpTo(res, maxBytes);
+  if (truncated) {
+    throw new Error(`response exceeds the ${maxBytes} byte limit`);
   }
-  return Buffer.concat(chunks);
+  return body;
 }
 
 /**

@@ -9,6 +9,13 @@ const logger = createLogger('builtin:scrape');
 export const createQueryLimit = () =>
   pLimit(appConfig.builtins.scrape.queryConcurrency);
 
+/** Hours since `date` (e.g. an indexer's pubDate), or undefined if unparsable or in the future. */
+export function ageInHoursSince(date: string): number | undefined {
+  const diffMs = Date.now() - new Date(date).getTime();
+  if (!Number.isFinite(diffMs) || diffMs < 0) return undefined;
+  return Math.ceil(diffMs / (1000 * 60 * 60));
+}
+
 /**
  * Checks whether a raw release title contains one of the given air dates
  * ('YYYY-MM-DD')

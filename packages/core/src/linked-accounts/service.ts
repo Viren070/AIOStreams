@@ -1,8 +1,5 @@
 import { config as appConfig } from '../config/index.js';
-import {
-  LinkedAccountRepository,
-  MAX_LINKED_ACCOUNTS_PER_USER,
-} from '../db/repositories/linked-accounts.js';
+import { LinkedAccountRepository } from '../db/repositories/linked-accounts.js';
 import { APIError, ErrorCode } from '../utils/constants.js';
 import { createLogger } from '../logging/logger.js';
 import { manifestSetFingerprint } from '../utils/manifest-fingerprint.js';
@@ -63,14 +60,12 @@ export class LinkedAccountService {
   ): Promise<LinkedAccount> {
     assertEnabled();
 
-    if (
-      (await LinkedAccountRepository.countForUser(uuid)) >=
-      MAX_LINKED_ACCOUNTS_PER_USER
-    ) {
+    const max = appConfig.linkedAccounts.maxPerUser;
+    if ((await LinkedAccountRepository.countForUser(uuid)) >= max) {
       throw new APIError(
         ErrorCode.BAD_REQUEST,
         400,
-        `You can link at most ${MAX_LINKED_ACCOUNTS_PER_USER} accounts.`
+        `You can link at most ${max} accounts.`
       );
     }
 

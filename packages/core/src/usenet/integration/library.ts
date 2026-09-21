@@ -1,7 +1,5 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { ParsedResult } from '@viren070/parse-torrent-title';
-import { parseTorrentTitleCached } from '../../parser/title.js';
 import {
   appConfig,
   downloadManager,
@@ -20,6 +18,8 @@ import {
   NZB,
   selectFileInTorrentOrNZB,
   hashNzbUrl,
+  parseFileNames,
+  selectableFileNames,
 } from '../../debrid/utils.js';
 import {
   ArticleNotFoundError,
@@ -54,9 +54,11 @@ import {
   attachProvisionalHoles,
   spawnCensusShadow,
   isCensusShadowLive,
+  cancelCensusShadow,
+  cancelAllCensusShadows,
   type CensusOutcome,
 } from './census-shadow.js';
-import { verifyEntryContentAndMark } from './verify-content.js';
+import { CONTENT_MISMATCH, verifyImportContent } from './verify-content.js';
 import {
   classifyNoStreamable,
   classifyAvailability,
@@ -143,7 +145,7 @@ const parsedNzbSweepTimer = setInterval(() => {
 parsedNzbSweepTimer.unref?.();
 
 function rememberParsedNzbAlias(hash: string, contentHash: string): void {
-  if (hash === contentHash) return;
+  if (!hash || hash === contentHash) return;
   parsedNzbAliases.delete(hash);
   parsedNzbAliases.set(hash, contentHash);
   while (parsedNzbAliases.size > PARSED_NZB_MAX_ALIASES) {
@@ -582,7 +584,19 @@ async function importNzb(
       });
     }
 
+    if (
+      (await verifyImportContent(engine, nzb, playable, jobSignal)) === 'bad'
+    ) {
+      const { code, reason } = CONTENT_MISMATCH;
+      content.census?.cancel();
+      recordOnce('failed', { errorCode: code });
+      throw await failImport(nzbHash, name, reason, code, {
+        reasonCode: code,
+      });
+    }
+
     const best = playable.reduce((a, b) => (b.size > a.size ? b : a));
+    engine.warmTarget(nzb, { index: best.index, layout: best.layout });
     // Small damage the census confirmed within the blocking window: the entry
     // lands as degraded with its per-file hole map attached (playback
     // pre-pads).
@@ -628,7 +642,6 @@ async function importNzb(
       engine,
       releaseKey: spec.releaseKey,
       onSettled: async (outcome) => {
-        if (outcome !== 'failed') await verifyEntryContentAndMark(nzbHash);
         if (origin === 'sabnzbd') {
           await handleArrCensusSettled(nzbHash, outcome);
         }
@@ -890,6 +903,17 @@ export async function resolveFileList(
   };
 }
 
+/** Every removal path goes through here so a background audit never outlives its row. */
+export async function deleteUsenetLibraryEntry(nzbHash: string): Promise<void> {
+  cancelCensusShadow(nzbHash);
+  await UsenetLibraryRepository.delete(nzbHash);
+}
+
+export async function clearUsenetLibrary(): Promise<void> {
+  cancelAllCensusShadows();
+  await UsenetLibraryRepository.clear();
+}
+
 /**
  * Pick the file to play. Honours an explicit `fileIndex`, short-circuits a
  * single-file NZB, and otherwise defers to the shared metadata-aware
@@ -909,10 +933,7 @@ export async function selectStreamFile(
 
   const title = playbackInfo.filename ?? filename;
   const totalSize = files.reduce((s, f) => s + f.size, 0);
-  const parsedFiles = new Map<string, ParsedResult>();
-  for (const s of [title, ...files.map((f) => f.name ?? '')]) {
-    if (!parsedFiles.has(s)) parsedFiles.set(s, parseTorrentTitleCached(s));
-  }
+  const parsedFiles = await parseFileNames(selectableFileNames(title, files));
 
   const nzbInfo: NZB = {
     type: 'usenet',
@@ -1059,7 +1080,8 @@ export async function addUsenetNzb(opts: {
   }
   let nzb: Nzb;
   try {
-    nzb = await parseNzb(xml);
+    // Cached under the content hash so the first play does not re-parse the XML.
+    nzb = await parseNzbCached('', xml);
   } catch (err) {
     recordGrabOutcome({
       indexer: indexerLabelFor(undefined, opts.url),
@@ -1187,7 +1209,7 @@ export async function removeForArr(
   const imported = entry.status === 'available' || entry.status === 'degraded';
   const copied = appConfig.arr.importMode === 'content' && opts.deleteFiles;
   if (!imported || copied) {
-    await UsenetLibraryRepository.delete(nzbHash);
+    await deleteUsenetLibraryEntry(nzbHash);
     return 'deleted';
   }
   await UsenetLibraryRepository.setHidden(nzbHash, true);
@@ -1332,7 +1354,7 @@ async function requeueEntry(
   const grabMs = Date.now() - fetchStart;
   let nzb: Nzb;
   try {
-    nzb = await parseNzb(xml);
+    nzb = await parseNzbCached(entry.nzbHash, xml);
   } catch (err) {
     recordGrabOutcome({
       indexer: indexerLabelFor(undefined, nzbUrl),
@@ -1352,7 +1374,7 @@ async function requeueEntry(
   // The source URL may serve different content than when the row was
   // created; trust the fresh parse
   if (nzb.hash !== entry.nzbHash) {
-    await UsenetLibraryRepository.delete(entry.nzbHash).catch(() => {});
+    await deleteUsenetLibraryEntry(entry.nzbHash).catch(() => {});
   }
   if (!nzbUrl.startsWith(LOCAL_NZB_SCHEME)) {
     await UsenetLibraryRepository.recordAlias(

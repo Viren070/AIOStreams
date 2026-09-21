@@ -28,6 +28,7 @@ import {
   findArticleNotFound,
   cryptFailure,
 } from './parse.js';
+import { VolumeSizeMismatchError } from '../rar/types.js';
 import {
   MAX_NEST_DEPTH,
   groupNestedArchives,
@@ -417,10 +418,17 @@ export async function inspectArchiveSets(
           heads.slice(1, -1).some((h) => h === undefined) &&
           memberFiles.every((f) => f?.firstSegmentNumber === 1);
         const attempt = async (
-          memberSizes: (number | undefined)[]
+          memberSizes: (number | undefined)[],
+          exact = false
         ): Promise<ArchiveSetInfo> => {
           const lazy = lazyFor(memberSizes);
-          const vs = await openVolumeSet(set, opener, memberSizes, concurrency);
+          const vs = await openVolumeSet(
+            set,
+            opener,
+            memberSizes,
+            concurrency,
+            exact
+          );
           const archiveBytes = vs.size();
           let { entries, volumeErrors } = await parseArchiveEntries(
             vs,
@@ -459,12 +467,26 @@ export async function inspectArchiveSets(
               }
             ));
           }
+          // An inferred size the headers contradict would splice the next
+          // volume's bytes into this one: re-probe every inferred member.
+          const sizeMismatch = volumeErrors.find(
+            (v) => v.error instanceof VolumeSizeMismatchError
+          );
+          if (sizeMismatch && !exact && memberFiles.some((f) => f?.inferred)) {
+            throw sizeMismatch.error;
+          }
+          // Persisted layouts carry the resolved sizes so a reopen never re-probes.
+          const resolvedSizes = vs.volumeRanges().map((r) => r.end - r.start);
           const inner = await listInnerRecursive(
             vs,
             entries,
             0,
             password,
-            { kind: set.kind, memberIndices: set.memberIndices, memberSizes },
+            {
+              kind: set.kind,
+              memberIndices: set.memberIndices,
+              memberSizes: resolvedSizes,
+            },
             [],
             parseConcurrency,
             opts.signal
@@ -581,7 +603,8 @@ export async function inspectArchiveSets(
             );
             try {
               return await attempt(
-                memberFiles.map((f) => (f?.inferred ? undefined : f?.size))
+                memberFiles.map((f) => (f?.inferred ? undefined : f?.size)),
+                true
               );
             } catch (err2) {
               warn(err2, 'archive inspect failed');

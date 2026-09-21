@@ -1,4 +1,5 @@
 import { log } from './logger';
+import { resolveDownloadDir } from './preferences';
 import { ResultsPanel } from './results-panel';
 import { Context, DownloadRecord } from './types';
 
@@ -60,13 +61,20 @@ export class DownloadManager {
     const url = result?.url ?? result?.externalUrl;
     if (!url || !result) return;
 
+    let downloadDir: string;
+    try {
+      downloadDir = resolveDownloadDir(this.ctx.preferences.downloadLocation);
+    } catch (err) {
+      log.error('could not resolve download location', err);
+      const msg = err instanceof Error ? err.message : String(err);
+      this.ctx.toast.error(`Could not resolve the download location: ${msg}`);
+      return;
+    }
+
     const filename = deriveFilename(url, result.name, result.filename);
     const baseDir = result.folderName
-      ? $filepath.join(
-          this.ctx.preferences.downloadLocation,
-          sanitiseFilename(result.folderName)
-        )
-      : this.ctx.preferences.downloadLocation;
+      ? $filepath.join(downloadDir, sanitiseFilename(result.folderName))
+      : downloadDir;
     const filePath = $filepath.join(baseDir, filename);
     this.active.add(index);
 
@@ -105,7 +113,7 @@ export class DownloadManager {
     }
 
     // Initial state to webview so the button updates immediately
-    this.panel.channel.send('download-progress', {
+    this.panel.send('download-progress', {
       index,
       sessionId,
       status: 'downloading',
@@ -121,7 +129,7 @@ export class DownloadManager {
       const status = progress.status;
       record.percentage = percentage ?? 0;
 
-      this.panel.channel.send('download-progress', {
+      this.panel.send('download-progress', {
         index,
         sessionId,
         status,

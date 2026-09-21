@@ -106,6 +106,8 @@ export interface Metadata {
   episodeAirDates?: string[];
   /** episodeAirDates[0], the highest-priority date. */
   episodeAirDate?: string;
+  /** When the requested episode aired, as the request numbers it. */
+  episodeReleased?: string;
   /** Season number the requested season resolved to (differs from the request under ordinal fallback). */
   resolvedSeasonNumber?: number;
   /** First episode number of the resolved season (>1 means continuous absolute numbering). */

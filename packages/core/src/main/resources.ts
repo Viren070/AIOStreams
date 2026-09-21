@@ -17,6 +17,7 @@ import { FeatureControl } from '../utils/feature.js';
 import { StreamContext, StreamUtils } from '../streams/index.js';
 import { buildPlayChain, type FailoverContentType } from './play-chain.js';
 import { resolveServiceWrappedStreams } from './serviceWrapper.js';
+import { resolveRemuxDbMediaInfo } from '../remuxdb/wrap.js';
 import type { ServiceWrapServiceTiming } from './serviceWrapper.js';
 import type { PrecomputeSubTimings } from '../streams/precomputer.js';
 import { StreamSelector } from '../parser/streamExpression.js';
@@ -39,6 +40,7 @@ import { precacheCache } from './caches.js';
 import {
   applyPosterModifications,
   convertDiscoverDeepLinks,
+  withQualifiedCollection,
 } from './catalog.js';
 import {
   hmac,
@@ -153,7 +155,7 @@ function getAddonsForResource(
  *  1. Addons with a matching idPrefix (tried first, errors are reported)
  *  2. Addons with general type support and no idPrefixes (fallback, errors are silently skipped)
  */
-function getMetaCandidates(
+export function getMetaCandidates(
   ctx: Pick<AIOStreamsContext, 'supportedResources' | 'addons'>,
   type: string,
   id: string
@@ -248,6 +250,7 @@ export async function processStreams(
     includeExternalFailover?: boolean;
     sameReleaseLimit: number;
     duplicateStaggerMs: number;
+    onlySameReleaseFailover: boolean;
   }
 ): Promise<{
   streams: ParsedStream[];
@@ -256,6 +259,7 @@ export async function processStreams(
     metaFilterMs: number;
     serviceWrapMs: number;
     serviceWrapTimings?: Record<string, ServiceWrapServiceTiming>;
+    remuxDbMs: number;
     filterMs: number;
     deduplicationMs: number;
     precomputeMs: number;
@@ -272,6 +276,7 @@ export async function processStreams(
   let metaFilterMs = 0;
   let serviceWrapMs = 0;
   let serviceWrapTimings: Record<string, ServiceWrapServiceTiming> | undefined;
+  let remuxDbMs = 0;
   let filterMs = 0;
   let deduplicationMs = 0;
   let precomputeMs = 0;
@@ -280,8 +285,15 @@ export async function processStreams(
   let limitMs = 0;
   let selMs = 0;
 
+  const withRemuxDb = async (streams: ParsedStream[]) => {
+    const start = Date.now();
+    await resolveRemuxDbMediaInfo(streams, context, ctx.userData);
+    remuxDbMs += Date.now() - start;
+  };
+
   if (isMeta) {
     await ctx.precomputer.precomputeSeaDexOnly(processedStreams, context);
+    await withRemuxDb(processedStreams);
     const metaFilterStart = Date.now();
     processedStreams = await ctx.filterer.filter(processedStreams, context);
     metaFilterMs = Date.now() - metaFilterStart;
@@ -303,6 +315,9 @@ export async function processStreams(
   }
 
   if (resolvedResults.hasNewStreams) {
+    await withRemuxDb(
+      processedStreams.filter((s) => !preServiceWrapIds.has(s.id))
+    );
     const filterStart = Date.now();
     processedStreams = await ctx.filterer.filter(processedStreams, context);
     filterMs = Date.now() - filterStart;
@@ -350,6 +365,7 @@ export async function processStreams(
         includeExternal: failoverOpts.includeExternalFailover,
         sameReleaseLimit: failoverOpts.sameReleaseLimit,
         duplicateStaggerMs: failoverOpts.duplicateStaggerMs,
+        onlySameReleaseFailover: failoverOpts.onlySameReleaseFailover,
       },
       userScopeKey(ctx.userData)
     ).catch((error) => {
@@ -385,6 +401,7 @@ export async function processStreams(
         includeExternal: failoverOpts.includeExternalFailover,
         sameReleaseLimit: failoverOpts.sameReleaseLimit,
         duplicateStaggerMs: failoverOpts.duplicateStaggerMs,
+        onlySameReleaseFailover: failoverOpts.onlySameReleaseFailover,
       },
       userScopeKey(ctx.userData)
     ).catch((error) => {
@@ -418,6 +435,7 @@ export async function processStreams(
           includeExternal: failoverOpts.includeExternalFailover,
           sameReleaseLimit: failoverOpts.sameReleaseLimit,
           duplicateStaggerMs: failoverOpts.duplicateStaggerMs,
+          onlySameReleaseFailover: failoverOpts.onlySameReleaseFailover,
         },
         userScopeKey(ctx.userData)
       ).catch((error) => {
@@ -476,6 +494,7 @@ export async function processStreams(
       metaFilterMs,
       serviceWrapMs,
       serviceWrapTimings,
+      remuxDbMs,
       filterMs,
       deduplicationMs,
       precomputeMs,
@@ -721,6 +740,7 @@ export async function getStreams(
     errors,
     statistics: addonStatistics,
     dispositions,
+    remuxDbMs: fetcherRemuxDbMs,
   } = await ctx.fetcher.fetch(supportedAddons, context);
   const fetchMs = Date.now() - fetchStart;
 
@@ -780,11 +800,15 @@ export async function getStreams(
           duplicateStaggerMs:
             ctx.userData.failover.duplicateStaggerMs ??
             constants.DEFAULT_FAILOVER_DUPLICATE_STAGGER_MS,
+          onlySameReleaseFailover:
+            ctx.userData.failover.onlySameReleaseFailover ??
+            constants.DEFAULT_FAILOVER_ONLY_SAME_RELEASE,
         }
       : undefined
   );
   let finalStreams = processResults.streams;
   const pipelineTimings = processResults.timings;
+  pipelineTimings.remuxDbMs += fetcherRemuxDbMs;
   errors.push(...processResults.errors);
 
   if (FeatureControl.disabledStreamTypes.size > 0) {
@@ -1018,7 +1042,11 @@ export async function getMeta(
       'trying addon for meta resource'
     );
     try {
-      const meta = await new Wrapper(candidate.addon).getMeta(type, id);
+      const meta = withQualifiedCollection(
+        ctx,
+        candidate.instanceId,
+        await new Wrapper(candidate.addon).getMeta(type, id)
+      );
       logger.debug(
         { addon: candidate.addon.name, instanceId: candidate.instanceId },
         'successfully got meta from addon'

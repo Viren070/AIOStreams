@@ -6,6 +6,7 @@ import {
   StremioTransformer,
 } from '@aiostreams/core';
 import { trackResource } from '../../middlewares/analytics.js';
+import { rawExtras } from '../../utils/extras.js';
 
 const logger = createLogger('server');
 const router: Router = Router();
@@ -32,7 +33,8 @@ router.get(
     const transformer = new StremioTransformer(req.userData);
 
     try {
-      const { type, id, extras } = req.params;
+      const { type, id } = req.params;
+      const extras = rawExtras(req);
 
       res
         .status(200)

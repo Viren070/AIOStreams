@@ -131,7 +131,8 @@ export async function inspectNzb(
             nzb.hash,
             fileOpts,
             lazySizes.get(index),
-            plan.par2
+            plan.par2,
+            plan.sizes
           );
           probed++;
           lastProgressAt = Date.now();

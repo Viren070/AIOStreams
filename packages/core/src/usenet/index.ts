@@ -36,6 +36,8 @@ import {
   groupArchiveSets,
   openArchiveInner,
   rebuildArchiveStream,
+  deserializeArchiveLayout,
+  hasPendingFragments,
   FileOpener,
   ArchiveStreamLayout,
   type ArchiveInnerEntry,
@@ -634,8 +636,16 @@ export class UsenetEngine {
     }, ARCHIVE_INSPECT_TIMEOUT_MS);
     timer.unref?.();
 
-    const opener: FileOpener = (index, knownSize, memo) =>
-      this.openFile(nzb, nzb.files[index], ac.signal, knownSize, memo);
+    const opener: FileOpener = (index, knownSize, memo, exact) =>
+      this.openFile(
+        nzb,
+        nzb.files[index],
+        ac.signal,
+        knownSize,
+        memo,
+        undefined,
+        exact
+      );
     try {
       // Only EXACT sizes may seed archive volume offsets: a placeholder
       // (encoded-size) value shifts every later volume's mapping and the
@@ -645,6 +655,7 @@ export class UsenetEngine {
         index: f.index,
         filename: f.filename,
         size: f.sizeExact ? f.size : undefined,
+        inferred: f.sizeInferred || undefined,
         segments: nzb.files[f.index]?.segments.length,
         firstSegmentNumber: nzb.files[f.index]?.segments[0]?.number,
       }));
@@ -840,6 +851,97 @@ export class UsenetEngine {
         fileIndex,
       })
     );
+  }
+
+  /**
+   * Fetch the article a cold open of `target` waits on, through the open's
+   * own locate (a season-pack episode starts mid-volume). Fire-and-forget.
+   */
+  warmTarget(nzb: Nzb, target: { index?: number; layout?: unknown }): void {
+    const start = this.locateTargetStart(nzb, target);
+    if (!start) return;
+    this.touch();
+    void this.openFile(nzb, start.file, undefined, start.knownSize)
+      .then((stream) => stream.readAt(start.offset, 1))
+      .catch(() => undefined);
+  }
+
+  /**
+   * A playback target's first decoded bytes, or undefined when reading them
+   * needs an archive parse.
+   */
+  async readTargetHead(
+    nzb: Nzb,
+    target: { index?: number; layout?: unknown },
+    length: number,
+    signal?: AbortSignal
+  ): Promise<Buffer | undefined> {
+    if (target.layout !== undefined) {
+      const layout = deserializeArchiveLayout(target.layout);
+      if (!layout) return undefined;
+      // A lazy rebuild resolves every volume. Lazy layouts are never AES or
+      // nested, so their head reads raw.
+      if (!hasPendingFragments(layout.target)) {
+        const stream = await this.openArchiveStreamFromLayout(
+          nzb,
+          layout,
+          signal
+        );
+        return stream.readAt(0, Math.min(length, stream.size()));
+      }
+    }
+    const start = this.locateTargetStart(nzb, target);
+    if (!start) return undefined;
+    this.touch();
+    const stream = await this.openFile(
+      nzb,
+      start.file,
+      signal,
+      start.knownSize
+    );
+    return stream.readAt(start.offset, Math.min(length, start.length));
+  }
+
+  /** Where a target's first byte sits in its backing NZB file. */
+  private locateTargetStart(
+    nzb: Nzb,
+    target: { index?: number; layout?: unknown }
+  ):
+    | { file: NzbFile; offset: number; length: number; knownSize?: number }
+    | undefined {
+    let fileIndex = target.index;
+    let offset = 0;
+    let length = Number.POSITIVE_INFINITY;
+    let knownSize: number | undefined;
+    if (target.layout !== undefined) {
+      let layout: ArchiveStreamLayout | undefined;
+      try {
+        layout = deserializeArchiveLayout(target.layout);
+      } catch {
+        return undefined;
+      }
+      // Nested sets and 7z entries carry no outer fragment to locate.
+      if (!layout || layout.nestedLevels.length > 0) return undefined;
+      const first = layout.target.fragments?.[0];
+      if (!first || first.pending !== undefined) return undefined;
+      let off = first.offset;
+      let vol = 0;
+      for (; vol < layout.memberSizes.length; vol++) {
+        const size = layout.memberSizes[vol];
+        if (size === undefined) return undefined;
+        if (off < size) break;
+        off -= size;
+      }
+      if (vol >= layout.memberIndices.length) return undefined;
+      fileIndex = layout.memberIndices[vol];
+      offset = off;
+      length = Math.min(first.length, layout.target.size);
+      knownSize = layout.memberSizes[vol];
+    }
+    if (fileIndex === undefined) return undefined;
+    const file = nzb.files[fileIndex];
+    if (!file || file.segments.length === 0) return undefined;
+    return { file, offset, length, knownSize };
   }
 
   /**
@@ -1104,7 +1206,8 @@ export class UsenetEngine {
      * streams of the archive path never pad here; the window level owns
      * archive padding.
      */
-    holes?: { holeHooks?: HoleHooks; fileIndex: number }
+    holes?: { holeHooks?: HoleHooks; fileIndex: number },
+    exactSize?: boolean
   ): Promise<FileStream> {
     const stream = new FileStream(
       this.pool,
@@ -1112,6 +1215,7 @@ export class UsenetEngine {
         segments: file.segments,
         filename: file.filename,
         knownSize,
+        exactSize,
       },
       nzb.hash,
       this.options,

@@ -45,6 +45,7 @@ export type PipelineTimings = {
   metaFilterMs: number;
   serviceWrapMs: number;
   serviceWrapTimings?: Record<string, ServiceWrapServiceTiming>;
+  remuxDbMs: number;
   filterMs: number;
   deduplicationMs: number;
   precomputeMs: number;

@@ -39,6 +39,8 @@ export const FIELD_REGISTRY: Readonly<Record<string, readonly string[]>> = {
     'uWedontknowwhatakilometeris',
     'visualTags',
     'audioTags',
+    'audioTracks',
+    'subtitleTracks',
     'releaseGroup',
     'regexMatched',
     'rankedRegexMatched',
@@ -57,6 +59,7 @@ export const FIELD_REGISTRY: Readonly<Record<string, readonly string[]>> = {
     'upscaled',
     'hasChapters',
     'network',
+    'site',
     'container',
     'extension',
     'indexer',
@@ -125,10 +128,43 @@ export const FIELD_REGISTRY: Readonly<Record<string, readonly string[]>> = {
     'malId',
     'hasSeaDex',
   ],
+  user: [
+    'languages',
+    'subtitles',
+    'resolutions',
+    'qualities',
+    'visualTags',
+    'audioTags',
+    'audioChannels',
+    'encodes',
+    'streamTypes',
+    'releaseGroups',
+    'keywords',
+  ],
+  /** only set inside `each(...)` */
+  track: [
+    'lang',
+    'codec',
+    'tag',
+    'channels',
+    'title',
+    'default',
+    'forced',
+    'commentary',
+    'dub',
+    'original',
+    'hearingImpaired',
+    'visualImpaired',
+  ],
   service: ['id', 'shortName', 'name', 'cached'],
   addon: ['name', 'presetId', 'manifestUrl'],
   debug: ['json', 'jsonf'],
 } as const;
+
+export const OBJECT_LISTS: ReadonlySet<string> = new Set([
+  'stream.audioTracks',
+  'stream.subtitleTracks',
+]);
 
 /** Lower-cased name to its canonical spelling, so field names are case-insensitive. */
 const CANONICAL_FIELDS: ReadonlyMap<string, [string, string]> = new Map(

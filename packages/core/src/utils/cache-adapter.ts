@@ -1,24 +1,59 @@
 ﻿import { config as appConfig } from '../config/index.js';
-import { RedisClientType } from 'redis';
+import { RedisClientType, RESP_TYPES } from 'redis';
+import { zstdCompress, zstdDecompress } from 'node:zlib';
+import { promisify } from 'node:util';
 import { REDIS_PREFIX } from './index.js';
 import { createLogger } from '../logging/logger.js';
 import { getTimeTakenSincePoint } from './time.js';
 import { getDb } from '../db/db.js';
 import type { DbDriver } from '../db/driver/types.js';
-import { sql } from '../db/sql.js';
+import { sql, join } from '../db/sql.js';
 import { withTimeout } from './general.js';
 
 const logger = createLogger('cache');
 
 const REDIS_TIMEOUT = appConfig.bootstrap.redisTimeout;
 
+const compress = promisify(zstdCompress);
+const decompress = promisify(zstdDecompress);
+
 /**
- * True when a serialised value is too large to be worth storing.
+ * JSON at or above this many bytes is stored compressed. Below it the saving
+ * does not pay for the round trip, and leaving small values as plain strings
+ * keeps the format readable by a version that predates compression.
  */
-function isOversized(serialised: string, prefix: string, key: string): boolean {
+const COMPRESS_THRESHOLD = 4096;
+/** zstd frame magic, little-endian: bytes 28 B5 2F FD. */
+const ZSTD_MAGIC = 0xfd2fb528;
+
+/** JSON.stringify never emits `(`, so the magic alone identifies the format. */
+const isCompressed = (raw: Buffer): boolean =>
+  raw.length >= 4 && raw.readUInt32LE(0) === ZSTD_MAGIC;
+
+async function encodeValue(value: unknown): Promise<string | Buffer> {
+  const json = JSON.stringify(value);
+  return json.length < COMPRESS_THRESHOLD
+    ? json
+    : compress(Buffer.from(json, 'utf8'));
+}
+
+async function decodeValue<V>(raw: Buffer): Promise<V> {
+  const json = isCompressed(raw) ? await decompress(raw) : raw;
+  return JSON.parse(json.toString('utf8')) as V;
+}
+
+const payloadBytes = (payload: string | Buffer): number =>
+  typeof payload === 'string'
+    ? Buffer.byteLength(payload, 'utf8')
+    : payload.length;
+
+/**
+ * True when a value is too large to be worth storing. `bytes` is what actually
+ * goes to the store, so on Redis that is the compressed size.
+ */
+function isOversized(bytes: number, prefix: string, key: string): boolean {
   const max = appConfig.resources.cache.maxValueBytes;
   if (!max) return false;
-  const bytes = Buffer.byteLength(serialised, 'utf8');
   if (bytes <= max) return false;
   logger.warn(
     { cache: prefix, key, bytes, max },
@@ -29,7 +64,12 @@ function isOversized(serialised: string, prefix: string, key: string): boolean {
 
 // Interface that both memory and Redis cache will implement
 export interface CacheBackend<K, V> {
-  get(key: K, updateTTL?: boolean): Promise<V | undefined>;
+  /**
+   * `updateTTL` re-arms the entry's expiry. Pass the TTL in seconds: only the
+   * memory backend retains the original, so `true` slides nothing elsewhere.
+   */
+  get(key: K, updateTTL?: boolean | number): Promise<V | undefined>;
+  getMany(keys: K[]): Promise<(V | undefined)[]>;
   set(key: K, value: V, ttl: number, forceWrite?: boolean): Promise<void>;
   flush(): Promise<void>;
   delete(key: K): Promise<boolean>;
@@ -44,12 +84,43 @@ export class MemoryCacheBackend<K, V> implements CacheBackend<K, V> {
   private cache: Map<K, CacheItem<V>>;
   private maxSize: number;
 
+  private static instances: Set<MemoryCacheBackend<any, any>> = new Set();
+  private static sweepInterval: NodeJS.Timeout | null = null;
+  private static sweepIntervalTime: number = 60_000;
+  private static sweepYieldEvery: number = 5000;
+
   constructor(maxSize: number) {
     this.cache = new Map<K, CacheItem<V>>();
     this.maxSize = maxSize;
+    MemoryCacheBackend.instances.add(this);
+    MemoryCacheBackend.startSweepInterval();
   }
 
-  async get(key: K, updateTTL: boolean = false): Promise<V | undefined> {
+  private static startSweepInterval() {
+    if (MemoryCacheBackend.sweepInterval !== null) return;
+    MemoryCacheBackend.sweepInterval = setInterval(() => {
+      void MemoryCacheBackend.sweepExpired();
+    }, MemoryCacheBackend.sweepIntervalTime);
+    MemoryCacheBackend.sweepInterval.unref();
+  }
+
+  private static async sweepExpired(): Promise<void> {
+    const now = Date.now();
+    let visited = 0;
+    for (const backend of MemoryCacheBackend.instances) {
+      for (const [key, item] of backend.cache) {
+        if (now - item.createdAt > item.ttl) backend.cache.delete(key);
+        if (++visited % MemoryCacheBackend.sweepYieldEvery === 0) {
+          await new Promise((resolve) => setImmediate(resolve));
+        }
+      }
+    }
+  }
+
+  async get(
+    key: K,
+    updateTTL: boolean | number = false
+  ): Promise<V | undefined> {
     const item = this.cache.get(key);
     if (item) {
       const now = Date.now();
@@ -58,13 +129,22 @@ export class MemoryCacheBackend<K, V> implements CacheBackend<K, V> {
         this.cache.delete(key);
         return undefined;
       }
+      // Re-inserting keeps Map order as LRU order, so eviction is O(1).
+      this.cache.delete(key);
+      this.cache.set(key, item);
       if (updateTTL) {
+        // A number re-arms with that TTL; `true` reuses the original.
+        if (typeof updateTTL === 'number') item.ttl = updateTTL * 1000;
         item.createdAt = now;
       }
 
       return structuredClone(item.value);
     }
     return undefined;
+  }
+
+  async getMany(keys: K[]): Promise<(V | undefined)[]> {
+    return Promise.all(keys.map((key) => this.get(key)));
   }
 
   async set(
@@ -113,20 +193,10 @@ export class MemoryCacheBackend<K, V> implements CacheBackend<K, V> {
     return 0;
   }
 
+  /** Drops the least recently used entry, which `get` keeps at the front. */
   private evict(): void {
-    let oldestKey: K | undefined;
-    let oldestTime = Infinity;
-
-    for (const [key, item] of this.cache.entries()) {
-      if (item.lastAccessed < oldestTime) {
-        oldestTime = item.lastAccessed;
-        oldestKey = key;
-      }
-    }
-
-    if (oldestKey !== undefined) {
-      this.cache.delete(oldestKey);
-    }
+    const oldest = this.cache.keys().next();
+    if (!oldest.done) this.cache.delete(oldest.value);
   }
 
   getSize(): number {
@@ -157,16 +227,25 @@ export class MemoryCacheBackend<K, V> implements CacheBackend<K, V> {
 // Redis cache implementation with timeout handling
 export class RedisCacheBackend<K, V> implements CacheBackend<K, V> {
   private client: RedisClientType;
+  /** Same connection, replies as Buffers so compressed values survive. */
+  private bufferClient: ReturnType<RedisClientType['withTypeMapping']>;
   private prefix: string;
   private maxSize: number;
   private timeout: number;
 
-  private static writeBuffer: Map<string, { value: any; ttl: number }> =
-    new Map();
+  private static writeBuffer: Map<
+    string,
+    { value: string | Buffer; ttl: number; attempts?: number }
+  > = new Map();
   private static flushInterval: NodeJS.Timeout | null = null;
-  private static isFlushing: boolean = false;
+  /** The flush in progress, so a `forceWrite` can wait for it rather than skip. */
+  private static flushing: Promise<void> | null = null;
   private static batchSize: number = 100;
   private static flushIntervalTime: number = 2000;
+  private static retryAfter: number = 0;
+  private static maxFlushAttempts: number = 3;
+  private static maxBufferedWrites: number = 1000;
+  private static maxBufferedBytes: number = 32 * 1024 * 1024;
   private static clientRef: RedisClientType | null = null;
   private static timeoutRef: number = REDIS_TIMEOUT;
 
@@ -177,6 +256,9 @@ export class RedisCacheBackend<K, V> implements CacheBackend<K, V> {
     timeout: number = REDIS_TIMEOUT
   ) {
     this.client = redisClient;
+    this.bufferClient = redisClient.withTypeMapping({
+      [RESP_TYPES.BLOB_STRING]: Buffer,
+    });
     this.prefix = prefix;
     this.maxSize = maxSize;
     this.timeout = timeout;
@@ -195,33 +277,58 @@ export class RedisCacheBackend<K, V> implements CacheBackend<K, V> {
   private static startFlushInterval() {
     if (RedisCacheBackend.flushInterval !== null) return;
     RedisCacheBackend.flushInterval = setInterval(() => {
-      RedisCacheBackend.flushWriteBuffer();
+      void RedisCacheBackend.flushWriteBuffer().catch(() => undefined);
     }, RedisCacheBackend.flushIntervalTime);
   }
 
-  async get(key: K, updateTTL: boolean = false): Promise<V | undefined> {
+  async get(
+    key: K,
+    updateTTL: boolean | number = false
+  ): Promise<V | undefined> {
     const redisKey = this.getKey(key);
 
     return withTimeout(
       async () => {
-        const data = await this.client.get(redisKey);
-        if (!data) return undefined;
+        const data = await this.bufferClient.get(redisKey);
+        if (!data || data.length === 0) return undefined;
 
-        if (updateTTL) {
-          // Update TTL if requested
-          const ttl = await this.client.ttl(redisKey);
-          if (ttl > 0) {
-            await this.client.expire(redisKey, ttl);
-          }
+        // Only a caller-supplied TTL can slide this: the stored value
+        // carries no TTL of its own.
+        if (typeof updateTTL === 'number' && updateTTL > 0) {
+          await this.client.expire(redisKey, updateTTL);
         }
 
-        return JSON.parse(data) as V;
+        return decodeValue<V>(data as Buffer);
       },
       undefined,
       {
         timeout: this.timeout,
         shouldProceed: () => this.client.isOpen,
         getContext: () => `getting key ${String(key)} from Redis`,
+      }
+    );
+  }
+
+  async getMany(keys: K[]): Promise<(V | undefined)[]> {
+    if (keys.length === 0) return [];
+    return withTimeout<(V | undefined)[]>(
+      async () => {
+        const raws = (await this.bufferClient.mGet(
+          keys.map((key) => this.getKey(key))
+        )) as (Buffer | null)[];
+        return Promise.all(
+          raws.map((raw) =>
+            raw && raw.length > 0
+              ? decodeValue<V>(raw).catch(() => undefined)
+              : undefined
+          )
+        );
+      },
+      keys.map(() => undefined),
+      {
+        timeout: this.timeout,
+        shouldProceed: () => this.client.isOpen,
+        getContext: () => `getting ${keys.length} keys from Redis`,
       }
     );
   }
@@ -234,29 +341,46 @@ export class RedisCacheBackend<K, V> implements CacheBackend<K, V> {
   ): Promise<void> {
     if (ttl === 0) return;
     const redisKey = this.getKey(key);
-    const serialised = JSON.stringify(value);
-    if (isOversized(serialised, this.prefix, String(key))) return;
+    const payload = await encodeValue(value);
+    if (isOversized(payloadBytes(payload), this.prefix, String(key))) return;
     RedisCacheBackend.writeBuffer.set(redisKey, {
-      value: serialised,
+      value: payload,
       ttl,
     });
 
-    if (RedisCacheBackend.writeBuffer.size >= RedisCacheBackend.batchSize) {
-      RedisCacheBackend.flushWriteBuffer();
-    } else if (forceWrite) {
+    // Checked before the batch size, or a write that has to be readable now
+    // is downgraded to a fire-and-forget flush.
+    if (forceWrite) {
       await RedisCacheBackend.flushWriteBuffer();
+    } else if (
+      RedisCacheBackend.writeBuffer.size >= RedisCacheBackend.batchSize &&
+      (Date.now() >= RedisCacheBackend.retryAfter ||
+        RedisCacheBackend.writeBuffer.size >=
+          RedisCacheBackend.maxBufferedWrites)
+    ) {
+      void RedisCacheBackend.flushWriteBuffer().catch(() => undefined);
     }
   }
 
+  /**
+   * Serialises flushes; a caller arriving during one waits, then takes its own
+   * turn, so a `forceWrite` is never left sitting in the buffer.
+   */
   private static async flushWriteBuffer(): Promise<void> {
-    if (
-      RedisCacheBackend.isFlushing ||
-      RedisCacheBackend.writeBuffer.size === 0
-    )
-      return;
+    while (RedisCacheBackend.flushing) {
+      await RedisCacheBackend.flushing.catch(() => undefined);
+    }
+    if (RedisCacheBackend.writeBuffer.size === 0) return;
+    const run = RedisCacheBackend.drainWriteBuffer();
+    RedisCacheBackend.flushing = run;
+    try {
+      await run;
+    } finally {
+      RedisCacheBackend.flushing = null;
+    }
+  }
 
-    RedisCacheBackend.isFlushing = true;
-
+  private static async drainWriteBuffer(): Promise<void> {
     const bufferToFlush = new Map(RedisCacheBackend.writeBuffer);
     RedisCacheBackend.writeBuffer.clear();
 
@@ -264,7 +388,6 @@ export class RedisCacheBackend<K, V> implements CacheBackend<K, V> {
       logger.error(
         'Cannot flush Redis write buffer - no client reference available'
       );
-      RedisCacheBackend.isFlushing = false;
       return;
     }
 
@@ -275,33 +398,65 @@ export class RedisCacheBackend<K, V> implements CacheBackend<K, V> {
       pipeline.set(key, item.value, { EX: item.ttl });
     }
 
-    try {
-      await withTimeout(
-        async () => {
-          await pipeline.exec();
-        },
-        undefined,
-        {
-          timeout: RedisCacheBackend.timeoutRef,
-          shouldProceed: () => RedisCacheBackend.clientRef?.isOpen ?? false,
-          getContext: () => 'flushing Redis write buffer',
-        }
+    const flushed = await withTimeout(
+      async () => {
+        await pipeline.exec();
+        return true;
+      },
+      false,
+      {
+        timeout: RedisCacheBackend.timeoutRef,
+        shouldProceed: () => RedisCacheBackend.clientRef?.isOpen ?? false,
+        getContext: () => 'flushing Redis write buffer',
+      }
+    );
+    if (!flushed) {
+      RedisCacheBackend.requeue(bufferToFlush);
+      return;
+    }
+    logger.debug('Flushed Redis write buffer', {
+      items: bufferToFlush.size,
+      timeTaken: getTimeTakenSincePoint(start),
+    });
+  }
+
+  /** Size-triggered flushes wait for the interval, or retries burn out at once. */
+  private static requeue(batch: typeof RedisCacheBackend.writeBuffer): void {
+    RedisCacheBackend.retryAfter =
+      Date.now() + RedisCacheBackend.flushIntervalTime;
+    let bytes = 0;
+    for (const item of RedisCacheBackend.writeBuffer.values()) {
+      bytes += payloadBytes(item.value);
+    }
+    let dropped = 0;
+    for (const [key, item] of batch) {
+      if (RedisCacheBackend.writeBuffer.has(key)) continue;
+      const attempts = (item.attempts ?? 0) + 1;
+      const size = payloadBytes(item.value);
+      if (
+        attempts >= RedisCacheBackend.maxFlushAttempts ||
+        RedisCacheBackend.writeBuffer.size >=
+          RedisCacheBackend.maxBufferedWrites ||
+        bytes + size > RedisCacheBackend.maxBufferedBytes
+      ) {
+        dropped++;
+        continue;
+      }
+      RedisCacheBackend.writeBuffer.set(key, { ...item, attempts });
+      bytes += size;
+    }
+    if (dropped > 0) {
+      logger.warn(
+        { dropped },
+        'dropped redis cache writes after failed flushes'
       );
-      logger.debug('Flushed Redis write buffer', {
-        items: bufferToFlush.size,
-        timeTaken: getTimeTakenSincePoint(start),
-      });
-    } catch (err) {
-      logger.error(`Error flushing Redis write buffer: ${err}`);
-    } finally {
-      RedisCacheBackend.isFlushing = false;
     }
   }
 
   async update(key: K, value: V): Promise<void> {
     const redisKey = this.getKey(key);
-    const serialised = JSON.stringify(value);
-    if (isOversized(serialised, this.prefix, String(key))) return;
+    const payload = await encodeValue(value);
+    if (isOversized(payloadBytes(payload), this.prefix, String(key))) return;
 
     await withTimeout(
       async () => {
@@ -310,7 +465,7 @@ export class RedisCacheBackend<K, V> implements CacheBackend<K, V> {
         if (ttl <= 0) return false; // Key doesn't exist or has no TTL
 
         // Update value but keep the same TTL
-        await this.client.set(redisKey, serialised, {
+        await this.client.set(redisKey, payload, {
           EX: ttl,
         });
         return true;
@@ -326,11 +481,12 @@ export class RedisCacheBackend<K, V> implements CacheBackend<K, V> {
 
   async delete(key: K): Promise<boolean> {
     const redisKey = this.getKey(key);
+    const wasBuffered = RedisCacheBackend.writeBuffer.delete(redisKey);
 
     return withTimeout<boolean>(
       async () => {
         const result = await this.client.del(redisKey);
-        return result > 0;
+        return wasBuffered || result > 0;
       },
       false,
       {
@@ -413,7 +569,8 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
   private static writeBuffer: Map<string, { value: any; ttl: number }> =
     new Map();
   private static flushInterval: NodeJS.Timeout | null = null;
-  private static isFlushing: boolean = false;
+  /** The flush in progress; see the Redis backend. */
+  private static flushing: Promise<void> | null = null;
   private static batchSize: number = 100;
   private static flushIntervalTime: number = 2000;
 
@@ -430,16 +587,26 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
   private static startFlushInterval() {
     if (SQLCacheBackend.flushInterval !== null) return;
     SQLCacheBackend.flushInterval = setInterval(() => {
-      SQLCacheBackend.flushWriteBuffer();
+      void SQLCacheBackend.flushWriteBuffer().catch(() => undefined);
     }, SQLCacheBackend.flushIntervalTime);
   }
 
-  private static async flushWriteBuffer() {
-    if (SQLCacheBackend.isFlushing || SQLCacheBackend.writeBuffer.size === 0)
-      return;
+  /** See the Redis equivalent. */
+  private static async flushWriteBuffer(): Promise<void> {
+    while (SQLCacheBackend.flushing) {
+      await SQLCacheBackend.flushing.catch(() => undefined);
+    }
+    if (SQLCacheBackend.writeBuffer.size === 0) return;
+    const run = SQLCacheBackend.drainWriteBuffer();
+    SQLCacheBackend.flushing = run;
+    try {
+      await run;
+    } finally {
+      SQLCacheBackend.flushing = null;
+    }
+  }
 
-    SQLCacheBackend.isFlushing = true;
-
+  private static async drainWriteBuffer(): Promise<void> {
     const bufferToFlush = new Map(SQLCacheBackend.writeBuffer);
     SQLCacheBackend.writeBuffer.clear();
 
@@ -451,7 +618,6 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
       for (const [key, value] of bufferToFlush.entries()) {
         SQLCacheBackend.writeBuffer.set(key, value);
       }
-      SQLCacheBackend.isFlushing = false;
       return;
     }
 
@@ -493,7 +659,8 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
       const now = Date.now();
       for (const [key, item] of bufferToFlush.entries()) {
         const serialised = JSON.stringify(item.value);
-        if (isOversized(serialised, 'sql', key)) continue;
+        if (isOversized(Buffer.byteLength(serialised, 'utf8'), 'sql', key))
+          continue;
         placeholders.push('(?, ?, ?)');
         values.push(key, serialised, now + item.ttl * 1000);
       }
@@ -518,8 +685,6 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
       for (const [key, value] of bufferToFlush.entries()) {
         this.writeBuffer.set(key, value);
       }
-    } finally {
-      this.isFlushing = false;
     }
   }
 
@@ -561,7 +726,10 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
     return `${this.prefix}${String(key)}`;
   }
 
-  async get(key: K, updateTTL: boolean = false): Promise<V | undefined> {
+  async get(
+    key: K,
+    updateTTL: boolean | number = false
+  ): Promise<V | undefined> {
     const sqlKey = this.getKey(key);
     const now = Date.now();
 
@@ -579,11 +747,11 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
         return undefined;
       }
 
-      if (updateTTL) {
-        const ttl = Math.max(0, expiresAt - now);
+      // The stored row carries no TTL, so only a supplied one can move this.
+      if (typeof updateTTL === 'number' && updateTTL > 0) {
         await this.db.exec(
           sql`UPDATE cache
-              SET expires_at = ${now + ttl},
+              SET expires_at = ${now + updateTTL * 1000},
                   last_accessed = CURRENT_TIMESTAMP
               WHERE key = ${sqlKey}`
         );
@@ -597,6 +765,44 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
     } catch (err) {
       logger.error(`Error getting key ${String(key)} from SQL cache: ${err}`);
       return undefined;
+    }
+  }
+
+  async getMany(keys: K[]): Promise<(V | undefined)[]> {
+    if (keys.length === 0) return [];
+    const sqlKeys = keys.map((key) => this.getKey(key));
+    const inList = (list: string[]) => join(list.map((key) => sql`${key}`));
+    const now = Date.now();
+
+    try {
+      const rows = await this.db.query<{
+        key: string;
+        value: string;
+        expires_at: number | string;
+      }>(
+        sql`SELECT key, value, expires_at FROM cache WHERE key IN (${inList(sqlKeys)})`
+      );
+
+      const found = new Map<string, V>();
+      const expired: string[] = [];
+      for (const row of rows) {
+        if (now > Number(row.expires_at)) expired.push(row.key);
+        else found.set(row.key, JSON.parse(row.value) as V);
+      }
+      if (expired.length > 0) {
+        await this.db.exec(
+          sql`DELETE FROM cache WHERE key IN (${inList(expired)})`
+        );
+      }
+      if (found.size > 0) {
+        await this.db.exec(
+          sql`UPDATE cache SET last_accessed = CURRENT_TIMESTAMP WHERE key IN (${inList([...found.keys()])})`
+        );
+      }
+      return sqlKeys.map((key) => found.get(key));
+    } catch (err) {
+      logger.error(`Error getting ${keys.length} keys from SQL cache: ${err}`);
+      return keys.map(() => undefined);
     }
   }
 
@@ -614,10 +820,10 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
       ttl,
     });
 
-    if (SQLCacheBackend.writeBuffer.size >= SQLCacheBackend.batchSize) {
-      SQLCacheBackend.flushWriteBuffer();
-    } else if (forceWrite) {
+    if (forceWrite) {
       await SQLCacheBackend.flushWriteBuffer();
+    } else if (SQLCacheBackend.writeBuffer.size >= SQLCacheBackend.batchSize) {
+      void SQLCacheBackend.flushWriteBuffer().catch(() => undefined);
     }
   }
 

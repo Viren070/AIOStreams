@@ -14,9 +14,13 @@ const MOBILE_BREAKPOINT = 768;
 const SUPPRESS_OUTSIDE_CLOSE_MS = 250;
 const POST_RESIZE_SHOW_DELAY_MS = 150;
 
+// Everything reaching the iframe is a JSON string: Seanime drops non-string
+// webview messages if no AniList account was logged in when the plugin loaded
+// (its token filter then matches the empty token against every payload).
 export class ResultsPanel {
   readonly wvState: $ui.State<WebviewState>;
-  readonly mobileState: $ui.State<boolean>;
+  private readonly syncedState: $ui.State<string>;
+  private readonly mobileState: $ui.State<string>;
   private readonly webview: $ui.Webview;
   private viewportWidth = 0;
   private viewportHeight = 0;
@@ -29,7 +33,8 @@ export class ResultsPanel {
     initialState: WebviewState
   ) {
     this.wvState = ctx.state<WebviewState>(initialState);
-    this.mobileState = ctx.state<boolean>(false);
+    this.syncedState = ctx.state<string>(JSON.stringify(initialState));
+    this.mobileState = ctx.state<string>(JSON.stringify(false));
     this.webview = ctx.newWebview({
       slot: 'fixed',
       width: `${VP_WIDTH}px`,
@@ -43,7 +48,7 @@ export class ResultsPanel {
       },
     });
     this.webview.setContent(() => RESULTS_HTML);
-    this.webview.channel.sync('state', this.wvState);
+    this.webview.channel.sync('state', this.syncedState);
     this.webview.channel.sync('mobile-mode', this.mobileState);
 
     try {
@@ -81,6 +86,15 @@ export class ResultsPanel {
     return this.webview.channel;
   }
 
+  setState(state: WebviewState): void {
+    this.wvState.set(state);
+    this.syncedState.set(JSON.stringify(state));
+  }
+
+  send(event: string, payload: unknown): void {
+    this.webview.channel.send(event, JSON.stringify(payload));
+  }
+
   isHidden(): boolean {
     return this.webview.isHidden();
   }
@@ -96,7 +110,7 @@ export class ResultsPanel {
     const mobile = this.isMobileViewport();
     if (mobile === this.lastAppliedMobile) return false;
     this.lastAppliedMobile = mobile;
-    this.mobileState.set(mobile);
+    this.mobileState.set(JSON.stringify(mobile));
     try {
       this.webview.setOptions(
         mobile
@@ -163,7 +177,7 @@ export class ResultsPanel {
 
   hide(): void {
     if (this.pendingHideCancel) this.pendingHideCancel();
-    this.webview.channel.send('close-anim', {});
+    this.send('close-anim', {});
     this.pendingHideCancel = this.ctx.setTimeout(() => {
       this.webview.hide();
       this.pendingHideCancel = null;
@@ -171,6 +185,6 @@ export class ResultsPanel {
   }
 
   sendPlayError(index: number): void {
-    this.webview.channel.send('play-error', { index });
+    this.send('play-error', { index });
   }
 }

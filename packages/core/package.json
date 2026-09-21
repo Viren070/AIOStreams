@@ -14,7 +14,7 @@
     "@aiostreams/crypto": "workspace:*",
     "@torbox/torbox-api": "github:viren070/torbox-sdk-js#dist",
     "@viren070/fsmux": "^0.3.0",
-    "@viren070/parse-torrent-title": "^0.8.8",
+    "@viren070/parse-torrent-title": "^0.9.1",
     "bcrypt": "^6.0.0",
     "better-sqlite3": "^12.10.0",
     "bytes": "^3.1.2",
@@ -44,7 +44,7 @@
     "@types/bcrypt": "^5.0.2",
     "@types/better-sqlite3": "^7.6.12",
     "@types/bytes": "^3.1.5",
-    "@types/node": "^20.19.39",
+    "@types/node": "^24.13.5",
     "@types/parse-torrent": "^5.8.8",
     "@types/pg": "^8.20.0",
     "@types/user-agents": "^1.0.4"

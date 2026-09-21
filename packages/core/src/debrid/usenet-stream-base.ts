@@ -17,6 +17,8 @@ import {
   selectFileInTorrentOrNZB,
   hashNzbUrl,
   buildResolveKey,
+  parseFileNames,
+  selectableFileNames,
 } from './utils.js';
 import {
   DebridServiceConfig,
@@ -28,8 +30,6 @@ import {
   DebridFailureCache,
   convertStatusCodeToError,
 } from './base.js';
-import { ParsedResult } from '@viren070/parse-torrent-title';
-import { parseTorrentTitleCached } from '../parser/title.js';
 import z, { ZodError } from 'zod';
 import { createClient, WebDAVClient, FileStat } from 'webdav';
 import { fetch } from 'undici';
@@ -1256,15 +1256,9 @@ export abstract class UsenetStreamService implements UsenetDebridService {
     } else if (debridFiles.length === 1) {
       selectedFile = debridFiles[0];
     } else {
-      // Parse all file names for matching
-      const allStrings = [jobName, ...debridFiles.map((f) => f.name ?? '')];
-      const parseResults: ParsedResult[] = allStrings.map((string) =>
-        parseTorrentTitleCached(string)
+      const parsedFiles = await parseFileNames(
+        selectableFileNames(jobName, debridFiles)
       );
-      const parsedFiles = new Map<string, ParsedResult>();
-      for (const [index, result] of parseResults.entries()) {
-        parsedFiles.set(allStrings[index], result);
-      }
 
       const nzbInfo = {
         type: 'usenet' as const,
@@ -1391,14 +1385,9 @@ export abstract class UsenetStreamService implements UsenetDebridService {
       selectedFile = debridFiles[0];
     } else {
       const title = playbackInfo.title ?? '';
-      const allStrings = [title, ...debridFiles.map((f) => f.name ?? '')];
-      const parseResults: ParsedResult[] = allStrings.map((string) =>
-        parseTorrentTitleCached(string)
+      const parsedFiles = await parseFileNames(
+        selectableFileNames(title, debridFiles)
       );
-      const parsedFiles = new Map<string, ParsedResult>();
-      for (const [index, result] of parseResults.entries()) {
-        parsedFiles.set(allStrings[index], result);
-      }
 
       const nzbInfo = {
         type: 'usenet' as const,

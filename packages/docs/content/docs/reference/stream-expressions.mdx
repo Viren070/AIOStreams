@@ -455,6 +455,109 @@ subtitles(streams, 'English')
 
 ---
 
+#### `audioTrack()` / `subtitleTrack()`
+
+Filter by the probed audio or subtitle **tracks** of a stream. A stream matches
+when at least one of its tracks meets **every** condition, so
+`subtitleTrack(streams, 'lang=English', 'forced')` needs one English track that
+is also forced, not an English track and some other forced track.
+
+Only media info fills these in, so streams whose tracks were never probed never
+match. With no conditions, any stream with at least one such track matches.
+
+Each condition is a string:
+
+| Condition    | Matches a track when                                  |
+| ------------ | ----------------------------------------------------- |
+| `field`      | the field is set, e.g. `forced` or `title`            |
+| `field=a\|b` | the field equals one of the values                    |
+| `field~a\|b` | the field contains one of the values                  |
+| `!…`         | the condition after `!` does not hold, e.g. `!forced` |
+
+Comparisons ignore case.
+
+**Fields:**
+
+| Field             | Tracks   | Example values                                                                               |
+| ----------------- | -------- | -------------------------------------------------------------------------------------------- |
+| `lang`            | both     | `English`, `French`                                                                          |
+| `title`           | both     | `SDH`, `Director's Commentary`, `VFQ`                                                        |
+| `codec`           | both     | ffprobe's codec name: `truehd`, `eac3`, `subrip`, `ass`, `hdmv_pgs_subtitle`, `dvd_subtitle` |
+| `tag`             | audio    | `TrueHD`, `DD+`, `DTS-HD MA`, the same names as `audioTag()`                                 |
+| `channels`        | audio    | `2.0`, `5.1`, `7.1`                                                                          |
+| `default`         | both     | flag                                                                                         |
+| `forced`          | subtitle | flag                                                                                         |
+| `hearingImpaired` | both     | flag                                                                                         |
+| `commentary`      | audio    | flag                                                                                         |
+| `dub`             | audio    | flag                                                                                         |
+| `original`        | audio    | flag                                                                                         |
+| `visualImpaired`  | audio    | flag (audio description)                                                                     |
+
+The flags are whatever the file itself marks, and many releases only say `SDH`
+or `Commentary` in the track's title, so `title~sdh` catches more than
+`hearingImpaired` does.
+
+```
+subtitleTrack(streams, 'title~ubtitle')                  // "Subtitle", "Dubtitle", "Subtitle[SDH]"
+subtitleTrack(streams, 'lang=English', 'hearingImpaired')
+subtitleTrack(streams, 'forced', '!lang=English')
+audioTrack(streams, 'lang=Japanese', 'original')
+audioTrack(streams, 'tag=TrueHD|DTS-HD MA', 'channels=7.1')
+negate(subtitleTrack(streams, 'codec~pgs'), streams)     // no PGS subtitles
+```
+
+---
+
+#### `editions()`
+
+Filter by edition. A stream matches when any of its editions is listed, and streams without one match `'Unknown'`.
+
+**Example values:** `"Director's Cut"` `'Extended Edition'` `'Theatrical'` `'IMAX'` `'Remastered'` `'Uncut'` `'Unknown'`
+
+```
+editions(streams, "Director's Cut", 'Extended Edition')
+```
+
+---
+
+#### `network()`
+
+Filter by the TV network or streaming service named in the release. Streams without one match `'Unknown'`.
+
+**Example values:** `'Netflix'` `'Prime Video'` `'Apple TV'` `'Disney+'` `'HBO Max'` `'Hulu'` `'Crunchyroll'` `'Unknown'`
+
+```
+network(streams, 'Netflix', 'Prime Video')
+```
+
+---
+
+#### `container()`
+
+Filter by the container format mentioned anywhere in the filename or folder
+name, such as `[MKV]` or a `.mkv` extension. Streams without one match `'Unknown'`.
+
+**Accepted values:** `'mkv'` `'mp4'` `'avi'` `'wmv'` `'mpg'` `'mpeg'` `'Unknown'`
+
+```
+container(streams, 'mkv', 'mp4')
+```
+
+---
+
+#### `extension()`
+
+Filter by the extension the filename (or, failing that, the folder name) ends
+in. Streams without a recognised extension match `'Unknown'`.
+
+**Example values:** `'mkv'` `'mp4'` `'avi'` `'m2ts'` `'ts'` `'iso'` `'Unknown'`
+
+```
+negate(extension(streams, 'iso', 'avi'), streams)
+```
+
+---
+
 #### `seeders()`
 
 Filter by torrent seeder count.

@@ -1,0 +1,128 @@
+---
+title: Metadata
+description: Extra meta, catalog entry, video and manifest catalog fields AIOStreams reads, and what each one shows in a Jellyfin client.
+---
+
+These fields sit alongside the Stremio ones on a catalog entry, a meta, a video, or a catalog in
+your manifest. Put them on catalog entries too where you can: lists are built without opening each
+title.
+
+## Meta and catalog entry fields
+
+| Field                | Shape                                                     | Shown in Jellyfin as                                      |
+| -------------------- | --------------------------------------------------------- | --------------------------------------------------------- |
+| `ids`                | object of [provider ids](#ids)                            | Provider ids and external links                           |
+| `landscapePoster`    | image URL                                                 | The wide card on Continue Watching, Next Up and home rows |
+| `originalTitle`      | string                                                    | The original title, under the name when they differ       |
+| `tagline`            | string                                                    | The tagline on the detail page                            |
+| `people`             | list of [people](#people)                                 | Cast and crew rows, with photos and characters            |
+| `certification`      | string, e.g. `"PG-13"`                                    | The age rating                                            |
+| `certificationLocal` | string, the rating in the viewer's country                | The local rating, where a client shows one                |
+| `criticRating`       | number, 0 to 100                                          | The critic score                                          |
+| `studios`            | list of strings                                           | Studios                                                   |
+| `networks`           | list of strings                                           | Studios, after `studios`                                  |
+| `countries`          | list of strings                                           | Production countries                                      |
+| `tags`               | list of strings                                           | Tags                                                      |
+| `endDate`            | date, a series' last air date                             | The end of a series' year range                           |
+| `airDays`            | list of `"Sunday"` … `"Saturday"`                         | When a series airs                                        |
+| `airTime`            | string, e.g. `"21:00"`                                    | As above                                                  |
+| `seasons`            | list of [seasons](#seasons)                               | Season names, overviews, posters and premiere dates       |
+| `collection`         | [collection block](/reference/addon-protocol/collections) | A collection                                              |
+
+### People
+
+```json
+{ "name": "Bryan Cranston", "role": "actor", "character": "Walter White", "photo": "https://…" }
+```
+
+| Field       | Meaning                                                                                                                    |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `name`      | Required.                                                                                                                  |
+| `role`      | Required. One of `actor`, `director`, `writer`, `producer`, `composer`, `creator`, `guestStar`; any other role is ignored. |
+| `character` | Who an actor plays.                                                                                                        |
+| `photo`     | A portrait URL.                                                                                                            |
+
+### Seasons
+
+```json
+{ "season": 1, "name": "The Beginning", "overview": "…", "poster": "https://…", "released": "2019-03-01" }
+```
+
+`season` is required and matches the `season` of the videos it describes; `0` is specials. A season
+you do not list keeps its default name.
+
+## Video fields
+
+These go on entries in a meta's `videos`.
+
+| Field    | Shape                             | Shown in Jellyfin as                |
+| -------- | --------------------------------- | ----------------------------------- |
+| `rating` | number or numeric string, 0 to 10 | The episode's rating                |
+| `ids`    | object of [provider ids](#ids)    | The episode's own ids and IMDb link |
+| `people` | list of [people](#people)         | Guest stars and episode credits     |
+
+A video's `ids` are the episode's own. A [watch state](/reference/addon-protocol/watch-state) event
+for an episode always carries the show's ids instead.
+
+## Catalog fields
+
+These go on a catalog in your manifest's `catalogs`, which is a library in Jellyfin.
+
+| Field        | Shape     | Shown in Jellyfin as   |
+| ------------ | --------- | ---------------------- |
+| `poster`     | image URL | The library's tile     |
+| `background` | image URL | The library's backdrop |
+
+```json
+{ "type": "movie", "id": "netflix", "name": "Netflix", "poster": "https://…", "background": "https://…" }
+```
+
+## Ids
+
+`ids` is keyed by provider, with the same keys as [watch state](/reference/addon-protocol/watch-state)
+events. Values are strings; numbers are accepted.
+
+| Key       | Provider    | Key     | Provider |
+| --------- | ----------- | ------- | -------- |
+| `imdb`    | IMDb        | `kitsu` | Kitsu    |
+| `tmdb`    | TMDB        | `anidb` | AniDB    |
+| `tvdb`    | TheTVDB     | `simkl` | Simkl    |
+| `mal`     | MyAnimeList | `trakt` | Trakt    |
+| `anilist` | AniList     |         |          |
+
+## Example
+
+```json
+{
+  "meta": {
+    "id": "tt0903747",
+    "type": "series",
+    "name": "Breaking Bad",
+    "landscapePoster": "https://…",
+    "endDate": "2013-09-29",
+    "tagline": "Remember my name",
+    "ids": { "imdb": "tt0903747", "tmdb": "1396", "tvdb": "81189" },
+    "certification": "TV-MA",
+    "criticRating": 96,
+    "networks": ["AMC"],
+    "countries": ["United States"],
+    "airDays": ["Sunday"],
+    "airTime": "22:00",
+    "people": [
+      { "name": "Vince Gilligan", "role": "creator" },
+      { "name": "Bryan Cranston", "role": "actor", "character": "Walter White", "photo": "https://…" }
+    ],
+    "seasons": [{ "season": 1, "poster": "https://…", "released": "2008-01-20" }],
+    "videos": [
+      {
+        "id": "tt0903747:1:1",
+        "title": "Pilot",
+        "season": 1,
+        "episode": 1,
+        "rating": 9.0,
+        "ids": { "imdb": "tt0959621", "tvdb": "349232" }
+      }
+    ]
+  }
+}
+```

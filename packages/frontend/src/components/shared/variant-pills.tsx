@@ -18,7 +18,7 @@ interface VariantPillsProps {
   className?: string;
 }
 
-const pill = (active: boolean) =>
+export const pill = (active: boolean) =>
   cn(
     'px-2.5 py-1 text-xs font-medium rounded-full border transition-colors',
     active

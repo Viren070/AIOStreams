@@ -1,6 +1,21 @@
 import * as constants from './constants.js';
 import { normaliseLanguage, normaliseLangCode } from './languages.js';
 
+export interface ParsedMediaTrack {
+  lang?: string;
+  codec?: string;
+  title?: string;
+  tag?: string;
+  channels?: string;
+  default?: boolean;
+  forced?: boolean;
+  commentary?: boolean;
+  dub?: boolean;
+  original?: boolean;
+  hearingImpaired?: boolean;
+  visualImpaired?: boolean;
+}
+
 export interface ParsedMediaInfo {
   /** Provenance tier; unset means unconfirmed. */
   mediaInfoQuality?: 'probe' | 'indexer' | 'addon';
@@ -9,6 +24,8 @@ export interface ParsedMediaInfo {
   audioTags?: string[];
   audioChannels?: string[];
   visualTags?: string[];
+  audioTracks?: ParsedMediaTrack[];
+  subtitleTracks?: ParsedMediaTrack[];
   /** Duration in seconds */
   duration?: number;
   bitrate?: number;
@@ -24,11 +41,21 @@ type MediaInfoAudioTrack = {
   title?: unknown;
   ch_layout?: unknown;
   ch?: unknown;
+  default?: unknown;
+  commentary?: unknown;
+  dub?: unknown;
+  original?: unknown;
+  hearing_impaired?: unknown;
+  visual_impaired?: unknown;
 };
 
 type MediaInfoSubtitleTrack = {
+  codec?: unknown;
   lang?: unknown;
   title?: unknown;
+  default?: unknown;
+  forced?: unknown;
+  hearing_impaired?: unknown;
 };
 
 type MediaInfoVideo = {
@@ -87,6 +114,42 @@ function isObject(value: unknown): value is Record<string, unknown> {
 function asMediaInfo(value: unknown): MediaInfo | undefined {
   if (!isObject(value)) return undefined;
   return value as MediaInfo;
+}
+
+function asTrackText(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+/** Drops a track that carries nothing worth keeping. */
+function normaliseTrack(
+  track: ParsedMediaTrack | undefined
+): ParsedMediaTrack | undefined {
+  if (!track) return undefined;
+  const out: ParsedMediaTrack = {
+    ...(track.lang ? { lang: track.lang } : {}),
+    ...(track.codec ? { codec: track.codec } : {}),
+    ...(track.title ? { title: track.title } : {}),
+    ...(track.tag ? { tag: track.tag } : {}),
+    ...(track.channels ? { channels: track.channels } : {}),
+    ...(track.default ? { default: true } : {}),
+    ...(track.forced ? { forced: true } : {}),
+    ...(track.commentary ? { commentary: true } : {}),
+    ...(track.dub ? { dub: true } : {}),
+    ...(track.original ? { original: true } : {}),
+    ...(track.hearingImpaired ? { hearingImpaired: true } : {}),
+    ...(track.visualImpaired ? { visualImpaired: true } : {}),
+  };
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+function normaliseTrackList(
+  tracks: ParsedMediaTrack[] | undefined
+): ParsedMediaTrack[] {
+  return (tracks ?? [])
+    .map(normaliseTrack)
+    .filter((track): track is ParsedMediaTrack => !!track);
 }
 
 function normaliseLanguageList(values: unknown[]): string[] {
@@ -267,12 +330,17 @@ export function normaliseParsedMediaInfo(
       : undefined;
   }
 
+  const audioTracks = normaliseTrackList(parsedMediaInfo.audioTracks);
+  const subtitleTracks = normaliseTrackList(parsedMediaInfo.subtitleTracks);
+
   const hasAnyData =
     languages.length > 0 ||
     subtitles.length > 0 ||
     audioTags.length > 0 ||
     audioChannels.length > 0 ||
     visualTags.length > 0 ||
+    audioTracks.length > 0 ||
+    subtitleTracks.length > 0 ||
     !!encode ||
     !!resolution ||
     !!parsedMediaInfo?.duration ||
@@ -288,6 +356,8 @@ export function normaliseParsedMediaInfo(
     ...(audioTags.length > 0 ? { audioTags } : {}),
     ...(audioChannels.length > 0 ? { audioChannels } : {}),
     ...(visualTags.length > 0 ? { visualTags } : {}),
+    ...(audioTracks.length > 0 ? { audioTracks } : {}),
+    ...(subtitleTracks.length > 0 ? { subtitleTracks } : {}),
     ...(encode ? { encode } : {}),
     ...(resolution ? { resolution } : {}),
     ...(parsedMediaInfo?.duration
@@ -332,6 +402,28 @@ export function parseMediaInfo(
     ),
   ];
 
+  const audioTrackList = audioTracks.map((track) => ({
+    lang: normaliseLanguage(resolveTrackLang(track.lang, track.title)),
+    codec: asTrackText(track.codec)?.toLowerCase(),
+    title: asTrackText(track.title),
+    tag: normaliseAudioTag(track.codec, track.profile),
+    channels: normaliseAudioChannels(track),
+    default: track.default === true,
+    commentary: track.commentary === true,
+    dub: track.dub === true,
+    original: track.original === true,
+    hearingImpaired: track.hearing_impaired === true,
+    visualImpaired: track.visual_impaired === true,
+  }));
+  const subtitleTrackList = subtitleTracks.map((track) => ({
+    lang: normaliseLanguage(resolveTrackLang(track.lang, track.title)),
+    codec: asTrackText(track.codec)?.toLowerCase(),
+    title: asTrackText(track.title),
+    default: track.default === true,
+    forced: track.forced === true,
+    hearingImpaired: track.hearing_impaired === true,
+  }));
+
   const visualTags = normaliseVisualTags(info.video);
   const encode = normaliseEncode(info.video);
   const resolution = normaliseResolution(info.video?.w, info.video?.h);
@@ -356,6 +448,8 @@ export function parseMediaInfo(
     audioTags,
     audioChannels,
     visualTags,
+    audioTracks: audioTrackList,
+    subtitleTracks: subtitleTrackList,
     encode,
     resolution,
     duration,
@@ -379,6 +473,8 @@ export function mergeParsedMediaInfo(
     audioTags: preferred?.audioTags ?? base?.audioTags,
     audioChannels: preferred?.audioChannels ?? base?.audioChannels,
     visualTags: preferred?.visualTags ?? base?.visualTags,
+    audioTracks: preferred?.audioTracks ?? base?.audioTracks,
+    subtitleTracks: preferred?.subtitleTracks ?? base?.subtitleTracks,
     encode: preferred?.encode ?? base?.encode,
     resolution: preferred?.resolution ?? base?.resolution,
     duration: preferred?.duration ?? base?.duration,

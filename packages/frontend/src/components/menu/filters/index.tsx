@@ -4040,7 +4040,7 @@ function Content() {
                 <SettingsCard
                   id="digitalReleaseFilter"
                   title="Digital Release Filter"
-                  description="This will filter out all results for movies that are determined to not have a digital release."
+                  description="Filters out movies, series, and anime that haven't released yet, based on release dates (movies) or episode air dates (series/anime)."
                 >
                   <Switch
                     label="Enabled"
@@ -4101,6 +4101,22 @@ function Content() {
                     </div>
                   </div>
                   <p className="text-sm text-[--muted]">Tolerance in days</p>
+                  <Switch
+                    label="Also Check Result Age"
+                    side="right"
+                    disabled={!userData.digitalReleaseFilter?.enabled}
+                    value={userData.digitalReleaseFilter?.checkResultAge ?? false}
+                    moreHelp="Blocks results uploaded before the release/air date (beyond tolerance). Only works when a result's age is known."
+                    onValueChange={(value) => {
+                      setUserData((prev) => ({
+                        ...prev,
+                        digitalReleaseFilter: {
+                          ...prev.digitalReleaseFilter,
+                          checkResultAge: value,
+                        },
+                      }));
+                    }}
+                  />
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <Combobox
@@ -4184,6 +4200,25 @@ function Content() {
                     }}
                   />
                 </SettingsCard>
+                {status?.settings.remuxdb.enabled && (
+                  <SettingsCard
+                    id="remuxDb"
+                    title="RemuxDB Integration"
+                    description="Fill in missing audio and subtitle languages, channels, HDR and resolution from RemuxDB's database of probed files. Each lookup sends the title's IMDb ID (and season and episode) to RemuxDB."
+                  >
+                    <Switch
+                      label="Enable"
+                      side="right"
+                      value={userData.remuxDb?.enabled ?? false}
+                      onValueChange={(value) => {
+                        setUserData((prev) => ({
+                          ...prev,
+                          remuxDb: { ...prev.remuxDb, enabled: value },
+                        }));
+                      }}
+                    />
+                  </SettingsCard>
+                )}
                 {mode === 'pro' && userData.excludeSeasonPacks && (
                   <SettingsCard
                     id="excludeSeasonPacks"

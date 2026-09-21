@@ -1,4 +1,4 @@
-﻿import { Option, UserData } from '../db/index.js';
+﻿import { Addon, Option, UserData } from '../db/index.js';
 import { appConfig, constants } from '../utils/index.js';
 import { StremThruPreset } from './stremthru.js';
 import { TorznabPreset } from './torznab.js';
@@ -61,10 +61,25 @@ export class BitmagnetPreset extends TorznabPreset {
         emptyIsUndefined: true,
       },
       {
+        id: 'searchMode',
+        name: 'Search Mode',
+        description:
+          '`Auto` searches by ID (TVDB/IMDb/TMDB + season/episode) when Bitmagnet supports it; `Forced Query` always searches by title text instead. **Note**: `Both` creates two separate addons, one per mode.',
+        type: 'select',
+        required: false,
+        showInSimpleMode: false,
+        default: 'query',
+        options: [
+          { label: 'Auto', value: 'auto' },
+          { label: 'Forced Query', value: 'query' },
+          { label: 'Both', value: 'both' },
+        ],
+      },
+      {
         id: 'useMultipleInstances',
         name: 'Use Multiple Instances',
         description:
-          'Torznab supports multiple services in one instance of the addon - which is used by default. If this is enabled, then the addon will be created for each service.',
+          'Bitmagnet supports multiple services in one instance of the addon - which is used by default. If this is enabled, then the addon will be created for each service.',
         type: 'boolean',
         default: false,
         showInSimpleMode: false,
@@ -105,6 +120,17 @@ export class BitmagnetPreset extends TorznabPreset {
     };
   }
 
+  static override async generateAddons(
+    userData: UserData,
+    options: Record<string, any>
+  ): Promise<Addon[]> {
+    // configs saved before searchMode was exposed always forced query search
+    return super.generateAddons(userData, {
+      ...options,
+      searchMode: options.searchMode ?? 'query',
+    });
+  }
+
   protected static override generateManifestUrl(
     userData: UserData,
     services: constants.ServiceId[],
@@ -118,7 +144,7 @@ export class BitmagnetPreset extends TorznabPreset {
       ...this.getBaseConfig(userData, services),
       url: `${appConfig.builtins.bitmagnet.url.replace(/\/$/, '')}/torznab`,
       apiPath: '/api',
-      forceQuerySearch: true,
+      forceQuerySearch: options.forceQuerySearch ?? true,
       paginate: options.paginate ?? false,
     };
 

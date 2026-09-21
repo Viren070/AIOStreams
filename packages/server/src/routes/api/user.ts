@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Request } from 'express';
 import {
   APIError,
   AnalyticsRepository,
@@ -42,6 +42,12 @@ import {
   parseBasicAuthHeader,
   resolveConfigCredentials,
 } from '../../utils/basic-auth.js';
+import {
+  listTrackers,
+  syncTrackerClaims,
+  type TrackerOption,
+  type TrackerStatus,
+} from '../jellyfin/handoff.js';
 const router: Router = Router();
 
 const logger = createLogger('server');
@@ -223,6 +229,20 @@ router.post('/', userCreateRateLimiter, async (req, res, next) => {
 });
 
 // updating user details
+function syncTrackersAfterSave(req: Request, uuid: string, password: string) {
+  const { reportEnabled, pullEnabled } = appConfig.watchState;
+  if (appConfig.jellyfin.enabled !== true || (!reportEnabled && !pullEnabled))
+    return;
+  const encrypted = encryptString(password);
+  if (!encrypted.success || !encrypted.data) return;
+  void syncTrackerClaims(req, uuid, encrypted.data).catch((error) => {
+    logger.warn(
+      { uuid, err: error instanceof Error ? error.message : String(error) },
+      'failed to sync tracker choices after a save'
+    );
+  });
+}
+
 router.put('/', async (req, res, next) => {
   let creds;
   try {
@@ -259,6 +279,7 @@ router.put('/', async (req, res, next) => {
     config.uuid = uuid;
     injectAccessKey(req, config);
     const updatedUser = await UserRepository.updateUser(uuid, password, config);
+    syncTrackersAfterSave(req, uuid, password);
     res.status(200).json(
       createResponse({
         success: true,
@@ -644,6 +665,59 @@ router.get('/client-agents', async (req, res, next) => {
     await UserRepository.verifyUser(uuid, creds.password);
     const agents = await getClientAgents(uuid);
     res.status(200).json(createResponse({ success: true, data: agents }));
+  } catch (error) {
+    if (error instanceof APIError) {
+      next(error);
+      return;
+    }
+    logger.error(error);
+    next(new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR));
+  }
+});
+
+/** The trackers this configuration syncs watch state with, and how they last went. */
+router.get('/watch-state', async (req, res, next) => {
+  let creds;
+  try {
+    creds = await resolveConfigCredentials(req, res, { allowEncrypted: false });
+  } catch (error) {
+    next(error);
+    return;
+  }
+  if (!creds) {
+    next(
+      new APIError(
+        constants.ErrorCode.MISSING_REQUIRED_FIELDS,
+        undefined,
+        'Authorization header (Basic) is required'
+      )
+    );
+    return;
+  }
+  const uuid = req.uuid || creds.uuid;
+
+  try {
+    await UserRepository.verifyUser(uuid, creds.password);
+    const jellyfin = appConfig.jellyfin.enabled === true;
+    const push = jellyfin && appConfig.watchState.reportEnabled;
+    const pull = jellyfin && appConfig.watchState.pullEnabled;
+    let trackers: TrackerStatus[] = [];
+    let available: TrackerOption[] = [];
+    if (push || pull) {
+      const encrypted = encryptString(creds.password);
+      if (!encrypted.success || !encrypted.data) {
+        throw new APIError(constants.ErrorCode.ENCRYPTION_ERROR);
+      }
+      const listed = await listTrackers(req, uuid, encrypted.data);
+      trackers = listed?.trackers ?? [];
+      available = listed?.available ?? [];
+    }
+    res.status(200).json(
+      createResponse({
+        success: true,
+        data: { push, pull, trackers, available },
+      })
+    );
   } catch (error) {
     if (error instanceof APIError) {
       next(error);

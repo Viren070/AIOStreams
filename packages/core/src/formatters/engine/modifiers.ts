@@ -14,7 +14,8 @@ import {
   languageToEmoji,
   normaliseLanguage,
 } from '../../utils/languages.js';
-import { substituteTools } from './sentinels.js';
+import { compileObjectFilter } from '../../utils/object-filter.js';
+import { sanitise, substituteTools } from './sentinels.js';
 
 /**
  * Modifier implementations, and the binding of a modifier's source text to a
@@ -48,6 +49,7 @@ const mapLanguages = (
 const stringModifiers = {
   upper: (value: string) => value.toUpperCase(),
   lower: (value: string) => value.toLowerCase(),
+  trim: (value: string) => value.trim(),
   title: (value: string) =>
     value
       .split(' ')
@@ -82,6 +84,14 @@ function mapChars(value: string, from: string, to: string): string {
   }
   return [...value].map((char) => table.get(char) ?? char).join('');
 }
+
+export function isObjectList(value: unknown): value is object[] {
+  return (
+    Array.isArray(value) && typeof value[0] === 'object' && value[0] !== null
+  );
+}
+
+const OBJECT_LIST_MODIFIERS = new Set(['length', 'reverse']);
 
 const arrayGetOrDefault = (value: string[], index: number) =>
   value.length > 0 ? String(value[index]) : '';
@@ -210,7 +220,7 @@ export const prefixOperators = Object.keys(conditionalModifiers.prefix).sort(
 // ------------------------------------------------------------ argument parsing
 
 /** Pulls quoted arguments out of a call's argument list, in order. */
-function quotedArguments(inner: string): string[] {
+export function quotedArguments(inner: string): string[] {
   const args: string[] = [];
   const pattern = /"([^"]*)"|'([^']*)'/g;
   let match: RegExpExecArray | null;
@@ -218,6 +228,42 @@ function quotedArguments(inner: string): string[] {
     args.push(match[1] ?? match[2] ?? '');
   }
   return args;
+}
+
+/**
+ * Pulls `{section.property}` references out of a call's argument list. A
+ * reference inside a quoted argument is literal text, so it is skipped.
+ */
+export function referenceArguments(inner: string): string[] {
+  const withoutQuoted = inner.replace(/"[^"]*"|'[^']*'/g, '');
+  const pattern = /\{\s*([A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*)\s*\}/g;
+  const found = new Set<string>();
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(withoutQuoted)) !== null) {
+    found.add(match[1]);
+  }
+  return [...found];
+}
+
+/**
+ * The literal arguments plus everything the references resolve to. References
+ * resolve per render; `literals` is expected to already be in the right case.
+ */
+function resolveListArgument(
+  literals: readonly string[],
+  references: readonly string[],
+  parseValue: unknown,
+  ctx: ModifierContext,
+  lower = true
+): string[] {
+  if (!references.length) return literals as string[];
+  const out = [...literals];
+  for (const reference of references) {
+    for (const value of ctx.resolveValues(reference, parseValue) ?? []) {
+      out.push(lower ? value.toLowerCase() : value);
+    }
+  }
+  return out;
 }
 
 /** `"'%H:%M'"` -> `"%H:%M"`; undefined when not quoted. */
@@ -235,6 +281,8 @@ function unquote(arg: string): string | undefined {
 export interface ModifierContext {
   /** Injected so this module needs no knowledge of ParseValue. */
   resolveVariable(source: string, parseValue: unknown): string | undefined;
+  /** A field's value as a list, for modifiers that compare against one. */
+  resolveValues(source: string, parseValue: unknown): string[] | undefined;
 }
 
 /**
@@ -302,6 +350,7 @@ function compileConditional(lower: string): CompiledModifier | undefined {
       // absent values are false without consulting the operator
       if (!exact.exists(value)) return false;
       if (isExact) return exact[lower as keyof typeof exact](value);
+      if (isObjectList(value)) return undefined;
 
       const arrayValue =
         Array.isArray(value) && value.every((item) => typeof item === 'string')
@@ -392,17 +441,39 @@ function compileParameterised(
       };
     }
 
-    case 'remove': {
+    case 'remove':
+    case 'keep': {
       const args = quotedArguments(inner);
-      if (args.length === 0) return () => undefined;
+      const references = referenceArguments(inner);
+      if (args.length === 0 && references.length === 0) return () => undefined;
       const targets = args.filter(Boolean);
-      return (value) => {
+      const loweredSet = new Set(targets.map((t) => t.toLowerCase()));
+      const lowered = [...loweredSet];
+      const keeping = name === 'keep';
+      return (value, parseValue, ctx) => {
         if (typeof value === 'string') {
+          // keeping part of a single string has no meaning
+          if (keeping) return undefined;
           let result = value;
-          for (const target of targets) result = result.replaceAll(target, '');
+          // removing from a string is a substring match, so case is kept
+          const removals = resolveListArgument(
+            targets,
+            references,
+            parseValue,
+            ctx,
+            false
+          );
+          for (const target of removals) result = result.replaceAll(target, '');
           return result;
         }
-        if (Array.isArray(value)) return value.filter((v) => !args.includes(v));
+        if (Array.isArray(value) && !isObjectList(value)) {
+          const set = references.length
+            ? new Set(resolveListArgument(lowered, references, parseValue, ctx))
+            : loweredSet;
+          return value.filter(
+            (item) => set.has(String(item).toLowerCase()) === keeping
+          );
+        }
         return undefined;
       };
     }
@@ -412,7 +483,39 @@ function compileParameterised(
       if (raw === undefined) return undefined;
       const separator = substituteTools(raw);
       return (value) =>
-        Array.isArray(value) ? value.join(separator) : undefined;
+        Array.isArray(value) && !isObjectList(value)
+          ? value.join(separator)
+          : undefined;
+    }
+
+    case 'where': {
+      let filter: ReturnType<typeof compileObjectFilter>;
+      try {
+        filter = compileObjectFilter(quotedArguments(inner));
+      } catch {
+        return () => undefined;
+      }
+      return (value, parseValue, ctx) =>
+        Array.isArray(value) && (!value.length || isObjectList(value))
+          ? value.filter((item) =>
+              filter(item, (path) => ctx.resolveValues(path, parseValue))
+            )
+          : undefined;
+    }
+
+    case 'pluck': {
+      const key = unquote(inner);
+      if (key === undefined) return undefined;
+      return (value) => {
+        if (!Array.isArray(value)) return undefined;
+        if (value.length && !isObjectList(value)) return undefined;
+        const found = new Set<string>();
+        for (const item of value as Record<string, unknown>[]) {
+          const field = item[key];
+          if (typeof field === 'string' && field) found.add(sanitise(field));
+        }
+        return [...found];
+      };
     }
 
     case 'truncate': {
@@ -451,6 +554,21 @@ function compileParameterised(
         conditionalModifiers.exact.exists(value) ? value : fallback;
     }
 
+    case 'trim': {
+      const chars = unquote(inner);
+      if (chars === undefined) return undefined;
+      const strip = new Set(chars);
+      return (value) => {
+        if (typeof value !== 'string') return undefined;
+        const points = [...value];
+        let start = 0;
+        let end = points.length;
+        while (start < end && strip.has(points[start])) start += 1;
+        while (end > start && strip.has(points[end - 1])) end -= 1;
+        return points.slice(start, end).join('');
+      };
+    }
+
     case 'translate': {
       const [from, to] = quotedArguments(inner);
       if (from === undefined || to === undefined) return undefined;
@@ -462,10 +580,15 @@ function compileParameterised(
       const options = quotedArguments(inner).map((option) =>
         option.toLowerCase()
       );
-      if (options.length === 0) return undefined;
-      const set = new Set(options);
-      return (value) => {
+      const references = referenceArguments(inner);
+      if (options.length === 0 && references.length === 0) return undefined;
+      const literalSet = new Set(options);
+      return (value, parseValue, ctx) => {
         if (value === null || value === undefined) return false;
+        if (isObjectList(value)) return undefined;
+        const set = references.length
+          ? new Set(resolveListArgument(options, references, parseValue, ctx))
+          : literalSet;
         if (Array.isArray(value)) {
           return value.some(
             (item) => typeof item === 'string' && set.has(item.toLowerCase())
@@ -505,6 +628,9 @@ function compilePlain(lower: string): CompiledModifier {
       return fn ? fn(value) : undefined;
     }
     if (Array.isArray(value)) {
+      if (isObjectList(value) && !OBJECT_LIST_MODIFIERS.has(lower)) {
+        return undefined;
+      }
       const fn = arrayModifiers[lower as keyof typeof arrayModifiers];
       return fn ? (fn as (v: any) => unknown)(value) : undefined;
     }

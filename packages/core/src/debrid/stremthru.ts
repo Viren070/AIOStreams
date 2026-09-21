@@ -16,6 +16,9 @@ import {
   hashNzbUrl,
   buildResolveKey,
   removeDownloadOnAbort,
+  parseFileNames,
+  selectableFileNames,
+  selectableFiles,
 } from './utils.js';
 import {
   DebridServiceConfig,
@@ -26,11 +29,11 @@ import {
   UsenetDebridService,
   DebridFailureCache,
 } from './base.js';
-import { ParsedResult } from '@viren070/parse-torrent-title';
-import { parseTorrentTitleCached } from '../parser/title.js';
 import assert from 'assert';
 
 const logger = createLogger('debrid:stremthru');
+
+const CHECK_CACHE_READ_BATCH = 500;
 
 function convertStremThruError(error: StremThruError): DebridError {
   return new DebridError(error.message, {
@@ -134,18 +137,35 @@ export class StremThruService
 
   //  Shared check cache helpers
 
+  private checkCacheKey(hash: string): string {
+    return `${this.serviceName}:${getSimpleTextHash(hash)}`;
+  }
+
   private async checkCacheGet(
     hash: string
   ): Promise<DebridDownload | undefined> {
-    return await StremThruService.checkCache.get(
-      `${this.serviceName}:${getSimpleTextHash(hash)}`
-    );
+    return await StremThruService.checkCache.get(this.checkCacheKey(hash));
+  }
+
+  private async checkCacheGetMany(
+    hashes: string[]
+  ): Promise<(DebridDownload | undefined)[]> {
+    const results: (DebridDownload | undefined)[] = [];
+    for (let i = 0; i < hashes.length; i += CHECK_CACHE_READ_BATCH) {
+      const batch = hashes.slice(i, i + CHECK_CACHE_READ_BATCH);
+      results.push(
+        ...(await StremThruService.checkCache.getMany(
+          batch.map((hash) => this.checkCacheKey(hash))
+        ))
+      );
+    }
+    return results;
   }
 
   private async checkCacheSet(debridDownload: DebridDownload): Promise<void> {
     try {
       await StremThruService.checkCache.set(
-        `${this.serviceName}:${getSimpleTextHash(debridDownload.hash!)}`,
+        this.checkCacheKey(debridDownload.hash!),
         debridDownload,
         appConfig.builtins.debrid.instantAvailabilityCacheTtl
       );
@@ -243,6 +263,7 @@ export class StremThruService
           link: file.link,
           path: file.path,
           index: file.index,
+          videoHash: (file as any).video_hash,
         })),
         size: (result.data.files ?? []).reduce(
           (acc, file) => acc + file.size,
@@ -297,14 +318,15 @@ export class StremThruService
     const cachedResults: DebridDownload[] = [];
     let newResults: DebridDownload[] = [];
     const magnetsToCheck: string[] = [];
-    for (const magnet of magnets) {
-      const cached = await this.checkCacheGet(magnet);
-      if (cached) {
-        cachedResults.push(cached);
+    const cached = await this.checkCacheGetMany(magnets);
+    magnets.forEach((magnet, i) => {
+      const hit = cached[i];
+      if (hit) {
+        cachedResults.push(hit);
       } else {
         magnetsToCheck.push(magnet);
       }
-    }
+    });
 
     if (magnetsToCheck.length > 0) {
       const BATCH_SIZE = 500;
@@ -339,12 +361,13 @@ export class StremThruService
           size: Math.round(
             item.files.reduce((acc, file) => acc + file.size, 0)
           ),
-          files: item.files.map((file) => {
+          files: selectableFiles(item.files).map((file) => {
             return {
               name: file.name,
               size: file.size,
               index: file.index,
               mediaInfo: (file as any).media_info,
+              videoHash: (file as any).video_hash,
             };
           }),
         }));
@@ -531,14 +554,16 @@ export class StremThruService
     const cachedResults: DebridDownload[] = [];
     const hashesToCheck: string[] = [];
 
-    for (const { hash } of nzbs as { hash: string }[]) {
-      const cached = await this.checkCacheGet(hash);
-      if (cached) {
-        cachedResults.push(cached);
+    const hashes = (nzbs as { hash: string }[]).map(({ hash }) => hash);
+    const cached = await this.checkCacheGetMany(hashes);
+    hashes.forEach((hash, i) => {
+      const hit = cached[i];
+      if (hit) {
+        cachedResults.push(hit);
       } else {
         hashesToCheck.push(hash);
       }
-    }
+    });
 
     let newResults: DebridDownload[] = [];
 
@@ -576,13 +601,15 @@ export class StremThruService
           size: item.files
             ? item.files.reduce((acc, file) => acc + file.size, 0)
             : undefined,
-          files: item.files?.map((file) => ({
-            name: file.name,
-            size: file.size,
-            index: file.index,
-            link: file.link,
-            path: file.path,
-          })),
+          files: item.files
+            ? selectableFiles(item.files).map((file) => ({
+                name: file.name,
+                size: file.size,
+                index: file.index,
+                link: file.link,
+                path: file.path,
+              }))
+            : undefined,
         }));
 
         newResults
@@ -644,6 +671,7 @@ export class StremThruService
           link: file.link,
           path: file.path,
           index: file.index,
+          videoHash: (file as any).video_hash,
         })),
       };
     } catch (error) {
@@ -1091,16 +1119,9 @@ export class StremThruService
         private: playbackInfo.private,
       };
 
-      const allStrings: string[] = [];
-      allStrings.push(magnetDownload.name ?? '');
-      allStrings.push(...magnetDownload.files.map((file) => file.name ?? ''));
-      const parseResults: ParsedResult[] = allStrings.map((string) =>
-        parseTorrentTitleCached(string)
+      const parsedFiles = await parseFileNames(
+        selectableFileNames(magnetDownload.name ?? '', magnetDownload.files)
       );
-      const parsedFiles = new Map<string, ParsedResult>();
-      for (const [index, result] of parseResults.entries()) {
-        parsedFiles.set(allStrings[index], result);
-      }
 
       file = await selectFileInTorrentOrNZB(
         torrent,
@@ -1363,17 +1384,9 @@ export class StremThruService
         metadata: metadata,
         size: usenetDownload.size || 0,
       };
-      const allStrings: string[] = [];
-      allStrings.push(usenetDownload.name ?? '');
-      allStrings.push(...usenetDownload.files.map((f) => f.name ?? ''));
-
-      const parseResults: ParsedResult[] = allStrings.map((string) =>
-        parseTorrentTitleCached(string)
+      const parsedFiles = await parseFileNames(
+        selectableFileNames(usenetDownload.name ?? '', usenetDownload.files)
       );
-      const parsedFiles = new Map<string, ParsedResult>();
-      for (const [index, result] of parseResults.entries()) {
-        parsedFiles.set(allStrings[index], result);
-      }
 
       file = await selectFileInTorrentOrNZB(
         nzbInfo,

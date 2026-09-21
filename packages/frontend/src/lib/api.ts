@@ -370,7 +370,6 @@ export async function updateUserConfig(
   });
 }
 
-
 export interface ClientAgent {
   userAgent: string;
   firstSeen: number;
@@ -400,7 +399,10 @@ export interface VariantEvaluation {
 
 /** The user agents seen on this configuration's stream and catalogue requests. */
 export async function loadClientAgents(uuid: string, password: string | null) {
-  return api<ClientAgent[]>('GET /user/client-agents', configAuth(uuid, password));
+  return api<ClientAgent[]>(
+    'GET /user/client-agents',
+    configAuth(uuid, password)
+  );
 }
 
 /** Ask the server which variant conditions match a hypothetical request. */
@@ -859,6 +861,94 @@ export async function fetchManifest(url: string): Promise<any> {
     );
   }
   return response.json();
+}
+
+export interface JellyfinInfo {
+  enabled: boolean;
+  serverUrl: string;
+  version: string;
+  maxVersions: number;
+  resolveOnOpen: 'always' | 'never' | 'user';
+}
+
+export async function getJellyfinInfo(credentials: Credentials) {
+  return api<JellyfinInfo>('GET /jellyfin/info', authed(credentials));
+}
+
+export interface TrackerExchange {
+  lastAt: number | null;
+  error: string | null;
+}
+
+export interface WatchStateTracker {
+  addon: string;
+  /** Absent for the primary user's trackers. */
+  persona?: string;
+  status: 'connected' | 'auth_expired' | 'error';
+  /** Absent when the addon or the instance does not use that direction. */
+  push?: TrackerExchange;
+  pull?: TrackerExchange;
+}
+
+export interface WatchStateTrackerOption {
+  /** Empty for the primary user, otherwise the persona id. */
+  user: string;
+  presetId: string;
+  addon: string;
+}
+
+export interface WatchStateOverview {
+  /** Whether this instance sends and reads watch state at all. */
+  push: boolean;
+  pull: boolean;
+  trackers: WatchStateTracker[];
+  available: WatchStateTrackerOption[];
+}
+
+/** The trackers the saved configuration syncs watch state with. */
+export async function getWatchStateTrackers(credentials: Credentials) {
+  return api<WatchStateOverview>('GET /user/watch-state', authed(credentials));
+}
+
+/** Binds a Quick Connect code shown on a TV to this configuration. */
+export async function approveJellyfinQuickConnect(
+  credentials: Credentials,
+  code: string,
+  persona?: string
+) {
+  return api<{
+    approved: boolean;
+    device: { name: string; app: string; version: string };
+  }>('POST /jellyfin/quickconnect/approve', {
+    ...authed(credentials),
+    body: { code, ...(persona ? { persona } : {}) },
+  });
+}
+
+export async function getJellyfinApiKeyToken(
+  credentials: Credentials,
+  id: string
+) {
+  return api<{ token: string }>('POST /jellyfin/api-keys/token', {
+    ...authed(credentials),
+    body: { id },
+  });
+}
+
+export interface QuickConnectPending {
+  device: { name: string; app: string; version: string };
+  requestedAt: string;
+}
+
+/** The device behind a code, before anything is bound to it. */
+export async function getJellyfinQuickConnectPending(
+  credentials: Credentials,
+  code: string
+) {
+  return api<QuickConnectPending>(
+    `GET /jellyfin/quickconnect/pending?code=${encodeURIComponent(code)}`,
+    authed(credentials)
+  );
 }
 
 export type {

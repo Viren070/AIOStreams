@@ -64,6 +64,8 @@ export interface AnimeListMapping {
 }
 
 export interface ImdbHints {
+  /** IMDb show the season/episode hints are coordinates in. */
+  id?: string;
   title?: string;
   /** Season number on IMDb where this canonical record starts. */
   fromSeason?: number;
@@ -191,6 +193,7 @@ export interface AnimeEntry {
   mappings?: AnimeEntryMappings;
   type: AnimeType;
   imdb?: {
+    id?: string;
     seasonNumber?: number;
     fromEpisode?: number;
     nonImdbEpisodes?: number[];
@@ -213,6 +216,7 @@ export interface AnimeEntry {
     seasonNumber: number | null;
     seasonId: number | null;
     fromEpisode?: number | null;
+    absoluteOrder?: boolean;
   };
   title?: string;
   animeSeason?: { season: AnimeSeason; year: number | null };

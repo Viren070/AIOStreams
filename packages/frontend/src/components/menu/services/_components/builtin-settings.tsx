@@ -249,6 +249,19 @@ export function BuiltinSettings() {
             }));
           }}
         />
+        <Switch
+          label="Only Same-Release Failover"
+          side="right"
+          disabled={!userData.failover?.enabled}
+          help="Never fail over to a different release, even if same-release alternatives run out."
+          value={userData.failover?.onlySameReleaseFailover ?? false}
+          onValueChange={(value) => {
+            setUserData((prev) => ({
+              ...prev,
+              failover: { ...prev.failover, onlySameReleaseFailover: value },
+            }));
+          }}
+        />
         {/* --- How to run them (concurrency + timing) --- */}
         <NumberInput
           label="Parallel Attempts"

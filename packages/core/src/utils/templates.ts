@@ -404,11 +404,31 @@ export class TemplateManager {
 }
 
 /**
- * Whitelist a template's regex patterns and synced URLs for every user. Only
- * for templates the operator vouches for; community uploads stay out unless
- * an admin marks one trusted.
+ * Whitelist the regex patterns and synced URLs of the templates the operator
+ * vouches for. Community uploads arrive via
+ * {@link registerCommunityTemplateTrust}. Takes the full current set, not a
+ * delta.
  */
 export function registerTemplateTrust(templates: Template[]): void {
+  const { patterns, selUrls, regexUrls } = collectTrust(templates);
+  RegexAccess.setSourcePatterns('templates', patterns);
+  SelAccess.setSourceUrls('templates', selUrls);
+  RegexAccess.setSourceUrls('templates', regexUrls);
+}
+
+/** The same, for the approved uploads an admin has marked trusted. */
+export function registerCommunityTemplateTrust(templates: Template[]): void {
+  const { patterns, selUrls, regexUrls } = collectTrust(templates);
+  RegexAccess.setSourcePatterns('community', patterns);
+  SelAccess.setSourceUrls('community', selUrls);
+  RegexAccess.setSourceUrls('community', regexUrls);
+}
+
+function collectTrust(templates: Template[]): {
+  patterns: string[];
+  selUrls: string[];
+  regexUrls: string[];
+} {
   const patterns: string[] = [];
   const selUrls: string[] = [];
   const regexUrls: string[] = [];
@@ -418,7 +438,5 @@ export function registerTemplateTrust(templates: Template[]): void {
     selUrls.push(...collected.selUrls);
     regexUrls.push(...collected.regexUrls);
   }
-  if (patterns.length > 0) RegexAccess.addPatterns(patterns);
-  if (selUrls.length > 0) SelAccess.addAllowedUrls(selUrls);
-  if (regexUrls.length > 0) RegexAccess.addAllowedUrls(regexUrls);
+  return { patterns, selUrls, regexUrls };
 }

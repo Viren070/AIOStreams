@@ -30,6 +30,7 @@ import {
 import { normaliseCountryCode } from '../utils/countries.js';
 import { partial_ratio } from 'fuzzball';
 import { ParsedResult } from '@viren070/parse-torrent-title';
+import { parseTorrentTitleCached } from '../parser/title.js';
 
 const logger = createLogger('debrid');
 
@@ -363,6 +364,38 @@ export const isTitleWrongN = (
   }
   return false;
 };
+export async function parseFileNames(
+  names: Iterable<string>
+): Promise<Map<string, ParsedResult>> {
+  const parsed = new Map<string, ParsedResult>();
+  for (const name of names) {
+    if (parsed.has(name)) continue;
+    parsed.set(name, parseTorrentTitleCached(name));
+    if (parsed.size % 200 === 0) {
+      await new Promise((resolve) => setImmediate(resolve));
+    }
+  }
+  return parsed;
+}
+
+/** Selection never reads the parse of a file it skips. */
+export function selectableFileNames(
+  title: string,
+  files: DebridFile[]
+): string[] {
+  const names = [title];
+  for (const file of files) {
+    if (!isNotVideoFile(file)) names.push(file.name ?? '');
+  }
+  return names;
+}
+
+/** Keeps one file when none are selectable, so nothing is still selected. */
+export function selectableFiles<T extends DebridFile>(files: T[]): T[] {
+  const kept = files.filter((file) => !isNotVideoFile(file));
+  return kept.length > 0 ? kept : files.slice(0, 1);
+}
+
 export async function selectFileInTorrentOrNZB(
   torrentOrNZB: Torrent | NZB,
   debridDownload: DebridDownload,

@@ -24,6 +24,11 @@ Supports any URL or P2P-based stream (debrid and usenet included). Stremio NNTP 
 <Callout type="warn">
   Requires the Search API. [Instances](/getting-started/public-instances) that disable it (e.g. the **Public ElfHosted Instance**) cannot be used with this extension.
 </Callout>
+<Callout type="warn">
+  Plugins only run in Seanime's web and desktop interface. [Tenji](https://seanime.app/docs/tenji/), the mobile and TV
+  client, does not support them - it ignores plugin tabs entirely and falls back to its automatic source. On Tenji, use
+  the **AIOStreams Torrent Provider** instead.
+</Callout>
 
 ### AIOStreams Torrent Provider
 
@@ -35,8 +40,9 @@ support handles debrid playback.
   Requires the Search API. [Instances](/getting-started/public-instances) that disable it (e.g. the **Public ElfHosted Instance**) cannot be used with this extension.
 </Callout>
 <Callout type="info">
-  This extension was developed before the Plugin system supported torrent streaming. Now that it does, the Torrent
-  Provider may be deprecated in a future release. The **AIOStreams Plugin** is preferred.
+  This extension was developed before the Plugin system supported torrent streaming. Now that it does, the **AIOStreams
+  Plugin** is preferred wherever plugins run. This extension remains the option for [Tenji](https://seanime.app/docs/tenji/),
+  which does not support plugins.
 </Callout>
 
 ### Stremio Custom Source
@@ -76,6 +82,16 @@ Then follow the steps for your extension:
         To adjust settings, click the **Preferences** icon (to the left of the three-dot menu) on the extension card.
         Available options include preferred player (built-in, desktop, or external link), search ID (IMDb or Kitsu),
         auto-play behaviour, and which triggers to show.
+      </Step>
+      <Step>
+        Recommended: go to **Settings** → **App** → **Episodes** and set **Default episode source** to **AIOStreams**.
+        AIOStreams then becomes the tab that opens on anime pages, and clicking an episode on the home page opens its
+        results panel directly.
+
+        <Callout type="info">
+          The option only appears while the plugin's **Show "AIOStreams" tab on anime details page** preference is
+          enabled (it is by default).
+        </Callout>
       </Step>
     </Steps>
   </Tab>

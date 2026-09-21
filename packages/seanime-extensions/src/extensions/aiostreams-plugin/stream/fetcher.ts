@@ -152,7 +152,8 @@ export class StreamFetcher {
       creds.baseUrl,
       creds.uuid,
       creds.encryptedPassword,
-      creds.variants
+      creds.variants,
+      (url, init) => this.ctx.fetch(url, init as $ui.FetchOptions)
     );
   }
 
@@ -362,7 +363,7 @@ export class StreamFetcher {
     const sessionId = this.setSessionId();
     this.resetDownloadSession();
 
-    this.panel.wvState.set({
+    this.panel.setState({
       results: [],
       loading: true,
       error: null,
@@ -498,7 +499,7 @@ export class StreamFetcher {
   }
 
   private applyResultsToPanel(state: WebviewState): void {
-    this.panel.wvState.set(state);
+    this.panel.setState(state);
   }
 
   refreshLastQuery(): void {

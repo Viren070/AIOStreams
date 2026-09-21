@@ -239,13 +239,25 @@ class APIError extends Error {
   }
 }
 
+interface FetchResult {
+  status: number;
+  statusText: string;
+  headers: unknown;
+  json(): unknown;
+}
+
+type FetchFn = (url: string, init: RequestInit) => Promise<FetchResult>;
+
 class AIOStreamsAPI {
   private baseUrl: string;
+  // Plugin UI contexts must pass ctx.fetch, as Seanime documents: the global
+  // fetch resolves outside the UI scheduler and randomly corrupts the VM.
   constructor(
     baseUrl: string,
     private uuid: string,
     private password: string,
-    readonly variants: string[] = []
+    readonly variants: string[] = [],
+    private readonly fetchFn: FetchFn = fetch
   ) {
     this.baseUrl = baseUrl.replace(/\/$/, '');
   }
@@ -347,7 +359,7 @@ class AIOStreamsAPI {
       }
     }
 
-    const response = await fetch(url, request);
+    const response = await this.fetchFn(url, request);
 
     if (response.status === 204) {
       return null as T;

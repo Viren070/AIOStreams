@@ -1,18 +1,30 @@
-﻿import { z } from 'zod';
-import {
+﻿import {
   Cache,
   DistributedLock,
-  formatZodError,
   getSimpleTextHash,
   getTimeTakenSincePoint,
   createLogger,
   makeRequest,
   makeUrlLogSafe,
-  parseXmlCompat,
+  readBodyUpTo,
+  registerLockErrorClass,
 } from '../../../utils/index.js';
 import { config as appConfig } from '../../../config/index.js';
 import type { Logger } from '../../../logging/logger.js';
 import { searchWithBackgroundRefresh } from '../../utils/general.js';
+import {
+  NabScanError,
+  NabScanner,
+  type NabAttrs,
+  type NabAttrType,
+  type NabCapsDocument,
+  type NabEnclosure,
+  type NabErrorDocument,
+  type NabScanProfile,
+  type NabSearchDocument,
+  type NabSearchFunction,
+  type NabTextField,
+} from './scan.js';
 
 // --- Generic Custom Error ---
 export class NabApiError extends Error {
@@ -25,250 +37,97 @@ export class NabApiError extends Error {
   }
 }
 
-// --- Zod Schemas ---
-const convertString = z
-  .string()
-  .optional()
-  .transform((val) => {
-    if (val === 'yes') return true;
-    if (val === 'no') return false;
-    if (val && !Number.isNaN(Number(val))) return Number(val);
-    return val;
-  });
+// Concurrent identical searches share one request through DistributedLock;
+// without this the waiters get a plain Error and lose the error code.
+registerLockErrorClass(NabApiError);
+registerLockErrorClass(NabScanError);
 
-const NabSearchFunctionSchema = z
-  .array(
-    z.object({
-      $: z.object({
-        available: convertString,
-        supportedParams: z
-          .string()
-          .transform((val) => val.split(','))
-          .default([]),
-      }),
-    })
-  )
-  .transform((arr) => arr[0].$);
-const NabCapsSearchingSchema = z
-  .object({
-    search: NabSearchFunctionSchema,
-  })
-  .catchall(NabSearchFunctionSchema);
+export type NabNamespace = 'torznab' | 'newznab';
 
-const CapabilitiesSchema = z
-  .object({
-    caps: z.object({
-      server: z.array(
-        z.object({ $: z.object({ title: z.string().optional() }) })
-      ),
-      limits: z
-        .array(
-          z.object({
-            $: z.object({ default: convertString, max: convertString }),
-          })
-        )
-        .optional(),
-      searching: z.array(NabCapsSearchingSchema),
-    }),
-  })
-  .transform((obj) => ({
-    server: obj.caps.server[0].$,
-    limits: obj.caps.limits?.[0].$,
-    searching: obj.caps.searching[0],
-  }));
-export type Capabilities = z.infer<typeof CapabilitiesSchema>;
-
-const AttributeSchema = z
-  .object({ $: z.object({ name: z.string(), value: convertString }) })
-  .transform((attr) => ({ [attr.$.name]: attr.$.value }));
-
-type NabAttributes = Record<string, string | number | boolean | undefined>;
+export type Capabilities = {
+  server: { title?: string };
+  limits?: { default?: number; max?: number };
+  searching: Record<string, NabSearchFunction>;
+};
 
 /**
- * Collapse `<ns:attr>` elements into a single object.
+ * What each namespace's addon actually reads off an item. The scanner is given
+ * this and materialises nothing else, so the 8-25 attributes an `extended=1`
+ * feed carries per item are never turned into strings, let alone cached.
  */
-const collapseAttributes = (
-  attrs: NabAttributes[] | undefined
-): NabAttributes =>
-  attrs?.reduce<NabAttributes>((acc, attr) => {
-    for (const key in attr) {
-      const value = attr[key];
-      if (value === '') continue;
-      const previous = acc[key];
-      acc[key] =
-        typeof previous === 'string' && previous && typeof value === 'string'
-          ? `${previous},${value}`
-          : value;
-    }
-    return acc;
-  }, {}) ?? {};
+const TORZNAB_PROFILE: NabScanProfile = {
+  attrElement: 'torznab:attr',
+  fields: new Set<NabTextField>(['title', 'guid', 'pubDate', 'size', 'type']),
+  indexers: new Set(['prowlarrindexer', 'jackettindexer'] as const),
+  enclosureLength: false,
+  attrs: new Map<string, NabAttrType>([
+    ['language', 'string'],
+    ['subs', 'string'],
+    ['magneturl', 'string'],
+    ['infohash', 'string'],
+    ['seeders', 'number'],
+    ['downloadvolumefactor', 'number'],
+    ['size', 'number'],
+  ]),
+};
 
-const GuidSchema = z
-  .array(z.union([z.string(), z.object({ _: z.string().optional() })]))
-  .optional()
-  .transform((arr) => {
-    const first = arr?.[0];
-    return (typeof first === 'string' ? first : first?._) || undefined;
-  });
+const NEWZNAB_PROFILE: NabScanProfile = {
+  attrElement: 'newznab:attr',
+  fields: new Set<NabTextField>(['title', 'pubDate', 'size']),
+  indexers: new Set(['prowlarrindexer'] as const),
+  enclosureLength: true,
+  attrs: new Map<string, NabAttrType>([
+    ['zyclopsHealth', 'string'],
+    ['usenetdate', 'string'],
+    ['language', 'string'],
+    ['subs', 'string'],
+    ['sourceIndexerName', 'string'],
+    ['hydraIndexerName', 'string'],
+    ['poster', 'string'],
+    ['size', 'number'],
+  ]),
+};
 
-// Create specific schemas for each namespace
-const createTorznabItemSchema = () =>
-  z
-    .object({
-      title: z.array(z.string()).transform((arr) => arr[0]),
-      link: z
-        .array(z.string())
-        .optional()
-        .transform((arr) => arr?.[0]),
-      guid: GuidSchema,
-      pubDate: z.array(z.string()).transform((arr) => arr[0]),
-      prowlarrindexer: z
-        .array(
-          z.object({
-            _: z.string(),
-            $: z.object({ id: z.string() }),
-          })
-        )
-        .optional()
-        .transform((arr) =>
-          arr?.[0] ? { name: arr[0]._, id: arr[0].$.id } : undefined
-        ),
-      jackettindexer: z
-        .array(
-          z.object({
-            _: z.string(),
-            $: z.object({ id: z.string() }),
-          })
-        )
-        .optional()
-        .transform((arr) =>
-          arr?.[0] ? { name: arr[0]._, id: arr[0].$.id } : undefined
-        ),
-      type: z
-        .array(z.string()) // usually "public", "semi-private" or "private" in Jackett responses
-        .optional()
-        .transform((arr) => arr?.[0]),
-      size: z
-        .array(z.string())
-        .optional()
-        .transform((arr) => (arr?.[0] ? Number(arr[0]) : undefined)),
-      enclosure: z.array(
-        z
-          .object({
-            $: z.object({
-              url: z.string(),
-              length: convertString,
-              type: z.string(),
-            }),
-          })
-          .transform((obj) => obj.$)
-      ),
-      'torznab:attr': z
-        .array(AttributeSchema)
-        .optional()
-        .transform(collapseAttributes),
-    })
-    .transform((item) => ({
-      title: item.title,
-      link: item.link,
-      guid: item.guid,
-      pubDate: item.pubDate,
-      prowlarrindexer: item.prowlarrindexer,
-      jackettindexer: item.jackettindexer,
-      type: item.type,
-      size: item.size,
-      enclosure: item.enclosure,
-      torznab: item['torznab:attr'],
-    }));
+interface NabSearchResultItemBase {
+  title: string;
+  /** Torznab only, but the base addon's duplicate-page check reads it. */
+  guid?: string;
+  pubDate?: string;
+  size?: number;
+  enclosure: NabEnclosure[];
+  prowlarrindexer?: { name: string };
+}
 
-const createNewznabItemSchema = () =>
-  z
-    .object({
-      title: z.array(z.string()).transform((arr) => arr[0]),
-      link: z
-        .array(z.string())
-        .optional()
-        .transform((arr) => arr?.[0]),
-      guid: GuidSchema,
-      pubDate: z.array(z.string()).transform((arr) => arr[0]),
-      size: z
-        .array(z.string())
-        .optional()
-        .transform((arr) => (arr?.[0] ? Number(arr[0]) : undefined)),
-      prowlarrindexer: z
-        .array(
-          z.object({
-            _: z.string(),
-            $: z.object({ id: z.string() }),
-          })
-        )
-        .optional()
-        .transform((arr) =>
-          arr?.[0] ? { name: arr[0]._, id: arr[0].$.id } : undefined
-        ),
-      enclosure: z.array(
-        z
-          .object({
-            $: z.object({
-              url: z.string(),
-              length: convertString,
-              type: z.string(),
-            }),
-          })
-          .transform((obj) => obj.$)
-      ),
-      'newznab:attr': z
-        .array(AttributeSchema)
-        .optional()
-        .transform(collapseAttributes),
-    })
-    .transform((item) => ({
-      title: item.title,
-      link: item.link,
-      guid: item.guid,
-      pubDate: item.pubDate,
-      size: item.size,
-      enclosure: item.enclosure,
-      newznab: item['newznab:attr'],
-      prowlarrindexer: item.prowlarrindexer,
-    }));
+export interface TorznabSearchResultItem extends NabSearchResultItemBase {
+  /** Usually "public", "semi-private" or "private" in Jackett responses. */
+  type?: string;
+  jackettindexer?: { name: string };
+  torznab: NabAttrs;
+}
 
-// schema for response attributes (offset, total only)
-const ResponseAttributeSchema = z
-  .object({
-    $: z.object({
-      offset: convertString.optional(),
-      total: convertString.optional(),
-    }),
-  })
-  .transform((obj) => ({
-    offset: obj.$.offset as number | undefined,
-    total: obj.$.total as number | undefined,
-  }));
-
-// Type definitions for search result items
-export type TorznabSearchResultItem = z.infer<
-  ReturnType<typeof createTorznabItemSchema>
->;
-export type NewznabSearchResultItem = z.infer<
-  ReturnType<typeof createNewznabItemSchema>
->;
+export interface NewznabSearchResultItem extends NabSearchResultItemBase {
+  newznab: NabAttrs;
+}
 
 // Union type for all possible search result items
-export type SearchResultItem<T extends 'torznab' | 'newznab'> =
-  T extends 'torznab' ? TorznabSearchResultItem : NewznabSearchResultItem;
+export type SearchResultItem<T extends NabNamespace> = T extends 'torznab'
+  ? TorznabSearchResultItem
+  : NewznabSearchResultItem;
 
-export type SearchResponse<T extends 'torznab' | 'newznab'> = {
+export type SearchResponse<T extends NabNamespace> = {
   offset?: number;
   total?: number;
   results: SearchResultItem<T>[];
+  /** Results were left unread because of a size or count cap. */
+  truncated?: true;
 };
 
-type RawSearchResponse = {
-  offset?: number;
-  total?: number;
-  results: (TorznabSearchResultItem | NewznabSearchResultItem)[];
-};
+type NabRequestKind = 'caps' | 'search';
+
+type NabRequestResult<
+  N extends NabNamespace,
+  K extends NabRequestKind,
+> = K extends 'caps' ? Capabilities : SearchResponse<N>;
 
 // --- Connection test ---
 const NAB_TEST_TIMEOUT = 15000;
@@ -328,20 +187,17 @@ const describeTestError = (
     return { code: error.code, message: error.description };
   }
   const message = error instanceof Error ? error.message : String(error);
-  if (
-    message.startsWith('Failed to parse XML response') ||
-    message.startsWith('Response validation failed')
-  ) {
+  if (error instanceof NabScanError) {
     return { message: 'The response was not a Newznab/Torznab API response' };
   }
   return { message };
 };
 
 // --- API Client Class ---
-export class BaseNabApi<N extends 'torznab' | 'newznab'> {
+export class BaseNabApi<N extends NabNamespace> {
   private readonly capabilitiesCache: Cache<string, Capabilities>;
   private readonly searchCache: Cache<string, SearchResponse<N>>;
-  private readonly SearchResultSchema: z.ZodType<RawSearchResponse>;
+  private readonly profile: NabScanProfile;
   private readonly logger: Logger;
   private readonly params: Record<string, string>;
   private readonly userAgent: string;
@@ -372,97 +228,20 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
       this.baseUrl = apiPathUrl.origin;
       this.apiPath = apiPathUrl.pathname;
     }
+    this.profile = namespace === 'torznab' ? TORZNAB_PROFILE : NEWZNAB_PROFILE;
     this.capabilitiesCache = Cache.getInstance(`${namespace}:api:caps`);
-    this.searchCache = Cache.getInstance(`${namespace}:api:search:v2`);
+    // v3: the cached item shape is now the scanner's projection.
+    this.searchCache = Cache.getInstance(`${namespace}:api:search:v3`);
     this.userAgent =
       appConfig.builtins.nab.userAgent ?? appConfig.http.defaultUserAgent;
     this.httpProxy =
       appConfig.builtins.nab.httpProxy?.[namespace as 'torznab' | 'newznab'];
-
-    // Create the appropriate schema based on namespace
-    if (namespace === 'torznab') {
-      this.SearchResultSchema = z
-        .object({
-          rss: z.object({
-            channel: z.array(
-              z.union([
-                z.literal(''),
-                z.object({
-                  item: z
-                    .array(createTorznabItemSchema())
-                    .optional()
-                    .default([]),
-                  'torznab:response': z
-                    .array(ResponseAttributeSchema)
-                    .optional(),
-                  'newznab:response': z
-                    .array(ResponseAttributeSchema)
-                    .optional(),
-                  response: z.array(ResponseAttributeSchema).optional(),
-                }),
-              ])
-            ),
-          }),
-        })
-        .transform((data) => {
-          const channel = data.rss.channel[0];
-          const response =
-            channel === ''
-              ? undefined
-              : (channel['torznab:response']?.[0] ??
-                channel['newznab:response']?.[0] ??
-                channel.response?.[0]);
-          return {
-            offset: response?.offset,
-            total: response?.total,
-            results: channel === '' ? [] : channel.item,
-          };
-        });
-    } else {
-      this.SearchResultSchema = z
-        .object({
-          rss: z.object({
-            channel: z.array(
-              z.union([
-                z.literal(''),
-                z.object({
-                  item: z
-                    .array(createNewznabItemSchema())
-                    .optional()
-                    .default([]),
-                  'torznab:response': z
-                    .array(ResponseAttributeSchema)
-                    .optional(),
-                  'newznab:response': z
-                    .array(ResponseAttributeSchema)
-                    .optional(),
-                  response: z.array(ResponseAttributeSchema).optional(),
-                }),
-              ])
-            ),
-          }),
-        })
-        .transform((data) => {
-          const channel = data.rss.channel[0];
-          const response =
-            channel === ''
-              ? undefined
-              : (channel['torznab:response']?.[0] ??
-                channel['newznab:response']?.[0] ??
-                channel.response?.[0]);
-          return {
-            offset: response?.offset,
-            total: response?.total,
-            results: channel === '' ? [] : channel.item,
-          };
-        });
-    }
   }
 
   public async getCapabilities(): Promise<Capabilities> {
     const cacheKey = `${this.baseUrl}${this.apiPath}?t=caps&${JSON.stringify(this.params)}`;
     return this.capabilitiesCache.wrap(
-      () => this.request('caps', CapabilitiesSchema, undefined, 3000),
+      () => this.request('caps', 'caps', undefined, 3000),
       cacheKey,
       appConfig.builtins.nab.capabilitiesCacheTtl
     );
@@ -479,12 +258,7 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
       searchCacheKey: cacheKey,
       bgCacheKey: `nab:${cacheKey}`,
       cacheTTL: appConfig.builtins.nab.searchCacheTtl,
-      fetchFn: () =>
-        this.request(
-          searchFunction,
-          this.SearchResultSchema,
-          params
-        ) as Promise<SearchResponse<N>>,
+      fetchFn: () => this.request(searchFunction, 'search', params),
       isEmptyResult: (result) => result.results.length === 0,
       logger: this.logger,
     });
@@ -501,7 +275,7 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
     try {
       capabilities = await this._request(
         'caps',
-        CapabilitiesSchema,
+        'caps',
         undefined,
         NAB_TEST_TIMEOUT
       );
@@ -529,7 +303,7 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
     try {
       const response = await this._request(
         'search',
-        this.SearchResultSchema,
+        'search',
         { limit: 1 },
         NAB_TEST_TIMEOUT
       );
@@ -559,16 +333,16 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
     return headers;
   };
 
-  private async request<T>(
+  private async request<K extends NabRequestKind>(
     func: string,
-    schema: z.ZodSchema<T>,
+    kind: K,
     params: Record<string, string | number | boolean> = {},
     timeout?: number
-  ): Promise<T> {
+  ): Promise<NabRequestResult<N, K>> {
     const lockKey = `${this.baseUrl}${this.apiPath}?t=${func}&${JSON.stringify(params)}&apikey=${this.apiKey ? getSimpleTextHash(this.apiKey) : ''}&${JSON.stringify(this.params)}`;
     const { result } = await DistributedLock.getInstance().withLock(
       lockKey,
-      () => this._request(func, schema, params, timeout),
+      () => this._request(func, kind, params, timeout),
       {
         timeout: timeout ?? appConfig.builtins.nab.searchTimeout,
         ttl: (timeout ?? appConfig.builtins.nab.searchTimeout) + 1000,
@@ -577,12 +351,12 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
     return result;
   }
 
-  private async _request<T>(
+  private async _request<K extends NabRequestKind>(
     func: string,
-    schema: z.ZodSchema<T>,
+    kind: K,
     params: Record<string, string | number | boolean> = {},
     timeout?: number
-  ): Promise<T> {
+  ): Promise<NabRequestResult<N, K>> {
     const start = Date.now();
     const url = new URL(`${this.baseUrl}${this.apiPath}`);
     const searchParams = new URLSearchParams({
@@ -615,44 +389,88 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
         context: this.namespace,
       });
 
-      const data = await response.text();
+      const {
+        body,
+        bytes,
+        truncated: bodyTruncated,
+      } = await readBodyUpTo(response, appConfig.builtins.nab.maxResponseBytes);
 
-      let result: any | null = null;
-      let parseError: Error | null = null;
+      let document:
+        | NabCapsDocument
+        | NabSearchDocument
+        | NabErrorDocument
+        | undefined;
+      let scanError: NabScanError | undefined;
       try {
-        result = parseXmlCompat(data);
+        const scanner = new NabScanner(body);
+        document =
+          kind === 'caps'
+            ? scanner.scanCaps()
+            : await scanner.scanSearch(this.profile, {
+                maxItems: appConfig.builtins.nab.maxResults,
+              });
       } catch (error) {
-        parseError = error as Error;
+        if (!(error instanceof NabScanError)) throw error;
+        scanError = error;
       }
 
-      if (result && result.error) {
-        const code = parseInt(result.error.$.code, 10);
-        const description = result.error.$.description;
-        throw new NabApiError(code, description);
+      // An API error document outranks the status code: plenty of indexers
+      // return one with a 4xx, and its code is what callers act on.
+      if (document?.kind === 'error') {
+        throw new NabApiError(document.code, document.description);
       }
 
       if (!response.ok) {
         throw new Error(`${response.status} - ${response.statusText}`);
       }
 
-      if (parseError || !result) {
-        this.logger.error(`Unexpected XML response: ${data}`);
-        throw new Error(
-          `Failed to parse XML response: ${parseError?.message ?? 'Unknown error'}`
+      if (!document) {
+        this.logger.error(
+          `Unexpected ${this.namespace} response (${bytes} bytes, status ${response.status}): ${body.subarray(0, 500).toString('utf8')}`
+        );
+        throw new NabScanError(
+          `Failed to parse XML response: ${scanError?.message ?? 'Unknown error'}`
         );
       }
 
-      const parsedResult = schema.parse(result);
       this.logger.debug(
         `Completed ${this.namespace} request for ${makeUrlLogSafe(urlString)} in ${getTimeTakenSincePoint(start)}`
       );
-      return parsedResult;
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        const message = `Response validation failed: ${formatZodError(error)}`;
-        this.logger.error(`${this.namespace} ${message}`);
-        throw new Error(message);
+
+      if (document.kind === 'caps') {
+        const { kind: _kind, ...capabilities } = document;
+        return capabilities as NabRequestResult<N, K>;
       }
+
+      const truncated = document.truncated || bodyTruncated;
+      if (truncated) {
+        this.logger.warn(
+          `Truncated ${this.namespace} response for ${makeUrlLogSafe(urlString)}`,
+          {
+            bytes,
+            bodyCapped: bodyTruncated,
+            items: document.results.length,
+            itemsCapped: document.truncated,
+            total: document.total,
+          }
+        );
+      }
+      if (document.skipped) {
+        this.logger.warn(
+          `Skipped ${document.skipped} untitled ${this.namespace} results for ${makeUrlLogSafe(urlString)}`
+        );
+      }
+
+      return {
+        offset: document.offset,
+        total: document.total,
+        results: document.results.map(({ attrs, ...item }) => ({
+          ...item,
+          [this.namespace]: attrs,
+        })),
+        ...(truncated ? { truncated: true as const } : {}),
+      } as NabRequestResult<N, K>;
+    } catch (error) {
       this.logger.error(`${this.namespace} request error: ${error}`);
       throw error;
     }

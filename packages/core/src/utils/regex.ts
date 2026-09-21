@@ -1,6 +1,7 @@
 import { Cache } from './cache.js';
 import { getSimpleTextHash } from './crypto.js';
 
+/* `memory` is required: a `RegExp` does not survive a JSON round trip. */
 const regexCache = Cache.getInstance<string, RegExp>(
   'regexCache',
   1_000,
@@ -47,7 +48,7 @@ export function buildKeywordRegexPattern(keywords: string[]): string {
   return `/(?:^|(?<![^ \\[(_\\-.]))(${keywords
     .map((filter) => filter.replace(/[-[\]{}()*+?.,\\^$]/g, '\\$&'))
     .map((filter) => filter.replace(/\s/g, '[\\s.\\-_]?'))
-    .join('|')})(?=[ \\)\\]_.-]|$)/i`;
+    .join('|')})(?=[ \\[(\\)\\]_.-]|$)/i`;
 }
 
 export async function formRegexFromKeywords(

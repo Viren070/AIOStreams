@@ -494,11 +494,12 @@ export const usenetSchema = {
     default: false,
     label: 'Verify file contents',
     description:
-      'After the article audit passes, read the first few kilobytes of each ' +
-      'video file and check it really is the container its name claims. The ' +
-      'audit only proves the articles exist — this catches a release that ' +
-      'was posted or assembled wrong. Costs about one article per file, at ' +
-      'import and on every recheck.',
+      'While importing, read the first few kilobytes of each video file and ' +
+      'check it really is the container its name claims. The article audit ' +
+      'only proves the articles exist — this catches a release that was ' +
+      'posted or assembled wrong before it is played, so failover can move ' +
+      'on to another release. Costs about one article per file, at import ' +
+      'and on every recheck.',
     env: 'USENET_VERIFY_CONTENT',
     requiresRestart: false,
     secret: false,

@@ -171,6 +171,8 @@ export enum CommandPriority {
   High = 0,
   /** STAT/HEAD/DATE: health, inspect, seek probes. */
   Low = 1,
+  /** Background audits: served only while nothing else is queued, within the pool's idle share. */
+  Idle = 2,
 }
 
 export type ProviderState =

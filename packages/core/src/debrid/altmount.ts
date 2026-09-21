@@ -20,8 +20,9 @@ import {
   selectFileInTorrentOrNZB,
   buildResolveKey,
   hashNzbUrl,
+  parseFileNames,
+  selectableFileNames,
 } from './utils.js';
-import { parseTorrentTitleCached } from '../parser/title.js';
 import { fetch } from 'undici';
 import { basename } from 'path';
 
@@ -216,9 +217,8 @@ export class AltmountService extends UsenetStreamService {
         selectedFile = debridFiles[0];
       } else {
         const title = filename || basename(nzb);
-        const allStrings = [title, ...debridFiles.map((f) => f.name ?? '')];
-        const parsedFilesMap = new Map(
-          allStrings.map((s) => [s, parseTorrentTitleCached(s)])
+        const parsedFilesMap = await parseFileNames(
+          selectableFileNames(title, debridFiles)
         );
 
         const nzbInfo = {

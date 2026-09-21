@@ -267,6 +267,8 @@ export const DEFAULT_FAILOVER_INCLUDE_EXTERNAL = false;
 export const DEFAULT_FAILOVER_SAME_RELEASE_LIMIT = 2;
 /** Delay between launching same-release variant attempts (ms). 0 = no delay. */
 export const DEFAULT_FAILOVER_DUPLICATE_STAGGER_MS = 0;
+/** Whether failover is restricted to same-release variants only (never a different release). */
+export const DEFAULT_FAILOVER_ONLY_SAME_RELEASE = false;
 
 /** Metadata fields the deduplicator can merge from discarded duplicates into the winner. */
 export const DEDUPLICATOR_MERGE_FIELDS = [
@@ -964,61 +966,79 @@ const TOP_LEVEL_OPTION_DETAILS: Record<
   | 'aioratingsProfileId'
   | 'openposterdbApiKey'
   | 'openposterdbUrl'
-  | 'openposterdbParameters',
+  | 'openposterdbParameters'
+  | 'pmdbApiKey',
   {
     name: string;
     description: string;
+    type: 'password' | 'string' | 'url';
   }
 > = {
   tmdbApiKey: {
     name: 'TMDB API Key',
+    type: 'password',
     description:
       'Get your free API key from [here](https://www.themoviedb.org/settings/api). Make sure to copy the 32 character API Key and not the Read Access Token.',
   },
   tmdbAccessToken: {
     name: 'TMDB Access Token',
+    type: 'password',
     description:
       'Get your free access token from [here](https://www.themoviedb.org/settings/api). Make sure to copy the Read Access Token and not the 32 character API Key.',
   },
   rpdbApiKey: {
     name: 'RPDB API Key',
+    type: 'password',
     description:
       'Get your free API key from [here](https://ratingposterdb.com/api-key/) for posters with ratings.',
   },
   topPosterApiKey: {
     name: 'TOP Posters API Key',
+    type: 'password',
     description:
       'Get your free API key from [here](https://api.top-posters.com/user/register) for posters with ratings.',
   },
   tvdbApiKey: {
     name: 'TVDB API Key',
+    type: 'password',
     description:
       'Sign up for a free API Key at [TVDB](https://www.thetvdb.com/api-information) and then get it from your [dashboard](https://www.thetvdb.com/dashboard/account/apikeys).',
   },
   aioratingsApiKey: {
     name: 'AIOratings API Key',
+    type: 'password',
     description:
       'Get your API key from [here](https://aioratings.com) for custom posters with ratings.',
   },
   aioratingsProfileId: {
     name: 'AIOratings Profile ID',
+    type: 'string',
     description:
       'Use "default" for the default profile, or enter a custom profile UUID from your AIOratings dashboard.',
   },
   openposterdbApiKey: {
     name: 'OpenPosterDB API Key',
+    type: 'password',
     description:
       'Get your API key from [here](https://openposterdb.com) for posters with ratings. Use `t0-free-rpdb` for the free public instance.',
   },
   openposterdbUrl: {
     name: 'OpenPosterDB URL',
+    type: 'url',
     description:
       'Custom base URL for a self-hosted OpenPosterDB instance. Leave empty to use the default public instance.',
   },
   openposterdbParameters: {
     name: 'OpenPosterDB Custom Parameters',
+    type: 'string',
     description:
       'Optional query string (without the leading `?`) appended to every poster to customise it, e.g. `ratings_limit=2&badge_size=l&position=br`.',
+  },
+  pmdbApiKey: {
+    name: 'PublicMetaDB API Key',
+    type: 'password',
+    description:
+      'Create one under Settings → API on [PublicMetaDB](https://publicmetadb.com). Used for skip intro and credits markers in the Jellyfin API.',
   },
 };
 
@@ -1193,6 +1213,34 @@ const AUDIO_TAGS = [
 ] as const;
 
 const AUDIO_CHANNELS = ['2.0', '5.1', '6.1', '7.1', 'Unknown'] as const;
+
+const DEFAULT_REPOST_SUFFIXES = [
+  'RP',
+  '1',
+  'NZBGeek',
+  '[N-Z-B]',
+  'Obfuscated',
+  'Obfuscation',
+  'Scrambled',
+  'sample',
+  'Pre',
+  'postbot',
+  'xpost',
+  'Rakuv*',
+  'WhiteRev',
+  'BUYMORE',
+  'AsRequested',
+  'AlternativeToRequested',
+  'GEROV',
+  'Z0iDS3N',
+  'Chamele0n',
+  '4P',
+  '4Planet',
+  'AlteZachen',
+  'RePACKPOST',
+  'FTP',
+  'xpo',
+];
 
 // Passthrough stages that can be selectively bypassed
 const PASSTHROUGH_STAGES = [
@@ -1521,6 +1569,9 @@ const SUBTITLES_RESOURCE = 'subtitles' as const;
 const CATALOG_RESOURCE = 'catalog' as const;
 const META_RESOURCE = 'meta' as const;
 const ADDON_CATALOG_RESOURCE = 'addon_catalog' as const;
+const WATCH_STATE_RESOURCE = 'watch_state' as const;
+/** Root manifest key for the resource, the way `catalog` has `catalogs`. */
+export const WATCH_STATE_MANIFEST_KEY = 'watchState' as const;
 
 export const MOVIE_TYPE = 'movie' as const;
 export const SERIES_TYPE = 'series' as const;
@@ -1550,7 +1601,12 @@ const RESOURCES = [
   CATALOG_RESOURCE,
   META_RESOURCE,
   ADDON_CATALOG_RESOURCE,
+  WATCH_STATE_RESOURCE,
 ] as const;
+
+const SEGMENT_PROVIDERS = ['introdb', 'aniskip', 'animeskip', 'pmdb'] as const;
+
+export type SegmentProviderId = (typeof SEGMENT_PROVIDERS)[number];
 
 export const RESOURCE_LABELS: Record<Resource, string> = {
   [STREAM_RESOURCE]: 'Stream',
@@ -1558,6 +1614,7 @@ export const RESOURCE_LABELS: Record<Resource, string> = {
   [CATALOG_RESOURCE]: 'Catalog',
   [META_RESOURCE]: 'Metadata',
   [ADDON_CATALOG_RESOURCE]: 'Addon Catalog',
+  [WATCH_STATE_RESOURCE]: 'Watch State',
 };
 
 // export const PRESET_CATEGORY_STREAMS = 'streams' as const;
@@ -1752,6 +1809,7 @@ export {
   VISUAL_TAGS,
   AUDIO_TAGS,
   AUDIO_CHANNELS,
+  DEFAULT_REPOST_SUFFIXES,
   ENCODES,
   PASSTHROUGH_STAGES,
   SORT_CRITERIA,
@@ -1759,11 +1817,13 @@ export {
   STREAM_TYPES,
   LANGUAGES,
   RESOURCES,
+  SEGMENT_PROVIDERS,
   STREAM_RESOURCE,
   SUBTITLES_RESOURCE,
   CATALOG_RESOURCE,
   META_RESOURCE,
   ADDON_CATALOG_RESOURCE,
+  WATCH_STATE_RESOURCE,
   REALDEBRID_SERVICE,
   PREMIUMIZE_SERVICE,
   ALLDEBRID_SERVICE,

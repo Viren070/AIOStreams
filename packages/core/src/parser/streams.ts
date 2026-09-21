@@ -6,6 +6,8 @@ import {
   Env,
   FULL_LANGUAGE_MAPPING,
   getLanguageDisplayName,
+  normaliseLanguage,
+  ServiceId,
 } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
 import FileParser from './file.js';
@@ -23,6 +25,21 @@ import {
 } from './merge.js';
 
 const logger = createLogger('parser');
+
+let serviceRegexes: { id: ServiceId; regex: RegExp }[] | undefined;
+
+function getServiceRegexes(): { id: ServiceId; regex: RegExp }[] {
+  serviceRegexes ??= Object.values(constants.SERVICE_DETAILS).map(
+    (service) => ({
+      id: service.id,
+      regex: new RegExp(
+        `(^|(?<![^ |[(_\\/\\-.]))(${service.knownNames.join('|')})(?=[ ⬇️⏳⚡☁️🌩️📫+/|\\)\\]_.-]|$|\n)`,
+        'im'
+      ),
+    })
+  );
+  return serviceRegexes;
+}
 
 class StreamParser {
   private count = 0;
@@ -508,12 +525,19 @@ class StreamParser {
     return undefined;
   }
 
+  /** An HLS playlist, whatever query string the url carries. */
+  protected isHlsUrl(url: string | null | undefined): boolean {
+    if (!url) return false;
+    const path = url.split('#')[0].split('?')[0];
+    return /\.m3u8?$/i.test(path);
+  }
+
   protected getStreamType(
     stream: Stream,
     service: ParsedStream['service'],
     currentParsedStream: ParsedStream
   ): ParsedStream['type'] {
-    if (stream.url?.endsWith('.m3u8')) {
+    if (this.isHlsUrl(stream.url)) {
       return 'live';
     }
 
@@ -589,6 +613,10 @@ class StreamParser {
         arrayMerge(folderParsed?.languages, fileParsed?.languages),
         this.getLanguages(stream, parsedStream)
       ),
+      subtitles: arrayMerge(
+        arrayMerge(folderParsed?.subtitles, fileParsed?.subtitles),
+        this.getSubtitles(stream, parsedStream)
+      ),
       ...this.getParsedFileMergeOverrides(stream, parsedStream),
     });
 
@@ -619,6 +647,23 @@ class StreamParser {
     ];
     return flags
       .map((flag) => convertFlagToLanguage(flag))
+      .filter((language) => language !== undefined);
+  }
+
+  /**
+   * Subtitle languages the addon says ship with the stream.
+   */
+  protected getSubtitles(
+    stream: Stream,
+    currentParsedStream: ParsedStream
+  ): string[] {
+    return [];
+  }
+
+  /** Languages of `stream.subtitles`, for presets whose attached subs ship with the release. */
+  protected attachedSubtitleLanguages(stream: Stream): string[] {
+    return (stream.subtitles ?? [])
+      .map((subtitle) => normaliseLanguage(subtitle.lang))
       .filter((language) => language !== undefined);
   }
 
@@ -673,16 +718,10 @@ class StreamParser {
     string: string
   ): ParsedStream['service'] | undefined {
     const cleanString = string.replace(/web-?dl/i, '');
-    const services = constants.SERVICE_DETAILS;
     const cachedSymbols = ['⚡', '🚀', 'cached', '🌩️', '📫'];
     const uncachedSymbols = ['⏳', 'download', 'UNCACHED', '☁️'];
     let streamService: ParsedStream['service'] | undefined;
-    Object.values(services).forEach((service) => {
-      // for each service, generate a regexp which creates a regex with all known names separated by |
-      const regex = new RegExp(
-        `(^|(?<![^ |[(_\\/\\-.]))(${service.knownNames.join('|')})(?=[ ⬇️⏳⚡☁️🌩️📫+/|\\)\\]_.-]|$|\n)`,
-        'im'
-      );
+    getServiceRegexes().forEach(({ id, regex }) => {
       // check if the string contains the regex
       const match = cleanString.match(regex);
       if (match) {
@@ -702,7 +741,7 @@ class StreamParser {
         }
 
         streamService = {
-          id: service.id,
+          id,
           cached: cached,
         };
       }

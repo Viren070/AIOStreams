@@ -1,3 +1,4 @@
+import { config } from '../config/index.js';
 import { createLogger } from '../logging/logger.js';
 import { ReleaseBlocklistRepository } from '../db/repositories/release-blocklist.js';
 import { instanceBackbones } from './backbones.js';
@@ -39,6 +40,7 @@ function markDead(
   scope: BlocklistScope,
   keys: Array<string | null | undefined>
 ): void {
+  if (!config.releaseBlocklist.enabled) return;
   const valid = keys.filter(
     (key): key is string => !!key && releaseKeyKind(key) === 'usenet'
   );
@@ -92,6 +94,7 @@ export function markReleaseDeadForCode(
 export function retractRelease(
   ...keys: Array<string | null | undefined>
 ): void {
+  if (!config.releaseBlocklist.enabled) return;
   for (const key of keys) {
     if (!key || releaseKeyKind(key) === null) continue;
     void ReleaseBlocklistRepository.retract(key, {

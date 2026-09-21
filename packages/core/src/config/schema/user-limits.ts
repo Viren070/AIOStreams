@@ -17,7 +17,7 @@ import type { RuntimeConfigSection } from '../types.js';
  * - `sel`: SEL sync access + whitelisted URLs + stream-expression limits.
  * - `variants`: config-variant access policy + script/instruction limits.
  * - `healthChecks`: health-check access policy + fetch limits.
- * - `sync`: shared refresh interval for whitelisted regex/SEL syncs.
+ * - `sync`: shared refresh/caching policy and address guard for regex/SEL syncs.
  * - `disabled`: hard-disabled addons/services/hosts/stream-types.
  * - `selfScraping`: prevents addons from scraping the same AIOStreams instance.
  * - `trusted`: list of trusted user UUIDs.
@@ -72,7 +72,7 @@ export const userLimitsSchema = {
   },
   maxFormatterTemplateLength: {
     schema: positiveInt,
-    default: 5000,
+    default: 15000,
     label: 'Max formatter template length',
     description:
       'Maximum length (characters) of a single formatter template string. Enforced during config validation.',
@@ -283,32 +283,13 @@ export const userLimitsSchema = {
       requiresRestart: false,
       secret: false,
     },
-    maxInstructions: {
+    maxTotalInstructions: {
       schema: positiveInt,
-      default: 100,
-      label: 'Max variant instructions',
-      description: 'Maximum number of instructions in a single variant script.',
-      env: 'MAX_VARIANT_INSTRUCTIONS',
-      requiresRestart: false,
-      secret: false,
-    },
-    maxActive: {
-      schema: positiveInt,
-      default: 4,
-      label: 'Max active variants',
+      default: 5000,
+      label: 'Max variant instructions per request',
       description:
-        'Maximum number of variants that may be combined on a single request.',
-      env: 'MAX_ACTIVE_VARIANTS',
-      requiresRestart: false,
-      secret: false,
-    },
-    maxDepth: {
-      schema: positiveInt,
-      default: 5,
-      label: 'Max variant nesting depth',
-      description:
-        'Maximum depth a variant may nest others through "use variant".',
-      env: 'MAX_VARIANT_DEPTH',
+        'Maximum number of instructions all the variants on one request may run in total, including those reached through "use variant". Anything past it is skipped.',
+      env: 'MAX_VARIANT_TOTAL_INSTRUCTIONS',
       requiresRestart: false,
       secret: false,
     },
@@ -411,11 +392,21 @@ export const userLimitsSchema = {
       default: 86400,
       label: 'Whitelist sync refresh interval',
       description:
-        'How often whitelisted regex/SEL sync URLs are refreshed (accepts e.g. "5m", "1h").',
+        'How often whitelisted regex/SEL sync URLs are refreshed (accepts e.g. "5m", "1h"). Also how long a URL only one user is allowed to use is cached for.',
       env: 'WHITELISTED_SYNC_REFRESH_INTERVAL',
       requiresRestart: true,
       secret: false,
       ui: { kind: 'duration' },
+    },
+    allowPrivateUrls: {
+      schema: z.boolean(),
+      default: false,
+      label: 'Allow private regex/SEL sync URLs',
+      description:
+        'Let sync URLs point at private addresses. Anyone allowed to sync from their own URL can then probe your internal network, so only enable this on an instance you trust the users of. Whitelisted URLs you configure yourself are never affected.',
+      env: 'SYNC_ALLOW_PRIVATE_URLS',
+      requiresRestart: false,
+      secret: false,
     },
   },
   disabled: {

@@ -7,9 +7,11 @@ import {
   fetchLinkedAccountPlatforms,
   fetchCommunityItems,
   fetchMyCommunityItems,
+  getWatchStateTrackers,
   api,
   type LinkedAccount,
   type LinkedAccountPlatformInfo,
+  type WatchStateOverview,
 } from './api';
 import type {
   CommunityItemMine,
@@ -57,6 +59,30 @@ export const linkedAccountsQuery = (
   });
 
 export const LINKED_ACCOUNTS_QUERY_ROOT = ['linked-accounts'] as const;
+
+export const WATCH_STATE_TRACKERS_QUERY_ROOT = [
+  'watch-state-trackers',
+] as const;
+
+export const watchStateTrackersQuery = (credentials: Credentials | null) =>
+  queryOptions({
+    queryKey: [
+      ...WATCH_STATE_TRACKERS_QUERY_ROOT,
+      credentials?.uuid ?? null,
+    ] as const,
+    queryFn: (): Promise<WatchStateOverview> =>
+      credentials
+        ? getWatchStateTrackers(credentials)
+        : Promise.resolve({
+            push: false,
+            pull: false,
+            trackers: [],
+            available: [],
+          }),
+    enabled: !!credentials,
+    staleTime: 30_000,
+    retry: false,
+  });
 
 /** Descriptors are static per instance, so they are cached for the session. */
 export const linkedAccountPlatformsQuery = (credentials: Credentials | null) =>

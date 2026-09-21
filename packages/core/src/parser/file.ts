@@ -4,11 +4,26 @@ import { parseTorrentTitleCached } from './title.js';
 import { RESOLUTIONS } from '../utils/constants.js';
 import { mapLanguageCode, convertLangCodeToName } from '../utils/languages.js';
 
-function matchPattern(
+/** The pattern tables are module constants, so their entries are built once. */
+const patternEntries = new WeakMap<
+  Record<string, RegExp>,
+  [string, RegExp][]
+>();
+
+function entriesOf(patterns: Record<string, RegExp>): [string, RegExp][] {
+  let entries = patternEntries.get(patterns);
+  if (!entries) {
+    entries = Object.entries(patterns);
+    patternEntries.set(patterns, entries);
+  }
+  return entries;
+}
+
+export function matchPattern(
   filename: string,
   patterns: Record<string, RegExp>
 ): string | undefined {
-  return Object.entries(patterns).find(([_, pattern]) =>
+  return entriesOf(patterns).find(([_, pattern]) =>
     pattern.test(filename)
   )?.[0];
 }
@@ -48,13 +63,30 @@ function normaliseResolution(
   return undefined;
 }
 
-function matchMultiplePatterns(
+export function matchMultiplePatterns(
   filename: string,
   patterns: Record<string, RegExp>
 ): string[] {
-  return Object.entries(patterns)
+  return entriesOf(patterns)
     .filter(([_, pattern]) => pattern.test(filename))
     .map(([tag]) => tag);
+}
+
+/** Within a request nearly every release parses to the same title. */
+const titleRegexes = new Map<string, RegExp>();
+const TITLE_REGEX_MAX = 2000;
+
+function titleRegex(parsedTitle: string): RegExp {
+  let regex = titleRegexes.get(parsedTitle);
+  if (!regex) {
+    const escaped = parsedTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    regex = new RegExp(escaped.replace(/ /g, '[._ ]'), 'i');
+    if (titleRegexes.size >= TITLE_REGEX_MAX) {
+      titleRegexes.delete(titleRegexes.keys().next().value!);
+    }
+    titleRegexes.set(parsedTitle, regex);
+  }
+  return regex;
 }
 
 class FileParser {
@@ -63,9 +95,7 @@ class FileParser {
     const parsedTitle = parsed.title;
     // prevent the title from being parsed for info
     if (parsedTitle && parsedTitle.length > 4) {
-      const escapedTitle = parsedTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const titleRegex = new RegExp(escapedTitle.replace(/ /g, '[._ ]'), 'i');
-      filename = filename.replace(titleRegex, '').trim();
+      filename = filename.replace(titleRegex(parsedTitle), '').trim();
       filename = filename.replace(/\s+/g, '.').replace(/^\.+|\.+$/g, '');
     }
     const resolution =
@@ -105,8 +135,7 @@ class FileParser {
       ]),
     ];
 
-    const releaseGroup =
-      filename.match(PARSE_REGEX.releaseGroup)?.[1] ?? parsed.group;
+    const releaseGroup = parsed.group;
     const title = parsedTitle;
     const year = parsed.year ? parsed.year.toString() : undefined;
     const country = parsed.country;
@@ -136,6 +165,7 @@ class FileParser {
       unrated: parsed.unrated ?? false,
       upscaled: parsed.upscaled ?? false,
       network: parsed.network,
+      site: parsed.site,
       container: parsed.container,
       extension: parsed.extension,
       seasons: parsed.seasons,

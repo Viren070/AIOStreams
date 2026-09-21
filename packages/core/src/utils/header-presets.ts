@@ -5,7 +5,7 @@
  */
 export const HEADER_PRESETS: Record<string, Record<string, string>> = {
   sabnzbd: {
-    'User-Agent': 'SABnzbd/5.1.2',
+    'User-Agent': 'SABnzbd/5.1.3',
   },
   nzbget: {
     Accept: '*/*',
@@ -13,30 +13,30 @@ export const HEADER_PRESETS: Record<string, Record<string, string>> = {
   },
   sonarr: {
     Accept: 'application/rss+xml, text/rss+xml, application/xml, text/xml',
-    'User-Agent': 'Sonarr/4.0.19.2979 (alpine 3.24.1)',
+    'User-Agent': 'Sonarr/4.0.20.3014 (alpine 3.24.2)',
   },
   radarr: {
     Accept: 'application/rss+xml, text/rss+xml, application/xml, text/xml',
-    'User-Agent': 'Radarr/6.3.0.10514 (alpine 3.24.1)',
+    'User-Agent': 'Radarr/6.4.4.10685 (alpine 3.24.2)',
   },
   prowlarr: {
     Accept: 'application/rss+xml, text/rss+xml, application/xml, text/xml',
-    'User-Agent': 'Prowlarr/2.5.2.5491 (alpine 3.24.1)',
+    'User-Agent': 'Prowlarr/2.6.5.5623 (alpine 3.24.2)',
   },
   nzbhydra2: {
     Accept: 'application/xml',
     'Content-Type': 'application/xml',
-    'User-Agent': 'NZBHydra2 8.9.0',
+    'User-Agent': 'NZBHydra2 9.0.2',
   },
   chrome: {
     'User-Agent':
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36',
     Accept:
       'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
     'Accept-Language': 'en-US,en;q=0.9',
     Priority: 'u=0, i',
     'Sec-Ch-Ua':
-      '"Google Chrome";v="153", "Not_A Brand";v="8", "Chromium";v="153"',
+      '"Chromium";v="154", "Google Chrome";v="154", "Not A(Brand";v="99"',
     'Sec-Ch-Ua-Mobile': '?0',
     'Sec-Ch-Ua-Platform': '"macOS"',
     'Sec-Fetch-Dest': 'document',

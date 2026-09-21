@@ -13,13 +13,33 @@ import {
 
 const logger = createLogger('server');
 
+/**
+ * A limiter, plus a way to spend one token outside the middleware.
+ *
+ * `tryConsume` charges the same bucket but writes no headers and throws
+ * nothing, so a route can degrade instead of failing.
+ */
+export interface Limiter {
+  (req: Request, res: Response, next: NextFunction): void;
+  tryConsume(req: Request): Promise<boolean>;
+}
+
 const createRateLimiter = (
   windowMs: number,
   maxRequests: number,
   prefix: string = ''
 ) => {
+  const keyOf = (req: Request) => {
+    const ip = req.requestIp || req.userIp || req.ip;
+    return prefix + ':' + (ip ? ipKeyGenerator(ip) : '');
+  };
   if (appConfig.rateLimits.disabled) {
-    return (req: Request, res: Response, next: NextFunction) => next();
+    return {
+      middleware: (req: Request, res: Response, next: NextFunction) => next(),
+      store: null,
+      keyOf,
+      max: maxRequests,
+    };
   }
   const redisClient = appConfig.bootstrap.redisUri
     ? Cache.getRedisClient()
@@ -31,18 +51,14 @@ const createRateLimiter = (
           sendCommand: (...args: string[]) => redisClient.sendCommand(args),
         })
       : new MemoryStore();
-  return rateLimit({
+  const middleware = rateLimit({
     windowMs,
     max: maxRequests,
     standardHeaders: true,
     legacyHeaders: false,
     store,
     validate: { creationStack: false },
-    keyGenerator: (req: Request) => {
-      const ip = req.requestIp || req.userIp || req.ip;
-      const ipKey = ip ? ipKeyGenerator(ip) : '';
-      return prefix + ':' + ipKey;
-    },
+    keyGenerator: keyOf,
     handler: (
       req: Request,
       res: Response,
@@ -60,6 +76,8 @@ const createRateLimiter = (
       throw new APIError(constants.ErrorCode.RATE_LIMIT_EXCEEDED);
     },
   });
+  // `rateLimit()` calls `store.init()` itself, so the store is usable here.
+  return { middleware, store, keyOf, max: maxRequests };
 };
 
 /**
@@ -71,15 +89,29 @@ const createRateLimiter = (
 const lazyLimiter = (
   resolve: () => { window: number; maxRequests: number },
   prefix: string
-) => {
+): Limiter => {
   let limiter: ReturnType<typeof createRateLimiter> | null = null;
-  return (req: Request, res: Response, next: NextFunction) => {
+  const ensure = () => {
     if (!limiter) {
       const { window, maxRequests } = resolve();
       limiter = createRateLimiter(window * 1000, maxRequests, prefix);
     }
-    return limiter(req, res, next);
+    return limiter;
   };
+  const fn = ((req: Request, res: Response, next: NextFunction) =>
+    ensure().middleware(req, res, next)) as Limiter;
+  fn.tryConsume = async (req: Request) => {
+    const built = ensure();
+    if (!built.store) return true;
+    try {
+      const { totalHits } = await built.store.increment(built.keyOf(req));
+      return totalHits <= built.max;
+    } catch {
+      // A limiter that cannot answer must not be the reason a request fails.
+      return true;
+    }
+  };
+  return fn;
 };
 
 const userApiRateLimiter = lazyLimiter(
@@ -162,11 +194,35 @@ const communityApiRateLimiter = lazyLimiter(
   'community-api'
 );
 
+const syncApiRateLimiter = lazyLimiter(
+  () => appConfig.rateLimits.syncApi,
+  'sync-api'
+);
+
+const jellyfinLoginRateLimiter = lazyLimiter(
+  () => appConfig.rateLimits.jellyfinLogin,
+  'jellyfin-login'
+);
+
+const jellyfinApiRateLimiter = lazyLimiter(
+  () => appConfig.rateLimits.jellyfinApi,
+  'jellyfin-api'
+);
+
+const jellyfinImageRateLimiter = lazyLimiter(
+  () => appConfig.rateLimits.jellyfinImage,
+  'jellyfin-image'
+);
+
 export {
+  jellyfinLoginRateLimiter,
+  jellyfinApiRateLimiter,
+  jellyfinImageRateLimiter,
   userApiRateLimiter,
   userCreateRateLimiter,
   linkedAccountsRateLimiter,
   communityApiRateLimiter,
+  syncApiRateLimiter,
   streamApiRateLimiter,
   formatApiRateLimiter,
   catalogApiRateLimiter,

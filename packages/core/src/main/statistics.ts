@@ -1,5 +1,6 @@
 import { constants, formatMilliseconds } from '../utils/index.js';
 import type { ParsedStream } from '../db/schemas.js';
+import { isRemuxDbEnabled } from '../remuxdb/wrap.js';
 import type { AIOStreamsContext, StatEntry, PipelineTimings } from './types.js';
 
 /** Split a flat filter-details array into per-📌-header groups. */
@@ -98,10 +99,13 @@ export function buildStatistics(
     (userData.digitalReleaseFilter?.showInfoOnFilter ?? true) &&
     filterStats.removed.noDigitalRelease.total > 0
   ) {
+    const noDigitalReleaseReason = Object.keys(
+      filterStats.removed.noDigitalRelease.details
+    )[0];
     statistics.push({
       title: '📅 Digital Release Filter',
       description: [
-        `⚠️ There is no digital release available for this media yet.`,
+        `⚠️ ${noDigitalReleaseReason ?? 'There is no digital release available for this media yet.'}`,
         finalStreams.length > 0
           ? '🔎 There are still streams present, this may be\ndue to any passthrough that is configured (addon level, SEL etc.)'
           : '',
@@ -136,7 +140,7 @@ export function buildStatistics(
   ) {
     const filterTimings = filterer.getFilterTimings();
     const accumulatedPrecompute = precomputer.getPrecomputeTimings();
-    // totalMs uses pipeline-phase timings only (fetchMs already contains the fetcher filter/precompute)
+    // totalMs uses pipeline-phase timings only (fetchMs already contains the fetcher filter/precompute/remuxDb)
     const totalMs =
       fetchMs +
       pipelineTimings.serviceWrapMs +
@@ -152,6 +156,9 @@ export function buildStatistics(
         `📥 Fetch: ${fmtMs(fetchMs)}`,
         `🔗 Service Wrap: ${fmtMs(pipelineTimings.serviceWrapMs)}`,
       ];
+      if (isRemuxDbEnabled(userData)) {
+        lines.push(`🎞️ RemuxDB: ${fmtMs(pipelineTimings.remuxDbMs)}`);
+      }
       // Show accumulated filter total (fetcher + optional re-filter pass)
       if (filterTimings.totalMs > 0) {
         lines.push(`🔍 Filter: ${fmtMs(filterTimings.totalMs)}`);

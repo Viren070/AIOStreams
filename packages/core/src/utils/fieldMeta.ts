@@ -169,6 +169,7 @@ export const FIELD_META: Omit<Record<keyof UserData, FieldMeta>, IgnoredKeys> = 
   syncedRankedStreamExpressionUrls: { label: 'Synced Ranked Expression URLs', group: 'filters', type: 'list', menu: 'filters', subTab: 'stream-expression' },
 
   enableSeadex: { label: 'SeaDex', group: 'filters', type: 'scalar', menu: 'filters', subTab: 'miscellaneous', keywords: ['anime', 'releases.moe'] },
+  remuxDb: { label: 'RemuxDB', group: 'filters', type: 'scalar', menu: 'filters', subTab: 'miscellaneous', keywords: ['probe', 'media info'] },
   excludeSeasonPacks: { label: 'Exclude Season Packs', group: 'filters', type: 'scalar', menu: 'filters', subTab: 'miscellaneous', ignoreForCommandPalette: true },
 
   excludeCached: { label: 'Exclude Cached Streams', group: 'filters', type: 'scalar', menu: 'filters', subTab: 'cache' },
@@ -213,6 +214,7 @@ export const FIELD_META: Omit<Record<keyof UserData, FieldMeta>, IgnoredKeys> = 
   tmdbApiKey: { label: 'TMDB API Key', group: 'metadata', type: 'scalar', menu: 'services', subTab: 'metadata', sectionId: 'tmdb' },
   tmdbAccessToken: { label: 'TMDB Access Token', group: 'metadata', type: 'scalar', menu: 'services', subTab: 'metadata', sectionId : 'tmdb' },
   tvdbApiKey: { label: 'TVDB API Key', group: 'metadata', type: 'scalar', menu: 'services', subTab: 'metadata' },
+  pmdbApiKey: { label: 'PublicMetaDB API Key', group: 'metadata', type: 'scalar', menu: 'save-install', sectionId: 'jellyfin', keywords: ['pmdb', 'publicmetadb', 'skip intro', 'segments'] },
   rpdbApiKey: { label: 'RPDB API Key', group: 'metadata', type: 'scalar', menu: 'services', subTab: 'posters' },
   topPosterApiKey: { label: 'TopPoster API Key', group: 'metadata', type: 'scalar', menu: 'services', subTab: 'posters' },
   aioratingsApiKey: { label: 'AIOratings API Key', group: 'metadata', type: 'scalar', menu: 'services', subTab: 'posters' },
@@ -242,6 +244,7 @@ export const FIELD_META: Omit<Record<keyof UserData, FieldMeta>, IgnoredKeys> = 
   failover: { label: 'Failover', group: 'misc', type: 'scalar', menu: 'services', subTab: 'builtin' },
   serviceWrap: { label: 'Service Wrap', group: 'misc', type: 'scalar', menu: 'services', subTab: 'builtin' },
   cacheAndPlay: { label: 'Cache and Play', group: 'misc', type: 'scalar', menu: 'services', subTab: 'builtin' },
+  jellyfin: { label: 'Jellyfin', group: 'misc', type: 'scalar', menu: 'save-install', keywords: ['jellyfin', 'swiftfin', 'streamyfin', 'findroid', 'infuse', 'kodi'] },
   autoRemoveDownloads: { label: 'Auto Remove Downloads', group: 'misc', type: 'scalar', menu: 'services', subTab: 'builtin' },
   checkOwned: { label: 'Check Owned', group: 'misc', type: 'scalar', menu: 'services', subTab: 'builtin' },
 

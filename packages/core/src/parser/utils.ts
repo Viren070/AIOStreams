@@ -1,4 +1,4 @@
-import { extract, FuzzballExtractOptions } from 'fuzzball';
+import { extract, full_process, ratio, FuzzballExtractOptions } from 'fuzzball';
 import {
   createLogger,
   constants,
@@ -53,6 +53,8 @@ const asciiFoldMap: Record<string, string> = {
 };
 
 function foldToAscii(title: string, language?: string): string {
+  // every step below only rewrites non-ascii characters
+  if (!/[^\x00-\x7f]/.test(title)) return title;
   const digraphMap = language ? languageDigraphMaps[language] : undefined;
   return (
     digraphMap ? title.replace(/[ÄäÖöÜüÅå]/g, (c) => digraphMap[c] ?? c) : title
@@ -72,6 +74,82 @@ interface TitleMatchInnerResult {
   matchedIndex?: number;
 }
 
+/** What extract() applies to every choice before scoring. */
+const FULL_PROCESS_OPTIONS: FuzzballExtractOptions = {
+  force_ascii: false,
+  collapseWhitespace: true,
+};
+
+const limitedTitleLists = new WeakMap<string[], Map<number, string[]>>();
+const processedTitleLists = new WeakMap<string[], string[]>();
+const normalisedTitleLists = new WeakMap<MetadataTitle[], string[]>();
+
+/** One slice per list, so the caches below keep seeing a single array. */
+function limitTitleList(titles: string[], limit: number): string[] {
+  let byLimit = limitedTitleLists.get(titles);
+  if (!byLimit) {
+    byLimit = new Map();
+    limitedTitleLists.set(titles, byLimit);
+  }
+  let limited = byLimit.get(limit);
+  if (!limited) {
+    limited = titles.slice(0, limit);
+    byLimit.set(limit, limited);
+  }
+  return limited;
+}
+
+function processedTitles(titles: string[]): string[] {
+  let processed = processedTitleLists.get(titles);
+  if (!processed) {
+    processed = titles.map((title) =>
+      full_process(title, FULL_PROCESS_OPTIONS)
+    );
+    processedTitleLists.set(titles, processed);
+  }
+  return processed;
+}
+
+/**
+ * QRatio is round(200 * LCS / (l1 + l2)), so round(200 * min(l1, l2) / (l1 + l2))
+ * is an exact upper bound on it and candidates that cannot reach the threshold
+ * or beat the current best can be skipped without scoring them. Holds for
+ * fuzzball@2.2.6's default scorer at substitution cost 2.
+ */
+function bestDefaultScorerMatch(
+  parsedTitle: string,
+  titles: string[],
+  threshold: number
+): TitleMatchInnerResult {
+  const query = full_process(parsedTitle, FULL_PROCESS_OPTIONS);
+  const choices = processedTitles(titles);
+
+  let bestScore = 0;
+  let bestKey: number | undefined;
+
+  if (query.length) {
+    for (let i = 0; i < choices.length; i++) {
+      const choice = choices[i];
+      if (!choice.length) continue;
+
+      const lengthSum = query.length + choice.length;
+      const bound = Math.round(
+        (200 * Math.min(query.length, choice.length)) / lengthSum
+      );
+      if (bound <= bestScore || bound / 100 < threshold) continue;
+
+      const score = ratio(query, choice, { full_process: false });
+      if (score > bestScore) {
+        bestScore = score;
+        bestKey = i;
+      }
+    }
+  }
+
+  const matched = bestScore / 100 >= threshold;
+  return { matched, matchedIndex: matched ? bestKey : undefined };
+}
+
 /**
  * Inner matching function shared by titleMatch and titleMatchWithLang.
  * Returns the match result and the index of the best matching title.
@@ -84,7 +162,7 @@ function _titleMatchInner(
   const { threshold, limitTitles, ...extractOptions } = options;
 
   if (limitTitles && titles.length > limitTitles) {
-    titles = titles.slice(0, limitTitles);
+    titles = limitTitleList(titles, limitTitles);
   }
 
   // when threshold is 1, no need to use levenshtein distance, just check for exact matches
@@ -93,6 +171,10 @@ function _titleMatchInner(
       (title) => title.toLowerCase() === parsedTitle.toLowerCase()
     );
     return { matched: idx !== -1, matchedIndex: idx !== -1 ? idx : undefined };
+  }
+
+  if (Object.keys(extractOptions).length === 0) {
+    return bestDefaultScorerMatch(parsedTitle, titles, threshold);
   }
 
   const results = extract(parsedTitle, titles, {
@@ -135,7 +217,11 @@ export function titleMatchWithLang(
   titles: MetadataTitle[],
   options: TitleMatchOptions
 ): { matched: boolean; language?: string } {
-  const normalisedTitles = titles.map((t) => normaliseTitle(t.title));
+  let normalisedTitles = normalisedTitleLists.get(titles);
+  if (!normalisedTitles) {
+    normalisedTitles = titles.map((t) => normaliseTitle(t.title));
+    normalisedTitleLists.set(titles, normalisedTitles);
+  }
   const result = _titleMatchInner(parsedTitle, normalisedTitles, options);
   return {
     matched: result.matched,
@@ -307,13 +393,8 @@ export function normaliseTitle(title: string) {
 }
 
 export function cleanTitle(title: string, language?: string) {
-  let cleaned = foldToAscii(title, language);
-
-  for (const char of ['♪', '♫', '★', '☆', '♡', '♥', '-', ';', ':']) {
-    cleaned = cleaned.replaceAll(char, ' ');
-  }
-
-  return cleaned
+  return foldToAscii(title, language)
+    .replace(/[♪♫★☆♡♥\-;:]/g, ' ')
     .replace(/&/g, 'and')
     .replace(/[^\p{L}\p{N}\s]/gu, '') // Remove remaining special chars
     .replace(/\s+/g, ' ') // Normalise spaces

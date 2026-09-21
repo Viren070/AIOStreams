@@ -1,5 +1,14 @@
 import { Extras, ExtrasSchema } from '../db/schemas.js';
 
+/** Values are percent-encoded, so a `&` inside one survives the split; a bare `%` stays literal. */
+function decodeValue(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 export class ExtrasParser {
   private extras: Partial<Extras>;
 
@@ -13,8 +22,8 @@ export class ExtrasParser {
     }
     const extrasObject = Object.fromEntries(
       extras.split('&').map((e) => {
-        const [key, value] = e.split('=');
-        return [key, encodeURIComponent(value)];
+        const [key, ...value] = e.split('=');
+        return [key, encodeURIComponent(decodeValue(value.join('=')))];
       })
     );
 

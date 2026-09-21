@@ -72,15 +72,35 @@ export {
   type ConfigSessionCredentials,
   type IssuedConfigSession,
 } from './repositories/config-sessions.js';
-export {
-  LinkedAccountRepository,
-  MAX_LINKED_ACCOUNTS_PER_USER,
-} from './repositories/linked-accounts.js';
+export { LinkedAccountRepository } from './repositories/linked-accounts.js';
 export {
   CommunityRepository,
   type CommunityItemInsert,
   type CommunityLiveUpdate,
 } from './repositories/community.js';
+export {
+  WatchStateRepository,
+  watchKindOf,
+  type WatchSnapshot,
+  type WatchIdentity,
+  type WatchStateRow,
+  type WatchStatePatch,
+  type WatchKind,
+  type WatchOrigin,
+} from './repositories/watch-state.js';
+export {
+  WatchSessionRepository,
+  type WatchSessionRow,
+  type WatchSessionUpsert,
+} from './repositories/watch-sessions.js';
+export { JellyfinRepository } from './repositories/jellyfin.js';
+export {
+  PlaybackHandoffRepository,
+  type SinkRow,
+  type SinkStatus,
+  type DeliveryRow,
+  type DeliveryStatus,
+} from './repositories/playback-handoff.js';
 export * from './schemas.js';
 
 export { sql, raw, join, SqlFragment } from './sql.js';
