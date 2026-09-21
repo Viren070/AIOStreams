@@ -48,9 +48,7 @@ export const logStartupInfo = () => {
   logger.info(`  Log Level:     ${appConfig.logging.logLevel.toUpperCase()}`);
   logger.info(`  Log Format:    ${appConfig.logging.logFormat.toUpperCase()}`);
   if (appConfig.logging.logSensitiveInfo) {
-    logger.warn(
-      '  Sensitive Info logging is ENABLED =€” disable in production'
-    );
+    logger.warn('  Sensitive Info logging is ENABLED - disable in production');
   }
   logger.info('');
 
