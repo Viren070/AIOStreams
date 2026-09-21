@@ -1,4 +1,8 @@
-﻿import { DistributedLock } from '../utils/distributed-lock.js';
+import {
+  selectEpisodeTitles,
+  type EpisodeTitleSource,
+} from './episode-title-ordering.js';
+import { DistributedLock } from '../utils/distributed-lock.js';
 import {
   deduplicateTitles,
   Metadata,
@@ -74,6 +78,7 @@ export class MetadataService {
             // fill order is irrelevant; merge.ts decides what wins
             const contributions: SourceContributions = {};
             let cinemetaVideos: CinemetaVideo[] | undefined;
+            let cinemetaEpisode: EpisodeTitleSource | undefined;
 
             // Check anime database first
             const animeEntry = await AnimeDatabase.getInstance().getEntryById(
@@ -394,6 +399,19 @@ export class MetadataService {
                   const n = (video as { number?: unknown }).number;
                   return typeof n === 'number' ? n : undefined;
                 };
+                const requestedVideo = cinemetaData.videos.find(
+                  (video) =>
+                    video.season === Number(id.season) &&
+                    episodeIndex(video) === Number(id.episode)
+                );
+                const videoTitle =
+                  requestedVideo?.title || requestedVideo?.name;
+                if (requestedVideo && videoTitle) {
+                  cinemetaEpisode = {
+                    airDate: requestedVideo.released ?? undefined,
+                    titles: [{ title: videoTitle }],
+                  };
+                }
                 cinemetaVideos = cinemetaData.videos.map((video) => ({
                   season: video.season,
                   episode: episodeIndex(video),
@@ -714,7 +732,7 @@ export class MetadataService {
                 // the request's own provider is authoritative
                 (id.type === 'themoviedbId' ? tmdbEp?.airDate : undefined) ??
                 (id.type === 'thetvdbId' ? tvdbEp?.airDate : undefined) ??
-                // imdb requests are numbered by cinemeta
+                // IMDb IDs do not guarantee Cinemeta ordering; conflicts are checked below
                 cinemetaReleased ??
                 // always fallback to tvdb/skyhook first, then tmdb.
                 tvdbEp?.airDate ??
@@ -743,20 +761,12 @@ export class MetadataService {
 
               // TMDB first so its language tags survive dedup; skyhook (en)
               // before TVDB (untagged) so the English tag is kept when present.
-              const names: MetadataTitle[] = [];
-              for (const ep of [tmdbEp, skyhookEp, tvdbEp]) {
-                if (!ep || !agreesWithRequest(ep.airDate)) continue;
-                for (const title of ep.titles) {
-                  if (
-                    !names.some(
-                      (name) =>
-                        name.title.toLowerCase() === title.title.toLowerCase()
-                    )
-                  ) {
-                    names.push(title);
-                  }
-                }
-              }
+              const { titles: names } = selectEpisodeTitles(
+                id.type,
+                referenceAirDate,
+                [tmdbEp, skyhookEp, tvdbEp],
+                cinemetaEpisode
+              );
               if (names.length) episodeTitles = deduplicateTitles(names);
             }
 
