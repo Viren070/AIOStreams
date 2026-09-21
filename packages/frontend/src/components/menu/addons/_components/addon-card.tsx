@@ -100,7 +100,7 @@ export function AddonCard({
             {preset.SUPPORTED_RESOURCES?.map((res: string) => (
               <span
                 key={res}
-                className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-500/10 text-blue-300 border border-blue-400/20"
               >
                 {res}
               </span>

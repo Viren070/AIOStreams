@@ -20,6 +20,8 @@ import {
   assertConfigAccessKey,
 } from '../../utils/index.js';
 import { ConfigProfileRepository } from './config-profiles.js';
+import { ConfigSessionRepository } from './config-sessions.js';
+import { LinkedAccountRepository } from './linked-accounts.js';
 
 const APIError = constants.APIError;
 const logger = createLogger('users');
@@ -53,15 +55,15 @@ interface ConfigKeyEntry {
   key: string;
 }
 
-const CONFIG_KEY_CACHE_TTL = 30 * 60;
+const CONFIG_KEY_CACHE_TTL = 24 * 60 * 60;
 
-const configKeyCache = Cache.getInstance<string, string>('config-key', 5000);
+const configKeyCache = Cache.getInstance<string, string>('config-key', 50000);
 
 let trustedUuidsSource: string | null | undefined;
 let trustedUuidPatterns: RegExp[] = [];
 
 /** Recompiles only when the configured list changes, not per request. */
-function isTrustedUuid(uuid: string): boolean {
+export function isTrustedUuid(uuid: string): boolean {
   const source = appConfig.userLimits.trusted.uuids;
   if (source !== trustedUuidsSource) {
     trustedUuidsSource = source;
@@ -84,6 +86,8 @@ export class UserRepository {
     config.trusted = false;
     config.ip = undefined;
     config.activeVariants = undefined;
+    config.autoVariants = undefined;
+    config.healthResults = undefined;
     config.variantSelectorLocation = undefined;
 
     let configToValidate: UserData = config;
@@ -197,6 +201,9 @@ export class UserRepository {
             config.parentConfig.password
           );
           config = mergeConfigs(parent, config);
+          // mergeConfigs starts from the child, so trust has to be carried
+          // over by hand, the way both save paths already do it.
+          config.trusted = parent.trusted || config.trusted;
           logger.info(
             `Merged parent config ${config.parentConfig!.uuid} for user ${uuid}`
           );
@@ -243,6 +250,8 @@ export class UserRepository {
     decryptedConfig.uuid = uuid;
     decryptedConfig.ip = undefined;
     decryptedConfig.activeVariants = undefined;
+    decryptedConfig.autoVariants = undefined;
+    decryptedConfig.healthResults = undefined;
     decryptedConfig.variantSelectorLocation = undefined;
     return applyMigrations(decryptedConfig);
   }
@@ -360,6 +369,8 @@ export class UserRepository {
     config.trusted = isTrustedUuid(uuid);
     config.ip = undefined;
     config.activeVariants = undefined;
+    config.autoVariants = undefined;
+    config.healthResults = undefined;
     config.variantSelectorLocation = undefined;
 
     const db = getDb();
@@ -540,6 +551,13 @@ export class UserRepository {
           uuid,
           newEncryptedPasswordToken
         );
+        await LinkedAccountRepository.rewriteManifestUrlsForUuid(
+          tx,
+          uuid,
+          newEncryptedPasswordToken
+        );
+        // Not rotated like the above: a password change ends them everywhere.
+        await ConfigSessionRepository.deleteAllForUuid(uuid, tx);
       });
       logger.info(`Changed password for user ${uuid}`);
       return { encryptedPassword: newEncryptedPasswordToken };

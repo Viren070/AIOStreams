@@ -2,7 +2,9 @@
 export { AnimeDatabase } from './database.js';
 export {
   enrichParsedIdWithAnimeEntry,
+  getEnrichedImdbId,
   getSeasonFromSynonyms,
+  getTmdbEpisode,
 } from './enrich.js';
 export type {
   AnimeEntry,

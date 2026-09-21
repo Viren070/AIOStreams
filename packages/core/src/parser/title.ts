@@ -1,10 +1,44 @@
 import { parseTorrentTitle, ParsedResult } from '@viren070/parse-torrent-title';
+import { DEFAULT_REPOST_SUFFIXES } from '../utils/constants.js';
 
 // Sized to cover the working set of a busy request without retaining much:
 // entries are small objects and the hit rate comes from repetition, not volume.
 const MAX_ENTRIES = 10_000;
 
 const cache = new Map<string, ParsedResult>();
+
+let repostSuffixPattern = compileRepostSuffixes(DEFAULT_REPOST_SUFFIXES);
+
+/** The SPA also loads this module, so the server pushes its config in here. */
+export function setRepostSuffixes(suffixes: readonly string[]): void {
+  repostSuffixPattern = compileRepostSuffixes(suffixes);
+}
+
+function compileRepostSuffixes(
+  suffixes: readonly string[]
+): RegExp | undefined {
+  const alternatives = suffixes
+    .map((suffix) => suffix.trim())
+    .filter(Boolean)
+    .map((suffix) =>
+      suffix.endsWith('*')
+        ? `${escapeRegex(suffix.slice(0, -1))}[a-z0-9]*`
+        : escapeRegex(suffix)
+    );
+  if (!alternatives.length) return undefined;
+  return new RegExp(
+    `(?:-(?:${alternatives.join('|')}))+(?=(?:\\.[a-z0-9]{2,4})?$)`,
+    'i'
+  );
+}
+
+function escapeRegex(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+export function stripRepostSuffixes(name: string): string {
+  return repostSuffixPattern ? name.replace(repostSuffixPattern, '') : name;
+}
 
 /**
  * Memoised {@link parseTorrentTitle}.
@@ -17,15 +51,16 @@ const cache = new Map<string, ParsedResult>();
  * including their arrays (`seasons`, `episodes`, `volumes`, `editions`).
  */
 export function parseTorrentTitleCached(title: string): ParsedResult {
-  const cached = cache.get(title);
+  const name = stripRepostSuffixes(title);
+  const cached = cache.get(name);
   if (cached !== undefined) {
     // Re-insert to refresh recency; Map iterates in insertion order.
-    cache.delete(title);
-    cache.set(title, cached);
+    cache.delete(name);
+    cache.set(name, cached);
     return cached;
   }
 
-  const parsed = parseTorrentTitle(title);
+  const parsed = parseTorrentTitle(name);
 
   if (cache.size >= MAX_ENTRIES) {
     const oldest = cache.keys().next().value;
@@ -33,7 +68,7 @@ export function parseTorrentTitleCached(title: string): ParsedResult {
       cache.delete(oldest);
     }
   }
-  cache.set(title, parsed);
+  cache.set(name, parsed);
   return parsed;
 }
 

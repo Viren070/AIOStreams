@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
   Template,
@@ -29,9 +29,9 @@ import {
   filterUnavailablePresets,
   applyInputValue,
   getVisibleOptions,
+  pruneStaleInputValues,
 } from '@/lib/templates/processors';
 import { UseValidationModal } from './validationModal';
-import { Mode } from '@/context/mode';
 
 export interface UseTemplateWizardParams {
   status: StatusResponse | null;
@@ -41,12 +41,15 @@ export interface UseTemplateWizardParams {
   templateValidations: Record<string, TemplateValidation>;
   setSelectedMenu: (menu: MenuId) => void;
   onOpenChange: (open: boolean) => void;
-  mode: Mode;
+  /** Step the wizard opens on, and returns to when cancelled. */
+  initialStep?: WizardStep;
 }
 
 export interface UseTemplateWizard {
   // State
   currentStep: WizardStep;
+  /** Steps this run will actually visit, in order, for the setup rail. */
+  plannedSteps: WizardStep[];
   processedTemplate: ProcessedTemplate | null;
   selectedServices: string[];
   inputValues: Record<string, string>;
@@ -70,6 +73,10 @@ export interface UseTemplateWizard {
   handleServiceSelectionNext(): void;
   handleServiceSelectionSkip(): void;
   handleTemplateInputsNext(): void;
+  handleCredentialsNext(): void;
+  previewUserData(): any | null;
+  goToStep(step: WizardStep): void;
+  resetTo(step: WizardStep): void;
   pushHistory(): void;
   handleBack(): void;
   confirmLoadTemplate(): Promise<void>;
@@ -84,9 +91,17 @@ export function useTemplateWizard({
   templateValidations,
   setSelectedMenu,
   onOpenChange,
-  mode,
+  initialStep = 'browse',
 }: UseTemplateWizardParams): UseTemplateWizard {
-  const [currentStep, setCurrentStep] = useState<WizardStep>('browse');
+  const [currentStep, setCurrentStep] = useState<WizardStep>(initialStep);
+  const [plannedSteps, setPlannedSteps] = useState<WizardStep[]>([
+    'browse',
+    'review',
+  ]);
+  // `initialStep` can change after mount (the About page decides between the
+  // first-run screen and the browser), so cancelling must read the live value.
+  const initialStepRef = useRef(initialStep);
+  initialStepRef.current = initialStep;
   const [processedTemplate, setProcessedTemplate] =
     useState<ProcessedTemplate | null>(null);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
@@ -154,8 +169,107 @@ export function useTemplateWizard({
       .map((s) => s.id);
 
   /**
-   * Migrates config, stamps in input values, filters services,
-   * resolves credential refs, merges into userData, then resets wizard state.
+   * Work out every step this template will visit before the first one is shown,
+   * so the rail can display the real length up front instead of growing.
+   * Credentials are planned against the widest possible service selection; the
+   * step is dropped later if the user's choices leave nothing to enter.
+   */
+  const planSteps = (template: Template, processed: ProcessedTemplate) => {
+    const hasOptions = (template.metadata.inputs?.length ?? 0) > 0;
+    const widestCredentials = addServiceInputs(
+      processed,
+      processed.services,
+      status,
+      userData
+    );
+    const steps: WizardStep[] = ['browse'];
+    if (processed.showServiceSelection) steps.push('selectService');
+    if (hasOptions) steps.push('templateInputs');
+    if (processed.inputs.length > 0 || widestCredentials.length > 0)
+      steps.push('inputs');
+    steps.push('review');
+    setPlannedSteps(steps);
+  };
+
+  /** Drop a step from the rail once we know it will not be visited. */
+  const dropPlannedStep = (step: WizardStep) =>
+    setPlannedSteps((prev) => prev.filter((s) => s !== step));
+
+  /**
+   * Build the config this template would produce: migrations, stamped input
+   * values, service enable/disable and resolved credential refs. Pure, so the
+   * review step can show the result before anything is committed.
+   */
+  const buildTemplateConfig = ({
+    config,
+    inputs,
+    resolvedValues,
+    selectedSvcs,
+  }: {
+    config: any;
+    inputs: TemplateInput[];
+    resolvedValues: Record<string, string>;
+    selectedSvcs: string[];
+  }) => {
+    const migratedData = applyMigrations(JSON.parse(JSON.stringify(config)));
+
+    inputs.forEach((input) => {
+      const value = resolvedValues[input.key];
+      if (value || !input.required) {
+        const paths = Array.isArray(input.path) ? input.path : [input.path];
+        for (const path of paths) {
+          if (path.startsWith('services.')) {
+            const pathParts = path.split('.');
+            const serviceId = pathParts[1] as any;
+            const credKey = pathParts[2];
+            if (!migratedData.services) migratedData.services = [];
+            let service = migratedData.services.find(
+              (s: any) => s.id === serviceId
+            );
+            if (!service) {
+              service = { id: serviceId, enabled: true, credentials: {} };
+              migratedData.services.push(service);
+            }
+            if (!service.credentials) service.credentials = {};
+            service.credentials[credKey] = value || '';
+          } else {
+            applyInputValue(migratedData, path, value || '');
+          }
+        }
+      }
+    });
+
+    if (selectedSvcs.length > 0) {
+      if (!migratedData.services) migratedData.services = [];
+
+      const services = migratedData.services;
+
+      selectedSvcs.forEach((svcId) => {
+        const existing = services.find((s: any) => s.id === svcId);
+        if (!existing) {
+          services.push({
+            id: svcId as ServiceId,
+            enabled: true,
+            credentials: {},
+          });
+        } else if (!existing.enabled) {
+          existing.enabled = true;
+        }
+      });
+
+      services.forEach((s: any) => {
+        if (!selectedSvcs.includes(s.id)) {
+          s.enabled = false;
+        }
+      });
+    }
+
+    resolveCredentialRefs(migratedData, resolvedValues);
+    return migratedData;
+  };
+
+  /**
+   * Applies the built config to userData, then resets wizard state.
    */
   const applyTemplate = async ({
     config,
@@ -180,60 +294,12 @@ export function useTemplateWizard({
   }) => {
     setIsLoading(true);
     try {
-      const migratedData = applyMigrations(JSON.parse(JSON.stringify(config)));
-
-      inputs.forEach((input) => {
-        const value = resolvedValues[input.key];
-        if (value || !input.required) {
-          const paths = Array.isArray(input.path) ? input.path : [input.path];
-          for (const path of paths) {
-            if (path.startsWith('services.')) {
-              const pathParts = path.split('.');
-              const serviceId = pathParts[1] as any;
-              const credKey = pathParts[2];
-              if (!migratedData.services) migratedData.services = [];
-              let service = migratedData.services.find(
-                (s: any) => s.id === serviceId
-              );
-              if (!service) {
-                service = { id: serviceId, enabled: true, credentials: {} };
-                migratedData.services.push(service);
-              }
-              if (!service.credentials) service.credentials = {};
-              service.credentials[credKey] = value || '';
-            } else {
-              applyInputValue(migratedData, path, value || '');
-            }
-          }
-        }
+      const migratedData = buildTemplateConfig({
+        config,
+        inputs,
+        resolvedValues,
+        selectedSvcs,
       });
-
-      if (selectedSvcs.length > 0) {
-        if (!migratedData.services) migratedData.services = [];
-
-        const services = migratedData.services;
-
-        selectedSvcs.forEach((svcId) => {
-          const existing = services.find((s: any) => s.id === svcId);
-          if (!existing) {
-            services.push({
-              id: svcId as ServiceId,
-              enabled: true,
-              credentials: {},
-            });
-          } else if (!existing.enabled) {
-            existing.enabled = true;
-          }
-        });
-
-        services.forEach((s: any) => {
-          if (!selectedSvcs.includes(s.id)) {
-            s.enabled = false;
-          }
-        });
-      }
-
-      resolveCredentialRefs(migratedData, resolvedValues);
       setUserData((prev: any) => ({ ...prev, ...migratedData }));
 
       if (templateId && templateVersion) {
@@ -270,7 +336,7 @@ export function useTemplateWizard({
       }
 
       setProcessedTemplate(null);
-      setCurrentStep('browse');
+      setCurrentStep(initialStepRef.current);
       setSelectedServices([]);
       setInputValues({});
       setWizardHistory([]);
@@ -289,6 +355,7 @@ export function useTemplateWizard({
     filterUnavailablePresets(template.config, status);
     const processed = processTemplate(template, status, userData);
     setProcessedTemplate(processed);
+    planSteps(template, processed);
 
     if (processed.skipServiceSelection) {
       if (processed.services.length === 1) {
@@ -303,18 +370,12 @@ export function useTemplateWizard({
       }
 
       if (processed.inputs.length === 0) {
-        applyTemplate({
-          config: template.config,
-          inputs: [],
-          resolvedValues: {},
-          selectedSvcs:
-            processed.services.length === 1 ? processed.services : [],
-          templateName: template.metadata.name,
-          setToSaveInstallMenu: template.metadata.setToSaveInstallMenu,
-          templateId: template.metadata.id,
-          templateVersion: template.metadata.version,
-          templateSourceUrl: template.metadata.sourceUrl,
-        });
+        setSelectedServices(
+          processed.services.length === 1 ? processed.services : []
+        );
+        setInputValues({});
+        dropPlannedStep('inputs');
+        setCurrentStep('review');
         return;
       }
 
@@ -330,17 +391,10 @@ export function useTemplateWizard({
       setCurrentStep('selectService');
     } else {
       if (processed.inputs.length === 0) {
-        applyTemplate({
-          config: template.config,
-          inputs: [],
-          resolvedValues: {},
-          selectedSvcs: [],
-          templateName: template.metadata.name,
-          setToSaveInstallMenu: template.metadata.setToSaveInstallMenu,
-          templateId: template.metadata.id,
-          templateVersion: template.metadata.version,
-          templateSourceUrl: template.metadata.sourceUrl,
-        });
+        setSelectedServices([]);
+        setInputValues({});
+        dropPlannedStep('inputs');
+        setCurrentStep('review');
         return;
       }
       setInputValues(
@@ -382,7 +436,10 @@ export function useTemplateWizard({
           }
         }
       }
-      const saved = getLocalStorageTemplateInputs(template.metadata.id);
+      const saved = pruneStaleInputValues(
+        options,
+        getLocalStorageTemplateInputs(template.metadata.id)
+      );
 
       const mergeWithDefaults = (
         base: Record<string, any>,
@@ -409,6 +466,7 @@ export function useTemplateWizard({
       const initialValues = mergeWithDefaults(defaults, saved);
 
       const processed = processTemplate(template, status, userData);
+      planSteps(template, processed);
       if (processed.showServiceSelection) {
         setProcessedTemplate(processed);
         setPendingTemplate(template);
@@ -493,6 +551,11 @@ export function useTemplateWizard({
         {}
       )
     );
+    if (allInputs.length === 0) {
+      dropPlannedStep('inputs');
+      setCurrentStep('review');
+      return;
+    }
     setCurrentStep('inputs');
   };
 
@@ -518,6 +581,11 @@ export function useTemplateWizard({
         {}
       )
     );
+    if (processedTemplate.inputs.length === 0) {
+      dropPlannedStep('inputs');
+      setCurrentStep('review');
+      return;
+    }
     setCurrentStep('inputs');
   };
 
@@ -525,7 +593,7 @@ export function useTemplateWizard({
     if (!pendingTemplate) return;
 
     const visibleOptions = getVisibleOptions(
-      mode,
+      'pro',
       templateInputOptions,
       templateInputValues,
       selectedServices
@@ -587,13 +655,18 @@ export function useTemplateWizard({
           {}
         )
       );
+      if (freshProcessed.inputs.length === 0) {
+        dropPlannedStep('inputs');
+        setCurrentStep('review');
+        return;
+      }
       setCurrentStep('inputs');
     } else {
       proceedWithTemplate(resolvedTemplate);
     }
   };
 
-  const confirmLoadTemplate = async () => {
+  const handleCredentialsNext = () => {
     if (!processedTemplate) return;
 
     const missingRequired = processedTemplate.inputs.filter(
@@ -606,6 +679,14 @@ export function useTemplateWizard({
       );
       return;
     }
+
+    pushHistory();
+    setCurrentStep('review');
+  };
+
+  /** Final apply, from the review step. */
+  const confirmLoadTemplate = async () => {
+    if (!processedTemplate) return;
 
     await applyTemplate({
       config: processedTemplate.template.config,
@@ -626,15 +707,58 @@ export function useTemplateWizard({
     setPendingTemplate(null);
     setTemplateInputOptions([]);
     setTemplateInputValues({});
-    setCurrentStep('browse');
+    setCurrentStep(initialStepRef.current);
     setSelectedServices([]);
     setInputValues({});
     setWizardHistory([]);
+    setPlannedSteps(['browse', 'review']);
     onOpenChange(false);
+  };
+
+  /**
+   * The config the review step is about to apply, merged onto the current one
+   * exactly as `applyTemplate` would.
+   */
+  const previewUserData = () => {
+    if (!processedTemplate) return null;
+    try {
+      return {
+        ...userData,
+        ...buildTemplateConfig({
+          config: processedTemplate.template.config,
+          inputs: processedTemplate.inputs,
+          resolvedValues: inputValues,
+          selectedSvcs: selectedServices,
+        }),
+      };
+    } catch (err) {
+      console.error('Failed to preview template changes:', err);
+      return null;
+    }
+  };
+
+  /** Drop all wizard state and start again at `step`, used when reopening. */
+  const resetTo = (step: WizardStep) => {
+    setProcessedTemplate(null);
+    setPendingTemplate(null);
+    setTemplateInputOptions([]);
+    setTemplateInputValues({});
+    setSelectedServices([]);
+    setInputValues({});
+    setWizardHistory([]);
+    setPlannedSteps(['browse', 'review']);
+    setCurrentStep(step);
+  };
+
+  /** Forward navigation that keeps Back working. */
+  const goToStep = (step: WizardStep) => {
+    pushHistory();
+    setCurrentStep(step);
   };
 
   return {
     currentStep,
+    plannedSteps,
     processedTemplate,
     selectedServices,
     inputValues,
@@ -652,6 +776,10 @@ export function useTemplateWizard({
     handleServiceSelectionNext,
     handleServiceSelectionSkip,
     handleTemplateInputsNext,
+    handleCredentialsNext,
+    previewUserData,
+    goToStep,
+    resetTo,
     pushHistory,
     handleBack,
     confirmLoadTemplate,

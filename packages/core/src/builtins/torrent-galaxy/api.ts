@@ -16,37 +16,28 @@ const logger = createLogger('torrent-galaxy');
 enum TorrentGalaxyCategory {
   Movies = 'Movies',
   TV = 'TV',
+  TVShows = 'TV shows',
   Anime = 'Anime',
 }
 
 const TorrentGalaxySearchResultSchema = z
   .looseObject({
-    pk: z.string(), // post key
     n: z.string(), // name
     a: z.number(), // unix timestamp i.e. age
-    c: z.string(), // category e.g. Movies
     s: z.number(), // size
-    t: z.string().nullable(), // poster URL
     u: z.string(), // user
     se: z.number(), // seeders
-    le: z.number(), // leechers
     i: z.string().nullable(), // imdb id,
     h: z.string().transform((h) => h.toLowerCase()), // hash
-    tg: z.array(z.string()), // tags.
   })
   .transform((data) => ({
-    postKey: data.pk,
     name: data.n,
     age: data.a,
-    category: data.c,
     size: data.s,
-    posterUrl: data.t,
     user: data.u,
     seeders: data.se,
-    leechers: data.le,
     imdbId: data.i,
     hash: data.h,
-    tags: data.tg,
   }));
 
 type TorrentGalaxySearchResult = z.infer<
@@ -56,13 +47,11 @@ type TorrentGalaxySearchResult = z.infer<
 const TorrentGalaxySearchResponse = z
   .object({
     page_size: z.number(),
-    count: z.number(),
     total: z.number(),
     results: z.array(TorrentGalaxySearchResultSchema),
   })
   .transform((data) => ({
     pageSize: data.page_size,
-    count: data.count,
     total: data.total,
     results: data.results,
   }));
@@ -72,6 +61,7 @@ type TorrentGalaxySearchResponse = z.infer<typeof TorrentGalaxySearchResponse>;
 const TorrentGalaxySearchOptions = z.object({
   query: z.string(),
   page: z.number().default(1),
+  categories: z.array(z.string()).default([]),
 });
 
 type TorrentGalaxySearchOptions = z.infer<typeof TorrentGalaxySearchOptions>;
@@ -109,7 +99,7 @@ class TorrentGalaxyAPI {
       cacheTTL: appConfig.builtins.torrentGalaxy.searchCacheTtl,
       fetchFn: () =>
         this.request<TorrentGalaxySearchResponse>(
-          `/get-posts/keywords:${encodeURIComponent(options.query)}:format:json`,
+          `/get-posts/keywords:${encodeURIComponent(options.query)}${options.categories.map((c) => `:category:${c}`).join('')}:format:json`,
           {
             schema: TorrentGalaxySearchResponse,
             timeout: appConfig.builtins.torrentGalaxy.searchTimeout,

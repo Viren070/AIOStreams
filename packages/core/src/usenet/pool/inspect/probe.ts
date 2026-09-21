@@ -15,6 +15,7 @@ import { NzbFile } from '../../nzb/model.js';
 import { isProbablyObfuscated } from '../../nzb/obfuscation.js';
 import { CommandPriority } from '../../types.js';
 import { InspectOptions, InspectResult } from './types.js';
+import type { SiblingSizes } from './probe-plan.js';
 
 const logger = createLogger('usenet/inspect');
 
@@ -65,7 +66,8 @@ export async function inspectFile(
   nzbHash: string,
   opts: InspectOptions,
   knownSize?: number,
-  par2?: () => Promise<Par2Index | undefined>
+  par2?: () => Promise<Par2Index | undefined>,
+  sizes?: SiblingSizes
 ): Promise<InspectResult> {
   if (file.segments.length === 0) {
     return {
@@ -121,16 +123,31 @@ export async function inspectFile(
 
     let size: number;
     let sizeExact: boolean;
+    let sizeInferred = false;
+    const firstPartLen =
+      first.byteRange !== undefined
+        ? first.byteRange[1] - first.byteRange[0]
+        : undefined;
+    // Only a head-aligned, full-first-part volume is a sibling-shape sample.
+    const siblingShaped =
+      headAligned &&
+      firstPartLen !== undefined &&
+      firstPartLen > 0 &&
+      type.category === 'archive' &&
+      file.segments.length > 1 &&
+      (first.totalParts === undefined ||
+        first.totalParts === file.segments.length);
     const exactSize = desc && desc.length > 0 ? desc.length : knownSize;
     if (exactSize && exactSize > 0) {
       // PAR2 already pinned this file's exact length; trust it over any yEnc header
       // and skip the size-refinement fetch entirely.
       size = exactSize;
       sizeExact = true;
+      if (siblingShaped) sizes?.record(file, firstPartLen!, type.format, size);
     } else {
-      const firstPartLen =
-        first.byteRange !== undefined
-          ? first.byteRange[1] - first.byteRange[0]
+      const inferred =
+        siblingShaped && opts.mode !== 'full'
+          ? sizes?.infer(file, firstPartLen!, type.format)
           : undefined;
       const trustYencSize =
         first.fileSize !== undefined &&
@@ -160,8 +177,12 @@ export async function inspectFile(
 
       // Fetch the last segment's header for the exact part-grid size when the
       // first segment's `=ybegin size=` is missing/untrustworthy, OR for an
-      // archive volume: its decoded size sets the VolumeSet offsets
-      if (
+      // archive volume: its decoded size sets the VolumeSet offsets.
+      if (inferred !== undefined) {
+        size = inferred;
+        sizeExact = true;
+        sizeInferred = true;
+      } else if (
         file.segments.length > 1 &&
         (opts.mode === 'full' || !trustYencSize || type.category === 'archive')
       ) {
@@ -177,6 +198,9 @@ export async function inspectFile(
           if (last.byteRange) {
             size = last.byteRange[1];
             sizeExact = true;
+            if (siblingShaped) {
+              sizes?.record(file, firstPartLen!, type.format, size);
+            }
           }
         } catch {
           /* non-fatal: keep first-segment size estimate */
@@ -190,6 +214,7 @@ export async function inspectFile(
         filename,
         size,
         sizeExact,
+        sizeInferred: sizeInferred || undefined,
         category: type.category,
         format: type.format,
         streamable: type.streamable,

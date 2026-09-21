@@ -15,7 +15,6 @@ const router: Router = Router();
 
 export default router;
 
-
 const manifest = async (config?: UserData): Promise<Manifest> => {
   let addonId = appConfig.branding.addonId;
   if (config) {

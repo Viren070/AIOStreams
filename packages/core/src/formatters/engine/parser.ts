@@ -5,9 +5,23 @@ import {
   ToolNode,
   rawText,
 } from './ast.js';
-import { canonicaliseField, nearestName, suggestField } from './fields.js';
-import { allModifierNames, prefixOperators } from './modifiers.js';
+import {
+  OBJECT_LISTS,
+  canonicaliseField,
+  nearestName,
+  suggestField,
+} from './fields.js';
+import {
+  allModifierNames,
+  prefixOperators,
+  quotedArguments,
+  referenceArguments,
+} from './modifiers.js';
 import { comparatorNames } from './comparators.js';
+import {
+  compileObjectFilter,
+  objectFilterReferences,
+} from '../../utils/object-filter.js';
 
 /**
  * Single-pass template parser. Linear in template length with a bounded stack,
@@ -36,15 +50,18 @@ const PREFIX_OPERATORS: readonly string[] = prefixOperators;
 export type CallArgumentShape =
   | 'quoted'
   | 'quotedPair'
+  | 'quotedList'
   | 'replaceArgs'
   | 'digits'
   | 'digitsOrPair'
-  | 'loose';
+  | 'loose'
+  | 'template';
 
 export const CALL_MODIFIERS: readonly (readonly [string, CallArgumentShape])[] =
   [
     ['replace', 'replaceArgs'],
     ['remove', 'loose'],
+    ['keep', 'loose'],
     ['join', 'quoted'],
     ['truncate', 'digits'],
     ['slice', 'digitsOrPair'],
@@ -53,6 +70,10 @@ export const CALL_MODIFIERS: readonly (readonly [string, CallArgumentShape])[] =
     ['default', 'quoted'],
     ['in', 'loose'],
     ['translate', 'quotedPair'],
+    ['trim', 'quoted'],
+    ['where', 'quotedList'],
+    ['pluck', 'quoted'],
+    ['each', 'template'],
   ];
 
 const LOOKS_LIKE_EXPRESSION =
@@ -103,7 +124,7 @@ export interface Diagnostic {
 export function validateTemplate(template: string): Diagnostic[] {
   const { nodes, diagnostics } = parseTemplate(template);
   // top-level node positions are already document offsets, so the identity map
-  const all = [...diagnostics, ...branchDiagnostics(nodes, template, (i) => i)];
+  const all = [...diagnostics, ...nestedDiagnostics(nodes, template, (i) => i)];
 
   const seen = new Set<string>();
   return all.filter((d) => {
@@ -146,28 +167,33 @@ function buildBranchMapper(
 }
 
 /**
- * Conditional branches are stored as raw strings and only compiled at render
- * time, so nothing else ever validates them. Walked here rather than in
- * `parseTemplate` to keep this off the render path.
+ * Conditional branches and `each()` templates are stored as raw strings and
+ * only compiled at render time, so nothing else ever validates them. Walked
+ * here rather than in `parseTemplate` to keep this off the render path.
  *
  * `mapToDoc` translates a position in the string these `nodes` were parsed from
  * into a document offset; each branch composes a fresh mapper so a diagnostic
  * nested any number of levels deep still lands on its exact character.
  */
-function branchDiagnostics(
+function nestedDiagnostics(
   nodes: TemplateNode[],
   doc: string,
   mapToDoc: (index: number) => number,
-  depth = 0
+  depth = 0,
+  inEach = false
 ): Diagnostic[] {
   if (depth > MAX_BRANCH_DEPTH) return [];
   const out: Diagnostic[] = [];
   for (const node of nodes) {
     if (node.kind === 'group') {
-      out.push(...branchDiagnostics(node.nodes, doc, mapToDoc, depth + 1));
+      out.push(
+        ...nestedDiagnostics(node.nodes, doc, mapToDoc, depth + 1, inEach)
+      );
       continue;
     }
-    if (node.kind !== 'expression' || !node.check) continue;
+    if (node.kind !== 'expression') continue;
+    out.push(...operandDiagnostics(node, doc, mapToDoc, depth, inEach));
+    if (!node.check) continue;
 
     const branches: [string | undefined, number | undefined][] = [
       [node.check.trueTemplate, node.check.trueStart],
@@ -185,7 +211,139 @@ function branchDiagnostics(
           message: `inside conditional branch: ${d.message}`,
         }))
       );
-      out.push(...branchDiagnostics(inner.nodes, doc, localMapper, depth + 1));
+      out.push(
+        ...nestedDiagnostics(inner.nodes, doc, localMapper, depth + 1, inEach)
+      );
+    }
+  }
+  return out;
+}
+
+/** Modifiers whose arguments may name a field, as `{section.property}`. */
+const REFERENCE_MODIFIERS: ReadonlySet<string> = new Set([
+  'where',
+  'in',
+  'keep',
+  'remove',
+]);
+
+/** `where`, `pluck`, `each` and `track.*` parse anywhere but only work in place. */
+function operandDiagnostics(
+  node: ExpressionNode,
+  doc: string,
+  mapToDoc: (index: number) => number,
+  depth: number,
+  inEach: boolean
+): Diagnostic[] {
+  const out: Diagnostic[] = [];
+  const base = node.start ?? 0;
+  // a moving cursor, so repeated text is found at the right occurrence
+  const source = node.source.toLowerCase();
+  let cursor = 0;
+  const locate = (text: string): number => {
+    const at = source.indexOf(text.toLowerCase(), cursor);
+    if (at === -1) return cursor;
+    cursor = at + text.length;
+    return at;
+  };
+  const at = (
+    from: number,
+    text: string,
+    category: DiagnosticCategory,
+    message: string
+  ): Diagnostic => ({
+    index: mapToDoc(base + from),
+    message,
+    source: text,
+    category,
+  });
+
+  for (const operand of node.operands) {
+    const field = `${operand.section}.${operand.property}`;
+    if (operand.literal === undefined) {
+      const fieldAt = locate(field);
+      if (operand.section === 'track' && !inEach) {
+        out.push(
+          at(
+            fieldAt,
+            field,
+            'unknown-field',
+            `\`${field}\` is only set inside \`::each(...)\``
+          )
+        );
+      }
+    }
+
+    let isList = operand.literal === undefined && OBJECT_LISTS.has(field);
+    for (const modifier of operand.modifiers) {
+      const modifierAt = locate(modifier);
+      const open = modifier.indexOf('(');
+      const name = (
+        open === -1 ? modifier : modifier.slice(0, open)
+      ).toLowerCase();
+
+      if (open !== -1 && REFERENCE_MODIFIERS.has(name)) {
+        const inner = modifier.slice(open + 1, -1);
+        // `where`'s references sit inside its quoted conditions
+        const references =
+          name === 'where'
+            ? objectFilterReferences(quotedArguments(inner))
+            : referenceArguments(inner);
+        for (const reference of references) {
+          const [section, property] = reference.split('.');
+          if (canonicaliseField(section, property)) continue;
+          const suggestion = suggestField(section, property)[0];
+          out.push({
+            ...at(
+              modifierAt,
+              modifier,
+              'unknown-field',
+              `\`::${name}\`: unknown field \`${reference}\``
+            ),
+            ...(suggestion ? { suggestion } : {}),
+          });
+        }
+      }
+
+      if (name !== 'where' && name !== 'pluck' && name !== 'each') {
+        if (name !== 'slice' && name !== 'reverse') isList = false;
+        continue;
+      }
+
+      const problem = (message: string) =>
+        out.push(at(modifierAt, modifier, 'modifier-arguments', message));
+      if (!isList) {
+        problem(
+          `\`::${name}\` only applies to a list of objects, such as \`stream.audioTracks\``
+        );
+      } else if (name === 'where') {
+        try {
+          compileObjectFilter(quotedArguments(modifier.slice(open + 1, -1)));
+        } catch (error) {
+          problem(`\`::where\`: ${(error as Error).message}`);
+        }
+      } else if (name === 'each' && inEach) {
+        problem('`::each` cannot be used inside another `::each`');
+      } else if (name === 'each') {
+        const argument = eachTemplate(modifier);
+        if (argument) {
+          const toModifier = templateArgumentMapper(argument);
+          const toDoc = (index: number) =>
+            mapToDoc(base + modifierAt + toModifier(index));
+          const inner = parseTemplate(argument.content);
+          out.push(
+            ...inner.diagnostics.map((d) => ({
+              ...d,
+              index: toDoc(d.index),
+              message: `inside each(): ${d.message}`,
+            }))
+          );
+          out.push(
+            ...nestedDiagnostics(inner.nodes, doc, toDoc, depth + 1, true)
+          );
+        }
+      }
+      if (name !== 'where') isList = false;
     }
   }
   return out;
@@ -193,7 +351,7 @@ function branchDiagnostics(
 
 class Scanner {
   constructor(
-    private readonly input: string,
+    readonly input: string,
     public pos = 0
   ) {}
 
@@ -267,6 +425,65 @@ function scanQuotedArgument(scanner: Scanner): boolean {
   return false;
 }
 
+export interface TemplateArgument {
+  /** unescaped */
+  content: string;
+  /** where each character of `content` sits in the scanned text */
+  offsets: number[];
+  /** one past the closing quote */
+  end: number;
+}
+
+/**
+ * As in a conditional branch, a quote inside a nested `{...}` does not close
+ * it, and a backslash escapes the quote.
+ */
+export function scanTemplateArgument(
+  text: string,
+  start: number
+): TemplateArgument | undefined {
+  const quote = text[start];
+  if (quote !== '"' && quote !== "'") return undefined;
+  let content = '';
+  const offsets: number[] = [];
+  let depth = 0;
+  let pos = start + 1;
+  while (pos < text.length) {
+    const char = text[pos];
+    if (char === '\\' && text[pos + 1] === quote) {
+      offsets.push(pos);
+      content += quote;
+      pos += 2;
+      continue;
+    }
+    if (char === '{') depth += 1;
+    else if (char === '}') depth = Math.max(0, depth - 1);
+    else if (char === quote && depth === 0) {
+      return { content, offsets, end: pos + 1 };
+    }
+    offsets.push(pos);
+    content += char;
+    pos += 1;
+  }
+  return undefined;
+}
+
+function templateArgumentMapper(
+  argument: TemplateArgument
+): (index: number) => number {
+  return (index) =>
+    index >= 0 && index < argument.offsets.length
+      ? argument.offsets[index]
+      : argument.end - 1;
+}
+
+export function eachTemplate(source: string): TemplateArgument | undefined {
+  if (!/^each\(/i.test(source)) return undefined;
+  let start = 'each('.length;
+  while (/\s/.test(source[start] ?? '')) start += 1;
+  return scanTemplateArgument(source, start);
+}
+
 function scanDigits(scanner: Scanner): boolean {
   const start = scanner.pos;
   while (scanner.peek() !== undefined && /\d/.test(scanner.peek()!)) {
@@ -285,10 +502,30 @@ function skipSpaces(scanner: Scanner): void {
  * The argument may itself contain parentheses, as in `remove('DV (Disk)')`, so
  * it ends at the last `)` in range rather than the first.
  */
+const LOOSE_REFERENCE =
+  /^\{\s*[A-Za-z_][A-Za-z0-9_]*\s*\.\s*[A-Za-z_][A-Za-z0-9_]*\s*\}$/;
+
 function scanLooseArgument(scanner: Scanner): boolean {
   let lastParen = -1;
   while (!scanner.atEnd) {
     const char = scanner.peek()!;
+    // a quoted argument is literal, braces and parens included
+    if (char === "'" || char === '"') {
+      const close = scanner.input.indexOf(char, scanner.pos + 1);
+      if (close !== -1) {
+        scanner.pos = close + 1;
+        continue;
+      }
+    }
+    // a reference's braces must not end the argument list, but anything else
+    // brace-shaped still does, so an unclosed `{` cannot run away
+    if (char === '{') {
+      const close = scanner.input.indexOf('}', scanner.pos);
+      const span = close === -1 ? '' : scanner.slice(scanner.pos, close + 1);
+      if (!LOOSE_REFERENCE.test(span)) break;
+      scanner.pos = close + 1;
+      continue;
+    }
     if (char === '}' || char === '[' || char === ']') break;
     if (char === ':' && scanner.peek(1) === ':') break;
     if (char === ')') lastParen = scanner.pos;
@@ -316,6 +553,21 @@ function scanCallArguments(
       skipSpaces(scanner);
       if (!scanQuotedArgument(scanner)) return false;
       break;
+    case 'quotedList':
+      do {
+        skipSpaces(scanner);
+        if (!scanQuotedArgument(scanner)) return false;
+        skipSpaces(scanner);
+      } while (scanner.eat(','));
+      break;
+    case 'template': {
+      skipSpaces(scanner);
+      const argument = scanTemplateArgument(scanner.input, scanner.pos);
+      if (!argument) return false;
+      scanner.pos = argument.end;
+      skipSpaces(scanner);
+      break;
+    }
     case 'replaceArgs':
       // the search key may be a {variable} rather than a quoted string
       if (scanner.peek() === '{') {
@@ -774,10 +1026,12 @@ export function parseTemplate(template: string): ParseResult {
 export const ARGUMENT_EXAMPLES: Record<CallArgumentShape, string> = {
   quoted: "('text')",
   quotedPair: "('from', 'to')",
+  quotedList: "('forced', 'lang=English')",
   replaceArgs: "('find', 'replaceWith')",
   digits: '(3)',
   digitsOrPair: '(0, 3)',
   loose: "('a', 'b')",
+  template: '("{track.lang}")',
 };
 
 /** Extent of the `{...}` opening at `braceIndex`, matching nested braces. */
@@ -1268,7 +1522,18 @@ function tokenizeModifier(
     const argStart = scanner.pos;
     if (scanCallArguments(scanner, shape)) {
       pushToken(out, map, start, nameEnd, 'modifier', depth);
-      pushToken(out, map, argStart, scanner.pos, 'call-args', depth);
+      if (shape === 'template') {
+        tokenizeTemplateArguments(
+          scanner.input,
+          argStart,
+          scanner.pos,
+          map,
+          depth,
+          out
+        );
+      } else {
+        pushToken(out, map, argStart, scanner.pos, 'call-args', depth);
+      }
       return;
     }
     scanner.pos = start;
@@ -1293,6 +1558,36 @@ function tokenizeModifier(
     scanner.pos = start + name.length;
     return;
   }
+}
+
+function tokenizeTemplateArguments(
+  text: string,
+  from: number,
+  to: number,
+  map: PositionMap,
+  depth: number,
+  out: Token[]
+): void {
+  let quoteAt = from + 1;
+  while (/\s/.test(text[quoteAt] ?? '')) quoteAt += 1;
+  const argument = scanTemplateArgument(text, quoteAt);
+  if (!argument) {
+    pushToken(out, map, from, to, 'call-args', depth);
+    return;
+  }
+  const toText = templateArgumentMapper(argument);
+  pushToken(out, map, from, quoteAt, 'call-args', depth);
+  pushToken(out, map, quoteAt, quoteAt + 1, 'quote', depth);
+  tokenizeRegion(
+    argument.content,
+    0,
+    argument.content.length,
+    (i) => map(toText(i)),
+    depth + 1,
+    out
+  );
+  pushToken(out, map, argument.end - 1, argument.end, 'quote', depth);
+  pushToken(out, map, argument.end, to, 'call-args', depth);
 }
 
 function tokenizeCheck(

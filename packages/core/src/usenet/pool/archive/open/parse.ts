@@ -80,11 +80,12 @@ export async function openVolumeSet(
   set: { kind: ArchiveKind; memberIndices: number[] },
   opener: FileOpener,
   knownSizes?: (number | undefined)[],
-  concurrency = DEFAULT_OPEN_CONCURRENCY
+  concurrency = DEFAULT_OPEN_CONCURRENCY,
+  exact = false
 ): Promise<VolumeSet> {
   const volumes: Volume[] = set.memberIndices.map((index, i) => ({
     filename: `vol-${index}`,
-    open: (knownSize, memo) => opener(index, knownSize, memo),
+    open: (knownSize, memo) => opener(index, knownSize, memo, exact),
     knownSize: knownSizes?.[i],
   }));
   const vs = new VolumeSet(volumes);

@@ -140,10 +140,13 @@ export const DateRangePicker = React.forwardRef<
     controlledValue || defaultValue
   );
 
-  const handleOnSelect = React.useCallback((date: DateRange | undefined) => {
-    setDate(date);
-    onValueChange?.(date);
-  }, []);
+  const handleOnSelect = React.useCallback(
+    (date: DateRange | undefined) => {
+      setDate(date);
+      onValueChange?.(date);
+    },
+    [onValueChange]
+  );
 
   React.useEffect(() => {
     if (!defaultValue || !isFirst.current) {

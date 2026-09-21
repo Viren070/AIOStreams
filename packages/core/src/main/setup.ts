@@ -443,11 +443,14 @@ export function buildResources(ctx: AIOStreamsContext): void {
       if (
         addon.resources &&
         addon.resources.length > 0 &&
-        !addon.resources.includes(resource.name)
+        !addon.resources.includes(resource.name as Resource)
       ) {
         addonResources = addonResources.filter((r) => r.name !== resource.name);
         continue;
       }
+
+      // Consumed, not served: kept in supportedResources, out of the manifest.
+      if (resource.name === constants.WATCH_STATE_RESOURCE) continue;
 
       const existing = ctx.finalResources.find((r) => r.name === resource.name);
       if (existing) {

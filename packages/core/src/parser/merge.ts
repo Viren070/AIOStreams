@@ -69,11 +69,7 @@ export function applySeasonPackHeuristics(
 ): ParsedFile {
   if (parsedFile.seasonPack || !parsedFile.episodes?.length) return parsedFile;
 
-  if (
-    sizes.folderSize &&
-    sizes.size &&
-    sizes.folderSize > sizes.size * 2
-  ) {
+  if (sizes.folderSize && sizes.size && sizes.folderSize > sizes.size * 2) {
     parsedFile.seasonPack = true;
   } else if (parsedFile.episodes.length > 5) {
     parsedFile.seasonPack = true;
@@ -135,6 +131,7 @@ export function mergeParsedFiles(
     unrated: fileParsed?.unrated || folderParsed?.unrated,
     upscaled: fileParsed?.upscaled || folderParsed?.upscaled,
     network: fileParsed?.network || folderParsed?.network,
+    site: fileParsed?.site || folderParsed?.site,
     container: fileParsed?.container || folderParsed?.container,
     extension: fileParsed?.extension || folderParsed?.extension,
     visualTags: arrayMerge(folderParsed?.visualTags, fileParsed?.visualTags),
@@ -145,6 +142,8 @@ export function mergeParsedFiles(
     ),
     languages: arrayMerge(folderParsed?.languages, fileParsed?.languages),
     subtitles: arrayMerge(folderParsed?.subtitles, fileParsed?.subtitles),
+    audioTracks: fileParsed?.audioTracks ?? folderParsed?.audioTracks,
+    subtitleTracks: fileParsed?.subtitleTracks ?? folderParsed?.subtitleTracks,
     subbed: fileParsed?.subbed || folderParsed?.subbed || false,
     dubbed: fileParsed?.dubbed || folderParsed?.dubbed || false,
     seasonPack,

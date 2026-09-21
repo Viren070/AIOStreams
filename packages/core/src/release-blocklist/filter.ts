@@ -36,7 +36,7 @@ export async function applyReleaseBlocklist<T extends BlocklistKeyableStream>(
   streams: T[],
   onRemoved?: (stream: T, verdict: BlocklistEvalResult) => void
 ): Promise<T[]> {
-  if (streams.length === 0) return streams;
+  if (streams.length === 0 || !config.releaseBlocklist.enabled) return streams;
   try {
     if (!(await ReleaseBlocklistRepository.hasEntries())) return streams;
 

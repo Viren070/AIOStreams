@@ -36,10 +36,11 @@ import {
   makeUrlLogSafe,
   formatZodError,
   PossibleRecursiveRequestError,
-  Env,
   appConfig,
   getTimeTakenSincePoint,
   RequestOptions,
+  DistributedLock,
+  requestLockType,
 } from '../utils/index.js';
 import { Preset, PresetManager } from '../presets/index.js';
 import {
@@ -409,6 +410,7 @@ export class Wrapper {
       this.addon.preset.type,
       this.manifestUrl
     );
+    const hit = { fromCache: false };
     const meta: Meta = await this.makeResourceRequest(
       'meta',
       { type, id },
@@ -422,8 +424,17 @@ export class Wrapper {
         id,
         headers: this.addon.headers,
         options: this.addon.preset.options,
-      })
+      }),
+      hit
     );
+    /*
+     * A cached meta was validated on the way in, so the schema is not re-run
+     * over every episode. Metas carrying per-video streams still take the full
+     * path: those streams are cached unparsed.
+     */
+    if (hit.fromCache && !meta.videos?.some((v) => v.streams?.length)) {
+      return meta as ParsedMeta;
+    }
     // parse streams in meta.videos.streams if present
     const parser = new (this.preset.getParser())(this.addon);
     if (meta.videos) {
@@ -467,6 +478,7 @@ export class Wrapper {
         id,
         headers: this.addon.headers,
         options: this.addon.preset.options,
+        extras,
       })
     );
   }
@@ -568,6 +580,8 @@ export class Wrapper {
     cacheTtl: number;
     shouldCache?: (data: T) => boolean;
     bypassCache?: boolean;
+    /** Set to true when the value came from the cache rather than upstream. */
+    hit?: { fromCache: boolean };
   }): Promise<T> {
     const {
       requestFn,
@@ -578,6 +592,7 @@ export class Wrapper {
       cacheTtl,
       shouldCache,
       bypassCache,
+      hit,
     } = options;
 
     let doBackground = appConfig.resources.background.enabled && cacher;
@@ -591,6 +606,7 @@ export class Wrapper {
           { addon: this.getAddonName(this.addon), resource: resourceName },
           'returning cached resource'
         );
+        if (hit) hit.fromCache = true;
         return cached;
       }
     }
@@ -606,7 +622,17 @@ export class Wrapper {
       return result;
     };
 
-    const requestPromise = processRequest();
+    const maxRequestDuration = doBackground
+      ? (appConfig.resources.background.timeout ??
+        appConfig.userLimits.timeouts.maxTimeout)
+      : timeout;
+    const requestPromise = DistributedLock.getInstance()
+      .withLock(cacheKey, processRequest, {
+        timeout,
+        ttl: maxRequestDuration + 1000,
+        type: requestLockType(),
+      })
+      .then(({ result }) => result);
 
     if (!doBackground) {
       return await requestPromise;
@@ -657,7 +683,8 @@ export class Wrapper {
     validator: (data: unknown) => T,
     cacher: Cache<string, T> | undefined,
     cacheTtl: number,
-    cacheKey?: string
+    cacheKey?: string,
+    hit?: { fromCache: boolean }
   ) {
     const { type, id, extras } = params;
     const url = this.buildResourceUrl(resource, type, id, extras);
@@ -706,6 +733,7 @@ export class Wrapper {
         cacheTtl,
         shouldCache: (data: T) =>
           resource !== 'stream' || (Array.isArray(data) && data.length > 0),
+        hit,
       });
       const count = this.resultCountOf(data);
       track({

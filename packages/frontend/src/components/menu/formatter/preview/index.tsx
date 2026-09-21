@@ -11,7 +11,8 @@ import {
 import { toast } from 'sonner';
 import { collectFieldReferences } from '../../../../../../core/src/formatters/engine';
 import { useUserData } from '@/context/userData';
-import { getFormattedStream } from '@/lib/api';
+import { useStatus } from '@/context/status';
+import { renderFormatter } from '@/lib/formatter-render';
 import { cn } from '../../../ui/core/styling';
 import { SettingsCard } from '../../../shared/settings-card';
 import { MenuTabs } from '../../../shared/menu-tabs';
@@ -21,12 +22,11 @@ import { Tooltip } from '../../../ui/tooltip';
 import { FormatQueue } from '../format-queue';
 import { getTemplates } from '../templates';
 import { PreviewFieldsProvider } from './fields';
+import { FormatterPreviewBox } from './preview-box';
 import {
   applyScenario,
-  buildFormatterContext,
   buildParsedFile,
   buildParsedFileWithoutOverrides,
-  buildParsedStream,
   DEFAULT_PREVIEW_INPUT,
   loadPreviewInput,
   PREVIEW_SCENARIOS,
@@ -40,33 +40,10 @@ import { StreamTab } from './tabs/stream';
 import { MetadataTab } from './tabs/metadata';
 import { ScoringTab } from './tabs/scoring';
 
-function FormatterPreviewBox({
-  name,
-  description,
-}: {
-  name?: string;
-  description?: string;
-}) {
-  return (
-    <div className="bg-gray-900 rounded-md p-4 border border-gray-800">
-      <div
-        className="text-xl font-bold mb-1 overflow-x-auto"
-        style={{ whiteSpace: 'pre' }}
-      >
-        {name}
-      </div>
-      <div
-        className="text-base text-muted-foreground overflow-x-auto"
-        style={{ whiteSpace: 'pre' }}
-      >
-        {description}
-      </div>
-    </div>
-  );
-}
-
 export function FormatterPreview() {
   const { userData } = useUserData();
+  const { status } = useStatus();
+  const addonName = status?.settings.addonName;
   const formatQueueRef = useRef<FormatQueue>(new FormatQueue(200));
 
   const [input, setInput] = useState<PreviewInput>(loadPreviewInput);
@@ -103,19 +80,18 @@ export function FormatterPreview() {
 
   const formatStream = useCallback(async () => {
     try {
-      const formatted = await getFormattedStream(buildParsedStream(input), {
-        ...buildFormatterContext(input),
+      const formatted = await renderFormatter(
+        templates,
         userData,
-      });
-      setFormattedStream({
-        name: formatted.name,
-        description: formatted.description,
-      });
+        addonName,
+        input
+      );
+      setFormattedStream(formatted);
     } catch (error) {
       console.error('Error formatting stream:', error);
       toast.error(`Failed to format stream: ${error}`);
     }
-  }, [input, userData]);
+  }, [input, userData, templates.name, templates.description, addonName]);
 
   useEffect(() => {
     formatQueueRef.current.enqueue(formatStream);

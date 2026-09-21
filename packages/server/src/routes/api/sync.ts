@@ -17,7 +17,7 @@ const ResolveSyncedSchema = z.object({
   regexUrls: z.array(z.string().url()).max(10).optional(),
   selUrls: z.array(z.string().url()).max(10).optional(),
   uuid: z.string().optional(),
-  password: z.string().optional(),
+  password: z.string().nullish(),
 });
 
 router.post('/resolve', async (req, res, next) => {

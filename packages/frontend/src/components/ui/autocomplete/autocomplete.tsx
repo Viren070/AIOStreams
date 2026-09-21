@@ -291,7 +291,7 @@ export const Autocomplete = React.forwardRef<
       onTextChange?.(value?.label ?? '');
       _updateOptionsTypeValueRef(value);
     },
-    []
+    [onValueChange, onTextChange]
   );
 
   // Focus the command input when arrow down is pressed

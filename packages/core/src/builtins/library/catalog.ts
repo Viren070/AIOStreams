@@ -19,6 +19,15 @@ import { token_set_ratio } from 'fuzzball';
 const logger = createLogger('library:catalog');
 
 export const LIBRARY_ID_PREFIX = 'aiostreams::library.';
+
+/** The item id is escaped because stream ids append `:<file>` to it. */
+export function buildLibraryId(
+  serviceId: string,
+  itemType: string,
+  itemId: string | number
+): string {
+  return `${LIBRARY_ID_PREFIX}${serviceId}.${itemType}.${encodeURIComponent(String(itemId))}`;
+}
 export const CATALOG_PAGE_SIZE = 100;
 enum Genre {
   ACTIONS = 'Actions',
@@ -170,7 +179,6 @@ export async function fetchCatalog(
   }
 
   if (nzbs.status === 'fulfilled') {
-    logger.debug({ nzbs: nzbs.value }, 'fetched nzbs from service');
     for (const item of nzbs.value) {
       if (!item.name) continue;
       if (item.status !== 'cached' && item.status !== 'downloaded') continue;
@@ -401,7 +409,7 @@ function createMetaPreview(entry: ParsedCatalogItem): MetaPreview {
   descriptionParts.push(`${typeIcon} ${item.itemType}`);
 
   return {
-    id: `${LIBRARY_ID_PREFIX}${item.serviceId}.${item.itemType}.${item.id}`,
+    id: buildLibraryId(item.serviceId, item.itemType, item.id),
     type: 'library',
     name: item.name ?? 'Unknown',
     description: descriptionParts.join(' • '),

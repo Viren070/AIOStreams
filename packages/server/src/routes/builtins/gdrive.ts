@@ -6,6 +6,7 @@ import {
   APIError,
   constants,
 } from '@aiostreams/core';
+import { rawExtras } from '../../utils/extras.js';
 const router: Router = Router();
 
 const logger = createLogger('server');
@@ -75,7 +76,8 @@ router.get(
     res: Response,
     next: NextFunction
   ) => {
-    const { encodedConfig, type, id, extras } = req.params;
+    const { encodedConfig, type, id } = req.params;
+    const extras = rawExtras(req);
     const config = JSON.parse(fromUrlSafeBase64(encodedConfig));
 
     try {

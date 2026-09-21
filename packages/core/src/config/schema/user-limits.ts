@@ -1,5 +1,10 @@
 import { z } from 'zod';
-import { commaSeparatedList, positiveInt, seconds } from './helpers.js';
+import {
+  byteSize,
+  commaSeparatedList,
+  positiveInt,
+  seconds,
+} from './helpers.js';
 import type { RuntimeConfigSection } from '../types.js';
 
 /**
@@ -11,7 +16,8 @@ import type { RuntimeConfigSection } from '../types.js';
  * - `regex`: regex-filter access policy + whitelisted patterns.
  * - `sel`: SEL sync access + whitelisted URLs + stream-expression limits.
  * - `variants`: config-variant access policy + script/instruction limits.
- * - `sync`: shared refresh interval for whitelisted regex/SEL syncs.
+ * - `healthChecks`: health-check access policy + fetch limits.
+ * - `sync`: shared refresh/caching policy and address guard for regex/SEL syncs.
  * - `disabled`: hard-disabled addons/services/hosts/stream-types.
  * - `selfScraping`: prevents addons from scraping the same AIOStreams instance.
  * - `trusted`: list of trusted user UUIDs.
@@ -66,7 +72,7 @@ export const userLimitsSchema = {
   },
   maxFormatterTemplateLength: {
     schema: positiveInt,
-    default: 5000,
+    default: 15000,
     label: 'Max formatter template length',
     description:
       'Maximum length (characters) of a single formatter template string. Enforced during config validation.',
@@ -277,32 +283,13 @@ export const userLimitsSchema = {
       requiresRestart: false,
       secret: false,
     },
-    maxInstructions: {
+    maxTotalInstructions: {
       schema: positiveInt,
-      default: 100,
-      label: 'Max variant instructions',
-      description: 'Maximum number of instructions in a single variant script.',
-      env: 'MAX_VARIANT_INSTRUCTIONS',
-      requiresRestart: false,
-      secret: false,
-    },
-    maxActive: {
-      schema: positiveInt,
-      default: 4,
-      label: 'Max active variants',
+      default: 5000,
+      label: 'Max variant instructions per request',
       description:
-        'Maximum number of variants that may be combined on a single request.',
-      env: 'MAX_ACTIVE_VARIANTS',
-      requiresRestart: false,
-      secret: false,
-    },
-    maxDepth: {
-      schema: positiveInt,
-      default: 5,
-      label: 'Max variant nesting depth',
-      description:
-        'Maximum depth a variant may nest others through "use variant".',
-      env: 'MAX_VARIANT_DEPTH',
+        'Maximum number of instructions all the variants on one request may run in total, including those reached through "use variant". Anything past it is skipped.',
+      env: 'MAX_VARIANT_TOTAL_INSTRUCTIONS',
       requiresRestart: false,
       secret: false,
     },
@@ -337,17 +324,89 @@ export const userLimitsSchema = {
       secret: false,
     },
   },
+  healthChecks: {
+    access: {
+      schema: accessLevel,
+      default: 'all',
+      label: 'Health check access',
+      description:
+        'Who may define health checks, the URLs polled to decide whether a service is up. "all" = everyone, "trusted" = trusted users only, "none" = the feature is disabled.',
+      env: 'HEALTH_CHECK_ACCESS',
+      requiresRestart: false,
+      secret: false,
+    },
+    max: {
+      schema: positiveInt,
+      default: 5,
+      label: 'Max health checks',
+      description: 'Maximum number of health checks a user may define.',
+      env: 'MAX_HEALTH_CHECKS',
+      requiresRestart: false,
+      secret: false,
+    },
+    minTtl: {
+      schema: seconds,
+      default: 60,
+      label: 'Min health check interval',
+      description:
+        'Shortest interval a health check result may be reused for. A user asking for less is raised to this (accepts e.g. "5m", "1h").',
+      env: 'HEALTH_CHECK_MIN_TTL',
+      requiresRestart: false,
+      secret: false,
+      ui: { kind: 'duration' },
+    },
+    maxTimeout: {
+      schema: positiveInt,
+      default: 10000,
+      label: 'Max health check timeout (ms)',
+      description:
+        'Longest a health check may wait for a response. The first request needing a fresh result waits this long at worst.',
+      env: 'HEALTH_CHECK_MAX_TIMEOUT',
+      requiresRestart: false,
+      secret: false,
+    },
+    maxBytes: {
+      schema: byteSize,
+      default: 65536,
+      label: 'Max health check response size',
+      description:
+        'How much of a health check response is read before giving up on it.',
+      env: 'HEALTH_CHECK_MAX_BYTES',
+      requiresRestart: false,
+      secret: false,
+    },
+    allowPrivateUrls: {
+      schema: z.boolean(),
+      default: false,
+      label: 'Allow private health check URLs',
+      description:
+        'Let health checks point at private addresses. Anyone who can save a configuration can then probe your internal network, so only enable this on an instance you trust the users of.',
+      env: 'HEALTH_CHECK_ALLOW_PRIVATE_URLS',
+      requiresRestart: false,
+      secret: false,
+    },
+  },
   sync: {
     refreshInterval: {
       schema: seconds,
       default: 86400,
       label: 'Whitelist sync refresh interval',
       description:
-        'How often whitelisted regex/SEL sync URLs are refreshed (accepts e.g. "5m", "1h").',
+        'How often whitelisted regex/SEL sync URLs are refreshed (accepts e.g. "5m", "1h"). Also how long a URL only one user is allowed to use is cached for.',
       env: 'WHITELISTED_SYNC_REFRESH_INTERVAL',
       requiresRestart: true,
       secret: false,
       ui: { kind: 'duration' },
+    },
+    allowPrivateUrls: {
+      schema: z.boolean(),
+      default: false,
+      label: 'Allow private regex/SEL sync URLs',
+      description:
+        'Let sync URLs point at private addresses. Anyone allowed to sync from their own URL can then probe your internal network, so only enable this on an instance you trust the users of. Whitelisted URLs you configure yourself are never affected.',
+      env: 'SYNC_ALLOW_PRIVATE_URLS',
+      requiresRestart: false,
+      secret: false,
     },
   },
   disabled: {

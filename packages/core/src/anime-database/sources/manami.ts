@@ -1,6 +1,7 @@
 /**
- * Manami offline anime database: large catalogue of titles and per-anime
- * metadata (season, year, synonyms, studios, ...) keyed by source URL.
+ * Anime offline database: large catalogue of titles and per-anime metadata
+ * (season, year, synonyms, studios, ...) keyed by source URL. Served from
+ * cedya77's continuation of the Manami project, archived on 2026-07-04.
  */
 import path from 'path';
 import { config as appConfig } from '../../config/index.js';
@@ -100,8 +101,8 @@ function toAnimeSeason(v: unknown): AnimeSeason {
 
 export const manamiSource: AnimeSource = {
   id: 'manami',
-  name: 'Manami DB',
-  url: 'https://github.com/manami-project/anime-offline-database/releases/download/latest/anime-offline-database.jsonl',
+  name: 'Anime Offline Database',
+  url: 'https://github.com/cedya77/anime-offline-database/releases/download/latest/anime-offline-database.jsonl',
   filePath: path.join(ANIME_DATABASE_PATH, 'manami-db.jsonl'),
   refreshIntervalMs() {
     return appConfig.metadata.animeDb.refresh.manamiDb * 1000;

@@ -5,6 +5,8 @@ export { default as newznab } from './newznab.js';
 export { default as prowlarr } from './prowlarr.js';
 export { default as knaben } from './knaben.js';
 export { default as eztv } from './eztv.js';
+export { default as therarbg } from './therarbg.js';
+export { default as thePirateBay } from './the-pirate-bay.js';
 export { default as torrentGalaxy } from './torrent-galaxy.js';
 export { default as seadex } from './seadex.js';
 export { default as easynews } from './easynews.js';

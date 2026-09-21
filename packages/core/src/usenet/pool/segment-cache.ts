@@ -1,6 +1,7 @@
 import { SegmentData } from '../types.js';
 import { DiskBackedCache } from '../../utils/disk-backed-cache.js';
 import { SegmentArena } from './segment-arena.js';
+import { SegmentIntegrityError } from './yenc.js';
 
 /** Point-in-time cache stats for the dashboard. */
 export interface CacheStats {
@@ -83,10 +84,29 @@ function serializeSegmentInto(s: SegmentData, dst: Buffer): number {
   return 4 + meta.length + s.body.length;
 }
 
+/**
+ * Throws {@link SegmentIntegrityError} when the body's length disagrees with
+ * the stored metadata, so a write cut short by a hard kill is refetched
+ * instead of served.
+ */
 function deserializeSegment(buf: Buffer): SegmentData {
-  const metaLen = buf.readUInt32LE(0);
+  const metaLen = buf.length >= 4 ? buf.readUInt32LE(0) : buf.length;
+  if (metaLen > buf.length - 4) {
+    throw new SegmentIntegrityError('cache entry header overruns the file');
+  }
   const meta = JSON.parse(buf.toString('utf8', 4, 4 + metaLen));
   const body = buf.subarray(4 + metaLen);
+  if (typeof meta.size === 'number' && meta.size !== body.length) {
+    throw new SegmentIntegrityError(
+      `cache entry body is ${body.length} B, stored size ${meta.size}`
+    );
+  }
+  const range = meta.byteRange;
+  if (Array.isArray(range) && range[1] - range[0] !== body.length) {
+    throw new SegmentIntegrityError(
+      `cache entry body is ${body.length} B, part range spans ${range[1] - range[0]}`
+    );
+  }
   return {
     body,
     byteRange: meta.byteRange,

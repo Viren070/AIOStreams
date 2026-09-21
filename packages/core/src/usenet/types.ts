@@ -136,6 +136,12 @@ export interface EngineOptions {
    * cheap, always-on safety net.
    */
   strictArchiveMembership: boolean;
+  /**
+   * Verify every decoded article against its `=yend` pcrc32/crc32. A mismatch
+   * is a non-terminal decode error (the next provider is tried); a copy
+   * corrupt on every provider is padded like a 430. Size checks run regardless.
+   */
+  verifyArticleCrc: boolean;
 }
 
 export const DEFAULT_ENGINE_OPTIONS: EngineOptions = {
@@ -156,6 +162,7 @@ export const DEFAULT_ENGINE_OPTIONS: EngineOptions = {
   censusMaxLifetimeMs: 30 * 60_000,
   lazyRarResolution: true,
   strictArchiveMembership: false,
+  verifyArticleCrc: true,
 };
 
 /** Priority for an NNTP command acquisition. */
@@ -164,6 +171,8 @@ export enum CommandPriority {
   High = 0,
   /** STAT/HEAD/DATE: health, inspect, seek probes. */
   Low = 1,
+  /** Background audits: served only while nothing else is queued, within the pool's idle share. */
+  Idle = 2,
 }
 
 export type ProviderState =

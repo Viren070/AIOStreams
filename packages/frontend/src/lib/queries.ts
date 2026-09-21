@@ -1,6 +1,24 @@
+import type { Credentials } from '@/lib/api';
 import { queryOptions } from '@tanstack/react-query';
-import { getSession, listConfigProfiles, api } from './api';
-import type { StatusResponse } from '@aiostreams/core';
+import {
+  getSession,
+  listConfigProfiles,
+  fetchLinkedAccounts,
+  fetchLinkedAccountPlatforms,
+  fetchCommunityItems,
+  fetchMyCommunityItems,
+  getWatchStateTrackers,
+  api,
+  type LinkedAccount,
+  type LinkedAccountPlatformInfo,
+  type WatchStateOverview,
+} from './api';
+import type {
+  CommunityItemMine,
+  CommunityItemPublic,
+  CommunityKind,
+  StatusResponse,
+} from '@aiostreams/core';
 
 export const sessionQuery = queryOptions({
   queryKey: ['session'] as const,
@@ -23,3 +41,80 @@ export const configProfilesQuery = queryOptions({
   staleTime: 30_000,
   retry: false,
 });
+
+/**
+ * Shared so the install card and the save flow cannot disagree about what is
+ * linked. The password is deliberately not part of the key.
+ */
+export const linkedAccountsQuery = (
+  credentials: { uuid: string; password: string | null } | null
+) =>
+  queryOptions({
+    queryKey: ['linked-accounts', credentials?.uuid ?? null] as const,
+    queryFn: (): Promise<LinkedAccount[]> =>
+      credentials ? fetchLinkedAccounts(credentials) : Promise.resolve([]),
+    enabled: !!credentials,
+    staleTime: 30_000,
+    retry: false,
+  });
+
+export const LINKED_ACCOUNTS_QUERY_ROOT = ['linked-accounts'] as const;
+
+export const WATCH_STATE_TRACKERS_QUERY_ROOT = [
+  'watch-state-trackers',
+] as const;
+
+export const watchStateTrackersQuery = (credentials: Credentials | null) =>
+  queryOptions({
+    queryKey: [
+      ...WATCH_STATE_TRACKERS_QUERY_ROOT,
+      credentials?.uuid ?? null,
+    ] as const,
+    queryFn: (): Promise<WatchStateOverview> =>
+      credentials
+        ? getWatchStateTrackers(credentials)
+        : Promise.resolve({
+            push: false,
+            pull: false,
+            trackers: [],
+            available: [],
+          }),
+    enabled: !!credentials,
+    staleTime: 30_000,
+    retry: false,
+  });
+
+/** Descriptors are static per instance, so they are cached for the session. */
+export const linkedAccountPlatformsQuery = (credentials: Credentials | null) =>
+  queryOptions({
+    queryKey: ['linked-account-platforms'] as const,
+    queryFn: (): Promise<LinkedAccountPlatformInfo[]> =>
+      credentials
+        ? fetchLinkedAccountPlatforms(credentials)
+        : Promise.resolve([]),
+    enabled: !!credentials,
+    staleTime: Infinity,
+    retry: false,
+  });
+
+export const COMMUNITY_QUERY_ROOT = ['community'] as const;
+export const MY_COMMUNITY_QUERY_ROOT = ['community-mine'] as const;
+
+export const communityItemsQuery = (kind: CommunityKind) =>
+  queryOptions({
+    queryKey: [...COMMUNITY_QUERY_ROOT, kind] as const,
+    queryFn: (): Promise<CommunityItemPublic[]> => fetchCommunityItems(kind),
+    staleTime: 60_000,
+    retry: false,
+  });
+
+/** The password is deliberately not part of the key. */
+export const myCommunityQuery = (credentials: Credentials | null) =>
+  queryOptions({
+    queryKey: [...MY_COMMUNITY_QUERY_ROOT, credentials?.uuid ?? null] as const,
+    queryFn: (): Promise<CommunityItemMine[]> =>
+      credentials ? fetchMyCommunityItems(credentials) : Promise.resolve([]),
+    enabled: !!credentials,
+    staleTime: 15_000,
+    retry: false,
+  });

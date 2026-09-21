@@ -108,6 +108,12 @@ export class DebridioWatchtowerPreset extends Preset {
       OPTIONS: options,
       SUPPORTED_STREAM_TYPES: [constants.HTTP_STREAM_TYPE],
       SUPPORTED_RESOURCES: supportedResources,
+      DISABLED: {
+        reason:
+          'Addon has been retired by its developer. "After sustained efforts, I\'ve decided to retire the WatchTower addon. Link sites are constantly changing, disappearing, or blocking by IP. With the rise of Usenet streaming and other high-quality alternatives, it no longer makes sense to maintain."',
+        removed: true,
+        disabled: true,
+      },
     };
   }
 

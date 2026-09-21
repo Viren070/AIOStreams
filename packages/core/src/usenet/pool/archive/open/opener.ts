@@ -5,6 +5,7 @@ import { ArchiveKind, archiveKindOf } from '../archive-volume.js';
 import { ArchiveEntry } from '../types.js';
 import { NotStreamableError } from '../errors.js';
 import { ArchiveStreamOptions } from '../inner-stream.js';
+import type { SlotBank } from '../../slot-bank.js';
 import { entrySource } from './descriptor.js';
 import { FileOpener } from './layout.js';
 import {
@@ -17,7 +18,7 @@ import {
   groupNestedArchives,
   buildNestedVolumeSet,
   entryReason,
-  pickBestVideo,
+  pickBestMedia,
 } from './nesting.js';
 
 const logger = createLogger('usenet/archive');
@@ -41,6 +42,7 @@ export interface OpenInnerOptions {
   prefetchWindows?: number;
   /** Hole (all-providers 430) pad-vs-fail hook for the final range stream. */
   onHole?: ArchiveStreamOptions['onHole'];
+  slotBank?: SlotBank;
 }
 
 /** Build the playback tuning passed to the final inner {@link ArchiveInnerStream}. */
@@ -50,6 +52,7 @@ function streamOptsFrom(opts: OpenInnerOptions): ArchiveStreamOptions {
     windowBytes: opts.windowBytes,
     prefetchWindows: opts.prefetchWindows,
     onHole: opts.onHole,
+    slotBank: opts.slotBank,
   };
 }
 
@@ -104,12 +107,12 @@ async function resolveInner(
   depth: number
 ): Promise<OpenedInner> {
   // 1. A real (non-archive) file at this level: an explicit path match, or the
-  //    largest video when auto-picking.
+  //    largest media file when auto-picking.
   const direct = innerPath
     ? entries.find(
         (e) => !e.isDir && e.name === innerPath && !archiveKindOf(e.name)
       )
-    : pickBestVideo(entries);
+    : pickBestMedia(entries);
   if (direct) {
     const reason = entryReason(direct);
     if (reason) {
@@ -164,6 +167,6 @@ async function resolveInner(
     'archive_no_video',
     innerPath
       ? `inner file not found in archive (${innerPath})`
-      : 'no streamable video in archive'
+      : 'no streamable media in archive'
   );
 }

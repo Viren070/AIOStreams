@@ -35,16 +35,16 @@ export const ToasterAnatomy = defineStyleAnatomy({
     'group-[.toaster]:data-[type=warning]:ring-amber-700/40',
     // Error
     'group-[.toaster]:data-[type=error]:bg-gradient-to-br',
-    'group-[.toaster]:data-[type=error]:from-red-950/95 group-[.toaster]:data-[type=error]:to-red-900/60',
+    'group-[.toaster]:data-[type=error]:from-red-700/95 group-[.toaster]:data-[type=error]:to-red-600/60',
     'group-[.toaster]:data-[type=error]:text-red-100',
-    'group-[.toaster]:data-[type=error]:border-red-800/50',
-    'group-[.toaster]:data-[type=error]:ring-red-700/40',
+    'group-[.toaster]:data-[type=error]:border-red-500/50',
+    'group-[.toaster]:data-[type=error]:ring-red-500/40',
     // Info
     'group-[.toaster]:data-[type=info]:bg-gradient-to-br',
-    'group-[.toaster]:data-[type=info]:from-blue-950/95 group-[.toaster]:data-[type=info]:to-blue-900/60',
+    'group-[.toaster]:data-[type=info]:from-blue-700/95 group-[.toaster]:data-[type=info]:to-blue-500/60',
     'group-[.toaster]:data-[type=info]:text-blue-100',
-    'group-[.toaster]:data-[type=info]:border-blue-800/50',
-    'group-[.toaster]:data-[type=info]:ring-blue-700/40',
+    'group-[.toaster]:data-[type=info]:border-blue-500/50',
+    'group-[.toaster]:data-[type=info]:ring-blue-500/40',
   ]),
   description: cva([
     'group/toast:text-xs group/toast:font-normal group/toast:mt-1',

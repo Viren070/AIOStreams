@@ -6,16 +6,25 @@ import {
   createUserConfig,
   deleteUserConfig,
   changePassword,
+  approveJellyfinQuickConnect,
+  getJellyfinQuickConnectPending,
+  type QuickConnectPending,
   CreateUserResponse,
 } from '@/lib/api';
+import { JellyfinApiKeys } from './jellyfin-api-keys';
+import { JellyfinPersonas } from './jellyfin-personas';
+import { JellyfinTrackers } from './jellyfin-trackers';
 import { PageWrapper } from '@/components/shared/page-wrapper';
-import { cn } from '@/components/ui/core/styling';
 import { Alert } from '@/components/ui/alert';
 import { SettingsCard } from '../shared/settings-card';
 import { toast } from 'sonner';
 import {
   Code2,
   CopyIcon,
+  KeyRound,
+  Layers,
+  LibraryBig,
+  Settings2,
   DownloadIcon,
   PlusIcon,
   Rss,
@@ -24,7 +33,7 @@ import {
 } from 'lucide-react';
 import { LuSquareCheck, LuSquareMinus, LuWand } from 'react-icons/lu';
 import { AnimatePresence, motion } from 'motion/react';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Checkbox, CheckboxGroup } from '@/components/ui/checkbox';
 import { IconButton } from '@/components/ui/button';
 import { useStatus } from '@/context/status';
 import { BiCopy } from 'react-icons/bi';
@@ -32,24 +41,30 @@ import { copyToClipboard } from '@/utils/clipboard';
 import { PageControls } from '../shared/page-controls';
 import { useDisclosure } from '@/hooks/disclosure';
 import { Modal } from '../ui/modal';
+import { MenuTabs } from '../shared/menu-tabs';
 import { Select } from '../ui/select';
 import { Switch } from '../ui/switch';
+import { NumberInput } from '../ui/number-input';
 import { TemplateExportModal } from '../shared/templates/export-modal';
 import { ConfigTemplatesModal } from '../shared/templates';
 import { PasswordInput } from '../ui/password-input';
 import { useMenu } from '@/context/menu';
+import { variantSelectionFromLocation } from '@/lib/manifest-url';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
 } from '../shared/confirmation-dialog';
 import { UserData, VariantSelectorLocation } from '@aiostreams/core';
-import { redactPresetOptions } from '@/lib/preset-credentials';
+import { sanitiseTemplateConfig } from '../../../../core/src/utils/template-sanitise';
 import { useSave } from '@/context/save';
 import { FiExternalLink } from 'react-icons/fi';
 import { ProfileCard } from './profile-card';
+import { LinkedAccountsSection } from './linked-accounts';
+import { LinkOfferModal, linkOfferDismissed } from './link-offer-modal';
+import { VariantPills } from '@/components/shared/variant-pills';
 import { useSession } from '@/context/session';
 import { useQuery } from '@tanstack/react-query';
-import { configProfilesQuery } from '@/lib/queries';
+import { configProfilesQuery, linkedAccountsQuery } from '@/lib/queries';
 
 // Reusable modal option button component
 interface ModalOptionButtonProps {
@@ -235,13 +250,104 @@ function CreateConfigCard({
   );
 }
 
+type ManifestNotice = 'always' | 'significant' | 'never';
+type PushBehaviour = 'ask' | 'auto' | 'never';
+
+interface SavePreferencesModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  showChanges: boolean;
+  onShowChangesChange: (value: boolean) => void;
+  manifestNotice: ManifestNotice;
+  onManifestNoticeChange: (value: ManifestNotice) => void;
+  pushBehaviour: PushBehaviour;
+  onPushBehaviourChange: (value: PushBehaviour) => void;
+  /**
+   * Hides the push preference when there is nowhere to push to, unless it has
+   * been set to something, which must stay reachable to be undone.
+   */
+  hasLinkedAccounts: boolean;
+}
+
+/**
+ * The notice's own switches can only ever turn things off, and once off the
+ * notice never appears again to turn them back on. This is where they are
+ * reachable from.
+ */
+function SavePreferencesModal({
+  open,
+  onOpenChange,
+  showChanges,
+  onShowChangesChange,
+  manifestNotice,
+  onManifestNoticeChange,
+  pushBehaviour,
+  onPushBehaviourChange,
+  hasLinkedAccounts,
+}: SavePreferencesModalProps) {
+  return (
+    <Modal
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Save preferences"
+      description="These apply wherever you open this configuration. Remember to save."
+      contentClass="max-w-lg"
+    >
+      <div className="min-w-0 space-y-4">
+        <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
+          <div className="flex-1 pr-3">
+            <div className="text-sm font-medium text-white">
+              Show changes before saving
+            </div>
+            <div className="text-xs text-gray-400 mt-1">
+              Review a diff of what you changed before it is written
+            </div>
+          </div>
+          <Switch
+            id="show-changes"
+            value={showChanges}
+            onValueChange={onShowChangesChange}
+          />
+        </div>
+        <Select
+          label="Manifest change notices"
+          help="Some clients (e.g. Stremio) cache your manifest, so a change can need a reinstall. This is when you get told."
+          value={manifestNotice}
+          onValueChange={(value) =>
+            onManifestNoticeChange(value as ManifestNotice)
+          }
+          options={[
+            { value: 'always', label: 'On every change' },
+            { value: 'significant', label: 'Only significant changes' },
+            { value: 'never', label: 'Never' },
+          ]}
+        />
+        {hasLinkedAccounts && (
+          <Select
+            label="Push to linked accounts"
+            help="What happens when a saved change means your linked accounts need the update."
+            value={pushBehaviour}
+            onValueChange={(value) =>
+              onPushBehaviourChange(value as PushBehaviour)
+            }
+            options={[
+              { value: 'ask', label: 'Ask each time' },
+              { value: 'auto', label: 'Push automatically' },
+              { value: 'never', label: 'Never push' },
+            ]}
+          />
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 interface SaveConfigCardProps {
   uuid: string;
   onCopyUuid: () => void;
   onSave: (e: React.FormEvent<HTMLFormElement>) => void;
   saveLoading: boolean;
-  showChanges: boolean;
-  onShowChangesChange: (value: boolean) => void;
+  onOpenPreferences: () => void;
 }
 
 function SaveConfigCard({
@@ -249,8 +355,7 @@ function SaveConfigCard({
   onCopyUuid,
   onSave,
   saveLoading,
-  showChanges,
-  onShowChangesChange,
+  onOpenPreferences,
 }: SaveConfigCardProps) {
   return (
     <SettingsCard
@@ -286,14 +391,16 @@ function SaveConfigCard({
           <Button type="submit" intent="white" loading={saveLoading} rounded>
             Save
           </Button>
-          <div className="flex items-center gap-2">
-            <Switch
-              id="show-changes"
-              label="Show changes before saving"
-              value={showChanges}
-              onValueChange={onShowChangesChange}
-            />
-          </div>
+          <Button
+            type="button"
+            intent="gray-outline"
+            size="sm"
+            rounded
+            leftIcon={<Settings2 className="h-4 w-4" />}
+            onClick={onOpenPreferences}
+          >
+            Preferences
+          </Button>
         </div>
       </form>
     </SettingsCard>
@@ -374,21 +481,6 @@ function VariantSelector({
   location,
   onLocationChange,
 }: VariantSelectorProps) {
-  const toggle = (id: string) =>
-    onChange(
-      selected.includes(id)
-        ? selected.filter((value) => value !== id)
-        : [...selected, id]
-    );
-
-  const pill = (active: boolean) =>
-    cn(
-      'px-2.5 py-1 text-xs font-medium rounded-full border transition-colors',
-      active
-        ? 'bg-[--brand]/20 text-[--brand] border-[--brand]/50'
-        : 'bg-transparent text-[--muted] border-[--border] hover:bg-[--subtle]'
-    );
-
   return (
     <div className="w-full rounded-xl border border-gray-700 bg-gray-800/30 p-5 shadow-inner">
       <h3 className="text-lg font-semibold text-white">Variant</h3>
@@ -396,25 +488,12 @@ function VariantSelector({
         The links below install the selected variant. Each one appears as a
         separate addon in your client; pick more than one to combine them.
       </p>
-      <div className="flex flex-wrap gap-1.5 mt-4">
-        <button
-          type="button"
-          onClick={() => onChange([])}
-          className={pill(selected.length === 0)}
-        >
-          Base config
-        </button>
-        {variants.map((variant) => (
-          <button
-            key={variant.id}
-            type="button"
-            onClick={() => toggle(variant.id)}
-            className={pill(selected.includes(variant.id))}
-          >
-            {variant.name || variant.id}
-          </button>
-        ))}
-      </div>
+      <VariantPills
+        className="mt-4"
+        variants={variants}
+        value={selected}
+        onChange={onChange}
+      />
       {selected.length > 0 && (
         <div className="mt-5 pt-4 border-t border-gray-700/50 max-w-md">
           <Select
@@ -439,6 +518,85 @@ function VariantSelector({
   );
 }
 
+function JellyfinPrimerFact({
+  icon,
+  title,
+  children,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start gap-3 p-3">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-400/10 text-brand-400">
+        {icon}
+      </div>
+      <div className="min-w-0 space-y-1">
+        <p className="text-sm font-medium text-white">{title}</p>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/** What a Jellyfin client will show, before the user connects one. */
+function JellyfinPrimer({
+  maxLibraries,
+  maxCatalogItems,
+  maxVersions,
+}: {
+  maxLibraries: number;
+  maxCatalogItems: number;
+  maxVersions: number;
+}) {
+  const limitNumber = (n: number) => (
+    <span className="font-medium tabular-nums text-gray-300">{n}</span>
+  );
+  return (
+    <div className="grid grid-cols-1 divide-y divide-gray-800 rounded-md border border-gray-800 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+      <JellyfinPrimerFact
+        icon={<LibraryBig className="h-4 w-4" />}
+        title="Catalogs become libraries"
+      >
+        <p className="text-xs text-gray-400">
+          In the order from the Catalogs page.
+        </p>
+        {(maxLibraries > 0 || maxCatalogItems > 0) && (
+          <p className="text-xs text-gray-500">
+            {maxLibraries > 0 ? (
+              <>
+                This instance shows your first {limitNumber(maxLibraries)}
+                {maxCatalogItems > 0 && (
+                  <>, up to {limitNumber(maxCatalogItems)} titles each</>
+                )}
+                .
+              </>
+            ) : (
+              <>
+                This instance lists up to {limitNumber(maxCatalogItems)} titles
+                in each.
+              </>
+            )}
+          </p>
+        )}
+      </JellyfinPrimerFact>
+      <JellyfinPrimerFact
+        icon={<Layers className="h-4 w-4" />}
+        title="Streams become versions"
+      >
+        <p className="text-xs text-gray-400">
+          Opening or playing a title searches your addons, as in Stremio.
+        </p>
+        <p className="text-xs text-gray-500">
+          Up to {limitNumber(maxVersions)} per title, in your sort order. Played
+          directly; nothing is transcoded.
+        </p>
+      </JellyfinPrimerFact>
+    </div>
+  );
+}
+
 interface InstallCardProps {
   encodedManifest: string;
   manifestUrl: string;
@@ -452,6 +610,8 @@ interface InstallCardProps {
   onOpenSearchApi: () => void;
   disableSeanimeCard?: boolean;
   seanimeDisabledReason?: string;
+  disableJellyfinCard?: boolean;
+  jellyfinDisabledReason?: string;
   disableNabIndexerCard?: boolean;
   nabIndexerDisabledReason?: string;
   disableSearchApiCard?: boolean;
@@ -473,6 +633,8 @@ function InstallCard({
   onOpenSearchApi,
   disableSeanimeCard,
   seanimeDisabledReason,
+  disableJellyfinCard,
+  jellyfinDisabledReason,
   disableNabIndexerCard,
   nabIndexerDisabledReason,
   disableSearchApiCard,
@@ -563,6 +725,8 @@ function InstallCard({
           </div>
         </div>
 
+        <LinkedAccountsSection manifestUrl={manifestUrl} />
+
         {/* Other apps — playback clients you install the addon into */}
         <div>
           <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
@@ -582,10 +746,11 @@ function InstallCard({
             <AppCard
               logoSrc="https://raw.githubusercontent.com/jellyfin/jellyfin-ux/refs/heads/master/logos/PNG-4x/jellyfin-icon--color-on-dark.png"
               name="Jellyfin"
-              description="Via Gelato plugin"
-              unofficial
-              author="lostb1t"
+              description="Sign in from any Jellyfin app"
+              beta
               onClick={onOpenJellyfin}
+              disabled={disableJellyfinCard}
+              disabledReason={jellyfinDisabledReason}
             />
             <AppCard
               logoSrc="https://link.chillio.app/app-icon.png"
@@ -694,8 +859,8 @@ function DangerZoneCard({
     <SettingsCard
       title="Danger Zone"
       description="Perform potentially destructive actions that cannot be undone"
-      className="lg:bg-red-950/70 border-red-500/20"
-      titleClassName="group-hover/settings-card:from-red-500/10 group-hover/settings-card:to-red-950/20"
+      className="lg:bg-red-700/70 border-red-500/20"
+      titleClassName="group-hover/settings-card:from-red-500/10 group-hover/settings-card:to-red-700/20"
     >
       <div className="flex flex-wrap items-center gap-3">
         {hasUser && (
@@ -1370,9 +1535,19 @@ function Content() {
     encryptedPassword,
     setEncryptedPassword,
   } = useUserData();
+  const { data: linkedAccounts } = useQuery(
+    linkedAccountsQuery(uuid ? { uuid, password } : null)
+  );
+  const preferencesModal = useDisclosure(false);
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmNewPassword, setConfirmNewPassword] = React.useState('');
   const [createLoading, setCreateLoading] = React.useState(false);
+  // Set only by a successful create, so the offer is never shown to an
+  // existing configuration.
+  const [linkOfferFor, setLinkOfferFor] = React.useState<{
+    uuid: string;
+    password: string;
+  } | null>(null);
   const [passwordRequirements, setPasswordRequirements] = React.useState<
     string[]
   >([]);
@@ -1388,6 +1563,18 @@ function Content() {
   const hasStatus = !!status;
   const searchApiDisabled = status?.settings?.searchApiDisabled ?? false;
   const nabApiDisabled = status?.settings?.nabApiDisabled ?? false;
+  const jellyfin = status?.settings?.jellyfin;
+  const jellyfinEnabled = jellyfin?.enabled ?? false;
+  const jellyfinVersionCap = jellyfin?.maxVersions ?? 10;
+  const jellyfinSegmentsAvailable = jellyfin?.segments.enabled ?? false;
+  const jellyfinSegmentProviders = jellyfin?.segments.providers ?? [];
+  const jellyfinPmdbKey =
+    jellyfinSegmentProviders.find((p) => p.id === 'pmdb')?.key ?? null;
+  // `user` leaves the switch to the configuration; the others force it.
+  const jellyfinResolveForced =
+    jellyfin?.resolveOnOpen && jellyfin.resolveOnOpen !== 'user'
+      ? jellyfin.resolveOnOpen === 'always'
+      : null;
   const seanimeExtensionVersion =
     status?.settings?.seanimeExtensionVersion ?? null;
   const isSeanimeVersionUnavailable =
@@ -1409,12 +1596,27 @@ function Content() {
   const importMenuModal = useDisclosure(false);
   const [filterCredentialsInExport, setFilterCredentialsInExport] =
     React.useState(true);
-  const [selectedVariants, setSelectedVariants] = React.useState<string[]>([]);
+
+  const selectionFromUrl = React.useMemo(
+    () =>
+      typeof window === 'undefined'
+        ? null
+        : variantSelectionFromLocation(
+            window.location.pathname,
+            window.location.search
+          ),
+    []
+  );
+  const [selectedVariants, setSelectedVariants] = React.useState<string[]>(
+    selectionFromUrl?.ids ?? []
+  );
   const [variantLocation, setVariantLocation] =
     React.useState<VariantSelectorLocation>(() =>
-      safeGetLocalStorageItem(VARIANT_LOCATION_STORAGE_KEY) === 'query'
-        ? 'query'
-        : 'path'
+      selectionFromUrl
+        ? selectionFromUrl.location
+        : safeGetLocalStorageItem(VARIANT_LOCATION_STORAGE_KEY) === 'query'
+          ? 'query'
+          : 'path'
     );
   React.useEffect(() => {
     safeSetLocalStorageItem(VARIANT_LOCATION_STORAGE_KEY, variantLocation);
@@ -1423,6 +1625,19 @@ function Content() {
   const seanimeModal = useDisclosure(false);
   const stremioCustomSourceModal = useDisclosure(false);
   const jellyfinModal = useDisclosure(false);
+  const jellyfinApiKeysModal = useDisclosure(false);
+  const [jellyfinTab, setJellyfinTab] = React.useState('connect');
+  const [quickConnectCode, setQuickConnectCode] = React.useState('');
+  const [quickConnectPending, setQuickConnectPending] =
+    React.useState<QuickConnectPending | null>(null);
+  const [quickConnectLookupError, setQuickConnectLookupError] = React.useState<
+    string | null
+  >(null);
+  const [lookingUpQuickConnect, setLookingUpQuickConnect] =
+    React.useState(false);
+  const [quickConnectPersona, setQuickConnectPersona] = React.useState('');
+  const [approvingQuickConnect, setApprovingQuickConnect] =
+    React.useState(false);
   const aniyomiModal = useDisclosure(false);
   const nabIndexerModal = useDisclosure(false);
   const searchApiModal = useDisclosure(false);
@@ -1453,7 +1668,7 @@ function Content() {
     const requirements: string[] = [];
 
     // already created a config
-    if (uuid && password) {
+    if (uuid) {
       setPasswordRequirements([]);
       return;
     }
@@ -1484,6 +1699,9 @@ function Content() {
       setUuid(result.uuid);
       setEncryptedPassword((result as CreateUserResponse).encryptedPassword);
       setPassword(newPassword);
+      if (!linkOfferDismissed()) {
+        setLinkOfferFor({ uuid: result.uuid, password: newPassword });
+      }
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : 'Failed to create configuration'
@@ -1521,50 +1739,12 @@ function Content() {
     reader.readAsText(file);
   };
 
-  const filterCredentials = (data: UserData): UserData => {
-    const clonedData = structuredClone(data);
-
-    return {
-      ...clonedData,
-      ip: undefined,
-      uuid: undefined,
-      accessKey: undefined,
-      tmdbAccessToken: undefined,
-      tmdbApiKey: undefined,
-      tvdbApiKey: undefined,
-      rpdbApiKey: undefined,
-      topPosterApiKey: undefined,
-      aioratingsApiKey: undefined,
-      aioratingsProfileId: undefined,
-      openposterdbApiKey: undefined,
-      openposterdbUrl: undefined,
-      openposterdbParameters: undefined,
-      services: clonedData?.services?.map((service) => ({
-        ...service,
-        credentials: {},
-      })),
-      // Scripts commonly carry a swapped service credential.
-      variants: clonedData?.variants?.map((variant) => ({
-        ...variant,
-        script: '# [redacted] variant scripts may contain credentials',
-      })),
-      proxy: {
-        ...clonedData?.proxy,
-        credentials: undefined,
-        url: undefined,
-        publicUrl: undefined,
-      },
-      presets: clonedData?.presets?.map((preset) => {
-        const presetMeta = status?.settings.presets.find(
-          (p) => p.ID === preset.type
-        );
-        return {
-          ...preset,
-          options: redactPresetOptions(preset.options, presetMeta?.OPTIONS),
-        };
-      }),
-    };
-  };
+  const filterCredentials = (data: UserData): UserData =>
+    sanitiseTemplateConfig(
+      data,
+      (type: string) =>
+        status?.settings.presets.find((p) => p.ID === type)?.OPTIONS
+    );
 
   const handleExport = () => {
     try {
@@ -1661,6 +1841,118 @@ function Content() {
         toast.success('Torrent provider URL copied to clipboard'),
       onError: () => toast.error('Failed to copy URL'),
     });
+  };
+
+  const jellyfinServerUrl = `${baseUrl}/jellyfin`;
+  const jellyfinUsername = profileAlias ?? uuid ?? '';
+  const copyJellyfinServerUrl = async () => {
+    await copyToClipboard(jellyfinServerUrl, {
+      onSuccess: () => toast.success('Server address copied to clipboard'),
+      onError: () => toast.error('Failed to copy address'),
+    });
+  };
+  const copyJellyfinUsername = async () => {
+    await copyToClipboard(jellyfinUsername, {
+      onSuccess: () => toast.success('Username copied to clipboard'),
+      onError: () => toast.error('Failed to copy username'),
+    });
+  };
+  const jellyfinPersonas = userData.jellyfin?.personas ?? [];
+  const jellyfinAccountName =
+    userData.jellyfin?.primary?.name || userData.addonName || 'Primary user';
+  const quickConnectPersonaName = quickConnectPersona
+    ? (jellyfinPersonas.find((p) => p.id === quickConnectPersona)?.name ??
+      quickConnectPersona)
+    : null;
+  // Carries the password, so the picker can list users before sign-in.
+  const jellyfinPickerUrl =
+    uuid && encryptedPassword
+      ? `${baseUrl}/jellyfin/${uuid}/${encryptedPassword}`
+      : '';
+  const copyJellyfinPickerUrl = async () => {
+    await copyToClipboard(jellyfinPickerUrl, {
+      onSuccess: () => toast.success('Server address copied to clipboard'),
+      onError: () => toast.error('Failed to copy address'),
+    });
+  };
+
+  // The device is shown before the code is bound: codes are one shared
+  // six-digit space, so a mistyped digit would approve a stranger's device.
+  React.useEffect(() => {
+    setQuickConnectPending(null);
+    setQuickConnectLookupError(null);
+    if (!uuid || quickConnectCode.length !== 6) {
+      setLookingUpQuickConnect(false);
+      return;
+    }
+    let cancelled = false;
+    setLookingUpQuickConnect(true);
+    const timer = setTimeout(() => {
+      getJellyfinQuickConnectPending(
+        { uuid, password: password || encryptedPassword || null },
+        quickConnectCode
+      )
+        .then((result) => {
+          if (!cancelled) setQuickConnectPending(result);
+        })
+        .catch((error) => {
+          if (!cancelled)
+            setQuickConnectLookupError(
+              error instanceof Error
+                ? error.message
+                : 'No device is waiting on this code'
+            );
+        })
+        .finally(() => {
+          if (!cancelled) setLookingUpQuickConnect(false);
+        });
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [quickConnectCode, uuid, password, encryptedPassword]);
+
+  const quickConnectRequestedAgo = (iso: string) => {
+    const seconds = Math.max(
+      0,
+      Math.round((Date.now() - Date.parse(iso)) / 1000)
+    );
+    if (seconds < 5) return 'just now';
+    if (seconds < 120) return `${seconds}s ago`;
+    return `${Math.round(seconds / 60)}m ago`;
+  };
+
+  const cancelQuickConnect = () => {
+    setQuickConnectCode('');
+    setQuickConnectPending(null);
+    setQuickConnectPersona('');
+  };
+
+  const approveQuickConnect = async () => {
+    if (!uuid || quickConnectCode.length !== 6) return;
+    setApprovingQuickConnect(true);
+    try {
+      const result = await approveJellyfinQuickConnect(
+        { uuid, password: password || encryptedPassword || null },
+        quickConnectCode,
+        quickConnectPersona || undefined
+      );
+      toast.success(
+        result.device?.app
+          ? `Signed in ${result.device.app} on ${result.device.name}${
+              quickConnectPersonaName ? ` as ${quickConnectPersonaName}` : ''
+            }`
+          : 'Quick Connect approved'
+      );
+      cancelQuickConnect();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to approve the code'
+      );
+    } finally {
+      setApprovingQuickConnect(false);
+    }
   };
 
   const newznabUrl = `${baseUrl}/api/v1/newznab/api`;
@@ -1783,7 +2075,7 @@ function Content() {
         <div>
           <h2>Install Addon</h2>
           <p className="text-[--muted]">
-            Configure and install your personalized Stremio addon
+            Configure and install your personalized addon
           </p>
         </div>
         <div className="hidden lg:block lg:ml-auto">
@@ -1817,10 +2109,7 @@ function Content() {
                 handleSaveContext();
               }}
               saveLoading={saveLoading}
-              showChanges={userData?.showChanges ?? false}
-              onShowChangesChange={(val) =>
-                setUserData((prev) => ({ ...prev, showChanges: val }))
-              }
+              onOpenPreferences={preferencesModal.open}
             />
 
             <InstallCard
@@ -1847,6 +2136,10 @@ function Content() {
               onOpenSearchApi={searchApiModal.open}
               disableSeanimeCard={disableSeanimeCard}
               seanimeDisabledReason={seanimeDisabledReason}
+              disableJellyfinCard={!jellyfinEnabled}
+              jellyfinDisabledReason={
+                jellyfinEnabled ? undefined : 'Disabled on this instance'
+              }
               disableNabIndexerCard={nabApiDisabled}
               nabIndexerDisabledReason={
                 nabApiDisabled
@@ -2331,24 +2624,431 @@ function Content() {
           open={jellyfinModal.isOpen}
           onOpenChange={jellyfinModal.toggle}
           title="AIOStreams for Jellyfin"
-          description="Install the Gelato plugin to bring AIOStreams to Jellyfin"
+          description="Works with Swiftfin, Findroid, Streamyfin, Android TV, Kodi and Infuse."
+          contentClass="max-w-2xl w-full"
         >
-          <div className="space-y-4">
-            <p className="text-sm text-gray-300">
-              Gelato is an unofficial Jellyfin plugin that brings Stremio addons
-              into Jellyfin.
-            </p>
-            <Button
-              intent="primary"
-              className="w-full"
-              leftIcon={<FiExternalLink />}
-              onClick={() =>
-                window.open('https://github.com/lostb1t/Gelato', '_blank')
-              }
-            >
-              Open Gelato on GitHub
-            </Button>
-          </div>
+          <MenuTabs
+            activeTab={jellyfinTab}
+            onTabChange={setJellyfinTab}
+            defaultMobileOpen="connect"
+            animated={false}
+            tabs={[
+              {
+                value: 'connect',
+                label: 'Connect',
+                content: (
+                  <div className="space-y-5">
+                    <JellyfinPrimer
+                      maxLibraries={jellyfin?.maxLibraries ?? 0}
+                      maxCatalogItems={jellyfin?.maxCatalogItems ?? 0}
+                      maxVersions={Math.min(
+                        userData.jellyfin?.maxVersions ?? jellyfinVersionCap,
+                        jellyfinVersionCap
+                      )}
+                    />
+
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-white">
+                        Server address
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <TextInput
+                          type="text"
+                          readOnly
+                          value={jellyfinServerUrl}
+                          className="flex-1 font-mono text-sm"
+                          onClick={(e) => e.currentTarget.select()}
+                        />
+                        <Button
+                          onClick={copyJellyfinServerUrl}
+                          intent="primary"
+                          className="shrink-0 px-3"
+                          aria-label="Copy Jellyfin server address"
+                        >
+                          <CopyIcon className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        Add this as a server in any Jellyfin client.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-white">Username</p>
+                      <div className="flex items-center gap-2">
+                        <TextInput
+                          type="text"
+                          readOnly
+                          value={jellyfinUsername}
+                          className="flex-1 font-mono text-sm"
+                          onClick={(e) => e.currentTarget.select()}
+                        />
+                        <Button
+                          onClick={copyJellyfinUsername}
+                          intent="primary"
+                          className="shrink-0 px-3"
+                          aria-label="Copy Jellyfin username"
+                        >
+                          <CopyIcon className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        {profileAlias
+                          ? 'Any password is accepted for an alias.'
+                          : 'The password is your configuration password.'}
+                        {jellyfinPersonas.length > 0 &&
+                          ' Add /<user> to sign in as a user.'}
+                      </p>
+                    </div>
+
+                    {jellyfinPickerUrl && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-white">
+                          Address with a sign-in picker
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <TextInput
+                            type="text"
+                            readOnly
+                            value={jellyfinPickerUrl}
+                            className="flex-1 font-mono text-sm"
+                            onClick={(e) => e.currentTarget.select()}
+                          />
+                          <Button
+                            onClick={copyJellyfinPickerUrl}
+                            intent="primary"
+                            className="shrink-0 px-3"
+                            aria-label="Copy Jellyfin server address with user picker"
+                          >
+                            <CopyIcon className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          Lists this configuration and its users at sign-in,
+                          with no password to type. It contains your password,
+                          so keep it within your household.
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-white">
+                        Quick Connect
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        For TVs: choose Quick Connect on the client and enter
+                        its code here.
+                      </p>
+                      <TextInput
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="123456"
+                        maxLength={6}
+                        value={quickConnectCode}
+                        onValueChange={(v) =>
+                          setQuickConnectCode(v.replace(/\D/g, '').slice(0, 6))
+                        }
+                        className="font-mono text-sm"
+                      />
+                      {quickConnectCode.length === 6 &&
+                        !quickConnectPending && (
+                          <p className="text-xs text-gray-500">
+                            {lookingUpQuickConnect
+                              ? 'Looking up the code...'
+                              : (quickConnectLookupError ??
+                                'No device is waiting on this code.')}
+                          </p>
+                        )}
+                      {quickConnectPending && (
+                        <div className="space-y-3 rounded-md border border-gray-800 p-3">
+                          <div>
+                            <p className="text-sm text-white">
+                              {quickConnectPending.device.app} on{' '}
+                              {quickConnectPending.device.name}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              Version {quickConnectPending.device.version},
+                              asked{' '}
+                              {quickConnectRequestedAgo(
+                                quickConnectPending.requestedAt
+                              )}
+                              .
+                            </p>
+                          </div>
+                          {jellyfinPersonas.length > 0 && (
+                            <Select
+                              label="Sign in as"
+                              value={quickConnectPersona || '__account__'}
+                              onValueChange={(value) =>
+                                setQuickConnectPersona(
+                                  value === '__account__' ? '' : value
+                                )
+                              }
+                              options={[
+                                {
+                                  label: jellyfinAccountName,
+                                  value: '__account__',
+                                },
+                                ...jellyfinPersonas.map((p) => ({
+                                  label: p.name,
+                                  value: p.id,
+                                })),
+                              ]}
+                            />
+                          )}
+                          <div className="flex items-center gap-2">
+                            <Button
+                              onClick={approveQuickConnect}
+                              intent="primary"
+                              disabled={approvingQuickConnect}
+                              loading={approvingQuickConnect}
+                            >
+                              Approve
+                              {quickConnectPersonaName
+                                ? ` as ${quickConnectPersonaName}`
+                                : ''}
+                            </Button>
+                            <Button
+                              intent="primary-subtle"
+                              onClick={cancelQuickConnect}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                      <div className="min-w-0 space-y-1">
+                        <p className="text-sm font-medium text-white">
+                          API keys
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Let other tools use this server&apos;s API without
+                          your password.
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        intent="gray-outline"
+                        rounded
+                        className="w-full shrink-0 sm:w-auto"
+                        leftIcon={<KeyRound className="h-4 w-4" />}
+                        onClick={jellyfinApiKeysModal.open}
+                      >
+                        Manage
+                        {userData.jellyfin?.apiKeys?.length
+                          ? ` (${userData.jellyfin.apiKeys.length})`
+                          : ''}
+                      </Button>
+                      <Modal
+                        open={jellyfinApiKeysModal.isOpen}
+                        onOpenChange={jellyfinApiKeysModal.toggle}
+                        title="API keys"
+                      >
+                        <JellyfinApiKeys serverUrl={jellyfinServerUrl} />
+                      </Modal>
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                value: 'users',
+                label: 'Users',
+                content: <JellyfinPersonas />,
+              },
+              {
+                value: 'trackers',
+                label: 'Trackers',
+                content: <JellyfinTrackers />,
+              },
+              {
+                value: 'playback',
+                label: 'Playback',
+                content: (
+                  <div className="space-y-5">
+                    <Switch
+                      label="Resolve streams when an item opens"
+                      help={
+                        jellyfinResolveForced === null
+                          ? "Fills the client's version list before you press play."
+                          : 'Set by this instance.'
+                      }
+                      moreHelp={
+                        jellyfinResolveForced === null
+                          ? 'Off, streams are fetched when playback starts: lighter, but the list shows a placeholder until then.'
+                          : undefined
+                      }
+                      side="right"
+                      disabled={jellyfinResolveForced !== null}
+                      value={
+                        jellyfinResolveForced ??
+                        userData.jellyfin?.resolveOnOpen ??
+                        true
+                      }
+                      defaultValue={true}
+                      onValueChange={(value) =>
+                        setUserData((prev) => ({
+                          ...prev,
+                          jellyfin: { ...prev.jellyfin, resolveOnOpen: value },
+                        }))
+                      }
+                    />
+                    <NumberInput
+                      label="Versions per item"
+                      help={`Up to ${jellyfinVersionCap} on this instance.`}
+                      moreHelp="Version names come from your formatter."
+                      min={1}
+                      max={jellyfinVersionCap}
+                      value={Math.min(
+                        userData.jellyfin?.maxVersions ?? jellyfinVersionCap,
+                        jellyfinVersionCap
+                      )}
+                      onValueChange={(value) =>
+                        setUserData((prev) => ({
+                          ...prev,
+                          jellyfin: {
+                            ...prev.jellyfin,
+                            maxVersions:
+                              value === undefined ? undefined : value,
+                          },
+                        }))
+                      }
+                    />
+                    {jellyfinSegmentsAvailable && (
+                      <div className="space-y-3 border-t border-gray-800 pt-4">
+                        <Switch
+                          label="Skip intro and credits"
+                          help="Offers your client markers so it can show a skip button."
+                          moreHelp="Timestamps come from community databases and are submitted against one release of an episode, so on a differently cut copy a marker can be a few seconds out. Whether your client skips automatically or asks first is a setting inside that client, not here."
+                          side="right"
+                          value={userData.jellyfin?.segments ?? true}
+                          defaultValue={true}
+                          onValueChange={(value) =>
+                            setUserData((prev) => ({
+                              ...prev,
+                              jellyfin: { ...prev.jellyfin, segments: value },
+                            }))
+                          }
+                        />
+                        {(userData.jellyfin?.segments ?? true) && (
+                          <CheckboxGroup
+                            label="Markers to offer"
+                            help="Turning off credits keeps the next-episode countdown some clients build from it."
+                            options={[
+                              { value: 'Intro', label: 'Intro' },
+                              { value: 'Recap', label: 'Recap' },
+                              { value: 'Outro', label: 'Credits' },
+                            ]}
+                            value={
+                              userData.jellyfin?.segmentTypes ?? [
+                                'Intro',
+                                'Recap',
+                                'Outro',
+                              ]
+                            }
+                            onValueChange={(value) =>
+                              setUserData((prev) => ({
+                                ...prev,
+                                jellyfin: {
+                                  ...prev.jellyfin,
+                                  segmentTypes: value as NonNullable<
+                                    UserData['jellyfin']
+                                  >['segmentTypes'],
+                                },
+                              }))
+                            }
+                          />
+                        )}
+                        {(userData.jellyfin?.segments ?? true) &&
+                          jellyfinSegmentProviders.length > 0 && (
+                            <div className="space-y-2">
+                              <p className="text-sm font-medium text-white">
+                                Sources
+                              </p>
+                              <ul className="space-y-1">
+                                {jellyfinSegmentProviders.map((provider) => {
+                                  const ownKey =
+                                    provider.id === 'pmdb' &&
+                                    !!userData.pmdbApiKey;
+                                  const missingKey =
+                                    provider.key === 'configuration' && !ownKey;
+                                  return (
+                                    <li
+                                      key={provider.id}
+                                      className="flex items-center justify-between gap-3 text-xs"
+                                    >
+                                      <span className="truncate text-gray-300">
+                                        {provider.name}
+                                      </span>
+                                      <span
+                                        className={
+                                          missingKey
+                                            ? 'shrink-0 text-[--orange]'
+                                            : 'shrink-0 text-gray-500'
+                                        }
+                                      >
+                                        {missingKey
+                                          ? 'Needs your key'
+                                          : ownKey
+                                            ? 'Using your key'
+                                            : 'Included'}
+                                      </span>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                              <p className="text-xs text-gray-500">
+                                Asked in this order; the first with a marker for
+                                a type supplies it.
+                              </p>
+                            </div>
+                          )}
+                        {(userData.jellyfin?.segments ?? true) &&
+                          jellyfinPmdbKey && (
+                            <PasswordInput
+                              autoComplete="new-password"
+                              label="PublicMetaDB API Key"
+                              help={
+                                <span>
+                                  {jellyfinPmdbKey === 'instance'
+                                    ? 'This instance already asks PublicMetaDB for markers; your own key makes those lookups as your account instead. '
+                                    : 'Adds markers from PublicMetaDB, which also covers movies. '}
+                                  Create a key under Settings → API on{' '}
+                                  <a
+                                    href="https://publicmetadb.com"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-[--brand] hover:underline"
+                                  >
+                                    publicmetadb.com
+                                  </a>
+                                  .
+                                </span>
+                              }
+                              placeholder={
+                                jellyfinPmdbKey === 'instance'
+                                  ? 'Provided by this instance (enter your own to override)'
+                                  : 'Enter your PublicMetaDB API key'
+                              }
+                              value={userData.pmdbApiKey}
+                              onValueChange={(value) =>
+                                setUserData((prev) => ({
+                                  ...prev,
+                                  pmdbApiKey: value || undefined,
+                                }))
+                              }
+                            />
+                          )}
+                      </div>
+                    )}
+                  </div>
+                ),
+              },
+            ]}
+          />
+          <p className="mt-4 text-xs text-gray-500">Save to apply changes.</p>
         </Modal>
 
         <Modal
@@ -2378,6 +3078,38 @@ function Content() {
           </div>
         </Modal>
 
+        <SavePreferencesModal
+          open={preferencesModal.isOpen}
+          onOpenChange={(open) =>
+            open ? preferencesModal.open() : preferencesModal.close()
+          }
+          showChanges={userData?.showChanges ?? false}
+          onShowChangesChange={(val) =>
+            setUserData((prev) => ({ ...prev, showChanges: val }))
+          }
+          manifestNotice={userData?.manifestNotice ?? 'always'}
+          onManifestNoticeChange={(val) =>
+            setUserData((prev) => ({ ...prev, manifestNotice: val }))
+          }
+          pushBehaviour={userData?.linkedAccounts?.pushBehaviour ?? 'ask'}
+          onPushBehaviourChange={(val) =>
+            setUserData((prev) => ({
+              ...prev,
+              linkedAccounts: { ...prev.linkedAccounts, pushBehaviour: val },
+            }))
+          }
+          hasLinkedAccounts={(linkedAccounts?.length ?? 0) > 0}
+        />
+        {linkOfferFor && (
+          <LinkOfferModal
+            open
+            onOpenChange={(open) => {
+              if (!open) setLinkOfferFor(null);
+            }}
+            credentials={linkOfferFor}
+            manifestUrl={manifestUrl}
+          />
+        )}
         <ConfirmationDialog {...confirmDelete} />
         <ConfirmationDialog {...confirmResetProps} />
 
@@ -2424,7 +3156,7 @@ function Content() {
               <Alert
                 intent="warning"
                 isClosable={false}
-                description="While excluding credentials removes your API keys, any custom addon URLs or manually overridden URLs in your config are not removed. These may contain sensitive information - double-check before sharing."
+                description="While excluding credentials removes your API keys, custom addon URLs, manually overridden URLs and variant scripts are left as written. These may contain sensitive information - double-check before sharing."
               />
             </div>
           </div>

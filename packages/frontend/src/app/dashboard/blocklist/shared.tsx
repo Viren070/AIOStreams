@@ -130,7 +130,7 @@ export const VERDICTS: Verdict[] = ['dead', 'defective', 'fake', 'mislabeled'];
 export const TRUSTS: Trust[] = ['full', 'corroborate', 'observe'];
 
 export const VERDICT_BADGE: Record<Verdict, string> = {
-  dead: 'bg-red-500/10 text-red-500 border-red-500/20',
+  dead: 'bg-red-500/10 text-red-400 border-red-400/20',
   defective: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
   fake: 'bg-fuchsia-500/10 text-fuchsia-500 border-fuchsia-500/20',
   mislabeled: 'bg-sky-500/10 text-sky-500 border-sky-500/20',

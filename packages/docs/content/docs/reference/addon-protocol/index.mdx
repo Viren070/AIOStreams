@@ -1,0 +1,15 @@
+---
+title: Overview
+description: What AIOStreams reads from and sends to addons beyond the Stremio addon protocol.
+---
+
+These are optional extensions to the Stremio addon protocol, mostly used when AIOStreams serves
+your addons to Jellyfin clients. Stremio ignores all of them, so an addon using them stays a normal
+Stremio addon.
+
+| Extension                                            | What it is                                                                                           |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| [Metadata](/reference/addon-protocol/metadata)       | Extra meta, video and catalog fields: ids, credits, taglines, ratings, studios, seasons, library art |
+| [Collections](/reference/addon-protocol/collections) | A `collection` block that turns a meta into a group of movies and shows                              |
+| [Subtitles](/reference/addon-protocol/subtitles)     | Subtitle titles and forced or hearing impaired flags                                                 |
+| [Watch state](/reference/addon-protocol/watch-state) | The `watch_state` resource: playback, watch history and watchlists                                   |

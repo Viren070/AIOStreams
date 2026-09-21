@@ -21,7 +21,10 @@ import {
   maskSensitiveInfo,
 } from '@aiostreams/core';
 import { ZodError } from 'zod';
-import { StaticFiles, mapDebridErrorToStaticFile } from '../../app.js';
+import {
+  StaticFiles,
+  mapDebridErrorToStaticFile,
+} from '../../utils/static-errors.js';
 import { corsMiddleware } from '../../middlewares/cors.js';
 const router: Router = Router();
 const logger = createLogger('server');

@@ -1,8 +1,9 @@
-import { Router } from 'express';
+import { Router, type Request } from 'express';
 import {
   APIError,
   AnalyticsRepository,
   config as appConfig,
+  ConfigSessionRepository,
   constants,
   createLogger,
   encryptString,
@@ -11,16 +12,56 @@ import {
   Permission,
   sessionHasPermission,
   UserRepository,
+  evaluateVariantConditions,
+  formatZodError,
+  getClientAgents,
+  getHealth,
+  HealthCheckSchema,
+  resolveHealthDetails,
+  validateConditionalActivation,
+  validateHealthCheck,
+  VariantSchema,
   type UserAnalyticsRange,
 } from '@aiostreams/core';
-import { userApiRateLimiter } from '../../middlewares/ratelimit.js';
-import { attachSession, injectAccessKey } from '../../middlewares/auth.js';
+import { z, ZodError } from 'zod';
+import {
+  loginRateLimiter,
+  userApiRateLimiter,
+  userCreateRateLimiter,
+} from '../../middlewares/ratelimit.js';
+import {
+  attachSession,
+  clearConfigSessionCookie,
+  injectAccessKey,
+  readConfigSessionToken,
+  setConfigSessionCookie,
+} from '../../middlewares/auth.js';
 import { resolveUuidAliasForUserApi } from '../../middlewares/alias.js';
 import { createResponse } from '../../utils/responses.js';
-import { parseBasicAuthHeader } from '../../utils/basic-auth.js';
+import {
+  parseBasicAuthHeader,
+  resolveConfigCredentials,
+} from '../../utils/basic-auth.js';
+import {
+  listTrackers,
+  syncTrackerClaims,
+  type TrackerOption,
+  type TrackerStatus,
+} from '../jellyfin/handoff.js';
 const router: Router = Router();
 
 const logger = createLogger('server');
+
+const VariantEvaluateRequestSchema = z.object({
+  variants: z.array(VariantSchema).optional(),
+  healthChecks: z.array(HealthCheckSchema).optional(),
+  userAgent: z.string().max(512).optional(),
+  resource: z.string().max(32).optional(),
+  type: z.string().max(64).optional(),
+  id: z.string().max(256).optional(),
+  query: z.record(z.string(), z.string()).optional(),
+  headers: z.record(z.string(), z.string()).optional(),
+});
 
 router.use(userApiRateLimiter);
 router.use(attachSession);
@@ -69,7 +110,7 @@ router.head('/', async (req, res, next) => {
 router.get('/', async (req, res, next) => {
   let creds;
   try {
-    creds = parseBasicAuthHeader(req, { allowEncrypted: false });
+    creds = await resolveConfigCredentials(req, res, { allowEncrypted: false });
   } catch (error) {
     next(error);
     return;
@@ -134,7 +175,7 @@ router.get('/', async (req, res, next) => {
 });
 
 // new user creation
-router.post('/', async (req, res, next) => {
+router.post('/', userCreateRateLimiter, async (req, res, next) => {
   const { config, password } = req.body;
   if (!config || !password) {
     next(
@@ -188,10 +229,24 @@ router.post('/', async (req, res, next) => {
 });
 
 // updating user details
+function syncTrackersAfterSave(req: Request, uuid: string, password: string) {
+  const { reportEnabled, pullEnabled } = appConfig.watchState;
+  if (appConfig.jellyfin.enabled !== true || (!reportEnabled && !pullEnabled))
+    return;
+  const encrypted = encryptString(password);
+  if (!encrypted.success || !encrypted.data) return;
+  void syncTrackerClaims(req, uuid, encrypted.data).catch((error) => {
+    logger.warn(
+      { uuid, err: error instanceof Error ? error.message : String(error) },
+      'failed to sync tracker choices after a save'
+    );
+  });
+}
+
 router.put('/', async (req, res, next) => {
   let creds;
   try {
-    creds = parseBasicAuthHeader(req, { allowEncrypted: false });
+    creds = await resolveConfigCredentials(req, res, { allowEncrypted: false });
   } catch (error) {
     next(error);
     return;
@@ -224,6 +279,7 @@ router.put('/', async (req, res, next) => {
     config.uuid = uuid;
     injectAccessKey(req, config);
     const updatedUser = await UserRepository.updateUser(uuid, password, config);
+    syncTrackersAfterSave(req, uuid, password);
     res.status(200).json(
       createResponse({
         success: true,
@@ -277,6 +333,135 @@ router.delete('/', async (req, res, next) => {
     if (error instanceof APIError) {
       next(error);
     } else {
+      next(new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR));
+    }
+  }
+});
+
+// Takes the password itself, never a session, so a stolen cookie cannot mint more.
+router.post('/session', loginRateLimiter, async (req, res, next) => {
+  if (!ConfigSessionRepository.enabled()) {
+    next(
+      new APIError(
+        constants.ErrorCode.FORBIDDEN,
+        undefined,
+        'Remembered sign-ins are disabled on this instance'
+      )
+    );
+    return;
+  }
+
+  let creds;
+  try {
+    creds = parseBasicAuthHeader(req, { allowEncrypted: false });
+  } catch (error) {
+    next(error);
+    return;
+  }
+  if (!creds) {
+    next(
+      new APIError(
+        constants.ErrorCode.MISSING_REQUIRED_FIELDS,
+        undefined,
+        'Authorization header (Basic) is required'
+      )
+    );
+    return;
+  }
+
+  const uuid = req.uuid || creds.uuid;
+  const remember = req.body?.remember === true;
+
+  try {
+    await UserRepository.verifyUser(uuid, creds.password);
+
+    const previous = readConfigSessionToken(req);
+    if (previous) await ConfigSessionRepository.deleteByToken(previous);
+
+    const session = await ConfigSessionRepository.create(
+      uuid,
+      creds.password,
+      remember
+    );
+    setConfigSessionCookie(
+      req,
+      res,
+      session.token,
+      remember,
+      session.expiresAt
+    );
+
+    res.status(200).json(
+      createResponse({
+        success: true,
+        detail: 'Session created successfully',
+        data: {
+          uuid,
+          remembered: session.remembered,
+          expiresAt: session.expiresAt,
+        },
+      })
+    );
+  } catch (error) {
+    if (error instanceof APIError) {
+      next(error);
+    } else {
+      logger.error(error);
+      next(new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR));
+    }
+  }
+});
+
+// end this browser's remembered sign-in
+router.delete('/session', async (req, res, next) => {
+  try {
+    const token = readConfigSessionToken(req);
+    if (token) await ConfigSessionRepository.deleteByToken(token);
+    clearConfigSessionCookie(res);
+    res.status(204).send();
+  } catch (error) {
+    logger.error(error);
+    next(new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR));
+  }
+});
+
+// end every remembered sign-in for this configuration
+router.delete('/sessions', async (req, res, next) => {
+  let creds;
+  try {
+    creds = await resolveConfigCredentials(req, res, { allowEncrypted: false });
+  } catch (error) {
+    next(error);
+    return;
+  }
+  if (!creds) {
+    next(
+      new APIError(
+        constants.ErrorCode.MISSING_REQUIRED_FIELDS,
+        undefined,
+        'Authorization header (Basic) or a session is required'
+      )
+    );
+    return;
+  }
+
+  try {
+    const count = await ConfigSessionRepository.deleteAllForUuid(
+      req.uuid || creds.uuid
+    );
+    clearConfigSessionCookie(res);
+    res.status(200).json(
+      createResponse({
+        success: true,
+        detail: 'Signed out on all devices',
+        data: { count },
+      })
+    );
+  } catch (error) {
+    if (error instanceof APIError) {
+      next(error);
+    } else {
+      logger.error(error);
       next(new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR));
     }
   }
@@ -391,7 +576,7 @@ router.post('/verify', async (req, res, next) => {
 router.get('/analytics', async (req, res, next) => {
   let creds;
   try {
-    creds = parseBasicAuthHeader(req, { allowEncrypted: false });
+    creds = await resolveConfigCredentials(req, res, { allowEncrypted: false });
   } catch (error) {
     next(error);
     return;
@@ -450,6 +635,240 @@ router.get('/analytics', async (req, res, next) => {
       })
     );
   } catch (error) {
+    logger.error(error);
+    next(new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR));
+  }
+});
+
+/** The user agents seen on this configuration's stream and catalogue requests. */
+router.get('/client-agents', async (req, res, next) => {
+  let creds;
+  try {
+    creds = await resolveConfigCredentials(req, res, { allowEncrypted: false });
+  } catch (error) {
+    next(error);
+    return;
+  }
+  if (!creds) {
+    next(
+      new APIError(
+        constants.ErrorCode.MISSING_REQUIRED_FIELDS,
+        undefined,
+        'Authorization header (Basic) is required'
+      )
+    );
+    return;
+  }
+  const uuid = req.uuid || creds.uuid;
+
+  try {
+    await UserRepository.verifyUser(uuid, creds.password);
+    const agents = await getClientAgents(uuid);
+    res.status(200).json(createResponse({ success: true, data: agents }));
+  } catch (error) {
+    if (error instanceof APIError) {
+      next(error);
+      return;
+    }
+    logger.error(error);
+    next(new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR));
+  }
+});
+
+/** The trackers this configuration syncs watch state with, and how they last went. */
+router.get('/watch-state', async (req, res, next) => {
+  let creds;
+  try {
+    creds = await resolveConfigCredentials(req, res, { allowEncrypted: false });
+  } catch (error) {
+    next(error);
+    return;
+  }
+  if (!creds) {
+    next(
+      new APIError(
+        constants.ErrorCode.MISSING_REQUIRED_FIELDS,
+        undefined,
+        'Authorization header (Basic) is required'
+      )
+    );
+    return;
+  }
+  const uuid = req.uuid || creds.uuid;
+
+  try {
+    await UserRepository.verifyUser(uuid, creds.password);
+    const jellyfin = appConfig.jellyfin.enabled === true;
+    const push = jellyfin && appConfig.watchState.reportEnabled;
+    const pull = jellyfin && appConfig.watchState.pullEnabled;
+    let trackers: TrackerStatus[] = [];
+    let available: TrackerOption[] = [];
+    if (push || pull) {
+      const encrypted = encryptString(creds.password);
+      if (!encrypted.success || !encrypted.data) {
+        throw new APIError(constants.ErrorCode.ENCRYPTION_ERROR);
+      }
+      const listed = await listTrackers(req, uuid, encrypted.data);
+      trackers = listed?.trackers ?? [];
+      available = listed?.available ?? [];
+    }
+    res.status(200).json(
+      createResponse({
+        success: true,
+        data: { push, pull, trackers, available },
+      })
+    );
+  } catch (error) {
+    if (error instanceof APIError) {
+      next(error);
+      return;
+    }
+    logger.error(error);
+    next(new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR));
+  }
+});
+
+/**
+ * Why a variant did or did not activate for a given request. Takes the draft
+ * variants and health checks from the body so the editor can try unsaved edits.
+ */
+router.post('/variants/evaluate', async (req, res, next) => {
+  let creds;
+  try {
+    creds = await resolveConfigCredentials(req, res, { allowEncrypted: false });
+  } catch (error) {
+    next(error);
+    return;
+  }
+  if (!creds) {
+    next(
+      new APIError(
+        constants.ErrorCode.MISSING_REQUIRED_FIELDS,
+        undefined,
+        'Authorization header (Basic) is required'
+      )
+    );
+    return;
+  }
+  const uuid = req.uuid || creds.uuid;
+
+  try {
+    const body = VariantEvaluateRequestSchema.parse(req.body ?? {});
+    const userData = await UserRepository.getUser(uuid, creds.password);
+    if (!userData) {
+      throw new APIError(constants.ErrorCode.USER_INVALID_DETAILS);
+    }
+    if (body.variants) userData.variants = body.variants;
+    if (body.healthChecks) userData.healthChecks = body.healthChecks;
+
+    try {
+      await validateConditionalActivation(userData);
+    } catch (error: any) {
+      throw new APIError(
+        constants.ErrorCode.USER_INVALID_CONFIG,
+        400,
+        error?.message ?? String(error)
+      );
+    }
+
+    const health = await resolveHealthDetails(userData);
+    userData.healthResults = Object.fromEntries(
+      Object.entries(health).map(([id, result]) => [id, result.ok])
+    );
+
+    const userAgent = body.userAgent ?? '';
+    const activation = await evaluateVariantConditions(userData, {
+      resource: body.resource ?? 'stream',
+      type: body.type,
+      id: body.id,
+      userAgent,
+      query: body.query ?? {},
+      headers: { ...(body.headers ?? {}), 'user-agent': userAgent },
+    });
+
+    res.status(200).json(
+      createResponse({
+        success: true,
+        data: { variants: activation.outcomes, health },
+      })
+    );
+  } catch (error) {
+    if (error instanceof ZodError) {
+      next(
+        new APIError(
+          constants.ErrorCode.BAD_REQUEST,
+          undefined,
+          formatZodError(error)
+        )
+      );
+      return;
+    }
+    if (error instanceof APIError) {
+      next(error);
+      return;
+    }
+    logger.error(error);
+    next(new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR));
+  }
+});
+
+/** Runs one health check now, ignoring the cache, so the editor can show it. */
+router.post('/health-checks/test', async (req, res, next) => {
+  let creds;
+  try {
+    creds = await resolveConfigCredentials(req, res, { allowEncrypted: false });
+  } catch (error) {
+    next(error);
+    return;
+  }
+  if (!creds) {
+    next(
+      new APIError(
+        constants.ErrorCode.MISSING_REQUIRED_FIELDS,
+        undefined,
+        'Authorization header (Basic) is required'
+      )
+    );
+    return;
+  }
+  const uuid = req.uuid || creds.uuid;
+
+  try {
+    const check = HealthCheckSchema.parse(req.body ?? {});
+    const userData = await UserRepository.getUser(uuid, creds.password);
+    if (!userData) {
+      throw new APIError(constants.ErrorCode.USER_INVALID_DETAILS);
+    }
+
+    // The same gate a save goes through, so a test cannot reach further than
+    // the check would once stored.
+    try {
+      await validateHealthCheck(userData, check);
+    } catch (error: any) {
+      throw new APIError(
+        constants.ErrorCode.USER_INVALID_CONFIG,
+        400,
+        error?.message ?? String(error)
+      );
+    }
+
+    const result = await getHealth(check, { bypassCache: true });
+    res.status(200).json(createResponse({ success: true, data: result }));
+  } catch (error) {
+    if (error instanceof ZodError) {
+      next(
+        new APIError(
+          constants.ErrorCode.BAD_REQUEST,
+          undefined,
+          formatZodError(error)
+        )
+      );
+      return;
+    }
+    if (error instanceof APIError) {
+      next(error);
+      return;
+    }
     logger.error(error);
     next(new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR));
   }

@@ -22,6 +22,7 @@ import { DistributedLock } from '../utils/distributed-lock.js';
 import {
   canonicalIdValue,
   type AnimeEntry,
+  type AnimeRecord,
   type IdValue,
   type SourceEntry,
 } from './types.js';
@@ -379,18 +380,7 @@ export class AnimeDatabase {
     }
 
     const candidates = await AnimeRepository.findCandidates(idType, idValue);
-    let entry: AnimeEntry | null = null;
-    if (candidates.length > 0) {
-      const filtered = filterCandidatesBySeasonType(candidates, season);
-      const chosen = selectBestRecord(
-        filtered,
-        idType,
-        idValue,
-        season,
-        episode
-      );
-      if (chosen) entry = buildAnimeEntry(chosen);
-    }
+    const entry = chooseEntry(candidates, idType, idValue, season, episode);
 
     this.cache.set(key, entry);
     if (this.cache.size > CACHE_MAX_ENTRIES) {
@@ -399,4 +389,54 @@ export class AnimeDatabase {
     }
     return entry;
   }
+
+  /** Many season/episode lookups on one id, from one read of its candidates. */
+  public async selectorFor(
+    idType: IdType,
+    idValue: IdValue
+  ): Promise<(season?: number, episode?: number) => AnimeEntry | null> {
+    if (this.disabled) return () => null;
+    const candidates = await AnimeRepository.findCandidates(idType, idValue);
+    return (season, episode) =>
+      chooseEntry(candidates, idType, idValue, season, episode);
+  }
+}
+
+function chooseEntry(
+  candidates: AnimeRecord[],
+  idType: IdType,
+  idValue: IdValue,
+  season?: number,
+  episode?: number
+): AnimeEntry | null {
+  if (idType === 'imdbId') {
+    const imdbId = String(idValue);
+    if (!season) {
+      // specials numbering differs everywhere, so hints can't place records there
+      candidates = candidates.filter((r) => String(r.ids.imdbId) === imdbId);
+    } else {
+      // another show's hints only apply when that show is the only one hinted
+      const hinted = new Set(candidates.map((r) => r.imdb?.id).filter(Boolean));
+      if (hinted.has(imdbId) || hinted.size > 1) {
+        candidates = candidates.map((r) =>
+          r.imdb?.id && r.imdb.id !== imdbId ? { ...r, imdb: undefined } : r
+        );
+      }
+    }
+  }
+  if (!candidates.length) return null;
+  const chosen = selectBestRecord(
+    filterCandidatesBySeasonType(candidates, season, idType),
+    idType,
+    idValue,
+    season,
+    episode
+  );
+  if (!chosen) return null;
+  const entry = buildAnimeEntry(chosen);
+  // match keys follow this id, so a hint-found entry must not carry another
+  if (idType === 'imdbId') {
+    entry.mappings = { ...entry.mappings, imdbId: String(idValue) };
+  }
+  return entry;
 }

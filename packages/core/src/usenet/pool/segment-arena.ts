@@ -1,3 +1,4 @@
+import { roundSlotSize } from './slot-size.js';
 import { createLogger } from '../../logging/logger.js';
 import { SegmentData } from '../types.js';
 
@@ -128,7 +129,7 @@ export class SegmentArena {
    * pinned/leased); the caller must degrade to an owned allocation.
    */
   checkout(minBytes: number): ArenaLease | null {
-    const need = Math.max(MIN_SLOT_BYTES, minBytes);
+    const need = roundSlotSize(Math.max(MIN_SLOT_BYTES, minBytes));
     if (this.budgetBytes === 0) return null;
 
     // 1. Free list, dropping undersized slots (sizes settle at the release's

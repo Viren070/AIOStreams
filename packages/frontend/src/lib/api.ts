@@ -3,6 +3,12 @@
  *
  */
 
+import type {
+  CommunityItemMine,
+  CommunityItemPublic,
+  CommunityKind,
+} from '@aiostreams/core';
+
 // =============================================================================
 // Types
 // =============================================================================
@@ -193,7 +199,11 @@ export async function api<T>(
 // =============================================================================
 
 // Import types from core package (types only)
-import type { UserData, ParsedStream } from '@aiostreams/core';
+import type {
+  UserData,
+  ParsedStream,
+  PlatformDescriptor,
+} from '@aiostreams/core';
 
 /**
  * User configuration response types
@@ -226,11 +236,6 @@ interface ResolveSyncedResponse {
     enabled?: boolean;
   }[];
   errors?: { url: string; error: string }[];
-}
-
-interface FormatStreamResponse {
-  name: string;
-  description: string;
 }
 
 interface CatalogInfo {
@@ -285,19 +290,61 @@ function basicAuthHeader(uuid: string, password: string): string {
   return `Basic ${btoa(binary)}`;
 }
 
-/**
- * Load user configuration
- */
-export async function loadUserConfig(uuid: string, password: string) {
-  return api<LoadUserResponse>('GET /user', {
+// A null password means the session cookie authenticates the request instead.
+function configAuth(uuid: string, password: string | null) {
+  return password === null
+    ? {}
+    : { headers: { Authorization: basicAuthHeader(uuid, password) } };
+}
+
+export interface ConfigSession {
+  uuid: string;
+  remembered: boolean;
+  expiresAt: number;
+}
+
+export function hasConfigSessionCookie(): boolean {
+  if (typeof document === 'undefined') return false;
+  return document.cookie
+    .split(';')
+    .some((part) => part.trim().startsWith('aiostreams.has-config-session='));
+}
+
+export async function createConfigSession(
+  uuid: string,
+  password: string,
+  remember: boolean
+) {
+  return api<ConfigSession>('POST /user/session', {
+    body: { remember },
     headers: { Authorization: basicAuthHeader(uuid, password) },
   });
 }
 
-export async function loadRawUserConfig(uuid: string, password: string) {
-  return api<LoadUserResponse>('GET /user?raw=true', {
-    headers: { Authorization: basicAuthHeader(uuid, password) },
-  });
+export async function endConfigSession() {
+  return api<void>('DELETE /user/session');
+}
+
+export async function endAllConfigSessions() {
+  return api<{ count: number }>('DELETE /user/sessions');
+}
+
+/**
+ * Load user configuration
+ */
+export async function loadUserConfig(uuid: string, password: string | null) {
+  return api<LoadUserResponse>('GET /user', configAuth(uuid, password));
+}
+
+export async function loadRawUserConfig(uuid: string, password: string | null) {
+  return api<LoadUserResponse>(
+    'GET /user?raw=true',
+    configAuth(uuid, password)
+  );
+}
+
+export async function loadConfigFromSession() {
+  return api<LoadUserResponse>('GET /user?raw=true');
 }
 
 /**
@@ -315,11 +362,78 @@ export async function createUserConfig(config: UserData, password: string) {
 export async function updateUserConfig(
   uuid: string,
   config: UserData,
-  password: string
+  password: string | null
 ) {
   return api<UpdateUserResponse>('PUT /user', {
     body: { config },
-    headers: { Authorization: basicAuthHeader(uuid, password) },
+    ...configAuth(uuid, password),
+  });
+}
+
+export interface ClientAgent {
+  userAgent: string;
+  firstSeen: number;
+  lastSeen: number;
+  requests: number;
+}
+
+export interface HealthCheckResult {
+  ok: boolean;
+  status?: number;
+  error?: string;
+  checkedAt: number;
+  latencyMs: number;
+}
+
+export interface VariantConditionOutcome {
+  id: string;
+  when: string;
+  matched: boolean;
+  error?: string;
+}
+
+export interface VariantEvaluation {
+  variants: VariantConditionOutcome[];
+  health: Record<string, HealthCheckResult>;
+}
+
+/** The user agents seen on this configuration's stream and catalogue requests. */
+export async function loadClientAgents(uuid: string, password: string | null) {
+  return api<ClientAgent[]>(
+    'GET /user/client-agents',
+    configAuth(uuid, password)
+  );
+}
+
+/** Ask the server which variant conditions match a hypothetical request. */
+export async function evaluateVariantConditions(
+  uuid: string,
+  password: string | null,
+  body: {
+    variants?: UserData['variants'];
+    healthChecks?: UserData['healthChecks'];
+    userAgent?: string;
+    resource?: string;
+    type?: string;
+    id?: string;
+    query?: Record<string, string>;
+  }
+) {
+  return api<VariantEvaluation>('POST /user/variants/evaluate', {
+    body,
+    ...configAuth(uuid, password),
+  });
+}
+
+/** Run one health check now, ignoring any cached result. */
+export async function testHealthCheck(
+  uuid: string,
+  password: string | null,
+  check: NonNullable<UserData['healthChecks']>[number]
+) {
+  return api<HealthCheckResult>('POST /user/health-checks/test', {
+    body: check,
+    ...configAuth(uuid, password),
   });
 }
 
@@ -414,7 +528,7 @@ export async function resolveSynced(
     regexUrls?: string[];
     selUrls?: string[];
   },
-  credentials?: { uuid: string; password: string }
+  credentials?: { uuid: string; password: string | null }
 ) {
   return api<ResolveSyncedResponse>('POST /sync/resolve', {
     body: {
@@ -431,7 +545,7 @@ export async function resolveSynced(
  */
 export async function resolveRegexPatterns(
   urls: string[],
-  credentials?: { uuid: string; password: string }
+  credentials?: Credentials
 ) {
   const result = await resolveSynced({ regexUrls: urls }, credentials);
   return { patterns: result.patterns || [], errors: result.errors };
@@ -442,19 +556,10 @@ export async function resolveRegexPatterns(
  */
 export async function resolveStreamExpressions(
   urls: string[],
-  credentials?: { uuid: string; password: string }
+  credentials?: Credentials
 ) {
   const result = await resolveSynced({ selUrls: urls }, credentials);
   return { expressions: result.expressions || [], errors: result.errors };
-}
-
-/**
- * Format stream for display
- */
-export async function getFormattedStream(stream: ParsedStream, context?: any) {
-  return api<FormatStreamResponse>('POST /format', {
-    body: { stream, context },
-  });
 }
 
 /**
@@ -538,12 +643,211 @@ export interface UserAnalyticsResponse {
 
 export async function fetchUserAnalytics(
   uuid: string,
-  password: string,
+  password: string | null,
   range: '24h' | '7d'
 ) {
-  return api<UserAnalyticsResponse>(`GET /user/analytics?range=${range}`, {
-    headers: { Authorization: basicAuthHeader(uuid, password) },
+  return api<UserAnalyticsResponse>(
+    `GET /user/analytics?range=${range}`,
+    configAuth(uuid, password)
+  );
+}
+
+export type LinkedAccountPlatformId = 'stremio' | 'aiomanager';
+
+export type LinkedAccountPlatformInfo = PlatformDescriptor;
+
+export interface LinkedAccount {
+  id: string;
+  platform: LinkedAccountPlatformId;
+  label: string;
+  identity: string | null;
+  config: {
+    instanceUrl?: string;
+    mintedSession?: boolean;
+    manifestUrls: string[];
+  };
+  autoPush: boolean;
+  lastSyncedAt?: number;
+  lastStatus?: 'ok' | 'error' | 'expired';
+  lastError?: string;
+  lastPushedManifestHash?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface LinkedAccountProbeResult {
+  ok: boolean;
+  message?: string;
+  version?: string;
+}
+
+export interface LinkedAccountPushResult {
+  outcomes: Array<{
+    url: string;
+    status: 'installed' | 'refreshed' | 'unchanged';
+  }>;
+}
+
+export interface LinkedAccountPushAllResult {
+  id: string;
+  label: string;
+  ok: boolean;
+  error?: string;
+}
+
+/** A null password means a remembered sign-in cookie carries the auth. */
+export type Credentials = { uuid: string; password: string | null };
+
+function authed(credentials: Credentials) {
+  return configAuth(credentials.uuid, credentials.password);
+}
+
+export async function fetchLinkedAccountPlatforms(credentials: Credentials) {
+  return api<LinkedAccountPlatformInfo[]>(
+    'GET /linked-accounts/platforms',
+    authed(credentials)
+  );
+}
+
+export async function fetchLinkedAccounts(credentials: Credentials) {
+  return api<LinkedAccount[]>('GET /linked-accounts', authed(credentials));
+}
+
+// =============================================================================
+// Community sharing
+// =============================================================================
+
+export interface SubmitCommunityFormatterInput extends Record<string, unknown> {
+  name: string;
+  description: string;
+  author: string;
+  version?: string;
+  tags?: string[];
+  payload: { name: string; description: string };
+}
+
+export async function fetchCommunityItems(kind: CommunityKind) {
+  return api<CommunityItemPublic[]>(`GET /community/${kind}s`);
+}
+
+export async function fetchMyCommunityItems(credentials: Credentials) {
+  return api<CommunityItemMine[]>('GET /community/mine', authed(credentials));
+}
+
+export async function submitCommunityFormatter(
+  credentials: Credentials,
+  body: SubmitCommunityFormatterInput
+) {
+  return api<CommunityItemMine>('POST /community/formatters', {
+    ...authed(credentials),
+    body,
   });
+}
+
+export async function submitCommunityTemplate(
+  credentials: Credentials,
+  template: unknown
+) {
+  return api<CommunityItemMine>('POST /community/templates', {
+    ...authed(credentials),
+    body: { template },
+  });
+}
+
+export async function updateCommunityItem(
+  credentials: Credentials,
+  id: string,
+  body: Record<string, unknown>
+) {
+  return api<CommunityItemMine>(
+    `PUT /community/items/${encodeURIComponent(id)}`,
+    { ...authed(credentials), body }
+  );
+}
+
+export async function withdrawCommunityDraft(
+  credentials: Credentials,
+  id: string
+) {
+  return api<CommunityItemMine>(
+    `DELETE /community/items/${encodeURIComponent(id)}/draft`,
+    authed(credentials)
+  );
+}
+
+export async function deleteCommunityItem(
+  credentials: Credentials,
+  id: string
+) {
+  return api<{ deleted: boolean }>(
+    `DELETE /community/items/${encodeURIComponent(id)}`,
+    authed(credentials)
+  );
+}
+
+export async function likeCommunityItem(credentials: Credentials, id: string) {
+  return api<{ liked: boolean; likes: number }>(
+    `POST /community/items/${encodeURIComponent(id)}/like`,
+    authed(credentials)
+  );
+}
+
+export async function probeLinkedAccount(
+  credentials: Credentials,
+  platform: LinkedAccountPlatformId,
+  instanceUrl?: string
+) {
+  return api<LinkedAccountProbeResult>('POST /linked-accounts/probe', {
+    ...authed(credentials),
+    body: { platform, instanceUrl },
+  });
+}
+
+export async function linkAccount(
+  credentials: Credentials,
+  body: {
+    platform: LinkedAccountPlatformId;
+    input: Record<string, unknown>;
+    manifestUrls: string[];
+    label?: string;
+  }
+) {
+  return api<LinkedAccount>('POST /linked-accounts', {
+    ...authed(credentials),
+    body,
+  });
+}
+
+export async function updateLinkedAccount(
+  credentials: Credentials,
+  id: string,
+  patch: { label?: string; autoPush?: boolean; manifestUrls?: string[] }
+) {
+  return api<LinkedAccount>(`PATCH /linked-accounts/${id}`, {
+    ...authed(credentials),
+    body: patch,
+  });
+}
+
+export async function unlinkAccount(credentials: Credentials, id: string) {
+  return api<{ unlinked: boolean }>(
+    `DELETE /linked-accounts/${id}`,
+    authed(credentials)
+  );
+}
+
+export async function pushLinkedAccount(credentials: Credentials, id: string) {
+  return api<LinkedAccountPushResult>(
+    `POST /linked-accounts/${id}/push`,
+    authed(credentials)
+  );
+}
+
+export async function pushAllLinkedAccounts(credentials: Credentials) {
+  return api<LinkedAccountPushAllResult[]>(
+    'POST /linked-accounts/push',
+    authed(credentials)
+  );
 }
 
 /**
@@ -559,6 +863,94 @@ export async function fetchManifest(url: string): Promise<any> {
   return response.json();
 }
 
+export interface JellyfinInfo {
+  enabled: boolean;
+  serverUrl: string;
+  version: string;
+  maxVersions: number;
+  resolveOnOpen: 'always' | 'never' | 'user';
+}
+
+export async function getJellyfinInfo(credentials: Credentials) {
+  return api<JellyfinInfo>('GET /jellyfin/info', authed(credentials));
+}
+
+export interface TrackerExchange {
+  lastAt: number | null;
+  error: string | null;
+}
+
+export interface WatchStateTracker {
+  addon: string;
+  /** Absent for the primary user's trackers. */
+  persona?: string;
+  status: 'connected' | 'auth_expired' | 'error';
+  /** Absent when the addon or the instance does not use that direction. */
+  push?: TrackerExchange;
+  pull?: TrackerExchange;
+}
+
+export interface WatchStateTrackerOption {
+  /** Empty for the primary user, otherwise the persona id. */
+  user: string;
+  presetId: string;
+  addon: string;
+}
+
+export interface WatchStateOverview {
+  /** Whether this instance sends and reads watch state at all. */
+  push: boolean;
+  pull: boolean;
+  trackers: WatchStateTracker[];
+  available: WatchStateTrackerOption[];
+}
+
+/** The trackers the saved configuration syncs watch state with. */
+export async function getWatchStateTrackers(credentials: Credentials) {
+  return api<WatchStateOverview>('GET /user/watch-state', authed(credentials));
+}
+
+/** Binds a Quick Connect code shown on a TV to this configuration. */
+export async function approveJellyfinQuickConnect(
+  credentials: Credentials,
+  code: string,
+  persona?: string
+) {
+  return api<{
+    approved: boolean;
+    device: { name: string; app: string; version: string };
+  }>('POST /jellyfin/quickconnect/approve', {
+    ...authed(credentials),
+    body: { code, ...(persona ? { persona } : {}) },
+  });
+}
+
+export async function getJellyfinApiKeyToken(
+  credentials: Credentials,
+  id: string
+) {
+  return api<{ token: string }>('POST /jellyfin/api-keys/token', {
+    ...authed(credentials),
+    body: { id },
+  });
+}
+
+export interface QuickConnectPending {
+  device: { name: string; app: string; version: string };
+  requestedAt: string;
+}
+
+/** The device behind a code, before anything is bound to it. */
+export async function getJellyfinQuickConnectPending(
+  credentials: Credentials,
+  code: string
+) {
+  return api<QuickConnectPending>(
+    `GET /jellyfin/quickconnect/pending?code=${encodeURIComponent(code)}`,
+    authed(credentials)
+  );
+}
+
 export type {
   ParsedStream,
   LoadUserResponse,
@@ -566,7 +958,6 @@ export type {
   UpdateUserResponse,
   ResolvePatternsResponse,
   ResolveSyncedResponse,
-  FormatStreamResponse,
   CatalogInfo,
   GDriveTokenResponse,
 };

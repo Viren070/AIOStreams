@@ -1,10 +1,15 @@
-import { Readable } from 'node:stream';
+import { Readable, addAbortSignal } from 'node:stream';
 import { createLogger } from '../../logging/logger.js';
 import { MultiProviderPool } from './multi-provider-pool.js';
 import { SegmentsStream } from './segments-stream.js';
-import { isImplausibleYencFileSize } from './yenc.js';
+import { SegmentIntegrityError, isImplausibleYencFileSize } from './yenc.js';
 import { definitiveLossKind } from '../nntp/errors.js';
-import { CommandPriority, EngineOptions, NzbSegmentRef } from '../types.js';
+import {
+  CommandPriority,
+  EngineOptions,
+  NzbSegmentRef,
+  SegmentData,
+} from '../types.js';
 import type { HoleHooks } from '../holes.js';
 
 const logger = createLogger('usenet/file-stream');
@@ -20,6 +25,8 @@ export interface FileSource {
    * Critical for archive inspection, which opens one stream per volume.
    */
   knownSize?: number;
+  /** Size from the last segment's part range even when `=ybegin size=` looks plausible. */
+  exactSize?: boolean;
 }
 
 /**
@@ -31,7 +38,10 @@ export interface SeekableStream {
   readonly filename?: string;
   size(): number;
   open(signal?: AbortSignal): Promise<void>;
-  createReadStream(range?: { start?: number; end?: number }): Readable;
+  createReadStream(
+    range?: { start?: number; end?: number },
+    signal?: AbortSignal
+  ): Readable;
   readAt(offset: number, length: number): Promise<Buffer>;
   /**
    * Zero-alloc variant of {@link readAt}: write into `dst` at `dstOffset`,
@@ -67,6 +77,8 @@ export interface SegmentMemo {
   len: number;
   /** Lazily allocated, grown only when a larger body appears; reused in place. */
   buf?: Buffer;
+  /** Measured part length, shared across a set; see `hintedPartSize`. */
+  partHint?: number;
 }
 
 /**
@@ -177,7 +189,7 @@ export class FileStream implements SeekableStream {
       // size; prefer it over a (possibly bogus) `=ybegin size=`.
       this._size = firstEnd || first.fileSize || first.size;
       this.sizeExact = firstEnd > 0;
-    } else if (trustYencSize) {
+    } else if (trustYencSize && !this.source.exactSize) {
       // yEnc `=ybegin size=` is the exact total file size; no last fetch needed.
       this._size = first.fileSize!;
       this.sizeExact = true;
@@ -185,15 +197,26 @@ export class FileStream implements SeekableStream {
       // No (or implausible) yEnc size: fall back to the last segment's part end
       // (exact) or a ratio estimate.
       const lastIdx = segments.length - 1;
-      const lastShared = await this.pool.fetchSegmentShared(
-        segments[lastIdx],
-        this.nzbHash,
-        signal,
-        CommandPriority.High
-      );
-      const last = lastShared.data;
-      lastShared.release();
-      if (last.byteRange) {
+      let last: SegmentData | undefined;
+      try {
+        const lastShared = await this.pool.fetchSegmentShared(
+          segments[lastIdx],
+          this.nzbHash,
+          signal,
+          CommandPriority.High
+        );
+        last = lastShared.data;
+        lastShared.release();
+      } catch (err) {
+        // An exact re-probe keeps the yEnc size when the last article is gone.
+        if (!trustYencSize || definitiveLossKind(err) !== 'missing') {
+          throw err;
+        }
+      }
+      if (last === undefined) {
+        this._size = first.fileSize!;
+        this.sizeExact = true;
+      } else if (last.byteRange) {
         this.knownRanges.set(lastIdx, {
           begin: last.byteRange[0],
           end: last.byteRange[1],
@@ -280,6 +303,12 @@ export class FileStream implements SeekableStream {
       ) {
         ({ begin, end: segEnd } = memo);
         const buf = memo.buf;
+        if (memo.len !== segEnd - begin) {
+          throw new SegmentIntegrityError(
+            `segment ${segmentIndex} memo holds ${memo.len} B for a ${segEnd - begin} B part`,
+            segments[segmentIndex].messageId
+          );
+        }
         this.knownRanges.set(segmentIndex, { begin, end: segEnd });
         if (begin >= end) break;
         if (segEnd > pos) {
@@ -302,8 +331,17 @@ export class FileStream implements SeekableStream {
         );
         try {
           const body = h.data.body;
-          begin = h.data.byteRange?.[0] ?? segmentIndex * this.avgDecodedSize;
-          segEnd = h.data.byteRange?.[1] ?? begin + body.length;
+          const range = h.data.byteRange;
+          // A short body would leave the rest of `dst` unwritten but still
+          // advance the cursor, serving whatever the buffer held.
+          if (range !== undefined && range[1] - range[0] !== body.length) {
+            throw new SegmentIntegrityError(
+              `segment ${segmentIndex} body is ${body.length} B but its part range spans ${range[1] - range[0]} B`,
+              segments[segmentIndex].messageId
+            );
+          }
+          begin = range?.[0] ?? segmentIndex * this.avgDecodedSize;
+          segEnd = range?.[1] ?? begin + body.length;
           this.knownRanges.set(segmentIndex, { begin, end: segEnd });
           // The located segment must contain `pos`; subsequent segments start
           // at their own `begin`. Guard against a gap/overshoot just in case.
@@ -348,7 +386,10 @@ export class FileStream implements SeekableStream {
   /**
    * Serve a half-open byte range [start, end). `end` defaults to file size.
    */
-  createReadStream(range?: { start?: number; end?: number }): Readable {
+  createReadStream(
+    range?: { start?: number; end?: number },
+    signal?: AbortSignal
+  ): Readable {
     if (!this.opened) {
       throw new Error('FileStream.open() must be called before reading');
     }
@@ -365,18 +406,25 @@ export class FileStream implements SeekableStream {
     }
 
     // Find the segment containing `start`.
-    return this.openRangeStream(start, length);
+    return this.openRangeStream(start, length, signal);
   }
 
-  private openRangeStream(start: number, length: number): Readable {
+  private openRangeStream(
+    start: number,
+    length: number,
+    signal?: AbortSignal
+  ): Readable {
     // Deferred passthrough: do the (async) interpolation search, then wire up a
     // SegmentsStream. We use a PassThrough-like Readable that begins emitting
     // once the start segment is located.
+    let inner: SegmentsStream | undefined;
     const out = new Readable({
       read() {
-        /* pushed by the inner stream */
+        // Paused-mode consumers (async iterators) never emit 'resume'.
+        inner?.resume();
       },
     });
+    if (signal) addAbortSignal(signal, out);
 
     const requestedAt = Date.now();
     let firstByteSeen = false;
@@ -395,7 +443,7 @@ export class FileStream implements SeekableStream {
                   .filter((l) => l >= 0 && l < segments.length)
               )
             : undefined;
-        const inner = new SegmentsStream({
+        inner = new SegmentsStream({
           pool: this.pool,
           segments,
           nzbHash: this.nzbHash,
@@ -420,6 +468,7 @@ export class FileStream implements SeekableStream {
           // the whole account, while concurrent streams fair-share it via that
           // semaphore; there is no separate per-stream connection cap.
           maxWorkers: this.opts.prefetchSegments,
+          taskBytes: this.avgDecodedSize,
           // Buffer sized to the same window so completed-but-not-yet-emitted
           // segments can ride out per-segment latency jitter without stalling
           // dispatch.
@@ -430,8 +479,11 @@ export class FileStream implements SeekableStream {
           skipBytes: start - segmentStartByte,
           limitBytes: length,
           priority: CommandPriority.High,
+          slotBank: this.pool.slotBank,
+          signal,
         });
-        inner.on('data', (chunk: Buffer) => {
+        const src = inner;
+        src.on('data', (chunk: Buffer) => {
           if (!firstByteSeen) {
             firstByteSeen = true;
             logger.debug(
@@ -444,12 +496,12 @@ export class FileStream implements SeekableStream {
               'range first byte'
             );
           }
-          if (!out.push(chunk)) inner.pause();
+          if (!out.push(chunk)) src.pause();
         });
-        inner.on('end', () => out.push(null));
-        inner.on('error', (err) => out.destroy(err));
-        out.on('resume', () => inner.resume());
-        const destroyInner = () => inner.destroy();
+        src.on('end', () => out.push(null));
+        src.on('error', (err) => out.destroy(err));
+        out.on('resume', () => src.resume());
+        const destroyInner = () => src.destroy();
         out.on('close', destroyInner);
       })
       .catch((err) =>
@@ -483,20 +535,26 @@ export class FileStream implements SeekableStream {
       return { segmentIndex: 0, segmentStartByte: firstRange.begin };
     }
 
+    // Dropped the moment it mislocates.
+    let hinted =
+      this.lockedPartSize === undefined ? this.hintedPartSize() : undefined;
     let guard = 0;
     while (lo <= hi && guard++ < segments.length + 8) {
       // Interpolate an index guess: exact arithmetic once the uniform part
       // size is locked, the running average estimate otherwise.
-      const est = this.lockedPartSize ?? Math.max(1, this.avgDecodedSize);
+      const est =
+        this.lockedPartSize ?? hinted ?? Math.max(1, this.avgDecodedSize);
       let guess = Math.floor(targetByte / est);
       guess = Math.min(hi, Math.max(lo, guess));
 
       const range = await this.rangeForSegment(guess);
       if (targetByte < range.begin) {
+        hinted = undefined;
         hi = guess - 1;
         // Refine avg estimate downward.
         this.avgDecodedSize = Math.max(1, range.begin / Math.max(1, guess));
       } else if (targetByte >= range.end) {
+        hinted = undefined;
         lo = guess + 1;
         this.avgDecodedSize = Math.max(1, range.end / Math.max(1, guess + 1));
       } else {
@@ -526,6 +584,21 @@ export class FileStream implements SeekableStream {
     const len = first.end - first.begin;
     const n = this.source.segments.length;
     if (len <= 0) return undefined;
+    return len * (n - 1) < this._size && this._size <= len * n
+      ? len
+      : undefined;
+  }
+
+  /**
+   * Part length measured on a sibling volume, accepted only when this file's
+   * own exact size and segment count admit a grid of that length. Aims the
+   * interpolation search and nothing else, so a wrong hint costs one extra
+   * probe, never a wrong offset; do not feed it to {@link partGridSize}.
+   */
+  private hintedPartSize(): number | undefined {
+    const len = this.memo?.partHint;
+    if (!len || len <= 0 || !this.sizeExact) return undefined;
+    const n = this.source.segments.length;
     return len * (n - 1) < this._size && this._size <= len * n
       ? len
       : undefined;
@@ -614,6 +687,9 @@ export class FileStream implements SeekableStream {
         }
       } else if (index > 0 && len > 0 && begin === index * len) {
         this.lockedPartSize = len;
+      }
+      if (this.memo && len > 0 && begin === index * len) {
+        this.memo.partHint = len;
       }
     }
     return range;

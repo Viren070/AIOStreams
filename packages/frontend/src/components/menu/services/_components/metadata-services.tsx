@@ -3,9 +3,16 @@ import { useUserData } from '@/context/userData';
 import { SettingsCard } from '../../../shared/settings-card';
 import { PasswordInput } from '../../../ui/password-input';
 
+const INSTANCE_DEFAULT_PLACEHOLDER =
+  'Provided by this instance (enter your own to override)';
+
 export function MetadataServices() {
   const { status } = useStatus();
   const { userData, setUserData } = useUserData();
+  const provided = status?.settings.metadata;
+  const tmdbAccessTokenProvided = !!provided?.tmdb.accessToken;
+  const tmdbApiKeyProvided = !!provided?.tmdb.apiKey;
+  const tvdbApiKeyProvided = !!provided?.tvdb.apiKey;
 
   return (
     <>
@@ -35,9 +42,13 @@ export function MetadataServices() {
               </p>
             </>
           }
-          required={!status?.settings.tmdbApiAvailable}
+          required={!tmdbAccessTokenProvided && !tmdbApiKeyProvided}
           value={userData.tmdbAccessToken}
-          placeholder="Enter your TMDB access token"
+          placeholder={
+            tmdbAccessTokenProvided
+              ? INSTANCE_DEFAULT_PLACEHOLDER
+              : 'Enter your TMDB access token'
+          }
           onValueChange={(value) => {
             setUserData((prev) => ({ ...prev, tmdbAccessToken: value }));
           }}
@@ -60,7 +71,11 @@ export function MetadataServices() {
               Token.
             </span>
           }
-          placeholder="Enter your TMDB API Key"
+          placeholder={
+            tmdbApiKeyProvided
+              ? INSTANCE_DEFAULT_PLACEHOLDER
+              : 'Enter your TMDB API Key'
+          }
           value={userData.tmdbApiKey}
           onValueChange={(value) => {
             setUserData((prev) => ({ ...prev, tmdbApiKey: value }));
@@ -77,7 +92,11 @@ export function MetadataServices() {
           autoComplete="new-password"
           label="TVDB API Key"
           value={userData.tvdbApiKey}
-          placeholder="Enter your TVDB API Key"
+          placeholder={
+            tvdbApiKeyProvided
+              ? INSTANCE_DEFAULT_PLACEHOLDER
+              : 'Enter your TVDB API Key'
+          }
           help={
             <span>
               Sign up for a <b>free</b> API Key at{' '}

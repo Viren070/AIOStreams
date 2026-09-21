@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { getDb } from '../db.js';
 import { sql, join, raw, SqlFragment } from '../sql.js';
+import type { ArrLink } from '../../arr/types.js';
 
 /**
  * In-process bus that fires `'change'` whenever a library row is created,
@@ -49,6 +50,13 @@ export type UsenetLibraryStatus =
   | 'streaming';
 
 export type UsenetLibrarySource = 'auto' | 'manual';
+
+/**
+ * Who created the row: resolving a stream for playback (whatever the client),
+ * the dashboard, or a download client speaking the SABnzbd protocol. Scopes
+ * the recheck and the arr-facing views.
+ */
+export type UsenetLibraryOrigin = 'playback' | 'dashboard' | 'sabnzbd';
 
 /** Status groups for dashboard filtering. */
 export type UsenetLibraryStatusGroup = 'active' | 'history' | 'all';
@@ -109,6 +117,21 @@ export interface UsenetLibraryEntry {
   password?: string;
   /** Shareable release key (`wd1:`), when indexer metadata allowed one. */
   releaseKey?: string;
+  origin: UsenetLibraryOrigin;
+  /** Earliest NZB `<file date>`, epoch seconds; drives the recheck cadence. */
+  postedAt?: number;
+  /** When the import reached available/degraded/failed, epoch ms. */
+  completedAt?: number;
+  lastCheckedAt?: number;
+  /** Next recheck due, epoch ms; null = never. */
+  nextCheckAt?: number;
+  checkCount: number;
+  /**
+   * Set when an arr removed the row from its queue after importing it: gone
+   * from the SABnzbd API and the `completed/` view, still a link target.
+   */
+  hiddenAt?: number;
+  arrLink?: ArrLink;
 }
 
 interface UsenetLibraryRow {
@@ -134,8 +157,38 @@ interface UsenetLibraryRow {
   category: string | null;
   password: string | null;
   release_key: string | null;
+  origin: string | null;
+  posted_at: number | string | null;
+  completed_at: number | string | null;
+  last_checked_at: number | string | null;
+  next_check_at: number | string | null;
+  check_count: number | string | null;
+  hidden_at: number | string | null;
+  arr_link: string | null;
   [k: string]: unknown;
 }
+
+function optNumber(v: number | string | null | undefined): number | undefined {
+  return v == null ? undefined : Number(v);
+}
+
+function parseArrLink(raw: string | null): ArrLink | undefined {
+  if (!raw) return undefined;
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object'
+      ? (parsed as ArrLink)
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+const VALID_ORIGINS = new Set<UsenetLibraryOrigin>([
+  'playback',
+  'dashboard',
+  'sabnzbd',
+]);
 
 /**
  * Normalise a DB timestamp to an ISO-8601 UTC string. pg returns `Date`
@@ -196,10 +249,22 @@ function mapRow(row: UsenetLibraryRow): UsenetLibraryEntry {
     category: row.category ?? undefined,
     password: row.password ?? undefined,
     releaseKey: row.release_key ?? undefined,
+    origin: VALID_ORIGINS.has(row.origin as UsenetLibraryOrigin)
+      ? (row.origin as UsenetLibraryOrigin)
+      : row.source === 'manual'
+        ? 'dashboard'
+        : 'playback',
+    postedAt: optNumber(row.posted_at),
+    completedAt: optNumber(row.completed_at),
+    lastCheckedAt: optNumber(row.last_checked_at),
+    nextCheckAt: optNumber(row.next_check_at),
+    checkCount: Number(row.check_count ?? 0),
+    hiddenAt: optNumber(row.hidden_at),
+    arrLink: parseArrLink(row.arr_link),
   };
 }
 
-const COLUMNS = sql`nzb_hash, name, size, file_index, files, status, fail_reason, error_code, fail_count, added_at, last_used_at, nzo_id, progress, bytes_done, bytes_total, owner, source, import_ms, nzb_url, category, password, release_key`;
+const COLUMNS = sql`nzb_hash, name, size, file_index, files, status, fail_reason, error_code, fail_count, added_at, last_used_at, nzo_id, progress, bytes_done, bytes_total, owner, source, import_ms, nzb_url, category, password, release_key, origin, posted_at, completed_at, last_checked_at, next_check_at, check_count, hidden_at, arr_link`;
 
 /**
  * Persistence for the native usenet library/history, one row per NZB,
@@ -367,18 +432,20 @@ export class UsenetLibraryRepository {
     name?: string;
     owner?: string;
     source?: UsenetLibrarySource;
+    origin?: UsenetLibraryOrigin;
     nzbUrl?: string;
     bytesTotal?: number;
     category?: string;
     releaseKey?: string;
+    postedAt?: number;
   }): Promise<void> {
     await getDb().exec(
       sql`INSERT INTO usenet_library
             (nzb_hash, name, files, status, fail_count, last_used_at,
-             nzo_id, progress, bytes_done, bytes_total, owner, source, nzb_url, category, release_key)
+             nzo_id, progress, bytes_done, bytes_total, owner, source, nzb_url, category, release_key, origin, posted_at)
           VALUES
             (${entry.nzbHash}, ${entry.name ?? null}, '[]', 'queued', 0, CURRENT_TIMESTAMP,
-             ${entry.nzbHash}, 0, 0, ${entry.bytesTotal ?? 0}, ${entry.owner ?? null}, ${entry.source ?? 'auto'}, ${entry.nzbUrl ?? null}, ${entry.category ?? null}, ${entry.releaseKey ?? null})
+             ${entry.nzbHash}, 0, 0, ${entry.bytesTotal ?? 0}, ${entry.owner ?? null}, ${entry.source ?? 'auto'}, ${entry.nzbUrl ?? null}, ${entry.category ?? null}, ${entry.releaseKey ?? null}, ${entry.origin ?? null}, ${entry.postedAt ?? null})
           ON CONFLICT(nzb_hash) DO UPDATE SET
             name = COALESCE(EXCLUDED.name, usenet_library.name),
             status = 'queued',
@@ -388,6 +455,11 @@ export class UsenetLibraryRepository {
             nzb_url = COALESCE(EXCLUDED.nzb_url, usenet_library.nzb_url),
             category = COALESCE(EXCLUDED.category, usenet_library.category),
             release_key = COALESCE(EXCLUDED.release_key, usenet_library.release_key),
+            origin = COALESCE(EXCLUDED.origin, usenet_library.origin),
+            posted_at = COALESCE(EXCLUDED.posted_at, usenet_library.posted_at),
+            completed_at = NULL,
+            next_check_at = NULL,
+            hidden_at = NULL,
             last_used_at = CURRENT_TIMESTAMP`
     );
     usenetLibraryBus.emit('change');
@@ -439,16 +511,23 @@ export class UsenetLibraryRepository {
     password?: string;
     status?: 'available' | 'degraded';
     releaseKey?: string;
+    origin?: UsenetLibraryOrigin;
+    postedAt?: number;
+    /** Epoch ms of the first recheck; omit for never. */
+    nextCheckAt?: number;
   }): Promise<void> {
     const filesJson = JSON.stringify(entry.files ?? []);
     const status = entry.status ?? 'available';
+    const now = Date.now();
     await getDb().exec(
       sql`INSERT INTO usenet_library
             (nzb_hash, name, size, file_index, files, status, fail_reason, error_code, fail_count, last_used_at,
-             nzo_id, progress, bytes_done, bytes_total, owner, source, import_ms, nzb_url, password, release_key)
+             nzo_id, progress, bytes_done, bytes_total, owner, source, import_ms, nzb_url, password, release_key,
+             origin, posted_at, completed_at, last_checked_at, next_check_at)
           VALUES
             (${entry.nzbHash}, ${entry.name ?? null}, ${entry.size ?? null}, ${entry.fileIndex ?? null}, ${filesJson}, ${status}, NULL, NULL, 0, CURRENT_TIMESTAMP,
-             ${entry.nzbHash}, 1, ${entry.size ?? 0}, ${entry.size ?? 0}, ${entry.owner ?? null}, ${entry.source ?? 'auto'}, ${entry.importMs ?? null}, ${entry.nzbUrl ?? null}, ${entry.password ?? null}, ${entry.releaseKey ?? null})
+             ${entry.nzbHash}, 1, ${entry.size ?? 0}, ${entry.size ?? 0}, ${entry.owner ?? null}, ${entry.source ?? 'auto'}, ${entry.importMs ?? null}, ${entry.nzbUrl ?? null}, ${entry.password ?? null}, ${entry.releaseKey ?? null},
+             ${entry.origin ?? null}, ${entry.postedAt ?? null}, ${now}, ${now}, ${entry.nextCheckAt ?? null})
           ON CONFLICT(nzb_hash) DO UPDATE SET
             name = EXCLUDED.name,
             size = EXCLUDED.size,
@@ -466,6 +545,12 @@ export class UsenetLibraryRepository {
             nzb_url = COALESCE(EXCLUDED.nzb_url, usenet_library.nzb_url),
             password = COALESCE(EXCLUDED.password, usenet_library.password),
             release_key = COALESCE(EXCLUDED.release_key, usenet_library.release_key),
+            origin = COALESCE(EXCLUDED.origin, usenet_library.origin),
+            posted_at = COALESCE(EXCLUDED.posted_at, usenet_library.posted_at),
+            completed_at = EXCLUDED.completed_at,
+            last_checked_at = EXCLUDED.last_checked_at,
+            next_check_at = EXCLUDED.next_check_at,
+            hidden_at = NULL,
             last_used_at = CURRENT_TIMESTAMP`
     );
     usenetLibraryBus.emit('change');
@@ -478,17 +563,20 @@ export class UsenetLibraryRepository {
     name?: string,
     errorCode?: string
   ): Promise<void> {
+    const now = Date.now();
     await getDb().exec(
       sql`INSERT INTO usenet_library
-            (nzb_hash, name, files, status, fail_reason, error_code, fail_count, last_used_at, nzo_id, progress)
+            (nzb_hash, name, files, status, fail_reason, error_code, fail_count, last_used_at, nzo_id, progress, completed_at)
           VALUES
-            (${nzbHash}, ${name ?? null}, '[]', 'failed', ${reason}, ${errorCode ?? null}, 1, CURRENT_TIMESTAMP, ${nzbHash}, 1)
+            (${nzbHash}, ${name ?? null}, '[]', 'failed', ${reason}, ${errorCode ?? null}, 1, CURRENT_TIMESTAMP, ${nzbHash}, 1, ${now})
           ON CONFLICT(nzb_hash) DO UPDATE SET
             status = 'failed',
             fail_reason = EXCLUDED.fail_reason,
             error_code = EXCLUDED.error_code,
             progress = 1,
             fail_count = usenet_library.fail_count + 1,
+            completed_at = EXCLUDED.completed_at,
+            next_check_at = NULL,
             last_used_at = CURRENT_TIMESTAMP`
     );
     usenetLibraryBus.emit('change');
@@ -499,6 +587,84 @@ export class UsenetLibraryRepository {
     await getDb().exec(
       sql`UPDATE usenet_library SET last_used_at = CURRENT_TIMESTAMP WHERE nzb_hash = ${nzbHash}`
     );
+  }
+
+  /** Hide (or unhide) a row from the arr-facing views; see `hiddenAt`. */
+  static async setHidden(nzbHash: string, hidden: boolean): Promise<void> {
+    await getDb().exec(
+      sql`UPDATE usenet_library SET hidden_at = ${hidden ? Date.now() : null}
+          WHERE nzb_hash = ${nzbHash}`
+    );
+    usenetLibraryBus.emit('change');
+  }
+
+  static async setArrLink(
+    nzbHash: string,
+    link: ArrLink | null
+  ): Promise<void> {
+    await getDb().exec(
+      sql`UPDATE usenet_library SET arr_link = ${link ? JSON.stringify(link) : null}
+          WHERE nzb_hash = ${nzbHash}`
+    );
+  }
+
+  /** Record a recheck pass; `bump` counts it as a completed check. */
+  static async setRecheck(
+    nzbHash: string,
+    patch: { lastCheckedAt: number; nextCheckAt: number | null; bump: boolean }
+  ): Promise<void> {
+    const bump = patch.bump ? sql`, check_count = check_count + 1` : sql``;
+    await getDb().exec(
+      sql`UPDATE usenet_library
+          SET last_checked_at = ${patch.lastCheckedAt}, next_check_at = ${patch.nextCheckAt}${bump}
+          WHERE nzb_hash = ${nzbHash}`
+    );
+  }
+
+  /**
+   * Rows with an arr replacement queued (`arr_link.repair` not finished).
+   * Filtered in-process: the repair state lives inside the JSON blob, and the
+   * candidate set (rows that have an arr link at all) is small.
+   */
+  static async listPendingArrRepairs(
+    limit = 50
+  ): Promise<UsenetLibraryEntry[]> {
+    const rows = await getDb().query<UsenetLibraryRow>(
+      sql`SELECT ${COLUMNS} FROM usenet_library
+          WHERE arr_link IS NOT NULL
+          ORDER BY last_used_at DESC LIMIT 500`
+    );
+    return rows
+      .map(mapRow)
+      .filter((e) => {
+        const state = e.arrLink?.repair?.state;
+        return state === 'pending' || state === 'blocklisted';
+      })
+      .slice(0, Math.max(1, limit));
+  }
+
+  /**
+   * Rows due for a recheck: playable, re-fetchable, and either never checked
+   * or past their `next_check_at`. Never-checked rows go first.
+   */
+  static async listDueForRecheck(opts: {
+    scope: 'sabnzbd' | 'all';
+    limit: number;
+    now?: number;
+  }): Promise<UsenetLibraryEntry[]> {
+    const now = opts.now ?? Date.now();
+    const limit = Math.min(Math.max(opts.limit, 1), 500);
+    const scope =
+      opts.scope === 'sabnzbd' ? sql` AND origin = ${'sabnzbd'}` : sql``;
+    const rows = await getDb().query<UsenetLibraryRow>(
+      sql`SELECT ${COLUMNS} FROM usenet_library
+          WHERE status IN ('available', 'degraded')
+            AND nzb_url IS NOT NULL
+            AND (next_check_at IS NULL OR next_check_at <= ${now})${scope}
+          ORDER BY (next_check_at IS NULL) DESC, next_check_at ASC, added_at DESC
+          LIMIT ${limit}`
+    );
+    return rows.map(mapRow);
   }
 
   /** In-process per-hash patch chains (see {@link patchFiles}). */
@@ -661,6 +827,10 @@ export class UsenetLibraryRepository {
       sort?: UsenetLibrarySort;
       /** Sort direction (defaults to desc). */
       dir?: UsenetLibrarySortDir;
+      /** Restrict to these origins. */
+      origins?: UsenetLibraryOrigin[];
+      /** `false` excludes arr-hidden rows, `true` returns only them. */
+      hidden?: boolean;
     } = {}
   ): Promise<{ entries: UsenetLibraryEntry[]; total: number }> {
     const limit = Math.min(Math.max(opts.limit ?? 50, 1), 500);
@@ -685,6 +855,12 @@ export class UsenetLibraryRepository {
         sql`LOWER(name) LIKE ${'%' + search.toLowerCase() + '%'}`
       );
     }
+    const origins = (opts.origins ?? []).filter((o) => VALID_ORIGINS.has(o));
+    if (origins.length > 0) {
+      conditions.push(sql`origin IN (${join(origins.map((o) => sql`${o}`))})`);
+    }
+    if (opts.hidden === false) conditions.push(sql`hidden_at IS NULL`);
+    if (opts.hidden === true) conditions.push(sql`hidden_at IS NOT NULL`);
     const where = conditions.length
       ? sql`WHERE ${join(conditions, ' AND ')}`
       : sql``;
@@ -704,5 +880,25 @@ export class UsenetLibraryRepository {
       entries: rows.map(mapRow),
       total: Number(countRow?.count ?? 0),
     };
+  }
+
+  /**
+   * Every entry in the given statuses, newest first, for building the WebDAV
+   * tree. Unpaginated because the tree needs the whole set; `limit` is a cap.
+   */
+  static async listForTree(opts: {
+    statuses: UsenetLibraryStatus[];
+    limit?: number;
+  }): Promise<UsenetLibraryEntry[]> {
+    const statuses = opts.statuses.filter((s) => VALID_STATUSES.has(s));
+    if (statuses.length === 0) return [];
+    const limit = Math.min(Math.max(opts.limit ?? 5000, 1), 50_000);
+    const rows = await getDb().query<UsenetLibraryRow>(
+      sql`SELECT ${COLUMNS} FROM usenet_library
+          WHERE status IN (${join(statuses.map((s) => sql`${s}`))})
+            AND nzb_url IS NOT NULL
+          ORDER BY added_at DESC, nzb_hash ASC LIMIT ${limit}`
+    );
+    return rows.map(mapRow);
   }
 }

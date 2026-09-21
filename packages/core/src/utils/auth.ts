@@ -33,7 +33,7 @@ interface SessionPayload {
   s?: 'oidc';
 }
 
-function constantTimeEquals(a: string, b: string): boolean {
+export function constantTimeEquals(a: string, b: string): boolean {
   const ab = Buffer.from(a);
   const bb = Buffer.from(b);
   if (ab.length !== bb.length) return false;
@@ -128,7 +128,7 @@ export function checkAuthToken(
  * - Users not listed fall back to the legacy AIOSTREAMS_AUTH_ADMINS /
  *   AIOSTREAMS_AUTH_PROXY behaviour: admin if the admin list is empty or
  *   includes them; proxy if the proxy list is empty or includes them; service
- *   and sabnzbd are always granted. With no legacy vars set this means every user is an admin.
+ *   sabnzbd and webdav are always granted. With no legacy vars set this means every user is an admin.
  *
  * Password identities only: an OIDC subject has no AIOSTREAMS_AUTH entry, so it
  * would take that fallback and receive every permission.
@@ -157,6 +157,7 @@ export function getEffectivePermissions(username: string): Set<Permission> {
   const perms = new Set<Permission>([
     Permission.Service,
     Permission.Sabnzbd,
+    Permission.Webdav,
     Permission.CreateConfig,
   ]);
   if (canProxy) perms.add(Permission.Proxy);

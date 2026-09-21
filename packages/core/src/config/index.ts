@@ -1,6 +1,7 @@
 import { bootstrap, BootstrapConfig } from './bootstrap.js';
 import { TaskManager } from '../tasks/index.js';
 import { setLogLevel, setLogFormat } from '../logging/logger.js';
+import { setRepostSuffixes } from '../parser/title.js';
 import {
   SettingsStore,
   type SettingsChangeEvent,
@@ -28,6 +29,12 @@ import {
   streamsSchema,
   releaseBlocklistSchema,
   oidcSchema,
+  linkedAccountsSchema,
+  communitySchema,
+  sharesSchema,
+  arrSchema,
+  jellyfinSchema,
+  watchStateSchema,
 } from './schema/index.js';
 
 export const runtimeSchemas = {
@@ -52,6 +59,12 @@ export const runtimeSchemas = {
   streams: streamsSchema,
   releaseBlocklist: releaseBlocklistSchema,
   oidc: oidcSchema,
+  linkedAccounts: linkedAccountsSchema,
+  community: communitySchema,
+  shares: sharesSchema,
+  arr: arrSchema,
+  jellyfin: jellyfinSchema,
+  watchState: watchStateSchema,
 } as const;
 
 export const runtimeKeyAliases: Record<string, string> = {
@@ -96,11 +109,15 @@ function applyLoggingConfig(): void {
 export async function initialiseConfig(): Promise<void> {
   await settingsStore.initialise();
   applyLoggingConfig();
+  setRepostSuffixes(settingsStore.current.resources.repostSuffixes);
   // Also covers another replica's edit: `settings-sync` below reloads the store,
   // which emits here.
   settingsStore.subscribe(({ changed }) => {
     if (changed.has('logging.logLevel') || changed.has('logging.logFormat')) {
       applyLoggingConfig();
+    }
+    if (changed.has('resources.repostSuffixes')) {
+      setRepostSuffixes(settingsStore.current.resources.repostSuffixes);
     }
   });
 

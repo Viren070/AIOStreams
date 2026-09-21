@@ -1,8 +1,11 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { ParsedResult } from '@viren070/parse-torrent-title';
-import { parseTorrentTitleCached } from '../../parser/title.js';
-import { downloadManager, NzbTooLargeError } from '../../utils/index.js';
+import {
+  appConfig,
+  downloadManager,
+  NotAnNzbError,
+  NzbTooLargeError,
+} from '../../utils/index.js';
 import { getDataFolder } from '../../utils/general.js';
 import { createLogger } from '../../logging/logger.js';
 import {
@@ -15,6 +18,8 @@ import {
   NZB,
   selectFileInTorrentOrNZB,
   hashNzbUrl,
+  parseFileNames,
+  selectableFileNames,
 } from '../../debrid/utils.js';
 import {
   ArticleNotFoundError,
@@ -23,11 +28,12 @@ import {
   ProviderConfig,
   serializeArchiveLayout,
   parseNzb,
-  isEligibleVideoTarget,
+  isEligibleTarget,
   contentTotalSize,
   type Nzb,
   type NzbContent,
 } from '../index.js';
+import { isMediaCategory } from '../pool/file-type.js';
 import {
   markReleaseDead,
   markReleaseDeadForCode,
@@ -41,9 +47,18 @@ import {
   type UsenetLibraryEntry,
   type UsenetLibraryFile,
   type UsenetLibrarySource,
+  type UsenetLibraryOrigin,
 } from '../../db/index.js';
 import { usenetEngineRegistry, getUsenetEngineConfig } from './engine.js';
-import { attachProvisionalHoles, spawnCensusShadow } from './census-shadow.js';
+import {
+  attachProvisionalHoles,
+  spawnCensusShadow,
+  isCensusShadowLive,
+  cancelCensusShadow,
+  cancelAllCensusShadows,
+  type CensusOutcome,
+} from './census-shadow.js';
+import { CONTENT_MISMATCH, verifyImportContent } from './verify-content.js';
 import {
   classifyNoStreamable,
   classifyAvailability,
@@ -58,8 +73,16 @@ import {
   extractNzbPassword,
   nzbReleaseName,
 } from './naming.js';
-import { encodeUsenetStreamToken } from './tokens.js';
+import { encodeUsenetStreamToken, type UsenetStreamToken } from './tokens.js';
 import { inspectScheduler, type InspectPriority } from './inspect-scheduler.js';
+import { nextCheckAt } from './recheck-schedule.js';
+import {
+  onArrDownloadReady,
+  enqueueArrRepair,
+  processArrRepairs,
+} from './arr-bridge.js';
+import { arrConfigured, nudgeArrs } from '../../arr/index.js';
+import { shouldSkipDegraded } from './damage-policy.js';
 import {
   indexerLabelFor,
   recordGrabOutcome,
@@ -112,8 +135,17 @@ const parsedNzbCache = new Map<
 /** Lookup-key aliases (search-time hash → content hash), FIFO-capped. */
 const parsedNzbAliases = new Map<string, string>();
 
+// Sweep the parsed-NZB cache every minute to evict expired entries.
+const parsedNzbSweepTimer = setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of parsedNzbCache) {
+    if (now - v.at > PARSED_NZB_TTL_MS) parsedNzbCache.delete(k);
+  }
+}, 60_000);
+parsedNzbSweepTimer.unref?.();
+
 function rememberParsedNzbAlias(hash: string, contentHash: string): void {
-  if (hash === contentHash) return;
+  if (!hash || hash === contentHash) return;
   parsedNzbAliases.delete(hash);
   parsedNzbAliases.set(hash, contentHash);
   while (parsedNzbAliases.size > PARSED_NZB_MAX_ALIASES) {
@@ -221,6 +253,17 @@ export async function fetchNzb(
   try {
     return await downloadManager.fetchNzb(url, { signal });
   } catch (err) {
+    if (err instanceof NotAnNzbError) {
+      throw new DebridError(err.message, {
+        statusCode: 502,
+        statusText: 'Bad Gateway',
+        code: 'BAD_GATEWAY',
+        headers: {},
+        body: null,
+        type: 'upstream_error',
+        cause: err,
+      });
+    }
     if (err instanceof NzbTooLargeError) {
       throw new DebridError(err.message, {
         statusCode: 413,
@@ -249,7 +292,7 @@ export async function fetchNzb(
  */
 function isPlaybackTarget(f: UsenetLibraryFile): boolean {
   if (f.streamable === false) return false;
-  return f.category === undefined || f.category === 'video';
+  return f.category === undefined || isMediaCategory(f.category);
 }
 
 /** Project a persisted library file onto the shared {@link DebridFile} shape. */
@@ -299,8 +342,7 @@ function collectLibraryFiles(
     if (f.error) continue;
     if (
       f.streamable &&
-      (!opts.eligibleOnly ||
-        isEligibleVideoTarget(f.filename, f.size, releaseSize))
+      (!opts.eligibleOnly || isEligibleTarget(f.filename, f.size, releaseSize))
     ) {
       files.push({
         name: f.filename,
@@ -315,8 +357,8 @@ function collectLibraryFiles(
       if (
         opts.eligibleOnly &&
         (!inner.streamable ||
-          inner.category !== 'video' ||
-          !isEligibleVideoTarget(inner.path, inner.size, releaseSize))
+          !isMediaCategory(inner.category) ||
+          !isEligibleTarget(inner.path, inner.size, releaseSize))
       ) {
         continue;
       }
@@ -370,6 +412,7 @@ async function importNzb(
     name?: string;
     owner?: string;
     source: UsenetLibrarySource;
+    origin: UsenetLibraryOrigin;
     nzbUrl?: string;
     category?: string;
     providers: ProviderConfig[];
@@ -400,7 +443,8 @@ async function importNzb(
   files: UsenetLibraryFile[];
   status: 'available' | 'degraded';
 }> {
-  const { nzbHash, nzb, name, owner, source, nzbUrl } = spec;
+  const { nzbHash, nzb, name, owner, source, origin, nzbUrl } = spec;
+  const postedAt = nzbPostedAt(nzb);
   const grabLabel = indexerLabelFor(spec.indexer, nzbUrl);
   // Every terminal exit records exactly one grab outcome; verdict paths record
   // before throwing, the outer catch sweeps up anything unrecorded.
@@ -428,9 +472,11 @@ async function importNzb(
       name,
       owner,
       source,
+      origin,
       nzbUrl,
       category: spec.category,
       releaseKey: spec.releaseKey,
+      postedAt,
     }).catch(() => {});
     await UsenetLibraryRepository.setStatus(nzbHash, 'inspecting').catch(
       () => {}
@@ -538,7 +584,19 @@ async function importNzb(
       });
     }
 
+    if (
+      (await verifyImportContent(engine, nzb, playable, jobSignal)) === 'bad'
+    ) {
+      const { code, reason } = CONTENT_MISMATCH;
+      content.census?.cancel();
+      recordOnce('failed', { errorCode: code });
+      throw await failImport(nzbHash, name, reason, code, {
+        reasonCode: code,
+      });
+    }
+
     const best = playable.reduce((a, b) => (b.size > a.size ? b : a));
+    engine.warmTarget(nzb, { index: best.index, layout: best.layout });
     // Small damage the census confirmed within the blocking window: the entry
     // lands as degraded with its per-file hole map attached (playback
     // pre-pads).
@@ -552,11 +610,15 @@ async function importNzb(
       files,
       owner,
       source,
+      origin,
+      postedAt,
       importMs: (spec.prepMs ?? 0) + (doneAt - inspectStart),
       nzbUrl,
       password: extractNzbPassword(nzb.meta, name),
       status: degraded ? 'degraded' : 'available',
       releaseKey: spec.releaseKey,
+      nextCheckAt:
+        nextCheckAt({ postedAt, addedAt: undefined }, doneAt) ?? undefined,
     }).catch((err) =>
       logger.warn({ err, nzbHash }, 'failed to persist usenet library entry')
     );
@@ -566,6 +628,10 @@ async function importNzb(
     // The release demonstrably exists (degraded still plays), so any dead
     // verdict for it is wrong.
     retractRelease(spec.releaseKey, nzbContentKey(nzbHash));
+    if (origin === 'sabnzbd') {
+      const row = await UsenetLibraryRepository.get(nzbHash);
+      if (row) onArrDownloadReady(row);
+    }
     // The census tail keeps auditing in the background; its final verdict
     // updates the entry (degraded/failed/promoted) when it completes.
     spawnCensusShadow({
@@ -575,7 +641,13 @@ async function importNzb(
       content,
       engine,
       releaseKey: spec.releaseKey,
+      onSettled: async (outcome) => {
+        if (origin === 'sabnzbd') {
+          await handleArrCensusSettled(nzbHash, outcome);
+        }
+      },
     });
+    scheduleArrHoldExpiryNudge(nzbHash, origin);
     return { files, status: degraded ? 'degraded' : 'available' };
   } catch (err) {
     if (jobSignal.aborted) {
@@ -601,6 +673,65 @@ async function importNzb(
     }
     throw err;
   }
+}
+
+/**
+ * A download client's row settled its census: hand the verdict to the arr.
+ * Either way the SAB view just left `Downloading` (or flipped to `Failed`),
+ * so ask the arrs to poll now instead of waiting out their scheduled
+ * refresh.
+ */
+async function handleArrCensusSettled(
+  nzbHash: string,
+  outcome: CensusOutcome
+): Promise<void> {
+  try {
+    const entry = await UsenetLibraryRepository.get(nzbHash);
+    if (!entry) return;
+    // Same replaceability rule as the recheck.
+    const replaceable =
+      outcome === 'failed' ||
+      (outcome === 'degraded' &&
+        shouldSkipDegraded('degraded', appConfig.usenet.damagePolicy));
+    if (replaceable) {
+      await enqueueArrRepair(
+        entry,
+        outcome === 'failed' ? 'failed' : 'degraded'
+      );
+      await processArrRepairs();
+    }
+    await nudgeArrs(entry.category);
+  } catch (err) {
+    logger.warn(
+      { nzbHash, outcome, err: (err as Error)?.message },
+      'arr hand-off after census verdict failed'
+    );
+  }
+}
+
+/**
+ * The hold timeout flips a still-auditing download-client row to Completed
+ * with no event announcing it; poke the arrs when it lapses so the hand-off
+ * is not left to their scheduled refresh. The settle path covers a census
+ * that finishes first.
+ */
+function scheduleArrHoldExpiryNudge(
+  nzbHash: string,
+  origin: UsenetLibraryOrigin
+): void {
+  if (origin !== 'sabnzbd' || !isCensusShadowLive(nzbHash)) return;
+  // Without a linked arr the hold lasts the whole census (no repair path).
+  if (!appConfig.usenet.arrWaitForCensus || !arrConfigured()) return;
+  const timer = setTimeout(
+    () => {
+      if (!isCensusShadowLive(nzbHash)) return;
+      UsenetLibraryRepository.get(nzbHash)
+        .then((entry) => entry && nudgeArrs(entry.category))
+        .catch(() => {});
+    },
+    appConfig.usenet.arrCensusHoldTimeout * 1000 + 2_000
+  );
+  timer.unref?.();
 }
 
 /**
@@ -747,6 +878,7 @@ export async function resolveFileList(
             name: playbackInfo.filename,
             owner,
             source: 'auto',
+            origin: 'playback',
             nzbUrl: playbackInfo.nzb,
             providers,
             options,
@@ -771,6 +903,17 @@ export async function resolveFileList(
   };
 }
 
+/** Every removal path goes through here so a background audit never outlives its row. */
+export async function deleteUsenetLibraryEntry(nzbHash: string): Promise<void> {
+  cancelCensusShadow(nzbHash);
+  await UsenetLibraryRepository.delete(nzbHash);
+}
+
+export async function clearUsenetLibrary(): Promise<void> {
+  cancelAllCensusShadows();
+  await UsenetLibraryRepository.clear();
+}
+
 /**
  * Pick the file to play. Honours an explicit `fileIndex`, short-circuits a
  * single-file NZB, and otherwise defers to the shared metadata-aware
@@ -790,10 +933,7 @@ export async function selectStreamFile(
 
   const title = playbackInfo.filename ?? filename;
   const totalSize = files.reduce((s, f) => s + f.size, 0);
-  const parsedFiles = new Map<string, ParsedResult>();
-  for (const s of [title, ...files.map((f) => f.name ?? '')]) {
-    if (!parsedFiles.has(s)) parsedFiles.set(s, parseTorrentTitleCached(s));
-  }
+  const parsedFiles = await parseFileNames(selectableFileNames(title, files));
 
   const nzbInfo: NZB = {
     type: 'usenet',
@@ -833,6 +973,7 @@ async function importNzbInBackground(args: {
   name: string;
   sourceUrl?: string;
   owner?: string;
+  origin: UsenetLibraryOrigin;
   category?: string;
   providers: ProviderConfig[];
   options: Partial<EngineOptions>;
@@ -852,6 +993,7 @@ async function importNzbInBackground(args: {
             name: args.name,
             owner: args.owner,
             source: 'manual',
+            origin: args.origin,
             nzbUrl: args.sourceUrl,
             category: args.category,
             providers: args.providers,
@@ -885,7 +1027,15 @@ export async function addUsenetNzb(opts: {
   category?: string;
   /** Explicit archive password; overrides any `<meta password>` in the NZB. */
   password?: string;
+  /** Who is adding: a dashboard user or a SABnzbd-protocol client. */
+  origin?: 'dashboard' | 'sabnzbd';
+  /**
+   * Add even when the release blocklist says the post is dead. Set by an
+   * explicit retry, where the caller already knows and is asking anyway.
+   */
+  skipBlocklist?: boolean;
 }): Promise<UsenetLibraryEntry> {
+  const origin = opts.origin ?? 'dashboard';
   const { providers, options } = getUsenetEngineConfig();
   if (providers.length === 0) {
     throw new DebridError('no usenet providers are configured', {
@@ -930,7 +1080,8 @@ export async function addUsenetNzb(opts: {
   }
   let nzb: Nzb;
   try {
-    nzb = await parseNzb(xml);
+    // Cached under the content hash so the first play does not re-parse the XML.
+    nzb = await parseNzbCached('', xml);
   } catch (err) {
     recordGrabOutcome({
       indexer: indexerLabelFor(undefined, opts.url),
@@ -947,6 +1098,9 @@ export async function addUsenetNzb(opts: {
     nzb.meta = { ...nzb.meta, password: opts.password };
   }
   const nzbHash = nzb.hash;
+  // A download client keeps offering the same dead post after each failed
+  // grab; refusing it here lets the arr move on to the next candidate.
+  if (!opts.skipBlocklist) await assertNotBlocklisted(nzbHash);
   const name = stripNzbExt(
     opts.name?.trim() ||
       nzbReleaseName(nzb.meta, nzb.files[0]?.filename) ||
@@ -966,8 +1120,10 @@ export async function addUsenetNzb(opts: {
     name,
     owner: opts.owner,
     source: 'manual',
+    origin,
     nzbUrl: sourceUrl,
     category: opts.category,
+    postedAt: nzbPostedAt(nzb),
   });
   // Record the search-time hash of the source URL so a later auto-resolve of
   // the same indexer link converges on this row instead of creating a second
@@ -987,6 +1143,7 @@ export async function addUsenetNzb(opts: {
     name,
     sourceUrl,
     owner: opts.owner,
+    origin,
     category: opts.category,
     providers,
     options,
@@ -995,6 +1152,135 @@ export async function addUsenetNzb(opts: {
   });
 
   return (await UsenetLibraryRepository.get(nzbHash))!;
+}
+
+/** Earliest `<file date>` in an NZB, epoch seconds. */
+export function nzbPostedAt(nzb: Nzb): number | undefined {
+  let min: number | undefined;
+  for (const file of nzb.files) {
+    if (file.date && file.date > 0 && (min === undefined || file.date < min)) {
+      min = file.date;
+    }
+  }
+  return min;
+}
+
+/** Refuse a post the release blocklist knows is dead. */
+async function assertNotBlocklisted(nzbHash: string): Promise<void> {
+  const contentKey = nzbContentKey(nzbHash);
+  if (!contentKey) return;
+  const verdict = await ReleaseBlocklistRepository.evaluateKeys(
+    [contentKey],
+    blocklistEvalOptions()
+  )
+    .then((verdicts) => verdicts.get(contentKey))
+    .catch(() => undefined);
+  if (!verdict?.filtered) return;
+  logger.debug(
+    { hash: nzbHash, key: contentKey, reason: verdict.reason },
+    'refusing nzb add: post is blocklisted'
+  );
+  throw new DebridError(
+    `nzb is blocklisted (${verdict.reason ?? verdict.verdict})`,
+    {
+      statusCode: 404,
+      statusText: 'Not Found',
+      code: 'NOT_FOUND',
+      headers: {},
+      body: null,
+      type: 'api_error',
+    }
+  );
+}
+
+/**
+ * What a download client's "remove" means for a row. A completed import is
+ * hidden rather than deleted: the arr's library now holds a link into
+ * `by-id/`, so the row must stay a valid stream target. Rows that were never
+ * imported (failed, still queued) and `content`-mode rows the arr copied
+ * out of are really gone.
+ */
+export async function removeForArr(
+  nzbHash: string,
+  opts: { deleteFiles: boolean }
+): Promise<'deleted' | 'hidden' | 'missing'> {
+  const entry = await UsenetLibraryRepository.get(nzbHash);
+  if (!entry) return 'missing';
+  const imported = entry.status === 'available' || entry.status === 'degraded';
+  const copied = appConfig.arr.importMode === 'content' && opts.deleteFiles;
+  if (!imported || copied) {
+    await deleteUsenetLibraryEntry(nzbHash);
+    return 'deleted';
+  }
+  await UsenetLibraryRepository.setHidden(nzbHash, true);
+  return 'hidden';
+}
+
+/**
+ * Pick a library file by selector: inner path, then index, then name. Without
+ * a selector (or when nothing matches) the largest streamable file wins.
+ */
+export function selectLibraryFile(
+  entry: UsenetLibraryEntry,
+  fileSel?: string
+): UsenetLibraryFile | undefined {
+  let file: UsenetLibraryFile | undefined;
+  if (fileSel) {
+    file =
+      entry.files.find((f) => f.path === fileSel) ??
+      entry.files.find((f) => String(f.index) === fileSel) ??
+      entry.files.find((f) => f.name === fileSel);
+  }
+  if (!file) {
+    file = entry.files
+      .filter((f) => f.streamable !== false)
+      .reduce<
+        UsenetLibraryFile | undefined
+      >((a, b) => (a && a.size > b.size ? a : b), undefined);
+  }
+  return file;
+}
+
+/**
+ * Display filename for a library file. Always a single path segment: it
+ * names share-tree leaves and symlink targets, and a disc-structure inner
+ * file carries its folders in `name` (BDMV/STREAM/...), which no POSIX
+ * directory entry may contain.
+ */
+export function libraryFileName(
+  entry: UsenetLibraryEntry,
+  file: UsenetLibraryFile
+): string {
+  return baseName(
+    file.name ??
+      (file.path ? baseName(file.path) : undefined) ??
+      entry.name ??
+      entry.nzbHash
+  );
+}
+
+/**
+ * Decoded stream token for a library file. Requires the entry to retain its
+ * source URL, which is how the stream session re-fetches the NZB.
+ */
+export function libraryFileToken(
+  entry: UsenetLibraryEntry,
+  file: UsenetLibraryFile,
+  /** User the resulting stream is attributed to. */
+  owner?: string
+): UsenetStreamToken {
+  if (!entry.nzbUrl) {
+    throw new Error(`library entry ${entry.nzbHash} has no source NZB URL`);
+  }
+  return {
+    nzb: entry.nzbUrl,
+    hash: entry.nzbHash,
+    fileIndex: file.index,
+    innerPath: file.path,
+    filename: libraryFileName(entry, file),
+    releaseKey: entry.releaseKey,
+    owner,
+  };
 }
 
 /**
@@ -1010,35 +1296,13 @@ export async function mintUsenetLibraryToken(
 ): Promise<{ token: string; filename: string } | undefined> {
   const entry = (await UsenetLibraryRepository.getResolved(nzbHash))?.entry;
   if (!entry?.nzbUrl) return undefined;
-  let file: UsenetLibraryFile | undefined;
-  if (fileSel) {
-    file =
-      entry.files.find((f) => f.path === fileSel) ??
-      entry.files.find((f) => String(f.index) === fileSel) ??
-      entry.files.find((f) => f.name === fileSel);
-  }
-  if (!file) {
-    file = entry.files
-      .filter((f) => f.streamable !== false)
-      .reduce<
-        UsenetLibraryFile | undefined
-      >((a, b) => (a && a.size > b.size ? a : b), undefined);
-  }
+  const file = selectLibraryFile(entry, fileSel);
   if (!file) return undefined;
-  const filename =
-    file.name ??
-    (file.path ? baseName(file.path) : undefined) ??
-    entry.name ??
-    entry.nzbHash;
-  const token = encodeUsenetStreamToken({
-    nzb: entry.nzbUrl,
-    hash: entry.nzbHash,
-    fileIndex: file.index,
-    innerPath: file.path,
-    filename,
-    owner,
-  });
-  return { token, filename };
+  const decoded = libraryFileToken(entry, file, owner);
+  return {
+    token: encodeUsenetStreamToken(decoded),
+    filename: decoded.filename,
+  };
 }
 
 /**
@@ -1090,7 +1354,7 @@ async function requeueEntry(
   const grabMs = Date.now() - fetchStart;
   let nzb: Nzb;
   try {
-    nzb = await parseNzb(xml);
+    nzb = await parseNzbCached(entry.nzbHash, xml);
   } catch (err) {
     recordGrabOutcome({
       indexer: indexerLabelFor(undefined, nzbUrl),
@@ -1110,7 +1374,7 @@ async function requeueEntry(
   // The source URL may serve different content than when the row was
   // created; trust the fresh parse
   if (nzb.hash !== entry.nzbHash) {
-    await UsenetLibraryRepository.delete(entry.nzbHash).catch(() => {});
+    await deleteUsenetLibraryEntry(entry.nzbHash).catch(() => {});
   }
   if (!nzbUrl.startsWith(LOCAL_NZB_SCHEME)) {
     await UsenetLibraryRepository.recordAlias(
@@ -1124,9 +1388,11 @@ async function requeueEntry(
     name,
     owner: entry.owner,
     source: 'manual',
+    origin: entry.origin,
     nzbUrl,
     category: entry.category,
     releaseKey: entry.releaseKey,
+    postedAt: nzbPostedAt(nzb),
   });
   void importNzbInBackground({
     nzbHash: nzb.hash,
@@ -1134,6 +1400,7 @@ async function requeueEntry(
     name,
     sourceUrl: nzbUrl,
     owner: entry.owner,
+    origin: entry.origin,
     category: entry.category,
     providers,
     options,

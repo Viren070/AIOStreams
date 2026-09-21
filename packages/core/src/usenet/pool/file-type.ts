@@ -1,11 +1,22 @@
-export type FileCategory = 'video' | 'archive' | 'par2' | 'subtitle' | 'other';
+export type FileCategory =
+  | 'video'
+  | 'audio'
+  | 'archive'
+  | 'par2'
+  | 'subtitle'
+  | 'other';
 
 export interface DetectedType {
   category: FileCategory;
-  /** Container/format label, e.g. 'matroska', 'mp4', 'rar', 'par2'. */
+  /** Container/format label, e.g. 'matroska', 'mp4', 'flac', 'rar', 'par2'. */
   format?: string;
   /** Whether this is a directly streamable media container. */
   streamable: boolean;
+}
+
+/** Playable content: what the library persists, selects and serves. */
+export function isMediaCategory(category: string | undefined): boolean {
+  return category === 'video' || category === 'audio';
 }
 
 const VIDEO_EXT = new Set([
@@ -25,6 +36,20 @@ const VIDEO_EXT = new Set([
   'ogv',
   'mka',
 ]);
+const AUDIO_EXT = new Set([
+  'mp3',
+  'm4a',
+  'm4b',
+  'flac',
+  'ogg',
+  'oga',
+  'opus',
+  'aac',
+  'wma',
+  'wav',
+  'aiff',
+  'aif',
+]);
 const ARCHIVE_EXT = new Set(['rar', 'zip', '7z', 'tar', 'gz']);
 const SUBTITLE_EXT = new Set(['srt', 'sub', 'idx', 'ass', 'ssa', 'vtt']);
 
@@ -33,7 +58,8 @@ export function detectFileType(
   sample: Buffer,
   filename?: string
 ): DetectedType {
-  const magic = detectByMagic(sample);
+  const ext = extensionOf(filename);
+  const magic = detectByMagic(sample, ext);
   if (magic) return magic;
 
   // Multi-part archive volume names whose final "extension" is a number
@@ -48,10 +74,11 @@ export function detectFileType(
     }
   }
 
-  const ext = extensionOf(filename);
   if (ext) {
     if (VIDEO_EXT.has(ext))
       return { category: 'video', format: ext, streamable: true };
+    if (AUDIO_EXT.has(ext))
+      return { category: 'audio', format: ext, streamable: true };
     // Disc images are stored video content; players (VLC/Kodi/Infuse) mount
     // BDMV/UHD ISOs directly, and our byte-range path serves them as-is.
     if (ext === 'iso' || ext === 'img')
@@ -75,7 +102,7 @@ export function extensionForFormat(format?: string): string | undefined {
   if (!format) return undefined;
   const mapped = FORMAT_EXT[format];
   if (mapped) return mapped;
-  return VIDEO_EXT.has(format) ? format : undefined;
+  return VIDEO_EXT.has(format) || AUDIO_EXT.has(format) ? format : undefined;
 }
 
 const FORMAT_EXT: Record<string, string> = {
@@ -84,28 +111,63 @@ const FORMAT_EXT: Record<string, string> = {
   iso: 'iso',
 };
 
-function detectByMagic(b: Buffer): DetectedType | undefined {
+const audio = (format: string): DetectedType => ({
+  category: 'audio',
+  format,
+  streamable: true,
+});
+
+function detectByMagic(b: Buffer, ext?: string): DetectedType | undefined {
   if (b.length < 4) return undefined;
+  const audioExt = ext && AUDIO_EXT.has(ext) ? ext : undefined;
 
   // Matroska / WebM (EBML)
   if (b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3) {
     return { category: 'video', format: 'matroska', streamable: true };
   }
-  // MP4 / MOV: 'ftyp' at offset 4
+  // MP4 / MOV / M4A / M4B: 'ftyp' at offset 4. The major brand names the
+  // audio-only variants; a generic brand (isom/mp42) is video unless the
+  // extension says otherwise.
   if (b.length >= 12 && b.subarray(4, 8).toString('latin1') === 'ftyp') {
+    const brand = b.subarray(8, 12).toString('latin1').trim().toLowerCase();
+    if (brand === 'm4b') return audio('m4b');
+    if (brand === 'm4a' || brand === 'm4p') return audio('m4a');
+    if (audioExt) return audio(audioExt);
     return { category: 'video', format: 'mp4', streamable: true };
   }
-  // AVI: 'RIFF' .... 'AVI '
-  if (
-    b.subarray(0, 4).toString('latin1') === 'RIFF' &&
-    b.length >= 12 &&
-    b.subarray(8, 12).toString('latin1') === 'AVI '
-  ) {
-    return { category: 'video', format: 'avi', streamable: true };
+  // RIFF: 'AVI ' or 'WAVE' at offset 8
+  if (b.length >= 12 && b.subarray(0, 4).toString('latin1') === 'RIFF') {
+    const form = b.subarray(8, 12).toString('latin1');
+    if (form === 'AVI ') {
+      return { category: 'video', format: 'avi', streamable: true };
+    }
+    if (form === 'WAVE') return audio('wav');
   }
   // MPEG-TS: 0x47 sync byte (and again 188 bytes later when available)
   if (b[0] === 0x47 && (b.length < 189 || b[188] === 0x47)) {
     return { category: 'video', format: 'mpegts', streamable: true };
+  }
+  // ID3v2 tag: MP3 in practice (a tagged AAC/FLAC keeps its extension's name).
+  if (b.subarray(0, 3).toString('latin1') === 'ID3') {
+    return audio(audioExt ?? 'mp3');
+  }
+  if (b.subarray(0, 4).toString('latin1') === 'fLaC') return audio('flac');
+  // Ogg: Theora video or Vorbis/Opus/FLAC audio, told apart by the first
+  // stream's header packet, which sits inside the first page.
+  if (b.subarray(0, 4).toString('latin1') === 'OggS') {
+    const head = b.subarray(0, 128).toString('latin1');
+    if (head.includes('theora')) {
+      return { category: 'video', format: 'ogv', streamable: true };
+    }
+    return audio(audioExt ?? (head.includes('OpusHead') ? 'opus' : 'ogg'));
+  }
+  // AIFF: 'FORM' .... 'AIFF' / 'AIFC'
+  if (
+    b.length >= 12 &&
+    b.subarray(0, 4).toString('latin1') === 'FORM' &&
+    /^AIF[FC]$/.test(b.subarray(8, 12).toString('latin1'))
+  ) {
+    return audio('aiff');
   }
   // PAR2: magic 'PAR2\0PKT'
   if (b.subarray(0, 8).toString('latin1') === 'PAR2\x00PKT') {

@@ -1,7 +1,7 @@
 import { RandomAccess, readAtIntoFrom } from '../random-access.js';
 import { AesStoredRegion } from '../types.js';
 import { CbcSeekableSource } from './cbc-source.js';
-import { deriveAesKey, decryptAesRegion } from './aes7z.js';
+import { deriveAesKey } from './aes7z.js';
 
 /**
  * The decrypted plaintext of a 7z store+encrypt folder (an `AES → Copy`
@@ -11,15 +11,16 @@ import { deriveAesKey, decryptAesRegion } from './aes7z.js';
  * read through an {@link ArchiveInnerStream}.
  */
 export class AesFolderSource extends CbcSeekableSource {
-  private readonly key: Buffer;
-
   constructor(
     private readonly parent: RandomAccess,
     private readonly region: AesStoredRegion,
     password: string
   ) {
-    super(region.packSize, region.iv);
-    this.key = deriveAesKey(password, region.cycles, region.salt);
+    super(
+      region.packSize,
+      region.iv,
+      deriveAesKey(password, region.cycles, region.salt)
+    );
   }
 
   protected readCipherInto(
@@ -37,9 +38,5 @@ export class AesFolderSource extends CbcSeekableSource {
       length,
       signal
     );
-  }
-
-  protected decryptBlocks(iv: Buffer, cipher: Buffer): Buffer {
-    return decryptAesRegion(this.key, iv, cipher);
   }
 }

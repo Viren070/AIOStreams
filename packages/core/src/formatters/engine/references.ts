@@ -1,5 +1,5 @@
 import { TemplateNode } from './ast.js';
-import { parseTemplate } from './parser.js';
+import { eachTemplate, parseTemplate } from './parser.js';
 
 /** Matches the parser's own branch cap, so both give up at the same nesting. */
 const MAX_BRANCH_DEPTH = 5;
@@ -17,6 +17,14 @@ function collect(
     if (node.kind !== 'expression') continue;
 
     for (const operand of node.operands) {
+      if (depth < MAX_BRANCH_DEPTH) {
+        for (const modifier of operand.modifiers) {
+          const template = eachTemplate(modifier);
+          if (template) {
+            collect(parseTemplate(template.content).nodes, found, depth + 1);
+          }
+        }
+      }
       // quoted literals stand in for a field but reference none
       if (operand.literal !== undefined || !operand.section) continue;
       found.add(`${operand.section}.${operand.property}`);

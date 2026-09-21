@@ -1,8 +1,12 @@
 import { createLogger } from '../../../logging/logger.js';
 import { OrderedParallelStream } from '../ordered-parallel-stream.js';
 import type { HoleDecision, HoleKind } from '../../holes.js';
+import type { SlotBank } from '../slot-bank.js';
 
 const logger = createLogger('usenet/archive-range');
+
+/** Window 0, kept inside one segment so the first byte costs one fetch. */
+const PRIME_WINDOW_BYTES = 128 * 1024;
 
 export interface ParallelRangeStreamOptions {
   /**
@@ -23,10 +27,14 @@ export interface ParallelRangeStreamOptions {
   end: number;
   /** Window granularity: roughly one segment so each window ≈ one fetch. */
   windowBytes: number;
+  primeBytes?: number;
   /** Max windows fetched concurrently (the per-stream connection budget). */
   concurrency: number;
   /** Soft cap on buffered (fetched-but-not-yet-emitted) bytes (read-ahead). */
   maxBufferedBytes: number;
+  slotBank?: SlotBank;
+  /** See OrderedParallelStreamOptions.signal. */
+  signal?: AbortSignal;
   /**
    * Decision hook for a window whose read died on a definitive all-providers
    * verdict: `pad` zero-fills the window and keeps streaming, `fail` destroys
@@ -59,6 +67,7 @@ export class ParallelRangeStream extends OrderedParallelStream {
   private start: number;
   private end: number;
   private windowBytes: number;
+  private primeBytes: number;
   private onHole?: ParallelRangeStreamOptions['onHole'];
   /** Fired on destroy/EOF to stop stale window walks (see class doc). */
   private abortController = new AbortController();
@@ -67,40 +76,57 @@ export class ParallelRangeStream extends OrderedParallelStream {
     const start = Math.max(0, opts.start);
     const end = Math.max(start, opts.end);
     const windowBytes = Math.max(1, opts.windowBytes);
+    const primeBytes = Math.max(
+      1,
+      Math.min(opts.primeBytes ?? PRIME_WINDOW_BYTES, windowBytes)
+    );
     const concurrency = Math.max(1, opts.concurrency);
     const maxBufferedBytes = Math.max(windowBytes, opts.maxBufferedBytes);
     const prefetchWindows = Math.ceil(maxBufferedBytes / windowBytes);
+    const span = end - start;
     super({
-      highWaterMark: Math.max(1, opts.maxBufferedBytes),
-      totalTasks: Math.ceil((end - start) / windowBytes),
+      totalTasks:
+        span <= primeBytes
+          ? Math.min(1, span)
+          : 1 + Math.ceil((span - primeBytes) / windowBytes),
       maxConcurrency: concurrency,
+      taskBytes: windowBytes,
       maxBufferedBytes,
-      slotCap: prefetchWindows + concurrency + 16,
+      slotCap: 2 * prefetchWindows + concurrency + 16,
       initialMaxSlot: windowBytes,
       logger,
+      slotBank: opts.slotBank,
+      signal: opts.signal,
     });
     this.readAtIntoFn = opts.readAtInto;
     this.start = start;
     this.end = end;
     this.windowBytes = windowBytes;
+    this.primeBytes = primeBytes;
     this.onHole = opts.onHole;
   }
 
   private windowOffset(idx: number): number {
-    return this.start + idx * this.windowBytes;
+    return idx === 0
+      ? this.start
+      : this.start + this.primeBytes + (idx - 1) * this.windowBytes;
   }
 
   private windowLength(idx: number): number {
-    return Math.min(this.windowBytes, this.end - this.windowOffset(idx));
+    return Math.min(
+      idx === 0 ? this.primeBytes : this.windowBytes,
+      this.end - this.windowOffset(idx)
+    );
   }
 
   protected startTask(idx: number): void {
-    const slot = this.slots.acquire(idx, this.windowBytes);
+    const length = this.windowLength(idx);
+    const slot = this.slots.acquire(idx, length);
     this.readAtIntoFn(
       slot,
       0,
       this.windowOffset(idx),
-      this.windowLength(idx),
+      length,
       this.abortController.signal
     )
       .then((written) => this.completeTask(idx, slot.subarray(0, written)))

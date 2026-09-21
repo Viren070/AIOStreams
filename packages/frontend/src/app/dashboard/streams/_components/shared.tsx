@@ -2,7 +2,7 @@ import React from 'react';
 import { BiCloudDownload, BiLayer, BiNetworkChart } from 'react-icons/bi';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/components/ui/core/styling';
-import type { StreamTransport } from '../queries';
+import type { LiveStreamSession, StreamTransport } from '../queries';
 
 const TRANSPORTS: Record<
   StreamTransport,
@@ -162,6 +162,17 @@ export function SegmentedControl<T extends string>({
       })}
     </div>
   );
+}
+
+/** What to call a session in a list. */
+export function streamLabel(s: LiveStreamSession): string {
+  return s.filename || s.displayUrl || s.targetKey;
+}
+
+/** Progress = (range start + bytes of the current read) / size, clamped. */
+export function streamProgress(s: LiveStreamSession): number {
+  if (!s.size) return 0;
+  return Math.min(1, Math.max(0, (s.start + s.currentBytes) / s.size));
 }
 
 /** Streams with no resolvable user (tokens minted before owner tracking). */

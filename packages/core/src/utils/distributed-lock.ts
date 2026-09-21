@@ -5,8 +5,14 @@ import { RedisClientType } from 'redis';
 import { Cache, REDIS_PREFIX } from './index.js';
 import { createLogger } from '../logging/logger.js';
 import { Time } from './time.js';
+import {
+  registerLockErrorClass,
+  resolveErrorCtor,
+} from './lock-error-registry.js';
 import fs from 'fs/promises';
 import path from 'path';
+
+export { registerLockErrorClass, resolveErrorCtor };
 
 const logger = createLogger('distributed-lock');
 const lockPrefix = `${REDIS_PREFIX}lock:`;
@@ -26,10 +32,79 @@ export interface LockResult<T> {
 
 interface StoredResult<T> {
   value?: T;
-  error?: string;
-  errorCode?: string;
-  errorType?: string;
-  errorStatusCode?: number;
+  error?: Error;
+}
+
+const warnedUnregisteredClasses = new Set<string>();
+
+// message/name are non-enumerable, so flatten Errors into a revivable,
+// class-tagged object before JSON.stringify drops them.
+export function flattenError(err: Error) {
+  const className = err.constructor?.name;
+  if (
+    className &&
+    className !== 'Error' &&
+    !resolveErrorCtor(className) &&
+    !warnedUnregisteredClasses.has(className)
+  ) {
+    warnedUnregisteredClasses.add(className);
+    logger.warn(
+      `Error class '${className}' crossed a distributed lock without being registered via registerLockErrorClass - a waiter reviving it will get a plain Error instead, so any 'instanceof ${className}' check downstream will silently fail for concurrent duplicate requests.`
+    );
+  }
+  const flat: Record<string, unknown> = {
+    __lockError: true,
+    className,
+    name: err.name,
+    message: err.message,
+  };
+  for (const [k, v] of Object.entries(err)) {
+    // cause may hold a non-JSON-safe SDK error (circular refs) - drop it,
+    // and never let a field clobber a protocol key.
+    if (k !== 'cause' && k !== '__lockError' && k !== 'className') {
+      flat[k] = v;
+    }
+  }
+  return flat;
+}
+
+export function stringifyLockResult(value: unknown): string {
+  try {
+    return JSON.stringify(value, (_key, val) =>
+      val instanceof Error ? flattenError(val) : val
+    );
+  } catch (e: any) {
+    // e.g. an unanticipated circular field - must not crash the lock.
+    logger.error(
+      `Failed to serialize lock result, falling back to a minimal error: ${e.message}`
+    );
+    return JSON.stringify({
+      error: flattenError(new Error('Unserializable lock result')),
+    });
+  }
+}
+
+export function parseLockResult<T>(json: string): T {
+  return JSON.parse(json, (_key, val) => {
+    if (!val || typeof val !== 'object' || !val.__lockError) return val;
+    const ctor = resolveErrorCtor(val.className);
+    const err = (ctor ? Object.create(ctor.prototype) : new Error()) as Error;
+    for (const [k, v] of Object.entries(val)) {
+      if (k === '__lockError' || k === 'className') continue;
+      // avoids throwing on getter-only accessors, e.g. DOMException.prototype.name
+      Object.defineProperty(err, k, {
+        value: v,
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      });
+    }
+    return err;
+  });
+}
+
+export function requestLockType(): 'redis' | 'memory' {
+  return appConfig.bootstrap.redisUri ? 'redis' : 'memory';
 }
 
 export class DistributedLock {
@@ -116,6 +191,17 @@ export class DistributedLock {
       : this.withSqlLock(key, fn, options);
   }
 
+  /** Whether anyone is subscribed to a lock's completion channel. */
+  private async hasWaiters(channel: string): Promise<boolean> {
+    try {
+      const counts = await this.redis!.pubSubNumSub(channel);
+      return Number(Object.values(counts ?? {})[0] ?? 0) > 0;
+    } catch {
+      // Unknown means publish: a missed result is worse than a wasted one.
+      return true;
+    }
+  }
+
   private async withRedisLock<T>(
     key: string,
     fn: () => Promise<T>,
@@ -134,26 +220,35 @@ export class DistributedLock {
       return result === 'OK';
     };
 
+    const release = async () => {
+      if ((await this.redis!.get(redisKey)) === owner) {
+        logger.debug(`Releasing redis lock for key: ${key}`);
+        await this.redis!.del(redisKey);
+      }
+    };
+
     if (await acquireLock()) {
       logger.debug(`Redis lock acquired for key: ${key}`);
       let result: T;
       try {
         result = await fn();
-        const storedResult: StoredResult<T> = { value: result };
-        await this.redis!.publish(doneChannel, JSON.stringify(storedResult));
       } catch (e: any) {
-        const errorResult: StoredResult<T> = { error: e.message || 'Error' };
-        if (e.code !== undefined) errorResult.errorCode = String(e.code);
-        if (e.type !== undefined) errorResult.errorType = String(e.type);
-        if (e.statusCode !== undefined)
-          errorResult.errorStatusCode = Number(e.statusCode);
-        await this.redis!.publish(doneChannel, JSON.stringify(errorResult));
+        await release();
+        const errorResult: StoredResult<T> = { error: e };
+        await this.redis!.publish(
+          doneChannel,
+          stringifyLockResult(errorResult)
+        );
         throw e;
-      } finally {
-        if ((await this.redis!.get(redisKey)) === owner) {
-          logger.debug(`Releasing redis lock for key: ${key}`);
-          await this.redis!.del(redisKey);
-        }
+      }
+      await release();
+      // Serialising the result is the expensive part, and with nothing waiting it is thrown away.
+      if (await this.hasWaiters(doneChannel)) {
+        const storedResult: StoredResult<T> = { value: result };
+        await this.redis!.publish(
+          doneChannel,
+          stringifyLockResult(storedResult)
+        );
       }
       return { result, cached: false };
     }
@@ -164,26 +259,20 @@ export class DistributedLock {
 
       const cleanup = () => {
         clearTimeout(timeoutId);
-        this.subRedis!.unsubscribe(doneChannel).catch((e) =>
+        // Only this waiter's listener: others in this process may share the channel.
+        this.subRedis!.unsubscribe(doneChannel, subscriber).catch((e) =>
           logger.error(`Error during unsubscribe: ${e.message}`)
         );
       };
 
       const subscriber = (message: string) => {
         cleanup();
-        const storedResult: StoredResult<T> = JSON.parse(message);
+        const storedResult: StoredResult<T> = parseLockResult(message);
         if (storedResult.error) {
           logger.warn(
             `Received error result for key: ${key} from lock holder.`
           );
-          const err = new Error(storedResult.error);
-          if (storedResult.errorCode !== undefined)
-            (err as any).code = storedResult.errorCode;
-          if (storedResult.errorType !== undefined)
-            (err as any).type = storedResult.errorType;
-          if (storedResult.errorStatusCode !== undefined)
-            (err as any).statusCode = storedResult.errorStatusCode;
-          reject(err);
+          reject(storedResult.error);
         } else {
           logger.debug(`Received cached result for key: ${key} via pub/sub.`);
           resolve({ result: storedResult.value!, cached: true });
@@ -204,10 +293,19 @@ export class DistributedLock {
           this.redis!.get(redisKey)
             .then((lockValue) => {
               if (lockValue === null) {
-                logger.warn(
-                  `Lock for key ${key} was released before subscription completed. Timing out.`
+                /*
+                 * The holder finished between the failed acquire and the
+                 * subscription, so nothing was published to wait for. Running
+                 * it here duplicates one request; failing loses the addon.
+                 */
+                logger.debug(
+                  `Lock for key ${key} was released before subscription completed; running it here.`
                 );
-                onTimeout();
+                cleanup();
+                fn().then(
+                  (result) => resolve({ result, cached: false }),
+                  reject
+                );
               }
             })
             .catch((err) => {
@@ -492,19 +590,15 @@ export class DistributedLock {
 
         await db.exec(
           sql`UPDATE distributed_locks
-              SET result = ${JSON.stringify({ value: result })}
+              SET result = ${stringifyLockResult({ value: result })}
               WHERE key = ${key} AND owner = ${owner}`
         );
       } catch (e: any) {
         try {
-          const errorEntry: StoredResult<T> = { error: e.message || 'Error' };
-          if (e.code !== undefined) errorEntry.errorCode = String(e.code);
-          if (e.type !== undefined) errorEntry.errorType = String(e.type);
-          if (e.statusCode !== undefined)
-            errorEntry.errorStatusCode = Number(e.statusCode);
+          const errorEntry: StoredResult<T> = { error: e };
           await db.exec(
             sql`UPDATE distributed_locks
-                SET result = ${JSON.stringify(errorEntry)}
+                SET result = ${stringifyLockResult(errorEntry)}
                 WHERE key = ${key} AND owner = ${owner}`
           );
         } catch (err) {
@@ -532,17 +626,10 @@ export class DistributedLock {
         sql`SELECT result FROM distributed_locks WHERE key = ${key}`
       );
       if (lockRow && lockRow.result) {
-        const storedResult: StoredResult<T> = JSON.parse(lockRow.result);
+        const storedResult: StoredResult<T> = parseLockResult(lockRow.result);
         if (storedResult.error) {
           logger.warn(`Polled error result for key: ${key} from SQL lock.`);
-          const err = new Error(storedResult.error);
-          if (storedResult.errorCode !== undefined)
-            (err as any).code = storedResult.errorCode;
-          if (storedResult.errorType !== undefined)
-            (err as any).type = storedResult.errorType;
-          if (storedResult.errorStatusCode !== undefined)
-            (err as any).statusCode = storedResult.errorStatusCode;
-          throw err;
+          throw storedResult.error;
         }
         logger.debug(`Polled cached result for key: ${key} from SQL lock.`);
         return { result: storedResult.value!, cached: true };

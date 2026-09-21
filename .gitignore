@@ -9,3 +9,4 @@ next-env.d.ts
 metadata.json
 data/
 testing/
+build/

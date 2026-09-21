@@ -15,7 +15,13 @@ export * from './debrid/index.js';
 export * from './usenet/integration/index.js';
 export * from './release-blocklist/index.js';
 export * from './stream-sessions/index.js';
+export * from './shares/index.js';
+export * from './arr/index.js';
 export * from './proxy/index.js';
+export * from './linked-accounts/index.js';
+export * from './community/index.js';
+export * from './watch-state/index.js';
+export * from './jellyfin/index.js';
 export { SceneMappingDataset } from './metadata/scene-mappings.js';
 export { IdMappingDataset } from './metadata/id-mappings.js';
 export {
@@ -28,6 +34,8 @@ export {
   ProwlarrAddon,
   KnabenAddon,
   EztvAddon,
+  TheRARBGAddon,
+  ThePirateBayAddon,
   TorrentGalaxyAddon,
   SeaDexAddon,
   EasynewsSearchAddon,

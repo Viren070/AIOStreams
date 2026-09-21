@@ -25,7 +25,10 @@ import {
   UsenetLibraryPage,
   UsenetStatsPage,
   UsenetProvidersPage,
-  UsenetSettingsPage,
+  CommunityLayout,
+  CommunityPendingPage,
+  CommunityPublishedPage,
+  CommunityBlocksPage,
 } from './routes/dashboard-pages';
 import { SplashscreenPage } from './routes/splashscreen-page';
 import { ConfigureRoute } from './routes/configure-route';
@@ -110,6 +113,13 @@ const stremioConfigureRoute = createRoute({
 const stremioConfigureAuthRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/stremio/$uuid/$encryptedPassword/configure',
+  beforeLoad: configureBeforeLoad,
+  component: ConfigureRoute,
+});
+
+const stremioConfigureVariantRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/stremio/$uuid/$encryptedPassword/v/$variantSelector/configure',
   beforeLoad: configureBeforeLoad,
   component: ConfigureRoute,
 });
@@ -218,6 +228,38 @@ const dashboardStreamsBansRoute = createRoute({
   component: StreamsBansPage,
 });
 
+const dashboardCommunityRoute = createRoute({
+  getParentRoute: () => dashboardRoute,
+  path: 'community',
+  component: CommunityLayout,
+});
+
+const dashboardCommunityIndexRoute = createRoute({
+  getParentRoute: () => dashboardCommunityRoute,
+  path: '/',
+  beforeLoad: () => {
+    throw redirect({ to: '/dashboard/community/pending' });
+  },
+});
+
+const dashboardCommunityPendingRoute = createRoute({
+  getParentRoute: () => dashboardCommunityRoute,
+  path: 'pending',
+  component: CommunityPendingPage,
+});
+
+const dashboardCommunityPublishedRoute = createRoute({
+  getParentRoute: () => dashboardCommunityRoute,
+  path: 'published',
+  component: CommunityPublishedPage,
+});
+
+const dashboardCommunityBlocksRoute = createRoute({
+  getParentRoute: () => dashboardCommunityRoute,
+  path: 'blocks',
+  component: CommunityBlocksPage,
+});
+
 const dashboardUsersRoute = createRoute({
   getParentRoute: () => dashboardRoute,
   path: 'users',
@@ -295,25 +337,19 @@ const dashboardUsenetStatsRoute = createRoute({
   component: UsenetStatsPage,
 });
 
+// Provider accounts keep their own page: the editor is a substantial thing in
+// its own right (add / test / speed-test / order), not a settings field.
 const dashboardUsenetProvidersRoute = createRoute({
   getParentRoute: () => dashboardUsenetRoute,
   path: 'providers',
   component: UsenetProvidersPage,
 });
 
-const dashboardUsenetSettingsRoute = createRoute({
-  getParentRoute: () => dashboardUsenetRoute,
-  path: 'settings',
-  validateSearch: (search: Record<string, unknown>): { field?: string } => ({
-    field: optionalString(search.field),
-  }),
-  component: UsenetSettingsPage,
-});
-
 const routeTree = rootRoute.addChildren([
   indexRoute,
   stremioConfigureRoute,
   stremioConfigureAuthRoute,
+  stremioConfigureVariantRoute,
   loginRoute,
   oauthGdriveRoute,
   splashscreenRoute,
@@ -344,7 +380,12 @@ const routeTree = rootRoute.addChildren([
       dashboardUsenetLibraryRoute,
       dashboardUsenetStatsRoute,
       dashboardUsenetProvidersRoute,
-      dashboardUsenetSettingsRoute,
+    ]),
+    dashboardCommunityRoute.addChildren([
+      dashboardCommunityIndexRoute,
+      dashboardCommunityPendingRoute,
+      dashboardCommunityPublishedRoute,
+      dashboardCommunityBlocksRoute,
     ]),
   ]),
 ]);

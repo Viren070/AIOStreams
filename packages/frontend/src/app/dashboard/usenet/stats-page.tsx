@@ -80,7 +80,7 @@ const STATE_DOT: Record<ProviderState, string> = {
   online: 'bg-emerald-500',
   connecting: 'bg-amber-500',
   offline: 'bg-[--muted]',
-  auth_failed: 'bg-red-500',
+  auth_failed: 'bg-red-400',
   disabled: 'bg-[--muted]/40',
 };
 
@@ -108,7 +108,7 @@ function poolHealth(p: ProviderPoolInfo): PoolHealth {
   if (p.state === 'auth_failed') {
     return {
       tone: 'bad',
-      cls: 'bg-red-500',
+      cls: 'bg-red-400',
       label: 'Authentication failed',
       hint: 'The provider rejected the username or password. Update the credentials on the Providers page.',
     };
@@ -182,7 +182,7 @@ function ProviderHealthPopover({
           aria-label={`${p.name || p.id}: ${health.label}. Show details`}
           className={cn(
             'shrink-0 -my-1 p-1 rounded-full transition-opacity hover:opacity-70',
-            health.tone === 'bad' ? 'text-red-500' : 'text-amber-500'
+            health.tone === 'bad' ? 'text-red-400' : 'text-amber-500'
           )}
         >
           <BiErrorCircle className="w-4 h-4" />
@@ -384,7 +384,7 @@ function LivePanel() {
                       className={cn(
                         'absolute inset-y-0 left-0',
                         'transition-[width] ease-out motion-reduce:transition-none',
-                        p.tripped ? 'bg-red-500/30' : 'bg-brand/30'
+                        p.tripped ? 'bg-red-400/30' : 'bg-brand/30'
                       )}
                       style={{
                         width: pct(p.total),
@@ -395,7 +395,7 @@ function LivePanel() {
                       className={cn(
                         'absolute inset-y-0 left-0',
                         'transition-[width] ease-out motion-reduce:transition-none',
-                        p.tripped ? 'bg-red-500' : 'bg-brand'
+                        p.tripped ? 'bg-red-400' : 'bg-brand'
                       )}
                       style={{
                         width: pct(p.acquired),
@@ -470,7 +470,7 @@ function ProviderTable({
   }
   return (
     <div className="overflow-x-auto -mx-4 px-4 lg:mx-0 lg:px-0">
-      <table className="w-full text-sm min-w-[720px]">
+      <table className="w-full text-sm min-w-[800px]">
         <thead className="text-[--muted] text-xs uppercase">
           <tr className="text-left border-b border-[--border]">
             <th className="py-2 pr-3">Provider</th>
@@ -486,6 +486,12 @@ function ProviderTable({
             </th>
             <th className="py-2 px-3 text-right">Errors</th>
             <th className="py-2 px-3 text-right">Missing</th>
+            <th
+              className="py-2 px-3 text-right"
+              title="Articles the provider delivered whose contents failed the checksum or size check. The fetch falls over to the next provider."
+            >
+              Unreadable
+            </th>
             <th className="py-2 pl-3 w-8" aria-label="Actions" />
           </tr>
         </thead>
@@ -562,13 +568,21 @@ function ProviderTable({
               <td
                 className={cn(
                   'py-2 px-3 text-right tabular-nums',
-                  p.errorRate > 0.1 && 'text-red-500'
+                  p.errorRate > 0.1 && 'text-red-400'
                 )}
               >
                 {formatPercent(p.errorRate)}
               </td>
               <td className="py-2 px-3 text-right tabular-nums text-[--muted]">
                 {formatPercent(p.missRate)}
+              </td>
+              <td
+                className={cn(
+                  'py-2 px-3 text-right tabular-nums',
+                  p.undecodableRate > 0 ? 'text-amber-400' : 'text-[--muted]'
+                )}
+              >
+                {formatPercent(p.undecodableRate)}
               </td>
               <td className="py-2 pl-3 text-right">
                 <Tooltip
@@ -618,9 +632,11 @@ function indexerFailBreakdown(i: UsenetIndexerStatRow): string {
 }
 
 /** Popover shape mirroring {@link ProviderHealthPopover} for grab errors. */
-function indexerErrorInfo(
-  e: NonNullable<UsenetIndexerStatRow['lastError']>
-): { tone: 'bad' | 'warn'; label: string; hint: string } {
+function indexerErrorInfo(e: NonNullable<UsenetIndexerStatRow['lastError']>): {
+  tone: 'bad' | 'warn';
+  label: string;
+  hint: string;
+} {
   if (e.status === 401 || e.status === 403) {
     return {
       tone: 'bad',
@@ -663,7 +679,7 @@ function IndexerErrorPopover({
           aria-label={`${indexer}: ${info.label}. Show details`}
           className={cn(
             'shrink-0 -my-1 p-1 rounded-full transition-opacity hover:opacity-70',
-            info.tone === 'bad' ? 'text-red-500' : 'text-amber-500'
+            info.tone === 'bad' ? 'text-red-400' : 'text-amber-500'
           )}
         >
           <BiErrorCircle className="w-4 h-4" />
@@ -675,7 +691,7 @@ function IndexerErrorPopover({
           <span
             className={cn(
               'w-2 h-2 rounded-full shrink-0',
-              info.tone === 'bad' ? 'bg-red-500' : 'bg-amber-500'
+              info.tone === 'bad' ? 'bg-red-400' : 'bg-amber-500'
             )}
           />
           <span className="text-sm font-semibold">{info.label}</span>
@@ -781,7 +797,7 @@ function IndexerTable({
               <td
                 className={cn(
                   'py-2 px-3 text-right tabular-nums',
-                  i.grabs > 0 && 1 - i.successRate > 0.1 && 'text-red-500'
+                  i.grabs > 0 && 1 - i.successRate > 0.1 && 'text-red-400'
                 )}
                 title={
                   i.degraded > 0
@@ -911,6 +927,11 @@ function StatsSection({
               ? data.totals.errors / (data.totals.articles + data.totals.errors)
               : 0
           )}
+          hint={
+            data.totals.undecodable
+              ? `${formatCompact(data.totals.undecodable)} unreadable`
+              : ''
+          }
         />
       </div>
 

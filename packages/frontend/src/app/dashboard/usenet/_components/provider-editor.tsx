@@ -71,8 +71,8 @@ function Pill({
 }) {
   const styles = {
     success: 'bg-emerald-500/15 text-emerald-500',
-    alert: 'bg-red-500/15 text-red-500',
-    warning: 'bg-orange-500/15 text-orange-500',
+    alert: 'bg-red-400/15 text-red-400',
+    warning: 'bg-orange-500/15 text-orange-400',
   }[intent];
   return (
     <span

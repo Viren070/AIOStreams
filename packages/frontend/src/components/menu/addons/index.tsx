@@ -306,8 +306,9 @@ function Content() {
     <>
       <div className="flex items-center justify-between gap-2">
         <StaticTabs
-          className="h-10 w-fit max-w-full border rounded-full"
-          triggerClass="px-4 py-1 text-md"
+          className="w-fit max-w-full border rounded-full py-0"
+          triggerClass="px-4 py-1 text-md h-full rounded-full"
+          pillClass="rounded-full border-transparent"
           items={[
             {
               name: 'Installed',
@@ -422,8 +423,9 @@ function Content() {
 
               {/* Category tabs */}
               <StaticTabs
-                className="h-10 w-fit max-w-full border rounded-full"
-                triggerClass="px-4 py-1 text-sm"
+                className="w-fit max-w-full border rounded-full py-0"
+                triggerClass="px-4 py-1 text-sm h-full rounded-full"
+                pillClass="rounded-full border-transparent"
                 items={[
                   {
                     name: 'All',

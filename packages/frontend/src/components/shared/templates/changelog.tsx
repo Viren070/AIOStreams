@@ -104,7 +104,7 @@ export function TemplateChangelogModal({
   const renderBody = () => {
     if (loading) return <ChangelogLoadingSkeleton />;
     if (error)
-      return <p className="text-sm text-red-400 italic py-2">{error}</p>;
+      return <p className="text-sm text-red-300 italic py-2">{error}</p>;
     if (entries.length === 0)
       return (
         <p className="text-sm text-gray-500 italic py-2">
@@ -164,7 +164,7 @@ export function TemplateUpdateChangelogSection({
   }, [changelogUrl, update.appliedVersion]);
 
   if (loading) return <ChangelogLoadingSkeleton />;
-  if (error) return <p className="text-xs text-red-400 italic">{error}</p>;
+  if (error) return <p className="text-xs text-red-300 italic">{error}</p>;
   if (!entries || entries.length === 0)
     return (
       <p className="text-xs text-gray-500 italic">

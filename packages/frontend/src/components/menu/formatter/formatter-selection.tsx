@@ -2,11 +2,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import type { EditorView } from '@codemirror/view';
 import { Code2, Type } from 'lucide-react';
 import * as constants from '../../../../../core/src/utils/constants';
-import { BUILTIN_FORMATTER_DEFINITIONS } from '../../../../../core/src/utils/formatter-definitions';
+import {
+  BUILTIN_FORMATTER_DEFINITIONS,
+  FormatterDefinition,
+} from '../../../../../core/src/utils/formatter-definitions';
 import { useUserData } from '@/context/userData';
 import { UserData } from '@aiostreams/core';
 import { SettingsCard } from '../../shared/settings-card';
-import { Select } from '../../ui/select';
 import { FormatterEditor } from './editor';
 import { Textarea } from '../../ui/textarea';
 import { Button } from '../../ui/button';
@@ -15,11 +17,12 @@ import { Tooltip } from '../../ui/tooltip';
 import { ImportModal } from '../../shared/import-modal';
 import { useDisclosure } from '@/hooks/disclosure';
 import { toast } from 'sonner';
-import { FaFileImport, FaFileExport, FaSave } from 'react-icons/fa';
+import { FaFileImport, FaFileExport } from 'react-icons/fa';
 import { SnippetsButton } from './snippets-button';
-import { SavedFormattersModal } from './saved-formatters-modal';
+import { FormatterBrowser } from './formatter-browser';
+import { FormatterPicker } from './formatter-picker';
 import { TemplateOutline } from './template-outline';
-import { getTemplates } from './templates';
+import { getActiveSavedName, getTemplates } from './templates';
 
 // Client-only UI preference (not synced to userData): a plain-textarea fallback.
 const SIMPLE_EDITOR_KEY = 'aiostreams:formatter-simple-editor';
@@ -31,8 +34,6 @@ function loadSimpleEditorPref(): boolean {
   }
 }
 
-const formatterChoices = Object.values(constants.FORMATTER_DETAILS);
-
 // Write name+description back into userData for whatever formatter is currently active.
 function applyTemplates(
   prev: UserData,
@@ -41,6 +42,22 @@ function applyTemplates(
 ): UserData {
   const id = prev.formatter.id;
   if (id === constants.CUSTOM_FORMATTER) {
+    const activeSaved = getActiveSavedName(prev);
+    if (activeSaved) {
+      return {
+        ...prev,
+        formatter: {
+          ...prev.formatter,
+          definitions: {
+            ...prev.formatter.definitions,
+            saved: {
+              ...prev.formatter.definitions?.saved,
+              [activeSaved]: { name, description },
+            },
+          },
+        },
+      };
+    }
     return {
       ...prev,
       formatter: {
@@ -77,7 +94,7 @@ function applyTemplates(
 export function FormatterSelection() {
   const { userData, setUserData } = useUserData();
   const importModalDisclosure = useDisclosure(false);
-  const savedModalDisclosure = useDisclosure(false);
+  const browserDisclosure = useDisclosure(false);
 
   // views for the outline's go-to and for inserting snippets at the caret
   const nameViewRef = useRef<EditorView | null>(null);
@@ -136,37 +153,67 @@ export function FormatterSelection() {
   // Derived directly from userData — no local mirror state needed.
   const { name: nameTemplate, description: descriptionTemplate } =
     getTemplates(userData);
-  const isCustomised =
-    currentId !== constants.CUSTOM_FORMATTER &&
-    !!definitions?.overrides?.[currentId];
-  const savedDefinitions = definitions?.saved ?? {};
-  const showTemplates =
-    currentId === constants.CUSTOM_FORMATTER ||
-    !!BUILTIN_FORMATTER_DEFINITIONS[currentId];
+  const isCustom = currentId === constants.CUSTOM_FORMATTER;
+  const isCustomised = !isCustom && !!definitions?.overrides?.[currentId];
+  const activeSaved = getActiveSavedName(userData);
+  const showTemplates = isCustom || !!BUILTIN_FORMATTER_DEFINITIONS[currentId];
 
-  function handleIdChange(newId: string) {
-    const typedId = newId as constants.FormatterType;
-    setUserData((prev) => {
-      // When switching to custom with no existing definition, seed it from whatever is active now.
-      if (
-        typedId === constants.CUSTOM_FORMATTER &&
-        !prev.formatter.definitions?.custom
-      ) {
-        const { name, description } = getTemplates(prev);
-        return {
-          ...prev,
-          formatter: {
-            ...prev.formatter,
-            id: typedId,
-            definitions: {
-              ...prev.formatter.definitions,
-              custom: { name, description },
-            },
-          },
-        };
+  const picker = activeSaved
+    ? {
+        name: activeSaved,
+        kind: 'saved' as const,
+        detail: 'Saved in your config. Edits below update it in place.',
       }
-      return { ...prev, formatter: { ...prev.formatter, id: typedId } };
+    : isCustom
+      ? {
+          name: 'Custom',
+          kind: 'custom' as const,
+          detail: 'Your own templates, edited below.',
+        }
+      : {
+          name: constants.FORMATTER_DETAILS[currentId]?.name ?? currentId,
+          kind: isCustomised ? ('customised' as const) : ('builtin' as const),
+          detail: constants.FORMATTER_DETAILS[currentId]?.description,
+        };
+
+  function selectBuiltin(id: constants.FormatterType) {
+    setUserData((prev) => ({
+      ...prev,
+      formatter: { ...prev.formatter, id, selectedSaved: undefined },
+    }));
+    browserDisclosure.close();
+  }
+
+  function selectSaved(name: string) {
+    setUserData((prev) => {
+      if (!prev.formatter.definitions?.saved?.[name]) return prev;
+      return {
+        ...prev,
+        formatter: {
+          ...prev.formatter,
+          id: constants.CUSTOM_FORMATTER,
+          selectedSaved: name,
+        },
+      };
     });
+    browserDisclosure.close();
+  }
+
+  function selectCustom() {
+    setUserData((prev) => {
+      // Seed the custom definition from whatever is active so the editor is not empty.
+      const custom = prev.formatter.definitions?.custom ?? getTemplates(prev);
+      return {
+        ...prev,
+        formatter: {
+          ...prev.formatter,
+          id: constants.CUSTOM_FORMATTER,
+          selectedSaved: undefined,
+          definitions: { ...prev.formatter.definitions, custom },
+        },
+      };
+    });
+    browserDisclosure.close();
   }
 
   function handleReset() {
@@ -227,6 +274,8 @@ export function FormatterSelection() {
         ...prev,
         formatter: {
           ...prev.formatter,
+          id: constants.CUSTOM_FORMATTER,
+          selectedSaved: name,
           definitions: {
             ...prev.formatter.definitions,
             saved: {
@@ -237,16 +286,30 @@ export function FormatterSelection() {
         },
       };
     });
-    toast.success('Formatter saved');
+    toast.success(`Saved and switched to "${name}"`);
   }
 
-  function handleLoadSavedFormatter(savedName: string) {
+  function installFormatter(name: string, definition: FormatterDefinition) {
+    let savedName = name.trim() || 'Community formatter';
     setUserData((prev) => {
-      const saved = prev.formatter.definitions?.saved?.[savedName];
-      if (!saved) return prev;
-      return applyTemplates(prev, saved.name, saved.description);
+      const saved = prev.formatter.definitions?.saved ?? {};
+      let suffix = 2;
+      while (saved[savedName]) savedName = `${name} (${suffix++})`;
+      return {
+        ...prev,
+        formatter: {
+          ...prev.formatter,
+          id: constants.CUSTOM_FORMATTER,
+          selectedSaved: savedName,
+          definitions: {
+            ...prev.formatter.definitions,
+            saved: { ...saved, [savedName]: { ...definition } },
+          },
+        },
+      };
     });
-    toast.success(`Loaded "${savedName}"`);
+    browserDisclosure.close();
+    toast.success(`Installed as "${savedName}"`);
   }
 
   function handleRenameSavedFormatter(oldName: string, newName: string) {
@@ -256,7 +319,7 @@ export function FormatterSelection() {
       return;
     }
     if (trimmed === oldName) return;
-    if (savedDefinitions[trimmed]) {
+    if (definitions?.saved?.[trimmed]) {
       toast.error('A saved formatter with this name already exists');
       return;
     }
@@ -270,6 +333,10 @@ export function FormatterSelection() {
         ...prev,
         formatter: {
           ...prev.formatter,
+          selectedSaved:
+            prev.formatter.selectedSaved === oldName
+              ? trimmed
+              : prev.formatter.selectedSaved,
           definitions: {
             ...prev.formatter.definitions,
             saved: Object.fromEntries(entries),
@@ -283,14 +350,19 @@ export function FormatterSelection() {
   function handleDeleteSavedFormatter(savedName: string) {
     setUserData((prev) => {
       const saved = { ...(prev.formatter.definitions?.saved ?? {}) };
-      if (!saved[savedName]) return prev;
+      const removed = saved[savedName];
+      if (!removed) return prev;
       delete saved[savedName];
+      const wasActive = getActiveSavedName(prev) === savedName;
       return {
         ...prev,
         formatter: {
           ...prev.formatter,
+          selectedSaved: wasActive ? undefined : prev.formatter.selectedSaved,
           definitions: {
             ...prev.formatter.definitions,
+            // keep editing the deleted definition as the plain custom one
+            custom: wasActive ? removed : prev.formatter.definitions?.custom,
             saved: Object.keys(saved).length > 0 ? saved : undefined,
           },
         },
@@ -304,37 +376,9 @@ export function FormatterSelection() {
       <SettingsCard
         title="Formatter Selection"
         id="formatter"
-        description="Choose how your streams should be formatted"
+        description="Pick a built-in, saved or community formatter, then tune its templates below"
       >
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex-1 min-w-0">
-            <Select
-              value={currentId}
-              onValueChange={handleIdChange}
-              options={formatterChoices.map((f) => ({
-                label: f.name,
-                value: f.id,
-              }))}
-            />
-          </div>
-          {currentId !== constants.CUSTOM_FORMATTER && (
-            <span
-              className={`text-xs font-medium px-2 py-0.5 rounded-full border flex-shrink-0 min-w-[7.75rem] text-center ${
-                isCustomised
-                  ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
-                  : 'bg-green-500/20 text-green-400 border-green-500/30'
-              }`}
-            >
-              {isCustomised ? 'Customised' : 'Using built-in'}
-            </span>
-          )}
-        </div>
-
-        {currentId !== constants.CUSTOM_FORMATTER && (
-          <p className="text-sm text-muted-foreground mt-2">
-            {formatterChoices.find((f) => f.id === currentId)?.description}
-          </p>
-        )}
+        <FormatterPicker {...picker} onOpen={browserDisclosure.open} />
 
         {showTemplates && (
           <div className="space-y-4 mt-4">
@@ -433,19 +477,6 @@ export function FormatterSelection() {
                       rounded
                       size="sm"
                       intent="primary-subtle"
-                      icon={<FaSave />}
-                      onClick={savedModalDisclosure.open}
-                    />
-                  }
-                >
-                  Saved formatters
-                </Tooltip>
-                <Tooltip
-                  trigger={
-                    <IconButton
-                      rounded
-                      size="sm"
-                      intent="primary-subtle"
                       icon={<FaFileImport />}
                       onClick={importModalDisclosure.open}
                     />
@@ -478,17 +509,16 @@ export function FormatterSelection() {
         onImport={handleImport}
       />
 
-      <SavedFormattersModal
-        open={savedModalDisclosure.isOpen}
-        onOpenChange={savedModalDisclosure.toggle}
-        canSaveCurrent={
-          currentId === constants.CUSTOM_FORMATTER || isCustomised
-        }
-        savedDefinitions={savedDefinitions}
-        onSave={handleSaveCurrentFormatter}
-        onLoad={handleLoadSavedFormatter}
+      <FormatterBrowser
+        open={browserDisclosure.isOpen}
+        onOpenChange={browserDisclosure.toggle}
+        onSelectBuiltin={selectBuiltin}
+        onSelectSaved={selectSaved}
+        onSelectCustom={selectCustom}
+        onSaveCurrent={handleSaveCurrentFormatter}
         onRename={handleRenameSavedFormatter}
         onDelete={handleDeleteSavedFormatter}
+        onInstall={installFormatter}
       />
     </>
   );

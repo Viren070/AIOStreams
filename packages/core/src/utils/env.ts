@@ -243,6 +243,10 @@ export const Env = cleanEnv(process.env, {
     default: 5000,
     desc: 'Redis timeout for the addon',
   }),
+  DATABASE_POOL_SIZE: num({
+    default: 10,
+    desc: 'Maximum PostgreSQL connections this instance opens. Request traffic, the background tasks and the watch-state import all draw from this pool, so an instance serving many clients wants more than the default. Ignored for SQLite, which has a single connection.',
+  }),
   SETTINGS_REFRESH_INTERVAL: num({
     default: 30,
     desc: 'How often (seconds) each instance polls the DB settings version and reloads runtime config if another instance changed it. Set 0 to disable (single-instance deployments).',
@@ -269,7 +273,7 @@ export const Env = cleanEnv(process.env, {
   }),
   AIOSTREAMS_AUTH_PERMISSIONS: permissionsMap({
     default: new Map<string, Set<string>>(),
-    desc: 'Per-user permissions. Comma-separated `username=perm1|perm2` entries (valid permissions: admin, proxy, service, sabnzbd; or `none` for login-only with no permissions). Users not listed default to admin (a superset of all permissions). Supersedes the deprecated AIOSTREAMS_AUTH_ADMINS / AIOSTREAMS_AUTH_PROXY for any user listed here.',
+    desc: 'Per-user permissions. Comma-separated `username=perm1|perm2` entries (valid permissions: admin, proxy, service, sabnzbd, webdav; or `none` for login-only with no permissions). Users not listed default to admin (a superset of all permissions). Supersedes the deprecated AIOSTREAMS_AUTH_ADMINS / AIOSTREAMS_AUTH_PROXY for any user listed here.',
   }),
   SYSTEM_LIFECYCLE_ENABLED: bool({
     default: false,

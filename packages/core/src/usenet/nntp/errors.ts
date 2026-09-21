@@ -77,6 +77,17 @@ export class ArticleNotFoundError extends Error {
 }
 
 /**
+ * The consumer left while its article was on the wire. Transport-wise the
+ * transfer completed, so the connection is healthy; the caller just gets no
+ * decode/cache work done on its behalf.
+ */
+export class FetchAbandonedError extends NntpError {
+  constructor(provider?: string) {
+    super('connection', 'aborted', { provider });
+  }
+}
+
+/**
  * Whether an error is a definitive "no provider will give us these bytes"
  * verdict, and of which kind.
  */

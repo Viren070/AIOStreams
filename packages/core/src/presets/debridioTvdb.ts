@@ -1,6 +1,6 @@
 import { Addon, Option, UserData } from '../db/index.js';
 import { CacheKeyRequestOptions, Preset, baseOptions } from './preset.js';
-import { constants } from '../utils/index.js';
+import { constants, getSimpleTextHash } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
 import {
   debridioSocialOption,
@@ -111,7 +111,7 @@ export class DebridioTvdbPreset extends Preset {
     // allows cache key to be shared across different debridio users.
     let cacheKey = `${this.METADATA.ID}-${resource}-${type}-${id}-${extras}`;
     if (resource === 'manifest') {
-      cacheKey += `-${presetOptions.debridioApiKey}`;
+      cacheKey += `-${getSimpleTextHash(presetOptions.debridioApiKey ?? '')}`;
     }
     return cacheKey;
   }

@@ -1,12 +1,149 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useUserData } from '@/context/userData';
 import { SettingsCard } from '../../../shared/settings-card';
+import {
+  ItemActions,
+  SortableList,
+  SortableRow,
+  rowActionsClass,
+  useSortableRows,
+} from '../../../shared/sortable-rows';
 import { Select } from '../../../ui/select';
 import { TextInput } from '../../../ui/text-input';
 import { Combobox } from '../../../ui/combobox';
 import { IconButton } from '../../../ui/button';
-import { FaPlus, FaRegTrashAlt, FaArrowUp, FaArrowDown } from 'react-icons/fa';
-import { arrayMove } from '@dnd-kit/sortable';
+import { Tooltip } from '../../../ui/tooltip';
+import { FaPlus } from 'react-icons/fa';
+import { UserData } from '@aiostreams/core';
+
+type Grouping = NonNullable<
+  NonNullable<UserData['groups']>['groupings']
+>[number];
+
+/** Group 1 has nothing before it to test, so its condition is never read. */
+const FIRST_GROUP_CONDITION = 'true';
+
+function GroupList() {
+  const { userData, setUserData } = useUserData();
+  const groupings = userData.groups?.groupings ?? [];
+
+  const setGroupings = useCallback(
+    (newGroups: Grouping[]) => {
+      const normalized = [...newGroups];
+      if (normalized.length > 0 && !normalized[0].condition) {
+        normalized[0] = { ...normalized[0], condition: FIRST_GROUP_CONDITION };
+      }
+      setUserData((prev) => ({
+        ...prev,
+        groups: { ...prev.groups, groupings: normalized },
+      }));
+    },
+    [setUserData]
+  );
+
+  const rows = useSortableRows(groupings, setGroupings);
+
+  const updateGroup = (index: number, updates: Partial<Grouping>) => {
+    setGroupings(
+      groupings.map((group, i) =>
+        i === index ? { ...group, ...updates } : group
+      )
+    );
+  };
+
+  // An addon belongs to at most one group, so only the ones this group already
+  // holds and the ones no group has claimed are offered.
+  const getAvailablePresets = (currentGroupIndex: number) => {
+    const presetsInOtherGroups = new Set(
+      groupings.flatMap((group, idx) =>
+        idx !== currentGroupIndex ? group.addons : []
+      )
+    );
+
+    return userData.presets
+      .filter((preset) => !presetsInOtherGroups.has(preset.instanceId))
+      .map((preset) => ({
+        label: preset.options.name,
+        value: preset.instanceId,
+        textValue: preset.options.name,
+      }));
+  };
+
+  return (
+    <>
+      <div className="text-sm text-[--muted] mb-2">
+        Each row is one group: the addons it fetches from, and the condition
+        deciding whether it is used. Group 1 always runs, so its condition is
+        fixed.
+      </div>
+      <SortableList rows={rows}>
+        {groupings.map((group, index) => {
+          const key = rows.keyAt(index);
+          return (
+            <SortableRow key={key} id={key}>
+              <div className={rowActionsClass}>
+                <ItemActions rows={rows} index={index} />
+              </div>
+              <div className="md:flex-[2] min-w-0">
+                <Combobox
+                  multiple
+                  maxDisplayedItems={3}
+                  value={group.addons}
+                  options={getAvailablePresets(index)}
+                  emptyMessage="You haven't installed any addons yet or they are already in a group"
+                  aria-label="Addons"
+                  placeholder="Select addons"
+                  onValueChange={(value) => {
+                    updateGroup(index, { addons: value });
+                  }}
+                />
+              </div>
+              <div className="md:flex-[3] min-w-0">
+                <TextInput
+                  // Group 1 reads as `true` whatever it stores, so a condition
+                  // carried up from a lower position survives being moved back.
+                  value={index === 0 ? FIRST_GROUP_CONDITION : group.condition}
+                  disabled={index === 0}
+                  aria-label="Condition"
+                  placeholder="count(totalStreams) < 4"
+                  onValueChange={(value) => {
+                    updateGroup(index, { condition: value });
+                  }}
+                />
+              </div>
+            </SortableRow>
+          );
+        })}
+      </SortableList>
+
+      <div className="mt-2 flex gap-2 items-center">
+        <Tooltip
+          trigger={
+            <IconButton
+              rounded
+              size="sm"
+              intent="primary-subtle"
+              icon={<FaPlus />}
+              aria-label="Add group"
+              onClick={() =>
+                setGroupings([
+                  ...groupings,
+                  {
+                    addons: [],
+                    condition:
+                      groupings.length === 0 ? FIRST_GROUP_CONDITION : '',
+                  },
+                ])
+              }
+            />
+          }
+        >
+          Add group
+        </Tooltip>
+      </div>
+    </>
+  );
+}
 
 export function AddonFetchingBehaviorCard() {
   const { userData, setUserData } = useUserData();
@@ -15,49 +152,6 @@ export function AddonFetchingBehaviorCard() {
     if (userData.groups?.enabled) return 'groups';
     return 'default';
   });
-
-  // Helper function to get presets that are not in any group except the current one
-  const getAvailablePresets = (currentGroupIndex: number) => {
-    const presetsInOtherGroups = new Set(
-      userData.groups?.groupings?.flatMap((group, idx) =>
-        idx !== currentGroupIndex ? group.addons : []
-      ) || []
-    );
-
-    return userData.presets
-      .filter((preset) => {
-        return !presetsInOtherGroups.has(preset.instanceId);
-      })
-      .map((preset) => ({
-        label: preset.options.name,
-        value: preset.instanceId,
-        textValue: preset.options.name,
-      }));
-  };
-
-  const updateGroup = (
-    index: number,
-    updates: Partial<{ addons: string[]; condition: string }>
-  ) => {
-    setUserData((prev) => {
-      const currentGroups = prev.groups?.groupings || [];
-      const newGroups = [...currentGroups];
-      newGroups[index] = {
-        ...newGroups[index],
-        ...updates,
-      };
-      if (index === 0) {
-        newGroups[index].condition = 'true';
-      }
-      return {
-        ...prev,
-        groups: {
-          ...prev.groups,
-          groupings: newGroups,
-        },
-      };
-    });
-  };
 
   const handleModeChange = (newMode: string) => {
     setMode(newMode);
@@ -81,6 +175,13 @@ export function AddonFetchingBehaviorCard() {
       'Organise addons into groups with conditions. Each group can be evaluated based on results from previous groups. Read the [docs](https://docs.aiostreams.viren070.me/guides/groups) for more information.',
     dynamic:
       'All addons start fetching at the same time. As soon as any addon returns results, the exit condition is evaluated. If the condition is met, results are returned immediately and any remaining addon results are ignored.',
+  };
+
+  const conditionFailureDescriptions = {
+    stop: 'Discard this group and every group after it, including any results they had already returned.',
+    skip: "Discard this group, then carry on checking the remaining groups' conditions as normal. A later group is included only if its condition passes and it has already finished. Nothing is waited on.",
+    includeFinished:
+      'Include this group and every group after it that has already finished, ignoring their conditions. Nothing is waited on.',
   };
 
   const placeholderExitConditions = [
@@ -138,119 +239,39 @@ export function AddonFetchingBehaviorCard() {
             }
           />
 
-          {(() => {
-            const handleGroupsChange = (newGroups: any[]) => {
-              const normalized = [...newGroups];
-              if (normalized.length > 0) {
-                normalized[0] = { ...normalized[0], condition: 'true' };
-              }
-              setUserData((prev) => ({
-                ...prev,
-                groups: { ...prev.groups, groupings: normalized },
-              }));
-            };
-
-            return (userData.groups?.groupings || []).map((group, index) => (
-              <div key={index} className="flex gap-2">
-                <div className="flex-1 flex gap-2">
-                  <div className="flex-1">
-                    <Combobox
-                      multiple
-                      value={group.addons}
-                      options={getAvailablePresets(index)}
-                      emptyMessage="You haven't installed any addons yet or they are already in a group"
-                      label="Addons"
-                      placeholder="Select addons"
-                      onValueChange={(value) => {
-                        updateGroup(index, { addons: value });
-                      }}
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <TextInput
-                      value={index === 0 ? 'true' : group.condition}
-                      disabled={index === 0}
-                      label="Condition"
-                      placeholder="Enter condition"
-                      onValueChange={(value) => {
-                        updateGroup(index, { condition: value });
-                      }}
-                    />
-                  </div>
-                </div>
-                <IconButton
-                  size="sm"
-                  rounded
-                  icon={<FaArrowUp />}
-                  intent="primary-subtle"
-                  disabled={index === 0}
-                  onClick={() => {
-                    handleGroupsChange(
-                      arrayMove(
-                        userData.groups?.groupings || [],
-                        index,
-                        index - 1
-                      )
-                    );
-                  }}
-                />
-                <IconButton
-                  size="sm"
-                  rounded
-                  icon={<FaArrowDown />}
-                  intent="primary-subtle"
-                  disabled={
-                    index === (userData.groups?.groupings || []).length - 1
-                  }
-                  onClick={() => {
-                    handleGroupsChange(
-                      arrayMove(
-                        userData.groups?.groupings || [],
-                        index,
-                        index + 1
-                      )
-                    );
-                  }}
-                />
-                <IconButton
-                  size="sm"
-                  rounded
-                  icon={<FaRegTrashAlt />}
-                  intent="alert-subtle"
-                  onClick={() => {
-                    const newGroups = [...(userData.groups?.groupings || [])];
-                    newGroups.splice(index, 1);
-                    handleGroupsChange(newGroups);
-                  }}
-                />
-              </div>
-            ));
-          })()}
-
-          <div className="mt-2 flex gap-2 items-center">
-            <IconButton
-              rounded
-              size="sm"
-              intent="primary-subtle"
-              icon={<FaPlus />}
-              onClick={() => {
-                setUserData((prev) => {
-                  const currentGroups = prev.groups?.groupings || [];
-                  const newGroup = {
-                    addons: [],
-                    condition: currentGroups.length === 0 ? 'true' : '',
-                  };
-                  return {
-                    ...prev,
-                    groups: {
-                      ...prev.groups,
-                      groupings: [...currentGroups, newGroup],
-                    },
-                  };
-                });
+          {userData.groups?.behaviour !== 'sequential' && (
+            <Select
+              label="When a Condition Fails"
+              value={userData.groups?.onConditionFailure ?? 'stop'}
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  groups: {
+                    ...prev.groups,
+                    onConditionFailure: value as
+                      | 'stop'
+                      | 'skip'
+                      | 'includeFinished',
+                  },
+                }));
               }}
+              options={[
+                { label: 'Stop', value: 'stop' },
+                { label: 'Skip group and keep checking', value: 'skip' },
+                {
+                  label: 'Keep everything already finished',
+                  value: 'includeFinished',
+                },
+              ]}
+              help={
+                conditionFailureDescriptions[
+                  userData.groups?.onConditionFailure ?? 'stop'
+                ]
+              }
             />
-          </div>
+          )}
+
+          <GroupList />
         </>
       )}
 

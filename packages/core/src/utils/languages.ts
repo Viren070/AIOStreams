@@ -82,6 +82,9 @@ const REGION_ALIASES: Record<string, string> = {
 const QUALIFIER_PATTERN = /^(.*\S)\s*\(([^()]+)\)$/;
 const MAX_INPUT_LENGTH = 64;
 
+const NORMALISED_LANGUAGE_CACHE = new Map<string, string | undefined>();
+const NORMALISED_LANGUAGE_CACHE_MAX = 1000;
+
 function toSupportedLanguage(
   entry: (typeof FULL_LANGUAGE_MAPPING)[number] | undefined
 ): string | undefined {
@@ -156,6 +159,21 @@ export function convertLangCodeToName(code: string): string | undefined {
  */
 export function normaliseLanguage(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
+  if (value.length > MAX_INPUT_LENGTH) return computeNormalisedLanguage(value);
+
+  const cached = NORMALISED_LANGUAGE_CACHE.get(value);
+  if (cached !== undefined || NORMALISED_LANGUAGE_CACHE.has(value)) {
+    return cached;
+  }
+  const result = computeNormalisedLanguage(value);
+  if (NORMALISED_LANGUAGE_CACHE.size >= NORMALISED_LANGUAGE_CACHE_MAX) {
+    NORMALISED_LANGUAGE_CACHE.clear();
+  }
+  NORMALISED_LANGUAGE_CACHE.set(value, result);
+  return result;
+}
+
+function computeNormalisedLanguage(value: string): string | undefined {
   let raw = value.trim();
   if (raw.length > MAX_INPUT_LENGTH) return undefined;
 
@@ -250,6 +268,28 @@ function computeLanguageCode(language: string): string | undefined {
     return `${selectedLang.iso_639_1?.toUpperCase()}-${selectedLang.iso_3166_1?.toUpperCase()}`;
   }
   return selectedLang.iso_639_1?.toUpperCase();
+}
+
+/**
+ * Convert a language display name to a lower-case ISO 639-2 code ("por"),
+ * the form Jellyfin clients expect on media streams.
+ */
+export function languageToIso6392(language: string): string | undefined {
+  const needle = language.trim().toLowerCase();
+  if (!needle) return undefined;
+  const possible = FULL_LANGUAGE_MAPPING.filter(
+    (lang) =>
+      lang.english_name
+        .split(';')
+        .some((name) => name.split('(')[0].trim().toLowerCase() === needle) ||
+      lang.internal_english_name?.toLowerCase() === needle ||
+      lang.name.toLowerCase() === needle ||
+      lang.iso_639_1?.toLowerCase() === needle ||
+      lang.iso_639_2.toLowerCase() === needle
+  );
+  if (!possible.length) return undefined;
+  const selected = possible.find((lang) => lang.flag_priority) ?? possible[0];
+  return selected.iso_639_2.toLowerCase();
 }
 
 /** Convert an ISO 639-1 code (e.g. "pt") to a display name. */

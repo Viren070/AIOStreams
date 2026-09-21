@@ -35,7 +35,7 @@ function useDrawerBodyBehavior(id: string, open: boolean | undefined) {
 export const DrawerAnatomy = defineStyleAnatomy({
   overlay: cva([
     'UI-Drawer__overlay',
-    'fixed inset-0 z-[50] bg-black/80',
+    'fixed inset-0 w-screen z-[50] bg-black/80',
     'data-[state=open]:animate-in data-[state=closed]:animate-out',
     'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
     // "transition-opacity duration-300",

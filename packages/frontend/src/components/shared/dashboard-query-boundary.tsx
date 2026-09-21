@@ -46,7 +46,7 @@ export function DashboardErrorCard({
         className
       )}
     >
-      <BiErrorCircle className="w-8 h-8 text-red-500" />
+      <BiErrorCircle className="w-8 h-8 text-red-400" />
       <div className="space-y-1">
         <p className="font-medium">{title}</p>
         {message && (

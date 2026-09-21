@@ -221,6 +221,7 @@ export class StreamRegistry {
     return checkAdmission({
       username: input.username,
       targetKey: input.targetKey,
+      share: input.share,
       activeSessions,
       globalActiveSessions,
       userBytes: (usage.byUser.get(input.username) ?? 0) + liveUser,
@@ -280,6 +281,7 @@ export class StreamRegistry {
       setInfo: (info) => {
         if (info.size && info.size > 0) session.size = info.size;
         if (info.filename) session.filename = info.filename;
+        if (info.start !== undefined) read.start = Math.max(0, info.start);
         session.dirty = true;
       },
       attach: (stream: Readable) => {

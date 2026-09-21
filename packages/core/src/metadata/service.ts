@@ -20,6 +20,8 @@ import { getTimeTakenSincePoint } from '../utils/time.js';
 import { TYPES } from '../utils/constants.js';
 import {
   AnimeDatabase,
+  getEnrichedImdbId,
+  getTmdbEpisode,
   IdParser,
   ParsedId,
   appConfig,
@@ -90,7 +92,7 @@ export class MetadataService {
             let imdbId: string | null =
               id.type === 'imdbId'
                 ? id.value.toString()
-                : (animeEntry?.mappings?.imdbId?.toString() ?? null);
+                : (getEnrichedImdbId(id, animeEntry) ?? null);
             let tvdbId: number | null =
               id.type === 'thetvdbId'
                 ? Number(id.value)
@@ -140,6 +142,16 @@ export class MetadataService {
             // ids already known without asking a provider
             contributions.request = { tmdbId, tvdbId };
 
+            const tmdbAvailable = !!(
+              this.config.tmdbAccessToken ||
+              this.config.tmdbApiKey ||
+              appConfig.metadata.tmdb.accessToken ||
+              appConfig.metadata.tmdb.apiKey
+            );
+            const tvdbAvailable = !!(
+              this.config.tvdbApiKey || appConfig.metadata.tvdb.apiKey
+            );
+
             // Setup parallel API requests
             const promises = [];
 
@@ -150,7 +162,7 @@ export class MetadataService {
             const parsedIdForTmdb = idForTmdb
               ? IdParser.parse(idForTmdb, type)
               : null;
-            if (parsedIdForTmdb) {
+            if (parsedIdForTmdb && tmdbAvailable) {
               promises.push(
                 (async () => {
                   return new TMDBMetadata({
@@ -170,7 +182,7 @@ export class MetadataService {
             const parsedIdForTvdb = idForTvdb
               ? IdParser.parse(idForTvdb, type)
               : null;
-            if (parsedIdForTvdb) {
+            if (parsedIdForTvdb && tvdbAvailable) {
               promises.push(
                 (async () => {
                   return new TVDBMetadata({
@@ -192,7 +204,35 @@ export class MetadataService {
             // IMDb metadata
             if (imdbId) {
               const imdbMetadata = new IMDBMetadata();
-              promises.push(imdbMetadata.getCinemetaData(imdbId, type));
+              const hintedId = imdbId;
+              const ownId = animeEntry?.mappings?.imdbId?.toString();
+              promises.push(
+                (async () => {
+                  const meta = await imdbMetadata.getCinemetaData(
+                    hintedId,
+                    type
+                  );
+                  // hints can name an IMDb entry Cinemeta has no aired episode for
+                  const hasEpisode = meta?.videos?.some(
+                    (v) =>
+                      !!v.released &&
+                      v.season === Number(id.season) &&
+                      (v.episode ?? (v as { number?: number }).number) ===
+                        Number(id.episode)
+                  );
+                  if (
+                    ownId &&
+                    ownId !== hintedId &&
+                    id.episode &&
+                    !hasEpisode
+                  ) {
+                    return (
+                      (await imdbMetadata.getCinemetaData(ownId, type)) ?? meta
+                    );
+                  }
+                  return meta;
+                })()
+              );
               promises.push(imdbMetadata.getImdbSuggestionData(imdbId, type));
             } else {
               promises.push(Promise.resolve(undefined));
@@ -464,34 +504,8 @@ export class MetadataService {
             }
 
             // anime entries partition and renumber seasons
-            const mapEpisodeForTmdb = () => {
-              let seasonNumber = Number(id.season);
-              let episodeNumber = Number(id.episode);
-              if (animeEntry) {
-                const originalSeason = seasonNumber;
-                seasonNumber = animeEntry.tmdb?.seasonNumber ?? seasonNumber;
-                if (animeEntry.tmdb?.fromEpisode) {
-                  const fromEpisode = Number(animeEntry.tmdb.fromEpisode);
-                  if (
-                    seasonNumber !== originalSeason ||
-                    episodeNumber < fromEpisode
-                  ) {
-                    episodeNumber = fromEpisode + episodeNumber - 1;
-                  }
-                }
-              }
-              return { seasonNumber, episodeNumber };
-            };
-
-            const tvdbAvailable = !!(
-              this.config.tvdbApiKey || appConfig.metadata.tvdb.apiKey
-            );
-            const tmdbAvailable = !!(
-              this.config.tmdbAccessToken ||
-              this.config.tmdbApiKey ||
-              appConfig.metadata.tmdb.accessToken ||
-              appConfig.metadata.tmdb.apiKey
-            );
+            const mapEpisodeForTmdb = () =>
+              getTmdbEpisode(id, animeEntry, merged.seasons ?? []);
 
             if (
               !merged.nextAirDate &&
@@ -590,6 +604,7 @@ export class MetadataService {
             // anime) and release groups follow all of them, so collect all
             // that agree on which episode the request points at.
             let episodeTitles: MetadataTitle[] | undefined;
+            let episodeReleased: string | undefined;
             let episodeYear: number | undefined;
             let seasonYear: number | undefined;
             if (type === 'series' && id.season && id.episode) {
@@ -712,6 +727,19 @@ export class MetadataService {
                 if (Number.isNaN(ref) || Number.isNaN(value)) return true;
                 return Math.abs(ref - value) <= 2 * 24 * 60 * 60 * 1000;
               };
+              // a disagreement means the providers number this episode differently
+              if (
+                referenceAirDate &&
+                !Number.isNaN(new Date(referenceAirDate).getTime()) &&
+                [
+                  cinemetaReleased,
+                  tvdbEp?.airDate,
+                  skyhookEp?.airDate,
+                  tmdbEp?.airDate,
+                ].every((date) => agreesWithRequest(date ?? undefined))
+              ) {
+                episodeReleased = referenceAirDate;
+              }
 
               // TMDB first so its language tags survive dedup; skyhook (en)
               // before TVDB (untagged) so the English tag is kept when present.
@@ -816,6 +844,7 @@ export class MetadataService {
               isDateBased: episodeFacts?.isDateBased || undefined,
               episodeAirDates: episodeFacts?.episodeAirDates,
               episodeAirDate: episodeFacts?.episodeAirDates?.[0],
+              episodeReleased,
               resolvedSeasonNumber: episodeFacts?.resolvedSeasonNumber,
               resolvedSeasonFirstEpisode:
                 episodeFacts?.resolvedSeasonFirstEpisode,

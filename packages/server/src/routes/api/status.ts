@@ -4,6 +4,8 @@ import {
   config as appConfig,
   getEnvironmentServiceDetails,
   PresetManager,
+  segmentProviders,
+  segmentsEnabled,
   SelAccess,
   UserRepository,
 } from '@aiostreams/core';
@@ -43,6 +45,24 @@ const statusInfo = async (): Promise<StatusResponse> => {
           : undefined,
       alternateDesign: appConfig.branding.alternateDesign,
       protected: appConfig.api.authRequired,
+      jellyfin: {
+        enabled: appConfig.jellyfin.enabled === true,
+        maxVersions: appConfig.jellyfin.maxVersions,
+        resolveOnOpen: appConfig.jellyfin.resolveOnOpen,
+        maxCatalogItems: appConfig.jellyfin.maxCatalogItems,
+        maxLibraries: appConfig.jellyfin.maxLibraries,
+        maxPersonas: appConfig.jellyfin.maxPersonas,
+        maxTrackers: appConfig.watchState.maxSinks,
+        segments: {
+          enabled: segmentsEnabled(),
+          providers: segmentProviders(),
+        },
+      },
+      community: {
+        formatters: appConfig.community.formatters,
+        templates: appConfig.community.templates,
+        minAccountAge: appConfig.community.minAccountAge,
+      },
       // Public endpoint: the button renders pre-auth, so nothing identifying
       // the provider goes here.
       oidc: {
@@ -51,7 +71,15 @@ const statusInfo = async (): Promise<StatusResponse> => {
         autoRedirect: appConfig.oidc.autoRedirect,
         localLoginEnabled: appConfig.oidc.allowLocalLogin,
       },
-      tmdbApiAvailable: !!appConfig.metadata.tmdb.accessToken,
+      metadata: {
+        tmdb: {
+          accessToken: !!appConfig.metadata.tmdb.accessToken,
+          apiKey: !!appConfig.metadata.tmdb.apiKey,
+        },
+        tvdb: {
+          apiKey: !!appConfig.metadata.tvdb.apiKey,
+        },
+      },
       regexAccess: {
         level: appConfig.userLimits.regex.access,
         ...allowedRegexes,
@@ -64,11 +92,18 @@ const statusInfo = async (): Promise<StatusResponse> => {
         access: appConfig.userLimits.variants.access,
         max: appConfig.userLimits.variants.max,
         maxScriptLength: appConfig.userLimits.variants.maxScriptLength,
-        maxInstructions: appConfig.userLimits.variants.maxInstructions,
-        maxActive: appConfig.userLimits.variants.maxActive,
+        maxTotalInstructions: appConfig.userLimits.variants.maxTotalInstructions,
         maxValueDepth: appConfig.userLimits.variants.maxValueDepth,
         maxPathSegments: appConfig.userLimits.variants.maxPathSegments,
         maxPathMatches: appConfig.userLimits.variants.maxPathMatches,
+      },
+      healthChecks: {
+        access: appConfig.userLimits.healthChecks.access,
+        max: appConfig.userLimits.healthChecks.max,
+        minTtl: appConfig.userLimits.healthChecks.minTtl,
+        maxTimeout: appConfig.userLimits.healthChecks.maxTimeout,
+        maxBytes: appConfig.userLimits.healthChecks.maxBytes,
+        allowPrivateUrls: appConfig.userLimits.healthChecks.allowPrivateUrls,
       },
       loggingSensitiveInfo: appConfig.logging.logSensitiveInfo,
       searchApiDisabled: !appConfig.api.enableSearchApi,
@@ -78,6 +113,7 @@ const statusInfo = async (): Promise<StatusResponse> => {
       userAnalyticsEnabled:
         appConfig.analytics.enabled !== false &&
         appConfig.analytics.userAnalyticsEnabled === true,
+      configSessionsEnabled: appConfig.api.configSessionsEnabled !== false,
       forced: {
         proxy: {
           enabled: appConfig.proxy.force.enabled ?? null,
@@ -143,6 +179,7 @@ const statusInfo = async (): Promise<StatusResponse> => {
         maxFailoverAttempts: appConfig.userLimits.maxFailoverAttempts,
         maxParallelAttempts: appConfig.userLimits.maxParallelAttempts,
         maxBackgroundPings: appConfig.userLimits.maxBackgroundPings,
+        maxLinkedAccounts: appConfig.linkedAccounts.maxPerUser,
       },
     },
   };

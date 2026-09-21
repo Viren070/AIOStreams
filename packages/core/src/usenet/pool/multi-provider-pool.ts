@@ -20,6 +20,7 @@ import {
   definitiveLossKind,
 } from '../nntp/errors.js';
 import { YencDecodeError } from './yenc.js';
+import { SlotBank } from './slot-bank.js';
 import type { HoleKind } from '../holes.js';
 import {
   CommandPriority,
@@ -79,6 +80,11 @@ export class MultiProviderPool {
    * Budget permits whose transfer has actually started on a connection.
    */
   private onWireCount = 0;
+  /**
+   * Sized to one stream's pool (the direct path's cap at 1 MiB per slot) so
+   * a seek hands every slot to its successor.
+   */
+  readonly slotBank: SlotBank;
 
   /**
    * Negative cache of definitive all-providers verdicts
@@ -154,6 +160,7 @@ export class MultiProviderPool {
     // The fetcher owns the connection pools + failover + decode; the engine's
     // StatsAccumulator is its (in-process) stats sink.
     this.fetcher = new LocalSegmentFetcher(providers, opts, stats);
+    this.slotBank = new SlotBank((3 * opts.prefetchSegments + 16) * (1 << 20));
 
     // The global download budget is a HARD ceiling on concurrent in-flight
     // BODY/ARTICLE downloads. It is auto-sized (in buildUsenetEngineOptions) to
@@ -509,13 +516,14 @@ export class MultiProviderPool {
     messageId: string,
     signal: AbortSignal | undefined,
     nzbHash?: string,
-    providerIds?: readonly string[]
+    providerIds?: readonly string[],
+    priority: CommandPriority = CommandPriority.Low
   ): Promise<StatDetail> {
     if (this.arena.has(messageId)) return { present: true, answered: true };
     return this.fetcher.statSegmentDetailed(
       messageId,
       nzbHash,
-      CommandPriority.Low,
+      priority,
       signal,
       providerIds
     );
@@ -529,19 +537,18 @@ export class MultiProviderPool {
   async probeBodyOnProvider(
     segment: NzbSegmentRef,
     providerId: string,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    priority: CommandPriority = CommandPriority.Low
   ): Promise<'ok' | 'not_found' | 'unreachable'> {
-    const releaseGlobal = await this.globalDownloads.acquire(
-      CommandPriority.Low,
-      signal
-    );
+    const releaseGlobal = await this.globalDownloads.acquire(priority, signal);
     const wire = this.wireTracker();
     try {
       return await this.fetcher.probeBodyOnProvider(
         segment,
         providerId,
         signal,
-        wire.start
+        wire.start,
+        priority
       );
     } finally {
       wire.end();
@@ -580,5 +587,6 @@ export class MultiProviderPool {
 
   close(): void {
     this.fetcher.close();
+    this.slotBank.clear();
   }
 }

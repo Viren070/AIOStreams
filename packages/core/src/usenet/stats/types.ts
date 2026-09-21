@@ -4,12 +4,13 @@ export interface ProviderStatsSnapshot {
   segmentsFetched: number;
   bytesDownloaded: number;
   missingSegments: number;
+  undecodableSegments: number;
   connectionErrors: number;
   /** Mean server response time in ms (over the retained sample window). */
   avgLatencyMs: number;
   /** 95th percentile server response time in ms. */
   p95LatencyMs: number;
-  /** segmentsFetched / (segmentsFetched + missingSegments). */
+  /** segmentsFetched / (segmentsFetched + missingSegments + undecodableSegments). */
   successRate: number;
 }
 
@@ -26,6 +27,8 @@ export type StatsEvent =
    */
   | { type: 'latency_sample'; providerId: string; ttfbMs: number }
   | { type: 'segment_missing'; providerId: string }
+  /** Delivered, but the copy failed decode / checksum / size verification. */
+  | { type: 'segment_undecodable'; providerId: string }
   | { type: 'connection_error'; providerId: string };
 
 /** Live, recent-window counters for the dashboard "now" tiles. */
@@ -77,6 +80,7 @@ export interface ProviderMetricDelta {
   bytes: number;
   errors: number;
   missing: number;
+  undecodable: number;
   /** Sum of successful fetch durations (ms); divide by articles for avg. */
   sumDurationMs: number;
   /**

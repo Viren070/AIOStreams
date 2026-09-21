@@ -1,5 +1,5 @@
 import { createLogger } from '../../../../logging/logger.js';
-import { detectFileType } from '../../file-type.js';
+import { detectFileType, isMediaCategory } from '../../file-type.js';
 import { RandomAccess } from '../random-access.js';
 import { ArchiveKind, groupVolumeSets } from '../archive-volume.js';
 import { VolumeSet, Volume } from '../usenet-fs.js';
@@ -85,14 +85,15 @@ export function entryReason(e: ArchiveEntry): ArchiveErrorCode | undefined {
   return undefined;
 }
 
-/** The largest video entry, if any. */
-export function pickBestVideo(
+/** The largest media entry, if any. */
+export function pickBestMedia(
   entries: ArchiveEntry[]
 ): ArchiveEntry | undefined {
   return entries
     .filter(
       (e) =>
-        !e.isDir && detectFileType(Buffer.alloc(0), e.name).category === 'video'
+        !e.isDir &&
+        isMediaCategory(detectFileType(Buffer.alloc(0), e.name).category)
     )
     .sort((a, b) => b.size - a.size)[0];
 }

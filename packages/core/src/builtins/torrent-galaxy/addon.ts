@@ -29,12 +29,6 @@ export type TorrentGalaxyAddonConfig = z.infer<
   typeof TorrentGalaxyAddonConfigSchema
 >;
 
-const WHITELISTED_CATEGORIES = [
-  TorrentGalaxyCategory.Anime,
-  TorrentGalaxyCategory.TV,
-  TorrentGalaxyCategory.Movies,
-];
-
 export class TorrentGalaxyAddon extends BaseDebridAddon<TorrentGalaxyAddonConfig> {
   readonly id = 'torrent-galaxy';
   readonly name = 'Torrent Galaxy';
@@ -71,7 +65,15 @@ export class TorrentGalaxyAddon extends BaseDebridAddon<TorrentGalaxyAddonConfig
       return [];
     }
 
-    logger.info(`Performing torrent galaxy search`, { queries });
+    const categories = [
+      ...(parsedId.mediaType === 'movie' ? [TorrentGalaxyCategory.Movies] : []),
+      ...(parsedId.mediaType === 'series'
+        ? [TorrentGalaxyCategory.TV, TorrentGalaxyCategory.TVShows]
+        : []),
+      ...(metadata.isAnime ? [TorrentGalaxyCategory.Anime] : []),
+    ];
+
+    logger.info(`Performing torrent galaxy search`, { queries, categories });
 
     const searchPromises = queries.map((q) =>
       queryLimit(async () => {
@@ -82,6 +84,7 @@ export class TorrentGalaxyAddon extends BaseDebridAddon<TorrentGalaxyAddonConfig
         const firstPageResponse = await this.api.search({
           query: q,
           page: 1,
+          categories,
         });
 
         const { total, pageSize } = firstPageResponse;
@@ -119,6 +122,7 @@ export class TorrentGalaxyAddon extends BaseDebridAddon<TorrentGalaxyAddonConfig
           const { results } = await this.api.search({
             query: q,
             page: pageNum,
+            categories,
           });
           logger.debug(`Fetched page ${pageNum} for query "${q}"`, {
             newResults: results.length,
@@ -145,12 +149,9 @@ export class TorrentGalaxyAddon extends BaseDebridAddon<TorrentGalaxyAddonConfig
       .flat()
       .filter(
         (result) =>
-          WHITELISTED_CATEGORIES.some(
-            (category) => result.category === category
-          ) ||
-          (metadata.imdbId && result.imdbId
-            ? result.imdbId === metadata.imdbId
-            : true)
+          !result.imdbId ||
+          !metadata.imdbId ||
+          result.imdbId === metadata.imdbId
       );
 
     const seenTorrents = new Set<string>();

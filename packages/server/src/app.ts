@@ -14,9 +14,12 @@ import {
   proxyApi,
   templatesApi,
   syncApi,
+  linkedAccountsApi,
   authApi,
   dashboardApi,
   usenetApi,
+  jellyfinApi,
+  communityApi,
 } from './routes/api/index.js';
 import {
   configure,
@@ -35,6 +38,9 @@ import {
 import seanimeExtensionsRouter from './routes/seanime/extensions.js';
 import sabnzbdRouter from './routes/api/sabnzbd.js';
 import publicBlocklistRouter from './routes/blocklist.js';
+import publicCommunityRouter from './routes/community.js';
+import webdavRouter from './routes/webdav.js';
+import { createJellyfinRouter } from './routes/jellyfin/index.js';
 import { createNabRouter } from './routes/api/nab.js';
 import {
   gdrive,
@@ -44,6 +50,8 @@ import {
   prowlarr,
   knaben,
   eztv,
+  therarbg,
+  thePirateBay,
   torrentGalaxy,
   seadex,
   easynews,
@@ -56,6 +64,9 @@ import {
   errorMiddleware,
   corsMiddleware,
   staticRateLimiter,
+  linkedAccountsRateLimiter,
+  communityApiRateLimiter,
+  syncApiRateLimiter,
   internalMiddleware,
   stremioStreamRateLimiter,
   stremioManifestRateLimiter,
@@ -64,6 +75,7 @@ import {
   stremioSubtitleRateLimiter,
   requireSessionIfAuthRequired,
 } from './middlewares/index.js';
+import { isTrustedIp } from './middlewares/ip.js';
 
 import {
   config as appConfig,
@@ -78,60 +90,8 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 const app: Express = express();
+app.set('trust proxy', (addr: string) => isTrustedIp(addr));
 const logger = createLogger('server');
-
-export enum StaticFiles {
-  DOWNLOAD_FAILED = 'download_failed.mp4',
-  DOWNLOADING = 'downloading.mp4',
-  UNAVAILABLE_FOR_LEGAL_REASONS = 'unavailable_for_legal_reasons.mp4',
-  STORE_LIMIT_EXCEEDED = 'store_limit_exceeded.mp4',
-  CONTENT_PROXY_LIMIT_REACHED = 'content_proxy_limit_reached.mp4',
-  INTERNAL_SERVER_ERROR = '500.mp4',
-  TOO_MANY_REQUESTS = '429.mp4',
-  FORBIDDEN = '403.mp4',
-  UNAUTHORIZED = '401.mp4',
-  NO_MATCHING_FILE = 'no_matching_file.mp4',
-  PAYMENT_REQUIRED = 'payment_required.mp4',
-  OK = '200.mp4',
-}
-
-/**
- * Map a DebridError code to the fallback video served in its place. Playback
- * endpoints answer a player, so a failure has to be watchable to be legible.
- */
-export function mapDebridErrorToStaticFile(code: string | undefined): string {
-  switch (code) {
-    case 'UNAVAILABLE_FOR_LEGAL_REASONS':
-      return StaticFiles.UNAVAILABLE_FOR_LEGAL_REASONS;
-    case 'STORE_LIMIT_EXCEEDED':
-      return StaticFiles.STORE_LIMIT_EXCEEDED;
-    case 'PAYMENT_REQUIRED':
-      return StaticFiles.PAYMENT_REQUIRED;
-    case 'TOO_MANY_ACTIVE_CONNECTIONS':
-      return StaticFiles.CONTENT_PROXY_LIMIT_REACHED;
-    case 'TOO_MANY_REQUESTS':
-      return StaticFiles.TOO_MANY_REQUESTS;
-    case 'FORBIDDEN':
-      return StaticFiles.FORBIDDEN;
-    case 'UNAUTHORIZED':
-      return StaticFiles.UNAUTHORIZED;
-    case 'UNPROCESSABLE_ENTITY':
-    case 'UNSUPPORTED_MEDIA_TYPE':
-    case 'STORE_MAGNET_INVALID':
-    case 'DOWNLOAD_FAILED':
-    case 'BAD_GATEWAY':
-    case 'GONE':
-      return StaticFiles.DOWNLOAD_FAILED;
-    case 'NO_MATCHING_FILE':
-      return StaticFiles.NO_MATCHING_FILE;
-    case 'SERVICE_UNAVAILABLE':
-      return StaticFiles.DOWNLOAD_FAILED;
-    case 'TIMEOUT':
-      return StaticFiles.DOWNLOADING;
-    default:
-      return StaticFiles.INTERNAL_SERVER_ERROR;
-  }
-}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -141,7 +101,12 @@ export const staticRoot = path.join(__dirname, './static');
 
 app.use(ipMiddleware);
 app.use(loggerMiddleware);
-app.use(express.json());
+// Built on the first request: runtime settings are not loaded at module load.
+let jsonParser: express.RequestHandler | undefined;
+app.use((req, res, next) => {
+  jsonParser ??= express.json({ limit: appConfig.api.maxJsonBodySize });
+  jsonParser(req, res, next);
+});
 app.use(express.urlencoded({ extended: true }));
 
 // Allow all origins in development for easier testing
@@ -175,10 +140,13 @@ apiRouter.use(
 apiRouter.use('/anime', animeApi);
 apiRouter.use('/proxy', proxyApi);
 apiRouter.use('/templates', templatesApi);
-apiRouter.use('/sync', syncApi);
+apiRouter.use('/sync', syncApiRateLimiter, syncApi);
+apiRouter.use('/linked-accounts', linkedAccountsRateLimiter, linkedAccountsApi);
+apiRouter.use('/community', communityApiRateLimiter, communityApi);
 apiRouter.use('/auth', authApi);
 apiRouter.use('/dashboard', dashboardApi);
 apiRouter.use('/usenet', usenetApi);
+apiRouter.use('/jellyfin', jellyfinApi);
 apiRouter.use('/sabnzbd', sabnzbdRouter);
 apiRouter.use('/newznab', createNabRouter('newznab'));
 apiRouter.use('/torznab', createNabRouter('torznab'));
@@ -257,6 +225,8 @@ builtinsRouter.use('/newznab', newznab);
 builtinsRouter.use('/prowlarr', prowlarr);
 builtinsRouter.use('/knaben', knaben);
 builtinsRouter.use('/eztv', eztv);
+builtinsRouter.use('/therarbg', therarbg);
+builtinsRouter.use('/the-pirate-bay', thePirateBay);
 builtinsRouter.use('/torrent-galaxy', torrentGalaxy);
 builtinsRouter.use('/seadex', seadex);
 builtinsRouter.use('/easynews', easynews);
@@ -264,20 +234,31 @@ builtinsRouter.use('/library', library);
 app.use('/builtins', builtinsRouter);
 
 app.use('/blocklist', publicBlocklistRouter);
+app.use('/community', publicCommunityRouter);
+app.use('/webdav', webdavRouter);
+
+// A Jellyfin client stores the address it is given and builds its own URLs
+// from it, so a variant has to travel in the path rather than a query string.
+const jellyfinRouter = createJellyfinRouter();
+app.use(
+  `/jellyfin/:uuid/:encryptedPassword${VARIANT_PATH_ROUTE}`,
+  jellyfinRouter
+);
+app.use('/jellyfin/:uuid/:encryptedPassword', jellyfinRouter);
+app.use(`/jellyfin${VARIANT_PATH_ROUTE}`, jellyfinRouter);
+app.use('/jellyfin', jellyfinRouter);
 
 // Content-hashed build assets. These filenames change on every content
 // change, so they are immutable and safe to cache aggressively. Deliberately
 // NOT behind staticRateLimiter: a single page load pulls many of these and
 // rate-limiting them is what caused asset fetch failures + the logo flash.
-app.get('/assets/*any', (req, res, next) => {
-  const filePath = path.resolve(frontendRoot, req.path.replace(/^\//, ''));
-  if (filePath.startsWith(frontendRoot) && fs.existsSync(filePath)) {
-    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-    res.sendFile(filePath);
-    return;
-  }
-  next();
-});
+app.use(
+  '/assets',
+  express.static(path.join(frontendRoot, 'assets'), {
+    immutable: true,
+    maxAge: '1y',
+  })
+);
 
 // Root-level static files (not content-hashed). Short cache; kept behind the
 // static rate limiter. The logo honours the alternate-design branding flag.
@@ -307,29 +288,10 @@ app.get(
     '/logo_alt.png',
   ],
   staticRateLimiter,
-  (req, res, next) => {
-    const filePath = path.resolve(frontendRoot, req.path.replace(/^\//, ''));
-    if (filePath.startsWith(frontendRoot) && fs.existsSync(filePath)) {
-      res.setHeader('Cache-Control', 'public, max-age=3600');
-      res.sendFile(filePath);
-      return;
-    }
-    next();
-  }
+  express.static(frontendRoot, { index: false, maxAge: '1h' })
 );
 
-app.get('/static/*any', corsMiddleware, (req, res, next) => {
-  const filePath = path.resolve(
-    staticRoot,
-    req.path.replace(/^\/static\//, '')
-  );
-  logger.debug(`Static file requested: ${filePath}`);
-  if (filePath.startsWith(staticRoot) && fs.existsSync(filePath)) {
-    res.sendFile(filePath);
-    return;
-  }
-  next();
-});
+app.use('/static', corsMiddleware, express.static(staticRoot));
 
 // legacy route handlers
 app.get(

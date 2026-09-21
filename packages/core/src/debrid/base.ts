@@ -1,5 +1,6 @@
 ﻿import { z } from 'zod';
 import { constants, ServiceId, Cache, appConfig } from '../utils/index.js';
+import { registerLockErrorClass } from '../utils/lock-error-registry.js';
 import { WD1_KEY_REGEX } from '../release-blocklist/keys.js';
 
 type DebridErrorCode =
@@ -76,6 +77,7 @@ export class DebridError extends Error {
     }
   }
 }
+registerLockErrorClass(DebridError);
 
 export const convertStatusCodeToError = (code: number): DebridError['code'] => {
   switch (code) {
@@ -175,6 +177,7 @@ const DebridFileSchema = z.object({
   size: z.number(),
   mimeType: z.string().optional(),
   mediaInfo: z.record(z.string(), z.unknown()).optional(),
+  videoHash: z.string().optional(),
   link: z.string().optional(),
   path: z.string().optional(),
   index: z.number().optional(),

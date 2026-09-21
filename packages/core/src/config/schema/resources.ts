@@ -2,11 +2,13 @@ import { z } from 'zod';
 import {
   byteSize,
   cacheTtlMap,
+  commaSeparatedList,
   nonNegativeInt,
   positiveInt,
   seconds,
 } from './helpers.js';
 import type { RuntimeConfigSection } from '../types.js';
+import { DEFAULT_REPOST_SUFFIXES } from '../../utils/constants.js';
 
 const optionalPositiveInt = z.union([z.number().int().positive(), z.null()]);
 const ttlField = cacheTtlMap;
@@ -77,6 +79,16 @@ export const resourcesSchema = {
     description:
       'Origin-level rewrites applied to stream URLs returned to clients. JSON object of `{origin: replacement}` URLs.',
     env: 'STREAM_URL_MAPPINGS',
+    requiresRestart: false,
+    secret: false,
+  },
+  repostSuffixes: {
+    schema: commaSeparatedList,
+    default: DEFAULT_REPOST_SUFFIXES,
+    label: 'Repost suffixes',
+    description:
+      'Tags that reposters and indexers add after the release group, such as `-FTP` or `-AsRequested`. They are ignored when parsing file and folder names, so the real release group is found. End an entry with `*` to match anything that starts with it, e.g. `Rakuv*`.',
+    env: 'REPOST_SUFFIXES',
     requiresRestart: false,
     secret: false,
   },
@@ -211,7 +223,7 @@ export const resourcesSchema = {
       default: 2 * 1000 * 1000,
       label: 'Max cached value size',
       description:
-        'Largest single value written to the Redis or SQL cache (`0` disables the limit). Oversized entries are skipped rather than stored. A skipped entry is recomputed on each request, so raising this trades memory for CPU. Accepts plain bytes or `2MB`-style strings.',
+        'Largest single value written to the Redis or SQL cache (`0` disables the limit). On Redis this is the stored size, so values large enough to be compressed are measured after compression. Oversized entries are skipped rather than stored. A skipped entry is recomputed on each request, so raising this trades memory for CPU. Accepts plain bytes or `2MB`-style strings.',
       env: 'MAX_CACHE_VALUE_BYTES',
       requiresRestart: false,
       secret: false,

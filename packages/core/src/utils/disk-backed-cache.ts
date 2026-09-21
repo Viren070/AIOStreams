@@ -269,8 +269,12 @@ export class DiskBackedCache<V> {
       this.disk.set(fileKey, { size: buf.length });
       this.addToMem(key, value, this.opts.sizeOf(value));
       return value;
-    } catch {
+    } catch (err) {
       // File vanished or is corrupt — drop the index entry.
+      logger.debug(
+        { name: this.opts.name, key, err: (err as Error)?.message },
+        'disk cache entry unreadable; dropped'
+      );
       this.dropDisk(fileKey);
       this.misses++;
       return undefined;
@@ -338,7 +342,10 @@ export class DiskBackedCache<V> {
   private acquireWriteBuf(size: number): Buffer {
     const slot = this.writePool.pop();
     if (slot && slot.length >= size) return slot;
-    return Buffer.allocUnsafe(Math.max(size, 1 << 20));
+    // 64 KiB granularity: payloads that vary by a few bytes share one size.
+    return Buffer.allocUnsafe(
+      Math.ceil(Math.max(size, 1 << 20) / 65536) * 65536
+    );
   }
 
   private releaseWriteBuf(buf: Buffer): void {

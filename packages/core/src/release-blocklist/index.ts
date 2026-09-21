@@ -30,7 +30,6 @@ export {
   type BlocklistDialect,
   type ParsedBlocklist,
 } from './io.js';
-export { isUnsafeRemoteUrl } from './url-safety.js';
 export { applyReleaseBlocklist, blocklistEvalOptions } from './filter.js';
 export {
   markReleaseDead,

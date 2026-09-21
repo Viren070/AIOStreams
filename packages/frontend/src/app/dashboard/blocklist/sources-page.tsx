@@ -314,9 +314,7 @@ function SourcesView({
               icon={<BiPencil />}
               aria-label="Edit selected"
               title={
-                canBatchEdit
-                  ? 'Edit selected'
-                  : 'Cannot edit the local source'
+                canBatchEdit ? 'Edit selected' : 'Cannot edit the local source'
               }
               onClick={() => setBatchEditOpen(true)}
               disabled={!canBatchEdit}

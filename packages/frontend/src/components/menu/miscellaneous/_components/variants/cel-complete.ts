@@ -15,16 +15,44 @@ const VERBS: Completion[] = [
   { label: 'clear', type: 'keyword', detail: 'clear <path>' },
   { label: 'add', type: 'keyword', detail: 'add <path> <value>, ...' },
   { label: 'prepend', type: 'keyword', detail: 'prepend <path> <value>, ...' },
+  {
+    label: 'insert',
+    type: 'keyword',
+    detail: 'insert [n] [before|after] <path> = <value>',
+  },
   { label: 'remove', type: 'keyword', detail: 'remove <path> [<value>, ...]' },
   { label: 'enable', type: 'keyword', detail: 'enable <path>' },
   { label: 'disable', type: 'keyword', detail: 'disable <path>' },
-  { label: 'use formatter ', type: 'keyword', detail: 'apply a saved formatter' },
+  {
+    label: 'use formatter ',
+    type: 'keyword',
+    detail: 'apply a saved formatter',
+  },
   { label: 'use variant ', type: 'keyword', detail: 'apply another variant' },
 ];
 
 /** A config root may only appear as the first token after a verb. */
 const ROOT_POSITION =
-  /^\s*(set|merge|unset|clear|add|prepend|remove|enable|disable)\s+\w*$/;
+  /^\s*(set|merge|unset|clear|add|prepend|remove|enable|disable|insert(\s+\d+\s+(before|after)|\s+(before|after))?)\s+\w*$/;
+
+/** `insert` may be followed by a placement keyword, or go straight to a root. */
+const PLACEMENT_POSITION = /^\s*insert\s+\w*$/;
+
+/** A count has to say which way it counts, so only placements follow it. */
+const COUNTED_PLACEMENT_POSITION = /^\s*insert\s+\d+\s+\w*$/;
+
+const PLACEMENTS: Completion[] = [
+  {
+    label: 'before',
+    type: 'keyword',
+    detail: 'n places before the addressed entry',
+  },
+  {
+    label: 'after',
+    type: 'keyword',
+    detail: 'n places after the addressed entry',
+  },
+];
 
 const ROOTS: Completion[] = Object.entries(FIELD_META)
   .filter(([key]) => !DENIED_ROOT_KEYS.has(key))
@@ -100,7 +128,9 @@ export function celCompletion({
 
         const presetType = /presets\[type\s*!?\*?=\s*"?([\w-]*)$/.exec(before);
         if (presetType) {
-          const types = [...new Set((userData.presets ?? []).map((p) => p.type))];
+          const types = [
+            ...new Set((userData.presets ?? []).map((p) => p.type)),
+          ];
           return {
             from: context.pos - presetType[1].length,
             options: types.map((type) => ({
@@ -132,6 +162,16 @@ export function celCompletion({
         // registry to complete from.
         if (/^\s*\w*$/.test(before)) {
           return { from: word.from, options: VERBS, validFor: /^\w*$/ };
+        }
+        if (COUNTED_PLACEMENT_POSITION.test(before)) {
+          return { from: word.from, options: PLACEMENTS, validFor: /^\w*$/ };
+        }
+        if (PLACEMENT_POSITION.test(before)) {
+          return {
+            from: word.from,
+            options: [...PLACEMENTS, ...ROOTS],
+            validFor: /^\w*$/,
+          };
         }
         if (ROOT_POSITION.test(before)) {
           return { from: word.from, options: ROOTS, validFor: /^\w*$/ };

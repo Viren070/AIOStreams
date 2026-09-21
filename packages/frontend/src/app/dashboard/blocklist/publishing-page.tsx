@@ -167,7 +167,7 @@ function StatusCell({ target }: { target: PublishTargetView }) {
       trigger={
         <button
           type="button"
-          className="inline-flex items-center gap-1 text-xs text-red-500 hover:underline underline-offset-2"
+          className="inline-flex items-center gap-1 text-xs text-red-400 hover:underline underline-offset-2"
         >
           Push failed
           <BiInfoCircle className="h-3.5 w-3.5" />
@@ -420,7 +420,7 @@ function PublishingView({
                   <td className="p-3 font-medium">
                     {target.name}
                     {target.configUnreadable && (
-                      <div className="text-xs text-red-500">
+                      <div className="text-xs text-red-400">
                         config unreadable — re-enter it
                       </div>
                     )}

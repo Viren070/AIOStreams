@@ -81,6 +81,7 @@ export function buildUsenetEngineOptions(
     circuitBreakerCooldownMs: u.circuitBreakerCooldown * 1000,
     lazyRarResolution: u.lazyRarResolution,
     strictArchiveMembership: u.strictArchiveMembership,
+    verifyArticleCrc: u.verifyArticleCrc,
     verifyMode: u.verifyMode,
     verifyBudgetMs: u.verifyBudgetMs,
     censusShadowConcurrency: u.censusShadowConcurrency,

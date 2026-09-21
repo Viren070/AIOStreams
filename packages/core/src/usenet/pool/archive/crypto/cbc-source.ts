@@ -1,4 +1,6 @@
+import { createDecipheriv } from 'node:crypto';
 import { RandomAccess } from '../random-access.js';
+import native from '@aiostreams/crypto';
 
 /**
  * A {@link RandomAccess} over the **decrypted plaintext** of an AES-CBC
@@ -7,25 +9,25 @@ import { RandomAccess } from '../random-access.js';
  * preceding ciphertext block (or the stream IV for block 0) as the CBC IV.
  * No full-stream buffering, so the plaintext streams on demand.
  *
- * Subclasses supply the ciphertext ({@link readCipherInto}) and the cipher
- * variant/key ({@link decryptBlocks}); plaintext and ciphertext are
- * byte-aligned 1:1 in CBC, so logical (plaintext) offsets index the cipher
- * stream directly.
+ * Subclasses supply the ciphertext ({@link readCipherInto}); plaintext and
+ * ciphertext are byte-aligned 1:1 in CBC, so logical (plaintext) offsets
+ * index the cipher stream directly.
  */
 export abstract class CbcSeekableSource implements RandomAccess {
   /**
    * Reusable ciphertext scratch buffers. Several windows call
    * {@link readAtInto} concurrently, so a single shared scratch would race;
    * the free list grows to the concurrent-window count and is then reused
-   * steadily. {@link decryptBlocks}' plaintext output remains a per-window
-   * allocation (node:crypto `update()` always returns a fresh Buffer).
+   * steadily.
    */
   private cipherScratch: Buffer[] = [];
 
   protected constructor(
     private readonly plainSize: number,
     /** CBC IV for ciphertext block 0. */
-    private readonly iv0: Buffer
+    private readonly iv0: Buffer,
+    /** AES key; its length selects AES-128/192/256. */
+    private readonly key: Buffer
   ) {}
 
   size(): number {
@@ -44,8 +46,22 @@ export abstract class CbcSeekableSource implements RandomAccess {
     signal?: AbortSignal
   ): Promise<number>;
 
-  /** AES-CBC decrypt `cipher` (a multiple of 16 bytes) with `iv`. */
-  protected abstract decryptBlocks(iv: Buffer, cipher: Buffer): Buffer;
+  /** Decrypt `cipher` (a multiple of 16 bytes); in place when the addon is present. */
+  private decryptBlocks(iv: Buffer, cipher: Buffer): Buffer {
+    if (native.aesCbcDecrypt) {
+      native.aesCbcDecrypt(this.key, iv, cipher);
+      return cipher;
+    }
+    const decipher = createDecipheriv(
+      `aes-${this.key.length * 8}-cbc`,
+      this.key,
+      iv
+    );
+    decipher.setAutoPadding(false);
+    const out = decipher.update(cipher);
+    const fin = decipher.final();
+    return fin.length === 0 ? out : Buffer.concat([out, fin]);
+  }
 
   async readAt(offset: number, length: number): Promise<Buffer> {
     if (length <= 0 || offset >= this.plainSize) return Buffer.alloc(0);

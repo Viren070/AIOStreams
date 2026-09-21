@@ -8,7 +8,7 @@ import { EasynewsPreset, EasynewsParser } from './easynews.js';
 import { constants } from '../utils/index.js';
 import { baseOptions } from './preset.js';
 import { config as appConfig } from '../config/index.js';
-import { StreamParser } from '../parser/index.js';
+import { StreamParser, getRegexForTextAfterEmojis } from '../parser/index.js';
 import { arrayMerge } from '../parser/merge.js';
 
 class EasynewsPlusPlusParser extends EasynewsParser {
@@ -24,7 +24,7 @@ class EasynewsPlusPlusParser extends EasynewsParser {
     stream: Stream,
     currentParsedStream: ParsedStream
   ): string[] {
-    const regex = this.getRegexForTextAfterEmojis(['🌐']);
+    const regex = getRegexForTextAfterEmojis(['🌐']);
     const langs = stream.description?.match(regex)?.[1];
     return (
       langs
@@ -46,7 +46,7 @@ class EasynewsPlusPlusParser extends EasynewsParser {
     // Easynews++ emits a `💬` subtitle-language line alongside the `🌐` audio
     // line, using the same comma-separated ISO 639-2 codes. Parse it the same way
     // getLanguages() handles audio, and merge into the file's subtitle languages.
-    const regex = this.getRegexForTextAfterEmojis(['💬']);
+    const regex = getRegexForTextAfterEmojis(['💬']);
     const subtitles =
       stream.description
         ?.match(regex)?.[1]

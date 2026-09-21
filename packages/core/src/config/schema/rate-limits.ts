@@ -76,6 +76,12 @@ export const rateLimitsSchema = {
     envPrefix: 'USER_API',
     label: 'user API',
   }),
+  userCreate: rateLimit({
+    windowDefault: 3600,
+    maxDefault: 10,
+    envPrefix: 'USER_CREATE',
+    label: 'config creation',
+  }),
   streamApi: rateLimit({
     windowDefault: 10,
     maxDefault: 5,
@@ -130,6 +136,24 @@ export const rateLimitsSchema = {
     envPrefix: 'STREMIO_META',
     label: 'Stremio meta',
   }),
+  linkedAccountsApi: rateLimit({
+    windowDefault: 60,
+    maxDefault: 20,
+    envPrefix: 'LINKED_ACCOUNTS_API',
+    label: 'linked accounts API',
+  }),
+  communityApi: rateLimit({
+    windowDefault: 60,
+    maxDefault: 60,
+    envPrefix: 'COMMUNITY_API',
+    label: 'community API',
+  }),
+  syncApi: rateLimit({
+    windowDefault: 60,
+    maxDefault: 20,
+    envPrefix: 'SYNC_API',
+    label: 'sync resolve API',
+  }),
   login: rateLimit({
     windowDefault: 300,
     maxDefault: 5,
@@ -141,5 +165,23 @@ export const rateLimitsSchema = {
     maxDefault: 20,
     envPrefix: 'OIDC',
     label: 'SSO login',
+  }),
+  jellyfinLogin: rateLimit({
+    windowDefault: 300,
+    maxDefault: 10,
+    envPrefix: 'JELLYFIN_LOGIN',
+    label: 'Jellyfin login',
+  }),
+  jellyfinApi: rateLimit({
+    windowDefault: 30,
+    maxDefault: 250,
+    envPrefix: 'JELLYFIN_API',
+    label: 'Jellyfin API',
+  }),
+  jellyfinImage: rateLimit({
+    windowDefault: 30,
+    maxDefault: 1200,
+    envPrefix: 'JELLYFIN_IMAGE',
+    label: 'Jellyfin image',
   }),
 } as const satisfies RuntimeConfigSection;

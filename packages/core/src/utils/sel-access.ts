@@ -1,16 +1,16 @@
-﻿import z from 'zod';
+import z from 'zod';
 import { UserData } from '../db/schemas.js';
 import { config } from '../config/index.js';
 import {
-  SyncManager,
-  type SyncOverride,
+  SyncService,
+  mergeSynced,
+  denyMessage,
+  allowedUrls,
   type FetchResult,
-  parseSyncedUrl,
-} from './sync.js';
+  type SyncOverride,
+  type UrlPartition,
+} from './sync/index.js';
 import { extractNamesFromExpression } from '../parser/streamExpression.js';
-import { createLogger } from '../logging/logger.js';
-
-const logger = createLogger('core');
 
 /**
  * Schema for a stream expression item fetched from a sync URL.
@@ -35,61 +35,62 @@ export type StreamExpressionItem = z.infer<typeof StreamExpressionSchema>;
  * Users can always enter any SEL expression locally - access control only applies to sync URLs.
  */
 export class SelAccess {
-  private static _instance: SyncManager<StreamExpressionItem>;
+  private static _service: SyncService<StreamExpressionItem>;
 
-  /**
-   * Get or create the singleton SyncManager instance.
-   */
-  private static get manager(): SyncManager<StreamExpressionItem> {
-    if (!this._instance) {
-      const configuredUrls = config.userLimits.sel.urls;
-
-      const refreshInterval = config.userLimits.sync.refreshInterval;
-
-      this._instance = new SyncManager<StreamExpressionItem>({
+  private static get service(): SyncService<StreamExpressionItem> {
+    if (!this._service) {
+      this._service = new SyncService<StreamExpressionItem>({
+        kind: 'sel',
         cacheKey: 'sel-expressions',
         maxCacheSize: 100,
-        refreshInterval,
-        configuredUrls,
         itemSchema: StreamExpressionSchema,
-        itemKey: (item) => item.expression,
         convertValue: (v) => ({ expression: v }),
+        settingsUrls: () => config.userLimits.sel.urls,
+        taskId: 'sel-sync-refresh',
+        taskLabel: 'SEL whitelist refresh',
+        taskDescription:
+          'Re-fetch the whitelisted stream expression URLs so synced expressions stay current.',
       });
     }
-    return this._instance;
+    return this._service;
   }
 
-  /**
-   * Initialise the SEL access service.
-   */
   public static initialise(): Promise<void> {
-    return this.manager.initialise();
+    return this.service.initialise();
   }
 
   /**
-   * Clean up resources. Safe to call before `initialise()`: the `manager`
+   * Clean up resources. Safe to call before `initialise()`: the `service`
    * getter would otherwise read from `config.userLimits.sel` and trip the
    * settings-store guard if shutdown runs before `initialiseConfig()` has
    * resolved (e.g. SIGTERM during startup).
    */
   public static cleanup(): void {
-    if (this._instance) this._instance.cleanup();
+    if (this._service) this._service.cleanup();
+  }
+
+  public static setSourceUrls(
+    source: 'templates' | 'community',
+    urls: string[]
+  ): void {
+    this.service.setSource(source, urls);
+  }
+
+  public static getAllowedUrls(): string[] {
+    return this.service.allowlist.urls;
+  }
+
+  public static partition(urls: string[], userData?: UserData): UrlPartition {
+    return this.service.partition(urls, userData);
   }
 
   /**
    * Validate sync URLs based on access level and user trust.
    * - `all`     → any URL allowed
-   * - `trusted` → trusted users can use any URL; others limited to whitelisted SEL URLs
+   * - `trusted` → trusted users can use any URL; others limited to vouched URLs
    */
   public static validateUrls(urls: string[], userData?: UserData): string[] {
-    const access = config.userLimits.sel.access;
-    const isUnrestricted =
-      access === 'all' || (access === 'trusted' && userData?.trusted);
-
-    if (isUnrestricted) return urls;
-
-    // Non-trusted users can only use whitelisted SEL URLs
-    return urls.filter((url) => this.manager.allowedUrls.includes(url));
+    return allowedUrls(this.service.partition(urls, userData));
   }
 
   /**
@@ -98,7 +99,7 @@ export class SelAccess {
   public static async getExpressionsForUrl(
     url: string
   ): Promise<StreamExpressionItem[]> {
-    return this.manager.fetchFromUrl(url);
+    return this.service.fetch(url, this.service.allowlist.has(url));
   }
 
   /**
@@ -109,15 +110,10 @@ export class SelAccess {
     userData?: UserData
   ): Promise<StreamExpressionItem[]> {
     if (!urls?.length) return [];
-
-    const validUrls = this.validateUrls(urls, userData);
-    if (!validUrls.length) return [];
-
-    const results = await Promise.all(
-      validUrls.map((url) => this.getExpressionsForUrl(url))
+    const fetched = await this.service.fetchAll(
+      this.service.partition(urls, userData)
     );
-
-    return results.flat();
+    return [...fetched.values()].flat();
   }
 
   /**
@@ -129,26 +125,23 @@ export class SelAccess {
     userData?: UserData
   ): Promise<FetchResult<StreamExpressionItem>[]> {
     if (!urls?.length) return [];
+    const partition = this.service.partition(urls, userData);
+    const denied = new Map(partition.denied.map((d) => [d.url, d.reason]));
+    const vouched = new Set(partition.vouched);
 
-    const validUrls = new Set(this.validateUrls(urls, userData));
-
-    const results = await Promise.all(
+    return Promise.all(
       urls.map((url) => {
-        if (!validUrls.has(url)) {
+        const reason = denied.get(url);
+        if (reason) {
           return {
             url,
             items: [] as StreamExpressionItem[],
-            error:
-              config.userLimits.sel.access === 'trusted' && !userData?.trusted
-                ? 'This URL is not in the allowed list. Contact the instance owner to whitelist it, or ask to be marked as a trusted user.'
-                : 'This URL is not allowed by the server configuration.',
+            error: denyMessage('sel', reason),
           } satisfies FetchResult<StreamExpressionItem>;
         }
-        return this.manager.fetchFromUrlWithError(url);
+        return this.service.fetchSettled(url, vouched.has(url));
       })
     );
-
-    return results;
   }
 
   /**
@@ -173,77 +166,23 @@ export class SelAccess {
     transform: (item: StreamExpressionItem) => U,
     getField: (item: U) => string
   ): Promise<U[]> {
-    const validUrls = urls?.length ? this.validateUrls(urls, userData) : [];
+    const partition = urls?.length
+      ? this.service.partition(urls, userData)
+      : { allowed: [], vouched: [], userScoped: [], denied: [] };
+    const usable = allowedUrls(partition);
 
-    if (validUrls.length === 0) {
-      const cleaned = existing.filter(
-        (item) => !parseSyncedUrl(getField(item))
-      );
-      return cleaned.length === existing.length ? existing : cleaned;
-    }
-
-    const validUrlSet = new Set(validUrls);
-    const urlExprMap = new Map<string, StreamExpressionItem[]>();
-    await Promise.all(
-      validUrls.map(async (url) => {
-        const exprs = await this.getExpressionsForUrl(url);
-        urlExprMap.set(url, exprs);
-      })
-    );
-
-    const overrides: SyncOverride[] = userData.selOverrides || [];
-    const result: U[] = [];
-    const resolvedInlineUrls = new Set<string>();
-
-    const pushExpressions = (expressions: StreamExpressionItem[]) => {
-      for (const expr of expressions) {
-        const override = this._findSelOverride(expr, overrides);
-
-        if (override?.disabled) continue;
-
-        const overriddenExpr = override
-          ? this._applySelOverride(expr, override)
-          : expr;
-
-        result.push(transform(overriddenExpr));
-      }
-    };
-
-    for (const item of existing) {
-      const placeholderUrl = parseSyncedUrl(getField(item));
-
-      if (placeholderUrl) {
-        if (validUrlSet.has(placeholderUrl)) {
-          resolvedInlineUrls.add(placeholderUrl);
-          pushExpressions(urlExprMap.get(placeholderUrl) ?? []);
-        }
-        continue;
-      }
-
-      result.push(item);
-    }
-
-    for (const url of validUrls) {
-      if (resolvedInlineUrls.has(url)) continue;
-      pushExpressions(urlExprMap.get(url) ?? []);
-    }
-
-    return result;
-  }
-
-  /**
-   * Add URLs to the allowed list for SEL syncing.
-   * URLs added this way are considered trusted and can be used for syncing.
-   */
-  public static addAllowedUrls(urls: string[]): void {
-    this.manager.addAllowedUrls(urls);
-  }
-
-  /**
-   * Get all allowed URLs for SEL syncing.
-   */
-  public static getAllowedUrls(): string[] {
-    return this.manager.allowedUrls;
+    return mergeSynced<StreamExpressionItem, U>({
+      urls: usable,
+      existing,
+      fetched: usable.length
+        ? await this.service.fetchAll(partition)
+        : new Map(),
+      overrides: userData.selOverrides || [],
+      findOverride: (expr, overrides) => this._findSelOverride(expr, overrides),
+      applyOverride: (expr, override) => this._applySelOverride(expr, override),
+      transform,
+      getField,
+    });
   }
 
   /**
@@ -255,8 +194,6 @@ export class SelAccess {
     expr: StreamExpressionItem,
     overrides: SyncOverride[]
   ): SyncOverride | undefined {
-    if (!overrides.length) return undefined;
-
     return overrides.find((o) => {
       // Match by exact expression
       if (o.expression && o.expression === expr.expression) return true;
@@ -297,6 +234,16 @@ export class SelAccess {
     return result;
   }
 
+  public static syncedUrlsOf(userData: UserData): string[] {
+    return [
+      ...(userData.syncedIncludedStreamExpressionUrls || []),
+      ...(userData.syncedExcludedStreamExpressionUrls || []),
+      ...(userData.syncedRequiredStreamExpressionUrls || []),
+      ...(userData.syncedPreferredStreamExpressionUrls || []),
+      ...(userData.syncedRankedStreamExpressionUrls || []),
+    ];
+  }
+
   /**
    * Helper method to resolve all synced stream expressions from URLs for temporary validation.
    * Returns expressions without modifying the userData config.
@@ -311,6 +258,10 @@ export class SelAccess {
     preferred: { expression: string; enabled: boolean }[];
     ranked: { expression: string; score: number; enabled: boolean }[];
   }> {
+    const plain = (item: StreamExpressionItem) => ({
+      expression: item.expression,
+      enabled: item.enabled ?? true,
+    });
     try {
       const [included, excluded, required, preferred, ranked] =
         await Promise.all([
@@ -318,40 +269,28 @@ export class SelAccess {
             userData.syncedIncludedStreamExpressionUrls,
             [],
             userData,
-            (item) => ({
-              expression: item.expression,
-              enabled: item.enabled ?? true,
-            }),
+            plain,
             (item) => item.expression
           ),
           this.syncStreamExpressions(
             userData.syncedExcludedStreamExpressionUrls,
             [],
             userData,
-            (item) => ({
-              expression: item.expression,
-              enabled: item.enabled ?? true,
-            }),
+            plain,
             (item) => item.expression
           ),
           this.syncStreamExpressions(
             userData.syncedRequiredStreamExpressionUrls,
             [],
             userData,
-            (item) => ({
-              expression: item.expression,
-              enabled: item.enabled ?? true,
-            }),
+            plain,
             (item) => item.expression
           ),
           this.syncStreamExpressions(
             userData.syncedPreferredStreamExpressionUrls,
             [],
             userData,
-            (item) => ({
-              expression: item.expression,
-              enabled: item.enabled ?? true,
-            }),
+            plain,
             (item) => item.expression
           ),
           this.syncStreamExpressions(

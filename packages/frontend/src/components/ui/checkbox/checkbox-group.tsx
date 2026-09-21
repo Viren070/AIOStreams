@@ -93,20 +93,23 @@ export const CheckboxGroup = React.forwardRef<
     controlledValue ?? defaultValue
   );
 
-  const handleUpdateValue = React.useCallback((v: string) => {
-    return (checked: boolean | 'indeterminate') => {
-      setValue((p) => {
-        const newArr =
-          checked === true
-            ? [...p, ...(p.includes(v) ? [] : [v])]
-            : checked === false
-              ? p.filter((v1) => v1 !== v)
-              : [...p];
-        onValueChange?.(newArr);
-        return newArr;
-      });
-    };
-  }, []);
+  const handleUpdateValue = React.useCallback(
+    (v: string) => {
+      return (checked: boolean | 'indeterminate') => {
+        setValue((p) => {
+          const newArr =
+            checked === true
+              ? [...p, ...(p.includes(v) ? [] : [v])]
+              : checked === false
+                ? p.filter((v1) => v1 !== v)
+                : [...p];
+          onValueChange?.(newArr);
+          return newArr;
+        });
+      };
+    },
+    [onValueChange]
+  );
 
   React.useEffect(() => {
     if (controlledValue !== undefined) {
@@ -132,7 +135,10 @@ export const CheckboxGroup = React.forwardRef<
               error={basicFieldProps.error}
               className={itemClass}
               labelClass={itemLabelClass}
-              containerClass={itemContainerClass}
+              // Rows are a vertical stack, so they must not sit in a line box:
+              // the indicator only mounts when checked and an inline-flex row
+              // takes its baseline from it, resizing the row on every toggle.
+              containerClass={cn('flex w-fit', itemContainerClass)}
               checkIconClass={itemCheckIconClass}
               disabled={basicFieldProps.disabled || opt.disabled}
               readonly={basicFieldProps.readonly || opt.readonly}

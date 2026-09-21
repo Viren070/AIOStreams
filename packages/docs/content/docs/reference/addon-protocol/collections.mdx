@@ -1,0 +1,80 @@
+---
+title: Collections
+description: The collection block, which turns a meta into a group of movies and shows that Jellyfin clients open as a collection.
+---
+
+A meta carrying a `collection` block is a collection: a titled group of movies, shows, or other
+collections. In a Jellyfin client it is a **BoxSet**, and a catalog of them is a **Collections**
+library.
+
+```json
+{
+  "meta": {
+    "id": "example.netflix",
+    "type": "movie",
+    "name": "Netflix",
+    "poster": "https://…/netflix-tile.png",
+    "posterShape": "landscape",
+    "collection": {
+      "items": [{ "id": "tt0903747", "type": "series", "name": "Breaking Bad", "poster": "https://…" }],
+      "sources": [
+        { "type": "movie", "catalogId": "netflix-movies" },
+        { "type": "series", "catalogId": "netflix-series", "genre": "Drama" },
+        { "addonId": "com.example.lists", "type": "movie", "catalogId": "top-netflix" }
+      ]
+    }
+  }
+}
+```
+
+## Members
+
+A collection's members are its `items`, then each of its `sources` in turn. A title listed twice
+is kept where it first appears.
+
+| Field     | Meaning                                                                                                                                                           |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `items`   | Catalog entries as a catalog would return them. `id` and `type` are required.                                                                                     |
+| `sources` | Catalogs whose entries are members, read a page at a time like a library, up to [`JELLYFIN_MAX_CATALOG_ITEMS`](/configuration/environment-variables) per catalog. |
+
+A member is the same title it is anywhere else: a series opens to its seasons, plays, and keeps its
+watch state. Use `items` for a short fixed list and `sources` for anything long or changing.
+
+### Sources
+
+| Field       | Meaning                                                                                                             |
+| ----------- | ------------------------------------------------------------------------------------------------------------------- |
+| `type`      | Required. The catalog's `type` in its manifest.                                                                     |
+| `catalogId` | Required. The catalog's `id` in its manifest.                                                                       |
+| `genre`     | A genre to filter the catalog by. The catalog must declare a `genre` extra.                                         |
+| `addonId`   | Another addon's manifest `id` or URL. Omit it for your own addon. A source whose addon is not installed is skipped. |
+
+A catalog does not need to be shown anywhere to be a source.
+
+## Marking catalog entries
+
+Put a `collection` block on the **catalog entry** too, even an empty one, so a list knows the entry
+is a collection without opening it:
+
+```json
+{ "metas": [{ "id": "example.netflix", "type": "movie", "name": "Netflix", "collection": {} }] }
+```
+
+A catalog whose entries are all collections becomes a Collections library; one that mixes
+collections with movies stays a movie library. The library's own art is the catalog's
+[`poster` and `background`](/reference/addon-protocol/metadata#catalog-fields).
+
+The collection's `name`, `description`, `poster`, `background`, `logo` and `landscapePoster` become
+the collection's own, and `posterShape` shapes its tile in clients that honour it. Its `type` can be
+anything.
+
+<Callout type="info">
+  In the metas AIOStreams serves onwards, each source's `catalogId` is renamed to the id AIOStreams
+  serves that catalog under, and `addonId` is removed.
+</Callout>
+
+## Collections without the block
+
+A `movie`-type meta whose `videos` list movies, served from a catalog with "collection" in its name,
+id or type, is still read as a collection. Each video can only be a movie; anything else needs the
+`collection` block.

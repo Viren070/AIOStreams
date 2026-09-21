@@ -12,6 +12,7 @@ export const Permission = {
   Proxy: 'proxy',
   Service: 'service',
   Sabnzbd: 'sabnzbd',
+  Webdav: 'webdav',
   CreateConfig: 'createConfig',
 } as const;
 

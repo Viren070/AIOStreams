@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { config as appConfig, createLogger } from '@aiostreams/core';
+import proxyaddr from 'proxy-addr';
 import { isIP } from 'net';
 
 const logger = createLogger('server');
@@ -11,26 +12,30 @@ function isValidIp(ip: string | undefined): boolean {
   return isIP(ip) !== 0;
 }
 
-const isIpInRange = (ip: string, range: string) => {
-  if (range.includes('/')) {
-    // CIDR notation
-    const [rangeIp, prefixLength] = range.split('/');
-    const ipToLong = (ip: string) =>
-      ip
-        .split('.')
-        .reduce((acc, octet) => (acc << 8) + parseInt(octet, 10), 0) >>> 0;
-    try {
-      const ipLong = ipToLong(ip);
-      const rangeLong = ipToLong(rangeIp);
-      const mask = ~(2 ** (32 - parseInt(prefixLength, 10)) - 1) >>> 0;
-      return (ipLong & mask) === (rangeLong & mask);
-    } catch {
-      return false;
-    }
+let compiledFor: readonly string[] | undefined;
+let compiledTrust: (addr: string, i: number) => boolean = () => false;
+
+/**
+ * Whether a socket peer is one of `trustedIps`.
+ */
+export function isTrustedIp(addr: string | undefined): boolean {
+  if (!addr) return false;
+  const list = appConfig.api.trustedIps;
+  if (list !== compiledFor) {
+    const valid = list.filter((entry) => {
+      try {
+        proxyaddr.compile([entry]);
+        return true;
+      } catch {
+        logger.warn({ entry }, 'ignoring unparseable trusted IP entry');
+        return false;
+      }
+    });
+    compiledTrust = proxyaddr.compile(valid);
+    compiledFor = list;
   }
-  // Exact match
-  return ip === range;
-};
+  return compiledTrust(addr, 0);
+}
 
 const isPrivateIp = (ip?: string) => {
   if (!ip) {
@@ -61,15 +66,7 @@ export const ipMiddleware = (
   };
 
   const userIp = getIpFromHeaders(req);
-  const ip = req.ip || '';
-  const trustedIps = appConfig.api.trustedIps;
-
-  const isTrustedIp = trustedIps.some((range) => isIpInRange(ip, range));
-  const requestIp = isTrustedIp
-    ? req.get('X-Forwarded-For')?.split(',')[0].trim() ||
-      req.get('CF-Connecting-IP') ||
-      ip
-    : ip;
+  const requestIp = req.ip;
   req.userIp = isPrivateIp(userIp) || !isValidIp(userIp) ? undefined : userIp;
   req.requestIp = isValidIp(requestIp) ? requestIp : undefined;
   next();

@@ -71,13 +71,13 @@ export const kitsuImdbSource: AnimeSource = {
         entry.ids.imdbId = imdbId;
       }
 
-      if (
+      const hasCoordinates =
         typeof raw.fromSeason === 'number' ||
         typeof raw.fromEpisode === 'number' ||
-        Array.isArray(raw.nonImdbEpisodes) ||
-        typeof raw.title === 'string'
-      ) {
+        Array.isArray(raw.nonImdbEpisodes);
+      if (hasCoordinates || typeof raw.title === 'string') {
         entry.imdb = {
+          id: hasCoordinates ? entry.ids.imdbId?.toString() : undefined,
           fromSeason:
             typeof raw.fromSeason === 'number' ? raw.fromSeason : undefined,
           fromEpisode:

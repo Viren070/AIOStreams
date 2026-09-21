@@ -1,12 +1,16 @@
-﻿import z from 'zod';
+import z from 'zod';
 import { UserData } from '../db/schemas.js';
 import { config } from '../config/index.js';
 import {
-  SyncManager,
-  type SyncOverride,
+  SyncService,
+  mergeSynced,
+  denyMessage,
+  isUnrestricted,
+  allowedUrls,
   type FetchResult,
-  parseSyncedUrl,
-} from './sync.js';
+  type SyncOverride,
+  type UrlPartition,
+} from './sync/index.js';
 import { createLogger } from '../logging/logger.js';
 
 const logger = createLogger('core');
@@ -25,6 +29,15 @@ export type RegexPatternItem = z.infer<typeof RegexPatternSchema> & {
 };
 
 /**
+ * Held per request, never in module state: a URL only this caller may fetch
+ * must not change what anyone else is allowed to run.
+ */
+export interface PermittedPatterns {
+  readonly permitted: ReadonlySet<string>;
+  readonly unrestricted: boolean;
+}
+
+/**
  * Manages regex pattern whitelisting, access control, and URL syncing.
  *
  * Access model:
@@ -33,129 +46,128 @@ export type RegexPatternItem = z.infer<typeof RegexPatternSchema> & {
  *   - `REGEX_FILTER_ACCESS = 'none'`     → no one can use regex (except whitelisted patterns)
  */
 export class RegexAccess {
-  private static _instance: SyncManager<RegexPatternItem>;
-  private static _whitelistedPatterns: string[] = [];
-  private static _description?: string;
+  private static _service: SyncService<RegexPatternItem>;
 
   /**
-   * Get or create the singleton SyncManager instance.
+   * Patterns this instance permits for everyone. Rebuilt from the operator's
+   * own sources on every refresh, never fed from a request.
    */
-  private static get manager(): SyncManager<RegexPatternItem> {
-    if (!this._instance) {
-      this._whitelistedPatterns = config.userLimits.regex.patterns;
-      this._description =
-        config.userLimits.regex.patternsDescription ?? undefined;
+  private static _vouchedPatterns = new Set<string>();
 
-      const configuredUrls = config.userLimits.regex.patternsUrls;
+  private static _sourcePatterns = new Map<string, string[]>();
 
-      const refreshInterval = config.userLimits.sync.refreshInterval;
+  private static _urlPatterns = new Map<string, string[]>();
 
-      this._instance = new SyncManager<RegexPatternItem>({
+  private static get service(): SyncService<RegexPatternItem> {
+    if (!this._service) {
+      this._service = new SyncService<RegexPatternItem>({
+        kind: 'regex',
         cacheKey: 'regex-patterns',
         maxCacheSize: 100,
-        refreshInterval,
-        configuredUrls,
         itemSchema: RegexPatternSchema,
-        itemKey: (item) => item.pattern,
         convertValue: (v) => ({ name: v, pattern: v }),
+        settingsUrls: () => config.userLimits.regex.patternsUrls,
+        taskId: 'regex-sync-refresh',
+        taskLabel: 'Regex whitelist refresh',
+        taskDescription:
+          'Re-fetch the whitelisted regex pattern URLs and rebuild the set of patterns non-trusted users may use.',
+        onVouchedItems: (items) => this.rebuildVouchedPatterns(items),
       });
+      this.rebuildVouchedPatterns();
     }
-    return this._instance;
+    return this._service;
   }
 
-  /**
-   * Initialise the regex access service.
-   */
   public static initialise(): Promise<void> {
-    // Seed the manager with statically configured patterns
-    if (this._whitelistedPatterns.length > 0 || !this._instance) {
-      // Ensure manager is created
-      const mgr = this.manager;
-      if (this._whitelistedPatterns.length > 0) {
-        mgr.addItems(
-          this._whitelistedPatterns.map((p) => ({ name: p, pattern: p }))
-        );
-      }
-    }
-    return this.manager.initialise();
+    return this.service.initialise();
   }
 
   /**
-   * Clean up resources. Safe to call before `initialise()`: the `manager`
+   * Clean up resources. Safe to call before `initialise()`: the `service`
    * getter would otherwise read from `config.userLimits.regex` and trip the
    * settings-store guard if shutdown runs before `initialiseConfig()` has
    * resolved (e.g. SIGTERM during startup).
    */
   public static cleanup(): void {
-    if (this._instance) this._instance.cleanup();
+    if (this._service) this._service.cleanup();
   }
 
-  /**
-   * Add patterns to the accumulated whitelist.
-   * Used by templates to register regex patterns that should be allowed
-   * (any pattern in an instance-owner template is automatically trusted).
-   */
-  public static addPatterns(patterns: string[]): void {
-    this.manager.addItems(patterns.map((pattern) => ({ pattern, name: '' })));
+  /** Takes that source's complete set, not a delta. */
+  public static setSourcePatterns(
+    source: 'templates' | 'community',
+    patterns: string[]
+  ): void {
+    this._sourcePatterns.set(source, patterns);
+    this.rebuildVouchedPatterns();
   }
 
-  /**
-   * Add URLs to the allowed list for regex pattern syncing.
-   * URLs added this way are considered trusted and can be used for syncing.
-   */
-  public static addAllowedUrls(urls: string[]): void {
-    this.manager.addAllowedUrls(urls);
-    Promise.all(urls.map((url) => this.getPatternsForUrl(url)))
-      .then((results) => {
-        const patterns = results.flat();
-        if (patterns.length > 0) {
-          this.manager.addItems(patterns);
-        }
-      })
-      .catch((err) =>
-        logger.warn(
-          `Failed to pre-fetch regex patterns from allowed URLs: ${err}`
-        )
-      );
+  public static setSourceUrls(
+    source: 'templates' | 'community',
+    urls: string[]
+  ): void {
+    this.service.setSource(source, urls);
   }
 
-  /**
-   * Get all allowed URLs for regex pattern syncing.
-   */
   public static getAllowedUrls(): string[] {
-    return this.manager.allowedUrls;
+    return this.service.allowlist.urls;
   }
 
   /**
-   * Check if a user is allowed to use regex filters.
-   * If specific regexes are provided, checks if they're all in the whitelist.
+   * Resolve once per request and carry the result: every consumer in the
+   * pipeline gets the same answer and working it out can cost a fetch.
    */
+  public static async resolvePermitted(
+    userData: UserData,
+    syncedUrls: string[] = []
+  ): Promise<PermittedPatterns> {
+    await this.initialise();
+
+    const unrestricted = isUnrestricted('regex', userData);
+    if (unrestricted) {
+      return { permitted: this._vouchedPatterns, unrestricted: true };
+    }
+
+    const permitted = new Set(this._vouchedPatterns);
+    if (syncedUrls.length > 0) {
+      // A URL this caller may fetch permits its own contents, for this request.
+      const partition = this.service.partition(syncedUrls, userData);
+      const fetched = await this.service.fetchAll(partition);
+      for (const items of fetched.values()) {
+        for (const item of items) permitted.add(item.pattern);
+      }
+    }
+    return { permitted, unrestricted: false };
+  }
+
+  /** Per pattern, so one unpermitted pattern does not disable the others. */
+  public static partitionPatterns(
+    patterns: string[],
+    permitted: PermittedPatterns
+  ): { allowed: string[]; denied: string[] } {
+    if (permitted.unrestricted || patterns.length === 0) {
+      return { allowed: patterns, denied: [] };
+    }
+    const allowed: string[] = [];
+    const denied: string[] = [];
+    for (const pattern of patterns) {
+      (permitted.permitted.has(pattern) ? allowed : denied).push(pattern);
+    }
+    return { allowed, denied };
+  }
+
+  /** All-or-nothing form, for callers that reject rather than degrade. */
   public static async isRegexAllowed(
     userData: UserData,
     regexes?: string[]
   ): Promise<boolean> {
-    await this.initialise();
-
-    // If specific patterns are provided, check if all are whitelisted
+    const permitted = await this.resolvePermitted(userData);
     if (regexes && regexes.length > 0) {
-      const whitelisted = this.manager.accumulatedKeys;
-      const allWhitelisted = regexes.every((r) => whitelisted.has(r));
-      if (allWhitelisted) return true;
+      return this.partitionPatterns(regexes, permitted).denied.length === 0;
     }
-
-    switch (config.userLimits.regex.access) {
-      case 'trusted':
-        return userData.trusted ?? false;
-      case 'all':
-        return true;
-      default:
-        return false;
-    }
+    return permitted.unrestricted;
   }
 
-  /**
-   * Get the whitelisted regex patterns info (for status endpoint).
-   */
+  /** The whitelisted regex patterns info (for the status endpoint). */
   public static async allowedRegexPatterns(): Promise<{
     patterns: string[];
     description?: string;
@@ -163,26 +175,24 @@ export class RegexAccess {
   }> {
     await this.initialise();
     return {
-      patterns: [...this.manager.accumulatedKeys],
-      description: this._description,
-      urls: this.manager.allowedUrls,
+      patterns: [...this._vouchedPatterns],
+      description: config.userLimits.regex.patternsDescription ?? undefined,
+      urls: this.service.allowlist.urls,
     };
+  }
+
+  public static partition(urls: string[], userData?: UserData): UrlPartition {
+    return this.service.partition(urls, userData);
   }
 
   /**
    * Validate sync URLs based on access level and user trust.
    * - `all`     → any URL allowed
-   * - `trusted` → trusted users can use any URL; others limited to configured URLs
-   * - `none`    → only configured URLs
+   * - `trusted` → trusted users can use any URL; others limited to vouched URLs
+   * - `none`    → only vouched URLs
    */
   public static validateUrls(urls: string[], userData?: UserData): string[] {
-    const access = config.userLimits.regex.access;
-    const isUnrestricted =
-      access === 'all' || (access === 'trusted' && userData?.trusted);
-
-    if (isUnrestricted) return urls;
-
-    return urls.filter((url) => this.manager.allowedUrls.includes(url));
+    return allowedUrls(this.service.partition(urls, userData));
   }
 
   /**
@@ -191,7 +201,7 @@ export class RegexAccess {
   public static async getPatternsForUrl(
     url: string
   ): Promise<RegexPatternItem[]> {
-    return this.manager.fetchFromUrl(url);
+    return this.service.fetch(url, this.service.allowlist.has(url));
   }
 
   /**
@@ -202,28 +212,10 @@ export class RegexAccess {
     userData?: UserData
   ): Promise<RegexPatternItem[]> {
     if (!urls?.length) return [];
-
-    const validUrls = this.validateUrls(urls, userData);
-    if (!validUrls.length) return [];
-
-    // Track dynamic URLs
-    const mgr = this.manager;
-    for (const url of validUrls) {
-      (mgr as any)._dynamicUrls ??= new Set();
-    }
-
-    const allPatterns = await Promise.all(
-      validUrls.map((url) => this.getPatternsForUrl(url))
+    const fetched = await this.service.fetchAll(
+      this.service.partition(urls, userData)
     );
-
-    const patterns = allPatterns.flat();
-
-    // Add fetched patterns to the accumulated whitelist
-    if (patterns.length > 0) {
-      mgr.addItems(patterns);
-    }
-
-    return patterns;
+    return [...fetched.values()].flat();
   }
 
   /**
@@ -235,35 +227,23 @@ export class RegexAccess {
     userData?: UserData
   ): Promise<FetchResult<RegexPatternItem>[]> {
     if (!urls?.length) return [];
+    const partition = this.service.partition(urls, userData);
+    const denied = new Map(partition.denied.map((d) => [d.url, d.reason]));
+    const vouched = new Set(partition.vouched);
 
-    const validUrls = new Set(this.validateUrls(urls, userData));
-
-    const results = await Promise.all(
+    return Promise.all(
       urls.map((url) => {
-        if (!validUrls.has(url)) {
+        const reason = denied.get(url);
+        if (reason) {
           return {
             url,
             items: [] as RegexPatternItem[],
-            error:
-              config.userLimits.regex.access === 'none'
-                ? 'Regex sync is disabled on this instance.'
-                : config.userLimits.regex.access === 'trusted' &&
-                    !userData?.trusted
-                  ? 'This URL is not in the allowed list. Contact the instance owner to whitelist it, or ask to be marked as a trusted user.'
-                  : 'This URL is not allowed by the server configuration.',
+            error: denyMessage('regex', reason),
           } satisfies FetchResult<RegexPatternItem>;
         }
-        return this.manager.fetchFromUrlWithError(url);
+        return this.service.fetchSettled(url, vouched.has(url));
       })
     );
-
-    // Add successful patterns to the whitelist
-    const allPatterns = results.flatMap((r) => r.items);
-    if (allPatterns.length > 0) {
-      this.manager.addItems(allPatterns);
-    }
-
-    return results;
   }
 
   /**
@@ -280,78 +260,32 @@ export class RegexAccess {
     transform: (item: RegexPatternItem) => U,
     getField: (item: U) => string
   ): Promise<U[]> {
-    const validUrls = urls?.length ? this.validateUrls(urls, userData) : [];
+    const partition = urls?.length
+      ? this.service.partition(urls, userData)
+      : { allowed: [], vouched: [], userScoped: [], denied: [] };
+    const usable = allowedUrls(partition);
 
-    if (validUrls.length === 0) {
-      const cleaned = existing.filter(
-        (item) => !parseSyncedUrl(getField(item))
-      );
-      return cleaned.length === existing.length ? existing : cleaned;
-    }
-
-    const validUrlSet = new Set(validUrls);
-    const urlPatternMap = new Map<string, RegexPatternItem[]>();
-    await Promise.all(
-      validUrls.map(async (url) => {
-        const patterns = await this.getPatternsForUrl(url);
-        urlPatternMap.set(url, patterns);
-      })
-    );
-
-    const allPatterns = [...urlPatternMap.values()].flat();
-    if (allPatterns.length > 0) {
-      this.manager.addItems(allPatterns);
-    }
-
-    const overrides: SyncOverride[] = userData.regexOverrides || [];
-    const result: U[] = [];
-    const resolvedInlineUrls = new Set<string>();
-
-    const pushPatterns = (patterns: RegexPatternItem[]) => {
-      for (const regex of patterns) {
-        const override = overrides.find(
+    return mergeSynced<RegexPatternItem, U>({
+      urls: usable,
+      existing,
+      fetched: usable.length
+        ? await this.service.fetchAll(partition)
+        : new Map(),
+      overrides: userData.regexOverrides || [],
+      findOverride: (regex, overrides) =>
+        overrides.find(
           (o) =>
             o.pattern === regex.pattern ||
             (regex.name && o.originalName === regex.name)
-        );
-
-        if (override?.disabled) continue;
-
-        result.push(
-          transform(
-            override
-              ? {
-                  ...regex,
-                  name: override.name ?? regex.name,
-                  score:
-                    override.score !== undefined ? override.score : regex.score,
-                }
-              : regex
-          )
-        );
-      }
-    };
-
-    for (const item of existing) {
-      const placeholderUrl = parseSyncedUrl(getField(item));
-
-      if (placeholderUrl) {
-        if (validUrlSet.has(placeholderUrl)) {
-          resolvedInlineUrls.add(placeholderUrl);
-          pushPatterns(urlPatternMap.get(placeholderUrl) ?? []);
-        }
-        continue;
-      }
-
-      result.push(item);
-    }
-
-    for (const url of validUrls) {
-      if (resolvedInlineUrls.has(url)) continue;
-      pushPatterns(urlPatternMap.get(url) ?? []);
-    }
-
-    return result;
+        ),
+      applyOverride: (regex, override) => ({
+        ...regex,
+        name: override.name ?? regex.name,
+        score: override.score !== undefined ? override.score : regex.score,
+      }),
+      transform,
+      getField,
+    });
   }
 
   /**
@@ -418,6 +352,47 @@ export class RegexAccess {
         err instanceof Error
           ? `Failed to resolve one or more synced regex patterns: ${err.message}`
           : 'Failed to resolve one or more synced regex patterns'
+      );
+    }
+  }
+
+  public static syncedUrlsOf(userData: UserData): string[] {
+    return [
+      ...(userData.syncedIncludedRegexUrls || []),
+      ...(userData.syncedExcludedRegexUrls || []),
+      ...(userData.syncedRequiredRegexUrls || []),
+      ...(userData.syncedPreferredRegexUrls || []),
+      ...(userData.syncedRankedRegexUrls || []),
+    ];
+  }
+
+  private static rebuildVouchedPatterns(
+    urlItems?: Map<string, RegexPatternItem[]>
+  ): void {
+    if (urlItems) {
+      this._urlPatterns = new Map(
+        [...urlItems].map(([url, items]) => [
+          url,
+          items.map((item) => item.pattern),
+        ])
+      );
+    }
+
+    // Read live so an edit to the static list takes effect without a restart.
+    const rebuilt = new Set<string>(config.userLimits.regex.patterns);
+    for (const patterns of this._sourcePatterns.values()) {
+      for (const pattern of patterns) rebuilt.add(pattern);
+    }
+    for (const patterns of this._urlPatterns.values()) {
+      for (const pattern of patterns) rebuilt.add(pattern);
+    }
+
+    const before = this._vouchedPatterns.size;
+    this._vouchedPatterns = rebuilt;
+    if (before !== rebuilt.size) {
+      logger.info(
+        { before, total: rebuilt.size },
+        'rebuilt vouched regex patterns'
       );
     }
   }

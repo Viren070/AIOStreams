@@ -63,6 +63,11 @@ export class GrabCache<V> {
     return this.inflight.get(key);
   }
 
+  /** Drop `key` from both tiers. */
+  delete(key: string): Promise<boolean> {
+    return this.cache.delete(key);
+  }
+
   /**
    * Return the cached value for `key`, else run (and cache) `produce`, deduping
    * concurrent callers for the same key. Successful results are written through

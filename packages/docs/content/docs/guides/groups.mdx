@@ -32,7 +32,8 @@ The **Grouping** feature lets you control _when_ different sets of your addons a
   </Step>
   <Step>
     **Early exit** — the moment a group's condition is `false`, all pending
-    results beyond that point are discarded.
+    results beyond that point are discarded. See [When a condition
+    fails](#when-a-condition-fails) to keep results that already arrived.
   </Step>
 </Steps>
 
@@ -91,6 +92,22 @@ queryType == "series" and count(resolution(totalStreams, '1080p')) < 2
 ```
 count(resolution(previousStreams, '2160p')) == 0 or previousGroupTimeTaken > 5000
 ```
+
+---
+
+## When a condition fails
+
+With **Parallel** behaviour every group is fetched at once, so a group can already have results by the time an earlier condition fails. **When a Condition Fails** decides what happens to them. It has no effect on **Sequential**, where later groups were never fetched in the first place.
+
+| Option                               | Behaviour                                                                                                                                                 |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Stop** (default)                   | Discard this group and every group after it.                                                                                                              |
+| **Skip group and keep checking**     | Discard this group, then evaluate the remaining conditions as normal. A later group is included only if its condition passes and it has already finished. |
+| **Keep everything already finished** | Include this group and every group after it that has already finished, ignoring their conditions.                                                         |
+
+Neither of the last two ever waits on a group that is still fetching.
+
+With **Skip group and keep checking**, a group that passes its condition but has not finished contributes nothing to `previousStreams` or `totalStreams`, so conditions further down the chain are evaluated without it. Use **Stop** if your conditions rely on every earlier group's results being present.
 
 ---
 

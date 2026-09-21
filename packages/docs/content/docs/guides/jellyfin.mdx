@@ -1,0 +1,199 @@
+---
+title: Jellyfin
+description: Watch your configuration in Jellyfin apps, with your catalogs as libraries, your streams as versions, and your progress kept across devices.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Steps, Step } from 'fumadocs-ui/components/steps';
+
+AIOStreams can present your configuration as a **Jellyfin server**. You add it to a Jellyfin app like any other server, sign in, and browse and play from there. Nothing is downloaded or stored: when you press play, AIOStreams searches your addons exactly as it does for Stremio.
+
+| In AIOStreams                     | In a Jellyfin app                                       |
+| --------------------------------- | ------------------------------------------------------- |
+| Your catalogs                     | Libraries                                               |
+| Your metadata addons              | Titles, with their details, seasons and episodes        |
+| The streams found for a title     | Versions of that title                                  |
+| Your subtitle addons              | Subtitle tracks                                         |
+| Catalogs of collections           | A Collections library                                   |
+| What you watch, and your trackers | Continue Watching, Next Up, played marks and favourites |
+
+## Before you start
+
+- **Add catalog and metadata addons to AIOStreams.** A Jellyfin app only sees what your AIOStreams configuration provides, so it needs addons for all three jobs: catalogs to fill the libraries, metadata to describe each title, and streams to play it.
+- **Save your configuration.** A Jellyfin app signs in to a saved configuration.
+- **Pick an app.** Swiftfin, Findroid, Streamyfin, Jellyfin for Android TV, Jellyfin for Kodi and Infuse all work. The Jellyfin web interface is not included: the server address is an API for apps, not a website.
+- **Check the instance allows it.** It is on by default. If the **Jellyfin** card under **Save & Install** is greyed out, the instance owner has turned it off.
+
+<Callout type="info">
+  Streams are **played directly**, never transcoded. Your app has to be able to
+  play the file as it is, so a device that struggles with a format in other apps
+  will struggle here too. Picking another version usually helps.
+</Callout>
+
+## Connecting an app
+
+<Steps>
+
+<Step>
+
+### Open the Jellyfin settings
+
+On the configure page, go to **Save & Install** and open the **Jellyfin** card. The **Connect** tab shows everything the app needs.
+
+</Step>
+
+<Step>
+
+### Add the server
+
+In your app, add a server and paste the **Server address**. It is your instance's address followed by `/jellyfin`, for example `https://aiostreams.example.com/jellyfin`.
+
+</Step>
+
+<Step>
+
+### Sign in
+
+Enter the **Username** shown on the Connect tab and your configuration password.
+
+- The username is your configuration UUID, or its alias if you gave it one through a [profile](/guides/config-profiles). An alias already stands in for the password, so the password field is not checked.
+- To sign in as one of your [household users](#household-users), add `/` and their name, for example `<uuid>/Sam`.
+
+</Step>
+
+</Steps>
+
+### On a TV
+
+Typing a UUID with a remote is painful, so use **Quick Connect** instead. Choose Quick Connect on the app's sign-in screen, then type the six-digit code it shows into the **Quick Connect** box on the Connect tab. The device waiting on that code appears; press **Approve**. If you have household users, choose who to sign in as first.
+
+### Sign-in picker
+
+The Connect tab also offers an **address with a sign-in picker**. Added as the server address instead, it makes the app list your configuration and its users on the sign-in screen, with no password to type.
+
+<Callout type="warn">
+  That address contains your configuration password. Only use it on devices in
+  your own household.
+</Callout>
+
+## Libraries
+
+Each catalog becomes a library, in the order set under **Addons → Catalogs**. Reorder or disable catalogs there to change what apps show.
+
+- **Limits.** An instance shows a limited number of libraries per configuration (20 by default) and lists a limited number of titles in each (250 by default). The Connect tab tells you this instance's numbers. Catalogs past the library limit do not appear at all, so move the ones you care about to the top.
+- **Search.** Searching in an app searches your catalogs that support search. Search-only catalogs are not shown as libraries.
+- **Genres.** A catalog with genres gets a genre filter. A catalog that requires a genre opens on its first one.
+- **Collections.** A catalog whose entries are collections, such as a set of streaming services or film series, becomes a **Collections** library. A collection can hold both movies and shows, and each opens and plays like it does anywhere else.
+
+Changes you save reach connected apps within about 30 seconds. Apps also keep their own copy for a while, so refresh or reopen the app if something still looks old.
+
+## Playing
+
+### Versions
+
+Opening a movie or an episode searches your addons, just as opening it in Stremio does, and lists the results as **versions**. Their names come from your [formatter](/reference/custom-formatter). The first version is the one your sorting ranks highest, so pressing play without choosing picks the same stream Stremio would put at the top.
+
+Two settings on the **Playback** tab control this:
+
+| Setting                                | What it does                                                                                                                                                                                   |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Resolve streams when an item opens** | On by default. Off, nothing is searched until you press play, which is lighter on your addons, but the version list shows a placeholder until then, with a **Load versions** entry to fill it. |
+| **Versions per item**                  | How many streams to offer. The instance sets the maximum (10 by default). Set it to 1 and apps have nothing to choose between.                                                                 |
+
+A title's versions are reused for a few minutes, so opening it and then playing it searches once.
+
+Anything an addon sent with nothing to play, such as a notice, an error, or a link to its own website, is listed after the versions, along with any statistics you have switched on. Stremio offers these as links to open in a browser, which a Jellyfin app has no way to do, so only their text is any use here, and playing one gets you a short clip saying so. They do not count towards **Versions per item**, and errors follow your **Hide Errors** setting.
+
+### When nothing plays
+
+- **No streams found** is shown when your addons returned nothing playable and none of them reported why. When one did, its error is listed in place of it, the same message Stremio would show. Either is looked up again after a few minutes.
+- **Some streams never appear as versions.** A stream that needs custom request headers can only be played by a Jellyfin app through a proxy, set up under **Proxy** on the configure page, so without one it is left out.
+- **A version will not start.** Try another version. Because nothing is transcoded, a file your device cannot decode will not play.
+
+### Skipping intros and credits
+
+Unless the instance owner has turned it off, the Playback tab has **Skip intro and credits**, on by default. Apps then get markers they can show a skip button for, and you can choose which markers to offer: intro, recap and credits. Whether the app skips automatically or asks first is a setting inside the app. The markers come from community databases, so on a differently cut copy of an episode they can be a few seconds out.
+
+## Watch history
+
+AIOStreams keeps your progress, played marks and favourites itself, for your configuration and for each household user with its own history. That is what fills **Continue Watching** and **Next Up**, and it is the same on every app you sign in to.
+
+### Trackers
+
+An addon that supports **Watch State** can act as a tracker. The **Trackers** tab lists the ones in your configuration and what each does:
+
+- **Records your plays**: what you watch in a Jellyfin app is sent to the addon, so a service it connects to (such as a watch-history site) stays up to date.
+- **Imports your history**: what the addon knows you watched elsewhere, including in Stremio, shows up in Continue Watching and Next Up.
+- If the addon supports a watchlist, your watchlist and your favourites stay in step.
+
+Each tracker syncs with one history. With several household users, choose which trackers each user syncs with in the **Users** tab (see [Choosing trackers](#choosing-trackers)). To stop an addon syncing for everyone, untick **Watch State** in that addon's **Resources** option and save. The instance owner can turn either direction off for everyone, in which case the tab says so.
+
+<Callout type="info">
+  Without a tracker, AIOStreams only knows what you played in Jellyfin apps.
+  Something watched in Stremio reaches Continue Watching only through a tracker
+  that imports your history.
+</Callout>
+
+Building a tracker addon? See the [Watch State reference](/reference/addon-protocol/watch-state).
+
+## Household users
+
+The **Users** tab adds users to your server, so everyone in a household can have their own profile in the app. They all sign in with the same configuration password.
+
+- **The primary user** is your configuration itself. Give it a name (your addon name by default) and an avatar.
+- **Each extra user** has a name, which is also what they type to sign in, and an optional avatar. You can hide a user from the sign-in picker; they can still sign in by name.
+- **History** is either **own**, a separate Continue Watching, or **shared** with the primary user. Sharing the history also shares its trackers.
+- **Variants** apply while that user is signed in, in the order picked, so a user can get, for example, a different set of filters. A variant that activates on its own applies too, [before the ones picked here](/reference/config-expressions#what-applies-in-what-order).
+
+Removing a user keeps their watch history. Adding a user again under the same name gets it back.
+
+### Choosing trackers
+
+Each user with a history of its own can sync with its own tracker addons, for example a separate watch-history account per person. Add one tracker addon per account to your configuration, then turn on **Choose trackers** for each user and pick theirs.
+
+- A tracker belongs to one history at a time, so a tracker picked for one user can't be picked for another. Otherwise what one person watches would end up in the other's history.
+- Left off, the primary user syncs with every tracker addon, so none are free for other users. Choose the primary user's trackers first.
+- Left off for another user, it syncs only with a tracker addon that its variants add.
+- A tracker nobody picks is not used.
+- Moving a tracker to another user also brings along what it already recorded for the previous one.
+
+## API keys
+
+A tool that uses the Jellyfin API, such as a dashboard or a script, can connect with an API key instead of your password. Open **API keys** at the bottom of the **Connect** tab:
+
+1. Name the key and select **Create key**.
+2. Save your configuration.
+3. Select **Copy key**, and give it to the tool with the same server address your apps use.
+
+A key acts as the server's administrator. It sees every user of your configuration: what each is watching now, their watch history, and your libraries. Revoke a key and save to cut a tool off; it stops working within 30 seconds. Changing your configuration password stops every key, so copy them again afterwards.
+
+What a tool can't get from AIOStreams:
+
+- **Addresses and locations.** AIOStreams does not record where anyone watches from, so rules built on IP addresses, such as account-sharing detection, have nothing to go on.
+- **Stopping a stream or sending a message.** Apps can't be controlled remotely.
+- **Transcoding and quality details.** Everything plays directly, and the stream details are not reported.
+- **Every title.** Each library lists at most `JELLYFIN_MAX_CATALOG_ITEMS` titles, and episodes are listed per show, not per library.
+
+## App differences
+
+Jellyfin apps each use a different part of the server, so a few things vary:
+
+- **Collections.** Some apps, such as Plezy and Jellyfin for Kodi, only show the first Collections library. Put the one you use most first in your catalog order. Plezy also shows collections in a library's Collections tab rather than as a library of their own, and draws every collection as a portrait poster, cropping wide artwork.
+- **Version picker.** Every app shows versions differently. Some list them on the item page, some only when you press play, and some only in the player.
+
+## For instance owners
+
+The Jellyfin server, skip markers and watch-state sync are on by default. The main settings are under **Dashboard → Settings**; see [environment variables](/configuration/environment-variables) for all of them.
+
+| Variable                         | Default | What it does                                                                                              |
+| -------------------------------- | ------- | --------------------------------------------------------------------------------------------------------- |
+| `JELLYFIN_ENABLED`               | `true`  | Turns the Jellyfin server on or off.                                                                      |
+| `JELLYFIN_MAX_LIBRARIES`         | `20`    | Catalogs shown as libraries per configuration. `0` shows them all.                                        |
+| `JELLYFIN_MAX_CATALOG_ITEMS`     | `250`   | Titles listed per library.                                                                                |
+| `JELLYFIN_MAX_VERSIONS`          | `10`    | The most versions a configuration can ask for.                                                            |
+| `JELLYFIN_RESOLVE_ON_OPEN`       | `user`  | `always` or `never` force resolving on open for everyone; `user` leaves it to each configuration.         |
+| `JELLYFIN_MAX_PERSONAS`          | `20`    | Household users per configuration. `0` allows none.                                                       |
+| `JELLYFIN_SEGMENTS_ENABLED`      | `true`  | Offers skip markers. It sends what is being played to the marker databases.                               |
+| `WATCH_STATE_REPORT_ENABLED`     | `true`  | Sends plays to tracker addons.                                                                            |
+| `WATCH_STATE_PULL_ENABLED`       | `true`  | Imports history from tracker addons.                                                                      |
+| `WATCH_STATE_ALLOW_PRIVATE_URLS` | `false` | Lets watch state reach addons on private addresses. Only enable it on an instance you trust the users of. |

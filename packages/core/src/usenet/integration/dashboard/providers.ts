@@ -8,7 +8,7 @@ import {
   type Nzb,
   type NzbSegment,
 } from '../../index.js';
-import { detectFileType } from '../../pool/file-type.js';
+import { detectFileType, isMediaCategory } from '../../pool/file-type.js';
 import { NntpConnection } from '../../nntp/connection.js';
 import { NntpError } from '../../nntp/errors.js';
 import { getSpeedTestEngineConfig, usenetEngineRegistry } from '../engine.js';
@@ -185,8 +185,9 @@ let cachedTestSource: { url: string; source: SpeedTestSource } | null = null;
 /**
  * Indexes of the streamable DATA files in an NZB, largest (by encoded size)
  * first. Reuses {@link detectFileType} (extension-only here, no bytes yet) to
- * keep only real content (video/archive) and never PAR2/NFO/SFV/subtitle/image
- * sidecars, whose articles are often missing and never represent throughput.
+ * keep only real content (video/audio/archive) and never
+ * PAR2/NFO/SFV/subtitle/image sidecars, whose articles are often missing and
+ * never represent throughput.
  */
 export function dataFileIndexes(nzb: Nzb): number[] {
   return nzb.files
@@ -197,7 +198,7 @@ export function dataFileIndexes(nzb: Nzb): number[] {
         Buffer.alloc(0),
         f.filename ?? f.subject
       );
-      return category === 'video' || category === 'archive';
+      return isMediaCategory(category) || category === 'archive';
     })
     .sort((a, b) => b.f.encodedSize - a.f.encodedSize)
     .map(({ i }) => i);

@@ -990,6 +990,7 @@ export const FULL_LANGUAGE_MAPPING: LanguageEntry[] = [
     iso_3166_1: 'NO',
     flag: '🇳🇴',
     english_name: 'Bokmål, Norwegian; Norwegian Bokmål',
+    internal_english_name: 'Norwegian',
     name: 'Bokmål',
   },
   {
@@ -1031,6 +1032,7 @@ export const FULL_LANGUAGE_MAPPING: LanguageEntry[] = [
     iso_3166_1: 'NO',
     flag: '🇳🇴',
     english_name: 'Norwegian Nynorsk; Nynorsk, Norwegian',
+    internal_english_name: 'Norwegian',
     name: 'Nynorsk',
   },
   {

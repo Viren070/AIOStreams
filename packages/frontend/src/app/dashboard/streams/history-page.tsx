@@ -47,19 +47,19 @@ const END_REASONS: Record<
   idle: { label: 'Finished' },
   stopped: {
     label: 'Stopped',
-    className: 'border-orange-500/40 bg-orange-500/10 text-orange-300',
+    className: 'border-orange-400/40 bg-orange-500/10 text-orange-300',
   },
   banned: {
     label: 'Blocked',
-    className: 'border-red-500/40 bg-red-500/10 text-red-300',
+    className: 'border-red-400/40 bg-red-500/10 text-red-200',
   },
   limit: {
     label: 'Limit reached',
-    className: 'border-red-500/40 bg-red-500/10 text-red-300',
+    className: 'border-red-400/40 bg-red-500/10 text-red-200',
   },
   error: {
     label: 'Error',
-    className: 'border-red-500/40 bg-red-500/10 text-red-300',
+    className: 'border-red-400/40 bg-red-500/10 text-red-200',
   },
   stale: {
     label: 'Interrupted',

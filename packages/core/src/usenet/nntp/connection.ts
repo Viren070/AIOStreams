@@ -1,6 +1,7 @@
 import net from 'node:net';
 import tls from 'node:tls';
 import { createLogger } from '../../logging/logger.js';
+import { roundSlotSize } from '../pool/slot-size.js';
 import { ProviderConfig } from '../types.js';
 import {
   NntpError,
@@ -55,6 +56,8 @@ interface PipelineRequest {
   signal?: AbortSignal;
   /** Epoch ms the command was written; the status line's arrival dates from here. */
   writtenAt: number;
+  /** Declared article size; sizes the pooled payload buffer. */
+  expectedBytes?: number;
   /**
    * Nothing else was in flight when this command was written
    */
@@ -70,7 +73,9 @@ interface PipelineRequest {
 let CONNECTION_SEQ = 0;
 
 /** Upper bound (bytes) on a pooled article buffer; larger payloads are allocated fresh, not pooled. */
-const RAW_POOL_CAP = 1 << 20;
+const RAW_POOL_CAP = 4 << 20;
+/** Pooled article buffer size when the caller gives no expected size. */
+const RAW_DEFAULT_BYTES = 1 << 20;
 
 /** Per-connection reused socket-read buffer for the `onread` path (Node fills it, consumed synchronously). */
 const READ_BUF_SIZE = 256 * 1024;
@@ -371,7 +376,8 @@ export class NntpConnection {
     messageId: string,
     signal: AbortSignal | undefined,
     stallTimeoutMs: number,
-    totalTimeoutMs?: number
+    totalTimeoutMs?: number,
+    expectedBytes?: number
   ): Promise<Buffer> {
     return this.submit<Buffer>(
       'body',
@@ -379,7 +385,8 @@ export class NntpConnection {
       signal,
       stallTimeoutMs,
       undefined,
-      totalTimeoutMs
+      totalTimeoutMs,
+      expectedBytes
     );
   }
 
@@ -506,7 +513,8 @@ export class NntpConnection {
     signal: AbortSignal | undefined,
     stallTimeoutMs: number,
     consumer?: (chunk: Buffer) => void,
-    totalTimeoutMs?: number
+    totalTimeoutMs?: number,
+    expectedBytes?: number
   ): Promise<T> {
     if (!this.isUsable) {
       return Promise.reject(
@@ -528,7 +536,8 @@ export class NntpConnection {
       signal,
       stallTimeoutMs,
       consumer,
-      totalTimeoutMs
+      totalTimeoutMs,
+      expectedBytes
     );
   }
 
@@ -546,7 +555,8 @@ export class NntpConnection {
     signal: AbortSignal | undefined,
     stallTimeoutMs: number,
     consumer?: (chunk: Buffer) => void,
-    totalTimeoutMs?: number
+    totalTimeoutMs?: number,
+    expectedBytes?: number
   ): Promise<T> {
     return new Promise<T>((resolve, reject) => {
       const now = Date.now();
@@ -565,6 +575,7 @@ export class NntpConnection {
         signal,
         consumer,
         writtenAt: now,
+        expectedBytes,
         // The command was written immediately before this push, so an empty
         // queue here means it went out on an otherwise-silent connection.
         solo: this.queue.length === 0,
@@ -734,9 +745,11 @@ export class NntpConnection {
     if (head.consumer) {
       parser.beginStreamingBody(head.consumer);
     } else {
-      // Fixed-cap pooled slot: size is unknown until the terminator, so the body
-      // streams in and the slot's own tail is the terminator carry.
-      parser.beginBufferedBody(this.acquireRaw(RAW_POOL_CAP));
+      // Pooled slot sized from the declared article size (the parser grows it
+      // if the post under-declared); the slot's own tail is the terminator carry.
+      parser.beginBufferedBody(
+        this.acquireRaw(head.expectedBytes ?? RAW_DEFAULT_BYTES)
+      );
     }
     return true;
   }
@@ -769,14 +782,15 @@ export class NntpConnection {
    */
   private acquireRaw(size: number): Buffer {
     if (size > RAW_POOL_CAP) return Buffer.allocUnsafe(size);
+    const slotSize = roundSlotSize(size);
     const want = Math.max(2, this.queue.length + 1);
     while (this.rawSlots.length < want) {
-      this.rawSlots.push(Buffer.allocUnsafe(size));
+      this.rawSlots.push(Buffer.allocUnsafe(slotSize));
     }
     if (this.rawNext >= this.rawSlots.length) this.rawNext = 0;
     let buf = this.rawSlots[this.rawNext];
     if (buf.length < size) {
-      buf = Buffer.allocUnsafe(size);
+      buf = Buffer.allocUnsafe(slotSize);
       this.rawSlots[this.rawNext] = buf;
     }
     this.rawNext = (this.rawNext + 1) % this.rawSlots.length;

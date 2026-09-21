@@ -2,7 +2,7 @@ import {
   UsenetIndexerMetricsRepository,
   type UsenetIndexerGrabDelta,
 } from '../../db/index.js';
-import { GrabHttpError } from '../../utils/download-manager.js';
+import { GrabHttpError, NotAnNzbError } from '../../utils/download-manager.js';
 import { createLogger } from '../../logging/logger.js';
 
 const logger = createLogger('usenet/grab-metrics');
@@ -41,6 +41,7 @@ export function grabHttpStatus(err: unknown): number | undefined {
   let cur: unknown = err;
   for (let depth = 0; depth < 5 && cur instanceof Error; depth++) {
     if (cur instanceof GrabHttpError) return cur.status;
+    if (cur instanceof NotAnNzbError) return cur.status;
     cur = cur.cause;
   }
   return undefined;
