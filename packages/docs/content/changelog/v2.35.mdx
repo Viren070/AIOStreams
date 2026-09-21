@@ -1,0 +1,403 @@
+---
+title: A Jellyfin server, plus audio and subtitle tracks
+description: Watch in Jellyfin apps with synced history and skip markers, filter and format on single audio and subtitle tracks, and keep busy instances responsive.
+date: 2026-09-22
+version: 2.35.0
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+{/* Screenshots go in packages/docs/public/changelog/v2.35/ and are linked as ![Alt](/changelog/v2.35/name.png). Only add the link once the file exists: a missing image fails the docs build. */}
+
+The headline is a **Jellyfin server**. Add your instance to a Jellyfin app and sign in with
+your configuration. Your catalogs become libraries, and the streams your addons find become
+versions to pick from. Continue Watching, Next Up and skip-intro buttons work as they do on
+any Jellyfin server, everyone in a household can have their own profile, and addons can act
+as **trackers**. A tracker records what you watch and brings back what you watched
+elsewhere.
+
+For everyone, media info now keeps **every audio and subtitle track** a file was probed
+with. The formatter and stream expressions can ask for an English forced subtitle or a
+commentary track, not just a bare list of languages. The formatter can compare a stream
+against **your own preferences**, variants can **insert** anywhere in a list, and release
+groups are parsed more reliably, particularly on usenet. Busy public instances should also
+be more responsive at peak times.
+
+For self-hosters, built-in Newznab and Torznab searches are faster, and each new feature
+comes with settings to limit it or turn it off.
+
+## A Jellyfin server
+
+Your configuration can now be added to a Jellyfin app as a server. Nothing is imported,
+downloaded or stored. When you open or play something, AIOStreams asks your addons, exactly
+as it does for Stremio, and translates the answer into what a Jellyfin app expects.
+
+| In AIOStreams                     | In a Jellyfin app                                       |
+| --------------------------------- | ------------------------------------------------------- |
+| Your catalogs                     | Libraries                                               |
+| Your metadata addons              | Titles, with their details, seasons and episodes        |
+| The streams found for a title     | Versions of that title                                  |
+| Your subtitle addons              | Subtitle tracks                                         |
+| Catalogs of collections           | A Collections library                                   |
+| What you watch, and your trackers | Continue Watching, Next Up, played marks and favourites |
+
+Swiftfin, Findroid, Streamyfin, Jellyfin for Android TV, Jellyfin for Kodi and Infuse all
+work. The Jellyfin web interface does not, because the address is an API for apps, not a
+website.
+
+### Connecting
+
+Open **Save & Install**, then the new **Jellyfin** card. Its **Connect** tab has everything
+an app asks for:
+
+1. In the app, add a server and paste the **Server address**: your instance followed by
+   `/jellyfin`, such as `https://aiostreams.example.com/jellyfin`.
+2. Sign in with the **Username** shown there and your configuration password. The username
+   is your configuration's UUID, or its alias if you gave it one through a
+   [profile](/changelog/v2.32#configuration-profiles).
+
+On a TV, use **Quick Connect** instead. Pick it on the app's sign-in screen and type the
+six-digit code the app shows into the Connect tab. The tab also offers an address with a
+**sign-in picker**, which lists your configuration and its users on the app's sign-in screen
+with no password to type. That address contains your password, so only use it on your own
+household's devices.
+
+### Browsing
+
+Each catalog becomes a library, in the order set under **Addons → Catalogs**. Searching in
+the app searches the catalogs that support search. A catalog of collections, such as a set
+of streaming services or film series, becomes a **Collections** library. Changes you save
+reach connected apps within about 30 seconds.
+
+{/* Screenshot: a Jellyfin app's home screen on this server, with Continue Watching and Next Up rows above a row of libraries named after the configuration's catalogs */}
+
+An instance limits how many libraries a configuration shows (20 by default) and how many
+titles each lists (250). The Connect tab shows your instance's numbers. Catalogs past the
+library limit do not appear at all, so move the ones you care about to the top.
+
+### Playing
+
+Opening a movie or an episode searches your addons and lists what comes back as
+**versions**. They are named by your [formatter](/reference/custom-formatter) and listed in
+your sort order, so pressing play without choosing plays the stream Stremio would put at the
+top.
+
+{/* Screenshot: the version picker in a Jellyfin app, listing several streams named by the formatter */}
+
+The **Playback** tab controls this:
+
+- **Versions per item** sets how many streams to offer, up to the instance's maximum (10 by
+  default).
+- **Resolve streams when an item opens** is on by default. Turn it off and nothing is
+  searched until you press play, which is lighter on your addons.
+
+Notices, errors and statistics your addons return are listed after the versions. Stremio
+shows these as links to open, which a Jellyfin app cannot do, so here you only see their
+text.
+
+Streams are played directly, never transcoded, so your device has to handle the file as it
+is. If one version will not start, try another. A stream that needs custom request headers
+can only play through a proxy set up under **Proxy**, so without a proxy it is left out.
+
+**Skip intro and credits**, on by default, gives apps intro, recap and credits markers, and
+the app shows a skip button. The markers come from community databases:
+
+- **IntroDB** covers series, plus end credits for movies.
+- **AniSkip** covers anime.
+- **PublicMetaDB** covers movies as well as series. It needs an API key. If the instance has
+  none, enter your own on the Playback tab.
+- **Anime Skip** also covers anime, when the instance owner has set it up.
+
+They are all asked at once. For each kind of marker, the first database on the list that has
+one supplies it. The Playback tab lists the databases your instance uses and lets you pick
+which markers to offer. Whether the app skips on its own is a setting in the app.
+
+### Watch history and trackers
+
+AIOStreams keeps your progress, played marks and favourites itself. That is what fills
+**Continue Watching** and **Next Up**, and it is the same on every app you sign in to.
+
+An addon that supports the new **Watch State** resource can act as a **tracker**. The
+**Trackers** tab lists the ones in your configuration and what each does:
+
+- **Records your plays.** What you watch in a Jellyfin app is sent to the addon, so the
+  watch-history service behind it stays up to date. Jellyfin apps report pause, stop and
+  your position as you watch, so a tracker knows a finished episode from one abandoned a
+  minute in. Stremio never tells an addon that.
+- **Imports your history.** What the addon knows you watched elsewhere, including in
+  Stremio, shows up in Continue Watching and Next Up.
+- **Keeps your watchlist in step** with your favourites, when the addon has a watchlist.
+
+To stop an addon syncing, untick **Watch State** in that addon's **Resources** option.
+
+### Household users
+
+The **Users** tab adds profiles to your server, one per person. Everyone signs in with the
+configuration password, by typing their name or picking it from the sign-in picker.
+
+- A user's **history** is either their own or shared with you.
+- **Variants** can be applied per user, so one person gets different filters, or a
+  different debrid account.
+- With **Choose trackers**, each user with their own history syncs with their own tracker
+  addons, such as a separate watch-history account per person.
+
+Removing a user keeps their history. Add them back under the same name and it returns.
+
+### API keys
+
+A tool that uses the Jellyfin API, such as a dashboard or a script, can connect with an
+**API key** instead of your password. Create one under **API keys** on the Connect tab. A
+key acts as the server's administrator: it sees every user of your configuration, including
+what each is watching right now. It stops working when you revoke it or change the
+configuration password.
+
+### For addon developers
+
+When serving Jellyfin apps, AIOStreams reads more from addons than Stremio does:
+
+- Extra metadata fields: credits, taglines, ratings, studios and library art.
+- A `collection` block that turns a meta into a group of movies and shows.
+- Subtitle titles, and forced and hearing-impaired flags.
+- The `watch_state` resource that trackers implement.
+
+Stremio ignores all of them, so an addon that uses them is still a normal Stremio addon. The
+[addon protocol reference](/reference/addon-protocol) documents each one.
+
+<Callout type="info">
+  The Jellyfin server is on by default. If the Jellyfin card is greyed out, the instance
+  owner has turned it off. The [Jellyfin guide](/guides/jellyfin) covers everything above in
+  more depth, including how the apps differ.
+</Callout>
+
+## For everyone
+
+### Audio and subtitle tracks
+
+Media info used to boil a file down to lists: its languages, its subtitle languages, its
+audio formats. It now keeps **every track** a probe found. A track has its language, title
+and codec, plus the format and channels for audio. It also carries the flags the file sets:
+default, forced, hearing impaired, commentary, dub, original language and audio description.
+
+Tracks come from the same media info that already filled in accurate languages and
+subtitles: the probe data StremThru provides for debrid results from the built-in addons and
+service-wrapped addons. For other addons, an optional [RemuxDB lookup](#smaller-things) can
+fill it in. A stream without media info has no tracks.
+
+In the formatter, `{stream.audioTracks}` and `{stream.subtitleTracks}` are lists of tracks.
+Narrow them with `::where`, take one field from each with `::pluck`, or render each track
+with `::each`:
+
+```
+{stream.subtitleTracks::where('hearingImpaired')::exists["CC"||""]}
+{stream.subtitleTracks::where('forced')::pluck('lang')::languageEmoji::join(' ')}
+{stream.audioTracks::each("{track.lang::languageCode} {track.tag} {track.channels}")::join(' | ')}
+
+  ->  EN TrueHD 7.1 | EN DD 2.0 | FR DD+ 5.1
+```
+
+In stream expressions, `audioTrack()` and `subtitleTrack()` match a stream when a single
+track meets every condition. So an English track that is also forced counts, but an English
+track plus a separate forced track does not:
+
+```
+subtitleTrack(streams, 'lang=English', 'forced')
+audioTrack(streams, 'lang=Japanese', 'original')
+negate(subtitleTrack(streams, 'codec~pgs'), streams)
+```
+
+Many releases only mark SDH or commentary in a track's title, so `title~sdh` catches more
+than the `hearingImpaired` flag does. You can add and edit tracks on the sample stream in the
+formatter's preview panel. The [formatter reference](/reference/custom-formatter#tracks) and
+the [stream expression reference](/reference/stream-expressions) list every field.
+
+### The formatter
+
+**Your own preferences, as fields.** The new `{user.*}` fields hold the lists you
+configured: languages, subtitles, resolutions, qualities, visual tags, audio tags, audio
+channels, encodes, stream types, release groups and keywords. Each one combines that list's
+preferred, required and included values.
+
+Pass one of these fields in place of a value to `::where`, `::in`, or the new `::keep` and
+`::remove`, and a template can react to your configuration instead of repeating it. Change
+your preferred languages and the template follows.
+
+```
+{stream.languages::in({user.languages})["⭐"||""]}
+{stream.audioTags::keep({user.audioTags})::join(', ')}
+{stream.subtitleTracks::where('lang={user.subtitles}', '!forced')::exists["💬"||""]}
+```
+
+Also new:
+
+- `{stream.site}` is the site a release names in its title, such as `www.UIndex.org`.
+- `::trim` strips whitespace, or any characters you give it, from both ends. With
+  `{stream.site}` it tidies a filename:
+  `{stream.filename::replace('{stream.site}','')::trim(' -')}`.
+- Templates can be three times as long. The default limit rose from 5,000 characters to
+  15,000.
+
+### Variants
+
+- **`insert`** puts a value anywhere in a list. `add` and `prepend` only reach the ends.
+  Anchor it on a selector so it still lands in the right place after you reorder the list:
+
+  ```
+  insert after excludedStreamExpressions[expression*="Torbox Download Limit"] = {
+    "expression": "/*No 4K*/ resolution(streams, '2160p')",
+    "enabled": true
+  }
+  ```
+
+- **`[*]` also walks an object's values**, not just a list's elements, so one instruction
+  reaches every sort list you have defined.
+  `insert sortCriteria[*][1] = { "key": "resolution", "direction": "desc" }` makes resolution
+  the second criterion in each.
+- **Any number of variants can combine.** The cap of four per request is gone. Instead,
+  everything one request applies shares a single budget of instructions. The reference now
+  spells out [what applies, in what order](/reference/config-expressions#what-applies-in-what-order)
+  when a variant chosen in the URL and variants activated by their conditions meet.
+
+The reference has more on [inserting at a position](/reference/config-expressions#inserting-at-a-position).
+
+### Release groups
+
+An update to the release name parser means release groups are read more reliably. The
+parser also ignores the tags that reposters and indexers add after the group. These are
+everywhere on usenet: in `Movie.2024.1080p.WEB-DL.x264-GROUP-AsRequested` or
+`...-GROUP-Obfuscated`, the release group is now `GROUP`, not `AsRequested` or
+`Obfuscated`. Release group filters, sorting and the formatter all see the real group.
+
+Common suffixes are recognised out of the box, and instance owners can
+[add more](#new-settings).
+
+### Steadier under load
+
+Most of this release's performance work is aimed at busy public instances. Some jobs used
+to run from start to finish without letting anything else through: reading a large indexer
+response, ranking thousands of streams against a regex list, or going through a download
+with thousands of files. While one of them ran, every other request on the instance waited.
+
+These jobs now run in short slices, so other requests keep moving while they run, and they
+use less CPU. A busy instance should see fewer slowdowns and smaller CPU spikes.
+
+### Smaller things
+
+- **PenguPlay** is available as a preset: movies, series and live TV from public hosts, with
+  provider and quality filters.
+- **SquareEyed** is in the Newznab preset's indexer list, contributed by
+  [Spoorloos](https://github.com/Spoorloos).
+- **Bitmagnet** has a **Search Mode** option. It can search by ID where Bitmagnet supports
+  it, always by title, or both. Title search was the only behaviour before, and it is still
+  the default.
+- **Only Same-Release Failover**, under **Services → Failover**, only fails over to other
+  copies of the release you picked, never to a different release. Contributed by webstreamr.
+- **Also Check Result Age**, in the **Digital Release Filter** under **Filters →
+  Miscellaneous**, also blocks results uploaded before the title's release or air date,
+  when the result's age is known. Contributed by webstreamr.
+- There are four new stream expression filters: `editions()`, `network()`, `container()` and
+  `extension()`.
+- **RemuxDB Integration**, under **Filters → Miscellaneous**, looks results up in RemuxDB's
+  database of probed files. It fills in media info, tracks included, for addons that StremThru
+  does not cover. It is off by default. Each lookup sends the title's IMDb ID, with the season
+  and episode, from the instance. Contributed by webstreamr.
+
+## For self-hosters
+
+### Faster Newznab and Torznab searches
+
+On an instance only you use, you are unlikely to notice the
+[performance work](#steadier-under-load), except in the built-in Newznab and Torznab
+searches:
+
+- **Responses are read about seven times faster.** That takes roughly a tenth off a search
+  that is not already cached.
+- **On Redis, their cache entries take about a twelfth of the space.** Large cache values
+  are now stored compressed. The biggest search responses, such as a full season of a
+  long-running show, used to go over **Max cached value size** and were fetched again every
+  time. Now they are cached.
+
+### New settings
+
+- **Jellyfin**, under **Settings → Jellyfin**. **Enable Jellyfin API** (`JELLYFIN_ENABLED`) is
+  on by default. **Max libraries per configuration** (`JELLYFIN_MAX_LIBRARIES`, 20), **Max
+  items per library** (`JELLYFIN_MAX_CATALOG_ITEMS`, 250), **Max versions per item**
+  (`JELLYFIN_MAX_VERSIONS`, 10) and **Max users per configuration** (`JELLYFIN_MAX_PERSONAS`,
+  20) set the limits. **Resolve streams when an item is opened** (`JELLYFIN_RESOLVE_ON_OPEN`)
+  can force that behaviour on or off for everyone. **Skip intro and credits**
+  (`JELLYFIN_SEGMENTS_ENABLED`, on) sends what is being played to the marker databases.
+  **Segment providers** (`JELLYFIN_SEGMENTS_PROVIDERS`) sets which databases are asked and in
+  what order. It defaults to IntroDB, AniSkip and PublicMetaDB. Anime Skip is only used with
+  an **Anime Skip client id** (`JELLYFIN_SEGMENTS_ANIME_SKIP_CLIENT_ID`). A **PublicMetaDB
+  API key** (`JELLYFIN_SEGMENTS_PMDB_API_KEY`) covers every configuration without its own.
+  Leave it empty and PublicMetaDB is only used by configurations that bring a key.
+  Logins, API calls and images each have their own rate limit: `JELLYFIN_LOGIN_RATE_LIMIT_*`,
+  `JELLYFIN_API_RATE_LIMIT_*` and `JELLYFIN_IMAGE_RATE_LIMIT_*`.
+- **Watch State**, under **Settings → Watch State**. **Report playback to addons**
+  (`WATCH_STATE_REPORT_ENABLED`) and **Read watch state from addons**
+  (`WATCH_STATE_PULL_ENABLED`) are both on. **Max addons exchanged with**
+  (`WATCH_STATE_MAX_SINKS`, 3) limits how many trackers a configuration can use. A tracker
+  addon on a private address also needs **Allow exchanging with private addresses**
+  (`WATCH_STATE_ALLOW_PRIVATE_URLS`, off). That lets anyone who can save a configuration make
+  your server send requests into your network, so only turn it on for users you trust.
+- **Repost suffixes**, under **Settings → Addon Resources** (`REPOST_SUFFIXES`), is the list
+  of tags the parser ignores after a release group. End an entry with `*` to match anything
+  that starts with it.
+- **Enable release blocklist**, under **Settings → Blocklists**
+  (`RELEASE_BLOCKLIST_ENABLED`, on), switches off the whole
+  [release blocklist](/guides/release-blocklist) in one go. While it is off, nothing is
+  filtered, no new verdicts are recorded and subscribed lists stop syncing. Existing entries
+  are kept. Contributed by webstreamr.
+- **Max linked accounts per configuration**, under **Settings → General**
+  (`LINKED_ACCOUNTS_MAX_PER_USER`, 10).
+- **RemuxDB**, under **Settings → RemuxDB** (`REMUXDB_ENABLED`, on), makes the RemuxDB lookup
+  available to users. Lookups go out from your server. Turning this off hides the option and
+  stops them.
+- `DATABASE_POOL_SIZE` (10) sets how many PostgreSQL connections the instance opens. It is a
+  startup setting with no dashboard equivalent. Requests, background tasks and watch-state
+  imports all share this pool, so an instance serving many Jellyfin clients wants a bigger
+  one.
+
+## Upgrading
+
+Nothing in this release changes install URLs or needs a manual migration. A few things are
+worth checking.
+
+**Network names.** The parser now uses the names the services use for themselves. `Amazon`
+is now `Prime Video`, `Disney` is `Disney+`, `HBO` is `HBO Max` and `Paramount` is
+`Paramount+`. Update any formatter template that compares `{stream.network}` against the old
+names.
+
+**Variant limits.** `MAX_VARIANT_INSTRUCTIONS`, `MAX_ACTIVE_VARIANTS` and
+`MAX_VARIANT_DEPTH` are gone. No per-script cap could bound what nested `use variant`
+instructions expand to, so one budget now covers everything a request applies: **Settings →
+User Limits → Max variant instructions per request** (`MAX_VARIANT_TOTAL_INSTRUCTIONS`,
+5000). A request that runs out stops there and says so. The old variables are ignored.
+
+**Private sync URLs.** Regex and stream expression sync URLs on private addresses are now
+refused unless **Settings → User Limits → Allow private regex/SEL sync URLs**
+(`SYNC_ALLOW_PRIVATE_URLS`) is on. Whitelisted URLs you configured yourself are not affected.
+
+**Newznab and Torznab caps.** Built-in Newznab and Torznab searches take at most 1,000
+results and 10 MB per response. Change these under **Settings → Built-ins** with
+**Newznab/Torznab max results per request** (`BUILTIN_NAB_MAX_RESULTS`) and
+**Newznab/Torznab max response size** (`BUILTIN_NAB_MAX_RESPONSE_BYTES`). An indexer that
+returns more is cut off at the cap with a warning, and the search still succeeds.
+
+**Several replicas on one Redis.** Large cache values are now stored compressed. The new
+version reads old values fine, but an older version logs a parse error every time it reads a
+compressed value, until that value expires. Upgrade every replica together.
+
+**A database from another build.** If a database's migrations were applied by a different
+build of AIOStreams, such as a fork or a development branch, startup now refuses it and names
+the migrations that conflict. Before, the instance ran on a schema it did not expect. To fix
+it, point `DATABASE_URI` at a fresh database or go back to the build that created it.
+Upgrading from a release is not affected.
+
+**What is on by default.** The Jellyfin server at `/jellyfin`, with skip markers and watch
+state in both directions. RemuxDB is also available by default, but each user has to turn it
+on for themselves. [New settings](#new-settings) says where to switch each one off.
+
+<Callout type="info">
+  Full commit-level history for this release is in the [GitHub
+  release](https://github.com/Viren070/AIOStreams/releases/tag/v2.35.0).
+</Callout>
