@@ -43,18 +43,25 @@ export function matchEntry(
   if (hash) {
     const inTorrent = (s: ProbeSource) =>
       s.torrent_info_hash?.toLowerCase() === hash;
+    const candidates = versions.filter((v) => v.sources.some(inTorrent));
     const name = baseName(stream.filename);
     const fileIdx = stream.torrent?.fileIdx;
+    const size = stream.size;
     const match =
       (name &&
-        versions.find((v) =>
+        candidates.find((v) =>
           v.sources.some((s) => inTorrent(s) && baseName(s.filename) === name)
         )) ||
-      versions.find((v) =>
-        v.sources.some(
-          (s) => inTorrent(s) && (s.torrent_file_idx ?? undefined) === fileIdx
-        )
-      );
+      (fileIdx !== undefined &&
+        candidates.find((v) =>
+          v.sources.some((s) => inTorrent(s) && s.torrent_file_idx === fileIdx)
+        )) ||
+      // No file index: the hash only counts if the sizes agree, ruling out packs.
+      (fileIdx === undefined &&
+        size &&
+        candidates.find(
+          (v) => v.size && Math.abs(v.size - size) <= size * 0.01
+        ));
     if (match) return match;
   }
 

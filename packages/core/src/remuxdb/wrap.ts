@@ -2,6 +2,7 @@ import type { ParsedStream, UserData } from '../db/schemas.js';
 import { resolveCrossProviderIds } from '../metadata/id-resolution.js';
 import type { StreamContext } from '../streams/context.js';
 import {
+  appConfig,
   createLogger,
   mergeParsedMediaInfos,
   parseMediaInfo,
@@ -41,12 +42,16 @@ async function lookupVersions(
   return versions;
 }
 
+export function isRemuxDbEnabled(userData: UserData): boolean {
+  return appConfig.remuxdb.enabled && userData.remuxDb?.enabled === true;
+}
+
 export async function resolveRemuxDbMediaInfo(
   streams: ParsedStream[],
   context: StreamContext,
   userData: UserData
 ): Promise<void> {
-  if (!userData.remuxDb?.enabled) return;
+  if (!isRemuxDbEnabled(userData)) return;
 
   try {
     const eligible = streams.filter(

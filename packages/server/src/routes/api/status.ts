@@ -80,6 +80,9 @@ const statusInfo = async (): Promise<StatusResponse> => {
           apiKey: !!appConfig.metadata.tvdb.apiKey,
         },
       },
+      remuxdb: {
+        enabled: appConfig.remuxdb.enabled,
+      },
       regexAccess: {
         level: appConfig.userLimits.regex.access,
         ...allowedRegexes,

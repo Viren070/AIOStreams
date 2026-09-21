@@ -1,5 +1,6 @@
 import { constants, formatMilliseconds } from '../utils/index.js';
 import type { ParsedStream } from '../db/schemas.js';
+import { isRemuxDbEnabled } from '../remuxdb/wrap.js';
 import type { AIOStreamsContext, StatEntry, PipelineTimings } from './types.js';
 
 /** Split a flat filter-details array into per-📌-header groups. */
@@ -155,7 +156,7 @@ export function buildStatistics(
         `📥 Fetch: ${fmtMs(fetchMs)}`,
         `🔗 Service Wrap: ${fmtMs(pipelineTimings.serviceWrapMs)}`,
       ];
-      if (userData.remuxDb?.enabled) {
+      if (isRemuxDbEnabled(userData)) {
         lines.push(`🎞️ RemuxDB: ${fmtMs(pipelineTimings.remuxDbMs)}`);
       }
       // Show accumulated filter total (fetcher + optional re-filter pass)

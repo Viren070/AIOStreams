@@ -1,7 +1,18 @@
+import { z } from 'zod';
 import { seconds, urlString } from './helpers.js';
 import type { RuntimeConfigSection } from '../types.js';
 
 export const remuxdbSchema = {
+  enabled: {
+    schema: z.boolean(),
+    default: true,
+    label: 'RemuxDB',
+    description:
+      'Let users fill in missing stream details from RemuxDB. Lookups are sent from this server, so turning this off hides the setting and stops all lookups.',
+    env: 'REMUXDB_ENABLED',
+    requiresRestart: false,
+    secret: false,
+  },
   baseUrl: {
     schema: urlString,
     default: 'https://remuxdb.1632022.xyz',
