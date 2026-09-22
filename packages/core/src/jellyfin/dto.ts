@@ -709,7 +709,7 @@ export function buildEpisode(
     PrimaryImageAspectRatio: 1.7777,
     Genres: seriesItem.Genres,
     GenreItems: seriesItem.GenreItems,
-    CommunityRating: extra.rating ?? seriesItem.CommunityRating,
+    CommunityRating: extra.rating,
     OfficialRating: seriesItem.OfficialRating,
     People: peopleDtos(extra.people),
     ProviderIds: extra.providerIds,
