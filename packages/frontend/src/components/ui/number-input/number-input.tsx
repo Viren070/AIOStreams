@@ -234,6 +234,13 @@ export const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
       locale,
       dir,
       onValueChange: (details: { valueAsNumber: number; value: string }) => {
+        if (
+          !isEmptyValue &&
+          details.value !== '' &&
+          details.valueAsNumber === Number(controlledValue)
+        ) {
+          return;
+        }
         onValueChange?.(details.valueAsNumber, details.value);
       },
     });

@@ -226,9 +226,10 @@ export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
       }
     }, [controlledValue]);
 
-    React.useEffect(() => {
+    const commitValue = (value: string[]) => {
+      handleUpdateValue(value);
       onValueChange?.(value);
-    }, [value]);
+    };
 
     const counts: Record<string, number> = {};
     const options = rawOptions.map((option) => {
@@ -282,7 +283,7 @@ export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
                   )}
                   onClick={(e) => {
                     e.preventDefault();
-                    handleUpdateValue(value.filter((v) => v !== option.value));
+                    commitValue(value.filter((v) => v !== option.value));
                     setOpen(false);
                   }}
                 >
@@ -365,7 +366,7 @@ export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
                       )}
                       onClick={(e) => {
                         e.preventDefault();
-                        handleUpdateValue([]);
+                        commitValue([]);
                         setOpen(keepOpenOnSelect);
                       }}
                     >
@@ -428,13 +429,13 @@ export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
                           );
                           if (_option) {
                             if (!multiple) {
-                              handleUpdateValue(
+                              commitValue(
                                 value.includes(_option.value)
                                   ? []
                                   : [_option.value]
                               );
                             } else {
-                              handleUpdateValue(
+                              commitValue(
                                 !value.includes(_option.value)
                                   ? [...value, _option.value]
                                   : value.filter((v) => v !== _option.value)
