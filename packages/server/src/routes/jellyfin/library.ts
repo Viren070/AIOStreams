@@ -2,6 +2,11 @@ import { Router, type Request, type Response } from 'express';
 import {
   buildGenre,
   catalogHasCollections,
+  filmographyCredits,
+  findPerson,
+  sortCredits,
+  titlePreviews,
+  type FilmographyKind,
   collectionMembers,
   config as appConfig,
   contentItemType,
@@ -74,6 +79,12 @@ function excludeTypes(req: Request, items: JellyfinItem[]): JellyfinItem[] {
   return excluded.size
     ? items.filter((i) => !excluded.has(String(i.Type).toLowerCase()))
     : items;
+}
+
+/** Jellyfin's SortOrder, when a request gives one. */
+function sortDescending(req: Request): boolean | undefined {
+  const order = qs(req, 'SortOrder');
+  return order ? order.toLowerCase().startsWith('desc') : undefined;
 }
 
 function filterByType(
@@ -502,6 +513,26 @@ async function handleItems(
       if (p?.kind === 'descriptor' && p.descriptor.k === 'person')
         name = p.descriptor.n;
     }
+    const found = name ? await findPerson(ctx.userData, name) : null;
+    if (found) {
+      const kinds = types
+        ? (['movie', 'series'] as FilmographyKind[]).filter((k) => types.has(k))
+        : undefined;
+      const credits = sortCredits(
+        filmographyCredits(found.person, kinds),
+        qlist(req, 'SortBy'),
+        sortDescending(req)
+      );
+      const previews = await titlePreviews(
+        engine,
+        found.tmdb,
+        credits.slice(startIndex, startIndex + limit)
+      );
+      const items = await itemsFromPreviews(ctx, previews);
+      send(req, res, excludeTypes(req, items), credits.length, startIndex);
+      return;
+    }
+    // Without TMDB, a search for the name finds what it can.
     const previews = name ? await searchCatalogs(engine, name, limit) : [];
     const items = filterByType(await itemsFromPreviews(ctx, previews), types);
     send(req, res, items, items.length, 0);

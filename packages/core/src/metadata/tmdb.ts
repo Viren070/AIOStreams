@@ -32,6 +32,7 @@ const TITLE_CACHE_TTL = 7 * 24 * 60 * 60; // 7 days
 const AUTHORISATION_CACHE_TTL = 2 * 24 * 60 * 60; // 2 days
 const EPISODE_CACHE_TTL = 6 * 60 * 60; // 6 hours
 const SEARCH_CACHE_TTL = 7 * 24 * 60 * 60; // 7 days
+const PERSON_CACHE_TTL = 3 * 24 * 60 * 60; // 3 days, credits grow
 
 // Zod schemas for API responses
 const GenreSchema = z.object({
@@ -175,6 +176,89 @@ const TVSearchResultsSchema = z.object({
   ),
 });
 
+const PersonSearchResultsSchema = z.object({
+  results: z.array(
+    z.looseObject({
+      id: z.number(),
+      name: z.string(),
+      popularity: z.number().optional(),
+    })
+  ),
+});
+
+const PersonCreditSchema = z.looseObject({
+  id: z.number(),
+  media_type: z.string(),
+  title: z.string().optional(),
+  name: z.string().optional(),
+  release_date: z.string().nullable().optional(),
+  first_air_date: z.string().nullable().optional(),
+  overview: z.string().nullable().optional(),
+  poster_path: z.string().nullable().optional(),
+  backdrop_path: z.string().nullable().optional(),
+  genre_ids: z.array(z.number()).optional(),
+  popularity: z.number().optional(),
+  vote_count: z.number().optional(),
+  character: z.string().nullable().optional(),
+  job: z.string().nullable().optional(),
+});
+
+const PersonDetailsSchema = z.looseObject({
+  id: z.number(),
+  name: z.string(),
+  biography: z.string().nullable().optional(),
+  birthday: z.string().nullable().optional(),
+  deathday: z.string().nullable().optional(),
+  place_of_birth: z.string().nullable().optional(),
+  profile_path: z.string().nullable().optional(),
+  known_for_department: z.string().nullable().optional(),
+  imdb_id: z.string().nullable().optional(),
+  combined_credits: z
+    .object({
+      cast: z.array(PersonCreditSchema).optional(),
+      crew: z.array(PersonCreditSchema).optional(),
+    })
+    .optional(),
+});
+
+const ExternalIdsSchema = z.looseObject({
+  imdb_id: z.string().nullable().optional(),
+});
+
+/** A movie or show as TMDB lists them in credits and recommendations. */
+export interface TMDBTitle {
+  tmdbId: number;
+  mediaType: 'movie' | 'tv';
+  title: string;
+  /** YYYY-MM-DD */
+  date?: string;
+  overview?: string;
+  posterPath?: string;
+  backdropPath?: string;
+  genreIds: number[];
+  popularity: number;
+  voteCount: number;
+}
+
+export interface TMDBPersonCredit extends TMDBTitle {
+  /** Characters played and jobs held, one entry per credit. */
+  roles: string[];
+}
+
+export interface TMDBPerson {
+  tmdbId: number;
+  name: string;
+  biography?: string;
+  /** YYYY-MM-DD */
+  birthday?: string;
+  deathday?: string;
+  placeOfBirth?: string;
+  profilePath?: string;
+  imdbId?: string;
+  department?: string;
+  credits: TMDBPersonCredit[];
+}
+
 export interface TMDBSeriesSearchResult {
   tmdbId: number;
   name?: string;
@@ -208,6 +292,12 @@ export class TMDBMetadata {
     Cache.getInstance<string, EpisodeDetails>('tmdb_episode_v2');
   private static readonly searchCache: Cache<string, TMDBSeriesSearchResult[]> =
     Cache.getInstance<string, TMDBSeriesSearchResult[]>('tmdb_search');
+  private static readonly personIdCache: Cache<string, number> =
+    Cache.getInstance<string, number>('tmdb_person_id');
+  private static readonly personCache: Cache<string, TMDBPerson> =
+    Cache.getInstance<string, TMDBPerson>('tmdb_person');
+  private static readonly imdbIdCache: Cache<string, string> =
+    Cache.getInstance<string, string>('tmdb_imdb_id');
   public constructor(auth?: { accessToken?: string; apiKey?: string }) {
     if (
       !auth?.accessToken &&
@@ -669,6 +759,120 @@ export class TMDBMetadata {
     return this.getEpisodeDetails(tmdbId, nextSeason, nextEpisode).then(
       (details) => details?.airDate
     );
+  }
+
+  private async getJson(path: string, params: Record<string, string> = {}) {
+    const url = new URL(API_BASE_URL + path);
+    for (const [key, value] of Object.entries(params)) {
+      url.searchParams.set(key, value);
+    }
+    this.addSearchParams(url);
+    const response = await makeRequest(url.toString(), {
+      timeout: 5000,
+      headers: this.getHeaders(),
+    });
+    if (response.status === 404) return undefined;
+    if (!response.ok) {
+      throw new Error(`TMDB ${path} failed: ${response.statusText}`);
+    }
+    return response.json();
+  }
+
+  /**
+   * The person a name most likely means: an exact match before a partial one,
+   * then the most popular.
+   */
+  public async findPersonId(name: string): Promise<number | undefined> {
+    const key = name.trim().toLowerCase();
+    const cached = await TMDBMetadata.personIdCache.get(key);
+    if (cached !== undefined) return cached || undefined;
+    const json = await this.getJson('/search/person', { query: name });
+    const results = json ? PersonSearchResultsSchema.parse(json).results : [];
+    const exact = results.filter((r) => r.name.trim().toLowerCase() === key);
+    const best = (exact.length ? exact : results).sort(
+      (a, b) => (b.popularity ?? 0) - (a.popularity ?? 0)
+    )[0];
+    // 0 remembers that nobody matched, so the search is not repeated.
+    await TMDBMetadata.personIdCache.set(key, best?.id ?? 0, SEARCH_CACHE_TTL);
+    return best?.id;
+  }
+
+  /** A person's details and every credit, cast and crew merged per title. */
+  public async getPerson(tmdbId: number): Promise<TMDBPerson | undefined> {
+    const key = String(tmdbId);
+    const cached = await TMDBMetadata.personCache.get(key);
+    if (cached) return cached;
+    const json = await this.getJson(`/person/${tmdbId}`, {
+      append_to_response: 'combined_credits',
+    });
+    if (!json) return undefined;
+    const data = PersonDetailsSchema.parse(json);
+    const credits = [
+      ...(data.combined_credits?.cast ?? []).map((c) => ({
+        ...c,
+        role: c.character,
+      })),
+      ...(data.combined_credits?.crew ?? []).map((c) => ({
+        ...c,
+        role: c.job,
+      })),
+    ];
+    const byTitle = new Map<string, TMDBPersonCredit>();
+    for (const credit of credits) {
+      if (credit.media_type !== 'movie' && credit.media_type !== 'tv') continue;
+      const title = credit.title ?? credit.name;
+      if (!title) continue;
+      const role = credit.role?.trim();
+      const titleKey = `${credit.media_type}:${credit.id}`;
+      const existing = byTitle.get(titleKey);
+      if (existing) {
+        if (role && !existing.roles.includes(role)) existing.roles.push(role);
+        continue;
+      }
+      byTitle.set(titleKey, {
+        tmdbId: credit.id,
+        mediaType: credit.media_type,
+        title,
+        date: (credit.release_date ?? credit.first_air_date) || undefined,
+        overview: credit.overview || undefined,
+        posterPath: credit.poster_path ?? undefined,
+        backdropPath: credit.backdrop_path ?? undefined,
+        genreIds: credit.genre_ids ?? [],
+        popularity: credit.popularity ?? 0,
+        voteCount: credit.vote_count ?? 0,
+        roles: role ? [role] : [],
+      });
+    }
+    const person: TMDBPerson = {
+      tmdbId: data.id,
+      name: data.name,
+      biography: data.biography || undefined,
+      birthday: data.birthday || undefined,
+      deathday: data.deathday || undefined,
+      placeOfBirth: data.place_of_birth || undefined,
+      profilePath: data.profile_path ?? undefined,
+      imdbId: data.imdb_id || undefined,
+      department: data.known_for_department ?? undefined,
+      credits: [...byTitle.values()],
+    };
+    await TMDBMetadata.personCache.set(key, person, PERSON_CACHE_TTL);
+    return person;
+  }
+
+  /** The IMDb id of a movie or show, for meta addons that only take those. */
+  public async getImdbId(
+    mediaType: 'movie' | 'tv',
+    tmdbId: number
+  ): Promise<string | undefined> {
+    const key = `${mediaType}:${tmdbId}`;
+    const cached = await TMDBMetadata.imdbIdCache.get(key);
+    if (cached !== undefined) return cached || undefined;
+    const json = await this.getJson(`/${mediaType}/${tmdbId}/external_ids`);
+    const imdbId = json
+      ? (ExternalIdsSchema.parse(json).imdb_id ?? undefined)
+      : undefined;
+    await TMDBMetadata.imdbIdCache.set(key, imdbId ?? '', ID_CACHE_TTL);
+    return imdbId;
   }
 
   public async validateAuthorisation() {

@@ -6,6 +6,8 @@ import {
   buildGenre,
   buildMediaSource,
   buildPerson,
+  findPerson,
+  withPersonDetails,
   buildSeason,
   buildView,
   collectionMembers,
@@ -376,8 +378,11 @@ export async function itemFromDescriptor(
     }
     case 'genre':
       return buildGenre(ctx.build, d.t, d.c, d.g);
-    case 'person':
-      return buildPerson(ctx.build, d.n);
+    case 'person': {
+      const item = buildPerson(ctx.build, d.n);
+      const found = await findPerson(ctx.userData, d.n);
+      return found ? withPersonDetails(item, found.person) : item;
+    }
     case 'source':
       return null;
     case 'boxset': {
