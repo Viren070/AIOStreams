@@ -156,8 +156,9 @@ async function _fetchFromApi(
   episode?: number
 ): Promise<MediaProbeVersion[] | null> {
   try {
-    const url = new URL(`${appConfig.remuxdb.baseUrl}/api/media/info`);
-    url.searchParams.set('imdb_id', imdbId);
+    const url = new URL(
+      `${appConfig.remuxdb.baseUrl}/api/media/${encodeURIComponent(imdbId)}/versions`
+    );
     if (season !== undefined) url.searchParams.set('season', String(season));
     if (episode !== undefined) url.searchParams.set('episode', String(episode));
 
