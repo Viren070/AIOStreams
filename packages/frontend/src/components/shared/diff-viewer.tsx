@@ -107,7 +107,7 @@ export function DiffViewer({
 
   return (
     <div className="w-full mt-4">
-      <Tabs defaultValue="visual" className="w-full">
+      <Tabs defaultValue="visual" className="w-full" animated={false}>
         <TabsList className="mb-4 grid w-full grid-cols-2">
           <TabsTrigger value="visual">Visual</TabsTrigger>
           <TabsTrigger value="json">Raw JSON</TabsTrigger>
