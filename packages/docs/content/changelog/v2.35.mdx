@@ -300,6 +300,8 @@ use less CPU. A busy instance should see fewer slowdowns and smaller CPU spikes.
   database of probed files. It fills in media info, tracks included, for addons that StremThru
   does not cover. It is off by default. Each lookup sends the title's IMDb ID, with the season
   and episode, from the instance. Contributed by webstreamr.
+- **Drafts** can be checked before you restore them. The redesigned banner's **Review** button shows
+  what restoring would change in the configuration you have loaded.
 
 ## For self-hosters
 
@@ -321,8 +323,7 @@ searches:
 - **Jellyfin**, under **Settings → Jellyfin**. **Enable Jellyfin API** (`JELLYFIN_ENABLED`) is
   on by default. **Max libraries per configuration** (`JELLYFIN_MAX_LIBRARIES`, 20), **Max
   items per library** (`JELLYFIN_MAX_CATALOG_ITEMS`, 250), **Max versions per item**
-  (`JELLYFIN_MAX_VERSIONS`, 10) and **Max users per configuration** (`JELLYFIN_MAX_PERSONAS`,
-  20) set the limits. **Resolve streams when an item is opened** (`JELLYFIN_RESOLVE_ON_OPEN`)
+  (`JELLYFIN_MAX_VERSIONS`, 10) and **Max users per configuration** (`JELLYFIN_MAX_PERSONAS`, 20) set the limits. **Resolve streams when an item is opened** (`JELLYFIN_RESOLVE_ON_OPEN`)
   can force that behaviour on or off for everyone. **Skip intro and credits**
   (`JELLYFIN_SEGMENTS_ENABLED`, on) sends what is being played to the marker databases.
   **Segment providers** (`JELLYFIN_SEGMENTS_PROVIDERS`) sets which databases are asked and in
