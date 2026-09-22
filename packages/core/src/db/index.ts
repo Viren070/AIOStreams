@@ -87,6 +87,8 @@ export {
   type WatchStatePatch,
   type WatchKind,
   type WatchOrigin,
+  type WatchHistoryCursor,
+  type WatchHistoryCounts,
 } from './repositories/watch-state.js';
 export {
   WatchSessionRepository,

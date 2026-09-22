@@ -144,6 +144,29 @@ export class LocalWatchStateProvider implements WatchStateProvider {
     }
   }
 
+  async clear(scope: WatchScope, itemKeys?: string[]): Promise<number> {
+    const prefix = `${scope.uuid}|${scope.persona}|`;
+    const only = itemKeys ? new Set(itemKeys) : null;
+    for (const key of this.pending.keys()) {
+      if (!key.startsWith(prefix)) continue;
+      if (!only || only.has(key.slice(prefix.length))) this.pending.delete(key);
+    }
+    const cleared = await WatchStateRepository.clearPlayback(scope, itemKeys);
+    if (cleared.length) {
+      this.notify(
+        scope,
+        cleared.map((row) => ({
+          ...row,
+          played: false,
+          positionMs: 0,
+          playCount: 0,
+          lastPlayedAt: null,
+        }))
+      );
+    }
+    return cleared.length;
+  }
+
   async flush(): Promise<void> {
     if (this.timer) {
       clearTimeout(this.timer);
@@ -239,9 +262,14 @@ export class LocalWatchStateProvider implements WatchStateProvider {
     patch: WatchStatePatch
   ): Promise<WatchStateRow> {
     const row = await WatchStateRepository.upsert(scope, identity, patch);
+    this.notify(scope, [row]);
+    return row;
+  }
+
+  private notify(scope: WatchScope, rows: WatchStateRow[]) {
     for (const listener of this.listeners) {
       try {
-        listener(scope, [row]);
+        listener(scope, rows);
       } catch (error) {
         logger.debug(
           { err: error instanceof Error ? error.message : String(error) },
@@ -249,6 +277,5 @@ export class LocalWatchStateProvider implements WatchStateProvider {
         );
       }
     }
-    return row;
   }
 }

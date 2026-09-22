@@ -169,6 +169,8 @@ export interface WatchStateProvider {
   listPlayed(scope: WatchScope, kinds?: WatchKind[]): Promise<WatchStateRow[]>;
   listForSeries(scope: WatchScope, seriesKey: string): Promise<WatchStateRow[]>;
   record(scope: WatchScope, event: WatchEvent): Promise<WatchStateRow | null>;
+  /** Forgets playback of `itemKeys`, or of the whole history; favourites stay. */
+  clear(scope: WatchScope, itemKeys?: string[]): Promise<number>;
   onChange(listener: WatchChangeListener): () => void;
   flush(): Promise<void>;
 }

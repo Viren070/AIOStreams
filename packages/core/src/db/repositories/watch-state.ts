@@ -3,7 +3,7 @@ import { config as appConfig } from '../../config/index.js';
 import { deleteInBatches, type PruneResult } from '../prune.js';
 import type { DbDriver } from '../driver/types.js';
 import type { SqlFragment } from '../sql.js';
-import { join, sql } from '../sql.js';
+import { join, raw, sql } from '../sql.js';
 import type { WatchScope } from '../../watch-state/types.js';
 
 /** What a list row needs to render without a metadata call. */
@@ -147,6 +147,26 @@ function toRow(r: DbRow): WatchStateRow {
 export function watchKindOf(row: Pick<WatchIdentity, 'kind'>): WatchKind {
   return row.kind;
 }
+
+/** Where a history page ended; rows sort on `sort_at`, then persona, then key. */
+export interface WatchHistoryCursor {
+  sortAt: number;
+  persona: string;
+  itemKey: string;
+}
+
+export interface WatchHistoryCounts {
+  persona: string;
+  played: number;
+  movies: number;
+  episodes: number;
+  inProgress: number;
+  favorites: number;
+  lastAt: number | null;
+}
+
+/** A row that is part of the history: finished, or part-way through. */
+const WATCHED = raw('(played = 1 OR position_ms > 0)');
 
 function filterKinds(rows: WatchStateRow[], kinds?: WatchKind[]) {
   if (!kinds?.length) return rows;
@@ -518,6 +538,108 @@ export class WatchStateRepository {
              AND series_key = ${seriesKey}`
     );
     return rows.map(toRow).filter((r) => r.episode != null);
+  }
+
+  /** One page of the histories of `personas`, newest first. */
+  static async listHistory(
+    uuid: string,
+    personas: string[],
+    opts: { limit: number; after?: WatchHistoryCursor; localOnly?: boolean }
+  ): Promise<WatchStateRow[]> {
+    if (!personas.length) return [];
+    const c = opts.after;
+    const after = c
+      ? sql`AND (sort_at < ${c.sortAt} OR (sort_at = ${c.sortAt} AND (persona > ${c.persona} OR (persona = ${c.persona} AND item_key < ${c.itemKey}))))`
+      : raw('');
+    const rows = await getDb().query<DbRow>(
+      sql`SELECT * FROM watch_state
+           WHERE uuid = ${uuid}
+             AND persona IN (${join(personas.map((p) => sql`${p}`))})
+             AND ${WATCHED}
+             ${opts.localOnly ? raw("AND origin = 'local'") : raw('')}
+             ${after}
+           ORDER BY sort_at DESC, persona ASC, item_key DESC
+           LIMIT ${opts.limit}`
+    );
+    return rows.map(toRow);
+  }
+
+  static async listForUuid(uuid: string): Promise<WatchStateRow[]> {
+    const rows = await getDb().query<DbRow>(
+      sql`SELECT * FROM watch_state WHERE uuid = ${uuid}
+           ORDER BY persona ASC, sort_at DESC`
+    );
+    return rows.map(toRow);
+  }
+
+  static async historyCounts(uuid: string): Promise<WatchHistoryCounts[]> {
+    const rows = await getDb().query<{
+      persona: string;
+      played: number | string | null;
+      movies: number | string | null;
+      episodes: number | string | null;
+      in_progress: number | string | null;
+      favorites: number | string | null;
+      last_at: number | string | null;
+    }>(
+      sql`SELECT persona,
+                 SUM(CASE WHEN played = 1 THEN 1 ELSE 0 END) AS played,
+                 SUM(CASE WHEN played = 1 AND kind = 'movie' THEN 1 ELSE 0 END) AS movies,
+                 SUM(CASE WHEN played = 1 AND kind = 'episode' THEN 1 ELSE 0 END) AS episodes,
+                 SUM(CASE WHEN played = 0 AND position_ms > 0 THEN 1 ELSE 0 END) AS in_progress,
+                 SUM(CASE WHEN favorite = 1 THEN 1 ELSE 0 END) AS favorites,
+                 MAX(CASE WHEN ${WATCHED} THEN sort_at END) AS last_at
+            FROM watch_state
+           WHERE uuid = ${uuid}
+           GROUP BY persona`
+    );
+    return rows.map((r) => ({
+      persona: r.persona,
+      played: Number(r.played ?? 0),
+      movies: Number(r.movies ?? 0),
+      episodes: Number(r.episodes ?? 0),
+      inProgress: Number(r.in_progress ?? 0),
+      favorites: Number(r.favorites ?? 0),
+      lastAt: optionalNumber(r.last_at),
+    }));
+  }
+
+  static async clearPlayback(
+    scope: WatchScope,
+    itemKeys?: string[]
+  ): Promise<WatchStateRow[]> {
+    const keys = itemKeys ? [...new Set(itemKeys.filter(Boolean))] : null;
+    const slices = keys
+      ? Array.from(
+          { length: Math.ceil(keys.length / CHUNK) },
+          (_, i) =>
+            sql`AND item_key IN (${join(
+              keys.slice(i * CHUNK, (i + 1) * CHUNK).map((k) => sql`${k}`)
+            )})`
+        )
+      : [raw('')];
+    const cleared: WatchStateRow[] = [];
+    await getDb().tx(async (db) => {
+      for (const only of slices) {
+        const where = sql`uuid = ${scope.uuid} AND persona = ${scope.persona}
+             AND (${WATCHED} OR play_count > 0) ${only}`;
+        const rows = await db.query<DbRow>(
+          sql`SELECT * FROM watch_state WHERE ${where}`
+        );
+        if (!rows.length) continue;
+        cleared.push(...rows.map(toRow));
+        await db.exec(
+          sql`DELETE FROM watch_state WHERE ${where} AND favorite = 0`
+        );
+        await db.exec(
+          sql`UPDATE watch_state
+                 SET played = 0, position_ms = 0, play_count = 0,
+                     last_played_at = NULL, updated_at = ${Date.now()}
+               WHERE ${where} AND favorite = 1`
+        );
+      }
+    });
+    return cleared;
   }
 
   /** An existing row only gains the favourite; a missing one is created as the addon's import. */
