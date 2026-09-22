@@ -581,6 +581,12 @@ function applyStatusDefaults(data: UserData, status: Status): UserData {
   return next;
 }
 
+export function resolveDraft(draft: Draft, status: Status | null): UserData {
+  // migrations mutate, and the draft is still held
+  const restored = applyMigrations(structuredClone(draft.data));
+  return status ? applyStatusDefaults(restored, status) : restored;
+}
+
 /** Stable comparison that ignores identity and other volatile fields. */
 function sameConfig(a: UserData, b: UserData): boolean {
   return JSON.stringify(filterForDiff(a)) === JSON.stringify(filterForDiff(b));
@@ -698,10 +704,8 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
     setPendingDraft((draft) => {
       if (draft) {
         try {
-          const restored = applyMigrations(draft.data);
-          setUserData(() =>
-            status ? applyStatusDefaults(restored, status) : restored
-          );
+          const restored = resolveDraft(draft, status);
+          setUserData(() => restored);
         } catch {
           /* unusable draft; drop it rather than breaking the page */
         }
