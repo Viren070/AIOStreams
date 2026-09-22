@@ -527,31 +527,44 @@ export const DefaultUserData: UserData = {
 
 type Status = NonNullable<ReturnType<typeof useStatus>['status']>;
 
-/**
- * Overlays the instance's forced and default settings. Applied to both the live
- * configuration and the draft baseline, so it must not mutate its input.
- */
-function applyStatusDefaults(data: UserData, status: Status): UserData {
-  const forced = status.settings.forced;
-  const defaults = status.settings.defaults;
+/** Defaults are for a fresh configuration only. Must not mutate its input. */
+function applyStatusSettings(
+  data: UserData,
+  status: Status,
+  fillDefaults: boolean
+): UserData {
+  const forced = status.settings.forced.proxy;
+  const defaults = fillDefaults ? status.settings.defaults.proxy : undefined;
   const services = status.settings.services;
+  const proxy = data.proxy;
 
   const next: UserData = { ...data };
   next.proxy = {
-    ...next.proxy,
-    enabled: forced.proxy.enabled ?? defaults.proxy?.enabled ?? undefined,
-    id: (forced.proxy.id ?? defaults.proxy?.id ?? 'builtin') as
+    ...proxy,
+    enabled: forced.enabled ?? proxy?.enabled ?? defaults?.enabled ?? undefined,
+    id: (forced.id ??
+      proxy?.id ??
+      defaults?.id ??
+      (fillDefaults ? 'builtin' : undefined)) as
       | 'builtin'
       | 'mediaflow'
       | 'stremthru'
       | undefined,
-    url: forced.proxy.url ?? defaults.proxy?.url ?? undefined,
-    publicUrl: forced.proxy.publicUrl ?? defaults.proxy?.publicUrl ?? undefined,
-    publicIp: forced.proxy.publicIp ?? defaults.proxy?.publicIp ?? undefined,
+    url: forced.url ?? proxy?.url ?? defaults?.url ?? undefined,
+    publicUrl:
+      forced.publicUrl ?? proxy?.publicUrl ?? defaults?.publicUrl ?? undefined,
+    publicIp:
+      forced.publicIp ?? proxy?.publicIp ?? defaults?.publicIp ?? undefined,
     credentials:
-      forced.proxy.credentials ?? defaults.proxy?.credentials ?? undefined,
+      forced.credentials ??
+      proxy?.credentials ??
+      defaults?.credentials ??
+      undefined,
     proxiedServices:
-      forced.proxy.proxiedServices ?? defaults.proxy?.proxiedServices ?? [],
+      forced.proxiedServices ??
+      proxy?.proxiedServices ??
+      defaults?.proxiedServices ??
+      (fillDefaults ? [] : undefined),
   };
 
   next.services = (data.services ?? []).map((service) => {
@@ -561,20 +574,25 @@ function applyStatusDefaults(data: UserData, status: Status): UserData {
     serviceMeta.credentials.forEach((credential) => {
       if (credential.forced) {
         credentials[credential.id] = credential.forced;
-      } else if (credential.default) {
+      } else if (
+        fillDefaults &&
+        credential.default &&
+        credentials[credential.id] === undefined
+      ) {
         credentials[credential.id] = credential.default;
       }
     });
     return {
       ...service,
       credentials,
-      // enable if every credential is set
-      enabled: serviceMeta.credentials.every(
-        (credential) =>
-          credential.forced ||
-          credential.default ||
-          credentials[credential.id] !== undefined
-      ),
+      enabled: fillDefaults
+        ? serviceMeta.credentials.every(
+            (credential) =>
+              credential.forced ||
+              credential.default ||
+              credentials[credential.id] !== undefined
+          )
+        : service.enabled,
     };
   });
 
@@ -584,7 +602,7 @@ function applyStatusDefaults(data: UserData, status: Status): UserData {
 export function resolveDraft(draft: Draft, status: Status | null): UserData {
   // migrations mutate, and the draft is still held
   const restored = applyMigrations(structuredClone(draft.data));
-  return status ? applyStatusDefaults(restored, status) : restored;
+  return status ? applyStatusSettings(restored, status, false) : restored;
 }
 
 /** Stable comparison that ignores identity and other volatile fields. */
@@ -671,10 +689,15 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
     statusApplied.current = true;
 
     // The baseline takes the same overlay, or defaults read as unsaved edits.
-    const anonBaseline = applyStatusDefaults(DefaultUserData, status);
+    // A configuration can load before status does.
+    const anonBaseline = applyStatusSettings(DefaultUserData, status, true);
+    const overlay = (data: UserData) =>
+      data === DefaultUserData
+        ? anonBaseline
+        : applyStatusSettings(data, status, false);
     anonBaselineRef.current = anonBaseline;
-    baselineRef.current = anonBaseline;
-    setUserData((prev) => applyStatusDefaults(prev, status));
+    baselineRef.current = overlay(baselineRef.current);
+    setUserData(overlay);
     setBaselineReady(true);
   }, [status]);
 
