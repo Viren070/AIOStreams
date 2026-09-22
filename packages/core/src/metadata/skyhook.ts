@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { Cache } from '../utils/cache.js';
-import { appConfig } from '../utils/index.js';
+import { appConfig, HEADER_PRESETS } from '../utils/index.js';
 import { makeRequest } from '../utils/http.js';
 import { createLogger } from '../logging/logger.js';
 import { Metadata } from './utils.js';
@@ -77,7 +77,7 @@ export class SkyhookMetadata {
           const response = await makeRequest(`${SKYHOOK_BASE}/${tvdbId}`, {
             method: 'GET',
             timeout: 5000,
-            headers: { 'User-Agent': appConfig.http.defaultUserAgent },
+            headers: { 'User-Agent': HEADER_PRESETS.sonarr['User-Agent'] },
           });
           if (!response.ok) return null;
           return SkyhookShowSchema.parse(await response.json());
@@ -167,7 +167,7 @@ export class SkyhookMetadata {
           const response = await makeRequest(url.toString(), {
             method: 'GET',
             timeout: 5000,
-            headers: { 'User-Agent': appConfig.http.defaultUserAgent },
+            headers: { 'User-Agent': HEADER_PRESETS.sonarr['User-Agent'] },
           });
           if (!response.ok) return [];
           const results = z
