@@ -58,6 +58,7 @@ Enter the **Username** shown on the Connect tab and your configuration password.
 
 - The username is your configuration UUID, or its alias if you gave it one through a [profile](/guides/config-profiles). An alias already stands in for the password, so the password field is not checked.
 - To sign in as one of your [household users](#household-users), add `/` and their name, for example `<uuid>/Sam`.
+- If the user you sign in as has a [PIN](#pins), the primary user included, add it after your password the same way, for example `yourpassword/1234`. With an alias, type just the PIN.
 
 </Step>
 
@@ -65,11 +66,11 @@ Enter the **Username** shown on the Connect tab and your configuration password.
 
 ### On a TV
 
-Typing a UUID with a remote is painful, so use **Quick Connect** instead. Choose Quick Connect on the app's sign-in screen, then type the six-digit code it shows into the **Quick Connect** box on the Connect tab. The device waiting on that code appears; press **Approve**. If you have household users, choose who to sign in as first.
+Typing a UUID with a remote is painful, so use **Quick Connect** instead. Choose Quick Connect on the app's sign-in screen, then type the six-digit code it shows into the **Quick Connect** box on the Connect tab. The device waiting on that code appears; press **Approve**. If you have household users, choose who to sign in as first, and enter their PIN if they have one.
 
 ### Sign-in picker
 
-The Connect tab also offers an **address with a sign-in picker**. Added as the server address instead, it makes the app list your configuration and its users on the sign-in screen, with no password to type.
+The Connect tab also offers an **address with a sign-in picker**. Added as the server address instead, it makes the app list your configuration and its users on the sign-in screen, with no password to type. A user with a PIN asks for it there, and a [PIN on the primary user](#the-primary-users-pin) keeps the address to that screen.
 
 <Callout type="warn">
   That address contains your configuration password. Only use it on devices in
@@ -138,14 +139,40 @@ Building a tracker addon? See the [Watch State reference](/reference/addon-proto
 
 ## Household users
 
-The **Users** tab adds users to your server, so everyone in a household can have their own profile in the app. They all sign in with the same configuration password.
+The **Users** tab adds users to your server, so everyone in a household can have their own profile in the app. They all sign in with the same configuration password, and a user can have a PIN on top.
 
-- **The primary user** is your configuration itself. Give it a name (your addon name by default) and an avatar.
+- **The primary user** is your configuration itself. Give it a name (your addon name by default), an avatar and, optionally, a [PIN](#pins).
 - **Each extra user** has a name, which is also what they type to sign in, and an optional avatar. You can hide a user from the sign-in picker; they can still sign in by name.
 - **History** is either **own**, a separate Continue Watching, or **shared** with the primary user. Sharing the history also shares its trackers.
 - **Variants** apply while that user is signed in, in the order picked, so a user can get, for example, a different set of filters. A variant that activates on its own applies too, [before the ones picked here](/reference/config-expressions#what-applies-in-what-order).
 
+- **PIN** is optional; see [PINs](#pins).
+
 Removing a user keeps their watch history. Adding a user again under the same name gets it back.
+
+### PINs
+
+Give a user a PIN of 4 to 12 digits to stop others in the household signing in as them. Apps ask for it on the sign-in screen, Quick Connect asks for it before approving, and the built-in web app asks for it when switching to that user. API keys can't act as a household user with a PIN.
+
+- Five wrong PINs in a row pause sign-in to that user for 15 minutes.
+- The primary user can still see a PIN user's watch history, but can't mark things watched as them.
+
+#### The primary user's PIN
+
+The primary user sees everyone's activity and history, so a PIN on it keeps the other users of your configuration out of yours. With one set:
+
+- Signing in as the primary user always asks for the PIN, even with your configuration password. On the plain server address, type `yourpassword/PIN`.
+- Switching to the primary user from another user asks for the PIN every time, so handing over a device after switching away doesn't hand over your account.
+- The sign-in picker address and an alias only reach the sign-in screen until someone signs in.
+
+Without a PIN on the primary user, a device approved with Quick Connect as another user needs your configuration password to switch to it.
+
+<Callout type="info">
+  A PIN keeps other people using your addresses out of that user. It does not
+  protect against anyone who can open your configuration, who can change or
+  remove it. For people who need to be fully separate, use separate
+  configurations.
+</Callout>
 
 ### Choosing trackers
 
@@ -165,7 +192,7 @@ A tool that uses the Jellyfin API, such as a dashboard or a script, can connect 
 2. Save your configuration.
 3. Select **Copy key**, and give it to the tool with the same server address your apps use.
 
-A key acts as the server's administrator. It sees every user of your configuration: what each is watching now, their watch history, and your libraries. Revoke a key and save to cut a tool off; it stops working within 30 seconds. Changing your configuration password stops every key, so copy them again afterwards.
+A key acts as the server's administrator, though it can't act as a household user with a [PIN](#pins). It sees every user of your configuration: what each is watching now, their watch history, and your libraries. Revoke a key and save to cut a tool off; it stops working within 30 seconds. Changing your configuration password stops every key, so copy them again afterwards.
 
 What a tool can't get from AIOStreams:
 
