@@ -464,6 +464,7 @@ Patterns chain with the other modifiers as usual:
 | `::join('separator')`   | Join elements with separator                           |
 | `::keep('a', 'b', …)`   | Keep only the listed elements                          |
 | `::remove('a', 'b', …)` | Drop the listed elements                               |
+| `::replace('a', 'b')`   | Replace every element equal to `a` with `b`            |
 | `::unique`              | Drop repeated elements, keeping the first              |
 | `::slice(start, end)`   | Return a section (end is optional)                     |
 | `::length`              | Number of elements                                     |
@@ -477,11 +478,12 @@ Patterns chain with the other modifiers as usual:
 | `::languageCode`        | Each language name/code → its ISO 639 code             |
 | `::languageEmoji`       | Each language name/code → its flag emoji               |
 
-`::keep` and `::remove` compare whole elements, ignoring case, and pair with the `{user.*}` lists:
+`::keep`, `::remove`, `::replace` and `::unique` compare whole elements, ignoring case. `::keep` and `::remove` pair with the `{user.*}` lists, and `::unique` drops the repeats `::replace` can leave behind:
 
 ```
-{stream.audioTags::keep({user.audioTags})::join(', ')}     ->  Atmos
-{stream.languages::remove({user.languages})::join(', ')}   ->  German
+{stream.audioTags::keep({user.audioTags})::join(', ')}               ->  Atmos
+{stream.languages::remove({user.languages})::join(', ')}             ->  German
+{stream.visualTags::replace('HDR10+', 'HDR')::unique::join(' | ')}   ->  HDR | DV
 ```
 
 ### Object List Modifiers
