@@ -1,11 +1,18 @@
 import pLimit from 'p-limit';
-import type { MetaPreview, UserData } from '../db/schemas.js';
+import type { Meta, MetaPreview, UserData } from '../db/schemas.js';
 import type { AIOStreams } from '../main/index.js';
+import { createLogger } from '../logging/logger.js';
 import { TMDBMetadata, type TMDBTitle } from '../metadata/tmdb.js';
 import { IdMappingDataset } from '../metadata/id-mappings.js';
+import { readEnrichment } from './enrichment.js';
+import { providerIdsFor } from './dto.js';
+
+const logger = createLogger('jellyfin');
 
 export const TMDB_IMAGES = 'https://image.tmdb.org/t/p/';
 const ID_LOOKUPS = 8;
+/* Extra titles asked for, since some map to nothing this setup can open. */
+const SPARE = 8;
 
 export function tmdbFor(userData: UserData): TMDBMetadata | null {
   try {
@@ -71,3 +78,44 @@ export async function titlePreviews(
   return previews.filter((p): p is MetaPreview => !!p);
 }
 
+/**
+ * What TMDB recommends alongside a movie or show, or null for the caller to
+ * fall back.
+ */
+export async function recommendedPreviews(
+  engine: AIOStreams,
+  userData: UserData,
+  meta: Meta | MetaPreview,
+  kind: 'movie' | 'series',
+  limit: number
+): Promise<MetaPreview[] | null> {
+  const tmdb = tmdbFor(userData);
+  if (!tmdb) return null;
+  const ids = providerIdsFor(meta, readEnrichment(meta));
+  const tmdbId =
+    Number(ids.Tmdb) ||
+    (ids.Imdb
+      ? IdMappingDataset.getInstance().resolve(kind, { imdbId: ids.Imdb })
+          .tmdbId
+      : undefined);
+  if (!tmdbId) return null;
+  try {
+    const titles = await tmdb.getRecommendations(
+      kind === 'movie' ? 'movie' : 'tv',
+      tmdbId
+    );
+    if (!titles.length) return null;
+    const previews = await titlePreviews(
+      engine,
+      tmdb,
+      titles.slice(0, limit + SPARE)
+    );
+    return previews.length ? previews.slice(0, limit) : null;
+  } catch (error) {
+    logger.debug(
+      { tmdbId, err: error instanceof Error ? error.message : String(error) },
+      'recommendations failed'
+    );
+    return null;
+  }
+}

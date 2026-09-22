@@ -33,6 +33,7 @@ const AUTHORISATION_CACHE_TTL = 2 * 24 * 60 * 60; // 2 days
 const EPISODE_CACHE_TTL = 6 * 60 * 60; // 6 hours
 const SEARCH_CACHE_TTL = 7 * 24 * 60 * 60; // 7 days
 const PERSON_CACHE_TTL = 3 * 24 * 60 * 60; // 3 days, credits grow
+const RECOMMENDATION_CACHE_TTL = 24 * 60 * 60; // 1 day
 
 // Zod schemas for API responses
 const GenreSchema = z.object({
@@ -225,6 +226,24 @@ const ExternalIdsSchema = z.looseObject({
   imdb_id: z.string().nullable().optional(),
 });
 
+const TitleListSchema = z.object({
+  results: z.array(
+    z.looseObject({
+      id: z.number(),
+      title: z.string().optional(),
+      name: z.string().optional(),
+      release_date: z.string().nullable().optional(),
+      first_air_date: z.string().nullable().optional(),
+      overview: z.string().nullable().optional(),
+      poster_path: z.string().nullable().optional(),
+      backdrop_path: z.string().nullable().optional(),
+      genre_ids: z.array(z.number()).optional(),
+      popularity: z.number().optional(),
+      vote_count: z.number().optional(),
+    })
+  ),
+});
+
 /** A movie or show as TMDB lists them in credits and recommendations. */
 export interface TMDBTitle {
   tmdbId: number;
@@ -296,6 +315,8 @@ export class TMDBMetadata {
     Cache.getInstance<string, number>('tmdb_person_id');
   private static readonly personCache: Cache<string, TMDBPerson> =
     Cache.getInstance<string, TMDBPerson>('tmdb_person');
+  private static readonly recommendationCache: Cache<string, TMDBTitle[]> =
+    Cache.getInstance<string, TMDBTitle[]>('tmdb_recommendations');
   private static readonly imdbIdCache: Cache<string, string> =
     Cache.getInstance<string, string>('tmdb_imdb_id');
   public constructor(auth?: { accessToken?: string; apiKey?: string }) {
@@ -857,6 +878,44 @@ export class TMDBMetadata {
     };
     await TMDBMetadata.personCache.set(key, person, PERSON_CACHE_TTL);
     return person;
+  }
+
+  /**
+   * What TMDB recommends alongside a title; its `similar` list is keyword
+   * matching and much noisier.
+   */
+  public async getRecommendations(
+    mediaType: 'movie' | 'tv',
+    tmdbId: number
+  ): Promise<TMDBTitle[]> {
+    return TMDBMetadata.recommendationCache.wrap(
+      async () => {
+        const json = await this.getJson(
+          `/${mediaType}/${tmdbId}/recommendations`
+        );
+        const results = json ? TitleListSchema.parse(json).results : [];
+        return results.flatMap((r): TMDBTitle[] => {
+          const title = r.title ?? r.name;
+          if (!title) return [];
+          return [
+            {
+              tmdbId: r.id,
+              mediaType,
+              title,
+              date: (r.release_date ?? r.first_air_date) || undefined,
+              overview: r.overview || undefined,
+              posterPath: r.poster_path ?? undefined,
+              backdropPath: r.backdrop_path ?? undefined,
+              genreIds: r.genre_ids ?? [],
+              popularity: r.popularity ?? 0,
+              voteCount: r.vote_count ?? 0,
+            },
+          ];
+        });
+      },
+      `${mediaType}:${tmdbId}`,
+      RECOMMENDATION_CACHE_TTL
+    );
   }
 
   /** The IMDb id of a movie or show, for meta addons that only take those. */

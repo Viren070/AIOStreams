@@ -4,6 +4,7 @@ import {
   catalogHasCollections,
   filmographyCredits,
   findPerson,
+  recommendedPreviews,
   sortCredits,
   titlePreviews,
   type FilmographyKind,
@@ -1084,8 +1085,21 @@ router.get(
     }
     const desc = d.descriptor;
     const meta = await getMetaLoose(ctx, desc.t, desc.i);
-    const genre = (meta?.genres ?? [])[0];
     const engine = await ctx.engine();
+    // TMDB's picks when it knows the title; else the top of its first genre.
+    const recommended = await recommendedPreviews(
+      engine,
+      ctx.userData,
+      meta ?? { id: desc.i, type: desc.t },
+      desc.k === 'movie' ? 'movie' : 'series',
+      limit
+    );
+    if (recommended) {
+      const items = await itemsFromPreviews(ctx, recommended);
+      send(req, res, items, items.length, 0);
+      return;
+    }
+    const genre = (meta?.genres ?? [])[0];
     if (genre) {
       for (const view of await ctx.views()) {
         if (
