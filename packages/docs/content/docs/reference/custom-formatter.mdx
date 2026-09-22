@@ -464,6 +464,7 @@ Patterns chain with the other modifiers as usual:
 | `::join('separator')`   | Join elements with separator                           |
 | `::keep('a', 'b', …)`   | Keep only the listed elements                          |
 | `::remove('a', 'b', …)` | Drop the listed elements                               |
+| `::unique`              | Drop repeated elements, keeping the first              |
 | `::slice(start, end)`   | Return a section (end is optional)                     |
 | `::length`              | Number of elements                                     |
 | `::first`               | First element                                          |
@@ -514,7 +515,7 @@ Comparisons ignore case. Because every condition must hold on the same item, `::
   ->  EN TrueHD 7.1 | EN DD 2.0 | FR DD+ 5.1
 ```
 
-`::each` renders its template once per item. For a track list, the track being rendered is available as `{track.*}` (see [Tracks](#tracks)). All other fields stay available too, and conditionals work inside it. An item that renders only whitespace is left out. Inside the template, quotes need escaping only outside `{…}`, as in conditional branches. `::each` cannot be nested inside another `::each`, and one render allows at most 256 items across all its `::each` calls.
+`::each` renders its template once per item. For a track list, the track being rendered is available as `{track.*}` (see [Tracks](#tracks)). All other fields stay available too, and conditionals work inside it. An item that renders only whitespace is left out, but repeats are kept: two English tracks render `EN` twice, so add `::unique` before `::join` to show it once. Inside the template, quotes need escaping only outside `{…}`, as in conditional branches. `::each` cannot be nested inside another `::each`, and one render allows at most 256 items across all its `::each` calls.
 
 ### Referencing a field
 

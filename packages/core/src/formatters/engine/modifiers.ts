@@ -129,6 +129,16 @@ const arrayModifiers = {
   rsort: sortBy(false),
   lsort: (value: any[]) => [...value].sort(),
   reverse: (value: string[]) => [...value].reverse(),
+  // ignores case, like the other list comparisons; the first spelling wins
+  unique: (value: string[]) => {
+    const seen = new Set<string>();
+    return value.filter((item) => {
+      const key = String(item).toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  },
   languagecode: (value: string[]) => mapLanguages(value, toLanguageCode),
   languageemoji: (value: string[]) => mapLanguages(value, toLanguageEmoji),
   string: (value: string[]) => value.toString(),
