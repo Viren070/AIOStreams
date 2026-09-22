@@ -53,7 +53,7 @@ import {
 } from '@aiostreams/core';
 import { stremioStreamRateLimiter } from '../../middlewares/ratelimit.js';
 import { StaticFiles } from '../../utils/static-errors.js';
-import type { JellyfinRequestContext } from './context.js';
+import { ANDROID_PLAYER_CLIENT, type JellyfinRequestContext } from './context.js';
 import { getMetaLoose, resolveMarkerId, resolvePlayback } from './resolve.js';
 
 export function contentRefOf(d: ContentDescriptor): ContentRef {
@@ -540,9 +540,10 @@ function resolveOnOpen(ctx: JellyfinRequestContext): boolean {
   }
 }
 
-export function subtitleUrlFor(req: Request, itemId: string, msid: string) {
+/** Relative to the server's base, which clients join it onto, as Jellyfin does. */
+export function subtitleUrlFor(itemId: string, msid: string) {
   return (index: number, format: string) =>
-    `${req.baseUrl}/Videos/${itemId}/${msid}/Subtitles/${index}/0/Stream.${format}`;
+    `/Videos/${itemId}/${msid}/Subtitles/${index}/0/Stream.${format}`;
 }
 
 export function nothingToPlayPath(
@@ -580,7 +581,8 @@ export function mediaSourcesFrom(
     buildMediaSource(record, {
       id: i === 0 ? opts.firstId : record.msid,
       subtitleFormat: format,
-      subtitleUrl: subtitleUrlFor(req, memo.itemId, record.msid),
+      subtitleUrl: subtitleUrlFor(memo.itemId, record.msid),
+      protocol: ctx.client.name === ANDROID_PLAYER_CLIENT ? 'File' : 'Http',
       runtimeMs: memo.runtimeMs,
       includeExtension: true,
       hasSegments: opts.hasSegments,

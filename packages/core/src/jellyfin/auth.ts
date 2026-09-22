@@ -47,9 +47,10 @@ export function serverId(): string {
   ).slice(0, 32);
 }
 
+/** Form-decoded: a client may send spaces as `+`. */
 function decodeValue(v: string): string {
   try {
-    return decodeURIComponent(v);
+    return decodeURIComponent(v.replace(/\+/g, ' '));
   } catch {
     return v;
   }

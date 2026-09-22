@@ -399,6 +399,8 @@ export interface MediaSourceBuildOptions {
   subtitleFormat: (sourceExtension: string) => SubtitleFormat;
   /** Server-relative delivery URL for the subtitle stream at `index`. */
   subtitleUrl: (index: number, format: SubtitleFormat) => string;
+  /** `File` sends the client through the server's stream route, not `Path`. */
+  protocol?: 'Http' | 'File';
   runtimeMs?: number;
   includeExtension: boolean;
   hasSegments?: boolean;
@@ -497,7 +499,7 @@ export function buildMediaSource(
     ? undefined
     : record.durationMs || opts.runtimeMs;
   const source: JellyfinMediaSource = {
-    Protocol: 'Http',
+    Protocol: opts.protocol ?? 'Http',
     Id: opts.id,
     Path: record.url,
     Type: 'Default',

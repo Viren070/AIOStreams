@@ -45,6 +45,12 @@ import { buildVariantRequestContext } from '../../utils/variant-context.js';
 
 const logger = createLogger('jellyfin');
 
+/**
+ * The Android app's own player, which plays an `Http` source's `Path` as a
+ * live HLS playlist, so it is sent through the stream route instead.
+ */
+export const ANDROID_PLAYER_CLIENT = 'Jellyfin for Android';
+
 export interface JellyfinRequestContext {
   uuid: string;
   encryptedPassword: string;
