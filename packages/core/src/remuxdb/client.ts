@@ -8,7 +8,7 @@ import {
 } from '../utils/index.js';
 import { instanceId } from '../stream-sessions/index.js';
 
-const logger = createLogger('remuxdb');
+export const logger = createLogger('remuxdb');
 
 const nullableString = z.string().nullable().optional();
 const nullableNumber = z.number().nullable().optional();
@@ -117,6 +117,15 @@ function triggerBackgroundRefresh(
   })().catch((error) =>
     logger.debug(`remuxdb background refresh failed for ${key}: ${error}`)
   );
+}
+
+export async function invalidateProbeCache(
+  imdbId: string,
+  season?: number,
+  episode?: number
+): Promise<void> {
+  const key = cacheKey(imdbId, season, episode);
+  await Promise.all([probeCache.delete(key), bgRefreshCache.delete(key)]);
 }
 
 export async function fetchProbeVersions(

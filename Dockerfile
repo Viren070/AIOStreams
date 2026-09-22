@@ -95,6 +95,28 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/* \
   && cp /usr/lib/*/libmimalloc.so.2 /usr/local/lib/libmimalloc.so.2
 
+# ffprobe (for RemuxDB media-info probing). Only dynamically links glibc,
+# which distroless nodejs already ships, so unlike libmimalloc no other
+# shared libraries need copying.
+FROM debian:12-slim AS ffprobe
+ARG TARGETARCH
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates curl xz-utils \
+  && rm -rf /var/lib/apt/lists/*
+RUN set -eu; \
+  case "$TARGETARCH" in \
+    amd64) FFMPEG_ARCH=linux64 ;; \
+    arm64) FFMPEG_ARCH=linuxarm64 ;; \
+    *) echo "unsupported TARGETARCH: $TARGETARCH" >&2; exit 1 ;; \
+  esac; \
+  FFMPEG_FILE="ffmpeg-n8.1-latest-${FFMPEG_ARCH}-gpl-8.1.tar.xz"; \
+  RELEASE_URL="https://github.com/BtbN/FFmpeg-Builds/releases/download/latest"; \
+  curl -fsSL -o "/tmp/${FFMPEG_FILE}" "${RELEASE_URL}/${FFMPEG_FILE}"; \
+  curl -fsSL -o /tmp/checksums.sha256 "${RELEASE_URL}/checksums.sha256"; \
+  (cd /tmp && grep " ${FFMPEG_FILE}\$" checksums.sha256 | sha256sum -c -); \
+  tar -xJf "/tmp/${FFMPEG_FILE}" -C /tmp --wildcards --strip-components=2 '*/bin/ffprobe'; \
+  chmod +x /tmp/ffprobe
+
 FROM gcr.io/distroless/nodejs24-debian12 AS production
 
 LABEL org.opencontainers.image.title="AIOStreams"
@@ -108,6 +130,8 @@ COPY --from=busybox:1.36.0-uclibc /bin/wget /bin/wget
 COPY --from=busybox:1.36.0-uclibc /bin/sh /bin/sh
 COPY --from=mimalloc /usr/local/lib/libmimalloc.so.2 /usr/local/lib/libmimalloc.so.2
 ENV LD_PRELOAD=/usr/local/lib/libmimalloc.so.2
+COPY --from=ffprobe /tmp/ffprobe /usr/local/bin/ffprobe
+ENV PATH="/usr/local/bin:${PATH}"
 ENV NODE_OPTIONS="--max-semi-space-size=8 --expose-gc"
 COPY --from=runtime /runtime /app
 

@@ -28,6 +28,12 @@ export interface UsenetStreamToken {
    * unidentified and bypass per-user limits and bans.
    */
   owner?: string;
+  internalProbe?: boolean;
+  imdbId?: string;
+  tmdbId?: number;
+  tvdbId?: number;
+  season?: number;
+  episode?: number;
 }
 
 /**

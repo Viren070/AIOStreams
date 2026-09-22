@@ -26,132 +26,181 @@ class NewznabStreamParser extends BuiltinStreamParser {
   }
 }
 
-const NEWZNAB_INDEXERS: {
+export const NEWZNAB_INDEXERS: {
   label: string;
   value: string;
   apiKeyUrl?: string;
+  // https://remuxdb.1632022.xyz/api/openapi.json - NzbIndexer schema
+  remuxDbIndexer?: string;
 }[] = [
   {
     label: 'abNZB',
     value: 'https://abnzb.com/api',
     apiKeyUrl: 'https://abnzb.com/profile',
+    remuxDbIndexer: 'abnzb',
   },
   {
     label: 'altHUB',
     value: 'https://api.althub.co.za/api',
     apiKeyUrl: 'https://althub.co.za/profile',
+    remuxDbIndexer: 'althub',
   },
   {
     label: 'AmeNZB',
     value: 'https://amenzb.moe/api',
     apiKeyUrl: 'https://amenzb.moe/profile',
+    remuxDbIndexer: 'amenzb',
   },
   // AnimeTosho needs no key at all
-  { label: 'AnimeTosho', value: 'https://feed.animetosho.org/api' },
+  {
+    label: 'AnimeTosho',
+    value: 'https://feed.animetosho.org/api',
+    remuxDbIndexer: 'animetosho',
+  },
   {
     label: 'AnimeTosho (NEW)',
     value: 'https://feed.animetosho.xyz/api',
     apiKeyUrl: 'https://animetosho.xyz/profile',
+    remuxDbIndexer: 'animetosho',
   },
-  { label: 'Aninzb', value: 'https://aninzb.moe/api' },
-  { label: 'ClubNZB', value: 'https://clubnzb.com/api' },
+  {
+    label: 'Aninzb',
+    value: 'https://aninzb.moe/api',
+    remuxDbIndexer: 'aninzb',
+  },
+  {
+    label: 'ClubNZB',
+    value: 'https://clubnzb.com/api',
+    remuxDbIndexer: 'clubnzb',
+  },
   {
     label: 'Digital Carnage',
     value: 'https://digitalcarnage.info/api',
     apiKeyUrl: 'https://digitalcarnage.info/profile',
+    remuxDbIndexer: 'digitalcarnage',
   },
-  { label: 'DOGnzb', value: 'https://api.dognzb.cr/api' },
+  {
+    label: 'DOGnzb',
+    value: 'https://api.dognzb.cr/api',
+    remuxDbIndexer: 'dognzb',
+  },
   {
     label: 'DrunkenSlug',
     value: 'https://drunkenslug.com/api',
     apiKeyUrl: 'https://drunkenslug.com/profile',
+    remuxDbIndexer: 'drunkenslug',
   },
-  { label: 'GingaDADDY', value: 'https://www.gingadaddy.com/api' },
+  {
+    label: 'GingaDADDY',
+    value: 'https://www.gingadaddy.com/api',
+    remuxDbIndexer: 'gingadaddy',
+  },
   {
     label: 'Miatrix',
     value: 'https://www.miatrix.com/api',
     apiKeyUrl: 'https://www.miatrix.com/profile',
+    remuxDbIndexer: 'miatrix',
   },
   {
     label: 'NewzBay',
     value: 'https://newzbay.cc/api',
     apiKeyUrl: 'https://newzbay.cc/profile',
+    remuxDbIndexer: 'newzbay',
   },
   {
     label: 'NinjaCentral',
     value: 'https://ninjacentral.co.za/api',
     apiKeyUrl: 'https://ninjacentral.co.za/profile',
+    remuxDbIndexer: 'ninjacentral',
   },
   {
     label: 'NZB Atlas',
     value: 'https://nzbatlas.com/api',
     apiKeyUrl: 'https://nzbatlas.com/profile',
+    remuxDbIndexer: 'nzbatlas',
   },
   {
     label: 'Nzb.life',
     value: 'https://api.nzb.life/api',
     apiKeyUrl: 'https://www.nzb.life/profile',
+    remuxDbIndexer: 'nzb_life',
   },
   {
     label: 'NZBFinder',
     value: 'https://nzbfinder.ws/api',
     apiKeyUrl: 'https://nzbfinder.ws/profile',
+    remuxDbIndexer: 'nzbfinder',
   },
   {
     label: 'NZBgeek',
     value: 'https://api.nzbgeek.info/api',
     apiKeyUrl: 'https://nzbgeek.info/profile',
+    remuxDbIndexer: 'nzbgeek',
   },
   {
     label: 'NzbNest',
     value: 'https://nzbnest.com/api',
     apiKeyUrl: 'https://nzbnest.com/profile',
+    remuxDbIndexer: 'nzbnest',
   },
   {
     label: 'NzbNoob',
     value: 'https://nzbnoob.com/api',
     apiKeyUrl: 'https://nzbnoob.com/profile',
+    remuxDbIndexer: 'nzbnoob',
   },
   {
     label: 'NzbPlanet',
     value: 'https://api.nzbplanet.net/api',
     apiKeyUrl: 'https://nzbplanet.net/profile',
+    remuxDbIndexer: 'nzbplanet',
   },
-  { label: 'NZBStars', value: 'https://nzbstars.com/api' },
+  {
+    label: 'NZBStars',
+    value: 'https://nzbstars.com/api',
+    remuxDbIndexer: 'nzbstars',
+  },
   {
     label: 'PourCeSoir',
     value: 'https://pourcesoir.in/api',
     apiKeyUrl: 'https://pourcesoir.in/profile',
+    remuxDbIndexer: 'pourcesoir',
   },
   {
     label: 'SquareEyed',
     value: 'https://squareeyed.org/api',
     apiKeyUrl: 'https://squareeyed.org/profile',
+    remuxDbIndexer: 'squareeyed',
   },
   {
     label: 'Tabula Rasa',
     value: 'https://www.tabula-rasa.pw/api/v1/api',
     apiKeyUrl: 'https://www.tabula-rasa.pw/profile',
+    remuxDbIndexer: 'tabula_rasa',
   },
   {
     label: 'TorBox Search',
     value: 'https://search-api.torbox.app/newznab/api',
     apiKeyUrl: 'https://torbox.app/settings?section=account',
+    remuxDbIndexer: 'torbox',
   },
   {
     label: 'Treasure Maps (formerly SceneNZBs)',
     value: 'https://treasure-maps.com/api',
     apiKeyUrl: 'https://treasure-maps.com/account',
+    remuxDbIndexer: 'treasure_maps',
   },
   {
     label: 'Usenet Crawler',
     value: 'https://www.usenet-crawler.com/api',
     apiKeyUrl: 'https://www.usenet-crawler.com/profile',
+    remuxDbIndexer: 'usenet_crawler',
   },
   {
     label: 'Videothek',
     value: 'https://videothek.io/api',
     apiKeyUrl: 'https://videothek.io/profile',
+    remuxDbIndexer: 'videothek',
   },
 ];
 

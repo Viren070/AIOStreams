@@ -351,6 +351,11 @@ export class NativeUsenetService implements UsenetDebridService {
       releaseKey: playbackInfo.releaseKey,
       indexer: playbackInfo.indexer,
       owner: this.owner,
+      imdbId: playbackInfo.metadata?.imdbId ?? undefined,
+      tmdbId: playbackInfo.metadata?.tmdbId ?? undefined,
+      tvdbId: playbackInfo.metadata?.tvdbId ?? undefined,
+      season: playbackInfo.metadata?.season,
+      episode: playbackInfo.metadata?.episode,
     });
 
     warmUsenetStreamTarget({
