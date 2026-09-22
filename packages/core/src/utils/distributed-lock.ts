@@ -88,7 +88,14 @@ export function parseLockResult<T>(json: string): T {
   return JSON.parse(json, (_key, val) => {
     if (!val || typeof val !== 'object' || !val.__lockError) return val;
     const ctor = resolveErrorCtor(val.className);
-    const err = (ctor ? Object.create(ctor.prototype) : new Error()) as Error;
+    // DOMException's getters throw unless read off a real instance.
+    const err = (
+      ctor === DOMException
+        ? new DOMException(val.message, val.name)
+        : ctor
+          ? Object.create(ctor.prototype)
+          : new Error()
+    ) as Error;
     for (const [k, v] of Object.entries(val)) {
       if (k === '__lockError' || k === 'className') continue;
       // avoids throwing on getter-only accessors, e.g. DOMException.prototype.name
