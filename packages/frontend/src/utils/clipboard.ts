@@ -1,3 +1,5 @@
+const CLIPBOARD_API_WAIT_MS = 500;
+
 interface CopyOptions {
   onSuccess?: () => void;
   onError?: (error: Error) => void;
@@ -54,7 +56,17 @@ export async function copyToClipboard(
 
   if (navigator.clipboard && navigator.clipboard.writeText) {
     try {
-      await navigator.clipboard.writeText(text);
+      // An embedded engine can leave the permission unanswered, and the
+      // fallback below needs the click's activation, which is short-lived.
+      await Promise.race([
+        navigator.clipboard.writeText(text),
+        new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error('timed out')),
+            CLIPBOARD_API_WAIT_MS
+          )
+        ),
+      ]);
       onSuccess?.();
       return;
     } catch (err) {
