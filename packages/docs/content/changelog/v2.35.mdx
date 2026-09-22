@@ -1,6 +1,6 @@
 ---
 title: A Jellyfin server, plus audio and subtitle tracks
-description: Watch in Jellyfin apps with synced history and skip markers, filter and format on single audio and subtitle tracks, and keep busy instances responsive.
+description: Watch in Jellyfin apps or a built-in web app with synced history, filter and format on single audio and subtitle tracks, and keep busy instances responsive.
 date: 2026-09-22
 version: 2.35.0
 ---
@@ -14,7 +14,8 @@ your configuration. Your catalogs become libraries, and the streams your addons 
 versions to pick from. Continue Watching, Next Up and skip-intro buttons work as they do on
 any Jellyfin server, everyone in a household can have their own profile, and addons can act
 as **trackers**. A tracker records what you watch and brings back what you watched
-elsewhere.
+elsewhere. The server also comes with its own **web app**, for browsing and playing in a
+browser.
 
 For everyone, media info now keeps **every audio and subtitle track** a file was probed
 with. The formatter and stream expressions can ask for an English forced subtitle or a
@@ -41,9 +42,9 @@ as it does for Stremio, and translates the answer into what a Jellyfin app expec
 | Catalogs of collections           | A Collections library                                   |
 | What you watch, and your trackers | Continue Watching, Next Up, played marks and favourites |
 
-Swiftfin, Findroid, Streamyfin, Jellyfin for Android TV, Jellyfin for Kodi and Infuse all
-work. The Jellyfin web interface does not, because the address is an API for apps, not a
-website.
+Swiftfin, Findroid, Streamyfin, Jellyfin for Android, Jellyfin for Android TV, Jellyfin
+Media Player, Jellyfin for Kodi and Infuse all work. In a browser, the address opens
+AIOStreams' own [web app](#the-web-app) rather than Jellyfin's.
 
 ### Connecting
 
@@ -142,6 +143,33 @@ configuration password, by typing their name or picking it from the sign-in pick
   addons, such as a separate watch-history account per person.
 
 Removing a user keeps their history. Add them back under the same name and it returns.
+
+### The web app
+
+Open your server address in a browser, or press **Open** next to **Web app** on the Connect
+tab, and you get a web app built for this server. Sign in as you would in an app, then pick
+who is watching.
+
+{/* Screenshot: the web app's home page, with a featured title at the top and Continue Watching above rows of catalogs */}
+
+- **Home** has what you are watching, Next Up, episodes airing soon and a row for each
+  catalog.
+- **Discover** browses any catalog by type and genre. Switching between Movies and Shows
+  takes you to the same catalog for the other type, such as from popular movies to popular
+  shows.
+- Show pages list seasons with air dates, and cast and crew link to a page for each person.
+- The **player** has audio and subtitle tracks, playback speed, and skip buttons, with intros
+  and credits marked on the seek bar.
+- **Activity** is your watch history, where you can mark things unwatched or remove them.
+  The primary user also sees everyone's history and what each person is playing right now.
+
+Like the apps, the web app plays streams as they are, so a browser only plays what it can
+decode. For anything else, copy the stream link or open it in an external player, which you
+can set in the web app's settings. Jellyfin Media Player and Jellyfin for Android load the
+web app too, but play through their own players, so everything plays there.
+
+The web app uses your addon's name and logo, and poster size and the featured row follow you
+to every device.
 
 ### API keys
 
