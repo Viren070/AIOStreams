@@ -218,8 +218,9 @@ export function applyVariants(
   } else if (result.jellyfin?.personas) {
     result.jellyfin = { ...result.jellyfin, personas: undefined };
   }
-  result.activeVariants = applied;
-  return { userData: result, applied, notes };
+  const pinned = withOwnAccountLock(result, userData);
+  pinned.activeVariants = applied;
+  return { userData: pinned, applied, notes };
 }
 
 /**
@@ -678,3 +679,16 @@ export function knownHealthCheckIds(userData: UserData): string[] {
 export type { HealthResult, VariantRequestContext };
 
 export { DEFAULT_CEL_LIMITS };
+
+/** The account's PIN is always the config's own, whatever else was merged or applied. */
+export function withOwnAccountLock(result: UserData, own: UserData): UserData {
+  const lock = own.jellyfin?.primary?.lock;
+  if (result.jellyfin?.primary?.lock === lock) return result;
+  return {
+    ...result,
+    jellyfin: {
+      ...result.jellyfin,
+      primary: { ...result.jellyfin?.primary, lock },
+    },
+  };
+}

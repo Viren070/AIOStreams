@@ -914,14 +914,15 @@ export async function getWatchStateTrackers(credentials: Credentials) {
 export async function approveJellyfinQuickConnect(
   credentials: Credentials,
   code: string,
-  persona?: string
+  persona?: string,
+  pin?: string
 ) {
   return api<{
     approved: boolean;
     device: { name: string; app: string; version: string };
   }>('POST /jellyfin/quickconnect/approve', {
     ...authed(credentials),
-    body: { code, ...(persona ? { persona } : {}) },
+    body: { code, ...(persona ? { persona } : {}), ...(pin ? { pin } : {}) },
   });
 }
 

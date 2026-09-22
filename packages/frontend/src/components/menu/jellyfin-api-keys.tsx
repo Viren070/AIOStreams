@@ -108,8 +108,9 @@ export function JellyfinApiKeys({ serverUrl }: { serverUrl: string }) {
         Give a tool a key and the server address{' '}
         <span className="font-mono text-gray-300">{serverUrl}</span> instead of
         your password. A key acts as the administrator, so it sees every
-        user&apos;s activity and history. Changing your password stops every
-        key; copy them again afterwards.
+        user&apos;s activity and history, though it can&apos;t act as a
+        household user with a PIN. Changing your password stops every key; copy
+        them again afterwards.
       </p>
 
       {keys.length > 0 && (

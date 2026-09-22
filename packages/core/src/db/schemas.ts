@@ -111,6 +111,23 @@ const Formatter = z.object({
 const CONFIG_UUID_SHAPE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+export const PERSONA_PIN_PATTERN = /^\d{4,12}$/;
+const BCRYPT_HASH_PATTERN = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
+/** A plain PIN as entered, or the bcrypt hash it was saved as. */
+const PERSONA_LOCK_PATTERN = new RegExp(
+  `${PERSONA_PIN_PATTERN.source}|${BCRYPT_HASH_PATTERN.source}`
+);
+
+export function isPersonaLockHash(value: string): boolean {
+  return BCRYPT_HASH_PATTERN.test(value);
+}
+
+/** A PIN's bcrypt hash; a plain PIN sent here is hashed when the config is saved. */
+const UserLockSchema = z
+  .string()
+  .regex(PERSONA_LOCK_PATTERN, 'A PIN must be 4 to 12 digits.')
+  .optional();
+
 /** A user a Jellyfin client can sign in as. Shares the configuration's credential. */
 const JellyfinPersonaSchema = z.object({
   // Names the DB partition, so a rename must not touch it.
@@ -130,6 +147,7 @@ const JellyfinPersonaSchema = z.object({
   trackers: z.array(z.string().min(1)).max(50).optional(),
   /** Kept out of the picker; still usable by name. */
   hidden: z.boolean().optional(),
+  lock: UserLockSchema,
 });
 
 export type JellyfinPersona = z.infer<typeof JellyfinPersonaSchema>;
@@ -165,6 +183,7 @@ const JellyfinSettingsFields = z.object({
         .optional(),
       /** Preset ids of the trackers it syncs with; absent means all. */
       trackers: z.array(z.string().min(1)).max(50).optional(),
+      lock: UserLockSchema,
     })
     .optional(),
   personas: z

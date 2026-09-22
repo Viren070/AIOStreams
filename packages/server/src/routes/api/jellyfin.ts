@@ -15,6 +15,7 @@ import { userApiRateLimiter } from '../../middlewares/ratelimit.js';
 import { attachSession } from '../../middlewares/auth.js';
 import { resolveConfigCredentials } from '../../utils/basic-auth.js';
 import { createResponse } from '../../utils/responses.js';
+import { accountLocked, userUnlocks } from '../jellyfin/context.js';
 
 const logger = createLogger('jellyfin');
 const router: Router = Router();
@@ -34,6 +35,8 @@ const approveBody = z.object({
     .string()
     .regex(/^[a-z0-9][a-z0-9_-]{0,31}$/)
     .optional(),
+  /** The chosen user's PIN, when it has one. */
+  pin: z.string().max(12).optional(),
 });
 
 router.get('/info', (req, res) => {
@@ -86,17 +89,48 @@ router.post('/quickconnect/approve', async (req, res, next) => {
       return;
     }
     await UserRepository.verifyUser(creds.uuid, creds.password);
+    const config = await UserRepository.getUser(creds.uuid, creds.password);
+    if (!parsed.data.persona && config) {
+      if (
+        !(await userUnlocks(creds.uuid, config, null, parsed.data.pin ?? ''))
+      ) {
+        next(
+          new APIError(
+            constants.ErrorCode.UNAUTHORIZED,
+            undefined,
+            'Wrong PIN for this user'
+          )
+        );
+        return;
+      }
+    }
     if (parsed.data.persona) {
-      const config = await UserRepository.getUser(creds.uuid, creds.password);
-      const known = config?.jellyfin?.personas?.some(
+      const persona = config?.jellyfin?.personas?.find(
         (p) => p.id === parsed.data.persona
       );
-      if (!known) {
+      if (!persona) {
         next(
           new APIError(
             constants.ErrorCode.BAD_REQUEST,
             undefined,
             'Unknown persona'
+          )
+        );
+        return;
+      }
+      if (
+        !(await userUnlocks(
+          creds.uuid,
+          config!,
+          persona,
+          parsed.data.pin ?? ''
+        ))
+      ) {
+        next(
+          new APIError(
+            constants.ErrorCode.UNAUTHORIZED,
+            undefined,
+            'Wrong PIN for this user'
           )
         );
         return;
@@ -278,6 +312,17 @@ router.post('/api-keys/token', async (req, res, next) => {
     }
     await UserRepository.verifyUser(creds.uuid, creds.password);
     const config = await UserRepository.getUser(creds.uuid, creds.password);
+    // A key acts as the account, so it needs what the account needs.
+    if (creds.encrypted && config && accountLocked(config)) {
+      next(
+        new APIError(
+          constants.ErrorCode.UNAUTHORIZED,
+          undefined,
+          'Sign in with your password to copy keys while the primary user has a PIN'
+        )
+      );
+      return;
+    }
     const saved = config?.jellyfin?.apiKeys?.some(
       (k) => k.id === parsed.data.id
     );

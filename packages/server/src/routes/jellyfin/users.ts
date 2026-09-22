@@ -28,6 +28,10 @@ import {
   param,
   personaById,
   personaByName,
+  accountLocked,
+  PIN_REQUIRED,
+  personaLocked,
+  userUnlocks,
   personasOf,
   qs,
   resolveConfig,
@@ -132,6 +136,7 @@ export function userDto(
   opts: { pickable?: boolean; forKey?: boolean } = {}
 ) {
   const pickable = opts.pickable ?? false;
+  const locked = persona ? personaLocked(persona) : accountLocked(userData);
   const now = new Date().toISOString();
   const tag = avatarTag(
     persona ? persona.avatar : userData.jellyfin?.primary?.avatar
@@ -142,10 +147,10 @@ export function userDto(
     ServerName: serverName(),
     Id: personaUserId(uuid, persona?.id ?? ''),
     ...(tag ? { PrimaryImageTag: tag } : {}),
-    HasPassword: !pickable,
-    HasConfiguredPassword: !pickable,
+    HasPassword: !pickable || locked,
+    HasConfiguredPassword: !pickable || locked,
     HasConfiguredEasyPassword: false,
-    EnableAutoLogin: true,
+    EnableAutoLogin: !locked,
     LastLoginDate: now,
     LastActivityDate: now,
     Configuration: userConfiguration(),
@@ -222,7 +227,8 @@ async function authenticationResult(
   uuid: string,
   encryptedPassword: string,
   userData: UserData,
-  persona: JellyfinPersona | null
+  persona: JellyfinPersona | null,
+  opts: { openedAsAccount?: boolean } = {}
 ) {
   const client = clientOf(req);
   return {
@@ -233,6 +239,7 @@ async function authenticationResult(
       p: encryptedPassword,
       d: client.deviceId,
       k: persona?.id,
+      ...(persona && opts.openedAsAccount ? { o: 1 as const } : {}),
     }),
     ServerId: instanceServerId(),
   };
@@ -247,7 +254,7 @@ function allUsers(
   return [
     userDto(uuid, userData, null, opts),
     ...personasOf(userData)
-      .filter((p) => opts.forKey || !p.hidden)
+      .filter((p) => (opts.forKey ? !personaLocked(p) : !p.hidden))
       .map((p) => userDto(uuid, userData, p, opts)),
   ];
 }
@@ -295,6 +302,9 @@ router.post(
     let uuid: string | undefined;
     let encryptedPassword: string | undefined;
     let personaName: string;
+    // A PIN: all of `Pw` where the configuration is already proven, the part
+    // after the password on the bare mount.
+    let pin = pw;
     if (ctx?.preAuthenticated) {
       uuid = ctx.uuid;
       encryptedPassword = ctx.encryptedPassword;
@@ -311,13 +321,29 @@ router.post(
         return;
       }
       if (isConfigUuid(account)) {
-        const enc = encryptString(pw);
-        if (!enc.success || !enc.data) {
-          res.status(500).json({ Message: 'Encryption failure' });
+        uuid = account;
+        // `<password>/<pin>`. The whole value is tried as the password first,
+        // so a password that itself holds a slash still signs in.
+        const slash = pw.lastIndexOf('/');
+        const candidates: [string, string][] = [[pw, '']];
+        if (slash > 0)
+          candidates.push([pw.slice(0, slash), pw.slice(slash + 1)]);
+        for (const [password, rest] of candidates) {
+          const enc = encryptString(password);
+          if (!enc.success || !enc.data) {
+            res.status(500).json({ Message: 'Encryption failure' });
+            return;
+          }
+          if (await resolveConfig(uuid, enc.data)) {
+            encryptedPassword = enc.data;
+            pin = rest;
+            break;
+          }
+        }
+        if (!encryptedPassword) {
+          res.status(401).json({ Message: 'Invalid username or password' });
           return;
         }
-        uuid = account;
-        encryptedPassword = enc.data;
       } else {
         // an alias already carries its password, the way alias URLs do
         const alias = await resolveConfigAlias(account);
@@ -340,6 +366,10 @@ router.post(
       res.status(401).json({ Message: 'Invalid username or password' });
       return;
     }
+    if (!(await userUnlocks(uuid, userData, signIn.persona, pin))) {
+      res.status(401).json({ Message: PIN_REQUIRED });
+      return;
+    }
     const client = clientOf(req);
     logger.info(
       {
@@ -356,7 +386,8 @@ router.post(
         uuid,
         encryptedPassword,
         userData,
-        signIn.persona
+        signIn.persona,
+        { openedAsAccount: !accountLocked(userData) }
       )
     );
   })

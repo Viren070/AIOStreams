@@ -13,6 +13,8 @@ import {
   getSimpleTextHash,
   isConfigUuid,
   isEncrypted,
+  PERSONA_PIN_PATTERN,
+  verifyHash,
   mintToken,
   readToken,
   resolveConfigAlias,
@@ -242,6 +244,63 @@ export function personaByName(
   );
 }
 
+export function personaLocked(
+  persona: JellyfinPersona | null | undefined
+): boolean {
+  return !!persona?.lock;
+}
+
+/** The PIN hash of a persona, or of the account for `null`. */
+function lockOf(
+  userData: Pick<UserData, 'jellyfin'>,
+  persona: JellyfinPersona | null
+): string | undefined {
+  return persona ? persona.lock : userData.jellyfin?.primary?.lock;
+}
+
+export function accountLocked(userData: Pick<UserData, 'jellyfin'>): boolean {
+  return !!lockOf(userData, null);
+}
+
+/** Sent when the credential was right but a PIN is missing or wrong, so a client can ask for it. */
+export const PIN_REQUIRED = 'PIN required';
+
+const PIN_ATTEMPTS = 5;
+const PIN_LOCKOUT_SECONDS = 15 * 60;
+// Shared across replicas when Redis is set, so a guess cannot be spread over them.
+const pinFailures = Cache.getInstance<string, number>(
+  'jellyfin-pin-failures',
+  10_000
+);
+
+/**
+ * Whether `pin` opens the user, a persona or the account for `null`. Past the
+ * attempt limit even the right PIN is refused for a while.
+ */
+export async function userUnlocks(
+  uuid: string,
+  userData: Pick<UserData, 'jellyfin'>,
+  persona: JellyfinPersona | null,
+  pin: string
+): Promise<boolean> {
+  const lock = lockOf(userData, persona);
+  if (!lock) return true;
+  // No PIN at all is a prompt, not a guess.
+  if (!pin) return false;
+  const key = `${uuid}:${persona?.id ?? ''}`;
+  const failures = (await pinFailures.get(key)) ?? 0;
+  if (failures >= PIN_ATTEMPTS) {
+    logger.warn({ uuid, persona: persona?.id }, 'user pin locked out');
+    return false;
+  }
+  if (PERSONA_PIN_PATTERN.test(pin) && (await verifyHash(pin, lock))) {
+    if (failures) await pinFailures.delete(key);
+    return true;
+  }
+  await pinFailures.set(key, failures + 1, PIN_LOCKOUT_SECONDS);
+  return false;
+}
+
 export function requestOrigin(req: Request): string {
   const host = req.get('host');
   if (host) return `${req.protocol}://${host}`;
@@ -388,7 +447,8 @@ async function buildContext(
     const named = keyClaim.userId
       ? userForId(uuid, userData, keyClaim.userId)
       : null;
-    if (named === undefined) return UNKNOWN_USER;
+    // A key is minted from the shared link, so it must not open a PIN.
+    if (named === undefined || personaLocked(named)) return UNKNOWN_USER;
     persona = named;
   } else {
     // A token naming a persona that no longer exists is no longer valid.
@@ -556,6 +616,16 @@ export const jellyfinContext: RequestHandler = async (req, res, next) => {
         return;
       }
       res.status(401).json({ Message: 'Invalid credentials' });
+      return;
+    }
+    // With an account PIN, the shared address alone only reaches sign-in.
+    if (
+      ctx.preAuthenticated &&
+      !ownToken &&
+      accountLocked(ctx.userData) &&
+      !isAnonymousOk(req.path)
+    ) {
+      res.status(401).json({ Message: 'Unauthorized' });
       return;
     }
     req.jf = ctx;

@@ -15,6 +15,8 @@ import {
 export interface BasicAuthCredentials {
   uuid: string;
   password: string;
+  /** Sent in its encrypted form, as a shared address carries it. */
+  encrypted?: boolean;
 }
 
 /**
@@ -94,7 +96,7 @@ export function parseBasicAuthHeader(
         error
       );
     }
-    password = data;
+    return { uuid, password: data, encrypted: true };
   }
 
   return { uuid, password };

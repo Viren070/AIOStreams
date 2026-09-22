@@ -230,6 +230,93 @@ function TrackersField({
 }
 
 /** Jellyfin clients show these as users of the server. */
+const PIN_SHAPE = /^\d{4,12}$/;
+
+/** A saved PIN comes back as its hash, never as the digits. */
+function isSavedPin(lock: string | undefined): lock is string {
+  return !!lock && lock.startsWith('$2');
+}
+
+function PinField({
+  value,
+  onChange,
+  help = 'Clients ask for it before signing in as this user. Anyone who can edit this configuration can still change or remove it.',
+}: {
+  value: string | undefined;
+  onChange(value: string | undefined): void;
+  help?: string;
+}) {
+  const [saved] = useState(isSavedPin(value) ? value : undefined);
+  const [mode, setMode] = useState<'saved' | 'edit' | 'removed'>(
+    saved ? 'saved' : 'edit'
+  );
+
+  if (mode !== 'edit') {
+    return (
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-medium">PIN</p>
+          <p className="text-xs text-[--muted]">
+            {mode === 'saved' ? 'Set. ' + help : 'Removed when you save.'}
+          </p>
+        </div>
+        <div className="flex flex-none gap-2">
+          {mode === 'saved' ? (
+            <>
+              <Button
+                size="sm"
+                intent="gray-outline"
+                rounded
+                onClick={() => setMode('edit')}
+              >
+                Change
+              </Button>
+              <Button
+                size="sm"
+                intent="alert-subtle"
+                rounded
+                onClick={() => {
+                  setMode('removed');
+                  onChange(undefined);
+                }}
+              >
+                Remove
+              </Button>
+            </>
+          ) : (
+            <Button
+              size="sm"
+              intent="gray-outline"
+              rounded
+              onClick={() => {
+                setMode('saved');
+                onChange(saved);
+              }}
+            >
+              Undo
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <TextInput
+      label="PIN"
+      type="password"
+      inputMode="numeric"
+      autoComplete="new-password"
+      placeholder={saved ? 'Unchanged' : 'None'}
+      help={`Optional, 4 to 12 digits. ${help}`}
+      value={isSavedPin(value) ? '' : (value ?? '')}
+      onValueChange={(typed) => {
+        const digits = typed.replace(/\D/g, '').slice(0, 12);
+        onChange(digits || saved);
+      }}
+    />
+  );
+}
+
 export function JellyfinPersonas() {
   const { userData, setUserData, uuid, password } = useUserData();
   const credentials = React.useMemo(
@@ -335,6 +422,10 @@ export function JellyfinPersonas() {
       toast.error('A linked variant no longer exists or is disabled.');
       return;
     }
+    if (draft.lock && !isSavedPin(draft.lock) && !PIN_SHAPE.test(draft.lock)) {
+      toast.error('A PIN is 4 to 12 digits.');
+      return;
+    }
     const trackers = draft.history === 'shared' ? undefined : draft.trackers;
     const taken = takenFor(editing, false);
     const clash = trackers?.find((id) => taken.has(id));
@@ -353,6 +444,7 @@ export function JellyfinPersonas() {
       variants: draft.variants?.length ? draft.variants : undefined,
       trackers,
       hidden: draft.hidden || undefined,
+      lock: draft.lock || undefined,
     };
     if (editing !== null && editing < personas.length) next[editing] = value;
     else next.push(value);
@@ -362,6 +454,14 @@ export function JellyfinPersonas() {
 
   const commitPrimary = () => {
     if (!primaryDraft) return;
+    if (
+      primaryDraft.lock &&
+      !isSavedPin(primaryDraft.lock) &&
+      !PIN_SHAPE.test(primaryDraft.lock)
+    ) {
+      toast.error('A PIN is 4 to 12 digits.');
+      return;
+    }
     const name = primaryDraft.name?.trim() || '';
     if (name && personas.some((p) => sameName(p.name, name))) {
       toast.error('Another user already has this name.');
@@ -390,6 +490,7 @@ export function JellyfinPersonas() {
         ? primaryDraft.variants
         : undefined,
       trackers: primaryDraft.trackers,
+      lock: primaryDraft.lock || undefined,
     };
     patch({ primary: Object.values(value).some(Boolean) ? value : undefined });
     setPrimaryDraft(null);
@@ -427,17 +528,25 @@ export function JellyfinPersonas() {
     <div className="space-y-3">
       <p className="text-xs text-gray-400">
         Shown as users of the server. Everyone signs in with this
-        configuration&apos;s password. The primary user is this configuration
-        itself; each other user can keep a history and trackers of its own.
+        configuration&apos;s password, and a user with a PIN also asks for that.
+        The primary user is this configuration itself; each other user can keep
+        a history and trackers of its own.
       </p>
 
       <ul className="divide-y divide-gray-800 rounded-md border border-gray-800">
         <UserRow
           name={primaryName}
           avatar={primary?.avatar}
-          summary={`Primary user · ${variantsLabel(primary?.variants)} · ${
-            primary?.trackers ? trackersLabel(primary.trackers) : 'all trackers'
-          }`}
+          summary={[
+            'Primary user',
+            variantsLabel(primary?.variants),
+            primary?.trackers
+              ? trackersLabel(primary.trackers)
+              : 'all trackers',
+            primary?.lock ? 'PIN' : null,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
           onEdit={() => setPrimaryDraft({ ...primary })}
         />
         {personas.map((persona, index) => (
@@ -454,6 +563,7 @@ export function JellyfinPersonas() {
                 ? trackersLabel(persona.trackers)
                 : null,
               persona.hidden ? 'hidden from the picker' : null,
+              persona.lock ? 'PIN' : null,
             ]
               .filter(Boolean)
               .join(' · ')}
@@ -539,6 +649,11 @@ export function JellyfinPersonas() {
               onValueChange={(value) =>
                 setPrimaryDraft({ ...primaryDraft, avatar: value || undefined })
               }
+            />
+            <PinField
+              value={primaryDraft.lock}
+              onChange={(lock) => setPrimaryDraft({ ...primaryDraft, lock })}
+              help="Asked every time someone signs in as the primary user or switches to it, even with your configuration password, so other users can't reach your history. Anyone who can edit this configuration can still change or remove it."
             />
             <div className="flex items-center justify-end gap-2">
               <Button
@@ -629,6 +744,11 @@ export function JellyfinPersonas() {
               onValueChange={(value) =>
                 setDraft({ ...draft, hidden: value || undefined })
               }
+            />
+
+            <PinField
+              value={draft.lock}
+              onChange={(lock) => setDraft({ ...draft, lock })}
             />
 
             <div className="flex items-center justify-end gap-2">

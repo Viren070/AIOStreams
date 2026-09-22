@@ -1,4 +1,4 @@
-﻿import { UserData } from '../schemas.js';
+﻿import { UserData, isPersonaLockHash } from '../schemas.js';
 import { getDb } from '../db.js';
 import { sql } from '../sql.js';
 import { config as appConfig } from '../../config/index.js';
@@ -575,6 +575,14 @@ export class UserRepository {
     password: string,
     salt?: string
   ): Promise<{ encryptedConfig: string; salt: string }> {
+    // Every stored config passes here, so a PIN is never kept plain.
+    for (const user of [
+      config.jellyfin?.primary,
+      ...(config.jellyfin?.personas ?? []),
+    ]) {
+      if (user?.lock && !isPersonaLockHash(user.lock))
+        user.lock = await getTextHash(user.lock);
+    }
     const { key, salt: saltUsed } = await deriveKey(
       `${password}:${appConfig.bootstrap.secretKey}`,
       salt

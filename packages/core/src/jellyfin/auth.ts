@@ -15,6 +15,8 @@ export interface TokenPayload {
   k?: string;
   /** API key id; the token then acts for every user. */
   a?: string;
+  /** Set when the credential that began the session also opens the account. */
+  o?: 1;
   iat: number;
 }
 

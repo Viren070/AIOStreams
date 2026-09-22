@@ -32,6 +32,7 @@ import {
   knownHealthCheckIds,
   validateConditionalActivation,
   validateVariants,
+  withOwnAccountLock,
 } from '../variants/runtime.js';
 import { parseSyncedUrl } from './sync/index.js';
 import { ZodError } from 'zod';
@@ -1726,6 +1727,5 @@ export function mergeConfigs(parent: UserData, child: UserData): UserData {
   } else if (result.jellyfin?.personas) {
     result.jellyfin = { ...result.jellyfin, personas: undefined };
   }
-
-  return result;
+  return withOwnAccountLock(result, child);
 }
