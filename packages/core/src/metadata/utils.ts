@@ -108,6 +108,9 @@ export interface Metadata {
   episodeAirDate?: string;
   /** When the requested episode aired, as the request numbers it. */
   episodeReleased?: string;
+  /** The requested episode on TVDB, when TVDB numbers it differently. */
+  tvdbSeason?: number;
+  tvdbEpisode?: number;
   /** Season number the requested season resolved to (differs from the request under ordinal fallback). */
   resolvedSeasonNumber?: number;
   /** First episode number of the resolved season (>1 means continuous absolute numbering). */

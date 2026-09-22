@@ -151,24 +151,29 @@ export abstract class BaseNabAddon<
     )
       queryParams.tvdbid = metadata.tvdbId.toString();
 
+    // a tvdb id search is answered in tvdb's own numbering
+    const searchSeason =
+      (queryParams.tvdbid && metadata.tvdbSeason) || parsedId.season;
+    const searchEpisode =
+      (queryParams.tvdbid && metadata.tvdbEpisode) || parsedId.episode;
     if (
       ((!this.userData.forceQuerySearch &&
         searchCapabilities.supportedParams.includes('season')) ||
         forceIncludeSeasonEpInParams.includes(
           capabilities.server.title || ''
         )) &&
-      parsedId.season
+      searchSeason
     )
-      queryParams.season = parsedId.season.toString();
+      queryParams.season = searchSeason.toString();
     if (
       ((!this.userData.forceQuerySearch &&
         searchCapabilities.supportedParams.includes('ep')) ||
         forceIncludeSeasonEpInParams.includes(
           capabilities.server.title || ''
         )) &&
-      parsedId.episode
+      searchEpisode
     )
-      queryParams.ep = parsedId.episode.toString();
+      queryParams.ep = searchEpisode.toString();
     if (
       !this.userData.forceQuerySearch &&
       searchCapabilities.supportedParams.includes('year') &&

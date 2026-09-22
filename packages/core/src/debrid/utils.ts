@@ -274,13 +274,23 @@ interface SelectionReport {
 // helpers
 export const isSeasonWrong = (
   parsed: { seasons?: number[]; episodes?: number[] },
-  metadata?: { season?: number; absoluteEpisode?: number }
+  metadata?: {
+    season?: number;
+    absoluteEpisode?: number;
+    tvdbSeason?: number;
+  }
 ) => {
   if (
     parsed.seasons?.length &&
     metadata?.season &&
     !parsed.seasons.includes(metadata.season)
   ) {
+    if (
+      metadata.tvdbSeason !== undefined &&
+      parsed.seasons.includes(metadata.tvdbSeason)
+    ) {
+      return false;
+    }
     // allow if season is "wrong" with value of 1 but absolute episode is correct
     if (
       parsed.seasons.length === 1 &&
@@ -304,20 +314,23 @@ export const isEpisodeWrong = (
   if (parsedDate && metadata?.airDates?.length) {
     return !metadata.airDates.includes(parsedDate);
   }
+  if (!parsed.episodes?.length || !metadata?.episode) return false;
+  // in tvdb's season the request's own episode number belongs to another cour
   if (
-    parsed.episodes?.length &&
-    metadata?.episode &&
-    !(
-      parsed.episodes.includes(metadata.episode) ||
-      (metadata.absoluteEpisode &&
-        parsed.episodes.includes(metadata.absoluteEpisode)) ||
-      (metadata.relativeAbsoluteEpisode &&
-        parsed.episodes.includes(metadata.relativeAbsoluteEpisode))
-    )
+    metadata.tvdbSeason !== undefined &&
+    metadata.tvdbEpisode !== undefined &&
+    parsed.seasons?.includes(metadata.tvdbSeason) &&
+    !(metadata.season && parsed.seasons.includes(metadata.season))
   ) {
-    return true;
+    return !parsed.episodes.includes(metadata.tvdbEpisode);
   }
-  return false;
+  return !(
+    parsed.episodes.includes(metadata.episode) ||
+    (metadata.absoluteEpisode &&
+      parsed.episodes.includes(metadata.absoluteEpisode)) ||
+    (metadata.relativeAbsoluteEpisode &&
+      parsed.episodes.includes(metadata.relativeAbsoluteEpisode))
+  );
 };
 /**
  * A country tag identifies which same-name show a release belongs to, even
@@ -558,6 +571,11 @@ export async function selectFileInTorrentOrNZB(
       const parsedHasSeason = parsed.seasons && parsed.seasons.length > 0;
       const isExactMatch = parsedEpisodesCount === 1;
       const isBatchMatch = parsedEpisodesCount > 1;
+      const requestedEpisode =
+        metadata?.tvdbSeason !== undefined &&
+        parsed.seasons?.includes(metadata.tvdbSeason)
+          ? metadata.tvdbEpisode
+          : metadata?.episode;
 
       // For files without season info: prefer absolute episode matches over regular episode
       if (
@@ -603,11 +621,11 @@ export async function selectFileInTorrentOrNZB(
         parsedHasSeason &&
         metadata?.season &&
         metadata?.absoluteEpisode &&
-        metadata?.episode &&
-        metadata.absoluteEpisode !== metadata.episode
+        requestedEpisode &&
+        metadata.absoluteEpisode !== requestedEpisode
       ) {
         // File has season info: prefer regular episode over absolute.
-        const matchesRegular = parsed.episodes?.includes(metadata.episode);
+        const matchesRegular = parsed.episodes?.includes(requestedEpisode);
         const matchesAbsolute = parsed.episodes?.includes(
           metadata.absoluteEpisode
         );

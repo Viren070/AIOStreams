@@ -1215,6 +1215,15 @@ class StreamFilterer {
       }
 
       if (
+        requestedMetadata?.tvdbSeason !== undefined &&
+        seasons?.includes(requestedMetadata.tvdbSeason) &&
+        (!stream.parsedFile?.episodes?.length ||
+          stream.parsedFile.episodes.includes(requestedMetadata.tvdbEpisode!))
+      ) {
+        return true;
+      }
+
+      if (
         requestedSeason !== undefined &&
         seasons &&
         seasons.length > 0 &&
