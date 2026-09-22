@@ -10,11 +10,13 @@ import {
   withPersonDetails,
   buildSeason,
   buildView,
+  Cache,
   collectionMembers,
   viewCollectionType,
   config as appConfig,
   contentDescriptor,
   decodeItemId,
+  descriptorForWatchRow,
   descriptorOf,
   encodeItemId,
   idNeedsCatalogs,
@@ -37,6 +39,7 @@ import {
   seriesIdOf,
   stripInternal,
   subtitleFormatFor,
+  TICKS_PER_MS,
   userDataFromRow,
   watchRowsFor,
   writeMemoPointer,
@@ -55,7 +58,11 @@ import {
 } from '@aiostreams/core';
 import { stremioStreamRateLimiter } from '../../middlewares/ratelimit.js';
 import { StaticFiles } from '../../utils/static-errors.js';
-import { ANDROID_PLAYER_CLIENT, type JellyfinRequestContext } from './context.js';
+import {
+  ANDROID_PLAYER_CLIENT,
+  WEB_APP_CLIENT,
+  type JellyfinRequestContext,
+} from './context.js';
 import { getMetaLoose, resolveMarkerId, resolvePlayback } from './resolve.js';
 
 export function contentRefOf(d: ContentDescriptor): ContentRef {
@@ -479,6 +486,49 @@ function isResumable(item: JellyfinItem): boolean {
   return !ud.Played && ud.PlaybackPositionTicks > 0;
 }
 
+const SUMMARY_TTL = 600;
+const SUMMARY_MISS_TTL = 30;
+const SUMMARY_OMIT = [
+  'MediaSources',
+  'MediaStreams',
+  'People',
+  'Tags',
+  'RemoteTrailers',
+  'UserData',
+];
+
+const summaryCache = Cache.getInstance<
+  string,
+  JellyfinItem | { missing: true }
+>('jellyfin-summary-items', 5_000, 'memory');
+
+/** A light item for a watch row, carrying the row's runtime when it has one. */
+export async function summaryItem(
+  ctx: JellyfinRequestContext,
+  row: Pick<
+    WatchStateRow,
+    'itemKey' | 'mediaType' | 'baseId' | 'season' | 'episode' | 'videoId'
+  > & { durationMs: number }
+): Promise<JellyfinItem | null> {
+  const key = `${ctx.userId}|${ctx.scope()}|${row.itemKey}|${row.durationMs}`;
+  const hit = await summaryCache.get(key);
+  if (hit) return 'missing' in hit ? null : hit;
+
+  const built = await itemFromDescriptor(ctx, descriptorForWatchRow(row)).catch(
+    () => null
+  );
+  if (!built) {
+    await summaryCache.set(key, { missing: true }, SUMMARY_MISS_TTL);
+    return null;
+  }
+  const item = stripInternal(built) as JellyfinItem & Record<string, unknown>;
+  for (const field of SUMMARY_OMIT) delete item[field];
+  if (row.durationMs > 0)
+    item.RunTimeTicks = Math.round(row.durationMs) * TICKS_PER_MS;
+  await summaryCache.set(key, item, SUMMARY_TTL);
+  return item;
+}
+
 export async function nextUpForSeries(
   ctx: JellyfinRequestContext,
   d: { t: string; i: string },
@@ -535,6 +585,8 @@ export async function nextUpForSeries(
 function resolveOnOpen(ctx: JellyfinRequestContext): boolean {
   // An API key looks items up and never plays them.
   if (ctx.apiKey) return false;
+  // The web app asks for versions when play is pressed.
+  if (ctx.client.name === WEB_APP_CLIENT) return false;
   switch (appConfig.jellyfin.resolveOnOpen) {
     case 'always':
       return true;

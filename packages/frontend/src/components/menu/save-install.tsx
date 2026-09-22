@@ -22,6 +22,7 @@ import {
   Code2,
   CopyIcon,
   KeyRound,
+  MonitorPlay,
   Layers,
   LibraryBig,
   Settings2,
@@ -2849,6 +2850,34 @@ function Content() {
                           </div>
                         </div>
                       )}
+                    </div>
+
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                      <div className="min-w-0 space-y-1">
+                        <p className="text-sm font-medium text-white">
+                          Web app
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Browse, see what is playing and manage watch history
+                          in your browser.
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        intent="gray-outline"
+                        rounded
+                        className="w-full shrink-0 sm:w-auto"
+                        leftIcon={<MonitorPlay className="h-4 w-4" />}
+                        onClick={() =>
+                          window.open(
+                            `${jellyfinPickerUrl || jellyfinServerUrl}/web/`,
+                            '_blank',
+                            'noopener'
+                          )
+                        }
+                      >
+                        Open
+                      </Button>
                     </div>
 
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">

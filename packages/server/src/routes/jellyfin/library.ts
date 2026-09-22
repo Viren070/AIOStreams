@@ -292,10 +292,10 @@ function send(
 }
 
 /** Rows in flight while building a shelf; each one costs a meta lookup. */
-const ROW_CONCURRENCY = 6;
+export const ROW_CONCURRENCY = 6;
 
 /** Runs `fn` over `items` with a few in flight, keeping the input order. */
-async function mapLimited<T, R>(
+export async function mapLimited<T, R>(
   items: T[],
   limit: number,
   fn: (item: T) => Promise<R>

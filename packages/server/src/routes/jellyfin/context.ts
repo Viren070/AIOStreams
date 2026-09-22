@@ -53,6 +53,9 @@ const logger = createLogger('jellyfin');
  */
 export const ANDROID_PLAYER_CLIENT = 'Jellyfin for Android';
 
+/** The client name the server's own web app signs in with. */
+export const WEB_APP_CLIENT = 'AIOStreams Web';
+
 export interface JellyfinRequestContext {
   uuid: string;
   encryptedPassword: string;

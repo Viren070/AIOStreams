@@ -1,0 +1,182 @@
+import React from 'react';
+import { motion } from 'motion/react';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+  useCarousel,
+} from '@/components/ui/carousel';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/components/ui/core/styling';
+import { usePosterSize, type PosterSize } from '../lib/settings';
+
+const ITEM_WIDTH = {
+  poster:
+    'basis-[9rem] sm:basis-[10.5rem] lg:basis-[11.5rem] 2xl:basis-[12.5rem]',
+  square: 'basis-[10rem] sm:basis-[11.5rem] lg:basis-[12.5rem]',
+  wide: 'basis-[16rem] sm:basis-[18rem] lg:basis-[20rem] 2xl:basis-[22rem]',
+};
+
+const SKELETON_SHAPE = {
+  poster: 'aspect-[2/3]',
+  square: 'aspect-square',
+  wide: 'aspect-video',
+};
+
+export type RowShape = keyof typeof ITEM_WIDTH;
+
+/** Cards fade in a little after one another, a page at a time. */
+export function fadeIn(index: number) {
+  return {
+    initial: { opacity: 0, y: 8 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.3, delay: (index % 20) * 0.025 },
+  };
+}
+
+/** Asks for more once the row is scrolled most of the way. */
+function EndWatcher({ onEnd }: { onEnd: () => void }) {
+  const { api } = useCarousel();
+  React.useEffect(() => {
+    if (!api) return;
+    const check = () => {
+      if (api.scrollProgress() > 0.7 || !api.canScrollNext()) onEnd();
+    };
+    api.on('scroll', check);
+    api.on('settle', check);
+    return () => {
+      api.off('scroll', check);
+      api.off('settle', check);
+    };
+  }, [api, onEnd]);
+  return null;
+}
+
+/** The row's arrows, only while there is somewhere to scroll. */
+function RowNav({ overlay }: { overlay?: boolean }) {
+  const { canScrollPrev, canScrollNext } = useCarousel();
+  if (!canScrollPrev && !canScrollNext) return null;
+  if (!overlay) {
+    return (
+      <div className="hidden gap-1 md:flex">
+        <CarouselPrevious />
+        <CarouselNext />
+      </div>
+    );
+  }
+  // A row without a header keeps its arrows over its edges.
+  const edge =
+    'absolute top-1/2 z-[2] hidden -translate-y-1/2 bg-black/60 backdrop-blur-sm disabled:hidden md:inline-flex';
+  return (
+    <>
+      <CarouselPrevious className={cn(edge, 'left-1')} />
+      <CarouselNext className={cn(edge, 'right-1')} />
+    </>
+  );
+}
+
+/** A titled, draggable row of cards that pages as it nears its end. */
+export function MediaRow({
+  title,
+  shape,
+  itemClass,
+  loading,
+  loadingMore,
+  onEndReached,
+  action,
+  children,
+}: {
+  title?: React.ReactNode;
+  shape: RowShape;
+  /** Replaces the shape's card width, for rows of something else. */
+  itemClass?: string;
+  loading?: boolean;
+  loadingMore?: boolean;
+  onEndReached?: () => void;
+  action?: React.ReactNode;
+  children?: React.ReactNode;
+}) {
+  const width = itemClass ?? ITEM_WIDTH[shape];
+  const items = React.Children.toArray(children);
+  if (!loading && !items.length) return null;
+  const skeletons = (count: number) =>
+    Array.from({ length: count }, (_, i) => (
+      <CarouselItem key={`skeleton-${i}`} className={width}>
+        <Skeleton
+          className={cn('h-auto w-full rounded-xl', SKELETON_SHAPE[shape])}
+        />
+      </CarouselItem>
+    ));
+  return (
+    <section>
+      <Carousel opts={{ align: 'start', dragFree: true }}>
+        {onEndReached && <EndWatcher onEnd={onEndReached} />}
+        {title || action ? (
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="min-w-0 truncate text-lg font-semibold sm:text-xl">
+              {title}
+            </h2>
+            <div className="flex flex-none items-center gap-2">
+              {action}
+              <RowNav />
+            </div>
+          </div>
+        ) : (
+          <RowNav overlay />
+        )}
+        <CarouselContent className={title || action ? 'mt-3' : undefined}>
+          {loading
+            ? skeletons(8)
+            : items.map((child, i) => (
+                <CarouselItem key={i} className={width}>
+                  <motion.div {...fadeIn(i)}>{child}</motion.div>
+                </CarouselItem>
+              ))}
+          {!loading && loadingMore && skeletons(4)}
+        </CarouselContent>
+      </Carousel>
+    </section>
+  );
+}
+
+const GRID_COLUMNS: Record<PosterSize, { poster: string; wide: string }> = {
+  small: {
+    poster:
+      'grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-9 2xl:grid-cols-12',
+    wide: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 2xl:grid-cols-6',
+  },
+  medium: {
+    poster:
+      'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-10',
+    wide: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5',
+  },
+  large: {
+    poster:
+      'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8',
+    wide: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4',
+  },
+};
+
+export function CardGrid({
+  shape = 'poster',
+  children,
+}: {
+  shape?: RowShape;
+  children: React.ReactNode;
+}) {
+  const [size] = usePosterSize();
+  return (
+    <div
+      className={cn(
+        'grid gap-4',
+        shape === 'wide'
+          ? GRID_COLUMNS[size].wide
+          : GRID_COLUMNS[size].poster
+      )}
+    >
+      {children}
+    </div>
+  );
+}

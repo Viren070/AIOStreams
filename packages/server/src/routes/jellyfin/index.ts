@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import express, { type Router } from 'express';
 import {
   APIError,
@@ -22,6 +24,8 @@ import playbackRouter from './playback.js';
 import subtitlesRouter from './subtitles.js';
 import imagesRouter from './images.js';
 import playstateRouter from './playstate.js';
+import webRouter from './web.js';
+import { frontendRoot } from '../../app.js';
 
 export const jellyfinCors: express.RequestHandler = (req, res, next) => {
   // The global middleware sets Allow-Credentials, which browsers reject
@@ -54,7 +58,7 @@ export const jellyfinCors: express.RequestHandler = (req, res, next) => {
 
 const UNLIMITED = /^\/system\/info\/public$/i;
 const LOGIN_LIKE =
-  /^\/(users\/authenticatebyname|users\/authenticatewithquickconnect|quickconnect\/(authorize|initiate))$/i;
+  /^\/(users\/authenticatebyname|users\/authenticatewithquickconnect|quickconnect\/(authorize|initiate)|aiostreams\/token)$/i;
 const IMAGE_LIKE =
   /^\/(items\/[^/]+\/images|persons\/[^/]+\/images|userimage|users\/[^/]+\/images|images\/general)(\/|$)/i;
 const STREAM_LIKE = /^\/items\/[^/]+\/(playbackinfo|mediasources)$/i;
@@ -62,7 +66,7 @@ const STREAM_LIKE = /^\/items\/[^/]+\/(playbackinfo|mediasources)$/i;
 const CACHEABLE =
   /^\/(items\/[^/]+\/images|persons\/[^/]+\/images|userimage|users\/[^/]+\/images|images\/general|videos\/)/i;
 
-/** Stands in for the web client a real server hosts here. */
+/** Stands in for the web app when the frontend was not built. */
 function landingPage(req: express.Request): string {
   const configure = `${req.protocol}://${req.get('host')}/stremio/configure`;
   return `<!doctype html>
@@ -162,7 +166,16 @@ export function createJellyfinRouter(): Router {
     res.redirect(302, `${req.baseUrl}/web/`);
   });
   router.all(['/web', '/web/index.html'], (req, res) => {
+    const index = path.join(frontendRoot, 'index.html');
+    if (fs.existsSync(index)) {
+      res.sendFile(index);
+      return;
+    }
     res.type('html').send(landingPage(req));
+  });
+  /* An app hosting the web client swaps this request for its native bridge. */
+  router.get('/web/main.:name.bundle.js', (_req, res) => {
+    res.type('js').send('');
   });
 
   router.use((req, res, next) => {
@@ -201,6 +214,7 @@ export function createJellyfinRouter(): Router {
   );
 
   router.use(jellyfinContext);
+  router.use(webRouter);
   router.use(systemRouter);
   router.use(usersRouter);
   router.use(quickConnectRouter);

@@ -15,7 +15,12 @@ import { userApiRateLimiter } from '../../middlewares/ratelimit.js';
 import { attachSession } from '../../middlewares/auth.js';
 import { resolveConfigCredentials } from '../../utils/basic-auth.js';
 import { createResponse } from '../../utils/responses.js';
-import { accountLocked, userUnlocks } from '../jellyfin/context.js';
+import {
+  accountLocked,
+  resolveConfig,
+  userUnlocks,
+} from '../jellyfin/context.js';
+import { authenticationResult, userDto } from '../jellyfin/users.js';
 
 const logger = createLogger('jellyfin');
 const router: Router = Router();
@@ -350,6 +355,91 @@ router.post('/api-keys/token', async (req, res, next) => {
         data: {
           token: mintToken({ u: creds.uuid, p: enc.data, a: parsed.data.id }),
         },
+      })
+    );
+  } catch (error) {
+    next(
+      error instanceof APIError
+        ? error
+        : new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR)
+    );
+  }
+});
+
+/* Signs the web app in as the primary user from a configuration sign-in. */
+router.post('/web/token', async (req, res, next) => {
+  try {
+    if (!appConfig.jellyfin.enabled) {
+      next(
+        new APIError(
+          constants.ErrorCode.FORBIDDEN,
+          undefined,
+          'Jellyfin API is disabled'
+        )
+      );
+      return;
+    }
+    const creds = await resolveConfigCredentials(req, res, {
+      allowEncrypted: true,
+    });
+    if (!creds) {
+      next(new APIError(constants.ErrorCode.UNAUTHORIZED));
+      return;
+    }
+    await UserRepository.verifyUser(creds.uuid, creds.password);
+    const enc = encryptString(creds.password);
+    if (!enc.success || !enc.data) {
+      next(new APIError(constants.ErrorCode.ENCRYPTION_ERROR));
+      return;
+    }
+    const userData = await resolveConfig(creds.uuid, enc.data);
+    if (!userData || (creds.encrypted && accountLocked(userData))) {
+      next(new APIError(constants.ErrorCode.UNAUTHORIZED));
+      return;
+    }
+    if (accountLocked(userData)) {
+      const pin = String(
+        (req.body as { pin?: unknown } | undefined)?.pin ?? ''
+      );
+      // Without a PIN, says who is asking for one, so the app can prompt.
+      if (!pin) {
+        res.json(
+          createResponse({
+            success: true,
+            data: {
+              needsPin: true,
+              User: userDto(creds.uuid, userData, null),
+              avatar: userData.jellyfin?.primary?.avatar ?? null,
+              branding: {
+                name: userData.addonName ?? null,
+                logo: userData.addonLogo ?? null,
+              },
+            },
+          })
+        );
+        return;
+      }
+      if (!(await userUnlocks(creds.uuid, userData, null, pin))) {
+        next(
+          new APIError(
+            constants.ErrorCode.UNAUTHORIZED,
+            undefined,
+            'Wrong PIN for this user'
+          )
+        );
+        return;
+      }
+    }
+    res.json(
+      createResponse({
+        success: true,
+        data: await authenticationResult(
+          req,
+          creds.uuid,
+          enc.data,
+          userData,
+          null
+        ),
       })
     );
   } catch (error) {

@@ -10,6 +10,15 @@
     <link rel="icon" href="/icon0.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-icon.png" />
     <link rel="manifest" href="/manifest.json" />
+    <script>
+      // The desktop app draws its player beneath its web view, which only
+      // renders transparency properly for a page transparent from the start.
+      if (
+        window.jmpInfo &&
+        /^\/jellyfin(\/.*)?\/web(\/(index\.html)?)?$/i.test(location.pathname)
+      )
+        document.documentElement.classList.add('see-through');
+    </script>
   </head>
   <body>
     <div id="root"></div>

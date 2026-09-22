@@ -1,9 +1,7 @@
 import { createHash } from 'crypto';
 import { Router, type Request } from 'express';
 import {
-  Cache,
   createLogger,
-  descriptorForWatchRow,
   encryptString,
   getSimpleTextHash,
   isConfigUuid,
@@ -13,11 +11,9 @@ import {
   resolveConfigAlias,
   serverId as instanceServerId,
   sessionKeyFor,
-  stripInternal,
   TICKS_PER_MS,
   WatchSessionRepository,
   type ClientInfo,
-  type JellyfinItem,
   type JellyfinPersona,
   type UserData,
   type WatchSessionRow,
@@ -37,7 +33,7 @@ import {
   resolveConfig,
   type JellyfinRequestContext,
 } from './context.js';
-import { itemFromDescriptor } from './items.js';
+import { summaryItem } from './items.js';
 import { serverName } from './system.js';
 
 const logger = createLogger('jellyfin');
@@ -115,7 +111,7 @@ export function userPolicy(opts: { admin?: boolean; hidden?: boolean } = {}) {
 type Faced = Pick<UserData, 'addonName' | 'jellyfin'>;
 
 /** The primary user's name, which stood in for a configuration before it had one. */
-function accountName(userData: Faced): string {
+export function accountName(userData: Faced): string {
   return userData.jellyfin?.primary?.name || userData.addonName || serverName();
 }
 
@@ -222,7 +218,7 @@ function clientOf(req: Request): ClientInfo {
   );
 }
 
-async function authenticationResult(
+export async function authenticationResult(
   req: Request,
   uuid: string,
   encryptedPassword: string,
@@ -246,7 +242,7 @@ async function authenticationResult(
 }
 
 /** Every user of one configuration, the account first. */
-function allUsers(
+export function allUsers(
   uuid: string,
   userData: UserData,
   opts: { pickable?: boolean; forKey?: boolean } = {}
@@ -495,47 +491,9 @@ router.post(
 );
 
 const SESSIONS_LIMIT = 50;
-const NOW_PLAYING_TTL = 600;
-const NOW_PLAYING_MISS_TTL = 30;
-const NOW_PLAYING_OMIT = [
-  'MediaSources',
-  'MediaStreams',
-  'People',
-  'Tags',
-  'RemoteTrailers',
-  'UserData',
-];
-
-const nowPlayingCache = Cache.getInstance<
-  string,
-  JellyfinItem | { missing: true }
->('jellyfin-now-playing', 5_000, 'memory');
-
-async function nowPlayingItem(
-  ctx: JellyfinRequestContext,
-  row: WatchSessionRow
-): Promise<JellyfinItem | null> {
-  const key = `${ctx.userId}|${ctx.scope()}|${row.itemKey}|${row.durationMs}`;
-  const hit = await nowPlayingCache.get(key);
-  if (hit) return 'missing' in hit ? null : hit;
-
-  const built = await itemFromDescriptor(ctx, descriptorForWatchRow(row)).catch(
-    () => null
-  );
-  if (!built) {
-    await nowPlayingCache.set(key, { missing: true }, NOW_PLAYING_MISS_TTL);
-    return null;
-  }
-  const item = stripInternal(built) as JellyfinItem & Record<string, unknown>;
-  for (const field of NOW_PLAYING_OMIT) delete item[field];
-  if (row.durationMs > 0)
-    item.RunTimeTicks = Math.round(row.durationMs) * TICKS_PER_MS;
-  await nowPlayingCache.set(key, item, NOW_PLAYING_TTL);
-  return item;
-}
 
 /** The caller's own session is the one this request is from, so it is active now. */
-async function sessionFromRow(
+export async function sessionFromRow(
   ctx: JellyfinRequestContext,
   row: WatchSessionRow,
   user: JellyfinPersona | null,
@@ -558,7 +516,7 @@ async function sessionFromRow(
   );
   const checkIn = new Date(row.lastCheckinAt).toISOString();
   const playing = row.endedAt == null;
-  const item = playing ? await nowPlayingItem(ctx, row) : null;
+  const item = playing ? await summaryItem(ctx, row) : null;
   return {
     ...session,
     LastActivityDate: own ? session.LastActivityDate : checkIn,

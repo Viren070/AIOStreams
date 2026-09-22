@@ -182,6 +182,12 @@ html {
   scrollbar-gutter: stable;
 }
 
+/* see index.html; the page's background is then drawn by an element */
+html.see-through,
+html.see-through body {
+  background: transparent !important;
+}
+
 html * {
   border-color: var(--border);
 }

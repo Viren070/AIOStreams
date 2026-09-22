@@ -1,0 +1,330 @@
+import React from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { api, hasConfigSessionCookie } from '@/lib/api';
+import { apiBase, JellyfinClient, JellyfinError } from './client';
+import {
+  clearCredentials,
+  readCredentials,
+  saveCredentials,
+  signedOut,
+} from './credentials';
+import { storage } from './storage';
+import { syncPreferences } from './settings';
+import type {
+  AuthenticationResult,
+  Branding,
+  PickableUser,
+  UserDto,
+} from './types';
+
+interface SessionValue {
+  client: JellyfinClient;
+  user: UserDto;
+  /** A client acting as another user of the configuration. */
+  clientFor(userId: string): Promise<JellyfinClient>;
+  switchUser(): void;
+  signOut(): void;
+}
+
+const SessionContext = React.createContext<SessionValue | null>(null);
+
+export function useSession(): SessionValue {
+  const value = React.useContext(SessionContext);
+  if (!value) throw new Error('useSession must be used within a session');
+  return value;
+}
+
+export type SessionPhase =
+  | { kind: 'loading' }
+  | { kind: 'signed-out' }
+  /** Each user says what picking it asks for. */
+  | {
+      kind: 'picking';
+      /** Whatever can already speak for the configuration, for its branding. */
+      client: JellyfinClient;
+      branding?: Branding;
+      users: PickableUser[];
+      choose(userId: string, secret?: string): Promise<void>;
+    }
+  | { kind: 'ready'; client: JellyfinClient; user: UserDto };
+
+const lastUserKey = (base: string) => `aiostreams-web-last-user:${base}`;
+
+/** The configuration page's hand-off, which asks first when the account has a PIN. */
+type WebTokenResult =
+  | AuthenticationResult
+  | {
+      needsPin: true;
+      User: UserDto;
+      avatar: string | null;
+      branding: Branding;
+    };
+
+/** `/jellyfin/<uuid or alias>/<encrypted password>`, with or without a variant. */
+function isPreAuthenticatedMount(base: string): boolean {
+  const parts = new URL(base).pathname.split('/').filter(Boolean);
+  return parts.length >= 3 && parts[1] !== 'v';
+}
+
+/**
+ * Signs in the way jellyfin-web does, then lets a configuration with several
+ * users pick one.
+ */
+export function useSessionPhase() {
+  const base = React.useMemo(apiBase, []);
+  const queryClient = useQueryClient();
+  const [phase, setPhase] = React.useState<SessionPhase>({ kind: 'loading' });
+
+  const adopt = React.useCallback(
+    (proof: JellyfinClient, auth: AuthenticationResult) => {
+      const user = auth.User!;
+      saveCredentials(base, {
+        serverId: auth.ServerId ?? '',
+        token: auth.AccessToken!,
+        userId: user.Id!,
+      });
+      storage.set(lastUserKey(base), user.Id);
+      setPhase({
+        kind: 'ready',
+        client: proof.withToken(auth.AccessToken!),
+        user,
+      });
+    },
+    [base]
+  );
+
+  const switchTo = React.useCallback(
+    async (proof: JellyfinClient, userId: string, secret?: string) => {
+      const auth = await proof.post<AuthenticationResult>('/AIOStreams/Token', {
+        UserId: userId,
+        ...(secret ? { Pw: secret } : {}),
+      });
+      queryClient.removeQueries({ queryKey: ['jf'] });
+      adopt(proof, auth);
+    },
+    [adopt, queryClient]
+  );
+
+  /** Takes the only user or the last one used, and asks otherwise. */
+  const enter = React.useCallback(
+    async (proof: JellyfinClient, signedIn?: AuthenticationResult) => {
+      const users = await proof.get<PickableUser[]>('/AIOStreams/Users');
+      const last = storage.get<string>(lastUserKey(base));
+      const target =
+        users.length === 1 ? users[0] : users.find((u) => u.user.Id === last);
+      if (!target || target.needs) {
+        setPhase({
+          kind: 'picking',
+          client: proof,
+          users,
+          choose: (id, secret) => switchTo(proof, id, secret),
+        });
+      } else if (signedIn && signedIn.User?.Id === target.user.Id) {
+        adopt(proof, signedIn);
+      } else {
+        await switchTo(proof, target.user.Id!);
+      }
+    },
+    [adopt, base, switchTo]
+  );
+
+  /**
+   * The sign-in picker for an address whose account has a PIN, which then no
+   * longer answers without signing in.
+   */
+  const pickPublicly = React.useCallback(
+    async (anonymous: JellyfinClient) => {
+      const listed = await anonymous
+        .get<UserDto[]>('/Users/Public')
+        .catch(() => [] as UserDto[]);
+      if (!listed.length) return false;
+      setPhase({
+        kind: 'picking',
+        client: anonymous,
+        users: listed.map((user) => ({
+          user,
+          avatar: user.PrimaryImageTag
+            ? anonymous.url(`/Users/${user.Id}/Images/Primary`, {
+                tag: user.PrimaryImageTag,
+              })
+            : null,
+          hidden: false,
+          needs: user.HasPassword ? 'pin' : null,
+        })),
+        choose: async (id, secret) => {
+          const user = listed.find((u) => u.Id === id);
+          const auth = await anonymous.post<AuthenticationResult>(
+            '/Users/AuthenticateByName',
+            { Username: user?.Name ?? '', Pw: secret ?? '' }
+          );
+          queryClient.removeQueries({ queryKey: ['jf'] });
+          adopt(anonymous, auth);
+        },
+      });
+      return true;
+    },
+    [adopt, queryClient]
+  );
+
+  React.useEffect(() => {
+    let cancelled = false;
+    const anonymous = new JellyfinClient(base);
+    const run = async () => {
+      const stored = readCredentials(base);
+      if (stored) {
+        const client = anonymous.withToken(stored.token);
+        const user = await client.get<UserDto>('/Users/Me').catch(() => null);
+        if (user) {
+          if (!cancelled) setPhase({ kind: 'ready', client, user });
+          return;
+        }
+      }
+      // The pre-authenticated address answers without a token.
+      const preAuthenticated =
+        isPreAuthenticatedMount(base) &&
+        (await anonymous
+          .get<UserDto>('/Users/Me')
+          .then(() => true)
+          .catch(() => false));
+      if (preAuthenticated) {
+        if (!cancelled) await enter(anonymous);
+        return;
+      }
+      if (
+        isPreAuthenticatedMount(base) &&
+        !cancelled &&
+        (await pickPublicly(anonymous))
+      ) {
+        return;
+      }
+      if (hasConfigSessionCookie() && !signedOut(base)) {
+        const auth = await api<WebTokenResult>(
+          'POST /jellyfin/web/token'
+        ).catch(() => null);
+        if (auth && 'needsPin' in auth) {
+          if (!cancelled)
+            setPhase({
+              kind: 'picking',
+              client: anonymous,
+              branding: auth.branding,
+              users: [
+                {
+                  user: auth.User,
+                  avatar: auth.avatar,
+                  hidden: false,
+                  needs: 'pin',
+                },
+              ],
+              choose: async (_id, pin) => {
+                const signedIn = await api<AuthenticationResult>(
+                  'POST /jellyfin/web/token',
+                  { body: { pin } }
+                );
+                await enter(
+                  anonymous.withToken(signedIn.AccessToken!),
+                  signedIn
+                );
+              },
+            });
+          return;
+        }
+        if (auth?.AccessToken) {
+          if (!cancelled)
+            await enter(anonymous.withToken(auth.AccessToken), auth);
+          return;
+        }
+      }
+      if (!cancelled) setPhase({ kind: 'signed-out' });
+    };
+    run().catch(() => {
+      if (!cancelled) setPhase({ kind: 'signed-out' });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [base, enter, pickPublicly]);
+
+  const signIn = React.useCallback(
+    async (username: string, password: string) => {
+      const auth = await new JellyfinClient(base).post<AuthenticationResult>(
+        '/Users/AuthenticateByName',
+        { Username: username, Pw: password }
+      );
+      const proof = new JellyfinClient(base, auth.AccessToken ?? null);
+      // A name that already carries a user signs in as that user.
+      if (username.includes('/')) adopt(proof, auth);
+      else await enter(proof, auth);
+    },
+    [adopt, base, enter]
+  );
+
+  const switchUser = React.useCallback(async () => {
+    if (phase.kind !== 'ready') return;
+    const proof = phase.client;
+    const users = await proof.get<PickableUser[]>('/AIOStreams/Users');
+    setPhase({
+      kind: 'picking',
+      client: proof,
+      users,
+      choose: (id, secret) => switchTo(proof, id, secret),
+    });
+  }, [phase, switchTo]);
+
+  const signOut = React.useCallback(() => {
+    if (phase.kind === 'ready') {
+      void phase.client.post('/Sessions/Logout').catch(() => undefined);
+    }
+    clearCredentials(base);
+    storage.remove(lastUserKey(base));
+    queryClient.removeQueries({ queryKey: ['jf'] });
+    setPhase({ kind: 'signed-out' });
+  }, [base, phase, queryClient]);
+
+  return { base, phase, signIn, switchUser, signOut };
+}
+
+export function SessionProvider({
+  client,
+  user,
+  switchUser,
+  signOut,
+  children,
+}: {
+  client: JellyfinClient;
+  user: UserDto;
+  switchUser: () => void;
+  signOut: () => void;
+  children: React.ReactNode;
+}) {
+  const others = React.useRef(new Map<string, Promise<JellyfinClient>>());
+  React.useEffect(() => others.current.clear(), [client]);
+  React.useEffect(() => syncPreferences(client, user.Id!), [client, user.Id]);
+
+  const clientFor = React.useCallback(
+    (userId: string) => {
+      if (userId === user.Id) return Promise.resolve(client);
+      let pending = others.current.get(userId);
+      if (!pending) {
+        pending = client
+          .post<AuthenticationResult>('/AIOStreams/Token', { UserId: userId })
+          .then((auth) => client.withToken(auth.AccessToken!));
+        pending.catch(() => others.current.delete(userId));
+        others.current.set(userId, pending);
+      }
+      return pending;
+    },
+    [client, user.Id]
+  );
+
+  const value = React.useMemo(
+    () => ({ client, user, clientFor, switchUser, signOut }),
+    [client, user, clientFor, switchUser, signOut]
+  );
+  return (
+    <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
+  );
+}
+
+export function isUnauthorized(error: unknown): boolean {
+  return error instanceof JellyfinError && error.status === 401;
+}

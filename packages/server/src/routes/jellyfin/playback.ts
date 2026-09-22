@@ -4,6 +4,7 @@ import {
   createLogger,
   lookupFor,
   couldHaveSegments,
+  isMemoFresh,
   playableSources,
   resolveByItem,
   segmentsFor,
@@ -20,6 +21,7 @@ import {
   jfOptional,
   param,
   qs,
+  WEB_APP_CLIENT,
   type JellyfinRequestContext,
 } from './context.js';
 import {
@@ -117,13 +119,31 @@ async function locate(
 /* A client retrying a failed play must not rerun the pipeline against an addon that is failing. */
 const EMPTY_MEMO_REUSE_MS = 30_000;
 
-async function ensureMemo(loc: Located): Promise<PlaybackMemo | null> {
-  if (loc.memo && playableSources(loc.memo.sources).length) return loc.memo;
-  if (loc.descriptor.k !== 'movie' && loc.descriptor.k !== 'episode')
-    return null;
-  if (loc.memo && Date.now() - loc.memo.createdAt < EMPTY_MEMO_REUSE_MS)
-    return loc.memo;
-  return resolvePlayback(loc.ctx, loc.descriptor, { force: true });
+async function ensureMemo(
+  loc: Located,
+  /* `current` reruns a memo past its reuse window, `force` any memo. */
+  opts: { current?: boolean; force?: boolean } = {}
+): Promise<PlaybackMemo | null> {
+  const { memo, descriptor } = loc;
+  const resolvable = descriptor.k === 'movie' || descriptor.k === 'episode';
+  const rerun =
+    resolvable && (opts.force || (opts.current && memo && !isMemoFresh(memo)));
+  if (!rerun) {
+    if (memo && playableSources(memo.sources).length) return memo;
+    if (!resolvable) return null;
+    if (memo && Date.now() - memo.createdAt < EMPTY_MEMO_REUSE_MS) return memo;
+  }
+  return resolvePlayback(loc.ctx, descriptor, { force: true });
+}
+
+/**
+ * The web app resolves when its version list opens rather than when an item
+ * opens, and can ask for a new run to retry addons that failed.
+ */
+function listingOptions(req: Request, loc: Located) {
+  if (!req.jf || loc.ctx.client.name !== WEB_APP_CLIENT || loc.requestedMsid)
+    return {};
+  return { current: true, force: bodyOf(req).Refresh === true };
 }
 
 function pickSource(
@@ -162,7 +182,7 @@ async function playbackInfo(req: Request, res: Response) {
     return;
   }
   const profile = bodyOf(req).DeviceProfile as DeviceProfile | undefined;
-  const memo = await ensureMemo(loc);
+  const memo = await ensureMemo(loc, listingOptions(req, loc));
   if (!memo || !memo.sources.length) {
     res.json({
       MediaSources: placeholderSources(req, loc.ctx, loc.itemId, true),
