@@ -794,7 +794,10 @@ router.get(
             (b.season ?? 0) - (a.season ?? 0) ||
             (b.episode ?? 0) - (a.episode ?? 0)
         );
-        const next = await nextUpForSeries(ctx, d.descriptor, rows[0], {
+        // Anchored on the last episode watched, as the shelf is; a row left by
+        // an unmarked episode or a favourite says nothing about progress.
+        const last = rows.find((r) => r.played || r.positionMs > 0);
+        const next = await nextUpForSeries(ctx, d.descriptor, last, {
           includeResumable,
         });
         if (next) items.push(next);
