@@ -20,13 +20,10 @@ import {
   resolveConfigAlias,
   memoScope,
   personaUserId,
-  resolveVariantSelector,
   serverId as instanceServerId,
   sql,
   UserRepository,
   validateConfig,
-  VARIANT_PATH_PARAM,
-  VARIANT_QUERY_PARAM,
   decryptString,
   type ClientInfo,
   type ItemBuildContext,
@@ -454,17 +451,9 @@ async function buildContext(
   const variantContext = buildVariantRequestContext(req, 'jellyfin');
 
   try {
-    const { ids: fromUrl, location } = resolveVariantSelector(
-      (req.params as Record<string, unknown>)[VARIANT_PATH_PARAM],
-      req.query[VARIANT_QUERY_PARAM]
-    );
-    // The URL is the more immediate choice, so it applies last and wins.
     const own = persona ? (persona.variants ?? []) : primaryVariants;
-    const linked = own.filter((id) => !fromUrl.includes(id));
-    const selected = [...linked, ...fromUrl];
-    const result = await activateVariants(userData, selected, variantContext);
+    const result = await activateVariants(userData, own, variantContext);
     userData = result.userData;
-    if (fromUrl.length) userData.variantSelectorLocation = location;
   } catch (error) {
     logger.warn(
       {

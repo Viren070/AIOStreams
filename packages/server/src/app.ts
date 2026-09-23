@@ -237,15 +237,8 @@ app.use('/blocklist', publicBlocklistRouter);
 app.use('/community', publicCommunityRouter);
 app.use('/webdav', webdavRouter);
 
-// A Jellyfin client stores the address it is given and builds its own URLs
-// from it, so a variant has to travel in the path rather than a query string.
 const jellyfinRouter = createJellyfinRouter();
-app.use(
-  `/jellyfin/:uuid/:encryptedPassword${VARIANT_PATH_ROUTE}`,
-  jellyfinRouter
-);
 app.use('/jellyfin/:uuid/:encryptedPassword', jellyfinRouter);
-app.use(`/jellyfin${VARIANT_PATH_ROUTE}`, jellyfinRouter);
 app.use('/jellyfin', jellyfinRouter);
 
 // Content-hashed build assets. These filenames change on every content
