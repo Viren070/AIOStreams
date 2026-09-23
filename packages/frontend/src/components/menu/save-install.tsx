@@ -6,6 +6,7 @@ import {
   createUserConfig,
   deleteUserConfig,
   changePassword,
+  createConfigSession,
   approveJellyfinQuickConnect,
   getJellyfinQuickConnectPending,
   type QuickConnectPending,
@@ -182,6 +183,8 @@ interface CreateConfigCardProps {
   confirmNewPassword: string;
   onNewPasswordChange: (value: string) => void;
   onConfirmNewPasswordChange: (value: string) => void;
+  staySignedIn: boolean | null;
+  onStaySignedInChange: (value: boolean) => void;
   createLoading: boolean;
 }
 
@@ -192,6 +195,8 @@ function CreateConfigCard({
   confirmNewPassword,
   onNewPasswordChange,
   onConfirmNewPasswordChange,
+  staySignedIn,
+  onStaySignedInChange,
   createLoading,
 }: CreateConfigCardProps) {
   return (
@@ -243,9 +248,19 @@ function CreateConfigCard({
             it is required to make changes.
           </p>
         </div>
-        <Button intent="white" type="submit" loading={createLoading} rounded>
-          Create
-        </Button>
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <Button intent="white" type="submit" loading={createLoading} rounded>
+            Create
+          </Button>
+          {staySignedIn !== null && (
+            <Checkbox
+              label="Remember me"
+              fieldClass="flex w-auto gap-2"
+              value={staySignedIn}
+              onValueChange={(v) => onStaySignedInChange(v === true)}
+            />
+          )}
+        </div>
       </form>
     </SettingsCard>
   );
@@ -1542,6 +1557,7 @@ function Content() {
   const preferencesModal = useDisclosure(false);
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmNewPassword, setConfirmNewPassword] = React.useState('');
+  const [staySignedIn, setStaySignedIn] = React.useState(true);
   const [createLoading, setCreateLoading] = React.useState(false);
   // Set only by a successful create, so the offer is never shown to an
   // existing configuration.
@@ -1553,6 +1569,7 @@ function Content() {
     string[]
   >([]);
   const { status } = useStatus();
+  const sessionsEnabled = status?.settings.configSessionsEnabled !== false;
   const { user: sessionUser } = useSession();
   const { data: profileData } = useQuery({
     ...configProfilesQuery,
@@ -1701,6 +1718,11 @@ function Content() {
       setUuid(result.uuid);
       setEncryptedPassword((result as CreateUserResponse).encryptedPassword);
       setPassword(newPassword);
+      if (sessionsEnabled) {
+        void createConfigSession(result.uuid, newPassword, staySignedIn).catch(
+          () => {}
+        );
+      }
       if (!linkOfferDismissed()) {
         setLinkOfferFor({ uuid: result.uuid, password: newPassword });
       }
@@ -2098,6 +2120,8 @@ function Content() {
             confirmNewPassword={confirmNewPassword}
             onNewPasswordChange={setNewPassword}
             onConfirmNewPasswordChange={setConfirmNewPassword}
+            staySignedIn={sessionsEnabled ? staySignedIn : null}
+            onStaySignedInChange={setStaySignedIn}
             createLoading={createLoading}
           />
         ) : (

@@ -141,6 +141,19 @@ export class ConfigSessionRepository {
     return { uuid: row.uuid, password, renewedUntil };
   }
 
+  /** Null when the token is not a live session for this uuid. */
+  static async rememberedFor(
+    token: string,
+    uuid: string
+  ): Promise<boolean | null> {
+    const row = await getDb().maybeOne<{ remembered: number | string }>(
+      sql`SELECT remembered FROM config_sessions
+           WHERE id = ${hashToken(token)} AND uuid = ${uuid}
+             AND expires_at > ${Date.now()}`
+    );
+    return row ? Boolean(Number(row.remembered)) : null;
+  }
+
   static async deleteByToken(token: string): Promise<void> {
     await getDb().exec(
       sql`DELETE FROM config_sessions WHERE id = ${hashToken(token)}`

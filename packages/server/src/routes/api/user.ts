@@ -502,11 +502,41 @@ router.post('/password', async (req, res, next) => {
   }
 
   try {
+    // changePassword ends every session, so this one's flag is read first.
+    const token = ConfigSessionRepository.enabled()
+      ? readConfigSessionToken(req)
+      : undefined;
+    const remembered = token
+      ? await ConfigSessionRepository.rememberedFor(token, uuid)
+      : null;
+
     const { encryptedPassword } = await UserRepository.changePassword(
       uuid,
       currentPassword,
       newPassword
     );
+
+    if (remembered !== null) {
+      try {
+        const session = await ConfigSessionRepository.create(
+          uuid,
+          newPassword,
+          remembered
+        );
+        setConfigSessionCookie(
+          req,
+          res,
+          session.token,
+          remembered,
+          session.expiresAt
+        );
+      } catch (error) {
+        logger.warn(
+          { uuid, err: error instanceof Error ? error.message : String(error) },
+          'failed to reissue the config session after a password change'
+        );
+      }
+    }
 
     res.status(200).json(
       createResponse({

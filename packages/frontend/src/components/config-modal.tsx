@@ -49,7 +49,7 @@ export function ConfigModal({
   const [uuid, setUuidInput] = React.useState(initialUuid || '');
   const [password, setPasswordInput] = React.useState('');
   const [saveToAccount, setSaveToAccount] = React.useState(false);
-  const [staySignedIn, setStaySignedIn] = React.useState(false);
+  const [staySignedIn, setStaySignedIn] = React.useState(true);
   const [label, setLabel] = React.useState('');
   const [loading, setLoading] = React.useState(false);
   const [busyProfileId, setBusyProfileId] = React.useState<string | null>(null);
@@ -191,7 +191,7 @@ export function ConfigModal({
     if (!open) {
       setPasswordInput('');
       setSaveToAccount(false);
-      setStaySignedIn(false);
+      setStaySignedIn(true);
       setLabel('');
       setShowManualForm(false);
       setPendingDelete(null);
@@ -220,7 +220,7 @@ export function ConfigModal({
 
   const staySignedInField = sessionsEnabled ? (
     <Checkbox
-      label="Stay signed in on this device"
+      label="Remember me"
       value={staySignedIn}
       onValueChange={(v) => setStaySignedIn(v === true)}
     />
