@@ -21,7 +21,11 @@ export default function JellyfinWebApp() {
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark">
       <MotionConfig reducedMotion="user">
-        <Toaster swipeDirections={['top', 'right']} />
+        <Toaster
+          swipeDirections={['top', 'right']}
+          offset={{ top: 'calc(24px + env(safe-area-inset-top))' }}
+          mobileOffset={{ top: 'calc(16px + env(safe-area-inset-top))' }}
+        />
         <Session />
       </MotionConfig>
     </ThemeProvider>

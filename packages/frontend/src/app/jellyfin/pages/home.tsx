@@ -95,7 +95,7 @@ export function HomePage() {
         className={
           heroItems.length || heroLoading
             ? 'relative z-[1] space-y-10 px-4 pt-2 lg:px-10'
-            : 'relative z-[1] space-y-10 px-4 pt-6 lg:px-10 lg:pt-10'
+            : 'relative z-[1] space-y-10 px-4 pt-[calc(1.5rem+env(safe-area-inset-top))] lg:px-10 lg:pt-[calc(2.5rem+env(safe-area-inset-top))]'
         }
       >
         <EpisodeRow

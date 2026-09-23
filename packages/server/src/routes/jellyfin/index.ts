@@ -133,7 +133,7 @@ export function createJellyfinRouter(): Router {
   router.all('/', (req, res) => {
     res.redirect(302, `${req.baseUrl}/web/`);
   });
-  /* The page is the configure app's, so it gets the web app's own manifest. */
+  /* The configure app's page, given the web app's manifest and edge-to-edge viewport. */
   router.all(['/web', '/web/index.html'], async (req, res) => {
     const html = await fs.promises
       .readFile(path.join(frontendRoot, 'index.html'), 'utf8')
@@ -158,6 +158,14 @@ export function createJellyfinRouter(): Router {
           .replace(
             /(name="apple-mobile-web-app-title" content=")[^"]*/,
             `$1${name}`
+          )
+          .replace(
+            'initial-scale=1.0"',
+            'initial-scale=1.0, viewport-fit=cover"'
+          )
+          .replace(
+            '<link rel="manifest"',
+            '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />\n    <link rel="manifest"'
           )
       );
   });

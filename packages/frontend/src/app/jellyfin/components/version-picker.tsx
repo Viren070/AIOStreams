@@ -82,8 +82,8 @@ export function VersionPickerProvider({
             : item?.ProductionYear || undefined
         }
         contentClass="flex w-full max-w-4xl flex-col gap-0 overflow-hidden p-0 max-md:h-[100dvh] max-md:rounded-none max-md:border-0 md:max-h-[85vh]"
-        headerClass="relative z-[1] px-4 pb-3 pr-14 pt-5 text-left sm:px-5 sm:pr-14"
-        closeClass="z-[2]"
+        headerClass="relative z-[1] px-4 pb-3 pr-14 pt-5 text-left max-md:pt-[calc(1.25rem+env(safe-area-inset-top))] sm:px-5 sm:pr-14"
+        closeClass="z-[2] max-md:top-[calc(1rem+env(safe-area-inset-top))]"
       >
         {request && (
           <Versions
@@ -256,7 +256,7 @@ function Versions({
 
       <div
         ref={listRef}
-        className="relative z-[1] min-h-0 flex-1 space-y-2 overflow-y-auto border-t border-white/5 px-3 pb-5 pt-3 sm:px-5"
+        className="relative z-[1] min-h-0 flex-1 space-y-2 overflow-y-auto border-t border-white/5 px-3 pb-5 pt-3 max-md:pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:px-5"
       >
         {info.isLoading &&
           Array.from({ length: 4 }, (_, i) => (

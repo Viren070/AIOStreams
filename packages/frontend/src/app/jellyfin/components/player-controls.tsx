@@ -381,7 +381,7 @@ export function PlayerControls({
 
       <div
         className={cn(
-          'absolute inset-x-0 top-0 flex items-center gap-3 bg-gradient-to-b from-black/80 to-transparent p-3 pb-12 transition-opacity duration-300 sm:p-5',
+          'absolute inset-x-0 top-0 flex items-center gap-3 bg-gradient-to-b from-black/80 to-transparent pb-12 pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pt-[calc(0.75rem+env(safe-area-inset-top))] transition-opacity duration-300 sm:pl-[max(1.25rem,env(safe-area-inset-left))] sm:pr-[max(1.25rem,env(safe-area-inset-right))] sm:pt-[calc(1.25rem+env(safe-area-inset-top))]',
           fade
         )}
       >
@@ -424,8 +424,10 @@ export function PlayerControls({
         // Above the bottom bar: its padding reaches up past this button.
         <div
           className={cn(
-            'absolute right-4 z-20 transition-[bottom] duration-300 sm:right-8',
-            visible ? 'bottom-28 sm:bottom-32' : 'bottom-8'
+            'absolute right-[max(1rem,env(safe-area-inset-right))] z-20 transition-[bottom] duration-300 sm:right-[max(2rem,env(safe-area-inset-right))]',
+            visible
+              ? 'bottom-[calc(7rem+env(safe-area-inset-bottom))] sm:bottom-[calc(8rem+env(safe-area-inset-bottom))]'
+              : 'bottom-[calc(2rem+env(safe-area-inset-bottom))]'
           )}
         >
           <Button
@@ -441,7 +443,7 @@ export function PlayerControls({
 
       <div
         className={cn(
-          'absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-3 pb-2 pt-16 transition-opacity duration-300 sm:px-5 sm:pb-3',
+          'absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent pb-[calc(0.5rem+env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pt-16 transition-opacity duration-300 sm:pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pl-[max(1.25rem,env(safe-area-inset-left))] sm:pr-[max(1.25rem,env(safe-area-inset-right))]',
           fade
         )}
       >

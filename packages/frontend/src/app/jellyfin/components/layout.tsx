@@ -169,7 +169,7 @@ export function WebLayout() {
               <motion.div
                 key={pathname}
                 {...PAGE_FADE}
-                className="max-lg:pb-20"
+                className="pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] max-lg:pb-[calc(5rem+env(safe-area-inset-bottom))]"
               >
                 <Outlet />
               </motion.div>
@@ -195,7 +195,7 @@ function MobileNav({
   const tab =
     'flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-full px-1 py-1.5 text-[0.65rem] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-white/60';
   return (
-    <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-3 lg:hidden">
+    <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:hidden">
       <div className="pointer-events-auto flex w-full max-w-md items-center gap-1 rounded-full border border-white/10 bg-gray-950/80 p-1.5 shadow-2xl shadow-black/60 backdrop-blur-xl">
         {items.map((item) => {
           const Icon = item.iconType;
@@ -255,7 +255,7 @@ function MobileNav({
 /** The padded column a page renders into. */
 export function PageBody({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative z-[1] space-y-8 px-4 pb-16 pt-6 lg:px-10 lg:pt-10">
+    <div className="relative z-[1] space-y-8 px-4 pb-16 pt-[calc(1.5rem+env(safe-area-inset-top))] lg:px-10 lg:pt-[calc(2.5rem+env(safe-area-inset-top))]">
       {children}
     </div>
   );

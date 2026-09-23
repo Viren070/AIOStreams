@@ -67,7 +67,7 @@ function ErrorLine({ error }: { error: string | null }) {
 
 function Screen({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.18),transparent_60%)] px-4 py-12">
+    <div className="relative flex min-h-screen items-center justify-center bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.18),transparent_60%)] px-4 pb-[max(3rem,env(safe-area-inset-bottom))] pt-[max(3rem,env(safe-area-inset-top))]">
       <div className="w-full max-w-3xl space-y-8">
         <motion.div
           initial={{ opacity: 0, scale: 0.92 }}
