@@ -271,7 +271,7 @@ usually a full fan-out.
 | `watched.movies`   | Base ids of finished films.                                                                                            |
 | `watched.episodes` | Video ids of finished episodes.                                                                                        |
 | `watched.counts`   | Watched and total per show, keyed by every id the show answers to. Advisory: send `0` for a total you do not know.     |
-| `watched.nextUp`   | Your own next-episode pointer, which may know about specials and unaired episodes that a naive "next number" does not. |
+| `watched.nextUp`   | Your next episode per show. AIOStreams reads the show's `type` and `at` from it and works out the next episode itself. |
 | `watchlist[]`      | The user's watchlist: `type` (your meta type), `metaId` and when it was added as `at`. See [Watchlist](#watchlist).    |
 
 **Return ids in the space your own metas publish.** If your series meta is keyed on `kitsu:49002`
