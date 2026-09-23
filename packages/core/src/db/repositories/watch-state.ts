@@ -480,20 +480,37 @@ export class WatchStateRepository {
     scope: WatchScope,
     limit: number
   ): Promise<WatchStateRow[]> {
+    const where = sql`uuid = ${scope.uuid} AND persona = ${scope.persona}
+      AND series_key IS NOT NULL AND episode IS NOT NULL AND ${WATCHED}`;
+    // Picks the series first, so only their rows are ranked, not the history.
+    const latest = await getDb().query<{
+      series_key: string;
+      at: number | string;
+    }>(
+      sql`SELECT series_key, MAX(sort_at) AS at FROM watch_state
+           WHERE ${where}
+           GROUP BY series_key
+           ORDER BY at DESC
+           LIMIT ${limit}`
+    );
+    if (!latest.length) return [];
+    const anchors = join(
+      latest.map(
+        (l) => sql`(series_key = ${l.series_key} AND sort_at = ${Number(l.at)})`
+      ),
+      ' OR '
+    );
     const rows = await getDb().query<DbRow>(
       sql`SELECT * FROM (
              SELECT *, ROW_NUMBER() OVER (
                       PARTITION BY series_key
-                      ORDER BY sort_at DESC, season DESC, episode DESC
+                      ORDER BY season DESC, episode DESC
                     ) AS series_rank
                FROM watch_state
-              WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
-                AND series_key IS NOT NULL AND episode IS NOT NULL
-                AND (played = 1 OR position_ms > 0)
+              WHERE ${where} AND (${anchors})
            ) ranked
            WHERE series_rank = 1
-           ORDER BY sort_at DESC, season DESC, episode DESC
-           LIMIT ${limit}`
+           ORDER BY sort_at DESC, season DESC, episode DESC`
     );
     return rows.map(toRow);
   }
