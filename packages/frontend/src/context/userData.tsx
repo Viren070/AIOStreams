@@ -10,7 +10,7 @@ import {
   DEFAULT_FAILOVER_PARALLEL,
 } from '../../../core/src/utils/constants';
 import { useStatus } from './status';
-import { filterForDiff } from '../utils/diff/userData';
+import { computeUserDataDiff } from '../utils/diff/userData';
 import {
   clearDrafts,
   isDraftOptOut,
@@ -605,9 +605,9 @@ export function resolveDraft(draft: Draft, status: Status | null): UserData {
   return status ? applyStatusSettings(restored, status, false) : restored;
 }
 
-/** Stable comparison that ignores identity and other volatile fields. */
+// Must agree with the review diff, or a draft can open with nothing in it.
 function sameConfig(a: UserData, b: UserData): boolean {
-  return JSON.stringify(filterForDiff(a)) === JSON.stringify(filterForDiff(b));
+  return computeUserDataDiff(a, b).diffs.length === 0;
 }
 
 /** Whether a configuration holds work worth offering to restore. */
@@ -677,9 +677,12 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
   const baselineRef = React.useRef<UserData>(DefaultUserData);
   const anonBaselineRef = React.useRef<UserData>(DefaultUserData);
   const [baselineReady, setBaselineReady] = React.useState(false);
+  // A save leaves userData untouched, so this re-runs the draft check.
+  const [baselineVersion, setBaselineVersion] = React.useState(0);
 
   const setBaseline = React.useCallback((data: UserData) => {
     baselineRef.current = data;
+    setBaselineVersion((v) => v + 1);
   }, []);
 
   const statusApplied = React.useRef(false);
@@ -707,7 +710,15 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     if (draftIdentity.current === uuid) return;
     draftIdentity.current = uuid;
-    setPendingDraft(readDraftFor(uuid));
+    const draft = readDraftFor(uuid);
+    let differs = false;
+    try {
+      differs = !!draft && !sameConfig(resolveDraft(draft, status), userData);
+    } catch {
+      /* unusable draft */
+    }
+    setPendingDraft(differs ? draft : null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uuid]);
 
   React.useEffect(() => {
@@ -721,7 +732,7 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
       writeLocalDraft(userData, uuid, userData.addonName);
     }, 400);
     return () => clearTimeout(handle);
-  }, [userData, uuid, baselineReady]);
+  }, [userData, uuid, baselineReady, baselineVersion]);
 
   const restoreDraft = React.useCallback(() => {
     setPendingDraft((draft) => {
