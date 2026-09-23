@@ -10,7 +10,7 @@ import { cn, defineStyleAnatomy } from '../core/styling';
 export const ContextMenuAnatomy = defineStyleAnatomy({
   root: cva([
     'UI-ContextMenu__root',
-    'z-50 min-w-[14rem] overflow-hidden rounded-xl border bg-[--background] p-1 text-[--foreground] shadow-lg',
+    'z-50 max-h-[var(--radix-context-menu-content-available-height)] min-w-[14rem] overflow-y-auto rounded-xl border bg-[--background] p-1 text-[--foreground] shadow-lg',
     'data-[state=open]:animate-in',
     'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
     'data-[state=closed]:zoom-out-100 data-[state=open]:zoom-in-95',
@@ -44,9 +44,12 @@ export const ContextMenuContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.Content>
 >(({ className, ...rest }, ref) => (
   <ContextMenuPrimitive.Portal>
+    {/* Anchored to a point, partial stickiness would let it leave the screen. */}
     <ContextMenuPrimitive.Content
       ref={ref}
       className={cn(ContextMenuAnatomy.root(), className)}
+      collisionPadding={8}
+      sticky="always"
       {...rest}
     />
   </ContextMenuPrimitive.Portal>
