@@ -88,6 +88,52 @@ Each catalog becomes a library, in the order set under **Addons → Catalogs**. 
 
 Changes you save reach connected apps within about 30 seconds. Apps also keep their own copy for a while, so refresh or reopen the app if something still looks old.
 
+## Different addons for Jellyfin and Stremio
+
+Stremio and your Jellyfin apps read the same configuration, so an addon you add for one shows up in the other. Some addons only make sense in one of them: a metadata addon with catalogs built to be libraries, say, or one you already install in Stremio on its own. A [variant](/reference/config-expressions) keeps them apart.
+
+Keep the Jellyfin setup in your base configuration and give Stremio a variant. The configure page always edits the base configuration, so this way you can still arrange the addon's catalogs and resources there as usual.
+
+<Steps>
+
+<Step>
+
+### Set it up for Jellyfin
+
+Add the addon, then order and enable its catalogs under **Addons → Catalogs** for the libraries you want.
+
+</Step>
+
+<Step>
+
+### Add a variant for Stremio
+
+In **Miscellaneous → Variants** (Advanced mode), add a variant with the id `stremio` that takes out what Stremio should not see:
+
+```
+# the addons only Jellyfin apps should use
+disable presets[instanceId=8ae]
+```
+
+The editor completes instance ids after `presets[instanceId=` and names each addon. Anything else that should differ in Stremio can go in the same variant, such as `set addonName = "..."`, or `enable` an addon kept disabled in the base configuration.
+
+</Step>
+
+<Step>
+
+### Install it in Stremio
+
+On **Save & Install**, pick the `stremio` variant, then install from there. Stremio's install links end in `/v/stremio`, and the Jellyfin server address stays as it is.
+
+</Step>
+
+</Steps>
+
+Two other ways to do it:
+
+- **Per Jellyfin user.** Leave the addon disabled in the base configuration, add a variant that turns it on (`enable presets[instanceId=8ae]`), and pick that variant for each user in the [Users tab](#household-users), the primary user included. Stremio then needs nothing new, but while the addon is disabled its catalogs can't be arranged on the configure page.
+- **A separate configuration**, when the two setups share little. Create a second configuration for Jellyfin and connect your apps to that one instead. See [variants or a parent config](/reference/config-expressions#variants-or-a-parent-config) for how the two approaches compare.
+
 ## Playing
 
 ### Versions
