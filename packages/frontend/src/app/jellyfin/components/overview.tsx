@@ -1,6 +1,4 @@
 import React from 'react';
-import { BiInfoCircle } from 'react-icons/bi';
-import { IconButton } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { Popover } from '@/components/ui/popover';
 import { useMediaQuery } from '@/hooks/media-query';
@@ -21,29 +19,22 @@ function Banner({ image }: { image: string[] }) {
   );
 }
 
-export function EpisodeInfo({
-  title,
-  line,
-  overview,
-  image,
-}: {
+interface OverviewDetails {
   title: string;
   line?: React.ReactNode;
   overview: string | null | undefined;
   image: string[];
-}) {
+}
+
+export function OverviewInfo({
+  title,
+  line,
+  overview,
+  image,
+  trigger,
+}: OverviewDetails & { trigger: React.ReactElement }) {
   const wide = useMediaQuery('(min-width: 1024px)');
-  if (!overview) return null;
-  const trigger = (
-    <IconButton
-      size="sm"
-      intent="gray-subtle"
-      className="rounded-full"
-      icon={<BiInfoCircle />}
-      aria-label="Episode details"
-    />
-  );
-  const synopsis = (
+  const text = (
     <p className="select-text whitespace-pre-line text-sm text-gray-300">
       {overview}
     </p>
@@ -62,7 +53,7 @@ export function EpisodeInfo({
             <p className="text-lg font-semibold leading-snug">{title}</p>
             {line && <p className="text-sm text-[--muted]">{line}</p>}
           </div>
-          {synopsis}
+          {text}
         </div>
       </Popover>
     );
@@ -77,7 +68,7 @@ export function EpisodeInfo({
       closeClass="z-[2]"
     >
       <Banner image={image} />
-      <div className="relative z-[1]">{synopsis}</div>
+      <div className="relative z-[1]">{text}</div>
     </Modal>
   );
 }

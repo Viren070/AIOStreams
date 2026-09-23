@@ -14,6 +14,8 @@ export type PosterSize = 'small' | 'medium' | 'large';
 
 export type PosterLine = 'title' | 'year';
 
+export type EpisodeLayout = 'auto' | 'row' | 'list';
+
 const POSTER_LINES: PosterLine[] = ['title', 'year'];
 
 /*
@@ -37,6 +39,7 @@ const LEGACY_KEYS = {
   posterSize: 'aiostreams-web-poster-size',
 } as const;
 const CATALOG_KEY = 'aiostreams-web-catalog';
+const EPISODE_LAYOUT_KEY = 'aiostreams-web-episode-layout';
 
 const cacheKey = (userId: string) => `aiostreams-web-prefs:${userId}`;
 const listeners = new Set<() => void>();
@@ -184,6 +187,25 @@ export function usePosterLines(): [
           ? lines.join(',')
           : 'none'
     );
+  }, []);
+  return [value, set];
+}
+
+function readEpisodeLayout(): EpisodeLayout {
+  const value = storage.get<string>(EPISODE_LAYOUT_KEY);
+  return value === 'row' || value === 'list' ? value : 'auto';
+}
+
+/** Kept on the device, since a phone and a TV want different layouts. */
+export function useEpisodeLayout(): [
+  EpisodeLayout,
+  (value: EpisodeLayout) => void,
+] {
+  const value = React.useSyncExternalStore(subscribe, readEpisodeLayout);
+  const set = React.useCallback((next: EpisodeLayout) => {
+    if (next === 'auto') storage.remove(EPISODE_LAYOUT_KEY);
+    else storage.set(EPISODE_LAYOUT_KEY, next);
+    announce();
   }, []);
   return [value, set];
 }

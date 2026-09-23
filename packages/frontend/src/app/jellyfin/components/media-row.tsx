@@ -97,6 +97,7 @@ export function MediaRow({
   loading,
   loadingMore,
   onEndReached,
+  startIndex,
   action,
   children,
 }: {
@@ -108,10 +109,13 @@ export function MediaRow({
   loading?: boolean;
   loadingMore?: boolean;
   onEndReached?: () => void;
+  /** Read once, so the row stays put as its items change. */
+  startIndex?: number;
   action?: React.ReactNode;
   children?: React.ReactNode;
 }) {
   const restoreKey = useEntryKey(id);
+  const [start] = React.useState(startIndex ?? 0);
   const width = itemClass ?? ITEM_WIDTH[shape];
   const items = React.Children.toArray(children);
   if (!loading && !items.length) return null;
@@ -126,7 +130,7 @@ export function MediaRow({
   return (
     <section>
       <Carousel
-        opts={{ align: 'start', dragFree: true }}
+        opts={{ align: 'start', dragFree: true, startIndex: start }}
         restoreKey={restoreKey}
       >
         {onEndReached && <EndWatcher onEnd={onEndReached} />}
@@ -188,9 +192,7 @@ export function CardGrid({
     <div
       className={cn(
         'grid gap-4',
-        shape === 'wide'
-          ? GRID_COLUMNS[size].wide
-          : GRID_COLUMNS[size].poster
+        shape === 'wide' ? GRID_COLUMNS[size].wide : GRID_COLUMNS[size].poster
       )}
     >
       {children}

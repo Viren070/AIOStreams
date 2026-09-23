@@ -8,9 +8,11 @@ import { useViews } from '../lib/queries';
 import { libraryLabel } from '../lib/format';
 import {
   MAX_FEATURED,
+  useEpisodeLayout,
   useFeatured,
   usePosterSize,
   usePosterLines,
+  type EpisodeLayout,
   type PosterLine,
   type PosterSize,
 } from '../lib/settings';
@@ -40,6 +42,7 @@ export function SettingsModal({
   const [featured, setFeatured] = useFeatured();
   const [posterSize, setPosterSize] = usePosterSize();
   const [posterLines, setPosterLines] = usePosterLines();
+  const [episodeLayout, setEpisodeLayout] = useEpisodeLayout();
   const [template, setTemplate] = React.useState('');
   React.useEffect(() => {
     if (open) setTemplate(externalPlayerTemplate());
@@ -87,7 +90,7 @@ export function SettingsModal({
       open={open}
       onOpenChange={onOpenChange}
       title="Settings"
-      description="These follow you to every device, except the external player, which stays on this one."
+      description="These follow you to every device, except the episode layout and external player, which stay on this one."
       contentClass="max-w-lg"
     >
       <div className="space-y-6">
@@ -125,6 +128,17 @@ export function SettingsModal({
           ]}
           value={posterLines}
           onValueChange={(value) => setPosterLines(value as PosterLine[])}
+        />
+        <Select
+          label="Episode layout"
+          help="Automatic lists episodes on narrow screens and puts them in a row on wide ones."
+          options={[
+            { value: 'auto', label: 'Automatic' },
+            { value: 'row', label: 'Row' },
+            { value: 'list', label: 'List' },
+          ]}
+          value={episodeLayout}
+          onValueChange={(value) => setEpisodeLayout(value as EpisodeLayout)}
         />
         <div className="space-y-3">
           <TextInput

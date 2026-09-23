@@ -2,6 +2,7 @@ import React from 'react';
 import {
   BiCalendarAlt,
   BiCheck,
+  BiChevronRight,
   BiDislike,
   BiHeart,
   BiMoviePlay,
@@ -13,10 +14,20 @@ import {
 } from 'react-icons/bi';
 import { Badge } from '@/components/ui/badge';
 import { Button, IconButton } from '@/components/ui/button';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+  useCarousel,
+} from '@/components/ui/carousel';
+import { Modal } from '@/components/ui/modal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip } from '@/components/ui/tooltip';
 import { LuffyError } from '@/components/shared/luffy-error';
 import { cn } from '@/components/ui/core/styling';
+import { useMediaQuery } from '@/hooks/media-query';
 import { useSession } from '../lib/session';
 import {
   useEpisodes,
@@ -32,7 +43,6 @@ import {
 import {
   backdropUrls,
   cardShape,
-  landscapeUrls,
   logoUrl,
   posterUrl,
 } from '../lib/images';
@@ -42,19 +52,23 @@ import {
   duration,
   episodeCode,
   itemSubtitle,
-  progressOf,
-  shortDate,
   ticksToMs,
   unavailableLabel,
   untilLabel,
 } from '../lib/format';
 import { href, itemPath, navigate } from '../lib/paths';
+import { useEpisodeLayout } from '../lib/settings';
 import { hasSelection } from '../lib/selection';
 import { useInView } from '../lib/use-in-view';
-import { CardGrid, MediaRow } from '../components/media-row';
+import { MediaRow } from '../components/media-row';
 import { MixedGrid } from '../components/mixed-grid';
-import { PosterCard, WideCard } from '../components/cards';
-import { EpisodeInfo } from '../components/episode-info';
+import { PosterCard } from '../components/cards';
+import {
+  EpisodeCard,
+  EpisodeList,
+  EpisodeListSkeleton,
+  upToIndex,
+} from '../components/episodes';
 import { ItemMenu } from '../components/item-menu';
 import { ExternalLinks } from '../components/external-links';
 import { CastAndCrew } from '../components/people';
@@ -468,8 +482,10 @@ function Seasons({
   focusEpisodeId?: string;
 }) {
   const { client } = useSession();
-  const picker = useVersionPicker();
   const setPlayed = useSetPlayed();
+  const [layoutPref] = useEpisodeLayout();
+  const wide = useMediaQuery('(min-width: 1024px)');
+  const layout = layoutPref === 'auto' ? (wide ? 'row' : 'list') : layoutPref;
   const seasons = useSeasons(series.Id!, true);
   const list = React.useMemo(() => seasons.data?.Items ?? [], [seasons.data]);
   const [seasonId, setSeasonId] = React.useState(initialSeasonId);
@@ -483,12 +499,18 @@ function Seasons({
   }, [list, seasonId]);
   const season = list.find((s) => s.Id === seasonId);
   const episodes = useEpisodes(series.Id!, seasonId);
+  const items = episodes.data?.Items ?? [];
+  const loading = seasons.isLoading || episodes.isLoading;
+  const summary = seasonSummary(season, items);
   const seasonPlayed = !!season?.UserData?.Played;
   // Seasons without art of their own carry the show's poster.
   const ownPosters = list.some(
     (s) =>
       s.ImageTags?.Primary && s.ImageTags.Primary !== series.ImageTags?.Primary
   );
+  const focusIndex = focusEpisodeId
+    ? items.findIndex((e) => e.Id === focusEpisodeId)
+    : -1;
 
   const focused = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
@@ -572,157 +594,212 @@ function Seasons({
           })}
         </MediaRow>
       ) : (
-        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-hide lg:mx-0 lg:px-0">
-          {list.map((s) => (
-            <Button
-              key={s.Id}
-              size="sm"
-              intent={s.Id === seasonId ? 'white' : 'gray-subtle'}
-              className="flex-none rounded-full"
-              rightIcon={s.UserData?.Played ? <BiCheck /> : undefined}
-              iconSpacing="0.25rem"
-              onClick={() => setSeasonId(s.Id!)}
-            >
-              {s.Name}
-            </Button>
-          ))}
+        <SeasonPills
+          seasons={list}
+          selected={seasonId}
+          onSelect={setSeasonId}
+        />
+      )}
+      {summary && (
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-[--muted]">{summary}</p>
+          {layout === 'row' && items.length > 1 && (
+            <AllEpisodes
+              title={season?.Name ?? 'Episodes'}
+              summary={summary}
+              episodes={items}
+            />
+          )}
         </div>
       )}
-      <SeasonSummary season={season} episodes={episodes.data?.Items} />
       {season?.Overview && (
         <p className="max-w-3xl select-text text-sm text-gray-300">
           {season.Overview}
         </p>
       )}
-      <CardGrid shape="wide">
-        {(seasons.isLoading || episodes.isLoading) &&
-          Array.from({ length: 6 }, (_, i) => (
-            <Skeleton
-              key={i}
-              className="aspect-video h-auto w-full rounded-xl"
-            />
-          ))}
-        {episodes.data?.Items?.map((episode) => {
-          const played = !!episode.UserData?.Played;
-          const focus = episode.Id === focusEpisodeId;
-          const unavailable = unavailableLabel(episode);
-          return (
-            <div key={episode.Id} ref={focus ? focused : undefined}>
-              <ItemMenu item={episode}>
-                <WideCard
-                  onClick={
-                    unavailable
-                      ? undefined
-                      : () =>
-                          picker.open(episode, {
-                            startMs: ticksToMs(
-                              episode.UserData?.PlaybackPositionTicks
-                            ),
-                          })
-                  }
-                  unavailable={!!unavailable}
-                  dimmed={!!unavailable}
-                  badge={
-                    unavailable ? (
-                      <Badge size="sm" intent="gray-solid">
-                        {unavailable}
-                      </Badge>
-                    ) : undefined
-                  }
-                  image={landscapeUrls(client, episode, { maxWidth: 640 })}
-                  title={seasonEpisodeTitle(episode)}
-                  subtitle={episodeLine(episode)}
-                  description={episode.Overview}
-                  meta={
-                    episode.CommunityRating ? (
-                      <span className="inline-flex items-center gap-1">
-                        <BiSolidStar className="text-yellow-400" />
-                        {episode.CommunityRating.toFixed(1)}
-                      </span>
-                    ) : undefined
-                  }
-                  progress={progressOf(episode)}
-                  highlighted={focus}
-                  actions={
-                    <div className="flex gap-1.5">
-                      <EpisodeInfo
-                        title={seasonEpisodeTitle(episode)}
-                        line={episodeLine(episode)}
-                        overview={episode.Overview}
-                        image={landscapeUrls(client, episode, {
-                          maxWidth: 960,
-                        })}
-                      />
-                      {!unavailable && (
-                        <IconButton
-                          size="sm"
-                          intent={played ? 'primary' : 'gray-subtle'}
-                          className="rounded-full"
-                          icon={<BiCheck />}
-                          aria-label={
-                            played ? 'Mark unwatched' : 'Mark watched'
-                          }
-                          onClick={() =>
-                            setPlayed.mutate({
-                              itemId: episode.Id!,
-                              played: !played,
-                            })
-                          }
-                        />
-                      )}
-                    </div>
-                  }
+      {layout === 'row' ? (
+        loading ? (
+          <MediaRow key="loading" shape="wide" itemClass={ROW_WIDTH} loading />
+        ) : (
+          <div ref={focusIndex >= 0 ? focused : undefined}>
+            <MediaRow
+              key={seasonId}
+              id={`episodes:${seasonId}`}
+              shape="wide"
+              itemClass={ROW_WIDTH}
+              startIndex={focusIndex >= 0 ? focusIndex : upToIndex(items)}
+            >
+              {items.map((episode) => (
+                <EpisodeCard
+                  key={episode.Id}
+                  episode={episode}
+                  highlighted={episode.Id === focusEpisodeId}
                 />
-              </ItemMenu>
-            </div>
-          );
-        })}
-      </CardGrid>
+              ))}
+            </MediaRow>
+          </div>
+        )
+      ) : loading ? (
+        <EpisodeListSkeleton columns />
+      ) : (
+        <EpisodeList
+          episodes={items}
+          highlightId={focusEpisodeId}
+          anchorId={focusEpisodeId}
+          anchorRef={focused}
+          columns
+        />
+      )}
     </Section>
   );
 }
 
-/** `1. Pilot`, as a season's list shows it: the season is already picked. */
-function seasonEpisodeTitle(episode: BaseItemDto): string {
-  const from = episode.IndexNumber;
-  const to = episode.IndexNumberEnd;
-  if (from == null) return episode.Name ?? '';
-  const number = to != null && to > from ? `${from}–${to}` : `${from}`;
-  return episode.Name ? `${number}. ${episode.Name}` : `Episode ${number}`;
+const ROW_WIDTH =
+  'basis-[85%] sm:basis-[20rem] lg:basis-[22rem] 2xl:basis-[24rem]';
+
+function SeasonPills({
+  seasons,
+  selected,
+  onSelect,
+}: {
+  seasons: BaseItemDto[];
+  selected: string | undefined;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <Carousel
+      gap="sm"
+      opts={{ align: 'start', dragFree: true, slidesToScroll: 'auto' }}
+      className="flex items-center gap-2"
+    >
+      <PillArrow
+        arrow="prev"
+        follow={seasons.findIndex((s) => s.Id === selected)}
+      />
+      <PillTrack>
+        {seasons.map((s) => (
+          <CarouselItem key={s.Id} className="basis-auto">
+            <Button
+              size="sm"
+              intent={s.Id === selected ? 'white' : 'gray-subtle'}
+              className="rounded-full"
+              rightIcon={s.UserData?.Played ? <BiCheck /> : undefined}
+              iconSpacing="0.25rem"
+              onClick={() => onSelect(s.Id!)}
+            >
+              {s.Name}
+            </Button>
+          </CarouselItem>
+        ))}
+      </PillTrack>
+      <PillArrow arrow="next" />
+    </Carousel>
+  );
 }
 
-/** When an episode aired and how long it runs, or when it will air. */
-function episodeLine(episode: BaseItemDto): string {
-  const date = episode.PremiereDate;
-  if (unavailableLabel(episode) === 'Unaired' && date) {
-    return `Airs ${dayLabel(date)} · ${untilLabel(date)}`;
-  }
-  const runtime = ticksToMs(episode.RunTimeTicks);
-  return [date && shortDate(date), runtime && duration(runtime)]
-    .filter(Boolean)
-    .join(' · ');
+/** `follow` scrolls that pill into view when it is out of it. */
+function PillArrow({
+  arrow,
+  follow,
+}: {
+  arrow: 'prev' | 'next';
+  follow?: number;
+}) {
+  const { api, canScrollPrev, canScrollNext } = useCarousel();
+  React.useEffect(() => {
+    if (!api || follow == null || follow < 0) return;
+    const node = api.slideNodes()[follow];
+    if (!node) return;
+    const root = api.rootNode().getBoundingClientRect();
+    const rect = node.getBoundingClientRect();
+    if (rect.left < root.left || rect.right > root.right) {
+      api.scrollTo(Math.min(follow, api.scrollSnapList().length - 1));
+    }
+  }, [api, follow]);
+  if (!canScrollPrev && !canScrollNext) return null;
+  const Arrow = arrow === 'prev' ? CarouselPrevious : CarouselNext;
+  return (
+    <Arrow className="hidden flex-none disabled:opacity-30 md:inline-flex" />
+  );
 }
 
-function SeasonSummary({
-  season,
+function PillTrack({ children }: { children: React.ReactNode }) {
+  const { canScrollPrev, canScrollNext } = useCarousel();
+  return (
+    <CarouselContent
+      contentClass={cn(
+        'min-w-0 flex-1',
+        canScrollPrev && canScrollNext
+          ? '[mask-image:linear-gradient(to_right,transparent,black_2.5rem,black_calc(100%-2.5rem),transparent)]'
+          : canScrollPrev
+            ? '[mask-image:linear-gradient(to_right,transparent,black_2.5rem)]'
+            : canScrollNext &&
+              '[mask-image:linear-gradient(to_left,transparent,black_2.5rem)]'
+      )}
+    >
+      {children}
+    </CarouselContent>
+  );
+}
+
+function AllEpisodes({
+  title,
+  summary,
   episodes,
 }: {
-  season: BaseItemDto | undefined;
-  episodes: BaseItemDto[] | null | undefined;
+  title: string;
+  summary: string;
+  episodes: BaseItemDto[];
 }) {
-  if (!season || !episodes?.length) return null;
+  const target = React.useRef<HTMLDivElement>(null);
+  return (
+    <Modal
+      trigger={
+        <Button
+          size="sm"
+          intent="gray-outline"
+          className="flex-none rounded-full"
+          rightIcon={<BiChevronRight />}
+          iconSpacing="0.25rem"
+        >
+          All episodes
+        </Button>
+      }
+      title={title}
+      description={summary}
+      contentClass="max-w-3xl"
+      onOpenAutoFocus={(e) => {
+        e.preventDefault();
+        target.current?.scrollIntoView({ block: 'center' });
+      }}
+    >
+      <EpisodeList
+        episodes={episodes}
+        anchorId={episodes[upToIndex(episodes)]?.Id}
+        anchorRef={target}
+      />
+    </Modal>
+  );
+}
+
+function seasonSummary(
+  season: BaseItemDto | undefined,
+  episodes: BaseItemDto[]
+): string | null {
+  if (!season || !episodes.length) return null;
   const first = episodes.find((e) => e.PremiereDate)?.PremiereDate;
   // A season without its own year carries the show's.
   const year = first ? new Date(first).getFullYear() : season.ProductionYear;
   const unaired = episodes.filter(
     (e) => unavailableLabel(e) === 'Unaired'
   ).length;
-  const parts = [
+  return [
     year,
     `${episodes.length} episode${episodes.length === 1 ? '' : 's'}`,
     unaired ? `${unaired} unaired` : null,
-  ].filter(Boolean);
-  return <p className="text-sm text-[--muted]">{parts.join(' · ')}</p>;
+  ]
+    .filter(Boolean)
+    .join(' · ');
 }
 
 /** A collection's members, paged like a library. */

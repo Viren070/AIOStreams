@@ -8,10 +8,15 @@ export function Artwork({
   src,
   alt,
   className,
+  own,
+  standIn,
 }: {
   src: string | string[] | null;
   alt: string;
   className?: string;
+  /** How many leading sources are the item's own, `standIn` covering the rest. */
+  own?: number;
+  standIn?: React.ReactNode;
 }) {
   const sources = Array.isArray(src) ? src : src ? [src] : [];
   const key = sources.join('|');
@@ -22,7 +27,9 @@ export function Artwork({
     setLoaded(false);
   }, [key]);
   const current = sources[attempt];
+  const borrowed = attempt >= (own ?? sources.length) ? standIn : null;
   if (!current) {
+    if (borrowed) return borrowed;
     return (
       <div
         className={cn(
@@ -35,23 +42,26 @@ export function Artwork({
     );
   }
   return (
-    <img
-      src={current}
-      alt={alt}
-      loading="lazy"
-      draggable={false}
-      onLoad={() => setLoaded(true)}
-      onError={() => setAttempt((n) => n + 1)}
-      className={cn(
-        'absolute inset-0 h-full w-full object-cover transition-[transform,opacity] duration-500',
-        loaded ? 'opacity-100' : 'opacity-0',
-        className
-      )}
-    />
+    <>
+      <img
+        src={current}
+        alt={alt}
+        loading="lazy"
+        draggable={false}
+        onLoad={() => setLoaded(true)}
+        onError={() => setAttempt((n) => n + 1)}
+        className={cn(
+          'absolute inset-0 h-full w-full object-cover transition-[transform,opacity] duration-500',
+          loaded ? 'opacity-100' : 'opacity-0',
+          className
+        )}
+      />
+      {borrowed}
+    </>
   );
 }
 
-function ProgressBar({ percent }: { percent: number }) {
+export function ProgressBar({ percent }: { percent: number }) {
   return (
     <div className="absolute inset-x-0 bottom-0 h-1 bg-black/60">
       <div
@@ -145,8 +155,6 @@ export interface WideCardProps {
   image: string | string[] | null;
   title: string;
   subtitle?: string;
-  /** A couple of lines under the subtitle, such as an episode's synopsis. */
-  description?: string | null;
   meta?: React.ReactNode;
   watched?: boolean;
   progress?: number | null;
@@ -158,8 +166,6 @@ export interface WideCardProps {
   dimmed?: boolean;
   /** Shown over the image's top left corner. */
   badge?: React.ReactNode;
-  /** Actions shown over the image's top right corner. */
-  actions?: React.ReactNode;
   className?: string;
 }
 
@@ -171,7 +177,6 @@ export function WideCard(props: WideCardProps) {
     image,
     title,
     subtitle,
-    description,
     meta,
     watched,
     progress,
@@ -179,7 +184,6 @@ export function WideCard(props: WideCardProps) {
     unavailable,
     dimmed,
     badge,
-    actions,
   } = props;
   const body = (
     <>
@@ -203,7 +207,7 @@ export function WideCard(props: WideCardProps) {
           </div>
         )}
         {badge && <div className="absolute left-2 top-2 z-[2]">{badge}</div>}
-        {watched && !actions && <WatchedMark />}
+        {watched && <WatchedMark />}
         {progress != null && progress > 0 && <ProgressBar percent={progress} />}
       </div>
       <div className="flex min-w-0 items-start justify-between gap-2 px-0.5">
@@ -214,11 +218,6 @@ export function WideCard(props: WideCardProps) {
           {subtitle && (
             <p className="truncate text-sm text-[--muted]" title={subtitle}>
               {subtitle}
-            </p>
-          )}
-          {description && (
-            <p className="mt-1 line-clamp-2 text-xs text-[--muted]">
-              {description}
             </p>
           )}
         </div>
@@ -245,7 +244,6 @@ export function WideCard(props: WideCardProps) {
       ) : (
         <div className="space-y-2">{body}</div>
       )}
-      {actions && <div className="absolute right-2 top-2 z-[3]">{actions}</div>}
     </div>
   );
 }
