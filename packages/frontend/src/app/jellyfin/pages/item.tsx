@@ -43,6 +43,7 @@ import {
 import {
   backdropUrls,
   cardShape,
+  landscapeUrls,
   logoUrl,
   posterUrl,
 } from '../lib/images';
@@ -58,11 +59,11 @@ import {
 } from '../lib/format';
 import { href, itemPath, navigate } from '../lib/paths';
 import { useEpisodeLayout } from '../lib/settings';
-import { hasSelection } from '../lib/selection';
 import { useInView } from '../lib/use-in-view';
 import { MediaRow } from '../components/media-row';
 import { MixedGrid } from '../components/mixed-grid';
 import { PosterCard } from '../components/cards';
+import { Overview } from '../components/overview';
 import {
   EpisodeCard,
   EpisodeList,
@@ -246,7 +247,6 @@ function Header({ item }: { item: BaseItemDto }) {
   const setFavorite = useSetFavorite();
   const setDropped = useSetDropped();
   const nextUp = useNextUpFor(item.Id!, item.Type === 'Series');
-  const [expanded, setExpanded] = React.useState(false);
   const logo = logoUrl(client, item);
   const [logoFailed, setLogoFailed] = React.useState(false);
   const poster = posterUrl(client, item, { maxWidth: 500 });
@@ -313,17 +313,16 @@ function Header({ item }: { item: BaseItemDto }) {
             ))}
           </div>
         )}
-        {item.Overview && (
-          <p
-            onClick={() => !hasSelection() && setExpanded((v) => !v)}
-            className={cn(
-              'cursor-pointer select-text text-sm leading-relaxed text-gray-300 sm:text-base',
-              !expanded && 'line-clamp-4'
-            )}
-          >
-            {item.Overview}
-          </p>
-        )}
+        <Overview
+          title={item.Name ?? ''}
+          line={[item.ProductionYear, item.Genres?.slice(0, 3).join(', ')]
+            .filter(Boolean)
+            .join(' · ')}
+          overview={item.Overview}
+          image={landscapeUrls(client, item, { maxWidth: 960 })}
+          clampClass="line-clamp-4"
+          className="text-sm leading-relaxed text-gray-300 sm:text-base"
+        />
         <div className="flex flex-wrap items-center gap-2">
           {target && (
             <Button

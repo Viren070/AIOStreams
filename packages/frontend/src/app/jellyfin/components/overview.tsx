@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal } from '@/components/ui/modal';
 import { Popover } from '@/components/ui/popover';
+import { cn } from '@/components/ui/core/styling';
 import { useMediaQuery } from '@/hooks/media-query';
 import { Artwork } from './cards';
 
@@ -70,5 +71,51 @@ export function OverviewInfo({
       <Banner image={image} />
       <div className="relative z-[1]">{text}</div>
     </Modal>
+  );
+}
+
+export function Overview({
+  clampClass,
+  className,
+  ...details
+}: OverviewDetails & { clampClass: string; className?: string }) {
+  const ref = React.useRef<HTMLParagraphElement>(null);
+  const [clipped, setClipped] = React.useState(false);
+  React.useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const check = () => setClipped(el.scrollHeight > el.clientHeight + 1);
+    check();
+    const observer = new ResizeObserver(check);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [details.overview]);
+  if (!details.overview) return null;
+  // A stretched flex item's height is definite, so the spacer can float More to the last line.
+  return (
+    <div className={cn('flex', className)}>
+      <p
+        ref={ref}
+        className={cn(
+          'min-w-0 select-text whitespace-pre-line before:float-right before:h-[calc(100%-1lh)]',
+          clampClass
+        )}
+      >
+        {clipped && (
+          <OverviewInfo
+            {...details}
+            trigger={
+              <button
+                type="button"
+                className="relative z-[1] clear-both float-right rounded pl-5 font-medium text-[--muted] outline-none transition-colors hover:text-white focus-visible:ring-2 focus-visible:ring-white/60"
+              >
+                More
+              </button>
+            }
+          />
+        )}
+        {details.overview}
+      </p>
+    </div>
   );
 }

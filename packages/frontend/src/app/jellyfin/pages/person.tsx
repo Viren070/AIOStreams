@@ -1,16 +1,15 @@
 import React from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LuffyError } from '@/components/shared/luffy-error';
-import { cn } from '@/components/ui/core/styling';
 import { useSession } from '../lib/session';
 import { useItem, usePersonItems } from '../lib/queries';
 import { posterUrl } from '../lib/images';
 import { yearsBetween } from '../lib/format';
-import { hasSelection } from '../lib/selection';
 import { useInView } from '../lib/use-in-view';
 import { PageBody } from '../components/layout';
 import { MixedGrid } from '../components/mixed-grid';
 import { ExternalLinks } from '../components/external-links';
+import { Overview } from '../components/overview';
 import { KINDS, KindTabs } from '../components/kind-tabs';
 import type { BaseItemDto } from '../lib/types';
 
@@ -52,7 +51,6 @@ function LifeDates({ person }: { person: BaseItemDto }) {
 
 function Header({ person }: { person: BaseItemDto }) {
   const { client } = useSession();
-  const [expanded, setExpanded] = React.useState(false);
   const photo = posterUrl(client, person, { maxWidth: 500 });
   return (
     <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-8">
@@ -67,17 +65,13 @@ function Header({ person }: { person: BaseItemDto }) {
         </h1>
         <LifeDates person={person} />
         <ExternalLinks links={person.ExternalUrls} />
-        {person.Overview && (
-          <p
-            onClick={() => !hasSelection() && setExpanded((v) => !v)}
-            className={cn(
-              'cursor-pointer select-text whitespace-pre-line text-sm leading-relaxed text-gray-300 sm:text-base',
-              !expanded && 'line-clamp-5'
-            )}
-          >
-            {person.Overview}
-          </p>
-        )}
+        <Overview
+          title={person.Name ?? ''}
+          overview={person.Overview}
+          image={[]}
+          clampClass="line-clamp-5"
+          className="text-sm leading-relaxed text-gray-300 sm:text-base"
+        />
       </div>
     </div>
   );
