@@ -1,4 +1,9 @@
-﻿import rateLimit, { MemoryStore, ipKeyGenerator } from 'express-rate-limit';
+﻿import rateLimit, {
+  MemoryStore,
+  ipKeyGenerator,
+  type Options,
+  type Store,
+} from 'express-rate-limit';
 import { Request, Response, NextFunction } from 'express';
 import { RedisStore } from 'rate-limit-redis';
 import {
@@ -113,6 +118,58 @@ const lazyLimiter = (
   };
   return fn;
 };
+
+/**
+ * Attempts at a secret, counted per key and charged before the check, so
+ * concurrent tries cannot all slip under the limit. Always on.
+ */
+export function attemptLimiter(
+  windowSeconds: number,
+  max: number,
+  prefix: string
+) {
+  const windowMs = windowSeconds * 1000;
+  let shared: Store | null | undefined;
+  const sharedStore = (): Store | null => {
+    if (shared === undefined) {
+      const redisClient = appConfig.bootstrap.redisUri
+        ? Cache.getRedisClient()
+        : undefined;
+      shared = redisClient
+        ? new RedisStore({
+            prefix: `${REDIS_PREFIX}attempts:${prefix}:`,
+            sendCommand: (...args: string[]) => redisClient.sendCommand(args),
+          })
+        : null;
+      void shared?.init?.({ windowMs } as Options);
+    }
+    return shared;
+  };
+  // Not MemoryStore: it hands back its live counter, which concurrent callers
+  // would all read at its final value.
+  const local = new Map<string, { hits: number; resetAt: number }>();
+  return {
+    /** Spends an attempt; false once the key is past its limit. */
+    async take(key: string): Promise<boolean> {
+      const store = sharedStore();
+      if (store) return (await store.increment(key)).totalHits <= max;
+      const now = Date.now();
+      let entry = local.get(key);
+      if (!entry || entry.resetAt <= now) {
+        if (local.size >= 10_000)
+          for (const [k, e] of local) if (e.resetAt <= now) local.delete(k);
+        entry = { hits: 0, resetAt: now + windowMs };
+        local.set(key, entry);
+      }
+      return ++entry.hits <= max;
+    },
+    async reset(key: string): Promise<void> {
+      const store = sharedStore();
+      if (store) await store.resetKey(key);
+      else local.delete(key);
+    },
+  };
+}
 
 const userApiRateLimiter = lazyLimiter(
   () => appConfig.rateLimits.userApi,

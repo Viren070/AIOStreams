@@ -58,7 +58,7 @@ export const jellyfinCors: express.RequestHandler = (req, res, next) => {
 
 const UNLIMITED = /^\/system\/info\/public$/i;
 const LOGIN_LIKE =
-  /^\/(users\/authenticatebyname|users\/authenticatewithquickconnect|quickconnect\/(authorize|initiate)|aiostreams\/token)$/i;
+  /^\/(users\/authenticatebyname|users\/authenticatewithquickconnect|quickconnect\/(authorize|initiate))$/i;
 const IMAGE_LIKE =
   /^\/(items\/[^/]+\/images|persons\/[^/]+\/images|userimage|users\/[^/]+\/images|images\/general)(\/|$)/i;
 const STREAM_LIKE = /^\/items\/[^/]+\/(playbackinfo|mediasources)$/i;

@@ -44,6 +44,7 @@ import {
 } from '@aiostreams/core';
 import { syncUserDataUrls } from '../../utils/syncUserData.js';
 import { buildVariantRequestContext } from '../../utils/variant-context.js';
+import { attemptLimiter } from '../../middlewares/ratelimit.js';
 
 const logger = createLogger('jellyfin');
 
@@ -268,13 +269,8 @@ export function accountLocked(userData: Pick<UserData, 'jellyfin'>): boolean {
 /** Sent when the credential was right but a PIN is missing or wrong, so a client can ask for it. */
 export const PIN_REQUIRED = 'PIN required';
 
-const PIN_ATTEMPTS = 5;
-const PIN_LOCKOUT_SECONDS = 15 * 60;
 // Shared across replicas when Redis is set, so a guess cannot be spread over them.
-const pinFailures = Cache.getInstance<string, number>(
-  'jellyfin-pin-failures',
-  10_000
-);
+const pinAttempts = attemptLimiter(15 * 60, 5, 'jellyfin-pin');
 
 /**
  * Whether `pin` opens the user, a persona or the account for `null`. Past the
@@ -291,16 +287,14 @@ export async function userUnlocks(
   // No PIN at all is a prompt, not a guess.
   if (!pin) return false;
   const key = `${uuid}:${persona?.id ?? ''}`;
-  const failures = (await pinFailures.get(key)) ?? 0;
-  if (failures >= PIN_ATTEMPTS) {
+  if (!(await pinAttempts.take(key))) {
     logger.warn({ uuid, persona: persona?.id }, 'user pin locked out');
     return false;
   }
   if (PERSONA_PIN_PATTERN.test(pin) && (await verifyHash(pin, lock))) {
-    if (failures) await pinFailures.delete(key);
+    await pinAttempts.reset(key);
     return true;
   }
-  await pinFailures.set(key, failures + 1, PIN_LOCKOUT_SECONDS);
   return false;
 }
 

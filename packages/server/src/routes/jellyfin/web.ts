@@ -32,6 +32,7 @@ import {
 import { summaryItem } from './items.js';
 import { mapLimited, ROW_CONCURRENCY } from './library.js';
 import { authenticationResult, sessionFromRow, userDto } from './users.js';
+import { jellyfinLoginRateLimiter } from '../../middlewares/ratelimit.js';
 
 /* The server's own web app; an API key is another tool's credential and may not use it. */
 
@@ -372,6 +373,10 @@ router.post(
       return;
     }
     const needs = secretFor(ctx, user);
+    if (needs && !(await jellyfinLoginRateLimiter.tryConsume(req))) {
+      res.status(429).json({ Message: 'Too many attempts' });
+      return;
+    }
     const allowed =
       needs === 'pin'
         ? await userUnlocks(ctx.uuid, ctx.userData, user.persona, secret)
