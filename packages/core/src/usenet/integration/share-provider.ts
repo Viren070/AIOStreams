@@ -316,12 +316,27 @@ function byIdFile(
   ]);
 }
 
+/**
+ * The projection is capped to the newest rows, so older entries fall back to
+ * the DB: imported links point here and must outlive the cap.
+ */
+async function byIdLookup(
+  hash: string
+): Promise<UsenetLibraryEntry | undefined> {
+  const hit = (await projection()).byHash.get(hash);
+  if (hit) return hit;
+  const entry = await UsenetLibraryRepository.get(hash);
+  return entry?.nzbUrl && TREE_STATUSES.includes(entry.status)
+    ? entry
+    : undefined;
+}
+
 async function resolveById(
   rest: string[],
   ctx: ShareContext
 ): Promise<ShareNode | undefined> {
   if (rest.length === 0) return byIdRoot(ctx);
-  const entry = (await projection()).byHash.get(rest[0]);
+  const entry = await byIdLookup(rest[0]);
   if (!entry) return undefined;
   if (rest.length === 1) return byIdEntry(entry, ctx);
   const file = entry.files.find(

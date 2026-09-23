@@ -892,7 +892,7 @@ export class UsenetLibraryRepository {
   }): Promise<UsenetLibraryEntry[]> {
     const statuses = opts.statuses.filter((s) => VALID_STATUSES.has(s));
     if (statuses.length === 0) return [];
-    const limit = Math.min(Math.max(opts.limit ?? 5000, 1), 50_000);
+    const limit = Math.min(Math.max(opts.limit ?? 25_000, 1), 50_000);
     const rows = await getDb().query<UsenetLibraryRow>(
       sql`SELECT ${COLUMNS} FROM usenet_library
           WHERE status IN (${join(statuses.map((s) => sql`${s}`))})
