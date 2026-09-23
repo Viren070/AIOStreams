@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   BiCheck,
+  BiCheckDouble,
   BiHeart,
   BiInfoCircle,
   BiPlay,
@@ -16,7 +17,7 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
-import { useSetFavorite, useSetPlayed } from '../lib/queries';
+import { useSetFavorite, useSetPlayed, useSetPlayedUpTo } from '../lib/queries';
 import { itemTitle, ticksToMs } from '../lib/format';
 import { itemPath, navigate, to } from '../lib/paths';
 import { useVersionPicker } from './version-picker';
@@ -32,6 +33,7 @@ export function ItemMenu({
 }) {
   const picker = useVersionPicker();
   const setPlayed = useSetPlayed();
+  const setPlayedUpTo = useSetPlayedUpTo();
   const setFavorite = useSetFavorite();
   // Jellyfin cannot play a virtual item, such as an episode not yet aired.
   const playable =
@@ -75,6 +77,11 @@ export function ItemMenu({
             >
               <BiCheck /> {played ? 'Mark unwatched' : 'Mark watched'}
             </ContextMenuItem>
+            {item.Type === 'Episode' && item.SeriesId && (
+              <ContextMenuItem onSelect={() => setPlayedUpTo.mutate(item.Id!)}>
+                <BiCheckDouble /> Mark watched up to here
+              </ContextMenuItem>
+            )}
             {!played && resumeMs > 0 && (
               <ContextMenuItem
                 onSelect={() =>

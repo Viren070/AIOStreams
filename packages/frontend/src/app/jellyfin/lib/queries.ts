@@ -386,6 +386,16 @@ export function useSetPlayed() {
   });
 }
 
+export function useSetPlayedUpTo() {
+  const { client } = useSession();
+  const refresh = useRefreshAll();
+  return useMutation({
+    mutationFn: (episodeId: string) =>
+      client.post(`/AIOStreams/PlayedUpTo/${episodeId}`),
+    onSettled: refresh,
+  });
+}
+
 export function useSetFavorite() {
   const { client, user } = useSession();
   const refresh = useRefreshAll();

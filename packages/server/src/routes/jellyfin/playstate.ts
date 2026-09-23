@@ -412,6 +412,53 @@ async function setPlayed(
   await reportPlayback(ctx, kind, ref, { row, item });
 }
 
+/** An episode and every aired one before it, specials aside, as one bulk mark. */
+async function setPlayedUpTo(
+  ctx: JellyfinRequestContext,
+  d: Extract<ContentDescriptor, { k: 'episode' }>
+) {
+  const provider = getWatchStateProvider();
+  const r = await episodesForSeries(ctx, d);
+  const now = Date.now();
+  const marked: ContentRef[] = [];
+  for (const ep of r?.episodes ?? []) {
+    const epd = descriptorOf(ep);
+    if (!epd || epd.k !== 'episode') continue;
+    if ((ep.UserData as { Played?: boolean } | undefined)?.Played) continue;
+    const before =
+      epd.s === d.s ? epd.e <= d.e : d.s > 0 && epd.s > 0 && epd.s < d.s;
+    if (!before) continue;
+    if (Date.parse(String(ep.PremiereDate ?? '')) > now) continue;
+    const epRef = contentRefOf(epd);
+    await provider.record(ctx.watch, {
+      type: 'played',
+      identity: await watchIdentityFor(epRef),
+      snapshot: snapshotOf(ep),
+    });
+    marked.push(epRef);
+  }
+  await reportBulkMark(
+    ctx,
+    'played',
+    { t: d.t, i: d.i },
+    marked,
+    r?.seriesItem
+  );
+}
+
+router.post(
+  '/AIOStreams/PlayedUpTo/:itemId',
+  jf(async (req, res, ctx) => {
+    const d = await descriptorFor(ctx, param(req, 'itemId'));
+    if (d?.k !== 'episode') {
+      res.status(404).json({ Message: 'Episode not found' });
+      return;
+    }
+    await setPlayedUpTo(ctx, d);
+    res.status(204).end();
+  })
+);
+
 const PLAYED_PATHS = [
   '/UserPlayedItems/:itemId',
   '/Users/:userId/PlayedItems/:itemId',
