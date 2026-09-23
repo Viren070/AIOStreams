@@ -16,7 +16,7 @@ export function noticeSources(
   info: PlaybackInfoResponse | undefined
 ): SourceInfo[] {
   return (info?.MediaSources ?? []).filter(
-    (s) => s.Type === 'Placeholder'
+    (s) => s.Type === 'Placeholder' && 'aiostreams' in s
   ) as SourceInfo[];
 }
 

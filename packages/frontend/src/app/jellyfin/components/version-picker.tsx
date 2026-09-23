@@ -1,9 +1,12 @@
 import React from 'react';
 import { toast } from 'sonner';
 import {
+  BiBarChartAlt2,
   BiCopy,
   BiDotsVerticalRounded,
+  BiErrorCircle,
   BiInfoCircle,
+  BiLink,
   BiLinkExternal,
   BiPlay,
   BiRefresh,
@@ -385,19 +388,66 @@ function Versions({
         })}
 
         {!terms.length &&
-          notices.map((notice) => (
-            <div
-              key={notice.Id}
-              className="flex items-start gap-3 rounded-xl border border-dashed border-white/10 p-3"
-            >
-              <BiInfoCircle className="mt-0.5 flex-none text-lg text-[--muted]" />
-              <p className="min-w-0 select-text whitespace-pre-line text-sm text-[--muted] [overflow-wrap:anywhere]">
-                {notice.aiostreams?.description || notice.Name}
-              </p>
-            </div>
-          ))}
+          notices.map((notice) => <Notice key={notice.Id} notice={notice} />)}
       </div>
     </>
+  );
+}
+
+const NOTICE_ICONS: Record<string, React.ReactNode> = {
+  error: <BiErrorCircle />,
+  statistic: <BiBarChartAlt2 />,
+  external: <BiLink />,
+};
+
+/** An addon message, pipeline error or statistic: text, and a link at most. */
+function Notice({ notice }: { notice: SourceInfo }) {
+  const { name, description, type, externalUrl } = notice.aiostreams!;
+  const error = type === 'error';
+  return (
+    <div
+      className={cn(
+        'flex items-start gap-3 rounded-xl border p-3',
+        error
+          ? 'border-red-500/20 bg-red-950/20'
+          : 'border-dashed border-white/10'
+      )}
+    >
+      <span
+        className={cn(
+          'mt-0.5 flex-none text-lg',
+          error ? 'text-red-300' : 'text-[--muted]'
+        )}
+      >
+        {NOTICE_ICONS[type] ?? <BiInfoCircle />}
+      </span>
+      <div className="min-w-0 flex-1 select-text space-y-1 whitespace-pre-line text-sm [overflow-wrap:anywhere]">
+        {name.trim() && (
+          <p className={cn('font-medium', error && 'text-red-300')}>
+            {name.trim()}
+          </p>
+        )}
+        {description.trim() && (
+          <p className="text-[--muted]">{description.trim()}</p>
+        )}
+      </div>
+      {externalUrl && (
+        <Tooltip
+          trigger={
+            <IconButton
+              size="sm"
+              intent="gray-basic"
+              className="flex-none rounded-full"
+              icon={<BiLinkExternal />}
+              aria-label="Open link"
+              onClick={() => window.open(externalUrl, '_blank', 'noopener')}
+            />
+          }
+        >
+          Open link
+        </Tooltip>
+      )}
+    </div>
   );
 }
 
