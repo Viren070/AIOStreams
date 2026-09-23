@@ -21,7 +21,7 @@ AIOStreams can present your configuration as a **Jellyfin server**. You add it t
 
 - **Add catalog and metadata addons to AIOStreams.** A Jellyfin app only sees what your AIOStreams configuration provides, so it needs addons for all three jobs: catalogs to fill the libraries, metadata to describe each title, and streams to play it.
 - **Save your configuration.** A Jellyfin app signs in to a saved configuration.
-- **Pick an app.** Swiftfin, Findroid, Streamyfin, Jellyfin for Android TV, Jellyfin for Kodi and Infuse all work. The Jellyfin web interface is not included: the server address is an API for apps, not a website.
+- **Pick an app.** Swiftfin, Findroid, Streamyfin, Jellyfin for Android TV, Jellyfin for Kodi and Infuse all work. In a browser, the server address opens AIOStreams' own [web app](#the-web-app) rather than Jellyfin's.
 - **Check the instance allows it.** It is on by default. If the **Jellyfin** card under **Save & Install** is greyed out, the instance owner has turned it off.
 
 <Callout type="info">
@@ -56,9 +56,9 @@ In your app, add a server and paste the **Server address**. It is your instance'
 
 Enter the **Username** shown on the Connect tab and your configuration password.
 
-- The username is your configuration UUID, or its alias if you gave it one through a [profile](/guides/config-profiles). An alias already stands in for the password, so the password field is not checked.
+- The username is your configuration UUID, or its alias if you gave it one through a [profile](/guides/config-profiles). The password is your configuration password either way.
 - To sign in as one of your [household users](#household-users), add `/` and their name, for example `<uuid>/Sam`.
-- If the user you sign in as has a [PIN](#pins), the primary user included, add it after your password the same way, for example `yourpassword/1234`. With an alias, type just the PIN.
+- If the user you sign in as has a [PIN](#pins), the primary user included, add it after your password the same way, for example `yourpassword/1234`.
 
 </Step>
 
@@ -70,12 +70,25 @@ Typing a UUID with a remote is painful, so use **Quick Connect** instead. Choose
 
 ### Sign-in picker
 
-The Connect tab also offers an **address with a sign-in picker**. Added as the server address instead, it makes the app list your configuration and its users on the sign-in screen, with no password to type. A user with a PIN asks for it there, and a [PIN on the primary user](#the-primary-users-pin) keeps the address to that screen.
+The Connect tab also offers an **address with a sign-in picker**. Added as the server address instead, it makes the app list your configuration's users on the sign-in screen, so there is no UUID to type. Signing in still needs your configuration password, with a user's [PIN](#pins) added the same way as above.
 
 <Callout type="warn">
-  That address contains your configuration password. Only use it on devices in
-  your own household.
+  That address holds the same secret as your install links. Only use it on
+  devices in your own household.
 </Callout>
+
+## The web app
+
+The server address also works in a browser. Open it, or press **Open** next to **Web app** on the Connect tab, and you get a web app built for this server. If you are signed in on the configure page in the same browser, it signs you straight in. Otherwise sign in as you would in an app. With [household users](#household-users), it then asks who is watching.
+
+- **Home** has Continue Watching, Next Up, episodes airing soon and a row for each catalog.
+- **Discover** browses any catalog by type and genre.
+- **Title pages** show the details, seasons and episodes, and the cast and crew, each with a page of what they have been in. **Play** lists the [versions](#versions) to choose from.
+- **Activity** is your watch history, where you can mark things unwatched or remove them. The primary user also sees everyone's history and what each person is playing right now.
+
+Like an app, the web app plays streams as they are, so a browser only plays what it can decode. For anything else, each version has **Copy stream link**, and **Open in external player** once you pick a player under **External player** in the web app's settings (VLC, Infuse, Outplayer and IINA are offered, or enter your own). Jellyfin Media Player and Jellyfin for Android load this web app too, but play through their own players, so everything plays there.
+
+The web app's settings also choose what is featured on the home page, the poster size and what shows under posters. These follow you to every device; the external player is set per device.
 
 ## Libraries
 
@@ -149,7 +162,7 @@ Two settings on the **Playback** tab control this:
 
 A title's versions are reused for a few minutes, so opening it and then playing it searches once.
 
-Anything an addon sent with nothing to play, such as a notice, an error, or a link to its own website, is listed after the versions, along with any statistics you have switched on. Stremio offers these as links to open in a browser, which a Jellyfin app has no way to do, so only their text is any use here, and playing one gets you a short clip saying so. They do not count towards **Versions per item**, and errors follow your **Hide Errors** setting.
+Anything an addon sent with nothing to play, such as a notice, an error, or a link to its own website, is listed after the versions, along with any statistics you have switched on. Stremio offers these as links to open in a browser, which a Jellyfin app has no way to do, so only their text is any use there, and playing one gets you a short clip saying so. The [web app](#the-web-app) shows them as text too, with a button to open any link. They do not count towards **Versions per item**, and errors follow your **Hide Errors** setting.
 
 ### When nothing plays
 
@@ -209,7 +222,6 @@ The primary user sees everyone's activity and history, so a PIN on it keeps the 
 
 - Signing in as the primary user always asks for the PIN, even with your configuration password. On the plain server address, type `yourpassword/PIN`.
 - Switching to the primary user from another user asks for the PIN every time, so handing over a device after switching away doesn't hand over your account.
-- The sign-in picker address and an alias only reach the sign-in screen until someone signs in.
 
 Without a PIN on the primary user, a device approved with Quick Connect as another user needs your configuration password to switch to it.
 
