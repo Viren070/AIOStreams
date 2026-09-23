@@ -176,7 +176,7 @@ function Versions({
           <img
             src={art}
             alt=""
-            className="h-full w-full object-cover opacity-25"
+            className="absolute inset-x-0 top-0 aspect-video min-h-full w-full object-cover opacity-25"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-[--paper]/30 via-[--paper]/70 to-[--paper]" />
         </div>
