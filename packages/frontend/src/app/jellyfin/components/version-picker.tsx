@@ -261,7 +261,7 @@ function Versions({
           ))}
         {info.isError && !info.data && (
           <div className="space-y-3 rounded-xl border border-red-500/20 bg-red-950/20 p-3">
-            <p className="text-sm text-red-300 [overflow-wrap:anywhere]">
+            <p className="select-text text-sm text-red-300 [overflow-wrap:anywhere]">
               Could not load the versions: {info.error.message}
             </p>
             <Button
@@ -391,7 +391,7 @@ function Versions({
               className="flex items-start gap-3 rounded-xl border border-dashed border-white/10 p-3"
             >
               <BiInfoCircle className="mt-0.5 flex-none text-lg text-[--muted]" />
-              <p className="min-w-0 whitespace-pre-line text-sm text-[--muted] [overflow-wrap:anywhere]">
+              <p className="min-w-0 select-text whitespace-pre-line text-sm text-[--muted] [overflow-wrap:anywhere]">
                 {notice.aiostreams?.description || notice.Name}
               </p>
             </div>

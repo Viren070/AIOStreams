@@ -6,6 +6,7 @@ import { useSession } from '../lib/session';
 import { useItem, usePersonItems } from '../lib/queries';
 import { posterUrl } from '../lib/images';
 import { yearsBetween } from '../lib/format';
+import { hasSelection } from '../lib/selection';
 import { useInView } from '../lib/use-in-view';
 import { PageBody } from '../components/layout';
 import { MixedGrid } from '../components/mixed-grid';
@@ -68,9 +69,9 @@ function Header({ person }: { person: BaseItemDto }) {
         <ExternalLinks links={person.ExternalUrls} />
         {person.Overview && (
           <p
-            onClick={() => setExpanded((v) => !v)}
+            onClick={() => !hasSelection() && setExpanded((v) => !v)}
             className={cn(
-              'cursor-pointer whitespace-pre-line text-sm leading-relaxed text-gray-300 sm:text-base',
+              'cursor-pointer select-text whitespace-pre-line text-sm leading-relaxed text-gray-300 sm:text-base',
               !expanded && 'line-clamp-5'
             )}
           >

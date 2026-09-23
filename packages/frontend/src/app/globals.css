@@ -379,3 +379,18 @@ pre {
       0 0 16px 3px rgb(var(--color-brand-500) / 0);
   }
 }
+
+/* The Jellyfin web app selects only text meant to be read or copied. */
+@layer base {
+  body.jellyfin-web {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  body.jellyfin-web :is(input, textarea, [contenteditable]) {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+  body.jellyfin-web :is(img, a) {
+    -webkit-user-drag: none;
+  }
+}

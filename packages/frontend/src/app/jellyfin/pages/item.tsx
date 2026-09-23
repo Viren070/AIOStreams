@@ -50,6 +50,7 @@ import {
   untilLabel,
 } from '../lib/format';
 import { href, itemPath, navigate } from '../lib/paths';
+import { hasSelection } from '../lib/selection';
 import { useInView } from '../lib/use-in-view';
 import { CardGrid, MediaRow } from '../components/media-row';
 import { MixedGrid } from '../components/mixed-grid';
@@ -282,9 +283,9 @@ function Header({ item }: { item: BaseItemDto }) {
         )}
         {item.Overview && (
           <p
-            onClick={() => setExpanded((v) => !v)}
+            onClick={() => !hasSelection() && setExpanded((v) => !v)}
             className={cn(
-              'cursor-pointer text-sm leading-relaxed text-gray-300 sm:text-base',
+              'cursor-pointer select-text text-sm leading-relaxed text-gray-300 sm:text-base',
               !expanded && 'line-clamp-4'
             )}
           >
@@ -570,7 +571,9 @@ function Seasons({
       )}
       <SeasonSummary season={season} episodes={episodes.data?.Items} />
       {season?.Overview && (
-        <p className="max-w-3xl text-sm text-gray-300">{season.Overview}</p>
+        <p className="max-w-3xl select-text text-sm text-gray-300">
+          {season.Overview}
+        </p>
       )}
       <CardGrid shape="wide">
         {(seasons.isLoading || episodes.isLoading) &&

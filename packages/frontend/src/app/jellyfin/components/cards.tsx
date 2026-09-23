@@ -39,6 +39,7 @@ function Artwork({
       src={current}
       alt={alt}
       loading="lazy"
+      draggable={false}
       onLoad={() => setLoaded(true)}
       onError={() => setAttempt((n) => n + 1)}
       className={cn(

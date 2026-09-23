@@ -14,6 +14,10 @@ import { JellyfinClient } from './lib/client';
 
 /** The web app served at the Jellyfin API's `/web`. */
 export default function JellyfinWebApp() {
+  React.useEffect(() => {
+    document.body.classList.add('jellyfin-web');
+    return () => document.body.classList.remove('jellyfin-web');
+  }, []);
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark">
       <MotionConfig reducedMotion="user">

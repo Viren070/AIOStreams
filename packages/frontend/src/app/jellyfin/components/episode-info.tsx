@@ -45,7 +45,9 @@ export function EpisodeInfo({
     />
   );
   const synopsis = (
-    <p className="whitespace-pre-line text-sm text-gray-300">{overview}</p>
+    <p className="select-text whitespace-pre-line text-sm text-gray-300">
+      {overview}
+    </p>
   );
 
   if (wide) {
