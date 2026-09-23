@@ -488,6 +488,7 @@ async function handleItems(
         exactTotal: isKodi(ctx) && wantsTotal(req),
         cursorKey: `${ctx.scope()}|${filterShape(req, types)}|${pd.t}|${pd.i}`,
         select: pageFilter(req, ctx, types, { parentId }),
+        kinds: searchKindsFor(types),
       });
       const items = await itemsFromPreviews(ctx, page.items, { parentId });
       send(req, res, applySort(req, items), page.total, startIndex);

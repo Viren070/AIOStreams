@@ -119,6 +119,10 @@ export class AIOStreams {
     return this.ctx.streamContext;
   }
 
+  public getUserData(): UserData {
+    return this.ctx.userData;
+  }
+
   public getResources(): StrictManifestResource[] {
     this.checkInitialised();
     return this.ctx.finalResources;
