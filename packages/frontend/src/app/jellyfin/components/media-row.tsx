@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
+import { useRouter } from '@tanstack/react-router';
 import {
   Carousel,
   CarouselContent,
@@ -77,8 +78,19 @@ function RowNav({ overlay }: { overlay?: boolean }) {
   );
 }
 
+/** Per history entry, so a fresh visit to the page starts the row over. */
+function useEntryKey(id: string | undefined) {
+  const router = useRouter();
+  const [entry] = React.useState(() => {
+    const location = router.state.location;
+    return location.state.__TSR_key ?? location.href;
+  });
+  return id ? `${entry}|${id}` : undefined;
+}
+
 /** A titled, draggable row of cards that pages as it nears its end. */
 export function MediaRow({
+  id,
   title,
   shape,
   itemClass,
@@ -88,6 +100,7 @@ export function MediaRow({
   action,
   children,
 }: {
+  id?: string;
   title?: React.ReactNode;
   shape: RowShape;
   /** Replaces the shape's card width, for rows of something else. */
@@ -98,6 +111,7 @@ export function MediaRow({
   action?: React.ReactNode;
   children?: React.ReactNode;
 }) {
+  const restoreKey = useEntryKey(id);
   const width = itemClass ?? ITEM_WIDTH[shape];
   const items = React.Children.toArray(children);
   if (!loading && !items.length) return null;
@@ -111,7 +125,10 @@ export function MediaRow({
     ));
   return (
     <section>
-      <Carousel opts={{ align: 'start', dragFree: true }}>
+      <Carousel
+        opts={{ align: 'start', dragFree: true }}
+        restoreKey={restoreKey}
+      >
         {onEndReached && <EndWatcher onEnd={onEndReached} />}
         {title || action ? (
           <div className="flex items-center justify-between gap-3">

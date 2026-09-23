@@ -99,11 +99,13 @@ export function HomePage() {
         }
       >
         <EpisodeRow
+          id="resume"
           title="Continue watching"
           items={resume.data?.Items}
           loading={resume.isLoading}
         />
         <EpisodeRow
+          id="next-up"
           title="Next up"
           items={nextUp.data?.Items}
           loading={nextUp.isLoading}
@@ -119,10 +121,12 @@ export function HomePage() {
 
 /** Resume points and next episodes play straight from the row. */
 function EpisodeRow({
+  id,
   title,
   items,
   loading,
 }: {
+  id: string;
   title: string;
   items: BaseItemDto[] | null | undefined;
   loading: boolean;
@@ -130,7 +134,7 @@ function EpisodeRow({
   const { client } = useSession();
   const picker = useVersionPicker();
   return (
-    <MediaRow title={title} shape="wide" loading={loading}>
+    <MediaRow id={id} title={title} shape="wide" loading={loading}>
       {items?.map((item) => {
         const left = remainingMs(item);
         return (
@@ -164,7 +168,12 @@ function UpcomingRow() {
   const { client } = useSession();
   const upcoming = useUpcoming();
   return (
-    <MediaRow title="Upcoming" shape="wide" loading={upcoming.isLoading}>
+    <MediaRow
+      id="upcoming"
+      title="Upcoming"
+      shape="wide"
+      loading={upcoming.isLoading}
+    >
       {upcoming.data?.Items?.map((item) => (
         <ItemMenu key={item.Id} item={item}>
           <WideCard
@@ -208,8 +217,10 @@ function LibraryRow({ view }: { view: BaseItemDto }) {
 
   return (
     <div ref={ref} className="min-h-[2rem]">
-      {near && (
+      {/* Cached rows show at once, so back restores into the full page height. */}
+      {(near || pages.data) && (
         <MediaRow
+          id={`view:${view.Id}`}
           title={
             <a
               href={href(to.discover(view.Id!))}

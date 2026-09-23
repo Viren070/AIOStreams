@@ -56,6 +56,21 @@ export function useCarousel() {
   return context;
 }
 
+/** `scrollTo` only lands on snaps. */
+function jumpTo(emblaApi: EmblaApi, location: number) {
+  const engine = emblaApi.internalEngine();
+  const at = engine.limit.constrain(location);
+  for (const vector of [
+    engine.location,
+    engine.offsetLocation,
+    engine.previousLocation,
+    engine.target,
+  ]) {
+    vector.set(at);
+  }
+  engine.translate.to(at);
+}
+
 /**
  * Embla re-initialises whenever slides are added and restarts at the nearest
  * snap; this puts a row that grew mid-drag back where it was.
@@ -68,18 +83,7 @@ function useKeepPositionOnReInit(api: CarouselApi) {
       saved = emblaApi.internalEngine().location.get();
     };
     const restore = (emblaApi: EmblaApi) => {
-      if (saved === null) return;
-      const engine = emblaApi.internalEngine();
-      const at = engine.limit.constrain(saved);
-      for (const vector of [
-        engine.location,
-        engine.offsetLocation,
-        engine.previousLocation,
-        engine.target,
-      ]) {
-        vector.set(at);
-      }
-      engine.translate.to(at);
+      if (saved !== null) jumpTo(emblaApi, saved);
     };
     api.on('scroll', remember);
     api.on('settle', remember);
@@ -92,19 +96,50 @@ function useKeepPositionOnReInit(api: CarouselApi) {
   }, [api]);
 }
 
+const savedPositions = new Map<string, number>();
+
+function useRestorePosition(api: CarouselApi, key: string | undefined) {
+  React.useEffect(() => {
+    if (!api || !key) return;
+    const saved = savedPositions.get(key);
+    if (saved !== undefined) {
+      jumpTo(api, saved);
+      api.emit('scroll');
+    }
+    const remember = (emblaApi: EmblaApi) => {
+      savedPositions.set(key, emblaApi.internalEngine().location.get());
+    };
+    api.on('scroll', remember);
+    api.on('settle', remember);
+    return () => {
+      api.off('scroll', remember);
+      api.off('settle', remember);
+    };
+  }, [api, key]);
+}
+
 export type CarouselProps = React.HTMLAttributes<HTMLDivElement> & {
   opts?: CarouselOptions;
   gap?: CarouselGap;
+  restoreKey?: string;
 };
 
 export const Carousel = React.forwardRef<HTMLDivElement, CarouselProps>(
   (props, ref) => {
-    const { opts, gap = 'md', className, children, ...rest } = props;
+    const {
+      opts,
+      gap = 'md',
+      restoreKey,
+      className,
+      children,
+      ...rest
+    } = props;
 
     const [carouselRef, api] = useEmblaCarousel({ ...opts, axis: 'x' });
     const [canScrollPrev, setCanScrollPrev] = React.useState(false);
     const [canScrollNext, setCanScrollNext] = React.useState(false);
     useKeepPositionOnReInit(api);
+    useRestorePosition(api, restoreKey);
 
     const onSelect = React.useCallback((emblaApi: EmblaApi) => {
       setCanScrollPrev(emblaApi.canScrollPrev());
