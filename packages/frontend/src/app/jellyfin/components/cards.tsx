@@ -4,7 +4,7 @@ import { cn } from '@/components/ui/core/styling';
 import { usePosterLines } from '../lib/settings';
 
 /** A list is tried in order, moving on when an image fails to load. */
-function Artwork({
+export function Artwork({
   src,
   alt,
   className,

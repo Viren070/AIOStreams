@@ -4,19 +4,18 @@ import { IconButton } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { Popover } from '@/components/ui/popover';
 import { useMediaQuery } from '@/hooks/media-query';
+import { Artwork } from './cards';
 
-function Banner({ image }: { image: string | null }) {
-  if (!image) return null;
+function Banner({ image }: { image: string[] }) {
+  if (!image.length) return null;
   return (
     <div
       aria-hidden
       className="pointer-events-none absolute inset-x-0 top-0 h-32 overflow-hidden"
     >
-      <img
-        src={image}
-        alt=""
-        className="h-full w-full object-cover opacity-30"
-      />
+      <div className="absolute inset-0 opacity-30">
+        <Artwork src={image} alt="" />
+      </div>
       <div className="absolute inset-0 bg-gradient-to-t from-[--paper] to-transparent" />
     </div>
   );
@@ -31,7 +30,7 @@ export function EpisodeInfo({
   title: string;
   line?: React.ReactNode;
   overview: string | null | undefined;
-  image: string | null;
+  image: string[];
 }) {
   const wide = useMediaQuery('(min-width: 1024px)');
   if (!overview) return null;

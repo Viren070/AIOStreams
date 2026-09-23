@@ -27,11 +27,12 @@ import {
   useHistory,
   useSetPlayed,
 } from '../lib/queries';
-import { posterUrl, landscapeUrl } from '../lib/images';
+import { posterUrl, landscapeUrls } from '../lib/images';
 import { clock, duration, episodeCode, relativeTime } from '../lib/format';
 import { href, itemPath, navigate, to } from '../lib/paths';
 import { PageBody } from '../components/layout';
 import { SessionsRow } from '../components/sessions';
+import { Artwork } from '../components/cards';
 import { UserAvatar } from '../components/user-avatar';
 import type { HistoryEntry, WebUser } from '../lib/types';
 
@@ -371,8 +372,9 @@ function DayTile({
             >
               <a href={href(itemPath(entry.item))} className="w-24 flex-none">
                 <div className="relative aspect-video overflow-hidden rounded-md bg-gray-900">
-                  <Img
-                    src={landscapeUrl(client, entry.item, { maxWidth: 300 })}
+                  <Artwork
+                    src={landscapeUrls(client, entry.item, { maxWidth: 300 })}
+                    alt=""
                   />
                 </div>
               </a>
@@ -434,24 +436,10 @@ function Status({ entry }: { entry: HistoryEntry }) {
   );
 }
 
-function Img({ src }: { src: string | null }) {
-  const [failed, setFailed] = React.useState(false);
-  if (!src || failed) return null;
-  return (
-    <img
-      src={src}
-      alt=""
-      loading="lazy"
-      onError={() => setFailed(true)}
-      className="absolute inset-0 h-full w-full object-cover"
-    />
-  );
-}
-
 function Poster({ src }: { src: string | null }) {
   return (
     <div className="relative aspect-[2/3] overflow-hidden rounded-md bg-gray-900">
-      <Img src={src} />
+      <Artwork src={src} alt="" />
     </div>
   );
 }

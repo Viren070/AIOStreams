@@ -631,7 +631,7 @@ function Seasons({
                         title={seasonEpisodeTitle(episode)}
                         line={episodeLine(episode)}
                         overview={episode.Overview}
-                        image={landscapeUrl(client, episode, {
+                        image={landscapeUrls(client, episode, {
                           maxWidth: 960,
                         })}
                       />
