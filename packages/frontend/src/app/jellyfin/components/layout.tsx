@@ -204,7 +204,10 @@ function MobileNav({
               key={item.name}
               type="button"
               aria-current={item.isCurrent ? 'page' : undefined}
-              onClick={item.onClick}
+              onClick={(e) => {
+                (document.activeElement as HTMLElement | null)?.blur();
+                item.onClick?.(e);
+              }}
               className={cn(
                 tab,
                 item.isCurrent
