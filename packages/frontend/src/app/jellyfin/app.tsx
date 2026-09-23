@@ -4,7 +4,7 @@ import { RouterProvider } from '@tanstack/react-router';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/toaster';
 import { LoadingOverlay } from '@/components/ui/loading-spinner';
-import { SessionProvider, useSessionPhase } from './lib/session';
+import { pickerUuid, SessionProvider, useSessionPhase } from './lib/session';
 import { announceToAndroid } from './lib/hosts';
 import { webRouter } from './router';
 import { SignInPage, UserPicker } from './pages/sign-in';
@@ -72,7 +72,9 @@ function Session() {
       screen = <LoadingOverlay />;
       break;
     case 'signed-out':
-      screen = <SignInPage onSignIn={signIn} />;
+      screen = (
+        <SignInPage onSignIn={signIn} defaultUsername={pickerUuid(base)} />
+      );
       break;
     case 'picking':
       screen = <UserPicker users={phase.users} onPick={phase.choose} />;

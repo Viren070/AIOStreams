@@ -60,10 +60,10 @@ type WebTokenResult =
       branding: Branding;
     };
 
-/** `/jellyfin/<uuid or alias>/<encrypted password>`, with or without a variant. */
-function isPreAuthenticatedMount(base: string): boolean {
+/** The uuid a `/jellyfin/<uuid>/<encrypted password>` picker address names. */
+export function pickerUuid(base: string): string {
   const parts = new URL(base).pathname.split('/').filter(Boolean);
-  return parts.length >= 3 && parts[1] !== 'v';
+  return parts.length >= 3 ? parts[1] : '';
 }
 
 /**
@@ -128,44 +128,6 @@ export function useSessionPhase() {
     [adopt, base, switchTo]
   );
 
-  /**
-   * The sign-in picker for an address whose account has a PIN, which then no
-   * longer answers without signing in.
-   */
-  const pickPublicly = React.useCallback(
-    async (anonymous: JellyfinClient) => {
-      const listed = await anonymous
-        .get<UserDto[]>('/Users/Public')
-        .catch(() => [] as UserDto[]);
-      if (!listed.length) return false;
-      setPhase({
-        kind: 'picking',
-        client: anonymous,
-        users: listed.map((user) => ({
-          user,
-          avatar: user.PrimaryImageTag
-            ? anonymous.url(`/Users/${user.Id}/Images/Primary`, {
-                tag: user.PrimaryImageTag,
-              })
-            : null,
-          hidden: false,
-          needs: user.HasPassword ? 'pin' : null,
-        })),
-        choose: async (id, secret) => {
-          const user = listed.find((u) => u.Id === id);
-          const auth = await anonymous.post<AuthenticationResult>(
-            '/Users/AuthenticateByName',
-            { Username: user?.Name ?? '', Pw: secret ?? '' }
-          );
-          queryClient.removeQueries({ queryKey: ['jf'] });
-          adopt(anonymous, auth);
-        },
-      });
-      return true;
-    },
-    [adopt, queryClient]
-  );
-
   React.useEffect(() => {
     let cancelled = false;
     const anonymous = new JellyfinClient(base);
@@ -178,24 +140,6 @@ export function useSessionPhase() {
           if (!cancelled) setPhase({ kind: 'ready', client, user });
           return;
         }
-      }
-      // The pre-authenticated address answers without a token.
-      const preAuthenticated =
-        isPreAuthenticatedMount(base) &&
-        (await anonymous
-          .get<UserDto>('/Users/Me')
-          .then(() => true)
-          .catch(() => false));
-      if (preAuthenticated) {
-        if (!cancelled) await enter(anonymous);
-        return;
-      }
-      if (
-        isPreAuthenticatedMount(base) &&
-        !cancelled &&
-        (await pickPublicly(anonymous))
-      ) {
-        return;
       }
       if (hasConfigSessionCookie() && !signedOut(base)) {
         const auth = await api<WebTokenResult>(
@@ -242,7 +186,7 @@ export function useSessionPhase() {
     return () => {
       cancelled = true;
     };
-  }, [base, enter, pickPublicly]);
+  }, [base, enter]);
 
   const signIn = React.useCallback(
     async (username: string, password: string) => {

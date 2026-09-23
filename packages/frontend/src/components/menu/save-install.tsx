@@ -1869,7 +1869,6 @@ function Content() {
   const quickConnectLocked = quickConnectPersona
     ? !!jellyfinPersonas.find((p) => p.id === quickConnectPersona)?.lock
     : !!userData.jellyfin?.primary?.lock;
-  // Carries the password, so the picker can list users before sign-in.
   const jellyfinPickerUrl =
     uuid && encryptedPassword
       ? `${baseUrl}/jellyfin/${uuid}/${encryptedPassword}`
@@ -2700,16 +2699,12 @@ function Content() {
                         </Button>
                       </div>
                       <p className="text-xs text-gray-500">
-                        {profileAlias
-                          ? 'Any password is accepted for an alias.'
-                          : 'The password is your configuration password.'}
+                        The password is your configuration password.
                         {jellyfinPersonas.length > 0 &&
                           ' Add /<user> to sign in as a user.'}
                         {(jellyfinPersonas.some((p) => p.lock) ||
                           !!userData.jellyfin?.primary?.lock) &&
-                          (profileAlias
-                            ? ' For a user with a PIN, the password is the PIN.'
-                            : ' For a user with a PIN, add /<PIN> to the password.')}
+                          ' For a user with a PIN, add /<PIN> to the password.'}
                       </p>
                     </div>
 
@@ -2736,10 +2731,10 @@ function Content() {
                           </Button>
                         </div>
                         <p className="text-xs text-gray-500">
-                          Lists this configuration and its users at sign-in,
-                          with no password to type except a user&apos;s PIN. It
-                          contains your password, so keep it within your
-                          household.
+                          Lists this configuration&apos;s users at sign-in, so
+                          there is no UUID to type. Signing in still needs your
+                          password. It holds the same secret as your install
+                          links, so keep it within your household.
                         </p>
                       </div>
                     )}
@@ -2870,7 +2865,7 @@ function Content() {
                         leftIcon={<MonitorPlay className="h-4 w-4" />}
                         onClick={() =>
                           window.open(
-                            `${jellyfinPickerUrl || jellyfinServerUrl}/web/`,
+                            `${jellyfinServerUrl}/web/`,
                             '_blank',
                             'noopener'
                           )

@@ -84,10 +84,12 @@ function Screen({ children }: { children: React.ReactNode }) {
 
 export function SignInPage({
   onSignIn,
+  defaultUsername = '',
 }: {
   onSignIn: (username: string, password: string) => Promise<void>;
+  defaultUsername?: string;
 }) {
-  const [username, setUsername] = React.useState('');
+  const [username, setUsername] = React.useState(defaultUsername);
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
@@ -137,11 +139,12 @@ export function SignInPage({
             value={username}
             onValueChange={setUsername}
             autoComplete="username"
-            autoFocus
+            autoFocus={!defaultUsername}
             required
           />
           <PasswordInput
             label="Password"
+            autoFocus={!!defaultUsername}
             value={password}
             onValueChange={(value) => {
               setPassword(value);
