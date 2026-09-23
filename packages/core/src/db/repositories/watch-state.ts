@@ -579,10 +579,24 @@ export class WatchStateRepository {
     return rows.map(toRow);
   }
 
-  static async listForUuid(uuid: string): Promise<WatchStateRow[]> {
+  /** One page of every row `personas` hold, in key order. */
+  static async listPage(
+    uuid: string,
+    personas: string[],
+    opts: { limit: number; after?: { persona: string; itemKey: string } }
+  ): Promise<WatchStateRow[]> {
+    if (!personas.length) return [];
+    const c = opts.after;
+    const after = c
+      ? sql`AND (persona > ${c.persona} OR (persona = ${c.persona} AND item_key > ${c.itemKey}))`
+      : raw('');
     const rows = await getDb().query<DbRow>(
-      sql`SELECT * FROM watch_state WHERE uuid = ${uuid}
-           ORDER BY persona ASC, sort_at DESC`
+      sql`SELECT * FROM watch_state
+           WHERE uuid = ${uuid}
+             AND persona IN (${join(personas.map((p) => sql`${p}`))})
+             ${after}
+           ORDER BY persona ASC, item_key ASC
+           LIMIT ${opts.limit}`
     );
     return rows.map(toRow);
   }

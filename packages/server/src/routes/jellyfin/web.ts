@@ -43,6 +43,7 @@ const SESSIONS_LIMIT = 50;
 const HISTORY_PAGE = 50;
 const HISTORY_PAGE_MAX = 200;
 const CLEAR_KEYS_MAX = 1000;
+const EXPORT_PAGE = 1000;
 
 function web(
   handler: (
@@ -315,45 +316,94 @@ router.post(
   })
 );
 
+function iso(ms: number | null): string | null {
+  return ms ? new Date(ms).toISOString() : null;
+}
+
+function exportRow(r: WatchStateRow) {
+  return {
+    persona: r.persona,
+    itemKey: r.itemKey,
+    kind: r.kind,
+    type: r.mediaType,
+    id: r.baseId,
+    season: r.season,
+    episode: r.episode,
+    videoId: r.videoId,
+    played: r.played,
+    playCount: r.playCount,
+    positionMs: r.positionMs,
+    durationMs: r.durationMs,
+    favorite: r.favorite,
+    lastPlayedAt: iso(r.lastPlayedAt),
+    updatedAt: iso(r.updatedAt),
+    origin: r.origin,
+  };
+}
+
+/** Resolves once the chunk is buffered, or the client has gone. */
+function write(res: Response, chunk: string): Promise<void> {
+  if (res.write(chunk)) return Promise.resolve();
+  return new Promise((resolve) => {
+    const done = () => {
+      res.off('drain', done);
+      res.off('close', done);
+      resolve();
+    };
+    res.once('drain', done);
+    res.once('close', done);
+  });
+}
+
+/* Written a page at a time, so a long history is never held whole. */
 router.get(
   '/AIOStreams/History/Export',
   web(async (_req, res, ctx) => {
-    const users = visibleUsers(ctx);
-    const scopes = new Set(users.filter(ownsScope).map((u) => u.scope.persona));
-    const rows = (await WatchStateRepository.listForUuid(ctx.uuid)).filter(
-      (r) => scopes.has(r.persona)
-    );
-    const iso = (ms: number | null) => (ms ? new Date(ms).toISOString() : null);
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="watch-history-${ctx.uuid.slice(0, 8)}.json"`
-    );
-    res.json({
+    const owners = visibleUsers(ctx).filter(ownsScope);
+    const personas = [...new Set(owners.map((u) => u.scope.persona))];
+    const head = JSON.stringify({
       exportedAt: new Date().toISOString(),
-      users: users.filter(ownsScope).map((u) => ({
+      users: owners.map((u) => ({
         id: u.id,
         persona: u.scope.persona,
         name: userDto(ctx.uuid, ctx.userData, u.persona).Name,
       })),
-      rows: rows.map((r) => ({
-        persona: r.persona,
-        itemKey: r.itemKey,
-        kind: r.kind,
-        type: r.mediaType,
-        id: r.baseId,
-        season: r.season,
-        episode: r.episode,
-        videoId: r.videoId,
-        played: r.played,
-        playCount: r.playCount,
-        positionMs: r.positionMs,
-        durationMs: r.durationMs,
-        favorite: r.favorite,
-        lastPlayedAt: iso(r.lastPlayedAt),
-        updatedAt: iso(r.updatedAt),
-        origin: r.origin,
-      })),
     });
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="watch-history-${ctx.uuid.slice(0, 8)}.json"`
+    );
+    res.type('json');
+    let gone = false;
+    res.once('close', () => (gone = true));
+    try {
+      await write(res, `${head.slice(0, -1)},"rows":[`);
+      let after: { persona: string; itemKey: string } | undefined;
+      let first = true;
+      while (!gone) {
+        const page = await WatchStateRepository.listPage(ctx.uuid, personas, {
+          limit: EXPORT_PAGE,
+          after,
+        });
+        if (!page.length) break;
+        const rows = page.map((r) => JSON.stringify(exportRow(r))).join(',');
+        await write(res, first ? rows : `,${rows}`);
+        first = false;
+        if (page.length < EXPORT_PAGE) break;
+        const last = page[page.length - 1];
+        after = { persona: last.persona, itemKey: last.itemKey };
+      }
+      res.end(']}');
+    } catch (error) {
+      logger.warn(
+        {
+          uuid: ctx.uuid,
+          err: error instanceof Error ? error.message : String(error),
+        },
+        'watch history export failed'
+      );
+      res.destroy();
+    }
   })
 );
 
