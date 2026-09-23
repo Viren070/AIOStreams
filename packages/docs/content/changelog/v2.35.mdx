@@ -93,8 +93,8 @@ The **Playback** tab controls this:
   searched until you press play, which is lighter on your addons.
 
 Notices, errors and statistics your addons return are listed after the versions. Stremio
-shows these as links to open, which a Jellyfin app cannot do, so here you only see their
-text.
+shows these as links to open, which a Jellyfin app cannot do, so there you only see their
+text. The [web app](#the-web-app) has a button to open any link.
 
 Streams are played directly, never transcoded, so your device has to handle the file as it
 is. If one version will not start, try another. A stream that needs custom request headers
@@ -128,6 +128,10 @@ An addon that supports the new **Watch State** resource can act as a **tracker**
 - **Imports your history.** What the addon knows you watched elsewhere, including in
   Stremio, shows up in Continue Watching and Next Up.
 - **Keeps your watchlist in step** with your favourites, when the addon has a watchlist.
+- **Hides shows you dropped.** A show you dropped on the tracker's service stays out of
+  Next Up. You can drop a show yourself by disliking it in an app, or with **Drop show** on
+  its page in the web app, and the tracker hears about it. Playing a dropped show brings it
+  back.
 
 To stop an addon syncing, untick **Watch State** in that addon's **Resources** option.
 
@@ -141,6 +145,9 @@ configuration password, by typing their name or picking it from the sign-in pick
   different debrid account.
 - With **Choose trackers**, each user with their own history syncs with their own tracker
   addons, such as a separate watch-history account per person.
+- A **PIN** of 4 to 12 digits stops others in the household signing in as that user, the
+  primary user included. Apps take it after the password, as `yourpassword/1234`, and Quick
+  Connect and the web app ask for it before switching to that user.
 
 Removing a user keeps their history. Add them back under the same name and it returns.
 
@@ -324,6 +331,10 @@ Also new:
 - `::trim` strips whitespace, or any characters you give it, from both ends. With
   `{stream.site}` it tidies a filename:
   `{stream.filename::replace('{stream.site}','')::trim(' -')}`.
+- `::replace` works on lists too, swapping every element equal to the first value for the
+  second. The new `::unique` drops repeated elements, such as the ones a replace leaves
+  behind or two English tracks rendered by `::each`:
+  `{stream.visualTags::replace('HDR10+', 'HDR')::unique::join(' | ')}` gives `HDR | DV`.
 - Templates can be three times as long. The default limit rose from 5,000 characters to
   15,000.
 
@@ -393,6 +404,9 @@ use less CPU. A busy instance should see fewer slowdowns and smaller CPU spikes.
   and episode, from the instance. Contributed by webstreamr.
 - **Drafts** can be checked before you restore them. The redesigned banner's **Review** button shows
   what restoring would change in the configuration you have loaded.
+- **Remember me**, the renamed **Stay signed in on this device** box, is now ticked by
+  default. Creating a configuration also signs you in to it, and changing its password keeps
+  you signed in on the device you changed it from.
 
 ## For self-hosters
 
