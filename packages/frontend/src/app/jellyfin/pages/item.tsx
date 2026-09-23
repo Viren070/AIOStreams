@@ -218,6 +218,7 @@ function Header({ item }: { item: BaseItemDto }) {
   const nextUp = useNextUpFor(item.Id!, item.Type === 'Series');
   const [expanded, setExpanded] = React.useState(false);
   const logo = logoUrl(client, item);
+  const [logoFailed, setLogoFailed] = React.useState(false);
   const poster = posterUrl(client, item, { maxWidth: 500 });
   const played = !!item.UserData?.Played;
   const favorite = !!item.UserData?.IsFavorite;
@@ -254,10 +255,11 @@ function Header({ item }: { item: BaseItemDto }) {
         />
       )}
       <div className="min-w-0 max-w-3xl flex-1 space-y-4">
-        {logo ? (
+        {logo && !logoFailed ? (
           <img
             src={logo}
             alt={item.Name ?? ''}
+            onError={() => setLogoFailed(true)}
             className="max-h-24 max-w-[min(26rem,85%)] object-contain object-left lg:max-h-32"
           />
         ) : (
