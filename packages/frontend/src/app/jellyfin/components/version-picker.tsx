@@ -140,6 +140,21 @@ function Versions({
   const art =
     backdropUrl(client, item, { maxWidth: 1280 }) ??
     landscapeUrl(client, item, { maxWidth: 1280 });
+  // The art ends where the list starts, however tall the header above it grows.
+  const listRef = React.useRef<HTMLDivElement>(null);
+  const [artHeight, setArtHeight] = React.useState<number>();
+  React.useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!list?.parentElement) return;
+    const update = () => setArtHeight(list.offsetTop);
+    const observer = new ResizeObserver(update);
+    for (const el of Array.from(list.parentElement.children)) {
+      if (el === list) break;
+      observer.observe(el);
+    }
+    update();
+    return () => observer.disconnect();
+  }, []);
 
   const start = (source: SourceInfo) => {
     onDone();
@@ -155,7 +170,8 @@ function Versions({
       {art && (
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-44 overflow-hidden"
+          className="pointer-events-none absolute inset-x-0 top-0 overflow-hidden"
+          style={{ height: artHeight }}
         >
           <img
             src={art}
@@ -235,7 +251,10 @@ function Versions({
         )}
       </div>
 
-      <div className="relative z-[1] min-h-0 flex-1 space-y-2 overflow-y-auto border-t border-white/5 px-3 pb-5 pt-3 sm:px-5">
+      <div
+        ref={listRef}
+        className="relative z-[1] min-h-0 flex-1 space-y-2 overflow-y-auto border-t border-white/5 px-3 pb-5 pt-3 sm:px-5"
+      >
         {info.isLoading &&
           Array.from({ length: 4 }, (_, i) => (
             <Skeleton key={i} className="h-24 w-full rounded-xl" />
