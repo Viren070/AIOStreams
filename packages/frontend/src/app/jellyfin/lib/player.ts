@@ -357,7 +357,7 @@ export function useDesktopPlayer(
       patch({ audio: id });
     },
     setSubtitle: (id) => {
-      if (!id) player?.setSubtitleStream(-1);
+      if (!id) player?.setSubtitleStream(0);
       else if (id.startsWith('embedded:'))
         player?.setSubtitleStream(Number(id.slice('embedded:'.length)));
       else {
