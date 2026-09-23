@@ -473,31 +473,29 @@ export class WatchStateRepository {
   /**
    * The furthest-through episode per series, for Next Up. Season and episode
    * break the tie, since an imported watched list gives every row of one show
-   * the same timestamp.
+   * the same timestamp. Picked per series before the limit, so a few long
+   * histories cannot crowd out the other shows.
    */
   static async listRecentSeries(
     scope: WatchScope,
     limit: number
   ): Promise<WatchStateRow[]> {
     const rows = await getDb().query<DbRow>(
-      sql`SELECT * FROM watch_state
-           WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
-             AND series_key IS NOT NULL
-             AND (played = 1 OR position_ms > 0)
-           ORDER BY sort_at DESC,
-                    season DESC, episode DESC
-           LIMIT 500`
+      sql`SELECT * FROM (
+             SELECT *, ROW_NUMBER() OVER (
+                      PARTITION BY series_key
+                      ORDER BY sort_at DESC, season DESC, episode DESC
+                    ) AS series_rank
+               FROM watch_state
+              WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+                AND series_key IS NOT NULL AND episode IS NOT NULL
+                AND (played = 1 OR position_ms > 0)
+           ) ranked
+           WHERE series_rank = 1
+           ORDER BY sort_at DESC, season DESC, episode DESC
+           LIMIT ${limit}`
     );
-    const seen = new Set<string>();
-    const out: WatchStateRow[] = [];
-    for (const r of rows.map(toRow)) {
-      if (r.episode == null || !r.seriesKey) continue;
-      if (seen.has(r.seriesKey)) continue;
-      seen.add(r.seriesKey);
-      out.push(r);
-      if (out.length >= limit) break;
-    }
-    return out;
+    return rows.map(toRow);
   }
 
   static async listFavorites(
