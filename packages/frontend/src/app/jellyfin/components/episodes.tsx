@@ -227,6 +227,7 @@ function Head({
               icon={<BiCheck />}
               aria-label={played ? 'Mark unwatched' : 'Mark watched'}
               aria-pressed={played}
+              loading={setPlayed.isPending}
               onClick={() =>
                 setPlayed.mutate({ itemId: episode.Id!, played: !played })
               }
