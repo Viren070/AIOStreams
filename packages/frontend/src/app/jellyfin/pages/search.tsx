@@ -28,6 +28,9 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
       <h1 className="text-3xl font-bold">Search</h1>
       <TextInput
         autoFocus
+        type="search"
+        autoComplete="off"
+        enterKeyHint="search"
         value={term}
         onValueChange={setTerm}
         placeholder="Movies and shows"
