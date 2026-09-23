@@ -67,8 +67,8 @@ function ErrorLine({ error }: { error: string | null }) {
 
 function Screen({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.18),transparent_60%)] px-4 py-12">
-      <div className="relative w-full max-w-3xl space-y-8">
+    <div className="relative flex min-h-screen items-center justify-center bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.18),transparent_60%)] px-4 py-12">
+      <div className="w-full max-w-3xl space-y-8">
         <motion.div
           initial={{ opacity: 0, scale: 0.92 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -254,7 +254,7 @@ function SecretPrompt({
         className="flex w-full flex-col items-center gap-4"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 6 }}
+        exit={{ opacity: 0 }}
         transition={{ ...SPRING, delay: 0.05 }}
       >
         <h1 className="text-xl font-semibold">{user.user.Name}</h1>
@@ -341,82 +341,88 @@ export function UserPicker({
 
   return (
     <Screen>
-      <LayoutGroup>
-        <AnimatePresence mode="popLayout" initial={false}>
-          {asking ? (
-            <motion.div key={`prompt-${asking.user.Id}`} {...FADE}>
-              <SecretPrompt
-                user={asking}
-                busy={!!busy}
-                error={error}
-                onSubmit={(secret) => pick(asking.user.Id!, secret)}
-                onBack={() => {
-                  setAsking(null);
-                  setError(null);
-                }}
-              />
-            </motion.div>
-          ) : (
-            <motion.div key="grid" className="space-y-8" {...FADE}>
-              <motion.h1
-                className="text-center text-2xl font-semibold"
-                {...RISE}
-              >
-                Who&apos;s watching?
-              </motion.h1>
-              <motion.div
-                className="flex flex-wrap justify-center gap-6"
-                initial="hidden"
-                animate="shown"
-                variants={{ shown: { transition: { staggerChildren: 0.05 } } }}
-              >
-                {users.map((u) => (
-                  <motion.button
-                    key={u.user.Id}
-                    type="button"
-                    disabled={!!busy}
-                    onClick={() => choose(u)}
-                    variants={{
-                      hidden: { opacity: 0, y: 14, scale: 0.96 },
-                      shown: { opacity: 1, y: 0, scale: 1 },
-                    }}
-                    transition={SPRING}
-                    whileTap={busy ? undefined : { scale: 0.96 }}
-                    className="group/user flex w-28 flex-col items-center sm:w-32"
-                  >
-                    <span
-                      className={cn(
-                        'flex w-full flex-col items-center gap-3 transition-opacity',
-                        u.hidden && 'opacity-60',
-                        busy && busy !== u.user.Id && 'opacity-40'
-                      )}
-                    >
-                      <span className="relative">
-                        <SharedAvatar
-                          user={u}
-                          className={cn(
-                            'size-24 text-3xl ring-2 ring-transparent transition group-hover/user:ring-white sm:size-28',
-                            busy === u.user.Id && 'animate-pulse ring-brand-400'
-                          )}
-                        />
-                        {u.needs === 'pin' && (
-                          <span className="absolute bottom-0 right-0 flex size-7 items-center justify-center rounded-full bg-gray-900 text-sm ring-2 ring-[--background]">
-                            <BiLockAlt aria-label="Has a PIN" />
-                          </span>
-                        )}
-                      </span>
-                      <span className="w-full truncate text-center text-sm font-medium">
-                        {u.user.Name}
-                      </span>
-                    </span>
-                  </motion.button>
-                ))}
+      {/* Takes the column's spacing, which a popped-out view would carry along. */}
+      <div>
+        <LayoutGroup>
+          <AnimatePresence mode="popLayout" initial={false}>
+            {asking ? (
+              <motion.div key={`prompt-${asking.user.Id}`} {...FADE}>
+                <SecretPrompt
+                  user={asking}
+                  busy={!!busy}
+                  error={error}
+                  onSubmit={(secret) => pick(asking.user.Id!, secret)}
+                  onBack={() => {
+                    setAsking(null);
+                    setError(null);
+                  }}
+                />
               </motion.div>
-              <ErrorLine error={error} />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </LayoutGroup>
+            ) : (
+              <motion.div key="grid" className="space-y-8" {...FADE}>
+                <motion.h1
+                  className="text-center text-2xl font-semibold"
+                  {...RISE}
+                >
+                  Who&apos;s watching?
+                </motion.h1>
+                <motion.div
+                  className="flex flex-wrap justify-center gap-6"
+                  initial="hidden"
+                  animate="shown"
+                  variants={{
+                    shown: { transition: { staggerChildren: 0.05 } },
+                  }}
+                >
+                  {users.map((u) => (
+                    <motion.button
+                      key={u.user.Id}
+                      type="button"
+                      disabled={!!busy}
+                      onClick={() => choose(u)}
+                      variants={{
+                        hidden: { opacity: 0, y: 14, scale: 0.96 },
+                        shown: { opacity: 1, y: 0, scale: 1 },
+                      }}
+                      transition={SPRING}
+                      whileTap={busy ? undefined : { scale: 0.96 }}
+                      className="group/user flex w-28 flex-col items-center sm:w-32"
+                    >
+                      <span
+                        className={cn(
+                          'flex w-full flex-col items-center gap-3 transition-opacity',
+                          u.hidden && 'opacity-60',
+                          busy && busy !== u.user.Id && 'opacity-40'
+                        )}
+                      >
+                        <span className="relative">
+                          <SharedAvatar
+                            user={u}
+                            className={cn(
+                              'size-24 text-3xl ring-2 ring-transparent transition group-hover/user:ring-white sm:size-28',
+                              busy === u.user.Id &&
+                                'animate-pulse ring-brand-400'
+                            )}
+                          />
+                          {u.needs === 'pin' && (
+                            <span className="absolute bottom-0 right-0 flex size-7 items-center justify-center rounded-full bg-gray-900 text-sm ring-2 ring-[--background]">
+                              <BiLockAlt aria-label="Has a PIN" />
+                            </span>
+                          )}
+                        </span>
+                        <span className="w-full truncate text-center text-sm font-medium">
+                          {u.user.Name}
+                        </span>
+                      </span>
+                    </motion.button>
+                  ))}
+                </motion.div>
+                <ErrorLine error={error} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </LayoutGroup>
+      </div>
     </Screen>
   );
 }
