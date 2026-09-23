@@ -20,9 +20,7 @@ function findTarget(ids: readonly string[]): HTMLElement | null {
       `#${CSS.escape(id)}`
     );
     for (const el of matches) {
-      // The configure page's MenuTabs renders a mobile accordion and a desktop
-      // tab strip with the same ids: only one of the two is laid out, and
-      // inactive panels are marked inert. `closest` includes `el` itself.
+      // Skip hidden matches and inert (closing) MenuTabs panels.
       if (el.offsetParent === null) continue;
       if (el.closest('[inert]')) continue;
       return el;

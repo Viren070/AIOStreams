@@ -756,41 +756,56 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Clearing means signing out; resetting to the baseline writes no draft.
-  const safeSetUserData = (
-    data: ((prev: UserData) => UserData | null) | null
-  ) => {
-    const reset = () => {
-      baselineRef.current = anonBaselineRef.current;
-      return anonBaselineRef.current;
-    };
-    if (data === null) {
-      setUserData(reset);
-    } else {
-      setUserData((prev) => {
-        const result = data(prev);
-        return result === null ? reset() : result;
-      });
-    }
-  };
+  const safeSetUserData = React.useCallback(
+    (data: ((prev: UserData) => UserData | null) | null) => {
+      const reset = () => {
+        baselineRef.current = anonBaselineRef.current;
+        return anonBaselineRef.current;
+      };
+      if (data === null) {
+        setUserData(reset);
+      } else {
+        setUserData((prev) => {
+          const result = data(prev);
+          return result === null ? reset() : result;
+        });
+      }
+    },
+    []
+  );
+
+  const value = React.useMemo(
+    () => ({
+      userData,
+      setUserData: safeSetUserData,
+      uuid,
+      setUuid,
+      password,
+      setPassword,
+      encryptedPassword,
+      setEncryptedPassword,
+      setBaseline,
+      pendingDraft: applicableDraft,
+      restoreDraft,
+      discardDraft,
+      disableDrafts,
+    }),
+    [
+      userData,
+      safeSetUserData,
+      uuid,
+      password,
+      encryptedPassword,
+      setBaseline,
+      applicableDraft,
+      restoreDraft,
+      discardDraft,
+      disableDrafts,
+    ]
+  );
 
   return (
-    <UserDataContext.Provider
-      value={{
-        userData,
-        setUserData: safeSetUserData,
-        uuid,
-        setUuid,
-        password,
-        setPassword,
-        encryptedPassword,
-        setEncryptedPassword,
-        setBaseline,
-        pendingDraft: applicableDraft,
-        restoreDraft,
-        discardDraft,
-        disableDrafts,
-      }}
-    >
+    <UserDataContext.Provider value={value}>
       {children}
     </UserDataContext.Provider>
   );

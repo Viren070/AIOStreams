@@ -1,4 +1,10 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, {
+  useState,
+  useMemo,
+  useEffect,
+  useRef,
+  useCallback,
+} from 'react';
 import { CatalogModification } from '@aiostreams/core';
 import { useUserData } from '@/context/userData';
 import { SettingsCard } from '../../../shared/settings-card';
@@ -17,7 +23,14 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { MdRefresh } from 'react-icons/md';
-import { SortableCatalogItem } from './sortable-catalog-item';
+import {
+  SortableCatalogItem,
+  type CatalogUpdate,
+} from './sortable-catalog-item';
+
+const MODIFIERS = [restrictToVerticalAxis];
+
+const catalogKey = (c: CatalogModification) => `${c.id}-${c.type}`;
 
 export function CatalogSettingsCard({
   loading,
@@ -33,17 +46,10 @@ export function CatalogSettingsCard({
     const currentCount = userData.mergedCatalogs?.length ?? 0;
     if (currentCount !== mergedCatalogsCountRef.current) {
       mergedCatalogsCountRef.current = currentCount;
-      // Trigger refresh when merged catalog count changes (added or deleted)
       fetchCatalogsData(true);
     }
   }, [userData.mergedCatalogs?.length, fetchCatalogsData]);
 
-  const capitalise = (str: string | undefined) => {
-    if (!str) return '';
-    return str.charAt(0).toUpperCase() + str.slice(1);
-  };
-
-  // Build set of source catalog IDs that are part of enabled merged catalogs
   const sourceCatalogsInMergedCatalogs = useMemo(() => {
     const set = new Set<string>();
     const enabledMerged = (userData.mergedCatalogs || []).filter(
@@ -62,7 +68,67 @@ export function CatalogSettingsCard({
     return set;
   }, [userData.mergedCatalogs]);
 
-  // DND handlers
+  const visibleCatalogs = useMemo(
+    () =>
+      (userData.catalogModifications ?? []).filter(
+        (catalog) => !sourceCatalogsInMergedCatalogs.has(catalogKey(catalog))
+      ),
+    [userData.catalogModifications, sourceCatalogsInMergedCatalogs]
+  );
+  // dnd-kit re-renders every sortable row when this array's identity changes
+  const sortableIds = useMemo(
+    () => visibleCatalogs.map(catalogKey),
+    [visibleCatalogs]
+  );
+
+  const updateCatalog = useCallback(
+    (id: string, type: string, update: CatalogUpdate) => {
+      setUserData((prev) => ({
+        ...prev,
+        catalogModifications: prev.catalogModifications?.map((c) =>
+          c.id === id && c.type === type ? update(c) : c
+        ),
+      }));
+    },
+    [setUserData]
+  );
+
+  const moveCatalog = useCallback(
+    (id: string, type: string, to: 'top' | 'bottom') => {
+      setUserData((prev) => {
+        if (!prev.catalogModifications) return prev;
+        const index = prev.catalogModifications.findIndex(
+          (c) => c.id === id && c.type === type
+        );
+        const last = prev.catalogModifications.length - 1;
+        if (index < 0 || index === (to === 'top' ? 0 : last)) return prev;
+        const newMods = [...prev.catalogModifications];
+        const [item] = newMods.splice(index, 1);
+        if (to === 'top') newMods.unshift(item);
+        else newMods.push(item);
+        return { ...prev, catalogModifications: newMods };
+      });
+    },
+    [setUserData]
+  );
+
+  const toggleCatalog = useCallback(
+    (id: string, type: string, enabled: boolean) => {
+      setUserData((prev) => ({
+        ...prev,
+        catalogModifications: prev.catalogModifications?.map((c) =>
+          c.id === id && c.type === type ? { ...c, enabled } : c
+        ),
+        ...(id.startsWith('aiostreams.merged.') && {
+          mergedCatalogs: prev.mergedCatalogs?.map((mc) =>
+            mc.id === id ? { ...mc, enabled } : mc
+          ),
+        }),
+      }));
+    },
+    [setUserData]
+  );
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(TouchSensor, {
@@ -160,59 +226,31 @@ export function CatalogSettingsCard({
           :/
         </p>
       )}
-      {userData.catalogModifications &&
-        userData.catalogModifications.length > 0 && (
-          <DndContext
-            modifiers={[restrictToVerticalAxis]}
-            onDragEnd={handleDragEnd}
-            onDragStart={handleDragStart}
-            sensors={sensors}
+      {visibleCatalogs.length > 0 && (
+        <DndContext
+          modifiers={MODIFIERS}
+          onDragEnd={handleDragEnd}
+          onDragStart={handleDragStart}
+          sensors={sensors}
+        >
+          <SortableContext
+            items={sortableIds}
+            strategy={verticalListSortingStrategy}
           >
-            <SortableContext
-              items={(userData.catalogModifications || []).map(
-                (c) => `${c.id}-${c.type}`
-              )}
-              strategy={verticalListSortingStrategy}
-            >
-              <ul className="space-y-2">
-                {(userData.catalogModifications || [])
-                  .filter(
-                    (catalog) =>
-                      !sourceCatalogsInMergedCatalogs.has(
-                        `${catalog.id}-${catalog.type}`
-                      )
-                  )
-                  .map((catalog: CatalogModification) => (
-                    <SortableCatalogItem
-                      key={`${catalog.id}-${catalog.type}`}
-                      catalog={catalog}
-                      onToggleEnabled={(enabled) => {
-                        setUserData((prev) => {
-                          const newState: Partial<typeof prev> = {
-                            catalogModifications:
-                              prev.catalogModifications?.map((c) =>
-                                c.id === catalog.id && c.type === catalog.type
-                                  ? { ...c, enabled }
-                                  : c
-                              ),
-                          };
-                          // If this is a merged catalog, also update mergedCatalogs state
-                          if (catalog.id.startsWith('aiostreams.merged.')) {
-                            newState.mergedCatalogs = prev.mergedCatalogs?.map(
-                              (mc) =>
-                                mc.id === catalog.id ? { ...mc, enabled } : mc
-                            );
-                          }
-                          return { ...prev, ...newState };
-                        });
-                      }}
-                      capitalise={capitalise}
-                    />
-                  ))}
-              </ul>
-            </SortableContext>
-          </DndContext>
-        )}
+            <ul className="space-y-2">
+              {visibleCatalogs.map((catalog) => (
+                <SortableCatalogItem
+                  key={catalogKey(catalog)}
+                  catalog={catalog}
+                  onUpdate={updateCatalog}
+                  onMove={moveCatalog}
+                  onToggleEnabled={toggleCatalog}
+                />
+              ))}
+            </ul>
+          </SortableContext>
+        </DndContext>
+      )}
     </SettingsCard>
   );
 }

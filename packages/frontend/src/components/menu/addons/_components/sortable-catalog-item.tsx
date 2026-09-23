@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { memo, useState } from 'react';
 import { CatalogModification } from '@aiostreams/core';
-import { useUserData } from '@/context/userData';
+import type {
+  DraggableAttributes,
+  DraggableSyntheticListeners,
+} from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { IconButton, Button } from '../../../ui/button';
@@ -28,15 +31,29 @@ import { FaArrowLeftLong, FaArrowRightLong, FaShuffle } from 'react-icons/fa6';
 import { PiStarFill, PiStarBold } from 'react-icons/pi';
 import { toast } from 'sonner';
 
-export function SortableCatalogItem({
-  catalog,
-  onToggleEnabled,
-  capitalise,
-}: {
+export type CatalogUpdate = (
+  catalog: CatalogModification
+) => CatalogModification;
+
+const capitalise = (str: string | undefined) =>
+  str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
+
+const catalogOrderStates = ['default', 'shuffle', 'reverse'] as const;
+const orderState = (c: CatalogModification) =>
+  c.shuffle ? 'shuffle' : c.reverse ? 'reverse' : 'default';
+
+// Keyed by id and type so the parent can pass the same callbacks to every row.
+interface CatalogItemProps {
   catalog: CatalogModification;
-  onToggleEnabled: (enabled: boolean) => void;
-  capitalise: (str: string | undefined) => string;
-}) {
+  onUpdate: (id: string, type: string, update: CatalogUpdate) => void;
+  onMove: (id: string, type: string, to: 'top' | 'bottom') => void;
+  onToggleEnabled: (id: string, type: string, enabled: boolean) => void;
+}
+
+// useSortable re-renders all rows on each drag change; the body stays memoised
+export const SortableCatalogItem = memo(function SortableCatalogItem(
+  props: CatalogItemProps
+) {
   const {
     attributes,
     listeners,
@@ -45,76 +62,58 @@ export function SortableCatalogItem({
     transition,
     isDragging,
   } = useSortable({
-    id: `${catalog.id}-${catalog.type}`,
+    id: `${props.catalog.id}-${props.catalog.type}`,
   });
 
-  const { setUserData } = useUserData();
+  return (
+    <li
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+      }}
+    >
+      <CatalogItemBody
+        {...props}
+        attributes={attributes}
+        listeners={listeners}
+      />
+    </li>
+  );
+});
 
-  // Check if this is a merged catalog
+const CatalogItemBody = memo(function CatalogItemBody({
+  catalog,
+  onUpdate,
+  onMove,
+  onToggleEnabled,
+  attributes,
+  listeners,
+}: CatalogItemProps & {
+  attributes: DraggableAttributes;
+  listeners: DraggableSyntheticListeners;
+}) {
   const isMergedCatalog = catalog.id.startsWith('aiostreams.merged.');
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
+  const update = (fn: CatalogUpdate) => onUpdate(catalog.id, catalog.type, fn);
+  const moveToTop = () => onMove(catalog.id, catalog.type, 'top');
+  const moveToBottom = () => onMove(catalog.id, catalog.type, 'bottom');
+  const toggleEnabled = (enabled: boolean) =>
+    onToggleEnabled(catalog.id, catalog.type, enabled);
 
-  const moveToTop = () => {
-    setUserData((prev) => {
-      if (!prev.catalogModifications) return prev;
-      const index = prev.catalogModifications.findIndex(
-        (c) => c.id === catalog.id && c.type === catalog.type
-      );
-      if (index <= 0) return prev;
-      const newMods = [...prev.catalogModifications];
-      const [item] = newMods.splice(index, 1);
-      newMods.unshift(item);
-      return { ...prev, catalogModifications: newMods };
-    });
-  };
-
-  const moveToBottom = () => {
-    setUserData((prev) => {
-      if (!prev.catalogModifications) return prev;
-      const index = prev.catalogModifications.findIndex(
-        (c) => c.id === catalog.id && c.type === catalog.type
-      );
-      if (index === prev.catalogModifications.length - 1) return prev;
-      const newMods = [...prev.catalogModifications];
-      const [item] = newMods.splice(index, 1);
-      newMods.push(item);
-      return { ...prev, catalogModifications: newMods };
-    });
-  };
-
-  const currentState = catalog.shuffle
-    ? 'shuffle'
-    : catalog.reverse
-      ? 'reverse'
-      : 'default';
-  const catalogOrderStates = ['default', 'shuffle', 'reverse'];
+  const currentState = orderState(catalog);
   const cycleCatalogOrderState = () => {
-    setUserData((prev) => {
-      const currentModification = prev.catalogModifications?.find(
-        (c) => c.id === catalog.id && c.type === catalog.type
-      );
-      if (!currentModification) return prev;
+    update((c) => {
       const newState =
         catalogOrderStates[
-          (catalogOrderStates.indexOf(currentState) + 1) %
+          (catalogOrderStates.indexOf(orderState(c)) + 1) %
             catalogOrderStates.length
         ];
       return {
-        ...prev,
-        catalogModifications: prev.catalogModifications?.map((c) =>
-          c.id === catalog.id && c.type === catalog.type
-            ? {
-                ...c,
-                shuffle: newState === 'shuffle',
-                reverse: newState === 'reverse',
-              }
-            : c
-        ),
+        ...c,
+        shuffle: newState === 'shuffle',
+        reverse: newState === 'reverse',
       };
     });
   };
@@ -124,40 +123,26 @@ export function SortableCatalogItem({
   const [newType, setNewType] = useState(
     catalog.overrideType || catalog.type || ''
   );
-  const dynamicIconSize = `text-xl h-8 w-8 lg:text-2xl lg:h-10 lg:w-10`;
+  const controlIconSize = 'text-xl h-8 w-8 md:text-2xl md:h-10 md:w-10';
 
   const handleNameAndTypeEdit = () => {
     if (!newType) {
       toast.error('Type cannot be empty');
       return;
     }
-    setUserData((prev) => ({
-      ...prev,
-      catalogModifications: prev.catalogModifications?.map((c) =>
-        c.id === catalog.id && c.type === catalog.type
-          ? {
-              ...c,
-              name: newName,
-              overrideType: newType,
-            }
-          : c
-      ),
-    }));
+    update((c) => ({ ...c, name: newName, overrideType: newType }));
     setModalOpen(false);
   };
 
   return (
-    <li ref={setNodeRef} style={style}>
+    <>
       <div className="relative px-2.5 py-2 bg-[var(--background)] rounded-[--radius-md] border overflow-hidden">
-        {/* Full-height drag handle - rounded vertical oval with spacing */}
         <div
           className={`absolute top-2 bottom-2 left-2 w-5 bg-[var(--muted)] md:bg-[var(--subtle)] md:hover:bg-[var(--subtle-highlight)] cursor-move flex-shrink-0 rounded-full`}
           {...{ ...attributes, ...listeners }}
         />
 
-        {/* Content wrapper */}
         <div className="pl-8 pr-3 py-3">
-          {/* Header section */}
           <div className="mb-4 md:mb-6 md:pr-40">
             <div className="flex items-center gap-2 mb-1">
               <h3 className="text-sm md:text-base font-medium line-clamp-1 truncate text-ellipsis">
@@ -177,14 +162,11 @@ export function SortableCatalogItem({
               {isMergedCatalog ? 'Merged Catalog' : catalog.addonName}
             </p>
 
-            {/* Mobile Controls Row - only visible on small screens */}
-            <div className="flex md:hidden items-center justify-between">
-              {/* Position controls - aligned left */}
-
+            <div className="flex items-center justify-between md:justify-end md:gap-2 md:absolute md:top-4 md:right-4">
               <div className="flex items-center gap-1">
                 <IconButton
                   rounded
-                  className={dynamicIconSize}
+                  className={controlIconSize}
                   icon={<LuChevronsUp />}
                   intent="primary-subtle"
                   onClick={moveToTop}
@@ -192,34 +174,7 @@ export function SortableCatalogItem({
                 />
                 <IconButton
                   rounded
-                  className={dynamicIconSize}
-                  icon={<LuChevronsDown />}
-                  intent="primary-subtle"
-                  onClick={moveToBottom}
-                  title="Move to bottom"
-                />
-              </div>
-
-              {/* Enable/disable toggle */}
-              <Switch
-                value={catalog.enabled ?? true}
-                onValueChange={onToggleEnabled}
-                moreHelp="Enable or disable this catalog from being used"
-              />
-            </div>
-
-            {/* Desktop Controls - only visible on medium screens and up */}
-            <div className="hidden md:flex items-center justify-end gap-2 absolute top-4 right-4">
-              <div className="flex items-center gap-1">
-                <IconButton
-                  rounded
-                  icon={<LuChevronsUp />}
-                  intent="primary-subtle"
-                  onClick={moveToTop}
-                  title="Move to top"
-                />
-                <IconButton
-                  rounded
+                  className={controlIconSize}
                   icon={<LuChevronsDown />}
                   intent="primary-subtle"
                   onClick={moveToBottom}
@@ -228,12 +183,11 @@ export function SortableCatalogItem({
               </div>
               <Switch
                 value={catalog.enabled ?? true}
-                onValueChange={onToggleEnabled}
+                onValueChange={toggleEnabled}
                 moreHelp="Enable or disable this catalog from being used"
               />
             </div>
           </div>{' '}
-          {/* Settings section */}
           <Accordion type="single" collapsible>
             <AccordionItem value="settings">
               <AccordionTrigger>
@@ -242,9 +196,7 @@ export function SortableCatalogItem({
                     Settings
                   </h4>
 
-                  {/* Active modifier icons */}
                   <div className="flex items-center gap-2 mr-2">
-                    {/* Merged catalog indicator */}
                     {isMergedCatalog && (
                       <Tooltip
                         trigger={
@@ -257,7 +209,6 @@ export function SortableCatalogItem({
                       </Tooltip>
                     )}
 
-                    {/* Shuffle/reverse toggle - hidden for merged catalogs */}
                     <Tooltip
                       trigger={
                         <IconButton
@@ -284,7 +235,6 @@ export function SortableCatalogItem({
                         currentState.slice(1)}
                     </Tooltip>
 
-                    {/* RPDB toggle - hidden for merged catalogs */}
                     <Tooltip
                       trigger={
                         <IconButton
@@ -300,17 +250,9 @@ export function SortableCatalogItem({
                           rounded
                           onClick={(e) => {
                             e.stopPropagation();
-                            setUserData((prev) => ({
-                              ...prev,
-                              catalogModifications:
-                                prev.catalogModifications?.map((c) =>
-                                  c.id === catalog.id && c.type === catalog.type
-                                    ? {
-                                        ...c,
-                                        usePosterService: !c.usePosterService,
-                                      }
-                                    : c
-                                ),
+                            update((c) => ({
+                              ...c,
+                              usePosterService: !c.usePosterService,
                             }));
                           }}
                         />
@@ -336,18 +278,9 @@ export function SortableCatalogItem({
                             rounded
                             onClick={(e) => {
                               e.stopPropagation();
-                              setUserData((prev) => ({
-                                ...prev,
-                                catalogModifications:
-                                  prev.catalogModifications?.map((c) =>
-                                    c.id === catalog.id &&
-                                    c.type === catalog.type
-                                      ? {
-                                          ...c,
-                                          onlyOnDiscover: !c.onlyOnDiscover,
-                                        }
-                                      : c
-                                  ),
+                              update((c) => ({
+                                ...c,
+                                onlyOnDiscover: !c.onlyOnDiscover,
                               }));
                             }}
                           />
@@ -375,36 +308,24 @@ export function SortableCatalogItem({
                             rounded
                             onClick={(e) => {
                               e.stopPropagation();
-                              setUserData((prev) => ({
-                                ...prev,
-                                catalogModifications:
-                                  prev.catalogModifications?.map((c) => {
-                                    if (
-                                      c.id !== catalog.id ||
-                                      c.type !== catalog.type
-                                    )
-                                      return c;
-                                    // 3-state cycle: normal -> onlyOnSearch -> disableSearch -> normal
-                                    if (!c.onlyOnSearch && !c.disableSearch) {
-                                      // normal -> onlyOnSearch
-                                      return {
-                                        ...c,
-                                        onlyOnSearch: true,
-                                        onlyOnDiscover: false,
-                                      };
-                                    } else if (c.onlyOnSearch) {
-                                      // onlyOnSearch -> disableSearch
-                                      return {
-                                        ...c,
-                                        onlyOnSearch: false,
-                                        disableSearch: true,
-                                      };
-                                    } else {
-                                      // disableSearch -> normal
-                                      return { ...c, disableSearch: false };
-                                    }
-                                  }),
-                              }));
+                              update((c) => {
+                                // cycles normal -> search only -> search disabled
+                                if (!c.onlyOnSearch && !c.disableSearch) {
+                                  return {
+                                    ...c,
+                                    onlyOnSearch: true,
+                                    onlyOnDiscover: false,
+                                  };
+                                } else if (c.onlyOnSearch) {
+                                  return {
+                                    ...c,
+                                    onlyOnSearch: false,
+                                    disableSearch: true,
+                                  };
+                                } else {
+                                  return { ...c, disableSearch: false };
+                                }
+                              });
                             }}
                           />
                         }
@@ -421,28 +342,17 @@ export function SortableCatalogItem({
               </AccordionTrigger>
               <AccordionContent>
                 <div className="space-y-4">
-                  {/* Large screens: horizontal layout, Medium and below: vertical layout */}
                   <div className="flex flex-col gap-4">
-                    {/* Shuffle/Reverse/RPDB settings - hidden for merged catalogs */}
-
                     <Switch
                       label="Shuffle"
                       help="Randomize the order of catalog items on each request"
                       side="right"
                       value={catalog.shuffle ?? false}
                       onValueChange={(shuffle) => {
-                        setUserData((prev) => ({
-                          ...prev,
-                          catalogModifications: prev.catalogModifications?.map(
-                            (c) =>
-                              c.id === catalog.id && c.type === catalog.type
-                                ? {
-                                    ...c,
-                                    shuffle,
-                                    reverse: shuffle ? false : c.reverse,
-                                  }
-                                : c
-                          ),
+                        update((c) => ({
+                          ...c,
+                          shuffle,
+                          reverse: shuffle ? false : c.reverse,
                         }));
                       }}
                     />
@@ -453,18 +363,10 @@ export function SortableCatalogItem({
                       side="right"
                       value={catalog.reverse ?? false}
                       onValueChange={(reverse) => {
-                        setUserData((prev) => ({
-                          ...prev,
-                          catalogModifications: prev.catalogModifications?.map(
-                            (c) =>
-                              c.id === catalog.id && c.type === catalog.type
-                                ? {
-                                    ...c,
-                                    reverse,
-                                    shuffle: reverse ? false : c.shuffle,
-                                  }
-                                : c
-                          ),
+                        update((c) => ({
+                          ...c,
+                          reverse,
+                          shuffle: reverse ? false : c.shuffle,
                         }));
                       }}
                     />
@@ -487,15 +389,7 @@ export function SortableCatalogItem({
                           step={1}
                           max={24}
                           onValueChange={(value) => {
-                            setUserData((prev) => ({
-                              ...prev,
-                              catalogModifications:
-                                prev.catalogModifications?.map((c) =>
-                                  c.id === catalog.id && c.type === catalog.type
-                                    ? { ...c, persistShuffleFor: value }
-                                    : c
-                                ),
-                            }));
+                            update((c) => ({ ...c, persistShuffleFor: value }));
                           }}
                         />
                       </div>
@@ -507,15 +401,7 @@ export function SortableCatalogItem({
                       side="right"
                       value={catalog.usePosterService ?? false}
                       onValueChange={(usePosterService) => {
-                        setUserData((prev) => ({
-                          ...prev,
-                          catalogModifications: prev.catalogModifications?.map(
-                            (c) =>
-                              c.id === catalog.id && c.type === catalog.type
-                                ? { ...c, usePosterService }
-                                : c
-                          ),
-                        }));
+                        update((c) => ({ ...c, usePosterService }));
                       }}
                     />
 
@@ -527,20 +413,12 @@ export function SortableCatalogItem({
                         value={catalog.onlyOnDiscover ?? false}
                         disabled={catalog.onlyOnSearch}
                         onValueChange={(onlyOnDiscover) => {
-                          setUserData((prev) => ({
-                            ...prev,
-                            catalogModifications:
-                              prev.catalogModifications?.map((c) =>
-                                c.id === catalog.id && c.type === catalog.type
-                                  ? {
-                                      ...c,
-                                      onlyOnDiscover,
-                                      onlyOnSearch: onlyOnDiscover
-                                        ? false
-                                        : c.onlyOnSearch,
-                                    }
-                                  : c
-                              ),
+                          update((c) => ({
+                            ...c,
+                            onlyOnDiscover,
+                            onlyOnSearch: onlyOnDiscover
+                              ? false
+                              : c.onlyOnSearch,
                           }));
                         }}
                       />
@@ -555,20 +433,12 @@ export function SortableCatalogItem({
                           value={catalog.onlyOnSearch ?? false}
                           disabled={catalog.disableSearch}
                           onValueChange={(onlyOnSearch) => {
-                            setUserData((prev) => ({
-                              ...prev,
-                              catalogModifications:
-                                prev.catalogModifications?.map((c) =>
-                                  c.id === catalog.id && c.type === catalog.type
-                                    ? {
-                                        ...c,
-                                        onlyOnSearch,
-                                        onlyOnDiscover: onlyOnSearch
-                                          ? false
-                                          : c.onlyOnDiscover,
-                                      }
-                                    : c
-                                ),
+                            update((c) => ({
+                              ...c,
+                              onlyOnSearch,
+                              onlyOnDiscover: onlyOnSearch
+                                ? false
+                                : c.onlyOnDiscover,
                             }));
                           }}
                         />
@@ -578,20 +448,12 @@ export function SortableCatalogItem({
                           side="right"
                           value={catalog.disableSearch ?? false}
                           onValueChange={(disableSearch) => {
-                            setUserData((prev) => ({
-                              ...prev,
-                              catalogModifications:
-                                prev.catalogModifications?.map((c) =>
-                                  c.id === catalog.id && c.type === catalog.type
-                                    ? {
-                                        ...c,
-                                        disableSearch,
-                                        onlyOnSearch: disableSearch
-                                          ? false
-                                          : c.onlyOnSearch,
-                                      }
-                                    : c
-                                ),
+                            update((c) => ({
+                              ...c,
+                              disableSearch,
+                              onlyOnSearch: disableSearch
+                                ? false
+                                : c.onlyOnSearch,
                             }));
                           }}
                         />
@@ -605,7 +467,6 @@ export function SortableCatalogItem({
         </div>
       </div>
 
-      {/* Name edit modal */}
       <Modal
         open={modalOpen}
         onOpenChange={setModalOpen}
@@ -637,6 +498,6 @@ export function SortableCatalogItem({
           </Button>
         </form>
       </Modal>
-    </li>
+    </>
   );
-}
+});
