@@ -171,6 +171,17 @@ function noticeStreamsOf(
   );
 }
 
+/** Clients open this as a link, so nothing but a web page gets through. */
+function webUrl(url: string | undefined): string | undefined {
+  if (!url) return undefined;
+  try {
+    const { protocol } = new URL(url);
+    return protocol === 'http:' || protocol === 'https:' ? url : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function showErrors(ctx: JellyfinRequestContext): boolean {
   return (
     !ctx.userData.hideErrors &&
@@ -300,24 +311,23 @@ async function resolveUncached(
     label: string,
     type: string,
     text: { name: string; description: string },
-    addon = ''
+    extra: { addon?: string; externalUrl?: string } = {}
   ) =>
     sources.push(
       noticeRecordFrom(ctx.uuid, `notice|${itemId}|${sources.length}`, label, {
         ...text,
-        addon,
+        addon: extra.addon ?? '',
+        externalUrl: extra.externalUrl,
         type,
       })
     );
 
   for (const stream of noticeStreamsOf(all, playable)) {
     const formatted = await format(stream);
-    notice(
-      labelFrom(formatted, stream),
-      stream.type,
-      formatted,
-      stream.addon?.name ?? ''
-    );
+    notice(labelFrom(formatted, stream), stream.type, formatted, {
+      addon: stream.addon?.name ?? '',
+      externalUrl: webUrl(stream.externalUrl),
+    });
   }
   if (showErrors(ctx)) {
     for (const error of streamsRes?.errors ?? []) {

@@ -197,7 +197,7 @@ export function noticeRecordFrom(
   label: string,
   extension: Pick<
     AiostreamsSourceExtension,
-    'name' | 'description' | 'addon' | 'type'
+    'name' | 'description' | 'addon' | 'type' | 'externalUrl'
   >
 ): MediaSourceRecord {
   return {

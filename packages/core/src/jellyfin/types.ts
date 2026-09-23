@@ -52,6 +52,7 @@ export interface AiostreamsSourceExtension {
   indexer?: string;
   mediaInfoQuality?: string;
   filename?: string;
+  externalUrl?: string;
   type: string;
 }
 
