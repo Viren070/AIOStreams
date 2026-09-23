@@ -39,6 +39,18 @@ function sanitiseHeaderValue(value: string): string {
   return value.replace(/[^\t\x20-\x7e]/g, '');
 }
 
+const HOP_BY_HOP = [
+  'connection',
+  'upgrade',
+  'keep-alive',
+  'proxy-authenticate',
+  'proxy-authorization',
+  'te',
+  'trailers',
+  'transfer-encoding',
+  'proxy-connection',
+];
+
 // A helper to iterate over the headers object
 function sanitiseHeaders(
   headers: Record<string, string | string[] | number | undefined>
@@ -46,7 +58,7 @@ function sanitiseHeaders(
   const sanitised: Record<string, string | string[]> = {};
 
   for (const [key, value] of Object.entries(headers)) {
-    if (value === undefined) {
+    if (value === undefined || HOP_BY_HOP.includes(key.toLowerCase())) {
       continue;
     }
 
@@ -101,16 +113,7 @@ function copyHeaders(headers: Record<string, string | string[] | undefined>) {
     'cf-pseudo-ipv4',
     'x-forwarded-proto',
 
-    // Hop-by-hop headers
-    'connection',
-    'upgrade',
-    'keep-alive',
-    'proxy-authenticate',
-    'proxy-authorization',
-    'te',
-    'trailers',
-    'transfer-encoding',
-    'proxy-connection',
+    ...HOP_BY_HOP,
   ]);
   return Object.fromEntries(
     Object.entries(headers).filter(([key]) => !exclude.has(key))
