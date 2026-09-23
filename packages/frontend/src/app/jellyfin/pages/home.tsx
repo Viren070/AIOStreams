@@ -10,7 +10,7 @@ import {
   useUpcoming,
   useViews,
 } from '../lib/queries';
-import { cardShape, landscapeUrl, posterUrl } from '../lib/images';
+import { cardShape, landscapeUrls, posterUrl } from '../lib/images';
 import {
   clock,
   dayLabel,
@@ -141,7 +141,7 @@ function EpisodeRow({
                   startMs: ticksToMs(item.UserData?.PlaybackPositionTicks),
                 })
               }
-              image={landscapeUrl(client, item, { maxWidth: 640 })}
+              image={landscapeUrls(client, item, { maxWidth: 640 })}
               title={itemTitle(item)}
               subtitle={itemSubtitle(item)}
               meta={
@@ -170,7 +170,7 @@ function UpcomingRow() {
           <WideCard
             href={href(itemPath(item))}
             unavailable
-            image={landscapeUrl(client, item, { maxWidth: 640 })}
+            image={landscapeUrls(client, item, { maxWidth: 640 })}
             title={itemTitle(item)}
             subtitle={itemSubtitle(item)}
             badge={

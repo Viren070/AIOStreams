@@ -33,6 +33,7 @@ import {
   backdropUrl,
   cardShape,
   landscapeUrl,
+  landscapeUrls,
   logoUrl,
   posterUrl,
 } from '../lib/images';
@@ -606,7 +607,7 @@ function Seasons({
                       </Badge>
                     ) : undefined
                   }
-                  image={landscapeUrl(client, episode, { maxWidth: 640 })}
+                  image={landscapeUrls(client, episode, { maxWidth: 640 })}
                   title={seasonEpisodeTitle(episode)}
                   subtitle={episodeLine(episode)}
                   description={episode.Overview}

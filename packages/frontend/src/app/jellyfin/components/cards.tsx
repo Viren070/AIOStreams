@@ -3,22 +3,26 @@ import { BiCheck, BiPlay } from 'react-icons/bi';
 import { cn } from '@/components/ui/core/styling';
 import { usePosterLines } from '../lib/settings';
 
+/** A list is tried in order, moving on when an image fails to load. */
 function Artwork({
   src,
   alt,
   className,
 }: {
-  src: string | null;
+  src: string | string[] | null;
   alt: string;
   className?: string;
 }) {
-  const [failed, setFailed] = React.useState(false);
+  const sources = Array.isArray(src) ? src : src ? [src] : [];
+  const key = sources.join('|');
+  const [attempt, setAttempt] = React.useState(0);
   const [loaded, setLoaded] = React.useState(false);
   React.useEffect(() => {
-    setFailed(false);
+    setAttempt(0);
     setLoaded(false);
-  }, [src]);
-  if (!src || failed) {
+  }, [key]);
+  const current = sources[attempt];
+  if (!current) {
     return (
       <div
         className={cn(
@@ -32,11 +36,11 @@ function Artwork({
   }
   return (
     <img
-      src={src}
+      src={current}
       alt={alt}
       loading="lazy"
       onLoad={() => setLoaded(true)}
-      onError={() => setFailed(true)}
+      onError={() => setAttempt((n) => n + 1)}
       className={cn(
         'absolute inset-0 h-full w-full object-cover transition-[transform,opacity] duration-500',
         loaded ? 'opacity-100' : 'opacity-0',
@@ -76,7 +80,7 @@ const SHAPE_CLASS: Record<CardShape, string> = {
 export interface PosterCardProps {
   href: string;
   shape?: CardShape;
-  image: string | null;
+  image: string | string[] | null;
   title: string;
   subtitle?: string;
   watched?: boolean;
@@ -137,7 +141,7 @@ export function PosterCard(props: PosterCardProps) {
 export interface WideCardProps {
   href?: string;
   onClick?: () => void;
-  image: string | null;
+  image: string | string[] | null;
   title: string;
   subtitle?: string;
   /** A couple of lines under the subtitle, such as an episode's synopsis. */

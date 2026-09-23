@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { useSession } from '../lib/session';
-import { landscapeUrl } from '../lib/images';
+import { landscapeUrls } from '../lib/images';
 import { clock, itemTitle, ticksToMs } from '../lib/format';
 import { href, itemPath } from '../lib/paths';
 import { MediaRow } from './media-row';
@@ -29,7 +29,7 @@ function SessionCard({ session }: { session: SessionInfoDto }) {
   return (
     <WideCard
       href={href(itemPath(item))}
-      image={landscapeUrl(client, item, { maxWidth: 640 })}
+      image={landscapeUrls(client, item, { maxWidth: 640 })}
       title={itemTitle(item)}
       subtitle={[session.UserName, session.DeviceName || session.Client]
         .filter(Boolean)

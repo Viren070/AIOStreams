@@ -50,24 +50,34 @@ export function landscapeUrl(
   item: BaseItemDto,
   size?: Size
 ): string | null {
-  if (item.Type === 'Episode') {
-    return (
-      image(client, item.Id, 'Primary', item.ImageTags?.Primary, size) ??
-      image(
-        client,
-        item.ParentThumbItemId,
-        'Thumb',
-        item.ParentThumbImageTag,
-        size
-      ) ??
-      backdropUrl(client, item, size)
-    );
-  }
-  return (
-    image(client, item.Id, 'Thumb', item.ImageTags?.Thumb, size) ??
-    backdropUrl(client, item, size) ??
-    image(client, item.Id, 'Primary', item.ImageTags?.Primary, size)
-  );
+  return landscapeUrls(client, item, size)[0] ?? null;
+}
+
+/** Every landscape image, best first. */
+export function landscapeUrls(
+  client: JellyfinClient,
+  item: BaseItemDto,
+  size?: Size
+): string[] {
+  const candidates =
+    item.Type === 'Episode'
+      ? [
+          image(client, item.Id, 'Primary', item.ImageTags?.Primary, size),
+          image(
+            client,
+            item.ParentThumbItemId,
+            'Thumb',
+            item.ParentThumbImageTag,
+            size
+          ),
+          backdropUrl(client, item, size),
+        ]
+      : [
+          image(client, item.Id, 'Thumb', item.ImageTags?.Thumb, size),
+          backdropUrl(client, item, size),
+          image(client, item.Id, 'Primary', item.ImageTags?.Primary, size),
+        ];
+  return candidates.filter((url): url is string => !!url);
 }
 
 export function backdropUrl(
