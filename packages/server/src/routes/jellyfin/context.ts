@@ -73,7 +73,6 @@ export interface JellyfinRequestContext {
   baseUrl: string;
   token: string;
   client: ClientInfo;
-  preAuthenticated: boolean;
   build: ItemBuildContext;
   engine(): Promise<AIOStreams>;
   /** The primary user's configuration, whose sinks are the ones trackers sync with. */
@@ -425,7 +424,6 @@ async function buildContext(
   encryptedPassword: string,
   token: string | undefined,
   client: ClientInfo,
-  preAuthenticated: boolean,
   personaKey: string,
   keyClaim?: ApiKeyClaim
 ): Promise<JellyfinRequestContext | typeof UNKNOWN_USER | null> {
@@ -444,7 +442,7 @@ async function buildContext(
     const named = keyClaim.userId
       ? userForId(uuid, userData, keyClaim.userId)
       : null;
-    // A key is minted from the shared link, so it must not open a PIN.
+    // A key goes to a tool, not a person, so it must not open a PIN.
     if (named === undefined || personaLocked(named)) return UNKNOWN_USER;
     persona = named;
   } else {
@@ -532,7 +530,6 @@ async function buildContext(
         k: persona?.id,
       }),
     client,
-    preAuthenticated,
     build: {
       serverId: serverIdValue,
       userId,
@@ -558,24 +555,28 @@ export const jellyfinContext: RequestHandler = async (req, res, next) => {
 
     let uuid: string | undefined;
     let encryptedPassword: string | undefined;
-    let preAuthenticated = false;
-    // Read on both branches: the path proves the credential, the token names the persona.
     const payload = token ? readToken(token) : null;
 
+    // A picker address only names the configuration; a token still signs in.
     if (params.uuid && params.encryptedPassword) {
       if (!isEncrypted(params.encryptedPassword)) {
         next('router');
         return;
       }
-      const resolved = await resolveUuid(params.uuid);
-      if (!resolved) {
+      if (!isConfigUuid(params.uuid)) {
         res.status(401).json({ Message: 'Unknown configuration' });
         return;
       }
-      uuid = resolved;
-      encryptedPassword = params.encryptedPassword;
-      preAuthenticated = true;
-    } else if (payload) {
+      req.jfMount = {
+        uuid: params.uuid,
+        encryptedPassword: params.encryptedPassword,
+      };
+    }
+    if (
+      payload &&
+      (!req.jfMount ||
+        payload.u.toLowerCase() === req.jfMount.uuid.toLowerCase())
+    ) {
       uuid = payload.u;
       encryptedPassword = payload.p;
     }
@@ -590,17 +591,14 @@ export const jellyfinContext: RequestHandler = async (req, res, next) => {
       return;
     }
 
-    // A token minted for another configuration lends it no persona or key.
-    const ownToken = payload && payload.u === uuid ? payload : null;
     const ctx = await buildContext(
       req,
       uuid,
       encryptedPassword,
       token,
       client,
-      preAuthenticated,
-      ownToken?.k ?? '',
-      ownToken?.a ? { id: ownToken.a, userId: urlUserId(req) } : undefined
+      payload?.k ?? '',
+      payload?.a ? { id: payload.a, userId: urlUserId(req) } : undefined
     );
     if (ctx === UNKNOWN_USER) {
       res.status(404).json({ Message: 'User not found' });
@@ -613,16 +611,6 @@ export const jellyfinContext: RequestHandler = async (req, res, next) => {
         return;
       }
       res.status(401).json({ Message: 'Invalid credentials' });
-      return;
-    }
-    // With an account PIN, the shared address alone only reaches sign-in.
-    if (
-      ctx.preAuthenticated &&
-      !ownToken &&
-      accountLocked(ctx.userData) &&
-      !isAnonymousOk(req.path)
-    ) {
-      res.status(401).json({ Message: 'Unauthorized' });
       return;
     }
     req.jf = ctx;
@@ -722,7 +710,6 @@ export async function contextFromCredentials(
       deviceId: 'unknown',
       version: '0',
     },
-    false,
     personaKey
   );
   return ctx === UNKNOWN_USER ? null : ctx;

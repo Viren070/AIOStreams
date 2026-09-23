@@ -120,18 +120,13 @@ function avatarTag(avatar: string | undefined): string | undefined {
   return avatar ? getSimpleTextHash(avatar).slice(0, 16) : undefined;
 }
 
-/**
- * `pickable` rows come from the pre-authenticated address, which already
- * proved the credential, so a client signs in with one tap and no password.
- * `forKey` rows make the primary user the administrator an API key acts as.
- */
+/** `forKey` rows make the primary user the administrator an API key acts as. */
 export function userDto(
   uuid: string,
   userData: Faced,
   persona: JellyfinPersona | null,
-  opts: { pickable?: boolean; forKey?: boolean } = {}
+  opts: { forKey?: boolean } = {}
 ) {
-  const pickable = opts.pickable ?? false;
   const locked = persona ? personaLocked(persona) : accountLocked(userData);
   const now = new Date().toISOString();
   const tag = avatarTag(
@@ -143,8 +138,8 @@ export function userDto(
     ServerName: serverName(),
     Id: personaUserId(uuid, persona?.id ?? ''),
     ...(tag ? { PrimaryImageTag: tag } : {}),
-    HasPassword: !pickable || locked,
-    HasConfiguredPassword: !pickable || locked,
+    HasPassword: true,
+    HasConfiguredPassword: true,
     HasConfiguredEasyPassword: false,
     EnableAutoLogin: !locked,
     LastLoginDate: now,
@@ -245,7 +240,7 @@ export async function authenticationResult(
 export function allUsers(
   uuid: string,
   userData: UserData,
-  opts: { pickable?: boolean; forKey?: boolean } = {}
+  opts: { forKey?: boolean } = {}
 ) {
   return [
     userDto(uuid, userData, null, opts),
@@ -275,82 +270,78 @@ function resolveSignIn(
 
 router.get(
   '/Users/Public',
-  jfOptional(async (req, res, ctx) => {
-    if (ctx?.preAuthenticated) {
-      res.json(allUsers(ctx.uuid, ctx.userData, { pickable: true }));
-      return;
-    }
-    // No configuration to list for, and an empty list is what makes a client
-    // show the manual form that takes a uuid or alias.
-    res.json([]);
+  jfOptional(async (req, res) => {
+    const mount = req.jfMount;
+    const userData = mount
+      ? await resolveConfig(mount.uuid, mount.encryptedPassword)
+      : null;
+    // Without a configuration to list for, an empty list is what makes a
+    // client show the manual form that takes a uuid or alias.
+    res.json(mount && userData ? allUsers(mount.uuid, userData) : []);
   })
 );
 
+/** `Pw` may be `<password>/<pin>`; the whole value is tried first, so a password holding a slash works. */
+async function checkPassword(
+  uuid: string,
+  pw: string
+): Promise<{ encryptedPassword: string; pin: string } | null> {
+  const slash = pw.lastIndexOf('/');
+  const candidates: [string, string][] = [[pw, '']];
+  if (slash > 0) candidates.push([pw.slice(0, slash), pw.slice(slash + 1)]);
+  for (const [password, pin] of candidates) {
+    const enc = encryptString(password);
+    if (!enc.success || !enc.data) throw new Error('Encryption failure');
+    if (await resolveConfig(uuid, enc.data))
+      return { encryptedPassword: enc.data, pin };
+  }
+  return null;
+}
+
 router.post(
   '/Users/AuthenticateByName',
-  jfOptional(async (req, res, ctx) => {
+  jfOptional(async (req, res) => {
     const body = (req.body ?? {}) as Record<string, unknown>;
     const username = String(body.Username ?? body.username ?? '').trim();
     const pw = String(
       body.Pw ?? body.pw ?? body.Password ?? body.password ?? ''
     );
+    const mount = req.jfMount;
 
-    let uuid: string | undefined;
-    let encryptedPassword: string | undefined;
-    let personaName: string;
-    // A PIN: all of `Pw` where the configuration is already proven, the part
-    // after the password on the bare mount.
-    let pin = pw;
-    if (ctx?.preAuthenticated) {
-      uuid = ctx.uuid;
-      encryptedPassword = ctx.encryptedPassword;
-      personaName = username;
-    } else {
-      // `<uuid or alias>/<persona>`; neither side can contain a slash.
-      const slash = username.lastIndexOf('/');
-      const account = slash >= 0 ? username.slice(0, slash) : username;
-      personaName = slash >= 0 ? username.slice(slash + 1) : '';
-      if (!account) {
-        res.status(401).json({
-          Message: 'Username (configuration UUID or alias) is required',
-        });
-        return;
-      }
-      if (isConfigUuid(account)) {
-        uuid = account;
-        // `<password>/<pin>`. The whole value is tried as the password first,
-        // so a password that itself holds a slash still signs in.
-        const slash = pw.lastIndexOf('/');
-        const candidates: [string, string][] = [[pw, '']];
-        if (slash > 0)
-          candidates.push([pw.slice(0, slash), pw.slice(slash + 1)]);
-        for (const [password, rest] of candidates) {
-          const enc = encryptString(password);
-          if (!enc.success || !enc.data) {
-            res.status(500).json({ Message: 'Encryption failure' });
-            return;
-          }
-          if (await resolveConfig(uuid, enc.data)) {
-            encryptedPassword = enc.data;
-            pin = rest;
-            break;
-          }
-        }
-        if (!encryptedPassword) {
-          res.status(401).json({ Message: 'Invalid username or password' });
-          return;
-        }
-      } else {
-        // an alias already carries its password, the way alias URLs do
-        const alias = await resolveConfigAlias(account);
-        if (!alias) {
-          res.status(401).json({ Message: 'Invalid username or password' });
-          return;
-        }
-        uuid = alias.uuid;
-        encryptedPassword = alias.encryptedPassword;
-      }
+    // `<uuid or alias>/<persona>`; neither side can contain a slash. On a
+    // picker address a bare name is one of its users, as the picker posts it.
+    const slash = username.lastIndexOf('/');
+    const bareUser = mount && slash < 0 && !isConfigUuid(username);
+    const account = bareUser
+      ? mount.uuid
+      : slash >= 0
+        ? username.slice(0, slash)
+        : username;
+    const personaName = bareUser
+      ? username
+      : slash >= 0
+        ? username.slice(slash + 1)
+        : '';
+    if (!account) {
+      res.status(401).json({
+        Message: 'Username (configuration UUID or alias) is required',
+      });
+      return;
     }
+    // An alias only stands in for the uuid; the password is still asked for.
+    const uuid = isConfigUuid(account)
+      ? account
+      : (await resolveConfigAlias(account))?.uuid;
+    if (!uuid || (mount && uuid.toLowerCase() !== mount.uuid.toLowerCase())) {
+      res.status(401).json({ Message: 'Invalid username or password' });
+      return;
+    }
+    const proven = await checkPassword(uuid, pw);
+    if (!proven) {
+      res.status(401).json({ Message: 'Invalid username or password' });
+      return;
+    }
+    const { encryptedPassword, pin } = proven;
 
     const userData = await resolveConfig(uuid, encryptedPassword);
     if (!userData) {

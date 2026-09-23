@@ -121,7 +121,7 @@ export function createJellyfinRouter(): Router {
   );
   router.use(express.urlencoded({ extended: false }));
 
-  /* pre-authenticated mount, but the second segment is not an encrypted password */
+  /* picker mount, but the second segment is not an encrypted password */
   router.use((req, _res, next) => {
     const p = req.params as Record<string, string | undefined>;
     if (p.uuid && p.encryptedPassword && !isEncrypted(p.encryptedPassword)) {
@@ -181,7 +181,7 @@ export function createJellyfinRouter(): Router {
   router.use((req, res, next) => {
     if (UNLIMITED.test(req.path)) {
       next();
-    } else if (LOGIN_LIKE.test(req.path) && !req.params.encryptedPassword) {
+    } else if (LOGIN_LIKE.test(req.path)) {
       jellyfinLoginRateLimiter(req, res, next);
     } else if (IMAGE_LIKE.test(req.path)) {
       jellyfinImageRateLimiter(req, res, next);

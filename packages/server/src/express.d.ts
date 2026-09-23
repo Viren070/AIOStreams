@@ -14,6 +14,8 @@ declare global {
       rateLimit?: RateLimitInfo;
       jf?: JellyfinRequestContext;
       jfClient?: ClientInfo;
+      /** The configuration a picker address names. */
+      jfMount?: { uuid: string; encryptedPassword: string };
     }
   }
 }
