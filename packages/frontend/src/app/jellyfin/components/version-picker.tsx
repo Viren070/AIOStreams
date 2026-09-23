@@ -256,11 +256,18 @@ function Versions({
 
       <div
         ref={listRef}
-        className="relative z-[1] min-h-0 flex-1 space-y-2 overflow-y-auto border-t border-white/5 px-3 pb-5 pt-3 max-md:pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:px-5"
+        className={cn(
+          'relative z-[1] min-h-0 flex-1 space-y-2 overflow-y-auto border-t border-white/5 px-3 pb-5 pt-3 max-md:pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:px-5',
+          info.isLoading && 'overflow-hidden'
+        )}
       >
+        {/* A phone's picker fills the screen, so it takes more to fill it. */}
         {info.isLoading &&
-          Array.from({ length: 4 }, (_, i) => (
-            <Skeleton key={i} className="h-24 w-full rounded-xl" />
+          Array.from({ length: 10 }, (_, i) => (
+            <Skeleton
+              key={i}
+              className={cn('h-24 w-full rounded-xl', i >= 4 && 'md:hidden')}
+            />
           ))}
         {info.isError && !info.data && (
           <div className="space-y-3 rounded-xl border border-red-500/20 bg-red-950/20 p-3">
