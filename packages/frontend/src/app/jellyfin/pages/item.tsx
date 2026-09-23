@@ -561,10 +561,11 @@ function Seasons({
               size="sm"
               intent={s.Id === seasonId ? 'white' : 'gray-subtle'}
               className="flex-none rounded-full"
+              rightIcon={s.UserData?.Played ? <BiCheck /> : undefined}
+              iconSpacing="0.25rem"
               onClick={() => setSeasonId(s.Id!)}
             >
               {s.Name}
-              {s.UserData?.Played && <BiCheck className="ml-1" />}
             </Button>
           ))}
         </div>
