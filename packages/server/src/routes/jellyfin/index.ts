@@ -14,7 +14,7 @@ import {
   stremioStreamRateLimiter,
 } from '../../middlewares/ratelimit.js';
 import { jellyfinContext } from './context.js';
-import systemRouter from './system.js';
+import systemRouter, { serverName } from './system.js';
 import usersRouter from './users.js';
 import quickConnectRouter from './quickconnect.js';
 import segmentsRouter from './segments.js';
@@ -133,13 +133,33 @@ export function createJellyfinRouter(): Router {
   router.all('/', (req, res) => {
     res.redirect(302, `${req.baseUrl}/web/`);
   });
-  router.all(['/web', '/web/index.html'], (_req, res) => {
-    const index = path.join(frontendRoot, 'index.html');
-    if (fs.existsSync(index)) {
-      res.sendFile(index);
+  /* The page is the configure app's, so it gets the web app's own manifest. */
+  router.all(['/web', '/web/index.html'], async (req, res) => {
+    const html = await fs.promises
+      .readFile(path.join(frontendRoot, 'index.html'), 'utf8')
+      .catch(() => null);
+    if (html === null) {
+      res.status(404).json({ Message: 'The web app is not built' });
       return;
     }
-    res.status(404).json({ Message: 'The web app is not built' });
+    // No config lookup here: this route runs ahead of the rate limiters.
+    const name = serverName().replace(
+      /[&<>"]/g,
+      (c) => `&#${c.charCodeAt(0)};`
+    );
+    res
+      .type('html')
+      .send(
+        html
+          .replace(
+            'href="/manifest.json"',
+            `href="${req.baseUrl}/web/manifest.json"`
+          )
+          .replace(
+            /(name="apple-mobile-web-app-title" content=")[^"]*/,
+            `$1${name}`
+          )
+      );
   });
   /* An app hosting the web client swaps this request for its native bridge. */
   router.get('/web/main.:name.bundle.js', (_req, res) => {

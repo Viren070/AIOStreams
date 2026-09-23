@@ -1,10 +1,19 @@
 import { Router, type Request } from 'express';
 import {
   config as appConfig,
+  isConfigUuid,
+  isEncrypted,
   JellyfinRepository,
   serverId as instanceServerId,
 } from '@aiostreams/core';
-import { jf, jfOptional, param, qs, requestOrigin } from './context.js';
+import {
+  jf,
+  jfOptional,
+  param,
+  qs,
+  requestOrigin,
+  resolveConfig,
+} from './context.js';
 
 const router: Router = Router({ mergeParams: true });
 
@@ -206,17 +215,53 @@ router.post('/Startup/{*rest}', (_req, res) => {
   res.status(204).end();
 });
 
-/* Some clients resolve the PWA manifest against the server. */
+/** A picker address's configuration, before or after `jellyfinContext` ran. */
+function mountOf(req: Request) {
+  if (req.jfMount) return req.jfMount;
+  const p = req.params as Record<string, string | undefined>;
+  return p.uuid &&
+    p.encryptedPassword &&
+    isConfigUuid(p.uuid) &&
+    isEncrypted(p.encryptedPassword)
+    ? { uuid: p.uuid, encryptedPassword: p.encryptedPassword }
+    : null;
+}
+
+/** The web app's name: its configuration's addon name on a picker address. */
+export async function webAppName(req: Request): Promise<string> {
+  const mount = mountOf(req);
+  const userData = mount
+    ? await resolveConfig(mount.uuid, mount.encryptedPassword).catch(() => null)
+    : null;
+  return userData?.addonName || serverName();
+}
+
+const WEB_APP_COLOUR = '#070707';
+const WEB_APP_ICONS = [192, 512].flatMap((size) =>
+  ['any', 'maskable'].map((purpose) => ({
+    src: `/web-app-manifest-${size}x${size}.png`,
+    sizes: `${size}x${size}`,
+    type: 'image/png',
+    purpose,
+  }))
+);
+
 router.get(
   '/web/manifest.json',
-  jfOptional(async (_req, res) => {
-    res.json({
-      name: serverName(),
-      short_name: serverName(),
-      start_url: '/',
-      display: 'standalone',
-      icons: [],
-    });
+  jfOptional(async (req, res) => {
+    const name = await webAppName(req);
+    res.type('application/manifest+json').send(
+      JSON.stringify({
+        name,
+        short_name: name,
+        start_url: './',
+        scope: './',
+        display: 'standalone',
+        background_color: WEB_APP_COLOUR,
+        theme_color: WEB_APP_COLOUR,
+        icons: WEB_APP_ICONS,
+      })
+    );
   })
 );
 
