@@ -1,7 +1,7 @@
 ---
-title: A Jellyfin server, plus audio and subtitle tracks
+title: A Jellyfin server, audio and subtitle tracks
 description: Watch in Jellyfin apps or a built-in web app with synced history, filter and format on single audio and subtitle tracks, and keep busy instances responsive.
-date: 2026-09-22
+date: 2026-09-23
 version: 2.35.0
 ---
 
@@ -150,7 +150,7 @@ Open your server address in a browser, or press **Open** next to **Web app** on 
 tab, and you get a web app built for this server. Sign in as you would in an app, then pick
 who is watching.
 
-{/* Screenshot: the web app's home page, with a featured title at the top and Continue Watching above rows of catalogs */}
+![The web app's home page on a desktop, with a featured show above Continue Watching, and the same app on a phone beside it](/changelog/v2.35/web-app.webp)
 
 - **Home** has what you are watching, Next Up, episodes airing soon and a row for each
   catalog.
@@ -162,6 +162,69 @@ who is watching.
   and credits marked on the seek bar.
 - **Activity** is your watch history, where you can mark things unwatched or remove them.
   The primary user also sees everyone's history and what each person is playing right now.
+
+<Gallery
+  slides={[
+    {
+      src: '/changelog/v2.35/web-app-home.webp',
+      alt: "The web app's home page, with a featured show, Continue Watching and Next Up",
+      caption: 'Home, with what you are watching and what is next',
+      width: 2880,
+      height: 1800,
+    },
+    {
+      src: '/changelog/v2.35/web-app-show.webp',
+      alt: "Severance's page, with its seasons and a grid of episodes marked as watched or in progress",
+      caption: 'Show pages list every season and episode',
+      width: 2880,
+      height: 1800,
+    },
+    {
+      src: '/changelog/v2.35/web-app-movie.webp',
+      alt: "Dune: Part Two's page, with its details, a Resume button and the cast and crew",
+      caption: 'Every title has a page, with its cast and crew',
+      width: 2880,
+      height: 1800,
+    },
+    {
+      src: '/changelog/v2.35/web-app-person.webp',
+      alt: "Zendaya's page, with her photo, a short biography and a grid of the films and shows she has been in",
+      caption: 'Each person has a page with what they have been in',
+      width: 2880,
+      height: 1800,
+    },
+    {
+      src: '/changelog/v2.35/web-app-versions.webp',
+      alt: 'The version list for Dune: Part Two, with seven versions described by the formatter and a choice to resume or start over',
+      caption: 'Pick a version, described by your formatter',
+      width: 2880,
+      height: 1800,
+    },
+    {
+      src: '/changelog/v2.35/web-app-discover.webp',
+      alt: 'Discover showing the Trending catalog as a grid of movie posters, with Movies, Shows and Collections tabs',
+      caption: 'Discover browses any catalog by type and genre',
+      width: 2880,
+      height: 1800,
+    },
+    {
+      src: '/changelog/v2.35/web-app-activity.webp',
+      alt: 'The Activity page, with two people playing something right now above a filter for each person and their watch history',
+      caption: "Activity shows who is watching what, and everyone's history",
+      width: 2880,
+      height: 1800,
+    },
+    {
+      src: '/changelog/v2.35/web-app-picker.webp',
+      alt: "The Who's watching screen, with four users to pick from",
+      caption: 'Everyone in a household picks their own profile',
+      width: 1920,
+      height: 1200,
+    },
+  ]}
+/>
+
+![Three phones showing the web app's home page, a show page and a movie's version list](/changelog/v2.35/web-app-phones.webp)
 
 Like the apps, the web app plays streams as they are, so a browser only plays what it can
 decode. For anything else, copy the stream link or open it in an external player, which you
