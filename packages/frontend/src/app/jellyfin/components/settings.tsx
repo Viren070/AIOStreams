@@ -57,8 +57,16 @@ export function SettingsModal({
     }),
     { value: NOTHING, label: 'Nothing', textValue: 'Nothing' },
   ];
+  // Catalogs since removed would count towards the limit without showing.
+  const known = new Set(featuredOptions.map((o) => o.value));
   const featuredValue =
-    featured === 'auto' ? [] : featured.length ? featured : [NOTHING];
+    featured === 'auto'
+      ? []
+      : !featured.length
+        ? [NOTHING]
+        : views.data
+          ? featured.filter((s) => known.has(s))
+          : featured;
   // Nothing excludes every other choice.
   const changeFeatured = (next: string[]) => {
     const added = next.filter((v) => !featuredValue.includes(v));

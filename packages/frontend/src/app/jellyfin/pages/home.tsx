@@ -68,8 +68,18 @@ export function HomePage() {
   const views = useViews();
   const [featured] = useFeatured();
 
+  const all = views.data?.Items ?? [];
+  // A removed catalog is skipped, and a list left without any is automatic.
+  const live =
+    featured === 'auto' || !views.data
+      ? featured
+      : featured.filter(
+          (s) => !s.startsWith('view:') || all.some((v) => `view:${v.Id}` === s)
+        );
   const sources =
-    featured === 'auto' ? autoSources(views.data?.Items ?? []) : featured;
+    live === 'auto' || (!live.length && featured.length)
+      ? autoSources(all)
+      : live;
   const viewIds = sources
     .filter((s) => s.startsWith('view:'))
     .map((s) => s.slice(5));
@@ -84,7 +94,7 @@ export function HomePage() {
     HERO_MAX
   );
   const heroLoading =
-    (featured === 'auto' && views.isLoading) ||
+    views.isLoading ||
     (sources.includes('resume') && resume.isLoading) ||
     heads.some((h) => h.isLoading);
 
