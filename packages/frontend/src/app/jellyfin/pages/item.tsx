@@ -30,9 +30,8 @@ import {
   useSimilar,
 } from '../lib/queries';
 import {
-  backdropUrl,
+  backdropUrls,
   cardShape,
-  landscapeUrl,
   landscapeUrls,
   logoUrl,
   posterUrl,
@@ -89,14 +88,13 @@ export function ItemPage({
       </div>
     );
   }
-  const backdrop = data
-    ? (backdropUrl(client, data, { maxWidth: 1920 }) ??
-      landscapeUrl(client, data, { maxWidth: 1920 }))
-    : null;
 
   return (
     <div className="relative">
-      <Backdrop image={backdrop} />
+      <Backdrop
+        images={data ? backdropUrls(client, data, { maxWidth: 1920 }) : []}
+        poster={data ? posterUrl(client, data, { maxWidth: 400 }) : null}
+      />
       <div className="relative z-[1] space-y-12 px-4 pb-16 pt-[38vh] lg:px-10 lg:pt-[26vh]">
         {!data || data.Type === 'Episode' ? (
           <HeaderSkeleton />
@@ -123,22 +121,40 @@ export function ItemPage({
   );
 }
 
-function Backdrop({ image }: { image: string | null }) {
+/** Past the landscape art, the poster stands in as a blurred wash of its colours. */
+function Backdrop({
+  images,
+  poster,
+}: {
+  images: string[];
+  poster: string | null;
+}) {
+  const sources = poster ? [...images, poster] : images;
+  const key = sources.join('|');
+  const [attempt, setAttempt] = React.useState(0);
   const [loaded, setLoaded] = React.useState(false);
-  React.useEffect(() => setLoaded(false), [image]);
+  React.useEffect(() => {
+    setAttempt(0);
+    setLoaded(false);
+  }, [key]);
+  const src = sources[attempt];
+  const wash = attempt >= images.length;
   return (
     <div
       aria-hidden
       className="pointer-events-none absolute inset-x-0 top-0 h-[55vh] overflow-hidden lg:h-[85vh]"
     >
-      {image && (
+      {src && (
         <img
-          src={image}
+          key={src}
+          src={src}
           alt=""
           onLoad={() => setLoaded(true)}
+          onError={() => setAttempt((n) => n + 1)}
           className={cn(
-            'absolute inset-0 h-full w-full object-cover object-top transition-opacity duration-700',
-            loaded ? 'opacity-100' : 'opacity-0'
+            'absolute inset-0 h-full w-full object-cover transition-opacity duration-700',
+            wash ? 'scale-125 blur-3xl saturate-150' : 'object-top',
+            !loaded ? 'opacity-0' : wash ? 'opacity-50' : 'opacity-100'
           )}
         />
       )}

@@ -97,6 +97,17 @@ export function backdropUrl(
   );
 }
 
+export function backdropUrls(
+  client: JellyfinClient,
+  item: BaseItemDto,
+  size?: Size
+): string[] {
+  return [
+    backdropUrl(client, item, size),
+    image(client, item.Id, 'Thumb', item.ImageTags?.Thumb, size),
+  ].filter((url): url is string => !!url);
+}
+
 export function logoUrl(
   client: JellyfinClient,
   item: BaseItemDto
