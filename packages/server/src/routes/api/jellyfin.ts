@@ -87,7 +87,7 @@ router.post('/quickconnect/approve', async (req, res, next) => {
       return;
     }
     const creds = await resolveConfigCredentials(req, res, {
-      allowEncrypted: true,
+      allowEncrypted: false,
     });
     if (!creds) {
       next(new APIError(constants.ErrorCode.UNAUTHORIZED));
@@ -237,7 +237,7 @@ router.get('/quickconnect/pending', async (req, res, next) => {
       return;
     }
     const creds = await resolveConfigCredentials(req, res, {
-      allowEncrypted: true,
+      allowEncrypted: false,
     });
     if (!creds) {
       next(new APIError(constants.ErrorCode.UNAUTHORIZED));
@@ -309,7 +309,7 @@ router.post('/api-keys/token', async (req, res, next) => {
       return;
     }
     const creds = await resolveConfigCredentials(req, res, {
-      allowEncrypted: true,
+      allowEncrypted: false,
     });
     if (!creds) {
       next(new APIError(constants.ErrorCode.UNAUTHORIZED));
@@ -317,17 +317,6 @@ router.post('/api-keys/token', async (req, res, next) => {
     }
     await UserRepository.verifyUser(creds.uuid, creds.password);
     const config = await UserRepository.getUser(creds.uuid, creds.password);
-    // A key acts as the account, so it needs what the account needs.
-    if (creds.encrypted && config && accountLocked(config)) {
-      next(
-        new APIError(
-          constants.ErrorCode.UNAUTHORIZED,
-          undefined,
-          'Sign in with your password to copy keys while the primary user has a PIN'
-        )
-      );
-      return;
-    }
     const saved = config?.jellyfin?.apiKeys?.some(
       (k) => k.id === parsed.data.id
     );
@@ -380,7 +369,7 @@ router.post('/web/token', async (req, res, next) => {
       return;
     }
     const creds = await resolveConfigCredentials(req, res, {
-      allowEncrypted: true,
+      allowEncrypted: false,
     });
     if (!creds) {
       next(new APIError(constants.ErrorCode.UNAUTHORIZED));
@@ -393,7 +382,7 @@ router.post('/web/token', async (req, res, next) => {
       return;
     }
     const userData = await resolveConfig(creds.uuid, enc.data);
-    if (!userData || (creds.encrypted && accountLocked(userData))) {
+    if (!userData) {
       next(new APIError(constants.ErrorCode.UNAUTHORIZED));
       return;
     }

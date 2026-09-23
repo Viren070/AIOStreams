@@ -23,8 +23,7 @@ function newKeyId(): string {
 }
 
 export function JellyfinApiKeys({ serverUrl }: { serverUrl: string }) {
-  const { userData, setUserData, uuid, password, encryptedPassword } =
-    useUserData();
+  const { userData, setUserData, uuid, password } = useUserData();
   const keys = userData.jellyfin?.apiKeys ?? [];
   const [name, setName] = useState('');
   const [tokens, setTokens] = useState<Record<string, string>>({});
@@ -65,7 +64,7 @@ export function JellyfinApiKeys({ serverUrl }: { serverUrl: string }) {
       setLoading(key.id);
       try {
         ({ token } = await getJellyfinApiKeyToken(
-          { uuid, password: password || encryptedPassword || null },
+          { uuid, password: password || null },
           key.id
         ));
         setTokens((prev) => ({ ...prev, [key.id]: token }));

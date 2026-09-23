@@ -1894,7 +1894,7 @@ function Content() {
     setLookingUpQuickConnect(true);
     const timer = setTimeout(() => {
       getJellyfinQuickConnectPending(
-        { uuid, password: password || encryptedPassword || null },
+        { uuid, password: password || null },
         quickConnectCode
       )
         .then((result) => {
@@ -1916,7 +1916,7 @@ function Content() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [quickConnectCode, uuid, password, encryptedPassword]);
+  }, [quickConnectCode, uuid, password]);
 
   const quickConnectRequestedAgo = (iso: string) => {
     const seconds = Math.max(
@@ -1940,7 +1940,7 @@ function Content() {
     setApprovingQuickConnect(true);
     try {
       const result = await approveJellyfinQuickConnect(
-        { uuid, password: password || encryptedPassword || null },
+        { uuid, password: password || null },
         quickConnectCode,
         quickConnectPersona || undefined,
         quickConnectLocked ? quickConnectPin : undefined
