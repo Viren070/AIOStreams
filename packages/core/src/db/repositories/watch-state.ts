@@ -48,6 +48,11 @@ export interface WatchStateRow extends WatchIdentity {
   /** The addon whose watchlist set `favorite`; null when set here. */
   favoriteSinkId: string | null;
   favoriteAt: number | null;
+  /** Hidden from Next Up until played again. */
+  dropped: boolean;
+  /** The addon whose dropped list set `dropped`; null when set here. */
+  droppedSinkId: string | null;
+  droppedAt: number | null;
   lastPlayedAt: number | null;
   updatedAt: number;
   origin: WatchOrigin;
@@ -63,6 +68,7 @@ export interface WatchStatePatch {
   played?: boolean;
   incrementPlayCount?: boolean | 'if-unplayed';
   favorite?: boolean;
+  dropped?: boolean;
   /** `null` clears it; `undefined` leaves it alone. */
   lastPlayedAt?: number | null;
   snapshot?: WatchSnapshot;
@@ -89,6 +95,9 @@ interface DbRow {
   favorite: number | string;
   favorite_sink_id: string | null;
   favorite_at: number | string | null;
+  dropped: number | string | null;
+  dropped_sink_id: string | null;
+  dropped_at: number | string | null;
   last_played_at: number | string | null;
   updated_at: number | string;
   origin: string;
@@ -134,6 +143,9 @@ function toRow(r: DbRow): WatchStateRow {
     favorite: Boolean(Number(r.favorite)),
     favoriteSinkId: r.favorite_sink_id ?? null,
     favoriteAt: optionalNumber(r.favorite_at ?? null),
+    dropped: Boolean(Number(r.dropped ?? 0)),
+    droppedSinkId: r.dropped_sink_id ?? null,
+    droppedAt: optionalNumber(r.dropped_at ?? null),
     lastPlayedAt: optionalNumber(r.last_played_at),
     updatedAt: Number(r.updated_at),
     origin: (r.origin as WatchOrigin) ?? 'local',
@@ -354,6 +366,8 @@ export class WatchStateRepository {
     const played = patch.played == null ? null : patch.played ? 1 : 0;
     const fav = patch.favorite == null ? null : patch.favorite ? 1 : 0;
     const setFav = fav == null ? 0 : 1;
+    const drop = patch.dropped == null ? null : patch.dropped ? 1 : 0;
+    const setDrop = drop == null ? 0 : 1;
     const incMode =
       patch.incrementPlayCount === 'if-unplayed'
         ? 2
@@ -376,14 +390,16 @@ export class WatchStateRepository {
       sql`INSERT INTO watch_state
             (uuid, persona, item_key, kind, media_type, base_id, season, episode,
              video_id, series_key, position_ms, duration_ms, played, play_count,
-             favorite, favorite_at, last_played_at, updated_at, origin, sink_id,
-             external_at, snapshot, sort_at, match_key)
+             favorite, favorite_at, dropped, dropped_at, last_played_at,
+             updated_at, origin, sink_id, external_at, snapshot, sort_at,
+             match_key)
           VALUES (${scope.uuid}, ${scope.persona}, ${identity.itemKey},
                   ${identity.kind}, ${identity.mediaType}, ${identity.baseId},
                   ${season}, ${episode}, ${videoId}, ${seriesKey},
                   COALESCE(${pos}, 0), COALESCE(${dur}, 0), COALESCE(${played}, 0),
                   CASE WHEN ${incMode} > 0 THEN 1 ELSE 0 END,
-                  COALESCE(${fav}, 0), ${setFav ? now : null}, ${lastPlayed}, ${now},
+                  COALESCE(${fav}, 0), ${setFav ? now : null},
+                  COALESCE(${drop}, 0), ${setDrop ? now : null}, ${lastPlayed}, ${now},
                   ${origin}, ${sinkId}, ${externalAt}, ${snapshot},
                   ${sortAt}, ${identity.matchKey ?? null})
           ON CONFLICT(uuid, persona, item_key) DO UPDATE SET
@@ -407,6 +423,9 @@ export class WatchStateRepository {
             -- A toggle here takes the favourite over from any watchlist import.
             favorite_sink_id = CASE WHEN ${setFav} = 1 THEN NULL ELSE watch_state.favorite_sink_id END,
             favorite_at = CASE WHEN ${setFav} = 1 THEN excluded.favorite_at ELSE watch_state.favorite_at END,
+            dropped = COALESCE(${drop}, watch_state.dropped),
+            dropped_sink_id = CASE WHEN ${setDrop} = 1 THEN NULL ELSE watch_state.dropped_sink_id END,
+            dropped_at = CASE WHEN ${setDrop} = 1 THEN excluded.dropped_at ELSE watch_state.dropped_at END,
             last_played_at = CASE WHEN ${setLastPlayed} = 1 THEN ${lastPlayed} ELSE watch_state.last_played_at END,
             -- Maintained on write so the shelves can order on a plain indexed
             -- column instead of a COALESCE the index cannot serve.
@@ -436,6 +455,9 @@ export class WatchStateRepository {
       favorite: !!fav,
       favoriteSinkId: null,
       favoriteAt: setFav ? now : null,
+      dropped: !!drop,
+      droppedSinkId: null,
+      droppedAt: setDrop ? now : null,
       lastPlayedAt: lastPlayed,
       updatedAt: now,
       origin,
@@ -474,7 +496,8 @@ export class WatchStateRepository {
    * The furthest-through episode per series, for Next Up. Season and episode
    * break the tie, since an imported watched list gives every row of one show
    * the same timestamp. Picked per series before the limit, so a few long
-   * histories cannot crowd out the other shows.
+   * histories cannot crowd out the other shows. A show dropped since it was
+   * last watched is left out.
    */
   static async listRecentSeries(
     scope: WatchScope,
@@ -487,9 +510,17 @@ export class WatchStateRepository {
       series_key: string;
       at: number | string;
     }>(
-      sql`SELECT series_key, MAX(sort_at) AS at FROM watch_state
-           WHERE ${where}
-           GROUP BY series_key
+      sql`SELECT series_key, at FROM (
+             SELECT series_key, MAX(sort_at) AS at FROM watch_state
+              WHERE ${where}
+              GROUP BY series_key
+           ) latest
+           WHERE NOT EXISTS (
+             SELECT 1 FROM watch_state d
+              WHERE d.uuid = ${scope.uuid} AND d.persona = ${scope.persona}
+                AND d.item_key = latest.series_key
+                AND d.dropped = 1 AND d.dropped_at > latest.at
+           )
            ORDER BY at DESC
            LIMIT ${limit}`
     );
@@ -723,6 +754,85 @@ export class WatchStateRepository {
     }
   }
 
+  /** A row undropped here keeps its time, so a play since still counts as newer. */
+  static async upsertDropped(
+    scope: WatchScope,
+    sinkId: string,
+    identities: WatchIdentity[],
+    now: number,
+    db: DbDriver = getDb()
+  ): Promise<void> {
+    for (let i = 0; i < identities.length; i += CHUNK) {
+      const values = identities.slice(i, i + CHUNK).map(
+        (identity) =>
+          sql`(${scope.uuid}, ${scope.persona}, ${identity.itemKey},
+            ${identity.kind}, ${identity.mediaType}, ${identity.baseId},
+            ${identity.seriesKey ?? null}, 1, ${sinkId}, ${now}, ${now},
+            ${now}, ${now}, 'import', ${sinkId}, 0)`
+      );
+      await db.exec(
+        sql`INSERT INTO watch_state
+              (uuid, persona, item_key, kind, media_type, base_id, series_key,
+               dropped, dropped_sink_id, dropped_at, dropped_seen_at,
+               updated_at, seen_at, origin, sink_id, sort_at)
+            VALUES ${join(values)}
+            ON CONFLICT(uuid, persona, item_key) DO UPDATE SET
+              dropped = 1,
+              dropped_sink_id = excluded.dropped_sink_id,
+              dropped_at = COALESCE(watch_state.dropped_at, excluded.dropped_at),
+              dropped_seen_at = excluded.dropped_seen_at`
+      );
+    }
+  }
+
+  static async touchDropped(
+    scope: WatchScope,
+    sinkId: string,
+    itemKeys: string[],
+    at: number,
+    db: DbDriver = getDb()
+  ): Promise<void> {
+    const wanted = [...new Set(itemKeys)];
+    for (let i = 0; i < wanted.length; i += CHUNK) {
+      await db.exec(
+        sql`UPDATE watch_state SET dropped_seen_at = ${at}
+             WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+               AND dropped_sink_id = ${sinkId}
+               AND item_key IN (${join(wanted.slice(i, i + CHUNK).map((k) => sql`${k}`))})`
+      );
+    }
+  }
+
+  /** Shows an addon's dropped list set and no longer lists. */
+  static async clearStaleDropped(
+    scope: WatchScope,
+    sinkId: string,
+    before: number,
+    db: DbDriver = getDb()
+  ): Promise<number> {
+    const res = await db.exec(
+      sql`UPDATE watch_state
+             SET dropped = 0, dropped_sink_id = NULL, dropped_at = NULL
+           WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+             AND dropped = 1 AND dropped_sink_id = ${sinkId}
+             AND COALESCE(dropped_seen_at, 0) < ${before}`
+    );
+    return res.rowCount ?? 0;
+  }
+
+  /** A show played here is picked up again. */
+  static async undropSeries(
+    scope: WatchScope,
+    seriesKey: string
+  ): Promise<void> {
+    await getDb().exec(
+      sql`UPDATE watch_state
+             SET dropped = 0, dropped_sink_id = NULL, dropped_at = ${Date.now()}
+           WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+             AND item_key = ${seriesKey} AND dropped = 1`
+    );
+  }
+
   /** Favourites an addon's watchlist set and no longer lists. */
   static async clearStaleWatchlist(
     scope: WatchScope,
@@ -759,7 +869,7 @@ export class WatchStateRepository {
              AND origin = 'import' AND sink_id = ${sinkId}
              AND COALESCE(seen_at, updated_at) < ${before}
              AND played = ${playedValue}
-             AND favorite = 0`
+             AND favorite = 0 AND dropped = 0`
     );
     return res.rowCount ?? 0;
   }

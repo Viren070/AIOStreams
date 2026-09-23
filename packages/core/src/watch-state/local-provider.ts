@@ -100,6 +100,7 @@ export class LocalWatchStateProvider implements WatchStateProvider {
       }
       case 'start': {
         this.pending.delete(key);
+        await this.undropOnPlay(scope, event.identity);
         return this.write(scope, event.identity, {
           positionMs: event.positionMs,
           durationMs: event.durationMs,
@@ -141,7 +142,18 @@ export class LocalWatchStateProvider implements WatchStateProvider {
           favorite: false,
           snapshot: event.snapshot,
         });
+      case 'dropped':
+      case 'undropped':
+        return this.write(scope, event.identity, {
+          dropped: event.type === 'dropped',
+          snapshot: event.snapshot,
+        });
     }
+  }
+
+  private async undropOnPlay(scope: WatchScope, identity: WatchIdentity) {
+    if (identity.kind === 'episode' && identity.seriesKey)
+      await WatchStateRepository.undropSeries(scope, identity.seriesKey);
   }
 
   async clear(scope: WatchScope, itemKeys?: string[]): Promise<number> {

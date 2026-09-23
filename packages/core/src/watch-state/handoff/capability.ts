@@ -17,12 +17,14 @@ export const PLAYBACK_EVENTS = [
   'unplayed',
 ] as const;
 
-/** Sent only to an addon that lists them. */
+/* These two pairs are sent only to an addon that lists them. */
 export const WATCHLIST_EVENTS = ['watchlisted', 'unwatchlisted'] as const;
+export const DROP_EVENTS = ['dropped', 'undropped'] as const;
 
 export const SENDABLE_EVENTS = [
   ...PLAYBACK_EVENTS,
   ...WATCHLIST_EVENTS,
+  ...DROP_EVENTS,
 ] as const;
 
 export type PlaybackEventKind = (typeof SENDABLE_EVENTS)[number];

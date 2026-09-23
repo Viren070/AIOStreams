@@ -8,10 +8,10 @@ that was finished from one abandoned a minute in. Jellyfin clients report their 
 10 seconds, plus pause, stop and mark-played, and the `watch_state` resource exchanges that with any
 addon that declares it:
 
-| Half   | Direction          | Carries                                                                              |
-| ------ | ------------------ | ------------------------------------------------------------------------------------ |
-| `push` | AIOStreams → addon | Playback events and watchlist changes, so a tracker records what really happened     |
-| `pull` | addon → AIOStreams | What the tracker already knows: Continue Watching, watched history and the watchlist |
+| Half   | Direction          | Carries                                                                                     |
+| ------ | ------------------ | ------------------------------------------------------------------------------------------- |
+| `push` | AIOStreams → addon | Playback events, watchlist changes and drops, so a tracker records what really happened     |
+| `pull` | addon → AIOStreams | What the tracker already knows: Continue Watching, watched history, drops and the watchlist |
 
 An addon may implement either half on its own. Only playback through a Jellyfin client produces
 push events; a stream played in Stremio reports nothing.
@@ -32,7 +32,7 @@ Add `watch_state` to `resources`, and a root `watchState` object describing the 
   ],
   "watchState": {
     "version": 2,
-    "push": { "events": ["stop", "played", "unplayed", "watchlisted", "unwatchlisted"], "bulk": true },
+    "push": { "events": ["stop", "played", "unplayed", "watchlisted", "unwatchlisted", "dropped", "undropped"], "bulk": true },
     "pull": { "items": true, "watched": true, "watchlist": true, "ttlSeconds": 300 }
   }
 }
@@ -42,7 +42,7 @@ Add `watch_state` to `resources`, and a root `watchState` object describing the 
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `types`, `idPrefixes`    | On the resource entry. Events are filtered by them before anything is sent, so an anime tracker declaring `kitsu:` never hears about `tt` items.           |
 | `watchState.version`     | The contract version you implement, currently `2`.                                                                                                         |
-| `watchState.push.events` | The events you want. Omit it to receive every playback event; [watchlist events](#watchlist-changes) are only sent when listed. Unknown names are ignored. |
+| `watchState.push.events` | The events you want. Omit it to receive every playback event; [watchlist events](#watchlist-changes) and [drops](#drops) are only sent when listed. Unknown names are ignored. |
 | `watchState.push.bulk`   | `true` to receive a mark on a whole show or season as one request. See [Bulk marks](#bulk-marks).                                                          |
 | `watchState.pull`        | Omit it if you serve nothing. `items`, `watched` and `watchlist` say which parts of the answer you fill; `ttlSeconds` is how long it may be reused.        |
 
@@ -223,6 +223,15 @@ The path id is the meta id and `scope` is `movie` or `series`. Read `event` befo
 `series` scope on `played` or `unplayed` is a [bulk mark](#bulk-marks), on a watchlist event it is
 the show. A newer change to the same title replaces one still waiting to be delivered.
 
+### Drops
+
+A Jellyfin user disliking a show sends `dropped`, and liking it or clearing the rating sends
+`undropped`, to addons that list those events. The body is a watchlist change's, with
+`scope: "series"`. A rating on anything but a show stays local.
+
+Playing a dropped show here picks it up again: AIOStreams stops hiding it without sending
+`undropped`. Undrop it on your tracker when a `start` arrives for it, as trackers do on a watch.
+
 ## Pull
 
 ```http
@@ -252,7 +261,8 @@ GET {addonBase}/watch_state/pull.json?since=a1b2c3d4e5f6
     "counts": { "tt0903747": { "watched": 37, "total": 62 } },
     "nextUp": [
       { "type": "series", "metaId": "tt0903747", "videoId": "tt0903747:3:12", "season": 3, "episode": 12, "at": 1788974000 }
-    ]
+    ],
+    "dropped": ["tt0460681", "tmdb:1622", "tvdb:78901"]
   },
   "watchlist": [
     { "type": "movie", "metaId": "tt0111161", "at": 1788900000 },
@@ -272,6 +282,7 @@ usually a full fan-out.
 | `watched.episodes` | Video ids of finished episodes.                                                                                        |
 | `watched.counts`   | Watched and total per show, keyed by every id the show answers to. Advisory: send `0` for a total you do not know.     |
 | `watched.nextUp`   | Your next episode per show. AIOStreams reads the show's `type` and `at` from it and works out the next episode itself. |
+| `watched.dropped`  | Shows the user dropped, keyed by every id the show answers to. See [Dropped shows](#dropped-shows).                    |
 | `watchlist[]`      | The user's watchlist: `type` (your meta type), `metaId` and when it was added as `at`. See [Watchlist](#watchlist).    |
 
 **Return ids in the space your own metas publish.** If your series meta is keyed on `kitsu:49002`
@@ -300,6 +311,18 @@ addon's watchlist added stays that addon's.
 
 `watchlist` is not gated by `version`. If your `version` changes whenever the watchlist does, you
 may omit `watchlist` when `since` matches, exactly as for `watched`.
+
+### Dropped shows
+
+`watched.dropped` hides a show from Next Up and Upcoming until something of it is played again,
+here or on your tracker. Like `watched` it is the **complete** list, so a show you stop listing is
+undropped, and an omitted `dropped` changes nothing. If you could not read the user's drops, omit
+it: an empty list after a failed read undrops everything.
+
+It travels inside `watched`, so it follows the [version gate](#the-version-gate): your `version` must
+change when a drop does. List every id the show answers to, as for `counts`, since the ids are
+matched as given. A drop or undrop made in a Jellyfin client is not overwritten by a pull for the
+echo window, and a show another addon dropped stays that addon's.
 
 ### The `version` gate
 

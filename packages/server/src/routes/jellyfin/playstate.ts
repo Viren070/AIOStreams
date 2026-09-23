@@ -21,6 +21,7 @@ import {
   bodyOf,
   jf,
   param,
+  qb,
   qs,
   type JellyfinRequestContext,
 } from './context.js';
@@ -31,7 +32,7 @@ import {
   episodesForSeries,
   itemFromDescriptor,
 } from './items.js';
-import { reportBulkMark, reportPlayback, reportWatchlist } from './handoff.js';
+import { reportBulkMark, reportListChange, reportPlayback } from './handoff.js';
 import { pickSource } from './playback.js';
 
 const router: Router = Router({ mergeParams: true });
@@ -474,8 +475,65 @@ async function setFavorite(
   });
   // Trackers keep watchlists of titles, not of episodes or collections.
   if (item?.Type === 'Movie' || item?.Type === 'Series')
-    await reportWatchlist(ctx, favorite, ref, item);
+    await reportListChange(
+      ctx,
+      favorite ? 'watchlisted' : 'unwatchlisted',
+      ref,
+      item
+    );
 }
+
+/** A dislike drops a show; a like or a cleared rating undrops it. */
+async function setDropped(
+  ctx: JellyfinRequestContext,
+  d: ContentDescriptor,
+  dropped: boolean
+) {
+  const ref = contentRefOf(d);
+  const identity = await watchIdentityFor(ref);
+  const provider = getWatchStateProvider();
+  const held = (await provider.getMany(ctx.watch, [identity.itemKey])).get(
+    identity.itemKey
+  );
+  if (!dropped && !held?.dropped) return;
+  const item = await itemFromDescriptor(ctx, d).catch(() => null);
+  await provider.record(ctx.watch, {
+    type: dropped ? 'dropped' : 'undropped',
+    identity,
+    snapshot: snapshotOf(item),
+  });
+  await reportListChange(ctx, dropped ? 'dropped' : 'undropped', ref, item);
+}
+
+const RATING_PATHS = [
+  '/UserItems/:itemId/Rating',
+  '/Users/:userId/Items/:itemId/Rating',
+];
+router.post(
+  RATING_PATHS,
+  jf(async (req, res, ctx) => {
+    const d = await descriptorFor(ctx, param(req, 'itemId'));
+    if (!d) {
+      res.status(404).json({ Message: 'Item not found' });
+      return;
+    }
+    // Only a show can be dropped.
+    if (d.k === 'series') await setDropped(ctx, d, qb(req, 'Likes') === false);
+    res.json((await userDataFor(ctx, d)) ?? {});
+  })
+);
+router.delete(
+  RATING_PATHS,
+  jf(async (req, res, ctx) => {
+    const d = await descriptorFor(ctx, param(req, 'itemId'));
+    if (!d) {
+      res.status(404).json({ Message: 'Item not found' });
+      return;
+    }
+    if (d.k === 'series') await setDropped(ctx, d, false);
+    res.json((await userDataFor(ctx, d)) ?? {});
+  })
+);
 
 const FAVORITE_PATHS = [
   '/UserFavoriteItems/:itemId',

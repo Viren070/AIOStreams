@@ -5,7 +5,8 @@ import {
   createLogger,
   dispatchBulkMark,
   dispatchPlayback,
-  dispatchWatchlist,
+  dispatchListChange,
+  type ListChangeInput,
   ensurePlaybackSink,
   itemKeyFor,
   PlaybackHandoffRepository,
@@ -361,9 +362,9 @@ export async function reportPlayback(
   }
 }
 
-export async function reportWatchlist(
+export async function reportListChange(
   ctx: JellyfinRequestContext,
-  listed: boolean,
+  kind: ListChangeInput['kind'],
   ref: ContentRef,
   item?: JellyfinItem | null
 ): Promise<void> {
@@ -372,8 +373,8 @@ export async function reportWatchlist(
   try {
     const sinks = await sinksFor(ctx);
     if (!sinks.length) return;
-    await dispatchWatchlist(ctx.watch, sinks, {
-      kind: listed ? 'watchlisted' : 'unwatchlisted',
+    await dispatchListChange(ctx.watch, sinks, {
+      kind,
       type: ref.type,
       metaId: ref.baseId,
       itemKey: itemKeyFor(ref),
@@ -382,10 +383,10 @@ export async function reportWatchlist(
   } catch (error) {
     logger.warn(
       {
-        listed,
+        kind,
         err: error instanceof Error ? error.message : String(error),
       },
-      'failed to report a watchlist change to addons'
+      'failed to report a list change to addons'
     );
   }
 }

@@ -151,6 +151,7 @@ export async function attachUserData(
         {
           ...(item.UserData as UserItemDataDto),
           ...(row ? { IsFavorite: row.favorite } : {}),
+          ...(row?.dropped ? { Likes: false } : {}),
         },
         played.length,
         aired.length
@@ -162,6 +163,7 @@ export async function attachUserData(
       item.UserData = {
         ...(item.UserData as object),
         IsFavorite: row.favorite,
+        ...(row.dropped ? { Likes: false } : {}),
       };
     } else {
       const runtimeMs =

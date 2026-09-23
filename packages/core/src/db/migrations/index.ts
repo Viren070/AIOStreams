@@ -36,6 +36,7 @@ import { watchStateWatchlist } from './0035_watch_state_watchlist.js';
 import { watchSessionDevice } from './0036_watch_session_device.js';
 import { watchSinkRetired } from './0037_watch_sink_retired.js';
 import { watchSessionUser } from './0038_watch_session_user.js';
+import { watchStateDropped } from './0039_watch_state_dropped.js';
 import type { Migration } from './types.js';
 
 export const MIGRATIONS: readonly Migration[] = [
@@ -77,6 +78,7 @@ export const MIGRATIONS: readonly Migration[] = [
   watchSessionDevice,
   watchSinkRetired,
   watchSessionUser,
+  watchStateDropped,
 ];
 
 export type { Migration } from './types.js';

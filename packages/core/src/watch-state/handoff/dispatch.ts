@@ -11,6 +11,7 @@ import type { IdType } from '../../utils/id-parser.js';
 import { sinkProbeMs } from './deliver.js';
 import { pullUrlFor, pushUrlFor, uniqueByAddress } from './resolve.js';
 import {
+  DROP_EVENTS,
   PLAYBACK_EVENTS,
   WATCHLIST_EVENTS,
   type PlaybackEventKind,
@@ -325,6 +326,9 @@ function replacesFor(
     case 'watchlisted':
     case 'unwatchlisted':
       return WATCHLIST_EVENTS;
+    case 'dropped':
+    case 'undropped':
+      return DROP_EVENTS;
     case 'start':
     case 'pause':
       return ['start', 'pause'];
@@ -528,18 +532,19 @@ export async function dispatchBulkMark(
   );
 }
 
-export interface WatchlistChangeInput {
-  kind: 'watchlisted' | 'unwatchlisted';
+/** A title put on or taken off one of the tracker's lists. */
+export interface ListChangeInput {
+  kind: 'watchlisted' | 'unwatchlisted' | 'dropped' | 'undropped';
   type: string;
   metaId: string;
   itemKey: string;
   providerIds?: Record<string, string>;
 }
 
-export async function dispatchWatchlist(
+export async function dispatchListChange(
   scope: WatchScope,
   sinks: ResolvedPlaybackSink[],
-  change: WatchlistChangeInput
+  change: ListChangeInput
 ): Promise<void> {
   if (!appConfig.watchState.reportEnabled || !sinks.length) return;
 
@@ -567,7 +572,7 @@ export async function dispatchWatchlist(
           ...(Object.keys(ids).length ? { ids } : {}),
         }),
         priority: SINGLE_LANE,
-        replaces: WATCHLIST_EVENTS,
+        replaces: replacesFor(change.kind),
       },
     ]
   );

@@ -126,6 +126,7 @@ export function userDataFromRow(
     Key: itemId,
     ItemId: itemId,
   };
+  if (row.dropped) ud.Likes = false;
   if (row.lastPlayedAt)
     ud.LastPlayedDate = new Date(row.lastPlayedAt).toISOString();
   if (!row.played && duration > 0 && row.positionMs > 0) {

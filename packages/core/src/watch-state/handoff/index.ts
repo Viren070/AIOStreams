@@ -20,11 +20,12 @@ export {
 export {
   dispatchBulkMark,
   dispatchPlayback,
-  dispatchWatchlist,
+  dispatchListChange,
   ensurePlaybackSink,
   retireOtherPersonaSinks,
   retireUnusedSinks,
   type BulkMarkInput,
+  type ListChangeInput,
   type PlaybackEventInput,
 } from './dispatch.js';
 export { deliverPlaybackEvents } from './deliver.js';

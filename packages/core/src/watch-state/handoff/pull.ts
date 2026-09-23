@@ -64,6 +64,7 @@ const StateWatchedSchema = z.looseObject({
   episodes: z.array(z.string()).optional(),
   counts: z.record(z.string(), z.unknown()).optional(),
   nextUp: z.array(StateNextUpSchema).optional(),
+  dropped: z.array(z.string().min(1)).optional(),
 });
 
 const StateWatchlistEntrySchema = z.looseObject({
@@ -87,6 +88,7 @@ export interface PullOutcome {
   items: number;
   watched: number;
   watchlist: number;
+  dropped: number;
   removed: number;
   skipped: number;
 }
@@ -96,6 +98,7 @@ const EMPTY: PullOutcome = {
   items: 0,
   watched: 0,
   watchlist: 0,
+  dropped: 0,
   removed: 0,
   skipped: 0,
 };
@@ -565,6 +568,40 @@ async function importWatchlist(
   return { written: rows.length, touched };
 }
 
+/** The same rules as {@link importWatchlist}. */
+async function importDropped(
+  scope: WatchScope,
+  sink: SinkRow,
+  ids: string[],
+  now: number,
+  db: DbDriver
+): Promise<{ written: number; touched: string[] }> {
+  const identities = [...new Set(ids)].map((id) =>
+    identityFor({ kind: 'series', type: 'series', baseId: id })
+  );
+  const existing = await WatchStateRepository.getMany(
+    scope,
+    identities.map((i) => i.itemKey),
+    db
+  );
+  const echoWindowMs = appConfig.watchState.echoWindowSeconds * 1000;
+  const rows: WatchIdentity[] = [];
+  const touched: string[] = [];
+  for (const identity of identities) {
+    const held = existing.get(identity.itemKey);
+    if (held?.dropped && held.droppedSinkId === sink.id) {
+      touched.push(identity.itemKey);
+      continue;
+    }
+    if (held?.dropped && held.droppedSinkId) continue;
+    const toggledHere = held && !held.droppedSinkId && held.droppedAt != null;
+    if (toggledHere && now - held.droppedAt! < echoWindowMs) continue;
+    rows.push(identity);
+  }
+  await WatchStateRepository.upsertDropped(scope, sink.id, rows, now, db);
+  return { written: rows.length, touched };
+}
+
 async function fetchState(sink: SinkRow): Promise<PlaybackStatePayload | null> {
   if (!sink.pullUrl) return null;
   const url = new URL(sink.pullUrl);
@@ -599,6 +636,7 @@ async function fetchState(sink: SinkRow): Promise<PlaybackStatePayload | null> {
     ['movies', watched?.movies?.length ?? 0, cfg.pullMaxWatched],
     ['episodes', watched?.episodes?.length ?? 0, cfg.pullMaxWatched],
     ['watchlist', parsed.data.watchlist?.length ?? 0, cfg.pullMaxWatched],
+    ['dropped', watched?.dropped?.length ?? 0, cfg.pullMaxWatched],
   ];
   for (const [what, got, max] of counts) {
     if (got > max) throw new Error(`${what} list of ${got} exceeds ${max}`);
@@ -663,6 +701,7 @@ export async function pullSink(
   let watchedWritten = 0;
   let watchedSkipped = 0;
   let watchlistWritten = 0;
+  let droppedWritten = 0;
   let removed = 0;
   const unchanged = !payload.watched;
 
@@ -737,6 +776,31 @@ export async function pullSink(
         'watched',
         tx
       );
+
+      // Complete when present, like the watchlist.
+      if (payload.watched.dropped) {
+        const drops = await importDropped(
+          scope,
+          sink,
+          payload.watched.dropped,
+          now,
+          tx
+        );
+        droppedWritten = drops.written;
+        await WatchStateRepository.touchDropped(
+          scope,
+          sink.id,
+          drops.touched,
+          now,
+          tx
+        );
+        removed += await WatchStateRepository.clearStaleDropped(
+          scope,
+          sink.id,
+          now,
+          tx
+        );
+      }
     }
 
     // Complete when present, like `watched`.
@@ -779,6 +843,7 @@ export async function pullSink(
     items: items.written,
     watched: watchedWritten,
     watchlist: watchlistWritten,
+    dropped: droppedWritten,
     removed,
     skipped: items.skipped + watchedSkipped,
   };
@@ -786,6 +851,7 @@ export async function pullSink(
     outcome.items ||
     outcome.watched ||
     outcome.watchlist ||
+    outcome.dropped ||
     outcome.removed
   ) {
     logger.debug({ addon: sink.addonName, ...outcome }, 'imported watch state');

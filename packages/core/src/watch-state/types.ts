@@ -139,7 +139,13 @@ export interface WatchProgressEvent {
 }
 
 export interface WatchFlagEvent {
-  type: 'played' | 'unplayed' | 'favorite' | 'unfavorite';
+  type:
+    | 'played'
+    | 'unplayed'
+    | 'favorite'
+    | 'unfavorite'
+    | 'dropped'
+    | 'undropped';
   identity: WatchIdentity;
   snapshot?: WatchSnapshot;
 }
