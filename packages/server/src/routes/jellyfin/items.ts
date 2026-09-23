@@ -7,6 +7,8 @@ import {
   buildMediaSource,
   buildPerson,
   findPerson,
+  imageTagsFor,
+  recallImages,
   withPersonDetails,
   buildSeason,
   buildView,
@@ -390,7 +392,18 @@ export async function itemFromDescriptor(
     case 'person': {
       const item = buildPerson(ctx.build, d.n);
       const found = await findPerson(ctx.userData, d.n);
-      return found ? withPersonDetails(item, found.person) : item;
+      const person = found ? withPersonDetails(item, found.person) : item;
+      if ((person.ImageTags as Record<string, string> | undefined)?.Primary)
+        return person;
+      // Without TMDB, the photo is the one a cast list already showed.
+      const photo = (await recallImages(item.Id))?.Primary;
+      return photo
+        ? {
+            ...person,
+            ImageTags: imageTagsFor({ Primary: photo }).ImageTags,
+            PrimaryImageAspectRatio: 0.6666,
+          }
+        : person;
     }
     case 'source':
       return null;
