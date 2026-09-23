@@ -2,10 +2,12 @@ import React from 'react';
 import {
   BiCalendarAlt,
   BiCheck,
+  BiDislike,
   BiHeart,
   BiMoviePlay,
   BiPlay,
   BiRevision,
+  BiSolidDislike,
   BiSolidHeart,
   BiSolidStar,
 } from 'react-icons/bi';
@@ -22,6 +24,7 @@ import {
   useItemPages,
   useNextUpFor,
   useSeasons,
+  useSetDropped,
   useSetFavorite,
   useSetPlayed,
   useSimilar,
@@ -209,12 +212,14 @@ function Header({ item }: { item: BaseItemDto }) {
   const picker = useVersionPicker();
   const setPlayed = useSetPlayed();
   const setFavorite = useSetFavorite();
+  const setDropped = useSetDropped();
   const nextUp = useNextUpFor(item.Id!, item.Type === 'Series');
   const [expanded, setExpanded] = React.useState(false);
   const logo = logoUrl(client, item);
   const poster = posterUrl(client, item, { maxWidth: 500 });
   const played = !!item.UserData?.Played;
   const favorite = !!item.UserData?.IsFavorite;
+  const dropped = item.UserData?.Likes === false;
   const trailer = item.RemoteTrailers?.[0]?.Url;
 
   const target =
@@ -355,6 +360,24 @@ function Header({ item }: { item: BaseItemDto }) {
           >
             {favorite ? 'Remove favourite' : 'Add favourite'}
           </Tooltip>
+          {item.Type === 'Series' && (
+            <Tooltip
+              trigger={
+                <IconButton
+                  intent={dropped ? 'warning-subtle' : 'gray-subtle'}
+                  className="rounded-full"
+                  icon={dropped ? <BiSolidDislike /> : <BiDislike />}
+                  aria-label={dropped ? 'Undrop show' : 'Drop show'}
+                  loading={setDropped.isPending}
+                  onClick={() =>
+                    setDropped.mutate({ itemId: item.Id!, dropped: !dropped })
+                  }
+                />
+              }
+            >
+              {dropped ? 'Undrop show' : 'Drop show'}
+            </Tooltip>
+          )}
           {!!item.ExternalUrls?.length && (
             <span className="mx-1 h-6 w-px bg-white/10" aria-hidden />
           )}

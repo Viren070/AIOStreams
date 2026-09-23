@@ -400,6 +400,20 @@ export function useSetFavorite() {
   });
 }
 
+export function useSetDropped() {
+  const { client, user } = useSession();
+  const refresh = useRefreshAll();
+  return useMutation({
+    mutationFn: (v: { itemId: string; dropped: boolean }) => {
+      const path = `/UserItems/${v.itemId}/Rating`;
+      return v.dropped
+        ? client.post(path, undefined, { userId: user.Id, Likes: false })
+        : client.delete(path, { userId: user.Id });
+    },
+    onSettled: refresh,
+  });
+}
+
 export function useClearHistory() {
   const { client } = useSession();
   const refresh = useRefreshAll();
