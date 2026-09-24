@@ -229,8 +229,8 @@ A Jellyfin user disliking a show sends `dropped`, and liking it or clearing the 
 `undropped`, to addons that list those events. The body is a watchlist change's, with
 `scope: "series"`. A rating on anything but a show stays local.
 
-Playing a dropped show here picks it up again: AIOStreams stops hiding it without sending
-`undropped`. Undrop it on your tracker when a `start` arrives for it, as trackers do on a watch.
+Playing a dropped show here picks it up again, and sends `undropped` for the show after the
+episode's `start`. An addon that lists both events can take either one as the undrop.
 
 ## Pull
 

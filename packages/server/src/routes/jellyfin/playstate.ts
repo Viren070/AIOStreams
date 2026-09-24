@@ -206,7 +206,13 @@ async function record(
     durationMs,
     snapshot: snapshotOf(item),
   };
-  const row = await getWatchStateProvider().record(ctx.watch, event);
+  const provider = getWatchStateProvider();
+  // Read before the start clears it, so addons that only keep lists hear the undrop.
+  const seriesKey = type === 'start' ? identity.seriesKey : null;
+  const undrops =
+    !!seriesKey &&
+    !!(await provider.getMany(ctx.watch, [seriesKey])).get(seriesKey)?.dropped;
+  const row = await provider.record(ctx.watch, event);
 
   if (type === 'start') {
     await openWatchSession(session, ref, {
@@ -220,6 +226,12 @@ async function record(
       positionMs,
       durationMs,
     });
+    if (undrops)
+      await reportListChange(ctx, 'undropped', {
+        kind: 'series',
+        type: ref.type,
+        baseId: ref.baseId,
+      });
     return;
   }
 
