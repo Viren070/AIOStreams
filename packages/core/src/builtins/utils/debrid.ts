@@ -33,6 +33,7 @@ import {
   preprocessTitle,
   normaliseTitle,
   extractInfoHashFromMagnet,
+  base32ToHex,
 } from '../../parser/utils.js';
 export { extractInfoHashFromMagnet };
 
@@ -43,9 +44,10 @@ type Metadata = TitleMetadata;
 export function validateInfoHash(
   infoHash: string | undefined
 ): string | undefined {
-  return infoHash && /^[a-f0-9]{40}$/i.test(infoHash)
-    ? infoHash.toLowerCase()
-    : undefined;
+  if (!infoHash) return undefined;
+  if (/^[a-f0-9]{40}$/i.test(infoHash)) return infoHash.toLowerCase();
+  if (/^[a-z2-7]{32}$/i.test(infoHash)) return base32ToHex(infoHash);
+  return undefined;
 }
 
 export function extractTrackersFromMagnet(magnet: string): string[] {
