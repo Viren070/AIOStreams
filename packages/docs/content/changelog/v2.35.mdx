@@ -1,7 +1,7 @@
 ---
 title: A Jellyfin server, audio and subtitle tracks
 description: Watch in Jellyfin apps or a built-in web app with synced history, filter and format on single audio and subtitle tracks, and keep busy instances responsive.
-date: 2026-09-23
+date: 2026-09-24
 version: 2.35.0
 ---
 
@@ -51,17 +51,17 @@ AIOStreams' own [web app](#the-web-app) rather than Jellyfin's.
 Open **Save & Install**, then the new **Jellyfin** card. Its **Connect** tab has everything
 an app asks for:
 
-1. In the app, add a server and paste the **Server address**: your instance followed by
-   `/jellyfin`, such as `https://aiostreams.example.com/jellyfin`.
-2. Sign in with the **Username** shown there and your configuration password. The username
-   is your configuration's UUID, or its alias if you gave it one through a
-   [profile](/changelog/v2.32#configuration-profiles).
+1. In the app, add a server and paste the **Address with a sign-in picker**. The app then
+   lists your configuration's users on its sign-in screen, so there is no UUID to type.
+2. Pick a user and enter your configuration password.
 
-On a TV, use **Quick Connect** instead. Pick it on the app's sign-in screen and type the
-six-digit code the app shows into the Connect tab. The tab also offers an address with a
-**sign-in picker**, which lists your configuration's users on the app's sign-in screen so
-there is no UUID to type. It still asks for your password, and it holds the same secret as
-your install links, so only use it on your own household's devices.
+The picker address holds the same secret as your install links, so only use it on your own
+household's devices. On a TV, use **Quick Connect** instead: pick it on the app's sign-in
+screen and type the six-digit code the app shows into the Connect tab. The plain **Server
+address** (`https://aiostreams.example.com/jellyfin`) works too, with the **Username** shown
+there: your configuration's UUID, or its alias if you gave it one through a
+[profile](/changelog/v2.32#configuration-profiles). The
+[Jellyfin guide](/guides/jellyfin#what-to-type-at-a-glance) has every combination.
 
 ### Browsing
 
@@ -146,8 +146,12 @@ configuration password, by typing their name or picking it from the sign-in pick
 - With **Choose trackers**, each user with their own history syncs with their own tracker
   addons, such as a separate watch-history account per person.
 - A **PIN** of 4 to 12 digits stops others in the household signing in as that user, the
-  primary user included. Apps take it after the password, as `yourpassword/1234`, and Quick
-  Connect and the web app ask for it before switching to that user.
+  primary user included. Apps take it after the password, as `yourpassword/1234`. Quick
+  Connect asks for it before approving, and the web app when switching to that user.
+  Changing a user's PIN signs them out on every device.
+- If the instance allows it, a user with a PIN of 6 or more digits can sign in on the
+  picker address with just their PIN. Give each person the picker address and their own
+  PIN, and they never need your configuration password.
 
 Removing a user keeps their history. Add them back under the same name and it returns.
 
@@ -235,8 +239,10 @@ who is watching.
 
 Like the apps, the web app plays streams as they are, so a browser only plays what it can
 decode. For anything else, copy the stream link or open it in an external player, which you
-can set in the web app's settings. Jellyfin Media Player and Jellyfin for Android load the
-web app too, but play through their own players, so everything plays there.
+can set in the web app's settings. Jellyfin Desktop and Jellyfin for Android load the web
+app too, but play through their own players, so everything plays there. The
+[Jellyfin guide](/guides/jellyfin#in-jellyfins-desktop-and-android-apps) covers what to
+expect in each.
 
 The web app uses your addon's name and logo, and poster size and the featured row follow you
 to every device.
@@ -436,6 +442,10 @@ searches:
   an **Anime Skip client id** (`JELLYFIN_SEGMENTS_ANIME_SKIP_CLIENT_ID`). A **PublicMetaDB
   API key** (`JELLYFIN_SEGMENTS_PMDB_API_KEY`) covers every configuration without its own.
   Leave it empty and PublicMetaDB is only used by configurations that bring a key.
+  **Sign in with a PIN alone** (`JELLYFIN_PIN_SIGN_IN`, off) lets a household user with a
+  PIN of 6 or more digits sign in on the picker address without the configuration
+  password. Leave it off on a public instance: it lets a configuration owner hand out
+  sign-ins to the web app without sharing their password.
   Logins, API calls and images each have their own rate limit: `JELLYFIN_LOGIN_RATE_LIMIT_*`,
   `JELLYFIN_API_RATE_LIMIT_*` and `JELLYFIN_IMAGE_RATE_LIMIT_*`.
 - **Watch State**, under **Settings → Watch State**. **Report playback to addons**
