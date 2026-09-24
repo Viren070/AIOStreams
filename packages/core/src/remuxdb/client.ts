@@ -167,13 +167,13 @@ async function _fetchFromApi(
       timeout: 5000,
       headers: { 'x-client-id': instanceId() },
     });
+    if (response.status === 404) return [];
     if (!response.ok) {
-      logger.debug(`remuxdb lookup for ${imdbId} returned ${response.status}`);
-      return null;
+      throw new Error(`returned ${response.status}`);
     }
     return z.array(MediaProbeVersionSchema).parse(await response.json());
   } catch (error) {
-    logger.debug(`remuxdb lookup failed for ${imdbId}: ${error}`);
+    logger.error(`remuxdb lookup failed for ${imdbId}: ${error}`);
     return null;
   }
 }
