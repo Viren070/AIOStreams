@@ -32,9 +32,19 @@ const NEWZNAB_INDEXERS: {
   apiKeyUrl?: string;
 }[] = [
   {
+    label: 'abNZB',
+    value: 'https://abnzb.com/api',
+    apiKeyUrl: 'https://abnzb.com/profile',
+  },
+  {
     label: 'altHUB',
     value: 'https://api.althub.co.za/api',
     apiKeyUrl: 'https://althub.co.za/profile',
+  },
+  {
+    label: 'AmeNZB',
+    value: 'https://amenzb.moe/api',
+    apiKeyUrl: 'https://amenzb.moe/profile',
   },
   // AnimeTosho needs no key at all
   { label: 'AnimeTosho', value: 'https://feed.animetosho.org/api' },
@@ -45,21 +55,37 @@ const NEWZNAB_INDEXERS: {
   },
   { label: 'Aninzb', value: 'https://aninzb.moe/api' },
   { label: 'ClubNZB', value: 'https://clubnzb.com/api' },
+  {
+    label: 'Digital Carnage',
+    value: 'https://digitalcarnage.info/api',
+    apiKeyUrl: 'https://digitalcarnage.info/profile',
+  },
   { label: 'DOGnzb', value: 'https://api.dognzb.cr/api' },
   {
     label: 'DrunkenSlug',
     value: 'https://drunkenslug.com/api',
     apiKeyUrl: 'https://drunkenslug.com/profile',
   },
+  { label: 'GingaDADDY', value: 'https://www.gingadaddy.com/api' },
   {
     label: 'Miatrix',
     value: 'https://www.miatrix.com/api',
     apiKeyUrl: 'https://www.miatrix.com/profile',
   },
   {
+    label: 'NewzBay',
+    value: 'https://newzbay.cc/api',
+    apiKeyUrl: 'https://newzbay.cc/profile',
+  },
+  {
     label: 'NinjaCentral',
     value: 'https://ninjacentral.co.za/api',
     apiKeyUrl: 'https://ninjacentral.co.za/profile',
+  },
+  {
+    label: 'NZB Atlas',
+    value: 'https://nzbatlas.com/api',
+    apiKeyUrl: 'https://nzbatlas.com/profile',
   },
   {
     label: 'Nzb.life',
@@ -77,6 +103,11 @@ const NEWZNAB_INDEXERS: {
     apiKeyUrl: 'https://nzbgeek.info/profile',
   },
   {
+    label: 'NzbNest',
+    value: 'https://nzbnest.com/api',
+    apiKeyUrl: 'https://nzbnest.com/profile',
+  },
+  {
     label: 'NzbNoob',
     value: 'https://nzbnoob.com/api',
     apiKeyUrl: 'https://nzbnoob.com/profile',
@@ -87,6 +118,11 @@ const NEWZNAB_INDEXERS: {
     apiKeyUrl: 'https://nzbplanet.net/profile',
   },
   { label: 'NZBStars', value: 'https://nzbstars.com/api' },
+  {
+    label: 'PourCeSoir',
+    value: 'https://pourcesoir.in/api',
+    apiKeyUrl: 'https://pourcesoir.in/profile',
+  },
   {
     label: 'SquareEyed',
     value: 'https://squareeyed.org/api',
@@ -111,6 +147,11 @@ const NEWZNAB_INDEXERS: {
     label: 'Usenet Crawler',
     value: 'https://www.usenet-crawler.com/api',
     apiKeyUrl: 'https://www.usenet-crawler.com/profile',
+  },
+  {
+    label: 'Videothek',
+    value: 'https://videothek.io/api',
+    apiKeyUrl: 'https://videothek.io/profile',
   },
 ];
 
