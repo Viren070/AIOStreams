@@ -95,8 +95,8 @@ function visibleUsers(ctx: JellyfinRequestContext): WebUser[] {
   return users.filter((u) => u.persona?.id === ctx.persona?.id);
 }
 
-/** A session whose credential also opens the account. */
-function openedAsAccount(ctx: JellyfinRequestContext): boolean {
+/** A session that began with the configuration password, or is the account itself. */
+function provedPassword(ctx: JellyfinRequestContext): boolean {
   return !ctx.persona || readToken(ctx.token)?.o === 1;
 }
 
@@ -104,17 +104,46 @@ function isCaller(ctx: JellyfinRequestContext, user: WebUser): boolean {
   return (user.persona?.id ?? '') === (ctx.persona?.id ?? '');
 }
 
+type Secret = 'pin' | 'password' | 'password-pin';
+
 /** What switching to `user` asks of the caller. */
-function secretFor(
-  ctx: JellyfinRequestContext,
-  user: WebUser
-): 'pin' | 'password' | null {
+function secretFor(ctx: JellyfinRequestContext, user: WebUser): Secret | null {
   if (isCaller(ctx, user)) return null;
-  if (user.persona) return personaLocked(user.persona) ? 'pin' : null;
+  const locked = user.persona
+    ? personaLocked(user.persona)
+    : accountLocked(ctx.userData);
+  // A persona session may have begun with its PIN alone.
+  if (!provedPassword(ctx) && (!user.persona || !locked)) {
+    return locked ? 'password-pin' : 'password';
+  }
   // A PIN is asked on every switch, or handing over a signed-in device would
   // hand over the account.
-  if (accountLocked(ctx.userData)) return 'pin';
-  return openedAsAccount(ctx) ? null : 'password';
+  return locked ? 'pin' : null;
+}
+
+async function passwordOpens(ctx: JellyfinRequestContext, password: string) {
+  return UserRepository.verifyUser(ctx.uuid, password).then(
+    () => true,
+    () => false
+  );
+}
+
+async function secretOpens(
+  ctx: JellyfinRequestContext,
+  user: WebUser,
+  needs: Secret,
+  secret: string
+): Promise<boolean> {
+  if (needs === 'pin') {
+    return userUnlocks(ctx.uuid, ctx.userData, user.persona, secret);
+  }
+  if (needs === 'password') return passwordOpens(ctx, secret);
+  const slash = secret.lastIndexOf('/');
+  if (slash <= 0) return false;
+  return (
+    (await passwordOpens(ctx, secret.slice(0, slash))) &&
+    userUnlocks(ctx.uuid, ctx.userData, user.persona, secret.slice(slash + 1))
+  );
 }
 
 function avatarOf(ctx: JellyfinRequestContext, user: WebUser): string | null {
@@ -407,10 +436,6 @@ router.get(
   })
 );
 
-/*
- * Switches user. A user with a PIN asks for it; a session holding a persona
- * alone asks for the configuration's password to reach an account without one.
- */
 router.post(
   '/AIOStreams/Token',
   web(async (req, res, ctx) => {
@@ -427,15 +452,7 @@ router.post(
       res.status(429).json({ Message: 'Too many attempts' });
       return;
     }
-    const allowed =
-      needs === 'pin'
-        ? await userUnlocks(ctx.uuid, ctx.userData, user.persona, secret)
-        : needs === 'password'
-          ? await UserRepository.verifyUser(ctx.uuid, secret).then(
-              () => true,
-              () => false
-            )
-          : true;
+    const allowed = needs ? await secretOpens(ctx, user, needs, secret) : true;
     if (!allowed) {
       res.status(401).json({ Message: 'Invalid password' });
       return;
@@ -447,7 +464,7 @@ router.post(
         ctx.encryptedPassword,
         ctx.userData,
         user.persona,
-        { openedAsAccount: openedAsAccount(ctx) }
+        { provedPassword: provedPassword(ctx) }
       )
     );
   })

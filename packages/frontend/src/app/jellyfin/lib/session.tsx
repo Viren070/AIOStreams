@@ -195,8 +195,10 @@ export function useSessionPhase() {
         { Username: username, Pw: password }
       );
       const proof = new JellyfinClient(base, auth.AccessToken ?? null);
-      // A name that already carries a user signs in as that user.
-      if (username.includes('/')) adopt(proof, auth);
+      // A name that carries or is a user signs in as that user.
+      const named =
+        username.toLowerCase() === (auth.User?.Name ?? '').toLowerCase();
+      if (username.includes('/') || named) adopt(proof, auth);
       else await enter(proof, auth);
     },
     [adopt, base, enter]

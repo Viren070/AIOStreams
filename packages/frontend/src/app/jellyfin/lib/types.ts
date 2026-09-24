@@ -55,7 +55,8 @@ export interface PickableUser {
   user: UserDto;
   avatar: string | null;
   hidden: boolean;
-  needs: 'pin' | 'password' | null;
+  /** `password-pin` is sent as `<password>/<pin>`. */
+  needs: 'pin' | 'password' | 'password-pin' | null;
 }
 
 export interface WebActivity {

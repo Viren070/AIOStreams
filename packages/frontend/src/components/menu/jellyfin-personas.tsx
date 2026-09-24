@@ -231,6 +231,9 @@ function TrackersField({
 
 /** Jellyfin clients show these as users of the server. */
 const PIN_SHAPE = /^\d{4,12}$/;
+/** Must match the server's floor for signing in with a PIN alone. */
+const PIN_ONLY_LENGTH = 6;
+const PIN_ONLY_SHAPE = new RegExp(`^\\d{${PIN_ONLY_LENGTH},12}$`);
 
 /** A saved PIN comes back as its hash, never as the digits. */
 function isSavedPin(lock: string | undefined): lock is string {
@@ -240,7 +243,7 @@ function isSavedPin(lock: string | undefined): lock is string {
 function PinField({
   value,
   onChange,
-  help = 'Clients ask for it before signing in as this user. Anyone who can edit this configuration can still change or remove it.',
+  help = 'Signing in as this user needs it, typed after the password as password/PIN. Anyone who can edit this configuration can still change or remove it.',
 }: {
   value: string | undefined;
   onChange(value: string | undefined): void;
@@ -332,6 +335,7 @@ export function JellyfinPersonas() {
   const maxPersonas =
     status?.settings?.jellyfin?.maxPersonas ?? DEFAULT_MAX_PERSONAS;
   const maxTrackers = status?.settings?.jellyfin?.maxTrackers;
+  const pinSignIn = status?.settings?.jellyfin?.pinSignIn ?? false;
   const personas = userData.jellyfin?.personas ?? [];
   const primary = userData.jellyfin?.primary;
   const primaryName = primary?.name || userData.addonName || 'Primary user';
@@ -425,6 +429,16 @@ export function JellyfinPersonas() {
     if (draft.lock && !isSavedPin(draft.lock) && !PIN_SHAPE.test(draft.lock)) {
       toast.error('A PIN is 4 to 12 digits.');
       return;
+    }
+    if (
+      pinSignIn &&
+      draft.lock &&
+      !isSavedPin(draft.lock) &&
+      !PIN_ONLY_SHAPE.test(draft.lock)
+    ) {
+      toast.warning(
+        `A PIN under ${PIN_ONLY_LENGTH} digits cannot sign in without your password.`
+      );
     }
     const trackers = draft.history === 'shared' ? undefined : draft.trackers;
     const taken = takenFor(editing, false);
@@ -528,9 +542,12 @@ export function JellyfinPersonas() {
     <div className="space-y-3">
       <p className="text-xs text-gray-400">
         Shown as users of the server. Everyone signs in with this
-        configuration&apos;s password, and a user with a PIN also asks for that.
-        The primary user is this configuration itself; each other user can keep
-        a history and trackers of its own.
+        configuration&apos;s password, and a user with a PIN also needs that,
+        typed after the password as password/PIN. The primary user is this
+        configuration itself; each other user can keep a history and trackers of
+        its own.
+        {pinSignIn &&
+          ` On the sign-in picker address, a user with a PIN of ${PIN_ONLY_LENGTH} or more digits can sign in with that PIN alone, so each person needs only their own PIN.`}
       </p>
 
       <ul className="divide-y divide-gray-800 rounded-md border border-gray-800">
@@ -653,7 +670,7 @@ export function JellyfinPersonas() {
             <PinField
               value={primaryDraft.lock}
               onChange={(lock) => setPrimaryDraft({ ...primaryDraft, lock })}
-              help="Asked every time someone signs in as the primary user or switches to it, even with your configuration password, so other users can't reach your history. Anyone who can edit this configuration can still change or remove it."
+              help="Needed every time someone signs in as the primary user, even with your configuration password (typed after it as password/PIN), and asked whenever someone switches to it in the web app, so other users can't reach your history. Anyone who can edit this configuration can still change or remove it."
             />
             <div className="flex items-center justify-end gap-2">
               <Button
@@ -749,6 +766,11 @@ export function JellyfinPersonas() {
             <PinField
               value={draft.lock}
               onChange={(lock) => setDraft({ ...draft, lock })}
+              help={
+                pinSignIn
+                  ? `Signing in as this user needs it, typed after the password as password/PIN. On the sign-in picker address, a PIN of ${PIN_ONLY_LENGTH} or more digits also works on its own, without your configuration password. Anyone who can edit this configuration can still change or remove it.`
+                  : undefined
+              }
             />
 
             <div className="flex items-center justify-end gap-2">

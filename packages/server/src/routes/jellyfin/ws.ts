@@ -14,7 +14,7 @@ import {
   type UserData,
   type WatchScope,
 } from '@aiostreams/core';
-import { personaById, resolveConfigFor } from './context.js';
+import { lockTag, personaById, resolveConfigFor } from './context.js';
 
 const logger = createLogger('jellyfin');
 
@@ -63,11 +63,12 @@ async function authenticateUpgrade(url: string): Promise<SocketUser | null> {
   const personaKey = payload.k ?? '';
   if (!resolved) return null;
   const { uuid, userData } = resolved;
-  if (!personaKey) {
+  const persona = personaKey ? personaById(userData, personaKey) : null;
+  if (personaKey && !persona) return null;
+  if ((payload.l ?? '') !== lockTag(userData, persona)) return null;
+  if (!persona) {
     return { scope: accountScope(uuid), userId: personaUserId(uuid, '') };
   }
-  const persona = personaById(userData, personaKey);
-  if (!persona) return null;
   return {
     scope:
       persona.history === 'shared'

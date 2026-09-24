@@ -1,6 +1,7 @@
 import React from 'react';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import { RouterProvider } from '@tanstack/react-router';
+import { useQuery } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/toaster';
 import { LoadingOverlay } from '@/components/ui/loading-spinner';
@@ -63,6 +64,19 @@ function Session() {
   React.useEffect(() => {
     document.title = branding.name || 'AIOStreams';
   }, [branding.name]);
+  const picker = pickerUuid(base);
+  const pinSignInQuery = useQuery({
+    queryKey: ['jf-pin-sign-in', base],
+    queryFn: async () => {
+      const info = await anonymous.get<{
+        aiostreams?: { pinSignIn?: boolean };
+      }>('/System/Info/Public');
+      return info.aiostreams?.pinSignIn ?? false;
+    },
+    enabled: phase.kind === 'signed-out' && !!picker,
+    staleTime: 5 * 60_000,
+  });
+  const pinSignIn = pinSignInQuery.data ?? false;
   // The Android app reads the stored sign-in when this is requested.
   React.useEffect(() => {
     if (ready && window.NativeInterface) {
@@ -76,8 +90,15 @@ function Session() {
       screen = <LoadingOverlay />;
       break;
     case 'signed-out':
-      screen = (
-        <SignInPage onSignIn={signIn} defaultUsername={pickerUuid(base)} />
+      // The form keeps its first username, so it waits to know which to offer.
+      screen = pinSignInQuery.isLoading ? (
+        <LoadingOverlay />
+      ) : (
+        <SignInPage
+          onSignIn={signIn}
+          defaultUsername={pinSignIn ? '' : picker}
+          pinSignIn={pinSignIn}
+        />
       );
       break;
     case 'picking':

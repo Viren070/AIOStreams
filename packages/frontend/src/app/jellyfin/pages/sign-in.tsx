@@ -85,9 +85,11 @@ function Screen({ children }: { children: React.ReactNode }) {
 export function SignInPage({
   onSignIn,
   defaultUsername = '',
+  pinSignIn = false,
 }: {
   onSignIn: (username: string, password: string) => Promise<void>;
   defaultUsername?: string;
+  pinSignIn?: boolean;
 }) {
   const [username, setUsername] = React.useState(defaultUsername);
   const [password, setPassword] = React.useState('');
@@ -131,11 +133,13 @@ export function SignInPage({
           <div className="space-y-1 text-center">
             <h1 className="text-xl font-semibold">Sign in</h1>
             <p className="text-sm text-[--muted]">
-              Use your configuration&apos;s UUID or alias and its password.
+              {pinSignIn
+                ? 'Use your user name and PIN, or the configuration’s UUID and its password.'
+                : 'Use your configuration’s UUID or alias and its password.'}
             </p>
           </div>
           <TextInput
-            label="UUID or alias"
+            label={pinSignIn ? 'User or UUID' : 'UUID or alias'}
             value={username}
             onValueChange={setUsername}
             autoComplete="username"
@@ -143,7 +147,7 @@ export function SignInPage({
             required
           />
           <PasswordInput
-            label="Password"
+            label={pinSignIn ? 'PIN or password' : 'Password'}
             autoFocus={!!defaultUsername}
             value={password}
             onValueChange={(value) => {
@@ -233,14 +237,19 @@ function SecretPrompt({
   onSubmit(secret: string): Promise<boolean>;
   onBack(): void;
 }) {
-  const pin = user.needs === 'pin';
-  const [secret, setSecret] = React.useState('');
+  const askPassword = user.needs !== 'pin';
+  const askPin = user.needs === 'pin' || user.needs === 'password-pin';
+  const [password, setPassword] = React.useState('');
+  const [pin, setPin] = React.useState('');
   const [scope, shake] = useShake<HTMLDivElement>();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const secret =
+      askPassword && askPin ? `${password}/${pin}` : askPin ? pin : password;
     if (await onSubmit(secret)) return;
-    setSecret('');
+    setPassword('');
+    setPin('');
     shake();
   };
 
@@ -258,26 +267,25 @@ function SecretPrompt({
         transition={{ ...SPRING, delay: 0.05 }}
       >
         <h1 className="text-xl font-semibold">{user.user.Name}</h1>
-        <div ref={scope} className="w-full">
-          {pin ? (
+        <div ref={scope} className="w-full space-y-3">
+          {askPassword && (
+            <PasswordInput
+              label="Configuration password"
+              help="Needed to switch to this user."
+              autoFocus
+              value={password}
+              onValueChange={setPassword}
+            />
+          )}
+          {askPin && (
             <TextInput
               label="PIN"
               type="password"
               inputMode="numeric"
               autoComplete="off"
-              autoFocus
-              value={secret}
-              onValueChange={(v) =>
-                setSecret(v.replace(/\D/g, '').slice(0, 12))
-              }
-            />
-          ) : (
-            <PasswordInput
-              label="Configuration password"
-              help="Needed to switch to the primary user."
-              autoFocus
-              value={secret}
-              onValueChange={setSecret}
+              autoFocus={!askPassword}
+              value={pin}
+              onValueChange={(v) => setPin(v.replace(/\D/g, '').slice(0, 12))}
             />
           )}
         </div>
@@ -287,7 +295,7 @@ function SecretPrompt({
           intent="white"
           className="w-full rounded-full"
           loading={busy}
-          disabled={pin ? secret.length < 4 : !secret}
+          disabled={(askPassword && !password) || (askPin && pin.length < 4)}
         >
           Continue
         </Button>
@@ -404,7 +412,8 @@ export function UserPicker({
                                 'animate-pulse ring-brand-400'
                             )}
                           />
-                          {u.needs === 'pin' && (
+                          {(u.needs === 'pin' ||
+                            u.needs === 'password-pin') && (
                             <span className="absolute bottom-0 right-0 flex size-7 items-center justify-center rounded-full bg-gray-900 text-sm ring-2 ring-[--background]">
                               <BiLockAlt aria-label="Has a PIN" />
                             </span>

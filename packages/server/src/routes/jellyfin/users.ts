@@ -1,6 +1,7 @@
 import { createHash } from 'crypto';
 import { Router, type Request } from 'express';
 import {
+  config as appConfig,
   createLogger,
   encryptString,
   getSimpleTextHash,
@@ -27,6 +28,7 @@ import {
   accountLocked,
   PIN_REQUIRED,
   personaLocked,
+  lockTag,
   userUnlocks,
   personasOf,
   qs,
@@ -219,7 +221,7 @@ export async function authenticationResult(
   encryptedPassword: string,
   userData: UserData,
   persona: JellyfinPersona | null,
-  opts: { openedAsAccount?: boolean } = {}
+  opts: { provedPassword?: boolean } = {}
 ) {
   const client = clientOf(req);
   return {
@@ -230,7 +232,8 @@ export async function authenticationResult(
       p: encryptedPassword,
       d: client.deviceId,
       k: persona?.id,
-      ...(persona && opts.openedAsAccount ? { o: 1 as const } : {}),
+      l: lockTag(userData, persona) || undefined,
+      ...(persona && opts.provedPassword ? { o: 1 as const } : {}),
     }),
     ServerId: instanceServerId(),
   };
@@ -298,6 +301,44 @@ async function checkPassword(
   return null;
 }
 
+/** A bare user name or the uuid on a picker address; `<uuid or alias>/<user>` elsewhere. */
+function parseSignIn(
+  username: string,
+  mount: { uuid: string } | undefined
+): { account: string; personaName: string } | null {
+  if (mount) {
+    if (username.includes('/')) return null;
+    return isConfigUuid(username)
+      ? { account: username, personaName: '' }
+      : { account: mount.uuid, personaName: username };
+  }
+  const slash = username.lastIndexOf('/');
+  return slash < 0
+    ? { account: username, personaName: '' }
+    : {
+        account: username.slice(0, slash),
+        personaName: username.slice(slash + 1),
+      };
+}
+
+/** Shorter PINs are too easy to guess once the picker address has leaked. */
+const PIN_ONLY_PATTERN = /^\d{6,12}$/;
+
+/** The picker address's credential stands in for the password. */
+async function pinOnlySignIn(
+  mount: { uuid: string; encryptedPassword: string },
+  personaName: string,
+  pin: string
+): Promise<{ userData: UserData; persona: JellyfinPersona } | null> {
+  if (!appConfig.jellyfin.pinSignIn || !personaName) return null;
+  if (!PIN_ONLY_PATTERN.test(pin)) return null;
+  const userData = await resolveConfig(mount.uuid, mount.encryptedPassword);
+  const persona = userData ? personaByName(userData, personaName) : null;
+  if (!userData || !persona || !personaLocked(persona)) return null;
+  if (!(await userUnlocks(mount.uuid, userData, persona, pin))) return null;
+  return { userData, persona };
+}
+
 router.post(
   '/Users/AuthenticateByName',
   jfOptional(async (req, res) => {
@@ -308,20 +349,12 @@ router.post(
     );
     const mount = req.jfMount;
 
-    // `<uuid or alias>/<persona>`; neither side can contain a slash. On a
-    // picker address a bare name is one of its users, as the picker posts it.
-    const slash = username.lastIndexOf('/');
-    const bareUser = mount && slash < 0 && !isConfigUuid(username);
-    const account = bareUser
-      ? mount.uuid
-      : slash >= 0
-        ? username.slice(0, slash)
-        : username;
-    const personaName = bareUser
-      ? username
-      : slash >= 0
-        ? username.slice(slash + 1)
-        : '';
+    const named = parseSignIn(username, mount);
+    if (!named) {
+      res.status(401).json({ Message: 'Invalid username or password' });
+      return;
+    }
+    const { account, personaName } = named;
     if (!account) {
       res.status(401).json({
         Message: 'Username (configuration UUID or alias) is required',
@@ -338,7 +371,30 @@ router.post(
     }
     const proven = await checkPassword(uuid, pw);
     if (!proven) {
-      res.status(401).json({ Message: 'Invalid username or password' });
+      const byPin = mount ? await pinOnlySignIn(mount, personaName, pw) : null;
+      if (!mount || !byPin) {
+        res.status(401).json({ Message: 'Invalid username or password' });
+        return;
+      }
+      const client = clientOf(req);
+      logger.info(
+        {
+          uuid: mount.uuid,
+          persona: byPin.persona.id,
+          client: client.name,
+          device: client.device,
+        },
+        'jellyfin client authenticated with a pin'
+      );
+      res.json(
+        await authenticationResult(
+          req,
+          mount.uuid,
+          mount.encryptedPassword,
+          byPin.userData,
+          byPin.persona
+        )
+      );
       return;
     }
     const { encryptedPassword, pin } = proven;
@@ -374,7 +430,7 @@ router.post(
         encryptedPassword,
         userData,
         signIn.persona,
-        { openedAsAccount: !accountLocked(userData) }
+        { provedPassword: true }
       )
     );
   })

@@ -15,8 +15,10 @@ export interface TokenPayload {
   k?: string;
   /** API key id; the token then acts for every user. */
   a?: string;
-  /** Set when the credential that began the session also opens the account. */
+  /** Set on a user session that began with the configuration password. */
   o?: 1;
+  /** Tags the PIN the user had when signed in, so changing it signs them out. */
+  l?: string;
   iat: number;
 }
 

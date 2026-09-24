@@ -262,6 +262,14 @@ export function accountLocked(userData: Pick<UserData, 'jellyfin'>): boolean {
   return !!lockOf(userData, null);
 }
 
+export function lockTag(
+  userData: Pick<UserData, 'jellyfin'>,
+  persona: JellyfinPersona | null
+): string {
+  const lock = lockOf(userData, persona);
+  return lock ? getSimpleTextHash(lock).slice(0, 12) : '';
+}
+
 /** Sent when the credential was right but a PIN is missing or wrong, so a client can ask for it. */
 export const PIN_REQUIRED = 'PIN required';
 
@@ -422,7 +430,9 @@ async function buildContext(
   token: string | undefined,
   client: ClientInfo,
   personaKey: string,
-  keyClaim?: ApiKeyClaim
+  keyClaim?: ApiKeyClaim,
+  /** The token's PIN tag; absent when the context is not built from a token. */
+  lockClaim?: string
 ): Promise<JellyfinRequestContext | typeof UNKNOWN_USER | null> {
   const entry = await resolveConfigEntry(uuid, encryptedPassword);
   if (!entry) return null;
@@ -446,6 +456,8 @@ async function buildContext(
     // A token naming a persona that no longer exists is no longer valid.
     persona = personaKey ? personaById(userData, personaKey) : null;
     if (personaKey && !persona) return null;
+    if (lockClaim !== undefined && lockClaim !== lockTag(userData, persona))
+      return null;
   }
   const primaryVariants = userData.jellyfin?.primary?.variants ?? [];
   const variantContext = buildVariantRequestContext(req, 'jellyfin');
@@ -517,6 +529,7 @@ async function buildContext(
         p: encryptedPassword,
         d: client.deviceId,
         k: persona?.id,
+        l: lockTag(baseUserData, persona) || undefined,
       }),
     client,
     build: {
@@ -587,7 +600,8 @@ export const jellyfinContext: RequestHandler = async (req, res, next) => {
       token,
       client,
       payload?.k ?? '',
-      payload?.a ? { id: payload.a, userId: urlUserId(req) } : undefined
+      payload?.a ? { id: payload.a, userId: urlUserId(req) } : undefined,
+      payload?.l ?? ''
     );
     if (ctx === UNKNOWN_USER) {
       res.status(404).json({ Message: 'User not found' });

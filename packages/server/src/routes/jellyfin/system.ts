@@ -28,7 +28,10 @@ export function publicInfo(req: Request) {
     LocalAddress: `${requestOrigin(req)}${req.baseUrl}`.replace(/\/$/, ''),
     ServerName: req.jf?.userData.addonName || serverName(),
     // Jellyfin has no field for a logo; clients ignore what they don't know.
-    aiostreams: { logo: req.jf?.userData.addonLogo ?? null },
+    aiostreams: {
+      logo: req.jf?.userData.addonLogo ?? null,
+      pinSignIn: appConfig.jellyfin.pinSignIn && !!mountOf(req),
+    },
     Version: appConfig.jellyfin.version,
     ProductName: JELLYFIN_PRODUCT_NAME,
     OperatingSystem: '',

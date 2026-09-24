@@ -117,6 +117,16 @@ export const jellyfinSchema = {
     secret: false,
     ui: { min: 0, max: 100 },
   },
+  pinSignIn: {
+    schema: z.boolean(),
+    default: false,
+    label: 'Sign in with a PIN alone',
+    description:
+      "Lets a user with a PIN of 6 or more digits sign in on a configuration's /jellyfin/<uuid>/<encryptedPassword> address with that PIN instead of the configuration password, so its owner can hand each person their own user without sharing the password. That address holds the same credential as the configuration's Stremio manifest URL, so anyone with that URL who learns or guesses a PIN can use that user. The primary user and users without a PIN still need the password. Leave this off on a public instance.",
+    env: 'JELLYFIN_PIN_SIGN_IN',
+    requiresRestart: false,
+    secret: false,
+  },
   resolveOnOpen: {
     schema: z.enum(['always', 'never', 'user']),
     default: 'user',

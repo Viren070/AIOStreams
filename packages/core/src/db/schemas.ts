@@ -1911,6 +1911,8 @@ const StatusResponseSchema = z.object({
         maxLibraries: z.number(),
         /** Extra users a configuration may add beyond its primary user. */
         maxPersonas: z.number(),
+        /** Whether a user's PIN alone signs it in on a picker address. */
+        pinSignIn: z.boolean().optional(),
         /** Trackers one user syncs with at most. */
         maxTrackers: z.number(),
         segments: z.object({

@@ -19,9 +19,9 @@ AIOStreams can present your configuration as a **Jellyfin server**. You add it t
 
 ## Before you start
 
-- **Add catalog and metadata addons to AIOStreams.** A Jellyfin app only sees what your AIOStreams configuration provides, so it needs addons for all three jobs: catalogs to fill the libraries, metadata to describe each title, and streams to play it.
+- **Add catalog and metadata addons to AIOStreams.** A Jellyfin app only sees what your configuration provides, so it needs addons for all three jobs: catalogs to fill the libraries, metadata to describe each title, and streams to play it.
 - **Save your configuration.** A Jellyfin app signs in to a saved configuration.
-- **Pick an app.** Swiftfin, Findroid, Streamyfin, Jellyfin for Android TV, Jellyfin for Kodi and Infuse all work. In a browser, the server address opens AIOStreams' own [web app](#the-web-app) rather than Jellyfin's.
+- **Pick an app.** Swiftfin, Findroid, Streamyfin, Jellyfin for Android TV, Jellyfin for Kodi and Infuse all work. In a browser, the server opens AIOStreams' own [web app](#the-web-app) rather than Jellyfin's.
 - **Check the instance allows it.** It is on by default. If the **Jellyfin** card under **Save & Install** is greyed out, the instance owner has turned it off.
 
 <Callout type="info">
@@ -32,63 +32,173 @@ AIOStreams can present your configuration as a **Jellyfin server**. You add it t
 
 ## Connecting an app
 
+Everything an app needs is on the configure page, under **Save & Install → Jellyfin → Connect**. There are three ways in:
+
+| Way                                               | Use it for                                     | What you enter                                    |
+| ------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------- |
+| **Address with a sign-in picker** (best)          | Your own devices and your household's          | Pick a user, then the password                    |
+| [Quick Connect](#on-a-tv-quick-connect)           | TVs and anything you type on with a remote     | Nothing; you approve a code on the configure page |
+| [Server address](#using-the-plain-server-address) | A device you'd rather not give the picker link | Your UUID or alias, then the password             |
+
+The sign-in picker is the easiest: the app lists your configuration's users on its sign-in screen, the way a normal Jellyfin server does, so nobody types a UUID.
+
 <Steps>
-
-<Step>
-
-### Open the Jellyfin settings
-
-On the configure page, go to **Save & Install** and open the **Jellyfin** card. The **Connect** tab shows everything the app needs.
-
-</Step>
 
 <Step>
 
 ### Add the server
 
-In your app, add a server and paste the **Server address**. It is your instance's address followed by `/jellyfin`, for example `https://aiostreams.example.com/jellyfin`.
+In your app, add a server and paste the **Address with a sign-in picker** from the Connect tab.
 
 </Step>
 
 <Step>
 
-### Sign in
+### Pick a user
 
-Enter the **Username** shown on the Connect tab and your configuration password.
+The app lists the [users](#users-and-pins) of your configuration: the primary user, which is your configuration itself, and any household users you added. Pick one.
 
-- The username is your configuration UUID, or its alias if you gave it one through a [profile](/guides/config-profiles). The password is your configuration password either way.
-- To sign in as one of your [household users](#household-users), add `/` and their name, for example `<uuid>/Sam`.
-- If the user you sign in as has a [PIN](#pins), the primary user included, add it after your password the same way, for example `yourpassword/1234`.
+</Step>
+
+<Step>
+
+### Enter the password
+
+Enter your configuration password. If that user has a [PIN](#pins), add it after the password with a `/`, for example `yourpassword/1234`.
+
+If the instance allows it, a user with a PIN of 6 or more digits can [enter just their PIN](#letting-people-sign-in-with-only-their-pin) instead.
 
 </Step>
 
 </Steps>
 
-### On a TV
-
-Typing a UUID with a remote is painful, so use **Quick Connect** instead. Choose Quick Connect on the app's sign-in screen, then type the six-digit code it shows into the **Quick Connect** box on the Connect tab. The device waiting on that code appears; press **Approve**. If you have household users, choose who to sign in as first, and enter their PIN if they have one.
-
-### Sign-in picker
-
-The Connect tab also offers an **address with a sign-in picker**. Added as the server address instead, it makes the app list your configuration's users on the sign-in screen, so there is no UUID to type. Signing in still needs your configuration password, with a user's [PIN](#pins) added the same way as above.
-
 <Callout type="warn">
-  That address holds the same secret as your install links. Only use it on
-  devices in your own household.
+  The picker address contains the same secret as your Stremio install links.
+  Treat it like one of them and only put it on devices in your household.
+</Callout>
+
+A user hidden from the picker can still sign in: choose the app's option to sign in manually and type their name, just the name.
+
+### On a TV: Quick Connect
+
+Typing with a remote is painful, so use **Quick Connect** instead:
+
+1. Add the server to the TV app as above, then choose **Quick Connect** on its sign-in screen. It shows a six-digit code.
+2. Type the code into the **Quick Connect** box on the Connect tab. The device waiting on it appears.
+3. If you have household users, choose who to sign in as, and enter their PIN if they have one. Then press **Approve**.
+
+An app that is already signed in may also offer a Quick Connect screen of its own. Approving a code there signs the new device in as the same user.
+
+### Using the plain server address
+
+The **Server address** on the Connect tab has no secret in it. It is your instance's address followed by `/jellyfin`, for example `https://aiostreams.example.com/jellyfin`. Apps show no user list on it, so you type who you are:
+
+- **Username**: the one shown on the Connect tab. That is your configuration UUID, or its alias if you gave it one through a [profile](/guides/config-profiles). To sign in as a household user, add `/` and their name, for example `<uuid>/Sam`.
+- **Password**: your configuration password, with `/PIN` added for a user with a PIN, as above.
+
+### What to type, at a glance
+
+| Signing in as               | On the sign-in picker address                                                     | On the server address            |
+| --------------------------- | --------------------------------------------------------------------------------- | -------------------------------- |
+| The primary user            | Pick it; your password                                                            | `<uuid>` or alias; your password |
+| A household user            | Pick them; your password                                                          | `<uuid>/<name>`; your password   |
+| Either, with a PIN          | `yourpassword/PIN`                                                                | `yourpassword/PIN`               |
+| A household user, PIN alone | The PIN, [if the instance allows it](#letting-people-sign-in-with-only-their-pin) | Not possible                     |
+
+## Users and PINs
+
+The **Users** tab adds users to your server, so everyone in a household can have their own profile, with their own Continue Watching, trackers and addon setup.
+
+- **The primary user** is your configuration itself. Give it a name (your addon name by default), an avatar and, optionally, a [PIN](#the-primary-users-pin).
+- **Each extra user** has a name, which is also what they type to sign in by hand, and an optional avatar. You can hide a user from the sign-in picker.
+- **History** is either **own**, a separate Continue Watching, or **shared** with the primary user. Sharing the history also shares its trackers.
+- **Variants** apply while that user is signed in, in the order picked, so a user can get, for example, a different set of filters. A variant that activates on its own applies too, [before the ones picked here](/reference/config-expressions#what-applies-in-what-order).
+- **Trackers** can be chosen per user; see [Trackers for each user](#trackers-for-each-user).
+- **PIN** is optional; see below.
+
+Removing a user keeps their watch history. Adding a user again under the same name gets it back.
+
+### PINs
+
+Give a user a PIN of 4 to 12 digits to stop others in the household signing in as them. PINs are an AIOStreams addition, so Jellyfin apps have no box for one: type it in the password box after the password, as `yourpassword/1234`. Without it, an app only reports a failed sign-in. The web app is the exception and asks for the PIN on its own, both at sign-in and when switching to that user. Quick Connect asks for it before approving. API keys can't act as a user with a PIN.
+
+- Five wrong PINs in a row pause sign-in to that user for 15 minutes.
+- Changing or removing a user's PIN signs that user out on every device.
+- The primary user can still see a PIN user's watch history, but can't mark things watched as them.
+
+### The primary user's PIN
+
+The primary user sees everyone's activity and history, so a PIN on it keeps the other people using your configuration out of yours. With one set:
+
+- Signing in as the primary user always needs the PIN, even with your configuration password.
+- Switching to the primary user from another user in the web app asks for the PIN every time, so handing over a device after switching away doesn't hand over your account.
+
+### Letting people sign in with only their PIN
+
+Sometimes the people you set up users for shouldn't know your configuration password, because it also opens the configure page. If the instance owner allows it, each of them can sign in with their own PIN instead. The Connect tab says whether your instance does.
+
+1. Give each person's user a PIN of **6 or more digits**.
+2. Give them the **Address with a sign-in picker**, their user name and their PIN.
+3. They pick their user and enter the PIN as the password.
+
+This only works on the sign-in picker address, and only for household users. The primary user, and users without a PIN, still need your configuration password, and a PIN shorter than 6 digits only works together with it. Anyone with the picker address or your install links who learns or guesses a PIN can sign in as that user, so pick PINs that aren't easy to guess.
+
+### Switching users
+
+In the [web app](#the-web-app), you can switch users without signing out:
+
+- Switching to a user with a PIN asks for their PIN.
+- A device that signed in with your configuration password switches to users without a PIN freely.
+- A device that never had your password, because it was approved with Quick Connect or signed in with a PIN alone, asks for the password to reach the primary user or any user without a PIN. For a primary user with a PIN, it asks for both, as `yourpassword/PIN`.
+
+### Signing devices out
+
+- **One user, everywhere:** change or remove their PIN.
+- **Everyone, everywhere:** change your configuration password. That also changes the picker address and your Stremio install links and stops every [API key](#api-keys), so hand out the new ones afterwards.
+
+<Callout type="info">
+  A PIN keeps other people using your addresses out of that user. It does not
+  protect against anyone who can open your configuration, who can change or
+  remove it. For people who need to be fully separate, use separate
+  configurations.
 </Callout>
 
 ## The web app
 
-The server address also works in a browser. Open it, or press **Open** next to **Web app** on the Connect tab, and you get a web app built for this server. If you are signed in on the configure page in the same browser, it signs you straight in. Otherwise sign in as you would in an app. With [household users](#household-users), it then asks who is watching. On a phone, add it to your home screen from the browser's menu and it opens like an app; the first time, you sign in again there.
+The server also works in a browser. Press **Open** next to **Web app** on the Connect tab, or open either address in a browser, and you get a web app built for this server.
+
+- **Signing in.** If you are signed in on the configure page in the same browser, it signs you straight in. Otherwise sign in with your UUID and password; on the picker address the UUID is already filled in. Where [PIN-only sign-in](#letting-people-sign-in-with-only-their-pin) is on, the picker address asks for a user name and PIN instead, and a household user goes straight to their own profile.
+- **Who is watching.** After signing in as the primary user, it asks which user is watching, or opens the one used last on that device.
+- **On a phone**, add it to your home screen from the browser's menu and it opens like an app. The first time, you sign in again there.
+
+What it has:
 
 - **Home** has Continue Watching, Next Up, episodes airing soon and a row for each catalog.
 - **Discover** browses any catalog by type and genre.
 - **Title pages** show the details, seasons and episodes, and the cast and crew, each with a page of what they have been in. **Play** lists the [versions](#versions) to choose from.
 - **Activity** is your watch history, where you can mark things unwatched or remove them. The primary user also sees everyone's history and what each person is playing right now.
 
-Like an app, the web app plays streams as they are, so a browser only plays what it can decode. For anything else, each version has **Copy stream link**, and **Open in external player** once you pick a player under **External player** in the web app's settings (VLC, Infuse, Outplayer and IINA are offered, or enter your own). Jellyfin Media Player and Jellyfin for Android load this web app too, but play through their own players, so everything plays there.
+Like an app, the web app plays streams as they are, so a browser only plays what it can decode. For anything else, each version has **Copy stream link**, and **Open in external player** once you pick a player under **External player** in the web app's settings (VLC, Infuse, Outplayer and IINA are offered, or enter your own). Or use one of the [apps that load the web app](#in-jellyfins-desktop-and-android-apps) with a player of their own.
 
 The web app's settings also choose what is featured on the home page, the poster size and what shows under posters. These follow you to every device; the external player is set per device.
+
+### In Jellyfin's desktop and Android apps
+
+Some Jellyfin apps don't have screens of their own. They load whatever web page the server provides and add a real video player to it. Pointed at AIOStreams, they load this web app, and it hands playback to their player, so files a browser can't decode play there too.
+
+It has been tested with **Jellyfin Desktop** and **Jellyfin for Android**. Other apps that work the same way may run it, but haven't been tried.
+
+- **Audio and subtitle tracks may not match the file.** These apps don't tell the web app which tracks a file really has, so the track menus list what AIOStreams knows about it from your addons. When that is incomplete, a track can be missing from the menu or not switch when picked.
+- **Jellyfin Desktop** is the successor to Jellyfin Media Player, and for now only has [development builds](https://github.com/jellyfin/jellyfin-desktop#development-builds). Jellyfin Media Player itself can't run this web app. Desktop draws the page at no more than 60 frames per second, even on a faster screen, and the mouse wheel scrolls in jumps rather than smoothly. If the player's controls end up squeezed into a corner after you switch away from fullscreen and back, press F11 twice.
+- **Jellyfin for Android** won't follow a redirect from `http://` to `https://`. If your AIOStreams address starts with `http://`, turn on the built-in proxy under **Proxy** on the configure page, or streams from `https://` sources won't play.
+
+#### Jellium Desktop
+
+[Jellium Desktop](https://github.com/andrewrabert/jellium-desktop) is a community desktop app built the same way. It feels smoother than Jellyfin Desktop and isn't held to 60 frames per second, but it comes with problems of its own:
+
+- **Its latest build crashes on start on Windows** ([issue #694](https://github.com/andrewrabert/jellium-desktop/issues/694)). An older build linked in that issue works.
+- **Seeking can leave a long black screen on Windows.** A bug in the video engine it ships makes a seek in some streams download the rest of the file before playing again. Streams that go through AIOStreams' proxy (**Proxy** on the configure page) avoid it; others can still hit it.
+- **Your preferred audio track isn't picked for you.** Choose it from the player's track menu instead.
 
 ## Libraries
 
@@ -100,6 +210,65 @@ Each catalog becomes a library, in the order set under **Addons → Catalogs**. 
 - **Collections.** A catalog whose entries are collections, such as a set of streaming services or film series, becomes a **Collections** library. A collection can hold both movies and shows, and each opens and plays like it does anywhere else.
 
 Changes you save reach connected apps within about 30 seconds. Apps also keep their own copy for a while, so refresh or reopen the app if something still looks old.
+
+## Playing
+
+### Versions
+
+Opening a movie or an episode searches your addons, just as opening it in Stremio does, and lists the results as **versions**. Their names come from your [formatter](/reference/custom-formatter). The first version is the one your sorting ranks highest, so pressing play without choosing picks the same stream Stremio would put at the top.
+
+Two settings on the **Playback** tab control this:
+
+| Setting                                | What it does                                                                                                                                                                                   |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Resolve streams when an item opens** | On by default. Off, nothing is searched until you press play, which is lighter on your addons, but the version list shows a placeholder until then, with a **Load versions** entry to fill it. |
+| **Versions per item**                  | How many streams to offer. The instance sets the maximum (10 by default). Set it to 1 and apps have nothing to choose between.                                                                 |
+
+A title's versions are reused for a few minutes, so opening it and then playing it searches once.
+
+Anything an addon sent with nothing to play, such as a notice, an error, or a link to its own website, is listed after the versions, along with any statistics you have switched on. Stremio offers these as links to open in a browser, which a Jellyfin app has no way to do, so only their text is any use there, and playing one gets you a short clip saying so. The [web app](#the-web-app) shows them as text too, with a button to open any link. They do not count towards **Versions per item**, and errors follow your **Hide Errors** setting.
+
+### When nothing plays
+
+- **No streams found** is shown when your addons returned nothing playable and none of them reported why. When one did, its error is listed in place of it, the same message Stremio would show. Either is looked up again after a few minutes.
+- **Some streams never appear as versions.** A stream that needs custom request headers can only be played by a Jellyfin app through a proxy, set up under **Proxy** on the configure page, so without one it is left out.
+- **A version will not start.** Try another version. Because nothing is transcoded, a file your device cannot decode will not play.
+
+### Skipping intros and credits
+
+Unless the instance owner has turned it off, the Playback tab has **Skip intro and credits**, on by default. Apps then get markers they can show a skip button for, and you can choose which markers to offer: intro, recap and credits. Whether the app skips automatically or asks first is a setting inside the app. The markers come from community databases, so on a differently cut copy of an episode they can be a few seconds out.
+
+## Watch history
+
+AIOStreams keeps your progress, played marks and favourites itself, for your configuration and for each user with its own history. That is what fills **Continue Watching** and **Next Up**, and it is the same on every app you sign in to.
+
+### Trackers
+
+An addon that supports **Watch State** can act as a tracker. The **Trackers** tab lists the ones in your configuration and what each does:
+
+- **Records your plays**: what you watch in a Jellyfin app is sent to the addon, so a service it connects to (such as a watch-history site) stays up to date.
+- **Imports your history**: what the addon knows you watched elsewhere, including in Stremio, shows up in Continue Watching and Next Up.
+- If the addon supports a watchlist, your watchlist and your favourites stay in step.
+
+To stop an addon syncing for everyone, untick **Watch State** in that addon's **Resources** option and save. The instance owner can turn either direction off for everyone, in which case the tab says so.
+
+<Callout type="info">
+  Without a tracker, AIOStreams only knows what you played in Jellyfin apps.
+  Something watched in Stremio reaches Continue Watching only through a tracker
+  that imports your history.
+</Callout>
+
+Building a tracker addon? See the [Watch State reference](/reference/addon-protocol/watch-state).
+
+### Trackers for each user
+
+Each user with a history of its own can sync with its own tracker addons, for example a separate watch-history account per person. Add one tracker addon per account to your configuration, then turn on **Choose trackers** for each user in the **Users** tab and pick theirs.
+
+- A tracker belongs to one history at a time, so a tracker picked for one user can't be picked for another. Otherwise what one person watches would end up in the other's history.
+- Left off, the primary user syncs with every tracker addon, so none are free for other users. Choose the primary user's trackers first.
+- Left off for another user, it syncs only with a tracker addon that its variants add.
+- A tracker nobody picks is not used.
+- Moving a tracker to another user also brings along what it already recorded for the previous one.
 
 ## Different addons for Jellyfin and Stremio
 
@@ -136,7 +305,7 @@ The editor completes instance ids after `presets[instanceId=` and names each add
 
 ### Install it in Stremio
 
-On **Save & Install**, pick the `stremio` variant, then install from there. Stremio's install links end in `/v/stremio`, and the Jellyfin server address stays as it is.
+On **Save & Install**, pick the `stremio` variant, then install from there. Stremio's install links end in `/v/stremio`, and the Jellyfin addresses stay as they are.
 
 </Step>
 
@@ -144,103 +313,8 @@ On **Save & Install**, pick the `stremio` variant, then install from there. Stre
 
 Two other ways to do it:
 
-- **Per Jellyfin user.** Leave the addon disabled in the base configuration, add a variant that turns it on (`enable presets[instanceId=8ae]`), and pick that variant for each user in the [Users tab](#household-users), the primary user included. Stremio then needs nothing new, but while the addon is disabled its catalogs can't be arranged on the configure page.
+- **Per Jellyfin user.** Leave the addon disabled in the base configuration, add a variant that turns it on (`enable presets[instanceId=8ae]`), and pick that variant for each user in the [Users tab](#users-and-pins), the primary user included. Stremio then needs nothing new, but while the addon is disabled its catalogs can't be arranged on the configure page.
 - **A separate configuration**, when the two setups share little. Create a second configuration for Jellyfin and connect your apps to that one instead. See [variants or a parent config](/reference/config-expressions#variants-or-a-parent-config) for how the two approaches compare.
-
-## Playing
-
-### Versions
-
-Opening a movie or an episode searches your addons, just as opening it in Stremio does, and lists the results as **versions**. Their names come from your [formatter](/reference/custom-formatter). The first version is the one your sorting ranks highest, so pressing play without choosing picks the same stream Stremio would put at the top.
-
-Two settings on the **Playback** tab control this:
-
-| Setting                                | What it does                                                                                                                                                                                   |
-| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Resolve streams when an item opens** | On by default. Off, nothing is searched until you press play, which is lighter on your addons, but the version list shows a placeholder until then, with a **Load versions** entry to fill it. |
-| **Versions per item**                  | How many streams to offer. The instance sets the maximum (10 by default). Set it to 1 and apps have nothing to choose between.                                                                 |
-
-A title's versions are reused for a few minutes, so opening it and then playing it searches once.
-
-Anything an addon sent with nothing to play, such as a notice, an error, or a link to its own website, is listed after the versions, along with any statistics you have switched on. Stremio offers these as links to open in a browser, which a Jellyfin app has no way to do, so only their text is any use there, and playing one gets you a short clip saying so. The [web app](#the-web-app) shows them as text too, with a button to open any link. They do not count towards **Versions per item**, and errors follow your **Hide Errors** setting.
-
-### When nothing plays
-
-- **No streams found** is shown when your addons returned nothing playable and none of them reported why. When one did, its error is listed in place of it, the same message Stremio would show. Either is looked up again after a few minutes.
-- **Some streams never appear as versions.** A stream that needs custom request headers can only be played by a Jellyfin app through a proxy, set up under **Proxy** on the configure page, so without one it is left out.
-- **A version will not start.** Try another version. Because nothing is transcoded, a file your device cannot decode will not play.
-
-### Skipping intros and credits
-
-Unless the instance owner has turned it off, the Playback tab has **Skip intro and credits**, on by default. Apps then get markers they can show a skip button for, and you can choose which markers to offer: intro, recap and credits. Whether the app skips automatically or asks first is a setting inside the app. The markers come from community databases, so on a differently cut copy of an episode they can be a few seconds out.
-
-## Watch history
-
-AIOStreams keeps your progress, played marks and favourites itself, for your configuration and for each household user with its own history. That is what fills **Continue Watching** and **Next Up**, and it is the same on every app you sign in to.
-
-### Trackers
-
-An addon that supports **Watch State** can act as a tracker. The **Trackers** tab lists the ones in your configuration and what each does:
-
-- **Records your plays**: what you watch in a Jellyfin app is sent to the addon, so a service it connects to (such as a watch-history site) stays up to date.
-- **Imports your history**: what the addon knows you watched elsewhere, including in Stremio, shows up in Continue Watching and Next Up.
-- If the addon supports a watchlist, your watchlist and your favourites stay in step.
-
-Each tracker syncs with one history. With several household users, choose which trackers each user syncs with in the **Users** tab (see [Choosing trackers](#choosing-trackers)). To stop an addon syncing for everyone, untick **Watch State** in that addon's **Resources** option and save. The instance owner can turn either direction off for everyone, in which case the tab says so.
-
-<Callout type="info">
-  Without a tracker, AIOStreams only knows what you played in Jellyfin apps.
-  Something watched in Stremio reaches Continue Watching only through a tracker
-  that imports your history.
-</Callout>
-
-Building a tracker addon? See the [Watch State reference](/reference/addon-protocol/watch-state).
-
-## Household users
-
-The **Users** tab adds users to your server, so everyone in a household can have their own profile in the app. They all sign in with the same configuration password, and a user can have a PIN on top.
-
-- **The primary user** is your configuration itself. Give it a name (your addon name by default), an avatar and, optionally, a [PIN](#pins).
-- **Each extra user** has a name, which is also what they type to sign in, and an optional avatar. You can hide a user from the sign-in picker; they can still sign in by name.
-- **History** is either **own**, a separate Continue Watching, or **shared** with the primary user. Sharing the history also shares its trackers.
-- **Variants** apply while that user is signed in, in the order picked, so a user can get, for example, a different set of filters. A variant that activates on its own applies too, [before the ones picked here](/reference/config-expressions#what-applies-in-what-order).
-
-- **PIN** is optional; see [PINs](#pins).
-
-Removing a user keeps their watch history. Adding a user again under the same name gets it back.
-
-### PINs
-
-Give a user a PIN of 4 to 12 digits to stop others in the household signing in as them. Apps ask for it on the sign-in screen, Quick Connect asks for it before approving, and the built-in web app asks for it when switching to that user. API keys can't act as a household user with a PIN.
-
-- Five wrong PINs in a row pause sign-in to that user for 15 minutes.
-- The primary user can still see a PIN user's watch history, but can't mark things watched as them.
-
-#### The primary user's PIN
-
-The primary user sees everyone's activity and history, so a PIN on it keeps the other users of your configuration out of yours. With one set:
-
-- Signing in as the primary user always asks for the PIN, even with your configuration password. On the plain server address, type `yourpassword/PIN`.
-- Switching to the primary user from another user asks for the PIN every time, so handing over a device after switching away doesn't hand over your account.
-
-Without a PIN on the primary user, a device approved with Quick Connect as another user needs your configuration password to switch to it.
-
-<Callout type="info">
-  A PIN keeps other people using your addresses out of that user. It does not
-  protect against anyone who can open your configuration, who can change or
-  remove it. For people who need to be fully separate, use separate
-  configurations.
-</Callout>
-
-### Choosing trackers
-
-Each user with a history of its own can sync with its own tracker addons, for example a separate watch-history account per person. Add one tracker addon per account to your configuration, then turn on **Choose trackers** for each user and pick theirs.
-
-- A tracker belongs to one history at a time, so a tracker picked for one user can't be picked for another. Otherwise what one person watches would end up in the other's history.
-- Left off, the primary user syncs with every tracker addon, so none are free for other users. Choose the primary user's trackers first.
-- Left off for another user, it syncs only with a tracker addon that its variants add.
-- A tracker nobody picks is not used.
-- Moving a tracker to another user also brings along what it already recorded for the previous one.
 
 ## API keys
 
@@ -250,7 +324,7 @@ A tool that uses the Jellyfin API, such as a dashboard or a script, can connect 
 2. Save your configuration.
 3. Select **Copy key**, and give it to the tool with the same server address your apps use.
 
-A key acts as the server's administrator, though it can't act as a household user with a [PIN](#pins). It sees every user of your configuration: what each is watching now, their watch history, and your libraries. Revoke a key and save to cut a tool off; it stops working within 30 seconds. Changing your configuration password stops every key, so copy them again afterwards.
+A key acts as the server's administrator, though it can't act as a user with a [PIN](#pins). It sees every user of your configuration: what each is watching now, their watch history, and your libraries. Revoke a key and save to cut a tool off; it stops working within 30 seconds. Changing your configuration password stops every key, so copy them again afterwards.
 
 What a tool can't get from AIOStreams:
 
@@ -268,7 +342,7 @@ Jellyfin apps each use a different part of the server, so a few things vary:
 
 ## For instance owners
 
-The Jellyfin server, skip markers and watch-state sync are on by default. The main settings are under **Dashboard → Settings**; see [environment variables](/configuration/environment-variables) for all of them.
+The Jellyfin server, skip markers and watch-state sync are on by default. The settings are under **Dashboard → Settings → Jellyfin** and **Watch State**; see [environment variables](/configuration/environment-variables) for all of them.
 
 | Variable                         | Default | What it does                                                                                              |
 | -------------------------------- | ------- | --------------------------------------------------------------------------------------------------------- |
@@ -278,6 +352,7 @@ The Jellyfin server, skip markers and watch-state sync are on by default. The ma
 | `JELLYFIN_MAX_VERSIONS`          | `10`    | The most versions a configuration can ask for.                                                            |
 | `JELLYFIN_RESOLVE_ON_OPEN`       | `user`  | `always` or `never` force resolving on open for everyone; `user` leaves it to each configuration.         |
 | `JELLYFIN_MAX_PERSONAS`          | `20`    | Household users per configuration. `0` allows none.                                                       |
+| `JELLYFIN_PIN_SIGN_IN`           | `false` | Lets a household user with a PIN of 6 or more digits sign in on the picker address with the PIN alone.    |
 | `JELLYFIN_SEGMENTS_ENABLED`      | `true`  | Offers skip markers. It sends what is being played to the marker databases.                               |
 | `WATCH_STATE_REPORT_ENABLED`     | `true`  | Sends plays to tracker addons.                                                                            |
 | `WATCH_STATE_PULL_ENABLED`       | `true`  | Imports history from tracker addons.                                                                      |

@@ -2756,9 +2756,12 @@ function Content() {
                         </div>
                         <p className="text-xs text-gray-500">
                           Lists this configuration&apos;s users at sign-in, so
-                          there is no UUID to type. Signing in still needs your
-                          password. It holds the same secret as your install
-                          links, so keep it within your household.
+                          there is no UUID to type.{' '}
+                          {jellyfin?.pinSignIn
+                            ? 'A user with a PIN of 6 or more digits signs in here with that PIN alone; everyone else still needs your password.'
+                            : 'Signing in still needs your password.'}{' '}
+                          It holds the same secret as your install links, so
+                          keep it within your household.
                         </p>
                       </div>
                     )}
