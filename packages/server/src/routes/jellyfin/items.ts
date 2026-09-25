@@ -62,7 +62,7 @@ import { stremioStreamRateLimiter } from '../../middlewares/ratelimit.js';
 import { StaticFiles } from '../../utils/static-errors.js';
 import {
   ANDROID_PLAYER_CLIENT,
-  WEB_APP_CLIENT,
+  isWebApp,
   type JellyfinRequestContext,
 } from './context.js';
 import { getMetaLoose, resolveMarkerId, resolvePlayback } from './resolve.js';
@@ -601,7 +601,7 @@ function resolveOnOpen(ctx: JellyfinRequestContext): boolean {
   // An API key looks items up and never plays them.
   if (ctx.apiKey) return false;
   // The web app asks for versions when play is pressed.
-  if (ctx.client.name === WEB_APP_CLIENT) return false;
+  if (isWebApp(ctx)) return false;
   switch (appConfig.jellyfin.resolveOnOpen) {
     case 'always':
       return true;

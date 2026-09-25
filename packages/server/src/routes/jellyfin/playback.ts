@@ -21,7 +21,7 @@ import {
   jfOptional,
   param,
   qs,
-  WEB_APP_CLIENT,
+  isWebApp,
   type JellyfinRequestContext,
 } from './context.js';
 import {
@@ -141,8 +141,7 @@ async function ensureMemo(
  * opens, and can ask for a new run to retry addons that failed.
  */
 function listingOptions(req: Request, loc: Located) {
-  if (!req.jf || loc.ctx.client.name !== WEB_APP_CLIENT || loc.requestedMsid)
-    return {};
+  if (!req.jf || !isWebApp(loc.ctx) || loc.requestedMsid) return {};
   return { current: true, force: bodyOf(req).Refresh === true };
 }
 
@@ -197,10 +196,7 @@ async function playbackInfo(req: Request, res: Response) {
   const sources = mediaSourcesFrom(req, loc.ctx, memo, {
     // Other clients play the item's own id; the web app keeps a version's id.
     firstId:
-      requested ??
-      (loc.ctx.client.name === WEB_APP_CLIENT
-        ? memo.sources[0].msid
-        : loc.itemId),
+      requested ?? (isWebApp(loc.ctx) ? memo.sources[0].msid : loc.itemId),
     requestedMsid: requested,
     profile,
     hasSegments: hasSegments(loc.ctx, memo),
