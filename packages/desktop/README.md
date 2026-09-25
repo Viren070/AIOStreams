@@ -1,8 +1,9 @@
 # AIOStreams Desktop
 
 AIOStreams' Jellyfin web app (`packages/jellyfin-web`) in a native window, playing through mpv. It
-runs on Windows, Linux and macOS. The macOS app is built and started in CI but has not yet been used
-on a Mac.
+runs on Windows, Linux and macOS, with downloads for Windows and macOS, and is in alpha. This file
+covers building it and how it works; using it is in the docs'
+[Desktop app guide](https://docs.aiostreams.viren070.me/guides/desktop-app).
 
 The window shows the web app's standalone build, which picks its own server: any Jellyfin server
 works, and AIOStreams servers get the extras. Switching servers happens in the page.

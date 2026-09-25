@@ -21,7 +21,7 @@ AIOStreams can present your configuration as a **Jellyfin server**. You add it t
 
 - **Add catalog and metadata addons to AIOStreams.** A Jellyfin app only sees what your configuration provides, so it needs addons for all three jobs: catalogs to fill the libraries, metadata to describe each title, and streams to play it.
 - **Save your configuration.** A Jellyfin app signs in to a saved configuration.
-- **Pick an app.** Swiftfin, Findroid, Streamyfin, Jellyfin for Android TV, Jellyfin for Kodi and Infuse all work. In a browser, the server opens AIOStreams' own [web app](#the-web-app) rather than Jellyfin's.
+- **Pick an app.** Swiftfin, Findroid, Streamyfin, Jellyfin for Android TV, Jellyfin for Kodi and Infuse all work. In a browser, the server opens AIOStreams' own [web app](#the-web-app) rather than Jellyfin's. On Windows and Mac, AIOStreams' [desktop app](/guides/desktop-app) is that web app with a player that plays what a browser can't.
 - **Check the instance allows it.** It is on by default. If the **Jellyfin** card under **Save & Install** is greyed out, the instance owner has turned it off.
 
 <Callout type="info">
@@ -180,13 +180,15 @@ What it has:
 - **Title pages** show the details, seasons and episodes, and the cast and crew, each with a page of what they have been in. **Play** lists the [versions](#versions) to choose from.
 - **Activity** is your watch history, where you can mark things unwatched or remove them. The primary user also sees everyone's history and what each person is playing right now.
 
-Like an app, the web app plays streams as they are, so a browser only plays what it can decode. For anything else, each version has **Copy stream link**, and **Open in external player** once you pick a player under **External player** in the web app's settings (VLC, Infuse, Outplayer and IINA are offered, or enter your own). Or use one of the [apps that load the web app](#in-jellyfins-desktop-and-android-apps) with a player of their own.
+Like an app, the web app plays streams as they are, so a browser only plays what it can decode. For anything else, each version has **Copy stream link**, and **Open in external player** once you pick a player under **External player** in the web app's settings (VLC, Infuse, Outplayer and IINA are offered, or enter your own). Or use AIOStreams' [desktop app](/guides/desktop-app) on Windows and Mac, or one of the [Jellyfin apps that load the web app](#in-jellyfins-desktop-and-android-apps), which bring a player of their own.
 
 The web app's settings also choose what is featured on the home page, whether next up joins the continue watching row, the poster size and what shows under posters. These follow you to every device; the external player is set per device.
 
 Under **Theme** you can pick a preset or your own accent and background colours, and add custom CSS. These follow you to every device too. See [web app themes and custom CSS](/reference/web-app-css) for the parts of the app CSS can target.
 
 ### In Jellyfin's desktop and Android apps
+
+On Windows and Mac, AIOStreams' own [desktop app](/guides/desktop-app) does this job and needs none of the workarounds below. On Android, and for anyone who prefers Jellyfin's apps, some of them load the web app too.
 
 Some Jellyfin apps don't have screens of their own. They load whatever web page the server provides and add a real video player to it. Pointed at AIOStreams, they load this web app, and it hands playback to their player, so files a browser can't decode play there too.
 

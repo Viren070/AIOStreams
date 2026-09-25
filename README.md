@@ -181,6 +181,14 @@ Take control of your Stremio home page from one place.
 - **NZB Proxying**: The built-in proxy can also forward NZB download requests for the Newznab built-in addon.
 - **Outgoing Request Proxy**: Route AIOStreams' own requests to upstream addons through an HTTP/SOCKS5 proxy - useful when your server's IP is blocked by an upstream service.
 
+### 📺 Jellyfin Server, Web App & Desktop App
+
+Watch outside Stremio too, with the same addons, filters and sorting.
+
+- **Jellyfin Server**: Add your configuration to a Jellyfin app on your phone, TV or computer. Catalogs become libraries, streams become versions, everyone in your household can have their own profile, and your watch progress and trackers stay in sync.
+- **Web App**: Browse, play and manage your watch history in any browser.
+- **Desktop App** (alpha): A Jellyfin app for Windows and macOS that signs in to your server and shows the web app with a built-in player, which plays what a browser can't, including HDR on Windows. It keeps itself up to date. **[Download it here](https://github.com/Viren070/AIOStreams/releases/tag/desktop)**.
+
 ---
 
 ## 🚀 Getting Started
@@ -199,6 +207,7 @@ Take control of your Stremio home page from one place.
 
 4. **Install the addon**
    - Use the Installation Options provided to install the addon to whatever app you are using.
+   - Or, under **Jellyfin**, connect a Jellyfin app, open the web app, or download the desktop app.
 
 For full setup and configuration instructions, see the **[documentation](https://docs.aiostreams.viren070.me)**.
 

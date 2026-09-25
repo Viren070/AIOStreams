@@ -1,0 +1,84 @@
+---
+title: Desktop app
+description: The web app in a window of its own, with a video player that plays what a browser can't. For Windows and Mac.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Steps, Step } from 'fumadocs-ui/components/steps';
+
+The desktop app is a Jellyfin app for Windows and Mac. It signs in to your configuration's [Jellyfin server](/guides/jellyfin) like any other Jellyfin app, and shows AIOStreams' [web app](/guides/jellyfin#the-web-app) in a window of its own, with [mpv](https://mpv.io) playing the video. Your addons still run on your AIOStreams instance: the app sees what they find through the server, as libraries and versions, and never installs or runs an addon itself.
+
+A browser only plays some formats, so many streams fail there. mpv plays nearly any stream as it is: MKV files, HEVC and AV1 video, Dolby and DTS surround audio, and styled subtitles.
+
+Everything else is the web app you already know: the same home page, catalogs, title pages, versions and settings. It signs in to any Jellyfin server, so it can hold other servers besides your configuration.
+
+<Callout type="warn">
+  The desktop app is in **alpha**. Expect rough edges and changes between
+  updates, and please report what you run into.
+</Callout>
+
+## Download
+
+The [desktop release](https://github.com/Viren070/AIOStreams/releases/tag/desktop) links each download:
+
+| Your computer                        | Download                          |
+| ------------------------------------ | --------------------------------- |
+| Windows, on most PCs (Intel or AMD)  | An installer, or a portable copy  |
+| Windows on Arm, such as Snapdragon   | An installer, or a portable copy  |
+| Mac with Apple silicon (M1 or later) | An installer, or the app in a zip |
+| Intel Mac                            | An installer, or the app in a zip |
+
+It needs Windows 10 or 11, or macOS 11 or later. There is no Linux download yet.
+
+- **The portable copy** runs without installing and keeps everything, including your sign-ins, in a `data` folder beside it.
+- **On a Mac**, the app is not signed by Apple yet, so macOS refuses to open it the first time. Open **System Settings → Privacy & Security** and press **Open Anyway**.
+
+## Signing in
+
+<Steps>
+  <Step>
+    Open the app and enter your server's address. For AIOStreams, copy one from
+    **Save & Install → Jellyfin → Connect** on the configure page; the address
+    with a sign-in picker is the easiest.
+  </Step>
+  <Step>
+    Sign in as you would in the [web app](/guides/jellyfin#the-web-app): pick a
+    user, then enter the password or PIN.
+  </Step>
+</Steps>
+
+To add another server or move between them, use **Change server** in the account menu.
+
+## Playing
+
+The player works as it does in the web app, with a few extras that need mpv:
+
+- **Subtitles inside the file** play with their own styling, and can be retimed like any other: `z` and `x` move them 0.1 seconds earlier or later, or sync them to a line you pick. The timing is remembered for each version.
+- **Stats.** Press `i` for what is playing: the format, resolution, decoder and dropped frames.
+- **HDR on Windows.** Turn on **Use HDR** in Windows' display settings and HDR video plays in HDR. Dolby Vision is converted to HDR10, as on any computer. On a Mac, HDR video is shown in SDR for now.
+
+Other keys: `Space` or `k` to play and pause, `←` `→` or `j` `l` to skip back and forward, `↑` `↓` for volume, `m` to mute, `f` for fullscreen, and `Shift+P` and `Shift+N` for the previous and next episode.
+
+## Settings
+
+The app adds a **Desktop app** section to the web app's settings. These stay on the computer:
+
+- **Updates**: whether to follow releases or nightly builds, and whether an update is waiting.
+- **Hardware decoding**: turn it off if video shows artefacts or stays black.
+- **Audio**: how many channels your speakers take, and whether to pass Dolby and DTS audio through to a receiver that decodes them.
+- **Esc leaves full screen**.
+- **mpv configuration**: opens the folder for your own `mpv.conf`, `input.conf`, scripts and shaders.
+- **Logs** and **Diagnostics**: open the log folder, or copy the app's versions and recent log for a bug report.
+
+## Updates
+
+The app checks for updates when it starts and every six hours, downloads them in the background, and applies them the next time it starts, or straight away if you ask. The portable copy updates itself too.
+
+Nightly builds come from every change, ahead of releases. They get fixes sooner but can break; switch back under **Settings → Desktop app → Updates**.
+
+<Callout type="info">
+  Something wrong? The logs are the first thing to share. **Settings → Desktop
+  app → Diagnostics** copies what is needed, or find them in `%LOCALAPPDATA%\AIOStreams Desktop\logs`
+  on Windows (`data\logs` in a portable copy) and `~/Library/Application Support/AIOStreams Desktop/logs`
+  on a Mac.
+</Callout>
