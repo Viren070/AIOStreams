@@ -80,7 +80,7 @@ import {
   type SubtitleOutline,
   type SubtitleSize,
 } from '../lib/settings';
-import { useBranding } from '../components/brand-logo';
+import { useServerInfo } from '../lib/server-info';
 import { PageBody } from '../components/layout';
 import { UserAvatar } from '../components/user-avatar';
 import {
@@ -584,11 +584,11 @@ function InterfaceSection() {
 
 function AccountSection() {
   const { client, user, switchUser, signOut, changeServer } = useSession();
-  const branding = useBranding();
+  const info = useServerInfo();
   const users = usePickableUsers();
   const avatar = users.data?.find((u) => u.user.Id === user.Id)?.avatar ?? null;
   const several = (users.data?.length ?? 0) > 1;
-  const configure = configureUrl(client.base, branding);
+  const configure = configureUrl(client.base, info);
   const confirmSignOut = useConfirmationDialog({
     title: 'Sign out',
     description: __STANDALONE__
@@ -609,7 +609,7 @@ function AccountSection() {
               <span>
                 <span className="block text-base">{user.Name}</span>
                 <span className="block font-normal text-[--muted]">
-                  {branding.name ?? serverAddress(client.base)}
+                  {info.name ?? serverAddress(client.base)}
                 </span>
               </span>
             </span>

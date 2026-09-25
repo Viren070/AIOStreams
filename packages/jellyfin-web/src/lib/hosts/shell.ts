@@ -87,19 +87,21 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
   const latest = useLatest({ ...opts, state });
   const externals = React.useMemo(
     () =>
-      textSubtitles(source).flatMap((s, i) => {
-        const link = subtitleUrl(opts.client, s);
-        return link
-          ? [
-              {
-                id: `${EXTERNAL}${s.Index}`,
-                url: link,
-                label: trackLabel(s, i + 1),
-                lang: s.Language ?? '',
-              },
-            ]
-          : [];
-      }),
+      textSubtitles(source)
+        .filter((s) => s.IsExternal)
+        .flatMap((s, i) => {
+          const link = subtitleUrl(opts.client, s);
+          return link
+            ? [
+                {
+                  id: `${EXTERNAL}${s.Index}`,
+                  url: link,
+                  label: trackLabel(s, i + 1),
+                  lang: s.Language ?? '',
+                },
+              ]
+            : [];
+        }),
     [source, opts.client]
   );
   const loaded = (url: string) =>

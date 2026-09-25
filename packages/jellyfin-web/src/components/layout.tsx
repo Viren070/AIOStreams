@@ -37,8 +37,9 @@ import { useSession } from '../lib/session';
 import { usePickableUsers } from '../lib/queries';
 import { configureUrl, navigate, to } from '../lib/paths';
 import { serverAddress } from '../lib/servers';
+import { useFeature, useServerInfo } from '../lib/server-info';
 import { UserAvatar } from './user-avatar';
-import { BrandLogo, useBranding } from './brand-logo';
+import { BrandLogo } from './brand-logo';
 import { VersionPickerProvider } from './version-picker';
 
 const PAGE_FADE = {
@@ -79,13 +80,13 @@ function AccountMenu({
   items: SidebarItem[];
 } & Pick<DropdownMenuProps, 'side' | 'align' | 'sideOffset'>) {
   const { client, user } = useSession();
-  const branding = useBranding();
+  const info = useServerInfo();
   return (
     <DropdownMenu {...position} className="min-w-52" trigger={trigger}>
       <DropdownMenuLabel>
         <span className="block truncate">{user.Name ?? 'You'}</span>
         <span className="block truncate text-xs font-normal text-[--muted]">
-          {branding.name ?? serverAddress(client.base)}
+          {info.name ?? serverAddress(client.base)}
         </span>
       </DropdownMenuLabel>
       <DropdownMenuSeparator />
@@ -141,7 +142,8 @@ export function PageBackground() {
 
 export function WebLayout() {
   const { client, signOut, switchUser, changeServer } = useSession();
-  const configure = configureUrl(client.base, useBranding());
+  const configure = configureUrl(client.base, useServerInfo());
+  const history = useFeature('history');
   const users = usePickableUsers();
   const several = (users.data?.length ?? 0) > 1;
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -174,12 +176,16 @@ export function WebLayout() {
       isCurrent: pathname.startsWith('/search'),
       onClick: () => navigate(to.search()),
     },
-    {
-      name: 'Activity',
-      iconType: BiHistory,
-      isCurrent: pathname.startsWith('/history'),
-      onClick: () => navigate(to.history),
-    },
+    ...(history
+      ? [
+          {
+            name: 'Activity',
+            iconType: BiHistory,
+            isCurrent: pathname.startsWith('/history'),
+            onClick: () => navigate(to.history),
+          },
+        ]
+      : []),
   ];
 
   const settings: SidebarItem = {

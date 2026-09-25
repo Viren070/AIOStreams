@@ -29,6 +29,7 @@ import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
 import { useSession } from '../lib/session';
+import { useFeature } from '../lib/server-info';
 import {
   useEpisodes,
   useItem,
@@ -257,6 +258,7 @@ function Header({ item }: { item: BaseItemDto }) {
   const played = !!item.UserData?.Played;
   const favorite = !!item.UserData?.IsFavorite;
   const dropped = item.UserData?.Likes === false;
+  const canDrop = useFeature('dropped');
   const trailer = item.RemoteTrailers?.[0]?.Url;
 
   const target =
@@ -397,7 +399,7 @@ function Header({ item }: { item: BaseItemDto }) {
           >
             {favorite ? 'Remove favourite' : 'Add favourite'}
           </Tooltip>
-          {item.Type === 'Series' && (
+          {canDrop && item.Type === 'Series' && (
             <Tooltip
               trigger={
                 <IconButton

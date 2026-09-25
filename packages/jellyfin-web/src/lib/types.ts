@@ -48,8 +48,6 @@ export interface WebUser {
 export interface Branding {
   name: string | null;
   logo: string | null;
-  /** The server speaks AIOStreams' extensions. */
-  aiostreams?: boolean;
 }
 
 /** A user the picker offers, and what switching to it asks for. */

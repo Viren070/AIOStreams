@@ -8,6 +8,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import { useSession } from './session';
+import { useFeature } from './server-info';
 import type {
   BaseItemDto,
   BaseItemDtoQueryResult,
@@ -26,14 +27,43 @@ function useKey() {
   return ['jf', client.base, user.Id] as const;
 }
 
+/** Libraries of movies and shows; music, books, photos and the like are left out. */
+const SHOWN_LIBRARIES = new Set(['movies', 'tvshows', 'boxsets', 'mixed']);
+
+function shownLibraries(
+  result: BaseItemDtoQueryResult
+): BaseItemDtoQueryResult {
+  return {
+    ...result,
+    Items: result.Items?.filter(
+      (v) => !v.CollectionType || SHOWN_LIBRARIES.has(v.CollectionType)
+    ),
+  };
+}
+
 export function useViews() {
   const { client, user } = useSession();
   return useQuery({
     queryKey: [...useKey(), 'views'],
     queryFn: () =>
       client.get<BaseItemDtoQueryResult>('/UserViews', { userId: user.Id }),
+    select: shownLibraries,
     staleTime: 5 * 60_000,
   });
+}
+
+/** What a library holds by its type; one without a type holds both. */
+export function libraryTypes(view: BaseItemDto): string {
+  switch (view.CollectionType) {
+    case 'movies':
+      return 'Movie';
+    case 'tvshows':
+      return 'Series';
+    case 'boxsets':
+      return 'BoxSet';
+    default:
+      return 'Movie,Series';
+  }
 }
 
 export function useResume() {
@@ -70,13 +100,18 @@ const FILTERS: Record<ItemFilter, string> = {
   favorite: 'IsFavorite',
 };
 
-/** The children of a library, genre or collection, in the catalog's order. */
+/**
+ * The items of a library or collection, in the catalog's order. A library is
+ * asked for recursively by its types, as a server may keep its movies in folders.
+ */
 export function useItemPages(
   parentId: string,
   opts: {
     pageSize?: number;
     filter?: ItemFilter;
     types?: string;
+    genreId?: string;
+    recursive?: boolean;
     enabled?: boolean;
   } = {}
 ) {
@@ -89,6 +124,8 @@ export function useItemPages(
       parentId,
       opts.filter,
       opts.types,
+      opts.genreId,
+      opts.recursive,
       pageSize,
     ],
     initialPageParam: 0,
@@ -99,6 +136,8 @@ export function useItemPages(
         StartIndex: pageParam,
         Limit: pageSize,
         IncludeItemTypes: opts.types,
+        GenreIds: opts.genreId,
+        Recursive: opts.recursive,
         Filters: opts.filter ? FILTERS[opts.filter] : undefined,
         EnableTotalRecordCount: true,
       }),
@@ -113,16 +152,18 @@ export function useItemPages(
   });
 }
 
-export function useLibraryHeads(viewIds: string[], limit: number) {
+export function useLibraryHeads(views: BaseItemDto[], limit: number) {
   const { client, user } = useSession();
   const key = useKey();
   return useQueries({
-    queries: viewIds.map((id) => ({
-      queryKey: [...key, 'head', id, limit],
+    queries: views.map((view) => ({
+      queryKey: [...key, 'head', view.Id, limit],
       queryFn: () =>
         client.get<BaseItemDtoQueryResult>('/Items', {
           userId: user.Id,
-          ParentId: id,
+          ParentId: view.Id,
+          IncludeItemTypes: libraryTypes(view),
+          Recursive: true,
           Limit: limit,
         }),
       staleTime: 5 * 60_000,
@@ -266,6 +307,15 @@ export function useSimilar(itemId: string, enabled: boolean) {
 }
 
 /**
+ * Any file plays as it is. A server gives a text subtitle an address only for
+ * a client that says it takes one; the player asks for WebVTT whatever it is.
+ */
+const DEVICE_PROFILE = {
+  DirectPlayProfiles: [{ Type: 'Video' }],
+  SubtitleProfiles: [{ Format: 'vtt', Method: 'External' }],
+};
+
+/**
  * `Refresh` reruns the addons even when the server has a recent result. Naming
  * a version gets its subtitles from subtitle addons too.
  */
@@ -276,6 +326,7 @@ function usePlaybackInfoRequest() {
       `/Items/${itemId}/PlaybackInfo`,
       {
         UserId: user.Id,
+        DeviceProfile: DEVICE_PROFILE,
         ...(refresh && { Refresh: true }),
         ...(sourceId && { MediaSourceId: sourceId }),
       },
@@ -337,6 +388,7 @@ export function usePickableUsers() {
   return useQuery({
     queryKey: [...useKey(), 'pickable-users'],
     queryFn: () => client.get<PickableUser[]>('/AIOStreams/Users'),
+    enabled: useFeature('users'),
     staleTime: 5 * 60_000,
   });
 }

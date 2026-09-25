@@ -4,6 +4,7 @@ import { Badge } from '@aiostreams/ui/badge';
 import { useSession } from '../lib/session';
 import {
   useItemPages,
+  libraryTypes,
   useLibraryHeads,
   useNextUp,
   useResume,
@@ -83,8 +84,9 @@ export function HomePage() {
   const viewIds = sources
     .filter((s) => s.startsWith('view:'))
     .map((s) => s.slice(5));
-  const heads = useLibraryHeads(viewIds, HERO_ITEMS);
-  const headOf = new Map(viewIds.map((id, i) => [id, heads[i]]));
+  const heroViews = viewIds.flatMap((id) => all.find((v) => v.Id === id) ?? []);
+  const heads = useLibraryHeads(heroViews, HERO_ITEMS);
+  const headOf = new Map(heroViews.map((view, i) => [view.Id, heads[i]]));
   const heroItems = interleave(
     sources.map((s) =>
       s === 'resume'
@@ -214,7 +216,12 @@ function LibraryRow({ view }: { view: BaseItemDto }) {
   const { client } = useSession();
   const [near, setNear] = React.useState(false);
   const ref = useInView<HTMLDivElement>(() => setNear(true), '400px');
-  const pages = useItemPages(view.Id!, { pageSize: ROW_PAGE, enabled: near });
+  const pages = useItemPages(view.Id!, {
+    types: libraryTypes(view),
+    recursive: true,
+    pageSize: ROW_PAGE,
+    enabled: near,
+  });
   const items = pages.data?.pages.flatMap((p) => p.Items ?? []) ?? [];
   const landscape =
     items.length > 0 &&

@@ -3,7 +3,10 @@ import { TICKS_PER_MS } from './format';
 import { storage } from './storage';
 import type { MediaStream, SourceInfo } from './types';
 
-/** The server's stream route, which redirects to the source. */
+/**
+ * The server's stream route. A player cannot send the sign-in header, so the
+ * token rides in the query, which servers that guard the route require.
+ */
 export function streamUrl(
   client: JellyfinClient,
   itemId: string,
@@ -14,6 +17,7 @@ export function streamUrl(
     static: true,
     MediaSourceId: source.Id,
     PlaySessionId: playSessionId,
+    ApiKey: client.token,
   });
 }
 

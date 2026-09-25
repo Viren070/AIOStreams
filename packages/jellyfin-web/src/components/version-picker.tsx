@@ -20,6 +20,7 @@ import { TextInput } from '@aiostreams/ui/text-input';
 import { Tooltip } from '@aiostreams/ui/tooltip';
 import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
 import { useSession } from '../lib/session';
+import { useFeature } from '../lib/server-info';
 import {
   useItem,
   usePlaybackInfo,
@@ -160,6 +161,7 @@ function Versions({
   const info = usePlaybackInfo(item.Id!, { listing: true });
   const refresh = useRefreshPlaybackInfo(item.Id!);
   const refreshing = info.isFetching || refresh.isPending;
+  const canRefresh = useFeature('refreshVersions');
   const play = usePlay();
   const template = externalPlayerTemplate();
   const [startMs, setStartMs] = React.useState(request.startMs);
@@ -240,23 +242,25 @@ function Versions({
           >
             Details
           </Button>
-          <Tooltip
-            trigger={
-              <IconButton
-                size="sm"
-                intent="gray-subtle"
-                className="rounded-full"
-                icon={
-                  <BiRefresh className={cn(refreshing && 'animate-spin')} />
-                }
-                aria-label="Search again"
-                disabled={refreshing}
-                onClick={retry}
-              />
-            }
-          >
-            Search again
-          </Tooltip>
+          {canRefresh && (
+            <Tooltip
+              trigger={
+                <IconButton
+                  size="sm"
+                  intent="gray-subtle"
+                  className="rounded-full"
+                  icon={
+                    <BiRefresh className={cn(refreshing && 'animate-spin')} />
+                  }
+                  aria-label="Search again"
+                  disabled={refreshing}
+                  onClick={retry}
+                />
+              }
+            >
+              Search again
+            </Tooltip>
+          )}
         </div>
         {request.startMs > 0 && (
           <div className="grid grid-cols-2 gap-1 rounded-full bg-black/40 p-1">

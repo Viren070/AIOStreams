@@ -16,6 +16,7 @@ import { SearchPage } from './pages/search';
 import { ItemPage } from './pages/item';
 import { PersonPage } from './pages/person';
 import { HistoryPage } from './pages/history';
+import { useFeature } from './lib/server-info';
 import { PlayerPage } from './pages/player';
 import { Button } from '@aiostreams/ui/button';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
@@ -35,10 +36,15 @@ const homeRoute = createRoute({
   component: HomePage,
 });
 
+/** A server that keeps no history has no page for it. */
+function HistoryRoute(): React.ReactElement {
+  return useFeature('history') ? <HistoryPage /> : <NotFoundPage />;
+}
+
 const historyRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/history',
-  component: HistoryPage,
+  component: HistoryRoute,
 });
 
 const settingsRoute = createRoute({

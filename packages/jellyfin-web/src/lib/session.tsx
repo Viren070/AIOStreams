@@ -39,6 +39,8 @@ export function useSession(): SessionValue {
 export type SessionPhase =
   | { kind: 'loading' }
   | { kind: 'signed-out' }
+  /** Signed in, but the server did not answer; nothing is forgotten. */
+  | { kind: 'unreachable' }
   /** Each user says what picking it asks for. */
   | {
       kind: 'picking';
@@ -136,6 +138,12 @@ export function useSessionPhase(base: string) {
     [adopt, base, switchTo]
   );
 
+  const [attempt, setAttempt] = React.useState(0);
+  const retry = React.useCallback(() => {
+    setPhase({ kind: 'loading' });
+    setAttempt((n) => n + 1);
+  }, []);
+
   React.useEffect(() => {
     let cancelled = false;
     const anonymous = new JellyfinClient(base);
@@ -143,9 +151,16 @@ export function useSessionPhase(base: string) {
       const stored = readCredentials(base);
       if (stored) {
         const client = anonymous.withToken(stored.token);
-        const user = await client.get<UserDto>('/Users/Me').catch(() => null);
-        if (user) {
-          if (!cancelled) setPhase({ kind: 'ready', client, user });
+        const me = await client.get<UserDto>('/Users/Me').then(
+          (user) => ({ user }),
+          (error: unknown) => ({ error })
+        );
+        if ('user' in me) {
+          if (!cancelled) setPhase({ kind: 'ready', client, user: me.user });
+          return;
+        }
+        if (!isUnauthorized(me.error)) {
+          if (!cancelled) setPhase({ kind: 'unreachable' });
           return;
         }
       }
@@ -193,7 +208,7 @@ export function useSessionPhase(base: string) {
     return () => {
       cancelled = true;
     };
-  }, [base, enter]);
+  }, [base, enter, attempt]);
 
   const signIn = React.useCallback(
     async (username: string, password: string) => {
@@ -233,7 +248,20 @@ export function useSessionPhase(base: string) {
     setPhase({ kind: 'signed-out' });
   }, [base, phase, queryClient]);
 
-  return { base, phase, signIn, switchUser, signOut };
+  // A token the server stops taking ends the session, rather than failing every page.
+  React.useEffect(() => {
+    if (phase.kind !== 'ready') return;
+    return queryClient.getQueryCache().subscribe((event) => {
+      if (
+        event.type === 'updated' &&
+        event.action.type === 'error' &&
+        isUnauthorized(event.action.error)
+      )
+        signOut();
+    });
+  }, [phase.kind, queryClient, signOut]);
+
+  return { base, phase, signIn, switchUser, signOut, retry };
 }
 
 export function SessionProvider({

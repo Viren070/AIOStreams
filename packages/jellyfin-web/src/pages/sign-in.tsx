@@ -1,12 +1,17 @@
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { AnimatePresence, LayoutGroup, motion, useAnimate } from 'motion/react';
 import { BiLockAlt } from 'react-icons/bi';
 import { Button } from '@aiostreams/ui/button';
 import { TextInput } from '@aiostreams/ui/text-input';
 import { PasswordInput } from '@aiostreams/ui/password-input';
 import { cn } from '@aiostreams/ui/core/styling';
+import { LoadingOverlay } from '@aiostreams/ui/loading-spinner';
 import { UserAvatar } from '../components/user-avatar';
 import { BrandLogo } from '../components/brand-logo';
+import type { JellyfinClient } from '../lib/client';
+import { configureUrl } from '../lib/paths';
+import { useServerInfo } from '../lib/server-info';
 import type { PickableUser, UserDto } from '../lib/types';
 
 /** Must match the server's `PIN_REQUIRED`. */
@@ -92,24 +97,51 @@ export function FormLink(props: React.ComponentPropsWithoutRef<'button'>) {
   );
 }
 
+type OtherWay = { label: string; onClick: () => void };
+
+/** What a sign-in form asks for, by what the server takes. */
+function signInCopy(configSignIn: boolean, pinSignIn: boolean, user: boolean) {
+  if (!configSignIn)
+    return {
+      help: user ? 'Enter your password.' : 'Use your user name and password.',
+      username: 'User name',
+      password: 'Password',
+    };
+  const help = user
+    ? pinSignIn
+      ? 'Use your PIN, or the configuration’s password.'
+      : 'Use the configuration’s password.'
+    : pinSignIn
+      ? 'Use your user name and PIN, or the configuration’s UUID and its password.'
+      : 'Use your configuration’s UUID or alias and its password.';
+  return {
+    help,
+    username: pinSignIn ? 'User or UUID' : 'UUID or alias',
+    password: pinSignIn ? 'PIN or password' : 'Password',
+  };
+}
+
 export function SignInPage({
   onSignIn,
   defaultUsername = '',
-  pinSignIn = false,
   user,
+  avatar = null,
   otherWay,
-  configureUrl,
+  configure,
   onChangeServer,
 }: {
   onSignIn: (username: string, password: string) => Promise<void>;
   defaultUsername?: string;
-  pinSignIn?: boolean;
   /** Picked from the server's list, so only their secret is asked for. */
   user?: UserDto;
-  otherWay?: { label: string; onClick: () => void };
-  configureUrl: string | null;
+  avatar?: string | null;
+  otherWay?: OtherWay;
+  configure: string | null;
   onChangeServer?: () => void;
 }) {
+  const info = useServerInfo();
+  const configSignIn = !!info.features.configSignIn;
+  const copy = signInCopy(configSignIn, info.pinSignIn, !!user);
   const [username, setUsername] = React.useState(user?.Name ?? defaultUsername);
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState<string | null>(null);
@@ -151,24 +183,20 @@ export function SignInPage({
         >
           <div className="flex flex-col items-center gap-1 text-center">
             {user && (
-              <UserAvatar name={user.Name} className="mb-2 size-16 text-2xl" />
+              <UserAvatar
+                name={user.Name}
+                src={avatar}
+                className="mb-2 size-16 text-2xl"
+              />
             )}
             <h1 className="text-xl font-semibold">
               {user ? user.Name : 'Sign in'}
             </h1>
-            <p className="text-sm text-[--muted]">
-              {user
-                ? pinSignIn
-                  ? 'Use your PIN, or the configuration’s password.'
-                  : 'Use the configuration’s password.'
-                : pinSignIn
-                  ? 'Use your user name and PIN, or the configuration’s UUID and its password.'
-                  : 'Use your configuration’s UUID or alias and its password.'}
-            </p>
+            <p className="text-sm text-[--muted]">{copy.help}</p>
           </div>
           {!user && (
             <TextInput
-              label={pinSignIn ? 'User or UUID' : 'UUID or alias'}
+              label={copy.username}
               value={username}
               onValueChange={setUsername}
               autoComplete="username"
@@ -176,15 +204,16 @@ export function SignInPage({
               required
             />
           )}
+          {/* A Jellyfin account can have no password; a configuration always has one. */}
           <PasswordInput
-            label={pinSignIn ? 'PIN or password' : 'Password'}
+            label={copy.password}
             autoFocus={!!user || !!defaultUsername}
             value={password}
             onValueChange={(value) => {
               setPassword(value);
               setPin(null);
             }}
-            required
+            required={configSignIn}
           />
           <AnimatePresence initial={false}>
             {pin !== null && (
@@ -222,9 +251,9 @@ export function SignInPage({
           {otherWay && (
             <FormLink onClick={otherWay.onClick}>{otherWay.label}</FormLink>
           )}
-          {configureUrl && (
+          {configure && (
             <a
-              href={configureUrl}
+              href={configure}
               target={__STANDALONE__ ? '_blank' : undefined}
               rel="noreferrer"
               className="block text-center text-sm text-[--muted] hover:text-white"
@@ -238,6 +267,135 @@ export function SignInPage({
         </form>
       </motion.div>
     </Screen>
+  );
+}
+
+/** A server that did not answer; trying again keeps any sign-in. */
+export function Unreachable({
+  address,
+  onRetry,
+  onChangeServer,
+}: {
+  address: string;
+  onRetry: () => void;
+  onChangeServer?: () => void;
+}) {
+  return (
+    <Screen>
+      <motion.div
+        {...RISE}
+        className="mx-auto w-full max-w-sm space-y-4 rounded-2xl border border-white/10 bg-gray-950/80 p-6 text-center shadow-xl"
+      >
+        <h1 className="text-xl font-semibold">Can’t reach the server</h1>
+        <p className="text-sm text-[--muted] [overflow-wrap:anywhere]">
+          {address} did not answer. Check that it is running, then try again.
+        </p>
+        <Button
+          intent="white"
+          className="w-full rounded-full"
+          onClick={onRetry}
+        >
+          Try again
+        </Button>
+        {onChangeServer && (
+          <FormLink onClick={onChangeServer}>Change server</FormLink>
+        )}
+      </motion.div>
+    </Screen>
+  );
+}
+
+/** A user's picture, as a server that lists its users gives it. */
+function publicAvatar(client: JellyfinClient, user: UserDto): string | null {
+  return user.PrimaryImageTag
+    ? client.url(`/Users/${user.Id}/Images/Primary`, {
+        tag: user.PrimaryImageTag,
+        maxWidth: 256,
+      })
+    : null;
+}
+
+/**
+ * Signing in: the users a server lists, when it lists more than one, then a
+ * form for the one picked; typing a name stays a click away.
+ */
+export function SignInScreen({
+  client,
+  defaultUsername,
+  onSignIn,
+  onChangeServer,
+}: {
+  /** Signed out, on the server being signed in to. */
+  client: JellyfinClient;
+  defaultUsername: string;
+  onSignIn: (username: string, password: string) => Promise<void>;
+  onChangeServer?: () => void;
+}) {
+  const info = useServerInfo();
+  const listed = useQuery({
+    queryKey: ['jf-public-users', client.base],
+    queryFn: () => client.get<UserDto[]>('/Users/Public').catch(() => []),
+    staleTime: 5 * 60_000,
+  });
+  const [chosen, setChosen] = React.useState<UserDto | null>(null);
+  const [typing, setTyping] = React.useState(false);
+  if (listed.isLoading) return <LoadingOverlay />;
+
+  const users = listed.data ?? [];
+  const user = typing
+    ? null
+    : (chosen ?? (users.length === 1 ? users[0] : null));
+  const typeInstead: OtherWay = {
+    label: info.features.configSignIn
+      ? 'Use a UUID instead'
+      : 'Type a user name',
+    onClick: () => setTyping(true),
+  };
+
+  if (users.length > 1 && !user && !typing) {
+    return (
+      <UserPicker
+        users={users.map((u) => ({
+          user: u,
+          avatar: publicAvatar(client, u),
+          hidden: false,
+          needs: null,
+        }))}
+        onPick={async (id) => {
+          const picked = users.find((u) => u.Id === id)!;
+          if (picked.HasPassword) setChosen(picked);
+          else await onSignIn(picked.Name ?? '', '');
+        }}
+        otherWay={typeInstead}
+        onChangeServer={onChangeServer}
+      />
+    );
+  }
+  return (
+    <SignInPage
+      key={user?.Id ?? 'typed'}
+      onSignIn={onSignIn}
+      defaultUsername={defaultUsername}
+      user={user ?? undefined}
+      avatar={user && publicAvatar(client, user)}
+      otherWay={
+        user
+          ? users.length > 1
+            ? { label: 'Choose another user', onClick: () => setChosen(null) }
+            : typeInstead
+          : users.length
+            ? {
+                label: 'Choose a user',
+                onClick: () => {
+                  setChosen(null);
+                  setTyping(false);
+                },
+              }
+            : undefined
+      }
+      configure={configureUrl(client.base, info)}
+      onChangeServer={onChangeServer}
+    />
   );
 }
 
@@ -354,7 +512,7 @@ export function UserPicker({
 }: {
   users: PickableUser[];
   onPick: (userId: string, secret?: string) => Promise<void>;
-  otherWay?: { label: string; onClick: () => void };
+  otherWay?: OtherWay;
   onChangeServer?: () => void;
 }) {
   const [busy, setBusy] = React.useState<string | null>(null);

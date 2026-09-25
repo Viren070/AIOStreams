@@ -7,6 +7,7 @@ import { useSession } from '../lib/session';
 import {
   useGenres,
   useItemPages,
+  libraryTypes,
   useViews,
   type ItemFilter,
 } from '../lib/queries';
@@ -162,10 +163,12 @@ export function DiscoverPage({
   const genreItem = genres.data?.Items?.find(
     (g) => g.Name?.toLowerCase() === genre?.toLowerCase()
   );
-  // A genre's id names its catalog, so it pages that catalog filtered.
-  const pages = useItemPages(genreItem?.Id ?? viewId, {
+  const pages = useItemPages(viewId, {
     filter,
-    types: kindOf(view) === current ? undefined : current,
+    types: view && kindOf(view) === current ? libraryTypes(view) : current,
+    genreId: genreItem?.Id,
+    recursive: true,
+    enabled: !!view,
   });
   const items = pages.data?.pages.flatMap((p) => p.Items ?? []) ?? [];
   const total = pages.data?.pages[0]?.TotalRecordCount;
