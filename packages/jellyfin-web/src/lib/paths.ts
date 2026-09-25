@@ -41,6 +41,14 @@ export function itemPath(
   return to.item(item.Id!);
 }
 
+/** The item's page, opening on its version list. */
+export function versionsPath(
+  item: Pick<BaseItemDto, 'Id' | 'Type' | 'SeriesId' | 'SeasonId'>
+): string {
+  const path = itemPath(item);
+  return `${path}${path.includes('?') ? '&' : '?'}pick=${item.Id}`;
+}
+
 export const href = (path: string) => `#${path}`;
 
 /** AIOStreams' configuration page, when the server is AIOStreams. */

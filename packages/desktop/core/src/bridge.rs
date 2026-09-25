@@ -98,6 +98,7 @@ const SETTABLE: &[&str] = &[
     "sub-pos",
     "sub-visibility",
     "time-pos",
+    "sub-bold",
     "sub-color",
     "sub-outline-color",
     "sub-outline-size",

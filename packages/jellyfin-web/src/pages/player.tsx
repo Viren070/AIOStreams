@@ -28,6 +28,7 @@ import { usePlaybackPrefs, type PlaybackPrefs } from '../lib/user-config';
 import { backdropUrl } from '../lib/images';
 import { goBack, to } from '../lib/paths';
 import { PlayerControls } from '../components/player-controls';
+import { useNextEpisodePrompt } from '../components/next-episode';
 import type { BaseItemDto, SourceInfo } from '../lib/types';
 
 interface PlayerProps {
@@ -104,6 +105,25 @@ export function PlayerPage({
   ) : (
     <BrowserPlayer {...playing} startMs={startMs} />
   );
+}
+
+/**
+ * The end of the file plays on or goes back; a ref, since the player needs the
+ * handler before the prompt that decides it exists.
+ */
+function useEnded(item: BaseItemDto) {
+  const back = React.useCallback(() => goBack(to.item(item.Id!)), [item.Id]);
+  const ended = React.useRef(back);
+  const onEnded = React.useCallback(() => ended.current(), []);
+  const connect = (next: ReturnType<typeof useNextEpisodePrompt>) => {
+    ended.current = () => {
+      if (!next.autoplay || !next.next) return back();
+      void next.playNext().then((ok) => {
+        if (!ok) back();
+      });
+    };
+  };
+  return { back, onEnded, connect };
 }
 
 /** Reports the playback the way a Jellyfin client does once it starts. */
@@ -240,6 +260,7 @@ function cueCss(style: SubtitleStyle): string {
   const css = subtitleCss(style);
   return `video::cue {
     font-size: ${css.fontSize};
+    font-weight: ${css.fontWeight};
     color: ${css.color};
     background-color: ${css.backgroundColor};
     text-shadow: ${css.textShadow};
@@ -255,15 +276,22 @@ function BrowserPlayer({
 }: PlayerProps) {
   const { client } = useSession();
   const video = React.useRef<HTMLVideoElement>(null);
-  const back = React.useCallback(() => goBack(to.item(item.Id!)), [item.Id]);
+  const { back, onEnded, connect } = useEnded(item);
   const subtitleStyle = useSubtitleStyle();
   const player = useBrowserPlayer(video, {
     source,
     startMs,
-    onEnded: back,
+    onEnded,
     prefs,
   });
   const segments = useSegments(item.Id!);
+  const next = useNextEpisodePrompt({
+    item,
+    source,
+    player,
+    segments: segments.data?.Items,
+  });
+  connect(next);
   useReporting(player, { item, source, playSessionId });
 
   return (
@@ -295,6 +323,7 @@ function BrowserPlayer({
         segments={segments.data?.Items}
         onBack={back}
       />
+      {next.element}
       {player.state.error && (
         <Failure
           itemId={item.Id!}
@@ -319,7 +348,7 @@ function NativePlayer({
   prefs,
 }: PlayerProps) {
   const { client } = useSession();
-  const back = React.useCallback(() => goBack(to.item(item.Id!)), [item.Id]);
+  const { back, onEnded, connect } = useEnded(item);
   const subtitleStyle = useSubtitleStyle();
   const useNativePlayer =
     playbackHost() === 'shell' ? useShellPlayer : useDesktopPlayer;
@@ -329,11 +358,18 @@ function NativePlayer({
     url: streamUrl(client, item.Id!, source, playSessionId),
     source,
     startMs,
-    onEnded: back,
+    onEnded,
     prefs,
     subtitleStyle,
   });
   const segments = useSegments(item.Id!);
+  const next = useNextEpisodePrompt({
+    item,
+    source,
+    player,
+    segments: segments.data?.Items,
+  });
+  connect(next);
   useReporting(player, { item, source, playSessionId });
 
   return (
@@ -345,6 +381,7 @@ function NativePlayer({
         segments={segments.data?.Items}
         onBack={back}
       />
+      {next.element}
       {player.state.error && (
         <Failure
           itemId={item.Id!}

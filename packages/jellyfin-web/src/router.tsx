@@ -115,19 +115,21 @@ const itemRoute = createRoute({
   validateSearch: (search: Record<string, unknown>) => ({
     season: search.season == null ? undefined : String(search.season),
     episode: search.episode == null ? undefined : String(search.episode),
+    pick: search.pick == null ? undefined : String(search.pick),
   }),
   component: ItemRouteView,
 });
 
 function ItemRouteView(): React.ReactElement {
   const { itemId } = itemRoute.useParams();
-  const { season, episode } = itemRoute.useSearch();
+  const { season, episode, pick } = itemRoute.useSearch();
   return (
     <ItemPage
       key={itemId}
       itemId={itemId}
       seasonId={season}
       episodeId={episode}
+      pickId={pick}
     />
   );
 }

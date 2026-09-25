@@ -74,17 +74,20 @@ import { ItemMenu } from '../components/item-menu';
 import { ExternalLinks } from '../components/external-links';
 import { CastAndCrew } from '../components/people';
 import { KINDS, KindTabs } from '../components/kind-tabs';
-import { useVersionPicker } from '../components/version-picker';
+import { PickOnArrival, useVersionPicker } from '../components/version-picker';
 import type { BaseItemDto } from '../lib/types';
 
 export function ItemPage({
   itemId,
   seasonId,
   episodeId,
+  pickId,
 }: {
   itemId: string;
   seasonId?: string;
   episodeId?: string;
+  /** Opens this item's version list as the page arrives. */
+  pickId?: string;
 }) {
   const { client } = useSession();
   const item = useItem(itemId);
@@ -106,6 +109,7 @@ export function ItemPage({
 
   return (
     <div className="relative">
+      {pickId && <PickOnArrival itemId={pickId} />}
       <Backdrop
         images={data ? backdropUrls(client, data, { maxWidth: 1920 }) : []}
         poster={data ? posterUrl(client, data, { maxWidth: 400 }) : null}

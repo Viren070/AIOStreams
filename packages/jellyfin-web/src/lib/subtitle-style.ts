@@ -34,6 +34,7 @@ export function subtitleCss(style: SubtitleStyle): {
   backgroundColor: string;
   textShadow: string;
   fontSize: string;
+  fontWeight: number;
 } {
   const px = OUTLINE_PX[style.outline];
   const c = style.outlineColor;
@@ -44,6 +45,7 @@ export function subtitleCss(style: SubtitleStyle): {
       ? `${-px}px ${-px}px 0 ${c}, ${px}px ${-px}px 0 ${c}, ${-px}px ${px}px 0 ${c}, ${px}px ${px}px 0 ${c}`
       : 'none',
     fontSize: `${SCALE[style.size] * 100}%`,
+    fontWeight: style.bold ? 700 : 500,
   };
 }
 

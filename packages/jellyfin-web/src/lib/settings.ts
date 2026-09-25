@@ -280,6 +280,7 @@ const isPercent = (value: number) => value >= 0 && value <= 100;
 
 const SUBTITLE_KEYS = {
   size: 'aiostreams-web-subtitle-size',
+  bold: 'aiostreams-web-subtitle-bold',
   textColor: 'aiostreams-web-subtitle-text-color',
   outline: 'aiostreams-web-subtitle-outline',
   outlineColor: 'aiostreams-web-subtitle-outline-color',
@@ -290,6 +291,8 @@ const SUBTITLE_KEYS = {
 
 export const useSubtitleSize = () =>
   useDeviceSetting<SubtitleSize>(SUBTITLE_KEYS.size, 'normal', SUBTITLE_SIZES);
+export const useSubtitleBold = () =>
+  useDeviceSetting<boolean>(SUBTITLE_KEYS.bold, false);
 export const useSubtitleTextColor = () =>
   useDeviceSetting<string>(SUBTITLE_KEYS.textColor, '#ffffff', isHex);
 export const useSubtitleOutline = () =>
@@ -309,6 +312,7 @@ export const useSubtitleOverrideStyled = () =>
 
 export interface SubtitleStyle {
   size: SubtitleSize;
+  bold: boolean;
   textColor: string;
   outline: SubtitleOutline;
   outlineColor: string;
@@ -320,6 +324,7 @@ export interface SubtitleStyle {
 
 export function useSubtitleStyle(): SubtitleStyle {
   const [size] = useSubtitleSize();
+  const [bold] = useSubtitleBold();
   const [textColor] = useSubtitleTextColor();
   const [outline] = useSubtitleOutline();
   const [outlineColor] = useSubtitleOutlineColor();
@@ -329,6 +334,7 @@ export function useSubtitleStyle(): SubtitleStyle {
   return React.useMemo(
     () => ({
       size,
+      bold,
       textColor,
       outline,
       outlineColor,
@@ -338,6 +344,7 @@ export function useSubtitleStyle(): SubtitleStyle {
     }),
     [
       size,
+      bold,
       textColor,
       outline,
       outlineColor,
@@ -397,3 +404,25 @@ export const useEscExitsFullscreen = () =>
 export function onSettingsChange(listener: () => void): () => void {
   return subscribe(listener);
 }
+
+export const NEXT_PROMPTS = ['credits', 'end', 'off'] as const;
+export type NextPrompt = (typeof NEXT_PROMPTS)[number];
+export const NEXT_LEADS = [15, 30, 45, 60, 90, 120] as const;
+export const NEXT_COUNTDOWNS = [5, 10, 15, 30] as const;
+
+const NEXT_KEYS = {
+  prompt: 'aiostreams-web-next-prompt',
+  lead: 'aiostreams-web-next-lead',
+  countdown: 'aiostreams-web-next-countdown',
+  fallbackFirst: 'aiostreams-web-next-fallback-first',
+} as const;
+
+export const useNextPrompt = () =>
+  useDeviceSetting<NextPrompt>(NEXT_KEYS.prompt, 'credits', NEXT_PROMPTS);
+/** Seconds before the end the prompt shows when there are no credits to go by. */
+export const useNextLead = () =>
+  useDeviceSetting<number>(NEXT_KEYS.lead, 30, NEXT_LEADS);
+export const useNextCountdown = () =>
+  useDeviceSetting<number>(NEXT_KEYS.countdown, 15, NEXT_COUNTDOWNS);
+export const useNextFallbackFirst = () =>
+  useDeviceSetting<boolean>(NEXT_KEYS.fallbackFirst, false);

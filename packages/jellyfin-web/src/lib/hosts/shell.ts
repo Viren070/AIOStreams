@@ -243,6 +243,7 @@ function setProp(name: string, value: unknown) {
 export function applySubtitleStyle(style: SubtitleStyle | undefined): void {
   if (!style) return;
   setProp('sub-scale', subtitleScale(style));
+  setProp('sub-bold', style.bold);
   setProp('sub-color', mpvColor(style.textColor));
   setProp('sub-outline-color', mpvColor(style.outlineColor));
   setProp('sub-outline-size', MPV_OUTLINE[style.outline]);

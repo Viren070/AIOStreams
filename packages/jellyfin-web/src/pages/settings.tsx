@@ -40,17 +40,24 @@ import {
 import {
   AUDIO_CHANNELS,
   MAX_FEATURED,
+  NEXT_COUNTDOWNS,
+  NEXT_LEADS,
   SEEK_STEPS,
   useAudioChannels,
   useEpisodeLayout,
   useEscExitsFullscreen,
   useFeatured,
   useHardwareDecoding,
+  useNextCountdown,
+  useNextFallbackFirst,
+  useNextLead,
+  useNextPrompt,
   usePassthrough,
   usePosterLines,
   usePosterSize,
   useSeekStep,
   useSubtitleBackgroundColor,
+  useSubtitleBold,
   useSubtitleBackgroundOpacity,
   useSubtitleOutline,
   useSubtitleOutlineColor,
@@ -60,6 +67,7 @@ import {
   useSubtitleTextColor,
   type AudioChannels,
   type EpisodeLayout,
+  type NextPrompt,
   type PosterLine,
   type PosterSize,
   type SubtitleOutline,
@@ -113,9 +121,20 @@ const PLAYER_PRESETS = [
 
 const ON_DEVICE = 'Kept on this device.';
 
+const NEXT_PROMPT_HELP: Record<NextPrompt, string> = {
+  credits:
+    'When the credits start, if they run to the end; otherwise a set time before the end.',
+  end: 'A set time before the end.',
+  off: 'Episodes end without offering the next one.',
+};
+
 function PlaybackSection() {
   const { prefs, update } = usePlaybackPrefs();
   const [seekStep, setSeekStep] = useSeekStep();
+  const [nextPrompt, setNextPrompt] = useNextPrompt();
+  const [nextLead, setNextLead] = useNextLead();
+  const [nextCountdown, setNextCountdown] = useNextCountdown();
+  const [nextFallbackFirst, setNextFallbackFirst] = useNextFallbackFirst();
   const [template, setTemplate] = React.useState(externalPlayerTemplate);
   const changeTemplate = (value: string) => {
     setTemplate(value);
@@ -153,6 +172,66 @@ function PlaybackSection() {
           value={mode}
           onValueChange={(v) => update({ SubtitleMode: v as SubtitleMode })}
         />
+      </SettingsCard>
+      <SettingsCard
+        title="Next episode"
+        description="Whether it plays on is saved to your account; the rest is kept on this device."
+      >
+        <Switch
+          side="right"
+          label="Play it automatically"
+          help="Counts down, then plays the next episode in the same kind of version. Off, the prompt waits for you."
+          value={prefs.EnableNextEpisodeAutoPlay !== false}
+          onValueChange={(v) => update({ EnableNextEpisodeAutoPlay: v })}
+        />
+        <Switch
+          side="right"
+          label="Play the first version when none matches"
+          help="Otherwise the next episode's version list opens when none is like the one you watched."
+          value={nextFallbackFirst}
+          onValueChange={setNextFallbackFirst}
+        />
+        <Select
+          label="Show the prompt"
+          help={NEXT_PROMPT_HELP[nextPrompt]}
+          options={[
+            { value: 'credits', label: 'When the credits start' },
+            { value: 'end', label: 'Before the end' },
+            { value: 'off', label: 'Never' },
+          ]}
+          value={nextPrompt}
+          onValueChange={(v) => setNextPrompt(v as NextPrompt)}
+        />
+        {nextPrompt !== 'off' && (
+          <Select
+            label="Before the end"
+            help={
+              nextPrompt === 'credits'
+                ? 'Used when an episode has no credits marked.'
+                : undefined
+            }
+            options={NEXT_LEADS.map((s) => ({
+              value: String(s),
+              label:
+                s < 60
+                  ? `${s} seconds`
+                  : `${s / 60} minute${s > 60 ? 's' : ''}`,
+            }))}
+            value={String(nextLead)}
+            onValueChange={(v) => setNextLead(Number(v))}
+          />
+        )}
+        {nextPrompt !== 'off' && (
+          <Select
+            label="Countdown"
+            options={NEXT_COUNTDOWNS.map((s) => ({
+              value: String(s),
+              label: `${s} seconds`,
+            }))}
+            value={String(nextCountdown)}
+            onValueChange={(v) => setNextCountdown(Number(v))}
+          />
+        )}
       </SettingsCard>
       <SettingsCard title="Controls" description={ON_DEVICE}>
         <Select
@@ -204,6 +283,7 @@ function PlaybackSection() {
 
 function SubtitlesSection() {
   const [size, setSize] = useSubtitleSize();
+  const [bold, setBold] = useSubtitleBold();
   const [textColor, setTextColor] = useSubtitleTextColor();
   const [outline, setOutline] = useSubtitleOutline();
   const [outlineColor, setOutlineColor] = useSubtitleOutlineColor();
@@ -216,10 +296,7 @@ function SubtitlesSection() {
     <>
       <SettingsCard title="Preview">
         <div className="flex aspect-[16/5] items-end justify-center rounded-lg bg-gradient-to-br from-gray-700 to-gray-950 p-4">
-          <span
-            className="rounded px-2 py-0.5 text-center text-lg font-medium"
-            style={css}
-          >
+          <span className="rounded px-2 py-0.5 text-center text-lg" style={css}>
             This is how subtitles will look.
           </span>
         </div>
@@ -240,6 +317,12 @@ function SubtitlesSection() {
           label="Colour"
           value={textColor}
           onValueChange={setTextColor}
+        />
+        <Switch
+          side="right"
+          label="Bold"
+          value={bold}
+          onValueChange={setBold}
         />
       </SettingsCard>
       <SettingsCard title="Outline">

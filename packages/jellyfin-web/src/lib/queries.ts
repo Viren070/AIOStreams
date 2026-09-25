@@ -433,3 +433,22 @@ export function useClearHistory() {
     onSettled: refresh,
   });
 }
+
+/** The episode after this one in its series, across seasons. */
+export function useNextEpisode(item: BaseItemDto) {
+  const { client, user } = useSession();
+  const seriesId = item.Type === 'Episode' ? item.SeriesId : undefined;
+  return useQuery({
+    queryKey: [...useKey(), 'next-episode', item.Id],
+    queryFn: async () => {
+      const res = await client.get<BaseItemDtoQueryResult>(
+        `/Shows/${seriesId}/Episodes`,
+        { userId: user.Id, StartItemId: item.Id, Limit: 2 }
+      );
+      const [current, next] = res.Items ?? [];
+      return current?.Id === item.Id && next ? next : null;
+    },
+    enabled: !!seriesId,
+    staleTime: 10 * 60_000,
+  });
+}

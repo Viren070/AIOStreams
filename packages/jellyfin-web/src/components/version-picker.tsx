@@ -21,6 +21,7 @@ import { Tooltip } from '@aiostreams/ui/tooltip';
 import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
 import { useSession } from '../lib/session';
 import {
+  useItem,
   usePlaybackInfo,
   useRefreshPlaybackInfo,
   useSetPlayed,
@@ -48,6 +49,20 @@ interface PickerValue {
 }
 
 const PickerContext = React.createContext<PickerValue | null>(null);
+
+/** Opens the picker once, then drops `pick` from the address. */
+export function PickOnArrival({ itemId }: { itemId: string }) {
+  const item = useItem(itemId);
+  const picker = useVersionPicker();
+  const opened = React.useRef(false);
+  React.useEffect(() => {
+    if (!item.data || opened.current) return;
+    opened.current = true;
+    picker.open(item.data);
+    navigate(itemPath(item.data), { replace: true });
+  }, [item.data, picker]);
+  return null;
+}
 
 export function useVersionPicker(): PickerValue {
   const value = React.useContext(PickerContext);
