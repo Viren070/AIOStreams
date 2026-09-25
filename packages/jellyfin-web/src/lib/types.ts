@@ -76,7 +76,8 @@ export interface HistoryEntry {
   favorite: boolean;
   lastPlayedAt: number | null;
   sortAt: number;
-  origin: 'local' | 'import';
+  /** Null where the server does not say. */
+  origin: 'local' | 'import' | null;
   tracker: string | null;
   item: BaseItemDto;
 }

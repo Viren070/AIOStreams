@@ -21,10 +21,14 @@ import {
 } from '@aiostreams/ui/shared/confirmation-dialog';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '../lib/session';
+import { useFeature } from '../lib/server-info';
 import {
   useActivity,
   useClearHistory,
   useHistory,
+  useOwnHistory,
+  useOwnSessions,
+  useOwnTotals,
   useSetPlayed,
 } from '../lib/queries';
 import { posterUrl, landscapeUrls } from '../lib/images';
@@ -41,14 +45,19 @@ type View = 'days' | 'table';
 const at = (e: HistoryEntry) => e.lastPlayedAt ?? e.sortAt;
 
 export function HistoryPage() {
-  const activity = useActivity();
+  // Without the server's history, the signed-in user's own plays and sessions.
+  const full = useFeature('history');
+  const activity = useActivity(full);
+  const ownSessions = useOwnSessions(!full);
   const users = activity.data?.users ?? [];
-  const sessions = activity.data?.sessions ?? [];
+  const sessions = (full ? activity.data?.sessions : ownSessions.data) ?? [];
   const owners = users.filter((u) => u.counts);
   const [userId, setUserId] = React.useState<string | null>(null);
   const [localOnly, setLocalOnly] = React.useState(false);
   const [view, setView] = React.useState<View>('days');
-  const history = useHistory(userId, localOnly);
+  const fullHistory = useHistory(userId, localOnly, full);
+  const ownHistory = useOwnHistory(!full);
+  const history = full ? fullHistory : ownHistory;
   const entries = React.useMemo(
     () => history.data?.pages.flatMap((p) => p.items) ?? [],
     [history.data]
@@ -79,11 +88,14 @@ export function HistoryPage() {
     <PageBody>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-bold">Activity</h1>
-        <div className="flex items-center gap-2">
-          <ExportButton />
-          {selected && <ResetButton owner={selected} />}
-        </div>
+        {full && (
+          <div className="flex items-center gap-2">
+            <ExportButton />
+            {selected && <ResetButton owner={selected} />}
+          </div>
+        )}
       </div>
+      {!full && <OwnTotals />}
 
       <SessionsRow sessions={sessions} />
 
@@ -97,7 +109,12 @@ export function HistoryPage() {
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-1 rounded-full bg-gray-900 p-1">
+        <div
+          className={cn(
+            'flex gap-1 rounded-full bg-gray-900 p-1',
+            !full && 'invisible'
+          )}
+        >
           {[
             { value: false, label: 'Everything' },
             { value: true, label: 'Played here' },
@@ -152,6 +169,28 @@ export function HistoryPage() {
       <div ref={sentinel} />
     </PageBody>
   );
+}
+
+function count(n: number, one: string, many: string): string {
+  return `${n.toLocaleString()} ${n === 1 ? one : many}`;
+}
+
+function OwnTotals() {
+  const t = useOwnTotals(true);
+  const watched = [
+    t.movies ? count(t.movies, 'movie', 'movies') : null,
+    t.episodes ? count(t.episodes, 'episode', 'episodes') : null,
+  ].filter(Boolean);
+  const more = [
+    t.inProgress ? `${t.inProgress.toLocaleString()} in progress` : null,
+    t.favorites ? count(t.favorites, 'favourite', 'favourites') : null,
+  ].filter(Boolean);
+  const parts = [
+    watched.length ? `${watched.join(' and ')} watched` : null,
+    ...more,
+  ].filter(Boolean);
+  if (!parts.length) return null;
+  return <p className="text-sm text-[--muted]">{parts.join(' · ')}</p>;
 }
 
 function UserChips({
@@ -447,7 +486,8 @@ function Poster({ src }: { src: string | null }) {
 /** Edits one entry, or every episode in a folded tile. */
 function EntryMenu({ entries }: { entries: HistoryEntry[] }) {
   const { user } = useSession();
-  const activity = useActivity();
+  const full = useFeature('history');
+  const activity = useActivity(full);
   const setPlayed = useSetPlayed();
   const clear = useClearHistory();
   const owner = entries[0].userId;
@@ -499,9 +539,11 @@ function EntryMenu({ entries }: { entries: HistoryEntry[] }) {
           Mark unwatched
         </DropdownMenuItem>
       )}
-      <DropdownMenuItem onClick={remove} className="text-red-300">
-        Remove from history
-      </DropdownMenuItem>
+      {full && (
+        <DropdownMenuItem onClick={remove} className="text-red-300">
+          Remove from history
+        </DropdownMenuItem>
+      )}
     </DropdownMenu>
   );
 }
@@ -582,6 +624,8 @@ function HistoryTable({
   names: Map<string, string> | null;
 }) {
   const { client } = useSession();
+  // Removing, and so selecting, needs the server's history.
+  const full = useFeature('history');
   const clear = useClearHistory();
   const [picked, setPicked] = React.useState<Set<string>>(new Set());
   const keyOf = (e: HistoryEntry) => `${e.userId}|${e.itemKey}`;
@@ -637,22 +681,24 @@ function HistoryTable({
         <table className="w-full text-sm">
           <thead className="bg-gray-900/60 text-left text-xs uppercase text-[--muted]">
             <tr>
-              <th className="w-10 p-3">
-                <Checkbox
-                  value={allPicked}
-                  onValueChange={() =>
-                    setPicked(
-                      allPicked ? new Set() : new Set(entries.map(keyOf))
-                    )
-                  }
-                  aria-label="Select all"
-                />
-              </th>
+              {full && (
+                <th className="w-10 p-3">
+                  <Checkbox
+                    value={allPicked}
+                    onValueChange={() =>
+                      setPicked(
+                        allPicked ? new Set() : new Set(entries.map(keyOf))
+                      )
+                    }
+                    aria-label="Select all"
+                  />
+                </th>
+              )}
               <th className="p-3">Title</th>
               {names && <th className="hidden p-3 sm:table-cell">User</th>}
               <th className="p-3">Status</th>
               <th className="hidden p-3 md:table-cell">When</th>
-              <th className="hidden p-3 md:table-cell">Source</th>
+              {full && <th className="hidden p-3 md:table-cell">Source</th>}
               <th className="w-10 p-3" />
             </tr>
           </thead>
@@ -667,13 +713,15 @@ function HistoryTable({
                     picked.has(keyOf(entry)) && 'bg-brand-500/5'
                   )}
                 >
-                  <td className="p-3">
-                    <Checkbox
-                      value={picked.has(keyOf(entry))}
-                      onValueChange={() => toggle(entry)}
-                      aria-label="Select"
-                    />
-                  </td>
+                  {full && (
+                    <td className="p-3">
+                      <Checkbox
+                        value={picked.has(keyOf(entry))}
+                        onValueChange={() => toggle(entry)}
+                        aria-label="Select"
+                      />
+                    </td>
+                  )}
                   <td className="p-3">
                     <a
                       href={href(itemPath(item))}
@@ -719,9 +767,12 @@ function HistoryTable({
                       timeStyle: 'short',
                     })}
                   </td>
-                  <td className="hidden p-3 text-xs text-[--muted] md:table-cell">
-                    {entry.tracker ?? (entry.origin === 'local' ? 'Here' : '')}
-                  </td>
+                  {full && (
+                    <td className="hidden p-3 text-xs text-[--muted] md:table-cell">
+                      {entry.tracker ??
+                        (entry.origin === 'local' ? 'Here' : '')}
+                    </td>
+                  )}
                   <td className="p-3">
                     <EntryMenu entries={[entry]} />
                   </td>

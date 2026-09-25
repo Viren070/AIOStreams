@@ -37,7 +37,7 @@ import { useSession } from '../lib/session';
 import { usePickableUsers } from '../lib/queries';
 import { configureUrl, navigate, to } from '../lib/paths';
 import { serverAddress } from '../lib/servers';
-import { useFeature, useServerInfo } from '../lib/server-info';
+import { useServerInfo } from '../lib/server-info';
 import { UserAvatar } from './user-avatar';
 import { BrandLogo } from './brand-logo';
 import { VersionPickerProvider } from './version-picker';
@@ -143,7 +143,6 @@ export function PageBackground() {
 export function WebLayout() {
   const { client, signOut, switchUser, changeServer } = useSession();
   const configure = configureUrl(client.base, useServerInfo());
-  const history = useFeature('history');
   const users = usePickableUsers();
   const several = (users.data?.length ?? 0) > 1;
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -176,16 +175,12 @@ export function WebLayout() {
       isCurrent: pathname.startsWith('/search'),
       onClick: () => navigate(to.search()),
     },
-    ...(history
-      ? [
-          {
-            name: 'Activity',
-            iconType: BiHistory,
-            isCurrent: pathname.startsWith('/history'),
-            onClick: () => navigate(to.history),
-          },
-        ]
-      : []),
+    {
+      name: 'Activity',
+      iconType: BiHistory,
+      isCurrent: pathname.startsWith('/history'),
+      onClick: () => navigate(to.history),
+    },
   ];
 
   const settings: SidebarItem = {
