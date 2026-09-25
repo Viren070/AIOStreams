@@ -1,11 +1,13 @@
 import { createHash } from 'crypto';
 import { Router, type Request } from 'express';
 import {
+  accountScope,
   config as appConfig,
   createLogger,
   encryptString,
   getSimpleTextHash,
   isConfigUuid,
+  JellyfinRepository,
   mintToken,
   personaUserId,
   quickConnectConsume,
@@ -17,6 +19,7 @@ import {
   type ClientInfo,
   type JellyfinPersona,
   type UserData,
+  type WatchScope,
   type WatchSessionRow,
 } from '@aiostreams/core';
 import {
@@ -43,6 +46,7 @@ const router: Router = Router({ mergeParams: true });
 
 export function userConfiguration() {
   return {
+    AudioLanguagePreference: '',
     PlayDefaultAudioTrack: true,
     SubtitleLanguagePreference: '',
     DisplayMissingEpisodes: false,
@@ -59,6 +63,33 @@ export function userConfiguration() {
     EnableNextEpisodeAutoPlay: true,
     CastReceiverId: '',
   };
+}
+
+const SUBTITLE_MODES = ['Default', 'Always', 'OnlyForced', 'None', 'Smart'];
+
+/** The playback preferences a user can set and this server keeps. */
+const USER_PREFERENCES: Record<string, (value: unknown) => boolean> = {
+  AudioLanguagePreference: (v) => typeof v === 'string' && v.length <= 16,
+  SubtitleLanguagePreference: (v) => typeof v === 'string' && v.length <= 16,
+  SubtitleMode: (v) => typeof v === 'string' && SUBTITLE_MODES.includes(v),
+  PlayDefaultAudioTrack: (v) => typeof v === 'boolean',
+  RememberAudioSelections: (v) => typeof v === 'boolean',
+  RememberSubtitleSelections: (v) => typeof v === 'boolean',
+  EnableNextEpisodeAutoPlay: (v) => typeof v === 'boolean',
+};
+
+function userPreferences(body: unknown): Record<string, unknown> {
+  const source = body && typeof body === 'object' ? body : {};
+  return Object.fromEntries(
+    Object.entries(source).filter(([key, value]) =>
+      USER_PREFERENCES[key]?.(value)
+    )
+  );
+}
+
+export async function storedUserConfiguration(scope: WatchScope) {
+  const stored = await JellyfinRepository.getUserConfiguration(scope);
+  return { ...userConfiguration(), ...userPreferences(stored) };
 }
 
 export function userPolicy(opts: { admin?: boolean; hidden?: boolean } = {}) {
@@ -224,8 +255,15 @@ export async function authenticationResult(
   opts: { provedPassword?: boolean } = {}
 ) {
   const client = clientOf(req);
+  const scope =
+    persona && persona.history !== 'shared'
+      ? { uuid, persona: persona.id }
+      : accountScope(uuid);
   return {
-    User: userDto(uuid, userData, persona),
+    User: {
+      ...userDto(uuid, userData, persona),
+      Configuration: await storedUserConfiguration(scope),
+    },
     SessionInfo: sessionInfo(uuid, userData, persona, client, req.userIp),
     AccessToken: mintToken({
       u: uuid,
@@ -488,7 +526,10 @@ router.get(
       res.status(400).json({ Message: 'API keys have no user' });
       return;
     }
-    res.json(userDto(ctx.uuid, ctx.userData, ctx.persona));
+    res.json({
+      ...userDto(ctx.uuid, ctx.userData, ctx.persona),
+      Configuration: await storedUserConfiguration(ctx.watch),
+    });
   })
 );
 router.get(
@@ -513,15 +554,21 @@ router.get(
     );
   })
 );
+/* A user token only ever reads and writes its own preferences. */
 router.get(
   '/Users/:userId/Configuration',
-  jf(async (_req, res) => {
-    res.json(userConfiguration());
+  jf(async (_req, res, ctx) => {
+    res.json(await storedUserConfiguration(ctx.watch));
   })
 );
 router.post(
   ['/Users/Configuration', '/Users/:userId/Configuration'],
-  jf(async (_req, res) => {
+  jf(async (req, res, ctx) => {
+    const stored = await JellyfinRepository.getUserConfiguration(ctx.watch);
+    await JellyfinRepository.setUserConfiguration(ctx.watch, {
+      ...userPreferences(stored),
+      ...userPreferences(req.body),
+    });
     res.status(204).end();
   })
 );

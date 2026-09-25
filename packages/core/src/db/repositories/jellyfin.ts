@@ -5,6 +5,7 @@ import { deleteInBatches, type PruneResult } from '../prune.js';
 import type { WatchScope } from '../../watch-state/types.js';
 
 const CHUNK = 200;
+const USER_CONFIGURATION = 'aiostreams:user-configuration';
 
 /**
  * Jellyfin item ids that cannot be rebuilt from their Stremio id, keyed by
@@ -76,6 +77,25 @@ export class JellyfinRepository {
     } catch {
       return null;
     }
+  }
+
+  /** Kept beside the display preferences, under an id no client asks for. */
+  static getUserConfiguration(
+    scope: WatchScope
+  ): Promise<Record<string, unknown> | null> {
+    return this.getDisplayPrefs(scope, USER_CONFIGURATION, USER_CONFIGURATION);
+  }
+
+  static setUserConfiguration(
+    scope: WatchScope,
+    configuration: Record<string, unknown>
+  ): Promise<void> {
+    return this.setDisplayPrefs(
+      scope,
+      USER_CONFIGURATION,
+      USER_CONFIGURATION,
+      configuration
+    );
   }
 
   static async setDisplayPrefs(
