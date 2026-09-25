@@ -23,6 +23,27 @@ export function serverName(): string {
   return appConfig.branding.addonName || 'AIOStreams';
 }
 
+/**
+ * The extensions this server implements, each with its version, so a client
+ * checks for the one it needs rather than for AIOStreams.
+ */
+const FEATURES = {
+  /** Sign-in with a configuration's UUID or alias. */
+  configSignIn: 1,
+  /** `/stremio/configure` on this origin. */
+  configure: 1,
+  /** `/AIOStreams/Users` and `/AIOStreams/Token`. */
+  users: 1,
+  /** `/AIOStreams/History`, its `Clear` and `Export`, and `/AIOStreams/Activity`. */
+  history: 1,
+  /** `/AIOStreams/PlayedUpTo/{id}`. */
+  playedUpTo: 1,
+  /** A series rated `Likes=false` is dropped. */
+  dropped: 1,
+  /** `Refresh` in a PlaybackInfo body runs the addons again. */
+  refreshVersions: 1,
+} as const;
+
 export function publicInfo(req: Request) {
   return {
     LocalAddress: `${requestOrigin(req)}${req.baseUrl}`.replace(/\/$/, ''),
@@ -31,6 +52,7 @@ export function publicInfo(req: Request) {
     aiostreams: {
       logo: req.jf?.userData.addonLogo ?? null,
       pinSignIn: appConfig.jellyfin.pinSignIn && !!mountOf(req),
+      features: FEATURES,
     },
     Version: appConfig.jellyfin.version,
     ProductName: JELLYFIN_PRODUCT_NAME,

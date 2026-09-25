@@ -584,11 +584,16 @@ async function handleItems(
     catalogDesc = pd;
     genreFromId = pd.g;
   }
-  if (!catalogDesc && genreIds.length) {
+  if (genreIds.length && pd?.k !== 'genre') {
     const g = await decodeForRequest(ctx, genreIds[0]);
-    if (g?.kind === 'descriptor' && g.descriptor.k === 'genre') {
-      genreFromId = g.descriptor.g;
-      if (g.descriptor.c) catalogDesc = g.descriptor;
+    const d = g?.kind === 'descriptor' ? g.descriptor : null;
+    // Jellyfin clients filter a library by its genre this way.
+    if (
+      d?.k === 'genre' &&
+      (!catalogDesc || (d.t === catalogDesc.t && d.c === catalogDesc.c))
+    ) {
+      genreFromId = d.g;
+      if (d.c) catalogDesc = d;
     }
   }
 
