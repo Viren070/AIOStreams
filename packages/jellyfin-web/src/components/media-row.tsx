@@ -56,25 +56,14 @@ function EndWatcher({ onEnd }: { onEnd: () => void }) {
 }
 
 /** The row's arrows, only while there is somewhere to scroll. */
-function RowNav({ overlay }: { overlay?: boolean }) {
+function RowNav() {
   const { canScrollPrev, canScrollNext } = useCarousel();
   if (!canScrollPrev && !canScrollNext) return null;
-  if (!overlay) {
-    return (
-      <div className="hidden gap-1 md:flex">
-        <CarouselPrevious />
-        <CarouselNext />
-      </div>
-    );
-  }
-  // A row without a header keeps its arrows over its edges.
-  const edge =
-    'absolute top-1/2 z-[2] hidden -translate-y-1/2 bg-black/60 backdrop-blur-sm disabled:hidden md:inline-flex';
   return (
-    <>
-      <CarouselPrevious className={cn(edge, 'left-1')} />
-      <CarouselNext className={cn(edge, 'right-1')} />
-    </>
+    <div className="hidden gap-1 md:flex">
+      <CarouselPrevious />
+      <CarouselNext />
+    </div>
   );
 }
 
@@ -92,6 +81,7 @@ function useEntryKey(id: string | undefined) {
 export function MediaRow({
   id,
   title,
+  header,
   shape,
   itemClass,
   loading,
@@ -103,6 +93,8 @@ export function MediaRow({
 }: {
   id?: string;
   title?: React.ReactNode;
+  /** Shown as it is in place of a title. */
+  header?: React.ReactNode;
   shape: RowShape;
   /** Replaces the shape's card width, for rows of something else. */
   itemClass?: string;
@@ -134,20 +126,20 @@ export function MediaRow({
         restoreKey={restoreKey}
       >
         {onEndReached && <EndWatcher onEnd={onEndReached} />}
-        {title || action ? (
-          <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center justify-between gap-3">
+          {title ? (
             <h2 className="min-w-0 truncate text-lg font-semibold sm:text-xl">
               {title}
             </h2>
-            <div className="flex flex-none items-center gap-2">
-              {action}
-              <RowNav />
-            </div>
+          ) : (
+            <div className="min-w-0">{header}</div>
+          )}
+          <div className="flex flex-none items-center gap-2">
+            {action}
+            <RowNav />
           </div>
-        ) : (
-          <RowNav overlay />
-        )}
-        <CarouselContent className={title || action ? 'mt-3' : undefined}>
+        </div>
+        <CarouselContent className="mt-3">
           {loading
             ? skeletons(8)
             : items.map((child, i) => (

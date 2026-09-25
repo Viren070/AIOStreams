@@ -462,16 +462,19 @@ function Section({
   action,
   children,
 }: {
-  title: string;
+  /** Left out when the first row carries it. */
+  title?: string;
   action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <section className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl font-semibold">{title}</h2>
-        {action}
-      </div>
+      {title && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-xl font-semibold">{title}</h2>
+          {action}
+        </div>
+      )}
       {children}
     </section>
   );
@@ -523,9 +526,10 @@ function Seasons({
   }, [episodes.data, focusEpisodeId]);
 
   return (
-    <Section title="Episodes">
+    <Section title={ownPosters ? undefined : 'Episodes'}>
       {ownPosters ? (
         <MediaRow
+          title="Episodes"
           shape="poster"
           itemClass="basis-[7rem] sm:basis-[8rem] lg:basis-[8.5rem]"
         >
@@ -587,22 +591,13 @@ function Seasons({
           onSelect={setSeasonId}
         />
       )}
-      {summary && (
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-sm text-[--muted]">{summary}</p>
-          {layout === 'row' && items.length > 1 && (
-            <AllEpisodes
-              title={season?.Name ?? 'Episodes'}
-              summary={summary}
-              episodes={items}
-            />
-          )}
-        </div>
-      )}
       {season?.Overview && (
         <p className="max-w-3xl select-text text-sm text-gray-300">
           {season.Overview}
         </p>
+      )}
+      {summary && layout === 'list' && (
+        <p className="text-sm text-[--muted]">{summary}</p>
       )}
       {layout === 'row' ? (
         loading ? (
@@ -615,6 +610,19 @@ function Seasons({
               shape="wide"
               itemClass={ROW_WIDTH}
               startIndex={focusIndex >= 0 ? focusIndex : upToIndex(items)}
+              header={
+                summary && <p className="text-sm text-[--muted]">{summary}</p>
+              }
+              action={
+                summary &&
+                items.length > 1 && (
+                  <AllEpisodes
+                    title={season?.Name ?? 'Episodes'}
+                    summary={summary}
+                    episodes={items}
+                  />
+                )
+              }
             >
               {items.map((episode) => (
                 <EpisodeCard
