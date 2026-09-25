@@ -19,11 +19,13 @@ import { Skeleton } from '@aiostreams/ui/skeleton';
 import { TextInput } from '@aiostreams/ui/text-input';
 import { Tooltip } from '@aiostreams/ui/tooltip';
 import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
+import { useQueryClient } from '@tanstack/react-query';
 import { useSession } from '../lib/session';
 import { useFeature } from '../lib/server-info';
 import {
   useItem,
   usePlaybackInfo,
+  usePlaybackInfoOptions,
   useRefreshPlaybackInfo,
   useSetPlayed,
 } from '../lib/queries';
@@ -163,6 +165,8 @@ function Versions({
   const refreshing = info.isFetching || refresh.isPending;
   const canRefresh = useFeature('refreshVersions');
   const play = usePlay();
+  const queryClient = useQueryClient();
+  const infoOptions = usePlaybackInfoOptions();
   const template = externalPlayerTemplate();
   const [startMs, setStartMs] = React.useState(request.startMs);
   const [filter, setFilter] = React.useState('');
@@ -195,6 +199,11 @@ function Versions({
   }, []);
 
   const start = (source: SourceInfo) => {
+    // The player's cached answer may predate this list and lack the version.
+    queryClient.removeQueries({
+      queryKey: infoOptions(item.Id!, source.Id ?? undefined).queryKey,
+      exact: true,
+    });
     onDone();
     play(item, { source, startMs, replace: !!request.playing }).catch(
       (e: Error) => toast.error(e.message)
