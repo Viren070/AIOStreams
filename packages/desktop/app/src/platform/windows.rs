@@ -210,10 +210,12 @@ pub fn libmpv_candidates() -> Vec<PathBuf> {
         paths.push(dir.join("libmpv-2.dll"));
     }
     if cfg!(debug_assertions) {
-        paths.push(PathBuf::from(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../vendor/libmpv-2.dll"
-        )));
+        paths.push(
+            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../vendor")
+                .join(std::env::consts::ARCH)
+                .join("libmpv-2.dll"),
+        );
     }
     paths
 }

@@ -1,0 +1,6 @@
+# The libmpv the desktop app ships: a shinchiro/mpv-winbuild-cmake release and the
+# SHA-256 of each architecture's mpv-dev archive. That repository keeps about four
+# months of releases, so a build that cannot find the tag needs it bumped.
+tag=20260924
+x86_64=50caf10ddb6644da4c205ce67dfe37e32fc3715b33c82e933d6e1962ff61eac9
+aarch64=604fadc84e829019a7ff3c2c1a1f317365f3f170146c3304fc983cdd05551931
