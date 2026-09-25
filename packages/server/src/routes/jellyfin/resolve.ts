@@ -237,6 +237,27 @@ export async function resolvePlayback(
   return (await resolveByItem(ctx.uuid, scope, itemId)) ?? null;
 }
 
+/**
+ * A version kept by a new run keeps the subtitles a lookup for its file added:
+ * a player still showing it asks for them by their position in that list.
+ */
+function keepEnrichedSubtitles(
+  memo: PlaybackMemo,
+  previous: PlaybackMemo | null | undefined
+): void {
+  const enriched = new Map(
+    (previous?.sources ?? [])
+      .filter((s) => s.subtitlesEnriched)
+      .map((s) => [s.msid, s])
+  );
+  for (const source of memo.sources) {
+    const before = enriched.get(source.msid);
+    if (!before) continue;
+    source.subtitles = before.subtitles;
+    source.subtitlesEnriched = true;
+  }
+}
+
 /** Live by the content when the url says nothing: a channel, or a schedule. */
 function isLiveContent(type: string, meta: ParsedMeta | null): boolean {
   return type === 'tv' || type === 'channel' || hasProgrammeVideos(meta);
@@ -365,6 +386,7 @@ async function resolveUncached(
     runtimeMs: target.runtimeMs,
     createdAt: Date.now(),
   };
+  keepEnrichedSubtitles(memo, await resolveByItem(ctx.uuid, scope, itemId));
   await writePlaybackMemo(memo, scope);
   if (!playableSources(sources).length) {
     const reason = (streamsRes?.errors ?? [])
