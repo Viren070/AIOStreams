@@ -293,6 +293,7 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
       patch({ subtitleDelayMs: delay });
     },
     // Only external subtitles can be read; mpv keeps embedded ones to itself.
+    canReadSubtitle: (id) => externals.some((e) => e.id === id),
     subtitleLines: async () => {
       const shown = subtitleId(latest.current.state.subtitle);
       const external = externals.find((e) => e.id === shown);

@@ -46,6 +46,8 @@ export interface PlayerController {
   setSubtitleDelay?: (ms: number) => void;
   /** The shown subtitle's lines, or null when the player cannot read them. */
   subtitleLines?: () => Promise<SubtitleLine[] | null>;
+  /** Whether `subtitleLines` can read this subtitle; every one when missing. */
+  canReadSubtitle?: (id: string) => boolean;
   toggleFullscreen(): void;
 }
 

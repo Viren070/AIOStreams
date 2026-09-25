@@ -625,7 +625,8 @@ export function PlayerControls({
                       delayMs={state.subtitleDelayMs}
                       onChange={player.setSubtitleDelay}
                       onSyncToLine={
-                        player.subtitleLines
+                        player.subtitleLines &&
+                        (player.canReadSubtitle?.(state.subtitle) ?? true)
                           ? () => setHeardAt(state.positionMs)
                           : undefined
                       }
