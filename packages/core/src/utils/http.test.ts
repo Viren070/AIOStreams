@@ -64,6 +64,22 @@ describe('rateLimitKey', () => {
     );
   });
 
+  test('treats userinfo like the Authorization header it becomes', () => {
+    assert.equal(
+      key('https://user:pass@indexer.test/api'),
+      key('https://indexer.test/api', {
+        Authorization: `Basic ${Buffer.from('user:pass').toString('base64')}`,
+      })
+    );
+  });
+
+  test('separates forwarded client IPs', () => {
+    assert.notEqual(
+      key('https://addon.test/stream', { 'X-Forwarded-For': '1.1.1.1' }),
+      key('https://addon.test/stream', { 'X-Forwarded-For': '2.2.2.2' })
+    );
+  });
+
   test('separates egresses', () => {
     const url = new URL('https://indexer.test/api');
     assert.notEqual(

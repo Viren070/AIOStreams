@@ -28,8 +28,8 @@ const urlCount = Cache.getInstance<string, number>(
   undefined,
   'memory'
 );
-// Per rateLimitKey flag, set (with TTL = Retry-After) after a 429.
 const MAX_RETRY_AFTER_SECONDS = 60 * 60;
+// Per rateLimitKey flag, set (with TTL = Retry-After) after a 429.
 const rateLimited = Cache.getInstance<string, true>(
   'rate-limited',
   undefined,
@@ -108,12 +108,7 @@ export interface RequestOptions {
 }
 
 const CREDENTIAL_PARAM = /apikey|api_key|token|secret|password|passwd|passkey/i;
-const CREDENTIAL_HEADERS = [
-  'authorization',
-  'proxy-authorization',
-  'x-api-key',
-  'cookie',
-];
+const CREDENTIAL_HEADERS = ['proxy-authorization', 'x-api-key', 'cookie'];
 
 // Upstream limits are per API key or per IP, so key on credentials and egress.
 export function rateLimitKey(
@@ -123,7 +118,8 @@ export function rateLimitKey(
 ): string {
   const scope = [
     egress,
-    `${urlObj.username}:${urlObj.password}`,
+    takeBasicAuthFromUrl(new URL(urlObj)) ?? headers.get('authorization'),
+    ...HEADERS_FOR_IP_FORWARDING.map((name) => headers.get(name) ?? ''),
     ...[...urlObj.searchParams]
       .filter(([name]) => CREDENTIAL_PARAM.test(name))
       .map(([name, value]) => `${name}=${value}`),
