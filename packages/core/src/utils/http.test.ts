@@ -1,4 +1,4 @@
-import { test, describe } from 'node:test';
+import { test, describe, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { Headers } from 'undici';
 import { parseRetryAfter, RateLimitedError, rateLimitKey } from './http.js';
@@ -8,10 +8,11 @@ describe('parseRetryAfter', () => {
     assert.equal(parseRetryAfter('120'), 120);
   });
 
-  test('parses an HTTP-date', () => {
-    const future = new Date(Date.now() + 60000);
-    const seconds = parseRetryAfter(future.toUTCString());
-    assert.ok(seconds !== undefined && seconds > 55 && seconds <= 60);
+  test('parses an HTTP-date', (t) => {
+    mock.timers.enable({ apis: ['Date'], now: Date.UTC(2026, 0, 1) });
+    t.after(() => mock.timers.reset());
+    const future = new Date(Date.UTC(2026, 0, 1, 0, 1));
+    assert.equal(parseRetryAfter(future.toUTCString()), 60);
   });
 
   test('returns undefined for missing or invalid values', () => {
