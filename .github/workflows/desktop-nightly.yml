@@ -8,6 +8,12 @@ on:
       - 'packages/jellyfin-web/**'
       - 'packages/ui/**'
   workflow_dispatch:
+    inputs:
+      platforms:
+        description: Which apps to build
+        type: choice
+        options: [all, windows, macos]
+        default: all
 
 permissions:
   contents: write
@@ -37,3 +43,4 @@ jobs:
     with:
       version: ${{ needs.version.outputs.version }}
       channel: nightly
+      platforms: ${{ inputs.platforms || 'all' }}
