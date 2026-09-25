@@ -1,4 +1,4 @@
-import type { BaseItemDto } from './types';
+import type { BaseItemDto, Branding } from './types';
 
 /*
  * The app routes on the URL hash, like jellyfin-web, so it works under any
@@ -41,6 +41,13 @@ export function itemPath(
 }
 
 export const href = (path: string) => `#${path}`;
+
+/** AIOStreams' configuration page, when the server is AIOStreams. */
+export function configureUrl(base: string, branding: Branding): string | null {
+  return !__STANDALONE__ || branding.aiostreams
+    ? new URL('/stremio/configure', base).href
+    : null;
+}
 
 type Push = (path: string, replace?: boolean) => void;
 

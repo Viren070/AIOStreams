@@ -9,6 +9,10 @@ html.see-through body {
   background: transparent !important;
 }
 
+html.playing .page-background {
+  display: none;
+}
+
 /* The page's scrollbar never goes away (see app.tsx), so a scroll lock must not
    make room for it again. */
 html body[data-scroll-locked] {

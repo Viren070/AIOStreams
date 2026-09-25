@@ -12,20 +12,20 @@ import type { PickableUser } from '../lib/types';
 /** Must match the server's `PIN_REQUIRED`. */
 const PIN_REQUIRED = 'PIN required';
 
-const SPRING = {
+export const SPRING = {
   type: 'spring',
   damping: 26,
   stiffness: 300,
   mass: 0.7,
 } as const;
 /* Each view fades both ways, so one brought back mid-exit returns to view. */
-const FADE = {
+export const FADE = {
   initial: { opacity: 0 },
   animate: { opacity: 1 },
   exit: { opacity: 0 },
   transition: { duration: 0.15 },
 } as const;
-const RISE = {
+export const RISE = {
   initial: { opacity: 0, y: 12 },
   animate: { opacity: 1, y: 0 },
   exit: { opacity: 0, y: -8 },
@@ -33,7 +33,7 @@ const RISE = {
 } as const;
 
 /** A short head shake, for a rejected password or PIN. */
-function useShake<T extends HTMLElement>() {
+export function useShake<T extends HTMLElement>() {
   const [scope, animate] = useAnimate<T>();
   const shake = React.useCallback(() => {
     if (scope.current)
@@ -46,7 +46,7 @@ function useShake<T extends HTMLElement>() {
   return [scope, shake] as const;
 }
 
-function ErrorLine({ error }: { error: string | null }) {
+export function ErrorLine({ error }: { error: string | null }) {
   return (
     <AnimatePresence initial={false}>
       {error && (
@@ -65,7 +65,7 @@ function ErrorLine({ error }: { error: string | null }) {
   );
 }
 
-function Screen({ children }: { children: React.ReactNode }) {
+export function Screen({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.18),transparent_60%)] px-4 pb-[max(3rem,env(safe-area-inset-bottom))] pt-[max(3rem,env(safe-area-inset-top))]">
       <div className="w-full max-w-3xl space-y-8">
@@ -82,14 +82,28 @@ function Screen({ children }: { children: React.ReactNode }) {
   );
 }
 
+export function FormLink(props: React.ComponentPropsWithoutRef<'button'>) {
+  return (
+    <button
+      type="button"
+      className="block w-full text-center text-sm text-[--muted] hover:text-white"
+      {...props}
+    />
+  );
+}
+
 export function SignInPage({
   onSignIn,
   defaultUsername = '',
   pinSignIn = false,
+  configureUrl,
+  onChangeServer,
 }: {
   onSignIn: (username: string, password: string) => Promise<void>;
   defaultUsername?: string;
   pinSignIn?: boolean;
+  configureUrl: string | null;
+  onChangeServer?: () => void;
 }) {
   const [username, setUsername] = React.useState(defaultUsername);
   const [password, setPassword] = React.useState('');
@@ -189,12 +203,19 @@ export function SignInPage({
           >
             Sign in
           </Button>
-          <a
-            href="/stremio/configure"
-            className="block text-center text-sm text-[--muted] hover:text-white"
-          >
-            Open the configuration page
-          </a>
+          {configureUrl && (
+            <a
+              href={configureUrl}
+              target={__STANDALONE__ ? '_blank' : undefined}
+              rel="noreferrer"
+              className="block text-center text-sm text-[--muted] hover:text-white"
+            >
+              Open the configuration page
+            </a>
+          )}
+          {onChangeServer && (
+            <FormLink onClick={onChangeServer}>Change server</FormLink>
+          )}
         </form>
       </motion.div>
     </Screen>
@@ -299,13 +320,7 @@ function SecretPrompt({
         >
           Continue
         </Button>
-        <button
-          type="button"
-          className="text-sm text-[--muted] hover:text-white"
-          onClick={onBack}
-        >
-          Back
-        </button>
+        <FormLink onClick={onBack}>Back</FormLink>
       </motion.div>
     </form>
   );
@@ -315,9 +330,11 @@ function SecretPrompt({
 export function UserPicker({
   users,
   onPick,
+  onChangeServer,
 }: {
   users: PickableUser[];
   onPick: (userId: string, secret?: string) => Promise<void>;
+  onChangeServer?: () => void;
 }) {
   const [busy, setBusy] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
@@ -427,6 +444,9 @@ export function UserPicker({
                   ))}
                 </motion.div>
                 <ErrorLine error={error} />
+                {onChangeServer && (
+                  <FormLink onClick={onChangeServer}>Change server</FormLink>
+                )}
               </motion.div>
             )}
           </AnimatePresence>

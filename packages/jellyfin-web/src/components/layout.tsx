@@ -8,6 +8,7 @@ import {
   BiLogOutCircle,
   BiCog,
   BiSearch,
+  BiServer,
   BiSliderAlt,
   BiTransferAlt,
 } from 'react-icons/bi';
@@ -32,9 +33,9 @@ import { useDisclosure } from '@aiostreams/ui/hooks/disclosure';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '../lib/session';
 import { usePickableUsers } from '../lib/queries';
-import { navigate, to } from '../lib/paths';
+import { configureUrl, navigate, to } from '../lib/paths';
 import { UserAvatar } from './user-avatar';
-import { BrandLogo } from './brand-logo';
+import { BrandLogo, useBranding } from './brand-logo';
 import { SettingsModal } from './settings';
 import { VersionPickerProvider } from './version-picker';
 
@@ -47,7 +48,7 @@ const PAGE_FADE = {
 function Logo() {
   return (
     <div className="mb-4 flex w-full justify-center p-4 pb-0">
-      <BrandLogo className="max-h-[60px] max-w-[90px] object-contain p-2" />
+      <BrandLogo className="max-h-[60px] max-w-[90px] object-contain p-4" />
     </div>
   );
 }
@@ -67,27 +68,30 @@ function SidebarAvatar({ className }: { className?: string }) {
 }
 
 /**
- * The backdrop as an element, not on the document, so the player can leave it
- * out and let the desktop app's video through.
+ * The backdrop as one element that never fades with the screens, so a
+ * transparent page shows nothing beneath it; the player hides it.
  */
 export function PageBackground() {
   return (
     <div
       aria-hidden
-      className="pointer-events-none fixed inset-0 -z-10 bg-[--background]"
+      className="page-background pointer-events-none fixed inset-0 -z-10 bg-[--background]"
     />
   );
 }
 
 export function WebLayout() {
-  const { signOut, switchUser, user } = useSession();
+  const { client, signOut, switchUser, changeServer, user } = useSession();
+  const configure = configureUrl(client.base, useBranding());
   const users = usePickableUsers();
   const several = (users.data?.length ?? 0) > 1;
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const settings = useDisclosure(false);
   const confirmSignOut = useConfirmationDialog({
     title: 'Sign out',
-    description: 'Sign out of this browser?',
+    description: __STANDALONE__
+      ? 'Sign out of this server?'
+      : 'Sign out of this browser?',
     actionText: 'Sign out',
     onConfirm: signOut,
   });
@@ -126,11 +130,18 @@ export function WebLayout() {
       iconType: BiCog,
       onClick: settings.open,
     },
-    {
-      name: 'Configure',
-      iconType: BiSliderAlt,
-      onClick: () => window.open('/stremio/configure', '_blank'),
-    },
+    ...(configure
+      ? [
+          {
+            name: 'Configure',
+            iconType: BiSliderAlt,
+            onClick: () => window.open(configure, '_blank'),
+          },
+        ]
+      : []),
+    ...(changeServer
+      ? [{ name: 'Change server', iconType: BiServer, onClick: changeServer }]
+      : []),
     {
       name: 'Sign out',
       iconType: BiLogOutCircle,
@@ -158,7 +169,6 @@ export function WebLayout() {
 
   return (
     <AppSidebarProvider>
-      <PageBackground />
       <AppLayout withSidebar sidebarSize="slim">
         <AppLayoutSidebar>
           <Sidebar header={<Logo />} items={items} footerItems={footerItems} />

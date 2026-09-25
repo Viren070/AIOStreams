@@ -1,7 +1,7 @@
 import React from 'react';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import { RouterProvider } from '@tanstack/react-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@aiostreams/ui/toaster';
 import { LoadingOverlay } from '@aiostreams/ui/loading-spinner';
@@ -11,7 +11,15 @@ import { webRouter } from './router';
 import { SignInPage, UserPicker } from './pages/sign-in';
 import { PageBackground } from './components/layout';
 import { BrandingProvider, useServerBranding } from './components/brand-logo';
-import { JellyfinClient } from './lib/client';
+import { apiBase, JellyfinClient } from './lib/client';
+import { configureUrl, navigate, to } from './lib/paths';
+import {
+  currentServer,
+  enterServer,
+  leaveServer,
+  type SavedServer,
+} from './lib/servers';
+import { ServersPage } from './pages/servers';
 
 /** The web app served at the Jellyfin API's `/web`. */
 export default function JellyfinWebApp() {
@@ -27,7 +35,8 @@ export default function JellyfinWebApp() {
           offset={{ top: 'calc(24px + env(safe-area-inset-top))' }}
           mobileOffset={{ top: 'calc(16px + env(safe-area-inset-top))' }}
         />
-        <Session />
+        <PageBackground />
+        {__STANDALONE__ ? <Standalone /> : <Served />}
       </MotionConfig>
     </ThemeProvider>
   );
@@ -47,8 +56,56 @@ function useStableScrollbar() {
   }, []);
 }
 
-function Session() {
-  const { base, phase, signIn, switchUser, signOut } = useSessionPhase();
+function Served() {
+  const base = React.useMemo(apiBase, []);
+  return <Session base={base} />;
+}
+
+/** Picks a server first; changing server comes back here without a reload. */
+function Standalone() {
+  const queryClient = useQueryClient();
+  const [base, setBase] = React.useState(currentServer);
+
+  const choose = React.useCallback((server: SavedServer) => {
+    enterServer(server);
+    setBase(server.base);
+  }, []);
+  const leave = React.useCallback(() => {
+    leaveServer();
+    navigate(to.home, { replace: true });
+    queryClient.clear();
+    setBase(null);
+  }, [queryClient]);
+
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={base ?? 'servers'}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.18 }}
+      >
+        {base ? (
+          <Session base={base} changeServer={leave} />
+        ) : (
+          <BrandingProvider value={{ name: null, logo: null }}>
+            <ServersPage onChoose={choose} />
+          </BrandingProvider>
+        )}
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+function Session({
+  base,
+  changeServer,
+}: {
+  base: string;
+  changeServer?: () => void;
+}) {
+  const { phase, signIn, switchUser, signOut } = useSessionPhase(base);
   useStableScrollbar();
 
   React.useEffect(() => announceToAndroid(base), [base]);
@@ -98,11 +155,19 @@ function Session() {
           onSignIn={signIn}
           defaultUsername={pinSignIn ? '' : picker}
           pinSignIn={pinSignIn}
+          configureUrl={configureUrl(base, branding)}
+          onChangeServer={changeServer}
         />
       );
       break;
     case 'picking':
-      screen = <UserPicker users={phase.users} onPick={phase.choose} />;
+      screen = (
+        <UserPicker
+          users={phase.users}
+          onPick={phase.choose}
+          onChangeServer={changeServer}
+        />
+      );
       break;
     case 'ready':
       screen = (
@@ -111,6 +176,7 @@ function Session() {
           user={phase.user}
           switchUser={switchUser}
           signOut={signOut}
+          changeServer={changeServer}
         >
           <RouterProvider router={webRouter} />
         </SessionProvider>
@@ -118,10 +184,8 @@ function Session() {
       break;
   }
 
-  // Signed in, the layout draws its own background, which the player leaves out.
   return (
     <BrandingProvider value={branding}>
-      {!ready && <PageBackground />}
       <AnimatePresence mode="wait">
         <motion.div
           key={ready ? `ready-${ready.user.Id}` : phase.kind}

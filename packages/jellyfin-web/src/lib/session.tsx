@@ -1,7 +1,7 @@
 import React from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { configSessionToken, hasConfigSessionCookie } from './config-session';
-import { apiBase, JellyfinClient, JellyfinError } from './client';
+import { JellyfinClient, JellyfinError } from './client';
 import {
   clearCredentials,
   readCredentials,
@@ -24,6 +24,8 @@ interface SessionValue {
   clientFor(userId: string): Promise<JellyfinClient>;
   switchUser(): void;
   signOut(): void;
+  /** Only in the standalone build. */
+  changeServer?: () => void;
 }
 
 const SessionContext = React.createContext<SessionValue | null>(null);
@@ -70,8 +72,7 @@ export function pickerUuid(base: string): string {
  * Signs in the way jellyfin-web does, then lets a configuration with several
  * users pick one.
  */
-export function useSessionPhase() {
-  const base = React.useMemo(apiBase, []);
+export function useSessionPhase(base: string) {
   const queryClient = useQueryClient();
   const [phase, setPhase] = React.useState<SessionPhase>({ kind: 'loading' });
 
@@ -108,7 +109,14 @@ export function useSessionPhase() {
   /** Takes the only user or the last one used, and asks otherwise. */
   const enter = React.useCallback(
     async (proof: JellyfinClient, signedIn?: AuthenticationResult) => {
-      const users = await proof.get<PickableUser[]>('/AIOStreams/Users');
+      const users = await proof
+        .get<PickableUser[]>('/AIOStreams/Users')
+        .catch((error: unknown) => {
+          // A server without the user picker has signed in the only user.
+          if (signedIn && error instanceof JellyfinError) return null;
+          throw error;
+        });
+      if (!users) return adopt(proof, signedIn!);
       const last = storage.get<string>(lastUserKey(base));
       const target =
         users.length === 1 ? users[0] : users.find((u) => u.user.Id === last);
@@ -141,7 +149,7 @@ export function useSessionPhase() {
           return;
         }
       }
-      if (hasConfigSessionCookie() && !signedOut(base)) {
+      if (!__STANDALONE__ && hasConfigSessionCookie() && !signedOut(base)) {
         const auth = await configSessionToken<WebTokenResult>().catch(
           () => null
         );
@@ -233,12 +241,14 @@ export function SessionProvider({
   user,
   switchUser,
   signOut,
+  changeServer,
   children,
 }: {
   client: JellyfinClient;
   user: UserDto;
   switchUser: () => void;
   signOut: () => void;
+  changeServer?: () => void;
   children: React.ReactNode;
 }) {
   const others = React.useRef(new Map<string, Promise<JellyfinClient>>());
@@ -262,8 +272,8 @@ export function SessionProvider({
   );
 
   const value = React.useMemo(
-    () => ({ client, user, clientFor, switchUser, signOut }),
-    [client, user, clientFor, switchUser, signOut]
+    () => ({ client, user, clientFor, switchUser, signOut, changeServer }),
+    [client, user, clientFor, switchUser, signOut, changeServer]
   );
   return (
     <SessionContext.Provider value={value}>{children}</SessionContext.Provider>

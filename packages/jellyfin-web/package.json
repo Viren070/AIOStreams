@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "rsbuild dev",
+    "dev:standalone": "rsbuild dev --env-mode standalone",
     "build": "rsbuild build",
+    "build:standalone": "rsbuild build --env-mode standalone",
     "typecheck": "tsc --noEmit",
     "preview": "rsbuild preview"
   },

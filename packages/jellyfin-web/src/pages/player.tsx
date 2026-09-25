@@ -34,15 +34,20 @@ interface PlayerProps {
   startMs: number;
 }
 
-/** The page keeps no scrollbar, or the space reserved for one, over the video. */
-function useNoScrollbar() {
+/**
+ * The page keeps no scrollbar, or the space reserved for one, over the video,
+ * and no backdrop (see PageBackground).
+ */
+function usePlayerPage() {
   React.useLayoutEffect(() => {
-    const { style } = document.documentElement;
-    const previous = [style.overflowY, style.scrollbarGutter];
-    style.overflowY = 'hidden';
-    style.scrollbarGutter = 'auto';
+    const html = document.documentElement;
+    const previous = [html.style.overflowY, html.style.scrollbarGutter];
+    html.style.overflowY = 'hidden';
+    html.style.scrollbarGutter = 'auto';
+    html.classList.add('playing');
     return () => {
-      [style.overflowY, style.scrollbarGutter] = previous;
+      [html.style.overflowY, html.style.scrollbarGutter] = previous;
+      html.classList.remove('playing');
     };
   }, []);
 }
@@ -58,7 +63,7 @@ export function PlayerPage({
 }) {
   const item = useItem(itemId);
   const info = usePlaybackInfo(itemId);
-  useNoScrollbar();
+  usePlayerPage();
 
   // Pinned once found: a refreshed version list must not restart playback.
   const [playing, setPlaying] = React.useState<Omit<

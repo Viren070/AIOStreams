@@ -7,6 +7,10 @@ const NONE: Branding = { name: null, logo: null };
 const BrandingContext = React.createContext<Branding>(NONE);
 export const BrandingProvider = BrandingContext.Provider;
 
+export function useBranding(): Branding {
+  return React.useContext(BrandingContext);
+}
+
 /** The configuration's name and logo, as the public server info gives them. */
 export function useServerBranding(
   client: JellyfinClient,
@@ -22,6 +26,7 @@ export function useServerBranding(
       return {
         name: data.ServerName ?? null,
         logo: data.aiostreams?.logo ?? null,
+        aiostreams: !!data.aiostreams,
       };
     },
     enabled: !override,
