@@ -7,6 +7,15 @@ import { canonicaliseField } from './engine/fields.js';
 import { NEW_LINE_SENTINEL, REMOVE_LINE_SENTINEL } from './engine/sentinels.js';
 import { comparatorFunctions } from './engine/comparators.js';
 
+/** Host of a parseable URL, or null — used for the formatter's urlHost field. */
+function extractUrlHost(url: string): string | null {
+  try {
+    return new URL(url).host;
+  } catch {
+    return null;
+  }
+}
+
 /**
  *
  * The custom formatter code in this file was adapted from https://github.com/diced/zipline/blob/trunk/src/lib/parser/index.ts
@@ -72,6 +81,8 @@ export interface ParseValue {
   stream?: {
     filename: string | null;
     folderName: string | null;
+    url: string | null;
+    urlHost: string | null;
     size: number | null;
     bitrate: number | null;
     folderSize: number | null;
@@ -620,6 +631,8 @@ export abstract class BaseFormatter {
       stream: {
         filename: stream.filename || null,
         folderName: stream.folderName || null,
+        url: stream.url || null,
+        urlHost: stream.url ? extractUrlHost(stream.url) : null,
         size: stream.size || null,
         folderSize: stream.folderSize || null,
         library: stream.library ?? false,
