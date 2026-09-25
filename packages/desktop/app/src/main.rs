@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod logging;
 mod platform;
 
 use std::borrow::Cow;
@@ -150,14 +151,39 @@ fn set_fullscreen(window: &Window, value: Option<bool>) {
     window.set_fullscreen(on.then_some(Fullscreen::Borderless(None)));
 }
 
+/// Where the app keeps its files, and the day's log.
+struct Paths {
+    mpv: PathBuf,
+    logs: PathBuf,
+    log_file: PathBuf,
+}
+
+fn about() -> String {
+    format!(
+        "version={} os=\"{}\" webview2={}",
+        env!("CARGO_PKG_VERSION"),
+        platform::os_version(),
+        wry::webview_version().unwrap_or_else(|_| "missing".into())
+    )
+}
+
 fn main() {
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
-    let args = args();
     let config_dir = app_dir(dirs::config_dir());
     let data_dir = app_dir(dirs::data_local_dir());
+    let logs = data_dir.join("logs");
+    let log_file = logging::init(&logs);
+    log::info!("starting {}", about());
+    let args = args();
 
     let web = args.web.is_none().then(|| web_dir(&args));
     let start_url = args.web.clone().unwrap_or_else(|| platform::APP_URL.into());
+    log::info!(
+        "paths web={} data={}",
+        web.as_ref()
+            .map(|dir| dir.display().to_string())
+            .unwrap_or_else(|| start_url.clone()),
+        data_dir.display()
+    );
     let app_origin =
         origin(&start_url).unwrap_or_else(|| platform::fatal("--web: not a valid address"));
 
@@ -175,10 +201,14 @@ fn main() {
 
     let video = platform::VideoSurface::new(window.hwnd(), size.width, size.height)
         .unwrap_or_else(|e| platform::fatal(&e));
-    let mpv_dir = mpv_config_dir(&config_dir);
+    let paths = Rc::new(Paths {
+        mpv: mpv_config_dir(&config_dir),
+        logs,
+        log_file,
+    });
     let player = Rc::new(RefCell::new(Some(start_player(
         &video,
-        &mpv_dir,
+        &paths.mpv,
         proxy.clone(),
     ))));
 
@@ -213,14 +243,14 @@ fn main() {
         )
         .with_ipc_handler({
             let (player, proxy, app_origin) = (player.clone(), proxy.clone(), app_origin.clone());
-            let mpv_dir = mpv_dir.clone();
+            let paths = paths.clone();
             move |req: Request<String>| {
                 let from = origin(&req.uri().to_string()).unwrap_or_default();
                 if from != app_origin {
                     return log::warn!("ignored a message from {from}");
                 }
                 match serde_json::from_str::<Inbound>(req.body()) {
-                    Ok(message) => handle(message, &player, &proxy, &mpv_dir),
+                    Ok(message) => handle(message, &player, &proxy, &paths),
                     Err(e) => log::warn!("bad message: {e}"),
                 }
             }
@@ -279,6 +309,7 @@ fn main() {
                 ..
             }
             | Event::UserEvent(UserEvent::Close) => {
+                log::info!("closing");
                 player.borrow_mut().take();
                 *flow = ControlFlow::Exit;
             }
@@ -322,7 +353,6 @@ fn start_player(
     mpv_dir: &Path,
     proxy: EventLoopProxy<UserEvent>,
 ) -> Player {
-    log::info!("mpv config from {}", mpv_dir.display());
     let mut defaults: Vec<(&str, String)> = vec![
         ("config-dir", mpv_dir.to_string_lossy().into_owned()),
         ("config", "yes".into()),
@@ -359,7 +389,11 @@ fn start_player(
                 .join("\n")
         ));
     };
-    log::info!("libmpv from {}", library.display());
+    log::info!(
+        "mpv library={} config={}",
+        library.display(),
+        mpv_dir.display()
+    );
     Player::start(library, &defaults, &required, emit)
         .unwrap_or_else(|e| platform::fatal(&format!("mpv failed to start: {e}")))
 }
@@ -368,7 +402,7 @@ fn handle(
     message: Inbound,
     player: &RefCell<Option<Player>>,
     proxy: &EventLoopProxy<UserEvent>,
-    mpv_dir: &Path,
+    paths: &Paths,
 ) {
     let fail = |message: String| {
         log::warn!("{message}");
@@ -405,6 +439,25 @@ fn handle(
             };
             send(UserEvent::Emit(receive_script(&info)));
         }
-        Inbound::OpenMpvConfig => platform::open_external(&mpv_dir.to_string_lossy()),
+        Inbound::OpenMpvConfig => platform::open_external(&paths.mpv.to_string_lossy()),
+        Inbound::OpenLogs => platform::open_external(&paths.logs.to_string_lossy()),
+        Inbound::Diagnostics => {
+            let (mpv, ffmpeg) = player.as_ref().map(Player::versions).unwrap_or_default();
+            let text = format!(
+                "AIOStreams Desktop {}\nmpv=\"{}\" ffmpeg={}\nlog={}\n\n{}",
+                about(),
+                mpv.unwrap_or_default(),
+                ffmpeg.unwrap_or_default(),
+                paths.log_file.display(),
+                logging::tail(&paths.log_file, 300)
+            );
+            send(UserEvent::Emit(receive_script(&Outbound::Diagnostics {
+                text,
+            })));
+        }
+        Inbound::WebError { message } => {
+            let message: String = message.chars().take(4000).collect();
+            log::error!(target: "web", "{message}");
+        }
     }
 }

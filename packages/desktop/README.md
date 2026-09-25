@@ -43,6 +43,14 @@ run. Keys the page does not use are passed to mpv, so `input.conf` bindings (sha
 like) work. The app keeps `idle`, `keep-open`, `force-window`, `osc`, `osd-bar`, `ytdl`, the idle
 background and the default key bindings fixed, since it drives playback itself.
 
+## Logs
+
+Each day the app runs gets a file in `%LOCALAPPDATA%\AIOStreams Desktop\logs`, and the last seven are
+kept. A line per event: startup versions and paths, each file loaded and how it played and ended,
+changes to tracks and decoding settings, mpv's warnings and errors (repeats collapsed), and errors
+from the page. `AIOSTREAMS_LOG=debug` adds every command and property the page sends. Settings →
+Desktop app opens the folder, or copies the versions and recent log for a bug report.
+
 ## Acknowledgements
 
 The design follows Stremio's Windows shell, [stremio-shell-ng](https://github.com/Stremio/stremio-shell-ng):

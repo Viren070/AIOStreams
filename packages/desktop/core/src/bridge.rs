@@ -28,6 +28,13 @@ pub enum Inbound {
     Close,
     AppInfo,
     OpenMpvConfig,
+    OpenLogs,
+    /// Versions, paths and the recent log, for a bug report.
+    Diagnostics,
+    /// An error from the page: uncaught, or passed to `console.error`.
+    WebError {
+        message: String,
+    },
 }
 
 #[derive(Debug, Serialize)]
@@ -52,6 +59,9 @@ pub enum Outbound {
         platform: &'static str,
         mpv: Option<String>,
         ffmpeg: Option<String>,
+    },
+    Diagnostics {
+        text: String,
     },
     Error {
         message: String,

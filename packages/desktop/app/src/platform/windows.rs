@@ -3,9 +3,14 @@ use std::path::PathBuf;
 use tao::platform::windows::IconExtWindows;
 use tao::window::Icon;
 
+use windows_sys::Win32::Foundation::SYSTEMTIME;
 use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
 use windows_sys::Win32::Graphics::Gdi::{BLACK_BRUSH, GetStockObject};
 use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
+use windows_sys::Win32::System::Registry::{
+    HKEY_LOCAL_MACHINE, RRF_RT_REG_DWORD, RRF_RT_REG_SZ, RegGetValueW,
+};
+use windows_sys::Win32::System::SystemInformation::GetLocalTime;
 use windows_sys::Win32::UI::Shell::ShellExecuteW;
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, HWND_BOTTOM, MB_ICONERROR, MB_OK, MessageBoxW, RegisterClassW,
@@ -127,6 +132,65 @@ pub fn fatal(message: &str) -> ! {
         )
     };
     std::process::exit(1)
+}
+
+/// `("2026-09-24", "21:03:04.123")`.
+pub fn local_time() -> (String, String) {
+    let mut t: SYSTEMTIME = unsafe { std::mem::zeroed() };
+    unsafe { GetLocalTime(&mut t) };
+    (
+        format!("{:04}-{:02}-{:02}", t.wYear, t.wMonth, t.wDay),
+        format!(
+            "{:02}:{:02}:{:02}.{:03}",
+            t.wHour, t.wMinute, t.wSecond, t.wMilliseconds
+        ),
+    )
+}
+
+fn os_value(name: &str, flags: u32, data: &mut [u8]) -> Option<usize> {
+    let key = wide(r"SOFTWARE\Microsoft\Windows NT\CurrentVersion");
+    let mut size = data.len() as u32;
+    let status = unsafe {
+        RegGetValueW(
+            HKEY_LOCAL_MACHINE,
+            key.as_ptr(),
+            wide(name).as_ptr(),
+            flags,
+            std::ptr::null_mut(),
+            data.as_mut_ptr().cast(),
+            &mut size,
+        )
+    };
+    (status == 0).then_some(size as usize)
+}
+
+/// E.g. `Windows 11 24H2, build 26100.4652`; the registry's product name says 10 on 11.
+pub fn os_version() -> String {
+    let text = |name: &str| {
+        let mut buf = [0u8; 256];
+        let size = os_value(name, RRF_RT_REG_SZ, &mut buf)?;
+        let units: Vec<u16> = buf[..size]
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .map(|c| u16::from_le_bytes(*c))
+            .take_while(|&u| u != 0)
+            .collect();
+        Some(String::from_utf16_lossy(&units))
+    };
+    let mut ubr = [0u8; 4];
+    let revision = os_value("UBR", RRF_RT_REG_DWORD, &mut ubr).map(|_| u32::from_le_bytes(ubr));
+    let build = text("CurrentBuild").unwrap_or_default();
+    let name = match build.parse::<u32>() {
+        Ok(n) if n >= 22000 => "Windows 11",
+        Ok(_) => "Windows 10",
+        Err(_) => "Windows",
+    };
+    let release = text("DisplayVersion")
+        .map(|r| format!(" {r}"))
+        .unwrap_or_default();
+    let revision = revision.map(|r| format!(".{r}")).unwrap_or_default();
+    format!("{name}{release}, build {build}{revision}")
 }
 
 pub fn libmpv_candidates() -> Vec<PathBuf> {
