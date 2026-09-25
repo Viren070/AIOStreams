@@ -18,7 +18,8 @@ export const ToasterAnatomy = defineStyleAnatomy({
     // "group-[.toaster]:ring-1 group-[.toaster]:ring-inset",
     'group-[.toaster]:transition-all group-[.toaster]:duration-200',
     // Default/Base style
-    // "group-[.toaster]:bg-gradient-to-br group-[.toaster]:from-[--paper] group-[.toaster]:to-[--paper]/80",
+    'group-[.toaster]:bg-gradient-to-br',
+    'group-[.toaster]:from-gray-900/95 group-[.toaster]:to-gray-800/60',
     'group-[.toaster]:text-[--foreground] group-[.toaster]:border-[--border]',
     'group-[.toaster]:ring-[--border]',
     // Success
