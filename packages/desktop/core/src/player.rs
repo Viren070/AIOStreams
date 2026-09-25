@@ -145,7 +145,7 @@ fn clock(seconds: f64) -> String {
 
 /// What is playing, once per file: enough to tell a codec or decoder problem apart.
 fn log_playing(mpv: &Mpv) {
-    let get = |name| text(mpv, name).unwrap_or_else(|| "none".into());
+    let get = |name: &str| text(mpv, name).unwrap_or_else(|| "none".into());
     let size = match (text(mpv, "width"), text(mpv, "height")) {
         (Some(w), Some(h)) => format!(" size={w}x{h}"),
         _ => String::new(),
@@ -155,10 +155,21 @@ fn log_playing(mpv: &Mpv) {
         .and_then(|v| v.as_f64())
         .map(clock)
         .unwrap_or_else(|| "unknown".into());
+    // Transfer/primaries in and out: `pq/bt.2020` out is HDR reaching the display.
+    let colour = |params: &str| {
+        format!(
+            "{}/{}",
+            get(&format!("{params}/gamma")),
+            get(&format!("{params}/primaries"))
+        )
+    };
     log::info!(
-        "playing video={}{size} hwdec={} audio={} channels={} duration={duration}",
+        "playing video={}{size} hwdec={} colour={} output={} peak={} audio={} channels={} duration={duration}",
         get("video-format"),
         get("hwdec-current"),
+        colour("video-params"),
+        colour("video-target-params"),
+        get("video-target-params/max-luma"),
         get("audio-codec-name"),
         get("audio-params/channel-count"),
     );
