@@ -9,6 +9,7 @@ import { detectTitleConflicts } from './conflicts.js';
 import {
   assembleTitles,
   mergeMetadata,
+  MetadataSource,
   SourceContribution,
   SourceContributions,
 } from './merge.js';
@@ -46,6 +47,7 @@ export interface MetadataServiceConfig {
   tmdbAccessToken?: string;
   tmdbApiKey?: string;
   tvdbApiKey?: string;
+  preferredSources?: MetadataSource[];
 }
 
 export class MetadataService {
@@ -69,7 +71,7 @@ export class MetadataService {
     return withRetry(
       async () => {
         const { result } = await this.lock.withLock(
-          `metadata:${id.mediaType}:${id.type}:${id.value}:${id.season ?? ''}:${id.episode ?? ''}${this.config.tmdbAccessToken || this.config.tmdbApiKey ? ':tmdb' : ''}${this.config.tvdbApiKey ? ':tvdb' : ''}`,
+          `metadata:${id.mediaType}:${id.type}:${id.value}:${id.season ?? ''}:${id.episode ?? ''}${this.config.tmdbAccessToken || this.config.tmdbApiKey ? ':tmdb' : ''}${this.config.tvdbApiKey ? ':tvdb' : ''}${this.config.preferredSources?.length ? `:pref=${this.config.preferredSources.join(',')}` : ''}`,
           async () => {
             const start = Date.now();
             // fill order is irrelevant; merge.ts decides what wins
@@ -441,7 +443,11 @@ export class MetadataService {
             }
 
             const mediaType = type === 'movie' ? 'movie' : 'series';
-            let merged = mergeMetadata(contributions, mediaType);
+            let merged = mergeMetadata(
+              contributions,
+              mediaType,
+              this.config.preferredSources ?? []
+            );
 
             // series only: movie results carry a year already
             let titleConflictsPromise: Promise<TitleConflict[]> | undefined;
@@ -474,7 +480,8 @@ export class MetadataService {
               getTmdbEpisode(id, animeEntry, merged.seasons ?? []);
 
             if (
-              !merged.nextAirDate &&
+              (!merged.nextAirDate ||
+                (this.config.preferredSources ?? []).includes('tmdbEpisode')) &&
               type === 'series' &&
               id.season &&
               id.episode
@@ -575,6 +582,8 @@ export class MetadataService {
             let tvdbEpisode: number | undefined;
             let episodeYear: number | undefined;
             let seasonYear: number | undefined;
+            let referenceAirDate: string | undefined;
+            let preferredAirDate: string | undefined;
             if (type === 'series' && id.season && id.episode) {
               const seasonNumber =
                 episodeFacts?.resolvedSeasonNumber ?? Number(id.season);
@@ -668,17 +677,33 @@ export class MetadataService {
                   }
                 }
               }
-              episodeYear ??= yearOf(
-                tmdbEp?.airDate ?? tvdbEp?.airDate ?? skyhookEp?.airDate
-              );
-
               // (season, episode) numbers mean whatever the provider the
               // request was made in says they mean.
               const cinemetaReleased = cinemetaVideos?.find(
                 (v) =>
                   v.season === Number(id.season) && v.episode === episodeNumber
               )?.released;
-              const referenceAirDate =
+              const preferredSources = this.config.preferredSources ?? [];
+              preferredAirDate = preferredSources
+                .map((s) =>
+                  s === 'tmdb'
+                    ? tmdbEp?.airDate
+                    : s === 'tvdb'
+                      ? tvdbEp?.airDate
+                      : s === 'cinemeta'
+                        ? (cinemetaReleased ?? undefined)
+                        : undefined
+                )
+                .find((d) => d !== undefined);
+              episodeYear ??= yearOf(
+                preferredAirDate ??
+                  tmdbEp?.airDate ??
+                  tvdbEp?.airDate ??
+                  skyhookEp?.airDate
+              );
+              referenceAirDate =
+                // an explicit user preference outranks the request-provider heuristic
+                preferredAirDate ??
                 // the request's own provider is authoritative
                 (id.type === 'themoviedbId' ? tmdbEp?.airDate : undefined) ??
                 (id.type === 'thetvdbId' ? tvdbEp?.airDate : undefined) ??
@@ -832,7 +857,11 @@ export class MetadataService {
             }
 
             // re-merge: the episode and scene steps added contributions
-            merged = mergeMetadata(contributions, mediaType);
+            merged = mergeMetadata(
+              contributions,
+              mediaType,
+              this.config.preferredSources ?? []
+            );
 
             if (
               !merged.titles.length ||
@@ -868,7 +897,11 @@ export class MetadataService {
               lastAiredDate: merged.lastAiredDate,
               isDateBased: episodeFacts?.isDateBased || undefined,
               episodeAirDates: episodeFacts?.episodeAirDates,
-              episodeAirDate: episodeFacts?.episodeAirDates?.[0],
+              preferredAirDate,
+              episodeAirDate:
+                preferredAirDate ??
+                episodeFacts?.episodeAirDates?.[0] ??
+                referenceAirDate,
               episodeReleased,
               tvdbSeason,
               tvdbEpisode,
