@@ -931,6 +931,10 @@ interface StremioCustomSourceModalProps {
 
 const DEFAULT_NAME_TEMPLATE = '{catalog.name} - {catalog.type}';
 
+/** The desktop app's stable release, whose notes link each download. */
+const DESKTOP_DOWNLOAD_URL =
+  'https://github.com/Viren070/AIOStreams/releases/tag/desktop';
+
 const VARIANT_LOCATION_STORAGE_KEY = 'aiostreams:install:variant-location';
 
 const STREMIO_CUSTOM_SOURCE_STORAGE_KEYS = {
@@ -2906,6 +2910,35 @@ function Content() {
                         }
                       >
                         Open
+                      </Button>
+                    </div>
+
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                      <div className="min-w-0 space-y-1">
+                        <p className="text-sm font-medium text-white">
+                          Desktop app
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          A Jellyfin app for Windows and Mac: the web app with a
+                          player that plays what a browser can&apos;t. Sign in
+                          with one of the addresses above.
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        intent="gray-outline"
+                        rounded
+                        className="w-full shrink-0 sm:w-auto"
+                        leftIcon={<DownloadIcon className="h-4 w-4" />}
+                        onClick={() =>
+                          window.open(
+                            DESKTOP_DOWNLOAD_URL,
+                            '_blank',
+                            'noopener'
+                          )
+                        }
+                      >
+                        Download
                       </Button>
                     </div>
 
