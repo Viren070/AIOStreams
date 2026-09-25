@@ -34,6 +34,30 @@ html body[data-scroll-locked] {
   margin-right: 0 !important;
 }
 
+/* Chromium drops these pseudo-elements wherever scrollbar-width is set. */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 9999px;
+  background: rgb(128 128 128 / 0.4) padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(128 128 128 / 0.6);
+}
+@supports not selector(::-webkit-scrollbar) {
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(128 128 128 / 0.4) transparent;
+  }
+}
+
 /* Only text meant to be read or copied is selectable. */
 @layer base {
   body.jellyfin-web {

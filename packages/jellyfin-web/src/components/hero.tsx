@@ -36,7 +36,7 @@ function HeroSkeleton() {
     >
       <div className="absolute inset-0 animate-pulse bg-[--subtle]" />
       <Shade />
-      <div className="absolute inset-x-0 bottom-0 space-y-4 px-4 pb-8 lg:max-w-3xl lg:px-10 lg:pb-14">
+      <div className="absolute inset-x-0 bottom-0 space-y-4 px-4 pb-8 lg:max-w-3xl lg:pl-0 lg:pr-10 lg:pb-14">
         <Skeleton className="h-12 w-64 lg:h-16 lg:w-96" />
         <Skeleton className="h-4 w-48" />
         <div className="space-y-2">
@@ -125,7 +125,7 @@ export function Hero({
 
       <div
         data-ui="hero-content"
-        className="absolute inset-x-0 bottom-0 space-y-4 px-4 pb-8 lg:max-w-3xl lg:px-10 lg:pb-14"
+        className="absolute inset-x-0 bottom-0 space-y-4 px-4 pb-8 lg:max-w-3xl lg:pl-0 lg:pr-10 lg:pb-14"
       >
         {logo ? (
           <img
@@ -192,7 +192,7 @@ export function Hero({
       {featured.length > 1 && (
         <div
           data-ui="hero-dots"
-          className="absolute bottom-6 right-4 flex gap-1.5 lg:bottom-14 lg:right-10"
+          className="absolute bottom-6 right-4 flex gap-1.5 lg:bottom-14"
         >
           {featured.map((f, i) => (
             <button

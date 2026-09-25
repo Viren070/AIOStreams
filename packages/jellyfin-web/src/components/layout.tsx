@@ -319,7 +319,7 @@ export function PageBody({ children }: { children: React.ReactNode }) {
   return (
     <div
       data-ui="page-body"
-      className="relative z-[1] space-y-8 px-4 pb-16 pt-[calc(1.5rem+env(safe-area-inset-top))] lg:px-10 lg:pt-[calc(2.5rem+env(safe-area-inset-top))]"
+      className="relative z-[1] space-y-8 px-4 pb-16 pt-[calc(1.5rem+env(safe-area-inset-top))] lg:pl-0 lg:pr-10 lg:pt-[calc(2.5rem+env(safe-area-inset-top))]"
     >
       {children}
     </div>

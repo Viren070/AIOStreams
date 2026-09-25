@@ -126,7 +126,7 @@ export function MediaRow({
         restoreKey={restoreKey}
       >
         {onEndReached && <EndWatcher onEnd={onEndReached} />}
-        <div className="flex items-center justify-between gap-3">
+        <div className="-mr-4 flex items-center justify-between gap-3 pr-4 lg:-mr-10">
           {title ? (
             <h2
               data-ui="media-row-title"
@@ -142,7 +142,11 @@ export function MediaRow({
             <RowNav />
           </div>
         </div>
-        <CarouselContent className="mt-3">
+        {/* Embla counts the last card's margin as the row's end gap. */}
+        <CarouselContent
+          contentClass="-mr-4 lg:-mr-10"
+          className="mt-3 [&>*:last-child]:mr-4"
+        >
           {loading
             ? skeletons(8)
             : items.map((child, i) => (

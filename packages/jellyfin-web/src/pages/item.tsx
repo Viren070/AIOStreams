@@ -117,7 +117,7 @@ export function ItemPage({
       />
       <div
         data-ui="item-body"
-        className="relative z-[1] space-y-12 px-4 pb-16 pt-[38vh] lg:px-10 lg:pt-[26vh]"
+        className="relative z-[1] space-y-12 px-4 pb-16 pt-[38vh] lg:pl-0 lg:pr-10 lg:pt-[26vh]"
       >
         {!data || data.Type === 'Episode' ? (
           <HeaderSkeleton />
