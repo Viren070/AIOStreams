@@ -1,4 +1,5 @@
 import React from 'react';
+import { toast } from 'sonner';
 import { storage } from '../storage';
 import { subtitleUrl, textSubtitles } from '../playback';
 import { sameLanguage } from '../languages';
@@ -6,6 +7,7 @@ import {
   onSettingsChange,
   readDesktopSettings,
   type DesktopSettings,
+  type UpdateChannelSetting,
   type SubtitleStyle,
 } from '../settings';
 import type { PlaybackPrefs } from '../user-config';
@@ -41,6 +43,13 @@ export type ShellMessage =
       ffmpeg: string | null;
     }
   | { type: 'diagnostics'; text: string }
+  | {
+      type: 'update-state';
+      state: 'checking' | 'downloading' | 'ready' | 'current' | 'error' | 'off';
+      channel: 'stable' | 'nightly' | null;
+      version: string | null;
+      error: string | null;
+    }
   | { type: 'error'; message: string };
 
 /** The AIOStreams desktop app's bridge to mpv. */
@@ -360,17 +369,65 @@ function applyDesktopSettings(settings: DesktopSettings): void {
   setProp('audio-spdif', settings.passthrough ? 'ac3,eac3,dts-hd,truehd' : '');
 }
 
-/** Keeps mpv in step with this device's settings, and handles Esc. */
+export type UpdateState = Extract<ShellMessage, { type: 'update-state' }>;
+
+/* The last report, for a settings page opened after it came. */
+let updateState: UpdateState | null = null;
+const updateListeners = new Set<() => void>();
+
+function subscribeUpdates(listener: () => void): () => void {
+  updateListeners.add(listener);
+  return () => updateListeners.delete(listener);
+}
+
+export function useUpdateState(): UpdateState | null {
+  return React.useSyncExternalStore(subscribeUpdates, () => updateState);
+}
+
+export function checkForUpdates(channel: UpdateChannelSetting): void {
+  window.aiostreamsDesktop?.send({
+    type: 'update-check',
+    channel: channel === 'installed' ? null : channel,
+  });
+}
+
+export function applyUpdate(): void {
+  window.aiostreamsDesktop?.send({ type: 'update-apply' });
+}
+
+function onUpdateState(next: UpdateState) {
+  const announced = updateState?.state === 'ready';
+  updateState = next;
+  for (const listener of updateListeners) listener();
+  if (next.state === 'ready' && !announced)
+    toast('Update ready', {
+      description: `Version ${next.version} installs on the next start.`,
+      action: { label: 'Restart now', onClick: applyUpdate },
+      duration: Infinity,
+    });
+}
+
+/** Keeps mpv in step with this device's settings, checks for updates, and handles Esc. */
 export function ShellSetup() {
   React.useEffect(() => {
     const shell = window.aiostreamsDesktop;
     if (!shell) return;
     let fullscreen = false;
-    const apply = () => applyDesktopSettings(readDesktopSettings());
+    let channel = readDesktopSettings().updateChannel;
+    const apply = () => {
+      const settings = readDesktopSettings();
+      applyDesktopSettings(settings);
+      if (settings.updateChannel !== channel) {
+        channel = settings.updateChannel;
+        checkForUpdates(channel);
+      }
+    };
     apply();
+    checkForUpdates(channel);
     const unsubscribeSettings = onSettingsChange(apply);
     const unsubscribe = shell.subscribe((m) => {
       if (m.type === 'fullscreen') fullscreen = m.value;
+      else if (m.type === 'update-state') onUpdateState(m);
     });
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || !fullscreen || e.defaultPrevented) return;

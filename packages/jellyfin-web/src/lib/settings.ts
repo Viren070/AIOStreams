@@ -358,7 +358,12 @@ export function useSubtitleStyle(): SubtitleStyle {
 export const AUDIO_CHANNELS = ['auto', 'stereo', '5.1', '7.1'] as const;
 export type AudioChannels = (typeof AUDIO_CHANNELS)[number];
 
+/** `installed` follows the channel this copy of the desktop app came from. */
+export const UPDATE_CHANNELS = ['installed', 'stable', 'nightly'] as const;
+export type UpdateChannelSetting = (typeof UPDATE_CHANNELS)[number];
+
 const DESKTOP_KEYS = {
+  updateChannel: 'aiostreams-desktop-update-channel',
   hardwareDecoding: 'aiostreams-desktop-hwdec',
   audioChannels: 'aiostreams-desktop-audio-channels',
   passthrough: 'aiostreams-desktop-passthrough',
@@ -366,6 +371,7 @@ const DESKTOP_KEYS = {
 } as const;
 
 export interface DesktopSettings {
+  updateChannel: UpdateChannelSetting;
   hardwareDecoding: boolean;
   audioChannels: AudioChannels;
   passthrough: boolean;
@@ -374,6 +380,11 @@ export interface DesktopSettings {
 
 export function readDesktopSettings(): DesktopSettings {
   return {
+    updateChannel: readDeviceSetting<UpdateChannelSetting>(
+      DESKTOP_KEYS.updateChannel,
+      'installed',
+      UPDATE_CHANNELS
+    ),
     hardwareDecoding: readDeviceSetting(DESKTOP_KEYS.hardwareDecoding, true),
     audioChannels: readDeviceSetting<AudioChannels>(
       DESKTOP_KEYS.audioChannels,
@@ -388,6 +399,12 @@ export function readDesktopSettings(): DesktopSettings {
   };
 }
 
+export const useUpdateChannel = () =>
+  useDeviceSetting<UpdateChannelSetting>(
+    DESKTOP_KEYS.updateChannel,
+    'installed',
+    UPDATE_CHANNELS
+  );
 export const useHardwareDecoding = () =>
   useDeviceSetting<boolean>(DESKTOP_KEYS.hardwareDecoding, true);
 export const useAudioChannels = () =>

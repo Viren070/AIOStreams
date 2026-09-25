@@ -35,6 +35,10 @@ import {
   openMpvConfig,
   requestDiagnostics,
   useShellInfo,
+  applyUpdate,
+  checkForUpdates,
+  useUpdateState,
+  type UpdateState,
 } from '../lib/hosts/shell';
 import { LANGUAGES } from '../lib/languages';
 import { serverAddress } from '../lib/servers';
@@ -53,6 +57,7 @@ import {
   useAudioChannels,
   useEpisodeLayout,
   useEscExitsFullscreen,
+  useUpdateChannel,
   useFeatured,
   useHardwareDecoding,
   useNextCountdown,
@@ -386,6 +391,65 @@ const CHANNEL_LABELS: Record<AudioChannels, string> = {
   '7.1': '7.1 surround',
 };
 
+function updateStatus(update: UpdateState | null): string {
+  switch (update?.state) {
+    case undefined:
+      return 'Not checked yet.';
+    case 'off':
+      return 'This copy does not update itself.';
+    case 'checking':
+      return 'Checking\u2026';
+    case 'downloading':
+      return `Downloading version ${update.version}\u2026`;
+    case 'ready':
+      return `Version ${update.version} installs on the next start.`;
+    case 'current':
+      return 'Up to date.';
+    case 'error':
+      return `Could not check: ${update.error}`;
+  }
+}
+
+function UpdatesCard() {
+  const [setting, setSetting] = useUpdateChannel();
+  const update = useUpdateState();
+  const channel =
+    setting === 'installed' ? (update?.channel ?? 'stable') : setting;
+  const busy = update?.state === 'checking' || update?.state === 'downloading';
+  const button = 'w-full rounded-full sm:w-auto';
+  return (
+    <SettingsCard title="Updates" description={ON_DEVICE}>
+      <Select
+        label="Channel"
+        help="Nightly builds come from every change, ahead of releases, and can break."
+        options={[
+          { value: 'stable', label: 'Stable' },
+          { value: 'nightly', label: 'Nightly' },
+        ]}
+        value={channel}
+        onValueChange={(v) => setSetting(v as 'stable' | 'nightly')}
+      />
+      <SettingsRow label="Status" help={updateStatus(update)}>
+        {update?.state === 'ready' ? (
+          <Button intent="white" className={button} onClick={applyUpdate}>
+            Restart now
+          </Button>
+        ) : (
+          <Button
+            intent="gray-outline"
+            className={button}
+            loading={busy}
+            disabled={update?.state === 'off'}
+            onClick={() => checkForUpdates(setting)}
+          >
+            Check now
+          </Button>
+        )}
+      </SettingsRow>
+    </SettingsCard>
+  );
+}
+
 function DesktopSection() {
   const [hardwareDecoding, setHardwareDecoding] = useHardwareDecoding();
   const [audioChannels, setAudioChannels] = useAudioChannels();
@@ -393,6 +457,7 @@ function DesktopSection() {
   const [escExits, setEscExits] = useEscExitsFullscreen();
   return (
     <>
+      <UpdatesCard />
       <SettingsCard title="Video" description={ON_DEVICE}>
         <Switch
           side="right"
