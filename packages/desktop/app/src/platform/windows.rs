@@ -134,6 +134,11 @@ pub fn fatal(message: &str) -> ! {
     std::process::exit(1)
 }
 
+/// The computer's name, which Jellyfin apps give as their device.
+pub fn device_name() -> String {
+    std::env::var("COMPUTERNAME").unwrap_or_else(|_| "Windows".into())
+}
+
 /// `("2026-09-24", "21:03:04.123")`.
 pub fn local_time() -> (String, String) {
     let mut t: SYSTEMTIME = unsafe { std::mem::zeroed() };

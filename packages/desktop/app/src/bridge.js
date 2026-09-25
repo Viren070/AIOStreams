@@ -22,6 +22,7 @@
     protocol: __PROTOCOL__,
     version: __VERSION__,
     platform: __PLATFORM__,
+    device: __DEVICE__,
     send,
     subscribe(listener) {
       listeners.add(listener);

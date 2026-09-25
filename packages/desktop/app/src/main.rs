@@ -227,6 +227,10 @@ fn main() {
         .replace(
             "__PLATFORM__",
             &serde_json::to_string(platform::PLATFORM).unwrap(),
+        )
+        .replace(
+            "__DEVICE__",
+            &serde_json::to_string(&platform::device_name()).unwrap(),
         );
     let webview = WebViewBuilder::new_with_web_context(&mut context)
         .with_bounds(page_bounds(size))
