@@ -226,6 +226,18 @@ export function useSessionPhase(base: string) {
     [adopt, base, enter]
   );
 
+  /** Signs in as the user the approving app chose. */
+  const signInWithQuickConnect = React.useCallback(
+    async (secret: string) => {
+      const auth = await new JellyfinClient(base).post<AuthenticationResult>(
+        '/Users/AuthenticateWithQuickConnect',
+        { Secret: secret }
+      );
+      adopt(new JellyfinClient(base, auth.AccessToken ?? null), auth);
+    },
+    [adopt, base]
+  );
+
   const switchUser = React.useCallback(async () => {
     if (phase.kind !== 'ready') return;
     const proof = phase.client;
@@ -261,7 +273,15 @@ export function useSessionPhase(base: string) {
     });
   }, [phase.kind, queryClient, signOut]);
 
-  return { base, phase, signIn, switchUser, signOut, retry };
+  return {
+    base,
+    phase,
+    signIn,
+    signInWithQuickConnect,
+    switchUser,
+    signOut,
+    retry,
+  };
 }
 
 export function SessionProvider({

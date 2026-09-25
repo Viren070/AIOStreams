@@ -6,13 +6,13 @@ import { Button } from '@aiostreams/ui/button';
 import { TextInput } from '@aiostreams/ui/text-input';
 import { PasswordInput } from '@aiostreams/ui/password-input';
 import { cn } from '@aiostreams/ui/core/styling';
-import { LoadingOverlay } from '@aiostreams/ui/loading-spinner';
+import { LoadingOverlay, LoadingSpinner } from '@aiostreams/ui/loading-spinner';
 import { UserAvatar } from '../components/user-avatar';
 import { BrandLogo } from '../components/brand-logo';
 import type { JellyfinClient } from '../lib/client';
 import { configureUrl } from '../lib/paths';
 import { useServerInfo } from '../lib/server-info';
-import type { PickableUser, UserDto } from '../lib/types';
+import type { PickableUser, QuickConnectResult, UserDto } from '../lib/types';
 
 /** Must match the server's `PIN_REQUIRED`. */
 const PIN_REQUIRED = 'PIN required';
@@ -97,7 +97,7 @@ export function FormLink(props: React.ComponentPropsWithoutRef<'button'>) {
   );
 }
 
-type OtherWay = { label: string; onClick: () => void };
+type SignInLink = { label: string; onClick: () => void };
 
 /** What a sign-in form asks for, by what the server takes. */
 function signInCopy(configSignIn: boolean, pinSignIn: boolean, user: boolean) {
@@ -126,7 +126,7 @@ export function SignInPage({
   defaultUsername = '',
   user,
   avatar = null,
-  otherWay,
+  links = [],
   configure,
   onChangeServer,
 }: {
@@ -135,7 +135,7 @@ export function SignInPage({
   /** Picked from the server's list, so only their secret is asked for. */
   user?: UserDto;
   avatar?: string | null;
-  otherWay?: OtherWay;
+  links?: SignInLink[];
   configure: string | null;
   onChangeServer?: () => void;
 }) {
@@ -248,9 +248,11 @@ export function SignInPage({
           >
             Sign in
           </Button>
-          {otherWay && (
-            <FormLink onClick={otherWay.onClick}>{otherWay.label}</FormLink>
-          )}
+          {links.map((link) => (
+            <FormLink key={link.label} onClick={link.onClick}>
+              {link.label}
+            </FormLink>
+          ))}
           {configure && (
             <a
               href={configure}
@@ -315,20 +317,120 @@ function publicAvatar(client: JellyfinClient, user: UserDto): string | null {
     : null;
 }
 
+const QUICK_CONNECT_POLL_MS = 3000;
+
+/** Signing in with a code that an app already signed in to the server approves. */
+function QuickConnectPage({
+  client,
+  onApproved,
+  onBack,
+}: {
+  client: JellyfinClient;
+  onApproved: (secret: string) => Promise<void>;
+  onBack: () => void;
+}) {
+  const info = useServerInfo();
+  const [attempt, setAttempt] = React.useState(0);
+  const request = useQuery({
+    queryKey: ['jf-quick-connect', client.base, attempt],
+    queryFn: () => client.post<QuickConnectResult>('/QuickConnect/Initiate'),
+    staleTime: Infinity,
+    gcTime: 0,
+  });
+  const secret = request.data?.Secret ?? null;
+  const status = useQuery({
+    queryKey: ['jf-quick-connect-status', client.base, secret],
+    queryFn: () =>
+      client.get<QuickConnectResult>('/QuickConnect/Connect', { secret }),
+    enabled: !!secret,
+    refetchInterval: (query) =>
+      query.state.data?.Authenticated ? false : QUICK_CONNECT_POLL_MS,
+    gcTime: 0,
+  });
+  const approved = !!status.data?.Authenticated;
+  // The server forgets a code after a while, so asking about it fails.
+  const expired = status.isError;
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!approved || !secret) return;
+    onApproved(secret).catch((e: Error) =>
+      setError(e.message || 'Sign in failed')
+    );
+  }, [approved, secret, onApproved]);
+
+  return (
+    <Screen>
+      <motion.div
+        {...RISE}
+        className="mx-auto w-full max-w-sm space-y-4 rounded-2xl border border-white/10 bg-gray-950/80 p-6 text-center shadow-xl"
+      >
+        <h1 className="text-xl font-semibold">Quick Connect</h1>
+        <p className="text-sm text-[--muted]">
+          {info.features.configure
+            ? 'Enter this code under Quick Connect in an app already signed in, or approve it on the configuration page.'
+            : 'Enter this code under Quick Connect in an app already signed in to this server.'}
+        </p>
+        <div className="flex h-14 items-center justify-center">
+          {request.data ? (
+            <span className="select-all font-mono text-4xl font-semibold tracking-[0.3em]">
+              {request.data.Code}
+            </span>
+          ) : (
+            !request.isError && <LoadingSpinner />
+          )}
+        </div>
+        {request.data && !error && (
+          <p className="text-sm text-[--muted]">
+            {expired
+              ? 'This code has expired.'
+              : approved
+                ? 'Approved. Signing in\u2026'
+                : 'Waiting for approval\u2026'}
+          </p>
+        )}
+        <ErrorLine
+          error={
+            error ??
+            (request.isError
+              ? `Quick Connect is unavailable: ${request.error.message}`
+              : null)
+          }
+        />
+        {(expired || request.isError || error) && (
+          <Button
+            intent="white"
+            className="w-full rounded-full"
+            onClick={() => {
+              setError(null);
+              setAttempt((n) => n + 1);
+            }}
+          >
+            New code
+          </Button>
+        )}
+        <FormLink onClick={onBack}>Back</FormLink>
+      </motion.div>
+    </Screen>
+  );
+}
+
 /**
  * Signing in: the users a server lists, when it lists more than one, then a
- * form for the one picked; typing a name stays a click away.
+ * form for the one picked; typing a name or Quick Connect stay a click away.
  */
 export function SignInScreen({
   client,
   defaultUsername,
   onSignIn,
+  onQuickConnect,
   onChangeServer,
 }: {
   /** Signed out, on the server being signed in to. */
   client: JellyfinClient;
   defaultUsername: string;
   onSignIn: (username: string, password: string) => Promise<void>;
+  onQuickConnect: (secret: string) => Promise<void>;
   onChangeServer?: () => void;
 }) {
   const info = useServerInfo();
@@ -337,20 +439,38 @@ export function SignInScreen({
     queryFn: () => client.get<UserDto[]>('/Users/Public').catch(() => []),
     staleTime: 5 * 60_000,
   });
+  const quickConnectEnabled = useQuery({
+    queryKey: ['jf-quick-connect-enabled', client.base],
+    queryFn: () =>
+      client.get<boolean>('/QuickConnect/Enabled').catch(() => false),
+    staleTime: 5 * 60_000,
+  });
   const [chosen, setChosen] = React.useState<UserDto | null>(null);
   const [typing, setTyping] = React.useState(false);
+  const [quickConnect, setQuickConnect] = React.useState(false);
   if (listed.isLoading) return <LoadingOverlay />;
+  if (quickConnect)
+    return (
+      <QuickConnectPage
+        client={client}
+        onApproved={onQuickConnect}
+        onBack={() => setQuickConnect(false)}
+      />
+    );
 
   const users = listed.data ?? [];
   const user = typing
     ? null
     : (chosen ?? (users.length === 1 ? users[0] : null));
-  const typeInstead: OtherWay = {
+  const typeInstead: SignInLink = {
     label: info.features.configSignIn
       ? 'Use a UUID instead'
       : 'Type a user name',
     onClick: () => setTyping(true),
   };
+  const quickConnectLinks: SignInLink[] = quickConnectEnabled.data
+    ? [{ label: 'Use Quick Connect', onClick: () => setQuickConnect(true) }]
+    : [];
 
   if (users.length > 1 && !user && !typing) {
     return (
@@ -366,11 +486,28 @@ export function SignInScreen({
           if (picked.HasPassword) setChosen(picked);
           else await onSignIn(picked.Name ?? '', '');
         }}
-        otherWay={typeInstead}
+        links={[typeInstead, ...quickConnectLinks]}
         onChangeServer={onChangeServer}
       />
     );
   }
+  const back: SignInLink[] = user
+    ? [
+        users.length > 1
+          ? { label: 'Choose another user', onClick: () => setChosen(null) }
+          : typeInstead,
+      ]
+    : users.length
+      ? [
+          {
+            label: 'Choose a user',
+            onClick: () => {
+              setChosen(null);
+              setTyping(false);
+            },
+          },
+        ]
+      : [];
   return (
     <SignInPage
       key={user?.Id ?? 'typed'}
@@ -378,21 +515,7 @@ export function SignInScreen({
       defaultUsername={defaultUsername}
       user={user ?? undefined}
       avatar={user && publicAvatar(client, user)}
-      otherWay={
-        user
-          ? users.length > 1
-            ? { label: 'Choose another user', onClick: () => setChosen(null) }
-            : typeInstead
-          : users.length
-            ? {
-                label: 'Choose a user',
-                onClick: () => {
-                  setChosen(null);
-                  setTyping(false);
-                },
-              }
-            : undefined
-      }
+      links={[...back, ...quickConnectLinks]}
       configure={configureUrl(client.base, info)}
       onChangeServer={onChangeServer}
     />
@@ -507,12 +630,12 @@ function SecretPrompt({
 export function UserPicker({
   users,
   onPick,
-  otherWay,
+  links = [],
   onChangeServer,
 }: {
   users: PickableUser[];
   onPick: (userId: string, secret?: string) => Promise<void>;
-  otherWay?: OtherWay;
+  links?: SignInLink[];
   onChangeServer?: () => void;
 }) {
   const [busy, setBusy] = React.useState<string | null>(null);
@@ -623,11 +746,11 @@ export function UserPicker({
                   ))}
                 </motion.div>
                 <ErrorLine error={error} />
-                {otherWay && (
-                  <FormLink onClick={otherWay.onClick}>
-                    {otherWay.label}
+                {links.map((link) => (
+                  <FormLink key={link.label} onClick={link.onClick}>
+                    {link.label}
                   </FormLink>
-                )}
+                ))}
                 {onChangeServer && (
                   <FormLink onClick={onChangeServer}>Change server</FormLink>
                 )}

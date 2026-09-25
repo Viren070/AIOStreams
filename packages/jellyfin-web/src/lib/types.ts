@@ -15,6 +15,7 @@ export type {
   MediaSegmentDtoQueryResult,
   MediaStream,
   PlaybackInfoResponse,
+  QuickConnectResult,
   SessionInfoDto,
   UserDto,
 } from '@jellyfin/sdk/lib/generated-client/models';

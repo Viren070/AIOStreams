@@ -113,7 +113,8 @@ function Session({
   base: string;
   changeServer?: () => void;
 }) {
-  const { phase, signIn, switchUser, signOut, retry } = useSessionPhase(base);
+  const { phase, signIn, signInWithQuickConnect, switchUser, signOut, retry } =
+    useSessionPhase(base);
   useStableScrollbar();
 
   React.useEffect(() => announceToAndroid(base), [base]);
@@ -173,6 +174,7 @@ function Session({
               : ''
           }
           onSignIn={signIn}
+          onQuickConnect={signInWithQuickConnect}
           onChangeServer={changeServer}
         />
       );
