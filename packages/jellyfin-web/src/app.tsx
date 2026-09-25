@@ -34,6 +34,7 @@ export default function JellyfinWebApp() {
     document.body.classList.add('jellyfin-web');
     return () => document.body.classList.remove('jellyfin-web');
   }, []);
+  useStableScrollbar();
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark">
       <MotionConfig reducedMotion="user">
@@ -51,8 +52,9 @@ export default function JellyfinWebApp() {
 }
 
 /**
- * Keeps the page's own scrollbar, since an embedded engine can drop the gutter
- * an overlay's scroll lock reserves.
+ * Keeps the page's own scrollbar on every screen, since an embedded engine can
+ * drop the gutter an overlay's scroll lock reserves, and a see-through page
+ * shows the empty gutter as a strip of the video surface.
  */
 function useStableScrollbar() {
   React.useEffect(() => {
@@ -115,7 +117,6 @@ function Session({
 }) {
   const { phase, signIn, signInWithQuickConnect, switchUser, signOut, retry } =
     useSessionPhase(base);
-  useStableScrollbar();
 
   React.useEffect(() => announceToAndroid(base), [base]);
 
