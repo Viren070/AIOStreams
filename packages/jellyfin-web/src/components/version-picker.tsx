@@ -210,6 +210,7 @@ function Versions({
       {art && (
         <div
           aria-hidden
+          data-ui="versions-banner"
           className="pointer-events-none absolute inset-x-0 top-0 overflow-hidden"
           style={{ height: artHeight }}
         >
@@ -221,9 +222,15 @@ function Versions({
           <div className="absolute inset-0 bg-gradient-to-b from-[--paper]/30 via-[--paper]/70 to-[--paper]" />
         </div>
       )}
-      <div className="relative z-[1] space-y-3 px-4 pb-3 sm:px-5">
+      <div
+        data-ui="versions-header"
+        className="relative z-[1] space-y-3 px-4 pb-3 sm:px-5"
+      >
         <div className="flex flex-wrap items-center gap-2">
-          <p className="mr-auto text-sm text-[--muted]">
+          <p
+            data-ui="versions-count"
+            className="mr-auto text-sm text-[--muted]"
+          >
             {info.data
               ? sources.length === 1
                 ? '1 version'
@@ -295,6 +302,7 @@ function Versions({
 
       <div
         ref={listRef}
+        data-ui="versions-list"
         className={cn(
           'relative z-[1] min-h-0 flex-1 space-y-2 overflow-y-auto border-t border-white/5 px-3 pb-5 pt-3 max-md:pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:px-5',
           info.isLoading && 'overflow-hidden'
@@ -363,6 +371,9 @@ function Versions({
           return (
             <div
               key={source.Id}
+              data-ui="version"
+              data-playing={source.Id === request.playing || undefined}
+              data-cached={source.aiostreams?.cached || undefined}
               className="group/version relative flex items-start rounded-xl border border-white/5 bg-white/[0.03] transition-colors hover:border-white/10 hover:bg-white/[0.06]"
             >
               <button
@@ -380,15 +391,24 @@ function Versions({
                     className="float-right ml-2 h-6 w-8 sm:hidden"
                   />
                   {source.Id === request.playing && (
-                    <span className="mb-1 inline-block rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-black">
+                    <span
+                      data-ui="version-playing"
+                      className="mb-1 inline-block rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-black"
+                    >
                       Playing
                     </span>
                   )}
-                  <span className="block whitespace-pre-line text-sm font-medium [overflow-wrap:anywhere] sm:text-base">
+                  <span
+                    data-ui="version-name"
+                    className="block whitespace-pre-line text-sm font-medium [overflow-wrap:anywhere] sm:text-base"
+                  >
                     {source.aiostreams?.name || source.Name}
                   </span>
                   {source.aiostreams?.description && (
-                    <span className="block whitespace-pre-line text-xs text-gray-300 [overflow-wrap:anywhere] sm:text-sm">
+                    <span
+                      data-ui="version-description"
+                      className="block whitespace-pre-line text-xs text-gray-300 [overflow-wrap:anywhere] sm:text-sm"
+                    >
                       {source.aiostreams.description}
                     </span>
                   )}
@@ -457,6 +477,8 @@ function Notice({ notice }: { notice: SourceInfo }) {
   const error = type === 'error';
   return (
     <div
+      data-ui="version-notice"
+      data-type={type}
       className={cn(
         'flex items-start gap-3 rounded-xl border p-3',
         error

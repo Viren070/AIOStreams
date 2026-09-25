@@ -29,7 +29,9 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
 
   return (
     <PageBody>
-      <h1 className="text-3xl font-bold">Search</h1>
+      <h1 data-ui="page-title" className="text-3xl font-bold">
+        Search
+      </h1>
       <TextInput
         autoFocus
         type="search"
@@ -42,12 +44,16 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
         }}
         placeholder="Movies and shows"
         leftIcon={<BiSearch className="text-xl" />}
+        data-ui="search-input"
         className="max-w-xl"
       />
       {!term.trim() && history.terms.length > 0 && (
-        <section className="max-w-xl space-y-1">
+        <section data-ui="search-history" className="max-w-xl space-y-1">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold text-[--muted]">
+            <h2
+              data-ui="section-title"
+              className="text-sm font-semibold text-[--muted]"
+            >
               Recent searches
             </h2>
             <Button size="sm" intent="gray-link" onClick={history.clear}>
@@ -58,6 +64,7 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
             {history.terms.map((t) => (
               <li
                 key={t}
+                data-ui="search-history-item"
                 className="flex items-center rounded-lg transition-colors hover:bg-white/[0.04]"
               >
                 <button
@@ -86,6 +93,7 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
       )}
       {searching && (
         <div
+          data-ui="search-results"
           onClickCapture={(e) => {
             if ((e.target as HTMLElement).closest('a')) history.add(debounced);
           }}

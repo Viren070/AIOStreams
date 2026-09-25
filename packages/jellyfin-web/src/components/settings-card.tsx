@@ -13,16 +13,23 @@ export function SettingsCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-3">
+    <div data-ui="settings-card" className="space-y-3">
       {(title || description) && (
         <div>
-          {title && <p className="font-semibold">{title}</p>}
+          {title && (
+            <p data-ui="settings-card-title" className="font-semibold">
+              {title}
+            </p>
+          )}
           {description && (
             <p className="text-sm text-[--muted]">{description}</p>
           )}
         </div>
       )}
-      <Card className="divide-y-2 divide-gray-700/40 overflow-clip rounded-xl border-white/10 bg-gray-950/70">
+      <Card
+        data-ui="settings-card-body"
+        className="divide-y-2 divide-gray-700/40 overflow-clip rounded-xl border-white/10 bg-gray-950/70"
+      >
         {React.Children.map(children, (child) =>
           child ? (
             <div className="p-3 transition-colors hover:bg-gray-900">
@@ -45,12 +52,14 @@ export function SettingsPageHeader({
   icon: IconType;
 }) {
   return (
-    <div className="flex items-center gap-3">
+    <div data-ui="settings-header" className="flex items-center gap-3">
       <div className="rounded-lg border border-brand-500/15 bg-gradient-to-br from-brand-500/10 to-purple-500/10 p-2">
         <Icon className="text-2xl text-brand-400" />
       </div>
       <div>
-        <h2 className="text-xl font-semibold">{title}</h2>
+        <h2 data-ui="section-title" className="text-xl font-semibold">
+          {title}
+        </h2>
         <p className="text-[--muted]">{description}</p>
       </div>
     </div>

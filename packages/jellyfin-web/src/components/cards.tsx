@@ -32,6 +32,7 @@ export function Artwork({
     if (borrowed) return borrowed;
     return (
       <div
+        data-ui="artwork-fallback"
         className={cn(
           'absolute inset-0 flex items-end bg-gray-900 p-3 text-sm text-[--muted]',
           className
@@ -44,6 +45,7 @@ export function Artwork({
   return (
     <>
       <img
+        data-ui="artwork"
         src={current}
         alt={alt}
         loading="lazy"
@@ -63,8 +65,12 @@ export function Artwork({
 
 export function ProgressBar({ percent }: { percent: number }) {
   return (
-    <div className="absolute inset-x-0 bottom-0 h-1 bg-black/60">
+    <div
+      data-ui="progress-bar"
+      className="absolute inset-x-0 bottom-0 h-1 bg-black/60"
+    >
       <div
+        data-ui="progress-bar-fill"
         className="h-full bg-brand-500"
         style={{ width: `${Math.min(100, Math.max(2, percent))}%` }}
       />
@@ -74,7 +80,10 @@ export function ProgressBar({ percent }: { percent: number }) {
 
 function WatchedMark() {
   return (
-    <span className="absolute right-2 top-2 z-[2] flex size-6 items-center justify-center rounded-full bg-brand-500 text-white shadow">
+    <span
+      data-ui="watched-badge"
+      className="absolute right-2 top-2 z-[2] flex size-6 items-center justify-center rounded-full bg-brand-500 text-white shadow"
+    >
       <BiCheck className="text-lg" />
     </span>
   );
@@ -109,11 +118,14 @@ export function PosterCard(props: PosterCardProps) {
   const showSubtitle = !!subtitle && lines.includes('year');
   return (
     <a
+      data-ui="poster-card"
+      data-shape={shape}
       href={href}
       title={showTitle ? undefined : title}
       className={cn('group/poster block space-y-2', props.className)}
     >
       <div
+        data-ui="poster-card-image"
         className={cn(
           'relative w-full overflow-hidden rounded-lg bg-gray-900 ring-1 ring-white/5',
           SHAPE_CLASS[shape]
@@ -127,21 +139,33 @@ export function PosterCard(props: PosterCardProps) {
         <div className="absolute inset-0 bg-black/0 transition-colors group-hover/poster:bg-black/20" />
         {watched && <WatchedMark />}
         {!watched && !!unwatched && (
-          <span className="absolute right-2 top-2 z-[2] rounded-full bg-brand-500 px-2 py-0.5 text-xs font-semibold text-white shadow">
+          <span
+            data-ui="unwatched-count"
+            className="absolute right-2 top-2 z-[2] rounded-full bg-brand-500 px-2 py-0.5 text-xs font-semibold text-white shadow"
+          >
             {unwatched}
           </span>
         )}
         {progress != null && progress > 0 && <ProgressBar percent={progress} />}
       </div>
       {(showTitle || showSubtitle) && (
-        <div className="min-w-0 px-0.5">
+        <div data-ui="poster-card-text" className="min-w-0 px-0.5">
           {showTitle && (
-            <p className="truncate text-sm font-medium" title={title}>
+            <p
+              data-ui="poster-card-title"
+              className="truncate text-sm font-medium"
+              title={title}
+            >
               {title}
             </p>
           )}
           {showSubtitle && (
-            <p className="truncate text-xs text-[--muted]">{subtitle}</p>
+            <p
+              data-ui="poster-card-subtitle"
+              className="truncate text-xs text-[--muted]"
+            >
+              {subtitle}
+            </p>
           )}
         </div>
       )}
@@ -188,6 +212,7 @@ export function WideCard(props: WideCardProps) {
   const body = (
     <>
       <div
+        data-ui="wide-card-image"
         className={cn(
           'relative aspect-video w-full overflow-hidden rounded-xl bg-gray-900 ring-1 ring-white/5',
           highlighted && 'ring-2 ring-brand-400'
@@ -206,29 +231,55 @@ export function WideCard(props: WideCardProps) {
             <BiPlay className="text-5xl text-white opacity-0 drop-shadow transition-opacity group-hover/wide:opacity-90" />
           </div>
         )}
-        {badge && <div className="absolute left-2 top-2 z-[2]">{badge}</div>}
+        {badge && (
+          <div
+            data-ui="wide-card-badge"
+            className="absolute left-2 top-2 z-[2]"
+          >
+            {badge}
+          </div>
+        )}
         {watched && <WatchedMark />}
         {progress != null && progress > 0 && <ProgressBar percent={progress} />}
       </div>
-      <div className="flex min-w-0 items-start justify-between gap-2 px-0.5">
+      <div
+        data-ui="wide-card-text"
+        className="flex min-w-0 items-start justify-between gap-2 px-0.5"
+      >
         <div className="min-w-0">
-          <p className="truncate font-semibold" title={title}>
+          <p
+            data-ui="wide-card-title"
+            className="truncate font-semibold"
+            title={title}
+          >
             {title}
           </p>
           {subtitle && (
-            <p className="truncate text-sm text-[--muted]" title={subtitle}>
+            <p
+              data-ui="wide-card-subtitle"
+              className="truncate text-sm text-[--muted]"
+              title={subtitle}
+            >
               {subtitle}
             </p>
           )}
         </div>
         {meta && (
-          <div className="flex-none pt-0.5 text-xs text-[--muted]">{meta}</div>
+          <div
+            data-ui="wide-card-meta"
+            className="flex-none pt-0.5 text-xs text-[--muted]"
+          >
+            {meta}
+          </div>
         )}
       </div>
     </>
   );
   return (
-    <div className={cn('group/wide relative space-y-2', props.className)}>
+    <div
+      data-ui="wide-card"
+      className={cn('group/wide relative space-y-2', props.className)}
+    >
       {href ? (
         <a href={href} className="block space-y-2">
           {body}

@@ -231,6 +231,7 @@ function Cover({
   const backdrop = item ? backdropUrl(client, item, { maxWidth: 1920 }) : null;
   return (
     <div
+      data-ui="player-cover"
       className={cn(
         'fixed inset-0 flex items-center justify-center bg-black transition-opacity duration-500',
         hidden && 'pointer-events-none opacity-0'
@@ -265,7 +266,10 @@ function Failure({
   const template = externalPlayerTemplate();
   const link = item && source ? directUrl(client, item.Id!, source) : null;
   return (
-    <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/90 p-6">
+    <div
+      data-ui="player-error"
+      className="fixed inset-0 z-20 flex items-center justify-center bg-black/90 p-6"
+    >
       <div className="max-w-md space-y-4 text-center">
         <p className="text-lg font-semibold [overflow-wrap:anywhere]">
           {message}
@@ -363,10 +367,11 @@ function BrowserPlayer({
   useReporting(player, { item, source, playSessionId });
 
   return (
-    <div className="fixed inset-0 bg-black">
+    <div data-page="player" className="fixed inset-0 bg-black">
       <style>{cueCss(subtitleStyle)}</style>
       <video
         ref={video}
+        data-ui="video"
         src={streamUrl(client, item.Id!, source, playSessionId)}
         className={cn('h-full w-full', OBJECT_FIT[fit])}
         autoPlay
@@ -448,7 +453,7 @@ function NativePlayer({
   useReporting(player, { item, source, playSessionId });
 
   return (
-    <div className="fixed inset-0">
+    <div data-page="player" className="fixed inset-0">
       <Cover item={item} hidden={player.state.started} />
       <PlayerControls
         item={item}

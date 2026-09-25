@@ -15,6 +15,7 @@ import { useInView } from '../lib/use-in-view';
 import { libraryLabel } from '../lib/format';
 import { navigate, to } from '../lib/paths';
 import { lastCatalog, rememberCatalog } from '../lib/settings';
+import { PillTabs } from '../components/pill-tabs';
 import { MixedGrid } from '../components/mixed-grid';
 import type { BaseItemDto } from '../lib/types';
 
@@ -81,10 +82,15 @@ function GenreFilter({
     );
   }
   return (
-    <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-hide lg:mx-0 lg:flex-wrap lg:px-0">
+    <div
+      data-ui="genre-pills"
+      className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-hide lg:mx-0 lg:flex-wrap lg:px-0"
+    >
       {[{ Id: 'all', Name: null }, ...genres].map((genre) => (
         <Button
           key={genre.Id ?? 'all'}
+          data-ui="genre-pill"
+          data-selected={value === genre.Name || undefined}
           size="sm"
           intent={value === genre.Name ? 'white' : 'gray-subtle'}
           className="flex-none rounded-full"
@@ -227,29 +233,30 @@ export function DiscoverPage({
 
   return (
     <div className="space-y-6 px-4 pb-16 pt-6 lg:px-10 lg:pt-10">
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h1 className="text-3xl font-bold">{view?.Name ?? 'Discover'}</h1>
+      <div
+        data-ui="page-header"
+        className="flex flex-wrap items-baseline gap-x-3 gap-y-1"
+      >
+        <h1 data-ui="page-title" className="text-3xl font-bold">
+          {view?.Name ?? 'Discover'}
+        </h1>
         {label && <span className="text-[--muted]">{label}</span>}
         {total != null && !filter && (
           <span className="text-sm text-[--muted]">{total} titles</span>
         )}
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+      <div
+        data-ui="discover-filters"
+        className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center"
+      >
         {offered.length > 1 && (
-          <div className="flex w-fit flex-none gap-1 rounded-full bg-gray-900 p-1">
-            {offered.map((k) => (
-              <Button
-                key={k.kind}
-                size="xs"
-                intent={current === k.kind ? 'white' : 'gray-basic'}
-                className="rounded-full"
-                onClick={() => switchKind(k.kind)}
-              >
-                {k.label}
-              </Button>
-            ))}
-          </div>
+          <PillTabs
+            name="kind"
+            options={offered.map((k) => ({ value: k.kind, label: k.label }))}
+            value={current}
+            onChange={switchKind}
+          />
         )}
         <CatalogPicker
           views={siblings}
@@ -270,19 +277,12 @@ export function DiscoverPage({
             }
           />
         )}
-        <div className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-full bg-gray-900 p-1 [scrollbar-width:none]">
-          {FILTERS.map((f) => (
-            <Button
-              key={f.label}
-              size="xs"
-              intent={filter === f.value ? 'white' : 'gray-basic'}
-              className="rounded-full"
-              onClick={() => setFilter(f.value)}
-            >
-              {f.label}
-            </Button>
-          ))}
-        </div>
+        <PillTabs
+          name="filter"
+          options={FILTERS}
+          value={filter}
+          onChange={setFilter}
+        />
       </div>
 
       {pages.isError ? (

@@ -8,6 +8,7 @@ export function BrandLogo({ className }: { className?: string }) {
   React.useEffect(() => setFailed(false), [logo]);
   return (
     <img
+      data-ui="brand-logo"
       src={logo && !failed ? logo : '/logo.png'}
       alt={name ?? 'AIOStreams'}
       onError={() => setFailed(true)}

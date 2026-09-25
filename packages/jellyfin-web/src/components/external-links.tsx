@@ -33,7 +33,10 @@ export function ExternalLinks({
   );
   if (!usable.length) return null;
   return (
-    <div className="flex flex-wrap items-center gap-0.5">
+    <div
+      data-ui="external-links"
+      className="flex flex-wrap items-center gap-0.5"
+    >
       {usable.map((link) => {
         const Icon = ICONS[link.Name.toLowerCase()] ?? LuExternalLink;
         return (

@@ -100,7 +100,10 @@ export function SyncByEar({
 
   return (
     <div className="pointer-events-none absolute inset-x-0 top-20 z-20 flex justify-center px-4">
-      <div className="pointer-events-auto w-full max-w-md rounded-2xl border border-white/10 bg-black/80 p-4 shadow-lg backdrop-blur">
+      <div
+        data-ui="sync-by-ear"
+        className="pointer-events-auto w-full max-w-md rounded-2xl border border-white/10 bg-black/80 p-4 shadow-lg backdrop-blur"
+      >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="font-semibold">Sync by ear</p>
@@ -207,7 +210,10 @@ export function SyncToLine({
             value={search}
             onValueChange={setSearch}
           />
-          <div className="max-h-[50vh] space-y-1 overflow-y-auto pr-1">
+          <div
+            data-ui="sync-lines"
+            className="max-h-[50vh] space-y-1 overflow-y-auto pr-1"
+          >
             {shown.map((line) => {
               const isClosest = !term && line === lines[closest];
               return (
@@ -215,6 +221,8 @@ export function SyncToLine({
                   key={`${line.startMs}-${line.text}`}
                   ref={isClosest ? nearest : undefined}
                   type="button"
+                  data-ui="sync-line"
+                  data-closest={isClosest || undefined}
                   onClick={() => onPick(delayForLine(heardAtMs, line))}
                   className={cn(
                     'flex w-full gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-white/10',

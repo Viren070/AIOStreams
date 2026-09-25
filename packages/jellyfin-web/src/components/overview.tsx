@@ -10,6 +10,7 @@ function Banner({ image }: { image: string[] }) {
   return (
     <div
       aria-hidden
+      data-ui="overview-banner"
       className="pointer-events-none absolute inset-x-0 top-0 h-32 overflow-hidden"
     >
       <div className="absolute inset-0 opacity-30">
@@ -36,7 +37,10 @@ export function OverviewInfo({
 }: OverviewDetails & { trigger: React.ReactElement }) {
   const wide = useMediaQuery('(min-width: 1024px)');
   const text = (
-    <p className="select-text whitespace-pre-line text-sm text-gray-300">
+    <p
+      data-ui="overview-text"
+      className="select-text whitespace-pre-line text-sm text-gray-300"
+    >
       {overview}
     </p>
   );
@@ -46,6 +50,7 @@ export function OverviewInfo({
       <Popover
         trigger={trigger}
         align="end"
+        data-ui="overview-popover"
         className="relative max-h-[min(32rem,var(--radix-popover-content-available-height))] w-[30rem] max-w-[calc(100vw-2rem)] overflow-y-auto rounded-xl bg-[--paper] p-0"
       >
         <Banner image={image} />
@@ -93,7 +98,7 @@ export function Overview({
   if (!details.overview) return null;
   // A stretched flex item's height is definite, so the spacer can float More to the last line.
   return (
-    <div className={cn('flex', className)}>
+    <div data-ui="overview" className={cn('flex', className)}>
       <p
         ref={ref}
         className={cn(
@@ -107,6 +112,7 @@ export function Overview({
             trigger={
               <button
                 type="button"
+                data-ui="overview-more"
                 className="relative z-[1] clear-both float-right rounded pl-5 font-medium text-[--muted] outline-none transition-colors hover:text-white focus-visible:ring-2 focus-visible:ring-white/60"
               >
                 More

@@ -12,7 +12,7 @@ export function SessionsRow({ sessions }: { sessions: SessionInfoDto[] }) {
   const playing = sessions.filter((s) => s.NowPlayingItem);
   if (!playing.length) return null;
   return (
-    <MediaRow title="Now playing" shape="wide">
+    <MediaRow id="now-playing" title="Now playing" shape="wide">
       {playing.map((s) => (
         <SessionCard key={s.Id} session={s} />
       ))}

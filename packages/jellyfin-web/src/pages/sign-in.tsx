@@ -70,9 +70,15 @@ export function ErrorLine({ error }: { error: string | null }) {
   );
 }
 
+export const AUTH_CARD =
+  'mx-auto w-full max-w-sm space-y-4 rounded-2xl border border-white/10 bg-gray-950/80 p-6 shadow-xl';
+
 export function Screen({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.18),transparent_60%)] px-4 pb-[max(3rem,env(safe-area-inset-bottom))] pt-[max(3rem,env(safe-area-inset-top))]">
+    <div
+      data-page="sign-in"
+      className="relative flex min-h-screen items-center justify-center bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.18),transparent_60%)] px-4 pb-[max(3rem,env(safe-area-inset-bottom))] pt-[max(3rem,env(safe-area-inset-top))]"
+    >
       <div className="w-full max-w-3xl space-y-8">
         <motion.div
           initial={{ opacity: 0, scale: 0.92 }}
@@ -179,7 +185,8 @@ export function SignInPage({
         <form
           ref={scope}
           onSubmit={submit}
-          className="mx-auto w-full max-w-sm space-y-4 rounded-2xl border border-white/10 bg-gray-950/80 p-6 shadow-xl"
+          data-ui="auth-card"
+          className={AUTH_CARD}
         >
           <div className="flex flex-col items-center gap-1 text-center">
             {user && (
@@ -189,7 +196,7 @@ export function SignInPage({
                 className="mb-2 size-16 text-2xl"
               />
             )}
-            <h1 className="text-xl font-semibold">
+            <h1 data-ui="page-title" className="text-xl font-semibold">
               {user ? user.Name : 'Sign in'}
             </h1>
             <p className="text-sm text-[--muted]">{copy.help}</p>
@@ -286,9 +293,12 @@ export function Unreachable({
     <Screen>
       <motion.div
         {...RISE}
-        className="mx-auto w-full max-w-sm space-y-4 rounded-2xl border border-white/10 bg-gray-950/80 p-6 text-center shadow-xl"
+        data-ui="auth-card"
+        className={cn(AUTH_CARD, 'text-center')}
       >
-        <h1 className="text-xl font-semibold">Can’t reach the server</h1>
+        <h1 data-ui="page-title" className="text-xl font-semibold">
+          Can’t reach the server
+        </h1>
         <p className="text-sm text-[--muted] [overflow-wrap:anywhere]">
           {address} did not answer. Check that it is running, then try again.
         </p>
@@ -363,9 +373,12 @@ function QuickConnectPage({
     <Screen>
       <motion.div
         {...RISE}
-        className="mx-auto w-full max-w-sm space-y-4 rounded-2xl border border-white/10 bg-gray-950/80 p-6 text-center shadow-xl"
+        data-ui="auth-card"
+        className={cn(AUTH_CARD, 'text-center')}
       >
-        <h1 className="text-xl font-semibold">Quick Connect</h1>
+        <h1 data-ui="page-title" className="text-xl font-semibold">
+          Quick Connect
+        </h1>
         <p className="text-sm text-[--muted]">
           {configureUrl(client.base, info)
             ? 'Enter this code under Quick Connect in an app already signed in, or approve it on the configuration page.'
@@ -587,7 +600,9 @@ function SecretPrompt({
         exit={{ opacity: 0 }}
         transition={{ ...SPRING, delay: 0.05 }}
       >
-        <h1 className="text-xl font-semibold">{user.user.Name}</h1>
+        <h1 data-ui="page-title" className="text-xl font-semibold">
+          {user.user.Name}
+        </h1>
         <div ref={scope} className="w-full space-y-3">
           {askPassword && (
             <PasswordInput
@@ -694,6 +709,7 @@ export function UserPicker({
                   Who&apos;s watching?
                 </motion.h1>
                 <motion.div
+                  data-ui="user-picker"
                   className="flex flex-wrap justify-center gap-6"
                   initial="hidden"
                   animate="shown"
@@ -713,6 +729,7 @@ export function UserPicker({
                       }}
                       transition={SPRING}
                       whileTap={busy ? undefined : { scale: 0.96 }}
+                      data-ui="user-picker-user"
                       className="group/user flex w-28 flex-col items-center sm:w-32"
                     >
                       <span

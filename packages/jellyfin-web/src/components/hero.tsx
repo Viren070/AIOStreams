@@ -15,8 +15,14 @@ const ROTATE_MS = 9000;
 function Shade() {
   return (
     <>
-      <div className="absolute inset-0 bg-gradient-to-r from-[--background] via-[--background]/70 via-35% to-transparent" />
-      <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-[--background] via-[--background]/60 to-transparent" />
+      <div
+        data-ui="hero-shade"
+        className="absolute inset-0 bg-gradient-to-r from-[--background] via-[--background]/70 via-35% to-transparent"
+      />
+      <div
+        data-ui="hero-shade"
+        className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-[--background] via-[--background]/60 to-transparent"
+      />
     </>
   );
 }
@@ -92,6 +98,7 @@ export function Hero({
 
   return (
     <section
+      data-ui="hero"
       className="relative h-[26rem] w-full overflow-hidden sm:h-[30rem] lg:h-[36rem]"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
@@ -99,6 +106,7 @@ export function Hero({
       {featured.map((f, i) => (
         <img
           key={f.Id}
+          data-ui="hero-backdrop"
           src={
             backdropUrl(client, f, { maxWidth: 1920 }) ??
             landscapeUrl(client, f, { maxWidth: 1920 }) ??
@@ -115,20 +123,30 @@ export function Hero({
       ))}
       <Shade />
 
-      <div className="absolute inset-x-0 bottom-0 space-y-4 px-4 pb-8 lg:max-w-3xl lg:px-10 lg:pb-14">
+      <div
+        data-ui="hero-content"
+        className="absolute inset-x-0 bottom-0 space-y-4 px-4 pb-8 lg:max-w-3xl lg:px-10 lg:pb-14"
+      >
         {logo ? (
           <img
+            data-ui="hero-logo"
             src={logo}
             alt={item.Name ?? ''}
             className="max-h-20 max-w-[min(24rem,75%)] object-contain object-left lg:max-h-28"
           />
         ) : (
-          <h1 className="line-clamp-2 text-3xl font-bold leading-tight lg:text-5xl">
+          <h1
+            data-ui="hero-title"
+            className="line-clamp-2 text-3xl font-bold leading-tight lg:text-5xl"
+          >
             {itemTitle(item)}
           </h1>
         )}
         {meta.length > 0 && (
-          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-gray-200">
+          <div
+            data-ui="hero-meta"
+            className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-gray-200"
+          >
             {meta.map((m, i) => (
               <React.Fragment key={i}>
                 {i > 0 && <span className="text-gray-500">•</span>}
@@ -138,11 +156,14 @@ export function Hero({
           </div>
         )}
         {item.Overview && (
-          <p className="line-clamp-2 max-w-2xl text-sm text-gray-300 sm:line-clamp-3 sm:text-base">
+          <p
+            data-ui="hero-overview"
+            className="line-clamp-2 max-w-2xl text-sm text-gray-300 sm:line-clamp-3 sm:text-base"
+          >
             {item.Overview}
           </p>
         )}
-        <div className="flex flex-wrap gap-2">
+        <div data-ui="hero-actions" className="flex flex-wrap gap-2">
           {playable && (
             <Button
               intent="white"
@@ -169,7 +190,10 @@ export function Hero({
       </div>
 
       {featured.length > 1 && (
-        <div className="absolute bottom-6 right-4 flex gap-1.5 lg:bottom-14 lg:right-10">
+        <div
+          data-ui="hero-dots"
+          className="absolute bottom-6 right-4 flex gap-1.5 lg:bottom-14 lg:right-10"
+        >
           {featured.map((f, i) => (
             <button
               key={f.Id}

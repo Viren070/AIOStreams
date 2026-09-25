@@ -14,6 +14,7 @@ export function UserAvatar({
   React.useEffect(() => setFailed(false), [src]);
   return (
     <span
+      data-ui="avatar"
       className={cn(
         'relative flex flex-none items-center justify-center overflow-hidden rounded-full bg-brand-500/30 font-semibold uppercase text-white',
         className

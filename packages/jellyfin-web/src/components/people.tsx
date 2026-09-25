@@ -24,7 +24,10 @@ export function PersonCard({
   const image = personImageUrl(client, person);
   const body = (
     <>
-      <div className="mx-auto size-20 overflow-hidden rounded-full bg-gray-900 ring-1 ring-white/10 transition group-hover:ring-white/40 sm:size-24">
+      <div
+        data-ui="person-card-image"
+        className="mx-auto size-20 overflow-hidden rounded-full bg-gray-900 ring-1 ring-white/10 transition group-hover:ring-white/40 sm:size-24"
+      >
         {image ? (
           <img
             src={image}
@@ -38,20 +41,34 @@ export function PersonCard({
           </span>
         )}
       </div>
-      <p className="mt-2 line-clamp-2 text-xs font-medium group-hover:underline">
+      <p
+        data-ui="person-card-name"
+        className="mt-2 line-clamp-2 text-xs font-medium group-hover:underline"
+      >
         {person.Name}
       </p>
       {detail && (
-        <p className="line-clamp-2 text-xs text-[--muted]">{detail}</p>
+        <p
+          data-ui="person-card-role"
+          className="line-clamp-2 text-xs text-[--muted]"
+        >
+          {detail}
+        </p>
       )}
     </>
   );
   return person.Id ? (
-    <a href={href(to.person(person.Id))} className="group block text-center">
+    <a
+      data-ui="person-card"
+      href={href(to.person(person.Id))}
+      className="group block text-center"
+    >
       {body}
     </a>
   ) : (
-    <div className="text-center">{body}</div>
+    <div data-ui="person-card" className="text-center">
+      {body}
+    </div>
   );
 }
 
@@ -77,7 +94,12 @@ export function CastAndCrew({
   return (
     <>
       {cast.length > 0 && (
-        <MediaRow title="Cast" shape="square" itemClass={PERSON_WIDTH}>
+        <MediaRow
+          id="cast"
+          title="Cast"
+          shape="square"
+          itemClass={PERSON_WIDTH}
+        >
           {cast.slice(0, 40).map((person) => (
             <PersonCard
               key={person.Id ?? person.Name}
@@ -88,7 +110,12 @@ export function CastAndCrew({
         </MediaRow>
       )}
       {crew.size > 0 && (
-        <MediaRow title="Crew" shape="square" itemClass={PERSON_WIDTH}>
+        <MediaRow
+          id="crew"
+          title="Crew"
+          shape="square"
+          itemClass={PERSON_WIDTH}
+        >
           {[...crew.values()].map(({ person, jobs }) => (
             <PersonCard
               key={person.Id ?? person.Name}

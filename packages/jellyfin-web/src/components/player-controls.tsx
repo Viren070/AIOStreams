@@ -94,13 +94,20 @@ function useIdle(ms: number): [boolean, () => void] {
 }
 
 function ControlButton({
+  name,
   label,
   className,
   ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) {
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  /** Stays the same as the label changes, for custom CSS. */
+  name: string;
+  label: string;
+}) {
   return (
     <button
       type="button"
+      data-ui="player-button"
+      data-name={name}
       aria-label={label}
       title={label}
       className={cn(
@@ -147,6 +154,7 @@ function SeekBar({
       aria-valuemin={0}
       aria-valuemax={Math.round(durationMs / 1000)}
       aria-valuenow={Math.round(shown / 1000)}
+      data-ui="seek-bar"
       className="group/seek relative flex h-5 cursor-pointer touch-none items-center"
       onPointerDown={(e) => {
         if (!durationMs) return;
@@ -164,14 +172,20 @@ function SeekBar({
       }}
       onPointerLeave={() => setHover(null)}
     >
-      <div className="relative h-1 w-full overflow-hidden rounded-full bg-white/20 transition-[height] group-hover/seek:h-1.5">
+      <div
+        data-ui="seek-bar-track"
+        className="relative h-1 w-full overflow-hidden rounded-full bg-white/20 transition-[height] group-hover/seek:h-1.5"
+      >
         <div
+          data-ui="seek-bar-buffered"
           className="absolute inset-y-0 left-0 bg-white/30"
           style={{ width: percent(bufferedMs) }}
         />
         {segments.map((s) => (
           <div
             key={`${s.type}-${s.startMs}`}
+            data-ui="seek-bar-segment"
+            data-type={s.type}
             className="absolute inset-y-0 bg-amber-300/60"
             style={{
               left: percent(s.startMs),
@@ -180,16 +194,19 @@ function SeekBar({
           />
         ))}
         <div
+          data-ui="seek-bar-progress"
           className="absolute inset-y-0 left-0 bg-brand-400"
           style={{ width: percent(shown) }}
         />
       </div>
       <div
+        data-ui="seek-bar-thumb"
         className="absolute size-3.5 -translate-x-1/2 rounded-full bg-white opacity-0 shadow transition-opacity group-hover/seek:opacity-100"
         style={{ left: percent(shown), opacity: drag !== null ? 1 : undefined }}
       />
       {hover !== null && durationMs > 0 && (
         <div
+          data-ui="seek-bar-tooltip"
           className="pointer-events-none absolute bottom-6 -translate-x-1/2 rounded-md bg-black/80 px-2 py-1 text-xs tabular-nums"
           style={{ left: percent(hover) }}
         >
@@ -206,8 +223,9 @@ function Volume({ player }: { player: PlayerController }) {
   const level = muted ? 0 : volume;
   const Icon = level === 0 ? LuVolumeX : level < 0.5 ? LuVolume1 : LuVolume2;
   return (
-    <div className="group/volume hidden items-center sm:flex">
+    <div data-ui="volume" className="group/volume hidden items-center sm:flex">
       <ControlButton
+        name="mute"
         label={muted ? 'Unmute' : 'Mute'}
         onClick={player.toggleMute}
       >
@@ -229,6 +247,7 @@ function Volume({ player }: { player: PlayerController }) {
 }
 
 function Menu({
+  name,
   label,
   icon,
   options,
@@ -237,6 +256,7 @@ function Menu({
   onOpenChange,
   footer,
 }: {
+  name: string;
   label: string;
   icon: React.ReactNode;
   options: Track[];
@@ -252,7 +272,11 @@ function Menu({
       sideOffset={8}
       onOpenChange={onOpenChange}
       className="max-h-[60vh] min-w-[12rem] max-w-[min(22rem,90vw)] overflow-y-auto bg-gray-950/95"
-      trigger={<ControlButton label={label}>{icon}</ControlButton>}
+      trigger={
+        <ControlButton name={name} label={label}>
+          {icon}
+        </ControlButton>
+      }
     >
       <DropdownMenuLabel>{label}</DropdownMenuLabel>
       {options.map((option) => (
@@ -287,6 +311,7 @@ function FitButton() {
   const next = VIDEO_FITS[(VIDEO_FITS.indexOf(fit) + 1) % VIDEO_FITS.length];
   return (
     <ControlButton
+      name="fit"
       label={`Picture: ${FIT_BUTTON[fit].label}`}
       onClick={() => setFit(next)}
     >
@@ -385,7 +410,10 @@ function useNotice(): [React.ReactNode, (text: string) => void] {
     timer.current = setTimeout(() => setText(null), 1200);
   }, []);
   const node = text && (
-    <div className="pointer-events-none absolute inset-x-0 top-20 flex justify-center">
+    <div
+      data-ui="player-notice"
+      className="pointer-events-none absolute inset-x-0 top-20 flex justify-center"
+    >
       <span className="rounded-full bg-black/70 px-4 py-1.5 text-sm font-medium tabular-nums">
         {text}
       </span>
@@ -414,6 +442,7 @@ function useToggleFlash(): [React.ReactNode, (paused: boolean) => void] {
       initial={{ opacity: 0.2, scale: 1 }}
       animate={{ opacity: 0.5, scale: 1.6 }}
       transition={{ duration: 0.06, ease: 'easeOut' }}
+      data-ui="play-flash"
       className="pointer-events-none absolute inset-0 flex items-center justify-center"
     >
       <Icon className="size-10 text-white lg:size-24" />
@@ -453,6 +482,7 @@ function useSeekFlash(): [React.ReactNode, (deltaMs: number) => void] {
           initial={{ opacity: 0.4, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.12, ease: 'easeOut' }}
+          data-ui="seek-flash"
           className="flex flex-col items-center gap-1 drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]"
         >
           <Icon className="size-8 lg:size-10" />
@@ -612,21 +642,25 @@ export function PlayerControls({
   const spinner = <LuLoaderCircle className="animate-spin" />;
   const buttons = {
     previous: isEpisode && {
+      name: 'previous',
       label: 'Previous episode',
       icon: loadingEpisode === 'previous' ? spinner : <LuSkipBack />,
       onClick: onPrevious,
     },
     back: {
+      name: 'back',
       label: `Back ${seekStep} seconds`,
       icon: <LuRotateCcw />,
       onClick: () => seekBy(-stepMs.current),
     },
     forward: {
+      name: 'forward',
       label: `Forward ${seekStep} seconds`,
       icon: <LuRotateCw />,
       onClick: () => seekBy(stepMs.current),
     },
     next: isEpisode && {
+      name: 'next',
       label: 'Next episode',
       icon: loadingEpisode === 'next' ? spinner : <LuSkipForward />,
       onClick: onNext,
@@ -636,6 +670,8 @@ export function PlayerControls({
     b && (
       <button
         type="button"
+        data-ui="player-middle-button"
+        data-name={b.name}
         aria-label={b.label}
         title={b.label}
         disabled={!b.onClick}
@@ -651,13 +687,20 @@ export function PlayerControls({
     );
   const barButton = (b: (typeof buttons)[keyof typeof buttons]) =>
     b && (
-      <ControlButton label={b.label} disabled={!b.onClick} onClick={b.onClick}>
+      <ControlButton
+        name={b.name}
+        label={b.label}
+        disabled={!b.onClick}
+        onClick={b.onClick}
+      >
         {b.icon}
       </ControlButton>
     );
 
   return (
     <div
+      data-ui="player-controls"
+      data-visible={visible || undefined}
       className={cn(
         'fixed inset-0 z-10 select-none',
         !visible && 'cursor-none'
@@ -681,15 +724,16 @@ export function PlayerControls({
       />
 
       <div
+        data-ui="player-top-bar"
         className={cn(
           'absolute inset-x-0 top-0 flex items-center gap-3 bg-gradient-to-b from-black/80 to-transparent pb-12 pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pt-[calc(0.75rem+env(safe-area-inset-top))] transition-opacity duration-300 sm:pl-[max(1.25rem,env(safe-area-inset-left))] sm:pr-[max(1.25rem,env(safe-area-inset-right))] sm:pt-[calc(1.25rem+env(safe-area-inset-top))]',
           fade
         )}
       >
-        <ControlButton label="Back" onClick={onBack}>
+        <ControlButton name="exit" label="Back" onClick={onBack}>
           <LuArrowLeft />
         </ControlButton>
-        <div className="min-w-0">
+        <div data-ui="player-title" className="min-w-0">
           <p className="truncate font-semibold">{itemTitle(item)}</p>
           {item.Type === 'Episode' && (
             <p className="truncate text-sm text-gray-300">
@@ -699,7 +743,10 @@ export function PlayerControls({
         </div>
       </div>
 
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center gap-3 sm:gap-6">
+      <div
+        data-ui="player-middle"
+        className="pointer-events-none absolute inset-0 flex items-center justify-center gap-3 sm:gap-6"
+      >
         {middleButton(buttons.previous)}
         {middleButton(buttons.back)}
         {state.waiting && !state.error ? (
@@ -707,6 +754,8 @@ export function PlayerControls({
         ) : (
           <button
             type="button"
+            data-ui="player-middle-button"
+            data-name="play"
             aria-label={state.paused ? 'Play' : 'Pause'}
             onClick={togglePlay}
             className={cn(
@@ -750,6 +799,7 @@ export function PlayerControls({
       {segment && !offeringNext && (
         // Above the bottom bar: its padding reaches up past this button.
         <div
+          data-ui="skip-segment"
           className={cn(
             'absolute right-[max(1rem,env(safe-area-inset-right))] z-20 transition-[bottom] duration-300 sm:right-[max(2rem,env(safe-area-inset-right))]',
             visible
@@ -769,12 +819,16 @@ export function PlayerControls({
       )}
 
       <div
+        data-ui="player-bottom-bar"
         className={cn(
           'absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent pb-[calc(0.5rem+env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pt-16 transition-opacity duration-300 sm:pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pl-[max(1.25rem,env(safe-area-inset-left))] sm:pr-[max(1.25rem,env(safe-area-inset-right))]',
           fade
         )}
       >
-        <p className="px-0.5 text-xs tabular-nums text-gray-200 sm:hidden">
+        <p
+          data-ui="player-time"
+          className="px-0.5 text-xs tabular-nums text-gray-200 sm:hidden"
+        >
           {time}
         </p>
         <SeekBar
@@ -787,6 +841,7 @@ export function PlayerControls({
         <div className="flex items-center gap-1">
           <div className="hidden items-center gap-1 lg:flex">
             <ControlButton
+              name="play"
               label={state.paused ? 'Play' : 'Pause'}
               onClick={togglePlay}
             >
@@ -798,12 +853,16 @@ export function PlayerControls({
             {barButton(buttons.next)}
           </div>
           <Volume player={player} />
-          <span className="ml-2 hidden whitespace-nowrap text-sm tabular-nums text-gray-200 sm:inline">
+          <span
+            data-ui="player-time"
+            className="ml-2 hidden whitespace-nowrap text-sm tabular-nums text-gray-200 sm:inline"
+          >
             {time}
           </span>
           <div className="ml-auto flex items-center sm:gap-1">
             {player.subtitleTracks.length > 0 && (
               <Menu
+                name="subtitles"
                 label="Subtitles"
                 icon={state.subtitle ? <LuCaptions /> : <LuCaptionsOff />}
                 options={subtitleOptions}
@@ -829,12 +888,17 @@ export function PlayerControls({
               />
             )}
             {onVersions && (
-              <ControlButton label="Versions" onClick={onVersions}>
+              <ControlButton
+                name="versions"
+                label="Versions"
+                onClick={onVersions}
+              >
                 <LuLayers />
               </ControlButton>
             )}
             {player.audioTracks.length > 1 && (
               <Menu
+                name="audio"
                 label="Audio"
                 icon={<LuAudioLines />}
                 options={player.audioTracks}
@@ -844,6 +908,7 @@ export function PlayerControls({
               />
             )}
             <Menu
+              name="speed"
               label="Speed"
               icon={<LuGauge />}
               options={RATES.map((rate) => ({
@@ -859,6 +924,7 @@ export function PlayerControls({
             )}
             {player.stats && (
               <Menu
+                name="statistics"
                 label="Statistics"
                 icon={<LuActivity />}
                 options={[{ id: '', label: 'Off' }, ...player.stats.pages]}
@@ -868,6 +934,7 @@ export function PlayerControls({
               />
             )}
             <ControlButton
+              name="fullscreen"
               label={state.fullscreen ? 'Exit full screen' : 'Full screen'}
               onClick={player.toggleFullscreen}
             >

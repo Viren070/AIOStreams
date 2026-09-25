@@ -181,11 +181,12 @@ export function useNextEpisodePrompt({
   const element =
     shown && next ? (
       <div
-        data-next-episode
+        data-ui="next-episode-card"
         className="fixed bottom-24 right-4 z-20 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-white/10 bg-gray-950/90 shadow-2xl backdrop-blur duration-300 animate-in fade-in-0 slide-in-from-right-4"
       >
         {image && (
           <img
+            data-ui="next-episode-image"
             src={image}
             alt=""
             className="aspect-video w-full object-cover"

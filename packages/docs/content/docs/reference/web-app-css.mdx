@@ -1,0 +1,115 @@
+---
+title: Web app themes and custom CSS
+description: The colours and CSS the web app's Theme settings take, and the selectors to style its parts by.
+---
+
+The web app's **Theme** settings, under **Interface**, change its look for you on every device you sign in on. Each user of a server has their own.
+
+- **Presets** set an accent and a background colour together.
+- **Accent** colours buttons, progress bars and highlights.
+- **Background** colours pages and panels, which take their shades from it. Dark colours read best.
+- **Custom CSS** is added on top of the theme, for anything the colours don't cover. It applies only to you.
+
+## Selectors
+
+Parts of the app carry a `data-ui` attribute, so CSS can target them without relying on the class names, which change between versions:
+
+```css
+/* Pink progress bars on cards */
+[data-ui="progress-bar-fill"] {
+  background: hotpink;
+}
+
+/* Only in the continue watching row */
+[data-row="resume"] [data-ui="progress-bar-fill"] {
+  background: hotpink;
+}
+
+/* A bigger play button in the player */
+[data-ui="player-button"][data-name="play"] {
+  font-size: 1.8rem;
+}
+```
+
+The colours are CSS variables on `:root` too, holding an `R G B` triple: `--color-brand-50` to `--color-brand-950` for the accent and `--color-gray-50` to `--color-gray-950` for the shades, plus `--background`.
+
+### Pages and layout
+
+| Selector                                 | What it is                                                                                                                |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `[data-page]`                            | Each page's container, named `home`, `discover`, `search`, `history`, `settings`, `item`, `person`, `player` or `sign-in` |
+| `page-background`                        | The colour behind every page                                                                                              |
+| `page-body`, `page-header`, `page-title` | A page's padded column, its heading row and its title                                                                     |
+| `section`, `section-title`               | A titled part of a page; `data-name` says which (`episodes`, `details`, `filmography`…)                                   |
+| `sidebar-logo`, `brand-logo`             | The logo in the sidebar and on the sign-in screen                                                                         |
+| `mobile-nav`, `mobile-nav-item`          | The bar at the bottom on a phone                                                                                          |
+| `pill-tabs`, `pill-tab`                  | A row of choices such as Movies / Shows; `data-name` says which row, `data-selected` marks the choice                     |
+| `avatar`                                 | A user's picture or initial                                                                                               |
+
+### Rows, grids and cards
+
+| Selector                                                                                                                                    | What it is                                                                                                                                                                         |
+| ------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `media-row`, `media-row-title`, `media-row-nav`                                                                                             | A scrolling row, its title and its arrows. `data-row` names it: `resume`, `next-up`, `upcoming`, `now-playing`, `similar`, `cast`, `crew`, `seasons`, or `view:<id>` for a catalog |
+| `card-grid`                                                                                                                                 | A grid of cards                                                                                                                                                                    |
+| `poster-card`, `poster-card-image`, `poster-card-text`, `poster-card-title`, `poster-card-subtitle`                                         | A poster; `data-shape` is `poster`, `landscape` or `square`                                                                                                                        |
+| `wide-card`, `wide-card-image`, `wide-card-badge`, `wide-card-text`, `wide-card-title`, `wide-card-subtitle`, `wide-card-meta`              | A landscape card, as in Continue Watching                                                                                                                                          |
+| `artwork`, `artwork-fallback`                                                                                                               | A card's picture, and the title shown when it has none                                                                                                                             |
+| `progress-bar`, `progress-bar-fill`                                                                                                         | How far through something you are                                                                                                                                                  |
+| `watched-badge`, `unwatched-count`                                                                                                          | The tick on something watched, and the count of episodes left on a show                                                                                                            |
+| `hero`, `hero-backdrop`, `hero-shade`, `hero-content`, `hero-logo`, `hero-title`, `hero-meta`, `hero-overview`, `hero-actions`, `hero-dots` | The featured banner on the home page                                                                                                                                               |
+
+### Title pages
+
+| Selector                                                                                                                                      | What it is                                                                  |
+| --------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `item-page`                                                                                                                                   | The page; `data-type` is `Movie`, `Series` or `BoxSet`                      |
+| `item-backdrop`, `item-body`, `item-header`                                                                                                   | The backdrop, everything over it, and the top part                          |
+| `item-poster`, `item-logo`, `item-title`, `item-tagline`, `item-meta`, `item-next-airing`, `item-genres`, `item-actions`, `item-details`      | The parts of the header and the details list                                |
+| `overview`, `overview-more`, `overview-popover`, `overview-banner`, `overview-text`                                                           | A description, its **More** link and the full text it opens                 |
+| `external-links`                                                                                                                              | The links to other sites                                                    |
+| `season-poster`, `season-pill`                                                                                                                | A season to pick; `data-selected` marks the open one                        |
+| `season-summary`, `season-overview`                                                                                                           | The season's year and episode count, and its description                    |
+| `episode-card`, `episode-list-item`, `episode-list`                                                                                           | An episode in a row or a list; `data-highlighted` marks the one you came to |
+| `episode-image`, `episode-number`, `episode-status`, `episode-head`, `episode-kicker`, `episode-title`, `episode-actions`, `episode-synopsis` | The parts of an episode                                                     |
+| `person-card`, `person-card-image`, `person-card-name`, `person-card-role`                                                                    | Someone in the cast or crew                                                 |
+| `person-header`, `person-photo`, `person-dates`                                                                                               | A person's page                                                             |
+
+### Versions
+
+| Selector                                                                | What it is                                                                    |
+| ----------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `versions-banner`, `versions-header`, `versions-count`, `versions-list` | The version list                                                              |
+| `version`                                                               | One version; `data-playing` marks the one playing, `data-cached` a cached one |
+| `version-name`, `version-description`, `version-playing`                | Its title, the lines under it, and the **Playing** label                      |
+| `version-notice`                                                        | A message instead of a version; `data-type` says what kind                    |
+
+### Player
+
+| Selector                                                                                                     | What it is                                                                                                                                                                         |
+| ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `video`                                                                                                      | The video, in a browser                                                                                                                                                            |
+| `player-controls`                                                                                            | Everything over the video; `data-visible` is set while the controls show                                                                                                           |
+| `player-top-bar`, `player-title`, `player-bottom-bar`, `player-middle`, `player-time`                        | The bars and the middle buttons                                                                                                                                                    |
+| `player-button`                                                                                              | A button in the bars; `data-name` is `exit`, `play`, `back`, `forward`, `previous`, `next`, `mute`, `subtitles`, `versions`, `audio`, `speed`, `fit`, `statistics` or `fullscreen` |
+| `player-middle-button`                                                                                       | A button in the middle, on phones and touch screens; `data-name` as above                                                                                                          |
+| `volume`                                                                                                     | The volume button and slider                                                                                                                                                       |
+| `seek-bar`, `seek-bar-track`, `seek-bar-buffered`, `seek-bar-progress`, `seek-bar-thumb`, `seek-bar-tooltip` | The timeline                                                                                                                                                                       |
+| `seek-bar-segment`                                                                                           | An intro, recap or credits mark; `data-type` says which                                                                                                                            |
+| `play-flash`, `seek-flash`, `player-notice`                                                                  | What pops up on play, pause, skipping and subtitle changes                                                                                                                         |
+| `skip-segment`                                                                                               | The **Skip intro** or **Skip credits** button                                                                                                                                      |
+| `next-episode-card`, `next-episode-image`                                                                    | The next episode's card near the end                                                                                                                                               |
+| `sync-by-ear`, `sync-lines`, `sync-line`                                                                     | Subtitle syncing; `data-closest` marks the line nearest now                                                                                                                        |
+| `player-cover`, `player-error`                                                                               | What shows while a video loads, and when it fails                                                                                                                                  |
+
+### Other pages
+
+| Selector                                                                                                       | What it is                                            |
+| -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `search-input`, `search-results`, `search-history`, `search-history-item`                                      | The search page                                       |
+| `discover-filters`, `genre-pills`, `genre-pill`                                                                | Discover's filters                                    |
+| `history-day`, `history-tiles`, `history-tile`, `history-entry`, `history-table`, `history-view`, `user-chips` | The activity page; `data-open` marks an expanded tile |
+| `settings-header`, `settings-card`, `settings-card-title`, `settings-card-body`, `theme-preset`                | The settings page; each tab carries `data-name`       |
+| `auth-card`, `user-picker`, `user-picker-user`, `server`                                                       | Sign-in, choosing a user and choosing a server        |
+
+In the desktop app the page must stay see-through while a video plays, so custom CSS can't give the page a background during playback.

@@ -41,7 +41,7 @@ function LifeDates({ person }: { person: BaseItemDto }) {
   ].filter(Boolean);
   if (!lines.length) return null;
   return (
-    <div className="space-y-0.5 text-sm text-gray-300">
+    <div data-ui="person-dates" className="space-y-0.5 text-sm text-gray-300">
       {lines.map((line) => (
         <p key={line as string}>{line}</p>
       ))}
@@ -53,14 +53,23 @@ function Header({ person }: { person: BaseItemDto }) {
   const { client } = useSession();
   const photo = posterUrl(client, person, { maxWidth: 500 });
   return (
-    <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-8">
-      <div className="aspect-[2/3] w-36 flex-none overflow-hidden rounded-xl bg-gray-900 shadow-2xl ring-1 ring-white/10 sm:w-48">
+    <div
+      data-ui="person-header"
+      className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-8"
+    >
+      <div
+        data-ui="person-photo"
+        className="aspect-[2/3] w-36 flex-none overflow-hidden rounded-xl bg-gray-900 shadow-2xl ring-1 ring-white/10 sm:w-48"
+      >
         {photo && (
           <img src={photo} alt="" className="h-full w-full object-cover" />
         )}
       </div>
       <div className="min-w-0 max-w-3xl flex-1 space-y-3">
-        <h1 className="text-3xl font-bold leading-tight sm:text-4xl">
+        <h1
+          data-ui="page-title"
+          className="text-3xl font-bold leading-tight sm:text-4xl"
+        >
           {person.Name}
         </h1>
         <LifeDates person={person} />
@@ -93,9 +102,9 @@ function Filmography({ personId }: { personId: string }) {
     [pages.data?.pages.length, types]
   );
   return (
-    <section className="space-y-4">
+    <section data-ui="section" data-name="filmography" className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl font-semibold">
+        <h2 data-ui="section-title" className="text-xl font-semibold">
           Filmography
           {total != null && (
             <span className="ml-2 text-base font-normal text-[--muted]">

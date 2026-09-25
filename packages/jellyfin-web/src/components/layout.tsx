@@ -50,7 +50,10 @@ const PAGE_FADE = {
 
 function Logo() {
   return (
-    <div className="mb-4 flex w-full justify-center p-4 pb-0">
+    <div
+      data-ui="sidebar-logo"
+      className="mb-4 flex w-full justify-center p-4 pb-0"
+    >
       <BrandLogo className="max-h-[60px] max-w-[90px] object-contain p-4" />
     </div>
   );
@@ -135,9 +138,14 @@ export function PageBackground() {
   return (
     <div
       aria-hidden
+      data-ui="page-background"
       className="page-background pointer-events-none fixed inset-0 -z-10 bg-[--background]"
     />
   );
+}
+
+function pageName(pathname: string): string {
+  return pathname.split('/')[1] || 'home';
 }
 
 export function WebLayout() {
@@ -229,6 +237,7 @@ export function WebLayout() {
             <VersionPickerProvider>
               <motion.div
                 key={pathname}
+                data-page={pageName(pathname)}
                 {...PAGE_FADE}
                 className="pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] max-lg:pb-[calc(5rem+env(safe-area-inset-bottom))]"
               >
@@ -254,7 +263,10 @@ function MobileNav({
   const tab =
     'flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-full px-1 py-1.5 text-[0.65rem] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-white/60';
   return (
-    <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:hidden">
+    <nav
+      data-ui="mobile-nav"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:hidden"
+    >
       <div className="pointer-events-auto flex w-full max-w-md items-center gap-1 rounded-full border border-white/10 bg-gray-950/80 p-1.5 shadow-2xl shadow-black/60 backdrop-blur-xl">
         {items.map((item) => {
           const Icon = item.iconType;
@@ -262,6 +274,7 @@ function MobileNav({
             <button
               key={item.name}
               type="button"
+              data-ui="mobile-nav-item"
               aria-current={item.isCurrent ? 'page' : undefined}
               onClick={(e) => {
                 (document.activeElement as HTMLElement | null)?.blur();
@@ -287,6 +300,7 @@ function MobileNav({
           trigger={
             <button
               type="button"
+              data-ui="mobile-nav-item"
               aria-label="Account"
               className={cn(tab, 'text-gray-400 hover:text-white')}
             >
@@ -303,7 +317,10 @@ function MobileNav({
 /** The padded column a page renders into. */
 export function PageBody({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative z-[1] space-y-8 px-4 pb-16 pt-[calc(1.5rem+env(safe-area-inset-top))] lg:px-10 lg:pt-[calc(2.5rem+env(safe-area-inset-top))]">
+    <div
+      data-ui="page-body"
+      className="relative z-[1] space-y-8 px-4 pb-16 pt-[calc(1.5rem+env(safe-area-inset-top))] lg:px-10 lg:pt-[calc(2.5rem+env(safe-area-inset-top))]"
+    >
       {children}
     </div>
   );

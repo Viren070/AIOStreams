@@ -6,6 +6,7 @@
     "custom-formatter",
     "templates",
     "addon-protocol",
-    "jellyfin-extensions"
+    "jellyfin-extensions",
+    "web-app-css"
   ]
 }

@@ -60,7 +60,7 @@ function RowNav() {
   const { canScrollPrev, canScrollNext } = useCarousel();
   if (!canScrollPrev && !canScrollNext) return null;
   return (
-    <div className="hidden gap-1 md:flex">
+    <div data-ui="media-row-nav" className="hidden gap-1 md:flex">
       <CarouselPrevious />
       <CarouselNext />
     </div>
@@ -120,7 +120,7 @@ export function MediaRow({
       </CarouselItem>
     ));
   return (
-    <section>
+    <section data-ui="media-row" data-row={id}>
       <Carousel
         opts={{ align: 'start', dragFree: true, startIndex: start }}
         restoreKey={restoreKey}
@@ -128,7 +128,10 @@ export function MediaRow({
         {onEndReached && <EndWatcher onEnd={onEndReached} />}
         <div className="flex items-center justify-between gap-3">
           {title ? (
-            <h2 className="min-w-0 truncate text-lg font-semibold sm:text-xl">
+            <h2
+              data-ui="media-row-title"
+              className="min-w-0 truncate text-lg font-semibold sm:text-xl"
+            >
               {title}
             </h2>
           ) : (
@@ -182,6 +185,7 @@ export function CardGrid({
   const [size] = usePosterSize();
   return (
     <div
+      data-ui="card-grid"
       className={cn(
         'grid gap-4',
         shape === 'wide' ? GRID_COLUMNS[size].wide : GRID_COLUMNS[size].poster

@@ -36,6 +36,7 @@ import { clock, duration, episodeCode, relativeTime } from '../lib/format';
 import { href, itemPath, navigate, to } from '../lib/paths';
 import { PageBody } from '../components/layout';
 import { SessionsRow } from '../components/sessions';
+import { PillTabs } from '../components/pill-tabs';
 import { Artwork } from '../components/cards';
 import { UserAvatar } from '../components/user-avatar';
 import type { HistoryEntry, WebUser } from '../lib/types';
@@ -90,7 +91,9 @@ export function HistoryPage() {
   return (
     <PageBody>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-bold">Activity</h1>
+        <h1 data-ui="page-title" className="text-3xl font-bold">
+          Activity
+        </h1>
         {full && (
           <div className="flex items-center gap-2">
             <ExportButton />
@@ -112,28 +115,20 @@ export function HistoryPage() {
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div
-          className={cn(
-            'flex gap-1 rounded-full bg-gray-900 p-1',
-            !full && 'invisible'
-          )}
-        >
-          {[
+        <PillTabs
+          name="source"
+          options={[
             { value: false, label: 'Everything' },
             { value: true, label: 'Played here' },
-          ].map((o) => (
-            <Button
-              key={o.label}
-              size="xs"
-              intent={localOnly === o.value ? 'white' : 'gray-basic'}
-              className="rounded-full"
-              onClick={() => setLocalOnly(o.value)}
-            >
-              {o.label}
-            </Button>
-          ))}
-        </div>
-        <div className="flex gap-1 rounded-full bg-gray-900 p-1">
+          ]}
+          value={localOnly}
+          onChange={setLocalOnly}
+          className={cn(!full && 'invisible')}
+        />
+        <div
+          data-ui="history-view"
+          className="flex gap-1 rounded-full bg-gray-900 p-1"
+        >
           <IconButton
             size="xs"
             intent={view === 'days' ? 'white' : 'gray-basic'}
@@ -219,7 +214,7 @@ function UserChips({
       )
       .map((u) => u.user.Name);
   return (
-    <div className="flex flex-wrap gap-2">
+    <div data-ui="user-chips" className="flex flex-wrap gap-2">
       <Button
         size="sm"
         intent={selected === null ? 'white' : 'gray-outline'}
@@ -309,9 +304,9 @@ function Days({
   return (
     <div className="space-y-8">
       {days.map((day) => (
-        <section key={day.key} className="space-y-3">
+        <section key={day.key} data-ui="history-day" className="space-y-3">
           <div className="flex flex-wrap items-baseline gap-x-3">
-            <h2 className="text-lg font-semibold">
+            <h2 data-ui="section-title" className="text-lg font-semibold">
               {day.date?.toLocaleDateString(undefined, {
                 weekday: 'long',
                 day: 'numeric',
@@ -325,7 +320,10 @@ function Days({
               </span>
             )}
           </div>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
+          <div
+            data-ui="history-tiles"
+            className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3"
+          >
             {day.tiles.map((tile) => (
               <DayTile key={tile.key} tile={tile} names={names} />
             ))}
@@ -365,6 +363,8 @@ function DayTile({
 
   return (
     <div
+      data-ui="history-tile"
+      data-open={open || undefined}
       className={cn(
         'rounded-xl border border-white/5 bg-gray-950/60',
         open && 'md:col-span-2 2xl:col-span-3'
@@ -416,6 +416,7 @@ function DayTile({
           {sorted.map((entry) => (
             <div
               key={entry.itemKey}
+              data-ui="history-entry"
               className="flex items-center gap-3 rounded-lg bg-gray-900/60 p-2"
             >
               <a href={href(itemPath(entry.item))} className="w-24 flex-none">
@@ -686,7 +687,10 @@ function HistoryTable({
           </div>
         </div>
       )}
-      <div className="overflow-x-auto rounded-xl border border-white/5">
+      <div
+        data-ui="history-table"
+        className="overflow-x-auto rounded-xl border border-white/5"
+      >
         <table className="w-full text-sm">
           <thead className="bg-gray-900/60 text-left text-xs uppercase text-[--muted]">
             <tr>

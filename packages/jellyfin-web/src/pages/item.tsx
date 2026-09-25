@@ -109,13 +109,16 @@ export function ItemPage({
   }
 
   return (
-    <div className="relative">
+    <div data-ui="item-page" data-type={data?.Type} className="relative">
       {pickId && <PickOnArrival itemId={pickId} />}
       <Backdrop
         images={data ? backdropUrls(client, data, { maxWidth: 1920 }) : []}
         poster={data ? posterUrl(client, data, { maxWidth: 400 }) : null}
       />
-      <div className="relative z-[1] space-y-12 px-4 pb-16 pt-[38vh] lg:px-10 lg:pt-[26vh]">
+      <div
+        data-ui="item-body"
+        className="relative z-[1] space-y-12 px-4 pb-16 pt-[38vh] lg:px-10 lg:pt-[26vh]"
+      >
         {!data || data.Type === 'Episode' ? (
           <HeaderSkeleton />
         ) : (
@@ -162,6 +165,7 @@ function Backdrop({
   return (
     <div
       aria-hidden
+      data-ui="item-backdrop"
       className="pointer-events-none absolute inset-x-0 top-0 h-[55vh] overflow-hidden lg:h-[85vh]"
     >
       {src && (
@@ -234,7 +238,10 @@ function MetaRow({ item }: { item: BaseItemDto }) {
   if (item.Type === 'Series' && item.Status) parts.push(item.Status);
   if (!parts.length) return null;
   return (
-    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-gray-200">
+    <div
+      data-ui="item-meta"
+      className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-gray-200"
+    >
       {parts.map((part, i) => (
         <React.Fragment key={i}>
           {i > 0 && <Dot />}
@@ -277,9 +284,13 @@ function Header({ item }: { item: BaseItemDto }) {
     : `Play${code ? ` ${code}` : ''}`;
 
   return (
-    <div className="flex flex-col gap-6 md:flex-row md:items-end md:gap-8">
+    <div
+      data-ui="item-header"
+      className="flex flex-col gap-6 md:flex-row md:items-end md:gap-8"
+    >
       {poster && (
         <img
+          data-ui="item-poster"
           src={poster}
           alt=""
           className={cn(
@@ -293,25 +304,31 @@ function Header({ item }: { item: BaseItemDto }) {
       <div className="min-w-0 max-w-3xl flex-1 space-y-4">
         {logo && !logoFailed ? (
           <img
+            data-ui="item-logo"
             src={logo}
             alt={item.Name ?? ''}
             onError={() => setLogoFailed(true)}
             className="max-h-24 max-w-[min(26rem,85%)] object-contain object-left lg:max-h-32"
           />
         ) : (
-          <h1 className="text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">
+          <h1
+            data-ui="item-title"
+            className="text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl"
+          >
             {item.Name}
           </h1>
         )}
         {item.Taglines?.[0] && (
-          <p className="text-base italic text-gray-300">{item.Taglines[0]}</p>
+          <p data-ui="item-tagline" className="text-base italic text-gray-300">
+            {item.Taglines[0]}
+          </p>
         )}
         <MetaRow item={item} />
         {item.Type === 'Series' && item.Status === 'Continuing' && (
           <NextAiring series={item} />
         )}
         {!!item.Genres?.length && (
-          <div className="flex flex-wrap gap-1.5">
+          <div data-ui="item-genres" className="flex flex-wrap gap-1.5">
             {item.Genres.map((genre) => (
               <Badge key={genre} intent="white" size="md">
                 {genre}
@@ -329,7 +346,10 @@ function Header({ item }: { item: BaseItemDto }) {
           clampClass="line-clamp-4"
           className="text-sm leading-relaxed text-gray-300 sm:text-base"
         />
-        <div className="flex flex-wrap items-center gap-2">
+        <div
+          data-ui="item-actions"
+          className="flex flex-wrap items-center gap-2"
+        >
           {target && (
             <Button
               intent="white"
@@ -446,7 +466,10 @@ function NextAiring({ series }: { series: BaseItemDto }) {
   );
   if (!next?.PremiereDate) return null;
   return (
-    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+    <p
+      data-ui="item-next-airing"
+      className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm"
+    >
       <BiCalendarAlt className="text-lg text-[--muted]" />
       <span className="font-semibold">
         {episodeCode(next.ParentIndexNumber, next.IndexNumber)}
@@ -458,20 +481,24 @@ function NextAiring({ series }: { series: BaseItemDto }) {
 }
 
 function Section({
+  name,
   title,
   action,
   children,
 }: {
+  name: string;
   /** Left out when the first row carries it. */
   title?: string;
   action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
-    <section className="space-y-4">
+    <section data-ui="section" data-name={name} className="space-y-4">
       {title && (
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-xl font-semibold">{title}</h2>
+          <h2 data-ui="section-title" className="text-xl font-semibold">
+            {title}
+          </h2>
           {action}
         </div>
       )}
@@ -526,9 +553,10 @@ function Seasons({
   }, [episodes.data, focusEpisodeId]);
 
   return (
-    <Section title={ownPosters ? undefined : 'Episodes'}>
+    <Section name="episodes" title={ownPosters ? undefined : 'Episodes'}>
       {ownPosters ? (
         <MediaRow
+          id="seasons"
           title="Episodes"
           shape="poster"
           itemClass="basis-[7rem] sm:basis-[8rem] lg:basis-[8.5rem]"
@@ -540,6 +568,8 @@ function Seasons({
               <ItemMenu key={s.Id} item={s} onPage>
                 <button
                   type="button"
+                  data-ui="season-poster"
+                  data-selected={selected || undefined}
                   onClick={() => setSeasonId(s.Id!)}
                   className="group/season w-full space-y-2 text-left"
                 >
@@ -564,7 +594,10 @@ function Seasons({
                       )}
                     />
                     {s.UserData?.Played && (
-                      <span className="absolute right-1.5 top-1.5 flex size-5 items-center justify-center rounded-full bg-brand-500 text-white">
+                      <span
+                        data-ui="watched-badge"
+                        className="absolute right-1.5 top-1.5 flex size-5 items-center justify-center rounded-full bg-brand-500 text-white"
+                      >
                         <BiCheck />
                       </span>
                     )}
@@ -592,12 +625,17 @@ function Seasons({
         />
       )}
       {season?.Overview && (
-        <p className="max-w-3xl select-text text-sm text-gray-300">
+        <p
+          data-ui="season-overview"
+          className="max-w-3xl select-text text-sm text-gray-300"
+        >
           {season.Overview}
         </p>
       )}
       {summary && layout === 'list' && (
-        <p className="text-sm text-[--muted]">{summary}</p>
+        <p data-ui="season-summary" className="text-sm text-[--muted]">
+          {summary}
+        </p>
       )}
       {layout === 'row' ? (
         loading ? (
@@ -611,7 +649,14 @@ function Seasons({
               itemClass={ROW_WIDTH}
               startIndex={focusIndex >= 0 ? focusIndex : upToIndex(items)}
               header={
-                summary && <p className="text-sm text-[--muted]">{summary}</p>
+                summary && (
+                  <p
+                    data-ui="season-summary"
+                    className="text-sm text-[--muted]"
+                  >
+                    {summary}
+                  </p>
+                )
               }
               action={
                 summary &&
@@ -676,6 +721,8 @@ function SeasonPills({
           <CarouselItem key={s.Id} className="basis-auto">
             <ItemMenu item={s} onPage>
               <Button
+                data-ui="season-pill"
+                data-selected={s.Id === selected || undefined}
                 size="sm"
                 intent={s.Id === selected ? 'white' : 'gray-subtle'}
                 className="rounded-full"
@@ -816,6 +863,7 @@ function Members({ parent }: { parent: BaseItemDto }) {
   );
   return (
     <Section
+      name="collection"
       title="In this collection"
       action={<KindTabs types={types} onChange={setTypes} />}
     >
@@ -857,8 +905,11 @@ function Details({ item }: { item: BaseItemDto }) {
   ).filter(([, value]) => !!value);
   if (!rows.length) return null;
   return (
-    <Section title="Details">
-      <dl className="grid max-w-5xl grid-cols-1 gap-x-10 gap-y-4 sm:grid-cols-2 xl:grid-cols-3">
+    <Section name="details" title="Details">
+      <dl
+        data-ui="item-details"
+        className="grid max-w-5xl grid-cols-1 gap-x-10 gap-y-4 sm:grid-cols-2 xl:grid-cols-3"
+      >
         {rows.map(([label, value]) => (
           <div key={label}>
             <dt className="text-xs uppercase tracking-wide text-[--muted]">
@@ -882,6 +933,7 @@ function Similar({ itemId }: { itemId: string }) {
     <div ref={ref} className="min-h-[2rem]">
       {near && (
         <MediaRow
+          id="similar"
           title="More like this"
           shape="poster"
           loading={similar.isLoading}

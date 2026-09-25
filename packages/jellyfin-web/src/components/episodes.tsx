@@ -70,7 +70,10 @@ function EpisodeNumber({
   const number = episodeNumber(episode);
   if (number == null) return null;
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-black/55">
+    <div
+      data-ui="episode-number"
+      className="absolute inset-0 flex items-center justify-center bg-black/55"
+    >
       <span
         className={cn(
           'font-bold tabular-nums text-white/90 drop-shadow-lg transition-opacity group-hover/episode:opacity-0',
@@ -116,6 +119,7 @@ function Thumb({
   const progress = progressOf(episode);
   return (
     <div
+      data-ui="episode-image"
       className={cn(
         'relative aspect-video overflow-hidden bg-gray-900 ring-1 ring-white/5',
         className
@@ -137,7 +141,7 @@ function Thumb({
         </div>
       )}
       {unavailable && (
-        <div className="absolute left-1.5 top-1.5">
+        <div data-ui="episode-status" className="absolute left-1.5 top-1.5">
           <Badge size="sm" intent="gray-solid">
             {unavailable}
           </Badge>
@@ -198,12 +202,18 @@ function Head({
   const played = !!episode.UserData?.Played;
   const clamp = oneLine ? 'line-clamp-1' : 'line-clamp-2';
   return (
-    <div className={cn('min-w-0', className)}>
+    <div data-ui="episode-head" className={cn('min-w-0', className)}>
       <div className="flex items-center gap-2">
-        <p className="min-w-0 flex-1 truncate text-xs text-[--muted] sm:text-sm">
+        <p
+          data-ui="episode-kicker"
+          className="min-w-0 flex-1 truncate text-xs text-[--muted] sm:text-sm"
+        >
           <Kicker episode={episode} />
         </p>
-        <div className="relative z-[1] flex flex-none items-center gap-1.5">
+        <div
+          data-ui="episode-actions"
+          className="relative z-[1] flex flex-none items-center gap-1.5"
+        >
           <OverviewInfo
             title={seasonEpisodeTitle(episode)}
             line={episodeLine(episode)}
@@ -239,6 +249,7 @@ function Head({
       {play ? (
         <button
           type="button"
+          data-ui="episode-title"
           onClick={play}
           className="mt-0.5 text-left text-sm font-semibold outline-none after:absolute after:inset-0 after:rounded-xl after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-white/60 sm:text-base"
         >
@@ -248,6 +259,7 @@ function Head({
         </button>
       ) : (
         <p
+          data-ui="episode-title"
           className={cn('mt-0.5 text-sm font-semibold sm:text-base', clamp)}
           title={oneLine ? title : undefined}
         >
@@ -268,6 +280,7 @@ function Synopsis({
   if (!episode.Overview) return null;
   return (
     <p
+      data-ui="episode-synopsis"
       className={cn(
         'whitespace-pre-line text-sm leading-snug text-white/60',
         className
@@ -288,7 +301,11 @@ export function EpisodeCard({
   const play = usePlay(episode);
   return (
     <ItemMenu item={episode} onPage>
-      <div className="group/episode relative space-y-2">
+      <div
+        data-ui="episode-card"
+        data-highlighted={highlighted || undefined}
+        className="group/episode relative space-y-2"
+      >
         <Thumb
           episode={episode}
           playable={!!play}
@@ -315,6 +332,8 @@ function EpisodeListItem({
   return (
     <ItemMenu item={episode} onPage>
       <div
+        data-ui="episode-list-item"
+        data-highlighted={highlighted || undefined}
         className={cn(
           'group/episode relative grid grid-cols-[40%_minmax(0,1fr)] gap-x-3 gap-y-2 rounded-xl p-2 transition-colors hover:bg-white/[0.04] sm:grid-cols-[13rem_minmax(0,1fr)] sm:grid-rows-[auto_1fr] sm:gap-x-4 sm:gap-y-1',
           highlighted && 'bg-white/[0.06] ring-1 ring-inset ring-brand-400'
@@ -355,6 +374,7 @@ export function EpisodeList({
 }) {
   return (
     <div
+      data-ui="episode-list"
       className={cn(
         '-mx-2 grid gap-x-6 gap-y-1',
         columns && 'xl:grid-cols-2 min-[1800px]:grid-cols-3'

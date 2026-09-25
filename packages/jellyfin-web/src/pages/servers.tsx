@@ -15,10 +15,15 @@ import {
   serverAddress,
   type SavedServer,
 } from '../lib/servers';
-import { ErrorLine, FADE, FormLink, RISE, Screen, useShake } from './sign-in';
-
-const CARD =
-  'mx-auto w-full max-w-sm space-y-4 rounded-2xl border border-white/10 bg-gray-950/80 p-6 shadow-xl';
+import {
+  AUTH_CARD,
+  ErrorLine,
+  FADE,
+  FormLink,
+  RISE,
+  Screen,
+  useShake,
+} from './sign-in';
 
 function AddServer({
   onAdded,
@@ -46,9 +51,16 @@ function AddServer({
   };
 
   return (
-    <form ref={scope} onSubmit={submit} className={CARD}>
+    <form
+      ref={scope}
+      onSubmit={submit}
+      data-ui="auth-card"
+      className={AUTH_CARD}
+    >
       <div className="space-y-1 text-center">
-        <h1 className="text-xl font-semibold">Add a server</h1>
+        <h1 data-ui="page-title" className="text-xl font-semibold">
+          Add a server
+        </h1>
         <p className="text-sm text-[--muted]">
           The address you open the web app at, or the server&apos;s own address.
         </p>
@@ -89,12 +101,15 @@ function ServerList({
   onAdd(): void;
 }) {
   return (
-    <div className={CARD}>
-      <h1 className="text-center text-xl font-semibold">Choose a server</h1>
+    <div data-ui="auth-card" className={AUTH_CARD}>
+      <h1 data-ui="page-title" className="text-center text-xl font-semibold">
+        Choose a server
+      </h1>
       <ul className="space-y-2">
         {servers.map((server) => (
           <li
             key={server.base}
+            data-ui="server"
             className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 pr-2 transition-colors hover:bg-white/10"
           >
             <button
