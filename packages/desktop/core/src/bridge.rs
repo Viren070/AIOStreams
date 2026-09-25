@@ -125,6 +125,7 @@ pub const OBSERVED: &[(&str, Kind)] = &[
     ("aid", Kind::String),
     ("sid", Kind::String),
     ("track-list", Kind::Json),
+    ("chapter-list", Kind::Json),
     ("video-params", Kind::Json),
 ];
 
