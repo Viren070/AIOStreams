@@ -5,6 +5,7 @@
     "config-expressions",
     "custom-formatter",
     "templates",
-    "addon-protocol"
+    "addon-protocol",
+    "jellyfin-extensions"
   ]
 }
