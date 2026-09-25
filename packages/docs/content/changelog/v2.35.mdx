@@ -1,6 +1,6 @@
 ---
 title: A Jellyfin server, audio and subtitle tracks
-description: Watch in Jellyfin apps or a built-in web app with synced history, filter and format on single audio and subtitle tracks, and keep busy instances responsive.
+description: Watch in Jellyfin apps, a web app or the new desktop app with synced history, filter on single audio and subtitle tracks, and keep busy instances responsive.
 date: 2026-09-24
 version: 2.35.0
 ---
@@ -15,7 +15,8 @@ versions to pick from. Continue Watching, Next Up and skip-intro buttons work as
 any Jellyfin server, everyone in a household can have their own profile, and addons can act
 as **trackers**. A tracker records what you watch and brings back what you watched
 elsewhere. The server also comes with its own **web app**, for browsing and playing in a
-browser.
+browser, and a **desktop app** for Windows and Mac that signs in to it and plays what a
+browser can't.
 
 For everyone, media info now keeps **every audio and subtitle track** a file was probed
 with. The formatter and stream expressions can ask for an English forced subtitle or a
@@ -60,8 +61,9 @@ household's devices. On a TV, use **Quick Connect** instead: pick it on the app'
 screen and type the six-digit code the app shows into the Connect tab. The plain **Server
 address** (`https://aiostreams.example.com/jellyfin`) works too, with the **Username** shown
 there: your configuration's UUID, or its alias if you gave it one through a
-[profile](/changelog/v2.32#configuration-profiles). The
-[Jellyfin guide](/guides/jellyfin#what-to-type-at-a-glance) has every combination.
+[profile](/changelog/v2.32#configuration-profiles). With an alias, the picker address is
+short too, `https://aiostreams.example.com/jellyfin/u/<alias>`, so you can type it on a TV.
+The [Jellyfin guide](/guides/jellyfin#what-to-type-at-a-glance) has every combination.
 
 ### Browsing
 
@@ -164,13 +166,19 @@ who is watching.
 ![The web app's home page on a desktop, with a featured show above Continue Watching, and the same app on a phone beside it](/changelog/v2.35/web-app.webp)
 
 - **Home** has what you are watching, Next Up, episodes airing soon and a row for each
-  catalog.
+  catalog. The featured title at the top rotates, or can follow the card you point at.
 - **Discover** browses any catalog by type and genre. Switching between Movies and Shows
   takes you to the same catalog for the other type, such as from popular movies to popular
   shows.
 - Show pages list seasons with air dates, and cast and crew link to a page for each person.
 - The **player** has audio and subtitle tracks, playback speed, and skip buttons, with intros
-  and credits marked on the seek bar.
+  and credits marked on the seek bar. It switches to another version where you are, fits,
+  crops or stretches the picture, and steps to the previous or next episode. Something you
+  were partway through resumes in the version you were watching.
+- **Next episode.** Near the end, the player offers the next episode and can play it on its
+  own, picking the version from the same release where there is one.
+- **Subtitles out of time** move with `z` and `x`, or sync to a line: tap once when you hear
+  it and again when it shows. The fix is remembered for each version.
 - **Activity** is your watch history, where you can mark things unwatched or remove them.
   The primary user also sees everyone's history and what each person is playing right now.
 
@@ -238,14 +246,38 @@ who is watching.
 ![Three phones showing the web app's home page, a show page and a movie's version list](/changelog/v2.35/web-app-phones.webp)
 
 Like the apps, the web app plays streams as they are, so a browser only plays what it can
-decode. For anything else, copy the stream link or open it in an external player, which you
-can set in the web app's settings. Jellyfin Desktop and Jellyfin for Android load the web
-app too, but play through their own players, so everything plays there. The
+decode. For anything else, copy the stream link, open it in an external player, which you
+can set in the web app's settings, or use the [desktop app](#the-desktop-app). Jellyfin
+Desktop and Jellyfin for Android load the web app too, but play through their own players,
+so everything plays there. The
 [Jellyfin guide](/guides/jellyfin#in-jellyfins-desktop-and-android-apps) covers what to
 expect in each.
 
-The web app uses your addon's name and logo, and poster size and the featured row follow you
-to every device.
+**Settings** has a page of its own: audio and subtitle languages, how subtitles look, the
+next-episode prompt, what home features and a **Theme** with your own colours and custom
+CSS. Languages, home and the theme are saved to your account, so they follow you to every
+device, and Jellyfin apps use your languages too. The web app also uses your addon's name
+and logo.
+
+### The desktop app
+
+The desktop app is a Jellyfin app for Windows and Mac. It signs in to your configuration's
+Jellyfin server like any other app and shows the same web app in a window of its own, with
+[mpv](https://mpv.io) playing the video. So it plays what a browser can't: MKV files, HEVC
+and AV1 video, Dolby and DTS audio, and subtitles with their own styling. On Windows, HDR
+video plays in HDR. Your addons still run on your AIOStreams instance, and the app only
+sees them through the server, as libraries and versions.
+
+- **Download it** from the [desktop app's release](https://github.com/Viren070/AIOStreams/releases/tag/desktop),
+  as an installer or a portable copy on Windows and an installer or app on a Mac.
+- **Sign in** with an address from the Connect tab. It works with any Jellyfin server, so it
+  can hold other servers besides yours.
+- **It keeps itself up to date**, and can follow nightly builds instead of releases.
+
+<Callout type="warn">
+  The desktop app is in **alpha** and is released separately from AIOStreams. The
+  [desktop app guide](/guides/desktop-app) covers downloading, signing in and its settings.
+</Callout>
 
 ### API keys
 
