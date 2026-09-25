@@ -1,7 +1,19 @@
 import { test, describe, mock } from 'node:test';
 import assert from 'node:assert/strict';
-import { Headers } from 'undici';
-import { parseRetryAfter, RateLimitedError, rateLimitKey } from './http.js';
+import {
+  getGlobalDispatcher,
+  Headers,
+  MockAgent,
+  setGlobalDispatcher,
+} from 'undici';
+import { settingsStore } from '../config/index.js';
+import { SettingsRepository } from '../db/repositories/settings.js';
+import {
+  makeRequest,
+  parseRetryAfter,
+  RateLimitedError,
+  rateLimitKey,
+} from './http.js';
 
 describe('parseRetryAfter', () => {
   test('parses delay-seconds', () => {
@@ -86,5 +98,38 @@ describe('rateLimitKey', () => {
       rateLimitKey(url, new Headers(), '0'),
       rateLimitKey(url, new Headers(), '1')
     );
+  });
+});
+
+describe('makeRequest', () => {
+  test('skips the network while an endpoint is cooling down', async (t) => {
+    mock.method(SettingsRepository, 'getAll', async () => []);
+    mock.method(SettingsRepository, 'getVersion', async () => 0);
+    await settingsStore.initialise();
+    const agent = new MockAgent();
+    agent.disableNetConnect();
+    const previous = getGlobalDispatcher();
+    setGlobalDispatcher(agent);
+    t.after(() => setGlobalDispatcher(previous));
+    let hits = 0;
+    agent
+      .get('https://indexer.test')
+      .intercept({ path: '/api?apikey=one' })
+      .reply(() => {
+        hits++;
+        return {
+          statusCode: 429,
+          responseOptions: { headers: { 'Retry-After': '60' } },
+        };
+      })
+      .persist();
+
+    for (let i = 0; i < 2; i++) {
+      await assert.rejects(
+        makeRequest('https://indexer.test/api?apikey=one', { timeout: 1000 }),
+        RateLimitedError
+      );
+    }
+    assert.equal(hits, 1);
   });
 });
