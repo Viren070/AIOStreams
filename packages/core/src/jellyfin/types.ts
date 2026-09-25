@@ -54,6 +54,8 @@ export interface AiostreamsSourceExtension {
   filename?: string;
   externalUrl?: string;
   type: string;
+  /** Stremio's: the next episode's version with the same group plays on. */
+  bingeGroup?: string;
 }
 
 export interface MediaSourceRecord {

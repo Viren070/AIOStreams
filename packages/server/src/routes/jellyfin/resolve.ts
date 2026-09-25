@@ -19,6 +19,7 @@ import {
   isMemoFresh,
   resolveByItem,
   sourceRecordFrom,
+  generateBingeGroup,
   writePlaybackMemo,
   type ContentDescriptor,
   type MediaSourceRecord,
@@ -291,7 +292,7 @@ async function resolveUncached(
   const top = playable.slice(0, maxVersionsFor(ctx));
 
   const sources: MediaSourceRecord[] = [];
-  for (const raw of top) {
+  for (const [index, raw] of top.entries()) {
     const stream = asLive(raw);
     const formatted = await format(stream);
     sources.push(
@@ -300,7 +301,8 @@ async function resolveUncached(
         stream,
         formatted,
         labelFrom(formatted, stream),
-        addonSubtitles
+        addonSubtitles,
+        generateBingeGroup(stream, index, ctx.userData)
       )
     );
   }

@@ -127,7 +127,8 @@ export function containerOf(stream: ParsedStream): string {
 
 export function extensionFor(
   stream: ParsedStream,
-  formatted: { name: string; description: string }
+  formatted: { name: string; description: string },
+  bingeGroup?: string
 ): AiostreamsSourceExtension {
   const pf = stream.parsedFile;
   return {
@@ -152,6 +153,7 @@ export function extensionFor(
     mediaInfoQuality: pf?.mediaInfoQuality,
     filename: stream.filename,
     type: stream.type,
+    bingeGroup,
   };
 }
 
@@ -170,7 +172,8 @@ export function sourceRecordFrom(
   stream: ParsedStream,
   formatted: { name: string; description: string },
   label: string,
-  addonSubtitles: SubtitleTrack[]
+  addonSubtitles: SubtitleTrack[],
+  bingeGroup?: string
 ): MediaSourceRecord {
   const identity = stream.id || stream.url || JSON.stringify(stream.releaseKey);
   return {
@@ -187,7 +190,7 @@ export function sourceRecordFrom(
     subtitles: mergeSubtitleTracks(stream, addonSubtitles),
     videoHash: stream.videoHash,
     live: stream.type === 'live',
-    extension: extensionFor(stream, formatted),
+    extension: extensionFor(stream, formatted, bingeGroup),
   };
 }
 
