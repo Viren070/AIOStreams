@@ -14,6 +14,7 @@ import { shouldProxyStream } from './proxifier.js';
 import { isExternalDebridFailover } from '../main/play-chain.js';
 import { PLAYBACK_PATH_PREFIX } from '../debrid/utils.js';
 import { arrayMerge } from '../parser/merge.js';
+import { stripRepostSuffixes } from '../parser/title.js';
 
 type MergeOptions = NonNullable<NonNullable<UserData['deduplicator']>['merge']>;
 type FailoverVariant = NonNullable<ParsedStream['failoverVariants']>[number];
@@ -142,7 +143,9 @@ class StreamDeduplicator {
       const currentStreamKeyStrings: string[] = [];
 
       if (deduplicationKeys.includes('filename') && stream.filename) {
-        let normalisedFilename = stream.filename
+        // Strip repost suffixes first: in `Name.mkv-xpost` the extension is
+        // only at the end once the suffix is gone.
+        let normalisedFilename = stripRepostSuffixes(stream.filename)
           .replace(
             /(mkv|mp4|avi|mov|wmv|flv|webm|m4v|mpg|mpeg|3gp|3g2|m2ts|ts|vob|ogv|ogm|divx|xvid|rm|rmvb|asf|mxf|mka|mks|mk3d|webm|f4v|f4p|f4a|f4b)$/i,
             ''
