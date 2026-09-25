@@ -12,7 +12,7 @@ import {
   useRefreshAll,
   useSegments,
 } from '../lib/queries';
-import { lastVersions, playableSources } from '../lib/use-play';
+import { hasLastingId, lastVersions, playableSources } from '../lib/use-play';
 import {
   directUrl,
   externalPlayerTemplate,
@@ -177,8 +177,8 @@ function useReporting(
   const { started, paused } = player.state;
 
   React.useEffect(() => {
-    if (started) lastVersions.set(item.Id!, source.Id!);
-  }, [started, item.Id, source.Id]);
+    if (started && hasLastingId(source)) lastVersions.set(item.Id!, source.Id!);
+  }, [started, item.Id, source]);
 
   React.useEffect(() => {
     if (!started) return;

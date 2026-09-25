@@ -62,7 +62,6 @@ import { stremioStreamRateLimiter } from '../../middlewares/ratelimit.js';
 import { StaticFiles } from '../../utils/static-errors.js';
 import {
   ANDROID_PLAYER_CLIENT,
-  isWebApp,
   type JellyfinRequestContext,
 } from './context.js';
 import { getMetaLoose, resolveMarkerId, resolvePlayback } from './resolve.js';
@@ -600,8 +599,6 @@ export async function nextUpForSeries(
 function resolveOnOpen(ctx: JellyfinRequestContext): boolean {
   // An API key looks items up and never plays them.
   if (ctx.apiKey) return false;
-  // The web app asks for versions when play is pressed.
-  if (isWebApp(ctx)) return false;
   switch (appConfig.jellyfin.resolveOnOpen) {
     case 'always':
       return true;
@@ -694,7 +691,7 @@ export async function detailItem(
     forceResolve?: boolean;
     requestedMsid?: string;
     overrideId?: string;
-    /** Batch lookups ask for metadata, not a version list, so they never resolve. */
+    /** Lookups that did not ask for a version list never resolve. */
     resolve?: boolean;
   } = {}
 ): Promise<JellyfinItem | null> {

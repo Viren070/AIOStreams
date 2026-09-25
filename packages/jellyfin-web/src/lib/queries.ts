@@ -16,6 +16,7 @@ import type {
   MediaSegmentDtoQueryResult,
   PickableUser,
   PlaybackInfoResponse,
+  SourceInfo,
   WebActivity,
 } from './types';
 
@@ -243,12 +244,39 @@ export function useSearch(term: string) {
   });
 }
 
+/** What the item pages show beyond a row's fields. Jellyfin builds `ExternalUrls` from `ProviderIds`. */
+const DETAIL_FIELDS = [
+  'AirTime',
+  'ExternalUrls',
+  'Genres',
+  'Overview',
+  'People',
+  'PrimaryImageAspectRatio',
+  'ProductionLocations',
+  'ProviderIds',
+  'RemoteTrailers',
+  'Studios',
+  'Taglines',
+].join(',');
+
+/**
+ * Looked up by id, not at `/Items/{id}`, which always carries the versions and
+ * so makes a server run its addons for every page.
+ */
 export function useItem(itemId: string) {
   const { client, user } = useSession();
   return useQuery({
     queryKey: [...useKey(), 'item', itemId],
-    queryFn: () =>
-      client.get<BaseItemDto>(`/Items/${itemId}`, { userId: user.Id }),
+    queryFn: async () => {
+      const { Items } = await client.get<BaseItemDtoQueryResult>('/Items', {
+        userId: user.Id,
+        Ids: itemId,
+        Fields: DETAIL_FIELDS,
+      });
+      const item = Items?.[0];
+      if (!item) throw new Error('This item was not found');
+      return item;
+    },
   });
 }
 
@@ -315,23 +343,28 @@ const DEVICE_PROFILE = {
   SubtitleProfiles: [{ Format: 'vtt', Method: 'External' }],
 };
 
-/**
- * `Refresh` reruns the addons even when the server has a recent result. Naming
- * a version gets its subtitles from subtitle addons too.
- */
+/** The first version carries the item's id; the web app keys every version by its own. */
+function withOwnId(source: SourceInfo): SourceInfo {
+  const id = source.aiostreams?.id;
+  return id ? { ...source, Id: id } : source;
+}
+
+/** Naming a version also gets its subtitles from subtitle addons. */
 function usePlaybackInfoRequest() {
   const { client, user } = useSession();
-  return (itemId: string, refresh = false, sourceId?: string) =>
-    client.post<PlaybackInfoResponse>(
+  return async (itemId: string, refresh = false, sourceId?: string) => {
+    const info = await client.post<PlaybackInfoResponse>(
       `/Items/${itemId}/PlaybackInfo`,
       {
         UserId: user.Id,
         DeviceProfile: DEVICE_PROFILE,
+        ...(sourceId ? { MediaSourceId: sourceId } : { Fresh: true }),
         ...(refresh && { Refresh: true }),
-        ...(sourceId && { MediaSourceId: sourceId }),
       },
       { userId: user.Id }
     );
+    return { ...info, MediaSources: info.MediaSources?.map(withOwnId) };
+  };
 }
 
 export function usePlaybackInfoOptions() {

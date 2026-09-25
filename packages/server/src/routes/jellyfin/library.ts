@@ -415,10 +415,12 @@ async function handleItems(
   const engine = await ctx.engine();
 
   if (ids.length) {
-    // One id is a detail fetch and must resolve; several are a metadata
-    // lookup filling a row, where resolving would run the stream pipeline
-    // once per id.
-    const resolve = ids.length === 1 ? undefined : false;
+    // Versions come only when asked for, as Jellyfin's do, and only for one
+    // id: resolving a row would run the stream pipeline once per id.
+    const wantsSources = qlist(req, 'Fields').some(
+      (f) => f.toLowerCase() === 'mediasources'
+    );
+    const resolve = ids.length === 1 && wantsSources ? undefined : false;
     const built = await mapLimited(ids.slice(0, 200), ROW_CONCURRENCY, (id) =>
       itemForId(req, ctx, id, { resolve }).catch(() => null)
     );

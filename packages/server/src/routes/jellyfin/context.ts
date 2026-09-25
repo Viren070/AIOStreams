@@ -51,13 +51,6 @@ const logger = createLogger('jellyfin');
  */
 export const ANDROID_PLAYER_CLIENT = 'Jellyfin for Android';
 
-/** The web app's client names, in a browser and in the desktop app. */
-const WEB_APP_CLIENTS = new Set(['AIOStreams Web', 'AIOStreams Desktop']);
-
-export function isWebApp(ctx: JellyfinRequestContext): boolean {
-  return WEB_APP_CLIENTS.has(ctx.client.name);
-}
-
 export interface JellyfinRequestContext {
   uuid: string;
   encryptedPassword: string;

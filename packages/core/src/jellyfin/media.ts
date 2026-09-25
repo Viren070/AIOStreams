@@ -559,7 +559,8 @@ export function buildMediaSource(
     Bitrate: record.bitrate,
     DefaultAudioStreamIndex: audioIndex >= 0 ? audioIndex : undefined,
   };
-  if (opts.includeExtension) source.aiostreams = record.extension;
+  if (opts.includeExtension)
+    source.aiostreams = { ...record.extension, id: record.msid };
   return source;
 }
 

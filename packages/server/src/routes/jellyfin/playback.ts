@@ -21,7 +21,6 @@ import {
   jfOptional,
   param,
   qs,
-  isWebApp,
   type JellyfinRequestContext,
 } from './context.js';
 import {
@@ -137,12 +136,14 @@ async function ensureMemo(
 }
 
 /**
- * The web app resolves when its version list opens rather than when an item
- * opens, and can ask for a new run to retry addons that failed.
+ * A client that lists versions here rather than from the item page can ask
+ * for a list no older than the reuse window (`Fresh`) or a new run that
+ * retries failed addons (`Refresh`). A named version keeps its list.
  */
 function listingOptions(req: Request, loc: Located) {
-  if (!req.jf || !isWebApp(loc.ctx) || loc.requestedMsid) return {};
-  return { current: true, force: bodyOf(req).Refresh === true };
+  if (!req.jf || loc.requestedMsid) return {};
+  const body = bodyOf(req);
+  return { current: body.Fresh === true, force: body.Refresh === true };
 }
 
 function pickSource(
@@ -194,9 +195,7 @@ async function playbackInfo(req: Request, res: Response) {
     ? loc.requestedMsid
     : undefined;
   const sources = mediaSourcesFrom(req, loc.ctx, memo, {
-    // Other clients play the item's own id; the web app keeps a version's id.
-    firstId:
-      requested ?? (isWebApp(loc.ctx) ? memo.sources[0].msid : loc.itemId),
+    firstId: requested ?? loc.itemId,
     requestedMsid: requested,
     profile,
     hasSegments: hasSegments(loc.ctx, memo),

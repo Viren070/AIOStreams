@@ -56,6 +56,8 @@ export interface AiostreamsSourceExtension {
   type: string;
   /** Stremio's: the next episode's version with the same group plays on. */
   bingeGroup?: string;
+  /** The version's own id, as the first version's `Id` is the item's. Set when sent. */
+  id?: string;
 }
 
 export interface MediaSourceRecord {

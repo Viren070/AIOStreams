@@ -11,6 +11,14 @@ export const lastVersions = storedMap<string>(
   500
 );
 
+/**
+ * Whether a version's id names the same release in the next listing: a server
+ * that describes its versions without their own ids numbers them by position.
+ */
+export function hasLastingId(source: SourceInfo): boolean {
+  return !source.aiostreams || !!source.aiostreams.id;
+}
+
 /** Versions that can play; notices from addons carry text only. */
 export function playableSources(
   info: PlaybackInfoResponse | undefined
