@@ -2,6 +2,14 @@ import React from 'react';
 import { storage } from '../storage';
 import { subtitleUrl, textSubtitles } from '../playback';
 import {
+  onSettingsChange,
+  readDesktopSettings,
+  type DesktopSettings,
+  type SubtitleStyle,
+} from '../settings';
+import type { PlaybackPrefs } from '../user-config';
+import { MPV_OUTLINE, mpvColor, subtitleScale } from '../subtitle-style';
+import {
   initialState,
   storedVolume,
   trackLabel,
@@ -18,6 +26,13 @@ export type ShellMessage =
   | { type: 'mpv-event'; name: string }
   | { type: 'mpv-ended'; reason: string; error: string | null }
   | { type: 'fullscreen'; value: boolean }
+  | {
+      type: 'app-info';
+      app: string;
+      platform: string;
+      mpv: string | null;
+      ffmpeg: string | null;
+    }
   | { type: 'error'; message: string };
 
 /** The AIOStreams desktop app's bridge to mpv. */
@@ -141,13 +156,12 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
     shell.send({ type: 'mpv-sync' });
     set('volume', Math.round(volume * 100));
     set('mute', muted);
-    command(
-      'loadfile',
-      url,
-      'replace',
-      -1,
-      startMs ? `start=${(startMs / 1000).toFixed(3)}` : ''
-    );
+    applySubtitleStyle(latest.current.subtitleStyle);
+    const options = [
+      ...(startMs ? [`start=${(startMs / 1000).toFixed(3)}`] : []),
+      ...trackOptions(latest.current.prefs ?? {}),
+    ];
+    command('loadfile', url, 'replace', -1, options.join(','));
     return () => {
       unsubscribe();
       command('stop');
@@ -186,4 +200,116 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
     setSubtitle: (id) => set('sid', id ? Number(id) : 'no'),
     toggleFullscreen: () => shell.send({ type: 'fullscreen' }),
   };
+}
+
+/**
+ * The user's languages and subtitle mode as mpv's per-file track choices.
+ * mpv matches a language across its two- and three-letter codes.
+ */
+function trackOptions(prefs: PlaybackPrefs): string[] {
+  const options: string[] = [];
+  if (prefs.AudioLanguagePreference)
+    options.push(`alang=${prefs.AudioLanguagePreference}`);
+  const slang = prefs.SubtitleLanguagePreference
+    ? [`slang=${prefs.SubtitleLanguagePreference}`]
+    : [];
+  switch (prefs.SubtitleMode) {
+    case 'None':
+      options.push('sid=no');
+      break;
+    case 'OnlyForced':
+      options.push('subs-fallback=no', 'subs-fallback-forced=always');
+      break;
+    case 'Always':
+      options.push(
+        ...slang,
+        'subs-fallback=yes',
+        'subs-with-matching-audio=yes'
+      );
+      break;
+    case 'Smart':
+      options.push(...slang, 'subs-with-matching-audio=no');
+      break;
+    default:
+      options.push(...slang);
+  }
+  return options;
+}
+
+function setProp(name: string, value: unknown) {
+  window.aiostreamsDesktop?.send({ type: 'mpv-set-prop', name, value });
+}
+
+export function applySubtitleStyle(style: SubtitleStyle | undefined): void {
+  if (!style) return;
+  setProp('sub-scale', subtitleScale(style));
+  setProp('sub-color', mpvColor(style.textColor));
+  setProp('sub-outline-color', mpvColor(style.outlineColor));
+  setProp('sub-outline-size', MPV_OUTLINE[style.outline]);
+  setProp(
+    'sub-back-color',
+    mpvColor(style.backgroundColor, style.backgroundOpacity)
+  );
+  setProp(
+    'sub-border-style',
+    style.backgroundOpacity > 0 ? 'background-box' : 'outline-and-shadow'
+  );
+  setProp('sub-ass-override', style.overrideStyled ? 'force' : 'scale');
+}
+
+function applyDesktopSettings(settings: DesktopSettings): void {
+  setProp('hwdec', settings.hardwareDecoding ? 'auto-safe' : 'no');
+  setProp(
+    'audio-channels',
+    settings.audioChannels === 'auto' ? 'auto-safe' : settings.audioChannels
+  );
+  setProp('audio-spdif', settings.passthrough ? 'ac3,eac3,dts-hd,truehd' : '');
+}
+
+/** Keeps mpv in step with this device's settings, and handles Esc. */
+export function ShellSetup() {
+  React.useEffect(() => {
+    const shell = window.aiostreamsDesktop;
+    if (!shell) return;
+    let fullscreen = false;
+    const apply = () => applyDesktopSettings(readDesktopSettings());
+    apply();
+    const unsubscribeSettings = onSettingsChange(apply);
+    const unsubscribe = shell.subscribe((m) => {
+      if (m.type === 'fullscreen') fullscreen = m.value;
+    });
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || !fullscreen || e.defaultPrevented) return;
+      if (readDesktopSettings().escExitsFullscreen)
+        shell.send({ type: 'fullscreen', value: false });
+    };
+    window.addEventListener('keydown', onKey);
+    shell.send({ type: 'mpv-sync' });
+    return () => {
+      unsubscribeSettings();
+      unsubscribe();
+      window.removeEventListener('keydown', onKey);
+    };
+  }, []);
+  return null;
+}
+
+export type ShellInfo = Extract<ShellMessage, { type: 'app-info' }>;
+
+export function useShellInfo(): ShellInfo | null {
+  const [info, setInfo] = React.useState<ShellInfo | null>(null);
+  React.useEffect(() => {
+    const shell = window.aiostreamsDesktop;
+    if (!shell) return;
+    const unsubscribe = shell.subscribe((m) => {
+      if (m.type === 'app-info') setInfo(m);
+    });
+    shell.send({ type: 'app-info' });
+    return unsubscribe;
+  }, []);
+  return info;
+}
+
+export function openMpvConfig(): void {
+  window.aiostreamsDesktop?.send({ type: 'open-mpv-config' });
 }

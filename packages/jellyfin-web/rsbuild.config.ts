@@ -1,7 +1,11 @@
+import { readFileSync } from 'node:fs';
 import { defineConfig, loadEnv } from '@rsbuild/core';
 import { pluginReact } from '@rsbuild/plugin-react';
 
 const { parsed } = loadEnv({ prefixes: ['PUBLIC_'] });
+const { version } = JSON.parse(
+  readFileSync(new URL('../../package.json', import.meta.url), 'utf8')
+) as { version: string };
 
 const devServerPort = Number(parsed.PORT) || 21459;
 const backendBaseUrl =
@@ -30,6 +34,7 @@ export default defineConfig(({ envMode }) => {
     // Read by @aiostreams/ui components.
     'process.env.NEXT_PUBLIC_PLATFORM': JSON.stringify(''),
     __STANDALONE__: JSON.stringify(standalone),
+    __APP_VERSION__: JSON.stringify(version),
   };
   if (standalone) {
     return {

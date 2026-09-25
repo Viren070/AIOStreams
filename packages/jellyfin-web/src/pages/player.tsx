@@ -22,6 +22,9 @@ import { useBrowserPlayer } from '../lib/hosts/browser';
 import { useDesktopPlayer } from '../lib/hosts/jellyfin-desktop';
 import { useShellPlayer } from '../lib/hosts/shell';
 import type { PlayerController } from '../lib/player';
+import { useSubtitleStyle, type SubtitleStyle } from '../lib/settings';
+import { subtitleCss } from '../lib/subtitle-style';
+import { usePlaybackPrefs, type PlaybackPrefs } from '../lib/user-config';
 import { backdropUrl } from '../lib/images';
 import { goBack, to } from '../lib/paths';
 import { PlayerControls } from '../components/player-controls';
@@ -32,6 +35,7 @@ interface PlayerProps {
   source: SourceInfo;
   playSessionId: string | null;
   startMs: number;
+  prefs: PlaybackPrefs;
 }
 
 /**
@@ -63,6 +67,7 @@ export function PlayerPage({
 }) {
   const item = useItem(itemId);
   const info = usePlaybackInfo(itemId);
+  const playback = usePlaybackPrefs();
   usePlayerPage();
 
   // Pinned once found: a refreshed version list must not restart playback.
@@ -72,16 +77,17 @@ export function PlayerPage({
   > | null>(null);
   const sources = playableSources(info.data);
   const source = sources.find((s) => s.Id === sourceId) ?? sources[0];
-  if (!playing && item.data && source) {
+  if (!playing && item.data && source && !playback.isLoading) {
     setPlaying({
       item: item.data,
       source,
       playSessionId: info.data?.PlaySessionId ?? null,
+      prefs: playback.prefs,
     });
   }
 
   if (!playing) {
-    if (item.isLoading || info.isLoading) {
+    if (item.isLoading || info.isLoading || playback.isLoading) {
       return (
         <Cover item={item.data}>
           <LoadingSpinner />
@@ -103,7 +109,11 @@ export function PlayerPage({
 /** Reports the playback the way a Jellyfin client does once it starts. */
 function useReporting(
   player: PlayerController,
-  { item, source, playSessionId }: Omit<PlayerProps, 'startMs'>
+  {
+    item,
+    source,
+    playSessionId,
+  }: Pick<PlayerProps, 'item' | 'source' | 'playSessionId'>
 ) {
   const { client } = useSession();
   const state = React.useRef(player.state);
@@ -226,16 +236,39 @@ function Failure({
   );
 }
 
-function BrowserPlayer({ item, source, playSessionId, startMs }: PlayerProps) {
+function cueCss(style: SubtitleStyle): string {
+  const css = subtitleCss(style);
+  return `video::cue {
+    font-size: ${css.fontSize};
+    color: ${css.color};
+    background-color: ${css.backgroundColor};
+    text-shadow: ${css.textShadow};
+  }`;
+}
+
+function BrowserPlayer({
+  item,
+  source,
+  playSessionId,
+  startMs,
+  prefs,
+}: PlayerProps) {
   const { client } = useSession();
   const video = React.useRef<HTMLVideoElement>(null);
   const back = React.useCallback(() => goBack(to.item(item.Id!)), [item.Id]);
-  const player = useBrowserPlayer(video, { source, startMs, onEnded: back });
+  const subtitleStyle = useSubtitleStyle();
+  const player = useBrowserPlayer(video, {
+    source,
+    startMs,
+    onEnded: back,
+    prefs,
+  });
   const segments = useSegments(item.Id!);
   useReporting(player, { item, source, playSessionId });
 
   return (
     <div className="fixed inset-0 bg-black">
+      <style>{cueCss(subtitleStyle)}</style>
       <video
         ref={video}
         src={streamUrl(client, item.Id!, source, playSessionId)}
@@ -278,9 +311,16 @@ function BrowserPlayer({ item, source, playSessionId, startMs }: PlayerProps) {
  * mpv draws beneath the page, which stays transparent from the first paint;
  * a cover hides the wait for the first frame.
  */
-function NativePlayer({ item, source, playSessionId, startMs }: PlayerProps) {
+function NativePlayer({
+  item,
+  source,
+  playSessionId,
+  startMs,
+  prefs,
+}: PlayerProps) {
   const { client } = useSession();
   const back = React.useCallback(() => goBack(to.item(item.Id!)), [item.Id]);
+  const subtitleStyle = useSubtitleStyle();
   const useNativePlayer =
     playbackHost() === 'shell' ? useShellPlayer : useDesktopPlayer;
   const player = useNativePlayer({
@@ -290,6 +330,8 @@ function NativePlayer({ item, source, playSessionId, startMs }: PlayerProps) {
     source,
     startMs,
     onEnded: back,
+    prefs,
+    subtitleStyle,
   });
   const segments = useSegments(item.Id!);
   useReporting(player, { item, source, playSessionId });

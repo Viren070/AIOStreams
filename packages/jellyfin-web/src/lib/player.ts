@@ -1,6 +1,8 @@
 import React from 'react';
 import { storage } from './storage';
 import type { JellyfinClient } from './client';
+import type { SubtitleStyle } from './settings';
+import type { PlaybackPrefs } from './user-config';
 import type { BaseItemDto, MediaStream, SourceInfo } from './types';
 
 export interface Track {
@@ -44,6 +46,8 @@ export interface PlayerOptions {
   source: SourceInfo;
   startMs: number;
   onEnded(): void;
+  prefs?: PlaybackPrefs;
+  subtitleStyle?: SubtitleStyle;
 }
 
 /** For players drawn beneath the page, which load the stream themselves. */

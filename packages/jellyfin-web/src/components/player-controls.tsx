@@ -29,10 +29,10 @@ import { LoadingSpinner } from '@aiostreams/ui/loading-spinner';
 import { cn } from '@aiostreams/ui/core/styling';
 import { clock, itemSubtitle, itemTitle, ticksToMs } from '../lib/format';
 import type { PlayerController, Track } from '../lib/player';
+import { useSeekStep } from '../lib/settings';
 import type { BaseItemDto, MediaSegmentDto } from '../lib/types';
 
 const IDLE_MS = 2000;
-const SKIP_MS = 10_000;
 const RATES = [0.5, 0.75, 1, 1.25, 1.5, 2];
 const SEGMENT_LABEL: Record<string, string> = {
   Intro: 'Skip intro',
@@ -316,6 +316,9 @@ export function PlayerControls({
     latest.current.togglePlay();
   };
 
+  const [seekStep] = useSeekStep();
+  const stepMs = React.useRef(seekStep * 1000);
+  stepMs.current = seekStep * 1000;
   const seekBy = (delta: number) => {
     const { positionMs, durationMs } = latest.current.state;
     const target = Math.max(0, positionMs + delta);
@@ -330,10 +333,10 @@ export function PlayerControls({
       const actions: Record<string, () => void> = {
         ' ': togglePlay,
         k: togglePlay,
-        ArrowLeft: () => seekBy(-SKIP_MS),
-        j: () => seekBy(-SKIP_MS),
-        ArrowRight: () => seekBy(SKIP_MS),
-        l: () => seekBy(SKIP_MS),
+        ArrowLeft: () => seekBy(-stepMs.current),
+        j: () => seekBy(-stepMs.current),
+        ArrowRight: () => seekBy(stepMs.current),
+        l: () => seekBy(stepMs.current),
         ArrowUp: () => p.setVolume(Math.min(1, p.state.volume + 0.05)),
         ArrowDown: () => p.setVolume(Math.max(0, p.state.volume - 0.05)),
         m: p.toggleMute,
@@ -462,14 +465,14 @@ export function PlayerControls({
             {state.paused ? <LuPlay /> : <LuPause />}
           </ControlButton>
           <ControlButton
-            label="Back 10 seconds"
-            onClick={() => seekBy(-SKIP_MS)}
+            label={`Back ${seekStep} seconds`}
+            onClick={() => seekBy(-stepMs.current)}
           >
             <LuRotateCcw />
           </ControlButton>
           <ControlButton
-            label="Forward 10 seconds"
-            onClick={() => seekBy(SKIP_MS)}
+            label={`Forward ${seekStep} seconds`}
+            onClick={() => seekBy(stepMs.current)}
           >
             <LuRotateCw />
           </ControlButton>

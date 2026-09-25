@@ -8,6 +8,7 @@ import type { BaseItemDto, Branding } from './types';
 export const to = {
   home: '/',
   history: '/history',
+  settings: (tab?: string) => (tab ? `/settings?tab=${tab}` : '/settings'),
   search: (term?: string) =>
     term ? `/search?q=${encodeURIComponent(term)}` : '/search',
   discover: (

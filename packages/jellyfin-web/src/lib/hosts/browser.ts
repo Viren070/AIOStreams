@@ -1,6 +1,9 @@
 import React from 'react';
 import { storage } from '../storage';
 import { subtitleUrl, textSubtitles } from '../playback';
+import { sameLanguage } from '../languages';
+import type { PlaybackPrefs } from '../user-config';
+import type { MediaStream } from '../types';
 import {
   initialState,
   storedVolume,
@@ -11,6 +14,26 @@ import {
   type PlayerOptions,
   type PlayerState,
 } from '../player';
+
+/** The text subtitle the user's language and subtitle mode start with. */
+function preferredSubtitle(
+  subtitles: MediaStream[],
+  prefs: PlaybackPrefs
+): MediaStream | undefined {
+  const lang = prefs.SubtitleLanguagePreference;
+  switch (prefs.SubtitleMode) {
+    case 'None':
+      return undefined;
+    case 'OnlyForced':
+      return subtitles.find(
+        (s) => s.IsForced && (!lang || sameLanguage(lang, s.Language))
+      );
+    default:
+      return lang
+        ? subtitles.find((s) => sameLanguage(lang, s.Language))
+        : undefined;
+  }
+}
 
 function toggleDocumentFullscreen(): void {
   if (document.fullscreenElement) void document.exitFullscreen();
@@ -25,9 +48,19 @@ export function useBrowserPlayer(
   const { source, startMs } = opts;
   const [state, setState] = React.useState(() => initialState(source, startMs));
   const onEnded = useLatest(opts.onEnded);
+  const prefs = useLatest(opts.prefs);
   const subtitles = React.useMemo(() => textSubtitles(source), [source]);
   const patch = (next: Partial<PlayerState>) =>
     setState((s) => ({ ...s, ...next }));
+  const showSubtitle = (id: string | null) => {
+    const tracks = video.current?.textTracks;
+    if (!tracks) return;
+    subtitles.forEach((s, i) => {
+      const track = tracks[i];
+      if (track) track.mode = String(s.Index) === id ? 'showing' : 'disabled';
+    });
+    patch({ subtitle: id });
+  };
 
   React.useEffect(() => {
     const el = video.current;
@@ -46,6 +79,8 @@ export function useBrowserPlayer(
       loadedmetadata: () => {
         if (startMs) el.currentTime = startMs / 1000;
         patch({ durationMs: el.duration * 1000 || 0 });
+        const first = preferredSubtitle(subtitles, prefs.current ?? {});
+        if (first) showSubtitle(String(first.Index));
       },
       durationchange: () => patch({ durationMs: el.duration * 1000 || 0 }),
       playing: () => patch({ started: true, paused: false, waiting: false }),
@@ -117,15 +152,7 @@ export function useBrowserPlayer(
       if (v) v.playbackRate = rate;
     },
     setAudio: () => {},
-    setSubtitle: (id) => {
-      const tracks = el()?.textTracks;
-      if (!tracks) return;
-      subtitles.forEach((s, i) => {
-        const track = tracks[i];
-        if (track) track.mode = String(s.Index) === id ? 'showing' : 'disabled';
-      });
-      patch({ subtitle: id });
-    },
+    setSubtitle: showSubtitle,
     toggleFullscreen: toggleDocumentFullscreen,
   };
 }

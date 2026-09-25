@@ -17,6 +17,7 @@ import { ItemPage } from './pages/item';
 import { PersonPage } from './pages/person';
 import { HistoryPage } from './pages/history';
 import { PlayerPage } from './pages/player';
+import { SettingsPage } from './pages/settings';
 
 const rootRoute = createRootRoute({ component: Outlet });
 
@@ -37,6 +38,25 @@ const historyRoute = createRoute({
   path: '/history',
   component: HistoryPage,
 });
+
+const settingsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings',
+  validateSearch: (search: Record<string, unknown>) => ({
+    tab: search.tab == null ? '' : String(search.tab),
+  }),
+  component: SettingsRouteView,
+});
+
+function SettingsRouteView(): React.ReactElement {
+  const { tab } = settingsRoute.useSearch();
+  return (
+    <SettingsPage
+      tab={tab}
+      onTabChange={(next) => navigate(to.settings(next), { replace: true })}
+    />
+  );
+}
 
 const searchRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -150,6 +170,7 @@ const routeTree = rootRoute.addChildren([
   shellRoute.addChildren([
     homeRoute,
     historyRoute,
+    settingsRoute,
     searchRoute,
     discoverIndexRoute,
     discoverRoute,

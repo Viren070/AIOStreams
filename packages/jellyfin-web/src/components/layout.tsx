@@ -29,14 +29,12 @@ import {
   ConfirmationDialog,
   useConfirmationDialog,
 } from '@aiostreams/ui/shared/confirmation-dialog';
-import { useDisclosure } from '@aiostreams/ui/hooks/disclosure';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '../lib/session';
 import { usePickableUsers } from '../lib/queries';
 import { configureUrl, navigate, to } from '../lib/paths';
 import { UserAvatar } from './user-avatar';
 import { BrandLogo, useBranding } from './brand-logo';
-import { SettingsModal } from './settings';
 import { VersionPickerProvider } from './version-picker';
 
 const PAGE_FADE = {
@@ -86,7 +84,6 @@ export function WebLayout() {
   const users = usePickableUsers();
   const several = (users.data?.length ?? 0) > 1;
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const settings = useDisclosure(false);
   const confirmSignOut = useConfirmationDialog({
     title: 'Sign out',
     description: __STANDALONE__
@@ -128,7 +125,8 @@ export function WebLayout() {
     {
       name: 'Settings',
       iconType: BiCog,
-      onClick: settings.open,
+      isCurrent: pathname.startsWith('/settings'),
+      onClick: () => navigate(to.settings()),
     },
     ...(configure
       ? [
@@ -188,7 +186,6 @@ export function WebLayout() {
         </AppLayout>
       </AppLayout>
       <MobileNav items={items} menuItems={menuItems} />
-      <SettingsModal open={settings.isOpen} onOpenChange={settings.toggle} />
       <ConfirmationDialog {...confirmSignOut} />
     </AppSidebarProvider>
   );

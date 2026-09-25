@@ -229,3 +229,171 @@ export function lastCatalog(kind?: string): string | null {
   const stored = storage.get<Catalogs>(CATALOG_KEY);
   return (kind ? stored?.[kind] : stored?.last) ?? null;
 }
+
+type Valid<T> = readonly T[] | ((value: T) => boolean);
+
+function isValid<T>(value: T, valid?: Valid<T>): boolean {
+  if (!valid) return true;
+  return typeof valid === 'function' ? valid(value) : valid.includes(value);
+}
+
+/** A setting kept on this device; `fallback` is also what clears it. */
+function useDeviceSetting<T extends string | number | boolean>(
+  key: string,
+  fallback: T,
+  valid?: Valid<T>
+): [T, (value: T) => void] {
+  const read = React.useCallback(
+    () => readDeviceSetting(key, fallback, valid),
+    [key, fallback, valid]
+  );
+  const value = React.useSyncExternalStore(subscribe, read);
+  const set = React.useCallback(
+    (next: T) => {
+      if (next === fallback) storage.remove(key);
+      else storage.set(key, next);
+      announce();
+    },
+    [key, fallback]
+  );
+  return [value, set];
+}
+
+function readDeviceSetting<T>(key: string, fallback: T, valid?: Valid<T>): T {
+  const stored = storage.get<T>(key);
+  if (stored === null || typeof stored !== typeof fallback) return fallback;
+  return isValid(stored, valid) ? stored : fallback;
+}
+
+export const SEEK_STEPS = [5, 10, 15, 30] as const;
+const SEEK_STEP_KEY = 'aiostreams-web-seek-step';
+export const useSeekStep = () =>
+  useDeviceSetting<number>(SEEK_STEP_KEY, 10, SEEK_STEPS);
+
+export const SUBTITLE_SIZES = ['small', 'normal', 'large', 'huge'] as const;
+export type SubtitleSize = (typeof SUBTITLE_SIZES)[number];
+export const SUBTITLE_OUTLINES = ['none', 'thin', 'normal', 'thick'] as const;
+export type SubtitleOutline = (typeof SUBTITLE_OUTLINES)[number];
+
+const isHex = (value: string) => /^#[0-9a-f]{6}$/i.test(value);
+const isPercent = (value: number) => value >= 0 && value <= 100;
+
+const SUBTITLE_KEYS = {
+  size: 'aiostreams-web-subtitle-size',
+  textColor: 'aiostreams-web-subtitle-text-color',
+  outline: 'aiostreams-web-subtitle-outline',
+  outlineColor: 'aiostreams-web-subtitle-outline-color',
+  backgroundColor: 'aiostreams-web-subtitle-background-color',
+  backgroundOpacity: 'aiostreams-web-subtitle-background-opacity',
+  overrideStyled: 'aiostreams-web-subtitle-override-styled',
+} as const;
+
+export const useSubtitleSize = () =>
+  useDeviceSetting<SubtitleSize>(SUBTITLE_KEYS.size, 'normal', SUBTITLE_SIZES);
+export const useSubtitleTextColor = () =>
+  useDeviceSetting<string>(SUBTITLE_KEYS.textColor, '#ffffff', isHex);
+export const useSubtitleOutline = () =>
+  useDeviceSetting<SubtitleOutline>(
+    SUBTITLE_KEYS.outline,
+    'normal',
+    SUBTITLE_OUTLINES
+  );
+export const useSubtitleOutlineColor = () =>
+  useDeviceSetting<string>(SUBTITLE_KEYS.outlineColor, '#000000', isHex);
+export const useSubtitleBackgroundColor = () =>
+  useDeviceSetting<string>(SUBTITLE_KEYS.backgroundColor, '#000000', isHex);
+export const useSubtitleBackgroundOpacity = () =>
+  useDeviceSetting<number>(SUBTITLE_KEYS.backgroundOpacity, 0, isPercent);
+export const useSubtitleOverrideStyled = () =>
+  useDeviceSetting<boolean>(SUBTITLE_KEYS.overrideStyled, false);
+
+export interface SubtitleStyle {
+  size: SubtitleSize;
+  textColor: string;
+  outline: SubtitleOutline;
+  outlineColor: string;
+  backgroundColor: string;
+  /** 0 to 100; 0 draws no background. */
+  backgroundOpacity: number;
+  overrideStyled: boolean;
+}
+
+export function useSubtitleStyle(): SubtitleStyle {
+  const [size] = useSubtitleSize();
+  const [textColor] = useSubtitleTextColor();
+  const [outline] = useSubtitleOutline();
+  const [outlineColor] = useSubtitleOutlineColor();
+  const [backgroundColor] = useSubtitleBackgroundColor();
+  const [backgroundOpacity] = useSubtitleBackgroundOpacity();
+  const [overrideStyled] = useSubtitleOverrideStyled();
+  return React.useMemo(
+    () => ({
+      size,
+      textColor,
+      outline,
+      outlineColor,
+      backgroundColor,
+      backgroundOpacity,
+      overrideStyled,
+    }),
+    [
+      size,
+      textColor,
+      outline,
+      outlineColor,
+      backgroundColor,
+      backgroundOpacity,
+      overrideStyled,
+    ]
+  );
+}
+
+export const AUDIO_CHANNELS = ['auto', 'stereo', '5.1', '7.1'] as const;
+export type AudioChannels = (typeof AUDIO_CHANNELS)[number];
+
+const DESKTOP_KEYS = {
+  hardwareDecoding: 'aiostreams-desktop-hwdec',
+  audioChannels: 'aiostreams-desktop-audio-channels',
+  passthrough: 'aiostreams-desktop-passthrough',
+  escExitsFullscreen: 'aiostreams-desktop-esc-fullscreen',
+} as const;
+
+export interface DesktopSettings {
+  hardwareDecoding: boolean;
+  audioChannels: AudioChannels;
+  passthrough: boolean;
+  escExitsFullscreen: boolean;
+}
+
+export function readDesktopSettings(): DesktopSettings {
+  return {
+    hardwareDecoding: readDeviceSetting(DESKTOP_KEYS.hardwareDecoding, true),
+    audioChannels: readDeviceSetting<AudioChannels>(
+      DESKTOP_KEYS.audioChannels,
+      'auto',
+      AUDIO_CHANNELS
+    ),
+    passthrough: readDeviceSetting(DESKTOP_KEYS.passthrough, false),
+    escExitsFullscreen: readDeviceSetting(
+      DESKTOP_KEYS.escExitsFullscreen,
+      true
+    ),
+  };
+}
+
+export const useHardwareDecoding = () =>
+  useDeviceSetting<boolean>(DESKTOP_KEYS.hardwareDecoding, true);
+export const useAudioChannels = () =>
+  useDeviceSetting<AudioChannels>(
+    DESKTOP_KEYS.audioChannels,
+    'auto',
+    AUDIO_CHANNELS
+  );
+export const usePassthrough = () =>
+  useDeviceSetting<boolean>(DESKTOP_KEYS.passthrough, false);
+export const useEscExitsFullscreen = () =>
+  useDeviceSetting<boolean>(DESKTOP_KEYS.escExitsFullscreen, true);
+
+export function onSettingsChange(listener: () => void): () => void {
+  return subscribe(listener);
+}
