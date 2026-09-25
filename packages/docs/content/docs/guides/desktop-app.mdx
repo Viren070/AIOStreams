@@ -12,6 +12,60 @@ A browser only plays some formats, so many streams fail there. mpv plays nearly 
 
 Everything else is the web app you already know: the same home page, catalogs, title pages, versions and settings. It signs in to any Jellyfin server, so it can hold other servers besides your configuration.
 
+<Gallery
+  slides={[
+    {
+      src: '/guides/desktop-app/home.webp',
+      alt: "The desktop app's home page, with The Love Hypothesis featured above Continue watching",
+      caption: 'Home, with a featured title that rotates',
+      width: 2288,
+      height: 1430,
+    },
+    {
+      src: '/guides/desktop-app/home-follow.webp',
+      alt: 'The home page with its featured title pinned above the rows, showing Supergirl, the poster the pointer rests on in the Trending row',
+      caption: 'Or one that follows the card you point at',
+      width: 2288,
+      height: 1430,
+    },
+    {
+      src: '/guides/desktop-app/collections.webp',
+      alt: 'The Studios library, with collections for 20th Century Fox, DC, Disney Animated, DreamWorks, Illumination, Lucasfilm, Marvel, Pixar and Universal',
+      caption: 'Catalogs of collections become libraries of collections',
+      width: 2288,
+      height: 1430,
+    },
+    {
+      src: '/guides/desktop-app/collection.webp',
+      alt: "The Marvel collection's page, with a grid of its movies and shows and a filter for each",
+      caption: 'A collection holds movies and shows together',
+      width: 2288,
+      height: 1430,
+    },
+    {
+      src: '/guides/desktop-app/episodes-row.webp',
+      alt: "Severance's episodes in a row, starting at the episode to watch next, Episode 4 of season 2",
+      caption: 'Episodes in a row, starting where you are',
+      width: 2288,
+      height: 1430,
+    },
+    {
+      src: '/guides/desktop-app/episodes-list.webp',
+      alt: "Severance's second season as a list of episodes, with their descriptions and watched marks",
+      caption: 'Or as a list, under Settings → Interface → Episode layout',
+      width: 2288,
+      height: 1430,
+    },
+    {
+      src: '/guides/desktop-app/versions.webp',
+      alt: 'The version list for Dune: Part Two, with seven versions described by the formatter and a choice to resume or start over',
+      caption: 'Pick a version, described by your formatter',
+      width: 2288,
+      height: 1430,
+    },
+  ]}
+/>
+
 <Callout type="warn">
   The desktop app is in **alpha**. Expect rough edges and changes between
   updates, and please report what you run into.
@@ -28,7 +82,7 @@ The [desktop release](https://github.com/Viren070/AIOStreams/releases/tag/deskto
 | Mac with Apple silicon (M1 or later) | An installer, or the app in a zip |
 | Intel Mac                            | An installer, or the app in a zip |
 
-It needs Windows 10 or 11, or macOS 11 or later. There is no Linux download yet.
+It needs Windows 10 or 11, or macOS 11 or later. There is no Linux download yet, but it can be [built from source](https://github.com/Viren070/AIOStreams/blob/main/packages/desktop/README.md#linux) on a recent distribution, such as Ubuntu 25.04 or Fedora 41.
 
 - **The portable copy** runs without installing and keeps everything, including your sign-ins, in a `data` folder beside it.
 - **On a Mac**, the app is not signed by Apple yet, so macOS refuses to open it the first time. Open **System Settings → Privacy & Security** and press **Open Anyway**.
@@ -53,9 +107,43 @@ To add another server or move between them, use **Change server** in the account
 
 The player works as it does in the web app, with a few extras that need mpv:
 
-- **Subtitles inside the file** play with their own styling, and can be retimed like any other: `z` and `x` move them 0.1 seconds earlier or later, or sync them to a line you pick. The timing is remembered for each version.
+- **Subtitles inside the file** play with their own styling.
 - **Stats.** Press `i` for what is playing: the format, resolution, decoder and dropped frames.
 - **HDR on Windows.** Turn on **Use HDR** in Windows' display settings and HDR video plays in HDR. Dolby Vision is converted to HDR10, as on any computer. On a Mac, HDR video is shown in SDR for now.
+
+When subtitles are out of time, the subtitle menu fixes them, and the timing is remembered for each version:
+
+- `z` and `x` move them 0.1 seconds earlier or later.
+- **Sync by ear**: tap **Heard** when you hear a line, then **Saw** when it shows.
+- **Sync to a line**, for subtitles from your subtitle addons: pick the line being spoken from a list.
+
+<Gallery
+  slides={[
+    {
+      src: '/guides/desktop-app/player.webp',
+      alt: "Sintel paused in the desktop app's player, with a subtitle and the player's controls over the video",
+      caption: 'The player, with mpv underneath',
+      width: 2288,
+      height: 1430,
+    },
+    {
+      src: '/guides/desktop-app/sync-line.webp',
+      alt: "The Sync to a line panel over Sintel, listing the subtitle's lines around the current moment",
+      caption: 'Sync to a line: pick the line being spoken',
+      width: 2288,
+      height: 1430,
+    },
+    {
+      src: '/guides/desktop-app/sync-ear.webp',
+      alt: 'The Sync by ear panel over Sintel, with a Heard and a Saw button',
+      caption: 'Sync by ear: tap Heard, then Saw',
+      width: 2288,
+      height: 1430,
+    },
+  ]}
+/>
+
+_Sintel_ is © Blender Foundation, shared under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).
 
 Other keys: `Space` or `k` to play and pause, `←` `→` or `j` `l` to skip back and forward, `↑` `↓` for volume, `m` to mute, `f` for fullscreen, and `Shift+P` and `Shift+N` for the previous and next episode.
 
