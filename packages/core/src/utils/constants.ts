@@ -1098,6 +1098,7 @@ export const DEFAULT_SMART_DETECT_ATTRIBUTES: SmartDetectAttribute[] = [
 
 export const AUTO_PLAY_ATTRIBUTES = [
   'service',
+  'cached',
   'addon',
   'proxied',
   'resolution',

@@ -27,6 +27,12 @@ export function generateBingeGroup(
       switch (attribute) {
         case 'service':
           return stream.service?.id ?? 'no service';
+        case 'cached':
+          return stream.service
+            ? stream.service.cached
+              ? 'cached'
+              : 'uncached'
+            : undefined;
         case 'type':
           return stream.type;
         case 'proxied':
