@@ -9,11 +9,11 @@ use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows_sys::Win32::UI::Shell::ShellExecuteW;
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, HWND_BOTTOM, MB_ICONERROR, MB_OK, MessageBoxW, RegisterClassW,
-    SW_SHOWNORMAL, SWP_NOACTIVATE, SetWindowPos, WNDCLASSW, WS_CHILD, WS_CLIPSIBLINGS, WS_VISIBLE,
+    SW_SHOWNORMAL, SWP_NOACTIVATE, SetWindowPos, WNDCLASSW, WS_CHILD, WS_VISIBLE,
 };
 
 /// Custom protocols are served from `http://<scheme>.localhost` on Windows.
-pub const SETUP_URL: &str = "http://aiostreams.localhost/";
+pub const APP_URL: &str = "http://aiostreams.localhost/";
 pub const PLATFORM: &str = "windows";
 
 fn wide(s: &str) -> Vec<u16> {
@@ -51,7 +51,7 @@ impl VideoSurface {
                 0,
                 class.as_ptr(),
                 std::ptr::null(),
-                WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS,
+                WS_CHILD | WS_VISIBLE,
                 0,
                 0,
                 width as i32,

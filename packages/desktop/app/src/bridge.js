@@ -39,8 +39,6 @@
         send({ type: 'fullscreen' });
       } else if (e.key === 'Escape' && fullscreen) {
         send({ type: 'fullscreen', value: false });
-      } else if (e.ctrlKey && e.shiftKey && e.key === 'Home') {
-        send({ type: 'change-server' });
       }
     },
     true

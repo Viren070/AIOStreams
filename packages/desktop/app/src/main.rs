@@ -4,13 +4,12 @@ mod platform;
 
 use std::borrow::Cow;
 use std::cell::RefCell;
-use std::path::PathBuf;
+use std::path::{Component, Path, PathBuf};
 use std::rc::Rc;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
-use aiostreams_desktop_core::bridge::{Inbound, Outbound, PROTOCOL_VERSION};
+use aiostreams_desktop_core::bridge::{Inbound, Outbound, PROTOCOL_VERSION, origin};
 use aiostreams_desktop_core::player::Player;
-use aiostreams_desktop_core::settings::{self, Settings};
 use tao::dpi::{LogicalSize, PhysicalPosition, PhysicalSize};
 use tao::event::{Event, WindowEvent};
 use tao::event_loop::{ControlFlow, EventLoopBuilder, EventLoopProxy};
@@ -24,7 +23,6 @@ use wry::{
 #[derive(Debug)]
 enum UserEvent {
     Emit(String),
-    Navigate(String),
     Fullscreen(Option<bool>),
     Minimize,
     Close,
@@ -32,24 +30,24 @@ enum UserEvent {
 }
 
 struct Args {
-    server: Option<String>,
-    reset: bool,
+    web: Option<String>,
+    web_dir: Option<PathBuf>,
     devtools: bool,
     debug_port: Option<u16>,
 }
 
 fn args() -> Args {
     let mut args = Args {
-        server: None,
-        reset: false,
+        web: None,
+        web_dir: None,
         devtools: cfg!(debug_assertions),
         debug_port: None,
     };
     let mut it = std::env::args().skip(1);
     while let Some(arg) = it.next() {
         match arg.as_str() {
-            "--server" => args.server = it.next(),
-            "--reset" => args.reset = true,
+            "--web" => args.web = it.next(),
+            "--web-dir" => args.web_dir = it.next().map(PathBuf::from),
             "--devtools" => args.devtools = true,
             "--remote-debugging-port" => args.debug_port = it.next().and_then(|p| p.parse().ok()),
             _ => log::warn!("unknown argument {arg}"),
@@ -63,8 +61,81 @@ fn app_dir(base: Option<PathBuf>) -> PathBuf {
         .join("AIOStreams Desktop")
 }
 
-fn web_url(server: &str) -> String {
-    format!("{server}/web")
+fn web_dir(args: &Args) -> PathBuf {
+    let mut candidates: Vec<PathBuf> = args.web_dir.iter().cloned().collect();
+    candidates.extend(std::env::var_os("AIOSTREAMS_WEB_DIR").map(PathBuf::from));
+    if let Some(dir) = std::env::current_exe()
+        .ok()
+        .and_then(|e| e.parent().map(PathBuf::from))
+    {
+        candidates.push(dir.join("web"));
+    }
+    if cfg!(debug_assertions) {
+        candidates.push(PathBuf::from(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../jellyfin-web/dist-standalone"
+        )));
+    }
+    candidates
+        .iter()
+        .find(|dir| dir.join("index.html").is_file())
+        .cloned()
+        .unwrap_or_else(|| {
+            platform::fatal(&format!(
+                "The web app was not found. Build it with `pnpm -F @aiostreams/jellyfin-web build:standalone`. Looked in:\n{}",
+                candidates
+                    .iter()
+                    .map(|p| p.display().to_string())
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            ))
+        })
+}
+
+fn content_type(path: &Path) -> &'static str {
+    match path.extension().and_then(|e| e.to_str()).unwrap_or("") {
+        "html" => "text/html; charset=utf-8",
+        "js" | "mjs" => "text/javascript; charset=utf-8",
+        "css" => "text/css; charset=utf-8",
+        "json" | "map" => "application/json",
+        "svg" => "image/svg+xml",
+        "png" => "image/png",
+        "ico" => "image/x-icon",
+        "woff2" => "font/woff2",
+        "woff" => "font/woff",
+        _ => "application/octet-stream",
+    }
+}
+
+/// Serves the web app's files; a path without an extension is one of its routes.
+fn serve(root: &Path, path: &str) -> Response<Cow<'static, [u8]>> {
+    let relative = Path::new(path.trim_start_matches('/'));
+    let not_found = || {
+        Response::builder()
+            .status(404)
+            .body(Cow::Borrowed(&[][..]))
+            .unwrap()
+    };
+    if relative
+        .components()
+        .any(|c| !matches!(c, Component::Normal(_)))
+    {
+        return not_found();
+    }
+    let mut file = root.join(relative);
+    if !file.is_file() {
+        if relative.extension().is_some() {
+            return not_found();
+        }
+        file = root.join("index.html");
+    }
+    match std::fs::read(&file) {
+        Ok(body) => Response::builder()
+            .header("Content-Type", content_type(&file))
+            .body(Cow::Owned(body))
+            .unwrap(),
+        Err(_) => not_found(),
+    }
 }
 
 fn page_bounds(size: PhysicalSize<u32>) -> Rect {
@@ -85,18 +156,10 @@ fn main() {
     let config_dir = app_dir(dirs::config_dir());
     let data_dir = app_dir(dirs::data_local_dir());
 
-    let mut stored = if args.reset {
-        Settings::default()
-    } else {
-        settings::load(&config_dir)
-    };
-    if let Some(server) = &args.server {
-        match settings::normalize_server(server) {
-            Ok(s) => stored.server = Some(s),
-            Err(e) => platform::fatal(&format!("--server: {e}")),
-        }
-    }
-    let _ = settings::save(&config_dir, &stored);
+    let web = args.web.is_none().then(|| web_dir(&args));
+    let start_url = args.web.clone().unwrap_or_else(|| platform::APP_URL.into());
+    let app_origin =
+        origin(&start_url).unwrap_or_else(|| platform::fatal("--web: not a valid address"));
 
     let event_loop = EventLoopBuilder::<UserEvent>::with_user_event().build();
     let proxy = event_loop.create_proxy();
@@ -118,10 +181,6 @@ fn main() {
         proxy.clone(),
     ))));
 
-    let server = Arc::new(Mutex::new(stored.server.clone()));
-    let origin_of = |url: &str| settings::origin(url).unwrap_or_default();
-    let setup_origin = origin_of(platform::SETUP_URL);
-
     let mut context = WebContext::new(Some(data_dir.join("WebView2")));
     let mut browser_args =
         "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection".to_string();
@@ -138,57 +197,38 @@ fn main() {
             "__PLATFORM__",
             &serde_json::to_string(platform::PLATFORM).unwrap(),
         );
-    let start_url = stored
-        .server
-        .as_deref()
-        .map(web_url)
-        .unwrap_or_else(|| platform::SETUP_URL.into());
-
     let webview = WebViewBuilder::new_with_web_context(&mut context)
         .with_bounds(page_bounds(size))
         .with_transparent(true)
         .with_devtools(args.devtools)
         .with_additional_browser_args(browser_args)
         .with_initialization_script(bridge)
-        .with_custom_protocol("aiostreams".into(), {
-            let server = server.clone();
-            move |_, _| setup_page(server_value(&server))
-        })
+        .with_custom_protocol(
+            "aiostreams".into(),
+            move |_, req: Request<Vec<u8>>| match &web {
+                Some(root) => serve(root, req.uri().path()),
+                None => serve(Path::new(""), ""),
+            },
+        )
         .with_ipc_handler({
-            let (server, player, proxy, setup_origin) = (
-                server.clone(),
-                player.clone(),
-                proxy.clone(),
-                setup_origin.clone(),
-            );
-            let config_dir = config_dir.clone();
+            let (player, proxy, app_origin) = (player.clone(), proxy.clone(), app_origin.clone());
             move |req: Request<String>| {
-                let from = origin_of(&req.uri().to_string());
-                let server_origin = server.lock().unwrap().as_deref().map(origin_of);
-                let message: Inbound = match serde_json::from_str(req.body()) {
-                    Ok(m) => m,
-                    Err(e) => return log::warn!("bad message from {from}: {e}"),
-                };
-                if from == setup_origin {
-                    if let Inbound::SetServer { url } = message {
-                        choose_server(&url, &server, &config_dir, &proxy);
-                    }
-                    return;
-                }
-                if server_origin.as_deref() != Some(from.as_str()) {
+                let from = origin(&req.uri().to_string()).unwrap_or_default();
+                if from != app_origin {
                     return log::warn!("ignored a message from {from}");
                 }
-                handle(message, &player, &proxy);
+                match serde_json::from_str::<Inbound>(req.body()) {
+                    Ok(message) => handle(message, &player, &proxy),
+                    Err(e) => log::warn!("bad message: {e}"),
+                }
             }
         })
         .with_navigation_handler({
-            let (server, setup_origin) = (server.clone(), setup_origin.clone());
+            let app_origin = app_origin.clone();
             move |url| {
-                let to = origin_of(&url);
-                let allowed = to == setup_origin
-                    || server.lock().unwrap().as_deref().map(origin_of).as_deref()
-                        == Some(to.as_str())
-                    || url.starts_with("about:");
+                let allowed = origin(&url).as_deref() == Some(app_origin.as_str())
+                    || url.starts_with("about:")
+                    || url.starts_with("blob:");
                 if !allowed {
                     platform::open_external(&url);
                 }
@@ -242,9 +282,6 @@ fn main() {
             }
             Event::UserEvent(UserEvent::Emit(script)) => {
                 let _ = webview.evaluate_script(&script);
-            }
-            Event::UserEvent(UserEvent::Navigate(url)) => {
-                let _ = webview.load_url(&url);
             }
             Event::UserEvent(UserEvent::Fullscreen(value)) => set_fullscreen(&window, value),
             Event::UserEvent(UserEvent::Minimize) => window.set_minimized(true),
@@ -302,6 +339,8 @@ fn start_player(
         ("input-cursor", "no"),
         ("osc", "no"),
         ("osd-bar", "no"),
+        ("background", "color"),
+        ("background-color", "#000000"),
         ("ytdl", "no"),
     ];
 
@@ -350,45 +389,5 @@ fn handle(message: Inbound, player: &RefCell<Option<Player>>, proxy: &EventLoopP
         Inbound::Fullscreen { value } => send(UserEvent::Fullscreen(value)),
         Inbound::Minimize => send(UserEvent::Minimize),
         Inbound::Close => send(UserEvent::Close),
-        Inbound::ChangeServer => send(UserEvent::Navigate(platform::SETUP_URL.into())),
-        Inbound::SetServer { .. } => {}
-    }
-}
-
-fn server_value(server: &Mutex<Option<String>>) -> String {
-    serde_json::to_string(server.lock().unwrap().as_deref().unwrap_or("")).unwrap()
-}
-
-fn setup_page(server: String) -> Response<Cow<'static, [u8]>> {
-    let html = include_str!("setup.html").replace("__SERVER__", &server);
-    Response::builder()
-        .header("Content-Type", "text/html; charset=utf-8")
-        .body(Cow::Owned(html.into_bytes()))
-        .unwrap()
-}
-
-fn choose_server(
-    input: &str,
-    server: &Mutex<Option<String>>,
-    config_dir: &std::path::Path,
-    proxy: &EventLoopProxy<UserEvent>,
-) {
-    match settings::normalize_server(input) {
-        Ok(url) => {
-            log::info!("server set to {url}");
-            *server.lock().unwrap() = Some(url.clone());
-            let _ = settings::save(
-                config_dir,
-                &Settings {
-                    server: Some(url.clone()),
-                },
-            );
-            let _ = proxy.send_event(UserEvent::Navigate(web_url(&url)));
-        }
-        Err(message) => {
-            let _ = proxy.send_event(UserEvent::Emit(receive_script(&Outbound::Error {
-                message,
-            })));
-        }
     }
 }

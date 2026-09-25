@@ -26,10 +26,6 @@ pub enum Inbound {
     },
     Minimize,
     Close,
-    ChangeServer,
-    SetServer {
-        url: String,
-    },
 }
 
 #[derive(Debug, Serialize)]
@@ -106,6 +102,12 @@ const SEEK_FLAGS: &[&str] = &[
     "keyframes",
     "exact",
 ];
+
+pub fn origin(url: &str) -> Option<String> {
+    url::Url::parse(url)
+        .ok()
+        .map(|u| u.origin().ascii_serialization())
+}
 
 fn is_web_url(s: &str) -> bool {
     url::Url::parse(s).is_ok_and(|u| matches!(u.scheme(), "http" | "https"))
