@@ -87,6 +87,13 @@ function mpvTrackLabel(track: MpvTrack): string {
 
 const EXTERNAL = 'ext:';
 
+const STATS_PAGES: Track[] = [
+  { id: '1', label: 'Playback' },
+  { id: '2', label: 'Frame timings' },
+  { id: '3', label: 'Cache' },
+  { id: '5', label: 'Tracks' },
+];
+
 /**
  * The AIOStreams desktop app's mpv, drawn beneath the page. Its tracks are the
  * file's own, plus the server's external subtitles, which mpv downloads only
@@ -133,6 +140,23 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
     shell.send({ type: 'mpv-set-prop', name, value });
   const command = (...args: unknown[]) =>
     shell.send({ type: 'mpv-command', args });
+
+  const [statsPage, setStatsPage] = React.useState<string | null>(null);
+  const shownStats = useLatest(statsPage);
+  const showStats = (page: string | null) => {
+    if (shownStats.current)
+      command('script-binding', 'stats/display-stats-toggle');
+    if (page) command('script-binding', `stats/display-page-${page}-toggle`);
+    setStatsPage(page);
+  };
+  React.useEffect(
+    () => () => {
+      if (shownStats.current)
+        command('script-binding', 'stats/display-stats-toggle');
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
 
   const [fit] = useVideoFit();
   React.useEffect(() => {
@@ -310,6 +334,7 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
       return res.ok ? parseSubtitleLines(await res.text()) : null;
     },
     toggleFullscreen: () => shell.send({ type: 'fullscreen' }),
+    stats: { pages: STATS_PAGES, page: statsPage, show: showStats },
   };
 }
 

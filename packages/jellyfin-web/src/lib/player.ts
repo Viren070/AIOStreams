@@ -49,6 +49,12 @@ export interface PlayerController {
   /** Whether `subtitleLines` can read this subtitle; every one when missing. */
   canReadSubtitle?: (id: string) => boolean;
   toggleFullscreen(): void;
+  /** Where the player draws playback statistics over the video. */
+  stats?: {
+    pages: Track[];
+    page: string | null;
+    show(page: string | null): void;
+  };
 }
 
 export interface PlayerOptions {

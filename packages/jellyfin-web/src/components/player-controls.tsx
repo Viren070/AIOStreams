@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { PiPauseDuotone, PiPlayDuotone } from 'react-icons/pi';
 import {
+  LuActivity,
   LuArrowLeft,
   LuAudioLines,
   LuCaptions,
@@ -524,6 +525,10 @@ export function PlayerControls({
         f: p.toggleFullscreen,
         z: () => nudgeSubtitles(-DELAY_STEP_MS),
         x: () => nudgeSubtitles(DELAY_STEP_MS),
+        i: () => {
+          const stats = latest.current.stats;
+          stats?.show(stats.page ? null : '1');
+        },
         P: () => episodes.current.onPrevious?.(),
         N: () => episodes.current.onNext?.(),
       };
@@ -799,6 +804,16 @@ export function PlayerControls({
             />
             {(playbackHost() === 'browser' || playbackHost() === 'shell') && (
               <FitButton />
+            )}
+            {player.stats && (
+              <Menu
+                label="Statistics"
+                icon={<LuActivity />}
+                options={[{ id: '', label: 'Off' }, ...player.stats.pages]}
+                value={player.stats.page}
+                onSelect={player.stats.show}
+                onOpenChange={onMenu}
+              />
             )}
             <ControlButton
               label={state.fullscreen ? 'Exit full screen' : 'Full screen'}

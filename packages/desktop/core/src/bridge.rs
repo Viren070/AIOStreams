@@ -155,6 +155,15 @@ const LOADFILE_OPTIONS: &[&str] = &[
     "subs-with-matching-audio",
 ];
 
+/// mpv's built-in stats.lua; a page toggle hides the overlay when it is shown.
+const STATS_BINDINGS: &[&str] = &[
+    "stats/display-stats-toggle",
+    "stats/display-page-1-toggle",
+    "stats/display-page-2-toggle",
+    "stats/display-page-3-toggle",
+    "stats/display-page-5-toggle",
+];
+
 const SEEK_FLAGS: &[&str] = &[
     "relative",
     "absolute",
@@ -271,6 +280,11 @@ pub fn command(args: &[Value]) -> Result<Vec<String>, String> {
         "keypress" => {
             if args.len() != 2 || args[1].is_empty() || args[1].chars().any(char::is_whitespace) {
                 return Err("keypress takes one key name".into());
+            }
+        }
+        "script-binding" => {
+            if args.len() != 2 || !STATS_BINDINGS.contains(&args[1].as_str()) {
+                return Err("only the stats overlay's bindings are allowed".into());
             }
         }
         "set" | "cycle" | "add" => {
