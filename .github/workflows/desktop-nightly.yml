@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'packages/desktop/**'
+      - '!packages/desktop/web-app.lock'
       - 'packages/jellyfin-web/**'
       - 'packages/ui/**'
   workflow_dispatch:

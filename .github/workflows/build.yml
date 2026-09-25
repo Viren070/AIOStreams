@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'packages/**'
+      - '!packages/desktop/**'
       - 'package-lock.json'
       - 'package.json'
       - 'tsconfig.json'

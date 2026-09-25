@@ -4,11 +4,13 @@ on:
   pull_request:
     paths:
       - 'packages/desktop/**'
+      - '!packages/desktop/web-app.lock'
       - '.github/workflows/desktop-*.yml'
   push:
     branches: [main]
     paths:
       - 'packages/desktop/**'
+      - '!packages/desktop/web-app.lock'
   workflow_dispatch:
 
 # A newer push replaces a check still running on the same branch.
