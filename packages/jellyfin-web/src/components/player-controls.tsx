@@ -422,6 +422,50 @@ function useToggleFlash(): [React.ReactNode, (paused: boolean) => void] {
   return [node, show];
 }
 
+/** The skip that pops on the side it went to, adding up quick presses. */
+function useSeekFlash(): [React.ReactNode, (deltaMs: number) => void] {
+  const [flash, setFlash] = React.useState<{ key: number; ms: number } | null>(
+    null
+  );
+  const timer = React.useRef<ReturnType<typeof setTimeout>>(undefined);
+  React.useEffect(() => () => clearTimeout(timer.current), []);
+  const show = React.useCallback((deltaMs: number) => {
+    clearTimeout(timer.current);
+    setFlash((f) => ({
+      key: Date.now(),
+      ms: f && f.ms < 0 === deltaMs < 0 ? f.ms + deltaMs : deltaMs,
+    }));
+    timer.current = setTimeout(() => setFlash(null), 700);
+  }, []);
+  const back = !!flash && flash.ms < 0;
+  const Icon = back ? LuRotateCcw : LuRotateCw;
+  const node = flash && (
+    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+      <div
+        className={
+          back
+            ? '-translate-x-[min(14rem,25vw)]'
+            : 'translate-x-[min(14rem,25vw)]'
+        }
+      >
+        <motion.div
+          key={flash.key}
+          initial={{ opacity: 0.4, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.12, ease: 'easeOut' }}
+          className="flex flex-col items-center gap-1 drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]"
+        >
+          <Icon className="size-8 lg:size-10" />
+          <span className="text-sm font-semibold tabular-nums lg:text-base">
+            {Math.abs(flash.ms) / 1000}s
+          </span>
+        </motion.div>
+      </div>
+    </div>
+  );
+  return [node, show];
+}
+
 /**
  * The controls drawn over either player; they hide while the pointer rests and
  * playback runs.
@@ -477,6 +521,7 @@ export function PlayerControls({
     []
   );
   const [flash, showFlash] = useToggleFlash();
+  const [seekFlash, showSeekFlash] = useSeekFlash();
   const [notice, showNotice] = useNotice();
   const nudgeSubtitles = (by: number) => {
     const p = latest.current;
@@ -508,6 +553,7 @@ export function PlayerControls({
     const { positionMs, durationMs } = latest.current.state;
     const target = Math.max(0, positionMs + delta);
     latest.current.seek(durationMs ? Math.min(durationMs, target) : target);
+    showSeekFlash(delta);
   };
 
   React.useEffect(() => {
@@ -677,6 +723,7 @@ export function PlayerControls({
       </div>
 
       {flash}
+      {seekFlash}
       {notice}
       {picking && player.setSubtitleDelay && (
         <SyncToLine
