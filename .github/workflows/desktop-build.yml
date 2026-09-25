@@ -27,6 +27,7 @@ on:
 
 env:
   VPK_VERSION: 1.2.158
+  CARGO_ABOUT_VERSION: 0.9.2
 
 jobs:
   # The page every build ships, built once.
@@ -55,15 +56,25 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+      # Scanning every crate's files takes minutes, and the pages change only with
+      # the crates, the config or the template.
+      - id: cache
+        uses: actions/cache@v6
+        with:
+          path: packages/desktop/licences
+          key: licences-${{ inputs.platforms }}-${{ env.CARGO_ABOUT_VERSION }}-${{ hashFiles('packages/desktop/Cargo.lock', 'packages/desktop/about.toml', 'packages/desktop/about.hbs') }}
       # Only Cargo's downloads: cargo-about reads the crates, it builds nothing.
-      - uses: Swatinem/rust-cache@v2
+      - if: steps.cache.outputs.cache-hit != 'true'
+        uses: Swatinem/rust-cache@v2
         with:
           workspaces: packages/desktop
           cache-targets: false
-      - uses: taiki-e/install-action@v2
+      - if: steps.cache.outputs.cache-hit != 'true'
+        uses: taiki-e/install-action@v2
         with:
-          tool: cargo-about@0.9.2
-      - working-directory: packages/desktop
+          tool: cargo-about@${{ env.CARGO_ABOUT_VERSION }}
+      - if: steps.cache.outputs.cache-hit != 'true'
+        working-directory: packages/desktop
         env:
           PLATFORMS: ${{ inputs.platforms }}
         run: |
