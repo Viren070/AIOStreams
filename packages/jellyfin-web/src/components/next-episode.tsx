@@ -24,6 +24,11 @@ type Direction = 'previous' | 'next';
 /** One notice, which a later press takes over. */
 const NOTICE = 'episode-versions';
 
+/** Sonner adds a toast on a timer but drops one on the next frame, which can come first. */
+function dismissNotice() {
+  setTimeout(() => toast.dismiss(NOTICE));
+}
+
 /** Shorter than this, a video gets no prompt. */
 const MIN_DURATION_MS = 40_000;
 /** Credits count as the end when they finish this close to it. */
@@ -143,13 +148,13 @@ export function useNextEpisodePrompt({
         if (wanted.current === direction) {
           wanted.current = null;
           setLoading(null);
-          toast.dismiss(NOTICE);
+          dismissNotice();
         }
       }
     },
     [queryClient, infoOptions, source, fallbackFirst]
   );
-  React.useEffect(() => () => void toast.dismiss(NOTICE), []);
+  React.useEffect(() => dismissNotice, []);
   const playNext = React.useCallback(
     () => playEpisode('next', next),
     [playEpisode, next]
