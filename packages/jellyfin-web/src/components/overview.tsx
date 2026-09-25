@@ -97,12 +97,13 @@ export function Overview({
   }, [details.overview]);
   if (!details.overview) return null;
   // A stretched flex item's height is definite, so the spacer can float More to the last line.
+  // Clamped by height: WebKit lays out line-clamp's -webkit-box as a column and drops the floats.
   return (
     <div data-ui="overview" className={cn('flex', className)}>
       <p
         ref={ref}
         className={cn(
-          'min-w-0 select-text whitespace-pre-line before:float-right before:h-[calc(100%-1lh)]',
+          'min-w-0 select-text overflow-hidden whitespace-pre-line before:float-right before:h-[calc(100%-1lh)]',
           clampClass
         )}
       >

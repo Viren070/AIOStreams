@@ -78,7 +78,7 @@ function Header({ person }: { person: BaseItemDto }) {
           title={person.Name ?? ''}
           overview={person.Overview}
           image={[]}
-          clampClass="line-clamp-5"
+          clampClass="max-h-[5lh]"
           className="text-sm leading-relaxed text-gray-300 sm:text-base"
         />
       </div>

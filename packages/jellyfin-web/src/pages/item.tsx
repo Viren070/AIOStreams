@@ -343,7 +343,7 @@ function Header({ item }: { item: BaseItemDto }) {
             .join(' · ')}
           overview={item.Overview}
           image={landscapeUrls(client, item, { maxWidth: 960 })}
-          clampClass="line-clamp-4"
+          clampClass="max-h-[4lh]"
           className="text-sm leading-relaxed text-gray-300 sm:text-base"
         />
         <div
