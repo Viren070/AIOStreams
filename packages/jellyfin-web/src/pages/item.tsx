@@ -930,7 +930,11 @@ function Similar({ itemId }: { itemId: string }) {
   const ref = useInView<HTMLDivElement>(() => setNear(true), '400px');
   const similar = useSimilar(itemId, near);
   return (
-    <div ref={ref} className="min-h-[2rem]">
+    <div
+      ref={ref}
+      hidden={!!similar.data && !similar.data.Items?.length}
+      className="min-h-[2rem]"
+    >
       {near && (
         <MediaRow
           id="similar"

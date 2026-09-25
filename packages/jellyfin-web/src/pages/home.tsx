@@ -262,8 +262,13 @@ function LibraryRow({ view }: { view: BaseItemDto }) {
     if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+  // Hidden once empty, so the list's spacing skips it too.
   return (
-    <div ref={ref} className="min-h-[2rem]">
+    <div
+      ref={ref}
+      hidden={!!pages.data && !items.length}
+      className="min-h-[2rem]"
+    >
       {/* Cached rows show at once, so back restores into the full page height. */}
       {(near || pages.data) && (
         <MediaRow
