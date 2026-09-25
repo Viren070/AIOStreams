@@ -15,6 +15,12 @@ import { ParsedResult } from '@viren070/parse-torrent-title';
 import { parseTorrentTitleCached } from '../../parser/title.js';
 import { normaliseTitle } from '../../parser/utils.js';
 import { token_set_ratio } from 'fuzzball';
+import {
+  LibraryArtwork,
+  buildArtworkQuery,
+  resolveLibraryArtwork,
+} from './artwork.js';
+import { LibraryNameFormat, formatLibraryItemName } from './naming.js';
 
 const logger = createLogger('library:catalog');
 
@@ -122,7 +128,8 @@ export async function fetchCatalog(
   sort: CatalogSort,
   sortDirection: 'asc' | 'desc',
   genre?: string,
-  search?: string
+  search?: string,
+  options: { showPosters?: boolean; nameFormat?: LibraryNameFormat } = {}
 ): Promise<MetaPreview[]> {
   if (genre === Genre.ACTIONS) {
     if (skip > 0) {
@@ -206,7 +213,17 @@ export async function fetchCatalog(
   }
 
   const page = results.slice(skip, skip + CATALOG_PAGE_SIZE);
-  return page.map((entry) => createMetaPreview(entry));
+  const artwork =
+    options.showPosters !== false
+      ? await resolveLibraryArtwork(
+          page.map((entry) =>
+            buildArtworkQuery(entry.parsed, entry.parsedTitle)
+          )
+        )
+      : [];
+  return page.map((entry, i) =>
+    createMetaPreview(entry, artwork[i], options.nameFormat)
+  );
 }
 
 export function parseExtras(extras?: string): {
@@ -396,7 +413,11 @@ function sortParsedItems(
   });
 }
 
-function createMetaPreview(entry: ParsedCatalogItem): MetaPreview {
+function createMetaPreview(
+  entry: ParsedCatalogItem,
+  artwork?: LibraryArtwork,
+  nameFormat: LibraryNameFormat = 'release'
+): MetaPreview {
   const { item, parsed } = entry;
   const descriptionParts: string[] = [];
 
@@ -408,12 +429,25 @@ function createMetaPreview(entry: ParsedCatalogItem): MetaPreview {
   const typeIcon = item.itemType === 'torrent' ? '🧲' : '📰';
   descriptionParts.push(`${typeIcon} ${item.itemType}`);
 
+  const releaseName = item.name ?? 'Unknown';
+  const useTitle = nameFormat === 'title';
   return {
     id: buildLibraryId(item.serviceId, item.itemType, item.id),
     type: 'library',
-    name: item.name ?? 'Unknown',
-    description: descriptionParts.join(' • '),
-    posterShape: 'landscape',
+    name: useTitle
+      ? formatLibraryItemName(parsed, releaseName, artwork)
+      : releaseName,
+    description: [
+      ...(useTitle ? [releaseName] : []),
+      descriptionParts.join(' • '),
+    ].join('\n'),
+    ...(artwork
+      ? {
+          poster: artwork.poster,
+          posterShape: 'poster',
+          imdb_id: artwork.imdbId,
+        }
+      : { posterShape: 'landscape' }),
   };
 }
 
