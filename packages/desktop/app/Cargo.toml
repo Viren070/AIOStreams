@@ -16,6 +16,7 @@ log.workspace = true
 serde_json.workspace = true
 dirs.workspace = true
 tao.workspace = true
+velopack = "1.2"
 wry.workspace = true
 
 [target.'cfg(windows)'.dependencies]

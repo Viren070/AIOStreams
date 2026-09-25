@@ -2,6 +2,7 @@
 
 mod logging;
 mod platform;
+mod updates;
 
 use std::borrow::Cow;
 use std::cell::RefCell;
@@ -16,6 +17,7 @@ use tao::event::{Event, WindowEvent};
 use tao::event_loop::{ControlFlow, EventLoopBuilder, EventLoopProxy};
 use tao::platform::windows::{WindowBuilderExtWindows, WindowExtWindows};
 use tao::window::{Fullscreen, Window, WindowBuilder};
+use updates::{Command, Updater};
 use wry::http::{Request, Response};
 use wry::{
     NewWindowResponse, PageLoadEvent, Rect, WebContext, WebViewBuilder, WebViewBuilderExtWindows,
@@ -60,6 +62,14 @@ fn args() -> Args {
 fn app_dir(base: Option<PathBuf>) -> PathBuf {
     base.unwrap_or_else(std::env::temp_dir)
         .join("AIOStreams Desktop")
+}
+
+/// A portable copy's own folder. Velopack runs the app from `<root>/current`,
+/// which each update replaces, and marks a portable root with `.portable`.
+fn portable_root() -> Option<PathBuf> {
+    let exe = std::env::current_exe().ok()?;
+    let root = exe.parent()?.parent()?;
+    root.join(".portable").is_file().then(|| root.to_path_buf())
 }
 
 fn web_dir(args: &Args) -> PathBuf {
@@ -168,8 +178,12 @@ fn about() -> String {
 }
 
 fn main() {
-    let config_dir = app_dir(dirs::config_dir());
-    let data_dir = app_dir(dirs::data_local_dir());
+    // Runs Velopack's install and update hooks, which exit when they are the reason for this launch.
+    velopack::VelopackApp::build().run();
+    let (config_dir, data_dir) = match portable_root() {
+        Some(root) => (root.join("data"), root.join("data")),
+        None => (app_dir(dirs::config_dir()), app_dir(dirs::data_local_dir())),
+    };
     let logs = data_dir.join("logs");
     let log_file = logging::init(&logs);
     log::info!("starting {}", about());
@@ -211,6 +225,12 @@ fn main() {
         &paths.mpv,
         proxy.clone(),
     ))));
+    let updater = Rc::new(Updater::start({
+        let proxy = proxy.clone();
+        move |message: Outbound| {
+            let _ = proxy.send_event(UserEvent::Emit(receive_script(&message)));
+        }
+    }));
 
     let mut context = WebContext::new(Some(data_dir.join("WebView2")));
     let mut browser_args =
@@ -247,14 +267,14 @@ fn main() {
         )
         .with_ipc_handler({
             let (player, proxy, app_origin) = (player.clone(), proxy.clone(), app_origin.clone());
-            let paths = paths.clone();
+            let (paths, updater) = (paths.clone(), updater.clone());
             move |req: Request<String>| {
                 let from = origin(&req.uri().to_string()).unwrap_or_default();
                 if from != app_origin {
                     return log::warn!("ignored a message from {from}");
                 }
                 match serde_json::from_str::<Inbound>(req.body()) {
-                    Ok(message) => handle(message, &player, &proxy, &paths),
+                    Ok(message) => handle(message, &player, &proxy, &paths, &updater),
                     Err(e) => log::warn!("bad message: {e}"),
                 }
             }
@@ -337,13 +357,8 @@ fn receive_script(message: &Outbound) -> String {
     format!("window.__aiostreamsDesktopReceive?.({})", message.to_json())
 }
 
-/// A `portable_config` folder beside the app wins, as in mpv's own builds.
 fn mpv_config_dir(config_dir: &std::path::Path) -> PathBuf {
-    let portable = std::env::current_exe()
-        .ok()
-        .and_then(|exe| exe.parent().map(|dir| dir.join("portable_config")))
-        .filter(|dir| dir.is_dir());
-    let dir = portable.unwrap_or_else(|| config_dir.join("mpv"));
+    let dir = config_dir.join("mpv");
     let _ = std::fs::create_dir_all(&dir);
     let conf = dir.join("mpv.conf");
     if !conf.exists() {
@@ -407,6 +422,7 @@ fn handle(
     player: &RefCell<Option<Player>>,
     proxy: &EventLoopProxy<UserEvent>,
     paths: &Paths,
+    updater: &Option<Updater>,
 ) {
     let fail = |message: String| {
         log::warn!("{message}");
@@ -458,6 +474,20 @@ fn handle(
             send(UserEvent::Emit(receive_script(&Outbound::Diagnostics {
                 text,
             })));
+        }
+        Inbound::UpdateCheck { channel } => match updater {
+            Some(updater) => updater.send(Command::Check(channel)),
+            None => send(UserEvent::Emit(receive_script(&Outbound::UpdateState {
+                state: "off",
+                channel: None,
+                version: None,
+                error: None,
+            }))),
+        },
+        Inbound::UpdateApply => {
+            if let Some(updater) = updater {
+                updater.send(Command::Apply);
+            }
         }
         Inbound::WebError { message } => {
             let message: String = message.chars().take(4000).collect();

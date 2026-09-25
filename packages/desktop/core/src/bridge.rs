@@ -9,6 +9,13 @@ use crate::mpv::Kind;
 /// Bumped when a message changes shape, so pages can tell shells apart.
 pub const PROTOCOL_VERSION: u32 = 1;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum UpdateChannel {
+    Stable,
+    Nightly,
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type", rename_all = "kebab-case")]
 pub enum Inbound {
@@ -31,6 +38,12 @@ pub enum Inbound {
     OpenLogs,
     /// Versions, paths and the recent log, for a bug report.
     Diagnostics,
+    /// Checks for an update and downloads it; `None` keeps the installed channel.
+    UpdateCheck {
+        channel: Option<UpdateChannel>,
+    },
+    /// Restarts into a downloaded update.
+    UpdateApply,
     /// An error from the page: uncaught, or passed to `console.error`.
     WebError {
         message: String,
@@ -62,6 +75,14 @@ pub enum Outbound {
     },
     Diagnostics {
         text: String,
+    },
+    /// `checking`, `downloading`, `ready`, `current`, `error`, or `off` for a
+    /// copy Velopack did not install.
+    UpdateState {
+        state: &'static str,
+        channel: Option<UpdateChannel>,
+        version: Option<String>,
+        error: Option<String>,
     },
     Error {
         message: String,
