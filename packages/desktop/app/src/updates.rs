@@ -10,6 +10,14 @@ use velopack::{UpdateCheck, UpdateInfo, UpdateManager, UpdateOptions};
 
 const RELEASES: &str = "https://github.com/Viren070/AIOStreams/releases/download";
 const RECHECK: Duration = Duration::from_secs(6 * 60 * 60);
+/// Velopack's names for the operating systems, which begin its channel names.
+const OS: &str = if cfg!(windows) {
+    "win"
+} else if cfg!(target_os = "macos") {
+    "osx"
+} else {
+    "linux"
+};
 const ARCH: &str = if cfg!(target_arch = "aarch64") {
     "arm64"
 } else {
@@ -29,8 +37,8 @@ fn feed(channel: UpdateChannel) -> String {
 
 fn velopack_channel(channel: UpdateChannel) -> String {
     match channel {
-        UpdateChannel::Stable => format!("win-{ARCH}"),
-        UpdateChannel::Nightly => format!("win-{ARCH}-nightly"),
+        UpdateChannel::Stable => format!("{OS}-{ARCH}"),
+        UpdateChannel::Nightly => format!("{OS}-{ARCH}-nightly"),
     }
 }
 

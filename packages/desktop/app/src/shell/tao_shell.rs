@@ -6,6 +6,8 @@ use aiostreams_desktop_core::bridge::{Inbound, Outbound, origin};
 use tao::dpi::{LogicalSize, PhysicalPosition, PhysicalSize};
 use tao::event::{Event, WindowEvent};
 use tao::event_loop::{ControlFlow, EventLoopBuilder};
+#[cfg(target_os = "macos")]
+use tao::platform::macos::WindowBuilderExtMacOS;
 #[cfg(windows)]
 use tao::platform::windows::WindowBuilderExtWindows;
 use tao::window::{Fullscreen, ResizeDirection, Window, WindowBuilder};
@@ -71,14 +73,27 @@ pub fn run(app: App) {
     } = app;
     let event_loop = EventLoopBuilder::<UserEvent>::with_user_event().build();
     let proxy = event_loop.create_proxy();
+    #[cfg(target_os = "macos")]
+    let _menu = platform::install_menu({
+        let proxy = proxy.clone();
+        move || {
+            let _ = proxy.send_event(UserEvent::Close);
+        }
+    });
     let builder = WindowBuilder::new()
         .with_title("AIOStreams")
-        .with_decorations(false)
         .with_window_icon(platform::window_icon())
         .with_inner_size(LogicalSize::new(1280.0, 760.0))
         .with_min_inner_size(LogicalSize::new(480.0, 320.0));
+    // macOS keeps its own window buttons, drawn over the page.
+    #[cfg(target_os = "macos")]
+    let builder = builder
+        .with_titlebar_transparent(true)
+        .with_title_hidden(true)
+        .with_fullsize_content_view(true);
     #[cfg(windows)]
     let builder = builder
+        .with_decorations(false)
         .with_undecorated_shadow(true)
         .with_window_classname(platform::WINDOW_CLASS)
         .with_taskbar_icon(platform::window_icon());
@@ -237,6 +252,10 @@ pub fn run(app: App) {
             Event::UserEvent(UserEvent::WindowState) => emit(Outbound::WindowState {
                 maximized: window.is_maximized(),
             }),
+            #[cfg(target_os = "macos")]
+            Event::UserEvent(UserEvent::WindowButtons(visible)) => {
+                platform::set_window_buttons(&window, visible)
+            }
             Event::UserEvent(UserEvent::Sync) => {
                 if let Some(p) = player.borrow().as_ref() {
                     p.sync();

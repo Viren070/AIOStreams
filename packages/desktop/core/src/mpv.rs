@@ -70,8 +70,13 @@ struct Api {
 impl Api {
     fn load(path: &Path) -> Result<Self, String> {
         // SAFETY: loading libmpv runs no initialisers that depend on us.
-        let lib = unsafe { Library::new(path) }
-            .map_err(|e| format!("could not load {}: {e}", path.display()))?;
+        let lib = unsafe { Library::new(path) }.map_err(|e| {
+            // libloading keeps the loader's own reason in the source.
+            let reason = std::error::Error::source(&e)
+                .map(|s| format!(": {s}"))
+                .unwrap_or_default();
+            format!("could not load {}: {e}{reason}", path.display())
+        })?;
         macro_rules! sym {
             ($name:literal) => {
                 // SAFETY: the signatures match mpv's client.h.

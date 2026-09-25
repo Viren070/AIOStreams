@@ -541,6 +541,20 @@ export function PlayerControls({
     !state.started ||
     picking !== null ||
     byEar;
+  // macOS draws its window buttons over the video, so they hide with the controls.
+  React.useEffect(() => {
+    const shell = window.aiostreamsDesktop;
+    if (shell?.platform === 'macos')
+      shell.send({ type: 'window-buttons', visible });
+  }, [visible]);
+  React.useEffect(
+    () => () => {
+      const shell = window.aiostreamsDesktop;
+      if (shell?.platform === 'macos')
+        shell.send({ type: 'window-buttons', visible: true });
+    },
+    []
+  );
   const positionNow = usePositionClock(state);
   const latest = React.useRef(player);
   latest.current = player;

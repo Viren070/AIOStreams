@@ -1,0 +1,6 @@
+# The libmpv the macOS app ships: IINA's prebuilt libraries for one of its releases,
+# relocatable and built for macOS 11. Each architecture's value is the SHA-256 of
+# its listing, a `<sha256>  <file>` line per library in byte order of the names.
+version=1.5.0
+arm64=aad92bb9626f71f21d238a697e06f91abd1d31a6c16735c21807cc43e59bfa5c
+x86_64=e00792fedd128595befa39419a5184a8780bd31cb40f4215024324c19f30746c

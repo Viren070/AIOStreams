@@ -25,6 +25,7 @@ pub enum UserEvent {
     Resize(Edge),
     ToggleMaximize,
     WindowState,
+    WindowButtons(bool),
 }
 
 /// The window edges the page resizes from; the system handles the others.
@@ -83,6 +84,8 @@ fn web_dir(args: &Args) -> PathBuf {
         .and_then(|e| e.parent().map(PathBuf::from))
     {
         candidates.push(dir.join("web"));
+        // Inside a macOS app bundle, beside `Contents/MacOS`.
+        candidates.push(dir.join("../Resources/web"));
     }
     if cfg!(debug_assertions) {
         candidates.push(PathBuf::from(concat!(
@@ -356,6 +359,7 @@ pub fn handle(
         },
         Inbound::WindowMaximize => send(UserEvent::ToggleMaximize),
         Inbound::WindowState => send(UserEvent::WindowState),
+        Inbound::WindowButtons { visible } => send(UserEvent::WindowButtons(visible)),
         Inbound::Close => send(UserEvent::Close),
         Inbound::AppInfo => {
             let (mpv, ffmpeg) = player.as_ref().map(Player::versions).unwrap_or_default();

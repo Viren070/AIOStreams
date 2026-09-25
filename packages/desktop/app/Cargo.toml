@@ -40,5 +40,18 @@ webkit6 = "0.4"
 libc = "0.2"
 libloading.workspace = true
 
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-foundation = "0.3"
+objc2-app-kit = "0.3"
+objc2-quartz-core = { version = "0.3", features = ["objc2-open-gl", "objc2-core-video"] }
+objc2-open-gl = "0.3"
+objc2-core-video = "0.3"
+objc2-core-foundation = "0.3"
+dispatch2 = "0.3"
+muda = "0.17"
+libc = "0.2"
+libloading.workspace = true
+
 [build-dependencies]
 winresource = "0.1"

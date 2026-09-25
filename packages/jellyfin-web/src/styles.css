@@ -23,6 +23,14 @@ html.playing:has([data-ui='player-controls'][data-visible])
   pointer-events: auto;
 }
 
+/* macOS draws its window buttons over the top left of the page. */
+html[data-platform='macos'] [data-ui='sidebar-logo'] {
+  padding-top: 2.25rem;
+}
+html[data-platform='macos'] [data-ui='player-top-bar'] {
+  padding-left: 5.25rem;
+}
+
 html.see-through.playing body,
 html.see-through.playing #root {
   background: transparent !important;

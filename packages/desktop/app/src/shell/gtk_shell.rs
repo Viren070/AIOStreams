@@ -150,6 +150,7 @@ impl Shell {
             UserEvent::WindowState => self.emit(Outbound::WindowState {
                 maximized: self.window.is_maximized(),
             }),
+            UserEvent::WindowButtons(_) => {}
         }
     }
 

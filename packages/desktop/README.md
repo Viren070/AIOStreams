@@ -1,7 +1,8 @@
 # AIOStreams Desktop
 
 AIOStreams' Jellyfin web app (`packages/jellyfin-web`) in a native window, playing through mpv. It
-runs on Windows and Linux; macOS is not started.
+runs on Windows, Linux and macOS. The macOS app is built and started in CI but has not yet been used
+on a Mac.
 
 The window shows the web app's standalone build, which picks its own server: any Jellyfin server
 works, and AIOStreams servers get the extras. Switching servers happens in the page.
@@ -19,9 +20,9 @@ works, and AIOStreams servers get the extras. Switching servers happens in the p
 
 - **The page** is the web app's standalone build: React, the same code a server hosts at `/web`. The
   app serves its files itself through a custom scheme (`http://aiostreams.localhost/` on Windows,
-  `aiostreams://localhost/` on Linux), so the page has an origin of its own and keeps sign-ins and
+  `aiostreams://localhost/` elsewhere), so the page has an origin of its own and keeps sign-ins and
   settings like any site. It draws everything except the video, including the window's title bar and
-  buttons, and the player UI is the same one a browser tab gets.
+  buttons (macOS keeps its own), and the player UI is the same one a browser tab gets.
 - **Rust** runs the rest: one process that opens the window, starts mpv, serves the page and carries
   messages between them.
 - **The window and web view** come from each platform's own toolkit, so no browser engine ships with
@@ -30,6 +31,8 @@ works, and AIOStreams servers get the extras. Switching servers happens in the p
     [wry](https://github.com/tauri-apps/wry) puts WebView2, the Edge engine built into Windows, in it.
   - Linux: GTK 4 and WebKitGTK 6, the toolkit and web engine GNOME apps use. tao and wry are built on
     GTK 3 there, so the app uses GTK directly.
+  - macOS: tao and wry again, with WKWebView, Safari's engine. The window keeps its own buttons over
+    the page, which leaves room for them and hides them with the player's controls.
 - **mpv** plays the video. The app loads libmpv at runtime instead of linking it, so it can say when
   it is missing and a user can swap in another build. mpv keeps its own config, scripts and shaders.
   - Windows: mpv draws with Direct3D 11 straight into a child window under the web view.
@@ -37,9 +40,11 @@ works, and AIOStreams servers get the extras. Switching servers happens in the p
     OpenGL through libmpv's render API into a `GtkGLArea`, and GTK composites the web view over it.
     mpv is given the Wayland or X11 display, which lets VA-API hand decoded frames to OpenGL without
     copying them through the CPU.
+  - macOS: mpv draws through the render API into a `CAOpenGLLayer` under the web view. Apple has
+    deprecated OpenGL, but the render API has no Metal backend; VideoToolbox decodes.
 - **The bridge** carries the page's mpv commands and property changes to the app, and sends back the
   properties the page watches: position, tracks, pause and the rest. See [Bridge](#bridge).
-- **[Velopack](https://velopack.io)** installs and updates the Windows app, and
+- **[Velopack](https://velopack.io)** installs and updates the Windows and macOS apps, and
   **[cargo-about](https://github.com/EmbarkStudios/cargo-about)** lists the licences it ships under.
 
 The code is a Cargo workspace, outside the pnpm build:
@@ -85,6 +90,22 @@ The app looks for `libmpv.so.2` next to the binary, then in the system library f
 24.04's libmpv is 0.37, which is too old; build a newer one and point `AIOSTREAMS_LIBMPV` at it.
 There are no Linux packages yet.
 
+### macOS
+
+Needs Rust and the Xcode command line tools.
+
+```sh
+./scripts/fetch-libmpv-macos.sh   # into vendor/macos-<arch>
+cargo run
+```
+
+The app ships the libmpv that IINA builds and publishes for its releases: mpv with FFmpeg and its
+libraries, built for macOS 11 and ready to sit in an app bundle. `libmpv-macos.pin` names the IINA
+release and a checksum of each architecture's libraries, and the script checks it. A debug build
+also finds Homebrew's or MacPorts' libmpv. `scripts/make-app-macos.sh` assembles `AIOStreams.app`
+from a release build.
+`scripts/check-macos.sh` lints the macOS code for both architectures from Linux, without a Mac.
+
 ### Flags
 
 | Flag                          | Does                                                                            |
@@ -102,6 +123,7 @@ mpv reads `mpv.conf`, `input.conf`, scripts and shaders from:
 
 - Windows: `%APPDATA%\AIOStreams Desktop\mpv`, or `data\mpv` in a portable copy.
 - Linux: `~/.config/AIOStreams Desktop/mpv`.
+- macOS: `~/Library/Application Support/AIOStreams Desktop/mpv`.
 
 A commented `mpv.conf` is written on first run. Keys the page does not use are passed to mpv, so
 `input.conf` bindings such as shader toggles work. The app keeps `idle`, `keep-open`, `force-window`,
@@ -114,6 +136,7 @@ Each day the app runs gets a log file, and the last seven are kept:
 
 - Windows: `%LOCALAPPDATA%\AIOStreams Desktop\logs`, or `data\logs` in a portable copy.
 - Linux: `~/.local/share/AIOStreams Desktop/logs`.
+- macOS: `~/Library/Application Support/AIOStreams Desktop/logs`.
 
 There is a line per event: startup versions and paths, each file loaded and how it played and ended,
 changes to tracks and decoding settings, mpv's warnings and errors (repeats collapsed), and errors
@@ -127,9 +150,10 @@ The Windows portable zip keeps everything beside itself, in a `data` folder: sig
 
 ## Releases and updates
 
-Velopack packs the Windows app and updates it. Each architecture has two channels, `win-x64` and
-`win-x64-nightly` (`win-arm64` likewise), and each channel's feed lives on one release that every
-build replaces, so the app always finds it at the same address:
+Velopack packs the Windows and macOS apps and updates them. Each OS and architecture has two
+channels, such as `win-x64` and `win-x64-nightly` (likewise `win-arm64`, `osx-arm64` and `osx-x64`),
+and each channel's feed lives on one release that every build replaces, so the app always finds it
+at the same address:
 
 | Channel | Built by                                              | Feed and latest installers    |
 | ------- | ----------------------------------------------------- | ----------------------------- |
@@ -137,8 +161,8 @@ build replaces, so the app always finds it at the same address:
 | Nightly | every push to `main` that changes the app or its page | the `desktop-nightly` release |
 
 The installer is `aiostreams-desktop-win-<arch>.exe` and the portable copy
-`aiostreams-desktop-win-<arch>.zip`, with `-nightly` added for nightlies; a stable release also gets
-them attached. release-please treats `packages/desktop` as its own component, so commits here bump
+`aiostreams-desktop-win-<arch>.zip`; on macOS, `aiostreams-desktop-osx-<arch>.pkg` and a zip of the
+app. `-nightly` is added for nightlies, and a stable release also gets them attached. release-please treats `packages/desktop` as its own component, so commits here bump
 the desktop version, not AIOStreams'. A nightly's version is the next patch with
 `-nightly.<UTC timestamp>`, so it updates past the last release, and moving back to stable is allowed
 to go down a version.
@@ -147,6 +171,12 @@ A copy follows the channel it was installed from; Settings → Desktop app switc
 start and every six hours, downloads in the background, and applies on the next start or when asked.
 A failed check only shows in Settings and never holds up the app. `AIOSTREAMS_UPDATE_FEED` points it
 at another feed, such as a local folder served over HTTP, for testing.
+
+The macOS app is signed ad hoc, not with a Developer ID, so the first open is refused until it is
+allowed in System Settings → Privacy & Security → Open Anyway. The Velopack updater lands in the
+bundle after it is sealed, so CI seals the zip again; the installer does not need it, since installed
+files are not quarantined. Signing for real needs `macos/entitlements.plist`, as the hardened runtime
+would otherwise stop mpv's LuaJIT and the bundled libraries.
 
 ## Licences
 
@@ -168,6 +198,10 @@ The design follows Stremio's shells. On Windows,
 [stremio-shell-ng](https://github.com/Stremio/stremio-shell-ng): mpv drawing into the window beneath
 a transparent WebView2, and the `mpv-command` / `mpv-set-prop` message names. On Linux,
 [stremio-linux-shell](https://github.com/Stremio/stremio-linux-shell): a `GtkGLArea` under a
-transparent WebKitGTK view, given the Wayland display. Passing unused keys to mpv comes from
+transparent WebKitGTK view, given the Wayland display. On macOS, the community
+[stremio-community-v5-mac](https://github.com/nnocte/stremio-community-v5-mac) port and
+[IINA](https://github.com/iina/iina): mpv's render API into a `CAOpenGLLayer` beneath WKWebView,
+drawing into the framebuffer the layer binds; the libmpv it ships is IINA's own build. Passing
+unused keys to mpv comes from
 [stremio-community-v5](https://github.com/Zaarrg/stremio-community-v5). No code is taken from any of
 them.

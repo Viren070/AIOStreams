@@ -42,6 +42,10 @@ pub enum Inbound {
     WindowMaximize,
     /// Asks for a `window-state` answer.
     WindowState,
+    /// Shows or hides the system's own window buttons, where it draws them over the page.
+    WindowButtons {
+        visible: bool,
+    },
     AppInfo,
     OpenMpvConfig,
     OpenLogs,

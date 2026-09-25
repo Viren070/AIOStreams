@@ -16,16 +16,19 @@ const INTERACTIVE =
 /**
  * The desktop app's window has no title bar: empty space along the top moves
  * it, the top edge resizes it (the page covers the one the system offers), and
- * these buttons stand in for the system's.
+ * these buttons stand in for the system's. macOS keeps its own buttons and
+ * edges, so only the moving is left to the page there.
  */
 export function WindowControls() {
   const shell = window.aiostreamsDesktop!;
+  const native = shell.platform === 'macos';
   const [maximized, setMaximized] = React.useState(false);
   const [fullscreen, setFullscreen] = React.useState(false);
   const latest = React.useRef({ maximized, fullscreen });
   latest.current = { maximized, fullscreen };
 
   React.useEffect(() => {
+    document.documentElement.dataset.platform = shell.platform;
     const unsubscribe = shell.subscribe((m) => {
       if (m.type === 'window-state') setMaximized(m.maximized);
       else if (m.type === 'fullscreen') setFullscreen(m.value);
@@ -34,7 +37,7 @@ export function WindowControls() {
     const onDown = (e: MouseEvent) => {
       const { maximized, fullscreen } = latest.current;
       if (e.button !== 0 || fullscreen || e.clientY > STRIP_PX) return;
-      if (e.clientY <= EDGE_PX && !maximized) {
+      if (e.clientY <= EDGE_PX && !maximized && !native) {
         const edge =
           e.clientX <= CORNER_PX
             ? 'nw'
@@ -54,9 +57,9 @@ export function WindowControls() {
       unsubscribe();
       window.removeEventListener('mousedown', onDown);
     };
-  }, [shell]);
+  }, [shell, native]);
 
-  if (fullscreen) return null;
+  if (fullscreen || native) return null;
   const button =
     'flex h-8 w-11 items-center justify-center rounded-lg text-[0.95rem] text-white/85 outline-none transition-colors hover:text-white active:text-white';
   return (
