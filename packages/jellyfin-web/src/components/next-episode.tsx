@@ -45,25 +45,19 @@ function promptAt(
 
 /**
  * The version of the next episode that carries on from this one: the one in
- * the same binge group, else the only or first one when allowed. A cached
- * version wins a tie, since an uncached one plays a placeholder until it is.
+ * the same binge group, else the only or first one when allowed.
  */
 function carryOn(
   sources: SourceInfo[],
   current: SourceInfo,
   fallbackFirst: boolean
 ): SourceInfo | undefined {
-  const ranked = [...sources].sort(
-    (a, b) =>
-      Number(b.aiostreams?.cached === true) -
-      Number(a.aiostreams?.cached === true)
-  );
   const group = current.aiostreams?.bingeGroup;
   const same = group
-    ? ranked.find((s) => s.aiostreams?.bingeGroup === group)
+    ? sources.find((s) => s.aiostreams?.bingeGroup === group)
     : undefined;
   return (
-    same ?? (sources.length === 1 || fallbackFirst ? ranked[0] : undefined)
+    same ?? (sources.length === 1 || fallbackFirst ? sources[0] : undefined)
   );
 }
 
