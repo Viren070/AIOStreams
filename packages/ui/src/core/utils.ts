@@ -17,3 +17,11 @@ export function mergeRefs<T = any>(
 export const isEmpty = (obj: any) =>
   [Object, Array].includes((obj || {}).constructor) &&
   !Object.entries(obj || {}).length;
+
+/** A press on a toast or a `data-modal-passthrough` element leaves an open modal as it is. */
+export function keepsModalOpen(target: EventTarget | null): boolean {
+  return (
+    target instanceof Element &&
+    !!target.closest('[data-sonner-toast], [data-modal-passthrough]')
+  );
+}

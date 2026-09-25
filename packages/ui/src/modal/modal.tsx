@@ -4,6 +4,7 @@ import { cva } from 'class-variance-authority';
 import * as React from 'react';
 import { CloseButton } from '../button';
 import { cn, ComponentAnatomy, defineStyleAnatomy } from '../core/styling';
+import { keepsModalOpen } from '../core/utils';
 
 /* -------------------------------------------------------------------------------------------------
  * Anatomy
@@ -150,6 +151,10 @@ export function Modal(props: ModalProps) {
               onEscapeKeyDown={onEscapeKeyDown}
               onPointerDownCapture={onPointerDownCapture}
               onInteractOutside={(e) => {
+                if (keepsModalOpen(e.target)) {
+                  e.preventDefault();
+                  return;
+                }
                 if (innerLayerWasOpenRef.current) {
                   innerLayerWasOpenRef.current = false;
                   e.preventDefault();

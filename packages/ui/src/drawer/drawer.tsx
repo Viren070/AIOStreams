@@ -4,6 +4,7 @@ import { cva, VariantProps } from 'class-variance-authority';
 import * as React from 'react';
 import { CloseButton } from '../button';
 import { cn, ComponentAnatomy, defineStyleAnatomy } from '../core/styling';
+import { keepsModalOpen } from '../core/utils';
 import { useState } from 'react';
 
 function useDrawerBodyBehavior(id: string, open: boolean | undefined) {
@@ -227,7 +228,10 @@ export function Drawer(props: DrawerProps) {
           onCloseAutoFocus={onCloseAutoFocus}
           onEscapeKeyDown={onEscapeKeyDown}
           onPointerDownCapture={onPointerDownCapture}
-          onInteractOutside={onInteractOutside}
+          onInteractOutside={(e) => {
+            if (keepsModalOpen(e.target)) e.preventDefault();
+            else onInteractOutside?.(e);
+          }}
           tabIndex={-1}
         >
           {!title && !description ? (

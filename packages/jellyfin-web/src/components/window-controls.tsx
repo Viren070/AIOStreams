@@ -64,7 +64,8 @@ export function WindowControls() {
       {!maximized && (
         <div
           aria-hidden
-          className="fixed inset-x-0 top-0 z-[9999] flex h-1 cursor-ns-resize justify-between"
+          data-modal-passthrough
+          className="pointer-events-auto fixed inset-x-0 top-0 z-[9999] flex h-1 cursor-ns-resize justify-between"
         >
           <span className="w-3 cursor-nwse-resize" />
           <span className="w-3 cursor-nesw-resize" />
@@ -72,7 +73,8 @@ export function WindowControls() {
       )}
       <div
         data-ui="window-controls"
-        className="fixed right-2 top-0 z-[9999] flex h-10 items-center gap-1 transition-opacity duration-300"
+        data-modal-passthrough
+        className="pointer-events-auto fixed right-2 top-0 z-[9999] flex h-10 items-center gap-1 transition-opacity duration-300"
       >
         <button
           type="button"

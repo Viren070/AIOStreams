@@ -11,6 +11,8 @@ export const ToasterAnatomy = defineStyleAnatomy({
   toaster: cva(['group toaster z-[150]']),
   toast: cva([
     'group/toast',
+    // An open modal turns pointer events off on the body, which toasts would inherit.
+    'pointer-events-auto',
     'select-none cursor-default',
     'group-[.toaster]:py-4 group-[.toaster]:px-6 group-[.toaster]:gap-3',
     'group-[.toaster]:text-sm group-[.toaster]:font-medium',
