@@ -17,13 +17,16 @@ import {
   AppLayoutContent,
   AppLayoutSidebar,
   AppSidebarProvider,
+  useAppSidebarContext,
 } from '@aiostreams/ui/app-layout';
 import {
   DropdownMenu,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  type DropdownMenuProps,
 } from '@aiostreams/ui/dropdown-menu';
+import { VerticalMenu } from '@aiostreams/ui/vertical-menu';
 import { Sidebar, type SidebarItem } from '@aiostreams/ui/shared/sidebar';
 import {
   ConfirmationDialog,
@@ -33,6 +36,7 @@ import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '../lib/session';
 import { usePickableUsers } from '../lib/queries';
 import { configureUrl, navigate, to } from '../lib/paths';
+import { serverAddress } from '../lib/servers';
 import { UserAvatar } from './user-avatar';
 import { BrandLogo, useBranding } from './brand-logo';
 import { VersionPickerProvider } from './version-picker';
@@ -65,6 +69,63 @@ function SidebarAvatar({ className }: { className?: string }) {
   );
 }
 
+/** The account menu: who is signed in, on which server, and the account actions. */
+function AccountMenu({
+  trigger,
+  items,
+  ...position
+}: {
+  trigger: React.ReactNode;
+  items: SidebarItem[];
+} & Pick<DropdownMenuProps, 'side' | 'align' | 'sideOffset'>) {
+  const { client, user } = useSession();
+  const branding = useBranding();
+  return (
+    <DropdownMenu {...position} className="min-w-52" trigger={trigger}>
+      <DropdownMenuLabel>
+        <span className="block truncate">{user.Name ?? 'You'}</span>
+        <span className="block truncate text-xs font-normal text-[--muted]">
+          {branding.name ?? serverAddress(client.base)}
+        </span>
+      </DropdownMenuLabel>
+      <DropdownMenuSeparator />
+      {items.map((item) => {
+        const Icon = item.iconType;
+        return (
+          <DropdownMenuItem key={item.name} onClick={item.onClick}>
+            {Icon && <Icon className="text-lg" />}
+            {item.name}
+          </DropdownMenuItem>
+        );
+      })}
+    </DropdownMenu>
+  );
+}
+
+/** The avatar at the foot of the sidebar, styled as its other items. */
+function SidebarAccount({ items }: { items: SidebarItem[] }) {
+  const { user } = useSession();
+  const sidebar = useAppSidebarContext();
+  return (
+    <AccountMenu
+      side="right"
+      align="end"
+      sideOffset={8}
+      items={items}
+      trigger={
+        <div>
+          <VerticalMenu
+            collapsed={!sidebar.isBelowBreakpoint}
+            isSidebar
+            itemClass="relative"
+            items={[{ name: user.Name ?? 'You', iconType: SidebarAvatar }]}
+          />
+        </div>
+      }
+    />
+  );
+}
+
 /**
  * The backdrop as one element that never fades with the screens, so a
  * transparent page shows nothing beneath it; the player hides it.
@@ -79,7 +140,7 @@ export function PageBackground() {
 }
 
 export function WebLayout() {
-  const { client, signOut, switchUser, changeServer, user } = useSession();
+  const { client, signOut, switchUser, changeServer } = useSession();
   const configure = configureUrl(client.base, useBranding());
   const users = usePickableUsers();
   const several = (users.data?.length ?? 0) > 1;
@@ -121,13 +182,17 @@ export function WebLayout() {
     },
   ];
 
+  const settings: SidebarItem = {
+    name: 'Settings',
+    iconType: BiCog,
+    isCurrent: pathname.startsWith('/settings'),
+    onClick: () => navigate(to.settings()),
+  };
+
   const accountItems: SidebarItem[] = [
-    {
-      name: 'Settings',
-      iconType: BiCog,
-      isCurrent: pathname.startsWith('/settings'),
-      onClick: () => navigate(to.settings()),
-    },
+    ...(several
+      ? [{ name: 'Switch user', iconType: BiTransferAlt, onClick: switchUser }]
+      : []),
     ...(configure
       ? [
           {
@@ -147,29 +212,16 @@ export function WebLayout() {
     },
   ];
 
-  const footerItems: SidebarItem[] = [
-    ...accountItems,
-    {
-      name: several
-        ? `${user.Name ?? 'You'}: switch user`
-        : (user.Name ?? 'You'),
-      iconType: SidebarAvatar,
-      onClick: several ? switchUser : undefined,
-    },
-  ];
-
-  const menuItems: SidebarItem[] = [
-    ...(several
-      ? [{ name: 'Switch user', iconType: BiTransferAlt, onClick: switchUser }]
-      : []),
-    ...accountItems,
-  ];
-
   return (
     <AppSidebarProvider>
       <AppLayout withSidebar sidebarSize="slim">
         <AppLayoutSidebar>
-          <Sidebar header={<Logo />} items={items} footerItems={footerItems} />
+          <Sidebar
+            header={<Logo />}
+            items={items}
+            footerItems={[settings]}
+            footer={<SidebarAccount items={accountItems} />}
+          />
         </AppLayoutSidebar>
         <AppLayout>
           <AppLayoutContent>
@@ -185,7 +237,7 @@ export function WebLayout() {
           </AppLayoutContent>
         </AppLayout>
       </AppLayout>
-      <MobileNav items={items} menuItems={menuItems} />
+      <MobileNav items={items} menuItems={[settings, ...accountItems]} />
       <ConfirmationDialog {...confirmSignOut} />
     </AppSidebarProvider>
   );
@@ -198,7 +250,6 @@ function MobileNav({
   items: SidebarItem[];
   menuItems: SidebarItem[];
 }) {
-  const { user } = useSession();
   const tab =
     'flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-full px-1 py-1.5 text-[0.65rem] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-white/60';
   return (
@@ -227,11 +278,11 @@ function MobileNav({
             </button>
           );
         })}
-        <DropdownMenu
+        <AccountMenu
           side="top"
           align="end"
           sideOffset={12}
-          className="min-w-52"
+          items={menuItems}
           trigger={
             <button
               type="button"
@@ -242,21 +293,7 @@ function MobileNav({
               <span className="max-w-full truncate">You</span>
             </button>
           }
-        >
-          <DropdownMenuLabel className="truncate">
-            {user.Name ?? 'You'}
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          {menuItems.map((item) => {
-            const Icon = item.iconType;
-            return (
-              <DropdownMenuItem key={item.name} onClick={item.onClick}>
-                {Icon && <Icon className="text-lg" />}
-                {item.name}
-              </DropdownMenuItem>
-            );
-          })}
-        </DropdownMenu>
+        />
       </div>
     </nav>
   );
