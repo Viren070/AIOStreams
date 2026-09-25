@@ -17,6 +17,12 @@ import { Combobox } from '@aiostreams/ui/combobox';
 import { Switch } from '@aiostreams/ui/switch';
 import { Slider } from '@aiostreams/ui/slider';
 import { ColorInput } from '@aiostreams/ui/color-input';
+import { Textarea } from '@aiostreams/ui/textarea';
+import {
+  DEFAULT_ACCENT,
+  DEFAULT_BACKGROUND,
+  THEME_PRESETS,
+} from '@aiostreams/ui/utils/palette';
 import { TextInput } from '@aiostreams/ui/text-input';
 import { Button } from '@aiostreams/ui/button';
 import {
@@ -50,7 +56,10 @@ import {
 } from '../lib/playback';
 import {
   AUDIO_CHANNELS,
+  MAX_CUSTOM_CSS,
   MAX_FEATURED,
+  useCustomCss,
+  useThemeColors,
   NEXT_COUNTDOWNS,
   NEXT_LEADS,
   SEEK_STEPS,
@@ -606,6 +615,7 @@ function InterfaceSection() {
 
   return (
     <>
+      <ThemeCard />
       <SettingsCard
         title="Home and grids"
         description="Saved to your account, so they follow you to every device."
@@ -667,6 +677,105 @@ function InterfaceSection() {
         />
       </SettingsCard>
     </>
+  );
+}
+
+function ThemeCard() {
+  const [colors, setColors] = useThemeColors();
+  const [css, setCss] = useCustomCss();
+  const accent = colors.accent ?? DEFAULT_ACCENT;
+  const background = colors.background ?? DEFAULT_BACKGROUND;
+  // The default colours are stored as nothing, so a later default change applies.
+  const pick = (next: { accent: string; background: string }) =>
+    setColors({
+      accent: next.accent === DEFAULT_ACCENT ? undefined : next.accent,
+      background:
+        next.background === DEFAULT_BACKGROUND ? undefined : next.background,
+    });
+  return (
+    <SettingsCard
+      title="Theme"
+      description="Saved to your account, so it follows you to every device."
+    >
+      <div className="space-y-2">
+        <p className="text-sm font-semibold">Presets</p>
+        <div className="flex flex-wrap gap-2">
+          {THEME_PRESETS.map((preset) => {
+            const selected =
+              preset.accent === accent && preset.background === background;
+            return (
+              <button
+                key={preset.name}
+                type="button"
+                data-ui="theme-preset"
+                aria-pressed={selected}
+                onClick={() => pick(preset)}
+                className={cn(
+                  'flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-sm transition-colors hover:bg-white/5',
+                  selected
+                    ? 'border-[--brand] ring-1 ring-[--brand]'
+                    : 'border-white/10'
+                )}
+              >
+                <span
+                  className="flex size-6 items-center justify-center rounded-full ring-1 ring-white/15"
+                  style={{ backgroundColor: preset.background }}
+                >
+                  <span
+                    className="size-3 rounded-full"
+                    style={{ backgroundColor: preset.accent }}
+                  />
+                </span>
+                {preset.name}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <ColorInput
+        label="Accent"
+        help="Buttons, progress bars and highlights."
+        value={accent}
+        onValueChange={(value) => pick({ accent: value, background })}
+      />
+      <ColorInput
+        label="Background"
+        help="Pages and panels take their shades from it. Dark colours read best."
+        value={background}
+        onValueChange={(value) => pick({ accent, background: value })}
+      />
+      <Textarea
+        label="Custom CSS"
+        help={
+          <>
+            Applied on top of the theme. Parts of the app carry a{' '}
+            <code>data-ui</code> attribute to style them by, such as{' '}
+            <code>[data-ui=&quot;progress-bar&quot;]</code>.
+          </>
+        }
+        value={css}
+        onValueChange={setCss}
+        maxLength={MAX_CUSTOM_CSS}
+        spellCheck={false}
+        placeholder={
+          '[data-ui="progress-bar-fill"] {\n  background: hotpink;\n}'
+        }
+        className="min-h-40 font-mono text-xs"
+      />
+      {(colors.accent || colors.background || css) && (
+        <Button
+          size="sm"
+          intent="gray-outline"
+          className="rounded-full"
+          onClick={() => {
+            setColors({});
+            setCss('');
+          }}
+        >
+          Reset theme
+        </Button>
+      )}
+    </SettingsCard>
   );
 }
 
@@ -873,7 +982,9 @@ export function SettingsPage({
 
   return (
     <PageBody>
-      <h1 className="text-3xl font-bold">Settings</h1>
+      <h1 data-ui="page-title" className="text-3xl font-bold">
+        Settings
+      </h1>
       <Tabs
         value={active.id}
         onValueChange={onTabChange}
@@ -896,7 +1007,12 @@ export function SettingsPage({
                 {group}
               </p>
               {items.map((s) => (
-                <TabsTrigger key={s.id} value={s.id} className="group">
+                <TabsTrigger
+                  key={s.id}
+                  value={s.id}
+                  data-name={s.id}
+                  className="group"
+                >
                   <s.icon className="mr-3 text-xl transition-transform duration-200 group-hover:translate-x-0.5" />
                   {s.label}
                 </TabsTrigger>
@@ -909,6 +1025,7 @@ export function SettingsPage({
             <TabsContent
               key={s.id}
               value={s.id}
+              data-name={s.id}
               className="space-y-6 duration-300 animate-in fade-in-0 slide-in-from-bottom-2"
             >
               {s.id === active.id && (

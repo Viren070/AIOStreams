@@ -9,8 +9,13 @@ html.see-through body {
   background: transparent !important;
 }
 
+/* Important so custom CSS can't cover the video beneath the page. */
 html.playing .page-background {
-  display: none;
+  display: none !important;
+}
+html.see-through.playing body,
+html.see-through.playing #root {
+  background: transparent !important;
 }
 
 /* The page's scrollbar never goes away (see app.tsx), so a scroll lock must not

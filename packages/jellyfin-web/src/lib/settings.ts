@@ -28,6 +28,9 @@ interface Synced {
   posterSize?: string;
   posterText?: string;
   mergeNextUp?: string;
+  accentColor?: string;
+  backgroundColor?: string;
+  customCss?: string;
 }
 
 const SYNCED_KEYS: (keyof Synced)[] = [
@@ -35,6 +38,9 @@ const SYNCED_KEYS: (keyof Synced)[] = [
   'posterSize',
   'posterText',
   'mergeNextUp',
+  'accentColor',
+  'backgroundColor',
+  'customCss',
 ];
 
 const PREFS_ID = 'aiostreams-web';
@@ -85,9 +91,9 @@ function publish(next: Synced) {
   announce();
 }
 
-function push(prefs: Synced) {
-  if (!session) return;
-  const { client, userId } = session;
+function push(prefs: Synced, target = session) {
+  if (!target) return;
+  const { client, userId } = target;
   void client
     .post(
       `/DisplayPreferences/${PREFS_ID}`,
@@ -125,12 +131,17 @@ export function syncPreferences(
   };
 }
 
+let pushTimer: ReturnType<typeof setTimeout> | undefined;
+
 function update(key: keyof Synced, value: string | undefined) {
   const next = { ...current };
   if (value) next[key] = value;
   else delete next[key];
   publish(next);
-  push(next);
+  // A dragged colour or typed CSS saves once it settles.
+  clearTimeout(pushTimer);
+  const target = session;
+  pushTimer = setTimeout(() => push(next, target), 500);
 }
 
 function readFeatured(): string {
@@ -205,6 +216,51 @@ export function useMergeNextUp(): [boolean, (value: boolean) => void] {
   const value = React.useSyncExternalStore(subscribe, readMergeNextUp);
   const set = React.useCallback((next: boolean) => {
     update('mergeNextUp', next ? '1' : undefined);
+  }, []);
+  return [value, set];
+}
+
+export interface ThemeColors {
+  accent?: string;
+  background?: string;
+}
+
+function readAccent(): string | undefined {
+  return current.accentColor;
+}
+
+function readBackground(): string | undefined {
+  return current.backgroundColor;
+}
+
+/** Unset colours keep the stylesheet's own. */
+export function useThemeColors(): [ThemeColors, (value: ThemeColors) => void] {
+  const accent = React.useSyncExternalStore(subscribe, readAccent);
+  const background = React.useSyncExternalStore(subscribe, readBackground);
+  const value = React.useMemo(
+    () => ({ accent, background }),
+    [accent, background]
+  );
+  const set = React.useCallback((next: ThemeColors) => {
+    update('accentColor', next.accent);
+    update('backgroundColor', next.background);
+  }, []);
+  return [value, set];
+}
+
+export const MAX_CUSTOM_CSS = 20_000;
+
+function readCustomCss(): string {
+  return current.customCss ?? '';
+}
+
+export function useCustomCss(): [string, (value: string) => void] {
+  const value = React.useSyncExternalStore(subscribe, readCustomCss);
+  const set = React.useCallback((next: string) => {
+    update(
+      'customCss',
+      next.trim() ? next.slice(0, MAX_CUSTOM_CSS) : undefined
+    );
   }, []);
   return [value, set];
 }
