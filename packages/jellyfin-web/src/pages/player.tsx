@@ -29,6 +29,7 @@ import { useDesktopPlayer } from '../lib/hosts/jellyfin-desktop';
 import { useShellPlayer } from '../lib/hosts/shell';
 import type { PlayerController } from '../lib/player';
 import {
+  useChapterSkips,
   useSubtitleStyle,
   useVideoFit,
   type SubtitleStyle,
@@ -416,18 +417,25 @@ function BrowserPlayer({
   );
 }
 
-/** The server's segments, or ones named by the file's chapters where it has none. */
+/**
+ * The server's segments and the ones the file's chapters name: where both have
+ * a kind, the chapters' when preferred, else the server's.
+ */
 function useShownSegments(
   segments: MediaSegmentDto[] | null | undefined,
   player: PlayerController
 ) {
   const { chapters } = player;
   const { durationMs } = player.state;
-  return React.useMemo(
-    () =>
-      segments?.length ? segments : chapterSegments(chapters ?? [], durationMs),
-    [segments, chapters, durationMs]
-  );
+  const [preferChapters] = useChapterSkips();
+  return React.useMemo(() => {
+    const named = chapterSegments(chapters ?? [], durationMs);
+    const [first, second] = preferChapters
+      ? [named, segments ?? []]
+      : [segments ?? [], named];
+    const kinds = new Set(first.map((s) => String(s.Type)));
+    return [...first, ...second.filter((s) => !kinds.has(String(s.Type)))];
+  }, [segments, chapters, durationMs, preferChapters]);
 }
 
 /**

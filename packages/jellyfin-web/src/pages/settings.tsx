@@ -66,6 +66,7 @@ import {
   useAudioChannels,
   useEpisodeLayout,
   useEscExitsFullscreen,
+  useChapterSkips,
   useUpdateChannel,
   useFeatured,
   useHardwareDecoding,
@@ -480,6 +481,7 @@ function DesktopSection() {
   const [audioChannels, setAudioChannels] = useAudioChannels();
   const [passthrough, setPassthrough] = usePassthrough();
   const [escExits, setEscExits] = useEscExitsFullscreen();
+  const [chapterSkips, setChapterSkips] = useChapterSkips();
   return (
     <>
       <UpdatesCard />
@@ -509,6 +511,15 @@ function DesktopSection() {
           help="Sends Dolby and DTS audio to your receiver as it is. Only turn this on if your receiver decodes them."
           value={passthrough}
           onValueChange={setPassthrough}
+        />
+      </SettingsCard>
+      <SettingsCard title="Skipping" description={ON_DEVICE}>
+        <Switch
+          side="right"
+          label="Skip by the file's chapters"
+          help="Where a file names its intro, credits, recap or preview chapters, the skip buttons use them instead of the server's times, since they fit that exact file. The rest still come from the server."
+          value={chapterSkips}
+          onValueChange={setChapterSkips}
         />
       </SettingsCard>
       <SettingsCard title="Window" description={ON_DEVICE}>

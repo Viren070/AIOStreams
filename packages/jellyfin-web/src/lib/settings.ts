@@ -465,6 +465,7 @@ const DESKTOP_KEYS = {
   audioChannels: 'aiostreams-desktop-audio-channels',
   passthrough: 'aiostreams-desktop-passthrough',
   escExitsFullscreen: 'aiostreams-desktop-esc-fullscreen',
+  chapterSkips: 'aiostreams-desktop-chapter-skips',
 } as const;
 
 export interface DesktopSettings {
@@ -514,6 +515,9 @@ export const usePassthrough = () =>
   useDeviceSetting<boolean>(DESKTOP_KEYS.passthrough, false);
 export const useEscExitsFullscreen = () =>
   useDeviceSetting<boolean>(DESKTOP_KEYS.escExitsFullscreen, true);
+/** Read by the page only; the app itself never needs it. */
+export const useChapterSkips = () =>
+  useDeviceSetting<boolean>(DESKTOP_KEYS.chapterSkips, true);
 
 export function onSettingsChange(listener: () => void): () => void {
   return subscribe(listener);
