@@ -48,6 +48,8 @@ interface ShellBridge {
   protocol: number;
   version: string;
   platform: string;
+  /** The computer's name. */
+  device: string;
   send(message: { type: string; [key: string]: unknown }): void;
   subscribe(listener: (message: ShellMessage) => void): () => void;
 }

@@ -1,7 +1,9 @@
 import { storage } from './storage';
 
-const CLIENT_NAME = 'AIOStreams Web';
-const CLIENT_VERSION = '1.0.0';
+// The desktop app is its own client, on the computer it runs on.
+const shell = window.aiostreamsDesktop;
+const CLIENT_NAME = shell ? 'AIOStreams Desktop' : 'AIOStreams Web';
+const CLIENT_VERSION = shell?.version ?? '1.0.0';
 const DEVICE_KEY = 'aiostreams-web-device';
 
 type QueryValue = string | number | boolean | string[] | null | undefined;
@@ -26,6 +28,7 @@ function deviceId(): string {
 }
 
 function deviceName(): string {
+  if (shell?.device) return shell.device;
   const ua = navigator.userAgent;
   const browser = /Edg\//.test(ua)
     ? 'Edge'
