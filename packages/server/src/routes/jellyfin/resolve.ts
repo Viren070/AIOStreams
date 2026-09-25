@@ -18,6 +18,7 @@ import {
   labelFrom,
   isMemoFresh,
   resolveByItem,
+  sourceIdentities,
   sourceRecordFrom,
   generateBingeGroup,
   writePlaybackMemo,
@@ -290,6 +291,7 @@ async function resolveUncached(
     }
   };
   const top = playable.slice(0, maxVersionsFor(ctx));
+  const identities = sourceIdentities(itemId, top);
 
   const sources: MediaSourceRecord[] = [];
   for (const [index, raw] of top.entries()) {
@@ -298,6 +300,7 @@ async function resolveUncached(
     sources.push(
       sourceRecordFrom(
         ctx.uuid,
+        identities[index],
         stream,
         formatted,
         labelFrom(formatted, stream),
@@ -395,9 +398,9 @@ export async function enrichSourceSubtitles(
   memo: PlaybackMemo,
   msid?: string
 ): Promise<void> {
-  const record =
-    (msid ? memo.sources.find((s) => s.msid === msid) : undefined) ??
-    memo.sources[0];
+  const record = msid
+    ? memo.sources.find((s) => s.msid === msid)
+    : memo.sources[0];
   if (!record || record.notice || record.subtitlesEnriched) return;
   const extras = fileExtrasFor(record);
 

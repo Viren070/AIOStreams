@@ -150,11 +150,9 @@ function pickSource(
   memo: PlaybackMemo,
   requestedMsid?: string
 ): MediaSourceRecord | undefined {
-  if (requestedMsid)
-    return (
-      memo.sources.find((s) => s.msid === requestedMsid) ?? memo.sources[0]
-    );
-  return memo.sources[0];
+  return requestedMsid
+    ? memo.sources.find((s) => s.msid === requestedMsid)
+    : memo.sources[0];
 }
 
 /**
@@ -192,14 +190,18 @@ async function playbackInfo(req: Request, res: Response) {
     return;
   }
   await enrichSourceSubtitles(loc.ctx, memo, loc.requestedMsid);
+  // A version no longer listed must not lend its id to another.
+  const requested = memo.sources.some((s) => s.msid === loc.requestedMsid)
+    ? loc.requestedMsid
+    : undefined;
   const sources = mediaSourcesFrom(req, loc.ctx, memo, {
     // Other clients play the item's own id; the web app keeps a version's id.
     firstId:
-      loc.requestedMsid ??
+      requested ??
       (loc.ctx.client.name === WEB_APP_CLIENT
         ? memo.sources[0].msid
         : loc.itemId),
-    requestedMsid: loc.requestedMsid,
+    requestedMsid: requested,
     profile,
     hasSegments: hasSegments(loc.ctx, memo),
   });

@@ -167,15 +167,51 @@ export function isPlayable(stream: ParsedStream): boolean {
   return !needsHeaders;
 }
 
+function fileKey(stream: ParsedStream): string {
+  const file = stream.filename ?? String(stream.size ?? '');
+  const infoHash = stream.torrent?.infoHash?.toLowerCase();
+  if (infoHash) return `btih:${infoHash}|${stream.torrent?.fileIdx ?? file}`;
+  if (stream.releaseKey)
+    return `release:${stream.releaseKey}|${stream.indexer ?? ''}|${file}`;
+  if (stream.nzbUrl) return `nzb:${stream.nzbUrl}|${file}`;
+  if (stream.ytId) return `yt:${stream.ytId}`;
+  if (stream.externalUrl) return `external:${stream.externalUrl}`;
+  if (stream.filename) return `file:${stream.filename}|${stream.size ?? ''}`;
+  return `url:${stream.url ?? ''}`;
+}
+
+/**
+ * What each version is, whatever its place in the list: its item, addon,
+ * service and file. Versions alike in all of it are numbered in order, as
+ * nothing else tells them apart.
+ */
+export function sourceIdentities(
+  itemId: string,
+  streams: ParsedStream[]
+): string[] {
+  const seen = new Map<string, number>();
+  return streams.map((stream) => {
+    const key = [
+      itemId,
+      stream.addon.instanceId,
+      stream.service?.id ?? '',
+      fileKey(stream),
+    ].join('|');
+    const count = seen.get(key) ?? 0;
+    seen.set(key, count + 1);
+    return count ? `${key}|${count}` : key;
+  });
+}
+
 export function sourceRecordFrom(
   uuid: string,
+  identity: string,
   stream: ParsedStream,
   formatted: { name: string; description: string },
   label: string,
   addonSubtitles: SubtitleTrack[],
   bingeGroup?: string
 ): MediaSourceRecord {
-  const identity = stream.id || stream.url || JSON.stringify(stream.releaseKey);
   return {
     msid: mediaSourceId(uuid, identity),
     url: stream.url!,
