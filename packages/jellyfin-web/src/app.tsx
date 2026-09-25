@@ -6,7 +6,7 @@ import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@aiostreams/ui/toaster';
 import { LoadingOverlay } from '@aiostreams/ui/loading-spinner';
 import { pickerUuid, SessionProvider, useSessionPhase } from './lib/session';
-import { announceToAndroid } from './lib/hosts';
+import { announceToAndroid } from './lib/hosts/jellyfin-android';
 import { webRouter } from './router';
 import { SignInPage, UserPicker } from './pages/sign-in';
 import { PageBackground } from './components/layout';

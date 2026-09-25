@@ -8,6 +8,7 @@ import {
 } from '@tanstack/react-router';
 import { WebLayout } from './components/layout';
 import { navigate, setNavigator, to } from './lib/paths';
+import { handleAndroidBack } from './lib/hosts/jellyfin-android';
 import { lastCatalog } from './lib/settings';
 import { HomePage } from './pages/home';
 import { DiscoverIndex, DiscoverPage } from './pages/discover';
@@ -183,22 +184,4 @@ document.addEventListener('click', (e) => {
   navigate(anchor.getAttribute('href')!.slice(1));
 });
 
-/*
- * The Android app sends its back button to `NavigationHelper.goBack()`, which
- * jellyfin-web defines. An open overlay closes first; at the root it exits.
- */
-if (window.NativeInterface) {
-  window.NavigationHelper = {
-    goBack() {
-      if (document.querySelector('[role="dialog"], [role="menu"]')) {
-        document.dispatchEvent(
-          new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
-        );
-      } else if (webRouter.history.canGoBack()) {
-        webRouter.history.back();
-      } else {
-        window.NativeInterface?.exitApp?.();
-      }
-    },
-  };
-}
+handleAndroidBack(webRouter.history);

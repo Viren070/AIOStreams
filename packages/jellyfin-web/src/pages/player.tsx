@@ -18,11 +18,10 @@ import {
   textSubtitles,
 } from '../lib/playback';
 import { playbackHost } from '../lib/hosts';
-import {
-  useBrowserPlayer,
-  useDesktopPlayer,
-  type PlayerController,
-} from '../lib/player';
+import { useBrowserPlayer } from '../lib/hosts/browser';
+import { useDesktopPlayer } from '../lib/hosts/jellyfin-desktop';
+import { useShellPlayer } from '../lib/hosts/shell';
+import type { PlayerController } from '../lib/player';
 import { backdropUrl } from '../lib/images';
 import { goBack, to } from '../lib/paths';
 import { PlayerControls } from '../components/player-controls';
@@ -88,8 +87,9 @@ export function PlayerPage({
       <Failure itemId={itemId} message="This version is no longer available." />
     );
   }
-  return playbackHost() === 'desktop' ? (
-    <DesktopPlayer {...playing} startMs={startMs} />
+  const host = playbackHost();
+  return host === 'shell' || host === 'desktop' ? (
+    <NativePlayer {...playing} startMs={startMs} />
   ) : (
     <BrowserPlayer {...playing} startMs={startMs} />
   );
@@ -273,28 +273,17 @@ function BrowserPlayer({ item, source, playSessionId, startMs }: PlayerProps) {
  * mpv draws beneath the page, which stays transparent from the first paint;
  * a cover hides the wait for the first frame.
  */
-function DesktopPlayer({ item, source, playSessionId, startMs }: PlayerProps) {
+function NativePlayer({ item, source, playSessionId, startMs }: PlayerProps) {
   const { client } = useSession();
   const back = React.useCallback(() => goBack(to.item(item.Id!)), [item.Id]);
-  // Titles only: the app fetches artwork from the server's root, not ours.
-  const metadata = React.useMemo(
-    () => ({
-      Name: item.Name,
-      Type: item.Type,
-      SeriesName: item.SeriesName,
-      IndexNumber: item.IndexNumber,
-      ParentIndexNumber: item.ParentIndexNumber,
-      ProductionYear: item.ProductionYear,
-      RunTimeTicks: item.RunTimeTicks,
-    }),
-    [item]
-  );
-  const player = useDesktopPlayer({
+  const useNativePlayer =
+    playbackHost() === 'shell' ? useShellPlayer : useDesktopPlayer;
+  const player = useNativePlayer({
     client,
+    item,
     url: streamUrl(client, item.Id!, source, playSessionId),
     source,
     startMs,
-    metadata,
     onEnded: back,
   });
   const segments = useSegments(item.Id!);

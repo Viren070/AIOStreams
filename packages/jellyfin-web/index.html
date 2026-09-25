@@ -20,7 +20,8 @@
     <script>
       // The desktop app draws its player beneath its web view, which only
       // renders transparency properly for a page transparent from the start.
-      if (window.jmpInfo) document.documentElement.classList.add('see-through');
+      if (window.jmpInfo || window.aiostreamsDesktop)
+        document.documentElement.classList.add('see-through');
     </script>
   </head>
   <body>
