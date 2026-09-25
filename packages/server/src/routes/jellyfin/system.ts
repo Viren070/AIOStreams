@@ -30,8 +30,6 @@ export function serverName(): string {
 const FEATURES = {
   /** Sign-in with a configuration's UUID or alias. */
   configSignIn: 1,
-  /** `/stremio/configure` on this origin. */
-  configure: 1,
   /** `/AIOStreams/Users` and `/AIOStreams/Token`. */
   users: 1,
   /** `/AIOStreams/History`, its `Clear` and `Export`, and `/AIOStreams/Activity`. */
@@ -51,6 +49,7 @@ export function publicInfo(req: Request) {
     // Jellyfin has no field for a logo; clients ignore what they don't know.
     aiostreams: {
       logo: req.jf?.userData.addonLogo ?? null,
+      configureUrl: `${requestOrigin(req)}/stremio/configure`,
       pinSignIn: appConfig.jellyfin.pinSignIn && !!mountOf(req),
       features: FEATURES,
     },

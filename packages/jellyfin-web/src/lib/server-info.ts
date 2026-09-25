@@ -6,7 +6,6 @@ import type { Branding } from './types';
 /** The extensions a server can offer; the server lists them in `system.ts`. */
 export type Feature =
   | 'configSignIn'
-  | 'configure'
   | 'users'
   | 'history'
   | 'playedUpTo'
@@ -15,6 +14,8 @@ export type Feature =
 
 /** What a server's public info says about it. */
 export interface ServerInfo extends Branding {
+  /** Where the account behind this server is configured. */
+  configureUrl: string | null;
   pinSignIn: boolean;
   /** Each extension it implements, with its version. */
   features: Partial<Record<Feature, number>>;
@@ -23,6 +24,7 @@ export interface ServerInfo extends Branding {
 export const NO_SERVER_INFO: ServerInfo = {
   name: null,
   logo: null,
+  configureUrl: null,
   pinSignIn: false,
   features: {},
 };
@@ -31,6 +33,7 @@ interface PublicSystemInfo {
   ServerName?: string;
   aiostreams?: {
     logo?: string | null;
+    configureUrl?: string | null;
     pinSignIn?: boolean;
     features?: ServerInfo['features'];
   };
@@ -59,6 +62,7 @@ export function useServerInfoQuery(client: JellyfinClient) {
       return {
         name: data.ServerName ?? null,
         logo: data.aiostreams?.logo ?? null,
+        configureUrl: data.aiostreams?.configureUrl ?? null,
         pinSignIn: data.aiostreams?.pinSignIn ?? false,
         features: data.aiostreams?.features ?? {},
       };

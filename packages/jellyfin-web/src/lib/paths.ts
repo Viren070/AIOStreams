@@ -53,10 +53,11 @@ export function versionsPath(
 export const href = (path: string) => `#${path}`;
 
 /** The server's configuration page, when it has one. */
+/** The server's own when it names one; the hosting server's page otherwise. */
 export function configureUrl(base: string, info: ServerInfo): string | null {
-  return !__STANDALONE__ || info.features.configure
-    ? new URL('/stremio/configure', base).href
-    : null;
+  const url =
+    info.configureUrl ?? (__STANDALONE__ ? null : '/stremio/configure');
+  return url ? new URL(url, base).href : null;
 }
 
 type Push = (path: string, replace?: boolean) => void;

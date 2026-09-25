@@ -367,7 +367,7 @@ function QuickConnectPage({
       >
         <h1 className="text-xl font-semibold">Quick Connect</h1>
         <p className="text-sm text-[--muted]">
-          {info.features.configure
+          {configureUrl(client.base, info)
             ? 'Enter this code under Quick Connect in an app already signed in, or approve it on the configuration page.'
             : 'Enter this code under Quick Connect in an app already signed in to this server.'}
         </p>
