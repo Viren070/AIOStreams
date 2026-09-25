@@ -7,6 +7,9 @@ import {
   LuCaptions,
   LuCaptionsOff,
   LuCheck,
+  LuCrop,
+  LuRatio,
+  LuStretchHorizontal,
   LuEar,
   LuGauge,
   LuLayers,
@@ -35,8 +38,14 @@ import { LoadingSpinner } from '@aiostreams/ui/loading-spinner';
 import { cn } from '@aiostreams/ui/core/styling';
 import { clock, itemSubtitle, itemTitle, ticksToMs } from '../lib/format';
 import type { PlayerController, PlayerState, Track } from '../lib/player';
+import { playbackHost } from '../lib/hosts';
 import { delayLabel } from '../lib/subtitle-lines';
-import { useSeekStep } from '../lib/settings';
+import {
+  useSeekStep,
+  useVideoFit,
+  VIDEO_FITS,
+  type VideoFit,
+} from '../lib/settings';
 import { SyncByEar, SyncToLine } from './subtitle-sync';
 import type { BaseItemDto, MediaSegmentDto } from '../lib/types';
 
@@ -263,6 +272,25 @@ function Menu({
 }
 
 const DELAY_STEP_MS = 100;
+
+const FIT_BUTTON: Record<VideoFit, { label: string; icon: React.ReactNode }> = {
+  fit: { label: 'Fit', icon: <LuRatio /> },
+  crop: { label: 'Crop', icon: <LuCrop /> },
+  stretch: { label: 'Stretch', icon: <LuStretchHorizontal /> },
+};
+
+function FitButton() {
+  const [fit, setFit] = useVideoFit();
+  const next = VIDEO_FITS[(VIDEO_FITS.indexOf(fit) + 1) % VIDEO_FITS.length];
+  return (
+    <ControlButton
+      label={`Picture: ${FIT_BUTTON[fit].label}`}
+      onClick={() => setFit(next)}
+    >
+      {FIT_BUTTON[fit].icon}
+    </ControlButton>
+  );
+}
 
 /** Nudges subtitles earlier or later without closing the menu. */
 function SubtitleSync({
@@ -709,6 +737,9 @@ export function PlayerControls({
               onSelect={(id) => id && player.setRate(Number(id))}
               onOpenChange={onMenu}
             />
+            {(playbackHost() === 'browser' || playbackHost() === 'shell') && (
+              <FitButton />
+            )}
             <ControlButton
               label={state.fullscreen ? 'Exit full screen' : 'Full screen'}
               onClick={player.toggleFullscreen}

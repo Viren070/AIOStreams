@@ -27,7 +27,12 @@ import { useBrowserPlayer } from '../lib/hosts/browser';
 import { useDesktopPlayer } from '../lib/hosts/jellyfin-desktop';
 import { useShellPlayer } from '../lib/hosts/shell';
 import type { PlayerController } from '../lib/player';
-import { useSubtitleStyle, type SubtitleStyle } from '../lib/settings';
+import {
+  useSubtitleStyle,
+  useVideoFit,
+  type SubtitleStyle,
+  type VideoFit,
+} from '../lib/settings';
 import { subtitleCss } from '../lib/subtitle-style';
 import { usePlaybackPrefs, type PlaybackPrefs } from '../lib/user-config';
 import { backdropUrl } from '../lib/images';
@@ -65,6 +70,12 @@ function usePlayerPage() {
     };
   }, []);
 }
+
+const OBJECT_FIT: Record<VideoFit, string> = {
+  fit: 'object-contain',
+  crop: 'object-cover',
+  stretch: 'object-fill',
+};
 
 export function PlayerPage({
   itemId,
@@ -330,6 +341,7 @@ function BrowserPlayer({
   const video = React.useRef<HTMLVideoElement>(null);
   const { back, onEnded, connect } = useEnded(item);
   const subtitleStyle = useSubtitleStyle();
+  const [fit] = useVideoFit();
   const player = useBrowserPlayer(video, {
     source,
     startMs,
@@ -353,7 +365,7 @@ function BrowserPlayer({
       <video
         ref={video}
         src={streamUrl(client, item.Id!, source, playSessionId)}
-        className="h-full w-full"
+        className={cn('h-full w-full', OBJECT_FIT[fit])}
         autoPlay
         playsInline
       >

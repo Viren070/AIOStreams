@@ -9,6 +9,7 @@ import {
   type DesktopSettings,
   type UpdateChannelSetting,
   type SubtitleStyle,
+  useVideoFit,
 } from '../settings';
 import type { PlaybackPrefs } from '../user-config';
 import {
@@ -132,6 +133,13 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
     shell.send({ type: 'mpv-set-prop', name, value });
   const command = (...args: unknown[]) =>
     shell.send({ type: 'mpv-command', args });
+
+  const [fit] = useVideoFit();
+  React.useEffect(() => {
+    set('keepaspect', fit !== 'stretch');
+    set('panscan', fit === 'crop' ? 1 : 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fit]);
 
   React.useEffect(() => {
     const { volume, muted } = storedVolume();

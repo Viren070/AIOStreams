@@ -125,6 +125,8 @@ const SETTABLE: &[&str] = &[
     "secondary-sid",
     "sub-delay",
     "audio-delay",
+    "panscan",
+    "keepaspect",
     "sub-scale",
     "sub-pos",
     "sub-visibility",
