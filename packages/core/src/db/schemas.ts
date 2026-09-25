@@ -1573,8 +1573,8 @@ export type ParsedStreams = z.infer<typeof ParsedStreams>;
 
 const TrailerSchema = z
   .object({
-    source: z.string().min(1),
-    type: z.string(),
+    source: z.string().optional(),
+    type: z.string().optional(),
   })
   .passthrough();
 

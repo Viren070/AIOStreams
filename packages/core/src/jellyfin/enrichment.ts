@@ -384,7 +384,7 @@ function trailersFrom(meta: AnyMeta): { Name: string; Url: string }[] {
       add(str(t.title) ?? 'Trailer', `https://www.youtube.com/watch?v=${yt}`);
   }
   for (const t of meta.trailers ?? []) {
-    const source = str(t.source);
+    const source = str(t.source) ?? str((t as AnyObject).ytId);
     if (!source) continue;
     add(
       str((t as AnyObject).name) ?? str(t.type) ?? 'Trailer',
