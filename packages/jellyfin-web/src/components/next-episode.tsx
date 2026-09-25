@@ -1,10 +1,11 @@
 import React from 'react';
+import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@aiostreams/ui/button';
 import { useSession } from '../lib/session';
 import { useAdjacentEpisodes, usePlaybackInfoOptions } from '../lib/queries';
 import { landscapeUrl } from '../lib/images';
-import { itemSubtitle, ticksToMs } from '../lib/format';
+import { episodeCode, itemSubtitle, ticksToMs } from '../lib/format';
 import { navigate, to, versionsPath } from '../lib/paths';
 import { playableSources } from '../lib/use-play';
 import {
@@ -109,6 +110,10 @@ export function useNextEpisodePrompt({
     async (episode: BaseItemDto | null) => {
       if (!episode || leaving.current) return false;
       leaving.current = true;
+      const code = episodeCode(episode.ParentIndexNumber, episode.IndexNumber);
+      const notice = toast.loading(
+        `Finding versions of ${code || episode.Name}…`
+      );
       try {
         const info = await queryClient.fetchQuery(infoOptions(episode.Id!));
         const target = carryOn(playableSources(info), source, fallbackFirst);
@@ -120,7 +125,10 @@ export function useNextEpisodePrompt({
         return true;
       } catch {
         leaving.current = false;
+        toast.error('Could not find versions of that episode');
         return false;
+      } finally {
+        toast.dismiss(notice);
       }
     },
     [queryClient, infoOptions, source, fallbackFirst]
