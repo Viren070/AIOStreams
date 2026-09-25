@@ -1,28 +1,64 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use tao::platform::windows::IconExtWindows;
 use tao::window::Icon;
 
 use windows_sys::Win32::Foundation::SYSTEMTIME;
-use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
+use windows_sys::Win32::Foundation::{
+    CloseHandle, ERROR_ALREADY_EXISTS, GetLastError, HANDLE, HWND, LPARAM, LRESULT, WPARAM,
+};
 use windows_sys::Win32::Graphics::Gdi::{BLACK_BRUSH, GetStockObject};
 use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows_sys::Win32::System::Registry::{
     HKEY_LOCAL_MACHINE, RRF_RT_REG_DWORD, RRF_RT_REG_SZ, RegGetValueW,
 };
 use windows_sys::Win32::System::SystemInformation::GetLocalTime;
+use windows_sys::Win32::System::Threading::CreateMutexW;
 use windows_sys::Win32::UI::Shell::ShellExecuteW;
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, DefWindowProcW, HWND_BOTTOM, MB_ICONERROR, MB_OK, MessageBoxW, RegisterClassW,
-    SW_SHOWNORMAL, SWP_NOACTIVATE, SetWindowPos, WNDCLASSW, WS_CHILD, WS_VISIBLE,
+    CreateWindowExW, DefWindowProcW, FindWindowW, HWND_BOTTOM, IsIconic, MB_ICONERROR, MB_OK,
+    MessageBoxW, RegisterClassW, SW_RESTORE, SW_SHOWNORMAL, SWP_NOACTIVATE, SetForegroundWindow,
+    SetWindowPos, ShowWindow, WNDCLASSW, WS_CHILD, WS_VISIBLE,
 };
 
 /// Custom protocols are served from `http://<scheme>.localhost` on Windows.
 pub const APP_URL: &str = "http://aiostreams.localhost/";
 pub const PLATFORM: &str = "windows";
 
+/// The main window's class, which a second launch looks the first one up by.
+pub const WINDOW_CLASS: &str = "AIOStreamsDesktop";
+
 fn wide(s: &str) -> Vec<u16> {
     s.encode_utf16().chain(Some(0)).collect()
+}
+
+/// Held for as long as the app runs.
+pub struct SingleInstance(#[allow(dead_code)] HANDLE);
+
+/// One copy per data folder, whose WebView2 profile two copies cannot share: a
+/// second launch brings the first window forward and gets None.
+pub fn claim_instance(data_dir: &Path) -> Option<SingleInstance> {
+    let key = data_dir.to_string_lossy().to_lowercase();
+    // FNV-1a: stable across builds, unlike std's hasher.
+    let hash = key.bytes().fold(0xcbf29ce484222325u64, |h, b| {
+        (h ^ u64::from(b)).wrapping_mul(0x100000001b3)
+    });
+    let name = wide(&format!("Local\\AIOStreamsDesktop-{hash:016x}"));
+    let handle = unsafe { CreateMutexW(std::ptr::null(), 0, name.as_ptr()) };
+    if handle.is_null() || unsafe { GetLastError() } != ERROR_ALREADY_EXISTS {
+        return Some(SingleInstance(handle));
+    }
+    unsafe {
+        CloseHandle(handle);
+        let window = FindWindowW(wide(WINDOW_CLASS).as_ptr(), std::ptr::null());
+        if !window.is_null() {
+            if IsIconic(window) != 0 {
+                ShowWindow(window, SW_RESTORE);
+            }
+            SetForegroundWindow(window);
+        }
+    }
+    None
 }
 
 unsafe extern "system" fn video_proc(

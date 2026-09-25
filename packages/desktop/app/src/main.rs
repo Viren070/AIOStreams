@@ -187,6 +187,10 @@ fn main() {
     let logs = data_dir.join("logs");
     let log_file = logging::init(&logs);
     log::info!("starting {}", about());
+    let Some(_instance) = platform::claim_instance(&data_dir) else {
+        log::info!("already running; brought its window forward");
+        return;
+    };
     let args = args();
 
     let web = args.web.is_none().then(|| web_dir(&args));
@@ -205,6 +209,7 @@ fn main() {
     let proxy = event_loop.create_proxy();
     let window = WindowBuilder::new()
         .with_title("AIOStreams")
+        .with_window_classname(platform::WINDOW_CLASS)
         .with_window_icon(platform::window_icon())
         .with_taskbar_icon(platform::window_icon())
         .with_inner_size(LogicalSize::new(1280.0, 760.0))
