@@ -60,6 +60,7 @@ import {
   useUpdateChannel,
   useFeatured,
   useHardwareDecoding,
+  useMergeNextUp,
   useNextCountdown,
   useNextFallbackFirst,
   useNextLead,
@@ -552,6 +553,7 @@ const NOTHING = 'none';
 function InterfaceSection() {
   const views = useViews();
   const [featured, setFeatured] = useFeatured();
+  const [mergeNextUp, setMergeNextUp] = useMergeNextUp();
   const [posterSize, setPosterSize] = usePosterSize();
   const [posterLines, setPosterLines] = usePosterLines();
   const [episodeLayout, setEpisodeLayout] = useEpisodeLayout();
@@ -604,6 +606,13 @@ function InterfaceSection() {
           maxItems={MAX_FEATURED}
           value={featuredValue}
           onValueChange={changeFeatured}
+        />
+        <Switch
+          side="right"
+          label="Merge continue watching and next up"
+          help="Shows next episodes in the continue watching row, after what you are partway through."
+          value={mergeNextUp}
+          onValueChange={setMergeNextUp}
         />
         <Select
           label="Poster size"

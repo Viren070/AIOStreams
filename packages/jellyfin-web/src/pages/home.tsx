@@ -25,7 +25,11 @@ import {
   untilLabel,
 } from '../lib/format';
 import { href, itemPath, to } from '../lib/paths';
-import { useFeatured, type FeaturedSource } from '../lib/settings';
+import {
+  useFeatured,
+  useMergeNextUp,
+  type FeaturedSource,
+} from '../lib/settings';
 import { useInView } from '../lib/use-in-view';
 import { Hero } from '../components/hero';
 import { MediaRow } from '../components/media-row';
@@ -63,11 +67,29 @@ function interleave(lists: BaseItemDto[][], max: number): BaseItemDto[] {
   return out;
 }
 
+function mergeRows(
+  resume: BaseItemDto[] | null | undefined,
+  nextUp: BaseItemDto[] | null | undefined
+): BaseItemDto[] {
+  const seen = new Set<string>();
+  return [...(resume ?? []), ...(nextUp ?? [])].filter((item) => {
+    const keys = [item.Id, item.SeriesId].filter((k): k is string => !!k);
+    if (keys.some((k) => seen.has(k))) return false;
+    keys.forEach((k) => seen.add(k));
+    return true;
+  });
+}
+
 export function HomePage() {
   const resume = useResume();
   const nextUp = useNextUp();
   const views = useViews();
   const [featured] = useFeatured();
+  const [mergeNextUp] = useMergeNextUp();
+  const merged = React.useMemo(
+    () => mergeRows(resume.data?.Items, nextUp.data?.Items),
+    [resume.data, nextUp.data]
+  );
 
   const all = views.data?.Items ?? [];
   // A removed catalog is skipped, and a list left without any is automatic.
@@ -110,18 +132,29 @@ export function HomePage() {
             : 'relative z-[1] space-y-10 px-4 pt-[calc(1.5rem+env(safe-area-inset-top))] lg:px-10 lg:pt-[calc(2.5rem+env(safe-area-inset-top))]'
         }
       >
-        <EpisodeRow
-          id="resume"
-          title="Continue watching"
-          items={resume.data?.Items}
-          loading={resume.isLoading}
-        />
-        <EpisodeRow
-          id="next-up"
-          title="Next up"
-          items={nextUp.data?.Items}
-          loading={nextUp.isLoading}
-        />
+        {mergeNextUp ? (
+          <EpisodeRow
+            id="resume"
+            title="Continue watching"
+            items={merged}
+            loading={resume.isLoading || nextUp.isLoading}
+          />
+        ) : (
+          <>
+            <EpisodeRow
+              id="resume"
+              title="Continue watching"
+              items={resume.data?.Items}
+              loading={resume.isLoading}
+            />
+            <EpisodeRow
+              id="next-up"
+              title="Next up"
+              items={nextUp.data?.Items}
+              loading={nextUp.isLoading}
+            />
+          </>
+        )}
         <UpcomingRow />
         {views.data?.Items?.map((view) => (
           <LibraryRow key={view.Id} view={view} />

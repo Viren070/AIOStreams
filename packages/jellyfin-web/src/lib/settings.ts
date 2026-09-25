@@ -27,9 +27,15 @@ interface Synced {
   featured?: string;
   posterSize?: string;
   posterText?: string;
+  mergeNextUp?: string;
 }
 
-const SYNCED_KEYS: (keyof Synced)[] = ['featured', 'posterSize', 'posterText'];
+const SYNCED_KEYS: (keyof Synced)[] = [
+  'featured',
+  'posterSize',
+  'posterText',
+  'mergeNextUp',
+];
 
 const PREFS_ID = 'aiostreams-web';
 /** Set on every save, so preferences reset to their defaults still count as saved. */
@@ -187,6 +193,18 @@ export function usePosterLines(): [
           ? lines.join(',')
           : 'none'
     );
+  }, []);
+  return [value, set];
+}
+
+function readMergeNextUp(): boolean {
+  return current.mergeNextUp === '1';
+}
+
+export function useMergeNextUp(): [boolean, (value: boolean) => void] {
+  const value = React.useSyncExternalStore(subscribe, readMergeNextUp);
+  const set = React.useCallback((next: boolean) => {
+    update('mergeNextUp', next ? '1' : undefined);
   }, []);
   return [value, set];
 }
