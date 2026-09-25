@@ -48,27 +48,40 @@ jobs:
           path: packages/jellyfin-web/dist-standalone
           retention-days: 1
 
-  # The Rust crates' licences for each Mac, generated here since cargo-about has
-  # no build for Intel Macs; it fails on a licence that about.toml does not accept.
-  macos-licences:
-    if: inputs.platforms != 'windows'
+  # The Rust crates' licences, a page per target, made once for every build;
+  # cargo-about fails on a licence that about.toml does not accept.
+  licences:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+      # Only Cargo's downloads: cargo-about reads the crates, it builds nothing.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/desktop
+          cache-targets: false
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-about@0.9.2
       - working-directory: packages/desktop
+        env:
+          PLATFORMS: ${{ inputs.platforms }}
         run: |
+          targets=()
+          if [ "$PLATFORMS" != macos ]; then
+            targets+=(x86_64-pc-windows-msvc aarch64-pc-windows-msvc)
+          fi
+          if [ "$PLATFORMS" != windows ]; then
+            targets+=(aarch64-apple-darwin x86_64-apple-darwin)
+          fi
           mkdir -p licences
-          for target in aarch64-apple-darwin x86_64-apple-darwin; do
+          for target in "${targets[@]}"; do
             cargo about generate --config about.toml --target "$target" \
               about.hbs -o "licences/$target.html"
           done
       - uses: actions/upload-artifact@v7
         with:
-          name: macos-licences
+          name: licences
           path: packages/desktop/licences
           retention-days: 1
 
@@ -98,7 +111,7 @@ jobs:
 
   build:
     name: build (Windows ${{ matrix.arch }})
-    needs: [web, feed]
+    needs: [web, feed, licences]
     if: inputs.platforms != 'macos'
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
@@ -109,9 +122,11 @@ jobs:
           - arch: x64
             runner: windows-latest
             mpv: x86_64
+            target: x86_64-pc-windows-msvc
           - arch: arm64
             runner: windows-11-arm
             mpv: aarch64
+            target: aarch64-pc-windows-msvc
     defaults:
       run:
         shell: pwsh
@@ -128,6 +143,11 @@ jobs:
           name: web
           path: packages/jellyfin-web/dist-standalone
 
+      - uses: actions/download-artifact@v8
+        with:
+          name: licences
+          path: packages/desktop/licences
+
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 9.0.x
@@ -137,10 +157,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: packages/desktop
-
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-about@0.9.2
 
       - name: Fetch libmpv
         run: ./packages/desktop/scripts/fetch-libmpv.ps1 -Arch ${{ matrix.mpv }}
@@ -163,11 +179,7 @@ jobs:
           Copy-Item packages/desktop/vendor/${{ matrix.mpv }}/libmpv-2.dll $stage
           Copy-Item packages/desktop/THIRD-PARTY.md $stage
           Copy-Item packages/jellyfin-web/dist-standalone "$stage/web" -Recurse
-          # The Rust crates' licences; fails on one that about.toml does not accept.
-          cargo about generate --manifest-path packages/desktop/Cargo.toml `
-            --config packages/desktop/about.toml packages/desktop/about.hbs `
-            -o "$stage/third-party-licenses.html"
-          if ($LASTEXITCODE -ne 0) { throw 'cargo about failed' }
+          Copy-Item packages/desktop/licences/${{ matrix.target }}.html "$stage/third-party-licenses.html"
 
       - name: Pack
         run: |
@@ -204,7 +216,7 @@ jobs:
 
   macos:
     name: build (macOS ${{ matrix.arch }})
-    needs: [web, feed, macos-licences]
+    needs: [web, feed, licences]
     if: inputs.platforms != 'windows'
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
@@ -237,7 +249,7 @@ jobs:
 
       - uses: actions/download-artifact@v8
         with:
-          name: macos-licences
+          name: licences
           path: packages/desktop/licences
 
       - uses: dtolnay/rust-toolchain@stable

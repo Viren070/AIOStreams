@@ -14,7 +14,13 @@ accepted = [
     "CC0-1.0",
     "MIT-0",
 ]
-targets = ["x86_64-pc-windows-msvc", "aarch64-pc-windows-msvc"]
+# Every packaged target; a build's own page passes --target.
+targets = [
+    "x86_64-pc-windows-msvc",
+    "aarch64-pc-windows-msvc",
+    "aarch64-apple-darwin",
+    "x86_64-apple-darwin",
+]
 ignore-build-dependencies = true
 ignore-dev-dependencies = true
 

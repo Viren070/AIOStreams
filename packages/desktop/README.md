@@ -189,8 +189,9 @@ would otherwise stop mpv's LuaJIT and the bundled libraries.
 
 Each package carries `THIRD-PARTY.md` and `third-party-licenses.html`, which cargo-about generates
 from `about.toml` and `about.hbs`. A crate under a licence `about.toml` does not accept fails the
-check and the build; accept it there once it is known to be fine to ship. To look at the page
-locally: `cargo about generate about.hbs -o third-party-licenses.html`.
+check and the build; accept it there once it is known to be fine to ship. CI makes one page per
+target; to look at one locally:
+`cargo about generate --target x86_64-pc-windows-msvc about.hbs -o third-party-licenses.html`.
 
 ## Bridge
 
