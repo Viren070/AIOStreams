@@ -64,6 +64,23 @@ fn post(event: UserEvent) {
     });
 }
 
+/// Leaves out the states the theme squares, since a provider above it wins.
+const FRAME_CSS: &str = "
+window.csd:not(.maximized):not(.fullscreen):not(.tiled):not(.tiled-top):not(.tiled-bottom):not(.tiled-left):not(.tiled-right),
+window.csd:not(.maximized):not(.fullscreen):not(.tiled):not(.tiled-top):not(.tiled-bottom):not(.tiled-left):not(.tiled-right) > overlay {
+    border-radius: 8px;
+}";
+
+fn add_frame_style(window: &gtk4::Window) {
+    let css = gtk4::CssProvider::new();
+    css.load_from_string(FRAME_CSS);
+    gtk4::style_context_add_provider_for_display(
+        &WidgetExt::display(window),
+        &css,
+        gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION,
+    );
+}
+
 fn respond(request: &webkit6::URISchemeRequest, served: Served) {
     let length = served.body.len() as i64;
     let stream = gio::MemoryInputStream::from_bytes(&glib::Bytes::from_owned(served.body));
@@ -159,11 +176,16 @@ pub fn run(app: App) {
         .title("AIOStreams")
         .default_width(1280)
         .default_height(760)
-        .decorated(false)
         .build();
     window.set_size_request(480, 320);
+    // A hidden title bar keeps GTK's frame: corners, shadow and resize borders.
+    let titlebar = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
+    titlebar.set_visible(false);
+    window.set_titlebar(Some(&titlebar));
+    add_frame_style(&window);
 
     let video = platform::VideoSurface::new().unwrap_or_else(|e| platform::fatal(&e));
+    video.widget().set_overflow(gtk4::Overflow::Hidden);
     window.set_child(Some(video.widget()));
     let started = start_player(&video, &paths.mpv, |message| {
         post(UserEvent::Emit(receive_script(&message)))
