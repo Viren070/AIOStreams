@@ -109,8 +109,8 @@ jobs:
             gh release create "$FEED" --prerelease --latest=false --title "$TITLE" --notes-file notes.md
           fi
 
-  build:
-    name: build (Windows ${{ matrix.arch }})
+  windows:
+    name: Windows ${{ matrix.arch }}
     needs: [web, feed, licences]
     if: inputs.platforms != 'macos'
     runs-on: ${{ matrix.runner }}
@@ -215,7 +215,7 @@ jobs:
         run: gh release upload ${{ inputs.release }} "releases/aiostreams-desktop-$env:CHANNEL.exe" "releases/aiostreams-desktop-$env:CHANNEL.zip" --clobber
 
   macos:
-    name: build (macOS ${{ matrix.arch }})
+    name: macOS ${{ matrix.arch }}
     needs: [web, feed, licences]
     if: inputs.platforms != 'windows'
     runs-on: ${{ matrix.runner }}
