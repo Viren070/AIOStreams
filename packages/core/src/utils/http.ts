@@ -6,6 +6,7 @@
   maskSensitiveInfo,
   redactForLog,
   formatDurationAsText,
+  getSimpleTextHash,
 } from './index.js';
 import { config as appConfig } from '../config/index.js';
 import {
@@ -27,7 +28,7 @@ const urlCount = Cache.getInstance<string, number>(
   undefined,
   'memory'
 );
-// Per origin+pathname flag, set (with TTL = Retry-After) after a 429.
+// Per rateLimitKey flag, set (with TTL = Retry-After) after a 429.
 const rateLimited = Cache.getInstance<string, true>(
   'rate-limited',
   undefined,
@@ -105,12 +106,38 @@ export interface RequestOptions {
   rawOptions?: RequestInit;
 }
 
-function rateLimitKey(urlObj: URL): string {
-  return `${urlObj.origin}${urlObj.pathname}`;
+const CREDENTIAL_PARAM = /apikey|api_key|token|secret|password|passwd|passkey/i;
+const CREDENTIAL_HEADERS = [
+  'authorization',
+  'proxy-authorization',
+  'x-api-key',
+  'cookie',
+];
+
+// Upstream limits are per API key or per IP, so key on credentials and egress.
+export function rateLimitKey(
+  urlObj: URL,
+  headers: Headers,
+  egress: string
+): string {
+  const scope = [
+    egress,
+    `${urlObj.username}:${urlObj.password}`,
+    ...[...urlObj.searchParams]
+      .filter(([name]) => CREDENTIAL_PARAM.test(name))
+      .map(([name, value]) => `${name}=${value}`),
+    ...CREDENTIAL_HEADERS.map((name) => headers.get(name) ?? ''),
+  ].join('&');
+  return `${urlObj.origin}${urlObj.pathname}|${getSimpleTextHash(scope)}`;
 }
 
-async function throwIfRateLimited(urlObj: URL): Promise<void> {
-  const rlKey = rateLimitKey(urlObj);
+function getEgress(urlObj: URL, options: RequestOptions): string {
+  if (options.forceProxy) return options.forceProxy;
+  const { useProxy, proxyIndex } = shouldProxy(urlObj, options.context);
+  return useProxy ? String(proxyIndex) : '';
+}
+
+async function throwIfRateLimited(urlObj: URL, rlKey: string): Promise<void> {
   if (await rateLimited.get(rlKey)) {
     const ttl = await rateLimited.getTTL(rlKey);
     logger.debug(
@@ -132,7 +159,10 @@ export async function makeRequest(url: string, options: RequestOptions) {
 
   // Checked before recursion accounting so an active cooldown isn't
   // misreported as a possible recursive request.
-  await throwIfRateLimited(urlObj);
+  await throwIfRateLimited(
+    urlObj,
+    rateLimitKey(urlObj, headers, getEgress(urlObj, options))
+  );
 
   // block recursive requests
   const key = `${urlObj.toString()}-${options.forwardIp}`;
@@ -168,7 +198,8 @@ export async function makeRequest(url: string, options: RequestOptions) {
   // Redirects are followed manually so the proxy ruleset, override headers,
   // URL rewrites and internal-secret handling are re-evaluated on every hop.
   for (let redirects = 0; ; redirects++) {
-    await throwIfRateLimited(urlObj);
+    const rlKey = rateLimitKey(urlObj, headers, getEgress(urlObj, options));
+    await throwIfRateLimited(urlObj, rlKey);
 
     const { dispatcher, useProxy, proxyIndex } = resolveDispatcher(
       urlObj,
@@ -254,7 +285,7 @@ export async function makeRequest(url: string, options: RequestOptions) {
       if (retryAfter !== undefined) {
         await response.body?.cancel().catch(() => {});
         const seconds = Math.max(1, retryAfter);
-        await rateLimited.set(rateLimitKey(urlObj), true, seconds);
+        await rateLimited.set(rlKey, true, seconds);
         throw new RateLimitedError(seconds);
       }
     }
