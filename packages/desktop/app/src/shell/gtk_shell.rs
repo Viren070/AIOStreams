@@ -173,6 +173,9 @@ pub fn run(app: App) {
         bridge,
     } = app;
     gtk4::init().unwrap_or_else(|e| platform::fatal(&format!("could not start GTK: {e}")));
+    // libmpv refuses to start unless LC_NUMERIC is C, which GTK's init replaced.
+    // SAFETY: on the main thread, before any other thread starts.
+    unsafe { libc::setlocale(libc::LC_NUMERIC, c"C".as_ptr()) };
     let window = gtk4::Window::builder()
         .title("AIOStreams")
         .default_width(1280)
