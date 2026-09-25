@@ -34,7 +34,9 @@ export function ProfileCard() {
     setAlias(profile?.alias ?? '');
   }, [profile?.id, profile?.label, profile?.alias]);
 
-  if (!sessionUser || !uuid || !password) {
+  // Only saving needs the password, which a restored sign-in does not have;
+  // a saved profile is edited by its id.
+  if (!sessionUser || !uuid || (!profile && !password)) {
     return null;
   }
 
@@ -62,7 +64,7 @@ export function ProfileCard() {
           : `Save this configuration to ${sessionUser.username} so you can reopen it without the password.`
       }
     >
-      {!profile ? (
+      {!profile && password ? (
         <div className="flex flex-col sm:flex-row sm:items-end gap-2">
           <TextInput
             label="Name"
@@ -86,7 +88,7 @@ export function ProfileCard() {
             Save as profile
           </Button>
         </div>
-      ) : (
+      ) : profile ? (
         <div className="space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-end gap-2">
             <TextInput
@@ -161,7 +163,7 @@ export function ProfileCard() {
             Delete profile
           </Button>
         </div>
-      )}
+      ) : null}
     </SettingsCard>
   );
 }
