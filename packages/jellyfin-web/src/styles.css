@@ -37,9 +37,11 @@ html.see-through.playing #root {
 }
 
 /* The page's scrollbar never goes away (see app.tsx), so a scroll lock must not
-   make room for it again. */
+   make room for it again. Nor hide the body's overflow: the page scrolls on
+   html, and a hidden body becomes the scroll container sticky parts follow. */
 html body[data-scroll-locked] {
   margin-right: 0 !important;
+  overflow: visible !important;
 }
 
 /* Chromium drops these pseudo-elements wherever scrollbar-width is set. */
