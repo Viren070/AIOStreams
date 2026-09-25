@@ -16,6 +16,8 @@ export default defineConfig({
   plugins: [pluginReact()],
   source: {
     entry: { index: './src/main.tsx' },
+    // Read by @aiostreams/ui components.
+    define: { 'process.env.NEXT_PUBLIC_PLATFORM': JSON.stringify('') },
   },
   html: {
     template: './index.html',
