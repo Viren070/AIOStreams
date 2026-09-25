@@ -1,5 +1,8 @@
 use std::path::PathBuf;
 
+use tao::platform::windows::IconExtWindows;
+use tao::window::Icon;
+
 use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
 use windows_sys::Win32::Graphics::Gdi::{BLACK_BRUSH, GetStockObject};
 use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
@@ -82,6 +85,11 @@ impl VideoSurface {
             );
         }
     }
+}
+
+/// The exe's own icon, embedded by build.rs.
+pub fn window_icon() -> Option<Icon> {
+    Icon::from_resource(1, None).ok()
 }
 
 pub fn mpv_options(wid: &str) -> Vec<(&'static str, String)> {

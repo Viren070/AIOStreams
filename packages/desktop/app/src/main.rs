@@ -14,7 +14,7 @@ use aiostreams_desktop_core::settings::{self, Settings};
 use tao::dpi::{LogicalSize, PhysicalPosition, PhysicalSize};
 use tao::event::{Event, WindowEvent};
 use tao::event_loop::{ControlFlow, EventLoopBuilder, EventLoopProxy};
-use tao::platform::windows::WindowExtWindows;
+use tao::platform::windows::{WindowBuilderExtWindows, WindowExtWindows};
 use tao::window::{Fullscreen, Window, WindowBuilder};
 use wry::http::{Request, Response};
 use wry::{
@@ -102,6 +102,8 @@ fn main() {
     let proxy = event_loop.create_proxy();
     let window = WindowBuilder::new()
         .with_title("AIOStreams")
+        .with_window_icon(platform::window_icon())
+        .with_taskbar_icon(platform::window_icon())
         .with_inner_size(LogicalSize::new(1280.0, 760.0))
         .with_min_inner_size(LogicalSize::new(480.0, 320.0))
         .build(&event_loop)
