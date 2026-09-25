@@ -28,6 +28,7 @@ import { ServersPage } from './pages/servers';
 import { playbackHost } from './lib/hosts';
 import { ShellSetup } from './lib/hosts/shell';
 import { ThemeStyles } from './components/theme-styles';
+import { WindowControls } from './components/window-controls';
 
 /** The web app served at the Jellyfin API's `/web`. */
 export default function JellyfinWebApp() {
@@ -46,7 +47,12 @@ export default function JellyfinWebApp() {
         />
         <PageBackground />
         <ThemeStyles />
-        {playbackHost() === 'shell' && <ShellSetup />}
+        {playbackHost() === 'shell' && (
+          <>
+            <ShellSetup />
+            <WindowControls />
+          </>
+        )}
         {__STANDALONE__ ? <Standalone /> : <Served />}
       </MotionConfig>
     </ThemeProvider>

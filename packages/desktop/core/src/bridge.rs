@@ -33,6 +33,15 @@ pub enum Inbound {
     },
     Minimize,
     Close,
+    /// Moves the window with the mouse, from a press on the page's title strip.
+    WindowDrag,
+    /// Resizes from the top edge, which the page covers: `n`, `ne` or `nw`.
+    WindowResize {
+        edge: String,
+    },
+    WindowMaximize,
+    /// Asks for a `window-state` answer.
+    WindowState,
     AppInfo,
     OpenMpvConfig,
     OpenLogs,
@@ -66,6 +75,9 @@ pub enum Outbound {
     },
     Fullscreen {
         value: bool,
+    },
+    WindowState {
+        maximized: bool,
     },
     AppInfo {
         app: &'static str,

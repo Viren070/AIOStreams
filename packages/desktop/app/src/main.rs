@@ -16,7 +16,7 @@ use tao::dpi::{LogicalSize, PhysicalPosition, PhysicalSize};
 use tao::event::{Event, WindowEvent};
 use tao::event_loop::{ControlFlow, EventLoopBuilder, EventLoopProxy};
 use tao::platform::windows::{WindowBuilderExtWindows, WindowExtWindows};
-use tao::window::{Fullscreen, Window, WindowBuilder};
+use tao::window::{Fullscreen, ResizeDirection, Window, WindowBuilder};
 use updates::{Command, Updater};
 use wry::http::{Request, Response};
 use wry::{
@@ -30,6 +30,10 @@ enum UserEvent {
     Minimize,
     Close,
     Sync,
+    Drag,
+    Resize(ResizeDirection),
+    ToggleMaximize,
+    WindowState,
 }
 
 struct Args {
@@ -209,6 +213,8 @@ fn main() {
     let proxy = event_loop.create_proxy();
     let window = WindowBuilder::new()
         .with_title("AIOStreams")
+        .with_decorations(false)
+        .with_undecorated_shadow(true)
         .with_window_classname(platform::WINDOW_CLASS)
         .with_window_icon(platform::window_icon())
         .with_taskbar_icon(platform::window_icon())
@@ -315,6 +321,7 @@ fn main() {
     video.resize(size.width, size.height);
 
     let mut fullscreen = false;
+    let mut maximized = window.is_maximized();
     event_loop.run(move |event, _, flow| {
         *flow = ControlFlow::Wait;
         let emit = |message: Outbound| {
@@ -331,6 +338,11 @@ fn main() {
                 if now != fullscreen {
                     fullscreen = now;
                     emit(Outbound::Fullscreen { value: now });
+                }
+                let now = window.is_maximized();
+                if now != maximized {
+                    maximized = now;
+                    emit(Outbound::WindowState { maximized: now });
                 }
             }
             // Keys go to the page, which a window brought back does not focus.
@@ -354,6 +366,18 @@ fn main() {
             }
             Event::UserEvent(UserEvent::Fullscreen(value)) => set_fullscreen(&window, value),
             Event::UserEvent(UserEvent::Minimize) => window.set_minimized(true),
+            Event::UserEvent(UserEvent::Drag) => {
+                let _ = window.drag_window();
+            }
+            Event::UserEvent(UserEvent::Resize(edge)) => {
+                let _ = window.drag_resize_window(edge);
+            }
+            Event::UserEvent(UserEvent::ToggleMaximize) => {
+                window.set_maximized(!window.is_maximized());
+            }
+            Event::UserEvent(UserEvent::WindowState) => emit(Outbound::WindowState {
+                maximized: window.is_maximized(),
+            }),
             Event::UserEvent(UserEvent::Sync) => {
                 if let Some(p) = player.borrow().as_ref() {
                     p.sync();
@@ -460,6 +484,15 @@ fn handle(
         Inbound::MpvSync => send(UserEvent::Sync),
         Inbound::Fullscreen { value } => send(UserEvent::Fullscreen(value)),
         Inbound::Minimize => send(UserEvent::Minimize),
+        Inbound::WindowDrag => send(UserEvent::Drag),
+        Inbound::WindowResize { edge } => match edge.as_str() {
+            "n" => send(UserEvent::Resize(ResizeDirection::North)),
+            "ne" => send(UserEvent::Resize(ResizeDirection::NorthEast)),
+            "nw" => send(UserEvent::Resize(ResizeDirection::NorthWest)),
+            _ => log::warn!("window-resize: unknown edge {edge}"),
+        },
+        Inbound::WindowMaximize => send(UserEvent::ToggleMaximize),
+        Inbound::WindowState => send(UserEvent::WindowState),
         Inbound::Close => send(UserEvent::Close),
         Inbound::AppInfo => {
             let (mpv, ffmpeg) = player.as_ref().map(Player::versions).unwrap_or_default();

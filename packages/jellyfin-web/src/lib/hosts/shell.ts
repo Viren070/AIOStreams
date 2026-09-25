@@ -36,6 +36,7 @@ export type ShellMessage =
   | { type: 'mpv-event'; name: string }
   | { type: 'mpv-ended'; reason: string; error: string | null }
   | { type: 'fullscreen'; value: boolean }
+  | { type: 'window-state'; maximized: boolean }
   | {
       type: 'app-info';
       app: string;

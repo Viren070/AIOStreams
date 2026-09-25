@@ -13,6 +13,16 @@ html.see-through body {
 html.playing .page-background {
   display: none !important;
 }
+html.playing [data-ui='window-controls'] {
+  opacity: 0;
+  pointer-events: none;
+}
+html.playing:has([data-ui='player-controls'][data-visible])
+  [data-ui='window-controls'] {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 html.see-through.playing body,
 html.see-through.playing #root {
   background: transparent !important;
