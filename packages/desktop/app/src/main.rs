@@ -175,9 +175,10 @@ fn main() {
 
     let video = platform::VideoSurface::new(window.hwnd(), size.width, size.height)
         .unwrap_or_else(|e| platform::fatal(&e));
+    let mpv_dir = mpv_config_dir(&config_dir);
     let player = Rc::new(RefCell::new(Some(start_player(
         &video,
-        &config_dir,
+        &mpv_dir,
         proxy.clone(),
     ))));
 
@@ -212,13 +213,14 @@ fn main() {
         )
         .with_ipc_handler({
             let (player, proxy, app_origin) = (player.clone(), proxy.clone(), app_origin.clone());
+            let mpv_dir = mpv_dir.clone();
             move |req: Request<String>| {
                 let from = origin(&req.uri().to_string()).unwrap_or_default();
                 if from != app_origin {
                     return log::warn!("ignored a message from {from}");
                 }
                 match serde_json::from_str::<Inbound>(req.body()) {
-                    Ok(message) => handle(message, &player, &proxy),
+                    Ok(message) => handle(message, &player, &proxy, &mpv_dir),
                     Err(e) => log::warn!("bad message: {e}"),
                 }
             }
@@ -317,10 +319,9 @@ fn mpv_config_dir(config_dir: &std::path::Path) -> PathBuf {
 
 fn start_player(
     video: &platform::VideoSurface,
-    config_dir: &std::path::Path,
+    mpv_dir: &Path,
     proxy: EventLoopProxy<UserEvent>,
 ) -> Player {
-    let mpv_dir = mpv_config_dir(config_dir);
     log::info!("mpv config from {}", mpv_dir.display());
     let mut defaults: Vec<(&str, String)> = vec![
         ("config-dir", mpv_dir.to_string_lossy().into_owned()),
@@ -363,7 +364,12 @@ fn start_player(
         .unwrap_or_else(|e| platform::fatal(&format!("mpv failed to start: {e}")))
 }
 
-fn handle(message: Inbound, player: &RefCell<Option<Player>>, proxy: &EventLoopProxy<UserEvent>) {
+fn handle(
+    message: Inbound,
+    player: &RefCell<Option<Player>>,
+    proxy: &EventLoopProxy<UserEvent>,
+    mpv_dir: &Path,
+) {
     let fail = |message: String| {
         log::warn!("{message}");
         let _ = proxy.send_event(UserEvent::Emit(receive_script(&Outbound::Error {
@@ -389,5 +395,16 @@ fn handle(message: Inbound, player: &RefCell<Option<Player>>, proxy: &EventLoopP
         Inbound::Fullscreen { value } => send(UserEvent::Fullscreen(value)),
         Inbound::Minimize => send(UserEvent::Minimize),
         Inbound::Close => send(UserEvent::Close),
+        Inbound::AppInfo => {
+            let (mpv, ffmpeg) = player.as_ref().map(Player::versions).unwrap_or_default();
+            let info = Outbound::AppInfo {
+                app: env!("CARGO_PKG_VERSION"),
+                platform: platform::PLATFORM,
+                mpv,
+                ffmpeg,
+            };
+            send(UserEvent::Emit(receive_script(&info)));
+        }
+        Inbound::OpenMpvConfig => platform::open_external(&mpv_dir.to_string_lossy()),
     }
 }

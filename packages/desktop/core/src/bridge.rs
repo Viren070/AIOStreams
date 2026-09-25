@@ -26,6 +26,8 @@ pub enum Inbound {
     },
     Minimize,
     Close,
+    AppInfo,
+    OpenMpvConfig,
 }
 
 #[derive(Debug, Serialize)]
@@ -44,6 +46,12 @@ pub enum Outbound {
     },
     Fullscreen {
         value: bool,
+    },
+    AppInfo {
+        app: &'static str,
+        platform: &'static str,
+        mpv: Option<String>,
+        ffmpeg: Option<String>,
     },
     Error {
         message: String,
@@ -90,9 +98,28 @@ const SETTABLE: &[&str] = &[
     "sub-pos",
     "sub-visibility",
     "time-pos",
+    "sub-color",
+    "sub-outline-color",
+    "sub-outline-size",
+    "sub-back-color",
+    "sub-border-style",
+    "sub-ass-override",
+    "hwdec",
+    "audio-channels",
+    "audio-spdif",
 ];
 
-const LOADFILE_OPTIONS: &[&str] = &["start", "aid", "sid", "alang", "slang", "force-media-title"];
+const LOADFILE_OPTIONS: &[&str] = &[
+    "start",
+    "aid",
+    "sid",
+    "alang",
+    "slang",
+    "force-media-title",
+    "subs-fallback",
+    "subs-fallback-forced",
+    "subs-with-matching-audio",
+];
 
 const SEEK_FLAGS: &[&str] = &[
     "relative",

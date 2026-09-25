@@ -81,6 +81,14 @@ impl Player {
         }
     }
 
+    pub fn versions(&self) -> (Option<String>, Option<String>) {
+        let get = |name| match self.mpv.get_property(name, Kind::String) {
+            Some(Value::String(s)) => Some(s),
+            _ => None,
+        };
+        (get("mpv-version"), get("ffmpeg-version"))
+    }
+
     pub fn stop(&self) {
         let _ = self.mpv.command(&["stop"]);
     }

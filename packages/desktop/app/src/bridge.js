@@ -1,13 +1,11 @@
 (() => {
   if (window.top !== window || window.aiostreamsDesktop) return;
   const listeners = new Set();
-  let fullscreen = false;
   let idle = true;
   const send = (message) => window.ipc.postMessage(JSON.stringify(message));
 
   Object.defineProperty(window, '__aiostreamsDesktopReceive', {
     value(message) {
-      if (message.type === 'fullscreen') fullscreen = message.value;
       if (message.type === 'mpv-prop' && message.name === 'idle-active')
         idle = message.data !== false;
       for (const listener of listeners) {
@@ -37,8 +35,6 @@
       if (e.key === 'F11') {
         e.preventDefault();
         send({ type: 'fullscreen' });
-      } else if (e.key === 'Escape' && fullscreen) {
-        send({ type: 'fullscreen', value: false });
       }
     },
     true

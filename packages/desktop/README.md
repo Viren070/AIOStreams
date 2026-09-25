@@ -43,6 +43,13 @@ run. Keys the page does not use are passed to mpv, so `input.conf` bindings (sha
 like) work. The app keeps `idle`, `keep-open`, `force-window`, `osc`, `osd-bar`, `ytdl`, the idle
 background and the default key bindings fixed, since it drives playback itself.
 
+## Acknowledgements
+
+The design follows Stremio's Windows shell, [stremio-shell-ng](https://github.com/Stremio/stremio-shell-ng):
+mpv drawing into the window beneath a transparent WebView2, and the `mpv-command` / `mpv-set-prop`
+message names. The `portable_config` folder and passing unused keys to mpv come from
+[stremio-community-v5](https://github.com/Zaarrg/stremio-community-v5). No code is taken from either.
+
 ## Bridge
 
 The page sees `window.aiostreamsDesktop` (`protocol`, `version`, `platform`, `send`, `subscribe`) on the
