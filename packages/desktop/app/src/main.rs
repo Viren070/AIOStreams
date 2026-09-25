@@ -333,6 +333,13 @@ fn main() {
                     emit(Outbound::Fullscreen { value: now });
                 }
             }
+            // Keys go to the page, which a window brought back does not focus.
+            Event::WindowEvent {
+                event: WindowEvent::Focused(true),
+                ..
+            } => {
+                let _ = webview.focus();
+            }
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,
                 ..
