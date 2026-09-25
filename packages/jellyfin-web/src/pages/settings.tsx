@@ -878,6 +878,10 @@ function AccountSection() {
   );
 }
 
+/** The desktop app's stable release, whose notes link each download. */
+const DESKTOP_DOWNLOAD_URL =
+  'https://github.com/Viren070/AIOStreams/releases/tag/desktop';
+
 function AboutSection() {
   const { client } = useSession();
   const shell = useShellInfo();
@@ -911,6 +915,22 @@ function AboutSection() {
           </span>
         </SettingsRow>
       ))}
+      {playbackHost() === 'browser' && (
+        <SettingsRow
+          label="Desktop app"
+          help="This web app with a player of its own, which plays what a browser can't, on Windows and Mac."
+        >
+          <Button
+            intent="gray-outline"
+            className="w-full rounded-full sm:w-auto"
+            onClick={() =>
+              window.open(DESKTOP_DOWNLOAD_URL, '_blank', 'noopener')
+            }
+          >
+            Download
+          </Button>
+        </SettingsRow>
+      )}
     </SettingsCard>
   );
 }

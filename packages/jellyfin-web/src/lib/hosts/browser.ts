@@ -127,7 +127,7 @@ export function useBrowserPlayer(
       error: () =>
         patch({
           error:
-            'This browser cannot play this version. Nothing is converted on the server, so try another version or a player app.',
+            'This browser cannot play this version. Nothing is converted on the server, so try another version, an external player or the desktop app.',
         }),
     };
     for (const [event, handler] of Object.entries(handlers))
