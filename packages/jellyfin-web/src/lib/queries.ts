@@ -591,12 +591,59 @@ export function useSetPlayed() {
   });
 }
 
+/**
+ * Marks an episode and the aired ones before it. Without the server's endpoint,
+ * an earlier season with nothing watched goes as one mark, which trackers take
+ * as one batch; the rest go an episode at a time.
+ */
 export function useSetPlayedUpTo() {
-  const { client } = useSession();
+  const { client, user } = useSession();
   const refresh = useRefreshAll();
+  const native = useFeature('playedUpTo');
   return useMutation({
-    mutationFn: (episodeId: string) =>
-      client.post(`/AIOStreams/PlayedUpTo/${episodeId}`),
+    mutationFn: async (episode: BaseItemDto) => {
+      if (native) return client.post(`/AIOStreams/PlayedUpTo/${episode.Id}`);
+      const res = await client.get<BaseItemDtoQueryResult>(
+        `/Shows/${episode.SeriesId}/Episodes`,
+        { userId: user.Id }
+      );
+      const all = res.Items ?? [];
+      const ts = episode.ParentIndexNumber ?? 0;
+      const te = episode.IndexNumber ?? 0;
+      const upTo = (e: BaseItemDto) => {
+        const s = e.ParentIndexNumber;
+        if (s == null || e.IndexNumber == null) return false;
+        return s === ts ? e.IndexNumber <= te : ts > 0 && s > 0 && s < ts;
+      };
+      const aired = (e: BaseItemDto) =>
+        !e.PremiereDate || Date.parse(e.PremiereDate) <= Date.now();
+      const bySeason = new Map<string, BaseItemDto[]>();
+      for (const e of all) {
+        const key = e.SeasonId ?? '';
+        bySeason.set(key, [...(bySeason.get(key) ?? []), e]);
+      }
+      const ids: string[] = [];
+      for (const [seasonId, episodes] of bySeason) {
+        const wanted = episodes.filter(
+          (e) => upTo(e) && aired(e) && !e.UserData?.Played
+        );
+        if (!wanted.length) continue;
+        const whole =
+          seasonId &&
+          episodes[0].ParentIndexNumber !== ts &&
+          wanted.length === episodes.length;
+        if (whole) ids.push(seasonId);
+        else ids.push(...wanted.map((e) => e.Id!));
+      }
+      const queue = [...ids];
+      const worker = async () => {
+        for (let id = queue.shift(); id; id = queue.shift())
+          await client.post(`/UserPlayedItems/${id}`, undefined, {
+            userId: user.Id,
+          });
+      };
+      await Promise.all(Array.from({ length: 4 }, worker));
+    },
     onSettled: refresh,
   });
 }

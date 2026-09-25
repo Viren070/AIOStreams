@@ -18,7 +18,6 @@ import {
   ContextMenuTrigger,
 } from '@aiostreams/ui/context-menu';
 import { useSetFavorite, useSetPlayed, useSetPlayedUpTo } from '../lib/queries';
-import { useFeature } from '../lib/server-info';
 import { itemTitle, ticksToMs } from '../lib/format';
 import { itemPath, navigate } from '../lib/paths';
 import { useVersionPicker } from './version-picker';
@@ -38,7 +37,6 @@ export function ItemMenu({
   const picker = useVersionPicker();
   const setPlayed = useSetPlayed();
   const setPlayedUpTo = useSetPlayedUpTo();
-  const playedUpTo = useFeature('playedUpTo');
   const setFavorite = useSetFavorite();
   // Jellyfin cannot play a virtual item, such as an episode not yet aired.
   const playable =
@@ -87,8 +85,8 @@ export function ItemMenu({
             >
               <BiCheck /> {played ? 'Mark unwatched' : 'Mark watched'}
             </ContextMenuItem>
-            {playedUpTo && item.Type === 'Episode' && item.SeriesId && (
-              <ContextMenuItem onSelect={() => setPlayedUpTo.mutate(item.Id!)}>
+            {item.Type === 'Episode' && item.SeriesId && (
+              <ContextMenuItem onSelect={() => setPlayedUpTo.mutate(item)}>
                 <BiCheckDouble /> Mark watched up to here
               </ContextMenuItem>
             )}
