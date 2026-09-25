@@ -1,4 +1,5 @@
 {
   ".": "2.34.1",
-  "packages/seanime-extensions": "0.10.2"
+  "packages/seanime-extensions": "0.10.2",
+  "packages/desktop": "0.1.0"
 }

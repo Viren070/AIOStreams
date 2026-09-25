@@ -1,0 +1,26 @@
+name: Desktop Check
+
+on:
+  pull_request:
+    paths:
+      - 'packages/desktop/**'
+      - '.github/workflows/desktop-*.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'packages/desktop/**'
+
+jobs:
+  check:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: packages/desktop
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test

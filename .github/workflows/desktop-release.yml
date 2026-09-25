@@ -1,0 +1,32 @@
+name: Desktop Release
+
+# Started by the release workflow once release-please tags a desktop-v* release.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The desktop-v* tag to build
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - id: version
+        env:
+          TAG: ${{ inputs.tag }}
+        run: echo "version=${TAG#desktop-v}" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: version
+    uses: ./.github/workflows/desktop-build.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
+      channel: stable
+      release: ${{ inputs.tag }}

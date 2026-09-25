@@ -1,0 +1,39 @@
+name: Desktop Nightly
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/desktop/**'
+      - 'packages/jellyfin-web/**'
+      - 'packages/ui/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# A newer push replaces a nightly still building.
+concurrency:
+  group: desktop-nightly
+  cancel-in-progress: true
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+      # Ahead of the last release, so a nightly always updates past it.
+      - id: version
+        run: |
+          current=$(jq -r '."packages/desktop"' .release-please-manifest.json)
+          IFS=. read -r major minor patch <<< "$current"
+          echo "version=$major.$minor.$((patch + 1))-nightly.$(date -u +%Y%m%d%H%M)" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: version
+    uses: ./.github/workflows/desktop-build.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
+      channel: nightly

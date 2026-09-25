@@ -29,3 +29,11 @@ jobs:
           TAG_NAME: ${{ steps.release.outputs.tag_name }}
         run: |
           gh workflow run --repo ${GITHUB_REPOSITORY} deploy-docker.yml -f ref=${TAG_NAME}
+
+      - name: Trigger Desktop Release
+        if: ${{ steps.release.outputs['packages/desktop--release_created'] }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ steps.release.outputs['packages/desktop--tag_name'] }}
+        run: |
+          gh workflow run --repo ${GITHUB_REPOSITORY} desktop-release.yml --ref ${TAG_NAME} -f tag=${TAG_NAME}

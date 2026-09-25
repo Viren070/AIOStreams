@@ -1,0 +1,124 @@
+name: Desktop Build
+
+# Builds, packs and publishes the desktop app for each architecture. A channel's
+# feed lives on one release that every build replaces, so the app always finds it
+# at the same address.
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: SemVer for this build
+        required: true
+        type: string
+      channel:
+        description: stable or nightly
+        required: true
+        type: string
+      release:
+        description: Versioned release to attach the installers to, if any
+        required: false
+        type: string
+        default: ''
+
+env:
+  VPK_VERSION: 1.2.158
+
+jobs:
+  build:
+    name: build (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: windows-latest
+            mpv: x86_64
+          - arch: arm64
+            runner: windows-11-arm
+            mpv: aarch64
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GITHUB_TOKEN: ${{ github.token }}
+      FEED: ${{ inputs.channel == 'nightly' && 'desktop-nightly' || 'desktop' }}
+      CHANNEL: win-${{ matrix.arch }}${{ inputs.channel == 'nightly' && '-nightly' || '' }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Build the web app
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          pnpm -F @aiostreams/jellyfin-web build:standalone
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Fetch libmpv
+        run: ./packages/desktop/scripts/fetch-libmpv.ps1 -Arch ${{ matrix.mpv }}
+
+      - name: Build the app
+        working-directory: packages/desktop
+        run: |
+          # The workspace version is the first `version =` in Cargo.toml.
+          $toml = Get-Content Cargo.toml -Raw
+          $toml = ([regex]'(?m)^version = ".*"$').Replace($toml, 'version = "${{ inputs.version }}"', 1)
+          Set-Content Cargo.toml $toml -NoNewline
+          cargo build --release
+
+      - name: Stage
+        run: |
+          $stage = New-Item -ItemType Directory -Force stage
+          Copy-Item packages/desktop/target/release/aiostreams-desktop.exe $stage
+          Copy-Item packages/desktop/vendor/${{ matrix.mpv }}/libmpv-2.dll $stage
+          Copy-Item packages/desktop/THIRD-PARTY.md $stage
+          Copy-Item packages/jellyfin-web/dist-standalone "$stage/web" -Recurse
+
+      - name: Pack
+        run: |
+          dotnet tool install -g vpk --version $env:VPK_VERSION
+          $feed = "https://github.com/${{ github.repository }}/releases/download/$env:FEED/"
+          # The last release, for a delta; the first build of a channel has none.
+          vpk download http --url $feed --channel $env:CHANNEL -o releases
+          if ($LASTEXITCODE -ne 0) { Write-Host 'No earlier release to build a delta from' }
+          vpk pack --packId aiostreams-desktop --packVersion ${{ inputs.version }} `
+            --packDir stage --mainExe aiostreams-desktop.exe --packTitle AIOStreams `
+            --packAuthors AIOStreams --icon packages/desktop/app/icons/aiostreams.ico `
+            --channel $env:CHANNEL --runtime win-${{ matrix.arch }} --outputDir releases
+          if ($LASTEXITCODE -ne 0) { throw 'vpk pack failed' }
+          $name = "aiostreams-desktop-$env:CHANNEL"
+          Move-Item "releases/aiostreams-desktop-$env:CHANNEL-Setup.exe" "releases/$name.exe" -Force
+          Move-Item "releases/aiostreams-desktop-$env:CHANNEL-Portable.zip" "releases/$name.zip" -Force
+
+      - name: Publish to the feed
+        run: |
+          gh release view $env:FEED *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $env:FEED --prerelease --latest=false `
+              --title "Desktop app ($env:FEED)" `
+              --notes 'Where the desktop app finds its updates, with the latest installers.'
+          }
+          $version = [regex]::Escape('${{ inputs.version }}')
+          $files = Get-ChildItem releases -File | Where-Object {
+            $_.Name -like "*$env:CHANNEL*" -and ($_.Extension -ne '.nupkg' -or $_.Name -match "-$version-")
+          }
+          gh release upload $env:FEED $files.FullName --clobber
+          # Only this channel's newest packages stay: an app further behind takes the full one.
+          $kept = $files.Name
+          $stale = gh release view $env:FEED --json assets --jq '.assets[].name' |
+            Where-Object { $_ -match "-$([regex]::Escape($env:CHANNEL))-(full|delta)\.nupkg$" -and $_ -notin $kept }
+          foreach ($asset in $stale) { gh release delete-asset $env:FEED $asset --yes }
+
+      - name: Attach to the release
+        if: ${{ inputs.release != '' }}
+        run: gh release upload ${{ inputs.release }} "releases/aiostreams-desktop-$env:CHANNEL.exe" "releases/aiostreams-desktop-$env:CHANNEL.zip" --clobber

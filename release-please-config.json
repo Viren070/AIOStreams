@@ -16,7 +16,8 @@
         "compose.yaml",
         "release-please-config.json",
         "packages/seanime-extensions",
-        "packages/seanime-extension"
+        "packages/seanime-extension",
+        "packages/desktop"
       ],
       "pull-request-title-pattern": "chore: release ${version}"
     },
@@ -40,6 +41,20 @@
           "type": "json",
           "path": "src/extensions/stremio-custom-source/manifest.json",
           "jsonpath": "$.version"
+        }
+      ]
+    },
+    "packages/desktop": {
+      "release-type": "simple",
+      "component": "desktop",
+      "include-component-in-tag": true,
+      "include-v-in-tag": true,
+      "pull-request-title-pattern": "chore(desktop): release ${version}",
+      "extra-files": [
+        {
+          "type": "toml",
+          "path": "Cargo.toml",
+          "jsonpath": "$.workspace.package.version"
         }
       ]
     }
