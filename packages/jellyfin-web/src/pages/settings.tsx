@@ -564,6 +564,7 @@ function InterfaceSection() {
       label: 'Continue watching',
       textValue: 'Continue watching',
     },
+    { value: 'next-up', label: 'Next up', textValue: 'Next up' },
     ...(views.data?.Items ?? []).map((v) => {
       const label = [v.Name, libraryLabel(v)].filter(Boolean).join(' · ');
       return { value: `view:${v.Id}`, label, textValue: label };

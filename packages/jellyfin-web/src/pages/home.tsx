@@ -90,6 +90,9 @@ export function HomePage() {
     () => mergeRows(resume.data?.Items, nextUp.data?.Items),
     [resume.data, nextUp.data]
   );
+  const continueItems = mergeNextUp ? merged : (resume.data?.Items ?? []);
+  const continueLoading =
+    resume.isLoading || (mergeNextUp && nextUp.isLoading);
 
   const all = views.data?.Items ?? [];
   // A removed catalog is skipped, and a list left without any is automatic.
@@ -112,14 +115,17 @@ export function HomePage() {
   const heroItems = interleave(
     sources.map((s) =>
       s === 'resume'
-        ? (resume.data?.Items ?? []).slice(0, HERO_ITEMS)
-        : (headOf.get(s.slice(5))?.data?.Items ?? [])
+        ? continueItems.slice(0, HERO_ITEMS)
+        : s === 'next-up'
+          ? (nextUp.data?.Items ?? []).slice(0, HERO_ITEMS)
+          : (headOf.get(s.slice(5))?.data?.Items ?? [])
     ),
     HERO_MAX
   );
   const heroLoading =
     views.isLoading ||
-    (sources.includes('resume') && resume.isLoading) ||
+    (sources.includes('resume') && continueLoading) ||
+    (sources.includes('next-up') && nextUp.isLoading) ||
     heads.some((h) => h.isLoading);
 
   return (
@@ -132,28 +138,19 @@ export function HomePage() {
             : 'relative z-[1] space-y-10 px-4 pt-[calc(1.5rem+env(safe-area-inset-top))] lg:px-10 lg:pt-[calc(2.5rem+env(safe-area-inset-top))]'
         }
       >
-        {mergeNextUp ? (
+        <EpisodeRow
+          id="resume"
+          title="Continue watching"
+          items={continueItems}
+          loading={continueLoading}
+        />
+        {!mergeNextUp && (
           <EpisodeRow
-            id="resume"
-            title="Continue watching"
-            items={merged}
-            loading={resume.isLoading || nextUp.isLoading}
+            id="next-up"
+            title="Next up"
+            items={nextUp.data?.Items}
+            loading={nextUp.isLoading}
           />
-        ) : (
-          <>
-            <EpisodeRow
-              id="resume"
-              title="Continue watching"
-              items={resume.data?.Items}
-              loading={resume.isLoading}
-            />
-            <EpisodeRow
-              id="next-up"
-              title="Next up"
-              items={nextUp.data?.Items}
-              loading={nextUp.isLoading}
-            />
-          </>
         )}
         <UpcomingRow />
         {views.data?.Items?.map((view) => (

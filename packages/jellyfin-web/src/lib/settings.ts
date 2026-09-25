@@ -2,7 +2,7 @@ import React from 'react';
 import type { JellyfinClient } from './client';
 import { storage } from './storage';
 
-/** A source the home page features from: `resume` or `view:<library id>`. */
+/** A source the home page features from: `resume`, `next-up` or `view:<library id>`. */
 export type FeaturedSource = string;
 
 /** An empty list features nothing. */
