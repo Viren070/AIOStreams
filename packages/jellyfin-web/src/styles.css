@@ -9,6 +9,12 @@ html.see-through body {
   background: transparent !important;
 }
 
+/* The page's scrollbar never goes away (see app.tsx), so a scroll lock must not
+   make room for it again. */
+html body[data-scroll-locked] {
+  margin-right: 0 !important;
+}
+
 /* Only text meant to be read or copied is selectable. */
 @layer base {
   body.jellyfin-web {
