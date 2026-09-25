@@ -1,21 +1,21 @@
-The latest AIOStreams desktop app. Download the file for your computer; once installed, the app keeps itself up to date.
+The latest AIOStreams desktop app. Pick the download for your computer; once installed, the app keeps itself up to date.
 
 ### Windows
 
-| Download | For |
+| Your PC | Download |
 | --- | --- |
-| `aiostreams-desktop-win-x64@SUFFIX@.exe` | Most PCs (Intel or AMD) |
-| `aiostreams-desktop-win-arm64@SUFFIX@.exe` | Arm PCs, such as Snapdragon laptops |
+| Most PCs (Intel or AMD) | [Installer](@BASE@/aiostreams-desktop-win-x64@SUFFIX@.exe) · [Portable](@BASE@/aiostreams-desktop-win-x64@SUFFIX@.zip) |
+| Arm PCs, such as Snapdragon laptops | [Installer](@BASE@/aiostreams-desktop-win-arm64@SUFFIX@.exe) · [Portable](@BASE@/aiostreams-desktop-win-arm64@SUFFIX@.zip) |
 
-The matching `.zip` is a portable copy that keeps its data beside itself.
+Not sure which? Settings → System → About shows "ARM-based processor" on an Arm PC. The portable copy keeps its data in a folder beside itself.
 
 ### macOS
 
-| Download | For |
+| Your Mac | Download |
 | --- | --- |
-| `aiostreams-desktop-osx-arm64@SUFFIX@.pkg` | Macs with Apple silicon (M1 and later) |
-| `aiostreams-desktop-osx-x64@SUFFIX@.pkg` | Intel Macs |
+| Apple silicon (M1 and later) | [Installer](@BASE@/aiostreams-desktop-osx-arm64@SUFFIX@.pkg) · [App](@BASE@/aiostreams-desktop-osx-arm64@SUFFIX@.zip) |
+| Intel | [Installer](@BASE@/aiostreams-desktop-osx-x64@SUFFIX@.pkg) · [App](@BASE@/aiostreams-desktop-osx-x64@SUFFIX@.zip) |
 
-The matching `.zip` holds the app itself, to drag into Applications. The app is not signed by Apple yet, so the first time it is opened, macOS refuses: allow it in System Settings → Privacy & Security → Open Anyway.
+Not sure which? Apple menu → About This Mac shows "Chip" on Apple silicon and "Processor" on an Intel Mac. The app is not signed by Apple yet, so macOS refuses it the first time: allow it in System Settings → Privacy & Security → Open Anyway.
 
 The other files are what installed copies update from.

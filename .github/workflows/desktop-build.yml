@@ -87,7 +87,9 @@ jobs:
           sparse-checkout: packages/desktop/feed-release.md
           sparse-checkout-cone-mode: false
       - run: |
-          sed "s/@SUFFIX@/$SUFFIX/g" packages/desktop/feed-release.md >notes.md
+          # Each build replaces its files under the same names, so the links stay good.
+          base="https://github.com/${{ github.repository }}/releases/download/$FEED"
+          sed -e "s|@BASE@|$base|g" -e "s|@SUFFIX@|$SUFFIX|g" packages/desktop/feed-release.md >notes.md
           if gh release view "$FEED" >/dev/null 2>&1; then
             gh release edit "$FEED" --title "$TITLE" --notes-file notes.md
           else
