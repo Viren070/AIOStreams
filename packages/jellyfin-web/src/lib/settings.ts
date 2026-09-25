@@ -467,4 +467,4 @@ export const useNextLead = () =>
 export const useNextCountdown = () =>
   useDeviceSetting<number>(NEXT_KEYS.countdown, 15, NEXT_COUNTDOWNS);
 export const useNextFallbackFirst = () =>
-  useDeviceSetting<boolean>(NEXT_KEYS.fallbackFirst, false);
+  useDeviceSetting<boolean>(NEXT_KEYS.fallbackFirst, true);
