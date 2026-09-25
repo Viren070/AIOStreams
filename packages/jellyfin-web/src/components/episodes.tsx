@@ -287,7 +287,7 @@ export function EpisodeCard({
 }) {
   const play = usePlay(episode);
   return (
-    <ItemMenu item={episode}>
+    <ItemMenu item={episode} onPage>
       <div className="group/episode relative space-y-2">
         <Thumb
           episode={episode}
@@ -313,7 +313,7 @@ function EpisodeListItem({
 }) {
   const play = usePlay(episode);
   return (
-    <ItemMenu item={episode}>
+    <ItemMenu item={episode} onPage>
       <div
         className={cn(
           'group/episode relative grid grid-cols-[40%_minmax(0,1fr)] gap-x-3 gap-y-2 rounded-xl p-2 transition-colors hover:bg-white/[0.04] sm:grid-cols-[13rem_minmax(0,1fr)] sm:grid-rows-[auto_1fr] sm:gap-x-4 sm:gap-y-1',

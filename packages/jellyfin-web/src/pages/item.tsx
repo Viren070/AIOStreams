@@ -487,7 +487,6 @@ function Seasons({
   focusEpisodeId?: string;
 }) {
   const { client } = useSession();
-  const setPlayed = useSetPlayed();
   const [layoutPref] = useEpisodeLayout();
   const wide = useMediaQuery('(min-width: 1024px)');
   const layout = layoutPref === 'auto' ? (wide ? 'row' : 'list') : layoutPref;
@@ -507,7 +506,6 @@ function Seasons({
   const items = episodes.data?.Items ?? [];
   const loading = seasons.isLoading || episodes.isLoading;
   const summary = seasonSummary(season, items);
-  const seasonPlayed = !!season?.UserData?.Played;
   // Seasons without art of their own carry the show's poster.
   const ownPosters = list.some(
     (s) =>
@@ -525,25 +523,7 @@ function Seasons({
   }, [episodes.data, focusEpisodeId]);
 
   return (
-    <Section
-      title="Episodes"
-      action={
-        season && (
-          <Button
-            size="sm"
-            intent="gray-outline"
-            className="rounded-full"
-            leftIcon={<BiCheck />}
-            loading={setPlayed.isPending}
-            onClick={() =>
-              setPlayed.mutate({ itemId: season.Id!, played: !seasonPlayed })
-            }
-          >
-            {seasonPlayed ? 'Mark season unwatched' : 'Mark season watched'}
-          </Button>
-        )
-      }
-    >
+    <Section title="Episodes">
       {ownPosters ? (
         <MediaRow
           shape="poster"
@@ -553,48 +533,50 @@ function Seasons({
             const selected = s.Id === seasonId;
             const poster = posterUrl(client, s, { maxWidth: 300 });
             return (
-              <button
-                key={s.Id}
-                type="button"
-                onClick={() => setSeasonId(s.Id!)}
-                className="group/season w-full space-y-2 text-left"
-              >
-                <div className="relative aspect-[2/3] overflow-hidden rounded-lg bg-gray-900">
-                  {poster && (
-                    <img
-                      src={poster}
-                      alt=""
-                      loading="lazy"
+              <ItemMenu key={s.Id} item={s} onPage>
+                <button
+                  type="button"
+                  onClick={() => setSeasonId(s.Id!)}
+                  className="group/season w-full space-y-2 text-left"
+                >
+                  <div className="relative aspect-[2/3] overflow-hidden rounded-lg bg-gray-900">
+                    {poster && (
+                      <img
+                        src={poster}
+                        alt=""
+                        loading="lazy"
+                        className={cn(
+                          'absolute inset-0 h-full w-full object-cover transition-opacity',
+                          !selected &&
+                            'opacity-60 group-hover/season:opacity-100'
+                        )}
+                      />
+                    )}
+                    {/* Drawn inside, since the row clips anything outside it. */}
+                    <span
                       className={cn(
-                        'absolute inset-0 h-full w-full object-cover transition-opacity',
-                        !selected && 'opacity-60 group-hover/season:opacity-100'
+                        'pointer-events-none absolute inset-0 rounded-lg ring-inset',
+                        selected ? 'ring-2 ring-white' : 'ring-1 ring-white/10'
                       )}
                     />
-                  )}
-                  {/* Drawn inside, since the row clips anything outside it. */}
-                  <span
-                    className={cn(
-                      'pointer-events-none absolute inset-0 rounded-lg ring-inset',
-                      selected ? 'ring-2 ring-white' : 'ring-1 ring-white/10'
+                    {s.UserData?.Played && (
+                      <span className="absolute right-1.5 top-1.5 flex size-5 items-center justify-center rounded-full bg-brand-500 text-white">
+                        <BiCheck />
+                      </span>
                     )}
-                  />
-                  {s.UserData?.Played && (
-                    <span className="absolute right-1.5 top-1.5 flex size-5 items-center justify-center rounded-full bg-brand-500 text-white">
-                      <BiCheck />
-                    </span>
-                  )}
-                </div>
-                <p
-                  className={cn(
-                    'truncate text-sm',
-                    selected
-                      ? 'font-semibold text-white'
-                      : 'text-[--muted] group-hover/season:text-white'
-                  )}
-                >
-                  {s.Name}
-                </p>
-              </button>
+                  </div>
+                  <p
+                    className={cn(
+                      'truncate text-sm',
+                      selected
+                        ? 'font-semibold text-white'
+                        : 'text-[--muted] group-hover/season:text-white'
+                    )}
+                  >
+                    {s.Name}
+                  </p>
+                </button>
+              </ItemMenu>
             );
           })}
         </MediaRow>
@@ -684,16 +666,18 @@ function SeasonPills({
       <PillTrack>
         {seasons.map((s) => (
           <CarouselItem key={s.Id} className="basis-auto">
-            <Button
-              size="sm"
-              intent={s.Id === selected ? 'white' : 'gray-subtle'}
-              className="rounded-full"
-              rightIcon={s.UserData?.Played ? <BiCheck /> : undefined}
-              iconSpacing="0.25rem"
-              onClick={() => onSelect(s.Id!)}
-            >
-              {s.Name}
-            </Button>
+            <ItemMenu item={s} onPage>
+              <Button
+                size="sm"
+                intent={s.Id === selected ? 'white' : 'gray-subtle'}
+                className="rounded-full"
+                rightIcon={s.UserData?.Played ? <BiCheck /> : undefined}
+                iconSpacing="0.25rem"
+                onClick={() => onSelect(s.Id!)}
+              >
+                {s.Name}
+              </Button>
+            </ItemMenu>
           </CarouselItem>
         ))}
       </PillTrack>

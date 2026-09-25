@@ -20,16 +20,19 @@ import {
 import { useSetFavorite, useSetPlayed, useSetPlayedUpTo } from '../lib/queries';
 import { useFeature } from '../lib/server-info';
 import { itemTitle, ticksToMs } from '../lib/format';
-import { itemPath, navigate, to } from '../lib/paths';
+import { itemPath, navigate } from '../lib/paths';
 import { useVersionPicker } from './version-picker';
 import type { BaseItemDto } from '../lib/types';
 
 /** Right click, or a long press on touch, for what a card's item offers. */
 export function ItemMenu({
   item,
+  onPage,
   children,
 }: {
   item: BaseItemDto;
+  /** Shown on the page the item opens, so it offers no way there. */
+  onPage?: boolean;
   children: React.ReactNode;
 }) {
   const picker = useVersionPicker();
@@ -52,7 +55,7 @@ export function ItemMenu({
       </ContextMenuTrigger>
       <ContextMenuContent>
         <ContextMenuLabel className="line-clamp-1">
-          {itemTitle(item)}
+          {onPage ? item.Name : itemTitle(item)}
         </ContextMenuLabel>
         {playable && (
           <ContextMenuItem
@@ -61,17 +64,22 @@ export function ItemMenu({
             <BiPlay /> {resumeMs ? 'Resume' : 'Play'}
           </ContextMenuItem>
         )}
-        <ContextMenuItem onSelect={() => navigate(itemPath(item))}>
-          <BiInfoCircle /> Open
-        </ContextMenuItem>
-        {item.Type === 'Episode' && item.SeriesId && (
-          <ContextMenuItem onSelect={() => navigate(to.item(item.SeriesId!))}>
-            <BiTv /> Go to show
+        {!onPage && (
+          <ContextMenuItem onSelect={() => navigate(itemPath(item))}>
+            {item.Type === 'Episode' ? (
+              <>
+                <BiTv /> Go to show
+              </>
+            ) : (
+              <>
+                <BiInfoCircle /> Open
+              </>
+            )}
           </ContextMenuItem>
         )}
         {item.Type !== 'BoxSet' && (
           <>
-            <ContextMenuSeparator />
+            {(playable || !onPage) && <ContextMenuSeparator />}
             <ContextMenuItem
               onSelect={() =>
                 setPlayed.mutate({ itemId: item.Id!, played: !played })
