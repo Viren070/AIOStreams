@@ -30,9 +30,25 @@ fn page_bounds(size: PhysicalSize<u32>) -> Rect {
     }
 }
 
-fn set_fullscreen(window: &Window, value: Option<bool>) {
+/// tao keeps a maximized frameless window's content off the taskbar even in
+/// fullscreen, so the window leaves maximized first and goes back after.
+fn set_fullscreen(window: &Window, value: Option<bool>, remaximize: &mut bool) {
     let on = value.unwrap_or(window.fullscreen().is_none());
-    window.set_fullscreen(on.then_some(Fullscreen::Borderless(None)));
+    if on == window.fullscreen().is_some() {
+        return;
+    }
+    if on {
+        *remaximize = window.is_maximized();
+        if *remaximize {
+            window.set_maximized(false);
+        }
+        window.set_fullscreen(Some(Fullscreen::Borderless(None)));
+    } else {
+        window.set_fullscreen(None);
+        if std::mem::take(remaximize) {
+            window.set_maximized(true);
+        }
+    }
 }
 
 fn direction(edge: Edge) -> ResizeDirection {
@@ -161,6 +177,7 @@ pub fn run(app: App) {
 
     let mut fullscreen = false;
     let mut maximized = window.is_maximized();
+    let mut remaximize = false;
     event_loop.run(move |event, _, flow| {
         *flow = ControlFlow::Wait;
         let emit = |message: Outbound| {
@@ -204,7 +221,9 @@ pub fn run(app: App) {
             Event::UserEvent(UserEvent::Emit(script)) => {
                 let _ = webview.evaluate_script(&script);
             }
-            Event::UserEvent(UserEvent::Fullscreen(value)) => set_fullscreen(&window, value),
+            Event::UserEvent(UserEvent::Fullscreen(value)) => {
+                set_fullscreen(&window, value, &mut remaximize)
+            }
             Event::UserEvent(UserEvent::Minimize) => window.set_minimized(true),
             Event::UserEvent(UserEvent::Drag) => {
                 let _ = window.drag_window();
