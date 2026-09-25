@@ -207,6 +207,8 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
         patch({ error: m.error ?? 'mpv could not play this version' });
     });
     shell.send({ type: 'mpv-sync' });
+    // mpv keeps pause from the last file.
+    set('pause', false);
     set('volume', Math.round(volume * 100));
     set('mute', muted);
     applySubtitleStyle(latest.current.subtitleStyle);
