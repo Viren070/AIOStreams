@@ -880,7 +880,7 @@ function AboutSection() {
     ['Server', info.data?.ServerName],
     ['Address', serverAddress(client.base)],
     ['Jellyfin API', info.data?.Version],
-    ['Web app', __APP_VERSION__],
+    ['Web app', __APP_COMMIT__],
     ...(shell
       ? ([
           ['Desktop app', shell.app],

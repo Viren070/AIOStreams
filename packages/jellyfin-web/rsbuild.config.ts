@@ -1,11 +1,39 @@
+import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { defineConfig, loadEnv } from '@rsbuild/core';
 import { pluginReact } from '@rsbuild/plugin-react';
 
 const { parsed } = loadEnv({ prefixes: ['PUBLIC_'] });
-const { version } = JSON.parse(
-  readFileSync(new URL('../../package.json', import.meta.url), 'utf8')
-) as { version: string };
+
+/**
+ * The commit this build comes from, e.g. `a1b2c3d4 (2026-09-25)`: from git, or
+ * from the metadata CI writes where there is none, as in the Docker build.
+ */
+function buildCommit(): string {
+  try {
+    const [hash, date] = execFileSync(
+      'git',
+      ['log', '-1', '--format=%h%n%cs', '--abbrev=8'],
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }
+    )
+      .trim()
+      .split('\n');
+    if (hash) return `${hash} (${date})`;
+  } catch {}
+  try {
+    const { commitHash, commitTime } = JSON.parse(
+      readFileSync(
+        new URL('../../resources/metadata.json', import.meta.url),
+        'utf8'
+      )
+    ) as { commitHash?: string; commitTime?: string };
+    if (commitHash && commitHash !== 'unknown')
+      return commitTime
+        ? `${commitHash} (${commitTime.slice(0, 10)})`
+        : commitHash;
+  } catch {}
+  return 'unknown';
+}
 
 const devServerPort = Number(parsed.PORT) || 21459;
 const backendBaseUrl =
@@ -34,7 +62,7 @@ export default defineConfig(({ envMode }) => {
     // Read by @aiostreams/ui components.
     'process.env.NEXT_PUBLIC_PLATFORM': JSON.stringify(''),
     __STANDALONE__: JSON.stringify(standalone),
-    __APP_VERSION__: JSON.stringify(version),
+    __APP_COMMIT__: JSON.stringify(buildCommit()),
   };
   if (standalone) {
     return {
