@@ -416,7 +416,15 @@ function onUpdateState(next: UpdateState) {
     });
 }
 
-/** Keeps mpv in step with this device's settings, checks for updates, and handles Esc. */
+/** The browser's own menu only where it edits or copies; Shift still opens it. */
+function onContextMenu(e: MouseEvent) {
+  const target = e.target as HTMLElement | null;
+  const editable = target?.closest('input, textarea, [contenteditable="true"]');
+  if (e.shiftKey || editable || !!window.getSelection()?.toString()) return;
+  e.preventDefault();
+}
+
+/** Keeps mpv in step with this device's settings, checks for updates, and handles Esc and right clicks. */
 export function ShellSetup() {
   React.useEffect(() => {
     const shell = window.aiostreamsDesktop;
@@ -444,11 +452,13 @@ export function ShellSetup() {
         shell.send({ type: 'fullscreen', value: false });
     };
     window.addEventListener('keydown', onKey);
+    window.addEventListener('contextmenu', onContextMenu);
     shell.send({ type: 'mpv-sync' });
     return () => {
       unsubscribeSettings();
       unsubscribe();
       window.removeEventListener('keydown', onKey);
+      window.removeEventListener('contextmenu', onContextMenu);
     };
   }, []);
   return null;

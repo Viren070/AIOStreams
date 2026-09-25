@@ -542,6 +542,7 @@ export function PlayerControls({
         !visible && 'cursor-none'
       )}
       onPointerMove={wake}
+      onContextMenu={(e) => e.preventDefault()}
       onPointerDown={(e) => {
         pointerType.current = e.pointerType;
         wake();
