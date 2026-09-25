@@ -42,7 +42,8 @@ import type { HistoryEntry, WebUser } from '../lib/types';
 
 type View = 'days' | 'table';
 
-const at = (e: HistoryEntry) => e.lastPlayedAt ?? e.sortAt;
+/* Null where the server gave no date, as for plays a tracker listed undated. */
+const at = (e: HistoryEntry) => e.lastPlayedAt ?? (e.sortAt || null);
 
 export function HistoryPage() {
   // Without the server's history, the signed-in user's own plays and sessions.
@@ -62,6 +63,8 @@ export function HistoryPage() {
     () => history.data?.pages.flatMap((p) => p.items) ?? [],
     [history.data]
   );
+  // A server that ignores the played filter answers with its catalogs instead.
+  const unlisted = !full && entries.some((e) => !e.played);
   const names = React.useMemo(
     () => new Map(users.map((u) => [u.user.Id!, u.user.Name ?? ''])),
     [users]
@@ -95,7 +98,7 @@ export function HistoryPage() {
           </div>
         )}
       </div>
-      {!full && <OwnTotals />}
+      {!full && !unlisted && <OwnTotals />}
 
       <SessionsRow sessions={sessions} />
 
@@ -158,6 +161,10 @@ export function HistoryPage() {
             <Skeleton key={i} className="h-24 w-full rounded-xl" />
           ))}
         </div>
+      ) : unlisted ? (
+        <p className="text-[--muted]">
+          This server can&apos;t list what you&apos;ve watched.
+        </p>
       ) : !entries.length ? (
         <p className="text-[--muted]">Nothing watched yet.</p>
       ) : view === 'days' ? (
@@ -166,7 +173,7 @@ export function HistoryPage() {
         <HistoryTable entries={entries} names={userId ? null : names} />
       )}
       {isFetchingNextPage && <Skeleton className="h-24 w-full rounded-xl" />}
-      <div ref={sentinel} />
+      {!unlisted && <div ref={sentinel} />}
     </PageBody>
   );
 }
@@ -261,7 +268,7 @@ interface Tile {
 
 interface Day {
   key: string;
-  date: Date;
+  date: Date | null;
   tiles: Tile[];
   runtimeMs: number;
 }
@@ -269,8 +276,9 @@ interface Day {
 function groupByDay(entries: HistoryEntry[]): Day[] {
   const days = new Map<string, Day>();
   for (const entry of entries) {
-    const date = new Date(at(entry));
-    const key = date.toDateString();
+    const when = at(entry);
+    const date = when ? new Date(when) : null;
+    const key = date?.toDateString() ?? 'undated';
     let day = days.get(key);
     if (!day) {
       day = { key, date, tiles: [], runtimeMs: 0 };
@@ -284,9 +292,10 @@ function groupByDay(entries: HistoryEntry[]): Day[] {
       day.tiles.push(tile);
     }
     tile.entries.push(entry);
-    if (entry.played) day.runtimeMs += entry.durationMs;
+    if (entry.played && date) day.runtimeMs += entry.durationMs;
   }
-  return [...days.values()];
+  const all = [...days.values()];
+  return [...all.filter((d) => d.date), ...all.filter((d) => !d.date)];
 }
 
 function Days({
@@ -303,12 +312,12 @@ function Days({
         <section key={day.key} className="space-y-3">
           <div className="flex flex-wrap items-baseline gap-x-3">
             <h2 className="text-lg font-semibold">
-              {day.date.toLocaleDateString(undefined, {
+              {day.date?.toLocaleDateString(undefined, {
                 weekday: 'long',
                 day: 'numeric',
                 month: 'long',
                 year: 'numeric',
-              })}
+              }) ?? 'Date not known'}
             </h2>
             {day.runtimeMs > 0 && (
               <span className="text-sm text-[--muted]">
@@ -446,7 +455,7 @@ function EntryLine({
         </p>
       )}
       <p className="flex flex-wrap items-center gap-x-2 text-xs text-[--muted]">
-        <span>{relativeTime(at(entry))}</span>
+        {at(entry) && <span>{relativeTime(at(entry)!)}</span>}
         <Status entry={entry} />
         {entry.tracker && (
           <Badge size="sm" intent="gray">
@@ -747,9 +756,11 @@ function HistoryTable({
                             {item.Name}
                           </span>
                         )}
-                        <span className="block text-xs text-[--muted] md:hidden">
-                          {relativeTime(at(entry))}
-                        </span>
+                        {at(entry) && (
+                          <span className="block text-xs text-[--muted] md:hidden">
+                            {relativeTime(at(entry)!)}
+                          </span>
+                        )}
                       </span>
                     </a>
                   </td>
@@ -762,10 +773,12 @@ function HistoryTable({
                     <Status entry={entry} />
                   </td>
                   <td className="hidden whitespace-nowrap p-3 text-xs text-[--muted] md:table-cell">
-                    {new Date(at(entry)).toLocaleString(undefined, {
-                      dateStyle: 'medium',
-                      timeStyle: 'short',
-                    })}
+                    {at(entry)
+                      ? new Date(at(entry)!).toLocaleString(undefined, {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        })
+                      : '—'}
                   </td>
                   {full && (
                     <td className="hidden p-3 text-xs text-[--muted] md:table-cell">

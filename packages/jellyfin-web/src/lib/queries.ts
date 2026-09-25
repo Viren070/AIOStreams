@@ -476,7 +476,7 @@ function playedEntry(userId: string, item: BaseItemDto): HistoryEntry {
     userId,
     itemKey: item.Id!,
     kind: item.Type === 'Episode' ? 'episode' : 'movie',
-    played: true,
+    played: !!item.UserData?.Played,
     playCount: Math.max(1, item.UserData?.PlayCount ?? 0),
     positionMs: 0,
     durationMs: ticksToMs(item.RunTimeTicks),
