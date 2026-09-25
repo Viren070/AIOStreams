@@ -40,6 +40,8 @@ const FEATURES = {
   dropped: 1,
   /** `Refresh` in a PlaybackInfo body runs the addons again. */
   refreshVersions: 1,
+  /** Every version carries the `aiostreams` object with its own `id`. */
+  versions: 1,
 } as const;
 
 export function publicInfo(req: Request) {

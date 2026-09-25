@@ -86,7 +86,7 @@ import {
   type SubtitleOutline,
   type SubtitleSize,
 } from '../lib/settings';
-import { useServerInfo } from '../lib/server-info';
+import { useFeature, useServerInfo } from '../lib/server-info';
 import { PageBody } from '../components/layout';
 import { UserAvatar } from '../components/user-avatar';
 import {
@@ -148,6 +148,7 @@ function PlaybackSection() {
   const [nextLead, setNextLead] = useNextLead();
   const [nextCountdown, setNextCountdown] = useNextCountdown();
   const [nextFallbackFirst, setNextFallbackFirst] = useNextFallbackFirst();
+  const bingeGroups = useFeature('versions');
   const [template, setTemplate] = React.useState(externalPlayerTemplate);
   const changeTemplate = (value: string) => {
     setTemplate(value);
@@ -193,14 +194,26 @@ function PlaybackSection() {
         <Switch
           side="right"
           label="Play it automatically"
-          help="Counts down, then plays the next episode in the same kind of version. Off, the prompt waits for you."
+          help={
+            bingeGroups
+              ? 'Counts down, then plays the next episode in the same kind of version. Off, the prompt waits for you.'
+              : 'Counts down, then plays the next episode. Off, the prompt waits for you.'
+          }
           value={prefs.EnableNextEpisodeAutoPlay !== false}
           onValueChange={(v) => update({ EnableNextEpisodeAutoPlay: v })}
         />
         <Switch
           side="right"
-          label="Play the first version when none matches"
-          help="Otherwise the next episode's version list opens when none is like the one you watched."
+          label={
+            bingeGroups
+              ? 'Play the first version when none matches'
+              : 'Play the first version'
+          }
+          help={
+            bingeGroups
+              ? "Otherwise the next episode's version list opens when none is like the one you watched."
+              : "Otherwise the next episode's version list opens when it has more than one."
+          }
           value={nextFallbackFirst}
           onValueChange={setNextFallbackFirst}
         />

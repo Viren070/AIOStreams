@@ -26,7 +26,8 @@ Standard Jellyfin clients ignore all of these, so offering them never breaks one
       "history": 1,
       "playedUpTo": 1,
       "dropped": 1,
-      "refreshVersions": 1
+      "refreshVersions": 1,
+      "versions": 1
     }
   }
 }
@@ -51,13 +52,15 @@ value is that feature's version.
 | `playedUpTo`      | [`/AIOStreams/PlayedUpTo/{id}`](#played-up-to): mark a series watched up to an episode    |
 | `dropped`         | [A disliked series is dropped](#dropped)                                                  |
 | `refreshVersions` | [`Refresh` in a `PlaybackInfo` body](#versions) runs the lookup for versions again        |
+| `versions`        | [Every version carries the `aiostreams` object](#versions), with its own `id`             |
 
 Every `/AIOStreams/*` endpoint takes the same authorization as the rest of the API. AIOStreams
 refuses them to API keys, which belong to other tools.
 
 ## Versions
 
-A title's versions are its `MediaSources`. Each can carry an `aiostreams` object:
+A title's versions are its `MediaSources`. With the `versions` feature, each carries an `aiostreams`
+object:
 
 | Field         | Shape  | What the web app does with it                                                            |
 | ------------- | ------ | ---------------------------------------------------------------------------------------- |
@@ -67,8 +70,8 @@ A title's versions are its `MediaSources`. Each can carry an `aiostreams` object
 | `bingeGroup`  | string | Autoplay picks the next episode's version with the same group, as Stremio's `bingeGroup` |
 
 The first version's `Id` is the item's own id, as in standard Jellyfin, so `id` is how the app tells
-versions apart across listings. A server that sends the `aiostreams` object without `id` is taken to
-number its versions by position, and the app does not remember them.
+versions apart across listings. Without the feature, the next episode settings say nothing of
+matching versions.
 
 The app loads a title's page with `/Items?Ids={id}&Fields=…` and no `MediaSources` field, and asks
 for versions only when play is pressed. A server that has to run something slow to find versions

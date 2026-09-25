@@ -10,7 +10,8 @@ export type Feature =
   | 'history'
   | 'playedUpTo'
   | 'dropped'
-  | 'refreshVersions';
+  | 'refreshVersions'
+  | 'versions';
 
 /** What a server's public info says about it. */
 export interface ServerInfo extends Branding {

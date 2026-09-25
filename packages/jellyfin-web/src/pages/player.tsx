@@ -12,7 +12,7 @@ import {
   useRefreshAll,
   useSegments,
 } from '../lib/queries';
-import { hasLastingId, lastVersions, playableSources } from '../lib/use-play';
+import { lastVersions, playableSources } from '../lib/use-play';
 import {
   directUrl,
   externalPlayerTemplate,
@@ -23,6 +23,7 @@ import {
   textSubtitles,
 } from '../lib/playback';
 import { playbackHost } from '../lib/hosts';
+import { useFeature } from '../lib/server-info';
 import { useBrowserPlayer } from '../lib/hosts/browser';
 import { useDesktopPlayer } from '../lib/hosts/jellyfin-desktop';
 import { useShellPlayer } from '../lib/hosts/shell';
@@ -186,10 +187,12 @@ function useReporting(
   const refresh = React.useRef(refreshAll);
   refresh.current = refreshAll;
   const { started, paused } = player.state;
+  // A server that sends the object without the feature numbers versions by position.
+  const lasting = useFeature('versions') || !source.aiostreams;
 
   React.useEffect(() => {
-    if (started && hasLastingId(source)) lastVersions.set(item.Id!, source.Id!);
-  }, [started, item.Id, source]);
+    if (started && lasting) lastVersions.set(item.Id!, source.Id!);
+  }, [started, lasting, item.Id, source.Id]);
 
   React.useEffect(() => {
     if (!started) return;
