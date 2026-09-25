@@ -436,9 +436,9 @@ async function processTorrentsForDebridService(
         parsedMediaInfo,
         service: {
           id: service.id,
+          // The account lists queued and stalled items too, so it is not proof.
           cached:
-            magnetCheckResult?.status === 'cached' ||
-            (magnetCheckResult?.library || torrent.library) === true,
+            magnetCheckResult?.status === 'cached' || torrent.library === true,
           library: (magnetCheckResult?.library || torrent.library) === true,
         },
       });
@@ -770,9 +770,7 @@ async function processNZBsForDebridService(
         file,
         service: {
           id: service.id,
-          cached:
-            nzbCheckResult?.status === 'cached' ||
-            (nzbCheckResult?.library || nzb.library) === true,
+          cached: nzbCheckResult?.status === 'cached' || nzb.library === true,
           library: (nzbCheckResult?.library || nzb.library) === true,
         },
       });
