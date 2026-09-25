@@ -29,6 +29,7 @@ const urlCount = Cache.getInstance<string, number>(
   'memory'
 );
 // Per rateLimitKey flag, set (with TTL = Retry-After) after a 429.
+const MAX_RETRY_AFTER_SECONDS = 60 * 60;
 const rateLimited = Cache.getInstance<string, true>(
   'rate-limited',
   undefined,
@@ -284,7 +285,10 @@ export async function makeRequest(url: string, options: RequestOptions) {
       const retryAfter = parseRetryAfter(response.headers.get('retry-after'));
       if (retryAfter !== undefined) {
         await response.body?.cancel().catch(() => {});
-        const seconds = Math.max(1, retryAfter);
+        const seconds = Math.min(
+          Math.max(1, retryAfter),
+          MAX_RETRY_AFTER_SECONDS
+        );
         await rateLimited.set(rlKey, true, seconds);
         throw new RateLimitedError(seconds);
       }
