@@ -193,7 +193,12 @@ async function playbackInfo(req: Request, res: Response) {
   }
   await enrichSourceSubtitles(loc.ctx, memo, loc.requestedMsid);
   const sources = mediaSourcesFrom(req, loc.ctx, memo, {
-    firstId: loc.requestedMsid ?? loc.itemId,
+    // Other clients play the item's own id; the web app keeps a version's id.
+    firstId:
+      loc.requestedMsid ??
+      (loc.ctx.client.name === WEB_APP_CLIENT
+        ? memo.sources[0].msid
+        : loc.itemId),
     requestedMsid: loc.requestedMsid,
     profile,
     hasSegments: hasSegments(loc.ctx, memo),
