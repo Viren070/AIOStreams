@@ -16,6 +16,8 @@ export type PosterLine = 'title' | 'year';
 
 export type EpisodeLayout = 'auto' | 'row' | 'list';
 
+export type HeroMode = 'rotate' | 'follow';
+
 const POSTER_LINES: PosterLine[] = ['title', 'year'];
 
 /*
@@ -28,6 +30,7 @@ interface Synced {
   posterSize?: string;
   posterText?: string;
   mergeNextUp?: string;
+  heroMode?: string;
   accentColor?: string;
   backgroundColor?: string;
   customCss?: string;
@@ -38,6 +41,7 @@ const SYNCED_KEYS: (keyof Synced)[] = [
   'posterSize',
   'posterText',
   'mergeNextUp',
+  'heroMode',
   'accentColor',
   'backgroundColor',
   'customCss',
@@ -216,6 +220,18 @@ export function useMergeNextUp(): [boolean, (value: boolean) => void] {
   const value = React.useSyncExternalStore(subscribe, readMergeNextUp);
   const set = React.useCallback((next: boolean) => {
     update('mergeNextUp', next ? '1' : undefined);
+  }, []);
+  return [value, set];
+}
+
+function readHeroMode(): HeroMode {
+  return current.heroMode === 'follow' ? 'follow' : 'rotate';
+}
+
+export function useHeroMode(): [HeroMode, (value: HeroMode) => void] {
+  const value = React.useSyncExternalStore(subscribe, readHeroMode);
+  const set = React.useCallback((next: HeroMode) => {
+    update('heroMode', next === 'rotate' ? undefined : next);
   }, []);
   return [value, set];
 }

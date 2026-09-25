@@ -21,6 +21,7 @@ import { useSetFavorite, useSetPlayed, useSetPlayedUpTo } from '../lib/queries';
 import { itemTitle, ticksToMs } from '../lib/format';
 import { itemPath, navigate } from '../lib/paths';
 import { useVersionPicker } from './version-picker';
+import { useHeroTarget } from './hero';
 import type { BaseItemDto } from '../lib/types';
 
 /** Right click, or a long press on touch, for what a card's item offers. */
@@ -35,6 +36,7 @@ export function ItemMenu({
   children: React.ReactNode;
 }) {
   const picker = useVersionPicker();
+  const heroTarget = useHeroTarget(item);
   const setPlayed = useSetPlayed();
   const setPlayedUpTo = useSetPlayedUpTo();
   const setFavorite = useSetFavorite();
@@ -49,7 +51,7 @@ export function ItemMenu({
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
-        <div>{children}</div>
+        <div {...heroTarget}>{children}</div>
       </ContextMenuTrigger>
       <ContextMenuContent>
         <ContextMenuLabel className="line-clamp-1">

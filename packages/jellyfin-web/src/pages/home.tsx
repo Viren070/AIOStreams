@@ -1,6 +1,7 @@
 import React from 'react';
 import { BiChevronRight } from 'react-icons/bi';
 import { Badge } from '@aiostreams/ui/badge';
+import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
 import { useSession } from '../lib/session';
 import {
   useItemPages,
@@ -27,11 +28,12 @@ import {
 import { href, itemPath, to } from '../lib/paths';
 import {
   useFeatured,
+  useHeroMode,
   useMergeNextUp,
   type FeaturedSource,
 } from '../lib/settings';
 import { useInView } from '../lib/use-in-view';
-import { Hero } from '../components/hero';
+import { FollowHero, Hero } from '../components/hero';
 import { MediaRow } from '../components/media-row';
 import { PosterCard, WideCard } from '../components/cards';
 import { ItemMenu } from '../components/item-menu';
@@ -127,7 +129,47 @@ export function HomePage() {
     (sources.includes('resume') && continueLoading) ||
     (sources.includes('next-up') && nextUp.isLoading) ||
     heads.some((h) => h.isLoading);
+  // Following needs a pointer to rest on cards and room for rows under the hero.
+  const [heroMode] = useHeroMode();
+  const canFollow = useMediaQuery(
+    '(min-width: 1024px) and (hover: hover) and (pointer: fine)'
+  );
+  const follow = heroMode === 'follow' && canFollow;
 
+  const rows = (
+    <>
+      <EpisodeRow
+        id="resume"
+        title="Continue watching"
+        items={continueItems}
+        loading={continueLoading}
+      />
+      {!mergeNextUp && (
+        <EpisodeRow
+          id="next-up"
+          title="Next up"
+          items={nextUp.data?.Items}
+          loading={nextUp.isLoading}
+        />
+      )}
+      <UpcomingRow />
+      {views.data?.Items?.map((view) => (
+        <LibraryRow key={view.Id} view={view} />
+      ))}
+    </>
+  );
+
+  if (follow)
+    return (
+      <FollowHero
+        items={heroItems.length ? heroItems : continueItems}
+        loading={heroLoading}
+      >
+        <div className="space-y-10 px-4 pb-16 pt-8 lg:pl-0 lg:pr-10">
+          {rows}
+        </div>
+      </FollowHero>
+    );
   return (
     <div className="pb-16">
       <Hero items={heroItems} loading={heroLoading} />
@@ -138,24 +180,7 @@ export function HomePage() {
             : 'relative z-[1] space-y-10 px-4 pt-[calc(1.5rem+env(safe-area-inset-top))] lg:pl-0 lg:pr-10 lg:pt-[calc(2.5rem+env(safe-area-inset-top))]'
         }
       >
-        <EpisodeRow
-          id="resume"
-          title="Continue watching"
-          items={continueItems}
-          loading={continueLoading}
-        />
-        {!mergeNextUp && (
-          <EpisodeRow
-            id="next-up"
-            title="Next up"
-            items={nextUp.data?.Items}
-            loading={nextUp.isLoading}
-          />
-        )}
-        <UpcomingRow />
-        {views.data?.Items?.map((view) => (
-          <LibraryRow key={view.Id} view={view} />
-        ))}
+        {rows}
       </div>
     </div>
   );

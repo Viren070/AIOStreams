@@ -69,6 +69,7 @@ import {
   useUpdateChannel,
   useFeatured,
   useHardwareDecoding,
+  useHeroMode,
   useMergeNextUp,
   useNextCountdown,
   useNextFallbackFirst,
@@ -89,6 +90,7 @@ import {
   useSubtitleTextColor,
   type AudioChannels,
   type EpisodeLayout,
+  type HeroMode,
   type NextPrompt,
   type PosterLine,
   type PosterSize,
@@ -575,6 +577,7 @@ const NOTHING = 'none';
 function InterfaceSection() {
   const views = useViews();
   const [featured, setFeatured] = useFeatured();
+  const [heroMode, setHeroMode] = useHeroMode();
   const [mergeNextUp, setMergeNextUp] = useMergeNextUp();
   const [posterSize, setPosterSize] = usePosterSize();
   const [posterLines, setPosterLines] = usePosterLines();
@@ -630,6 +633,16 @@ function InterfaceSection() {
           maxItems={MAX_FEATURED}
           value={featuredValue}
           onValueChange={changeFeatured}
+        />
+        <Select
+          label="Hero"
+          help="Following pins it above the rows and shows the card the pointer rests on or the keyboard is on, starting with a featured title. Touch screens and narrow windows keep it rotating."
+          options={[
+            { value: 'rotate', label: 'Rotates through featured titles' },
+            { value: 'follow', label: 'Follows the selected card' },
+          ]}
+          value={heroMode}
+          onValueChange={(value) => setHeroMode(value as HeroMode)}
         />
         <Switch
           side="right"

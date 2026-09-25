@@ -280,6 +280,7 @@ export function useItem(itemId: string) {
       if (!item) throw new Error('This item was not found');
       return item;
     },
+    enabled: !!itemId,
   });
 }
 
