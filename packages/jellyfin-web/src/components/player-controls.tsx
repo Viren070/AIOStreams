@@ -7,6 +7,7 @@ import {
   LuCaptions,
   LuCaptionsOff,
   LuCheck,
+  LuEar,
   LuGauge,
   LuLayers,
   LuListVideo,
@@ -33,9 +34,10 @@ import {
 import { LoadingSpinner } from '@aiostreams/ui/loading-spinner';
 import { cn } from '@aiostreams/ui/core/styling';
 import { clock, itemSubtitle, itemTitle, ticksToMs } from '../lib/format';
-import type { PlayerController, Track } from '../lib/player';
+import type { PlayerController, PlayerState, Track } from '../lib/player';
+import { delayLabel } from '../lib/subtitle-lines';
 import { useSeekStep } from '../lib/settings';
-import { SyncToLine } from './subtitle-sync';
+import { SyncByEar, SyncToLine } from './subtitle-sync';
 import type { BaseItemDto, MediaSegmentDto } from '../lib/types';
 
 const IDLE_MS = 2000;
@@ -262,19 +264,16 @@ function Menu({
 
 const DELAY_STEP_MS = 100;
 
-function delayLabel(ms: number): string {
-  if (!ms) return 'In sync';
-  return `${ms > 0 ? '+' : '−'}${(Math.abs(ms) / 1000).toFixed(1)}s`;
-}
-
 /** Nudges subtitles earlier or later without closing the menu. */
 function SubtitleSync({
   delayMs,
   onChange,
+  onSyncByEar,
   onSyncToLine,
 }: {
   delayMs: number;
   onChange(ms: number): void;
+  onSyncByEar(): void;
   onSyncToLine?: () => void;
 }) {
   const keepOpen = (e: Event) => e.preventDefault();
@@ -302,6 +301,10 @@ function SubtitleSync({
           <LuPlus />
         </DropdownMenuItem>
       </div>
+      <DropdownMenuItem onClick={onSyncByEar}>
+        <LuEar className="flex-none" />
+        Sync by ear…
+      </DropdownMenuItem>
       {onSyncToLine && (
         <DropdownMenuItem onClick={onSyncToLine}>
           <LuListVideo className="flex-none" />
@@ -316,6 +319,21 @@ function SubtitleSync({
       )}
     </>
   );
+}
+
+/** The position at this moment, between the player's few reports a second. */
+function usePositionClock(state: PlayerState): () => number {
+  const last = React.useRef({ positionMs: 0, at: 0, paused: true, rate: 1 });
+  const { positionMs, paused, rate } = state;
+  React.useEffect(() => {
+    last.current = { positionMs, at: performance.now(), paused, rate };
+  }, [positionMs, paused, rate]);
+  return React.useCallback(() => {
+    const l = last.current;
+    return l.paused
+      ? l.positionMs
+      : l.positionMs + (performance.now() - l.at) * l.rate;
+  }, []);
 }
 
 function isTyping(target: EventTarget | null): boolean {
@@ -398,10 +416,20 @@ export function PlayerControls({
   const [menus, setMenus] = React.useState(0);
   const pointerType = React.useRef('mouse');
   const segments = React.useMemo(() => segmentsOf(rawSegments), [rawSegments]);
-  // Set while picking the line heard at this position.
-  const [heardAt, setHeardAt] = React.useState<number | null>(null);
+  // Set while picking the line heard; playback waits, then resumes if it ran.
+  const [picking, setPicking] = React.useState<{
+    heardAtMs: number;
+    resume: boolean;
+  } | null>(null);
+  const [byEar, setByEar] = React.useState(false);
   const visible =
-    !idle || state.paused || menus > 0 || !state.started || heardAt !== null;
+    !idle ||
+    state.paused ||
+    menus > 0 ||
+    !state.started ||
+    picking !== null ||
+    byEar;
+  const positionNow = usePositionClock(state);
   const latest = React.useRef(player);
   latest.current = player;
   const loadLines = React.useCallback(
@@ -421,6 +449,17 @@ export function PlayerControls({
     showFlash(latest.current.state.paused);
     latest.current.togglePlay();
   };
+  const pickLine = () => {
+    const resume = !latest.current.state.paused;
+    if (resume) latest.current.togglePlay();
+    setPicking({ heardAtMs: positionNow(), resume });
+  };
+  const closePicker = () => {
+    if (picking?.resume && latest.current.state.paused)
+      latest.current.togglePlay();
+    setPicking(null);
+  };
+  const closeByEar = React.useCallback(() => setByEar(false), []);
 
   const [seekStep] = useSeekStep();
   const stepMs = React.useRef(seekStep * 1000);
@@ -532,17 +571,25 @@ export function PlayerControls({
 
       {flash}
       {notice}
-      {heardAt !== null && player.setSubtitleDelay && (
+      {picking && player.setSubtitleDelay && (
         <SyncToLine
-          heardAtMs={heardAt}
+          heardAtMs={picking.heardAtMs}
           delayMs={state.subtitleDelayMs}
           load={loadLines}
           onPick={(ms) => {
             player.setSubtitleDelay?.(ms);
-            setHeardAt(null);
+            closePicker();
             showNotice(`Subtitles ${delayLabel(ms).toLowerCase()}`);
           }}
-          onClose={() => setHeardAt(null)}
+          onClose={closePicker}
+        />
+      )}
+      {byEar && player.setSubtitleDelay && state.subtitle && (
+        <SyncByEar
+          delayMs={state.subtitleDelayMs}
+          now={positionNow}
+          onApply={player.setSubtitleDelay}
+          onClose={closeByEar}
         />
       )}
 
@@ -624,10 +671,11 @@ export function PlayerControls({
                     <SubtitleSync
                       delayMs={state.subtitleDelayMs}
                       onChange={player.setSubtitleDelay}
+                      onSyncByEar={() => setByEar(true)}
                       onSyncToLine={
                         player.subtitleLines &&
                         (player.canReadSubtitle?.(state.subtitle) ?? true)
-                          ? () => setHeardAt(state.positionMs)
+                          ? pickLine
                           : undefined
                       }
                     />

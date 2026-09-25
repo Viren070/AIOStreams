@@ -48,6 +48,27 @@ export function delayForLine(heardAtMs: number, line: SubtitleLine): number {
   return clampDelay(heardAtMs - line.startMs - REACTION_MS);
 }
 
+/** Taps further apart than this were two different lines. */
+const MAX_TAP_GAP_MS = 30_000;
+
+/**
+ * The delay from when a line was heard and when its subtitle showed; null when
+ * too far apart to be one line. Reaction time is in both taps and cancels out.
+ */
+export function delayForTaps(
+  delayMs: number,
+  heardAtMs: number,
+  sawAtMs: number
+): number | null {
+  const gap = heardAtMs - sawAtMs;
+  return Math.abs(gap) > MAX_TAP_GAP_MS ? null : clampDelay(delayMs + gap);
+}
+
+export function delayLabel(ms: number): string {
+  if (!ms) return 'In sync';
+  return `${ms > 0 ? '+' : '−'}${(Math.abs(ms) / 1000).toFixed(1)}s`;
+}
+
 /*
  * Kept per version rather than per title: two releases of one episode are
  * rarely off by the same amount.
