@@ -74,9 +74,11 @@ jobs:
       - name: Build the app
         working-directory: packages/desktop
         run: |
-          # The workspace version is the first `version =` in Cargo.toml.
+          # The workspace version is the first `version =` in Cargo.toml, whose
+          # checkout may have CRLF endings.
           $toml = Get-Content Cargo.toml -Raw
-          $toml = ([regex]'(?m)^version = ".*"$').Replace($toml, 'version = "${{ inputs.version }}"', 1)
+          $toml = ([regex]'(?m)^version = "[^"]*"').Replace($toml, 'version = "${{ inputs.version }}"', 1)
+          if ($toml -notmatch [regex]::Escape('version = "${{ inputs.version }}"')) { throw 'could not set the version' }
           Set-Content Cargo.toml $toml -NoNewline
           cargo build --release
 
