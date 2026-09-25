@@ -1,6 +1,7 @@
 import React from 'react';
 import { storage } from '../storage';
 import { subtitleUrl, textSubtitles } from '../playback';
+import { sameLanguage } from '../languages';
 import {
   onSettingsChange,
   readDesktopSettings,
@@ -8,6 +9,12 @@ import {
   type SubtitleStyle,
 } from '../settings';
 import type { PlaybackPrefs } from '../user-config';
+import {
+  clampDelay,
+  parseSubtitleLines,
+  savedSubtitleDelay,
+  saveSubtitleDelay,
+} from '../subtitle-lines';
 import { MPV_OUTLINE, mpvColor, subtitleScale } from '../subtitle-style';
 import {
   initialState,
@@ -55,6 +62,9 @@ interface MpvTrack {
   type: 'video' | 'audio' | 'sub';
   title?: string;
   lang?: string;
+  external?: boolean;
+  'external-filename'?: string;
+  selected?: boolean;
 }
 
 function mpvTrackLabel(track: MpvTrack): string {
@@ -62,15 +72,45 @@ function mpvTrackLabel(track: MpvTrack): string {
   return parts.join(' · ') || `Track ${track.id}`;
 }
 
+const EXTERNAL = 'ext:';
+
 /**
  * The AIOStreams desktop app's mpv, drawn beneath the page. Its tracks are the
- * file's own, plus the server's external subtitles.
+ * file's own, plus the server's external subtitles, which mpv downloads only
+ * when picked: a version can carry dozens.
  */
 export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
   const { source, startMs, url } = opts;
   const [state, setState] = React.useState(() => initialState(source, startMs));
   const [tracks, setTracks] = React.useState<MpvTrack[]>([]);
   const latest = useLatest({ ...opts, state });
+  const externals = React.useMemo(
+    () =>
+      textSubtitles(source).flatMap((s, i) => {
+        const link = subtitleUrl(opts.client, s);
+        return link
+          ? [
+              {
+                id: `${EXTERNAL}${s.Index}`,
+                url: link,
+                label: trackLabel(s, i + 1),
+                lang: s.Language ?? '',
+              },
+            ]
+          : [];
+      }),
+    [source, opts.client]
+  );
+  const loaded = (url: string) =>
+    tracks.find((t) => t.type === 'sub' && t['external-filename'] === url);
+  // mpv's id for a loaded external subtitle reads back as its external id.
+  const subtitleId = (sid: string | null) => {
+    const track = tracks.find((t) => t.type === 'sub' && String(t.id) === sid);
+    const external = externals.find(
+      (e) => e.url === track?.['external-filename']
+    );
+    return external?.id ?? sid;
+  };
   const patch = (next: Partial<PlayerState>) =>
     setState((s) => ({ ...s, ...next }));
   const shell = window.aiostreamsDesktop!;
@@ -84,18 +124,30 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
     let cache = false;
     let seeking = false;
 
-    const addSubtitles = () => {
-      textSubtitles(source).forEach((s, i) => {
-        const link = subtitleUrl(latest.current.client, s);
-        if (link)
-          command(
-            'sub-add',
-            link,
-            'auto',
-            trackLabel(s, i + 1),
-            s.Language ?? ''
-          );
-      });
+    let fileTracks: MpvTrack[] = [];
+    // Shows an external subtitle in the user's language when their mode wants
+    // one and the file has none of its own; Default only honours the file's.
+    const addPreferredSubtitle = () => {
+      const { SubtitleLanguagePreference: lang, SubtitleMode: mode } =
+        latest.current.prefs ?? {};
+      if (!lang || (mode !== 'Always' && mode !== 'Smart')) return;
+      const has = (type: MpvTrack['type']) =>
+        fileTracks.some(
+          (t) =>
+            t.type === type &&
+            (type === 'sub' ? !t.external : t.selected) &&
+            sameLanguage(lang, t.lang)
+        );
+      if (has('sub') || (mode === 'Smart' && has('audio'))) return;
+      const external = externals.find((e) => sameLanguage(lang, e.lang));
+      if (external)
+        command(
+          'sub-add',
+          external.url,
+          'select',
+          external.label,
+          external.lang
+        );
     };
     const onProp = (name: string, data: unknown) => {
       const num = typeof data === 'number' ? data : null;
@@ -135,7 +187,8 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
           break;
         }
         case 'track-list':
-          setTracks(Array.isArray(data) ? (data as MpvTrack[]) : []);
+          fileTracks = Array.isArray(data) ? (data as MpvTrack[]) : [];
+          setTracks(fileTracks);
           break;
       }
     };
@@ -147,7 +200,7 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
       else if (m.type === 'mpv-event' && m.name === 'playback-restart')
         patch({ started: true, waiting: false });
       else if (m.type === 'mpv-event' && m.name === 'file-loaded')
-        addSubtitles();
+        addPreferredSubtitle();
       else if (m.type === 'mpv-ended' && m.reason === 'eof')
         latest.current.onEnded();
       else if (m.type === 'mpv-ended' && m.reason === 'error')
@@ -157,6 +210,9 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
     set('volume', Math.round(volume * 100));
     set('mute', muted);
     applySubtitleStyle(latest.current.subtitleStyle);
+    const delay = savedSubtitleDelay(source.Id);
+    set('sub-delay', delay / 1000);
+    patch({ subtitleDelayMs: delay });
     const options = [
       ...(startMs ? [`start=${(startMs / 1000).toFixed(3)}`] : []),
       ...trackOptions(latest.current.prefs ?? {}),
@@ -182,9 +238,12 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
     label: mpvTrackLabel(t),
   });
   return {
-    state,
+    state: { ...state, subtitle: subtitleId(state.subtitle) },
     audioTracks: tracks.filter((t) => t.type === 'audio').map(toTrack),
-    subtitleTracks: tracks.filter((t) => t.type === 'sub').map(toTrack),
+    subtitleTracks: [
+      ...tracks.filter((t) => t.type === 'sub' && !t.external).map(toTrack),
+      ...externals.map(({ id, label }) => ({ id, label })),
+    ],
     togglePlay: () => set('pause', !latest.current.state.paused),
     seek: (ms) => {
       command('seek', ms / 1000, 'absolute');
@@ -197,7 +256,34 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
     },
     setRate: (rate) => set('speed', rate),
     setAudio: (id) => set('aid', Number(id)),
-    setSubtitle: (id) => set('sid', id ? Number(id) : 'no'),
+    setSubtitle: (id) => {
+      const external = externals.find((e) => e.id === id);
+      if (!external) return set('sid', id ? Number(id) : 'no');
+      const track = loaded(external.url);
+      if (track) set('sid', track.id);
+      else
+        command(
+          'sub-add',
+          external.url,
+          'select',
+          external.label,
+          external.lang
+        );
+    },
+    setSubtitleDelay: (ms) => {
+      const delay = clampDelay(ms);
+      set('sub-delay', delay / 1000);
+      saveSubtitleDelay(source.Id, delay);
+      patch({ subtitleDelayMs: delay });
+    },
+    // Only external subtitles can be read; mpv keeps embedded ones to itself.
+    subtitleLines: async () => {
+      const shown = subtitleId(latest.current.state.subtitle);
+      const external = externals.find((e) => e.id === shown);
+      if (!external) return null;
+      const res = await fetch(external.url);
+      return res.ok ? parseSubtitleLines(await res.text()) : null;
+    },
     toggleFullscreen: () => shell.send({ type: 'fullscreen' }),
   };
 }

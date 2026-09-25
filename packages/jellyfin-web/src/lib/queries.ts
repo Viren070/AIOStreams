@@ -265,13 +265,20 @@ export function useSimilar(itemId: string, enabled: boolean) {
   });
 }
 
-/** `Refresh` reruns the addons even when the server has a recent result. */
+/**
+ * `Refresh` reruns the addons even when the server has a recent result. Naming
+ * a version gets its subtitles from subtitle addons too.
+ */
 function usePlaybackInfoRequest() {
   const { client, user } = useSession();
-  return (itemId: string, refresh = false) =>
+  return (itemId: string, refresh = false, sourceId?: string) =>
     client.post<PlaybackInfoResponse>(
       `/Items/${itemId}/PlaybackInfo`,
-      { UserId: user.Id, ...(refresh && { Refresh: true }) },
+      {
+        UserId: user.Id,
+        ...(refresh && { Refresh: true }),
+        ...(sourceId && { MediaSourceId: sourceId }),
+      },
       { userId: user.Id }
     );
 }
@@ -279,10 +286,10 @@ function usePlaybackInfoRequest() {
 export function usePlaybackInfoOptions() {
   const request = usePlaybackInfoRequest();
   const key = useKey();
-  return (itemId: string) =>
+  return (itemId: string, sourceId?: string) =>
     queryOptions({
-      queryKey: [...key, 'playback-info', itemId],
-      queryFn: () => request(itemId),
+      queryKey: [...key, 'playback-info', itemId, sourceId ?? null],
+      queryFn: () => request(itemId, false, sourceId),
       staleTime: 10 * 60_000,
     });
 }
@@ -293,11 +300,11 @@ export function usePlaybackInfoOptions() {
  */
 export function usePlaybackInfo(
   itemId: string,
-  opts: { listing?: boolean } = {}
+  opts: { listing?: boolean; sourceId?: string } = {}
 ) {
   const options = usePlaybackInfoOptions();
   return useQuery({
-    ...options(itemId),
+    ...options(itemId, opts.sourceId),
     refetchOnMount: opts.listing ? 'always' : true,
   });
 }

@@ -1,6 +1,6 @@
 import React from 'react';
 import { toast } from 'sonner';
-import { BiArrowBack, BiCopy, BiLinkExternal } from 'react-icons/bi';
+import { BiArrowBack, BiCopy, BiLayer, BiLinkExternal } from 'react-icons/bi';
 import { Button } from '@aiostreams/ui/button';
 import { LoadingSpinner } from '@aiostreams/ui/loading-spinner';
 import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
@@ -29,6 +29,10 @@ import { backdropUrl } from '../lib/images';
 import { goBack, to } from '../lib/paths';
 import { PlayerControls } from '../components/player-controls';
 import { useNextEpisodePrompt } from '../components/next-episode';
+import {
+  useVersionPicker,
+  VersionPickerProvider,
+} from '../components/version-picker';
 import type { BaseItemDto, SourceInfo } from '../lib/types';
 
 interface PlayerProps {
@@ -67,7 +71,7 @@ export function PlayerPage({
   startMs: number;
 }) {
   const item = useItem(itemId);
-  const info = usePlaybackInfo(itemId);
+  const info = usePlaybackInfo(itemId, { sourceId: sourceId || undefined });
   const playback = usePlaybackPrefs();
   usePlayerPage();
 
@@ -100,10 +104,14 @@ export function PlayerPage({
     );
   }
   const host = playbackHost();
-  return host === 'shell' || host === 'desktop' ? (
-    <NativePlayer {...playing} startMs={startMs} />
-  ) : (
-    <BrowserPlayer {...playing} startMs={startMs} />
+  return (
+    <VersionPickerProvider>
+      {host === 'shell' || host === 'desktop' ? (
+        <NativePlayer {...playing} startMs={startMs} />
+      ) : (
+        <BrowserPlayer {...playing} startMs={startMs} />
+      )}
+    </VersionPickerProvider>
   );
 }
 
@@ -124,6 +132,19 @@ function useEnded(item: BaseItemDto) {
     };
   };
   return { back, onEnded, connect };
+}
+
+function useSwitchVersion(
+  item: BaseItemDto,
+  source: SourceInfo,
+  player: PlayerController
+) {
+  const picker = useVersionPicker();
+  return () =>
+    picker.open(item, {
+      startMs: player.state.positionMs,
+      playing: source.Id ?? undefined,
+    });
 }
 
 /** Reports the playback the way a Jellyfin client does once it starts. */
@@ -199,11 +220,13 @@ function Failure({
   message,
   item,
   source,
+  onVersions,
 }: {
   itemId: string;
   message: string;
   item?: BaseItemDto;
   source?: SourceInfo;
+  onVersions?: () => void;
 }) {
   const { client } = useSession();
   const template = externalPlayerTemplate();
@@ -223,6 +246,16 @@ function Failure({
           >
             Back
           </Button>
+          {onVersions && (
+            <Button
+              intent="white"
+              className="rounded-full"
+              leftIcon={<BiLayer />}
+              onClick={onVersions}
+            >
+              Other versions
+            </Button>
+          )}
           {link && template && (
             <Button
               intent="white"
@@ -292,6 +325,7 @@ function BrowserPlayer({
     segments: segments.data?.Items,
   });
   connect(next);
+  const switchVersion = useSwitchVersion(item, source, player);
   useReporting(player, { item, source, playSessionId });
 
   return (
@@ -322,6 +356,8 @@ function BrowserPlayer({
         player={player}
         segments={segments.data?.Items}
         onBack={back}
+        offeringNext={!!next.element}
+        onVersions={switchVersion}
       />
       {next.element}
       {player.state.error && (
@@ -330,6 +366,7 @@ function BrowserPlayer({
           item={item}
           source={source}
           message={player.state.error}
+          onVersions={switchVersion}
         />
       )}
     </div>
@@ -370,6 +407,7 @@ function NativePlayer({
     segments: segments.data?.Items,
   });
   connect(next);
+  const switchVersion = useSwitchVersion(item, source, player);
   useReporting(player, { item, source, playSessionId });
 
   return (
@@ -380,6 +418,8 @@ function NativePlayer({
         player={player}
         segments={segments.data?.Items}
         onBack={back}
+        offeringNext={!!next.element}
+        onVersions={switchVersion}
       />
       {next.element}
       {player.state.error && (
@@ -388,6 +428,7 @@ function NativePlayer({
           item={item}
           source={source}
           message={`Playback failed: ${player.state.error}`}
+          onVersions={switchVersion}
         />
       )}
     </div>

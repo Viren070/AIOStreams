@@ -25,7 +25,7 @@ export function noticeSources(
 export function usePlay() {
   return async (
     item: BaseItemDto,
-    opts: { source: SourceInfo; startMs?: number }
+    opts: { source: SourceInfo; startMs?: number; replace?: boolean }
   ) => {
     const { source } = opts;
     if (!source.Id) throw new Error('No playable version was found');
@@ -36,6 +36,6 @@ export function usePlay() {
       playOnAndroid(item, source, startMs);
       return;
     }
-    navigate(to.play(item.Id!, source.Id, startMs));
+    navigate(to.play(item.Id!, source.Id, startMs), { replace: opts.replace });
   };
 }

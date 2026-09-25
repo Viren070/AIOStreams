@@ -41,11 +41,13 @@ import type { BaseItemDto, SourceInfo } from '../lib/types';
 interface Request {
   item: BaseItemDto;
   startMs: number;
+  /** From the player: the version playing, which a pick replaces. */
+  playing?: string;
 }
 
 interface PickerValue {
   /** Lists the item's versions; nothing is resolved until this is called. */
-  open(item: BaseItemDto, opts?: { startMs?: number }): void;
+  open(item: BaseItemDto, opts?: { startMs?: number; playing?: string }): void;
 }
 
 const PickerContext = React.createContext<PickerValue | null>(null);
@@ -79,7 +81,12 @@ export function VersionPickerProvider({
   const [external, setExternal] = React.useState<BaseItemDto | null>(null);
   const value = React.useMemo<PickerValue>(
     () => ({
-      open: (item, opts) => setRequest({ item, startMs: opts?.startMs ?? 0 }),
+      open: (item, opts) =>
+        setRequest({
+          item,
+          startMs: opts?.startMs ?? 0,
+          playing: opts?.playing,
+        }),
     }),
     []
   );
@@ -176,7 +183,9 @@ function Versions({
 
   const start = (source: SourceInfo) => {
     onDone();
-    play(item, { source, startMs }).catch((e: Error) => toast.error(e.message));
+    play(item, { source, startMs, replace: !!request.playing }).catch(
+      (e: Error) => toast.error(e.message)
+    );
   };
   const retry = () =>
     refresh.mutate(undefined, {
@@ -355,6 +364,11 @@ function Versions({
                     aria-hidden
                     className="float-right ml-2 h-6 w-8 sm:hidden"
                   />
+                  {source.Id === request.playing && (
+                    <span className="mb-1 inline-block rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-black">
+                      Playing
+                    </span>
+                  )}
                   <span className="block whitespace-pre-line text-sm font-medium [overflow-wrap:anywhere] sm:text-base">
                     {source.aiostreams?.name || source.Name}
                   </span>

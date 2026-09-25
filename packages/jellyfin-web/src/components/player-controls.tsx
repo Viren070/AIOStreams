@@ -8,6 +8,11 @@ import {
   LuCaptionsOff,
   LuCheck,
   LuGauge,
+  LuLayers,
+  LuListVideo,
+  LuMinus,
+  LuPlus,
+  LuUndo2,
   LuMaximize,
   LuMinimize,
   LuPause,
@@ -30,6 +35,7 @@ import { cn } from '@aiostreams/ui/core/styling';
 import { clock, itemSubtitle, itemTitle, ticksToMs } from '../lib/format';
 import type { PlayerController, Track } from '../lib/player';
 import { useSeekStep } from '../lib/settings';
+import { SyncToLine } from './subtitle-sync';
 import type { BaseItemDto, MediaSegmentDto } from '../lib/types';
 
 const IDLE_MS = 2000;
@@ -215,6 +221,7 @@ function Menu({
   value,
   onSelect,
   onOpenChange,
+  footer,
 }: {
   label: string;
   icon: React.ReactNode;
@@ -222,6 +229,7 @@ function Menu({
   value: string | null;
   onSelect(id: string | null): void;
   onOpenChange(open: boolean): void;
+  footer?: React.ReactNode;
 }) {
   return (
     <DropdownMenu
@@ -247,7 +255,66 @@ function Menu({
           <span className="[overflow-wrap:anywhere]">{option.label}</span>
         </DropdownMenuItem>
       ))}
+      {footer}
     </DropdownMenu>
+  );
+}
+
+const DELAY_STEP_MS = 100;
+
+function delayLabel(ms: number): string {
+  if (!ms) return 'In sync';
+  return `${ms > 0 ? '+' : '−'}${(Math.abs(ms) / 1000).toFixed(1)}s`;
+}
+
+/** Nudges subtitles earlier or later without closing the menu. */
+function SubtitleSync({
+  delayMs,
+  onChange,
+  onSyncToLine,
+}: {
+  delayMs: number;
+  onChange(ms: number): void;
+  onSyncToLine?: () => void;
+}) {
+  const keepOpen = (e: Event) => e.preventDefault();
+  return (
+    <>
+      <DropdownMenuLabel className="pt-3">Sync</DropdownMenuLabel>
+      <div className="flex items-center gap-1 px-1 pb-1">
+        <DropdownMenuItem
+          onSelect={keepOpen}
+          onClick={() => onChange(delayMs - DELAY_STEP_MS)}
+          className="justify-center"
+          aria-label="Show subtitles earlier"
+        >
+          <LuMinus />
+        </DropdownMenuItem>
+        <span className="min-w-16 flex-1 text-center text-sm tabular-nums">
+          {delayLabel(delayMs)}
+        </span>
+        <DropdownMenuItem
+          onSelect={keepOpen}
+          onClick={() => onChange(delayMs + DELAY_STEP_MS)}
+          className="justify-center"
+          aria-label="Show subtitles later"
+        >
+          <LuPlus />
+        </DropdownMenuItem>
+      </div>
+      {onSyncToLine && (
+        <DropdownMenuItem onClick={onSyncToLine}>
+          <LuListVideo className="flex-none" />
+          Sync to a line…
+        </DropdownMenuItem>
+      )}
+      {delayMs !== 0 && (
+        <DropdownMenuItem onSelect={keepOpen} onClick={() => onChange(0)}>
+          <LuUndo2 className="flex-none" />
+          Reset
+        </DropdownMenuItem>
+      )}
+    </>
   );
 }
 
@@ -257,6 +324,25 @@ function isTyping(target: EventTarget | null): boolean {
     (target.isContentEditable ||
       ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
   );
+}
+
+function useNotice(): [React.ReactNode, (text: string) => void] {
+  const [text, setText] = React.useState<string | null>(null);
+  const timer = React.useRef<ReturnType<typeof setTimeout>>(undefined);
+  React.useEffect(() => () => clearTimeout(timer.current), []);
+  const show = React.useCallback((next: string) => {
+    clearTimeout(timer.current);
+    setText(next);
+    timer.current = setTimeout(() => setText(null), 1200);
+  }, []);
+  const node = text && (
+    <div className="pointer-events-none absolute inset-x-0 top-20 flex justify-center">
+      <span className="rounded-full bg-black/70 px-4 py-1.5 text-sm font-medium tabular-nums">
+        {text}
+      </span>
+    </div>
+  );
+  return [node, show];
 }
 
 /** The play or pause icon that pops in the middle when either is pressed. */
@@ -296,21 +382,41 @@ export function PlayerControls({
   player,
   segments: rawSegments,
   onBack,
+  onVersions,
+  offeringNext = false,
 }: {
   item: BaseItemDto;
   player: PlayerController;
   segments: MediaSegmentDto[] | null | undefined;
   onBack(): void;
+  onVersions?: () => void;
+  /** The next episode's card covers skipping the credits. */
+  offeringNext?: boolean;
 }) {
   const { state } = player;
   const [idle, wake] = useIdle(IDLE_MS);
   const [menus, setMenus] = React.useState(0);
   const pointerType = React.useRef('mouse');
   const segments = React.useMemo(() => segmentsOf(rawSegments), [rawSegments]);
-  const visible = !idle || state.paused || menus > 0 || !state.started;
+  // Set while picking the line heard at this position.
+  const [heardAt, setHeardAt] = React.useState<number | null>(null);
+  const visible =
+    !idle || state.paused || menus > 0 || !state.started || heardAt !== null;
   const latest = React.useRef(player);
   latest.current = player;
+  const loadLines = React.useCallback(
+    () => latest.current.subtitleLines?.() ?? Promise.resolve(null),
+    []
+  );
   const [flash, showFlash] = useToggleFlash();
+  const [notice, showNotice] = useNotice();
+  const nudgeSubtitles = (by: number) => {
+    const p = latest.current;
+    if (!p.setSubtitleDelay || !p.state.subtitle) return;
+    const next = p.state.subtitleDelayMs + by;
+    p.setSubtitleDelay(next);
+    showNotice(`Subtitles ${delayLabel(next).toLowerCase()}`);
+  };
   const togglePlay = () => {
     showFlash(latest.current.state.paused);
     latest.current.togglePlay();
@@ -328,7 +434,8 @@ export function PlayerControls({
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
-      if (isTyping(e.target)) return;
+      if (isTyping(e.target) || document.querySelector('[role="dialog"]'))
+        return;
       const p = latest.current;
       const actions: Record<string, () => void> = {
         ' ': togglePlay,
@@ -341,6 +448,8 @@ export function PlayerControls({
         ArrowDown: () => p.setVolume(Math.max(0, p.state.volume - 0.05)),
         m: p.toggleMute,
         f: p.toggleFullscreen,
+        z: () => nudgeSubtitles(-DELAY_STEP_MS),
+        x: () => nudgeSubtitles(DELAY_STEP_MS),
       };
       const action = actions[e.key];
       if (!action) return;
@@ -422,8 +531,22 @@ export function PlayerControls({
       </div>
 
       {flash}
+      {notice}
+      {heardAt !== null && player.setSubtitleDelay && (
+        <SyncToLine
+          heardAtMs={heardAt}
+          delayMs={state.subtitleDelayMs}
+          load={loadLines}
+          onPick={(ms) => {
+            player.setSubtitleDelay?.(ms);
+            setHeardAt(null);
+            showNotice(`Subtitles ${delayLabel(ms).toLowerCase()}`);
+          }}
+          onClose={() => setHeardAt(null)}
+        />
+      )}
 
-      {segment && (
+      {segment && !offeringNext && (
         // Above the bottom bar: its padding reaches up past this button.
         <div
           className={cn(
@@ -495,7 +618,26 @@ export function PlayerControls({
                 value={state.subtitle}
                 onSelect={player.setSubtitle}
                 onOpenChange={onMenu}
+                footer={
+                  player.setSubtitleDelay &&
+                  state.subtitle && (
+                    <SubtitleSync
+                      delayMs={state.subtitleDelayMs}
+                      onChange={player.setSubtitleDelay}
+                      onSyncToLine={
+                        player.subtitleLines
+                          ? () => setHeardAt(state.positionMs)
+                          : undefined
+                      }
+                    />
+                  )
+                }
               />
+            )}
+            {onVersions && (
+              <ControlButton label="Versions" onClick={onVersions}>
+                <LuLayers />
+              </ControlButton>
             )}
             {player.audioTracks.length > 1 && (
               <Menu

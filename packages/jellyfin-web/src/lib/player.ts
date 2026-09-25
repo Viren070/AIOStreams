@@ -2,6 +2,7 @@ import React from 'react';
 import { storage } from './storage';
 import type { JellyfinClient } from './client';
 import type { SubtitleStyle } from './settings';
+import type { SubtitleLine } from './subtitle-lines';
 import type { PlaybackPrefs } from './user-config';
 import type { BaseItemDto, MediaStream, SourceInfo } from './types';
 
@@ -24,6 +25,8 @@ export interface PlayerState {
   fullscreen: boolean;
   audio: string | null;
   subtitle: string | null;
+  /** Positive shows subtitles later. */
+  subtitleDelayMs: number;
   error: string | null;
 }
 
@@ -39,6 +42,10 @@ export interface PlayerController {
   setRate(rate: number): void;
   setAudio(id: string): void;
   setSubtitle(id: string | null): void;
+  /** Missing where the player cannot shift subtitles. */
+  setSubtitleDelay?: (ms: number) => void;
+  /** The shown subtitle's lines, or null when the player cannot read them. */
+  subtitleLines?: () => Promise<SubtitleLine[] | null>;
   toggleFullscreen(): void;
 }
 
@@ -79,6 +86,7 @@ export function initialState(source: SourceInfo, startMs: number): PlayerState {
     fullscreen: false,
     audio: null,
     subtitle: null,
+    subtitleDelayMs: 0,
     error: null,
     ...storedVolume(),
   };

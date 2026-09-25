@@ -6,7 +6,7 @@ import {
   createRouter,
   Outlet,
 } from '@tanstack/react-router';
-import { WebLayout } from './components/layout';
+import { PageBody, WebLayout } from './components/layout';
 import { navigate, setNavigator, to } from './lib/paths';
 import { handleAndroidBack } from './lib/hosts/jellyfin-android';
 import { lastCatalog } from './lib/settings';
@@ -17,6 +17,8 @@ import { ItemPage } from './pages/item';
 import { PersonPage } from './pages/person';
 import { HistoryPage } from './pages/history';
 import { PlayerPage } from './pages/player';
+import { Button } from '@aiostreams/ui/button';
+import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import { SettingsPage } from './pages/settings';
 
 const rootRoute = createRootRoute({ component: Outlet });
@@ -183,8 +185,28 @@ const routeTree = rootRoute.addChildren([
   playRoute,
 ]);
 
+function NotFoundPage(): React.ReactElement {
+  return (
+    <PageBody>
+      <LuffyError title="There is nothing here">
+        <p className="text-sm text-[--muted]">
+          The link may be old, or the page moved.
+        </p>
+        <Button
+          intent="white"
+          className="mt-4 rounded-full"
+          onClick={() => navigate(to.home, { replace: true })}
+        >
+          Go home
+        </Button>
+      </LuffyError>
+    </PageBody>
+  );
+}
+
 export const webRouter = createRouter({
   routeTree,
+  defaultNotFoundComponent: NotFoundPage,
   history: createHashHistory(),
   scrollRestoration: true,
 });

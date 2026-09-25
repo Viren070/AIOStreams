@@ -3,6 +3,11 @@ import { storage } from '../storage';
 import { subtitleUrl, textSubtitles } from '../playback';
 import { sameLanguage } from '../languages';
 import type { PlaybackPrefs } from '../user-config';
+import {
+  clampDelay,
+  savedSubtitleDelay,
+  saveSubtitleDelay,
+} from '../subtitle-lines';
 import type { MediaStream } from '../types';
 import {
   initialState,
@@ -46,12 +51,33 @@ export function useBrowserPlayer(
   opts: PlayerOptions
 ): PlayerController {
   const { source, startMs } = opts;
-  const [state, setState] = React.useState(() => initialState(source, startMs));
+  const [state, setState] = React.useState(() => ({
+    ...initialState(source, startMs),
+    subtitleDelayMs: savedSubtitleDelay(source.Id),
+  }));
   const onEnded = useLatest(opts.onEnded);
   const prefs = useLatest(opts.prefs);
   const subtitles = React.useMemo(() => textSubtitles(source), [source]);
   const patch = (next: Partial<PlayerState>) =>
     setState((s) => ({ ...s, ...next }));
+  // A text track's cues load late, so each one remembers the shift it has.
+  const shifted = React.useRef(new WeakMap<TextTrack, number>());
+  const delayMs = React.useRef(savedSubtitleDelay(source.Id));
+  const shiftCues = React.useCallback(() => {
+    const tracks = video.current?.textTracks;
+    if (!tracks) return;
+    for (const track of Array.from(tracks)) {
+      const cues = track.cues;
+      if (!cues?.length) continue;
+      const by = (delayMs.current - (shifted.current.get(track) ?? 0)) / 1000;
+      if (!by) continue;
+      for (const cue of Array.from(cues)) {
+        cue.startTime += by;
+        cue.endTime += by;
+      }
+      shifted.current.set(track, delayMs.current);
+    }
+  }, [video]);
   const showSubtitle = (id: string | null) => {
     const tracks = video.current?.textTracks;
     if (!tracks) return;
@@ -59,6 +85,7 @@ export function useBrowserPlayer(
       const track = tracks[i];
       if (track) track.mode = String(s.Index) === id ? 'showing' : 'disabled';
     });
+    shiftCues();
     patch({ subtitle: id });
   };
 
@@ -105,6 +132,8 @@ export function useBrowserPlayer(
     };
     for (const [event, handler] of Object.entries(handlers))
       el.addEventListener(event, handler);
+    const trackElements = Array.from(el.querySelectorAll('track'));
+    for (const t of trackElements) t.addEventListener('load', shiftCues);
     const onFullscreen = () =>
       patch({ fullscreen: !!document.fullscreenElement });
     document.addEventListener('fullscreenchange', onFullscreen);
@@ -112,6 +141,7 @@ export function useBrowserPlayer(
       for (const [event, handler] of Object.entries(handlers))
         el.removeEventListener(event, handler);
       document.removeEventListener('fullscreenchange', onFullscreen);
+      for (const t of trackElements) t.removeEventListener('load', shiftCues);
     };
   }, [video, startMs, onEnded]);
 
@@ -153,6 +183,24 @@ export function useBrowserPlayer(
     },
     setAudio: () => {},
     setSubtitle: showSubtitle,
+    setSubtitleDelay: (ms) => {
+      delayMs.current = clampDelay(ms);
+      shiftCues();
+      saveSubtitleDelay(source.Id, delayMs.current);
+      patch({ subtitleDelayMs: delayMs.current });
+    },
+    subtitleLines: async () => {
+      const index = subtitles.findIndex(
+        (s) => String(s.Index) === state.subtitle
+      );
+      const cues = video.current?.textTracks[index]?.cues;
+      if (!cues?.length) return null;
+      // Cues carry the shift already applied, so it comes off again.
+      return Array.from(cues).map((cue) => ({
+        startMs: cue.startTime * 1000 - delayMs.current,
+        text: (cue as VTTCue).text.replace(/<[^>]*>/g, ''),
+      }));
+    },
     toggleFullscreen: toggleDocumentFullscreen,
   };
 }
