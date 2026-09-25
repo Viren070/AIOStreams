@@ -1,4 +1,4 @@
-import { storage } from './storage';
+import { storedMap } from './storage';
 
 export interface SubtitleLine {
   startMs: number;
@@ -52,26 +52,17 @@ export function delayForLine(heardAtMs: number, line: SubtitleLine): number {
  * Kept per version rather than per title: two releases of one episode are
  * rarely off by the same amount.
  */
-const DELAYS_KEY = 'aiostreams-web-subtitle-delays';
-const MAX_REMEMBERED = 200;
+const delays = storedMap<number>('aiostreams-web-subtitle-delays', 200);
 
 export function savedSubtitleDelay(
   sourceId: string | null | undefined
 ): number {
-  if (!sourceId) return 0;
-  return storage.get<Record<string, number>>(DELAYS_KEY)?.[sourceId] ?? 0;
+  return (sourceId && delays.get(sourceId)) || 0;
 }
 
 export function saveSubtitleDelay(
   sourceId: string | null | undefined,
   ms: number
 ): void {
-  if (!sourceId) return;
-  const { [sourceId]: _, ...rest } =
-    storage.get<Record<string, number>>(DELAYS_KEY) ?? {};
-  const kept = Object.entries(rest).slice(-(MAX_REMEMBERED - 1));
-  storage.set(
-    DELAYS_KEY,
-    Object.fromEntries(ms ? [...kept, [sourceId, ms]] : kept)
-  );
+  if (sourceId) delays.set(sourceId, ms || undefined);
 }

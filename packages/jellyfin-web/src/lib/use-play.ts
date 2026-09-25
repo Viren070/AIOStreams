@@ -2,7 +2,14 @@ import { playbackHost } from './hosts';
 import { playOnAndroid } from './hosts/jellyfin-android';
 import { ticksToMs } from './format';
 import { navigate, to } from './paths';
+import { storedMap } from './storage';
 import type { BaseItemDto, PlaybackInfoResponse, SourceInfo } from './types';
+
+/** The version each item last played in, which resuming it goes straight to. */
+export const lastVersions = storedMap<string>(
+  'aiostreams-web-last-versions',
+  500
+);
 
 /** Versions that can play; notices from addons carry text only. */
 export function playableSources(

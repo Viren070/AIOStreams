@@ -366,7 +366,7 @@ export function useHistory(userId: string | null, localOnly: boolean) {
 }
 
 /** Watch-state edits change every list, so each one refreshes them all. */
-function useRefreshAll() {
+export function useRefreshAll() {
   const queryClient = useQueryClient();
   const key = useKey();
   return () => queryClient.invalidateQueries({ queryKey: key });

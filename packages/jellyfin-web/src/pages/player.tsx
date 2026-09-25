@@ -6,8 +6,13 @@ import { LoadingSpinner } from '@aiostreams/ui/loading-spinner';
 import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '../lib/session';
-import { useItem, usePlaybackInfo, useSegments } from '../lib/queries';
-import { playableSources } from '../lib/use-play';
+import {
+  useItem,
+  usePlaybackInfo,
+  useRefreshAll,
+  useSegments,
+} from '../lib/queries';
+import { lastVersions, playableSources } from '../lib/use-play';
 import {
   directUrl,
   externalPlayerTemplate,
@@ -26,7 +31,7 @@ import { useSubtitleStyle, type SubtitleStyle } from '../lib/settings';
 import { subtitleCss } from '../lib/subtitle-style';
 import { usePlaybackPrefs, type PlaybackPrefs } from '../lib/user-config';
 import { backdropUrl } from '../lib/images';
-import { goBack, to } from '../lib/paths';
+import { goBack, navigate, to, versionsPath } from '../lib/paths';
 import { PlayerControls } from '../components/player-controls';
 import { useNextEpisodePrompt } from '../components/next-episode';
 import {
@@ -81,7 +86,13 @@ export function PlayerPage({
     'startMs'
   > | null>(null);
   const sources = playableSources(info.data);
-  const source = sources.find((s) => s.Id === sourceId) ?? sources[0];
+  const source = sourceId ? sources.find((s) => s.Id === sourceId) : sources[0];
+  const missing = !playing && !!item.data && !!info.data && !source;
+  React.useEffect(() => {
+    if (!missing || !item.data) return;
+    lastVersions.set(itemId, undefined);
+    navigate(versionsPath(item.data), { replace: true });
+  }, [missing, item.data, itemId]);
   if (!playing && item.data && source && !playback.isLoading) {
     setPlaying({
       item: item.data,
@@ -92,7 +103,7 @@ export function PlayerPage({
   }
 
   if (!playing) {
-    if (item.isLoading || info.isLoading || playback.isLoading) {
+    if (item.isLoading || info.isLoading || playback.isLoading || missing) {
       return (
         <Cover item={item.data}>
           <LoadingSpinner />
@@ -160,7 +171,14 @@ function useReporting(
   const state = React.useRef(player.state);
   state.current = player.state;
   const reporter = React.useRef<PlaybackReporter | null>(null);
+  const refreshAll = useRefreshAll();
+  const refresh = React.useRef(refreshAll);
+  refresh.current = refreshAll;
   const { started, paused } = player.state;
+
+  React.useEffect(() => {
+    if (started) lastVersions.set(item.Id!, source.Id!);
+  }, [started, item.Id, source.Id]);
 
   React.useEffect(() => {
     if (!started) return;
@@ -171,11 +189,12 @@ function useReporting(
     );
     current.start();
     reporter.current = current;
-    const onHide = () => current.stop();
+    const onHide = () => void current.stop();
     window.addEventListener('pagehide', onHide);
     return () => {
       window.removeEventListener('pagehide', onHide);
-      current.stop();
+      // The position it leaves is what the pages behind offer to resume.
+      void current.stop().then(() => refresh.current());
       reporter.current = null;
     };
   }, [started, client, item.Id, source.Id, playSessionId]);

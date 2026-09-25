@@ -114,16 +114,19 @@ export class PlaybackReporter {
       .catch(() => {});
   }
 
-  stop(): void {
-    if (this.stopped) return;
+  stop(): Promise<void> {
+    if (this.stopped) return Promise.resolve();
     this.stopped = true;
     if (this.timer) clearInterval(this.timer);
     // keepalive lets the report leave while the page is closing.
-    void this.client
+    return this.client
       .request('POST', '/Sessions/Playing/Stopped', {
         body: this.body(),
         keepalive: true,
       })
-      .catch(() => {});
+      .then(
+        () => {},
+        () => {}
+      );
   }
 }

@@ -31,11 +31,17 @@ import {
   externalPlayerTemplate,
   externalPlayerUrl,
 } from '../lib/playback';
-import { noticeSources, playableSources, usePlay } from '../lib/use-play';
-import { clock, itemSubtitle, itemTitle } from '../lib/format';
+import {
+  lastVersions,
+  noticeSources,
+  playableSources,
+  usePlay,
+} from '../lib/use-play';
+import { playbackHost } from '../lib/hosts';
+import { clock, itemSubtitle, itemTitle, ticksToMs } from '../lib/format';
 import { cn } from '@aiostreams/ui/core/styling';
 import { backdropUrl, landscapeUrl } from '../lib/images';
-import { itemPath, navigate } from '../lib/paths';
+import { itemPath, navigate, to } from '../lib/paths';
 import type { BaseItemDto, SourceInfo } from '../lib/types';
 
 interface Request {
@@ -60,7 +66,9 @@ export function PickOnArrival({ itemId }: { itemId: string }) {
   React.useEffect(() => {
     if (!item.data || opened.current) return;
     opened.current = true;
-    picker.open(item.data);
+    picker.open(item.data, {
+      startMs: ticksToMs(item.data.UserData?.PlaybackPositionTicks),
+    });
     navigate(itemPath(item.data), { replace: true });
   }, [item.data, picker]);
   return null;
@@ -81,12 +89,15 @@ export function VersionPickerProvider({
   const [external, setExternal] = React.useState<BaseItemDto | null>(null);
   const value = React.useMemo<PickerValue>(
     () => ({
-      open: (item, opts) =>
-        setRequest({
-          item,
-          startMs: opts?.startMs ?? 0,
-          playing: opts?.playing,
-        }),
+      open: (item, opts) => {
+        const startMs = opts?.startMs ?? 0;
+        const last =
+          startMs > 0 && !opts?.playing && playbackHost() !== 'android'
+            ? lastVersions.get(item.Id!)
+            : undefined;
+        if (last) navigate(to.play(item.Id!, last, startMs));
+        else setRequest({ item, startMs, playing: opts?.playing });
+      },
     }),
     []
   );
