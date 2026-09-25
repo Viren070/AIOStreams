@@ -3,6 +3,10 @@ import { AnimatePresence, motion } from 'motion/react';
 import { BiPlus, BiX } from 'react-icons/bi';
 import { Button, IconButton } from '@aiostreams/ui/button';
 import { TextInput } from '@aiostreams/ui/text-input';
+import {
+  ConfirmationDialog,
+  useConfirmationDialog,
+} from '@aiostreams/ui/shared/confirmation-dialog';
 import { UserAvatar } from '../components/user-avatar';
 import {
   findServer,
@@ -117,7 +121,7 @@ function ServerList({
               intent="gray-subtle"
               className="size-8 flex-none rounded-full"
               icon={<BiX />}
-              aria-label={`Forget ${server.name}`}
+              aria-label={`Remove ${server.name}`}
               onClick={() => onForget(server)}
             />
           </li>
@@ -146,12 +150,22 @@ export function ServersPage({
     document.title = 'AIOStreams';
   }, []);
 
-  const forget = (server: SavedServer) => {
-    forgetServer(server.base);
-    const rest = savedServers();
-    setServers(rest);
-    if (!rest.length) setAdding(true);
-  };
+  const [forgetting, setForgetting] = React.useState<SavedServer | null>(null);
+  const confirmForget = useConfirmationDialog({
+    title: 'Remove server',
+    description: forgetting
+      ? `Remove ${forgetting.name} from this device? You will need to add it and sign in again.`
+      : undefined,
+    actionText: 'Remove',
+    actionIntent: 'alert-subtle',
+    onConfirm: () => {
+      if (!forgetting) return;
+      forgetServer(forgetting.base);
+      const rest = savedServers();
+      setServers(rest);
+      if (!rest.length) setAdding(true);
+    },
+  });
 
   return (
     <Screen>
@@ -167,13 +181,17 @@ export function ServersPage({
               <ServerList
                 servers={servers}
                 onChoose={onChoose}
-                onForget={forget}
+                onForget={(server) => {
+                  setForgetting(server);
+                  confirmForget.open();
+                }}
                 onAdd={() => setAdding(true)}
               />
             )}
           </motion.div>
         </AnimatePresence>
       </motion.div>
+      <ConfirmationDialog {...confirmForget} />
     </Screen>
   );
 }
