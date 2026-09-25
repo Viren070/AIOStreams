@@ -15,6 +15,7 @@ import {
   LuGauge,
   LuLayers,
   LuListVideo,
+  LuLoaderCircle,
   LuMinus,
   LuPlus,
   LuUndo2,
@@ -433,6 +434,7 @@ export function PlayerControls({
   onVersions,
   onPrevious,
   onNext,
+  loadingEpisode,
   offeringNext = false,
 }: {
   item: BaseItemDto;
@@ -442,6 +444,8 @@ export function PlayerControls({
   onVersions?: () => void;
   onPrevious?: () => void;
   onNext?: () => void;
+  /** The episode button whose versions are loading. */
+  loadingEpisode?: 'previous' | 'next' | null;
   /** The next episode's card covers skipping the credits. */
   offeringNext?: boolean;
 }) {
@@ -559,10 +563,11 @@ export function PlayerControls({
       )}
     </>
   );
+  const spinner = <LuLoaderCircle className="animate-spin" />;
   const buttons = {
     previous: isEpisode && {
       label: 'Previous episode',
-      icon: <LuSkipBack />,
+      icon: loadingEpisode === 'previous' ? spinner : <LuSkipBack />,
       onClick: onPrevious,
     },
     back: {
@@ -577,7 +582,7 @@ export function PlayerControls({
     },
     next: isEpisode && {
       label: 'Next episode',
-      icon: <LuSkipForward />,
+      icon: loadingEpisode === 'next' ? spinner : <LuSkipForward />,
       onClick: onNext,
     },
   };

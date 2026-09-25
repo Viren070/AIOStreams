@@ -19,6 +19,11 @@ import { usePlaybackPrefs } from '../lib/user-config';
 import type { PlayerController } from '../lib/player';
 import type { BaseItemDto, MediaSegmentDto, SourceInfo } from '../lib/types';
 
+type Direction = 'previous' | 'next';
+
+/** One notice, which a later press takes over. */
+const NOTICE = 'episode-versions';
+
 /** Shorter than this, a video gets no prompt. */
 const MIN_DURATION_MS = 40_000;
 /** Credits count as the end when they finish this close to it. */
@@ -106,16 +111,23 @@ export function useNextEpisodePrompt({
   const shown = due && !dismissed;
 
   const leaving = React.useRef(false);
+  // The latest press wins; a lookup it overtook is dropped when it lands.
+  const wanted = React.useRef<Direction | null>(null);
+  const [loading, setLoading] = React.useState<Direction | null>(null);
   const playEpisode = React.useCallback(
-    async (episode: BaseItemDto | null) => {
+    async (direction: Direction, episode: BaseItemDto | null) => {
       if (!episode || leaving.current) return false;
-      leaving.current = true;
+      if (wanted.current === direction) return true;
+      wanted.current = direction;
+      setLoading(direction);
       const code = episodeCode(episode.ParentIndexNumber, episode.IndexNumber);
-      const notice = toast.loading(
-        `Finding versions of ${code || episode.Name}…`
-      );
+      toast.loading(`Finding versions of ${code || episode.Name}…`, {
+        id: NOTICE,
+      });
       try {
         const info = await queryClient.fetchQuery(infoOptions(episode.Id!));
+        if (wanted.current !== direction) return true;
+        leaving.current = true;
         const target = carryOn(playableSources(info), source, fallbackFirst);
         if (target)
           navigate(to.play(episode.Id!, target.Id!, resumeMs(episode)), {
@@ -124,21 +136,26 @@ export function useNextEpisodePrompt({
         else navigate(versionsPath(episode), { replace: true });
         return true;
       } catch {
-        leaving.current = false;
+        if (wanted.current !== direction) return true;
         toast.error('Could not find versions of that episode');
         return false;
       } finally {
-        toast.dismiss(notice);
+        if (wanted.current === direction) {
+          wanted.current = null;
+          setLoading(null);
+          toast.dismiss(NOTICE);
+        }
       }
     },
     [queryClient, infoOptions, source, fallbackFirst]
   );
+  React.useEffect(() => () => void toast.dismiss(NOTICE), []);
   const playNext = React.useCallback(
-    () => playEpisode(next),
+    () => playEpisode('next', next),
     [playEpisode, next]
   );
   const playPrevious = React.useCallback(
-    () => playEpisode(previous),
+    () => playEpisode('previous', previous),
     [playEpisode, previous]
   );
 
@@ -213,5 +230,13 @@ export function useNextEpisodePrompt({
       </div>
     ) : null;
 
-  return { element, next, previous, autoplay, playNext, playPrevious };
+  return {
+    element,
+    next,
+    previous,
+    autoplay,
+    playNext,
+    playPrevious,
+    loading,
+  };
 }
