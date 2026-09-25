@@ -270,7 +270,7 @@ export function DiscoverPage({
             }
           />
         )}
-        <div className="flex w-fit gap-1 rounded-full bg-gray-900 p-1">
+        <div className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-full bg-gray-900 p-1 [scrollbar-width:none]">
           {FILTERS.map((f) => (
             <Button
               key={f.label}
