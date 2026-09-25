@@ -9,7 +9,7 @@ import {
 } from '@tanstack/react-query';
 import { useSession } from './session';
 import { useFeature } from './server-info';
-import { ticksToMs } from './format';
+import { ticksToMs, unavailableLabel } from './format';
 import type {
   BaseItemDto,
   BaseItemDtoQueryResult,
@@ -640,18 +640,28 @@ export function useClearHistory() {
 }
 
 /** The episode after this one in its series, across seasons. */
-export function useNextEpisode(item: BaseItemDto) {
+/**
+ * The episodes either side of this one. A server that ignores `AdjacentTo`
+ * sends the whole show, so the neighbours are found by position.
+ */
+export function useAdjacentEpisodes(item: BaseItemDto) {
   const { client, user } = useSession();
   const seriesId = item.Type === 'Episode' ? item.SeriesId : undefined;
   return useQuery({
-    queryKey: [...useKey(), 'next-episode', item.Id],
+    queryKey: [...useKey(), 'adjacent-episodes', item.Id],
     queryFn: async () => {
       const res = await client.get<BaseItemDtoQueryResult>(
         `/Shows/${seriesId}/Episodes`,
-        { userId: user.Id, StartItemId: item.Id, Limit: 2 }
+        { userId: user.Id, AdjacentTo: item.Id }
       );
-      const [current, next] = res.Items ?? [];
-      return current?.Id === item.Id && next ? next : null;
+      const items = res.Items ?? [];
+      const at = items.findIndex((e) => e.Id === item.Id);
+      const playable = (e: BaseItemDto | undefined) =>
+        at >= 0 && e && !unavailableLabel(e) ? e : null;
+      return {
+        previous: playable(items[at - 1]),
+        next: playable(items[at + 1]),
+      };
     },
     enabled: !!seriesId,
     staleTime: 10 * 60_000,

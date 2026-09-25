@@ -389,6 +389,8 @@ function BrowserPlayer({
         onBack={back}
         offeringNext={!!next.element}
         onVersions={switchVersion}
+        onPrevious={next.previous ? next.playPrevious : undefined}
+        onNext={next.next ? next.playNext : undefined}
       />
       {next.element}
       {player.state.error && (
@@ -451,6 +453,8 @@ function NativePlayer({
         onBack={back}
         offeringNext={!!next.element}
         onVersions={switchVersion}
+        onPrevious={next.previous ? next.playPrevious : undefined}
+        onNext={next.next ? next.playNext : undefined}
       />
       {next.element}
       {player.state.error && (

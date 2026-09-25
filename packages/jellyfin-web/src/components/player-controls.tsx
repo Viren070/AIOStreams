@@ -23,6 +23,7 @@ import {
   LuPlay,
   LuRotateCcw,
   LuRotateCw,
+  LuSkipBack,
   LuSkipForward,
   LuVolume1,
   LuVolume2,
@@ -429,6 +430,8 @@ export function PlayerControls({
   segments: rawSegments,
   onBack,
   onVersions,
+  onPrevious,
+  onNext,
   offeringNext = false,
 }: {
   item: BaseItemDto;
@@ -436,6 +439,8 @@ export function PlayerControls({
   segments: MediaSegmentDto[] | null | undefined;
   onBack(): void;
   onVersions?: () => void;
+  onPrevious?: () => void;
+  onNext?: () => void;
   /** The next episode's card covers skipping the credits. */
   offeringNext?: boolean;
 }) {
@@ -460,6 +465,8 @@ export function PlayerControls({
   const positionNow = usePositionClock(state);
   const latest = React.useRef(player);
   latest.current = player;
+  const episodes = React.useRef({ onPrevious, onNext });
+  episodes.current = { onPrevious, onNext };
   const loadLines = React.useCallback(
     () => latest.current.subtitleLines?.() ?? Promise.resolve(null),
     []
@@ -517,6 +524,8 @@ export function PlayerControls({
         f: p.toggleFullscreen,
         z: () => nudgeSubtitles(-DELAY_STEP_MS),
         x: () => nudgeSubtitles(DELAY_STEP_MS),
+        P: () => episodes.current.onPrevious?.(),
+        N: () => episodes.current.onNext?.(),
       };
       const action = actions[e.key];
       if (!action) return;
@@ -534,6 +543,62 @@ export function PlayerControls({
   const onMenu = (open: boolean) => setMenus((n) => n + (open ? 1 : -1));
   const subtitleOptions = [{ id: '', label: 'Off' }, ...player.subtitleTracks];
   const fade = visible ? 'opacity-100' : 'pointer-events-none opacity-0';
+  const isEpisode = item.Type === 'Episode';
+  // Below lg the bar has no room for these, so they move to the middle.
+  const middle = pointerType.current === 'touch' ? '' : 'lg:hidden';
+  const time = (
+    <>
+      {clock(state.positionMs)}
+      {state.durationMs > 0 && (
+        <span className="text-gray-400"> / {clock(state.durationMs)}</span>
+      )}
+    </>
+  );
+  const buttons = {
+    previous: isEpisode && {
+      label: 'Previous episode',
+      icon: <LuSkipBack />,
+      onClick: onPrevious,
+    },
+    back: {
+      label: `Back ${seekStep} seconds`,
+      icon: <LuRotateCcw />,
+      onClick: () => seekBy(-stepMs.current),
+    },
+    forward: {
+      label: `Forward ${seekStep} seconds`,
+      icon: <LuRotateCw />,
+      onClick: () => seekBy(stepMs.current),
+    },
+    next: isEpisode && {
+      label: 'Next episode',
+      icon: <LuSkipForward />,
+      onClick: onNext,
+    },
+  };
+  const middleButton = (b: (typeof buttons)[keyof typeof buttons]) =>
+    b && (
+      <button
+        type="button"
+        aria-label={b.label}
+        title={b.label}
+        disabled={!b.onClick}
+        onClick={b.onClick}
+        className={cn(
+          'pointer-events-auto flex size-12 flex-none items-center justify-center rounded-full bg-black/40 text-2xl transition-opacity duration-300 disabled:text-white/30',
+          middle,
+          fade
+        )}
+      >
+        {b.icon}
+      </button>
+    );
+  const barButton = (b: (typeof buttons)[keyof typeof buttons]) =>
+    b && (
+      <ControlButton label={b.label} disabled={!b.onClick} onClick={b.onClick}>
+        {b.icon}
+      </ControlButton>
+    );
 
   return (
     <div
@@ -578,24 +643,27 @@ export function PlayerControls({
         </div>
       </div>
 
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center gap-3 sm:gap-6">
+        {middleButton(buttons.previous)}
+        {middleButton(buttons.back)}
         {state.waiting && !state.error ? (
-          <LoadingSpinner />
+          <LoadingSpinner containerClass="size-16 flex-none" iconClass="mr-0" />
         ) : (
-          pointerType.current === 'touch' && (
-            <button
-              type="button"
-              aria-label={state.paused ? 'Play' : 'Pause'}
-              onClick={togglePlay}
-              className={cn(
-                'pointer-events-auto flex size-16 items-center justify-center rounded-full bg-black/50 text-3xl transition-opacity duration-300',
-                fade
-              )}
-            >
-              {state.paused ? <LuPlay /> : <LuPause />}
-            </button>
-          )
+          <button
+            type="button"
+            aria-label={state.paused ? 'Play' : 'Pause'}
+            onClick={togglePlay}
+            className={cn(
+              'pointer-events-auto flex size-16 flex-none items-center justify-center rounded-full bg-black/50 text-3xl transition-opacity duration-300',
+              middle,
+              fade
+            )}
+          >
+            {state.paused ? <LuPlay /> : <LuPause />}
+          </button>
         )}
+        {middleButton(buttons.forward)}
+        {middleButton(buttons.next)}
       </div>
 
       {flash}
@@ -649,6 +717,9 @@ export function PlayerControls({
           fade
         )}
       >
+        <p className="px-0.5 text-xs tabular-nums text-gray-200 sm:hidden">
+          {time}
+        </p>
         <SeekBar
           positionMs={state.positionMs}
           durationMs={state.durationMs}
@@ -657,35 +728,23 @@ export function PlayerControls({
           onSeek={player.seek}
         />
         <div className="flex items-center gap-1">
-          <ControlButton
-            label={state.paused ? 'Play' : 'Pause'}
-            onClick={togglePlay}
-          >
-            {state.paused ? <LuPlay /> : <LuPause />}
-          </ControlButton>
-          <ControlButton
-            label={`Back ${seekStep} seconds`}
-            onClick={() => seekBy(-stepMs.current)}
-          >
-            <LuRotateCcw />
-          </ControlButton>
-          <ControlButton
-            label={`Forward ${seekStep} seconds`}
-            onClick={() => seekBy(stepMs.current)}
-          >
-            <LuRotateCw />
-          </ControlButton>
+          <div className="hidden items-center gap-1 lg:flex">
+            <ControlButton
+              label={state.paused ? 'Play' : 'Pause'}
+              onClick={togglePlay}
+            >
+              {state.paused ? <LuPlay /> : <LuPause />}
+            </ControlButton>
+            {barButton(buttons.back)}
+            {barButton(buttons.forward)}
+            {barButton(buttons.previous)}
+            {barButton(buttons.next)}
+          </div>
           <Volume player={player} />
-          <span className="ml-2 whitespace-nowrap text-sm tabular-nums text-gray-200">
-            {clock(state.positionMs)}
-            {state.durationMs > 0 && (
-              <span className="text-gray-400">
-                {' '}
-                / {clock(state.durationMs)}
-              </span>
-            )}
+          <span className="ml-2 hidden whitespace-nowrap text-sm tabular-nums text-gray-200 sm:inline">
+            {time}
           </span>
-          <div className="ml-auto flex items-center gap-1">
+          <div className="ml-auto flex items-center sm:gap-1">
             {player.subtitleTracks.length > 0 && (
               <Menu
                 label="Subtitles"

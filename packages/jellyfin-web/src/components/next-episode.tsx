@@ -2,7 +2,7 @@ import React from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@aiostreams/ui/button';
 import { useSession } from '../lib/session';
-import { useNextEpisode, usePlaybackInfoOptions } from '../lib/queries';
+import { useAdjacentEpisodes, usePlaybackInfoOptions } from '../lib/queries';
 import { landscapeUrl } from '../lib/images';
 import { itemSubtitle, ticksToMs } from '../lib/format';
 import { navigate, to, versionsPath } from '../lib/paths';
@@ -44,7 +44,7 @@ function promptAt(
 }
 
 /**
- * The version of the next episode that carries on from this one: the one in
+ * The version of another episode that carries on from this one: the one in
  * the same binge group, else the only or first one when allowed.
  */
 function carryOn(
@@ -85,7 +85,9 @@ export function useNextEpisodePrompt({
   const { client } = useSession();
   const queryClient = useQueryClient();
   const infoOptions = usePlaybackInfoOptions();
-  const next = useNextEpisode(item).data ?? null;
+  const adjacent = useAdjacentEpisodes(item).data;
+  const next = adjacent?.next ?? null;
+  const previous = adjacent?.previous ?? null;
   const [prompt] = useNextPrompt();
   const [lead] = useNextLead();
   const [countdown] = useNextCountdown();
@@ -103,23 +105,34 @@ export function useNextEpisodePrompt({
   const shown = due && !dismissed;
 
   const leaving = React.useRef(false);
-  const playNext = React.useCallback(async () => {
-    if (!next || leaving.current) return false;
-    leaving.current = true;
-    try {
-      const info = await queryClient.fetchQuery(infoOptions(next.Id!));
-      const target = carryOn(playableSources(info), source, fallbackFirst);
-      if (target)
-        navigate(to.play(next.Id!, target.Id!, resumeMs(next)), {
-          replace: true,
-        });
-      else navigate(versionsPath(next), { replace: true });
-      return true;
-    } catch {
-      leaving.current = false;
-      return false;
-    }
-  }, [next, queryClient, infoOptions, source, fallbackFirst]);
+  const playEpisode = React.useCallback(
+    async (episode: BaseItemDto | null) => {
+      if (!episode || leaving.current) return false;
+      leaving.current = true;
+      try {
+        const info = await queryClient.fetchQuery(infoOptions(episode.Id!));
+        const target = carryOn(playableSources(info), source, fallbackFirst);
+        if (target)
+          navigate(to.play(episode.Id!, target.Id!, resumeMs(episode)), {
+            replace: true,
+          });
+        else navigate(versionsPath(episode), { replace: true });
+        return true;
+      } catch {
+        leaving.current = false;
+        return false;
+      }
+    },
+    [queryClient, infoOptions, source, fallbackFirst]
+  );
+  const playNext = React.useCallback(
+    () => playEpisode(next),
+    [playEpisode, next]
+  );
+  const playPrevious = React.useCallback(
+    () => playEpisode(previous),
+    [playEpisode, previous]
+  );
 
   React.useEffect(() => {
     if (shown && next) void queryClient.prefetchQuery(infoOptions(next.Id!));
@@ -192,5 +205,5 @@ export function useNextEpisodePrompt({
       </div>
     ) : null;
 
-  return { element, next, autoplay, playNext };
+  return { element, next, previous, autoplay, playNext, playPrevious };
 }
