@@ -40,6 +40,7 @@ export type ShellMessage =
       mpv: string | null;
       ffmpeg: string | null;
     }
+  | { type: 'diagnostics'; text: string }
   | { type: 'error'; message: string };
 
 /** The AIOStreams desktop app's bridge to mpv. */
@@ -401,4 +402,28 @@ export function useShellInfo(): ShellInfo | null {
 
 export function openMpvConfig(): void {
   window.aiostreamsDesktop?.send({ type: 'open-mpv-config' });
+}
+
+export function openLogs(): void {
+  window.aiostreamsDesktop?.send({ type: 'open-logs' });
+}
+
+/** Versions, paths and the recent log, for a bug report. */
+export function requestDiagnostics(): Promise<string> {
+  const shell = window.aiostreamsDesktop;
+  if (!shell)
+    return Promise.reject(new Error('Only the desktop app has these'));
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      unsubscribe();
+      reject(new Error('The app did not answer'));
+    }, 5000);
+    const unsubscribe = shell.subscribe((m) => {
+      if (m.type !== 'diagnostics') return;
+      clearTimeout(timer);
+      unsubscribe();
+      resolve(m.text);
+    });
+    shell.send({ type: 'diagnostics' });
+  });
 }

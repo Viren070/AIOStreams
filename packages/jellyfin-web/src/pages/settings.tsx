@@ -1,5 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import type { IconType } from 'react-icons';
 import {
   LuCaptions,
@@ -23,12 +24,18 @@ import {
   useConfirmationDialog,
 } from '@aiostreams/ui/shared/confirmation-dialog';
 import { cn } from '@aiostreams/ui/core/styling';
+import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
 import { useSession } from '../lib/session';
 import { usePickableUsers, useViews } from '../lib/queries';
 import { libraryLabel } from '../lib/format';
 import { configureUrl } from '../lib/paths';
 import { playbackHost } from '../lib/hosts';
-import { openMpvConfig, useShellInfo } from '../lib/hosts/shell';
+import {
+  openLogs,
+  openMpvConfig,
+  requestDiagnostics,
+  useShellInfo,
+} from '../lib/hosts/shell';
 import { LANGUAGES } from '../lib/languages';
 import { serverAddress } from '../lib/servers';
 import { subtitleCss } from '../lib/subtitle-style';
@@ -433,6 +440,41 @@ function DesktopSection() {
             onClick={openMpvConfig}
           >
             Open folder
+          </Button>
+        </SettingsRow>
+      </SettingsCard>
+      <SettingsCard title="Troubleshooting">
+        <SettingsRow
+          label="Logs"
+          help="What the app did each day, kept for a week."
+        >
+          <Button
+            intent="gray-outline"
+            className="w-full rounded-full sm:w-auto"
+            onClick={openLogs}
+          >
+            Open folder
+          </Button>
+        </SettingsRow>
+        <SettingsRow
+          label="Diagnostics"
+          help="Versions and the recent log, to paste into a bug report."
+        >
+          <Button
+            intent="gray-outline"
+            className="w-full rounded-full sm:w-auto"
+            onClick={() =>
+              requestDiagnostics()
+                .then((text) =>
+                  copyToClipboard(text, {
+                    onSuccess: () => toast.success('Diagnostics copied'),
+                    onError: () => toast.error('Could not copy them'),
+                  })
+                )
+                .catch((e: Error) => toast.error(e.message))
+            }
+          >
+            Copy
           </Button>
         </SettingsRow>
       </SettingsCard>
