@@ -9,11 +9,18 @@ on:
     branches: [main]
     paths:
       - 'packages/desktop/**'
+  workflow_dispatch:
+
+# A newer push replaces a check still running on the same branch.
+concurrency:
+  group: desktop-check-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   check:
     name: check (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -22,7 +29,7 @@ jobs:
       run:
         working-directory: packages/desktop
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Install GTK 4 and WebKitGTK 6
         if: runner.os == 'Linux'
         run: |
@@ -31,6 +38,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/desktop
       - run: cargo fmt --check
       - run: cargo clippy --all-targets -- -D warnings
       - run: cargo test

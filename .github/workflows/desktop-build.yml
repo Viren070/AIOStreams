@@ -24,9 +24,30 @@ env:
   VPK_VERSION: 1.2.158
 
 jobs:
+  # The page every build ships, built once.
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter "@aiostreams/jellyfin-web..."
+      - run: pnpm -F @aiostreams/jellyfin-web build:standalone
+      - uses: actions/upload-artifact@v7
+        with:
+          name: web
+          path: packages/jellyfin-web/dist-standalone
+          retention-days: 1
+
   build:
     name: build (${{ matrix.arch }})
+    needs: web
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -46,23 +67,22 @@ jobs:
       FEED: ${{ inputs.channel == 'nightly' && 'desktop-nightly' || 'desktop' }}
       CHANNEL: win-${{ matrix.arch }}${{ inputs.channel == 'nightly' && '-nightly' || '' }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v6
+      - uses: actions/download-artifact@v8
         with:
-          node-version: 24
+          name: web
+          path: packages/jellyfin-web/dist-standalone
 
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 9.0.x
 
-      - name: Build the web app
-        run: |
-          corepack enable
-          pnpm install --frozen-lockfile
-          pnpm -F @aiostreams/jellyfin-web build:standalone
-
       - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/desktop
 
       - uses: taiki-e/install-action@v2
         with:
