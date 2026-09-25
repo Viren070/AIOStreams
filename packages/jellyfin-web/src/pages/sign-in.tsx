@@ -7,7 +7,7 @@ import { PasswordInput } from '@aiostreams/ui/password-input';
 import { cn } from '@aiostreams/ui/core/styling';
 import { UserAvatar } from '../components/user-avatar';
 import { BrandLogo } from '../components/brand-logo';
-import type { PickableUser } from '../lib/types';
+import type { PickableUser, UserDto } from '../lib/types';
 
 /** Must match the server's `PIN_REQUIRED`. */
 const PIN_REQUIRED = 'PIN required';
@@ -96,16 +96,21 @@ export function SignInPage({
   onSignIn,
   defaultUsername = '',
   pinSignIn = false,
+  user,
+  otherWay,
   configureUrl,
   onChangeServer,
 }: {
   onSignIn: (username: string, password: string) => Promise<void>;
   defaultUsername?: string;
   pinSignIn?: boolean;
+  /** Picked from the server's list, so only their secret is asked for. */
+  user?: UserDto;
+  otherWay?: { label: string; onClick: () => void };
   configureUrl: string | null;
   onChangeServer?: () => void;
 }) {
-  const [username, setUsername] = React.useState(defaultUsername);
+  const [username, setUsername] = React.useState(user?.Name ?? defaultUsername);
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
@@ -144,25 +149,36 @@ export function SignInPage({
           onSubmit={submit}
           className="mx-auto w-full max-w-sm space-y-4 rounded-2xl border border-white/10 bg-gray-950/80 p-6 shadow-xl"
         >
-          <div className="space-y-1 text-center">
-            <h1 className="text-xl font-semibold">Sign in</h1>
+          <div className="flex flex-col items-center gap-1 text-center">
+            {user && (
+              <UserAvatar name={user.Name} className="mb-2 size-16 text-2xl" />
+            )}
+            <h1 className="text-xl font-semibold">
+              {user ? user.Name : 'Sign in'}
+            </h1>
             <p className="text-sm text-[--muted]">
-              {pinSignIn
-                ? 'Use your user name and PIN, or the configuration’s UUID and its password.'
-                : 'Use your configuration’s UUID or alias and its password.'}
+              {user
+                ? pinSignIn
+                  ? 'Use your PIN, or the configuration’s password.'
+                  : 'Use the configuration’s password.'
+                : pinSignIn
+                  ? 'Use your user name and PIN, or the configuration’s UUID and its password.'
+                  : 'Use your configuration’s UUID or alias and its password.'}
             </p>
           </div>
-          <TextInput
-            label={pinSignIn ? 'User or UUID' : 'UUID or alias'}
-            value={username}
-            onValueChange={setUsername}
-            autoComplete="username"
-            autoFocus={!defaultUsername}
-            required
-          />
+          {!user && (
+            <TextInput
+              label={pinSignIn ? 'User or UUID' : 'UUID or alias'}
+              value={username}
+              onValueChange={setUsername}
+              autoComplete="username"
+              autoFocus={!defaultUsername}
+              required
+            />
+          )}
           <PasswordInput
             label={pinSignIn ? 'PIN or password' : 'Password'}
-            autoFocus={!!defaultUsername}
+            autoFocus={!!user || !!defaultUsername}
             value={password}
             onValueChange={(value) => {
               setPassword(value);
@@ -203,6 +219,9 @@ export function SignInPage({
           >
             Sign in
           </Button>
+          {otherWay && (
+            <FormLink onClick={otherWay.onClick}>{otherWay.label}</FormLink>
+          )}
           {configureUrl && (
             <a
               href={configureUrl}
@@ -330,10 +349,12 @@ function SecretPrompt({
 export function UserPicker({
   users,
   onPick,
+  otherWay,
   onChangeServer,
 }: {
   users: PickableUser[];
   onPick: (userId: string, secret?: string) => Promise<void>;
+  otherWay?: { label: string; onClick: () => void };
   onChangeServer?: () => void;
 }) {
   const [busy, setBusy] = React.useState<string | null>(null);
@@ -444,6 +465,11 @@ export function UserPicker({
                   ))}
                 </motion.div>
                 <ErrorLine error={error} />
+                {otherWay && (
+                  <FormLink onClick={otherWay.onClick}>
+                    {otherWay.label}
+                  </FormLink>
+                )}
                 {onChangeServer && (
                   <FormLink onClick={onChangeServer}>Change server</FormLink>
                 )}

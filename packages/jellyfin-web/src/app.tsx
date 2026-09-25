@@ -13,6 +13,7 @@ import { PageBackground } from './components/layout';
 import { BrandingProvider, useServerBranding } from './components/brand-logo';
 import { apiBase, JellyfinClient } from './lib/client';
 import { configureUrl, navigate, to } from './lib/paths';
+import type { UserDto } from './lib/types';
 import {
   currentServer,
   enterServer,
@@ -137,6 +138,23 @@ function Session({
     staleTime: 5 * 60_000,
   });
   const pinSignIn = pinSignInQuery.data ?? false;
+  // A picker address lists its users, so nobody has to type the UUID.
+  const publicUsersQuery = useQuery({
+    queryKey: ['jf-public-users', base],
+    queryFn: () => anonymous.get<UserDto[]>('/Users/Public'),
+    enabled: phase.kind === 'signed-out' && !!picker,
+    staleTime: 5 * 60_000,
+  });
+  const listed = publicUsersQuery.data ?? [];
+  const [chosen, setChosen] = React.useState<UserDto | null>(null);
+  const [manual, setManual] = React.useState(false);
+  const signInAs = manual
+    ? null
+    : (chosen ?? (listed.length === 1 ? listed[0] : null));
+  const byUuid = {
+    label: 'Use a UUID instead',
+    onClick: () => setManual(true),
+  };
   // The Android app reads the stored sign-in when this is requested.
   React.useEffect(() => {
     if (ready && window.NativeInterface) {
@@ -151,17 +169,52 @@ function Session({
       break;
     case 'signed-out':
       // The form keeps its first username, so it waits to know which to offer.
-      screen = pinSignInQuery.isLoading ? (
-        <LoadingOverlay />
-      ) : (
-        <SignInPage
-          onSignIn={signIn}
-          defaultUsername={pinSignIn ? '' : picker}
-          pinSignIn={pinSignIn}
-          configureUrl={configureUrl(base, branding)}
-          onChangeServer={changeServer}
-        />
-      );
+      screen =
+        pinSignInQuery.isLoading || publicUsersQuery.isLoading ? (
+          <LoadingOverlay />
+        ) : listed.length > 1 && !signInAs && !manual ? (
+          <UserPicker
+            users={listed.map((user) => ({
+              user,
+              avatar: null,
+              hidden: false,
+              needs: null,
+            }))}
+            onPick={async (id) =>
+              setChosen(listed.find((u) => u.Id === id) ?? null)
+            }
+            otherWay={byUuid}
+            onChangeServer={changeServer}
+          />
+        ) : (
+          <SignInPage
+            key={signInAs?.Id ?? 'uuid'}
+            onSignIn={signIn}
+            defaultUsername={pinSignIn ? '' : picker}
+            pinSignIn={pinSignIn}
+            user={signInAs ?? undefined}
+            otherWay={
+              signInAs
+                ? listed.length > 1
+                  ? {
+                      label: 'Choose another user',
+                      onClick: () => setChosen(null),
+                    }
+                  : byUuid
+                : listed.length
+                  ? {
+                      label: 'Choose a user',
+                      onClick: () => {
+                        setChosen(null);
+                        setManual(false);
+                      },
+                    }
+                  : undefined
+            }
+            configureUrl={configureUrl(base, branding)}
+            onChangeServer={changeServer}
+          />
+        );
       break;
     case 'picking':
       screen = (
