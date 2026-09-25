@@ -1,0 +1,23 @@
+# The licences of the Rust crates built into the app, for `cargo about generate`.
+# Listed in order of preference, so a crate offering several is listed under MIT.
+accepted = [
+    "MIT",
+    "Apache-2.0",
+    "Unicode-3.0",
+    "ISC",
+    "BSD-3-Clause",
+    "Zlib",
+    "MPL-2.0",
+    "CDLA-Permissive-2.0",
+    "0BSD",
+    "Unlicense",
+    "CC0-1.0",
+    "MIT-0",
+]
+targets = ["x86_64-pc-windows-msvc", "aarch64-pc-windows-msvc"]
+ignore-build-dependencies = true
+ignore-dev-dependencies = true
+
+# The app's own crates, which are not published.
+[private]
+ignore = true

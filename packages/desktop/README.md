@@ -81,6 +81,12 @@ start and every six hours, downloads in the background, and applies on the next 
 A failed check only shows in Settings, and never holds up the app. `AIOSTREAMS_UPDATE_FEED` points it
 at another feed, e.g. a local folder served over HTTP, for testing.
 
+Each package carries `THIRD-PARTY.md` and `third-party-licenses.html`, which
+[cargo-about](https://github.com/EmbarkStudios/cargo-about) generates from `about.toml` and `about.hbs`.
+A crate under a licence `about.toml` does not accept fails the check and the build; accept it there
+once it is known to be fine to ship. To look at the page locally:
+`cargo about generate about.hbs -o third-party-licenses.html`.
+
 ## Acknowledgements
 
 The design follows Stremio's Windows shell, [stremio-shell-ng](https://github.com/Stremio/stremio-shell-ng):

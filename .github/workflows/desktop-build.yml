@@ -64,6 +64,10 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-about@0.9.2
+
       - name: Fetch libmpv
         run: ./packages/desktop/scripts/fetch-libmpv.ps1 -Arch ${{ matrix.mpv }}
 
@@ -83,6 +87,11 @@ jobs:
           Copy-Item packages/desktop/vendor/${{ matrix.mpv }}/libmpv-2.dll $stage
           Copy-Item packages/desktop/THIRD-PARTY.md $stage
           Copy-Item packages/jellyfin-web/dist-standalone "$stage/web" -Recurse
+          # The Rust crates' licences; fails on one that about.toml does not accept.
+          cargo about generate --manifest-path packages/desktop/Cargo.toml `
+            --config packages/desktop/about.toml packages/desktop/about.hbs `
+            -o "$stage/third-party-licenses.html"
+          if ($LASTEXITCODE -ne 0) { throw 'cargo about failed' }
 
       - name: Pack
         run: |

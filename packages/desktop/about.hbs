@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Third-party licences</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 860px; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+  pre { white-space: pre-wrap; background: #f4f4f4; padding: 1rem; max-height: 24rem; overflow-y: auto; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #111; color: #ddd; }
+    pre { background: #1c1c1c; }
+    a { color: #8ab4f8; }
+  }
+</style>
+</head>
+<body>
+<h1>Third-party licences</h1>
+<p>AIOStreams Desktop is built with these Rust crates. Each licence below lists the crates it covers, then its text. libmpv and the web app's libraries are covered in THIRD-PARTY.md.</p>
+<ul>
+{{#each overview}}
+  <li><a href="#{{id}}">{{name}}</a> ({{count}})</li>
+{{/each}}
+</ul>
+{{#each licenses}}
+<h2 id="{{id}}">{{name}}</h2>
+<p>
+{{#each used_by}}
+  <a href="{{#if crate.repository}}{{crate.repository}}{{else}}https://crates.io/crates/{{crate.name}}{{/if}}">{{crate.name}} {{crate.version}}</a>{{#unless @last}},{{/unless}}
+{{/each}}
+</p>
+<pre>{{text}}</pre>
+{{/each}}
+</body>
+</html>
