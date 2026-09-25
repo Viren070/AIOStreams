@@ -48,7 +48,7 @@ struct RawLogMessage {
     text: *const c_char,
 }
 
-type Handle = *mut c_void;
+pub(crate) type Handle = *mut c_void;
 
 struct Api {
     create: unsafe extern "C" fn() -> Handle,
@@ -64,7 +64,7 @@ struct Api {
     wakeup: unsafe extern "C" fn(Handle),
     free: unsafe extern "C" fn(*mut c_void),
     error_string: unsafe extern "C" fn(c_int) -> *const c_char,
-    _lib: Library,
+    lib: Library,
 }
 
 impl Api {
@@ -93,7 +93,7 @@ impl Api {
             wakeup: sym!("mpv_wakeup"),
             free: sym!("mpv_free"),
             error_string: sym!("mpv_error_string"),
-            _lib: lib,
+            lib,
         })
     }
 }
@@ -183,7 +183,21 @@ impl Mpv {
         Ok(mpv)
     }
 
-    fn error(&self, code: c_int) -> String {
+    pub(crate) fn handle(&self) -> Handle {
+        self.handle
+    }
+
+    /// # Safety
+    /// `T` must be the function's type as mpv declares it.
+    pub(crate) unsafe fn symbol<T: Copy>(&self, name: &str) -> Result<T, String> {
+        let n = cstring(name)?;
+        // SAFETY: the caller vouches for the type.
+        unsafe { self.api.lib.get::<T>(n.as_bytes_with_nul()) }
+            .map(|s| *s)
+            .map_err(|e| format!("libmpv is missing {name}: {e}"))
+    }
+
+    pub(crate) fn error(&self, code: c_int) -> String {
         // SAFETY: mpv_error_string returns a static string for any code.
         text(unsafe { (self.api.error_string)(code) })
     }

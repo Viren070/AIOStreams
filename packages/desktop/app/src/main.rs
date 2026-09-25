@@ -2,9 +2,9 @@
 
 mod logging;
 mod platform;
+mod shell;
 mod updates;
 
-use std::borrow::Cow;
 use std::cell::RefCell;
 use std::path::{Component, Path, PathBuf};
 use std::rc::Rc;
@@ -12,31 +12,30 @@ use std::sync::Arc;
 
 use aiostreams_desktop_core::bridge::{Inbound, Outbound, PROTOCOL_VERSION, origin};
 use aiostreams_desktop_core::player::Player;
-use tao::dpi::{LogicalSize, PhysicalPosition, PhysicalSize};
-use tao::event::{Event, WindowEvent};
-use tao::event_loop::{ControlFlow, EventLoopBuilder, EventLoopProxy};
-use tao::platform::windows::{WindowBuilderExtWindows, WindowExtWindows};
-use tao::window::{Fullscreen, ResizeDirection, Window, WindowBuilder};
 use updates::{Command, Updater};
-use wry::http::{Request, Response};
-use wry::{
-    NewWindowResponse, PageLoadEvent, Rect, WebContext, WebViewBuilder, WebViewBuilderExtWindows,
-};
 
 #[derive(Debug)]
-enum UserEvent {
+pub enum UserEvent {
     Emit(String),
     Fullscreen(Option<bool>),
     Minimize,
     Close,
     Sync,
     Drag,
-    Resize(ResizeDirection),
+    Resize(Edge),
     ToggleMaximize,
     WindowState,
 }
 
-struct Args {
+/// The window edges the page resizes from; the system handles the others.
+#[derive(Debug, Clone, Copy)]
+pub enum Edge {
+    North,
+    NorthEast,
+    NorthWest,
+}
+
+pub struct Args {
     web: Option<String>,
     web_dir: Option<PathBuf>,
     devtools: bool,
@@ -122,63 +121,91 @@ fn content_type(path: &Path) -> &'static str {
     }
 }
 
+pub struct Served {
+    pub status: u16,
+    pub content_type: &'static str,
+    pub body: Vec<u8>,
+}
+
 /// Serves the web app's files; a path without an extension is one of its routes.
-fn serve(root: &Path, path: &str) -> Response<Cow<'static, [u8]>> {
-    let relative = Path::new(path.trim_start_matches('/'));
-    let not_found = || {
-        Response::builder()
-            .status(404)
-            .body(Cow::Borrowed(&[][..]))
-            .unwrap()
+pub fn serve(root: Option<&Path>, path: &str) -> Served {
+    let not_found = Served {
+        status: 404,
+        content_type: "text/plain",
+        body: Vec::new(),
     };
+    let Some(root) = root else { return not_found };
+    let relative = Path::new(path.trim_start_matches('/'));
     if relative
         .components()
         .any(|c| !matches!(c, Component::Normal(_)))
     {
-        return not_found();
+        return not_found;
     }
     let mut file = root.join(relative);
     if !file.is_file() {
         if relative.extension().is_some() {
-            return not_found();
+            return not_found;
         }
         file = root.join("index.html");
     }
     match std::fs::read(&file) {
-        Ok(body) => Response::builder()
-            .header("Content-Type", content_type(&file))
-            .body(Cow::Owned(body))
-            .unwrap(),
-        Err(_) => not_found(),
+        Ok(body) => Served {
+            status: 200,
+            content_type: content_type(&file),
+            body,
+        },
+        Err(_) => not_found,
     }
 }
 
-fn page_bounds(size: PhysicalSize<u32>) -> Rect {
-    Rect {
-        position: PhysicalPosition::new(0, 0).into(),
-        size: size.into(),
-    }
-}
-
-fn set_fullscreen(window: &Window, value: Option<bool>) {
-    let on = value.unwrap_or(window.fullscreen().is_none());
-    window.set_fullscreen(on.then_some(Fullscreen::Borderless(None)));
+pub fn allowed_navigation(url: &str, app_origin: &str) -> bool {
+    origin(url).as_deref() == Some(app_origin)
+        || url.starts_with("about:")
+        || url.starts_with("blob:")
 }
 
 /// Where the app keeps its files, and the day's log.
-struct Paths {
+pub struct Paths {
     mpv: PathBuf,
     logs: PathBuf,
     log_file: PathBuf,
 }
 
+pub struct App {
+    pub args: Args,
+    pub web: Option<PathBuf>,
+    pub start_url: String,
+    pub app_origin: String,
+    pub data_dir: PathBuf,
+    pub paths: Rc<Paths>,
+    pub bridge: String,
+}
+
 fn about() -> String {
     format!(
-        "version={} os=\"{}\" webview2={}",
+        "version={} os=\"{}\" webview={}",
         env!("CARGO_PKG_VERSION"),
         platform::os_version(),
-        wry::webview_version().unwrap_or_else(|_| "missing".into())
+        shell::webview_version()
     )
+}
+
+fn bridge_script() -> String {
+    include_str!("bridge.js")
+        .replace("__PROTOCOL__", &PROTOCOL_VERSION.to_string())
+        .replace(
+            "__VERSION__",
+            &serde_json::to_string(env!("CARGO_PKG_VERSION")).unwrap(),
+        )
+        .replace(
+            "__PLATFORM__",
+            &serde_json::to_string(platform::PLATFORM).unwrap(),
+        )
+        .replace(
+            "__DEVICE__",
+            &serde_json::to_string(&platform::device_name()).unwrap(),
+        )
 }
 
 fn main() {
@@ -196,6 +223,11 @@ fn main() {
         return;
     };
     let args = args();
+    #[cfg(target_os = "linux")]
+    if let Some(port) = args.debug_port {
+        // SAFETY: set before the web view starts, which is what reads it.
+        unsafe { std::env::set_var("WEBKIT_INSPECTOR_HTTP_SERVER", format!("127.0.0.1:{port}")) };
+    }
 
     let web = args.web.is_none().then(|| web_dir(&args));
     let start_url = args.web.clone().unwrap_or_else(|| platform::APP_URL.into());
@@ -208,192 +240,27 @@ fn main() {
     );
     let app_origin =
         origin(&start_url).unwrap_or_else(|| platform::fatal("--web: not a valid address"));
-
-    let event_loop = EventLoopBuilder::<UserEvent>::with_user_event().build();
-    let proxy = event_loop.create_proxy();
-    let window = WindowBuilder::new()
-        .with_title("AIOStreams")
-        .with_decorations(false)
-        .with_undecorated_shadow(true)
-        .with_window_classname(platform::WINDOW_CLASS)
-        .with_window_icon(platform::window_icon())
-        .with_taskbar_icon(platform::window_icon())
-        .with_inner_size(LogicalSize::new(1280.0, 760.0))
-        .with_min_inner_size(LogicalSize::new(480.0, 320.0))
-        .build(&event_loop)
-        .unwrap_or_else(|e| platform::fatal(&format!("could not open a window: {e}")));
-    let size = window.inner_size();
-
-    let video = platform::VideoSurface::new(window.hwnd(), size.width, size.height)
-        .unwrap_or_else(|e| platform::fatal(&e));
     let paths = Rc::new(Paths {
         mpv: mpv_config_dir(&config_dir),
         logs,
         log_file,
     });
-    let player = Rc::new(RefCell::new(Some(start_player(
-        &video,
-        &paths.mpv,
-        proxy.clone(),
-    ))));
-    let updater = Rc::new(Updater::start({
-        let proxy = proxy.clone();
-        move |message: Outbound| {
-            let _ = proxy.send_event(UserEvent::Emit(receive_script(&message)));
-        }
-    }));
-
-    let mut context = WebContext::new(Some(data_dir.join("WebView2")));
-    let mut browser_args =
-        "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection".to_string();
-    if let Some(port) = args.debug_port {
-        browser_args.push_str(&format!(" --remote-debugging-port={port}"));
-    }
-    let bridge = include_str!("bridge.js")
-        .replace("__PROTOCOL__", &PROTOCOL_VERSION.to_string())
-        .replace(
-            "__VERSION__",
-            &serde_json::to_string(env!("CARGO_PKG_VERSION")).unwrap(),
-        )
-        .replace(
-            "__PLATFORM__",
-            &serde_json::to_string(platform::PLATFORM).unwrap(),
-        )
-        .replace(
-            "__DEVICE__",
-            &serde_json::to_string(&platform::device_name()).unwrap(),
-        );
-    let webview = WebViewBuilder::new_with_web_context(&mut context)
-        .with_bounds(page_bounds(size))
-        .with_transparent(true)
-        .with_devtools(args.devtools)
-        .with_additional_browser_args(browser_args)
-        .with_initialization_script(bridge)
-        .with_custom_protocol(
-            "aiostreams".into(),
-            move |_, req: Request<Vec<u8>>| match &web {
-                Some(root) => serve(root, req.uri().path()),
-                None => serve(Path::new(""), ""),
-            },
-        )
-        .with_ipc_handler({
-            let (player, proxy, app_origin) = (player.clone(), proxy.clone(), app_origin.clone());
-            let (paths, updater) = (paths.clone(), updater.clone());
-            move |req: Request<String>| {
-                let from = origin(&req.uri().to_string()).unwrap_or_default();
-                if from != app_origin {
-                    return log::warn!("ignored a message from {from}");
-                }
-                match serde_json::from_str::<Inbound>(req.body()) {
-                    Ok(message) => handle(message, &player, &proxy, &paths, &updater),
-                    Err(e) => log::warn!("bad message: {e}"),
-                }
-            }
-        })
-        .with_navigation_handler({
-            let app_origin = app_origin.clone();
-            move |url| {
-                let allowed = origin(&url).as_deref() == Some(app_origin.as_str())
-                    || url.starts_with("about:")
-                    || url.starts_with("blob:");
-                if !allowed {
-                    platform::open_external(&url);
-                }
-                allowed
-            }
-        })
-        .with_new_window_req_handler(|url, _| {
-            platform::open_external(&url);
-            NewWindowResponse::Deny
-        })
-        .with_on_page_load_handler({
-            let player = player.clone();
-            move |event, _| {
-                // A new page never owns the video the last one started.
-                if let (PageLoadEvent::Started, Some(p)) = (event, player.borrow().as_ref()) {
-                    p.stop();
-                }
-            }
-        })
-        .with_url(start_url)
-        .build_as_child(&window)
-        .unwrap_or_else(|e| platform::fatal(&format!("could not start WebView2: {e}")));
-    video.resize(size.width, size.height);
-
-    let mut fullscreen = false;
-    let mut maximized = window.is_maximized();
-    event_loop.run(move |event, _, flow| {
-        *flow = ControlFlow::Wait;
-        let emit = |message: Outbound| {
-            let _ = webview.evaluate_script(&receive_script(&message));
-        };
-        match event {
-            Event::WindowEvent {
-                event: WindowEvent::Resized(size),
-                ..
-            } => {
-                video.resize(size.width, size.height);
-                let _ = webview.set_bounds(page_bounds(size));
-                let now = window.fullscreen().is_some();
-                if now != fullscreen {
-                    fullscreen = now;
-                    emit(Outbound::Fullscreen { value: now });
-                }
-                let now = window.is_maximized();
-                if now != maximized {
-                    maximized = now;
-                    emit(Outbound::WindowState { maximized: now });
-                }
-            }
-            // Keys go to the page, which a window brought back does not focus.
-            Event::WindowEvent {
-                event: WindowEvent::Focused(true),
-                ..
-            } => {
-                let _ = webview.focus();
-            }
-            Event::WindowEvent {
-                event: WindowEvent::CloseRequested,
-                ..
-            }
-            | Event::UserEvent(UserEvent::Close) => {
-                log::info!("closing");
-                player.borrow_mut().take();
-                *flow = ControlFlow::Exit;
-            }
-            Event::UserEvent(UserEvent::Emit(script)) => {
-                let _ = webview.evaluate_script(&script);
-            }
-            Event::UserEvent(UserEvent::Fullscreen(value)) => set_fullscreen(&window, value),
-            Event::UserEvent(UserEvent::Minimize) => window.set_minimized(true),
-            Event::UserEvent(UserEvent::Drag) => {
-                let _ = window.drag_window();
-            }
-            Event::UserEvent(UserEvent::Resize(edge)) => {
-                let _ = window.drag_resize_window(edge);
-            }
-            Event::UserEvent(UserEvent::ToggleMaximize) => {
-                window.set_maximized(!window.is_maximized());
-            }
-            Event::UserEvent(UserEvent::WindowState) => emit(Outbound::WindowState {
-                maximized: window.is_maximized(),
-            }),
-            Event::UserEvent(UserEvent::Sync) => {
-                if let Some(p) = player.borrow().as_ref() {
-                    p.sync();
-                }
-                emit(Outbound::Fullscreen { value: fullscreen });
-            }
-            _ => {}
-        }
+    shell::run(App {
+        args,
+        web,
+        start_url,
+        app_origin,
+        data_dir,
+        paths,
+        bridge: bridge_script(),
     });
 }
 
-fn receive_script(message: &Outbound) -> String {
+pub fn receive_script(message: &Outbound) -> String {
     format!("window.__aiostreamsDesktopReceive?.({})", message.to_json())
 }
 
-fn mpv_config_dir(config_dir: &std::path::Path) -> PathBuf {
+fn mpv_config_dir(config_dir: &Path) -> PathBuf {
     let dir = config_dir.join("mpv");
     let _ = std::fs::create_dir_all(&dir);
     let conf = dir.join("mpv.conf");
@@ -403,23 +270,25 @@ fn mpv_config_dir(config_dir: &std::path::Path) -> PathBuf {
     dir
 }
 
-fn start_player(
+/// `emit` is called on mpv's event thread.
+pub fn start_player(
     video: &platform::VideoSurface,
     mpv_dir: &Path,
-    proxy: EventLoopProxy<UserEvent>,
+    emit: impl Fn(Outbound) + Send + Sync + 'static,
 ) -> Player {
     let mut defaults: Vec<(&str, String)> = vec![
         ("config-dir", mpv_dir.to_string_lossy().into_owned()),
         ("config", "yes".into()),
         ("audio-client-name", "AIOStreams".into()),
     ];
-    defaults.extend(platform::mpv_options(&video.wid()));
+    defaults.extend(platform::mpv_options(video));
     let defaults: Vec<(&str, &str)> = defaults.iter().map(|(k, v)| (*k, v.as_str())).collect();
     // The page drives playback, so these hold whatever mpv.conf says.
     let required = [
         ("idle", "yes"),
         ("keep-open", "no"),
-        ("force-window", "yes"),
+        // With the render API, mpv's output needs the app's OpenGL context first.
+        ("force-window", if cfg!(windows) { "yes" } else { "no" }),
         ("input-default-bindings", "no"),
         ("input-vo-keyboard", "no"),
         ("input-cursor", "no"),
@@ -430,13 +299,10 @@ fn start_player(
         ("ytdl", "no"),
     ];
 
-    let emit = Arc::new(move |message: Outbound| {
-        let _ = proxy.send_event(UserEvent::Emit(receive_script(&message)));
-    });
     let candidates = platform::libmpv_candidates();
     let Some(library) = candidates.iter().find(|p| p.exists()) else {
         platform::fatal(&format!(
-            "libmpv-2.dll was not found. Looked in:\n{}",
+            "libmpv was not found. Looked in:\n{}",
             candidates
                 .iter()
                 .map(|p| p.display().to_string())
@@ -449,25 +315,22 @@ fn start_player(
         library.display(),
         mpv_dir.display()
     );
-    Player::start(library, &defaults, &required, emit)
+    Player::start(library, &defaults, &required, Arc::new(emit))
         .unwrap_or_else(|e| platform::fatal(&format!("mpv failed to start: {e}")))
 }
 
-fn handle(
+pub fn handle(
     message: Inbound,
     player: &RefCell<Option<Player>>,
-    proxy: &EventLoopProxy<UserEvent>,
+    send: &dyn Fn(UserEvent),
     paths: &Paths,
     updater: &Option<Updater>,
 ) {
     let fail = |message: String| {
         log::warn!("{message}");
-        let _ = proxy.send_event(UserEvent::Emit(receive_script(&Outbound::Error {
+        send(UserEvent::Emit(receive_script(&Outbound::Error {
             message,
         })));
-    };
-    let send = |event: UserEvent| {
-        let _ = proxy.send_event(event);
     };
     let player = player.borrow();
     match message {
@@ -486,9 +349,9 @@ fn handle(
         Inbound::Minimize => send(UserEvent::Minimize),
         Inbound::WindowDrag => send(UserEvent::Drag),
         Inbound::WindowResize { edge } => match edge.as_str() {
-            "n" => send(UserEvent::Resize(ResizeDirection::North)),
-            "ne" => send(UserEvent::Resize(ResizeDirection::NorthEast)),
-            "nw" => send(UserEvent::Resize(ResizeDirection::NorthWest)),
+            "n" => send(UserEvent::Resize(Edge::North)),
+            "ne" => send(UserEvent::Resize(Edge::NorthEast)),
+            "nw" => send(UserEvent::Resize(Edge::NorthWest)),
             _ => log::warn!("window-resize: unknown edge {edge}"),
         },
         Inbound::WindowMaximize => send(UserEvent::ToggleMaximize),

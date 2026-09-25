@@ -109,6 +109,10 @@ impl Player {
         }
     }
 
+    pub fn mpv(&self) -> Arc<Mpv> {
+        self.mpv.clone()
+    }
+
     pub fn versions(&self) -> (Option<String>, Option<String>) {
         (
             text(&self.mpv, "mpv-version"),

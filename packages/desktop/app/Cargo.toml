@@ -15,8 +15,10 @@ aiostreams-desktop-core.workspace = true
 log.workspace = true
 serde_json.workspace = true
 dirs.workspace = true
-tao.workspace = true
 velopack = "1.2"
+
+[target.'cfg(not(target_os = "linux"))'.dependencies]
+tao.workspace = true
 wry.workspace = true
 
 [target.'cfg(windows)'.dependencies]
@@ -31,6 +33,12 @@ windows-sys = { workspace = true, features = [
   "Win32_UI_Shell",
   "Win32_UI_WindowsAndMessaging",
 ] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+gtk4 = { version = "0.9", features = ["v4_14"] }
+webkit6 = "0.4"
+libc = "0.2"
+libloading.workspace = true
 
 [build-dependencies]
 winresource = "0.1"

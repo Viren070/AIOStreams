@@ -186,9 +186,14 @@ const SEEK_FLAGS: &[&str] = &[
 ];
 
 pub fn origin(url: &str) -> Option<String> {
-    url::Url::parse(url)
-        .ok()
-        .map(|u| u.origin().ascii_serialization())
+    let url = url::Url::parse(url).ok()?;
+    let origin = url.origin();
+    // A custom scheme's origin is opaque, "null" for every such page, so it is spelled out.
+    if origin.is_tuple() {
+        Some(origin.ascii_serialization())
+    } else {
+        Some(format!("{}://{}", url.scheme(), url.host_str()?))
+    }
 }
 
 fn is_web_url(s: &str) -> bool {

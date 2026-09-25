@@ -1,7 +1,9 @@
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
-use tao::platform::windows::IconExtWindows;
-use tao::window::Icon;
+use aiostreams_desktop_core::mpv::Mpv;
+use tao::platform::windows::{IconExtWindows, WindowExtWindows};
+use tao::window::{Icon, Window};
 
 use windows_sys::Win32::Foundation::SYSTEMTIME;
 use windows_sys::Win32::Foundation::{
@@ -24,6 +26,7 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
 /// Custom protocols are served from `http://<scheme>.localhost` on Windows.
 pub const APP_URL: &str = "http://aiostreams.localhost/";
 pub const PLATFORM: &str = "windows";
+pub const WEB_DATA_DIR: &str = "WebView2";
 
 /// The main window's class, which a second launch looks the first one up by.
 pub const WINDOW_CLASS: &str = "AIOStreamsDesktop";
@@ -76,7 +79,9 @@ pub struct VideoSurface {
 }
 
 impl VideoSurface {
-    pub fn new(parent: isize, width: u32, height: u32) -> Result<Self, String> {
+    pub fn new(window: &Window) -> Result<Self, String> {
+        let (parent, size) = (window.hwnd(), window.inner_size());
+        let (width, height) = (size.width, size.height);
         let class = wide("AIOStreamsVideo");
         unsafe {
             let instance = GetModuleHandleW(std::ptr::null());
@@ -109,9 +114,10 @@ impl VideoSurface {
         }
     }
 
-    pub fn wid(&self) -> String {
-        (self.hwnd as i64).to_string()
-    }
+    /// mpv draws into the window itself, so it needs no render context.
+    pub fn attach(&self, _mpv: Arc<Mpv>) {}
+
+    pub fn shutdown(&self) {}
 
     pub fn resize(&self, width: u32, height: u32) {
         unsafe {
@@ -133,9 +139,9 @@ pub fn window_icon() -> Option<Icon> {
     Icon::from_resource(1, None).ok()
 }
 
-pub fn mpv_options(wid: &str) -> Vec<(&'static str, String)> {
+pub fn mpv_options(video: &VideoSurface) -> Vec<(&'static str, String)> {
     vec![
-        ("wid", wid.to_string()),
+        ("wid", (video.hwnd as i64).to_string()),
         ("vo", "gpu-next,gpu,".into()),
         ("gpu-context", "d3d11".into()),
         ("hwdec", "auto-safe".into()),
