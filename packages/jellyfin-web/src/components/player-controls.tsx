@@ -14,6 +14,7 @@ import {
   LuEar,
   LuGauge,
   LuLayers,
+  LuListOrdered,
   LuListVideo,
   LuLoaderCircle,
   LuMinus,
@@ -50,6 +51,7 @@ import {
   type VideoFit,
 } from '../lib/settings';
 import { SyncByEar, SyncToLine } from './subtitle-sync';
+import { chapterAt, type Chapter } from '../lib/chapters';
 import type { BaseItemDto, MediaSegmentDto } from '../lib/types';
 
 const IDLE_MS = 2000;
@@ -119,18 +121,20 @@ function ControlButton({
   );
 }
 
-/** The timeline, with segments marked, a hover time and drag to seek. */
+/** The timeline, with segments and chapters marked, a hover time and drag to seek. */
 function SeekBar({
   positionMs,
   durationMs,
   bufferedMs,
   segments,
+  chapters,
   onSeek,
 }: {
   positionMs: number;
   durationMs: number;
   bufferedMs: number;
   segments: Segment[];
+  chapters: Chapter[];
   onSeek(ms: number): void;
 }) {
   const bar = React.useRef<HTMLDivElement>(null);
@@ -198,6 +202,17 @@ function SeekBar({
           className="absolute inset-y-0 left-0 bg-brand-400"
           style={{ width: percent(shown) }}
         />
+        {chapters.map(
+          (c) =>
+            c.startMs > 0 && (
+              <div
+                key={c.startMs}
+                data-ui="seek-bar-chapter"
+                className="absolute inset-y-0 w-0.5 -translate-x-1/2 bg-black/70"
+                style={{ left: percent(c.startMs) }}
+              />
+            )
+        )}
       </div>
       <div
         data-ui="seek-bar-thumb"
@@ -210,7 +225,8 @@ function SeekBar({
           className="pointer-events-none absolute bottom-6 -translate-x-1/2 rounded-md bg-black/80 px-2 py-1 text-xs tabular-nums"
           style={{ left: percent(hover) }}
         >
-          {segments.find((s) => hover >= s.startMs && hover < s.endMs)?.type}{' '}
+          {segments.find((s) => hover >= s.startMs && hover < s.endMs)?.type ??
+            chapters[chapterAt(chapters, hover)]?.title}{' '}
           {clock(hover)}
         </div>
       )}
@@ -641,6 +657,7 @@ export function PlayerControls({
   );
   const onMenu = (open: boolean) => setMenus((n) => n + (open ? 1 : -1));
   const subtitleOptions = [{ id: '', label: 'Off' }, ...player.subtitleTracks];
+  const chapters = player.chapters ?? [];
   const fade = visible ? 'opacity-100' : 'pointer-events-none opacity-0';
   const isEpisode = item.Type === 'Episode';
   // Below lg the bar has no room for these, so they move to the middle.
@@ -850,6 +867,7 @@ export function PlayerControls({
           durationMs={state.durationMs}
           bufferedMs={state.bufferedMs}
           segments={segments}
+          chapters={chapters}
           onSeek={player.seek}
         />
         <div className="flex items-center gap-1">
@@ -899,6 +917,22 @@ export function PlayerControls({
                     />
                   )
                 }
+              />
+            )}
+            {chapters.length > 1 && (
+              <Menu
+                name="chapters"
+                label="Chapters"
+                icon={<LuListOrdered />}
+                options={chapters.map((c, i) => ({
+                  id: String(i),
+                  label: `${c.title || `Chapter ${i + 1}`} · ${clock(c.startMs)}`,
+                }))}
+                value={String(chapterAt(chapters, state.positionMs))}
+                onSelect={(id) =>
+                  id && player.seek(chapters[Number(id)].startMs)
+                }
+                onOpenChange={onMenu}
               />
             )}
             {onVersions && (

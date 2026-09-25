@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { storage } from '../storage';
 import { subtitleUrl, textSubtitles } from '../playback';
 import { sameLanguage } from '../languages';
+import { parseChapters, type Chapter } from '../chapters';
 import {
   onSettingsChange,
   readDesktopSettings,
@@ -104,6 +105,7 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
   const { source, startMs, url } = opts;
   const [state, setState] = React.useState(() => initialState(source, startMs));
   const [tracks, setTracks] = React.useState<MpvTrack[]>([]);
+  const [chapters, setChapters] = React.useState<Chapter[]>([]);
   const latest = useLatest({ ...opts, state });
   const externals = React.useMemo(
     () =>
@@ -237,6 +239,9 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
           fileTracks = Array.isArray(data) ? (data as MpvTrack[]) : [];
           setTracks(fileTracks);
           break;
+        case 'chapter-list':
+          setChapters(parseChapters(data));
+          break;
       }
     };
 
@@ -335,6 +340,7 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
       return res.ok ? parseSubtitleLines(await res.text()) : null;
     },
     toggleFullscreen: () => shell.send({ type: 'fullscreen' }),
+    chapters,
     stats: { pages: STATS_PAGES, page: statsPage, show: showStats },
   };
 }

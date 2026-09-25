@@ -44,7 +44,8 @@ import {
   useVersionPicker,
   VersionPickerProvider,
 } from '../components/version-picker';
-import type { BaseItemDto, SourceInfo } from '../lib/types';
+import { chapterSegments } from '../lib/chapters';
+import type { BaseItemDto, MediaSegmentDto, SourceInfo } from '../lib/types';
 
 interface PlayerProps {
   item: BaseItemDto;
@@ -415,6 +416,20 @@ function BrowserPlayer({
   );
 }
 
+/** The server's segments, or ones named by the file's chapters where it has none. */
+function useShownSegments(
+  segments: MediaSegmentDto[] | null | undefined,
+  player: PlayerController
+) {
+  const { chapters } = player;
+  const { durationMs } = player.state;
+  return React.useMemo(
+    () =>
+      segments?.length ? segments : chapterSegments(chapters ?? [], durationMs),
+    [segments, chapters, durationMs]
+  );
+}
+
 /**
  * mpv draws beneath the page, which stays transparent from the first paint;
  * a cover hides the wait for the first frame.
@@ -441,12 +456,12 @@ function NativePlayer({
     prefs,
     subtitleStyle,
   });
-  const segments = useSegments(item.Id!);
+  const segments = useShownSegments(useSegments(item.Id!).data?.Items, player);
   const next = useNextEpisodePrompt({
     item,
     source,
     player,
-    segments: segments.data?.Items,
+    segments,
   });
   connect(next);
   const switchVersion = useSwitchVersion(item, source, player);
@@ -458,7 +473,7 @@ function NativePlayer({
       <PlayerControls
         item={item}
         player={player}
-        segments={segments.data?.Items}
+        segments={segments}
         onBack={back}
         offeringNext={!!next.element}
         onVersions={switchVersion}

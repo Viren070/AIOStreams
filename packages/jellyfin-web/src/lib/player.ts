@@ -1,6 +1,7 @@
 import React from 'react';
 import { storage } from './storage';
 import type { JellyfinClient } from './client';
+import type { Chapter } from './chapters';
 import type { SubtitleStyle } from './settings';
 import type { SubtitleLine } from './subtitle-lines';
 import type { PlaybackPrefs } from './user-config';
@@ -49,6 +50,8 @@ export interface PlayerController {
   /** Whether `subtitleLines` can read this subtitle; every one when missing. */
   canReadSubtitle?: (id: string) => boolean;
   toggleFullscreen(): void;
+  /** The file's chapters, where the player reads them. */
+  chapters?: Chapter[];
   /** Where the player draws playback statistics over the video. */
   stats?: {
     pages: Track[];
