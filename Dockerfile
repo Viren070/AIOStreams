@@ -26,6 +26,7 @@ COPY packages/server/package*.json ./packages/server/
 COPY packages/core/package*.json ./packages/core/
 COPY packages/frontend/package*.json ./packages/frontend/
 COPY packages/ui/package*.json ./packages/ui/
+COPY packages/jellyfin-web/package*.json ./packages/jellyfin-web/
 COPY packages/seanime-extensions/package*.json ./packages/seanime-extensions/
 COPY packages/crypto/package*.json ./packages/crypto/
 COPY pnpm-workspace.yaml ./pnpm-workspace.yaml
@@ -42,6 +43,7 @@ COPY packages/server ./packages/server
 COPY packages/core ./packages/core
 COPY packages/frontend ./packages/frontend
 COPY packages/ui ./packages/ui
+COPY packages/jellyfin-web ./packages/jellyfin-web
 COPY packages/seanime-extensions ./packages/seanime-extensions
 COPY packages/crypto ./packages/crypto
 COPY scripts ./scripts
@@ -57,6 +59,7 @@ RUN rm -rf packages/core/node_modules
 RUN rm -rf packages/server/node_modules
 RUN rm -rf packages/frontend/node_modules
 RUN rm -rf packages/ui/node_modules
+RUN rm -rf packages/jellyfin-web/node_modules
 RUN rm -rf packages/seanime-extensions/node_modules
 
 RUN pnpm install --prod --frozen-lockfile
@@ -80,6 +83,7 @@ COPY --from=builder /build/packages/crypto ./packages/crypto
 
 COPY --from=builder /build/packages/core/dist ./packages/core/dist
 COPY --from=builder /build/packages/frontend/dist ./packages/frontend/dist
+COPY --from=builder /build/packages/jellyfin-web/dist ./packages/jellyfin-web/dist
 COPY --from=builder /build/packages/server/dist ./packages/server/dist
 COPY --from=builder /build/packages/server/src/static ./packages/server/dist/static
 COPY --from=builder /build/packages/seanime-extensions/dist ./packages/seanime-extensions/dist

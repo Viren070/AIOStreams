@@ -57,14 +57,8 @@ export default defineConfig({
       '/api': backendBaseUrl,
       // the nab endpoint test button posts to /builtins/<namespace>/test
       '/builtins': backendBaseUrl,
-      // the Jellyfin API; its /web page is this app, so the dev server serves it
-      '/jellyfin': {
-        target: backendBaseUrl,
-        bypass: (req) =>
-          /\/web(\/(index\.html)?)?(\?|$)/i.test(req.url ?? '')
-            ? '/index.html'
-            : undefined,
-      },
+      // also covers /jellyfin-web, the web app's assets
+      '/jellyfin': backendBaseUrl,
     },
   },
   tools: {

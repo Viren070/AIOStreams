@@ -282,9 +282,6 @@ importers:
       '@headlessui/react':
         specifier: ^2.2.10
         version: 2.2.10(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      '@jellyfin/sdk':
-        specifier: ^1.0.0
-        version: 1.0.0(axios@1.20.0)
       '@radix-ui/react-dismissable-layer':
         specifier: ^1.1.11
         version: 1.1.13(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -378,6 +375,78 @@ importers:
       zod:
         specifier: ^4.4.3
         version: 4.4.3
+
+  packages/jellyfin-web:
+    devDependencies:
+      '@aiostreams/core':
+        specifier: workspace:*
+        version: link:../core
+      '@aiostreams/ui':
+        specifier: workspace:*
+        version: link:../ui
+      '@fontsource/inter':
+        specifier: ^5.2.8
+        version: 5.2.8
+      '@jellyfin/sdk':
+        specifier: ^1.0.0
+        version: 1.0.0(axios@1.20.0)
+      '@rsbuild/core':
+        specifier: ^1.5.18
+        version: 1.7.5
+      '@rsbuild/plugin-react':
+        specifier: ^1.4.1
+        version: 1.4.6(@rsbuild/core@1.7.5)
+      '@tanstack/react-query':
+        specifier: ^5.95.0
+        version: 5.101.0(react@19.2.7)
+      '@tanstack/react-router':
+        specifier: ^1.169.2
+        version: 1.170.16(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@types/node':
+        specifier: ^24.13.5
+        version: 24.13.5
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.17
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.17)
+      autoprefixer:
+        specifier: ^10.5.0
+        version: 10.5.0(postcss@8.5.15)
+      motion:
+        specifier: ^12.38.0
+        version: 12.40.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      next-themes:
+        specifier: ^0.4.6
+        version: 0.4.6(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      postcss:
+        specifier: ^8.5.14
+        version: 8.5.15
+      postcss-import:
+        specifier: ^16.1.1
+        version: 16.1.1(postcss@8.5.15)
+      postcss-nesting:
+        specifier: ^13.0.2
+        version: 13.0.2(postcss@8.5.15)
+      react:
+        specifier: ^19.2.6
+        version: 19.2.7
+      react-dom:
+        specifier: ^19.2.6
+        version: 19.2.7(react@19.2.7)
+      react-icons:
+        specifier: ^5.6.0
+        version: 5.6.0(react@19.2.7)
+      sonner:
+        specifier: 2.0.5
+        version: 2.0.5(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      tailwindcss:
+        specifier: ^3.4.19
+        version: 3.4.19(tsx@4.22.4)
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
 
   packages/seanime-extensions:
     devDependencies:

@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "isolatedModules": true,
+    "composite": false,
+    "declaration": false,
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "rsbuild.config.ts"]
+}

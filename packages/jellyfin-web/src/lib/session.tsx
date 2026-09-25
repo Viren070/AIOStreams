@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { api, hasConfigSessionCookie } from '@/lib/api';
+import { configSessionToken, hasConfigSessionCookie } from './config-session';
 import { apiBase, JellyfinClient, JellyfinError } from './client';
 import {
   clearCredentials,
@@ -142,9 +142,9 @@ export function useSessionPhase() {
         }
       }
       if (hasConfigSessionCookie() && !signedOut(base)) {
-        const auth = await api<WebTokenResult>(
-          'POST /jellyfin/web/token'
-        ).catch(() => null);
+        const auth = await configSessionToken<WebTokenResult>().catch(
+          () => null
+        );
         if (auth && 'needsPin' in auth) {
           if (!cancelled)
             setPhase({
@@ -160,9 +160,8 @@ export function useSessionPhase() {
                 },
               ],
               choose: async (_id, pin) => {
-                const signedIn = await api<AuthenticationResult>(
-                  'POST /jellyfin/web/token',
-                  { body: { pin } }
+                const signedIn = await configSessionToken<AuthenticationResult>(
+                  { pin: pin ?? '' }
                 );
                 await enter(
                   anonymous.withToken(signedIn.AccessToken!),

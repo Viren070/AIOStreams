@@ -13,8 +13,8 @@ Requires Node `>=24` and pnpm `>=11` (enforced in root `package.json` engines).
 All commands run from the repo root. The repo is a pnpm workspace with packages under `packages/*`.
 
 - `pnpm install` — install everything (pnpm workspaces).
-- `pnpm build` — build `core` → `server` → `frontend` → `seanime-extensions` in that order (the order matters; later packages depend on `@aiostreams/core`).
-- `pnpm dev` — run `core`, `server` and `frontend` in parallel watch mode.
+- `pnpm build` — build `core` → `server` → `frontend` → `jellyfin-web` → `seanime-extensions` in that order (the order matters; later packages depend on `@aiostreams/core`).
+- `pnpm dev` — run `core`, `server`, `frontend` and `jellyfin-web` in parallel watch mode.
 - `pnpm start:dev` — `tsx watch` of `packages/server/src/server.ts` with `NODE_ENV=development` (use this when you only need the backend to reload).
 - `pnpm start` — run the built server (`node packages/server/dist/server`). Requires `pnpm build` first.
 - `pnpm start:frontend:dev` — only the rsbuild dev server for the SPA.
@@ -35,7 +35,8 @@ The frontend uses rsbuild (not Vite/webpack directly) — `pnpm -F frontend dev`
 - `packages/core` — the engine. Everything addon-related, all I/O, DB, cache, config, presets, builtins, stream pipeline. Other packages depend on it as `@aiostreams/core`.
 - `packages/server` — thin Express 5 app that wires `core` to HTTP. Owns routing, middleware, rate limiting, static asset serving, and the server lifecycle.
 - `packages/frontend` — React 19 SPA (rsbuild + TanStack Router + TanStack Query + Tailwind + Radix). Built output is served by the server from `packages/frontend/dist` at runtime.
-- `packages/ui` — `@aiostreams/ui`, the shared component kit (Tailwind preset, `theme.css`, components, hooks, format helpers). Source-only: no build step, consumed as `@aiostreams/ui/<component>`, and a consumer's Tailwind `content` must include `../ui/src`.
+- `packages/ui` — `@aiostreams/ui`, the shared component kit (Tailwind preset, `theme.css`, components, hooks, format helpers). Source-only: no build step, consumed as `@aiostreams/ui/<component>` by `frontend` and `jellyfin-web`, whose Tailwind `content` must include `../ui/src`.
+- `packages/jellyfin-web` — the web app served at every Jellyfin mount's `/web` (rsbuild, own `dist`). The server sends its `index.html` from each mount and serves its hashed assets at `/jellyfin-web/static`. Built for AIOStreams-like Jellyfin servers (direct play only, optional `aiostreams` extension fields), not as a general Jellyfin client.
 - `packages/seanime-extensions` — separate Seanime extension bundles, built independently.
 - `packages/docs` — the docs site (separate build).
 

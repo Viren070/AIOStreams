@@ -28,7 +28,6 @@
     "@eslint/eslintrc": "^3.3.5",
     "@fontsource/inter": "^5.2.8",
     "@headlessui/react": "^2.2.10",
-    "@jellyfin/sdk": "^1.0.0",
     "@radix-ui/react-dismissable-layer": "^1.1.11",
     "@rsbuild/core": "^1.5.18",
     "@rsbuild/plugin-node-polyfill": "^1.4.4",

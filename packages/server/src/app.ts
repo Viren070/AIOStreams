@@ -97,6 +97,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export const frontendRoot = path.join(__dirname, '../../frontend/dist');
+export const jellyfinWebRoot = path.join(__dirname, '../../jellyfin-web/dist');
 export const staticRoot = path.join(__dirname, './static');
 
 app.use(ipMiddleware);
@@ -248,6 +249,13 @@ app.use('/jellyfin', jellyfinRouter);
 app.use(
   '/assets',
   express.static(path.join(frontendRoot, 'assets'), {
+    immutable: true,
+    maxAge: '1y',
+  })
+);
+app.use(
+  '/jellyfin-web/static',
+  express.static(path.join(jellyfinWebRoot, 'static'), {
     immutable: true,
     maxAge: '1y',
   })

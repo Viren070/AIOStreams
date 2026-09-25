@@ -1,0 +1,25 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+@import '@aiostreams/ui/theme.css';
+
+/* see index.html; the page's background is then drawn by an element */
+html.see-through,
+html.see-through body {
+  background: transparent !important;
+}
+
+/* Only text meant to be read or copied is selectable. */
+@layer base {
+  body.jellyfin-web {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  body.jellyfin-web :is(input, textarea, [contenteditable]) {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+  body.jellyfin-web :is(img, a) {
+    -webkit-user-drag: none;
+  }
+}

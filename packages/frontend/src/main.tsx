@@ -10,15 +10,10 @@ import { RouterProvider } from '@tanstack/react-router';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '@/lib/query-client';
 
-/** The Jellyfin API serves its web app at `/web` under any of its mounts. */
-const JELLYFIN_WEB_PATH = /^\/jellyfin(\/.*)?\/web(\/(index\.html)?)?$/i;
-
 const App = React.lazy(() =>
-  JELLYFIN_WEB_PATH.test(window.location.pathname)
-    ? import('./app/jellyfin/app')
-    : import('./router').then(({ router }) => ({
-        default: () => <RouterProvider router={router} />,
-      }))
+  import('./router').then(({ router }) => ({
+    default: () => <RouterProvider router={router} />,
+  }))
 );
 
 const rootEl = document.getElementById('root')!;

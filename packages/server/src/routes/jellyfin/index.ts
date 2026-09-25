@@ -25,7 +25,7 @@ import subtitlesRouter from './subtitles.js';
 import imagesRouter from './images.js';
 import playstateRouter from './playstate.js';
 import webRouter from './web.js';
-import { frontendRoot } from '../../app.js';
+import { jellyfinWebRoot } from '../../app.js';
 
 export const jellyfinCors: express.RequestHandler = (req, res, next) => {
   // The global middleware sets Allow-Credentials, which browsers reject
@@ -133,10 +133,9 @@ export function createJellyfinRouter(): Router {
   router.all('/', (req, res) => {
     res.redirect(302, `${req.baseUrl}/web/`);
   });
-  /* The configure app's page, given the web app's manifest and edge-to-edge viewport. */
   router.all(['/web', '/web/index.html'], async (req, res) => {
     const html = await fs.promises
-      .readFile(path.join(frontendRoot, 'index.html'), 'utf8')
+      .readFile(path.join(jellyfinWebRoot, 'index.html'), 'utf8')
       .catch(() => null);
     if (html === null) {
       res.status(404).json({ Message: 'The web app is not built' });
@@ -158,14 +157,6 @@ export function createJellyfinRouter(): Router {
           .replace(
             /(name="apple-mobile-web-app-title" content=")[^"]*/,
             `$1${name}`
-          )
-          .replace(
-            'initial-scale=1.0"',
-            'initial-scale=1.0, viewport-fit=cover"'
-          )
-          .replace(
-            '<link rel="manifest"',
-            '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />\n    <link rel="manifest"'
           )
       );
   });
