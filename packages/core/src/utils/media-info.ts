@@ -122,12 +122,10 @@ function asTrackText(value: unknown): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
-/** Drops a track that carries nothing worth keeping. */
-function normaliseTrack(
-  track: ParsedMediaTrack | undefined
-): ParsedMediaTrack | undefined {
-  if (!track) return undefined;
-  const out: ParsedMediaTrack = {
+/** An empty track is kept: players number tracks by position, unknown ones included. */
+function normaliseTrack(track: ParsedMediaTrack | undefined): ParsedMediaTrack {
+  if (!track) return {};
+  return {
     ...(track.lang ? { lang: track.lang } : {}),
     ...(track.codec ? { codec: track.codec } : {}),
     ...(track.title ? { title: track.title } : {}),
@@ -141,15 +139,19 @@ function normaliseTrack(
     ...(track.hearingImpaired ? { hearingImpaired: true } : {}),
     ...(track.visualImpaired ? { visualImpaired: true } : {}),
   };
-  return Object.keys(out).length > 0 ? out : undefined;
 }
 
 function normaliseTrackList(
   tracks: ParsedMediaTrack[] | undefined
 ): ParsedMediaTrack[] {
-  return (tracks ?? [])
-    .map(normaliseTrack)
-    .filter((track): track is ParsedMediaTrack => !!track);
+  return (tracks ?? []).map(normaliseTrack);
+}
+
+/** The tracks something is known about, for describing or filtering a stream. */
+export function describedTracks<T extends object>(
+  tracks: T[] | undefined
+): T[] {
+  return (tracks ?? []).filter((track) => Object.keys(track).length > 0);
 }
 
 function normaliseLanguageList(values: unknown[]): string[] {

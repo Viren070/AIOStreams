@@ -82,9 +82,13 @@ function deriveHdrTags(track: TrackDetail): string[] {
 }
 
 export function toWireMediaInfo(entry: MediaProbeVersion): MediaInfo {
-  const videoTrack = entry.tracks.find((t) => t.kind === 'video');
-  const audioTracks = entry.tracks.filter((t) => t.kind === 'audio');
-  const subtitleTracks = entry.tracks.filter((t) => t.kind === 'subtitle');
+  // Clients pick a track by its position in the file, so order matters.
+  const tracks = [...entry.tracks].sort((a, b) => a.idx - b.idx);
+  const videoTrack = tracks.find((t) => t.kind === 'video');
+  const audioTracks = tracks.filter((t) => t.kind === 'audio');
+  const subtitleTracks = tracks.filter(
+    (t) => t.kind === 'subtitle' && !t.is_external
+  );
 
   return {
     video: videoTrack
@@ -102,10 +106,16 @@ export function toWireMediaInfo(entry: MediaProbeVersion): MediaInfo {
       title: t.title ?? undefined,
       ch_layout: t.channel_layout ?? undefined,
       ch: t.channels ?? undefined,
+      default: t.is_default,
+      hearing_impaired: t.is_hearing_impaired,
     })),
     subtitle: subtitleTracks.map((t) => ({
+      codec: t.codec ?? undefined,
       lang: t.language ?? undefined,
       title: t.title ?? undefined,
+      default: t.is_default,
+      forced: t.is_forced,
+      hearing_impaired: t.is_hearing_impaired,
     })),
     format: {
       n: entry.container ?? '',

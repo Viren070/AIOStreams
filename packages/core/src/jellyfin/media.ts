@@ -323,7 +323,11 @@ function videoStream(
   };
 }
 
-/* One entry per real track when the probe listed them, otherwise per language. */
+/*
+ * One entry per real track. Without a track list the languages come from a
+ * deduplicated list in no known order, and clients pick audio by position, so
+ * they are named on one stream rather than listed as tracks that may not line up.
+ */
 function audioStreams(
   pf: ParsedFile | undefined,
   startIndex: number
@@ -363,39 +367,39 @@ function audioStreams(
     | undefined;
   const channels = channelTag ? CHANNEL_COUNT[channelTag] : undefined;
   const layout = channelTag ? CHANNEL_LAYOUT[channelTag] : undefined;
-  const list = languages.length ? languages : ['Unknown'];
-  return list.map((lang, i) => ({
-    Type: 'Audio',
-    Index: startIndex + i,
-    ...STREAM_FLAGS,
-    Codec: codec,
-    Language: lang === 'Unknown' ? undefined : languageToIso6392(lang),
-    DisplayTitle:
-      [lang !== 'Unknown' ? lang : undefined, audioTag, channelTag]
-        .filter(Boolean)
-        .join(' ') || 'Audio',
-    Channels: channels,
-    ChannelLayout: layout,
-    IsDefault: i === 0,
-    IsTextSubtitleStream: false,
-  }));
+  return [
+    {
+      Type: 'Audio',
+      Index: startIndex,
+      ...STREAM_FLAGS,
+      Codec: codec,
+      Language:
+        languages.length === 1 ? languageToIso6392(languages[0]) : undefined,
+      DisplayTitle:
+        [languages.join(', '), audioTag, channelTag]
+          .filter(Boolean)
+          .join(' ') || 'Audio',
+      Channels: channels,
+      ChannelLayout: layout,
+      IsDefault: true,
+      IsTextSubtitleStream: false,
+    },
+  ];
 }
 
+const IMAGE_SUBTITLE_CODEC = /pgs|dvd_?sub|dvb_?sub|vobsub|xsub/i;
+
 /*
- * Only a real probe knows the embedded tracks. Clients match an advertised
- * track to the one their player demuxed by language and title, so the language
- * fallback emits no `Title` rather than an invented one that mis-selects.
+ * Clients pick an embedded track by its position among these, so only a probe's
+ * per-track list is listed, whole: a list of languages drops repeats and would
+ * shift every later track.
  */
 function embeddedSubtitleStreams(
   pf: ParsedFile | undefined,
   startIndex: number
 ): JellyfinMediaStream[] {
-  if (pf?.mediaInfoQuality !== 'probe') return [];
-  const tracks = pf.subtitleTracks?.length
-    ? pf.subtitleTracks
-    : (pf.subtitles ?? [])
-        .filter((l) => l && l !== 'Unknown')
-        .map((lang) => ({ lang }) as MediaTrack);
+  const tracks =
+    pf?.mediaInfoQuality === 'probe' ? (pf.subtitleTracks ?? []) : [];
   return tracks.map((track, i) => ({
     Type: 'Subtitle',
     Index: startIndex + i,
@@ -410,7 +414,7 @@ function embeddedSubtitleStreams(
     IsDefault: track.default ?? false,
     IsForced: track.forced ?? false,
     IsHearingImpaired: track.hearingImpaired ?? false,
-    IsTextSubtitleStream: true,
+    IsTextSubtitleStream: !IMAGE_SUBTITLE_CODEC.test(track.codec ?? ''),
     DeliveryMethod: 'Embed',
   }));
 }

@@ -2,6 +2,7 @@
 import * as constants from '../utils/constants.js';
 import { formatHours, makeSmall } from './utils.js';
 import { languageToCode, languageToEmoji } from '../utils/languages.js';
+import { describedTracks } from '../utils/media-info.js';
 import { compileTemplate as engineCompileTemplate } from './engine/compile.js';
 import { canonicaliseField } from './engine/fields.js';
 import { NEW_LINE_SENTINEL, REMOVE_LINE_SENTINEL } from './engine/sentinels.js';
@@ -57,7 +58,10 @@ const TRACK_DEFAULTS: FormatterTrack = {
 };
 
 function formatterTracks(tracks: MediaTrack[] | undefined): FormatterTrack[] {
-  return (tracks ?? []).map((track) => ({ ...TRACK_DEFAULTS, ...track }));
+  return describedTracks(tracks).map((track) => ({
+    ...TRACK_DEFAULTS,
+    ...track,
+  }));
 }
 
 export interface FormatterConfig {

@@ -14,6 +14,7 @@ import { createLogger } from '../logging/logger.js';
 import { ExpressionContext } from '../streams/context.js';
 import { formRegexFromKeywordsSync } from '../utils/regex.js';
 import { ObjectFilter, compileObjectFilter } from '../utils/object-filter.js';
+import { describedTracks } from '../utils/media-info.js';
 
 const logger = createLogger('stream-expression');
 
@@ -880,7 +881,9 @@ export abstract class StreamExpressionEngine {
           throw new Error(`${label}: ${(error as Error).message}`);
         }
         return streams.filter((stream) =>
-          (stream.parsedFile?.[key] ?? []).some((track) => matches(track))
+          describedTracks(stream.parsedFile?.[key]).some((track) =>
+            matches(track)
+          )
         );
       };
 
