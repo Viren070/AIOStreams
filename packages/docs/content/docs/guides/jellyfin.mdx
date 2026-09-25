@@ -50,6 +50,8 @@ The sign-in picker is the easiest: the app lists your configuration's users on i
 
 In your app, add a server and paste the **Address with a sign-in picker** from the Connect tab.
 
+If your configuration has a share alias in its [profile](/guides/config-profiles), the address is short, `https://your-instance/jellyfin/u/<alias>`, so you can type it on a TV. Without one it holds your UUID and an encrypted password, and is easier to paste than to type.
+
 </Step>
 
 <Step>
@@ -167,7 +169,7 @@ In the [web app](#the-web-app), you can switch users without signing out:
 
 The server also works in a browser. Press **Open** next to **Web app** on the Connect tab, or open either address in a browser, and you get a web app built for this server.
 
-- **Signing in.** If you are signed in on the configure page in the same browser, it signs you straight in. Otherwise sign in with your UUID and password; on the picker address the UUID is already filled in. Where [PIN-only sign-in](#letting-people-sign-in-with-only-their-pin) is on, the picker address asks for a user name and PIN instead, and a household user goes straight to their own profile.
+- **Signing in.** If you are signed in on the configure page in the same browser, it signs you straight in. Otherwise sign in with your UUID and password; on the picker address the UUID, or the alias of a short address, is already filled in. Where [PIN-only sign-in](#letting-people-sign-in-with-only-their-pin) is on, the picker address asks for a user name and PIN instead, and a household user goes straight to their own profile.
 - **Who is watching.** After signing in as the primary user, it asks which user is watching, or opens the one used last on that device.
 - **On a phone**, add it to your home screen from the browser's menu and it opens like an app. The first time, you sign in again there.
 

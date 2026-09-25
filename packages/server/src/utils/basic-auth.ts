@@ -4,7 +4,9 @@ import {
   ConfigSessionRepository,
   constants,
   decryptString,
+  isConfigUuid,
   isEncrypted,
+  resolveConfigAlias,
 } from '@aiostreams/core';
 import {
   clearConfigSessionCookie,
@@ -114,7 +116,12 @@ export async function resolveConfigCredentials(
   opts?: { allowEncrypted?: boolean; allowSession?: boolean }
 ): Promise<BasicAuthCredentials | null> {
   const fromHeader = parseBasicAuthHeader(req, opts);
-  if (fromHeader) return fromHeader;
+  if (fromHeader) {
+    // An alias names the configuration; the password is still checked.
+    if (isConfigUuid(fromHeader.uuid)) return fromHeader;
+    const target = await resolveConfigAlias(fromHeader.uuid);
+    return target ? { ...fromHeader, uuid: target.uuid } : fromHeader;
+  }
 
   if (opts?.allowSession === false || !ConfigSessionRepository.enabled()) {
     return null;

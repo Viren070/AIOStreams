@@ -1891,8 +1891,10 @@ function Content() {
   const quickConnectLocked = quickConnectPersona
     ? !!jellyfinPersonas.find((p) => p.id === quickConnectPersona)?.lock
     : !!userData.jellyfin?.primary?.lock;
-  const jellyfinPickerUrl =
-    uuid && encryptedPassword
+  // An alias makes it short enough to type on a TV.
+  const jellyfinPickerUrl = aliasForInstall
+    ? `${baseUrl}/jellyfin/u/${aliasForInstall}`
+    : uuid && encryptedPassword
       ? `${baseUrl}/jellyfin/${uuid}/${encryptedPassword}`
       : '';
   const copyJellyfinPickerUrl = async () => {
@@ -2762,6 +2764,11 @@ function Content() {
                             : 'Signing in still needs your password.'}{' '}
                           It holds the same secret as your install links, so
                           keep it within your household.
+                          {aliasForInstall
+                            ? ' Your alias stands in for the UUID and password; the long address still works.'
+                            : sessionUser
+                              ? ' A share alias in your profile makes it short enough to type on a TV.'
+                              : ''}
                         </p>
                       </div>
                     )}

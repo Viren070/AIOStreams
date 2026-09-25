@@ -64,10 +64,13 @@ type WebTokenResult =
       branding: Branding;
     };
 
-/** The uuid a `/jellyfin/<uuid>/<encrypted password>` picker address names. */
-export function pickerUuid(base: string): string {
+/** The uuid or `/u/<alias>` a picker address names, as a sign-in takes it. */
+export function pickerAccount(base: string): string {
   const parts = new URL(base).pathname.split('/').filter(Boolean);
-  return parts.length >= 3 ? parts[1] : '';
+  if (parts.length < 3) return '';
+  return parts[1].toLowerCase() === 'u'
+    ? decodeURIComponent(parts[2]).toLowerCase()
+    : parts[1];
 }
 
 /**

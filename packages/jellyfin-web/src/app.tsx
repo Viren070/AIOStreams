@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@aiostreams/ui/toaster';
 import { LoadingOverlay } from '@aiostreams/ui/loading-spinner';
-import { pickerUuid, SessionProvider, useSessionPhase } from './lib/session';
+import { pickerAccount, SessionProvider, useSessionPhase } from './lib/session';
 import { announceToAndroid } from './lib/hosts/jellyfin-android';
 import { webRouter } from './router';
 import { SignInScreen, Unreachable, UserPicker } from './pages/sign-in';
@@ -170,7 +170,7 @@ function Session({
           client={anonymous}
           defaultUsername={
             info.features.configSignIn && !info.pinSignIn
-              ? pickerUuid(base)
+              ? pickerAccount(base)
               : ''
           }
           onSignIn={signIn}

@@ -145,6 +145,20 @@ async function loadConfig(
   };
 }
 
+/**
+ * The configuration a `/u/<alias>` picker address names. Aliases are lowercase,
+ * and a TV keyboard may capitalise what was typed.
+ */
+export async function resolvePickerAlias(
+  alias: string
+): Promise<{ uuid: string; encryptedPassword: string } | null> {
+  const lower = alias.toLowerCase();
+  return (
+    (await resolveConfigAlias(alias)) ??
+    (lower !== alias ? await resolveConfigAlias(lower) : null)
+  );
+}
+
 export async function resolveUuid(uuidOrAlias: string): Promise<string | null> {
   if (isConfigUuid(uuidOrAlias)) return uuidOrAlias;
   const alias = await resolveConfigAlias(uuidOrAlias);
@@ -570,6 +584,13 @@ export const jellyfinContext: RequestHandler = async (req, res, next) => {
         uuid: params.uuid,
         encryptedPassword: params.encryptedPassword,
       };
+    } else if (params.alias) {
+      const target = await resolvePickerAlias(params.alias);
+      if (!target) {
+        res.status(401).json({ Message: 'Unknown configuration' });
+        return;
+      }
+      req.jfMount = target;
     }
     if (
       payload &&

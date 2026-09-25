@@ -239,6 +239,7 @@ app.use('/community', publicCommunityRouter);
 app.use('/webdav', webdavRouter);
 
 const jellyfinRouter = createJellyfinRouter();
+app.use('/jellyfin/u/:alias', jellyfinRouter);
 app.use('/jellyfin/:uuid/:encryptedPassword', jellyfinRouter);
 app.use('/jellyfin', jellyfinRouter);
 

@@ -141,8 +141,8 @@ export function ProfileCard() {
             </div>
             <p className="text-sm text-[--muted]">
               {profile.alias
-                ? 'Your manifest URL above uses this alias. Anyone with it can install this configuration, so treat it like the long URL, and keep it hard to guess.'
-                : 'An alias shortens your manifest URL above. It replaces the UUID and password in the link, so it grants the same access.'}
+                ? 'Your manifest URL and sign-in picker address use this alias. Anyone with it can install this configuration, so treat it like the long URL, and keep it hard to guess.'
+                : 'An alias shortens your manifest URL and sign-in picker address. It replaces the UUID and password in them, so it grants the same access.'}
             </p>
           </div>
 

@@ -36,6 +36,7 @@ import {
   personasOf,
   qs,
   resolveConfig,
+  resolvePickerAlias,
   type JellyfinRequestContext,
 } from './context.js';
 import { summaryItem } from './items.js';
@@ -339,7 +340,7 @@ async function checkPassword(
   return null;
 }
 
-/** A bare user name or the uuid on a picker address; `<uuid or alias>/<user>` elsewhere. */
+/** A bare user name, alias or the uuid on a picker address; `<uuid or alias>/<user>` elsewhere. */
 function parseSignIn(
   username: string,
   mount: { uuid: string } | undefined
@@ -442,7 +443,14 @@ router.post(
       res.status(401).json({ Message: 'Invalid username or password' });
       return;
     }
-    const signIn = resolveSignIn(userData, personaName);
+    // On a picker address the account also answers to its alias, after its users.
+    const signIn =
+      resolveSignIn(userData, personaName) ??
+      (mount &&
+      (await resolvePickerAlias(personaName))?.uuid.toLowerCase() ===
+        uuid.toLowerCase()
+        ? { persona: null }
+        : null);
     if (!signIn) {
       res.status(401).json({ Message: 'Invalid username or password' });
       return;
