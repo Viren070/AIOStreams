@@ -15,8 +15,8 @@ import {
 } from '@dnd-kit/sortable';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { CSS } from '@dnd-kit/utilities';
-import { IconButton } from '../ui/button';
-import { Tooltip } from '../ui/tooltip';
+import { IconButton } from '@aiostreams/ui/button';
+import { Tooltip } from '@aiostreams/ui/tooltip';
 import { FaRegTrashAlt, FaArrowUp, FaArrowDown } from 'react-icons/fa';
 
 export const rowClass =

@@ -4,7 +4,7 @@ import CodeMirror, {
   ReactCodeMirrorRef,
 } from '@uiw/react-codemirror';
 import { placeholder as placeholderExtension } from '@codemirror/view';
-import { cn } from '@/components/ui/core/styling';
+import { cn } from '@aiostreams/ui/core/styling';
 import { formatterTheme } from './formatter-theme.js';
 import { formatterHighlight } from './formatter-highlight.js';
 import { formatterLinter } from './formatter-lint.js';

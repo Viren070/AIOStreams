@@ -1,8 +1,8 @@
 import React from 'react';
 import { BiPause, BiPlayCircle } from 'react-icons/bi';
-import { cn } from '@/components/ui/core/styling';
+import { cn } from '@aiostreams/ui/core/styling';
 import { AnimatedNumber } from '@/components/shared/animated-number';
-import { formatSpeed } from '@/lib/format';
+import { formatSpeed } from '@aiostreams/ui/core/format';
 import {
   liveFrameMs,
   useLiveStreams,

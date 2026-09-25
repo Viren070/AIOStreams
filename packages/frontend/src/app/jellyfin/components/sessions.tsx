@@ -1,4 +1,4 @@
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@aiostreams/ui/badge';
 import { useSession } from '../lib/session';
 import { landscapeUrls } from '../lib/images';
 import { clock, itemTitle, ticksToMs } from '../lib/format';

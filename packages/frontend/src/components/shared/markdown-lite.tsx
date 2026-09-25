@@ -1,6 +1,6 @@
 import React from 'react';
 import { toast } from 'sonner';
-import { copyToClipboard } from '@/utils/clipboard';
+import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
 
 interface MarkdownLiteProps {
   children: string;

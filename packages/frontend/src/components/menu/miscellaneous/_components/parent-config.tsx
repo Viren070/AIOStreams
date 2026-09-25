@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { useUserData } from '@/context/userData';
 import { SettingsCard } from '../../../shared/settings-card';
-import { Button, IconButton } from '@/components/ui/button';
-import { TextInput } from '@/components/ui/text-input';
-import { PasswordInput } from '@/components/ui/password-input';
-import { Select } from '@/components/ui/select';
-import { Modal } from '@/components/ui/modal';
+import { Button, IconButton } from '@aiostreams/ui/button';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { PasswordInput } from '@aiostreams/ui/password-input';
+import { Select } from '@aiostreams/ui/select';
+import { Modal } from '@aiostreams/ui/modal';
 import { verifyParentConfig } from '@/lib/api';
 import { toast } from 'sonner';
 import { GoLink, GoUnlink } from 'react-icons/go';

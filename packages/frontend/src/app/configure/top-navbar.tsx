@@ -1,14 +1,14 @@
 // import { OfflineTopMenu } from '@/app/(main)/(offline)/offline/_components/offline-top-menu';
 import { LayoutHeaderBackground } from '@/components/layout-header-background';
-import { AppSidebarTrigger } from '@/components/ui/app-layout';
-import { cn } from '@/components/ui/core/styling';
+import { AppSidebarTrigger } from '@aiostreams/ui/app-layout';
+import { cn } from '@aiostreams/ui/core/styling';
 
 import React from 'react';
 import { PageControls } from '@/components/shared/page-controls';
 import { useMenu } from '@/context/menu';
-import { IconButton } from '@/components/ui/button';
+import { IconButton } from '@aiostreams/ui/button';
 import { BiHeart, BiLogInCircle, BiLogOutCircle } from 'react-icons/bi';
-import { useDisclosure } from '@/hooks/disclosure';
+import { useDisclosure } from '@aiostreams/ui/hooks/disclosure';
 import { DonationModal } from '@/components/shared/donation-modal';
 import { useCommandPalette } from '@/context/command-palette';
 import { CommandPaletteTopBarButton } from '@/components/shared/command-palette/search-button';

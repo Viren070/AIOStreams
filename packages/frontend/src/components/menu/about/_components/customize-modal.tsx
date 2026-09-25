@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Modal } from '@/components/ui/modal';
-import { Button } from '@/components/ui/button';
-import { TextInput } from '@/components/ui/text-input';
-import { Textarea } from '@/components/ui/textarea';
+import { Modal } from '@aiostreams/ui/modal';
+import { Button } from '@aiostreams/ui/button';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { Textarea } from '@aiostreams/ui/textarea';
 import { useUserData } from '@/context/userData';
 
 export function CustomizeModal({

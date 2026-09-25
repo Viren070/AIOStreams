@@ -4,17 +4,17 @@ import { useUserData } from '@/context/userData';
 import { useStatus } from '@/context/status';
 import { watchStateTrackersQuery } from '@/lib/queries';
 import type { WatchStateTrackerOption } from '@/lib/api';
-import { cn } from '@/components/ui/core/styling';
+import { cn } from '@aiostreams/ui/core/styling';
 import { pill, VariantPills } from '../shared/variant-pills';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
-} from '../shared/confirmation-dialog';
-import { Button, IconButton } from '@/components/ui/button';
-import { TextInput } from '@/components/ui/text-input';
-import { Select } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Modal } from '@/components/ui/modal';
+} from '@aiostreams/ui/shared/confirmation-dialog';
+import { Button, IconButton } from '@aiostreams/ui/button';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { Select } from '@aiostreams/ui/select';
+import { Switch } from '@aiostreams/ui/switch';
+import { Modal } from '@aiostreams/ui/modal';
 import { toast } from 'sonner';
 import { FiEdit2, FiPlus, FiTrash2 } from 'react-icons/fi';
 import type { UserData } from '@aiostreams/core';

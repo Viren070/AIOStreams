@@ -1,8 +1,8 @@
 import React from 'react';
-import { TextInput } from '@/components/ui/text-input';
-import { PasswordInput } from '@/components/ui/password-input';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { PasswordInput } from '@aiostreams/ui/password-input';
+import { Button } from '@aiostreams/ui/button';
+import { Card } from '@aiostreams/ui/card';
 import { login, APIError } from '@/lib/api';
 import { toast } from 'sonner';
 import { useMutation, useQueryClient } from '@tanstack/react-query';

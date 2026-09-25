@@ -17,14 +17,14 @@ import {
   communityItemsQuery,
   myCommunityQuery,
 } from '@/lib/queries';
-import { Button, IconButton } from '../../../ui/button';
-import { TextInput } from '../../../ui/text-input';
-import { Tooltip } from '../../../ui/tooltip';
-import { cn } from '../../../ui/core/styling';
+import { Button, IconButton } from '@aiostreams/ui/button';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { Tooltip } from '@aiostreams/ui/tooltip';
+import { cn } from '@aiostreams/ui/core/styling';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
-} from '../../../shared/confirmation-dialog';
+} from '@aiostreams/ui/shared/confirmation-dialog';
 import { getTemplates } from '../templates';
 import { FormatterCard } from './formatter-card';
 import { ShareFormatterModal } from './share-modal';

@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { TextInput } from '@/components/ui/text-input';
-import { parseDuration, formatDurationMs } from '@/lib/format';
+import { TextInput } from '../text-input';
+import { parseDuration, formatDurationMs } from '../core/format';
 
 export interface DurationInputProps {
   label?: React.ReactNode;

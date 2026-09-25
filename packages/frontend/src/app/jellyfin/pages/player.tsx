@@ -1,10 +1,10 @@
 import React from 'react';
 import { toast } from 'sonner';
 import { BiArrowBack, BiCopy, BiLinkExternal } from 'react-icons/bi';
-import { Button } from '@/components/ui/button';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { copyToClipboard } from '@/utils/clipboard';
-import { cn } from '@/components/ui/core/styling';
+import { Button } from '@aiostreams/ui/button';
+import { LoadingSpinner } from '@aiostreams/ui/loading-spinner';
+import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
+import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '../lib/session';
 import { useItem, usePlaybackInfo, useSegments } from '../lib/queries';
 import { playableSources } from '../lib/use-play';

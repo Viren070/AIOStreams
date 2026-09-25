@@ -1,8 +1,8 @@
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Combobox } from '@/components/ui/combobox';
-import { Skeleton } from '@/components/ui/skeleton';
-import { LuffyError } from '@/components/shared/luffy-error';
+import { Button } from '@aiostreams/ui/button';
+import { Combobox } from '@aiostreams/ui/combobox';
+import { Skeleton } from '@aiostreams/ui/skeleton';
+import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import { useSession } from '../lib/session';
 import {
   useGenres,

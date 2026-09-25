@@ -1,23 +1,23 @@
 import { useEffect, useState } from 'react';
 import { useUserData } from '@/context/userData';
 import { useStatus } from '@/context/status';
-import { useDisclosure } from '@/hooks/disclosure';
+import { useDisclosure } from '@aiostreams/ui/hooks/disclosure';
 import { resolveRegexPatterns, resolveStreamExpressions } from '@/lib/api';
 import { toast } from 'sonner';
-import { cn } from '../../../ui/core/styling';
-import { IconButton } from '../../../ui/button';
-import { Button } from '../../../ui/button';
-import { TextInput } from '../../../ui/text-input';
-import { NumberInput } from '../../../ui/number-input';
-import { Tooltip } from '../../../ui/tooltip';
-import { Modal } from '../../../ui/modal';
-import { Checkbox } from '../../../ui/checkbox';
+import { cn } from '@aiostreams/ui/core/styling';
+import { IconButton } from '@aiostreams/ui/button';
+import { Button } from '@aiostreams/ui/button';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { NumberInput } from '@aiostreams/ui/number-input';
+import { Tooltip } from '@aiostreams/ui/tooltip';
+import { Modal } from '@aiostreams/ui/modal';
+import { Checkbox } from '@aiostreams/ui/checkbox';
 import {
   Disclosure,
   DisclosureItem,
   DisclosureTrigger,
   DisclosureContent,
-} from '../../../ui/disclosure';
+} from '@aiostreams/ui/disclosure';
 import {
   FaRegTrashAlt,
   FaPlus,

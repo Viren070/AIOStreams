@@ -1,13 +1,13 @@
 import React from 'react';
 import { useController, useFormContext } from 'react-hook-form';
 import { BiPlus, BiTrash } from 'react-icons/bi';
-import { TextInput } from '@/components/ui/text-input';
-import { NumberInput } from '@/components/ui/number-input';
-import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
-import { Button, IconButton } from '@/components/ui/button';
-import { BasicField } from '@/components/ui/basic-field';
-import { CheckboxGroup } from '@/components/ui/checkbox';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { NumberInput } from '@aiostreams/ui/number-input';
+import { Switch } from '@aiostreams/ui/switch';
+import { Textarea } from '@aiostreams/ui/textarea';
+import { Button, IconButton } from '@aiostreams/ui/button';
+import { BasicField } from '@aiostreams/ui/basic-field';
+import { CheckboxGroup } from '@aiostreams/ui/checkbox';
 import {
   ItemActions,
   SortableList,
@@ -15,7 +15,7 @@ import {
   rowActionsClass,
   useSortableRows,
 } from '@/components/shared/sortable-rows';
-import { parseDuration, formatDurationMs } from '@/lib/format';
+import { parseDuration, formatDurationMs } from '@aiostreams/ui/core/format';
 import MarkdownLite from '@/components/shared/markdown-lite';
 import type { SettingsUiHint } from '../queries';
 /** Sentinel value that signals "clear this secret" on save. */

@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react';
-import { Modal } from '../ui/modal';
-import { Button } from '../ui/button';
-import { TextInput } from '../ui/text-input';
-import { useDisclosure } from '@/hooks/disclosure';
+import { Modal } from '@aiostreams/ui/modal';
+import { Button } from '@aiostreams/ui/button';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { useDisclosure } from '@aiostreams/ui/hooks/disclosure';
 import { toast } from 'sonner';
 
 export interface ImportModalProps {

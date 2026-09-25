@@ -8,9 +8,9 @@ import {
   CarouselNext,
   CarouselPrevious,
   useCarousel,
-} from '@/components/ui/carousel';
-import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/components/ui/core/styling';
+} from '@aiostreams/ui/carousel';
+import { Skeleton } from '@aiostreams/ui/skeleton';
+import { cn } from '@aiostreams/ui/core/styling';
 import { usePosterSize, type PosterSize } from '../lib/settings';
 
 const ITEM_WIDTH = {

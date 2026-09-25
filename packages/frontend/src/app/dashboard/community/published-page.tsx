@@ -2,16 +2,16 @@ import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { BiSearch, BiTrash, BiReset } from 'react-icons/bi';
 import type { CommunityItem, CommunityKind } from '@aiostreams/core';
-import { Card } from '@/components/ui/card';
-import { Button, IconButton } from '@/components/ui/button';
-import { TextInput } from '@/components/ui/text-input';
-import { Switch } from '@/components/ui/switch';
-import { Tooltip } from '@/components/ui/tooltip';
+import { Card } from '@aiostreams/ui/card';
+import { Button, IconButton } from '@aiostreams/ui/button';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { Switch } from '@aiostreams/ui/switch';
+import { Tooltip } from '@aiostreams/ui/tooltip';
 import { DashboardQueryBoundary } from '@/components/shared/dashboard-query-boundary';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
-} from '@/components/shared/confirmation-dialog';
+} from '@aiostreams/ui/shared/confirmation-dialog';
 import {
   Pill,
   SegmentedControl,

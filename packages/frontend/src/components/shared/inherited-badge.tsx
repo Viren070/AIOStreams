@@ -1,5 +1,5 @@
 import { FiLink } from 'react-icons/fi';
-import { Tooltip } from '@/components/ui/tooltip';
+import { Tooltip } from '@aiostreams/ui/tooltip';
 
 type Props = {
   section:

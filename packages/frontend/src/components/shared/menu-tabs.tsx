@@ -1,13 +1,13 @@
 import * as React from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { useMediaQuery } from '@/hooks/media-query';
-import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
+import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
+import { Tabs, TabsList, TabsTrigger } from '@aiostreams/ui/tabs';
 import {
   Accordion,
   AccordionItem,
   AccordionTrigger,
   AccordionContent,
-} from '../ui/accordion';
+} from '@aiostreams/ui/accordion';
 
 export interface MenuTabItem {
   value: string;

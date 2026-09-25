@@ -1,14 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Bookmark, BookmarkPlus, Check, Pencil, Trash2, X } from 'lucide-react';
 import type { FormatterDefinition } from '../../../../../../core/src/utils/formatter-definitions';
-import { Button, IconButton } from '../../../ui/button';
-import { Popover } from '../../../ui/popover';
-import { TextInput } from '../../../ui/text-input';
-import { Tooltip } from '../../../ui/tooltip';
+import { Button, IconButton } from '@aiostreams/ui/button';
+import { Popover } from '@aiostreams/ui/popover';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { Tooltip } from '@aiostreams/ui/tooltip';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
-} from '../../../shared/confirmation-dialog';
+} from '@aiostreams/ui/shared/confirmation-dialog';
 import { FormatterCard } from './formatter-card';
 import type { CardPreview } from './use-card-previews';
 

@@ -1,8 +1,8 @@
 import React from 'react';
 import { Link } from '@tanstack/react-router';
 import { BiChevronRight } from 'react-icons/bi';
-import { Card } from '@/components/ui/card';
-import { cn } from '@/components/ui/core/styling';
+import { Card } from '@aiostreams/ui/card';
+import { cn } from '@aiostreams/ui/core/styling';
 
 /**
  * An overview widget that is entirely a link through to its full view.

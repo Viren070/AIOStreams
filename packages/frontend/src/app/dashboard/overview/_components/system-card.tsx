@@ -1,6 +1,6 @@
 import { BiChip } from 'react-icons/bi';
-import { cn } from '@/components/ui/core/styling';
-import { formatBytes, formatDuration } from '@/lib/format';
+import { cn } from '@aiostreams/ui/core/styling';
+import { formatBytes, formatDuration } from '@aiostreams/ui/core/format';
 import type { SystemMetrics } from '@/app/dashboard/system/use-system';
 import { OverviewCard } from './overview-card';
 

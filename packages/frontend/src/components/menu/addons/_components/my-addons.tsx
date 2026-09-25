@@ -3,12 +3,12 @@ import { useUserData, removeInvalidPresetReferences } from '@/context/userData';
 import { useStatus } from '@/context/status';
 import { Option } from '@aiostreams/core';
 import { SettingsCard } from '../../../shared/settings-card';
-import { Button, IconButton } from '../../../ui/button';
-import { Switch } from '../../../ui/switch';
-import { Modal } from '../../../ui/modal';
-import { TextInput } from '../../../ui/text-input';
+import { Button, IconButton } from '@aiostreams/ui/button';
+import { Switch } from '@aiostreams/ui/switch';
+import { Modal } from '@aiostreams/ui/modal';
+import { TextInput } from '@aiostreams/ui/text-input';
 import TemplateOption from '../../../shared/template-option';
-import { useDisclosure } from '@/hooks/disclosure';
+import { useDisclosure } from '@aiostreams/ui/hooks/disclosure';
 import { useMode } from '@/context/mode';
 import { toast } from 'sonner';
 import { PlusIcon, SearchIcon } from 'lucide-react';
@@ -31,7 +31,7 @@ import { ReorderModal } from './reorder-modal';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
-} from '../../../shared/confirmation-dialog';
+} from '@aiostreams/ui/shared/confirmation-dialog';
 import * as constants from '../../../../../../core/src/utils/constants';
 
 const manifestCache = new Map<string, any>();

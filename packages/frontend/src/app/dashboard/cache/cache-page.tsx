@@ -3,16 +3,16 @@ import { toast } from 'sonner';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { BiSearchAlt, BiTrash, BiRefresh } from 'react-icons/bi';
 import { PageWrapper } from '@/components/shared/page-wrapper';
-import { Card } from '@/components/ui/card';
-import { Button, IconButton } from '@/components/ui/button';
-import { cn } from '@/components/ui/core/styling';
+import { Card } from '@aiostreams/ui/card';
+import { Button, IconButton } from '@aiostreams/ui/button';
+import { cn } from '@aiostreams/ui/core/styling';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
-} from '@/components/shared/confirmation-dialog';
+} from '@aiostreams/ui/shared/confirmation-dialog';
 import { DashboardQueryBoundary } from '@/components/shared/dashboard-query-boundary';
 import { api } from '@/lib/api';
-import { formatBytes } from '@/lib/format';
+import { formatBytes } from '@aiostreams/ui/core/format';
 
 interface Instance {
   name: string;

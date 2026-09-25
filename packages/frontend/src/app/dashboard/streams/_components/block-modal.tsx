@@ -1,10 +1,10 @@
 import React from 'react';
 import { toast } from 'sonner';
-import { Modal } from '@/components/ui/modal';
-import { Button } from '@/components/ui/button';
-import { TextInput } from '@/components/ui/text-input';
-import { Select } from '@/components/ui/select';
-import { BasicField } from '@/components/ui/basic-field';
+import { Modal } from '@aiostreams/ui/modal';
+import { Button } from '@aiostreams/ui/button';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { Select } from '@aiostreams/ui/select';
+import { BasicField } from '@aiostreams/ui/basic-field';
 import { useCreateStreamBan } from '../queries';
 import { BAN_DURATIONS } from './shared';
 

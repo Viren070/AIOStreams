@@ -1,6 +1,6 @@
 import React from 'react';
-import { Modal } from '@/components/ui/modal';
-import { Button } from '@/components/ui/button';
+import { Modal } from '@aiostreams/ui/modal';
+import { Button } from '@aiostreams/ui/button';
 import {
   ChangelogEntryRow,
   TemplateUpdateChangelogSection,

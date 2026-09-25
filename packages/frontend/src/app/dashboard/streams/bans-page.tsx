@@ -1,12 +1,12 @@
 import React from 'react';
 import { toast } from 'sonner';
 import { BiPlus, BiTrash } from 'react-icons/bi';
-import { Card } from '@/components/ui/card';
-import { Button, IconButton } from '@/components/ui/button';
-import { Modal } from '@/components/ui/modal';
-import { TextInput } from '@/components/ui/text-input';
-import { Select } from '@/components/ui/select';
-import { BasicField } from '@/components/ui/basic-field';
+import { Card } from '@aiostreams/ui/card';
+import { Button, IconButton } from '@aiostreams/ui/button';
+import { Modal } from '@aiostreams/ui/modal';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { Select } from '@aiostreams/ui/select';
+import { BasicField } from '@aiostreams/ui/basic-field';
 import { DashboardQueryBoundary } from '@/components/shared/dashboard-query-boundary';
 import {
   useCreateStreamBan,

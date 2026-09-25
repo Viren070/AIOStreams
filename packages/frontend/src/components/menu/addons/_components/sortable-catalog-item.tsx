@@ -6,18 +6,18 @@ import type {
 } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { IconButton, Button } from '../../../ui/button';
-import { Switch } from '../../../ui/switch';
-import { Modal } from '../../../ui/modal';
-import { TextInput } from '../../../ui/text-input';
-import { NumberInput } from '../../../ui/number-input';
-import { Tooltip } from '../../../ui/tooltip';
+import { IconButton, Button } from '@aiostreams/ui/button';
+import { Switch } from '@aiostreams/ui/switch';
+import { Modal } from '@aiostreams/ui/modal';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { NumberInput } from '@aiostreams/ui/number-input';
+import { Tooltip } from '@aiostreams/ui/tooltip';
 import {
   Accordion,
   AccordionTrigger,
   AccordionContent,
   AccordionItem,
-} from '../../../ui/accordion';
+} from '@aiostreams/ui/accordion';
 import { BiEdit } from 'react-icons/bi';
 import { LuChevronsUp, LuChevronsDown, LuMerge } from 'react-icons/lu';
 import {

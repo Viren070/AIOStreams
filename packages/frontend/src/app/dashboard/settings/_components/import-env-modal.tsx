@@ -1,8 +1,8 @@
 import React from 'react';
 import { toast } from 'sonner';
-import { Modal } from '@/components/ui/modal';
-import { Button } from '@/components/ui/button';
-import { Alert } from '@/components/ui/alert';
+import { Modal } from '@aiostreams/ui/modal';
+import { Button } from '@aiostreams/ui/button';
+import { Alert } from '@aiostreams/ui/alert';
 import { useImportEnv, type SettingsKey } from '../queries';
 import { humanise } from '../tabs.config';
 

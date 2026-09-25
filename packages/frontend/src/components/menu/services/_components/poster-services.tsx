@@ -1,9 +1,9 @@
 import { useUserData } from '@/context/userData';
 import { SettingsCard } from '../../../shared/settings-card';
-import { Select } from '../../../ui/select';
-import { PasswordInput } from '../../../ui/password-input';
-import { TextInput } from '../../../ui/text-input';
-import { Switch } from '../../../ui/switch';
+import { Select } from '@aiostreams/ui/select';
+import { PasswordInput } from '@aiostreams/ui/password-input';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { Switch } from '@aiostreams/ui/switch';
 
 export function PosterServices() {
   const { userData, setUserData } = useUserData();

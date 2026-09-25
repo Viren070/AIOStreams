@@ -3,14 +3,14 @@ import { useNavigate, useSearch } from '@tanstack/react-router';
 import { z } from 'zod';
 import { useWatch, type UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Form } from '@/components/ui/form';
-import { Alert } from '@/components/ui/alert';
-import { Card } from '@/components/ui/card';
-import { cn } from '@/components/ui/core/styling';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@aiostreams/ui/tabs';
+import { Form } from '@aiostreams/ui/form';
+import { Alert } from '@aiostreams/ui/alert';
+import { Card } from '@aiostreams/ui/card';
+import { cn } from '@aiostreams/ui/core/styling';
 import { PageWrapper } from '@/components/shared/page-wrapper';
-import { Spinner } from '@/components/ui/loading-spinner';
-import { LuffyError } from '@/components/shared/luffy-error';
+import { Spinner } from '@aiostreams/ui/loading-spinner';
+import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import {
   useSettings,
   useSaveSettings,

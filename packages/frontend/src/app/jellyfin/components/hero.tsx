@@ -1,8 +1,8 @@
 import React from 'react';
 import { BiInfoCircle, BiPlay, BiSolidStar } from 'react-icons/bi';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/components/ui/core/styling';
+import { Button } from '@aiostreams/ui/button';
+import { Skeleton } from '@aiostreams/ui/skeleton';
+import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '../lib/session';
 import { backdropUrl, landscapeUrl, logoUrl } from '../lib/images';
 import { itemSubtitle, itemTitle, ticksToMs } from '../lib/format';

@@ -3,11 +3,11 @@ import { toast } from 'sonner';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { CommunityItemMine } from '@aiostreams/core';
 import type { FormatterDefinition } from '../../../../../../core/src/utils/formatter-definitions';
-import { Modal } from '../../../ui/modal';
-import { Button } from '../../../ui/button';
-import { TextInput } from '../../../ui/text-input';
-import { Textarea } from '../../../ui/textarea';
-import { BasicField } from '../../../ui/basic-field';
+import { Modal } from '@aiostreams/ui/modal';
+import { Button } from '@aiostreams/ui/button';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { Textarea } from '@aiostreams/ui/textarea';
+import { BasicField } from '@aiostreams/ui/basic-field';
 import {
   submitCommunityFormatter,
   updateCommunityItem,

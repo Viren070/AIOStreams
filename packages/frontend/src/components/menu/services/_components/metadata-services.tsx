@@ -1,7 +1,7 @@
 import { useStatus } from '@/context/status';
 import { useUserData } from '@/context/userData';
 import { SettingsCard } from '../../../shared/settings-card';
-import { PasswordInput } from '../../../ui/password-input';
+import { PasswordInput } from '@aiostreams/ui/password-input';
 
 const INSTANCE_DEFAULT_PLACEHOLDER =
   'Provided by this instance (enter your own to override)';

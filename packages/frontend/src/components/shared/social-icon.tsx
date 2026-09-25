@@ -1,16 +1,16 @@
 import React from 'react';
-import { cn } from '@/components/ui/core/styling';
+import { cn } from '@aiostreams/ui/core/styling';
 import { FiGithub } from 'react-icons/fi';
 import { AiOutlineDiscord } from 'react-icons/ai';
 import { FaPatreon } from 'react-icons/fa6';
 import { SiBuymeacoffee, SiGithubsponsors, SiKofi } from 'react-icons/si';
-import { Tooltip } from '../ui/tooltip';
+import { Tooltip } from '@aiostreams/ui/tooltip';
 import { FaGlobe } from 'react-icons/fa6';
 import { BiDonateHeart } from 'react-icons/bi';
 import {
   useConfirmationDialog,
   ConfirmationDialog,
-} from './confirmation-dialog';
+} from '@aiostreams/ui/shared/confirmation-dialog';
 
 type SocialIconProps = {
   id:

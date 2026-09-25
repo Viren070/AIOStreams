@@ -1,7 +1,7 @@
 import React from 'react';
 import { Option } from '@aiostreams/core';
 import { ChevronDownIcon } from 'lucide-react';
-import { cn } from '../../../ui/core/styling';
+import { cn } from '@aiostreams/ui/core/styling';
 import TemplateOption from '../../template-option';
 import { getVisibleOptions } from '@/lib/templates/processors';
 

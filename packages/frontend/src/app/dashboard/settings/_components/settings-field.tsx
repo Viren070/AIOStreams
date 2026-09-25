@@ -1,12 +1,12 @@
 import React from 'react';
 import { BiLockAlt, BiTrash } from 'react-icons/bi';
 import { useFormContext } from 'react-hook-form';
-import { Alert } from '@/components/ui/alert';
-import { Field } from '@/components/ui/form';
-import { BasicField } from '@/components/ui/basic-field';
-import { PasswordInput } from '@/components/ui/password-input';
-import { Tooltip } from '@/components/ui/tooltip';
-import { IconButton } from '@/components/ui/button';
+import { Alert } from '@aiostreams/ui/alert';
+import { Field } from '@aiostreams/ui/form';
+import { BasicField } from '@aiostreams/ui/basic-field';
+import { PasswordInput } from '@aiostreams/ui/password-input';
+import { Tooltip } from '@aiostreams/ui/tooltip';
+import { IconButton } from '@aiostreams/ui/button';
 import type { SettingsKey } from '../queries';
 import {
   KeyValueListField,

@@ -1,16 +1,16 @@
-import { TextInput } from '../ui/text-input';
-import { NumberInput } from '../ui/number-input';
-import { Switch } from '../ui/switch';
-import { Select } from '../ui/select';
-import { Combobox } from '../ui/combobox';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { NumberInput } from '@aiostreams/ui/number-input';
+import { Switch } from '@aiostreams/ui/switch';
+import { Select } from '@aiostreams/ui/select';
+import { Combobox } from '@aiostreams/ui/combobox';
 import { Option, NNTPServers } from '@aiostreams/core';
 import React, { useState, useEffect } from 'react';
 import MarkdownLite from './markdown-lite';
-import { Alert } from '../ui/alert';
+import { Alert } from '@aiostreams/ui/alert';
 import { SocialIcon } from './social-icon';
-import { PasswordInput } from '../ui/password-input';
-import { Button } from '../ui/button';
-import { IconButton } from '../ui/button';
+import { PasswordInput } from '@aiostreams/ui/password-input';
+import { Button } from '@aiostreams/ui/button';
+import { IconButton } from '@aiostreams/ui/button';
 import {
   FaKey,
   FaChevronUp,
@@ -23,8 +23,8 @@ import {
   FaTrashCan,
 } from 'react-icons/fa6';
 import { BiTestTube } from 'react-icons/bi';
-import { Modal } from '../ui/modal';
-import { Tooltip } from '../ui/tooltip';
+import { Modal } from '@aiostreams/ui/modal';
+import { Tooltip } from '@aiostreams/ui/tooltip';
 import { toast } from 'sonner';
 // this component, accepts an option and returns a component that renders the option.
 // string - TextInput

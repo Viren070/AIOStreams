@@ -3,7 +3,7 @@ import {
   CommandGroup,
   CommandItem,
   CommandShortcut,
-} from '@/components/ui/command/command';
+} from '@aiostreams/ui/command';
 import { useCommandPalette } from '@/context/command-palette';
 import { useQuickActions } from '@/context/quick-actions';
 import { useMode } from '@/context/mode';

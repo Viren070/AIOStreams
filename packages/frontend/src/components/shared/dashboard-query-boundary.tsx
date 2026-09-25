@@ -1,10 +1,10 @@
 import React from 'react';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { BiErrorCircle, BiRefresh } from 'react-icons/bi';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/ui/loading-spinner';
-import { cn } from '@/components/ui/core/styling';
+import { Card } from '@aiostreams/ui/card';
+import { Button } from '@aiostreams/ui/button';
+import { Spinner } from '@aiostreams/ui/loading-spinner';
+import { cn } from '@aiostreams/ui/core/styling';
 
 /**
  * Default loading fallback used when a page doesn't supply a custom skeleton.

@@ -4,14 +4,14 @@ import { FiCopy, FiKey, FiTrash2 } from 'react-icons/fi';
 import type { UserData } from '@aiostreams/core';
 import { useUserData } from '@/context/userData';
 import { APIError, getJellyfinApiKeyToken } from '@/lib/api';
-import { formatDateTime } from '@/lib/format';
-import { copyToClipboard } from '@/utils/clipboard';
-import { Button, IconButton } from '@/components/ui/button';
-import { TextInput } from '@/components/ui/text-input';
+import { formatDateTime } from '@aiostreams/ui/core/format';
+import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
+import { Button, IconButton } from '@aiostreams/ui/button';
+import { TextInput } from '@aiostreams/ui/text-input';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
-} from '../shared/confirmation-dialog';
+} from '@aiostreams/ui/shared/confirmation-dialog';
 
 type ApiKey = NonNullable<NonNullable<UserData['jellyfin']>['apiKeys']>[number];
 

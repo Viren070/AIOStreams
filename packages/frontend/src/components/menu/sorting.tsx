@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import { PageControls } from '../shared/page-controls';
 import { PageWrapper } from '../shared/page-wrapper';
 import { SettingsCard } from '../shared/settings-card';
-import { Combobox } from '../ui/combobox';
+import { Combobox } from '@aiostreams/ui/combobox';
 import { useUserData, useParentInheritance } from '@/context/userData';
 import { InheritedBadge } from '../shared/inherited-badge';
-import { IconButton } from '../ui/button';
+import { IconButton } from '@aiostreams/ui/button';
 import { MenuTabs } from '../shared/menu-tabs';
 import {
   SORT_CRITERIA,
@@ -37,7 +37,7 @@ import {
   Tv,
   Star,
 } from 'lucide-react';
-import { cn } from '../ui/core/styling';
+import { cn } from '@aiostreams/ui/core/styling';
 import type { UserData } from '@aiostreams/core';
 
 type SortCriteriaItem = {

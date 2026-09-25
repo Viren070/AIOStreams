@@ -1,6 +1,6 @@
 import React from 'react';
-import { cn } from '@/components/ui/core/styling';
-import { Spinner } from '@/components/ui/loading-spinner';
+import { cn } from '@aiostreams/ui/core/styling';
+import { Spinner } from '@aiostreams/ui/loading-spinner';
 import { TextGenerateEffect } from './text-generate-effect';
 
 /**

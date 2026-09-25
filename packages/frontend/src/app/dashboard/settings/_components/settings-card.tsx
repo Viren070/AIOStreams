@@ -1,6 +1,6 @@
 import React from 'react';
-import { Card } from '@/components/ui/card';
-import { cn } from '@/components/ui/core/styling';
+import { Card } from '@aiostreams/ui/card';
+import { cn } from '@aiostreams/ui/core/styling';
 import type { IconType } from 'react-icons';
 
 export function SettingsNavCard({ children }: { children: React.ReactNode }) {

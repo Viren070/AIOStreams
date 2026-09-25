@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 import * as constants from '../../../../../../../core/src/utils/constants';
 import { ParsedFile } from '../../../../../../../core/src/db/schemas';
-import { IconButton, Button } from '../../../../ui/button';
-import { TextInput } from '../../../../ui/text-input';
-import { Textarea } from '../../../../ui/textarea';
-import { cn } from '../../../../ui/core/styling';
-import { Select } from '../../../../ui/select';
-import { Combobox } from '../../../../ui/combobox';
+import { IconButton, Button } from '@aiostreams/ui/button';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { Textarea } from '@aiostreams/ui/textarea';
+import { cn } from '@aiostreams/ui/core/styling';
+import { Select } from '@aiostreams/ui/select';
+import { Combobox } from '@aiostreams/ui/combobox';
 import {
   AdvancedFields,
   FieldGrid,

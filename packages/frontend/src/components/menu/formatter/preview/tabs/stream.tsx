@@ -1,5 +1,5 @@
 import * as constants from '../../../../../../../core/src/utils/constants';
-import { formatBytes, formatBitrate } from '@/lib/format';
+import { formatBytes, formatBitrate } from '@aiostreams/ui/core/format';
 import { deriveBitrate, isValidUrl, PreviewInput } from '../state';
 import {
   AdvancedFields,

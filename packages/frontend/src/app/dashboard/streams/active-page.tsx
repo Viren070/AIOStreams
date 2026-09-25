@@ -1,9 +1,9 @@
 import React from 'react';
-import { Card } from '@/components/ui/card';
-import { Stat } from '@/components/ui/charts';
+import { Card } from '@aiostreams/ui/card';
+import { Stat } from '@aiostreams/ui/charts';
 import { DashboardQueryBoundary } from '@/components/shared/dashboard-query-boundary';
 import { AnimatedNumber } from '@/components/shared/animated-number';
-import { formatSpeed } from '@/lib/format';
+import { formatSpeed } from '@aiostreams/ui/core/format';
 import { useLiveStreams, liveFrameMs } from './queries';
 import { StreamRow } from './_components/stream-row';
 import { BlockModal, type BlockTarget } from './_components/block-modal';

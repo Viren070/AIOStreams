@@ -1,5 +1,9 @@
 import { BiCloudDownload } from 'react-icons/bi';
-import { formatCompact, formatPercent, formatSpeed } from '@/lib/format';
+import {
+  formatCompact,
+  formatPercent,
+  formatSpeed,
+} from '@aiostreams/ui/core/format';
 import type { LiveStats } from '@/app/dashboard/usenet/queries';
 import { OverviewCard } from './overview-card';
 

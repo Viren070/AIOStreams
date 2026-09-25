@@ -1,4 +1,4 @@
-import { Card } from '@/components/ui/card';
+import { Card } from '@aiostreams/ui/card';
 import { DashboardLoading } from '@/components/shared/dashboard-query-boundary';
 import { ProviderEditor } from './_components/provider-editor';
 import { useUsenetProviders } from './queries';

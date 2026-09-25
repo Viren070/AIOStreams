@@ -1,7 +1,7 @@
 import { BiSearch } from 'react-icons/bi';
-import { cn } from '@/components/ui/core/styling';
-import { useAppSidebarContext } from '@/components/ui/app-layout';
-import { Tooltip } from '@/components/ui/tooltip';
+import { cn } from '@aiostreams/ui/core/styling';
+import { useAppSidebarContext } from '@aiostreams/ui/app-layout';
+import { Tooltip } from '@aiostreams/ui/tooltip';
 
 const APPLE_PLATFORM = /mac|ios|iphone|ipad|ipod/i;
 

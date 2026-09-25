@@ -2,11 +2,11 @@ import React from 'react';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { BiCopy, BiLinkAlt } from 'react-icons/bi';
-import { Modal } from '@/components/ui/modal';
-import { Button, IconButton } from '@/components/ui/button';
-import { Form, Field } from '@/components/ui/form';
+import { Modal } from '@aiostreams/ui/modal';
+import { Button, IconButton } from '@aiostreams/ui/button';
+import { Form, Field } from '@aiostreams/ui/form';
 import { KeyValueListField } from '../../settings/_components/custom-fields';
-import { copyToClipboard } from '@/utils/clipboard';
+import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
 import { useGenerateProxyLink } from '../queries';
 
 const HISTORY_KEY = 'aiostreams.proxy.generated';

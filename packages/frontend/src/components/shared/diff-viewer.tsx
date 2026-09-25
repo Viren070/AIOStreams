@@ -7,9 +7,9 @@ import React, {
 } from 'react';
 import { DiffItem, formatValue } from '../../utils/diff/diff';
 import { calculateLineDiff, LineDiff } from '../../utils/diff/text';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@aiostreams/ui/tabs';
 import { ChevronUp, ChevronDown } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@aiostreams/ui/button';
 import { toast } from 'sonner';
 
 export interface DiffAnnotation {

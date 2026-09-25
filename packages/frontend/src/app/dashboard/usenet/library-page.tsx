@@ -25,32 +25,32 @@ import {
   BiRefresh,
   BiDotsVerticalRounded,
 } from 'react-icons/bi';
-import { Card } from '@/components/ui/card';
-import { Button, IconButton } from '@/components/ui/button';
-import { TextInput } from '@/components/ui/text-input';
-import { Select } from '@/components/ui/select';
-import { Tooltip } from '@/components/ui/tooltip';
+import { Card } from '@aiostreams/ui/card';
+import { Button, IconButton } from '@aiostreams/ui/button';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { Select } from '@aiostreams/ui/select';
+import { Tooltip } from '@aiostreams/ui/tooltip';
 import {
   DropdownMenu,
   DropdownMenuItem,
   DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
-import { SimpleDropzone } from '@/components/ui/simple-dropzone';
+} from '@aiostreams/ui/dropdown-menu';
+import { SimpleDropzone } from '@aiostreams/ui/simple-dropzone';
 import {
   Pagination,
   PaginationEllipsis,
   PaginationItem,
   PaginationTrigger,
   pageWindow,
-} from '@/components/ui/pagination';
-import { cn } from '@/components/ui/core/styling';
-import { useDebounce } from '@/hooks/debounce';
-import { useMediaQuery } from '@/hooks/media-query';
+} from '@aiostreams/ui/pagination';
+import { cn } from '@aiostreams/ui/core/styling';
+import { useDebounce } from '@aiostreams/ui/hooks/debounce';
+import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
 import { DashboardQueryBoundary } from '@/components/shared/dashboard-query-boundary';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
-} from '@/components/shared/confirmation-dialog';
+} from '@aiostreams/ui/shared/confirmation-dialog';
 import {
   useUsenetLibrary,
   useUsenetLibraryStream,
@@ -73,7 +73,7 @@ import {
 import { NzbBrowser } from './_components/nzb-browser';
 import { EntryInfoModal } from './_components/entry-info-modal';
 import { SettingsPageHeader } from '../settings/_components/settings-card';
-import { formatBytes } from '@/lib/format';
+import { formatBytes } from '@aiostreams/ui/core/format';
 
 const STATUS_STYLE: Record<LibraryStatus, string> = {
   queued: 'bg-[--subtle] text-[--muted]',

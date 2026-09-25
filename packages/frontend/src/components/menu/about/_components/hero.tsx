@@ -1,6 +1,6 @@
 import React from 'react';
 import { PencilIcon, HeartIcon, LogInIcon, LogOutIcon } from 'lucide-react';
-import { Button, IconButton } from '@/components/ui/button';
+import { Button, IconButton } from '@aiostreams/ui/button';
 
 export function AboutHero({
   addonName,

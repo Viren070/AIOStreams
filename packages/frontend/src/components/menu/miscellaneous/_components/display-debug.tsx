@@ -1,8 +1,8 @@
 import { useUserData } from '@/context/userData';
 import { SettingsCard } from '../../../shared/settings-card';
-import { Switch } from '../../../ui/switch';
-import { Select } from '../../../ui/select';
-import { Combobox } from '../../../ui/combobox';
+import { Switch } from '@aiostreams/ui/switch';
+import { Select } from '@aiostreams/ui/select';
+import { Combobox } from '@aiostreams/ui/combobox';
 import { RESOURCES } from '../../../../../../core/src/utils/constants';
 
 export function DisplayDebug() {

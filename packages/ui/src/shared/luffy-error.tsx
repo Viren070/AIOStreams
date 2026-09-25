@@ -1,5 +1,5 @@
-import { Button } from '@/components/ui/button/button';
-import { cn } from '@/components/ui/core/styling';
+import { Button } from '../button';
+import { cn } from '../core/styling';
 import React from 'react';
 
 interface LuffyErrorProps {

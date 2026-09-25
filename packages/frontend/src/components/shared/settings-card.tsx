@@ -4,8 +4,8 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { cn } from '@/components/ui/core/styling';
+} from '@aiostreams/ui/card';
+import { cn } from '@aiostreams/ui/core/styling';
 import React, { useRef, useState } from 'react';
 
 type SettingsCardProps = {

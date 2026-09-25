@@ -1,6 +1,6 @@
 import React from 'react';
 import { LuPlus, LuX } from 'react-icons/lu';
-import { IconButton } from '@/components/ui/button';
+import { IconButton } from '@aiostreams/ui/button';
 import { buildManifestUrl } from '@/lib/manifest-url';
 import {
   VariantPills,

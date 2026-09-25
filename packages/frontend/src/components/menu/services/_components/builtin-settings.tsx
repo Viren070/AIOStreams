@@ -1,11 +1,11 @@
 import { useStatus } from '@/context/status';
 import { useUserData } from '@/context/userData';
 import { SettingsCard } from '../../../shared/settings-card';
-import { Switch } from '../../../ui/switch';
-import { Select } from '../../../ui/select';
-import { Combobox } from '../../../ui/combobox';
-import { NumberInput } from '../../../ui/number-input/number-input';
-import { DurationInput } from '../../../ui/duration-input';
+import { Switch } from '@aiostreams/ui/switch';
+import { Select } from '@aiostreams/ui/select';
+import { Combobox } from '@aiostreams/ui/combobox';
+import { NumberInput } from '@aiostreams/ui/number-input';
+import { DurationInput } from '@aiostreams/ui/duration-input';
 import {
   ServiceId,
   BUILTIN_SUPPORTED_SERVICES,

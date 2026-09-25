@@ -3,22 +3,22 @@ import { toast } from 'sonner';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { BiTrash, BiSearch, BiInfoCircle } from 'react-icons/bi';
 import { PageWrapper } from '@/components/shared/page-wrapper';
-import { Card } from '@/components/ui/card';
-import { Button, IconButton } from '@/components/ui/button';
-import { TextInput } from '@/components/ui/text-input';
-import { NumberInput } from '@/components/ui/number-input';
-import { Select } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Modal } from '@/components/ui/modal';
+import { Card } from '@aiostreams/ui/card';
+import { Button, IconButton } from '@aiostreams/ui/button';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { NumberInput } from '@aiostreams/ui/number-input';
+import { Select } from '@aiostreams/ui/select';
+import { Checkbox } from '@aiostreams/ui/checkbox';
+import { Modal } from '@aiostreams/ui/modal';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
-} from '@/components/shared/confirmation-dialog';
+} from '@aiostreams/ui/shared/confirmation-dialog';
 import { DashboardQueryBoundary } from '@/components/shared/dashboard-query-boundary';
-import { useDebounce } from '@/hooks/debounce';
+import { useDebounce } from '@aiostreams/ui/hooks/debounce';
 import { api } from '@/lib/api';
-import { formatDateTime } from '@/lib/format';
-import { copyToClipboard } from '@/utils/clipboard';
+import { formatDateTime } from '@aiostreams/ui/core/format';
+import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
 
 interface UserItem {
   uuid: string;

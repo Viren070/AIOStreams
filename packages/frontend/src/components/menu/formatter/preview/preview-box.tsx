@@ -1,4 +1,4 @@
-import { cn } from '../../../ui/core/styling';
+import { cn } from '@aiostreams/ui/core/styling';
 
 export function FormatterPreviewBox({
   name,

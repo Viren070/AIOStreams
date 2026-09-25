@@ -13,12 +13,12 @@ import { collectFieldReferences } from '../../../../../../core/src/formatters/en
 import { useUserData } from '@/context/userData';
 import { useStatus } from '@/context/status';
 import { renderFormatter } from '@/lib/formatter-render';
-import { cn } from '../../../ui/core/styling';
+import { cn } from '@aiostreams/ui/core/styling';
 import { SettingsCard } from '../../../shared/settings-card';
 import { MenuTabs } from '../../../shared/menu-tabs';
-import { IconButton } from '../../../ui/button';
-import { Select } from '../../../ui/select';
-import { Tooltip } from '../../../ui/tooltip';
+import { IconButton } from '@aiostreams/ui/button';
+import { Select } from '@aiostreams/ui/select';
+import { Tooltip } from '@aiostreams/ui/tooltip';
 import { FormatQueue } from '../format-queue';
 import { getTemplates } from '../templates';
 import { PreviewFieldsProvider } from './fields';

@@ -25,6 +25,7 @@ COPY package*.json ./
 COPY packages/server/package*.json ./packages/server/
 COPY packages/core/package*.json ./packages/core/
 COPY packages/frontend/package*.json ./packages/frontend/
+COPY packages/ui/package*.json ./packages/ui/
 COPY packages/seanime-extensions/package*.json ./packages/seanime-extensions/
 COPY packages/crypto/package*.json ./packages/crypto/
 COPY pnpm-workspace.yaml ./pnpm-workspace.yaml
@@ -40,6 +41,7 @@ COPY tsconfig.*json ./
 COPY packages/server ./packages/server
 COPY packages/core ./packages/core
 COPY packages/frontend ./packages/frontend
+COPY packages/ui ./packages/ui
 COPY packages/seanime-extensions ./packages/seanime-extensions
 COPY packages/crypto ./packages/crypto
 COPY scripts ./scripts
@@ -54,6 +56,7 @@ RUN rm -rf node_modules
 RUN rm -rf packages/core/node_modules
 RUN rm -rf packages/server/node_modules
 RUN rm -rf packages/frontend/node_modules
+RUN rm -rf packages/ui/node_modules
 RUN rm -rf packages/seanime-extensions/node_modules
 
 RUN pnpm install --prod --frozen-lockfile

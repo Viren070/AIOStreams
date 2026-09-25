@@ -1,6 +1,6 @@
-import { IconButton } from '@/components/ui/button';
-import { cn } from '@/components/ui/core/styling';
-import { useDebounce } from '@/hooks/debounce';
+import { IconButton } from '../button';
+import { cn } from '../core/styling';
+import { useDebounce } from '../hooks/debounce';
 import { colord } from 'colord';
 import React, { forwardRef, useMemo } from 'react';
 import { HexColorPicker } from 'react-colorful';

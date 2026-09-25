@@ -16,20 +16,20 @@ import {
   AppLayoutContent,
   AppLayoutSidebar,
   AppSidebarProvider,
-} from '@/components/ui/app-layout';
+} from '@aiostreams/ui/app-layout';
 import {
   DropdownMenu,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
-import { Sidebar, type SidebarItem } from '@/components/sidebar/Sidebar';
+} from '@aiostreams/ui/dropdown-menu';
+import { Sidebar, type SidebarItem } from '@aiostreams/ui/shared/sidebar';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
-} from '@/components/shared/confirmation-dialog';
-import { useDisclosure } from '@/hooks/disclosure';
-import { cn } from '@/components/ui/core/styling';
+} from '@aiostreams/ui/shared/confirmation-dialog';
+import { useDisclosure } from '@aiostreams/ui/hooks/disclosure';
+import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '../lib/session';
 import { usePickableUsers } from '../lib/queries';
 import { navigate, to } from '../lib/paths';

@@ -1,6 +1,6 @@
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { TextInput } from '@/components/ui/text-input';
+import { Button } from '@aiostreams/ui/button';
+import { TextInput } from '@aiostreams/ui/text-input';
 import { applyMigrations, useUserData } from '@/context/userData';
 import {
   createUserConfig,
@@ -16,7 +16,7 @@ import { JellyfinApiKeys } from './jellyfin-api-keys';
 import { JellyfinPersonas } from './jellyfin-personas';
 import { JellyfinTrackers } from './jellyfin-trackers';
 import { PageWrapper } from '@/components/shared/page-wrapper';
-import { Alert } from '@/components/ui/alert';
+import { Alert } from '@aiostreams/ui/alert';
 import { SettingsCard } from '../shared/settings-card';
 import { toast } from 'sonner';
 import {
@@ -35,27 +35,27 @@ import {
 } from 'lucide-react';
 import { LuSquareCheck, LuSquareMinus, LuWand } from 'react-icons/lu';
 import { AnimatePresence, motion } from 'motion/react';
-import { Checkbox, CheckboxGroup } from '@/components/ui/checkbox';
-import { IconButton } from '@/components/ui/button';
+import { Checkbox, CheckboxGroup } from '@aiostreams/ui/checkbox';
+import { IconButton } from '@aiostreams/ui/button';
 import { useStatus } from '@/context/status';
 import { BiCopy } from 'react-icons/bi';
-import { copyToClipboard } from '@/utils/clipboard';
+import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
 import { PageControls } from '../shared/page-controls';
-import { useDisclosure } from '@/hooks/disclosure';
-import { Modal } from '../ui/modal';
+import { useDisclosure } from '@aiostreams/ui/hooks/disclosure';
+import { Modal } from '@aiostreams/ui/modal';
 import { MenuTabs } from '../shared/menu-tabs';
-import { Select } from '../ui/select';
-import { Switch } from '../ui/switch';
-import { NumberInput } from '../ui/number-input';
+import { Select } from '@aiostreams/ui/select';
+import { Switch } from '@aiostreams/ui/switch';
+import { NumberInput } from '@aiostreams/ui/number-input';
 import { TemplateExportModal } from '../shared/templates/export-modal';
 import { ConfigTemplatesModal } from '../shared/templates';
-import { PasswordInput } from '../ui/password-input';
+import { PasswordInput } from '@aiostreams/ui/password-input';
 import { useMenu } from '@/context/menu';
 import { variantSelectionFromLocation } from '@/lib/manifest-url';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
-} from '../shared/confirmation-dialog';
+} from '@aiostreams/ui/shared/confirmation-dialog';
 import { UserData, VariantSelectorLocation } from '@aiostreams/core';
 import { sanitiseTemplateConfig } from '../../../../core/src/utils/template-sanitise';
 import { useSave } from '@/context/save';

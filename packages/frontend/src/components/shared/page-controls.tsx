@@ -1,4 +1,4 @@
-import { Button, IconButton } from '../ui/button';
+import { Button, IconButton } from '@aiostreams/ui/button';
 import { useMenu } from '@/context/menu';
 import { FaArrowLeft, FaArrowRight } from 'react-icons/fa6';
 import { BiLogInCircle, BiLogOutCircle, BiSave } from 'react-icons/bi';

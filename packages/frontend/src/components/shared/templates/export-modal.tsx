@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Modal } from '../../ui/modal';
-import { Button } from '../../ui/button';
-import { Alert } from '../../ui/alert';
+import { Modal } from '@aiostreams/ui/modal';
+import { Button } from '@aiostreams/ui/button';
+import { Alert } from '@aiostreams/ui/alert';
 import { toast } from 'sonner';
 import { StatusResponse, Template, UserData } from '@aiostreams/core';
 import { redactPresetOptions } from '../../../../../core/src/utils/template-sanitise';
 import { useStatus } from '@/context/status';
 import { MAX_COMMUNITY_TAGS, parseTags } from '@/lib/tags';
-import { TextInput } from '../../ui/text-input';
-import { Textarea } from '../../ui/textarea';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { Textarea } from '@aiostreams/ui/textarea';
 
 export interface TemplateExportModalProps {
   open: boolean;

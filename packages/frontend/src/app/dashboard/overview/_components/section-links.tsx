@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router';
-import { Card } from '@/components/ui/card';
+import { Card } from '@aiostreams/ui/card';
 import { NAV, SECTIONED, sectionHref } from '@/app/dashboard/nav';
 
 const CHIP_CLASS =

@@ -1,13 +1,17 @@
 import React from 'react';
 import { toast } from 'sonner';
 import { BiCopy, BiHide, BiShow } from 'react-icons/bi';
-import { Modal } from '@/components/ui/modal';
-import { IconButton } from '@/components/ui/button';
-import { Tooltip } from '@/components/ui/tooltip';
-import { cn } from '@/components/ui/core/styling';
-import { copyToClipboard } from '@/utils/clipboard';
+import { Modal } from '@aiostreams/ui/modal';
+import { IconButton } from '@aiostreams/ui/button';
+import { Tooltip } from '@aiostreams/ui/tooltip';
+import { cn } from '@aiostreams/ui/core/styling';
+import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
 import { releaseBlocklistKeys, type LibraryEntry } from '../queries';
-import { formatBytes, formatDateTime, formatLatency } from '@/lib/format';
+import {
+  formatBytes,
+  formatDateTime,
+  formatLatency,
+} from '@aiostreams/ui/core/format';
 
 function copy(text: string, label: string) {
   void copyToClipboard(text, {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { StatusResponse, ServiceId } from '@aiostreams/core';
 import { CheckIcon } from 'lucide-react';
-import { cn } from '../../../ui/core/styling';
+import { cn } from '@aiostreams/ui/core/styling';
 import MarkdownLite from '../../markdown-lite';
 import { ServiceLogo } from '../../service-logo';
 import { SERVICE_GROUPS, serviceInGroup } from '@/lib/services';

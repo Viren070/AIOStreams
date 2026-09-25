@@ -8,7 +8,7 @@ import {
 } from '../basic-field';
 import { cn, ComponentAnatomy, defineStyleAnatomy } from '../core/styling';
 import { mergeRefs } from '../core/utils';
-import { Popover } from '@/components/ui/popover';
+import { Popover } from '../popover';
 import { AiOutlineExclamationCircle } from 'react-icons/ai';
 
 /* -------------------------------------------------------------------------------------------------

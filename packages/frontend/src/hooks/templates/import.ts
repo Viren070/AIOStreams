@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Template, StatusResponse } from '@aiostreams/core';
-import { useConfirmationDialog } from '@/components/shared/confirmation-dialog';
+import { useConfirmationDialog } from '@aiostreams/ui/shared/confirmation-dialog';
 import { TemplateValidation } from '@/lib/templates/types';
 import {
   getLocalStorageTemplates,

@@ -12,13 +12,13 @@ import {
   BiRefresh,
   BiSearch,
 } from 'react-icons/bi';
-import { Button, IconButton } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { Modal } from '@/components/ui/modal';
-import { Skeleton } from '@/components/ui/skeleton';
-import { TextInput } from '@/components/ui/text-input';
-import { Tooltip } from '@/components/ui/tooltip';
-import { copyToClipboard } from '@/utils/clipboard';
+import { Button, IconButton } from '@aiostreams/ui/button';
+import { DropdownMenu, DropdownMenuItem } from '@aiostreams/ui/dropdown-menu';
+import { Modal } from '@aiostreams/ui/modal';
+import { Skeleton } from '@aiostreams/ui/skeleton';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { Tooltip } from '@aiostreams/ui/tooltip';
+import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
 import { useSession } from '../lib/session';
 import {
   usePlaybackInfo,
@@ -32,7 +32,7 @@ import {
 } from '../lib/playback';
 import { noticeSources, playableSources, usePlay } from '../lib/use-play';
 import { clock, itemSubtitle, itemTitle } from '../lib/format';
-import { cn } from '@/components/ui/core/styling';
+import { cn } from '@aiostreams/ui/core/styling';
 import { backdropUrl, landscapeUrl } from '../lib/images';
 import { itemPath, navigate } from '../lib/paths';
 import type { BaseItemDto, SourceInfo } from '../lib/types';

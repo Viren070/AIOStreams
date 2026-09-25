@@ -9,7 +9,7 @@ import {
 import { CloseButton, IconButton } from '../button';
 import { cn, ComponentAnatomy, defineStyleAnatomy } from '../core/styling';
 import { hiddenInputStyles } from '../input';
-import { formatBytes } from '@/lib/format';
+import { formatBytes } from '../core/format';
 
 /* -------------------------------------------------------------------------------------------------
  * Anatomy

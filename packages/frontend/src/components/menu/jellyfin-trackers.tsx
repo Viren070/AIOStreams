@@ -3,11 +3,11 @@ import { useQuery } from '@tanstack/react-query';
 import { ArrowDownLeft, ArrowUpRight, History } from 'lucide-react';
 import { FiExternalLink } from 'react-icons/fi';
 import { useUserData } from '@/context/userData';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@aiostreams/ui/button';
+import { Skeleton } from '@aiostreams/ui/skeleton';
 import { watchStateTrackersQuery } from '@/lib/queries';
 import { DOCS_BASE_URL } from '@/lib/changelog';
-import { relativeTime } from '@/lib/format';
+import { relativeTime } from '@aiostreams/ui/core/format';
 import type { TrackerExchange, WatchStateTracker } from '@/lib/api';
 
 const RESOURCE_DOCS_URL = `${DOCS_BASE_URL}/reference/addon-protocol/watch-state`;

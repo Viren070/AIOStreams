@@ -3,14 +3,14 @@ import { toast } from 'sonner';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FileJson, Trash2, Undo2, Upload } from 'lucide-react';
 import type { CommunityItemMine, UserData } from '@aiostreams/core';
-import { Modal } from '../../ui/modal';
-import { Button, IconButton } from '../../ui/button';
-import { Tooltip } from '../../ui/tooltip';
-import { cn } from '../../ui/core/styling';
+import { Modal } from '@aiostreams/ui/modal';
+import { Button, IconButton } from '@aiostreams/ui/button';
+import { Tooltip } from '@aiostreams/ui/tooltip';
+import { cn } from '@aiostreams/ui/core/styling';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
-} from '../confirmation-dialog';
+} from '@aiostreams/ui/shared/confirmation-dialog';
 import { useStatus } from '@/context/status';
 import {
   deleteCommunityItem,

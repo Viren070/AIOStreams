@@ -1,6 +1,6 @@
 import React from 'react';
 import { ServiceId } from '@aiostreams/core';
-import { cn } from '@/components/ui/core/styling';
+import { cn } from '@aiostreams/ui/core/styling';
 import { SERVICE_LOGO_MAP } from '@/lib/services';
 
 export function ServiceLogo({

@@ -1,5 +1,5 @@
-import { cn } from '@/components/ui/core/styling';
-import { formatBytes } from '@/lib/format';
+import { cn } from '@aiostreams/ui/core/styling';
+import { formatBytes } from '@aiostreams/ui/core/format';
 import type { BandwidthOverview } from '../queries';
 
 const DAY_MS = 86_400_000;

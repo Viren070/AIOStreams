@@ -19,13 +19,13 @@ import {
   TouchSensor,
   useSensor,
 } from '@dnd-kit/core';
-import { Button, IconButton } from '../../../ui/button';
+import { Button, IconButton } from '@aiostreams/ui/button';
 import { FiSettings, FiSearch } from 'react-icons/fi';
-import { TextInput } from '../../../ui/text-input';
-import { cn } from '../../../ui/core/styling';
-import { Switch } from '../../../ui/switch';
-import { Modal } from '../../../ui/modal';
-import { Alert } from '../../../ui/alert';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { cn } from '@aiostreams/ui/core/styling';
+import { Switch } from '@aiostreams/ui/switch';
+import { Modal } from '@aiostreams/ui/modal';
+import { Alert } from '@aiostreams/ui/alert';
 import TemplateOption from '../../../shared/template-option';
 import MarkdownLite from '../../../shared/markdown-lite';
 import { StatusResponse, UserData } from '@aiostreams/core';

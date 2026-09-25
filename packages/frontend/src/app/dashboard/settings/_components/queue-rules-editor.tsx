@@ -1,9 +1,9 @@
 import React from 'react';
-import { Card } from '@/components/ui/card';
-import { Select } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Spinner } from '@/components/ui/loading-spinner';
-import { cn } from '@/components/ui/core/styling';
+import { Card } from '@aiostreams/ui/card';
+import { Select } from '@aiostreams/ui/select';
+import { Switch } from '@aiostreams/ui/switch';
+import { Spinner } from '@aiostreams/ui/loading-spinner';
+import { cn } from '@aiostreams/ui/core/styling';
 import {
   useQueueCleanupRules,
   useSaveQueueCleanupRules,

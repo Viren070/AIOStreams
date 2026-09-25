@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import type { CommunityItem, TemplateReviewSummary } from '@aiostreams/core';
-import { Modal } from '@/components/ui/modal';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { Modal } from '@aiostreams/ui/modal';
+import { Button } from '@aiostreams/ui/button';
+import { Textarea } from '@aiostreams/ui/textarea';
 import { Pill } from '@/app/dashboard/streams/_components/shared';
 
 export function KindPill({ kind }: { kind: CommunityItem['kind'] }) {

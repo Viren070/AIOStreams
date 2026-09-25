@@ -10,7 +10,7 @@ import { AiOutlineDiscord } from 'react-icons/ai';
 import { FiGithub } from 'react-icons/fi';
 import { FaChevronRight } from 'react-icons/fa';
 import { GlowCard } from '@/components/shared/glow-card';
-import { cn } from '@/components/ui/core/styling';
+import { cn } from '@aiostreams/ui/core/styling';
 import { DOCS_BASE_URL, DOCS_CHANGELOG_URL } from '@/lib/changelog';
 
 interface ResourceRowProps {

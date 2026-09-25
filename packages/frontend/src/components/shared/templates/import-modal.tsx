@@ -1,12 +1,12 @@
 import React from 'react';
 import { Template, StatusResponse } from '@aiostreams/core';
 import { BiImport } from 'react-icons/bi';
-import { Modal } from '../../ui/modal';
-import { Button } from '../../ui/button';
-import { TextInput } from '../../ui/text-input';
-import { Alert } from '../../ui/alert';
+import { Modal } from '@aiostreams/ui/modal';
+import { Button } from '@aiostreams/ui/button';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { Alert } from '@aiostreams/ui/alert';
 import MarkdownLite from '../markdown-lite';
-import { cn } from '../../ui/core/styling';
+import { cn } from '@aiostreams/ui/core/styling';
 import * as constants from '../../../../../core/src/utils/constants';
 
 interface TemplateImportModalProps {

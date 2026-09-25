@@ -1,10 +1,10 @@
 import { SNIPPETS } from '../../../../../core/src/utils/constants';
-import { useDisclosure } from '@/hooks/disclosure';
-import { Button } from '../../ui/button';
-import { Modal } from '@/components/ui/modal';
+import { useDisclosure } from '@aiostreams/ui/hooks/disclosure';
+import { Button } from '@aiostreams/ui/button';
+import { Modal } from '@aiostreams/ui/modal';
 import { CopyIcon, PlusIcon } from 'lucide-react';
 import { toast } from 'sonner';
-import { copyToClipboard } from '@/utils/clipboard';
+import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
 
 export function SnippetsButton({
   onInsert,

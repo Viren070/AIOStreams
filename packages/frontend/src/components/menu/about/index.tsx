@@ -5,7 +5,7 @@ import { PageWrapper } from '@/components/shared/page-wrapper';
 import { SettingsCard } from '@/components/shared/settings-card';
 import { DonationModal } from '@/components/shared/donation-modal';
 import { ConfigTemplatesModal } from '@/components/shared/templates';
-import { useDisclosure } from '@/hooks/disclosure';
+import { useDisclosure } from '@aiostreams/ui/hooks/disclosure';
 import { useStatus } from '@/context/status';
 import { useUserData } from '@/context/userData';
 import { useMenu } from '@/context/menu';

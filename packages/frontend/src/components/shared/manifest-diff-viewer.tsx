@@ -4,7 +4,7 @@ import {
   computeManifestDiff,
   manifestValueFormatter,
 } from '../../utils/diff/manifest';
-import { Alert } from '../ui/alert';
+import { Alert } from '@aiostreams/ui/alert';
 
 interface ManifestDiffViewerProps {
   oldManifest: any;

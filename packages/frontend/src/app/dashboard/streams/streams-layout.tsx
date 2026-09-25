@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { PageWrapper } from '@/components/shared/page-wrapper';
 import { SectionNavSelect } from '@/components/shared/section-nav-select';
 import { AnimatedNumber } from '@/components/shared/animated-number';
-import { formatSpeed } from '@/lib/format';
+import { formatSpeed } from '@aiostreams/ui/core/format';
 import {
   STREAMS_SECTIONS,
   DEFAULT_STREAMS_SECTION,

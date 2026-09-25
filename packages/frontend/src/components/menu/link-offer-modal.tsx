@@ -1,10 +1,10 @@
 import React from 'react';
 import { toast } from 'sonner';
 import { LuCheck, LuRefreshCw } from 'react-icons/lu';
-import { Button } from '@/components/ui/button';
-import { Modal } from '@/components/ui/modal';
-import { Alert } from '@/components/ui/alert';
-import { Select } from '@/components/ui/select';
+import { Button } from '@aiostreams/ui/button';
+import { Modal } from '@aiostreams/ui/modal';
+import { Alert } from '@aiostreams/ui/alert';
+import { Select } from '@aiostreams/ui/select';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   linkedAccountPlatformsQuery,

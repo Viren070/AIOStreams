@@ -1,9 +1,9 @@
 import React from 'react';
-import { Modal } from '@/components/ui/modal';
-import { Combobox } from '@/components/ui/combobox';
-import { Select } from '@/components/ui/select';
-import { TextInput } from '@/components/ui/text-input';
-import { Button } from '@/components/ui/button';
+import { Modal } from '@aiostreams/ui/modal';
+import { Combobox } from '@aiostreams/ui/combobox';
+import { Select } from '@aiostreams/ui/select';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { Button } from '@aiostreams/ui/button';
 import { useViews } from '../lib/queries';
 import { libraryLabel } from '../lib/format';
 import {

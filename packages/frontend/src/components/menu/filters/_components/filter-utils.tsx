@@ -1,4 +1,4 @@
-import { cn } from '../../../ui/core/styling';
+import { cn } from '@aiostreams/ui/core/styling';
 import { PageControls } from '../../../shared/page-controls';
 import {
   RESOLUTIONS,

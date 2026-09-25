@@ -9,11 +9,11 @@ import {
   type UserAnalyticsResponse,
   type UserAnalyticsAddon,
 } from '@/lib/api';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Alert } from '@/components/ui/alert';
-import { Card, CardContent } from '../ui/card';
-import { cn } from '../ui/core/styling';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@aiostreams/ui/tabs';
+import { Skeleton } from '@aiostreams/ui/skeleton';
+import { Alert } from '@aiostreams/ui/alert';
+import { Card, CardContent } from '@aiostreams/ui/card';
+import { cn } from '@aiostreams/ui/core/styling';
 
 /**
  * Per-user request stats for the configure-page Stats tab.

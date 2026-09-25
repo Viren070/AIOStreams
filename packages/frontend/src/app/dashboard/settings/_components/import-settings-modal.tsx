@@ -3,10 +3,10 @@ import { toast } from 'sonner';
 import { AnimatePresence, motion } from 'motion/react';
 import { BiArrowBack } from 'react-icons/bi';
 import type { QueryKey } from '@tanstack/react-query';
-import { Modal } from '@/components/ui/modal';
-import { Button } from '@/components/ui/button';
-import { Alert } from '@/components/ui/alert';
-import { SimpleDropzone } from '@/components/ui/simple-dropzone';
+import { Modal } from '@aiostreams/ui/modal';
+import { Button } from '@aiostreams/ui/button';
+import { Alert } from '@aiostreams/ui/alert';
+import { SimpleDropzone } from '@aiostreams/ui/simple-dropzone';
 import { useImportSettings } from '../queries';
 import { humanise } from '../tabs.config';
 

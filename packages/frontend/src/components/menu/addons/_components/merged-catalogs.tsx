@@ -3,22 +3,22 @@ import { MergedCatalog } from '@aiostreams/core';
 import { useStatus } from '@/context/status';
 import { useUserData } from '@/context/userData';
 import { SettingsCard } from '../../../shared/settings-card';
-import { Button, CloseButton, IconButton } from '../../../ui/button';
-import { Modal } from '../../../ui/modal';
-import { TextInput } from '../../../ui/text-input';
-import { Combobox } from '../../../ui/combobox';
-import { Select } from '../../../ui/select';
-import { Alert } from '../../../ui/alert';
+import { Button, CloseButton, IconButton } from '@aiostreams/ui/button';
+import { Modal } from '@aiostreams/ui/modal';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { Combobox } from '@aiostreams/ui/combobox';
+import { Select } from '@aiostreams/ui/select';
+import { Alert } from '@aiostreams/ui/alert';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
-} from '../../../shared/confirmation-dialog';
+} from '@aiostreams/ui/shared/confirmation-dialog';
 import {
   Accordion,
   AccordionTrigger,
   AccordionContent,
   AccordionItem,
-} from '../../../ui/accordion';
+} from '@aiostreams/ui/accordion';
 import { LuMerge } from 'react-icons/lu';
 import { BiEdit, BiTrash } from 'react-icons/bi';
 import { FaPlus } from 'react-icons/fa';

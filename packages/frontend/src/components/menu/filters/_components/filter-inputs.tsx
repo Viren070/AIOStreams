@@ -1,11 +1,11 @@
 import { ReactNode, useCallback, useRef } from 'react';
-import { useDisclosure } from '@/hooks/disclosure';
+import { useDisclosure } from '@aiostreams/ui/hooks/disclosure';
 import { toast } from 'sonner';
-import { IconButton } from '../../../ui/button';
-import { TextInput } from '../../../ui/text-input';
-import { NumberInput } from '../../../ui/number-input';
-import { Tooltip } from '../../../ui/tooltip';
-import { Checkbox } from '../../../ui/checkbox';
+import { IconButton } from '@aiostreams/ui/button';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { NumberInput } from '@aiostreams/ui/number-input';
+import { Tooltip } from '@aiostreams/ui/tooltip';
+import { Checkbox } from '@aiostreams/ui/checkbox';
 import { SettingsCard } from '../../../shared/settings-card';
 import { ImportModal } from '../../../shared/import-modal';
 import {

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { PageWrapper } from '../../shared/page-wrapper';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@aiostreams/ui/tabs';
 import { SettingsNavCard } from '../../shared/settings-card';
 import { useUserData } from '@/context/userData';
 import {
@@ -28,10 +28,10 @@ import { BiSolidCameraMovie } from 'react-icons/bi';
 import { BsRegex, BsSpeakerFill } from 'react-icons/bs';
 import { GoContainer, GoFileBinary } from 'react-icons/go';
 import { TbFilterCode } from 'react-icons/tb';
-import { Select } from '../../ui/select';
-import { Combobox } from '../../ui/combobox';
+import { Select } from '@aiostreams/ui/select';
+import { Combobox } from '@aiostreams/ui/combobox';
 import { SettingsCard } from '../../shared/settings-card';
-import { Card } from '../../ui/card';
+import { Card } from '@aiostreams/ui/card';
 import {
   RESOLUTIONS,
   QUALITIES,
@@ -56,18 +56,18 @@ import {
   MIN_BITRATE,
   MAX_BITRATE,
 } from '../../../../../core/src/utils/constants';
-import { Switch } from '../../ui/switch';
+import { Switch } from '@aiostreams/ui/switch';
 import { useStatus } from '@/context/status';
-import { NumberInput } from '../../ui/number-input';
-import { IconButton, Button } from '../../ui/button';
-import { Tooltip } from '../../ui/tooltip';
-import { Alert } from '../../ui/alert';
-import { Modal } from '../../ui/modal';
-import { useDisclosure } from '@/hooks/disclosure';
-import { Slider } from '../../ui/slider/slider';
+import { NumberInput } from '@aiostreams/ui/number-input';
+import { IconButton, Button } from '@aiostreams/ui/button';
+import { Tooltip } from '@aiostreams/ui/tooltip';
+import { Alert } from '@aiostreams/ui/alert';
+import { Modal } from '@aiostreams/ui/modal';
+import { useDisclosure } from '@aiostreams/ui/hooks/disclosure';
+import { Slider } from '@aiostreams/ui/slider';
 import MarkdownLite from '../../shared/markdown-lite';
 import { useMode } from '@/context/mode';
-import { copyToClipboard } from '@/utils/clipboard';
+import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
 import { useParentInheritance } from '@/context/userData';
 import { useSubTab } from '@/context/sub-tab';
 import { InheritedBadge } from '../../shared/inherited-badge';
@@ -112,7 +112,7 @@ import {
 import type { SyncConfig } from './_components/synced-patterns';
 import { UserData } from '@aiostreams/core';
 import { toast } from 'sonner';
-import { Popover } from '@/components/ui/popover';
+import { Popover } from '@aiostreams/ui/popover';
 import { AiOutlineExclamationCircle } from 'react-icons/ai';
 
 /** Create a `<SYNCED: url>` placeholder string. */
@@ -4105,7 +4105,9 @@ function Content() {
                     label="Also Check Result Age"
                     side="right"
                     disabled={!userData.digitalReleaseFilter?.enabled}
-                    value={userData.digitalReleaseFilter?.checkResultAge ?? false}
+                    value={
+                      userData.digitalReleaseFilter?.checkResultAge ?? false
+                    }
                     moreHelp="Blocks results uploaded before the release/air date (beyond tolerance). Only works when a result's age is known."
                     onValueChange={(value) => {
                       setUserData((prev) => ({

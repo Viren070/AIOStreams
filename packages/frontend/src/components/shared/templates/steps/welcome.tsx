@@ -4,7 +4,7 @@ import {
   SlidersHorizontalIcon,
   KeyRoundIcon,
 } from 'lucide-react';
-import { cn } from '../../../ui/core/styling';
+import { cn } from '@aiostreams/ui/core/styling';
 
 interface ChoiceProps {
   icon: React.ReactNode;

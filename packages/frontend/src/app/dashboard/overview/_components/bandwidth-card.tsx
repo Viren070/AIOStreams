@@ -1,5 +1,5 @@
 import { BiBarChartAlt2 } from 'react-icons/bi';
-import { formatBytes, formatPercent } from '@/lib/format';
+import { formatBytes, formatPercent } from '@aiostreams/ui/core/format';
 import { useBandwidth } from '@/app/dashboard/streams/queries';
 import { CardNote, OverviewCard } from './overview-card';
 

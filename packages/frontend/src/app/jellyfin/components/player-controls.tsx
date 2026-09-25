@@ -19,14 +19,14 @@ import {
   LuVolume2,
   LuVolumeX,
 } from 'react-icons/lu';
-import { Button } from '@/components/ui/button';
+import { Button } from '@aiostreams/ui/button';
 import {
   DropdownMenu,
   DropdownMenuItem,
   DropdownMenuLabel,
-} from '@/components/ui/dropdown-menu';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { cn } from '@/components/ui/core/styling';
+} from '@aiostreams/ui/dropdown-menu';
+import { LoadingSpinner } from '@aiostreams/ui/loading-spinner';
+import { cn } from '@aiostreams/ui/core/styling';
 import { clock, itemSubtitle, itemTitle, ticksToMs } from '../lib/format';
 import type { PlayerController, Track } from '../lib/player';
 import type { BaseItemDto, MediaSegmentDto } from '../lib/types';

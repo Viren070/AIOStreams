@@ -7,21 +7,25 @@ import {
   BiStopCircle,
   BiUserX,
 } from 'react-icons/bi';
-import { IconButton } from '@/components/ui/button';
-import { Tooltip } from '@/components/ui/tooltip';
+import { IconButton } from '@aiostreams/ui/button';
+import { Tooltip } from '@aiostreams/ui/tooltip';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
-} from '@/components/shared/confirmation-dialog';
+} from '@aiostreams/ui/shared/confirmation-dialog';
 import {
   DropdownMenu,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
-import { cn } from '@/components/ui/core/styling';
+} from '@aiostreams/ui/dropdown-menu';
+import { cn } from '@aiostreams/ui/core/styling';
 import { AnimatedNumber } from '@/components/shared/animated-number';
-import { formatBytes, formatClock, formatSpeed } from '@/lib/format';
+import {
+  formatBytes,
+  formatClock,
+  formatSpeed,
+} from '@aiostreams/ui/core/format';
 import {
   useStopStream,
   useStopUserStreams,

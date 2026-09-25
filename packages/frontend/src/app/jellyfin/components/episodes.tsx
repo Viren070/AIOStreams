@@ -1,9 +1,9 @@
 import React from 'react';
 import { BiCheck, BiInfoCircle, BiPlay, BiSolidStar } from 'react-icons/bi';
-import { Badge } from '@/components/ui/badge';
-import { IconButton } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/components/ui/core/styling';
+import { Badge } from '@aiostreams/ui/badge';
+import { IconButton } from '@aiostreams/ui/button';
+import { Skeleton } from '@aiostreams/ui/skeleton';
+import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '../lib/session';
 import { useSetPlayed } from '../lib/queries';
 import { landscapeUrls } from '../lib/images';

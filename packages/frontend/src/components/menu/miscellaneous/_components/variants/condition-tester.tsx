@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useUserData } from '@/context/userData';
 import { SettingsCard } from '../../../../shared/settings-card';
-import { Button } from '@/components/ui/button';
-import { TextInput } from '@/components/ui/text-input';
-import { Select } from '@/components/ui/select';
-import { Alert } from '@/components/ui/alert';
+import { Button } from '@aiostreams/ui/button';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { Select } from '@aiostreams/ui/select';
+import { Alert } from '@aiostreams/ui/alert';
 import { toast } from 'sonner';
 import { FiCheck, FiPlay, FiX } from 'react-icons/fi';
 import type { UserData } from '@aiostreams/core';

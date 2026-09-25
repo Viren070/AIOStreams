@@ -2,10 +2,10 @@ import React from 'react';
 import { toast } from 'sonner';
 import { BiPowerOff } from 'react-icons/bi';
 import { PageWrapper } from '@/components/shared/page-wrapper';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Alert } from '@/components/ui/alert';
-import { cn } from '@/components/ui/core/styling';
+import { Card } from '@aiostreams/ui/card';
+import { Button } from '@aiostreams/ui/button';
+import { Alert } from '@aiostreams/ui/alert';
+import { cn } from '@aiostreams/ui/core/styling';
 import {
   DashboardErrorCard,
   DashboardLoading,
@@ -15,18 +15,18 @@ import {
   DonutChart,
   LineChart,
   type Series,
-} from '@/components/ui/charts';
+} from '@aiostreams/ui/charts';
 import { api } from '@/lib/api';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
-} from '@/components/shared/confirmation-dialog';
+} from '@aiostreams/ui/shared/confirmation-dialog';
 import {
   useSystemStream,
   type MetricsSample,
   type SystemMetrics,
 } from './use-system';
-import { formatBytes, formatDuration } from '@/lib/format';
+import { formatBytes, formatDuration } from '@aiostreams/ui/core/format';
 
 function Gauge({
   label,

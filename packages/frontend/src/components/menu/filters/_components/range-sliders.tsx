@@ -1,12 +1,12 @@
-import { Slider } from '../../../ui/slider/slider';
-import { NumberInput } from '../../../ui/number-input';
+import { Slider } from '@aiostreams/ui/slider';
+import { NumberInput } from '@aiostreams/ui/number-input';
 import {
   MIN_SIZE,
   MAX_SIZE,
   MIN_BITRATE,
   MAX_BITRATE,
 } from '../../../../../../core/src/utils/constants';
-import { formatBytes, formatBitrate } from '@/lib/format';
+import { formatBytes, formatBitrate } from '@aiostreams/ui/core/format';
 
 // Generic MediaRangeSlider
 

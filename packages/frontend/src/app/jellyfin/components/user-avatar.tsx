@@ -1,5 +1,5 @@
 import React from 'react';
-import { cn } from '@/components/ui/core/styling';
+import { cn } from '@aiostreams/ui/core/styling';
 
 export function UserAvatar({
   name,

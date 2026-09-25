@@ -1,6 +1,6 @@
 import React from 'react';
-import { Skeleton } from '@/components/ui/skeleton';
-import { LuffyError } from '@/components/shared/luffy-error';
+import { Skeleton } from '@aiostreams/ui/skeleton';
+import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import { useSession } from '../lib/session';
 import { useItem, usePersonItems } from '../lib/queries';
 import { posterUrl } from '../lib/images';

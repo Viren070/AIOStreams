@@ -1,10 +1,10 @@
 import React from 'react';
 import { AnimatePresence, LayoutGroup, motion, useAnimate } from 'motion/react';
 import { BiLockAlt } from 'react-icons/bi';
-import { Button } from '@/components/ui/button';
-import { TextInput } from '@/components/ui/text-input';
-import { PasswordInput } from '@/components/ui/password-input';
-import { cn } from '@/components/ui/core/styling';
+import { Button } from '@aiostreams/ui/button';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { PasswordInput } from '@aiostreams/ui/password-input';
+import { cn } from '@aiostreams/ui/core/styling';
 import { UserAvatar } from '../components/user-avatar';
 import { BrandLogo } from '../components/brand-logo';
 import type { PickableUser } from '../lib/types';

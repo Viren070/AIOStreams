@@ -1,6 +1,6 @@
 import React from 'react';
 import { PlayIcon, LayoutTemplateIcon, DownloadIcon } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@aiostreams/ui/button';
 import { GlowCard } from '@/components/shared/glow-card';
 
 interface GetStartedCardProps {

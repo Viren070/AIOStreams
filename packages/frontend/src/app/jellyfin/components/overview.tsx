@@ -1,8 +1,8 @@
 import React from 'react';
-import { Modal } from '@/components/ui/modal';
-import { Popover } from '@/components/ui/popover';
-import { cn } from '@/components/ui/core/styling';
-import { useMediaQuery } from '@/hooks/media-query';
+import { Modal } from '@aiostreams/ui/modal';
+import { Popover } from '@aiostreams/ui/popover';
+import { cn } from '@aiostreams/ui/core/styling';
+import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
 import { Artwork } from './cards';
 
 function Banner({ image }: { image: string[] }) {

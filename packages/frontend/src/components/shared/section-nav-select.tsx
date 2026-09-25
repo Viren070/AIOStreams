@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BiChevronDown, BiCheck } from 'react-icons/bi';
-import { cn } from '@/components/ui/core/styling';
+import { cn } from '@aiostreams/ui/core/styling';
 
 /** A dashboard feature's sub-section, shared by its layout, the router and
  *  the sidebar accordion. */

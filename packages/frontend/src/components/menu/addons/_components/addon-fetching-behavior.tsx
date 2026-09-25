@@ -8,11 +8,11 @@ import {
   rowActionsClass,
   useSortableRows,
 } from '../../../shared/sortable-rows';
-import { Select } from '../../../ui/select';
-import { TextInput } from '../../../ui/text-input';
-import { Combobox } from '../../../ui/combobox';
-import { IconButton } from '../../../ui/button';
-import { Tooltip } from '../../../ui/tooltip';
+import { Select } from '@aiostreams/ui/select';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { Combobox } from '@aiostreams/ui/combobox';
+import { IconButton } from '@aiostreams/ui/button';
+import { Tooltip } from '@aiostreams/ui/tooltip';
 import { FaPlus } from 'react-icons/fa';
 import { UserData } from '@aiostreams/core';
 

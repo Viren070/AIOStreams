@@ -1,7 +1,7 @@
 import React from 'react';
-import { AppSidebar, useAppSidebarContext } from '@/components/ui/app-layout';
-import { cn } from '@/components/ui/core/styling';
-import { VerticalMenu, VerticalMenuItem } from '@/components/ui/vertical-menu';
+import { AppSidebar, useAppSidebarContext } from '../app-layout';
+import { cn } from '../core/styling';
+import { VerticalMenu, VerticalMenuItem } from '../vertical-menu';
 
 export type SidebarItem = VerticalMenuItem;
 

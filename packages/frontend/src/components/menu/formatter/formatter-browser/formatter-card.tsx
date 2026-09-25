@@ -1,6 +1,6 @@
 import React from 'react';
 import { GlowCard } from '../../../shared/glow-card';
-import { cn } from '../../../ui/core/styling';
+import { cn } from '@aiostreams/ui/core/styling';
 import { FormatterPreviewBox } from '../preview/preview-box';
 import type { CardPreview } from './use-card-previews';
 

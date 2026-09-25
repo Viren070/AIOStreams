@@ -1,4 +1,4 @@
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from '@aiostreams/ui/skeleton';
 import type { JellyfinClient } from '../lib/client';
 import { cardShape, posterUrl } from '../lib/images';
 import { itemSubtitle, progressOf } from '../lib/format';

@@ -1,15 +1,15 @@
 import React from 'react';
 import { toast } from 'sonner';
-import { Modal } from '@/components/ui/modal';
-import { Button } from '@/components/ui/button';
-import { Select } from '@/components/ui/select';
-import { BasicField } from '@/components/ui/basic-field';
+import { Modal } from '@aiostreams/ui/modal';
+import { Button } from '@aiostreams/ui/button';
+import { Select } from '@aiostreams/ui/select';
+import { BasicField } from '@aiostreams/ui/basic-field';
 import {
   useResetUsenetStats,
   type UsenetStatsResetResult,
   type UsenetStatsResetTarget,
 } from '../queries';
-import { formatBytes, formatCompact } from '@/lib/format';
+import { formatBytes, formatCompact } from '@aiostreams/ui/core/format';
 
 export interface ResetStatsTarget {
   target: UsenetStatsResetTarget;

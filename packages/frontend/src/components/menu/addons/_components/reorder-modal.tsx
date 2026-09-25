@@ -14,8 +14,8 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Modal } from '../../../ui/modal';
-import { Button } from '../../../ui/button';
+import { Modal } from '@aiostreams/ui/modal';
+import { Button } from '@aiostreams/ui/button';
 import { IoExtensionPuzzle } from 'react-icons/io5';
 import { PlusIcon } from 'lucide-react';
 

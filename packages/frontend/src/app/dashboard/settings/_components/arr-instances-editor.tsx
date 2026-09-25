@@ -7,15 +7,15 @@ import {
   BiErrorCircle,
   BiTestTube,
 } from 'react-icons/bi';
-import { Card } from '@/components/ui/card';
-import { Button, IconButton } from '@/components/ui/button';
-import { TextInput } from '@/components/ui/text-input';
-import { PasswordInput } from '@/components/ui/password-input';
-import { Select } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { BasicField } from '@/components/ui/basic-field';
-import { cn } from '@/components/ui/core/styling';
-import { Spinner } from '@/components/ui/loading-spinner';
+import { Card } from '@aiostreams/ui/card';
+import { Button, IconButton } from '@aiostreams/ui/button';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { PasswordInput } from '@aiostreams/ui/password-input';
+import { Select } from '@aiostreams/ui/select';
+import { Switch } from '@aiostreams/ui/switch';
+import { BasicField } from '@aiostreams/ui/basic-field';
+import { cn } from '@aiostreams/ui/core/styling';
+import { Spinner } from '@aiostreams/ui/loading-spinner';
 import {
   ARR_SECRET_MASK,
   useArrInstances,

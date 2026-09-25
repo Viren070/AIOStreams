@@ -5,8 +5,8 @@ import {
   ExternalLinkIcon,
   ScrollTextIcon,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@aiostreams/ui/button';
+import { Skeleton } from '@aiostreams/ui/skeleton';
 import { GlowCard } from '@/components/shared/glow-card';
 import {
   DOCS_CHANGELOG_URL,

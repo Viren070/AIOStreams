@@ -1,10 +1,10 @@
 import React from 'react';
 import { toast } from 'sonner';
 import { BiRefresh } from 'react-icons/bi';
-import { Alert } from '@/components/ui/alert';
-import { Button, IconButton } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { cn } from '@/components/ui/core/styling';
+import { Alert } from '@aiostreams/ui/alert';
+import { Button, IconButton } from '@aiostreams/ui/button';
+import { Card } from '@aiostreams/ui/card';
+import { cn } from '@aiostreams/ui/core/styling';
 import {
   useFuseMountAction,
   useFuseStatus,

@@ -1,8 +1,8 @@
 import React from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { cn } from '@/components/ui/core/styling';
-import type { VerticalMenuItem } from '@/components/ui/vertical-menu';
-import { Sidebar } from '@/components/sidebar/Sidebar';
+import { cn } from '@aiostreams/ui/core/styling';
+import type { VerticalMenuItem } from '@aiostreams/ui/vertical-menu';
+import { Sidebar } from '@aiostreams/ui/shared/sidebar';
 import { CommandPaletteSearchButton } from '@/components/shared/command-palette/search-button';
 import { useStatus } from '@/context/status';
 import { useMenu, MenuId } from '@/context/menu';
@@ -27,10 +27,10 @@ import {
 } from 'react-icons/bi';
 import { useCommandPalette } from '@/context/command-palette';
 import { useRegisterQuickAction } from '@/context/quick-actions';
-import { useDisclosure } from '@/hooks/disclosure';
-import { Modal } from '@/components/ui/modal';
-import { TextInput } from '@/components/ui/text-input';
-import { Tooltip } from '@/components/ui/tooltip';
+import { useDisclosure } from '@aiostreams/ui/hooks/disclosure';
+import { Modal } from '@aiostreams/ui/modal';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { Tooltip } from '@aiostreams/ui/tooltip';
 import { useMode } from '@/context/mode';
 import { DonationModal } from '@/components/shared/donation-modal';
 import { useSave } from '@/context/save';

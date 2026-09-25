@@ -14,9 +14,9 @@ import {
 } from '@dnd-kit/sortable';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { CSS } from '@dnd-kit/utilities';
-import { Combobox } from '../../../ui/combobox';
+import { Combobox } from '@aiostreams/ui/combobox';
 import { SettingsCard } from '../../../shared/settings-card';
-import { IconButton } from '../../../ui/button';
+import { IconButton } from '@aiostreams/ui/button';
 import { FaRegTrashAlt } from 'react-icons/fa';
 import { useMode } from '@/context/mode';
 

@@ -1,11 +1,11 @@
 import React from 'react';
 import { toast } from 'sonner';
 import type { QueryKey } from '@tanstack/react-query';
-import { Modal } from '@/components/ui/modal';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Tooltip } from '@/components/ui/tooltip';
-import { Alert } from '@/components/ui/alert';
+import { Modal } from '@aiostreams/ui/modal';
+import { Button } from '@aiostreams/ui/button';
+import { Checkbox } from '@aiostreams/ui/checkbox';
+import { Tooltip } from '@aiostreams/ui/tooltip';
+import { Alert } from '@aiostreams/ui/alert';
 import {
   useResetSettings,
   type ManagedSettingsKey,

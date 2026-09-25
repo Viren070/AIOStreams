@@ -8,7 +8,7 @@ import React, {
 import { CatalogModification } from '@aiostreams/core';
 import { useUserData } from '@/context/userData';
 import { SettingsCard } from '../../../shared/settings-card';
-import { IconButton } from '../../../ui/button';
+import { IconButton } from '@aiostreams/ui/button';
 import {
   DndContext,
   useSensor,

@@ -9,22 +9,22 @@ import {
   BiTrash,
   BiUpload,
 } from 'react-icons/bi';
-import { Card } from '@/components/ui/card';
-import { Button, IconButton } from '@/components/ui/button';
-import { TextInput } from '@/components/ui/text-input';
-import { Textarea } from '@/components/ui/textarea';
-import { NumberInput } from '@/components/ui/number-input';
-import { Select } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Modal } from '@/components/ui/modal';
-import { Popover } from '@/components/ui/popover';
+import { Card } from '@aiostreams/ui/card';
+import { Button, IconButton } from '@aiostreams/ui/button';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { Textarea } from '@aiostreams/ui/textarea';
+import { NumberInput } from '@aiostreams/ui/number-input';
+import { Select } from '@aiostreams/ui/select';
+import { Switch } from '@aiostreams/ui/switch';
+import { Modal } from '@aiostreams/ui/modal';
+import { Popover } from '@aiostreams/ui/popover';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
-} from '@/components/shared/confirmation-dialog';
+} from '@aiostreams/ui/shared/confirmation-dialog';
 import { DashboardQueryBoundary } from '@/components/shared/dashboard-query-boundary';
 import { api } from '@/lib/api';
-import { copyToClipboard } from '@/utils/clipboard';
+import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
 import { useStatus } from '@/context/status';
 import {
   Badge,
@@ -39,7 +39,7 @@ import {
   type PublishTargetView,
   type Snapshot,
 } from './shared';
-import { Alert } from '@/components/ui/alert';
+import { Alert } from '@aiostreams/ui/alert';
 
 const PROVIDER_BADGE = 'bg-sky-500/10 text-sky-500 border-sky-500/20';
 

@@ -1,8 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { CheckIcon } from 'lucide-react';
-import { cn } from '../../ui/core/styling';
-import { Button } from '../../ui/button';
+import { cn } from '@aiostreams/ui/core/styling';
+import { Button } from '@aiostreams/ui/button';
 import { WizardStep, WIZARD_STEP_LABELS } from '@/lib/templates/types';
 
 interface SetupShellProps {

@@ -4,17 +4,17 @@ import {
   AppLayoutContent,
   AppLayoutSidebar,
   AppSidebarProvider,
-} from '@/components/ui/app-layout';
+} from '@aiostreams/ui/app-layout';
 import { MainSidebar } from './main-sidebar';
 import { LoadingOverlayWithLogo } from '@/components/shared/loading-overlay';
 import { MenuProvider } from '@/context/menu';
 import { MenuContent } from '@/components/menu-content';
-import { LoadingOverlay } from '@/components/ui/loading-spinner';
+import { LoadingOverlay } from '@aiostreams/ui/loading-spinner';
 import { TopNavbar } from './top-navbar';
-import { Button } from '@/components/ui/button';
+import { Button } from '@aiostreams/ui/button';
 import { UserDataProvider } from '@/context/userData';
 import { SaveProvider } from '@/context/save';
-import { LuffyError } from '@/components/shared/luffy-error';
+import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import { ModeProvider } from '@/context/mode';
 import { SubTabProvider } from '@/context/sub-tab';
 import { QuickActionsProvider } from '@/context/quick-actions';

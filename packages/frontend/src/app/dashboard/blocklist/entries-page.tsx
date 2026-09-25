@@ -8,26 +8,26 @@ import {
   BiSearch,
   BiTrash,
 } from 'react-icons/bi';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { TextInput } from '@/components/ui/text-input';
-import { Select } from '@/components/ui/select';
-import { Modal } from '@/components/ui/modal';
+import { Card } from '@aiostreams/ui/card';
+import { Button } from '@aiostreams/ui/button';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { Select } from '@aiostreams/ui/select';
+import { Modal } from '@aiostreams/ui/modal';
 import {
   Pagination,
   PaginationEllipsis,
   PaginationItem,
   PaginationTrigger,
   pageWindow,
-} from '@/components/ui/pagination';
-import { cn } from '@/components/ui/core/styling';
+} from '@aiostreams/ui/pagination';
+import { cn } from '@aiostreams/ui/core/styling';
 import { DashboardQueryBoundary } from '@/components/shared/dashboard-query-boundary';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
-} from '@/components/shared/confirmation-dialog';
+} from '@aiostreams/ui/shared/confirmation-dialog';
 import { api } from '@/lib/api';
-import { copyToClipboard } from '@/utils/clipboard';
+import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
 import {
   Badge,
   KIND_BADGE,

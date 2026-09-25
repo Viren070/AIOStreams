@@ -12,8 +12,8 @@ import {
   BiSolidHeart,
   BiSolidStar,
 } from 'react-icons/bi';
-import { Badge } from '@/components/ui/badge';
-import { Button, IconButton } from '@/components/ui/button';
+import { Badge } from '@aiostreams/ui/badge';
+import { Button, IconButton } from '@aiostreams/ui/button';
 import {
   Carousel,
   CarouselContent,
@@ -21,13 +21,13 @@ import {
   CarouselNext,
   CarouselPrevious,
   useCarousel,
-} from '@/components/ui/carousel';
-import { Modal } from '@/components/ui/modal';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Tooltip } from '@/components/ui/tooltip';
-import { LuffyError } from '@/components/shared/luffy-error';
-import { cn } from '@/components/ui/core/styling';
-import { useMediaQuery } from '@/hooks/media-query';
+} from '@aiostreams/ui/carousel';
+import { Modal } from '@aiostreams/ui/modal';
+import { Skeleton } from '@aiostreams/ui/skeleton';
+import { Tooltip } from '@aiostreams/ui/tooltip';
+import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
+import { cn } from '@aiostreams/ui/core/styling';
+import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
 import { useSession } from '../lib/session';
 import {
   useEpisodes,

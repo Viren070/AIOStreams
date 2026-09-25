@@ -1,13 +1,13 @@
 import React from 'react';
 import { toast } from 'sonner';
 import { BiPlay, BiDownload, BiFolder, BiFile, BiLink } from 'react-icons/bi';
-import { Modal } from '@/components/ui/modal';
-import { IconButton } from '@/components/ui/button';
-import { Tooltip } from '@/components/ui/tooltip';
-import { cn } from '@/components/ui/core/styling';
-import { copyToClipboard } from '@/utils/clipboard';
+import { Modal } from '@aiostreams/ui/modal';
+import { IconButton } from '@aiostreams/ui/button';
+import { Tooltip } from '@aiostreams/ui/tooltip';
+import { cn } from '@aiostreams/ui/core/styling';
+import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
 import { useUsenetNzbFiles, usePlayUrl, type LibraryFile } from '../queries';
-import { formatBytes } from '@/lib/format';
+import { formatBytes } from '@aiostreams/ui/core/format';
 
 /** Group files by their top-level folder (derived from path or name). */
 function groupByFolder(files: LibraryFile[]): Record<string, LibraryFile[]> {

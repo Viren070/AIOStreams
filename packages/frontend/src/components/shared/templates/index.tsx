@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
-import { Modal } from '../../ui/modal';
-import { Button } from '../../ui/button';
+import { Modal } from '@aiostreams/ui/modal';
+import { Button } from '@aiostreams/ui/button';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
-} from '../confirmation-dialog';
+} from '@aiostreams/ui/shared/confirmation-dialog';
 import { useUserData } from '@/context/userData';
 import { useStatus } from '@/context/status';
 import { useMenu } from '@/context/menu';

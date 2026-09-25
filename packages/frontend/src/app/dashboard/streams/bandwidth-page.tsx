@@ -1,16 +1,16 @@
 import React from 'react';
-import { Card } from '@/components/ui/card';
+import { Card } from '@aiostreams/ui/card';
 import {
   AreaChart,
   CHART_COLORS,
   LineChart,
   Stat,
   type Series,
-} from '@/components/ui/charts';
-import { Tooltip } from '@/components/ui/tooltip';
-import { cn } from '@/components/ui/core/styling';
+} from '@aiostreams/ui/charts';
+import { Tooltip } from '@aiostreams/ui/tooltip';
+import { cn } from '@aiostreams/ui/core/styling';
 import { DashboardQueryBoundary } from '@/components/shared/dashboard-query-boundary';
-import { formatBytes, formatPercent } from '@/lib/format';
+import { formatBytes, formatPercent } from '@aiostreams/ui/core/format';
 import { useBandwidth, type BandwidthWindow } from './queries';
 import { SegmentedControl, displayUser } from './_components/shared';
 import { UsageBar, bandwidthRows } from './_components/bandwidth';

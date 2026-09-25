@@ -7,7 +7,7 @@ import {
   CommandItem,
   CommandList,
   CommandShortcut,
-} from '@/components/ui/command/command';
+} from '@aiostreams/ui/command';
 
 /** Every CommandItem installs a MutationObserver, so an uncapped result list
  *  makes each keystroke rebuild hundreds of them. */

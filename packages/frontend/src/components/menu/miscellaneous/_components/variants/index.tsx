@@ -2,11 +2,11 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useUserData } from '@/context/userData';
 import { useStatus } from '@/context/status';
 import { SettingsCard } from '../../../../shared/settings-card';
-import { Button, IconButton } from '@/components/ui/button';
-import { TextInput } from '@/components/ui/text-input';
-import { Switch } from '@/components/ui/switch';
-import { Alert } from '@/components/ui/alert';
-import { Modal } from '@/components/ui/modal';
+import { Button, IconButton } from '@aiostreams/ui/button';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { Switch } from '@aiostreams/ui/switch';
+import { Alert } from '@aiostreams/ui/alert';
+import { Modal } from '@aiostreams/ui/modal';
 import { UserDataDiffViewer } from '@/components/shared/userdata-diff-viewer';
 import { toast } from 'sonner';
 import { FiEye, FiPlus, FiTrash2 } from 'react-icons/fi';
@@ -25,8 +25,8 @@ const ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,31}$/;
 
 const CONDITION_HELP =
   'Optional. A true/false expression that makes this variant apply on its own, without ?v= in the URL. ' +
-  'Available: userAgent, resource, type, id, query(\'name\'), header(\'name\'), health(\'id\'), ' +
-  'includes(a, b) and matches(value, \'regex\'). Selecting the variant in the URL still applies it either way.';
+  "Available: userAgent, resource, type, id, query('name'), header('name'), health('id'), " +
+  "includes(a, b) and matches(value, 'regex'). Selecting the variant in the URL still applies it either way.";
 
 function nextVariantId(existing: Variant[]): string {
   if (!existing.some((v) => v.id === 'variant')) return 'variant';
@@ -156,7 +156,10 @@ export function Variants() {
       )}
 
       {variants.length > 0 && (
-        <ConditionTester variants={variants} healthChecks={userData.healthChecks} />
+        <ConditionTester
+          variants={variants}
+          healthChecks={userData.healthChecks}
+        />
       )}
 
       <PreviewModal

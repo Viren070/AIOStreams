@@ -9,17 +9,17 @@ import {
   BiGridAlt,
   BiListUl,
 } from 'react-icons/bi';
-import { Badge } from '@/components/ui/badge';
-import { Button, IconButton } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { DropdownMenu, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { Skeleton } from '@/components/ui/skeleton';
-import { LuffyError } from '@/components/shared/luffy-error';
+import { Badge } from '@aiostreams/ui/badge';
+import { Button, IconButton } from '@aiostreams/ui/button';
+import { Checkbox } from '@aiostreams/ui/checkbox';
+import { DropdownMenu, DropdownMenuItem } from '@aiostreams/ui/dropdown-menu';
+import { Skeleton } from '@aiostreams/ui/skeleton';
+import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
-} from '@/components/shared/confirmation-dialog';
-import { cn } from '@/components/ui/core/styling';
+} from '@aiostreams/ui/shared/confirmation-dialog';
+import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '../lib/session';
 import {
   useActivity,

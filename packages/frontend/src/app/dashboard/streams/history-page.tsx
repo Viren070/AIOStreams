@@ -1,25 +1,25 @@
 import React from 'react';
 import { toast } from 'sonner';
 import { BiSearch, BiTrash } from 'react-icons/bi';
-import { Card } from '@/components/ui/card';
-import { TextInput } from '@/components/ui/text-input';
-import { Select } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Button } from '@/components/ui/button';
+import { Card } from '@aiostreams/ui/card';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { Select } from '@aiostreams/ui/select';
+import { Checkbox } from '@aiostreams/ui/checkbox';
+import { Button } from '@aiostreams/ui/button';
 import {
   Pagination,
   PaginationEllipsis,
   PaginationItem,
   PaginationTrigger,
   pageWindow,
-} from '@/components/ui/pagination';
+} from '@aiostreams/ui/pagination';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
-} from '@/components/shared/confirmation-dialog';
-import { cn } from '@/components/ui/core/styling';
+} from '@aiostreams/ui/shared/confirmation-dialog';
+import { cn } from '@aiostreams/ui/core/styling';
 import { DashboardQueryBoundary } from '@/components/shared/dashboard-query-boundary';
-import { formatBytes, formatClock } from '@/lib/format';
+import { formatBytes, formatClock } from '@aiostreams/ui/core/format';
 import {
   useDeleteStreamHistory,
   useStreamHistory,

@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { BiBlock, BiCheck, BiTrash, BiX } from 'react-icons/bi';
 import type { CommunityItem, TemplateReviewSummary } from '@aiostreams/core';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Card } from '@aiostreams/ui/card';
+import { Button } from '@aiostreams/ui/button';
+import { Checkbox } from '@aiostreams/ui/checkbox';
 import { DashboardQueryBoundary } from '@/components/shared/dashboard-query-boundary';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
-} from '@/components/shared/confirmation-dialog';
+} from '@aiostreams/ui/shared/confirmation-dialog';
 import { Pill, relativeTime } from '@/app/dashboard/streams/_components/shared';
 import {
   useAddBlock,

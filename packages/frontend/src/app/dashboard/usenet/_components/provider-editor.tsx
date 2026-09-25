@@ -11,19 +11,19 @@ import {
   BiTachometer,
 } from 'react-icons/bi';
 import { LuPower, LuPowerOff } from 'react-icons/lu';
-import { Tooltip } from '@/components/ui/tooltip';
-import { Card } from '@/components/ui/card';
-import { Button, IconButton } from '@/components/ui/button';
-import { TextInput } from '@/components/ui/text-input';
-import { NumberInput } from '@/components/ui/number-input';
-import { PasswordInput } from '@/components/ui/password-input';
-import { Switch } from '@/components/ui/switch';
-import { BasicField } from '@/components/ui/basic-field';
-import { cn } from '@/components/ui/core/styling';
+import { Tooltip } from '@aiostreams/ui/tooltip';
+import { Card } from '@aiostreams/ui/card';
+import { Button, IconButton } from '@aiostreams/ui/button';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { NumberInput } from '@aiostreams/ui/number-input';
+import { PasswordInput } from '@aiostreams/ui/password-input';
+import { Switch } from '@aiostreams/ui/switch';
+import { BasicField } from '@aiostreams/ui/basic-field';
+import { cn } from '@aiostreams/ui/core/styling';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
-} from '@/components/shared/confirmation-dialog';
+} from '@aiostreams/ui/shared/confirmation-dialog';
 import {
   PROVIDER_SECRET_MASK,
   useSaveProviders,
@@ -33,7 +33,7 @@ import {
   type ProviderTestResult,
   type ProviderSpeedTestResult,
 } from '../queries';
-import { formatSpeed } from '@/lib/format';
+import { formatSpeed } from '@aiostreams/ui/core/format';
 
 /** Client-side editable provider row. */
 interface Draft {

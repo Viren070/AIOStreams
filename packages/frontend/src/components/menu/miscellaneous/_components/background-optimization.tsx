@@ -1,8 +1,8 @@
 import { useUserData } from '@/context/userData';
 import { useStatus } from '@/context/status';
 import { SettingsCard } from '../../../shared/settings-card';
-import { Switch } from '../../../ui/switch';
-import { TextInput } from '../../../ui/text-input';
+import { Switch } from '@aiostreams/ui/switch';
+import { TextInput } from '@aiostreams/ui/text-input';
 import { DEFAULT_PRELOAD_SELECTOR } from '../../../../../../core/src/utils/constants';
 
 export function BackgroundOptimization() {

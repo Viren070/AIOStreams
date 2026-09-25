@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui/button';
+import { Button } from '@aiostreams/ui/button';
 import { useNavigate } from '@tanstack/react-router';
 
 export function IndexPage() {

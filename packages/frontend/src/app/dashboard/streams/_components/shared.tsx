@@ -1,7 +1,7 @@
 import React from 'react';
 import { BiCloudDownload, BiLayer, BiNetworkChart } from 'react-icons/bi';
-import { Tooltip } from '@/components/ui/tooltip';
-import { cn } from '@/components/ui/core/styling';
+import { Tooltip } from '@aiostreams/ui/tooltip';
+import { cn } from '@aiostreams/ui/core/styling';
 import type { LiveStreamSession, StreamTransport } from '../queries';
 
 const TRANSPORTS: Record<

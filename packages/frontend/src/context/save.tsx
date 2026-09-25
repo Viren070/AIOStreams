@@ -19,8 +19,8 @@ import {
 import { manifestFingerprint } from '../../../core/src/utils/manifest-fingerprint';
 import { computeUserDataDiff } from '../utils/diff/userData';
 import { toast } from 'sonner';
-import { Modal } from '@/components/ui/modal';
-import { Button } from '@/components/ui/button';
+import { Modal } from '@aiostreams/ui/modal';
+import { Button } from '@aiostreams/ui/button';
 import { UserDataDiffViewer } from '@/components/shared/userdata-diff-viewer';
 import {
   ManifestDiffViewer,
@@ -30,7 +30,7 @@ import {
   hasSevereManifestChanges,
   hasAnyManifestChanges,
 } from '../utils/diff/manifest';
-import { Switch } from '@/components/ui/switch';
+import { Switch } from '@aiostreams/ui/switch';
 
 interface SaveContextType {
   handleSave: (options?: {

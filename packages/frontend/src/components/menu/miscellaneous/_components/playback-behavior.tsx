@@ -1,10 +1,10 @@
 import { useUserData } from '@/context/userData';
 import { SettingsCard } from '../../../shared/settings-card';
-import { Switch } from '../../../ui/switch';
-import { Select } from '../../../ui/select';
-import { Combobox } from '../../../ui/combobox';
-import { NumberInput } from '../../../ui/number-input/number-input';
-import { Alert } from '../../../ui/alert';
+import { Switch } from '@aiostreams/ui/switch';
+import { Select } from '@aiostreams/ui/select';
+import { Combobox } from '@aiostreams/ui/combobox';
+import { NumberInput } from '@aiostreams/ui/number-input';
+import { Alert } from '@aiostreams/ui/alert';
 import {
   AUTO_PLAY_ATTRIBUTES,
   DEFAULT_AUTO_PLAY_ATTRIBUTES,

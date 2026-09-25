@@ -1,6 +1,6 @@
 import React from 'react';
 import { Bookmark, ChevronsUpDown, Layers, PenLine } from 'lucide-react';
-import { cn } from '../../ui/core/styling';
+import { cn } from '@aiostreams/ui/core/styling';
 
 export type FormatterKind = 'builtin' | 'customised' | 'saved' | 'custom';
 

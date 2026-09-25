@@ -5,12 +5,12 @@ import {
   AppLayoutSidebar,
   AppSidebarProvider,
   AppSidebarTrigger,
-} from '@/components/ui/app-layout';
-import { Sidebar, SidebarItem } from '@/components/sidebar/Sidebar';
+} from '@aiostreams/ui/app-layout';
+import { Sidebar, SidebarItem } from '@aiostreams/ui/shared/sidebar';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
-} from '@/components/shared/confirmation-dialog';
+} from '@aiostreams/ui/shared/confirmation-dialog';
 import { useSession } from '@/context/session';
 import { BiLogOutCircle, BiSliderAlt } from 'react-icons/bi';
 import { LayoutHeaderBackground } from '@/components/layout-header-background';

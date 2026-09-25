@@ -1,5 +1,5 @@
 import { PAGE_TRANSITION } from '@/components/shared/page-transition';
-import { cn } from '@/components/ui/core/styling';
+import { cn } from '@aiostreams/ui/core/styling';
 import { motion } from 'motion/react';
 import React from 'react';
 

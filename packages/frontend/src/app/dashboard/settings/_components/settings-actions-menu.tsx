@@ -8,13 +8,13 @@ import {
   BiDownload,
   BiUpload,
 } from 'react-icons/bi';
-import { IconButton } from '@/components/ui/button';
+import { IconButton } from '@aiostreams/ui/button';
 import {
   DropdownMenu,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
+} from '@aiostreams/ui/dropdown-menu';
 import {
   fetchSettingsExport,
   type ManagedSettingsKey,

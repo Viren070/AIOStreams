@@ -1,11 +1,11 @@
 import React from 'react';
 import { toast } from 'sonner';
 import { ConfigModal } from '@/components/config-modal';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Checkbox } from '@aiostreams/ui/checkbox';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
-} from '@/components/shared/confirmation-dialog';
+} from '@aiostreams/ui/shared/confirmation-dialog';
 import { useUserData } from '@/context/userData';
 import { useStatus } from '@/context/status';
 import {

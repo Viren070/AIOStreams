@@ -1,6 +1,6 @@
 import React from 'react';
 import { BiChevronRight } from 'react-icons/bi';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@aiostreams/ui/badge';
 import { useSession } from '../lib/session';
 import {
   useItemPages,

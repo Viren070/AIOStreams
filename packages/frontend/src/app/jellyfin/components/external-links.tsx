@@ -8,8 +8,8 @@ import {
   SiThemoviedatabase,
   SiTrakt,
 } from 'react-icons/si';
-import { IconButton } from '@/components/ui/button';
-import { Tooltip } from '@/components/ui/tooltip';
+import { IconButton } from '@aiostreams/ui/button';
+import { Tooltip } from '@aiostreams/ui/tooltip';
 import { AnidbIcon, TvdbIcon } from './brand-icons';
 
 const ICONS: Record<string, IconType> = {

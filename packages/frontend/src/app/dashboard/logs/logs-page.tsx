@@ -15,29 +15,29 @@ import {
   BiTrash,
 } from 'react-icons/bi';
 import { toast } from 'sonner';
-import { TextInput } from '@/components/ui/text-input';
-import { Switch } from '@/components/ui/switch';
-import { Button, IconButton } from '@/components/ui/button';
-import { Select } from '@/components/ui/select';
-import { Popover } from '@/components/ui/popover';
-import { Card } from '@/components/ui/card';
-import { cn } from '@/components/ui/core/styling';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { Switch } from '@aiostreams/ui/switch';
+import { Button, IconButton } from '@aiostreams/ui/button';
+import { Select } from '@aiostreams/ui/select';
+import { Popover } from '@aiostreams/ui/popover';
+import { Card } from '@aiostreams/ui/card';
+import { cn } from '@aiostreams/ui/core/styling';
 import {
   useLogStream,
   exportUrl,
   type LogFilters,
   type LogRow,
 } from './use-log-stream';
-import { useDebounce } from '@/hooks/debounce';
+import { useDebounce } from '@aiostreams/ui/hooks/debounce';
 import { PageWrapper } from '@/components/shared/page-wrapper';
-import { Spinner } from '@/components/ui/loading-spinner';
-import { LuffyError } from '@/components/shared/luffy-error';
+import { Spinner } from '@aiostreams/ui/loading-spinner';
+import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
-} from '@/components/shared/confirmation-dialog';
-import { copyToClipboard } from '@/utils/clipboard';
-import { formatDateTime } from '@/lib/format';
+} from '@aiostreams/ui/shared/confirmation-dialog';
+import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
+import { formatDateTime } from '@aiostreams/ui/core/format';
 import { api } from '@/lib/api';
 
 const LEVELS = ['trace', 'debug', 'info', 'warn', 'error', 'fatal'] as const;

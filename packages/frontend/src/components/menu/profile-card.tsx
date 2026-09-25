@@ -1,8 +1,8 @@
 import React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { TextInput } from '@/components/ui/text-input';
+import { Button } from '@aiostreams/ui/button';
+import { TextInput } from '@aiostreams/ui/text-input';
 import { SettingsCard } from '@/components/shared/settings-card';
 import { useSession } from '@/context/session';
 import { useUserData } from '@/context/userData';

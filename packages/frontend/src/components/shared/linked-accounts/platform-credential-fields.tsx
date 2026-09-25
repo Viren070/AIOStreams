@@ -1,7 +1,7 @@
 import React from 'react';
-import { Select } from '@/components/ui/select';
-import { TextInput } from '@/components/ui/text-input';
-import { PasswordInput } from '@/components/ui/password-input';
+import { Select } from '@aiostreams/ui/select';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { PasswordInput } from '@aiostreams/ui/password-input';
 import type { PlatformDescriptor, PlatformField } from '@aiostreams/core';
 
 export interface PlatformCredentialState {

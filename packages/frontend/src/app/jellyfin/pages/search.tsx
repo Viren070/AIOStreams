@@ -1,7 +1,7 @@
 import React from 'react';
 import { BiSearch } from 'react-icons/bi';
-import { TextInput } from '@/components/ui/text-input';
-import { useDebounce } from '@/hooks/debounce';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { useDebounce } from '@aiostreams/ui/hooks/debounce';
 import { useSession } from '../lib/session';
 import { useSearch } from '../lib/queries';
 import { navigate, to } from '../lib/paths';

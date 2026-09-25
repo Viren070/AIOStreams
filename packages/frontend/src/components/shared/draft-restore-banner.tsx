@@ -1,13 +1,13 @@
 import React from 'react';
 import { BiDotsVerticalRounded } from 'react-icons/bi';
 import { LuEye, LuHistory } from 'react-icons/lu';
-import { Button, IconButton } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { Modal } from '@/components/ui/modal';
+import { Button, IconButton } from '@aiostreams/ui/button';
+import { DropdownMenu, DropdownMenuItem } from '@aiostreams/ui/dropdown-menu';
+import { Modal } from '@aiostreams/ui/modal';
 import { UserDataDiffViewer } from '@/components/shared/userdata-diff-viewer';
 import { resolveDraft, useUserData } from '@/context/userData';
 import { useStatus } from '@/context/status';
-import { relativeTime } from '@/lib/format';
+import { relativeTime } from '@aiostreams/ui/core/format';
 
 /** Offers unsaved work found on this browser, rather than applying it. */
 export function DraftRestoreBanner() {

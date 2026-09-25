@@ -1,7 +1,7 @@
 import React from 'react';
 import { useMode } from '@/context/mode';
 import { GlowCard } from '@/components/shared/glow-card';
-import { ModeSwitch } from '@/components/ui/mode-switch/mode-switch';
+import { ModeSwitch } from '@/components/mode-switch/mode-switch';
 
 export function InterfaceMode() {
   const { mode, setMode } = useMode();

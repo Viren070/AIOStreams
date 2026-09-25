@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import CodeMirror, { EditorView } from '@uiw/react-codemirror';
 import { placeholder as placeholderExtension } from '@codemirror/view';
 import { UserData } from '@aiostreams/core';
-import { cn } from '@/components/ui/core/styling';
+import { cn } from '@aiostreams/ui/core/styling';
 import { formatterTheme } from '../../../formatter/editor/formatter-theme.js';
 import { celHighlight, celTheme } from './cel-highlight.js';
 import { celLinter } from './cel-lint.js';

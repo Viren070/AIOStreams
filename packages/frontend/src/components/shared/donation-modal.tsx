@@ -1,5 +1,5 @@
-import { Button } from '../ui/button';
-import { Modal } from '../ui/modal';
+import { Button } from '@aiostreams/ui/button';
+import { Modal } from '@aiostreams/ui/modal';
 import { SiGithubsponsors } from 'react-icons/si';
 import { SiKofi } from 'react-icons/si';
 

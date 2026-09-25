@@ -1,13 +1,13 @@
 import { useEffect } from 'react';
-import { LoadingOverlay } from '@/components/ui/loading-spinner';
+import { LoadingOverlay } from '@aiostreams/ui/loading-spinner';
 import { TextGenerateEffect } from '@/components/shared/text-generate-effect';
-import { LuffyError } from '@/components/shared/luffy-error';
-import { Card } from '@/components/ui/card';
-import { IconButton } from '@/components/ui/button';
+import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
+import { Card } from '@aiostreams/ui/card';
+import { IconButton } from '@aiostreams/ui/button';
 import { toast } from 'sonner';
 import { exchangeGDriveCode } from '@/lib/api';
 import { BiCopy } from 'react-icons/bi';
-import { copyToClipboard } from '@/utils/clipboard';
+import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
 import { useMutation } from '@tanstack/react-query';
 
 export function OAuthCallback() {

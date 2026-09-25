@@ -1,6 +1,6 @@
 import React from 'react';
 import { BiCheck, BiPlay } from 'react-icons/bi';
-import { cn } from '@/components/ui/core/styling';
+import { cn } from '@aiostreams/ui/core/styling';
 import { usePosterLines } from '../lib/settings';
 
 /** A list is tried in order, moving on when an image fails to load. */

@@ -10,21 +10,21 @@ import {
   BiTrash,
   BiUpload,
 } from 'react-icons/bi';
-import { Card } from '@/components/ui/card';
-import { Button, IconButton, type ButtonProps } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { TextInput } from '@/components/ui/text-input';
-import { Textarea } from '@/components/ui/textarea';
-import { NumberInput } from '@/components/ui/number-input';
-import { Select } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Modal } from '@/components/ui/modal';
-import { SimpleDropzone } from '@/components/ui/simple-dropzone';
-import { cn } from '@/components/ui/core/styling';
+import { Card } from '@aiostreams/ui/card';
+import { Button, IconButton, type ButtonProps } from '@aiostreams/ui/button';
+import { Checkbox } from '@aiostreams/ui/checkbox';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { Textarea } from '@aiostreams/ui/textarea';
+import { NumberInput } from '@aiostreams/ui/number-input';
+import { Select } from '@aiostreams/ui/select';
+import { Switch } from '@aiostreams/ui/switch';
+import { Modal } from '@aiostreams/ui/modal';
+import { SimpleDropzone } from '@aiostreams/ui/simple-dropzone';
+import { cn } from '@aiostreams/ui/core/styling';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
-} from '@/components/shared/confirmation-dialog';
+} from '@aiostreams/ui/shared/confirmation-dialog';
 import { DashboardQueryBoundary } from '@/components/shared/dashboard-query-boundary';
 import { api } from '@/lib/api';
 import {

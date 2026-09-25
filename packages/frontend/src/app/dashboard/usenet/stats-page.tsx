@@ -1,12 +1,12 @@
 import React from 'react';
 import { BiErrorCircle, BiEraser } from 'react-icons/bi';
-import { Alert } from '@/components/ui/alert';
-import { Card } from '@/components/ui/card';
-import { IconButton } from '@/components/ui/button';
-import { Popover } from '@/components/ui/popover';
-import { Tooltip } from '@/components/ui/tooltip';
-import { cn } from '@/components/ui/core/styling';
-import { AreaChart, DonutChart, Stat } from '@/components/ui/charts';
+import { Alert } from '@aiostreams/ui/alert';
+import { Card } from '@aiostreams/ui/card';
+import { IconButton } from '@aiostreams/ui/button';
+import { Popover } from '@aiostreams/ui/popover';
+import { Tooltip } from '@aiostreams/ui/tooltip';
+import { cn } from '@aiostreams/ui/core/styling';
+import { AreaChart, DonutChart, Stat } from '@aiostreams/ui/charts';
 import { DashboardQueryBoundary } from '@/components/shared/dashboard-query-boundary';
 import { AnimatedNumber } from '@/components/shared/animated-number';
 import {
@@ -31,7 +31,7 @@ import {
   formatPercent,
   formatCompact,
   formatDurationMs,
-} from '@/lib/format';
+} from '@aiostreams/ui/core/format';
 
 // ---------------------------------------------------------------------------
 // formatting helpers

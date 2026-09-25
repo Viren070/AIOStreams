@@ -1,4 +1,4 @@
-import { LoadingOverlay } from '@/components/ui/loading-spinner';
+import { LoadingOverlay } from '@aiostreams/ui/loading-spinner';
 
 export function SplashscreenPage() {
   return (

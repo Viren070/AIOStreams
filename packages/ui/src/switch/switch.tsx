@@ -1,5 +1,5 @@
-import { hiddenInputStyles } from '@/components/ui/input';
-import { Popover } from '@/components/ui/popover';
+import { hiddenInputStyles } from '../input';
+import { Popover } from '../popover';
 import * as SwitchPrimitive from '@radix-ui/react-switch';
 import { cva, VariantProps } from 'class-variance-authority';
 import * as React from 'react';

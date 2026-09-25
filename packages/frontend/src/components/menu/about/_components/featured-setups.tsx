@@ -2,7 +2,7 @@ import React from 'react';
 import { Template } from '@aiostreams/core';
 import { PuzzleIcon, CloudIcon, CloudOffIcon } from 'lucide-react';
 import { GlowCard } from '@/components/shared/glow-card';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from '@aiostreams/ui/skeleton';
 import MarkdownLite from '@/components/shared/markdown-lite';
 import { SourceBadge } from '@/components/shared/templates/steps/browse';
 import { templateRequirements } from '@/lib/templates/summary';

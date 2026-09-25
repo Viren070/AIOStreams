@@ -16,7 +16,7 @@ import {
   ContextMenuLabel,
   ContextMenuSeparator,
   ContextMenuTrigger,
-} from '@/components/ui/context-menu';
+} from '@aiostreams/ui/context-menu';
 import { useSetFavorite, useSetPlayed, useSetPlayedUpTo } from '../lib/queries';
 import { itemTitle, ticksToMs } from '../lib/format';
 import { itemPath, navigate, to } from '../lib/paths';

@@ -1,10 +1,10 @@
 import React from 'react';
 import { useFormContext, useFormState } from 'react-hook-form';
 import { FiRotateCcw, FiSave } from 'react-icons/fi';
-import { Alert } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { Field } from '@/components/ui/form';
-import { cn } from '@/components/ui/core/styling';
+import { Alert } from '@aiostreams/ui/alert';
+import { Button } from '@aiostreams/ui/button';
+import { Field } from '@aiostreams/ui/form';
+import { cn } from '@aiostreams/ui/core/styling';
 
 /**
  * Ported 1:1 from seanime's `settings-submit-button.tsx`, minus jotai — dirty

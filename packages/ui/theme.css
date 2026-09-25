@@ -1,0 +1,213 @@
+/* Import after Tailwind's base, components and utilities, so these rules follow preflight. */
+
+body {
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+}
+
+@layer base {
+  :root {
+    --color-brand-50: 242 240 255;
+    --color-brand-100: 238 235 255;
+    --color-brand-200: 212 208 255;
+    --color-brand-300: 199 194 255;
+    --color-brand-400: 159 146 255;
+    --color-brand-500: 97 82 223;
+    --color-brand-600: 82 67 203;
+    --color-brand-700: 63 46 178;
+    --color-brand-800: 49 40 135;
+    --color-brand-900: 35 28 107;
+    --color-brand-950: 26 20 79;
+    --color-brand-default: 97 82 223;
+
+    --color-gray-50: 230 230 230;
+    --color-gray-100: 225 225 225;
+    --color-gray-200: 209 209 209;
+    --color-gray-300: 202 202 202;
+    --color-gray-400: 143 143 143;
+    --color-gray-500: 90 90 90;
+    --color-gray-600: 72 72 72;
+    --color-gray-700: 54 54 54;
+    --color-gray-800: 28 28 28;
+    --color-gray-900: 16 16 16;
+    --color-gray-950: 11 11 11;
+    --color-gray-default: 105 105 105;
+
+    --radius: 0.5rem;
+    --radius-md: 0.5rem;
+
+    --titlebar-h: theme('height.10');
+
+    --foreground: theme('colors.gray.800');
+    --background: white;
+
+    --brand: theme('colors.brand.300');
+    --slate: theme('colors.slate.500');
+    --gray: theme('colors.gray.500');
+    --zinc: theme('colors.zinc.500');
+    --neutral: theme('colors.neutral.500');
+    --stone: theme('colors.stone.500');
+    --red: theme('colors.red.500');
+    --orange: theme('colors.orange.500');
+    --amber: theme('colors.amber.500');
+    --yellow: theme('colors.yellow.500');
+    --lime: theme('colors.lime.500');
+    --green: theme('colors.green.500');
+    --emerald: theme('colors.emerald.500');
+    --teal: theme('colors.teal.500');
+    --cyan: theme('colors.cyan.500');
+    --sky: theme('colors.sky.500');
+    --blue: theme('colors.blue.500');
+    --indigo: theme('colors.indigo.500');
+    --violet: theme('colors.violet.500');
+    --purple: theme('colors.purple.500');
+    --fuchsia: theme('colors.fuchsia.500');
+    --pink: theme('colors.pink.500');
+    --rose: theme('colors.rose.500');
+
+    --border: theme('colors.gray.200');
+    --ring: theme('colors.brand.500');
+
+    --muted: theme('colors.gray.500');
+    --muted-highlight: theme('colors.gray.700');
+
+    --paper: theme('colors.white');
+    --subtle: rgba(0, 0, 0, 0.04);
+    --subtle-highlight: rgba(0, 0, 0, 0.06);
+  }
+
+  .dark,
+  [data-mode='dark'] {
+    --foreground: theme('colors.gray.200');
+    --background: #070707;
+
+    --slate: theme('colors.slate.300');
+    --gray: theme('colors.gray.300');
+    --zinc: theme('colors.zinc.300');
+    --neutral: theme('colors.neutral.300');
+    --stone: theme('colors.stone.300');
+    --red: theme('colors.red.300');
+    --orange: theme('colors.orange.300');
+    --amber: theme('colors.amber.300');
+    --yellow: theme('colors.yellow.300');
+    --lime: theme('colors.lime.300');
+    --green: theme('colors.green.300');
+    --emerald: theme('colors.emerald.300');
+    --teal: theme('colors.teal.300');
+    --cyan: theme('colors.cyan.300');
+    --sky: theme('colors.sky.300');
+    --blue: theme('colors.blue.300');
+    --indigo: theme('colors.indigo.300');
+    --violet: theme('colors.violet.300');
+    --purple: theme('colors.purple.300');
+    --fuchsia: theme('colors.fuchsia.300');
+    --pink: theme('colors.pink.300');
+    --rose: theme('colors.rose.300');
+
+    --border: rgba(255, 255, 255, 0.1);
+    --ring: theme('colors.brand.200');
+
+    --muted: rgba(255, 255, 255, 0.4);
+    --muted-highlight: rgba(255, 255, 255, 0.6);
+
+    --paper: theme('colors.gray.950');
+    --paper-highlighter: theme('colors.gray.950');
+    --subtle: rgba(255, 255, 255, 0.06);
+    --subtle-highlight: rgba(255, 255, 255, 0.08);
+  }
+}
+
+html {
+  background-color: var(--background);
+  color: var(--foreground);
+  /* always reserve the scrollbar's space, so neither a route change nor an
+     overlay's scroll lock can change the viewport width */
+  scrollbar-gutter: stable;
+}
+
+html * {
+  border-color: var(--border);
+}
+
+h1 {
+  @apply scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl;
+}
+
+h2 {
+  @apply scroll-m-20 text-3xl font-bold tracking-tight first:mt-0;
+}
+
+h3 {
+  @apply scroll-m-20 text-2xl font-semibold tracking-tight;
+}
+
+h4 {
+  @apply scroll-m-20 text-xl font-semibold tracking-tight;
+}
+
+h5 {
+  @apply scroll-m-20 text-lg font-semibold tracking-tight;
+}
+
+h6 {
+  @apply scroll-m-20 text-base font-semibold tracking-tight;
+}
+
+/* width */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-700 rounded-full;
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-600;
+}
+
+.code {
+  @apply bg-gray-800 rounded-[--radius-md] px-2 py-1 text-sm font-mono border;
+}
+
+.force-hidden {
+  display: none !important;
+}
+
+/* the gutter above is permanent, so react-remove-scroll's own compensation
+   would double up and pull the page left while an overlay is open */
+@supports (scrollbar-gutter: stable) {
+  body[data-scroll-locked] {
+    margin-right: 0 !important;
+    --removed-body-scroll-bar-size: 0px !important;
+  }
+}
+
+pre {
+  overflow-x: auto;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}

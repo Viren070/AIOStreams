@@ -1,15 +1,15 @@
 import React, { createContext, useContext, useMemo, useState } from 'react';
-import { cn } from '../../../ui/core/styling';
+import { cn } from '@aiostreams/ui/core/styling';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '../../../ui/accordion';
-import { TextInput } from '../../../ui/text-input';
-import { NumberInput } from '../../../ui/number-input';
-import { Select } from '../../../ui/select';
-import { Switch } from '../../../ui/switch';
+} from '@aiostreams/ui/accordion';
+import { TextInput } from '@aiostreams/ui/text-input';
+import { NumberInput } from '@aiostreams/ui/number-input';
+import { Select } from '@aiostreams/ui/select';
+import { Switch } from '@aiostreams/ui/switch';
 
 /** One control can drive several template fields, e.g. every language variant. */
 export type FieldRef = string | readonly string[];

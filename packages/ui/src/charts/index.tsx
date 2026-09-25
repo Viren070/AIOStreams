@@ -26,7 +26,7 @@ import {
   Tooltip,
   Legend,
 } from 'recharts';
-import { cn } from '@/components/ui/core/styling';
+import { cn } from '../core/styling';
 
 /** Palette used for multi-series charts; first entry is the brand color. */
 export const CHART_COLORS = [

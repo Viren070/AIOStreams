@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { cn } from '@/components/ui/core/styling';
+import { cn } from '@aiostreams/ui/core/styling';
 import { api } from '@/lib/api';
 
 export type Verdict = 'dead' | 'defective' | 'fake' | 'mislabeled';

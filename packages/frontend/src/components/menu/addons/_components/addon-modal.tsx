@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Option } from '@aiostreams/core';
-import { Button } from '../../../ui/button';
-import { Modal } from '../../../ui/modal';
+import { Button } from '@aiostreams/ui/button';
+import { Modal } from '@aiostreams/ui/modal';
 import TemplateOption from '../../../shared/template-option';
 import MarkdownLite from '../../../shared/markdown-lite';
 import { useMode } from '@/context/mode';

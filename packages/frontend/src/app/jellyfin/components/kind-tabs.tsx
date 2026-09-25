@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui/button';
+import { Button } from '@aiostreams/ui/button';
 
 export const KINDS = [
   { label: 'All', types: 'Movie,Series' },

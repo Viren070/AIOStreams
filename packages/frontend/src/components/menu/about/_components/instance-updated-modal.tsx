@@ -1,7 +1,7 @@
 import React from 'react';
 import { SparklesIcon, ExternalLinkIcon } from 'lucide-react';
-import { Modal } from '@/components/ui/modal';
-import { Button } from '@/components/ui/button';
+import { Modal } from '@aiostreams/ui/modal';
+import { Button } from '@aiostreams/ui/button';
 import {
   DOCS_CHANGELOG_URL,
   DocsChangelogEntry,

@@ -6,9 +6,9 @@ import {
   KeyRoundIcon,
   GitCompareIcon,
 } from 'lucide-react';
-import { Alert } from '../../../ui/alert';
-import { Modal } from '../../../ui/modal';
-import { Button } from '../../../ui/button';
+import { Alert } from '@aiostreams/ui/alert';
+import { Modal } from '@aiostreams/ui/modal';
+import { Button } from '@aiostreams/ui/button';
 import { ServiceLogo } from '../../service-logo';
 import { UserDataDiffViewer } from '../../userdata-diff-viewer';
 import { templateRequirements } from '@/lib/templates/summary';

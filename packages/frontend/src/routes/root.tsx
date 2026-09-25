@@ -1,8 +1,8 @@
 import { Outlet, createRootRouteWithContext } from '@tanstack/react-router';
 import { ThemeProvider } from 'next-themes';
-import { Toaster } from '@/components/ui/toaster';
-import { LuffyError } from '@/components/shared/luffy-error';
-import { LoadingOverlay } from '@/components/ui/loading-spinner';
+import { Toaster } from '@aiostreams/ui/toaster';
+import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
+import { LoadingOverlay } from '@aiostreams/ui/loading-spinner';
 import type { QueryClient } from '@tanstack/react-query';
 import { lazy, Suspense } from 'react';
 

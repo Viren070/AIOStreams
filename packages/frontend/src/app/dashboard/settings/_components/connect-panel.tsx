@@ -1,8 +1,8 @@
 import React from 'react';
 import { toast } from 'sonner';
 import { BiCopy } from 'react-icons/bi';
-import { Card } from '@/components/ui/card';
-import { IconButton } from '@/components/ui/button';
+import { Card } from '@aiostreams/ui/card';
+import { IconButton } from '@aiostreams/ui/button';
 import { useConfigValue } from './use-config-value';
 
 /**

@@ -7,17 +7,17 @@ import {
   AccordionItem,
   AccordionTrigger,
   AccordionContent,
-} from '@/components/ui/accordion';
-import { Drawer } from '@/components/ui/drawer';
-import { Alert } from '@/components/ui/alert';
-import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/components/ui/core/styling';
+} from '@aiostreams/ui/accordion';
+import { Drawer } from '@aiostreams/ui/drawer';
+import { Alert } from '@aiostreams/ui/alert';
+import { Skeleton } from '@aiostreams/ui/skeleton';
+import { cn } from '@aiostreams/ui/core/styling';
 import {
   GithubRelease,
   ReleaseChannel,
   DOCS_CHANGELOG_URL,
 } from '@/lib/changelog';
-import { useMediaQuery } from '@/hooks/media-query';
+import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
 import { UseReleases } from './use-releases';
 
 /**
