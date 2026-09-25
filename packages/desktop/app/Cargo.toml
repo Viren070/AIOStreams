@@ -1,0 +1,29 @@
+[package]
+name = "aiostreams-desktop"
+description = "AIOStreams' Jellyfin web app in a native window, playing through mpv"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "aiostreams-desktop"
+path = "src/main.rs"
+
+[dependencies]
+aiostreams-desktop-core.workspace = true
+log.workspace = true
+env_logger.workspace = true
+serde_json.workspace = true
+dirs.workspace = true
+tao.workspace = true
+wry.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { workspace = true, features = [
+  "Win32_Foundation",
+  "Win32_Graphics_Gdi",
+  "Win32_System_LibraryLoader",
+  "Win32_UI_Shell",
+  "Win32_UI_WindowsAndMessaging",
+] }

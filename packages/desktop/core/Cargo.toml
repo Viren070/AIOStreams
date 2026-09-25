@@ -1,0 +1,14 @@
+[package]
+name = "aiostreams-desktop-core"
+description = "The OS-independent part of the desktop shell: libmpv, the page bridge, settings"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+libloading.workspace = true
+log.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+url = "2"

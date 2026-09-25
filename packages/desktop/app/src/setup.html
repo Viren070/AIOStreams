@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>AIOStreams</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: system-ui, sans-serif;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #070707;
+        color: #f4f4f5;
+      }
+      form {
+        width: min(28rem, calc(100vw - 2rem));
+        display: grid;
+        gap: 0.75rem;
+      }
+      h1 {
+        margin: 0 0 0.25rem;
+        font-size: 1.5rem;
+      }
+      p {
+        margin: 0;
+        color: #a1a1aa;
+        font-size: 0.9rem;
+        line-height: 1.4;
+      }
+      input {
+        padding: 0.7rem 0.9rem;
+        border-radius: 0.6rem;
+        border: 1px solid #3f3f46;
+        background: #18181b;
+        color: inherit;
+        font-size: 1rem;
+      }
+      input:focus {
+        outline: 2px solid #a1a1aa;
+        outline-offset: 1px;
+      }
+      button {
+        padding: 0.7rem;
+        border: 0;
+        border-radius: 999px;
+        background: #f4f4f5;
+        color: #09090b;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      #error {
+        color: #f87171;
+        min-height: 1.2em;
+      }
+    </style>
+  </head>
+  <body>
+    <form id="form">
+      <h1>Connect to a server</h1>
+      <p>Paste the address you open the web app at, or the server's address.</p>
+      <input
+        id="url"
+        type="text"
+        placeholder="https://example.com/jellyfin"
+        autofocus
+        spellcheck="false"
+      />
+      <p id="error" role="alert"></p>
+      <button type="submit">Connect</button>
+    </form>
+    <script>
+      const input = document.getElementById('url');
+      const error = document.getElementById('error');
+      input.value = __SERVER__;
+      window.aiostreamsDesktop.subscribe((message) => {
+        if (message.type === 'error') error.textContent = message.message;
+      });
+      document.getElementById('form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        error.textContent = '';
+        window.aiostreamsDesktop.send({ type: 'set-server', url: input.value });
+      });
+    </script>
+  </body>
+</html>
