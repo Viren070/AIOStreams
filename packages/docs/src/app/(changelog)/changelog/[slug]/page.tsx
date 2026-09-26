@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
@@ -75,7 +76,12 @@ export async function generateMetadata(
   const page = changelogSource.getPage([slug]);
   if (!page) notFound();
 
-  const image = `/og/changelog/${slug}.webp`;
+  const { title, description, version, date } = page.data;
+  const hash = createHash('sha1')
+    .update(JSON.stringify([title, description, version, date]))
+    .digest('hex')
+    .slice(0, 8);
+  const image = `/og/changelog/${slug}.webp?v=${hash}`;
 
   return {
     title: page.data.title,
