@@ -1,4 +1,6 @@
-﻿import { Headers } from 'undici';
+﻿import pLimit from 'p-limit';
+import type { ConflictEpisodeCatalog } from '../streams/title-conflict-episodes.js';
+import { Headers } from 'undici';
 import {
   appConfig,
   Cache,
@@ -303,6 +305,13 @@ export class TMDBMetadata {
   >('tmdb_id_conversion');
   private static readonly metadataCache: Cache<string, Metadata> =
     Cache.getInstance<string, Metadata>('tmdb_metadata');
+  private static readonly catalogCache = Cache.getInstance<
+    number,
+    ConflictEpisodeCatalog
+  >('tmdb_episode_catalog');
+  private static readonly seasonBoundCache = Cache.getInstance<number, number>(
+    'tmdb_conflict_season_bound'
+  );
   private readonly accessToken: string | undefined;
   private readonly apiKey: string | undefined;
   private static readonly validationCache: Cache<string, boolean> =
@@ -653,6 +662,134 @@ export class TMDBMetadata {
     const json = await response.json();
     const data = ReleaseDatesResponseSchema.parse(json);
     return data.results.flatMap((result) => result.release_dates);
+  }
+
+  /** Validate the complete season list independently of individual episode data. */
+  public async getSeasonBound(tmdbId: number): Promise<number> {
+    return TMDBMetadata.seasonBoundCache.wrap(
+      async () => {
+        const url = new URL(`${API_BASE_URL}/tv/${tmdbId}`);
+        this.addSearchParams(url);
+        const response = await makeRequest(url.toString(), {
+          timeout: 5000,
+          headers: this.getHeaders(),
+        });
+        if (!response.ok)
+          throw new Error(`TMDB season summary failed: ${response.status}`);
+        const show = z
+          .object({
+            id: z.number().int().positive(),
+            number_of_seasons: z.number().int().positive(),
+            seasons: z.array(
+              z.object({ season_number: z.number().int().nonnegative() })
+            ),
+          })
+          .parse(await response.json());
+        const seasons = show.seasons
+          .map((s) => s.season_number)
+          .filter((n) => n > 0)
+          .sort((a, b) => a - b);
+        if (
+          show.id !== tmdbId ||
+          seasons.length !== show.number_of_seasons ||
+          seasons.some((n, i) => n !== i + 1)
+        ) {
+          throw new Error('Incomplete or mismatched TMDB season summary');
+        }
+        return show.number_of_seasons;
+      },
+      tmdbId,
+      24 * 60 * 60
+    );
+  }
+
+  /** Fetch a complete regular-season catalog; failures and partial data are not cached. */
+  public async getEpisodeCatalog(
+    tmdbId: number
+  ): Promise<ConflictEpisodeCatalog> {
+    return TMDBMetadata.catalogCache.wrap(
+      async () => {
+        const read = async (path: string) => {
+          const url = new URL(API_BASE_URL + path);
+          this.addSearchParams(url);
+          const response = await makeRequest(url.toString(), {
+            timeout: 5000,
+            headers: this.getHeaders(),
+          });
+          if (!response.ok)
+            throw new Error(`TMDB catalog request failed: ${response.status}`);
+          return response.json();
+        };
+        const show = z
+          .object({
+            id: z.number().int().positive(),
+            number_of_seasons: z.number().int().positive(),
+            number_of_episodes: z.number().int().positive(),
+            seasons: z.array(
+              z.object({
+                season_number: z.number().int().nonnegative(),
+                episode_count: z.number().int().nonnegative(),
+              })
+            ),
+          })
+          .parse(await read(`/tv/${tmdbId}`));
+        const seasons = show.seasons
+          .filter((s) => s.season_number > 0)
+          .sort((a, b) => a.season_number - b.season_number);
+        if (
+          show.id !== tmdbId ||
+          seasons.length !== show.number_of_seasons ||
+          seasons.some(
+            (s, i) => s.season_number !== i + 1 || s.episode_count < 1
+          ) ||
+          seasons.reduce((n, s) => n + s.episode_count, 0) !==
+            show.number_of_episodes
+        )
+          throw new Error('Incomplete TMDB catalog summary');
+        const limit = pLimit(3);
+        const lists = await Promise.all(
+          seasons.map((season) =>
+            limit(async () => {
+              const data = z
+                .object({
+                  season_number: z.number().int(),
+                  episodes: z.array(
+                    z.object({
+                      show_id: z.number().int(),
+                      season_number: z.number().int(),
+                      episode_number: z.number().int().positive(),
+                    })
+                  ),
+                })
+                .parse(
+                  await read(`/tv/${tmdbId}/season/${season.season_number}`)
+                );
+              const episodes = data.episodes.sort(
+                (a, b) => a.episode_number - b.episode_number
+              );
+              if (
+                data.season_number !== season.season_number ||
+                episodes.length !== season.episode_count ||
+                episodes.some(
+                  (e, i) =>
+                    e.show_id !== tmdbId ||
+                    e.season_number !== season.season_number ||
+                    e.episode_number !== i + 1
+                )
+              )
+                throw new Error('Incomplete or mismatched TMDB season catalog');
+              return episodes.map((e) => ({
+                seasonNumber: e.season_number,
+                episodeNumber: e.episode_number,
+              }));
+            })
+          )
+        );
+        return { tmdbId, episodes: lists.flat() };
+      },
+      tmdbId,
+      24 * 60 * 60
+    );
   }
 
   public async getEpisodeDetails(
