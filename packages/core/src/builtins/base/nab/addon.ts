@@ -21,6 +21,7 @@ import {
 import {
   createQueryLimit,
   getTitleLanguagesForUrl,
+  getTitleLimitForUrl,
   titleContainsAirDate,
 } from '../../utils/general.js';
 
@@ -245,6 +246,7 @@ export abstract class BaseNabAddon<
           ? false
           : !queryParams.season && !queryParams.ep,
         titleLanguages: getTitleLanguagesForUrl(this.userData.url, this.id),
+        titleLimit: getTitleLimitForUrl(this.userData.url, this.id),
       });
       searchType = 'query';
     }
