@@ -3,6 +3,7 @@ use std::ffi::{c_char, c_int, c_void};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::{Arc, OnceLock};
+use std::time::Duration;
 
 use aiostreams_desktop_core::mpv::Mpv;
 use aiostreams_desktop_core::render::{NativeDisplay, RenderContext};
@@ -117,15 +118,50 @@ fn native_display(display: &gtk4::gdk::Display) -> Option<NativeDisplay> {
     }
 }
 
+type Render = Rc<RefCell<Option<RenderContext>>>;
+
 thread_local! {
     static AREA: RefCell<Option<gtk4::GLArea>> = const { RefCell::new(None) };
+    static RENDER: RefCell<Option<Render>> = const { RefCell::new(None) };
+}
+
+/// Draws the next frame when it is due, not in mpv's own wait, which would hold up the UI thread.
+fn update_video() {
+    let Some(area) = AREA.with(|a| a.borrow().clone()) else {
+        return;
+    };
+    let Some(render) = RENDER.with(|r| r.borrow().clone()) else {
+        return;
+    };
+    let render = render.borrow();
+    let Some(r) = render.as_ref() else {
+        return;
+    };
+    // mpv's render calls need its OpenGL context current, and GTK may have left another.
+    area.make_current();
+    if !r.update() {
+        return;
+    }
+    // A frame drawn in one refresh shows at the next; the timer can fire late.
+    let refresh = area
+        .frame_clock()
+        .map(|c| c.refresh_info(0).0)
+        .filter(|&us| us > 0)
+        .unwrap_or(16_667);
+    let lead = Duration::from_micros(refresh as u64) + Duration::from_millis(2);
+    match r.next_frame_in().and_then(|wait| wait.checked_sub(lead)) {
+        Some(wait) if !wait.is_zero() => {
+            glib::timeout_add_local_once(wait, move || area.queue_render());
+        }
+        _ => area.queue_render(),
+    }
 }
 
 /// The GLArea mpv's render API draws into, beneath the web view.
 pub struct VideoSurface {
     overlay: gtk4::Overlay,
     area: gtk4::GLArea,
-    render: Rc<RefCell<Option<RenderContext>>>,
+    render: Render,
 }
 
 impl VideoSurface {
@@ -138,13 +174,14 @@ impl VideoSurface {
         overlay.set_child(Some(&area));
         AREA.with(|a| *a.borrow_mut() = Some(area.clone()));
 
-        let render: Rc<RefCell<Option<RenderContext>>> = Rc::default();
+        let render: Render = Rc::default();
+        RENDER.with(|r| *r.borrow_mut() = Some(render.clone()));
         area.connect_render({
             let render = render.clone();
             move |area, _| {
                 if let Some(r) = render.borrow().as_ref() {
                     let scale = area.scale_factor();
-                    r.render(
+                    r.draw(
                         current_fbo(),
                         area.width() * scale,
                         area.height() * scale,
@@ -187,13 +224,7 @@ impl VideoSurface {
                 ) {
                     Ok(mut ctx) => {
                         ctx.on_update(|| {
-                            glib::idle_add_once(|| {
-                                AREA.with(|a| {
-                                    if let Some(a) = a.borrow().as_ref() {
-                                        a.queue_render();
-                                    }
-                                })
-                            });
+                            glib::idle_add_once(update_video);
                         });
                         *render.borrow_mut() = Some(ctx);
                         area.queue_render();
