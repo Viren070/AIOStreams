@@ -268,7 +268,8 @@ impl VideoLayer {
             return;
         }
         let _lock = ContextLock::new(ivars.context);
-        match RenderContext::new(mpv, get_proc_address, ptr::null_mut(), None, false) {
+        // Advanced control: mpv waits on the main thread, where nothing may block on mpv.
+        match RenderContext::new(mpv, get_proc_address, ptr::null_mut(), None, true) {
             Ok(mut render) => {
                 render.on_update(|| {
                     DispatchQueue::main().exec_async(|| {
@@ -489,6 +490,8 @@ pub fn mpv_options(_video: &VideoSurface) -> Vec<(&'static str, String)> {
         ("hwdec", "auto-safe".into()),
         // Frames arrive when due, so drawing one barely waits on the main thread.
         ("video-timing-offset", "0".into()),
+        // Needs OpenGL 4.4, which macOS lacks, and each try waits on the main thread.
+        ("vd-lavc-dr", "no".into()),
     ]
 }
 
