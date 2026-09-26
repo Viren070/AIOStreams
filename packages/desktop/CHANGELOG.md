@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.2.0...desktop-v0.3.0) (2026-09-26)
+
+
+### Features
+
+* **jellyfin-web:** split search results into movie and show rows ([a9bf501](https://github.com/Viren070/AIOStreams/commit/a9bf501542add926bf8a6233893d98da025de75a))
+
 ## [0.2.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.1.0...desktop-v0.2.0) (2026-09-26)
 
 
