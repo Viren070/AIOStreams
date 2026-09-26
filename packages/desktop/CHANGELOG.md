@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/Viren070/AIOStreams/compare/desktop-v0.3.0...desktop-v0.3.1) (2026-09-26)
+
+
+### Bug Fixes
+
+* **jellyfin-web:** credit the projects the app builds on under About ([acd8956](https://github.com/Viren070/AIOStreams/commit/acd8956f0b5f1bbcfface3109e8a594a163e200c))
+
 ## [0.3.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.2.0...desktop-v0.3.0) (2026-09-26)
 
 
