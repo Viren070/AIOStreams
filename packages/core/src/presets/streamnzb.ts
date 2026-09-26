@@ -1,7 +1,21 @@
-import { Addon, Option, UserData, ParsedStream, Stream } from '../db/index.js';
+import {
+  Addon,
+  Option,
+  UserData,
+  ParsedStream,
+  Stream,
+  ParsedFile,
+} from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
 import { StreamParser } from '../parser/index.js';
-import { appConfig, createLogger, makeRequest } from '../utils/index.js';
+import {
+  appConfig,
+  createLogger,
+  makeRequest,
+  normaliseLanguage,
+  normaliseParsedMediaInfo,
+  ParsedMediaInfo,
+} from '../utils/index.js';
 import { constants } from '../utils/index.js';
 
 const logger = createLogger('streamnzb');
@@ -25,6 +39,55 @@ class StreamNZBStreamParser extends StreamParser {
     const cached = (stream.behaviorHints as { cached?: boolean } | undefined)
       ?.cached;
     if (cached === true) return 'AvailNZB 💚';
+  }
+
+  // StreamNZB streams carry the release's languages as ISO 639-1 codes in a
+  // `languages` field, merged from the release name and the indexer's own
+  // language tag. Flags in the description only cover the languages a single
+  // flag can stand for, so the codes are the complete list.
+  protected override getLanguages(
+    stream: Stream,
+    currentParsedStream: ParsedStream
+  ): string[] {
+    const languages = super.getLanguages(stream, currentParsedStream);
+    const codes = (stream as Record<string, unknown>).languages;
+    if (Array.isArray(codes)) {
+      for (const code of codes) {
+        const language = normaliseLanguage(code);
+        if (language && !languages.includes(language)) {
+          languages.push(language);
+        }
+      }
+    }
+    return languages;
+  }
+
+  // StreamNZB also sends the same `parsedMediaInfo` block the Newznab builtin
+  // builds from a feed's language and subs attributes. It is the only place
+  // subtitle languages can travel — a Stremio stream's `subtitles` field is a
+  // list of subtitle files — and without it every StreamNZB stream has
+  // "Unknown" subtitles and fails a required-subtitle filter.
+  protected override getParsedFileMergeOverrides(
+    stream: Stream,
+    _currentParsedStream: ParsedStream
+  ): Partial<ParsedFile> {
+    const provided = normaliseParsedMediaInfo(
+      (stream as Record<string, unknown>).parsedMediaInfo as
+        | ParsedMediaInfo
+        | undefined
+    );
+    if (!provided) return {};
+    const overrides: Partial<ParsedFile> = {};
+    if (provided.languages?.length) {
+      overrides.languages = [...provided.languages];
+    }
+    if (provided.subtitles?.length) {
+      overrides.subtitles = [...provided.subtitles];
+    }
+    if (provided.mediaInfoQuality) {
+      overrides.mediaInfoQuality = provided.mediaInfoQuality;
+    }
+    return overrides;
   }
 
   protected override getService(
