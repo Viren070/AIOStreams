@@ -172,6 +172,9 @@ pub fn run(app: App) {
         paths,
         bridge,
     } = app;
+    // The window's app id and class, which desktops match to its entry and icon.
+    glib::set_prgname(Some("io.github.viren070.aiostreams"));
+    glib::set_application_name("AIOStreams");
     gtk4::init().unwrap_or_else(|e| platform::fatal(&format!("could not start GTK: {e}")));
     // libmpv refuses to start unless LC_NUMERIC is C, which GTK's init replaced.
     // SAFETY: on the main thread, before any other thread starts.
