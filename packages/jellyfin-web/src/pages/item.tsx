@@ -76,6 +76,7 @@ import { ExternalLinks } from '../components/external-links';
 import { CastAndCrew } from '../components/people';
 import { KINDS, KindTabs } from '../components/kind-tabs';
 import { PickOnArrival, useVersionPicker } from '../components/version-picker';
+import { BackdropFrame } from '../components/hero';
 import type { BaseItemDto } from '../lib/types';
 
 export function ItemPage({
@@ -162,25 +163,32 @@ function Backdrop({
   }, [key]);
   const src = sources[attempt];
   const wash = attempt >= images.length;
+  const image = src && (
+    <img
+      key={src}
+      src={src}
+      alt=""
+      onLoad={() => setLoaded(true)}
+      onError={() => setAttempt((n) => n + 1)}
+      className={cn(
+        'absolute inset-0 h-full w-full object-cover transition-opacity duration-700',
+        wash ? 'scale-125 blur-3xl saturate-150' : 'object-top',
+        !loaded ? 'opacity-0' : wash ? 'opacity-50' : 'opacity-100'
+      )}
+    />
+  );
   return (
     <div
       aria-hidden
       data-ui="item-backdrop"
       className="pointer-events-none absolute inset-x-0 top-0 h-[55vh] overflow-hidden lg:h-[85vh]"
     >
-      {src && (
-        <img
-          key={src}
-          src={src}
-          alt=""
-          onLoad={() => setLoaded(true)}
-          onError={() => setAttempt((n) => n + 1)}
-          className={cn(
-            'absolute inset-0 h-full w-full object-cover transition-opacity duration-700',
-            wash ? 'scale-125 blur-3xl saturate-150' : 'object-top',
-            !loaded ? 'opacity-0' : wash ? 'opacity-50' : 'opacity-100'
-          )}
-        />
+      {wash ? (
+        image
+      ) : (
+        <BackdropFrame className="max-w-[calc(55vh*2.6)] lg:max-w-[calc(85vh*2.6)]">
+          {image}
+        </BackdropFrame>
       )}
       <div className="absolute inset-0 hidden bg-gradient-to-r from-[--background] via-[--background]/60 via-40% to-transparent lg:block" />
       <div className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-[--background] via-[--background]/70 to-transparent" />

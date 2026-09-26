@@ -32,6 +32,27 @@ function Shade() {
   );
 }
 
+/** Keeps a backdrop within 2.6 times its height, so a wide window does not crop away most of it. */
+export function BackdropFrame({
+  className,
+  children,
+}: {
+  className: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      data-ui="backdrop-frame"
+      className={cn(
+        'absolute inset-y-0 right-0 w-full lg:[mask-image:linear-gradient(to_right,transparent,black_12rem)]',
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
 function HeroTextSkeleton() {
   return (
     <>
@@ -54,7 +75,7 @@ function HeroSkeleton() {
   return (
     <section
       aria-hidden
-      className="relative h-[26rem] w-full overflow-hidden sm:h-[30rem] lg:h-[36rem]"
+      className="relative h-[26rem] w-full overflow-hidden sm:h-[30rem] lg:h-[max(36rem,53vh)]"
     >
       <div className="absolute inset-0 animate-pulse bg-[--subtle]" />
       <Shade />
@@ -226,16 +247,18 @@ export function Hero({
   return (
     <section
       data-ui="hero"
-      className="relative h-[26rem] w-full overflow-hidden sm:h-[30rem] lg:h-[36rem]"
+      className="relative h-[26rem] w-full overflow-hidden sm:h-[30rem] lg:h-[max(36rem,53vh)]"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      <Backdrops
-        sources={[
-          ...new Set(featured.flatMap((f) => backdropSrc(client, f) ?? [])),
-        ]}
-        current={backdropSrc(client, item)}
-      />
+      <BackdropFrame className="max-w-[calc(26rem*2.6)] sm:max-w-[calc(30rem*2.6)] lg:max-w-[calc(max(36rem,53vh)*2.6)]">
+        <Backdrops
+          sources={[
+            ...new Set(featured.flatMap((f) => backdropSrc(client, f) ?? [])),
+          ]}
+          current={backdropSrc(client, item)}
+        />
+      </BackdropFrame>
       <Shade />
 
       <div
@@ -308,7 +331,9 @@ function FollowBackdrop({ item }: { item: BaseItemDto | undefined }) {
       aria-hidden
       className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
     >
-      <Backdrops sources={recent} current={src} />
+      <BackdropFrame className="max-w-[calc(100vh*2.6)]">
+        <Backdrops sources={recent} current={src} />
+      </BackdropFrame>
       <Shade />
     </div>
   );
