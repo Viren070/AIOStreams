@@ -16,6 +16,7 @@ import {
 import { titleMatch, cleanTitle, preprocessTitle } from '../../parser/utils.js';
 import { parseTorrentTitleCached } from '../../parser/title.js';
 import { SearchMetadata } from '../base/debrid.js';
+import { isSeasonAbsoluteEpisodePairWrong } from '../../anime-database/episode-pairs.js';
 
 const logger = createLogger('library');
 
@@ -63,6 +64,16 @@ export function isItemMatch(
     const parsedDate = parsed.date || undefined;
     if (parsedDate && metadata.airDates?.length) {
       return metadata.airDates.includes(parsedDate);
+    }
+
+    if (
+      isSeasonAbsoluteEpisodePairWrong(itemName, parsed, {
+        ...metadata,
+        season,
+        episode,
+      })
+    ) {
+      return false;
     }
 
     // If the item has season info, check it matches
