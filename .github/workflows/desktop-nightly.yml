@@ -22,9 +22,10 @@ on:
 permissions:
   contents: write
 
-# A newer push replaces a nightly still building.
+# A newer push replaces a nightly still building. A release commit builds nothing, so it
+# runs in a group of its own instead of cancelling one.
 concurrency:
-  group: desktop-nightly
+  group: "${{ startsWith(github.event.head_commit.message, 'chore(desktop): release ') && format('desktop-nightly-skip-{0}', github.run_id) || 'desktop-nightly' }}"
   cancel-in-progress: true
 
 jobs:
