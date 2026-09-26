@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, mpsc};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
@@ -22,11 +22,20 @@ const LOGGED_PROPS: &[&str] = &[
     "audio-spdif",
 ];
 
+enum Request {
+    Command(Vec<String>),
+    SetProp(String, String),
+    Sync,
+}
+
+/// Makes the page's mpv calls on a thread of its own: the caller may be the render thread mpv waits on.
 pub struct Player {
     mpv: Arc<Mpv>,
-    emit: Emit,
     quit: Arc<AtomicBool>,
     events: Option<JoinHandle<()>>,
+    requests: Option<mpsc::Sender<Request>>,
+    worker: Option<JoinHandle<()>>,
+    versions: (Option<String>, Option<String>),
     /// The last value of each logged setting, so re-applying one logs nothing.
     logged: Mutex<HashMap<String, String>>,
 }
@@ -49,10 +58,11 @@ impl Player {
         for (id, (name, kind)) in OBSERVED.iter().enumerate() {
             mpv.observe(name, *kind, id as u64)?;
         }
+        let versions = (text(&mpv, "mpv-version"), text(&mpv, "ffmpeg-version"));
         log::info!(
             "mpv started version=\"{}\" ffmpeg={}",
-            text(&mpv, "mpv-version").unwrap_or_default(),
-            text(&mpv, "ffmpeg-version").unwrap_or_default()
+            versions.0.as_deref().unwrap_or_default(),
+            versions.1.as_deref().unwrap_or_default()
         );
         let quit = Arc::new(AtomicBool::new(false));
         let events = std::thread::Builder::new()
@@ -62,15 +72,32 @@ impl Player {
                 move || pump(&mpv, &emit, &quit)
             })
             .map_err(|e| e.to_string())?;
+        let (requests, inbox) = mpsc::channel();
+        let worker = std::thread::Builder::new()
+            .name("mpv-requests".into())
+            .spawn({
+                let mpv = mpv.clone();
+                move || serve(&mpv, &emit, &inbox)
+            })
+            .map_err(|e| e.to_string())?;
         Ok(Self {
             mpv,
-            emit,
             quit,
             events: Some(events),
+            requests: Some(requests),
+            worker: Some(worker),
+            versions,
             logged: Mutex::default(),
         })
     }
 
+    fn send(&self, request: Request) {
+        if let Some(requests) = &self.requests {
+            let _ = requests.send(request);
+        }
+    }
+
+    /// Errs only on refused arguments; mpv's own errors reach the page as a message.
     pub fn command(&self, args: &[Value]) -> Result<(), String> {
         let args = bridge::command(args)?;
         match args.as_slice() {
@@ -80,8 +107,8 @@ impl Player {
             [name, url, ..] if name == "sub-add" => log::info!("add subtitle url={url}"),
             _ => log::debug!("command {args:?}"),
         }
-        let refs: Vec<&str> = args.iter().map(String::as_str).collect();
-        self.mpv.command(&refs)
+        self.send(Request::Command(args));
+        Ok(())
     }
 
     pub fn set_prop(&self, name: &str, value: &Value) -> Result<(), String> {
@@ -96,17 +123,12 @@ impl Player {
         } else {
             log::debug!("set {name}={shown}");
         }
-        self.mpv.set_property(name, &value)
+        self.send(Request::SetProp(name.to_string(), value));
+        Ok(())
     }
 
     pub fn sync(&self) {
-        for (name, kind) in OBSERVED {
-            let data = self.mpv.get_property(name, *kind).unwrap_or(Value::Null);
-            (self.emit)(Outbound::MpvProp {
-                name: (*name).into(),
-                data,
-            });
-        }
+        self.send(Request::Sync);
     }
 
     pub fn mpv(&self) -> Arc<Mpv> {
@@ -114,23 +136,56 @@ impl Player {
     }
 
     pub fn versions(&self) -> (Option<String>, Option<String>) {
-        (
-            text(&self.mpv, "mpv-version"),
-            text(&self.mpv, "ffmpeg-version"),
-        )
+        self.versions.clone()
     }
 
     pub fn stop(&self) {
-        let _ = self.mpv.command(&["stop"]);
+        self.send(Request::Command(vec!["stop".into()]));
     }
 }
 
 impl Drop for Player {
     fn drop(&mut self) {
+        // Dropping the sender ends the worker after what was sent.
+        self.requests.take();
+        if let Some(worker) = self.worker.take() {
+            let _ = worker.join();
+        }
         self.quit.store(true, Ordering::SeqCst);
         self.mpv.wakeup();
         if let Some(events) = self.events.take() {
             let _ = events.join();
+        }
+    }
+}
+
+fn serve(mpv: &Mpv, emit: &Emit, inbox: &mpsc::Receiver<Request>) {
+    let fail = |message: String| {
+        log::warn!("{message}");
+        emit(Outbound::Error { message });
+    };
+    for request in inbox {
+        match request {
+            Request::Command(args) => {
+                let refs: Vec<&str> = args.iter().map(String::as_str).collect();
+                if let Err(e) = mpv.command(&refs) {
+                    fail(format!("mpv command {args:?}: {e}"));
+                }
+            }
+            Request::SetProp(name, value) => {
+                if let Err(e) = mpv.set_property(&name, &value) {
+                    fail(format!("mpv set {name}={value}: {e}"));
+                }
+            }
+            Request::Sync => {
+                for (name, kind) in OBSERVED {
+                    let data = mpv.get_property(name, *kind).unwrap_or(Value::Null);
+                    emit(Outbound::MpvProp {
+                        name: (*name).into(),
+                        data,
+                    });
+                }
+            }
         }
     }
 }
