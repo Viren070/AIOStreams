@@ -283,17 +283,26 @@ pub fn run(app: App) {
     let presses = gtk4::GestureClick::new();
     presses.set_button(0);
     presses.set_propagation_phase(gtk4::PropagationPhase::Capture);
-    presses.connect_pressed(|gesture, _, x, y| {
-        let (Some(shell), Some(device)) = (shell(), gesture.current_event_device()) else {
-            return;
-        };
-        *shell.press.borrow_mut() = Some(Press {
-            device,
-            button: gesture.current_button(),
-            x,
-            y,
-            time: gesture.current_event_time(),
-        });
+    presses.connect_pressed({
+        let webview = webview.downgrade();
+        move |gesture, _, x, y| {
+            // WebKitGTK 6 leaves a mouse's back and forward buttons to the app.
+            match (gesture.current_button(), webview.upgrade()) {
+                (8, Some(w)) => return w.go_back(),
+                (9, Some(w)) => return w.go_forward(),
+                _ => {}
+            }
+            let (Some(shell), Some(device)) = (shell(), gesture.current_event_device()) else {
+                return;
+            };
+            *shell.press.borrow_mut() = Some(Press {
+                device,
+                button: gesture.current_button(),
+                x,
+                y,
+                time: gesture.current_event_time(),
+            });
+        }
     });
     webview.add_controller(presses);
 
