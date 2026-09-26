@@ -234,6 +234,16 @@ A title's versions are reused for a few minutes, so opening it and then playing 
 
 Anything an addon sent with nothing to play, such as a notice, an error, or a link to its own website, is listed after the versions, along with any statistics you have switched on. Stremio offers these as links to open in a browser, which a Jellyfin app has no way to do, so only their text is any use there, and playing one gets you a short clip saying so. The [web app](#the-web-app) shows them as text too, with a button to open any link. They do not count towards **Versions per item**, and errors follow your **Hide Errors** setting.
 
+### Audio and subtitle tracks
+
+Subtitles from your subtitle addons show up as subtitle tracks in every app. The file's own audio and subtitle tracks depend on what AIOStreams knows about the stream:
+
+- **Media info that lists the tracks:** every track, named as in the file.
+- **Only the languages**, as some addons and indexers report: one numbered track per language, such as **Audio 2** or **Subtitle 1**. A file with two tracks in one language has one more than is listed.
+- **Nothing:** one audio track and none of the file's subtitles.
+
+Apps that read the tracks from the file themselves, and the [desktop app](/guides/desktop-app), list every track regardless.
+
 ### When nothing plays
 
 - **No streams found** is shown when your addons returned nothing playable and none of them reported why. When one did, its error is listed in place of it, the same message Stremio would show. Either is looked up again after a few minutes.

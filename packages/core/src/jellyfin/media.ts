@@ -323,11 +323,23 @@ function videoStream(
   };
 }
 
-/*
- * One entry per real track. Without a track list the languages come from a
- * deduplicated list in no known order, and clients pick audio by position, so
- * they are named on one stream rather than listed as tracks that may not line up.
+const NOT_A_TRACK = new Set([
+  'Unknown',
+  'Dual Audio',
+  'Dubbed',
+  'Multi',
+  'Original',
+]);
+
+/**
+ * Clients pick tracks by position: one unnamed track per confirmed language, as
+ * a deduplicated list is never longer than the file's but its order is unknown.
  */
+function placeholderLanguages(pf: ParsedFile | undefined, list?: string[]) {
+  if (!pf?.mediaInfoQuality) return [];
+  return (list ?? []).filter((l) => l && !NOT_A_TRACK.has(l));
+}
+
 function audioStreams(
   pf: ParsedFile | undefined,
   startIndex: number
@@ -357,6 +369,17 @@ function audioStreams(
     });
   }
 
+  const placeholders = placeholderLanguages(pf, pf?.languages);
+  if (placeholders.length > 1) {
+    return placeholders.map((_, i) => ({
+      Type: 'Audio',
+      Index: startIndex + i,
+      ...STREAM_FLAGS,
+      DisplayTitle: `Audio ${i + 1}`,
+      IsDefault: i === 0,
+      IsTextSubtitleStream: false,
+    }));
+  }
   const languages = (pf?.languages ?? []).filter((l) => l && l !== 'Unknown');
   const audioTag = (pf?.audioTags ?? []).find((t) => t !== 'Unknown') as
     | AudioTag
@@ -389,17 +412,26 @@ function audioStreams(
 
 const IMAGE_SUBTITLE_CODEC = /pgs|dvd_?sub|dvb_?sub|vobsub|xsub/i;
 
-/*
- * Clients pick an embedded track by its position among these, so only a probe's
- * per-track list is listed, whole: a list of languages drops repeats and would
- * shift every later track.
- */
 function embeddedSubtitleStreams(
   pf: ParsedFile | undefined,
   startIndex: number
 ): JellyfinMediaStream[] {
   const tracks =
     pf?.mediaInfoQuality === 'probe' ? (pf.subtitleTracks ?? []) : [];
+  if (!tracks.length) {
+    const languages = placeholderLanguages(pf, pf?.subtitles);
+    const only = languages.length === 1 ? languages[0] : undefined;
+    return languages.map((_, i) => ({
+      Type: 'Subtitle',
+      Index: startIndex + i,
+      ...STREAM_FLAGS,
+      Language: only ? languageToIso6392(only) : undefined,
+      DisplayTitle: only ?? `Subtitle ${i + 1}`,
+      IsDefault: false,
+      IsTextSubtitleStream: true,
+      DeliveryMethod: 'Embed',
+    }));
+  }
   return tracks.map((track, i) => ({
     Type: 'Subtitle',
     Index: startIndex + i,
