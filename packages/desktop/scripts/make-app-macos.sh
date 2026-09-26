@@ -57,14 +57,7 @@ min_macos=$(
 )
 echo "minimum macOS: $min_macos"
 
-iconset=$(mktemp -d)/AppIcon.iconset
-mkdir -p "$iconset"
-logo="$desktop/../frontend/public/logo.png"
-for size in 16 32 128 256 512; do
-  sips -z $size $size "$logo" --out "$iconset/icon_${size}x${size}.png" >/dev/null
-  sips -z $((size * 2)) $((size * 2)) "$logo" --out "$iconset/icon_${size}x${size}@2x.png" >/dev/null
-done
-iconutil -c icns "$iconset" -o "$app/Contents/Resources/AppIcon.icns"
+cp "$desktop/app/icons/aiostreams.icns" "$app/Contents/Resources/AppIcon.icns"
 
 sed -e "s/@VERSION@/$version/" -e "s/@SHORT_VERSION@/${version%%-*}/" -e "s/@MIN_MACOS@/$min_macos/" \
   "$desktop/macos/Info.plist" >"$app/Contents/Info.plist"
