@@ -47,9 +47,10 @@ async function deliverOne(row: DeliveryRow): Promise<Outcome> {
       body: row.body,
       timeout: REQUEST_TIMEOUT_MS,
       headers: { 'Content-Type': 'application/json' },
-      // Server-initiated and repeated by design, so the recursion guard does
-      // not apply.
+      // Server-initiated and retried on its own schedule, so neither the
+      // recursion guard nor 429 cooldowns apply.
       ignoreRecursion: true,
+      ignoreCooldown: true,
     });
   } catch (error) {
     return {

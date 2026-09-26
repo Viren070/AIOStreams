@@ -17,6 +17,7 @@ import {
   HeadersInit,
   ProxyAgent,
   RequestInit,
+  Response,
 } from 'undici';
 import { socksDispatcher } from 'fetch-socks';
 import { createLogger } from '../logging/logger.js';
@@ -28,10 +29,10 @@ const urlCount = Cache.getInstance<string, number>(
   undefined,
   'memory'
 );
-const MAX_RETRY_AFTER_SECONDS = 60 * 60;
-// Per rateLimitKey flag, set (with TTL = Retry-After) after a 429.
-const rateLimited = Cache.getInstance<string, true>(
-  'rate-limited',
+const COOLDOWN_BASE_SECONDS = 5;
+const COOLDOWN_CAP_SECONDS = 60;
+const cooldowns = Cache.getInstance<string, { until: number; strikes: number }>(
+  'upstream-cooldown',
   undefined,
   'memory'
 );
@@ -105,27 +106,46 @@ export interface RequestOptions {
   forceProxy?: string;
   context?: FetchContext;
   rawOptions?: RequestInit;
+  /** Still arms 429 cooldowns, but is never refused by one. */
+  ignoreCooldown?: boolean;
 }
 
 const CREDENTIAL_PARAM = /apikey|api_key|token|secret|password|passwd|passkey/i;
-const CREDENTIAL_HEADERS = ['proxy-authorization', 'x-api-key', 'cookie'];
+const CREDENTIAL_HEADERS = [
+  'proxy-authorization',
+  'x-api-key',
+  'api-key',
+  'apikey',
+  'cookie',
+];
 
-// Upstream limits are per API key or per IP, so key on credentials and egress.
-export function rateLimitKey(
+export interface CooldownKey {
+  key: string;
+  anon: boolean;
+}
+
+// Upstreams limit a user (forwarded IP or credential) across all paths, and
+// anonymous requests by the address they come from.
+export function cooldownKey(
   urlObj: URL,
   headers: Headers,
   egress: string
-): string {
-  const scope = [
-    egress,
-    takeBasicAuthFromUrl(new URL(urlObj)) ?? headers.get('authorization'),
-    ...HEADERS_FOR_IP_FORWARDING.map((name) => headers.get(name) ?? ''),
-    ...[...urlObj.searchParams]
-      .filter(([name]) => CREDENTIAL_PARAM.test(name))
-      .map(([name, value]) => `${name}=${value}`),
-    ...CREDENTIAL_HEADERS.map((name) => headers.get(name) ?? ''),
-  ].join('&');
-  return `${urlObj.origin}${urlObj.pathname}|${getSimpleTextHash(scope)}`;
+): CooldownKey {
+  const user: string[] = [];
+  const auth =
+    takeBasicAuthFromUrl(new URL(urlObj)) ?? headers.get('authorization');
+  if (auth) user.push(`authorization=${auth}`);
+  for (const name of [...HEADERS_FOR_IP_FORWARDING, ...CREDENTIAL_HEADERS]) {
+    const value = headers.get(name);
+    if (value) user.push(`${name}=${value}`);
+  }
+  for (const [name, value] of urlObj.searchParams) {
+    if (CREDENTIAL_PARAM.test(name)) user.push(`${name}=${value}`);
+  }
+  return {
+    key: `${urlObj.origin}|${getSimpleTextHash([egress, ...user].join('&'))}`,
+    anon: user.length === 0,
+  };
 }
 
 function getEgress(urlObj: URL, options: RequestOptions): string {
@@ -134,15 +154,56 @@ function getEgress(urlObj: URL, options: RequestOptions): string {
   return useProxy ? String(proxyIndex) : '';
 }
 
-async function throwIfRateLimited(urlObj: URL, rlKey: string): Promise<void> {
-  if (await rateLimited.get(rlKey)) {
-    const ttl = await rateLimited.getTTL(rlKey);
+async function checkCooldown(
+  urlObj: URL,
+  headers: Headers,
+  options: RequestOptions
+): Promise<CooldownKey> {
+  const cooldown = cooldownKey(urlObj, headers, getEgress(urlObj, options));
+  if (options.ignoreCooldown) return cooldown;
+  const entry = await cooldowns.get(cooldown.key);
+  const remaining = entry ? entry.until - Date.now() : 0;
+  if (remaining > 0) {
     logger.debug(
-      { url: makeUrlLogSafe(urlObj.toString()), ttl },
-      'skipping request, still rate limited'
+      { url: makeUrlLogSafe(urlObj.toString()), remaining },
+      'skipping request, upstream cooling down'
     );
-    throw new RateLimitedError(ttl);
+    throw new RateLimitedError(Math.ceil(remaining / 1000));
   }
+  return cooldown;
+}
+
+async function recordCooldown(
+  { key, anon }: CooldownKey,
+  sentAt: number,
+  response: Response
+): Promise<void> {
+  if (response.status !== 429 && !response.ok) return;
+  const previous = await cooldowns.get(key);
+  // Responses to requests sent before the cooldown ended belong to its burst.
+  const sameBurst = previous !== undefined && sentAt < previous.until;
+  if (response.ok) {
+    if (previous && !sameBurst) await cooldowns.delete(key);
+    return;
+  }
+
+  const strikes = sameBurst ? previous.strikes : (previous?.strikes ?? 0) + 1;
+  const retryAfter = parseRetryAfter(response.headers.get('retry-after'));
+  const seconds =
+    retryAfter !== undefined
+      ? Math.min(Math.max(1, retryAfter), COOLDOWN_CAP_SECONDS)
+      : anon
+        ? COOLDOWN_BASE_SECONDS
+        : Math.min(
+            COOLDOWN_BASE_SECONDS * 2 ** (strikes - 1),
+            COOLDOWN_CAP_SECONDS
+          );
+  const until = Math.max(previous?.until ?? 0, Date.now() + seconds * 1000);
+  await cooldowns.set(
+    key,
+    { until, strikes },
+    Math.ceil((until - Date.now()) / 1000) + 60
+  );
 }
 
 export async function makeRequest(url: string, options: RequestOptions) {
@@ -156,10 +217,7 @@ export async function makeRequest(url: string, options: RequestOptions) {
 
   // Checked before recursion accounting so an active cooldown isn't
   // misreported as a possible recursive request.
-  await throwIfRateLimited(
-    urlObj,
-    rateLimitKey(urlObj, headers, getEgress(urlObj, options))
-  );
+  let cooldown = await checkCooldown(urlObj, headers, options);
 
   // block recursive requests
   const key = `${urlObj.toString()}-${options.forwardIp}`;
@@ -195,8 +253,9 @@ export async function makeRequest(url: string, options: RequestOptions) {
   // Redirects are followed manually so the proxy ruleset, override headers,
   // URL rewrites and internal-secret handling are re-evaluated on every hop.
   for (let redirects = 0; ; redirects++) {
-    const rlKey = rateLimitKey(urlObj, headers, getEgress(urlObj, options));
-    await throwIfRateLimited(urlObj, rlKey);
+    if (redirects > 0) {
+      cooldown = await checkCooldown(urlObj, headers, options);
+    }
 
     const { dispatcher, useProxy, proxyIndex } = resolveDispatcher(
       urlObj,
@@ -253,6 +312,7 @@ export async function makeRequest(url: string, options: RequestOptions) {
     );
 
     let response;
+    const sentAt = Date.now();
     try {
       response = await fetch(urlObj.toString(), {
         ...rawOptions,
@@ -277,18 +337,7 @@ export async function makeRequest(url: string, options: RequestOptions) {
       throw err;
     }
 
-    if (response.status === 429) {
-      const retryAfter = parseRetryAfter(response.headers.get('retry-after'));
-      if (retryAfter !== undefined) {
-        await response.body?.cancel().catch(() => {});
-        const seconds = Math.min(
-          Math.max(1, retryAfter),
-          MAX_RETRY_AFTER_SECONDS
-        );
-        await rateLimited.set(rlKey, true, seconds);
-        throw new RateLimitedError(seconds);
-      }
-    }
+    await recordCooldown(cooldown, sentAt, response);
 
     // Callers that set rawOptions.redirect handle redirects themselves.
     if (redirectMode) {

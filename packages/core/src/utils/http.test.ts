@@ -12,7 +12,7 @@ import {
   makeRequest,
   parseRetryAfter,
   RateLimitedError,
-  rateLimitKey,
+  cooldownKey,
 } from './http.js';
 
 describe('parseRetryAfter', () => {
@@ -50,14 +50,14 @@ describe('RateLimitedError', () => {
   });
 });
 
-describe('rateLimitKey', () => {
+describe('cooldownKey', () => {
   const key = (url: string, headers: Record<string, string> = {}) =>
-    rateLimitKey(new URL(url), new Headers(headers), '');
+    cooldownKey(new URL(url), new Headers(headers), '').key;
 
-  test('shares the key across searches with the same API key', () => {
+  test('shares the key across paths and searches with the same API key', () => {
     assert.equal(
       key('https://indexer.test/api?t=search&q=a&apikey=one'),
-      key('https://indexer.test/api?t=search&q=b&apikey=one')
+      key('https://indexer.test/getnzb?id=b&apikey=one')
     );
   });
 
@@ -95,8 +95,8 @@ describe('rateLimitKey', () => {
   test('separates egresses', () => {
     const url = new URL('https://indexer.test/api');
     assert.notEqual(
-      rateLimitKey(url, new Headers(), '0'),
-      rateLimitKey(url, new Headers(), '1')
+      cooldownKey(url, new Headers(), '0').key,
+      cooldownKey(url, new Headers(), '1').key
     );
   });
 });
@@ -124,12 +124,14 @@ describe('makeRequest', () => {
       })
       .persist();
 
-    for (let i = 0; i < 2; i++) {
-      await assert.rejects(
-        makeRequest('https://indexer.test/api?apikey=one', { timeout: 1000 }),
-        RateLimitedError
-      );
-    }
+    const response = await makeRequest('https://indexer.test/api?apikey=one', {
+      timeout: 1000,
+    });
+    assert.equal(response.status, 429);
+    await assert.rejects(
+      makeRequest('https://indexer.test/api?apikey=one', { timeout: 1000 }),
+      RateLimitedError
+    );
     assert.equal(hits, 1);
   });
 });
