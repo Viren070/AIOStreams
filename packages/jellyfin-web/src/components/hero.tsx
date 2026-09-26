@@ -135,7 +135,7 @@ function HeroDetails({
 }) {
   const { client } = useSession();
   const picker = useVersionPicker();
-  const logo = item.Type !== 'Episode' ? logoUrl(client, item) : null;
+  const logo = logoUrl(client, item);
   // Jellyfin cannot play a virtual item, such as an episode not yet aired.
   const playable =
     (item.Type === 'Movie' || item.Type === 'Episode') &&
