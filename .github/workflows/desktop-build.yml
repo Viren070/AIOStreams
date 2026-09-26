@@ -106,6 +106,7 @@ jobs:
       FEED: ${{ inputs.channel == 'nightly' && 'desktop-nightly' || 'desktop' }}
       TITLE: ${{ inputs.channel == 'nightly' && 'Desktop app, nightly' || 'Desktop app' }}
       SUFFIX: ${{ inputs.channel == 'nightly' && '-nightly' || '' }}
+      PRERELEASE: ${{ inputs.channel == 'nightly' }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -116,9 +117,9 @@ jobs:
           base="https://github.com/${{ github.repository }}/releases/download/$FEED"
           sed -e "s|@BASE@|$base|g" -e "s|@SUFFIX@|$SUFFIX|g" packages/desktop/feed-release.md >notes.md
           if gh release view "$FEED" >/dev/null 2>&1; then
-            gh release edit "$FEED" --title "$TITLE" --notes-file notes.md
+            gh release edit "$FEED" --prerelease="$PRERELEASE" --title "$TITLE" --notes-file notes.md
           else
-            gh release create "$FEED" --prerelease --latest=false --title "$TITLE" --notes-file notes.md
+            gh release create "$FEED" --prerelease="$PRERELEASE" --latest=false --title "$TITLE" --notes-file notes.md
           fi
 
   windows:

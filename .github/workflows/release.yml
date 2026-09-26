@@ -34,3 +34,12 @@ jobs:
           TAG_NAME: ${{ steps.release.outputs['packages/desktop--tag_name'] }}
         run: |
           gh workflow run --repo ${GITHUB_REPOSITORY} desktop-release.yml --ref ${TAG_NAME} -f tag=${TAG_NAME}
+
+      # GitHub marks the newest release latest, and the README's release badge and link follow it.
+      - name: Keep the server's release latest
+        if: ${{ steps.release.outputs['packages/desktop--release_created'] || steps.release.outputs['packages/seanime-extensions--release_created'] }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag=$(gh release list --repo ${GITHUB_REPOSITORY} --exclude-pre-releases --json tagName --jq '[.[].tagName | select(startswith("v"))][0]')
+          gh release edit --repo ${GITHUB_REPOSITORY} "$tag" --latest
