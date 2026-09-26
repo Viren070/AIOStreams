@@ -52,11 +52,12 @@ export type ProwlarrApiIndexer = z.infer<typeof ProwlarrApiIndexerSchema>;
 
 const ProwlarrApiIndexersListSchema = z.array(ProwlarrApiIndexerSchema);
 
-const ProwlarrApiSearchItemSchema = z.object({
+export const ProwlarrApiSearchItemSchema = z.object({
   guid: z.string().optional(), // can sometimes be the raw magnet url
   ageHours: z.number(),
   size: z.number(),
   indexer: z.string(),
+  indexerId: z.number(),
   title: z.string(),
   downloadUrl: z.url().optional(),
   magnetUrl: z.url().optional(),
@@ -79,12 +80,12 @@ class ProwlarrApi {
 
   private readonly baseApiPath = '/api/v1';
 
-  // v2: the cached value is the result list, no longer wrapped with the
-  // upstream response headers.
+  // v3 retains indexerId for per-indexer yearless fallback thresholds.
+  // Earlier cached results omitted it.
   private readonly searchCache = Cache.getInstance<
     string,
     ProwlarrApiSearchItem[]
-  >('prowlarr-api:search:v2');
+  >('prowlarr-api:search:v3');
 
   private readonly indexersCache = Cache.getInstance<
     string,
