@@ -14,6 +14,7 @@ const PARAM_OPENGL_FBO: c_int = 3;
 const PARAM_FLIP_Y: c_int = 4;
 const PARAM_X11_DISPLAY: c_int = 8;
 const PARAM_WL_DISPLAY: c_int = 9;
+const PARAM_ADVANCED_CONTROL: c_int = 10;
 const PARAM_NEXT_FRAME_INFO: c_int = 11;
 const PARAM_BLOCK_FOR_TARGET_TIME: c_int = 12;
 
@@ -94,11 +95,13 @@ unsafe extern "C" fn trampoline(data: *mut c_void) {
 }
 
 impl RenderContext {
+    /// With `advanced`, mpv waits on this thread, so no blocking mpv call may run on it.
     pub fn new(
         mpv: Arc<Mpv>,
         get_proc_address: GetProcAddress,
         get_proc_address_ctx: *mut c_void,
         display: Option<NativeDisplay>,
+        advanced: bool,
     ) -> Result<Self, String> {
         // SAFETY: the types match mpv's render.h and client.h.
         let api = unsafe {
@@ -119,6 +122,7 @@ impl RenderContext {
             get_proc_address,
             get_proc_address_ctx,
         };
+        let mut advanced: c_int = advanced.into();
         let mut params = vec![
             Param {
                 kind: PARAM_API_TYPE,
@@ -127,6 +131,10 @@ impl RenderContext {
             Param {
                 kind: PARAM_OPENGL_INIT_PARAMS,
                 data: (&raw mut init).cast(),
+            },
+            Param {
+                kind: PARAM_ADVANCED_CONTROL,
+                data: (&raw mut advanced).cast(),
             },
         ];
         match display {
@@ -158,7 +166,7 @@ impl RenderContext {
         })
     }
 
-    /// Called on one of mpv's threads whenever a new frame is ready.
+    /// Called on one of mpv's threads when a frame is ready or, with advanced control, when `update` must run.
     pub fn on_update(&mut self, f: impl Fn() + Send + Sync + 'static) {
         let boxed: Box<OnUpdate> = Box::new(Box::new(f));
         let data = (&*boxed as *const OnUpdate).cast_mut().cast();

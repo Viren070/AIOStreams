@@ -211,7 +211,7 @@ impl VideoLayer {
             return;
         }
         let _lock = ContextLock::new(ivars.context);
-        match RenderContext::new(mpv, get_proc_address, ptr::null_mut(), None) {
+        match RenderContext::new(mpv, get_proc_address, ptr::null_mut(), None, false) {
             Ok(mut render) => {
                 render.on_update(|| {
                     DispatchQueue::main().exec_async(|| {

@@ -221,6 +221,7 @@ impl VideoSurface {
                     get_proc_address,
                     std::ptr::null_mut(),
                     display,
+                    true, // advanced control
                 ) {
                     Ok(mut ctx) => {
                         ctx.on_update(|| {
