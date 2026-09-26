@@ -7,7 +7,11 @@
  * cached too: a service that is down must not be re-probed on every request.
  */
 import { config as appConfig } from '../config/index.js';
-import type { HealthCheck, HealthCheckExpect, UserData } from '../db/schemas.js';
+import type {
+  HealthCheck,
+  HealthCheckExpect,
+  UserData,
+} from '../db/schemas.js';
 import { createLogger } from '../logging/logger.js';
 import { Cache } from '../utils/cache.js';
 import { getSimpleTextHash } from '../utils/crypto.js';
@@ -62,7 +66,9 @@ export function healthChecksEnabled(userData: UserData): boolean {
 }
 
 /** Applies defaults and the operator's floors and ceilings. */
-export function normaliseHealthCheck(check: HealthCheck): NormalisedHealthCheck {
+export function normaliseHealthCheck(
+  check: HealthCheck
+): NormalisedHealthCheck {
   const limits = appConfig.userLimits.healthChecks;
   return {
     id: check.id.toLowerCase(),

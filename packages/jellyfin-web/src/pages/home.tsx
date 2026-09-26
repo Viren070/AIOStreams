@@ -93,8 +93,7 @@ export function HomePage() {
     [resume.data, nextUp.data]
   );
   const continueItems = mergeNextUp ? merged : (resume.data?.Items ?? []);
-  const continueLoading =
-    resume.isLoading || (mergeNextUp && nextUp.isLoading);
+  const continueLoading = resume.isLoading || (mergeNextUp && nextUp.isLoading);
 
   const all = views.data?.Items ?? [];
   // A removed catalog is skipped, and a list left without any is automatic.

@@ -509,7 +509,8 @@ function expressionFields(
 ): { label: string; value: string }[] {
   const fields: { label: string; value: string }[] = [];
   const push = (label: string, value?: string | null) => {
-    if (typeof value === 'string' && value.trim()) fields.push({ label, value });
+    if (typeof value === 'string' && value.trim())
+      fields.push({ label, value });
   };
 
   for (const variant of userData.variants ?? []) {

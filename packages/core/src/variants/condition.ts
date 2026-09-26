@@ -36,7 +36,10 @@ export class VariantConditionEvaluator extends StreamExpressionEngine {
     this.setupHealthFunction(resources.health);
 
     const consts = this.parser.consts;
-    consts.userAgent = (context.userAgent ?? '').slice(0, MAX_USER_AGENT_LENGTH);
+    consts.userAgent = (context.userAgent ?? '').slice(
+      0,
+      MAX_USER_AGENT_LENGTH
+    );
     consts.resource = context.resource;
     consts.type = context.type ?? '';
     consts.id = context.id ?? '';

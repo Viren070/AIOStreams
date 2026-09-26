@@ -83,14 +83,12 @@ router.post('/instances/test', async (req, res, next) => {
 // GET /dashboard/arr/queue-rules: the catalogue plus the user's choices.
 router.get('/queue-rules', (_req, res, next) => {
   try {
-    res
-      .status(200)
-      .json(
-        createResponse({
-          success: true,
-          data: { rules: getQueueCleanupRules() },
-        })
-      );
+    res.status(200).json(
+      createResponse({
+        success: true,
+        data: { rules: getQueueCleanupRules() },
+      })
+    );
   } catch (err) {
     next(err);
   }
@@ -109,14 +107,12 @@ router.put('/queue-rules', async (req, res) => {
   }
   try {
     await saveQueueCleanupRules(body.rules as never[], username(req));
-    res
-      .status(200)
-      .json(
-        createResponse({
-          success: true,
-          data: { rules: getQueueCleanupRules() },
-        })
-      );
+    res.status(200).json(
+      createResponse({
+        success: true,
+        data: { rules: getQueueCleanupRules() },
+      })
+    );
   } catch (err) {
     const message =
       err instanceof ZodError

@@ -53,9 +53,7 @@ export class StremThruStreamParser extends StreamParser {
   }
 
   private getProbedBitrate(stream: Stream): number | undefined {
-    const match = stream.description?.match(
-      /〽️\s*([\d.]+)\s*(B|KB|MB)\/s/i
-    );
+    const match = stream.description?.match(/〽️\s*([\d.]+)\s*(B|KB|MB)\/s/i);
     if (!match) return undefined;
     const value = parseFloat(match[1]);
     const unit = match[2].toUpperCase();
