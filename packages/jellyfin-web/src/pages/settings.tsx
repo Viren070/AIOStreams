@@ -939,7 +939,7 @@ function AboutSection() {
       {playbackHost() === 'browser' && (
         <SettingsRow
           label="Desktop app"
-          help="This web app with a player of its own, which plays what a browser can't, on Windows and Mac."
+          help="This web app with a player of its own, which plays what a browser can't, on Windows, Mac and Linux."
         >
           <Button
             intent="gray-outline"

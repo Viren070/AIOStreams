@@ -1,7 +1,7 @@
 # AIOStreams Desktop
 
 AIOStreams' Jellyfin web app (`packages/jellyfin-web`) in a native window, playing through mpv. It
-runs on Windows, Linux and macOS, with downloads for Windows and macOS, and is in alpha. This file
+runs on Windows, Linux and macOS, with downloads for each, and is in alpha. This file
 covers building it and how it works; using it is in the docs'
 [Desktop app guide](https://docs.aiostreams.viren070.me/guides/desktop-app).
 
@@ -45,8 +45,9 @@ works, and AIOStreams servers get the extras. Switching servers happens in the p
     deprecated OpenGL, but the render API has no Metal backend; VideoToolbox decodes.
 - **The bridge** carries the page's mpv commands and property changes to the app, and sends back the
   properties the page watches: position, tracks, pause and the rest. See [Bridge](#bridge).
-- **[Velopack](https://velopack.io)** installs and updates the Windows and macOS apps, and
-  **[cargo-about](https://github.com/EmbarkStudios/cargo-about)** lists the licences it ships under.
+- **[Velopack](https://velopack.io)** installs and updates the Windows and macOS apps, Linux ships
+  as a [Flatpak](https://flatpak.org), and **[cargo-about](https://github.com/EmbarkStudios/cargo-about)**
+  lists the licences it ships under.
 
 The code is a Cargo workspace, outside the pnpm build:
 
@@ -89,7 +90,12 @@ cargo run
 
 The app looks for `libmpv.so.2` next to the binary, then in the system library folders. Ubuntu
 24.04's libmpv is 0.37, which is too old; build a newer one and point `AIOSTREAMS_LIBMPV` at it.
-There are no Linux packages yet.
+
+The download is a Flatpak, which `scripts/make-flatpak.sh` builds from `linux/io.github.viren070.aiostreams.yml`
+after the page: the GNOME 51 runtime, with libmpv and the libraries it needs built in. It needs
+`flatpak`, `flatpak-builder`, `python3-aiohttp`, `python3-tomlkit` and the Flathub remote. Under
+WSL, point `FLATPAK_WORK` at a folder on the Linux filesystem, since the builder's state cannot live
+on a Windows drive. Install the bundle it prints with `flatpak install --user`.
 
 ### macOS
 
@@ -123,7 +129,8 @@ from a release build.
 mpv reads `mpv.conf`, `input.conf`, scripts and shaders from:
 
 - Windows: `%APPDATA%\AIOStreams Desktop\mpv`, or `data\mpv` in a portable copy.
-- Linux: `~/.config/AIOStreams Desktop/mpv`.
+- Linux: `~/.config/AIOStreams Desktop/mpv`, or
+  `~/.var/app/io.github.viren070.aiostreams/config/AIOStreams Desktop/mpv` in the Flatpak.
 - macOS: `~/Library/Application Support/AIOStreams Desktop/mpv`.
 
 A commented `mpv.conf` is written on first run. Keys the page does not use are passed to mpv, so
@@ -136,7 +143,8 @@ playback itself.
 Each day the app runs gets a log file, and the last seven are kept:
 
 - Windows: `%LOCALAPPDATA%\AIOStreams Desktop\logs`, or `data\logs` in a portable copy.
-- Linux: `~/.local/share/AIOStreams Desktop/logs`.
+- Linux: `~/.local/share/AIOStreams Desktop/logs`, or
+  `~/.var/app/io.github.viren070.aiostreams/data/AIOStreams Desktop/logs` in the Flatpak.
 - macOS: `~/Library/Application Support/AIOStreams Desktop/logs`.
 
 There is a line per event: startup versions and paths, each file loaded and how it played and ended,
@@ -163,7 +171,7 @@ at the same address:
 
 The installer is `aiostreams-desktop-win-<arch>.exe` and the portable copy
 `aiostreams-desktop-win-<arch>.zip`; on macOS, `aiostreams-desktop-osx-<arch>.pkg` and a zip of the
-app. `-nightly` is added for nightlies, and a stable release also gets them attached. release-please treats `packages/desktop` as its own component, so commits here bump
+app; on Linux, `aiostreams-desktop-linux-<arch>.flatpak`. `-nightly` is added for nightlies, and a stable release also gets them attached. release-please treats `packages/desktop` as its own component, so commits here bump
 the desktop version, not AIOStreams'. A nightly's version is the next patch with
 `-nightly.<UTC timestamp>`, so it updates past the last release, and moving back to stable is allowed
 to go down a version.
@@ -179,6 +187,10 @@ A copy follows the channel it was installed from; Settings → Desktop app switc
 start and every six hours, downloads in the background, and applies on the next start or when asked.
 A failed check only shows in Settings and never holds up the app. `AIOSTREAMS_UPDATE_FEED` points it
 at another feed, such as a local folder served over HTTP, for testing.
+
+The Flatpak is not Velopack's, so it does not update itself, and Settings says so; installing a newer
+bundle over it updates it and keeps its data. Its metainfo lists the desktop releases from
+`CHANGELOG.md` (`linux/metainfo-releases.py`), which software centres show.
 
 The macOS app is signed ad hoc, not with a Developer ID, so the first open is refused until it is
 allowed in System Settings → Privacy & Security → Open Anyway. The Velopack updater lands in the

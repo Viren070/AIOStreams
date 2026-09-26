@@ -2919,9 +2919,9 @@ function Content() {
                           Desktop app
                         </p>
                         <p className="text-xs text-gray-500">
-                          A Jellyfin app for Windows and Mac: the web app with a
-                          player that plays what a browser can&apos;t. Sign in
-                          with one of the addresses above.
+                          A Jellyfin app for Windows, Mac and Linux: the web app
+                          with a player that plays what a browser can&apos;t.
+                          Sign in with one of the addresses above.
                         </p>
                       </div>
                       <Button

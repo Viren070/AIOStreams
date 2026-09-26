@@ -187,7 +187,7 @@ Watch outside Stremio too, with the same addons, filters and sorting.
 
 - **Jellyfin Server**: Add your configuration to a Jellyfin app on your phone, TV or computer. Catalogs become libraries, streams become versions, everyone in your household can have their own profile, and your watch progress and trackers stay in sync.
 - **Web App**: Browse, play and manage your watch history in any browser.
-- **Desktop App** (alpha): A Jellyfin app for Windows and macOS that signs in to your server and shows the web app with a built-in player, which plays what a browser can't, including HDR on Windows. It keeps itself up to date. **[Download it here](https://github.com/Viren070/AIOStreams/releases/tag/desktop)**.
+- **Desktop App** (alpha): A Jellyfin app for Windows, macOS and Linux that signs in to your server and shows the web app with a built-in player, which plays what a browser can't, including HDR on Windows. It keeps itself up to date on Windows and macOS, and comes as a Flatpak on Linux. **[Download it here](https://github.com/Viren070/AIOStreams/releases/tag/desktop)**.
 
 ---
 
