@@ -298,26 +298,8 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       torrentResults = [...torrentResults, ...enrichedResults];
     }
 
-    const torrentServices = this.userData.services.filter(
-      (s) =>
-        ![
-          'nzbdav',
-          'altmount',
-          'stremio_nntp',
-          'stremthru_newz',
-          'aiostreams',
-        ].includes(s.id)
-    );
-    const nzbServices = this.userData.services.filter((s) =>
-      [
-        'nzbdav',
-        'altmount',
-        'torbox',
-        'stremio_nntp',
-        'stremthru_newz',
-        'aiostreams',
-      ].includes(s.id)
-    );
+    const torrentServices = this.getTorrentServices();
+    const nzbServices = this.getNzbServices();
 
     if (torrentServices.length === 0 && torrentResults.length > 0) {
       errorStreams.push(
@@ -470,6 +452,32 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     });
 
     return [...resultStreams, ...errorStreams];
+  }
+
+  protected getTorrentServices(): T['services'] {
+    return this.userData.services.filter(
+      (s) =>
+        ![
+          'nzbdav',
+          'altmount',
+          'stremio_nntp',
+          'stremthru_newz',
+          'aiostreams',
+        ].includes(s.id)
+    );
+  }
+
+  protected getNzbServices(): T['services'] {
+    return this.userData.services.filter((s) =>
+      [
+        'nzbdav',
+        'altmount',
+        'torbox',
+        'stremio_nntp',
+        'stremthru_newz',
+        'aiostreams',
+      ].includes(s.id)
+    );
   }
 
   protected buildQueries(
