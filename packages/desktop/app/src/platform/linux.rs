@@ -225,6 +225,17 @@ impl VideoSurface {
     pub fn resize(&self, _width: u32, _height: u32) {}
 }
 
+/// With no file mpv stops drawing, and the last frame would show where the page is see-through.
+pub fn clear_video() {
+    glib::idle_add_once(|| {
+        AREA.with(|a| {
+            if let Some(a) = a.borrow().as_ref() {
+                a.queue_render();
+            }
+        })
+    });
+}
+
 pub fn mpv_options(_video: &VideoSurface) -> Vec<(&'static str, String)> {
     vec![("vo", "libmpv".into()), ("hwdec", "auto-safe".into())]
 }
