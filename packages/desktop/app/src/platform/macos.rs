@@ -6,6 +6,7 @@ use std::ffi::{c_char, c_int, c_void};
 use std::path::{Path, PathBuf};
 use std::ptr::{self, NonNull};
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use aiostreams_desktop_core::mpv::Mpv;
 use aiostreams_desktop_core::render::RenderContext;
@@ -118,6 +119,49 @@ pub struct LayerIvars {
     started: Cell<bool>,
     drawn: Cell<bool>,
     skipped: Cell<u32>,
+    held: Cell<Held>,
+}
+
+/// How long video draws held the main thread, over a window of time.
+#[derive(Clone, Copy)]
+struct Held {
+    since: Instant,
+    total: Duration,
+    longest: Duration,
+}
+
+impl Held {
+    const WINDOW: Duration = Duration::from_secs(10);
+
+    fn new() -> Self {
+        Self {
+            since: Instant::now(),
+            total: Duration::ZERO,
+            longest: Duration::ZERO,
+        }
+    }
+
+    /// Warns when draws took more than a tenth of the window, which the web view feels.
+    fn add(self, took: Duration) -> Self {
+        let held = Self {
+            total: self.total + took,
+            longest: self.longest.max(took),
+            ..self
+        };
+        let elapsed = held.since.elapsed();
+        if elapsed < Self::WINDOW {
+            return held;
+        }
+        if held.total > elapsed / 10 {
+            log::warn!(
+                "video draws held the main thread {} ms/s over {} s, longest {} ms",
+                held.total.as_millis() * 1000 / elapsed.as_millis().max(1),
+                elapsed.as_secs(),
+                held.longest.as_millis()
+            );
+        }
+        Self::new()
+    }
 }
 
 define_class!(
@@ -158,7 +202,10 @@ define_class!(
             if let Some(render) = self.ivars().render.borrow().as_ref() {
                 let (fbo, width, height) = frame_target();
                 if width > 0 && height > 0 {
+                    let start = Instant::now();
                     render.render(fbo, width, height, true);
+                    let held = &self.ivars().held;
+                    held.set(held.get().add(start.elapsed()));
                 }
             }
             // SAFETY: the superclass flushes the context.
@@ -206,6 +253,7 @@ impl VideoLayer {
             started: Cell::new(false),
             drawn: Cell::new(false),
             skipped: Cell::new(0),
+            held: Cell::new(Held::new()),
         });
         // SAFETY: NSObject's init, on a freshly allocated instance.
         Ok(unsafe { msg_send![super(this), init] })
@@ -436,7 +484,12 @@ pub fn install_menu(on_quit: impl Fn() + Send + Sync + 'static) -> Option<Menu> 
 const QUIT: &str = "quit";
 
 pub fn mpv_options(_video: &VideoSurface) -> Vec<(&'static str, String)> {
-    vec![("vo", "libmpv".into()), ("hwdec", "auto-safe".into())]
+    vec![
+        ("vo", "libmpv".into()),
+        ("hwdec", "auto-safe".into()),
+        // Frames arrive when due, so drawing one barely waits on the main thread.
+        ("video-timing-offset", "0".into()),
+    ]
 }
 
 pub fn open_external(url: &str) {
