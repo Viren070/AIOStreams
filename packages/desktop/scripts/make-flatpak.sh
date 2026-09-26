@@ -21,5 +21,7 @@ python3 "$generator" "$desktop/Cargo.lock" -o "$linux/cargo-sources.json"
 
 flatpak-builder --user --install-deps-from=flathub --force-clean \
   --state-dir="$work/.flatpak-builder" --repo="$work/repo" "$work/build" "$linux/$id.yml"
-flatpak build-bundle "$work/repo" "$work/$id.flatpak" "$id"
+# Lets the bundle install where Flathub, which has its runtime, is not set up.
+flatpak build-bundle --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo \
+  "$work/repo" "$work/$id.flatpak" "$id"
 echo "$work/$id.flatpak"

@@ -132,6 +132,7 @@ modules:
       - mkdir -p /app/bin /app/lib/codecs-extra /app/lib/intel-vaapi-driver
       - ln -s ../lib/aiostreams-desktop/aiostreams-desktop /app/bin/aiostreams-desktop
       - install -Dm644 linux/io.github.viren070.aiostreams.desktop -t /app/share/applications
+      - python3 linux/metainfo-releases.py linux/io.github.viren070.aiostreams.metainfo.xml CHANGELOG.md Cargo.toml
       - install -Dm644 linux/io.github.viren070.aiostreams.metainfo.xml -t /app/share/metainfo
       - install -Dm644 app/icons/aiostreams.png /app/share/icons/hicolor/512x512/apps/io.github.viren070.aiostreams.png
       - install -Dm644 LICENSE THIRD-PARTY.md -t /app/share/licenses/io.github.viren070.aiostreams
