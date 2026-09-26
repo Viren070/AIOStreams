@@ -45,7 +45,7 @@ export function subtitleUrl(
 ): string | null {
   if (!stream.DeliveryUrl) return null;
   return new URL(
-    client.url(stream.DeliveryUrl.replace(/Stream\.\w+$/, 'Stream.vtt')),
+    client.url(stream.DeliveryUrl.replace(/Stream\.\w+(?=\?|$)/, 'Stream.vtt')),
     window.location.origin
   ).toString();
 }
