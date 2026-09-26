@@ -67,6 +67,7 @@ import {
   useEpisodeLayout,
   useEscExitsFullscreen,
   useChapterSkips,
+  useCombineSearch,
   useUpdateChannel,
   useFeatured,
   useHardwareDecoding,
@@ -593,6 +594,7 @@ function InterfaceSection() {
   const [featured, setFeatured] = useFeatured();
   const [heroMode, setHeroMode] = useHeroMode();
   const [mergeNextUp, setMergeNextUp] = useMergeNextUp();
+  const [combineSearch, setCombineSearch] = useCombineSearch();
   const [posterSize, setPosterSize] = usePosterSize();
   const [posterLines, setPosterLines] = usePosterLines();
   const [episodeLayout, setEpisodeLayout] = useEpisodeLayout();
@@ -664,6 +666,13 @@ function InterfaceSection() {
           help="Shows next episodes in the continue watching row, after what you are partway through."
           value={mergeNextUp}
           onValueChange={setMergeNextUp}
+        />
+        <Switch
+          side="right"
+          label="Combine movie and show results"
+          help="Shows search results in one grid instead of a row each for movies and shows."
+          value={combineSearch}
+          onValueChange={setCombineSearch}
         />
         <Select
           label="Poster size"

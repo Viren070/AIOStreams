@@ -30,6 +30,7 @@ interface Synced {
   posterSize?: string;
   posterText?: string;
   mergeNextUp?: string;
+  combineSearch?: string;
   heroMode?: string;
   accentColor?: string;
   backgroundColor?: string;
@@ -41,6 +42,7 @@ const SYNCED_KEYS: (keyof Synced)[] = [
   'posterSize',
   'posterText',
   'mergeNextUp',
+  'combineSearch',
   'heroMode',
   'accentColor',
   'backgroundColor',
@@ -220,6 +222,18 @@ export function useMergeNextUp(): [boolean, (value: boolean) => void] {
   const value = React.useSyncExternalStore(subscribe, readMergeNextUp);
   const set = React.useCallback((next: boolean) => {
     update('mergeNextUp', next ? '1' : undefined);
+  }, []);
+  return [value, set];
+}
+
+function readCombineSearch(): boolean {
+  return current.combineSearch === '1';
+}
+
+export function useCombineSearch(): [boolean, (value: boolean) => void] {
+  const value = React.useSyncExternalStore(subscribe, readCombineSearch);
+  const set = React.useCallback((next: boolean) => {
+    update('combineSearch', next ? '1' : undefined);
   }, []);
   return [value, set];
 }

@@ -230,19 +230,23 @@ export function useGenres(viewId: string) {
   });
 }
 
-export function useSearch(term: string) {
+export function useSearch(
+  term: string,
+  types = 'Movie,Series',
+  enabled = true
+) {
   const { client, user } = useSession();
   return useQuery({
-    queryKey: [...useKey(), 'search', term],
+    queryKey: [...useKey(), 'search', types, term],
     queryFn: () =>
       client.get<BaseItemDtoQueryResult>('/Items', {
         userId: user.Id,
         SearchTerm: term,
         Recursive: true,
-        IncludeItemTypes: 'Movie,Series',
+        IncludeItemTypes: types,
         Limit: 48,
       }),
-    enabled: term.length >= 2,
+    enabled: enabled && term.length >= 2,
     placeholderData: keepPreviousData,
   });
 }
