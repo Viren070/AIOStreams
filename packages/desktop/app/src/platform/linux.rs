@@ -174,7 +174,11 @@ impl VideoSurface {
                     return log::error!("OpenGL context: {e}");
                 }
                 let display = native_display(&area.display());
-                log::info!("mpv render context display={display:?}");
+                let gl = area.context().map(|c| {
+                    let (major, minor) = c.version();
+                    format!("{:?} {major}.{minor}", c.api())
+                });
+                log::info!("mpv render context display={display:?} gl={gl:?}");
                 match RenderContext::new(
                     mpv.clone(),
                     get_proc_address,
