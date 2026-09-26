@@ -6,6 +6,9 @@ on:
     paths:
       - 'packages/desktop/**'
       - '!packages/desktop/web-app.lock'
+      - '!packages/desktop/README.md'
+      - '!packages/desktop/CHANGELOG.md'
+      - '!packages/desktop/linux/screenshots/**'
       - 'packages/jellyfin-web/**'
       - 'packages/ui/**'
   workflow_dispatch:
@@ -26,6 +29,7 @@ concurrency:
 
 jobs:
   version:
+    if: "${{ !startsWith(github.event.head_commit.message, 'chore(desktop): release ') }}"
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}

@@ -2,15 +2,15 @@ name: Desktop Check
 
 on:
   pull_request:
-    paths:
-      - 'packages/desktop/**'
-      - '!packages/desktop/web-app.lock'
-      - '.github/workflows/desktop-*.yml'
+    paths: &crates
+      - 'packages/desktop/Cargo.*'
+      - 'packages/desktop/app/**'
+      - 'packages/desktop/core/**'
+      - 'packages/desktop/about.*'
+      - '.github/workflows/desktop-check.yml'
   push:
     branches: [main]
-    paths:
-      - 'packages/desktop/**'
-      - '!packages/desktop/web-app.lock'
+    paths: *crates
   workflow_dispatch:
 
 # A newer push replaces a check still running on the same branch.
@@ -24,6 +24,7 @@ env:
 jobs:
   check:
     name: check (${{ matrix.os }})
+    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
