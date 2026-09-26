@@ -238,6 +238,7 @@ export class TsukihimeAddon extends BaseDebridAddon<TsukihimeAddonConfig> {
       appConfig.builtins.tsukihime.pageLimit
     );
 
+    let failedPages = 0;
     if (totalPages > 1) {
       const pageNumbers = Array.from(
         { length: totalPages - 1 },
@@ -249,14 +250,20 @@ export class TsukihimeAddon extends BaseDebridAddon<TsukihimeAddonConfig> {
       for (const page of remainingPages) {
         if (page.status === 'fulfilled') {
           allResults.push(...page.value.results);
+        } else {
+          failedPages++;
         }
       }
     }
 
     logger.info(
       `TsukiHime search for ${label} took ${getTimeTakenSincePoint(start)}`,
-      { results: allResults.length, pages: totalPages }
+      { results: allResults.length, pages: totalPages, failedPages }
     );
-    return { results: allResults, truncated: availablePages > totalPages };
+    // a failed page is a gap the title search can fill, like the page limit
+    return {
+      results: allResults,
+      truncated: availablePages > totalPages || failedPages > 0,
+    };
   }
 }
