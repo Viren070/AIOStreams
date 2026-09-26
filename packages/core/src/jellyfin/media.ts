@@ -442,6 +442,8 @@ export interface MediaSourceBuildOptions {
   subtitleFormat: (sourceExtension: string) => SubtitleFormat;
   /** Server-relative delivery URL for the subtitle stream at `index`. */
   subtitleUrl: (index: number, format: SubtitleFormat) => string;
+  /** The client's own token, as players fetch subtitles without its headers. */
+  subtitleToken?: string;
   /** `File` sends the client through the server's stream route, not `Path`. */
   protocol?: 'Http' | 'File';
   runtimeMs?: number;
@@ -465,7 +467,10 @@ export function externalSubtitleStartIndex(record: MediaSourceRecord): number {
 
 export function buildMediaStreams(
   record: MediaSourceRecord,
-  opts: Pick<MediaSourceBuildOptions, 'subtitleFormat' | 'subtitleUrl'>
+  opts: Pick<
+    MediaSourceBuildOptions,
+    'subtitleFormat' | 'subtitleUrl' | 'subtitleToken'
+  >
 ): JellyfinMediaStream[] {
   const streams: JellyfinMediaStream[] = [
     videoStream(record.parsedFile, record.bitrate),
@@ -493,8 +498,11 @@ export function buildMediaStreams(
       IsHearingImpaired: sub.hearingImpaired ?? false,
       IsTextSubtitleStream: true,
       DeliveryMethod: 'External',
-      DeliveryUrl: url,
+      DeliveryUrl: opts.subtitleToken
+        ? `${url}?ApiKey=${encodeURIComponent(opts.subtitleToken)}`
+        : url,
       IsExternalUrl: false,
+      // No token here: clients read the format off its end.
       Path: url,
     });
   });

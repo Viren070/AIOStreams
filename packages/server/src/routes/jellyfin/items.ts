@@ -23,6 +23,7 @@ import {
   encodeItemId,
   idNeedsCatalogs,
   episodeDescriptor,
+  extractAuth,
   findCatalog,
   groupSeasons,
   hasProgrammeVideos,
@@ -636,6 +637,13 @@ export function mediaSourcesFrom(
 ): JellyfinMediaSource[] {
   const format = (sourceExtension: string) =>
     subtitleFormatFor(opts.profile, ctx.client.name, sourceExtension);
+  // Not ctx.token, which is minted when the request had none.
+  const token = ctx.apiKey
+    ? undefined
+    : extractAuth({
+        header: (name) => req.get(name),
+        query: req.query as Record<string, unknown>,
+      }).token;
   let ordered = memo.sources;
   if (opts.requestedMsid) {
     const idx = ordered.findIndex((s) => s.msid === opts.requestedMsid);
@@ -651,6 +659,7 @@ export function mediaSourcesFrom(
       id: i === 0 ? opts.firstId : record.msid,
       subtitleFormat: format,
       subtitleUrl: subtitleUrlFor(memo.itemId, record.msid),
+      subtitleToken: token,
       protocol: ctx.client.name === ANDROID_PLAYER_CLIENT ? 'File' : 'Http',
       runtimeMs: memo.runtimeMs,
       includeExtension: true,
