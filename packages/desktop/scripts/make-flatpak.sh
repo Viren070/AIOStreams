@@ -19,7 +19,7 @@ generator="$linux/flatpak-cargo-generator.py"
   https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/master/cargo/flatpak-cargo-generator.py
 python3 "$generator" "$desktop/Cargo.lock" -o "$linux/cargo-sources.json"
 
-flatpak-builder --user --install-deps-from=flathub --force-clean \
+flatpak-builder --user --install-deps-from=flathub --force-clean --ccache \
   --state-dir="$work/.flatpak-builder" --repo="$work/repo" "$work/build" "$linux/$id.yml"
 # Lets the bundle install where Flathub, which has its runtime, is not set up.
 flatpak build-bundle --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo \

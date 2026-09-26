@@ -376,15 +376,31 @@ jobs:
       - name: Install Flatpak
         run: |
           sudo apt-get update
-          sudo apt-get install -y flatpak flatpak-builder python3-aiohttp python3-tomlkit
+          # Recommends would add ffmpeg and a media stack the build never uses.
+          sudo apt-get install -y --no-install-recommends flatpak flatpak-builder elfutils python3-aiohttp python3-tomlkit
           flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 
-      # Built modules and downloads, so a build redoes only what changed.
+      # Built modules are only reusable on the same SDK builds, so they are part of the cache key.
+      - name: Install the runtimes
+        run: |
+          mkdir -p "$FLATPAK_WORK"
+          flatpak-builder --user --install-deps-from=flathub --install-deps-only "$FLATPAK_WORK/build" packages/desktop/linux/io.github.viren070.aiostreams.yml
+          flatpak list --user --runtime --columns=application,branch,active |
+            grep -E '^(org\.gnome\.(Sdk|Platform)|org\.freedesktop\.Sdk\.Extension\.rust-stable)\s' > "$FLATPAK_WORK/runtimes.txt"
+
+      # Built modules, compiled crates and downloads, so a build redoes only what changed.
       - uses: actions/cache@v6
         with:
           path: flatpak-work/.flatpak-builder
-          key: flatpak-${{ matrix.arch }}-${{ hashFiles('packages/desktop/linux/io.github.viren070.aiostreams.yml') }}-${{ github.run_id }}
-          restore-keys: flatpak-${{ matrix.arch }}-${{ hashFiles('packages/desktop/linux/io.github.viren070.aiostreams.yml') }}-
+          key: flatpak-${{ matrix.arch }}-${{ hashFiles('packages/desktop/linux/io.github.viren070.aiostreams.yml', 'packages/desktop/Cargo.lock', 'flatpak-work/runtimes.txt') }}
+          restore-keys: flatpak-${{ matrix.arch }}-
+
+      # Crates built on other runtimes are never reused, so they would only grow the cache.
+      - name: Drop crates built on other runtimes
+        run: |
+          state="$FLATPAK_WORK/.flatpak-builder"
+          cmp -s "$FLATPAK_WORK/runtimes.txt" "$state/runtimes.txt" || rm -rf "$state/ccache/cargo-target"
+          mkdir -p "$state" && cp "$FLATPAK_WORK/runtimes.txt" "$state/runtimes.txt"
 
       - name: Build the Flatpak
         run: |

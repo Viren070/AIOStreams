@@ -128,8 +128,10 @@ modules:
         CARGO_HOME: /run/build/aiostreams-desktop/cargo
     build-commands:
       - cargo --offline fetch --manifest-path Cargo.toml
-      - cargo --offline build --release -p aiostreams-desktop
-      - install -Dm755 target/release/aiostreams-desktop -t /app/lib/aiostreams-desktop
+      # With --ccache, compiled crates stay in the builder's cache for the next build.
+      - target=${CCACHE_DIR:+$CCACHE_DIR/cargo-}target;
+        cargo --offline build --release -p aiostreams-desktop --target-dir "$target" &&
+        install -Dm755 "$target/release/aiostreams-desktop" -t /app/lib/aiostreams-desktop
       - cp -r web /app/lib/aiostreams-desktop/web
       - mkdir -p /app/bin /app/lib/codecs-extra /app/lib/intel-vaapi-driver
       - ln -s ../lib/aiostreams-desktop/aiostreams-desktop /app/bin/aiostreams-desktop
