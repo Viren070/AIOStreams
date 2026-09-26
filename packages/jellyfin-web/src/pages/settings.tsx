@@ -44,6 +44,7 @@ import {
   applyUpdate,
   checkForUpdates,
   useUpdateState,
+  type ShellInfo,
   type UpdateState,
 } from '../lib/hosts/shell';
 import { LANGUAGES } from '../lib/languages';
@@ -937,32 +938,87 @@ function AboutSection() {
       : []),
   ];
   return (
-    <SettingsCard>
-      {rows.map(([label, value]) => (
-        <SettingsRow key={label} label={label}>
-          <span className="break-all text-sm text-[--muted]">
-            {value || '…'}
-          </span>
-        </SettingsRow>
-      ))}
-      {playbackHost() === 'browser' && (
-        <SettingsRow
-          label="Desktop app"
-          help="This web app with a player of its own, which plays what a browser can't, on Windows, Mac and Linux."
-        >
-          <Button
-            intent="gray-outline"
-            className="w-full rounded-full sm:w-auto"
-            onClick={() =>
-              window.open(DESKTOP_DOWNLOAD_URL, '_blank', 'noopener')
-            }
+    <>
+      <SettingsCard>
+        {rows.map(([label, value]) => (
+          <SettingsRow key={label} label={label}>
+            <span className="break-all text-sm text-[--muted]">
+              {value || '…'}
+            </span>
+          </SettingsRow>
+        ))}
+        {playbackHost() === 'browser' && (
+          <SettingsRow
+            label="Desktop app"
+            help="This web app with a player of its own, which plays what a browser can't, on Windows, Mac and Linux."
           >
-            Download
-          </Button>
-        </SettingsRow>
-      )}
-    </SettingsCard>
+            <Button
+              intent="gray-outline"
+              className="w-full rounded-full sm:w-auto"
+              onClick={() =>
+                window.open(DESKTOP_DOWNLOAD_URL, '_blank', 'noopener')
+              }
+            >
+              Download
+            </Button>
+          </SettingsRow>
+        )}
+      </SettingsCard>
+      <SettingsCard title="Credits">
+        {credits(shell).map((credit) => (
+          <SettingsRow key={credit.name} label={credit.name} help={credit.help}>
+            <Button
+              intent="gray-outline"
+              className="w-full rounded-full sm:w-auto"
+              onClick={() => window.open(credit.url, '_blank', 'noopener')}
+            >
+              Visit
+            </Button>
+          </SettingsRow>
+        ))}
+      </SettingsCard>
+    </>
   );
+}
+
+/** The Linux app builds its own libmpv, so only these ship someone else's. */
+const LIBMPV_BUILDS: Record<string, { name: string; url: string }> = {
+  windows: {
+    name: 'shinchiro',
+    url: 'https://github.com/shinchiro/mpv-winbuild-cmake',
+  },
+  macos: { name: 'IINA', url: 'https://iina.io' },
+};
+
+function credits(
+  shell: ShellInfo | null
+): { name: string; help: string; url: string }[] {
+  const build = shell ? LIBMPV_BUILDS[shell.platform] : undefined;
+  return [
+    {
+      name: 'Seanime',
+      help: 'The interface is built on its components.',
+      url: 'https://github.com/5rahim/seanime',
+    },
+    {
+      name: 'Jellyfin',
+      help: 'The API this app speaks.',
+      url: 'https://jellyfin.org',
+    },
+    ...(shell
+      ? [
+          { name: 'mpv', help: 'Plays the video.', url: 'https://mpv.io' },
+          {
+            name: 'FFmpeg',
+            help: 'Decodes what mpv plays.',
+            url: 'https://ffmpeg.org',
+          },
+        ]
+      : []),
+    ...(build
+      ? [{ ...build, help: 'Builds the mpv library this app ships with.' }]
+      : []),
+  ];
 }
 
 interface Section {
