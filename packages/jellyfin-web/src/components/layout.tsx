@@ -1,6 +1,10 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Outlet, useRouterState } from '@tanstack/react-router';
+import {
+  Outlet,
+  useElementScrollRestoration,
+  useRouterState,
+} from '@tanstack/react-router';
 import {
   BiCompass,
   BiHistory,
@@ -144,6 +148,16 @@ export function PageBackground() {
   );
 }
 
+/** The router scrolls a commit after a page renders, so the old offset could paint first. */
+function PageScroll() {
+  const saved = useElementScrollRestoration({ getElement: () => window });
+  React.useLayoutEffect(() => {
+    window.scrollTo(saved?.scrollX ?? 0, saved?.scrollY ?? 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return null;
+}
+
 function pageName(pathname: string): string {
   return pathname.split('/')[1] || 'home';
 }
@@ -242,6 +256,7 @@ export function WebLayout() {
                 className="pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] max-lg:pb-[calc(5rem+env(safe-area-inset-bottom))]"
               >
                 <Outlet />
+                <PageScroll />
               </motion.div>
             </VersionPickerProvider>
           </AppLayoutContent>
