@@ -17,6 +17,7 @@ const PARAM_WL_DISPLAY: c_int = 9;
 const PARAM_ADVANCED_CONTROL: c_int = 10;
 const PARAM_NEXT_FRAME_INFO: c_int = 11;
 const PARAM_BLOCK_FOR_TARGET_TIME: c_int = 12;
+const PARAM_SKIP_RENDERING: c_int = 13;
 
 const UPDATE_FRAME: u64 = 1;
 const FRAME_INFO_PRESENT: u64 = 1;
@@ -216,6 +217,31 @@ impl RenderContext {
     /// Draws without waiting for the frame's display time.
     pub fn draw(&self, fbo: i32, width: i32, height: i32, flip_y: bool) {
         self.draw_frame(fbo, width, height, flip_y, false);
+    }
+
+    /// Takes the next frame without drawing it, for when there is nowhere to show it.
+    pub fn skip(&self) {
+        let mut skip: c_int = 1;
+        let mut block: c_int = 0;
+        let mut params = [
+            Param {
+                kind: PARAM_SKIP_RENDERING,
+                data: (&raw mut skip).cast(),
+            },
+            Param {
+                kind: PARAM_BLOCK_FOR_TARGET_TIME,
+                data: (&raw mut block).cast(),
+            },
+            Param {
+                kind: PARAM_INVALID,
+                data: ptr::null_mut(),
+            },
+        ];
+        // SAFETY: a parameter list ending in INVALID, on the thread with the GL context.
+        let code = unsafe { (self.api.render)(self.ctx, params.as_mut_ptr()) };
+        if code < 0 {
+            log::warn!("mpv skip render: {}", self.mpv.error(code));
+        }
     }
 
     fn draw_frame(&self, fbo: i32, width: i32, height: i32, flip_y: bool, wait: bool) {

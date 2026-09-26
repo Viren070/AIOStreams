@@ -27,7 +27,7 @@ use objc2_open_gl::{
     CGLLockContext, CGLOpenGLProfile, CGLPixelFormatAttribute, CGLPixelFormatObj, CGLRetainContext,
     CGLRetainPixelFormat, CGLSetCurrentContext, CGLSetParameter, CGLUnlockContext,
 };
-use objc2_quartz_core::{CAAutoresizingMask, CALayer, CAOpenGLLayer};
+use objc2_quartz_core::{CAAutoresizingMask, CALayer, CAOpenGLLayer, CATransaction};
 use tao::platform::macos::WindowExtMacOS;
 use tao::window::{Icon, Window};
 
@@ -116,6 +116,8 @@ pub struct LayerIvars {
     render: RefCell<Option<RenderContext>>,
     mpv: RefCell<Option<Arc<Mpv>>>,
     started: Cell<bool>,
+    drawn: Cell<bool>,
+    skipped: Cell<u32>,
 }
 
 define_class!(
@@ -148,6 +150,11 @@ define_class!(
         ) {
             // SAFETY: the context the layer made current for this call.
             unsafe { CGLSetCurrentContext(context) };
+            self.ivars().drawn.set(true);
+            let skipped = self.ivars().skipped.replace(0);
+            if skipped > 0 {
+                log::info!("video shown again after {skipped} frames skipped while hidden");
+            }
             if let Some(render) = self.ivars().render.borrow().as_ref() {
                 let (fbo, width, height) = frame_target();
                 if width > 0 && height > 0 {
@@ -197,6 +204,8 @@ impl VideoLayer {
             render: RefCell::default(),
             mpv: RefCell::default(),
             started: Cell::new(false),
+            drawn: Cell::new(false),
+            skipped: Cell::new(0),
         });
         // SAFETY: NSObject's init, on a freshly allocated instance.
         Ok(unsafe { msg_send![super(this), init] })
@@ -215,11 +224,9 @@ impl VideoLayer {
             Ok(mut render) => {
                 render.on_update(|| {
                     DispatchQueue::main().exec_async(|| {
-                        LAYER.with(|l| {
-                            if let Some(layer) = l.borrow().as_ref() {
-                                layer.setNeedsDisplay();
-                            }
-                        })
+                        if let Some(layer) = LAYER.with(|l| l.borrow().clone()) {
+                            layer.update_video();
+                        }
                     });
                 });
                 *ivars.render.borrow_mut() = Some(render);
@@ -227,6 +234,36 @@ impl VideoLayer {
                 self.setNeedsDisplay();
             }
             Err(e) => log::error!("{e}"),
+        }
+    }
+
+    /// Takes each frame mpv readies, drawn or skipped, so mpv never waits on a hidden window.
+    fn update_video(&self) {
+        let ivars = self.ivars();
+        {
+            let render = ivars.render.borrow();
+            let Some(r) = render.as_ref() else {
+                return;
+            };
+            let _lock = ContextLock::new(ivars.context);
+            if !r.update() {
+                return;
+            }
+        }
+        ivars.drawn.set(false);
+        self.display();
+        CATransaction::flush();
+        if ivars.drawn.get() {
+            return;
+        }
+        // Core Animation does not draw a minimised, covered or hidden window, or one on another Space.
+        let render = ivars.render.borrow();
+        if let Some(r) = render.as_ref() {
+            let _lock = ContextLock::new(ivars.context);
+            if r.update() {
+                r.skip();
+                ivars.skipped.set(ivars.skipped.get() + 1);
+            }
         }
     }
 
