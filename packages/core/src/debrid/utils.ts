@@ -278,12 +278,17 @@ export const isSeasonWrong = (
     season?: number;
     absoluteEpisode?: number;
     tvdbSeason?: number;
+    alternateSeasonNumber?: number;
   }
 ) => {
   if (
     parsed.seasons?.length &&
     metadata?.season &&
-    !parsed.seasons.includes(metadata.season)
+    !parsed.seasons.includes(metadata.season) &&
+    !(
+      metadata.alternateSeasonNumber !== undefined &&
+      parsed.seasons.includes(metadata.alternateSeasonNumber)
+    )
   ) {
     if (
       metadata.tvdbSeason !== undefined &&

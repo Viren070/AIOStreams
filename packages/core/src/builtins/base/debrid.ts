@@ -76,6 +76,8 @@ export interface SearchMetadata extends TitleMetadata {
   episodeAirDate?: string;
   /** First episode number of the resolved season (>1 means continuous absolute numbering). */
   resolvedSeasonFirstEpisode?: number;
+  /** Season number under the other (year vs. ordinal) convention, when it differs. */
+  alternateSeasonNumber?: number;
   /** Scene-mapping search titles, best (non-identity) first. */
   sceneTitles?: string[];
   titleConflicts?: TitleConflict[];
@@ -644,11 +646,17 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
           seriesTitles
         );
       }
-      if (parsedId.season && parsedId.episode && !continuousAbsolute) {
+      const addSeasonEpisodeQuery = (seasonNumber: number | string) =>
         addQuery(
-          `${titlePlaceholder} S${parsedId.season!.toString().padStart(2, '0')}E${parsedId.episode!.toString().padStart(2, '0')}`,
+          `${titlePlaceholder} S${seasonNumber.toString().padStart(2, '0')}E${parsedId.episode!.toString().padStart(2, '0')}`,
           seriesTitles
         );
+      if (parsedId.season && parsedId.episode && !continuousAbsolute) {
+        addSeasonEpisodeQuery(parsedId.season);
+      }
+      // some indexers catalog this show under the other (year vs. ordinal) season convention
+      if (metadata.alternateSeasonNumber && parsedId.episode && !continuousAbsolute) {
+        addSeasonEpisodeQuery(metadata.alternateSeasonNumber);
       }
       // date-based releases are named by air date
       if (metadata.isDateBased && metadata.episodeAirDate) {
@@ -828,7 +836,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       isAnime: animeEntry ? true : false,
       ongoingSeason:
         metadata.nextAirDate && metadata.seasons?.length
-          ? Number(parsedId.season) ===
+          ? (metadata.resolvedSeasonNumber ?? Number(parsedId.season)) ===
             Math.max(...metadata.seasons.map((s) => s.season_number))
           : undefined,
       isDateBased: metadata.isDateBased,
@@ -837,6 +845,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       resolvedSeasonFirstEpisode: metadata.resolvedSeasonFirstEpisode,
       tvdbSeason: metadata.tvdbSeason,
       tvdbEpisode: metadata.tvdbEpisode,
+      alternateSeasonNumber: metadata.alternateSeasonNumber,
       sceneTitles: metadata.sceneTitles,
       country: metadata.country,
       titleConflicts: metadata.titleConflicts,

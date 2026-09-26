@@ -136,6 +136,10 @@ export class EztvAddon extends BaseDebridAddon<EztvAddonConfig> {
     }
 
     const seasonStr = String(requestedSeason);
+    const alternateSeasonStr =
+      metadata.alternateSeasonNumber !== undefined
+        ? String(metadata.alternateSeasonNumber)
+        : undefined;
     const episodeStr = String(requestedEpisode);
 
     // date-named uploads carry season/episode "0" on EZTV; match them by air date.
@@ -143,8 +147,8 @@ export class EztvAddon extends BaseDebridAddon<EztvAddonConfig> {
     const airDates = metadata.airDates;
     const matchingTorrents = allTorrents.filter(
       (t) =>
-        (t.season === seasonStr &&
-          (t.episode === episodeStr || t.episode === '0')) ||
+        ((t.episode === episodeStr || t.episode === '0') &&
+          (t.season === seasonStr || t.season === alternateSeasonStr)) ||
         (!!airDates?.length && titleContainsAirDate(t.title, airDates))
     );
 
