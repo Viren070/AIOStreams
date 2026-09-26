@@ -29,6 +29,7 @@ import {
 } from '../../debrid/index.js';
 import { ParsedResult } from '@viren070/parse-torrent-title';
 import { parseTorrentTitleCached } from '../../parser/title.js';
+import { isLocalEpisodeWrong } from '../../anime-database/episode-titles.js';
 import {
   preprocessTitle,
   normaliseTitle,
@@ -78,7 +79,11 @@ function getValidationFailureReason(
     }
   }
   if (isSeasonWrong(parsed, metadata)) return 'season';
-  if (isEpisodeWrong(parsed, metadata)) return 'episode';
+  if (
+    isEpisodeWrong(parsed, metadata, rawTitle) ||
+    isLocalEpisodeWrong(parsed, metadata)
+  )
+    return 'episode';
   return null;
 }
 
@@ -348,9 +353,14 @@ async function processTorrentsForDebridService(
       filteredFailed++;
       continue;
     }
-    const parsedTorrent = parsedTitlesMap.get(
-      torrent.title ?? magnetCheckResult?.name ?? ''
-    );
+    const effectiveTitle = torrent.title ?? magnetCheckResult?.name ?? '';
+    if (!parsedTitlesMap.has(effectiveTitle)) {
+      parsedTitlesMap.set(
+        effectiveTitle,
+        parseTorrentTitleCached(effectiveTitle)
+      );
+    }
+    const parsedTorrent = parsedTitlesMap.get(effectiveTitle);
 
     if (metadata && parsedTorrent) {
       const reason = getValidationFailureReason(
@@ -497,7 +507,10 @@ export async function processTorrentsForP2P(
       if (isSeasonWrong(parsedTorrent, metadata)) {
         continue;
       }
-      if (isEpisodeWrong(parsedTorrent, metadata)) {
+      if (
+        isEpisodeWrong(parsedTorrent, metadata, torrent.title) ||
+        isLocalEpisodeWrong(parsedTorrent, metadata)
+      ) {
         continue;
       }
     }
@@ -516,6 +529,10 @@ export async function processTorrentsForP2P(
   }
 
   const parsedFiles = await parseFileNames(allFileStrings);
+
+  for (const [title, parsed] of parsedTitlesMap.entries()) {
+    parsedFiles.set(title, parsed);
+  }
 
   for (const { torrent } of validTorrents) {
     let file: DebridFile | undefined;
@@ -708,9 +725,14 @@ async function processNZBsForDebridService(
       });
       continue;
     }
-    const parsedNzb = parsedTitlesMap.get(
-      nzb.title ?? nzbCheckResult?.name ?? ''
-    );
+    const effectiveTitle = nzb.title ?? nzbCheckResult?.name ?? '';
+    if (!parsedTitlesMap.has(effectiveTitle)) {
+      parsedTitlesMap.set(
+        effectiveTitle,
+        parseTorrentTitleCached(effectiveTitle)
+      );
+    }
+    const parsedNzb = parsedTitlesMap.get(effectiveTitle);
 
     if (metadata && parsedNzb) {
       const reason = getValidationFailureReason(

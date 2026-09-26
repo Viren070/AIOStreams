@@ -21,6 +21,8 @@ import {
   SERVICE_DETAILS,
 } from '../../utils/index.js';
 import { config as appConfig } from '../../config/index.js';
+import { getExternalEntryEpisode } from '../../anime-database/episode-coordinates.js';
+import { getExternalEpisodeTitles } from '../../anime-database/episode-titles.js';
 import { TorrentGrabber } from '../../utils/torrent.js';
 import {
   BuiltinDebridServices,
@@ -423,6 +425,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       relativeAbsoluteEpisode: searchMetadata.relativeAbsoluteEpisode,
       tvdbSeason: searchMetadata.tvdbSeason,
       tvdbEpisode: searchMetadata.tvdbEpisode,
+      localEpisodeTitles: searchMetadata.localEpisodeTitles,
       airDates: searchMetadata.airDates,
       isDateBased: searchMetadata.isDateBased,
     };
@@ -472,6 +475,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     return [...resultStreams, ...errorStreams];
   }
 
+  /** Build deduplicated release queries, keeping part titles with local episode numbers. */
   protected buildQueries(
     parsedId: ParsedId,
     metadata: SearchMetadata,
@@ -605,6 +609,31 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         ? [...titles, ...variantTitles]
         : titles;
 
+      // A translated anime episode belongs to an individual part. Do not mix
+      // its titles and numbering with the external show's numbering scheme.
+      const scopedTitles = metadata.localEpisodeTitles;
+      const localTitleKeys = new Set(scopedTitles?.map(normaliseTitle));
+      const showTitles = scopedTitles
+        ? seriesTitles.filter(
+            (title) => !localTitleKeys.has(normaliseTitle(title))
+          )
+        : seriesTitles;
+      let localTitles = scopedTitles
+        ? seriesTitles.filter((title) =>
+            localTitleKeys.has(normaliseTitle(title))
+          )
+        : seriesTitles;
+      if (scopedTitles && localTitles.length === 0) {
+        // A default/limited title selection may contain only the parent title.
+        // Prefer one verified entry title, never the broad parent as fallback.
+        const fallback = scopedTitles.find(
+          (title) =>
+            !appConfig.builtins.scrape.latinQueriesOnly ||
+            isPredominantlyLatin(cleanTitle(title))
+        );
+        if (fallback) localTitles = [cleanTitle(fallback)];
+      }
+
       // season numbers are meaningless in release names when episodes are
       // numbered continuously across seasons
       const continuousAbsolute = (metadata.resolvedSeasonFirstEpisode ?? 1) > 1;
@@ -616,7 +645,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       ) {
         addQuery(
           `${titlePlaceholder} S${parsedId.season!.toString().padStart(2, '0')}`,
-          seriesTitles
+          showTitles
         );
       }
       if (metadata.absoluteEpisode) {
@@ -624,30 +653,31 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
           metadata.isAnime
             ? `${titlePlaceholder} ${metadata.absoluteEpisode!.toString().padStart(2, '0')}`
             : `${titlePlaceholder} E${metadata.absoluteEpisode!.toString().padStart(2, '0')}`,
-          seriesTitles
+          showTitles
         );
       } else if (parsedId.episode && !parsedId.season) {
         addQuery(
           `${titlePlaceholder} E${parsedId.episode!.toString().padStart(2, '0')}`,
-          seriesTitles
+          showTitles
         );
       }
       if (
         // if relative absolute exists and is different from absoluteEpisode and episode
         metadata.relativeAbsoluteEpisode &&
-        [metadata.absoluteEpisode, parsedId.episode].every(
-          (v) => v !== metadata.relativeAbsoluteEpisode
-        )
+        (scopedTitles !== undefined ||
+          [metadata.absoluteEpisode, parsedId.episode].every(
+            (v) => v !== metadata.relativeAbsoluteEpisode
+          ))
       ) {
         addQuery(
           `${titlePlaceholder} ${metadata.relativeAbsoluteEpisode!.toString().padStart(2, '0')}`,
-          seriesTitles
+          localTitles
         );
       }
       if (parsedId.season && parsedId.episode && !continuousAbsolute) {
         addQuery(
           `${titlePlaceholder} S${parsedId.season!.toString().padStart(2, '0')}E${parsedId.episode!.toString().padStart(2, '0')}`,
-          seriesTitles
+          showTitles
         );
       }
       // date-based releases are named by air date
@@ -664,7 +694,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     } else {
       addQuery(titlePlaceholder);
     }
-    return queries;
+    return [...new Set(queries)];
   }
 
   protected abstract _searchTorrents(
@@ -797,6 +827,12 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       }
     }
 
+    if (animeEntry) {
+      relativeAbsoluteEpisode =
+        getExternalEntryEpisode(parsedId, animeEntry) ??
+        relativeAbsoluteEpisode;
+    }
+
     // // Map IDs
     const imdbId =
       parsedId.type === 'imdbId'
@@ -820,6 +856,11 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       episode: parsedId.episode ? Number(parsedId.episode) : undefined,
       absoluteEpisode,
       relativeAbsoluteEpisode,
+      localEpisodeTitles: getExternalEpisodeTitles(
+        parsedId,
+        animeEntry,
+        absoluteEpisode
+      ),
       year: metadata.year,
       seasonYear,
       imdbId,

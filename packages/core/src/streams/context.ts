@@ -21,6 +21,11 @@ import {
 } from '../builtins/utils/general.js';
 import { iso6391ToLanguage } from '../utils/languages.js';
 import { config as appConfig } from '../config/index.js';
+import {
+  getExternalEntryEpisode,
+  mapExternalEpisodeToTmdb,
+} from '../anime-database/episode-coordinates.js';
+import { getExternalEpisodeTitles } from '../anime-database/episode-titles.js';
 
 const logger = createLogger('stream-context');
 
@@ -28,6 +33,7 @@ const logger = createLogger('stream-context');
  * Extended metadata that includes additional fields computed during context build
  */
 export interface ExtendedMetadata extends Metadata {
+  localEpisodeTitles?: string[];
   absoluteEpisode?: number;
   relativeAbsoluteEpisode?: number; // Episode number within current AniDB entry (for split entries)
   seasonYear?: number; // For anime, the year of the season (e.g., 2021 for "Winter 2021")
@@ -312,10 +318,23 @@ export class StreamContext {
           }
         }
 
+        if (this.animeEntry && this.parsedId) {
+          relativeAbsoluteEpisode =
+            getExternalEntryEpisode(this.parsedId, this.animeEntry) ??
+            relativeAbsoluteEpisode;
+        }
+
         const extendedMetadata: ExtendedMetadata = {
           ...metadata,
           absoluteEpisode,
           relativeAbsoluteEpisode,
+          localEpisodeTitles: this.parsedId
+            ? getExternalEpisodeTitles(
+                this.parsedId,
+                this.animeEntry,
+                absoluteEpisode
+              )
+            : undefined,
           seasonYear: this.animeEntry?.animeSeason?.year ?? undefined,
         };
 
@@ -405,11 +424,13 @@ export class StreamContext {
         let seasonNumber = originalSeason;
         let episodeNumber = Number(this.parsedId.episode);
         if (this.isAnime && this.animeEntry) {
-          ({ seasonNumber, episodeNumber } = getTmdbEpisode(
-            this.parsedId,
-            this.animeEntry,
-            metadata.seasons ?? []
-          ));
+          ({ seasonNumber, episodeNumber } =
+            mapExternalEpisodeToTmdb(this.parsedId, this.animeEntry) ??
+            getTmdbEpisode(
+              this.parsedId,
+              this.animeEntry,
+              metadata.seasons ?? []
+            ));
           logger.debug(
             {
               originalSeason,
@@ -554,19 +575,19 @@ export class StreamContext {
    * Get episode air date, waiting for fetch if needed.
    */
   public async getEpisodeAirDate(): Promise<string | undefined> {
-    if (this._episodeDetails !== undefined) {
-      return this._episodeDetails.airDate;
+    if (this._episodeDetails === undefined) {
+      if (!this._episodeDetailsPromise) {
+        this.startEpisodeDetailsFetch();
+      }
+      if (this._episodeDetailsPromise) {
+        this._episodeDetails = await this._episodeDetailsPromise;
+      }
     }
 
-    if (!this._episodeDetailsPromise) {
-      this.startEpisodeDetailsFetch();
-    }
-
-    if (this._episodeDetailsPromise) {
-      this._episodeDetails = await this._episodeDetailsPromise;
-    }
-
-    return this._episodeDetails?.airDate;
+    return (
+      this._episodeDetails?.airDate ||
+      (await this.getMetadata())?.episodeAirDate
+    );
   }
 
   public async getEpisodeRuntime(): Promise<number | undefined> {
@@ -616,7 +637,9 @@ export class StreamContext {
   private computeAgeInDays(): number | undefined {
     const episodeDate =
       this.type === 'series'
-        ? this._episodeDetails?.airDate || this._metadata?.episodeReleased
+        ? this._episodeDetails?.airDate ||
+          (this.isAnime ? this._metadata?.episodeAirDate : undefined) ||
+          this._metadata?.episodeReleased
         : undefined;
     if (episodeDate) {
       return this.getDaysSince(episodeDate);

@@ -218,6 +218,8 @@ const TitleMetadataSchema = z.object({
   // the same episode as tvdb numbers it, when that differs
   tvdbSeason: z.number().optional(),
   tvdbEpisode: z.number().optional(),
+  // Verified part titles for translated local episode numbers.
+  localEpisodeTitles: z.array(z.string()).optional(),
   // local air dates ('YYYY-MM-DD') of the requested episode for date-based shows
   airDates: z.array(z.string()).optional(),
   isDateBased: z.boolean().optional(),

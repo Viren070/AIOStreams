@@ -190,6 +190,8 @@ export interface AnimeEntryMappings {
 
 /** Public anime entry returned by {@link AnimeDatabase.getEntryById}. */
 export interface AnimeEntry {
+  /** Entry titles not shared with other candidates for an external show ID. */
+  localEpisodeTitles?: string[];
   mappings?: AnimeEntryMappings;
   type: AnimeType;
   imdb?: {

@@ -14,6 +14,7 @@
 import type { IdType } from '../utils/id-parser.js';
 import { AnimeType, type AnimeRecord, type IdValue } from './types.js';
 import { createLogger } from '../logging/logger.js';
+import { readEpisodeCoordinate } from './episode-coordinates.js';
 
 const logger = createLogger('anime-database:selector');
 
@@ -30,9 +31,9 @@ function seasonRegex(season: number): RegExp {
 /** Highest season number this record claims, in any source's coordinates. */
 function advertisedSeasonOf(r: AnimeRecord): number {
   return Math.max(
-    typeof r.tvdb?.seasonNumber === 'number' ? r.tvdb.seasonNumber : 0,
-    typeof r.tmdb?.seasonNumber === 'number' ? r.tmdb.seasonNumber : 0,
-    typeof r.trakt?.seasonNumber === 'number' ? r.trakt.seasonNumber : 0
+    readEpisodeCoordinate(r.tvdb?.seasonNumber) ?? 0,
+    readEpisodeCoordinate(r.tmdb?.seasonNumber) ?? 0,
+    readEpisodeCoordinate(r.trakt?.seasonNumber) ?? 0
   );
 }
 
@@ -142,6 +143,7 @@ interface Candidate {
   reason: string;
 }
 
+/** Rank candidates in the requested provider's coordinates, then by verified part starts. */
 function scoreBySeasonEpisode(
   candidates: AnimeRecord[],
   season: number,
@@ -182,8 +184,8 @@ function scoreBySeasonEpisode(
   let rangeFromSeason = -1;
   let hasLaterCour = false;
   for (const r of candidates) {
-    const fs = r.imdb?.fromSeason;
-    if (typeof fs !== 'number') continue;
+    const fs = readEpisodeCoordinate(r.imdb?.fromSeason);
+    if (fs === undefined) continue;
     if (fs > season) {
       hasLaterCour = true;
       continue;
@@ -194,10 +196,33 @@ function scoreBySeasonEpisode(
     }
   }
 
+  // A later cour of the same parent show can have explicit TVDB/TMDB
+  // coordinates before IMDb hints catch up. Do not let extrapolation hide
+  // it. Shared parent IDs are essential: a sequel with its own provider IDs
+  // must not displace an original series merely because season numbers match.
+  const hasMappedContinuation =
+    native === 'imdb' &&
+    !hasLaterCour &&
+    rangeWinner !== null &&
+    candidates.some((r) =>
+      (['tvdb', 'tmdb'] as const).some((source) => {
+        const key = source === 'tvdb' ? 'thetvdbId' : 'themoviedbId';
+        const parent = rangeWinner!.ids?.[key];
+        return (
+          r !== rangeWinner &&
+          parent != null &&
+          parent !== '' &&
+          String(parent) === String(r.ids?.[key]) &&
+          readEpisodeCoordinate(r[source]?.seasonNumber) === season &&
+          episode >= (r[source]?.fromEpisode ?? 1)
+        );
+      })
+    );
+
   for (const r of candidates) {
     // Trakt season number.
-    if (typeof r.trakt?.seasonNumber === 'number') {
-      if (r.trakt.seasonNumber === season) {
+    if (r.trakt) {
+      if (readEpisodeCoordinate(r.trakt.seasonNumber) === season) {
         scored.push({
           record: r,
           priority: prio('trakt'),
@@ -207,10 +232,7 @@ function scoreBySeasonEpisode(
       }
     }
     // Kitsu IMDb-cour mapping. Exact match.
-    if (
-      typeof r.imdb?.fromSeason === 'number' &&
-      r.imdb.fromSeason === season
-    ) {
+    if (r.imdb && readEpisodeCoordinate(r.imdb.fromSeason) === season) {
       const fromEpisode = r.imdb.fromEpisode ?? 1;
       if (episode >= fromEpisode) {
         scored.push({
@@ -229,7 +251,7 @@ function scoreBySeasonEpisode(
     if (imdbInCoordinate && r === rangeWinner && rangeFromSeason !== season) {
       scored.push({
         record: r,
-        priority: hasLaterCour ? 65 : 40,
+        priority: hasLaterCour ? 65 : hasMappedContinuation ? 20 : 40,
         fromEpisode: r.imdb?.fromEpisode ?? 1,
         reason: hasLaterCour
           ? 'kitsu-fromSeason-range'
@@ -242,7 +264,7 @@ function scoreBySeasonEpisode(
     if (
       r.tvdb?.seasonNumber !== undefined &&
       r.tvdb.seasonNumber !== null &&
-      (r.tvdb.seasonNumber === season ||
+      (readEpisodeCoordinate(r.tvdb.seasonNumber) === season ||
         (r.tvdb.seasonNumber === 'a' && idType === 'thetvdbId'))
     ) {
       const fromEpisode = r.tvdb.fromEpisode ?? 1;
@@ -256,10 +278,7 @@ function scoreBySeasonEpisode(
       }
     }
     // Anime-Lists XML tmdbSeason match.
-    if (
-      typeof r.tmdb?.seasonNumber === 'number' &&
-      r.tmdb.seasonNumber === season
-    ) {
+    if (r.tmdb && readEpisodeCoordinate(r.tmdb.seasonNumber) === season) {
       const fromEpisode = r.tmdb.fromEpisode ?? 1;
       if (episode >= fromEpisode) {
         scored.push({
