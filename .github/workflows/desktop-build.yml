@@ -20,7 +20,7 @@ on:
         type: string
         default: ''
       platforms:
-        description: all, windows or macos
+        description: all, windows, macos or linux
         required: false
         type: string
         default: all
@@ -52,6 +52,7 @@ jobs:
   # The Rust crates' licences, a page per target, made once for every build;
   # cargo-about fails on a licence that about.toml does not accept.
   licences:
+    if: inputs.platforms != 'linux'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -79,10 +80,10 @@ jobs:
           PLATFORMS: ${{ inputs.platforms }}
         run: |
           targets=()
-          if [ "$PLATFORMS" != macos ]; then
+          if [ "$PLATFORMS" = all ] || [ "$PLATFORMS" = windows ]; then
             targets+=(x86_64-pc-windows-msvc aarch64-pc-windows-msvc)
           fi
-          if [ "$PLATFORMS" != windows ]; then
+          if [ "$PLATFORMS" = all ] || [ "$PLATFORMS" = macos ]; then
             targets+=(aarch64-apple-darwin x86_64-apple-darwin)
           fi
           mkdir -p licences
@@ -123,7 +124,7 @@ jobs:
   windows:
     name: Windows ${{ matrix.arch }}
     needs: [web, feed, licences]
-    if: inputs.platforms != 'macos'
+    if: inputs.platforms == 'all' || inputs.platforms == 'windows'
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     strategy:
@@ -228,7 +229,7 @@ jobs:
   macos:
     name: macOS ${{ matrix.arch }}
     needs: [web, feed, licences]
-    if: inputs.platforms != 'windows'
+    if: inputs.platforms == 'all' || inputs.platforms == 'macos'
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
     strategy:
@@ -343,3 +344,59 @@ jobs:
       - name: Attach to the release
         if: ${{ inputs.release != '' }}
         run: gh release upload "${{ inputs.release }}" "releases/aiostreams-desktop-$CHANNEL.pkg" "releases/aiostreams-desktop-$CHANNEL.zip" --clobber
+
+  linux:
+    name: Linux ${{ matrix.arch }}
+    needs: [web, feed]
+    if: inputs.platforms == 'all' || inputs.platforms == 'linux'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ inputs.version }}
+      FEED: ${{ inputs.channel == 'nightly' && 'desktop-nightly' || 'desktop' }}
+      CHANNEL: linux-${{ matrix.arch }}${{ inputs.channel == 'nightly' && '-nightly' || '' }}
+      FLATPAK_WORK: ${{ github.workspace }}/flatpak-work
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: web
+          path: packages/jellyfin-web/dist-standalone
+
+      - name: Install Flatpak
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder python3-aiohttp python3-tomlkit
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+
+      # Built modules and downloads, so a build redoes only what changed.
+      - uses: actions/cache@v6
+        with:
+          path: flatpak-work/.flatpak-builder
+          key: flatpak-${{ matrix.arch }}-${{ hashFiles('packages/desktop/linux/io.github.viren070.aiostreams.yml') }}-${{ github.run_id }}
+          restore-keys: flatpak-${{ matrix.arch }}-${{ hashFiles('packages/desktop/linux/io.github.viren070.aiostreams.yml') }}-
+
+      - name: Build the Flatpak
+        run: |
+          perl -0pi -e 's/^version = "[^"]*"/version = "$ENV{VERSION}"/m' packages/desktop/Cargo.toml
+          grep -q "^version = \"$VERSION\"" packages/desktop/Cargo.toml
+          sh packages/desktop/scripts/make-flatpak.sh
+          mkdir -p releases
+          mv "$FLATPAK_WORK/io.github.viren070.aiostreams.flatpak" "releases/aiostreams-desktop-$CHANNEL.flatpak"
+
+      - name: Publish to the feed
+        run: gh release upload "$FEED" "releases/aiostreams-desktop-$CHANNEL.flatpak" --clobber
+
+      - name: Attach to the release
+        if: ${{ inputs.release != '' }}
+        run: gh release upload "${{ inputs.release }}" "releases/aiostreams-desktop-$CHANNEL.flatpak" --clobber

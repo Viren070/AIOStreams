@@ -13,7 +13,7 @@ on:
       platforms:
         description: Which apps to build
         type: choice
-        options: [all, windows, macos]
+        options: [all, windows, macos, linux]
         default: all
 
 permissions:
