@@ -30,6 +30,10 @@ import {
 import { ParsedResult } from '@viren070/parse-torrent-title';
 import { parseTorrentTitleCached } from '../../parser/title.js';
 import {
+  recoverAnimeRelease,
+  isRecoveredAnimeEpisodeWrong,
+} from '../../parser/anime-release.js';
+import {
   preprocessTitle,
   normaliseTitle,
   extractInfoHashFromMagnet,
@@ -572,7 +576,10 @@ export async function processNZBs(
   for (const n of nzbs) {
     const key = n.title ?? '';
     if (!sharedParsedNzbTitlesMap.has(key)) {
-      sharedParsedNzbTitlesMap.set(key, parseTorrentTitleCached(key));
+      sharedParsedNzbTitlesMap.set(
+        key,
+        recoverAnimeRelease(key, parseTorrentTitleCached(key), metadata)
+      );
     }
   }
 
@@ -679,7 +686,10 @@ async function processNZBsForDebridService(
     for (const nzb of nzbs) {
       const key = nzb.title ?? '';
       if (!parsedTitlesMap.has(key)) {
-        parsedTitlesMap.set(key, parseTorrentTitleCached(key));
+        parsedTitlesMap.set(
+          key,
+          recoverAnimeRelease(key, parseTorrentTitleCached(key), metadata)
+        );
       }
     }
   }
@@ -708,24 +718,30 @@ async function processNZBsForDebridService(
       });
       continue;
     }
-    const parsedNzb = parsedTitlesMap.get(
-      nzb.title ?? nzbCheckResult?.name ?? ''
-    );
-
+    const effectiveTitle = nzb.title ?? nzbCheckResult?.name ?? '';
+    const originalParsed = parseTorrentTitleCached(effectiveTitle);
+    const parsedNzb =
+      parsedTitlesMap.get(effectiveTitle) ??
+      recoverAnimeRelease(effectiveTitle, originalParsed, metadata);
+    parsedTitlesMap.set(effectiveTitle, parsedNzb);
     if (metadata && parsedNzb) {
-      const reason = getValidationFailureReason(
-        nzb.title ?? nzbCheckResult?.name,
-        parsedNzb,
-        metadata,
-        nzb.confirmed,
-        normTitles
-      );
+      const reason =
+        parsedNzb !== originalParsed &&
+        isRecoveredAnimeEpisodeWrong(parsedNzb, metadata)
+          ? 'absolute-episode'
+          : getValidationFailureReason(
+              nzb.title ?? nzbCheckResult?.name,
+              parsedNzb,
+              metadata,
+              nzb.confirmed,
+              normTitles
+            );
       if (reason) {
         continue;
       }
     }
 
-    validNZBs.push({ nzb, nzbCheckResult, parsedTitle: parsedNzb! });
+    validNZBs.push({ nzb, nzbCheckResult, parsedTitle: parsedNzb });
   }
 
   // Parse files only for valid NZBs

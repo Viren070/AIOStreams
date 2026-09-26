@@ -413,6 +413,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       {} as Record<BuiltinServiceId, string | string[]>
     );
     const titleMetadata: TitleMetadata = {
+      isAnime: searchMetadata.isAnime,
       titles: searchMetadata.titles,
       year: searchMetadata.year,
       seasonYear: searchMetadata.seasonYear,
