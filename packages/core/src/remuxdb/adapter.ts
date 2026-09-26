@@ -17,6 +17,19 @@ function unwrapProxyUrl(nzbUrl: string): string {
   }
 }
 
+export function resolveNzbHostname(
+  nzbUrl: string | undefined
+): string | undefined {
+  if (!nzbUrl) return undefined;
+  try {
+    return new URL(unwrapProxyUrl(nzbUrl)).hostname
+      .toLowerCase()
+      .replace(/^www\./, '');
+  } catch {
+    return undefined;
+  }
+}
+
 export function extractNzbGuid(nzbUrl: string | undefined): string | undefined {
   if (!nzbUrl) return undefined;
   const realUrl = unwrapProxyUrl(nzbUrl);

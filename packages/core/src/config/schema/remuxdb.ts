@@ -8,7 +8,7 @@ export const remuxdbSchema = {
     default: true,
     label: 'RemuxDB',
     description:
-      'Let users fill in missing stream details from RemuxDB. Lookups are sent from this server, so turning this off hides the setting and stops all lookups.',
+      'Let users fill in missing stream details from RemuxDB, and contribute media info probed from streams played through the built-in usenet reader back to it. Lookups and probes are sent from this server, so turning this off hides the setting and stops all lookups and submissions.',
     env: 'REMUXDB_ENABLED',
     requiresRestart: false,
     secret: false,

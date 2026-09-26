@@ -425,6 +425,9 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       tvdbEpisode: searchMetadata.tvdbEpisode,
       airDates: searchMetadata.airDates,
       isDateBased: searchMetadata.isDateBased,
+      imdbId: searchMetadata.imdbId,
+      tmdbId: searchMetadata.tmdbId,
+      tvdbId: searchMetadata.tvdbId,
     };
     const metadataId = getSimpleTextHash(JSON.stringify(titleMetadata));
     await metadataStore().set(
