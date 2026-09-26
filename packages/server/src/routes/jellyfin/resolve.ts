@@ -387,7 +387,7 @@ async function resolveUncached(
     createdAt: Date.now(),
   };
   keepEnrichedSubtitles(memo, await resolveByItem(ctx.uuid, scope, itemId));
-  await writePlaybackMemo(memo, scope);
+  await writePlaybackMemo(memo, scope, ctx.persona?.id);
   if (!playableSources(sources).length) {
     const reason = (streamsRes?.errors ?? [])
       .map((e) => [e.title, e.description].filter(Boolean).join(': '))
@@ -455,7 +455,7 @@ export async function enrichSourceSubtitles(
     { itemId: memo.itemId, msid: record.msid, added },
     'file-matched subtitles merged'
   );
-  await writePlaybackMemo(memo, ctx.scope());
+  await writePlaybackMemo(memo, ctx.scope(), ctx.persona?.id);
 }
 
 export function resolveMarkerId(

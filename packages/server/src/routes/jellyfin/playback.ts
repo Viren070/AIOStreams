@@ -75,7 +75,8 @@ async function locate(
       (await contextFromCredentials(
         req,
         pointer.uuid,
-        pointer.encryptedPassword
+        pointer.encryptedPassword,
+        pointer.persona
       )) ?? undefined;
     if (!ctx) return null;
   }

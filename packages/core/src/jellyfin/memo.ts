@@ -48,12 +48,14 @@ export function newPlaySessionId(): string {
 
 export async function writePlaybackMemo(
   memo: PlaybackMemo,
-  scope: string
+  scope: string,
+  persona?: string
 ): Promise<void> {
   const pointer: MemoPointer = {
     uuid: memo.uuid,
     encryptedPassword: memo.encryptedPassword,
     itemId: memo.itemId,
+    persona,
   };
   await Promise.all([
     memos.set(

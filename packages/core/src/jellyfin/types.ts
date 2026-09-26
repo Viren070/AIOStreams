@@ -99,6 +99,7 @@ export interface MemoPointer {
   uuid: string;
   encryptedPassword: string;
   itemId: string;
+  persona?: string;
 }
 
 export type ImageKind = 'Primary' | 'Backdrop' | 'Logo' | 'Thumb';

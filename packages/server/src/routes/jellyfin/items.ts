@@ -675,6 +675,7 @@ export function placeholderSources(
     uuid: ctx.uuid,
     encryptedPassword: ctx.encryptedPassword,
     itemId,
+    persona: ctx.persona?.id,
   }).catch(() => undefined);
   return [
     placeholderMediaSource(itemId, 'Streams resolve on play', path),
