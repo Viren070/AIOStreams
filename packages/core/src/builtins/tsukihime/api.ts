@@ -61,10 +61,11 @@ const TsukihimeAnimeSchema = z.looseObject({ id: z.number() });
 
 const getApiBaseUrl = () => appConfig.builtins.tsukihime.url;
 
-// not .nzb.gz, which is gzipped and rejected as an NZB
+// not .nzb.gz, which is gzipped and rejected as an NZB; storage 404s on an
+// encoded slash in the name
 const getNzbUrl = (torrent: TsukihimeTorrent) =>
   new URL(
-    `/nzbs/${torrent.id}/${encodeURIComponent(torrent.name)}.nzb`,
+    `/nzbs/${torrent.id}/${encodeURIComponent(torrent.name.replaceAll('/', '_'))}.nzb`,
     appConfig.builtins.tsukihime.storageUrl
   ).toString();
 
