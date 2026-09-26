@@ -49,6 +49,7 @@ export function Artwork({
         src={current}
         alt={alt}
         loading="lazy"
+        decoding="async"
         draggable={false}
         onLoad={() => setLoaded(true)}
         onError={() => setAttempt((n) => n + 1)}
