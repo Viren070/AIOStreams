@@ -49,8 +49,11 @@ pub enum Inbound {
     AppInfo,
     OpenMpvConfig,
     OpenLogs,
-    /// Versions, paths and the recent log, for a bug report.
-    Diagnostics,
+    /// Versions, paths and the recent log, for a bug report; the page names its own build and the server's.
+    Diagnostics {
+        web: Option<String>,
+        server: Option<String>,
+    },
     /// Checks for an update and downloads it; `None` keeps the installed channel.
     UpdateCheck {
         channel: Option<UpdateChannel>,

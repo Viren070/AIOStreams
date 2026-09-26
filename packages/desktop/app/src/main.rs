@@ -373,11 +373,13 @@ pub fn handle(
         }
         Inbound::OpenMpvConfig => platform::open_external(&paths.mpv.to_string_lossy()),
         Inbound::OpenLogs => platform::open_external(&paths.logs.to_string_lossy()),
-        Inbound::Diagnostics => {
+        Inbound::Diagnostics { web, server } => {
             let (mpv, ffmpeg) = player.as_ref().map(Player::versions).unwrap_or_default();
             let text = format!(
-                "AIOStreams Desktop {}\nmpv=\"{}\" ffmpeg={}\nlog={}\n\n{}",
+                "AIOStreams Desktop {}\nweb=\"{}\" server=\"{}\"\nmpv=\"{}\" ffmpeg={}\nlog={}\n\n{}",
                 about(),
+                web.unwrap_or_default(),
+                server.unwrap_or_default(),
                 mpv.unwrap_or_default(),
                 ffmpeg.unwrap_or_default(),
                 paths.log_file.display(),

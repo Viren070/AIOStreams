@@ -521,7 +521,7 @@ export function openLogs(): void {
 }
 
 /** Versions, paths and the recent log, for a bug report. */
-export function requestDiagnostics(): Promise<string> {
+export function requestDiagnostics(server: string | null): Promise<string> {
   const shell = window.aiostreamsDesktop;
   if (!shell)
     return Promise.reject(new Error('Only the desktop app has these'));
@@ -536,6 +536,6 @@ export function requestDiagnostics(): Promise<string> {
       unsubscribe();
       resolve(m.text);
     });
-    shell.send({ type: 'diagnostics' });
+    shell.send({ type: 'diagnostics', web: __APP_COMMIT__, server });
   });
 }

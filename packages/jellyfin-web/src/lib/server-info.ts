@@ -20,6 +20,8 @@ export interface ServerInfo extends Branding {
   pinSignIn: boolean;
   /** Each extension it implements, with its version. */
   features: Partial<Record<Feature, number>>;
+  /** The server's build, like `v2.35.0` or `nightly a1b2c3d4`. */
+  version: string | null;
 }
 
 export const NO_SERVER_INFO: ServerInfo = {
@@ -28,6 +30,7 @@ export const NO_SERVER_INFO: ServerInfo = {
   configureUrl: null,
   pinSignIn: false,
   features: {},
+  version: null,
 };
 
 interface PublicSystemInfo {
@@ -37,7 +40,19 @@ interface PublicSystemInfo {
     configureUrl?: string | null;
     pinSignIn?: boolean;
     features?: ServerInfo['features'];
+    version?: { tag?: string; channel?: string; commit?: string };
   };
+}
+
+function buildVersion(
+  build: NonNullable<PublicSystemInfo['aiostreams']>['version']
+): string | null {
+  const known = (v?: string) => (v && v !== 'unknown' ? v : null);
+  const tag = known(build?.tag);
+  const commit = known(build?.commit);
+  if (build?.channel === 'nightly' || build?.channel === 'dev')
+    return commit ? `${build.channel} ${commit}` : build.channel;
+  return tag;
 }
 
 const ServerInfoContext = React.createContext<ServerInfo>(NO_SERVER_INFO);
@@ -66,6 +81,7 @@ export function useServerInfoQuery(client: JellyfinClient) {
         configureUrl: data.aiostreams?.configureUrl ?? null,
         pinSignIn: data.aiostreams?.pinSignIn ?? false,
         features: data.aiostreams?.features ?? {},
+        version: buildVersion(data.aiostreams?.version),
       };
     },
     staleTime: 5 * 60_000,

@@ -54,6 +54,11 @@ export function publicInfo(req: Request) {
       configureUrl: `${requestOrigin(req)}/stremio/configure`,
       pinSignIn: appConfig.jellyfin.pinSignIn && !!mountOf(req),
       features: FEATURES,
+      version: {
+        tag: appConfig.bootstrap.tag,
+        channel: appConfig.bootstrap.channel,
+        commit: appConfig.bootstrap.gitCommit,
+      },
     },
     Version: appConfig.jellyfin.version,
     ProductName: JELLYFIN_PRODUCT_NAME,

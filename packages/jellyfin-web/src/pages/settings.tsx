@@ -482,6 +482,7 @@ function DesktopSection() {
   const [passthrough, setPassthrough] = usePassthrough();
   const [escExits, setEscExits] = useEscExitsFullscreen();
   const [chapterSkips, setChapterSkips] = useChapterSkips();
+  const server = useServerInfo();
   return (
     <>
       <UpdatesCard />
@@ -565,7 +566,9 @@ function DesktopSection() {
             intent="gray-outline"
             className="w-full rounded-full sm:w-auto"
             onClick={() =>
-              requestDiagnostics()
+              requestDiagnostics(
+                server.version && `AIOStreams ${server.version}`
+              )
                 .then((text) =>
                   copyToClipboard(text, {
                     onSuccess: () => toast.success('Diagnostics copied'),
@@ -896,6 +899,7 @@ const DESKTOP_DOWNLOAD_URL =
 function AboutSection() {
   const { client } = useSession();
   const shell = useShellInfo();
+  const { version } = useServerInfo();
   const info = useQuery({
     queryKey: ['jf-system-info', client.base],
     queryFn: () =>
@@ -905,7 +909,13 @@ function AboutSection() {
     staleTime: 5 * 60_000,
   });
   const rows: [string, string | null | undefined][] = [
-    ['Server', info.data?.ServerName],
+    [
+      'Server',
+      info.data?.ServerName &&
+        (version
+          ? `${info.data.ServerName} (${version})`
+          : info.data.ServerName),
+    ],
     ['Address', serverAddress(client.base)],
     ['Jellyfin API', info.data?.Version],
     ['Web app', __APP_COMMIT__],

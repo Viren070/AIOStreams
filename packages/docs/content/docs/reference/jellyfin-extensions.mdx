@@ -21,6 +21,7 @@ Standard Jellyfin clients ignore all of these, so offering them never breaks one
     "logo": "https://…/logo.png",
     "configureUrl": "https://example.com/configure",
     "pinSignIn": false,
+    "version": { "tag": "v2.35.0", "channel": "stable", "commit": "a1b2c3d4" },
     "features": {
       "users": 1,
       "history": 1,
@@ -39,6 +40,7 @@ Standard Jellyfin clients ignore all of these, so offering them never breaks one
 | `configureUrl` | URL or `null`          | Links to it as the place to change the account's setup                           |
 | `pinSignIn`    | boolean                | AIOStreams only; see [what stays with AIOStreams](#what-stays-with-aiostreams)   |
 | `features`     | name to version number | Turns on the parts below; a missing name, or no `aiostreams` object, means "off" |
+| `version`      | object of strings      | Shows the build in About and diagnostics: `commit` on nightly or dev, else `tag` |
 
 The web app checks `features` for each part it uses, never whether the server is AIOStreams. Each
 value is that feature's version.
