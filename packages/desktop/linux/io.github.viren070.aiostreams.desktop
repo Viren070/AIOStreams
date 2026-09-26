@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=AIOStreams
+Comment=Browse and play your libraries
+Exec=aiostreams-desktop
+Icon=io.github.viren070.aiostreams
+Terminal=false
+Categories=AudioVideo;Video;Player;
+Keywords=streaming;movies;shows;jellyfin;
+StartupNotify=true
+StartupWMClass=io.github.viren070.aiostreams

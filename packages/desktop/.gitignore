@@ -1,3 +1,9 @@
 /target
 /vendor
 /third-party-licenses.html
+/linux/build
+/linux/repo
+/linux/.flatpak-builder
+/linux/cargo-sources.json
+/linux/flatpak-cargo-generator.py
+/linux/*.flatpak

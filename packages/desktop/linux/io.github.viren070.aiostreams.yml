@@ -1,0 +1,153 @@
+app-id: io.github.viren070.aiostreams
+runtime: org.gnome.Platform
+runtime-version: '51'
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+add-extensions:
+  org.freedesktop.Platform.codecs-extra:
+    version: 26.08-extra
+    directory: lib/codecs-extra
+    add-ld-path: .
+  org.freedesktop.Platform.VAAPI.Intel:
+    version: '26.08'
+    directory: lib/intel-vaapi-driver
+    add-ld-path: .
+    download-if: have-intel-gpu
+    enable-if: have-intel-gpu
+command: aiostreams-desktop
+finish-args:
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=ipc
+  - --socket=pulseaudio
+  - --filesystem=xdg-run/pipewire-0:ro
+  - --share=network
+  # Includes NVIDIA's device nodes, for CUDA decoding.
+  - --device=dri
+cleanup:
+  - /include
+  - /lib/cmake
+  - /lib/pkgconfig
+  - /share/man
+  - '*.a'
+  - '*.la'
+modules:
+  - name: luajit
+    buildsystem: simple
+    build-commands:
+      - make -j$FLATPAK_BUILDER_N_JOBS PREFIX=/app
+      - make install PREFIX=/app
+    sources:
+      - type: git
+        url: https://github.com/LuaJIT/LuaJIT.git
+        commit: c6ffc141a8762b41703f9287d63d93622a13dd8f
+
+  - name: libXpresent
+    buildsystem: autotools
+    sources:
+      - type: git
+        url: https://gitlab.freedesktop.org/xorg/lib/libxpresent.git
+        tag: libXpresent-1.0.2
+        commit: 4d92149372461bf575e8a09b1064a2884c38c3aa
+
+  - name: libplacebo
+    buildsystem: meson
+    config-opts:
+      - --libdir=lib
+      - -Dvulkan=enabled
+      - -Ddemos=false
+    sources:
+      - type: git
+        url: https://github.com/haasn/libplacebo.git
+        tag: v7.360.1
+        commit: cee9b076f2c63104ccfd497fa79c39a867293ec4
+
+  - name: uchardet
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DCMAKE_INSTALL_LIBDIR=lib
+      - -DBUILD_BINARY=OFF
+      - -DBUILD_STATIC=OFF
+      # uchardet 0.0.8 declares a CMake version this SDK no longer accepts.
+      - -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+    sources:
+      - type: archive
+        url: https://www.freedesktop.org/software/uchardet/releases/uchardet-0.0.8.tar.xz
+        sha256: e97a60cfc00a1c147a674b097bb1422abd9fa78a2d9ce3f3fdcc2e78a34ac5f0
+
+  - name: libass
+    buildsystem: meson
+    config-opts:
+      - --libdir=lib
+    sources:
+      - type: archive
+        url: https://github.com/libass/libass/archive/0.17.4.tar.gz
+        sha256: c287d180d93dc9c9021872574b618ac49027e84cc90e1289318b1ee68bb42251
+
+  - name: libmpv
+    buildsystem: meson
+    config-opts:
+      # The SDK's Meson defaults to lib64, which Flatpak does not search.
+      - --libdir=lib
+      - -Dbuild-date=false
+      - -Dcplayer=false
+      - -Dlibmpv=true
+      - -Dmanpage-build=disabled
+      # The stats page and user scripts run on Lua.
+      - -Dlua=luajit
+      # Subtitle files that are not UTF-8.
+      - -Duchardet=enabled
+      - -Dwayland=enabled
+      - -Dx11=enabled
+      - -Dvulkan=enabled
+      - -Dgl=enabled
+      - -Degl=enabled
+      - -Degl-wayland=enabled
+      - -Degl-x11=enabled
+      - -Dvaapi=enabled
+      - -Dvaapi-wayland=enabled
+      - -Dvaapi-x11=enabled
+      - -Dcuda-hwaccel=enabled
+      - -Dcuda-interop=enabled
+      - -Dvdpau=enabled
+      - -Dvdpau-gl-x11=enabled
+    sources:
+      - type: archive
+        url: https://github.com/mpv-player/mpv/archive/v0.41.0.tar.gz
+        sha256: ee21092a5ee427353392360929dc64645c54479aefdb5babc5cfbb5fad626209
+
+  - name: aiostreams-desktop
+    buildsystem: simple
+    build-options:
+      append-path: /usr/lib/sdk/rust-stable/bin
+      env:
+        CARGO_HOME: /run/build/aiostreams-desktop/cargo
+    build-commands:
+      - cargo --offline fetch --manifest-path Cargo.toml
+      - cargo --offline build --release -p aiostreams-desktop
+      - install -Dm755 target/release/aiostreams-desktop -t /app/lib/aiostreams-desktop
+      - cp -r web /app/lib/aiostreams-desktop/web
+      - mkdir -p /app/bin /app/lib/codecs-extra /app/lib/intel-vaapi-driver
+      - ln -s ../lib/aiostreams-desktop/aiostreams-desktop /app/bin/aiostreams-desktop
+      - install -Dm644 linux/io.github.viren070.aiostreams.desktop -t /app/share/applications
+      - install -Dm644 linux/io.github.viren070.aiostreams.metainfo.xml -t /app/share/metainfo
+      - install -Dm644 app/icons/aiostreams.png /app/share/icons/hicolor/512x512/apps/io.github.viren070.aiostreams.png
+      - install -Dm644 LICENSE THIRD-PARTY.md -t /app/share/licenses/io.github.viren070.aiostreams
+    sources:
+      - type: dir
+        path: ..
+        skip:
+          - target
+          - vendor
+          - linux/build
+          - linux/repo
+          - linux/.flatpak-builder
+          - linux/screenshots
+      - type: dir
+        path: ../../jellyfin-web/dist-standalone
+        dest: web
+      - type: file
+        path: ../../../LICENSE
+      - cargo-sources.json
