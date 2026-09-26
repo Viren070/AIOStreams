@@ -48,13 +48,16 @@ export function compareVersions(
   return an > bn ? 1 : an < bn ? -1 : 0;
 }
 
+/** A server nightly, like `2026.09.26.1642-nightly`; not the desktop app's `desktop-nightly`. */
+const NIGHTLY_TAG = /^\d{4}\.\d{2}\.\d{2}\.\d{4}-nightly$/;
+
 export function releaseMatchesChannel(
   tag: string,
   channel: ReleaseChannel
 ): boolean {
   return channel === 'stable'
     ? tag.startsWith('v') && !tag.includes('nightly')
-    : tag.endsWith('-nightly');
+    : NIGHTLY_TAG.test(tag);
 }
 
 export type VersionJump = 'major' | 'minor' | 'patch';

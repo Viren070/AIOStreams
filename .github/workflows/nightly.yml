@@ -36,7 +36,7 @@ jobs:
       - name: Get last nightly tag
         id: get_last_nightly_tag
         run: |
-          LAST_NIGHTLY_TAG=$(git tag -l "*-nightly" --sort=-committerdate | head -n 1 || echo "")
+          LAST_NIGHTLY_TAG=$(git tag -l "[0-9]*-nightly" --sort=-committerdate | head -n 1 || echo "")
           echo "last_nightly_tag=$LAST_NIGHTLY_TAG" >> $GITHUB_OUTPUT
           echo "Found last nightly tag: ${LAST_NIGHTLY_TAG:-none}"
 
