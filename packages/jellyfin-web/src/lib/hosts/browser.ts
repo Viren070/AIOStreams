@@ -40,9 +40,41 @@ function preferredSubtitle(
   }
 }
 
+function isPhone(): boolean {
+  return (
+    matchMedia('(pointer: coarse)').matches &&
+    Math.min(screen.width, screen.height) < 600
+  );
+}
+
+/** Phones also turn to landscape, which only a full screen page may lock. */
+async function enterFullscreen(): Promise<void> {
+  await document.documentElement.requestFullscreen?.();
+  const orientation = screen.orientation as ScreenOrientation & {
+    lock?(orientation: string): Promise<void>;
+  };
+  if (isPhone()) await orientation.lock?.('landscape');
+}
+
 function toggleDocumentFullscreen(): void {
   if (document.fullscreenElement) void document.exitFullscreen();
-  else void document.documentElement.requestFullscreen?.().catch(() => {});
+  else void enterFullscreen().catch(() => {});
+}
+
+/** Phones play full screen in landscape, as their own players do. */
+export function usePhoneFullscreen(enabled: boolean): void {
+  React.useEffect(() => {
+    if (!enabled || !isPhone()) return;
+    if (!document.fullscreenElement) void enterFullscreen().catch(() => {});
+    return () => {
+      // The next episode's player keeps it, as it could not enter again without a tap.
+      setTimeout(() => {
+        const playing = document.documentElement.classList.contains('playing');
+        if (!playing && document.fullscreenElement)
+          void document.exitFullscreen().catch(() => {});
+      });
+    };
+  }, [enabled]);
 }
 
 /** A `<video>` element; its external subtitles are `<track>`s in source order. */

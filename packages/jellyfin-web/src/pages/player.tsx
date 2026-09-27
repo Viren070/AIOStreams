@@ -24,7 +24,7 @@ import {
 } from '../lib/playback';
 import { playbackHost } from '../lib/hosts';
 import { useFeature } from '../lib/server-info';
-import { useBrowserPlayer } from '../lib/hosts/browser';
+import { useBrowserPlayer, usePhoneFullscreen } from '../lib/hosts/browser';
 import { useDesktopPlayer } from '../lib/hosts/jellyfin-desktop';
 import { useShellPlayer } from '../lib/hosts/shell';
 import type { PlayerController } from '../lib/player';
@@ -93,6 +93,7 @@ export function PlayerPage({
   const info = usePlaybackInfo(itemId, { sourceId: sourceId || undefined });
   const playback = usePlaybackPrefs();
   usePlayerPage();
+  usePhoneFullscreen(playbackHost() === 'browser');
 
   // Pinned once found: a refreshed version list must not restart playback.
   const [playing, setPlaying] = React.useState<Omit<
