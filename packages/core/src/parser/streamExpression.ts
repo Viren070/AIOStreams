@@ -18,47 +18,6 @@ import { describedTracks } from '../utils/media-info.js';
 
 const logger = createLogger('stream-expression');
 
-function positiveEpisodeNumber(value: unknown): number | undefined {
-  if (typeof value !== 'number' || !Number.isFinite(value) || value < 1) {
-    return undefined;
-  }
-  return value;
-}
-
-/**
- * Season episode and absolute episode, when the request actually has them.
- * Missing context uses -1, which is not an episode number.
- */
-function requestedEpisodeNumbers(consts: {
-  episode?: unknown;
-  absoluteEpisode?: unknown;
-}): number[] {
-  const numbers = [
-    positiveEpisodeNumber(consts.episode),
-    positiveEpisodeNumber(consts.absoluteEpisode),
-  ].filter((episode): episode is number => episode !== undefined);
-  return [...new Set(numbers)];
-}
-
-/**
- * A combined file (S01E05-E06) played for a later episode inside it.
- * Season packs stay out: those streams point at one episode of a folder.
- * The first episode is the lowest parsed number. Range titles parse in
- * ascending order, so this matches episodes[0] for those names.
- */
-function isLaterEpisodeOfMultiFile(
-  stream: ParsedStream,
-  requested: number[]
-): boolean {
-  const parsed = stream.parsedFile;
-  const episodes = parsed?.episodes;
-  if (!episodes || episodes.length < 2 || parsed?.seasonPack) {
-    return false;
-  }
-  const first = Math.min(...episodes);
-  return !requested.includes(first);
-}
-
 export abstract class StreamExpressionEngine {
   protected parser: Parser;
   protected _pinInstructions: Map<string, 'top' | 'bottom'> = new Map();
@@ -1276,22 +1235,6 @@ export abstract class StreamExpressionEngine {
         (stream) =>
           stream.parsedFile?.episodes &&
           stream.parsedFile.episodes.length >= minEpisodes
-      );
-    };
-
-    // The requested episode numbers are written onto the parser after this
-    // function is registered. Close over the consts object, not a copy.
-    const expressionConsts = this.parser.consts;
-    this.parser.functions.notFirstEpisode = function (streams: ParsedStream[]) {
-      if (!Array.isArray(streams) || streams.some((stream) => !stream.type)) {
-        throw new Error('Your streams input must be an array of streams');
-      }
-      const requested = requestedEpisodeNumbers(expressionConsts);
-      if (requested.length === 0) {
-        return [];
-      }
-      return streams.filter((stream) =>
-        isLaterEpisodeOfMultiFile(stream, requested)
       );
     };
 

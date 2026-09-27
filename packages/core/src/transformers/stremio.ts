@@ -21,7 +21,7 @@ import {
 import { createFormatter, FormatterContext } from '../formatters/index.js';
 import { AIOStreamsError, AIOStreamsResponse } from '../main/types.js';
 import { Cache, createLogger, getTimeTakenSincePoint } from '../utils/index.js';
-import { generateBingeGroup } from './utils.js';
+import { BingeRequest, generateBingeGroup } from './utils.js';
 
 type ErrorOptions = {
   errorTitle?: string;
@@ -30,6 +30,22 @@ type ErrorOptions = {
 };
 
 const logger = createLogger('stremio');
+
+function bingeRequestFor(
+  episode: number | null | undefined,
+  context?: FormatterContext
+): BingeRequest {
+  const requested = typeof episode === 'number' ? episode : context?.episode;
+  const sameAsContext =
+    requested !== undefined && requested === context?.episode;
+  return {
+    episode: requested,
+    absoluteEpisode: sameAsContext ? context?.absoluteEpisode : undefined,
+    relativeAbsoluteEpisode: sameAsContext
+      ? context?.relativeAbsoluteEpisode
+      : undefined,
+  };
+}
 
 export class StremioTransformer {
   constructor(private readonly userData: UserData) {}
@@ -53,7 +69,11 @@ export class StremioTransformer {
       ) => Promise<{ name: string; description: string }>;
     },
     index: number,
-    options?: { disableAutoplay?: boolean; provideStreamData?: boolean }
+    options?: {
+      disableAutoplay?: boolean;
+      provideStreamData?: boolean;
+      request?: BingeRequest;
+    }
   ): Promise<AIOStream> {
     const { name, description } = stream.addon.formatPassthrough
       ? {
@@ -64,7 +84,7 @@ export class StremioTransformer {
 
     const bingeGroup = options?.disableAutoplay
       ? undefined
-      : generateBingeGroup(stream, index, this.userData);
+      : generateBingeGroup(stream, index, this.userData, options?.request);
 
     return {
       name,
@@ -170,6 +190,7 @@ export class StremioTransformer {
       errors,
     } = response;
     const { provideStreamData, disableAutoplay } = options ?? {};
+    const request = bingeRequestFor(formatterContext.episode, formatterContext);
 
     let transformedStreams: AIOStream[] = [];
 
@@ -180,6 +201,7 @@ export class StremioTransformer {
         this.convertParsedStreamToStream(stream, formatter, index, {
           disableAutoplay: disableAutoplay ?? false,
           provideStreamData: provideStreamData ?? false,
+          request,
         })
       )
     );
@@ -325,6 +347,7 @@ export class StremioTransformer {
               this.convertParsedStreamToStream(stream, formatter!, index, {
                 disableAutoplay: disableAutoplay ?? false,
                 provideStreamData: provideStreamData ?? false,
+                request: bingeRequestFor(video.episode, formatterContext),
               })
             )
           );

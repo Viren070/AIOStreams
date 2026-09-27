@@ -696,20 +696,6 @@ seasonPack(streams, 'onlySeasons')  // ambiguous packs without episode reference
 
 ---
 
-#### `notFirstEpisode()`
-
-Multi-episode files where the requested episode is not the first episode in the file.
-
-A combined release such as `S01E05-E06` matches both episode requests. Autoplay follows `bingeGroup`, not the sort order, so the same file plays again from the start. Put this in an excluded stream expression to drop that file when the request is for a later episode inside it:
-
-```
-notFirstEpisode(streams)
-```
-
-The first episode is the lowest `parsedFile.episodes` value. The request counts as that episode when `episode` or `absoluteEpisode` equals it. Season packs are not matched. With no requested episode (a movie, or a group condition), the function matches nothing.
-
----
-
 #### `addon()`
 
 Filter by addon name (case-sensitive).

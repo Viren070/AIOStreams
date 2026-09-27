@@ -186,7 +186,12 @@ router.get(
 
       const apiData = await transformer.transformStreams(
         response,
-        requiredFields
+        requiredFields,
+        {
+          episode: formatterContext.episode,
+          absoluteEpisode: formatterContext.absoluteEpisode,
+          relativeAbsoluteEpisode: formatterContext.relativeAbsoluteEpisode,
+        }
       );
       if (stremioStreams && format) {
         apiData.results = apiData.results.map((result, index) => {
