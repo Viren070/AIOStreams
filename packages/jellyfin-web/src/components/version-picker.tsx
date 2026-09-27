@@ -31,13 +31,14 @@ import {
 } from '../lib/queries';
 import {
   directUrl,
+  externalAlways,
   externalPlayerTemplate,
-  externalPlayerUrl,
 } from '../lib/playback';
 import {
   lastVersions,
   noticeSources,
   playableSources,
+  playExternally,
   usePlay,
 } from '../lib/use-play';
 import { playbackHost } from '../lib/hosts';
@@ -95,7 +96,10 @@ export function VersionPickerProvider({
       open: (item, opts) => {
         const startMs = opts?.startMs ?? 0;
         const last =
-          startMs > 0 && !opts?.playing && playbackHost() !== 'android'
+          startMs > 0 &&
+          !opts?.playing &&
+          playbackHost() !== 'android' &&
+          !externalAlways()
             ? lastVersions.get(item.Id!)
             : undefined;
         if (last) navigate(to.play(item.Id!, last, startMs));
@@ -205,9 +209,12 @@ function Versions({
       exact: true,
     });
     onDone();
-    play(item, { source, startMs, replace: !!request.playing }).catch(
-      (e: Error) => toast.error(e.message)
-    );
+    play(item, {
+      source,
+      startMs,
+      replace: !!request.playing,
+      onExternal,
+    }).catch((e: Error) => toast.error(e.message));
   };
   const retry = () =>
     refresh.mutate(undefined, {
@@ -361,8 +368,8 @@ function Versions({
                     label: 'Open in external player',
                     icon: <BiLinkExternal />,
                     run: () => {
-                      window.location.href = externalPlayerUrl(template, link);
-                      onExternal();
+                      if (!playExternally(client, item, source, startMs))
+                        onExternal();
                     },
                   },
                 ]

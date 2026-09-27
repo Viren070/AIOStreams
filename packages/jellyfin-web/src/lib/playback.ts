@@ -51,8 +51,13 @@ export function subtitleUrl(
 }
 
 const EXTERNAL_PLAYER_KEY = 'aiostreams-web-external-player';
+const EXTERNAL_ALWAYS_KEY = 'aiostreams-web-external-always';
 
-/** A URL template with `{url}` or `{encodedUrl}`, kept per device. */
+/**
+ * A URL template kept per device: `{url}` or `{encodedUrl}`, and optionally
+ * `{position}` (seconds to start at) and `{returnUrl}` (where a player that
+ * reports back sends the position it stopped at).
+ */
 export function externalPlayerTemplate(): string {
   return storage.get<string>(EXTERNAL_PLAYER_KEY) ?? '';
 }
@@ -62,11 +67,38 @@ export function setExternalPlayerTemplate(template: string): void {
   else storage.remove(EXTERNAL_PLAYER_KEY);
 }
 
-export function externalPlayerUrl(template: string, url: string): string {
-  if (template.includes('{encodedUrl}'))
-    return template.replace('{encodedUrl}', encodeURIComponent(url));
-  if (template.includes('{url}')) return template.replace('{url}', url);
-  return `${template}${url}`;
+/** Whether playing a version opens the external player instead. */
+export function externalAlways(): boolean {
+  return (
+    !!externalPlayerTemplate() &&
+    storage.get<boolean>(EXTERNAL_ALWAYS_KEY) === true
+  );
+}
+
+export function setExternalAlways(value: boolean): void {
+  if (value) storage.set(EXTERNAL_ALWAYS_KEY, true);
+  else storage.remove(EXTERNAL_ALWAYS_KEY);
+}
+
+export function externalPlayerUrl(
+  template: string,
+  url: string,
+  opts: { startMs?: number; returnUrl?: string } = {}
+): string {
+  let filled = template.replace(
+    '{position}',
+    String(Math.floor((opts.startMs ?? 0) / 1000))
+  );
+  if (opts.returnUrl)
+    filled = filled.replace('{returnUrl}', encodeURIComponent(opts.returnUrl));
+  else if (filled.includes('{returnUrl}'))
+    filled = filled
+      .replace(/[?&][^=&?]+=\{returnUrl\}/, '')
+      .replace(/^([^?]*)&/, '$1?');
+  if (filled.includes('{encodedUrl}'))
+    return filled.replace('{encodedUrl}', encodeURIComponent(url));
+  if (filled.includes('{url}')) return filled.replace('{url}', url);
+  return `${filled}${url}`;
 }
 
 const PROGRESS_EVERY_MS = 10_000;

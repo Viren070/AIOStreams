@@ -12,11 +12,10 @@ import {
   useRefreshAll,
   useSegments,
 } from '../lib/queries';
-import { lastVersions, playableSources } from '../lib/use-play';
+import { lastVersions, playableSources, playExternally } from '../lib/use-play';
 import {
   directUrl,
   externalPlayerTemplate,
-  externalPlayerUrl,
   PlaybackReporter,
   streamUrl,
   subtitleUrl,
@@ -302,9 +301,7 @@ function Failure({
               intent="white"
               className="rounded-full"
               leftIcon={<BiLinkExternal />}
-              onClick={() => {
-                window.location.href = externalPlayerUrl(template, link);
-              }}
+              onClick={() => playExternally(client, item!, source!)}
             >
               Open in player
             </Button>

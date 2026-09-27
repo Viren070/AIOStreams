@@ -57,7 +57,9 @@ import { serverAddress } from '../lib/servers';
 import { subtitleCss } from '../lib/subtitle-style';
 import { usePlaybackPrefs, type SubtitleMode } from '../lib/user-config';
 import {
+  externalAlways,
   externalPlayerTemplate,
+  setExternalAlways,
   setExternalPlayerTemplate,
 } from '../lib/playback';
 import {
@@ -147,7 +149,11 @@ const SUBTITLE_MODES: { value: SubtitleMode; label: string; help: string }[] = [
 
 const PLAYER_PRESETS = [
   { name: 'VLC', template: 'vlc://{url}' },
-  { name: 'Infuse', template: 'infuse://x-callback-url/play?url={encodedUrl}' },
+  {
+    name: 'Infuse',
+    template:
+      'infuse://x-callback-url/play?url={encodedUrl}&position={position}&x-success={returnUrl}',
+  },
   { name: 'Outplayer', template: 'outplayer://{url}' },
   { name: 'IINA', template: 'iina://weblink?url={encodedUrl}' },
 ];
@@ -176,9 +182,14 @@ function PlaybackSection() {
   const bingeGroups = useFeature('versions');
   const shell = playbackHost() === 'shell';
   const [template, setTemplate] = React.useState(externalPlayerTemplate);
+  const [always, setAlways] = React.useState(externalAlways);
   const changeTemplate = (value: string) => {
     setTemplate(value);
     setExternalPlayerTemplate(value);
+  };
+  const changeAlways = (value: boolean) => {
+    setAlways(value);
+    setExternalAlways(value);
   };
 
   return (
@@ -302,7 +313,7 @@ function PlaybackSection() {
             placeholder="vlc://{url}"
             value={template}
             onValueChange={changeTemplate}
-            help="Adds an open-in-player button to each version. {url} is the stream address, {encodedUrl} the same address URL-encoded."
+            help="Adds an open-in-player button to each version. {url} is the stream address, {encodedUrl} the same address URL-encoded, {position} the second to start at, and {returnUrl} a link back here for a player that reports where it stopped."
           />
           <div className="flex flex-wrap gap-2">
             {PLAYER_PRESETS.map((p) => (
@@ -326,6 +337,15 @@ function PlaybackSection() {
             </Button>
           </div>
         </div>
+        {template.trim() && (
+          <Switch
+            side="right"
+            label="Play every version in it"
+            help="Picking a version opens it in your player instead of here."
+            value={always}
+            onValueChange={changeAlways}
+          />
+        )}
       </SettingsCard>
     </>
   );

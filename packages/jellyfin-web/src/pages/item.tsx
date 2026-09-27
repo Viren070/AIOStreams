@@ -78,6 +78,7 @@ import { KINDS, KindTabs } from '../components/kind-tabs';
 import { PickOnArrival, useVersionPicker } from '../components/version-picker';
 import { BackdropFrame } from '../components/hero';
 import type { BaseItemDto } from '../lib/types';
+import { useExternalReturn } from '../lib/external-return';
 
 export function ItemPage({
   itemId,
@@ -94,6 +95,7 @@ export function ItemPage({
   const { client } = useSession();
   const item = useItem(itemId);
   const data = item.data;
+  useExternalReturn();
 
   React.useEffect(() => {
     if (data?.Type === 'Episode' && data.SeriesId) {
