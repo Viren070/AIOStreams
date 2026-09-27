@@ -86,10 +86,13 @@ function SidebarAvatar({ className }: { className?: string }) {
 /** The account menu: who is signed in, on which server, and the account actions. */
 function AccountMenu({
   trigger,
+  places = [],
   items,
   ...position
 }: {
   trigger: React.ReactNode;
+  /** Pages listed above the account's actions. */
+  places?: SidebarItem[];
   items: SidebarItem[];
 } & Pick<DropdownMenuProps, 'side' | 'align' | 'sideOffset'>) {
   const { client, user } = useSession();
@@ -102,16 +105,22 @@ function AccountMenu({
           {info.name ?? serverAddress(client.base)}
         </span>
       </DropdownMenuLabel>
-      <DropdownMenuSeparator />
-      {items.map((item) => {
-        const Icon = item.iconType;
-        return (
-          <DropdownMenuItem key={item.name} onClick={item.onClick}>
-            {Icon && <Icon className="text-lg" />}
-            {item.name}
-          </DropdownMenuItem>
-        );
-      })}
+      {[places, items]
+        .filter((group) => group.length)
+        .map((group, i) => (
+          <React.Fragment key={i}>
+            <DropdownMenuSeparator />
+            {group.map((item) => {
+              const Icon = item.iconType;
+              return (
+                <DropdownMenuItem key={item.name} onClick={item.onClick}>
+                  {Icon && <Icon className="text-lg" />}
+                  {item.name}
+                </DropdownMenuItem>
+              );
+            })}
+          </React.Fragment>
+        ))}
     </DropdownMenu>
   );
 }
@@ -251,7 +260,12 @@ export function WebLayout() {
   const users = usePickableUsers();
   const several = (users.data?.length ?? 0) > 1;
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  // The phone's bar has no room for it; the home page links to it.
+  const activity: SidebarItem = {
+    name: 'Activity',
+    iconType: BiHistory,
+    isCurrent: pathname.startsWith('/history'),
+    onClick: () => navigate(to.history),
+  };
   const calendar: SidebarItem = {
     name: 'Calendar',
     iconType: BiCalendar,
@@ -294,12 +308,7 @@ export function WebLayout() {
       onClick: () => navigate(to.favourites()),
     },
     calendar,
-    {
-      name: 'Activity',
-      iconType: BiHistory,
-      isCurrent: pathname.startsWith('/history'),
-      onClick: () => navigate(to.history),
-    },
+    activity,
   ];
 
   const settings: SidebarItem = {
@@ -361,7 +370,8 @@ export function WebLayout() {
         </AppLayout>
       </AppLayout>
       <MobileNav
-        items={items.filter((i) => i !== calendar)}
+        items={items.filter((i) => i !== calendar && i !== activity)}
+        places={[activity, calendar]}
         menuItems={[settings, ...accountItems]}
       />
       <ConfirmationDialog {...confirmSignOut} />
@@ -371,11 +381,14 @@ export function WebLayout() {
 
 function MobileNav({
   items,
+  places,
   menuItems,
 }: {
   items: SidebarItem[];
+  places: SidebarItem[];
   menuItems: SidebarItem[];
 }) {
+  const inMenu = [...places, ...menuItems].some((item) => item.isCurrent);
   const tab =
     'flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-full px-1 py-1.5 text-[0.65rem] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-white/60';
   return (
@@ -412,13 +425,19 @@ function MobileNav({
           side="top"
           align="end"
           sideOffset={12}
+          places={places}
           items={menuItems}
           trigger={
             <button
               type="button"
               data-ui="mobile-nav-item"
               aria-label="Account"
-              className={cn(tab, 'text-gray-400 hover:text-white')}
+              className={cn(
+                tab,
+                inMenu
+                  ? 'bg-white/10 text-white'
+                  : 'text-gray-400 hover:text-white'
+              )}
             >
               <SidebarAvatar />
               <span className="max-w-full truncate">You</span>

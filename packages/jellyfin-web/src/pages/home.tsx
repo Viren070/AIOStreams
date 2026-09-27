@@ -1,5 +1,5 @@
 import React from 'react';
-import { BiCalendar, BiChevronRight } from 'react-icons/bi';
+import { BiCalendar, BiChevronRight, BiHistory } from 'react-icons/bi';
 import { Button } from '@aiostreams/ui/button';
 import { Badge } from '@aiostreams/ui/badge';
 import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
@@ -143,6 +143,17 @@ export function HomePage() {
         title="Continue watching"
         items={continueItems}
         loading={continueLoading}
+        action={
+          <Button
+            size="sm"
+            intent="gray-subtle"
+            className="rounded-full"
+            leftIcon={<BiHistory />}
+            onClick={() => navigate(to.history)}
+          >
+            Activity
+          </Button>
+        }
       />
       {!mergeNextUp && (
         <EpisodeRow
@@ -192,8 +203,10 @@ function EpisodeRow({
   title,
   items,
   loading,
+  action,
 }: {
   id: string;
+  action?: React.ReactNode;
   title: string;
   items: BaseItemDto[] | null | undefined;
   loading: boolean;
@@ -201,7 +214,13 @@ function EpisodeRow({
   const { client } = useSession();
   const picker = useVersionPicker();
   return (
-    <MediaRow id={id} title={title} shape="wide" loading={loading}>
+    <MediaRow
+      id={id}
+      title={title}
+      shape="wide"
+      loading={loading}
+      action={action}
+    >
       {items?.map((item) => {
         const left = remainingMs(item);
         return (
