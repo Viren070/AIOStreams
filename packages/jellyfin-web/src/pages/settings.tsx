@@ -8,7 +8,9 @@ import {
   LuInfo,
   LuLayoutGrid,
   LuMonitor,
+  LuPalette,
   LuUser,
+  LuVolume2,
 } from 'react-icons/lu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@aiostreams/ui/tabs';
 import { Card } from '@aiostreams/ui/card';
@@ -147,6 +149,8 @@ const PLAYER_PRESETS = [
 ];
 
 const ON_DEVICE = 'Kept on this device.';
+const ON_ACCOUNT =
+  'Saved to your account, so your other devices and Jellyfin apps use it too.';
 
 const NEXT_PROMPT_HELP: Record<NextPrompt, string> = {
   credits:
@@ -162,45 +166,19 @@ function PlaybackSection() {
   const [nextLead, setNextLead] = useNextLead();
   const [nextCountdown, setNextCountdown] = useNextCountdown();
   const [nextFallbackFirst, setNextFallbackFirst] = useNextFallbackFirst();
+  const [hardwareDecoding, setHardwareDecoding] = useHardwareDecoding();
+  const [escExits, setEscExits] = useEscExitsFullscreen();
+  const [chapterSkips, setChapterSkips] = useChapterSkips();
   const bingeGroups = useFeature('versions');
+  const shell = playbackHost() === 'shell';
   const [template, setTemplate] = React.useState(externalPlayerTemplate);
   const changeTemplate = (value: string) => {
     setTemplate(value);
     setExternalPlayerTemplate(value);
   };
-  const mode = prefs.SubtitleMode ?? 'Default';
 
   return (
     <>
-      <SettingsCard
-        title="Languages"
-        description="Saved to your account, so your other devices and Jellyfin apps use them too."
-      >
-        <Select
-          label="Audio language"
-          help="Picked when a version has it; otherwise the version's own default plays."
-          options={LANGUAGE_OPTIONS}
-          value={prefs.AudioLanguagePreference || ANY}
-          onValueChange={(v) =>
-            update({ AudioLanguagePreference: v === ANY ? '' : v })
-          }
-        />
-        <Select
-          label="Subtitle language"
-          options={LANGUAGE_OPTIONS}
-          value={prefs.SubtitleLanguagePreference || ANY}
-          onValueChange={(v) =>
-            update({ SubtitleLanguagePreference: v === ANY ? '' : v })
-          }
-        />
-        <Select
-          label="Subtitles"
-          help={SUBTITLE_MODES.find((m) => m.value === mode)?.help}
-          options={SUBTITLE_MODES.map(({ value, label }) => ({ value, label }))}
-          value={mode}
-          onValueChange={(v) => update({ SubtitleMode: v as SubtitleMode })}
-        />
-      </SettingsCard>
       <SettingsCard
         title="Next episode"
         description="Whether it plays on is saved to your account; the rest is kept on this device."
@@ -284,7 +262,35 @@ function PlaybackSection() {
           value={String(seekStep)}
           onValueChange={(v) => setSeekStep(Number(v))}
         />
+        {shell && (
+          <Switch
+            side="right"
+            label="Skip by the file's chapters"
+            help="Where a file names its intro, credits, recap or preview chapters, the skip buttons use them instead of the server's times, since they fit that exact file. The rest still come from the server."
+            value={chapterSkips}
+            onValueChange={setChapterSkips}
+          />
+        )}
+        {shell && (
+          <Switch
+            side="right"
+            label="Esc leaves full screen"
+            value={escExits}
+            onValueChange={setEscExits}
+          />
+        )}
       </SettingsCard>
+      {shell && (
+        <SettingsCard title="Video" description={ON_DEVICE}>
+          <Switch
+            side="right"
+            label="Hardware decoding"
+            help="Decodes on the graphics card. Turn it off if video shows artefacts or stays black."
+            value={hardwareDecoding}
+            onValueChange={setHardwareDecoding}
+          />
+        </SettingsCard>
+      )}
       <SettingsCard title="External player" description={ON_DEVICE}>
         <div className="space-y-3">
           <TextInput
@@ -321,7 +327,51 @@ function PlaybackSection() {
   );
 }
 
+function AudioSection() {
+  const { prefs, update } = usePlaybackPrefs();
+  const [audioChannels, setAudioChannels] = useAudioChannels();
+  const [passthrough, setPassthrough] = usePassthrough();
+  return (
+    <>
+      <SettingsCard title="Language" description={ON_ACCOUNT}>
+        <Select
+          label="Audio language"
+          help="Picked when a version has it; otherwise the version's own default plays."
+          options={LANGUAGE_OPTIONS}
+          value={prefs.AudioLanguagePreference || ANY}
+          onValueChange={(v) =>
+            update({ AudioLanguagePreference: v === ANY ? '' : v })
+          }
+        />
+      </SettingsCard>
+      {playbackHost() === 'shell' && (
+        <SettingsCard title="Output" description={ON_DEVICE}>
+          <Select
+            label="Channels"
+            help="What your speakers or receiver take."
+            options={AUDIO_CHANNELS.map((c) => ({
+              value: c,
+              label: CHANNEL_LABELS[c],
+            }))}
+            value={audioChannels}
+            onValueChange={(v) => setAudioChannels(v as AudioChannels)}
+          />
+          <Switch
+            side="right"
+            label="Pass surround audio through"
+            help="Sends Dolby and DTS audio to your receiver as it is. Only turn this on if your receiver decodes them."
+            value={passthrough}
+            onValueChange={setPassthrough}
+          />
+        </SettingsCard>
+      )}
+    </>
+  );
+}
+
 function SubtitlesSection() {
+  const { prefs, update } = usePlaybackPrefs();
+  const mode = prefs.SubtitleMode ?? 'Default';
   const [size, setSize] = useSubtitleSize();
   const [bold, setBold] = useSubtitleBold();
   const [textColor, setTextColor] = useSubtitleTextColor();
@@ -334,6 +384,23 @@ function SubtitlesSection() {
   const css = subtitleCss(useSubtitleStyle());
   return (
     <>
+      <SettingsCard title="Language" description={ON_ACCOUNT}>
+        <Select
+          label="Subtitle language"
+          options={LANGUAGE_OPTIONS}
+          value={prefs.SubtitleLanguagePreference || ANY}
+          onValueChange={(v) =>
+            update({ SubtitleLanguagePreference: v === ANY ? '' : v })
+          }
+        />
+        <Select
+          label="Subtitles"
+          help={SUBTITLE_MODES.find((m) => m.value === mode)?.help}
+          options={SUBTITLE_MODES.map(({ value, label }) => ({ value, label }))}
+          value={mode}
+          onValueChange={(v) => update({ SubtitleMode: v as SubtitleMode })}
+        />
+      </SettingsCard>
       <SettingsCard title="Preview">
         <div className="flex aspect-[16/5] items-end justify-center rounded-lg bg-gradient-to-br from-gray-700 to-gray-950 p-4">
           <span className="rounded px-2 py-0.5 text-center text-lg" style={css}>
@@ -479,60 +546,10 @@ function UpdatesCard() {
 }
 
 function DesktopSection() {
-  const [hardwareDecoding, setHardwareDecoding] = useHardwareDecoding();
-  const [audioChannels, setAudioChannels] = useAudioChannels();
-  const [passthrough, setPassthrough] = usePassthrough();
-  const [escExits, setEscExits] = useEscExitsFullscreen();
-  const [chapterSkips, setChapterSkips] = useChapterSkips();
   const server = useServerInfo();
   return (
     <>
       <UpdatesCard />
-      <SettingsCard title="Video" description={ON_DEVICE}>
-        <Switch
-          side="right"
-          label="Hardware decoding"
-          help="Decodes on the graphics card. Turn it off if video shows artefacts or stays black."
-          value={hardwareDecoding}
-          onValueChange={setHardwareDecoding}
-        />
-      </SettingsCard>
-      <SettingsCard title="Audio" description={ON_DEVICE}>
-        <Select
-          label="Channels"
-          help="What your speakers or receiver take."
-          options={AUDIO_CHANNELS.map((c) => ({
-            value: c,
-            label: CHANNEL_LABELS[c],
-          }))}
-          value={audioChannels}
-          onValueChange={(v) => setAudioChannels(v as AudioChannels)}
-        />
-        <Switch
-          side="right"
-          label="Pass surround audio through"
-          help="Sends Dolby and DTS audio to your receiver as it is. Only turn this on if your receiver decodes them."
-          value={passthrough}
-          onValueChange={setPassthrough}
-        />
-      </SettingsCard>
-      <SettingsCard title="Skipping" description={ON_DEVICE}>
-        <Switch
-          side="right"
-          label="Skip by the file's chapters"
-          help="Where a file names its intro, credits, recap or preview chapters, the skip buttons use them instead of the server's times, since they fit that exact file. The rest still come from the server."
-          value={chapterSkips}
-          onValueChange={setChapterSkips}
-        />
-      </SettingsCard>
-      <SettingsCard title="Window" description={ON_DEVICE}>
-        <Switch
-          side="right"
-          label="Esc leaves full screen"
-          value={escExits}
-          onValueChange={setEscExits}
-        />
-      </SettingsCard>
       <SettingsCard title="mpv">
         <SettingsRow
           label="mpv configuration"
@@ -635,7 +652,6 @@ function InterfaceSection() {
 
   return (
     <>
-      <ThemeCard />
       <SettingsCard
         title="Home and grids"
         description="Saved to your account, so they follow you to every device."
@@ -717,7 +733,7 @@ function InterfaceSection() {
   );
 }
 
-function ThemeCard() {
+function ThemeSection() {
   const [colors, setColors] = useThemeColors();
   const [css, setCss] = useCustomCss();
   const accent = colors.accent ?? DEFAULT_ACCENT;
@@ -1035,31 +1051,28 @@ function sections(): Section[] {
     {
       id: 'playback',
       label: 'Playback',
-      description: 'Languages, subtitles and controls',
+      description: 'Next episode, controls and players',
       icon: LuCirclePlay,
       group: 'Watching',
       Content: PlaybackSection,
     },
     {
+      id: 'audio',
+      label: 'Audio',
+      description:
+        playbackHost() === 'shell' ? 'Language and output' : 'Language',
+      icon: LuVolume2,
+      group: 'Watching',
+      Content: AudioSection,
+    },
+    {
       id: 'subtitles',
       label: 'Subtitles',
-      description: 'How subtitles look',
+      description: 'Language and how subtitles look',
       icon: LuCaptions,
       group: 'Watching',
       Content: SubtitlesSection,
     },
-    ...(playbackHost() === 'shell'
-      ? [
-          {
-            id: 'desktop',
-            label: 'Desktop app',
-            description: 'The player on this computer',
-            icon: LuMonitor,
-            group: 'Watching',
-            Content: DesktopSection,
-          },
-        ]
-      : []),
     {
       id: 'interface',
       label: 'Interface',
@@ -1069,6 +1082,14 @@ function sections(): Section[] {
       Content: InterfaceSection,
     },
     {
+      id: 'theme',
+      label: 'Theme',
+      description: 'Colours and custom CSS',
+      icon: LuPalette,
+      group: 'App',
+      Content: ThemeSection,
+    },
+    {
       id: 'account',
       label: 'Account',
       description: 'Who you are signed in as',
@@ -1076,6 +1097,18 @@ function sections(): Section[] {
       group: 'App',
       Content: AccountSection,
     },
+    ...(playbackHost() === 'shell'
+      ? [
+          {
+            id: 'desktop',
+            label: 'Desktop app',
+            description: 'Updates, mpv and troubleshooting',
+            icon: LuMonitor,
+            group: 'App',
+            Content: DesktopSection,
+          },
+        ]
+      : []),
     {
       id: 'about',
       label: 'About',
