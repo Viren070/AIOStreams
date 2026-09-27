@@ -46,6 +46,7 @@ import { clock, itemSubtitle, itemTitle, ticksToMs } from '../lib/format';
 import { cn } from '@aiostreams/ui/core/styling';
 import { backdropUrl, landscapeUrl } from '../lib/images';
 import { itemPath, navigate, to } from '../lib/paths';
+import { useSkipVersionList } from '../lib/settings';
 import type { BaseItemDto, SourceInfo } from '../lib/types';
 
 interface Request {
@@ -58,6 +59,11 @@ interface Request {
 interface PickerValue {
   /** Lists the item's versions; nothing is resolved until this is called. */
   open(item: BaseItemDto, opts?: { startMs?: number; playing?: string }): void;
+  /**
+   * What Play does: the list, or a version straight away when the user skips
+   * the list. A hold does the other.
+   */
+  play(item: BaseItemDto, opts?: { startMs?: number; held?: boolean }): void;
 }
 
 const PickerContext = React.createContext<PickerValue | null>(null);
@@ -91,23 +97,64 @@ export function VersionPickerProvider({
 }) {
   const [request, setRequest] = React.useState<Request | null>(null);
   const [external, setExternal] = React.useState<BaseItemDto | null>(null);
-  const value = React.useMemo<PickerValue>(
-    () => ({
-      open: (item, opts) => {
+  const [skipList] = useSkipVersionList();
+  const queryClient = useQueryClient();
+  const infoOptions = usePlaybackInfoOptions();
+  const playVersion = usePlay();
+  const latest = React.useRef({
+    skipList,
+    queryClient,
+    infoOptions,
+    playVersion,
+  });
+  latest.current = { skipList, queryClient, infoOptions, playVersion };
+
+  const value = React.useMemo<PickerValue>(() => {
+    const open: PickerValue['open'] = (item, opts) => {
+      const startMs = opts?.startMs ?? 0;
+      const last =
+        startMs > 0 &&
+        !opts?.playing &&
+        playbackHost() !== 'android' &&
+        !externalAlways()
+          ? lastVersions.get(item.Id!)
+          : undefined;
+      if (last) navigate(to.play(item.Id!, last, startMs));
+      else setRequest({ item, startMs, playing: opts?.playing });
+    };
+    // The version last played when resuming, else the first; the list when none plays.
+    const playStraight = async (item: BaseItemDto, startMs: number) => {
+      const { queryClient, infoOptions, playVersion } = latest.current;
+      const last = startMs > 0 ? lastVersions.get(item.Id!) : undefined;
+      const notice = toast.loading('Finding a version…');
+      try {
+        const info = await queryClient.fetchQuery(infoOptions(item.Id!));
+        const sources = playableSources(info);
+        const source = sources.find((s) => s.Id === last) ?? sources[0];
+        if (!source) setRequest({ item, startMs });
+        else
+          await playVersion(item, {
+            source,
+            startMs,
+            onExternal: () => setExternal(item),
+          });
+      } catch {
+        setRequest({ item, startMs });
+      } finally {
+        setTimeout(() => toast.dismiss(notice));
+      }
+    };
+    return {
+      open,
+      play: (item, opts) => {
         const startMs = opts?.startMs ?? 0;
-        const last =
-          startMs > 0 &&
-          !opts?.playing &&
-          playbackHost() !== 'android' &&
-          !externalAlways()
-            ? lastVersions.get(item.Id!)
-            : undefined;
-        if (last) navigate(to.play(item.Id!, last, startMs));
-        else setRequest({ item, startMs, playing: opts?.playing });
+        if (latest.current.skipList !== !!opts?.held)
+          void playStraight(item, startMs);
+        else if (opts?.held) setRequest({ item, startMs });
+        else open(item, { startMs });
       },
-    }),
-    []
-  );
+    };
+  }, []);
   const item = request?.item;
   return (
     <PickerContext.Provider value={value}>

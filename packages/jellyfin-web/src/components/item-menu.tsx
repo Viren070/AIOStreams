@@ -4,8 +4,10 @@ import {
   BiCheckDouble,
   BiHeart,
   BiInfoCircle,
+  BiListUl,
   BiPlay,
   BiReset,
+  BiSkipNext,
   BiSolidHeart,
   BiTv,
 } from 'react-icons/bi';
@@ -20,6 +22,7 @@ import {
 import { useSetFavorite, useSetPlayed, useSetPlayedUpTo } from '../lib/queries';
 import { itemTitle, ticksToMs } from '../lib/format';
 import { itemPath, navigate } from '../lib/paths';
+import { useSkipVersionList } from '../lib/settings';
 import { useVersionPicker } from './version-picker';
 import { useHeroTarget } from './hero';
 import type { BaseItemDto } from '../lib/types';
@@ -47,6 +50,7 @@ export function ItemMenu({
   const played = !!item.UserData?.Played;
   const favorite = !!item.UserData?.IsFavorite;
   const resumeMs = ticksToMs(item.UserData?.PlaybackPositionTicks);
+  const [skipList] = useSkipVersionList();
 
   return (
     <ContextMenu>
@@ -59,9 +63,19 @@ export function ItemMenu({
         </ContextMenuLabel>
         {playable && (
           <ContextMenuItem
-            onSelect={() => picker.open(item, { startMs: resumeMs })}
+            onSelect={() => picker.play(item, { startMs: resumeMs })}
           >
             <BiPlay /> {resumeMs ? 'Resume' : 'Play'}
+          </ContextMenuItem>
+        )}
+        {playable && (
+          <ContextMenuItem
+            onSelect={() =>
+              picker.play(item, { startMs: resumeMs, held: true })
+            }
+          >
+            {skipList ? <BiListUl /> : <BiSkipNext />}
+            {skipList ? 'Choose a version' : 'Play straight away'}
           </ContextMenuItem>
         )}
         {!onPage && (

@@ -207,8 +207,14 @@ function EpisodeRow({
           <ItemMenu key={item.Id} item={item}>
             <WideCard
               onClick={() =>
-                picker.open(item, {
+                picker.play(item, {
                   startMs: ticksToMs(item.UserData?.PlaybackPositionTicks),
+                })
+              }
+              onHold={() =>
+                picker.play(item, {
+                  startMs: ticksToMs(item.UserData?.PlaybackPositionTicks),
+                  held: true,
                 })
               }
               image={landscapeUrls(client, item, { maxWidth: 640 })}

@@ -78,6 +78,7 @@ import { KINDS, KindTabs } from '../components/kind-tabs';
 import { PickOnArrival, useVersionPicker } from '../components/version-picker';
 import { BackdropFrame } from '../components/hero';
 import type { BaseItemDto } from '../lib/types';
+import { useHold } from '../lib/use-hold';
 import { useExternalReturn } from '../lib/external-return';
 
 export function ItemPage({
@@ -293,6 +294,14 @@ function Header({ item }: { item: BaseItemDto }) {
   const playLabel = resumeMs
     ? `Resume${code ? ` ${code}` : ` from ${clock(resumeMs)}`}`
     : `Play${code ? ` ${code}` : ''}`;
+  const holdPlay = useHold(
+    target
+      ? () => picker.play(target, { startMs: resumeMs, held: true })
+      : undefined
+  );
+  const holdRestart = useHold(
+    target ? () => picker.play(target, { startMs: 0, held: true }) : undefined
+  );
 
   return (
     <div
@@ -366,7 +375,8 @@ function Header({ item }: { item: BaseItemDto }) {
               intent="white"
               className="rounded-full"
               leftIcon={<BiPlay className="text-xl" />}
-              onClick={() => picker.open(target, { startMs: resumeMs })}
+              onClick={() => picker.play(target, { startMs: resumeMs })}
+              {...holdPlay}
             >
               {playLabel}
             </Button>
@@ -379,7 +389,8 @@ function Header({ item }: { item: BaseItemDto }) {
                   className="rounded-full"
                   icon={<BiRevision />}
                   aria-label="Play from the start"
-                  onClick={() => picker.open(target, { startMs: 0 })}
+                  onClick={() => picker.play(target, { startMs: 0 })}
+                  {...holdRestart}
                 />
               }
             >

@@ -376,6 +376,10 @@ const VIDEO_FIT_KEY = 'aiostreams-web-video-fit';
 export const useVideoFit = () =>
   useDeviceSetting<VideoFit>(VIDEO_FIT_KEY, 'fit', VIDEO_FITS);
 
+const SKIP_VERSIONS_KEY = 'aiostreams-web-skip-versions';
+export const useSkipVersionList = () =>
+  useDeviceSetting<boolean>(SKIP_VERSIONS_KEY, false);
+
 export const SEEK_STEPS = [5, 10, 15, 30] as const;
 const SEEK_STEP_KEY = 'aiostreams-web-seek-step';
 export const useSeekStep = () =>

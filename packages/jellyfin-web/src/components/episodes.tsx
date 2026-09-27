@@ -20,6 +20,7 @@ import { Artwork, ProgressBar } from './cards';
 import { OverviewInfo } from './overview';
 import { ItemMenu } from './item-menu';
 import { useVersionPicker } from './version-picker';
+import { useHold } from '../lib/use-hold';
 import type { BaseItemDto } from '../lib/types';
 
 function episodeNumber(episode: BaseItemDto): string | null {
@@ -90,12 +91,15 @@ function ownImages(episode: BaseItemDto): number {
   return episode.ImageTags?.Primary ? 1 : 0;
 }
 
-function usePlay(episode: BaseItemDto): (() => void) | undefined {
+function usePlay(
+  episode: BaseItemDto
+): ((opts?: { held?: boolean }) => void) | undefined {
   const picker = useVersionPicker();
   if (unavailableLabel(episode)) return undefined;
-  return () =>
-    picker.open(episode, {
+  return (opts) =>
+    picker.play(episode, {
       startMs: ticksToMs(episode.UserData?.PlaybackPositionTicks),
+      held: opts?.held,
     });
 }
 
@@ -191,12 +195,13 @@ function Head({
   oneLine,
 }: {
   episode: BaseItemDto;
-  play: (() => void) | undefined;
+  play: ((opts?: { held?: boolean }) => void) | undefined;
   className?: string;
   /** Keeps a row's cards level. */
   oneLine?: boolean;
 }) {
   const { client } = useSession();
+  const hold = useHold(play && (() => play({ held: true })), { touch: false });
   const setPlayed = useSetPlayed();
   const title = episode.Name || seasonEpisodeTitle(episode);
   const played = !!episode.UserData?.Played;
@@ -250,7 +255,8 @@ function Head({
         <button
           type="button"
           data-ui="episode-title"
-          onClick={play}
+          onClick={() => play()}
+          {...hold}
           className="mt-0.5 text-left text-sm font-semibold outline-none after:absolute after:inset-0 after:rounded-xl after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-white/60 sm:text-base"
         >
           <span className={clamp} title={oneLine ? title : undefined}>

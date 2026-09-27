@@ -12,6 +12,7 @@ import { itemPath, navigate } from '../lib/paths';
 import { useVersionPicker } from './version-picker';
 import type { JellyfinClient } from '../lib/client';
 import type { BaseItemDto } from '../lib/types';
+import { useHold } from '../lib/use-hold';
 
 const ROTATE_MS = 9000;
 /** How long the pointer rests on a card before the hero follows it. */
@@ -140,6 +141,12 @@ function HeroDetails({
   const playable =
     (item.Type === 'Movie' || item.Type === 'Episode') &&
     item.LocationType !== 'Virtual';
+  const holdPlay = useHold(() =>
+    picker.play(item, {
+      startMs: ticksToMs(item.UserData?.PlaybackPositionTicks),
+      held: true,
+    })
+  );
   const meta = [
     item.Type === 'Episode' ? itemSubtitle(item) : item.ProductionYear,
     item.CommunityRating ? (
@@ -196,10 +203,11 @@ function HeroDetails({
             className="rounded-full"
             leftIcon={<BiPlay className="text-xl" />}
             onClick={() =>
-              picker.open(item, {
+              picker.play(item, {
                 startMs: ticksToMs(item.UserData?.PlaybackPositionTicks),
               })
             }
+            {...holdPlay}
           >
             Play
           </Button>

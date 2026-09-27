@@ -90,6 +90,7 @@ import {
   usePosterSize,
   useSeekStep,
   useShareOnDiscord,
+  useSkipVersionList,
   useSubtitleBackgroundColor,
   useSubtitleBold,
   useSubtitleBackgroundOpacity,
@@ -172,6 +173,7 @@ const NEXT_PROMPT_HELP: Record<NextPrompt, string> = {
 function PlaybackSection() {
   const { prefs, update } = usePlaybackPrefs();
   const [seekStep, setSeekStep] = useSeekStep();
+  const [skipList, setSkipList] = useSkipVersionList();
   const [nextPrompt, setNextPrompt] = useNextPrompt();
   const [nextLead, setNextLead] = useNextLead();
   const [nextCountdown, setNextCountdown] = useNextCountdown();
@@ -194,6 +196,19 @@ function PlaybackSection() {
 
   return (
     <>
+      <SettingsCard title="Versions" description={ON_DEVICE}>
+        <Switch
+          side="right"
+          label="Skip the version list"
+          help={
+            skipList
+              ? 'Play starts the version you last watched, or the first one. Hold Play to choose instead.'
+              : 'Play lists the versions to choose from. Hold Play to start the first one instead.'
+          }
+          value={skipList}
+          onValueChange={setSkipList}
+        />
+      </SettingsCard>
       <SettingsCard
         title="Next episode"
         description="Whether it plays on is saved to your account; the rest is kept on this device."

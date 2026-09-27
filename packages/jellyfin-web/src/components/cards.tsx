@@ -1,6 +1,7 @@
 import React from 'react';
 import { BiCheck, BiPlay } from 'react-icons/bi';
 import { cn } from '@aiostreams/ui/core/styling';
+import { useHold } from '../lib/use-hold';
 import { usePosterLines } from '../lib/settings';
 
 /** A list is tried in order, moving on when an image fails to load. */
@@ -177,6 +178,8 @@ export function PosterCard(props: PosterCardProps) {
 export interface WideCardProps {
   href?: string;
   onClick?: () => void;
+  /** A mouse press held down; touch keeps its long press for the item menu. */
+  onHold?: () => void;
   image: string | string[] | null;
   title: string;
   subtitle?: string;
@@ -199,6 +202,7 @@ export function WideCard(props: WideCardProps) {
   const {
     href,
     onClick,
+    onHold,
     image,
     title,
     subtitle,
@@ -210,6 +214,7 @@ export function WideCard(props: WideCardProps) {
     dimmed,
     badge,
   } = props;
+  const hold = useHold(onHold, { touch: false });
   const body = (
     <>
       <div
@@ -289,6 +294,7 @@ export function WideCard(props: WideCardProps) {
         <button
           type="button"
           onClick={onClick}
+          {...hold}
           className="block w-full space-y-2 text-left"
         >
           {body}
