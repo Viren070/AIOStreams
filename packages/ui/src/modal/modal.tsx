@@ -119,12 +119,8 @@ export function Modal(props: ModalProps) {
     ...rest
   } = props;
 
-  // Workaround for Radix Select-in-Dialog dismissal on Chromium: the
-  // Select can unmount between `pointerdown` and the deferred touch `click`,
-  // leaving the Dialog as the new topmost dismissable layer, which then
-  // incorrectly dismisses on the same interaction. We snapshot at pointerdown
-  // whether any inner Radix popper was open, and suppress the Dialog's
-  // outside-close on the matching interaction.
+  // Radix judges an outside press at `click`, after it may have closed the
+  // layer it hit (a Select, or a dialog above), so snapshot at `pointerdown`.
   const innerLayerWasOpenRef = React.useRef(false);
 
   return (
@@ -222,14 +218,19 @@ const INNER_LAYER_SELECTOR =
   '[role="menu"][data-state="open"],' +
   '[data-radix-popper-content-wrapper]:not(:has([role="tooltip"]))';
 
+// Read only on an outside press, so a match is another dialog.
+const DIALOG_SELECTOR = '[role="dialog"], [role="alertdialog"]';
+
 function InnerLayerSnapshotter({
   targetRef,
 }: {
   targetRef: React.RefObject<boolean>;
 }) {
   React.useEffect(() => {
-    const handler = () => {
-      targetRef.current = !!document.querySelector(INNER_LAYER_SELECTOR);
+    const handler = (e: PointerEvent) => {
+      targetRef.current =
+        !!document.querySelector(INNER_LAYER_SELECTOR) ||
+        (e.target instanceof Element && !!e.target.closest(DIALOG_SELECTOR));
     };
     document.addEventListener('pointerdown', handler, true);
     return () => document.removeEventListener('pointerdown', handler, true);

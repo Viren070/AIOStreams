@@ -367,7 +367,7 @@ export function ConfigTemplatesModal({
                   : undefined
               }
               initialExpandedTemplate={
-                pendingDetailId
+                pendingDetailId && !validationModal.show
                   ? (loader.templates.find(
                       (t) => t.metadata.id === pendingDetailId
                     ) ?? undefined)
