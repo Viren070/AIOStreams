@@ -25,6 +25,9 @@ finish-args:
   - --share=network
   # Includes NVIDIA's device nodes, for CUDA decoding.
   - --device=dri
+  # Discord's socket, for showing what plays on the user's profile.
+  - --filesystem=xdg-run/discord-ipc-0
+  - --filesystem=xdg-run/app/com.discordapp.Discord:create
 cleanup:
   - /include
   - /lib/cmake

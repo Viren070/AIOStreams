@@ -11,6 +11,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use aiostreams_desktop_core::bridge::{Inbound, Outbound, PROTOCOL_VERSION, origin};
+use aiostreams_desktop_core::discord;
 use aiostreams_desktop_core::player::Player;
 use updates::{Command, Updater};
 
@@ -403,6 +404,7 @@ pub fn handle(
                 updater.send(Command::Apply);
             }
         }
+        Inbound::Presence { presence } => discord::set(presence),
         Inbound::WebError { message } => {
             let message: String = message.chars().take(4000).collect();
             log::error!(target: "web", "{message}");

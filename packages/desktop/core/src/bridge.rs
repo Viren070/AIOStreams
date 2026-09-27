@@ -4,6 +4,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::discord::Presence;
 use crate::mpv::Kind;
 
 /// Bumped when a message changes shape, so pages can tell shells apart.
@@ -63,6 +64,10 @@ pub enum Inbound {
     /// An error from the page: uncaught, or passed to `console.error`.
     WebError {
         message: String,
+    },
+    /// What Discord shows the user watching; `None` clears it.
+    Presence {
+        presence: Option<Presence>,
     },
 }
 
