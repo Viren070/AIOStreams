@@ -30,7 +30,10 @@ import {
   DropdownMenuSeparator,
   type DropdownMenuProps,
 } from '@aiostreams/ui/dropdown-menu';
+import { LuCircleArrowLeft, LuCircleArrowRight } from 'react-icons/lu';
 import { VerticalMenu } from '@aiostreams/ui/vertical-menu';
+import { HoverCard } from '@aiostreams/ui/hover-card';
+import type { IconType } from 'react-icons';
 import { Sidebar, type SidebarItem } from '@aiostreams/ui/shared/sidebar';
 import {
   ConfirmationDialog,
@@ -40,6 +43,7 @@ import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '../lib/session';
 import { usePickableUsers } from '../lib/queries';
 import { configureUrl, navigate, to } from '../lib/paths';
+import { playbackHost } from '../lib/hosts';
 import { serverAddress } from '../lib/servers';
 import { useServerInfo } from '../lib/server-info';
 import { UserAvatar } from './user-avatar';
@@ -158,6 +162,83 @@ function PageScroll() {
   return null;
 }
 
+interface NavigationHistory {
+  canGoBack: boolean;
+  canGoForward: boolean;
+}
+
+/** Styled as the sidebar's items, whose icons lift on hover. */
+function HistoryButton({
+  label,
+  icon: Icon,
+  className,
+  ...props
+}: {
+  label: string;
+  icon: IconType;
+} & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      className={cn(
+        'group/history flex size-10 items-center justify-center rounded-full text-[--muted] outline-none transition hover:text-[--foreground] focus-visible:ring-2 focus-visible:ring-white/40 disabled:pointer-events-none disabled:opacity-40',
+        className
+      )}
+      {...props}
+    >
+      <Icon className="text-2xl transition group-hover/history:-rotate-2 group-hover/history:scale-[1.05]" />
+    </button>
+  );
+}
+
+/** Back, and forward on hover, where no browser around the app has them. */
+function HistoryButtons() {
+  useRouterState({ select: (s) => s.location.href });
+  if (
+    playbackHost() === 'browser' &&
+    !matchMedia('(display-mode: standalone)').matches
+  )
+    return null;
+  // Engines without the Navigation API leave both on.
+  const nav = (window as { navigation?: NavigationHistory }).navigation;
+  const back = (
+    <HistoryButton
+      label="Back"
+      icon={LuCircleArrowLeft}
+      disabled={nav?.canGoBack === false}
+      onClick={() => window.history.back()}
+    />
+  );
+  return (
+    <div
+      data-ui="sidebar-history"
+      className="flex w-full flex-col items-center gap-3 px-4 pt-3"
+    >
+      <span aria-hidden className="h-px w-8 bg-white/10" />
+      {nav?.canGoForward === false ? (
+        back
+      ) : (
+        <HoverCard
+          side="right"
+          sideOffset={0}
+          openDelay={150}
+          closeDelay={150}
+          className="w-auto border-none bg-transparent p-0 pl-1.5 shadow-none"
+          trigger={<span className="flex">{back}</span>}
+        >
+          <HistoryButton
+            label="Forward"
+            icon={LuCircleArrowRight}
+            className="border border-white/10 bg-[--paper] shadow-lg shadow-black/50"
+            onClick={() => window.history.forward()}
+          />
+        </HoverCard>
+      )}
+    </div>
+  );
+}
+
 function pageName(pathname: string): string {
   return pathname.split('/')[1] || 'home';
 }
@@ -242,6 +323,7 @@ export function WebLayout() {
           <Sidebar
             header={<Logo />}
             items={items}
+            belowItems={<HistoryButtons />}
             footerItems={[settings]}
             footer={<SidebarAccount items={accountItems} />}
           />

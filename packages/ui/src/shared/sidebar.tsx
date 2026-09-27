@@ -10,6 +10,8 @@ interface SidebarProps {
   header?: React.ReactNode;
   /** Menu items. */
   items: SidebarItem[];
+  /** Optional content rendered right under the menu items. */
+  belowItems?: React.ReactNode;
   /**
    * Bottom action items (donate, configure, sign out, …). Rendered with the
    * same pill / icon styling as the main menu so footer actions don't look
@@ -31,6 +33,7 @@ interface SidebarProps {
 export function Sidebar({
   header,
   items,
+  belowItems,
   footerItems,
   footer,
   onItemSelect,
@@ -61,6 +64,7 @@ export function Sidebar({
             ctx.setOpen(false);
           }}
         />
+        {belowItems}
       </div>
       {(footerItems?.length || footer) && (
         <div className="p-4 gap-2 flex flex-col">
