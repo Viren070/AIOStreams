@@ -13,6 +13,7 @@ path = "src/main.rs"
 [dependencies]
 aiostreams-desktop-core.workspace = true
 log.workspace = true
+serde.workspace = true
 serde_json.workspace = true
 dirs.workspace = true
 velopack = "1.2"

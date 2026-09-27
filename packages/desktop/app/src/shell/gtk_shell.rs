@@ -11,6 +11,7 @@ use webkit6::{
     UserScriptInjectionTime,
 };
 
+use crate::placement::{self, MIN_SIZE, Placement, SETTLE};
 use crate::updates::Updater;
 use crate::{
     App, Edge, Served, UserEvent, allowed_navigation, handle, platform, receive_script, serve,
@@ -162,6 +163,18 @@ impl Shell {
     }
 }
 
+/// GTK keeps the size the window has when not maximized as its default size.
+/// Wayland leaves where it goes to the desktop.
+fn placement_of(window: &gtk4::Window) -> Placement {
+    let (width, height) = window.default_size();
+    Placement {
+        width: width.max(MIN_SIZE.0 as i32) as u32,
+        height: height.max(MIN_SIZE.1 as i32) as u32,
+        position: None,
+        maximized: window.is_maximized(),
+    }
+}
+
 pub fn run(app: App) {
     let App {
         args,
@@ -179,12 +192,14 @@ pub fn run(app: App) {
     // libmpv refuses to start unless LC_NUMERIC is C, which GTK's init replaced.
     // SAFETY: on the main thread, before any other thread starts.
     unsafe { libc::setlocale(libc::LC_NUMERIC, c"C".as_ptr()) };
+    let saved = placement::load(&data_dir);
     let window = gtk4::Window::builder()
         .title("AIOStreams")
-        .default_width(1280)
-        .default_height(760)
+        .default_width(saved.width as i32)
+        .default_height(saved.height as i32)
+        .maximized(saved.maximized)
         .build();
-    window.set_size_request(480, 320);
+    window.set_size_request(MIN_SIZE.0 as i32, MIN_SIZE.1 as i32);
     // A hidden title bar keeps GTK's frame: corners, shadow and resize borders.
     let titlebar = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
     titlebar.set_visible(false);
@@ -334,11 +349,35 @@ pub fn run(app: App) {
             shell.webview.grab_focus();
         }
     });
-    window.connect_close_request(|_| {
-        if let Some(shell) = shell() {
-            shell.close();
+    let pending: Rc<RefCell<Option<glib::SourceId>>> = Rc::default();
+    let save_later = {
+        let data_dir = data_dir.clone();
+        move |window: &gtk4::Window| {
+            if let Some(id) = pending.borrow_mut().take() {
+                id.remove();
+            }
+            let (window, data_dir, done) = (window.downgrade(), data_dir.clone(), pending.clone());
+            let id = glib::timeout_add_local_once(SETTLE, move || {
+                done.borrow_mut().take();
+                if let Some(window) = window.upgrade() {
+                    placement::save(&data_dir, &placement_of(&window));
+                }
+            });
+            *pending.borrow_mut() = Some(id);
         }
-        glib::Propagation::Proceed
+    };
+    window.connect_default_width_notify(save_later.clone());
+    window.connect_default_height_notify(save_later.clone());
+    window.connect_maximized_notify(save_later);
+    window.connect_close_request({
+        let data_dir = data_dir.clone();
+        move |window| {
+            placement::save(&data_dir, &placement_of(window));
+            if let Some(shell) = shell() {
+                shell.close();
+            }
+            glib::Propagation::Proceed
+        }
     });
 
     let main_loop = glib::MainLoop::new(None, false);

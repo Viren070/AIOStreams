@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod logging;
+mod placement;
 mod platform;
 mod shell;
 mod updates;

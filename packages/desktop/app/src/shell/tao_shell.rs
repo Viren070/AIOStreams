@@ -1,11 +1,12 @@
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::time::Instant;
 
 use aiostreams_desktop_core::bridge::{Inbound, Outbound, origin};
 use tao::dpi::{LogicalSize, PhysicalPosition, PhysicalSize};
 use tao::event::{Event, WindowEvent};
-use tao::event_loop::{ControlFlow, EventLoopBuilder};
+use tao::event_loop::{ControlFlow, EventLoopBuilder, EventLoopWindowTarget};
 #[cfg(target_os = "macos")]
 use tao::platform::macos::WindowBuilderExtMacOS;
 #[cfg(windows)]
@@ -16,6 +17,7 @@ use wry::WebViewBuilderExtWindows;
 use wry::http::{Request, Response};
 use wry::{NewWindowResponse, PageLoadEvent, Rect, WebContext, WebViewBuilder};
 
+use crate::placement::{self, MIN_SIZE, Placement, SETTLE};
 use crate::updates::Updater;
 use crate::{
     App, Edge, UserEvent, allowed_navigation, handle, platform, receive_script, serve, start_player,
@@ -53,6 +55,47 @@ fn set_fullscreen(window: &Window, value: Option<bool>, remaximize: &mut bool) {
     }
 }
 
+fn start_position(
+    target: &EventLoopWindowTarget<UserEvent>,
+    saved: &Placement,
+) -> Option<PhysicalPosition<i32>> {
+    if let Some((x, y)) = saved.position {
+        let on_screen = target.available_monitors().any(|m| {
+            let (origin, size) = (m.position(), m.size());
+            let middle = x + (saved.width as f64 * m.scale_factor() / 2.0) as i32;
+            (origin.x..origin.x + size.width as i32).contains(&middle)
+                && (origin.y..origin.y + size.height as i32).contains(&(y + 16))
+        });
+        if on_screen {
+            return Some(PhysicalPosition::new(x, y));
+        }
+    }
+    let m = target.primary_monitor()?;
+    let (origin, size, scale) = (m.position(), m.size(), m.scale_factor());
+    let width = (saved.width as f64 * scale) as i32;
+    let height = (saved.height as f64 * scale) as i32;
+    Some(PhysicalPosition::new(
+        origin.x + ((size.width as i32 - width) / 2).max(0),
+        origin.y + ((size.height as i32 - height) / 2).max(0),
+    ))
+}
+
+/// Read once the window settles, since a maximize reports its new bounds before its new state.
+fn record(window: &Window, placement: &mut Placement) {
+    if window.fullscreen().is_some() || window.is_minimized() {
+        return;
+    }
+    placement.maximized = window.is_maximized();
+    if !placement.maximized {
+        let size = window.inner_size().to_logical::<f64>(window.scale_factor());
+        placement.width = size.width.round() as u32;
+        placement.height = size.height.round() as u32;
+        if let Ok(p) = window.outer_position() {
+            placement.position = Some((p.x, p.y));
+        }
+    }
+}
+
 fn direction(edge: Edge) -> ResizeDirection {
     match edge {
         Edge::North => ResizeDirection::North,
@@ -80,11 +123,17 @@ pub fn run(app: App) {
             let _ = proxy.send_event(UserEvent::Close);
         }
     });
+    let mut placement = placement::load(&data_dir);
     let builder = WindowBuilder::new()
         .with_title("AIOStreams")
         .with_window_icon(platform::window_icon())
-        .with_inner_size(LogicalSize::new(1280.0, 760.0))
-        .with_min_inner_size(LogicalSize::new(480.0, 320.0));
+        .with_inner_size(LogicalSize::new(placement.width, placement.height))
+        .with_min_inner_size(LogicalSize::new(MIN_SIZE.0, MIN_SIZE.1))
+        .with_maximized(placement.maximized);
+    let builder = match start_position(&event_loop, &placement) {
+        Some(position) => builder.with_position(position),
+        None => builder,
+    };
     // macOS keeps its own window buttons, drawn over the page.
     #[cfg(target_os = "macos")]
     let builder = builder
@@ -193,8 +242,14 @@ pub fn run(app: App) {
     let mut fullscreen = false;
     let mut maximized = window.is_maximized();
     let mut remaximize = false;
+    let mut save_at: Option<Instant> = None;
     event_loop.run(move |event, _, flow| {
-        *flow = ControlFlow::Wait;
+        if save_at.is_some_and(|at| Instant::now() >= at) {
+            save_at = None;
+            record(&window, &mut placement);
+            placement::save(&data_dir, &placement);
+        }
+        *flow = save_at.map_or(ControlFlow::Wait, ControlFlow::WaitUntil);
         let emit = |message: Outbound| {
             let _ = webview.evaluate_script(&receive_script(&message));
         };
@@ -215,6 +270,17 @@ pub fn run(app: App) {
                     maximized = now;
                     emit(Outbound::WindowState { maximized: now });
                 }
+                let at = Instant::now() + SETTLE;
+                save_at = Some(at);
+                *flow = ControlFlow::WaitUntil(at);
+            }
+            Event::WindowEvent {
+                event: WindowEvent::Moved(_),
+                ..
+            } => {
+                let at = Instant::now() + SETTLE;
+                save_at = Some(at);
+                *flow = ControlFlow::WaitUntil(at);
             }
             // Keys go to the page, which a window brought back does not focus.
             Event::WindowEvent {
@@ -229,6 +295,8 @@ pub fn run(app: App) {
             }
             | Event::UserEvent(UserEvent::Close) => {
                 log::info!("closing");
+                record(&window, &mut placement);
+                placement::save(&data_dir, &placement);
                 video.shutdown();
                 player.borrow_mut().take();
                 *flow = ControlFlow::Exit;
