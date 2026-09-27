@@ -22,8 +22,6 @@ import type { BaseItemDto } from '../lib/types';
 const FILTERS: { value: ItemFilter | undefined; label: string }[] = [
   { value: undefined, label: 'All' },
   { value: 'unplayed', label: 'Unwatched' },
-  { value: 'played', label: 'Watched' },
-  { value: 'favorite', label: 'Favourites' },
 ];
 
 export type Kind = 'Movie' | 'Series' | 'BoxSet';
