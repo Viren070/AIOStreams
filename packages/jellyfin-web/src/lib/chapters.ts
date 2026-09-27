@@ -34,7 +34,7 @@ export function chapterAt(chapters: Chapter[], ms: number): number {
 const KINDS: [MediaSegmentDto['Type'], RegExp][] = [
   [
     'Intro' as MediaSegmentDto['Type'],
-    /^(op|opening|opening (credits|song|theme)|intro|introduction|title sequence|main titles?)$/,
+    /^(op|opening|opening (credits|song|theme)|title sequence|main titles?)$/,
   ],
   [
     'Outro' as MediaSegmentDto['Type'],
@@ -47,11 +47,18 @@ const KINDS: [MediaSegmentDto['Type'], RegExp][] = [
   ],
 ];
 
-function kindOf(title: string): MediaSegmentDto['Type'] | undefined {
-  const plain = title
+/** Names the cold open before the opening in some releases, so it counts only when nothing names the opening. */
+const LOOSE_INTRO = /^(intro|introduction)$/;
+
+function plainTitle(title: string): string {
+  return title
     .toLowerCase()
     .replace(/[^a-z]+/g, ' ')
     .trim();
+}
+
+function kindOf(title: string): MediaSegmentDto['Type'] | undefined {
+  const plain = plainTitle(title);
   return KINDS.find(([, pattern]) => pattern.test(plain))?.[0];
 }
 
@@ -65,8 +72,13 @@ export function chapterSegments(
   chapters: Chapter[],
   durationMs: number
 ): MediaSegmentDto[] {
+  const hasOpening = chapters.some((c) => kindOf(c.title) === 'Intro');
   return chapters.flatMap((chapter, i) => {
-    const type = kindOf(chapter.title);
+    const type =
+      kindOf(chapter.title) ??
+      (!hasOpening && LOOSE_INTRO.test(plainTitle(chapter.title))
+        ? ('Intro' as MediaSegmentDto['Type'])
+        : undefined);
     const endMs = chapters[i + 1]?.startMs ?? durationMs;
     if (!type || !(endMs > chapter.startMs)) return [];
     return [
