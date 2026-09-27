@@ -152,7 +152,7 @@ const PLAYER_PRESETS = [
   {
     name: 'Infuse',
     template:
-      'infuse://x-callback-url/play?url={encodedUrl}&position={position}&x-success={returnUrl}',
+      'infuse://x-callback-url/play?url={encodedUrl}&filename={filename}&sub={subtitles}&position={position}&x-success={returnUrl}',
   },
   { name: 'Outplayer', template: 'outplayer://{url}' },
   { name: 'IINA', template: 'iina://weblink?url={encodedUrl}' },
@@ -313,7 +313,7 @@ function PlaybackSection() {
             placeholder="vlc://{url}"
             value={template}
             onValueChange={changeTemplate}
-            help="Adds an open-in-player button to each version. {url} is the stream address, {encodedUrl} the same address URL-encoded, {position} the second to start at, and {returnUrl} a link back here for a player that reports where it stopped."
+            help="Adds an open-in-player button to each version. {url} is the stream address, {encodedUrl} the same address URL-encoded, {filename} the file's name, {subtitles} each external subtitle (its parameter repeats per file), {position} the second to start at, and {returnUrl} a link back here for a player that reports where it stopped. Values other than {url} are URL-encoded."
           />
           <div className="flex flex-wrap gap-2">
             {PLAYER_PRESETS.map((p) => (

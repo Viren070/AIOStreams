@@ -12,7 +12,11 @@ import {
   useRefreshAll,
   useSegments,
 } from '../lib/queries';
-import { lastVersions, playableSources, playExternally } from '../lib/use-play';
+import {
+  lastVersions,
+  playableSources,
+  usePlayExternally,
+} from '../lib/use-play';
 import {
   directUrl,
   externalPlayerTemplate,
@@ -266,6 +270,7 @@ function Failure({
   onVersions?: () => void;
 }) {
   const { client } = useSession();
+  const playExternally = usePlayExternally();
   const template = externalPlayerTemplate();
   const link = item && source ? directUrl(client, item.Id!, source) : null;
   return (
@@ -301,7 +306,7 @@ function Failure({
               intent="white"
               className="rounded-full"
               leftIcon={<BiLinkExternal />}
-              onClick={() => playExternally(client, item!, source!)}
+              onClick={() => playExternally(item!, source!)}
             >
               Open in player
             </Button>

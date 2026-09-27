@@ -38,7 +38,7 @@ import {
   lastVersions,
   noticeSources,
   playableSources,
-  playExternally,
+  usePlayExternally,
   usePlay,
 } from '../lib/use-play';
 import { playbackHost } from '../lib/hosts';
@@ -169,6 +169,7 @@ function Versions({
   const refreshing = info.isFetching || refresh.isPending;
   const canRefresh = useFeature('refreshVersions');
   const play = usePlay();
+  const playExternally = usePlayExternally();
   const queryClient = useQueryClient();
   const infoOptions = usePlaybackInfoOptions();
   const template = externalPlayerTemplate();
@@ -368,8 +369,7 @@ function Versions({
                     label: 'Open in external player',
                     icon: <BiLinkExternal />,
                     run: () => {
-                      if (!playExternally(client, item, source, startMs))
-                        onExternal();
+                      if (!playExternally(item, source, startMs)) onExternal();
                     },
                   },
                 ]
