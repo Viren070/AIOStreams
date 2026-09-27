@@ -113,28 +113,56 @@ To hide the featured banner, set **Featured on home** to **Nothing** under **Set
 
 ### Hide spoilers
 
-Blur the pictures and descriptions of episodes you haven't watched. Hovering over one shows it.
+Blur the pictures, titles and descriptions of episodes you haven't watched. Pointing at one fades it in.
 
 ```css
+/* Episodes you haven't watched, until you point at one */
 :is([data-ui='episode-card'], [data-ui='episode-list-item']):not(
-    [data-watched]
+    [data-watched],
+    :hover,
+    :focus-within
   )
-  :is([data-ui='artwork'], [data-ui='episode-synopsis']) {
+  [data-ui='artwork'] {
   filter: blur(12px);
+}
+:is([data-ui='episode-card'], [data-ui='episode-list-item']):not(
+    [data-watched],
+    :hover,
+    :focus-within
+  )
+  :is(
+    [data-ui='episode-title'] > span,
+    p[data-ui='episode-title'],
+    [data-ui='episode-synopsis']
+  ) {
+  filter: blur(5px);
 }
 
 /* Next up and upcoming episodes, but not what you're partway through */
 :is([data-row='next-up'], [data-row='upcoming'], [data-row='resume'])
-  [data-ui='wide-card']:not([data-in-progress])
+  [data-ui='wide-card']:not([data-in-progress], :hover, :focus-within)
   [data-ui='artwork'] {
   filter: blur(12px);
 }
+:is([data-row='next-up'], [data-row='upcoming'], [data-row='resume'])
+  [data-ui='wide-card']:not([data-in-progress], :hover, :focus-within)
+  [data-ui='wide-card-subtitle'] {
+  filter: blur(5px);
+}
 
-:is([data-ui='episode-card'], [data-ui='episode-list-item'], [data-ui='wide-card']):hover
-  :is([data-ui='artwork'], [data-ui='episode-synopsis']) {
-  filter: none;
+/* Fade the blur in and out */
+[data-ui='artwork'] {
+  transition-property: filter, transform, opacity;
+}
+[data-ui='episode-title'] > span,
+p[data-ui='episode-title'],
+[data-ui='episode-synopsis'],
+[data-ui='wide-card-subtitle'] {
+  transition: filter 0.3s;
 }
 ```
+
+Blur the text inside an episode's title rather than the title itself: the title is what makes the whole episode play when pressed, and a blur on it would shrink that to the title alone.
 
 ### Hide buttons on title pages
 
