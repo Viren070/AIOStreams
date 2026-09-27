@@ -8,9 +8,11 @@ import {
   sortCredits,
   titlePreviews,
   type FilmographyKind,
+  Cache,
   collectionMembers,
   config as appConfig,
   contentItemType,
+  defaultUserData,
   encodeItemId,
   findCatalog,
   genreId,
@@ -551,6 +553,33 @@ async function handleItems(
   // Watch state is keyed by content identity and cannot say which catalog an
   // item came from, so only unscoped lists come from the provider; a scoped
   // request falls through to that catalog's page, where the filter is exact.
+  // A library's episodes by air date, as a calendar asks for them, are the
+  // episodes of the shows being watched.
+  const minPremiere = Date.parse(qs(req, 'MinPremiereDate') ?? '');
+  const maxPremiere = Date.parse(qs(req, 'MaxPremiereDate') ?? '');
+  if (
+    !parentId &&
+    types?.has('episode') &&
+    (Number.isFinite(minPremiere) || Number.isFinite(maxPremiere))
+  ) {
+    refreshWatchState(ctx);
+    const episodes = await airingEpisodes(
+      ctx,
+      Number.isFinite(minPremiere) ? minPremiere : 0,
+      Number.isFinite(maxPremiere) ? maxPremiere : Infinity
+    );
+    const pageEnd =
+      startIndex + Math.min(Math.max(1, qi(req, 'Limit', 500)), 500);
+    send(
+      req,
+      res,
+      episodes.slice(startIndex, pageEnd),
+      episodes.length,
+      startIndex
+    );
+    return;
+  }
+
   if ((wantsFavorites || wantsPlayed || wantsResumable) && !parentId) {
     refreshWatchState(ctx);
     const provider = getWatchStateProvider();
@@ -888,28 +917,78 @@ router.get(
 const UPCOMING_SERIES = 60;
 const UPCOMING_CONCURRENCY = 4;
 const DAY_MS = 86_400_000;
+/** How far back a range may reach: the whole grid of the month before the current one. */
+const DATED_PAST_DAYS = 75;
+const DATED_FUTURE_DAYS = 365;
+const DATED_TTL = 6 * 60 * 60;
+
+/* One show's episodes that air near now, so a range reads no meta while it lasts. */
+const datedEpisodes = Cache.getInstance<string, JellyfinItem[]>(
+  'jellyfin-dated-episodes',
+  20_000
+);
 
 function premiereOf(item: JellyfinItem): number {
   const at = Date.parse(String(item.PremiereDate ?? ''));
   return Number.isFinite(at) ? at : Number.MAX_SAFE_INTEGER;
 }
 
-async function upcomingForSeries(
+async function datedForSeries(
   ctx: JellyfinRequestContext,
   row: WatchStateRow,
-  now: number,
-  horizon: number
+  now: number
 ): Promise<JellyfinItem[]> {
-  const res = await episodesForSeries(ctx, {
+  const d = {
     t: row.mediaType,
     i: seriesIdOf(row.baseId, row.videoId, row.mediaType),
-  });
+  };
+  const key = `${ctx.scope()}|${d.t}|${d.i}`;
+  const cached = await datedEpisodes.get(key).catch(() => undefined);
+  if (cached) return cached;
+  const res = await episodesForSeries(ctx, d);
   if (!res) return [];
-  return res.episodes.filter((e) => {
-    if (e.ParentIndexNumber === 0) return false;
+  const from = now - DATED_PAST_DAYS * DAY_MS;
+  const to = now + DATED_FUTURE_DAYS * DAY_MS;
+  const dated = res.episodes.filter((e) => {
     const at = premiereOf(e);
-    return at >= now && at <= horizon;
+    return e.ParentIndexNumber !== 0 && at >= from && at <= to;
   });
+  void datedEpisodes.set(key, dated, DATED_TTL).catch(() => undefined);
+  return dated;
+}
+
+/**
+ * Episodes of the shows being watched that air between two times, aired ones
+ * included, soonest first, with the user's own state.
+ */
+async function airingEpisodes(
+  ctx: JellyfinRequestContext,
+  from: number,
+  to: number
+): Promise<JellyfinItem[]> {
+  const recent = await getWatchStateProvider().listRecentSeries(
+    ctx.watch,
+    UPCOMING_SERIES
+  );
+  const now = Date.now();
+  const episodes: JellyfinItem[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < recent.length; i += UPCOMING_CONCURRENCY) {
+    const batch = await Promise.all(
+      recent
+        .slice(i, i + UPCOMING_CONCURRENCY)
+        .map((row) => datedForSeries(ctx, row, now).catch(() => []))
+    );
+    for (const episode of batch.flat()) {
+      const at = premiereOf(episode);
+      if (seen.has(episode.Id) || at < from || at > to) continue;
+      seen.add(episode.Id);
+      // Copied and reset: users of one configuration share the cached items.
+      episodes.push({ ...episode, UserData: defaultUserData(episode.Id) });
+    }
+  }
+  const withState = await attachUserData(ctx, episodes);
+  return withState.sort((a, b) => premiereOf(a) - premiereOf(b));
 }
 
 router.get(
@@ -923,31 +1002,12 @@ router.get(
       return;
     }
     refreshWatchState(ctx);
-
-    const recent = await getWatchStateProvider().listRecentSeries(
-      ctx.watch,
-      UPCOMING_SERIES
-    );
     const now = Date.now();
-    const horizon = now + appConfig.jellyfin.upcomingDays * DAY_MS;
-
-    const episodes: JellyfinItem[] = [];
-    const seen = new Set<string>();
-    for (let i = 0; i < recent.length; i += UPCOMING_CONCURRENCY) {
-      const batch = await Promise.all(
-        recent
-          .slice(i, i + UPCOMING_CONCURRENCY)
-          .map((row) =>
-            upcomingForSeries(ctx, row, now, horizon).catch(() => [])
-          )
-      );
-      for (const episode of batch.flat()) {
-        if (seen.has(episode.Id)) continue;
-        seen.add(episode.Id);
-        episodes.push(episode);
-      }
-    }
-    episodes.sort((a, b) => premiereOf(a) - premiereOf(b));
+    const episodes = await airingEpisodes(
+      ctx,
+      now,
+      now + appConfig.jellyfin.upcomingDays * DAY_MS
+    );
 
     send(
       req,
