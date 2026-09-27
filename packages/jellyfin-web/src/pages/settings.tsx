@@ -5,6 +5,7 @@ import type { IconType } from 'react-icons';
 import {
   LuCaptions,
   LuCirclePlay,
+  LuHeart,
   LuInfo,
   LuLayoutGrid,
   LuMonitor,
@@ -33,6 +34,8 @@ import {
 } from '@aiostreams/ui/shared/confirmation-dialog';
 import { cn } from '@aiostreams/ui/core/styling';
 import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
+import { DonationModal } from '@aiostreams/ui/shared/donation-modal';
+import { useDisclosure } from '@aiostreams/ui/hooks/disclosure';
 import { useSession } from '../lib/session';
 import { usePickableUsers, useViews } from '../lib/queries';
 import { libraryLabel } from '../lib/format';
@@ -1128,6 +1131,7 @@ export function SettingsPage({
   onTabChange(tab: string): void;
 }) {
   const all = React.useMemo(sections, []);
+  const donation = useDisclosure(false);
   const active = all.find((s) => s.id === tab) ?? all[0];
   const groups = new Map<string, Section[]>();
   for (const s of all) groups.set(s.group, [...(groups.get(s.group) ?? []), s]);
@@ -1171,6 +1175,17 @@ export function SettingsPage({
               ))}
             </Card>
           ))}
+          <div className="flex basis-full justify-center pt-1">
+            <Button
+              size="sm"
+              intent="gray-outline"
+              className="rounded-full"
+              leftIcon={<LuHeart />}
+              onClick={donation.open}
+            >
+              Donate
+            </Button>
+          </div>
         </TabsList>
         <div className="min-w-0">
           {all.map((s) => (
@@ -1194,6 +1209,7 @@ export function SettingsPage({
           ))}
         </div>
       </Tabs>
+      <DonationModal open={donation.isOpen} onOpenChange={donation.toggle} />
     </PageBody>
   );
 }
