@@ -1,4 +1,4 @@
-﻿import { z } from 'zod';
+import { z } from 'zod';
 import { constants, ServiceId, Cache, appConfig } from '../utils/index.js';
 import { registerLockErrorClass } from '../utils/lock-error-registry.js';
 import { WD1_KEY_REGEX } from '../release-blocklist/keys.js';
@@ -218,6 +218,8 @@ const TitleMetadataSchema = z.object({
   // the same episode as tvdb numbers it, when that differs
   tvdbSeason: z.number().optional(),
   tvdbEpisode: z.number().optional(),
+  // Selected anime-entry aliases used to resolve bare entry-relative episode filenames.
+  animeEntryTitles: z.array(z.string()).optional(),
   // local air dates ('YYYY-MM-DD') of the requested episode for date-based shows
   airDates: z.array(z.string()).optional(),
   isDateBased: z.boolean().optional(),
