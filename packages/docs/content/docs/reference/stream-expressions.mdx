@@ -696,6 +696,24 @@ seasonPack(streams, 'onlySeasons')  // ambiguous packs without episode reference
 
 ---
 
+#### `notFirstEpisode()`
+
+Select multi-episode files that contain the requested episode, but start with an earlier episode. For example, `Show.S01E05-E06.mkv` matches a request for E06, but not E05 or E07. Single-episode files do not match.
+
+```
+notFirstEpisode(streams)
+```
+
+The first episode is the lowest parsed episode number. Requests are checked against their season-relative, absolute and relative absolute (AniDB entry) episode numbers. If any of those numbers matches the first episode, the file is not selected. Without a valid requested episode, including movie searches and group conditions, this function returns an empty list.
+
+The filename is parsed separately from the folder name: a combined file inside a season pack still matches, while a range found only in the folder name does not. When neither a filename nor a folder name is available, parsed episode metadata is used only for streams that are not marked as season packs. Ambiguous streams are left alone.
+
+Use this in an **excluded stream expression** to prevent a combined file from being offered again for its later episodes. Exclusion applies to both autoplay and manual selection, and can leave a later episode with no results if the combined file is its only release. It does not tell the player to skip to the episode after the combined file.
+
+You can also use it in a ranked expression to demote these files while retaining manual access. Ranking alone does not prevent a client from choosing the same `bingeGroup` again. This function is opt-in and does not change autoplay groups.
+
+---
+
 #### `addon()`
 
 Filter by addon name (case-sensitive).

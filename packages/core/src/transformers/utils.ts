@@ -1,9 +1,6 @@
 ﻿import { constants } from '../index.js';
 import { config as appConfig } from '../config/index.js';
 import { ParsedStream, UserData } from '../db/index.js';
-import { appendLaterEpisodeMarker, type BingeRequest } from './binge-group.js';
-
-export type { BingeRequest } from './binge-group.js';
 
 /**
  * Generates the `bingeGroup` string for a stream based on the user's autoplay
@@ -12,8 +9,7 @@ export type { BingeRequest } from './binge-group.js';
 export function generateBingeGroup(
   stream: ParsedStream,
   index: number,
-  userData: UserData,
-  request?: BingeRequest
+  userData: UserData
 ): string | undefined {
   const autoPlaySettings = {
     enabled: userData.autoPlay?.enabled ?? true,
@@ -102,10 +98,5 @@ export function generateBingeGroup(
       break;
   }
 
-  return appendLaterEpisodeMarker(
-    bingeGroup,
-    stream,
-    request,
-    autoPlaySettings.method
-  );
+  return bingeGroup;
 }
