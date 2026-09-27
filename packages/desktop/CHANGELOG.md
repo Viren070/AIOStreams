@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.5.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.4.0...desktop-v0.5.0) (2026-09-27)
+
+
+### Features
+
+* **desktop:** save and restore the window's size, position and maximized state ([589d069](https://github.com/Viren070/AIOStreams/commit/589d06935c9ccb630de795e461b6836dd20aec23))
+* **jellyfin-web:** add hooks for custom CSS and an apply step ([70df21d](https://github.com/Viren070/AIOStreams/commit/70df21d9088b5cbf6840d3b77d8d4cf24c2c4d4a))
+
+
+### Bug Fixes
+
+* **jellyfin-web:** brighten the calendar's episode art ([70df21d](https://github.com/Viren070/AIOStreams/commit/70df21d9088b5cbf6840d3b77d8d4cf24c2c4d4a))
+* **ui:** keep a modal open when a press closes a dialog above it ([70df21d](https://github.com/Viren070/AIOStreams/commit/70df21d9088b5cbf6840d3b77d8d4cf24c2c4d4a))
+
 ## [0.4.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.3.1...desktop-v0.4.0) (2026-09-27)
 
 
