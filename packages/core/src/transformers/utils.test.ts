@@ -80,6 +80,19 @@ describe('generateBingeGroup combined files', () => {
     assert.equal(group([6], { episode: 6 }), start);
   });
 
+  it('keeps position-based autoplay groups unmarked', () => {
+    const file = stream([5, 6]);
+    const request = { episode: 6 };
+    assert.equal(
+      appendLaterEpisodeMarker(base, file, request, 'matchingIndex'),
+      base
+    );
+    assert.equal(
+      appendLaterEpisodeMarker(base, file, request, 'firstFile'),
+      base
+    );
+  });
+
   it('returns nothing when autoplay is off', () => {
     const off = { autoPlay: { enabled: false } } as UserData;
     assert.equal(

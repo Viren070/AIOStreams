@@ -16,16 +16,21 @@ function positiveEpisode(value: number | undefined): number | undefined {
 
 /**
  * Stremio autoplay selects the next episode's stream with an equal bingeGroup.
- * A combined file matches the later episode too, so that request is marked
- * `laterEpisode:<n>` and is not selected. The file stays in the list.
- * Season packs are one episode of a folder and stay unmarked. The first
- * episode is the lowest parsed number.
+ * In matchingFile mode a combined file matches the later episode too, so that
+ * request is marked `laterEpisode:<n>` and is not selected. The file stays in
+ * the list. Matching Index and First File select by position, so they keep
+ * the group they already built. Season packs are one episode of a folder and
+ * stay unmarked. The first episode is the lowest parsed number.
  */
 export function appendLaterEpisodeMarker(
   bingeGroup: string,
   stream: ParsedStream,
-  request: BingeRequest | undefined
+  request: BingeRequest | undefined,
+  method: string = 'matchingFile'
 ): string {
+  if (method !== 'matchingFile') {
+    return bingeGroup;
+  }
   const parsed = stream.parsedFile;
   const episodes = parsed?.episodes;
   if (!episodes || episodes.length < 2 || parsed?.seasonPack || !request) {
