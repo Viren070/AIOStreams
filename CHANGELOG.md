@@ -1,5 +1,34 @@
 # Changelog
 
+## [2.35.1](https://github.com/Viren070/AIOStreams/compare/v2.35.0...v2.35.1) (2026-09-27)
+
+
+### Features
+
+* **jellyfin-web:** add {filename} and {subtitles} to the external player link ([1ca68bc](https://github.com/Viren070/AIOStreams/commit/1ca68bc18fcd2895e6967179dbbe24d935a67f8a))
+* **jellyfin-web:** add {position} and {returnUrl} to the external player link ([dfcdac9](https://github.com/Viren070/AIOStreams/commit/dfcdac9ae19042461c1037e4d7cffc4136375cad))
+* **jellyfin-web:** add a calendar page ([1fc8594](https://github.com/Viren070/AIOStreams/commit/1fc85947164c73ccc9bb51d39a266b086797e515))
+* **jellyfin-web:** add a donate button under the settings tabs ([81b4188](https://github.com/Viren070/AIOStreams/commit/81b4188e5ef69fcb98c1745aeef5376a8ca6dc12))
+* **jellyfin-web:** add a favourites page ([3c2dc76](https://github.com/Viren070/AIOStreams/commit/3c2dc76ce4aaa8fbe652e516a404d03c51c8c742))
+* **jellyfin-web:** add a setting to share what plays on Discord ([8fdd332](https://github.com/Viren070/AIOStreams/commit/8fdd332b945144a92ade5c670127fa50af3343c5))
+* **jellyfin-web:** add a setting to skip the version list, with hold to do the other ([225a12c](https://github.com/Viren070/AIOStreams/commit/225a12c42ea732c7f4333900f652f08c89d53a26))
+* **jellyfin-web:** add back and forward buttons to the sidebar in apps ([43599da](https://github.com/Viren070/AIOStreams/commit/43599da68639bd22b867d5124e48d2713f94a506))
+* **jellyfin-web:** keep the window buttons in full screen, with one to leave it ([7fa240f](https://github.com/Viren070/AIOStreams/commit/7fa240f1096ebef0a9a7bab1e15bfb61624a1ec7))
+* **jellyfin-web:** move Activity and Calendar into the phone's account menu ([3048e78](https://github.com/Viren070/AIOStreams/commit/3048e78a93acccf65848a9df308b41e2ab278a1d))
+* **jellyfin-web:** open the player full screen in landscape on phones ([a3d4b28](https://github.com/Viren070/AIOStreams/commit/a3d4b2820b4eb703e3606cf9d1eba1c9bee59409))
+* **jellyfin:** answer /Items episode queries with a premiere date range ([0d90026](https://github.com/Viren070/AIOStreams/commit/0d900265c913ba44396bdcf88bbc1c37a0264005))
+
+
+### Bug Fixes
+
+* **deduplicator:** strip away repost suffixes in deduplicator ([#1360](https://github.com/Viren070/AIOStreams/issues/1360)) ([30c228d](https://github.com/Viren070/AIOStreams/commit/30c228dfb4987a7898c316db3b6100f52505588d))
+* **jellyfin-web:** count an Intro chapter as the intro only when none is named the opening ([95f0ee5](https://github.com/Viren070/AIOStreams/commit/95f0ee57b87bb2eb5ab811219096cd33287ad31e))
+* **jellyfin-web:** show any server's placeholder sources as notices ([ff32b06](https://github.com/Viren070/AIOStreams/commit/ff32b06d173c83b581827e322a5160054c584602))
+* **jellyfin-web:** slide pages in by top instead of a transform ([11b5ccc](https://github.com/Viren070/AIOStreams/commit/11b5ccc9c4baf8e268d318b960853bc76204c9c8))
+* **jellyfin:** round every tick value to a whole number ([bb64fb1](https://github.com/Viren070/AIOStreams/commit/bb64fb1f03366af59c37991807626e7edf19d5a0))
+* **jellyfin:** take a show's episodes from SeasonId before the path id ([6e33129](https://github.com/Viren070/AIOStreams/commit/6e331296ffb2694c34996a0e374c8cc0e2704597))
+* **remuxdb:** require indexer to agree when matching usenet guids ([#1374](https://github.com/Viren070/AIOStreams/issues/1374)) ([5d60ab7](https://github.com/Viren070/AIOStreams/commit/5d60ab7114f218d6e125192a39602b7b4886e271))
+
 ## [2.35.0](https://github.com/Viren070/AIOStreams/compare/v2.34.1...v2.35.0) (2026-09-26)
 
 
