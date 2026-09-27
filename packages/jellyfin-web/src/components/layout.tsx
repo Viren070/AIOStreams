@@ -52,8 +52,8 @@ import { BrandLogo } from './brand-logo';
 import { VersionPickerProvider } from './version-picker';
 
 const PAGE_FADE = {
-  initial: { opacity: 0, y: 6 },
-  animate: { opacity: 1, y: 0 },
+  initial: { opacity: 0, top: 6 },
+  animate: { opacity: 1, top: 0 },
   transition: { type: 'spring', damping: 28, stiffness: 260, mass: 0.7 },
 } as const;
 
@@ -342,7 +342,7 @@ export function WebLayout() {
                 key={pathname}
                 data-page={pageName(pathname)}
                 {...PAGE_FADE}
-                className="pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] max-lg:pb-[calc(5rem+env(safe-area-inset-bottom))]"
+                className="relative pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] max-lg:pb-[calc(5rem+env(safe-area-inset-bottom))]"
               >
                 <Outlet />
                 <PageScroll />
