@@ -4206,7 +4206,7 @@ function Content() {
                   <SettingsCard
                     id="remuxDb"
                     title="RemuxDB Integration"
-                    description="Fill in missing audio and subtitle languages, channels, HDR and resolution from RemuxDB's database of probed files. Each lookup sends the title's IMDb ID (and season and episode) to RemuxDB."
+                    description="Fill in missing audio and subtitle languages, channels, HDR and resolution from RemuxDB's database of probed files. Each lookup sends the title's IMDb ID (and season and episode) to RemuxDB. Usenet results only match when they come from the Newznab addon: NZBHydra and Prowlarr hide the indexer's NZB ID behind their own download links."
                   >
                     <Switch
                       label="Enable"
