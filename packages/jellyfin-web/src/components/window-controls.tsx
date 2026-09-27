@@ -4,6 +4,7 @@ import {
   VscChromeMaximize,
   VscChromeMinimize,
   VscChromeRestore,
+  VscScreenNormal,
 } from 'react-icons/vsc';
 import { cn } from '@aiostreams/ui/core/styling';
 
@@ -16,8 +17,9 @@ const INTERACTIVE =
 /**
  * The desktop app's window has no title bar: empty space along the top moves
  * it, the top edge resizes it (the page covers the one the system offers), and
- * these buttons stand in for the system's. macOS keeps its own buttons and
- * edges, so only the moving is left to the page there.
+ * these buttons stand in for the system's, staying in full screen so a mouse
+ * can leave it. macOS keeps its own buttons and edges, so only the moving is
+ * left to the page there.
  */
 export function WindowControls() {
   const shell = window.aiostreamsDesktop!;
@@ -59,12 +61,12 @@ export function WindowControls() {
     };
   }, [shell, native]);
 
-  if (fullscreen || native) return null;
+  if (native) return null;
   const button =
     'flex h-8 w-11 items-center justify-center rounded-lg text-[0.95rem] text-white/85 outline-none transition-colors hover:text-white active:text-white';
   return (
     <>
-      {!maximized && (
+      {!maximized && !fullscreen && (
         <div
           aria-hidden
           data-modal-passthrough
@@ -76,6 +78,7 @@ export function WindowControls() {
       )}
       <div
         data-ui="window-controls"
+        data-fullscreen={fullscreen || undefined}
         data-modal-passthrough
         className="pointer-events-auto fixed right-2 top-0 z-[9999] flex h-10 items-center gap-1 transition-opacity duration-300"
       >
@@ -88,15 +91,28 @@ export function WindowControls() {
         >
           <VscChromeMinimize />
         </button>
-        <button
-          type="button"
-          aria-label={maximized ? 'Restore' : 'Maximise'}
-          tabIndex={-1}
-          className={cn(button, 'hover:bg-white/5 active:bg-white/10')}
-          onClick={() => shell.send({ type: 'window-maximize' })}
-        >
-          {maximized ? <VscChromeRestore /> : <VscChromeMaximize />}
-        </button>
+        {fullscreen ? (
+          <button
+            type="button"
+            aria-label="Exit full screen"
+            title="Exit full screen"
+            tabIndex={-1}
+            className={cn(button, 'hover:bg-white/5 active:bg-white/10')}
+            onClick={() => shell.send({ type: 'fullscreen', value: false })}
+          >
+            <VscScreenNormal />
+          </button>
+        ) : (
+          <button
+            type="button"
+            aria-label={maximized ? 'Restore' : 'Maximise'}
+            tabIndex={-1}
+            className={cn(button, 'hover:bg-white/5 active:bg-white/10')}
+            onClick={() => shell.send({ type: 'window-maximize' })}
+          >
+            {maximized ? <VscChromeRestore /> : <VscChromeMaximize />}
+          </button>
+        )}
         <button
           type="button"
           aria-label="Close"
