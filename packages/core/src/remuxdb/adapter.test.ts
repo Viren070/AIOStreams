@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
 import type { ParsedStream } from '../db/schemas.js';
-import { extractNzbGuid, matchEntry, toWireMediaInfo } from './adapter.js';
+import {
+  extractNzbGuid,
+  matchEntry,
+  resolveRemuxDbIndexer,
+  toWireMediaInfo,
+} from './adapter.js';
 import { MediaProbeVersionSchema } from './client.js';
 import type { MediaProbeVersion, TrackDetail } from './client.js';
 
@@ -52,10 +57,10 @@ describe('matchEntry', () => {
 
   test('matches nzb by id query param', () => {
     const v = version({
-      sources: [{ kind: 'nzb', indexer_guid: 'guid123' }],
+      sources: [{ kind: 'nzb', indexer: 'nzbnest', indexer_guid: 'guid123' }],
     });
     const s = stream({
-      nzbUrl: 'https://indexer.example/api?t=get&id=guid123&apikey=x',
+      nzbUrl: 'https://nzbnest.com/api?t=get&id=guid123&apikey=x',
     });
     assert.equal(matchEntry([v], s), v);
   });
@@ -63,20 +68,40 @@ describe('matchEntry', () => {
   test('matches hex guid embedded in path', () => {
     const guid = '1abc9603eb172f3e63ca5970f6518dd9';
     const v = version({
-      sources: [{ kind: 'nzb', indexer_guid: guid }],
+      sources: [{ kind: 'nzb', indexer: 'nzbnest', indexer_guid: guid }],
     });
     const s = stream({
-      nzbUrl: `https://indexer.example/getnzb/${guid}.nzb&i=136164&r=key`,
+      nzbUrl: `https://nzbnest.com/getnzb/${guid}.nzb&i=136164&r=key`,
     });
     assert.equal(matchEntry([v], s), v);
   });
 
-  test('falls back to bare guid when nzbUrl is not a URL', () => {
+  test('does not match when the indexer differs', () => {
     const v = version({
-      sources: [{ kind: 'nzb', indexer_guid: 'raw-guid' }],
+      sources: [{ kind: 'nzb', indexer: 'althub', indexer_guid: 'guid123' }],
+    });
+    const s = stream({
+      nzbUrl: 'https://nzbnest.com/api?t=get&id=guid123&apikey=x',
+    });
+    assert.equal(matchEntry([v], s), undefined);
+  });
+
+  test('does not match when the indexer cannot be resolved', () => {
+    const v = version({
+      sources: [{ kind: 'nzb', indexer: 'nzbnest', indexer_guid: 'guid123' }],
+    });
+    const s = stream({
+      nzbUrl: 'https://unknown-indexer.example/api?t=get&id=guid123&apikey=x',
+    });
+    assert.equal(matchEntry([v], s), undefined);
+  });
+
+  test('does not match a bare guid when nzbUrl is not a URL', () => {
+    const v = version({
+      sources: [{ kind: 'nzb', indexer: 'nzbnest', indexer_guid: 'raw-guid' }],
     });
     const s = stream({ nzbUrl: 'raw-guid' });
-    assert.equal(matchEntry([v], s), v);
+    assert.equal(matchEntry([v], s), undefined);
   });
 
   test('no identity fields yields no match', () => {
@@ -115,6 +140,33 @@ describe('extractNzbGuid', () => {
 
   test('bare guid (not a URL)', () => {
     assert.equal(extractNzbGuid('raw-guid'), 'raw-guid');
+  });
+});
+
+describe('resolveRemuxDbIndexer', () => {
+  test('resolves a known indexer by hostname', () => {
+    assert.equal(
+      resolveRemuxDbIndexer('https://nzbnest.com/api?t=get&id=guid123'),
+      'nzbnest'
+    );
+  });
+
+  test('ignores a www. prefix', () => {
+    assert.equal(
+      resolveRemuxDbIndexer('https://www.nzbnest.com/api?t=get&id=guid123'),
+      'nzbnest'
+    );
+  });
+
+  test('unknown hostname resolves to undefined', () => {
+    assert.equal(
+      resolveRemuxDbIndexer('https://unknown-indexer.example/api'),
+      undefined
+    );
+  });
+
+  test('not a URL resolves to undefined', () => {
+    assert.equal(resolveRemuxDbIndexer('raw-guid'), undefined);
   });
 });
 
