@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.4.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.3.1...desktop-v0.4.0) (2026-09-27)
+
+
+### Features
+
+* **desktop:** show what plays as Discord rich presence ([36f5602](https://github.com/Viren070/AIOStreams/commit/36f5602591a16f14206c51634783b0e8b192ffed))
+* **jellyfin-web:** add {filename} and {subtitles} to the external player link ([333b356](https://github.com/Viren070/AIOStreams/commit/333b3561df7026680d65c96ff41a89a371c85426))
+* **jellyfin-web:** add {position} and {returnUrl} to the external player link ([333b356](https://github.com/Viren070/AIOStreams/commit/333b3561df7026680d65c96ff41a89a371c85426))
+* **jellyfin-web:** add a calendar page ([333b356](https://github.com/Viren070/AIOStreams/commit/333b3561df7026680d65c96ff41a89a371c85426))
+* **jellyfin-web:** add a donate button under the settings tabs ([333b356](https://github.com/Viren070/AIOStreams/commit/333b3561df7026680d65c96ff41a89a371c85426))
+* **jellyfin-web:** add a favourites page ([333b356](https://github.com/Viren070/AIOStreams/commit/333b3561df7026680d65c96ff41a89a371c85426))
+* **jellyfin-web:** add a setting to share what plays on Discord ([333b356](https://github.com/Viren070/AIOStreams/commit/333b3561df7026680d65c96ff41a89a371c85426))
+* **jellyfin-web:** add a setting to skip the version list, with hold to do the other ([333b356](https://github.com/Viren070/AIOStreams/commit/333b3561df7026680d65c96ff41a89a371c85426))
+* **jellyfin-web:** add back and forward buttons to the sidebar in apps ([333b356](https://github.com/Viren070/AIOStreams/commit/333b3561df7026680d65c96ff41a89a371c85426))
+* **jellyfin-web:** keep the window buttons in full screen, with one to leave it ([333b356](https://github.com/Viren070/AIOStreams/commit/333b3561df7026680d65c96ff41a89a371c85426))
+* **jellyfin-web:** move Activity and Calendar into the phone's account menu ([333b356](https://github.com/Viren070/AIOStreams/commit/333b3561df7026680d65c96ff41a89a371c85426))
+* **jellyfin-web:** open the player full screen in landscape on phones ([333b356](https://github.com/Viren070/AIOStreams/commit/333b3561df7026680d65c96ff41a89a371c85426))
+
+
+### Bug Fixes
+
+* **jellyfin-web:** count an Intro chapter as the intro only when none is named the opening ([333b356](https://github.com/Viren070/AIOStreams/commit/333b3561df7026680d65c96ff41a89a371c85426))
+* **jellyfin-web:** show any server's placeholder sources as notices ([333b356](https://github.com/Viren070/AIOStreams/commit/333b3561df7026680d65c96ff41a89a371c85426))
+* **jellyfin-web:** slide pages in by top instead of a transform ([333b356](https://github.com/Viren070/AIOStreams/commit/333b3561df7026680d65c96ff41a89a371c85426))
+* **jellyfin:** round every tick value to a whole number ([333b356](https://github.com/Viren070/AIOStreams/commit/333b3561df7026680d65c96ff41a89a371c85426))
+
 ## [0.3.1](https://github.com/Viren070/AIOStreams/compare/desktop-v0.3.0...desktop-v0.3.1) (2026-09-26)
 
 
