@@ -7,7 +7,7 @@ import {
   UserData,
 } from '../db/index.js';
 import { AIOStreamsResponse } from '../main/types.js';
-import { generateBingeGroup } from './utils.js';
+import { BingeRequest, generateBingeGroup } from './utils.js';
 
 export interface SearchApiResponseData {
   results: SearchApiResult[];
@@ -80,7 +80,8 @@ export class ApiTransformer {
       streams: ParsedStream[];
       statistics: { title: string; description: string; forced?: boolean }[];
     }>,
-    requiredFields: SearchApiResultField[]
+    requiredFields: SearchApiResultField[],
+    request?: BingeRequest
   ): Promise<SearchApiResponseData> {
     const { data, errors } = response;
     let filteredCount = 0;
@@ -122,7 +123,8 @@ export class ApiTransformer {
         cached: stream.service?.cached ?? null,
         servers: stream.servers ?? null,
         notWebReady: stream.notWebReady ?? null,
-        bingeGroup: generateBingeGroup(stream, index, this.userData) ?? null,
+        bingeGroup:
+          generateBingeGroup(stream, index, this.userData, request) ?? null,
         private: stream.torrent?.private ?? null,
         seadexBest: stream.seadex?.isBest ?? null,
         seadex: stream.seadex?.isSeadex ?? null,
