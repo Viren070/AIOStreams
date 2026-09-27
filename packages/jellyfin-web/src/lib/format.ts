@@ -108,9 +108,33 @@ export function shortDate(iso: string): string {
   });
 }
 
+/**
+ * Jellyfin stores a date without a time as midnight UTC, written with seven
+ * zeroes; a time from a JavaScript server has three, so its midnight is real.
+ */
+function dateOnly(iso: string): boolean {
+  return !iso.includes('T') || /T00:00:00(\.0{7})?Z$/.test(iso);
+}
+
+/** The local day something airs; a date without a time keeps its own day. */
+export function airDay(iso: string): Date {
+  const at = new Date(iso);
+  return dateOnly(iso)
+    ? new Date(at.getUTCFullYear(), at.getUTCMonth(), at.getUTCDate())
+    : new Date(at.getFullYear(), at.getMonth(), at.getDate());
+}
+
+export function airTime(iso: string): string | null {
+  if (dateOnly(iso)) return null;
+  return new Date(iso).toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 /** `Sun, 28 Sep` */
 export function dayLabel(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
+  return airDay(iso).toLocaleDateString(undefined, {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
@@ -122,7 +146,7 @@ export function untilLabel(iso: string): string {
   const midnight = (d: Date) =>
     new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   const days = Math.round(
-    (midnight(new Date(iso)) - midnight(new Date())) / DAY_MS
+    (midnight(airDay(iso)) - midnight(new Date())) / DAY_MS
   );
   const format = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
   return days < 14

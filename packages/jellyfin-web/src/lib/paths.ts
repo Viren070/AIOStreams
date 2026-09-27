@@ -9,6 +9,8 @@ import type { BaseItemDto } from './types';
 export const to = {
   home: '/',
   history: '/history',
+  calendar: (month?: string) =>
+    month ? `/calendar?month=${month}` : '/calendar',
   favourites: (kind?: string) =>
     kind ? `/favourites?kind=${kind}` : '/favourites',
   settings: (tab?: string) => (tab ? `/settings?tab=${tab}` : '/settings'),

@@ -6,6 +6,7 @@ import {
   useRouterState,
 } from '@tanstack/react-router';
 import {
+  BiCalendar,
   BiCompass,
   BiHeart,
   BiHistory,
@@ -250,6 +251,13 @@ export function WebLayout() {
   const users = usePickableUsers();
   const several = (users.data?.length ?? 0) > 1;
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  // The phone's bar has no room for it; the home page links to it.
+  const calendar: SidebarItem = {
+    name: 'Calendar',
+    iconType: BiCalendar,
+    isCurrent: pathname.startsWith('/calendar'),
+    onClick: () => navigate(to.calendar()),
+  };
   const confirmSignOut = useConfirmationDialog({
     title: 'Sign out',
     description: __STANDALONE__
@@ -285,6 +293,7 @@ export function WebLayout() {
       isCurrent: pathname.startsWith('/favourites'),
       onClick: () => navigate(to.favourites()),
     },
+    calendar,
     {
       name: 'Activity',
       iconType: BiHistory,
@@ -351,7 +360,10 @@ export function WebLayout() {
           </AppLayoutContent>
         </AppLayout>
       </AppLayout>
-      <MobileNav items={items} menuItems={[settings, ...accountItems]} />
+      <MobileNav
+        items={items.filter((i) => i !== calendar)}
+        menuItems={[settings, ...accountItems]}
+      />
       <ConfirmationDialog {...confirmSignOut} />
     </AppSidebarProvider>
   );

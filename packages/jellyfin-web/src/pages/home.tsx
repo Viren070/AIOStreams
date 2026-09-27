@@ -1,5 +1,6 @@
 import React from 'react';
-import { BiChevronRight } from 'react-icons/bi';
+import { BiCalendar, BiChevronRight } from 'react-icons/bi';
+import { Button } from '@aiostreams/ui/button';
 import { Badge } from '@aiostreams/ui/badge';
 import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
 import { useSession } from '../lib/session';
@@ -25,7 +26,7 @@ import {
   ticksToMs,
   untilLabel,
 } from '../lib/format';
-import { href, itemPath, to } from '../lib/paths';
+import { href, itemPath, navigate, to } from '../lib/paths';
 import {
   useFeatured,
   useHeroMode,
@@ -245,6 +246,17 @@ function UpcomingRow() {
       title="Upcoming"
       shape="wide"
       loading={upcoming.isLoading}
+      action={
+        <Button
+          size="sm"
+          intent="gray-subtle"
+          className="rounded-full"
+          leftIcon={<BiCalendar />}
+          onClick={() => navigate(to.calendar())}
+        >
+          Calendar
+        </Button>
+      }
     >
       {upcoming.data?.Items?.map((item) => (
         <ItemMenu key={item.Id} item={item}>

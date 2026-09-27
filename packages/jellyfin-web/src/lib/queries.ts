@@ -217,6 +217,25 @@ export function useUpcoming() {
   });
 }
 
+/** The library's episodes airing between two dates, aired ones included. */
+export function useCalendar(from: Date, to: Date) {
+  const { client, user } = useSession();
+  return useQuery({
+    queryKey: [...useKey(), 'calendar', from.getTime(), to.getTime()],
+    queryFn: () =>
+      client.get<BaseItemDtoQueryResult>('/Items', {
+        userId: user.Id,
+        IncludeItemTypes: 'Episode',
+        Recursive: true,
+        MinPremiereDate: from.toISOString(),
+        MaxPremiereDate: to.toISOString(),
+        SortBy: 'PremiereDate',
+        Limit: 500,
+      }),
+    staleTime: 30 * 60_000,
+  });
+}
+
 export function useGenres(viewId: string) {
   const { client, user } = useSession();
   return useQuery({

@@ -13,6 +13,7 @@ import { lastCatalog } from './lib/settings';
 import { HomePage } from './pages/home';
 import { DiscoverIndex, DiscoverPage } from './pages/discover';
 import { FavouritesPage } from './pages/favourites';
+import { CalendarPage } from './pages/calendar';
 import { SearchPage } from './pages/search';
 import { ItemPage } from './pages/item';
 import { PersonPage } from './pages/person';
@@ -54,6 +55,20 @@ const favouritesRoute = createRoute({
 function FavouritesRouteView(): React.ReactElement {
   const { kind } = favouritesRoute.useSearch();
   return <FavouritesPage kind={kind} />;
+}
+
+const calendarRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/calendar',
+  validateSearch: (search: Record<string, unknown>) => ({
+    month: search.month == null ? undefined : String(search.month),
+  }),
+  component: CalendarRouteView,
+});
+
+function CalendarRouteView(): React.ReactElement {
+  const { month } = calendarRoute.useSearch();
+  return <CalendarPage month={month} />;
 }
 
 const settingsRoute = createRoute({
@@ -190,6 +205,7 @@ const routeTree = rootRoute.addChildren([
     homeRoute,
     historyRoute,
     favouritesRoute,
+    calendarRoute,
     settingsRoute,
     searchRoute,
     discoverIndexRoute,
