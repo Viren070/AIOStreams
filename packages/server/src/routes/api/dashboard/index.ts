@@ -191,7 +191,8 @@ router.post('/logs/clear', (req, res) => {
 const SECRET_MASK = '';
 
 // GET /dashboard/settings — every runtime config key + metadata + value.
-router.get('/settings', (_req, res) => {
+router.get('/settings', async (_req, res) => {
+  await settingsStore.refreshIfChanged();
   const hints = describeSettings();
   const keys = settingsStore.metadata
     // Fields with a bespoke editor (e.g. usenet.providers) are hidden here and

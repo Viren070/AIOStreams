@@ -164,6 +164,7 @@ export type SettingsChangeListener<TSections extends SectionSchemas> = (
 export class SettingsStore<TSections extends SectionSchemas> {
   private snapshot: Snapshot<TSections>;
   private version = 0;
+  private reloadSeq = 0;
   private initialisedFlag = false;
   private storedKeys: Set<string> = new Set();
   private fieldsByKey: Map<string, FieldEntry>;
@@ -241,6 +242,9 @@ export class SettingsStore<TSections extends SectionSchemas> {
   async reload(options: { emit?: boolean } = {}): Promise<Set<string>> {
     const emit = options.emit !== false;
     const previous = this.snapshot;
+    const seq = ++this.reloadSeq;
+    // Before the rows, so a write landing in between still triggers the next sync.
+    const version = await SettingsRepository.getVersion();
     const rows = await SettingsRepository.getAll();
 
     // Parse raw row values, then fold renamed (aliased) keys onto their current
@@ -282,10 +286,11 @@ export class SettingsStore<TSections extends SectionSchemas> {
         logger.warn({ key, error }, 'Ignoring invalid stored setting');
       }
     }
+    if (seq !== this.reloadSeq) return new Set();
     this.storedKeys = new Set(stored.keys());
     this.snapshot = this.buildSnapshot(stored);
     this.initialisedFlag = true;
-    this.version = await SettingsRepository.getVersion();
+    this.version = version;
     if (!emit) return new Set();
     const changed = this.diffKeys(previous, this.snapshot);
     if (changed.size > 0) {

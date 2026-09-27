@@ -105,7 +105,7 @@ export function useSaveSettings() {
   return useMutation({
     mutationFn: (patch: Record<string, unknown>) =>
       api<PatchResult>('PATCH /dashboard/settings', { body: patch }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: DASHBOARD_SCOPE }),
+    onSettled: () => qc.invalidateQueries({ queryKey: DASHBOARD_SCOPE }),
   });
 }
 
