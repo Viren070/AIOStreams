@@ -102,5 +102,10 @@ export function generateBingeGroup(
       break;
   }
 
-  return appendLaterEpisodeMarker(bingeGroup, stream, request);
+  return appendLaterEpisodeMarker(
+    bingeGroup,
+    stream,
+    request,
+    autoPlaySettings.method
+  );
 }
