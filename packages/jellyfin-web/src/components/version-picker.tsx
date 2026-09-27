@@ -482,7 +482,13 @@ const NOTICE_ICONS: Record<string, React.ReactNode> = {
 
 /** An addon message, pipeline error or statistic: text, and a link at most. */
 function Notice({ notice }: { notice: SourceInfo }) {
-  const { name, description, type, externalUrl } = notice.aiostreams!;
+  // Other servers send the text in the name, the first line being its title.
+  const [head = '', ...rest] = (notice.Name ?? '').split('\n');
+  const { name, description, type, externalUrl } = notice.aiostreams ?? {
+    name: head,
+    description: rest.join('\n'),
+    type: 'info',
+  };
   const error = type === 'error';
   return (
     <div
