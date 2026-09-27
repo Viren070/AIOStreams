@@ -206,6 +206,8 @@ export function useNextEpisodePrompt({
           </div>
           <div className="flex gap-2">
             <Button
+              data-ui="next-episode-action"
+              data-name="play"
               intent="white"
               className="flex-1 rounded-full"
               onClick={() => void playNext()}
@@ -215,6 +217,8 @@ export function useNextEpisodePrompt({
                 : 'Play now'}
             </Button>
             <Button
+              data-ui="next-episode-action"
+              data-name="hide"
               intent="gray-outline"
               className="rounded-full"
               onClick={() => setDismissed(true)}
@@ -224,7 +228,7 @@ export function useNextEpisodePrompt({
           </div>
         </div>
         {autoplay && (
-          <div className="h-1 bg-white/10">
+          <div data-ui="next-episode-countdown" className="h-1 bg-white/10">
             <div
               className="h-full bg-white transition-[width] duration-200 ease-linear"
               style={{

@@ -25,16 +25,29 @@ import {
   type SavedServer,
 } from './lib/servers';
 import { ServersPage } from './pages/servers';
-import { playbackHost } from './lib/hosts';
+import { playbackHost, type PlaybackHost } from './lib/hosts';
 import { ShellSetup } from './lib/hosts/shell';
 import { ThemeStyles } from './components/theme-styles';
 import { WindowControls } from './components/window-controls';
 
+/** Custom CSS matches these, so they can't change. */
+const HOST_NAMES: Record<PlaybackHost, string> = {
+  browser: 'browser',
+  shell: 'desktop',
+  desktop: 'jellyfin-desktop',
+  android: 'android',
+};
+
 /** The web app served at the Jellyfin API's `/web`. */
 export default function JellyfinWebApp() {
   React.useEffect(() => {
+    const html = document.documentElement;
     document.body.classList.add('jellyfin-web');
-    return () => document.body.classList.remove('jellyfin-web');
+    html.dataset.host = HOST_NAMES[playbackHost()];
+    return () => {
+      document.body.classList.remove('jellyfin-web');
+      delete html.dataset.host;
+    };
   }, []);
   useStableScrollbar();
   return (

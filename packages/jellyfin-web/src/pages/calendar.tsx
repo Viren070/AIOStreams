@@ -79,7 +79,7 @@ function EpisodeRow({ item }: { item: BaseItemDto }) {
     <a
       href={href(itemPath(item))}
       data-ui="calendar-entry"
-      data-played={played || undefined}
+      data-watched={played || undefined}
       className={cn(
         'flex items-center gap-3 rounded-xl p-1 transition-colors hover:bg-white/5',
         played && 'text-[--muted]'
@@ -180,7 +180,7 @@ function DayCell({
             <a
               href={href(itemPath(item))}
               data-ui="calendar-entry"
-              data-played={item.UserData?.Played || undefined}
+              data-watched={item.UserData?.Played || undefined}
               onClick={(e) => e.stopPropagation()}
               onPointerEnter={() => setHovered(item)}
               onPointerLeave={() => setHovered(undefined)}
@@ -390,6 +390,8 @@ export function CalendarPage({ month }: { month?: string }) {
         )}
       </div>
       <Modal
+        data-ui="dialog"
+        data-name="calendar-day"
         open={!!openDay}
         onOpenChange={(open) => !open && setOpenDay(null)}
         title={openDay ? longDay(openDay) : undefined}

@@ -246,6 +246,7 @@ function Cover({
     >
       {backdrop && (
         <img
+          data-ui="player-cover-image"
           src={backdrop}
           alt=""
           className="absolute inset-0 h-full w-full object-cover opacity-25"

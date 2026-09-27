@@ -283,6 +283,8 @@ function Menu({
 }) {
   return (
     <DropdownMenu
+      data-ui="player-menu"
+      data-name={name}
       side="top"
       align="end"
       sideOffset={8}
@@ -299,6 +301,8 @@ function Menu({
         {options.map((option) => (
           <DropdownMenuItem
             key={option.id}
+            data-ui="player-menu-item"
+            data-selected={(value ?? '') === option.id || undefined}
             onClick={() => onSelect(option.id === '' ? null : option.id)}
           >
             <LuCheck
@@ -734,6 +738,8 @@ export function PlayerControls({
     <div
       data-ui="player-controls"
       data-visible={visible || undefined}
+      data-paused={state.paused || undefined}
+      data-waiting={(state.waiting && !state.error) || undefined}
       className={cn(
         'fixed inset-0 z-10 select-none',
         !visible && 'cursor-none'
@@ -833,6 +839,7 @@ export function PlayerControls({
         // Above the bottom bar: its padding reaches up past this button.
         <div
           data-ui="skip-segment"
+          data-type={segment.type}
           className={cn(
             'absolute right-[max(1rem,env(safe-area-inset-right))] z-20 transition-[bottom] duration-300 sm:right-[max(2rem,env(safe-area-inset-right))]',
             visible

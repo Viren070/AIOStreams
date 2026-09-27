@@ -116,8 +116,14 @@ export function Modal(props: ModalProps) {
     onEscapeKeyDown,
     onPointerDownCapture,
     onInteractOutside,
-    ...rest
+    ...others
   } = props;
+  // The root renders no element, so `data-*` attributes go on the dialog box.
+  const rest: Record<string, unknown> = {};
+  const data: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(others)) {
+    (key.startsWith('data-') ? data : rest)[key] = value;
+  }
 
   // Radix judges an outside press at `click`, after it may have closed the
   // layer it hit (a Select, or a dialog above), so snapshot at `pointerdown`.
@@ -141,6 +147,7 @@ export function Modal(props: ModalProps) {
             )}
           >
             <DialogPrimitive.Content
+              {...data}
               className={cn(ModalAnatomy.content(), contentClass)}
               onOpenAutoFocus={onOpenAutoFocus}
               onCloseAutoFocus={onCloseAutoFocus}

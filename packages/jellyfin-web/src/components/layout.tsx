@@ -98,7 +98,12 @@ function AccountMenu({
   const { client, user } = useSession();
   const info = useServerInfo();
   return (
-    <DropdownMenu {...position} className="min-w-52" trigger={trigger}>
+    <DropdownMenu
+      data-ui="account-menu"
+      {...position}
+      className="min-w-52"
+      trigger={trigger}
+    >
       <DropdownMenuLabel>
         <span className="block truncate">{user.Name ?? 'You'}</span>
         <span className="block truncate text-xs font-normal text-[--muted]">
@@ -113,7 +118,11 @@ function AccountMenu({
             {group.map((item) => {
               const Icon = item.iconType;
               return (
-                <DropdownMenuItem key={item.name} onClick={item.onClick}>
+                <DropdownMenuItem
+                  key={item.name}
+                  data-name={item.id}
+                  onClick={item.onClick}
+                >
                   {Icon && <Icon className="text-lg" />}
                   {item.name}
                 </DropdownMenuItem>
@@ -141,7 +150,13 @@ function SidebarAccount({ items }: { items: SidebarItem[] }) {
             collapsed={!sidebar.isBelowBreakpoint}
             isSidebar
             itemClass="relative"
-            items={[{ name: user.Name ?? 'You', iconType: SidebarAvatar }]}
+            items={[
+              {
+                id: 'account',
+                name: user.Name ?? 'You',
+                iconType: SidebarAvatar,
+              },
+            ]}
           />
         </div>
       }
@@ -215,6 +230,7 @@ function HistoryButtons() {
   const nav = (window as { navigation?: NavigationHistory }).navigation;
   const back = (
     <HistoryButton
+      data-name="back"
       label="Back"
       icon={LuCircleArrowLeft}
       disabled={nav?.canGoBack === false}
@@ -239,6 +255,7 @@ function HistoryButtons() {
           trigger={<span className="flex">{back}</span>}
         >
           <HistoryButton
+            data-name="forward"
             label="Forward"
             icon={LuCircleArrowRight}
             className="border border-white/10 bg-[--paper] shadow-lg shadow-black/50"
@@ -261,12 +278,14 @@ export function WebLayout() {
   const several = (users.data?.length ?? 0) > 1;
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const activity: SidebarItem = {
+    id: 'activity',
     name: 'Activity',
     iconType: BiHistory,
     isCurrent: pathname.startsWith('/history'),
     onClick: () => navigate(to.history),
   };
   const calendar: SidebarItem = {
+    id: 'calendar',
     name: 'Calendar',
     iconType: BiCalendar,
     isCurrent: pathname.startsWith('/calendar'),
@@ -283,12 +302,14 @@ export function WebLayout() {
 
   const items: SidebarItem[] = [
     {
+      id: 'home',
       name: 'Home',
       iconType: BiHomeAlt2,
       isCurrent: pathname === '/',
       onClick: () => navigate(to.home),
     },
     {
+      id: 'discover',
       name: 'Discover',
       iconType: BiCompass,
       isCurrent:
@@ -296,12 +317,14 @@ export function WebLayout() {
       onClick: () => navigate(to.discover()),
     },
     {
+      id: 'search',
       name: 'Search',
       iconType: BiSearch,
       isCurrent: pathname.startsWith('/search'),
       onClick: () => navigate(to.search()),
     },
     {
+      id: 'favourites',
       name: 'Favourites',
       iconType: BiHeart,
       isCurrent: pathname.startsWith('/favourites'),
@@ -312,6 +335,7 @@ export function WebLayout() {
   ];
 
   const settings: SidebarItem = {
+    id: 'settings',
     name: 'Settings',
     iconType: BiCog,
     isCurrent: pathname.startsWith('/settings'),
@@ -320,11 +344,19 @@ export function WebLayout() {
 
   const accountItems: SidebarItem[] = [
     ...(several
-      ? [{ name: 'Switch user', iconType: BiTransferAlt, onClick: switchUser }]
+      ? [
+          {
+            id: 'switch-user',
+            name: 'Switch user',
+            iconType: BiTransferAlt,
+            onClick: switchUser,
+          },
+        ]
       : []),
     ...(configure
       ? [
           {
+            id: 'configure',
             name: 'Configure',
             iconType: BiSliderAlt,
             onClick: () => window.open(configure, '_blank'),
@@ -332,9 +364,17 @@ export function WebLayout() {
         ]
       : []),
     ...(changeServer
-      ? [{ name: 'Change server', iconType: BiServer, onClick: changeServer }]
+      ? [
+          {
+            id: 'change-server',
+            name: 'Change server',
+            iconType: BiServer,
+            onClick: changeServer,
+          },
+        ]
       : []),
     {
+      id: 'sign-out',
       name: 'Sign out',
       iconType: BiLogOutCircle,
       onClick: () => confirmSignOut.open(),
@@ -344,7 +384,7 @@ export function WebLayout() {
   return (
     <AppSidebarProvider>
       <AppLayout withSidebar sidebarSize="slim">
-        <AppLayoutSidebar>
+        <AppLayoutSidebar data-ui="sidebar">
           <Sidebar
             header={<Logo />}
             items={items}
@@ -404,6 +444,7 @@ function MobileNav({
               key={item.name}
               type="button"
               data-ui="mobile-nav-item"
+              data-name={item.id}
               aria-current={item.isCurrent ? 'page' : undefined}
               onClick={(e) => {
                 (document.activeElement as HTMLElement | null)?.blur();
@@ -431,6 +472,8 @@ function MobileNav({
             <button
               type="button"
               data-ui="mobile-nav-item"
+              data-name="account"
+              aria-current={inMenu ? 'page' : undefined}
               aria-label="Account"
               className={cn(
                 tab,

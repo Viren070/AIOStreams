@@ -113,7 +113,13 @@ export function ItemPage({
   }
 
   return (
-    <div data-ui="item-page" data-type={data?.Type} className="relative">
+    <div
+      data-ui="item-page"
+      data-type={data?.Type}
+      data-watched={data?.UserData?.Played || undefined}
+      data-favourite={data?.UserData?.IsFavorite || undefined}
+      className="relative"
+    >
       {pickId && <PickOnArrival itemId={pickId} />}
       <Backdrop
         images={data ? backdropUrls(client, data, { maxWidth: 1920 }) : []}
@@ -170,6 +176,8 @@ function Backdrop({
   const image = src && (
     <img
       key={src}
+      data-ui="item-backdrop-image"
+      data-wash={wash || undefined}
       src={src}
       alt=""
       onLoad={() => setLoaded(true)}
@@ -194,8 +202,16 @@ function Backdrop({
           {image}
         </BackdropFrame>
       )}
-      <div className="absolute inset-0 hidden bg-gradient-to-r from-[--background] via-[--background]/60 via-40% to-transparent lg:block" />
-      <div className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-[--background] via-[--background]/70 to-transparent" />
+      <div
+        data-ui="item-backdrop-shade"
+        data-name="side"
+        className="absolute inset-0 hidden bg-gradient-to-r from-[--background] via-[--background]/60 via-40% to-transparent lg:block"
+      />
+      <div
+        data-ui="item-backdrop-shade"
+        data-name="bottom"
+        className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-[--background] via-[--background]/70 to-transparent"
+      />
     </div>
   );
 }
@@ -214,50 +230,61 @@ function HeaderSkeleton() {
 }
 
 function Dot() {
-  return <span className="text-gray-500">•</span>;
+  return (
+    <span data-ui="meta-separator" className="text-gray-500">
+      •
+    </span>
+  );
 }
 
 function MetaRow({ item }: { item: BaseItemDto }) {
-  const parts: React.ReactNode[] = [];
+  const parts: [string, React.ReactNode][] = [];
   const start = item.ProductionYear;
   const end = item.EndDate ? new Date(item.EndDate).getFullYear() : null;
   if (item.Type === 'Series' && start) {
-    parts.push(
+    parts.push([
+      'year',
       item.Status === 'Continuing'
         ? `${start}–`
         : end && end !== start
           ? `${start}–${end}`
-          : start
-    );
-  } else if (start) parts.push(start);
+          : start,
+    ]);
+  } else if (start) parts.push(['year', start]);
   if (item.OfficialRating) {
-    parts.push(
+    parts.push([
+      'age-rating',
       <span className="rounded border border-white/30 px-1.5 py-px text-xs">
         {item.OfficialRating}
-      </span>
-    );
+      </span>,
+    ]);
   }
   const runtime = ticksToMs(item.RunTimeTicks);
-  if (runtime && item.Type !== 'Series') parts.push(duration(runtime));
+  if (runtime && item.Type !== 'Series') {
+    parts.push(['runtime', duration(runtime)]);
+  }
   if (item.CommunityRating) {
-    parts.push(
+    parts.push([
+      'score',
       <span className="inline-flex items-center gap-1">
         <BiSolidStar className="text-yellow-400" />
         {item.CommunityRating.toFixed(1)}
-      </span>
-    );
+      </span>,
+    ]);
   }
-  if (item.Type === 'Series' && item.Status) parts.push(item.Status);
+  if (item.Type === 'Series' && item.Status) {
+    parts.push(['status', item.Status]);
+  }
   if (!parts.length) return null;
   return (
     <div
       data-ui="item-meta"
       className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-gray-200"
     >
-      {parts.map((part, i) => (
-        <React.Fragment key={i}>
+      {parts.map(([name, part], i) => (
+        <React.Fragment key={name}>
           {i > 0 && <Dot />}
-          <span>{part}</span>
+          <span data-name={name}>{part}</span>
         </React.Fragment>
       ))}
     </div>
@@ -350,7 +377,7 @@ function Header({ item }: { item: BaseItemDto }) {
         {!!item.Genres?.length && (
           <div data-ui="item-genres" className="flex flex-wrap gap-1.5">
             {item.Genres.map((genre) => (
-              <Badge key={genre} intent="white" size="md">
+              <Badge key={genre} data-ui="item-genre" intent="white" size="md">
                 {genre}
               </Badge>
             ))}
@@ -372,6 +399,8 @@ function Header({ item }: { item: BaseItemDto }) {
         >
           {target && (
             <Button
+              data-ui="item-action"
+              data-name="play"
               intent="white"
               className="rounded-full"
               leftIcon={<BiPlay className="text-xl" />}
@@ -385,6 +414,8 @@ function Header({ item }: { item: BaseItemDto }) {
             <Tooltip
               trigger={
                 <IconButton
+                  data-ui="item-action"
+                  data-name="restart"
                   intent="gray-subtle"
                   className="rounded-full"
                   icon={<BiRevision />}
@@ -399,6 +430,8 @@ function Header({ item }: { item: BaseItemDto }) {
           )}
           {trailer && (
             <Button
+              data-ui="item-action"
+              data-name="trailer"
               intent="gray-outline"
               className="rounded-full"
               leftIcon={<BiMoviePlay className="text-lg" />}
@@ -411,6 +444,9 @@ function Header({ item }: { item: BaseItemDto }) {
             <Tooltip
               trigger={
                 <IconButton
+                  data-ui="item-action"
+                  data-name="watched"
+                  data-active={played || undefined}
                   intent={played ? 'primary-subtle' : 'gray-subtle'}
                   className="rounded-full"
                   icon={<BiCheck />}
@@ -428,6 +464,9 @@ function Header({ item }: { item: BaseItemDto }) {
           <Tooltip
             trigger={
               <IconButton
+                data-ui="item-action"
+                data-name="favourite"
+                data-active={favorite || undefined}
                 intent={favorite ? 'alert-subtle' : 'gray-subtle'}
                 className="rounded-full"
                 icon={favorite ? <BiSolidHeart /> : <BiHeart />}
@@ -445,6 +484,9 @@ function Header({ item }: { item: BaseItemDto }) {
             <Tooltip
               trigger={
                 <IconButton
+                  data-ui="item-action"
+                  data-name="drop"
+                  data-active={dropped || undefined}
                   intent={dropped ? 'warning-subtle' : 'gray-subtle'}
                   className="rounded-full"
                   icon={dropped ? <BiSolidDislike /> : <BiDislike />}
@@ -460,7 +502,11 @@ function Header({ item }: { item: BaseItemDto }) {
             </Tooltip>
           )}
           {!!item.ExternalUrls?.length && (
-            <span className="mx-1 h-6 w-px bg-white/10" aria-hidden />
+            <span
+              data-ui="item-actions-divider"
+              className="mx-1 h-6 w-px bg-white/10"
+              aria-hidden
+            />
           )}
           <ExternalLinks links={item.ExternalUrls} />
         </div>
@@ -820,6 +866,8 @@ function AllEpisodes({
   const target = React.useRef<HTMLDivElement>(null);
   return (
     <Modal
+      data-ui="dialog"
+      data-name="all-episodes"
       trigger={
         <Button
           size="sm"

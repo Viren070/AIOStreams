@@ -529,6 +529,7 @@ function EntryMenu({ entries }: { entries: HistoryEntry[] }) {
 
   return (
     <DropdownMenu
+      data-ui="history-entry-menu"
       align="end"
       trigger={
         <IconButton

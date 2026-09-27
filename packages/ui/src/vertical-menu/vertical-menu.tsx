@@ -144,6 +144,8 @@ const __VerticalMenuContext = React.createContext<
 
 export type VerticalMenuItem = {
   name: string;
+  /** Set as `data-name`, which stays the same as the name changes. */
+  id?: string;
   iconType?: React.ElementType;
   isCurrent?: boolean;
   onClick?: (e: React.MouseEvent<HTMLElement>) => void;
@@ -319,6 +321,7 @@ export const VerticalMenu = React.forwardRef<HTMLDivElement, VerticalMenuProps>(
                         itemClass
                       )}
                       data-current={item.isCurrent}
+                      data-name={item.id}
                       onClick={handleItemClick(item)}
                       data-vertical-menu-item-button={item.name}
                     >
@@ -345,6 +348,7 @@ export const VerticalMenu = React.forwardRef<HTMLDivElement, VerticalMenuProps>(
                                 itemClass
                               )}
                               data-current={sub.isCurrent}
+                              data-name={sub.id}
                               onClick={handleItemClick(sub)}
                               data-vertical-menu-item-button={sub.name}
                             >
@@ -361,7 +365,9 @@ export const VerticalMenu = React.forwardRef<HTMLDivElement, VerticalMenuProps>(
                       VerticalMenuAnatomy.item({ collapsed, isSidebar }),
                       itemClass
                     )}
+                    aria-current={item.isCurrent ? 'page' : undefined}
                     data-current={item.isCurrent}
+                    data-name={item.id}
                     onClick={handleItemClick(item)}
                     data-vertical-menu-item-button={item.name}
                   >
@@ -380,6 +386,7 @@ export const VerticalMenu = React.forwardRef<HTMLDivElement, VerticalMenuProps>(
                           )}
                           aria-current={item.isCurrent ? 'page' : undefined}
                           data-current={item.isCurrent}
+                          data-name={item.id}
                           onClick={handleItemClick(item)}
                         >
                           <ItemContent {...item} />

@@ -13,7 +13,11 @@ export function SettingsCard({
   children: React.ReactNode;
 }) {
   return (
-    <div data-ui="settings-card" className="space-y-3">
+    <div
+      data-ui="settings-card"
+      data-name={title?.toLowerCase().replace(/[^a-z0-9]+/g, '-')}
+      className="space-y-3"
+    >
       {(title || description) && (
         <div>
           {title && (

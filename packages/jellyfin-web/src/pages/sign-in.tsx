@@ -73,10 +73,17 @@ export function ErrorLine({ error }: { error: string | null }) {
 export const AUTH_CARD =
   'mx-auto w-full max-w-sm space-y-4 rounded-2xl border border-white/10 bg-gray-950/80 p-6 shadow-xl';
 
-export function Screen({ children }: { children: React.ReactNode }) {
+export function Screen({
+  name,
+  children,
+}: {
+  name: string;
+  children: React.ReactNode;
+}) {
   return (
     <div
       data-page="sign-in"
+      data-name={name}
       className="relative flex min-h-screen items-center justify-center bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.18),transparent_60%)] px-4 pb-[max(3rem,env(safe-area-inset-bottom))] pt-[max(3rem,env(safe-area-inset-top))]"
     >
       <div className="w-full max-w-3xl space-y-8">
@@ -180,7 +187,7 @@ export function SignInPage({
   };
 
   return (
-    <Screen>
+    <Screen name="sign-in">
       <motion.div {...RISE}>
         <form
           ref={scope}
@@ -290,7 +297,7 @@ export function Unreachable({
   onChangeServer?: () => void;
 }) {
   return (
-    <Screen>
+    <Screen name="unreachable">
       <motion.div
         {...RISE}
         data-ui="auth-card"
@@ -370,7 +377,7 @@ function QuickConnectPage({
   }, [approved, secret, onApproved]);
 
   return (
-    <Screen>
+    <Screen name="quick-connect">
       <motion.div
         {...RISE}
         data-ui="auth-card"
@@ -682,7 +689,7 @@ export function UserPicker({
   };
 
   return (
-    <Screen>
+    <Screen name="user-picker">
       {/* Takes the column's spacing, which a popped-out view would carry along. */}
       <div>
         <LayoutGroup>

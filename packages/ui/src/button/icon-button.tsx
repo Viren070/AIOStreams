@@ -8,7 +8,7 @@ import { cn, defineStyleAnatomy } from '../core/styling';
  * -----------------------------------------------------------------------------------------------*/
 
 export const IconButtonAnatomy = defineStyleAnatomy({
-  root: cva('UI-IconButton_root p-0 flex-none', {
+  root: cva('UI-IconButton__root p-0 flex-none', {
     variants: {
       size: {
         xs: 'text-xl h-6 w-6',

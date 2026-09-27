@@ -133,7 +133,10 @@ export function syncPreferences(
     })
     .catch(() => undefined);
   return () => {
-    if (mine === generation) session = null;
+    if (mine === generation) {
+      session = null;
+      publish({});
+    }
   };
 }
 
@@ -279,6 +282,10 @@ export function useThemeColors(): [ThemeColors, (value: ThemeColors) => void] {
 }
 
 export const MAX_CUSTOM_CSS = 20_000;
+
+export const CUSTOM_CSS_OFF = new URLSearchParams(window.location.search).has(
+  'safe'
+);
 
 function readCustomCss(): string {
   return current.customCss ?? '';

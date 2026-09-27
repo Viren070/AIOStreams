@@ -9,7 +9,7 @@ import { cn, ComponentAnatomy, defineStyleAnatomy } from '../core/styling';
 export const ButtonAnatomy = defineStyleAnatomy({
   root: cva(
     [
-      'UI-Button_root',
+      'UI-Button__root',
       'whitespace-nowrap font-medium rounded-lg',
       'inline-flex items-center text-white text-center justify-center',
       'focus-visible:outline-none focus-visible:ring-1 ring-offset-1 ring-offset-[--background] focus-visible:ring-white/40',

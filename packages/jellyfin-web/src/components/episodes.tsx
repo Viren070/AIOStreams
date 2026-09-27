@@ -140,7 +140,10 @@ function Thumb({
         )}
       />
       {playable && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover/episode:bg-black/30">
+        <div
+          data-ui="episode-play"
+          className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover/episode:bg-black/30"
+        >
           <BiPlay className="text-4xl text-white opacity-0 drop-shadow transition-opacity group-hover/episode:opacity-90" />
         </div>
       )}
@@ -226,6 +229,8 @@ function Head({
             image={landscapeUrls(client, episode, { maxWidth: 960 })}
             trigger={
               <IconButton
+                data-ui="episode-action"
+                data-name="details"
                 size="sm"
                 intent="gray-subtle"
                 className="size-8 rounded-full"
@@ -236,6 +241,9 @@ function Head({
           />
           {play && (
             <IconButton
+              data-ui="episode-action"
+              data-name="watched"
+              data-active={played || undefined}
               size="sm"
               intent={played ? 'primary' : 'gray-subtle'}
               className="size-8 rounded-full"
@@ -297,6 +305,14 @@ function Synopsis({
   );
 }
 
+function episodeState(episode: BaseItemDto) {
+  return {
+    'data-watched': episode.UserData?.Played || undefined,
+    'data-in-progress': (progressOf(episode) ?? 0) > 0 || undefined,
+    'data-unavailable': unavailableLabel(episode)?.toLowerCase(),
+  };
+}
+
 export function EpisodeCard({
   episode,
   highlighted,
@@ -309,6 +325,7 @@ export function EpisodeCard({
     <ItemMenu item={episode} onPage>
       <div
         data-ui="episode-card"
+        {...episodeState(episode)}
         data-highlighted={highlighted || undefined}
         className="group/episode relative space-y-2"
       >
@@ -339,6 +356,7 @@ function EpisodeListItem({
     <ItemMenu item={episode} onPage>
       <div
         data-ui="episode-list-item"
+        {...episodeState(episode)}
         data-highlighted={highlighted || undefined}
         className={cn(
           'group/episode relative grid grid-cols-[40%_minmax(0,1fr)] gap-x-3 gap-y-2 rounded-xl p-2 transition-colors hover:bg-white/[0.04] sm:grid-cols-[13rem_minmax(0,1fr)] sm:grid-rows-[auto_1fr] sm:gap-x-4 sm:gap-y-1',

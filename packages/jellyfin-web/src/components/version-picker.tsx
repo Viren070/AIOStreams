@@ -160,6 +160,8 @@ export function VersionPickerProvider({
     <PickerContext.Provider value={value}>
       {children}
       <Modal
+        data-ui="dialog"
+        data-name="versions"
         open={!!request}
         onOpenChange={(open) => !open && setRequest(null)}
         title={item ? itemTitle(item) : undefined}
@@ -302,6 +304,8 @@ function Versions({
               : 'Finding versions'}
           </p>
           <Button
+            data-ui="versions-action"
+            data-name="details"
             size="sm"
             intent="gray-subtle"
             className="rounded-full"
@@ -317,6 +321,8 @@ function Versions({
             <Tooltip
               trigger={
                 <IconButton
+                  data-ui="versions-action"
+                  data-name="search-again"
                   size="sm"
                   intent="gray-subtle"
                   className="rounded-full"
@@ -334,7 +340,10 @@ function Versions({
           )}
         </div>
         {request.startMs > 0 && (
-          <div className="grid grid-cols-2 gap-1 rounded-full bg-black/40 p-1">
+          <div
+            data-ui="versions-start"
+            className="grid grid-cols-2 gap-1 rounded-full bg-black/40 p-1"
+          >
             <Button
               size="sm"
               intent={startMs ? 'white' : 'gray-basic'}
@@ -355,6 +364,7 @@ function Versions({
         )}
         {sources.length >= FILTER_FROM && (
           <TextInput
+            data-ui="versions-filter"
             value={filter}
             onValueChange={setFilter}
             placeholder="Filter versions"
@@ -413,6 +423,7 @@ function Versions({
             ...(template
               ? [
                   {
+                    name: 'external-player',
                     label: 'Open in external player',
                     icon: <BiLinkExternal />,
                     run: () => {
@@ -422,6 +433,7 @@ function Versions({
                 ]
               : []),
             {
+              name: 'copy-link',
               label: 'Copy stream link',
               icon: <BiCopy />,
               run: () =>
@@ -441,10 +453,14 @@ function Versions({
             >
               <button
                 type="button"
+                data-ui="version-play"
                 onClick={() => start(source)}
                 className="flex min-w-0 flex-1 items-start gap-3 rounded-xl p-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-white/60"
               >
-                <span className="hidden size-9 flex-none items-center justify-center rounded-full bg-white/10 text-white transition-colors group-hover/version:bg-white group-hover/version:text-black sm:flex">
+                <span
+                  data-ui="version-play-icon"
+                  className="hidden size-9 flex-none items-center justify-center rounded-full bg-white/10 text-white transition-colors group-hover/version:bg-white group-hover/version:text-black sm:flex"
+                >
                   <BiPlay className="text-xl" />
                 </span>
                 <span className="min-w-0 flex-1 space-y-1">
@@ -479,6 +495,7 @@ function Versions({
               </button>
               <div className="absolute right-1.5 top-1.5 sm:hidden">
                 <DropdownMenu
+                  data-ui="version-menu"
                   align="end"
                   trigger={
                     <IconButton
@@ -491,7 +508,11 @@ function Versions({
                   }
                 >
                   {actions.map((a) => (
-                    <DropdownMenuItem key={a.label} onClick={a.run}>
+                    <DropdownMenuItem
+                      key={a.label}
+                      data-name={a.name}
+                      onClick={a.run}
+                    >
                       {a.icon}
                       {a.label}
                     </DropdownMenuItem>
@@ -504,6 +525,8 @@ function Versions({
                     key={a.label}
                     trigger={
                       <IconButton
+                        data-ui="version-action"
+                        data-name={a.name}
                         size="sm"
                         intent="gray-basic"
                         className="rounded-full"
@@ -604,6 +627,8 @@ function ExternalPrompt({
   const setPlayed = useSetPlayed();
   return (
     <Modal
+      data-ui="dialog"
+      data-name="external-player"
       open={!!item}
       onOpenChange={(open) => !open && onClose()}
       title="Playing in your player"

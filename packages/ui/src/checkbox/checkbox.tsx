@@ -43,7 +43,7 @@ export const CheckboxAnatomy = defineStyleAnatomy({
     }
   ),
   label: cva(
-    ['UI-Checkbox_label', 'font-normal', 'data-[disabled=true]:opacity-50'],
+    ['UI-Checkbox__label', 'font-normal', 'data-[disabled=true]:opacity-50'],
     {
       variants: {
         size: {

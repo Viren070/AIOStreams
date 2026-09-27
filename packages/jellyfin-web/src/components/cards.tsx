@@ -122,6 +122,8 @@ export function PosterCard(props: PosterCardProps) {
     <a
       data-ui="poster-card"
       data-shape={shape}
+      data-watched={watched || undefined}
+      data-in-progress={(!!progress && progress > 0) || undefined}
       href={href}
       title={showTitle ? undefined : title}
       className={cn('group/poster block space-y-2', props.className)}
@@ -138,7 +140,10 @@ export function PosterCard(props: PosterCardProps) {
           alt={title}
           className="group-hover/poster:scale-[1.04]"
         />
-        <div className="absolute inset-0 bg-black/0 transition-colors group-hover/poster:bg-black/20" />
+        <div
+          data-ui="poster-card-shade"
+          className="absolute inset-0 bg-black/0 transition-colors group-hover/poster:bg-black/20"
+        />
         {watched && <WatchedMark />}
         {!watched && !!unwatched && (
           <span
@@ -233,7 +238,10 @@ export function WideCard(props: WideCardProps) {
           )}
         />
         {!unavailable && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover/wide:bg-black/30">
+          <div
+            data-ui="wide-card-play"
+            className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover/wide:bg-black/30"
+          >
             <BiPlay className="text-5xl text-white opacity-0 drop-shadow transition-opacity group-hover/wide:opacity-90" />
           </div>
         )}
@@ -284,6 +292,11 @@ export function WideCard(props: WideCardProps) {
   return (
     <div
       data-ui="wide-card"
+      data-watched={watched || undefined}
+      data-in-progress={(!!progress && progress > 0) || undefined}
+      data-highlighted={highlighted || undefined}
+      data-dimmed={dimmed || undefined}
+      data-unavailable={unavailable || undefined}
       className={cn('group/wide relative space-y-2', props.className)}
     >
       {href ? (

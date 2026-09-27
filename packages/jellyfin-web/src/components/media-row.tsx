@@ -89,6 +89,7 @@ export function MediaRow({
   onEndReached,
   startIndex,
   action,
+  rowRef,
   children,
 }: {
   id?: string;
@@ -104,6 +105,7 @@ export function MediaRow({
   /** Read once, so the row stays put as its items change. */
   startIndex?: number;
   action?: React.ReactNode;
+  rowRef?: React.Ref<HTMLElement>;
   children?: React.ReactNode;
 }) {
   const restoreKey = useEntryKey(id);
@@ -113,14 +115,18 @@ export function MediaRow({
   if (!loading && !items.length) return null;
   const skeletons = (count: number) =>
     Array.from({ length: count }, (_, i) => (
-      <CarouselItem key={`skeleton-${i}`} className={width}>
+      <CarouselItem
+        key={`skeleton-${i}`}
+        data-ui="media-row-item"
+        className={width}
+      >
         <Skeleton
           className={cn('h-auto w-full rounded-xl', SKELETON_SHAPE[shape])}
         />
       </CarouselItem>
     ));
   return (
-    <section data-ui="media-row" data-row={id}>
+    <section ref={rowRef} data-ui="media-row" data-row={id} data-shape={shape}>
       <Carousel
         opts={{ align: 'start', dragFree: true, startIndex: start }}
         restoreKey={restoreKey}
@@ -138,7 +144,11 @@ export function MediaRow({
             <div className="min-w-0">{header}</div>
           )}
           <div className="flex flex-none items-center gap-2">
-            {action}
+            {action && (
+              <div data-ui="media-row-action" className="flex">
+                {action}
+              </div>
+            )}
             <RowNav />
           </div>
         </div>
@@ -150,7 +160,11 @@ export function MediaRow({
           {loading
             ? skeletons(8)
             : items.map((child, i) => (
-                <CarouselItem key={i} className={width}>
+                <CarouselItem
+                  key={i}
+                  data-ui="media-row-item"
+                  className={width}
+                >
                   <motion.div {...fadeIn(i)}>{child}</motion.div>
                 </CarouselItem>
               ))}
@@ -190,6 +204,8 @@ export function CardGrid({
   return (
     <div
       data-ui="card-grid"
+      data-shape={shape}
+      data-size={size}
       className={cn(
         'grid gap-4',
         shape === 'wide' ? GRID_COLUMNS[size].wide : GRID_COLUMNS[size].poster

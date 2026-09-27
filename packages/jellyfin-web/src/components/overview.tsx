@@ -66,6 +66,8 @@ export function OverviewInfo({
   }
   return (
     <Modal
+      data-ui="dialog"
+      data-name="overview"
       trigger={trigger}
       title={title}
       description={line}

@@ -57,12 +57,13 @@ export function ItemMenu({
       <ContextMenuTrigger asChild>
         <div {...heroTarget}>{children}</div>
       </ContextMenuTrigger>
-      <ContextMenuContent>
+      <ContextMenuContent data-ui="item-menu">
         <ContextMenuLabel className="line-clamp-1">
           {onPage ? item.Name : itemTitle(item)}
         </ContextMenuLabel>
         {playable && (
           <ContextMenuItem
+            data-name="play"
             onSelect={() => picker.play(item, { startMs: resumeMs })}
           >
             <BiPlay /> {resumeMs ? 'Resume' : 'Play'}
@@ -70,6 +71,7 @@ export function ItemMenu({
         )}
         {playable && (
           <ContextMenuItem
+            data-name={skipList ? 'choose-version' : 'play-now'}
             onSelect={() =>
               picker.play(item, { startMs: resumeMs, held: true })
             }
@@ -79,7 +81,10 @@ export function ItemMenu({
           </ContextMenuItem>
         )}
         {!onPage && (
-          <ContextMenuItem onSelect={() => navigate(itemPath(item))}>
+          <ContextMenuItem
+            data-name="open"
+            onSelect={() => navigate(itemPath(item))}
+          >
             {item.Type === 'Episode' ? (
               <>
                 <BiTv /> Go to show
@@ -95,6 +100,7 @@ export function ItemMenu({
           <>
             {(playable || !onPage) && <ContextMenuSeparator />}
             <ContextMenuItem
+              data-name="watched"
               onSelect={() =>
                 setPlayed.mutate({ itemId: item.Id!, played: !played })
               }
@@ -102,12 +108,16 @@ export function ItemMenu({
               <BiCheck /> {played ? 'Mark unwatched' : 'Mark watched'}
             </ContextMenuItem>
             {item.Type === 'Episode' && item.SeriesId && (
-              <ContextMenuItem onSelect={() => setPlayedUpTo.mutate(item)}>
+              <ContextMenuItem
+                data-name="watched-up-to"
+                onSelect={() => setPlayedUpTo.mutate(item)}
+              >
                 <BiCheckDouble /> Mark watched up to here
               </ContextMenuItem>
             )}
             {!played && resumeMs > 0 && (
               <ContextMenuItem
+                data-name="remove-resume"
                 onSelect={() =>
                   setPlayed.mutate({ itemId: item.Id!, played: false })
                 }
@@ -118,6 +128,7 @@ export function ItemMenu({
           </>
         )}
         <ContextMenuItem
+          data-name="favourite"
           onSelect={() =>
             setFavorite.mutate({ itemId: item.Id!, favorite: !favorite })
           }

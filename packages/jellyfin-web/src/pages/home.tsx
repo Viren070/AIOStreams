@@ -176,7 +176,10 @@ export function HomePage() {
         items={heroItems.length ? heroItems : continueItems}
         loading={heroLoading}
       >
-        <div className="space-y-10 px-4 pb-16 pt-8 lg:pl-0 lg:pr-10">
+        <div
+          data-ui="home-rows"
+          className="space-y-10 px-4 pb-16 pt-8 lg:pl-0 lg:pr-10"
+        >
           {rows}
         </div>
       </FollowHero>
@@ -185,6 +188,7 @@ export function HomePage() {
     <div className="pb-16">
       <Hero items={heroItems} loading={heroLoading} />
       <div
+        data-ui="home-rows"
         className={
           heroItems.length || heroLoading
             ? 'relative z-[1] space-y-10 px-4 pt-2 lg:pl-0 lg:pr-10'
@@ -306,7 +310,7 @@ const ROW_PAGE = 20;
 function LibraryRow({ view }: { view: BaseItemDto }) {
   const { client } = useSession();
   const [near, setNear] = React.useState(false);
-  const ref = useInView<HTMLDivElement>(() => setNear(true), '400px');
+  const ref = useInView<HTMLElement>(() => setNear(true), '400px');
   const pages = useItemPages(view.Id!, {
     types: libraryTypes(view),
     recursive: true,
@@ -323,54 +327,44 @@ function LibraryRow({ view }: { view: BaseItemDto }) {
     if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // Hidden once empty, so the list's spacing skips it too.
+  // Shown loading until fetched: the row itself must mount to come into view.
   return (
-    <div
-      ref={ref}
-      hidden={!!pages.data && !items.length}
-      className="min-h-[2rem]"
-    >
-      {/* Cached rows show at once, so back restores into the full page height. */}
-      {(near || pages.data) && (
-        <MediaRow
-          id={`view:${view.Id}`}
-          title={
-            <a
-              href={href(to.discover(view.Id!))}
-              className="group/title inline-flex items-baseline gap-2"
-            >
-              {view.Name}
-              {label && (
-                <span className="text-sm font-normal text-[--muted]">
-                  {label}
-                </span>
-              )}
-              <BiChevronRight className="self-center text-xl text-[--muted] transition-transform group-hover/title:translate-x-0.5" />
-            </a>
-          }
-          shape={landscape ? 'wide' : 'poster'}
-          loading={pages.isLoading}
-          loadingMore={isFetchingNextPage}
-          onEndReached={more}
+    <MediaRow
+      rowRef={ref}
+      id={`view:${view.Id}`}
+      title={
+        <a
+          href={href(to.discover(view.Id!))}
+          className="group/title inline-flex items-baseline gap-2"
         >
-          {items.map((item) => (
-            <ItemMenu key={item.Id} item={item}>
-              <PosterCard
-                href={href(itemPath(item))}
-                shape={landscape ? 'landscape' : cardShape(item)}
-                image={posterUrl(client, item, {
-                  maxWidth: landscape ? 640 : 400,
-                })}
-                title={item.Name ?? ''}
-                subtitle={itemSubtitle(item)}
-                watched={item.UserData?.Played}
-                unwatched={item.UserData?.UnplayedItemCount ?? undefined}
-                progress={progressOf(item)}
-              />
-            </ItemMenu>
-          ))}
-        </MediaRow>
-      )}
-    </div>
+          {view.Name}
+          {label && (
+            <span className="text-sm font-normal text-[--muted]">{label}</span>
+          )}
+          <BiChevronRight className="self-center text-xl text-[--muted] transition-transform group-hover/title:translate-x-0.5" />
+        </a>
+      }
+      shape={landscape ? 'wide' : 'poster'}
+      loading={!pages.data && !pages.isError}
+      loadingMore={isFetchingNextPage}
+      onEndReached={more}
+    >
+      {items.map((item) => (
+        <ItemMenu key={item.Id} item={item}>
+          <PosterCard
+            href={href(itemPath(item))}
+            shape={landscape ? 'landscape' : cardShape(item)}
+            image={posterUrl(client, item, {
+              maxWidth: landscape ? 640 : 400,
+            })}
+            title={item.Name ?? ''}
+            subtitle={itemSubtitle(item)}
+            watched={item.UserData?.Played}
+            unwatched={item.UserData?.UnplayedItemCount ?? undefined}
+            progress={progressOf(item)}
+          />
+        </ItemMenu>
+      ))}
+    </MediaRow>
   );
 }

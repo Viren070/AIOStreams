@@ -189,6 +189,8 @@ export function SyncToLine({
 
   return (
     <Modal
+      data-ui="dialog"
+      data-name="sync-to-line"
       open
       onOpenChange={(open) => !open && onClose()}
       title="Sync to a line"

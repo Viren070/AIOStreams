@@ -46,7 +46,7 @@ export const RadioGroupAnatomy = defineStyleAnatomy({
   ]),
   itemLabel: cva(
     [
-      'UI-Checkbox_itemLabel',
+      'UI-RadioGroup__itemLabel',
       'font-normal block',
       'data-[disabled=true]:opacity-50',
     ],

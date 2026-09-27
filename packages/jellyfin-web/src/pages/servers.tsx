@@ -183,7 +183,7 @@ export function ServersPage({
   });
 
   return (
-    <Screen>
+    <Screen name="servers">
       <motion.div {...RISE}>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div key={adding ? 'add' : 'list'} {...FADE}>

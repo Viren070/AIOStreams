@@ -64,6 +64,7 @@ import {
 } from '../lib/playback';
 import {
   AUDIO_CHANNELS,
+  CUSTOM_CSS_OFF,
   MAX_CUSTOM_CSS,
   MAX_FEATURED,
   useCustomCss,
@@ -782,9 +783,12 @@ function InterfaceSection() {
   );
 }
 
+const KEEP_CSS_MS = 15_000;
+
 function ThemeSection() {
   const [colors, setColors] = useThemeColors();
   const [css, setCss] = useCustomCss();
+  const [draft, setDraft] = React.useState(css);
   const accent = colors.accent ?? DEFAULT_ACCENT;
   const background = colors.background ?? DEFAULT_BACKGROUND;
   // The default colours are stored as nothing, so a later default change applies.
@@ -794,6 +798,29 @@ function ThemeSection() {
       background:
         next.background === DEFAULT_BACKGROUND ? undefined : next.background,
     });
+  // Undone unless kept, so CSS that hides the page can't lock anyone out.
+  const pending = React.useRef<
+    { id: string | number; previous: string } | undefined
+  >(undefined);
+  const apply = () => {
+    const previous = pending.current?.previous ?? css;
+    if (pending.current) toast.dismiss(pending.current.id);
+    setCss(draft);
+    const id = toast('Custom CSS applied', {
+      description: 'It will be undone unless you keep it.',
+      duration: KEEP_CSS_MS,
+      action: { label: 'Keep', onClick: () => undefined },
+      onDismiss: () => {
+        if (pending.current?.id === id) pending.current = undefined;
+      },
+      onAutoClose: () => {
+        pending.current = undefined;
+        setCss(previous);
+        toast('Custom CSS undone');
+      },
+    });
+    pending.current = { id, previous };
+  };
   return (
     <SettingsCard
       title="Theme"
@@ -847,36 +874,57 @@ function ThemeSection() {
         onValueChange={(value) => pick({ accent, background: value })}
       />
       <Textarea
+        data-ui="custom-css-editor"
         label="Custom CSS"
         help={
-          <>
-            Applied on top of the theme. Parts of the app carry a{' '}
-            <code>data-ui</code> attribute to style them by, such as{' '}
-            <code>[data-ui=&quot;progress-bar&quot;]</code>.
-          </>
+          CUSTOM_CSS_OFF ? (
+            <>
+              Off for this visit, since the address ends in <code>?safe</code>.
+              Fix or clear it here, then open the app without it.
+            </>
+          ) : (
+            <>
+              Applied on top of the theme. Parts of the app carry a{' '}
+              <code>data-ui</code> attribute to style them by, such as{' '}
+              <code>[data-ui=&quot;progress-bar&quot;]</code>. If it ever hides
+              the page, add <code>?safe</code> to the address to turn it off.
+            </>
+          )
         }
-        value={css}
-        onValueChange={setCss}
+        value={draft}
+        onValueChange={setDraft}
         maxLength={MAX_CUSTOM_CSS}
         spellCheck={false}
         placeholder={
           '[data-ui="progress-bar-fill"] {\n  background: hotpink;\n}'
         }
-        className="min-h-40 font-mono text-xs"
+        className="min-h-60 font-mono text-xs"
       />
-      {(colors.accent || colors.background || css) && (
+      <div className="flex flex-wrap gap-2">
         <Button
           size="sm"
-          intent="gray-outline"
-          className="rounded-full"
-          onClick={() => {
-            setColors({});
-            setCss('');
-          }}
+          intent="white"
+          className="rounded-full max-sm:w-full"
+          disabled={draft.trim() === css.trim()}
+          onClick={apply}
         >
-          Reset theme
+          Apply CSS
         </Button>
-      )}
+        {(colors.accent || colors.background || css) && (
+          <Button
+            size="sm"
+            intent="gray-outline"
+            className="rounded-full max-sm:w-full"
+            onClick={() => {
+              setColors({});
+              setCss('');
+              setDraft('');
+            }}
+          >
+            Reset theme
+          </Button>
+        )}
+      </div>
     </SettingsCard>
   );
 }

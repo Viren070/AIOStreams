@@ -23,10 +23,12 @@ function Shade() {
     <>
       <div
         data-ui="hero-shade"
+        data-name="side"
         className="absolute inset-0 bg-gradient-to-r from-[--background] via-[--background]/70 via-35% to-transparent"
       />
       <div
         data-ui="hero-shade"
+        data-name="bottom"
         className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-[--background] via-[--background]/60 to-transparent"
       />
     </>
@@ -76,6 +78,8 @@ function HeroSkeleton() {
   return (
     <section
       aria-hidden
+      data-ui="hero"
+      data-loading
       className="relative h-[26rem] w-full overflow-hidden sm:h-[30rem] lg:h-[max(36rem,53vh)]"
     >
       <div className="absolute inset-0 animate-pulse bg-[--subtle]" />
@@ -147,16 +151,22 @@ function HeroDetails({
       held: true,
     })
   );
-  const meta = [
-    item.Type === 'Episode' ? itemSubtitle(item) : item.ProductionYear,
-    item.CommunityRating ? (
-      <span className="inline-flex items-center gap-1">
-        <BiSolidStar className="text-yellow-400" />
-        {item.CommunityRating.toFixed(1)}
-      </span>
-    ) : null,
-    item.Genres?.slice(0, 3).join(', '),
-  ].filter(Boolean);
+  const parts: [string, React.ReactNode][] = [
+    item.Type === 'Episode'
+      ? ['episode', itemSubtitle(item)]
+      : ['year', item.ProductionYear],
+    [
+      'score',
+      item.CommunityRating ? (
+        <span className="inline-flex items-center gap-1">
+          <BiSolidStar className="text-yellow-400" />
+          {item.CommunityRating.toFixed(1)}
+        </span>
+      ) : null,
+    ],
+    ['genres', item.Genres?.slice(0, 3).join(', ')],
+  ];
+  const meta = parts.filter(([, part]) => part);
 
   return (
     <>
@@ -180,10 +190,14 @@ function HeroDetails({
           data-ui="hero-meta"
           className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-gray-200"
         >
-          {meta.map((m, i) => (
-            <React.Fragment key={i}>
-              {i > 0 && <span className="text-gray-500">•</span>}
-              <span>{m}</span>
+          {meta.map(([name, part], i) => (
+            <React.Fragment key={name}>
+              {i > 0 && (
+                <span data-ui="meta-separator" className="text-gray-500">
+                  •
+                </span>
+              )}
+              <span data-name={name}>{part}</span>
             </React.Fragment>
           ))}
         </div>
@@ -199,6 +213,8 @@ function HeroDetails({
       <div data-ui="hero-actions" className="flex flex-wrap gap-2">
         {playable && (
           <Button
+            data-ui="hero-action"
+            data-name="play"
             intent="white"
             className="rounded-full"
             leftIcon={<BiPlay className="text-xl" />}
@@ -213,6 +229,8 @@ function HeroDetails({
           </Button>
         )}
         <Button
+          data-ui="hero-action"
+          data-name="info"
           intent={playable ? 'gray-outline' : 'white'}
           className="rounded-full"
           leftIcon={<BiInfoCircle className="text-xl" />}
@@ -288,6 +306,8 @@ export function Hero({
             <button
               key={f.Id}
               type="button"
+              data-ui="hero-dot"
+              data-current={i === index || undefined}
               aria-label={`Show ${f.Name}`}
               onClick={() => setIndex(i)}
               className={cn(
@@ -407,6 +427,7 @@ export function FollowHero({
       <div className="relative z-[1] flex h-dvh flex-col">
         <section
           data-ui="hero"
+          data-follow
           className="flex h-[55%] flex-none flex-col justify-end"
         >
           <div
