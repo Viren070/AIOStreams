@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-router';
 import {
   BiCompass,
+  BiHeart,
   BiHistory,
   BiHomeAlt2,
   BiLogOutCircle,
@@ -277,6 +278,12 @@ export function WebLayout() {
       iconType: BiSearch,
       isCurrent: pathname.startsWith('/search'),
       onClick: () => navigate(to.search()),
+    },
+    {
+      name: 'Favourites',
+      iconType: BiHeart,
+      isCurrent: pathname.startsWith('/favourites'),
+      onClick: () => navigate(to.favourites()),
     },
     {
       name: 'Activity',

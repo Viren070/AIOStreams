@@ -12,6 +12,7 @@ import { handleAndroidBack } from './lib/hosts/jellyfin-android';
 import { lastCatalog } from './lib/settings';
 import { HomePage } from './pages/home';
 import { DiscoverIndex, DiscoverPage } from './pages/discover';
+import { FavouritesPage } from './pages/favourites';
 import { SearchPage } from './pages/search';
 import { ItemPage } from './pages/item';
 import { PersonPage } from './pages/person';
@@ -40,6 +41,20 @@ const historyRoute = createRoute({
   path: '/history',
   component: HistoryPage,
 });
+
+const favouritesRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/favourites',
+  validateSearch: (search: Record<string, unknown>) => ({
+    kind: search.kind == null ? undefined : String(search.kind),
+  }),
+  component: FavouritesRouteView,
+});
+
+function FavouritesRouteView(): React.ReactElement {
+  const { kind } = favouritesRoute.useSearch();
+  return <FavouritesPage kind={kind} />;
+}
 
 const settingsRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -174,6 +189,7 @@ const routeTree = rootRoute.addChildren([
   shellRoute.addChildren([
     homeRoute,
     historyRoute,
+    favouritesRoute,
     settingsRoute,
     searchRoute,
     discoverIndexRoute,
