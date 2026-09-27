@@ -32,7 +32,7 @@ import { Modal } from '@aiostreams/ui/modal';
 import { TextInput } from '@aiostreams/ui/text-input';
 import { Tooltip } from '@aiostreams/ui/tooltip';
 import { useMode } from '@/context/mode';
-import { DonationModal } from '@/components/shared/donation-modal';
+import { DonationModal } from '@aiostreams/ui/shared/donation-modal';
 import { useSave } from '@/context/save';
 
 type MenuItem = VerticalMenuItem & {

@@ -18,7 +18,7 @@ export function DonationModal({
         <div className="flex flex-col gap-2 items-center">
           <span className="text-3xl">💖</span>
           <h2 className="text-xl font-bold">Donate to Me</h2>
-          <p className="text-sm text-muted-foreground max-w-md">
+          <p className="text-sm text-[--muted] max-w-md">
             AIOStreams is a solo project built and maintained by me in my free
             time. If you find it useful, please consider supporting my work.
             Your donation helps me keep the project alive and improve it for

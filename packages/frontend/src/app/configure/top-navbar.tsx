@@ -9,7 +9,7 @@ import { useMenu } from '@/context/menu';
 import { IconButton } from '@aiostreams/ui/button';
 import { BiHeart, BiLogInCircle, BiLogOutCircle } from 'react-icons/bi';
 import { useDisclosure } from '@aiostreams/ui/hooks/disclosure';
-import { DonationModal } from '@/components/shared/donation-modal';
+import { DonationModal } from '@aiostreams/ui/shared/donation-modal';
 import { useCommandPalette } from '@/context/command-palette';
 import { CommandPaletteTopBarButton } from '@/components/shared/command-palette/search-button';
 import { useConfigAuth } from '@/context/config-auth';
