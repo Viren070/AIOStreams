@@ -6,11 +6,13 @@ import type { ParsedStream, UserData } from '../db/schemas.js';
 function makeStream(
   mediaInfoQuality: 'probe' | 'indexer' | 'addon' | undefined,
   languages: string[],
-  subtitles: string[]
+  subtitles: string[],
+  filename?: string
 ): ParsedStream {
   return {
     id: Math.random().toString(),
     type: 'p2p',
+    filename,
     parsedFile: {
       audioChannels: [],
       visualTags: [],
@@ -18,6 +20,11 @@ function makeStream(
       languages,
       subtitles,
       mediaInfoQuality,
+    },
+    addon: {
+      instanceId: 'test-instance',
+      resultPassthrough: false,
+      preset: { id: 'test-preset' },
     },
   } as unknown as ParsedStream;
 }
@@ -34,6 +41,24 @@ function merge(winner: ParsedStream, others: ParsedStream[]) {
   };
   dedup.mergeLanguagesAndSubtitles(winner, others, ['languages', 'subtitles']);
 }
+
+describe('deduplicate', () => {
+  it('repost suffix and file extension are being stripped correctly', async () => {
+    const stream1 = makeStream(undefined, [], [], 'Name.mkv-xpost');
+    const stream2 = makeStream(undefined, [], [], 'Name');
+    const dedup = new StreamDeduplicator({
+      deduplicator: {
+        enabled: true,
+        keys: ['filename'],
+        p2p: 'single_result',
+      },
+      presets: [],
+      services: [],
+    } as unknown as UserData);
+    const results = await dedup.deduplicate([stream1, stream2]);
+    assert.equal(results.length, 1);
+  });
+});
 
 describe('mergeLanguagesAndSubtitles', () => {
   it('takes only the probe, discarding the indexer entirely', () => {
