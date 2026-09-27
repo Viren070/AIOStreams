@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.35.2](https://github.com/Viren070/AIOStreams/compare/v2.35.1...v2.35.2) (2026-09-27)
+
+
+### Features
+
+* **jellyfin-web:** add hooks for custom CSS and an apply step ([6a66b23](https://github.com/Viren070/AIOStreams/commit/6a66b234cfb9008968fe50cc2dabdbbb582a23c5))
+
+
+### Bug Fixes
+
+* **dashboard:** load settings saved on other instances ([b99ef06](https://github.com/Viren070/AIOStreams/commit/b99ef060e954c0b2168c8b7b56ce71adbaa02b4b))
+* **jellyfin-web:** brighten the calendar's episode art ([46a092c](https://github.com/Viren070/AIOStreams/commit/46a092c692d0544e005d5c6ede353d3c8985c57d))
+* **ui:** keep a modal open when a press closes a dialog above it ([c0c745b](https://github.com/Viren070/AIOStreams/commit/c0c745b78d3077bf5df36f6b1bc3a0f59ed349a5))
+
 ## [2.35.1](https://github.com/Viren070/AIOStreams/compare/v2.35.0...v2.35.1) (2026-09-27)
 
 
