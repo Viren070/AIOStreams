@@ -978,25 +978,30 @@ router.get(
 router.get(
   '/Shows/:seriesId/Episodes',
   jf(async (req, res, ctx) => {
-    const d = await decodeForRequest(ctx, param(req, 'seriesId'));
-    if (
-      d?.kind !== 'descriptor' ||
-      (d.descriptor.k !== 'series' && d.descriptor.k !== 'movie')
-    ) {
+    // Given a season, the path id is ignored, as some clients put the season's id there.
+    const seasonId = qs(req, 'SeasonId');
+    const sd = seasonId ? await decodeForRequest(ctx, seasonId) : null;
+    const fromSeason =
+      sd?.kind === 'descriptor' && sd.descriptor.k === 'season'
+        ? sd.descriptor
+        : undefined;
+    const d = fromSeason
+      ? null
+      : await decodeForRequest(ctx, param(req, 'seriesId'));
+    const show =
+      fromSeason ??
+      (d?.kind === 'descriptor' &&
+      (d.descriptor.k === 'series' || d.descriptor.k === 'movie')
+        ? d.descriptor
+        : undefined);
+    if (!show) {
       res.status(404).json({ Message: 'Series not found' });
       return;
     }
-    let season: number | undefined;
-    const seasonId = qs(req, 'SeasonId');
-    if (seasonId) {
-      const sd = await decodeForRequest(ctx, seasonId);
-      if (sd?.kind === 'descriptor' && sd.descriptor.k === 'season')
-        season = sd.descriptor.s;
-    }
+    let season = fromSeason?.s;
     const seasonNum = qs(req, 'Season');
     if (season == null && seasonNum) season = Number(seasonNum);
-    let eps =
-      (await episodesForSeries(ctx, d.descriptor, season))?.episodes ?? [];
+    let eps = (await episodesForSeries(ctx, show, season))?.episodes ?? [];
     const startItemId = qs(req, 'StartItemId');
     if (startItemId) {
       const idx = eps.findIndex(
