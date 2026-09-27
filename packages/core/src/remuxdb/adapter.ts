@@ -1,6 +1,7 @@
 import type { ParsedStream } from '../db/schemas.js';
 import { decodeProxyToken, ProxyDataSchema } from '../proxy/token.js';
 import type { MediaInfo } from '../utils/media-info.js';
+import { NEWZNAB_INDEXERS } from '../presets/newznab.js';
 import type { MediaProbeVersion, ProbeSource, TrackDetail } from './client.js';
 
 function unwrapProxyUrl(nzbUrl: string): string {
@@ -14,6 +15,28 @@ function unwrapProxyUrl(nzbUrl: string): string {
     return data.success ? data.data.url : nzbUrl;
   } catch {
     return nzbUrl;
+  }
+}
+
+const KNOWN_INDEXER_HOSTNAMES: Record<string, string> = Object.fromEntries(
+  NEWZNAB_INDEXERS.flatMap((i) =>
+    i.remuxDbIndexer
+      ? [[new URL(i.value).hostname.replace(/^www\./, ''), i.remuxDbIndexer]]
+      : []
+  )
+);
+
+export function resolveRemuxDbIndexer(
+  nzbUrl: string | undefined
+): string | undefined {
+  if (!nzbUrl) return undefined;
+  try {
+    const hostname = new URL(unwrapProxyUrl(nzbUrl)).hostname
+      .toLowerCase()
+      .replace(/^www\./, '');
+    return KNOWN_INDEXER_HOSTNAMES[hostname];
+  } catch {
+    return undefined;
   }
 }
 
@@ -65,9 +88,12 @@ export function matchEntry(
     if (match) return match;
   }
 
+  const indexer = resolveRemuxDbIndexer(stream.nzbUrl);
   const guid = extractNzbGuid(stream.nzbUrl);
-  if (guid) {
-    return versions.find((v) => v.sources.some((s) => s.indexer_guid === guid));
+  if (indexer && guid) {
+    return versions.find((v) =>
+      v.sources.some((s) => s.indexer === indexer && s.indexer_guid === guid)
+    );
   }
 
   return undefined;
