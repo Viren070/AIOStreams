@@ -1,5 +1,6 @@
 import type { ParsedStream, Subtitle } from '../db/schemas.js';
 import { readSubtitleEnrichment } from './enrichment.js';
+import { msToTicks } from './media.js';
 import type { DeviceProfile, SubtitleTrack } from './types.js';
 
 export type SubtitleFormat = 'vtt' | 'srt' | 'ass' | 'json';
@@ -211,8 +212,8 @@ export function cuesToJellyfinJson(cues: Cue[]): string {
     TrackEvents: cues.map((c, i) => ({
       Id: String(i + 1),
       Text: c.text,
-      StartPositionTicks: c.startMs * 10_000,
-      EndPositionTicks: c.endMs * 10_000,
+      StartPositionTicks: msToTicks(c.startMs),
+      EndPositionTicks: msToTicks(c.endMs),
     })),
   });
 }

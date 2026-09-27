@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import { createHash } from 'crypto';
 import {
   lookupFor,
+  msToTicks,
   segmentsEnabled,
   segmentsFor,
   type Segment,
@@ -13,7 +14,6 @@ import { locate } from './playback.js';
 
 const router: Router = Router({ mergeParams: true });
 
-const TICKS_PER_MS = 10_000;
 const KNOWN_TYPES: SegmentType[] = ['Intro', 'Recap', 'Outro'];
 const EMPTY = { Items: [] as unknown[], TotalRecordCount: 0, StartIndex: 0 };
 
@@ -89,8 +89,8 @@ async function mediaSegments(req: Request, res: Response) {
       Id: segmentId(itemId, s.type),
       ItemId: itemId,
       Type: s.type,
-      StartTicks: s.startMs * TICKS_PER_MS,
-      EndTicks: s.endMs * TICKS_PER_MS,
+      StartTicks: msToTicks(s.startMs),
+      EndTicks: msToTicks(s.endMs),
     })),
     TotalRecordCount: segments.length,
     StartIndex: 0,

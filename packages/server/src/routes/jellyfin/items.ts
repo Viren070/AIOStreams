@@ -42,7 +42,7 @@ import {
   seriesIdOf,
   stripInternal,
   subtitleFormatFor,
-  TICKS_PER_MS,
+  msToTicks,
   userDataFromRow,
   watchRowsFor,
   writeMemoPointer,
@@ -538,8 +538,7 @@ export async function summaryItem(
   }
   const item = stripInternal(built) as JellyfinItem & Record<string, unknown>;
   for (const field of SUMMARY_OMIT) delete item[field];
-  if (row.durationMs > 0)
-    item.RunTimeTicks = Math.round(row.durationMs) * TICKS_PER_MS;
+  if (row.durationMs > 0) item.RunTimeTicks = msToTicks(row.durationMs);
   await summaryCache.set(key, item, SUMMARY_TTL);
   return item;
 }

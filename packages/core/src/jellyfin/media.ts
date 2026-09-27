@@ -19,6 +19,11 @@ import type {
 
 export const TICKS_PER_MS = 10_000;
 
+/** Clients read ticks as 64-bit integers, so a fraction fails to decode. */
+export function msToTicks(ms: number): number {
+  return Math.round(ms * TICKS_PER_MS);
+}
+
 type Encode = (typeof constants.ENCODES)[number];
 type AudioTag = (typeof constants.AUDIO_TAGS)[number];
 type AudioChannels = (typeof constants.AUDIO_CHANNELS)[number];
@@ -591,7 +596,7 @@ export function buildMediaSource(
     Name: record.label,
     IsRemote: true,
     ETag: record.msid,
-    RunTimeTicks: durationMs ? durationMs * TICKS_PER_MS : undefined,
+    RunTimeTicks: durationMs ? msToTicks(durationMs) : undefined,
     IsInfiniteStream: record.live,
     ...SOURCE_FLAGS,
     HasSegments: opts.hasSegments ?? false,

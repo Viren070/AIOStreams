@@ -14,7 +14,7 @@ import {
   resolveConfigAlias,
   serverId as instanceServerId,
   sessionKeyFor,
-  TICKS_PER_MS,
+  msToTicks,
   WatchSessionRepository,
   type ClientInfo,
   type JellyfinPersona,
@@ -627,7 +627,7 @@ export async function sessionFromRow(
       ? {
           PlayState: {
             ...session.PlayState,
-            PositionTicks: Math.round(row.positionMs) * TICKS_PER_MS,
+            PositionTicks: msToTicks(row.positionMs),
             IsPaused: row.paused,
           },
         }

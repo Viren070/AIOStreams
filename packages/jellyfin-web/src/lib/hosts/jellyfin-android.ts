@@ -35,7 +35,7 @@ export function playOnAndroid(
       ids: [item.Id],
       mediaSourceId: source.Id,
       startIndex: 0,
-      startPositionTicks: startMs * TICKS_PER_MS,
+      startPositionTicks: Math.round(startMs) * TICKS_PER_MS,
     }),
     JSON.stringify({
       maxStreamingBitrateLocal: 120_000_000,
