@@ -42,20 +42,38 @@ function merge(winner: ParsedStream, others: ParsedStream[]) {
   dedup.mergeLanguagesAndSubtitles(winner, others, ['languages', 'subtitles']);
 }
 
+async function dedup(streams: ParsedStream[]) {
+  const deduplicator = new StreamDeduplicator({
+    deduplicator: {
+      enabled: true,
+      keys: ['filename'],
+      p2p: 'single_result',
+    },
+    presets: [],
+    services: [],
+  } as unknown as UserData);
+  return deduplicator.deduplicate(streams);
+}
+
 describe('deduplicate', () => {
-  it('repost suffix and file extension are being stripped correctly', async () => {
+  it('file extension gets stripped correctly', async () => {
+    const stream1 = makeStream(undefined, [], [], 'Name.mkv');
+    const stream2 = makeStream(undefined, [], [], 'Name');
+    const results = await dedup([stream1, stream2]);
+    assert.equal(results.length, 1);
+  });
+
+  it('repost suffix gets stripped correctly', async () => {
+    const stream1 = makeStream(undefined, [], [], 'Name-xpost');
+    const stream2 = makeStream(undefined, [], [], 'Name');
+    const results = await dedup([stream1, stream2]);
+    assert.equal(results.length, 1);
+  });
+
+  it('repost suffix and file extension get stripped correctly together', async () => {
     const stream1 = makeStream(undefined, [], [], 'Name.mkv-xpost');
     const stream2 = makeStream(undefined, [], [], 'Name');
-    const dedup = new StreamDeduplicator({
-      deduplicator: {
-        enabled: true,
-        keys: ['filename'],
-        p2p: 'single_result',
-      },
-      presets: [],
-      services: [],
-    } as unknown as UserData);
-    const results = await dedup.deduplicate([stream1, stream2]);
+    const results = await dedup([stream1, stream2]);
     assert.equal(results.length, 1);
   });
 });
