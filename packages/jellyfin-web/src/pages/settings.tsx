@@ -87,6 +87,7 @@ import {
   usePosterLines,
   usePosterSize,
   useSeekStep,
+  useShareOnDiscord,
   useSubtitleBackgroundColor,
   useSubtitleBold,
   useSubtitleBackgroundOpacity,
@@ -550,9 +551,19 @@ function UpdatesCard() {
 
 function DesktopSection() {
   const server = useServerInfo();
+  const [shareOnDiscord, setShareOnDiscord] = useShareOnDiscord();
   return (
     <>
       <UpdatesCard />
+      <SettingsCard title="Discord" description={ON_DEVICE}>
+        <Switch
+          side="right"
+          label="Show what you're watching"
+          help="Your Discord profile shows the title, the episode and the time left while something plays. Discord has to be running on this computer."
+          value={shareOnDiscord}
+          onValueChange={setShareOnDiscord}
+        />
+      </SettingsCard>
       <SettingsCard title="mpv">
         <SettingsRow
           label="mpv configuration"
@@ -1105,7 +1116,7 @@ function sections(): Section[] {
           {
             id: 'desktop',
             label: 'Desktop app',
-            description: 'Updates, mpv and troubleshooting',
+            description: 'Updates, Discord, mpv and troubleshooting',
             icon: LuMonitor,
             group: 'App',
             Content: DesktopSection,

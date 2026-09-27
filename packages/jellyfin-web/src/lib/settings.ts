@@ -480,6 +480,7 @@ const DESKTOP_KEYS = {
   passthrough: 'aiostreams-desktop-passthrough',
   escExitsFullscreen: 'aiostreams-desktop-esc-fullscreen',
   chapterSkips: 'aiostreams-desktop-chapter-skips',
+  discord: 'aiostreams-desktop-discord',
 } as const;
 
 export interface DesktopSettings {
@@ -532,6 +533,8 @@ export const useEscExitsFullscreen = () =>
 /** Read by the page only; the app itself never needs it. */
 export const useChapterSkips = () =>
   useDeviceSetting<boolean>(DESKTOP_KEYS.chapterSkips, true);
+export const useShareOnDiscord = () =>
+  useDeviceSetting<boolean>(DESKTOP_KEYS.discord, false);
 
 export function onSettingsChange(listener: () => void): () => void {
   return subscribe(listener);
