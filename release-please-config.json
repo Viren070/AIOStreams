@@ -55,6 +55,11 @@
           "type": "toml",
           "path": "Cargo.toml",
           "jsonpath": "$.workspace.package.version"
+        },
+        {
+          "type": "toml",
+          "path": "Cargo.lock",
+          "jsonpath": "$.package[?(@.name.value == 'aiostreams-desktop' || @.name.value == 'aiostreams-desktop-core')].version"
         }
       ]
     }
