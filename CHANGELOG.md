@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.35.4](https://github.com/Viren070/AIOStreams/compare/v2.35.3...v2.35.4) (2026-09-28)
+
+
+### Features
+
+* adjust jellyfin wording/install options, update docs, readme ([d461cd7](https://github.com/Viren070/AIOStreams/commit/d461cd76ef43c34f270d8a93a6f721f42071b528))
+* **builtins/nab:** warn on missing infohash, fix hash-fallback bug ([#1261](https://github.com/Viren070/AIOStreams/issues/1261)) ([8b5aa22](https://github.com/Viren070/AIOStreams/commit/8b5aa22e397d9378216ecc1e0ccfd353fcd88e9e))
+* **desktop:** add Discord events for browsing and a connection status ([eb193b4](https://github.com/Viren070/AIOStreams/commit/eb193b47ff45fe30604c3ed66b0829509ccc7cf5))
+
 ## [2.35.3](https://github.com/Viren070/AIOStreams/compare/v2.35.2...v2.35.3) (2026-09-28)
 
 
