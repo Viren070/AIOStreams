@@ -1525,7 +1525,7 @@ const METADATA_FIELDS: (keyof UserData)[] = [
 const MISC_FIELDS: (keyof UserData)[] = [
   'autoPlay', 'areYouStillThere', 'statistics', 'dynamicAddonFetching',
   'failover', 'serviceWrap', 'cacheAndPlay', 'preloadStreams', 'precacheSelector',
-  'hideErrors', 'hideErrorsForResources', 'addonCategoryColors', 'catalogModifications', 'mergedCatalogs',
+  'hideErrors', 'hideErrorsForResources', 'addonCategoryColors', 'catalogModifications', 'newCatalogsDisabled', 'upstreamCatalogOrder', 'mergedCatalogs',
   'accessKey', 'externalDownloads', 'autoRemoveDownloads', 'checkOwned', 'showChanges',
 ];
 

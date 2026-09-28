@@ -83,6 +83,8 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       return;
     }
     validatedUserData.catalogModifications = undefined;
+    validatedUserData.newCatalogsDisabled = undefined;
+    validatedUserData.upstreamCatalogOrder = undefined;
 
     const aio = new AIOStreams(validatedUserData);
     await aio.initialise();

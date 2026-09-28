@@ -239,6 +239,8 @@ export const FIELD_META: Omit<Record<keyof UserData, FieldMeta>, IgnoredKeys> = 
   dynamicAddonFetching: { label: 'Dynamic Addon Fetching', group: 'misc', type: 'scalar', menu: 'addons', subTab: 'addons', sectionId: 'fetchStrategy', keywords: ['exit condition', 'dynamic fetching', 'fetch strategy'] },
   addonCategoryColors: { label: 'Addon Category Colors', group: 'misc', type: 'scalar', menu: 'addons', subTab: 'addons' },
   catalogModifications: { label: 'Catalog Modifications', group: 'misc', type: 'scalar', menu: 'addons', subTab: 'catalogs' },
+  newCatalogsDisabled: { label: 'New Catalogs Disabled', group: 'misc', type: 'scalar', menu: 'addons', subTab: 'catalogs' },
+  upstreamCatalogOrder: { label: 'Upstream Catalog Order', group: 'misc', type: 'scalar', menu: 'addons', subTab: 'catalogs' },
   mergedCatalogs: { label: 'Merged Catalogs', group: 'misc', type: 'scalar', menu: 'addons', subTab: 'catalogs' },
 
   failover: { label: 'Failover', group: 'misc', type: 'scalar', menu: 'services', subTab: 'builtin' },

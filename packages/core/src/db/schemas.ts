@@ -1143,6 +1143,8 @@ export const UserDataSchema = z.object({
   presets: PresetList,
   addonCategoryColors: z.record(z.string(), z.string()).optional(), // maps custom category name → colour key
   catalogModifications: z.array(CatalogModification).optional(),
+  newCatalogsDisabled: z.array(z.string()).optional(), // addon instance ids whose catalogs start disabled until saved otherwise
+  upstreamCatalogOrder: z.array(z.string()).optional(), // addon instance ids whose catalogs keep the addon's order within their positions
   mergedCatalogs: z.array(MergedCatalog).optional(),
   externalDownloads: z.boolean().optional(),
   cacheAndPlay: CacheAndPlaySchema.optional(),
