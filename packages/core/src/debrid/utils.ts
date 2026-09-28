@@ -60,7 +60,10 @@ export async function maybeGrabNzbForDirectUpload(
   nzb: string,
   requestedByIndexer?: boolean
 ): Promise<Buffer | null> {
-  if (!appConfig.builtins.debrid.uploadNzbDirectly || !requestedByIndexer) {
+  if (
+    !appConfig.builtins.debrid.uploadNzbDirectlyEnabled ||
+    !requestedByIndexer
+  ) {
     return null;
   }
   let url: URL;
@@ -77,15 +80,7 @@ export async function maybeGrabNzbForDirectUpload(
   ) {
     return null;
   }
-  try {
-    return await downloadManager.fetchNzb(nzb);
-  } catch (error) {
-    logger.warn(
-      { error: error instanceof Error ? error.message : String(error) },
-      'failed to grab nzb for direct upload, falling back to url'
-    );
-    return null;
-  }
+  return await downloadManager.fetchNzb(nzb);
 }
 
 export function bufferToArrayBuffer(buf: Buffer): ArrayBuffer {

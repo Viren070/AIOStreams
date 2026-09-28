@@ -209,13 +209,13 @@ export const builtinsSchema = {
       requiresRestart: false,
       secret: false,
     },
-    uploadNzbDirectly: {
+    uploadNzbDirectlyEnabled: {
       schema: z.boolean(),
       default: false,
       label: 'Upload NZBs directly',
       description:
-        'Upload non-proxied NZBs directly instead of passing their URL, where supported. Helps when a debrid service cannot fetch an indexer link itself, or when the indexer blocks the debrid service.',
-      env: 'BUILTIN_DEBRID_UPLOAD_NZB_DIRECTLY',
+        'Makes the "Upload NZBs Directly" option available on indexer addons (e.g. Newznab), which uploads a non-proxied NZB\'s bytes directly instead of passing its URL, where supported. Helps when a debrid service cannot fetch an indexer link itself, or when the indexer blocks the debrid service.',
+      env: 'BUILTIN_DEBRID_UPLOAD_NZB_DIRECTLY_ENABLED',
       requiresRestart: false,
       secret: false,
     },

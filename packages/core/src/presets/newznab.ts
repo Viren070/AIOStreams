@@ -213,7 +213,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
         type: 'password',
         required: false,
       },
-      ...(appConfig.builtins.debrid.uploadNzbDirectly
+      ...(appConfig.builtins.debrid.uploadNzbDirectlyEnabled
         ? [
             {
               id: 'uploadNzbDirectly',
@@ -555,6 +555,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
       apiPath: '',
       apiKey: options.api?.apiKey,
       proxyAuth: options.proxyAuth,
+      uploadNzbDirectly: options.uploadNzbDirectly ?? false,
       forceQuerySearch: options.forceQuerySearch ?? false,
       paginate: options.paginate ?? false,
       seasonEpisodeStrategy: options.seasonEpisodeStrategy ?? 'episode',
