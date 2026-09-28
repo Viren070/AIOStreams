@@ -4,7 +4,33 @@ import {
   convertFlagToLanguage,
   getLanguagesAfterMarker,
   getRegexForTextAfterEmojis,
+  extractInfoHashFromMagnet,
 } from './utils.js';
+
+const VALID_HASH = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+
+describe('extractInfoHashFromMagnet', () => {
+  it('extracts a hex BTIH followed by another param', () => {
+    assert.equal(
+      extractInfoHashFromMagnet(`magnet:?xt=urn:btih:${VALID_HASH}&dn=test`),
+      VALID_HASH
+    );
+  });
+
+  it('extracts a hex BTIH at the end of the string', () => {
+    assert.equal(
+      extractInfoHashFromMagnet(`magnet:?xt=urn:btih:${VALID_HASH}`),
+      VALID_HASH
+    );
+  });
+
+  it('rejects a BTIH with a trailing character instead of truncating it', () => {
+    assert.equal(
+      extractInfoHashFromMagnet(`magnet:?xt=urn:btih:${VALID_HASH}a&dn=test`),
+      undefined
+    );
+  });
+});
 
 describe('convertFlagToLanguage', () => {
   it('maps a recognized flag to its language', () => {

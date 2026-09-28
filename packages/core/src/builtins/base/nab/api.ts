@@ -25,6 +25,10 @@ import {
   type NabSearchFunction,
   type NabTextField,
 } from './scan.js';
+import {
+  extractInfoHashFromMagnet,
+  validateInfoHash,
+} from '../../utils/debrid.js';
 
 // --- Generic Custom Error ---
 export class NabApiError extends Error {
@@ -114,6 +118,40 @@ export type SearchResultItem<T extends NabNamespace> = T extends 'torznab'
   ? TorznabSearchResultItem
   : NewznabSearchResultItem;
 
+// https://torznab.github.io/spec-1.3-draft/revisions/1.0-Torznab-Torrent-Support.html
+const MAGNET_ENCLOSURE_TYPES = new Set([
+  'application/x-bittorrent',
+  'application/x-bittorrent;x-scheme-handler/magnet',
+]);
+
+function extractBtihFromEnclosures(
+  enclosures: NabEnclosure[]
+): string | undefined {
+  for (const e of enclosures) {
+    const enclosureType = e.type?.toLowerCase();
+    if (
+      !enclosureType ||
+      !MAGNET_ENCLOSURE_TYPES.has(enclosureType) ||
+      !e.url.toLowerCase().startsWith('magnet:')
+    )
+      continue;
+    const hash = extractInfoHashFromMagnet(e.url);
+    if (hash) return hash;
+  }
+  return undefined;
+}
+
+/** Pulls a usable infohash out of a torznab result, if one's there. */
+export function extractTorznabInfoHash(
+  result: TorznabSearchResultItem
+): string | undefined {
+  return (
+    validateInfoHash(result.torznab?.infohash?.toString()) ??
+    extractInfoHashFromMagnet((result.torznab?.magneturl ?? '').toString()) ??
+    extractBtihFromEnclosures(result.enclosure)
+  );
+}
+
 export type SearchResponse<T extends NabNamespace> = {
   offset?: number;
   total?: number;
@@ -149,6 +187,8 @@ export type NabTestResult = {
   /** ID params actually usable per media type - movie-search/tv-search each advertise their own supportedParams, and one may support IDs while the other doesn't. */
   idSearchParams?: { movie: string[]; series: string[] };
   resultCount?: number;
+  /** torznab only; undefined if inconclusive */
+  missingInfoHash?: boolean;
   error?: { code?: number; message: string };
 };
 
@@ -307,10 +347,17 @@ export class BaseNabApi<N extends NabNamespace> {
         { limit: 1 },
         NAB_TEST_TIMEOUT
       );
+      const missingInfoHash =
+        this.namespace === 'torznab' && response.results.length > 0
+          ? !response.results.some((r) =>
+              extractTorznabInfoHash(r as TorznabSearchResultItem)
+            )
+          : undefined;
       return {
         ok: true,
         ...details,
         resultCount: response.total ?? response.results.length,
+        missingInfoHash,
       };
     } catch (error) {
       return {
