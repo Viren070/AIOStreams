@@ -76,7 +76,7 @@ Watch without Stremio, with the same addons, filters, sorting and formatting. Th
 
 - **In Your Browser**: On any device. Add it to your phone's home screen and it opens like an app.
 - **Desktop App** (alpha): For Windows, macOS and Linux, with a built-in player that plays what a browser can't, including HDR on Windows. It keeps itself up to date on Windows and macOS, and comes as a Flatpak on Linux. **[Download it here](https://github.com/Viren070/AIOStreams/releases/tag/desktop)**.
-- **Jellyfin Apps**: Your configuration is also a Jellyfin-compatible server, so Swiftfin, Findroid, Infuse, Kodi, Android TV and other Jellyfin apps can sign in to it too.
+- **Jellyfin Apps**: Your configuration is also a Jellyfin-compatible server, so Swiftfin, Findroid, Infuse, Kodi, Android TV and other Jellyfin apps can sign in to it too, on a TV with a Quick Connect code.
 
 **What's inside**
 
@@ -85,8 +85,8 @@ Watch without Stremio, with the same addons, filters, sorting and formatting. Th
 - **Player**: Audio and subtitle tracks in your preferred languages, subtitles from your subtitle addons in your own size, colours and outline, skip intro, recap and credits, and the next episode with an optional countdown.
 - **Subtitle Sync**: Nudge them, sync them by ear, or pick the spoken line from a list, remembered for each version.
 - **Activity**: Your watch history by day or as a table, to mark unwatched, remove or export. The main profile also sees everyone's history and what each person is playing right now.
-- **Household Profiles**: A profile for everyone, each with its own Continue Watching and an optional PIN. Switch without signing out, and sign in a TV with Quick Connect.
-- **Tracker Sync**: What you watch is sent to your tracker addons, and what you watched elsewhere, including in Stremio, shows up in Continue Watching.
+- **Household Profiles**: A profile for everyone, each with its own Continue Watching and an optional PIN. Switch between them without signing out.
+- **Tracker Sync**: Addons that support [Watch State](https://docs.aiostreams.viren070.me/reference/addon-protocol/watch-state) can record what you play and bring in the history they hold, so what you watched elsewhere can show up in Continue Watching.
 - **Custom Themes and CSS**: Preset themes, your own accent and background colours, and custom CSS with [documented hooks](https://docs.aiostreams.viren070.me/reference/web-app-css), all following you to every device.
 - **Desktop Extras**: mpv playback for MKV, HEVC, AV1 and styled subtitles, surround output with Dolby and DTS passthrough, chapters, your own `mpv.conf`, `input.conf`, scripts and shaders, what you're watching on your Discord profile, and background updates with an optional nightly channel on Windows and macOS.
 
