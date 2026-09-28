@@ -19,6 +19,7 @@ import {
   parseFileNames,
   selectableFileNames,
   selectableFiles,
+  maybeGrabNzbForDirectUpload,
 } from './utils.js';
 import {
   DebridServiceConfig,
@@ -684,7 +685,12 @@ export class StremThruService
 
   public async addNzb(nzb: string, name: string): Promise<DebridDownload> {
     try {
-      const result = await this.stremthru.store.addNewz({ link: nzb });
+      const file = await maybeGrabNzbForDirectUpload(nzb);
+      const result = await this.stremthru.store.addNewz(
+        file
+          ? { file: new File([file], name, { type: 'application/x-nzb' }) }
+          : { link: nzb }
+      );
       assert.ok(
         result?.data,
         `Missing data from StremThru addNewz: ${JSON.stringify(result)}`

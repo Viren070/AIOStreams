@@ -18,6 +18,8 @@ import {
   removeDownloadOnAbort,
   parseFileNames,
   selectableFileNames,
+  maybeGrabNzbForDirectUpload,
+  bufferToArrayBuffer,
 } from './utils.js';
 import {
   DebridServiceConfig,
@@ -332,12 +334,10 @@ export class TorboxDebridService
 
   public async addNzb(nzb: string, name: string): Promise<DebridDownload> {
     try {
+      const file = await maybeGrabNzbForDirectUpload(nzb);
       const res = await this.torboxApi.usenet.createUsenetDownload(
         this.apiVersion,
-        {
-          link: nzb,
-          name,
-        }
+        file ? { file: bufferToArrayBuffer(file), name } : { link: nzb, name }
       );
 
       if (!res.data?.data?.usenetdownloadId) {

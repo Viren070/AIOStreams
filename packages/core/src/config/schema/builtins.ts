@@ -209,6 +209,16 @@ export const builtinsSchema = {
       requiresRestart: false,
       secret: false,
     },
+    uploadNzbDirectly: {
+      schema: z.boolean(),
+      default: false,
+      label: 'Upload NZBs directly',
+      description:
+        'Upload non-proxied NZBs directly instead of passing their URL, where supported. Helps when a debrid service cannot fetch an indexer link itself, or when the indexer blocks the debrid service.',
+      env: 'BUILTIN_DEBRID_UPLOAD_NZB_DIRECTLY',
+      requiresRestart: false,
+      secret: false,
+    },
     metadataStore: {
       schema: z.union([debridStore, z.null()]),
       default: null,

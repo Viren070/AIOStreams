@@ -10,6 +10,7 @@ import {
   encryptString,
   toUrlSafeBase64,
   ParsedMediaInfo,
+  downloadManager,
 } from '../utils/index.js';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -53,6 +54,42 @@ export function cleanNzbUrl(url: string): string {
     cleaned = cleaned.substring(0, hIndex);
   }
   return cleaned;
+}
+
+export async function maybeGrabNzbForDirectUpload(
+  nzb: string
+): Promise<Buffer | null> {
+  if (!appConfig.builtins.debrid.uploadNzbDirectly) return null;
+  let url: URL;
+  try {
+    url = new URL(nzb);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+  // skip URLs already pointing at this instance's own proxy
+  if (
+    url.host === new URL(appConfig.bootstrap.internalUrl).host ||
+    url.host === new URL(appConfig.bootstrap.baseUrl).host
+  ) {
+    return null;
+  }
+  try {
+    return await downloadManager.fetchNzb(nzb);
+  } catch (error) {
+    logger.warn(
+      { error: error instanceof Error ? error.message : String(error) },
+      'failed to grab nzb for direct upload, falling back to url'
+    );
+    return null;
+  }
+}
+
+export function bufferToArrayBuffer(buf: Buffer): ArrayBuffer {
+  return buf.buffer.slice(
+    buf.byteOffset,
+    buf.byteOffset + buf.byteLength
+  ) as ArrayBuffer;
 }
 
 /**
