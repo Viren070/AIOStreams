@@ -647,7 +647,7 @@ export function JellyfinPersonas() {
           <div className="space-y-4">
             <TextInput
               label="Name"
-              help="Shown by clients. Defaults to your addon name."
+              help="Shown in apps. Defaults to your addon name."
               placeholder={userData.addonName || 'Primary user'}
               value={primaryDraft.name ?? ''}
               onValueChange={(value) =>
@@ -707,11 +707,11 @@ export function JellyfinPersonas() {
       )}
 
       {draft && (
-        <Modal open onOpenChange={close} title="Jellyfin user">
+        <Modal open onOpenChange={close} title="User">
           <div className="space-y-4">
             <TextInput
               label="Name"
-              help="Shown by clients, and typed to sign in."
+              help="Shown in apps, and typed to sign in."
               value={draft.name}
               onValueChange={(value) => setDraft({ ...draft, name: value })}
             />

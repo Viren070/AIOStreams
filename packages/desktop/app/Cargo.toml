@@ -1,6 +1,6 @@
 [package]
 name = "aiostreams-desktop"
-description = "AIOStreams' Jellyfin web app in a native window, playing through mpv"
+description = "The AIOStreams app in a native window, playing through mpv"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

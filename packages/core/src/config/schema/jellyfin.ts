@@ -11,9 +11,9 @@ export const jellyfinSchema = {
   enabled: {
     schema: z.boolean(),
     default: true,
-    label: 'Enable Jellyfin API',
+    label: 'Enable media server',
     description:
-      'Presents every configuration as a Jellyfin server at /jellyfin. Clients sign in with the configuration UUID or alias and its password, or approve a Quick Connect code from the configuration page.',
+      'Presents every configuration as a Jellyfin-compatible server at /jellyfin, for the AIOStreams web and desktop app and for Jellyfin apps. Apps sign in with the configuration UUID or alias and its password, or approve a Quick Connect code from the configuration page.',
     env: 'JELLYFIN_ENABLED',
     requiresRestart: false,
     secret: false,

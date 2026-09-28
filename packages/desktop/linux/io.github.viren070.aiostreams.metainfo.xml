@@ -10,8 +10,9 @@
   <project_license>AGPL-3.0-only</project_license>
   <description>
     <p>
-      A desktop app for AIOStreams and other Jellyfin servers. Sign in to a
-      server, browse its catalogs and play titles with mpv.
+      The AIOStreams app for your desktop. Sign in to your AIOStreams
+      configuration, browse its catalogs and play titles with mpv. It also
+      signs in to Jellyfin servers.
     </p>
   </description>
   <launchable type="desktop-id">io.github.viren070.aiostreams.desktop</launchable>

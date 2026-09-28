@@ -6,11 +6,11 @@ description: The web app in a window of its own, with a video player that plays 
 import { Callout } from 'fumadocs-ui/components/callout';
 import { Steps, Step } from 'fumadocs-ui/components/steps';
 
-The desktop app is a Jellyfin app for Windows, Mac and Linux. It signs in to your configuration's [Jellyfin server](/guides/jellyfin) like any other Jellyfin app, and shows AIOStreams' [web app](/guides/jellyfin#the-web-app) in a window of its own, with [mpv](https://mpv.io) playing the video. Your addons still run on your AIOStreams instance: the app sees what they find through the server, as libraries and versions, and never installs or runs an addon itself.
+The desktop app is the [AIOStreams app](/guides/app) for Windows, Mac and Linux, in a window of its own, with [mpv](https://mpv.io) playing the video. It signs in to your configuration's [media server](/guides/media-server), so there is nothing to self-host. Your addons still run on your AIOStreams instance: the app sees what they find through the server, as libraries and versions, and never installs or runs an addon itself.
 
 A browser only plays some formats, so many streams fail there. mpv plays nearly any stream as it is: MKV files, HEVC and AV1 video, Dolby and DTS surround audio, and styled subtitles.
 
-Everything else is the web app you already know: the same home page, catalogs, title pages, versions and settings. It signs in to any Jellyfin server, so it can hold other servers besides your configuration.
+Everything else is the app you know from the browser: the same home page, catalogs, title pages, versions and settings. It also signs in to Jellyfin servers, so it can hold other servers besides your configuration.
 
 <Gallery
   slides={[
@@ -94,12 +94,12 @@ It needs Windows 10 or 11, macOS 11 or later, or a Linux distribution with Flatp
 
 <Steps>
   <Step>
-    Open the app and enter your server's address. For AIOStreams, copy one from
-    **Save & Install → Jellyfin → Connect** on the configure page; the address
-    with a sign-in picker is the easiest.
+    Open the app and enter your server's address. For AIOStreams, open **Sign-in addresses**
+    under **Save & Install → AIOStreams app** on the configure page and copy one;
+    the address with a sign-in picker is the easiest.
   </Step>
   <Step>
-    Sign in as you would in the [web app](/guides/jellyfin#the-web-app): pick a
+    Sign in as you would [in a browser](/guides/app#in-a-browser): pick a
     user, then enter the password or PIN.
   </Step>
 </Steps>
@@ -152,7 +152,7 @@ Other keys: `Space` or `k` to play and pause, `←` `→` or `j` `l` to skip bac
 
 ## Settings
 
-The app adds a **Desktop app** section to the web app's settings. These stay on the computer:
+The app adds a **Desktop app** section to the settings. These stay on the computer:
 
 - **Updates**: whether to follow releases or nightly builds, and whether an update is waiting. Windows and Mac only.
 - **Hardware decoding**: turn it off if video shows artefacts or stays black.

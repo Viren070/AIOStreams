@@ -400,7 +400,7 @@ export const TAB_MANIFEST: Record<string, Omit<TabDef, 'section'>> = {
 
   // --- other apps and services ----------------------------------------------
   jellyfin: {
-    label: 'Jellyfin',
+    label: 'Media server',
     icon: BiTv,
     group: 'Integrations',
     order: 410,

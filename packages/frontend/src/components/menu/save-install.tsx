@@ -23,6 +23,7 @@ import {
   Code2,
   CopyIcon,
   KeyRound,
+  Monitor,
   MonitorPlay,
   Layers,
   LibraryBig,
@@ -32,6 +33,7 @@ import {
   Rss,
   SearchIcon,
   UploadIcon,
+  Users,
 } from 'lucide-react';
 import { LuSquareCheck, LuSquareMinus, LuWand } from 'react-icons/lu';
 import { AnimatePresence, motion } from 'motion/react';
@@ -556,7 +558,7 @@ function JellyfinPrimerFact({
   );
 }
 
-/** What a Jellyfin client will show, before the user connects one. */
+/** What an app will show, before the user connects one. */
 function JellyfinPrimer({
   maxLibraries,
   maxCatalogItems,
@@ -613,14 +615,143 @@ function JellyfinPrimer({
   );
 }
 
+type ServerTab = 'connect' | 'users';
+
+function AppFact({
+  icon,
+  children,
+}: {
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <li className="flex items-start gap-2.5">
+      <span className="mt-0.5 shrink-0 text-brand-400">{icon}</span>
+      <span className="text-sm text-gray-400">{children}</span>
+    </li>
+  );
+}
+
+function AppBlock({
+  webAppUrl,
+  onOpenServer,
+  disabled,
+  disabledReason,
+}: {
+  webAppUrl: string;
+  onOpenServer: (tab: ServerTab) => void;
+  disabled?: boolean;
+  disabledReason?: string;
+}) {
+  const download = useDesktopDownload();
+  return (
+    <div className="w-full rounded-xl border border-gray-700 bg-gray-800/30 p-5 shadow-inner">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 lg:items-center">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-4">
+            <div className="flex-shrink-0 h-12 w-12 rounded-lg bg-gray-900 flex items-center justify-center p-2 shadow-sm">
+              <img
+                src="/logo.png"
+                alt="AIOStreams"
+                className="h-full w-full object-contain"
+              />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-white">
+                AIOStreams app
+              </h3>
+              <p className="text-sm text-gray-400">
+                Browse your catalogs and play in your browser, or on your
+                computer with the desktop app. Nothing else to install or host.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Button
+              onClick={() => window.open(webAppUrl, '_blank', 'noopener')}
+              intent="primary"
+              className="w-full shadow-md"
+              leftIcon={<MonitorPlay className="h-4 w-4" />}
+              disabled={disabled}
+            >
+              Open in browser
+            </Button>
+            <Button
+              onClick={() => window.open(download.url, '_blank', 'noopener')}
+              intent="gray-outline"
+              className="w-full"
+              leftIcon={<DownloadIcon className="h-4 w-4" />}
+              disabled={disabled}
+            >
+              {download.label}
+            </Button>
+          </div>
+          {disabledReason && (
+            <p className="text-xs text-amber-300">{disabledReason}</p>
+          )}
+        </div>
+
+        <div className="space-y-3 lg:border-l lg:border-gray-700/50 lg:pl-8">
+          <ul className="space-y-2">
+            <AppFact icon={<LibraryBig className="h-4 w-4" />}>
+              Your catalogs become libraries and your streams become versions,
+              sorted and named as in Stremio. Debrid and Usenet streams play;
+              P2P torrents don&apos;t.
+            </AppFact>
+            <AppFact icon={<Users className="h-4 w-4" />}>
+              A profile for everyone in your household, with progress kept
+              across devices.
+            </AppFact>
+            <AppFact icon={<Monitor className="h-4 w-4" />}>
+              The desktop app for Windows, Mac and Linux plays what a browser
+              can&apos;t.{' '}
+              <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-300">
+                Alpha
+              </span>
+            </AppFact>
+          </ul>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+            <button
+              type="button"
+              onClick={() => onOpenServer('connect')}
+              disabled={disabled}
+              className="text-brand-400 hover:underline disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:no-underline"
+            >
+              Sign-in addresses
+            </button>
+            <button
+              type="button"
+              onClick={() => onOpenServer('users')}
+              disabled={disabled}
+              className="text-brand-400 hover:underline disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:no-underline"
+            >
+              Users, trackers and playback
+            </button>
+            <a
+              href={DESKTOP_GUIDE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-brand-400 hover:underline"
+            >
+              All downloads
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface InstallCardProps {
   encodedManifest: string;
   manifestUrl: string;
   usingAlias: boolean;
+  webAppUrl: string;
   onCopyManifestUrl: () => void;
   onOpenChillio: () => void;
   onOpenSeanime: () => void;
-  onOpenJellyfin: () => void;
+  onOpenJellyfin: (tab: ServerTab) => void;
   onOpenAniyomi: () => void;
   onOpenNabIndexer: () => void;
   onOpenSearchApi: () => void;
@@ -639,6 +770,7 @@ function InstallCard({
   encodedManifest,
   manifestUrl,
   usingAlias,
+  webAppUrl,
   variantSelector,
   onCopyManifestUrl,
   onOpenChillio,
@@ -741,6 +873,13 @@ function InstallCard({
           </div>
         </div>
 
+        <AppBlock
+          webAppUrl={webAppUrl}
+          onOpenServer={onOpenJellyfin}
+          disabled={disableJellyfinCard}
+          disabledReason={jellyfinDisabledReason}
+        />
+
         <LinkedAccountsSection manifestUrl={manifestUrl} />
 
         {/* Other apps — playback clients you install the addon into */}
@@ -761,10 +900,10 @@ function InstallCard({
             />
             <AppCard
               logoSrc="https://raw.githubusercontent.com/jellyfin/jellyfin-ux/refs/heads/master/logos/PNG-4x/jellyfin-icon--color-on-dark.png"
-              name="Jellyfin"
-              description="Sign in from any Jellyfin app"
+              name="Jellyfin apps"
+              description="Use your configuration in any Jellyfin app"
               beta
-              onClick={onOpenJellyfin}
+              onClick={() => onOpenJellyfin('connect')}
               disabled={disableJellyfinCard}
               disabledReason={jellyfinDisabledReason}
             />
@@ -934,6 +1073,90 @@ const DEFAULT_NAME_TEMPLATE = '{catalog.name} - {catalog.type}';
 /** The desktop app's stable release, whose notes link each download. */
 const DESKTOP_DOWNLOAD_URL =
   'https://github.com/Viren070/AIOStreams/releases/tag/desktop';
+const DESKTOP_ASSET_URL =
+  'https://github.com/Viren070/AIOStreams/releases/download/desktop/aiostreams-desktop-';
+const DESKTOP_GUIDE_URL =
+  'https://docs.aiostreams.viren070.me/guides/desktop-app#download';
+
+interface DesktopDownload {
+  label: string;
+  url: string;
+}
+
+type UADataNavigator = Navigator & {
+  userAgentData?: {
+    platform?: string;
+    getHighEntropyValues?: (
+      hints: string[]
+    ) => Promise<{ architecture?: string }>;
+  };
+};
+
+type DesktopOs = 'windows' | 'mac' | 'linux';
+type DesktopArch = 'arm64' | 'x64';
+
+function desktopOs(): DesktopOs | undefined {
+  const hint = (navigator as UADataNavigator).userAgentData?.platform;
+  if (hint) {
+    if (/^windows$/i.test(hint)) return 'windows';
+    if (/^macos$/i.test(hint)) return 'mac';
+    if (/^linux$/i.test(hint)) return 'linux';
+    return undefined;
+  }
+  const ua = navigator.userAgent;
+  if (/iPhone|iPad|iPod|Android/.test(ua)) return undefined;
+  // iPads ask for desktop sites as a Mac.
+  if (/Macintosh/.test(ua)) {
+    return navigator.maxTouchPoints > 1 ? undefined : 'mac';
+  }
+  if (/Windows/.test(ua)) return 'windows';
+  if (/Linux/.test(ua)) return 'linux';
+  return undefined;
+}
+
+function desktopDownload(
+  os: DesktopOs | undefined,
+  arch: DesktopArch | undefined
+): DesktopDownload {
+  switch (os) {
+    case 'windows':
+      return {
+        label: 'Download for Windows',
+        url: `${DESKTOP_ASSET_URL}win-${arch ?? 'x64'}.exe`,
+      };
+    // Only Chromium reports a Mac's chip; elsewhere the release page asks.
+    case 'mac':
+      return {
+        label: 'Download for Mac',
+        url: arch
+          ? `${DESKTOP_ASSET_URL}osx-${arch}.pkg`
+          : DESKTOP_DOWNLOAD_URL,
+      };
+    case 'linux':
+      return {
+        label: 'Download for Linux',
+        url: `${DESKTOP_ASSET_URL}linux-${arch ?? 'x64'}.flatpak`,
+      };
+    default:
+      return { label: 'Download desktop app', url: DESKTOP_DOWNLOAD_URL };
+  }
+}
+
+function useDesktopDownload(): DesktopDownload {
+  const [arch, setArch] = React.useState<DesktopArch | undefined>(() =>
+    /aarch64|arm64/i.test(navigator.userAgent) ? 'arm64' : undefined
+  );
+  React.useEffect(() => {
+    (navigator as UADataNavigator).userAgentData
+      ?.getHighEntropyValues?.(['architecture'])
+      .then(({ architecture }) => {
+        if (architecture === 'arm') setArch('arm64');
+        else if (architecture === 'x86') setArch('x64');
+      })
+      .catch(() => {});
+  }, []);
+  return desktopDownload(desktopOs(), arch);
+}
 
 const VARIANT_LOCATION_STORAGE_KEY = 'aiostreams:install:variant-location';
 
@@ -1901,6 +2124,7 @@ function Content() {
     : uuid && encryptedPassword
       ? `${baseUrl}/jellyfin/${uuid}/${encryptedPassword}`
       : '';
+  const jellyfinWebAppUrl = `${jellyfinPickerUrl || jellyfinServerUrl}/web/`;
   const copyJellyfinPickerUrl = async () => {
     await copyToClipboard(jellyfinPickerUrl, {
       onSuccess: () => toast.success('Server address copied to clipboard'),
@@ -2152,6 +2376,7 @@ function Content() {
               encodedManifest={encodedManifest}
               manifestUrl={manifestUrl}
               usingAlias={!!aliasForInstall}
+              webAppUrl={jellyfinWebAppUrl}
               variantSelector={
                 enabledVariants.length > 0 ? (
                   <VariantSelector
@@ -2166,7 +2391,10 @@ function Content() {
               onCopyManifestUrl={copyManifestUrl}
               onOpenChillio={chillLinkModal.open}
               onOpenSeanime={seanimeModal.open}
-              onOpenJellyfin={jellyfinModal.open}
+              onOpenJellyfin={(tab) => {
+                setJellyfinTab(tab);
+                jellyfinModal.open();
+              }}
               onOpenAniyomi={aniyomiModal.open}
               onOpenNabIndexer={nabIndexerModal.open}
               onOpenSearchApi={searchApiModal.open}
@@ -2659,8 +2887,8 @@ function Content() {
         <Modal
           open={jellyfinModal.isOpen}
           onOpenChange={jellyfinModal.toggle}
-          title="AIOStreams for Jellyfin"
-          description="Works with Swiftfin, Findroid, Streamyfin, Android TV, Kodi and Infuse."
+          title="Media server"
+          description="Your configuration as a server for the AIOStreams app and Jellyfin apps, such as Swiftfin, Findroid, Streamyfin, Android TV, Kodi and Infuse."
           contentClass="max-w-2xl w-full"
         >
           <MenuTabs
@@ -2699,13 +2927,14 @@ function Content() {
                           onClick={copyJellyfinServerUrl}
                           intent="primary"
                           className="shrink-0 px-3"
-                          aria-label="Copy Jellyfin server address"
+                          aria-label="Copy server address"
                         >
                           <CopyIcon className="h-4 w-4" />
                         </Button>
                       </div>
                       <p className="text-xs text-gray-500">
-                        Add this as a server in any Jellyfin client.
+                        Add this as a server in the desktop app or any Jellyfin
+                        app.
                       </p>
                     </div>
 
@@ -2723,7 +2952,7 @@ function Content() {
                           onClick={copyJellyfinUsername}
                           intent="primary"
                           className="shrink-0 px-3"
-                          aria-label="Copy Jellyfin username"
+                          aria-label="Copy username"
                         >
                           <CopyIcon className="h-4 w-4" />
                         </Button>
@@ -2755,7 +2984,7 @@ function Content() {
                             onClick={copyJellyfinPickerUrl}
                             intent="primary"
                             className="shrink-0 px-3"
-                            aria-label="Copy Jellyfin server address with user picker"
+                            aria-label="Copy server address with user picker"
                           >
                             <CopyIcon className="h-4 w-4" />
                           </Button>
@@ -2902,11 +3131,7 @@ function Content() {
                         className="w-full shrink-0 sm:w-auto"
                         leftIcon={<MonitorPlay className="h-4 w-4" />}
                         onClick={() =>
-                          window.open(
-                            `${jellyfinServerUrl}/web/`,
-                            '_blank',
-                            'noopener'
-                          )
+                          window.open(jellyfinWebAppUrl, '_blank', 'noopener')
                         }
                       >
                         Open
@@ -2919,9 +3144,9 @@ function Content() {
                           Desktop app
                         </p>
                         <p className="text-xs text-gray-500">
-                          A Jellyfin app for Windows, Mac and Linux: the web app
-                          with a player that plays what a browser can&apos;t.
-                          Sign in with one of the addresses above.
+                          The app for Windows, Mac and Linux, with a player that
+                          plays what a browser can&apos;t. Sign in with one of
+                          the addresses above.
                         </p>
                       </div>
                       <Button

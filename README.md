@@ -68,6 +68,32 @@ Add any Stremio addon you already use - Torrentio, Comet, MediaFusion, and many 
 
 </p>
 
+### 📺 AIOStreams App
+
+Watch without Stremio, with the same addons, filters, sorting and formatting. There's nothing extra to self-host and no Jellyfin to install: it runs on your AIOStreams instance. Public instances have it on except ElfHosted's, and ElfHosted's private instances have it off until you turn it on. It plays streams with a link, such as debrid and Usenet ones, so P2P torrents aren't supported.
+
+**Where you can watch**
+
+- **In Your Browser**: On any device. Add it to your phone's home screen and it opens like an app.
+- **Desktop App** (alpha): For Windows, macOS and Linux, with a built-in player that plays what a browser can't, including HDR on Windows. It keeps itself up to date on Windows and macOS, and comes as a Flatpak on Linux. **[Download it here](https://github.com/Viren070/AIOStreams/releases/tag/desktop)**.
+- **Jellyfin Apps**: Your configuration is also a Jellyfin-compatible server, so Swiftfin, Findroid, Infuse, Kodi, Android TV and other Jellyfin apps can sign in to it too.
+
+**What's inside**
+
+- **Browse**: Home rows for Continue Watching, Next Up and each catalog, plus Discover, search, collections, favourites, a calendar of airing episodes, and a page for every title and person.
+- **Versions**: Your streams as versions, sorted and named by your formatter. Switch version mid-play, skip the list and play the top one, or open it in an external player like VLC or Infuse.
+- **Player**: Audio and subtitle tracks in your preferred languages, subtitles from your subtitle addons in your own size, colours and outline, skip intro, recap and credits, and the next episode with an optional countdown.
+- **Subtitle Sync**: Nudge them, sync them by ear, or pick the spoken line from a list, remembered for each version.
+- **Activity**: Your watch history by day or as a table, to mark unwatched, remove or export. The main profile also sees everyone's history and what each person is playing right now.
+- **Household Profiles**: A profile for everyone, each with its own Continue Watching and an optional PIN. Switch without signing out, and sign in a TV with Quick Connect.
+- **Tracker Sync**: What you watch is sent to your tracker addons, and what you watched elsewhere, including in Stremio, shows up in Continue Watching.
+- **Custom Themes and CSS**: Preset themes, your own accent and background colours, and custom CSS with [documented hooks](https://docs.aiostreams.viren070.me/reference/web-app-css), all following you to every device.
+- **Desktop Extras**: mpv playback for MKV, HEVC, AV1 and styled subtitles, surround output with Dolby and DTS passthrough, chapters, your own `mpv.conf`, `input.conf`, scripts and shaders, what you're watching on your Discord profile, and background updates with an optional nightly channel on Windows and macOS.
+
+<p align="center">
+  <img src="packages/docs/public/guides/app/hero.webp" alt="The AIOStreams app on a computer and a phone" width="850" />
+</p>
+
 ### 🧩 Built-in Addons
 
 AIOStreams ships with a suite of its own addons - search engines and integrations that are hosted alongside AIOStreams itself and available exclusively to your instance. They're configured and used just like any other addon in the marketplace.
@@ -181,14 +207,6 @@ Take control of your Stremio home page from one place.
 - **NZB Proxying**: The built-in proxy can also forward NZB download requests for the Newznab built-in addon.
 - **Outgoing Request Proxy**: Route AIOStreams' own requests to upstream addons through an HTTP/SOCKS5 proxy - useful when your server's IP is blocked by an upstream service.
 
-### 📺 Jellyfin Server, Web App & Desktop App
-
-Watch outside Stremio too, with the same addons, filters and sorting.
-
-- **Jellyfin Server**: Add your configuration to a Jellyfin app on your phone, TV or computer. Catalogs become libraries, streams become versions, everyone in your household can have their own profile, and your watch progress and trackers stay in sync.
-- **Web App**: Browse, play and manage your watch history in any browser.
-- **Desktop App** (alpha): A Jellyfin app for Windows, macOS and Linux that signs in to your server and shows the web app with a built-in player, which plays what a browser can't, including HDR on Windows. It keeps itself up to date on Windows and macOS, and comes as a Flatpak on Linux. **[Download it here](https://github.com/Viren070/AIOStreams/releases/tag/desktop)**.
-
 ---
 
 ## 🚀 Getting Started
@@ -207,7 +225,7 @@ Watch outside Stremio too, with the same addons, filters and sorting.
 
 4. **Install the addon**
    - Use the Installation Options provided to install the addon to whatever app you are using.
-   - Or, under **Jellyfin**, connect a Jellyfin app, open the web app, or download the desktop app.
+   - Or watch without Stremio: under **AIOStreams app**, open the app in your browser or download the desktop app, or connect a Jellyfin app under **Jellyfin apps**.
 
 For full setup and configuration instructions, see the **[documentation](https://docs.aiostreams.viren070.me)**.
 

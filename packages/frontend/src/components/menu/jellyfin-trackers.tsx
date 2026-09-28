@@ -186,7 +186,7 @@ export function JellyfinTrackers() {
           </Button>
         }
       >
-        An addon that supports Watch State can record what you play in Jellyfin
+        An addon that supports Watch State can record what you play in the apps
         and bring in what you watched elsewhere. None of yours do yet.
       </EmptyState>
     );
