@@ -281,8 +281,9 @@ Building a tracker addon? See the [Watch State reference](/reference/addon-proto
 Each user with a history of its own can sync with its own tracker addons, for example a separate watch-history account per person. Add one tracker addon per account to your configuration, then turn on **Choose trackers** for each user in the **Users** tab and pick theirs.
 
 - A tracker belongs to one history at a time, so a tracker picked for one user can't be picked for another. Otherwise what one person watches would end up in the other's history.
+- The exception is a tracker addon that keeps users apart itself, such as one with a card per person. It can be picked for every user, and AIOStreams tells it which user each play is for. The addon matches a user by name; when the Users tab shows a **tracker id** for someone, give the addon that id as well.
 - Left off, the primary user syncs with every tracker addon, so none are free for other users. Choose the primary user's trackers first.
-- Left off for another user, it syncs only with a tracker addon that its variants add.
+- Left off for another user, it syncs with a tracker addon that its variants add, and with any tracker addon that keeps users apart.
 - A tracker nobody picks is not used.
 - Moving a tracker to another user also brings along what it already recorded for the previous one.
 

@@ -17,6 +17,7 @@ import {
   type AIOStreams,
   type ContentRef,
   type JellyfinItem,
+  type JellyfinPersona,
   type PlaybackEventKind,
   type ResolvedPlaybackSink,
   type SinkStatus,
@@ -83,6 +84,38 @@ function pickedByOthers(ctx: JellyfinRequestContext): Set<string> {
   return presets;
 }
 
+/**
+ * What the users ahead of this persona picked: the primary user, then personas
+ * in order. Left on automatic, the primary user holds every tracker.
+ */
+async function claimedBefore(
+  ctx: JellyfinRequestContext
+): Promise<Set<string>> {
+  const primaryPicks = ctx.userData.jellyfin?.primary?.trackers;
+  const claimed = new Set(
+    primaryPicks ??
+      (await ctx.primaryEngine())
+        .getPlaybackSinks()
+        .flatMap((sink) => (sink.presetId ? [sink.presetId] : []))
+  );
+  for (const persona of personasOf(ctx.userData)) {
+    if (persona.id === ctx.persona?.id) break;
+    if (persona.history === 'shared') continue;
+    for (const id of persona.trackers ?? []) claimed.add(id);
+  }
+  return claimed;
+}
+
+function asViewer(
+  sink: ResolvedPlaybackSink,
+  persona: JellyfinPersona | null
+): ResolvedPlaybackSink {
+  if (!sink.viewers || !persona) return sink;
+  const query = new URLSearchParams(sink.query);
+  query.set('viewer', persona.id);
+  return { ...sink, query: `?${query}` };
+}
+
 /** A tracker that failed to load keeps its row; an outage is not giving it up. */
 function unloaded(
   engine: AIOStreams,
@@ -96,8 +129,9 @@ function unloaded(
 
 /**
  * Each tracker account belongs to one history. A user's explicit list is what
- * it claims; left on automatic, the primary user takes every tracker and a
- * persona of its own history only what its variants added.
+ * it claims, and a tracker two users pick goes to the first; left on automatic,
+ * the primary user takes every tracker and a persona of its own history only
+ * what its variants added. A tracker that keeps users apart serves them all.
  */
 async function resolveSinks(
   ctx: JellyfinRequestContext,
@@ -114,21 +148,25 @@ async function resolveSinks(
     };
   }
   const engine = await ctx.engine();
-  const own = engine.getPlaybackSinks();
+  // A different address, so `ownSinks` keeps it beside the primary user's.
+  const own = engine
+    .getPlaybackSinks()
+    .map((sink) => asViewer(sink, ctx.persona));
   const picks = ctx.persona?.trackers;
   if (picks) {
     let sinks = picked(own, picks);
-    if (!primaryPicks && sinks.length) {
-      const held = new Set(
-        (await ctx.primaryEngine()).getPlaybackSinks().map((s) => s.presetId)
+    if (sinks.some((sink) => !sink.viewers)) {
+      const claimed = await claimedBefore(ctx);
+      sinks = sinks.filter(
+        (sink) => sink.viewers || !claimed.has(sink.presetId!)
       );
-      sinks = sinks.filter((sink) => !held.has(sink.presetId));
     }
     return { sinks, unloaded: unloaded(engine, picks) };
   }
   const taken = pickedByOthers(ctx);
   const sinks = (await ownSinks(ctx, own)).filter(
-    (sink) => sink.presetId === undefined || !taken.has(sink.presetId)
+    (sink) =>
+      sink.viewers || sink.presetId === undefined || !taken.has(sink.presetId)
   );
   return { sinks, unloaded: unloaded(engine, undefined) };
 }
@@ -221,6 +259,8 @@ export interface TrackerOption {
   user: string;
   presetId: string;
   addon: string;
+  /** Can be picked for several users. */
+  viewers: boolean;
 }
 
 /**
@@ -285,6 +325,7 @@ export async function listTrackers(
           user: ctx.persona?.id ?? '',
           presetId: sink.presetId,
           addon: sink.name,
+          viewers: !!sink.viewers,
         },
       ];
     });

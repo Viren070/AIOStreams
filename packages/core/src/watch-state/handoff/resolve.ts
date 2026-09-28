@@ -24,6 +24,7 @@ export interface ResolvedPlaybackSink {
   query: string;
   events: readonly PlaybackEventKind[];
   bulk?: boolean;
+  viewers?: boolean;
   /** Whether this addon answers the pull half. */
   pullable: boolean;
   ttlSeconds?: number;
@@ -124,6 +125,7 @@ export function resolvePlaybackSinks(
       query: manifestUrl.search,
       events: capability.events,
       bulk: capability.bulk,
+      viewers: capability.viewers,
       pullable: capability.pullable,
       ttlSeconds: capability.ttlSeconds,
       types: capability.types,

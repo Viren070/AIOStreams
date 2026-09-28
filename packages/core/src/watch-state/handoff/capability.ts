@@ -38,6 +38,8 @@ export interface WatchStateCapabilityInfo {
   events: readonly PlaybackEventKind[];
   /** Takes a mark on a whole show or season as one request. */
   bulk: boolean;
+  /** Tells users apart by the `viewer` it is sent. */
+  viewers: boolean;
   /** Whether the addon answers the `pull` half. */
   pullable: boolean;
   /** How long its answer may be reused before asking again. */
@@ -83,6 +85,7 @@ export function readWatchStateCapability(
     version: block?.version ?? 1,
     events,
     bulk: block?.push?.bulk === true,
+    viewers: block?.viewers === true,
     pullable,
     ttlSeconds: pull?.ttlSeconds,
     types: entry.types ?? [],

@@ -250,33 +250,13 @@ const JellyfinSettingsFields = z.object({
 
 /** Per-configuration settings for the Jellyfin-compatible API. */
 const JellyfinSettings = JellyfinSettingsFields.superRefine((settings, ctx) => {
-  // A tracker account belongs to one history, or two histories would mix.
-  const owners = new Map<string, string>();
-  const claim = (who: string, trackers: string[] | undefined) => {
-    for (const id of new Set(trackers ?? [])) {
-      const owner = owners.get(id);
-      if (owner) {
-        ctx.addIssue({
-          code: 'custom',
-          message: `Tracker "${id}" is selected for both ${owner} and ${who}.`,
-        });
-      } else {
-        owners.set(id, who);
-      }
-    }
-  };
-  claim('the primary user', settings.primary?.trackers);
   for (const persona of settings.personas ?? []) {
-    if (persona.history === 'shared') {
-      if (persona.trackers) {
-        ctx.addIssue({
-          code: 'custom',
-          message: `${persona.name} shares the primary user's history, so it uses the primary user's trackers.`,
-        });
-      }
-      continue;
+    if (persona.history === 'shared' && persona.trackers) {
+      ctx.addIssue({
+        code: 'custom',
+        message: `${persona.name} shares the primary user's history, so it uses the primary user's trackers.`,
+      });
     }
-    claim(persona.name, persona.trackers);
   }
 });
 
@@ -1253,6 +1233,7 @@ const AddonCatalogDefinitionSchema = z.object({
  */
 export const WatchStateCapabilitySchema = z.looseObject({
   version: z.coerce.number().optional(),
+  viewers: z.boolean().optional(),
   push: z
     .looseObject({
       events: z.array(z.string()).optional(),

@@ -38,13 +38,14 @@ Add `watch_state` to `resources`, and a root `watchState` object describing the 
 }
 ```
 
-| Field                    | Meaning                                                                                                                                                    |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `types`, `idPrefixes`    | On the resource entry. Events are filtered by them before anything is sent, so an anime tracker declaring `kitsu:` never hears about `tt` items.           |
-| `watchState.version`     | The contract version you implement, currently `2`.                                                                                                         |
+| Field                    | Meaning                                                                                                                                                                        |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `types`, `idPrefixes`    | On the resource entry. Events are filtered by them before anything is sent, so an anime tracker declaring `kitsu:` never hears about `tt` items.                               |
+| `watchState.version`     | The contract version you implement, currently `2`.                                                                                                                             |
 | `watchState.push.events` | The events you want. Omit it to receive every playback event; [watchlist events](#watchlist-changes) and [drops](#drops) are only sent when listed. Unknown names are ignored. |
-| `watchState.push.bulk`   | `true` to receive a mark on a whole show or season as one request. See [Bulk marks](#bulk-marks).                                                          |
-| `watchState.pull`        | Omit it if you serve nothing. `items`, `watched` and `watchlist` say which parts of the answer you fill; `ttlSeconds` is how long it may be reused.        |
+| `watchState.push.bulk`   | `true` to receive a mark on a whole show or season as one request. See [Bulk marks](#bulk-marks).                                                                              |
+| `watchState.pull`        | Omit it if you serve nothing. `items`, `watched` and `watchlist` say which parts of the answer you fill; `ttlSeconds` is how long it may be reused.                            |
+| `watchState.viewers`     | `true` if one configuration of your addon can serve several people. See [Viewers](#viewers).                                                                                   |
 
 Your addon URL already holds the user's configuration, so it is the credential. No header
 identifies the user.
@@ -358,6 +359,30 @@ the previous answer.
   errored or rate-limited, deletes every title only that source knew about. Omit `watched` unless
   you can serve all of them.
 </Callout>
+
+## Viewers
+
+A configuration usually belongs to one person, so an addon installed once syncs with one
+history. With `"viewers": true` in `watchState`, AIOStreams names the user on every push and pull,
+and one install can serve every user of the configuration:
+
+```http
+POST {addonBase}/watch_state/push/series/tt0903747:3:7.json?viewer=sam
+GET {addonBase}/watch_state/pull.json?viewer=sam&since=9f2c7b1e4a0d3856
+```
+
+- `viewer` is the id of a user with a history of their own. It is made once from the user's name
+  (lowercased, each run of other characters turned into `-`, trimmed of `-`, cut to 28 characters)
+  and never changes, even when the user is renamed. A second user whose name gives the same id
+  gets a suffix such as `sam-2`.
+- No `viewer` means the owner of the configuration: the primary user, and any user who shares its
+  history.
+- Keep everything per viewer: deduplication on `id`, and the pull's `version`.
+- Answer `404` for a viewer you do not know. The event is dropped, not retried, and only that
+  user's pull fails.
+
+`viewer` is only ever on the query string, never in the body. Declare `viewers` only once your
+configuration can tell users apart: an addon without it is picked for one user at a time.
 
 ## Enabling it
 

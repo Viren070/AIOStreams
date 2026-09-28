@@ -896,6 +896,8 @@ export interface WatchStateTrackerOption {
   user: string;
   presetId: string;
   addon: string;
+  /** Can be picked for several users. */
+  viewers: boolean;
 }
 
 export interface WatchStateOverview {
