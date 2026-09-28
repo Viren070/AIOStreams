@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.7.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.6.0...desktop-v0.7.0) (2026-09-28)
+
+
+### Features
+
+* adjust jellyfin wording/install options, update docs, readme ([d461cd7](https://github.com/Viren070/AIOStreams/commit/d461cd76ef43c34f270d8a93a6f721f42071b528))
+* **desktop:** add Discord events for browsing and a connection status ([eb193b4](https://github.com/Viren070/AIOStreams/commit/eb193b47ff45fe30604c3ed66b0829509ccc7cf5))
+
+
+### Bug Fixes
+
+* **desktop:** send the Discord logo by address ([39d447f](https://github.com/Viren070/AIOStreams/commit/39d447f390ce2db0f1d97cf56450477862a8351a))
+
 ## [0.6.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.5.0...desktop-v0.6.0) (2026-09-28)
 
 
