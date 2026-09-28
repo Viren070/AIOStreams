@@ -1,12 +1,15 @@
 //! Discord Rich Presence over Discord's local IPC socket.
 
-use std::io::{Read, Write};
+use std::io::{ErrorKind, Read, Write};
+use std::path::PathBuf;
 use std::sync::OnceLock;
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use serde::Deserialize;
 use serde_json::{Value, json};
+
+use crate::bridge::Outbound;
 
 const CLIENT_ID: &str = "1484926986865479680";
 /// The application's art asset key.
@@ -14,12 +17,14 @@ const LOGO: &str = "discord";
 const REPO_URL: &str = "https://github.com/Viren070/AIOStreams";
 /// A presence Discord was not running for is sent again this often.
 const RETRY: Duration = Duration::from_secs(30);
+/// Discord takes five updates every twenty seconds.
+const GAP: Duration = Duration::from_secs(4);
 
 const OP_HANDSHAKE: u32 = 0;
 const OP_FRAME: u32 = 1;
 const OP_CLOSE: u32 = 2;
 
-/// What the page is playing; `position` and `duration` are milliseconds.
+/// What the page shows; `position` and `duration` are milliseconds.
 #[derive(Debug, Clone, Deserialize)]
 pub struct Presence {
     pub title: String,
@@ -29,64 +34,158 @@ pub struct Presence {
     pub duration: Option<i64>,
     #[serde(default)]
     pub paused: bool,
+    #[serde(default)]
+    pub browsing: bool,
+}
+
+enum Command {
+    Set(Option<Presence>),
+    Check,
+}
+
+static WORKER: OnceLock<Sender<Command>> = OnceLock::new();
+
+/// Starts the worker, which gives `emit` a `discord-status` whenever it changes.
+pub fn start(emit: impl Fn(Outbound) + Send + 'static) {
+    WORKER.get_or_init(|| {
+        let (tx, rx) = mpsc::channel();
+        std::thread::Builder::new()
+            .name("discord".into())
+            .spawn(move || run(rx, emit))
+            .expect("spawn the discord thread");
+        tx
+    });
 }
 
 /// Shows `presence`, or clears it with `None`. Never blocks on Discord.
 pub fn set(presence: Option<Presence>) {
-    static WORKER: OnceLock<Sender<Option<Presence>>> = OnceLock::new();
-    let sender = WORKER.get_or_init(|| {
-        let (tx, rx) = mpsc::channel();
-        std::thread::Builder::new()
-            .name("discord".into())
-            .spawn(move || run(rx))
-            .expect("spawn the discord thread");
-        tx
-    });
-    let _ = sender.send(presence);
+    send(Command::Set(presence));
 }
 
-fn run(rx: Receiver<Option<Presence>>) {
+/// Connects if need be and reports the status, even an unchanged one.
+pub fn check() {
+    send(Command::Check);
+}
+
+fn send(command: Command) {
+    if let Some(worker) = WORKER.get() {
+        let _ = worker.send(command);
+    }
+}
+
+#[derive(Clone, PartialEq)]
+enum Status {
+    Connected,
+    NotFound,
+    Failed(String),
+    Refused(String),
+}
+
+struct Reporter<E> {
+    emit: E,
+    last: Option<Status>,
+}
+
+impl<E: Fn(Outbound)> Reporter<E> {
+    /// Logs and reports a change only, since failures are retried.
+    fn report(&mut self, status: Status, force: bool) {
+        let changed = self.last.as_ref() != Some(&status);
+        if changed {
+            match &status {
+                Status::Connected => {}
+                Status::NotFound => log::info!("no running Discord found"),
+                Status::Failed(e) => log::info!("could not connect: {e}"),
+                Status::Refused(e) => log::warn!("Discord refused the presence: {e}"),
+            }
+        }
+        if changed || force {
+            let (state, message) = match &status {
+                Status::Connected => ("connected", None),
+                Status::NotFound => ("not-found", None),
+                Status::Failed(e) => ("failed", Some(e.clone())),
+                Status::Refused(e) => ("refused", Some(e.clone())),
+            };
+            (self.emit)(Outbound::DiscordStatus { state, message });
+        }
+        self.last = Some(status);
+    }
+
+    fn open(&mut self, force: bool) -> Option<Connection> {
+        match Connection::open() {
+            Ok((conn, path)) => {
+                log::info!("connected to {}", path.display());
+                self.report(Status::Connected, force);
+                Some(conn)
+            }
+            Err(status) => {
+                self.report(status, force);
+                None
+            }
+        }
+    }
+}
+
+fn run(rx: Receiver<Command>, emit: impl Fn(Outbound)) {
+    let mut reporter = Reporter { emit, last: None };
     let mut conn: Option<Connection> = None;
     let mut pending: Option<Option<Presence>> = None;
+    let mut next_send = Instant::now();
     loop {
-        let next = match pending {
-            Some(_) => rx.recv_timeout(RETRY),
+        // Waiting out the gap keeps only the newest presence.
+        let received = match pending {
+            Some(_) => rx.recv_timeout(next_send.saturating_duration_since(Instant::now())),
             None => rx.recv().map_err(|_| RecvTimeoutError::Disconnected),
         };
-        match next {
-            Ok(mut latest) => {
-                while let Ok(newer) = rx.try_recv() {
-                    latest = newer;
+        match received {
+            Ok(Command::Set(presence)) => {
+                pending = Some(presence);
+                continue;
+            }
+            Ok(Command::Check) => {
+                if conn.is_none() {
+                    conn = reporter.open(true);
+                    if conn.is_some() {
+                        next_send = Instant::now();
+                    }
+                } else if let Some(last) = reporter.last.clone() {
+                    reporter.report(last, true);
                 }
-                pending = Some(latest);
+                continue;
             }
             Err(RecvTimeoutError::Timeout) => {}
             Err(RecvTimeoutError::Disconnected) => return,
         }
-        let Some(presence) = pending.clone() else {
+        let Some(presence) = pending.take() else {
             continue;
         };
         if conn.is_none() {
             if presence.is_none() {
-                pending = None;
                 continue;
             }
-            conn = Connection::open();
+            conn = reporter.open(false);
         }
         let mut sent = conn.as_mut().map(|c| c.set_activity(presence.as_ref()));
         // A restarted Discord leaves a dead socket, so one retry goes to a new one.
         if let Some(Err(e)) = &sent {
-            log::debug!("discord: {e}");
-            conn = Connection::open();
+            log::debug!("{e}");
+            conn = reporter.open(false);
             sent = conn.as_mut().map(|c| c.set_activity(presence.as_ref()));
         }
         match sent {
-            Some(Ok(())) => pending = None,
-            Some(Err(e)) => {
-                log::debug!("discord: {e}");
-                conn = None;
+            Some(Ok(refusal)) => {
+                reporter.report(refusal.map_or(Status::Connected, Status::Refused), false);
+                next_send = Instant::now() + GAP;
             }
-            None => {}
+            Some(Err(e)) => {
+                log::debug!("{e}");
+                conn = None;
+                pending = Some(presence);
+                next_send = Instant::now() + RETRY;
+            }
+            None => {
+                pending = Some(presence);
+                next_send = Instant::now() + RETRY;
+            }
         }
     }
 }
@@ -135,14 +234,16 @@ fn activity(p: &Presence) -> Value {
     };
     let mut activity = json!({
         "type": 3,
-        // Names the title, not the app, in the member list.
-        "status_display_type": 2,
         "details": clip(&p.title),
         "assets": { "large_image": LOGO, "large_text": clip(&hover) },
         "buttons": [{ "label": "AIOStreams", "url": REPO_URL }],
     });
     if let Some(state) = state {
         activity["state"] = json!(clip(&state));
+    }
+    // Names the title in the member list; browsing leaves the app's name there.
+    if !p.browsing {
+        activity["status_display_type"] = json!(2);
     }
     if let Some(id) = imdb {
         let page = format!("https://www.imdb.com/title/{id}/");
@@ -178,22 +279,33 @@ trait Stream: Read + Write + Send {}
 impl<T: Read + Write + Send> Stream for T {}
 
 impl Connection {
-    fn open() -> Option<Self> {
-        let stream = socket_paths()
-            .into_iter()
-            .find_map(|path| connect(&path).ok())?;
-        let mut conn = Connection { stream, nonce: 0 };
-        let hello = json!({ "v": 1, "client_id": CLIENT_ID });
-        match conn.write(OP_HANDSHAKE, &hello).and_then(|_| conn.read()) {
-            Ok(_) => Some(conn),
-            Err(e) => {
-                log::debug!("discord handshake: {e}");
-                None
+    fn open() -> Result<(Self, PathBuf), Status> {
+        let mut errors = Vec::new();
+        for path in socket_paths() {
+            let stream = match connect(&path) {
+                Ok(stream) => stream,
+                Err(e) if e.kind() == ErrorKind::NotFound => continue,
+                Err(e) => {
+                    errors.push(format!("{}: {e}", path.display()));
+                    continue;
+                }
+            };
+            let mut conn = Connection { stream, nonce: 0 };
+            let hello = json!({ "v": 1, "client_id": CLIENT_ID });
+            match conn.write(OP_HANDSHAKE, &hello).and_then(|_| conn.read()) {
+                Ok(_) => return Ok((conn, path)),
+                Err(e) => errors.push(format!("{}: handshake: {e}", path.display())),
             }
+        }
+        if errors.is_empty() {
+            Err(Status::NotFound)
+        } else {
+            Err(Status::Failed(errors.join("; ")))
         }
     }
 
-    fn set_activity(&mut self, presence: Option<&Presence>) -> std::io::Result<()> {
+    /// Discord's reason, when it refuses the presence.
+    fn set_activity(&mut self, presence: Option<&Presence>) -> std::io::Result<Option<String>> {
         self.nonce += 1;
         let payload = json!({
             "cmd": "SET_ACTIVITY",
@@ -202,10 +314,15 @@ impl Connection {
         });
         self.write(OP_FRAME, &payload)?;
         let reply = self.read()?;
-        if reply["evt"] == "ERROR" {
-            log::warn!("discord refused the presence: {}", reply["data"]);
+        if reply["evt"] != "ERROR" {
+            return Ok(None);
         }
-        Ok(())
+        let data = &reply["data"];
+        Ok(Some(
+            data["message"]
+                .as_str()
+                .map_or_else(|| data.to_string(), str::to_owned),
+        ))
     }
 
     fn write(&mut self, op: u32, payload: &Value) -> std::io::Result<()> {
@@ -226,14 +343,17 @@ impl Connection {
         let mut body = vec![0u8; len];
         self.stream.read_exact(&mut body)?;
         if op == OP_CLOSE {
-            return Err(std::io::Error::other("discord closed the connection"));
+            return Err(std::io::Error::other(format!(
+                "discord closed the connection: {}",
+                String::from_utf8_lossy(&body)
+            )));
         }
         serde_json::from_slice(&body).map_err(std::io::Error::other)
     }
 }
 
 #[cfg(windows)]
-fn socket_paths() -> Vec<std::path::PathBuf> {
+fn socket_paths() -> Vec<PathBuf> {
     (0..10)
         .map(|i| format!(r"\\.\pipe\discord-ipc-{i}").into())
         .collect()
@@ -248,17 +368,41 @@ fn connect(path: &std::path::Path) -> std::io::Result<Box<dyn Stream>> {
     Ok(Box::new(pipe))
 }
 
-/// Discord's own sandboxed builds put the socket in a subfolder.
+/// Flatpak clients, which keep the socket in a folder of their own.
 #[cfg(unix)]
-fn socket_paths() -> Vec<std::path::PathBuf> {
-    let mut dirs: Vec<std::path::PathBuf> = ["XDG_RUNTIME_DIR", "TMPDIR", "TMP", "TEMP"]
-        .iter()
-        .filter_map(|v| std::env::var_os(v).map(Into::into))
-        .collect();
-    dirs.push("/tmp".into());
+const FLATPAKS: [&str; 4] = [
+    "com.discordapp.Discord",
+    "dev.vencord.Vesktop",
+    "org.equicord.equibop",
+    "io.github.equicord.equibop",
+];
+
+#[cfg(unix)]
+fn socket_paths() -> Vec<PathBuf> {
+    let mut dirs: Vec<PathBuf> = Vec::new();
+    let vars = ["XDG_RUNTIME_DIR", "TMPDIR", "TMP", "TEMP"].map(std::env::var_os);
+    for dir in vars
+        .into_iter()
+        .flatten()
+        .map(PathBuf::from)
+        .chain(["/tmp".into()])
+    {
+        if !dirs.contains(&dir) {
+            dirs.push(dir);
+        }
+    }
+    let mut subs = vec![
+        String::new(),
+        "snap.discord".into(),
+        "snap.discord-canary".into(),
+    ];
+    for id in FLATPAKS {
+        subs.push(format!("app/{id}"));
+        subs.push(format!(".flatpak/{id}/xdg-run"));
+    }
     let mut out = Vec::new();
     for dir in dirs {
-        for sub in ["", "app/com.discordapp.Discord", "snap.discord"] {
+        for sub in &subs {
             for i in 0..10 {
                 out.push(dir.join(sub).join(format!("discord-ipc-{i}")));
             }

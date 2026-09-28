@@ -576,8 +576,34 @@ export const useEscExitsFullscreen = () =>
 /** Read by the page only; the app itself never needs it. */
 export const useChapterSkips = () =>
   useDeviceSetting<boolean>(DESKTOP_KEYS.chapterSkips, true);
-export const useShareOnDiscord = () =>
-  useDeviceSetting<boolean>(DESKTOP_KEYS.discord, false);
+
+export const DISCORD_EVENTS = [
+  'playing',
+  'titles',
+  'home',
+  'discover',
+  'search',
+  'calendar',
+  'favourites',
+  'activity',
+] as const;
+export type DiscordEvent = (typeof DISCORD_EVENTS)[number];
+
+const discordKey = (event: DiscordEvent) =>
+  event === 'playing'
+    ? DESKTOP_KEYS.discord
+    : `${DESKTOP_KEYS.discord}-${event}`;
+
+export const useDiscordEvent = (event: DiscordEvent) =>
+  useDeviceSetting<boolean>(discordKey(event), event === 'playing');
+
+export function useAnyDiscordEvent(): boolean {
+  return React.useSyncExternalStore(subscribe, () =>
+    DISCORD_EVENTS.some((e) =>
+      readDeviceSetting(discordKey(e), e === 'playing')
+    )
+  );
+}
 
 export function onSettingsChange(listener: () => void): () => void {
   return subscribe(listener);

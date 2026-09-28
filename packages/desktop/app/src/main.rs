@@ -406,6 +406,7 @@ pub fn handle(
             }
         }
         Inbound::Presence { presence } => discord::set(presence),
+        Inbound::DiscordCheck => discord::check(),
         Inbound::WebError { message } => {
             let message: String = message.chars().take(4000).collect();
             log::error!(target: "web", "{message}");

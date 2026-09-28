@@ -49,6 +49,9 @@ import {
   applyUpdate,
   checkForUpdates,
   useUpdateState,
+  checkDiscord,
+  useDiscordStatus,
+  type DiscordStatus,
   type ShellInfo,
   type UpdateState,
 } from '../lib/hosts/shell';
@@ -93,7 +96,10 @@ import {
   usePosterLines,
   usePosterSize,
   useSeekStep,
-  useShareOnDiscord,
+  useAnyDiscordEvent,
+  useDiscordEvent,
+  DISCORD_EVENTS,
+  type DiscordEvent,
   useSkipVersionList,
   useSubtitleBackgroundColor,
   useSubtitleBold,
@@ -629,21 +635,87 @@ function UpdatesCard() {
   );
 }
 
+const DISCORD_LABELS: Record<DiscordEvent, { label: string; help?: string }> = {
+  playing: {
+    label: "What's playing",
+    help: 'The title, the episode and the time left.',
+  },
+  titles: {
+    label: 'Title pages',
+    help: 'The movie or show whose page is open.',
+  },
+  home: { label: 'Home' },
+  discover: { label: 'Discover' },
+  search: { label: 'Search', help: 'That you are searching, not what for.' },
+  calendar: { label: 'Calendar' },
+  favourites: { label: 'Favourites' },
+  activity: { label: 'Activity' },
+};
+
+function discordStatus(status: DiscordStatus | null): string {
+  switch (status?.state) {
+    case undefined:
+      return 'Checking…';
+    case 'connected':
+      return 'Connected to Discord.';
+    case 'not-found':
+      return 'Discord is not running on this computer.';
+    case 'failed':
+      return `Could not connect: ${status.message}`;
+    case 'refused':
+      return `Discord refused the status: ${status.message}`;
+  }
+}
+
+function DiscordEventSwitch({ event }: { event: DiscordEvent }) {
+  const [value, setValue] = useDiscordEvent(event);
+  const { label, help } = DISCORD_LABELS[event];
+  return (
+    <Switch
+      side="right"
+      label={label}
+      help={help}
+      value={value}
+      onValueChange={setValue}
+    />
+  );
+}
+
+function DiscordCard() {
+  const any = useAnyDiscordEvent();
+  const status = useDiscordStatus();
+  React.useEffect(() => {
+    if (any) checkDiscord();
+  }, [any]);
+  return (
+    <SettingsCard
+      title="Discord"
+      description={`What your Discord profile shows. ${ON_DEVICE}`}
+    >
+      {DISCORD_EVENTS.map((event) => (
+        <DiscordEventSwitch key={event} event={event} />
+      ))}
+      {any && (
+        <SettingsRow label="Status" help={discordStatus(status)}>
+          <Button
+            intent="gray-outline"
+            className="w-full rounded-full sm:w-auto"
+            onClick={checkDiscord}
+          >
+            Check now
+          </Button>
+        </SettingsRow>
+      )}
+    </SettingsCard>
+  );
+}
+
 function DesktopSection() {
   const server = useServerInfo();
-  const [shareOnDiscord, setShareOnDiscord] = useShareOnDiscord();
   return (
     <>
       <UpdatesCard />
-      <SettingsCard title="Discord" description={ON_DEVICE}>
-        <Switch
-          side="right"
-          label="Show what you're watching"
-          help="Your Discord profile shows the title, the episode and the time left while something plays. Discord has to be running on this computer."
-          value={shareOnDiscord}
-          onValueChange={setShareOnDiscord}
-        />
-      </SettingsCard>
+      <DiscordCard />
       <SettingsCard title="mpv">
         <SettingsRow
           label="mpv configuration"

@@ -28,6 +28,8 @@ finish-args:
   # Discord's socket, for showing what plays on the user's profile.
   - --filesystem=xdg-run/discord-ipc-0
   - --filesystem=xdg-run/app/com.discordapp.Discord:create
+  - --filesystem=xdg-run/.flatpak/dev.vencord.Vesktop/xdg-run:create
+  - --filesystem=xdg-run/.flatpak/org.equicord.equibop/xdg-run:create
 cleanup:
   - /include
   - /lib/cmake

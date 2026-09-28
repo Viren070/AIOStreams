@@ -53,6 +53,11 @@ export type ShellMessage =
       version: string | null;
       error: string | null;
     }
+  | {
+      type: 'discord-status';
+      state: 'connected' | 'not-found' | 'failed' | 'refused';
+      message: string | null;
+    }
   | { type: 'error'; message: string };
 
 /** The AIOStreams desktop app's bridge to mpv. */
@@ -448,6 +453,29 @@ function onUpdateState(next: UpdateState) {
     });
 }
 
+export type DiscordStatus = Extract<ShellMessage, { type: 'discord-status' }>;
+
+let discordStatus: DiscordStatus | null = null;
+const discordListeners = new Set<() => void>();
+
+function subscribeDiscord(listener: () => void): () => void {
+  discordListeners.add(listener);
+  return () => discordListeners.delete(listener);
+}
+
+export function useDiscordStatus(): DiscordStatus | null {
+  return React.useSyncExternalStore(subscribeDiscord, () => discordStatus);
+}
+
+export function checkDiscord(): void {
+  window.aiostreamsDesktop?.send({ type: 'discord-check' });
+}
+
+function onDiscordStatus(next: DiscordStatus) {
+  discordStatus = next;
+  for (const listener of discordListeners) listener();
+}
+
 /** The browser's own menu only where it edits or copies; Shift still opens it. */
 function onContextMenu(e: MouseEvent) {
   const target = e.target as HTMLElement | null;
@@ -477,6 +505,7 @@ export function ShellSetup() {
     const unsubscribe = shell.subscribe((m) => {
       if (m.type === 'fullscreen') fullscreen = m.value;
       else if (m.type === 'update-state') onUpdateState(m);
+      else if (m.type === 'discord-status') onDiscordStatus(m);
     });
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || !fullscreen || e.defaultPrevented) return;

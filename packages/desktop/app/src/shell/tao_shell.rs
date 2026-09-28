@@ -4,6 +4,7 @@ use std::rc::Rc;
 use std::time::Instant;
 
 use aiostreams_desktop_core::bridge::{Inbound, Outbound, origin};
+use aiostreams_desktop_core::discord;
 use tao::dpi::{LogicalSize, PhysicalPosition, PhysicalSize};
 use tao::event::{Event, WindowEvent};
 use tao::event_loop::{ControlFlow, EventLoopBuilder, EventLoopWindowTarget};
@@ -168,6 +169,12 @@ pub fn run(app: App) {
             let _ = proxy.send_event(UserEvent::Emit(receive_script(&message)));
         }
     }));
+    discord::start({
+        let proxy = proxy.clone();
+        move |message: Outbound| {
+            let _ = proxy.send_event(UserEvent::Emit(receive_script(&message)));
+        }
+    });
 
     let mut context = WebContext::new(Some(data_dir.join(platform::WEB_DATA_DIR)));
     let builder = WebViewBuilder::new_with_web_context(&mut context)

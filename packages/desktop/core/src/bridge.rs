@@ -65,10 +65,12 @@ pub enum Inbound {
     WebError {
         message: String,
     },
-    /// What Discord shows the user watching; `None` clears it.
+    /// What Discord shows the user doing; `None` clears it.
     Presence {
         presence: Option<Presence>,
     },
+    /// Connects to Discord if need be and answers with a `discord-status`.
+    DiscordCheck,
 }
 
 #[derive(Debug, Serialize)]
@@ -107,6 +109,11 @@ pub enum Outbound {
         channel: Option<UpdateChannel>,
         version: Option<String>,
         error: Option<String>,
+    },
+    /// `connected`, `not-found`, `failed` or `refused`, with the reason for the last two.
+    DiscordStatus {
+        state: &'static str,
+        message: Option<String>,
     },
     Error {
         message: String,

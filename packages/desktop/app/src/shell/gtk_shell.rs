@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use aiostreams_desktop_core::bridge::{Inbound, Outbound, origin};
+use aiostreams_desktop_core::discord;
 use aiostreams_desktop_core::player::Player;
 use gtk4::prelude::*;
 use gtk4::{gdk, gio, glib};
@@ -223,6 +224,7 @@ pub fn run(app: App) {
     let updater = Rc::new(Updater::start(|message| {
         post(UserEvent::Emit(receive_script(&message)))
     }));
+    discord::start(|message| post(UserEvent::Emit(receive_script(&message))));
 
     let context = webkit6::WebContext::new();
     context.register_uri_scheme("aiostreams", move |request| {

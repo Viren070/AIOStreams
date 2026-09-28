@@ -48,6 +48,7 @@ import { configureUrl, navigate, to } from '../lib/paths';
 import { playbackHost } from '../lib/hosts';
 import { serverAddress } from '../lib/servers';
 import { useServerInfo } from '../lib/server-info';
+import { useDiscordBrowsing } from '../lib/discord';
 import { UserAvatar } from './user-avatar';
 import { BrandLogo } from './brand-logo';
 import { VersionPickerProvider } from './version-picker';
@@ -277,6 +278,7 @@ export function WebLayout() {
   const users = usePickableUsers();
   const several = (users.data?.length ?? 0) > 1;
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  useDiscordBrowsing(pathname);
   const activity: SidebarItem = {
     id: 'activity',
     name: 'Activity',
