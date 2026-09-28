@@ -140,8 +140,10 @@ pub fn run(app: App) {
         .with_titlebar_transparent(true)
         .with_title_hidden(true)
         .with_fullsize_content_view(true);
+    // tao shows a visible window at its restored size before maximizing it.
     #[cfg(windows)]
     let builder = builder
+        .with_visible(false)
         .with_decorations(false)
         .with_undecorated_shadow(true)
         .with_window_classname(platform::WINDOW_CLASS)
@@ -237,6 +239,11 @@ pub fn run(app: App) {
     let webview = builder.build_as_child(&window);
     let webview =
         webview.unwrap_or_else(|e| platform::fatal(&format!("could not start the web view: {e}")));
+    #[cfg(windows)]
+    window.set_visible(true);
+    // Showing the window maximizes it.
+    let size = window.inner_size();
+    let _ = webview.set_bounds(page_bounds(size));
     video.resize(size.width, size.height);
 
     let mut fullscreen = false;
