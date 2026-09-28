@@ -66,20 +66,6 @@ export async function maybeGrabNzbForDirectUpload(
   ) {
     return null;
   }
-  let url: URL;
-  try {
-    url = new URL(nzb);
-  } catch {
-    return null;
-  }
-  if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
-  // skip URLs already pointing at this instance's own proxy
-  if (
-    url.host === new URL(appConfig.bootstrap.internalUrl).host ||
-    url.host === new URL(appConfig.bootstrap.baseUrl).host
-  ) {
-    return null;
-  }
   return await downloadManager.fetchNzb(nzb);
 }
 
