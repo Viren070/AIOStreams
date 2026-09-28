@@ -1,5 +1,27 @@
 # Changelog
 
+## [2.35.3](https://github.com/Viren070/AIOStreams/compare/v2.35.2...v2.35.3) (2026-09-28)
+
+
+### Features
+
+* add a show on home modifier for catalogs that require a genre ([a780805](https://github.com/Viren070/AIOStreams/commit/a78080578d3ea3b2df5989856aa7c528e6deb6c0))
+* **core:** add per-addon catalog defaults ([063b018](https://github.com/Viren070/AIOStreams/commit/063b018947f646cb8774c28a85fca64f813e3e4e))
+* **frontend:** rework the catalog editor ([1c6f2c0](https://github.com/Viren070/AIOStreams/commit/1c6f2c0c466136d440d4dda007d6747e4e276947))
+* **jellyfin-web:** add a per-segment skip setting ([b66d07a](https://github.com/Viren070/AIOStreams/commit/b66d07a016881a8a4a4fd208098195c7b4a3a5bc))
+* **jellyfin:** send persona ids to trackers that declare watchState.viewers ([ffd98bd](https://github.com/Viren070/AIOStreams/commit/ffd98bd0897df74e2e7f392bab438c9e2732ac7a))
+
+
+### Bug Fixes
+
+* **jellyfin:** apply variants before syncing and validating the config ([1764e37](https://github.com/Viren070/AIOStreams/commit/1764e37f17682e303123808a1e4c7e89e11e261e))
+* **ui:** declare the dark color scheme before the app loads ([ec93f12](https://github.com/Viren070/AIOStreams/commit/ec93f125245d9d9da535f006413aa6a2f2d1f8de))
+
+
+### Miscellaneous Chores
+
+* update header presets ([#1383](https://github.com/Viren070/AIOStreams/issues/1383)) ([a1f783c](https://github.com/Viren070/AIOStreams/commit/a1f783c966f4e00bbf7a735dc8b13df92c13a6a1))
+
 ## [2.35.2](https://github.com/Viren070/AIOStreams/compare/v2.35.1...v2.35.2) (2026-09-27)
 
 
