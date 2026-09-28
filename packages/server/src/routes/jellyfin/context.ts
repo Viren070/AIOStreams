@@ -88,6 +88,8 @@ export interface JellyfinRequestContext {
  */
 interface CachedConfig {
   userData: UserData;
+  /** As saved, for variants to patch before the sync and validation. */
+  stored: UserData;
   updatedAt: string;
   checkedAt: number;
 }
@@ -132,17 +134,21 @@ async function loadConfig(
   userData.uuid = uuid;
   userData.encryptedPassword = encryptedPassword;
   userData.ip = undefined;
-  userData = await syncUserDataUrls(userData);
-  userData = await validateConfig(userData, {
+  const stored = structuredClone(userData);
+  return {
+    userData: await syncAndValidate(userData),
+    stored,
+    updatedAt: await configUpdatedAt(uuid),
+    checkedAt: Date.now(),
+  };
+}
+
+async function syncAndValidate(userData: UserData): Promise<UserData> {
+  return validateConfig(await syncUserDataUrls(userData), {
     skipVariantValidation: true,
     skipErrorsFromAddonsOrProxies: true,
     decryptValues: true,
   });
-  return {
-    userData,
-    updatedAt: await configUpdatedAt(uuid),
-    checkedAt: Date.now(),
-  };
 }
 
 /**
@@ -472,21 +478,33 @@ async function buildContext(
   }
   const primaryVariants = userData.jellyfin?.primary?.variants ?? [];
   const variantContext = buildVariantRequestContext(req, 'jellyfin');
-
-  try {
-    const own = persona ? (persona.variants ?? []) : primaryVariants;
-    const result = await activateVariants(userData, own, variantContext);
-    userData = result.userData;
-  } catch (error) {
-    logger.warn(
-      {
-        uuid,
-        persona: persona?.id,
-        err: error instanceof Error ? error.message : String(error),
-      },
-      'variant activation failed for jellyfin request'
-    );
-  }
+  const configFor = async (selected: string[]): Promise<UserData> => {
+    try {
+      const { userData: activated, applied } = await activateVariants(
+        entry.stored,
+        selected,
+        variantContext
+      );
+      const data = applied.length
+        ? await syncAndValidate(activated)
+        : { ...baseUserData, healthResults: activated.healthResults };
+      return { ...data, ip: req.userIp };
+    } catch (error) {
+      logger.warn(
+        {
+          uuid,
+          persona: persona?.id,
+          variants: selected,
+          err: error instanceof Error ? error.message : String(error),
+        },
+        'variant activation failed for jellyfin request'
+      );
+      return baseUserData;
+    }
+  };
+  userData = await configFor(
+    persona ? (persona.variants ?? []) : primaryVariants
+  );
 
   const serverIdValue = instanceServerId();
   const baseUrl = `${requestOrigin(req)}${req.baseUrl}`.replace(/\/$/, '');
@@ -509,14 +527,7 @@ async function buildContext(
     })));
   const getPrimaryEngine = () => {
     if (!persona) return getEngine();
-    return (primaryEngine ??= activateVariants(
-      baseUserData,
-      primaryVariants,
-      variantContext
-    ).then(
-      (r) => engineOf(r.userData),
-      () => engineOf(baseUserData)
-    ));
+    return (primaryEngine ??= configFor(primaryVariants).then(engineOf));
   };
   const userId = personaUserId(uuid, persona?.id ?? '');
   const watch: WatchScope =
