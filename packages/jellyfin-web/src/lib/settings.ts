@@ -392,6 +392,38 @@ const SEEK_STEP_KEY = 'aiostreams-web-seek-step';
 export const useSeekStep = () =>
   useDeviceSetting<number>(SEEK_STEP_KEY, 10, SEEK_STEPS);
 
+export const SEGMENT_TYPES = [
+  'Intro',
+  'Recap',
+  'Outro',
+  'Preview',
+  'Commercial',
+] as const;
+export type SegmentType = (typeof SEGMENT_TYPES)[number];
+export const SEGMENT_ACTIONS = ['ask', 'skip', 'none'] as const;
+export type SegmentAction = (typeof SEGMENT_ACTIONS)[number];
+const segmentKey = (type: SegmentType) =>
+  `aiostreams-web-segment-${type.toLowerCase()}`;
+
+export const useSegmentAction = (type: SegmentType) =>
+  useDeviceSetting<SegmentAction>(segmentKey(type), 'ask', SEGMENT_ACTIONS);
+
+function readSegmentActions(): string {
+  return SEGMENT_TYPES.map((type) =>
+    readDeviceSetting<SegmentAction>(segmentKey(type), 'ask', SEGMENT_ACTIONS)
+  ).join(',');
+}
+
+export function useSegmentActions(): Record<SegmentType, SegmentAction> {
+  const raw = React.useSyncExternalStore(subscribe, readSegmentActions);
+  return React.useMemo(() => {
+    const actions = raw.split(',') as SegmentAction[];
+    return Object.fromEntries(
+      SEGMENT_TYPES.map((type, i) => [type, actions[i]])
+    ) as Record<SegmentType, SegmentAction>;
+  }, [raw]);
+}
+
 export const SUBTITLE_SIZES = ['small', 'normal', 'large', 'huge'] as const;
 export type SubtitleSize = (typeof SUBTITLE_SIZES)[number];
 export const SUBTITLE_OUTLINES = ['none', 'thin', 'normal', 'thick'] as const;

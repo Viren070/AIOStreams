@@ -46,7 +46,9 @@ import { playbackHost } from '../lib/hosts';
 import { delayLabel } from '../lib/subtitle-lines';
 import {
   useSeekStep,
+  useSegmentActions,
   useVideoFit,
+  type SegmentType,
   VIDEO_FITS,
   type VideoFit,
 } from '../lib/settings';
@@ -55,13 +57,14 @@ import { chapterAt, type Chapter } from '../lib/chapters';
 import type { BaseItemDto, MediaSegmentDto } from '../lib/types';
 
 const IDLE_MS = 2000;
+const SKIP_BUTTON_MS = 8000;
 const RATES = [0.5, 0.75, 1, 1.25, 1.5, 2];
-const SEGMENT_LABEL: Record<string, string> = {
-  Intro: 'Skip intro',
-  Recap: 'Skip recap',
-  Outro: 'Skip credits',
-  Preview: 'Skip preview',
-  Commercial: 'Skip ad',
+const SEGMENT_NAME: Record<string, string> = {
+  Intro: 'intro',
+  Recap: 'recap',
+  Outro: 'credits',
+  Preview: 'preview',
+  Commercial: 'ad',
 };
 
 interface Segment {
@@ -69,6 +72,8 @@ interface Segment {
   startMs: number;
   endMs: number;
 }
+
+const segmentId = (s: Segment) => `${s.type}:${s.startMs}`;
 
 function segmentsOf(items: MediaSegmentDto[] | null | undefined): Segment[] {
   return (items ?? [])
@@ -658,9 +663,37 @@ export function PlayerControls({
     return () => window.removeEventListener('keydown', onKey);
   }, [wake]);
 
-  const segment = segments.find(
+  const segmentActions = useSegmentActions();
+  const inside = segments.filter(
     (s) => state.positionMs >= s.startMs && state.positionMs < s.endMs - 1000
   );
+  const actionOf = (s: Segment) =>
+    segmentActions[s.type as SegmentType] ?? 'ask';
+  // Each segment skips once; seeking back into one offers the button instead.
+  const skipped = React.useRef(new Set<string>());
+  const segment = inside.find(
+    (s) =>
+      actionOf(s) === 'ask' ||
+      (actionOf(s) === 'skip' && skipped.current.has(segmentId(s)))
+  );
+  const autoSkip = inside.find(
+    (s) => actionOf(s) === 'skip' && !skipped.current.has(segmentId(s))
+  );
+  React.useEffect(() => {
+    if (!autoSkip || !state.started) return;
+    skipped.current.add(segmentId(autoSkip));
+    if (offeringNext) return;
+    latest.current.seek(autoSkip.endMs);
+    showNotice(`Skipped ${SEGMENT_NAME[autoSkip.type] ?? 'segment'}`);
+  }, [autoSkip, state.started, offeringNext, showNotice]);
+  const [segmentFresh, setSegmentFresh] = React.useState(false);
+  const shownSegment = segment && segmentId(segment);
+  React.useEffect(() => {
+    if (!shownSegment) return;
+    setSegmentFresh(true);
+    const timer = setTimeout(() => setSegmentFresh(false), SKIP_BUTTON_MS);
+    return () => clearTimeout(timer);
+  }, [shownSegment]);
   const onMenu = (open: boolean) => setMenus((n) => n + (open ? 1 : -1));
   const subtitleOptions = [{ id: '', label: 'Off' }, ...player.subtitleTracks];
   const chapters = player.chapters ?? [];
@@ -840,11 +873,13 @@ export function PlayerControls({
         <div
           data-ui="skip-segment"
           data-type={segment.type}
+          data-visible={visible || segmentFresh || undefined}
           className={cn(
-            'absolute right-[max(1rem,env(safe-area-inset-right))] z-20 transition-[bottom] duration-300 sm:right-[max(2rem,env(safe-area-inset-right))]',
+            'absolute right-[max(1rem,env(safe-area-inset-right))] z-20 transition-[bottom,opacity] duration-300 sm:right-[max(2rem,env(safe-area-inset-right))]',
             visible
               ? 'bottom-[calc(7rem+env(safe-area-inset-bottom))] sm:bottom-[calc(8rem+env(safe-area-inset-bottom))]'
-              : 'bottom-[calc(2rem+env(safe-area-inset-bottom))]'
+              : 'bottom-[calc(2rem+env(safe-area-inset-bottom))]',
+            !visible && !segmentFresh && 'pointer-events-none opacity-0'
           )}
         >
           <Button
@@ -853,7 +888,9 @@ export function PlayerControls({
             rightIcon={<LuSkipForward />}
             onClick={() => player.seek(segment.endMs)}
           >
-            {SEGMENT_LABEL[segment.type] ?? 'Skip'}
+            {SEGMENT_NAME[segment.type]
+              ? `Skip ${SEGMENT_NAME[segment.type]}`
+              : 'Skip'}
           </Button>
         </div>
       )}

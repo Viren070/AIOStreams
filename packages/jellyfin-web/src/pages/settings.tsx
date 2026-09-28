@@ -72,6 +72,9 @@ import {
   NEXT_COUNTDOWNS,
   NEXT_LEADS,
   SEEK_STEPS,
+  SEGMENT_ACTIONS,
+  SEGMENT_TYPES,
+  useSegmentAction,
   useAudioChannels,
   useEpisodeLayout,
   useEscExitsFullscreen,
@@ -107,6 +110,8 @@ import {
   type NextPrompt,
   type PosterLine,
   type PosterSize,
+  type SegmentAction,
+  type SegmentType,
   type SubtitleOutline,
   type SubtitleSize,
 } from '../lib/settings';
@@ -170,6 +175,40 @@ const NEXT_PROMPT_HELP: Record<NextPrompt, string> = {
   end: 'A set time before the end.',
   off: 'Episodes end without offering the next one.',
 };
+
+const SEGMENT_LABELS: Record<SegmentType, string> = {
+  Intro: 'Intros',
+  Recap: 'Recaps',
+  Outro: 'Credits',
+  Preview: 'Previews',
+  Commercial: 'Ads',
+};
+
+const SEGMENT_ACTION_LABELS: Record<SegmentAction, string> = {
+  ask: 'Show a skip button',
+  skip: 'Skip automatically',
+  none: 'Do nothing',
+};
+
+function SegmentActionSelect({ type }: { type: SegmentType }) {
+  const [action, setAction] = useSegmentAction(type);
+  return (
+    <Select
+      label={SEGMENT_LABELS[type]}
+      help={
+        type === 'Outro' && action === 'skip'
+          ? 'Credits that end an episode are left to the next episode prompt when it shows.'
+          : undefined
+      }
+      options={SEGMENT_ACTIONS.map((a) => ({
+        value: a,
+        label: SEGMENT_ACTION_LABELS[a],
+      }))}
+      value={action}
+      onValueChange={(v) => setAction(v as SegmentAction)}
+    />
+  );
+}
 
 function PlaybackSection() {
   const { prefs, update } = usePlaybackPrefs();
@@ -282,6 +321,20 @@ function PlaybackSection() {
           />
         )}
       </SettingsCard>
+      <SettingsCard title="Skipping" description={ON_DEVICE}>
+        {SEGMENT_TYPES.map((type) => (
+          <SegmentActionSelect key={type} type={type} />
+        ))}
+        {shell && (
+          <Switch
+            side="right"
+            label="Skip by the file's chapters"
+            help="Where a file names its intro, credits, recap or preview chapters, skipping uses them instead of the server's times, since they fit that exact file. The rest still come from the server."
+            value={chapterSkips}
+            onValueChange={setChapterSkips}
+          />
+        )}
+      </SettingsCard>
       <SettingsCard title="Controls" description={ON_DEVICE}>
         <Select
           label="Skip length"
@@ -293,15 +346,6 @@ function PlaybackSection() {
           value={String(seekStep)}
           onValueChange={(v) => setSeekStep(Number(v))}
         />
-        {shell && (
-          <Switch
-            side="right"
-            label="Skip by the file's chapters"
-            help="Where a file names its intro, credits, recap or preview chapters, the skip buttons use them instead of the server's times, since they fit that exact file. The rest still come from the server."
-            value={chapterSkips}
-            onValueChange={setChapterSkips}
-          />
-        )}
         {shell && (
           <Switch
             side="right"
