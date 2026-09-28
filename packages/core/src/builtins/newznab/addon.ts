@@ -37,6 +37,7 @@ class NewznabApi extends BaseNabApi<'newznab'> {
 
 export const NewznabAddonConfigSchema = NabAddonConfigSchema.extend({
   proxyAuth: z.string().optional(),
+  uploadNzbDirectly: z.boolean().optional(),
   zyclopsHealthProxy: z
     .object({
       enabled: z.boolean().optional(),
@@ -235,7 +236,11 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
       nzbs.push(nzb);
     }
 
-    if (this.userData.proxyAuth) {
+    if (this.userData.uploadNzbDirectly) {
+      for (const nzb of nzbs) {
+        nzb.uploadDirectly = true;
+      }
+    } else if (this.userData.proxyAuth) {
       const auth = this.userData.proxyAuth;
       BuiltinProxy.validateAuth(auth);
       const proxy = createProxy({

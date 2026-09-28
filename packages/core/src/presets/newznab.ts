@@ -213,6 +213,18 @@ export class NewznabPreset extends BuiltinAddonPreset {
         type: 'password',
         required: false,
       },
+      ...(appConfig.builtins.debrid.uploadNzbDirectly
+        ? [
+            {
+              id: 'uploadNzbDirectly',
+              name: 'Upload NZBs Directly',
+              description:
+                'Instead of proxying, download the NZB and upload it directly to the debrid/usenet service, where supported.',
+              type: 'boolean',
+              default: false,
+            } satisfies Option,
+          ]
+        : []),
       {
         id: 'timeout',
         name: 'Timeout (ms)',

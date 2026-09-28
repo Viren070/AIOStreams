@@ -57,9 +57,12 @@ export function cleanNzbUrl(url: string): string {
 }
 
 export async function maybeGrabNzbForDirectUpload(
-  nzb: string
+  nzb: string,
+  requestedByIndexer?: boolean
 ): Promise<Buffer | null> {
-  if (!appConfig.builtins.debrid.uploadNzbDirectly) return null;
+  if (!appConfig.builtins.debrid.uploadNzbDirectly || !requestedByIndexer) {
+    return null;
+  }
   let url: URL;
   try {
     url = new URL(nzb);
@@ -246,6 +249,7 @@ export interface NZB extends BaseFile {
   type: 'usenet';
   hash: string;
   nzb: string;
+  uploadDirectly?: boolean;
   easynewsUrl?: string;
   zyclopsHealth?: string;
   serviceItemId?: string;

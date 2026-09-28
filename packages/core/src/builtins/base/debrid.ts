@@ -891,6 +891,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         : {
             type: 'usenet',
             nzb: torrentOrNzb.nzb,
+            uploadDirectly: torrentOrNzb.uploadDirectly,
             title: torrentOrNzb.title,
             hash: torrentOrNzb.hash,
             releaseKey: torrentOrNzb.releaseKey,

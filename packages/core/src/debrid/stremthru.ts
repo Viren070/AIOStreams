@@ -683,9 +683,13 @@ export class StremThruService
     }
   }
 
-  public async addNzb(nzb: string, name: string): Promise<DebridDownload> {
+  public async addNzb(
+    nzb: string,
+    name: string,
+    uploadDirectly?: boolean
+  ): Promise<DebridDownload> {
     try {
-      const file = await maybeGrabNzbForDirectUpload(nzb);
+      const file = await maybeGrabNzbForDirectUpload(nzb, uploadDirectly);
       const result = await this.stremthru.store.addNewz(
         file
           ? { file: new File([file], name, { type: 'application/x-nzb' }) }
@@ -1189,7 +1193,7 @@ export class StremThruService
     autoRemoveDownloads?: boolean,
     signal?: AbortSignal
   ): Promise<string | undefined> {
-    const { nzb, metadata, hash } = playbackInfo;
+    const { nzb, metadata, hash, uploadDirectly } = playbackInfo;
     const cacheKey = buildResolveKey(
       'st:cache',
       this.serviceName,
@@ -1259,7 +1263,7 @@ export class StremThruService
         hash,
       });
 
-      usenetDownload = await this.addNzb(nzb, filename);
+      usenetDownload = await this.addNzb(nzb, filename, uploadDirectly);
 
       logger.debug(`Usenet download added for ${makeUrlLogSafe(nzb)}`, {
         status: usenetDownload.status,

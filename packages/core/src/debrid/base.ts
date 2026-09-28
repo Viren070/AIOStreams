@@ -256,6 +256,7 @@ const UsenetInfoSchema = BaseFileInfoSchema.extend({
   hash: z.string(),
   easynewsUrl: z.string().optional(),
   nzb: z.string(),
+  uploadDirectly: z.boolean().optional(),
   releaseKey: z.string().regex(WD1_KEY_REGEX).optional().catch(undefined),
   indexer: z.string().optional(),
   type: z.literal('usenet'),
@@ -326,7 +327,11 @@ export interface UsenetDebridService extends BaseDebridService {
     checkOwned?: boolean
   ): Promise<DebridDownload[]>;
   listNzbs?(id?: string): Promise<DebridDownload[]>;
-  addNzb?(nzb: string, name: string): Promise<DebridDownload>;
+  addNzb?(
+    nzb: string,
+    name: string,
+    uploadDirectly?: boolean
+  ): Promise<DebridDownload>;
   generateUsenetLink?(
     downloadId: string,
     fileId?: string,

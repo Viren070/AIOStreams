@@ -332,9 +332,13 @@ export class TorboxDebridService
     return cachedResults;
   }
 
-  public async addNzb(nzb: string, name: string): Promise<DebridDownload> {
+  public async addNzb(
+    nzb: string,
+    name: string,
+    uploadDirectly?: boolean
+  ): Promise<DebridDownload> {
     try {
-      const file = await maybeGrabNzbForDirectUpload(nzb);
+      const file = await maybeGrabNzbForDirectUpload(nzb, uploadDirectly);
       const res = await this.torboxApi.usenet.createUsenetDownload(
         this.apiVersion,
         file ? { file: bufferToArrayBuffer(file), name } : { link: nzb, name }
@@ -715,7 +719,7 @@ export class TorboxDebridService
     autoRemoveDownloads?: boolean,
     signal?: AbortSignal
   ): Promise<string | undefined> {
-    const { nzb, metadata, hash } = playbackInfo;
+    const { nzb, metadata, hash, uploadDirectly } = playbackInfo;
     const cacheKey = buildResolveKey(
       'tb:cache',
       this.serviceName,
@@ -789,7 +793,7 @@ export class TorboxDebridService
         hash,
       });
 
-      usenetDownload = await this.addNzb(nzb, filename);
+      usenetDownload = await this.addNzb(nzb, filename, uploadDirectly);
 
       logger.debug(`Usenet download added for ${makeUrlLogSafe(nzb)}`, {
         status: usenetDownload.status,
