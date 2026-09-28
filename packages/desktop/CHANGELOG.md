@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.6.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.5.0...desktop-v0.6.0) (2026-09-28)
+
+
+### Features
+
+* add a show on home modifier for catalogs that require a genre ([22fc51f](https://github.com/Viren070/AIOStreams/commit/22fc51fe02e21401a808a3e89517e21148bc32e7))
+* **jellyfin-web:** add a per-segment skip setting ([22fc51f](https://github.com/Viren070/AIOStreams/commit/22fc51fe02e21401a808a3e89517e21148bc32e7))
+
+
+### Bug Fixes
+
+* **desktop:** create the window hidden on Windows and show it after the web view ([2955154](https://github.com/Viren070/AIOStreams/commit/2955154fa97209032bf945a6d7dc73ca905c1814))
+* **ui:** declare the dark color scheme before the app loads ([22fc51f](https://github.com/Viren070/AIOStreams/commit/22fc51fe02e21401a808a3e89517e21148bc32e7))
+
 ## [0.5.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.4.0...desktop-v0.5.0) (2026-09-27)
 
 
