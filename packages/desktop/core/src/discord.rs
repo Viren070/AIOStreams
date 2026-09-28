@@ -12,8 +12,9 @@ use serde_json::{Value, json};
 use crate::bridge::Outbound;
 
 const CLIENT_ID: &str = "1484926986865479680";
-/// The application's art asset key.
-const LOGO: &str = "discord";
+/// The application's art asset.
+const LOGO: &str =
+    "https://cdn.discordapp.com/app-assets/1484926986865479680/1553797379705020567.png";
 const REPO_URL: &str = "https://github.com/Viren070/AIOStreams";
 /// A presence Discord was not running for is sent again this often.
 const RETRY: Duration = Duration::from_secs(30);
@@ -84,6 +85,7 @@ enum Status {
 struct Reporter<E> {
     emit: E,
     last: Option<Status>,
+    path: Option<PathBuf>,
 }
 
 impl<E: Fn(Outbound)> Reporter<E> {
@@ -113,8 +115,14 @@ impl<E: Fn(Outbound)> Reporter<E> {
     fn open(&mut self, force: bool) -> Option<Connection> {
         match Connection::open() {
             Ok((conn, path)) => {
-                log::info!("connected to {}", path.display());
-                self.report(Status::Connected, force);
+                if self.path.as_ref() != Some(&path) {
+                    log::info!("connected to {}", path.display());
+                    self.path = Some(path);
+                }
+                // A client can take the connection but not the presence, so a sent one reports it.
+                if force {
+                    self.report(Status::Connected, true);
+                }
                 Some(conn)
             }
             Err(status) => {
@@ -126,7 +134,11 @@ impl<E: Fn(Outbound)> Reporter<E> {
 }
 
 fn run(rx: Receiver<Command>, emit: impl Fn(Outbound)) {
-    let mut reporter = Reporter { emit, last: None };
+    let mut reporter = Reporter {
+        emit,
+        last: None,
+        path: None,
+    };
     let mut conn: Option<Connection> = None;
     let mut pending: Option<Option<Presence>> = None;
     let mut next_send = Instant::now();
@@ -177,7 +189,7 @@ fn run(rx: Receiver<Command>, emit: impl Fn(Outbound)) {
                 next_send = Instant::now() + GAP;
             }
             Some(Err(e)) => {
-                log::debug!("{e}");
+                reporter.report(Status::Failed(e.to_string()), false);
                 conn = None;
                 pending = Some(presence);
                 next_send = Instant::now() + RETRY;
