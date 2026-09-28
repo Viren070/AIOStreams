@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
+import { cn } from '@aiostreams/ui/core/styling';
 import { Tabs, TabsList, TabsTrigger } from '@aiostreams/ui/tabs';
 import {
   Accordion,
@@ -30,6 +31,10 @@ interface MenuTabsProps {
   /** Passed to the tab bar; off inside a modal, which moves as it resizes. */
   animated?: boolean;
 }
+
+/** Clipping, not hidden overflow: a scroll container would stop sticky content sticking. */
+const STICKY_SAFE_CLIP =
+  'overflow-hidden supports-[overflow:clip]:overflow-clip';
 
 // Direction-aware slide: entering panel comes in from the side you're heading
 // towards, the exiting one leaves the opposite way. `custom` carries the sign.
@@ -116,7 +121,10 @@ export function MenuTabs({
             <AccordionItem
               key={tab.value}
               value={tab.value}
-              className="border border-[--border] rounded-[--radius-md] overflow-hidden mb-2"
+              className={cn(
+                'border border-[--border] rounded-[--radius-md] mb-2',
+                STICKY_SAFE_CLIP
+              )}
             >
               <AccordionTrigger>
                 <span className="flex items-center gap-2 text-sm font-medium">
@@ -124,7 +132,7 @@ export function MenuTabs({
                   {tab.label}
                 </span>
               </AccordionTrigger>
-              <AccordionContent>
+              <AccordionContent contentContainerClass={STICKY_SAFE_CLIP}>
                 <div
                   ref={(el) => {
                     if (el) el.inert = mobileOpen !== tab.value;
@@ -165,7 +173,7 @@ export function MenuTabs({
       {/* Only the active tab is mounted; it slides in as the previous one
           slides out (popLayout keeps the entrant in flow, so the region
           takes each tab's natural height instead of the tallest tab's). */}
-      <div ref={panelRef} className="relative mt-4 overflow-hidden">
+      <div ref={panelRef} className="relative mt-4 overflow-x-clip">
         <AnimatePresence mode="popLayout" initial={false} custom={direction}>
           <motion.div
             key={activeTab}

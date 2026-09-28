@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { MergedCatalog } from '@aiostreams/core';
 import { useStatus } from '@/context/status';
 import { useUserData } from '@/context/userData';
@@ -24,7 +24,22 @@ import { BiEdit, BiTrash } from 'react-icons/bi';
 import { FaPlus } from 'react-icons/fa';
 import { toast } from 'sonner';
 
-export function MergedCatalogsCard() {
+/** Opens the editor from elsewhere. */
+export type MergeRequest =
+  | { kind: 'new'; catalogs: { id: string; type: string }[] }
+  | { kind: 'edit'; id: string };
+
+export const encodeMergeSource = (c: { id: string; type: string }) =>
+  `id=${encodeURIComponent(c.id)}&type=${encodeURIComponent(c.type)}`;
+
+export function MergedCatalogsCard({
+  request,
+  onRequestHandled,
+}: {
+  request?: MergeRequest | null;
+  /** Clears the request, so a remount doesn't open the editor again. */
+  onRequestHandled?: () => void;
+}) {
   const { userData, setUserData } = useUserData();
   const { status } = useStatus();
   const maxMergedCatalogSources =
@@ -78,7 +93,7 @@ export function MergedCatalogsCard() {
   const allCatalogs = (userData.catalogModifications || [])
     .filter((c) => !c.id.startsWith('aiostreams.merged.')) // Exclude merged catalogs from being selected as sources
     .map((c) => ({
-      value: `id=${encodeURIComponent(c.id)}&type=${encodeURIComponent(c.type)}`,
+      value: encodeMergeSource(c),
       name: c.name || c.id,
       catalogType: c.type,
       addonName: c.addonName || 'Unknown Addon',
@@ -169,6 +184,23 @@ export function MergedCatalogsCard() {
     setExpandedAddons(new Set());
     setModalOpen(true);
   };
+
+  useEffect(() => {
+    if (!request) return;
+    onRequestHandled?.();
+    if (request.kind === 'edit') {
+      const merged = userData.mergedCatalogs?.find(
+        (mc) => mc.id === request.id
+      );
+      if (merged) openEditModal(merged);
+      return;
+    }
+    openAddModal();
+    const types = new Set(request.catalogs.map((c) => c.type));
+    if (types.size === 1) setType([...types][0]);
+    setSelectedCatalogs(request.catalogs.map(encodeMergeSource));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [request]);
 
   const handleSave = () => {
     if (!name.trim()) {

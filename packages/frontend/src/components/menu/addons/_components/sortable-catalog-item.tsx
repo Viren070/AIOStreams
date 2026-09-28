@@ -8,18 +8,17 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { IconButton, Button } from '@aiostreams/ui/button';
 import { Switch } from '@aiostreams/ui/switch';
+import { Checkbox } from '@aiostreams/ui/checkbox';
+import { Badge } from '@aiostreams/ui/badge';
 import { Modal } from '@aiostreams/ui/modal';
 import { TextInput } from '@aiostreams/ui/text-input';
 import { NumberInput } from '@aiostreams/ui/number-input';
-import { Tooltip } from '@aiostreams/ui/tooltip';
 import {
-  Accordion,
-  AccordionTrigger,
-  AccordionContent,
-  AccordionItem,
-} from '@aiostreams/ui/accordion';
-import { BiEdit } from 'react-icons/bi';
-import { LuChevronsUp, LuChevronsDown, LuMerge } from 'react-icons/lu';
+  LuChevronsUp,
+  LuChevronsDown,
+  LuMerge,
+  LuSettings2,
+} from 'react-icons/lu';
 import {
   TbSearch,
   TbSearchOff,
@@ -30,6 +29,7 @@ import { MdSavedSearch } from 'react-icons/md';
 import { FaArrowLeftLong, FaArrowRightLong, FaShuffle } from 'react-icons/fa6';
 import { PiStarFill, PiStarBold } from 'react-icons/pi';
 import { toast } from 'sonner';
+import { catalogKey } from './catalog-order';
 
 export type CatalogUpdate = (
   catalog: CatalogModification
@@ -42,12 +42,38 @@ const catalogOrderStates = ['default', 'shuffle', 'reverse'] as const;
 const orderState = (c: CatalogModification) =>
   c.shuffle ? 'shuffle' : c.reverse ? 'reverse' : 'default';
 
+export const isMerged = (c: CatalogModification) =>
+  c.id.startsWith('aiostreams.merged.');
+
+export function onHome(c: CatalogModification): boolean {
+  if (c.genreRequired) return !!c.showOnHome;
+  return c.hideable !== false && !c.onlyOnDiscover && !c.onlyOnSearch;
+}
+
+export const showOnHome: CatalogUpdate = (c) =>
+  c.genreRequired
+    ? { ...c, showOnHome: true, onlyOnSearch: false }
+    : c.hideable !== false
+      ? { ...c, onlyOnDiscover: false, onlyOnSearch: false }
+      : c;
+
+export const hideFromHome: CatalogUpdate = (c) =>
+  c.genreRequired
+    ? { ...c, showOnHome: false }
+    : c.hideable !== false
+      ? { ...c, onlyOnDiscover: true, onlyOnSearch: false }
+      : c;
+
 // Keyed by id and type so the parent can pass the same callbacks to every row.
 interface CatalogItemProps {
   catalog: CatalogModification;
+  isNew: boolean;
+  selected: boolean;
+  onSelect: (key: string, range: boolean) => void;
   onUpdate: (id: string, type: string, update: CatalogUpdate) => void;
   onMove: (id: string, type: string, to: 'top' | 'bottom') => void;
   onToggleEnabled: (id: string, type: string, enabled: boolean) => void;
+  onEditMerged: (id: string) => void;
 }
 
 // useSortable re-renders all rows on each drag change; the body stays memoised
@@ -61,9 +87,7 @@ export const SortableCatalogItem = memo(function SortableCatalogItem(
     transform,
     transition,
     isDragging,
-  } = useSortable({
-    id: `${props.catalog.id}-${props.catalog.type}`,
-  });
+  } = useSortable({ id: catalogKey(props.catalog) });
 
   return (
     <li
@@ -74,478 +98,459 @@ export const SortableCatalogItem = memo(function SortableCatalogItem(
         opacity: isDragging ? 0.5 : 1,
       }}
     >
-      <CatalogItemBody
-        {...props}
-        attributes={attributes}
-        listeners={listeners}
-      />
+      <CatalogRow {...props} attributes={attributes} listeners={listeners} />
     </li>
   );
 });
 
-const CatalogItemBody = memo(function CatalogItemBody({
+const CatalogRow = memo(function CatalogRow({
   catalog,
+  isNew,
+  selected,
+  onSelect,
   onUpdate,
   onMove,
   onToggleEnabled,
+  onEditMerged,
   attributes,
   listeners,
 }: CatalogItemProps & {
   attributes: DraggableAttributes;
   listeners: DraggableSyntheticListeners;
 }) {
-  const isMergedCatalog = catalog.id.startsWith('aiostreams.merged.');
-
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const update = (fn: CatalogUpdate) => onUpdate(catalog.id, catalog.type, fn);
-  const moveToTop = () => onMove(catalog.id, catalog.type, 'top');
-  const moveToBottom = () => onMove(catalog.id, catalog.type, 'bottom');
-  const toggleEnabled = (enabled: boolean) =>
-    onToggleEnabled(catalog.id, catalog.type, enabled);
+  const enabled = catalog.enabled ?? true;
+  const merged = isMerged(catalog);
+  const iconClass = 'h-8 w-8 text-lg';
 
-  const currentState = orderState(catalog);
-  const cycleCatalogOrderState = () => {
-    update((c) => {
-      const newState =
-        catalogOrderStates[
-          (catalogOrderStates.indexOf(orderState(c)) + 1) %
-            catalogOrderStates.length
-        ];
-      return {
-        ...c,
-        shuffle: newState === 'shuffle',
-        reverse: newState === 'reverse',
-      };
-    });
-  };
+  return (
+    <>
+      <div
+        data-selected={selected || undefined}
+        className="flex items-center gap-2 rounded-[--radius-md] border bg-[var(--background)] px-2 py-1.5 transition-colors data-[selected]:border-[--brand] md:gap-3"
+      >
+        <div
+          className="h-9 w-2.5 flex-shrink-0 cursor-move rounded-full bg-[var(--subtle)] hover:bg-[var(--subtle-highlight)] md:w-3"
+          {...attributes}
+          {...listeners}
+        />
+        <Checkbox
+          value={selected}
+          fieldClass="flex w-auto flex-none"
+          aria-label="Select catalog"
+          onClick={(e) => {
+            e.preventDefault();
+            onSelect(catalogKey(catalog), e.shiftKey);
+          }}
+        />
+        <div
+          className={`min-w-0 flex-1 ${enabled ? '' : 'opacity-50'}`}
+          title={catalog.id}
+        >
+          <div className="flex items-center gap-2">
+            <p className="truncate text-sm font-medium">
+              {catalog.name ?? catalog.id}
+            </p>
+            {isNew && (
+              <Badge intent="primary" size="sm" className="flex-shrink-0">
+                New
+              </Badge>
+            )}
+          </div>
+          <p className="truncate text-xs text-[--muted]">
+            {capitalise(catalog.overrideType ?? catalog.type)} ·{' '}
+            {merged ? 'Merged catalog' : catalog.addonName}
+          </p>
+        </div>
+        <div className="hidden flex-shrink-0 items-center gap-1 md:flex">
+          {merged && (
+            <div
+              title="Merged Catalog"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--brand-subtle)]"
+            >
+              <LuMerge className="text-lg text-[var(--brand)]" />
+            </div>
+          )}
+          <IconButton
+            className={iconClass}
+            icon={<LuChevronsUp />}
+            intent="primary-subtle"
+            rounded
+            title="Move to top"
+            aria-label="Move to top"
+            onClick={() => onMove(catalog.id, catalog.type, 'top')}
+          />
+          <IconButton
+            className={iconClass}
+            icon={<LuChevronsDown />}
+            intent="primary-subtle"
+            rounded
+            title="Move to bottom"
+            aria-label="Move to bottom"
+            onClick={() => onMove(catalog.id, catalog.type, 'bottom')}
+          />
+          <QuickToggles
+            catalog={catalog}
+            update={update}
+            iconClass={iconClass}
+          />
+        </div>
+        <Switch
+          value={enabled}
+          onValueChange={(value) =>
+            onToggleEnabled(catalog.id, catalog.type, value)
+          }
+        />
+        <IconButton
+          rounded
+          size="sm"
+          intent="gray-subtle"
+          icon={<LuSettings2 />}
+          aria-label="Catalog settings"
+          title="Settings"
+          onClick={() => setSettingsOpen(true)}
+        />
+      </div>
+      {settingsOpen && (
+        <CatalogSettingsModal
+          catalog={catalog}
+          update={update}
+          onMove={(to) => onMove(catalog.id, catalog.type, to)}
+          onEditMerged={() => {
+            setSettingsOpen(false);
+            onEditMerged(catalog.id);
+          }}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
+    </>
+  );
+});
 
-  const [modalOpen, setModalOpen] = useState(false);
+function QuickToggles({
+  catalog,
+  update,
+  iconClass,
+}: {
+  catalog: CatalogModification;
+  update: (fn: CatalogUpdate) => void;
+  iconClass: string;
+}) {
+  const home = onHome(catalog);
+  const toggle = (
+    label: string,
+    icon: React.ReactElement,
+    onClick: () => void,
+    disabled?: boolean
+  ) => (
+    <IconButton
+      className={iconClass}
+      icon={icon}
+      intent="primary-subtle"
+      rounded
+      title={label}
+      aria-label={label}
+      disabled={disabled}
+      onClick={onClick}
+    />
+  );
+  return (
+    <>
+      {toggle(
+        capitalise(orderState(catalog)),
+        catalog.shuffle ? (
+          <FaShuffle />
+        ) : catalog.reverse ? (
+          <FaArrowLeftLong />
+        ) : (
+          <FaArrowRightLong />
+        ),
+        () =>
+          update((c) => {
+            const next =
+              catalogOrderStates[
+                (catalogOrderStates.indexOf(orderState(c)) + 1) %
+                  catalogOrderStates.length
+              ];
+            return {
+              ...c,
+              shuffle: next === 'shuffle',
+              reverse: next === 'reverse',
+            };
+          })
+      )}
+      {toggle(
+        'Poster Services',
+        catalog.usePosterService ? <PiStarFill /> : <PiStarBold />,
+        () => update((c) => ({ ...c, usePosterService: !c.usePosterService }))
+      )}
+      {(catalog.hideable || catalog.genreRequired) &&
+        toggle(
+          home ? 'On Home' : 'Discover Only',
+          home ? <TbSmartHome /> : <TbSmartHomeOff />,
+          () => update(home ? hideFromHome : showOnHome),
+          catalog.onlyOnSearch
+        )}
+      {catalog.searchable &&
+        toggle(
+          catalog.onlyOnSearch
+            ? 'Search Only'
+            : catalog.disableSearch
+              ? 'Search Disabled'
+              : 'Searchable',
+          catalog.onlyOnSearch ? (
+            <MdSavedSearch />
+          ) : catalog.disableSearch ? (
+            <TbSearchOff />
+          ) : (
+            <TbSearch />
+          ),
+          () =>
+            update((c) => {
+              // cycles normal -> search only -> search disabled
+              if (!c.onlyOnSearch && !c.disableSearch) {
+                return {
+                  ...c,
+                  onlyOnSearch: true,
+                  onlyOnDiscover: false,
+                  showOnHome: false,
+                };
+              } else if (c.onlyOnSearch) {
+                return { ...c, onlyOnSearch: false, disableSearch: true };
+              } else {
+                return { ...c, disableSearch: false };
+              }
+            })
+        )}
+    </>
+  );
+}
+
+function CatalogSettingsModal({
+  catalog,
+  update,
+  onMove,
+  onEditMerged,
+  onClose,
+}: {
+  catalog: CatalogModification;
+  update: (fn: CatalogUpdate) => void;
+  onMove: (to: 'top' | 'bottom') => void;
+  onEditMerged: () => void;
+  onClose: () => void;
+}) {
+  const merged = isMerged(catalog);
   const [newName, setNewName] = useState(catalog.name || '');
   const [newType, setNewType] = useState(
     catalog.overrideType || catalog.type || ''
   );
-  const controlIconSize = 'text-xl h-8 w-8 md:text-2xl md:h-10 md:w-10';
-
-  const handleNameAndTypeEdit = () => {
-    if (!newType) {
-      toast.error('Type cannot be empty');
-      return;
-    }
-    update((c) => ({ ...c, name: newName, overrideType: newType }));
-    setModalOpen(false);
-  };
+  const renamed =
+    newName !== (catalog.name || '') ||
+    newType !== (catalog.overrideType || catalog.type || '');
 
   return (
-    <>
-      <div className="relative px-2.5 py-2 bg-[var(--background)] rounded-[--radius-md] border overflow-hidden">
-        <div
-          className={`absolute top-2 bottom-2 left-2 w-5 bg-[var(--muted)] md:bg-[var(--subtle)] md:hover:bg-[var(--subtle-highlight)] cursor-move flex-shrink-0 rounded-full`}
-          {...{ ...attributes, ...listeners }}
-        />
+    <Modal
+      open
+      onOpenChange={(open) => !open && onClose()}
+      title={catalog.name ?? catalog.id}
+      description={merged ? 'Merged catalog' : catalog.addonName}
+    >
+      <div className="space-y-4">
+        {merged && (
+          <Button
+            className="w-full"
+            intent="white"
+            rounded
+            leftIcon={<LuMerge />}
+            onClick={onEditMerged}
+          >
+            Edit name and sources
+          </Button>
+        )}
+        {!merged && (
+          <form
+            className="space-y-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!newType) {
+                toast.error('Type cannot be empty');
+                return;
+              }
+              update((c) => ({ ...c, name: newName, overrideType: newType }));
+              toast.success('Name and type saved');
+            }}
+          >
+            <TextInput
+              label="Name"
+              placeholder="Enter catalog name"
+              value={newName}
+              onValueChange={setNewName}
+            />
+            <TextInput
+              label="Type"
+              placeholder="Enter catalog type"
+              value={newType}
+              onValueChange={setNewType}
+            />
+            <Button
+              className="w-full"
+              type="submit"
+              intent="white"
+              rounded
+              disabled={!renamed}
+            >
+              Save name and type
+            </Button>
+          </form>
+        )}
 
-        <div className="pl-8 pr-3 py-3">
-          <div className="mb-4 md:mb-6 md:pr-40">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="text-sm md:text-base font-medium line-clamp-1 truncate text-ellipsis">
-                {catalog.name ?? catalog.id} -{' '}
-                {capitalise(catalog.overrideType ?? catalog.type)}
-              </h3>
-              {!isMergedCatalog && (
-                <IconButton
-                  className="rounded-full h-5 w-5 md:h-6 md:w-6 flex-shrink-0"
-                  icon={<BiEdit />}
-                  intent="primary-subtle"
-                  onClick={() => setModalOpen(true)}
-                />
-              )}
+        <div className="flex gap-2">
+          <Button
+            className="flex-1"
+            intent="gray-outline"
+            size="sm"
+            rounded
+            leftIcon={<LuChevronsUp />}
+            onClick={() => onMove('top')}
+          >
+            Move to top
+          </Button>
+          <Button
+            className="flex-1"
+            intent="gray-outline"
+            size="sm"
+            rounded
+            leftIcon={<LuChevronsDown />}
+            onClick={() => onMove('bottom')}
+          >
+            Move to bottom
+          </Button>
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <Switch
+            label="Shuffle"
+            help="Randomize the order of catalog items on each request"
+            side="right"
+            value={catalog.shuffle ?? false}
+            onValueChange={(shuffle) =>
+              update((c) => ({
+                ...c,
+                shuffle,
+                reverse: shuffle ? false : c.reverse,
+              }))
+            }
+          />
+          <Switch
+            label="Reverse Order"
+            help="Reverse the order of catalog items"
+            side="right"
+            value={catalog.reverse ?? false}
+            onValueChange={(reverse) =>
+              update((c) => ({
+                ...c,
+                reverse,
+                shuffle: reverse ? false : c.shuffle,
+              }))
+            }
+          />
+          <div className="flex flex-col gap-2 md:flex-row md:items-center">
+            <div className="flex-1">
+              <label className="text-sm font-medium">Persist Shuffle For</label>
+              <p className="text-xs text-[--muted]">
+                The amount of hours to keep a given shuffled catalog order
+                before shuffling again. Defaults to 0 (Shuffle on every
+                request).
+              </p>
             </div>
-            <p className="text-xs md:text-sm text-[var(--muted-foreground)] mb-2 md:mb-0">
-              {isMergedCatalog ? 'Merged Catalog' : catalog.addonName}
-            </p>
-
-            <div className="flex items-center justify-between md:justify-end md:gap-2 md:absolute md:top-4 md:right-4">
-              <div className="flex items-center gap-1">
-                <IconButton
-                  rounded
-                  className={controlIconSize}
-                  icon={<LuChevronsUp />}
-                  intent="primary-subtle"
-                  onClick={moveToTop}
-                  title="Move to top"
-                />
-                <IconButton
-                  rounded
-                  className={controlIconSize}
-                  icon={<LuChevronsDown />}
-                  intent="primary-subtle"
-                  onClick={moveToBottom}
-                  title="Move to bottom"
-                />
-              </div>
-              <Switch
-                value={catalog.enabled ?? true}
-                onValueChange={toggleEnabled}
-                moreHelp="Enable or disable this catalog from being used"
+            <div className="w-full md:w-32">
+              <NumberInput
+                value={catalog.persistShuffleFor ?? 0}
+                min={0}
+                step={1}
+                max={24}
+                onValueChange={(value) =>
+                  update((c) => ({ ...c, persistShuffleFor: value }))
+                }
               />
             </div>
-          </div>{' '}
-          <Accordion type="single" collapsible>
-            <AccordionItem value="settings">
-              <AccordionTrigger>
-                <div className="flex items-center justify-center md:justify-between w-full">
-                  <h4 className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide hidden md:block">
-                    Settings
-                  </h4>
-
-                  <div className="flex items-center gap-2 mr-2">
-                    {isMergedCatalog && (
-                      <Tooltip
-                        trigger={
-                          <div className="flex items-center justify-center h-10 w-10 rounded-full bg-[var(--brand-subtle)]">
-                            <LuMerge className="text-xl text-[var(--brand)]" />
-                          </div>
-                        }
-                      >
-                        Merged Catalog
-                      </Tooltip>
-                    )}
-
-                    <Tooltip
-                      trigger={
-                        <IconButton
-                          className="text-2xl h-10 w-10"
-                          icon={
-                            catalog.shuffle ? (
-                              <FaShuffle />
-                            ) : catalog.reverse ? (
-                              <FaArrowLeftLong />
-                            ) : (
-                              <FaArrowRightLong />
-                            )
-                          }
-                          intent="primary-subtle"
-                          rounded
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            cycleCatalogOrderState();
-                          }}
-                        />
-                      }
-                    >
-                      {currentState.charAt(0).toUpperCase() +
-                        currentState.slice(1)}
-                    </Tooltip>
-
-                    <Tooltip
-                      trigger={
-                        <IconButton
-                          className="text-2xl h-10 w-10"
-                          icon={
-                            catalog.usePosterService ? (
-                              <PiStarFill />
-                            ) : (
-                              <PiStarBold />
-                            )
-                          }
-                          intent="primary-subtle"
-                          rounded
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            update((c) => ({
-                              ...c,
-                              usePosterService: !c.usePosterService,
-                            }));
-                          }}
-                        />
-                      }
-                    >
-                      Poster Services
-                    </Tooltip>
-
-                    {catalog.hideable && (
-                      <Tooltip
-                        trigger={
-                          <IconButton
-                            className="text-2xl h-10 w-10"
-                            icon={
-                              catalog.onlyOnDiscover ? (
-                                <TbSmartHomeOff />
-                              ) : (
-                                <TbSmartHome />
-                              )
-                            }
-                            disabled={catalog.onlyOnSearch}
-                            intent="primary-subtle"
-                            rounded
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              update((c) => ({
-                                ...c,
-                                onlyOnDiscover: !c.onlyOnDiscover,
-                              }));
-                            }}
-                          />
-                        }
-                      >
-                        Discover Only
-                      </Tooltip>
-                    )}
-
-                    {catalog.genreRequired && (
-                      <Tooltip
-                        trigger={
-                          <IconButton
-                            className="text-2xl h-10 w-10"
-                            icon={
-                              catalog.showOnHome ? (
-                                <TbSmartHome />
-                              ) : (
-                                <TbSmartHomeOff />
-                              )
-                            }
-                            disabled={catalog.onlyOnSearch}
-                            intent="primary-subtle"
-                            rounded
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              update((c) => ({
-                                ...c,
-                                showOnHome: !c.showOnHome,
-                              }));
-                            }}
-                          />
-                        }
-                      >
-                        Show on Home
-                      </Tooltip>
-                    )}
-
-                    {catalog.searchable && (
-                      <Tooltip
-                        trigger={
-                          <IconButton
-                            className="text-2xl h-10 w-10"
-                            icon={
-                              catalog.onlyOnSearch ? (
-                                <MdSavedSearch />
-                              ) : catalog.disableSearch ? (
-                                <TbSearchOff />
-                              ) : (
-                                <TbSearch />
-                              )
-                            }
-                            intent="primary-subtle"
-                            rounded
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              update((c) => {
-                                // cycles normal -> search only -> search disabled
-                                if (!c.onlyOnSearch && !c.disableSearch) {
-                                  return {
-                                    ...c,
-                                    onlyOnSearch: true,
-                                    onlyOnDiscover: false,
-                                    showOnHome: false,
-                                  };
-                                } else if (c.onlyOnSearch) {
-                                  return {
-                                    ...c,
-                                    onlyOnSearch: false,
-                                    disableSearch: true,
-                                  };
-                                } else {
-                                  return { ...c, disableSearch: false };
-                                }
-                              });
-                            }}
-                          />
-                        }
-                      >
-                        {catalog.onlyOnSearch
-                          ? 'Search Only'
-                          : catalog.disableSearch
-                            ? 'Search Disabled'
-                            : 'Searchable'}
-                      </Tooltip>
-                    )}
-                  </div>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-4">
-                  <div className="flex flex-col gap-4">
-                    <Switch
-                      label="Shuffle"
-                      help="Randomize the order of catalog items on each request"
-                      side="right"
-                      value={catalog.shuffle ?? false}
-                      onValueChange={(shuffle) => {
-                        update((c) => ({
-                          ...c,
-                          shuffle,
-                          reverse: shuffle ? false : c.reverse,
-                        }));
-                      }}
-                    />
-
-                    <Switch
-                      label="Reverse Order"
-                      help="Reverse the order of catalog items"
-                      side="right"
-                      value={catalog.reverse ?? false}
-                      onValueChange={(reverse) => {
-                        update((c) => ({
-                          ...c,
-                          reverse,
-                          shuffle: reverse ? false : c.shuffle,
-                        }));
-                      }}
-                    />
-
-                    <div className="flex flex-col md:flex-row md:items-center gap-2 -mx-2 px-2 hover:bg-[var(--subtle-highlight)] rounded-md">
-                      <div className="flex-1 py-2">
-                        <label className="text-sm font-medium">
-                          Persist Shuffle For
-                        </label>
-                        <p className="text-xs text-[--muted]">
-                          The amount of hours to keep a given shuffled catalog
-                          order before shuffling again. Defaults to 0 (Shuffle
-                          on every request).
-                        </p>
-                      </div>
-                      <div className="w-full md:w-32 py-2">
-                        <NumberInput
-                          value={catalog.persistShuffleFor ?? 0}
-                          min={0}
-                          step={1}
-                          max={24}
-                          onValueChange={(value) => {
-                            update((c) => ({ ...c, persistShuffleFor: value }));
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    <Switch
-                      label="Poster Services"
-                      help="Replace movie/show posters with posters from poster services (RPDB or TOP Posters) when supported"
-                      side="right"
-                      value={catalog.usePosterService ?? false}
-                      onValueChange={(usePosterService) => {
-                        update((c) => ({ ...c, usePosterService }));
-                      }}
-                    />
-
-                    {catalog.hideable && (
-                      <Switch
-                        label="Discover Only"
-                        help="Hide this catalog from the home page and only show it on the Discover page"
-                        side="right"
-                        value={catalog.onlyOnDiscover ?? false}
-                        disabled={catalog.onlyOnSearch}
-                        onValueChange={(onlyOnDiscover) => {
-                          update((c) => ({
-                            ...c,
-                            onlyOnDiscover,
-                            onlyOnSearch: onlyOnDiscover
-                              ? false
-                              : c.onlyOnSearch,
-                          }));
-                        }}
-                      />
-                    )}
-
-                    {catalog.genreRequired && (
-                      <Switch
-                        label="Show on Home"
-                        help="This catalog needs a genre, so it only shows on the Discover page. Show it on the home page too, with its first genre picked"
-                        side="right"
-                        value={catalog.showOnHome ?? false}
-                        disabled={catalog.onlyOnSearch}
-                        onValueChange={(showOnHome) => {
-                          update((c) => ({
-                            ...c,
-                            showOnHome,
-                            onlyOnSearch: showOnHome ? false : c.onlyOnSearch,
-                          }));
-                        }}
-                      />
-                    )}
-
-                    {catalog.searchable && (
-                      <>
-                        <Switch
-                          label="Search Only"
-                          help="Only show this catalog when searching"
-                          side="right"
-                          value={catalog.onlyOnSearch ?? false}
-                          disabled={catalog.disableSearch}
-                          onValueChange={(onlyOnSearch) => {
-                            update((c) => ({
-                              ...c,
-                              onlyOnSearch,
-                              onlyOnDiscover: onlyOnSearch
-                                ? false
-                                : c.onlyOnDiscover,
-                              showOnHome: onlyOnSearch ? false : c.showOnHome,
-                            }));
-                          }}
-                        />
-                        <Switch
-                          label="Disable Search"
-                          help="Disable the search for this catalog"
-                          side="right"
-                          value={catalog.disableSearch ?? false}
-                          onValueChange={(disableSearch) => {
-                            update((c) => ({
-                              ...c,
-                              disableSearch,
-                              onlyOnSearch: disableSearch
-                                ? false
-                                : c.onlyOnSearch,
-                            }));
-                          }}
-                        />
-                      </>
-                    )}
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+          </div>
+          <Switch
+            label="Poster Services"
+            help="Replace movie/show posters with posters from poster services (RPDB or TOP Posters) when supported"
+            side="right"
+            value={catalog.usePosterService ?? false}
+            onValueChange={(usePosterService) =>
+              update((c) => ({ ...c, usePosterService }))
+            }
+          />
+          {catalog.hideable && (
+            <Switch
+              label="Discover Only"
+              help="Hide this catalog from the home page and only show it on the Discover page"
+              side="right"
+              value={catalog.onlyOnDiscover ?? false}
+              disabled={catalog.onlyOnSearch}
+              onValueChange={(onlyOnDiscover) =>
+                update((c) => ({
+                  ...c,
+                  onlyOnDiscover,
+                  onlyOnSearch: onlyOnDiscover ? false : c.onlyOnSearch,
+                }))
+              }
+            />
+          )}
+          {catalog.genreRequired && (
+            <Switch
+              label="Show on Home"
+              help="This catalog needs a genre, so it only shows on the Discover page. Show it on the home page too, with its first genre picked"
+              side="right"
+              value={catalog.showOnHome ?? false}
+              disabled={catalog.onlyOnSearch}
+              onValueChange={(showOnHome) =>
+                update((c) => ({
+                  ...c,
+                  showOnHome,
+                  onlyOnSearch: showOnHome ? false : c.onlyOnSearch,
+                }))
+              }
+            />
+          )}
+          {catalog.searchable && (
+            <>
+              <Switch
+                label="Search Only"
+                help="Only show this catalog when searching"
+                side="right"
+                value={catalog.onlyOnSearch ?? false}
+                disabled={catalog.disableSearch}
+                onValueChange={(onlyOnSearch) =>
+                  update((c) => ({
+                    ...c,
+                    onlyOnSearch,
+                    onlyOnDiscover: onlyOnSearch ? false : c.onlyOnDiscover,
+                    showOnHome: onlyOnSearch ? false : c.showOnHome,
+                  }))
+                }
+              />
+              <Switch
+                label="Disable Search"
+                help="Disable the search for this catalog"
+                side="right"
+                value={catalog.disableSearch ?? false}
+                onValueChange={(disableSearch) =>
+                  update((c) => ({
+                    ...c,
+                    disableSearch,
+                    onlyOnSearch: disableSearch ? false : c.onlyOnSearch,
+                  }))
+                }
+              />
+            </>
+          )}
         </div>
       </div>
-
-      <Modal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        title="Edit Catalog Name"
-      >
-        <form
-          className="space-y-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleNameAndTypeEdit();
-          }}
-        >
-          <TextInput
-            label="Name"
-            placeholder="Enter catalog name"
-            value={newName}
-            onValueChange={setNewName}
-          />
-
-          <TextInput
-            label="Type"
-            placeholder="Enter catalog type"
-            value={newType}
-            onValueChange={setNewType}
-          />
-
-          <Button className="w-full" type="submit">
-            Save Changes
-          </Button>
-        </form>
-      </Modal>
-    </>
+    </Modal>
   );
-});
+}
