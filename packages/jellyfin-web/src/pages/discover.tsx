@@ -163,16 +163,24 @@ export function DiscoverPage({
       (untyped && k.kind !== 'BoxSet')
   );
 
-  // The genre travels by name, as its id belongs to the catalog it came from.
-  const genreItem = genres.data?.Items?.find(
-    (g) => g.Name?.toLowerCase() === genre?.toLowerCase()
+  // A catalog that needs a genre offers None for all of it, so All sends that.
+  const none = genres.data?.Items?.find((g) => g.Name === 'None');
+  const pickable = React.useMemo(
+    () => genres.data?.Items?.filter((g) => g.Name !== 'None') ?? [],
+    [genres.data]
   );
+  // The genre travels by name, as its id belongs to the catalog it came from.
+  const genreItem = genre
+    ? genres.data?.Items?.find(
+        (g) => g.Name?.toLowerCase() === genre.toLowerCase()
+      )
+    : none;
   const pages = useItemPages(viewId, {
     filter,
     types: view && kindOf(view) === current ? libraryTypes(view) : current,
     genreId: genreItem?.Id,
     recursive: true,
-    enabled: !!view,
+    enabled: !!view && !genres.isLoading,
   });
   const items = pages.data?.pages.flatMap((p) => p.Items ?? []) ?? [];
   const total = pages.data?.pages[0]?.TotalRecordCount;
@@ -261,9 +269,9 @@ export function DiscoverPage({
           viewId={viewId}
           onChange={(id) => open(id, kindFor(all.find((v) => v.Id === id)))}
         />
-        {!!genres.data?.Items?.length && (
+        {pickable.length > 0 && (
           <GenreFilter
-            genres={genres.data.Items}
+            genres={pickable}
             value={genre ?? null}
             onChange={(name) =>
               navigate(

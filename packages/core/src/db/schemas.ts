@@ -571,12 +571,14 @@ const CatalogModification = z.object({
   reverse: z.boolean().optional(), // reverse the catalog
   persistShuffleFor: z.number().min(0).max(24).optional(), // persist the shuffle for a given amount of time (in hours)
   onlyOnDiscover: z.boolean().optional(), // only show the catalog on the discover page
+  showOnHome: z.boolean().optional(), // show a genre-requiring catalog on the home page too
   disableSearch: z.boolean().optional(), // disable the search for the catalog
   onlyOnSearch: z.boolean().optional(), // only show the catalog on search results - mutually exclusive with onlyOnDiscover, only available when the catalog has a non-required search extra
   enabled: z.boolean().optional(), // enable or disable the catalog
   usePosterService: z.boolean().optional(), // use rpdb or top poster for posters if supported
   overrideType: z.string().min(1).optional(), // override the type of the catalog
   hideable: z.boolean().optional(), // hide the catalog from the home page
+  genreRequired: z.boolean().optional(), // property of whether only a genre is required (showOnHome applies)
   searchable: z.boolean().optional(), // property of whether the catalog is searchable (not a search only catalog)
   addonName: z.string().optional(), // the name of the addon that provides the catalog
 });

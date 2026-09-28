@@ -5,6 +5,7 @@ import type { AIOStreams } from '../main/index.js';
 import { Cache } from '../utils/cache.js';
 import { createLogger } from '../logging/logger.js';
 import { userScopeKey } from '../utils/user-scope.js';
+import { firstGenre } from '../utils/extras.js';
 import { viewId } from './ids.js';
 import { hasProgrammeVideos, isLeafEntry } from './dto.js';
 import type { LeafEvidence } from './dto.js';
@@ -24,13 +25,14 @@ export function supportsExtra(c: Catalog, name: string): boolean {
   return !!extra(c, name);
 }
 
-/** Genre a required-genre catalog is browsed with when the client picks none. */
+/** Genre a required-genre catalog is walked with when the caller names none. */
 export function requiredGenreDefault(c: Catalog): string | undefined {
   const e = extra(c, 'genre');
-  if (!e?.isRequired) return undefined;
-  return (e.options ?? []).find(
-    (o): o is string => typeof o === 'string' && o.length > 0
-  );
+  return e?.isRequired ? firstGenre(e) : undefined;
+}
+
+export function requiresGenre(c: Catalog): boolean {
+  return !!extra(c, 'genre')?.isRequired;
 }
 
 export function genreOptions(c: Catalog): string[] {

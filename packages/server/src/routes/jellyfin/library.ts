@@ -24,6 +24,7 @@ import {
   latestSpellings,
   listResult,
   listViews,
+  requiresGenre,
   searchCatalogs,
   seriesIdOf,
   seriesKeyOf,
@@ -63,6 +64,9 @@ import {
 import { getMetaLoose } from './resolve.js';
 
 const router: Router = Router({ mergeParams: true });
+
+const withoutRequiredGenre = (views: ViewEntry[]) =>
+  views.filter((v) => !requiresGenre(v.catalog));
 
 function isKodi(ctx: JellyfinRequestContext): boolean {
   return /kodi/i.test(ctx.client.name);
@@ -635,7 +639,11 @@ async function handleItems(
 
   if (catalogDesc) {
     const catalog = findCatalog(engine, catalogDesc.t, catalogDesc.c);
-    if (!catalog || !catalogCanList(types)) {
+    if (
+      !catalog ||
+      !catalogCanList(types) ||
+      (requiresGenre(catalog) && !genreFromId && !searchTerm)
+    ) {
       send(req, res, [], 0, startIndex);
       return;
     }
@@ -713,7 +721,9 @@ async function handleItems(
     send(req, res, [], 0, startIndex);
     return;
   }
-  const views = await viewsForTypes(ctx, await ctx.views(), types);
+  const views = withoutRequiredGenre(
+    await viewsForTypes(ctx, await ctx.views(), types)
+  );
   const want = startIndex + limit;
   const items: JellyfinItem[] = [];
   let offset = 0;
@@ -761,7 +771,7 @@ router.get(
       const d = await decodeForRequest(ctx, parentId);
       if (d?.kind === 'descriptor' && d.descriptor.k === 'view') {
         const catalog = findCatalog(engine, d.descriptor.t, d.descriptor.c);
-        if (catalog) {
+        if (catalog && !requiresGenre(catalog)) {
           const page = await getCatalogPage(engine, catalog, {
             startIndex: 0,
             limit,
@@ -773,7 +783,9 @@ router.get(
         }
       }
     } else {
-      const views = await viewsForTypes(ctx, await ctx.views(), types);
+      const views = withoutRequiredGenre(
+        await viewsForTypes(ctx, await ctx.views(), types)
+      );
       const per = Math.max(4, Math.ceil(limit / Math.max(1, views.length)));
       const pageAt = readAhead(views.length, (i) =>
         getCatalogPage(engine, views[i].catalog, {
@@ -1210,7 +1222,7 @@ router.get(
   jf(async (req, res, ctx) => {
     const limit = Math.min(Math.max(1, qi(req, 'ItemLimit', 8)), 20);
     const engine = await ctx.engine();
-    const views = (await ctx.views())
+    const views = withoutRequiredGenre(await ctx.views())
       .filter((v) => v.collectionType === 'movies')
       .slice(0, 3);
     const out = [];

@@ -3,6 +3,7 @@
   Env,
   getSimpleTextHash,
   maskSensitiveInfo,
+  requiresOnlyGenre,
 } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
 import { constants } from '../utils/index.js';
@@ -624,6 +625,7 @@ export function buildResources(ctx: AIOStreamsContext): void {
         const canDisableSearch = catalog.extra?.some(
           (e) => e.name === 'search' && !e.isRequired
         );
+        const canApplyShowOnHome = requiresOnlyGenre(catalog.extra);
 
         if (modification?.onlyOnDiscover && canApplyOnlyOnDiscover) {
           const genreExtra = catalog.extra?.find((e) => e.name === 'genre');
@@ -642,6 +644,17 @@ export function buildResources(ctx: AIOStreamsContext): void {
               isRequired: true,
             });
           }
+        } else if (modification?.showOnHome && canApplyShowOnHome) {
+          // Sending no genre already means `None`.
+          catalog.extra = catalog.extra!.map((e) =>
+            e.name === 'genre'
+              ? {
+                  ...e,
+                  isRequired: false,
+                  options: e.options?.filter((o) => o !== 'None'),
+                }
+              : e
+          );
         } else if (modification?.onlyOnSearch && canApplyOnlyOnSearch) {
           const searchExtra = catalog.extra?.find((e) => e.name === 'search');
           if (searchExtra) {

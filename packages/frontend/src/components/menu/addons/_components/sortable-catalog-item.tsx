@@ -290,6 +290,35 @@ const CatalogItemBody = memo(function CatalogItemBody({
                       </Tooltip>
                     )}
 
+                    {catalog.genreRequired && (
+                      <Tooltip
+                        trigger={
+                          <IconButton
+                            className="text-2xl h-10 w-10"
+                            icon={
+                              catalog.showOnHome ? (
+                                <TbSmartHome />
+                              ) : (
+                                <TbSmartHomeOff />
+                              )
+                            }
+                            disabled={catalog.onlyOnSearch}
+                            intent="primary-subtle"
+                            rounded
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              update((c) => ({
+                                ...c,
+                                showOnHome: !c.showOnHome,
+                              }));
+                            }}
+                          />
+                        }
+                      >
+                        Show on Home
+                      </Tooltip>
+                    )}
+
                     {catalog.searchable && (
                       <Tooltip
                         trigger={
@@ -315,6 +344,7 @@ const CatalogItemBody = memo(function CatalogItemBody({
                                     ...c,
                                     onlyOnSearch: true,
                                     onlyOnDiscover: false,
+                                    showOnHome: false,
                                   };
                                 } else if (c.onlyOnSearch) {
                                   return {
@@ -424,6 +454,23 @@ const CatalogItemBody = memo(function CatalogItemBody({
                       />
                     )}
 
+                    {catalog.genreRequired && (
+                      <Switch
+                        label="Show on Home"
+                        help="This catalog needs a genre, so it only shows on the Discover page. Show it on the home page too, with its first genre picked"
+                        side="right"
+                        value={catalog.showOnHome ?? false}
+                        disabled={catalog.onlyOnSearch}
+                        onValueChange={(showOnHome) => {
+                          update((c) => ({
+                            ...c,
+                            showOnHome,
+                            onlyOnSearch: showOnHome ? false : c.onlyOnSearch,
+                          }));
+                        }}
+                      />
+                    )}
+
                     {catalog.searchable && (
                       <>
                         <Switch
@@ -439,6 +486,7 @@ const CatalogItemBody = memo(function CatalogItemBody({
                               onlyOnDiscover: onlyOnSearch
                                 ? false
                                 : c.onlyOnDiscover,
+                              showOnHome: onlyOnSearch ? false : c.showOnHome,
                             }));
                           }}
                         />

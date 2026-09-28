@@ -1,4 +1,24 @@
-import { Extras, ExtrasSchema } from '../db/schemas.js';
+import { Extras, ExtrasSchema, type Manifest } from '../db/schemas.js';
+
+type CatalogExtra = NonNullable<Manifest['catalogs'][number]['extra']>[number];
+
+/** Only a genre is required, and it offers one to fall back on. */
+export function requiresOnlyGenre(extra: CatalogExtra[] | undefined): boolean {
+  const required = (extra ?? []).filter((e) => e.isRequired);
+  return (
+    required.length === 1 &&
+    required[0].name === 'genre' &&
+    !!firstGenre(required[0])
+  );
+}
+
+export function firstGenre(
+  extra: CatalogExtra | undefined
+): string | undefined {
+  return extra?.options?.find(
+    (o): o is string => typeof o === 'string' && o.length > 0
+  );
+}
 
 /** Values are percent-encoded, so a `&` inside one survives the split; a bare `%` stays literal. */
 function decodeValue(value: string): string {

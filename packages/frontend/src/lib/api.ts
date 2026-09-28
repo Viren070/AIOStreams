@@ -243,6 +243,7 @@ interface CatalogInfo {
   type: string;
   name: string;
   hideable: boolean;
+  genreRequired: boolean;
   searchable: boolean;
   addonName: string;
 }

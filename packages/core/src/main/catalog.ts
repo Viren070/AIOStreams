@@ -2,6 +2,7 @@ import {
   createLogger,
   getTimeTakenSincePoint,
   ExtrasParser,
+  firstGenre,
   getSimpleTextHash,
   maskSensitiveInfo,
   userScopeKey,
@@ -134,6 +135,16 @@ export async function fetchRawCatalogItems(
     actualType = modification.type;
   }
 
+  const genreExtra = getCatalogExtras(
+    ctx,
+    addonInstanceId,
+    catalogId,
+    actualType
+  )?.find((e) => e.name === 'genre');
+  if (genreExtra?.isRequired && !parsedExtras?.genre && !parsedExtras?.search) {
+    parsedExtras = new ExtrasParser(parsedExtras?.toString());
+    parsedExtras.genre = firstGenre(genreExtra);
+  }
   if (parsedExtras?.genre === 'None') {
     parsedExtras.genre = undefined;
   }
@@ -583,7 +594,12 @@ export async function getMergedCatalog(
       const requiredExtras = catalogExtras?.filter((e) => e.isRequired);
       if (requiredExtras && requiredExtras.length > 0) {
         for (const reqExtra of requiredExtras) {
-          if (!sourceExtras.has(reqExtra.name)) {
+          // fetchRawCatalogItems fills the genre, but not for a search.
+          const fallback =
+            reqExtra.name === 'genre' &&
+            !sourceExtras.search &&
+            firstGenre(reqExtra);
+          if (!sourceExtras.has(reqExtra.name) && !fallback) {
             logger.debug(
               {
                 encodedCatalogId,

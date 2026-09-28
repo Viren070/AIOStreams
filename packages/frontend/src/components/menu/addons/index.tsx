@@ -66,6 +66,7 @@ function Content() {
               addonName: nMod.addonName,
               type: nMod.type,
               hideable: nMod.hideable,
+              genreRequired: nMod.genreRequired,
               searchable: nMod.searchable,
             };
           }
@@ -85,6 +86,7 @@ function Content() {
                 currentUserData.aioratingsApiKey
               ),
               hideable: catalog.hideable,
+              genreRequired: catalog.genreRequired,
               searchable: catalog.searchable,
               addonName: catalog.addonName,
             });
