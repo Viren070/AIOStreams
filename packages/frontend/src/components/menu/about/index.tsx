@@ -322,7 +322,8 @@ function Content() {
       />
 
       <InstanceUpdatedModal
-        version={version}
+        tag={version}
+        baseVersion={status?.version}
         channel={channel}
         docsEntries={docsEntries}
       />

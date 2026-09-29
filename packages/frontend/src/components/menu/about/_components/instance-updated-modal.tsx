@@ -16,7 +16,7 @@ import {
 
 /**
  * Tells the user what changed when the instance they use has been updated
- * under them. Reads `status.tag`, which is already loaded, so it costs no
+ * under them. Reads the status, which is already loaded, so it costs no
  * request and cannot be rate limited.
  *
  * Deliberately not the same thing as "an update is available": that one is
@@ -24,19 +24,28 @@ import {
  * it.
  */
 export function InstanceUpdatedModal({
-  version,
+  tag,
+  baseVersion,
   channel,
   docsEntries,
 }: {
-  version: string;
+  tag: string;
+  /** The stable release a nightly is built on. */
+  baseVersion?: string;
   channel: ReleaseChannel;
   docsEntries: DocsChangelogEntry[];
 }) {
   const [shownFor, setShownFor] = React.useState<string | null>(null);
 
+  // Nightly ships on every merge, so it is announced by its base release.
+  const version =
+    channel === 'stable'
+      ? tag
+      : channel === 'nightly' && baseVersion
+        ? `v${baseVersion.replace(/^v/, '')}`
+        : '';
+
   React.useEffect(() => {
-    // Nightly ships on every merge, so announcing each one would be noise.
-    if (channel !== 'stable') return;
     if (!version || version.toLowerCase() === 'unknown') return;
 
     const lastSeen = getLastSeenVersion();
@@ -60,7 +69,7 @@ export function InstanceUpdatedModal({
       // Patch releases and rollbacks pass silently.
       setLastSeenVersion(version);
     }
-  }, [version, channel]);
+  }, [version]);
 
   const dismiss = () => {
     setLastSeenVersion(version);
@@ -68,6 +77,7 @@ export function InstanceUpdatedModal({
   };
 
   const entry = findDocsEntry(docsEntries, version);
+  const nightly = channel === 'nightly';
 
   return (
     <Modal
@@ -84,9 +94,17 @@ export function InstanceUpdatedModal({
           </span>
           <div className="min-w-0">
             <h2 className="text-lg font-semibold text-white">
-              AIOStreams was updated to {version}
+              {nightly
+                ? `AIOStreams ${version} is out`
+                : `AIOStreams was updated to ${version}`}
             </h2>
-            {entry ? (
+            {nightly ? (
+              <p className="text-sm text-[--muted] mt-1">
+                This instance runs nightly builds, so you&apos;ve had its
+                changes as they landed. Read the changelog to catch up on
+                anything you missed.
+              </p>
+            ) : entry ? (
               <p className="text-sm text-[--muted] mt-1">{entry.title}</p>
             ) : (
               <p className="text-sm text-[--muted] mt-1">
@@ -97,10 +115,15 @@ export function InstanceUpdatedModal({
           </div>
         </div>
 
-        {entry?.description && (
-          <p className="text-sm text-gray-300 border-l-2 border-gray-700 pl-3">
-            {entry.description}
-          </p>
+        {(entry?.description || (nightly && entry)) && (
+          <div className="text-sm border-l-2 border-gray-700 pl-3">
+            {nightly && <p className="text-white">{entry?.title}</p>}
+            {entry?.description && (
+              <p className={nightly ? 'text-gray-400 mt-0.5' : 'text-gray-300'}>
+                {entry.description}
+              </p>
+            )}
+          </div>
         )}
 
         <div className="flex items-center justify-between gap-3 pt-1">
