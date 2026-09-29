@@ -254,6 +254,14 @@ export class BuiltinAddonPreset extends Preset {
             aiostreamsAuth: credentials.aiostreamsAuth,
           })
         ),
+      [constants.QBITTORRENT_SERVICE]: (credentials: any) =>
+        toUrlSafeBase64(
+          JSON.stringify({
+            url: credentials.url,
+            username: credentials.username,
+            password: credentials.password,
+          })
+        ),
     };
     const altmountSpecialCase: Partial<
       Record<ServiceId, (credentials: any) => any>

@@ -5,6 +5,7 @@ import {
   appConfig,
   getSimpleTextHash,
   encryptString,
+  toUrlSafeBase64,
   BuiltinServiceId,
   mergeParsedMediaInfos,
 } from '../utils/index.js';
@@ -612,6 +613,14 @@ export function getServiceCredential(service: {
         email: creds.email,
         password: creds.password,
       });
+    case constants.QBITTORRENT_SERVICE:
+      return toUrlSafeBase64(
+        JSON.stringify({
+          url: creds.url,
+          username: creds.username,
+          password: creds.password,
+        })
+      );
     default:
       return creds.apiKey;
   }

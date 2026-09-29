@@ -7,6 +7,10 @@ import { BuiltinAddonPreset } from './builtin.js';
 export class TorznabPreset extends BuiltinAddonPreset {
   static override get METADATA() {
     const supportedResources = [constants.STREAM_RESOURCE];
+    const supportedServices: ServiceId[] = [
+      ...StremThruPreset.supportedServices,
+      constants.QBITTORRENT_SERVICE,
+    ];
     const options: Option[] = [
       {
         id: 'name',
@@ -62,7 +66,7 @@ export class TorznabPreset extends BuiltinAddonPreset {
         type: 'multi-select',
         required: false,
         showInSimpleMode: false,
-        options: StremThruPreset.supportedServices.map((service) => ({
+        options: supportedServices.map((service) => ({
           value: service,
           label: constants.SERVICE_DETAILS[service].name,
         })),
@@ -177,7 +181,7 @@ export class TorznabPreset extends BuiltinAddonPreset {
       URL: [`${appConfig.bootstrap.internalUrl}/builtins/torznab`],
       TIMEOUT: appConfig.presets.defaultTimeout,
       USER_AGENT: appConfig.http.defaultUserAgent,
-      SUPPORTED_SERVICES: StremThruPreset.supportedServices,
+      SUPPORTED_SERVICES: supportedServices,
       DESCRIPTION: 'An addon to get debrid results from a Torznab endpoint.',
       OPTIONS: options,
       SUPPORTED_STREAM_TYPES: [
