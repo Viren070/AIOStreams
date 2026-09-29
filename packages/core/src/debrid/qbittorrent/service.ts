@@ -29,9 +29,9 @@ import {
 } from './client.js';
 import { STREAM_THRESHOLD_BYTES, computeFileAvailability } from './availability.js';
 import {
-  CREDENTIAL_REF_TTL_SECONDS,
+  STREAM_REF_TTL_SECONDS,
   encodeQbittorrentStreamToken,
-  registerCredentialRef,
+  registerStreamRef,
 } from './tokens.js';
 
 const logger = createLogger('debrid:qbittorrent');
@@ -279,14 +279,16 @@ export class QBittorrentService implements TorrentDebridService {
     const { file, filePath } = readiness;
 
     const token = encodeQbittorrentStreamToken({
-      credentialRef: await registerCredentialRef(this.credential),
-      exp: Math.floor(Date.now() / 1000) + CREDENTIAL_REF_TTL_SECONDS,
-      hash,
-      fileIndex: file.index,
-      filePath,
-      fileSize: file.size,
-      filename: filename || file.name,
-      addedAt: torrent.added_on,
+      ref: await registerStreamRef({
+        credential: this.credential,
+        hash,
+        fileIndex: file.index,
+        filePath,
+        fileSize: file.size,
+        filename: filename || file.name,
+        addedAt: torrent.added_on,
+      }),
+      exp: Math.floor(Date.now() / 1000) + STREAM_REF_TTL_SECONDS,
     });
 
     return `${appConfig.bootstrap.baseUrl}/api/v1/qbittorrent/stream/${token}/${encodeURIComponent(

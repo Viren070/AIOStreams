@@ -178,6 +178,13 @@ export async function buildPlayChain(
   const items: PlayChainItem[] = eligible.map((s) => {
     const variants: PlayChainItem[] = (s.failoverVariants ?? [])
       .filter((v) => opts.contentTypes.includes(v.type))
+    // qBittorrent streams never join failover chains, a chained add would
+    // create snatch/seeding obligations for releases the user never chose.
+      .filter(
+        (v) =>
+          v.serviceId !== constants.QBITTORRENT_SERVICE &&
+          s.service?.id !== constants.QBITTORRENT_SERVICE
+      )
       .map((v) => ({
         url: v.url,
         type: v.type,
