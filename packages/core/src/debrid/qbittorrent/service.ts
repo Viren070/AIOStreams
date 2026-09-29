@@ -280,28 +280,7 @@ export class QBittorrentService implements TorrentDebridService {
       signal
     );
     if (!readiness) return undefined;
-    const { files, file } = readiness;
-
-    const torrentRoot = torrent.content_path.endsWith('/')
-      ? torrent.content_path
-      : torrent.content_path + '/';
-    const filePath =
-      files.length === 1 ? torrent.content_path : torrentRoot + file.name;
-
-    try {
-      await stat(filePath);
-    } catch {
-      throw new DebridError(
-        'qBittorrent download directory is not reachable from AIOStreams; both must run on the same machine (or share the directory through a mount)',
-        {
-          statusCode: 503,
-          statusText: 'Service Unavailable',
-          code: 'SERVICE_UNAVAILABLE',
-          type: 'api_error',
-          headers: {},
-        }
-      );
-    }
+    const { file, filePath } = readiness;
 
     const token = encodeQbittorrentStreamToken({
       credential: this.credential,
@@ -344,8 +323,16 @@ export class QBittorrentService implements TorrentDebridService {
     playbackInfo: PlaybackInfo & TorrentInfo,
     cacheAndPlay: boolean,
     signal?: AbortSignal
-  ): Promise<{ files: Awaited<ReturnType<QBittorrentClient['getFiles']>>; file: { index: number; name: string; size: number } } | undefined> {
+  ): Promise<
+    | {
+        files: Awaited<ReturnType<QBittorrentClient['getFiles']>>;
+        file: { index: number; name: string; size: number };
+        filePath: string;
+      }
+    | undefined
+  > {
     const maxPolls = Math.max(1, Math.ceil(this.options.maxWaitTime / this.options.pollInterval));
+    let dataReadyButNotOnDisk = 0;
     for (let i = 0; i < maxPolls; i++) {
       this.throwIfAborted(signal);
 
@@ -368,6 +355,13 @@ export class QBittorrentService implements TorrentDebridService {
       const files = await this.client.getFiles(torrent.hash, signal);
       const file = await this.selectFile(current, files, playbackInfo);
       if (file) {
+        const torrentRoot = current.content_path.endsWith('/')
+          ? current.content_path
+          : current.content_path + '/';
+        const filePath =
+          files.length === 1
+            ? current.content_path
+            : torrentRoot + file.name;
         const pieceSize = await this.client.getPieceSize(torrent.hash, signal);
         const pieceStates = await this.client.getPieceStates(torrent.hash, signal);
         const availability = computeFileAvailability({
@@ -377,17 +371,50 @@ export class QBittorrentService implements TorrentDebridService {
           pieceSize,
         });
         const threshold = Math.min(file.size, STREAM_THRESHOLD_BYTES);
+          // Piece states flip before flush, verify bytes are readable.
+        let onDisk = false;
+        try {
+          await stat(filePath);
+          onDisk = true;
+        } catch {}
         if (
-          availability.complete ||
-          availability.contiguousFrom(0) >= threshold ||
-          downloadStatus(current) === 'downloaded'
+          onDisk &&
+          (availability.complete ||
+            availability.contiguousFrom(0) >= threshold ||
+            downloadStatus(current) === 'downloaded')
         ) {
-          return { files, file };
+          return { files, file, filePath };
+        }
+        if (
+          !onDisk &&
+          (availability.complete ||
+            availability.contiguousFrom(0) >= threshold ||
+            downloadStatus(current) === 'downloaded')
+        ) {
+          // The data claims to be ready but nothing is landing on disk. A
+          // short burst of this is write-cache flush lag; a sustained one
+          // means AIOStreams does not share a filesystem with qBittorrent.
+          dataReadyButNotOnDisk++;
+          if (dataReadyButNotOnDisk >= 5) {
+            throw new DebridError(
+              'qBittorrent download directory is not reachable from AIOStreams; both must run on the same machine (or share the directory through a mount)',
+              {
+                statusCode: 503,
+                statusText: 'Service Unavailable',
+                code: 'SERVICE_UNAVAILABLE',
+                type: 'api_error',
+                headers: {},
+              }
+            );
+          }
+        } else {
+          dataReadyButNotOnDisk = 0;
         }
         logger.debug('qBittorrent file not yet readable', {
           hash: torrent.hash,
           contiguous: availability.contiguousFrom(0),
           threshold,
+          onDisk,
           attempt: i + 1,
         });
       }
