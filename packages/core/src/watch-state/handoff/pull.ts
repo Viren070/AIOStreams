@@ -32,10 +32,8 @@ const logger = createLogger('playback-pull');
 
 const REQUEST_TIMEOUT_MS = 20_000;
 
-/** Nothing below this fraction is worth restoring as a resume point. */
-const RESUME_MIN_FRACTION = 0.02;
-/** At or past this fraction the addon is describing a finished item. */
-const PLAYED_FRACTION = 0.9;
+/** A tracker's resume point already passed its own minimum, so imports allow a lower one. */
+const RESUME_MIN_PERCENT = 2;
 
 const StateItemSchema = z.looseObject({
   type: z.string().optional(),
@@ -353,7 +351,8 @@ async function importItems(
       item.played === true ||
       (!!position &&
         position.durationMs > 0 &&
-        position.positionMs >= position.durationMs * PLAYED_FRACTION);
+        position.positionMs >=
+          (position.durationMs * appConfig.watchState.playedPercent) / 100);
 
     if (!played && !position) {
       skipped++;
@@ -364,7 +363,10 @@ async function importItems(
     const tooEarly =
       !!position &&
       position.durationMs > 0 &&
-      position.positionMs < position.durationMs * RESUME_MIN_FRACTION;
+      position.positionMs <
+        (position.durationMs *
+          Math.min(RESUME_MIN_PERCENT, appConfig.watchState.minResumePercent)) /
+          100;
 
     rows.push({
       identity,

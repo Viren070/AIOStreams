@@ -117,6 +117,28 @@ export const watchStateSchema = {
     secret: false,
     ui: { min: 1 },
   },
+  minResumePercent: {
+    schema: z.number().int().min(0).max(49),
+    default: 5,
+    label: 'Minimum resume percentage',
+    description:
+      'Playback stopped before this much of a title has played keeps no resume point, so it stays out of Continue Watching and has no resume button. Set 0 to keep every position.',
+    env: 'WATCH_STATE_MIN_RESUME_PERCENT',
+    requiresRestart: false,
+    secret: false,
+    ui: { min: 0, max: 49 },
+  },
+  playedPercent: {
+    schema: z.number().int().min(50).max(100),
+    default: 90,
+    label: 'Played percentage',
+    description:
+      'Playback that reaches this much of a title marks it played and clears its resume point. Tracker addons are told it was watched, and a title imported from one this far along counts as played.',
+    env: 'WATCH_STATE_PLAYED_PERCENT',
+    requiresRestart: false,
+    secret: false,
+    ui: { min: 50, max: 100 },
+  },
   sessionIdleTimeout: {
     schema: seconds.pipe(z.number().min(60)),
     default: 300,

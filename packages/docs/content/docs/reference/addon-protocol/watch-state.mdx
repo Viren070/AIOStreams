@@ -93,7 +93,7 @@ is the video id.
 | `at`                       | Unix seconds.                                                                                                                                                   |
 | `metaId`, `videoId`        | The meta the video belongs to, and the video that was played. See [Two id spaces](#two-id-spaces).                                                              |
 | `positionMs`, `durationMs` | Where playback was, and the video's length when known.                                                                                                          |
-| `played`                   | Whether playback passed the watched threshold (90%).                                                                                                            |
+| `played`                   | Whether playback passed the instance's played threshold (90% by default).                                                                                       |
 | `season`, `episode`        | Sent as fields, so you never parse an id.                                                                                                                       |
 | `ids`                      | The **show's or film's** ids in the [shared vocabulary](/reference/addon-protocol/metadata#ids), every one the metadata addon knew. Never an episode's own ids. |
 

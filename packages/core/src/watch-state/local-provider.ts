@@ -18,10 +18,6 @@ import type {
 
 const logger = createLogger('watch-state');
 
-/** Progress at or past this fraction marks the item played. */
-const PLAYED_FRACTION = 0.9;
-/** Progress below this fraction on stop resets the position. */
-const RESUME_MIN_FRACTION = 0.05;
 /** Items shorter than this never create a resume entry. */
 const RESUME_MIN_DURATION_MS = 90_000;
 interface PendingProgress {
@@ -214,7 +210,10 @@ export class LocalWatchStateProvider implements WatchStateProvider {
 
   private progressPatch(p: PendingProgress): WatchStatePatch {
     const dur = p.durationMs ?? 0;
-    if (dur > 0 && p.positionMs >= dur * PLAYED_FRACTION) {
+    if (
+      dur > 0 &&
+      p.positionMs >= (dur * appConfig.watchState.playedPercent) / 100
+    ) {
       return {
         positionMs: 0,
         durationMs: dur,
@@ -247,7 +246,7 @@ export class LocalWatchStateProvider implements WatchStateProvider {
     const dur = event.durationMs || existing?.durationMs || 0;
     const pos = event.positionMs ?? existing?.positionMs ?? 0;
     const now = Date.now();
-    if (dur > 0 && pos >= dur * PLAYED_FRACTION) {
+    if (dur > 0 && pos >= (dur * appConfig.watchState.playedPercent) / 100) {
       return {
         positionMs: 0,
         durationMs: dur,
@@ -258,7 +257,8 @@ export class LocalWatchStateProvider implements WatchStateProvider {
       };
     }
     const tooShort = dur > 0 && dur < RESUME_MIN_DURATION_MS;
-    const tooEarly = dur > 0 && pos < dur * RESUME_MIN_FRACTION;
+    const tooEarly =
+      dur > 0 && pos < (dur * appConfig.watchState.minResumePercent) / 100;
     return {
       positionMs: tooShort || tooEarly ? 0 : pos,
       durationMs: dur || undefined,

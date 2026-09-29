@@ -238,16 +238,18 @@ What a tool can't get from AIOStreams:
 
 The media server, skip markers and watch-state sync are on by default. The settings are under **Dashboard → Settings → Media server** and **Watch State**; see [environment variables](/configuration/environment-variables) for all of them.
 
-| Variable                     | Default | What it does                                                                                                             |
-| ---------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `JELLYFIN_ENABLED`           | `true`  | Turns the media server on or off, for the AIOStreams app and Jellyfin apps.                                              |
-| `JELLYFIN_MAX_LIBRARIES`     | `20`    | Catalogs shown as libraries per configuration. `0` shows them all.                                                       |
-| `JELLYFIN_MAX_CATALOG_ITEMS` | `250`   | Titles listed per library.                                                                                               |
-| `JELLYFIN_MAX_VERSIONS`      | `10`    | The most versions a configuration can ask for.                                                                           |
-| `JELLYFIN_RESOLVE_ON_OPEN`   | `user`  | `always` or `never` force resolving on open for everyone; `user` leaves it to each configuration.                        |
-| `JELLYFIN_MAX_PERSONAS`      | `20`    | Household users per configuration. `0` allows none.                                                                      |
-| `JELLYFIN_PIN_SIGN_IN`       | `false` | Lets a household user with a PIN of 6 or more digits sign in on the picker address with the PIN alone.                   |
-| `JELLYFIN_SEGMENTS_ENABLED`  | `true`  | Offers skip markers. It sends what is being played to the marker databases.                                              |
-| `WATCH_STATE_REPORT_ENABLED` | `true`  | Sends plays to tracker addons.                                                                                           |
-| `WATCH_STATE_PULL_ENABLED`   | `true`  | Imports history from tracker addons.                                                                                     |
-| `ALLOW_PRIVATE_URLS`         | `true`  | Lets this server reach private addresses, such as a tracker addon on a Docker network. Turn it off on a public instance. |
+| Variable                         | Default | What it does                                                                                                             |
+| -------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `JELLYFIN_ENABLED`               | `true`  | Turns the media server on or off, for the AIOStreams app and Jellyfin apps.                                              |
+| `JELLYFIN_MAX_LIBRARIES`         | `20`    | Catalogs shown as libraries per configuration. `0` shows them all.                                                       |
+| `JELLYFIN_MAX_CATALOG_ITEMS`     | `250`   | Titles listed per library.                                                                                               |
+| `JELLYFIN_MAX_VERSIONS`          | `10`    | The most versions a configuration can ask for.                                                                           |
+| `JELLYFIN_RESOLVE_ON_OPEN`       | `user`  | `always` or `never` force resolving on open for everyone; `user` leaves it to each configuration.                        |
+| `JELLYFIN_MAX_PERSONAS`          | `20`    | Household users per configuration. `0` allows none.                                                                      |
+| `JELLYFIN_PIN_SIGN_IN`           | `false` | Lets a household user with a PIN of 6 or more digits sign in on the picker address with the PIN alone.                   |
+| `JELLYFIN_SEGMENTS_ENABLED`      | `true`  | Offers skip markers. It sends what is being played to the marker databases.                                              |
+| `WATCH_STATE_REPORT_ENABLED`     | `true`  | Sends plays to tracker addons.                                                                                           |
+| `WATCH_STATE_PULL_ENABLED`       | `true`  | Imports history from tracker addons.                                                                                     |
+| `WATCH_STATE_MIN_RESUME_PERCENT` | `5`     | Stopping before this much has played keeps no resume point.                                                              |
+| `WATCH_STATE_PLAYED_PERCENT`     | `90`    | Playing this much marks a title played.                                                                                  |
+| `ALLOW_PRIVATE_URLS`             | `true`  | Lets this server reach private addresses, such as a tracker addon on a Docker network. Turn it off on a public instance. |
