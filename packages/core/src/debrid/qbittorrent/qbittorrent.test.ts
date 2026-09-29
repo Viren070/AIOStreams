@@ -1,0 +1,339 @@
+import '../../index.js';
+import { test, describe, mock } from 'node:test';
+import assert from 'node:assert/strict';
+import { getGlobalDispatcher, MockAgent, setGlobalDispatcher } from 'undici';
+import { settingsStore } from '../../config/index.js';
+import { SettingsRepository } from '../../db/repositories/settings.js';
+import { toUrlSafeBase64 } from '../../utils/general.js';
+import { DebridError } from '../base.js';
+import {
+  parseQbittorrentCredential,
+  QbittorrentFile,
+  QBITTORRENT_TAG,
+} from './client.js';
+import { QBittorrentService } from './service.js';
+import {
+  decodeQbittorrentStreamToken,
+  encodeQbittorrentStreamToken,
+  QbittorrentStreamToken,
+} from './tokens.js';
+import { computeFileAvailability } from './availability.js';
+
+const WEBUI = 'http://qbit.test';
+
+function credentialToken(
+  url = WEBUI,
+  username = 'user',
+  password = 'pass'
+): string {
+  return toUrlSafeBase64(JSON.stringify({ url, username, password }));
+}
+
+function file(partial: Partial<QbittorrentFile> & { index: number; name: string; size: number; piece_range: [number, number] }): QbittorrentFile {
+  return { progress: 0, priority: 1, ...partial };
+}
+
+const TOKEN: QbittorrentStreamToken = {
+  credential: { url: WEBUI, username: 'user', password: 'pass' },
+  hash: 'a'.repeat(40),
+  fileIndex: 0,
+  filePath: '/downloads/file.mkv',
+  fileSize: 1000,
+  filename: 'file.mkv',
+  addedAt: 1700000000,
+};
+
+describe('parseQbittorrentCredential', () => {
+
+
+
+});
+
+describe('stream tokens', () => {
+
+  test('rejects tampered ciphertext', () => {
+    const encoded = encodeQbittorrentStreamToken(TOKEN);
+    const tampered = encoded.slice(0, -4) + (encoded.endsWith('AAAA') ? 'BBBB' : 'AAAA');
+    assert.equal(decodeQbittorrentStreamToken(tampered), undefined);
+  });
+
+});
+
+describe('computeFileAvailability', () => {
+  // Layout: pieceSize 250. File 0 = [0, 500) = pieces 0-1.
+  // File 1 = [500, 1500) = pieces 2-5, 1000 bytes.
+  const files = [
+    file({ index: 0, name: 'first.bin', size: 500, piece_range: [0, 1], progress: 1 }),
+    file({ index: 1, name: 'video.mkv', size: 1000, piece_range: [2, 5] }),
+  ];
+
+  test('reports complete when every file piece is downloaded', () => {
+    const availability = computeFileAvailability({
+      files,
+      fileIndex: 1,
+      pieceStates: [2, 2, 2, 2, 2, 2],
+      pieceSize: 250,
+    });
+    assert.equal(availability.complete, true);
+    assert.equal(availability.rangeAvailable(0, 1000), true);
+  });
+
+  test('serves a range only when all its pieces are downloaded', () => {
+    // Piece 4 missing: global [1000, 1250) = file bytes [500, 750).
+    const availability = computeFileAvailability({
+      files,
+      fileIndex: 1,
+      pieceStates: [2, 2, 2, 2, 0, 2],
+      pieceSize: 250,
+    });
+    assert.equal(availability.complete, false);
+    assert.equal(availability.rangeAvailable(0, 500), true);
+    assert.equal(availability.rangeAvailable(0, 501), false);
+    assert.equal(availability.rangeAvailable(750, 1000), true);
+  });
+
+  test('clamps contiguous reads at the first hole', () => {
+    const availability = computeFileAvailability({
+      files,
+      fileIndex: 1,
+      pieceStates: [2, 2, 2, 2, 0, 2],
+      pieceSize: 250,
+    });
+    assert.equal(availability.contiguousFrom(0), 500);
+    assert.equal(availability.contiguousFrom(500), 500);
+    assert.equal(availability.contiguousFrom(750), 1000);
+  });
+
+  test('handles a piece shared with the previous file', () => {
+    // File 0 = [0, 600) (pieces 0-2), file 1 = [600, 1500) (pieces 2-5):
+    // piece 2 spans the end of file 0 and the start of file 1.
+    const shared = [
+      file({ index: 0, name: 'first.bin', size: 600, piece_range: [0, 2], progress: 1 }),
+      file({ index: 1, name: 'video.mkv', size: 900, piece_range: [2, 5] }),
+    ];
+    const availability = computeFileAvailability({
+      files: shared,
+      fileIndex: 1,
+      pieceStates: [0, 0, 2, 0, 0, 0],
+      pieceSize: 250,
+    });
+    // Piece 2 covers global [500, 750): file 1 bytes [0, 150).
+    assert.equal(availability.contiguousFrom(0), 150);
+  });
+
+  test('falls back to progress when piece states are unavailable', () => {
+    const partial = [
+      file({ index: 0, name: 'first.bin', size: 500, piece_range: [0, 1], progress: 1 }),
+      file({ index: 1, name: 'video.mkv', size: 1000, piece_range: [2, 5], progress: 0.5 }),
+    ];
+    const availability = computeFileAvailability({
+      files: partial,
+      fileIndex: 1,
+      pieceSize: 250,
+    });
+    assert.equal(availability.complete, false);
+    assert.equal(availability.contiguousFrom(0), 500);
+    assert.equal(availability.rangeAvailable(0, 500), true);
+    assert.equal(availability.rangeAvailable(0, 501), false);
+  });
+});
+
+// Each test gets its own credential so the client's shared session and
+// login-failure caches cannot leak state between tests.
+let credentialCounter = 0;
+
+function service() {
+  return new QBittorrentService(
+    { token: credentialToken(WEBUI, 'user', `pass-${++credentialCounter}`) },
+    { pollInterval: 10, maxWaitTime: 100 }
+  );
+}
+
+describe('QBittorrentService', () => {
+  test('maps torrent states onto download statuses', async (t) => {
+    await withMockedWebUi(t, {
+      login: true,
+      intercepts: [
+        {
+          path: `/api/v2/torrents/info?hashes=${'b'.repeat(40)}%7C${'c'.repeat(40)}%7C${'d'.repeat(40)}`,
+          body: [
+            { ...torrentFixture('b'.repeat(40), 'stalledUP'), progress: 1 },
+            torrentFixture('c'.repeat(40), 'error'),
+          ],
+        },
+        {
+          path: `/api/v2/torrents/files?hash=${'b'.repeat(40)}`,
+          body: [fileFixture(0, 'video.mkv', 2000)],
+        },
+      ],
+    });
+    const [seeded, errored, absent] = await service().checkMagnets([
+      `magnet:?xt=urn:btih:${'b'.repeat(40)}`,
+      `magnet:?xt=urn:btih:${'c'.repeat(40)}`,
+      `magnet:?xt=urn:btih:${'d'.repeat(40)}`,
+    ]);
+    assert.equal(seeded.status, 'cached');
+    assert.equal(seeded.library, true);
+    assert.ok(seeded.files?.length);
+    assert.equal(errored.status, 'failed');
+    assert.equal(absent.status, 'unknown');
+    assert.equal(absent.library, false);
+  });
+
+  test('adds torrents with the aiostreams tag and streaming flags', async (t) => {
+    let addBody = '';
+    await withMockedWebUi(t, {
+      login: true,
+      intercepts: [],
+      onAdd: (body) => (addBody = body),
+    });
+    await service().addMagnet(`magnet:?xt=urn:btih:${'e'.repeat(40)}`);
+    assert.match(addBody, /urls=magnet%3A/);
+    assert.match(addBody, new RegExp(`tags=${QBITTORRENT_TAG}`));
+    assert.match(addBody, /sequentialDownload=true/);
+    assert.match(addBody, /firstLastPiecePrio=true/);
+  });
+
+  test('maps a rejected add to STORE_MAGNET_INVALID', async (t) => {
+    await withMockedWebUi(t, { login: true, intercepts: [], addStatus: 415 });
+    await assert.rejects(
+      () => service().addMagnet(`magnet:?xt=urn:btih:${'f'.repeat(40)}`),
+      (err: unknown) =>
+        err instanceof DebridError && err.code === 'STORE_MAGNET_INVALID'
+    );
+  });
+
+  test('reports bad credentials as UNAUTHORIZED', async (t) => {
+    await withMockedWebUi(t, { login: false });
+    await assert.rejects(
+      () => service().listMagnets(),
+      (err: unknown) =>
+        err instanceof DebridError && err.code === 'UNAUTHORIZED'
+    );
+  });
+
+  test('re-logins once when the session goes stale', async (t) => {
+    let logins = 0;
+    let dataHits = 0;
+    await withMockedWebUi(t, {
+      login: true,
+      intercepts: [],
+      onLogin: () => logins++,
+      dataIntercept: () => {
+        dataHits++;
+        // First data call pretends the SID is stale, then succeeds.
+        if (dataHits === 1) {
+          return { statusCode: 401 };
+        }
+        return {
+          statusCode: 200,
+          data: JSON.stringify([]),
+          responseOptions: { headers: { 'content-type': 'application/json' } },
+        };
+      },
+    });
+    const result = await service().listMagnets();
+    assert.deepEqual(result, []);
+    assert.equal(logins, 2);
+    assert.equal(dataHits, 2);
+  });
+});
+
+function torrentFixture(hash: string, state: string) {
+  return {
+    hash,
+    name: 'release',
+    state,
+    progress: 0,
+    size: 2000,
+    completed: 0,
+    amount_left: 2000,
+    content_path: '/downloads/release',
+    save_path: '/downloads',
+    category: '',
+    tags: '',
+    added_on: 1700000000,
+  };
+}
+
+function fileFixture(index: number, name: string, size: number) {
+  return { index, name, size, progress: 0, priority: 1, piece_range: [0, 1], availability: 1 };
+}
+
+interface MockWebUiOptions {
+  login: boolean;
+  intercepts?: { path: string; body: unknown }[];
+  addStatus?: number;
+  onAdd?: (body: string) => void;
+  onLogin?: () => void;
+  /** Reply callback for `/api/v2/torrents/info?tag=aiostreams` (listMagnets). */
+  dataIntercept?: () => {
+    statusCode: number;
+    data?: string;
+    responseOptions?: { headers: Record<string, string> };
+  };
+}
+
+/**
+ * Point the undici dispatcher at a fake WebUI: one login intercept, one
+ * add intercept, and per-path JSON bodies for the data endpoints. All
+ * intercepts are registered here because undici matches the earliest
+ * registered intercept for a path, so a test cannot shadow these later.
+ */
+async function withMockedWebUi(
+  t: { after: (fn: () => void) => void },
+  options: MockWebUiOptions
+) {
+  options.intercepts ??= [];
+  mock.method(SettingsRepository, 'getAll', async () => []);
+  mock.method(SettingsRepository, 'getVersion', async () => 0);
+  await settingsStore.initialise();
+  const agent = new MockAgent();
+  agent.disableNetConnect();
+  const previous = getGlobalDispatcher();
+  setGlobalDispatcher(agent);
+  t.after(() => setGlobalDispatcher(previous));
+
+  agent
+    .get(WEBUI)
+    .intercept({ path: '/api/v2/auth/login', method: 'POST' })
+    .reply(() => {
+      options.onLogin?.();
+      if (!options.login) {
+        return { statusCode: 200, data: 'Fails.' };
+      }
+      return {
+        statusCode: 200,
+        data: 'Ok.',
+        responseOptions: { headers: { 'set-cookie': 'SID=test; Path=/' } },
+      };
+    })
+    .persist();
+  agent
+    .get(WEBUI)
+    .intercept({ path: '/api/v2/torrents/add', method: 'POST' })
+    .reply(({ body }) => {
+      options.onAdd?.(String(body));
+      return { statusCode: options.addStatus ?? 200, data: '' };
+    })
+    .persist();
+  if (options.dataIntercept) {
+    agent
+      .get(WEBUI)
+      .intercept({ path: '/api/v2/torrents/info?tag=aiostreams' })
+      .reply(options.dataIntercept)
+      .persist();
+  }
+  for (const { path, body } of options.intercepts) {
+    agent
+      .get(WEBUI)
+      .intercept({ path })
+      .reply(() => ({
+        statusCode: 200,
+        data: JSON.stringify(body),
+        responseOptions: { headers: { 'content-type': 'application/json' } },
+      }))
+      .persist();
+  }
+  return agent;
+}
