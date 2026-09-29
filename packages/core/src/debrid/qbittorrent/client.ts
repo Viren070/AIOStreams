@@ -106,12 +106,9 @@ interface Session {
  */
 const sessions = new Map<string, Session>();
 
-/**
- * Login failures are cached briefly per credential so a mistyped password
- * cannot trip qBittorrent's IP ban through parallel resolve attempts.
- */
+/** Cached login failures keep a bad password from tripping qBittorrent's IP ban. */
 const loginFailures = new Map<string, number>();
-const LOGIN_FAILURE_TTL_MS = 5_000;
+const LOGIN_FAILURE_TTL_MS = 60_000;
 
 function credentialKey(credential: QbittorrentCredential): string {
   return getSimpleTextHash(
@@ -229,8 +226,9 @@ export class QBittorrentClient {
     }
     if (!session) session = await this.login();
     let response = await attempt(session);
-    if (response.status === 401 || response.status === 403) {
-      // Stale SID: re-login once and retry.
+    if (response.status === 401) {
+      // Stale SID: re-login once and retry. A 403 is not retried: it means
+      // the host is banned, and another login attempt cannot help.
       sessions.delete(this.key());
       response = await attempt(await this.login());
     }
@@ -272,7 +270,12 @@ export class QBittorrentClient {
   }
 
   private httpError(status: number, path: string): DebridError {
-    if (status === 401 || status === 403) {
+    if (status === 403) {
+      return unauthorized(
+        'qBittorrent rejected the request; this host may be banned by the WebUI'
+      );
+    }
+    if (status === 401) {
       return unauthorized(
         'qBittorrent rejected the request; check the WebUI credentials'
       );
@@ -406,33 +409,6 @@ export class QBittorrentClient {
     }
     if (!response.ok) {
       throw this.httpError(response.status, '/api/v2/torrents/add');
-    }
-  }
-
-  /** Enable sequential download for a torrent, if it is not already on. */
-  async ensureSequential(
-    torrent: QbittorrentTorrent,
-    signal?: AbortSignal
-  ): Promise<void> {
-    if (torrent.seq_dl) return;
-    const properties = await this.requestJson(
-      QbittorrentPropertiesSchema,
-      `/api/v2/torrents/properties?hash=${encodeURIComponent(torrent.hash)}`,
-      { signal }
-    );
-    if (properties.seq_dl) return;
-    const response = await this.request('/api/v2/torrents/toggleSequential', {
-      method: 'POST',
-      body: new URLSearchParams({ hashes: torrent.hash }),
-      signal,
-    });
-    if (!response.ok) {
-      // Purely an optimisation; a torrent without sequential download still
-      // streams whatever pieces exist.
-      logger.debug(
-        { hash: torrent.hash },
-        'could not enable sequential download'
-      );
     }
   }
 }

@@ -1,4 +1,4 @@
-import { stat } from 'fs/promises';
+import { open } from 'fs/promises';
 import {
   DebridDownload,
   DebridError,
@@ -28,7 +28,11 @@ import {
   parseQbittorrentCredential,
 } from './client.js';
 import { STREAM_THRESHOLD_BYTES, computeFileAvailability } from './availability.js';
-import { encodeQbittorrentStreamToken } from './tokens.js';
+import {
+  CREDENTIAL_REF_TTL_SECONDS,
+  encodeQbittorrentStreamToken,
+  registerCredentialRef,
+} from './tokens.js';
 
 const logger = createLogger('debrid:qbittorrent');
 
@@ -92,13 +96,16 @@ export class QBittorrentService implements TorrentDebridService {
         continue;
       }
       const failed = FAILED_STATES.has(torrent.state);
+      const complete =
+        SEEDED_STATES.has(torrent.state) || torrent.progress >= 1;
       const download: DebridDownload = {
         id: torrent.hash,
         hash: torrent.hash,
         name: torrent.name,
         size: torrent.size,
         addedAt: new Date(torrent.added_on * 1000).toISOString(),
-        status: failed ? 'failed' : 'cached',
+
+        status: failed ? 'failed' : complete ? 'cached' : 'downloading',
         library: true,
       };
       result.push(download);
@@ -184,17 +191,9 @@ export class QBittorrentService implements TorrentDebridService {
   }
 
   async removeMagnet(): Promise<void> {
-    // Removing a torrent stops it seeding, which breaks private tracker
-    // hit-and-run obligations; the service refuses by design.
-    throw new DebridError(
-      'qBittorrent torrents are never removed; they keep seeding in the client',
-      {
-        statusCode: 501,
-        statusText: 'Not Implemented',
-        code: 'NOT_IMPLEMENTED',
-        type: 'api_error',
-        headers: {},
-      }
+    // Never remove, the torrent must keep seeding.
+    logger.debug(
+      'removeMagnet ignored: qBittorrent torrents keep seeding by design'
     );
   }
 
@@ -267,10 +266,7 @@ export class QBittorrentService implements TorrentDebridService {
         await this.client.addTorrentUrl(magnet);
       }
       torrent = await this.waitForTorrent(hash, signal);
-    } else {
-      await this.client.ensureSequential(torrent, signal);
     }
-
 
 
     const readiness = await this.waitForReadable(
@@ -283,7 +279,8 @@ export class QBittorrentService implements TorrentDebridService {
     const { file, filePath } = readiness;
 
     const token = encodeQbittorrentStreamToken({
-      credential: this.credential,
+      credentialRef: await registerCredentialRef(this.credential),
+      exp: Math.floor(Date.now() / 1000) + CREDENTIAL_REF_TTL_SECONDS,
       hash,
       fileIndex: file.index,
       filePath,
@@ -371,29 +368,17 @@ export class QBittorrentService implements TorrentDebridService {
           pieceSize,
         });
         const threshold = Math.min(file.size, STREAM_THRESHOLD_BYTES);
+        const dataReady =
+          availability.complete ||
+          availability.contiguousFrom(0) >= threshold ||
+          downloadStatus(current) === 'downloaded';
           // Piece states flip before flush, verify bytes are readable.
-        let onDisk = false;
-        try {
-          await stat(filePath);
-          onDisk = true;
-        } catch {}
-        if (
-          onDisk &&
-          (availability.complete ||
-            availability.contiguousFrom(0) >= threshold ||
-            downloadStatus(current) === 'downloaded')
-        ) {
+        const flushed = await this.hasFlushedHead(filePath, file.size);
+        if (dataReady && flushed) {
           return { files, file, filePath };
         }
-        if (
-          !onDisk &&
-          (availability.complete ||
-            availability.contiguousFrom(0) >= threshold ||
-            downloadStatus(current) === 'downloaded')
-        ) {
-          // The data claims to be ready but nothing is landing on disk. A
-          // short burst of this is write-cache flush lag; a sustained one
-          // means AIOStreams does not share a filesystem with qBittorrent.
+        if (dataReady && !flushed) {
+
           dataReadyButNotOnDisk++;
           if (dataReadyButNotOnDisk >= 5) {
             throw new DebridError(
@@ -414,7 +399,7 @@ export class QBittorrentService implements TorrentDebridService {
           hash: torrent.hash,
           contiguous: availability.contiguousFrom(0),
           threshold,
-          onDisk,
+          flushed,
           attempt: i + 1,
         });
       }
@@ -477,6 +462,33 @@ export class QBittorrentService implements TorrentDebridService {
     );
     if (selected?.index === undefined) return undefined;
     return files.find((file) => file.index === selected.index);
+  }
+
+  /**
+   * Whether the file's head is readable and non-zero, proof the pieces
+   * were flushed (a container header is never all zeros).
+   */
+  private async hasFlushedHead(
+    filePath: string,
+    fileSize: number
+  ): Promise<boolean> {
+    if (fileSize === 0) return true;
+    const length = Math.min(64 * 1024, fileSize);
+    let handle;
+    try {
+      handle = await open(filePath, 'r');
+    } catch {
+      return false;
+    }
+    try {
+      const buffer = Buffer.alloc(length);
+      const { bytesRead } = await handle.read(buffer, 0, length, 0);
+      return buffer.subarray(0, bytesRead).some((byte) => byte !== 0);
+    } catch {
+      return false;
+    } finally {
+      await handle.close().catch(() => {});
+    }
   }
 
   private throwIfAborted(signal?: AbortSignal): void {

@@ -1,11 +1,42 @@
+import { randomUUID } from 'crypto';
 import z from 'zod';
-import { decryptString, encryptString } from '../../utils/index.js';
+import { Cache, decryptString, encryptString } from '../../utils/index.js';
 import { QbittorrentCredentialSchema } from './client.js';
+
+/** How long a credential reference stays resolvable after a resolve. */
+export const CREDENTIAL_REF_TTL_SECONDS = 12 * 60 * 60;
+
+/**
+ * Server-side store for WebUI credentials referenced by stream tokens. Tokens
+ * carry only an opaque reference (plus expiry), so a leaked stream URL cannot
+ * disclose the credential itself.
+ */
+const credentialStore = Cache.getInstance<string, z.infer<
+  typeof QbittorrentCredentialSchema
+>>('qbittorrent:credentials');
+
+/** Register a stream entry behind a fresh opaque ref. */
+export async function registerCredentialRef(
+  credential: z.infer<typeof QbittorrentCredentialSchema>
+): Promise<string> {
+  const ref = randomUUID();
+  await credentialStore.set(ref, credential, CREDENTIAL_REF_TTL_SECONDS);
+  return ref;
+}
+
+/** Look up a ref, undefined means expired. */
+export function resolveCredentialRef(
+  ref: string
+): Promise<z.infer<typeof QbittorrentCredentialSchema> | undefined> {
+  return credentialStore.get(ref);
+}
 
 /** Decoded payload of a qBittorrent stream token. */
 export const QbittorrentStreamTokenSchema = z.object({
-  /** Full WebUI credential so the byte route can re-authenticate. */
-  credential: QbittorrentCredentialSchema,
+  /** Opaque reference to the server-side credential entry. */
+  credentialRef: z.string().min(1),
+  /** Expiry (epoch seconds); matches the credential reference's TTL. */
+  exp: z.number().int().positive(),
 
   hash: z.string().regex(/^[a-f0-9]{40}$/i),
 
