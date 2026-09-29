@@ -244,6 +244,7 @@ function Content() {
 
         <WhatsNew
           version={version}
+          baseVersion={status?.version}
           channel={channel}
           releases={releases}
           docsEntries={docsEntries}

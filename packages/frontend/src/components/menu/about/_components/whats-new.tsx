@@ -20,6 +20,7 @@ import { ReleasesDrawer } from './releases-drawer';
 
 interface WhatsNewProps {
   version: string;
+  baseVersion?: string;
   channel: ReleaseChannel;
   releases: UseReleases;
   docsEntries: DocsChangelogEntry[];
@@ -32,6 +33,7 @@ interface WhatsNewProps {
  */
 export function WhatsNew({
   version,
+  baseVersion,
   channel,
   releases,
   docsEntries,
@@ -56,7 +58,12 @@ export function WhatsNew({
     !releases.loading && !releases.error && releases.newer.length === 0;
 
   // The hand-written entry for whichever version is worth reading about.
-  const entry = findDocsEntry(docsEntries, latest?.tag_name ?? version);
+  // Nightly tags name no release, so a nightly uses the one it is built on.
+  const nightlyBase = channel === 'nightly' ? baseVersion : undefined;
+  const entry = findDocsEntry(
+    docsEntries,
+    nightlyBase ?? latest?.tag_name ?? version
+  );
 
   return (
     <>
@@ -109,6 +116,11 @@ export function WhatsNew({
                   <Skeleton className="h-4 w-64 mt-2" />
                 ) : entry ? (
                   <div className="mt-2">
+                    {nightlyBase && (
+                      <p className="text-xs text-gray-500">
+                        Built on v{nightlyBase.replace(/^v/, '')}
+                      </p>
+                    )}
                     <p className="text-sm text-gray-300">{entry.title}</p>
                     {entry.description && (
                       <p className="text-sm text-[--muted] mt-0.5">
