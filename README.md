@@ -72,6 +72,10 @@ Add any Stremio addon you already use - Torrentio, Comet, MediaFusion, and many 
 
 Watch without Stremio, with the same addons, filters, sorting and formatting. There's nothing extra to self-host and no Jellyfin to install: it runs on your AIOStreams instance. Public instances have it on except ElfHosted's, and ElfHosted's private instances have it off until you turn it on. It plays streams with a link, such as debrid and Usenet ones, so P2P torrents aren't supported.
 
+<p align="center">
+  <img src="packages/docs/public/guides/app/hero.webp" alt="The AIOStreams app on a computer and a phone" width="850" />
+</p>
+
 **Where you can watch**
 
 - **In Your Browser**: On any device. Add it to your phone's home screen and it opens like an app.
@@ -89,10 +93,6 @@ Watch without Stremio, with the same addons, filters, sorting and formatting. Th
 - **Tracker Sync**: Addons that support [Watch State](https://docs.aiostreams.viren070.me/reference/addon-protocol/watch-state) can record what you play and bring in the history they hold, so what you watched elsewhere can show up in Continue Watching.
 - **Custom Themes and CSS**: Preset themes, your own accent and background colours, and custom CSS with [documented hooks](https://docs.aiostreams.viren070.me/reference/web-app-css), all following you to every device.
 - **Desktop Extras**: mpv playback for MKV, HEVC, AV1 and styled subtitles, surround output with Dolby and DTS passthrough, chapters, your own `mpv.conf`, `input.conf`, scripts and shaders, what you're watching on your Discord profile, and background updates with an optional nightly channel on Windows and macOS.
-
-<p align="center">
-  <img src="packages/docs/public/guides/app/hero.webp" alt="The AIOStreams app on a computer and a phone" width="850" />
-</p>
 
 ### 🧩 Built-in Addons
 
