@@ -31,10 +31,6 @@ export function requiredGenreDefault(c: Catalog): string | undefined {
   return e?.isRequired ? firstGenre(e) : undefined;
 }
 
-export function requiresGenre(c: Catalog): boolean {
-  return !!extra(c, 'genre')?.isRequired;
-}
-
 export function genreOptions(c: Catalog): string[] {
   return (extra(c, 'genre')?.options ?? []).filter(
     (o): o is string => typeof o === 'string' && o.length > 0

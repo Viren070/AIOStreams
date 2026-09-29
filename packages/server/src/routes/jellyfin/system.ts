@@ -42,6 +42,8 @@ const FEATURES = {
   refreshVersions: 1,
   /** Every version carries the `aiostreams` object with its own `id`. */
   versions: 1,
+  /** A library that needs a genre picked says so, as `aiostreams.genreRequired`. */
+  genreRequired: 1,
 } as const;
 
 export function publicInfo(req: Request) {

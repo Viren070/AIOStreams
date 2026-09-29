@@ -279,6 +279,10 @@ function baseItem(
   };
 }
 
+export function requiresGenre(c: Catalog): boolean {
+  return !!c.extra?.some((e) => e.name === 'genre' && e.isRequired);
+}
+
 export function buildView(
   ctx: ItemBuildContext,
   catalog: Catalog,
@@ -298,6 +302,7 @@ export function buildView(
     ChildCount: 0,
     Path: `/aiostreams/${catalog.type}/${catalog.id}`,
     PrimaryImageAspectRatio: 1.7777,
+    ...(requiresGenre(catalog) && { aiostreams: { genreRequired: true } }),
     _aio: { descriptor: { k: 'view', t: catalog.type, c: catalog.id } },
   };
 }

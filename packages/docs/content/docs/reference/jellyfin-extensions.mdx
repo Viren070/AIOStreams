@@ -28,7 +28,8 @@ Standard Jellyfin clients ignore all of these, so offering them never breaks one
       "playedUpTo": 1,
       "dropped": 1,
       "refreshVersions": 1,
-      "versions": 1
+      "versions": 1,
+      "genreRequired": 1
     }
   }
 }
@@ -55,6 +56,7 @@ value is that feature's version.
 | `dropped`         | [A disliked series is dropped](#dropped)                                                  |
 | `refreshVersions` | [`Refresh` in a `PlaybackInfo` body](#versions) runs the lookup for versions again        |
 | `versions`        | [Every version carries the `aiostreams` object](#versions), with its own `id`             |
+| `genreRequired`   | [A library that needs a genre picked says so](#libraries)                                 |
 
 Every `/AIOStreams/*` endpoint takes the same authorization as the rest of the API. AIOStreams
 refuses them to API keys, which belong to other tools.
@@ -86,6 +88,14 @@ In the `PlaybackInfo` body:
 | `Fresh`         | The app is listing versions: answer with a list no older than the server keeps one for   |
 | `Refresh`       | Look versions up again even if a recent list exists (with the `refreshVersions` feature) |
 | `MediaSourceId` | Standard. The app is playing that version: answer from the list it came from             |
+
+## Libraries
+
+With `genreRequired`, a library (a `CollectionFolder`) whose items only list once a genre is picked
+carries `"aiostreams": { "genreRequired": true }`. Asked for without a genre, such a library lists
+nothing. Its genres come from `/Genres?ParentId={library}` as usual, and a genre named `None` stands
+for all of it. The app opens it on `None` where that is offered and on its first genre otherwise, and
+offers All only where `None` is there to send.
 
 ## Users
 

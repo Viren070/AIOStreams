@@ -5,7 +5,8 @@ import { Skeleton } from '@aiostreams/ui/skeleton';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import { useSession } from '../lib/session';
 import {
-  noneGenre,
+  defaultGenre,
+  needsGenre,
   useGenres,
   useItemPages,
   libraryTypes,
@@ -16,6 +17,7 @@ import { useInView } from '../lib/use-in-view';
 import { libraryLabel } from '../lib/format';
 import { navigate, to } from '../lib/paths';
 import { lastCatalog, rememberCatalog } from '../lib/settings';
+import { useFeature } from '../lib/server-info';
 import { PillTabs } from '../components/pill-tabs';
 import { MixedGrid } from '../components/mixed-grid';
 import type { BaseItemDto } from '../lib/types';
@@ -49,10 +51,12 @@ function kindOf(view: BaseItemDto | undefined): Kind | undefined {
  */
 function GenreFilter({
   genres,
+  withAll,
   value,
   onChange,
 }: {
   genres: BaseItemDto[];
+  withAll: boolean;
   value: string | null;
   onChange(name: string | null): void;
 }) {
@@ -66,7 +70,7 @@ function GenreFilter({
         keepOpenOnSelect={false}
         className="w-full rounded-full sm:w-56"
         options={[
-          { value: ALL, label: 'All', textValue: 'All' },
+          ...(withAll ? [{ value: ALL, label: 'All', textValue: 'All' }] : []),
           ...genres.map((g) => ({
             value: g.Name ?? '',
             label: g.Name ?? '',
@@ -85,19 +89,21 @@ function GenreFilter({
       data-ui="genre-pills"
       className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-hide lg:mx-0 lg:flex-wrap lg:px-0"
     >
-      {[{ Id: 'all', Name: null }, ...genres].map((genre) => (
-        <Button
-          key={genre.Id ?? 'all'}
-          data-ui="genre-pill"
-          data-selected={value === genre.Name || undefined}
-          size="sm"
-          intent={value === genre.Name ? 'white' : 'gray-subtle'}
-          className="flex-none rounded-full"
-          onClick={() => onChange(genre.Name ?? null)}
-        >
-          {genre.Name ?? 'All'}
-        </Button>
-      ))}
+      {[...(withAll ? [{ Id: 'all', Name: null }] : []), ...genres].map(
+        (genre) => (
+          <Button
+            key={genre.Id ?? 'all'}
+            data-ui="genre-pill"
+            data-selected={value === genre.Name || undefined}
+            size="sm"
+            intent={value === genre.Name ? 'white' : 'gray-subtle'}
+            className="flex-none rounded-full"
+            onClick={() => onChange(genre.Name ?? null)}
+          >
+            {genre.Name ?? 'All'}
+          </Button>
+        )
+      )}
     </div>
   );
 }
@@ -164,17 +170,20 @@ export function DiscoverPage({
       (untyped && k.kind !== 'BoxSet')
   );
 
-  const none = noneGenre(genres.data?.Items);
+  const required = useFeature('genreRequired') && needsGenre(view);
+  const opening = defaultGenre(genres.data?.Items, required);
   const pickable = React.useMemo(
-    () => genres.data?.Items?.filter((g) => g !== none) ?? [],
-    [genres.data, none]
+    () => genres.data?.Items?.filter((g) => g.Name !== 'None') ?? [],
+    [genres.data]
   );
+  // A catalog that needs a genre and lacks None has no All.
+  const withAll = !required || opening?.Name === 'None';
   // The genre travels by name, as its id belongs to the catalog it came from.
   const genreItem = genre
     ? genres.data?.Items?.find(
         (g) => g.Name?.toLowerCase() === genre.toLowerCase()
       )
-    : none;
+    : opening;
   const pages = useItemPages(viewId, {
     filter,
     types: view && kindOf(view) === current ? libraryTypes(view) : current,
@@ -272,7 +281,8 @@ export function DiscoverPage({
         {pickable.length > 0 && (
           <GenreFilter
             genres={pickable}
-            value={genre ?? null}
+            withAll={withAll}
+            value={genre ?? (withAll ? null : (opening?.Name ?? null))}
             onChange={(name) =>
               navigate(
                 to.discover(viewId, {

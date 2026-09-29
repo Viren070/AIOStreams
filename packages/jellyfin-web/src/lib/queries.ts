@@ -161,16 +161,22 @@ export function useLibraryHeads(views: BaseItemDto[], limit: number) {
   const key = useKey();
   const queryClient = useQueryClient();
   const genres = useGenresOptions();
+  const genreRequired = useFeature('genreRequired');
   return useQueries({
     queries: views.map((view) => ({
       queryKey: [...key, 'head', view.Id, limit],
       queryFn: async () => {
-        const offered = await queryClient.fetchQuery(genres(view.Id!));
+        const required = genreRequired && needsGenre(view);
+        // A server with the feature flags every library that needs a genre.
+        const offered =
+          genreRequired && !required
+            ? undefined
+            : await queryClient.fetchQuery(genres(view.Id!));
         return client.get<BaseItemDtoQueryResult>('/Items', {
           userId: user.Id,
           ParentId: view.Id,
           IncludeItemTypes: libraryTypes(view),
-          GenreIds: noneGenre(offered.Items)?.Id,
+          GenreIds: defaultGenre(offered?.Items, required)?.Id,
           Recursive: true,
           Limit: limit,
         });
@@ -260,11 +266,23 @@ export function useGenres(viewId: string) {
   return useQuery(useGenresOptions()(viewId));
 }
 
-/** A catalog that needs a genre offers None for all of it, so All browses with that. */
-export function noneGenre(
-  genres: BaseItemDto[] | null | undefined
+export function needsGenre(view: BaseItemDto | undefined): boolean {
+  const extension = view as { aiostreams?: { genreRequired?: boolean } };
+  return extension?.aiostreams?.genreRequired === true;
+}
+
+/**
+ * The genre a library opens with: None where offered, which a catalog that
+ * needs a genre reads as all of it, else the first when it needs one.
+ */
+export function defaultGenre(
+  genres: BaseItemDto[] | null | undefined,
+  required: boolean
 ): BaseItemDto | undefined {
-  return genres?.find((g) => g.Name === 'None');
+  return (
+    genres?.find((g) => g.Name === 'None') ??
+    (required ? genres?.[0] : undefined)
+  );
 }
 
 export function useSearch(
