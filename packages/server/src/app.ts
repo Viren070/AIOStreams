@@ -18,6 +18,7 @@ import {
   authApi,
   dashboardApi,
   usenetApi,
+  qbittorrentApi,
   jellyfinApi,
   communityApi,
 } from './routes/api/index.js';
@@ -148,6 +149,7 @@ apiRouter.use('/community', communityApiRateLimiter, communityApi);
 apiRouter.use('/auth', authApi);
 apiRouter.use('/dashboard', dashboardApi);
 apiRouter.use('/usenet', usenetApi);
+apiRouter.use('/qbittorrent', qbittorrentApi);
 apiRouter.use('/jellyfin', jellyfinApi);
 apiRouter.use('/sabnzbd', sabnzbdRouter);
 apiRouter.use('/newznab', createNabRouter('newznab'));
