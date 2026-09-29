@@ -1953,7 +1953,6 @@ const StatusResponseSchema = z.object({
       minTtl: z.number(),
       maxTimeout: z.number(),
       maxBytes: z.number(),
-      allowPrivateUrls: z.boolean(),
     }),
     loggingSensitiveInfo: z.boolean(),
     searchApiDisabled: z.boolean(),

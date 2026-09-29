@@ -104,4 +104,20 @@ export const httpSchema = {
     requiresRestart: false,
     secret: false,
   },
+  allowPrivateUrls: {
+    schema: z.boolean(),
+    default: true,
+    label: 'Allow private addresses',
+    description:
+      'Let this server connect to private, loopback and link-local addresses, such as `http://addon:3000` on a Docker network, for any URL a user enters or an addon returns. Turn it off on a public instance, or anyone who can create a configuration can make this server send requests into your internal network. Addresses you set yourself in any setting or environment variable are always allowed.',
+    env: [
+      'ALLOW_PRIVATE_URLS',
+      'WATCH_STATE_ALLOW_PRIVATE_URLS',
+      'LINKED_ACCOUNTS_ALLOW_PRIVATE_URLS',
+      'HEALTH_CHECK_ALLOW_PRIVATE_URLS',
+      'SYNC_ALLOW_PRIVATE_URLS',
+    ],
+    requiresRestart: false,
+    secret: false,
+  },
 } as const satisfies RuntimeConfigSection;

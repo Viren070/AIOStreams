@@ -1,5 +1,6 @@
 import { config as appConfig } from '../../config/index.js';
-import { isUnsafeRemoteUrl, isUnsafeRemoteUrlResolved } from '../url-safety.js';
+import { isRefusedUrl } from '../private-addresses.js';
+import { isUnsafeRemoteUrl } from '../url-safety.js';
 import type { UrlAllowlist } from './allowlist.js';
 import { isHttpUrl, type SyncKind, type UrlPartition } from './types.js';
 
@@ -50,7 +51,9 @@ export function partitionUrls(
       });
       continue;
     }
-    if (allowPrivate() ? !isHttpUrl(url) : isUnsafeRemoteUrl(url)) {
+    if (
+      appConfig.http.allowPrivateUrls ? !isHttpUrl(url) : isUnsafeRemoteUrl(url)
+    ) {
       partition.denied.push({ url, reason: 'unsafe-address' });
       continue;
     }
@@ -63,14 +66,9 @@ export function partitionUrls(
 
 /** Only for URLs the instance has not vouched for; every host is user-supplied. */
 export async function assertFetchable(url: string): Promise<void> {
-  if (allowPrivate()) return;
-  if (await isUnsafeRemoteUrlResolved(url)) {
+  if (await isRefusedUrl(url)) {
     throw new Error(
-      'That URL points somewhere this server will not connect to. It must be a public http(s) address.'
+      'That URL is a private address, and this instance does not allow connecting to private addresses.'
     );
   }
-}
-
-function allowPrivate(): boolean {
-  return appConfig.userLimits.sync.allowPrivateUrls === true;
 }

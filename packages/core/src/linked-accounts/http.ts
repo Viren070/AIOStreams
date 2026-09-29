@@ -1,10 +1,6 @@
 import { APIError, ErrorCode } from '../utils/constants.js';
 import { makeRequest } from '../utils/http.js';
-import {
-  isUnsafeRemoteUrl,
-  isUnsafeRemoteUrlResolved,
-} from '../utils/url-safety.js';
-import { config as appConfig } from '../config/index.js';
+import { isRefusedUrl } from '../utils/private-addresses.js';
 
 const TIMEOUT_MS = 15000;
 
@@ -12,32 +8,19 @@ export function normaliseInstanceUrl(raw: string): string {
   return raw.trim().replace(/\/+$/, '');
 }
 
-/**
- * Every host here comes from an end user, so the DNS-resolving guard applies
- * unless an operator has opted their instance out.
- */
 export async function assertReachableUrl(url: string): Promise<void> {
-  const unsafe = appConfig.linkedAccounts.allowPrivateUrls
-    ? !/^https?:\/\//i.test(url)
-    : await isUnsafeRemoteUrlResolved(url);
-  if (unsafe) {
+  if (!/^https?:\/\//i.test(url)) {
     throw new APIError(
       ErrorCode.BAD_REQUEST,
       400,
-      appConfig.linkedAccounts.allowPrivateUrls
-        ? 'That is not a valid http(s) URL.'
-        : 'That URL points somewhere this server will not connect to. It must be a public http(s) address.'
+      'That is not a valid http(s) URL.'
     );
   }
-}
-
-/** The literal-host check only, for URLs we build rather than accept. */
-export function assertPublicUrl(url: string): void {
-  if (!appConfig.linkedAccounts.allowPrivateUrls && isUnsafeRemoteUrl(url)) {
+  if (await isRefusedUrl(url)) {
     throw new APIError(
       ErrorCode.BAD_REQUEST,
       400,
-      'That URL points somewhere this server will not connect to.'
+      'That URL is a private address, and this instance does not allow connecting to private addresses.'
     );
   }
 }

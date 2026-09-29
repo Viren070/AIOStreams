@@ -375,16 +375,6 @@ export const userLimitsSchema = {
       requiresRestart: false,
       secret: false,
     },
-    allowPrivateUrls: {
-      schema: z.boolean(),
-      default: false,
-      label: 'Allow private health check URLs',
-      description:
-        'Let health checks point at private addresses. Anyone who can save a configuration can then probe your internal network, so only enable this on an instance you trust the users of.',
-      env: 'HEALTH_CHECK_ALLOW_PRIVATE_URLS',
-      requiresRestart: false,
-      secret: false,
-    },
   },
   sync: {
     refreshInterval: {
@@ -397,16 +387,6 @@ export const userLimitsSchema = {
       requiresRestart: true,
       secret: false,
       ui: { kind: 'duration' },
-    },
-    allowPrivateUrls: {
-      schema: z.boolean(),
-      default: false,
-      label: 'Allow private regex/SEL sync URLs',
-      description:
-        'Let sync URLs point at private addresses. Anyone allowed to sync from their own URL can then probe your internal network, so only enable this on an instance you trust the users of. Whitelisted URLs you configure yourself are never affected.',
-      env: 'SYNC_ALLOW_PRIVATE_URLS',
-      requiresRestart: false,
-      secret: false,
     },
   },
   disabled: {

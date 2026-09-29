@@ -22,6 +22,7 @@ import {
 import { socksDispatcher } from 'fetch-socks';
 import { createLogger } from '../logging/logger.js';
 import { resolveHeaderPreset } from './header-presets.js';
+import { PrivateAddressError } from './private-addresses.js';
 
 const logger = createLogger('http');
 const urlCount = Cache.getInstance<string, number>(
@@ -324,6 +325,9 @@ export async function makeRequest(url: string, options: RequestOptions) {
         redirect: redirectMode ?? 'manual',
       });
     } catch (err) {
+      if (err instanceof Error && err.cause instanceof PrivateAddressError) {
+        throw err.cause;
+      }
       if (
         err instanceof Error &&
         err.name === 'TypeError' &&

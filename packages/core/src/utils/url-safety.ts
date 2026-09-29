@@ -69,6 +69,11 @@ function isBlockedIpv6(host: string): boolean {
   );
 }
 
+export function isBlockedAddress(address: string): boolean {
+  const host = address.replace(/^\[|\]$/g, '').toLowerCase();
+  return host.includes(':') ? isBlockedIpv6(host) : isBlockedIpv4(host);
+}
+
 function hostnameOf(rawUrl: string): string | null {
   try {
     return new URL(rawUrl).hostname.replace(/^\[|\]$/g, '').toLowerCase();
@@ -119,7 +124,5 @@ export async function isUnsafeRemoteUrlResolved(
   }
   if (addresses.length === 0) return true;
 
-  return addresses.some(({ address, family }) =>
-    family === 6 ? isBlockedIpv6(address.toLowerCase()) : isBlockedIpv4(address)
-  );
+  return addresses.some(({ address }) => isBlockedAddress(address));
 }

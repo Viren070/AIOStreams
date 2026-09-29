@@ -1,3 +1,4 @@
+import { PrivateAddressError } from './private-addresses.js';
 import { isUnsafeRemoteUrl } from './url-safety.js';
 
 const DEFAULT_MAX_REDIRECTS = 5;
@@ -8,7 +9,7 @@ export interface FetchRemoteOptions {
   timeoutMs: number;
   maxRedirects?: number;
   method?: 'GET' | 'HEAD';
-  /** Skip the SSRF guard. Only for URLs an operator has opted in to. */
+  /** Skip the literal-host check and leave private addresses to the connection guard. */
   allowPrivateHosts?: boolean;
   /** Defaults to true: a non-2xx response throws rather than being returned. */
   throwOnHttpError?: boolean;
@@ -100,6 +101,10 @@ export async function fetchRemoteCapped(
       headers,
       redirect: 'manual',
       signal: AbortSignal.timeout(options.timeoutMs),
+    }).catch((err: unknown) => {
+      throw err instanceof Error && err.cause instanceof PrivateAddressError
+        ? err.cause
+        : err;
     });
 
     if (res.status === 304) {

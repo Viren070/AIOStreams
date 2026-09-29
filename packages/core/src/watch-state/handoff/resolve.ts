@@ -1,6 +1,4 @@
 import { config as appConfig } from '../../config/index.js';
-import { createLogger } from '../../logging/logger.js';
-import { isUnsafeRemoteUrl } from '../../utils/url-safety.js';
 import type {
   Addon,
   Manifest,
@@ -10,8 +8,6 @@ import {
   readWatchStateCapability,
   type PlaybackEventKind,
 } from './capability.js';
-
-const logger = createLogger('playback-handoff');
 
 export interface ResolvedPlaybackSink {
   instanceId: string;
@@ -97,17 +93,6 @@ export function resolvePlaybackSinks(
     } catch {
       continue;
     }
-    if (
-      !appConfig.watchState.allowPrivateUrls &&
-      isUnsafeRemoteUrl(manifestUrl.toString())
-    ) {
-      logger.debug(
-        { addon: addon.name },
-        'skipping watch-state exchange with a private address'
-      );
-      continue;
-    }
-
     const baseUrl = manifestUrl
       .toString()
       .split('?')[0]

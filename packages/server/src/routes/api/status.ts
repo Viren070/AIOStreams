@@ -108,7 +108,6 @@ const statusInfo = async (): Promise<StatusResponse> => {
         minTtl: appConfig.userLimits.healthChecks.minTtl,
         maxTimeout: appConfig.userLimits.healthChecks.maxTimeout,
         maxBytes: appConfig.userLimits.healthChecks.maxBytes,
-        allowPrivateUrls: appConfig.userLimits.healthChecks.allowPrivateUrls,
       },
       loggingSensitiveInfo: appConfig.logging.logSensitiveInfo,
       searchApiDisabled: !appConfig.api.enableSearchApi,

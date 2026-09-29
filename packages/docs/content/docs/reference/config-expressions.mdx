@@ -179,12 +179,12 @@ Several variants can apply to one request: every one you selected, and every one
 
 Inside a script, instructions run top to bottom, and `use variant` runs that variant's instructions at the point it appears. The last write to a field wins, so `set` replaces whatever an earlier variant put there, while `add`, `remove` and `insert` build on it. Prefer those in a variant meant to combine with others.
 
-| Request                                        | Applies                                     |
-| ---------------------------------------------- | ------------------------------------------- |
-| `/v/phone,rd2`                                 | `phone`, then `rd2`                         |
-| No selector, `phone` and `rd-down` both match  | whichever is listed first, then the other   |
-| `/v/no-dv` while `rd-down` matches             | `rd-down`, then `no-dv`                     |
-| `/v/rd-down` while `rd-down` also matches      | once only, in its position in the URL       |
+| Request                                       | Applies                                   |
+| --------------------------------------------- | ----------------------------------------- |
+| `/v/phone,rd2`                                | `phone`, then `rd2`                       |
+| No selector, `phone` and `rd-down` both match | whichever is listed first, then the other |
+| `/v/no-dv` while `rd-down` matches            | `rd-down`, then `no-dv`                   |
+| `/v/rd-down` while `rd-down` also matches     | once only, in its position in the URL     |
 
 A request may run 5000 instructions across everything it applies, including those `use variant` reaches. One that runs out stops there and says so.
 
@@ -208,22 +208,22 @@ merge deduplicator = {
 
 ### Instructions
 
-| Instruction                        | Effect                                                                              |
-| ---------------------------------- | ----------------------------------------------------------------------------------- |
-| `set <path> = <value>`             | Assign a value. Missing intermediate objects are created.                           |
-| `merge <path> = { ... }`           | Deep merge. Objects recurse, arrays are replaced, a `null` member deletes that key. |
-| `unset <path>`                     | Delete a key, or remove a list element when the path ends in an index or selector.  |
-| `clear <path>`                     | Empty a list or object.                                                             |
-| `add <path> <value>, ...`          | Append to a list, skipping values already present. Creates the list if absent.      |
-| `prepend <path> <value>, ...`      | The same, inserted at the front.                                                    |
-| `insert <path> = <value>, ...`     | Insert at the position the path names. The value lands there and the rest shift down. |
-| `insert after <path> = <value>`    | The same, placed just past the addressed entry. `insert before` spells out the default. |
+| Instruction                         | Effect                                                                                                 |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `set <path> = <value>`              | Assign a value. Missing intermediate objects are created.                                              |
+| `merge <path> = { ... }`            | Deep merge. Objects recurse, arrays are replaced, a `null` member deletes that key.                    |
+| `unset <path>`                      | Delete a key, or remove a list element when the path ends in an index or selector.                     |
+| `clear <path>`                      | Empty a list or object.                                                                                |
+| `add <path> <value>, ...`           | Append to a list, skipping values already present. Creates the list if absent.                         |
+| `prepend <path> <value>, ...`       | The same, inserted at the front.                                                                       |
+| `insert <path> = <value>, ...`      | Insert at the position the path names. The value lands there and the rest shift down.                  |
+| `insert after <path> = <value>`     | The same, placed just past the addressed entry. `insert before` spells out the default.                |
 | `insert <n> after <path> = <value>` | `n` places from the addressed entry: `2 after` leaves one entry in between. `before` counts backwards. |
-| `remove <path> <value>, ...`       | Remove matching values from a list.                                                 |
-| `remove <path>`                    | With no values, the path itself selects the elements to remove.                     |
-| `enable <path>` / `disable <path>` | Shorthand for `set <path>.enabled = true` / `false`.                                |
-| `use formatter <name>`             | Load one of your saved formatters.                                                  |
-| `use variant <id>`                 | Apply another variant's instructions at this point.                                 |
+| `remove <path> <value>, ...`        | Remove matching values from a list.                                                                    |
+| `remove <path>`                     | With no values, the path itself selects the elements to remove.                                        |
+| `enable <path>` / `disable <path>`  | Shorthand for `set <path>.enabled = true` / `false`.                                                   |
+| `use formatter <name>`              | Load one of your saved formatters.                                                                     |
+| `use variant <id>`                  | Apply another variant's instructions at this point.                                                    |
 
 ### Values
 
@@ -479,7 +479,7 @@ Operators can tune these; defaults shown.
 | Shortest health check interval  | 60s      | `HEALTH_CHECK_MIN_TTL`                           |
 | Longest health check timeout    | 10000ms  | `HEALTH_CHECK_MAX_TIMEOUT`                       |
 | Health check response read      | 64KB     | `HEALTH_CHECK_MAX_BYTES`                         |
-| Private health check URLs       | refused  | `HEALTH_CHECK_ALLOW_PRIVATE_URLS`                |
+| Private health check URLs       | allowed  | `ALLOW_PRIVATE_URLS`                             |
 
 ---
 
@@ -489,4 +489,4 @@ Operators can tune these; defaults shown.
 - **Syntax errors and forbidden fields are rejected on save**, so they never reach a live request.
 - **A variant's name is a label** for the configuration UI and the install page. Use `set addonName` to change what your client shows.
 - **Variants are not inherited** from a parent config: they reference this config's own addon ids and saved formatter names. Neither are health checks.
-- **Health check URLs must be public** unless the instance owner has allowed private ones, and can never point back at the instance itself.
+- **Health check URLs cannot reach private addresses** when the instance owner has turned those off, and can never point back at the instance itself.

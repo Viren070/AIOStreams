@@ -8,6 +8,7 @@ import {
   dispatchListChange,
   type ListChangeInput,
   ensurePlaybackSink,
+  isRefusedUrl,
   itemKeyFor,
   PlaybackHandoffRepository,
   providerIdsFor,
@@ -252,6 +253,8 @@ export interface TrackerStatus {
   /** Absent when the addon or this instance does not use that direction. */
   push?: TrackerExchange;
   pull?: TrackerExchange;
+  /** Its address is private and this instance does not connect to those. */
+  refused?: boolean;
 }
 
 export interface TrackerOption {
@@ -284,6 +287,30 @@ export async function listTrackers(
   const rowOf = new Map(
     rows.map((row) => [`${row.persona}|${row.addonInstanceId}`, row])
   );
+  // With its address refused the manifest never loads, so only its row is left.
+  const unloaded = contexts.map((ctx, i) => {
+    const live = new Set(resolved[i].map((sink) => sink.instanceId));
+    return rows.filter(
+      (row) =>
+        row.persona === ctx.watch.persona &&
+        row.retiredAt === null &&
+        !live.has(row.addonInstanceId) &&
+        engines[i].getAddon(row.addonInstanceId)
+    );
+  });
+  const baseUrls = [
+    ...new Set([
+      ...resolved.flat().map((sink) => sink.baseUrl),
+      ...unloaded.flat().map((row) => row.baseUrl),
+    ]),
+  ];
+  const refusedUrls = new Set(
+    (
+      await Promise.all(
+        baseUrls.map(async (url) => ((await isRefusedUrl(url)) ? url : null))
+      )
+    ).filter((url) => url !== null)
+  );
 
   const { reportEnabled, pullEnabled } = appConfig.watchState;
   const exchanges = (sink: ResolvedPlaybackSink) => ({
@@ -309,10 +336,25 @@ export async function listTrackers(
                 error: row?.lastPullError ?? null,
               }
             : undefined,
+          ...(refusedUrls.has(sink.baseUrl) ? { refused: true } : {}),
         },
       ];
     })
   );
+  contexts.forEach((ctx, i) => {
+    for (const row of unloaded[i]) {
+      if (!refusedUrls.has(row.baseUrl)) continue;
+      trackers.push({
+        addon:
+          row.addonName ??
+          engines[i].getAddon(row.addonInstanceId)?.name ??
+          row.addonInstanceId,
+        persona: ctx.persona?.id,
+        status: row.status,
+        refused: true,
+      });
+    }
+  });
   const available = contexts.flatMap((ctx, i) => {
     const seen = new Set<string>();
     return engines[i].getPlaybackSinks().flatMap((sink): TrackerOption[] => {

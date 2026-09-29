@@ -32,6 +32,7 @@ export * from '../anime-database/index.js';
 export * from './regex.js';
 export * from './general.js';
 export * from './url-safety.js';
+export * from './private-addresses.js';
 export { readBodyCapped, readBodyUpTo } from './safe-fetch.js';
 export * from './manifest-fingerprint.js';
 export * from './disk-backed-cache.js';

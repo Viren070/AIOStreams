@@ -16,10 +16,6 @@ import { createLogger } from '../logging/logger.js';
 import { Cache } from '../utils/cache.js';
 import { getSimpleTextHash } from '../utils/crypto.js';
 import { fetchRemoteCapped } from '../utils/safe-fetch.js';
-import {
-  isUnsafeRemoteUrl,
-  isUnsafeRemoteUrlResolved,
-} from '../utils/url-safety.js';
 
 const logger = createLogger('health-checks');
 
@@ -157,7 +153,6 @@ export function assertSafeHealthCheckUrl(check: {
   id: string;
   url: string;
 }): void {
-  const limits = appConfig.userLimits.healthChecks;
   let url: URL;
   try {
     url = new URL(check.url);
@@ -166,11 +161,6 @@ export function assertSafeHealthCheckUrl(check: {
   }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
     throw new Error(`Health check "${check.id}" must use http or https.`);
-  }
-  if (!limits.allowPrivateUrls && isUnsafeRemoteUrl(check.url)) {
-    throw new Error(
-      `Health check "${check.id}" points at a private address, which this instance does not allow.`
-    );
   }
   // A check aimed at this instance would re-enter the request it is gating.
   for (const own of [
@@ -198,17 +188,11 @@ async function probe(check: NormalisedHealthCheck): Promise<HealthResult> {
   const started = Date.now();
   try {
     assertSafeHealthCheckUrl(check);
-    if (
-      !limits.allowPrivateUrls &&
-      (await isUnsafeRemoteUrlResolved(check.url))
-    ) {
-      throw new Error('URL refused (unsafe scheme or private address)');
-    }
     const response = await fetchRemoteCapped(check.url, {
       maxBytes: limits.maxBytes,
       timeoutMs: check.timeout,
       method: check.method,
-      allowPrivateHosts: limits.allowPrivateUrls,
+      allowPrivateHosts: true,
       throwOnHttpError: false,
     });
     if (response.notModified) throw new Error('unexpected 304 response');

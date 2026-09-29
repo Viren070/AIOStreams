@@ -889,6 +889,8 @@ export interface WatchStateTracker {
   /** Absent when the addon or the instance does not use that direction. */
   push?: TrackerExchange;
   pull?: TrackerExchange;
+  /** Its address is private and the instance does not connect to those. */
+  refused?: boolean;
 }
 
 export interface WatchStateTrackerOption {

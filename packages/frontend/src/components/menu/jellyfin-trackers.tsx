@@ -79,7 +79,13 @@ function TrackerRow({
           {tracker.addon}
           {owner && <span className="text-[--muted]"> · {owner}</span>}
         </p>
-        {tracker.push && (
+        {tracker.refused && (
+          <p className="text-xs text-[--orange]">
+            Not used: this addon is on a private address, and this instance
+            doesn&apos;t connect to private addresses.
+          </p>
+        )}
+        {!tracker.refused && tracker.push && (
           <ExchangeLine
             icon={<ArrowUpRight className="h-3.5 w-3.5" />}
             label="Records your plays"
@@ -88,7 +94,7 @@ function TrackerRow({
             idle="Nothing played yet"
           />
         )}
-        {tracker.pull && (
+        {!tracker.refused && tracker.pull && (
           <ExchangeLine
             icon={<ArrowDownLeft className="h-3.5 w-3.5" />}
             label="Imports your history"
@@ -98,7 +104,7 @@ function TrackerRow({
           />
         )}
       </div>
-      {tracker.status !== 'connected' && (
+      {!tracker.refused && tracker.status !== 'connected' && (
         <span
           className="shrink-0 rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-300"
           title={

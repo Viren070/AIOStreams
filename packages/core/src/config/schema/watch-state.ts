@@ -29,16 +29,6 @@ export const watchStateSchema = {
     requiresRestart: false,
     secret: false,
   },
-  allowPrivateUrls: {
-    schema: z.boolean(),
-    default: false,
-    label: 'Allow exchanging with private addresses',
-    description:
-      'Allow playback events to be sent to, and watch state read from, an addon on a private or loopback address, such as `http://tracker:7000` on a Docker network. This lets anyone who can create a configuration make this server send requests to your internal network, so only enable it on a trusted, non-public instance.',
-    env: 'WATCH_STATE_ALLOW_PRIVATE_URLS',
-    requiresRestart: false,
-    secret: false,
-  },
   maxSinks: {
     schema: z.number().int().min(0),
     default: 3,

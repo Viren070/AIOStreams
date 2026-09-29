@@ -17,6 +17,7 @@ import {
   createLogger,
   initDb,
   initialiseConfig,
+  installPrivateAddressGuard,
   closeDb,
   UserRepository,
   logStartupInfo,
@@ -64,6 +65,7 @@ async function initialiseDatabase() {
   try {
     await initDb(appConfig.bootstrap.databaseUri);
     await initialiseConfig();
+    installPrivateAddressGuard();
   } catch (error) {
     if (error instanceof ConfigStartupError) throw error;
     logger.error('Failed to initialise database:', error);
