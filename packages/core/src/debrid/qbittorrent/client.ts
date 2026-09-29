@@ -13,13 +13,32 @@ const logger = createLogger('debrid:qbittorrent');
  * (categories can carry a save path and relocate downloads). */
 export const QBITTORRENT_TAG = 'aiostreams';
 
+/** qBittorrent file priority values, 0 skips the file entirely. */
+export const FILE_PRIORITY = {
+  skip: 0,
+  normal: 1,
+  max: 7,
+} as const;
+
 export const QbittorrentCredentialSchema = z.object({
   url: z.string().url(),
   username: z.string().min(1),
   password: z.string(),
+  skipOtherFiles: z
+    .union([z.boolean(), z.string(), z.null()])
+    .transform((value) => value === true || value === 'true')
+    .optional(),
 });
 
 export type QbittorrentCredential = z.infer<typeof QbittorrentCredentialSchema>;
+
+/** Whether AIOStreams added this torrent, only ours get re-arranged. */
+export function isOwnTorrent(torrent: { tags: string }): boolean {
+  return torrent.tags
+    .split(',')
+    .map((tag) => tag.trim())
+    .includes(QBITTORRENT_TAG);
+}
 
 /** Parse the base64url credential blob from the preset/service-wrap paths. */
 export function parseQbittorrentCredential(
@@ -410,5 +429,53 @@ export class QBittorrentClient {
     if (!response.ok) {
       throw this.httpError(response.status, '/api/v2/torrents/add');
     }
+  }
+
+   * Playback optimisation only, failures return false instead of throwing
+   * so callers retry drift on the next poll.
+  async setFilePriority(
+    hash: string,
+    ids: number[],
+    priority: number,
+    signal?: AbortSignal
+  ): Promise<boolean> {
+    if (ids.length === 0) return true;
+    const response = await this.request('/api/v2/torrents/filePrio', {
+      method: 'POST',
+      body: new URLSearchParams({
+        hash,
+        id: ids.join('|'),
+        priority: String(priority),
+      }),
+      signal,
+    });
+    if (!response.ok) {
+      logger.debug(
+        { hash, priority, count: ids.length, status: response.status },
+        'could not set file priorities'
+      );
+    }
+    return response.ok;
+  }
+
+  /** Resume a stopped torrent, 5 renamed `resume` to `start`, fall back for 4.x. */
+  async startTorrent(hash: string, signal?: AbortSignal): Promise<boolean> {
+    for (const path of ['/api/v2/torrents/start', '/api/v2/torrents/resume']) {
+      const response = await this.request(path, {
+        method: 'POST',
+        body: new URLSearchParams({ hashes: hash }),
+        signal,
+      });
+      if (response.ok) return true;
+      // Only 4.x lacks `start` (404); anything else is a real failure.
+      if (response.status !== 404) {
+        logger.debug(
+          { hash, path, status: response.status },
+          'could not start torrent'
+        );
+        return false;
+      }
+    }
+    return false;
   }
 }

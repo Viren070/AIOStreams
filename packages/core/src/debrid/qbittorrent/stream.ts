@@ -3,11 +3,20 @@ import { Readable } from 'stream';
 import { DebridError } from '../base.js';
 import type { ByteRangeRequest, OpenedByteStream } from '../../shares/types.js';
 import { createLogger } from '../../utils/index.js';
-import { QBittorrentClient } from './client.js';
-import { computeFileAvailability, type FileAvailability } from './availability.js';
+import {
+  FILE_PRIORITY,
+  isOwnTorrent,
+  QBittorrentClient,
+} from './client.js';
+import {
+  computeFileAvailability,
+  deriveFilePath,
+  type FileAvailability,
+} from './availability.js';
 import {
   QbittorrentStreamRefEntry,
   decodeQbittorrentStreamToken,
+  markFileLive,
   resolveStreamRef,
 } from './tokens.js';
 
@@ -112,6 +121,8 @@ class QbittorrentPieceStream extends Readable {
     this.pumping = true;
     try {
       while (this.cursor < this.end && !this.destroyed) {
+        // Keep the file live so a concurrent resolve cannot skip it.
+        markFileLive(this.entry.hash, this.entry.fileIndex);
         const snapshot = await getSharedSnapshot(
           this.client,
           this.entry,
@@ -149,13 +160,17 @@ class QbittorrentPieceStream extends Readable {
         await delay(AVAILABILITY_POLL_MS);
       }
       if (this.cursor >= this.end && !this.destroyed) this.push(null);
+    } catch (error) {
+      // Surface read/poll failures on the stream itself, an error thrown out
+      // of pump() would otherwise reject an unwatched promise.
+      this.destroy(error as Error);
     } finally {
       this.pumping = false;
     }
   }
 
   private async readChunk(chunkEnd: number): Promise<Buffer | null> {
-    this.handle ??= await open(this.entry.filePath, 'r');
+    this.handle ??= await this.openHandle();
     const length = chunkEnd - this.cursor;
     const buffer = Buffer.alloc(length);
     const { bytesRead } = await this.handle.read(
@@ -166,6 +181,36 @@ class QbittorrentPieceStream extends Readable {
     );
     if (this.destroyed) return null;
     return bytesRead === length ? buffer : buffer.subarray(0, bytesRead);
+  }
+
+  /**
+   * Open the file handle, re-deriving the path if the old one vanished:
+   * qBittorrent can relocate a torrent mid-stream ("move on finish" or the
+   * `.unwanted` folder for unselected files).
+   */
+  private async openHandle(): Promise<FileHandle> {
+    if (this.handle) return this.handle;
+    try {
+      this.handle = await open(this.entry.filePath, 'r');
+      return this.handle;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      const torrent = await this.client.getTorrent(this.entry.hash, this.signal);
+      const files = torrent
+        ? await this.client.getFiles(this.entry.hash, this.signal)
+        : [];
+      const filePath = torrent
+        ? deriveFilePath(torrent, files, this.entry.fileIndex)
+        : undefined;
+      if (!filePath) throw error;
+      logger.debug(
+        { hash: this.entry.hash, from: this.entry.filePath, to: filePath },
+        'qBittorrent file moved; re-resolving path'
+      );
+      this.entry.filePath = filePath;
+      this.handle = await open(filePath, 'r');
+      return this.handle;
+    }
   }
 }
 
@@ -228,7 +273,8 @@ export async function openQbittorrentStream(opts: {
     });
   }
   const files = await client.getFiles(entry.hash, opts.signal);
-  if (!files.some((file) => file.index === entry.fileIndex)) {
+  const selectedFile = files.find((file) => file.index === entry.fileIndex);
+  if (!selectedFile) {
     throw new DebridError('Torrent no longer contains the selected file', {
       statusCode: 400,
       statusText: 'Bad Request',
@@ -236,6 +282,16 @@ export async function openQbittorrentStream(opts: {
       type: 'api_error',
       headers: {},
     });
+  }
+  // The player asking for bytes makes this file live, heal any skip.
+  markFileLive(entry.hash, entry.fileIndex);
+  if (selectedFile.priority === FILE_PRIORITY.skip) {
+    await client.setFilePriority(
+      entry.hash,
+      [entry.fileIndex],
+      isOwnTorrent(torrent) ? FILE_PRIORITY.max : FILE_PRIORITY.normal,
+      opts.signal
+    );
   }
 
   const start = opts.range?.suffixLength
