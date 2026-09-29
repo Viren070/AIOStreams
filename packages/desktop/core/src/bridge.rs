@@ -71,6 +71,8 @@ pub enum Inbound {
     },
     /// Connects to Discord if need be and answers with a `discord-status`.
     DiscordCheck,
+    /// The page can take `link` messages, and any that arrived before it loaded.
+    LinksReady,
 }
 
 #[derive(Debug, Serialize)]
@@ -114,6 +116,10 @@ pub enum Outbound {
     DiscordStatus {
         state: &'static str,
         message: Option<String>,
+    },
+    /// An `aiostreams://` link the app was opened with.
+    Link {
+        url: String,
     },
     Error {
         message: String,

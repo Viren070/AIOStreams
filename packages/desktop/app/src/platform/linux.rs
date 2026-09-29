@@ -1,5 +1,7 @@
 use std::cell::RefCell;
 use std::ffi::{c_char, c_int, c_void};
+use std::io::{Read, Write};
+use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::{Arc, OnceLock};
@@ -19,13 +21,50 @@ pub const WEB_DATA_DIR: &str = "WebKit";
 /// Held for as long as the app runs.
 pub struct SingleInstance(#[allow(dead_code)] Option<std::fs::File>);
 
-/// One copy per data folder, whose web storage two copies cannot share.
-pub fn claim_instance(data_dir: &Path) -> Option<SingleInstance> {
+/// One copy per data folder, whose web storage two copies cannot share: a
+/// second launch hands its link over and gets None.
+pub fn claim_instance(data_dir: &Path, link: Option<&str>) -> Option<SingleInstance> {
     let _ = std::fs::create_dir_all(data_dir);
     let Ok(file) = std::fs::File::create(data_dir.join("instance.lock")) else {
         return Some(SingleInstance(None));
     };
-    file.try_lock().ok().map(|()| SingleInstance(Some(file)))
+    let claimed = file.try_lock().ok().map(|()| SingleInstance(Some(file)));
+    if claimed.is_none()
+        && let Some(link) = link
+    {
+        match UnixStream::connect(links_socket(data_dir)) {
+            Ok(mut stream) => {
+                let _ = stream.write_all(link.as_bytes());
+            }
+            Err(e) => log::warn!("links: could not reach the running copy: {e}"),
+        }
+    }
+    claimed
+}
+
+fn links_socket(data_dir: &Path) -> PathBuf {
+    data_dir.join("links.sock")
+}
+
+pub fn listen_links(data_dir: &Path, deliver: impl Fn(String) + Send + 'static) {
+    let path = links_socket(data_dir);
+    // Left by a copy that crashed: the instance lock says no other copy runs.
+    let _ = std::fs::remove_file(&path);
+    let listener = match UnixListener::bind(&path) {
+        Ok(listener) => listener,
+        Err(e) => return log::warn!("links: could not listen: {e}"),
+    };
+    std::thread::spawn(move || {
+        for stream in listener.incoming().flatten() {
+            let _ = stream.set_read_timeout(Some(Duration::from_secs(2)));
+            let mut text = String::new();
+            if (&stream).take(16 * 1024).read_to_string(&mut text).is_ok()
+                && let Some(link) = crate::links::accept(&text)
+            {
+                deliver(link);
+            }
+        }
+    });
 }
 
 type ProcFn = unsafe extern "C" fn(*const c_char) -> *mut c_void;

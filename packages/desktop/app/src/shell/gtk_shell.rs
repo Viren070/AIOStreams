@@ -12,6 +12,7 @@ use webkit6::{
     UserScriptInjectionTime,
 };
 
+use crate::links::Inbox;
 use crate::placement::{self, MIN_SIZE, Placement, SETTLE};
 use crate::updates::Updater;
 use crate::{
@@ -46,6 +47,7 @@ struct Shell {
     video: platform::VideoSurface,
     player: Rc<RefCell<Option<Player>>>,
     press: RefCell<Option<Press>>,
+    links: RefCell<Inbox>,
     main_loop: glib::MainLoop,
 }
 
@@ -153,6 +155,19 @@ impl Shell {
                 maximized: self.window.is_maximized(),
             }),
             UserEvent::WindowButtons(_) => {}
+            UserEvent::Link(link) => {
+                self.window.present();
+                let now = self.links.borrow_mut().receive(link);
+                if let Some(link) = now {
+                    self.emit(Outbound::Link { url: link });
+                }
+            }
+            UserEvent::LinksReady => {
+                let ready = self.links.borrow_mut().ready();
+                for link in ready {
+                    self.emit(Outbound::Link { url: link });
+                }
+            }
         }
     }
 
@@ -300,8 +315,13 @@ pub fn run(app: App) {
     webview.connect_load_changed({
         let player = player.clone();
         move |_, event| {
-            if let (LoadEvent::Started, Some(p)) = (event, player.borrow().as_ref()) {
-                p.stop();
+            if let LoadEvent::Started = event {
+                if let Some(shell) = shell() {
+                    shell.links.borrow_mut().page_loading();
+                }
+                if let Some(p) = player.borrow().as_ref() {
+                    p.stop();
+                }
             }
         }
     });
@@ -390,9 +410,14 @@ pub fn run(app: App) {
             video,
             player,
             press: RefCell::new(None),
+            links: RefCell::new(Inbox::default()),
             main_loop: main_loop.clone(),
         }))
     });
+    if let Some(link) = args.link.clone() {
+        post(UserEvent::Link(link));
+    }
+    platform::listen_links(&data_dir, |link| post(UserEvent::Link(link)));
     window.present();
     webview.load_uri(&start_url);
     main_loop.run();

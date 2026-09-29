@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, OnceLock};
 
 use aiostreams_desktop_core::mpv::Mpv;
 use tao::platform::windows::{IconExtWindows, WindowExtWindows};
@@ -10,17 +10,20 @@ use windows_sys::Win32::Foundation::{
     CloseHandle, ERROR_ALREADY_EXISTS, GetLastError, HANDLE, HWND, LPARAM, LRESULT, WPARAM,
 };
 use windows_sys::Win32::Graphics::Gdi::{BLACK_BRUSH, GetStockObject};
+use windows_sys::Win32::System::DataExchange::COPYDATASTRUCT;
 use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows_sys::Win32::System::Registry::{
-    HKEY_LOCAL_MACHINE, RRF_RT_REG_DWORD, RRF_RT_REG_SZ, RegGetValueW,
+    HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, REG_SZ, RRF_RT_REG_DWORD, RRF_RT_REG_SZ, RegDeleteTreeW,
+    RegGetValueW, RegSetKeyValueW,
 };
 use windows_sys::Win32::System::SystemInformation::GetLocalTime;
 use windows_sys::Win32::System::Threading::CreateMutexW;
 use windows_sys::Win32::UI::Shell::ShellExecuteW;
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, DefWindowProcW, FindWindowW, HWND_BOTTOM, IsIconic, MB_ICONERROR, MB_OK,
-    MessageBoxW, RegisterClassW, SW_RESTORE, SW_SHOWNORMAL, SWP_NOACTIVATE, SetForegroundWindow,
-    SetWindowPos, ShowWindow, WNDCLASSW, WS_CHILD, WS_VISIBLE,
+    CreateWindowExW, DefWindowProcW, FindWindowExW, FindWindowW, HWND_BOTTOM, HWND_MESSAGE,
+    IsIconic, MB_ICONERROR, MB_OK, MessageBoxW, RegisterClassW, SMTO_ABORTIFHUNG, SW_RESTORE,
+    SW_SHOWNORMAL, SWP_NOACTIVATE, SendMessageTimeoutW, SetForegroundWindow, SetWindowPos,
+    ShowWindow, WM_COPYDATA, WNDCLASSW, WS_CHILD, WS_VISIBLE,
 };
 
 /// Custom protocols are served from `http://<scheme>.localhost` on Windows.
@@ -38,18 +41,26 @@ fn wide(s: &str) -> Vec<u16> {
 /// Held for as long as the app runs.
 pub struct SingleInstance(#[allow(dead_code)] HANDLE);
 
-/// One copy per data folder, whose WebView2 profile two copies cannot share: a
-/// second launch brings the first window forward and gets None.
-pub fn claim_instance(data_dir: &Path) -> Option<SingleInstance> {
+fn instance_key(data_dir: &Path) -> String {
     let key = data_dir.to_string_lossy().to_lowercase();
     // FNV-1a: stable across builds, unlike std's hasher.
     let hash = key.bytes().fold(0xcbf29ce484222325u64, |h, b| {
         (h ^ u64::from(b)).wrapping_mul(0x100000001b3)
     });
-    let name = wide(&format!("Local\\AIOStreamsDesktop-{hash:016x}"));
+    format!("AIOStreamsDesktop-{hash:016x}")
+}
+
+/// One copy per data folder, whose WebView2 profile two copies cannot share: a
+/// second launch hands its link over, brings the first window forward and gets None.
+pub fn claim_instance(data_dir: &Path, link: Option<&str>) -> Option<SingleInstance> {
+    let key = instance_key(data_dir);
+    let name = wide(&format!("Local\\{key}"));
     let handle = unsafe { CreateMutexW(std::ptr::null(), 0, name.as_ptr()) };
     if handle.is_null() || unsafe { GetLastError() } != ERROR_ALREADY_EXISTS {
         return Some(SingleInstance(handle));
+    }
+    if let Some(link) = link {
+        hand_over(&key, link);
     }
     unsafe {
         CloseHandle(handle);
@@ -62,6 +73,146 @@ pub fn claim_instance(data_dir: &Path) -> Option<SingleInstance> {
         }
     }
     None
+}
+
+/// Any program can send a WM_COPYDATA, so a link carries this mark.
+const LINK_MARK: usize = 0x4149_4f53;
+
+type Deliver = Box<dyn Fn(String) + Send>;
+static DELIVER: OnceLock<Mutex<Deliver>> = OnceLock::new();
+
+fn links_class(key: &str) -> Vec<u16> {
+    wide(&format!("{key}-links"))
+}
+
+unsafe extern "system" fn links_proc(
+    hwnd: HWND,
+    msg: u32,
+    wparam: WPARAM,
+    lparam: LPARAM,
+) -> LRESULT {
+    if msg == WM_COPYDATA {
+        let data = unsafe { &*(lparam as *const COPYDATASTRUCT) };
+        if data.dwData != LINK_MARK || data.lpData.is_null() {
+            return 0;
+        }
+        let units = unsafe {
+            std::slice::from_raw_parts(data.lpData as *const u16, data.cbData as usize / 2)
+        };
+        let link = crate::links::accept(&String::from_utf16_lossy(units));
+        if let (Some(link), Some(deliver)) = (link, DELIVER.get())
+            && let Ok(deliver) = deliver.lock()
+        {
+            deliver(link);
+        }
+        return 1;
+    }
+    unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
+}
+
+/// Takes the links a second launch hands over, on the thread that runs the event loop.
+pub fn listen_links(data_dir: &Path, deliver: impl Fn(String) + Send + 'static) {
+    let _ = DELIVER.set(Mutex::new(Box::new(deliver)));
+    let class = links_class(&instance_key(data_dir));
+    unsafe {
+        let instance = GetModuleHandleW(std::ptr::null());
+        let wc = WNDCLASSW {
+            lpfnWndProc: Some(links_proc),
+            hInstance: instance,
+            lpszClassName: class.as_ptr(),
+            ..std::mem::zeroed()
+        };
+        RegisterClassW(&wc);
+        let window = CreateWindowExW(
+            0,
+            class.as_ptr(),
+            std::ptr::null(),
+            0,
+            0,
+            0,
+            0,
+            0,
+            HWND_MESSAGE,
+            std::ptr::null_mut(),
+            instance,
+            std::ptr::null(),
+        );
+        if window.is_null() {
+            log::warn!("links: could not create the window that receives them");
+        }
+    }
+}
+
+fn hand_over(key: &str, link: &str) {
+    let class = links_class(key);
+    let units: Vec<u16> = link.encode_utf16().collect();
+    let data = COPYDATASTRUCT {
+        dwData: LINK_MARK,
+        cbData: (units.len() * 2) as u32,
+        lpData: units.as_ptr() as *mut _,
+    };
+    unsafe {
+        let window = FindWindowExW(
+            HWND_MESSAGE,
+            std::ptr::null_mut(),
+            class.as_ptr(),
+            std::ptr::null(),
+        );
+        if window.is_null() {
+            return log::warn!("links: the running copy takes none");
+        }
+        SendMessageTimeoutW(
+            window,
+            WM_COPYDATA,
+            0,
+            &data as *const COPYDATASTRUCT as LPARAM,
+            SMTO_ABORTIFHUNG,
+            5000,
+            std::ptr::null_mut(),
+        );
+    }
+}
+
+fn scheme_key() -> String {
+    format!(r"Software\Classes\{}", crate::links::SCHEME)
+}
+
+pub fn register_links() {
+    let Ok(exe) = std::env::current_exe() else {
+        return;
+    };
+    let exe = exe.display().to_string();
+    let root = scheme_key();
+    let set = |key: &str, name: Option<&str>, value: &str| {
+        let value = wide(value);
+        let name = name.map(wide);
+        unsafe {
+            RegSetKeyValueW(
+                HKEY_CURRENT_USER,
+                wide(key).as_ptr(),
+                name.as_ref().map_or(std::ptr::null(), |n| n.as_ptr()),
+                REG_SZ,
+                value.as_ptr().cast(),
+                (value.len() * 2) as u32,
+            );
+        }
+    };
+    set(&root, None, "URL:AIOStreams");
+    set(&root, Some("URL Protocol"), "");
+    set(
+        &format!(r"{root}\DefaultIcon"),
+        None,
+        &format!("\"{exe}\",0"),
+    );
+    set(
+        &format!(r"{root}\shell\open\command"),
+        None,
+        &format!("\"{exe}\" \"%1\""),
+    );
+}
+
+pub fn unregister_links() {
+    unsafe { RegDeleteTreeW(HKEY_CURRENT_USER, wide(&scheme_key()).as_ptr()) };
 }
 
 unsafe extern "system" fn video_proc(

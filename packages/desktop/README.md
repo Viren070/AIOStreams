@@ -124,6 +124,20 @@ from a release build.
 
 `AIOSTREAMS_LIBMPV` and `AIOSTREAMS_WEB_DIR` point at libmpv and the standalone build too.
 
+### Links
+
+`aiostreams://` links open the app, or hand the link to the copy already running:
+
+| Link                                | Opens                                                                                                     |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `aiostreams://server?url=<address>` | Adding a server, with the address filled in; it asks first when signed in to another                      |
+| `aiostreams://search?q=<term>`      | Search                                                                                                    |
+| `aiostreams://return/item/<id>?<…>` | An item's page, saving the position an external player sends back through the player link's `{returnUrl}` |
+
+Encode each value once, with `encodeURIComponent`. The Windows installer registers the scheme (a
+portable copy does not), the macOS bundle through its `Info.plist`, and the Flatpak through its
+desktop entry.
+
 ## mpv config
 
 mpv reads `mpv.conf`, `input.conf`, scripts and shaders from:

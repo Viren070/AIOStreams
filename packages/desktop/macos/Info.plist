@@ -40,5 +40,16 @@
 	</dict>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>AIOStreams connects to media servers on your local network.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>io.github.viren070.aiostreams</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>aiostreams</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

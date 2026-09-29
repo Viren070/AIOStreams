@@ -18,6 +18,7 @@ use wry::WebViewBuilderExtWindows;
 use wry::http::{Request, Response};
 use wry::{NewWindowResponse, PageLoadEvent, Rect, WebContext, WebViewBuilder};
 
+use crate::links::Inbox;
 use crate::placement::{self, MIN_SIZE, Placement, SETTLE};
 use crate::updates::Updater;
 use crate::{
@@ -117,6 +118,17 @@ pub fn run(app: App) {
     } = app;
     let event_loop = EventLoopBuilder::<UserEvent>::with_user_event().build();
     let proxy = event_loop.create_proxy();
+    let inbox = Rc::new(RefCell::new(Inbox::default()));
+    if let Some(link) = args.link.clone() {
+        inbox.borrow_mut().receive(link);
+    }
+    #[cfg(windows)]
+    platform::listen_links(&data_dir, {
+        let proxy = proxy.clone();
+        move |link| {
+            let _ = proxy.send_event(UserEvent::Link(link));
+        }
+    });
     #[cfg(target_os = "macos")]
     let _menu = platform::install_menu({
         let proxy = proxy.clone();
@@ -222,11 +234,14 @@ pub fn run(app: App) {
             NewWindowResponse::Deny
         })
         .with_on_page_load_handler({
-            let player = player.clone();
+            let (player, inbox) = (player.clone(), inbox.clone());
             move |event, _| {
-                // A new page never owns the video the last one started.
-                if let (PageLoadEvent::Started, Some(p)) = (event, player.borrow().as_ref()) {
-                    p.stop();
+                if let PageLoadEvent::Started = event {
+                    inbox.borrow_mut().page_loading();
+                    // A new page never owns the video the last one started.
+                    if let Some(p) = player.borrow().as_ref() {
+                        p.stop();
+                    }
                 }
             }
         })
@@ -337,6 +352,24 @@ pub fn run(app: App) {
             #[cfg(target_os = "macos")]
             Event::UserEvent(UserEvent::WindowButtons(visible)) => {
                 platform::set_window_buttons(&window, visible)
+            }
+            #[cfg(target_os = "macos")]
+            Event::Opened { urls } => {
+                for link in urls.iter().filter_map(|u| crate::links::accept(u.as_str())) {
+                    if let Some(link) = inbox.borrow_mut().receive(link) {
+                        emit(Outbound::Link { url: link });
+                    }
+                }
+            }
+            Event::UserEvent(UserEvent::Link(link)) => {
+                if let Some(link) = inbox.borrow_mut().receive(link) {
+                    emit(Outbound::Link { url: link });
+                }
+            }
+            Event::UserEvent(UserEvent::LinksReady) => {
+                for link in inbox.borrow_mut().ready() {
+                    emit(Outbound::Link { url: link });
+                }
             }
             Event::UserEvent(UserEvent::Sync) => {
                 if let Some(p) = player.borrow().as_ref() {

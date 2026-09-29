@@ -40,8 +40,9 @@ pub const WEB_DATA_DIR: &str = "WebKit";
 /// Held for as long as the app runs.
 pub struct SingleInstance(#[allow(dead_code)] Option<std::fs::File>);
 
-/// One copy per data folder, whose web storage two copies cannot share.
-pub fn claim_instance(data_dir: &Path) -> Option<SingleInstance> {
+/// One copy per data folder, whose web storage two copies cannot share. The
+/// system hands links to the running copy itself, as tao's `Opened` event.
+pub fn claim_instance(data_dir: &Path, _link: Option<&str>) -> Option<SingleInstance> {
     let _ = std::fs::create_dir_all(data_dir);
     let Ok(file) = std::fs::File::create(data_dir.join("instance.lock")) else {
         return Some(SingleInstance(None));
