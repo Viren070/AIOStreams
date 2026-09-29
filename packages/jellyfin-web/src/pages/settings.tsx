@@ -560,7 +560,7 @@ function SubtitlesSection() {
         <Switch
           side="right"
           label="Apply to styled subtitles too"
-          help="Styled subtitles, common in anime, keep their own look unless this is on. Only in the desktop app."
+          help="Styled subtitles, common in anime, keep their own fonts and colours unless this is on. Blu-ray and DVD subtitles always keep their look and size. Only in the desktop app."
           value={overrideStyled}
           onValueChange={setOverrideStyled}
         />

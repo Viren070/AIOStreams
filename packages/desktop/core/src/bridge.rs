@@ -170,6 +170,7 @@ const SETTABLE: &[&str] = &[
     "sub-back-color",
     "sub-border-style",
     "sub-ass-override",
+    "sub-ass-force-margins",
     "hwdec",
     "audio-channels",
     "audio-spdif",

@@ -85,7 +85,14 @@ interface MpvTrack {
   external?: boolean;
   'external-filename'?: string;
   selected?: boolean;
+  codec?: string;
 }
+
+const IMAGE_SUBTITLE_CODECS = new Set([
+  'hdmv_pgs_subtitle',
+  'dvd_subtitle',
+  'dvb_subtitle',
+]);
 
 function mpvTrackLabel(track: MpvTrack): string {
   const parts = [track.title, track.lang?.toUpperCase()].filter(Boolean);
@@ -170,6 +177,7 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
   React.useEffect(() => {
     set('keepaspect', fit !== 'stretch');
     set('panscan', fit === 'crop' ? 1 : 0);
+    set('sub-ass-force-margins', fit === 'crop');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fit]);
 
@@ -179,6 +187,18 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
     let seeking = false;
 
     let fileTracks: MpvTrack[] = [];
+    let sid: string | null = null;
+    let imageSubtitle = false;
+    const syncSubtitleScale = () => {
+      const track = fileTracks.find(
+        (t) => t.type === 'sub' && String(t.id) === sid
+      );
+      const image = IMAGE_SUBTITLE_CODECS.has(track?.codec ?? '');
+      const style = latest.current.subtitleStyle;
+      if (image === imageSubtitle || !style) return;
+      imageSubtitle = image;
+      set('sub-scale', image ? 1 : subtitleScale(style));
+    };
     // Shows an external subtitle in the user's language when their mode wants
     // one and the file has none of its own; Default only honours the file's.
     const addPreferredSubtitle = () => {
@@ -238,11 +258,16 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
           const id =
             typeof data === 'string' && /^\d+$/.test(data) ? data : null;
           patch(name === 'aid' ? { audio: id } : { subtitle: id });
+          if (name === 'sid') {
+            sid = id;
+            syncSubtitleScale();
+          }
           break;
         }
         case 'track-list':
           fileTracks = Array.isArray(data) ? (data as MpvTrack[]) : [];
           setTracks(fileTracks);
+          syncSubtitleScale();
           break;
         case 'chapter-list':
           setChapters(parseChapters(data));
