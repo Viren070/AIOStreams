@@ -34,14 +34,8 @@ function file(partial: Partial<QbittorrentFile> & { index: number; name: string;
 }
 
 const TOKEN: QbittorrentStreamToken = {
-  credentialRef: '0d1e2f3a-4b5c-6d7e-8f9a-0b1c2d3e4f5a',
+  ref: '0d1e2f3a-4b5c-6d7e-8f9a-0b1c2d3e4f5a',
   exp: 4102444800,
-  hash: 'a'.repeat(40),
-  fileIndex: 0,
-  filePath: '/downloads/file.mkv',
-  fileSize: 1000,
-  filename: 'file.mkv',
-  addedAt: 1700000000,
 };
 
 describe('parseQbittorrentCredential', () => {

@@ -3,52 +3,57 @@ import z from 'zod';
 import { Cache, decryptString, encryptString } from '../../utils/index.js';
 import { QbittorrentCredentialSchema } from './client.js';
 
-/** How long a credential reference stays resolvable after a resolve. */
-export const CREDENTIAL_REF_TTL_SECONDS = 12 * 60 * 60;
+/** How long a stream reference stays resolvable after a resolve. */
+export const STREAM_REF_TTL_SECONDS = 12 * 60 * 60;
+
+
+export interface QbittorrentStreamRefEntry {
+  credential: z.infer<typeof QbittorrentCredentialSchema>;
+
+  hash: string;
+
+  fileIndex: number;
+
+  filePath: string;
+
+  fileSize: number;
+
+  filename: string;
+
+  addedAt: number;
+}
 
 /**
- * Server-side store for WebUI credentials referenced by stream tokens. Tokens
- * carry only an opaque reference (plus expiry), so a leaked stream URL cannot
- * disclose the credential itself.
+ * Server-side store for stream references. Tokens carry only an opaque
+ * reference (plus expiry), so a leaked or tampered stream URL can neither
+ * disclose the WebUI credential nor reach a path that was not registered by
+ * a resolve.
  */
-const credentialStore = Cache.getInstance<string, z.infer<
-  typeof QbittorrentCredentialSchema
->>('qbittorrent:credentials');
+const streamRefStore = Cache.getInstance<string, QbittorrentStreamRefEntry>(
+  'qbittorrent:stream-refs'
+);
 
 /** Register a stream entry behind a fresh opaque ref. */
-export async function registerCredentialRef(
-  credential: z.infer<typeof QbittorrentCredentialSchema>
+export async function registerStreamRef(
+  entry: QbittorrentStreamRefEntry
 ): Promise<string> {
   const ref = randomUUID();
-  await credentialStore.set(ref, credential, CREDENTIAL_REF_TTL_SECONDS);
+  await streamRefStore.set(ref, entry, STREAM_REF_TTL_SECONDS);
   return ref;
 }
 
 /** Look up a ref, undefined means expired. */
-export function resolveCredentialRef(
+export function resolveStreamRef(
   ref: string
-): Promise<z.infer<typeof QbittorrentCredentialSchema> | undefined> {
-  return credentialStore.get(ref);
+): Promise<QbittorrentStreamRefEntry | undefined> {
+  return streamRefStore.get(ref);
 }
 
-/** Decoded payload of a qBittorrent stream token. */
+/** Opaque token for byte URLs, carries only a ref id and expiry. */
 export const QbittorrentStreamTokenSchema = z.object({
-  /** Opaque reference to the server-side credential entry. */
-  credentialRef: z.string().min(1),
-  /** Expiry (epoch seconds); matches the credential reference's TTL. */
+  ref: z.string().min(1),
+
   exp: z.number().int().positive(),
-
-  hash: z.string().regex(/^[a-f0-9]{40}$/i),
-
-  fileIndex: z.number().int().nonnegative(),
-
-  filePath: z.string().min(1),
-
-  fileSize: z.number().int().positive(),
-
-  filename: z.string(),
-
-  addedAt: z.number().int(),
 });
 
 export type QbittorrentStreamToken = z.infer<
