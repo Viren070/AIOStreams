@@ -3,6 +3,7 @@ export * from './utils.js';
 export * from './stremthru.js';
 export * from './torbox.js';
 export * from './nzbdav.js';
+export * from './qbittorrent/index.js';
 export * from './altmount.js';
 export * from './aiostreams.js';
 
