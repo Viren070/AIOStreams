@@ -23,19 +23,39 @@ export function computeFileAvailability(params: {
   pieceSize: number;
 }): FileAvailability {
   const { files, fileIndex, pieceStates, pieceSize } = params;
-  const file = files[fileIndex];
-  if (!file || pieceSize <= 0) {
+  if (pieceSize <= 0) {
     return {
       complete: false,
       contiguousFrom: () => 0,
       rangeAvailable: () => false,
     };
   }
+  // Sum offsets in index order, array order is not guaranteed.
+  const sorted = [...files].sort((a, b) => a.index - b.index);
+  const position = sorted.findIndex((file) => file.index === fileIndex);
+  if (position === -1) {
+    return {
+      complete: false,
+      contiguousFrom: () => 0,
+      rangeAvailable: () => false,
+    };
+  }
+  const file = sorted[position];
+  if (file.size === 0) {
+    return {
+      complete: true,
+      contiguousFrom: (start) => start,
+      rangeAvailable: () => true,
+    };
+  }
   const fileSize = file.size;
-  // Offset of this file within the torrent, since piece indices are global.
-  const fileOffset = files
-    .slice(0, fileIndex)
+  let fileOffset = sorted
+    .slice(0, position)
     .reduce((sum, f) => sum + f.size, 0);
+  // v2 pad files shift summed offsets, the piece range pins the real one.
+  if (Math.floor(fileOffset / pieceSize) !== file.piece_range[0]) {
+    fileOffset = file.piece_range[0] * pieceSize;
+  }
 
   if (!pieceStates) {
     const available = Math.floor(file.progress * fileSize);

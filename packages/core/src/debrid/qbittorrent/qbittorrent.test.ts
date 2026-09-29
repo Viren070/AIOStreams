@@ -34,7 +34,8 @@ function file(partial: Partial<QbittorrentFile> & { index: number; name: string;
 }
 
 const TOKEN: QbittorrentStreamToken = {
-  credential: { url: WEBUI, username: 'user', password: 'pass' },
+  credentialRef: '0d1e2f3a-4b5c-6d7e-8f9a-0b1c2d3e4f5a',
+  exp: 4102444800,
   hash: 'a'.repeat(40),
   fileIndex: 0,
   filePath: '/downloads/file.mkv',
@@ -136,6 +137,57 @@ describe('computeFileAvailability', () => {
     assert.equal(availability.rangeAvailable(0, 500), true);
     assert.equal(availability.rangeAvailable(0, 501), false);
   });
+
+  test('corrects offsets when pad files are hidden from the list', () => {
+    // True layout: file 0 = [0, 500) (pieces 0-1), a hidden 250-byte pad file
+    // = [500, 750) (piece 2), file 1 = [750, 1750) (pieces 3-6). The files
+    // list omits the pad file, so summed offsets land one piece short; the
+    // file's own piece range pins the true offset.
+    const withPad = [
+      file({ index: 0, name: 'first.bin', size: 500, piece_range: [0, 1], progress: 1 }),
+      file({ index: 1, name: 'video.mkv', size: 1000, piece_range: [3, 6] }),
+    ];
+    const availability = computeFileAvailability({
+      files: withPad,
+      fileIndex: 1,
+      pieceStates: [2, 2, 2, 2, 0, 0, 0],
+      pieceSize: 250,
+    });
+    // File 1 starts at global 750 (piece 3); its first 250 bytes are in
+    // piece 3 = global [750, 1000).
+    assert.equal(availability.contiguousFrom(0), 250);
+    assert.equal(availability.rangeAvailable(0, 250), true);
+    assert.equal(availability.rangeAvailable(0, 251), false);
+  });
+
+  test('resolves files by index regardless of array order', () => {
+    const reordered = [
+      file({ index: 1, name: 'video.mkv', size: 1000, piece_range: [2, 5] }),
+      file({ index: 0, name: 'first.bin', size: 500, piece_range: [0, 1], progress: 1 }),
+    ];
+    const availability = computeFileAvailability({
+      files: reordered,
+      fileIndex: 1,
+      pieceStates: [2, 2, 2, 2, 2, 2],
+      pieceSize: 250,
+    });
+    assert.equal(availability.complete, true);
+  });
+
+  test('treats zero-length files as complete', () => {
+    const withEmpty = [
+      file({ index: 0, name: 'first.bin', size: 500, piece_range: [0, 1], progress: 1 }),
+      file({ index: 1, name: 'empty.txt', size: 0, piece_range: [2, 1] }),
+    ];
+    const availability = computeFileAvailability({
+      files: withEmpty,
+      fileIndex: 1,
+      pieceStates: [2, 2],
+      pieceSize: 250,
+    });
+    assert.equal(availability.complete, true);
+    assert.equal(availability.rangeAvailable(0, 0), true);
+  });
 });
 
 // Each test gets its own credential so the client's shared session and
@@ -155,22 +207,28 @@ describe('QBittorrentService', () => {
       login: true,
       intercepts: [
         {
-          path: `/api/v2/torrents/info?hashes=${'b'.repeat(40)}%7C${'c'.repeat(40)}%7C${'d'.repeat(40)}`,
+          path: `/api/v2/torrents/info?hashes=${'b'.repeat(40)}%7C${'c'.repeat(40)}%7C${'d'.repeat(40)}%7C${'9'.repeat(40)}`,
           body: [
             { ...torrentFixture('b'.repeat(40), 'stalledUP'), progress: 1 },
             torrentFixture('c'.repeat(40), 'error'),
+            torrentFixture('9'.repeat(40), 'downloading'),
           ],
         },
         {
           path: `/api/v2/torrents/files?hash=${'b'.repeat(40)}`,
           body: [fileFixture(0, 'video.mkv', 2000)],
         },
+        {
+          path: `/api/v2/torrents/files?hash=${'9'.repeat(40)}`,
+          body: [fileFixture(0, 'video.mkv', 2000)],
+        },
       ],
     });
-    const [seeded, errored, absent] = await service().checkMagnets([
+    const [seeded, errored, absent, downloading] = await service().checkMagnets([
       `magnet:?xt=urn:btih:${'b'.repeat(40)}`,
       `magnet:?xt=urn:btih:${'c'.repeat(40)}`,
       `magnet:?xt=urn:btih:${'d'.repeat(40)}`,
+      `magnet:?xt=urn:btih:${'9'.repeat(40)}`,
     ]);
     assert.equal(seeded.status, 'cached');
     assert.equal(seeded.library, true);
@@ -178,6 +236,9 @@ describe('QBittorrentService', () => {
     assert.equal(errored.status, 'failed');
     assert.equal(absent.status, 'unknown');
     assert.equal(absent.library, false);
+    // Present but incomplete: playable only after more download.
+    assert.equal(downloading.status, 'downloading');
+    assert.equal(downloading.library, true);
   });
 
   test('adds torrents with the aiostreams tag and streaming flags', async (t) => {
