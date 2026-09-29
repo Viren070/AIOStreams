@@ -70,16 +70,35 @@ download frontier.
 ## How playback behaves while downloading
 
 - Torrents are added with **sequential download** and **first and last piece
-  priority**, so the start of the file and the container index (where the
-  duration and seek information live) arrive early. Seeking into a region
-  that has not downloaded yet waits briefly for the data and then answers
-  `416 Not Satisfiable` until it arrives; seeking back into downloaded data
+  priority**, and the file being played is raised to maximum priority, so the
+  start of the file and the container index (where the duration and seek
+  information live) arrive early. Seeking into a region that has not
+  downloaded yet pauses until the data arrives, and the connection is torn
+  down if the download stalls for a minute; seeking back into downloaded data
   always works.
 - The full file size is advertised from the first request, so your player
   shows the correct duration and seek bar even while the download is running.
 - Torrents AIOStreams adds are tagged `aiostreams` (a tag, not a category, so
   category-based save paths are never touched). Existing torrents are adopted
   as they are, and nothing is re-tagged, re-prioritised or removed.
+
+### Download only the selected file
+
+In multi-file torrents (a season pack, for example), the service setting
+**Download Only the Selected File** skips the other files and fetches only
+the episode being played, on demand: each resolve raises that episode's
+priority, so episodes arrive as you watch them instead of the whole pack
+downloading up front. The file currently being watched is never skipped (so
+next-episode prefetch and a second screen cannot stall playback), files that
+are already complete are never touched, and if you resume an episode that
+was skipped meanwhile, its download restarts automatically.
+
+<Callout type="warn">
+  **This breaks seeding for private trackers.** A torrent with skipped files
+  can never complete, so it can never fully seed, and most private trackers
+  count that as a hit-and-run. Leave the setting off if you seed private
+  trackers; it is meant for public torrents and tight disk space.
+</Callout>
 
 <Callout type="info">
   **Why the "cached" badge means something different here.** For debrid

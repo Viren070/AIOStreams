@@ -22,21 +22,37 @@ import {
   makeUrlLogSafe,
 } from '../../utils/index.js';
 import {
+  FILE_PRIORITY,
+  isOwnTorrent,
   QBittorrentClient,
   QbittorrentCredential,
   QbittorrentTorrent,
   parseQbittorrentCredential,
 } from './client.js';
-import { STREAM_THRESHOLD_BYTES, computeFileAvailability } from './availability.js';
+import {
+  STREAM_THRESHOLD_BYTES,
+  computeFileAvailability,
+  deriveFilePath,
+  planFilePriorities,
+} from './availability.js';
 import {
   STREAM_REF_TTL_SECONDS,
   encodeQbittorrentStreamToken,
+  liveFileIndices,
+  markFileLive,
   registerStreamRef,
 } from './tokens.js';
 
 const logger = createLogger('debrid:qbittorrent');
 
 const FAILED_STATES = new Set(['error', 'missingFiles']);
+/** Paused/stopped across both qBittorrent generations (4.x paused*, 5.x stopped*). */
+const STOPPED_STATES = new Set([
+  'pausedDL',
+  'pausedUP',
+  'stoppedDL',
+  'stoppedUP',
+]);
 const SEEDED_STATES = new Set([
   'uploading',
   'pausedUP',
@@ -332,6 +348,9 @@ export class QBittorrentService implements TorrentDebridService {
   > {
     const maxPolls = Math.max(1, Math.ceil(this.options.maxWaitTime / this.options.pollInterval));
     let dataReadyButNotOnDisk = 0;
+    let priorityFailures = 0;
+    let prioritiesAbandoned = false;
+    let resumeAttempted = false;
     for (let i = 0; i < maxPolls; i++) {
       this.throwIfAborted(signal);
 
@@ -351,16 +370,68 @@ export class QBittorrentService implements TorrentDebridService {
         throw err;
       }
 
+      // Own torrents that hit a stop (qBittorrent "finished" actions like
+      // ratio limits can stop a torrent whose last wanted file completed)
+      // must be resumed or this resolve can never become ready. Adopted
+      // torrents are never resumed: a user's deliberate pause stands.
+      if (
+        !resumeAttempted &&
+        isOwnTorrent(current) &&
+        STOPPED_STATES.has(current.state)
+      ) {
+        resumeAttempted = true;
+        const started = await this.client.startTorrent(current.hash, signal);
+        if (!started) {
+          logger.warn(
+            { hash: current.hash, state: current.state },
+            'could not resume stopped torrent for playback'
+          );
+        }
+      }
+
       const files = await this.client.getFiles(torrent.hash, signal);
       const file = await this.selectFile(current, files, playbackInfo);
       if (file) {
-        const torrentRoot = current.content_path.endsWith('/')
-          ? current.content_path
-          : current.content_path + '/';
-        const filePath =
-          files.length === 1
-            ? current.content_path
-            : torrentRoot + file.name;
+        // Protect against concurrent skips mid-play.
+        markFileLive(torrent.hash, file.index);
+        if (!prioritiesAbandoned) {
+          const applied = await this.applyFilePriorities(
+            current,
+            files,
+            file.index,
+            signal
+          );
+          if (!applied) {
+            priorityFailures++;
+            if (priorityFailures >= 3) {
+              prioritiesAbandoned = true;
+              // An adopted torrent whose skipped selected file cannot be
+              // restored will never download; failing fast beats burning
+              // the whole wait budget on a guaranteed timeout.
+              const stillSkipped =
+                files.find((f) => f.index === file.index)?.priority ===
+                FILE_PRIORITY.skip;
+              if (!isOwnTorrent(current) && stillSkipped) {
+                throw new DebridError(
+                  'qBittorrent refused to restore the skipped file selected for playback',
+                  {
+                    statusCode: 502,
+                    statusText: 'Bad Gateway',
+                    code: 'BAD_GATEWAY',
+                    type: 'upstream_error',
+                    headers: {},
+                  }
+                );
+              }
+              logger.warn(
+                { hash: torrent.hash, fileIndex: file.index },
+                'giving up on file priority adjustments for this resolve'
+              );
+            }
+          }
+        }
+        const filePath = deriveFilePath(current, files, file.index);
+        if (!filePath) continue;
         const pieceSize = await this.client.getPieceSize(torrent.hash, signal);
         const pieceStates = await this.client.getPieceStates(torrent.hash, signal);
         const availability = computeFileAvailability({
@@ -417,6 +488,53 @@ export class QBittorrentService implements TorrentDebridService {
       type: 'api_error',
       headers: {},
     });
+  }
+
+  /**
+   * Apply the file-priority plan. Only files whose current
+   * priority differs are sent, so transient failures retry on the next poll.
+   */
+  private async applyFilePriorities(
+    torrent: QbittorrentTorrent,
+    files: Awaited<ReturnType<QBittorrentClient['getFiles']>>,
+    selectedIndex: number,
+    signal?: AbortSignal
+  ): Promise<boolean> {
+    const plan = planFilePriorities({
+      files,
+      selectedIndex,
+      skipOthers: this.credential.skipOtherFiles === true,
+      ownTorrent: isOwnTorrent(torrent),
+      liveFiles: liveFileIndices(torrent.hash),
+    });
+    const currentPriority = new Map(
+      files.map((file) => [file.index, file.priority])
+    );
+    const targets: { ids: number[]; priority: number }[] = [];
+    const skip = plan.skip.filter(
+      (index) => currentPriority.get(index) !== FILE_PRIORITY.skip
+    );
+    if (skip.length > 0) targets.push({ ids: skip, priority: FILE_PRIORITY.skip });
+    const raise = plan.raise.filter(
+      (index) => currentPriority.get(index) !== FILE_PRIORITY.max
+    );
+    if (raise.length > 0) targets.push({ ids: raise, priority: FILE_PRIORITY.max });
+    const restore = plan.restore.filter(
+      (index) => currentPriority.get(index) === FILE_PRIORITY.skip
+    );
+    if (restore.length > 0)
+      targets.push({ ids: restore, priority: FILE_PRIORITY.normal });
+    const results = await Promise.all(
+      targets.map((target) =>
+        this.client.setFilePriority(
+          torrent.hash,
+          target.ids,
+          target.priority,
+          signal
+        )
+      )
+    );
+    return results.every((ok) => ok);
   }
 
   private async selectFile(

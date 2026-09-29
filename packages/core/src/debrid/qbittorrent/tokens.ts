@@ -49,6 +49,54 @@ export function resolveStreamRef(
   return streamRefStore.get(ref);
 }
 
+/** How long a file stays live after its last consumer touch. */
+export const LIVE_FILE_TTL_MS = 15 * 60_000;
+
+const MAX_LIVE_TORRENTS = 512;
+
+/** hash -> fileIndex -> expiry (epoch ms) of the last touch. */
+const liveFiles = new Map<string, Map<number, number>>();
+
+function pruneLiveFiles(now: number): void {
+  for (const [hash, perTorrent] of liveFiles) {
+    for (const [fileIndex, expiresAt] of perTorrent) {
+      if (expiresAt <= now) perTorrent.delete(fileIndex);
+    }
+    if (perTorrent.size === 0) liveFiles.delete(hash);
+  }
+}
+
+
+export function markFileLive(
+  hash: string,
+  fileIndex: number,
+  ttlMs: number = LIVE_FILE_TTL_MS
+): void {
+  const now = Date.now();
+  pruneLiveFiles(now);
+  let perTorrent = liveFiles.get(hash);
+  if (!perTorrent) {
+    if (liveFiles.size >= MAX_LIVE_TORRENTS) {
+      liveFiles.delete(liveFiles.keys().next().value as string);
+    }
+    perTorrent = new Map();
+    liveFiles.set(hash, perTorrent);
+  }
+  perTorrent.set(fileIndex, now + ttlMs);
+}
+
+/** The torrent's currently-live file indices (expired touches pruned). */
+export function liveFileIndices(hash: string): Set<number> {
+  const perTorrent = liveFiles.get(hash);
+  if (!perTorrent) return new Set();
+  const now = Date.now();
+  for (const [fileIndex, expiresAt] of perTorrent) {
+    if (expiresAt <= now) perTorrent.delete(fileIndex);
+  }
+  if (perTorrent.size === 0) liveFiles.delete(hash);
+  return new Set(perTorrent.keys());
+}
+
 /** Opaque token for byte URLs, carries only a ref id and expiry. */
 export const QbittorrentStreamTokenSchema = z.object({
   ref: z.string().min(1),

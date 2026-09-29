@@ -1,7 +1,81 @@
-import { QbittorrentFile } from './client.js';
+import { FILE_PRIORITY, QbittorrentFile } from './client.js';
 
 /** A file must have at least this many contiguous bytes before playback starts. */
 export const STREAM_THRESHOLD_BYTES = 16 * 1024 * 1024;
+
+/** How a resolve should adjust file priorities in a multi-file torrent. */
+export interface FilePriorityPlan {
+  /** File indices to skip entirely (never downloaded). */
+  skip: number[];
+  /** File indices to raise to maximum priority (downloaded first). */
+  raise: number[];
+  /** File indices to restore to normal priority (currently skipped). */
+  restore: number[];
+}
+
+/**
+ * Plan file priority changes for a resolve. Own torrents: selected file
+ * raised, others optionally skipped. Adopted torrents: only restore a
+ * skipped selected file. Complete files and files being streamed are
+ * never touched.
+ */
+export function planFilePriorities(params: {
+  files: QbittorrentFile[];
+  selectedIndex: number;
+  skipOthers: boolean;
+  ownTorrent: boolean;
+  /** Indices with an active consumer, excluded from the skip set. */
+  liveFiles?: ReadonlySet<number>;
+}): FilePriorityPlan {
+  const plan: FilePriorityPlan = { skip: [], raise: [], restore: [] };
+  const selected = params.files.find(
+    (file) => file.index === params.selectedIndex
+  );
+  if (!selected) return plan;
+  // Nothing to download first and nothing worth skipping, leave a complete
+  // torrent exactly as it is.
+  if (params.files.every((file) => file.progress >= 1)) return plan;
+  if (params.ownTorrent) {
+    if (params.skipOthers) {
+      plan.skip = params.files
+        .filter(
+          (file) =>
+            file.index !== params.selectedIndex &&
+            file.progress < 1 &&
+            !params.liveFiles?.has(file.index)
+        )
+        .map((file) => file.index);
+    }
+    if (selected.progress < 1) {
+      plan.raise = [params.selectedIndex];
+    }
+  } else if (selected.priority === FILE_PRIORITY.skip) {
+    plan.restore = [params.selectedIndex];
+  }
+  return plan;
+}
+
+/**
+ * Absolute on-disk path of one file within a torrent: the torrent's content
+ * path itself for single-file torrents, otherwise the file's relative name
+ * under the content path. Shared by the resolve wait (which re-derives it
+ * every poll, so qBittorrent "move on finish" cannot strand it) and the byte
+ * stream (which re-derives it when a mid-stream move makes the old path
+ * vanish).
+ */
+export function deriveFilePath(
+  torrent: { content_path: string },
+  files: QbittorrentFile[],
+  fileIndex: number
+): string | undefined {
+  const file = files.find((f) => f.index === fileIndex);
+  if (!file) return undefined;
+  if (files.length === 1) return torrent.content_path;
+  const root = torrent.content_path.endsWith('/')
+    ? torrent.content_path
+    : torrent.content_path + '/';
+  return root + file.name;
+}
 
 /** Byte-level view of one file's download state from piece states. */
 export interface FileAvailability {

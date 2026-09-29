@@ -996,6 +996,14 @@ const SERVICE_DETAILS: Record<
         type: 'password',
         required: true,
       },
+      {
+        id: 'skipOtherFiles',
+        name: 'Download Only the Selected File',
+        description:
+          'In multi-file torrents (for example a season pack), skip downloading the other files and fetch only the file being played. Faster and uses less disk, but the torrent can never fully seed, and **on private trackers this can trigger hit-and-run warnings**. Leave off if you seed private torrents.',
+        type: 'boolean',
+        required: false,
+      },
     ],
   },
 };

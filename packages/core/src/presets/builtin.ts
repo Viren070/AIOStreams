@@ -260,6 +260,7 @@ export class BuiltinAddonPreset extends Preset {
             url: credentials.url,
             username: credentials.username,
             password: credentials.password,
+            skipOtherFiles: credentials.skipOtherFiles,
           })
         ),
     };
