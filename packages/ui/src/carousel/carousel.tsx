@@ -2,6 +2,7 @@ import { cva } from 'class-variance-authority';
 import useEmblaCarousel, {
   type UseEmblaCarouselType,
 } from 'embla-carousel-react';
+import { WheelGesturesPlugin } from 'embla-carousel-wheel-gestures';
 import * as React from 'react';
 import { IconButton } from '../button';
 import { cn, defineStyleAnatomy } from '../core/styling';
@@ -33,6 +34,7 @@ export const CarouselAnatomy = defineStyleAnatomy({
 export type CarouselApi = UseEmblaCarouselType[1];
 type EmblaApi = NonNullable<CarouselApi>;
 export type CarouselOptions = Parameters<typeof useEmblaCarousel>[0];
+export type CarouselPlugins = Parameters<typeof useEmblaCarousel>[1];
 
 type CarouselGap = 'none' | 'sm' | 'md' | 'lg';
 
@@ -120,6 +122,7 @@ function useRestorePosition(api: CarouselApi, key: string | undefined) {
 
 export type CarouselProps = React.HTMLAttributes<HTMLDivElement> & {
   opts?: CarouselOptions;
+  plugins?: CarouselPlugins;
   gap?: CarouselGap;
   restoreKey?: string;
 };
@@ -128,6 +131,7 @@ export const Carousel = React.forwardRef<HTMLDivElement, CarouselProps>(
   (props, ref) => {
     const {
       opts,
+      plugins,
       gap = 'md',
       restoreKey,
       className,
@@ -135,7 +139,10 @@ export const Carousel = React.forwardRef<HTMLDivElement, CarouselProps>(
       ...rest
     } = props;
 
-    const [carouselRef, api] = useEmblaCarousel({ ...opts, axis: 'x' });
+    const [carouselRef, api] = useEmblaCarousel({ ...opts, axis: 'x' }, [
+      WheelGesturesPlugin(),
+      ...(plugins ?? []),
+    ]);
     const [canScrollPrev, setCanScrollPrev] = React.useState(false);
     const [canScrollNext, setCanScrollNext] = React.useState(false);
     useKeepPositionOnReInit(api);
