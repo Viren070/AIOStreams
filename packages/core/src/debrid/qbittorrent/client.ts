@@ -93,6 +93,8 @@ const QbittorrentPropertiesSchema = z.object({
 });
 
 interface Session {
+  /** Cookie name qBittorrent issued (SID or QBT_SID_<port>). */
+  cookieName: string;
   sid: string;
   expiresAt: number;
 }
@@ -164,9 +166,10 @@ export class QBittorrentClient {
       }).toString(),
     });
     const body = await response.text();
-    if (body.trim() !== 'Ok.') {
-      // qBittorrent answers "Fails." (HTTP 200) for bad credentials and 403
-      // when the host is banned.
+    // qBittorrent 5.x answers 204 with an empty body on success; 4.x used
+    // 200 with "Ok.". Bad credentials are 200 with "Fails.", a banned host
+    // gets 403.
+    if (!response.ok || body.includes('Fails.')) {
       loginFailures.set(key, Date.now());
       throw unauthorized(
         response.status === 403
@@ -175,16 +178,21 @@ export class QBittorrentClient {
       );
     }
     const cookie = response.headers.get('set-cookie') ?? '';
-    const sid = /SID=([^;]+)/.exec(cookie)?.[1];
-    if (!sid) {
+    // qBittorrent 5.x names the cookie after the WebUI port (QBT_SID_8080),
+    // older versions use a plain SID.
+    const cookieMatch = /(?:^|;\s*)([A-Za-z0-9_]*SID[A-Za-z0-9_]*)=([^;]+)/.exec(
+      cookie
+    );
+    if (!cookieMatch) {
       loginFailures.set(key, Date.now());
       throw unauthorized('qBittorrent login returned no session cookie');
     }
+    const [, cookieName, sid] = cookieMatch;
     const expires = /expires=([^;]+)/i.exec(cookie)?.[1];
     const expiresAt = expires
       ? new Date(expires).getTime() - 30_000
       : Date.now() + 30 * 60_000;
-    const session: Session = { sid, expiresAt };
+    const session: Session = { cookieName, sid, expiresAt };
     sessions.set(key, session);
     return session;
   }
@@ -201,7 +209,7 @@ export class QBittorrentClient {
       const headers: Record<string, string> = {
         referer: this.baseUrl() + '/',
       };
-      if (session) headers.cookie = `SID=${session.sid}`;
+      if (session) headers.cookie = `${session.cookieName}=${session.sid}`;
       if (options.body !== undefined) {
         headers['content-type'] = 'application/x-www-form-urlencoded';
       }
