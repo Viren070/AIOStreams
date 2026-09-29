@@ -5,6 +5,7 @@ import { Skeleton } from '@aiostreams/ui/skeleton';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import { useSession } from '../lib/session';
 import {
+  noneGenre,
   useGenres,
   useItemPages,
   libraryTypes,
@@ -163,11 +164,10 @@ export function DiscoverPage({
       (untyped && k.kind !== 'BoxSet')
   );
 
-  // A catalog that needs a genre offers None for all of it, so All sends that.
-  const none = genres.data?.Items?.find((g) => g.Name === 'None');
+  const none = noneGenre(genres.data?.Items);
   const pickable = React.useMemo(
-    () => genres.data?.Items?.filter((g) => g.Name !== 'None') ?? [],
-    [genres.data]
+    () => genres.data?.Items?.filter((g) => g !== none) ?? [],
+    [genres.data, none]
   );
   // The genre travels by name, as its id belongs to the catalog it came from.
   const genreItem = genre

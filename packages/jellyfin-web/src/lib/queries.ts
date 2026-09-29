@@ -159,17 +159,22 @@ export function useItemPages(
 export function useLibraryHeads(views: BaseItemDto[], limit: number) {
   const { client, user } = useSession();
   const key = useKey();
+  const queryClient = useQueryClient();
+  const genres = useGenresOptions();
   return useQueries({
     queries: views.map((view) => ({
       queryKey: [...key, 'head', view.Id, limit],
-      queryFn: () =>
-        client.get<BaseItemDtoQueryResult>('/Items', {
+      queryFn: async () => {
+        const offered = await queryClient.fetchQuery(genres(view.Id!));
+        return client.get<BaseItemDtoQueryResult>('/Items', {
           userId: user.Id,
           ParentId: view.Id,
           IncludeItemTypes: libraryTypes(view),
+          GenreIds: noneGenre(offered.Items)?.Id,
           Recursive: true,
           Limit: limit,
-        }),
+        });
+      },
       staleTime: 5 * 60_000,
     })),
   });
@@ -236,17 +241,30 @@ export function useCalendar(from: Date, to: Date) {
   });
 }
 
-export function useGenres(viewId: string) {
+function useGenresOptions() {
   const { client, user } = useSession();
-  return useQuery({
-    queryKey: [...useKey(), 'genres', viewId],
-    queryFn: () =>
-      client.get<BaseItemDtoQueryResult>('/Genres', {
-        userId: user.Id,
-        ParentId: viewId,
-      }),
-    staleTime: 30 * 60_000,
-  });
+  const key = useKey();
+  return (viewId: string) =>
+    queryOptions({
+      queryKey: [...key, 'genres', viewId],
+      queryFn: () =>
+        client.get<BaseItemDtoQueryResult>('/Genres', {
+          userId: user.Id,
+          ParentId: viewId,
+        }),
+      staleTime: 30 * 60_000,
+    });
+}
+
+export function useGenres(viewId: string) {
+  return useQuery(useGenresOptions()(viewId));
+}
+
+/** A catalog that needs a genre offers None for all of it, so All browses with that. */
+export function noneGenre(
+  genres: BaseItemDto[] | null | undefined
+): BaseItemDto | undefined {
+  return genres?.find((g) => g.Name === 'None');
 }
 
 export function useSearch(
