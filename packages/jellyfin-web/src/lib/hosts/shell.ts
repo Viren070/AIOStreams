@@ -58,6 +58,7 @@ export type ShellMessage =
       state: 'connected' | 'not-found' | 'failed' | 'refused';
       message: string | null;
     }
+  | { type: 'link'; url: string }
   | { type: 'error'; message: string };
 
 /** The AIOStreams desktop app's bridge to mpv. */
@@ -564,6 +565,20 @@ export function useShellInfo(): ShellInfo | null {
     return unsubscribe;
   }, []);
   return info;
+}
+
+/** The `aiostreams://` links the app is opened with, including the one that started it. */
+export function useShellLinks(onLink: (url: string) => void): void {
+  const latest = useLatest(onLink);
+  React.useEffect(() => {
+    const shell = window.aiostreamsDesktop;
+    if (!shell) return;
+    const unsubscribe = shell.subscribe((m) => {
+      if (m.type === 'link') latest.current(m.url);
+    });
+    shell.send({ type: 'links-ready' });
+    return unsubscribe;
+  }, [latest]);
 }
 
 export function openMpvConfig(): void {

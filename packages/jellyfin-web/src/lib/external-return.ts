@@ -11,17 +11,20 @@ import type { BaseItemDto, SourceInfo } from './types';
 
 /**
  * The item's page, marked with what played, for a player that reports where it
- * stopped. Only a browser tab is what such a link reopens.
+ * stopped: a browser tab reopens it by its address, the desktop app by its link.
  */
 export function externalReturnUrl(
   item: BaseItemDto,
   source: SourceInfo
 ): string | undefined {
-  if (playbackHost() !== 'browser') return undefined;
+  const host = playbackHost();
+  if (host !== 'shell' && host !== 'browser') return undefined;
   const path = itemPath(item);
   const marks = new URLSearchParams({ played: item.Id!, source: source.Id! });
+  const marked = `${path}${path.includes('?') ? '&' : '?'}${marks}`;
+  if (host === 'shell') return `aiostreams://return${marked}`;
   const { origin, pathname } = window.location;
-  return `${origin}${pathname}#${path}${path.includes('?') ? '&' : '?'}${marks}`;
+  return `${origin}${pathname}#${marked}`;
 }
 
 const MARKS = ['played', 'source', 'position', 'lastPlayedUrl'];

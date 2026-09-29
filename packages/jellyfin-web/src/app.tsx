@@ -26,7 +26,13 @@ import {
 } from './lib/servers';
 import { ServersPage } from './pages/servers';
 import { playbackHost, type PlaybackHost } from './lib/hosts';
-import { ShellSetup } from './lib/hosts/shell';
+import { ShellSetup, useShellLinks } from './lib/hosts/shell';
+import { parseAppLink } from './lib/app-links';
+import { toast } from 'sonner';
+import {
+  ConfirmationDialog,
+  useConfirmationDialog,
+} from '@aiostreams/ui/shared/confirmation-dialog';
 import { ThemeStyles } from './components/theme-styles';
 import { WindowControls } from './components/window-controls';
 
@@ -96,9 +102,13 @@ function Served() {
 function Standalone() {
   const queryClient = useQueryClient();
   const [base, setBase] = React.useState(currentServer);
+  // A linked server fills in the add form; it never connects on its own.
+  const [linked, setLinked] = React.useState<string | null>(null);
+  const [asking, setAsking] = React.useState<string | null>(null);
 
   const choose = React.useCallback((server: SavedServer) => {
     enterServer(server);
+    setLinked(null);
     setBase(server.base);
   }, []);
   const leave = React.useCallback(() => {
@@ -108,24 +118,48 @@ function Standalone() {
     setBase(null);
   }, [queryClient]);
 
+  const confirmLeave = useConfirmationDialog({
+    title: 'Add a server',
+    description: asking
+      ? `Leave ${base ? serverAddress(base) : 'this server'} to add ${serverAddress(asking)}?`
+      : undefined,
+    actionText: 'Continue',
+    onConfirm: () => {
+      setLinked(asking);
+      leave();
+    },
+  });
+  const openConfirm = confirmLeave.open;
+  useShellLinks((raw) => {
+    const link = parseAppLink(raw);
+    if (!link) return void toast.error('The app cannot open that link');
+    if (link.kind === 'route') return navigate(link.path);
+    if (!base) return setLinked(link.address);
+    setAsking(link.address);
+    openConfirm();
+  });
+
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={base ?? 'servers'}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.18 }}
-      >
-        {base ? (
-          <Session base={base} changeServer={leave} />
-        ) : (
-          <ServerInfoProvider value={NO_SERVER_INFO}>
-            <ServersPage onChoose={choose} />
-          </ServerInfoProvider>
-        )}
-      </motion.div>
-    </AnimatePresence>
+    <>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={base ?? 'servers'}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18 }}
+        >
+          {base ? (
+            <Session base={base} changeServer={leave} />
+          ) : (
+            <ServerInfoProvider value={NO_SERVER_INFO}>
+              <ServersPage key={linked} onChoose={choose} address={linked} />
+            </ServerInfoProvider>
+          )}
+        </motion.div>
+      </AnimatePresence>
+      <ConfirmationDialog {...confirmLeave} />
+    </>
   );
 }
 

@@ -26,13 +26,15 @@ import {
 } from './sign-in';
 
 function AddServer({
+  initial,
   onAdded,
   onBack,
 }: {
+  initial?: string | null;
   onAdded(server: SavedServer): void;
   onBack?: () => void;
 }) {
-  const [address, setAddress] = React.useState('');
+  const [address, setAddress] = React.useState(initial ?? '');
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [scope, shake] = useShake<HTMLFormElement>();
@@ -156,11 +158,14 @@ function ServerList({
 
 export function ServersPage({
   onChoose,
+  address,
 }: {
   onChoose(server: SavedServer): void;
+  /** Filled into the add form, as from a link. */
+  address?: string | null;
 }) {
   const [servers, setServers] = React.useState(savedServers);
-  const [adding, setAdding] = React.useState(servers.length === 0);
+  const [adding, setAdding] = React.useState(servers.length === 0 || !!address);
   React.useEffect(() => {
     document.title = 'AIOStreams';
   }, []);
@@ -189,6 +194,7 @@ export function ServersPage({
           <motion.div key={adding ? 'add' : 'list'} {...FADE}>
             {adding ? (
               <AddServer
+                initial={address}
                 onAdded={onChoose}
                 onBack={servers.length ? () => setAdding(false) : undefined}
               />
