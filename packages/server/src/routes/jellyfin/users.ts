@@ -50,7 +50,7 @@ export function userConfiguration() {
     AudioLanguagePreference: '',
     PlayDefaultAudioTrack: true,
     SubtitleLanguagePreference: '',
-    DisplayMissingEpisodes: false,
+    DisplayMissingEpisodes: true,
     GroupedFolders: [],
     SubtitleMode: 'Default',
     DisplayCollectionsView: false,

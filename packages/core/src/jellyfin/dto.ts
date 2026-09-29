@@ -41,6 +41,7 @@ export interface ItemBuildContext {
   uuid: string;
   /** Whether list rows advertise placeholder versions, see `listPlaceholderSources`. */
   listVersions: boolean;
+  markUnaired: boolean;
 }
 
 type AnyMeta = (MetaPreview | Meta) & Record<string, unknown>;
@@ -75,6 +76,11 @@ export function descriptorOf(
 ): JellyfinDescriptor | undefined {
   return (item as { _aio?: { descriptor?: JellyfinDescriptor } })._aio
     ?.descriptor;
+}
+
+/** Set even when the episode is not sent as `Virtual`. */
+export function isUnairedEpisode(item: JellyfinItem): boolean {
+  return !!(item as { _aio?: { unaired?: boolean } })._aio?.unaired;
 }
 
 export function defaultUserData(itemId: string): UserItemDataDto {
@@ -680,6 +686,7 @@ export function buildEpisode(
   const unaired =
     v.available === false ||
     (premiere ? new Date(premiere).getTime() > Date.now() : false);
+  const missing = unaired && ctx.markUnaired;
   const title = video.title ?? video.name ?? `Episode ${video.episode}`;
   const path = `/aiostreams/${meta.type}/${meta.id}/${group.name}/${title}${PLAYABLE_EXT}`;
   const seriesTags = seriesItem.ImageTags as Record<string, string>;
@@ -688,8 +695,8 @@ export function buildEpisode(
     SortName: `${String(group.season).padStart(4, '0')}-${String(video.episode ?? 0).padStart(4, '0')}`,
     MediaType: 'Video',
     VideoType: 'VideoFile',
-    LocationType: unaired ? 'Virtual' : 'FileSystem',
-    CanDownload: !unaired,
+    LocationType: missing ? 'Virtual' : 'FileSystem',
+    CanDownload: !missing,
     IndexNumber: video.episode,
     ParentIndexNumber: group.season,
     SeriesId: seriesItem.Id,
@@ -722,7 +729,7 @@ export function buildEpisode(
     ExternalUrls: externalUrls(extra.providerIds, 'episode'),
     UserData: userDataFromRow(id, playstate, runtimeMs),
     Path: path,
-    ...(unaired || !ctx.listVersions
+    ...(missing || !ctx.listVersions
       ? {}
       : {
           EnableMediaSourceDisplay: true,
@@ -733,7 +740,7 @@ export function buildEpisode(
             path
           ),
         }),
-    _aio: { descriptor },
+    _aio: { descriptor, ...(unaired ? { unaired: true } : {}) },
   };
 }
 

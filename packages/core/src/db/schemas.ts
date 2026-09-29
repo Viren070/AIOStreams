@@ -172,6 +172,8 @@ const JellyfinSettingsFields = z.object({
   segments: z.boolean().optional(),
   /** Which markers to offer. Absent means all of them. */
   segmentTypes: z.array(z.enum(['Intro', 'Recap', 'Outro'])).optional(),
+  /** Send unaired episodes as missing, which clients won't offer to play. Default on. */
+  markUnaired: z.boolean().optional(),
   /** The configuration's own user: the history its trackers sync with. */
   primary: z
     .object({

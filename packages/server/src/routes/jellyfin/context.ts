@@ -559,6 +559,7 @@ async function buildContext(
       userId,
       uuid,
       listVersions: wantsListVersions(req, client),
+      markUnaired: finalUserData.jellyfin?.markUnaired ?? true,
     },
     engine: getEngine,
     primaryEngine: getPrimaryEngine,

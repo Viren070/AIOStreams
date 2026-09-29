@@ -3264,6 +3264,20 @@ function Content() {
                         }))
                       }
                     />
+                    <Switch
+                      label="Mark unaired episodes"
+                      help="Clients show upcoming episodes as unaired and won't offer to play them."
+                      moreHelp="Turn off if your client hides unaired episodes."
+                      side="right"
+                      value={userData.jellyfin?.markUnaired ?? true}
+                      defaultValue={true}
+                      onValueChange={(value) =>
+                        setUserData((prev) => ({
+                          ...prev,
+                          jellyfin: { ...prev.jellyfin, markUnaired: value },
+                        }))
+                      }
+                    />
                     {jellyfinSegmentsAvailable && (
                       <div className="space-y-3 border-t border-gray-800 pt-4">
                         <Switch

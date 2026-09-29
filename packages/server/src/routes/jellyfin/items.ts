@@ -29,6 +29,7 @@ import {
   hasProgrammeVideos,
   identityFor,
   isLeafEntry,
+  isUnairedEpisode,
   itemKeyFor,
   placeholderMediaSource,
   playableSources,
@@ -552,7 +553,7 @@ export async function nextUpForSeries(
   const res = await episodesForSeries(ctx, d);
   if (!res) return null;
   const eps = res.episodes.filter(
-    (e) => e.LocationType !== 'Virtual' && e.ParentIndexNumber !== 0
+    (e) => !isUnairedEpisode(e) && e.ParentIndexNumber !== 0
   );
   if (!eps.length) return null;
   let next: JellyfinItem | null | undefined;
