@@ -711,7 +711,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       preferredSources: resolvePreferredSources(
         this.userData.metadataProvider,
         type === 'movie' ? 'movie' : 'series',
-        !!animeEntry
+        type === 'anime' || !!animeEntry
       ),
     }).getMetadata(parsedId, type === 'movie' ? 'movie' : 'series');
 
