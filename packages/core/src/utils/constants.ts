@@ -374,6 +374,7 @@ const STREMIO_NNTP_SERVICE = 'stremio_nntp';
 const STREMTHRU_NEWZ_SERVICE = 'stremthru_newz';
 const AIOSTREAMS_SERVICE = 'aiostreams';
 const TORRIN_SERVICE = 'torrin';
+const QBITTORRENT_SERVICE = 'qbittorrent';
 
 const SERVICES = [
   REALDEBRID_SERVICE,
@@ -394,6 +395,7 @@ const SERVICES = [
   STREMTHRU_NEWZ_SERVICE,
   AIOSTREAMS_SERVICE,
   TORRIN_SERVICE,
+  QBITTORRENT_SERVICE,
 ] as const;
 
 export const BUILTIN_SUPPORTED_SERVICES = [
@@ -413,6 +415,7 @@ export const BUILTIN_SUPPORTED_SERVICES = [
   STREMTHRU_NEWZ_SERVICE,
   AIOSTREAMS_SERVICE,
   TORRIN_SERVICE,
+  QBITTORRENT_SERVICE,
 ] as const;
 
 export type ServiceId = (typeof SERVICES)[number];
@@ -952,6 +955,47 @@ const SERVICE_DETAILS: Record<
         name: 'API Key',
         description:
           'Your Torrin API key (begins with `tr_`). Obtain it from [torrin.app/app/settings](https://torrin.app/app/settings).',
+        type: 'password',
+        required: true,
+      },
+    ],
+  },
+  [QBITTORRENT_SERVICE]: {
+    id: QBITTORRENT_SERVICE,
+    name: 'qBittorrent',
+    shortName: 'qBit',
+    knownNames: ['qbit', 'qB', 'qBt', 'QBittorrent'],
+    signUpText:
+      'Stream torrents through your own qBittorrent client while they download. No debrid account needed, and torrents are never deleted, so seeding and private tracker ratios stay intact.',
+    credentials: [
+      {
+        id: 'note',
+        name: 'Requirements',
+        description:
+          '**Shared filesystem:** AIOStreams must run on the same machine as qBittorrent (or have its download directory mounted), because the qBittorrent WebUI API cannot serve file bytes.\n\n**Seeding:** AIOStreams never deletes torrents, so your seed ratio and hit-and-run obligations stay intact.\n\n**WebUI:** The WebUI must be enabled with a username and password. Repeated failed logins get the IP banned by qBittorrent, so double-check the credentials before saving.',
+        type: 'alert',
+        intent: 'warning',
+        required: false,
+      },
+      {
+        id: 'url',
+        name: 'qBittorrent WebUI URL',
+        description:
+          'The base URL of your qBittorrent WebUI. E.g., http://localhost:8080',
+        type: 'url',
+        required: true,
+      },
+      {
+        id: 'username',
+        name: 'Username',
+        description: 'Your qBittorrent WebUI username.',
+        type: 'string',
+        required: true,
+      },
+      {
+        id: 'password',
+        name: 'Password',
+        description: 'Your qBittorrent WebUI password.',
         type: 'password',
         required: true,
       },
@@ -1782,6 +1826,7 @@ export {
   DEBRIDLINK_SERVICE,
   TORBOX_SERVICE,
   TORRIN_SERVICE,
+  QBITTORRENT_SERVICE,
   EASYDEBRID_SERVICE,
   DEBRIDER_SERVICE,
   PUTIO_SERVICE,
