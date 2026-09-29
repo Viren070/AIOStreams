@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.8.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.7.0...desktop-v0.8.0) (2026-09-29)
+
+
+### Features
+
+* **desktop:** add an aiostreams:// link scheme ([8f243fc](https://github.com/Viren070/AIOStreams/commit/8f243fc6bc1a3afd71d7f0e97ff0c9ae29105751))
+* **jellyfin-web:** open aiostreams:// links ([72c70fe](https://github.com/Viren070/AIOStreams/commit/72c70fe37208b002e2de0b8d9df2efc2fedf877f))
+
+
+### Bug Fixes
+
+* **desktop:** don't scale disc subtitles, keep styled ones in the crop ([907867d](https://github.com/Viren070/AIOStreams/commit/907867d81bbd53b16b8bb9ebbf85905de2a124e7))
+* **ui:** pan carousel rows with a trackpad or mouse wheel ([#1394](https://github.com/Viren070/AIOStreams/issues/1394)) ([72c70fe](https://github.com/Viren070/AIOStreams/commit/72c70fe37208b002e2de0b8d9df2efc2fedf877f))
+
 ## [0.7.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.6.0...desktop-v0.7.0) (2026-09-28)
 
 
