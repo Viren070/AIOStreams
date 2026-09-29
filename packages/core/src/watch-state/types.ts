@@ -92,6 +92,22 @@ export function seriesIdOf(
   return containsToken(baseId, series) ? series : baseId;
 }
 
+export function seriesKeyOfMatch(
+  matchKey: string,
+  type: string
+): string | null {
+  if (!matchKey.startsWith('e|')) return null;
+  const videoId = matchKey.slice(2);
+  const parsed = IdParser.parse(videoId, type);
+  if (!parsed?.episode) return null;
+  const suffix = parsed.season
+    ? `:${parsed.season}:${parsed.episode}`
+    : `:${parsed.episode}`;
+  return videoId.endsWith(suffix)
+    ? seriesKeyOf(videoId.slice(0, -suffix.length))
+    : null;
+}
+
 function containsToken(haystack: string, token: string): boolean {
   const word = /[A-Za-z0-9]/;
   for (

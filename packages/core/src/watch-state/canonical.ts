@@ -16,6 +16,7 @@ import { createLogger } from '../logging/logger.js';
 import {
   identityFor,
   itemKeyFor,
+  seriesKeyOf,
   type ContentRef,
   type WatchIdentity,
 } from './types.js';
@@ -158,6 +159,27 @@ function mappedMatchKey(ref: ContentRef, lookup: Lookup): string | null {
   });
 }
 
+/** A show under its preferred id, so a drop made under one spelling covers the others. */
+async function showMatchKey(ref: ContentRef): Promise<string | null> {
+  const parsed = IdParser.parse(ref.baseId, ref.type);
+  if (!parsed) return null;
+  const entry = await AnimeDatabase.getInstance().getEntryById(
+    parsed.type,
+    parsed.value
+  );
+  let base = preferredBase(entry?.mappings);
+  const provider = MAPPED[parsed.type];
+  if (!base && provider && appConfig.metadata.idMappings.enabled) {
+    base =
+      IdMappingDataset.getInstance().imdbIdFor(
+        'series',
+        provider,
+        Number(parsed.value)
+      ) ?? null;
+  }
+  return base ? seriesKeyOf(base) : null;
+}
+
 function logMiss(ref: ContentRef, error: unknown) {
   logger.debug(
     {
@@ -170,6 +192,7 @@ function logMiss(ref: ContentRef, error: unknown) {
 
 export async function matchKeyFor(ref: ContentRef): Promise<string | null> {
   try {
+    if (ref.kind === 'series') return await showMatchKey(ref);
     const lookup = lookupOf(ref);
     if (!lookup) return null;
     const entry = await AnimeDatabase.getInstance().getEntryById(
@@ -196,6 +219,10 @@ export async function matchKeysFor(
     const key = itemKeyFor(ref);
     if (out.has(key)) continue;
     try {
+      if (ref.kind === 'series') {
+        out.set(key, await showMatchKey(ref));
+        continue;
+      }
       const lookup = lookupOf(ref);
       if (!lookup) {
         out.set(key, null);

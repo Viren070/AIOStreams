@@ -4,7 +4,7 @@ import { deleteInBatches, type PruneResult } from '../prune.js';
 import type { DbDriver } from '../driver/types.js';
 import type { SqlFragment } from '../sql.js';
 import { join, raw, sql } from '../sql.js';
-import type { WatchScope } from '../../watch-state/types.js';
+import { seriesKeyOfMatch, type WatchScope } from '../../watch-state/types.js';
 
 /** What a list row needs to render without a metadata call. */
 export interface WatchSnapshot {
@@ -497,7 +497,7 @@ export class WatchStateRepository {
    * break the tie, since an imported watched list gives every row of one show
    * the same timestamp. Picked per series before the limit, so a few long
    * histories cannot crowd out the other shows. A show dropped since it was
-   * last watched is left out.
+   * last watched is left out, under whichever of its ids the drop was made.
    */
   static async listRecentSeries(
     scope: WatchScope,
@@ -505,45 +505,93 @@ export class WatchStateRepository {
   ): Promise<WatchStateRow[]> {
     const where = sql`uuid = ${scope.uuid} AND persona = ${scope.persona}
       AND series_key IS NOT NULL AND episode IS NOT NULL AND ${WATCHED}`;
-    // Picks the series first, so only their rows are ranked, not the history.
-    const latest = await getDb().query<{
-      series_key: string;
-      at: number | string;
+    const page = limit * 2;
+    const out: WatchStateRow[] = [];
+    for (let offset = 0; out.length < limit; offset += page) {
+      // Picks the series first, so only their rows are ranked, not the history.
+      const latest = await getDb().query<{
+        series_key: string;
+        at: number | string;
+      }>(
+        sql`SELECT series_key, MAX(sort_at) AS at FROM watch_state
+             WHERE ${where}
+             GROUP BY series_key
+             ORDER BY at DESC, series_key
+             LIMIT ${page} OFFSET ${offset}`
+      );
+      if (!latest.length) break;
+      const lastAt = new Map(latest.map((l) => [l.series_key, Number(l.at)]));
+      const anchors = join(
+        latest.map(
+          (l) =>
+            sql`(series_key = ${l.series_key} AND sort_at = ${Number(l.at)})`
+        ),
+        ' OR '
+      );
+      const rows = (
+        await getDb().query<DbRow>(
+          sql`SELECT * FROM (
+                 SELECT *, ROW_NUMBER() OVER (
+                          PARTITION BY series_key
+                          ORDER BY season DESC, episode DESC
+                        ) AS series_rank
+                   FROM watch_state
+                  WHERE ${where} AND (${anchors})
+               ) ranked
+               WHERE series_rank = 1
+               ORDER BY sort_at DESC, season DESC, episode DESC`
+        )
+      ).map(toRow);
+      const showOf = (row: WatchStateRow) =>
+        row.matchKey ? seriesKeyOfMatch(row.matchKey, row.mediaType) : null;
+      const droppedAt = await this.dropTimes(scope, [
+        ...new Set(
+          rows.flatMap((row) =>
+            [row.seriesKey, showOf(row)].filter((k): k is string => !!k)
+          )
+        ),
+      ]);
+      for (const row of rows) {
+        const at = lastAt.get(row.seriesKey!) ?? 0;
+        const dropped = [row.seriesKey, showOf(row)].some(
+          (key) => key && (droppedAt.get(key) ?? 0) > at
+        );
+        if (dropped) continue;
+        out.push(row);
+        if (out.length >= limit) break;
+      }
+      if (latest.length < page) break;
+    }
+    return out;
+  }
+
+  private static async dropTimes(
+    scope: WatchScope,
+    keys: string[]
+  ): Promise<Map<string, number>> {
+    const out = new Map<string, number>();
+    if (!keys.length) return out;
+    const list = join(keys.map((key) => sql`${key}`));
+    const owner = sql`uuid = ${scope.uuid} AND persona = ${scope.persona}`;
+    // Two branches, not an OR: SQLite only uses both indexes this way.
+    const drops = await getDb().query<{
+      item_key: string;
+      match_key: string | null;
+      dropped_at: number | string | null;
     }>(
-      sql`SELECT series_key, at FROM (
-             SELECT series_key, MAX(sort_at) AS at FROM watch_state
-              WHERE ${where}
-              GROUP BY series_key
-           ) latest
-           WHERE NOT EXISTS (
-             SELECT 1 FROM watch_state d
-              WHERE d.uuid = ${scope.uuid} AND d.persona = ${scope.persona}
-                AND d.item_key = latest.series_key
-                AND d.dropped = 1 AND d.dropped_at > latest.at
-           )
-           ORDER BY at DESC
-           LIMIT ${limit}`
+      sql`SELECT item_key, match_key, dropped_at FROM watch_state
+           WHERE ${owner} AND item_key IN (${list}) AND dropped = 1
+          UNION ALL
+          SELECT item_key, match_key, dropped_at FROM watch_state
+           WHERE ${owner} AND match_key IN (${list}) AND dropped = 1`
     );
-    if (!latest.length) return [];
-    const anchors = join(
-      latest.map(
-        (l) => sql`(series_key = ${l.series_key} AND sort_at = ${Number(l.at)})`
-      ),
-      ' OR '
-    );
-    const rows = await getDb().query<DbRow>(
-      sql`SELECT * FROM (
-             SELECT *, ROW_NUMBER() OVER (
-                      PARTITION BY series_key
-                      ORDER BY season DESC, episode DESC
-                    ) AS series_rank
-               FROM watch_state
-              WHERE ${where} AND (${anchors})
-           ) ranked
-           WHERE series_rank = 1
-           ORDER BY sort_at DESC, season DESC, episode DESC`
-    );
-    return rows.map(toRow);
+    for (const drop of drops) {
+      const at = Number(drop.dropped_at ?? 0);
+      for (const key of [drop.item_key, drop.match_key]) {
+        if (key && at > (out.get(key) ?? 0)) out.set(key, at);
+      }
+    }
+    return out;
   }
 
   static async listFavorites(
@@ -820,17 +868,21 @@ export class WatchStateRepository {
     return res.rowCount ?? 0;
   }
 
-  /** A show played here is picked up again. */
+  /** A show played here is picked up again, under every id it was dropped. */
   static async undropSeries(
     scope: WatchScope,
-    seriesKey: string
+    seriesKeys: string[]
   ): Promise<void> {
-    await getDb().exec(
-      sql`UPDATE watch_state
-             SET dropped = 0, dropped_sink_id = NULL, dropped_at = ${Date.now()}
-           WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
-             AND item_key = ${seriesKey} AND dropped = 1`
-    );
+    const keys = join(seriesKeys.map((key) => sql`${key}`));
+    const now = Date.now();
+    for (const column of [raw('item_key'), raw('match_key')]) {
+      await getDb().exec(
+        sql`UPDATE watch_state
+               SET dropped = 0, dropped_sink_id = NULL, dropped_at = ${now}
+             WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+               AND ${column} IN (${keys}) AND dropped = 1`
+      );
+    }
   }
 
   /** Favourites an addon's watchlist set and no longer lists. */

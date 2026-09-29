@@ -8,12 +8,13 @@ import {
   type WatchStatePatch,
   type WatchStateRow,
 } from '../db/repositories/watch-state.js';
-import type {
-  WatchChangeListener,
-  WatchEvent,
-  WatchProgressEvent,
-  WatchScope,
-  WatchStateProvider,
+import {
+  seriesKeyOfMatch,
+  type WatchChangeListener,
+  type WatchEvent,
+  type WatchProgressEvent,
+  type WatchScope,
+  type WatchStateProvider,
 } from './types.js';
 
 const logger = createLogger('watch-state');
@@ -148,8 +149,14 @@ export class LocalWatchStateProvider implements WatchStateProvider {
   }
 
   private async undropOnPlay(scope: WatchScope, identity: WatchIdentity) {
-    if (identity.kind === 'episode' && identity.seriesKey)
-      await WatchStateRepository.undropSeries(scope, identity.seriesKey);
+    if (identity.kind !== 'episode' || !identity.seriesKey) return;
+    const show = identity.matchKey
+      ? seriesKeyOfMatch(identity.matchKey, identity.mediaType)
+      : null;
+    await WatchStateRepository.undropSeries(
+      scope,
+      show ? [identity.seriesKey, show] : [identity.seriesKey]
+    );
   }
 
   async clear(scope: WatchScope, itemKeys?: string[]): Promise<number> {
