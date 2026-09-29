@@ -219,8 +219,9 @@ export class QBittorrentClient {
       sessions.delete(this.key());
       session = undefined;
     }
+    if (!session) session = await this.login();
     let response = await attempt(session);
-    if ((response.status === 401 || response.status === 403) && session) {
+    if (response.status === 401 || response.status === 403) {
       // Stale SID: re-login once and retry.
       sessions.delete(this.key());
       response = await attempt(await this.login());
