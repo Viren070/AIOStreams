@@ -26,9 +26,14 @@ export function evaluateProxyStream(
   if (stream.proxied) {
     return 'skip';
   }
-  // Native usenet streams are served directly from this instance's byte
-  // endpoint (under BASE_URL) and must never be routed through any proxy.
-  if (stream.service && stream.service.id === constants.AIOSTREAMS_SERVICE) {
+  // Native usenet and qBittorrent streams are served from this instance's
+  // byte endpoint and must never be proxied.
+  if (
+    stream.service &&
+    [constants.AIOSTREAMS_SERVICE, constants.QBITTORRENT_SERVICE].includes(
+      stream.service.id
+    )
+  ) {
     return 'skip';
   }
   let streamUrl: URL;
