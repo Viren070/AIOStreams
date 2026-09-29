@@ -4,6 +4,7 @@
     "groups",
     "usenet",
     "sonarr-radarr",
+    "qbittorrent",
     "release-blocklist",
     "scored-sorting",
     "app",

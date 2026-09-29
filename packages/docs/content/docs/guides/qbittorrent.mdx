@@ -1,0 +1,100 @@
+---
+title: qBittorrent
+description: Stream torrents through your own qBittorrent client while they download, instead of through a debrid service.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Steps, Step } from 'fumadocs-ui/components/steps';
+
+The qBittorrent service plays torrents through your own qBittorrent client.
+When you press play, AIOStreams adds the torrent to qBittorrent and serves the
+partially downloaded file to your player with HTTP range support, so playback
+starts while the download continues. The torrent is never re-hosted anywhere
+and is never deleted, which makes this the right choice for private trackers:
+seeding, ratios and hit-and-run obligations stay between you and your client.
+
+## Before you start
+
+You need two things already working.
+
+1. **qBittorrent with the WebUI enabled**, reachable from AIOStreams, with a
+   username and password set (Tools → Options → Web UI).
+2. **A shared filesystem.** The qBittorrent WebUI API cannot serve file bytes,
+   so AIOStreams reads the downloaded file from disk. AIOStreams and
+   qBittorrent must run on the same machine, or qBittorrent's download
+   directory must be mounted into AIOStreams (the same requirement Docker
+   users already know from mapping download volumes).
+
+<Callout type="warn">
+  If the paths do not line up, playback fails with a clear error the first
+  time you press play, and the torrent is still added to qBittorrent. Nothing
+  is ever removed from the client, so a misconfiguration cannot damage your
+  seed ratio.
+</Callout>
+
+## Setting it up
+
+<Steps>
+  <Step>
+
+### Add the service
+
+Open your configuration, go to **Services**, enable **qBittorrent** and enter
+your WebUI URL, username and password. A local URL (for example
+`http://localhost:8080`) is usually the right choice when both run on the
+same machine.
+
+  </Step>
+  <Step>
+
+### Point a torrent addon at it
+
+Any built-in torrent addon (Prowlarr, Torznab, and the presets built on them)
+can use the service. For private trackers, the usual shape is one Prowlarr
+instance whose **Services** option selects only qBittorrent, so tracker
+results never route through a debrid account. Everything else keeps using
+your debrid services as before.
+
+  </Step>
+  <Step>
+
+### Play something
+
+Pick a result and press play. The first seconds of playback wait for the
+download to gather a playable prefix; from then on the stream follows the
+download frontier.
+
+  </Step>
+</Steps>
+
+## How playback behaves while downloading
+
+- Torrents are added with **sequential download** and **first and last piece
+  priority**, so the start of the file and the container index (where the
+  duration and seek information live) arrive early. Seeking into a region
+  that has not downloaded yet waits briefly for the data and then answers
+  `416 Not Satisfiable` until it arrives; seeking back into downloaded data
+  always works.
+- The full file size is advertised from the first request, so your player
+  shows the correct duration and seek bar even while the download is running.
+- Torrents AIOStreams adds are tagged `aiostreams` (a tag, not a category, so
+  category-based save paths are never touched). Existing torrents are adopted
+  as they are, and nothing is re-tagged, re-prioritised or removed.
+
+<Callout type="info">
+  **Why the "cached" badge means something different here.** For debrid
+  services, a cached torrent plays instantly from the cloud. For qBittorrent,
+  a torrent already in your client shows as cached (its data is on disk, or
+  arriving); a new one downloads on your connection first. On a seedbox this
+  is usually seconds.
+</Callout>
+
+## Security notes
+
+- The service credential travels encrypted inside every stream URL AIOStreams
+  generates, the same way all service credentials do. Stream URLs are as
+  sensitive for qBittorrent as they are for a debrid API key: anyone who has
+  one can use your client's WebUI.
+- qBittorrent bans IPs after repeated failed logins. If you mistype the
+  password, fix it in the service settings before pressing play again.
+- qBittorrent 4.6+ is required; 5.x is recommended.
