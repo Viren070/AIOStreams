@@ -121,7 +121,7 @@ export const watchStateSchema = {
     default: 365,
     label: 'Watch state retention (days)',
     description:
-      'Watch progress, played flags and favourites untouched for longer than this are deleted by the daily prune task. State read from an addon is refreshed on every successful read, so it only ages out once that addon stops reporting it.',
+      'Watch history, favourites and dropped shows are kept for as long as the configuration is in use, and deleted by the daily prune task once it has gone unused for this many days. Unfinished progress not updated in that time is deleted on its own.',
     env: 'WATCH_STATE_RETENTION_DAYS',
     requiresRestart: false,
     secret: false,

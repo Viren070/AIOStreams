@@ -17,7 +17,7 @@ export function registerJellyfinTasks(): void {
     id: 'jellyfin-prune',
     label: 'Prune Jellyfin state',
     description:
-      'Deletes hashed Jellyfin item ids not seen for 180 days and watch state untouched for longer than the configured retention. Browsing re-creates ids; watch state is gone for good.',
+      'Deletes hashed Jellyfin item ids not seen for 180 days, the watch state of configurations unused for longer than the configured retention, and unfinished progress older than it. Browsing re-creates ids; watch state is gone for good.',
     category: 'jellyfin',
     kind: 'scheduled',
     intervalMs: DAY_MS,
@@ -26,8 +26,9 @@ export function registerJellyfinTasks(): void {
     multiReplica: 'single',
     run: async () => {
       const ids = await JellyfinRepository.pruneIds(ID_MAP_MAX_AGE_MS);
-      const retentionMs = appConfig.watchState.retentionDays * DAY_MS;
-      const rows = await WatchStateRepository.prune(retentionMs);
+      const rows = await WatchStateRepository.prune(
+        appConfig.watchState.retentionDays
+      );
       const deliveries = await PlaybackHandoffRepository.pruneFinished(
         Date.now() - appConfig.watchState.deliveryRetentionDays * DAY_MS
       );

@@ -874,21 +874,35 @@ export class WatchStateRepository {
     return res.rowCount ?? 0;
   }
 
-  static async prune(maxAgeMs: number): Promise<PruneResult> {
-    const cutoff = Date.now() - maxAgeMs;
+  /** History, favourites and drops last while the configuration is in use; bare progress ages out alone. */
+  static async prune(retentionDays: number): Promise<PruneResult> {
+    const db = getDb();
+    const cutoff = Date.now() - retentionDays * 24 * 3600 * 1000;
     const batch = appConfig.watchState.pruneBatchSize;
     return deleteInBatches(async () => {
       // Row values, so the delete is driven by the primary key.
-      const res = await getDb().exec(
+      const abandoned = await db.exec(
+        sql`DELETE FROM watch_state
+             WHERE (uuid, persona, item_key) IN (
+               SELECT w.uuid, w.persona, w.item_key
+                 FROM users u JOIN watch_state w ON w.uuid = u.uuid
+                WHERE u.accessed_at < ${db.intervalAgo(retentionDays, 'days')}
+                LIMIT ${batch}
+             )`
+      );
+      if (abandoned.rowCount) return abandoned.rowCount;
+      const progress = await db.exec(
         sql`DELETE FROM watch_state
              WHERE (uuid, persona, item_key) IN (
                SELECT uuid, persona, item_key FROM watch_state
                 WHERE updated_at < ${cutoff}
+                  AND played = 0 AND play_count = 0
+                  AND favorite = 0 AND dropped = 0
                 ORDER BY updated_at ASC
                 LIMIT ${batch}
              )`
       );
-      return res.rowCount ?? 0;
+      return progress.rowCount ?? 0;
     });
   }
 }
