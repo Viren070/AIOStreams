@@ -606,7 +606,12 @@ describe('QBittorrentService resolve', () => {
       onFilePrio: (body) => prioBodies.push(body),
       intercepts: dataIntercepts(
         hash,
-        { ...torrentFixture(hash, 'downloading'), content_path: contentPath, tags: QBITTORRENT_TAG },
+        {
+          ...torrentFixture(hash, 'downloading'),
+          content_path: contentPath,
+          save_path: contentPath,
+          tags: QBITTORRENT_TAG,
+        },
         [
           { ...fileFixture(0, 's01e01.mkv', 1000), piece_range: [0, 3] },
           { ...fileFixture(1, 's01e02.mkv', 1000), piece_range: [4, 7] },
