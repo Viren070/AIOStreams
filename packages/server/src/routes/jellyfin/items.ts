@@ -44,6 +44,8 @@ import {
   stripInternal,
   subtitleFormatFor,
   msToTicks,
+  ratingUserData,
+  seasonAnimeIds,
   userDataFromRow,
   watchRowsFor,
   writeMemoPointer,
@@ -81,6 +83,8 @@ export function contentRefOf(d: ContentDescriptor): ContentRef {
       };
     case 'movie':
       return { kind: 'movie', type: d.t, baseId: d.i, videoId: d.i };
+    case 'season':
+      return { kind: 'season', type: d.t, baseId: d.i, season: d.s };
     default:
       return { kind: 'series', type: d.t, baseId: d.i };
   }
@@ -153,8 +157,7 @@ export async function attachUserData(
       item.UserData = withPlayedCounts(
         {
           ...(item.UserData as UserItemDataDto),
-          ...(row ? { IsFavorite: row.favorite } : {}),
-          ...(row?.dropped ? { Likes: false } : {}),
+          ...(row ? { IsFavorite: row.favorite, ...ratingUserData(row) } : {}),
         },
         played.length,
         aired.length
@@ -166,7 +169,7 @@ export async function attachUserData(
       item.UserData = {
         ...(item.UserData as object),
         IsFavorite: row.favorite,
-        ...(row.dropped ? { Likes: false } : {}),
+        ...ratingUserData(row),
       };
     } else {
       const runtimeMs =
@@ -273,13 +276,34 @@ export async function seasonsForSeries(
   if (!meta) return null;
   const seriesItem = buildContentItem(ctx.build, { ...meta, type: d.t });
   const groups = groupSeasons(meta, true);
-  const states = await watchRowsFor(
-    ctx.watch,
-    groups.flatMap((g) => g.videos.map((v) => episodeRef(meta, g, v)))
-  );
+  const seasonRef = (season: number): ContentRef => ({
+    kind: 'season',
+    type: meta.type,
+    baseId: meta.id,
+    season,
+  });
+  const [states, animeIds] = await Promise.all([
+    watchRowsFor(ctx.watch, [
+      ...groups.flatMap((g) => g.videos.map((v) => episodeRef(meta, g, v))),
+      ...groups.map((g) => seasonRef(g.season)),
+    ]),
+    seasonAnimeIds(
+      seriesItem.ProviderIds as Record<string, string> | undefined,
+      groups.map((g) => g.season)
+    ),
+  ]);
   const seasons = groups.map((g) =>
-    buildSeason(ctx.build, meta, seriesItem, g, states, (v) =>
-      episodeKey(meta, g, v)
+    buildSeason(
+      ctx.build,
+      meta,
+      seriesItem,
+      g,
+      states,
+      (v) => episodeKey(meta, g, v),
+      {
+        row: states.get(itemKeyFor(seasonRef(g.season))),
+        providerIds: animeIds.get(g.season),
+      }
     )
   );
   return { meta, seriesItem, seasons };

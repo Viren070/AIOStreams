@@ -8,10 +8,10 @@ that was finished from one abandoned a minute in. Jellyfin clients report their 
 10 seconds, plus pause, stop and mark-played, and the `watch_state` resource exchanges that with any
 addon that declares it:
 
-| Half   | Direction          | Carries                                                                                     |
-| ------ | ------------------ | ------------------------------------------------------------------------------------------- |
-| `push` | AIOStreams → addon | Playback events, watchlist changes and drops, so a tracker records what really happened     |
-| `pull` | addon → AIOStreams | What the tracker already knows: Continue Watching, watched history, drops and the watchlist |
+| Half   | Direction          | Carries                                                                                                  |
+| ------ | ------------------ | -------------------------------------------------------------------------------------------------------- |
+| `push` | AIOStreams → addon | Playback events, watchlist changes, drops and ratings, so a tracker records what really happened         |
+| `pull` | addon → AIOStreams | What the tracker already knows: Continue Watching, watched history, drops, the watchlist and the ratings |
 
 An addon may implement either half on its own. Only playback through a Jellyfin client produces
 push events; a stream played in Stremio reports nothing.
@@ -32,20 +32,20 @@ Add `watch_state` to `resources`, and a root `watchState` object describing the 
   ],
   "watchState": {
     "version": 2,
-    "push": { "events": ["stop", "played", "unplayed", "watchlisted", "unwatchlisted", "dropped", "undropped"], "bulk": true },
-    "pull": { "items": true, "watched": true, "watchlist": true, "ttlSeconds": 300 }
+    "push": { "events": ["stop", "played", "unplayed", "watchlisted", "unwatchlisted", "dropped", "undropped", "rated", "unrated"], "bulk": true },
+    "pull": { "items": true, "watched": true, "watchlist": true, "ratings": true, "ttlSeconds": 300 }
   }
 }
 ```
 
-| Field                    | Meaning                                                                                                                                                                        |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `types`, `idPrefixes`    | On the resource entry. Events are filtered by them before anything is sent, so an anime tracker declaring `kitsu:` never hears about `tt` items.                               |
-| `watchState.version`     | The contract version you implement, currently `2`.                                                                                                                             |
-| `watchState.push.events` | The events you want. Omit it to receive every playback event; [watchlist events](#watchlist-changes) and [drops](#drops) are only sent when listed. Unknown names are ignored. |
-| `watchState.push.bulk`   | `true` to receive a mark on a whole show or season as one request. See [Bulk marks](#bulk-marks).                                                                              |
-| `watchState.pull`        | Omit it if you serve nothing. `items`, `watched` and `watchlist` say which parts of the answer you fill; `ttlSeconds` is how long it may be reused.                            |
-| `watchState.viewers`     | `true` if one configuration of your addon can serve several people. See [Viewers](#viewers).                                                                                   |
+| Field                    | Meaning                                                                                                                                                                                             |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `types`, `idPrefixes`    | On the resource entry. Events are filtered by them before anything is sent, so an anime tracker declaring `kitsu:` never hears about `tt` items.                                                    |
+| `watchState.version`     | The contract version you implement, currently `2`.                                                                                                                                                  |
+| `watchState.push.events` | The events you want. Omit it to receive every playback event; [watchlist events](#watchlist-changes), [drops](#drops) and [ratings](#ratings) are only sent when listed. Unknown names are ignored. |
+| `watchState.push.bulk`   | `true` to receive a mark on a whole show or season as one request. See [Bulk marks](#bulk-marks).                                                                                                   |
+| `watchState.pull`        | Omit it if you serve nothing. `items`, `watched`, `watchlist` and `ratings` say which parts of the answer you fill; `ttlSeconds` is how long it may be reused.                                      |
+| `watchState.viewers`     | `true` if one configuration of your addon can serve several people. See [Viewers](#viewers).                                                                                                        |
 
 Your addon URL already holds the user's configuration, so it is the credential. No header
 identifies the user.
@@ -228,10 +228,46 @@ the show. A newer change to the same title replaces one still waiting to be deli
 
 A Jellyfin user disliking a show sends `dropped`, and liking it or clearing the rating sends
 `undropped`, to addons that list those events. The body is a watchlist change's, with
-`scope: "series"`. A rating on anything but a show stays local.
+`scope: "series"`. A like or dislike on anything but a show stays local.
 
 Playing a dropped show here picks it up again, and sends `undropped` for the show after the
 episode's `start`. An addon that lists both events can take either one as the undrop.
+
+### Ratings
+
+A Jellyfin user rating a movie, show, season or episode sends `rated`, and clearing the rating
+sends `unrated`, to addons that list those events. Each is its own rating: a show's does not stand
+in for its seasons', nor the reverse. `rating` runs from 0 to 10 and keeps any decimals the
+user gave, so round it to the scale your tracker keeps. Likes and dislikes are not ratings and are
+never sent.
+
+```http
+POST {addonBase}/watch_state/push/series/tt0903747:3:7.json
+```
+
+```json
+{
+  "id": "r|e|tt0903747:3:7|rated|1757441718000",
+  "event": "rated",
+  "scope": "episode",
+  "at": 1757441718,
+  "metaId": "tt0903747",
+  "videoId": "tt0903747:3:7",
+  "season": 3,
+  "episode": 7,
+  "rating": 8.5,
+  "ids": { "imdb": "tt0903747", "tmdb": "1396", "tvdb": "81189" }
+}
+```
+
+`scope` is `movie`, `series`, `season` or `episode`. Ignore the ones your tracker cannot rate. An
+episode is named as its playback events name it, with the video id as the path id; anything else has
+its meta id there and no `videoId`, and a season carries its `season`. `unrated` carries no
+`rating`. A newer rating of the same title replaces one still waiting to be delivered.
+
+A show kept under an id that spans several anime entries, such as an IMDb id, is sent without anime
+ids at the show level, since they would name only one of its entries. Its seasons and episodes carry
+the ids of their own entry.
 
 ## Pull
 
@@ -268,6 +304,11 @@ GET {addonBase}/watch_state/pull.json?since=a1b2c3d4e5f6
   "watchlist": [
     { "type": "movie", "metaId": "tt0111161", "at": 1788900000 },
     { "type": "series", "metaId": "kitsu:42323", "at": 1788800000 }
+  ],
+  "ratings": [
+    { "type": "movie", "metaId": "tt0111161", "rating": 9, "at": 1788700000 },
+    { "type": "series", "metaId": "tt0903747", "season": 2, "rating": 9, "at": 1788650000 },
+    { "type": "series", "metaId": "tt0903747", "videoId": "tt0903747:3:7", "rating": 8.5, "at": 1788600000 }
   ]
 }
 ```
@@ -276,15 +317,16 @@ GET {addonBase}/watch_state/pull.json?since=a1b2c3d4e5f6
 they cost very different amounts: a paused-playback list is one small call, a watched library is
 usually a full fan-out.
 
-| Field              | Meaning                                                                                                                |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| `items[]`          | One row per video with a position, a played flag, or both. Bounded, newest first.                                      |
-| `watched.movies`   | Base ids of finished films.                                                                                            |
-| `watched.episodes` | Video ids of finished episodes.                                                                                        |
-| `watched.counts`   | Watched and total per show, keyed by every id the show answers to. Advisory: send `0` for a total you do not know.     |
-| `watched.nextUp`   | Your next episode per show. AIOStreams reads the show's `type` and `at` from it and works out the next episode itself. |
-| `watched.dropped`  | Shows the user dropped, keyed by every id the show answers to. See [Dropped shows](#dropped-shows).                    |
-| `watchlist[]`      | The user's watchlist: `type` (your meta type), `metaId` and when it was added as `at`. See [Watchlist](#watchlist).    |
+| Field              | Meaning                                                                                                                                             |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `items[]`          | One row per video with a position, a played flag, or both. Bounded, newest first.                                                                   |
+| `watched.movies`   | Base ids of finished films.                                                                                                                         |
+| `watched.episodes` | Video ids of finished episodes.                                                                                                                     |
+| `watched.counts`   | Watched and total per show, keyed by every id the show answers to. Advisory: send `0` for a total you do not know.                                  |
+| `watched.nextUp`   | Your next episode per show. AIOStreams reads the show's `type` and `at` from it and works out the next episode itself.                              |
+| `watched.dropped`  | Shows the user dropped, keyed by every id the show answers to. See [Dropped shows](#dropped-shows).                                                 |
+| `watchlist[]`      | The user's watchlist: `type` (your meta type), `metaId` and when it was added as `at`. See [Watchlist](#watchlist).                                 |
+| `ratings[]`        | The user's ratings from 0 to 10, with `type`, `metaId`, a season's `season` or an episode's `videoId`, and `at`. See [Rated titles](#rated-titles). |
 
 **Return ids in the space your own metas publish.** If your series meta is keyed on `kitsu:49002`
 with videos `kitsu:49002:11`, return those, whatever space the tracker answered in. That is why the
@@ -312,6 +354,17 @@ addon's watchlist added stays that addon's.
 
 `watchlist` is not gated by `version`. If your `version` changes whenever the watchlist does, you
 may omit `watchlist` when `since` matches, exactly as for `watched`.
+
+### Rated titles
+
+`ratings` becomes the Jellyfin user's ratings. Like the watchlist it is the **complete** list, so a
+title you stop listing loses its rating, and an omitted `ratings` changes nothing. An entry whose
+`videoId` differs from its `metaId` rates that episode, and one with a `season` and no such
+`videoId` rates that season. Scale your tracker's ratings to 0 to 10;
+an entry outside that range is skipped.
+
+A rating set in a Jellyfin client is not overwritten by a pull for the echo window, and a title
+another addon rated stays that addon's. Like `watchlist`, `ratings` is not gated by `version`.
 
 ### Dropped shows
 

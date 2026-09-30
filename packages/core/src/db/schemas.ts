@@ -1248,6 +1248,7 @@ export const WatchStateCapabilitySchema = z.looseObject({
       items: z.boolean().optional(),
       watched: z.boolean().optional(),
       watchlist: z.boolean().optional(),
+      ratings: z.boolean().optional(),
       ttlSeconds: z.coerce.number().min(0).optional(),
     })
     .optional(),

@@ -18,7 +18,7 @@ export interface WatchSnapshot {
   runtimeMs?: number;
 }
 
-export type WatchKind = 'movie' | 'series' | 'episode';
+export type WatchKind = 'movie' | 'series' | 'season' | 'episode';
 
 /** Who wrote the row. An import may replace an import, never a recent local. */
 export type WatchOrigin = 'local' | 'import';
@@ -53,6 +53,12 @@ export interface WatchStateRow extends WatchIdentity {
   /** The addon whose dropped list set `dropped`; null when set here. */
   droppedSinkId: string | null;
   droppedAt: number | null;
+  /** 0 to 10, as Jellyfin keeps it. */
+  rating: number | null;
+  /** The addon whose ratings set `rating`; null when set here. */
+  ratingSinkId: string | null;
+  ratingAt: number | null;
+  likes: boolean | null;
   lastPlayedAt: number | null;
   updatedAt: number;
   origin: WatchOrigin;
@@ -69,7 +75,9 @@ export interface WatchStatePatch {
   incrementPlayCount?: boolean | 'if-unplayed';
   favorite?: boolean;
   dropped?: boolean;
-  /** `null` clears it; `undefined` leaves it alone. */
+  /* For these three, `null` clears it and `undefined` leaves it alone. */
+  rating?: number | null;
+  likes?: boolean | null;
   lastPlayedAt?: number | null;
   snapshot?: WatchSnapshot;
   origin?: WatchOrigin;
@@ -98,6 +106,10 @@ interface DbRow {
   dropped: number | string | null;
   dropped_sink_id: string | null;
   dropped_at: number | string | null;
+  rating: number | string | null;
+  rating_sink_id: string | null;
+  rating_at: number | string | null;
+  likes: number | string | null;
   last_played_at: number | string | null;
   updated_at: number | string;
   origin: string;
@@ -146,6 +158,10 @@ function toRow(r: DbRow): WatchStateRow {
     dropped: Boolean(Number(r.dropped ?? 0)),
     droppedSinkId: r.dropped_sink_id ?? null,
     droppedAt: optionalNumber(r.dropped_at ?? null),
+    rating: optionalNumber(r.rating ?? null),
+    ratingSinkId: r.rating_sink_id ?? null,
+    ratingAt: optionalNumber(r.rating_at ?? null),
+    likes: r.likes == null ? null : Boolean(Number(r.likes)),
     lastPlayedAt: optionalNumber(r.last_played_at),
     updatedAt: Number(r.updated_at),
     origin: (r.origin as WatchOrigin) ?? 'local',
@@ -179,6 +195,11 @@ export interface WatchHistoryCounts {
 
 /** A row that is part of the history: finished, or part-way through. */
 const WATCHED = raw('(played = 1 OR position_ms > 0)');
+
+/** What outlives the history being cleared or aged out. */
+const KEPT = raw(
+  '(favorite = 1 OR dropped = 1 OR rating IS NOT NULL OR likes IS NOT NULL)'
+);
 
 function filterKinds(rows: WatchStateRow[], kinds?: WatchKind[]) {
   if (!kinds?.length) return rows;
@@ -368,6 +389,10 @@ export class WatchStateRepository {
     const setFav = fav == null ? 0 : 1;
     const drop = patch.dropped == null ? null : patch.dropped ? 1 : 0;
     const setDrop = drop == null ? 0 : 1;
+    const setRating = patch.rating === undefined ? 0 : 1;
+    const rating = patch.rating ?? null;
+    const setLikes = patch.likes === undefined ? 0 : 1;
+    const likes = patch.likes == null ? null : patch.likes ? 1 : 0;
     const incMode =
       patch.incrementPlayCount === 'if-unplayed'
         ? 2
@@ -390,16 +415,17 @@ export class WatchStateRepository {
       sql`INSERT INTO watch_state
             (uuid, persona, item_key, kind, media_type, base_id, season, episode,
              video_id, series_key, position_ms, duration_ms, played, play_count,
-             favorite, favorite_at, dropped, dropped_at, last_played_at,
-             updated_at, origin, sink_id, external_at, snapshot, sort_at,
-             match_key)
+             favorite, favorite_at, dropped, dropped_at, rating, rating_at,
+             likes, last_played_at, updated_at, origin, sink_id, external_at,
+             snapshot, sort_at, match_key)
           VALUES (${scope.uuid}, ${scope.persona}, ${identity.itemKey},
                   ${identity.kind}, ${identity.mediaType}, ${identity.baseId},
                   ${season}, ${episode}, ${videoId}, ${seriesKey},
                   COALESCE(${pos}, 0), COALESCE(${dur}, 0), COALESCE(${played}, 0),
                   CASE WHEN ${incMode} > 0 THEN 1 ELSE 0 END,
                   COALESCE(${fav}, 0), ${setFav ? now : null},
-                  COALESCE(${drop}, 0), ${setDrop ? now : null}, ${lastPlayed}, ${now},
+                  COALESCE(${drop}, 0), ${setDrop ? now : null},
+                  ${rating}, ${setRating ? now : null}, ${likes}, ${lastPlayed}, ${now},
                   ${origin}, ${sinkId}, ${externalAt}, ${snapshot},
                   ${sortAt}, ${identity.matchKey ?? null})
           ON CONFLICT(uuid, persona, item_key) DO UPDATE SET
@@ -426,6 +452,10 @@ export class WatchStateRepository {
             dropped = COALESCE(${drop}, watch_state.dropped),
             dropped_sink_id = CASE WHEN ${setDrop} = 1 THEN NULL ELSE watch_state.dropped_sink_id END,
             dropped_at = CASE WHEN ${setDrop} = 1 THEN excluded.dropped_at ELSE watch_state.dropped_at END,
+            rating = CASE WHEN ${setRating} = 1 THEN excluded.rating ELSE watch_state.rating END,
+            rating_sink_id = CASE WHEN ${setRating} = 1 THEN NULL ELSE watch_state.rating_sink_id END,
+            rating_at = CASE WHEN ${setRating} = 1 THEN excluded.rating_at ELSE watch_state.rating_at END,
+            likes = CASE WHEN ${setLikes} = 1 THEN excluded.likes ELSE watch_state.likes END,
             last_played_at = CASE WHEN ${setLastPlayed} = 1 THEN ${lastPlayed} ELSE watch_state.last_played_at END,
             -- Maintained on write so the shelves can order on a plain indexed
             -- column instead of a COALESCE the index cannot serve.
@@ -458,6 +488,10 @@ export class WatchStateRepository {
       dropped: !!drop,
       droppedSinkId: null,
       droppedAt: setDrop ? now : null,
+      rating,
+      ratingSinkId: null,
+      ratingAt: setRating ? now : null,
+      likes: likes == null ? null : !!likes,
       lastPlayedAt: lastPlayed,
       updatedAt: now,
       origin,
@@ -737,13 +771,13 @@ export class WatchStateRepository {
         if (!rows.length) continue;
         cleared.push(...rows.map(toRow));
         await db.exec(
-          sql`DELETE FROM watch_state WHERE ${where} AND favorite = 0`
+          sql`DELETE FROM watch_state WHERE ${where} AND NOT ${KEPT}`
         );
         await db.exec(
           sql`UPDATE watch_state
                  SET played = 0, position_ms = 0, play_count = 0,
                      last_played_at = NULL, updated_at = ${Date.now()}
-               WHERE ${where} AND favorite = 1`
+               WHERE ${where} AND ${KEPT}`
         );
       }
     });
@@ -885,6 +919,76 @@ export class WatchStateRepository {
     }
   }
 
+  /** A local rating is replaced; a missing row is created as the addon's import. */
+  static async upsertRatings(
+    scope: WatchScope,
+    sinkId: string,
+    rows: { identity: WatchIdentity; rating: number; at: number }[],
+    now: number,
+    db: DbDriver = getDb()
+  ): Promise<void> {
+    for (let i = 0; i < rows.length; i += CHUNK) {
+      const values = rows.slice(i, i + CHUNK).map(
+        ({ identity, rating, at }) =>
+          sql`(${scope.uuid}, ${scope.persona}, ${identity.itemKey},
+            ${identity.kind}, ${identity.mediaType}, ${identity.baseId},
+            ${identity.season ?? null}, ${identity.episode ?? null},
+            ${identity.videoId ?? null}, ${identity.seriesKey ?? null},
+            ${rating}, ${sinkId}, ${at}, ${now}, ${now}, ${now}, 'import',
+            ${sinkId}, 0, ${identity.matchKey ?? null})`
+      );
+      await db.exec(
+        sql`INSERT INTO watch_state
+              (uuid, persona, item_key, kind, media_type, base_id, season,
+               episode, video_id, series_key, rating, rating_sink_id, rating_at,
+               rating_seen_at, updated_at, seen_at, origin, sink_id, sort_at,
+               match_key)
+            VALUES ${join(values)}
+            ON CONFLICT(uuid, persona, item_key) DO UPDATE SET
+              rating = excluded.rating,
+              rating_sink_id = excluded.rating_sink_id,
+              rating_at = excluded.rating_at,
+              rating_seen_at = excluded.rating_seen_at,
+              match_key = COALESCE(excluded.match_key, watch_state.match_key)`
+      );
+    }
+  }
+
+  static async touchRatings(
+    scope: WatchScope,
+    sinkId: string,
+    itemKeys: string[],
+    at: number,
+    db: DbDriver = getDb()
+  ): Promise<void> {
+    const wanted = [...new Set(itemKeys)];
+    for (let i = 0; i < wanted.length; i += CHUNK) {
+      await db.exec(
+        sql`UPDATE watch_state SET rating_seen_at = ${at}
+             WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+               AND rating_sink_id = ${sinkId}
+               AND item_key IN (${join(wanted.slice(i, i + CHUNK).map((k) => sql`${k}`))})`
+      );
+    }
+  }
+
+  /** Ratings an addon set and no longer lists. */
+  static async clearStaleRatings(
+    scope: WatchScope,
+    sinkId: string,
+    before: number,
+    db: DbDriver = getDb()
+  ): Promise<number> {
+    const res = await db.exec(
+      sql`UPDATE watch_state
+             SET rating = NULL, rating_sink_id = NULL, rating_at = NULL
+           WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+             AND rating IS NOT NULL AND rating_sink_id = ${sinkId}
+             AND COALESCE(rating_seen_at, 0) < ${before}`
+    );
+    return res.rowCount ?? 0;
+  }
+
   /** Favourites an addon's watchlist set and no longer lists. */
   static async clearStaleWatchlist(
     scope: WatchScope,
@@ -921,12 +1025,12 @@ export class WatchStateRepository {
              AND origin = 'import' AND sink_id = ${sinkId}
              AND COALESCE(seen_at, updated_at) < ${before}
              AND played = ${playedValue}
-             AND favorite = 0 AND dropped = 0`
+             AND NOT ${KEPT}`
     );
     return res.rowCount ?? 0;
   }
 
-  /** History, favourites and drops last while the configuration is in use; bare progress ages out alone. */
+  /** History, favourites, drops and ratings last while the configuration is in use; bare progress ages out alone. */
   static async prune(retentionDays: number): Promise<PruneResult> {
     const db = getDb();
     const cutoff = Date.now() - retentionDays * 24 * 3600 * 1000;
@@ -949,7 +1053,7 @@ export class WatchStateRepository {
                SELECT uuid, persona, item_key FROM watch_state
                 WHERE updated_at < ${cutoff}
                   AND played = 0 AND play_count = 0
-                  AND favorite = 0 AND dropped = 0
+                  AND NOT ${KEPT}
                 ORDER BY updated_at ASC
                 LIMIT ${batch}
              )`

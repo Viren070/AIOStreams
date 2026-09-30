@@ -6,6 +6,7 @@ import {
   dispatchBulkMark,
   dispatchPlayback,
   dispatchListChange,
+  dispatchRating,
   type ListChangeInput,
   ensurePlaybackSink,
   isRefusedUrl,
@@ -376,15 +377,15 @@ export async function listTrackers(
 }
 
 /**
- * A tracker keys on the show, so an episode reports the series item's ids and
- * never its own; the series meta is cached by the episode build.
+ * A tracker keys on the show, so an episode or season reports the series
+ * item's ids and never its own; the series meta is cached by the episode build.
  */
 async function idsFor(
   ctx: JellyfinRequestContext,
   ref: ContentRef,
   item?: JellyfinItem | null
 ): Promise<Record<string, string>> {
-  if (ref.episode == null) {
+  if (ref.kind === 'movie' || ref.kind === 'series') {
     const own = (item?.ProviderIds as Record<string, string> | undefined) ?? {};
     return Object.keys(own).length
       ? own
@@ -470,6 +471,36 @@ export async function reportListChange(
         err: error instanceof Error ? error.message : String(error),
       },
       'failed to report a list change to addons'
+    );
+  }
+}
+
+export async function reportRating(
+  ctx: JellyfinRequestContext,
+  ref: ContentRef,
+  rating: number | null,
+  item?: JellyfinItem | null
+): Promise<void> {
+  if (!appConfig.watchState.reportEnabled) return;
+  try {
+    const sinks = await sinksFor(ctx);
+    if (!sinks.length) return;
+    await dispatchRating(ctx.watch, sinks, {
+      kind: rating == null ? 'unrated' : 'rated',
+      scope: ref.kind,
+      type: ref.type,
+      metaId: ref.baseId,
+      itemKey: itemKeyFor(ref),
+      videoId: ref.videoId,
+      season: ref.season,
+      episode: ref.episode,
+      rating: rating ?? undefined,
+      providerIds: await idsFor(ctx, ref, item),
+    });
+  } catch (error) {
+    logger.warn(
+      { err: error instanceof Error ? error.message : String(error) },
+      'failed to report a rating to addons'
     );
   }
 }

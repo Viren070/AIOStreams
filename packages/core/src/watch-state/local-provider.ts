@@ -145,6 +145,12 @@ export class LocalWatchStateProvider implements WatchStateProvider {
           dropped: event.type === 'dropped',
           snapshot: event.snapshot,
         });
+      case 'rating':
+        return this.write(scope, event.identity, {
+          rating: event.rating,
+          likes: event.likes,
+          snapshot: event.snapshot,
+        });
     }
   }
 

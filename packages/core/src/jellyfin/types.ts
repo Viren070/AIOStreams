@@ -109,8 +109,9 @@ export interface UserItemDataDto {
   PlaybackPositionTicks: number;
   PlayCount: number;
   IsFavorite: boolean;
-  /** False for a dropped show; a like is not kept. */
   Likes?: boolean;
+  /** 0 to 10. */
+  Rating?: number;
   Played: boolean;
   LastPlayedDate?: string;
   PlayedPercentage?: number;

@@ -117,6 +117,20 @@ export function withPlayedCounts(
   };
 }
 
+/** Jellyfin reads a rating from 6.5 up as a like. */
+const MIN_LIKE_RATING = 6.5;
+
+export function ratingUserData(
+  row: Pick<WatchStateRow, 'dropped' | 'likes' | 'rating'>
+): Pick<UserItemDataDto, 'Likes' | 'Rating'> {
+  const out: Pick<UserItemDataDto, 'Likes' | 'Rating'> = {};
+  if (row.rating != null) out.Rating = row.rating;
+  if (row.dropped) out.Likes = false;
+  else if (row.likes != null) out.Likes = row.likes;
+  else if (row.rating != null) out.Likes = row.rating >= MIN_LIKE_RATING;
+  return out;
+}
+
 export function userDataFromRow(
   itemId: string,
   row: WatchStateRow | undefined,
@@ -132,7 +146,7 @@ export function userDataFromRow(
     Key: itemId,
     ItemId: itemId,
   };
-  if (row.dropped) ud.Likes = false;
+  Object.assign(ud, ratingUserData(row));
   if (row.lastPlayedAt)
     ud.LastPlayedDate = new Date(row.lastPlayedAt).toISOString();
   if (!row.played && duration > 0 && row.positionMs > 0) {
@@ -169,7 +183,7 @@ export function providerIdsFor(
 
 function externalUrls(
   providerIds: Record<string, string>,
-  kind: 'movie' | 'series' | 'episode'
+  kind: 'movie' | 'series' | 'season' | 'episode'
 ) {
   const urls: { Name: string; Url: string }[] = [];
   if (providerIds.Imdb)
@@ -177,8 +191,8 @@ function externalUrls(
       Name: 'IMDb',
       Url: `https://www.imdb.com/title/${providerIds.Imdb}`,
     });
-  // TMDB, TVDB and Trakt ids name a movie or a show; an episode's do not.
-  if (kind !== 'episode') {
+  // TMDB, TVDB and Trakt ids name a movie or a show, not its parts.
+  if (kind === 'movie' || kind === 'series') {
     const show = kind === 'series';
     if (providerIds.Tmdb)
       urls.push({
@@ -604,7 +618,8 @@ export function buildSeason(
   seriesItem: JellyfinItem,
   group: SeasonGroup,
   playstates?: Map<string, WatchStateRow>,
-  episodeKeyOf?: (video: SeasonGroup['videos'][number]) => string
+  episodeKeyOf?: (video: SeasonGroup['videos'][number]) => string,
+  own: { row?: WatchStateRow; providerIds?: Record<string, string> } = {}
 ): JellyfinItem {
   const id = encodeItemId({
     k: 'season',
@@ -650,7 +665,16 @@ export function buildSeason(
     ParentLogoImageTag: seriesTags?.Logo,
     PrimaryImageAspectRatio: 0.6666,
     ProductionYear: seriesItem.ProductionYear,
-    UserData: withPlayedCounts(defaultUserData(id), played, counted),
+    UserData: {
+      ...withPlayedCounts(defaultUserData(id), played, counted),
+      ...(own.row ? ratingUserData(own.row) : {}),
+    },
+    ...(own.providerIds
+      ? {
+          ProviderIds: own.providerIds,
+          ExternalUrls: externalUrls(own.providerIds, 'season'),
+        }
+      : {}),
     Path: `/aiostreams/${meta.type}/${meta.id}/${group.name}`,
     _aio: {
       descriptor: { k: 'season', t: meta.type, i: meta.id, s: group.season },

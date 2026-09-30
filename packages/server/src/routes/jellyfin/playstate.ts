@@ -32,7 +32,12 @@ import {
   episodesForSeries,
   itemFromDescriptor,
 } from './items.js';
-import { reportBulkMark, reportListChange, reportPlayback } from './handoff.js';
+import {
+  reportBulkMark,
+  reportListChange,
+  reportPlayback,
+  reportRating,
+} from './handoff.js';
 import { pickSource } from './playback.js';
 
 const router: Router = Router({ mergeParams: true });
@@ -542,7 +547,6 @@ async function setFavorite(
     );
 }
 
-/** A dislike drops a show; a like or a cleared rating undrops it. */
 async function setDropped(
   ctx: JellyfinRequestContext,
   d: ContentDescriptor,
@@ -564,6 +568,48 @@ async function setDropped(
   await reportListChange(ctx, dropped ? 'dropped' : 'undropped', ref, item);
 }
 
+/** Only a changed numeric rating is reported; likes stay here. */
+async function setRating(
+  ctx: JellyfinRequestContext,
+  d: ContentDescriptor,
+  change: { rating?: number | null; likes?: boolean | null }
+) {
+  if (d.k === 'boxset') return;
+  const ref = contentRefOf(d);
+  const identity = await watchIdentityFor(ref);
+  const provider = getWatchStateProvider();
+  const held = (await provider.getMany(ctx.watch, [identity.itemKey])).get(
+    identity.itemKey
+  );
+  const item = await itemFromDescriptor(ctx, d).catch(() => null);
+  await provider.record(ctx.watch, {
+    type: 'rating',
+    identity,
+    ...change,
+    snapshot: snapshotOf(item),
+  });
+  if (change.rating !== undefined && change.rating !== (held?.rating ?? null))
+    await reportRating(ctx, ref, change.rating, item);
+}
+
+/**
+ * A like or dislike, or clearing both with the numeric rating as Jellyfin
+ * does. On a show a dislike is the drop, and anything else undrops it.
+ */
+async function rate(
+  ctx: JellyfinRequestContext,
+  d: ContentDescriptor,
+  likes: boolean | null
+) {
+  if (d.k === 'series' && likes === false) {
+    await setRating(ctx, d, { likes: null });
+    await setDropped(ctx, d, true);
+    return;
+  }
+  await setRating(ctx, d, likes === null ? { likes, rating: null } : { likes });
+  if (d.k === 'series') await setDropped(ctx, d, false);
+}
+
 const RATING_PATHS = [
   '/UserItems/:itemId/Rating',
   '/Users/:userId/Items/:itemId/Rating',
@@ -571,25 +617,28 @@ const RATING_PATHS = [
 router.post(
   RATING_PATHS,
   jf(async (req, res, ctx) => {
-    const d = await descriptorFor(ctx, param(req, 'itemId'));
+    const d = await descriptorFor(ctx, param(req, 'itemId'), {
+      season: true,
+    });
     if (!d) {
       res.status(404).json({ Message: 'Item not found' });
       return;
     }
-    // Only a show can be dropped.
-    if (d.k === 'series') await setDropped(ctx, d, qb(req, 'Likes') === false);
+    await rate(ctx, d, qb(req, 'Likes') ?? null);
     res.json((await userDataFor(ctx, d)) ?? {});
   })
 );
 router.delete(
   RATING_PATHS,
   jf(async (req, res, ctx) => {
-    const d = await descriptorFor(ctx, param(req, 'itemId'));
+    const d = await descriptorFor(ctx, param(req, 'itemId'), {
+      season: true,
+    });
     if (!d) {
       res.status(404).json({ Message: 'Item not found' });
       return;
     }
-    if (d.k === 'series') await setDropped(ctx, d, false);
+    await rate(ctx, d, null);
     res.json((await userDataFor(ctx, d)) ?? {});
   })
 );
@@ -650,7 +699,9 @@ const USERDATA_PATHS = [
 router.get(
   USERDATA_PATHS,
   jf(async (req, res, ctx) => {
-    const d = await descriptorFor(ctx, param(req, 'itemId'));
+    const d = await descriptorFor(ctx, param(req, 'itemId'), {
+      season: true,
+    });
     if (!d) {
       res.status(404).json({ Message: 'Item not found' });
       return;
@@ -661,14 +712,27 @@ router.get(
 router.post(
   USERDATA_PATHS,
   jf(async (req, res, ctx) => {
-    const d = await descriptorFor(ctx, param(req, 'itemId'));
+    const d = await descriptorFor(ctx, param(req, 'itemId'), {
+      season: true,
+    });
     if (!d) {
       res.status(404).json({ Message: 'Item not found' });
       return;
     }
     const body = bodyOf(req);
+    if (
+      typeof body.Rating === 'number' &&
+      !(body.Rating >= 0 && body.Rating <= 10)
+    ) {
+      res.status(400).json({ Message: 'A 0 to 10 rating is required' });
+      return;
+    }
     if (typeof body.Played === 'boolean') await setPlayed(ctx, d, body.Played);
-    if (typeof body.IsFavorite === 'boolean')
+    if (typeof body.Likes === 'boolean') await rate(ctx, d, body.Likes);
+    // A number replaces a like, as Jellyfin keeps the two as one value.
+    if (typeof body.Rating === 'number')
+      await setRating(ctx, d, { rating: body.Rating, likes: null });
+    if (typeof body.IsFavorite === 'boolean' && d.k !== 'season')
       await setFavorite(ctx, d, body.IsFavorite);
     if (
       typeof body.PlaybackPositionTicks === 'number' &&
