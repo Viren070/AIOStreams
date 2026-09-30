@@ -57,37 +57,49 @@ export function planFilePriorities(params: {
 
 /**
  * Absolute on-disk path of one file within a torrent. The files API reports
- * names relative to the torrent's base (root folder included for folder
- * packs); `content_path` is the torrent root's CURRENT location — including
- * qBittorrent's temp/incomplete directory before completion and wherever
- * "move on finish" relocates it — while `save_path` is only the final
- * destination. So the base is derived from content_path: for a folder pack
- * (every name's first segment equals the root folder's name) it is
- * content_path's parent, for a rootless layout content_path itself, and for
- * a single-file torrent content_path already IS the file. Re-derived every
- * poll and on byte-stream ENOENT so relocations cannot strand a stream.
+ * names relative to the torrent's base as recorded in the metainfo (root
+ * folder included); `content_path` is the torrent root's CURRENT location —
+ * including qBittorrent's temp/incomplete directory before completion and
+ * wherever "move on finish" relocates it — while `save_path` is only the
+ * final destination. So the base comes from comparing the two: when they
+ * differ the root folder is present and content_path is "<base>/<root>";
+ * when they match the files sit directly in the save dir, either because
+ * the metainfo is rootless or because qBittorrent stripped the root folder
+ * (then the shared first segment of every name is not part of the disk
+ * path). A single-file torrent's content_path already IS the file; this
+ * special case is load-bearing, not a simplification. Re-derived every poll
+ * and on byte-stream ENOENT so relocations cannot strand a stream.
  */
 export function deriveFilePath(
-  torrent: { content_path: string },
+  torrent: { content_path: string; save_path: string },
   files: QbittorrentFile[],
   fileIndex: number
 ): string | undefined {
   const file = files.find((f) => f.index === fileIndex);
   if (!file) return undefined;
-  if (files.length === 1) return torrent.content_path;
-  const slash = file.name.indexOf('/');
-  const rootName = slash > 0 ? file.name.slice(0, slash) : undefined;
-  const pathRoot = torrent.content_path.endsWith('/')
-    ? torrent.content_path.slice(0, -1)
-    : torrent.content_path;
-  const baseSlash = pathRoot.lastIndexOf('/');
-  const baseName = baseSlash >= 0 ? pathRoot.slice(baseSlash + 1) : pathRoot;
-  if (rootName && baseName === rootName && baseSlash >= 0) {
-    // Folder pack: content_path is "<base>/<root folder>".
-    return pathRoot.slice(0, baseSlash) + '/' + file.name;
+  // Windows-hosted qBittorrent reports native separators; Node accepts
+  // forward slashes on every platform.
+  const contentPath = torrent.content_path.replace(/\/+$/, '').replace(/\\/g, '/');
+  if (files.length === 1) return contentPath;
+  const savePath = torrent.save_path.replace(/\/+$/, '').replace(/\\/g, '/');
+  const firstSegments = new Set(
+    files.map((f) => (f.name.includes('/') ? f.name.slice(0, f.name.indexOf('/')) : ''))
+  );
+  const rootName =
+    firstSegments.size === 1 && !firstSegments.has('')
+      ? [...firstSegments][0]
+      : undefined;
+  const baseName = contentPath.slice(contentPath.lastIndexOf('/') + 1);
+  if (rootName && baseName === rootName && contentPath !== savePath) {
+    // Root folder present on disk.
+    return contentPath.slice(0, contentPath.lastIndexOf('/')) + '/' + file.name;
   }
-  // Rootless layout: content_path is the folder holding the files.
-  return pathRoot + '/' + file.name;
+  if (rootName && contentPath === savePath) {
+    // Root folder stripped from disk but still in metainfo names.
+    return contentPath + '/' + file.name.slice(file.name.indexOf('/') + 1);
+  }
+  // Rootless or mixed layout, names map directly under the content path.
+  return contentPath + '/' + file.name;
 }
 
 /** Byte-level view of one file's download state from piece states. */

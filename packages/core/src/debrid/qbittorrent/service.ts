@@ -351,10 +351,12 @@ export class QBittorrentService implements TorrentDebridService {
     let priorityFailures = 0;
     let prioritiesAbandoned = false;
     let resumeAttempted = false;
+    let lastState = torrent.state;
     for (let i = 0; i < maxPolls; i++) {
       this.throwIfAborted(signal);
 
       const current = (await this.client.getTorrent(torrent.hash, signal)) ?? torrent;
+      lastState = current.state;
       if (FAILED_STATES.has(current.state)) {
         const err = new DebridError(`qBittorrent torrent is ${current.state}`, {
           statusCode: 400,
@@ -479,13 +481,16 @@ export class QBittorrentService implements TorrentDebridService {
       await new Promise((resolve) => setTimeout(resolve, this.options.pollInterval));
     }
 
-    throw new DebridError('Timed out waiting for the download to become playable', {
-      statusCode: 408,
-      statusText: 'Request Timeout',
-      code: 'TIMEOUT',
-      type: 'api_error',
-      headers: {},
-    });
+    throw new DebridError(
+      `Timed out waiting for the download to become playable (qBittorrent last reported "${lastState}")`,
+      {
+        statusCode: 408,
+        statusText: 'Request Timeout',
+        code: 'TIMEOUT',
+        type: 'api_error',
+        headers: {},
+      }
+    );
   }
 
   /**
