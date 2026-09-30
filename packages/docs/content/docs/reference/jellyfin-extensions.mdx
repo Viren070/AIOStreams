@@ -200,7 +200,8 @@ the app does not offer it: marking a long series one episode at a time would tak
 With `dropped`, rating a series with the standard `Likes=false` (`POST /UserItems/{id}/Rating`)
 drops it: it leaves Next Up until it is played again, and the drop reaches the user's trackers. The
 app shows "Drop show" on series only where the server has the feature, since elsewhere the rating
-would do nothing.
+would do nothing. It undrops with `Likes=true`, since clearing the rating would also clear a
+numeric one.
 
 ## What stays with AIOStreams
 

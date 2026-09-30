@@ -726,12 +726,29 @@ export function useSetDropped() {
   const { client, user } = useSession();
   const refresh = useRefreshAll();
   return useMutation({
-    mutationFn: (v: { itemId: string; dropped: boolean }) => {
-      const path = `/UserItems/${v.itemId}/Rating`;
-      return v.dropped
-        ? client.post(path, undefined, { userId: user.Id, Likes: false })
-        : client.delete(path, { userId: user.Id });
-    },
+    // A like undrops, where clearing the rating would clear a numeric one too.
+    mutationFn: (v: { itemId: string; dropped: boolean }) =>
+      client.post(`/UserItems/${v.itemId}/Rating`, undefined, {
+        userId: user.Id,
+        Likes: !v.dropped,
+      }),
+    onSettled: refresh,
+  });
+}
+
+/** From 0 to 10; `null` clears it. */
+export function useSetRating() {
+  const { client, user } = useSession();
+  const refresh = useRefreshAll();
+  return useMutation({
+    mutationFn: (v: { itemId: string; rating: number | null }) =>
+      v.rating == null
+        ? client.delete(`/UserItems/${v.itemId}/Rating`, { userId: user.Id })
+        : client.post(
+            `/UserItems/${v.itemId}/UserData`,
+            { Rating: v.rating },
+            { userId: user.Id }
+          ),
     onSettled: refresh,
   });
 }

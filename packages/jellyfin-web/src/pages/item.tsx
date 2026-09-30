@@ -72,6 +72,7 @@ import {
   upToIndex,
 } from '../components/episodes';
 import { ItemMenu } from '../components/item-menu';
+import { RatingButton } from '../components/rating';
 import { ExternalLinks } from '../components/external-links';
 import { CastAndCrew } from '../components/people';
 import { KINDS, KindTabs } from '../components/kind-tabs';
@@ -96,6 +97,7 @@ export function ItemPage({
   const { client } = useSession();
   const item = useItem(itemId);
   const data = item.data;
+  const [season, setSeason] = React.useState<BaseItemDto>();
   useExternalReturn();
 
   React.useEffect(() => {
@@ -133,12 +135,13 @@ export function ItemPage({
           <HeaderSkeleton />
         ) : (
           <>
-            <Header item={data} />
+            <Header item={data} season={season} />
             {data.Type === 'Series' && (
               <Seasons
                 series={data}
                 initialSeasonId={seasonId}
                 focusEpisodeId={episodeId}
+                onSeason={setSeason}
               />
             )}
             {data.Type === 'BoxSet' && <SubCollections parent={data} />}
@@ -291,7 +294,18 @@ function MetaRow({ item }: { item: BaseItemDto }) {
   );
 }
 
-function Header({ item }: { item: BaseItemDto }) {
+/** The show's links, with the selected season's own in place of the show's. */
+function linksFor(item: BaseItemDto, season?: BaseItemDto) {
+  const own = season?.ExternalUrls ?? [];
+  if (!own.length) return item.ExternalUrls;
+  const byName = new Map(own.map((link) => [link.Name, link]));
+  const shown = (item.ExternalUrls ?? []).map(
+    (link) => byName.get(link.Name) ?? link
+  );
+  return [...shown, ...own.filter((link) => !shown.includes(link))];
+}
+
+function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
   const { client } = useSession();
   const picker = useVersionPicker();
   const setPlayed = useSetPlayed();
@@ -305,6 +319,7 @@ function Header({ item }: { item: BaseItemDto }) {
   const favorite = !!item.UserData?.IsFavorite;
   const dropped = item.UserData?.Likes === false;
   const canDrop = useFeature('dropped');
+  const links = linksFor(item, season);
   const trailer = item.RemoteTrailers?.[0]?.Url;
 
   const target =
@@ -398,35 +413,37 @@ function Header({ item }: { item: BaseItemDto }) {
           className="flex flex-wrap items-center gap-2"
         >
           {target && (
-            <Button
-              data-ui="item-action"
-              data-name="play"
-              intent="white"
-              className="rounded-full"
-              leftIcon={<BiPlay className="text-xl" />}
-              onClick={() => picker.play(target, { startMs: resumeMs })}
-              {...holdPlay}
-            >
-              {playLabel}
-            </Button>
-          )}
-          {target && !!resumeMs && (
-            <Tooltip
-              trigger={
-                <IconButton
-                  data-ui="item-action"
-                  data-name="restart"
-                  intent="gray-subtle"
-                  className="rounded-full"
-                  icon={<BiRevision />}
-                  aria-label="Play from the start"
-                  onClick={() => picker.play(target, { startMs: 0 })}
-                  {...holdRestart}
-                />
-              }
-            >
-              Play from the start
-            </Tooltip>
+            <div className="flex w-full items-center gap-2 sm:w-auto">
+              <Button
+                data-ui="item-action"
+                data-name="play"
+                intent="white"
+                className="flex-1 rounded-full sm:flex-none"
+                leftIcon={<BiPlay className="text-xl" />}
+                onClick={() => picker.play(target, { startMs: resumeMs })}
+                {...holdPlay}
+              >
+                {playLabel}
+              </Button>
+              {!!resumeMs && (
+                <Tooltip
+                  trigger={
+                    <IconButton
+                      data-ui="item-action"
+                      data-name="restart"
+                      intent="gray-subtle"
+                      className="rounded-full"
+                      icon={<BiRevision />}
+                      aria-label="Play from the start"
+                      onClick={() => picker.play(target, { startMs: 0 })}
+                      {...holdRestart}
+                    />
+                  }
+                >
+                  Play from the start
+                </Tooltip>
+              )}
+            </div>
           )}
           {trailer && (
             <Button
@@ -501,14 +518,19 @@ function Header({ item }: { item: BaseItemDto }) {
               {dropped ? 'Undrop show' : 'Drop show'}
             </Tooltip>
           )}
-          {!!item.ExternalUrls?.length && (
+          {(item.Type === 'Movie' || item.Type === 'Series') && (
+            <RatingButton item={item} />
+          )}
+          {!!links?.length && (
             <span
               data-ui="item-actions-divider"
-              className="mx-1 h-6 w-px bg-white/10"
+              className="mx-1 hidden h-6 w-px bg-white/10 sm:block"
               aria-hidden
             />
           )}
-          <ExternalLinks links={item.ExternalUrls} />
+          <div className="basis-full sm:basis-auto">
+            <ExternalLinks links={links} />
+          </div>
         </div>
       </div>
     </div>
@@ -579,10 +601,12 @@ function Seasons({
   series,
   initialSeasonId,
   focusEpisodeId,
+  onSeason,
 }: {
   series: BaseItemDto;
   initialSeasonId?: string;
   focusEpisodeId?: string;
+  onSeason: (season: BaseItemDto | undefined) => void;
 }) {
   const { client } = useSession();
   const [layoutPref] = useEpisodeLayout();
@@ -600,6 +624,10 @@ function Seasons({
     setSeasonId(next.Id!);
   }, [list, seasonId]);
   const season = list.find((s) => s.Id === seasonId);
+  React.useEffect(() => onSeason(season), [season, onSeason]);
+  React.useEffect(() => () => onSeason(undefined), [onSeason]);
+  // A show of one season is rated as the show.
+  const rateSeason = list.filter((s) => (s.IndexNumber ?? 0) > 0).length > 1;
   const episodes = useEpisodes(series.Id!, seasonId);
   const items = episodes.data?.Items ?? [];
   const loading = seasons.isLoading || episodes.isLoading;
@@ -608,6 +636,18 @@ function Seasons({
   const ownPosters = list.some(
     (s) =>
       s.ImageTags?.Primary && s.ImageTags.Primary !== series.ImageTags?.Primary
+  );
+  const summaryLine = (summary || (rateSeason && season)) && (
+    <p
+      data-ui="season-summary"
+      className="flex flex-wrap items-center gap-x-2 text-sm text-[--muted]"
+    >
+      {summary}
+      {summary && rateSeason && season && <span aria-hidden>·</span>}
+      {rateSeason && season && (
+        <RatingButton item={season} label="Rate season" inline />
+      )}
+    </p>
   );
   const focusIndex = focusEpisodeId
     ? items.findIndex((e) => e.Id === focusEpisodeId)
@@ -700,11 +740,7 @@ function Seasons({
           {season.Overview}
         </p>
       )}
-      {summary && layout === 'list' && (
-        <p data-ui="season-summary" className="text-sm text-[--muted]">
-          {summary}
-        </p>
-      )}
+      {layout === 'list' && summaryLine}
       {layout === 'row' ? (
         loading ? (
           <MediaRow key="loading" shape="wide" itemClass={ROW_WIDTH} loading />
@@ -716,16 +752,7 @@ function Seasons({
               shape="wide"
               itemClass={ROW_WIDTH}
               startIndex={focusIndex >= 0 ? focusIndex : upToIndex(items)}
-              header={
-                summary && (
-                  <p
-                    data-ui="season-summary"
-                    className="text-sm text-[--muted]"
-                  >
-                    {summary}
-                  </p>
-                )
-              }
+              header={summaryLine}
               action={
                 summary &&
                 items.length > 1 && (
