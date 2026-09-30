@@ -3,7 +3,7 @@ import { config as appConfig, subscribeToConfig } from '../../config/index.js';
 import { TaskManager } from '../../tasks/index.js';
 import { SyncFetcher } from './fetcher.js';
 import { UrlAllowlist } from './allowlist.js';
-import { assertFetchable, partitionUrls } from './policy.js';
+import { partitionUrls } from './policy.js';
 import type {
   AllowlistSource,
   FetchResult,
@@ -100,8 +100,7 @@ export class SyncService<T extends Record<string, any>> {
     return partitionUrls(this.config.kind, urls, this.allowlist, userData);
   }
 
-  public async fetch(url: string, vouched: boolean): Promise<T[]> {
-    if (!vouched) await assertFetchable(url);
+  public fetch(url: string, vouched: boolean): Promise<T[]> {
     return this.fetcher.fetch(url, {
       ttl: vouched ? this.vouchedTtl : this.userTtl,
     });

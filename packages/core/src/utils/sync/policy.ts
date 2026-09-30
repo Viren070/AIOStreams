@@ -1,5 +1,4 @@
 import { config as appConfig } from '../../config/index.js';
-import { isRefusedUrl } from '../private-addresses.js';
 import { isUnsafeRemoteUrl } from '../url-safety.js';
 import type { UrlAllowlist } from './allowlist.js';
 import { isHttpUrl, type SyncKind, type UrlPartition } from './types.js';
@@ -16,10 +15,7 @@ export function isUnrestricted(
   return access === 'all' || (access === 'trusted' && !!userData?.trusted);
 }
 
-/**
- * Synchronous because config validation calls it on the request path, so only
- * the literal address check happens here; {@link assertFetchable} resolves DNS.
- */
+/** Checks the literal address only; the connection guard checks resolved names. */
 export function partitionUrls(
   kind: SyncKind,
   urls: string[],
@@ -62,13 +58,4 @@ export function partitionUrls(
   }
 
   return partition;
-}
-
-/** Only for URLs the instance has not vouched for; every host is user-supplied. */
-export async function assertFetchable(url: string): Promise<void> {
-  if (await isRefusedUrl(url)) {
-    throw new Error(
-      'That URL is a private address, and this instance does not allow connecting to private addresses.'
-    );
-  }
 }
