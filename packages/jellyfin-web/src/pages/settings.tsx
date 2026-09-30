@@ -916,6 +916,8 @@ function InterfaceSection() {
 }
 
 const KEEP_CSS_MS = 15_000;
+const CSS_DOCS_URL =
+  'https://docs.aiostreams.viren070.me/reference/web-app-css';
 
 function ThemeSection() {
   const [colors, setColors] = useThemeColors();
@@ -1020,6 +1022,16 @@ function ThemeSection() {
               <code>data-ui</code> attribute to style them by, such as{' '}
               <code>[data-ui=&quot;progress-bar&quot;]</code>. If it ever hides
               the page, add <code>?safe</code> to the address to turn it off.
+              See the{' '}
+              <a
+                href={CSS_DOCS_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="text-[--brand] hover:underline"
+              >
+                guide
+              </a>{' '}
+              for every selector and examples.
             </>
           )
         }
