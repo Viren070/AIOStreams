@@ -19,6 +19,8 @@ import {
   decodeQbittorrentStreamToken,
   encodeQbittorrentStreamToken,
   QbittorrentStreamToken,
+  registerStreamRef,
+  resolveStreamRef,
 } from './tokens.js';
 import {
   applyPathMappings,
@@ -109,6 +111,38 @@ describe('stream tokens', () => {
     assert.equal(decodeQbittorrentStreamToken(tampered), undefined);
   });
 
+
+  test('stream references round-trip every credential field', async (t) => {
+    mock.method(SettingsRepository, 'getAll', async () => []);
+    mock.method(SettingsRepository, 'getVersion', async () => 0);
+    await settingsStore.initialise();
+    t.after(() => mock.restoreAll());
+    const credential = parseQbittorrentCredential(
+      toUrlSafeBase64(
+        JSON.stringify({
+          url: WEBUI,
+          username: 'u',
+          password: 'p',
+          skipOtherFiles: 'true',
+          pathMappings: '/qbit/downloads=/data',
+        })
+      )
+    );
+    const ref = await registerStreamRef({
+      credential,
+      hash: 'a'.repeat(40),
+      fileIndex: 2,
+      filePath: '/data/pack/s01e02.mkv',
+      fileSize: 12345,
+      filename: 's01e02.mkv',
+      addedAt: 1700000000,
+    });
+    const entry = await resolveStreamRef(ref);
+    assert.ok(entry, 'reference resolves');
+    assert.deepEqual(entry?.credential, credential);
+    assert.equal(entry?.filePath, '/data/pack/s01e02.mkv');
+    assert.equal(entry?.fileSize, 12345);
+  });
 });
 
 describe('planFilePriorities', () => {
