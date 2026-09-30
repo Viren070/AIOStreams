@@ -30,7 +30,7 @@ import { useFeature } from '../lib/server-info';
 import { useBrowserPlayer, usePhoneFullscreen } from '../lib/hosts/browser';
 import { useDesktopPlayer } from '../lib/hosts/jellyfin-desktop';
 import { useShellPlayer } from '../lib/hosts/shell';
-import { useDiscordPresence } from '../lib/discord';
+import { useNowPlaying } from '../lib/now-playing';
 import type { PlayerController } from '../lib/player';
 import {
   useChapterSkips,
@@ -372,6 +372,11 @@ function BrowserPlayer({
   connect(next);
   const switchVersion = useSwitchVersion(item, source, player);
   useReporting(player, { item, source, playSessionId });
+  useNowPlaying(item, player, {
+    onStop: back,
+    onNext: next.next ? next.playNext : undefined,
+    onPrevious: next.previous ? next.playPrevious : undefined,
+  });
 
   return (
     <div data-page="player" className="fixed inset-0 bg-black">
@@ -479,7 +484,11 @@ function NativePlayer({
   connect(next);
   const switchVersion = useSwitchVersion(item, source, player);
   useReporting(player, { item, source, playSessionId });
-  useDiscordPresence(item, player.state);
+  useNowPlaying(item, player, {
+    onStop: back,
+    onNext: next.next ? next.playNext : undefined,
+    onPrevious: next.previous ? next.playPrevious : undefined,
+  });
 
   return (
     <div data-page="player" className="fixed inset-0">

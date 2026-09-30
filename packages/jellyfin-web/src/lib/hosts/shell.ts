@@ -59,7 +59,14 @@ export type ShellMessage =
       message: string | null;
     }
   | { type: 'link'; url: string }
+  | { type: 'media-key'; key: MediaKey }
   | { type: 'error'; message: string };
+
+/** A press on the system's media controls; positions and offsets are milliseconds. */
+export type MediaKey =
+  | { action: 'play' | 'pause' | 'toggle' | 'stop' | 'next' | 'previous' }
+  | { action: 'seek'; position: number }
+  | { action: 'skip'; offset: number };
 
 /** The AIOStreams desktop app's bridge to mpv. */
 interface ShellBridge {

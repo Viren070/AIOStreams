@@ -177,6 +177,17 @@ export function useBrowserPlayer(
     };
   }, [video, startMs, onEnded]);
 
+  // Browsers keep a closed player in their media controls until its video drops the stream.
+  React.useEffect(() => {
+    const el = video.current;
+    return () => {
+      if (!el) return;
+      el.pause();
+      el.removeAttribute('src');
+      el.load();
+    };
+  }, [video]);
+
   const el = () => video.current;
   return {
     state,
