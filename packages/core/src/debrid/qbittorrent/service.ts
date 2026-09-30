@@ -326,6 +326,11 @@ export class QBittorrentService implements TorrentDebridService {
     if (!readiness) return undefined;
     const { file, filePath } = readiness;
 
+    // The display name is the file's BASE name: qBittorrent reports pack
+    // members as relative paths ("pack/s01e02.mkv"), and an encoded slash in
+    // the final URL segment breaks external players' URL parsing.
+    const displayName = (filename || file.name).split('/').pop() ?? file.name;
+
     const token = encodeQbittorrentStreamToken({
       ref: await registerStreamRef({
         credential: this.credential,
@@ -333,14 +338,14 @@ export class QBittorrentService implements TorrentDebridService {
         fileIndex: file.index,
         filePath,
         fileSize: file.size,
-        filename: filename || file.name,
+        filename: displayName,
         addedAt: torrent.added_on,
       }),
       exp: Math.floor(Date.now() / 1000) + STREAM_REF_TTL_SECONDS,
     });
 
     return `${appConfig.bootstrap.baseUrl}/api/v1/qbittorrent/stream/${token}/${encodeURIComponent(
-      filename || file.name
+      displayName
     )}`;
   }
 
