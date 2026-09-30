@@ -190,6 +190,13 @@ function TrackersField({
           >
             Automatic
           </button>
+          <button
+            type="button"
+            onClick={() => onChange([])}
+            className={pill(!!value && !value.length)}
+          >
+            None
+          </button>
           {choices.map((choice) => {
             const selected = !!value?.includes(choice.presetId);
             return (
