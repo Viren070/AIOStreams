@@ -405,15 +405,13 @@ export class QBittorrentService implements TorrentDebridService {
             priorityFailures++;
             if (priorityFailures >= 3) {
               prioritiesAbandoned = true;
-              // An adopted torrent whose skipped selected file cannot be
-              // restored will never download; failing fast beats burning
-              // the whole wait budget on a guaranteed timeout.
+
               const stillSkipped =
                 files.find((f) => f.index === file.index)?.priority ===
                 FILE_PRIORITY.skip;
-              if (!isOwnTorrent(current) && stillSkipped) {
+              if (stillSkipped) {
                 throw new DebridError(
-                  'qBittorrent refused to restore the skipped file selected for playback',
+                  'qBittorrent refused to raise the skipped file selected for playback',
                   {
                     statusCode: 502,
                     statusText: 'Bad Gateway',
@@ -598,7 +596,13 @@ export class QBittorrentService implements TorrentDebridService {
     try {
       handle = await open(filePath, 'r');
     } catch {
-      return false;
+      // qBittorrent's "Append .!qB to incomplete files" option keeps the
+      // suffixed name on disk until the file completes.
+      try {
+        handle = await open(filePath + '.!qB', 'r');
+      } catch {
+        return false;
+      }
     }
     try {
       const buffer = Buffer.alloc(length);

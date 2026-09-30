@@ -22,6 +22,7 @@ import {
 } from './tokens.js';
 import {
   computeFileAvailability,
+  deriveFilePath,
   planFilePriorities,
 } from './availability.js';
 
@@ -189,6 +190,47 @@ describe('planFilePriorities', () => {
     });
     assert.deepEqual(plan, { skip: [], raise: [], restore: [] });
   });
+});
+
+describe('deriveFilePath', () => {
+  const pack = [
+    file({ index: 0, name: 'pack/s01e01.mkv', size: 100, piece_range: [0, 1] }),
+    file({ index: 1, name: 'pack/s01e02.mkv', size: 100, piece_range: [2, 3] }),
+  ];
+  const rootless = [
+    file({ index: 0, name: 'a.mkv', size: 100, piece_range: [0, 1] }),
+    file({ index: 1, name: 'b.mkv', size: 100, piece_range: [2, 3] }),
+  ];
+
+  test('folder pack joins names under the content path parent', () => {
+    assert.equal(
+      deriveFilePath({ content_path: '/dl/tmp/pack' }, pack, 1),
+      '/dl/tmp/pack/s01e02.mkv'
+    );
+  });
+
+  test('folder pack follows the content path into the temp dir', () => {
+    assert.equal(
+      deriveFilePath({ content_path: '/dl/incomplete/pack' }, pack, 0),
+      '/dl/incomplete/pack/s01e01.mkv'
+    );
+  });
+
+  test('rootless layouts join names onto the content path', () => {
+    assert.equal(
+      deriveFilePath({ content_path: '/dl/rel' }, rootless, 1),
+      '/dl/rel/b.mkv'
+    );
+  });
+
+  test('single-file torrents use the content path directly', () => {
+    const single = [file({ index: 0, name: 'movie.mkv', size: 1, piece_range: [0, 1] })];
+    assert.equal(
+      deriveFilePath({ content_path: '/dl/pack/movie.mkv' }, single, 0),
+      '/dl/pack/movie.mkv'
+    );
+  });
+
 });
 
 describe('computeFileAvailability', () => {

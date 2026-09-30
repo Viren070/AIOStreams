@@ -56,27 +56,38 @@ export function planFilePriorities(params: {
 }
 
 /**
- * Absolute on-disk path of one file within a torrent: the torrent's content
- * path itself for single-file torrents, otherwise the file's name joined to
- * the save path — the files API reports names relative to the SAVE path
- * (root folder included), so joining them onto content_path (which already
- * ends in the root folder) would double it. Shared by the resolve wait
- * (which re-derives it every poll, so qBittorrent "move on finish" cannot
- * strand it) and the byte stream (which re-derives it when a mid-stream move
- * makes the old path vanish).
+ * Absolute on-disk path of one file within a torrent. The files API reports
+ * names relative to the torrent's base (root folder included for folder
+ * packs); `content_path` is the torrent root's CURRENT location — including
+ * qBittorrent's temp/incomplete directory before completion and wherever
+ * "move on finish" relocates it — while `save_path` is only the final
+ * destination. So the base is derived from content_path: for a folder pack
+ * (every name's first segment equals the root folder's name) it is
+ * content_path's parent, for a rootless layout content_path itself, and for
+ * a single-file torrent content_path already IS the file. Re-derived every
+ * poll and on byte-stream ENOENT so relocations cannot strand a stream.
  */
 export function deriveFilePath(
-  torrent: { content_path: string; save_path: string },
+  torrent: { content_path: string },
   files: QbittorrentFile[],
   fileIndex: number
 ): string | undefined {
   const file = files.find((f) => f.index === fileIndex);
   if (!file) return undefined;
   if (files.length === 1) return torrent.content_path;
-  const root = torrent.save_path.endsWith('/')
-    ? torrent.save_path
-    : torrent.save_path + '/';
-  return root + file.name;
+  const slash = file.name.indexOf('/');
+  const rootName = slash > 0 ? file.name.slice(0, slash) : undefined;
+  const pathRoot = torrent.content_path.endsWith('/')
+    ? torrent.content_path.slice(0, -1)
+    : torrent.content_path;
+  const baseSlash = pathRoot.lastIndexOf('/');
+  const baseName = baseSlash >= 0 ? pathRoot.slice(baseSlash + 1) : pathRoot;
+  if (rootName && baseName === rootName && baseSlash >= 0) {
+    // Folder pack: content_path is "<base>/<root folder>".
+    return pathRoot.slice(0, baseSlash) + '/' + file.name;
+  }
+  // Rootless layout: content_path is the folder holding the files.
+  return pathRoot + '/' + file.name;
 }
 
 /** Byte-level view of one file's download state from piece states. */
