@@ -1,4 +1,26 @@
+import { realpath } from 'fs/promises';
 import { FILE_PRIORITY, QbittorrentFile } from './client.js';
+
+/** Rewrite a qBittorrent-reported path through the configured mount
+ * mappings. Longest matching prefix wins. */
+export type AllowedPath = 'allowed' | 'missing' | 'outside';
+
+export async function resolveAllowedPath(candidate: string): Promise<AllowedPath> {
+  const real = await realpath(candidate).catch(() => undefined);
+  if (!real) return 'missing';
+  const roots = (process.env.QBITTORRENT_ALLOWED_ROOTS ?? '')
+    .split(',')
+    .map((root) => root.trim())
+    .filter(Boolean);
+  if (roots.length === 0) return 'allowed';
+  for (const root of roots) {
+    const realRoot = await realpath(root).catch(() => undefined);
+    if (!realRoot) continue;
+    const normalized = realRoot.endsWith('/') ? realRoot : realRoot + '/';
+    if (real === realRoot || real.startsWith(normalized)) return 'allowed';
+  }
+  return 'outside';
+}
 
 /** A file must have at least this many contiguous bytes before playback starts. */
 export const STREAM_THRESHOLD_BYTES = 16 * 1024 * 1024;

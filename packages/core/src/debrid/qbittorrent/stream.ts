@@ -1,4 +1,4 @@
-import { open, FileHandle } from 'fs/promises';
+import { open, stat, FileHandle } from 'fs/promises';
 import { Readable } from 'stream';
 import { DebridError } from '../base.js';
 import type { ByteRangeRequest, OpenedByteStream } from '../../shares/types.js';
@@ -6,7 +6,7 @@ import { createLogger } from '../../utils/index.js';
 import {
   FILE_PRIORITY,
   isOwnTorrent,
-  qbittorrentCredentialKey,
+  credentialKey,
   QBittorrentClient,
   type QbittorrentFile,
 } from './client.js';
@@ -14,6 +14,7 @@ import {
   computeFileAvailability,
   deriveFilePath,
   PieceReadiness,
+  resolveAllowedPath,
   type FileAvailability,
 } from './availability.js';
 import {
@@ -62,7 +63,7 @@ const pieceReadiness = new Map<string, PieceReadiness>();
 const pieceSizes = new Map<string, number>();
 
 function torrentKey(entry: QbittorrentStreamRefEntry): string {
-  return `${qbittorrentCredentialKey(entry.credential)}:${entry.hash}`;
+  return `${credentialKey(entry.credential)}:${entry.hash}`;
 }
 
 function getTorrentState(
@@ -133,13 +134,13 @@ async function getSnapshot(
   return { at, pieceSize, availability, filePriority };
 }
 
-async function openIfExists(path: string): Promise<boolean> {
+async function openIfExists(path: string): Promise<string | undefined> {
   try {
     const handle = await open(path, 'r');
     await handle.close();
-    return true;
+    return path;
   } catch {
-    return false;
+    return undefined;
   }
 }
 
@@ -176,7 +177,8 @@ async function locateEntryFile(
   const deadline = Date.now() + MOVE_WAIT_MS;
   for (;;) {
     for (const candidate of pathVariants(entry.filePath)) {
-      if (await openIfExists(candidate)) return candidate;
+      const found = await openIfExists(candidate);
+      if (found && (await resolveAllowedPath(candidate)) === 'allowed') return candidate;
     }
     const torrent = await client.getTorrent(entry.hash, signal);
     const files = torrent
@@ -186,17 +188,14 @@ async function locateEntryFile(
       ? deriveFilePath(torrent, files, entry.fileIndex)
       : undefined;
     if (derived && derived !== entry.filePath) {
-      // A complete torrent's destination must have reached full size: a
-      // cross-filesystem move is a copy, and a short destination for complete
-      // data means the copy has not landed (a stale or transitional state
-      // must not let a truncated file through). An incomplete torrent's file
-      // is legitimately short, whatever the reported state.
-      const requireComplete = (torrent?.progress ?? 0) >= 1;
+      // A complete file must have reached full size after a move.
+      const fileComplete =
+        (files.find((file) => file.index === entry.fileIndex)?.progress ?? 0) >= 1;
       for (const candidate of pathVariants(derived)) {
-        const ok = requireComplete
+        const ok = fileComplete
           ? await openIfComplete(candidate, entry.fileSize)
           : await openIfExists(candidate);
-        if (ok) return candidate;
+        if (ok && (await resolveAllowedPath(candidate)) === 'allowed') return candidate;
       }
     }
     if (torrent?.state !== 'moving' || Date.now() >= deadline) return undefined;
@@ -215,6 +214,8 @@ class QbittorrentPieceStream extends Readable {
   private pumping = false;
   private stalledSince: number | null = null;
   private path: string;
+  private lastSnapshotAt = 0;
+  private lastRaisedAt = 0;
 
   constructor(
     private readonly client: QBittorrentClient,
@@ -261,14 +262,45 @@ class QbittorrentPieceStream extends Readable {
           this.entry.hash,
           this.entry.fileIndex
         );
-        const snapshot = await getSnapshot(this.client, this.entry);
-        if (this.destroyed) return;
+        let snapshot: Snapshot | undefined;
+        try {
+          snapshot = await getSnapshot(this.client, this.entry);
+        } catch (error) {
+          // A transient WebUI blip must not end playback while readable data
+          // remains, only auth failures and aborts are fatal.
+          if (
+            this.signal?.aborted ||
+            (error instanceof DebridError &&
+              (error.statusCode === 401 || error.statusCode === 403))
+          ) {
+            throw error;
+          }
+          if (this.stalledSince === null) this.stalledSince = Date.now();
+          if (Date.now() - this.stalledSince >= STALL_TIMEOUT_MS) {
+            this.destroy(new Error('qBittorrent download stalled'));
+            return;
+          }
+          await delay(AVAILABILITY_POLL_MS);
+          continue;
+        }
+        if (!snapshot || this.destroyed) return;
+        if (snapshot.at !== this.lastSnapshotAt) {
+          this.lastSnapshotAt = snapshot.at;
+
+          await this.ensureHandleCurrent();
+        }
         // Heal a priority skip that slipped past the opener.
-        if (snapshot.filePriority === FILE_PRIORITY.skip) {
+        if (
+          this.ownTorrent &&
+          snapshot.filePriority === FILE_PRIORITY.skip &&
+          this.lastRaisedAt !== snapshot.at
+        ) {
+          this.lastRaisedAt = snapshot.at;
           await this.client.setFilePriority(
             this.entry.hash,
             [this.entry.fileIndex],
-            this.ownTorrent ? FILE_PRIORITY.max : FILE_PRIORITY.normal
+            FILE_PRIORITY.max,
+            this.signal
           );
         }
 
@@ -309,6 +341,24 @@ class QbittorrentPieceStream extends Readable {
     } finally {
       this.pumping = false;
     }
+  }
+
+  /** Verify the handle still matches the file at the current path. */
+  private async ensureHandleCurrent(): Promise<void> {
+    if (!this.handle) return;
+    try {
+      const handleStat = await this.handle.stat();
+      if (handleStat.nlink > 0) {
+        const pathStat = await stat(this.path);
+        if (handleStat.ino === pathStat.ino && handleStat.dev === pathStat.dev) {
+          return;
+        }
+      }
+    } catch {
+      // fall through: close and re-locate
+    }
+    await this.handle.close().catch(() => {});
+    this.handle = null;
   }
 
   /**

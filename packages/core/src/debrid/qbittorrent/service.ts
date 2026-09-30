@@ -35,6 +35,7 @@ import {
   computeFileAvailability,
   deriveFilePath,
   planFilePriorities,
+  resolveAllowedPath,
 } from './availability.js';
 import {
   STREAM_REF_TTL_SECONDS,
@@ -271,6 +272,21 @@ export class QBittorrentService implements TorrentDebridService {
         : undefined) ?? (await this.client.getTorrent(hash));
 
     if (!torrent) {
+      const addTorrent = async (url: string) => {
+        try {
+          await this.client.addTorrentUrl(url);
+        } catch (error) {
+          // 4.x answers a duplicate add with 200 "Fails."
+          if (
+            error instanceof DebridError &&
+            error.code === 'STORE_MAGNET_INVALID' &&
+            (await this.client.getTorrent(hash, signal))
+          ) {
+            return;
+          }
+          throw error;
+        }
+      };
       if (
         playbackInfo.private !== undefined &&
         playbackInfo.downloadUrl &&
@@ -279,7 +295,7 @@ export class QBittorrentService implements TorrentDebridService {
         logger.debug(
           `Adding torrent from ${makeUrlLogSafe(playbackInfo.downloadUrl)}`
         );
-        await this.client.addTorrentUrl(playbackInfo.downloadUrl);
+        await addTorrent(playbackInfo.downloadUrl);
       } else {
         let magnet = `magnet:?xt=urn:btih:${hash}`;
         if (playbackInfo.filename) {
@@ -290,8 +306,10 @@ export class QBittorrentService implements TorrentDebridService {
             .map((source) => encodeURIComponent(source))
             .join('&tr=')}`;
         }
-        await this.client.addTorrentUrl(magnet);
+        await addTorrent(magnet);
       }
+
+      if (!cacheAndPlay) return undefined;
       torrent = await this.waitForTorrent(hash, signal, deadline);
     }
 
@@ -444,6 +462,20 @@ export class QBittorrentService implements TorrentDebridService {
         }
         const filePath = deriveFilePath(current, files, file.index);
         if (filePath) {
+          const allowed = await resolveAllowedPath(filePath);
+          if (allowed === 'outside') {
+            throw new DebridError(
+              'qBittorrent reported a file path outside the configured download roots',
+              {
+                statusCode: 403,
+                statusText: 'Forbidden',
+                code: 'FORBIDDEN',
+                type: 'api_error',
+                headers: {},
+              }
+            );
+          }
+          // Just pre-allocation lag, nothing flushed yet.
           const pieceSize = await this.client.getPieceSize(torrent.hash, signal);
           const pieceStates = await this.client.getPieceStates(torrent.hash, signal);
           const availability = computeFileAvailability({
@@ -498,6 +530,18 @@ export class QBittorrentService implements TorrentDebridService {
       );
     }
 
+    if (STOPPED_STATES.has(lastState) && !isOwnTorrent(torrent)) {
+      throw new DebridError(
+        'The torrent is paused in your qBittorrent client; resume it to play it through AIOStreams',
+        {
+          statusCode: 408,
+          statusText: 'Request Timeout',
+          code: 'TIMEOUT',
+          type: 'api_error',
+          headers: {},
+        }
+      );
+    }
     throw new DebridError(
       `Timed out waiting for the download to become playable (qBittorrent last reported "${lastState}")`,
       {

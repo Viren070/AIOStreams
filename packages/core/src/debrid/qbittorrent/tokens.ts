@@ -29,24 +29,42 @@ export interface QbittorrentStreamRefEntry {
  * disclose the WebUI credential nor reach a path that was not registered by
  * a resolve.
  */
-const streamRefStore = Cache.getInstance<string, QbittorrentStreamRefEntry>(
+const streamRefStore = Cache.getInstance<string, string>(
   'qbittorrent:stream-refs'
 );
 
-/** Register a stream entry behind a fresh opaque ref. */
+/**
+ * Register a stream entry behind a fresh opaque reference for
+ * {@link STREAM_REF_TTL_SECONDS}. The WebUI credential inside the entry is
+ * encrypted at rest, so a Redis or SQL cache backend never holds the
+ * password in plaintext. Each resolve mints a new reference; references are
+ * never reused, so one expiring cannot affect other streams.
+ */
 export async function registerStreamRef(
   entry: QbittorrentStreamRefEntry
 ): Promise<string> {
   const ref = randomUUID();
-  await streamRefStore.set(ref, entry, STREAM_REF_TTL_SECONDS);
+  const sealed = encryptString(JSON.stringify(entry));
+  if (!sealed.success) {
+    throw new Error('failed to seal qbittorrent stream reference');
+  }
+  await streamRefStore.set(ref, sealed.data, STREAM_REF_TTL_SECONDS);
   return ref;
 }
 
 /** Look up a ref, undefined means expired. */
-export function resolveStreamRef(
+export async function resolveStreamRef(
   ref: string
 ): Promise<QbittorrentStreamRefEntry | undefined> {
-  return streamRefStore.get(ref);
+  const sealed = await streamRefStore.get(ref);
+  if (!sealed) return undefined;
+  const opened = decryptString(sealed);
+  if (!opened.success || opened.data == null) return undefined;
+  try {
+    return JSON.parse(opened.data) as QbittorrentStreamRefEntry;
+  } catch {
+    return undefined;
+  }
 }
 
 /** How long a file stays live after its last consumer touch. */

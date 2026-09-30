@@ -114,11 +114,16 @@ was skipped meanwhile, its download restarts automatically.
 
 - Stream URLs carry no credential: they hold an opaque reference that points
   at a server-side entry (kept for 12 hours) with the WebUI credential, the
-  torrent and the one selected file. A leaked URL can be used to read that
-  one file until the reference expires — it cannot reach your client's WebUI
-  or any other torrent. If AIOStreams uses the SQL or Redis cache backend,
-  note that the stored entry contains the WebUI password in plaintext for as
-  long as the reference lives.
+  torrent and the one selected file. The stored credential is encrypted, so
+  a Redis or SQL cache backend never holds the password in plaintext. A
+  leaked URL can be used to read that one file until the reference expires,
+  it cannot reach your client's WebUI or any other torrent.
+- The WebUI URL is entered by whoever configures the service, and the paths
+  AIOStreams serves come from that client. On a server shared by several
+  people, set the `QBITTORRENT_ALLOWED_ROOTS` environment variable (a
+  comma-separated list of download directories): qBittorrent file paths are
+  then confined to those directories, through symlinks, before anything is
+  served.
 - qBittorrent bans IPs after repeated failed logins. If you mistype the
   password, fix it in the service settings before pressing play again.
 - qBittorrent 4.6+ is required; 5.x is recommended.
