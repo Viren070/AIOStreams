@@ -1,4 +1,4 @@
-import { realpath } from 'fs/promises';
+import { realpath, stat } from 'fs/promises';
 import { FILE_PRIORITY, QbittorrentFile } from './client.js';
 
 /** Rewrite a qBittorrent-reported path through the configured mount
@@ -25,6 +25,9 @@ export type AllowedPath = 'allowed' | 'missing' | 'outside';
 export async function resolveAllowedPath(candidate: string): Promise<AllowedPath> {
   const real = await realpath(candidate).catch(() => undefined);
   if (!real) return 'missing';
+
+  const stats = await stat(real).catch(() => undefined);
+  if (!stats?.isFile()) return 'missing';
   const roots = (process.env.QBITTORRENT_ALLOWED_ROOTS ?? '')
     .split(',')
     .map((root) => root.trim())

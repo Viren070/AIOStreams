@@ -275,6 +275,7 @@ export class BuiltinAddonPreset extends Preset {
           username: credentials.username,
           password: credentials.password,
           skipOtherFiles: credentials.skipOtherFiles,
+          pathMappings: credentials.pathMappings,
         }),
     };
     const altmountSpecialCase: Partial<
