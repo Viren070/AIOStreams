@@ -73,7 +73,9 @@ function liveKey(
   credential: z.infer<typeof QbittorrentCredentialSchema>,
   hash: string
 ): string {
-  return `${credential.url}|${credential.username}|${hash}`;
+
+  const url = credential.url.replace(/\/+$/, '');
+  return `${url}|${credential.username}|${hash}`;
 }
 
 export function markFileLive(

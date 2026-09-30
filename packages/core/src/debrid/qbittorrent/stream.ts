@@ -39,6 +39,8 @@ interface Snapshot {
   at: number;
   pieceSize: number;
   availability: FileAvailability;
+  /** Current priority of the streamed file (skip heeds it). */
+  filePriority: number;
 }
 
 /** Raw per-torrent state shared across all concurrent streams of a torrent. */
@@ -126,7 +128,9 @@ async function getSnapshot(
     pieceSize,
     isReadable: pieceReadiness.get(key)?.readable,
   });
-  return { at, pieceSize, availability };
+  const filePriority =
+    files.find((file) => file.index === entry.fileIndex)?.priority ?? 1;
+  return { at, pieceSize, availability, filePriority };
 }
 
 async function openIfExists(path: string): Promise<boolean> {
@@ -182,9 +186,14 @@ async function locateEntryFile(
       ? deriveFilePath(torrent, files, entry.fileIndex)
       : undefined;
     if (derived && derived !== entry.filePath) {
-      const moving = torrent?.state === 'moving';
+      // A complete torrent's destination must have reached full size: a
+      // cross-filesystem move is a copy, and a short destination for complete
+      // data means the copy has not landed (a stale or transitional state
+      // must not let a truncated file through). An incomplete torrent's file
+      // is legitimately short, whatever the reported state.
+      const requireComplete = (torrent?.progress ?? 0) >= 1;
       for (const candidate of pathVariants(derived)) {
-        const ok = moving
+        const ok = requireComplete
           ? await openIfComplete(candidate, entry.fileSize)
           : await openIfExists(candidate);
         if (ok) return candidate;
@@ -211,6 +220,7 @@ class QbittorrentPieceStream extends Readable {
     private readonly client: QBittorrentClient,
     private readonly entry: QbittorrentStreamRefEntry,
     locatedPath: string,
+    private readonly ownTorrent: boolean,
     private readonly start: number,
     private readonly end: number,
     private readonly signal?: AbortSignal
@@ -253,6 +263,14 @@ class QbittorrentPieceStream extends Readable {
         );
         const snapshot = await getSnapshot(this.client, this.entry);
         if (this.destroyed) return;
+        // Heal a priority skip that slipped past the opener.
+        if (snapshot.filePriority === FILE_PRIORITY.skip) {
+          await this.client.setFilePriority(
+            this.entry.hash,
+            [this.entry.fileIndex],
+            this.ownTorrent ? FILE_PRIORITY.max : FILE_PRIORITY.normal
+          );
+        }
 
         const frontier = snapshot.availability.readableFrom(this.cursor);
         if (frontier > this.cursor) {
@@ -465,6 +483,7 @@ export async function openQbittorrentStream(opts: {
     client,
     entry,
     located,
+    isOwnTorrent(torrent),
     start,
     end,
     opts.signal
