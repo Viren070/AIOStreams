@@ -110,6 +110,18 @@ export function useBrowserPlayer(
       shifted.current.set(track, delayMs.current);
     }
   }, [video]);
+  // Browsers disagree on where a cue the file leaves unplaced goes, so sit it where mpv does.
+  const placeCues = React.useCallback(() => {
+    for (const track of Array.from(video.current?.textTracks ?? [])) {
+      for (const cue of Array.from(track.cues ?? [])) {
+        const vtt = cue as VTTCue;
+        if (vtt.line !== 'auto') continue;
+        vtt.snapToLines = false;
+        vtt.line = 97;
+        vtt.lineAlign = 'end';
+      }
+    }
+  }, [video]);
   const showSubtitle = (id: string | null) => {
     const tracks = video.current?.textTracks;
     if (!tracks) return;
@@ -165,7 +177,11 @@ export function useBrowserPlayer(
     for (const [event, handler] of Object.entries(handlers))
       el.addEventListener(event, handler);
     const trackElements = Array.from(el.querySelectorAll('track'));
-    for (const t of trackElements) t.addEventListener('load', shiftCues);
+    const onTrackLoad = () => {
+      placeCues();
+      shiftCues();
+    };
+    for (const t of trackElements) t.addEventListener('load', onTrackLoad);
     const onFullscreen = () =>
       patch({ fullscreen: !!document.fullscreenElement });
     document.addEventListener('fullscreenchange', onFullscreen);
@@ -173,7 +189,7 @@ export function useBrowserPlayer(
       for (const [event, handler] of Object.entries(handlers))
         el.removeEventListener(event, handler);
       document.removeEventListener('fullscreenchange', onFullscreen);
-      for (const t of trackElements) t.removeEventListener('load', shiftCues);
+      for (const t of trackElements) t.removeEventListener('load', onTrackLoad);
     };
   }, [video, startMs, onEnded]);
 

@@ -39,7 +39,7 @@ import {
   type SubtitleStyle,
   type VideoFit,
 } from '../lib/settings';
-import { subtitleCss } from '../lib/subtitle-style';
+import { subtitleCss, subtitleScale } from '../lib/subtitle-style';
 import { usePlaybackPrefs, type PlaybackPrefs } from '../lib/user-config';
 import { backdropUrl } from '../lib/images';
 import { goBack, navigate, to, versionsPath } from '../lib/paths';
@@ -333,10 +333,11 @@ function Failure({
   );
 }
 
+/** Sized from the video's height, as a cue is by default; Firefox reads a percentage against the page font. */
 function cueCss(style: SubtitleStyle): string {
   const css = subtitleCss(style);
   return `video::cue {
-    font-size: ${css.fontSize};
+    font-size: calc(${subtitleScale(style)} * 5vh);
     font-weight: ${css.fontWeight};
     color: ${css.color};
     background-color: ${css.backgroundColor};
