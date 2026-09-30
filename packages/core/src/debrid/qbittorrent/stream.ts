@@ -14,6 +14,7 @@ import {
   applyPathMappings,
   computeFileAvailability,
   deriveFilePath,
+  openRegularFile,
   PieceReadiness,
   resolveAllowedPath,
   type FileAvailability,
@@ -136,13 +137,10 @@ async function getSnapshot(
 }
 
 async function openIfExists(path: string): Promise<string | undefined> {
-  try {
-    const handle = await open(path, 'r');
-    await handle.close();
-    return path;
-  } catch {
-    return undefined;
-  }
+  const handle = await openRegularFile(path);
+  if (!handle) return undefined;
+  await handle.close().catch(() => {});
+  return path;
 }
 
 /** Opens a candidate only when it has reached the file's full size. */
@@ -150,17 +148,10 @@ async function openIfComplete(
   path: string,
   fileSize: number
 ): Promise<boolean> {
-  try {
-    const handle = await open(path, 'r');
-    try {
-      const { size } = await handle.stat();
-      return size >= fileSize;
-    } finally {
-      await handle.close().catch(() => {});
-    }
-  } catch {
-    return false;
-  }
+  const handle = await openRegularFile(path, { minSize: fileSize });
+  if (!handle) return false;
+  await handle.close().catch(() => {});
+  return true;
 }
 
 function pathVariants(path: string): string[] {
@@ -178,8 +169,11 @@ async function locateEntryFile(
   const deadline = Date.now() + MOVE_WAIT_MS;
   for (;;) {
     for (const candidate of pathVariants(entry.filePath)) {
-      const found = await openIfExists(candidate);
-      if (found && (await resolveAllowedPath(candidate)) === 'allowed') return candidate;
+      const allowed = await resolveAllowedPath(candidate);
+      if (allowed === 'invalid' || allowed === 'outside') return undefined;
+      if (allowed === 'allowed' && (await openIfExists(candidate))) {
+        return candidate;
+      }
     }
     const torrent = await client.getTorrent(entry.hash, signal);
     const files = torrent
@@ -196,10 +190,12 @@ async function locateEntryFile(
       const fileComplete =
         (files.find((file) => file.index === entry.fileIndex)?.progress ?? 0) >= 1;
       for (const candidate of pathVariants(derived)) {
+        const allowed = await resolveAllowedPath(candidate);
+        if (allowed !== 'allowed') continue;
         const ok = fileComplete
           ? await openIfComplete(candidate, entry.fileSize)
           : await openIfExists(candidate);
-        if (ok && (await resolveAllowedPath(candidate)) === 'allowed') return candidate;
+        if (ok) return candidate;
       }
     }
     if (torrent?.state !== 'moving' || Date.now() >= deadline) return undefined;

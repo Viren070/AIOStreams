@@ -35,6 +35,7 @@ import {
   applyPathMappings,
   computeFileAvailability,
   deriveFilePath,
+  openRegularFile,
   planFilePriorities,
   resolveAllowedPath,
 } from './availability.js';
@@ -499,6 +500,18 @@ export class QBittorrentService implements TorrentDebridService {
               }
             );
           }
+          if (allowed === 'invalid') {
+            throw new DebridError(
+              'qBittorrent reported a file path that is not a regular file',
+              {
+                statusCode: 403,
+                statusText: 'Forbidden',
+                code: 'FORBIDDEN',
+                type: 'api_error',
+                headers: {},
+              }
+            );
+          }
           // Just pre-allocation lag, nothing flushed yet.
           const pieceSize = await this.client.getPieceSize(torrent.hash, signal);
           const pieceStates = await this.client.getPieceStates(torrent.hash, signal);
@@ -682,18 +695,14 @@ export class QBittorrentService implements TorrentDebridService {
   ): Promise<boolean> {
     if (fileSize === 0) return true;
     const length = Math.min(64 * 1024, fileSize);
-    let handle;
-    try {
-      handle = await open(filePath, 'r');
-    } catch {
-      // qBittorrent's "Append .!qB to incomplete files" option keeps the
-      // suffixed name on disk until the file completes.
-      try {
-        handle = await open(filePath + '.!qB', 'r');
-      } catch {
-        return false;
-      }
-    }
+    // Non-blocking regular-file opens only: a reported path that resolves
+    // to a fifo or device node must not park a threadpool thread. qBittorrent's
+    // "Append .!qB to incomplete files" keeps the suffixed name on disk until
+    // the file completes.
+    let handle =
+      (await openRegularFile(filePath)) ??
+      (await openRegularFile(filePath + '.!qB'));
+    if (!handle) return false;
     try {
       const buffer = Buffer.alloc(length);
       const { bytesRead } = await handle.read(buffer, 0, length, 0);

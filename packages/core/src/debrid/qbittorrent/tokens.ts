@@ -58,8 +58,22 @@ export async function registerStreamRef(
  * references still cached must degrade to an expired link, not a crash);
  * the caller should answer as an expired link.
  */
+const SealedCredentialSchema = z.object({
+  url: z.string(),
+  username: z.string(),
+  password: z.string(),
+  skipOtherFiles: z.boolean().optional(),
+  // The credential is stored POST-transform (skipOtherFiles already a
+  // boolean, pathMappings already parsed into pairs), so the entry schema
+  // mirrors the output shape rather than re-running the input transforms.
+  pathMappings: z.union([
+    z.array(z.object({ from: z.string(), to: z.string() })),
+    z.undefined(),
+  ]),
+});
+
 const SealedStreamRefSchema = z.object({
-  credential: QbittorrentCredentialSchema,
+  credential: SealedCredentialSchema,
   hash: z.string(),
   fileIndex: z.number(),
   filePath: z.string(),

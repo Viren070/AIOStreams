@@ -1,4 +1,5 @@
-import { realpath, stat } from 'fs/promises';
+import { open, realpath, stat, type FileHandle } from 'fs/promises';
+import { constants } from 'fs';
 import { FILE_PRIORITY, QbittorrentFile } from './client.js';
 
 /** Rewrite a qBittorrent-reported path through the configured mount
@@ -8,26 +9,65 @@ export function applyPathMappings(
   mappings?: { from: string; to: string }[]
 ): string {
   if (!mappings || mappings.length === 0) return path;
-  const sorted = [...mappings].sort((a, b) => b.from.length - a.from.length);
+  // Map backslashes too so Windows-style mappings match.
+  const normalize = (value: string) => value.replace(/\\/g, '/');
+  const sorted = [...mappings].sort(
+    (a, b) => normalize(b.from).length - normalize(a.from).length
+  );
   for (const mapping of sorted) {
-    const from = mapping.from.endsWith('/') ? mapping.from : mapping.from + '/';
-    if (path === mapping.from) return mapping.to;
+    const fromRaw = normalize(mapping.from);
+    const from = fromRaw.endsWith('/') ? fromRaw : fromRaw + '/';
+    if (path === fromRaw) return normalize(mapping.to);
     if (path.startsWith(from)) {
       const tail = path.slice(from.length);
-      return mapping.to.endsWith('/') ? mapping.to + tail : mapping.to + '/' + tail;
+      const to = normalize(mapping.to);
+      return to.endsWith('/') ? to + tail : to + '/' + tail;
     }
   }
   return path;
 }
 
-export type AllowedPath = 'allowed' | 'missing' | 'outside';
+export type AllowedPath = 'allowed' | 'missing' | 'invalid' | 'outside';
+
+/**
+ * Open a path for reading, refusing anything that is not a regular file.
+ * Non-blocking first, a fifo or device node would park a threadpool
+ * thread forever.
+ */
+export async function openRegularFile(
+  path: string,
+  opts: { minSize?: number } = {}
+): Promise<FileHandle | undefined> {
+  let handle: FileHandle;
+  try {
+    handle = await open(path, constants.O_RDONLY | constants.O_NONBLOCK);
+  } catch {
+    return undefined;
+  }
+  try {
+    const stats = await handle.stat();
+    if (!stats.isFile()) {
+      await handle.close().catch(() => {});
+      return undefined;
+    }
+    if (opts.minSize !== undefined && stats.size < opts.minSize) {
+      await handle.close().catch(() => {});
+      return undefined;
+    }
+    return handle;
+  } catch {
+    await handle.close().catch(() => {});
+    return undefined;
+  }
+}
 
 export async function resolveAllowedPath(candidate: string): Promise<AllowedPath> {
   const real = await realpath(candidate).catch(() => undefined);
   if (!real) return 'missing';
 
   const stats = await stat(real).catch(() => undefined);
-  if (!stats?.isFile()) return 'missing';
+  if (!stats) return 'missing';
+  if (!stats.isFile()) return 'invalid';
   const roots = (process.env.QBITTORRENT_ALLOWED_ROOTS ?? '')
     .split(',')
     .map((root) => root.trim())
@@ -41,15 +81,26 @@ export async function resolveAllowedPath(candidate: string): Promise<AllowedPath
   for (const root of roots) {
     const realRoot = await realpath(root).catch(() => undefined);
     if (!realRoot) continue;
-    const normalized = realRoot.endsWith('/') ? realRoot : realRoot + '/';
-    if (
-      fold(real) === fold(realRoot) ||
-      fold(real).startsWith(fold(normalized))
-    ) {
-      return 'allowed';
-    }
+    if (fold(real) === fold(realRoot)) return 'allowed';
+    const relative = posixRelative(realRoot, real);
+    if (relative !== undefined) return 'allowed';
   }
   return 'outside';
+}
+
+function posixRelative(root: string, target: string): string | undefined {
+  // Inside root (not escaping, not on a different drive).
+  const fold =
+    process.platform === 'win32'
+      ? (value: string) => value.toLowerCase()
+      : (value: string) => value;
+  const rootParts = fold(root).split(/[\\/]+/).filter(Boolean);
+  const targetParts = fold(target).split(/[\\/]+/).filter(Boolean);
+  if (rootParts.length >= targetParts.length) return undefined;
+  for (let i = 0; i < rootParts.length; i++) {
+    if (rootParts[i] !== targetParts[i]) return undefined;
+  }
+  return targetParts.slice(rootParts.length).join('/');
 }
 
 /** A file must have at least this many contiguous bytes before playback starts. */
