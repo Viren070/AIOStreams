@@ -13,6 +13,7 @@ use webkit6::{
 };
 
 use crate::links::Inbox;
+use crate::media;
 use crate::placement::{self, MIN_SIZE, Placement, SETTLE};
 use crate::updates::Updater;
 use crate::{
@@ -240,6 +241,7 @@ pub fn run(app: App) {
         post(UserEvent::Emit(receive_script(&message)))
     }));
     discord::start(|message| post(UserEvent::Emit(receive_script(&message))));
+    media::start(|key| post(UserEvent::Emit(receive_script(&Outbound::MediaKey { key }))));
 
     let context = webkit6::WebContext::new();
     context.register_uri_scheme("aiostreams", move |request| {

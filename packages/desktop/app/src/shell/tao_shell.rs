@@ -11,7 +11,7 @@ use tao::event_loop::{ControlFlow, EventLoopBuilder, EventLoopWindowTarget};
 #[cfg(target_os = "macos")]
 use tao::platform::macos::WindowBuilderExtMacOS;
 #[cfg(windows)]
-use tao::platform::windows::WindowBuilderExtWindows;
+use tao::platform::windows::{WindowBuilderExtWindows, WindowExtWindows};
 use tao::window::{Fullscreen, ResizeDirection, Window, WindowBuilder};
 #[cfg(windows)]
 use wry::WebViewBuilderExtWindows;
@@ -19,6 +19,7 @@ use wry::http::{Request, Response};
 use wry::{NewWindowResponse, PageLoadEvent, Rect, WebContext, WebViewBuilder};
 
 use crate::links::Inbox;
+use crate::media;
 use crate::placement::{self, MIN_SIZE, Placement, SETTLE};
 use crate::updates::Updater;
 use crate::{
@@ -181,6 +182,16 @@ pub fn run(app: App) {
             let _ = proxy.send_event(UserEvent::Emit(receive_script(&message)));
         }
     }));
+    let keys = {
+        let proxy = proxy.clone();
+        move |key| {
+            let _ = proxy.send_event(UserEvent::Emit(receive_script(&Outbound::MediaKey { key })));
+        }
+    };
+    #[cfg(windows)]
+    media::start(window.hwnd(), keys);
+    #[cfg(target_os = "macos")]
+    media::start(keys);
     discord::start({
         let proxy = proxy.clone();
         move |message: Outbound| {

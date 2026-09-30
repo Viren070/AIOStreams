@@ -22,6 +22,7 @@ name = "aiostreams-desktop"
 version = "0.8.0"
 dependencies = [
  "aiostreams-desktop-core",
+ "block2",
  "dirs",
  "dispatch2",
  "gtk4",
@@ -34,6 +35,7 @@ dependencies = [
  "objc2-core-foundation",
  "objc2-core-video",
  "objc2-foundation",
+ "objc2-media-player",
  "objc2-open-gl",
  "objc2-quartz-core",
  "serde",
@@ -41,6 +43,7 @@ dependencies = [
  "tao",
  "velopack",
  "webkit6",
+ "windows",
  "windows-sys 0.61.2",
  "winresource",
  "wry",
@@ -1967,6 +1970,20 @@ dependencies = [
  "bitflags 2.13.2",
  "objc2",
  "objc2-core-foundation",
+]
+
+[[package]]
+name = "objc2-media-player"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "85f2a98483f6e76313cb85a5a185eaa3cda86a177b13a8852d56cbd0085bf635"
+dependencies = [
+ "bitflags 2.13.2",
+ "block2",
+ "objc2",
+ "objc2-app-kit",
+ "objc2-core-foundation",
+ "objc2-foundation",
 ]
 
 [[package]]

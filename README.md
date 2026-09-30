@@ -92,7 +92,7 @@ Watch without Stremio, with the same addons, filters, sorting and formatting. Th
 - **Household Profiles**: A profile for everyone, each with its own Continue Watching and an optional PIN. Switch between them without signing out.
 - **Tracker Sync**: Addons that support [Watch State](https://docs.aiostreams.viren070.me/reference/addon-protocol/watch-state) can record what you play and bring in the history they hold, so what you watched elsewhere can show up in Continue Watching.
 - **Custom Themes and CSS**: Preset themes, your own accent and background colours, and custom CSS with [documented hooks](https://docs.aiostreams.viren070.me/reference/web-app-css), all following you to every device.
-- **Desktop Extras**: mpv playback for MKV, HEVC, AV1 and styled subtitles, surround output with Dolby and DTS passthrough, chapters, your own `mpv.conf`, `input.conf`, scripts and shaders, what you're watching on your Discord profile, and background updates with an optional nightly channel on Windows and macOS.
+- **Desktop Extras**: mpv playback for MKV, HEVC, AV1 and styled subtitles, surround output with Dolby and DTS passthrough, chapters, your own `mpv.conf`, `input.conf`, scripts and shaders, what you're watching in the system's media controls and on your Discord profile, the keyboard's media keys, and background updates with an optional nightly channel on Windows and macOS.
 
 ### 🧩 Built-in Addons
 

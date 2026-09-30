@@ -18,13 +18,23 @@ use windows_sys::Win32::System::Registry::{
 };
 use windows_sys::Win32::System::SystemInformation::GetLocalTime;
 use windows_sys::Win32::System::Threading::CreateMutexW;
-use windows_sys::Win32::UI::Shell::ShellExecuteW;
+use windows_sys::Win32::UI::Shell::{SetCurrentProcessExplicitAppUserModelID, ShellExecuteW};
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, FindWindowExW, FindWindowW, HWND_BOTTOM, HWND_MESSAGE,
     IsIconic, MB_ICONERROR, MB_OK, MessageBoxW, RegisterClassW, SMTO_ABORTIFHUNG, SW_RESTORE,
     SW_SHOWNORMAL, SWP_NOACTIVATE, SendMessageTimeoutW, SetForegroundWindow, SetWindowPos,
     ShowWindow, WM_COPYDATA, WNDCLASSW, WS_CHILD, WS_VISIBLE,
 };
+
+/// The id on the Start menu shortcut Velopack makes, which gives the system's
+/// media controls the app's name and icon.
+const APP_ID: &str = "velopack.aiostreams-desktop";
+
+/// Set before any window opens.
+pub fn claim_app_id() {
+    let id = wide(APP_ID);
+    unsafe { SetCurrentProcessExplicitAppUserModelID(id.as_ptr()) };
+}
 
 /// Custom protocols are served from `http://<scheme>.localhost` on Windows.
 pub const APP_URL: &str = "http://aiostreams.localhost/";

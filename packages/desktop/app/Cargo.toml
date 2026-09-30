@@ -23,6 +23,13 @@ tao.workspace = true
 wry.workspace = true
 
 [target.'cfg(windows)'.dependencies]
+windows = { version = "0.62", features = [
+  "Foundation",
+  "Media",
+  "Storage_Streams",
+  "Win32_Foundation",
+  "Win32_System_WinRT",
+] }
 windows-sys = { workspace = true, features = [
   "Win32_Foundation",
   "Win32_Graphics_Gdi",
@@ -51,6 +58,18 @@ objc2-open-gl = "0.3"
 objc2-core-video = "0.3"
 objc2-core-foundation = "0.3"
 dispatch2 = "0.3"
+block2 = "0.6"
+objc2-media-player = { version = "0.3", default-features = false, features = [
+  "std",
+  "block2",
+  "objc2-app-kit",
+  "objc2-core-foundation",
+  "MPMediaItem",
+  "MPNowPlayingInfoCenter",
+  "MPRemoteCommand",
+  "MPRemoteCommandCenter",
+  "MPRemoteCommandEvent",
+] }
 muda = "0.17"
 libc = "0.2"
 libloading.workspace = true
