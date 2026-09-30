@@ -124,6 +124,12 @@ was skipped meanwhile, its download restarts automatically.
   comma-separated list of download directories): qBittorrent file paths are
   then confined to those directories, through symlinks, before anything is
   served.
+- Playing through qBittorrent downloads to the operator's own client, so on
+  an instance with users you don't personally know, it usually should not be
+  user-configurable at all. The standard instance controls all apply: hide
+  it entirely with `DISABLED_SERVICES=qbittorrent:reason`, offer the
+  operator's client with `FORCED_SERVICE_CREDENTIALS`, or pre-fill a shared
+  box's client with `DEFAULT_SERVICE_CREDENTIALS`.
 - qBittorrent bans IPs after repeated failed logins. If you mistype the
   password, fix it in the service settings before pressing play again.
 - qBittorrent 4.6+ is required; 5.x is recommended.
