@@ -1,5 +1,5 @@
 import '../../index.js';
-import { test, describe, mock } from 'node:test';
+import { test, describe, mock, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -729,6 +729,20 @@ describe('qbittorrent service availability', () => {
 });
 
 describe('QBittorrentService resolve', () => {
+  // The confinement check fails closed without configured roots; these
+  // tests build their content under the system temp directory.
+  const previousRoots = process.env.QBITTORRENT_ALLOWED_ROOTS;
+  before(() => {
+    process.env.QBITTORRENT_ALLOWED_ROOTS = tmpdir();
+  });
+  after(() => {
+    if (previousRoots === undefined) {
+      delete process.env.QBITTORRENT_ALLOWED_ROOTS;
+    } else {
+      process.env.QBITTORRENT_ALLOWED_ROOTS = previousRoots;
+    }
+  });
+
   // One unique infohash per test: the live-file registry is module-global
   // with a 15-minute TTL, so reusing a hash would leak liveness between
   // tests (and correctly suppress skips of a "live" file).

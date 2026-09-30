@@ -1,4 +1,5 @@
 import { toUrlSafeBase64 } from '../../utils/index.js';
+import { DebridError } from '../base.js';
 import {
   parseQbittorrentCredential,
   QBittorrentClient,
@@ -14,9 +15,8 @@ export interface QbittorrentTestResult {
 }
 
 /**
- * Probe a qBittorrent WebUI for the config UI's test button: validate the
- * URL, log in (the client's first request establishes the session), and
- * list the torrents AIOStreams added, which also proves API access.
+ * Probe a WebUI for the config UI's test button, validate the URL, log in
+ * and list our torrents, which also proves API access.
  */
 export async function testQbittorrentConnection(args: {
   url: string;
@@ -45,14 +45,20 @@ export async function testQbittorrentConnection(args: {
       torrentCount: torrents.length,
     };
   } catch (error) {
+    // Fixed buckets only, echoing upstream status codes would turn the
+    // test button into a network probe of whatever the caller pointed at.
+    const status =
+      error instanceof DebridError ? error.statusCode : undefined;
+    const banned = error instanceof Error && error.message.includes('banned');
     return {
       ok: false,
-      stage: 'login',
+      stage: status === 401 || status === 403 ? 'login' : 'api',
       error: {
-        message:
-          error instanceof Error
-            ? error.message
-            : 'Could not reach the qBittorrent WebUI',
+        message: banned
+          ? 'The WebUI rejected the login (the host may be banned; wait a minute and retry)'
+          : status === 401 || status === 403
+            ? 'Login failed: check the username and password'
+            : 'Could not reach the qBittorrent WebUI at that URL',
       },
     };
   }
