@@ -213,51 +213,43 @@ export function computeFileAvailability(params: {
 }
 
 /**
- * Tracks when each piece of one torrent was first observed downloaded.
+ * Tracks in which observation each piece was first seen downloaded.
  * qBittorrent flips a piece's state before flushing it to disk, so a piece
- * only counts as readable once it has been seen downloaded in an EARLIER
- * observation — at least one observation old. This replaces withholding a
- * fixed number of bytes behind the frontier: it keeps unflushed pieces out
- * of reads while still serving the file's final piece (where MKV cues and
- * the MP4 moov live) as soon as it has aged one poll, instead of stalling
- * tail reads until the whole torrent completes.
+ * only counts as readable once it has aged one observation, which still
+ * serves the file's final piece (MKV cues, MP4 moov) instead of stalling
+ * tail reads until completion. Generations rather than timestamps, a
+ * wall-clock step backwards cannot wedge pieces unreadable.
  */
 export class PieceReadiness {
-  private firstSeen: Float64Array;
+  private firstSeenGen: Uint32Array;
 
   /** Number of pieces this instance was created for. */
   readonly pieceCount: number;
 
+  private generation = 0;
+
   constructor(pieceCount: number) {
     this.pieceCount = pieceCount;
-    this.firstSeen = new Float64Array(pieceCount);
+    this.firstSeenGen = new Uint32Array(pieceCount);
   }
 
-  /**
-   * Record one observation; pieces flipped to downloaded get a timestamp.
-   * The observation clock is captured once and applied at the END of the
-   * pass, so a piece flipped in this observation can never compare as older
-   * than the observation itself (separate Date.now() reads could tick past
-   * each other and make fresh pieces instantly readable).
-   */
-  observe(pieceStates: number[], now: number = Date.now()): void {
+  /** Record one observation, pieces flipped to downloaded get the generation. */
+  observe(pieceStates: number[]): void {
+    this.generation++;
     for (let piece = 0; piece < pieceStates.length; piece++) {
       if (pieceStates[piece] === 2) {
-        if (this.firstSeen[piece] === 0) this.firstSeen[piece] = now;
-      } else if (this.firstSeen[piece] !== 0) {
+        if (this.firstSeenGen[piece] === 0) this.firstSeenGen[piece] = this.generation;
+      } else if (this.firstSeenGen[piece] !== 0) {
         // Lost to a recheck or re-download, it must age again before it is
         // readable once more.
-        this.firstSeen[piece] = 0;
+        this.firstSeenGen[piece] = 0;
       }
     }
-    this.lastObservedAt = now;
   }
 
   /** A piece is readable once it was downloaded in a previous observation. */
   readable = (piece: number): boolean => {
-    const seenAt = this.firstSeen[piece];
-    return seenAt !== 0 && seenAt < this.lastObservedAt;
+    const seenIn = this.firstSeenGen[piece];
+    return seenIn !== 0 && seenIn < this.generation;
   };
-
-  private lastObservedAt = 0;
 }

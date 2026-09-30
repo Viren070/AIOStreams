@@ -297,7 +297,7 @@ describe('PieceReadiness', () => {
 
   test('withholds pieces until they are seen in an earlier observation', () => {
     const readiness = new PieceReadiness(4);
-    readiness.observe([2, 2, 0, 0], 1_000);
+    readiness.observe([2, 2, 0, 0]);
     const fresh = computeFileAvailability({
       files,
       fileIndex: 0,
@@ -308,7 +308,7 @@ describe('PieceReadiness', () => {
     assert.equal(fresh.contiguousFrom(0), 500);
     assert.equal(fresh.readableFrom(0), 0);
     // One observation later both downloaded pieces have aged.
-    readiness.observe([2, 2, 0, 0], 2_000);
+    readiness.observe([2, 2, 0, 0]);
     const aged = computeFileAvailability({
       files,
       fileIndex: 0,
@@ -322,8 +322,8 @@ describe('PieceReadiness', () => {
   test('serves the file tail once the last piece has aged', () => {
     const readiness = new PieceReadiness(4);
     // firstLastPiecePrio pulled the tail piece in early.
-    readiness.observe([2, 0, 0, 2], 1_000);
-    readiness.observe([2, 0, 0, 2], 2_000);
+    readiness.observe([2, 0, 0, 2]);
+    readiness.observe([2, 0, 0, 2]);
     const availability = computeFileAvailability({
       files,
       fileIndex: 0,
@@ -337,9 +337,9 @@ describe('PieceReadiness', () => {
 
   test('a piece lost to a recheck must age again', () => {
     const readiness = new PieceReadiness(2);
-    readiness.observe([2, 2], 1_000);
-    readiness.observe([2, 0], 2_000);
-    readiness.observe([2, 2], 3_000);
+    readiness.observe([2, 2]);
+    readiness.observe([2, 0]);
+    readiness.observe([2, 2]);
     const availability = computeFileAvailability({
       files: [file({ index: 0, name: 'v.mkv', size: 500, piece_range: [0, 1] })],
       fileIndex: 0,
