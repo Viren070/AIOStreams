@@ -119,11 +119,10 @@ was skipped meanwhile, its download restarts automatically.
   leaked URL can be used to read that one file until the reference expires,
   it cannot reach your client's WebUI or any other torrent.
 - The WebUI URL is entered by whoever configures the service, and the paths
-  AIOStreams serves come from that client. On a server shared by several
-  people, set the `QBITTORRENT_ALLOWED_ROOTS` environment variable (a
-  comma-separated list of download directories): qBittorrent file paths are
-  then confined to those directories, through symlinks, before anything is
-  served.
+  AIOStreams serves come from that client. The service is operator-opt-in:
+  it stays hidden until `QBITTORRENT_ALLOWED_ROOTS` is set (a comma-separated
+  list of download directories), and qBittorrent file paths are then confined
+  to those directories, through symlinks, before anything is served.
 - Playing through qBittorrent downloads to the operator's own client, so on
   an instance with users you don't personally know, it usually should not be
   user-configurable at all. The standard instance controls all apply: hide

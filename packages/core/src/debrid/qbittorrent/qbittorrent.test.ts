@@ -7,6 +7,8 @@ import { join } from 'node:path';
 import { getGlobalDispatcher, MockAgent, setGlobalDispatcher } from 'undici';
 import { settingsStore } from '../../config/index.js';
 import { SettingsRepository } from '../../db/repositories/settings.js';
+import { FeatureControl } from '../../utils/feature.js';
+import { getEnvironmentServiceDetails } from '../../utils/config.js';
 import { toUrlSafeBase64 } from '../../utils/general.js';
 import { DebridError, PlaybackInfo } from '../base.js';
 import {
@@ -698,6 +700,33 @@ function torrentFixture(hash: string, state: string) {
 function fileFixture(index: number, name: string, size: number) {
   return { index, name, size, progress: 0, priority: 1, piece_range: [0, 1], availability: 1 };
 }
+
+describe('qbittorrent service availability', () => {
+  test('hidden until download roots are configured', () => {
+    const previous = process.env.QBITTORRENT_ALLOWED_ROOTS;
+    delete process.env.QBITTORRENT_ALLOWED_ROOTS;
+    try {
+      assert.ok(
+        !FeatureControl.disabledServices.has('qbittorrent') === false,
+        'qBittorrent is disabled without roots'
+      );
+      const details = getEnvironmentServiceDetails();
+      assert.ok(!('qbittorrent' in details), 'qBittorrent absent from the service list');
+      process.env.QBITTORRENT_ALLOWED_ROOTS = '/downloads';
+      assert.ok(
+        !FeatureControl.disabledServices.has('qbittorrent'),
+        'qBittorrent enabled with roots configured'
+      );
+      assert.ok('qbittorrent' in getEnvironmentServiceDetails());
+    } finally {
+      if (previous === undefined) {
+        delete process.env.QBITTORRENT_ALLOWED_ROOTS;
+      } else {
+        process.env.QBITTORRENT_ALLOWED_ROOTS = previous;
+      }
+    }
+  });
+});
 
 describe('QBittorrentService resolve', () => {
   // One unique infohash per test: the live-file registry is module-global
