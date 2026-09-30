@@ -1,5 +1,40 @@
 # Changelog
 
+## [2.35.5](https://github.com/Viren070/AIOStreams/compare/v2.35.4...v2.35.5) (2026-09-30)
+
+
+### Features
+
+* **core:** replace per-feature private URL settings with ALLOW_PRIVATE_URLS ([c3853ca](https://github.com/Viren070/AIOStreams/commit/c3853ca30a977dc062252dbc198232fd43b35273))
+* **desktop:** drive the system's media controls from a shared now-playing state ([89f4671](https://github.com/Viren070/AIOStreams/commit/89f4671a7e376d2b688b3fa41dfbd31313b72902))
+* flag libraries that need a genre ([a079079](https://github.com/Viren070/AIOStreams/commit/a07907931dc0039729a5245f63381ca84fa55c2f))
+* **frontend:** add a None option to a user's trackers ([16aa997](https://github.com/Viren070/AIOStreams/commit/16aa99710f7237662245068bbe4283c8d58a7e4b))
+* **frontend:** announce new releases to nightly users by their base version ([0ab165c](https://github.com/Viren070/AIOStreams/commit/0ab165c414fbe3c427a4439aa890e7f6a6deef32))
+* **frontend:** ask for the configuration password in the profile card ([86c3ffb](https://github.com/Viren070/AIOStreams/commit/86c3ffb4cbdbdff76a347c1373f5d32908a94bc4))
+* **frontend:** show the release a nightly is built on in What's new ([3dcc603](https://github.com/Viren070/AIOStreams/commit/3dcc6030c520ab0be4b157b6c0e90e543ec61ba3))
+* **jellyfin-web:** add a subtitle height setting ([fad3c78](https://github.com/Viren070/AIOStreams/commit/fad3c78cd2c658fa77f21bd1a4874acf101c134e))
+* **jellyfin-web:** link the custom CSS guide from the theme settings ([db4b778](https://github.com/Viren070/AIOStreams/commit/db4b778731216c12dd144bba8325295f67111f71))
+* **jellyfin-web:** link the source code and documentation from About ([f0bae05](https://github.com/Viren070/AIOStreams/commit/f0bae05dc219d2922229c2163db28b64d948e4be))
+* **jellyfin-web:** open aiostreams:// links ([33caebd](https://github.com/Viren070/AIOStreams/commit/33caebd9126ce2d13ef3b0e10a91d8b5fb5efdfd))
+* **jellyfin-web:** rate movies, shows and seasons from their page ([e222942](https://github.com/Viren070/AIOStreams/commit/e222942403cd8aa82fc4ee92e2b5ea1d7853b76f))
+* **jellyfin-web:** replace the player's volume range with a bar that marks the boost ([6922932](https://github.com/Viren070/AIOStreams/commit/6922932d41093a0b200f4f44dcabc4125ca87d18))
+* **jellyfin-web:** send now-playing to the desktop app and set the browser's media session ([f5c790f](https://github.com/Viren070/AIOStreams/commit/f5c790f47b42b89b572ea62de19a7cb47c7e780d))
+* **jellyfin-web:** take the player's top volume from mpv's volume-max ([e99ce70](https://github.com/Viren070/AIOStreams/commit/e99ce707dd77d4810904ab2b687e89ddf283a036))
+* **jellyfin:** add a setting to stop marking unaired episodes ([1bfc82b](https://github.com/Viren070/AIOStreams/commit/1bfc82b90b2c1041ae656fb34de08b17427023f9))
+* **watch-state:** keep ratings and likes, and push and pull ratings ([f85758d](https://github.com/Viren070/AIOStreams/commit/f85758dee209d443471f3bfb54da754c39c3ae5f)), closes [#1359](https://github.com/Viren070/AIOStreams/issues/1359)
+* **watch-state:** make the resume and played thresholds configurable ([597e463](https://github.com/Viren070/AIOStreams/commit/597e4630c4005588ea98fa8d821e05e71d6a6f76))
+
+
+### Bug Fixes
+
+* **core/sync:** remove the DNS pre-check on user sync URLs ([13fc300](https://github.com/Viren070/AIOStreams/commit/13fc300efa3cf348798283f9020e664827c5ea08)), closes [#1401](https://github.com/Viren070/AIOStreams/issues/1401)
+* **desktop:** don't scale disc subtitles, keep styled ones in the crop ([907867d](https://github.com/Viren070/AIOStreams/commit/907867d81bbd53b16b8bb9ebbf85905de2a124e7))
+* **jellyfin-web:** send None for featured catalogs that need a genre ([0470d74](https://github.com/Viren070/AIOStreams/commit/0470d74a519d9e99bd8c28ffef63b2c64a53ed3f))
+* **jellyfin-web:** size and place browser subtitle cues ([3021081](https://github.com/Viren070/AIOStreams/commit/3021081760d01018a8d349f16aed2f299b685953))
+* **ui:** pan carousel rows with a trackpad or mouse wheel ([#1394](https://github.com/Viren070/AIOStreams/issues/1394)) ([736d6c4](https://github.com/Viren070/AIOStreams/commit/736d6c4dae8ec3d6f429ee33c1b078ca349ca81f))
+* **watch-state:** keep history for as long as a configuration is in use ([1a7f39f](https://github.com/Viren070/AIOStreams/commit/1a7f39fc3da2876b155718da6a8f495cb6aaac47))
+* **watch-state:** match drops against every id a show is stored under ([d029954](https://github.com/Viren070/AIOStreams/commit/d029954da44802fbb152ca5583aa2b468c45cdb0))
+
 ## [2.35.4](https://github.com/Viren070/AIOStreams/compare/v2.35.3...v2.35.4) (2026-09-28)
 
 
