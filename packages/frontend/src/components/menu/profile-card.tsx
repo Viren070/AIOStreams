@@ -2,6 +2,7 @@ import React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Button } from '@aiostreams/ui/button';
+import { PasswordInput } from '@aiostreams/ui/password-input';
 import { TextInput } from '@aiostreams/ui/text-input';
 import { SettingsCard } from '@/components/shared/settings-card';
 import { useSession } from '@/context/session';
@@ -27,6 +28,7 @@ export function ProfileCard() {
 
   const [label, setLabel] = React.useState('');
   const [alias, setAlias] = React.useState('');
+  const [typed, setTyped] = React.useState('');
   const [busy, setBusy] = React.useState(false);
 
   React.useEffect(() => {
@@ -34,11 +36,11 @@ export function ProfileCard() {
     setAlias(profile?.alias ?? '');
   }, [profile?.id, profile?.label, profile?.alias]);
 
-  // Only saving needs the password, which a restored sign-in does not have;
-  // a saved profile is edited by its id.
-  if (!sessionUser || !uuid || (!profile && !password)) {
+  if (!sessionUser || !uuid) {
     return null;
   }
+  // A restored sign-in does not hold the password, so saving asks for it again.
+  const savePassword = password || typed;
 
   const run = async (action: () => Promise<unknown>, success: string) => {
     setBusy(true);
@@ -64,7 +66,7 @@ export function ProfileCard() {
           : `Save this configuration to ${sessionUser.username} so you can reopen it without the password.`
       }
     >
-      {!profile && password ? (
+      {!profile ? (
         <div className="flex flex-col sm:flex-row sm:items-end gap-2">
           <TextInput
             label="Name"
@@ -73,14 +75,28 @@ export function ProfileCard() {
             placeholder="Optional"
             className="flex-1"
           />
+          {!password && (
+            <PasswordInput
+              label="Password"
+              value={typed}
+              onValueChange={setTyped}
+              placeholder="This configuration's password"
+              className="flex-1"
+            />
+          )}
           <Button
             intent="white"
             rounded
             loading={busy}
+            disabled={!savePassword}
             onClick={() =>
               run(
                 () =>
-                  saveConfigProfile(uuid, password, label.trim() || undefined),
+                  saveConfigProfile(
+                    uuid,
+                    savePassword,
+                    label.trim() || undefined
+                  ),
                 'Saved to your profile'
               )
             }
@@ -88,7 +104,7 @@ export function ProfileCard() {
             Save as profile
           </Button>
         </div>
-      ) : profile ? (
+      ) : (
         <div className="space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-end gap-2">
             <TextInput
@@ -163,7 +179,7 @@ export function ProfileCard() {
             Delete profile
           </Button>
         </div>
-      ) : null}
+      )}
     </SettingsCard>
   );
 }
