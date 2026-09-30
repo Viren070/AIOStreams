@@ -5,7 +5,6 @@ import {
   appConfig,
   getSimpleTextHash,
   encryptString,
-  toUrlSafeBase64,
   BuiltinServiceId,
 } from '../utils/index.js';
 import { layerMediaInfo } from '../media-info/apply.js';
