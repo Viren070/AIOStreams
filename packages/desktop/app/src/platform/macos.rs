@@ -5,7 +5,7 @@ use std::cell::{Cell, RefCell};
 use std::ffi::{c_char, c_int, c_void};
 use std::path::{Path, PathBuf};
 use std::ptr::{self, NonNull};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use aiostreams_desktop_core::mpv::Mpv;
@@ -20,7 +20,7 @@ use objc2::{
 use objc2_app_kit::{
     NSAutoresizingMaskOptions, NSView, NSWindow, NSWindowButton, NSWindowOrderingMode,
 };
-use objc2_core_foundation::CFTimeInterval;
+use objc2_core_foundation::{CFString, CFTimeInterval};
 use objc2_core_video::CVTimeStamp;
 use objc2_foundation::NSObject;
 use objc2_open_gl::{
@@ -494,6 +494,42 @@ pub fn mpv_options(_video: &VideoSurface) -> Vec<(&'static str, String)> {
         // Needs OpenGL 4.4, which macOS lacks, and each try waits on the main thread.
         ("vd-lavc-dr", "no".into()),
     ]
+}
+
+#[link(name = "IOKit", kind = "framework")]
+unsafe extern "C" {
+    fn IOPMAssertionCreateWithName(
+        kind: &CFString,
+        level: u32,
+        name: &CFString,
+        id: &mut u32,
+    ) -> i32;
+    fn IOPMAssertionRelease(id: u32) -> i32;
+}
+
+const ASSERTION_LEVEL_ON: u32 = 255;
+
+static AWAKE: Mutex<Option<u32>> = Mutex::new(None);
+
+pub fn keep_awake(on: bool) {
+    let Ok(mut held) = AWAKE.lock() else { return };
+    match (on, *held) {
+        (true, None) => {
+            let mut id = 0;
+            let kind = CFString::from_static_str("PreventUserIdleDisplaySleep");
+            let name = CFString::from_static_str("Playing video");
+            match unsafe { IOPMAssertionCreateWithName(&kind, ASSERTION_LEVEL_ON, &name, &mut id) }
+            {
+                0 => *held = Some(id),
+                code => log::warn!("keep awake: IOPMAssertionCreateWithName returned {code}"),
+            }
+        }
+        (false, Some(id)) => {
+            unsafe { IOPMAssertionRelease(id) };
+            *held = None;
+        }
+        _ => {}
+    }
 }
 
 pub fn open_external(url: &str) {

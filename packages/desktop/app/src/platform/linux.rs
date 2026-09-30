@@ -1,16 +1,17 @@
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::ffi::{c_char, c_int, c_void};
 use std::io::{Read, Write};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
 
 use aiostreams_desktop_core::mpv::Mpv;
 use aiostreams_desktop_core::render::{NativeDisplay, RenderContext};
-use gtk4::glib;
 use gtk4::prelude::*;
+use gtk4::{gio, glib};
 use libloading::Library;
 
 /// Custom protocols are served from `<scheme>://localhost` on Linux.
@@ -309,6 +310,52 @@ pub fn clear_video() {
 
 pub fn mpv_options(_video: &VideoSurface) -> Vec<(&'static str, String)> {
     vec![("vo", "libmpv".into()), ("hwdec", "auto-safe".into())]
+}
+
+const INHIBIT_IDLE: u32 = 8;
+
+/// The portal's handle for the running inhibition, which closing ends.
+static AWAKE: Mutex<Option<String>> = Mutex::new(None);
+
+pub fn keep_awake(on: bool) {
+    let Ok(mut held) = AWAKE.lock() else { return };
+    if on == held.is_some() {
+        return;
+    }
+    let result =
+        gio::bus_get_sync(gio::BusType::Session, None::<&gio::Cancellable>).and_then(|bus| {
+            let call = |path: &str, interface, method, args: Option<glib::Variant>| {
+                bus.call_sync(
+                    Some("org.freedesktop.portal.Desktop"),
+                    path,
+                    interface,
+                    method,
+                    args.as_ref(),
+                    None,
+                    gio::DBusCallFlags::NONE,
+                    2000,
+                    None::<&gio::Cancellable>,
+                )
+            };
+            match held.take() {
+                Some(handle) => call(&handle, "org.freedesktop.portal.Request", "Close", None),
+                None => {
+                    let args =
+                        ("", INHIBIT_IDLE, HashMap::<String, glib::Variant>::new()).to_variant();
+                    let reply = call(
+                        "/org/freedesktop/portal/desktop",
+                        "org.freedesktop.portal.Inhibit",
+                        "Inhibit",
+                        Some(args),
+                    )?;
+                    *held = reply.child_value(0).str().map(String::from);
+                    Ok(reply)
+                }
+            }
+        });
+    if let Err(e) = result {
+        log::warn!("keep awake: {e}");
+    }
 }
 
 pub fn open_external(url: &str) {

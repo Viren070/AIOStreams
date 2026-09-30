@@ -10,7 +10,7 @@ mod updates;
 use std::cell::RefCell;
 use std::path::{Component, Path, PathBuf};
 use std::rc::Rc;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use aiostreams_desktop_core::bridge::{Inbound, Outbound, PROTOCOL_VERSION, origin};
 use aiostreams_desktop_core::discord;
@@ -337,8 +337,49 @@ pub fn start_player(
         library.display(),
         mpv_dir.display()
     );
+    let awake = Mutex::new(Awake::default());
+    let emit = move |message: Outbound| {
+        if let Outbound::MpvProp { name, data } = &message
+            && let Ok(mut awake) = awake.lock()
+        {
+            awake.update(name, data);
+        }
+        emit(message)
+    };
     Player::start(library, &defaults, &required, Arc::new(emit))
         .unwrap_or_else(|e| platform::fatal(&format!("mpv failed to start: {e}")))
+}
+
+/// Keeps the display on while a file plays.
+struct Awake {
+    paused: bool,
+    idle: bool,
+    on: bool,
+}
+
+impl Default for Awake {
+    fn default() -> Self {
+        Self {
+            paused: false,
+            idle: true,
+            on: false,
+        }
+    }
+}
+
+impl Awake {
+    fn update(&mut self, name: &str, data: &serde_json::Value) {
+        match name {
+            "pause" => self.paused = data == true,
+            "idle-active" => self.idle = data == true,
+            _ => return,
+        }
+        let on = !self.paused && !self.idle;
+        if on != self.on {
+            self.on = on;
+            platform::keep_awake(on);
+        }
+    }
 }
 
 pub fn handle(

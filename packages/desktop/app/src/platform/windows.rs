@@ -299,6 +299,9 @@ pub fn mpv_options(video: &VideoSurface) -> Vec<(&'static str, String)> {
     ]
 }
 
+/// mpv keeps the display on itself, as the video is its own window.
+pub fn keep_awake(_on: bool) {}
+
 pub fn open_external(url: &str) {
     let (op, file) = (wide("open"), wide(url));
     unsafe {
