@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/Viren070/AIOStreams/compare/desktop-v0.9.0...desktop-v0.9.1) (2026-09-30)
+
+
+### Features
+
+* **jellyfin-web:** show a message for no libraries ([2ba1032](https://github.com/Viren070/AIOStreams/commit/2ba10321059e9517363d9e6b6a20c8201087df50))
+
 ## [0.9.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.8.0...desktop-v0.9.0) (2026-09-30)
 
 
