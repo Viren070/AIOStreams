@@ -1004,6 +1004,14 @@ const SERVICE_DETAILS: Record<
         type: 'boolean',
         required: false,
       },
+      {
+        id: 'pathMappings',
+        name: 'Path Mappings',
+        description:
+          'For deployments where the download directory is mounted at different paths (for example two docker containers mounting the same folder differently). Format: `/path/qbit/sees=/path/aiostreams/sees`, additional pairs separated by `;`.',
+        type: 'string',
+        required: false,
+      },
     ],
   },
 };

@@ -21,11 +21,32 @@ import {
   QbittorrentStreamToken,
 } from './tokens.js';
 import {
+  applyPathMappings,
   computeFileAvailability,
   deriveFilePath,
   PieceReadiness,
   planFilePriorities,
 } from './availability.js';
+
+describe('applyPathMappings', () => {
+  test('rewrites the longest matching prefix', () => {
+    assert.equal(
+      applyPathMappings('/qbit/downloads/pack/s01.mkv', [
+        { from: '/qbit', to: '/local' },
+        { from: '/qbit/downloads', to: '/data' },
+      ]),
+      '/data/pack/s01.mkv'
+    );
+  });
+
+  test('leaves unmatched paths alone', () => {
+    assert.equal(
+      applyPathMappings('/elsewhere/file.mkv', [{ from: '/qbit', to: '/local' }]),
+      '/elsewhere/file.mkv'
+    );
+    assert.equal(applyPathMappings('/any/file.mkv'), '/any/file.mkv');
+  });
+});
 
 const WEBUI = 'http://qbit.test';
 

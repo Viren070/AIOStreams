@@ -3,6 +3,23 @@ import { FILE_PRIORITY, QbittorrentFile } from './client.js';
 
 /** Rewrite a qBittorrent-reported path through the configured mount
  * mappings. Longest matching prefix wins. */
+export function applyPathMappings(
+  path: string,
+  mappings?: { from: string; to: string }[]
+): string {
+  if (!mappings || mappings.length === 0) return path;
+  const sorted = [...mappings].sort((a, b) => b.from.length - a.from.length);
+  for (const mapping of sorted) {
+    const from = mapping.from.endsWith('/') ? mapping.from : mapping.from + '/';
+    if (path === mapping.from) return mapping.to;
+    if (path.startsWith(from)) {
+      const tail = path.slice(from.length);
+      return mapping.to.endsWith('/') ? mapping.to + tail : mapping.to + '/' + tail;
+    }
+  }
+  return path;
+}
+
 export type AllowedPath = 'allowed' | 'missing' | 'outside';
 
 export async function resolveAllowedPath(candidate: string): Promise<AllowedPath> {
@@ -13,11 +30,21 @@ export async function resolveAllowedPath(candidate: string): Promise<AllowedPath
     .map((root) => root.trim())
     .filter(Boolean);
   if (roots.length === 0) return 'allowed';
+  // Fold for case-insensitive platforms.
+  const fold =
+    process.platform === 'win32'
+      ? (value: string) => value.toLowerCase()
+      : (value: string) => value;
   for (const root of roots) {
     const realRoot = await realpath(root).catch(() => undefined);
     if (!realRoot) continue;
     const normalized = realRoot.endsWith('/') ? realRoot : realRoot + '/';
-    if (real === realRoot || real.startsWith(normalized)) return 'allowed';
+    if (
+      fold(real) === fold(realRoot) ||
+      fold(real).startsWith(fold(normalized))
+    ) {
+      return 'allowed';
+    }
   }
   return 'outside';
 }

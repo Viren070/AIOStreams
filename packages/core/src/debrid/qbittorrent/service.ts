@@ -32,6 +32,7 @@ import {
 } from './client.js';
 import {
   STREAM_THRESHOLD_BYTES,
+  applyPathMappings,
   computeFileAvailability,
   deriveFilePath,
   planFilePriorities,
@@ -382,13 +383,33 @@ export class QBittorrentService implements TorrentDebridService {
     let priorityFailures = 0;
     let prioritiesAbandoned = false;
     let resumeAttempted = false;
+    let torrentMisses = 0;
     let lastState = torrent.state;
     let attempt = 0;
     while (Date.now() < deadline) {
       this.throwIfAborted(signal);
       attempt++;
 
-      const current = (await this.client.getTorrent(torrent.hash, signal)) ?? torrent;
+      const fetched = await this.client.getTorrent(torrent.hash, signal);
+      if (!fetched) {
+        // When the torrent vanishes mid-resolve, fail fast after 3 misses.
+        torrentMisses++;
+        if (torrentMisses >= 3) {
+          throw new DebridError(
+            'The torrent was removed from qBittorrent while waiting for it',
+            {
+              statusCode: 404,
+              statusText: 'Not Found',
+              code: 'NOT_FOUND',
+              type: 'api_error',
+              headers: {},
+            }
+          );
+        }
+      } else {
+        torrentMisses = 0;
+      }
+      const current = fetched ?? torrent;
       lastState = current.state;
       if (FAILED_STATES.has(current.state)) {
         const err = new DebridError(`qBittorrent torrent is ${current.state}`, {
@@ -460,7 +481,10 @@ export class QBittorrentService implements TorrentDebridService {
             }
           }
         }
-        const filePath = deriveFilePath(current, files, file.index);
+        const derived = deriveFilePath(current, files, file.index);
+        const filePath = derived
+          ? applyPathMappings(derived, this.credential.pathMappings)
+          : undefined;
         if (filePath) {
           const allowed = await resolveAllowedPath(filePath);
           if (allowed === 'outside') {

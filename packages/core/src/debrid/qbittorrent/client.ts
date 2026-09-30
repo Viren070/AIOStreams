@@ -29,6 +29,32 @@ export const QbittorrentCredentialSchema = z.object({
     .union([z.boolean(), z.string(), z.null()])
     .transform((value) => value === true || value === 'true')
     .optional(),
+  /**
+   * `qBittorrent path=local path` pairs, `;`-separated, for mounts that
+   * differ between qBittorrent and AIOStreams (two containers, one host
+   * folder).
+   */
+  pathMappings: z
+    .string()
+    .optional()
+    .transform((value) =>
+      value
+        ? (value
+            .split(';')
+            .map((pair) => pair.trim())
+            .filter(Boolean)
+            .map((pair) => {
+              const separator = pair.indexOf('=');
+              return separator > 0
+                ? {
+                    from: pair.slice(0, separator).trim(),
+                    to: pair.slice(separator + 1).trim(),
+                  }
+                : undefined;
+            })
+            .filter((pair): pair is { from: string; to: string } => !!pair))
+        : undefined
+    ),
 });
 
 export type QbittorrentCredential = z.infer<typeof QbittorrentCredentialSchema>;
@@ -135,6 +161,7 @@ export function credentialKey(credential: QbittorrentCredential): string {
 export function encodeQbittorrentCredential(
   credential: Pick<QbittorrentCredential, 'url' | 'username' | 'password'> & {
     skipOtherFiles?: boolean | string | null;
+    pathMappings?: string;
   }
 ): string {
   return toUrlSafeBase64(
@@ -147,6 +174,7 @@ export function encodeQbittorrentCredential(
         credential.skipOtherFiles === 'true'
           ? true
           : undefined,
+      pathMappings: credential.pathMappings || undefined,
     })
   );
 }
@@ -213,13 +241,19 @@ export class QBittorrentClient {
     const body = await response.text();
     // qBittorrent 5.x answers 204 with an empty body on success; 4.x used
     // 200 with "Ok.". Bad credentials are 200 with "Fails.", a banned host
-    // gets 403.
-    if (!response.ok || body.includes('Fails.')) {
+    // gets 403. A 5xx from a restarting WebUI is transient: it must not arm
+    // the failure cache and lock the credential out for a minute.
+    if (body.includes('Fails.') || response.status === 403) {
       loginFailures.set(key, Date.now());
       throw unauthorized(
         response.status === 403
           ? 'qBittorrent rejected the login (IP may be banned)'
           : 'qBittorrent login failed; check the WebUI credentials'
+      );
+    }
+    if (!response.ok) {
+      throw unauthorized(
+        `qBittorrent login failed with status ${response.status}`
       );
     }
     // getSetCookie splits multiple Set-Cookie headers, which a joined
@@ -250,6 +284,9 @@ export class QBittorrentClient {
       : Date.now() + 30 * 60_000;
     const session: Session = { cookieName, sid, expiresAt };
     sessions.set(key, session);
+    // A success clears any stale failure record so the 60s lockout cannot
+    // outlive the problem it protects against.
+    loginFailures.delete(key);
     return session;
   }
 
@@ -272,7 +309,11 @@ export class QBittorrentClient {
       return makeRequest(`${this.baseUrl()}${path}`, {
         method: options.method ?? 'GET',
         timeout: 30_000,
-        signal: options.signal,
+        // makeRequest only applies the timeout without a signal, a frozen
+        // WebUI must not hang resolves.
+        signal: options.signal
+          ? AbortSignal.any([options.signal, AbortSignal.timeout(30_000)])
+          : undefined,
         headers,
         body: options.body?.toString(),
         ignoreRecursion: true,

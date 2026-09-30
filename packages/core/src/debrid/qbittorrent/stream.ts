@@ -11,6 +11,7 @@ import {
   type QbittorrentFile,
 } from './client.js';
 import {
+  applyPathMappings,
   computeFileAvailability,
   deriveFilePath,
   PieceReadiness,
@@ -185,7 +186,10 @@ async function locateEntryFile(
       ? await client.getFiles(entry.hash, signal)
       : [];
     const derived = torrent
-      ? deriveFilePath(torrent, files, entry.fileIndex)
+      ? applyPathMappings(
+          deriveFilePath(torrent, files, entry.fileIndex) ?? '',
+          entry.credential.pathMappings
+        ) || undefined
       : undefined;
     if (derived && derived !== entry.filePath) {
       // A complete file must have reached full size after a move.
@@ -199,7 +203,7 @@ async function locateEntryFile(
       }
     }
     if (torrent?.state !== 'moving' || Date.now() >= deadline) return undefined;
-    await delay(MOVE_RETRY_MS);
+    await abortableDelay(MOVE_RETRY_MS, signal);
   }
 }
 
@@ -419,6 +423,19 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/** Abortable wait (a disconnecting client must not keep a request alive). */
+function abortableDelay(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(done, ms);
+    function done() {
+      signal?.removeEventListener('abort', done);
+      clearTimeout(timer);
+      resolve();
+    }
+    signal?.addEventListener('abort', done, { once: true });
+  });
+}
+
 /**
  * Open a byte range on a possibly still-downloading file. Full size is
  * always advertised, unwritten regions are never read.
@@ -498,9 +515,12 @@ export async function openQbittorrentStream(opts: {
     );
   }
 
-  const start = opts.range?.suffixLength
-    ? Math.max(0, entry.fileSize - opts.range.suffixLength)
-    : (opts.range?.start ?? 0);
+  const start =
+    opts.range?.suffixLength !== undefined
+      ? // A zero suffix length is unsatisfiable (RFC 7233): start = size,
+        // which the range server answers with 416.
+        Math.max(0, entry.fileSize - opts.range.suffixLength)
+      : (opts.range?.start ?? 0);
   const end = Math.min(
     opts.range?.endExclusive ?? entry.fileSize,
     entry.fileSize

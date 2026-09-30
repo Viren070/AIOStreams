@@ -52,7 +52,22 @@ export async function registerStreamRef(
   return ref;
 }
 
-/** Look up a ref, undefined means expired. */
+/**
+ * Look up the entry for a stream token reference. Undefined when the
+ * reference is unknown, expired, or fails validation (a schema change with
+ * references still cached must degrade to an expired link, not a crash);
+ * the caller should answer as an expired link.
+ */
+const SealedStreamRefSchema = z.object({
+  credential: QbittorrentCredentialSchema,
+  hash: z.string(),
+  fileIndex: z.number(),
+  filePath: z.string(),
+  fileSize: z.number(),
+  filename: z.string(),
+  addedAt: z.number(),
+});
+
 export async function resolveStreamRef(
   ref: string
 ): Promise<QbittorrentStreamRefEntry | undefined> {
@@ -61,7 +76,7 @@ export async function resolveStreamRef(
   const opened = decryptString(sealed);
   if (!opened.success || opened.data == null) return undefined;
   try {
-    return JSON.parse(opened.data) as QbittorrentStreamRefEntry;
+    return SealedStreamRefSchema.parse(JSON.parse(opened.data));
   } catch {
     return undefined;
   }
