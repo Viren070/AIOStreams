@@ -326,10 +326,9 @@ export class QBittorrentService implements TorrentDebridService {
     if (!readiness) return undefined;
     const { file, filePath } = readiness;
 
-    // The display name is the file's BASE name: qBittorrent reports pack
-    // members as relative paths ("pack/s01e02.mkv"), and an encoded slash in
-    // the final URL segment breaks external players' URL parsing.
-    const displayName = (filename || file.name).split('/').pop() ?? file.name;
+    // Players sniff the format from the url's last segment, use the real
+    // file's base name (pack members report as relative paths).
+    const displayName = file.name.split('/').pop() || filename || file.name;
 
     const token = encodeQbittorrentStreamToken({
       ref: await registerStreamRef({

@@ -895,6 +895,11 @@ describe('QBittorrentService resolve', () => {
     });
     const link = await serviceWithSkip().resolve(playback(hash, 1), 's01e02.mkv', true);
     assert.match(link ?? '', /\/api\/v1\/qbittorrent\/stream\//);
+    assert.match(
+      link ?? '',
+      /\/s01e02\.mkv$/,
+      'the url ends with the file name players sniff the format from'
+    );
     assert.equal(prioBodies.length, 2);
     assert.ok(
       prioBodies.some((body) => /id=1/.test(body) && /priority=7/.test(body))
