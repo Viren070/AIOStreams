@@ -111,6 +111,16 @@ A catalog's row is named `view:` and then its id. To find the id, open the catal
 
 To hide the featured banner, set **Featured on home** to **Nothing** under **Settings → Interface** instead.
 
+### Hide what a catalog holds
+
+A catalog's row on the home page says what it holds, such as **Shows** or **Movies**, beside its title.
+
+```css
+[data-ui='media-row'][data-row^='view:'] [data-ui='media-row-title'] a > span {
+  display: none;
+}
+```
+
 ### Hide spoilers
 
 Blur the pictures, titles and descriptions of episodes you haven't watched. Pointing at one fades it in.
