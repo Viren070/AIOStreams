@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.9.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.8.0...desktop-v0.9.0) (2026-09-30)
+
+
+### Features
+
+* **desktop:** drive the system's media controls from a shared now-playing state ([89f4671](https://github.com/Viren070/AIOStreams/commit/89f4671a7e376d2b688b3fa41dfbd31313b72902))
+* flag libraries that need a genre ([85c2df2](https://github.com/Viren070/AIOStreams/commit/85c2df2fc6c02fcf84460a9263ed2cc6c6a0a3f0))
+* **jellyfin-web:** add a subtitle height setting ([85c2df2](https://github.com/Viren070/AIOStreams/commit/85c2df2fc6c02fcf84460a9263ed2cc6c6a0a3f0))
+* **jellyfin-web:** link the custom CSS guide from the theme settings ([85c2df2](https://github.com/Viren070/AIOStreams/commit/85c2df2fc6c02fcf84460a9263ed2cc6c6a0a3f0))
+* **jellyfin-web:** link the source code and documentation from About ([85c2df2](https://github.com/Viren070/AIOStreams/commit/85c2df2fc6c02fcf84460a9263ed2cc6c6a0a3f0))
+* **jellyfin-web:** rate movies, shows and seasons from their page ([85c2df2](https://github.com/Viren070/AIOStreams/commit/85c2df2fc6c02fcf84460a9263ed2cc6c6a0a3f0))
+* **jellyfin-web:** replace the player's volume range with a bar that marks the boost ([85c2df2](https://github.com/Viren070/AIOStreams/commit/85c2df2fc6c02fcf84460a9263ed2cc6c6a0a3f0))
+* **jellyfin-web:** send now-playing to the desktop app and set the browser's media session ([85c2df2](https://github.com/Viren070/AIOStreams/commit/85c2df2fc6c02fcf84460a9263ed2cc6c6a0a3f0))
+* **jellyfin-web:** take the player's top volume from mpv's volume-max ([e99ce70](https://github.com/Viren070/AIOStreams/commit/e99ce707dd77d4810904ab2b687e89ddf283a036))
+
+
+### Bug Fixes
+
+* **desktop:** inhibit display sleep while a file plays on macOS and Linux ([d19594a](https://github.com/Viren070/AIOStreams/commit/d19594a6892f11110b1ea011176a469726a391f6))
+* **jellyfin-web:** send None for featured catalogs that need a genre ([85c2df2](https://github.com/Viren070/AIOStreams/commit/85c2df2fc6c02fcf84460a9263ed2cc6c6a0a3f0))
+* **jellyfin-web:** size and place browser subtitle cues ([85c2df2](https://github.com/Viren070/AIOStreams/commit/85c2df2fc6c02fcf84460a9263ed2cc6c6a0a3f0))
+
 ## [0.8.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.7.0...desktop-v0.8.0) (2026-09-29)
 
 
