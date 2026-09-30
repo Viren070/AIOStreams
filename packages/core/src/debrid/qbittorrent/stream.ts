@@ -3,6 +3,8 @@ import { Readable } from 'stream';
 import { DebridError } from '../base.js';
 import type { ByteRangeRequest, OpenedByteStream } from '../../shares/types.js';
 import { createLogger } from '../../utils/index.js';
+import { FeatureControl } from '../../utils/feature.js';
+import { QBITTORRENT_SERVICE } from '../../utils/constants.js';
 import {
   FILE_PRIORITY,
   isOwnTorrent,
@@ -170,9 +172,11 @@ async function locateEntryFile(
   for (;;) {
     for (const candidate of pathVariants(entry.filePath)) {
       const allowed = await resolveAllowedPath(candidate);
-      if (allowed === 'invalid' || allowed === 'outside') return undefined;
-      if (allowed === 'allowed' && (await openIfExists(candidate))) {
-        return candidate;
+      if (allowed.status === 'invalid' || allowed.status === 'outside') {
+        return undefined;
+      }
+      if (allowed.status === 'allowed' && (await openIfExists(allowed.realPath!))) {
+        return allowed.realPath!;
       }
     }
     const torrent = await client.getTorrent(entry.hash, signal);
@@ -191,11 +195,11 @@ async function locateEntryFile(
         (files.find((file) => file.index === entry.fileIndex)?.progress ?? 0) >= 1;
       for (const candidate of pathVariants(derived)) {
         const allowed = await resolveAllowedPath(candidate);
-        if (allowed !== 'allowed') continue;
+        if (allowed.status !== 'allowed') continue;
         const ok = fileComplete
-          ? await openIfComplete(candidate, entry.fileSize)
-          : await openIfExists(candidate);
-        if (ok) return candidate;
+          ? await openIfComplete(allowed.realPath!, entry.fileSize)
+          : await openIfExists(allowed.realPath!);
+        if (ok) return allowed.realPath!;
       }
     }
     if (torrent?.state !== 'moving' || Date.now() >= deadline) return undefined;
@@ -390,28 +394,34 @@ class QbittorrentPieceStream extends Readable {
    */
   private async openHandle(): Promise<FileHandle> {
     if (this.handle) return this.handle;
-    try {
-      this.handle = await open(this.path, 'r');
-      return this.handle;
-    } catch {
+    // Every open goes through the confinement check, a path swapped for a
+    // symlink between checks must not get a raw open.
+    const checkedOpen = async (path: string) => {
+      const allowed = await resolveAllowedPath(path);
+      if (allowed.status !== 'allowed') return undefined;
+      return openRegularFile(allowed.realPath!);
+    };
+    let handle = await checkedOpen(this.path);
+    if (!handle) {
       const located = await locateEntryFile(
         this.client,
         this.entry,
         this.signal
       );
-      if (!located) {
-        throw new Error(
-          `qBittorrent file is no longer reachable: ${this.path}`
+      if (located) {
+        logger.debug(
+          { hash: this.entry.hash, from: this.path, to: located },
+          'qBittorrent file moved; re-resolving path'
         );
+        this.path = located;
+        handle = await checkedOpen(located);
       }
-      logger.debug(
-        { hash: this.entry.hash, from: this.path, to: located },
-        'qBittorrent file moved; re-resolving path'
-      );
-      this.path = located;
-      this.handle = await open(located, 'r');
-      return this.handle;
     }
+    if (!handle) {
+      throw new Error(`qBittorrent file is no longer reachable: ${this.path}`);
+    }
+    this.handle = handle;
+    return this.handle;
   }
 }
 
@@ -442,6 +452,18 @@ export async function openQbittorrentStream(opts: {
   signal?: AbortSignal;
 }): Promise<OpenedByteStream> {
   opts.signal?.throwIfAborted();
+  // Stream references outlive configuration changes (12h TTL), the gate is
+  // re-checked here so withdrawing the download roots also ends live links.
+  if (FeatureControl.disabledServices.has(QBITTORRENT_SERVICE)) {
+    throw new DebridError('qBittorrent playback is disabled on this instance', {
+      statusCode: 403,
+      statusText: 'Forbidden',
+      code: 'FORBIDDEN',
+      headers: {},
+      body: null,
+      type: 'api_error',
+    });
+  }
   const token = decodeQbittorrentStreamToken(opts.token);
   if (!token) {
     throw new DebridError('invalid or tampered qBittorrent stream token', {

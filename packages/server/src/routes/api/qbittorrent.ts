@@ -2,6 +2,7 @@ import { NextFunction, Request, Response, Router } from 'express';
 import {
   createLogger,
   DebridError,
+  FeatureControl,
   openQbittorrentStream,
   testQbittorrentConnection,
 } from '@aiostreams/core';
@@ -26,7 +27,7 @@ const TestRequestSchema = z.object({
 
 /**
  * `POST /api/v1/qbittorrent/test` for the config UI's test button. Probe
- * only: log in to the WebUI with the supplied credentials and report back.
+ * only, log in to the WebUI with the supplied credentials and report back.
  */
 router.post(
   '/test',
@@ -34,6 +35,15 @@ router.post(
   userApiRateLimiter,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      // The probe follows the instance's feature gate: a disabled or
+      // not-yet-opted-in service must not offer an outbound request probe.
+      const disabled = FeatureControl.disabledServices.get('qbittorrent');
+      if (disabled) {
+        res.status(403).json(
+          createResponse({ success: false, detail: disabled })
+        );
+        return;
+      }
       const body = TestRequestSchema.parse(req.body ?? {});
       const result = await testQbittorrentConnection(body);
       logger.debug(
@@ -49,11 +59,10 @@ router.post(
 
 /**
  * Byte-serving endpoint for qBittorrent streams. The token is an encrypted
- * capability minted by `QBittorrentService.resolve`: it carries only an
- * opaque reference to a server-side entry (credential, torrent and the one
- * selected file), so no additional auth is required here. Serves HTTP Range
- * requests straight from the file on disk, gated against the torrent's
- * piece states.
+ * capability minted by resolve, an opaque reference to a server-side entry
+ * (credential, torrent, selected file), so no extra auth is needed. Serves
+ * range requests straight from the file, gated against the torrent's piece
+ * states.
  */
 router.get(
   '/stream/:token{/:filename}',
@@ -73,7 +82,7 @@ router.get(
     } catch (err) {
       if (err instanceof DebridError) {
         if (res.headersSent) {
-          // Bytes are already on the wire; the only honest answer is to
+          // Bytes are already on the wire, the only honest answer is to
           // drop the connection, not to write a second response.
           res.destroy();
           return;

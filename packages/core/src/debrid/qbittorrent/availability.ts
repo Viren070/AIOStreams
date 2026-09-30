@@ -61,18 +61,29 @@ export async function openRegularFile(
   }
 }
 
-export async function resolveAllowedPath(candidate: string): Promise<AllowedPath> {
+export interface ResolvedAllowedPath {
+  status: AllowedPath;
+  /** The fully resolved path when allowed, open this one rather than the input. */
+  realPath?: string;
+}
+
+export async function resolveAllowedPath(
+  candidate: string
+): Promise<ResolvedAllowedPath> {
   const real = await realpath(candidate).catch(() => undefined);
-  if (!real) return 'missing';
+  if (!real) return { status: 'missing' };
 
   const stats = await stat(real).catch(() => undefined);
-  if (!stats) return 'missing';
-  if (!stats.isFile()) return 'invalid';
+  if (!stats) return { status: 'missing' };
+  if (!stats.isFile()) return { status: 'invalid' };
   const roots = (process.env.QBITTORRENT_ALLOWED_ROOTS ?? '')
     .split(',')
     .map((root) => root.trim())
     .filter(Boolean);
-  if (roots.length === 0) return 'allowed';
+  // The service is operator opt-in: with no roots configured, nothing is
+  // allowed (the service itself is hidden; this closes links minted before
+  // an operator withdrew the roots).
+  if (roots.length === 0) return { status: 'outside' };
   // Fold for case-insensitive platforms.
   const fold =
     process.platform === 'win32'
@@ -81,11 +92,15 @@ export async function resolveAllowedPath(candidate: string): Promise<AllowedPath
   for (const root of roots) {
     const realRoot = await realpath(root).catch(() => undefined);
     if (!realRoot) continue;
-    if (fold(real) === fold(realRoot)) return 'allowed';
+    if (fold(real) === fold(realRoot)) {
+      return { status: 'allowed', realPath: real };
+    }
     const relative = posixRelative(realRoot, real);
-    if (relative !== undefined) return 'allowed';
+    if (relative !== undefined) {
+      return { status: 'allowed', realPath: real };
+    }
   }
-  return 'outside';
+  return { status: 'outside' };
 }
 
 function posixRelative(root: string, target: string): string | undefined {

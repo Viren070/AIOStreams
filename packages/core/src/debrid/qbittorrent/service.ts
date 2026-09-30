@@ -487,7 +487,7 @@ export class QBittorrentService implements TorrentDebridService {
           ? applyPathMappings(derived, this.credential.pathMappings)
           : undefined;
         if (filePath) {
-          const allowed = await resolveAllowedPath(filePath);
+          const allowed = (await resolveAllowedPath(filePath)).status;
           if (allowed === 'outside') {
             throw new DebridError(
               'qBittorrent reported a file path outside the configured download roots',
@@ -695,13 +695,16 @@ export class QBittorrentService implements TorrentDebridService {
   ): Promise<boolean> {
     if (fileSize === 0) return true;
     const length = Math.min(64 * 1024, fileSize);
-    // Non-blocking regular-file opens only: a reported path that resolves
-    // to a fifo or device node must not park a threadpool thread. qBittorrent's
-    // "Append .!qB to incomplete files" keeps the suffixed name on disk until
-    // the file completes.
-    let handle =
-      (await openRegularFile(filePath)) ??
-      (await openRegularFile(filePath + '.!qB'));
+    // Non-blocking regular-file opens only, on paths that pass the roots
+    // check (the .!qB variant too, qBittorrent's "Append .!qB to incomplete
+    // files" keeps the suffixed name on disk until the file completes).
+    let handle: Awaited<ReturnType<typeof openRegularFile>> = undefined;
+    for (const variant of [filePath, filePath + '.!qB']) {
+      const allowed = await resolveAllowedPath(variant);
+      if (allowed.status !== 'allowed') continue;
+      handle = await openRegularFile(allowed.realPath!);
+      if (handle) break;
+    }
     if (!handle) return false;
     try {
       const buffer = Buffer.alloc(length);
