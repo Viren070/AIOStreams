@@ -47,13 +47,16 @@ const FEATURES = {
 } as const;
 
 export function publicInfo(req: Request) {
+  const addressed = addressedConfig(req);
   return {
     LocalAddress: `${requestOrigin(req)}${req.baseUrl}`.replace(/\/$/, ''),
     ServerName: req.jf?.userData.addonName || serverName(),
     // Jellyfin has no field for a logo; clients ignore what they don't know.
     aiostreams: {
       logo: req.jf?.userData.addonLogo ?? null,
-      configureUrl: `${requestOrigin(req)}/stremio/configure`,
+      configureUrl: addressed
+        ? `${requestOrigin(req)}/stremio/${addressed.uuid}/${addressed.encryptedPassword}/configure`
+        : `${requestOrigin(req)}/stremio/configure`,
       pinSignIn: appConfig.jellyfin.pinSignIn && !!mountOf(req),
       features: FEATURES,
       version: {
@@ -248,9 +251,8 @@ router.post('/Startup/{*rest}', (_req, res) => {
   res.status(204).end();
 });
 
-/** A picker address's configuration, before or after `jellyfinContext` ran. */
-function mountOf(req: Request) {
-  if (req.jfMount) return req.jfMount;
+/** The configuration named in the address itself, not one an alias resolves to. */
+function addressedConfig(req: Request) {
   const p = req.params as Record<string, string | undefined>;
   return p.uuid &&
     p.encryptedPassword &&
@@ -258,6 +260,11 @@ function mountOf(req: Request) {
     isEncrypted(p.encryptedPassword)
     ? { uuid: p.uuid, encryptedPassword: p.encryptedPassword }
     : null;
+}
+
+/** A picker address's configuration, before or after `jellyfinContext` ran. */
+function mountOf(req: Request) {
+  return req.jfMount ?? addressedConfig(req);
 }
 
 /** The web app's name: its configuration's addon name on a picker address. */
