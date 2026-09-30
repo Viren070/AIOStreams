@@ -429,6 +429,8 @@ export class QBittorrentClient {
     if (!response.ok) {
       throw this.httpError(response.status, '/api/v2/torrents/add');
     }
+      // Drain the body so the connection is released.
+    await response.body?.cancel().catch(() => {});
   }
 
    * Playback optimisation only, failures return false instead of throwing
@@ -455,6 +457,8 @@ export class QBittorrentClient {
         'could not set file priorities'
       );
     }
+      // Drain the body so the connection is released.
+    await response.body?.cancel().catch(() => {});
     return response.ok;
   }
 
@@ -466,6 +470,8 @@ export class QBittorrentClient {
         body: new URLSearchParams({ hashes: hash }),
         signal,
       });
+      // Drain the body so the connection is released.
+      await response.body?.cancel().catch(() => {});
       if (response.ok) return true;
       // Only 4.x lacks `start` (404); anything else is a real failure.
       if (response.status !== 404) {

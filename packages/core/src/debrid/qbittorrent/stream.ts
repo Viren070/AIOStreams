@@ -128,6 +128,7 @@ class QbittorrentPieceStream extends Readable {
           this.entry,
           this.signal
         );
+        if (this.destroyed) return;
         // The largest byte (exclusive) known to be on disk behind the
         // cursor; one piece behind the piece frontier unless complete,
         // because piece states flip before the flush.
@@ -184,38 +185,76 @@ class QbittorrentPieceStream extends Readable {
   }
 
   /**
-   * Open the file handle, re-deriving the path if the old one vanished:
-   * qBittorrent can relocate a torrent mid-stream ("move on finish" or the
-   * `.unwanted` folder for unselected files).
+   * Open the file handle, following qBittorrent relocations if the current
+   * path no longer opens (mid-stream "move on finish", temp-dir exits,
+   * `.!qB` naming). An already-open handle keeps reading the same inode
+   * across a rename.
    */
   private async openHandle(): Promise<FileHandle> {
     if (this.handle) return this.handle;
-    try {
-      this.handle = await open(this.entry.filePath, 'r');
-      return this.handle;
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-      const torrent = await this.client.getTorrent(this.entry.hash, this.signal);
-      const files = torrent
-        ? await this.client.getFiles(this.entry.hash, this.signal)
-        : [];
-      const filePath = torrent
-        ? deriveFilePath(torrent, files, this.entry.fileIndex)
-        : undefined;
-      if (!filePath) throw error;
+    const located = await locateEntryFile(
+      this.client,
+      this.entry,
+      this.signal
+    );
+    if (!located) {
+      throw new Error(`qBittorrent file is no longer reachable: ${this.entry.filePath}`);
+    }
+    if (located !== this.entry.filePath) {
       logger.debug(
-        { hash: this.entry.hash, from: this.entry.filePath, to: filePath },
+        { hash: this.entry.hash, from: this.entry.filePath, to: located },
         'qBittorrent file moved; re-resolving path'
       );
-      this.entry.filePath = filePath;
-      this.handle = await open(filePath, 'r');
-      return this.handle;
+      this.entry.filePath = located;
     }
+    this.handle = await open(located, 'r');
+    return this.handle;
   }
 }
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Find the on-disk path of a stream entry's file, following qBittorrent
+ * relocations: the registered path, its `.!qB` variant ("append .!qB to
+ * incomplete files"), and a freshly derived path (the torrent may have been
+ * moved out of its temp dir by "finished" handling, or relocated on
+ * completion) plus that variant. Returns undefined when nothing opens.
+ */
+async function locateEntryFile(
+  client: QBittorrentClient,
+  entry: QbittorrentStreamRefEntry,
+  signal?: AbortSignal
+): Promise<string | undefined> {
+  for (const candidate of [entry.filePath, entry.filePath + '.!qB']) {
+    try {
+      const handle = await open(candidate, 'r');
+      await handle.close();
+      return candidate;
+    } catch {
+      // try the next candidate
+    }
+  }
+  const torrent = await client.getTorrent(entry.hash, signal);
+  const files = torrent
+    ? await client.getFiles(entry.hash, signal)
+    : [];
+  const derived = torrent
+    ? deriveFilePath(torrent, files, entry.fileIndex)
+    : undefined;
+  if (!derived || derived === entry.filePath) return undefined;
+  for (const candidate of [derived, derived + '.!qB']) {
+    try {
+      const handle = await open(candidate, 'r');
+      await handle.close();
+      return candidate;
+    } catch {
+      // try the next candidate
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -302,12 +341,11 @@ export async function openQbittorrentStream(opts: {
     entry.fileSize
   );
 
-  try {
-    const handle = await open(entry.filePath, 'r');
-    await handle.close();
-  } catch {
-    // The path was reachable when the reference was registered; if it is
-    // gone now the mount or qBittorrent's layout changed underneath us.
+    // Follow relocations (temp dir exits, move on finish, .!qB naming)
+    // before giving up on the shared-filesystem diagnosis. A spanning
+    // request may race a just-added torrent, give the locator a grace.
+  const located = await locateEntryFile(client, entry, opts.signal);
+  if (!located) {
     throw new DebridError(
       'qBittorrent download directory is not reachable from AIOStreams; both must run on the same machine (or share the directory through a mount)',
       {
@@ -318,6 +356,13 @@ export async function openQbittorrentStream(opts: {
         headers: {},
       }
     );
+  }
+  if (located !== entry.filePath) {
+    logger.debug(
+      { hash: entry.hash, from: entry.filePath, to: located },
+      'qBittorrent file moved; following new path'
+    );
+    entry.filePath = located;
   }
 
   const stream = new QbittorrentPieceStream(
