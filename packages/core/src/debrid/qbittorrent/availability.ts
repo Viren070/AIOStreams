@@ -57,23 +57,25 @@ export function planFilePriorities(params: {
 
 /**
  * Absolute on-disk path of one file within a torrent: the torrent's content
- * path itself for single-file torrents, otherwise the file's relative name
- * under the content path. Shared by the resolve wait (which re-derives it
- * every poll, so qBittorrent "move on finish" cannot strand it) and the byte
- * stream (which re-derives it when a mid-stream move makes the old path
- * vanish).
+ * path itself for single-file torrents, otherwise the file's name joined to
+ * the save path — the files API reports names relative to the SAVE path
+ * (root folder included), so joining them onto content_path (which already
+ * ends in the root folder) would double it. Shared by the resolve wait
+ * (which re-derives it every poll, so qBittorrent "move on finish" cannot
+ * strand it) and the byte stream (which re-derives it when a mid-stream move
+ * makes the old path vanish).
  */
 export function deriveFilePath(
-  torrent: { content_path: string },
+  torrent: { content_path: string; save_path: string },
   files: QbittorrentFile[],
   fileIndex: number
 ): string | undefined {
   const file = files.find((f) => f.index === fileIndex);
   if (!file) return undefined;
   if (files.length === 1) return torrent.content_path;
-  const root = torrent.content_path.endsWith('/')
-    ? torrent.content_path
-    : torrent.content_path + '/';
+  const root = torrent.save_path.endsWith('/')
+    ? torrent.save_path
+    : torrent.save_path + '/';
   return root + file.name;
 }
 
