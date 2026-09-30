@@ -12,6 +12,7 @@ import { layerMediaInfo } from '../media-info/apply.js';
 import {
   Torrent,
   BuiltinDebridServices,
+  encodeQbittorrentCredential,
   generatePlaybackUrl,
   metadataStore,
   fileInfoStore,
@@ -594,14 +595,12 @@ export function getServiceCredential(service: {
         password: creds.password,
       });
     case constants.QBITTORRENT_SERVICE:
-      return toUrlSafeBase64(
-        JSON.stringify({
-          url: creds.url,
-          username: creds.username,
-          password: creds.password,
-          skipOtherFiles: creds.skipOtherFiles,
-        })
-      );
+      return encodeQbittorrentCredential({
+        url: creds.url,
+        username: creds.username,
+        password: creds.password,
+        skipOtherFiles: creds.skipOtherFiles,
+      });
     default:
       return creds.apiKey;
   }

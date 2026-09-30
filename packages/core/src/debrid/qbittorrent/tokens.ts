@@ -67,12 +67,19 @@ function pruneLiveFiles(now: number): void {
 }
 
 
+let lastLivePrune = 0;
+
 export function markFileLive(
   hash: string,
   fileIndex: number,
   ttlMs: number = LIVE_FILE_TTL_MS
 ): void {
   const now = Date.now();
+
+  if (now - lastLivePrune >= 1_000) {
+    lastLivePrune = now;
+    pruneLiveFiles(now);
+  }
   pruneLiveFiles(now);
   let perTorrent = liveFiles.get(hash);
   if (!perTorrent) {
