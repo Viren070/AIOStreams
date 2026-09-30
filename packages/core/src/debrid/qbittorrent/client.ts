@@ -73,21 +73,17 @@ export function parseQbittorrentCredential(
   return parsed.data;
 }
 
-/** A torrent as reported by `/api/v2/torrents/info`. */
+/** A torrent as reported by `/api/v2/torrents/info`, only the fields we read. */
 export const QbittorrentTorrentSchema = z.object({
   hash: z.string(),
   name: z.string(),
   state: z.string(),
   progress: z.number(),
   size: z.number(),
-  completed: z.number(),
-  amount_left: z.number(),
   content_path: z.string(),
   save_path: z.string(),
-  category: z.string(),
   tags: z.string(),
   added_on: z.number(),
-  seq_dl: z.boolean().optional(),
 });
 
 export type QbittorrentTorrent = z.infer<typeof QbittorrentTorrentSchema>;
@@ -99,17 +95,14 @@ export const QbittorrentFileSchema = z.object({
   size: z.number(),
   progress: z.number(),
   priority: z.number(),
-  is_seed: z.boolean().optional(),
   /** Inclusive global piece range `[first, last]` covered by this file. */
   piece_range: z.tuple([z.number(), z.number()]),
-  availability: z.number().optional(),
 });
 
 export type QbittorrentFile = z.infer<typeof QbittorrentFileSchema>;
 
 const QbittorrentPropertiesSchema = z.object({
   piece_size: z.number(),
-  seq_dl: z.boolean().optional(),
 });
 
 interface Session {
@@ -131,15 +124,11 @@ const inflightLogins = new Map<string, Promise<Session>>();
 const loginFailures = new Map<string, number>();
 const LOGIN_FAILURE_TTL_MS = 60_000;
 
-function credentialKey(credential: QbittorrentCredential): string {
+/** Cache key for per-credential shared state (sessions, snapshots). */
+export function credentialKey(credential: QbittorrentCredential): string {
   return getSimpleTextHash(
     `${credential.url}|${credential.username}|${credential.password}`
   );
-}
-
-/** Credential key for cross-instance caches (snapshots, readiness). */
-export function qbittorrentCredentialKey(credential: QbittorrentCredential): string {
-  return credentialKey(credential);
 }
 
 /** Inverse of {@link parseQbittorrentCredential}, flattens for storage. */
@@ -296,10 +285,12 @@ export class QBittorrentClient {
     }
     if (!session) session = await this.login();
     let response = await attempt(session);
-    if (response.status === 401) {
-      // Stale SID: re-login once and retry. A 403 is not retried: it means
-      // the host is banned, and another login attempt cannot help. The 401
-      // body is drained so the connection is released.
+    if (
+      response.status === 401 ||
+      // With a session in hand a 403 means "stale session" (4.x answers
+      // unauthenticated calls with it), a truly banned host fails at login.
+      (response.status === 403 && session !== undefined)
+    ) {
       await response.body?.cancel().catch(() => {});
       sessions.delete(this.key());
       response = await attempt(await this.login());
@@ -495,11 +486,28 @@ export class QBittorrentClient {
         headers: {},
       });
     }
+    const body = await response.text();
     if (!response.ok) {
+      // qBittorrent 5.x answers a duplicate add with 409, the torrent is
+      // already there, which is all this call needed to ensure.
+      if (response.status === 409) {
+        logger.debug('qBittorrent already has this torrent');
+        return;
+      }
       throw this.httpError(response.status, '/api/v2/torrents/add');
     }
-      // Drain the body so the connection is released.
-    await response.body?.cancel().catch(() => {});
+    // qBittorrent 4.x answers an invalid (or duplicate) add with 200 and a
+    // "Fails." body. The caller distinguishes duplicates by looking the
+    // torrent up.
+    if (body.includes('Fails.')) {
+      throw new DebridError('qBittorrent rejected the torrent', {
+        statusCode: 400,
+        statusText: 'Bad Request',
+        code: 'STORE_MAGNET_INVALID',
+        type: 'store_error',
+        headers: {},
+      });
+    }
   }
 
   /**
