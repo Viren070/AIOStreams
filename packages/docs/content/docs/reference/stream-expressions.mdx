@@ -63,12 +63,12 @@ The constants available to you depend on where the expression is used.
 
 Used by a [config variant](/reference/config-expressions) to activate itself from the incoming request. These conditions describe the request rather than the streams, so the stream helpers do not apply.
 
-| Constant    | Type     | Description                                                              |
-| ----------- | -------- | ------------------------------------------------------------------------ |
-| `userAgent` | `string` | The client's `User-Agent` header, or `''`                                |
-| `resource`  | `string` | `stream`, `manifest.json`, `catalog`, `meta`, `subtitles`, `search`, ... |
-| `type`      | `string` | Media type, where the request has one                                    |
-| `id`        | `string` | The requested id, e.g. `tt0111161:1:2`                                   |
+| Constant    | Type     | Description                                                                                              |
+| ----------- | -------- | -------------------------------------------------------------------------------------------------------- |
+| `userAgent` | `string` | The client's `User-Agent` header, or `''`. On Jellyfin, with the app's name, version and device appended |
+| `resource`  | `string` | `stream`, `manifest.json`, `catalog`, `meta`, `subtitles`, `search`, ...                                 |
+| `type`      | `string` | Media type, where the request has one                                                                    |
+| `id`        | `string` | The requested id, e.g. `tt0111161:1:2`                                                                   |
 
 Along with the four [variant condition functions](#variant-condition-functions), which work
 nowhere else, and `health()`, which works everywhere.

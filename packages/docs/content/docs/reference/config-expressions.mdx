@@ -125,19 +125,19 @@ Selecting a conditional variant applies it to every request, not only those its 
 
 ### What a condition can read
 
-| Name                     | Is                                                                        |
-| ------------------------ | ------------------------------------------------------------------------- |
-| `userAgent`              | The client's `User-Agent` header, or an empty string                      |
-| `resource`               | `stream`, `manifest.json`, `catalog`, `meta`, `subtitles`, `search`, ...  |
-| `type`                   | `movie`, `series`, ... where the request has one                          |
-| `id`                     | The requested id, e.g. `tt0111161:1:2`                                    |
-| `query('name')`          | A query parameter, or an empty string                                     |
-| `header('name')`         | A request header, or an empty string                                      |
-| `health('id')`           | Whether a health check is currently passing                               |
-| `includes(a, b)`         | Whether `a` contains `b`, ignoring case                                   |
-| `matches(value, 'expr')` | Whether a regular expression matches. Follows this instance's regex rules |
+| Name                     | Is                                                                                                                         |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| `userAgent`              | The client's `User-Agent` header, or an empty string. On Jellyfin, the app's name, version and device are added to the end |
+| `resource`               | `stream`, `manifest.json`, `catalog`, `meta`, `subtitles`, `search`, ...                                                   |
+| `type`                   | `movie`, `series`, ... where the request has one                                                                           |
+| `id`                     | The requested id, e.g. `tt0111161:1:2`                                                                                     |
+| `query('name')`          | A query parameter, or an empty string                                                                                      |
+| `header('name')`         | A request header, or an empty string                                                                                       |
+| `health('id')`           | Whether a health check is currently passing                                                                                |
+| `includes(a, b)`         | Whether `a` contains `b`, ignoring case                                                                                    |
+| `matches(value, 'expr')` | Whether a regular expression matches. Follows this instance's regex rules                                                  |
 
-Finding the right `userAgent` is guesswork, so the Variants tab lists the last five that actually reached your configuration. Only stream, catalogue, meta and subtitle requests are counted.
+Finding the right `userAgent` is guesswork, so the Variants tab lists the last five that actually reached your configuration. Only stream, catalogue, meta, subtitle and Jellyfin requests are counted.
 
 ### Health checks
 

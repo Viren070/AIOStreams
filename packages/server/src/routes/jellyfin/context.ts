@@ -20,6 +20,7 @@ import {
   resolveConfigAlias,
   memoScope,
   personaUserId,
+  recordClientAgent,
   serverId as instanceServerId,
   sql,
   UserRepository,
@@ -440,6 +441,15 @@ interface ApiKeyClaim {
 
 const UNKNOWN_USER = 'unknown-user';
 
+/** Clients name themselves in the auth header, hidden from conditions. */
+function withClientName(userAgent: string, client: ClientInfo): string {
+  if (client.name === 'Unknown') return userAgent;
+  let product =
+    client.version === '0' ? client.name : `${client.name}/${client.version}`;
+  if (client.device !== 'Unknown') product += ` (${client.device})`;
+  return userAgent ? `${userAgent} ${product}` : product;
+}
+
 async function buildContext(
   req: Request,
   uuid: string,
@@ -477,7 +487,13 @@ async function buildContext(
       return null;
   }
   const primaryVariants = userData.jellyfin?.primary?.variants ?? [];
-  const variantContext = buildVariantRequestContext(req, 'jellyfin');
+  const request = buildVariantRequestContext(req, 'jellyfin');
+  const variantContext = {
+    ...request,
+    userAgent: withClientName(request.userAgent, client),
+  };
+  // Tokenless contexts also serve the configuration page's own requests.
+  if (token) void recordClientAgent(uuid, variantContext.userAgent, 'jellyfin');
   const configFor = async (selected: string[]): Promise<UserData> => {
     try {
       const { userData: activated, applied } = await activateVariants(
