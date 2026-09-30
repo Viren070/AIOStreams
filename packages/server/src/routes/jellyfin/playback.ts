@@ -51,19 +51,27 @@ interface Located {
 async function locate(
   req: Request,
   rawItemId: string,
-  /* Routes that carry the source id in the path rather than the query. */
-  hintMsid?: string
+  opts: {
+    /* Routes that carry the source id in the path rather than the query. */
+    hintMsid?: string;
+    /* The session's list, which the request itself may no longer select. */
+    bySession?: boolean;
+  } = {}
 ): Promise<Located | null> {
   const psid = qs(req, 'PlaySessionId');
   const rawMsid =
     qs(req, 'MediaSourceId') ??
     (bodyOf(req).MediaSourceId as string | undefined) ??
-    hintMsid;
+    opts.hintMsid;
   let ctx = req.jf;
+  const session =
+    psid && (!ctx || opts.bySession)
+      ? await resolveByPlaySession(psid)
+      : undefined;
 
   if (!ctx) {
     const pointer =
-      (psid ? await resolveByPlaySession(psid) : undefined) ??
+      session ??
       (rawMsid &&
       rawMsid.replace(/-/g, '').toLowerCase() !==
         rawItemId.replace(/-/g, '').toLowerCase()
@@ -104,7 +112,12 @@ async function locate(
     const norm = rawMsid.replace(/-/g, '').toLowerCase();
     if (norm !== itemId) requestedMsid = norm;
   }
-  const memo = await resolveByItem(ctx.uuid, ctx.scope(), itemId).then(
+  // No persona check: personas on the same variants share a memo and its session.
+  const scope =
+    opts.bySession && session?.scope && session.uuid === ctx.uuid
+      ? session.scope
+      : ctx.scope();
+  const memo = await resolveByItem(ctx.uuid, scope, itemId).then(
     (m) => m ?? null
   );
   return {
@@ -209,7 +222,7 @@ router.post('/Items/:itemId/PlaybackInfo', jfOptional(playbackInfo));
 router.get('/Items/:itemId/MediaSources', jfOptional(playbackInfo));
 
 async function streamHandler(req: Request, res: Response) {
-  const loc = await locate(req, param(req, 'itemId'));
+  const loc = await locate(req, param(req, 'itemId'), { bySession: true });
   if (!loc) {
     res.status(404).json({ Message: 'Item not found' });
     return;

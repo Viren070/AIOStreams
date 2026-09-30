@@ -100,6 +100,8 @@ export interface MemoPointer {
   encryptedPassword: string;
   itemId: string;
   persona?: string;
+  /** Only on a play session's pointer. */
+  scope?: string;
 }
 
 export type ImageKind = 'Primary' | 'Backdrop' | 'Logo' | 'Thumb';

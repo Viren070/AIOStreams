@@ -64,7 +64,12 @@ export async function writePlaybackMemo(
       PLAYBACK_MEMO_TTL,
       true
     ),
-    pointers.set(`psid:${memo.psid}`, pointer, PLAYBACK_MEMO_TTL, true),
+    pointers.set(
+      `psid:${memo.psid}`,
+      { ...pointer, scope },
+      PLAYBACK_MEMO_TTL,
+      true
+    ),
     ...memo.sources.map((s) =>
       pointers.set(`msid:${s.msid}`, pointer, PLAYBACK_MEMO_TTL, true)
     ),

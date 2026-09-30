@@ -55,7 +55,10 @@ async function fetchSubtitle(url: string): Promise<string | null> {
 
 async function subtitleHandler(req: Request, res: Response) {
   const msid = param(req, 'mediaSourceId').replace(/-/g, '').toLowerCase();
-  const loc = await locate(req, param(req, 'itemId'), msid);
+  const loc = await locate(req, param(req, 'itemId'), {
+    hintMsid: msid,
+    bySession: true,
+  });
   if (!loc) {
     res.status(404).end();
     return;

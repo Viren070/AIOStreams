@@ -684,6 +684,7 @@ export function mediaSourcesFrom(
       subtitleFormat: format,
       subtitleUrl: subtitleUrlFor(memo.itemId, record.msid),
       subtitleToken: token,
+      playSessionId: memo.psid,
       protocol: ctx.client.name === ANDROID_PLAYER_CLIENT ? 'File' : 'Http',
       runtimeMs: memo.runtimeMs,
       includeExtension: true,
