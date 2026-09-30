@@ -40,7 +40,10 @@ export async function openRegularFile(
 ): Promise<FileHandle | undefined> {
   let handle: FileHandle;
   try {
-    handle = await open(path, constants.O_RDONLY | constants.O_NONBLOCK);
+    handle = await open(
+      path,
+      constants.O_RDONLY | constants.O_NONBLOCK | constants.O_NOFOLLOW
+    );
   } catch {
     return undefined;
   }
@@ -76,13 +79,15 @@ export async function resolveAllowedPath(
   const stats = await stat(real).catch(() => undefined);
   if (!stats) return { status: 'missing' };
   if (!stats.isFile()) return { status: 'invalid' };
-  const roots = (process.env.QBITTORRENT_ALLOWED_ROOTS ?? '')
+
+  const rawRoots = (process.env.QBITTORRENT_ALLOWED_ROOTS ?? '')
     .split(',')
     .map((root) => root.trim())
     .filter(Boolean);
-  // The service is operator opt-in: with no roots configured, nothing is
-  // allowed (the service itself is hidden; this closes links minted before
-  // an operator withdrew the roots).
+  const validRoot = (root: string) =>
+    root.startsWith('/') && root.replace(/\/+$/, '') !== '' && root !== '/';
+  const roots = rawRoots.filter(validRoot);
+
   if (roots.length === 0) return { status: 'outside' };
   // Fold for case-insensitive platforms.
   const fold =
