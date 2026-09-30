@@ -619,6 +619,7 @@ export function getServiceCredential(service: {
         username: creds.username,
         password: creds.password,
         skipOtherFiles: creds.skipOtherFiles,
+        pathMappings: creds.pathMappings,
       });
     default:
       return creds.apiKey;

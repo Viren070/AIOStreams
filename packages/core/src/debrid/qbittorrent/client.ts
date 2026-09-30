@@ -239,11 +239,14 @@ export class QBittorrentClient {
       }).toString(),
     });
     const body = await response.text();
-    // qBittorrent 5.x answers 204 with an empty body on success; 4.x used
-    // 200 with "Ok.". Bad credentials are 200 with "Fails.", a banned host
-    // gets 403. A 5xx from a restarting WebUI is transient: it must not arm
-    // the failure cache and lock the credential out for a minute.
-    if (body.includes('Fails.') || response.status === 403) {
+    // 5.x answers 204 on success and 401 on bad credentials, 4.x used
+    // 200 "Ok."/"Fails.", a banned host gets 403. A restarting WebUI's 5xx
+    // must not arm the failure cache.
+    if (
+      response.status === 401 ||
+      response.status === 403 ||
+      body.includes('Fails.')
+    ) {
       loginFailures.set(key, Date.now());
       throw unauthorized(
         response.status === 403
@@ -276,8 +279,16 @@ export class QBittorrentClient {
       }
     }
     if (!cookieName || !sid) {
-      loginFailures.set(key, Date.now());
-      throw unauthorized('qBittorrent login returned no session cookie');
+      // "Bypass authentication for clients on localhost" answers with no
+      // cookie, proceed without one.
+      const session: Session = {
+        cookieName: '',
+        sid: '',
+        expiresAt: Date.now() + 30 * 60_000,
+      };
+      sessions.set(key, session);
+      loginFailures.delete(key);
+      return session;
     }
     const expiresAt = expires
       ? new Date(expires).getTime() - 30_000
@@ -302,7 +313,9 @@ export class QBittorrentClient {
       const headers: Record<string, string> = {
         referer: this.baseUrl() + '/',
       };
-      if (session) headers.cookie = `${session.cookieName}=${session.sid}`;
+      if (session && session.sid) {
+        headers.cookie = `${session.cookieName}=${session.sid}`;
+      }
       if (options.body !== undefined) {
         headers['content-type'] = 'application/x-www-form-urlencoded';
       }
