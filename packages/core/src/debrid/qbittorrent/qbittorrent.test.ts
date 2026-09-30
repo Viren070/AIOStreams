@@ -201,33 +201,89 @@ describe('deriveFilePath', () => {
     file({ index: 0, name: 'a.mkv', size: 100, piece_range: [0, 1] }),
     file({ index: 1, name: 'b.mkv', size: 100, piece_range: [2, 3] }),
   ];
+  const showPack = [
+    file({ index: 0, name: 'Show/e01.mkv', size: 100, piece_range: [0, 1] }),
+    file({ index: 1, name: 'Show/e02.mkv', size: 100, piece_range: [2, 3] }),
+  ];
 
-  test('folder pack joins names under the content path parent', () => {
+  test('folder pack kept: names join under the content path parent', () => {
     assert.equal(
-      deriveFilePath({ content_path: '/dl/tmp/pack' }, pack, 1),
-      '/dl/tmp/pack/s01e02.mkv'
+      deriveFilePath(
+        { content_path: '/dl/final/pack', save_path: '/dl/final' },
+        pack,
+        1
+      ),
+      '/dl/final/pack/s01e02.mkv'
     );
   });
 
   test('folder pack follows the content path into the temp dir', () => {
     assert.equal(
-      deriveFilePath({ content_path: '/dl/incomplete/pack' }, pack, 0),
+      deriveFilePath(
+        { content_path: '/dl/incomplete/pack', save_path: '/dl/final' },
+        pack,
+        0
+      ),
       '/dl/incomplete/pack/s01e01.mkv'
+    );
+  });
+
+  test('save dir named like the pack root does not collide', () => {
+    assert.equal(
+      deriveFilePath(
+        { content_path: '/dl/Show/Show', save_path: '/dl/Show' },
+        showPack,
+        0
+      ),
+      '/dl/Show/Show/e01.mkv'
+    );
+  });
+
+  test('stripped root layout drops the shared first segment', () => {
+    assert.equal(
+      deriveFilePath(
+        { content_path: '/dl', save_path: '/dl' },
+        showPack,
+        1
+      ),
+      '/dl/e02.mkv'
     );
   });
 
   test('rootless layouts join names onto the content path', () => {
     assert.equal(
-      deriveFilePath({ content_path: '/dl/rel' }, rootless, 1),
+      deriveFilePath({ content_path: '/dl/rel', save_path: '/dl/rel' }, rootless, 1),
       '/dl/rel/b.mkv'
+    );
+  });
+
+  test('rootless layouts in a temp dir still use the content path', () => {
+    assert.equal(
+      deriveFilePath({ content_path: '/tmp/inc', save_path: '/dl' }, rootless, 0),
+      '/tmp/inc/a.mkv'
     );
   });
 
   test('single-file torrents use the content path directly', () => {
     const single = [file({ index: 0, name: 'movie.mkv', size: 1, piece_range: [0, 1] })];
     assert.equal(
-      deriveFilePath({ content_path: '/dl/pack/movie.mkv' }, single, 0),
+      deriveFilePath(
+        { content_path: '/dl/pack/movie.mkv', save_path: '/dl/pack' },
+        single,
+        0
+      ),
       '/dl/pack/movie.mkv'
+    );
+  });
+
+  test('windows separators are normalised', () => {
+    assert.equal(
+      deriveFilePath(
+        { content_path: 'C:\\dl\\pack', save_path: 'C:\\dl' },
+        pack,
+        0
+      ),
+      'C:/dl/pack/s01e01.mkv'
     );
   });
 

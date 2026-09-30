@@ -221,40 +221,62 @@ function delay(ms: number): Promise<void> {
  * relocations: the registered path, its `.!qB` variant ("append .!qB to
  * incomplete files"), and a freshly derived path (the torrent may have been
  * moved out of its temp dir by "finished" handling, or relocated on
- * completion) plus that variant. Returns undefined when nothing opens.
+ * completion) plus that variant.
+ *
+ * A candidate only counts when its size reaches the file's full size: a
+ * cross-filesystem relocation is a copy, and the destination exists but is
+ * short until the copy lands — serving it would truncate playback. While
+ * the torrent reports a `moving` state the whole chain is retried with a
+ * short backoff, bounded, instead of failing the request outright.
  */
 async function locateEntryFile(
   client: QBittorrentClient,
   entry: QbittorrentStreamRefEntry,
   signal?: AbortSignal
 ): Promise<string | undefined> {
-  for (const candidate of [entry.filePath, entry.filePath + '.!qB']) {
-    try {
-      const handle = await open(candidate, 'r');
-      await handle.close();
-      return candidate;
-    } catch {
-      // try the next candidate
+  const tryOpen = async (paths: string[]): Promise<string | undefined> => {
+    for (const candidate of paths) {
+      try {
+        const handle = await open(candidate, 'r');
+        try {
+          const { size } = await handle.stat();
+          if (size < entry.fileSize) continue;
+          return candidate;
+        } finally {
+          await handle.close().catch(() => {});
+        }
+      } catch {
+        // try the next candidate
+      }
     }
-  }
-  const torrent = await client.getTorrent(entry.hash, signal);
-  const files = torrent
-    ? await client.getFiles(entry.hash, signal)
-    : [];
-  const derived = torrent
-    ? deriveFilePath(torrent, files, entry.fileIndex)
-    : undefined;
-  if (!derived || derived === entry.filePath) return undefined;
-  for (const candidate of [derived, derived + '.!qB']) {
-    try {
-      const handle = await open(candidate, 'r');
-      await handle.close();
-      return candidate;
-    } catch {
-      // try the next candidate
+    return undefined;
+  };
+  const deadline = Date.now() + 10_000;
+  for (;;) {
+    let torrent: Awaited<ReturnType<QBittorrentClient['getTorrent']>>;
+    {
+      const paths: string[] = [];
+      for (const path of [entry.filePath]) {
+        paths.push(path);
+        if (!path.endsWith('.!qB')) paths.push(path + '.!qB');
+      }
+      torrent = await client.getTorrent(entry.hash, signal);
+      const files = torrent
+        ? await client.getFiles(entry.hash, signal)
+        : [];
+      const derived = torrent
+        ? deriveFilePath(torrent, files, entry.fileIndex)
+        : undefined;
+      if (derived && derived !== entry.filePath) {
+        paths.push(derived);
+        if (!derived.endsWith('.!qB')) paths.push(derived + '.!qB');
+      }
+      const found = await tryOpen(paths);
+      if (found) return found;
     }
+    if (torrent?.state !== 'moving' || Date.now() >= deadline) return undefined;
+    await delay(500);
   }
-  return undefined;
 }
 
 /**
