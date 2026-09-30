@@ -441,7 +441,10 @@ const SUBTITLE_KEYS = {
   backgroundColor: 'aiostreams-web-subtitle-background-color',
   backgroundOpacity: 'aiostreams-web-subtitle-background-opacity',
   overrideStyled: 'aiostreams-web-subtitle-override-styled',
+  position: 'aiostreams-web-subtitle-position',
 } as const;
+
+export const SUBTITLE_POSITION_MAX = 30;
 
 export const useSubtitleSize = () =>
   useDeviceSetting<SubtitleSize>(SUBTITLE_KEYS.size, 'normal', SUBTITLE_SIZES);
@@ -463,6 +466,12 @@ export const useSubtitleBackgroundOpacity = () =>
   useDeviceSetting<number>(SUBTITLE_KEYS.backgroundOpacity, 0, isPercent);
 export const useSubtitleOverrideStyled = () =>
   useDeviceSetting<boolean>(SUBTITLE_KEYS.overrideStyled, false);
+export const useSubtitlePosition = () =>
+  useDeviceSetting<number>(
+    SUBTITLE_KEYS.position,
+    0,
+    (v) => v >= 0 && v <= SUBTITLE_POSITION_MAX
+  );
 
 export interface SubtitleStyle {
   size: SubtitleSize;
@@ -474,6 +483,8 @@ export interface SubtitleStyle {
   /** 0 to 100; 0 draws no background. */
   backgroundOpacity: number;
   overrideStyled: boolean;
+  /** Percent of the height to raise subtitles by. */
+  position: number;
 }
 
 export function useSubtitleStyle(): SubtitleStyle {
@@ -485,6 +496,7 @@ export function useSubtitleStyle(): SubtitleStyle {
   const [backgroundColor] = useSubtitleBackgroundColor();
   const [backgroundOpacity] = useSubtitleBackgroundOpacity();
   const [overrideStyled] = useSubtitleOverrideStyled();
+  const [position] = useSubtitlePosition();
   return React.useMemo(
     () => ({
       size,
@@ -495,6 +507,7 @@ export function useSubtitleStyle(): SubtitleStyle {
       backgroundColor,
       backgroundOpacity,
       overrideStyled,
+      position,
     }),
     [
       size,
@@ -505,6 +518,7 @@ export function useSubtitleStyle(): SubtitleStyle {
       backgroundColor,
       backgroundOpacity,
       overrideStyled,
+      position,
     ]
   );
 }

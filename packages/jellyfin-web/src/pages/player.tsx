@@ -362,6 +362,7 @@ function BrowserPlayer({
     startMs,
     onEnded,
     prefs,
+    subtitleStyle,
   });
   const segments = useSegments(item.Id!);
   const next = useNextEpisodePrompt({

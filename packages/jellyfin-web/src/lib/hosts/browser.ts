@@ -9,6 +9,7 @@ import {
   saveSubtitleDelay,
 } from '../subtitle-lines';
 import type { MediaStream } from '../types';
+import { subtitleLine } from '../subtitle-style';
 import {
   initialState,
   storedVolume,
@@ -110,18 +111,23 @@ export function useBrowserPlayer(
       shifted.current.set(track, delayMs.current);
     }
   }, [video]);
-  // Browsers disagree on where a cue the file leaves unplaced goes, so sit it where mpv does.
+  // Browsers disagree on where a cue the file leaves unplaced goes.
+  const placed = React.useRef(new WeakSet<VTTCue>());
+  const line = subtitleLine(opts.subtitleStyle);
   const placeCues = React.useCallback(() => {
     for (const track of Array.from(video.current?.textTracks ?? [])) {
       for (const cue of Array.from(track.cues ?? [])) {
         const vtt = cue as VTTCue;
-        if (vtt.line !== 'auto') continue;
+        if (vtt.line !== 'auto' && !placed.current.has(vtt)) continue;
+        placed.current.add(vtt);
         vtt.snapToLines = false;
-        vtt.line = 97;
+        vtt.line = line;
         vtt.lineAlign = 'end';
       }
     }
-  }, [video]);
+  }, [video, line]);
+  React.useEffect(placeCues, [placeCues]);
+  const latestPlaceCues = useLatest(placeCues);
   const showSubtitle = (id: string | null) => {
     const tracks = video.current?.textTracks;
     if (!tracks) return;
@@ -178,7 +184,7 @@ export function useBrowserPlayer(
       el.addEventListener(event, handler);
     const trackElements = Array.from(el.querySelectorAll('track'));
     const onTrackLoad = () => {
-      placeCues();
+      latestPlaceCues.current();
       shiftCues();
     };
     for (const t of trackElements) t.addEventListener('load', onTrackLoad);

@@ -24,6 +24,10 @@ export const MPV_OUTLINE: Record<SubtitleOutline, number> = {
 
 export const subtitleScale = (style: SubtitleStyle) => SCALE[style.size];
 
+/** Percent from the top where an unplaced subtitle's bottom sits, as mpv places it. */
+export const subtitleLine = (style?: SubtitleStyle) =>
+  97 - (style?.position ?? 0);
+
 function rgba(hex: string, opacity: number): string {
   const n = parseInt(hex.slice(1), 16);
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${opacity / 100})`;

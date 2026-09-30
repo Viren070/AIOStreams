@@ -57,7 +57,7 @@ import {
 } from '../lib/hosts/shell';
 import { LANGUAGES } from '../lib/languages';
 import { serverAddress } from '../lib/servers';
-import { subtitleCss } from '../lib/subtitle-style';
+import { subtitleCss, subtitleLine } from '../lib/subtitle-style';
 import { usePlaybackPrefs, type SubtitleMode } from '../lib/user-config';
 import {
   externalAlways,
@@ -104,6 +104,8 @@ import {
   useSubtitleBackgroundColor,
   useSubtitleBold,
   useSubtitleBackgroundOpacity,
+  useSubtitlePosition,
+  SUBTITLE_POSITION_MAX,
   useSubtitleOutline,
   useSubtitleOutlineColor,
   useSubtitleOverrideStyled,
@@ -471,7 +473,9 @@ function SubtitlesSection() {
   const [backgroundOpacity, setBackgroundOpacity] =
     useSubtitleBackgroundOpacity();
   const [overrideStyled, setOverrideStyled] = useSubtitleOverrideStyled();
-  const css = subtitleCss(useSubtitleStyle());
+  const [position, setPosition] = useSubtitlePosition();
+  const style = useSubtitleStyle();
+  const css = subtitleCss(style);
   return (
     <>
       <SettingsCard title="Language" description={ON_ACCOUNT}>
@@ -492,8 +496,11 @@ function SubtitlesSection() {
         />
       </SettingsCard>
       <SettingsCard title="Preview">
-        <div className="flex aspect-[16/5] items-end justify-center rounded-lg bg-gradient-to-br from-gray-700 to-gray-950 p-4">
-          <span className="rounded px-2 py-0.5 text-center text-lg" style={css}>
+        <div className="relative aspect-[16/5] rounded-lg bg-gradient-to-br from-gray-700 to-gray-950">
+          <span
+            className="absolute left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded px-2 py-0.5 text-center text-lg"
+            style={{ ...css, bottom: `${100 - subtitleLine(style)}%` }}
+          >
             This is how subtitles will look.
           </span>
         </div>
@@ -520,6 +527,15 @@ function SubtitlesSection() {
           label="Bold"
           value={bold}
           onValueChange={setBold}
+        />
+        <Slider
+          label={`Height: ${position}%`}
+          help="How far subtitles sit above their usual place near the bottom."
+          min={0}
+          max={SUBTITLE_POSITION_MAX}
+          step={1}
+          value={[position]}
+          onValueChange={([v]) => setPosition(v)}
         />
       </SettingsCard>
       <SettingsCard title="Outline">

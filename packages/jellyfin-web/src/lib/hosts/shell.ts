@@ -437,6 +437,7 @@ export function applySubtitleStyle(style: SubtitleStyle | undefined): void {
     style.backgroundOpacity > 0 ? 'background-box' : 'outline-and-shadow'
   );
   setProp('sub-ass-override', style.overrideStyled ? 'force' : 'scale');
+  setProp('sub-pos', 100 - style.position);
 }
 
 function applyDesktopSettings(settings: DesktopSettings): void {
