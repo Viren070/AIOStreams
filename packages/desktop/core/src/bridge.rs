@@ -149,6 +149,7 @@ pub const OBSERVED: &[(&str, Kind)] = &[
     ("seeking", Kind::Flag),
     ("idle-active", Kind::Flag),
     ("volume", Kind::Double),
+    ("volume-max", Kind::Double),
     ("mute", Kind::Flag),
     ("speed", Kind::Double),
     ("aid", Kind::String),

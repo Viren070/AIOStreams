@@ -21,6 +21,8 @@ export interface PlayerState {
   durationMs: number;
   bufferedMs: number;
   volume: number;
+  /** Above 1 where the player can boost past the file's own level. */
+  maxVolume: number;
   muted: boolean;
   rate: number;
   fullscreen: boolean;
@@ -77,10 +79,10 @@ export interface NativePlayerOptions extends PlayerOptions {
 
 export const VOLUME_KEY = 'aiostreams-web-volume';
 
-export function storedVolume(): { volume: number; muted: boolean } {
+export function storedVolume(max = 1): { volume: number; muted: boolean } {
   const saved = storage.get<{ volume: number; muted: boolean }>(VOLUME_KEY);
   return {
-    volume: Math.min(1, Math.max(0, saved?.volume ?? 1)),
+    volume: Math.min(max, Math.max(0, saved?.volume ?? 1)),
     muted: saved?.muted ?? false,
   };
 }
@@ -99,6 +101,7 @@ export function initialState(source: SourceInfo, startMs: number): PlayerState {
     subtitle: null,
     subtitleDelayMs: 0,
     error: null,
+    maxVolume: 1,
     ...storedVolume(),
   };
 }

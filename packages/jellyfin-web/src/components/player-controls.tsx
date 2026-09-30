@@ -256,7 +256,7 @@ function Volume({ player }: { player: PlayerController }) {
         <input
           type="range"
           min={0}
-          max={100}
+          max={Math.round(player.state.maxVolume * 100)}
           value={Math.round(level * 100)}
           onChange={(e) => player.setVolume(Number(e.target.value) / 100)}
           aria-label="Volume"
@@ -640,7 +640,8 @@ export function PlayerControls({
         j: () => seekBy(-stepMs.current),
         ArrowRight: () => seekBy(stepMs.current),
         l: () => seekBy(stepMs.current),
-        ArrowUp: () => p.setVolume(Math.min(1, p.state.volume + 0.05)),
+        ArrowUp: () =>
+          p.setVolume(Math.min(p.state.maxVolume, p.state.volume + 0.05)),
         ArrowDown: () => p.setVolume(Math.max(0, p.state.volume - 0.05)),
         m: p.toggleMute,
         f: p.toggleFullscreen,

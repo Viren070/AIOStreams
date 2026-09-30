@@ -190,7 +190,8 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
   }, [fit]);
 
   React.useEffect(() => {
-    const { volume, muted } = storedVolume();
+    // mpv refuses anything above its volume-max.
+    const { volume, muted } = storedVolume(Infinity);
     let cache = false;
     let seeking = false;
 
@@ -254,6 +255,9 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
           break;
         case 'volume':
           if (num !== null) patch({ volume: num / 100 });
+          break;
+        case 'volume-max':
+          if (num !== null) patch({ maxVolume: num / 100 });
           break;
         case 'mute':
           patch({ muted: data === true });
