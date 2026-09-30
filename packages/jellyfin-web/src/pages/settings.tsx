@@ -916,8 +916,8 @@ function InterfaceSection() {
 }
 
 const KEEP_CSS_MS = 15_000;
-const CSS_DOCS_URL =
-  'https://docs.aiostreams.viren070.me/reference/web-app-css';
+const DOCS_URL = 'https://docs.aiostreams.viren070.me';
+const CSS_DOCS_URL = `${DOCS_URL}/reference/web-app-css`;
 
 function ThemeSection() {
   const [colors, setColors] = useThemeColors();
@@ -1159,9 +1159,22 @@ function AccountSection() {
   );
 }
 
+const REPO_URL = 'https://github.com/Viren070/AIOStreams';
 /** The desktop app's stable release, whose notes link each download. */
-const DESKTOP_DOWNLOAD_URL =
-  'https://github.com/Viren070/AIOStreams/releases/tag/desktop';
+const DESKTOP_DOWNLOAD_URL = `${REPO_URL}/releases/tag/desktop`;
+
+const LINKS = [
+  {
+    name: 'Source code',
+    help: 'Where the app is made, and where to report a problem.',
+    url: REPO_URL,
+  },
+  {
+    name: 'Documentation',
+    help: 'How to use the app and what each setting does.',
+    url: `${DOCS_URL}/guides/app`,
+  },
+];
 
 function AboutSection() {
   const { client } = useSession();
@@ -1220,6 +1233,17 @@ function AboutSection() {
             </Button>
           </SettingsRow>
         )}
+        {LINKS.map((link) => (
+          <SettingsRow key={link.name} label={link.name} help={link.help}>
+            <Button
+              intent="gray-outline"
+              className="w-full rounded-full sm:w-auto"
+              onClick={() => window.open(link.url, '_blank', 'noopener')}
+            >
+              Visit
+            </Button>
+          </SettingsRow>
+        ))}
       </SettingsCard>
       <SettingsCard title="Credits">
         {credits(shell).map((credit) => (
@@ -1353,7 +1377,7 @@ function sections(): Section[] {
     {
       id: 'about',
       label: 'About',
-      description: 'Versions',
+      description: 'Versions and links',
       icon: LuInfo,
       group: 'App',
       Content: AboutSection,
