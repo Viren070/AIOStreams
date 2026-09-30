@@ -6,7 +6,7 @@ import { useItem, usePersonItems } from '../lib/queries';
 import { posterUrl } from '../lib/images';
 import { yearsBetween } from '../lib/format';
 import { useInView } from '../lib/use-in-view';
-import { PageBody } from '../components/layout';
+import { PageBody, PageMessage } from '../components/layout';
 import { MixedGrid } from '../components/mixed-grid';
 import { ExternalLinks } from '../components/external-links';
 import { Overview } from '../components/overview';
@@ -137,9 +137,9 @@ export function PersonPage({ personId }: { personId: string }) {
   const person = useItem(personId);
   if (person.isError) {
     return (
-      <PageBody>
-        <LuffyError title="Could not load this person" />
-      </PageBody>
+      <PageMessage>
+        <LuffyError title="Could not load this person" className="mt-0" />
+      </PageMessage>
     );
   }
   return (

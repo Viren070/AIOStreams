@@ -505,3 +505,21 @@ export function PageBody({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
+/** The window's height less the phone nav bar, which pages are padded for. */
+export const FILL_WINDOW =
+  'min-h-[calc(100dvh-5rem-env(safe-area-inset-bottom))] lg:min-h-dvh';
+
+export function PageMessage({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      data-ui="page-message"
+      className={cn(
+        'relative z-[1] flex flex-col justify-center px-4 py-10 lg:pl-0 lg:pr-10',
+        FILL_WINDOW
+      )}
+    >
+      {children}
+    </div>
+  );
+}

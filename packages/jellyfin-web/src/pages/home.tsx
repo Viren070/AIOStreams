@@ -3,6 +3,7 @@ import { BiCalendar, BiChevronRight, BiHistory } from 'react-icons/bi';
 import { Button } from '@aiostreams/ui/button';
 import { Badge } from '@aiostreams/ui/badge';
 import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
+import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '../lib/session';
 import {
   useItemPages,
@@ -38,6 +39,8 @@ import { FollowHero, Hero } from '../components/hero';
 import { MediaRow } from '../components/media-row';
 import { PosterCard, WideCard } from '../components/cards';
 import { ItemMenu } from '../components/item-menu';
+import { NoCatalogs } from '../components/no-catalogs';
+import { FILL_WINDOW } from '../components/layout';
 import { useVersionPicker } from '../components/version-picker';
 import type { BaseItemDto } from '../lib/types';
 
@@ -97,6 +100,7 @@ export function HomePage() {
   const continueLoading = resume.isLoading || (mergeNextUp && nextUp.isLoading);
 
   const all = views.data?.Items ?? [];
+  const noCatalogs = views.isSuccess && !all.length;
   // A removed catalog is skipped, and a list left without any is automatic.
   const live =
     featured === 'auto' || !views.data
@@ -164,13 +168,18 @@ export function HomePage() {
         />
       )}
       <UpcomingRow />
-      {views.data?.Items?.map((view) => (
-        <LibraryRow key={view.Id} view={view} />
-      ))}
+      {noCatalogs ? (
+        <div className="flex flex-1 flex-col justify-center">
+          <NoCatalogs />
+        </div>
+      ) : (
+        all.map((view) => <LibraryRow key={view.Id} view={view} />)
+      )}
     </>
   );
 
-  if (follow)
+  // Without catalogs the pinned hero would stand empty over the message.
+  if (follow && !noCatalogs)
     return (
       <FollowHero
         items={heroItems.length ? heroItems : continueItems}
@@ -185,15 +194,16 @@ export function HomePage() {
       </FollowHero>
     );
   return (
-    <div className="pb-16">
+    <div className={cn('pb-16', noCatalogs && ['flex flex-col', FILL_WINDOW])}>
       <Hero items={heroItems} loading={heroLoading} />
       <div
         data-ui="home-rows"
-        className={
+        className={cn(
           heroItems.length || heroLoading
             ? 'relative z-[1] space-y-10 px-4 pt-2 lg:pl-0 lg:pr-10'
-            : 'relative z-[1] space-y-10 px-4 pt-[calc(1.5rem+env(safe-area-inset-top))] lg:pl-0 lg:pr-10 lg:pt-[calc(2.5rem+env(safe-area-inset-top))]'
-        }
+            : 'relative z-[1] space-y-10 px-4 pt-[calc(1.5rem+env(safe-area-inset-top))] lg:pl-0 lg:pr-10 lg:pt-[calc(2.5rem+env(safe-area-inset-top))]',
+          noCatalogs && 'flex flex-1 flex-col'
+        )}
       >
         {rows}
       </div>

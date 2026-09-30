@@ -20,6 +20,8 @@ import { lastCatalog, rememberCatalog } from '../lib/settings';
 import { useFeature } from '../lib/server-info';
 import { PillTabs } from '../components/pill-tabs';
 import { MixedGrid } from '../components/mixed-grid';
+import { NoCatalogs } from '../components/no-catalogs';
+import { PageMessage } from '../components/layout';
 import type { BaseItemDto } from '../lib/types';
 
 const FILTERS: { value: ItemFilter | undefined; label: string }[] = [
@@ -329,12 +331,18 @@ export function DiscoverIndex({ lastViewId }: { lastViewId: string | null }) {
     if (target?.Id) navigate(to.discover(target.Id), { replace: true });
   }, [target?.Id]);
 
-  if (views.isError) return <LuffyError title="Could not load your catalogs" />;
+  if (views.isError) {
+    return (
+      <PageMessage>
+        <LuffyError title="Could not load your catalogs" className="mt-0" />
+      </PageMessage>
+    );
+  }
   if (views.isSuccess && !all.length) {
     return (
-      <div className="px-4 pt-6 text-[--muted] lg:pl-0 lg:pr-10 lg:pt-10">
-        No catalogs are configured.
-      </div>
+      <PageMessage>
+        <NoCatalogs />
+      </PageMessage>
     );
   }
   return (

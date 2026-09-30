@@ -62,6 +62,7 @@ import { href, itemPath, navigate } from '../lib/paths';
 import { useEpisodeLayout } from '../lib/settings';
 import { useInView } from '../lib/use-in-view';
 import { MediaRow } from '../components/media-row';
+import { PageMessage } from '../components/layout';
 import { MixedGrid } from '../components/mixed-grid';
 import { PosterCard } from '../components/cards';
 import { Overview } from '../components/overview';
@@ -108,9 +109,9 @@ export function ItemPage({
 
   if (item.isError) {
     return (
-      <div className="p-10">
-        <LuffyError title="Could not load this title" />
-      </div>
+      <PageMessage>
+        <LuffyError title="Could not load this title" className="mt-0" />
+      </PageMessage>
     );
   }
 
