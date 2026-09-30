@@ -5,6 +5,7 @@ import {
   fromUrlSafeBase64,
   getSimpleTextHash,
   makeRequest,
+  toUrlSafeBase64,
 } from '../../utils/index.js';
 
 const logger = createLogger('debrid:qbittorrent');
@@ -119,11 +120,12 @@ interface Session {
 }
 
 /**
- * Shared per-credential WebUI sessions, so concurrent resolves reuse one
- * login instead of hammering the auth endpoint (qBittorrent IP-bans hosts
- * with repeated failures).
+ * Shared per-credential sessions, concurrent resolves reuse one login.
+ * qBittorrent IP-bans repeated failures, so parallel logins are
+ * deduplicated through {@link inflightLogins} too.
  */
 const sessions = new Map<string, Session>();
+const inflightLogins = new Map<string, Promise<Session>>();
 
 /** Cached login failures keep a bad password from tripping qBittorrent's IP ban. */
 const loginFailures = new Map<string, number>();
@@ -132,6 +134,31 @@ const LOGIN_FAILURE_TTL_MS = 60_000;
 function credentialKey(credential: QbittorrentCredential): string {
   return getSimpleTextHash(
     `${credential.url}|${credential.username}|${credential.password}`
+  );
+}
+
+/** Credential key for cross-instance caches (snapshots, readiness). */
+export function qbittorrentCredentialKey(credential: QbittorrentCredential): string {
+  return credentialKey(credential);
+}
+
+/** Inverse of {@link parseQbittorrentCredential}, flattens for storage. */
+export function encodeQbittorrentCredential(
+  credential: Pick<QbittorrentCredential, 'url' | 'username' | 'password'> & {
+    skipOtherFiles?: boolean | string | null;
+  }
+): string {
+  return toUrlSafeBase64(
+    JSON.stringify({
+      url: credential.url,
+      username: credential.username,
+      password: credential.password,
+      skipOtherFiles:
+        credential.skipOtherFiles === true ||
+        credential.skipOtherFiles === 'true'
+          ? true
+          : undefined,
+    })
   );
 }
 
@@ -151,6 +178,9 @@ function unauthorized(message: string): DebridError {
  * without one.
  */
 export class QBittorrentClient {
+
+  private readonly pieceSizes = new Map<string, number>();
+
   constructor(private readonly credential: QbittorrentCredential) {}
 
   private baseUrl(): string {
@@ -169,6 +199,16 @@ export class QBittorrentClient {
         'qBittorrent login failed recently; check the WebUI credentials'
       );
     }
+    const inflight = inflightLogins.get(key);
+    if (inflight) return inflight;
+    const attempt = this.doLogin(key).finally(() => {
+      inflightLogins.delete(key);
+    });
+    inflightLogins.set(key, attempt);
+    return attempt;
+  }
+
+  private async doLogin(key: string): Promise<Session> {
     const response = await makeRequest(`${this.baseUrl()}/api/v2/auth/login`, {
       method: 'POST',
       timeout: 15_000,
@@ -193,18 +233,29 @@ export class QBittorrentClient {
           : 'qBittorrent login failed; check the WebUI credentials'
       );
     }
-    const cookie = response.headers.get('set-cookie') ?? '';
+    // getSetCookie splits multiple Set-Cookie headers, which a joined
+    // headers.get() would mash together.
+    const cookies = response.headers.getSetCookie?.() ?? [];
     // qBittorrent 5.x names the cookie after the WebUI port (QBT_SID_8080),
     // older versions use a plain SID.
-    const cookieMatch = /(?:^|;\s*)([A-Za-z0-9_]*SID[A-Za-z0-9_]*)=([^;]+)/.exec(
-      cookie
-    );
-    if (!cookieMatch) {
+    let cookieName: string | undefined;
+    let sid: string | undefined;
+    let expires: string | undefined;
+    for (const cookie of cookies) {
+      const match = /(?:^|;\s*)([A-Za-z0-9_]*SID[A-Za-z0-9_]*)=([^;]+)/.exec(
+        cookie
+      );
+      if (match) {
+        cookieName = match[1];
+        sid = match[2];
+        expires = /expires=([^;]+)/i.exec(cookie)?.[1];
+        break;
+      }
+    }
+    if (!cookieName || !sid) {
       loginFailures.set(key, Date.now());
       throw unauthorized('qBittorrent login returned no session cookie');
     }
-    const [, cookieName, sid] = cookieMatch;
-    const expires = /expires=([^;]+)/i.exec(cookie)?.[1];
     const expiresAt = expires
       ? new Date(expires).getTime() - 30_000
       : Date.now() + 30 * 60_000;
@@ -247,7 +298,9 @@ export class QBittorrentClient {
     let response = await attempt(session);
     if (response.status === 401) {
       // Stale SID: re-login once and retry. A 403 is not retried: it means
-      // the host is banned, and another login attempt cannot help.
+      // the host is banned, and another login attempt cannot help. The 401
+      // body is drained so the connection is released.
+      await response.body?.cancel().catch(() => {});
       sessions.delete(this.key());
       response = await attempt(await this.login());
     }
@@ -261,6 +314,8 @@ export class QBittorrentClient {
   ): Promise<T> {
     const response = await this.request(path, options);
     if (!response.ok) {
+      // Drain the body so the connection is released before throwing.
+      await response.body?.cancel().catch(() => {});
       throw this.httpError(response.status, path);
     }
     let data: unknown;
@@ -370,12 +425,16 @@ export class QBittorrentClient {
     }
   }
 
+  /** Piece size is immutable per torrent, fetch it once per hash. */
   async getPieceSize(hash: string, signal?: AbortSignal): Promise<number> {
+    const cached = this.pieceSizes.get(hash);
+    if (cached !== undefined) return cached;
     const properties = await this.requestJson(
       QbittorrentPropertiesSchema,
       `/api/v2/torrents/properties?hash=${encodeURIComponent(hash)}`,
       { signal }
     );
+    this.pieceSizes.set(hash, properties.piece_size);
     return properties.piece_size;
   }
 
@@ -390,6 +449,16 @@ export class QBittorrentClient {
         { signal }
       );
     } catch (error) {
+      // Auth failures and aborts must propagate, falling back to file
+      // progress would misreport sparse files as playable. Only a genuine
+      // absence of piece states degrades.
+      if (
+        signal?.aborted ||
+        (error instanceof DebridError &&
+          (error.statusCode === 401 || error.statusCode === 403))
+      ) {
+        throw error;
+      }
       logger.debug(
         { err: error instanceof Error ? error.message : String(error) },
         'piece states unavailable, falling back to progress'
@@ -433,8 +502,10 @@ export class QBittorrentClient {
     await response.body?.cancel().catch(() => {});
   }
 
+  /**
    * Playback optimisation only, failures return false instead of throwing
    * so callers retry drift on the next poll.
+   */
   async setFilePriority(
     hash: string,
     ids: number[],
@@ -442,15 +513,25 @@ export class QBittorrentClient {
     signal?: AbortSignal
   ): Promise<boolean> {
     if (ids.length === 0) return true;
-    const response = await this.request('/api/v2/torrents/filePrio', {
-      method: 'POST',
-      body: new URLSearchParams({
-        hash,
-        id: ids.join('|'),
-        priority: String(priority),
-      }),
-      signal,
-    });
+    let response: Response;
+    try {
+      response = await this.request('/api/v2/torrents/filePrio', {
+        method: 'POST',
+        body: new URLSearchParams({
+          hash,
+          id: ids.join('|'),
+          priority: String(priority),
+        }),
+        signal,
+      });
+    } catch (error) {
+      if (signal?.aborted) throw error;
+      logger.debug(
+        { hash, priority, count: ids.length, err: error },
+        'could not set file priorities'
+      );
+      return false;
+    }
     if (!response.ok) {
       logger.debug(
         { hash, priority, count: ids.length, status: response.status },
@@ -465,11 +546,18 @@ export class QBittorrentClient {
   /** Resume a stopped torrent, 5 renamed `resume` to `start`, fall back for 4.x. */
   async startTorrent(hash: string, signal?: AbortSignal): Promise<boolean> {
     for (const path of ['/api/v2/torrents/start', '/api/v2/torrents/resume']) {
-      const response = await this.request(path, {
-        method: 'POST',
-        body: new URLSearchParams({ hashes: hash }),
-        signal,
-      });
+      let response: Response;
+      try {
+        response = await this.request(path, {
+          method: 'POST',
+          body: new URLSearchParams({ hashes: hash }),
+          signal,
+        });
+      } catch (error) {
+        if (signal?.aborted) throw error;
+        logger.debug({ hash, path, err: error }, 'could not start torrent');
+        return false;
+      }
       // Drain the body so the connection is released.
       await response.body?.cancel().catch(() => {});
       if (response.ok) return true;

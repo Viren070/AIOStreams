@@ -14,6 +14,7 @@ import {
   toUrlSafeBase64,
 } from '../utils/index.js';
 import { Preset } from './preset.js';
+import { encodeQbittorrentCredential } from '../debrid/index.js';
 import { releaseKeyKind } from '../release-blocklist/keys.js';
 import { stremthruSpecialCases } from './stremthru.js';
 
@@ -255,14 +256,12 @@ export class BuiltinAddonPreset extends Preset {
           })
         ),
       [constants.QBITTORRENT_SERVICE]: (credentials: any) =>
-        toUrlSafeBase64(
-          JSON.stringify({
-            url: credentials.url,
-            username: credentials.username,
-            password: credentials.password,
-            skipOtherFiles: credentials.skipOtherFiles,
-          })
-        ),
+        encodeQbittorrentCredential({
+          url: credentials.url,
+          username: credentials.username,
+          password: credentials.password,
+          skipOtherFiles: credentials.skipOtherFiles,
+        }),
     };
     const altmountSpecialCase: Partial<
       Record<ServiceId, (credentials: any) => any>

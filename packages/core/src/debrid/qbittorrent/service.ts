@@ -1,4 +1,5 @@
 import { open } from 'fs/promises';
+import { setTimeout as sleep } from 'node:timers/promises';
 import {
   DebridDownload,
   DebridError,
@@ -133,13 +134,20 @@ export class QBittorrentService implements TorrentDebridService {
     // File lists for pre-selection, capped and failure-tolerant.
     await Promise.all(
       foundWithFiles.map(async ({ download, hash }) => {
-        const files = await this.client.getFiles(hash);
-        download.files = files.map((file) => ({
-          id: file.index,
-          name: file.name,
-          size: file.size,
-          index: file.index,
-        }));
+        try {
+          const files = await this.client.getFiles(hash);
+          download.files = files.map((file) => ({
+            id: file.index,
+            name: file.name,
+            size: file.size,
+            index: file.index,
+          }));
+        } catch (error) {
+          logger.debug(
+            { hash, err: error },
+            'could not list files for checkMagnets entry'
+          );
+        }
       })
     );
     return result;
@@ -250,13 +258,16 @@ export class QBittorrentService implements TorrentDebridService {
     cacheAndPlay: boolean,
     signal?: AbortSignal
   ): Promise<string | undefined> {
-    const { hash, metadata } = playbackInfo;
+
+    const hash = playbackInfo.hash.toLowerCase();
+    // One wall-clock budget shared by both wait loops.
+    const deadline = Date.now() + this.options.maxWaitTime;
 
     await DebridFailureCache.check(this.serviceName, 'torrent', hash);
 
     let torrent =
       (playbackInfo.serviceItemId
-        ? await this.client.getTorrent(playbackInfo.serviceItemId)
+        ? await this.client.getTorrent(playbackInfo.serviceItemId.toLowerCase())
         : undefined) ?? (await this.client.getTorrent(hash));
 
     if (!torrent) {
@@ -281,7 +292,7 @@ export class QBittorrentService implements TorrentDebridService {
         }
         await this.client.addTorrentUrl(magnet);
       }
-      torrent = await this.waitForTorrent(hash, signal);
+      torrent = await this.waitForTorrent(hash, signal, deadline);
     }
 
 
@@ -289,7 +300,8 @@ export class QBittorrentService implements TorrentDebridService {
       torrent,
       playbackInfo,
       cacheAndPlay,
-      signal
+      signal,
+      deadline
     );
     if (!readiness) return undefined;
     const { file, filePath } = readiness;
@@ -297,7 +309,7 @@ export class QBittorrentService implements TorrentDebridService {
     const token = encodeQbittorrentStreamToken({
       ref: await registerStreamRef({
         credential: this.credential,
-        hash,
+        hash: torrent.hash,
         fileIndex: file.index,
         filePath,
         fileSize: file.size,
@@ -314,14 +326,16 @@ export class QBittorrentService implements TorrentDebridService {
 
   private async waitForTorrent(
     hash: string,
-    signal?: AbortSignal
+    signal: AbortSignal | undefined,
+    deadline: number
   ): Promise<QbittorrentTorrent> {
-    const maxPolls = Math.max(1, Math.ceil(this.options.maxWaitTime / this.options.pollInterval));
-    for (let i = 0; i < maxPolls; i++) {
+    while (Date.now() < deadline) {
       this.throwIfAborted(signal);
       const torrent = await this.client.getTorrent(hash, signal);
       if (torrent) return torrent;
-      await new Promise((resolve) => setTimeout(resolve, this.options.pollInterval));
+      await sleep(this.options.pollInterval, undefined, { signal }).catch(
+        () => {}
+      );
     }
     throw new DebridError('Timed out waiting for qBittorrent to accept the torrent', {
       statusCode: 408,
@@ -337,23 +351,24 @@ export class QBittorrentService implements TorrentDebridService {
     torrent: QbittorrentTorrent,
     playbackInfo: PlaybackInfo & TorrentInfo,
     cacheAndPlay: boolean,
-    signal?: AbortSignal
+    signal: AbortSignal | undefined,
+    deadline: number
   ): Promise<
     | {
-        files: Awaited<ReturnType<QBittorrentClient['getFiles']>>;
         file: { index: number; name: string; size: number };
         filePath: string;
       }
     | undefined
   > {
-    const maxPolls = Math.max(1, Math.ceil(this.options.maxWaitTime / this.options.pollInterval));
     let dataReadyButNotOnDisk = 0;
     let priorityFailures = 0;
     let prioritiesAbandoned = false;
     let resumeAttempted = false;
     let lastState = torrent.state;
-    for (let i = 0; i < maxPolls; i++) {
+    let attempt = 0;
+    while (Date.now() < deadline) {
       this.throwIfAborted(signal);
+      attempt++;
 
       const current = (await this.client.getTorrent(torrent.hash, signal)) ?? torrent;
       lastState = current.state;
@@ -372,28 +387,25 @@ export class QBittorrentService implements TorrentDebridService {
         throw err;
       }
 
-      // Own torrents that hit a stop (qBittorrent "finished" actions like
-      // ratio limits can stop a torrent whose last wanted file completed)
-      // must be resumed or this resolve can never become ready. Adopted
-      // torrents are never resumed: a user's deliberate pause stands.
-      if (
-        !resumeAttempted &&
-        isOwnTorrent(current) &&
-        STOPPED_STATES.has(current.state)
-      ) {
-        resumeAttempted = true;
-        const started = await this.client.startTorrent(current.hash, signal);
-        if (!started) {
-          logger.warn(
-            { hash: current.hash, state: current.state },
-            'could not resume stopped torrent for playback'
-          );
-        }
-      }
-
       const files = await this.client.getFiles(torrent.hash, signal);
       const file = await this.selectFile(current, files, playbackInfo);
       if (file) {
+        // Resume our own stopped torrents, adopted ones stay as the user left them.
+        if (
+          !resumeAttempted &&
+          isOwnTorrent(current) &&
+          STOPPED_STATES.has(current.state) &&
+          (files.find((f) => f.index === file.index)?.progress ?? 0) < 1
+        ) {
+          resumeAttempted = true;
+          const started = await this.client.startTorrent(current.hash, signal);
+          if (!started) {
+            logger.warn(
+              { hash: current.hash, state: current.state },
+              'could not resume stopped torrent for playback'
+            );
+          }
+        }
         // Protect against concurrent skips mid-play.
         markFileLive(torrent.hash, file.index);
         if (!prioritiesAbandoned) {
@@ -431,54 +443,59 @@ export class QBittorrentService implements TorrentDebridService {
           }
         }
         const filePath = deriveFilePath(current, files, file.index);
-        if (!filePath) continue;
-        const pieceSize = await this.client.getPieceSize(torrent.hash, signal);
-        const pieceStates = await this.client.getPieceStates(torrent.hash, signal);
-        const availability = computeFileAvailability({
-          files,
-          fileIndex: file.index,
-          pieceStates,
-          pieceSize,
-        });
-        const threshold = Math.min(file.size, STREAM_THRESHOLD_BYTES);
-        const dataReady =
-          availability.complete ||
-          availability.contiguousFrom(0) >= threshold ||
-          downloadStatus(current) === 'downloaded';
+        if (filePath) {
+          const pieceSize = await this.client.getPieceSize(torrent.hash, signal);
+          const pieceStates = await this.client.getPieceStates(torrent.hash, signal);
+          const availability = computeFileAvailability({
+            files,
+            fileIndex: file.index,
+            pieceStates,
+            pieceSize,
+          });
+          const threshold = Math.min(file.size, STREAM_THRESHOLD_BYTES);
+          const dataReady =
+            availability.complete ||
+            availability.contiguousFrom(0) >= threshold;
           // Piece states flip before flush, verify bytes are readable.
-        const flushed = await this.hasFlushedHead(filePath, file.size);
-        if (dataReady && flushed) {
-          return { files, file, filePath };
-        }
-        if (dataReady && !flushed) {
-
-          dataReadyButNotOnDisk++;
-          if (dataReadyButNotOnDisk >= 5) {
-            throw new DebridError(
-              'qBittorrent download directory is not reachable from AIOStreams; both must run on the same machine (or share the directory through a mount)',
-              {
-                statusCode: 503,
-                statusText: 'Service Unavailable',
-                code: 'SERVICE_UNAVAILABLE',
-                type: 'api_error',
-                headers: {},
-              }
-            );
+          const flushed = await this.hasFlushedHead(filePath, file.size);
+          if (dataReady && flushed) {
+            return { file, filePath };
           }
-        } else {
-          dataReadyButNotOnDisk = 0;
+          if (dataReady && !flushed) {
+
+            dataReadyButNotOnDisk++;
+            if (dataReadyButNotOnDisk >= 5) {
+              throw new DebridError(
+                'qBittorrent download directory is not reachable from AIOStreams; both must run on the same machine (or share the directory through a mount)',
+                {
+                  statusCode: 503,
+                  statusText: 'Service Unavailable',
+                  code: 'SERVICE_UNAVAILABLE',
+                  type: 'api_error',
+                  headers: {},
+                }
+              );
+            }
+          } else {
+            dataReadyButNotOnDisk = 0;
+          }
+          logger.debug(
+            {
+              hash: torrent.hash,
+              contiguous: availability.contiguousFrom(0),
+              threshold,
+              flushed,
+              attempt,
+            },
+            'qBittorrent file not yet readable'
+          );
         }
-        logger.debug('qBittorrent file not yet readable', {
-          hash: torrent.hash,
-          contiguous: availability.contiguousFrom(0),
-          threshold,
-          flushed,
-          attempt: i + 1,
-        });
       }
 
       if (!cacheAndPlay) return undefined;
-      await new Promise((resolve) => setTimeout(resolve, this.options.pollInterval));
+      await sleep(this.options.pollInterval, undefined, { signal }).catch(
+        () => {}
+      );
     }
 
     throw new DebridError(

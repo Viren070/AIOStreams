@@ -37,6 +37,12 @@ router.get(
       });
     } catch (err) {
       if (err instanceof DebridError) {
+        if (res.headersSent) {
+          // Bytes are already on the wire; the only honest answer is to
+          // drop the connection, not to write a second response.
+          res.destroy();
+          return;
+        }
         logger.warn(
           { err },
           'qbittorrent stream failed before any bytes were sent'

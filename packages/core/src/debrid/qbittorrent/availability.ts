@@ -77,11 +77,10 @@ export function deriveFilePath(
 ): string | undefined {
   const file = files.find((f) => f.index === fileIndex);
   if (!file) return undefined;
-  // Windows-hosted qBittorrent reports native separators; Node accepts
-  // forward slashes on every platform.
-  const contentPath = torrent.content_path.replace(/\/+$/, '').replace(/\\/g, '/');
+  // Normalise Windows separators before stripping trailing slashes.
+  const contentPath = torrent.content_path.replace(/\\/g, '/').replace(/\/+$/, '');
   if (files.length === 1) return contentPath;
-  const savePath = torrent.save_path.replace(/\/+$/, '').replace(/\\/g, '/');
+  const savePath = torrent.save_path.replace(/\\/g, '/').replace(/\/+$/, '');
   const firstSegments = new Set(
     files.map((f) => (f.name.includes('/') ? f.name.slice(0, f.name.indexOf('/')) : ''))
   );
@@ -108,24 +107,30 @@ export interface FileAvailability {
   complete: boolean;
   /** Largest end such that [start, end) is fully downloaded. */
   contiguousFrom(start: number): number;
+  /** Like contiguousFrom but only counting flushed pieces. */
+  readableFrom(start: number): number;
   /** Whether every byte in `[start, end)` is downloaded. */
   rangeAvailable(start: number, end: number): boolean;
 }
 
+/**
  * Compute FileAvailability for one file. pieceStates: 0=missing,
  * 1=downloading, 2=downloaded. Without piece states only a complete
  * file claims anything, progress is not a prefix map.
+ */
 export function computeFileAvailability(params: {
   files: QbittorrentFile[];
   fileIndex: number;
   pieceStates?: number[];
   pieceSize: number;
+  isReadable?: (globalPiece: number) => boolean;
 }): FileAvailability {
-  const { files, fileIndex, pieceStates, pieceSize } = params;
+  const { files, fileIndex, pieceStates, pieceSize, isReadable } = params;
   if (pieceSize <= 0) {
     return {
       complete: false,
       contiguousFrom: () => 0,
+      readableFrom: () => 0,
       rangeAvailable: () => false,
     };
   }
@@ -136,6 +141,7 @@ export function computeFileAvailability(params: {
     return {
       complete: false,
       contiguousFrom: () => 0,
+      readableFrom: () => 0,
       rangeAvailable: () => false,
     };
   }
@@ -144,6 +150,7 @@ export function computeFileAvailability(params: {
     return {
       complete: true,
       contiguousFrom: (start) => start,
+      readableFrom: (start) => start,
       rangeAvailable: () => true,
     };
   }
@@ -157,43 +164,98 @@ export function computeFileAvailability(params: {
   }
 
   if (!pieceStates) {
-    const available = Math.floor(file.progress * fileSize);
+    const complete = file.progress >= 1;
     return {
-      complete: file.progress >= 1,
-      contiguousFrom: (start) =>
-        Math.max(start, Math.min(available, fileSize)),
-      rangeAvailable: (start, end) =>
-        start >= fileSize || (start < available && end <= available),
+      complete,
+      contiguousFrom: (start) => (complete ? Math.max(start, fileSize) : start),
+      readableFrom: (start) => (complete ? Math.max(start, fileSize) : start),
+      rangeAvailable: (start, end) => complete || start >= end,
     };
   }
 
+  const readable = isReadable ?? ((piece: number) => pieceStates[piece] === 2);
   const downloaded = (piece: number) => pieceStates[piece] === 2;
   const pieceAt = (localByte: number) =>
     Math.floor((fileOffset + localByte) / pieceSize);
   const [firstPiece, lastPiece] = file.piece_range;
+  const runFrom = (start: number, ok: (piece: number) => boolean) => {
+    if (start >= fileSize) return fileSize;
+    let piece = pieceAt(start);
+    if (!ok(piece)) return start;
+    while (piece < lastPiece && ok(piece + 1)) {
+      piece++;
+    }
+    return Math.min(fileSize, (piece + 1) * pieceSize - fileOffset);
+  };
+  const rangeOver = (start: number, end: number, ok: (piece: number) => boolean) => {
+    if (start >= end) return true;
+    const from = pieceAt(start);
+    const to = pieceAt(end - 1);
+    for (let piece = from; piece <= to; piece++) {
+      if (!ok(piece)) return false;
+    }
+    return true;
+  };
+  let complete = true;
+  for (let piece = firstPiece; piece <= lastPiece; piece++) {
+    if (!downloaded(piece)) {
+      complete = false;
+      break;
+    }
+  }
 
   return {
-    complete: Array.from(
-      { length: lastPiece - firstPiece + 1 },
-      (_, i) => downloaded(firstPiece + i)
-    ).every(Boolean),
-    contiguousFrom: (start) => {
-      if (start >= fileSize) return fileSize;
-      let piece = pieceAt(start);
-      if (!downloaded(piece)) return start;
-      while (piece < lastPiece && downloaded(piece + 1)) {
-        piece++;
-      }
-      return Math.min(fileSize, (piece + 1) * pieceSize - fileOffset);
-    },
-    rangeAvailable: (start, end) => {
-      if (start >= end) return true;
-      const from = pieceAt(start);
-      const to = pieceAt(end - 1);
-      for (let piece = from; piece <= to; piece++) {
-        if (!downloaded(piece)) return false;
-      }
-      return true;
-    },
+    complete,
+    contiguousFrom: (start) => runFrom(start, downloaded),
+    readableFrom: (start) => runFrom(start, readable),
+    rangeAvailable: (start, end) => rangeOver(start, end, downloaded),
   };
+}
+
+/**
+ * Tracks when each piece of one torrent was first observed downloaded.
+ * qBittorrent flips a piece's state before flushing it to disk, so a piece
+ * only counts as readable once it has been seen downloaded in an EARLIER
+ * observation — at least one observation old. This replaces withholding a
+ * fixed number of bytes behind the frontier: it keeps unflushed pieces out
+ * of reads while still serving the file's final piece (where MKV cues and
+ * the MP4 moov live) as soon as it has aged one poll, instead of stalling
+ * tail reads until the whole torrent completes.
+ */
+export class PieceReadiness {
+  private firstSeen: Float64Array;
+
+  /** Number of pieces this instance was created for. */
+  readonly pieceCount: number;
+
+  constructor(pieceCount: number) {
+    this.pieceCount = pieceCount;
+    this.firstSeen = new Float64Array(pieceCount);
+  }
+
+  /** Record one observation, pieces flipped to downloaded get the generation. */
+  observe(pieceStates: number[], now: number = Date.now()): void {
+    for (let piece = 0; piece < pieceStates.length; piece++) {
+      if (pieceStates[piece] === 2) {
+        if (this.firstSeen[piece] === 0) this.firstSeen[piece] = now;
+      } else if (this.firstSeen[piece] !== 0) {
+        // Lost to a recheck or re-download, it must age again before it is
+        // readable once more.
+        this.firstSeen[piece] = 0;
+      }
+    }
+  }
+
+  /** A piece is readable once it was downloaded in a previous observation. */
+  readable = (piece: number): boolean => {
+    const seenAt = this.firstSeen[piece];
+    return seenAt !== 0 && seenAt < this.lastObservedAt;
+  };
+
+  private lastObservedAt = 0;
+
+  /** Must be called after each {@link observe} to age the observation. */
+  commit(now: number = Date.now()): void {
+    this.lastObservedAt = now;
+  }
 }

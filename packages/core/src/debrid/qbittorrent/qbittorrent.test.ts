@@ -23,6 +23,7 @@ import {
 import {
   computeFileAvailability,
   deriveFilePath,
+  PieceReadiness,
   planFilePriorities,
 } from './availability.js';
 
@@ -289,6 +290,75 @@ describe('deriveFilePath', () => {
 
 });
 
+describe('PieceReadiness', () => {
+  const files = [
+    file({ index: 0, name: 'video.mkv', size: 1000, piece_range: [0, 3] }),
+  ];
+
+  test('withholds pieces until they are seen in an earlier observation', () => {
+    const readiness = new PieceReadiness(4);
+    readiness.observe([2, 2, 0, 0], 1_000);
+    readiness.commit(1_000);
+    const fresh = computeFileAvailability({
+      files,
+      fileIndex: 0,
+      pieceStates: [2, 2, 0, 0],
+      pieceSize: 250,
+      isReadable: readiness.readable,
+    });
+    assert.equal(fresh.contiguousFrom(0), 500);
+    assert.equal(fresh.readableFrom(0), 0);
+    // One observation later both downloaded pieces have aged.
+    readiness.observe([2, 2, 0, 0], 2_000);
+    readiness.commit(2_000);
+    const aged = computeFileAvailability({
+      files,
+      fileIndex: 0,
+      pieceStates: [2, 2, 0, 0],
+      pieceSize: 250,
+      isReadable: readiness.readable,
+    });
+    assert.equal(aged.readableFrom(0), 500);
+  });
+
+  test('serves the file tail once the last piece has aged', () => {
+    const readiness = new PieceReadiness(4);
+    // firstLastPiecePrio pulled the tail piece in early.
+    readiness.observe([2, 0, 0, 2], 1_000);
+    readiness.commit(1_000);
+    readiness.observe([2, 0, 0, 2], 2_000);
+    readiness.commit(2_000);
+    const availability = computeFileAvailability({
+      files,
+      fileIndex: 0,
+      pieceStates: [2, 0, 0, 2],
+      pieceSize: 250,
+      isReadable: readiness.readable,
+    });
+    assert.equal(availability.readableFrom(750), 1000);
+    assert.equal(availability.contiguousFrom(0), 250);
+  });
+
+  test('a piece lost to a recheck must age again', () => {
+    const readiness = new PieceReadiness(2);
+    readiness.observe([2, 2], 1_000);
+    readiness.commit(1_000);
+    readiness.observe([2, 0], 2_000);
+    readiness.commit(2_000);
+    readiness.observe([2, 2], 3_000);
+    readiness.commit(3_000);
+    const availability = computeFileAvailability({
+      files: [file({ index: 0, name: 'v.mkv', size: 500, piece_range: [0, 1] })],
+      fileIndex: 0,
+      pieceStates: [2, 2],
+      pieceSize: 250,
+      isReadable: readiness.readable,
+    });
+    // Piece 1 re-appeared in the same observation; not readable yet.
+    assert.equal(availability.readableFrom(0), 250);
+  });
+});
+
 describe('computeFileAvailability', () => {
   // Layout: pieceSize 250. File 0 = [0, 500) = pieces 0-1.
   // File 1 = [500, 1500) = pieces 2-5, 1000 bytes.
@@ -351,7 +421,9 @@ describe('computeFileAvailability', () => {
     assert.equal(availability.contiguousFrom(0), 150);
   });
 
-  test('falls back to progress when piece states are unavailable', () => {
+  test('claims nothing from partial progress when piece states are unavailable', () => {
+    // Progress is not a prefix map (first/last-piece priority, non-sequential
+    // downloads), so a progress-length prefix could hand a player zeros.
     const partial = [
       file({ index: 0, name: 'first.bin', size: 500, piece_range: [0, 1], progress: 1 }),
       file({ index: 1, name: 'video.mkv', size: 1000, piece_range: [2, 5], progress: 0.5 }),
@@ -362,9 +434,22 @@ describe('computeFileAvailability', () => {
       pieceSize: 250,
     });
     assert.equal(availability.complete, false);
-    assert.equal(availability.contiguousFrom(0), 500);
-    assert.equal(availability.rangeAvailable(0, 500), true);
-    assert.equal(availability.rangeAvailable(0, 501), false);
+    assert.equal(availability.contiguousFrom(0), 0);
+    assert.equal(availability.rangeAvailable(0, 500), false);
+  });
+
+  test('a complete file is playable without piece states', () => {
+    const complete = [
+      file({ index: 0, name: 'first.bin', size: 500, piece_range: [0, 1], progress: 1 }),
+      file({ index: 1, name: 'video.mkv', size: 1000, piece_range: [2, 5], progress: 1 }),
+    ];
+    const availability = computeFileAvailability({
+      files: complete,
+      fileIndex: 1,
+      pieceSize: 250,
+    });
+    assert.equal(availability.complete, true);
+    assert.equal(availability.contiguousFrom(0), 1000);
   });
 
   test('corrects offsets when pad files are hidden from the list', () => {
