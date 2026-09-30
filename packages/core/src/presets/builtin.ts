@@ -14,7 +14,7 @@ import {
   toUrlSafeBase64,
 } from '../utils/index.js';
 import { Preset } from './preset.js';
-import { encodeQbittorrentCredential } from '../debrid/index.js';
+import { encodeQbittorrentCredential } from '../debrid/qbittorrent/client.js';
 import { releaseKeyKind } from '../release-blocklist/keys.js';
 import { stremthruSpecialCases } from './stremthru.js';
 

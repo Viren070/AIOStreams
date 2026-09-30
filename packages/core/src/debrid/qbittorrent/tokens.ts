@@ -69,7 +69,15 @@ function pruneLiveFiles(now: number): void {
 
 let lastLivePrune = 0;
 
+function liveKey(
+  credential: z.infer<typeof QbittorrentCredentialSchema>,
+  hash: string
+): string {
+  return `${credential.url}|${credential.username}|${hash}`;
+}
+
 export function markFileLive(
+  credential: z.infer<typeof QbittorrentCredentialSchema>,
   hash: string,
   fileIndex: number,
   ttlMs: number = LIVE_FILE_TTL_MS
@@ -80,27 +88,31 @@ export function markFileLive(
     lastLivePrune = now;
     pruneLiveFiles(now);
   }
-  pruneLiveFiles(now);
-  let perTorrent = liveFiles.get(hash);
+  const key = liveKey(credential, hash);
+  let perTorrent = liveFiles.get(key);
   if (!perTorrent) {
     if (liveFiles.size >= MAX_LIVE_TORRENTS) {
       liveFiles.delete(liveFiles.keys().next().value as string);
     }
     perTorrent = new Map();
-    liveFiles.set(hash, perTorrent);
+    liveFiles.set(key, perTorrent);
   }
   perTorrent.set(fileIndex, now + ttlMs);
 }
 
 /** The torrent's currently-live file indices (expired touches pruned). */
-export function liveFileIndices(hash: string): Set<number> {
-  const perTorrent = liveFiles.get(hash);
+export function liveFileIndices(
+  credential: z.infer<typeof QbittorrentCredentialSchema>,
+  hash: string
+): Set<number> {
+  const key = liveKey(credential, hash);
+  const perTorrent = liveFiles.get(key);
   if (!perTorrent) return new Set();
   const now = Date.now();
   for (const [fileIndex, expiresAt] of perTorrent) {
     if (expiresAt <= now) perTorrent.delete(fileIndex);
   }
-  if (perTorrent.size === 0) liveFiles.delete(hash);
+  if (perTorrent.size === 0) liveFiles.delete(key);
   return new Set(perTorrent.keys());
 }
 

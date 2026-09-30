@@ -86,7 +86,6 @@ function getTorrentState(
         pieceReadiness.set(key, readiness);
       }
       readiness.observe(pieceStates);
-      readiness.commit();
     }
     const value: RawTorrentState = { at: Date.now(), files, pieceStates };
     sharedTorrents.set(key, { value });
@@ -164,16 +163,7 @@ function pathVariants(path: string): string[] {
   return path.endsWith('.!qB') ? [path] : [path, path + '.!qB'];
 }
 
-/**
- * Find the on-disk path of a stream entry's file, following qBittorrent
- * relocations. The registered path was proven readable when the reference
- * was created and a mid-download file is legitimately shorter than its full
- * size, so it is trusted as-is; freshly derived paths (the torrent may have
- * been moved out of its temp dir by "finished" handling or relocated on
- * completion) must be complete, because a cross-filesystem move is a copy
- * and the destination is short until it lands. While the torrent reports a
- * `moving` state the chain is retried briefly instead of failing.
- */
+/** Find the file on disk, following relocations and .!qB naming. */
 async function locateEntryFile(
   client: QBittorrentClient,
   entry: QbittorrentStreamRefEntry,
@@ -192,8 +182,12 @@ async function locateEntryFile(
       ? deriveFilePath(torrent, files, entry.fileIndex)
       : undefined;
     if (derived && derived !== entry.filePath) {
+      const moving = torrent?.state === 'moving';
       for (const candidate of pathVariants(derived)) {
-        if (await openIfComplete(candidate, entry.fileSize)) return candidate;
+        const ok = moving
+          ? await openIfComplete(candidate, entry.fileSize)
+          : await openIfExists(candidate);
+        if (ok) return candidate;
       }
     }
     if (torrent?.state !== 'moving' || Date.now() >= deadline) return undefined;
@@ -252,12 +246,15 @@ class QbittorrentPieceStream extends Readable {
     try {
       while (this.cursor < this.end && !this.destroyed) {
         // Keep the file live so a concurrent resolve cannot skip it.
-        markFileLive(this.entry.hash, this.entry.fileIndex);
+        markFileLive(
+          this.entry.credential,
+          this.entry.hash,
+          this.entry.fileIndex
+        );
         const snapshot = await getSnapshot(this.client, this.entry);
         if (this.destroyed) return;
-        const frontier = snapshot.availability.complete
-          ? snapshot.availability.contiguousFrom(this.cursor)
-          : snapshot.availability.readableFrom(this.cursor);
+
+        const frontier = snapshot.availability.readableFrom(this.cursor);
         if (frontier > this.cursor) {
           const chunkEnd = Math.min(
             frontier,
@@ -408,7 +405,10 @@ export async function openQbittorrentStream(opts: {
       headers: {},
     });
   }
-  const files = await client.getFiles(entry.hash, opts.signal);
+  // File lists come from the shared per-torrent snapshot so seek-heavy
+  // players (one open per range request) cannot hammer the WebUI with
+  // redundant calls; the torrent fetch above covers existence and ownership.
+  const { files } = await getTorrentState(client, entry);
   const selectedFile = files.find((file) => file.index === entry.fileIndex);
   if (!selectedFile) {
     throw new DebridError('Torrent no longer contains the selected file', {
@@ -420,7 +420,7 @@ export async function openQbittorrentStream(opts: {
     });
   }
   // The player asking for bytes makes this file live, heal any skip.
-  markFileLive(entry.hash, entry.fileIndex);
+  markFileLive(entry.credential, entry.hash, entry.fileIndex);
   if (selectedFile.priority === FILE_PRIORITY.skip) {
     await client.setFilePriority(
       entry.hash,

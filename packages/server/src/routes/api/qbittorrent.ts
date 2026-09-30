@@ -15,10 +15,11 @@ router.use(corsMiddleware);
 
 /**
  * Byte-serving endpoint for qBittorrent streams. The token is an encrypted
- * capability minted by `QBittorrentService.resolve` (it carries the user's
- * WebUI credential and the selected file), so no additional auth is required
- * here. Serves HTTP Range requests straight from the file on disk, gated
- * against the torrent's piece states.
+ * capability minted by `QBittorrentService.resolve`: it carries only an
+ * opaque reference to a server-side entry (credential, torrent and the one
+ * selected file), so no additional auth is required here. Serves HTTP Range
+ * requests straight from the file on disk, gated against the torrent's
+ * piece states.
  */
 router.get(
   '/stream/:token{/:filename}',

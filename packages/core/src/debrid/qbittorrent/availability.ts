@@ -233,7 +233,13 @@ export class PieceReadiness {
     this.firstSeen = new Float64Array(pieceCount);
   }
 
-  /** Record one observation, pieces flipped to downloaded get the generation. */
+  /**
+   * Record one observation; pieces flipped to downloaded get a timestamp.
+   * The observation clock is captured once and applied at the END of the
+   * pass, so a piece flipped in this observation can never compare as older
+   * than the observation itself (separate Date.now() reads could tick past
+   * each other and make fresh pieces instantly readable).
+   */
   observe(pieceStates: number[], now: number = Date.now()): void {
     for (let piece = 0; piece < pieceStates.length; piece++) {
       if (pieceStates[piece] === 2) {
@@ -244,6 +250,7 @@ export class PieceReadiness {
         this.firstSeen[piece] = 0;
       }
     }
+    this.lastObservedAt = now;
   }
 
   /** A piece is readable once it was downloaded in a previous observation. */
@@ -253,9 +260,4 @@ export class PieceReadiness {
   };
 
   private lastObservedAt = 0;
-
-  /** Must be called after each {@link observe} to age the observation. */
-  commit(now: number = Date.now()): void {
-    this.lastObservedAt = now;
-  }
 }

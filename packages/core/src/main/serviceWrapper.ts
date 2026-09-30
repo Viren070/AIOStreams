@@ -5,7 +5,6 @@ import {
   appConfig,
   getSimpleTextHash,
   encryptString,
-  toUrlSafeBase64,
   BuiltinServiceId,
   mergeParsedMediaInfos,
 } from '../utils/index.js';

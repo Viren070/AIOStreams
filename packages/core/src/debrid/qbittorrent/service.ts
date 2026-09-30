@@ -407,7 +407,7 @@ export class QBittorrentService implements TorrentDebridService {
           }
         }
         // Protect against concurrent skips mid-play.
-        markFileLive(torrent.hash, file.index);
+        markFileLive(this.credential, torrent.hash, file.index);
         if (!prioritiesAbandoned) {
           const applied = await this.applyFilePriorities(
             current,
@@ -525,7 +525,7 @@ export class QBittorrentService implements TorrentDebridService {
       selectedIndex,
       skipOthers: this.credential.skipOtherFiles === true,
       ownTorrent: isOwnTorrent(torrent),
-      liveFiles: liveFileIndices(torrent.hash),
+      liveFiles: liveFileIndices(this.credential, torrent.hash),
     });
     const currentPriority = new Map(
       files.map((file) => [file.index, file.priority])
