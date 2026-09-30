@@ -469,10 +469,13 @@ function fileFixture(index: number, name: string, size: number) {
 }
 
 describe('QBittorrentService resolve', () => {
-  const HASH = '1'.repeat(40);
+  // One unique infohash per test: the live-file registry is module-global
+  // with a 15-minute TTL, so reusing a hash would leak liveness between
+  // tests (and correctly suppress skips of a "live" file).
+  const hashOf = (char: string) => char.repeat(40);
 
-  function playback(fileIndex: number): PlaybackInfo {
-    return { type: 'torrent', hash: HASH, sources: [], fileIndex };
+  function playback(hash: string, fileIndex: number): PlaybackInfo {
+    return { type: 'torrent', hash, sources: [], fileIndex };
   }
 
   /**
@@ -494,34 +497,37 @@ describe('QBittorrentService resolve', () => {
   }
 
   function dataIntercepts(
+    hash: string,
     torrent: Record<string, unknown>,
     files: Record<string, unknown>[],
     pieceStates: number[]
   ) {
     return [
-      { path: `/api/v2/torrents/info?hashes=${HASH}`, body: [torrent] },
-      { path: `/api/v2/torrents/files?hash=${HASH}`, body: files },
-      { path: `/api/v2/torrents/properties?hash=${HASH}`, body: { piece_size: 250 } },
+      { path: `/api/v2/torrents/info?hashes=${hash}`, body: [torrent] },
+      { path: `/api/v2/torrents/files?hash=${hash}`, body: files },
+      { path: `/api/v2/torrents/properties?hash=${hash}`, body: { piece_size: 250 } },
       {
-        path: `/api/v2/torrents/pieceStates?hash=${HASH}`,
+        path: `/api/v2/torrents/pieceStates?hash=${hash}`,
         body: pieceStates,
       },
     ];
   }
 
   test('resolves a ready file and raises its priority', async (t) => {
+    const hash = hashOf('1');
     const contentPath = makeContent(t, [{ name: 'video.mkv', size: 2000 }]);
     const prioBodies: string[] = [];
     await withMockedWebUi(t, {
       login: true,
       onFilePrio: (body) => prioBodies.push(body),
       intercepts: dataIntercepts(
-        { ...torrentFixture(HASH, 'downloading'), content_path: contentPath, tags: QBITTORRENT_TAG },
+        hash,
+        { ...torrentFixture(hash, 'downloading'), content_path: contentPath, tags: QBITTORRENT_TAG },
         [{ ...fileFixture(0, 'video.mkv', 2000), piece_range: [0, 7] }],
         [2, 2, 2, 2, 2, 2, 2, 2]
       ),
     });
-    const link = await service().resolve(playback(0), 'video.mkv', true);
+    const link = await service().resolve(playback(hash, 0), 'video.mkv', true);
     assert.match(link ?? '', /\/api\/v1\/qbittorrent\/stream\//);
     assert.equal(prioBodies.length, 1);
     assert.match(prioBodies[0], /id=0/);
@@ -529,18 +535,20 @@ describe('QBittorrentService resolve', () => {
   });
 
   test('restores a skipped selected file in an adopted torrent', async (t) => {
+    const hash = hashOf('2');
     const contentPath = makeContent(t, [{ name: 'video.mkv', size: 2000 }]);
     const prioBodies: string[] = [];
     await withMockedWebUi(t, {
       login: true,
       onFilePrio: (body) => prioBodies.push(body),
       intercepts: dataIntercepts(
-        { ...torrentFixture(HASH, 'downloading'), content_path: contentPath },
+        hash,
+        { ...torrentFixture(hash, 'downloading'), content_path: contentPath },
         [{ ...fileFixture(0, 'video.mkv', 2000), priority: 0, piece_range: [0, 7] }],
         [2, 2, 2, 2, 2, 2, 2, 2]
       ),
     });
-    const link = await service().resolve(playback(0), 'video.mkv', true);
+    const link = await service().resolve(playback(hash, 0), 'video.mkv', true);
     assert.match(link ?? '', /\/api\/v1\/qbittorrent\/stream\//);
     assert.equal(prioBodies.length, 1);
     assert.match(prioBodies[0], /id=0/);
@@ -548,41 +556,46 @@ describe('QBittorrentService resolve', () => {
   });
 
   test('resumes a stopped own torrent', async (t) => {
+    const hash = hashOf('3');
     const contentPath = makeContent(t, [{ name: 'video.mkv', size: 2000 }]);
     const starts: string[] = [];
     await withMockedWebUi(t, {
       login: true,
       onTorrentStart: (body) => starts.push(body),
       intercepts: dataIntercepts(
-        { ...torrentFixture(HASH, 'stoppedDL'), content_path: contentPath, tags: QBITTORRENT_TAG },
+        hash,
+        { ...torrentFixture(hash, 'stoppedDL'), content_path: contentPath, tags: QBITTORRENT_TAG },
         [{ ...fileFixture(0, 'video.mkv', 2000), piece_range: [0, 7] }],
         [2, 2, 2, 2, 2, 2, 2, 2]
       ),
     });
-    const link = await service().resolve(playback(0), 'video.mkv', true);
+    const link = await service().resolve(playback(hash, 0), 'video.mkv', true);
     assert.match(link ?? '', /\/api\/v1\/qbittorrent\/stream\//);
     assert.equal(starts.length, 1);
-    assert.match(starts[0], new RegExp(`hashes=${HASH}`));
+    assert.match(starts[0], new RegExp(`hashes=${hash}`));
   });
 
   test('leaves a complete torrent untouched', async (t) => {
+    const hash = hashOf('4');
     const contentPath = makeContent(t, [{ name: 'video.mkv', size: 2000 }]);
     const prioBodies: string[] = [];
     await withMockedWebUi(t, {
       login: true,
       onFilePrio: (body) => prioBodies.push(body),
       intercepts: dataIntercepts(
-        { ...torrentFixture(HASH, 'stalledUP'), content_path: contentPath, progress: 1, tags: QBITTORRENT_TAG },
+        hash,
+        { ...torrentFixture(hash, 'stalledUP'), content_path: contentPath, progress: 1, tags: QBITTORRENT_TAG },
         [{ ...fileFixture(0, 'video.mkv', 2000), progress: 1, piece_range: [0, 7] }],
         [2, 2, 2, 2, 2, 2, 2, 2]
       ),
     });
-    const link = await service().resolve(playback(0), 'video.mkv', true);
+    const link = await service().resolve(playback(hash, 0), 'video.mkv', true);
     assert.match(link ?? '', /\/api\/v1\/qbittorrent\/stream\//);
     assert.equal(prioBodies.length, 0);
   });
 
   test('skips other files and raises the selected one when opted in', async (t) => {
+    const hash = hashOf('5');
     const contentPath = makeContent(t, [
       { name: 's01e01.mkv', size: 1000 },
       { name: 's01e02.mkv', size: 1000 },
@@ -592,7 +605,8 @@ describe('QBittorrentService resolve', () => {
       login: true,
       onFilePrio: (body) => prioBodies.push(body),
       intercepts: dataIntercepts(
-        { ...torrentFixture(HASH, 'downloading'), content_path: contentPath, tags: QBITTORRENT_TAG },
+        hash,
+        { ...torrentFixture(hash, 'downloading'), content_path: contentPath, tags: QBITTORRENT_TAG },
         [
           { ...fileFixture(0, 's01e01.mkv', 1000), piece_range: [0, 3] },
           { ...fileFixture(1, 's01e02.mkv', 1000), piece_range: [4, 7] },
@@ -600,7 +614,7 @@ describe('QBittorrentService resolve', () => {
         [2, 2, 2, 2, 2, 2, 2, 2]
       ),
     });
-    const link = await serviceWithSkip().resolve(playback(1), 's01e02.mkv', true);
+    const link = await serviceWithSkip().resolve(playback(hash, 1), 's01e02.mkv', true);
     assert.match(link ?? '', /\/api\/v1\/qbittorrent\/stream\//);
     assert.equal(prioBodies.length, 2);
     assert.ok(
