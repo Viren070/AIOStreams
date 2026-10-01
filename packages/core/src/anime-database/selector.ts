@@ -93,7 +93,15 @@ export function selectBestRecord(
   if (candidates.length === 0) return null;
   if (candidates.length === 1) return candidates[0];
 
-  logger.debug({ candidates, season, episode }, 'selecting best record');
+  logger.debug(
+    {
+      id: `${idType}:${idValue}`,
+      candidates: candidates.map((c) => c.rid),
+      season,
+      episode,
+    },
+    'selecting best record'
+  );
 
   // A season lookup with no concrete episode is treated as a request for the
   // start of that season (episode 1), so the scorer's `episode >= fromEpisode`
