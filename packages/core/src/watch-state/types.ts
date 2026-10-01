@@ -93,10 +93,10 @@ export function seriesIdOf(
   return containsToken(baseId, series) ? series : baseId;
 }
 
-export function seriesKeyOfMatch(
+export function matchedEpisodeOf(
   matchKey: string,
   type: string
-): string | null {
+): Pick<WatchIdentity, 'baseId' | 'season' | 'episode' | 'videoId'> | null {
   if (!matchKey.startsWith('e|')) return null;
   const videoId = matchKey.slice(2);
   const parsed = IdParser.parse(videoId, type);
@@ -104,9 +104,21 @@ export function seriesKeyOfMatch(
   const suffix = parsed.season
     ? `:${parsed.season}:${parsed.episode}`
     : `:${parsed.episode}`;
-  return videoId.endsWith(suffix)
-    ? seriesKeyOf(videoId.slice(0, -suffix.length))
-    : null;
+  if (!videoId.endsWith(suffix)) return null;
+  return {
+    baseId: videoId.slice(0, -suffix.length),
+    season: parsed.season ? Number(parsed.season) : null,
+    episode: Number(parsed.episode),
+    videoId,
+  };
+}
+
+export function seriesKeyOfMatch(
+  matchKey: string,
+  type: string
+): string | null {
+  const matched = matchedEpisodeOf(matchKey, type);
+  return matched ? seriesKeyOf(matched.baseId) : null;
 }
 
 function containsToken(haystack: string, token: string): boolean {

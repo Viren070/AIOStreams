@@ -4,7 +4,11 @@ import { deleteInBatches, type PruneResult } from '../prune.js';
 import type { DbDriver } from '../driver/types.js';
 import type { SqlFragment } from '../sql.js';
 import { join, raw, sql } from '../sql.js';
-import { seriesKeyOfMatch, type WatchScope } from '../../watch-state/types.js';
+import {
+  matchedEpisodeOf,
+  seriesKeyOfMatch,
+  type WatchScope,
+} from '../../watch-state/types.js';
 
 /** What a list row needs to render without a metadata call. */
 export interface WatchSnapshot {
@@ -204,6 +208,21 @@ const KEPT = raw(
 function filterKinds(rows: WatchStateRow[], kinds?: WatchKind[]) {
   if (!kinds?.length) return rows;
   return rows.filter((r) => kinds.includes(r.kind));
+}
+
+/** `row` moved to `whole`'s show, at the episode its match key names. */
+function underShow(row: WatchStateRow, whole: WatchStateRow): WatchStateRow {
+  const at = row.matchKey
+    ? matchedEpisodeOf(row.matchKey, row.mediaType)
+    : null;
+  if (!at) return whole;
+  return {
+    ...row,
+    ...at,
+    itemKey: row.matchKey!,
+    mediaType: whole.mediaType,
+    seriesKey: whole.seriesKey,
+  };
 }
 
 export class WatchStateRepository {
@@ -532,6 +551,11 @@ export class WatchStateRepository {
    * the same timestamp. Picked per series before the limit, so a few long
    * histories cannot crowd out the other shows. A show dropped since it was
    * last watched is left out, under whichever of its ids the drop was made.
+   *
+   * A show with rows under several ids, such as an anime season's own entry
+   * and the whole show, comes back once, anchored on its newest row. That row
+   * moves to the id its match key names when the show has rows there, since
+   * that id covers every season.
    */
   static async listRecentSeries(
     scope: WatchScope,
@@ -541,6 +565,7 @@ export class WatchStateRepository {
       AND series_key IS NOT NULL AND episode IS NOT NULL AND ${WATCHED}`;
     const page = limit * 2;
     const out: WatchStateRow[] = [];
+    const shown = new Set<string>();
     for (let offset = 0; out.length < limit; offset += page) {
       // Picks the series first, so only their rows are ranked, not the history.
       const latest = await getDb().query<{
@@ -585,13 +610,19 @@ export class WatchStateRepository {
           )
         ),
       ]);
-      for (const row of rows) {
+      const kept = rows.filter((row) => {
         const at = lastAt.get(row.seriesKey!) ?? 0;
-        const dropped = [row.seriesKey, showOf(row)].some(
+        return ![row.seriesKey, showOf(row)].some(
           (key) => key && (droppedAt.get(key) ?? 0) > at
         );
-        if (dropped) continue;
-        out.push(row);
+      });
+      const bySeries = new Map(kept.map((row) => [row.seriesKey!, row]));
+      for (const row of kept) {
+        const show = showOf(row) ?? row.seriesKey!;
+        if (shown.has(show)) continue;
+        shown.add(show);
+        const whole = bySeries.get(show);
+        out.push(whole && whole !== row ? underShow(row, whole) : row);
         if (out.length >= limit) break;
       }
       if (latest.length < page) break;
