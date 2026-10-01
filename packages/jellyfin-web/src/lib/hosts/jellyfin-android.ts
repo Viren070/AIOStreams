@@ -6,6 +6,9 @@ import {
   type SegmentAction,
 } from '../settings';
 import type { BaseItemDto, SourceInfo } from '../types';
+import type { Host } from '.';
+import { mediaInfo } from './native-shell';
+import type { MediaKey } from './shell';
 
 interface AndroidPlayer {
   isEnabled(): boolean;
@@ -24,7 +27,7 @@ interface AndroidInterface {
 }
 
 /** What the app's media controls call on the page. */
-export interface AndroidPlaybackManager {
+interface AndroidPlaybackManager {
   unpause(): void;
   pause(): void;
   playPause(): void;
@@ -48,7 +51,7 @@ declare global {
       initPlayer(options: string): void;
     };
     NavigationHelper?: {
-      goBack(): void;
+      goBack?(): void;
       playbackManager?: AndroidPlaybackManager;
     };
     MediaSegments?: {
@@ -57,15 +60,11 @@ declare global {
   }
 }
 
-/** The app keeps its player's options, such as starting in landscape, in its own settings. */
-export const hasAndroidSettings = () =>
-  !!window.NativeInterface?.openClientSettings;
-
-export const openAndroidSettings = () =>
-  window.NativeInterface?.openClientSettings?.();
+/** The app's skip buttons carry no amount. */
+const SKIP_MS = 10_000;
 
 /** The phone's own name and id, so this page and the app's player are one device. */
-export function androidDevice(): { id: string; name: string } | null {
+function device(): { id: string; name: string } | null {
   try {
     const info = JSON.parse(
       window.NativeInterface?.getDeviceInformation?.() ?? 'null'
@@ -81,61 +80,37 @@ export function androidDevice(): { id: string; name: string } | null {
   }
 }
 
-export function androidServerSelection(): (() => void) | undefined {
-  const app = window.NativeInterface;
-  return app?.openServerSelection
-    ? () => app.openServerSelection?.()
-    : undefined;
-}
-
-let appFullscreen = false;
+let fullscreen = false;
 
 /** The app's web view has no fullscreen API, so the app hides its bars and turns landscape itself. */
-export const hasAppFullscreen = () =>
-  !!window.NativeInterface?.enableFullscreen;
-
-export const isAppFullscreen = () => appFullscreen;
-
-export function setAppFullscreen(on: boolean): void {
+function setFullscreen(on: boolean): void {
   if (on) window.NativeInterface?.enableFullscreen?.();
   else window.NativeInterface?.disableFullscreen?.();
-  appFullscreen = on;
+  fullscreen = on;
   document.dispatchEvent(new Event('fullscreenchange'));
 }
 
-export const hasAndroidMediaSession = () =>
-  !!window.NativeInterface?.updateMediaSession;
-
-export function updateAndroidMediaSession(state: {
-  itemId: string;
-  title: string;
-  artist: string;
-  imageUrl: string;
-  position: number;
-  duration: number;
-  isPaused: boolean;
-}): void {
-  window.NativeInterface?.updateMediaSession?.(
-    JSON.stringify({
-      action: 'timeupdate',
-      album: '',
-      canSeek: true,
-      isLocalPlayer: true,
-      ...state,
-    })
-  );
-}
-
-export function clearAndroidMediaSession(): void {
-  window.NativeInterface?.hideMediaSession?.();
-  if (window.NavigationHelper) delete window.NavigationHelper.playbackManager;
-}
-
-export function setAndroidPlaybackManager(
-  manager: AndroidPlaybackManager
-): void {
-  if (window.NavigationHelper)
-    window.NavigationHelper.playbackManager = manager;
+/** The app calls jellyfin-web's playback manager, which this stands in for. */
+function listen(press: (key: MediaKey) => void): () => void {
+  const helper = (window.NavigationHelper ??= {});
+  const skip = (offset: number) => () => press({ action: 'skip', offset });
+  helper.playbackManager = {
+    unpause: () => press({ action: 'play' }),
+    pause: () => press({ action: 'pause' }),
+    playPause: () => press({ action: 'toggle' }),
+    stop: () => press({ action: 'stop' }),
+    nextTrack: () => press({ action: 'next' }),
+    previousTrack: () => press({ action: 'previous' }),
+    fastForward: skip(SKIP_MS),
+    rewind: skip(-SKIP_MS),
+    seekMs: (ms) => press({ action: 'seek', position: ms }),
+    volumeUp() {},
+    volumeDown() {},
+    sendCommand() {},
+  };
+  return () => {
+    delete helper.playbackManager;
+  };
 }
 
 const ANDROID_SEGMENT_ACTIONS: Record<SegmentAction, string> = {
@@ -145,7 +120,7 @@ const ANDROID_SEGMENT_ACTIONS: Record<SegmentAction, string> = {
 };
 
 /** The Android player keeps its own skip action per segment type. */
-export function syncAndroidSegments(): () => void {
+function syncSegments(): () => void {
   const bridge = window.MediaSegments;
   if (!bridge) return () => undefined;
   let sent: ReturnType<typeof settings.segmentActions.read> | undefined;
@@ -161,21 +136,35 @@ export function syncAndroidSegments(): () => void {
 }
 
 /**
- * The Android app keeps its web view only once a request for jellyfin-web's
- * main bundle goes out, which it answers with its bridge.
+ * The app keeps its web view only once a request for jellyfin-web's main
+ * bundle goes out, which it answers with its bridge.
  */
-export function announceToAndroid(base: string): void {
-  if (!window.NativeInterface) return;
+function announce(base: string): void {
   const script = document.createElement('script');
   script.src = `${new URL(base).pathname}/web/main.aiostreams.bundle.js`;
   document.body.appendChild(script);
 }
 
-export function playOnAndroid(
-  item: BaseItemDto,
-  source: SourceInfo,
-  startMs: number
-): void {
+/**
+ * The app sends its back button to `NavigationHelper.goBack()`, which
+ * jellyfin-web defines. An open overlay closes first; at the root it exits.
+ */
+function handleBack(history: { canGoBack(): boolean; back(): void }): void {
+  const helper = (window.NavigationHelper ??= {});
+  helper.goBack = () => {
+    if (document.querySelector('[role="dialog"], [role="menu"]')) {
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+      );
+    } else if (history.canGoBack()) {
+      history.back();
+    } else {
+      window.NativeInterface?.exitApp?.();
+    }
+  };
+}
+
+function play(item: BaseItemDto, source: SourceInfo, startMs: number): void {
   const options = JSON.stringify({
     ids: [item.Id],
     mediaSourceId: source.Id,
@@ -195,26 +184,47 @@ export function playOnAndroid(
   );
 }
 
-/**
- * The Android app sends its back button to `NavigationHelper.goBack()`, which
- * jellyfin-web defines. An open overlay closes first; at the root it exits.
- */
-export function handleAndroidBack(history: {
-  canGoBack(): boolean;
-  back(): void;
-}): void {
-  if (!window.NativeInterface) return;
-  window.NavigationHelper = {
-    goBack() {
-      if (document.querySelector('[role="dialog"], [role="menu"]')) {
-        document.dispatchEvent(
-          new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
-        );
-      } else if (history.canGoBack()) {
-        history.back();
-      } else {
-        window.NativeInterface?.exitApp?.();
-      }
+function build(app: AndroidInterface): { page: Host; player: Host } {
+  const page: Host = {
+    name: 'android',
+    device,
+    selectServer:
+      app.openServerSelection && (() => app.openServerSelection?.()),
+    settings: app.openClientSettings && {
+      label: 'Android app',
+      description: "The app's player",
+      help: "The app's player and its options, such as starting videos in landscape.",
+      open: () => app.openClientSettings?.(),
     },
+    fullscreen: app.enableFullscreen && {
+      active: () => fullscreen,
+      set: setFullscreen,
+    },
+    mediaSession: app.updateMediaSession && {
+      update: (now) => app.updateMediaSession?.(JSON.stringify(mediaInfo(now))),
+      clear: () => app.hideMediaSession?.(),
+      listen,
+    },
+    start: ({ base, history }) => {
+      announce(base);
+      handleBack(history);
+      return syncSegments();
+    },
+    // The app reads the stored sign-in when this is requested.
+    signedIn: (client) =>
+      void client.post('/Sessions/Capabilities/Full', {}).catch(() => {}),
   };
+  return { page, player: { ...page, play } };
+}
+
+let hosts: ReturnType<typeof build> | undefined;
+
+/** Jellyfin's Android app, whose player takes over unless it is turned off there. */
+export function androidHost(): Host | null {
+  const app = window.NativeInterface;
+  if (!app) return null;
+  hosts ??= build(app);
+  return window.NativePlayer?.isEnabled() || window.ExternalPlayer?.isEnabled()
+    ? hosts.player
+    : hosts.page;
 }

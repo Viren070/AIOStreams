@@ -1,11 +1,5 @@
 import React from 'react';
-import { playbackHost } from './hosts';
-import {
-  clearAndroidMediaSession,
-  hasAndroidMediaSession,
-  setAndroidPlaybackManager,
-  updateAndroidMediaSession,
-} from './hosts/jellyfin-android';
+import { currentHost } from './hosts';
 import type { MediaKey } from './hosts/shell';
 import { itemSubtitle, itemTitle } from './format';
 import { landscapeUrl, posterUrl } from './images';
@@ -15,8 +9,6 @@ import { settings, useSetting } from './settings';
 import { useLatest, type PlayerController } from './player';
 import type { BaseItemDto } from './types';
 
-/** A browser's skip buttons carry no amount. */
-const SKIP_MS = 10_000;
 /** How far the position may stray from where it should be before the browser is told again. */
 const DRIFT_MS = 2000;
 
@@ -39,7 +31,8 @@ interface Actions {
 
 /**
  * Tells the system's media controls what plays and takes their presses: through
- * the desktop app, which also shows it on Discord, or through the browser.
+ * the desktop app, which also shows it on Discord, the app around the page, or
+ * the browser.
  */
 export function useNowPlaying(
   item: BaseItemDto,
@@ -58,7 +51,8 @@ export function useNowPlaying(
   const { started, paused, positionMs, durationMs, rate } = player.state;
   const hasNext = !!actions.onNext;
   const hasPrevious = !!actions.onPrevious;
-  const host = playbackHost();
+  const host = currentHost();
+  const desktop = host.name === 'desktop';
 
   const latest = useLatest({ player, actions });
   const press = React.useCallback((key: MediaKey) => {
@@ -93,7 +87,7 @@ export function useNowPlaying(
 
   React.useEffect(() => {
     const shell = window.aiostreamsDesktop;
-    if (host !== 'shell' || !shell || !started) return;
+    if (!desktop || !shell || !started) return;
     shell.send({
       type: 'now-playing',
       item: {
@@ -107,7 +101,7 @@ export function useNowPlaying(
       },
     });
   }, [
-    host,
+    desktop,
     started,
     title,
     subtitle,
@@ -120,7 +114,7 @@ export function useNowPlaying(
 
   React.useEffect(() => {
     const shell = window.aiostreamsDesktop;
-    if (host !== 'shell' || !shell) return;
+    if (!desktop || !shell) return;
     const unsubscribe = shell.subscribe((m) => {
       if (m.type === 'media-key') press(m.key);
     });
@@ -128,28 +122,17 @@ export function useNowPlaying(
       unsubscribe();
       shell.send({ type: 'now-playing', item: null });
     };
-  }, [host, press]);
+  }, [desktop, press]);
 
-  const android = host === 'browser' && hasAndroidMediaSession();
+  const app = host.usePlayer ? undefined : host.mediaSession;
   React.useEffect(() => {
-    if (!android) return;
-    const skip = (offset: number) => () => press({ action: 'skip', offset });
-    setAndroidPlaybackManager({
-      unpause: () => press({ action: 'play' }),
-      pause: () => press({ action: 'pause' }),
-      playPause: () => press({ action: 'toggle' }),
-      stop: () => press({ action: 'stop' }),
-      nextTrack: () => press({ action: 'next' }),
-      previousTrack: () => press({ action: 'previous' }),
-      fastForward: skip(SKIP_MS),
-      rewind: skip(-SKIP_MS),
-      seekMs: (ms) => press({ action: 'seek', position: ms }),
-      volumeUp() {},
-      volumeDown() {},
-      sendCommand() {},
-    });
-    return clearAndroidMediaSession;
-  }, [android, press]);
+    if (!app) return;
+    const stop = app.listen?.(press);
+    return () => {
+      stop?.();
+      app.clear();
+    };
+  }, [app, press]);
 
   const toldApp = React.useRef<{
     at: number;
@@ -157,7 +140,7 @@ export function useNowPlaying(
     key: string;
   } | null>(null);
   React.useEffect(() => {
-    if (!android || !started) return;
+    if (!app || !started) return;
     const key = JSON.stringify([item.Id, title, subtitle, artwork, paused]);
     const last = toldApp.current;
     const expected =
@@ -166,17 +149,17 @@ export function useNowPlaying(
         : null;
     if (expected != null && Math.abs(expected - positionMs) < DRIFT_MS) return;
     toldApp.current = { at: Date.now(), positionMs, key };
-    updateAndroidMediaSession({
+    app.update({
       itemId: item.Id!,
       title,
       artist: subtitle ?? '',
       imageUrl: artwork ?? '',
-      position: Math.round(positionMs),
-      duration: Math.round(durationMs),
-      isPaused: paused,
+      positionMs,
+      durationMs,
+      paused,
     });
   }, [
-    android,
+    app,
     started,
     item.Id,
     title,
@@ -189,7 +172,7 @@ export function useNowPlaying(
   ]);
 
   const session =
-    host === 'browser' && !android && 'mediaSession' in navigator
+    !host.usePlayer && !app && 'mediaSession' in navigator
       ? navigator.mediaSession
       : null;
 

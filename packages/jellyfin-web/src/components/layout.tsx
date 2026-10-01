@@ -45,7 +45,7 @@ import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '../lib/session';
 import { usePickableUsers } from '../lib/queries';
 import { configureUrl, navigate, to } from '../lib/paths';
-import { playbackHost } from '../lib/hosts';
+import { currentHost } from '../lib/hosts';
 import { serverAddress } from '../lib/servers';
 import { useServerInfo } from '../lib/server-info';
 import { useDiscordBrowsing } from '../lib/discord';
@@ -223,7 +223,7 @@ function HistoryButton({
 function HistoryButtons() {
   useRouterState({ select: (s) => s.location.href });
   if (
-    playbackHost() === 'browser' &&
+    currentHost().name === 'browser' &&
     !matchMedia('(display-mode: standalone)').matches
   )
     return null;

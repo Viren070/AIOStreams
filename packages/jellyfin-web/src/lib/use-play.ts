@@ -1,5 +1,4 @@
-import { playbackHost } from './hosts';
-import { playOnAndroid } from './hosts/jellyfin-android';
+import { currentHost } from './hosts';
 import { ticksToMs } from './format';
 import { navigate, to } from './paths';
 import { externalReturnUrl } from './external-return';
@@ -89,13 +88,14 @@ export function usePlay() {
     const startMs =
       opts.startMs ?? ticksToMs(item.UserData?.PlaybackPositionTicks);
 
-    if (externalAlways() && playbackHost() !== 'android') {
+    const { play } = currentHost();
+    if (externalAlways() && !play) {
       if (!playExternally(item, source, startMs)) opts.onExternal?.();
       return;
     }
 
-    if (playbackHost() === 'android') {
-      playOnAndroid(item, source, startMs);
+    if (play) {
+      play(item, source, startMs);
       return;
     }
     navigate(to.play(item.Id!, source.Id, startMs), { replace: opts.replace });

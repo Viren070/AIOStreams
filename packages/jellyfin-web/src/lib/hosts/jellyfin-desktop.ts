@@ -2,6 +2,8 @@ import React from 'react';
 import { storage } from '../storage';
 import { subtitleUrl } from '../playback';
 import type { BaseItemDto } from '../types';
+import type { Host } from '.';
+import { nativeShellParts } from './native-shell';
 import {
   initialState,
   ofType,
@@ -255,4 +257,17 @@ export function useDesktopPlayer(opts: NativePlayerOptions): PlayerController {
         api?.input.executeActions(['host:fullscreen'])
       ),
   };
+}
+
+let host: Host | undefined;
+
+/** Jellyfin's desktop app, which brings jellyfin-web's shell too. */
+export function jellyfinDesktopHost(): Host | null {
+  if (!window.jmpInfo || !window.apiPromise) return null;
+  host ??= {
+    ...(window.NativeShell && nativeShellParts(window.NativeShell)),
+    name: 'jellyfin-desktop',
+    usePlayer: useDesktopPlayer,
+  };
+  return host;
 }

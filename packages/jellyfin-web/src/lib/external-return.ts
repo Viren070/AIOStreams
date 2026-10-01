@@ -1,7 +1,7 @@
 import React from 'react';
 import { useRouterState } from '@tanstack/react-router';
 import { toast } from 'sonner';
-import { playbackHost } from './hosts';
+import { currentHost } from './hosts';
 import { itemPath } from './paths';
 import { PlaybackReporter } from './playback';
 import { useRefreshAll } from './queries';
@@ -17,12 +17,12 @@ export function externalReturnUrl(
   item: BaseItemDto,
   source: SourceInfo
 ): string | undefined {
-  const host = playbackHost();
-  if (host !== 'shell' && host !== 'browser') return undefined;
+  const host = currentHost().name;
+  if (host !== 'desktop' && host !== 'browser') return undefined;
   const path = itemPath(item);
   const marks = new URLSearchParams({ played: item.Id!, source: source.Id! });
   const marked = `${path}${path.includes('?') ? '&' : '?'}${marks}`;
-  if (host === 'shell') return `aiostreams://return${marked}`;
+  if (host === 'desktop') return `aiostreams://return${marked}`;
   const { origin, pathname } = window.location;
   return `${origin}${pathname}#${marked}`;
 }

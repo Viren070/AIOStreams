@@ -8,7 +8,6 @@ import {
 } from '@tanstack/react-router';
 import { PageMessage, WebLayout } from './components/layout';
 import { navigate, setNavigator, to } from './lib/paths';
-import { handleAndroidBack } from './lib/hosts/jellyfin-android';
 import { lastCatalog } from './lib/settings';
 import { HomePage } from './pages/home';
 import { DiscoverIndex, DiscoverPage } from './pages/discover';
@@ -260,5 +259,3 @@ document.addEventListener('click', (e) => {
   e.preventDefault();
   navigate(anchor.getAttribute('href')!.slice(1));
 });
-
-handleAndroidBack(webRouter.history);

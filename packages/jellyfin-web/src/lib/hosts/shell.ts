@@ -30,6 +30,7 @@ import {
   type PlayerState,
   type Track,
 } from '../player';
+import type { Host } from '.';
 
 export type ShellMessage =
   | { type: 'mpv-prop'; name: string; data: unknown }
@@ -617,4 +618,15 @@ export function requestDiagnostics(server: string | null): Promise<string> {
     });
     shell.send({ type: 'diagnostics', web: __APP_COMMIT__, server });
   });
+}
+
+const host: Host = {
+  name: 'desktop',
+  device: () => ({ name: window.aiostreamsDesktop?.device }),
+  usePlayer: useShellPlayer,
+};
+
+/** The AIOStreams desktop app, which plays in mpv. */
+export function shellHost(): Host | null {
+  return window.aiostreamsDesktop?.protocol === 1 ? host : null;
 }

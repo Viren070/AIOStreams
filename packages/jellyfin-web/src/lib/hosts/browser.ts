@@ -3,11 +3,7 @@ import { storage } from '../storage';
 import { subtitleUrl, textSubtitles } from '../playback';
 import { sameLanguage } from '../languages';
 import type { PlaybackPrefs } from '../user-config';
-import {
-  hasAppFullscreen,
-  isAppFullscreen,
-  setAppFullscreen,
-} from './jellyfin-android';
+import { currentHost } from '.';
 import {
   clampDelay,
   savedSubtitleDelay,
@@ -53,11 +49,13 @@ function isPhone(): boolean {
   );
 }
 
-const isFullscreen = () => !!document.fullscreenElement || isAppFullscreen();
+const isFullscreen = () =>
+  !!document.fullscreenElement || !!currentHost().fullscreen?.active();
 
 /** Phones also turn to landscape, which only a full screen page may lock. */
 async function enterFullscreen(): Promise<void> {
-  if (hasAppFullscreen()) return setAppFullscreen(true);
+  const app = currentHost().fullscreen;
+  if (app) return app.set(true);
   await document.documentElement.requestFullscreen?.();
   const orientation = screen.orientation as ScreenOrientation & {
     lock?(orientation: string): Promise<void>;
@@ -66,7 +64,8 @@ async function enterFullscreen(): Promise<void> {
 }
 
 async function exitFullscreen(): Promise<void> {
-  if (isAppFullscreen()) setAppFullscreen(false);
+  const app = currentHost().fullscreen;
+  if (app?.active()) app.set(false);
   else await document.exitFullscreen();
 }
 

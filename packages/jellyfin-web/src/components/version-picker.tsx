@@ -41,7 +41,7 @@ import {
   usePlayExternally,
   usePlay,
 } from '../lib/use-play';
-import { playbackHost } from '../lib/hosts';
+import { currentHost } from '../lib/hosts';
 import { clock, itemSubtitle, itemTitle, ticksToMs } from '../lib/format';
 import { cn } from '@aiostreams/ui/core/styling';
 import { backdropUrl, landscapeUrl } from '../lib/images';
@@ -115,7 +115,7 @@ export function VersionPickerProvider({
       const last =
         startMs > 0 &&
         !opts?.playing &&
-        playbackHost() !== 'android' &&
+        !currentHost().play &&
         !externalAlways()
           ? lastVersions.get(item.Id!)
           : undefined;

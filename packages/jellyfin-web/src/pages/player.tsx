@@ -25,13 +25,11 @@ import {
   subtitleUrl,
   textSubtitles,
 } from '../lib/playback';
-import { playbackHost } from '../lib/hosts';
+import { currentHost } from '../lib/hosts';
 import { useFeature } from '../lib/server-info';
 import { useBrowserPlayer, usePhoneFullscreen } from '../lib/hosts/browser';
-import { useDesktopPlayer } from '../lib/hosts/jellyfin-desktop';
-import { useShellPlayer } from '../lib/hosts/shell';
 import { useNowPlaying } from '../lib/now-playing';
-import type { PlayerController } from '../lib/player';
+import type { NativePlayerOptions, PlayerController } from '../lib/player';
 import {
   settings,
   useSetting,
@@ -96,7 +94,7 @@ export function PlayerPage({
   const info = usePlaybackInfo(itemId, { sourceId: sourceId || undefined });
   const playback = usePlaybackPrefs();
   usePlayerPage();
-  usePhoneFullscreen(playbackHost() === 'browser');
+  usePhoneFullscreen(!currentHost().usePlayer);
 
   // Pinned once found: a refreshed version list must not restart playback.
   const [playing, setPlaying] = React.useState<Omit<
@@ -132,11 +130,11 @@ export function PlayerPage({
       <Failure itemId={itemId} message="This version is no longer available." />
     );
   }
-  const host = playbackHost();
+  const { usePlayer } = currentHost();
   return (
     <VersionPickerProvider>
-      {host === 'shell' || host === 'desktop' ? (
-        <NativePlayer {...playing} startMs={startMs} />
+      {usePlayer ? (
+        <NativePlayer {...playing} startMs={startMs} usePlayer={usePlayer} />
       ) : (
         <BrowserPlayer {...playing} startMs={startMs} />
       )}
@@ -459,13 +457,14 @@ function NativePlayer({
   playSessionId,
   startMs,
   prefs,
-}: PlayerProps) {
+  usePlayer,
+}: PlayerProps & {
+  usePlayer: (opts: NativePlayerOptions) => PlayerController;
+}) {
   const { client } = useSession();
   const { back, onEnded, connect } = useEnded(item);
   const [subtitleStyle] = useSetting(settings.subtitleStyle);
-  const useNativePlayer =
-    playbackHost() === 'shell' ? useShellPlayer : useDesktopPlayer;
-  const player = useNativePlayer({
+  const player = usePlayer({
     client,
     item,
     url: streamUrl(client, item.Id!, source, playSessionId),

@@ -42,7 +42,7 @@ import { LoadingSpinner } from '@aiostreams/ui/loading-spinner';
 import { cn } from '@aiostreams/ui/core/styling';
 import { clock, itemSubtitle, itemTitle, ticksToMs } from '../lib/format';
 import type { PlayerController, PlayerState, Track } from '../lib/player';
-import { playbackHost } from '../lib/hosts';
+import { currentHost } from '../lib/hosts';
 import { delayLabel } from '../lib/subtitle-lines';
 import {
   settings,
@@ -1099,7 +1099,7 @@ export function PlayerControls({
               onSelect={(id) => id && player.setRate(Number(id))}
               onOpenChange={onMenu}
             />
-            {(playbackHost() === 'browser' || playbackHost() === 'shell') && (
+            {(!currentHost().usePlayer || currentHost().name === 'desktop') && (
               <FitButton />
             )}
             {player.stats && (

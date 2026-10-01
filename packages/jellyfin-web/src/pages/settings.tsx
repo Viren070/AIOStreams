@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import type { IconType } from 'react-icons';
 import {
+  LuAppWindow,
   LuCaptions,
   LuCirclePlay,
   LuHeart,
@@ -10,7 +11,6 @@ import {
   LuLayoutGrid,
   LuMonitor,
   LuPalette,
-  LuSmartphone,
   LuUser,
   LuVolume2,
 } from 'react-icons/lu';
@@ -41,11 +41,7 @@ import { useSession } from '../lib/session';
 import { usePickableUsers, useViews } from '../lib/queries';
 import { libraryLabel } from '../lib/format';
 import { configureUrl } from '../lib/paths';
-import { playbackHost } from '../lib/hosts';
-import {
-  hasAndroidSettings,
-  openAndroidSettings,
-} from '../lib/hosts/jellyfin-android';
+import { currentHost } from '../lib/hosts';
 import {
   openLogs,
   openMpvConfig,
@@ -211,7 +207,7 @@ function PlaybackSection() {
     settings.desktop.chapterSkips
   );
   const bingeGroups = useFeature('versions');
-  const shell = playbackHost() === 'shell';
+  const shell = currentHost().name === 'desktop';
   const [template, setTemplate] = React.useState(externalPlayerTemplate);
   const [always, setAlways] = React.useState(externalAlways);
   const changeTemplate = (value: string) => {
@@ -421,7 +417,7 @@ function AudioSection() {
           }
         />
       </SettingsCard>
-      {playbackHost() === 'shell' && (
+      {currentHost().name === 'desktop' && (
         <SettingsCard title="Output" description={ON_DEVICE}>
           <Select
             label="Channels"
@@ -719,17 +715,15 @@ function DiscordCard() {
   );
 }
 
-function AndroidSection() {
+function AppSection() {
+  const app = currentHost().settings;
   return (
-    <SettingsCard title="Player">
-      <SettingsRow
-        label="App settings"
-        help="The app's player and its options, such as starting videos in landscape."
-      >
+    <SettingsCard>
+      <SettingsRow label="App settings" help={app?.help}>
         <Button
           intent="gray-outline"
           className="w-full rounded-full sm:w-auto"
-          onClick={openAndroidSettings}
+          onClick={app?.open}
         >
           Open
         </Button>
@@ -1229,7 +1223,7 @@ function AboutSection() {
             </span>
           </SettingsRow>
         ))}
-        {playbackHost() === 'browser' && (
+        {currentHost().name === 'browser' && (
           <SettingsRow
             label="Desktop app"
             help="This web app with a player of its own, which plays what a browser can't, on Windows, Mac and Linux."
@@ -1324,6 +1318,7 @@ interface Section {
 }
 
 function sections(): Section[] {
+  const host = currentHost();
   return [
     {
       id: 'playback',
@@ -1336,8 +1331,7 @@ function sections(): Section[] {
     {
       id: 'audio',
       label: 'Audio',
-      description:
-        playbackHost() === 'shell' ? 'Language and output' : 'Language',
+      description: host.name === 'desktop' ? 'Language and output' : 'Language',
       icon: LuVolume2,
       group: 'Watching',
       Content: AudioSection,
@@ -1374,7 +1368,7 @@ function sections(): Section[] {
       group: 'App',
       Content: AccountSection,
     },
-    ...(playbackHost() === 'shell'
+    ...(host.name === 'desktop'
       ? [
           {
             id: 'desktop',
@@ -1386,15 +1380,15 @@ function sections(): Section[] {
           },
         ]
       : []),
-    ...(hasAndroidSettings()
+    ...(host.settings
       ? [
           {
-            id: 'android',
-            label: 'Android app',
-            description: "The app's player",
-            icon: LuSmartphone,
+            id: 'app',
+            label: host.settings.label,
+            description: host.settings.description,
+            icon: LuAppWindow,
             group: 'App',
-            Content: AndroidSection,
+            Content: AppSection,
           },
         ]
       : []),
