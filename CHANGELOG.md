@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.35.7](https://github.com/Viren070/AIOStreams/compare/v2.35.6...v2.35.7) (2026-10-01)
+
+
+### Features
+
+* **jellyfin-web:** add an Android app settings tab that opens the app's settings ([9508271](https://github.com/Viren070/AIOStreams/commit/95082715f10bb5f94bcdaada5b366e1ceaa23279))
+* **jellyfin-web:** move app bridges behind one host interface ([9102d6e](https://github.com/Viren070/AIOStreams/commit/9102d6efb20190300a13217799cb1548d9123054))
+* **jellyfin-web:** use more of the Android app's bridge ([2a75f88](https://github.com/Viren070/AIOStreams/commit/2a75f88aefeb69185c34100ccdc58d0bc7b284a0))
+* **jellyfin:** list the next episode of caught-up shows in Upcoming ([0840b88](https://github.com/Viren070/AIOStreams/commit/0840b8839ba57362f925829e1a8dbb3a2d7123c6))
+
+
+### Bug Fixes
+
+* **jellyfin:** drop the anime/series fallback on meta requests ([2a7569b](https://github.com/Viren070/AIOStreams/commit/2a7569bd4fbea3fca613fcaee0b1f95431d8dc1a))
+* **jellyfin:** go on from the furthest watched episode in Next Up ([c77e031](https://github.com/Viren070/AIOStreams/commit/c77e031405efe58bad4c6809de8310866a7ed8f9))
+* **watch-state:** return one recent series row per show across its ids ([5389d49](https://github.com/Viren070/AIOStreams/commit/5389d49d8e1ffe128326cc3ef1918b00581eaf88))
+
 ## [2.35.6](https://github.com/Viren070/AIOStreams/compare/v2.35.5...v2.35.6) (2026-10-01)
 
 
