@@ -6,7 +6,10 @@ import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@aiostreams/ui/toaster';
 import { LoadingOverlay } from '@aiostreams/ui/loading-spinner';
 import { pickerAccount, SessionProvider, useSessionPhase } from './lib/session';
-import { announceToAndroid } from './lib/hosts/jellyfin-android';
+import {
+  announceToAndroid,
+  syncAndroidSegments,
+} from './lib/hosts/jellyfin-android';
 import { webRouter } from './router';
 import { SignInScreen, Unreachable, UserPicker } from './pages/sign-in';
 import { PageBackground } from './components/layout';
@@ -174,6 +177,7 @@ function Session({
     useSessionPhase(base);
 
   React.useEffect(() => announceToAndroid(base), [base]);
+  React.useEffect(() => syncAndroidSegments(), []);
 
   const ready = phase.kind === 'ready' ? phase : null;
   const anonymous = React.useMemo(() => new JellyfinClient(base), [base]);

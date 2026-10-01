@@ -1,4 +1,10 @@
 import { TICKS_PER_MS } from '../format';
+import {
+  onSettingsChange,
+  SEGMENT_TYPES,
+  settings,
+  type SegmentAction,
+} from '../settings';
 import type { BaseItemDto, SourceInfo } from '../types';
 
 interface AndroidPlayer {
@@ -11,7 +17,32 @@ declare global {
     NativeInterface?: { exitApp?(): void };
     NativePlayer?: AndroidPlayer;
     NavigationHelper?: { goBack(): void };
+    MediaSegments?: {
+      setSegmentTypeAction(type: string, action: string): void;
+    };
   }
+}
+
+const ANDROID_SEGMENT_ACTIONS: Record<SegmentAction, string> = {
+  ask: 'AskToSkip',
+  skip: 'Skip',
+  none: 'None',
+};
+
+/** The Android player keeps its own skip action per segment type. */
+export function syncAndroidSegments(): () => void {
+  const bridge = window.MediaSegments;
+  if (!bridge) return () => undefined;
+  let sent: ReturnType<typeof settings.segmentActions.read> | undefined;
+  const apply = () => {
+    const actions = settings.segmentActions.read();
+    if (actions === sent) return;
+    sent = actions;
+    for (const type of SEGMENT_TYPES)
+      bridge.setSegmentTypeAction(type, ANDROID_SEGMENT_ACTIONS[actions[type]]);
+  };
+  apply();
+  return onSettingsChange(apply);
 }
 
 /**
