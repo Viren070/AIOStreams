@@ -612,7 +612,7 @@ export class TMDBMetadata {
       );
     }
 
-    const uniqueTitles = deduplicateTitles(allTitles);
+    const uniqueTitles = deduplicateTitles(allTitles, originalLanguage);
     const metadata: Metadata = {
       title: primaryTitle,
       titles: uniqueTitles,
