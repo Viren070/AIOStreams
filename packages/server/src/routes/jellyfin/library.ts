@@ -1008,21 +1008,17 @@ async function airingEpisodes(
     UPCOMING_SERIES
   );
   const now = Date.now();
+  const dated = await mapLimited(recent, UPCOMING_CONCURRENCY, (row) =>
+    datedForSeries(ctx, row, now).catch(() => [])
+  );
   const episodes: JellyfinItem[] = [];
   const seen = new Set<string>();
-  for (let i = 0; i < recent.length; i += UPCOMING_CONCURRENCY) {
-    const batch = await Promise.all(
-      recent
-        .slice(i, i + UPCOMING_CONCURRENCY)
-        .map((row) => datedForSeries(ctx, row, now).catch(() => []))
-    );
-    for (const episode of batch.flat()) {
-      const at = premiereOf(episode);
-      if (seen.has(episode.Id) || at < from || at > to) continue;
-      seen.add(episode.Id);
-      // Copied and reset: users of one configuration share the cached items.
-      episodes.push({ ...episode, UserData: defaultUserData(episode.Id) });
-    }
+  for (const episode of dated.flat()) {
+    const at = premiereOf(episode);
+    if (seen.has(episode.Id) || at < from || at > to) continue;
+    seen.add(episode.Id);
+    // Copied and reset: users of one configuration share the cached items.
+    episodes.push({ ...episode, UserData: defaultUserData(episode.Id) });
   }
   const withState = await attachUserData(ctx, episodes);
   return withState.sort((a, b) => premiereOf(a) - premiereOf(b));
@@ -1042,28 +1038,24 @@ async function upcomingEpisodes(
     const at = premiereOf(e);
     return at > now && at <= to;
   };
+  const nexts = await mapLimited(recent, UPCOMING_CONCURRENCY, async (row) => {
+    // The cached dates rule most shows out before their episodes are read.
+    const dated = await datedForSeries(ctx, row, now).catch(() => []);
+    if (!dated.some(airsSoon)) return null;
+    const d = {
+      t: row.mediaType,
+      i: seriesIdOf(row.baseId, row.videoId, row.mediaType),
+    };
+    return nextToAir(ctx, d, row).catch(() => null);
+  });
   const episodes: JellyfinItem[] = [];
   const shown = new Set<string>();
-  for (let i = 0; i < recent.length; i += UPCOMING_CONCURRENCY) {
-    const batch = await Promise.all(
-      recent.slice(i, i + UPCOMING_CONCURRENCY).map(async (row) => {
-        // The cached dates rule most shows out before their episodes are read.
-        const dated = await datedForSeries(ctx, row, now).catch(() => []);
-        if (!dated.some(airsSoon)) return null;
-        const d = {
-          t: row.mediaType,
-          i: seriesIdOf(row.baseId, row.videoId, row.mediaType),
-        };
-        return nextToAir(ctx, d, row).catch(() => null);
-      })
-    );
-    for (const next of batch) {
-      if (!next || !airsSoon(next)) continue;
-      const series = String(next.SeriesId ?? next.Id);
-      if (shown.has(series)) continue;
-      shown.add(series);
-      episodes.push(next);
-    }
+  for (const next of nexts) {
+    if (!next || !airsSoon(next)) continue;
+    const series = String(next.SeriesId ?? next.Id);
+    if (shown.has(series)) continue;
+    shown.add(series);
+    episodes.push(next);
   }
   return episodes.sort((a, b) => premiereOf(a) - premiereOf(b));
 }
