@@ -11,6 +11,7 @@ import type {
 } from '../anime-database/types.js';
 import { IdMappingDataset } from '../metadata/id-mappings.js';
 import { config as appConfig } from '../config/index.js';
+import { Cache } from '../utils/cache.js';
 import { IdParser, type ParsedId } from '../utils/id-parser.js';
 import { createLogger } from '../logging/logger.js';
 import {
@@ -259,6 +260,26 @@ export async function matchKeyFor(ref: ContentRef): Promise<string | null> {
   }
 }
 
+const MATCH_KEY_TTL = 60 * 60;
+
+const matchKeyCache = Cache.getInstance<string, string | null>(
+  'watch-match-keys',
+  50_000,
+  'memory'
+);
+
+/** Every field a match key is derived from; the item key leaves some out. */
+function refAddress(ref: ContentRef): string {
+  return [
+    ref.kind,
+    ref.type,
+    ref.baseId,
+    ref.season ?? '',
+    ref.episode ?? '',
+    ref.videoId ?? '',
+  ].join('|');
+}
+
 /** Keyed by each reference's own key; one anime-database read per distinct id. */
 export async function matchKeysFor(
   refs: ContentRef[]
@@ -266,37 +287,46 @@ export async function matchKeysFor(
   type Selector = (season?: number, episode?: number) => AnimeEntry | null;
   const out = new Map<string, string | null>();
   const selectors = new Map<string, Promise<Selector | null>>();
-  for (const ref of refs) {
+  const addresses = refs.map(refAddress);
+  const cached = await matchKeyCache.getMany(addresses);
+  for (const [i, ref] of refs.entries()) {
     const key = itemKeyFor(ref);
     if (out.has(key)) continue;
+    if (cached[i] !== undefined) {
+      out.set(key, cached[i]);
+      continue;
+    }
     try {
+      let match: string | null = null;
       if (ref.kind === 'series') {
-        out.set(key, await showMatchKey(ref));
-        continue;
+        match = await showMatchKey(ref);
+      } else {
+        const lookup = lookupOf(ref);
+        if (lookup) {
+          const id = `${lookup.parsed.type}:${lookup.parsed.value}`;
+          let selector = selectors.get(id);
+          if (!selector) {
+            selector = AnimeDatabase.getInstance()
+              .selectorFor(lookup.parsed.type, lookup.parsed.value)
+              .catch((error: unknown) => {
+                logMiss(ref, error);
+                return null;
+              });
+            selectors.set(id, selector);
+          }
+          const select = await selector;
+          if (!select) {
+            // A failed read is not cached.
+            out.set(key, mappedMatchKey(ref, lookup));
+            continue;
+          }
+          match =
+            matchKeyWith(ref, lookup, select(lookup.season, lookup.episode)) ??
+            mappedMatchKey(ref, lookup);
+        }
       }
-      const lookup = lookupOf(ref);
-      if (!lookup) {
-        out.set(key, null);
-        continue;
-      }
-      const id = `${lookup.parsed.type}:${lookup.parsed.value}`;
-      let selector = selectors.get(id);
-      if (!selector) {
-        selector = AnimeDatabase.getInstance()
-          .selectorFor(lookup.parsed.type, lookup.parsed.value)
-          .catch((error: unknown) => {
-            logMiss(ref, error);
-            return null;
-          });
-        selectors.set(id, selector);
-      }
-      const select = await selector;
-      out.set(
-        key,
-        (select
-          ? matchKeyWith(ref, lookup, select(lookup.season, lookup.episode))
-          : null) ?? mappedMatchKey(ref, lookup)
-      );
+      out.set(key, match);
+      void matchKeyCache.set(addresses[i], match, MATCH_KEY_TTL);
     } catch (error) {
       logMiss(ref, error);
       out.set(key, null);
