@@ -7,6 +7,7 @@ import { Toaster } from '@aiostreams/ui/toaster';
 import { LoadingOverlay } from '@aiostreams/ui/loading-spinner';
 import { pickerAccount, SessionProvider, useSessionPhase } from './lib/session';
 import {
+  androidServerSelection,
   announceToAndroid,
   syncAndroidSegments,
 } from './lib/hosts/jellyfin-android';
@@ -168,13 +169,17 @@ function Standalone() {
 
 function Session({
   base,
-  changeServer,
+  changeServer: leave,
 }: {
   base: string;
   changeServer?: () => void;
 }) {
   const { phase, signIn, signInWithQuickConnect, switchUser, signOut, retry } =
     useSessionPhase(base);
+  const changeServer = React.useMemo(
+    () => leave ?? androidServerSelection(),
+    [leave]
+  );
 
   React.useEffect(() => announceToAndroid(base), [base]);
   React.useEffect(() => syncAndroidSegments(), []);

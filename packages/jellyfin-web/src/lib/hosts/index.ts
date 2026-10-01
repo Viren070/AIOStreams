@@ -7,7 +7,10 @@ export type PlaybackHost = 'shell' | 'desktop' | 'android' | 'browser';
 export function playbackHost(): PlaybackHost {
   if (window.aiostreamsDesktop?.protocol === 1) return 'shell';
   if (window.jmpInfo && window.apiPromise) return 'desktop';
-  if (window.NativeInterface && window.NativePlayer?.isEnabled()) {
+  if (
+    window.NativeInterface &&
+    (window.NativePlayer?.isEnabled() || window.ExternalPlayer?.isEnabled())
+  ) {
     return 'android';
   }
   return 'browser';

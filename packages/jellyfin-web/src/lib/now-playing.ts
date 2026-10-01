@@ -1,5 +1,11 @@
 import React from 'react';
 import { playbackHost } from './hosts';
+import {
+  clearAndroidMediaSession,
+  hasAndroidMediaSession,
+  setAndroidPlaybackManager,
+  updateAndroidMediaSession,
+} from './hosts/jellyfin-android';
 import type { MediaKey } from './hosts/shell';
 import { itemSubtitle, itemTitle } from './format';
 import { landscapeUrl, posterUrl } from './images';
@@ -124,8 +130,66 @@ export function useNowPlaying(
     };
   }, [host, press]);
 
+  const android = host === 'browser' && hasAndroidMediaSession();
+  React.useEffect(() => {
+    if (!android) return;
+    const skip = (offset: number) => () => press({ action: 'skip', offset });
+    setAndroidPlaybackManager({
+      unpause: () => press({ action: 'play' }),
+      pause: () => press({ action: 'pause' }),
+      playPause: () => press({ action: 'toggle' }),
+      stop: () => press({ action: 'stop' }),
+      nextTrack: () => press({ action: 'next' }),
+      previousTrack: () => press({ action: 'previous' }),
+      fastForward: skip(SKIP_MS),
+      rewind: skip(-SKIP_MS),
+      seekMs: (ms) => press({ action: 'seek', position: ms }),
+      volumeUp() {},
+      volumeDown() {},
+      sendCommand() {},
+    });
+    return clearAndroidMediaSession;
+  }, [android, press]);
+
+  const toldApp = React.useRef<{
+    at: number;
+    positionMs: number;
+    key: string;
+  } | null>(null);
+  React.useEffect(() => {
+    if (!android || !started) return;
+    const key = JSON.stringify([item.Id, title, subtitle, artwork, paused]);
+    const last = toldApp.current;
+    const expected =
+      last && last.key === key
+        ? last.positionMs + (paused ? 0 : (Date.now() - last.at) * rate)
+        : null;
+    if (expected != null && Math.abs(expected - positionMs) < DRIFT_MS) return;
+    toldApp.current = { at: Date.now(), positionMs, key };
+    updateAndroidMediaSession({
+      itemId: item.Id!,
+      title,
+      artist: subtitle ?? '',
+      imageUrl: artwork ?? '',
+      position: Math.round(positionMs),
+      duration: Math.round(durationMs),
+      isPaused: paused,
+    });
+  }, [
+    android,
+    started,
+    item.Id,
+    title,
+    subtitle,
+    artwork,
+    paused,
+    positionMs,
+    durationMs,
+    rate,
+  ]);
+
   const session =
-    host === 'browser' && 'mediaSession' in navigator
+    host === 'browser' && !android && 'mediaSession' in navigator
       ? navigator.mediaSession
       : null;
 

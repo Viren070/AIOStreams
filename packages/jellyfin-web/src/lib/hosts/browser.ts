@@ -4,6 +4,11 @@ import { subtitleUrl, textSubtitles } from '../playback';
 import { sameLanguage } from '../languages';
 import type { PlaybackPrefs } from '../user-config';
 import {
+  hasAppFullscreen,
+  isAppFullscreen,
+  setAppFullscreen,
+} from './jellyfin-android';
+import {
   clampDelay,
   savedSubtitleDelay,
   saveSubtitleDelay,
@@ -48,8 +53,11 @@ function isPhone(): boolean {
   );
 }
 
+const isFullscreen = () => !!document.fullscreenElement || isAppFullscreen();
+
 /** Phones also turn to landscape, which only a full screen page may lock. */
 async function enterFullscreen(): Promise<void> {
+  if (hasAppFullscreen()) return setAppFullscreen(true);
   await document.documentElement.requestFullscreen?.();
   const orientation = screen.orientation as ScreenOrientation & {
     lock?(orientation: string): Promise<void>;
@@ -57,22 +65,25 @@ async function enterFullscreen(): Promise<void> {
   if (isPhone()) await orientation.lock?.('landscape');
 }
 
+async function exitFullscreen(): Promise<void> {
+  if (isAppFullscreen()) setAppFullscreen(false);
+  else await document.exitFullscreen();
+}
+
 function toggleDocumentFullscreen(): void {
-  if (document.fullscreenElement) void document.exitFullscreen();
-  else void enterFullscreen().catch(() => {});
+  void (isFullscreen() ? exitFullscreen() : enterFullscreen()).catch(() => {});
 }
 
 /** Phones play full screen in landscape, as their own players do. */
 export function usePhoneFullscreen(enabled: boolean): void {
   React.useEffect(() => {
     if (!enabled || !isPhone()) return;
-    if (!document.fullscreenElement) void enterFullscreen().catch(() => {});
+    if (!isFullscreen()) void enterFullscreen().catch(() => {});
     return () => {
       // The next episode's player keeps it, as it could not enter again without a tap.
       setTimeout(() => {
         const playing = document.documentElement.classList.contains('playing');
-        if (!playing && document.fullscreenElement)
-          void document.exitFullscreen().catch(() => {});
+        if (!playing && isFullscreen()) void exitFullscreen().catch(() => {});
       });
     };
   }, [enabled]);
@@ -188,8 +199,7 @@ export function useBrowserPlayer(
       shiftCues();
     };
     for (const t of trackElements) t.addEventListener('load', onTrackLoad);
-    const onFullscreen = () =>
-      patch({ fullscreen: !!document.fullscreenElement });
+    const onFullscreen = () => patch({ fullscreen: isFullscreen() });
     document.addEventListener('fullscreenchange', onFullscreen);
     return () => {
       for (const [event, handler] of Object.entries(handlers))
