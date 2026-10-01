@@ -1668,7 +1668,8 @@ const MetaVideoSchema = z
     cast: z.array(z.string()).nullish(),
     directors: z.array(z.string()).nullish(),
     links: z.array(MetaLinkSchema).nullish(),
-    ratings: z.array(ContentRatingSchema).nullish(),
+    // Some addons send a display string here.
+    ratings: z.array(ContentRatingSchema).nullish().catch(undefined),
   })
   .passthrough();
 
