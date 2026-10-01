@@ -473,7 +473,9 @@ export async function itemFromDescriptor(
             : undefined,
       });
       if (asBoxset) item.Id = encodeItemId(d);
-      if (!opts.playstate) await attachUserData(ctx, [item]);
+      // A show is played by its episodes, which its own row does not hold.
+      if (!opts.playstate || d.k === 'series')
+        await attachUserData(ctx, [item]);
       return item;
     }
     case 'season': {
