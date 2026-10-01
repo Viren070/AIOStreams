@@ -21,6 +21,7 @@ import {
   ServiceAuth,
   FileInfo,
   TitleMetadata,
+  DEBRID_CAPABILITIES,
 } from './base.js';
 import {
   normaliseTitle,
@@ -166,6 +167,7 @@ export const BuiltinDebridServices = z.array(
   z.object({
     id: z.enum(constants.BUILTIN_SUPPORTED_SERVICES),
     credential: z.string(),
+    disabledCapabilities: z.array(z.enum(DEBRID_CAPABILITIES)).optional(),
   })
 );
 

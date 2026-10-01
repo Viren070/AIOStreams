@@ -285,9 +285,21 @@ export type TorrentInfo = z.infer<typeof TorrentInfoSchema>;
 export type UsenetInfo = z.infer<typeof UsenetInfoSchema>;
 export type TitleMetadata = z.infer<typeof TitleMetadataSchema>;
 
+export const DEBRID_CAPABILITIES = ['torrents', 'usenet'] as const;
+export type DebridCapability = (typeof DEBRID_CAPABILITIES)[number];
+
+export function resolveCapabilities(
+  disabled?: DebridCapability[]
+): Record<DebridCapability, boolean> {
+  return {
+    torrents: !disabled?.includes('torrents'),
+    usenet: !disabled?.includes('usenet'),
+  };
+}
+
 interface BaseDebridService {
   readonly serviceName: ServiceId;
-  readonly capabilities: { torrents: boolean; usenet: boolean };
+  readonly capabilities: Record<DebridCapability, boolean>;
 
   resolve(
     playbackInfo: PlaybackInfo,
@@ -341,6 +353,7 @@ export type DebridService = TorrentDebridService | UsenetDebridService;
 export type DebridServiceConfig = {
   token: string;
   clientIp?: string;
+  disabledCapabilities?: DebridCapability[];
 };
 
 export function isTorrentDebridService(

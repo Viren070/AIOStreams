@@ -469,6 +469,7 @@ const SERVICE_DETAILS: Record<
     knownNames: string[];
     signUpText: string;
     credentials: Option[];
+    capabilities?: { id: 'torrents' | 'usenet'; note?: string }[];
   }
 > = {
   [REALDEBRID_SERVICE]: {
@@ -558,6 +559,13 @@ const SERVICE_DETAILS: Record<
           'Your Torbox API key. Obtain it from [here](https://torbox.app/settings)',
         type: 'password',
         required: true,
+      },
+    ],
+    capabilities: [
+      { id: 'torrents' },
+      {
+        id: 'usenet',
+        note: 'Only relevant with Torbox Pro and Usenet/NZB addons. Turn off to exclude Usenet.',
       },
     ],
   },

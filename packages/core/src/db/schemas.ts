@@ -322,10 +322,13 @@ const BitrateFilterOptions = z.object({
   resolution: z.partialRecord(Resolutions, SizeFilter).optional(),
 });
 
+const DebridCapabilities = z.enum(['torrents', 'usenet']);
+
 const ServiceSchema = z.object({
   id: ServiceIds,
   enabled: z.boolean().optional(),
   credentials: z.record(z.string().min(1), z.string()),
+  disabledCapabilities: z.array(DebridCapabilities).optional(),
 });
 
 export type Service = z.infer<typeof ServiceSchema>;
@@ -2004,6 +2007,11 @@ const StatusResponseSchema = z.object({
         knownNames: z.array(z.string()),
         signUpText: z.string(),
         credentials: z.array(OptionDefinition),
+        capabilities: z
+          .array(
+            z.object({ id: DebridCapabilities, note: z.string().optional() })
+          )
+          .optional(),
       })
     ),
     limits: z.object({
