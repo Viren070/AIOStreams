@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.9.2](https://github.com/Viren070/AIOStreams/compare/desktop-v0.9.1...desktop-v0.9.2) (2026-10-01)
+
+
+### Features
+
+* **frontend:** open the desktop app from the install card ([e7ca6b2](https://github.com/Viren070/AIOStreams/commit/e7ca6b229332158683b593bab86a1219b55db34e))
+* **jellyfin-web:** send skip actions to the Android app's player ([e7ca6b2](https://github.com/Viren070/AIOStreams/commit/e7ca6b229332158683b593bab86a1219b55db34e))
+
 ## [0.9.1](https://github.com/Viren070/AIOStreams/compare/desktop-v0.9.0...desktop-v0.9.1) (2026-09-30)
 
 
