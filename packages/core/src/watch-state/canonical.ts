@@ -93,19 +93,99 @@ function tvdbEpisodeOf(
   return { season: range.tvdbSeason, episode: episode + range.offset };
 }
 
+/**
+ * Where TVDB numbers an entry's episode, read as the anime-list does: its
+ * episode pairs, then its ranges, then the default season and offset. An
+ * episode spanning several TVDB ones takes the first. A pair to `0` is passed
+ * over, since pairs count AniDB's episodes, which other ids can number apart.
+ */
+function tvdbPlacementOf(
+  episode: number,
+  entry: AnimeEntry
+): { season: number; episode: number } | null {
+  const own = (entry.episodeMappings ?? []).filter(
+    (m) => m.anidbSeason === 1 && m.tvdbSeason !== undefined
+  );
+  for (const m of own) {
+    const to = Number(m.episodes?.match(new RegExp(`;${episode}-(\\d+)`))?.[1]);
+    if (to > 0) return { season: m.tvdbSeason!, episode: to };
+  }
+  const range = own.find(
+    (m) =>
+      m.start !== undefined &&
+      m.end !== undefined &&
+      m.offset !== undefined &&
+      episode >= m.start &&
+      episode <= m.end
+  );
+  if (range)
+    return { season: range.tvdbSeason!, episode: episode + range.offset! };
+  const { seasonNumber, fromEpisode } = entry.tvdb;
+  if (typeof seasonNumber !== 'number') return null;
+  return { season: seasonNumber, episode: (fromEpisode ?? 1) + episode - 1 };
+}
+
+const HINTED_TYPES: ParsedId['type'][] = [...ENTRY_NUMBERED, 'anidbId'];
+
+/** The IMDb title an entry's hints number it under, when that is not its mapped show. */
+function hintedElsewhere(
+  type: ParsedId['type'],
+  entry: AnimeEntry
+): string | null {
+  const hinted = entry.imdb?.id;
+  const mapped = entry.mappings?.imdbId;
+  if (!hinted || !mapped || hinted === mapped) return null;
+  return HINTED_TYPES.includes(type) ? hinted : null;
+}
+
+function placesOnTvdb(entry: AnimeEntry): boolean {
+  return (
+    typeof entry.tvdb.seasonNumber === 'number' ||
+    !!entry.episodeMappings?.some(
+      (m) => m.anidbSeason === 1 && m.tvdbSeason !== undefined
+    )
+  );
+}
+
+/**
+ * An entry the IMDb hints number under another title than its mapped show is
+ * placed where TVDB numbers it in that show, or failing that, under the hints'
+ * own title.
+ */
+function hintedElsewhereEpisodeOf(
+  parsed: ParsedId,
+  entry: AnimeEntry
+): { base?: string; season: number; episode: number } | null {
+  const hinted = hintedElsewhere(parsed.type, entry);
+  if (!hinted) return null;
+  const episode = Number(parsed.episode);
+  if (!Number.isInteger(episode)) return null;
+  const tvdb = tvdbPlacementOf(episode, entry);
+  if (tvdb) return tvdb;
+  if (entry.imdb?.seasonNumber == null) return null;
+  return {
+    base: hinted,
+    season: entry.imdb.seasonNumber,
+    episode: (entry.imdb.fromEpisode ?? 1) + episode - 1,
+  };
+}
+
 function matchKeyWith(
   ref: ContentRef,
   lookup: Lookup,
   entry: AnimeEntry | null
 ): string | null {
   if (!entry) return null;
-  const base = preferredBase(entry.mappings);
-  if (!base) return null;
+  const mapped = preferredBase(entry.mappings);
+  if (!mapped) return null;
   if (ref.kind === 'movie') {
-    return itemKeyFor({ ...ref, baseId: base, videoId: base });
+    return itemKeyFor({ ...ref, baseId: mapped, videoId: mapped });
   }
 
-  const placed = tvdbEpisodeOf(lookup.parsed, entry);
+  const placed: { base?: string; season: number; episode: number } | null =
+    tvdbEpisodeOf(lookup.parsed, entry) ??
+    hintedElsewhereEpisodeOf(lookup.parsed, entry);
+  const base = placed?.base ?? mapped;
   if (placed) {
     lookup.parsed.season = String(placed.season);
     lookup.parsed.episode = String(placed.episode);
@@ -159,7 +239,10 @@ function mappedMatchKey(ref: ContentRef, lookup: Lookup): string | null {
   });
 }
 
-/** A show under its preferred id, so a drop made under one spelling covers the others. */
+/**
+ * A show under its preferred id, so a drop made under one spelling covers the
+ * others; under its hints' own title when that is where all its episodes key.
+ */
 async function showMatchKey(ref: ContentRef): Promise<string | null> {
   const parsed = IdParser.parse(ref.baseId, ref.type);
   if (!parsed) return null;
@@ -167,7 +250,11 @@ async function showMatchKey(ref: ContentRef): Promise<string | null> {
     parsed.type,
     parsed.value
   );
-  let base = preferredBase(entry?.mappings);
+  const hinted = entry && hintedElsewhere(parsed.type, entry);
+  let base =
+    hinted && !placesOnTvdb(entry) && entry.imdb?.seasonNumber != null
+      ? hinted
+      : preferredBase(entry?.mappings);
   const provider = MAPPED[parsed.type];
   if (!base && provider && appConfig.metadata.idMappings.enabled) {
     base =
