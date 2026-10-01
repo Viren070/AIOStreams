@@ -10,6 +10,7 @@ import {
   LuLayoutGrid,
   LuMonitor,
   LuPalette,
+  LuSmartphone,
   LuUser,
   LuVolume2,
 } from 'react-icons/lu';
@@ -41,6 +42,10 @@ import { usePickableUsers, useViews } from '../lib/queries';
 import { libraryLabel } from '../lib/format';
 import { configureUrl } from '../lib/paths';
 import { playbackHost } from '../lib/hosts';
+import {
+  hasAndroidSettings,
+  openAndroidSettings,
+} from '../lib/hosts/jellyfin-android';
 import {
   openLogs,
   openMpvConfig,
@@ -714,6 +719,25 @@ function DiscordCard() {
   );
 }
 
+function AndroidSection() {
+  return (
+    <SettingsCard title="Player">
+      <SettingsRow
+        label="App settings"
+        help="The app's player and its options, such as starting videos in landscape."
+      >
+        <Button
+          intent="gray-outline"
+          className="w-full rounded-full sm:w-auto"
+          onClick={openAndroidSettings}
+        >
+          Open
+        </Button>
+      </SettingsRow>
+    </SettingsCard>
+  );
+}
+
 function DesktopSection() {
   const server = useServerInfo();
   return (
@@ -1359,6 +1383,18 @@ function sections(): Section[] {
             icon: LuMonitor,
             group: 'App',
             Content: DesktopSection,
+          },
+        ]
+      : []),
+    ...(hasAndroidSettings()
+      ? [
+          {
+            id: 'android',
+            label: 'Android app',
+            description: "The app's player",
+            icon: LuSmartphone,
+            group: 'App',
+            Content: AndroidSection,
           },
         ]
       : []),

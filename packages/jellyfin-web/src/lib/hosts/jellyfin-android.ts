@@ -14,7 +14,7 @@ interface AndroidPlayer {
 
 declare global {
   interface Window {
-    NativeInterface?: { exitApp?(): void };
+    NativeInterface?: { exitApp?(): void; openClientSettings?(): void };
     NativePlayer?: AndroidPlayer;
     NavigationHelper?: { goBack(): void };
     MediaSegments?: {
@@ -22,6 +22,13 @@ declare global {
     };
   }
 }
+
+/** The app keeps its player's options, such as starting in landscape, in its own settings. */
+export const hasAndroidSettings = () =>
+  !!window.NativeInterface?.openClientSettings;
+
+export const openAndroidSettings = () =>
+  window.NativeInterface?.openClientSettings?.();
 
 const ANDROID_SEGMENT_ACTIONS: Record<SegmentAction, string> = {
   ask: 'AskToSkip',
