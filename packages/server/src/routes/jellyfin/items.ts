@@ -288,6 +288,7 @@ export async function seasonsForSeries(
       ...groups.map((g) => seasonRef(g.season)),
     ]),
     seasonAnimeIds(
+      meta,
       seriesItem.ProviderIds as Record<string, string> | undefined,
       groups.map((g) => g.season)
     ),

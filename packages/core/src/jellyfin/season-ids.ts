@@ -1,16 +1,16 @@
 import { AnimeDatabase } from '../anime-database/index.js';
 import type { AnimeEntryMappings } from '../anime-database/types.js';
-import type { IdType } from '../utils/id-parser.js';
+import { IdParser, type IdType } from '../utils/id-parser.js';
 
-/** Jellyfin provider id -> the anime database's, best lookup first. */
+/** Jellyfin provider id -> the anime database's, show-wide ids first. */
 const LOOKUP: [string, IdType][] = [
+  ['Tvdb', 'thetvdbId'],
+  ['Tmdb', 'themoviedbId'],
+  ['Imdb', 'imdbId'],
   ['Kitsu', 'kitsuId'],
   ['MyAnimeList', 'malId'],
   ['AniList', 'anilistId'],
   ['AniDB', 'anidbId'],
-  ['Imdb', 'imdbId'],
-  ['Tmdb', 'themoviedbId'],
-  ['Tvdb', 'thetvdbId'],
 ];
 
 const MAPPED: [keyof AnimeEntryMappings, string][] = [
@@ -20,16 +20,26 @@ const MAPPED: [keyof AnimeEntryMappings, string][] = [
   ['kitsuId', 'Kitsu'],
 ];
 
-/** Each season's own anime entry, for a show that spans several. */
+/**
+ * Each season's own anime entry, for a show that spans several. Looked up by
+ * the show's own id, whose seasons these are; a multi-season show's anime ids
+ * often name only its first season.
+ */
 export async function seasonAnimeIds(
+  show: { id: string; type: string },
   providerIds: Record<string, string> | undefined,
   seasons: number[]
 ): Promise<Map<number, Record<string, string>>> {
   const out = new Map<number, Record<string, string>>();
-  const source = LOOKUP.find(([key]) => providerIds?.[key]);
-  if (!source || !seasons.length) return out;
+  if (!seasons.length) return out;
+  const parsed = IdParser.parse(show.id, show.type);
+  const fallback = LOOKUP.find(([key]) => providerIds?.[key]);
+  const source: [IdType, string | number] | undefined = parsed
+    ? [parsed.type, parsed.value]
+    : fallback && [fallback[1], providerIds![fallback[0]]];
+  if (!source) return out;
   const select = await AnimeDatabase.getInstance()
-    .selectorFor(source[1], providerIds![source[0]])
+    .selectorFor(source[0], source[1])
     .catch(() => null);
   if (!select) return out;
   for (const season of seasons) {
