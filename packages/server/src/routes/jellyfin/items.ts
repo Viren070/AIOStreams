@@ -569,55 +569,73 @@ export async function summaryItem(
   return item;
 }
 
+function isPlayed(item: JellyfinItem): boolean {
+  return (item.UserData as { Played: boolean }).Played;
+}
+
+/**
+ * A show's episodes and the furthest one watched, which Next Up goes on from,
+ * as Jellyfin's does. One part-way through past it comes back as `resume`.
+ */
+async function watchingPosition(
+  ctx: JellyfinRequestContext,
+  d: { t: string; i: string },
+  last?: WatchStateRow
+): Promise<{
+  eps: JellyfinItem[];
+  from: number;
+  resume?: JellyfinItem;
+} | null> {
+  const res = await episodesForSeries(ctx, d);
+  if (!res) return null;
+  const eps = res.episodes.filter((e) => e.ParentIndexNumber !== 0);
+  let from = eps.findLastIndex(isPlayed);
+  if (!last) return { eps, from };
+  const lastId = encodeItemId({
+    k: 'episode',
+    t: last.mediaType,
+    i: seriesIdOf(last.baseId, last.videoId, last.mediaType),
+    s: last.season ?? 1,
+    e: last.episode ?? 0,
+    v: last.videoId ?? '',
+  });
+  let idx = eps.findIndex((e) => e.Id === lastId);
+  // A row from another id space can only name its episode by number.
+  if (idx < 0 && last.episode != null)
+    idx = eps.findIndex(
+      (e) =>
+        e.ParentIndexNumber === (last.season ?? 1) &&
+        e.IndexNumber === last.episode
+    );
+  if (idx > from) {
+    const anchor = eps[idx];
+    if (isResumable(anchor)) return { eps, from, resume: anchor };
+    // The list only sees this row when a match key links the two spellings.
+    if (!last.played && last.positionMs > 0)
+      return {
+        eps,
+        from,
+        resume: { ...anchor, UserData: userDataFromRow(anchor.Id, last) },
+      };
+    if (last.played) from = idx;
+  }
+  return { eps, from };
+}
+
 export async function nextUpForSeries(
   ctx: JellyfinRequestContext,
   d: { t: string; i: string },
   last?: WatchStateRow,
   opts: { includeResumable?: boolean } = {}
 ): Promise<JellyfinItem | null> {
-  const res = await episodesForSeries(ctx, d);
-  if (!res) return null;
-  const eps = res.episodes.filter(
-    (e) => !isUnairedEpisode(e) && e.ParentIndexNumber !== 0
-  );
-  if (!eps.length) return null;
-  let next: JellyfinItem | null | undefined;
-  if (last) {
-    const lastId = encodeItemId({
-      k: 'episode',
-      t: last.mediaType,
-      i: seriesIdOf(last.baseId, last.videoId, last.mediaType),
-      s: last.season ?? 1,
-      e: last.episode ?? 0,
-      v: last.videoId ?? '',
-    });
-    let idx = eps.findIndex((e) => e.Id === lastId);
-    // A row from another id space can only name its episode by number.
-    if (idx < 0 && last.episode != null)
-      idx = eps.findIndex(
-        (e) =>
-          e.ParentIndexNumber === (last.season ?? 1) &&
-          e.IndexNumber === last.episode
-      );
-    if (idx >= 0) {
-      const anchor = eps[idx];
-      if (isResumable(anchor)) next = anchor;
-      // The list only sees this row when a match key links the two spellings.
-      else if (!last.played && last.positionMs > 0)
-        next = { ...anchor, UserData: userDataFromRow(anchor.Id, last) };
-      else next = eps[idx + 1] ?? null;
-    }
-    // The anchor may sit mid-run, so fall through rather than offer a rewatch.
-    if (
-      next &&
-      !isResumable(next) &&
-      (next.UserData as { Played: boolean }).Played
-    )
-      next = undefined;
-  }
-  if (next === undefined)
-    next = eps.find((e) => !(e.UserData as { Played: boolean }).Played) ?? null;
-
+  const at = await watchingPosition(ctx, d, last);
+  if (!at) return null;
+  const next =
+    at.resume ??
+    at.eps
+      .slice(at.from + 1)
+      .find((e) => !isUnairedEpisode(e) && !isPlayed(e)) ??
+    null;
   if (next && opts.includeResumable === false && isResumable(next)) return null;
   return next;
 }
