@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.3](https://github.com/Viren070/AIOStreams/compare/desktop-v0.9.2...desktop-v0.9.3) (2026-10-01)
+
+
+### Bug Fixes
+
+* **desktop:** only look for Snap and Flatpak Discord sockets on Linux ([52a0a9f](https://github.com/Viren070/AIOStreams/commit/52a0a9f317f18243f240d858628405ab7e0966bc))
+
 ## [0.9.2](https://github.com/Viren070/AIOStreams/compare/desktop-v0.9.1...desktop-v0.9.2) (2026-10-01)
 
 
