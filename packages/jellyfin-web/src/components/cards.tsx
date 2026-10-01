@@ -2,7 +2,7 @@ import React from 'react';
 import { BiCheck, BiPlay } from 'react-icons/bi';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useHold } from '../lib/use-hold';
-import { usePosterLines } from '../lib/settings';
+import { settings, useSetting } from '../lib/settings';
 
 /** A list is tried in order, moving on when an image fails to load. */
 export function Artwork({
@@ -115,7 +115,7 @@ export interface PosterCardProps {
 export function PosterCard(props: PosterCardProps) {
   const { href, image, title, subtitle, watched, unwatched, progress } = props;
   const shape = props.shape ?? 'poster';
-  const [lines] = usePosterLines();
+  const [lines] = useSetting(settings.posterLines);
   const showTitle = lines.includes('title');
   const showSubtitle = !!subtitle && lines.includes('year');
   return (

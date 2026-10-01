@@ -59,7 +59,7 @@ import {
   untilLabel,
 } from '../lib/format';
 import { href, itemPath, navigate } from '../lib/paths';
-import { useEpisodeLayout } from '../lib/settings';
+import { settings, useSetting } from '../lib/settings';
 import { useInView } from '../lib/use-in-view';
 import { MediaRow } from '../components/media-row';
 import { PageMessage } from '../components/layout';
@@ -610,7 +610,7 @@ function Seasons({
   onSeason: (season: BaseItemDto | undefined) => void;
 }) {
   const { client } = useSession();
-  const [layoutPref] = useEpisodeLayout();
+  const [layoutPref] = useSetting(settings.episodeLayout);
   const wide = useMediaQuery('(min-width: 1024px)');
   const layout = layoutPref === 'auto' ? (wide ? 'row' : 'list') : layoutPref;
   const seasons = useSeasons(series.Id!, true);

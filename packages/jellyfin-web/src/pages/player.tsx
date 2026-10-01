@@ -33,9 +33,8 @@ import { useShellPlayer } from '../lib/hosts/shell';
 import { useNowPlaying } from '../lib/now-playing';
 import type { PlayerController } from '../lib/player';
 import {
-  useChapterSkips,
-  useSubtitleStyle,
-  useVideoFit,
+  settings,
+  useSetting,
   type SubtitleStyle,
   type VideoFit,
 } from '../lib/settings';
@@ -355,8 +354,8 @@ function BrowserPlayer({
   const { client } = useSession();
   const video = React.useRef<HTMLVideoElement>(null);
   const { back, onEnded, connect } = useEnded(item);
-  const subtitleStyle = useSubtitleStyle();
-  const [fit] = useVideoFit();
+  const [subtitleStyle] = useSetting(settings.subtitleStyle);
+  const [fit] = useSetting(settings.videoFit);
   const player = useBrowserPlayer(video, {
     source,
     startMs,
@@ -439,7 +438,7 @@ function useShownSegments(
 ) {
   const { chapters } = player;
   const { durationMs } = player.state;
-  const [preferChapters] = useChapterSkips();
+  const [preferChapters] = useSetting(settings.desktop.chapterSkips);
   return React.useMemo(() => {
     const named = chapterSegments(chapters ?? [], durationMs);
     const [first, second] = preferChapters
@@ -463,7 +462,7 @@ function NativePlayer({
 }: PlayerProps) {
   const { client } = useSession();
   const { back, onEnded, connect } = useEnded(item);
-  const subtitleStyle = useSubtitleStyle();
+  const [subtitleStyle] = useSetting(settings.subtitleStyle);
   const useNativePlayer =
     playbackHost() === 'shell' ? useShellPlayer : useDesktopPlayer;
   const player = useNativePlayer({

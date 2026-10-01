@@ -1,7 +1,7 @@
 import React from 'react';
 import { useItem } from './queries';
 import { itemTitle } from './format';
-import { useDiscordEvent, type DiscordEvent } from './settings';
+import { settings, useSetting, type DiscordEvent } from './settings';
 
 /** How long a page stays open before Discord is told, so passing through one does not show. */
 const DWELL_MS = 2000;
@@ -42,7 +42,7 @@ export function useDiscordBrowsing(pathname: string) {
   const item = useItem(itemId).data;
   const page = PAGES.find(([pattern]) => pattern.test(pathname));
   const event = itemId ? 'titles' : page?.[1];
-  const [enabled] = useDiscordEvent(event ?? 'titles');
+  const [enabled] = useSetting(settings.discord[event ?? 'titles']);
   // Undefined while a title loads, which leaves the last status up meanwhile.
   let presence: ReturnType<typeof browsing> | null | undefined = null;
   if (event && enabled) {

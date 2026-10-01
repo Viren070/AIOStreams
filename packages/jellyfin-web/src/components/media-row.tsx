@@ -11,7 +11,7 @@ import {
 } from '@aiostreams/ui/carousel';
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import { cn } from '@aiostreams/ui/core/styling';
-import { usePosterSize, type PosterSize } from '../lib/settings';
+import { settings, useSetting, type PosterSize } from '../lib/settings';
 
 const ITEM_WIDTH = {
   poster:
@@ -200,7 +200,7 @@ export function CardGrid({
   shape?: RowShape;
   children: React.ReactNode;
 }) {
-  const [size] = usePosterSize();
+  const [size] = useSetting(settings.posterSize);
   return (
     <div
       data-ui="card-grid"

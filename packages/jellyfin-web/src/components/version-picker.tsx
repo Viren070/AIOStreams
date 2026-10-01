@@ -46,7 +46,7 @@ import { clock, itemSubtitle, itemTitle, ticksToMs } from '../lib/format';
 import { cn } from '@aiostreams/ui/core/styling';
 import { backdropUrl, landscapeUrl } from '../lib/images';
 import { itemPath, navigate, to } from '../lib/paths';
-import { useSkipVersionList } from '../lib/settings';
+import { settings, useSetting } from '../lib/settings';
 import type { BaseItemDto, SourceInfo } from '../lib/types';
 
 interface Request {
@@ -97,7 +97,7 @@ export function VersionPickerProvider({
 }) {
   const [request, setRequest] = React.useState<Request | null>(null);
   const [external, setExternal] = React.useState<BaseItemDto | null>(null);
-  const [skipList] = useSkipVersionList();
+  const [skipList] = useSetting(settings.skipVersionList);
   const queryClient = useQueryClient();
   const infoOptions = usePlaybackInfoOptions();
   const playVersion = usePlay();

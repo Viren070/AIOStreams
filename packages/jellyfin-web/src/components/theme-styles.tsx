@@ -1,12 +1,12 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { themeVariables } from '@aiostreams/ui/utils/palette';
-import { CUSTOM_CSS_OFF, useCustomCss, useThemeColors } from '../lib/settings';
+import { settings, useSetting, CUSTOM_CSS_OFF } from '../lib/settings';
 
 /** Last on the page, so the user's colours and CSS win ties. */
 export function ThemeStyles() {
-  const [colors] = useThemeColors();
-  const [css] = useCustomCss();
+  const [colors] = useSetting(settings.themeColors);
+  const [css] = useSetting(settings.customCss);
   const vars = React.useMemo(
     () =>
       Object.entries(themeVariables(colors))

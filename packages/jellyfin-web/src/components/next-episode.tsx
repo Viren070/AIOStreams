@@ -8,13 +8,7 @@ import { landscapeUrl } from '../lib/images';
 import { episodeCode, itemSubtitle, ticksToMs } from '../lib/format';
 import { navigate, to, versionsPath } from '../lib/paths';
 import { playableSources } from '../lib/use-play';
-import {
-  useNextCountdown,
-  useNextFallbackFirst,
-  useNextLead,
-  useNextPrompt,
-  type NextPrompt,
-} from '../lib/settings';
+import { settings, useSetting, type NextPrompt } from '../lib/settings';
 import { usePlaybackPrefs } from '../lib/user-config';
 import type { PlayerController } from '../lib/player';
 import type { BaseItemDto, MediaSegmentDto, SourceInfo } from '../lib/types';
@@ -99,10 +93,10 @@ export function useNextEpisodePrompt({
   const adjacent = useAdjacentEpisodes(item).data;
   const next = adjacent?.next ?? null;
   const previous = adjacent?.previous ?? null;
-  const [prompt] = useNextPrompt();
-  const [lead] = useNextLead();
-  const [countdown] = useNextCountdown();
-  const [fallbackFirst] = useNextFallbackFirst();
+  const [prompt] = useSetting(settings.next.prompt);
+  const [lead] = useSetting(settings.next.lead);
+  const [countdown] = useSetting(settings.next.countdown);
+  const [fallbackFirst] = useSetting(settings.next.fallbackFirst);
   const { prefs } = usePlaybackPrefs();
   const autoplay = prefs.EnableNextEpisodeAutoPlay !== false;
   const { positionMs, durationMs, paused } = player.state;

@@ -5,7 +5,7 @@ import { itemSubtitle, itemTitle } from './format';
 import { landscapeUrl, posterUrl } from './images';
 import { useItem } from './queries';
 import { useSession } from './session';
-import { useDiscordEvent } from './settings';
+import { settings, useSetting } from './settings';
 import { useLatest, type PlayerController } from './player';
 import type { BaseItemDto } from './types';
 
@@ -41,7 +41,7 @@ export function useNowPlaying(
   actions: Actions
 ) {
   const { client } = useSession();
-  const [discord] = useDiscordEvent('playing');
+  const [discord] = useSetting(settings.discord['playing']);
   const show = useItem(item.SeriesId ?? item.Id!);
   const imdb = (item.Type === 'Episode' ? show.data : item)?.ProviderIds?.Imdb;
   const title = itemTitle(item);

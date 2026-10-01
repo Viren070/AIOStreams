@@ -45,9 +45,8 @@ import type { PlayerController, PlayerState, Track } from '../lib/player';
 import { playbackHost } from '../lib/hosts';
 import { delayLabel } from '../lib/subtitle-lines';
 import {
-  useSeekStep,
-  useSegmentActions,
-  useVideoFit,
+  settings,
+  useSetting,
   type SegmentType,
   VIDEO_FITS,
   type VideoFit,
@@ -414,7 +413,7 @@ const FIT_BUTTON: Record<VideoFit, { label: string; icon: React.ReactNode }> = {
 };
 
 function FitButton() {
-  const [fit, setFit] = useVideoFit();
+  const [fit, setFit] = useSetting(settings.videoFit);
   const next = VIDEO_FITS[(VIDEO_FITS.indexOf(fit) + 1) % VIDEO_FITS.length];
   return (
     <ControlButton
@@ -704,7 +703,7 @@ export function PlayerControls({
   };
   const closeByEar = React.useCallback(() => setByEar(false), []);
 
-  const [seekStep] = useSeekStep();
+  const [seekStep] = useSetting(settings.seekStep);
   const stepMs = React.useRef(seekStep * 1000);
   stepMs.current = seekStep * 1000;
   const seekBy = (delta: number) => {
@@ -750,7 +749,7 @@ export function PlayerControls({
     return () => window.removeEventListener('keydown', onKey);
   }, [wake]);
 
-  const segmentActions = useSegmentActions();
+  const [segmentActions] = useSetting(settings.segmentActions);
   const inside = segments.filter(
     (s) => state.positionMs >= s.startMs && state.positionMs < s.endMs - 1000
   );

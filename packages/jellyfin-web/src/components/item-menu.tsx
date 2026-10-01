@@ -22,7 +22,7 @@ import {
 import { useSetFavorite, useSetPlayed, useSetPlayedUpTo } from '../lib/queries';
 import { itemTitle, ticksToMs } from '../lib/format';
 import { itemPath, navigate } from '../lib/paths';
-import { useSkipVersionList } from '../lib/settings';
+import { settings, useSetting } from '../lib/settings';
 import { useVersionPicker } from './version-picker';
 import { useHeroTarget } from './hero';
 import type { BaseItemDto } from '../lib/types';
@@ -50,7 +50,7 @@ export function ItemMenu({
   const played = !!item.UserData?.Played;
   const favorite = !!item.UserData?.IsFavorite;
   const resumeMs = ticksToMs(item.UserData?.PlaybackPositionTicks);
-  const [skipList] = useSkipVersionList();
+  const [skipList] = useSetting(settings.skipVersionList);
 
   return (
     <ContextMenu>

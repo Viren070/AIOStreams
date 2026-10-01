@@ -5,12 +5,11 @@ import { subtitleUrl, textSubtitles } from '../playback';
 import { sameLanguage } from '../languages';
 import { parseChapters, type Chapter } from '../chapters';
 import {
+  settings,
+  useSetting,
   onSettingsChange,
-  readDesktopSettings,
-  type DesktopSettings,
   type UpdateChannelSetting,
   type SubtitleStyle,
-  useVideoFit,
 } from '../settings';
 import type { PlaybackPrefs } from '../user-config';
 import {
@@ -181,7 +180,7 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
     []
   );
 
-  const [fit] = useVideoFit();
+  const [fit] = useSetting(settings.videoFit);
   React.useEffect(() => {
     set('keepaspect', fit !== 'stretch');
     set('panscan', fit === 'crop' ? 1 : 0);
@@ -444,13 +443,12 @@ export function applySubtitleStyle(style: SubtitleStyle | undefined): void {
   setProp('sub-pos', 100 - style.position);
 }
 
-function applyDesktopSettings(settings: DesktopSettings): void {
-  setProp('hwdec', settings.hardwareDecoding ? 'auto-safe' : 'no');
-  setProp(
-    'audio-channels',
-    settings.audioChannels === 'auto' ? 'auto-safe' : settings.audioChannels
-  );
-  setProp('audio-spdif', settings.passthrough ? 'ac3,eac3,dts-hd,truehd' : '');
+function applyDesktopSettings(): void {
+  const { hardwareDecoding, audioChannels, passthrough } = settings.desktop;
+  const channels = audioChannels.read();
+  setProp('hwdec', hardwareDecoding.read() ? 'auto-safe' : 'no');
+  setProp('audio-channels', channels === 'auto' ? 'auto-safe' : channels);
+  setProp('audio-spdif', passthrough.read() ? 'ac3,eac3,dts-hd,truehd' : '');
 }
 
 export type UpdateState = Extract<ShellMessage, { type: 'update-state' }>;
@@ -528,12 +526,12 @@ export function ShellSetup() {
     const shell = window.aiostreamsDesktop;
     if (!shell) return;
     let fullscreen = false;
-    let channel = readDesktopSettings().updateChannel;
+    const { updateChannel, escExitsFullscreen } = settings.desktop;
+    let channel = updateChannel.read();
     const apply = () => {
-      const settings = readDesktopSettings();
-      applyDesktopSettings(settings);
-      if (settings.updateChannel !== channel) {
-        channel = settings.updateChannel;
+      applyDesktopSettings();
+      if (updateChannel.read() !== channel) {
+        channel = updateChannel.read();
         checkForUpdates(channel);
       }
     };
@@ -547,7 +545,7 @@ export function ShellSetup() {
     });
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || !fullscreen || e.defaultPrevented) return;
-      if (readDesktopSettings().escExitsFullscreen)
+      if (escExitsFullscreen.read())
         shell.send({ type: 'fullscreen', value: false });
     };
     window.addEventListener('keydown', onKey);

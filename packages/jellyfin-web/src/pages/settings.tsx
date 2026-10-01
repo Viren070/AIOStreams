@@ -66,52 +66,20 @@ import {
   setExternalPlayerTemplate,
 } from '../lib/playback';
 import {
+  settings,
+  useSetting,
   AUDIO_CHANNELS,
   CUSTOM_CSS_OFF,
   MAX_CUSTOM_CSS,
   MAX_FEATURED,
-  useCustomCss,
-  useThemeColors,
   NEXT_COUNTDOWNS,
   NEXT_LEADS,
   SEEK_STEPS,
   SEGMENT_ACTIONS,
   SEGMENT_TYPES,
-  useSegmentAction,
-  useAudioChannels,
-  useEpisodeLayout,
-  useEscExitsFullscreen,
-  useChapterSkips,
-  useCombineSearch,
-  useUpdateChannel,
-  useFeatured,
-  useHardwareDecoding,
-  useHeroMode,
-  useMergeNextUp,
-  useNextCountdown,
-  useNextFallbackFirst,
-  useNextLead,
-  useNextPrompt,
-  usePassthrough,
-  usePosterLines,
-  usePosterSize,
-  useSeekStep,
-  useAnyDiscordEvent,
-  useDiscordEvent,
   DISCORD_EVENTS,
   type DiscordEvent,
-  useSkipVersionList,
-  useSubtitleBackgroundColor,
-  useSubtitleBold,
-  useSubtitleBackgroundOpacity,
-  useSubtitlePosition,
   SUBTITLE_POSITION_MAX,
-  useSubtitleOutline,
-  useSubtitleOutlineColor,
-  useSubtitleOverrideStyled,
-  useSubtitleSize,
-  useSubtitleStyle,
-  useSubtitleTextColor,
   type AudioChannels,
   type EpisodeLayout,
   type HeroMode,
@@ -199,7 +167,7 @@ const SEGMENT_ACTION_LABELS: Record<SegmentAction, string> = {
 };
 
 function SegmentActionSelect({ type }: { type: SegmentType }) {
-  const [action, setAction] = useSegmentAction(type);
+  const [action, setAction] = useSetting(settings.segment[type]);
   return (
     <Select
       label={SEGMENT_LABELS[type]}
@@ -220,15 +188,23 @@ function SegmentActionSelect({ type }: { type: SegmentType }) {
 
 function PlaybackSection() {
   const { prefs, update } = usePlaybackPrefs();
-  const [seekStep, setSeekStep] = useSeekStep();
-  const [skipList, setSkipList] = useSkipVersionList();
-  const [nextPrompt, setNextPrompt] = useNextPrompt();
-  const [nextLead, setNextLead] = useNextLead();
-  const [nextCountdown, setNextCountdown] = useNextCountdown();
-  const [nextFallbackFirst, setNextFallbackFirst] = useNextFallbackFirst();
-  const [hardwareDecoding, setHardwareDecoding] = useHardwareDecoding();
-  const [escExits, setEscExits] = useEscExitsFullscreen();
-  const [chapterSkips, setChapterSkips] = useChapterSkips();
+  const [seekStep, setSeekStep] = useSetting(settings.seekStep);
+  const [skipList, setSkipList] = useSetting(settings.skipVersionList);
+  const [nextPrompt, setNextPrompt] = useSetting(settings.next.prompt);
+  const [nextLead, setNextLead] = useSetting(settings.next.lead);
+  const [nextCountdown, setNextCountdown] = useSetting(settings.next.countdown);
+  const [nextFallbackFirst, setNextFallbackFirst] = useSetting(
+    settings.next.fallbackFirst
+  );
+  const [hardwareDecoding, setHardwareDecoding] = useSetting(
+    settings.desktop.hardwareDecoding
+  );
+  const [escExits, setEscExits] = useSetting(
+    settings.desktop.escExitsFullscreen
+  );
+  const [chapterSkips, setChapterSkips] = useSetting(
+    settings.desktop.chapterSkips
+  );
   const bingeGroups = useFeature('versions');
   const shell = playbackHost() === 'shell';
   const [template, setTemplate] = React.useState(externalPlayerTemplate);
@@ -421,8 +397,12 @@ function PlaybackSection() {
 
 function AudioSection() {
   const { prefs, update } = usePlaybackPrefs();
-  const [audioChannels, setAudioChannels] = useAudioChannels();
-  const [passthrough, setPassthrough] = usePassthrough();
+  const [audioChannels, setAudioChannels] = useSetting(
+    settings.desktop.audioChannels
+  );
+  const [passthrough, setPassthrough] = useSetting(
+    settings.desktop.passthrough
+  );
   return (
     <>
       <SettingsCard title="Language" description={ON_ACCOUNT}>
@@ -464,17 +444,24 @@ function AudioSection() {
 function SubtitlesSection() {
   const { prefs, update } = usePlaybackPrefs();
   const mode = prefs.SubtitleMode ?? 'Default';
-  const [size, setSize] = useSubtitleSize();
-  const [bold, setBold] = useSubtitleBold();
-  const [textColor, setTextColor] = useSubtitleTextColor();
-  const [outline, setOutline] = useSubtitleOutline();
-  const [outlineColor, setOutlineColor] = useSubtitleOutlineColor();
-  const [backgroundColor, setBackgroundColor] = useSubtitleBackgroundColor();
-  const [backgroundOpacity, setBackgroundOpacity] =
-    useSubtitleBackgroundOpacity();
-  const [overrideStyled, setOverrideStyled] = useSubtitleOverrideStyled();
-  const [position, setPosition] = useSubtitlePosition();
-  const style = useSubtitleStyle();
+  const [size, setSize] = useSetting(settings.subtitle.size);
+  const [bold, setBold] = useSetting(settings.subtitle.bold);
+  const [textColor, setTextColor] = useSetting(settings.subtitle.textColor);
+  const [outline, setOutline] = useSetting(settings.subtitle.outline);
+  const [outlineColor, setOutlineColor] = useSetting(
+    settings.subtitle.outlineColor
+  );
+  const [backgroundColor, setBackgroundColor] = useSetting(
+    settings.subtitle.backgroundColor
+  );
+  const [backgroundOpacity, setBackgroundOpacity] = useSetting(
+    settings.subtitle.backgroundOpacity
+  );
+  const [overrideStyled, setOverrideStyled] = useSetting(
+    settings.subtitle.overrideStyled
+  );
+  const [position, setPosition] = useSetting(settings.subtitle.position);
+  const [style] = useSetting(settings.subtitleStyle);
   const css = subtitleCss(style);
   return (
     <>
@@ -612,7 +599,7 @@ function updateStatus(update: UpdateState | null): string {
 }
 
 function UpdatesCard() {
-  const [setting, setSetting] = useUpdateChannel();
+  const [setting, setSetting] = useSetting(settings.desktop.updateChannel);
   const update = useUpdateState();
   const channel =
     setting === 'installed' ? (update?.channel ?? 'stable') : setting;
@@ -684,7 +671,7 @@ function discordStatus(status: DiscordStatus | null): string {
 }
 
 function DiscordEventSwitch({ event }: { event: DiscordEvent }) {
-  const [value, setValue] = useDiscordEvent(event);
+  const [value, setValue] = useSetting(settings.discord[event]);
   const { label, help } = DISCORD_LABELS[event];
   return (
     <Switch
@@ -698,7 +685,8 @@ function DiscordEventSwitch({ event }: { event: DiscordEvent }) {
 }
 
 function DiscordCard() {
-  const any = useAnyDiscordEvent();
+  const [events] = useSetting(settings.discordEvents);
+  const any = Object.values(events).some(Boolean);
   const status = useDiscordStatus();
   React.useEffect(() => {
     if (any) checkDiscord();
@@ -791,13 +779,13 @@ const NOTHING = 'none';
 
 function InterfaceSection() {
   const views = useViews();
-  const [featured, setFeatured] = useFeatured();
-  const [heroMode, setHeroMode] = useHeroMode();
-  const [mergeNextUp, setMergeNextUp] = useMergeNextUp();
-  const [combineSearch, setCombineSearch] = useCombineSearch();
-  const [posterSize, setPosterSize] = usePosterSize();
-  const [posterLines, setPosterLines] = usePosterLines();
-  const [episodeLayout, setEpisodeLayout] = useEpisodeLayout();
+  const [featured, setFeatured] = useSetting(settings.featured);
+  const [heroMode, setHeroMode] = useSetting(settings.heroMode);
+  const [mergeNextUp, setMergeNextUp] = useSetting(settings.mergeNextUp);
+  const [combineSearch, setCombineSearch] = useSetting(settings.combineSearch);
+  const [posterSize, setPosterSize] = useSetting(settings.posterSize);
+  const [posterLines, setPosterLines] = useSetting(settings.posterLines);
+  const [episodeLayout, setEpisodeLayout] = useSetting(settings.episodeLayout);
 
   const featuredOptions = [
     {
@@ -920,8 +908,8 @@ const DOCS_URL = 'https://docs.aiostreams.viren070.me';
 const CSS_DOCS_URL = `${DOCS_URL}/reference/web-app-css`;
 
 function ThemeSection() {
-  const [colors, setColors] = useThemeColors();
-  const [css, setCss] = useCustomCss();
+  const [colors, setColors] = useSetting(settings.themeColors);
+  const [css, setCss] = useSetting(settings.customCss);
   const [draft, setDraft] = React.useState(css);
   const accent = colors.accent ?? DEFAULT_ACCENT;
   const background = colors.background ?? DEFAULT_BACKGROUND;

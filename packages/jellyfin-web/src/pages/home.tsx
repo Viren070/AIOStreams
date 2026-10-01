@@ -28,12 +28,7 @@ import {
   untilLabel,
 } from '../lib/format';
 import { href, itemPath, navigate, to } from '../lib/paths';
-import {
-  useFeatured,
-  useHeroMode,
-  useMergeNextUp,
-  type FeaturedSource,
-} from '../lib/settings';
+import { settings, useSetting, type FeaturedSource } from '../lib/settings';
 import { useInView } from '../lib/use-in-view';
 import { FollowHero, Hero } from '../components/hero';
 import { MediaRow } from '../components/media-row';
@@ -90,8 +85,8 @@ export function HomePage() {
   const resume = useResume();
   const nextUp = useNextUp();
   const views = useViews();
-  const [featured] = useFeatured();
-  const [mergeNextUp] = useMergeNextUp();
+  const [featured] = useSetting(settings.featured);
+  const [mergeNextUp] = useSetting(settings.mergeNextUp);
   const merged = React.useMemo(
     () => mergeRows(resume.data?.Items, nextUp.data?.Items),
     [resume.data, nextUp.data]
@@ -134,7 +129,7 @@ export function HomePage() {
     (sources.includes('next-up') && nextUp.isLoading) ||
     heads.some((h) => h.isLoading);
   // Following needs a pointer to rest on cards and room for rows under the hero.
-  const [heroMode] = useHeroMode();
+  const [heroMode] = useSetting(settings.heroMode);
   const canFollow = useMediaQuery(
     '(min-width: 1024px) and (hover: hover) and (pointer: fine)'
   );

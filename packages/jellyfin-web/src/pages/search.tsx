@@ -6,7 +6,7 @@ import { useDebounce } from '@aiostreams/ui/hooks/debounce';
 import { useSession } from '../lib/session';
 import type { JellyfinClient } from '../lib/client';
 import { useSearch } from '../lib/queries';
-import { useCombineSearch } from '../lib/settings';
+import { settings, useSetting } from '../lib/settings';
 import { useSearchHistory } from '../lib/search-history';
 import { cardShape, posterUrl } from '../lib/images';
 import { itemSubtitle, progressOf } from '../lib/format';
@@ -22,7 +22,7 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
   const { client, user } = useSession();
   const [term, setTerm] = React.useState(initialTerm);
   const debounced = useDebounce(term.trim(), 400);
-  const [combine] = useCombineSearch();
+  const [combine] = useSetting(settings.combineSearch);
   // One search per kind, so neither fills the other's result limit.
   const mixed = useSearch(debounced, 'Movie,Series', combine);
   const movies = useSearch(debounced, 'Movie', !combine);
