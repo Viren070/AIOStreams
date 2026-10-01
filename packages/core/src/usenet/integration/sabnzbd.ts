@@ -263,6 +263,8 @@ async function listEntries(
     offset: start,
     sort: group === 'active' ? 'added' : 'activity',
     dir: group === 'active' ? 'asc' : 'desc',
+    // Only these rows get a `completed/` folder to report as `storage`.
+    origins: ['sabnzbd'],
     hidden: false,
   });
   const total = listed.total;
