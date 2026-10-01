@@ -403,14 +403,14 @@ fn socket_paths() -> Vec<PathBuf> {
             dirs.push(dir);
         }
     }
-    let mut subs = vec![
-        String::new(),
-        "snap.discord".into(),
-        "snap.discord-canary".into(),
-    ];
-    for id in FLATPAKS {
-        subs.push(format!("app/{id}"));
-        subs.push(format!(".flatpak/{id}/xdg-run"));
+    let mut subs = vec![String::new()];
+    if cfg!(target_os = "linux") {
+        subs.push("snap.discord".into());
+        subs.push("snap.discord-canary".into());
+        for id in FLATPAKS {
+            subs.push(format!("app/{id}"));
+            subs.push(format!(".flatpak/{id}/xdg-run"));
+        }
     }
     let mut out = Vec::new();
     for dir in dirs {
