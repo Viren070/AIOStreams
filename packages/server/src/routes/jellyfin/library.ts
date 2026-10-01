@@ -58,6 +58,7 @@ import {
   itemForId,
   itemFromDescriptor,
   itemsFromPreviews,
+  nextToAir,
   nextUpForSeries,
   rememberListMarkers,
   seasonsForSeries,
@@ -1027,6 +1028,46 @@ async function airingEpisodes(
   return withState.sort((a, b) => premiereOf(a) - premiereOf(b));
 }
 
+/** The next episode of each show caught up on, where it airs before `to`, soonest first. */
+async function upcomingEpisodes(
+  ctx: JellyfinRequestContext,
+  to: number
+): Promise<JellyfinItem[]> {
+  const recent = await getWatchStateProvider().listRecentSeries(
+    ctx.watch,
+    UPCOMING_SERIES
+  );
+  const now = Date.now();
+  const airsSoon = (e: JellyfinItem) => {
+    const at = premiereOf(e);
+    return at > now && at <= to;
+  };
+  const episodes: JellyfinItem[] = [];
+  const shown = new Set<string>();
+  for (let i = 0; i < recent.length; i += UPCOMING_CONCURRENCY) {
+    const batch = await Promise.all(
+      recent.slice(i, i + UPCOMING_CONCURRENCY).map(async (row) => {
+        // The cached dates rule most shows out before their episodes are read.
+        const dated = await datedForSeries(ctx, row, now).catch(() => []);
+        if (!dated.some(airsSoon)) return null;
+        const d = {
+          t: row.mediaType,
+          i: seriesIdOf(row.baseId, row.videoId, row.mediaType),
+        };
+        return nextToAir(ctx, d, row).catch(() => null);
+      })
+    );
+    for (const next of batch) {
+      if (!next || !airsSoon(next)) continue;
+      const series = String(next.SeriesId ?? next.Id);
+      if (shown.has(series)) continue;
+      shown.add(series);
+      episodes.push(next);
+    }
+  }
+  return episodes.sort((a, b) => premiereOf(a) - premiereOf(b));
+}
+
 router.get(
   '/Shows/Upcoming',
   jf(async (req, res, ctx) => {
@@ -1038,11 +1079,9 @@ router.get(
       return;
     }
     refreshWatchState(ctx);
-    const now = Date.now();
-    const episodes = await airingEpisodes(
+    const episodes = await upcomingEpisodes(
       ctx,
-      now,
-      now + appConfig.jellyfin.upcomingDays * DAY_MS
+      Date.now() + appConfig.jellyfin.upcomingDays * DAY_MS
     );
 
     send(

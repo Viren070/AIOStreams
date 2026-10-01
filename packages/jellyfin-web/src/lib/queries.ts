@@ -214,7 +214,7 @@ export function usePersonItems(personId: string, types: string) {
   });
 }
 
-/** Episodes of shows in progress that air in the next couple of weeks. */
+/** The next episode of each show the user is caught up on. */
 export function useUpcoming() {
   const { client, user } = useSession();
   return useQuery({

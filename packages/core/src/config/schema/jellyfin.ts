@@ -86,10 +86,10 @@ export const jellyfinSchema = {
   },
   upcomingDays: {
     schema: z.number().int().min(1).max(365),
-    default: 14,
+    default: 90,
     label: 'Upcoming window (days)',
     description:
-      'How far ahead the Upcoming row looks for episodes of shows you are part way through. A library only holds what exists, so Jellyfin itself needs no window, but metadata addons announce episodes months out and the row becomes a schedule rather than a shelf.',
+      'How far ahead the Upcoming row looks for the next episode of each show you are caught up on.',
     env: 'JELLYFIN_UPCOMING_DAYS',
     requiresRestart: false,
     secret: false,

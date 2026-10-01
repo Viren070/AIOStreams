@@ -640,6 +640,18 @@ export async function nextUpForSeries(
   return next;
 }
 
+/** The next episode to air, or null while the show has a Next Up. */
+export async function nextToAir(
+  ctx: JellyfinRequestContext,
+  d: { t: string; i: string },
+  last: WatchStateRow
+): Promise<JellyfinItem | null> {
+  const at = await watchingPosition(ctx, d, last);
+  if (!at || at.resume) return null;
+  const ahead = at.eps.slice(at.from + 1).filter((e) => !isPlayed(e));
+  return ahead.some((e) => !isUnairedEpisode(e)) ? null : (ahead[0] ?? null);
+}
+
 function resolveOnOpen(ctx: JellyfinRequestContext, asked = false): boolean {
   // An API key looks items up and never plays them.
   if (ctx.apiKey) return false;
