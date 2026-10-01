@@ -400,7 +400,6 @@ const ANONYMOUS_OK = [
   /^\/videos\/[^/]+\/stream(\.|\/|$)/i,
   /^\/videos\/[^/]+\/[^/]+\/subtitles\//i,
   /^\/items\/[^/]+\/(download|file)$/i,
-  /^\/items\/[^/]+$/i,
   /^\/items\/[^/]+\/playbackinfo$/i,
   /^\/items\/[^/]+\/mediasources$/i,
   /^\/web\/manifest\.json$/i,

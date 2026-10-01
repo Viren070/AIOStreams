@@ -6,7 +6,6 @@ import {
   watchIdentityFor,
   openWatchSession,
   resolveByItem,
-  resolveByMediaSource,
   descriptorOf,
   sessionKeyFor,
   TICKS_PER_MS,
@@ -28,7 +27,7 @@ import {
 import {
   boxSetChildren,
   contentRefOf,
-  decodeForRequest,
+  decodeItemForRequest,
   episodesForSeries,
   itemFromDescriptor,
 } from './items.js';
@@ -63,14 +62,8 @@ async function descriptorFor(
   id: string,
   opts: { season?: boolean } = {}
 ): Promise<ContentDescriptor | null> {
-  let decoded = await decodeForRequest(ctx, id);
-  if (decoded?.kind === 'source') {
-    const pointer = await resolveByMediaSource(decoded.msid);
-    if (!pointer || pointer.uuid !== ctx.uuid) return null;
-    decoded = await decodeForRequest(ctx, pointer.itemId);
-  }
-  if (!decoded || decoded.kind !== 'descriptor') return null;
-  const d = decoded.descriptor;
+  const d = await decodeItemForRequest(ctx, id);
+  if (!d) return null;
   return d.k === 'movie' ||
     d.k === 'episode' ||
     d.k === 'series' ||

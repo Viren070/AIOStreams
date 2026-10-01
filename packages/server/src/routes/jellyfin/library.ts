@@ -51,6 +51,7 @@ import {
   attachUserData,
   boxSetChildren,
   decodeForRequest,
+  decodeItemForRequest,
   isBoxsetCatalog,
   isBoxsetEntry,
   episodesForSeries,
@@ -58,6 +59,7 @@ import {
   itemFromDescriptor,
   itemsFromPreviews,
   nextUpForSeries,
+  rememberListMarkers,
   seasonsForSeries,
   viewItems,
 } from './items.js';
@@ -90,6 +92,13 @@ function excludeTypes(req: Request, items: JellyfinItem[]): JellyfinItem[] {
   return excluded.size
     ? items.filter((i) => !excluded.has(String(i.Type).toLowerCase()))
     : items;
+}
+
+/** Undefined without Fields: Jellyfin's single-item route takes none and always sends MediaSources. */
+function wantsVersions(req: Request): boolean | undefined {
+  const fields = qlist(req, 'Fields');
+  if (!fields.length) return undefined;
+  return fields.some((f) => f.toLowerCase() === 'mediasources');
 }
 
 /** Jellyfin's SortOrder, when a request gives one. */
@@ -244,20 +253,22 @@ function applyUserFilters(req: Request, items: JellyfinItem[]): JellyfinItem[] {
   const isPlayed = qb(req, 'IsPlayed');
   const isFavorite = qb(req, 'IsFavorite');
   const ud = (i: JellyfinItem) =>
-    i.UserData as {
-      Played: boolean;
-      IsFavorite: boolean;
-      PlaybackPositionTicks: number;
-    };
+    i.UserData as
+      | {
+          Played: boolean;
+          IsFavorite: boolean;
+          PlaybackPositionTicks: number;
+        }
+      | undefined;
   let out = items;
   if (filters.includes('isplayed') || isPlayed === true)
-    out = out.filter((i) => ud(i).Played);
+    out = out.filter((i) => ud(i)?.Played);
   if (filters.includes('isunplayed') || isPlayed === false)
-    out = out.filter((i) => !ud(i).Played);
+    out = out.filter((i) => !ud(i)?.Played);
   if (filters.includes('isfavorite') || isFavorite === true)
-    out = out.filter((i) => ud(i).IsFavorite);
+    out = out.filter((i) => ud(i)?.IsFavorite);
   if (filters.includes('isresumable'))
-    out = out.filter((i) => ud(i).PlaybackPositionTicks > 0);
+    out = out.filter((i) => (ud(i)?.PlaybackPositionTicks ?? 0) > 0);
   return out;
 }
 
@@ -297,6 +308,7 @@ function send(
   total?: number,
   startIndex = 0
 ) {
+  if (req.jf) rememberListMarkers(req.jf, items);
   const out = items.map(stripInternal);
   res.json(listResult(out, wantsTotal(req) ? total : out.length, startIndex));
 }
@@ -422,22 +434,32 @@ async function handleItems(
   const wantsResumable = filters.includes('isresumable');
   const recursive = qb(req, 'Recursive') ?? false;
   const personIds = qlist(req, 'PersonIds');
-  const engine = await ctx.engine();
 
   if (ids.length) {
-    // Versions come only when asked for, as Jellyfin's do, and only for one
-    // id: resolving a row would run the stream pipeline once per id.
-    const wantsSources = qlist(req, 'Fields').some(
-      (f) => f.toLowerCase() === 'mediasources'
-    );
-    const resolve = ids.length === 1 && wantsSources ? undefined : false;
+    // Resolving runs the stream pipeline, so a lookup of several ids never does.
+    const resolve = ids.length === 1 && (wantsVersions(req) ?? false);
     const built = await mapLimited(ids.slice(0, 200), ROW_CONCURRENCY, (id) =>
-      itemForId(req, ctx, id, { resolve }).catch(() => null)
+      itemForId(req, ctx, id, { resolve, listed: true }).catch(() => null)
     );
-    const items = built.filter((item): item is JellyfinItem => !!item);
-    send(req, res, filterByType(items, types), items.length, 0);
+    const items = applySort(
+      req,
+      excludeTypes(
+        req,
+        applyUserFilters(
+          req,
+          filterByType(
+            built.filter((item): item is JellyfinItem => !!item),
+            types
+          )
+        )
+      )
+    );
+    const end = qs(req, 'Limit') ? startIndex + limit : items.length;
+    send(req, res, items.slice(startIndex, end), items.length, startIndex);
     return;
   }
+
+  const engine = await ctx.engine();
 
   const parent = parentId ? await decodeForRequest(ctx, parentId) : null;
   const pd = parent?.kind === 'descriptor' ? parent.descriptor : null;
@@ -810,7 +832,9 @@ router.get(
         if (items.length >= limit) break;
       }
     }
-    res.json(filterByType(items, types).slice(0, limit).map(stripInternal));
+    const latest = filterByType(items, types).slice(0, limit);
+    rememberListMarkers(ctx, latest);
+    res.json(latest.map(stripInternal));
   })
 );
 
@@ -1107,7 +1131,9 @@ router.get(
   (req, _res, next) =>
     RESERVED_ITEM_IDS.test(param(req, 'itemId')) ? next('route') : next(),
   jf(async (req, res, ctx) => {
-    const item = await itemForId(req, ctx, param(req, 'itemId'));
+    const item = await itemForId(req, ctx, param(req, 'itemId'), {
+      resolve: wantsVersions(req),
+    });
     if (!item) {
       res.status(404).json({ Message: 'Item not found' });
       return;
@@ -1119,10 +1145,9 @@ router.get(
 router.get(
   '/Items/:itemId/Ancestors',
   jf(async (req, res, ctx) => {
-    const d = await decodeForRequest(ctx, param(req, 'itemId'));
+    const desc = await decodeItemForRequest(ctx, param(req, 'itemId'));
     const out: JellyfinItem[] = [];
-    if (d?.kind === 'descriptor') {
-      const desc = d.descriptor;
+    if (desc) {
       if (desc.k === 'episode') {
         const season = await itemFromDescriptor(ctx, {
           k: 'season',
@@ -1164,16 +1189,12 @@ router.get(
     '/Shows/:itemId/Similar',
   ],
   jf(async (req, res, ctx) => {
-    const d = await decodeForRequest(ctx, param(req, 'itemId'));
+    const desc = await decodeItemForRequest(ctx, param(req, 'itemId'));
     const limit = Math.min(Math.max(1, qi(req, 'Limit', 12)), 50);
-    if (
-      d?.kind !== 'descriptor' ||
-      (d.descriptor.k !== 'movie' && d.descriptor.k !== 'series')
-    ) {
+    if (desc?.k !== 'movie' && desc?.k !== 'series') {
       send(req, res, [], 0, 0);
       return;
     }
-    const desc = d.descriptor;
     const meta = await getMetaLoose(ctx, desc.t, desc.i);
     const engine = await ctx.engine();
     // TMDB's picks when it knows the title; else the top of its first genre.
@@ -1231,13 +1252,13 @@ router.get(
         startIndex: 0,
         limit,
       });
+      const items = await itemsFromPreviews(ctx, page.items, {
+        parentId: view.id,
+        catalog: view.catalog,
+      });
+      rememberListMarkers(ctx, items);
       out.push({
-        Items: (
-          await itemsFromPreviews(ctx, page.items, {
-            parentId: view.id,
-            catalog: view.catalog,
-          })
-        ).map(stripInternal),
+        Items: items.map(stripInternal),
         RecommendationType: 'SimilarToRecentlyPlayed',
         BaselineItemName: view.catalog.name,
         CategoryId: view.id,

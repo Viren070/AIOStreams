@@ -621,7 +621,7 @@ export async function nextUpForSeries(
   return next;
 }
 
-function resolveOnOpen(ctx: JellyfinRequestContext): boolean {
+function resolveOnOpen(ctx: JellyfinRequestContext, asked = false): boolean {
   // An API key looks items up and never plays them.
   if (ctx.apiKey) return false;
   switch (appConfig.jellyfin.resolveOnOpen) {
@@ -630,7 +630,7 @@ function resolveOnOpen(ctx: JellyfinRequestContext): boolean {
     case 'never':
       return false;
     default:
-      return ctx.userData.jellyfin?.resolveOnOpen ?? true;
+      return asked || (ctx.userData.jellyfin?.resolveOnOpen ?? true);
   }
 }
 
@@ -694,6 +694,32 @@ export function mediaSourcesFrom(
   );
 }
 
+/** Lets the "Load versions" id, a hash, lead back to its item. */
+function rememberMarker(ctx: JellyfinRequestContext, itemId: string): string {
+  const marker = resolveMarkerId(ctx, itemId);
+  void writeMemoPointer(marker, {
+    uuid: ctx.uuid,
+    encryptedPassword: ctx.encryptedPassword,
+    itemId,
+    persona: ctx.persona?.id,
+  }).catch(() => undefined);
+  return marker;
+}
+
+/** List rows offer the marker as well, for clients that never open the item. */
+export function rememberListMarkers(
+  ctx: JellyfinRequestContext,
+  items: JellyfinItem[]
+): void {
+  if (!ctx.build.listVersions) return;
+  for (const item of items) {
+    const sources = item.MediaSources as JellyfinMediaSource[] | undefined;
+    const marker = resolveMarkerId(ctx, String(item.Id));
+    if (sources?.some((s) => s.Id === marker))
+      rememberMarker(ctx, String(item.Id));
+  }
+}
+
 export function placeholderSources(
   req: Request,
   ctx: JellyfinRequestContext,
@@ -704,16 +730,9 @@ export function placeholderSources(
   if (resolved) {
     return [placeholderMediaSource(itemId, 'No streams found', path)];
   }
-  const marker = resolveMarkerId(ctx, itemId);
-  void writeMemoPointer(marker, {
-    uuid: ctx.uuid,
-    encryptedPassword: ctx.encryptedPassword,
-    itemId,
-    persona: ctx.persona?.id,
-  }).catch(() => undefined);
   return [
     placeholderMediaSource(itemId, 'Streams resolve on play', path),
-    placeholderMediaSource(marker, 'Load versions', path),
+    placeholderMediaSource(rememberMarker(ctx, itemId), 'Load versions', path),
   ];
 }
 
@@ -726,7 +745,7 @@ export async function detailItem(
     forceResolve?: boolean;
     requestedMsid?: string;
     overrideId?: string;
-    /** Lookups that did not ask for a version list never resolve. */
+    /** `true`: the client asked for versions, which beats the user's switch. `false` never resolves. */
     resolve?: boolean;
   } = {}
 ): Promise<JellyfinItem | null> {
@@ -747,7 +766,8 @@ export async function detailItem(
       ? existing
       : null;
   const shouldResolve =
-    opts.resolve !== false && (opts.forceResolve || resolveOnOpen(ctx));
+    opts.resolve !== false &&
+    (opts.forceResolve || resolveOnOpen(ctx, opts.resolve));
   const resolveNow = async () => {
     if (!opts.forceResolve && !(await stremioStreamRateLimiter.tryConsume(req)))
       return null;
@@ -773,12 +793,26 @@ export async function detailItem(
   return item;
 }
 
+/** Decodes an id, following a version's id to its item. */
+export async function decodeItemForRequest(
+  ctx: JellyfinRequestContext,
+  raw: string
+): Promise<JellyfinDescriptor | null> {
+  let decoded = await decodeForRequest(ctx, raw);
+  if (decoded?.kind === 'source') {
+    const pointer = await resolveByMediaSource(decoded.msid);
+    if (!pointer || pointer.uuid !== ctx.uuid) return null;
+    decoded = await decodeForRequest(ctx, pointer.itemId);
+  }
+  return decoded?.kind === 'descriptor' ? decoded.descriptor : null;
+}
+
 /** `/Items/{id}` where id may be a content id, a media source id or a resolve marker. */
 export async function itemForId(
   req: Request,
   ctx: JellyfinRequestContext,
   raw: string,
-  opts: { resolve?: boolean } = {}
+  opts: { resolve?: boolean; listed?: boolean } = {}
 ): Promise<JellyfinItem | null> {
   const decoded = await decodeForRequest(ctx, raw);
   if (!decoded) return null;
@@ -789,8 +823,14 @@ export async function itemForId(
     if (!inner || inner.kind !== 'descriptor') return null;
     const d = inner.descriptor as ContentDescriptor;
     // The marker id is derived from the item, so recognising it needs no state.
+    // Opening it asks for versions; a list only names it.
     if (decoded.msid === resolveMarkerId(ctx, pointer.itemId)) {
-      return detailItem(req, ctx, d, { forceResolve: true });
+      return detailItem(
+        req,
+        ctx,
+        d,
+        opts.listed ? { resolve: opts.resolve } : { forceResolve: true }
+      );
     }
     // A client asking by source id expects it first, under the item's own id.
     return detailItem(req, ctx, d, {

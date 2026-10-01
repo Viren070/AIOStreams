@@ -3225,7 +3225,7 @@ function Content() {
                       }
                       moreHelp={
                         jellyfinResolveForced === null
-                          ? 'Off, streams are fetched when playback starts: lighter, but the list shows a placeholder until then.'
+                          ? 'Off, streams are fetched when playback starts or an app asks for the version list: lighter, but the list shows a placeholder until then.'
                           : undefined
                       }
                       side="right"

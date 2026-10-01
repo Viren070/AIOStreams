@@ -132,7 +132,7 @@ export const jellyfinSchema = {
     default: 'user',
     label: 'Resolve streams when an item is opened',
     description:
-      'Stock clients build their version picker from the item page, which means fetching streams before playback starts. **always** does that for everyone, **never** only resolves on play (the picker shows a placeholder until then), **user** lets each configuration choose.',
+      'Stock clients build their version picker from the item page, which means fetching streams before playback starts. **always** does that for everyone, **never** only resolves on play (the picker shows a placeholder until then), **user** lets each configuration choose, though an app that asks the item for its versions gets them either way.',
     env: 'JELLYFIN_RESOLVE_ON_OPEN',
     requiresRestart: false,
     secret: false,
