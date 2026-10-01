@@ -3,12 +3,13 @@ import { Button } from '@aiostreams/ui/button';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import { useSession } from '../lib/session';
 import { usePickableUsers, useViews } from '../lib/queries';
-import { useServerInfo } from '../lib/server-info';
+import { useFeature, useServerInfo } from '../lib/server-info';
 import { configureUrl } from '../lib/paths';
 
 export function NoCatalogs() {
   const { client, switchUser, changeServer } = useSession();
   const configure = configureUrl(client.base, useServerInfo());
+  const configTip = useFeature('configSignIn');
   const views = useViews();
   const users = usePickableUsers();
   const several = (users.data?.length ?? 0) > 1;
@@ -54,12 +55,12 @@ export function NoCatalogs() {
           </Button>
         )}
       </div>
-      {configure && (
+      {configure && configTip && (
         <Alert
           data-ui="no-catalogs-tip"
           intent="info-basic"
           className="mx-auto mt-6 max-w-md text-left"
-          description="Add a catalog addon from the Marketplace, or any addon with Custom."
+          description="Install catalog addons from Addons → Marketplace. For one that isn't listed, use the Custom addon there."
         />
       )}
     </LuffyError>

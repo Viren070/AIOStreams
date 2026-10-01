@@ -64,12 +64,13 @@ function AddServer({
           Add a server
         </h1>
         <p className="text-sm text-[--muted]">
-          The address you open the web app at, or the server&apos;s own address.
+          The address of the AIOStreams instance where you set up your addon.
+          Other Jellyfin servers work too.
         </p>
       </div>
       <TextInput
         label="Server address"
-        placeholder="https://example.com"
+        placeholder="https://aiostreams.example.com"
         value={address}
         onValueChange={setAddress}
         autoComplete="url"

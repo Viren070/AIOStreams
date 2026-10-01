@@ -634,11 +634,13 @@ function AppFact({
 
 function AppBlock({
   webAppUrl,
+  desktopLink,
   onOpenServer,
   disabled,
   disabledReason,
 }: {
   webAppUrl: string;
+  desktopLink: string;
   onOpenServer: (tab: ServerTab) => void;
   disabled?: boolean;
   disabledReason?: string;
@@ -671,16 +673,27 @@ function AppBlock({
             <Button
               onClick={() => window.open(webAppUrl, '_blank', 'noopener')}
               intent="primary"
-              className="w-full shadow-md"
+              className="w-full shadow-md sm:col-span-2"
               leftIcon={<MonitorPlay className="h-4 w-4" />}
               disabled={disabled}
             >
               Open in browser
             </Button>
+            {download.os && (
+              <Button
+                onClick={() => window.open(desktopLink)}
+                intent="gray-outline"
+                className="w-full"
+                leftIcon={<Monitor className="h-4 w-4" />}
+                disabled={disabled}
+              >
+                Open in desktop app
+              </Button>
+            )}
             <Button
               onClick={() => window.open(download.url, '_blank', 'noopener')}
               intent="gray-outline"
-              className="w-full"
+              className={download.os ? 'w-full' : 'w-full sm:col-span-2'}
               leftIcon={<DownloadIcon className="h-4 w-4" />}
               disabled={disabled}
             >
@@ -748,6 +761,7 @@ interface InstallCardProps {
   manifestUrl: string;
   usingAlias: boolean;
   webAppUrl: string;
+  desktopLink: string;
   onCopyManifestUrl: () => void;
   onOpenChillio: () => void;
   onOpenSeanime: () => void;
@@ -771,6 +785,7 @@ function InstallCard({
   manifestUrl,
   usingAlias,
   webAppUrl,
+  desktopLink,
   variantSelector,
   onCopyManifestUrl,
   onOpenChillio,
@@ -875,6 +890,7 @@ function InstallCard({
 
         <AppBlock
           webAppUrl={webAppUrl}
+          desktopLink={desktopLink}
           onOpenServer={onOpenJellyfin}
           disabled={disableJellyfinCard}
           disabledReason={jellyfinDisabledReason}
@@ -1081,6 +1097,8 @@ const DESKTOP_GUIDE_URL =
 interface DesktopDownload {
   label: string;
   url: string;
+  /** Unset where the desktop app doesn't run, such as on a phone. */
+  os?: DesktopOs;
 }
 
 type UADataNavigator = Navigator & {
@@ -1155,7 +1173,8 @@ function useDesktopDownload(): DesktopDownload {
       })
       .catch(() => {});
   }, []);
-  return desktopDownload(desktopOs(), arch);
+  const os = desktopOs();
+  return { ...desktopDownload(os, arch), os };
 }
 
 const VARIANT_LOCATION_STORAGE_KEY = 'aiostreams:install:variant-location';
@@ -2125,6 +2144,7 @@ function Content() {
       ? `${baseUrl}/jellyfin/${uuid}/${encryptedPassword}`
       : '';
   const jellyfinWebAppUrl = `${jellyfinPickerUrl || jellyfinServerUrl}/web/`;
+  const jellyfinDesktopLink = `aiostreams://server?url=${encodeURIComponent(jellyfinPickerUrl || jellyfinServerUrl)}`;
   const copyJellyfinPickerUrl = async () => {
     await copyToClipboard(jellyfinPickerUrl, {
       onSuccess: () => toast.success('Server address copied to clipboard'),
@@ -2377,6 +2397,7 @@ function Content() {
               manifestUrl={manifestUrl}
               usingAlias={!!aliasForInstall}
               webAppUrl={jellyfinWebAppUrl}
+              desktopLink={jellyfinDesktopLink}
               variantSelector={
                 enabledVariants.length > 0 ? (
                   <VariantSelector
