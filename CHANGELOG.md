@@ -1,5 +1,26 @@
 # Changelog
 
+## [2.35.6](https://github.com/Viren070/AIOStreams/compare/v2.35.5...v2.35.6) (2026-10-01)
+
+
+### Features
+
+* **frontend:** open the desktop app from the install card ([3646b0e](https://github.com/Viren070/AIOStreams/commit/3646b0ea7b22e71b5eacac93e0d1126ca450fa5d))
+* **jellyfin-web:** send skip actions to the Android app's player ([f2345c2](https://github.com/Viren070/AIOStreams/commit/f2345c2fe1f1a169571c6c2d23425f9a49a93d5a))
+* **jellyfin-web:** show a message for no libraries ([563126e](https://github.com/Viren070/AIOStreams/commit/563126e324678d9a5c632252d52a49812ce315e5))
+* **jellyfin:** append client device/name to user agent for variants ([be4b308](https://github.com/Viren070/AIOStreams/commit/be4b308d6eff72eedeb61cdaafcf2b37cab97560))
+* **jellyfin:** link the configuration's own page when the address names it ([8673164](https://github.com/Viren070/AIOStreams/commit/86731647ab1cd861813b5712865cb3c4cb943c18))
+
+
+### Bug Fixes
+
+* **jellyfin:** line up the single-item and Ids lookups ([b34976c](https://github.com/Viren070/AIOStreams/commit/b34976c7e40bcc10f8db96391836de1333bdc170))
+* **jellyfin:** look up season anime ids by the show's own id ([f9a9fbb](https://github.com/Viren070/AIOStreams/commit/f9a9fbb4ff7d2b9715385932f1030e1606e1f197))
+* **jellyfin:** look up stream and subtitle requests under their play session's scope ([759ae6b](https://github.com/Viren070/AIOStreams/commit/759ae6b590e63144a0228fcef93640aed09b6868))
+* **metadata:** pass original language into TMDB title dedup ([#1408](https://github.com/Viren070/AIOStreams/issues/1408)) ([cce26dd](https://github.com/Viren070/AIOStreams/commit/cce26dda70aa60e68fa4ce35c4f99ddc205551ac))
+* **schemas:** drop a video's ratings when they are not a list ([9d1dfdb](https://github.com/Viren070/AIOStreams/commit/9d1dfdb658fd5ac21ee80db3b9908ffca45640af))
+* **usenet:** list only SABnzbd-added rows in the SABnzbd queue and history ([5351691](https://github.com/Viren070/AIOStreams/commit/535169126a44a01fe5083025f205b8d26639a6a4))
+
 ## [2.35.5](https://github.com/Viren070/AIOStreams/compare/v2.35.4...v2.35.5) (2026-09-30)
 
 
