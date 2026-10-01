@@ -64,7 +64,7 @@ import {
   seasonsForSeries,
   viewItems,
 } from './items.js';
-import { getMetaLoose } from './resolve.js';
+import { getMeta } from './resolve.js';
 
 const router: Router = Router({ mergeParams: true });
 
@@ -468,7 +468,7 @@ async function handleItems(
   // A collection meta is a BoxSet whatever type it is served as.
   const collectionParent =
     pd?.k === 'series'
-      ? !!(await getMetaLoose(ctx, pd.t, pd.i).catch(() => null))?.collection
+      ? !!(await getMeta(ctx, pd.t, pd.i).catch(() => null))?.collection
       : false;
   if (pd?.k === 'series' && !collectionParent) {
     if (types?.has('episode') || recursive) {
@@ -515,7 +515,7 @@ async function handleItems(
     (pd?.k === 'movie' && !pd.p) ||
     (pd?.k === 'series' && collectionParent)
   ) {
-    const meta = await getMetaLoose(ctx, pd.t, pd.i).catch(() => null);
+    const meta = await getMeta(ctx, pd.t, pd.i).catch(() => null);
     if (meta?.collection) {
       const page = await collectionMembers(engine, meta, {
         startIndex,
@@ -1234,7 +1234,7 @@ router.get(
       send(req, res, [], 0, 0);
       return;
     }
-    const meta = await getMetaLoose(ctx, desc.t, desc.i);
+    const meta = await getMeta(ctx, desc.t, desc.i);
     const engine = await ctx.engine();
     // TMDB's picks when it knows the title; else the top of its first genre.
     const recommended = await recommendedPreviews(

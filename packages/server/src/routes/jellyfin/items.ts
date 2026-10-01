@@ -68,7 +68,7 @@ import {
   ANDROID_PLAYER_CLIENT,
   type JellyfinRequestContext,
 } from './context.js';
-import { getMetaLoose, resolveMarkerId, resolvePlayback } from './resolve.js';
+import { getMeta, resolveMarkerId, resolvePlayback } from './resolve.js';
 
 export function contentRefOf(d: ContentDescriptor): ContentRef {
   switch (d.k) {
@@ -272,7 +272,7 @@ export async function seasonsForSeries(
   seriesItem: JellyfinItem;
   seasons: JellyfinItem[];
 } | null> {
-  const meta = await getMetaLoose(ctx, d.t, d.i);
+  const meta = await getMeta(ctx, d.t, d.i);
   if (!meta) return null;
   const seriesItem = buildContentItem(ctx.build, { ...meta, type: d.t });
   const groups = groupSeasons(meta, true);
@@ -319,7 +319,7 @@ export async function episodesForSeries(
   seriesItem: JellyfinItem;
   episodes: JellyfinItem[];
 } | null> {
-  const meta = await getMetaLoose(ctx, d.t, d.i);
+  const meta = await getMeta(ctx, d.t, d.i);
   if (!meta) return null;
   const seriesItem = buildContentItem(ctx.build, { ...meta, type: d.t });
   const groups = groupSeasons(meta, true).filter(
@@ -353,7 +353,7 @@ export async function boxSetChildren(
   boxset: JellyfinItem;
   children: JellyfinItem[];
 } | null> {
-  const meta = await getMetaLoose(ctx, d.t, d.i);
+  const meta = await getMeta(ctx, d.t, d.i);
   if (meta?.collection) {
     const { items } = await collectionMembers(await ctx.engine(), meta, {
       startIndex: 0,
@@ -434,7 +434,7 @@ export async function itemFromDescriptor(
     case 'source':
       return null;
     case 'boxset': {
-      const meta = await getMetaLoose(ctx, d.t, d.i);
+      const meta = await getMeta(ctx, d.t, d.i);
       if (!meta || (!meta.collection && !meta.videos?.length)) return null;
       const item = buildContentItem(
         ctx.build,
@@ -445,7 +445,7 @@ export async function itemFromDescriptor(
     }
     case 'movie':
     case 'series': {
-      const meta = await getMetaLoose(ctx, d.t, d.i);
+      const meta = await getMeta(ctx, d.t, d.i);
       if (!meta && d.k === 'movie' && d.p) {
         // A collection's movie may exist only as an entry in its parent.
         const id = encodeItemId(d);
@@ -481,7 +481,7 @@ export async function itemFromDescriptor(
       return r?.seasons.find((s) => s.IndexNumber === d.s) ?? null;
     }
     case 'episode': {
-      const meta = await getMetaLoose(ctx, d.t, d.i);
+      const meta = await getMeta(ctx, d.t, d.i);
       if (!meta) return null;
       const seriesItem = buildContentItem(ctx.build, { ...meta, type: d.t });
       const groups = groupSeasons(meta, true);

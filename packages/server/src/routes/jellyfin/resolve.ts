@@ -33,8 +33,7 @@ import type { JellyfinRequestContext } from './context.js';
 
 const logger = createLogger('jellyfin');
 
-/** Anime metas are often served under `series`, and the other way round. */
-export function getMetaLoose(
+export function getMeta(
   ctx: JellyfinRequestContext,
   type: string,
   id: string
@@ -42,49 +41,36 @@ export function getMetaLoose(
   const key = `${type}|${id}`;
   let pending = ctx.metas.get(key);
   if (!pending) {
-    pending = fetchMetaLoose(ctx, type, id);
+    pending = fetchMeta(ctx, type, id);
     ctx.metas.set(key, pending);
   }
   return pending;
 }
 
-async function fetchMetaLoose(
+async function fetchMeta(
   ctx: JellyfinRequestContext,
   type: string,
   id: string
 ): Promise<ParsedMeta | null> {
   const engine = await ctx.engine();
-  const order =
-    type === 'anime'
-      ? [type, 'series']
-      : type === 'series'
-        ? [type, 'anime']
-        : [type];
-  for (const t of order) {
-    try {
-      const res = await engine.getMeta(t, id);
-      if (res.data) {
-        if (
-          type !== 'movie' &&
-          res.data.videos?.length &&
-          !hasProgrammeVideos(res.data)
-        ) {
-          rememberShowEpisodes(ctx.scope(), type, id, res.data);
-        }
-        return res.data;
-      }
-    } catch (error) {
-      logger.debug(
-        {
-          type: t,
-          id,
-          err: error instanceof Error ? error.message : String(error),
-        },
-        'meta failed'
-      );
+  try {
+    const res = await engine.getMeta(type, id);
+    if (!res.data) return null;
+    if (
+      type !== 'movie' &&
+      res.data.videos?.length &&
+      !hasProgrammeVideos(res.data)
+    ) {
+      rememberShowEpisodes(ctx.scope(), type, id, res.data);
     }
+    return res.data;
+  } catch (error) {
+    logger.debug(
+      { type, id, err: error instanceof Error ? error.message : String(error) },
+      'meta failed'
+    );
+    return null;
   }
-  return null;
 }
 
 export interface PlayTarget {
@@ -106,7 +92,7 @@ export async function playTargetFor(
   d: ContentDescriptor
 ): Promise<PlayTarget | null> {
   if (d.k === 'episode') {
-    const meta = await getMetaLoose(ctx, d.t, d.i).catch(() => null);
+    const meta = await getMeta(ctx, d.t, d.i).catch(() => null);
     const video = meta?.videos?.find((v) => v.id === d.v) as
       | MetaVideo
       | undefined;
@@ -120,7 +106,7 @@ export async function playTargetFor(
   }
   if (d.k === 'movie') {
     // A collection's movie is one of its parent's videos.
-    const meta = await getMetaLoose(ctx, d.t, d.p ?? d.i).catch(() => null);
+    const meta = await getMeta(ctx, d.t, d.p ?? d.i).catch(() => null);
     const hinted = d.p ? undefined : meta?.behaviorHints?.defaultVideoId;
     const videoId = typeof hinted === 'string' && hinted ? hinted : d.i;
     const video = meta?.videos?.find((v) => v.id === videoId) as
@@ -130,7 +116,7 @@ export async function playTargetFor(
       parseRuntimeMs(video?.runtime) ??
       (d.p
         ? parseRuntimeMs(
-            (await getMetaLoose(ctx, d.t, d.i).catch(() => null))?.runtime
+            (await getMeta(ctx, d.t, d.i).catch(() => null))?.runtime
           )
         : parseRuntimeMs(meta?.runtime));
     return {
@@ -275,7 +261,7 @@ async function resolveUncached(
   const engine = await ctx.engine();
   const liveContent = isLiveContent(
     target.type,
-    await getMetaLoose(ctx, d.t, d.k === 'movie' ? (d.p ?? d.i) : d.i).catch(
+    await getMeta(ctx, d.t, d.k === 'movie' ? (d.p ?? d.i) : d.i).catch(
       () => null
     )
   );
