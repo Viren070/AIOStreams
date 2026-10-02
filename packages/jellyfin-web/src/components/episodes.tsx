@@ -16,7 +16,7 @@ import {
   unavailableLabel,
   untilLabel,
 } from '../lib/format';
-import { Artwork, ProgressBar } from './cards';
+import { Artwork, OpenedPulse, ProgressBar } from './cards';
 import { OverviewInfo } from './overview';
 import { ItemMenu } from './item-menu';
 import { useVersionPicker } from './version-picker';
@@ -153,10 +153,7 @@ function Thumb({
         </div>
       )}
       {progress != null && progress > 0 && <ProgressBar percent={progress} />}
-      {/* Drawn inside, since a row clips anything outside it. */}
-      {highlighted && (
-        <span className="pointer-events-none absolute inset-0 rounded-[inherit] ring-2 ring-inset ring-brand-400" />
-      )}
+      {highlighted && <OpenedPulse />}
     </div>
   );
 }
@@ -359,11 +356,9 @@ function EpisodeListItem({
         data-ui="episode-list-item"
         {...episodeState(episode)}
         data-highlighted={highlighted || undefined}
-        className={cn(
-          'group/episode relative grid grid-cols-[40%_minmax(0,1fr)] gap-x-3 gap-y-2 rounded-xl p-2 transition-colors hover:bg-white/[0.04] sm:grid-cols-[13rem_minmax(0,1fr)] sm:grid-rows-[auto_1fr] sm:gap-x-4 sm:gap-y-1',
-          highlighted && 'bg-white/[0.06] ring-1 ring-inset ring-brand-400'
-        )}
+        className="group/episode relative grid grid-cols-[40%_minmax(0,1fr)] gap-x-3 gap-y-2 rounded-xl p-2 transition-colors hover:bg-white/[0.04] sm:grid-cols-[13rem_minmax(0,1fr)] sm:grid-rows-[auto_1fr] sm:gap-x-4 sm:gap-y-1"
       >
+        {highlighted && <OpenedPulse />}
         <Thumb
           episode={episode}
           playable={!!play}

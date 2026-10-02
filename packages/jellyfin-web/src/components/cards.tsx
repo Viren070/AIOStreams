@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'motion/react';
 import { BiCheck, BiPlay } from 'react-icons/bi';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useHold } from '../lib/use-hold';
@@ -245,6 +246,20 @@ export function FocusRing({ className }: { className: string }) {
         'pointer-events-none absolute inset-0 z-[1] rounded-[inherit] opacity-0 ring-2 ring-inset ring-[--ring]',
         className
       )}
+    />
+  );
+}
+
+/** Points out the item a page opened on with a ring that blinks, then fades. */
+export function OpenedPulse() {
+  return (
+    <motion.span
+      aria-hidden
+      data-ui="opened-pulse"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: [0, 1, 0.3, 1, 0] }}
+      transition={{ duration: 2, delay: 0.3, times: [0, 0.15, 0.35, 0.55, 1] }}
+      className="pointer-events-none absolute inset-0 z-[1] rounded-[inherit] ring-2 ring-inset ring-[--ring]"
     />
   );
 }
