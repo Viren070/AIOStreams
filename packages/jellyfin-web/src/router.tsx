@@ -147,13 +147,14 @@ const itemRoute = createRoute({
     season: search.season == null ? undefined : String(search.season),
     episode: search.episode == null ? undefined : String(search.episode),
     pick: search.pick == null ? undefined : String(search.pick),
+    play: search.play == null ? undefined : String(search.play),
   }),
   component: ItemRouteView,
 });
 
 function ItemRouteView(): React.ReactElement {
   const { itemId } = itemRoute.useParams();
-  const { season, episode, pick } = itemRoute.useSearch();
+  const { season, episode, pick, play } = itemRoute.useSearch();
   return (
     <ItemPage
       key={itemId}
@@ -161,6 +162,7 @@ function ItemRouteView(): React.ReactElement {
       seasonId={season}
       episodeId={episode}
       pickId={pick}
+      playId={play}
     />
   );
 }
@@ -242,9 +244,12 @@ export const webRouter = createRouter({
   scrollRestoration: true,
 });
 
-setNavigator((path, replace) =>
-  replace ? webRouter.history.replace(path) : webRouter.history.push(path)
-);
+setNavigator((path, replace) => {
+  if (!replace) return webRouter.history.push(path);
+  webRouter.history.replace(path);
+  // The history batches a tick's changes into one, so a push right after would drop this.
+  webRouter.history.flush();
+});
 
 /*
  * In-app links are plain anchors, so opening one in a new tab works. A plain

@@ -69,18 +69,26 @@ interface PickerValue {
 const PickerContext = React.createContext<PickerValue | null>(null);
 
 /** Opens the picker once, then drops `pick` from the address. */
-export function PickOnArrival({ itemId }: { itemId: string }) {
+export function PickOnArrival({
+  itemId,
+  play,
+}: {
+  itemId: string;
+  /** As Play does, which skips the list when the setting says so. */
+  play?: boolean;
+}) {
   const item = useItem(itemId);
   const picker = useVersionPicker();
   const opened = React.useRef(false);
   React.useEffect(() => {
     if (!item.data || opened.current) return;
     opened.current = true;
-    picker.open(item.data, {
-      startMs: ticksToMs(item.data.UserData?.PlaybackPositionTicks),
-    });
+    const startMs = ticksToMs(item.data.UserData?.PlaybackPositionTicks);
+    // First, since resuming a remembered version goes straight to the player.
     navigate(itemPath(item.data), { replace: true });
-  }, [item.data, picker]);
+    if (play) picker.play(item.data, { startMs });
+    else picker.open(item.data, { startMs });
+  }, [item.data, picker, play]);
   return null;
 }
 
