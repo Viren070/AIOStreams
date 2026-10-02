@@ -17,6 +17,7 @@ import {
   jfOptional,
   param,
   personasOf,
+  qi,
   qs,
 } from './context.js';
 import { itemFromDescriptor } from './items.js';
@@ -107,15 +108,69 @@ function shouldRelay(req: Request): boolean {
   );
 }
 
+/** The width a client asked for, under whichever name it used. */
+function requestedWidth(req: Request): number | undefined {
+  for (const name of ['maxWidth', 'fillWidth', 'width']) {
+    const width = qi(req, name, 0);
+    if (width > 0) return width;
+  }
+  return undefined;
+}
+
+const TMDB = /^https:\/\/image\.tmdb\.org\/t\/p\/(?:w(\d+)|original)\//;
+// TMDB serves any of these for any kind of image, and nothing in between.
+const TMDB_WIDTHS = [45, 92, 154, 185, 300, 342, 500, 780, 1280];
+
+const TVDB = 'https://artworks.thetvdb.com/banners/';
+const TVDB_THUMBS: [RegExp, number][] = [
+  [/\/posters\//, 340],
+  [/\/(fanart|backgrounds)\//, 640],
+];
+
+const METAHUB =
+  /^https:\/\/images\.metahub\.space\/(poster|background)\/(small|medium|large)\//;
+const METAHUB_WIDTHS: Record<string, Record<string, number>> = {
+  poster: { small: 300, medium: 500, large: 780 },
+  background: { small: 480, medium: 1920, large: 1920 },
+};
+const METAHUB_STILL =
+  /^(https:\/\/episodes\.metahub\.space\/.+\/)w(\d+)(\.jpg)$/;
+const METAHUB_STILL_WIDTHS = [185, 300, 500, 780];
+
 /**
- * Asks TMDB for a display-sized rendition instead of the original.
- *
- * Only TMDB, because only its URLs encode the size in the path.
+ * The smallest rendition at least `width` wide, for hosts whose URLs name
+ * one, and never larger than the URL already asks for.
  */
-function sized(url: string, type: string): string {
-  if (!url.startsWith('https://image.tmdb.org/t/p/original/')) return url;
-  const backdrop = /backdrop|thumb/i.test(type);
-  return url.replace('/t/p/original/', backdrop ? '/t/p/w1280/' : '/t/p/w780/');
+function sized(url: string, width: number): string {
+  const tmdb = TMDB.exec(url);
+  if (tmdb) {
+    const current = tmdb[1] ? Number(tmdb[1]) : Infinity;
+    const pick = TMDB_WIDTHS.find((w) => w >= width);
+    return pick && pick < current
+      ? url.replace(tmdb[0], `https://image.tmdb.org/t/p/w${pick}/`)
+      : url;
+  }
+  if (url.startsWith(TVDB) && !/_t\.\w+$/.test(url)) {
+    const thumb = TVDB_THUMBS.find(([path]) => path.test(url));
+    return thumb && width <= thumb[1] ? url.replace(/(\.\w+)$/, '_t$1') : url;
+  }
+  const metahub = METAHUB.exec(url);
+  if (metahub) {
+    const [prefix, kind, size] = metahub;
+    const widths = METAHUB_WIDTHS[kind];
+    const pick = Object.keys(widths).find((s) => widths[s] >= width);
+    return pick && widths[pick] < widths[size]
+      ? url.replace(prefix, prefix.replace(`/${size}/`, `/${pick}/`))
+      : url;
+  }
+  const still = METAHUB_STILL.exec(url);
+  if (still) {
+    const pick = METAHUB_STILL_WIDTHS.find((w) => w >= width);
+    return pick && pick < Number(still[2])
+      ? `${still[1]}w${pick}${still[3]}`
+      : url;
+  }
+  return url;
 }
 
 /* Relays in flight per process; artwork arrives in bursts and each one holds
@@ -191,13 +246,21 @@ async function itemImage(req: Request, res: Response) {
     res.status(200).end();
     return;
   }
+  // A relay asked for no size still avoids piping an original.
+  const width =
+    requestedWidth(req) ??
+    (relaying
+      ? /backdrop|thumb/i.test(param(req, 'type'))
+        ? 1280
+        : 780
+      : undefined);
+  const target = width ? sized(url, width) : url;
   if (relaying) {
-    // Only the relayed path: a redirect costs us nothing either way.
-    await relay(req, res, sized(url, param(req, 'type')));
+    await relay(req, res, target);
     return;
   }
   res.setHeader('Cache-Control', 'public, max-age=3600');
-  res.redirect(302, url);
+  res.redirect(302, target);
 }
 
 const ITEM_IMAGE_PATHS = [
@@ -231,11 +294,13 @@ router.get(
 
 async function personImage(req: Request, res: Response) {
   const tag = qs(req, 'tag');
-  const url = tag ? decodeImageTag(tag) : null;
-  if (!url) {
+  const decoded = tag ? decodeImageTag(tag) : null;
+  if (!decoded) {
     res.status(404).end();
     return;
   }
+  const width = requestedWidth(req);
+  const url = width ? sized(decoded, width) : decoded;
   if (shouldRelay(req)) {
     await relay(req, res, url);
     return;
