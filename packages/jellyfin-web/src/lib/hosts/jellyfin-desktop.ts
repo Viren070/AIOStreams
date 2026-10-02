@@ -268,6 +268,7 @@ export function jellyfinDesktopHost(): Host | null {
     ...(window.NativeShell && nativeShellParts(window.NativeShell)),
     name: 'jellyfin-desktop',
     usePlayer: useDesktopPlayer,
+    playerFeatures: ['audio'],
   };
   return host;
 }

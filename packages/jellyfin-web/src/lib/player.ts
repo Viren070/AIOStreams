@@ -33,6 +33,9 @@ export interface PlayerState {
   error: string | null;
 }
 
+/** What some players add to what a browser's video can do. */
+export type PlayerFeature = 'audio' | 'chapters' | 'stats';
+
 /** One set of controls over whichever player the page runs in. */
 export interface PlayerController {
   state: PlayerState;

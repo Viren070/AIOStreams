@@ -136,7 +136,8 @@ export function MediaRow({
           {title ? (
             <h2
               data-ui="media-row-title"
-              className="min-w-0 truncate text-lg font-semibold sm:text-xl"
+              // Room inside the truncating box for a link's focus outline.
+              className="-m-1 min-w-0 truncate p-1 text-lg font-semibold sm:text-xl"
             >
               {title}
             </h2>

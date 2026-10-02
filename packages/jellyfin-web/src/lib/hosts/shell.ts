@@ -521,13 +521,14 @@ function onContextMenu(e: MouseEvent) {
   e.preventDefault();
 }
 
-/** Keeps mpv in step with this device's settings, checks for updates, and handles Esc and right clicks. */
+let windowFullscreen = false;
+
+/** Keeps mpv in step with this device's settings, checks for updates, and handles right clicks. */
 export function ShellSetup() {
   React.useEffect(() => {
     const shell = window.aiostreamsDesktop;
     if (!shell) return;
-    let fullscreen = false;
-    const { updateChannel, escExitsFullscreen } = settings.desktop;
+    const { updateChannel } = settings.desktop;
     let channel = updateChannel.read();
     const apply = () => {
       applyDesktopSettings();
@@ -540,22 +541,15 @@ export function ShellSetup() {
     checkForUpdates(channel);
     const unsubscribeSettings = onSettingsChange(apply);
     const unsubscribe = shell.subscribe((m) => {
-      if (m.type === 'fullscreen') fullscreen = m.value;
+      if (m.type === 'fullscreen') windowFullscreen = m.value;
       else if (m.type === 'update-state') onUpdateState(m);
       else if (m.type === 'discord-status') onDiscordStatus(m);
     });
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || !fullscreen || e.defaultPrevented) return;
-      if (escExitsFullscreen.read())
-        shell.send({ type: 'fullscreen', value: false });
-    };
-    window.addEventListener('keydown', onKey);
     window.addEventListener('contextmenu', onContextMenu);
     shell.send({ type: 'mpv-sync' });
     return () => {
       unsubscribeSettings();
       unsubscribe();
-      window.removeEventListener('keydown', onKey);
       window.removeEventListener('contextmenu', onContextMenu);
     };
   }, []);
@@ -624,6 +618,12 @@ const host: Host = {
   name: 'desktop',
   device: () => ({ name: window.aiostreamsDesktop?.device }),
   usePlayer: useShellPlayer,
+  playerFeatures: ['audio', 'chapters', 'stats'],
+  back: () => {
+    if (!windowFullscreen) return false;
+    window.aiostreamsDesktop?.send({ type: 'fullscreen', value: false });
+    return true;
+  },
 };
 
 /** The AIOStreams desktop app, which plays in mpv. */

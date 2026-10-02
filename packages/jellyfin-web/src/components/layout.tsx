@@ -49,6 +49,7 @@ import { currentHost } from '../lib/hosts';
 import { serverAddress } from '../lib/servers';
 import { useServerInfo } from '../lib/server-info';
 import { useDiscordBrowsing } from '../lib/discord';
+import { useAction } from '../lib/input';
 import { UserAvatar } from './user-avatar';
 import { BrandLogo } from './brand-logo';
 import { VersionPickerProvider } from './version-picker';
@@ -209,7 +210,7 @@ function HistoryButton({
       type="button"
       aria-label={label}
       className={cn(
-        'group/history flex size-10 items-center justify-center rounded-full text-[--muted] outline-none transition hover:text-[--foreground] focus-visible:ring-2 focus-visible:ring-white/40 disabled:pointer-events-none disabled:opacity-40',
+        'group/history flex size-10 items-center justify-center rounded-full text-[--muted] transition hover:text-[--foreground] disabled:pointer-events-none disabled:opacity-40',
         className
       )}
       {...props}
@@ -279,6 +280,8 @@ export function WebLayout() {
   const several = (users.data?.length ?? 0) > 1;
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   useDiscordBrowsing(pathname);
+  useAction('search', () => navigate(to.search()));
+  useAction('home', () => navigate(to.home));
   const activity: SidebarItem = {
     id: 'activity',
     name: 'Activity',
@@ -432,7 +435,7 @@ function MobileNav({
 }) {
   const inMenu = [...places, ...menuItems].some((item) => item.isCurrent);
   const tab =
-    'flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-full px-1 py-1.5 text-[0.65rem] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-white/60';
+    'flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-full px-1 py-1.5 text-[0.65rem] font-medium transition-colors';
   return (
     <nav
       data-ui="mobile-nav"

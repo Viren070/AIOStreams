@@ -98,6 +98,43 @@ function useKeepPositionOnReInit(api: CarouselApi) {
   }, [api]);
 }
 
+/**
+ * Scrolls a focused slide just into view. Focus would otherwise scroll the
+ * clipped viewport itself, which Embla can't see.
+ */
+function useFollowFocus(api: CarouselApi) {
+  React.useEffect(() => {
+    if (!api) return;
+    const viewport = api.rootNode();
+    const follow = () => {
+      viewport.scrollLeft = 0;
+      const focused = document.activeElement;
+      const slide = api.slideNodes().find((s) => s.contains(focused));
+      if (!slide) return;
+      const engine = api.internalEngine();
+      // Where the slide lands once any scroll under way finishes.
+      const ahead = engine.target.get() - engine.location.get();
+      const view = viewport.getBoundingClientRect();
+      const rect = slide.getBoundingClientRect();
+      const left = rect.left + ahead - view.left;
+      const right = rect.right + ahead - view.right;
+      const shift = left < 0 ? left : right > 0 ? Math.min(right, left) : 0;
+      if (!shift) return;
+      engine.scrollBody.useBaseDuration().useBaseFriction();
+      engine.scrollTo.distance(-shift, false);
+    };
+    const onScroll = () => {
+      if (viewport.scrollLeft) follow();
+    };
+    viewport.addEventListener('focusin', follow);
+    viewport.addEventListener('scroll', onScroll);
+    return () => {
+      viewport.removeEventListener('focusin', follow);
+      viewport.removeEventListener('scroll', onScroll);
+    };
+  }, [api]);
+}
+
 const savedPositions = new Map<string, number>();
 
 function useRestorePosition(api: CarouselApi, key: string | undefined) {
@@ -139,14 +176,15 @@ export const Carousel = React.forwardRef<HTMLDivElement, CarouselProps>(
       ...rest
     } = props;
 
-    const [carouselRef, api] = useEmblaCarousel({ ...opts, axis: 'x' }, [
-      WheelGesturesPlugin(),
-      ...(plugins ?? []),
-    ]);
+    const [carouselRef, api] = useEmblaCarousel(
+      { ...opts, axis: 'x', watchFocus: false },
+      [WheelGesturesPlugin(), ...(plugins ?? [])]
+    );
     const [canScrollPrev, setCanScrollPrev] = React.useState(false);
     const [canScrollNext, setCanScrollNext] = React.useState(false);
     useKeepPositionOnReInit(api);
     useRestorePosition(api, restoreKey);
+    useFollowFocus(api);
 
     const onSelect = React.useCallback((emblaApi: EmblaApi) => {
       setCanScrollPrev(emblaApi.canScrollPrev());
@@ -155,19 +193,6 @@ export const Carousel = React.forwardRef<HTMLDivElement, CarouselProps>(
 
     const scrollPrev = React.useCallback(() => api?.scrollPrev(), [api]);
     const scrollNext = React.useCallback(() => api?.scrollNext(), [api]);
-
-    const handleKeyDown = React.useCallback(
-      (event: React.KeyboardEvent<HTMLDivElement>) => {
-        if (event.key === 'ArrowLeft') {
-          event.preventDefault();
-          scrollPrev();
-        } else if (event.key === 'ArrowRight') {
-          event.preventDefault();
-          scrollNext();
-        }
-      },
-      [scrollPrev, scrollNext]
-    );
 
     React.useEffect(() => {
       if (!api) return;
@@ -196,7 +221,6 @@ export const Carousel = React.forwardRef<HTMLDivElement, CarouselProps>(
       >
         <div
           ref={ref}
-          onKeyDownCapture={handleKeyDown}
           className={cn(CarouselAnatomy.root(), className)}
           role="region"
           aria-roledescription="carousel"
@@ -267,6 +291,8 @@ CarouselItem.displayName = 'CarouselItem';
  * CarouselPrevious / CarouselNext
  * -----------------------------------------------------------------------------------------------*/
 
+// Out of the focus order: focusing a slide already scrolls to it.
+
 export type CarouselButtonProps = React.ComponentProps<typeof IconButton> & {
   chevronIconClass?: string;
 };
@@ -308,6 +334,7 @@ export const CarouselPrevious = React.forwardRef<
       className={cn('rounded-full', className)}
       disabled={!canScrollPrev}
       onClick={scrollPrev}
+      tabIndex={-1}
       aria-label="Previous"
       icon={<Chevron path="m15 18-6-6 6-6" className={chevronIconClass} />}
       {...rest}
@@ -336,6 +363,7 @@ export const CarouselNext = React.forwardRef<
       className={cn('rounded-full', className)}
       disabled={!canScrollNext}
       onClick={scrollNext}
+      tabIndex={-1}
       aria-label="Next"
       icon={<Chevron path="m9 18 6-6-6-6" className={chevronIconClass} />}
       {...rest}

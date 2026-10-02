@@ -6,6 +6,8 @@ import { TextInput } from '@aiostreams/ui/text-input';
 import { LoadingSpinner } from '@aiostreams/ui/loading-spinner';
 import { cn } from '@aiostreams/ui/core/styling';
 import { clock } from '../lib/format';
+import { useAction, useKeys } from '../lib/input';
+import { KeyCaps } from './key-caps';
 import {
   delayForLine,
   delayForTaps,
@@ -14,8 +16,6 @@ import {
 } from '../lib/subtitle-lines';
 
 type Tap = 'heard' | 'saw';
-
-const TAP_KEYS: Record<string, Tap> = { h: 'heard', s: 'saw' };
 
 /**
  * Two taps, in either order: when a line is heard and when its subtitle shows.
@@ -62,29 +62,12 @@ export function SyncByEar({
       `Subtitles set to ${delayLabel(next).toLowerCase()}. Another line refines it.`
     );
   };
-  const latestTap = React.useRef(tap);
-  latestTap.current = tap;
+  useAction('sync.heard', () => tap('heard'));
+  useAction('sync.saw', () => tap('saw'));
+  useAction('back', onClose);
+  const keys = { heard: useKeys('sync.heard')[0], saw: useKeys('sync.saw')[0] };
 
-  React.useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
-      if (document.querySelector('[role="dialog"]')) return;
-      if (e.key === 'Escape') onClose();
-      const kind = TAP_KEYS[e.key.toLowerCase()];
-      if (!kind) return;
-      e.preventDefault();
-      latestTap.current(kind);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
-  const button = (
-    kind: Tap,
-    label: string,
-    key: string,
-    icon: React.ReactNode
-  ) => (
+  const button = (kind: Tap, label: string, icon: React.ReactNode) => (
     <Button
       intent={first?.tap === kind ? 'white' : 'gray-subtle'}
       rounded
@@ -92,9 +75,12 @@ export function SyncByEar({
       onClick={() => tap(kind)}
     >
       {label}
-      <kbd className="ml-2 hidden rounded border border-white/30 px-1 text-xs opacity-60 sm:inline">
-        {key}
-      </kbd>
+      {keys[kind] && (
+        <KeyCaps
+          input={keys[kind]}
+          className="ml-2 hidden opacity-60 sm:inline-flex"
+        />
+      )}
     </Button>
   );
 
@@ -122,8 +108,8 @@ export function SyncByEar({
           </button>
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2">
-          {button('heard', 'Heard', 'H', <LuEar />)}
-          {button('saw', 'Saw', 'S', <LuEye />)}
+          {button('heard', 'Heard', <LuEar />)}
+          {button('saw', 'Saw', <LuEye />)}
         </div>
         <p className="mt-2 text-xs tabular-nums text-gray-400">
           Now: {delayLabel(delayMs)}

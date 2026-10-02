@@ -116,7 +116,8 @@ export function Overview({
               <button
                 type="button"
                 data-ui="overview-more"
-                className="relative z-[1] clear-both float-right rounded pl-5 font-medium text-[--muted] outline-none transition-colors hover:text-white focus-visible:ring-2 focus-visible:ring-white/60"
+                data-focus="own"
+                className="relative z-[1] clear-both float-right pl-5 font-medium text-[--muted] transition-colors hover:text-white focus-visible:text-white focus-visible:underline"
               >
                 More
               </button>

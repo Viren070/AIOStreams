@@ -1,5 +1,9 @@
 import type { JellyfinClient } from '../client';
-import type { NativePlayerOptions, PlayerController } from '../player';
+import type {
+  NativePlayerOptions,
+  PlayerController,
+  PlayerFeature,
+} from '../player';
 import type { BaseItemDto, SourceInfo } from '../types';
 import { androidHost } from './jellyfin-android';
 import { jellyfinDesktopHost } from './jellyfin-desktop';
@@ -27,6 +31,7 @@ export interface Host {
   device?(): { id?: string; name?: string } | null;
   /** A player drawn beneath the page. */
   usePlayer?(opts: NativePlayerOptions): PlayerController;
+  playerFeatures?: readonly PlayerFeature[];
   /** The app's own player takes over from the page. */
   play?(item: BaseItemDto, source: SourceInfo, startMs: number): void;
   selectServer?(): void;
@@ -34,16 +39,17 @@ export interface Host {
   settings?: { label: string; description: string; help: string; open(): void };
   /** Full screen for a web view without the fullscreen API. */
   fullscreen?: { active(): boolean; set(on: boolean): void };
+  /** Takes Back before the page does; true when it acted. */
+  back?(): boolean;
+  /** Back from the first page leaves the app. */
+  exit?(): void;
   /** The app's media controls, in place of the browser's. */
   mediaSession?: {
     update(now: NowPlaying): void;
     clear(): void;
     listen?(press: (key: MediaKey) => void): () => void;
   };
-  start?(ctx: {
-    base: string;
-    history: { canGoBack(): boolean; back(): void };
-  }): () => void;
+  start?(ctx: { base: string }): () => void;
   signedIn?(client: JellyfinClient): void;
 }
 

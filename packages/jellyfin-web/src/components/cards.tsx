@@ -235,6 +235,20 @@ export function ProgressBar({ percent }: { percent: number }) {
   );
 }
 
+/** Laid over the artwork, which would cover a ring drawn on its frame. */
+export function FocusRing({ className }: { className: string }) {
+  return (
+    <span
+      aria-hidden
+      data-ui="focus-ring"
+      className={cn(
+        'pointer-events-none absolute inset-0 z-[1] rounded-[inherit] opacity-0 ring-2 ring-inset ring-[--ring]',
+        className
+      )}
+    />
+  );
+}
+
 function WatchedMark() {
   return (
     <span
@@ -281,6 +295,7 @@ export function PosterCard(props: PosterCardProps) {
       data-in-progress={(!!progress && progress > 0) || undefined}
       href={href}
       title={showTitle ? undefined : title}
+      data-focus="own"
       className={cn('group/poster block space-y-2', props.className)}
     >
       <div
@@ -293,12 +308,13 @@ export function PosterCard(props: PosterCardProps) {
         <Artwork
           src={image}
           alt={title}
-          className="group-hover/poster:scale-[1.04]"
+          className="group-hover/poster:scale-[1.04] group-focus-visible/poster:scale-[1.04]"
         />
         <div
           data-ui="poster-card-shade"
-          className="absolute inset-0 bg-black/0 transition-colors group-hover/poster:bg-black/20"
+          className="absolute inset-0 bg-black/0 transition-colors group-hover/poster:bg-black/20 group-focus-visible/poster:bg-black/20"
         />
+        <FocusRing className="group-focus-visible/poster:opacity-100" />
         {watched && <WatchedMark />}
         {!watched && !!unwatched && (
           <span
@@ -388,16 +404,16 @@ export function WideCard(props: WideCardProps) {
           src={image}
           alt={title}
           className={cn(
-            'group-hover/wide:scale-[1.03]',
+            'group-hover/wide:scale-[1.03] group-focus-visible/wide-link:scale-[1.03]',
             dimmed && 'opacity-40 grayscale'
           )}
         />
         {!unavailable && (
           <div
             data-ui="wide-card-play"
-            className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover/wide:bg-black/30"
+            className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover/wide:bg-black/30 group-focus-visible/wide-link:bg-black/30"
           >
-            <BiPlay className="text-5xl text-white opacity-0 drop-shadow transition-opacity group-hover/wide:opacity-90" />
+            <BiPlay className="text-5xl text-white opacity-0 drop-shadow transition-opacity group-hover/wide:opacity-90 group-focus-visible/wide-link:opacity-90" />
           </div>
         )}
         {badge && (
@@ -410,6 +426,7 @@ export function WideCard(props: WideCardProps) {
         )}
         {watched && <WatchedMark />}
         {progress != null && progress > 0 && <ProgressBar percent={progress} />}
+        <FocusRing className="group-focus-visible/wide-link:opacity-100" />
       </div>
       <div
         data-ui="wide-card-text"
@@ -455,7 +472,11 @@ export function WideCard(props: WideCardProps) {
       className={cn('group/wide relative space-y-2', props.className)}
     >
       {href ? (
-        <a href={href} className="block space-y-2">
+        <a
+          href={href}
+          data-focus="own"
+          className="group/wide-link block space-y-2"
+        >
           {body}
         </a>
       ) : onClick ? (
@@ -463,7 +484,8 @@ export function WideCard(props: WideCardProps) {
           type="button"
           onClick={onClick}
           {...hold}
-          className="block w-full space-y-2 text-left"
+          data-focus="own"
+          className="group/wide-link block w-full space-y-2 text-left"
         >
           {body}
         </button>

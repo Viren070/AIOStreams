@@ -72,6 +72,27 @@ html body[data-scroll-locked] {
   }
 }
 
+/* One focus mark everywhere, in the accent, over the shared components' faint
+   rings. Fields keep their own, and anything else drawing one sets
+   data-focus="own". Chained :not()s, since older TV browsers take no list. */
+html.dark {
+  --ring: rgb(var(--color-brand-400));
+}
+:focus-visible:not([data-focus='own']):not(input):not(textarea) {
+  --tw-ring-color: transparent;
+  --tw-ring-offset-width: 0px;
+  outline: 2px solid var(--ring) !important;
+  outline-offset: 2px;
+}
+[data-focus='own']:focus-visible {
+  outline: none;
+}
+/* Rows and the hero clip anything past their edges. */
+.UI-Carousel__content :focus-visible:not([data-focus='own']):not(input),
+[data-ui='hero'] :focus-visible:not([data-focus='own']):not(input) {
+  outline-offset: -2px;
+}
+
 /* Only text meant to be read or copied is selectable. */
 @layer base {
   body.jellyfin-web {

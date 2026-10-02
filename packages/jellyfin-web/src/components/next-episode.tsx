@@ -8,6 +8,7 @@ import { landscapeUrl } from '../lib/images';
 import { episodeCode, itemSubtitle, ticksToMs } from '../lib/format';
 import { navigate, to, versionsPath } from '../lib/paths';
 import { playableSources } from '../lib/use-play';
+import { focusOn, keyboardFocus, useAction } from '../lib/input';
 import { settings, useSetting, type NextPrompt } from '../lib/settings';
 import { usePlaybackPrefs } from '../lib/user-config';
 import type { PlayerController } from '../lib/player';
@@ -176,10 +177,33 @@ export function useNextEpisodePrompt({
     if (counting && leftMs <= 0) void playNext();
   }, [counting, leftMs, playNext]);
 
+  // While it shows, it stands in for the skip button, and Back from it hides it.
+  const card = React.useRef<HTMLDivElement>(null);
+  useAction('player.skipSegment', () => void playNext(), shown);
+  useAction(
+    'player.controls',
+    () => {
+      const play = card.current?.querySelector<HTMLElement>('[data-name=play]');
+      if (keyboardFocus() || !play) return false;
+      focusOn(play);
+    },
+    shown
+  );
+  useAction(
+    'back',
+    () => {
+      const el = keyboardFocus();
+      if (!el || !card.current?.contains(el)) return false;
+      setDismissed(true);
+    },
+    shown
+  );
+
   const image = next ? landscapeUrl(client, next, { maxWidth: 320 }) : null;
   const element =
     shown && next ? (
       <div
+        ref={card}
         data-ui="next-episode-card"
         className="fixed bottom-24 right-4 z-20 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-white/10 bg-gray-950/90 shadow-2xl backdrop-blur duration-300 animate-in fade-in-0 slide-in-from-right-4"
       >

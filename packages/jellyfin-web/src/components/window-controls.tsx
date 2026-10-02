@@ -63,7 +63,7 @@ export function WindowControls() {
 
   if (native) return null;
   const button =
-    'flex h-8 w-11 items-center justify-center rounded-lg text-[0.95rem] text-white/85 outline-none transition-colors hover:text-white active:text-white';
+    'flex h-8 w-11 items-center justify-center rounded-lg text-[0.95rem] text-white/85 transition-colors hover:text-white active:text-white';
   return (
     <>
       {!maximized && !fullscreen && (

@@ -229,6 +229,8 @@ function Head({
               <IconButton
                 data-ui="episode-action"
                 data-name="details"
+                // A playable episode is one stop, and its menu has the rest.
+                data-nav={play ? 'skip' : undefined}
                 size="sm"
                 intent="gray-subtle"
                 className="size-8 rounded-full"
@@ -242,6 +244,7 @@ function Head({
               data-ui="episode-action"
               data-name="watched"
               data-active={played || undefined}
+              data-nav="skip"
               size="sm"
               intent={played ? 'primary' : 'gray-subtle'}
               className="size-8 rounded-full"
@@ -263,7 +266,8 @@ function Head({
           data-ui="episode-title"
           onClick={() => play()}
           {...hold}
-          className="mt-0.5 text-left text-sm font-semibold outline-none after:absolute after:inset-0 after:rounded-xl after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-white/60 sm:text-base"
+          data-focus="own"
+          className="mt-0.5 text-left text-sm font-semibold after:absolute after:inset-0 after:rounded-xl after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-[--ring] sm:text-base"
         >
           <span className={clamp} title={oneLine ? title : undefined}>
             {title}

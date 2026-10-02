@@ -8,6 +8,7 @@ import {
   LuCirclePlay,
   LuHeart,
   LuInfo,
+  LuKeyboard,
   LuLayoutGrid,
   LuMonitor,
   LuPalette,
@@ -76,6 +77,7 @@ import {
   NEXT_COUNTDOWNS,
   NEXT_LEADS,
   SEEK_STEPS,
+  VOLUME_STEPS,
   SEGMENT_ACTIONS,
   SEGMENT_TYPES,
   DISCORD_EVENTS,
@@ -95,6 +97,7 @@ import {
 import { useFeature, useServerInfo } from '../lib/server-info';
 import { PageBody } from '../components/layout';
 import { UserAvatar } from '../components/user-avatar';
+import { ShortcutSettings } from '../components/shortcut-settings';
 import {
   SettingsCard,
   SettingsPageHeader,
@@ -190,6 +193,7 @@ function SegmentActionSelect({ type }: { type: SegmentType }) {
 function PlaybackSection() {
   const { prefs, update } = usePlaybackPrefs();
   const [seekStep, setSeekStep] = useSetting(settings.seekStep);
+  const [volumeStep, setVolumeStep] = useSetting(settings.volumeStep);
   const [skipList, setSkipList] = useSetting(settings.skipVersionList);
   const [nextPrompt, setNextPrompt] = useSetting(settings.next.prompt);
   const [nextLead, setNextLead] = useSetting(settings.next.lead);
@@ -199,9 +203,6 @@ function PlaybackSection() {
   );
   const [hardwareDecoding, setHardwareDecoding] = useSetting(
     settings.desktop.hardwareDecoding
-  );
-  const [escExits, setEscExits] = useSetting(
-    settings.desktop.escExitsFullscreen
   );
   const [chapterSkips, setChapterSkips] = useSetting(
     settings.desktop.chapterSkips
@@ -331,14 +332,16 @@ function PlaybackSection() {
           value={String(seekStep)}
           onValueChange={(v) => setSeekStep(Number(v))}
         />
-        {shell && (
-          <Switch
-            side="right"
-            label="Esc leaves full screen"
-            value={escExits}
-            onValueChange={setEscExits}
-          />
-        )}
+        <Select
+          label="Volume step"
+          help="How much the volume keys and the scroll wheel change the volume."
+          options={VOLUME_STEPS.map((s) => ({
+            value: String(s),
+            label: `${s}%`,
+          }))}
+          value={String(volumeStep)}
+          onValueChange={(v) => setVolumeStep(Number(v))}
+        />
       </SettingsCard>
       {shell && (
         <SettingsCard title="Video" description={ON_DEVICE}>
@@ -1352,6 +1355,19 @@ function sections(): Section[] {
       group: 'App',
       Content: InterfaceSection,
     },
+    // A touch screen has no keys to set.
+    ...(matchMedia('(pointer: coarse)').matches
+      ? []
+      : [
+          {
+            id: 'shortcuts',
+            label: 'Shortcuts',
+            description: 'Keys, remotes and gamepads',
+            icon: LuKeyboard,
+            group: 'App',
+            Content: ShortcutSettings,
+          },
+        ]),
     {
       id: 'theme',
       label: 'Theme',
@@ -1472,6 +1488,7 @@ export function SettingsPage({
             <TabsContent
               key={s.id}
               value={s.id}
+              tabIndex={-1}
               data-name={s.id}
               className="space-y-6 duration-300 animate-in fade-in-0 slide-in-from-bottom-2"
             >

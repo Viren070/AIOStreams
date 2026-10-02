@@ -227,6 +227,36 @@ function device<T extends string | number | boolean>(
   };
 }
 
+/** Lists of strings by name, kept on this device; an empty record clears it. */
+function deviceLists(key: string): Setting<Record<string, string[]>> {
+  let seen: string | undefined;
+  let value: Record<string, string[]> = {};
+  return {
+    read() {
+      const stored = storage.get<unknown>(key);
+      const text = JSON.stringify(stored);
+      if (text !== seen) {
+        seen = text;
+        const entries =
+          stored && typeof stored === 'object' ? Object.entries(stored) : [];
+        value = Object.fromEntries(
+          entries.filter(
+            (entry): entry is [string, string[]] =>
+              Array.isArray(entry[1]) &&
+              entry[1].every((item) => typeof item === 'string')
+          )
+        );
+      }
+      return value;
+    },
+    write(next) {
+      if (Object.keys(next).length) storage.set(key, next);
+      else storage.remove(key);
+      announce();
+    },
+  };
+}
+
 type Values<G> = { [K in keyof G]: G[K] extends Setting<infer T> ? T : never };
 
 function group<G extends Record<string, Setting<unknown>>>(
@@ -275,6 +305,9 @@ export const VIDEO_FITS = ['fit', 'crop', 'stretch'] as const;
 export type VideoFit = (typeof VIDEO_FITS)[number];
 
 export const SEEK_STEPS = [5, 10, 15, 30] as const;
+
+/** Percentages. */
+export const VOLUME_STEPS = [1, 2, 5, 10] as const;
 
 export const SEGMENT_TYPES = [
   'Intro',
@@ -452,6 +485,9 @@ export const settings = {
   videoFit: device<VideoFit>('aiostreams-web-video-fit', 'fit', VIDEO_FITS),
   skipVersionList: device<boolean>('aiostreams-web-skip-versions', false),
   seekStep: device<number>('aiostreams-web-seek-step', 10, SEEK_STEPS),
+  volumeStep: device<number>('aiostreams-web-volume-step', 5, VOLUME_STEPS),
+  /** Keys changed from the defaults, by action. */
+  shortcuts: deviceLists('aiostreams-web-shortcuts'),
   segment,
   segmentActions: group(segment),
   subtitle,
@@ -469,10 +505,6 @@ export const settings = {
       AUDIO_CHANNELS
     ),
     passthrough: device<boolean>('aiostreams-desktop-passthrough', false),
-    escExitsFullscreen: device<boolean>(
-      'aiostreams-desktop-esc-fullscreen',
-      true
-    ),
     /** Read by the page only; the app itself never needs it. */
     chapterSkips: device<boolean>('aiostreams-desktop-chapter-skips', true),
   },

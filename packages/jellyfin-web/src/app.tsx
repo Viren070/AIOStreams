@@ -34,6 +34,7 @@ import {
 } from '@aiostreams/ui/shared/confirmation-dialog';
 import { ThemeStyles } from './components/theme-styles';
 import { WindowControls } from './components/window-controls';
+import { InputSetup } from './components/input-setup';
 
 /** The web app served at the Jellyfin API's `/web`. */
 export default function JellyfinWebApp() {
@@ -57,6 +58,7 @@ export default function JellyfinWebApp() {
         />
         <PageBackground />
         <ThemeStyles />
+        <InputSetup history={webRouter.history} />
         {currentHost().name === 'desktop' && (
           <>
             <ShellSetup />
@@ -165,10 +167,7 @@ function Session({
     useSessionPhase(base);
   const changeServer = leave ?? currentHost().selectServer;
 
-  React.useEffect(
-    () => currentHost().start?.({ base, history: webRouter.history }),
-    [base]
-  );
+  React.useEffect(() => currentHost().start?.({ base }), [base]);
 
   const ready = phase.kind === 'ready' ? phase : null;
   const anonymous = React.useMemo(() => new JellyfinClient(base), [base]);

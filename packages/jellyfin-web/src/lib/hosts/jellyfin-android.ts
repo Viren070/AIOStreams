@@ -1,4 +1,5 @@
 import { TICKS_PER_MS } from '../format';
+import { runAction } from '../input';
 import {
   onSettingsChange,
   SEGMENT_TYPES,
@@ -145,23 +146,10 @@ function announce(base: string): void {
   document.body.appendChild(script);
 }
 
-/**
- * The app sends its back button to `NavigationHelper.goBack()`, which
- * jellyfin-web defines. An open overlay closes first; at the root it exits.
- */
-function handleBack(history: { canGoBack(): boolean; back(): void }): void {
+/** The app sends its back button to `NavigationHelper.goBack()`, which jellyfin-web defines. */
+function handleBack(): void {
   const helper = (window.NavigationHelper ??= {});
-  helper.goBack = () => {
-    if (document.querySelector('[role="dialog"], [role="menu"]')) {
-      document.dispatchEvent(
-        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
-      );
-    } else if (history.canGoBack()) {
-      history.back();
-    } else {
-      window.NativeInterface?.exitApp?.();
-    }
-  };
+  helper.goBack = () => void runAction('back');
 }
 
 function play(item: BaseItemDto, source: SourceInfo, startMs: number): void {
@@ -205,9 +193,10 @@ function build(app: AndroidInterface): { page: Host; player: Host } {
       clear: () => app.hideMediaSession?.(),
       listen,
     },
-    start: ({ base, history }) => {
+    exit: app.exitApp && (() => app.exitApp?.()),
+    start: ({ base }) => {
       announce(base);
-      handleBack(history);
+      handleBack();
       return syncSegments();
     },
     // The app reads the stored sign-in when this is requested.

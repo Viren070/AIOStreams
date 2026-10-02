@@ -1,6 +1,7 @@
 import { useSession } from '../lib/session';
 import { personImageUrl } from '../lib/images';
 import { href, to } from '../lib/paths';
+import { FocusRing } from './cards';
 import { MediaRow } from './media-row';
 import type { BaseItemPerson } from '../lib/types';
 
@@ -26,7 +27,7 @@ export function PersonCard({
     <>
       <div
         data-ui="person-card-image"
-        className="mx-auto size-20 overflow-hidden rounded-full bg-gray-900 ring-1 ring-white/10 transition group-hover:ring-white/40 sm:size-24"
+        className="relative mx-auto size-20 overflow-hidden rounded-full bg-gray-900 ring-1 ring-white/10 transition group-hover:ring-white/40 sm:size-24"
       >
         {image ? (
           <img
@@ -40,6 +41,7 @@ export function PersonCard({
             {initials(person.Name ?? '?')}
           </span>
         )}
+        <FocusRing className="group-focus-visible:opacity-100" />
       </div>
       <p
         data-ui="person-card-name"
@@ -61,6 +63,7 @@ export function PersonCard({
     <a
       data-ui="person-card"
       href={href(to.person(person.Id))}
+      data-focus="own"
       className="group block text-center"
     >
       {body}

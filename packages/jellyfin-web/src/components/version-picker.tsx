@@ -455,7 +455,7 @@ function Versions({
                 type="button"
                 data-ui="version-play"
                 onClick={() => start(source)}
-                className="flex min-w-0 flex-1 items-start gap-3 rounded-xl p-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                className="flex min-w-0 flex-1 items-start gap-3 rounded-xl p-3 text-left"
               >
                 <span
                   data-ui="version-play-icon"

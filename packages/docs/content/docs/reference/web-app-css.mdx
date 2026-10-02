@@ -79,8 +79,9 @@ The **Background** setting does this best, since panels take their shades from i
 ### No zoom on hover
 
 ```css
-[data-ui='poster-card']:hover [data-ui='artwork'],
-[data-ui='wide-card']:hover [data-ui='artwork'] {
+[data-ui='poster-card']:is(:hover, :focus-visible) [data-ui='artwork'],
+[data-ui='wide-card']:hover [data-ui='artwork'],
+[data-ui='wide-card'] :focus-visible [data-ui='artwork'] {
   transform: none;
 }
 ```
@@ -392,6 +393,7 @@ States are attributes set only while true, such as `data-watched`. Match them wi
 | `artwork`, `artwork-fallback`                                                                                                                    | A card's picture, and the title shown when it has none                                                                                                                                                                                                                             |
 | `progress-bar`, `progress-bar-fill`                                                                                                              | How far through something you are                                                                                                                                                                                                                                                  |
 | `watched-badge`, `unwatched-count`                                                                                                               | The tick on something watched, and the count of episodes left on a show                                                                                                                                                                                                            |
+| `focus-ring`                                                                                                                                     | The ring on a card the keyboard, a remote or a gamepad is on                                                                                                                                                                                                                       |
 | `item-menu`                                                                                                                                      | The menu a card opens on right-click or a long press; its items have `data-name`: `play`, `play-now`, `choose-version`, `open`, `watched`, `watched-up-to`, `remove-resume`, `favourite`                                                                                           |
 
 ### The featured banner
@@ -473,6 +475,7 @@ States are attributes set only while true, such as `data-watched`. Match them wi
 | `history-day`, `history-tiles`, `history-tile`, `history-entry`, `history-entry-menu`, `history-table`, `history-view`, `user-chips` | The activity page; `data-open` marks an expanded tile                                                               |
 | `settings-header`, `settings-card`, `settings-card-title`, `settings-card-body`, `theme-preset`, `custom-css-editor`                 | The settings page. Each tab carries `data-name`, and each card a `data-name` from its title, such as `next-episode` |
 | `auth-card`, `user-picker`, `user-picker-user`, `server`                                                                             | Signing in, choosing a user and choosing a server                                                                   |
+| `shortcuts-help`, `shortcut-keys`, `key-caps`                                                                                        | The shortcuts list `?` opens, a shortcut's keys in settings, and the keys shown for one                             |
 
 ### Shared components
 

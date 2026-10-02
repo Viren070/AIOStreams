@@ -6,6 +6,7 @@ export interface SubtitleLine {
 }
 
 export const SUBTITLE_DELAY_LIMIT_MS = 60_000;
+export const SUBTITLE_DELAY_STEP_MS = 100;
 /** Pressing on hearing a line comes this late, on average. */
 const REACTION_MS = 300;
 

@@ -6,6 +6,7 @@ export interface NativeShell {
     appName?(): string;
     deviceName?(): string;
     supports?(feature: string): boolean;
+    exit?(): void;
   };
   selectServer?(): void;
   openClientSettings?(): void;
@@ -46,6 +47,10 @@ export function nativeShellParts(shell: NativeShell): Omit<Host, 'name'> {
       return name ? { name } : null;
     },
     selectServer: shell.selectServer && (() => shell.selectServer?.()),
+    exit:
+      app?.exit && app.supports?.('exit') !== false
+        ? () => app.exit?.()
+        : undefined,
     settings:
       shell.openClientSettings && app?.supports?.('clientsettings') !== false
         ? {

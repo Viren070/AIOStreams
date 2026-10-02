@@ -122,7 +122,7 @@ export function RatingButton({
           aria-valuemin={0}
           aria-valuemax={STARS}
           aria-valuenow={shown}
-          className="flex rounded-md text-2xl outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+          className="flex rounded-md text-2xl"
           onKeyDown={onKey}
           onPointerLeave={() => setDraft(null)}
         >
