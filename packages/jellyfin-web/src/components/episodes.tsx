@@ -189,17 +189,20 @@ function Kicker({ episode }: { episode: BaseItemDto }) {
 function Head({
   episode,
   play,
+  onHold,
   className,
   oneLine,
 }: {
   episode: BaseItemDto;
-  play: ((opts?: { held?: boolean }) => void) | undefined;
+  play: (() => void) | undefined;
+  /** A mouse press held on the title; rows leave it out, since dragging them would set it off. */
+  onHold?: () => void;
   className?: string;
   /** Keeps a row's cards level. */
   oneLine?: boolean;
 }) {
   const { client } = useSession();
-  const hold = useHold(play && (() => play({ held: true })), { touch: false });
+  const hold = useHold(onHold, { touch: false });
   const setPlayed = useSetPlayed();
   const title = episode.Name || seasonEpisodeTitle(episode);
   const played = !!episode.UserData?.Played;
@@ -365,7 +368,12 @@ function EpisodeListItem({
           className="rounded-lg sm:row-span-2"
           numberClass="text-3xl sm:text-4xl"
         />
-        <Head episode={episode} play={play} className="self-start" />
+        <Head
+          episode={episode}
+          play={play}
+          onHold={play && (() => play({ held: true }))}
+          className="self-start"
+        />
         {/* Beside a phone's thumbnail it would get a few words a line. */}
         <Synopsis
           episode={episode}

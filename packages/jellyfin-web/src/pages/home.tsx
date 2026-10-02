@@ -244,12 +244,6 @@ function EpisodeRow({
                   startMs: ticksToMs(item.UserData?.PlaybackPositionTicks),
                 })
               }
-              onHold={() =>
-                picker.play(item, {
-                  startMs: ticksToMs(item.UserData?.PlaybackPositionTicks),
-                  held: true,
-                })
-              }
               image={(width) =>
                 landscapeUrls(client, item, { maxWidth: width })
               }
