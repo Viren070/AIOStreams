@@ -286,6 +286,8 @@ export class BuiltinAddonPreset extends Preset {
       services: services.map((service) => ({
         id: service,
         credential: this.getServiceCredential(service, userData),
+        disabledCapabilities: userData.services?.find((s) => s.id === service)
+          ?.disabledCapabilities,
       })),
       cacheAndPlay: userData.cacheAndPlay,
       autoRemoveDownloads: userData.autoRemoveDownloads,
