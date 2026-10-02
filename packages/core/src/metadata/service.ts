@@ -536,6 +536,13 @@ export class MetadataService {
                         );
                       }
                     : undefined,
+                  fetchTvdbSeriesSeasons:
+                    tvdbAvailable && resolvedTvdbId
+                      ? () =>
+                          new TVDBMetadata({
+                            apiKey: this.config.tvdbApiKey,
+                          }).getSeasonNumbers(Number(resolvedTvdbId))
+                      : undefined,
                   fetchTmdbEpisode:
                     tmdbAvailable && resolvedTmdbId
                       ? async (seasonNumber, episodeNumber) => {
@@ -875,6 +882,7 @@ export class MetadataService {
               resolvedSeasonNumber: episodeFacts?.resolvedSeasonNumber,
               resolvedSeasonFirstEpisode:
                 episodeFacts?.resolvedSeasonFirstEpisode,
+              alternateSeasonNumber: episodeFacts?.alternateSeasonNumber,
               sceneTitles,
             };
             logger.debug(
