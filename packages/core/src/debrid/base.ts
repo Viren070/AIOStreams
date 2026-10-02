@@ -207,6 +207,7 @@ export interface DebridDownload {
 }
 
 const TitleMetadataSchema = z.object({
+  isAnime: z.boolean().optional(),
   titles: z.array(z.string()),
   year: z.number().optional(),
   seasonYear: z.number().optional(),
