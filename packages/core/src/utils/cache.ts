@@ -351,6 +351,34 @@ export class Cache<K, V> {
     return result;
   }
 
+  private revalidating = new Set<K>();
+
+  /**
+   * Stale-while-revalidate read. Once less than `staleTtl` of an entry's TTL
+   * remains, it is still returned and `refresh` runs in the background, once
+   * per key per process. A miss returns `load`. Both store what they fetch for
+   * their TTL plus `staleTtl`.
+   */
+  async getOrRevalidate(
+    key: K,
+    load: () => Promise<V>,
+    refresh: () => Promise<void>,
+    staleTtl: number
+  ): Promise<V> {
+    const [cached, remaining] = await Promise.all([
+      this.get(key).catch(() => undefined),
+      this.getTTL(key).catch(() => 0),
+    ]);
+    if (cached === undefined) return load();
+    if (remaining < staleTtl && !this.revalidating.has(key)) {
+      this.revalidating.add(key);
+      void refresh()
+        .catch(() => undefined)
+        .finally(() => this.revalidating.delete(key));
+    }
+    return cached;
+  }
+
   /**
    * @param updateTTL Re-arm the entry's expiry on read. Pass the TTL in
    * seconds; `true` only slides on the memory backend, which is the one that

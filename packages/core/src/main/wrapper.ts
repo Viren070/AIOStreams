@@ -197,16 +197,15 @@ export class Wrapper {
         options: this.addon.preset.options,
       }) || this.manifestUrl;
 
-    const requestFn = async (signal: AbortSignal): Promise<Manifest> => {
+    const fetchManifest = async (
+      signal: AbortSignal,
+      fetchTimeout: number
+    ): Promise<Manifest> => {
       logger.debug(
         { addon: this.addon.name, url: makeUrlLogSafe(this.manifestUrl) },
         'fetching manifest'
       );
       try {
-        const fetchTimeout = appConfig.resources.background.enabled
-          ? (appConfig.resources.background.timeout ??
-            appConfig.userLimits.timeouts.maxTimeout)
-          : (options?.timeout ?? appConfig.resources.timeouts.manifest);
         const res = await makeRequest(this.manifestUrl, {
           timeout: fetchTimeout,
           signal: AbortSignal.any([signal, AbortSignal.timeout(fetchTimeout)]),
@@ -249,36 +248,88 @@ export class Wrapper {
       }
     };
 
-    const failureTtl = appConfig.resources.cache.manifest.failureTtl;
-    if (failureTtl > 0 && !options?.bypassCache) {
-      const failure = await manifestFailureCache.get(cacheKey);
-      if (failure) {
-        throw new Error(failure);
-      }
-    }
+    const backgroundTimeout =
+      appConfig.resources.background.timeout ??
+      appConfig.userLimits.timeouts.maxTimeout;
+    const foregroundTimeout =
+      options?.timeout ?? appConfig.resources.timeouts.manifest;
+    const requestFn = (signal: AbortSignal) =>
+      fetchManifest(
+        signal,
+        appConfig.resources.background.enabled
+          ? backgroundTimeout
+          : foregroundTimeout
+      );
 
-    try {
-      return await this._request({
-        requestFn,
-        timeout: options?.timeout ?? appConfig.resources.timeouts.manifest,
-        resourceName: 'manifest',
-        cacher: manifestCache,
-        cacheKey,
-        cacheTtl: resolveTtl(
-          appConfig.resources.cache.manifest.ttl,
-          this.addon.preset.type,
-          this.manifestUrl
-        ),
-        bypassCache: options?.bypassCache,
-      });
-    } catch (error: any) {
+    const ttl = resolveTtl(
+      appConfig.resources.cache.manifest.ttl,
+      this.addon.preset.type,
+      this.manifestUrl
+    );
+    const cacheTtl = ttl > 0 ? ttl + ttl : ttl;
+    const failureTtl = appConfig.resources.cache.manifest.failureTtl;
+    const recordFailure = async (error: unknown) => {
       if (failureTtl > 0 && !(error instanceof PossibleRecursiveRequestError)) {
         await manifestFailureCache
-          .set(cacheKey, error.message, failureTtl)
+          .set(cacheKey, (error as Error).message, failureTtl)
           .catch(() => undefined);
       }
-      throw error;
-    }
+    };
+
+    const fetchNow = async (): Promise<Manifest> => {
+      if (failureTtl > 0 && !options?.bypassCache) {
+        const failure = await manifestFailureCache.get(cacheKey);
+        if (failure) {
+          throw new Error(failure);
+        }
+      }
+      try {
+        return await this._request({
+          requestFn,
+          timeout: foregroundTimeout,
+          resourceName: 'manifest',
+          cacher: manifestCache,
+          cacheKey,
+          cacheTtl,
+          bypassCache: options?.bypassCache,
+        });
+      } catch (error) {
+        await recordFailure(error);
+        throw error;
+      }
+    };
+
+    const refresh = async (): Promise<void> => {
+      if (failureTtl > 0 && (await manifestFailureCache.get(cacheKey))) return;
+      if (backgroundInFlight >= appConfig.resources.background.maxConcurrent)
+        return;
+      backgroundInFlight++;
+      try {
+        await DistributedLock.getInstance().withLock(
+          cacheKey,
+          async () => {
+            const manifest = await fetchManifest(
+              AbortSignal.timeout(backgroundTimeout),
+              backgroundTimeout
+            );
+            await manifestCache.set(cacheKey, manifest, cacheTtl);
+            return manifest;
+          },
+          {
+            timeout: backgroundTimeout,
+            ttl: backgroundTimeout + 1000,
+            type: requestLockType(),
+          }
+        );
+      } catch (error) {
+        await recordFailure(error);
+      } finally {
+        backgroundInFlight--;
+      }
+    };
+
+    if (ttl <= 0 || options?.bypassCache) return fetchNow();
+    return manifestCache.getOrRevalidate(cacheKey, fetchNow, refresh, ttl);
   }
 
   async getStreams(type: string, id: string): Promise<ParsedStream[]> {
