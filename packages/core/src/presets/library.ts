@@ -135,6 +135,29 @@ export class LibraryPreset extends BuiltinAddonPreset {
         showInSimpleMode: false,
       },
       {
+        id: 'showPosters',
+        name: 'Show Posters',
+        description:
+          'Look up each library item on IMDb by its parsed title and show the matching poster in catalogs. Items that cannot be matched keep the plain landscape card. Setting an IMDb ID also lets catalog poster services (e.g. RPDB) apply to library items.',
+        type: 'boolean',
+        default: true,
+        showInSimpleMode: false,
+      },
+      {
+        id: 'nameFormat',
+        name: 'Name Format',
+        description:
+          'How library items are named in catalogs. "Release name" shows the raw torrent/NZB name. "Clean title" shows the title with its season/episode or year (e.g. "Rick and Morty S09E04"), using the matched IMDb title when posters are enabled, and moves the release name into the description.',
+        type: 'select',
+        required: false,
+        showInSimpleMode: false,
+        options: [
+          { value: 'release', label: 'Release name' },
+          { value: 'title', label: 'Clean title' },
+        ],
+        default: 'release',
+      },
+      {
         id: 'hideStreams',
         name: 'Hide Streams',
         description:
@@ -247,6 +270,8 @@ export class LibraryPreset extends BuiltinAddonPreset {
       skipProcessing: options?.skipProcessing,
       showRefreshActions: options?.showRefreshActions,
       hideStreams: options?.hideStreams,
+      showPosters: options?.showPosters,
+      nameFormat: options?.nameFormat,
     };
     return `${appConfig.bootstrap.internalUrl}/builtins/library/${this.base64EncodeJSON(
       config,
