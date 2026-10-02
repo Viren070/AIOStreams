@@ -5,7 +5,7 @@ import { Cache } from '../utils/cache.js';
 import { IdParser } from '../utils/id-parser.js';
 import { createLogger } from '../logging/logger.js';
 import type { WatchStateRow } from '../db/repositories/watch-state.js';
-import { seriesIdOf } from '../watch-state/types.js';
+import { matchedEpisodeOf, seriesIdOf } from '../watch-state/types.js';
 import { firstWriteOf } from './write-once.js';
 import type { ContentDescriptor, JellyfinDescriptor } from './types.js';
 
@@ -435,20 +435,39 @@ export function personaUserId(uuid: string, persona: string): string {
     .slice(0, 32);
 }
 
+/**
+ * Where a watch row's episode sits in its show. A row numbered within its own
+ * entry has no season, so its match key places it.
+ */
+export function watchRowEpisode(
+  row: Pick<WatchStateRow, 'mediaType' | 'season' | 'episode' | 'matchKey'>
+): { season: number; episode: number } | null {
+  if (row.episode == null) return null;
+  const matched =
+    row.season == null && row.matchKey
+      ? matchedEpisodeOf(row.matchKey, row.mediaType)
+      : null;
+  if (matched?.season != null && matched.episode != null) {
+    return { season: matched.season, episode: matched.episode };
+  }
+  return { season: row.season ?? 1, episode: row.episode };
+}
+
 /** The Jellyfin item a watch-state row stands for. */
 export function descriptorForWatchRow(
   row: Pick<
     WatchStateRow,
-    'mediaType' | 'baseId' | 'season' | 'episode' | 'videoId'
+    'mediaType' | 'baseId' | 'season' | 'episode' | 'videoId' | 'matchKey'
   >
 ): ContentDescriptor {
-  if (row.episode != null) {
+  const at = watchRowEpisode(row);
+  if (at) {
     return {
       k: 'episode',
       t: row.mediaType,
       i: seriesIdOf(row.baseId, row.videoId, row.mediaType),
-      s: row.season ?? 1,
-      e: row.episode,
+      s: at.season,
+      e: at.episode,
       v: row.videoId ?? row.baseId,
     };
   }

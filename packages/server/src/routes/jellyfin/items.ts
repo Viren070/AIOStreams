@@ -40,13 +40,13 @@ import {
   isMemoFresh,
   resolveByItem,
   resolveByMediaSource,
-  seriesIdOf,
   stripInternal,
   subtitleFormatFor,
   msToTicks,
   ratingUserData,
   seasonAnimeIds,
   userDataFromRow,
+  watchRowEpisode,
   watchRowsFor,
   writeMemoPointer,
   type ContentDescriptor,
@@ -396,6 +396,17 @@ export async function boxSetChildren(
   return { meta, boxset, children };
 }
 
+function findVideo(
+  groups: SeasonGroup[],
+  match: (group: SeasonGroup, video: SeasonGroup['videos'][number]) => boolean
+): { group: SeasonGroup; video: SeasonGroup['videos'][number] } | null {
+  for (const group of groups) {
+    const video = group.videos.find((v) => match(group, v));
+    if (video) return { group, video };
+  }
+  return null;
+}
+
 export async function itemFromDescriptor(
   ctx: JellyfinRequestContext,
   d: JellyfinDescriptor,
@@ -487,21 +498,10 @@ export async function itemFromDescriptor(
       if (!meta) return null;
       const seriesItem = buildContentItem(ctx.build, { ...meta, type: d.t });
       const groups = groupSeasons(meta, true);
-      let found: {
-        group: SeasonGroup;
-        video: SeasonGroup['videos'][number];
-      } | null = null;
-      for (const g of groups) {
-        const v =
-          g.videos.find((x) => x.id === d.v) ??
-          (g.season === d.s
-            ? g.videos.find((x) => x.episode === d.e)
-            : undefined);
-        if (v) {
-          found = { group: g, video: v };
-          break;
-        }
-      }
+      // Every season by id first: a bare number can match an earlier one.
+      const found =
+        findVideo(groups, (_, x) => x.id === d.v) ??
+        findVideo(groups, (g, x) => g.season === d.s && x.episode === d.e);
       const group = found?.group ?? {
         season: d.s,
         name: d.s === 0 ? 'Specials' : `Season ${d.s}`,
@@ -574,7 +574,6 @@ export async function summaryItem(
 interface EpisodeSlot {
   group: SeasonGroup;
   video: SeasonGroup['videos'][number];
-  id: string;
   row?: WatchStateRow;
 }
 
@@ -610,7 +609,6 @@ async function watchingPosition(
   const eps: EpisodeSlot[] = pairs.map(({ g, v }, i) => ({
     group: g,
     video: v,
-    id: encodeItemId(episodeDescriptor(meta, g, v)),
     row: states.get(itemKeyFor(refs[i])),
   }));
   let seriesItem: JellyfinItem | undefined;
@@ -625,21 +623,14 @@ async function watchingPosition(
     );
   let from = eps.findLastIndex(slotPlayed);
   if (!last) return { eps, from, build };
-  const lastId = encodeItemId({
-    k: 'episode',
-    t: last.mediaType,
-    i: seriesIdOf(last.baseId, last.videoId, last.mediaType),
-    s: last.season ?? 1,
-    e: last.episode ?? 0,
-    v: last.videoId ?? '',
-  });
-  let idx = eps.findIndex((e) => e.id === lastId);
+  let idx = last.videoId
+    ? eps.findIndex((e) => e.video.id === last.videoId)
+    : -1;
   // A row from another id space can only name its episode by number.
-  if (idx < 0 && last.episode != null)
+  const at = watchRowEpisode(last);
+  if (idx < 0 && at)
     idx = eps.findIndex(
-      (e) =>
-        e.group.season === (last.season ?? 1) &&
-        e.video.episode === last.episode
+      (e) => e.group.season === at.season && e.video.episode === at.episode
     );
   if (idx > from) {
     const anchor = eps[idx];
