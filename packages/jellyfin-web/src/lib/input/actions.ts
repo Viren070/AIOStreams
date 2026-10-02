@@ -176,12 +176,34 @@ export const ACTIONS = {
     keys: ['X'],
     repeat: true,
   },
+  'player.subtitlesSmaller': {
+    label: 'Smaller subtitles',
+    group: 'player',
+    keys: ['-'],
+  },
+  'player.subtitlesBigger': {
+    label: 'Bigger subtitles',
+    group: 'player',
+    keys: ['=', 'Plus'],
+  },
+  'player.subtitlesLower': {
+    label: 'Lower subtitles',
+    group: 'player',
+    keys: ['Shift+R'],
+    repeat: true,
+  },
+  'player.subtitlesHigher': {
+    label: 'Raise subtitles',
+    group: 'player',
+    keys: ['R'],
+    repeat: true,
+  },
   'player.slower': { label: 'Slower', group: 'player', keys: ['<', '['] },
   'player.faster': { label: 'Faster', group: 'player', keys: ['>', ']'] },
   'player.normalSpeed': {
     label: 'Normal speed',
     group: 'player',
-    keys: ['R'],
+    keys: ['Backspace'],
   },
   'player.fullscreen': { label: 'Full screen', group: 'player', keys: ['F'] },
   'player.stats': {

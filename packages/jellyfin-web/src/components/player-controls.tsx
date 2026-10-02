@@ -53,9 +53,16 @@ import {
   settings,
   useSetting,
   type SegmentType,
+  SUBTITLE_POSITION_MAX,
+  SUBTITLE_SIZES,
   VIDEO_FITS,
   type VideoFit,
 } from '../lib/settings';
+import {
+  stepSubtitleHeight,
+  stepSubtitleSize,
+  SUBTITLE_SIZE_LABELS,
+} from '../lib/subtitle-style';
 import { SyncByEar, SyncToLine } from './subtitle-sync';
 import { RATES, usePlayerKeys } from './player-keys';
 import { chapterAt, type Chapter } from '../lib/chapters';
@@ -460,6 +467,96 @@ function FitButton() {
   );
 }
 
+const keepOpen = (e: Event) => e.preventDefault();
+
+interface Step {
+  label: string;
+  /** Missing at the end of the range. */
+  onClick?: () => void;
+}
+
+/** A value with a button either side, which leave the menu open. */
+function Stepper({
+  label,
+  value,
+  less,
+  more,
+}: {
+  label?: string;
+  value: string;
+  less: Step;
+  more: Step;
+}) {
+  const button = (step: Step, icon: React.ReactNode) => (
+    <DropdownMenuItem
+      onSelect={keepOpen}
+      onClick={step.onClick}
+      disabled={!step.onClick}
+      className="justify-center"
+      aria-label={step.label}
+    >
+      {icon}
+    </DropdownMenuItem>
+  );
+  return (
+    <div className="flex items-center gap-1 px-1 pb-1">
+      {label && <span className="flex-1 px-1 text-sm">{label}</span>}
+      {button(less, <LuMinus />)}
+      <span
+        className={cn(
+          'min-w-16 text-center text-sm tabular-nums',
+          !label && 'flex-1'
+        )}
+      >
+        {value}
+      </span>
+      {button(more, <LuPlus />)}
+    </div>
+  );
+}
+
+/** Size and height, which every video on this device keeps. */
+function SubtitleStyleSteppers() {
+  const [size] = useSetting(settings.subtitle.size);
+  const [height] = useSetting(settings.subtitle.position);
+  const at = SUBTITLE_SIZES.indexOf(size);
+  return (
+    <>
+      <DropdownMenuLabel className="pt-3">Style</DropdownMenuLabel>
+      <Stepper
+        label="Size"
+        value={SUBTITLE_SIZE_LABELS[size]}
+        less={{
+          label: 'Smaller subtitles',
+          onClick: at > 0 ? () => stepSubtitleSize(-1) : undefined,
+        }}
+        more={{
+          label: 'Bigger subtitles',
+          onClick:
+            at < SUBTITLE_SIZES.length - 1
+              ? () => stepSubtitleSize(1)
+              : undefined,
+        }}
+      />
+      <Stepper
+        label="Height"
+        value={`${height}%`}
+        less={{
+          label: 'Lower subtitles',
+          onClick: height > 0 ? () => stepSubtitleHeight(-1) : undefined,
+        }}
+        more={{
+          label: 'Raise subtitles',
+          onClick:
+            height < SUBTITLE_POSITION_MAX
+              ? () => stepSubtitleHeight(1)
+              : undefined,
+        }}
+      />
+    </>
+  );
+}
+
 /** Nudges subtitles earlier or later without closing the menu. */
 function SubtitleSync({
   delayMs,
@@ -472,31 +569,20 @@ function SubtitleSync({
   onSyncByEar(): void;
   onSyncToLine?: () => void;
 }) {
-  const keepOpen = (e: Event) => e.preventDefault();
   return (
     <>
       <DropdownMenuLabel className="pt-3">Sync</DropdownMenuLabel>
-      <div className="flex items-center gap-1 px-1 pb-1">
-        <DropdownMenuItem
-          onSelect={keepOpen}
-          onClick={() => onChange(delayMs - SUBTITLE_DELAY_STEP_MS)}
-          className="justify-center"
-          aria-label="Show subtitles earlier"
-        >
-          <LuMinus />
-        </DropdownMenuItem>
-        <span className="min-w-16 flex-1 text-center text-sm tabular-nums">
-          {delayLabel(delayMs)}
-        </span>
-        <DropdownMenuItem
-          onSelect={keepOpen}
-          onClick={() => onChange(delayMs + SUBTITLE_DELAY_STEP_MS)}
-          className="justify-center"
-          aria-label="Show subtitles later"
-        >
-          <LuPlus />
-        </DropdownMenuItem>
-      </div>
+      <Stepper
+        value={delayLabel(delayMs)}
+        less={{
+          label: 'Show subtitles earlier',
+          onClick: () => onChange(delayMs - SUBTITLE_DELAY_STEP_MS),
+        }}
+        more={{
+          label: 'Show subtitles later',
+          onClick: () => onChange(delayMs + SUBTITLE_DELAY_STEP_MS),
+        }}
+      />
       <DropdownMenuItem onClick={onSyncByEar}>
         <LuEar className="flex-none" />
         Sync by ear…
@@ -1067,19 +1153,23 @@ export function PlayerControls({
                 onSelect={player.setSubtitle}
                 onOpenChange={onMenu}
                 footer={
-                  player.setSubtitleDelay &&
                   state.subtitle && (
-                    <SubtitleSync
-                      delayMs={state.subtitleDelayMs}
-                      onChange={player.setSubtitleDelay}
-                      onSyncByEar={() => setByEar(true)}
-                      onSyncToLine={
-                        player.subtitleLines &&
-                        (player.canReadSubtitle?.(state.subtitle) ?? true)
-                          ? pickLine
-                          : undefined
-                      }
-                    />
+                    <>
+                      {player.setSubtitleDelay && (
+                        <SubtitleSync
+                          delayMs={state.subtitleDelayMs}
+                          onChange={player.setSubtitleDelay}
+                          onSyncByEar={() => setByEar(true)}
+                          onSyncToLine={
+                            player.subtitleLines &&
+                            (player.canReadSubtitle?.(state.subtitle) ?? true)
+                              ? pickLine
+                              : undefined
+                          }
+                        />
+                      )}
+                      <SubtitleStyleSteppers />
+                    </>
                   )
                 }
               />

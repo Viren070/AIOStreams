@@ -12,6 +12,11 @@ import {
 import { useLatest, type PlayerController } from '../lib/player';
 import { settings } from '../lib/settings';
 import { delayLabel, SUBTITLE_DELAY_STEP_MS } from '../lib/subtitle-lines';
+import {
+  stepSubtitleHeight,
+  stepSubtitleSize,
+  SUBTITLE_SIZE_LABELS,
+} from '../lib/subtitle-style';
 
 export const RATES = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
@@ -63,6 +68,17 @@ export function usePlayerKeys(keys: PlayerKeys): void {
       const next = state.subtitleDelayMs + sign * SUBTITLE_DELAY_STEP_MS;
       setSubtitleDelay(next);
       k().notice(`Subtitles ${delayLabel(next).toLowerCase()}`);
+    };
+    const resizeSubtitles = (sign: number) => {
+      if (!player().state.subtitle) return false;
+      const size = stepSubtitleSize(sign) ?? settings.subtitle.size.read();
+      k().notice(`Subtitles ${SUBTITLE_SIZE_LABELS[size].toLowerCase()}`);
+    };
+    const raiseSubtitles = (sign: number) => {
+      if (!player().state.subtitle) return false;
+      const height =
+        stepSubtitleHeight(sign) ?? settings.subtitle.position.read();
+      k().notice(`Subtitle height ${height}%`);
     };
     const changeRate = (rate: number) => {
       player().setRate(rate);
@@ -166,6 +182,10 @@ export function usePlayerKeys(keys: PlayerKeys): void {
       },
       'player.subtitlesEarlier': () => nudgeSubtitles(-1),
       'player.subtitlesLater': () => nudgeSubtitles(1),
+      'player.subtitlesSmaller': () => resizeSubtitles(-1),
+      'player.subtitlesBigger': () => resizeSubtitles(1),
+      'player.subtitlesLower': () => raiseSubtitles(-1),
+      'player.subtitlesHigher': () => raiseSubtitles(1),
       'player.slower': () => stepRate(-1),
       'player.faster': () => stepRate(1),
       'player.normalSpeed': () => changeRate(1),

@@ -189,6 +189,13 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fit]);
 
+  const imageSubtitle = React.useRef(false);
+  const { subtitleStyle } = opts;
+  React.useEffect(
+    () => applySubtitleStyle(subtitleStyle, imageSubtitle.current),
+    [subtitleStyle]
+  );
+
   React.useEffect(() => {
     // mpv refuses anything above its volume-max.
     const { volume, muted } = storedVolume(Infinity);
@@ -197,15 +204,14 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
 
     let fileTracks: MpvTrack[] = [];
     let sid: string | null = null;
-    let imageSubtitle = false;
     const syncSubtitleScale = () => {
       const track = fileTracks.find(
         (t) => t.type === 'sub' && String(t.id) === sid
       );
       const image = IMAGE_SUBTITLE_CODECS.has(track?.codec ?? '');
       const style = latest.current.subtitleStyle;
-      if (image === imageSubtitle || !style) return;
-      imageSubtitle = image;
+      if (image === imageSubtitle.current || !style) return;
+      imageSubtitle.current = image;
       set('sub-scale', image ? 1 : subtitleScale(style));
     };
     // Shows an external subtitle in the user's language when their mode wants
@@ -305,7 +311,6 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
     set('pause', false);
     set('volume', Math.round(volume * 100));
     set('mute', muted);
-    applySubtitleStyle(latest.current.subtitleStyle);
     const delay = savedSubtitleDelay(source.Id);
     set('sub-delay', delay / 1000);
     patch({ subtitleDelayMs: delay });
@@ -425,9 +430,13 @@ function setProp(name: string, value: unknown) {
   window.aiostreamsDesktop?.send({ type: 'mpv-set-prop', name, value });
 }
 
-export function applySubtitleStyle(style: SubtitleStyle | undefined): void {
+/** Image subtitles keep their own size. */
+function applySubtitleStyle(
+  style: SubtitleStyle | undefined,
+  image: boolean
+): void {
   if (!style) return;
-  setProp('sub-scale', subtitleScale(style));
+  setProp('sub-scale', image ? 1 : subtitleScale(style));
   setProp('sub-bold', style.bold);
   setProp('sub-color', mpvColor(style.textColor));
   setProp('sub-outline-color', mpvColor(style.outlineColor));

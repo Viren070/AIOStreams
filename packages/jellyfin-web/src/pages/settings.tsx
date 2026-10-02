@@ -59,7 +59,11 @@ import {
 } from '../lib/hosts/shell';
 import { LANGUAGES } from '../lib/languages';
 import { serverAddress } from '../lib/servers';
-import { subtitleCss, subtitleLine } from '../lib/subtitle-style';
+import {
+  subtitleCss,
+  subtitleLine,
+  SUBTITLE_SIZE_LABELS,
+} from '../lib/subtitle-style';
 import { usePlaybackPrefs, type SubtitleMode } from '../lib/user-config';
 import {
   externalAlways,
@@ -83,6 +87,7 @@ import {
   DISCORD_EVENTS,
   type DiscordEvent,
   SUBTITLE_POSITION_MAX,
+  SUBTITLE_SIZES,
   type AudioChannels,
   type EpisodeLayout,
   type HeroMode,
@@ -499,12 +504,10 @@ function SubtitlesSection() {
       <SettingsCard title="Text" description={ON_DEVICE}>
         <Select
           label="Size"
-          options={[
-            { value: 'small', label: 'Small' },
-            { value: 'normal', label: 'Normal' },
-            { value: 'large', label: 'Large' },
-            { value: 'huge', label: 'Huge' },
-          ]}
+          options={SUBTITLE_SIZES.map((value) => ({
+            value,
+            label: SUBTITLE_SIZE_LABELS[value],
+          }))}
           value={size}
           onValueChange={(v) => setSize(v as SubtitleSize)}
         />
