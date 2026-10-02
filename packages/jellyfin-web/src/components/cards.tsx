@@ -2,6 +2,8 @@ import React from 'react';
 import { BiCheck, BiPlay } from 'react-icons/bi';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useHold } from '../lib/use-hold';
+import { useInView } from '../lib/use-in-view';
+import { canShrink, shrinkArtwork } from '../lib/artwork';
 import { settings, useSetting } from '../lib/settings';
 
 /** A list is tried in order, moving on when an image fails to load. */
@@ -23,6 +25,7 @@ export function Artwork({
   const key = sources.join('|');
   const [attempt, setAttempt] = React.useState(0);
   const [loaded, setLoaded] = React.useState(false);
+  const [plain, setPlain] = React.useState<string | null>(null);
   React.useEffect(() => {
     setAttempt(0);
     setLoaded(false);
@@ -43,25 +46,123 @@ export function Artwork({
       </div>
     );
   }
+  const imageClass = cn(
+    'absolute inset-0 h-full w-full object-cover transition-[transform,opacity] duration-500',
+    loaded ? 'opacity-100' : 'opacity-0',
+    className
+  );
   return (
     <>
-      <img
-        data-ui="artwork"
-        src={current}
-        alt={alt}
-        loading="lazy"
-        decoding="async"
-        draggable={false}
-        onLoad={() => setLoaded(true)}
-        onError={() => setAttempt((n) => n + 1)}
-        className={cn(
-          'absolute inset-0 h-full w-full object-cover transition-[transform,opacity] duration-500',
-          loaded ? 'opacity-100' : 'opacity-0',
-          className
-        )}
-      />
+      {canShrink && plain !== current ? (
+        <ShrunkImage
+          src={current}
+          alt={alt}
+          className={imageClass}
+          onLoad={() => setLoaded(true)}
+          onPlain={() => setPlain(current)}
+        />
+      ) : (
+        <img
+          data-ui="artwork"
+          src={current}
+          alt={alt}
+          loading="lazy"
+          decoding="async"
+          draggable={false}
+          onLoad={() => setLoaded(true)}
+          onError={() => setAttempt((n) => n + 1)}
+          className={imageClass}
+        />
+      )}
       {borrowed}
     </>
+  );
+}
+
+function deviceSize(entry: ResizeObserverEntry) {
+  const box = entry.devicePixelContentBoxSize?.[0];
+  return box
+    ? { width: box.inlineSize, height: box.blockSize }
+    : {
+        width: Math.round(entry.contentRect.width * devicePixelRatio),
+        height: Math.round(entry.contentRect.height * devicePixelRatio),
+      };
+}
+
+/** `src` drawn at the canvas's device size, or handed back for a plain image. */
+function ShrunkImage({
+  src,
+  alt,
+  className,
+  onLoad,
+  onPlain,
+}: {
+  src: string;
+  alt: string;
+  className: string;
+  onLoad: () => void;
+  onPlain: () => void;
+}) {
+  const [near, setNear] = React.useState(false);
+  const ref = useInView<HTMLCanvasElement>(() => setNear(true), '300px');
+  const [size, setSize] = React.useState<{ width: number; height: number }>();
+  const done = React.useRef({ onLoad, onPlain });
+  done.current = { onLoad, onPlain };
+
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) => {
+      const next = deviceSize(entry);
+      if (!next.width || !next.height) return;
+      // Small changes are left to CSS scaling rather than redrawn.
+      setSize((prev) =>
+        prev &&
+        Math.abs(prev.width - next.width) <= prev.width * 0.1 &&
+        Math.abs(prev.height - next.height) <= prev.height * 0.1
+          ? prev
+          : next
+      );
+    });
+    try {
+      observer.observe(el, { box: 'device-pixel-content-box' });
+    } catch {
+      observer.observe(el);
+    }
+    return () => observer.disconnect();
+  }, [ref]);
+
+  React.useEffect(() => {
+    if (!near || !size) return;
+    const job = shrinkArtwork(src, size.width, size.height);
+    void job.promise.then((result) => {
+      if (!('bitmap' in result)) return done.current.onPlain();
+      const el = ref.current;
+      if (el) {
+        el.width = result.bitmap.width;
+        el.height = result.bitmap.height;
+        // A CPU-backed canvas paints with the page instead of becoming a layer.
+        el.getContext('2d', { willReadFrequently: true })?.drawImage(
+          result.bitmap,
+          0,
+          0
+        );
+        done.current.onLoad();
+      }
+      result.bitmap.close();
+    });
+    return job.cancel;
+  }, [near, size, src, ref]);
+
+  return (
+    <canvas
+      ref={ref}
+      data-ui="artwork"
+      role="img"
+      aria-label={alt || undefined}
+      aria-hidden={!alt || undefined}
+      className={className}
+    />
   );
 }
 
