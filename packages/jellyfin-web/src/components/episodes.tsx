@@ -109,14 +109,12 @@ function Thumb({
   highlighted,
   className,
   numberClass,
-  maxWidth,
 }: {
   episode: BaseItemDto;
   playable: boolean;
   highlighted?: boolean;
   className?: string;
   numberClass: string;
-  maxWidth: number;
 }) {
   const { client } = useSession();
   const unavailable = unavailableLabel(episode);
@@ -130,7 +128,7 @@ function Thumb({
       )}
     >
       <Artwork
-        src={landscapeUrls(client, episode, { maxWidth })}
+        src={(width) => landscapeUrls(client, episode, { maxWidth: width })}
         alt={seasonEpisodeTitle(episode)}
         own={ownImages(episode)}
         standIn={<EpisodeNumber episode={episode} className={numberClass} />}
@@ -226,7 +224,7 @@ function Head({
             title={seasonEpisodeTitle(episode)}
             line={episodeLine(episode)}
             overview={episode.Overview}
-            image={landscapeUrls(client, episode, { maxWidth: 960 })}
+            image={landscapeUrls(client, episode, { maxWidth: 480 })}
             trigger={
               <IconButton
                 data-ui="episode-action"
@@ -335,7 +333,6 @@ export function EpisodeCard({
           highlighted={highlighted}
           className="rounded-xl"
           numberClass="text-5xl"
-          maxWidth={640}
         />
         <Head episode={episode} play={play} className="px-0.5 pt-2" oneLine />
         <Synopsis episode={episode} className="line-clamp-3 px-0.5" />
@@ -368,7 +365,6 @@ function EpisodeListItem({
           playable={!!play}
           className="rounded-lg sm:row-span-2"
           numberClass="text-3xl sm:text-4xl"
-          maxWidth={480}
         />
         <Head episode={episode} play={play} className="self-start" />
         {/* Beside a phone's thumbnail it would get a few words a line. */}

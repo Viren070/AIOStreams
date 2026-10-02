@@ -34,9 +34,7 @@ export function MixedGrid({
             <PosterCard
               href={href(itemPath(child))}
               shape={landscape ? 'landscape' : cardShape(child)}
-              image={posterUrl(client, child, {
-                maxWidth: landscape ? 640 : 400,
-              })}
+              image={(width) => posterUrl(client, child, { maxWidth: width })}
               title={child.Name ?? ''}
               subtitle={itemSubtitle(child)}
               watched={child.UserData?.Played}

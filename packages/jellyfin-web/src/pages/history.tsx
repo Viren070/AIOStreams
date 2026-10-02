@@ -37,7 +37,7 @@ import { href, itemPath, navigate, to } from '../lib/paths';
 import { PageBody } from '../components/layout';
 import { SessionsRow } from '../components/sessions';
 import { PillTabs } from '../components/pill-tabs';
-import { Artwork } from '../components/cards';
+import { Artwork, type ArtworkSource } from '../components/cards';
 import { UserAvatar } from '../components/user-avatar';
 import type { HistoryEntry, WebUser } from '../lib/types';
 
@@ -372,7 +372,9 @@ function DayTile({
     >
       <div className="flex gap-3 p-3">
         <a href={titleHref} className="w-14 flex-none">
-          <Poster src={posterUrl(client, item, { maxWidth: 200 })} />
+          <Poster
+            src={(width) => posterUrl(client, item, { maxWidth: width })}
+          />
         </a>
         <div className="min-w-0 flex-1 space-y-0.5">
           <a
@@ -422,7 +424,9 @@ function DayTile({
               <a href={href(itemPath(entry.item))} className="w-24 flex-none">
                 <div className="relative aspect-video overflow-hidden rounded-md bg-gray-900">
                   <Artwork
-                    src={landscapeUrls(client, entry.item, { maxWidth: 300 })}
+                    src={(width) =>
+                      landscapeUrls(client, entry.item, { maxWidth: width })
+                    }
                     alt=""
                   />
                 </div>
@@ -485,7 +489,7 @@ function Status({ entry }: { entry: HistoryEntry }) {
   );
 }
 
-function Poster({ src }: { src: string | null }) {
+function Poster({ src }: { src: ArtworkSource }) {
   return (
     <div className="relative aspect-[2/3] overflow-hidden rounded-md bg-gray-900">
       <Artwork src={src} alt="" />
@@ -743,7 +747,9 @@ function HistoryTable({
                     >
                       <span className="w-8 flex-none">
                         <Poster
-                          src={posterUrl(client, item, { maxWidth: 120 })}
+                          src={(width) =>
+                            posterUrl(client, item, { maxWidth: width })
+                          }
                         />
                       </span>
                       <span className="min-w-0">

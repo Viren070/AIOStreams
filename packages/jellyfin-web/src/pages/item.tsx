@@ -126,7 +126,7 @@ export function ItemPage({
       {pickId && <PickOnArrival itemId={pickId} />}
       <Backdrop
         images={data ? backdropUrls(client, data, { maxWidth: 1920 }) : []}
-        poster={data ? posterUrl(client, data, { maxWidth: 400 }) : null}
+        poster={data ? posterUrl(client, data, { maxWidth: 160 }) : null}
       />
       <div
         data-ui="item-body"
@@ -313,9 +313,9 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
   const setFavorite = useSetFavorite();
   const setDropped = useSetDropped();
   const nextUp = useNextUpFor(item.Id!, item.Type === 'Series');
-  const logo = logoUrl(client, item);
+  const logo = logoUrl(client, item, { maxWidth: 416 });
   const [logoFailed, setLogoFailed] = React.useState(false);
-  const poster = posterUrl(client, item, { maxWidth: 500 });
+  const poster = posterUrl(client, item, { maxWidth: 320 });
   const played = !!item.UserData?.Played;
   const favorite = !!item.UserData?.IsFavorite;
   const dropped = item.UserData?.Likes === false;
@@ -405,7 +405,7 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
             .filter(Boolean)
             .join(' · ')}
           overview={item.Overview}
-          image={landscapeUrls(client, item, { maxWidth: 960 })}
+          image={landscapeUrls(client, item, { maxWidth: 480 })}
           clampClass="max-h-[4lh]"
           className="text-sm leading-relaxed text-gray-300 sm:text-base"
         />
@@ -672,7 +672,7 @@ function Seasons({
         >
           {list.map((s) => {
             const selected = s.Id === seasonId;
-            const poster = posterUrl(client, s, { maxWidth: 300 });
+            const poster = posterUrl(client, s, { maxWidth: 120 });
             return (
               <ItemMenu key={s.Id} item={s} onPage>
                 <button
@@ -973,7 +973,7 @@ function SubCollections({ parent }: { parent: BaseItemDto }) {
           <PosterCard
             href={href(itemPath(item))}
             shape={landscape ? 'landscape' : cardShape(item)}
-            image={posterUrl(client, item, { maxWidth: landscape ? 640 : 400 })}
+            image={(width) => posterUrl(client, item, { maxWidth: width })}
             title={item.Name ?? ''}
             subtitle={itemSubtitle(item)}
             watched={item.UserData?.Played}
@@ -1084,7 +1084,7 @@ function Similar({ itemId }: { itemId: string }) {
             <ItemMenu key={item.Id} item={item}>
               <PosterCard
                 href={href(itemPath(item))}
-                image={posterUrl(client, item, { maxWidth: 400 })}
+                image={(width) => posterUrl(client, item, { maxWidth: width })}
                 title={item.Name ?? ''}
                 subtitle={itemSubtitle(item)}
                 watched={item.UserData?.Played}

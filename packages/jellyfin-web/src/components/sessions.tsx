@@ -29,7 +29,7 @@ function SessionCard({ session }: { session: SessionInfoDto }) {
   return (
     <WideCard
       href={href(itemPath(item))}
-      image={landscapeUrls(client, item, { maxWidth: 640 })}
+      image={(width) => landscapeUrls(client, item, { maxWidth: width })}
       title={itemTitle(item)}
       subtitle={[session.UserName, session.DeviceName || session.Client]
         .filter(Boolean)

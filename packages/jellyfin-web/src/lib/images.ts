@@ -1,7 +1,18 @@
 import type { JellyfinClient } from './client';
 import type { BaseItemDto } from './types';
 
+/** `maxWidth` is the widest the image is drawn at, in CSS pixels. */
 type Size = { maxWidth?: number };
+
+const STEPS = [
+  120, 160, 240, 320, 400, 480, 640, 800, 960, 1280, 1600, 1920, 2560, 3840,
+];
+
+/** In device pixels, rounded up to a step so the same URLs come back. */
+function deviceWidth(css: number): number {
+  const px = css * (window.devicePixelRatio || 1);
+  return STEPS.find((step) => step >= px) ?? Math.ceil(px);
+}
 
 function image(
   client: JellyfinClient,
@@ -15,7 +26,11 @@ function image(
     type === 'Backdrop'
       ? `/Items/${itemId}/Images/Backdrop/0`
       : `/Items/${itemId}/Images/${type}`;
-  return client.url(path, { tag, maxWidth: size.maxWidth, quality: 90 });
+  return client.url(path, {
+    tag,
+    maxWidth: size.maxWidth && deviceWidth(size.maxWidth),
+    quality: 90,
+  });
 }
 
 /** A portrait poster; an episode borrows its show's. */
@@ -110,11 +125,12 @@ export function backdropUrls(
 
 export function logoUrl(
   client: JellyfinClient,
-  item: BaseItemDto
+  item: BaseItemDto,
+  size?: Size
 ): string | null {
   return (
-    image(client, item.Id, 'Logo', item.ImageTags?.Logo) ??
-    image(client, item.ParentLogoItemId, 'Logo', item.ParentLogoImageTag)
+    image(client, item.Id, 'Logo', item.ImageTags?.Logo, size) ??
+    image(client, item.ParentLogoItemId, 'Logo', item.ParentLogoImageTag, size)
   );
 }
 
@@ -132,6 +148,6 @@ export function personImageUrl(
   person: { Id?: string; PrimaryImageTag?: string | null }
 ): string | null {
   return image(client, person.Id, 'Primary', person.PrimaryImageTag, {
-    maxWidth: 240,
+    maxWidth: 104,
   });
 }

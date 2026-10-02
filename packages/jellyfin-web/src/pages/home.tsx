@@ -250,7 +250,9 @@ function EpisodeRow({
                   held: true,
                 })
               }
-              image={landscapeUrls(client, item, { maxWidth: 640 })}
+              image={(width) =>
+                landscapeUrls(client, item, { maxWidth: width })
+              }
               title={itemTitle(item)}
               subtitle={itemSubtitle(item)}
               meta={
@@ -295,7 +297,7 @@ function UpcomingRow() {
           <WideCard
             href={href(itemPath(item))}
             unavailable
-            image={landscapeUrls(client, item, { maxWidth: 640 })}
+            image={(width) => landscapeUrls(client, item, { maxWidth: width })}
             title={itemTitle(item)}
             subtitle={itemSubtitle(item)}
             badge={
@@ -363,9 +365,7 @@ function LibraryRow({ view }: { view: BaseItemDto }) {
           <PosterCard
             href={href(itemPath(item))}
             shape={landscape ? 'landscape' : cardShape(item)}
-            image={posterUrl(client, item, {
-              maxWidth: landscape ? 640 : 400,
-            })}
+            image={(width) => posterUrl(client, item, { maxWidth: width })}
             title={item.Name ?? ''}
             subtitle={itemSubtitle(item)}
             watched={item.UserData?.Played}

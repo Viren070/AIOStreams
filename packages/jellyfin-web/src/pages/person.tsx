@@ -51,7 +51,7 @@ function LifeDates({ person }: { person: BaseItemDto }) {
 
 function Header({ person }: { person: BaseItemDto }) {
   const { client } = useSession();
-  const photo = posterUrl(client, person, { maxWidth: 500 });
+  const photo = posterUrl(client, person, { maxWidth: 192 });
   return (
     <div
       data-ui="person-header"

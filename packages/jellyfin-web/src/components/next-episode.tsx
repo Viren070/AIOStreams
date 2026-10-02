@@ -176,7 +176,7 @@ export function useNextEpisodePrompt({
     if (counting && leftMs <= 0) void playNext();
   }, [counting, leftMs, playNext]);
 
-  const image = next ? landscapeUrl(client, next, { maxWidth: 640 }) : null;
+  const image = next ? landscapeUrl(client, next, { maxWidth: 320 }) : null;
   const element =
     shown && next ? (
       <div

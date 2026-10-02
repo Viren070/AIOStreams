@@ -87,7 +87,7 @@ function EpisodeRow({ item }: { item: BaseItemDto }) {
     >
       <div className="relative aspect-video w-28 flex-none overflow-hidden rounded-lg bg-gray-900">
         <Artwork
-          src={landscapeUrls(client, item, { maxWidth: 320 })}
+          src={(width) => landscapeUrls(client, item, { maxWidth: width })}
           alt={itemTitle(item)}
         />
       </div>
@@ -158,7 +158,9 @@ function DayCell({
               )}
             >
               <Artwork
-                src={landscapeUrls(client, item, { maxWidth: 480 })}
+                src={(width) =>
+                  landscapeUrls(client, item, { maxWidth: width })
+                }
                 alt=""
               />
             </div>

@@ -6,6 +6,65 @@ import { useInView } from '../lib/use-in-view';
 import { canShrink, shrinkArtwork } from '../lib/artwork';
 import { settings, useSetting } from '../lib/settings';
 
+type Sources = string | string[] | null;
+
+/** URLs, or a function giving them for the CSS width the image is drawn at. */
+export type ArtworkSource = Sources | ((width: number) => Sources);
+
+interface Box {
+  /** CSS pixels, only ever growing, so a smaller layout keeps what it loaded. */
+  width: number;
+  device: { width: number; height: number };
+}
+
+function deviceSize(entry: ResizeObserverEntry) {
+  const box = entry.devicePixelContentBoxSize?.[0];
+  return box
+    ? { width: box.inlineSize, height: box.blockSize }
+    : {
+        width: Math.round(entry.contentRect.width * devicePixelRatio),
+        height: Math.round(entry.contentRect.height * devicePixelRatio),
+      };
+}
+
+const near = (a: number, b: number) => Math.abs(a - b) <= a * 0.1;
+
+/** The drawn size of whichever element the returned ref is on. */
+function useBox() {
+  const [box, setBox] = React.useState<Box>();
+  const observer = React.useRef<ResizeObserver | null>(null);
+  React.useEffect(() => () => observer.current?.disconnect(), []);
+  const measure = React.useCallback((el: Element | null) => {
+    observer.current?.disconnect();
+    observer.current = null;
+    if (!el) return;
+    const next = new ResizeObserver(([entry]) => {
+      const width = entry.contentRect.width;
+      const device = deviceSize(entry);
+      if (!width || !device.width || !device.height) return;
+      setBox((prev) => {
+        if (!prev) return { width, device };
+        // Small changes are left to CSS scaling rather than redrawn.
+        const same =
+          near(prev.device.width, device.width) &&
+          near(prev.device.height, device.height);
+        if (width <= prev.width && same) return prev;
+        return {
+          width: Math.max(width, prev.width),
+          device: same ? prev.device : device,
+        };
+      });
+    });
+    try {
+      next.observe(el, { box: 'device-pixel-content-box' });
+    } catch {
+      next.observe(el);
+    }
+    observer.current = next;
+  }, []);
+  return [box, measure] as const;
+}
+
 /** A list is tried in order, moving on when an image fails to load. */
 export function Artwork({
   src,
@@ -14,23 +73,38 @@ export function Artwork({
   own,
   standIn,
 }: {
-  src: string | string[] | null;
+  src: ArtworkSource;
   alt: string;
   className?: string;
   /** How many leading sources are the item's own, `standIn` covering the rest. */
   own?: number;
   standIn?: React.ReactNode;
 }) {
-  const sources = Array.isArray(src) ? src : src ? [src] : [];
+  const [box, measure] = useBox();
+  const resolved =
+    typeof src === 'function' ? (box ? src(box.width) : undefined) : src;
+  const sources = Array.isArray(resolved)
+    ? resolved
+    : resolved
+      ? [resolved]
+      : [];
   const key = sources.join('|');
-  const [attempt, setAttempt] = React.useState(0);
-  const [loaded, setLoaded] = React.useState(false);
+  // Tied to the list and the source rather than reset by an effect, which a
+  // cached image can finish loading before.
+  const [failed, setFailed] = React.useState({ key: '', count: 0 });
+  const attempt = failed.key === key ? failed.count : 0;
+  const [loadedSrc, setLoadedSrc] = React.useState<string | null>(null);
   const [plain, setPlain] = React.useState<string | null>(null);
-  React.useEffect(() => {
-    setAttempt(0);
-    setLoaded(false);
-  }, [key]);
   const current = sources[attempt];
+  const loaded = !!current && loadedSrc === current;
+  const imageClass = cn(
+    'absolute inset-0 h-full w-full object-cover transition-[transform,opacity] duration-500',
+    loaded ? 'opacity-100' : 'opacity-0',
+    className
+  );
+  // Laid out empty first when the URL waits on the drawn width.
+  if (resolved === undefined)
+    return <div ref={measure} className={imageClass} />;
   const borrowed = attempt >= (own ?? sources.length) ? standIn : null;
   if (!current) {
     if (borrowed) return borrowed;
@@ -46,11 +120,6 @@ export function Artwork({
       </div>
     );
   }
-  const imageClass = cn(
-    'absolute inset-0 h-full w-full object-cover transition-[transform,opacity] duration-500',
-    loaded ? 'opacity-100' : 'opacity-0',
-    className
-  );
   return (
     <>
       {canShrink && plain !== current ? (
@@ -58,19 +127,27 @@ export function Artwork({
           src={current}
           alt={alt}
           className={imageClass}
-          onLoad={() => setLoaded(true)}
+          size={box?.device}
+          measure={measure}
+          onLoad={() => setLoadedSrc(current)}
           onPlain={() => setPlain(current)}
         />
       ) : (
         <img
+          ref={measure}
           data-ui="artwork"
           src={current}
           alt={alt}
           loading="lazy"
           decoding="async"
           draggable={false}
-          onLoad={() => setLoaded(true)}
-          onError={() => setAttempt((n) => n + 1)}
+          onLoad={() => setLoadedSrc(current)}
+          onError={() =>
+            setFailed((f) => ({
+              key,
+              count: (f.key === key ? f.count : 0) + 1,
+            }))
+          }
           className={imageClass}
         />
       )}
@@ -79,65 +156,42 @@ export function Artwork({
   );
 }
 
-function deviceSize(entry: ResizeObserverEntry) {
-  const box = entry.devicePixelContentBoxSize?.[0];
-  return box
-    ? { width: box.inlineSize, height: box.blockSize }
-    : {
-        width: Math.round(entry.contentRect.width * devicePixelRatio),
-        height: Math.round(entry.contentRect.height * devicePixelRatio),
-      };
-}
-
 /** `src` drawn at the canvas's device size, or handed back for a plain image. */
 function ShrunkImage({
   src,
   alt,
   className,
+  size,
+  measure,
   onLoad,
   onPlain,
 }: {
   src: string;
   alt: string;
   className: string;
+  size: { width: number; height: number } | undefined;
+  measure: (el: Element | null) => void;
   onLoad: () => void;
   onPlain: () => void;
 }) {
-  const [near, setNear] = React.useState(false);
-  const ref = useInView<HTMLCanvasElement>(() => setNear(true), '300px');
-  const [size, setSize] = React.useState<{ width: number; height: number }>();
+  const [visible, setVisible] = React.useState(false);
+  const view = useInView<HTMLCanvasElement>(() => setVisible(true), '300px');
+  const ref = React.useCallback(
+    (el: HTMLCanvasElement | null) => {
+      view.current = el;
+      measure(el);
+    },
+    [view, measure]
+  );
   const done = React.useRef({ onLoad, onPlain });
   done.current = { onLoad, onPlain };
 
   React.useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const observer = new ResizeObserver(([entry]) => {
-      const next = deviceSize(entry);
-      if (!next.width || !next.height) return;
-      // Small changes are left to CSS scaling rather than redrawn.
-      setSize((prev) =>
-        prev &&
-        Math.abs(prev.width - next.width) <= prev.width * 0.1 &&
-        Math.abs(prev.height - next.height) <= prev.height * 0.1
-          ? prev
-          : next
-      );
-    });
-    try {
-      observer.observe(el, { box: 'device-pixel-content-box' });
-    } catch {
-      observer.observe(el);
-    }
-    return () => observer.disconnect();
-  }, [ref]);
-
-  React.useEffect(() => {
-    if (!near || !size) return;
+    if (!visible || !size) return;
     const job = shrinkArtwork(src, size.width, size.height);
     void job.promise.then((result) => {
       if (!('bitmap' in result)) return done.current.onPlain();
-      const el = ref.current;
+      const el = view.current;
       if (el) {
         el.width = result.bitmap.width;
         el.height = result.bitmap.height;
@@ -152,7 +206,7 @@ function ShrunkImage({
       result.bitmap.close();
     });
     return job.cancel;
-  }, [near, size, src, ref]);
+  }, [visible, size, src, view]);
 
   return (
     <canvas
@@ -203,7 +257,7 @@ const SHAPE_CLASS: Record<CardShape, string> = {
 export interface PosterCardProps {
   href: string;
   shape?: CardShape;
-  image: string | string[] | null;
+  image: ArtworkSource;
   title: string;
   subtitle?: string;
   watched?: boolean;
@@ -286,7 +340,7 @@ export interface WideCardProps {
   onClick?: () => void;
   /** A mouse press held down; touch keeps its long press for the item menu. */
   onHold?: () => void;
-  image: string | string[] | null;
+  image: ArtworkSource;
   title: string;
   subtitle?: string;
   meta?: React.ReactNode;

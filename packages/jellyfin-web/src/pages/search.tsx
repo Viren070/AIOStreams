@@ -179,7 +179,7 @@ function ResultRow({
           <PosterCard
             href={href(itemPath(item))}
             shape={landscape ? 'landscape' : cardShape(item)}
-            image={posterUrl(client, item, { maxWidth: landscape ? 640 : 400 })}
+            image={(width) => posterUrl(client, item, { maxWidth: width })}
             title={item.Name ?? ''}
             subtitle={itemSubtitle(item)}
             watched={item.UserData?.Played}

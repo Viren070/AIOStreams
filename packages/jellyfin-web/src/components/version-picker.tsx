@@ -234,8 +234,8 @@ function Versions({
       })
     : sources;
   const art =
-    backdropUrl(client, item, { maxWidth: 1280 }) ??
-    landscapeUrl(client, item, { maxWidth: 1280 });
+    backdropUrl(client, item, { maxWidth: 896 }) ??
+    landscapeUrl(client, item, { maxWidth: 896 });
   // The art ends where the list starts, however tall the header above it grows.
   const listRef = React.useRef<HTMLDivElement>(null);
   const [artHeight, setArtHeight] = React.useState<number>();

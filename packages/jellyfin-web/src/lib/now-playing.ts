@@ -46,8 +46,8 @@ export function useNowPlaying(
   const title = itemTitle(item);
   const subtitle = itemSubtitle(item) || null;
   const artwork =
-    landscapeUrl(client, item, { maxWidth: 640 }) ??
-    posterUrl(client, item, { maxWidth: 400 });
+    landscapeUrl(client, item, { maxWidth: 320 }) ??
+    posterUrl(client, item, { maxWidth: 200 });
   const { started, paused, positionMs, durationMs, rate } = player.state;
   const hasNext = !!actions.onNext;
   const hasPrevious = !!actions.onPrevious;
