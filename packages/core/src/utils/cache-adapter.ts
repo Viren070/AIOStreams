@@ -89,9 +89,12 @@ export class MemoryCacheBackend<K, V> implements CacheBackend<K, V> {
   private static sweepIntervalTime: number = 60_000;
   private static sweepYieldEvery: number = 5000;
 
-  constructor(maxSize: number) {
+  private clone: <T>(value: T) => T;
+
+  constructor(maxSize: number, options: { clone?: boolean } = {}) {
     this.cache = new Map<K, CacheItem<V>>();
     this.maxSize = maxSize;
+    this.clone = options.clone === false ? (value) => value : structuredClone;
     MemoryCacheBackend.instances.add(this);
     MemoryCacheBackend.startSweepInterval();
   }
@@ -138,7 +141,7 @@ export class MemoryCacheBackend<K, V> implements CacheBackend<K, V> {
         item.createdAt = now;
       }
 
-      return structuredClone(item.value);
+      return this.clone(item.value);
     }
     return undefined;
   }
@@ -158,12 +161,7 @@ export class MemoryCacheBackend<K, V> implements CacheBackend<K, V> {
     }
     this.cache.set(
       key,
-      new CacheItem<V>(
-        structuredClone(value),
-        Date.now(),
-        Date.now(),
-        ttl * 1000
-      )
+      new CacheItem<V>(this.clone(value), Date.now(), Date.now(), ttl * 1000)
     );
   }
 

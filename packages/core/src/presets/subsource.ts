@@ -248,12 +248,11 @@ export class SubSourcePreset extends Preset {
         `${this.METADATA.NAME} requires a SubSource API Key to be set. Please provide it in the configuration.`
       );
     }
-    options.subtitleTypes = options.subtitleTypes || [1, 2, 3, 4];
+    const subtitleTypes: number[] = options.subtitleTypes || [1, 2, 3, 4];
 
     const host = options.url || this.DEFAULT_URL;
 
-    const type =
-      options.subtitleTypes.length === 4 ? 0 : options.subtitleTypes.join(',');
+    const type = subtitleTypes.length === 4 ? 0 : subtitleTypes.join(',');
     const config = Buffer.from(
       `${options.subSourceApiKey}/${options.language.join(',')}/${options.hearingImpairment}/type:${type}`
     ).toString('base64');

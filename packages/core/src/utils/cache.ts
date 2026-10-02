@@ -31,6 +31,14 @@ export interface CacheDescription {
   };
 }
 
+export interface CacheOptions {
+  /**
+   * Memory store only. `false` shares the stored value instead of cloning it,
+   * so callers must not change it.
+   */
+  clone?: boolean;
+}
+
 export class Cache<K, V> {
   private static instances: Map<string, any> = new Map();
   /**
@@ -46,6 +54,7 @@ export class Cache<K, V> {
     | (() => number | null | undefined)
     | undefined;
   private storePreference: 'redis' | 'sql' | 'memory' | undefined;
+  private options: CacheOptions;
   private name: string;
 
   // Redis client singleton
@@ -54,11 +63,13 @@ export class Cache<K, V> {
   private constructor(
     name: string,
     maxSize: number | (() => number | null | undefined) | undefined,
-    store?: 'redis' | 'sql' | 'memory'
+    store?: 'redis' | 'sql' | 'memory',
+    options: CacheOptions = {}
   ) {
     this.name = name;
     this.explicitMaxSize = maxSize;
     this.storePreference = store;
+    this.options = options;
   }
 
   /** Resolved max size — falls back to the runtime-config default. */
@@ -82,7 +93,9 @@ export class Cache<K, V> {
         maxSize
       );
     } else {
-      this._backend = new MemoryCacheBackend<K, V>(maxSize);
+      this._backend = new MemoryCacheBackend<K, V>(maxSize, {
+        clone: this.options.clone ?? true,
+      });
     }
     return this._backend;
   }
@@ -171,14 +184,16 @@ export class Cache<K, V> {
    * Get an instance of the cache with a specific name
    * @param name Unique identifier for this cache instance
    * @param maxSize Maximum size of the cache (only used when creating a new instance)
+   * @param options Only used when creating a new instance
    */
   public static getInstance<K, V>(
     name: string,
     maxSize?: number | (() => number | null | undefined),
-    store?: 'redis' | 'sql' | 'memory'
+    store?: 'redis' | 'sql' | 'memory',
+    options?: CacheOptions
   ): Cache<K, V> {
     if (!this.instances.has(name)) {
-      this.instances.set(name, new Cache<K, V>(name, maxSize, store));
+      this.instances.set(name, new Cache<K, V>(name, maxSize, store, options));
     }
     return this.instances.get(name) as Cache<K, V>;
   }

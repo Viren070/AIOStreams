@@ -101,7 +101,8 @@ const RECHECK_MS = 30_000;
 const configCache = Cache.getInstance<string, CachedConfig>(
   'jellyfin-config',
   5000,
-  'memory'
+  'memory',
+  { clone: false }
 );
 const inFlight = new Map<string, Promise<CachedConfig | null>>();
 
@@ -200,16 +201,14 @@ export async function resolveConfigEntry(
     const loaded = await pending;
     if (!loaded) return null;
     void configCache.set(key, loaded, CONFIG_TTL).catch(() => undefined);
-    // Cold loads share one promise, and the caller stamps its IP onto the
-    // result, so each needs its own copy. A cache hit is already a clone.
-    entry = structuredClone(loaded);
+    entry = loaded;
   }
   return entry;
 }
 
 /**
- * A fresh copy of the resolved config, or null when the credentials are wrong.
- * Not cloned here: the forced-memory cache already clones on read.
+ * The resolved config, or null when the credentials are wrong. Shared with the
+ * cache: copy it before changing anything.
  */
 export async function resolveConfig(
   uuid: string,
@@ -462,8 +461,7 @@ async function buildContext(
 ): Promise<JellyfinRequestContext | typeof UNKNOWN_USER | null> {
   const entry = await resolveConfigEntry(uuid, encryptedPassword);
   if (!entry) return null;
-  let userData = entry.userData;
-  userData.ip = req.userIp;
+  let userData: UserData = { ...entry.userData, ip: req.userIp };
   const baseUserData = userData;
 
   let apiKey: JellyfinApiKey | null = null;
@@ -495,8 +493,9 @@ async function buildContext(
   if (token) void recordClientAgent(uuid, variantContext.userAgent, 'jellyfin');
   const configFor = async (selected: string[]): Promise<UserData> => {
     try {
+      // Activation sets `healthResults` on its argument.
       const { userData: activated, applied } = await activateVariants(
-        entry.stored,
+        { ...entry.stored },
         selected,
         variantContext
       );
