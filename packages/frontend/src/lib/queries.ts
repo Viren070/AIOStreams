@@ -13,6 +13,7 @@ import {
   type LinkedAccountPlatformInfo,
   type WatchStateOverview,
 } from './api';
+import { fetchDocsChangelog } from './changelog';
 import type {
   CommunityItemMine,
   CommunityItemPublic,
@@ -32,6 +33,12 @@ export const statusQuery = queryOptions({
   queryFn: () => api<StatusResponse>('/status'),
   staleTime: 60_000,
   retry: false,
+});
+
+export const docsChangelogQuery = queryOptions({
+  queryKey: ['docs-changelog'] as const,
+  queryFn: fetchDocsChangelog,
+  staleTime: Infinity,
 });
 
 // 401s without a session, which is a normal state on the configure page.

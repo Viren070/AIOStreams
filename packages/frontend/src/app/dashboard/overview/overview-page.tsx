@@ -12,6 +12,7 @@ import { PageWrapper } from '@/components/shared/page-wrapper';
 import { Card } from '@aiostreams/ui/card';
 import { cn } from '@aiostreams/ui/core/styling';
 import { api } from '@/lib/api';
+import { useStatus } from '@/context/status';
 import { useSystemStream } from '@/app/dashboard/system/use-system';
 import { formatDuration } from '@aiostreams/ui/core/format';
 import { useUsenetGlance } from '@/app/dashboard/usenet/queries';
@@ -21,6 +22,7 @@ import { BandwidthCard } from './_components/bandwidth-card';
 import { SectionLinks } from './_components/section-links';
 import { SystemCard } from './_components/system-card';
 import { UsenetCard } from './_components/usenet-card';
+import { VersionCard } from './_components/version-card';
 import { CardNote, OverviewCard } from './_components/overview-card';
 
 interface OverviewMetrics {
@@ -128,6 +130,7 @@ export function DashboardHome() {
     refetchInterval: 15_000,
   });
   const { metrics } = useSystemStream();
+  const { status } = useStatus();
 
   // Only the count is wanted, so ask for the smallest page the API will serve.
   const pending = useCommunityItems({ pending: true, limit: 1 });
@@ -212,7 +215,10 @@ export function DashboardHome() {
         )}
       </div>
 
-      {metrics && <SystemCard metrics={metrics} />}
+      <div className="space-y-3">
+        {metrics && <SystemCard metrics={metrics} />}
+        {status && <VersionCard status={status} />}
+      </div>
 
       {/* What the instance is doing right now */}
       <div

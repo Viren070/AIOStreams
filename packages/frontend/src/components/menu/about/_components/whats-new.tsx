@@ -15,8 +15,8 @@ import {
   docsEntryUrl,
   findDocsEntry,
 } from '@/lib/changelog';
-import { UseReleases } from './use-releases';
-import { ReleasesDrawer } from './releases-drawer';
+import type { UseReleases } from '@/components/shared/releases/use-releases';
+import { ReleasesDrawer } from '@/components/shared/releases/releases-drawer';
 
 interface WhatsNewProps {
   version: string;

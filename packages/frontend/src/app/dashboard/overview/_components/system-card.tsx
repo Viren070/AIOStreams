@@ -1,42 +1,7 @@
 import { BiChip } from 'react-icons/bi';
-import { cn } from '@aiostreams/ui/core/styling';
 import { formatBytes, formatDuration } from '@aiostreams/ui/core/format';
 import type { SystemMetrics } from '@/app/dashboard/system/use-system';
-import { OverviewCard } from './overview-card';
-
-/**
- * One reading. `ratio` only colours the figure once it is worth noticing; the
- * value itself carries the detail, so there is no track to read against.
- */
-function Reading({
-  label,
-  value,
-  hint,
-  ratio,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-  ratio?: number;
-}) {
-  return (
-    <div className="min-w-0 space-y-1">
-      <div className="text-xs uppercase tracking-wide text-[--muted]">
-        {label}
-      </div>
-      <div
-        className={cn(
-          'truncate text-lg font-semibold tabular-nums',
-          ratio != null && ratio >= 0.95 && 'text-red-400',
-          ratio != null && ratio >= 0.85 && ratio < 0.95 && 'text-amber-500'
-        )}
-      >
-        {value}
-      </div>
-      {hint && <div className="truncate text-xs text-[--muted]">{hint}</div>}
-    </div>
-  );
-}
+import { OverviewCard, Reading } from './overview-card';
 
 /**
  * Resource use in absolute terms: a percentage alone doesn't say whether an
