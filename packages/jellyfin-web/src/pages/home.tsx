@@ -88,11 +88,11 @@ export function HomePage() {
   const views = useViews();
   const [featured] = useSetting(settings.featured);
   const [mergeNextUp] = useSetting(settings.mergeNextUp);
-  const merged = React.useMemo(
-    () => mergeRows(resume.data?.Items, nextUp.data?.Items),
-    [resume.data, nextUp.data]
+  const continueItems = React.useMemo(
+    () =>
+      mergeRows(resume.data?.Items, mergeNextUp ? nextUp.data?.Items : null),
+    [resume.data, nextUp.data, mergeNextUp]
   );
-  const continueItems = mergeNextUp ? merged : (resume.data?.Items ?? []);
   const continueLoading = resume.isLoading || (mergeNextUp && nextUp.isLoading);
 
   const all = views.data?.Items ?? [];
