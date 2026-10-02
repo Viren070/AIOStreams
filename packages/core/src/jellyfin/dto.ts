@@ -83,6 +83,14 @@ export function isUnairedEpisode(item: JellyfinItem): boolean {
   return !!(item as { _aio?: { unaired?: boolean } })._aio?.unaired;
 }
 
+export function isUnairedVideo(video: SeasonGroup['videos'][number]): boolean {
+  const premiere = toIso(video.released);
+  return (
+    (video as { available?: unknown }).available === false ||
+    (premiere ? new Date(premiere).getTime() > Date.now() : false)
+  );
+}
+
 export function defaultUserData(itemId: string): UserItemDataDto {
   return {
     PlaybackPositionTicks: 0,
@@ -698,7 +706,6 @@ export function buildEpisode(
     i: meta.id,
     s: group.season,
   });
-  const v = video as typeof video & Record<string, unknown>;
   const images: ItemImages = {};
   if (typeof video.thumbnail === 'string') images.Primary = video.thumbnail;
   if (typeof meta.background === 'string') images.Backdrop = meta.background;
@@ -707,9 +714,7 @@ export function buildEpisode(
   const extra = readVideoEnrichment(video);
   const runtimeMs = extra.runtimeMs ?? parseRuntimeMs(meta.runtime);
   const premiere = toIso(video.released);
-  const unaired =
-    v.available === false ||
-    (premiere ? new Date(premiere).getTime() > Date.now() : false);
+  const unaired = isUnairedVideo(video);
   const missing = unaired && ctx.markUnaired;
   const title = video.title ?? video.name ?? `Episode ${video.episode}`;
   const path = `/aiostreams/${meta.type}/${meta.id}/${group.name}/${title}${PLAYABLE_EXT}`;

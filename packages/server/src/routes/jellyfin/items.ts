@@ -29,7 +29,7 @@ import {
   hasProgrammeVideos,
   identityFor,
   isLeafEntry,
-  isUnairedEpisode,
+  isUnairedVideo,
   itemKeyFor,
   placeholderMediaSource,
   playableSources,
@@ -571,8 +571,19 @@ export async function summaryItem(
   return item;
 }
 
-function isPlayed(item: JellyfinItem): boolean {
-  return (item.UserData as { Played: boolean }).Played;
+interface EpisodeSlot {
+  group: SeasonGroup;
+  video: SeasonGroup['videos'][number];
+  id: string;
+  row?: WatchStateRow;
+}
+
+function slotPlayed(slot: EpisodeSlot): boolean {
+  return !!slot.row?.played;
+}
+
+function slotResumable(slot: EpisodeSlot): boolean {
+  return !slot.row?.played && (slot.row?.positionMs ?? 0) > 0;
 }
 
 /**
@@ -584,15 +595,36 @@ async function watchingPosition(
   d: { t: string; i: string },
   last?: WatchStateRow
 ): Promise<{
-  eps: JellyfinItem[];
+  eps: EpisodeSlot[];
   from: number;
+  build: (slot: EpisodeSlot) => JellyfinItem;
   resume?: JellyfinItem;
 } | null> {
-  const res = await episodesForSeries(ctx, d);
-  if (!res) return null;
-  const eps = res.episodes.filter((e) => e.ParentIndexNumber !== 0);
-  let from = eps.findLastIndex(isPlayed);
-  if (!last) return { eps, from };
+  const meta = await getMeta(ctx, d.t, d.i);
+  if (!meta) return null;
+  const pairs = groupSeasons(meta, true)
+    .filter((g) => g.season !== 0)
+    .flatMap((g) => g.videos.map((v) => ({ g, v })));
+  const refs = pairs.map(({ g, v }) => episodeRef(meta, g, v));
+  const states = await watchRowsFor(ctx.watch, refs);
+  const eps: EpisodeSlot[] = pairs.map(({ g, v }, i) => ({
+    group: g,
+    video: v,
+    id: encodeItemId(episodeDescriptor(meta, g, v)),
+    row: states.get(itemKeyFor(refs[i])),
+  }));
+  let seriesItem: JellyfinItem | undefined;
+  const build = (slot: EpisodeSlot) =>
+    buildEpisode(
+      ctx.build,
+      meta,
+      (seriesItem ??= buildContentItem(ctx.build, { ...meta, type: d.t })),
+      slot.group,
+      slot.video,
+      slot.row
+    );
+  let from = eps.findLastIndex(slotPlayed);
+  if (!last) return { eps, from, build };
   const lastId = encodeItemId({
     k: 'episode',
     t: last.mediaType,
@@ -601,27 +633,31 @@ async function watchingPosition(
     e: last.episode ?? 0,
     v: last.videoId ?? '',
   });
-  let idx = eps.findIndex((e) => e.Id === lastId);
+  let idx = eps.findIndex((e) => e.id === lastId);
   // A row from another id space can only name its episode by number.
   if (idx < 0 && last.episode != null)
     idx = eps.findIndex(
       (e) =>
-        e.ParentIndexNumber === (last.season ?? 1) &&
-        e.IndexNumber === last.episode
+        e.group.season === (last.season ?? 1) &&
+        e.video.episode === last.episode
     );
   if (idx > from) {
     const anchor = eps[idx];
-    if (isResumable(anchor)) return { eps, from, resume: anchor };
+    if (slotResumable(anchor))
+      return { eps, from, build, resume: build(anchor) };
     // The list only sees this row when a match key links the two spellings.
-    if (!last.played && last.positionMs > 0)
+    if (!last.played && last.positionMs > 0) {
+      const item = build(anchor);
       return {
         eps,
         from,
-        resume: { ...anchor, UserData: userDataFromRow(anchor.Id, last) },
+        build,
+        resume: { ...item, UserData: userDataFromRow(item.Id, last) },
       };
+    }
     if (last.played) from = idx;
   }
-  return { eps, from };
+  return { eps, from, build };
 }
 
 export async function nextUpForSeries(
@@ -632,12 +668,12 @@ export async function nextUpForSeries(
 ): Promise<JellyfinItem | null> {
   const at = await watchingPosition(ctx, d, last);
   if (!at) return null;
-  const next =
-    at.resume ??
-    at.eps
-      .slice(at.from + 1)
-      .find((e) => !isUnairedEpisode(e) && !isPlayed(e)) ??
-    null;
+  const pick = at.resume
+    ? undefined
+    : at.eps
+        .slice(at.from + 1)
+        .find((e) => !isUnairedVideo(e.video) && !slotPlayed(e));
+  const next = at.resume ?? (pick ? at.build(pick) : null);
   if (next && opts.includeResumable === false && isResumable(next)) return null;
   return next;
 }
@@ -650,8 +686,9 @@ export async function nextToAir(
 ): Promise<JellyfinItem | null> {
   const at = await watchingPosition(ctx, d, last);
   if (!at || at.resume) return null;
-  const ahead = at.eps.slice(at.from + 1).filter((e) => !isPlayed(e));
-  return ahead.some((e) => !isUnairedEpisode(e)) ? null : (ahead[0] ?? null);
+  const ahead = at.eps.slice(at.from + 1).filter((e) => !slotPlayed(e));
+  if (ahead.some((e) => !isUnairedVideo(e.video))) return null;
+  return ahead[0] ? at.build(ahead[0]) : null;
 }
 
 function resolveOnOpen(ctx: JellyfinRequestContext, asked = false): boolean {
