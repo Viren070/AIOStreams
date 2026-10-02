@@ -92,6 +92,7 @@ interface CachedConfig {
   /** As saved, for variants to patch before the sync and validation. */
   stored: UserData;
   updatedAt: string;
+  loadedAt: number;
   checkedAt: number;
 }
 const CONFIG_TTL = 300;
@@ -141,6 +142,7 @@ async function loadConfig(
     userData: await syncAndValidate(userData),
     stored,
     updatedAt: await configUpdatedAt(uuid),
+    loadedAt: Date.now(),
     checkedAt: Date.now(),
   };
 }
@@ -181,8 +183,9 @@ export async function resolveConfigEntry(
   const key = `${uuid}|${getSimpleTextHash(encryptedPassword)}`;
   let entry = await configCache.get(key).catch(() => undefined);
   if (entry && Date.now() - entry.checkedAt > RECHECK_MS) {
-    const updatedAt = await configUpdatedAt(uuid);
-    if (updatedAt !== entry.updatedAt) {
+    // Synced lists were merged in at load, so an unchanged config still expires.
+    const expired = Date.now() - entry.loadedAt > CONFIG_TTL * 1000;
+    if (expired || (await configUpdatedAt(uuid)) !== entry.updatedAt) {
       await configCache.delete(key).catch(() => undefined);
       entry = undefined;
     } else {
