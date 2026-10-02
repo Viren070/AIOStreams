@@ -44,14 +44,27 @@ function signTag(body: string): string {
     .slice(0, SIGNATURE_LENGTH);
 }
 
+const PREFIXES_BY_LENGTH = [...HOST_PREFIXES].sort(
+  (a, b) => b[1].length - a[1].length
+);
+
+const TAG_MEMO_MAX = 20_000;
+const tagMemo = new Map<string, string>();
+
 export function encodeImageTag(url: string): string {
-  const match = [...HOST_PREFIXES]
-    .sort((a, b) => b[1].length - a[1].length)
-    .find(([, prefix]) => url.startsWith(prefix));
+  const memo = tagMemo.get(url);
+  if (memo !== undefined) return memo;
+  const match = PREFIXES_BY_LENGTH.find(([, prefix]) => url.startsWith(prefix));
   const body = match
     ? `${match[0]}${b64url(url.slice(match[1].length))}`
     : `0${b64url(url)}`;
-  return `${signTag(body)}${body}`;
+  const tag = `${signTag(body)}${body}`;
+  if (tagMemo.size >= TAG_MEMO_MAX) {
+    const oldest = tagMemo.keys().next();
+    if (!oldest.done) tagMemo.delete(oldest.value);
+  }
+  tagMemo.set(url, tag);
+  return tag;
 }
 
 export function decodeImageTag(tag: string): string | null {
