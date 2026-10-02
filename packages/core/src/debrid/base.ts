@@ -213,6 +213,9 @@ const TitleMetadataSchema = z.object({
   country: z.string().optional(),
   season: z.number().optional(),
   episode: z.number().optional(),
+  imdbId: z.string().nullable().optional(),
+  tmdbId: z.number().nullable().optional(),
+  tvdbId: z.number().nullable().optional(),
   absoluteEpisode: z.number().optional(),
   relativeAbsoluteEpisode: z.number().optional(),
   // the same episode as tvdb numbers it, when that differs

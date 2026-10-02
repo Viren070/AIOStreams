@@ -57,6 +57,7 @@ import {
 } from './grab-metrics.js';
 import { noteStreamActivity, pruneStreamActivity } from './damage-policy.js';
 import { condemnArrDownload } from './arr-bridge.js';
+import { queueUsenetProbe } from '../../remuxdb/probe.js';
 
 const logger = createLogger('usenet/stream');
 
@@ -731,7 +732,7 @@ export async function openUsenetStream(
   const admitted = streamRegistry.open({
     transport: 'usenet',
     username: decoded.owner ?? '',
-    share: opts.share,
+    share: opts.share || decoded.internalProbe,
     clientIp: opts.clientIp,
     targetKey: usenetTargetKey(
       decoded.hash,
@@ -773,6 +774,7 @@ export async function openUsenetStream(
   const handle = admitted.handle;
 
   noteStreamActivity(decoded.hash);
+  const wasWarm = streamSessions.has(streamSessionKey(decoded));
   let session: UsenetStreamSession;
   try {
     session = await getStreamSession(decoded, providers, options);
@@ -780,6 +782,9 @@ export async function openUsenetStream(
   } catch (err) {
     handle.close();
     throw err;
+  }
+  if (!wasWarm) {
+    queueUsenetProbe(decoded);
   }
   const { size, filename } = session;
   const suffix = opts.suffixLength;
