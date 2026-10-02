@@ -926,6 +926,15 @@ const NON_VIDEO_EXTENSIONS = new Set([
   '.dts',
   '.ape',
   '.aiff',
+  '.epub',
+  '.mobi',
+  '.azw',
+  '.azw3',
+  '.fb2',
+  '.djvu',
+  '.cbz',
+  '.cbr',
+  '.cb7',
 ]);
 const NON_VIDEO_PATTERNS = [/\.7z\.\d+$/];
 
