@@ -241,7 +241,9 @@ export class UserRepository {
     const key = await this.resolveConfigKey(uuid, password, row);
 
     await db.exec(
-      sql`UPDATE users SET accessed_at = CURRENT_TIMESTAMP WHERE uuid = ${uuid}`
+      sql`UPDATE users SET accessed_at = CURRENT_TIMESTAMP
+           WHERE uuid = ${uuid}
+             AND (accessed_at IS NULL OR accessed_at < ${db.intervalAgo(1, 'hours')})`
     );
 
     const decryptedConfig = this.decryptConfigWithKey(row.config, key);
