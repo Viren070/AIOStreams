@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.10.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.9.3...desktop-v0.10.0) (2026-10-02)
+
+
+### Features
+
+* **jellyfin-web:** change subtitle size and height from the player ([ed6981d](https://github.com/Viren070/AIOStreams/commit/ed6981d9e97601e1cdcb14c987c5b25874d95dc3))
+* **jellyfin-web:** drop hold to play from rows ([ed6981d](https://github.com/Viren070/AIOStreams/commit/ed6981d9e97601e1cdcb14c987c5b25874d95dc3))
+* **jellyfin-web:** guess intro and credits segments from chapter lengths ([ed6981d](https://github.com/Viren070/AIOStreams/commit/ed6981d9e97601e1cdcb14c987c5b25874d95dc3))
+* **jellyfin-web:** play next up and resume items from their page ([ed6981d](https://github.com/Viren070/AIOStreams/commit/ed6981d9e97601e1cdcb14c987c5b25874d95dc3))
+* **jellyfin-web:** pulse the episode a page opened on instead of ringing it ([ed6981d](https://github.com/Viren070/AIOStreams/commit/ed6981d9e97601e1cdcb14c987c5b25874d95dc3))
+* **jellyfin-web:** request images at their drawn width times the pixel ratio ([ed6981d](https://github.com/Viren070/AIOStreams/commit/ed6981d9e97601e1cdcb14c987c5b25874d95dc3))
+* **jellyfin-web:** resize card artwork to its device size in a worker ([ed6981d](https://github.com/Viren070/AIOStreams/commit/ed6981d9e97601e1cdcb14c987c5b25874d95dc3))
+* **jellyfin-web:** restore keyboard focus on pages returned to ([ed6981d](https://github.com/Viren070/AIOStreams/commit/ed6981d9e97601e1cdcb14c987c5b25874d95dc3))
+* **jellyfin-web:** rewrite shortcuts as remappable actions and add spatial navigation ([ed6981d](https://github.com/Viren070/AIOStreams/commit/ed6981d9e97601e1cdcb14c987c5b25874d95dc3))
+
+
+### Bug Fixes
+
+* **desktop:** enable wry's devtools feature ([6af4025](https://github.com/Viren070/AIOStreams/commit/6af402532c73dc0b1f10a68676bf7b6b55936a8a))
+* **jellyfin-web:** leave genre-required libraries off home ([ed6981d](https://github.com/Viren070/AIOStreams/commit/ed6981d9e97601e1cdcb14c987c5b25874d95dc3))
+* **jellyfin-web:** show one continue watching card per show ([ed6981d](https://github.com/Viren070/AIOStreams/commit/ed6981d9e97601e1cdcb14c987c5b25874d95dc3))
+
 ## [0.9.3](https://github.com/Viren070/AIOStreams/compare/desktop-v0.9.2...desktop-v0.9.3) (2026-10-01)
 
 
