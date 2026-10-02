@@ -19,7 +19,7 @@ dependencies = [
 
 [[package]]
 name = "aiostreams-desktop"
-version = "0.9.3"
+version = "0.10.0"
 dependencies = [
  "aiostreams-desktop-core",
  "block2",
@@ -51,7 +51,7 @@ dependencies = [
 
 [[package]]
 name = "aiostreams-desktop-core"
-version = "0.9.3"
+version = "0.10.0"
 dependencies = [
  "libloading",
  "log",
