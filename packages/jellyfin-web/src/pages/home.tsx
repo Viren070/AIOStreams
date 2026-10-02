@@ -8,6 +8,7 @@ import { useSession } from '../lib/session';
 import {
   useItemPages,
   libraryTypes,
+  needsGenre,
   useLibraryHeads,
   useNextUp,
   useResume,
@@ -29,6 +30,7 @@ import {
 } from '../lib/format';
 import { href, itemPath, navigate, to } from '../lib/paths';
 import { settings, useSetting, type FeaturedSource } from '../lib/settings';
+import { useFeature } from '../lib/server-info';
 import { useInView } from '../lib/use-in-view';
 import { FollowHero, Hero } from '../components/hero';
 import { MediaRow } from '../components/media-row';
@@ -96,6 +98,8 @@ export function HomePage() {
 
   const all = views.data?.Items ?? [];
   const noCatalogs = views.isSuccess && !all.length;
+  const genreRequired = useFeature('genreRequired');
+  const onHome = genreRequired ? all.filter((v) => !needsGenre(v)) : all;
   // A removed catalog is skipped, and a list left without any is automatic.
   const live =
     featured === 'auto' || !views.data
@@ -105,7 +109,7 @@ export function HomePage() {
         );
   const sources =
     live === 'auto' || (!live.length && featured.length)
-      ? autoSources(all)
+      ? autoSources(onHome)
       : live;
   const viewIds = sources
     .filter((s) => s.startsWith('view:'))
@@ -168,7 +172,7 @@ export function HomePage() {
           <NoCatalogs />
         </div>
       ) : (
-        all.map((view) => <LibraryRow key={view.Id} view={view} />)
+        onHome.map((view) => <LibraryRow key={view.Id} view={view} />)
       )}
     </>
   );
