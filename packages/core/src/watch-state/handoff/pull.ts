@@ -188,12 +188,12 @@ function matchedIdentityFrom(
 interface ImportResult {
   written: number;
   skipped: number;
-  touched: string[];
+  listed: string[];
   rekeyed: [string, string][];
 }
 
 /**
- * An unchanged row is only touched, so a match key found after it was stored
+ * An unchanged row is not rewritten, so a match key found after it was stored
  * needs its own write.
  */
 function staleMatchKeys(
@@ -321,8 +321,7 @@ async function importItems(
   db: DbDriver,
   matches: MatchKeys
 ): Promise<ImportResult> {
-  if (!items.length)
-    return { written: 0, skipped: 0, touched: [], rekeyed: [] };
+  if (!items.length) return { written: 0, skipped: 0, listed: [], rekeyed: [] };
 
   const keys = items.map((i) =>
     i.episode != null || splitVideoId(i.videoId).episode != null
@@ -332,8 +331,7 @@ async function importItems(
   const existingRows = await WatchStateRepository.getMany(scope, keys, db);
 
   const rows: ImportRow[] = [];
-  /* Unchanged but still listed; marked seen so the sweep leaves them. */
-  const touched: string[] = [];
+  const listed: string[] = [];
   let skipped = 0;
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
@@ -343,7 +341,7 @@ async function importItems(
 
     if (!mayImport(existing, at, now)) {
       skipped++;
-      if (existing) touched.push(key);
+      if (existing) listed.push(key);
       continue;
     }
 
@@ -373,7 +371,7 @@ async function importItems(
 
     if (!played && !position) {
       skipped++;
-      if (existing) touched.push(key);
+      if (existing) listed.push(key);
       continue;
     }
 
@@ -399,10 +397,11 @@ async function importItems(
     });
   }
   await WatchStateRepository.upsertImports(scope, rows, db);
+  for (const row of rows) listed.push(row.identity.itemKey);
   return {
     written: rows.length,
     skipped,
-    touched,
+    listed,
     rekeyed: staleMatchKeys(existingRows, matches),
   };
 }
@@ -444,7 +443,7 @@ async function importWatched(
   const existingRows = await WatchStateRepository.getMany(scope, keys, db);
 
   const rows: ImportRow[] = [];
-  const touched: string[] = [];
+  const listed: string[] = [];
   let skipped = 0;
 
   const write = (
@@ -460,12 +459,12 @@ async function importWatched(
       existing.origin === 'import' &&
       existing.sinkId === sink.id
     ) {
-      touched.push(key);
+      listed.push(key);
       return;
     }
     if (!mayImport(existing, now, now)) {
       skipped++;
-      if (existing) touched.push(key);
+      if (existing) listed.push(key);
       return;
     }
     rows.push({
@@ -523,10 +522,11 @@ async function importWatched(
   }
 
   await WatchStateRepository.upsertImports(scope, rows, db);
+  for (const row of rows) listed.push(row.identity.itemKey);
   return {
     written: rows.length,
     skipped,
-    touched,
+    listed,
     rekeyed: staleMatchKeys(existingRows, matches),
   };
 }
@@ -785,7 +785,7 @@ export async function pullSink(
   let items: ImportResult = {
     written: 0,
     skipped: 0,
-    touched: [],
+    listed: [],
     rekeyed: [],
   };
   let watchedWritten = 0;
@@ -798,8 +798,8 @@ export async function pullSink(
 
   /*
    * One transaction, so a concurrent read cannot sweep rows this one has
-   * written but not yet marked seen. The fetch stays outside it: on SQLite a
-   * transaction holds the single connection.
+   * written. The fetch stays outside it: on SQLite a transaction holds the
+   * single connection.
    */
   const listKeys = [
     ...(payload.watchlist ?? []).map((entry) =>
@@ -830,13 +830,7 @@ export async function pullSink(
       tx,
       matches
     );
-    await WatchStateRepository.touchImports(
-      scope,
-      sink.id,
-      items.touched,
-      now,
-      tx
-    );
+    const imported = new Set(items.listed);
     await WatchStateRepository.setMatchKeys(scope, items.rekeyed, tx);
 
     // Always complete, so anything it stopped reporting goes now.
@@ -845,6 +839,7 @@ export async function pullSink(
       sink.id,
       now,
       'resume',
+      imported,
       tx
     );
 
@@ -859,19 +854,14 @@ export async function pullSink(
       );
       watchedWritten = res.written;
       watchedSkipped = res.skipped;
-      await WatchStateRepository.touchImports(
-        scope,
-        sink.id,
-        res.touched,
-        now,
-        tx
-      );
+      for (const key of res.listed) imported.add(key);
       await WatchStateRepository.setMatchKeys(scope, res.rekeyed, tx);
       removed += await WatchStateRepository.deleteStaleImports(
         scope,
         sink.id,
         now,
         'watched',
+        imported,
         tx
       );
 

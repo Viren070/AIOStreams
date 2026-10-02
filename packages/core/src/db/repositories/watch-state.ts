@@ -352,31 +352,6 @@ export class WatchStateRepository {
     }
   }
 
-  /**
-   * Marks imported rows as still listed, without pretending they changed.
-   *
-   * `seen_at` separates "still there" from "changed"; the sweep reads the
-   * former, so an unchanged row is not mistaken for one the addon dropped.
-   */
-  static async touchImports(
-    scope: WatchScope,
-    sinkId: string,
-    itemKeys: string[],
-    at: number,
-    db: DbDriver = getDb()
-  ): Promise<void> {
-    const wanted = [...new Set(itemKeys.filter(Boolean))];
-    for (let i = 0; i < wanted.length; i += CHUNK) {
-      const slice = wanted.slice(i, i + CHUNK);
-      await db.exec(
-        sql`UPDATE watch_state SET seen_at = ${at}
-             WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
-               AND origin = 'import' AND sink_id = ${sinkId}
-               AND item_key IN (${join(slice.map((k) => sql`${k}`))})`
-      );
-    }
-  }
-
   static async setMatchKeys(
     scope: WatchScope,
     pairs: [itemKey: string, matchKey: string][],
@@ -1037,7 +1012,7 @@ export class WatchStateRepository {
   }
 
   /**
-   * Imported rows from one addon that this run did not touch. Swept per half,
+   * Imported rows from one addon that this run did not list. Swept per half,
    * because the halves arrive independently: sweeping both on a read that
    * carried only one would delete everything the other half owns.
    */
@@ -1046,18 +1021,29 @@ export class WatchStateRepository {
     sinkId: string,
     before: number,
     half: 'resume' | 'watched',
+    listed: ReadonlySet<string>,
     db: DbDriver = getDb()
   ): Promise<number> {
     const playedValue = half === 'watched' ? 1 : 0;
-    const res = await db.exec(
-      sql`DELETE FROM watch_state
-           WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+    const candidates = sql`uuid = ${scope.uuid} AND persona = ${scope.persona}
              AND origin = 'import' AND sink_id = ${sinkId}
              AND COALESCE(seen_at, updated_at) < ${before}
              AND played = ${playedValue}
-             AND NOT ${KEPT}`
+             AND NOT ${KEPT}`;
+    const rows = await db.query<{ item_key: string }>(
+      sql`SELECT item_key FROM watch_state WHERE ${candidates}`
     );
-    return res.rowCount ?? 0;
+    const stale = rows.map((r) => r.item_key).filter((k) => !listed.has(k));
+    let removed = 0;
+    for (let i = 0; i < stale.length; i += CHUNK) {
+      const res = await db.exec(
+        sql`DELETE FROM watch_state
+             WHERE ${candidates}
+               AND item_key IN (${join(stale.slice(i, i + CHUNK).map((k) => sql`${k}`))})`
+      );
+      removed += res.rowCount ?? 0;
+    }
+    return removed;
   }
 
   /** History, favourites, drops and ratings last while the configuration is in use; bare progress ages out alone. */
