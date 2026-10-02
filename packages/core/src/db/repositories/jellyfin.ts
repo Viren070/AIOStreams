@@ -5,12 +5,13 @@ import { deleteInBatches, type PruneResult } from '../prune.js';
 import type { WatchScope } from '../../watch-state/types.js';
 
 const CHUNK = 200;
+const SEEN_REFRESH_MS = 24 * 3600 * 1000;
 const USER_CONFIGURATION = 'aiostreams:user-configuration';
 
 /**
  * Jellyfin item ids that cannot be rebuilt from their Stremio id, keyed by
- * the 32-hex id the client saw. Rows are refreshed whenever the id is
- * emitted again, so anything a client still browses stays resolvable.
+ * the 32-hex id the client saw. Rows are refreshed, at most daily, whenever
+ * the id is emitted again, so anything a client still browses stays resolvable.
  */
 export class JellyfinRepository {
   static async rememberIds(
@@ -26,7 +27,12 @@ export class JellyfinRepository {
       await getDb().exec(
         sql`INSERT INTO jellyfin_id_map (id, payload, seen_at)
             VALUES ${values}
-            ON CONFLICT(id) DO UPDATE SET seen_at = excluded.seen_at`
+            ON CONFLICT(id) DO NOTHING`
+      );
+      await getDb().exec(
+        sql`UPDATE jellyfin_id_map SET seen_at = ${now}
+            WHERE id IN (${join(slice.map((e) => sql`${e.id}`))})
+              AND seen_at < ${now - SEEN_REFRESH_MS}`
       );
     }
   }
