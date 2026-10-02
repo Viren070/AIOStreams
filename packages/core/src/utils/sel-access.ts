@@ -194,13 +194,15 @@ export class SelAccess {
     expr: StreamExpressionItem,
     overrides: SyncOverride[]
   ): SyncOverride | undefined {
+    let names: string[] | undefined | null = null;
     return overrides.find((o) => {
       // Match by exact expression
       if (o.expression && o.expression === expr.expression) return true;
 
       // Match by extracted names vs stored exprNames
       if (o.exprNames && o.exprNames.length > 0) {
-        const names = extractNamesFromExpression(expr.expression, false);
+        if (names === null)
+          names = extractNamesFromExpression(expr.expression, false);
         const matches = (list?: string[]) =>
           !!list &&
           list.length === o.exprNames!.length &&
