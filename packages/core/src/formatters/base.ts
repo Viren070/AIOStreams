@@ -873,7 +873,9 @@ export abstract class BaseFormatter {
   /**
    */
   private compileWithEngine(str: string): CompiledParseFunction {
-    return engineCompileTemplate<ParseValue>(str, {
+    // Cached templates outlive this formatter, so no hook may reach `this`.
+    let warn = this.formatterContext.onWarning;
+    const compiled = engineCompileTemplate<ParseValue>(str, {
       resolveVariable: (source, parseValue) => {
         const value = readField(source, parseValue);
         return value == null ? undefined : String(value);
@@ -887,9 +889,11 @@ export abstract class BaseFormatter {
       },
       comparators: comparatorFunctions,
       onDepthExceeded: (max) =>
-        this.formatterContext.onWarning?.(
+        warn?.(
           `Template nesting depth exceeded (max ${max}). Returning literal text.`
         ),
     });
+    warn = undefined;
+    return compiled;
   }
 }
