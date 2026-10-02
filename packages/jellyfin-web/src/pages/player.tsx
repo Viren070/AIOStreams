@@ -46,7 +46,7 @@ import {
   useVersionPicker,
   VersionPickerProvider,
 } from '../components/version-picker';
-import { chapterSegments } from '../lib/chapters';
+import { chapterSegments, guessedSegments } from '../lib/chapters';
 import type { BaseItemDto, MediaSegmentDto, SourceInfo } from '../lib/types';
 
 interface PlayerProps {
@@ -428,23 +428,31 @@ function BrowserPlayer({
 
 /**
  * The server's segments and the ones the file's chapters name: where both have
- * a kind, the chapters' when preferred, else the server's.
+ * a kind, the chapters' when preferred, else the server's. Guesses from
+ * chapter lengths fill the kinds neither has.
  */
 function useShownSegments(
+  item: BaseItemDto,
   segments: MediaSegmentDto[] | null | undefined,
   player: PlayerController
 ) {
   const { chapters } = player;
   const { durationMs } = player.state;
   const [preferChapters] = useSetting(settings.desktop.chapterSkips);
+  const episode = item.Type === 'Episode';
   return React.useMemo(() => {
     const named = chapterSegments(chapters ?? [], durationMs);
-    const [first, second] = preferChapters
-      ? [named, segments ?? []]
-      : [segments ?? [], named];
-    const kinds = new Set(first.map((s) => String(s.Type)));
-    return [...first, ...second.filter((s) => !kinds.has(String(s.Type)))];
-  }, [segments, chapters, durationMs, preferChapters]);
+    const server = segments ?? [];
+    const guessed = episode ? guessedSegments(chapters ?? [], durationMs) : [];
+    const kinds = new Set<string>();
+    return (
+      preferChapters ? [named, server, guessed] : [server, named, guessed]
+    ).flatMap((source) => {
+      const added = source.filter((s) => !kinds.has(String(s.Type)));
+      added.forEach((s) => kinds.add(String(s.Type)));
+      return added;
+    });
+  }, [segments, chapters, durationMs, preferChapters, episode]);
 }
 
 /**
@@ -474,7 +482,11 @@ function NativePlayer({
     prefs,
     subtitleStyle,
   });
-  const segments = useShownSegments(useSegments(item.Id!).data?.Items, player);
+  const segments = useShownSegments(
+    item,
+    useSegments(item.Id!).data?.Items,
+    player
+  );
   const next = useNextEpisodePrompt({
     item,
     source,
