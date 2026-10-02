@@ -203,15 +203,13 @@ export class Wrapper {
         'fetching manifest'
       );
       try {
-        const backgroundTimeout =
-          appConfig.resources.background.timeout ??
-          appConfig.userLimits.timeouts.maxTimeout;
+        const fetchTimeout = appConfig.resources.background.enabled
+          ? (appConfig.resources.background.timeout ??
+            appConfig.userLimits.timeouts.maxTimeout)
+          : (options?.timeout ?? appConfig.resources.timeouts.manifest);
         const res = await makeRequest(this.manifestUrl, {
-          timeout: backgroundTimeout,
-          signal: AbortSignal.any([
-            signal,
-            AbortSignal.timeout(backgroundTimeout),
-          ]),
+          timeout: fetchTimeout,
+          signal: AbortSignal.any([signal, AbortSignal.timeout(fetchTimeout)]),
           headers: this.addon.headers,
           forwardIp: this.addon.ip,
         });
