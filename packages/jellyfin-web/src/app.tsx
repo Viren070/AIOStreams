@@ -58,7 +58,7 @@ export default function JellyfinWebApp() {
         />
         <PageBackground />
         <ThemeStyles />
-        <InputSetup history={webRouter.history} />
+        <InputSetup router={webRouter} />
         {currentHost().name === 'desktop' && (
           <>
             <ShellSetup />

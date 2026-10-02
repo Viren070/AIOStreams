@@ -7,6 +7,7 @@ import {
   inKeyedList,
   isQuiet,
   isTextField,
+  markPointerFocus,
   overlayOpen,
   ownsKey,
   sendKey,
@@ -66,6 +67,18 @@ function runHandlers(ids: readonly ActionId[], input: string): boolean {
 export const runAction = (id: ActionId, input = ''): boolean =>
   runHandlers([id], input);
 
+let keys = false;
+
+/** Whether keys, a remote or a gamepad came last, rather than a pointer. */
+export const usingKeys = () => keys;
+
+const onPointer = () => {
+  keys = false;
+  markPointerFocus(true);
+};
+
+const onFocus = () => markPointerFocus(!keys);
+
 let recorder: ((input: string) => void) | null = null;
 
 /** Hands every input to `listener` instead of its actions until stopped. */
@@ -79,6 +92,8 @@ export function record(listener: (input: string) => void): () => void {
 const worksInDialogs = (id: ActionId) => id === 'back' || id.startsWith('nav.');
 
 export function dispatch(input: string, repeat = false): boolean {
+  // The wheel is a pointer's.
+  if (!input.startsWith('Wheel')) keys = true;
   if (recorder) {
     recorder(input);
     return true;
@@ -203,7 +218,9 @@ export const movesFocus = (input: string) =>
 function onKey(e: KeyboardEvent, early: boolean): void {
   if (isQuiet(e)) return;
   const input = keyInput(e);
-  if (!input || (early && takesHold(e, input))) return;
+  if (!input) return;
+  keys = true;
+  if (early && takesHold(e, input)) return;
   if (recorder) {
     if (!early) return;
     e.preventDefault();
@@ -291,7 +308,11 @@ export function startInput(): () => void {
   window.addEventListener('keyup', onKeyUp, true);
   window.addEventListener('blur', onBlur);
   window.addEventListener('wheel', onWheel, { passive: true });
+  window.addEventListener('pointerdown', onPointer, true);
+  window.addEventListener('focusin', onFocus, true);
   return () => {
+    window.removeEventListener('focusin', onFocus, true);
+    window.removeEventListener('pointerdown', onPointer, true);
     window.removeEventListener('keyup', onKeyUp, true);
     window.removeEventListener('blur', onBlur);
     window.removeEventListener('keydown', early, true);

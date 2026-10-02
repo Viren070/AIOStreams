@@ -87,6 +87,13 @@ html.dark {
 [data-focus='own']:focus-visible {
   outline: none;
 }
+/* Focus that came from a pointer (markPointerFocus). */
+html[data-pointer-focus] :focus-visible:not(input):not(textarea),
+html[data-pointer-focus] :focus-visible:not(input):not(textarea)::after,
+html[data-pointer-focus] :focus-visible [data-ui='focus-ring'] {
+  outline: none !important;
+  --tw-ring-color: transparent !important;
+}
 /* Rows and the hero clip anything past their edges. */
 .UI-Carousel__content :focus-visible:not([data-focus='own']):not(input),
 [data-ui='hero'] :focus-visible:not([data-focus='own']):not(input) {

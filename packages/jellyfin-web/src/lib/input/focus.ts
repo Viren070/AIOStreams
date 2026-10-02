@@ -37,17 +37,33 @@ export const inKeyedList = (el: Element | null) => !!el?.closest(KEYED_LIST);
 
 export const dialogOpen = () => !!document.querySelector(OPEN_DIALOG);
 
+const POINTER_FOCUS = 'data-pointer-focus';
+
+/**
+ * Marks focus that came from a pointer, so it shows no ring. Chromium rings it
+ * once any key is pressed, and rings what a clicked menu focuses if a key came
+ * before.
+ */
+export const markPointerFocus = (pointer: boolean) =>
+  document.documentElement.toggleAttribute(POINTER_FOCUS, pointer);
+
 /** What the keyboard, a remote or a gamepad is on, rather than a pointer. */
 export function keyboardFocus(): HTMLElement | null {
   const el = document.activeElement;
   return el instanceof HTMLElement &&
     el !== document.body &&
-    el.matches(':focus-visible')
+    el.matches(':focus-visible') &&
+    !document.documentElement.hasAttribute(POINTER_FOCUS)
     ? el
     : null;
 }
 
 export const overlayOpen = () => !!document.querySelector(OPEN_OVERLAY);
+
+export const inOverlay = (el: Element) =>
+  !!el.closest(
+    '[role=dialog], [role=alertdialog], [role=menu], [role=listbox]'
+  );
 
 const VERTICAL = ['ArrowUp', 'ArrowDown'];
 const HORIZONTAL = ['ArrowLeft', 'ArrowRight'];

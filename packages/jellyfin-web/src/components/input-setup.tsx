@@ -1,4 +1,5 @@
 import React from 'react';
+import type { AnyRouter } from '@tanstack/react-router';
 import { Button } from '@aiostreams/ui/button';
 import { Modal } from '@aiostreams/ui/modal';
 import { currentHost } from '../lib/hosts';
@@ -12,6 +13,7 @@ import {
   move,
   onAction,
   openMenu,
+  returnFocus,
   startGamepads,
   startInput,
   type ActionGroup,
@@ -41,13 +43,15 @@ function back(history: History): boolean {
 }
 
 /** Keys, the wheel and gamepads, and what they do on every screen. */
-export function InputSetup({ history }: { history: History }) {
+export function InputSetup({ router }: { router: AnyRouter }) {
   const [help, setHelp] = React.useState(false);
   React.useEffect(() => {
     const fallback = { fallback: true };
+    const { history } = router;
     const stops = [
       startInput(),
       startGamepads(),
+      returnFocus(router),
       onAction('nav.up', () => move('up'), fallback),
       onAction('nav.down', () => move('down'), fallback),
       onAction('nav.left', () => move('left'), fallback),
@@ -58,7 +62,7 @@ export function InputSetup({ history }: { history: History }) {
       onAction('help', () => setHelp(true), fallback),
     ];
     return () => stops.forEach((stop) => stop());
-  }, [history]);
+  }, [router]);
   return <ShortcutsHelp open={help} onOpenChange={setHelp} />;
 }
 

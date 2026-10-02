@@ -30,4 +30,5 @@ export {
   openMenu,
 } from './focus';
 export { startGamepads } from './gamepad';
+export { returnFocus } from './return';
 export { inputLabels } from './keys';
