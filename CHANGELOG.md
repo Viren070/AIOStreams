@@ -1,5 +1,56 @@
 # Changelog
 
+## [2.35.8](https://github.com/Viren070/AIOStreams/compare/v2.35.7...v2.35.8) (2026-10-02)
+
+
+### Features
+
+* **cache:** add stale-while-revalidate reads and use them for manifests ([416fcce](https://github.com/Viren070/AIOStreams/commit/416fcce2ec5d20edf379c4e993163932ac30ee15))
+* **dashboard:** add a version card to the overview ([a16a2f1](https://github.com/Viren070/AIOStreams/commit/a16a2f1c8980f82ad7d0987d2ce777e69211f5d1))
+* **jellyfin-web:** change subtitle size and height from the player ([ffdc0d3](https://github.com/Viren070/AIOStreams/commit/ffdc0d39c990af1bf5402d4a6f3fc70f72158c81))
+* **jellyfin-web:** drop hold to play from rows ([d800040](https://github.com/Viren070/AIOStreams/commit/d800040a45bef85ba00ac955c9c325576bb2a6f5))
+* **jellyfin-web:** guess intro and credits segments from chapter lengths ([1580465](https://github.com/Viren070/AIOStreams/commit/158046534d2c66712f97a6bbca608407c4b6ac3f))
+* **jellyfin-web:** play next up and resume items from their page ([72f8032](https://github.com/Viren070/AIOStreams/commit/72f8032e52f63a8a27614e9501ca21125ade5570))
+* **jellyfin-web:** pulse the episode a page opened on instead of ringing it ([b4fbd7c](https://github.com/Viren070/AIOStreams/commit/b4fbd7cbc69b930f8999e2f2ac7ecca99bed35c8))
+* **jellyfin-web:** request images at their drawn width times the pixel ratio ([7f3d396](https://github.com/Viren070/AIOStreams/commit/7f3d396d5e7308399770ee0714caf41cf414ea90))
+* **jellyfin-web:** resize card artwork to its device size in a worker ([2b49efe](https://github.com/Viren070/AIOStreams/commit/2b49efee7685ee99191853245b72cc156a38e7c1))
+* **jellyfin-web:** restore keyboard focus on pages returned to ([3ce4dee](https://github.com/Viren070/AIOStreams/commit/3ce4dee78ac0cc9b081d03e90d3f822d33f29918))
+* **jellyfin-web:** rewrite shortcuts as remappable actions and add spatial navigation ([ff0dd1a](https://github.com/Viren070/AIOStreams/commit/ff0dd1a11e2111d998226946d72a39f0a777c11d))
+* **jellyfin:** redirect artwork to the smallest rendition covering the requested width ([a0d2f9d](https://github.com/Viren070/AIOStreams/commit/a0d2f9d067203aba06adb53a5e57d295336bcc42))
+
+
+### Bug Fixes
+
+* **formatter:** stop cached templates keeping their formatter alive ([360deb8](https://github.com/Viren070/AIOStreams/commit/360deb8a4c9625ed2a772587a64fb518cede65dd))
+* **jellyfin-web:** leave genre-required libraries off home ([0ac4310](https://github.com/Viren070/AIOStreams/commit/0ac4310c3e3bf015bd0d92532e9dc6a932f3be25))
+* **jellyfin-web:** show one continue watching card per show ([09b1676](https://github.com/Viren070/AIOStreams/commit/09b1676a7d7003cda4066a0264dc3640a07d5109))
+* **jellyfin:** attach user data to series built from watch rows ([dd9a87c](https://github.com/Viren070/AIOStreams/commit/dd9a87c162a210f450ba2d874b7831b4caeae1dd)), closes [#1419](https://github.com/Viren070/AIOStreams/issues/1419)
+* **jellyfin:** look up episodes by video id across every season first ([aa64fb4](https://github.com/Viren070/AIOStreams/commit/aa64fb4179c7b85ebfb4892914f5a25eba9d847e))
+* **jellyfin:** reload cached configs once their TTL has passed ([82f0bd3](https://github.com/Viren070/AIOStreams/commit/82f0bd36780522953dd2d1c86a7249a1344f0ffd))
+* **watch-state:** place anime episodes by TVDB when their IMDb hints name another show ([f815290](https://github.com/Viren070/AIOStreams/commit/f815290e8775981cbdde22e0fff7fc1d5d8657cb))
+* **wrapper:** bound foreground manifest fetches by the manifest timeout ([f82773b](https://github.com/Viren070/AIOStreams/commit/f82773bb7f39dcbfcf4e2330c28aebdf2d965e3f))
+
+
+### Performance Improvements
+
+* **anime-database:** log only candidate rids in the selector ([8f7fd8a](https://github.com/Viren070/AIOStreams/commit/8f7fd8a803c0c6e21cd3834b50ba28f193b0e80c))
+* **api:** stop counting users on every health and status check ([54ce0ca](https://github.com/Viren070/AIOStreams/commit/54ce0cac441f58d4fcb47ca8cb9233c97702a0d1))
+* **cache:** estimate the SQL cache size between counts ([e98bbe3](https://github.com/Viren070/AIOStreams/commit/e98bbe34a423246d68b3a435240521e51916b774))
+* **db:** drop unused indexes and narrow the import sweep index ([61d73a8](https://github.com/Viren070/AIOStreams/commit/61d73a83cf7a4416de5a99522503e940e95a1ce6))
+* **db:** stamp users.accessed_at at most once an hour ([89beb47](https://github.com/Viren070/AIOStreams/commit/89beb47700588621d8d67171b7600779311c35bc))
+* **debrid:** skip torrents and NZBs with more than 10,000 selectable files ([ec99d30](https://github.com/Viren070/AIOStreams/commit/ec99d30930216c841ca6d57b65d704d32fd77985))
+* **debrid:** treat audio files as non-video and look extensions up in a set ([e27061d](https://github.com/Viren070/AIOStreams/commit/e27061ddb4bfb224bb0ba82fac7520d9b8fb108c))
+* **debrid:** treat ebook and comic files as non-video ([6547f3e](https://github.com/Viren070/AIOStreams/commit/6547f3ee7eb135bfdf224717a3367ab4f5c06667))
+* **jellyfin:** build only the episodes Next Up picks ([62b5670](https://github.com/Viren070/AIOStreams/commit/62b5670e4c16333e06f396b01ee2823dcfa0edd5))
+* **jellyfin:** memoise image tags by URL ([24b395a](https://github.com/Viren070/AIOStreams/commit/24b395acf393557fcae38dca291ecdbecbab35e4))
+* **jellyfin:** read Upcoming and calendar shows through a pool ([ae8b370](https://github.com/Viren070/AIOStreams/commit/ae8b370cad832cdf7f4316ba079dece8716d9c36))
+* **jellyfin:** refresh id map seen_at at most once a day ([52d43ec](https://github.com/Viren070/AIOStreams/commit/52d43ec58a14a05ce91ed13e090620e9142627af))
+* **jellyfin:** share the cached config instead of cloning it ([6a1140f](https://github.com/Viren070/AIOStreams/commit/6a1140fb3ec2955f7693726f903f09514b17b8ac))
+* **sel:** extract expression names once per item when matching overrides ([25f2fc0](https://github.com/Viren070/AIOStreams/commit/25f2fc033f5f7b42d109aeed64610bee7c5ad217))
+* **watch-state:** cache match keys for batch lookups ([87b4847](https://github.com/Viren070/AIOStreams/commit/87b48474d390c9c56ea57693d6753cd5fdf2462d))
+* **watch-state:** return the upserted row instead of reading it back ([6db546d](https://github.com/Viren070/AIOStreams/commit/6db546dfc891948b0a312e2708df4d9918339391))
+* **watch-state:** sweep stale imports by listed keys instead of re-stamping them ([4e1cbbf](https://github.com/Viren070/AIOStreams/commit/4e1cbbf8ddc9a11657a4fce56046d606aa9b2bc5))
+
 ## [2.35.7](https://github.com/Viren070/AIOStreams/compare/v2.35.6...v2.35.7) (2026-10-01)
 
 
