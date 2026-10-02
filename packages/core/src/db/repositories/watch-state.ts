@@ -430,7 +430,7 @@ export class WatchStateRepository {
     const sinkId = patch.sinkId ?? null;
     const externalAt = patch.externalAt ?? null;
 
-    await getDb().exec(
+    const row = await getDb().maybeOne<DbRow>(
       sql`INSERT INTO watch_state
             (uuid, persona, item_key, kind, media_type, base_id, season, episode,
              video_id, series_key, position_ms, duration_ms, played, play_count,
@@ -484,11 +484,10 @@ export class WatchStateRepository {
             sink_id = excluded.sink_id,
             external_at = excluded.external_at,
             snapshot = COALESCE(${snapshot}, watch_state.snapshot),
-            match_key = COALESCE(excluded.match_key, watch_state.match_key)`
+            match_key = COALESCE(excluded.match_key, watch_state.match_key)
+          RETURNING *`
     );
-
-    const row = await this.get(scope, identity.itemKey);
-    if (row) return row;
+    if (row) return toRow(row);
     return {
       uuid: scope.uuid,
       persona: scope.persona,
