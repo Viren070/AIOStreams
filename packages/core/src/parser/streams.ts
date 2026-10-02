@@ -23,6 +23,7 @@ import {
   arrayMerge,
   applySeasonPackHeuristics,
 } from './merge.js';
+import { stripProviderResidue } from './providerResidue.js';
 
 const logger = createLogger('parser');
 
@@ -268,6 +269,7 @@ class StreamParser {
     return undefined;
   }
 
+
   protected getFilename(
     stream: Stream,
     currentParsedStream: ParsedStream
@@ -275,7 +277,7 @@ class StreamParser {
     let filename = stream.behaviorHints?.filename;
 
     if (filename) {
-      return filename;
+      return stripProviderResidue(filename);
     }
 
     const description = stream.description || stream.title;
