@@ -32,10 +32,7 @@ export interface CacheDescription {
 }
 
 export interface CacheOptions {
-  /**
-   * Memory store only. `false` shares the stored value instead of cloning it,
-   * so callers must not change it.
-   */
+  /** Memory store only. `false` shares values that callers must not change. */
   clone?: boolean;
 }
 
@@ -353,12 +350,7 @@ export class Cache<K, V> {
 
   private revalidating = new Set<K>();
 
-  /**
-   * Stale-while-revalidate read. Once less than `staleTtl` of an entry's TTL
-   * remains, it is still returned and `refresh` runs in the background, once
-   * per key per process. A miss returns `load`. Both store what they fetch for
-   * their TTL plus `staleTtl`.
-   */
+  /** `load` and `refresh` store what they fetch for its TTL plus `staleTtl`. */
   async getOrRevalidate(
     key: K,
     load: () => Promise<V>,

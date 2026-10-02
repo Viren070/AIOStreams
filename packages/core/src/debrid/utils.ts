@@ -938,6 +938,19 @@ export function isNotVideoFile(file: DebridFile): boolean {
   );
 }
 
+const MAX_SELECTABLE_FILES = 10_000;
+
+export function hasTooManySelectableFiles(files?: DebridFile[]): boolean {
+  if (!files || files.length <= MAX_SELECTABLE_FILES) return false;
+  let selectable = 0;
+  for (const file of files) {
+    if (!isNotVideoFile(file) && ++selectable > MAX_SELECTABLE_FILES) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export const metadataStore = () => {
   const prefix = 'mds';
   const store: 'redis' | 'sql' | 'memory' =

@@ -1,6 +1,5 @@
 import type { Migration } from './types.js';
 
-// seen_at stays out of the sweep index so seen_at touches are heap-only updates.
 const sql = `
       DROP INDEX IF EXISTS idx_users_accessed_at;
       DROP INDEX IF EXISTS idx_task_runs_at;

@@ -21,6 +21,7 @@ import {
   isCountryWrong,
   DebridDownload,
   isNotVideoFile,
+  hasTooManySelectableFiles,
   isTorrentDebridService,
   isUsenetDebridService,
   TitleMetadata,
@@ -376,6 +377,15 @@ async function processTorrentsForDebridService(
       }
     }
 
+    if (hasTooManySelectableFiles(magnetCheckResult?.files)) {
+      logger.debug(`Skipping torrent with too many files to select from`, {
+        service: service.id,
+        torrent: torrent.title,
+        files: magnetCheckResult?.files?.length,
+      });
+      continue;
+    }
+
     validTorrents.push({
       torrent,
       magnetCheckResult,
@@ -502,6 +512,13 @@ export async function processTorrentsForP2P(
       if (isEpisodeWrong(parsedTorrent, metadata)) {
         continue;
       }
+    }
+    if (hasTooManySelectableFiles(torrent.files)) {
+      logger.debug(`Skipping torrent with too many files to select from`, {
+        torrent: torrent.title,
+        files: torrent.files?.length,
+      });
+      continue;
     }
     validTorrents.push({ torrent, parsedTitle: parsedTorrent! });
   }
@@ -725,6 +742,15 @@ async function processNZBsForDebridService(
       if (reason) {
         continue;
       }
+    }
+
+    if (hasTooManySelectableFiles(nzbCheckResult?.files)) {
+      logger.debug(`Skipping NZB with too many files to select from`, {
+        service: service.id,
+        nzb: nzb.title,
+        files: nzbCheckResult?.files?.length,
+      });
+      continue;
     }
 
     validNZBs.push({ nzb, nzbCheckResult, parsedTitle: parsedNzb! });

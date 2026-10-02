@@ -604,7 +604,6 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
     }
   }
 
-  /** Rows at the last COUNT plus rows this process has written since. */
   private static sizeEstimate: { rows: number; at: number } | null = null;
   private static readonly SIZE_RECHECK_MS = 5 * 60_000;
 
