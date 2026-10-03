@@ -10,6 +10,8 @@ import { jellyfinDesktopHost } from './jellyfin-desktop';
 import { nativeShellHost } from './native-shell';
 import { shellHost } from './shell';
 import type { MediaKey } from './shell/bridge';
+import { tizenHost } from './tizen';
+import { webosHost } from './webos';
 
 export interface NowPlaying {
   itemId: string;
@@ -66,6 +68,8 @@ export function currentHost(): Host {
     jellyfinDesktopHost() ??
     androidHost() ??
     nativeShellHost() ??
+    webosHost() ??
+    tizenHost() ??
     browserHost
   );
 }
