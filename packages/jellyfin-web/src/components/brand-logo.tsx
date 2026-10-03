@@ -9,7 +9,7 @@ export function BrandLogo({ className }: { className?: string }) {
   return (
     <img
       data-ui="brand-logo"
-      src={logo && !failed ? logo : '/logo.png'}
+      src={logo && !failed ? logo : __STANDALONE__ ? './logo.png' : '/logo.png'}
       alt={name ?? 'AIOStreams'}
       onError={() => setFailed(true)}
       className={className}
