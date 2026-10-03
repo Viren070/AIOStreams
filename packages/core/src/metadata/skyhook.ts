@@ -23,6 +23,7 @@ const SkyhookEpisodeSchema = z.looseObject({
 const SkyhookShowSchema = z.looseObject({
   tvdbId: z.number(),
   title: z.string(),
+  status: z.string().nullable().optional().catch(undefined),
   imdbId: z.string().nullable().optional(),
   tmdbId: z.number().nullable().optional(),
   originalLanguage: z.string().nullable().optional(),
@@ -70,18 +71,25 @@ export class SkyhookMetadata {
     SkyhookSearchResult[]
   >('skyhook:search');
 
-  public async getShow(tvdbId: number): Promise<SkyhookShow | null> {
+  /** Read a cached show; a cancelled lookup must not cache an unavailable result. */
+  public async getShow(
+    tvdbId: number,
+    signal?: AbortSignal
+  ): Promise<SkyhookShow | null> {
     return SkyhookMetadata.cache.wrap(
       async () => {
         try {
+          signal?.throwIfAborted();
           const response = await makeRequest(`${SKYHOOK_BASE}/${tvdbId}`, {
             method: 'GET',
             timeout: 5000,
+            signal,
             headers: { 'User-Agent': HEADER_PRESETS.sonarr['User-Agent'] },
           });
           if (!response.ok) return null;
           return SkyhookShowSchema.parse(await response.json());
         } catch (error) {
+          if (signal?.aborted) throw error;
           logger.debug(`skyhook lookup failed for tvdb ${tvdbId}: ${error}`);
           return null;
         }
@@ -158,18 +166,24 @@ export class SkyhookMetadata {
   }
 
   /** Series matching `term` by name. */
-  public async search(term: string): Promise<SkyhookSearchResult[]> {
+  public async search(
+    term: string,
+    signal?: AbortSignal
+  ): Promise<SkyhookSearchResult[]> {
     return SkyhookMetadata.searchCache.wrap(
       async () => {
         try {
+          signal?.throwIfAborted();
           const url = new URL(SKYHOOK_SEARCH_BASE);
           url.searchParams.set('term', term);
           const response = await makeRequest(url.toString(), {
             method: 'GET',
             timeout: 5000,
+            signal,
             headers: { 'User-Agent': HEADER_PRESETS.sonarr['User-Agent'] },
           });
-          if (!response.ok) return [];
+          if (!response.ok)
+            throw new Error(`Skyhook search unavailable: ${response.status}`);
           const results = z
             .array(SkyhookSearchResultSchema)
             .parse(await response.json());
@@ -185,8 +199,9 @@ export class SkyhookMetadata {
             };
           });
         } catch (error) {
+          if (signal?.aborted) throw error;
           logger.debug(`skyhook search failed for "${term}": ${error}`);
-          return [];
+          throw error;
         }
       },
       term.toLowerCase(),

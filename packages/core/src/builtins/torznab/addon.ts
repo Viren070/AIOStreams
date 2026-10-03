@@ -13,6 +13,9 @@ import {
   NabAddonConfigSchema,
   NabAddonConfig,
   parseNabParsedFileInfo,
+  parseNabReleaseIds,
+  parseNabReleaseYear,
+  parseNabReleaseMedium,
 } from '../base/nab/addon.js';
 import { ageInHoursSince } from '../utils/general.js';
 
@@ -65,7 +68,11 @@ export class TorznabAddon extends BaseNabAddon<NabAddonConfig, TorznabApi> {
       const parsedMediaInfo = parseNabParsedFileInfo({
         audioLanguages: result.torznab?.language,
         subtitleLanguages: result.torznab?.subs,
+        audioTracks: result.torznab?.audio_tracks,
       });
+      const releaseYear = parseNabReleaseYear(result.torznab);
+      const releaseMedium = parseNabReleaseMedium(result.torznab);
+      const releaseIds = parseNabReleaseIds(result.torznab);
 
       torrents.push({
         confirmed: meta.searchType === 'id',
@@ -99,6 +106,9 @@ export class TorznabAddon extends BaseNabAddon<NabAddonConfig, TorznabApi> {
             ? result?.type === 'private'
             : undefined,
         parsedMediaInfo,
+        releaseIds,
+        releaseYear,
+        releaseMedium,
       });
     }
 
