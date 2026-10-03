@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.35.9](https://github.com/Viren070/AIOStreams/compare/v2.35.8...v2.35.9) (2026-10-03)
+
+
+### Features
+
+* **watch-state:** read a kind on pulled watchlist and rating entries ([95c77e5](https://github.com/Viren070/AIOStreams/commit/95c77e52d90d71f6c6005b5245c0fde84aefe7a5))
+* **watch-state:** read airsAt on pulled next episodes ([9aee883](https://github.com/Viren070/AIOStreams/commit/9aee8832accce0cd26576b5cccf3736e8dfb06d4))
+
+
+### Bug Fixes
+
+* **desktop:** load a bundled vulkan-1.dll when Windows has none ([30ddeb0](https://github.com/Viren070/AIOStreams/commit/30ddeb0d8506179319bda82486ad8c2f9a672de9))
+* **jellyfin-web:** avoid GamepadList array methods and AbortSignal.timeout ([76ca250](https://github.com/Viren070/AIOStreams/commit/76ca25076df04330f7a2974a4dc0559f5cd94df6))
+* **jellyfin-web:** keep the artwork crop inside the image ([f8fae6c](https://github.com/Viren070/AIOStreams/commit/f8fae6ca9494622549a04643f33c493572c2a397))
+* **watch-state:** fold an item's spellings in the history list and counts ([4f82379](https://github.com/Viren070/AIOStreams/commit/4f823797deb3f490482e551d793029567a272071))
+
 ## [2.35.8](https://github.com/Viren070/AIOStreams/compare/v2.35.7...v2.35.8) (2026-10-02)
 
 
