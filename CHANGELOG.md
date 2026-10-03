@@ -1,5 +1,26 @@
 # Changelog
 
+## [2.35.9](https://github.com/Viren070/AIOStreams/compare/v2.35.8...v2.35.9) (2026-10-03)
+
+
+### Features
+
+* **jellyfin:** add watchlisted shows and films to Upcoming ([7814d09](https://github.com/Viren070/AIOStreams/commit/7814d091bffccdf9230967d4074d114428f51f36))
+* **jellyfin:** raise the max versions default to 25 ([9f8ed87](https://github.com/Viren070/AIOStreams/commit/9f8ed87f92548a9516f1d4f60cc372088337fb53))
+* **watch-state:** read a kind on pulled watchlist and rating entries ([95c77e5](https://github.com/Viren070/AIOStreams/commit/95c77e52d90d71f6c6005b5245c0fde84aefe7a5))
+* **watch-state:** read airsAt on pulled next episodes ([9aee883](https://github.com/Viren070/AIOStreams/commit/9aee8832accce0cd26576b5cccf3736e8dfb06d4))
+
+
+### Bug Fixes
+
+* **desktop:** load a bundled vulkan-1.dll when Windows has none ([30ddeb0](https://github.com/Viren070/AIOStreams/commit/30ddeb0d8506179319bda82486ad8c2f9a672de9))
+* **jellyfin-web:** avoid GamepadList array methods and AbortSignal.timeout ([76ca250](https://github.com/Viren070/AIOStreams/commit/76ca25076df04330f7a2974a4dc0559f5cd94df6))
+* **jellyfin-web:** keep the artwork crop inside the image ([f8fae6c](https://github.com/Viren070/AIOStreams/commit/f8fae6ca9494622549a04643f33c493572c2a397))
+* **jellyfin:** decode HTML entities in overviews ([9902895](https://github.com/Viren070/AIOStreams/commit/99028950d9a9b9dbad4c9c04d4def8369fae1ef4))
+* **jellyfin:** page Next Up through up to 200 recent shows ([4f51dc1](https://github.com/Viren070/AIOStreams/commit/4f51dc11b085fa096fd8c962fe2be587e91b2fed))
+* **jellyfin:** size the pointer cache by max versions ([c086df8](https://github.com/Viren070/AIOStreams/commit/c086df84b56e6c111936c8e7bdbc0b3d8c96b6f3))
+* **watch-state:** fold an item's spellings in the history list and counts ([4f82379](https://github.com/Viren070/AIOStreams/commit/4f823797deb3f490482e551d793029567a272071))
+
 ## [2.35.8](https://github.com/Viren070/AIOStreams/compare/v2.35.7...v2.35.8) (2026-10-02)
 
 
