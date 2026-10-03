@@ -1,5 +1,6 @@
 {
   ".": "2.35.9",
   "packages/seanime-extensions": "0.10.2",
-  "packages/desktop": "0.10.1"
+  "packages/desktop": "0.10.1",
+  "packages/tv": "0.1.0"
 }

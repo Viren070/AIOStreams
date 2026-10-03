@@ -21,6 +21,21 @@ manifest (`webos/appinfo.json`, `tizen/config.xml`), which carries none itself.
 The Tizen build needs Tizen Studio's `tizen` command on `PATH` and a security profile to sign
 with, named by `TIZEN_PROFILE`.
 
+## Releases
+
+release-please releases this package on its own (`tv-v*` tags, `chore(tv): release` pull
+requests), and the TV Release workflow attaches `aiostreams-webos-<version>.ipk` and
+`aiostreams-tizen-<version>.wgt` to each release. Like the desktop app, page changes reach the
+changelog through the `chore(tv): update the web app` pull request that moves `web-app.lock`
+forward. The TV Check workflow builds both packages when anything here changes; run it by hand to
+get them as artifacts of the run.
+
+CI signs the `.wgt` with the `TIZEN_AUTHOR_KEY` secret (a base64 author `.p12`) and
+`TIZEN_AUTHOR_PASSWORD` (make it 27 letters: the Tizen CLI misreads some passwords), or a one-off
+author certificate when they are missing. Either way a TV
+needs it re-signed for itself (below), so the author only matters for keeping one identity across
+releases.
+
 ## Install
 
 ### webOS

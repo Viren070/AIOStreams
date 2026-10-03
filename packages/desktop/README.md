@@ -196,7 +196,7 @@ the desktop version, not AIOStreams'. A nightly's version is the next patch with
 to go down a version.
 
 release-please only counts commits under `packages/desktop` towards the desktop app, so page changes
-alone would never release it. When the web app or the UI kit changes, the Desktop Web App workflow
+alone would never release it. When the web app or the UI kit changes, the Web App Updates workflow
 opens or updates a `chore(desktop): update the web app` pull request that moves `web-app.lock`
 forward and carries their `feat` and `fix` commits in its message; merging it lets release-please cut
 a desktop release that lists them. `web-app.lock` only records how far the changelog goes: every

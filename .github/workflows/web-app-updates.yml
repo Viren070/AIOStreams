@@ -1,9 +1,9 @@
-name: Desktop Web App
+name: Web App Updates
 
-# The web app's commits count towards AIOStreams' releases, not the desktop app's
-# that bundles it. This keeps a pull request open that moves web-app.lock forward
-# with their conventional commits in its message, so merging it lets release-please
-# cut a desktop release that lists them.
+# The web app's commits count towards AIOStreams' releases, not the apps' that
+# bundle it. For each app this keeps a pull request open that moves its
+# web-app.lock forward with their conventional commits in its message, so merging
+# it lets release-please cut an app release that lists them.
 on:
   push:
     branches: [main]
@@ -17,18 +17,28 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: desktop-web-app
+  group: web-app-updates
   cancel-in-progress: true
 
 jobs:
   pull-request:
+    name: pull request (${{ matrix.app }})
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: desktop
+            label: desktop
+          - app: tv
+            label: TV
     env:
       # A token of its own lets the pull request run CI, as release-please's do.
       GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
-      BRANCH: desktop/web-app
-      LOCK: packages/desktop/web-app.lock
+      APP: ${{ matrix.app }}
+      BRANCH: ${{ matrix.app }}/web-app
+      LOCK: packages/${{ matrix.app }}/web-app.lock
     steps:
       - uses: actions/checkout@v7
         with:
@@ -38,15 +48,15 @@ jobs:
       - name: List the web app's changes
         id: changes
         run: |
-          # Since the last merged update, or the last desktop release if that is newer.
+          # Since the last merged update, or the app's last release if that is newer.
           base=$(git log -1 --format=%H -- "$LOCK")
-          tag=$(git describe --tags --abbrev=0 --match 'desktop-v*' 2>/dev/null || true)
+          tag=$(git describe --tags --abbrev=0 --match "$APP-v*" 2>/dev/null || true)
           if [ -n "$tag" ] && git merge-base --is-ancestor "$base" "$tag"; then
             base=$tag
           fi
-          # A commit that also touched the desktop app already counts towards its release.
+          # A commit that also touched the app already counts towards its release.
           for commit in $(git log --reverse --format=%H "$base..HEAD" -- packages/jellyfin-web packages/ui); do
-            git diff-tree --no-commit-id --name-only -r "$commit" | grep -q '^packages/desktop/' && continue
+            git diff-tree --no-commit-id --name-only -r "$commit" | grep -q "^packages/$APP/" && continue
             git log -1 --format=%s "$commit"
           done | grep -E '^[a-z]+(\([^)]*\))?!?: ' >changes.txt || true
           echo "count=$(wc -l <changes.txt)" >>"$GITHUB_OUTPUT"
@@ -54,10 +64,12 @@ jobs:
 
       - name: Open or update the pull request
         if: steps.changes.outputs.count != '0'
+        env:
+          LABEL: ${{ matrix.label }}
         run: |
-          title='chore(desktop): update the web app'
+          title="chore($APP): update the web app"
           {
-            echo "The web app's changes since the desktop app last took it, for the desktop changelog."
+            echo "The web app's changes since the $LABEL app last took it, for the $LABEL changelog."
             echo
             # release-please reads each of these as a commit of its own.
             sed 's/$/\n/' changes.txt
