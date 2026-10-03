@@ -30,9 +30,12 @@ function press(input: string, repeat: boolean): void {
   else dispatch(input, repeat);
 }
 
+// Older engines return a GamepadList, which has no array methods.
+const gamepads = () => Array.from(navigator.getGamepads());
+
 function pressed(): Set<string> {
   const down = new Set<string>();
-  for (const pad of navigator.getGamepads()) {
+  for (const pad of gamepads()) {
     if (!pad) continue;
     pad.buttons.forEach((button, i) => {
       if (button.pressed && BUTTONS[i]) down.add(BUTTONS[i]);
@@ -88,7 +91,7 @@ export function startGamepads(): () => void {
       }
     }
   };
-  const connected = () => navigator.getGamepads().some(Boolean);
+  const connected = () => gamepads().some(Boolean);
   const start = () => {
     if (!frame) frame = requestAnimationFrame(poll);
   };

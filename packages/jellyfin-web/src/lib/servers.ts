@@ -54,13 +54,18 @@ interface PublicInfo {
 }
 
 async function publicInfo(base: string): Promise<PublicInfo | null> {
+  // Older engines lack AbortSignal.timeout.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10_000);
   try {
     const res = await fetch(`${base}/System/Info/Public`, {
-      signal: AbortSignal.timeout(10_000),
+      signal: controller.signal,
     });
     return res.ok ? ((await res.json()) as PublicInfo) : null;
   } catch {
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
