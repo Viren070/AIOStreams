@@ -15,13 +15,18 @@ import { firstWriteOf } from './write-once.js';
 export const PLAYBACK_MEMO_TTL = 4 * 60 * 60;
 
 /* ~20 KB per memo, so the cap is low; an eviction costs a re-resolve. */
+const MEMO_CAP = 10_000;
+/* The play session, notices and list markers, beside one pointer per version. */
+const POINTER_SPARE = 5;
+
 const memos = Cache.getInstance<string, PlaybackMemo>(
   'jellyfin-playback',
-  10_000
+  MEMO_CAP
 );
+/* A stream URL names only its source, so a pointer must outlive its memo. */
 const pointers = Cache.getInstance<string, MemoPointer>(
   'jellyfin-playback-ptr',
-  50_000
+  () => MEMO_CAP * (appConfig.jellyfin.maxVersions + POINTER_SPARE)
 );
 
 /**
