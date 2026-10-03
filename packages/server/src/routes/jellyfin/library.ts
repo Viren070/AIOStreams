@@ -52,6 +52,7 @@ import {
 import {
   attachUserData,
   boxSetChildren,
+  caughtUpOn,
   decodeForRequest,
   decodeItemForRequest,
   isBoxsetCatalog,
@@ -334,6 +335,16 @@ export async function mapLimited<T, R>(
       }
     })
   );
+  return out;
+}
+
+async function take<T>(source: AsyncIterator<T>, n: number): Promise<T[]> {
+  const out: T[] = [];
+  while (out.length < n) {
+    const next = await source.next();
+    if (next.done) break;
+    out.push(next.value);
+  }
   return out;
 }
 
@@ -880,6 +891,9 @@ router.get(
   })
 );
 
+/** How many of the most recently watched shows Next Up looks through. */
+const NEXT_UP_SHOWS = 200;
+
 router.get(
   '/Shows/NextUp',
   jf(async (req, res, ctx) => {
@@ -916,29 +930,29 @@ router.get(
         if (next) items.push(next);
       }
     } else {
-      const recent = await provider.listRecentSeries(ctx.watch, limit * 2);
+      const recent = provider.recentSeries(ctx.watch, limit * 4);
       /* One show can sit under several series keys; see `itemsFromRows`. */
       const shown = new Set<string>();
       // Reaching the limit mid-batch wastes at most the rest of that batch.
       for (
-        let i = 0;
-        i < recent.length && items.length < limit;
-        i += ROW_CONCURRENCY
+        let checked = 0;
+        items.length < limit && checked < NEXT_UP_SHOWS;
+        checked += ROW_CONCURRENCY
       ) {
-        const batch = await mapLimited(
-          recent.slice(i, i + ROW_CONCURRENCY),
-          ROW_CONCURRENCY,
-          (row) =>
-            nextUpForSeries(
-              ctx,
-              {
-                t: row.mediaType,
-                i: seriesIdOf(row.baseId, row.videoId, row.mediaType),
-              },
-              row,
-              { includeResumable }
-            ).catch(() => null)
-        );
+        const rows = await take(recent, ROW_CONCURRENCY);
+        if (!rows.length) break;
+        const batch = await mapLimited(rows, ROW_CONCURRENCY, async (row) => {
+          const d = {
+            t: row.mediaType,
+            i: seriesIdOf(row.baseId, row.videoId, row.mediaType),
+          };
+          // A part-played anchor can still come back to resume.
+          if (row.played && (await caughtUpOn(ctx, d).catch(() => false)))
+            return null;
+          return nextUpForSeries(ctx, d, row, { includeResumable }).catch(
+            () => null
+          );
+        });
         for (const next of batch) {
           if (items.length >= limit) break;
           if (!next || (next.UserData as { Played: boolean }).Played) continue;

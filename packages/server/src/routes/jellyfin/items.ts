@@ -119,6 +119,17 @@ async function airedEpisodesOf(
   return show ? airedEpisodeRefs(show, now) : undefined;
 }
 
+/** Whether every aired episode is played, from an episode list that can lag the meta. */
+export async function caughtUpOn(
+  ctx: JellyfinRequestContext,
+  d: { t: string; i: string }
+): Promise<boolean> {
+  const aired = await airedEpisodesOf(ctx, d, Date.now());
+  if (!aired?.length) return false;
+  const rows = await watchRowsFor(ctx.watch, aired);
+  return aired.every((ref) => rows.get(itemKeyFor(ref))?.played);
+}
+
 /** Batched user data for every content item in a list. */
 export async function attachUserData(
   ctx: JellyfinRequestContext,

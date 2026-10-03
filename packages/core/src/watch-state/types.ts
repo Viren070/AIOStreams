@@ -208,6 +208,7 @@ export interface WatchStateProvider {
     kinds?: WatchKind[]
   ): Promise<WatchStateRow[]>;
   listRecentSeries(scope: WatchScope, limit: number): Promise<WatchStateRow[]>;
+  recentSeries(scope: WatchScope, page: number): AsyncGenerator<WatchStateRow>;
   listFavorites(
     scope: WatchScope,
     kinds?: WatchKind[]

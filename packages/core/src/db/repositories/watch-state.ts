@@ -534,16 +534,14 @@ export class WatchStateRepository {
    * moves to the id its match key names when the show has rows there, since
    * that id covers every season.
    */
-  static async listRecentSeries(
+  static async *recentSeries(
     scope: WatchScope,
-    limit: number
-  ): Promise<WatchStateRow[]> {
+    page: number
+  ): AsyncGenerator<WatchStateRow> {
     const where = sql`uuid = ${scope.uuid} AND persona = ${scope.persona}
       AND series_key IS NOT NULL AND episode IS NOT NULL AND ${WATCHED}`;
-    const page = limit * 2;
-    const out: WatchStateRow[] = [];
     const shown = new Set<string>();
-    for (let offset = 0; out.length < limit; offset += page) {
+    for (let offset = 0; ; offset += page) {
       // Picks the series first, so only their rows are ranked, not the history.
       const latest = await getDb().query<{
         series_key: string;
@@ -555,7 +553,7 @@ export class WatchStateRepository {
              ORDER BY at DESC, series_key
              LIMIT ${page} OFFSET ${offset}`
       );
-      if (!latest.length) break;
+      if (!latest.length) return;
       const lastAt = new Map(latest.map((l) => [l.series_key, Number(l.at)]));
       const anchors = join(
         latest.map(
@@ -599,10 +597,20 @@ export class WatchStateRepository {
         if (shown.has(show)) continue;
         shown.add(show);
         const whole = bySeries.get(show);
-        out.push(whole && whole !== row ? underShow(row, whole) : row);
-        if (out.length >= limit) break;
+        yield whole && whole !== row ? underShow(row, whole) : row;
       }
-      if (latest.length < page) break;
+      if (latest.length < page) return;
+    }
+  }
+
+  static async listRecentSeries(
+    scope: WatchScope,
+    limit: number
+  ): Promise<WatchStateRow[]> {
+    const out: WatchStateRow[] = [];
+    for await (const row of this.recentSeries(scope, limit * 2)) {
+      out.push(row);
+      if (out.length >= limit) break;
     }
     return out;
   }

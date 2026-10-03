@@ -53,6 +53,10 @@ export class LocalWatchStateProvider implements WatchStateProvider {
     return WatchStateRepository.listRecentSeries(scope, limit);
   }
 
+  recentSeries(scope: WatchScope, page: number) {
+    return WatchStateRepository.recentSeries(scope, page);
+  }
+
   listFavorites(scope: WatchScope, kinds?: WatchKind[]) {
     return WatchStateRepository.listFavorites(scope, kinds);
   }
