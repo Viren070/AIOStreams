@@ -91,8 +91,9 @@ async function decode(
 /** The source rectangle `object-fit: cover` shows of a `w`x`h` image in the box. */
 function cover(w: number, h: number, width: number, height: number) {
   const scale = Math.max(width / w, height / h);
-  const sw = width / scale;
-  const sh = height / scale;
+  // WebKit draws nothing for a source rectangle a rounding error past the image.
+  const sw = Math.min(w, width / scale);
+  const sh = Math.min(h, height / scale);
   return [(w - sw) / 2, (h - sh) / 2, sw, sh] as const;
 }
 
