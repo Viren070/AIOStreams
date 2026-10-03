@@ -36,6 +36,7 @@ import {
 import { mergeSources, type SourceBatch } from './merger.js';
 import { filterCandidatesBySeasonType, selectBestRecord } from './selector.js';
 import { buildAnimeEntry } from './builder.js';
+import { getEntryEpisodeTitles } from './episode-titles.js';
 
 const logger = createLogger('anime-database');
 
@@ -380,7 +381,31 @@ export class AnimeDatabase {
     }
 
     const candidates = await AnimeRepository.findCandidates(idType, idValue);
-    const entry = chooseEntry(candidates, idType, idValue, season, episode);
+    const chosen = chooseRecord(candidates, idType, idValue, season, episode);
+    const entry = chosen ? buildSelectedEntry(chosen, idType, idValue) : null;
+    if (
+      chosen &&
+      entry &&
+      season !== undefined &&
+      episode !== undefined &&
+      ['imdbId', 'thetvdbId', 'themoviedbId'].includes(idType)
+    ) {
+      // Related records supply title uniqueness, never selection coordinates.
+      const related = await Promise.all(
+        (['imdbId', 'thetvdbId', 'themoviedbId'] as const)
+          .filter(
+            (key) =>
+              key !== idType &&
+              chosen.ids?.[key] != null &&
+              chosen.ids?.[key] !== ''
+          )
+          .map((key) => AnimeRepository.findCandidates(key, chosen.ids[key]!))
+      );
+      entry.localEpisodeTitles = getEntryEpisodeTitles(chosen, [
+        ...candidates,
+        ...related.flat(),
+      ]);
+    }
 
     this.cache.set(key, entry);
     if (this.cache.size > CACHE_MAX_ENTRIES) {
@@ -402,13 +427,13 @@ export class AnimeDatabase {
   }
 }
 
-function chooseEntry(
+function chooseRecord(
   candidates: AnimeRecord[],
   idType: IdType,
   idValue: IdValue,
   season?: number,
   episode?: number
-): AnimeEntry | null {
+): AnimeRecord | null {
   if (idType === 'imdbId') {
     const imdbId = String(idValue);
     if (!season) {
@@ -432,11 +457,29 @@ function chooseEntry(
     season,
     episode
   );
-  if (!chosen) return null;
+  return chosen;
+}
+
+function buildSelectedEntry(
+  chosen: AnimeRecord,
+  idType: IdType,
+  idValue: IdValue
+): AnimeEntry {
   const entry = buildAnimeEntry(chosen);
-  // match keys follow this id, so a hint-found entry must not carry another
+  // Match keys follow this ID even when the record was found through a hint.
   if (idType === 'imdbId') {
     entry.mappings = { ...entry.mappings, imdbId: String(idValue) };
   }
   return entry;
+}
+
+function chooseEntry(
+  candidates: AnimeRecord[],
+  idType: IdType,
+  idValue: IdValue,
+  season?: number,
+  episode?: number
+): AnimeEntry | null {
+  const chosen = chooseRecord(candidates, idType, idValue, season, episode);
+  return chosen ? buildSelectedEntry(chosen, idType, idValue) : null;
 }

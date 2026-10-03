@@ -31,6 +31,8 @@ import { normaliseCountryCode } from '../utils/countries.js';
 import { partial_ratio } from 'fuzzball';
 import { ParsedResult } from '@viren070/parse-torrent-title';
 import { parseTorrentTitleCached } from '../parser/title.js';
+import { isLocalEpisodeWrong } from '../anime-database/episode-titles.js';
+import { isSeasonAbsoluteEpisodePairWrong } from '../anime-database/episode-pairs.js';
 
 const logger = createLogger('debrid');
 
@@ -305,15 +307,18 @@ export const isSeasonWrong = (
   }
   return false;
 };
+/** Reject episode mismatches, including metadata-confirmed season/absolute pairs. */
 export const isEpisodeWrong = (
   parsed: ParsedResult,
-  metadata?: TitleMetadata
+  metadata?: TitleMetadata,
+  name?: string
 ) => {
   // a parsed release date is authoritative when the requested air date is known
   const parsedDate = parsed.date || undefined;
   if (parsedDate && metadata?.airDates?.length) {
     return !metadata.airDates.includes(parsedDate);
   }
+  if (isSeasonAbsoluteEpisodePairWrong(name, parsed, metadata)) return true;
   if (!parsed.episodes?.length || !metadata?.episode) return false;
   // in tvdb's season the request's own episode number belongs to another cour
   if (
@@ -457,6 +462,9 @@ export async function selectFileInTorrentOrNZB(
     ? new Set(metadata.titles.map(normaliseTitle))
     : null;
   const knownTitles = metadata?.titles ?? [];
+  const parsedTitle = parsedFiles.get(
+    torrentOrNZB.title ?? debridDownload.name ?? ''
+  );
   const files = debridDownload.files;
   const maxSize =
     torrentOrNZB.size || files.reduce((max, f) => Math.max(max, f.size), 0);
@@ -491,6 +499,21 @@ export async function selectFileInTorrentOrNZB(
       logger.warn(`Parsed file not found for ${file.name}`);
       fileReport.skipped = true;
       fileReport.skipReason = 'No parsed metadata available';
+      report.files.push(fileReport);
+      continue;
+    }
+
+    const localEpisodeWrong = isLocalEpisodeWrong(
+      parsed,
+      metadata,
+      parsedTitle
+    );
+    if (localEpisodeWrong && !options?.skipSeasonEpisodeCheck) {
+      // Reject before scoring: a matching date must not hide a valid candidate
+      // behind a wrong-part bestMatch that final validation would reject.
+      fileReport.skipped = true;
+      fileReport.skipReason =
+        'Local episode title belongs to a different anime part';
       report.files.push(fileReport);
       continue;
     }
@@ -558,7 +581,7 @@ export async function selectFileInTorrentOrNZB(
 
     const parsedDate = parsed?.date || undefined;
     if (parsedDate && metadata?.airDates?.length) {
-      if (metadata.airDates.includes(parsedDate)) {
+      if (metadata.airDates.includes(parsedDate) && !localEpisodeWrong) {
         score += 800;
         fileReport.scoreBreakdown.episodeMatchType = 'date';
         fileReport.scoreBreakdown.episodeScore = 800;
@@ -566,7 +589,11 @@ export async function selectFileInTorrentOrNZB(
         score -= 800;
         fileReport.scoreBreakdown.wrongDatePenalty = -800;
       }
-    } else if (parsed && !isEpisodeWrong(parsed, metadata)) {
+    } else if (
+      parsed &&
+      !isEpisodeWrong(parsed, metadata, file.name) &&
+      !localEpisodeWrong
+    ) {
       const parsedEpisodesCount = parsed.episodes?.length || 0;
       const parsedHasSeason = parsed.seasons && parsed.seasons.length > 0;
       const isExactMatch = parsedEpisodesCount === 1;
@@ -748,17 +775,13 @@ export async function selectFileInTorrentOrNZB(
   // Select the best matching file
   const bestMatch = fileScores[0];
   const parsedFile = parsedFiles.get(bestMatch.file.name ?? '');
-  const parsedTitle = parsedFiles.get(torrentOrNZB.title ?? '');
 
-  if (
-    metadata &&
-    parsedFile &&
-    parsedTitle &&
-    !options?.skipSeasonEpisodeCheck
-  ) {
+  if (metadata && parsedFile && !options?.skipSeasonEpisodeCheck) {
     if (
-      isEpisodeWrong(parsedFile, metadata) ||
-      isEpisodeWrong(parsedTitle, metadata)
+      isEpisodeWrong(parsedFile, metadata, bestMatch.file.name) ||
+      (parsedTitle &&
+        isEpisodeWrong(parsedTitle, metadata, torrentOrNZB.title)) ||
+      isLocalEpisodeWrong(parsedFile, metadata, parsedTitle)
     ) {
       logger.debug(
         `Episode ${metadata.episode} or ${metadata.absoluteEpisode} not found in ${torrentOrNZB.title} and ${bestMatch.file.name}, skipping...`
