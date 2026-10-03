@@ -20,5 +20,5 @@ export function subtitleUrl(
   const path = original
     ? stream.DeliveryUrl
     : stream.DeliveryUrl.replace(/Stream\.\w+(?=\?|$)/, 'Stream.vtt');
-  return new URL(client.url(path), window.location.origin).toString();
+  return new URL(client.url(path), window.location.href).toString();
 }
