@@ -23,6 +23,7 @@ import {
   SearchMetadata,
 } from '../base/debrid.js';
 import { getTitleLanguagesForUrl } from '../utils/general.js';
+import { getYearlessQueries } from '../utils/yearless.js';
 import { hashNzbUrl } from '../../debrid/utils.js';
 import EasynewsApi, {
   EasynewsApiError,
@@ -132,50 +133,84 @@ export class EasynewsSearchAddon extends BaseDebridAddon<EasynewsSearchAddonConf
       return [];
     }
 
-    logger.info(`Performing Easynews search`, { queries });
-
-    const searchPromises = queries.map(async (query) => {
-      const start = Date.now();
-      try {
-        const result = await this.api.search({
-          query,
-          paginate: this.userData.paginate,
-        });
-        logger.info(
-          `Easynews search for "${query}" took ${getTimeTakenSincePoint(start)}`,
-          { results: result.results.length }
-        );
-        return result;
-      } catch (error) {
-        if (error instanceof EasynewsApiError) {
-          if (error.status === 401) {
-            throw error;
-          }
-          logger.error(`Easynews API error: ${error.message}`, {
-            status: error.status,
+    const runQueries = async (queryList: string[]) => {
+      logger.info(`Performing Easynews search`, { queries: queryList });
+      const searchPromises = queryList.map(async (query) => {
+        const start = Date.now();
+        try {
+          const result = await this.api.search({
+            query,
+            paginate: this.userData.paginate,
           });
-        } else {
-          logger.error(
-            `Easynews search error: ${error instanceof Error ? error.message : String(error)}`
+          logger.info(
+            `Easynews search for "${query}" took ${getTimeTakenSincePoint(start)}`,
+            { results: result.results.length }
           );
+          return result;
+        } catch (error) {
+          if (error instanceof EasynewsApiError) {
+            if (error.status === 401) {
+              throw error;
+            }
+            logger.error(`Easynews API error: ${error.message}`, {
+              status: error.status,
+            });
+          } else {
+            logger.error(
+              `Easynews search error: ${error instanceof Error ? error.message : String(error)}`
+            );
+          }
+          return null;
         }
-        return null;
-      }
-    });
+      });
 
-    const allResults = await Promise.all(searchPromises);
+      return (await Promise.all(searchPromises)).filter(
+        (r): r is EasynewsSearchResult => r !== null
+      );
+    };
 
-    const validResults = allResults.filter(
-      (r): r is EasynewsSearchResult => r !== null
-    );
-
+    const validResults = await runQueries(queries);
     if (validResults.length === 0) {
       return [];
     }
 
+    const resultItems = validResults.flatMap((r) => r.results);
+    const uniqueInitialCount = new Set(resultItems.map((item) => item.hash))
+      .size;
+    const yearlessFallback = appConfig.builtins.scrape.yearlessMovieFallback;
+
+    if (
+      parsedId.mediaType === 'movie' &&
+      metadata.year &&
+      yearlessFallback.enabled &&
+      uniqueInitialCount < yearlessFallback.resultThreshold
+    ) {
+      const yearlessQueries = getYearlessQueries(queries, metadata.year);
+
+      if (yearlessQueries.length > 0) {
+        logger.info(
+          'Year-constrained Easynews movie search returned too few unique results; retrying without year',
+          {
+            uniqueResults: uniqueInitialCount,
+            threshold: yearlessFallback.resultThreshold,
+            queries: yearlessQueries,
+          }
+        );
+        try {
+          validResults.push(...(await runQueries(yearlessQueries)));
+        } catch (error) {
+          logger.warn(
+            'Yearless movie fallback failed; keeping initial results',
+            {
+              error: error instanceof Error ? error.message : String(error),
+            }
+          );
+        }
+      }
+    }
+
     // use download info from first successful result
     const downloadInfo = validResults[0].downloadInfo;
-
     const items = validResults.flatMap((r) => r.results);
 
     // Deduplicate by hash
