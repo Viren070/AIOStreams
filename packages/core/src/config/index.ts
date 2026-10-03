@@ -37,6 +37,26 @@ import {
   watchStateSchema,
   remuxdbSchema,
 } from './schema/index.js';
+import { titleLimitsField } from './schema/title-limits.js';
+
+const builtinsSchemaWithTitleLimits = {
+  ...builtinsSchema,
+  scrape: {
+    withAllTitles: builtinsSchema.scrape.withAllTitles,
+    titleLanguages: builtinsSchema.scrape.titleLanguages,
+    titleLimit: {
+      ...builtinsSchema.scrape.titleLimit,
+      label: 'Default title limit',
+      description:
+        'Maximum alternative titles used per scrape when no override is configured.',
+    },
+    titleLimits: titleLimitsField,
+    queryConcurrency: builtinsSchema.scrape.queryConcurrency,
+    latinQueriesOnly: builtinsSchema.scrape.latinQueriesOnly,
+    dateBased: builtinsSchema.scrape.dateBased,
+    absoluteSearch: builtinsSchema.scrape.absoluteSearch,
+  },
+} as const;
 
 export const runtimeSchemas = {
   branding: brandingSchema,
@@ -54,7 +74,7 @@ export const runtimeSchemas = {
   tasks: tasksSchema,
   metadata: metadataSchema,
   presets: presetsSchema,
-  builtins: builtinsSchema,
+  builtins: builtinsSchemaWithTitleLimits,
   analytics: analyticsSchema,
   usenet: usenetSchema,
   streams: streamsSchema,
