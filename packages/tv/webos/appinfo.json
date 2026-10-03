@@ -1,0 +1,12 @@
+{
+  "id": "io.github.viren070.aiostreams",
+  "vendor": "AIOStreams",
+  "type": "web",
+  "main": "index.html",
+  "title": "AIOStreams",
+  "icon": "icon.png",
+  "largeIcon": "largeIcon.png",
+  "resolution": "1920x1080",
+  "disableBackHistoryAPI": true,
+  "requiredACG": []
+}
