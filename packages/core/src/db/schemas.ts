@@ -1332,11 +1332,27 @@ export const ReleaseKeySchema = z
   .optional()
   .catch(undefined);
 
+/** Identifiers attached by the source to the release itself, not its search query. */
+export const ReleaseIdsSchema = z.object({
+  imdbId: z
+    .string()
+    .regex(/^tt\d{7,10}$/)
+    .optional(),
+  tvdbId: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(),
+});
+export type ReleaseIds = z.infer<typeof ReleaseIdsSchema>;
+export const ReleaseYearSchema = z.string().regex(/^(?:18|19|20|21)\d{2}$/);
+/** Explicit content classification on the returned release, never its search category. */
+export const ReleaseMediumSchema = z.enum(['animation']);
+
 export const StreamSchema = z.looseObject({
   url: z.string().or(z.null()).optional(),
   nzbUrl: z.string().or(z.null()).optional(),
   releaseKey: ReleaseKeySchema,
   idMatched: z.boolean().optional(),
+  releaseIds: ReleaseIdsSchema.optional().catch(undefined),
+  releaseYear: ReleaseYearSchema.optional().catch(undefined),
+  releaseMedium: ReleaseMediumSchema.optional().catch(undefined),
   servers: z.array(z.string().min(1)).nullable().optional(),
   rarUrls: z.array(SourceSchema).nullable().optional(),
   zipUrls: z.array(SourceSchema).nullable().optional(),
@@ -1503,6 +1519,9 @@ export const ParsedStreamSchema = z.object({
   library: z.boolean().optional(),
   /** Upstream matched this release against an ID-indexed source, not a text search. */
   idMatched: z.boolean().optional(),
+  releaseIds: ReleaseIdsSchema.optional(),
+  releaseYear: ReleaseYearSchema.optional(),
+  releaseMedium: ReleaseMediumSchema.optional(),
   seadex: z
     .object({
       isBest: z.boolean(),

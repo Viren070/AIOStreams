@@ -23,6 +23,79 @@ import {
   getTitleLanguagesForUrl,
   titleContainsAirDate,
 } from '../../utils/general.js';
+import type { ReleaseIds } from '../../../db/schemas.js';
+import type { NabAttrs } from './scan.js';
+import { ReleaseYearSchema } from '../../../db/schemas.js';
+import { parseIndexerAudioTracks } from '../../../utils/media-info.js';
+
+/** The item's content year, never pubDate/usenetdate or the search query's year. */
+export function parseNabReleaseYear(attrs: NabAttrs): string | undefined {
+  const raw = attrs.year;
+  if (raw === undefined || raw === '') return undefined;
+  const values = String(raw)
+    .split(',')
+    .map((value) => value.trim());
+  if (values.some((value) => !ReleaseYearSchema.safeParse(value).success))
+    return undefined;
+  return new Set(values).size === 1 ? values[0] : undefined;
+}
+
+/** Only numeric item categories leave the adapter. */
+export function nabCategoryIds(attrs: NabAttrs): number[] {
+  return [
+    ...new Set(
+      String(attrs.category ?? '')
+        .split(',')
+        .filter((value) => /^\d+$/.test(value.trim()))
+        .map(Number)
+        .filter((value) => Number.isSafeInteger(value) && value > 0)
+    ),
+  ];
+}
+
+/** Standard TV/Anime category on this item; generic TV/HD/SD categories say nothing about animation. */
+export function parseNabReleaseMedium(
+  attrs: NabAttrs
+): 'animation' | undefined {
+  return nabCategoryIds(attrs).includes(5070) ? 'animation' : undefined;
+}
+
+/** Preserve item IDs; never derive them from query parameters or title text. */
+export function parseNabReleaseIds(attrs: NabAttrs): ReleaseIds | undefined {
+  const ids: ReleaseIds = {};
+  for (const [key, aliases] of [
+    ['imdbId', ['imdb', 'imdbid']],
+    ['tvdbId', ['tvdbid']],
+  ] as const) {
+    const values = new Set<string>();
+    for (const alias of aliases) {
+      const raw = attrs[alias];
+      if (raw === undefined || raw === '') continue;
+      for (const value of String(raw).split(',')) {
+        const trimmed = value.trim();
+        const digits = key === 'imdbId' ? trimmed.replace(/^tt/i, '') : trimmed;
+        if (/^0+$/.test(digits) || !digits) continue;
+        if (!/^\d+$/.test(digits) || !Number.isSafeInteger(Number(digits)))
+          return undefined;
+        if (key === 'imdbId' && digits.length > 10) return undefined;
+        values.add(
+          key === 'imdbId'
+            ? `tt${digits.padStart(7, '0')}`
+            : String(Number(digits))
+        );
+      }
+    }
+    // Conflicting repeated IDs or aliases make the whole record unreliable.
+    if (values.size > 1) return undefined;
+    const value = [...values][0];
+    if (value) {
+      if (key === 'imdbId') ids.imdbId = value;
+      else ids.tvdbId = Number(value);
+    }
+  }
+  // A bare TMDB number has separate movie and TV namespaces; do not guess one.
+  return ids.imdbId || ids.tvdbId ? ids : undefined;
+}
 
 /**
  * Parse a comma-separated language string from a newznab/torznab attribute
@@ -50,10 +123,18 @@ export function parseNabLanguages(
 export function parseNabParsedFileInfo(args: {
   audioLanguages?: string | number | boolean;
   subtitleLanguages?: string | number | boolean;
+  audioTracks?: string | number | boolean;
 }): ParsedMediaInfo | undefined {
+  const tracks = parseIndexerAudioTracks(args.audioTracks);
   return normaliseParsedMediaInfo({
+    ...tracks,
     mediaInfoQuality: 'indexer',
-    languages: parseNabLanguages(args.audioLanguages),
+    languages: [
+      ...new Set([
+        ...parseNabLanguages(args.audioLanguages),
+        ...(tracks?.languages ?? []),
+      ]),
+    ],
     subtitles: parseNabLanguages(args.subtitleLanguages),
   });
 }
@@ -94,7 +175,6 @@ export abstract class BaseNabAddon<
     const queryParams: Record<string, string> = {};
     const queryLimit = createQueryLimit();
     let capabilities: Capabilities;
-    let searchType: SearchResultMetadata['searchType'] = 'id';
     try {
       capabilities = await this.api.getCapabilities();
     } catch (error) {
@@ -226,6 +306,10 @@ export abstract class BaseNabAddon<
       }
     }
 
+    const searchType: SearchResultMetadata['searchType'] =
+      queryParams.imdbid || queryParams.tmdbid || queryParams.tvdbid
+        ? 'id'
+        : 'query';
     let queries: string[] = [];
     if (
       !queryParams.imdbid &&
@@ -246,7 +330,6 @@ export abstract class BaseNabAddon<
           : !queryParams.season && !queryParams.ep,
         titleLanguages: getTitleLanguagesForUrl(this.userData.url, this.id),
       });
-      searchType = 'query';
     }
     let results: SearchResultItem<A['namespace']>[] = [];
     if (queries.length > 0) {

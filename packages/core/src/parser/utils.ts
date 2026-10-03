@@ -6,6 +6,7 @@ import {
   getLanguageDisplayName,
 } from '../utils/index.js';
 import { MetadataTitle } from '../metadata/utils.js';
+import { normaliseCountryCode } from '../utils/countries.js';
 
 const logger = createLogger('parser');
 
@@ -184,9 +185,15 @@ function _titleMatchInner(
 
   let bestScore = 0;
   let bestKey: number | undefined;
+  let bestFullScore = 0;
   for (const result of results) {
-    if (result.score > bestScore) {
+    if (result.score < bestScore) continue;
+    // Contains matching can give a short alias and a longer distinctive title
+    // the same score. Prefer the closer full title for the identity key.
+    const fullScore = ratio(parsedTitle, result.choice);
+    if (result.score > bestScore || fullScore > bestFullScore) {
       bestScore = result.score;
+      bestFullScore = fullScore;
       bestKey = result.key;
     }
   }
@@ -216,7 +223,7 @@ export function titleMatchWithLang(
   parsedTitle: string,
   titles: MetadataTitle[],
   options: TitleMatchOptions
-): { matched: boolean; language?: string } {
+): { matched: boolean; language?: string; matchedTitle?: string } {
   let normalisedTitles = normalisedTitleLists.get(titles);
   if (!normalisedTitles) {
     normalisedTitles = titles.map((t) => normaliseTitle(t.title));
@@ -225,6 +232,10 @@ export function titleMatchWithLang(
   const result = _titleMatchInner(parsedTitle, normalisedTitles, options);
   return {
     matched: result.matched,
+    matchedTitle:
+      result.matchedIndex !== undefined
+        ? titles[result.matchedIndex]?.title
+        : undefined,
     language:
       result.matchedIndex !== undefined
         ? titles[result.matchedIndex]?.language
@@ -307,6 +318,7 @@ function strippedTitleSuffix(
 export interface ReconciledName {
   title?: string;
   year?: string;
+  country?: string;
 }
 
 /**
@@ -318,7 +330,8 @@ export function reconcileParsedName(
   parsed: ReconciledName,
   names: (string | undefined)[],
   titles: string[],
-  requestedYear?: number
+  requestedYear?: number,
+  primaryTitle?: string
 ): ReconciledName {
   const { title, year } = parsed;
   if (!title) return parsed;
@@ -329,12 +342,64 @@ export function reconcileParsedName(
     titles,
     getTitleIndex(titles)
   );
-  if (!suffix) return parsed;
-
-  return {
-    title: `${title} ${suffix}`,
-    year: suffix === year && requestedYear !== Number(year) ? undefined : year,
-  };
+  let result = suffix
+    ? {
+        title: `${title} ${suffix}`,
+        year:
+          suffix === year && requestedYear !== Number(year) ? undefined : year,
+        country: parsed.country,
+      }
+    : parsed;
+  const literalCountry = primaryTitle?.match(
+    /(?:^|[\s._-])(UK|US|AU|NZ)$/i
+  )?.[1];
+  if (
+    literalCountry &&
+    result.title &&
+    normaliseTitle(result.title) === normaliseTitle(primaryTitle!) &&
+    normaliseCountryCode(result.country) ===
+      normaliseCountryCode(literalCountry)
+  )
+    // A word in the canonical title is not also an explicit country tag.
+    result = { ...result, country: undefined };
+  const known = (getTitleIndex(titles).normalised ??= new Set(
+    titles.map(normaliseTitle)
+  ));
+  const candidates = [
+    result.title?.match(/^(.*\S)[\s._-]+(UK|US|AU|NZ)\s*$/i),
+    ...names.map((name) =>
+      name
+        ?.replace(/^(?:\s*\[[^\]]+\])+\s*/, '')
+        .match(
+          /^(.+)[\s._-]+(UK|US|AU|NZ)(?=[\s._-]+(?:\d{4}\b|S\d{1,2}(?:E\d{1,3})?\b|E\d{1,3}\b|\d{1,2}x\d{1,3}\b)|\.(?:mkv|mp4|avi|m4v|ts|m2ts|webm)$)/i
+        )
+    ),
+  ];
+  for (const candidate of candidates) {
+    if (!candidate || !known.has(normaliseTitle(candidate[1]))) continue;
+    const complete = normaliseTitle(`${candidate[1]} ${candidate[2]}`);
+    const current = normaliseTitle(result.title!);
+    const country = normaliseCountryCode(candidate[2]);
+    if (
+      (current !== normaliseTitle(candidate[1]) && current !== complete) ||
+      (result.country && normaliseCountryCode(result.country) !== country)
+    )
+      continue;
+    // Preserve genuine title words such as Us / This Is Us. Explicit tags
+    // need a separately known base title, never a global case-insensitive strip.
+    if (
+      primaryTitle
+        ? complete === normaliseTitle(primaryTitle)
+        : known.has(complete)
+    )
+      continue;
+    return {
+      ...result,
+      title: candidate[1].replace(/[._]/g, ' ').trim(),
+      country: result.country ?? country,
+    };
+  }
+  return result;
 }
 
 export function preprocessTitle(

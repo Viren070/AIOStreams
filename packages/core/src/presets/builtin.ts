@@ -15,6 +15,7 @@ import {
 } from '../utils/index.js';
 import { Preset } from './preset.js';
 import { releaseKeyKind } from '../release-blocklist/keys.js';
+import { ReleaseYearSchema, ReleaseMediumSchema } from '../db/schemas.js';
 import { stremthruSpecialCases } from './stremthru.js';
 
 export class BuiltinStreamParser extends StreamParser {
@@ -24,8 +25,18 @@ export class BuiltinStreamParser extends StreamParser {
       : undefined;
   }
 
-  protected override getIdMatched(stream: Stream): boolean | undefined {
-    return stream.idMatched === true ? true : undefined;
+  protected override getReleaseYear(
+    stream: Stream
+  ): ParsedStream['releaseYear'] {
+    const result = ReleaseYearSchema.safeParse(stream.releaseYear);
+    return result.success ? result.data : undefined;
+  }
+
+  protected override getReleaseMedium(
+    stream: Stream
+  ): ParsedStream['releaseMedium'] {
+    const result = ReleaseMediumSchema.safeParse(stream.releaseMedium);
+    return result.success ? result.data : undefined;
   }
 
   protected override getLanguages(
