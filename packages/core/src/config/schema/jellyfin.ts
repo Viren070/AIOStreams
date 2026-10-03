@@ -97,7 +97,7 @@ export const jellyfinSchema = {
   },
   maxVersions: {
     schema: z.number().int().min(1).max(50),
-    default: 10,
+    default: 25,
     label: 'Max versions per item',
     description:
       'Upper bound on how many streams an item offers as versions. Configurations can pick a lower number.',

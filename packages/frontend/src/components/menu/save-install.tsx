@@ -1829,7 +1829,7 @@ function Content() {
   const nabApiDisabled = status?.settings?.nabApiDisabled ?? false;
   const jellyfin = status?.settings?.jellyfin;
   const jellyfinEnabled = jellyfin?.enabled ?? false;
-  const jellyfinVersionCap = jellyfin?.maxVersions ?? 10;
+  const jellyfinVersionCap = jellyfin?.maxVersions ?? 25;
   const jellyfinSegmentsAvailable = jellyfin?.segments.enabled ?? false;
   const jellyfinSegmentProviders = jellyfin?.segments.providers ?? [];
   const jellyfinPmdbKey =
