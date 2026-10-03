@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.10.1](https://github.com/Viren070/AIOStreams/compare/desktop-v0.10.0...desktop-v0.10.1) (2026-10-03)
+
+
+### Bug Fixes
+
+* **desktop:** load a bundled vulkan-1.dll when Windows has none ([30ddeb0](https://github.com/Viren070/AIOStreams/commit/30ddeb0d8506179319bda82486ad8c2f9a672de9))
+* **jellyfin-web:** avoid GamepadList array methods and AbortSignal.timeout ([4033c64](https://github.com/Viren070/AIOStreams/commit/4033c6482289f89c09d199a61931f748696738fd))
+* **jellyfin-web:** keep the artwork crop inside the image ([4033c64](https://github.com/Viren070/AIOStreams/commit/4033c6482289f89c09d199a61931f748696738fd))
+
 ## [0.10.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.9.3...desktop-v0.10.0) (2026-10-02)
 
 
