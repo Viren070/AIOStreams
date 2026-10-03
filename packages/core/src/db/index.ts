@@ -91,6 +91,10 @@ export {
   type WatchHistoryCounts,
 } from './repositories/watch-state.js';
 export {
+  WatchAirTimeRepository,
+  type WatchAirTime,
+} from './repositories/watch-air-times.js';
+export {
   WatchSessionRepository,
   type WatchSessionRow,
   type WatchSessionUpsert,

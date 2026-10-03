@@ -47,7 +47,9 @@ import {
   seasonAnimeIds,
   userDataFromRow,
   watchRowEpisode,
+  watchRowsAndAirTimesFor,
   watchRowsFor,
+  withTrackerAirTime,
   writeMemoPointer,
   type ContentDescriptor,
   type ContentRef,
@@ -605,12 +607,16 @@ async function watchingPosition(
     .filter((g) => g.season !== 0)
     .flatMap((g) => g.videos.map((v) => ({ g, v })));
   const refs = pairs.map(({ g, v }) => episodeRef(meta, g, v));
-  const states = await watchRowsFor(ctx.watch, refs);
-  const eps: EpisodeSlot[] = pairs.map(({ g, v }, i) => ({
-    group: g,
-    video: v,
-    row: states.get(itemKeyFor(refs[i])),
-  }));
+  const { rows, airTimes } = await watchRowsAndAirTimesFor(ctx.watch, refs);
+  const eps: EpisodeSlot[] = pairs.map(({ g, v }, i) => {
+    const key = itemKeyFor(refs[i]);
+    const airsAt = airTimes.get(key);
+    return {
+      group: g,
+      video: airsAt == null ? v : withTrackerAirTime(v, airsAt),
+      row: rows.get(key),
+    };
+  });
   let seriesItem: JellyfinItem | undefined;
   const build = (slot: EpisodeSlot) =>
     buildEpisode(

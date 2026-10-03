@@ -297,7 +297,7 @@ GET {addonBase}/watch_state/pull.json?since=a1b2c3d4e5f6
     "episodes": ["tt0903747:3:09", "tt0903747:3:10"],
     "counts": { "tt0903747": { "watched": 37, "total": 62 } },
     "nextUp": [
-      { "type": "series", "metaId": "tt0903747", "videoId": "tt0903747:3:12", "season": 3, "episode": 12, "at": 1788974000 }
+      { "type": "series", "metaId": "tt0903747", "videoId": "tt0903747:3:12", "season": 3, "episode": 12, "at": 1788974000, "airsAt": 1789000000 }
     ],
     "dropped": ["tt0460681", "tmdb:1622", "tvdb:78901"]
   },
@@ -323,7 +323,7 @@ usually a full fan-out.
 | `watched.movies`   | Base ids of finished films.                                                                                                                                             |
 | `watched.episodes` | Video ids of finished episodes.                                                                                                                                         |
 | `watched.counts`   | Watched and total per show, keyed by every id the show answers to. Advisory: send `0` for a total you do not know.                                                      |
-| `watched.nextUp`   | Your next episode per show. AIOStreams reads the show's `type` and `at` from it and works out the next episode itself.                                                  |
+| `watched.nextUp`   | Your next episode per show. AIOStreams reads the show's `type` and `at` from it and works out the next episode itself. See [Air times](#air-times).                     |
 | `watched.dropped`  | Shows the user dropped, keyed by every id the show answers to. See [Dropped shows](#dropped-shows).                                                                     |
 | `watchlist[]`      | The user's watchlist: `type` (your meta type), `kind` when needed, `metaId` and when it was added as `at`. See [Watchlist](#watchlist).                                 |
 | `ratings[]`        | The user's ratings from 0 to 10, with `type`, `kind` when needed, `metaId`, a season's `season` or an episode's `videoId`, and `at`. See [Rated titles](#rated-titles). |
@@ -381,6 +381,17 @@ It travels inside `watched`, so it follows the [version gate](#the-version-gate)
 change when a drop does. List every id the show answers to, as for `counts`, since the ids are
 matched as given. A drop or undrop made in a Jellyfin client is not overwritten by a pull for the
 echo window, and a show another addon dropped stays that addon's.
+
+### Air times
+
+`airsAt` on a `watched.nextUp` entry is when your tracker says that episode airs, in seconds like
+`at`. The episode then airs at the later of this time and its meta's `released`: Next Up waits for
+the real time rather than a date-only fallback, and Upcoming can list an episode the meta has no
+date for yet, such as a newly announced season's first. Leave it out when your tracker gives no
+time.
+
+It travels inside `watched`, so it follows the [version gate](#the-version-gate): your `version` must
+change when an air time does.
 
 ### The `version` gate
 

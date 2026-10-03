@@ -28,6 +28,8 @@ import {
   searchCatalogs,
   seriesIdOf,
   seriesKeyOf,
+  seriesKeyOfMatch,
+  showsAiringBetween,
   supportsExtra,
   type ContentKind,
   stripInternal,
@@ -1029,19 +1031,25 @@ async function upcomingEpisodes(
   ctx: JellyfinRequestContext,
   to: number
 ): Promise<JellyfinItem[]> {
-  const recent = await getWatchStateProvider().listRecentSeries(
-    ctx.watch,
-    UPCOMING_SERIES
-  );
   const now = Date.now();
+  const [recent, timed] = await Promise.all([
+    getWatchStateProvider().listRecentSeries(ctx.watch, UPCOMING_SERIES),
+    showsAiringBetween(ctx.watch, now, to),
+  ]);
   const airsSoon = (e: JellyfinItem) => {
     const at = premiereOf(e);
     return at > now && at <= to;
   };
+  const trackerTimed = (row: WatchStateRow) =>
+    [
+      row.seriesKey,
+      row.matchKey && seriesKeyOfMatch(row.matchKey, row.mediaType),
+    ].some((key) => !!key && timed.has(key));
   const nexts = await mapLimited(recent, UPCOMING_CONCURRENCY, async (row) => {
-    // The cached dates rule most shows out before their episodes are read.
+    // The cached dates rule most shows out before their episodes are read,
+    // unless a tracker times one, which an undated new season needs.
     const dated = await datedForSeries(ctx, row, now).catch(() => []);
-    if (!dated.some(airsSoon)) return null;
+    if (!dated.some(airsSoon) && !trackerTimed(row)) return null;
     const d = {
       t: row.mediaType,
       i: seriesIdOf(row.baseId, row.videoId, row.mediaType),

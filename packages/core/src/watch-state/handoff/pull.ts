@@ -19,6 +19,10 @@ import {
   type WatchStateRow,
 } from '../../db/repositories/watch-state.js';
 import {
+  WatchAirTimeRepository,
+  type WatchAirTime,
+} from '../../db/repositories/watch-air-times.js';
+import {
   identityFor,
   itemKeyFor,
   scopeOf,
@@ -55,6 +59,7 @@ const StateNextUpSchema = z.looseObject({
   season: z.number().nullable().optional(),
   episode: z.number().nullable().optional(),
   at: z.number().optional(),
+  airsAt: z.number().nullable().optional(),
 });
 
 const StateWatchedSchema = z.looseObject({
@@ -257,8 +262,56 @@ async function matchKeysFrom(
       videoId,
     });
   }
+  for (const row of payload.watched?.nextUp ?? []) {
+    if (row.airsAt) refs.push(nextUpRef(row));
+  }
 
   return matchKeysFor(refs);
+}
+
+function nextUpRef(row: z.infer<typeof StateNextUpSchema>): ContentRef {
+  const split = splitVideoId(row.videoId);
+  return {
+    kind: 'episode',
+    type: row.type || 'series',
+    baseId: row.metaId,
+    season: row.season !== undefined ? row.season : split.season,
+    episode: row.episode !== undefined ? row.episode : split.episode,
+    videoId: row.videoId,
+  };
+}
+
+function airTimesFrom(
+  nextUp: z.infer<typeof StateNextUpSchema>[],
+  matches: MatchKeys
+): WatchAirTime[] {
+  const out = new Map<string, WatchAirTime>();
+  for (const row of nextUp) {
+    const airsAt = atMs(row.airsAt ?? undefined, 0);
+    if (!airsAt) continue;
+    const ref = nextUpRef(row);
+    const identity = matchedIdentityFrom(
+      row.videoId,
+      {
+        kind: 'episode',
+        type: ref.type,
+        metaId: row.metaId,
+        season: ref.season,
+        episode: ref.episode,
+      },
+      matches
+    );
+    const held = out.get(identity.itemKey);
+    if (held && held.airsAt >= airsAt) continue;
+    out.set(identity.itemKey, {
+      itemKey: identity.itemKey,
+      matchKey: identity.matchKey ?? null,
+      seriesKey: seriesKeyOf(row.metaId),
+      mediaType: identity.mediaType,
+      airsAt,
+    });
+  }
+  return [...out.values()];
 }
 
 function identityFrom(
@@ -865,6 +918,12 @@ export async function pullSink(
       watchedSkipped = res.skipped;
       for (const key of res.listed) imported.add(key);
       await WatchStateRepository.setMatchKeys(scope, res.rekeyed, tx);
+      await WatchAirTimeRepository.replace(
+        scope,
+        sink.id,
+        airTimesFrom(payload.watched.nextUp ?? [], matches),
+        tx
+      );
       removed += await WatchStateRepository.deleteStaleImports(
         scope,
         sink.id,

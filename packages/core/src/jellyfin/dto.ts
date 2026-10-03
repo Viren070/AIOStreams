@@ -91,6 +91,21 @@ export function isUnairedVideo(video: SeasonGroup['videos'][number]): boolean {
   );
 }
 
+/**
+ * A video timed by a tracker. It airs at the later of the two times, so neither
+ * a fallback time in the meta nor a stale tracker airs it early, and the time
+ * then decides whether it has aired.
+ */
+export function withTrackerAirTime<V extends SeasonGroup['videos'][number]>(
+  video: V,
+  trackerAt: number
+): V {
+  const own = video.released ? Date.parse(video.released) : NaN;
+  const at = Number.isFinite(own) ? Math.max(own, trackerAt) : trackerAt;
+  const { available: _, ...rest } = video as V & { available?: unknown };
+  return { ...rest, released: new Date(at).toISOString() } as V;
+}
+
 export function defaultUserData(itemId: string): UserItemDataDto {
   return {
     PlaybackPositionTicks: 0,
