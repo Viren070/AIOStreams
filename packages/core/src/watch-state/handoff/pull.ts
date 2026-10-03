@@ -65,14 +65,19 @@ const StateWatchedSchema = z.looseObject({
   dropped: z.array(z.string().min(1)).optional(),
 });
 
+/* An unknown kind is dropped rather than failing the whole read. */
+const TitleKindSchema = z.enum(['movie', 'series']).optional().catch(undefined);
+
 const StateWatchlistEntrySchema = z.looseObject({
   type: z.string().min(1),
+  kind: TitleKindSchema,
   metaId: z.string().min(1),
   at: z.number().optional(),
 });
 
 const StateRatingSchema = z.looseObject({
   type: z.string().min(1),
+  kind: TitleKindSchema,
   metaId: z.string().min(1),
   videoId: z.string().min(1).optional(),
   season: z.number().nullable().optional(),
@@ -531,11 +536,15 @@ async function importWatched(
   };
 }
 
-/** Every non-movie type is a show, as when browsed. */
+/** Without a `kind`, every non-movie type is a show, as when browsed. */
+function isFilm(entry: { type: string; kind?: 'movie' | 'series' }): boolean {
+  return (entry.kind ?? entry.type) === 'movie';
+}
+
 function watchlistRef(
   entry: z.infer<typeof StateWatchlistEntrySchema>
 ): ContentRef {
-  return entry.type === 'movie'
+  return isFilm(entry)
     ? {
         kind: 'movie',
         type: entry.type,
@@ -600,7 +609,7 @@ function ratingRef(entry: z.infer<typeof StateRatingSchema>): ContentRef {
       videoId: entry.videoId,
     };
   }
-  if (entry.type !== 'movie' && entry.season != null)
+  if (!isFilm(entry) && entry.season != null)
     return {
       kind: 'season',
       type: entry.type,

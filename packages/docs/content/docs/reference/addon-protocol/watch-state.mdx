@@ -317,16 +317,16 @@ GET {addonBase}/watch_state/pull.json?since=a1b2c3d4e5f6
 they cost very different amounts: a paused-playback list is one small call, a watched library is
 usually a full fan-out.
 
-| Field              | Meaning                                                                                                                                             |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `items[]`          | One row per video with a position, a played flag, or both. Bounded, newest first.                                                                   |
-| `watched.movies`   | Base ids of finished films.                                                                                                                         |
-| `watched.episodes` | Video ids of finished episodes.                                                                                                                     |
-| `watched.counts`   | Watched and total per show, keyed by every id the show answers to. Advisory: send `0` for a total you do not know.                                  |
-| `watched.nextUp`   | Your next episode per show. AIOStreams reads the show's `type` and `at` from it and works out the next episode itself.                              |
-| `watched.dropped`  | Shows the user dropped, keyed by every id the show answers to. See [Dropped shows](#dropped-shows).                                                 |
-| `watchlist[]`      | The user's watchlist: `type` (your meta type), `metaId` and when it was added as `at`. See [Watchlist](#watchlist).                                 |
-| `ratings[]`        | The user's ratings from 0 to 10, with `type`, `metaId`, a season's `season` or an episode's `videoId`, and `at`. See [Rated titles](#rated-titles). |
+| Field              | Meaning                                                                                                                                                                 |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `items[]`          | One row per video with a position, a played flag, or both. Bounded, newest first.                                                                                       |
+| `watched.movies`   | Base ids of finished films.                                                                                                                                             |
+| `watched.episodes` | Video ids of finished episodes.                                                                                                                                         |
+| `watched.counts`   | Watched and total per show, keyed by every id the show answers to. Advisory: send `0` for a total you do not know.                                                      |
+| `watched.nextUp`   | Your next episode per show. AIOStreams reads the show's `type` and `at` from it and works out the next episode itself.                                                  |
+| `watched.dropped`  | Shows the user dropped, keyed by every id the show answers to. See [Dropped shows](#dropped-shows).                                                                     |
+| `watchlist[]`      | The user's watchlist: `type` (your meta type), `kind` when needed, `metaId` and when it was added as `at`. See [Watchlist](#watchlist).                                 |
+| `ratings[]`        | The user's ratings from 0 to 10, with `type`, `kind` when needed, `metaId`, a season's `season` or an episode's `videoId`, and `at`. See [Rated titles](#rated-titles). |
 
 **Return ids in the space your own metas publish.** If your series meta is keyed on `kitsu:49002`
 with videos `kitsu:49002:11`, return those, whatever space the tracker answered in. That is why the
@@ -355,6 +355,9 @@ addon's watchlist added stays that addon's.
 `watchlist` is not gated by `version`. If your `version` changes whenever the watchlist does, you
 may omit `watchlist` when `since` matches, exactly as for `watched`.
 
+`kind` is `movie` or `series`. Send it when your `type` does not say which, such as an `anime` type
+used for films and shows alike. Without it, every `type` but `movie` is read as a show.
+
 ### Rated titles
 
 `ratings` becomes the Jellyfin user's ratings. Like the watchlist it is the **complete** list, so a
@@ -364,7 +367,8 @@ title you stop listing loses its rating, and an omitted `ratings` changes nothin
 an entry outside that range is skipped.
 
 A rating set in a Jellyfin client is not overwritten by a pull for the echo window, and a title
-another addon rated stays that addon's. Like `watchlist`, `ratings` is not gated by `version`.
+another addon rated stays that addon's. Like `watchlist`, `ratings` is not gated by `version`, and
+an entry for a title reads `kind` as a watchlist entry does.
 
 ### Dropped shows
 
