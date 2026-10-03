@@ -968,6 +968,8 @@ router.get(
 );
 
 const UPCOMING_SERIES = 60;
+/** How many watchlisted shows, and films, Upcoming looks at, newest first. */
+const UPCOMING_WATCHLIST = 100;
 const UPCOMING_CONCURRENCY = 4;
 const DAY_MS = 86_400_000;
 /** How far back a range may reach: the whole grid of the month before the current one. */
@@ -1010,6 +1012,31 @@ async function datedForSeries(
   return dated;
 }
 
+/* A film that premieres ahead, so Upcoming reads no meta while it lasts. */
+const datedFilms = Cache.getInstance<string, JellyfinItem[]>(
+  'jellyfin-dated-films',
+  20_000
+);
+
+async function datedFilm(
+  ctx: JellyfinRequestContext,
+  row: WatchStateRow,
+  now: number
+): Promise<JellyfinItem[]> {
+  const d = { k: 'movie' as const, t: row.mediaType, i: row.baseId };
+  const key = `${ctx.scope()}|${d.t}|${d.i}`;
+  const cached = await datedFilms.get(key).catch(() => undefined);
+  if (cached) return cached;
+  const item = await itemFromDescriptor(ctx, d);
+  const at = item ? premiereOf(item) : 0;
+  const dated =
+    item?.Type === 'Movie' && at > now && at <= now + DATED_FUTURE_DAYS * DAY_MS
+      ? [item]
+      : [];
+  void datedFilms.set(key, dated, DATED_TTL).catch(() => undefined);
+  return dated;
+}
+
 /**
  * Episodes of the shows being watched that air between two times, aired ones
  * included, soonest first, with the user's own state.
@@ -1040,16 +1067,36 @@ async function airingEpisodes(
   return withState.sort((a, b) => premiereOf(a) - premiereOf(b));
 }
 
-/** The next episode of each show caught up on, where it airs before `to`, soonest first. */
-async function upcomingEpisodes(
+/**
+ * The next episode of each show caught up on, watched or watchlisted, where it
+ * airs before `to`, and watchlisted films that premiere by then, soonest first.
+ */
+async function upcomingItems(
   ctx: JellyfinRequestContext,
   to: number
 ): Promise<JellyfinItem[]> {
   const now = Date.now();
-  const [recent, timed] = await Promise.all([
-    getWatchStateProvider().listRecentSeries(ctx.watch, UPCOMING_SERIES),
+  const provider = getWatchStateProvider();
+  const [recent, timed, listed] = await Promise.all([
+    provider.listRecentSeries(ctx.watch, UPCOMING_SERIES),
     showsAiringBetween(ctx.watch, now, to),
+    provider.listFavorites(ctx.watch),
   ]);
+  const showKey = (row: WatchStateRow) =>
+    `${row.mediaType}|${seriesIdOf(row.baseId, row.videoId, row.mediaType)}`;
+  const watching = new Set(recent.map(showKey));
+  const shows = [
+    ...recent,
+    ...listed
+      .filter(
+        (row) =>
+          row.kind === 'series' && !row.dropped && !watching.has(showKey(row))
+      )
+      .slice(0, UPCOMING_WATCHLIST),
+  ];
+  const films = listed
+    .filter((row) => row.kind === 'movie' && !row.played)
+    .slice(0, UPCOMING_WATCHLIST);
   const airsSoon = (e: JellyfinItem) => {
     const at = premiereOf(e);
     return at > now && at <= to;
@@ -1059,7 +1106,7 @@ async function upcomingEpisodes(
       row.seriesKey,
       row.matchKey && seriesKeyOfMatch(row.matchKey, row.mediaType),
     ].some((key) => !!key && timed.has(key));
-  const nexts = await mapLimited(recent, UPCOMING_CONCURRENCY, async (row) => {
+  const nexts = await mapLimited(shows, UPCOMING_CONCURRENCY, async (row) => {
     // The cached dates rule most shows out before their episodes are read,
     // unless a tracker times one, which an undated new season needs.
     const dated = await datedForSeries(ctx, row, now).catch(() => []);
@@ -1070,16 +1117,24 @@ async function upcomingEpisodes(
     };
     return nextToAir(ctx, d, row).catch(() => null);
   });
-  const episodes: JellyfinItem[] = [];
+  const premieres = await mapLimited(films, UPCOMING_CONCURRENCY, (row) =>
+    datedFilm(ctx, row, now).catch(() => [])
+  );
+  const items: JellyfinItem[] = [];
   const shown = new Set<string>();
   for (const next of nexts) {
     if (!next || !airsSoon(next)) continue;
     const series = String(next.SeriesId ?? next.Id);
     if (shown.has(series)) continue;
     shown.add(series);
-    episodes.push(next);
+    items.push(next);
   }
-  return episodes.sort((a, b) => premiereOf(a) - premiereOf(b));
+  const dated = premieres
+    .flat()
+    .filter(airsSoon)
+    .map((film) => ({ ...film, UserData: defaultUserData(film.Id) }));
+  items.push(...(await attachUserData(ctx, dated)));
+  return items.sort((a, b) => premiereOf(a) - premiereOf(b));
 }
 
 router.get(
@@ -1093,7 +1148,7 @@ router.get(
       return;
     }
     refreshWatchState(ctx);
-    const episodes = await upcomingEpisodes(
+    const items = await upcomingItems(
       ctx,
       Date.now() + appConfig.jellyfin.upcomingDays * DAY_MS
     );
@@ -1101,8 +1156,8 @@ router.get(
     send(
       req,
       res,
-      episodes.slice(startIndex, startIndex + limit),
-      episodes.length,
+      items.slice(startIndex, startIndex + limit),
+      items.length,
       startIndex
     );
   })
