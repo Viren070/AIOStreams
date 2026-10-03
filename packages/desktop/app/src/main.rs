@@ -340,6 +340,8 @@ pub fn start_player(
         library.display(),
         mpv_dir.display()
     );
+    #[cfg(windows)]
+    platform::load_vulkan_loader(library);
     let awake = Mutex::new(Awake::default());
     let emit = move |message: Outbound| {
         if let Outbound::MpvProp { name, data } = &message

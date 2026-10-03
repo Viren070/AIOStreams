@@ -13,6 +13,11 @@ AIOStreams Desktop is licensed under the AGPL-3.0. It ships with:
     is under its own project's licence (GPL, LGPL or permissive). Source:
     [mpv-player/mpv](https://github.com/mpv-player/mpv), [FFmpeg](https://ffmpeg.org) and each
     library's own project.
+- **The Vulkan loader** on Windows: `vulkan/vulkan-1.dll`, from the
+  [LunarG Vulkan Runtime](https://vulkan.lunarg.com/sdk/home), whose version is in `libmpv.pin` in
+  the AIOStreams repository. Licensed under the Apache-2.0; its licence text is beside it in
+  `vulkan/VulkanRT-License.txt`. Source:
+  [KhronosGroup/Vulkan-Loader](https://github.com/KhronosGroup/Vulkan-Loader).
 - **Rust crates** built into the app, under MIT, Apache-2.0 and other permissive licences.
   `third-party-licenses.html` lists each crate with its licence text.
 - **JavaScript libraries** built into the web app in `web` (`Contents/Resources/web` on macOS).

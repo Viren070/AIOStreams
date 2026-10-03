@@ -4,3 +4,8 @@
 tag=20260924
 x86_64=50caf10ddb6644da4c205ce67dfe37e32fc3715b33c82e933d6e1962ff61eac9
 aarch64=604fadc84e829019a7ff3c2c1a1f317365f3f170146c3304fc983cdd05551931
+# The LunarG Vulkan Runtime whose vulkan-1.dll the app loads when Windows has none, and
+# the SHA-256 of each architecture's components archive.
+vulkan=1.4.363.0
+vulkan_x86_64=a25a927aa8b9f0371048f1861cf88ac3b9bc9b1fb332c42d897c8ab32695769a
+vulkan_aarch64=fede2cc8b62e55d3b0607019e1f8ca612bc663ae9301be5de10a52329a552271

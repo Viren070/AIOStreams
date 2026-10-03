@@ -11,7 +11,7 @@ use windows_sys::Win32::Foundation::{
 };
 use windows_sys::Win32::Graphics::Gdi::{BLACK_BRUSH, GetStockObject};
 use windows_sys::Win32::System::DataExchange::COPYDATASTRUCT;
-use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
+use windows_sys::Win32::System::LibraryLoader::{GetModuleHandleW, LoadLibraryW};
 use windows_sys::Win32::System::Registry::{
     HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, REG_SZ, RRF_RT_REG_DWORD, RRF_RT_REG_SZ, RegDeleteTreeW,
     RegGetValueW, RegSetKeyValueW,
@@ -424,4 +424,20 @@ pub fn libmpv_candidates() -> Vec<PathBuf> {
         );
     }
     paths
+}
+
+/// libmpv imports vulkan-1.dll, which GPU drivers install. Where Windows has none, loading
+/// the copy in the `vulkan` folder beside libmpv first is what resolves that import.
+pub fn load_vulkan_loader(libmpv: &Path) {
+    if !unsafe { LoadLibraryW(wide("vulkan-1.dll").as_ptr()) }.is_null() {
+        return;
+    }
+    let bundled = libmpv.with_file_name("vulkan").join("vulkan-1.dll");
+    let path = wide(&bundled.to_string_lossy());
+    if unsafe { LoadLibraryW(path.as_ptr()) }.is_null() {
+        let error = std::io::Error::last_os_error();
+        log::warn!("could not load {}: {error}", bundled.display());
+    } else {
+        log::info!("Windows has no vulkan-1.dll; loaded {}", bundled.display());
+    }
 }

@@ -190,6 +190,7 @@ jobs:
           $stage = New-Item -ItemType Directory -Force stage
           Copy-Item packages/desktop/target/release/aiostreams-desktop.exe $stage
           Copy-Item packages/desktop/vendor/${{ matrix.mpv }}/libmpv-2.dll $stage
+          Copy-Item packages/desktop/vendor/${{ matrix.mpv }}/vulkan "$stage/vulkan" -Recurse
           Copy-Item packages/desktop/THIRD-PARTY.md $stage
           Copy-Item packages/jellyfin-web/dist-standalone "$stage/web" -Recurse
           Copy-Item packages/desktop/licences/${{ matrix.target }}.html "$stage/third-party-licenses.html"
