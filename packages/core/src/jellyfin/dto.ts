@@ -23,6 +23,7 @@ import {
 import { imageTagsFor, rememberImages } from './images.js';
 import { listPlaceholderSources, msToTicks } from './media.js';
 import { getSimpleTextHash } from '../utils/crypto.js';
+import { decodeEntities } from '../utils/entities.js';
 import type {
   ContentDescriptor,
   ItemImages,
@@ -52,6 +53,11 @@ const DTO_VERSION = 1;
 
 function etagFor(id: string): string {
   return getSimpleTextHash(`${DTO_VERSION}|${id}`).slice(0, 32);
+}
+
+/** Addon text can carry HTML entities, which plain-text clients print as written. */
+function overviewText(text: string | null | undefined): string | undefined {
+  return text == null ? undefined : decodeEntities(text);
 }
 
 export function listResult<T>(
@@ -505,7 +511,7 @@ export function buildContentItem(
     MediaType: jellyfinType === 'Movie' ? 'Video' : undefined,
     DateCreated: premiere ?? EPOCH_DATE,
     CanDownload: jellyfinType === 'Movie',
-    Overview: (meta.description as string | undefined) ?? undefined,
+    Overview: overviewText(meta.description as string | undefined),
     Taglines: enrichment.tagline ? [enrichment.tagline] : [],
     ProductionYear: year,
     PremiereDate: premiere,
@@ -673,7 +679,7 @@ export function buildSeason(
     ...baseItem(ctx, id, details?.name ?? group.name, 'Season', true),
     SortName: String(group.season).padStart(4, '0'),
     IndexNumber: group.season,
-    Overview: details?.overview,
+    Overview: overviewText(details?.overview),
     PremiereDate: details?.premiere,
     SeriesId: seriesItem.Id,
     SeriesName: seriesItem.Name,
@@ -748,7 +754,7 @@ export function buildEpisode(
     SeasonId: seasonId,
     SeasonName: seasonDetailsOf(seriesItem, group.season)?.name ?? group.name,
     ParentId: seasonId,
-    Overview: video.overview ?? undefined,
+    Overview: overviewText(video.overview),
     PremiereDate: premiere,
     DateCreated: premiere ?? EPOCH_DATE,
     ProductionYear: premiere
@@ -820,7 +826,7 @@ export function buildBoxSetChild(
     CanDownload: true,
     IndexNumber: index + 1,
     ParentId: boxset.Id,
-    Overview: video.overview ?? undefined,
+    Overview: overviewText(video.overview),
     PremiereDate: premiere,
     DateCreated: premiere ?? EPOCH_DATE,
     ProductionYear: premiere ? new Date(premiere).getUTCFullYear() : undefined,

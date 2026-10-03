@@ -15,6 +15,8 @@
  * and silently returning zero results would turn an API error into "no results".
  */
 
+import { decodeEntities } from '../../../utils/entities.js';
+
 /** Raised for a body that is not a Newznab/Torznab document. */
 export class NabScanError extends Error {
   constructor(message: string) {
@@ -32,7 +34,6 @@ const APOS = 0x27; // '
 const BANG = 0x21; // !
 const QUESTION = 0x3f; // ?
 const DASH = 0x2d; // -
-const HASH = 0x23; // #
 
 const ITEM_OPEN = Buffer.from('<item', 'latin1');
 const ITEM_CLOSE = Buffer.from('</item', 'latin1');
@@ -145,42 +146,6 @@ interface Elem {
 
 function isWs(c: number): boolean {
   return c === 0x20 || c === 0x09 || c === 0x0a || c === 0x0d;
-}
-
-/** Decode the five XML entities plus numeric character references. */
-function decodeEntities(value: string): string {
-  if (!value.includes('&')) return value;
-  return value.replace(
-    /&(#[xX][0-9a-fA-F]+|#[0-9]+|[a-zA-Z][a-zA-Z0-9]*);/g,
-    (whole: string, body: string) => {
-      switch (body) {
-        case 'amp':
-          return '&';
-        case 'lt':
-          return '<';
-        case 'gt':
-          return '>';
-        case 'quot':
-          return '"';
-        case 'apos':
-          return "'";
-      }
-      if (body.charCodeAt(0) === HASH) {
-        const hex = body[1] === 'x' || body[1] === 'X';
-        const code = Number.parseInt(body.slice(hex ? 2 : 1), hex ? 16 : 10);
-        if (Number.isFinite(code) && code >= 0 && code <= 0x10ffff) {
-          try {
-            return String.fromCodePoint(code);
-          } catch {
-            return whole;
-          }
-        }
-      }
-      // Unknown entity: leave it be. The DOM parser was lenient here too, and
-      // an indexer's stray `&` is no reason to fail a whole page of results.
-      return whole;
-    }
-  );
 }
 
 /** `''` and non-numeric text become undefined, never 0. */
