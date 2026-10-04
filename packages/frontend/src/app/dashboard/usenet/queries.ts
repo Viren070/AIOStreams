@@ -276,6 +276,9 @@ export interface LibraryEntry {
   hiddenAt?: number;
   /** Which arr grabbed this, and how replacing it has gone. */
   arrLink?: ArrLink;
+  probedFiles?: number;
+  /** Video files that get probed, leaving out samples and extras. */
+  probeableFiles?: number;
 }
 
 export type ArrRepairState =

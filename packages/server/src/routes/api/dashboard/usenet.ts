@@ -22,6 +22,10 @@ import {
   ReleaseBlocklistRepository,
   blocklistEvalOptions,
   nzbContentKey,
+  MediaInfoRepository,
+  mediaInfoProber,
+  featureFiles,
+  type ProbeFinished,
   type UsenetStatsWindow,
   type UsenetStatsResetTarget,
   type UsenetLibraryStatusGroup,
@@ -305,12 +309,19 @@ router.get('/library/stream', (req, res) => {
       if (!closed) res.write('data: {"type":"change"}\n\n');
     }, 250);
   };
+  // A stored probe changes an entry's media info badge.
+  const onProbe = ({ releaseKeys, outcome }: ProbeFinished) => {
+    if (outcome === 'stored' && releaseKeys.some((k) => k.startsWith('nh1:')))
+      onChange();
+  };
   usenetLibraryBus.on('change', onChange);
+  mediaInfoProber.on('finished', onProbe);
   const hb = setInterval(() => res.write(':hb\n\n'), 15000);
 
   req.on('close', () => {
     closed = true;
     usenetLibraryBus.off('change', onChange);
+    mediaInfoProber.off('finished', onProbe);
     if (pending) clearTimeout(pending);
     clearInterval(hb);
     res.end();
@@ -343,6 +354,25 @@ async function annotateBlocked<
     logger.warn({ err }, 'blocklist annotation of library entries failed');
     return entries.map((e) => ({ ...e, blocked: false }));
   }
+}
+
+/** How many of each entry's probeable files have media info. */
+async function annotateProbed<
+  T extends { nzbHash: string; files: Parameters<typeof featureFiles>[0] },
+>(
+  entries: T[]
+): Promise<Array<T & { probedFiles: number; probeableFiles: number }>> {
+  const counts = await MediaInfoRepository.countByPost(
+    entries.map((e) => e.nzbHash)
+  ).catch((err) => {
+    logger.warn({ err }, 'media info annotation of library entries failed');
+    return new Map<string, number>();
+  });
+  return entries.map((e) => ({
+    ...e,
+    probedFiles: counts.get(e.nzbHash) ?? 0,
+    probeableFiles: featureFiles(e.files).length,
+  }));
 }
 
 router.get('/library', async (req, res, next) => {
@@ -387,7 +417,10 @@ router.get('/library', async (req, res, next) => {
     res.status(200).json(
       createResponse({
         success: true,
-        data: { ...data, entries: await annotateBlocked(data.entries) },
+        data: {
+          ...data,
+          entries: await annotateProbed(await annotateBlocked(data.entries)),
+        },
       })
     );
   } catch (err) {

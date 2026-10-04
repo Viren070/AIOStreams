@@ -12,6 +12,7 @@ import {
   BiPlayCircle,
   BiCog,
   BiShareAlt,
+  BiScan,
 } from 'react-icons/bi';
 import { SECTIONS } from '@/app/dashboard/usenet/sections';
 import { BLOCKLIST_SECTIONS } from '@/app/dashboard/blocklist/sections';
@@ -78,6 +79,12 @@ export const NAV: DashboardNavItem[] = [
     href: '/dashboard/usenet',
     icon: BiCloudDownload,
     desc: 'Library, providers & stats',
+  },
+  {
+    label: 'Media info',
+    href: '/dashboard/media-info',
+    icon: BiScan,
+    desc: 'Probed tracks & sources',
   },
   {
     label: 'Blocklists',

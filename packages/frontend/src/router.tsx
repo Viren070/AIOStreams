@@ -25,6 +25,7 @@ import {
   UsenetLibraryPage,
   UsenetStatsPage,
   UsenetProvidersPage,
+  MediaInfoPage,
   CommunityLayout,
   CommunityPendingPage,
   CommunityPublishedPage,
@@ -331,6 +332,16 @@ const dashboardUsenetLibraryRoute = createRoute({
   component: UsenetLibraryPage,
 });
 
+// `?nzb=<hash>` narrows the files to one NZB, as the usenet library links it.
+const dashboardMediaInfoRoute = createRoute({
+  getParentRoute: () => dashboardRoute,
+  path: 'media-info',
+  validateSearch: (search: Record<string, unknown>): { nzb?: string } => ({
+    nzb: optionalString(search.nzb),
+  }),
+  component: MediaInfoPage,
+});
+
 const dashboardUsenetStatsRoute = createRoute({
   getParentRoute: () => dashboardUsenetRoute,
   path: 'stats',
@@ -381,6 +392,7 @@ const routeTree = rootRoute.addChildren([
       dashboardUsenetStatsRoute,
       dashboardUsenetProvidersRoute,
     ]),
+    dashboardMediaInfoRoute,
     dashboardCommunityRoute.addChildren([
       dashboardCommunityIndexRoute,
       dashboardCommunityPendingRoute,

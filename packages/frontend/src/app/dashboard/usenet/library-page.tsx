@@ -24,7 +24,9 @@ import {
   BiCheckShield,
   BiRefresh,
   BiDotsVerticalRounded,
+  BiScan,
 } from 'react-icons/bi';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { Card } from '@aiostreams/ui/card';
 import { Button, IconButton } from '@aiostreams/ui/button';
 import { TextInput } from '@aiostreams/ui/text-input';
@@ -330,6 +332,7 @@ function EntryActions({
   onDelete: (hash: string) => void;
 }) {
   const playUrl = usePlayUrl();
+  const navigate = useNavigate();
   // Degraded entries are playable: known holes are zero-filled at playback.
   const available = e.status === 'available' || e.status === 'degraded';
   const multiFile = e.files.length > 1;
@@ -409,6 +412,18 @@ function EntryActions({
             Details
           </DropdownMenuItem>
           <DropdownMenuItem
+            onSelect={() =>
+              navigate({
+                to: '/dashboard/media-info',
+                search: { nzb: e.nzbHash },
+              })
+            }
+            disabled={!e.probedFiles}
+          >
+            <BiScan />
+            {e.probedFiles ? 'Media info' : 'No media info yet'}
+          </DropdownMenuItem>
+          <DropdownMenuItem
             onSelect={() => onRequeue([e.nzbHash])}
             disabled={!e.nzbUrl}
           >
@@ -459,6 +474,48 @@ function EntryActions({
   );
 }
 
+/** How many files have probed tracks; links to them unless selecting. */
+function ProbedBadge({
+  entry: e,
+  linked,
+}: {
+  entry: LibraryEntry;
+  linked: boolean;
+}) {
+  const probed = e.probedFiles ?? 0;
+  const of = e.probeableFiles ?? 0;
+  const label = of > 1 ? `${Math.min(probed, of)}/${of} probed` : 'probed';
+  const content = (
+    <>
+      <BiScan className="shrink-0" />
+      {label}
+    </>
+  );
+  const className = 'inline-flex items-center gap-1';
+  return (
+    <Tooltip
+      trigger={
+        linked ? (
+          <Link
+            to="/dashboard/media-info"
+            search={{ nzb: e.nzbHash }}
+            className={cn(
+              className,
+              'transition-colors hover:text-[--foreground]'
+            )}
+          >
+            {content}
+          </Link>
+        ) : (
+          <span className={className}>{content}</span>
+        )
+      }
+    >
+      Track details stored for {probed} file{probed === 1 ? '' : 's'}
+    </Tooltip>
+  );
+}
+
 /**
  * One library entry. `view='grid'` renders a slim vertical card; `view='list'`
  * renders a full-width horizontal row. Both share {@link EntryActions} and the
@@ -504,6 +561,7 @@ function EntryCard({
           {e.hiddenAt ? 'sab · imported' : 'sab'}
         </span>
       )}
+      {!!e.probedFiles && <ProbedBadge entry={e} linked={!selectMode} />}
     </>
   );
   const cardClass = cn(

@@ -18,6 +18,7 @@ export { UsenetLayout } from '@/app/dashboard/usenet/usenet-layout';
 export { UsenetLibraryPage } from '@/app/dashboard/usenet/library-page';
 export { UsenetStatsPage } from '@/app/dashboard/usenet/stats-page';
 export { UsenetProvidersPage } from '@/app/dashboard/usenet/providers-page';
+export { MediaInfoPage } from '@/app/dashboard/media-info/media-info-page';
 export { CommunityLayout } from '@/app/dashboard/community/community-layout';
 export { CommunityPendingPage } from '@/app/dashboard/community/pending-page';
 export { CommunityPublishedPage } from '@/app/dashboard/community/published-page';

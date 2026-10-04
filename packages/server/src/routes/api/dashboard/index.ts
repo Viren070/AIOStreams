@@ -32,6 +32,7 @@ import blocklistDashboard from './blocklist.js';
 import streamsDashboard from './streams.js';
 import communityDashboard from './community.js';
 import sharesDashboard from './shares.js';
+import mediaInfoDashboard from './media-info.js';
 
 const router: Router = Router();
 const logger = createLogger('dashboard');
@@ -56,6 +57,9 @@ router.use('/streams', streamsDashboard);
 
 // Community-shared formatters and templates: review queue, blocks.
 router.use('/community', communityDashboard);
+
+// Probed files, the attempt log and the live probe queue.
+router.use('/media-info', mediaInfoDashboard);
 
 function csv(v: unknown): string[] | undefined {
   if (typeof v !== 'string' || !v.trim()) return undefined;
