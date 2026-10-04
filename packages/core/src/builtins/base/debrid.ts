@@ -81,6 +81,20 @@ export interface SearchMetadata extends TitleMetadata {
   titleConflicts?: TitleConflict[];
 }
 
+/**
+ * First title tagged with the language, else the first title the language
+ * shares with others (deduplication drops the tag of a shared title).
+ */
+function findTitleInLanguage(
+  titles: MetadataTitle[] | undefined,
+  language: string
+): MetadataTitle | undefined {
+  return (
+    titles?.find((t) => t.language === language) ??
+    titles?.find((t) => t.languages?.includes(language))
+  );
+}
+
 export const BaseDebridConfigSchema = z.object({
   services: BuiltinDebridServices,
   tmdbApiKey: z.string().optional(),
@@ -518,21 +532,21 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         } else if (spec === 'original') {
           // First title in the content's original language (from TMDB).
           const match = metadata.originalLanguage
-            ? metadata.titlesWithLang?.find(
-                (t) => t.language === metadata.originalLanguage
+            ? findTitleInLanguage(
+                metadata.titlesWithLang,
+                metadata.originalLanguage
               )
             : undefined;
-          if (match) selected.add(cleanTitle(match.title, match.language));
+          if (match)
+            selected.add(cleanTitle(match.title, metadata.originalLanguage));
         } else if (spec === 'scene') {
           metadata.sceneTitles
             ?.slice(0, appConfig.builtins.scrape.titleLimit)
             .forEach((title) => selected.add(cleanTitle(title)));
         } else {
           // take only the first matching title.
-          const match = metadata.titlesWithLang?.find(
-            (t) => t.language === spec
-          );
-          if (match) selected.add(cleanTitle(match.title, match.language));
+          const match = findTitleInLanguage(metadata.titlesWithLang, spec);
+          if (match) selected.add(cleanTitle(match.title, spec));
         }
       }
       titles = [...selected];
