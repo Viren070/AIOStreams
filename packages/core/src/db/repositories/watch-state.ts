@@ -515,7 +515,7 @@ export class WatchStateRepository {
     const rows = await getDb().query<DbRow>(
       sql`SELECT * FROM watch_state
            WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
-             AND played = 0 AND position_ms > 0
+             AND position_ms > 0
            ORDER BY sort_at DESC
            LIMIT ${Math.max(limit * 3, 30)}`
     );
@@ -769,7 +769,7 @@ export class WatchStateRepository {
                  COUNT(DISTINCT CASE WHEN played = 1 THEN ${ITEM} END) AS played,
                  COUNT(DISTINCT CASE WHEN played = 1 AND kind = 'movie' THEN ${ITEM} END) AS movies,
                  COUNT(DISTINCT CASE WHEN played = 1 AND kind = 'episode' THEN ${ITEM} END) AS episodes,
-                 COUNT(DISTINCT CASE WHEN played = 0 AND position_ms > 0 THEN ${ITEM} END) AS in_progress,
+                 COUNT(DISTINCT CASE WHEN position_ms > 0 THEN ${ITEM} END) AS in_progress,
                  SUM(CASE WHEN favorite = 1 THEN 1 ELSE 0 END) AS favorites,
                  MAX(CASE WHEN ${WATCHED} THEN sort_at END) AS last_at
             FROM watch_state
@@ -1107,6 +1107,34 @@ export class WatchStateRepository {
       removed += res.rowCount ?? 0;
     }
     return removed;
+  }
+
+  /** Rewatch points an addon set and no longer lists; the watched mark stays. */
+  static async clearStaleRewatches(
+    scope: WatchScope,
+    sinkId: string,
+    before: number,
+    listed: ReadonlySet<string>,
+    db: DbDriver = getDb()
+  ): Promise<number> {
+    const candidates = sql`uuid = ${scope.uuid} AND persona = ${scope.persona}
+             AND origin = 'import' AND sink_id = ${sinkId}
+             AND COALESCE(seen_at, updated_at) < ${before}
+             AND played = 1 AND position_ms > 0`;
+    const rows = await db.query<{ item_key: string }>(
+      sql`SELECT item_key FROM watch_state WHERE ${candidates}`
+    );
+    const stale = rows.map((r) => r.item_key).filter((k) => !listed.has(k));
+    let cleared = 0;
+    for (let i = 0; i < stale.length; i += CHUNK) {
+      const res = await db.exec(
+        sql`UPDATE watch_state SET position_ms = 0
+             WHERE ${candidates}
+               AND item_key IN (${join(stale.slice(i, i + CHUNK).map((k) => sql`${k}`))})`
+      );
+      cleared += res.rowCount ?? 0;
+    }
+    return cleared;
   }
 
   /** History, favourites, drops and ratings last while the configuration is in use; bare progress ages out alone. */

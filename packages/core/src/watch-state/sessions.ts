@@ -10,6 +10,7 @@ import { dispatchPlayback } from './handoff/dispatch.js';
 import type { ResolvedPlaybackSink } from './handoff/resolve.js';
 import type { PlaybackEventKind } from './handoff/capability.js';
 import { getWatchStateProvider } from './index.js';
+import { playedThrough } from './local-provider.js';
 import { scopeOf, type ContentRef, type WatchScope } from './types.js';
 import { watchIdentityFor } from './canonical.js';
 
@@ -170,7 +171,10 @@ export async function sweepIdleWatchSessions(): Promise<{
         at,
         positionMs: session.positionMs,
         durationMs: session.durationMs || undefined,
-        played: row ? row.played : undefined,
+        played: playedThrough(
+          session.positionMs,
+          session.durationMs || row?.durationMs
+        ),
       });
       reported++;
     } catch (error) {

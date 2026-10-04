@@ -6,7 +6,7 @@ export * from './canonical.js';
 export * from './lookup.js';
 export * from './handoff/index.js';
 export * from './sessions.js';
-export { LocalWatchStateProvider } from './local-provider.js';
+export { LocalWatchStateProvider, playedThrough } from './local-provider.js';
 
 let provider: WatchStateProvider | null = null;
 

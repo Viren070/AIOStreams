@@ -413,6 +413,8 @@ export async function reportPlayback(
     item?: JellyfinItem | null;
     positionMs?: number;
     durationMs?: number;
+    /** A stop's own threshold decision; a played row may be mid rewatch. */
+    played?: boolean;
   } = {}
 ): Promise<void> {
   if (!appConfig.watchState.reportEnabled) return;
@@ -431,7 +433,7 @@ export async function reportPlayback(
       // The row clears the position once it decides the item was played.
       positionMs: opts.positionMs ?? opts.row?.positionMs,
       durationMs: opts.durationMs || opts.row?.durationMs,
-      played: opts.row ? opts.row.played : undefined,
+      played: opts.played ?? (opts.row ? opts.row.played : undefined),
       providerIds,
     });
   } catch (error) {

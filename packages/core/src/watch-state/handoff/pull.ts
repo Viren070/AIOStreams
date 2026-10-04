@@ -30,6 +30,7 @@ import {
   type WatchScope,
 } from '../types.js';
 import { matchKeysFor } from '../canonical.js';
+import { playedThrough } from '../local-provider.js';
 import type { ContentRef } from '../types.js';
 
 const logger = createLogger('playback-pull');
@@ -132,6 +133,13 @@ function atMs(at: number | undefined, fallback: number): number {
 
 function episodeKeyOf(videoId: string): string {
   return `e|${videoId}`;
+}
+
+function watchedKeysOf(watched: z.infer<typeof StateWatchedSchema>): string[] {
+  return [
+    ...(watched.movies ?? []).map((id) => `m|${id}`),
+    ...(watched.episodes ?? []).map(episodeKeyOf),
+  ];
 }
 
 /** Null when no duration is known: a percentage alone is not a position. */
@@ -377,7 +385,8 @@ async function importItems(
   items: z.infer<typeof StateItemSchema>[],
   now: number,
   db: DbDriver,
-  matches: MatchKeys
+  matches: MatchKeys,
+  watched: ReadonlySet<string>
 ): Promise<ImportResult> {
   if (!items.length) return { written: 0, skipped: 0, listed: [], rekeyed: [] };
 
@@ -420,18 +429,19 @@ async function importItems(
     );
 
     const position = positionOf(item, existing);
-    const played =
-      item.played === true ||
-      (!!position &&
-        position.durationMs > 0 &&
-        position.positionMs >=
-          (position.durationMs * appConfig.watchState.playedPercent) / 100);
-
-    if (!played && !position) {
+    if (item.played !== true && !position) {
       skipped++;
       if (existing) listed.push(key);
       continue;
     }
+    const finished =
+      !!position && playedThrough(position.positionMs, position.durationMs);
+    // A paused point never unwatches a title.
+    const played =
+      finished ||
+      item.played === true ||
+      !!existing?.played ||
+      watched.has(key);
 
     const tooEarly =
       !!position &&
@@ -444,7 +454,7 @@ async function importItems(
     rows.push({
       identity,
       values: WatchStateRepository.importValues(scope, identity, {
-        positionMs: played || tooEarly ? 0 : (position?.positionMs ?? 0),
+        positionMs: finished || tooEarly ? 0 : (position?.positionMs ?? 0),
         durationMs: position?.durationMs ?? 0,
         played,
         lastPlayedAt: at,
@@ -494,11 +504,11 @@ async function importWatched(
   }
   for (const row of nextUp) noteWatch(row.metaId, row.at);
 
-  const keys = [
-    ...movies.map((id) => `m|${id}`),
-    ...episodes.map(episodeKeyOf),
-  ];
-  const existingRows = await WatchStateRepository.getMany(scope, keys, db);
+  const existingRows = await WatchStateRepository.getMany(
+    scope,
+    watchedKeysOf(watched),
+    db
+  );
 
   const rows: ImportRow[] = [];
   const listed: string[] = [];
@@ -510,12 +520,11 @@ async function importWatched(
     existing?: WatchStateRow
   ) => {
     const showAt = watchedAt.get(identity.baseId) ?? 0;
-    /* Already imported and already played; marking it seen is enough. */
+    /* Imported as played, or mid rewatch: marking it seen is enough. */
     if (
-      existing &&
-      existing.played &&
-      existing.origin === 'import' &&
-      existing.sinkId === sink.id
+      existing?.played &&
+      (existing.positionMs > 0 ||
+        (existing.origin === 'import' && existing.sinkId === sink.id))
     ) {
       listed.push(key);
       return;
@@ -890,7 +899,8 @@ export async function pullSink(
       payload.items ?? [],
       now,
       tx,
-      matches
+      matches,
+      new Set(payload.watched ? watchedKeysOf(payload.watched) : [])
     );
     const imported = new Set(items.listed);
     await WatchStateRepository.setMatchKeys(scope, items.rekeyed, tx);
@@ -901,6 +911,13 @@ export async function pullSink(
       sink.id,
       now,
       'resume',
+      imported,
+      tx
+    );
+    removed += await WatchStateRepository.clearStaleRewatches(
+      scope,
+      sink.id,
+      now,
       imported,
       tx
     );

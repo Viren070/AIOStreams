@@ -5,6 +5,7 @@ import {
   getWatchStateProvider,
   watchIdentityFor,
   openWatchSession,
+  playedThrough,
   resolveByItem,
   descriptorOf,
   sessionKeyFor,
@@ -187,6 +188,12 @@ async function record(
   const ref = contentRefOf(d);
   const identity = await watchIdentityFor(ref);
   const session = sessionOf(ctx, opts.playSessionId);
+  const provider = getWatchStateProvider();
+  if (type === 'stop' && positionMs == null)
+    positionMs =
+      (await provider.getMany(ctx.watch, [identity.itemKey])).get(
+        identity.itemKey
+      )?.positionMs ?? 0;
 
   // one meta call on start and stop, none on the 5-10 s progress ticks
   const item =
@@ -204,7 +211,6 @@ async function record(
     durationMs,
     snapshot: snapshotOf(item),
   };
-  const provider = getWatchStateProvider();
   // Read before the start clears it, so addons that only keep lists hear the undrop.
   const seriesKey = type === 'start' ? identity.seriesKey : null;
   const undrops =
@@ -240,6 +246,7 @@ async function record(
       item,
       positionMs,
       durationMs,
+      played: playedThrough(positionMs ?? 0, durationMs || row?.durationMs),
     });
     return;
   }
