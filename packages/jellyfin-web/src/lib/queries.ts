@@ -236,7 +236,7 @@ export function useCalendar(from: Date, to: Date) {
     queryFn: () =>
       client.get<BaseItemDtoQueryResult>('/Items', {
         userId: user.Id,
-        IncludeItemTypes: 'Episode',
+        IncludeItemTypes: 'Episode,Movie',
         Recursive: true,
         MinPremiereDate: from.toISOString(),
         MaxPremiereDate: to.toISOString(),

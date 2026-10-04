@@ -7,7 +7,13 @@ import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '../lib/session';
 import { useCalendar } from '../lib/queries';
-import { airDay, airTime, episodeCode, itemTitle } from '../lib/format';
+import {
+  airDay,
+  airTime,
+  episodeCode,
+  itemSubtitle,
+  itemTitle,
+} from '../lib/format';
 import { landscapeUrls } from '../lib/images';
 import { href, itemPath, navigate, to } from '../lib/paths';
 import { PageBody } from '../components/layout';
@@ -58,12 +64,6 @@ function gridDays(first: Date, startDay: number): Date[] {
   });
 }
 
-function episodeLine(item: BaseItemDto): string {
-  return [episodeCode(item.ParentIndexNumber, item.IndexNumber), item.Name]
-    .filter(Boolean)
-    .join(' · ');
-}
-
 function longDay(d: Date): string {
   return d.toLocaleDateString(undefined, {
     weekday: 'long',
@@ -94,7 +94,7 @@ function EpisodeRow({ item }: { item: BaseItemDto }) {
       <div className="min-w-0">
         <p className="truncate font-medium">{itemTitle(item)}</p>
         <p className="truncate text-sm text-[--muted]">
-          {[episodeLine(item), item.PremiereDate && airTime(item.PremiereDate)]
+          {[itemSubtitle(item), item.PremiereDate && airTime(item.PremiereDate)]
             .filter(Boolean)
             .join(' · ')}
         </p>
@@ -387,7 +387,7 @@ export function CalendarPage({ month }: { month?: string }) {
             </div>
             {!inMonth && (
               <p className="text-[--muted]">
-                Nothing airs this month from the shows you are watching.
+                Nothing airs this month from your shows or watchlist.
               </p>
             )}
           </>
