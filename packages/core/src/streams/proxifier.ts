@@ -4,6 +4,8 @@ import { constants, createLogger } from '../utils/index.js';
 import { takeBasicAuthFromUrl } from '../utils/http.js';
 import { createProxy } from '../proxy/index.js';
 import { PLAYBACK_PATH_PREFIX } from '../debrid/utils.js';
+import { mediaInfoIdentity } from '../media-info/identity.js';
+import { isTrustedAddon } from '../presets/trust.js';
 
 const logger = createLogger('proxy');
 
@@ -131,6 +133,7 @@ class Proxifier {
     logger.debug({ count: streamsToProxy.length }, 'proxying streams');
 
     const proxy = createProxy(this.userData.proxy);
+    const ours = this.userData.proxy.id === constants.BUILTIN_SERVICE;
 
     const proxiedUrls = streamsToProxy.length
       ? await proxy.generateUrls(
@@ -159,13 +162,25 @@ class Proxifier {
             // Tag owned-playback URLs so the playback route can detect that a
             // request arrived through our proxy and avoid double-proxying a
             // failover-produced URL.
-            if (url.includes(PLAYBACK_PATH_PREFIX)) {
+            const owned = url.includes(PLAYBACK_PATH_PREFIX);
+            if (owned) {
               url += `${url.includes('?') ? '&' : '?'}${constants.INTERNAL_PROXY_MARKER}=1`;
             }
+            // Our playback route probes owned URLs itself.
+            const identity =
+              ours && !owned && isTrustedAddon(stream.addon)
+                ? mediaInfoIdentity(stream)
+                : undefined;
             return {
               url,
               filename: stream.filename,
               headers,
+              mediaInfo: identity?.releaseKeys.length
+                ? {
+                    keys: identity.releaseKeys.slice(0, 4),
+                    file: identity.file,
+                  }
+                : undefined,
             };
           })
         )

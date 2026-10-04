@@ -8,12 +8,19 @@ export const ProxyDataSchema = z.object({
   // These are optional, as we'll be forwarding client headers
   requestHeaders: z.record(z.string(), z.string()).optional(),
   responseHeaders: z.record(z.string(), z.string()).optional(),
+  /** The release a proxied stream plays, so its play can be probed. */
+  mediaInfo: z
+    .object({
+      keys: z.array(z.string().max(80)).min(1).max(4),
+      file: z.string().max(1024).optional(),
+    })
+    .optional(),
 });
 export type ProxyData = z.infer<typeof ProxyDataSchema>;
 
 export function decodeProxyToken(
   token: string
-): { rawAuth: string; rawData: string } | null {
+): { rawAuth: string; rawData: string; encrypted: boolean } | null {
   const parts = token.split('.');
   let encodedAuth: string;
   let encodedData: string;
@@ -32,7 +39,9 @@ export function decodeProxyToken(
     mode === 'e' ? decryptString(s).data : fromUrlSafeBase64(s);
   const rawAuth = decode(encodedAuth);
   const rawData = decode(encodedData);
-  return rawAuth && rawData ? { rawAuth, rawData } : null;
+  return rawAuth && rawData
+    ? { rawAuth, rawData, encrypted: mode === 'e' }
+    : null;
 }
 
 /** The upstream URL behind one of our proxy URLs, or the URL itself. */

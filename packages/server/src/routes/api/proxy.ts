@@ -23,6 +23,9 @@ import {
   BuiltinProxy,
   streamRegistry,
   proxyTargetKey,
+  PLAYBACK_PATH_PREFIX,
+  withPlayPath,
+  onProxiedPlay,
 } from '@aiostreams/core';
 import { z } from 'zod';
 import { request, Dispatcher } from 'undici';
@@ -138,7 +141,7 @@ type ProxyData = z.infer<typeof ProxyDataSchema>;
 function decodeAndAuthorizeRequest(
   encryptedAuthAndData: string,
   requestId: string
-): { auth: ProxyAuth; data: ProxyData } {
+): { auth: ProxyAuth; data: ProxyData; encrypted: boolean } {
   const decoded = decodeProxyToken(encryptedAuthAndData);
   if (!decoded) {
     logger.error(`[${requestId}] Decryption failed`);
@@ -174,7 +177,7 @@ function decodeAndAuthorizeRequest(
     );
   }
 
-  return { auth, data };
+  return { auth, data, encrypted: decoded.encrypted };
 }
 
 /**
@@ -338,8 +341,11 @@ router.all(
     let session: ReturnType<typeof streamRegistry.open> | undefined;
 
     try {
-      const { auth: decodedAuth, data: decodedData } =
-        decodeAndAuthorizeRequest(req.params.encryptedAuthAndData, requestId);
+      const {
+        auth: decodedAuth,
+        data: decodedData,
+        encrypted,
+      } = decodeAndAuthorizeRequest(req.params.encryptedAuthAndData, requestId);
       auth = decodedAuth;
       data = decodedData;
       const filename = req.params.filename as string | undefined;
@@ -404,7 +410,12 @@ router.all(
       }
 
       const upstreamStartTime = Date.now();
-      let currentUrl = data.url;
+      // Our playback route learns which client path this proxy URL served.
+      let currentUrl =
+        req.query[constants.PLAY_PATH_MARKER] === 'jellyfin' &&
+        data.url.includes(PLAYBACK_PATH_PREFIX)
+          ? withPlayPath(data.url, 'jellyfin')
+          : data.url;
 
       let redirectCount = 0;
       let method = req.method as Dispatcher.HttpMethod;
@@ -509,6 +520,28 @@ router.all(
         contentRange: upstreamResponse.headers['content-range'],
         targetUrl: currentUrl,
       });
+
+      // Only a token we encrypted can name the release it plays.
+      if (
+        encrypted &&
+        data.mediaInfo &&
+        req.method === 'GET' &&
+        upstreamResponse.statusCode < 300 &&
+        rangeStart(req.headers.range) === 0 &&
+        !data.url.includes(PLAYBACK_PATH_PREFIX)
+      ) {
+        onProxiedPlay({
+          path:
+            req.query[constants.PLAY_PATH_MARKER] === 'jellyfin'
+              ? 'jellyfin'
+              : 'stremio',
+          url: currentUrl,
+          from: data.url,
+          headers: data.requestHeaders,
+          mediaInfo: data.mediaInfo,
+          filename: data.filename,
+        });
+      }
 
       if (session?.ok) {
         // Content-Range carries the whole file; Content-Length only this range.

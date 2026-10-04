@@ -1,5 +1,6 @@
 ﻿import z from 'zod';
 import { StreamProxyConfig } from '../db/schemas.js';
+import type { ProxyData } from './token.js';
 import {
   Cache,
   createLogger,
@@ -21,6 +22,8 @@ export interface ProxyStream {
     request?: Record<string, string>;
     response?: Record<string, string>;
   };
+  /** Only our own proxy carries it, in its encrypted token. */
+  mediaInfo?: ProxyData['mediaInfo'];
 }
 
 type ValidatedStreamProxyConfig = StreamProxyConfig & {
