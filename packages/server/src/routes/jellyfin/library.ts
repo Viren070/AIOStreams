@@ -594,7 +594,8 @@ async function handleItems(
   // item came from, so only unscoped lists come from the provider; a scoped
   // request falls through to that catalog's page, where the filter is exact.
   // A library's episodes by air date, as a calendar asks for them, are the
-  // episodes of the shows being watched.
+  // episodes of the shows followed, with the watchlisted films when it asks
+  // for films too.
   const minPremiere = Date.parse(qs(req, 'MinPremiereDate') ?? '');
   const maxPremiere = Date.parse(qs(req, 'MaxPremiereDate') ?? '');
   if (
@@ -603,20 +604,15 @@ async function handleItems(
     (Number.isFinite(minPremiere) || Number.isFinite(maxPremiere))
   ) {
     refreshWatchState(ctx);
-    const episodes = await airingEpisodes(
+    const items = await airingItems(
       ctx,
       Number.isFinite(minPremiere) ? minPremiere : 0,
-      Number.isFinite(maxPremiere) ? maxPremiere : Infinity
+      Number.isFinite(maxPremiere) ? maxPremiere : Infinity,
+      types.has('movie')
     );
     const pageEnd =
       startIndex + Math.min(Math.max(1, qi(req, 'Limit', 500)), 500);
-    send(
-      req,
-      res,
-      episodes.slice(startIndex, pageEnd),
-      episodes.length,
-      startIndex
-    );
+    send(req, res, items.slice(startIndex, pageEnd), items.length, startIndex);
     return;
   }
 
@@ -968,7 +964,7 @@ router.get(
 );
 
 const UPCOMING_SERIES = 60;
-/** How many watchlisted shows, and films, Upcoming looks at, newest first. */
+/** How many watchlisted shows, and films, are looked at, newest first. */
 const UPCOMING_WATCHLIST = 100;
 const UPCOMING_CONCURRENCY = 4;
 const DAY_MS = 86_400_000;
@@ -1012,7 +1008,7 @@ async function datedForSeries(
   return dated;
 }
 
-/* A film that premieres ahead, so Upcoming reads no meta while it lasts. */
+/* A film that premieres near now, so a range reads no meta while it lasts. */
 const datedFilms = Cache.getInstance<string, JellyfinItem[]>(
   'jellyfin-dated-films',
   20_000
@@ -1030,40 +1026,76 @@ async function datedFilm(
   const item = await itemFromDescriptor(ctx, d);
   const at = item ? premiereOf(item) : 0;
   const dated =
-    item?.Type === 'Movie' && at > now && at <= now + DATED_FUTURE_DAYS * DAY_MS
+    item?.Type === 'Movie' &&
+    at >= now - DATED_PAST_DAYS * DAY_MS &&
+    at <= now + DATED_FUTURE_DAYS * DAY_MS
       ? [item]
       : [];
   void datedFilms.set(key, dated, DATED_TTL).catch(() => undefined);
   return dated;
 }
 
+/** The shows and films Upcoming and the calendar follow. */
+async function followed(
+  ctx: JellyfinRequestContext
+): Promise<{ shows: WatchStateRow[]; films: WatchStateRow[] }> {
+  const provider = getWatchStateProvider();
+  const [recent, listed] = await Promise.all([
+    provider.listRecentSeries(ctx.watch, UPCOMING_SERIES),
+    provider.listFavorites(ctx.watch),
+  ]);
+  const showKey = (row: WatchStateRow) =>
+    `${row.mediaType}|${seriesIdOf(row.baseId, row.videoId, row.mediaType)}`;
+  const watching = new Set(recent.map(showKey));
+  return {
+    shows: [
+      ...recent,
+      ...listed
+        .filter(
+          (row) =>
+            row.kind === 'series' && !row.dropped && !watching.has(showKey(row))
+        )
+        .slice(0, UPCOMING_WATCHLIST),
+    ],
+    films: listed
+      .filter((row) => row.kind === 'movie' && !row.played)
+      .slice(0, UPCOMING_WATCHLIST),
+  };
+}
+
 /**
- * Episodes of the shows being watched that air between two times, aired ones
- * included, soonest first, with the user's own state.
+ * Episodes of the shows followed that air between two times, aired ones
+ * included, and with `films` the watchlisted films premiering then, soonest
+ * first, with the user's own state.
  */
-async function airingEpisodes(
+async function airingItems(
   ctx: JellyfinRequestContext,
   from: number,
-  to: number
+  to: number,
+  films: boolean
 ): Promise<JellyfinItem[]> {
-  const recent = await getWatchStateProvider().listRecentSeries(
-    ctx.watch,
-    UPCOMING_SERIES
-  );
+  const follows = await followed(ctx);
   const now = Date.now();
-  const dated = await mapLimited(recent, UPCOMING_CONCURRENCY, (row) =>
-    datedForSeries(ctx, row, now).catch(() => [])
-  );
-  const episodes: JellyfinItem[] = [];
+  const [dated, premieres] = await Promise.all([
+    mapLimited(follows.shows, UPCOMING_CONCURRENCY, (row) =>
+      datedForSeries(ctx, row, now).catch(() => [])
+    ),
+    films
+      ? mapLimited(follows.films, UPCOMING_CONCURRENCY, (row) =>
+          datedFilm(ctx, row, now).catch(() => [])
+        )
+      : [],
+  ]);
+  const items: JellyfinItem[] = [];
   const seen = new Set<string>();
-  for (const episode of dated.flat()) {
-    const at = premiereOf(episode);
-    if (seen.has(episode.Id) || at < from || at > to) continue;
-    seen.add(episode.Id);
+  for (const item of [...dated.flat(), ...premieres.flat()]) {
+    const at = premiereOf(item);
+    if (seen.has(item.Id) || at < from || at > to) continue;
+    seen.add(item.Id);
     // Copied and reset: users of one configuration share the cached items.
-    episodes.push({ ...episode, UserData: defaultUserData(episode.Id) });
+    items.push({ ...item, UserData: defaultUserData(item.Id) });
   }
-  const withState = await attachUserData(ctx, episodes);
+  const withState = await attachUserData(ctx, items);
   return withState.sort((a, b) => premiereOf(a) - premiereOf(b));
 }
 
@@ -1076,27 +1108,10 @@ async function upcomingItems(
   to: number
 ): Promise<JellyfinItem[]> {
   const now = Date.now();
-  const provider = getWatchStateProvider();
-  const [recent, timed, listed] = await Promise.all([
-    provider.listRecentSeries(ctx.watch, UPCOMING_SERIES),
+  const [{ shows, films }, timed] = await Promise.all([
+    followed(ctx),
     showsAiringBetween(ctx.watch, now, to),
-    provider.listFavorites(ctx.watch),
   ]);
-  const showKey = (row: WatchStateRow) =>
-    `${row.mediaType}|${seriesIdOf(row.baseId, row.videoId, row.mediaType)}`;
-  const watching = new Set(recent.map(showKey));
-  const shows = [
-    ...recent,
-    ...listed
-      .filter(
-        (row) =>
-          row.kind === 'series' && !row.dropped && !watching.has(showKey(row))
-      )
-      .slice(0, UPCOMING_WATCHLIST),
-  ];
-  const films = listed
-    .filter((row) => row.kind === 'movie' && !row.played)
-    .slice(0, UPCOMING_WATCHLIST);
   const airsSoon = (e: JellyfinItem) => {
     const at = premiereOf(e);
     return at > now && at <= to;
