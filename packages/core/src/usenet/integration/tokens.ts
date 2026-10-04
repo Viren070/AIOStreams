@@ -28,6 +28,12 @@ export interface UsenetStreamToken {
    * unidentified and bypass per-user limits and bans.
    */
   owner?: string;
+  /** The title the release was found for. */
+  imdbId?: string;
+  tmdbId?: number;
+  tvdbId?: number;
+  season?: number;
+  episode?: number;
 }
 
 /**
@@ -41,6 +47,13 @@ export function encodeUsenetStreamToken(token: UsenetStreamToken): string {
     throw new Error('failed to encrypt usenet stream token');
   }
   return enc.data;
+}
+
+export function decodeUsenetStreamUrl(
+  url: string
+): UsenetStreamToken | undefined {
+  const token = /\/api\/v1\/usenet\/stream\/([^/?#]+)/.exec(url)?.[1];
+  return token ? decodeUsenetStreamToken(token) : undefined;
 }
 
 /** Inverse of {@link encodeUsenetStreamToken}. Returns undefined on failure. */

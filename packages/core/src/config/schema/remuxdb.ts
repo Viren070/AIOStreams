@@ -13,6 +13,16 @@ export const remuxdbSchema = {
     requiresRestart: false,
     secret: false,
   },
+  contribute: {
+    schema: z.boolean(),
+    default: false,
+    label: 'Contribute to RemuxDB',
+    description:
+      'Send what the media info probe reads from played usenet files to RemuxDB, so other RemuxDB users get it too. Each submission names the indexer, the release id on it, the file name and the title it was played for.',
+    env: 'REMUXDB_CONTRIBUTE',
+    requiresRestart: false,
+    secret: false,
+  },
   baseUrl: {
     schema: urlString,
     default: 'https://remuxdb.1632022.xyz',

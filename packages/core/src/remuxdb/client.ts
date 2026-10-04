@@ -119,6 +119,15 @@ function triggerBackgroundRefresh(
   );
 }
 
+export async function invalidateProbeVersions(
+  imdbId: string,
+  season?: number,
+  episode?: number
+): Promise<void> {
+  const key = cacheKey(imdbId, season, episode);
+  await Promise.all([probeCache.delete(key), bgRefreshCache.delete(key)]);
+}
+
 export async function fetchProbeVersions(
   imdbId: string,
   season?: number,
