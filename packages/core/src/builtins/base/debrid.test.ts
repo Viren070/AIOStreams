@@ -121,6 +121,17 @@ describe('BaseDebridAddon title language queries', () => {
     assert.deepEqual(queries('bg'), ['покемон детектив пикачу 2019']);
   });
 
+  it('finds a shared title by the original language', () => {
+    assert.deepEqual(
+      queryBuilder.buildQueries(
+        { mediaType: 'movie' } as ParsedId,
+        { ...metadata, originalLanguage: 'ru' },
+        { titleLanguages: ['original'] }
+      ),
+      ['покемон детектив пикачу 2019']
+    );
+  });
+
   it('still finds a title only one language uses', () => {
     assert.deepEqual(queries('uk'), ['покемон детектив пікачу 2019']);
   });
