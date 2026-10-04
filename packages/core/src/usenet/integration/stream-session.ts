@@ -443,6 +443,25 @@ function holeHooksFor(
   return { hooks, holeBytes };
 }
 
+/**
+ * A resolved file as byte ranges, for readers other than a player. Shares the
+ * player's session, so its reads hit the same segment cache.
+ */
+export async function openUsenetFile(decoded: UsenetStreamToken): Promise<{
+  size: number;
+  open(start: number, end: number, signal: AbortSignal): Promise<Readable>;
+}> {
+  const { providers, options } = getUsenetEngineConfig();
+  const { size } = await getStreamSession(decoded, providers, options);
+  return {
+    size,
+    open: async (start, end, signal) =>
+      (
+        await getStreamSession(decoded, providers, options)
+      ).stream.createReadStream({ start, end }, signal),
+  };
+}
+
 /** Open (or reuse) the seekable handle for a resolved token. */
 async function getStreamSession(
   decoded: UsenetStreamToken,

@@ -25,6 +25,7 @@ import { createHash } from 'node:crypto';
 import { appConfig } from '../../utils/index.js';
 import { subscribeToConfig } from '../../config/index.js';
 import { openUsenetStream, usenetStreamEtag } from './stream-session.js';
+import { probesOn, queueEngineProbe } from '../../media-info/play.js';
 import { libraryFileToken, libraryFileName, removeForArr } from './library.js';
 import { encodeUsenetStreamToken } from './tokens.js';
 import { stripNzbExt } from './naming.js';
@@ -253,8 +254,10 @@ function fileNode(
     contentType: mimeForFilename(name),
     body: {
       type: 'stream',
-      open: (range, signal) =>
-        openUsenetStream(token, {
+      open: (range, signal) => {
+        // Repeat reads are deduped by the prober before they reach the db.
+        if (probesOn('shares')) void queueEngineProbe(token, 'shares');
+        return openUsenetStream(token, {
           start: range?.start,
           end: range?.endExclusive,
           suffixLength: range?.suffixLength,
@@ -263,7 +266,8 @@ function fileNode(
           share: true,
         }).catch((err) => {
           throw ShareError.from(err);
-        }),
+        });
+      },
     },
   };
 }

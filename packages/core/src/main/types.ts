@@ -33,6 +33,8 @@ export interface AIOStreamsOptions {
   skipFailedAddons?: boolean;
   increasedManifestTimeout?: boolean;
   bypassManifestCache?: boolean;
+  /** Which client path this engine serves, for media info probes. */
+  path?: 'stremio' | 'jellyfin';
 }
 
 export type StatEntry = {
@@ -45,7 +47,7 @@ export type PipelineTimings = {
   metaFilterMs: number;
   serviceWrapMs: number;
   serviceWrapTimings?: Record<string, ServiceWrapServiceTiming>;
-  remuxDbMs: number;
+  mediaInfoMs: number;
   filterMs: number;
   deduplicationMs: number;
   precomputeMs: number;

@@ -22,6 +22,30 @@ export * from './linked-accounts/index.js';
 export * from './community/index.js';
 export * from './watch-state/index.js';
 export * from './jellyfin/index.js';
+export { requestTitleMetadata } from './media-info/lookup.js';
+export {
+  onPlay,
+  onProxiedPlay,
+  probesOn,
+  idsFromVideoId,
+  type PlaybackPlay,
+} from './media-info/play.js';
+export {
+  mediaInfoProber,
+  type ProbeFinished,
+  type ProbeJob,
+  type ProberSnapshot,
+} from './media-info/probe.js';
+export {
+  mediaInfoFiles,
+  mediaInfoSummary,
+  pruneMediaInfoProbes,
+  type MediaInfoFile,
+  type MediaInfoSummary,
+} from './media-info/summary.js';
+export type { MediaInfoRecord } from './media-info/record.js';
+export { MEDIA_INFO_PROBE_PATHS } from './config/schema/media-info.js';
+export { sharedRows, type SharedRow } from './media-info/remote.js';
 export { SceneMappingDataset } from './metadata/scene-mappings.js';
 export { IdMappingDataset } from './metadata/id-mappings.js';
 export {

@@ -513,15 +513,28 @@ export const seconds = z
  * Accepts either a string array (DB-stored shape) or a comma-separated string
  * (env-supplied shape) and produces a trimmed string array.
  */
+const splitList = (value: string) =>
+  value
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+
 export const commaSeparatedList = z.union([
   z.array(z.string()),
-  z.string().transform((value) =>
-    value
-      .split(',')
-      .map((entry) => entry.trim())
-      .filter((entry) => entry.length > 0)
-  ),
+  z.string().transform(splitList),
 ]);
+
+export function commaSeparatedEnumList<
+  const T extends readonly [string, ...string[]],
+>(values: T) {
+  return z.union([
+    z.array(z.enum(values)),
+    z
+      .string()
+      .transform(splitList)
+      .pipe(z.array(z.enum(values))),
+  ]);
+}
 
 /**
  * Same as `seconds` but allows -1 as a sentinel (commonly used for "disabled").

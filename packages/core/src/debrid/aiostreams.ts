@@ -27,7 +27,11 @@ import {
   toDebridFiles,
   shouldSkipDegraded,
   hasRecentStreamActivity,
+  type UsenetStreamToken,
 } from '../usenet/integration/index.js';
+import { storedFileInfo, storedFilesByPost } from '../media-info/lookup.js';
+import type { MediaInfoRecord } from '../media-info/record.js';
+import { toWireMediaInfo } from '../media-info/wire.js';
 import {
   ReleaseBlocklistRepository,
   UsenetLibraryRepository,
@@ -119,6 +123,10 @@ export class NativeUsenetService implements UsenetDebridService {
       }
     );
 
+    const probed = await storedFilesByPost(
+      [...library.values()].map((e) => e.nzbHash)
+    ).catch(() => new Map<string, Map<string, MediaInfoRecord>>());
+
     const policy = appConfig.usenet.damagePolicy;
     return nzbs.map(({ name, hash }) => {
       const entry = hash ? library.get(hash) : undefined;
@@ -134,8 +142,12 @@ export class NativeUsenetService implements UsenetDebridService {
           library: true,
         };
       }
+      const posted = entry ? probed.get(entry.nzbHash) : undefined;
       const files: DebridFile[] | undefined = entry?.files.length
-        ? toDebridFiles(entry.files)
+        ? toDebridFiles(entry.files).map((file) => {
+            const info = storedFileInfo(posted, file);
+            return info ? { ...file, mediaInfo: toWireMediaInfo(info) } : file;
+          })
         : undefined;
       return {
         id: hash ?? name ?? 'unknown',
@@ -342,7 +354,7 @@ export class NativeUsenetService implements UsenetDebridService {
     UsenetLibraryRepository.touch(contentHash).catch(() => {});
 
     const chosenFilename = selected.name ?? filename;
-    const token = encodeUsenetStreamToken({
+    const streamToken: UsenetStreamToken = {
       nzb: playbackInfo.nzb,
       hash: contentHash,
       fileIndex: selected.index,
@@ -351,7 +363,13 @@ export class NativeUsenetService implements UsenetDebridService {
       releaseKey: playbackInfo.releaseKey,
       indexer: playbackInfo.indexer,
       owner: this.owner,
-    });
+      imdbId: playbackInfo.metadata?.imdbId ?? undefined,
+      tmdbId: playbackInfo.metadata?.tmdbId ?? undefined,
+      tvdbId: playbackInfo.metadata?.tvdbId ?? undefined,
+      season: playbackInfo.metadata?.season,
+      episode: playbackInfo.metadata?.episode,
+    };
+    const token = encodeUsenetStreamToken(streamToken);
 
     warmUsenetStreamTarget({
       nzb: playbackInfo.nzb,
@@ -361,7 +379,6 @@ export class NativeUsenetService implements UsenetDebridService {
       providers,
       options,
     });
-
     const url = `${appConfig.bootstrap.baseUrl}/api/v1/usenet/stream/${token}`;
     logger.debug(
       {

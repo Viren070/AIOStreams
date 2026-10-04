@@ -56,6 +56,7 @@ import {
   ReleaseBlocklistPublishService,
   flushStreamSessions,
   pruneStreamSessions,
+  pruneMediaInfoProbes,
   recoverStreamSessions,
   streamRegistry,
 } from '@aiostreams/core';
@@ -275,6 +276,21 @@ function registerStreamTasks() {
     run: async () => {
       const n = await pruneStreamSessions();
       return { ok: true, message: `pruned ${n} rows` };
+    },
+  });
+  TaskManager.register({
+    id: 'media-info-probes-prune',
+    label: 'Prune media info probes',
+    description: 'Deletes probe attempts older than 30 days.',
+    category: 'data-sync',
+    kind: 'scheduled',
+    intervalMs: 24 * 60 * 60_000,
+    enabled: true,
+    destructive: false,
+    multiReplica: 'single',
+    run: async () => {
+      const { deleted } = await pruneMediaInfoProbes();
+      return { ok: true, message: `pruned ${deleted} rows` };
     },
   });
 }

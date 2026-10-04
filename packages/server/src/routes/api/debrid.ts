@@ -18,7 +18,9 @@ import {
   type FailoverAttempt,
   type FailoverContentType,
   type PlayChainItem,
+  type PlaybackTarget,
   maskSensitiveInfo,
+  onPlay,
 } from '@aiostreams/core';
 import { ZodError } from 'zod';
 import {
@@ -97,6 +99,10 @@ router.get(
       const clientIp = req.userIp;
 
       const arrivedViaOurProxy = !!req.query[constants.INTERNAL_PROXY_MARKER];
+      const playPath =
+        req.query[constants.PLAY_PATH_MARKER] === 'jellyfin'
+          ? 'jellyfin'
+          : 'stremio';
       const proxyConfig = chain?.proxyConfig;
 
       // Wrap a resolved (CDN) URL in a proxy URL when the source item should be
@@ -130,6 +136,22 @@ router.get(
         return resolvedUrl; // fail-open
       };
 
+      // Served URL -> what it resolved from, for the media info probe.
+      const resolvedFrom = new Map<
+        string,
+        { target: PlaybackTarget; url: string }
+      >();
+      const resolveOwned = async (
+        target: PlaybackTarget,
+        proxied: boolean | undefined,
+        signal?: AbortSignal
+      ): Promise<string | undefined> => {
+        const url = await resolvePlaybackTarget(target, { clientIp }, signal);
+        const served = await maybeProxy(url, proxied);
+        if (url && served) resolvedFrom.set(served, { target, url });
+        return served;
+      };
+
       // Resolve a chain item (or variant), branching on owned vs external, then
       // proxying the result when configured.
       const resolveTarget =
@@ -142,9 +164,7 @@ router.get(
           }
           const target = parsePlaybackUrl(item.url);
           return target
-            ? resolvePlaybackTarget(target, { clientIp }, signal).then((url) =>
-                maybeProxy(url, item.proxied)
-              )
+            ? resolveOwned(target, item.proxied, signal)
             : Promise.reject(new Error('unparseable fallback url'));
         };
 
@@ -155,11 +175,11 @@ router.get(
             : describeChainItem({ type: clickedType, filename }, 'clicked'),
           rank: 0,
           resolve: (signal) =>
-            resolvePlaybackTarget(
+            resolveOwned(
               { encryptedStoreAuth, fileInfoRaw, metadataId, filename },
-              { clientIp },
+              chain?.clickedProxied,
               signal
-            ).then((url) => maybeProxy(url, chain?.clickedProxied)),
+            ),
         },
         ...fallbacks.map(
           (f): FailoverAttempt => ({
@@ -263,6 +283,18 @@ router.get(
 
       res.setHeader('Cache-Control', 'no-store');
       res.redirect(307, result.url);
+
+      const played = resolvedFrom.get(result.url);
+      if (played) {
+        void onPlay({
+          path: playPath,
+          target: played.target,
+          resolvedUrl: played.url,
+          viaProxy:
+            arrivedViaOurProxy ||
+            result.url.includes(constants.BUILTIN_PROXY_PATH_PREFIX),
+        });
+      }
     } catch (error: any) {
       if (error instanceof APIError || error instanceof ZodError) {
         next(error);

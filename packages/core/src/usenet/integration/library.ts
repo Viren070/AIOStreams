@@ -44,6 +44,7 @@ import { blocklistEvalOptions } from '../../release-blocklist/filter.js';
 import { ReleaseBlocklistRepository } from '../../db/repositories/release-blocklist.js';
 import {
   UsenetLibraryRepository,
+  usenetLibraryBus,
   type UsenetLibraryEntry,
   type UsenetLibraryFile,
   type UsenetLibrarySource,
@@ -1004,6 +1005,10 @@ async function importNzbInBackground(args: {
           },
           jobSignal
         ),
+    });
+    usenetLibraryBus.emit('imported', {
+      nzbHash: args.nzbHash,
+      origin: args.origin,
     });
   } catch (err) {
     logger.warn(

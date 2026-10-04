@@ -6,6 +6,7 @@ export * from './naming.js';
 export * from './errors.js';
 export * from './library.js';
 export * from './stream-session.js';
+export * from './library-probes.js';
 export * from './dashboard/index.js';
 export * from './sabnzbd.js';
 export * from './share-provider.js';

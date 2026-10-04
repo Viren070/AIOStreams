@@ -196,6 +196,12 @@ function classify(schema: AnyZod): SettingsUiHint {
       if (arr) {
         const el = unwrap(def(arr).element as AnyZod);
         if (el && typeOf(el) === 'string') return { kind: 'list' };
+        if (el && (typeOf(el) === 'enum' || typeOf(el) === 'literal')) {
+          const inner = classify(el);
+          if (inner.options) {
+            return { kind: 'multiEnum', options: inner.options };
+          }
+        }
       }
     }
     if (kinds.every((k) => k === 'literal' || k === 'enum')) {

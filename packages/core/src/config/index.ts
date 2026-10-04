@@ -36,6 +36,7 @@ import {
   jellyfinSchema,
   watchStateSchema,
   remuxdbSchema,
+  mediaInfoSchema,
 } from './schema/index.js';
 
 export const runtimeSchemas = {
@@ -67,6 +68,7 @@ export const runtimeSchemas = {
   jellyfin: jellyfinSchema,
   watchState: watchStateSchema,
   remuxdb: remuxdbSchema,
+  mediaInfo: mediaInfoSchema,
 } as const;
 
 export const runtimeKeyAliases: Record<string, string> = {

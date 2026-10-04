@@ -14,37 +14,13 @@ import { getDebridService } from '../debrid/index.js';
 import {
   metadataStore,
   fileInfoStore,
-  PLAYBACK_PATH_PREFIX,
+  type PlaybackTarget,
 } from '../debrid/utils.js';
 import { isFailoverRetryableError } from './play-chain.js';
 
+export { parsePlaybackUrl, type PlaybackTarget } from '../debrid/utils.js';
+
 const logger = createLogger('failover');
-
-/** The raw, URL-borne pieces needed to resolve one owned playback item. */
-export interface PlaybackTarget {
-  encryptedStoreAuth: string;
-  /** base64url-encoded FileInfo, or a fileInfo-store hash key. */
-  fileInfoRaw: string;
-  metadataId: string;
-  filename: string;
-}
-
-/** Split an owned playback URL back into its resolvable pieces. */
-export function parsePlaybackUrl(url: string): PlaybackTarget | undefined {
-  const idx = url.indexOf(PLAYBACK_PATH_PREFIX);
-  if (idx === -1) return undefined;
-  const rest = url.slice(idx + PLAYBACK_PATH_PREFIX.length);
-  // {storeAuth}/{fallbackKey}/{fileInfo}/{metadataId}/{filename}
-  const segments = rest.split('/');
-  if (segments.length < 5) return undefined;
-  return {
-    encryptedStoreAuth: segments[0],
-    // segments[1] is the fallback key — ignored when re-resolving a target.
-    fileInfoRaw: segments[2],
-    metadataId: segments[3],
-    filename: decodeURIComponent(segments[4]),
-  };
-}
 
 function badRequest(message: string): DebridError {
   return new DebridError(message, {
@@ -103,6 +79,18 @@ function buildPlaybackInfo(
       };
 }
 
+export function decodeStoreAuth(
+  target: PlaybackTarget
+): ServiceAuth | undefined {
+  const decrypted = decryptString(target.encryptedStoreAuth);
+  if (!decrypted.success) return undefined;
+  try {
+    return ServiceAuthSchema.parse(JSON.parse(decrypted.data));
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Decode + resolve a single owned playback target to a servable URL (or
  * undefined if the source is still downloading). Used uniformly for the clicked
@@ -118,16 +106,8 @@ export async function resolvePlaybackTarget(
     throw badRequest('Failed to parse file info and not found in store.');
   }
 
-  const decrypted = decryptString(target.encryptedStoreAuth);
-  if (!decrypted.success) {
-    throw badRequest('Failed to decrypt store auth');
-  }
-  let storeAuth: ServiceAuth;
-  try {
-    storeAuth = ServiceAuthSchema.parse(JSON.parse(decrypted.data));
-  } catch {
-    throw badRequest('Failed to parse store auth');
-  }
+  const storeAuth = decodeStoreAuth(target);
+  if (!storeAuth) throw badRequest('Failed to decode store auth');
 
   const metadata = await metadataStore().get(target.metadataId);
   const playbackInfo = buildPlaybackInfo(fileInfo, metadata, target.filename);
@@ -149,7 +129,16 @@ export async function resolvePlaybackTarget(
 /**
  * Smallest body we will accept as a real release.
  */
-const MIN_PLAUSIBLE_FILE_SIZE = 16 * 1024 * 1024;
+export const MIN_PLAUSIBLE_FILE_SIZE = 16 * 1024 * 1024;
+
+/** A redirect back onto the link's own host, where addons keep error videos. */
+export function isOwnHostRedirect(from: string, to: string): boolean {
+  try {
+    return new URL(to, from).host === new URL(from).host;
+  } catch {
+    return false;
+  }
+}
 
 /** Total size out of a `Content-Range: bytes 0-0/12345` header, when stated. */
 function parseContentRangeTotal(value: string | null): number | undefined {
@@ -196,15 +185,7 @@ export async function resolveExternalTarget(
       if (!location) {
         throw new Error('external target redirect had no Location header');
       }
-      let sameHost = false;
-      try {
-        // Resolve relative redirects against the probe URL before comparing hosts.
-        sameHost = new URL(location, url).host === new URL(url).host;
-      } catch {
-        // Unparseable Location, treat as a real (off-host) CDN URL.
-      }
-      if (sameHost) {
-        // Redirect back onto the addon's own host, probably a static error video.
+      if (isOwnHostRedirect(url, location)) {
         throw new Error('external target redirected to an error video');
       }
       logger.debug({ host }, 'external target resolved to off-host redirect');
