@@ -66,7 +66,11 @@ import {
   subtitleLine,
   SUBTITLE_SIZE_LABELS,
 } from '../lib/subtitles/style';
-import { usePlaybackPrefs, type SubtitleMode } from '../lib/user-config';
+import {
+  ORIGINAL_LANGUAGE,
+  usePlaybackPrefs,
+  type SubtitleMode,
+} from '../lib/user-config';
 import {
   CUSTOM_LINK,
   LAUNCHED_PLAYERS,
@@ -112,6 +116,11 @@ import {
 } from '../components/settings-card';
 
 const ANY = 'any';
+const AUDIO_LANGUAGE_OPTIONS = [
+  { value: ANY, label: 'No preference' },
+  { value: ORIGINAL_LANGUAGE, label: 'Original language' },
+  ...LANGUAGES.map((l) => ({ value: l.code, label: l.name })),
+];
 const LANGUAGE_OPTIONS = [
   { value: ANY, label: 'No preference' },
   ...LANGUAGES.map((l) => ({ value: l.code, label: l.name })),
@@ -435,13 +444,26 @@ function AudioSection() {
       <SettingsCard title="Language" description={ON_ACCOUNT}>
         <Select
           label="Audio language"
-          help="Picked when a version has it; otherwise the version's own default plays."
-          options={LANGUAGE_OPTIONS}
+          help={
+            prefs.AudioLanguagePreference === ORIGINAL_LANGUAGE
+              ? "The language the title was made in, when a version has it; otherwise the version's own default plays."
+              : "Picked when a version has it; otherwise the version's own default plays."
+          }
+          options={AUDIO_LANGUAGE_OPTIONS}
           value={prefs.AudioLanguagePreference || ANY}
           onValueChange={(v) =>
             update({ AudioLanguagePreference: v === ANY ? '' : v })
           }
         />
+        {!!prefs.AudioLanguagePreference && (
+          <Switch
+            side="right"
+            label="Play the version's default track first"
+            help="A track the version marks as its default plays even when another is in the language above. Turn this off for the language to always win."
+            value={prefs.PlayDefaultAudioTrack !== false}
+            onValueChange={(v) => update({ PlayDefaultAudioTrack: v })}
+          />
+        )}
       </SettingsCard>
       {currentHost().name === 'desktop' && (
         <SettingsCard title="Output" description={ON_DEVICE}>
