@@ -656,7 +656,7 @@ const SERVICE_DETAILS: Record<
     id: AIOSTREAMS_SERVICE,
     name: 'AIOStreams',
     shortName: 'AIO',
-    knownNames: ['AIO', 'AIO Usenet', 'NZB', 'Usenet', 'Native Usenet'],
+    knownNames: ['AIO', 'AIO Usenet', 'NZB', 'Native Usenet'],
     signUpText:
       'Stream directly from your own NNTP providers via the built-in usenet engine. Providers are configured globally by the administrator.',
     credentials: [
