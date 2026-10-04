@@ -101,6 +101,21 @@ export {
 } from './repositories/watch-sessions.js';
 export { JellyfinRepository } from './repositories/jellyfin.js';
 export {
+  MediaInfoRepository,
+  type MediaInfoRow,
+  type MediaInfoKind,
+  type MediaInfoFileFilter,
+} from './repositories/media-info.js';
+export {
+  MediaInfoProbeRepository,
+  type ProbeAttempt,
+  type ProbeAttemptFilter,
+  type ProbeKind,
+  type ProbeOutcome,
+  type ProbePath,
+  type ProbeReader,
+} from './repositories/media-info-probes.js';
+export {
   PlaybackHandoffRepository,
   type SinkRow,
   type SinkStatus,
