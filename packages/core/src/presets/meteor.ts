@@ -39,6 +39,10 @@ class MeteorStreamParser extends StreamParser {
     return type;
   }
 
+  protected override getTorrentFile(stream: Stream): string | undefined {
+    return stream.behaviorHints?.filename ?? undefined;
+  }
+
   protected getParsedFileMergeOverrides(
     stream: Stream,
     currentParsedStream: ParsedStream

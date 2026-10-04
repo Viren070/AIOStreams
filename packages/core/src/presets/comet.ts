@@ -47,6 +47,11 @@ class CometStreamParser extends StreamParser {
     }
   }
 
+  // Comet names the torrent here; it picks the file only at playback.
+  protected override getTorrentTitle(stream: Stream): string | undefined {
+    return stream.behaviorHints?.filename ?? undefined;
+  }
+
   protected isInfoStream(stream: Stream): string | undefined {
     const str = 'Sync debrid account library now';
     if (stream.description?.includes(str)) {

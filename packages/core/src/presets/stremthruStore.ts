@@ -38,6 +38,11 @@ class StremthruStoreStreamParser extends StremThruStreamParser {
       ? stream.behaviorHints?.bingeGroup?.match(/[a-fA-F0-9]{40}$/)?.[0]
       : undefined;
   }
+
+  // A store item's stream is always one file of it.
+  protected override getTorrentFile(stream: Stream): string | undefined {
+    return stream.behaviorHints?.filename ?? undefined;
+  }
 }
 
 export class StremthruStorePreset extends StremThruPreset {

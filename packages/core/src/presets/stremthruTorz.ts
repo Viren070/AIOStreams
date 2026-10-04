@@ -9,14 +9,40 @@ import {
 import { baseOptions, Preset } from './preset.js';
 import { constants, ServiceId } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
-import { StreamParser } from '../parser/index.js';
+import { StreamParser, getRegexForTextAfterEmojis } from '../parser/index.js';
 import { StremThruPreset, StremThruStreamParser } from './stremthru.js';
+
+const TITLE_LINE = getRegexForTextAfterEmojis(['📁']);
 
 class StremthruTorzStreamParser extends StremThruStreamParser {
   protected override applyUrlModifications(
     url: string | undefined
   ): string | undefined {
     return super.applyUrlModifications(url);
+  }
+
+  // Torz names a file only once it matched one: `.../{hash}/{fileIdx}/{name}`,
+  // or a P2P stream's file index. Otherwise the name may be the torrent's.
+  protected override getTorrentFile(stream: Stream): string | undefined {
+    if (!stream.url) {
+      return (stream.fileIdx ?? -1) >= 0
+        ? (stream.behaviorHints?.filename ?? undefined)
+        : undefined;
+    }
+    try {
+      const parts = new URL(stream.url).pathname.split('/');
+      const name = parts.at(-1);
+      const index = Number(parts.at(-2));
+      return name && Number.isInteger(index) && index >= 0
+        ? decodeURIComponent(name)
+        : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  protected override getTorrentTitle(stream: Stream): string | undefined {
+    return stream.description?.match(TITLE_LINE)?.[1];
   }
 }
 

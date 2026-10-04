@@ -1479,6 +1479,8 @@ export const ParsedStreamSchema = z.object({
       sources: z.array(z.string().min(1)).optional(),
       private: z.boolean().optional(),
       freeleech: z.boolean().optional(),
+      file: z.string().min(1).optional(),
+      title: z.string().min(1).optional(),
     })
     .optional(),
   countryWhitelist: z.array(z.string().length(3)).optional(),

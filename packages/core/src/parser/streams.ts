@@ -194,8 +194,15 @@ class StreamParser {
 
     parsedStream.parsedFile = this.getParsedFile(stream, parsedStream);
 
+    const infoHash = stream.infoHash ?? this.getInfoHash(stream, parsedStream);
     parsedStream.torrent = {
-      infoHash: stream.infoHash ?? this.getInfoHash(stream, parsedStream),
+      infoHash,
+      file: infoHash
+        ? this.getTorrentFile(stream, parsedStream)?.trim() || undefined
+        : undefined,
+      title: infoHash
+        ? this.getTorrentTitle(stream, parsedStream)?.trim() || undefined
+        : undefined,
       seeders: this.getSeeders(stream, parsedStream),
       sources: stream.sources ?? undefined,
       fileIdx:
@@ -497,6 +504,21 @@ class StreamParser {
     stream: Stream,
     currentParsedStream: ParsedStream
   ): number | undefined {
+    return undefined;
+  }
+
+  /** A file inside the torrent, only where the addon names one reliably. */
+  protected getTorrentFile(
+    _stream: Stream,
+    _currentParsedStream: ParsedStream
+  ): string | undefined {
+    return undefined;
+  }
+
+  protected getTorrentTitle(
+    _stream: Stream,
+    _currentParsedStream: ParsedStream
+  ): string | undefined {
     return undefined;
   }
 

@@ -121,6 +121,20 @@ export class BuiltinStreamParser extends StreamParser {
     return folderName.trim() || undefined;
   }
 
+  // An index below 0 means no file was picked and the name is the torrent's.
+  protected override getTorrentFile(stream: Stream): string | undefined {
+    return (stream.fileIdx ?? -1) >= 0
+      ? (stream.behaviorHints?.filename ?? undefined)
+      : undefined;
+  }
+
+  protected override getTorrentTitle(
+    stream: Stream,
+    currentParsedStream: ParsedStream
+  ): string | undefined {
+    return this.getFolder(stream, currentParsedStream);
+  }
+
   protected getError(
     stream: Stream,
     currentParsedStream: ParsedStream

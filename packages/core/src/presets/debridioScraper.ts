@@ -4,6 +4,7 @@ import { SERVICE_DETAILS } from '../utils/index.js';
 import { constants, ServiceId } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
+import { VIDEO_FILE_EXTENSIONS } from '../debrid/utils.js';
 import {
   debridioSocialOption,
   debridioLogo,
@@ -13,6 +14,15 @@ import {
 class DebridioStreamParser extends StreamParser {
   protected override get indexerRegex(): RegExp | undefined {
     return undefined;
+  }
+
+  // Without a video extension the name is the torrent's title, not a file.
+  protected override getTorrentFile(stream: Stream): string | undefined {
+    const name = stream.behaviorHints?.filename ?? undefined;
+    const extension = name?.slice(name.lastIndexOf('.')).toLowerCase();
+    return extension && VIDEO_FILE_EXTENSIONS.includes(extension)
+      ? name
+      : undefined;
   }
 }
 

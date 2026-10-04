@@ -64,6 +64,14 @@ export class TorrentioParser extends StreamParser {
     return folderName;
   }
 
+  protected override getTorrentFile(stream: Stream): string | undefined {
+    return stream.behaviorHints?.filename ?? undefined;
+  }
+
+  protected override getTorrentTitle(stream: Stream): string | undefined {
+    return this.getFolder(stream);
+  }
+
   protected override getFileIdx(
     stream: Stream,
     currentParsedStream: ParsedStream
