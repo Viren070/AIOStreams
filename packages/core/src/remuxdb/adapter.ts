@@ -1,22 +1,10 @@
 import type { ParsedStream } from '../db/schemas.js';
-import { decodeProxyToken, ProxyDataSchema } from '../proxy/token.js';
+import { unwrapProxyUrl } from '../proxy/token.js';
 import type { MediaInfo } from '../utils/media-info.js';
 import { NEWZNAB_INDEXERS } from '../presets/newznab.js';
+import type { MediaInfoRecord, MediaTrack } from '../media-info/record.js';
+import { toWireMediaInfo as recordToWire } from '../media-info/wire.js';
 import type { MediaProbeVersion, ProbeSource, TrackDetail } from './client.js';
-
-function unwrapProxyUrl(nzbUrl: string): string {
-  try {
-    const segments = new URL(nzbUrl).pathname.split('/');
-    const token = segments[segments.indexOf('proxy') + 1];
-    if (!token) return nzbUrl;
-    const decoded = decodeProxyToken(token);
-    if (!decoded) return nzbUrl;
-    const data = ProxyDataSchema.safeParse(JSON.parse(decoded.rawData));
-    return data.success ? data.data.url : nzbUrl;
-  } catch {
-    return nzbUrl;
-  }
-}
 
 const KNOWN_INDEXER_HOSTNAMES: Record<string, string> = Object.fromEntries(
   NEWZNAB_INDEXERS.flatMap((i) =>
@@ -99,56 +87,69 @@ export function matchEntry(
   return undefined;
 }
 
-function deriveHdrTags(track: TrackDetail): string[] {
-  if ((track.dv_profile ?? 0) > 0) return ['dv'];
-  if (track.hdr10_plus_present) return ['hdr10+'];
-  if (track.color_transfer === 'smpte2084') return ['hdr10'];
-  if (track.color_transfer === 'arib-std-b67') return ['hlg'];
-  return [];
+const nonNull = <T>(value: T | null | undefined): T | undefined =>
+  value ?? undefined;
+
+function fromTrack(t: TrackDetail): MediaTrack | undefined {
+  const common = {
+    index: t.idx,
+    codec: nonNull(t.codec),
+    profile: nonNull(t.profile),
+    language: nonNull(t.language),
+    title: nonNull(t.title),
+    bitrate: nonNull(t.bit_rate),
+    default: t.is_default,
+    forced: t.is_forced,
+    hearingImpaired: t.is_hearing_impaired,
+  };
+  switch (t.kind) {
+    case 'video':
+      return {
+        ...common,
+        type: 'video',
+        width: nonNull(t.width),
+        height: nonNull(t.height),
+        fps: nonNull(t.fps),
+        bitDepth: nonNull(t.bit_depth),
+        pixelFormat: nonNull(t.pixel_format),
+        colorPrimaries: nonNull(t.color_primaries),
+        colorRange: nonNull(t.color_range),
+        colorSpace: nonNull(t.color_space),
+        colorTransfer: nonNull(t.color_transfer),
+        aspectRatio: nonNull(t.aspect_ratio),
+        level: nonNull(t.level),
+        refFrames: nonNull(t.ref_frames),
+        dvProfile: nonNull(t.dv_profile),
+        hdr10Plus: t.hdr10_plus_present,
+      };
+    case 'audio':
+      return {
+        ...common,
+        type: 'audio',
+        channels: nonNull(t.channels),
+        channelLayout: nonNull(t.channel_layout),
+        sampleRate: nonNull(t.sample_rate),
+      };
+    case 'subtitle':
+      return t.is_external ? undefined : { ...common, type: 'subtitle' };
+    default:
+      return undefined;
+  }
+}
+
+export function fromRemuxDbVersion(entry: MediaProbeVersion): MediaInfoRecord {
+  return {
+    container: nonNull(entry.container),
+    duration: nonNull(entry.duration),
+    size: nonNull(entry.size),
+    bitrate: nonNull(entry.bitrate),
+    chapters: entry.has_chapters,
+    tracks: entry.tracks
+      .map(fromTrack)
+      .filter((t): t is MediaTrack => t !== undefined),
+  };
 }
 
 export function toWireMediaInfo(entry: MediaProbeVersion): MediaInfo {
-  // Clients pick a track by its position in the file, so order matters.
-  const tracks = [...entry.tracks].sort((a, b) => a.idx - b.idx);
-  const videoTrack = tracks.find((t) => t.kind === 'video');
-  const audioTracks = tracks.filter((t) => t.kind === 'audio');
-  const subtitleTracks = tracks.filter(
-    (t) => t.kind === 'subtitle' && !t.is_external
-  );
-
-  return {
-    video: videoTrack
-      ? {
-          codec: videoTrack.codec ?? undefined,
-          w: videoTrack.width ?? undefined,
-          h: videoTrack.height ?? undefined,
-          hdr: deriveHdrTags(videoTrack),
-        }
-      : undefined,
-    audio: audioTracks.map((t) => ({
-      codec: t.codec ?? undefined,
-      profile: t.profile ?? undefined,
-      lang: t.language ?? undefined,
-      title: t.title ?? undefined,
-      ch_layout: t.channel_layout ?? undefined,
-      ch: t.channels ?? undefined,
-      default: t.is_default,
-      hearing_impaired: t.is_hearing_impaired,
-    })),
-    subtitle: subtitleTracks.map((t) => ({
-      codec: t.codec ?? undefined,
-      lang: t.language ?? undefined,
-      title: t.title ?? undefined,
-      default: t.is_default,
-      forced: t.is_forced,
-      hearing_impaired: t.is_hearing_impaired,
-    })),
-    format: {
-      n: entry.container ?? '',
-      dur: (entry.duration ?? 0) * 1_000_000_000,
-      s: entry.size ?? 0,
-      br: entry.bitrate ?? 0,
-    },
-    has_chapters: entry.has_chapters,
-  };
+  return recordToWire(fromRemuxDbVersion(entry));
 }

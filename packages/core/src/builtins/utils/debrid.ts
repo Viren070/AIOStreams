@@ -796,6 +796,10 @@ async function processNZBsForDebridService(
         size: nzbCheckResult?.size || nzb.size,
         indexer: nzb.library ? undefined : nzb.indexer,
         file,
+        parsedMediaInfo: mergeParsedMediaInfos(
+          nzb.parsedMediaInfo,
+          parseMediaInfo(file.mediaInfo)
+        ),
         service: {
           id: service.id,
           cached: nzbCheckResult?.status === 'cached' || nzb.library === true,

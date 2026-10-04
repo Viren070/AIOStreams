@@ -34,6 +34,13 @@ export interface ParsedMediaInfo {
   hasChapters?: boolean;
 }
 
+/** Whether tracks are known one by one, which only a probe of the file gives. */
+export function hasTrackLists(
+  info: { audioTracks?: unknown[]; subtitleTracks?: unknown[] } | undefined
+): boolean {
+  return !!(info?.audioTracks?.length || info?.subtitleTracks?.length);
+}
+
 type MediaInfoAudioTrack = {
   codec?: unknown;
   profile?: unknown;
