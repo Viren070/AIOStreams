@@ -174,6 +174,8 @@ const JellyfinSettingsFields = z.object({
   segmentTypes: z.array(z.enum(['Intro', 'Recap', 'Outro'])).optional(),
   /** Send unaired episodes as missing, which clients won't offer to play. Default on. */
   markUnaired: z.boolean().optional(),
+  /** Seconds a play waits for its version's tracks; absent uses the instance's. */
+  playWait: z.number().int().min(0).max(30).optional(),
   /** The configuration's own user: the history its trackers sync with. */
   primary: z
     .object({
@@ -1906,6 +1908,8 @@ const StatusResponseSchema = z.object({
         pinSignIn: z.boolean().optional(),
         /** Trackers one user syncs with at most. */
         maxTrackers: z.number(),
+        /** The default wait for tracks on play; absent when nothing is probed. */
+        playWait: z.number().optional(),
         segments: z.object({
           enabled: z.boolean(),
           /** In the operator's order; `configuration` needs the configuration's own key. */

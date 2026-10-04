@@ -3,7 +3,7 @@ import {
   Cache,
   convertSubtitle,
   createLogger,
-  externalSubtitleStartIndex,
+  externalSubtitleFor,
   readBodyCapped,
   subtitleExtensionOf,
   type SubtitleFormat,
@@ -69,9 +69,8 @@ async function subtitleHandler(req: Request, res: Response) {
     return;
   }
   const source = pickSource(memo, loc.requestedMsid);
-  const index = Number(param(req, 'index'));
   const track = source
-    ? source.subtitles[index - externalSubtitleStartIndex(source)]
+    ? externalSubtitleFor(source, Number(param(req, 'index')))
     : undefined;
   if (!track) {
     res.status(404).end();

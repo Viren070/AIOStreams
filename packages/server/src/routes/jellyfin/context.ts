@@ -383,6 +383,17 @@ export function bodyOf(req: Request): Record<string, unknown> {
     : {};
 }
 
+/** A body field by name in any case, as Jellyfin reads JSON. */
+export function bodyField(req: Request, name: string): unknown {
+  const body = bodyOf(req);
+  if (name in body) return body[name];
+  const lower = name.toLowerCase();
+  for (const [key, value] of Object.entries(body)) {
+    if (key.toLowerCase() === lower) return value;
+  }
+  return undefined;
+}
+
 /** Routes that must answer without a credential (clients send none). */
 const ANONYMOUS_OK = [
   /^\/system\/info\/public$/i,
@@ -532,7 +543,10 @@ async function buildContext(
   let leafEvidence: Promise<LeafEvidence> | null = null;
   const finalUserData = userData;
   const engineOf = (data: UserData) =>
-    new AIOStreams(data, { skipFailedAddons: true }).initialise();
+    new AIOStreams(data, {
+      skipFailedAddons: true,
+      path: 'jellyfin',
+    }).initialise();
   const getEngine = () => (engine ??= engineOf(finalUserData));
   const getViews = () =>
     (views ??= getEngine().then((e) => listViews(e, finalUserData)));

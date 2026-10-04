@@ -1,5 +1,11 @@
 import type { MediaTrack, ParsedFile, ParsedStream } from '../db/schemas.js';
-import { constants } from '../utils/index.js';
+import { constants, hasTrackLists } from '../utils/index.js';
+import type { TitleMetadata } from '../debrid/base.js';
+import { withPlayPath } from '../debrid/utils.js';
+import { applyMediaInfo } from '../media-info/apply.js';
+import { mediaInfoIdentity, storedMediaInfoFor } from '../media-info/lookup.js';
+import { probeBeforePlay } from '../media-info/play.js';
+import type { ContributionIds } from '../media-info/contribute.js';
 import { languageToIso6392 } from '../utils/languages.js';
 import { subtitleLanguage } from './enrichment.js';
 import { mediaSourceId } from './ids.js';
@@ -130,19 +136,8 @@ export function containerOf(stream: ParsedStream): string {
   return 'mkv';
 }
 
-export function extensionFor(
-  stream: ParsedStream,
-  formatted: { name: string; description: string },
-  bingeGroup?: string
-): AiostreamsSourceExtension {
-  const pf = stream.parsedFile;
+function fileExtension(pf: ParsedFile | undefined) {
   return {
-    name: formatted.name,
-    description: formatted.description,
-    addon: stream.addon?.name ?? '',
-    service: stream.service?.id,
-    cached: stream.service?.cached,
-    proxied: stream.proxied,
     resolution: pf?.resolution,
     quality: pf?.quality,
     encode: pf?.encode,
@@ -150,16 +145,76 @@ export function extensionFor(
     audioTags: pf?.audioTags ?? [],
     audioChannels: pf?.audioChannels ?? [],
     languages: pf?.languages ?? [],
+    releaseGroup: pf?.releaseGroup,
+    mediaInfoQuality: pf?.mediaInfoQuality,
+  };
+}
+
+export function extensionFor(
+  stream: ParsedStream,
+  formatted: { name: string; description: string },
+  bingeGroup?: string
+): AiostreamsSourceExtension {
+  return {
+    name: formatted.name,
+    description: formatted.description,
+    addon: stream.addon?.name ?? '',
+    service: stream.service?.id,
+    cached: stream.service?.cached,
+    proxied: stream.proxied,
+    ...fileExtension(stream.parsedFile),
     size: stream.size,
     seeders: stream.torrent?.seeders,
     age: stream.age,
-    releaseGroup: pf?.releaseGroup,
     indexer: stream.indexer,
-    mediaInfoQuality: pf?.mediaInfoQuality,
     filename: stream.filename,
     type: stream.type,
     bingeGroup,
   };
+}
+
+/**
+ * Fill a version from a file probed after it was listed. `waitMs` probes the
+ * file now when nothing is stored and reading it is safe.
+ */
+export async function applyStoredMediaInfo(
+  record: MediaSourceRecord,
+  metadata: TitleMetadata | undefined,
+  opts: { waitMs?: number; clientIp?: string; ids?: ContributionIds } = {}
+): Promise<boolean> {
+  if (record.notice || hasTrackLists(record.parsedFile)) return false;
+  const stored = () =>
+    record.mediaInfo
+      ? storedMediaInfoFor(record.mediaInfo, metadata)
+      : Promise.resolve(undefined);
+  let info = await stored();
+  if (!info && opts.waitMs && record.url) {
+    info =
+      (await probeBeforePlay(
+        {
+          url: record.url,
+          mediaInfo: record.mediaInfo,
+          service: record.extension.service,
+          proxied: record.extension.proxied,
+        },
+        { timeoutMs: opts.waitMs, clientIp: opts.clientIp, ids: opts.ids }
+      )) ?? (await stored());
+  }
+  if (!info) return false;
+  const target = {
+    parsedFile: record.parsedFile,
+    duration: record.durationMs,
+    bitrate: record.bitrate,
+  };
+  applyMediaInfo(target, info);
+  record.parsedFile = target.parsedFile;
+  record.durationMs = target.duration;
+  record.bitrate = target.bitrate;
+  record.extension = {
+    ...record.extension,
+    ...fileExtension(record.parsedFile),
+  };
+  return true;
 }
 
 /** A stream clients can play directly: has a URL and needs no headers unless proxied. */
@@ -219,7 +274,7 @@ export function sourceRecordFrom(
 ): MediaSourceRecord {
   return {
     msid: mediaSourceId(uuid, identity),
-    url: stream.url!,
+    url: withPlayPath(stream.url!, 'jellyfin'),
     requestHeaders: stream.proxied ? undefined : stream.requestHeaders,
     filename: stream.filename,
     container: containerOf(stream),
@@ -229,6 +284,7 @@ export function sourceRecordFrom(
     label,
     parsedFile: stream.parsedFile,
     subtitles: mergeSubtitleTracks(stream, addonSubtitles),
+    mediaInfo: mediaInfoIdentity(stream),
     videoHash: stream.videoHash,
     live: stream.type === 'live',
     extension: extensionFor(stream, formatted, bingeGroup),
@@ -477,7 +533,7 @@ export interface MediaSourceBuildOptions {
   id: string;
   /** Delivery format for one track, given the format it is served in upstream. */
   subtitleFormat: (sourceExtension: string) => SubtitleFormat;
-  /** Server-relative delivery URL for the subtitle stream at `index`. */
+  /** Server-relative delivery URL; {@link externalSubtitleFor} reads `index` back. */
   subtitleUrl: (index: number, format: SubtitleFormat) => string;
   /** The client's own token, as players fetch subtitles without its headers. */
   subtitleToken?: string;
@@ -492,15 +548,24 @@ export interface MediaSourceBuildOptions {
 }
 
 /**
- * Index of the first external subtitle stream. The subtitle route is addressed
- * by MediaStream index, so this must match what `buildMediaStreams` emits.
+ * Subtitle URLs name an external track by its position among them, past any
+ * stream index, so a URL from an earlier list still names the same track once
+ * a probe adds embedded ones. Lower indexes are MediaStream indexes.
  */
-export function externalSubtitleStartIndex(record: MediaSourceRecord): number {
-  return (
-    1 +
-    audioStreams(record.parsedFile, 0).length +
-    embeddedSubtitleStreams(record.parsedFile, 0).length
-  );
+const EXTERNAL_SUBTITLE_URL_BASE = 1000;
+
+export function externalSubtitleFor(
+  record: MediaSourceRecord,
+  urlIndex: number
+): SubtitleTrack | undefined {
+  const position =
+    urlIndex >= EXTERNAL_SUBTITLE_URL_BASE
+      ? urlIndex - EXTERNAL_SUBTITLE_URL_BASE
+      : urlIndex -
+        (1 +
+          audioStreams(record.parsedFile, 0).length +
+          embeddedSubtitleStreams(record.parsedFile, 0).length);
+  return record.subtitles[position];
 }
 
 export function buildMediaStreams(
@@ -525,7 +590,7 @@ export function buildMediaStreams(
   record.subtitles.forEach((sub, i) => {
     const index = externalStart + i;
     const format = opts.subtitleFormat(subtitleExtensionOf(sub.url));
-    const url = opts.subtitleUrl(index, format);
+    const url = opts.subtitleUrl(EXTERNAL_SUBTITLE_URL_BASE + i, format);
     const language = subtitleLanguage(sub.lang);
     streams.push({
       Type: 'Subtitle',

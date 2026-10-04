@@ -1839,6 +1839,13 @@ function Content() {
     jellyfin?.resolveOnOpen && jellyfin.resolveOnOpen !== 'user'
       ? jellyfin.resolveOnOpen === 'always'
       : null;
+  const jellyfinPlayWait =
+    userData.proxy?.enabled ||
+    userData.services?.some(
+      (s) => s.enabled && (s.id === 'aiostreams' || s.id === 'torbox')
+    )
+      ? jellyfin?.playWait
+      : undefined;
   const seanimeExtensionVersion =
     status?.settings?.seanimeExtensionVersion ?? null;
   const isSeanimeVersionUnavailable =
@@ -3285,6 +3292,22 @@ function Content() {
                         }))
                       }
                     />
+                    {jellyfinPlayWait !== undefined && (
+                      <NumberInput
+                        label="Wait for tracks on play"
+                        help={`Seconds. ${jellyfinPlayWait} by default on this instance.`}
+                        moreHelp="When you play a version whose tracks aren't known yet, the server reads them first, so the player lists every audio and subtitle track on the first play. It only reads versions where that can't add an IP to a debrid account: the built-in usenet service, debrid services that allow it, and anything played through a proxy. If reading takes longer than this, the tracks show from the next play. 0 starts at once. Some apps give up after about 20 seconds, so stay below that. A variant can set this per app."
+                        min={0}
+                        max={30}
+                        value={userData.jellyfin?.playWait ?? jellyfinPlayWait}
+                        onValueChange={(value) =>
+                          setUserData((prev) => ({
+                            ...prev,
+                            jellyfin: { ...prev.jellyfin, playWait: value },
+                          }))
+                        }
+                      />
+                    )}
                     <Switch
                       label="Mark unaired episodes"
                       help="Clients show upcoming episodes as unaired and won't offer to play them."

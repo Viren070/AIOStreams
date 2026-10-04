@@ -1,5 +1,7 @@
 import {
   addonSubtitleTracks,
+  applyStoredMediaInfo,
+  idsFromVideoId,
   config as appConfig,
   constants,
   createFormatter,
@@ -15,6 +17,7 @@ import {
   parseRuntimeMs,
   playableSources,
   rememberShowEpisodes,
+  requestTitleMetadata,
   labelFrom,
   isMemoFresh,
   resolveByItem,
@@ -369,6 +372,9 @@ async function resolveUncached(
     psid: newPlaySessionId(),
     sources,
     addonSubtitles,
+    titleMetadata: streamContext
+      ? await requestTitleMetadata(streamContext).catch(() => undefined)
+      : undefined,
     runtimeMs: target.runtimeMs,
     createdAt: Date.now(),
   };
@@ -440,6 +446,32 @@ export async function enrichSourceSubtitles(
   logger.debug(
     { itemId: memo.itemId, msid: record.msid, added },
     'file-matched subtitles merged'
+  );
+  await writePlaybackMemo(memo, ctx.scope(), ctx.persona?.id);
+}
+
+export async function applyProbedMediaInfo(
+  ctx: JellyfinRequestContext,
+  memo: PlaybackMemo,
+  msid?: string,
+  /* A play, rather than a listing, may wait for its version's probe. */
+  opts: { playing?: boolean } = {}
+): Promise<void> {
+  const record = msid
+    ? memo.sources.find((s) => s.msid === msid)
+    : memo.sources[0];
+  if (!record) return;
+  const applied = await applyStoredMediaInfo(record, memo.titleMetadata, {
+    waitMs: opts.playing
+      ? (ctx.userData.jellyfin?.playWait ?? appConfig.mediaInfo.playWait) * 1000
+      : 0,
+    clientIp: ctx.userData.ip,
+    ids: idsFromVideoId(memo.videoId),
+  }).catch(() => false);
+  if (!applied) return;
+  logger.debug(
+    { itemId: memo.itemId, msid: record.msid },
+    'stored media info applied on play'
   );
   await writePlaybackMemo(memo, ctx.scope(), ctx.persona?.id);
 }

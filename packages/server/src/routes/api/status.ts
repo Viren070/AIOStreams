@@ -4,6 +4,7 @@ import {
   config as appConfig,
   getEnvironmentServiceDetails,
   PresetManager,
+  probesOn,
   segmentProviders,
   segmentsEnabled,
   SelAccess,
@@ -65,6 +66,9 @@ const statusInfo = async (): Promise<StatusResponse> => {
         maxPersonas: appConfig.jellyfin.maxPersonas,
         pinSignIn: appConfig.jellyfin.pinSignIn,
         maxTrackers: appConfig.watchState.maxSinks,
+        playWait: probesOn('jellyfin')
+          ? appConfig.mediaInfo.playWait
+          : undefined,
         segments: {
           enabled: segmentsEnabled(),
           providers: segmentProviders(),

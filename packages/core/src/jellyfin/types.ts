@@ -1,4 +1,6 @@
 import type { ParsedFile } from '../db/schemas.js';
+import type { TitleMetadata } from '../debrid/base.js';
+import type { MediaInfoIdentity } from '../media-info/lookup.js';
 
 /**
  * What a Jellyfin item id stands for. `t` is always the Stremio type used
@@ -73,6 +75,7 @@ export interface MediaSourceRecord {
   parsedFile?: ParsedFile;
   subtitles: SubtitleTrack[];
   subtitlesEnriched?: boolean;
+  mediaInfo?: MediaInfoIdentity;
   videoHash?: string;
   live: boolean;
   /** Carries text only: an addon notice, a pipeline error or a statistic. */
@@ -91,6 +94,8 @@ export interface PlaybackMemo {
   psid: string;
   sources: MediaSourceRecord[];
   addonSubtitles: SubtitleTrack[];
+  /** The requested episode, for finding a pack's probed files on play. */
+  titleMetadata?: TitleMetadata;
   runtimeMs?: number;
   createdAt: number;
 }
