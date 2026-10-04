@@ -19,6 +19,7 @@ import {
   dashboardApi,
   usenetApi,
   jellyfinApi,
+  mediaInfoApi,
   communityApi,
 } from './routes/api/index.js';
 import {
@@ -68,6 +69,7 @@ import {
   linkedAccountsRateLimiter,
   communityApiRateLimiter,
   syncApiRateLimiter,
+  mediaInfoApiRateLimiter,
   internalMiddleware,
   stremioStreamRateLimiter,
   stremioManifestRateLimiter,
@@ -143,6 +145,7 @@ apiRouter.use('/anime', animeApi);
 apiRouter.use('/proxy', proxyApi);
 apiRouter.use('/templates', templatesApi);
 apiRouter.use('/sync', syncApiRateLimiter, syncApi);
+apiRouter.use('/media-info', mediaInfoApiRateLimiter, mediaInfoApi);
 apiRouter.use('/linked-accounts', linkedAccountsRateLimiter, linkedAccountsApi);
 apiRouter.use('/community', communityApiRateLimiter, communityApi);
 apiRouter.use('/auth', authApi);

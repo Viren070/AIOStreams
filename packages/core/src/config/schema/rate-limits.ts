@@ -154,6 +154,12 @@ export const rateLimitsSchema = {
     envPrefix: 'SYNC_API',
     label: 'sync resolve API',
   }),
+  mediaInfoApi: rateLimit({
+    windowDefault: 60,
+    maxDefault: 120,
+    envPrefix: 'MEDIA_INFO_API',
+    label: 'media info lookup API',
+  }),
   login: rateLimit({
     windowDefault: 300,
     maxDefault: 5,
