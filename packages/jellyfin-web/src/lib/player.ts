@@ -63,6 +63,11 @@ export interface PlayerController {
     page: string | null;
     show(page: string | null): void;
   };
+  /** Loads a subtitle file from this device; `types` are the extensions it reads. */
+  subtitleFiles?: {
+    types: readonly string[];
+    add(file: File): Promise<void>;
+  };
   /** The name of the player in its own window that these controls drive. */
   external?: string;
   /** Closes a player in its own window. */

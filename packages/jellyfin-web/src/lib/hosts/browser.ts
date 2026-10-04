@@ -10,6 +10,7 @@ import {
   saveSubtitleDelay,
 } from '../subtitle-lines';
 import type { MediaStream } from '../types';
+import { checkSubtitleFile, readSubtitleCues } from '../subtitle-files';
 import { subtitleLine } from '../subtitle-style';
 import {
   initialState,
@@ -88,7 +89,18 @@ export function usePhoneFullscreen(enabled: boolean): void {
   }, [enabled]);
 }
 
-/** A `<video>` element; its external subtitles are `<track>`s in source order. */
+const SUBTITLE_TYPES = ['srt', 'vtt', 'ass', 'ssa'];
+
+interface FileTrack {
+  id: string;
+  label: string;
+  track: TextTrack;
+}
+
+/**
+ * A `<video>` element; its external subtitles are `<track>`s in source order,
+ * and files the user adds are text tracks after them.
+ */
 export function useBrowserPlayer(
   video: React.RefObject<HTMLVideoElement | null>,
   opts: PlayerOptions
@@ -101,6 +113,8 @@ export function useBrowserPlayer(
   const onEnded = useLatest(opts.onEnded);
   const prefs = useLatest(opts.prefs);
   const subtitles = React.useMemo(() => textSubtitles(source), [source]);
+  const files = React.useRef<FileTrack[]>([]);
+  const [fileList, setFileList] = React.useState<FileTrack[]>([]);
   const patch = (next: Partial<PlayerState>) =>
     setState((s) => ({ ...s, ...next }));
   // A text track's cues load late, so each one remembers the shift it has.
@@ -145,6 +159,8 @@ export function useBrowserPlayer(
       const track = tracks[i];
       if (track) track.mode = String(s.Index) === id ? 'showing' : 'disabled';
     });
+    for (const file of files.current)
+      file.track.mode = file.id === id ? 'showing' : 'disabled';
     shiftCues();
     patch({ subtitle: id });
   };
@@ -223,10 +239,13 @@ export function useBrowserPlayer(
   return {
     state,
     audioTracks: [],
-    subtitleTracks: subtitles.map((s, i) => ({
-      id: String(s.Index),
-      label: trackLabel(s, i + 1),
-    })),
+    subtitleTracks: [
+      ...subtitles.map((s, i) => ({
+        id: String(s.Index),
+        label: trackLabel(s, i + 1),
+      })),
+      ...fileList.map(({ id, label }) => ({ id, label })),
+    ],
     togglePlay: () => {
       const v = el();
       if (!v) return;
@@ -267,13 +286,38 @@ export function useBrowserPlayer(
       const index = subtitles.findIndex(
         (s) => String(s.Index) === state.subtitle
       );
-      const cues = video.current?.textTracks[index]?.cues;
+      const file = files.current.find((f) => f.id === state.subtitle);
+      const cues = (file?.track ?? video.current?.textTracks[index])?.cues;
       if (!cues?.length) return null;
       // Cues carry the shift already applied, so it comes off again.
       return Array.from(cues).map((cue) => ({
         startMs: cue.startTime * 1000 - delayMs.current,
         text: (cue as VTTCue).text.replace(/<[^>]*>/g, ''),
       }));
+    },
+    subtitleFiles: {
+      types: SUBTITLE_TYPES,
+      add: async (file) => {
+        checkSubtitleFile(file, SUBTITLE_TYPES);
+        const cues = await readSubtitleCues(file);
+        const v = video.current;
+        if (!v) return;
+        const track = v.addTextTrack('subtitles', file.name);
+        track.mode = 'hidden';
+        for (const cue of cues)
+          track.addCue(
+            new VTTCue(cue.startMs / 1000, cue.endMs / 1000, cue.text)
+          );
+        const added = {
+          id: `file:${files.current.length}`,
+          label: file.name,
+          track,
+        };
+        files.current = [...files.current, added];
+        setFileList(files.current);
+        latestPlaceCues.current();
+        showSubtitle(added.id);
+      },
     },
     toggleFullscreen: toggleDocumentFullscreen,
   };

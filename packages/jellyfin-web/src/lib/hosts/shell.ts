@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { storage } from '../storage';
 import { subtitleUrl, textSubtitles } from '../playback';
 import { itemSubtitle, itemTitle } from '../format';
+import { base64, checkSubtitleFile } from '../subtitle-files';
 import { sameLanguage } from '../languages';
 import { parseChapters, type Chapter } from '../chapters';
 import {
@@ -135,6 +136,8 @@ let linger: ReturnType<typeof setTimeout> | undefined;
 /** The episode a launched player moved on to by itself, which the next page takes over. */
 let advanced: { itemId: string; sourceId: string } | null = null;
 
+const SUBTITLE_TYPES = ['srt', 'vtt', 'ass', 'ssa', 'sub', 'sup'];
+
 /**
  * The AIOStreams desktop app's mpv, drawn beneath the page, or with
  * `launched`, the user's own player in its own window. Its tracks are the
@@ -168,6 +171,8 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
         }),
     [source, opts.client]
   );
+  const fromServer = (track: MpvTrack) =>
+    externals.some((e) => e.url === track['external-filename']);
   const loaded = (url: string) =>
     tracks.find((t) => t.type === 'sub' && t['external-filename'] === url);
   // mpv's id for a loaded external subtitle reads back as its external id.
@@ -431,7 +436,7 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
     state: { ...state, subtitle: subtitleId(state.subtitle) },
     audioTracks: tracks.filter((t) => t.type === 'audio').map(toTrack),
     subtitleTracks: [
-      ...tracks.filter((t) => t.type === 'sub' && !t.external).map(toTrack),
+      ...tracks.filter((t) => t.type === 'sub' && !fromServer(t)).map(toTrack),
       ...externals.map(({ id, label }) => ({ id, label })),
     ],
     togglePlay: () => set('pause', !latest.current.state.paused),
@@ -474,6 +479,14 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
       if (!external) return null;
       const res = await fetch(external.url);
       return res.ok ? parseSubtitleLines(await res.text()) : null;
+    },
+    subtitleFiles: {
+      types: SUBTITLE_TYPES,
+      add: async (file) => {
+        checkSubtitleFile(file, SUBTITLE_TYPES);
+        const data = await base64(file);
+        shell.send({ type: 'subtitle-file', name: file.name, data, ...target });
+      },
     },
     toggleFullscreen: external
       ? () => command('cycle', 'fullscreen')

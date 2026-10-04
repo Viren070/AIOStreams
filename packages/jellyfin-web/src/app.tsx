@@ -48,6 +48,7 @@ export default function JellyfinWebApp() {
     };
   }, []);
   useStableScrollbar();
+  useNoFileDrops();
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark">
       <MotionConfig reducedMotion="user">
@@ -82,6 +83,21 @@ function useStableScrollbar() {
     html.style.overflowY = 'scroll';
     return () => {
       html.style.overflowY = '';
+    };
+  }, []);
+}
+
+/** A file dropped where nothing takes it would replace the page. */
+function useNoFileDrops() {
+  React.useEffect(() => {
+    const stop = (e: DragEvent) => {
+      if (e.dataTransfer?.types.includes('Files')) e.preventDefault();
+    };
+    window.addEventListener('dragover', stop);
+    window.addEventListener('drop', stop);
+    return () => {
+      window.removeEventListener('dragover', stop);
+      window.removeEventListener('drop', stop);
     };
   }, []);
 }
