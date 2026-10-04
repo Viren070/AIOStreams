@@ -865,12 +865,13 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
 
   async delete(key: K): Promise<boolean> {
     const sqlKey = this.getKey(key);
+    const wasBuffered = SQLCacheBackend.writeBuffer.delete(sqlKey);
 
     try {
       const result = await this.db.exec(
         sql`DELETE FROM cache WHERE key = ${sqlKey}`
       );
-      return result.rowCount > 0;
+      return wasBuffered || result.rowCount > 0;
     } catch (err) {
       logger.error(`Error deleting key ${String(key)} from SQL cache: ${err}`);
       return false;
