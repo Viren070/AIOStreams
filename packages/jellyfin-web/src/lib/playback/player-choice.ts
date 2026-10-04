@@ -135,10 +135,10 @@ function fillParam(
 }
 
 /**
- * Fills a player link: `{url}` or `{encodedUrl}`, and optionally `{position}`
- * (seconds to start at), `{returnUrl}` (where a player that reports back sends
- * the position it stopped at), `{filename}` and `{subtitles}` (its parameter
- * repeated once per external subtitle).
+ * Fills a player link: `{url}` or `{encodedUrl}`, and optionally `{scheme}`
+ * (the address's), `{position}` (seconds to start at), `{returnUrl}` (where a
+ * player that reports back sends the position it stopped at), `{filename}` and
+ * `{subtitles}` (its parameter repeated once per external subtitle).
  */
 export function playerLink(
   template: string,
@@ -150,10 +150,9 @@ export function playerLink(
     subtitles?: string[];
   } = {}
 ): string {
-  let filled = template.replace(
-    '{position}',
-    String(Math.floor((opts.startMs ?? 0) / 1000))
-  );
+  let filled = template
+    .replace('{scheme}', new URL(url, location.href).protocol.slice(0, -1))
+    .replace('{position}', String(Math.floor((opts.startMs ?? 0) / 1000)));
   filled = fillParam(
     filled,
     'returnUrl',
@@ -161,8 +160,11 @@ export function playerLink(
   );
   filled = fillParam(filled, 'filename', opts.filename ? [opts.filename] : []);
   filled = fillParam(filled, 'subtitles', opts.subtitles ?? []);
-  if (filled.includes('{encodedUrl}'))
-    return filled.replace('{encodedUrl}', encodeURIComponent(url));
-  if (filled.includes('{url}')) return filled.replace('{url}', url);
-  return `${filled}${url}`;
+  const link = filled.includes('{encodedUrl}')
+    ? filled.replace('{encodedUrl}', encodeURIComponent(url))
+    : filled.includes('{url}')
+      ? filled.replace('{url}', url)
+      : `${filled}${url}`;
+  // An intent link names the scheme apart, so the address follows it without one.
+  return link.replace(/^intent:\/\/https?:\/\//i, 'intent://');
 }

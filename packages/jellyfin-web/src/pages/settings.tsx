@@ -415,7 +415,7 @@ function PlayerCard() {
           placeholder="vlc://{url}"
           value={link}
           onValueChange={setLink}
-          help="{url} is the stream address, {encodedUrl} the same address URL-encoded, {filename} the file's name, {subtitles} each external subtitle (its parameter repeats per file), {position} the second to start at, and {returnUrl} a link back here for a player that reports where it stopped. Values other than {url} are URL-encoded."
+          help="{url} is the stream address, {encodedUrl} the same address URL-encoded, {scheme} its scheme, {filename} the file's name, {subtitles} each external subtitle (its parameter repeats per file), {position} the second to start at, and {returnUrl} a link back here for a player that reports where it stopped. Values other than {url} are URL-encoded. After intent://, {url} goes without its scheme."
         />
       )}
     </SettingsCard>
