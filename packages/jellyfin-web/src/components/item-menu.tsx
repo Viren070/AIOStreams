@@ -19,7 +19,12 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@aiostreams/ui/context-menu';
-import { useSetFavorite, useSetPlayed, useSetPlayedUpTo } from '../lib/queries';
+import {
+  useClearResume,
+  useSetFavorite,
+  useSetPlayed,
+  useSetPlayedUpTo,
+} from '../lib/queries';
 import { itemTitle, ticksToMs } from '../lib/format';
 import { itemPath, navigate } from '../lib/paths';
 import { settings, useSetting } from '../lib/settings';
@@ -42,6 +47,7 @@ export function ItemMenu({
   const heroTarget = useHeroTarget(item);
   const setPlayed = useSetPlayed();
   const setPlayedUpTo = useSetPlayedUpTo();
+  const clearResume = useClearResume();
   const setFavorite = useSetFavorite();
   // Jellyfin cannot play a virtual item, such as an episode not yet aired.
   const playable =
@@ -115,12 +121,10 @@ export function ItemMenu({
                 <BiCheckDouble /> Mark watched up to here
               </ContextMenuItem>
             )}
-            {!played && resumeMs > 0 && (
+            {resumeMs > 0 && (
               <ContextMenuItem
                 data-name="remove-resume"
-                onSelect={() =>
-                  setPlayed.mutate({ itemId: item.Id!, played: false })
-                }
+                onSelect={() => clearResume.mutate(item.Id!)}
               >
                 <BiReset /> Remove from continue watching
               </ContextMenuItem>

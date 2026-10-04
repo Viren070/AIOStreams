@@ -651,6 +651,20 @@ export function useSetPlayed() {
   });
 }
 
+export function useClearResume() {
+  const { client, user } = useSession();
+  const refresh = useRefreshAll();
+  return useMutation({
+    mutationFn: (itemId: string) =>
+      client.post(
+        `/UserItems/${itemId}/UserData`,
+        { PlaybackPositionTicks: 0 },
+        { userId: user.Id }
+      ),
+    onSettled: refresh,
+  });
+}
+
 /**
  * Marks an episode and the aired ones before it. Without the server's endpoint,
  * an earlier season with nothing watched goes as one mark, which trackers take
