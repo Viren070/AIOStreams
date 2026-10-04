@@ -8,6 +8,7 @@ import {
   DSU,
   getSimpleTextHash,
   constants,
+  hasTrackLists,
 } from '../utils/index.js';
 import StreamUtils, { shouldPassthroughStage } from './utils.js';
 import { shouldProxyStream } from './proxifier.js';
@@ -607,7 +608,7 @@ class StreamDeduplicator {
    * sources at the best mediaInfoQuality tier present, discarding lower
    * tiers. If nobody has a tier, merges everything as a best effort. A probe
    * describes the whole file, so at that tier languages and tracks are copied
-   * from the first probed source instead of unioned.
+   * from one probed source instead of unioned, the first with track lists.
    */
   private mergeLanguagesAndSubtitles(
     winner: ParsedStream,
@@ -621,7 +622,11 @@ class StreamDeduplicator {
       : sources;
 
     if (winner.parsedFile) {
-      const probed = bestTier === 'probe' ? pool[0].parsedFile : undefined;
+      const probed =
+        bestTier === 'probe'
+          ? (pool.find((s) => hasTrackLists(s.parsedFile)) ?? pool[0])
+              .parsedFile
+          : undefined;
       if (fields.includes('languages')) {
         if (probed) {
           winner.parsedFile.languages = probed.languages ?? [];
