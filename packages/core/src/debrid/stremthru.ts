@@ -30,6 +30,7 @@ import {
   DebridFailureCache,
 } from './base.js';
 import assert from 'assert';
+import { queueStremThruMediaInfo } from '../media-info/sources/stremthru.js';
 
 const logger = createLogger('debrid:stremthru');
 
@@ -353,6 +354,7 @@ export class StremThruService
         );
 
         const allItems = batchResults.flat();
+        queueStremThruMediaInfo(allItems);
 
         newResults = allItems.map((item) => ({
           id: -1,
