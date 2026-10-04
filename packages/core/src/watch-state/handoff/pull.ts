@@ -30,6 +30,7 @@ import {
   type WatchScope,
 } from '../types.js';
 import { matchKeysFor } from '../canonical.js';
+import { bySpelling } from '../lookup.js';
 import { playedThrough } from '../local-provider.js';
 import type { ContentRef } from '../types.js';
 
@@ -616,7 +617,10 @@ function watchlistRef(
     : { kind: 'series', type: entry.type, baseId: entry.metaId };
 }
 
-/** A favourite toggled here inside the echo window, or set by another addon's watchlist, is left alone. */
+/**
+ * A favourite toggled here inside the echo window, or set by another addon's
+ * watchlist, is left alone; so is one set here under another spelling.
+ */
 async function importWatchlist(
   scope: WatchScope,
   sink: SinkRow,
@@ -635,23 +639,37 @@ async function importWatchlist(
       at: atMs(entry.at, now),
     };
   });
-  const existing = await WatchStateRepository.getMany(
-    scope,
-    identities.map((i) => i.identity.itemKey),
-    db
+  const keysOf = ({ identity }: (typeof identities)[number]) =>
+    identity.matchKey
+      ? [identity.itemKey, identity.matchKey]
+      : [identity.itemKey];
+  const spellings = bySpelling(
+    await WatchStateRepository.getSpellings(
+      scope,
+      identities.flatMap(keysOf),
+      db
+    )
   );
   const echoWindowMs = appConfig.watchState.echoWindowSeconds * 1000;
   const rows: typeof identities = [];
   const touched: string[] = [];
   for (const row of identities) {
-    const held = existing.get(row.identity.itemKey);
-    if (held?.favoriteSinkId === sink.id && held.favorite) {
-      touched.push(row.identity.itemKey);
+    const held = keysOf(row).flatMap((key) => spellings.get(key) ?? []);
+    const mine = held.find((h) => h.favorite && h.favoriteSinkId === sink.id);
+    if (mine) {
+      touched.push(mine.itemKey);
       continue;
     }
-    if (held?.favorite && held.favoriteSinkId) continue;
-    const toggledHere = held && !held.favoriteSinkId && held.favoriteAt != null;
-    if (toggledHere && now - held.favoriteAt! < echoWindowMs) continue;
+    if (held.some((h) => h.favorite && h.favoriteSinkId)) continue;
+    const toggledHere = held.some(
+      (h) =>
+        !h.favoriteSinkId &&
+        h.favoriteAt != null &&
+        now - h.favoriteAt < echoWindowMs
+    );
+    if (toggledHere) continue;
+    if (held.some((h) => h.favorite && h.itemKey !== row.identity.itemKey))
+      continue;
     rows.push(row);
   }
   await WatchStateRepository.upsertWatchlist(scope, sink.id, rows, now, db);

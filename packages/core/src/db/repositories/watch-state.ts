@@ -644,6 +644,7 @@ export class WatchStateRepository {
     return out;
   }
 
+  /** A title favourited under several spellings is listed once, by its newest. */
   static async listFavorites(
     scope: WatchScope,
     kinds?: WatchKind[]
@@ -655,7 +656,14 @@ export class WatchStateRepository {
            ORDER BY COALESCE(favorite_at, updated_at) DESC
            LIMIT 500`
     );
-    return filterKinds(rows.map(toRow), kinds);
+    const titles = new Set<string>();
+    const listed = rows.filter((row) => {
+      const title = row.match_key ?? row.item_key;
+      if (titles.has(title)) return false;
+      titles.add(title);
+      return true;
+    });
+    return filterKinds(listed.map(toRow), kinds);
   }
 
   static async listPlayed(
@@ -770,7 +778,7 @@ export class WatchStateRepository {
                  COUNT(DISTINCT CASE WHEN played = 1 AND kind = 'movie' THEN ${ITEM} END) AS movies,
                  COUNT(DISTINCT CASE WHEN played = 1 AND kind = 'episode' THEN ${ITEM} END) AS episodes,
                  COUNT(DISTINCT CASE WHEN position_ms > 0 THEN ${ITEM} END) AS in_progress,
-                 SUM(CASE WHEN favorite = 1 THEN 1 ELSE 0 END) AS favorites,
+                 COUNT(DISTINCT CASE WHEN favorite = 1 THEN ${ITEM} END) AS favorites,
                  MAX(CASE WHEN ${WATCHED} THEN sort_at END) AS last_at
             FROM watch_state
            WHERE uuid = ${uuid}

@@ -15,9 +15,19 @@ function latest(rows: WatchStateRow[]): WatchStateRow | undefined {
   return best;
 }
 
-function bySpelling<T extends { itemKey: string; matchKey?: string | null }>(
-  rows: T[]
-): Map<string, T[]> {
+/** The latest row, holding the favourite when any spelling does: it is the title's. */
+function standing(rows: WatchStateRow[]): WatchStateRow | undefined {
+  const row = latest(rows);
+  if (!row || row.favorite) return row;
+  const favourite = rows.find((r) => r.favorite);
+  return favourite
+    ? { ...row, favorite: true, favoriteAt: favourite.favoriteAt }
+    : row;
+}
+
+export function bySpelling<
+  T extends { itemKey: string; matchKey?: string | null },
+>(rows: T[]): Map<string, T[]> {
   const out = new Map<string, T[]>();
   const add = (key: string, row: T) => {
     const list = out.get(key);
@@ -67,7 +77,7 @@ async function rowsFor(
   );
   const out = new Map<string, WatchStateRow>();
   for (const [own, rows] of found) {
-    const row = latest(rows);
+    const row = standing(rows);
     if (row) out.set(own, row);
   }
   return out;

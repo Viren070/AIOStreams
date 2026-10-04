@@ -151,6 +151,7 @@ export class LocalWatchStateProvider implements WatchStateProvider {
           snapshot: event.snapshot,
         });
       case 'unfavorite':
+        await this.unfavoriteSpellings(scope, event.identity);
         return this.write(scope, event.identity, {
           favorite: false,
           snapshot: event.snapshot,
@@ -167,6 +168,20 @@ export class LocalWatchStateProvider implements WatchStateProvider {
           likes: event.likes,
           snapshot: event.snapshot,
         });
+    }
+  }
+
+  /** Reads count a favourite under any spelling, so every one of them goes. */
+  private async unfavoriteSpellings(
+    scope: WatchScope,
+    identity: WatchIdentity
+  ) {
+    const keys = [identity.itemKey, identity.matchKey].filter(
+      (key): key is string => !!key
+    );
+    for (const row of await WatchStateRepository.getSpellings(scope, keys)) {
+      if (row.favorite && row.itemKey !== identity.itemKey)
+        await this.write(scope, row, { favorite: false });
     }
   }
 
