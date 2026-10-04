@@ -11,12 +11,15 @@ mod updates;
 use std::cell::RefCell;
 use std::path::{Component, Path, PathBuf};
 use std::rc::Rc;
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 
 use aiostreams_desktop_core::bridge::{Inbound, Outbound, PROTOCOL_VERSION, origin};
 use aiostreams_desktop_core::external::{self, External};
 use aiostreams_desktop_core::player::Player;
 use aiostreams_desktop_core::{discord, now_playing};
+use base64::Engine;
+use base64::engine::general_purpose::STANDARD as BASE64;
 use updates::{Command, Updater};
 
 #[derive(Debug)]
@@ -187,6 +190,7 @@ pub struct Paths {
     logs: PathBuf,
     log_file: PathBuf,
     players: PathBuf,
+    subtitles: PathBuf,
 }
 
 pub struct App {
@@ -268,11 +272,14 @@ fn main() {
     );
     let app_origin =
         origin(&start_url).unwrap_or_else(|| platform::fatal("--web: not a valid address"));
+    let subtitles = data_dir.join("subtitles");
+    let _ = std::fs::remove_dir_all(&subtitles);
     let paths = Rc::new(Paths {
         mpv: mpv_config_dir(&config_dir),
         logs,
         log_file,
         players: config_dir.join("players.json"),
+        subtitles,
     });
     shell::run(App {
         args,
@@ -371,6 +378,31 @@ pub fn start_external(paths: &Paths, emit: impl Fn(Outbound) + Send + Sync + 'st
     )
 }
 
+const SUBTITLE_TYPES: &[&str] = &["srt", "vtt", "ass", "ssa", "sub", "sup"];
+const MAX_SUBTITLE_BYTES: usize = 10 << 20;
+
+/// The page never names a path for mpv to open, so the app writes the file itself.
+fn save_subtitle(dir: &Path, name: &str, data: &str) -> Result<PathBuf, String> {
+    static NEXT: AtomicU32 = AtomicU32::new(0);
+    let extension = Path::new(name)
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(str::to_ascii_lowercase)
+        .filter(|e| SUBTITLE_TYPES.contains(&e.as_str()))
+        .ok_or("not a subtitle file")?;
+    let bytes = BASE64.decode(data).map_err(|e| e.to_string())?;
+    if bytes.len() > MAX_SUBTITLE_BYTES {
+        return Err("too big".into());
+    }
+    std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+    let path = dir.join(format!(
+        "{}.{extension}",
+        NEXT.fetch_add(1, Ordering::Relaxed)
+    ));
+    std::fs::write(&path, bytes).map_err(|e| e.to_string())?;
+    Ok(path)
+}
+
 /// Keeps the display on while a file plays.
 struct Awake {
     paused: bool,
@@ -447,6 +479,22 @@ pub fn handle(
         }
         Inbound::MpvSync { external: true } => external.sync(),
         Inbound::MpvSync { external: false } => send(UserEvent::Sync),
+        Inbound::SubtitleFile {
+            name,
+            data,
+            external: to_external,
+        } => {
+            let title: String = name.chars().take(200).collect();
+            match save_subtitle(&paths.subtitles, &name, &data) {
+                Ok(path) if to_external => external.add_subtitle(&path, &title),
+                Ok(path) => {
+                    if let Some(p) = player.as_ref() {
+                        p.add_subtitle(&path, &title);
+                    }
+                }
+                Err(e) => fail(format!("subtitle file {title}: {e}")),
+            }
+        }
         Inbound::ExternalPlayers => emit(external.players()),
         Inbound::ExternalChoose { player } => match external::Kind::parse(&player) {
             Some(kind) => send(UserEvent::ChoosePlayer(kind)),

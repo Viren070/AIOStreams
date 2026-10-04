@@ -38,6 +38,13 @@ pub enum Inbound {
         #[serde(default)]
         external: bool,
     },
+    /// A subtitle file the user dropped or picked, base64-encoded.
+    SubtitleFile {
+        name: String,
+        data: String,
+        #[serde(default)]
+        external: bool,
+    },
     /// Asks for an `external-players` answer.
     ExternalPlayers,
     /// Lets the user pick where a player is installed.

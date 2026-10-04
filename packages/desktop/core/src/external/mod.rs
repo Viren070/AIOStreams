@@ -211,6 +211,17 @@ impl External {
         self.with(|backend| backend.sync());
     }
 
+    pub fn add_subtitle(&self, path: &Path, title: &str) {
+        self.with(|backend| {
+            backend.command(vec![
+                "sub-add".into(),
+                path.to_string_lossy().into_owned(),
+                "select".into(),
+                title.into(),
+            ])
+        });
+    }
+
     pub fn close(&self) {
         if let Ok(mut session) = self.session.lock()
             && let Some(s) = session.take()

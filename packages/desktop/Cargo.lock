@@ -22,6 +22,7 @@ name = "aiostreams-desktop"
 version = "0.10.1"
 dependencies = [
  "aiostreams-desktop-core",
+ "base64 0.22.1",
  "block2",
  "dirs",
  "dispatch2",

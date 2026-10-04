@@ -131,6 +131,17 @@ impl Player {
         self.send(Request::Sync);
     }
 
+    /// Takes a file the app wrote itself, which the bridge's checks would refuse.
+    pub fn add_subtitle(&self, path: &Path, title: &str) {
+        log::info!("add subtitle file={}", path.display());
+        self.send(Request::Command(vec![
+            "sub-add".into(),
+            path.to_string_lossy().into_owned(),
+            "select".into(),
+            title.into(),
+        ]));
+    }
+
     pub fn mpv(&self) -> Arc<Mpv> {
         self.mpv.clone()
     }

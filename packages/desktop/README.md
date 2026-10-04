@@ -232,7 +232,8 @@ the app's own origin only. Messages from any other origin are dropped, navigatio
 the default browser, and every mpv command, property and `loadfile` option is checked against an
 allowlist in `core/src/bridge.rs`: pages can play http(s) URLs, not local files or scripts. A page
 can start the user's own mpv, but only the one the app found or the user picked in the system's file
-dialog, and what it sends there passes the same allowlist.
+dialog, and what it sends there passes the same allowlist. A subtitle file the user adds reaches the
+app as data, which it writes into its own folder for mpv to load.
 
 ## Acknowledgements
 
