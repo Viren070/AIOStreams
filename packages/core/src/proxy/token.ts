@@ -34,3 +34,19 @@ export function decodeProxyToken(
   const rawData = decode(encodedData);
   return rawAuth && rawData ? { rawAuth, rawData } : null;
 }
+
+/** The upstream URL behind one of our proxy URLs, or the URL itself. */
+export function unwrapProxyUrl(url: string): string {
+  if (!url.includes('/proxy/')) return url;
+  try {
+    const segments = new URL(url).pathname.split('/');
+    const token = segments[segments.indexOf('proxy') + 1];
+    if (!token) return url;
+    const decoded = decodeProxyToken(token);
+    if (!decoded) return url;
+    const data = ProxyDataSchema.safeParse(JSON.parse(decoded.rawData));
+    return data.success ? data.data.url : url;
+  } catch {
+    return url;
+  }
+}

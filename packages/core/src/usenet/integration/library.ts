@@ -1453,6 +1453,30 @@ export async function requeueUsenetNzb(nzbHash: string): Promise<void> {
 }
 
 /**
+ * Alias entries recorded under our NZB proxy's URL, which changes with its
+ * credential, by the URL behind it.
+ */
+export async function backfillProxiedNzbAliases(): Promise<{
+  proxied: number;
+  added: number;
+}> {
+  const rows = await UsenetLibraryRepository.proxiedSourceUrls();
+  if (rows.length === 0) return { proxied: 0, added: 0 };
+  const added = await UsenetLibraryRepository.addMissingAliases(
+    rows.map((r) => ({
+      aliasHash: hashNzbUrl(r.nzbUrl),
+      nzbHash: r.nzbHash,
+      nzbUrl: r.nzbUrl,
+    }))
+  );
+  logger.debug(
+    { proxied: rows.length, added },
+    'aliased proxied nzbs by their source'
+  );
+  return { proxied: rows.length, added };
+}
+
+/**
  * Boot-time recovery for inspects interrupted by a restart. Any row still in
  * `queued`/`inspecting` at startup is stale
  */

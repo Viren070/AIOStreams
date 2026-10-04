@@ -466,6 +466,12 @@ class TaskManagerImpl {
     return this.tasks.get(id)?.def;
   }
 
+  /** Whether a task has finished without error on any replica. */
+  async hasSucceeded(id: string): Promise<boolean> {
+    const runs = await TaskStateRepository.listRuns();
+    return runs.some((r) => r.taskId === id && r.lastStatus === 'ok');
+  }
+
   /** Every task, merged with what the rest of the cluster has recorded. */
   async list(): Promise<TaskState[]> {
     let runsByTask = new Map<string, TaskRunState[]>();

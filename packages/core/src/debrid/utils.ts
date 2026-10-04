@@ -31,6 +31,7 @@ import { normaliseCountryCode } from '../utils/countries.js';
 import { partial_ratio } from 'fuzzball';
 import { ParsedResult } from '@viren070/parse-torrent-title';
 import { parseTorrentTitleCached } from '../parser/title.js';
+import { unwrapProxyUrl } from '../proxy/token.js';
 
 const logger = createLogger('debrid');
 
@@ -79,10 +80,8 @@ const NZB_URL_SHAPES: ReadonlyArray<{
 const md5 = (value: string): string =>
   createHash('md5').update(value).digest('hex');
 
-/**
- * Compute an MD5 hash identifying an NZB URL.
- */
-export function hashNzbUrl(url: string, clean: boolean = true): string {
+/** The URL reduced to its identifying params, when it has a known shape. */
+function shapedNzbUrl(url: string): string | undefined {
   try {
     const u = new URL(url);
     const pathName = u.pathname.replace(/\/$/, '');
@@ -95,10 +94,32 @@ export function hashNzbUrl(url: string, clean: boolean = true): string {
           u.searchParams.delete(key);
         }
       }
-      return md5(u.toString());
+      return u.toString();
     }
   } catch {}
-  return md5(clean ? cleanNzbUrl(url) : url);
+  return undefined;
+}
+
+/**
+ * The default hashes what our proxy fetches, so it survives proxy changes;
+ * `clean: false` hashes the URL a remote service receives.
+ */
+export function hashNzbUrl(url: string, clean: boolean = true): string {
+  if (clean) return canonicalNzbHash(url).hash;
+  const shaped = shapedNzbUrl(url);
+  return md5(shaped ?? url);
+}
+
+/** {@link hashNzbUrl}'s default, and whether the URL had a known shape. */
+export function canonicalNzbHash(url: string): {
+  hash: string;
+  known: boolean;
+} {
+  const source = unwrapProxyUrl(url);
+  const shaped = shapedNzbUrl(source);
+  return shaped
+    ? { hash: md5(shaped), known: true }
+    : { hash: md5(cleanNzbUrl(source)), known: false };
 }
 
 /**

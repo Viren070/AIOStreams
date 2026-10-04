@@ -50,6 +50,7 @@ import {
   runLibraryRecheck,
   runUsenetArrQueueCleanup,
   requeueInterruptedInspects,
+  backfillProxiedNzbAliases,
   flushAllDiskCaches,
   ReleaseBlocklistRemoteService,
   ReleaseBlocklistPublishService,
@@ -151,6 +152,26 @@ function registerCacheTasks() {
 const USENET_METRICS_RETENTION_DAYS = 400;
 
 function registerUsenetTasks() {
+  TaskManager.register({
+    id: 'usenet-proxied-aliases',
+    label: 'Alias proxied NZBs by their source',
+    description:
+      'Keys library entries added through the NZB proxy by the URL behind it, ' +
+      'so they keep matching after the proxy credential changes. Runs at ' +
+      'startup until it has succeeded once.',
+    category: 'usenet',
+    kind: 'manual',
+    enabled: true,
+    destructive: false,
+    multiReplica: 'single',
+    run: async () => {
+      const { proxied, added } = await backfillProxiedNzbAliases();
+      return {
+        ok: true,
+        message: `${added} aliases added for ${proxied} proxied nzbs`,
+      };
+    },
+  });
   TaskManager.register({
     id: 'usenet-metrics-drain',
     label: 'Flush usenet provider metrics',
@@ -382,6 +403,11 @@ async function start() {
       logger.warn('Failed to recover orphaned stream sessions:', error)
     );
     void requeueInterruptedInspects();
+    void TaskManager.hasSucceeded('usenet-proxied-aliases')
+      .then((done) =>
+        done ? undefined : TaskManager.runNow('usenet-proxied-aliases')
+      )
+      .catch((error) => logger.warn('Failed to alias proxied nzbs:', error));
     await initialiseAuth();
     startAnalytics();
     await startNfsShare();
