@@ -183,7 +183,15 @@ export async function resolveEpisodeFacts(
     airDate ??= findCinemetaDate(ordinalSeason.season_number, episode);
   }
 
-  if (airDate) {
+  // Provider dates must be real calendar dates in the same date-only format
+  // used by release matching. Keep directHit independent of date validity:
+  // a missing/invalid direct date must not enable a different numbering scheme.
+  if (
+    airDate &&
+    /^\d{4}-\d{2}-\d{2}$/.test(airDate) &&
+    !Number.isNaN(Date.parse(airDate)) &&
+    new Date(airDate).toISOString().slice(0, 10) === airDate
+  ) {
     resolution.episodeAirDates = [airDate];
   }
   return resolution;

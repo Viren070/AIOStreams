@@ -14,6 +14,7 @@
 import type { IdType } from '../utils/id-parser.js';
 import { AnimeType, type AnimeRecord, type IdValue } from './types.js';
 import { createLogger } from '../logging/logger.js';
+import { readEpisodeCoordinate } from './episode-coordinates.js';
 
 const logger = createLogger('anime-database:selector');
 
@@ -30,9 +31,9 @@ function seasonRegex(season: number): RegExp {
 /** Highest season number this record claims, in any source's coordinates. */
 function advertisedSeasonOf(r: AnimeRecord): number {
   return Math.max(
-    typeof r.tvdb?.seasonNumber === 'number' ? r.tvdb.seasonNumber : 0,
-    typeof r.tmdb?.seasonNumber === 'number' ? r.tmdb.seasonNumber : 0,
-    typeof r.trakt?.seasonNumber === 'number' ? r.trakt.seasonNumber : 0
+    readEpisodeCoordinate(r.tvdb?.seasonNumber) ?? 0,
+    readEpisodeCoordinate(r.tmdb?.seasonNumber) ?? 0,
+    readEpisodeCoordinate(r.trakt?.seasonNumber) ?? 0
   );
 }
 
@@ -150,6 +151,42 @@ interface Candidate {
   reason: string;
 }
 
+/** Corroborate an IMDb range with a bounded, regular-season TVDB mapping. */
+function coversMappedEpisode(
+  record: AnimeRecord,
+  season: number,
+  episode: number
+): boolean {
+  return (
+    record.tvdb?.episodeMappings?.some((mapping) => {
+      const { start, end, offset = 0 } = mapping;
+      if (
+        mapping.anidbSeason !== 1 ||
+        mapping.tvdbSeason !== season ||
+        mapping.episodes ||
+        start === undefined ||
+        end === undefined ||
+        !Number.isSafeInteger(start) ||
+        !Number.isSafeInteger(end) ||
+        !Number.isSafeInteger(offset) ||
+        start < 1 ||
+        end < start
+      )
+        return false;
+      const first = start + offset;
+      const last = end + offset;
+      return (
+        Number.isSafeInteger(first) &&
+        Number.isSafeInteger(last) &&
+        first >= 1 &&
+        episode >= first &&
+        episode <= last
+      );
+    }) ?? false
+  );
+}
+
+/** Rank candidates in the requested provider's coordinates, then by verified part starts. */
 function scoreBySeasonEpisode(
   candidates: AnimeRecord[],
   season: number,
@@ -190,8 +227,8 @@ function scoreBySeasonEpisode(
   let rangeFromSeason = -1;
   let hasLaterCour = false;
   for (const r of candidates) {
-    const fs = r.imdb?.fromSeason;
-    if (typeof fs !== 'number') continue;
+    const fs = readEpisodeCoordinate(r.imdb?.fromSeason);
+    if (fs === undefined) continue;
     if (fs > season) {
       hasLaterCour = true;
       continue;
@@ -202,10 +239,42 @@ function scoreBySeasonEpisode(
     }
   }
 
+  // A multi-season original can have only one IMDb start hint, but explicit
+  // TVDB episode ranges for its later seasons. That corroboration is stronger
+  // than a sequel's informal "Season N" alias (e.g. Bleach's TYBW aliases).
+  // It supports the existing IMDb range; it is not a native IMDb exact match.
+  const hasMappedRange =
+    native === 'imdb' &&
+    rangeWinner !== null &&
+    coversMappedEpisode(rangeWinner, season, episode);
+
+  // A later cour of the same parent show can have explicit TVDB/TMDB
+  // coordinates before IMDb hints catch up. Do not let extrapolation hide
+  // it. Shared parent IDs are essential: a sequel with its own provider IDs
+  // must not displace an original series merely because season numbers match.
+  const hasMappedContinuation =
+    native === 'imdb' &&
+    !hasLaterCour &&
+    rangeWinner !== null &&
+    candidates.some((r) =>
+      (['tvdb', 'tmdb'] as const).some((source) => {
+        const key = source === 'tvdb' ? 'thetvdbId' : 'themoviedbId';
+        const parent = rangeWinner!.ids?.[key];
+        return (
+          r !== rangeWinner &&
+          parent != null &&
+          parent !== '' &&
+          String(parent) === String(r.ids?.[key]) &&
+          readEpisodeCoordinate(r[source]?.seasonNumber) === season &&
+          episode >= (r[source]?.fromEpisode ?? 1)
+        );
+      })
+    );
+
   for (const r of candidates) {
     // Trakt season number.
-    if (typeof r.trakt?.seasonNumber === 'number') {
-      if (r.trakt.seasonNumber === season) {
+    if (r.trakt) {
+      if (readEpisodeCoordinate(r.trakt.seasonNumber) === season) {
         scored.push({
           record: r,
           priority: prio('trakt'),
@@ -215,10 +284,7 @@ function scoreBySeasonEpisode(
       }
     }
     // Kitsu IMDb-cour mapping. Exact match.
-    if (
-      typeof r.imdb?.fromSeason === 'number' &&
-      r.imdb.fromSeason === season
-    ) {
+    if (r.imdb && readEpisodeCoordinate(r.imdb.fromSeason) === season) {
       const fromEpisode = r.imdb.fromEpisode ?? 1;
       if (episode >= fromEpisode) {
         scored.push({
@@ -233,15 +299,24 @@ function scoreBySeasonEpisode(
     // per-source season signals (tvdb/tmdb/synonym) so that when Kitsu has no
     // exact mapping for the requested season we defer to the next best source.
     // Interpolation (a gap between known cours) is trusted above fuzzy synonym
-    // matches; extrapolation past the last cour is a true last resort.
+    // matches. Explicit episode coverage can also corroborate extrapolation;
+    // otherwise it remains a last resort behind mapped continuations.
     if (imdbInCoordinate && r === rangeWinner && rangeFromSeason !== season) {
       scored.push({
         record: r,
-        priority: hasLaterCour ? 65 : 40,
+        priority: hasLaterCour
+          ? 65
+          : hasMappedRange
+            ? 60
+            : hasMappedContinuation
+              ? 20
+              : 40,
         fromEpisode: r.imdb?.fromEpisode ?? 1,
         reason: hasLaterCour
           ? 'kitsu-fromSeason-range'
-          : 'kitsu-fromSeason-extrapolated',
+          : hasMappedRange
+            ? 'kitsu-fromSeason-mapped-range'
+            : 'kitsu-fromSeason-extrapolated',
       });
     }
     // Anime-Lists XML defaultTvdbSeason match. The 'a' (absolute-numbering)
@@ -250,7 +325,7 @@ function scoreBySeasonEpisode(
     if (
       r.tvdb?.seasonNumber !== undefined &&
       r.tvdb.seasonNumber !== null &&
-      (r.tvdb.seasonNumber === season ||
+      (readEpisodeCoordinate(r.tvdb.seasonNumber) === season ||
         (r.tvdb.seasonNumber === 'a' && idType === 'thetvdbId'))
     ) {
       const fromEpisode = r.tvdb.fromEpisode ?? 1;
@@ -264,10 +339,7 @@ function scoreBySeasonEpisode(
       }
     }
     // Anime-Lists XML tmdbSeason match.
-    if (
-      typeof r.tmdb?.seasonNumber === 'number' &&
-      r.tmdb.seasonNumber === season
-    ) {
+    if (r.tmdb && readEpisodeCoordinate(r.tmdb.seasonNumber) === season) {
       const fromEpisode = r.tmdb.fromEpisode ?? 1;
       if (episode >= fromEpisode) {
         scored.push({
