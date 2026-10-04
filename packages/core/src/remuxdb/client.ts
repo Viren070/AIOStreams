@@ -76,7 +76,7 @@ export const MediaProbeVersionSchema = z
 export type MediaProbeVersion = z.infer<typeof MediaProbeVersionSchema>;
 
 const probeCache = Cache.getInstance<string, MediaProbeVersion[]>(
-  'remuxdb:probe'
+  'remuxdb:versions'
 );
 const bgRefreshCache = Cache.getInstance<string, number>('remuxdb:bg-refresh');
 
@@ -156,13 +156,14 @@ async function _fetchFromApi(
   episode?: number
 ): Promise<MediaProbeVersion[] | null> {
   try {
-    const url = new URL(
-      `${appConfig.remuxdb.baseUrl}/api/media/${encodeURIComponent(imdbId)}/versions`
-    );
-    if (season !== undefined) url.searchParams.set('season', String(season));
-    if (episode !== undefined) url.searchParams.set('episode', String(episode));
+    // An episode is addressed in the id; query parameters are ignored.
+    const id =
+      season !== undefined && episode !== undefined
+        ? `${imdbId}:${season}:${episode}`
+        : imdbId;
+    const url = `${appConfig.remuxdb.baseUrl}/api/media/${encodeURIComponent(id)}/versions`;
 
-    const response = await makeRequest(url.toString(), {
+    const response = await makeRequest(url, {
       method: 'GET',
       timeout: 5000,
       headers: { 'x-client-id': instanceId() },
