@@ -102,6 +102,30 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/* \
   && cp /usr/lib/*/libmimalloc.so.2 /usr/local/lib/libmimalloc.so.2
 
+# zlib is linked statically: the runtime image has no libz.
+FROM debian:12-slim AS ffprobe
+ARG FFMPEG_VERSION=8.1.3
+ARG FFMPEG_SHA256=7138d28c96d9d3e3af4ee3d8cad72741f8ffb40da90c1112235dea3ecd3178a3
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates curl xz-utils gcc libc6-dev make zlib1g-dev \
+  && rm -rf /var/lib/apt/lists/* \
+  && rm /usr/lib/*/libz.so
+WORKDIR /src
+RUN curl -fsSL -o ffmpeg.tar.xz "https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.xz" \
+  && echo "${FFMPEG_SHA256}  ffmpeg.tar.xz" | sha256sum -c - \
+  && tar -xJf ffmpeg.tar.xz --strip-components=1 \
+  && ./configure \
+    --disable-everything --disable-autodetect --disable-doc --disable-debug \
+    --disable-programs --enable-ffprobe \
+    --disable-avdevice --disable-avfilter --disable-swscale --disable-swresample \
+    --disable-x86asm --enable-zlib \
+    --enable-protocol=file,http,tcp \
+    --enable-demuxer=asf,avi,flv,matroska,mov,mpegps,mpegts,ogg \
+    --enable-parser=aac,aac_latm,ac3,av1,dca,dvbsub,dvdsub,flac,h264,hevc,mlp,mpeg4video,mpegaudio,mpegvideo,opus,vc1,vorbis,vp8,vp9 \
+    --enable-decoder=aac,aac_latm,ac3,alac,dca,eac3,flac,mlp,mp2,mp3,opus,truehd,vorbis,pcm_bluray,pcm_dvd,pcm_s16le,pcm_s24le,h264,hevc,mpeg2video,mpeg4,vc1,vp8,vp9,ass,ssa,subrip,srt,webvtt,movtext,pgssub,dvdsub,dvbsub \
+  && make -j"$(nproc)" ffprobe \
+  && strip ffprobe
+
 FROM gcr.io/distroless/nodejs24-debian12 AS production
 
 LABEL org.opencontainers.image.title="AIOStreams"
@@ -115,6 +139,7 @@ COPY --from=busybox:1.36.0-uclibc /bin/wget /bin/wget
 COPY --from=busybox:1.36.0-uclibc /bin/sh /bin/sh
 COPY --from=mimalloc /usr/local/lib/libmimalloc.so.2 /usr/local/lib/libmimalloc.so.2
 ENV LD_PRELOAD=/usr/local/lib/libmimalloc.so.2
+COPY --from=ffprobe /src/ffprobe /usr/local/bin/ffprobe
 ENV NODE_OPTIONS="--max-semi-space-size=8 --expose-gc"
 COPY --from=runtime /runtime /app
 
