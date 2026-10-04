@@ -27,6 +27,7 @@ import {
 import {
   decodeForRequest,
   mediaSourcesFrom,
+  trackPreferences,
   nothingToPlayPath,
   placeholderSources,
 } from './items.js';
@@ -234,6 +235,7 @@ async function playbackInfo(req: Request, res: Response) {
     : undefined;
   const sources = mediaSourcesFrom(req, loc.ctx, memo, {
     firstId: requested ?? loc.itemId,
+    tracks: await trackPreferences(loc.ctx),
     requestedMsid: requested,
     profile,
     hasSegments: hasSegments(loc.ctx, memo),

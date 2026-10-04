@@ -224,6 +224,7 @@ const TitleMetadataSchema = z.object({
   // local air dates ('YYYY-MM-DD') of the requested episode for date-based shows
   airDates: z.array(z.string()).optional(),
   isDateBased: z.boolean().optional(),
+  originalLanguage: z.string().optional(),
 });
 
 const BasePlaybackInfoSchema = z.object({

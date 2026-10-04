@@ -4,6 +4,7 @@ export * from './images.js';
 export * from './enrichment.js';
 export * from './dto.js';
 export * from './media.js';
+export * from './track-defaults.js';
 export * from './subtitles.js';
 export * from './memo.js';
 export * from './auth.js';

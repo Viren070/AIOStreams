@@ -15,6 +15,7 @@ import {
   serverId as instanceServerId,
   sessionKeyFor,
   msToTicks,
+  SUBTITLE_MODES,
   WatchSessionRepository,
   type ClientInfo,
   type JellyfinPersona,
@@ -66,13 +67,11 @@ export function userConfiguration() {
   };
 }
 
-const SUBTITLE_MODES = ['Default', 'Always', 'OnlyForced', 'None', 'Smart'];
-
 /** The playback preferences a user can set and this server keeps. */
 const USER_PREFERENCES: Record<string, (value: unknown) => boolean> = {
   AudioLanguagePreference: (v) => typeof v === 'string' && v.length <= 16,
   SubtitleLanguagePreference: (v) => typeof v === 'string' && v.length <= 16,
-  SubtitleMode: (v) => typeof v === 'string' && SUBTITLE_MODES.includes(v),
+  SubtitleMode: (v) => SUBTITLE_MODES.some((mode) => mode === v),
   PlayDefaultAudioTrack: (v) => typeof v === 'boolean',
   RememberAudioSelections: (v) => typeof v === 'boolean',
   RememberSubtitleSelections: (v) => typeof v === 'boolean',

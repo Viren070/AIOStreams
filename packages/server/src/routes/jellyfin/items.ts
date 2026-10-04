@@ -38,10 +38,12 @@ import {
   showEpisodesOf,
   withPlayedCounts,
   isMemoFresh,
+  JellyfinRepository,
   resolveByItem,
   resolveByMediaSource,
   stripInternal,
   subtitleFormatFor,
+  trackPreferencesFrom,
   msToTicks,
   ratingUserData,
   seasonAnimeIds,
@@ -62,6 +64,7 @@ import {
   type PlaybackMemo,
   type WatchStateRow,
   type SeasonGroup,
+  type TrackPreferences,
   type UserItemDataDto,
 } from '@aiostreams/core';
 import { stremioStreamRateLimiter } from '../../middlewares/ratelimit.js';
@@ -725,6 +728,14 @@ export function nothingToPlayPath(
   return `${ctx.baseUrl.replace(req.baseUrl, '')}/static/${StaticFiles.NO_MATCHING_FILE}`;
 }
 
+export async function trackPreferences(
+  ctx: JellyfinRequestContext
+): Promise<TrackPreferences> {
+  return trackPreferencesFrom(
+    await JellyfinRepository.getUserConfiguration(ctx.watch)
+  );
+}
+
 /** MediaSources for an item, from a memo; the first source carries `firstId`. */
 export function mediaSourcesFrom(
   req: Request,
@@ -732,6 +743,7 @@ export function mediaSourcesFrom(
   memo: PlaybackMemo,
   opts: {
     firstId: string;
+    tracks: TrackPreferences;
     requestedMsid?: string;
     profile?: DeviceProfile;
     hasSegments?: boolean;
@@ -768,6 +780,8 @@ export function mediaSourcesFrom(
       includeExtension: true,
       hasSegments: opts.hasSegments,
       noticePath: nothingToPlayPath(req, ctx),
+      tracks: opts.tracks,
+      originalLanguage: memo.titleMetadata?.originalLanguage,
     })
   );
 }
@@ -856,6 +870,7 @@ export async function detailItem(
   if (memo && memo.sources.length) {
     const sources = mediaSourcesFrom(req, ctx, memo, {
       firstId: itemId,
+      tracks: await trackPreferences(ctx),
       requestedMsid: opts.requestedMsid,
     });
     item.MediaSources = sources;

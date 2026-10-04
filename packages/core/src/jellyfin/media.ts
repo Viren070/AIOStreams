@@ -8,6 +8,10 @@ import { probeBeforePlay } from '../media-info/play.js';
 import type { ContributionIds } from '../media-info/contribute.js';
 import { languageToIso6392 } from '../utils/languages.js';
 import { subtitleLanguage } from './enrichment.js';
+import {
+  defaultTrackIndexes,
+  type TrackPreferences,
+} from './track-defaults.js';
 import { mediaSourceId } from './ids.js';
 import {
   mergeSubtitleTracks,
@@ -545,6 +549,9 @@ export interface MediaSourceBuildOptions {
   hasSegments?: boolean;
   /** Where a notice source points, having nothing of its own. */
   noticePath?: string;
+  /** The user's choices, which pick the tracks a version starts with. */
+  tracks?: TrackPreferences;
+  originalLanguage?: string;
 }
 
 /**
@@ -653,6 +660,9 @@ export function buildMediaSource(
   }
   const mediaStreams = buildMediaStreams(record, opts);
   const audioIndex = mediaStreams.findIndex((s) => s.Type === 'Audio');
+  const defaults = opts.tracks
+    ? defaultTrackIndexes(mediaStreams, opts.tracks, opts.originalLanguage)
+    : { audio: audioIndex >= 0 ? audioIndex : undefined, subtitle: -1 };
   const durationMs = record.live
     ? undefined
     : record.durationMs || opts.runtimeMs;
@@ -672,7 +682,8 @@ export function buildMediaSource(
     HasSegments: opts.hasSegments ?? false,
     MediaStreams: mediaStreams,
     Bitrate: record.bitrate,
-    DefaultAudioStreamIndex: audioIndex >= 0 ? audioIndex : undefined,
+    DefaultAudioStreamIndex: defaults.audio,
+    DefaultSubtitleStreamIndex: defaults.subtitle,
   };
   if (opts.includeExtension)
     source.aiostreams = { ...record.extension, id: record.msid };

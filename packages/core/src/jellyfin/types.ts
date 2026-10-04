@@ -94,7 +94,7 @@ export interface PlaybackMemo {
   psid: string;
   sources: MediaSourceRecord[];
   addonSubtitles: SubtitleTrack[];
-  /** The requested episode, for finding a pack's probed files on play. */
+  /** The requested title, for its original language and a pack's probed files. */
   titleMetadata?: TitleMetadata;
   runtimeMs?: number;
   createdAt: number;

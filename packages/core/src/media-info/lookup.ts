@@ -32,20 +32,18 @@ const baseName = (path: string | undefined) => path?.split('/').pop() ?? '';
 /** The episode a request is for, as the resolver's file selection reads it. */
 export async function requestTitleMetadata(
   context: StreamContext
-): Promise<TitleMetadata | undefined> {
-  const season = Number(context.parsedId?.season);
-  const episode = Number(context.parsedId?.episode);
-  if (!season || !episode) return undefined;
+): Promise<TitleMetadata> {
   const metadata = await context.getMetadata();
   return {
     titles: metadata?.titles?.map((t) => t.title) ?? [],
     year: metadata?.year,
     seasonYear: metadata?.seasonYear,
     country: metadata?.country,
-    season,
-    episode,
+    season: Number(context.parsedId?.season) || undefined,
+    episode: Number(context.parsedId?.episode) || undefined,
     absoluteEpisode: metadata?.absoluteEpisode,
     relativeAbsoluteEpisode: metadata?.relativeAbsoluteEpisode,
+    originalLanguage: metadata?.originalLanguage,
   };
 }
 
@@ -129,7 +127,7 @@ async function pickFile(
   if (single) return { file: single };
 
   const episode = await metadata();
-  if (!episode) return undefined;
+  if (!episode?.season || !episode.episode) return undefined;
   const features = featureFiles(
     rows.map((row, index) => ({
       name: baseName(row.file),
