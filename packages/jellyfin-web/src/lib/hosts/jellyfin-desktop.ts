@@ -126,6 +126,21 @@ export function useDesktopPlayer(opts: NativePlayerOptions): PlayerController {
     1,
     audio.findIndex((s) => s.Index === source.DefaultAudioStreamIndex) + 1
   );
+  const startSubtitle = subtitles.find(
+    (s) => s.Index === source.DefaultSubtitleStreamIndex
+  );
+  const startSubtitleId = !startSubtitle
+    ? null
+    : embedded.includes(startSubtitle)
+      ? `embedded:${embedded.indexOf(startSubtitle) + 1}`
+      : `external:${startSubtitle.Index}`;
+  /** The player's subtitle stream: a position among the embedded ones, or `#,` and a link. */
+  const desktopSubtitle = (id: string): number | string | null => {
+    if (id.startsWith('embedded:')) return Number(id.slice('embedded:'.length));
+    const stream = external.find((s) => `external:${s.Index}` === id);
+    const link = stream && subtitleUrl(opts.client, stream);
+    return link ? `#,${link}` : null;
+  };
 
   React.useEffect(
     () => onDesktopSettings(() => patch({ fullscreen: desktopFullscreen() })),
@@ -175,10 +190,13 @@ export function useDesktopPlayer(opts: NativePlayerOptions): PlayerController {
           media: {},
         },
         defaultAudio,
-        -1,
+        (startSubtitleId && desktopSubtitle(startSubtitleId)) ?? -1,
         () => {}
       );
-      patch({ audio: audio.length ? String(defaultAudio) : null });
+      patch({
+        audio: audio.length ? String(defaultAudio) : null,
+        subtitle: startSubtitleId,
+      });
       cleanup = () => {
         mpv.playing.disconnect(handlers.playing);
         mpv.paused.disconnect(handlers.paused);
@@ -242,14 +260,8 @@ export function useDesktopPlayer(opts: NativePlayerOptions): PlayerController {
       patch({ audio: id });
     },
     setSubtitle: (id) => {
-      if (!id) player?.setSubtitleStream(0);
-      else if (id.startsWith('embedded:'))
-        player?.setSubtitleStream(Number(id.slice('embedded:'.length)));
-      else {
-        const stream = external.find((s) => `external:${s.Index}` === id);
-        const link = stream && subtitleUrl(opts.client, stream);
-        if (link) player?.setSubtitleStream(`#,${link}`);
-      }
+      const stream = id ? desktopSubtitle(id) : 0;
+      if (stream !== null) player?.setSubtitleStream(stream);
       patch({ subtitle: id });
     },
     toggleFullscreen: () =>

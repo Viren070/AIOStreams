@@ -178,7 +178,7 @@ export function useNextEpisodePrompt({
         if (!current || !target) return;
         queueNext.current?.({
           itemId: next.Id!,
-          sourceId: target.Id!,
+          source: target,
           startMs: resumeMs(next),
           url: streamUrl(client, next.Id!, target, info.PlaySessionId),
         });

@@ -482,7 +482,7 @@ function NativePlayer({
     onEnded,
     onClosed: back,
     onAdvance: (episode) =>
-      navigate(to.play(episode.itemId, episode.sourceId, episode.startMs), {
+      navigate(to.play(episode.itemId, episode.source.Id!, episode.startMs), {
         replace: true,
       }),
     prefs,

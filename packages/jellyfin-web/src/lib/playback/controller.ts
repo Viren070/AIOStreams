@@ -77,7 +77,7 @@ export interface PlayerController {
 
 export interface QueuedEpisode {
   itemId: string;
-  sourceId: string;
+  source: SourceInfo;
   startMs: number;
   url: string;
 }

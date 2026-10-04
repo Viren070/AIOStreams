@@ -6,7 +6,8 @@ import { base64, checkSubtitleFile } from '../../subtitles/files';
 import { sameLanguage } from '../../languages';
 import { parseChapters, type Chapter } from '../../playback/chapters';
 import { settings, useSetting, type SubtitleStyle } from '../../settings';
-import type { PlaybackPrefs } from '../../user-config';
+import { ORIGINAL_LANGUAGE, type PlaybackPrefs } from '../../user-config';
+import type { SourceInfo } from '../../types';
 import {
   clampDelay,
   savedSubtitleDelay,
@@ -206,7 +207,7 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
     const load = () => {
       const options = [
         ...(startMs ? [`start=${(startMs / 1000).toFixed(3)}`] : []),
-        ...trackOptions(latest.current.prefs ?? {}),
+        ...trackOptions(latest.current.prefs ?? {}, source),
       ];
       command('loadfile', url, 'replace', -1, options.join(','));
     };
@@ -298,7 +299,7 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
         const next = queued.current;
         if (!next) return;
         moved = true;
-        advanced = { itemId: next.itemId, sourceId: next.sourceId };
+        advanced = { itemId: next.itemId, sourceId: next.source.Id! };
         latest.current.onAdvance?.(next);
       } else if (m.type === 'mpv-event' && m.name === 'playback-restart')
         patch({ started: true, waiting: false });
@@ -436,7 +437,7 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
             ...(episode.startMs
               ? [`start=${(episode.startMs / 1000).toFixed(3)}`]
               : []),
-            ...trackOptions(latest.current.prefs ?? {}),
+            ...trackOptions(latest.current.prefs ?? {}, episode.source),
           ];
           command('loadfile', episode.url, 'append', -1, options.join(','));
         }
@@ -469,12 +470,21 @@ function failure(error: string | null, cause?: string): string {
 
 /**
  * The user's languages and subtitle mode as mpv's per-file track choices.
- * mpv matches a language across its two- and three-letter codes.
+ * mpv matches a language across its two- and three-letter codes. Original
+ * language takes the language of the server's default audio track, as only
+ * the server knows it; other servers may not pick that track from the
+ * user's settings, so a named language goes to mpv as it is.
  */
-function trackOptions(prefs: PlaybackPrefs): string[] {
+function trackOptions(prefs: PlaybackPrefs, source: SourceInfo): string[] {
   const options: string[] = [];
-  if (prefs.AudioLanguagePreference)
-    options.push(`alang=${prefs.AudioLanguagePreference}`);
+  const audio =
+    prefs.AudioLanguagePreference === ORIGINAL_LANGUAGE
+      ? source.MediaStreams?.find(
+          (s) =>
+            s.Type === 'Audio' && s.Index === source.DefaultAudioStreamIndex
+        )?.Language
+      : prefs.AudioLanguagePreference;
+  if (audio) options.push(`alang=${audio}`);
   const slang = prefs.SubtitleLanguagePreference
     ? [`slang=${prefs.SubtitleLanguagePreference}`]
     : [];
