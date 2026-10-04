@@ -160,6 +160,12 @@ describe('cleanTitle', () => {
     assert.equal(cleanTitle('Ёлки'), 'ёлки');
   });
 
+  it('keeps decomposed Cyrillic й, ё and ї whole', () => {
+    for (const title of ['Мой сосед Тоторо', 'Ёлки', 'Країна']) {
+      assert.equal(cleanTitle(title.normalize('NFD')), cleanTitle(title));
+    }
+  });
+
   it('still strips diacritics from Latin letters', () => {
     assert.equal(cleanTitle('Léon: The Professional'), 'leon the professional');
     assert.equal(
@@ -170,6 +176,7 @@ describe('cleanTitle', () => {
 
   it('strips Latin diacritics next to Cyrillic text', () => {
     assert.equal(cleanTitle('Амели / Amélie'), 'амели amelie');
+    assert.equal(cleanTitle('Léon / Леон'.normalize('NFD')), 'leon леон');
   });
 });
 

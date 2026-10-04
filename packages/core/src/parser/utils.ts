@@ -69,8 +69,10 @@ function foldToAscii(
   const folded = (
     digraphMap ? title.replace(/[ÄäÖöÜüÅå]/g, (c) => digraphMap[c] ?? c) : title
   ).replace(/[ßıøØłŁđĐæÆœŒðÐþÞ]/g, (c) => asciiFoldMap[c]);
+  // compose first: a decomposed й would leave its combining breve, which is
+  // not Cyrillic script, in a run that gets stripped
   return keepCyrillic
-    ? folded.replace(/\P{Script=Cyrillic}+/gu, stripDiacritics)
+    ? folded.normalize('NFC').replace(/\P{Script=Cyrillic}+/gu, stripDiacritics)
     : stripDiacritics(folded);
 }
 
