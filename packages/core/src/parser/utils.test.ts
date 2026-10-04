@@ -5,6 +5,8 @@ import {
   getLanguagesAfterMarker,
   getRegexForTextAfterEmojis,
   extractInfoHashFromMagnet,
+  cleanTitle,
+  normaliseTitle,
 } from './utils.js';
 
 const VALID_HASH = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -149,5 +151,31 @@ describe('getRegexForTextAfterEmojis', () => {
       '*️⃣ Extended Edition\n📄 movie.mkv'.match(re)?.[1],
       'Extended Edition'
     );
+  });
+});
+
+describe('cleanTitle', () => {
+  it('keeps Cyrillic й and ё whole', () => {
+    assert.equal(cleanTitle('Мой сосед Тоторо'), 'мой сосед тоторо');
+    assert.equal(cleanTitle('Ёлки'), 'ёлки');
+  });
+
+  it('still strips diacritics from Latin letters', () => {
+    assert.equal(cleanTitle('Léon: The Professional'), 'leon the professional');
+    assert.equal(
+      cleanTitle('Le Fabuleux Destin d’Amélie Poulain'),
+      'le fabuleux destin damelie poulain'
+    );
+  });
+
+  it('strips Latin diacritics next to Cyrillic text', () => {
+    assert.equal(cleanTitle('Амели / Amélie'), 'амели amelie');
+  });
+});
+
+describe('normaliseTitle', () => {
+  it('folds Cyrillic й and ё so releases spelling them и and е still match', () => {
+    assert.equal(normaliseTitle('Ёлки'), normaliseTitle('Елки'));
+    assert.equal(normaliseTitle('Мой сосед'), 'моисосед');
   });
 });
