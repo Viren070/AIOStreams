@@ -23,7 +23,8 @@ use crate::media;
 use crate::placement::{self, MIN_SIZE, Placement, SETTLE};
 use crate::updates::Updater;
 use crate::{
-    App, Edge, UserEvent, allowed_navigation, handle, platform, receive_script, serve, start_player,
+    App, Edge, UserEvent, allowed_navigation, handle, platform, receive_script, serve,
+    start_external, start_player,
 };
 
 pub fn webview_version() -> String {
@@ -176,6 +177,12 @@ pub fn run(app: App) {
     });
     video.attach(started.mpv());
     let player = Rc::new(RefCell::new(Some(started)));
+    let external = Rc::new(start_external(&paths, {
+        let proxy = proxy.clone();
+        move |message: Outbound| {
+            let _ = proxy.send_event(UserEvent::Emit(receive_script(&message)));
+        }
+    }));
     let updater = Rc::new(Updater::start({
         let proxy = proxy.clone();
         move |message: Outbound| {
@@ -215,7 +222,7 @@ pub fn run(app: App) {
         })
         .with_ipc_handler({
             let (player, proxy, app_origin) = (player.clone(), proxy.clone(), app_origin.clone());
-            let (paths, updater) = (paths.clone(), updater.clone());
+            let (external, paths, updater) = (external.clone(), paths.clone(), updater.clone());
             move |req: Request<String>| {
                 let from = origin(&req.uri().to_string()).unwrap_or_default();
                 if from != app_origin {
@@ -225,7 +232,7 @@ pub fn run(app: App) {
                     let _ = proxy.send_event(event);
                 };
                 match serde_json::from_str::<Inbound>(req.body()) {
-                    Ok(message) => handle(message, &player, &send, &paths, &updater),
+                    Ok(message) => handle(message, &player, &external, &send, &paths, &updater),
                     Err(e) => log::warn!("bad message: {e}"),
                 }
             }
@@ -245,7 +252,7 @@ pub fn run(app: App) {
             NewWindowResponse::Deny
         })
         .with_on_page_load_handler({
-            let (player, inbox) = (player.clone(), inbox.clone());
+            let (player, external, inbox) = (player.clone(), external.clone(), inbox.clone());
             move |event, _| {
                 if let PageLoadEvent::Started = event {
                     inbox.borrow_mut().page_loading();
@@ -253,6 +260,7 @@ pub fn run(app: App) {
                     if let Some(p) = player.borrow().as_ref() {
                         p.stop();
                     }
+                    external.close();
                 }
             }
         })
@@ -339,6 +347,7 @@ pub fn run(app: App) {
                 placement::save(&data_dir, &placement);
                 video.shutdown();
                 player.borrow_mut().take();
+                external.close();
                 *flow = ControlFlow::Exit;
             }
             Event::UserEvent(UserEvent::Emit(script)) => {
@@ -381,6 +390,13 @@ pub fn run(app: App) {
                 for link in inbox.borrow_mut().ready() {
                     emit(Outbound::Link { url: link });
                 }
+            }
+            Event::UserEvent(UserEvent::ChoosePlayer(kind)) => {
+                let title = format!("Choose {}", kind.id());
+                if let Some(path) = platform::choose_program(&window, &title) {
+                    external.set_program(kind, path);
+                }
+                emit(external.players());
             }
             Event::UserEvent(UserEvent::Sync) => {
                 if let Some(p) = player.borrow().as_ref() {

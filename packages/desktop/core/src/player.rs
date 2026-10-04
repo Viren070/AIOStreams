@@ -183,6 +183,7 @@ fn serve(mpv: &Mpv, emit: &Emit, inbox: &mpsc::Receiver<Request>) {
                     emit(Outbound::MpvProp {
                         name: (*name).into(),
                         data,
+                        external: false,
                     });
                 }
             }
@@ -234,6 +235,56 @@ fn log_playing(mpv: &Mpv) {
     );
 }
 
+/// Holds back properties that change every frame, sending each at most once
+/// per interval; the last value held always goes out.
+#[derive(Default)]
+pub struct Throttle {
+    sent: HashMap<String, Instant>,
+    held: HashMap<String, Value>,
+}
+
+impl Throttle {
+    const EVERY: Duration = Duration::from_millis(THROTTLE_MS);
+
+    /// The value to send now, if it is not held.
+    pub fn pass(&mut self, name: String, value: Value) -> Option<(String, Value)> {
+        if THROTTLED.contains(&name.as_str())
+            && self
+                .sent
+                .get(&name)
+                .is_some_and(|at| at.elapsed() < Self::EVERY)
+        {
+            self.held.insert(name, value);
+            return None;
+        }
+        self.held.remove(&name);
+        self.sent.insert(name.clone(), Instant::now());
+        Some((name, value))
+    }
+
+    pub fn due(&mut self) -> Vec<(String, Value)> {
+        let mut due = Vec::new();
+        let sent = &mut self.sent;
+        self.held.retain(|name, value| {
+            if sent.get(name).is_some_and(|at| at.elapsed() < Self::EVERY) {
+                return true;
+            }
+            sent.insert(name.clone(), Instant::now());
+            due.push((name.clone(), value.take()));
+            false
+        });
+        due
+    }
+
+    pub fn wait(&self) -> Duration {
+        if self.held.is_empty() {
+            Duration::from_secs(1)
+        } else {
+            Self::EVERY
+        }
+    }
+}
+
 /// Collapses a message mpv repeats, as a broken stream can print one per frame.
 #[derive(Default)]
 struct MpvLog {
@@ -275,20 +326,13 @@ fn pump(mpv: &Mpv, emit: &Emit, quit: &AtomicBool) {
             .get(id as usize)
             .is_some_and(|(_, k)| *k == Kind::Json)
     };
-    let every = Duration::from_millis(THROTTLE_MS);
-    let mut sent: HashMap<String, Instant> = HashMap::new();
-    let mut held: HashMap<String, Value> = HashMap::new();
+    let mut throttle = Throttle::default();
     let mut mpv_log = MpvLog::default();
     // Seeks restart playback too; only the first restart of a file is logged.
     let mut reported = false;
 
     while !quit.load(Ordering::SeqCst) {
-        let timeout = if held.is_empty() {
-            1.0
-        } else {
-            every.as_secs_f64()
-        };
-        if let Some(event) = mpv.wait_event(timeout, json) {
+        if let Some(event) = mpv.wait_event(throttle.wait().as_secs_f64(), json) {
             match event {
                 Event::Shutdown => break,
                 Event::Log {
@@ -298,12 +342,19 @@ fn pump(mpv: &Mpv, emit: &Emit, quit: &AtomicBool) {
                 } => mpv_log.push(&level, &prefix, &text),
                 Event::StartFile => {
                     reported = false;
-                    emit(Outbound::MpvEvent { name: "start-file" })
+                    emit(Outbound::MpvEvent {
+                        name: "start-file",
+                        external: false,
+                    })
                 }
                 Event::FileLoaded => emit(Outbound::MpvEvent {
                     name: "file-loaded",
+                    external: false,
                 }),
-                Event::Seek => emit(Outbound::MpvEvent { name: "seek" }),
+                Event::Seek => emit(Outbound::MpvEvent {
+                    name: "seek",
+                    external: false,
+                }),
                 Event::PlaybackRestart => {
                     if !reported {
                         reported = true;
@@ -311,6 +362,7 @@ fn pump(mpv: &Mpv, emit: &Emit, quit: &AtomicBool) {
                     }
                     emit(Outbound::MpvEvent {
                         name: "playback-restart",
+                        external: false,
                     })
                 }
                 Event::EndFile { reason, error } => {
@@ -319,32 +371,29 @@ fn pump(mpv: &Mpv, emit: &Emit, quit: &AtomicBool) {
                         Some(e) => log::warn!("ended reason={reason} error=\"{e}\""),
                         None => log::info!("ended reason={reason}"),
                     }
-                    emit(Outbound::MpvEnded { reason, error });
+                    emit(Outbound::MpvEnded {
+                        reason,
+                        error,
+                        external: false,
+                    });
                 }
                 Event::Property { name, value, .. } => {
-                    if THROTTLED.contains(&name.as_str())
-                        && sent.get(&name).is_some_and(|at| at.elapsed() < every)
-                    {
-                        held.insert(name, value);
-                    } else {
-                        held.remove(&name);
-                        sent.insert(name.clone(), Instant::now());
-                        emit(Outbound::MpvProp { name, data: value });
+                    if let Some((name, data)) = throttle.pass(name, value) {
+                        emit(Outbound::MpvProp {
+                            name,
+                            data,
+                            external: false,
+                        });
                     }
                 }
             }
         }
-        // A held value goes out once its interval passes, so the last one is never lost.
-        held.retain(|name, value| {
-            if sent.get(name).is_some_and(|at| at.elapsed() < every) {
-                return true;
-            }
-            sent.insert(name.clone(), Instant::now());
+        for (name, data) in throttle.due() {
             emit(Outbound::MpvProp {
-                name: name.clone(),
-                data: value.take(),
+                name,
+                data,
+                external: false,
             });
-            false
-        });
+        }
     }
 }

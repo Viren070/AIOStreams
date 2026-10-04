@@ -14,6 +14,7 @@ use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 use aiostreams_desktop_core::bridge::{Inbound, Outbound, PROTOCOL_VERSION, origin};
+use aiostreams_desktop_core::external::{self, External};
 use aiostreams_desktop_core::player::Player;
 use aiostreams_desktop_core::{discord, now_playing};
 use updates::{Command, Updater};
@@ -32,6 +33,7 @@ pub enum UserEvent {
     WindowButtons(bool),
     Link(String),
     LinksReady,
+    ChoosePlayer(external::Kind),
 }
 
 /// The window edges the page resizes from; the system handles the others.
@@ -184,6 +186,7 @@ pub struct Paths {
     mpv: PathBuf,
     logs: PathBuf,
     log_file: PathBuf,
+    players: PathBuf,
 }
 
 pub struct App {
@@ -269,6 +272,7 @@ fn main() {
         mpv: mpv_config_dir(&config_dir),
         logs,
         log_file,
+        players: config_dir.join("players.json"),
     });
     shell::run(App {
         args,
@@ -344,7 +348,7 @@ pub fn start_player(
     platform::load_vulkan_loader(library);
     let awake = Mutex::new(Awake::default());
     let emit = move |message: Outbound| {
-        if let Outbound::MpvProp { name, data } = &message
+        if let Outbound::MpvProp { name, data, .. } = &message
             && let Ok(mut awake) = awake.lock()
         {
             awake.update(name, data);
@@ -354,6 +358,17 @@ pub fn start_player(
     };
     Player::start(library, &defaults, &required, Arc::new(emit))
         .unwrap_or_else(|e| platform::fatal(&format!("mpv failed to start: {e}")))
+}
+
+/// `emit` is called on the player's own threads.
+pub fn start_external(paths: &Paths, emit: impl Fn(Outbound) + Send + Sync + 'static) -> External {
+    External::new(
+        paths.players.clone(),
+        Arc::new(move |message: Outbound| {
+            now_playing::observe(&message);
+            emit(message)
+        }),
+    )
 }
 
 /// Keeps the display on while a file plays.
@@ -391,29 +406,57 @@ impl Awake {
 pub fn handle(
     message: Inbound,
     player: &RefCell<Option<Player>>,
+    external: &External,
     send: &dyn Fn(UserEvent),
     paths: &Paths,
     updater: &Option<Updater>,
 ) {
+    let emit = |message: Outbound| send(UserEvent::Emit(receive_script(&message)));
     let fail = |message: String| {
         log::warn!("{message}");
-        send(UserEvent::Emit(receive_script(&Outbound::Error {
-            message,
-        })));
+        emit(Outbound::Error { message });
     };
     let player = player.borrow();
     match message {
-        Inbound::MpvCommand { args } => {
-            if let Some(Err(e)) = player.as_ref().map(|p| p.command(&args)) {
+        Inbound::MpvCommand {
+            args,
+            external: to_external,
+        } => {
+            let done = if to_external {
+                Some(external.command(&args))
+            } else {
+                player.as_ref().map(|p| p.command(&args))
+            };
+            if let Some(Err(e)) = done {
                 fail(format!("mpv command {args:?}: {e}"));
             }
         }
-        Inbound::MpvSetProp { name, value } => {
-            if let Some(Err(e)) = player.as_ref().map(|p| p.set_prop(&name, &value)) {
+        Inbound::MpvSetProp {
+            name,
+            value,
+            external: to_external,
+        } => {
+            let done = if to_external {
+                Some(external.set_prop(&name, &value))
+            } else {
+                player.as_ref().map(|p| p.set_prop(&name, &value))
+            };
+            if let Some(Err(e)) = done {
                 fail(format!("mpv set {name}={value}: {e}"));
             }
         }
-        Inbound::MpvSync => send(UserEvent::Sync),
+        Inbound::MpvSync { external: true } => external.sync(),
+        Inbound::MpvSync { external: false } => send(UserEvent::Sync),
+        Inbound::ExternalPlayers => emit(external.players()),
+        Inbound::ExternalChoose { player } => match external::Kind::parse(&player) {
+            Some(kind) => send(UserEvent::ChoosePlayer(kind)),
+            None => log::warn!("external-choose: unknown player {player}"),
+        },
+        Inbound::ExternalOpen { player, title } => match external::Kind::parse(&player) {
+            Some(kind) => external.open(kind, title.as_deref()),
+            None => log::warn!("external-open: unknown player {player}"),
+        },
+        Inbound::ExternalClose => external.close(),
         Inbound::Fullscreen { value } => send(UserEvent::Fullscreen(value)),
         Inbound::Minimize => send(UserEvent::Minimize),
         Inbound::WindowDrag => send(UserEvent::Drag),
@@ -429,13 +472,12 @@ pub fn handle(
         Inbound::Close => send(UserEvent::Close),
         Inbound::AppInfo => {
             let (mpv, ffmpeg) = player.as_ref().map(Player::versions).unwrap_or_default();
-            let info = Outbound::AppInfo {
+            emit(Outbound::AppInfo {
                 app: env!("CARGO_PKG_VERSION"),
                 platform: platform::PLATFORM,
                 mpv,
                 ffmpeg,
-            };
-            send(UserEvent::Emit(receive_script(&info)));
+            });
         }
         Inbound::OpenMpvConfig => platform::open_external(&paths.mpv.to_string_lossy()),
         Inbound::OpenLogs => platform::open_external(&paths.logs.to_string_lossy()),
@@ -451,18 +493,16 @@ pub fn handle(
                 paths.log_file.display(),
                 logging::tail(&paths.log_file, 300)
             );
-            send(UserEvent::Emit(receive_script(&Outbound::Diagnostics {
-                text,
-            })));
+            emit(Outbound::Diagnostics { text });
         }
         Inbound::UpdateCheck { channel } => match updater {
             Some(updater) => updater.send(Command::Check(channel)),
-            None => send(UserEvent::Emit(receive_script(&Outbound::UpdateState {
+            None => emit(Outbound::UpdateState {
                 state: "off",
                 channel: None,
                 version: None,
                 error: None,
-            }))),
+            }),
         },
         Inbound::UpdateApply => {
             if let Some(updater) = updater {

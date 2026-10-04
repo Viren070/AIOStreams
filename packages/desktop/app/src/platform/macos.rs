@@ -18,11 +18,12 @@ use objc2::{
     AllocAnyThread, DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send,
 };
 use objc2_app_kit::{
-    NSAutoresizingMaskOptions, NSView, NSWindow, NSWindowButton, NSWindowOrderingMode,
+    NSAutoresizingMaskOptions, NSModalResponseOK, NSOpenPanel, NSView, NSWindow, NSWindowButton,
+    NSWindowOrderingMode,
 };
 use objc2_core_foundation::{CFString, CFTimeInterval};
 use objc2_core_video::CVTimeStamp;
-use objc2_foundation::NSObject;
+use objc2_foundation::{NSObject, NSString};
 use objc2_open_gl::{
     CGLChoosePixelFormat, CGLContextObj, CGLContextParameter, CGLCreateContext, CGLError,
     CGLLockContext, CGLOpenGLProfile, CGLPixelFormatAttribute, CGLPixelFormatObj, CGLRetainContext,
@@ -539,6 +540,24 @@ pub fn open_external(url: &str) {
 }
 
 /// Shown in a dialog too, since an app opened from Finder has no terminal.
+pub fn choose_program(_window: &Window, title: &str) -> Option<PathBuf> {
+    let panel = NSOpenPanel::openPanel(MainThreadMarker::new()?);
+    panel.setCanChooseFiles(true);
+    panel.setCanChooseDirectories(false);
+    panel.setAllowsMultipleSelection(false);
+    panel.setMessage(Some(&NSString::from_str(title)));
+    if panel.runModal() != NSModalResponseOK {
+        return None;
+    }
+    let path = PathBuf::from(panel.URL()?.path()?.to_string());
+    // A picked app runs the program of the same name inside it.
+    if path.extension().is_some_and(|e| e == "app") {
+        let name = path.file_stem()?.to_owned();
+        return Some(path.join("Contents/MacOS").join(name));
+    }
+    Some(path)
+}
+
 pub fn fatal(message: &str) -> ! {
     log::error!("{message}");
     eprintln!("AIOStreams: {message}");

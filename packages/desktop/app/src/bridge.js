@@ -6,8 +6,8 @@
 
   Object.defineProperty(window, '__aiostreamsDesktopReceive', {
     value(message) {
-      if (message.type === 'mpv-prop' && message.name === 'idle-active')
-        idle = message.data !== false;
+      const own = message.type === 'mpv-prop' && !message.external;
+      if (own && message.name === 'idle-active') idle = message.data !== false;
       for (const listener of listeners) {
         try {
           listener(message);

@@ -95,7 +95,7 @@ pub fn browsing(presence: Option<Presence>) {
 pub fn observe(message: &Outbound) {
     let Ok(mut state) = STATE.lock() else { return };
     match message {
-        Outbound::MpvProp { name, data } => match name.as_str() {
+        Outbound::MpvProp { name, data, .. } => match name.as_str() {
             "pause" => {
                 state.paused = data == true;
                 publish(&mut state);
@@ -121,6 +121,7 @@ pub fn observe(message: &Outbound) {
         },
         Outbound::MpvEvent {
             name: "playback-restart",
+            ..
         } => {
             state.seeked = true;
             publish(&mut state);

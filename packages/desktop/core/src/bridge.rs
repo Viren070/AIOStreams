@@ -21,15 +21,35 @@ pub enum UpdateChannel {
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type", rename_all = "kebab-case")]
 pub enum Inbound {
+    /// `external` messages go to the player started with `external-open`.
     MpvCommand {
         args: Vec<Value>,
+        #[serde(default)]
+        external: bool,
     },
     MpvSetProp {
         name: String,
         value: Value,
+        #[serde(default)]
+        external: bool,
     },
     /// Resends every observed property's current value.
-    MpvSync,
+    MpvSync {
+        #[serde(default)]
+        external: bool,
+    },
+    /// Asks for an `external-players` answer.
+    ExternalPlayers,
+    /// Lets the user pick where a player is installed.
+    ExternalChoose {
+        player: String,
+    },
+    /// Starts the player, or keeps the one already open, for the next `loadfile`.
+    ExternalOpen {
+        player: String,
+        title: Option<String>,
+    },
+    ExternalClose,
     Fullscreen {
         value: Option<bool>,
     },
@@ -86,12 +106,26 @@ pub enum Outbound {
     MpvProp {
         name: String,
         data: Value,
+        #[serde(skip_serializing_if = "is_false")]
+        external: bool,
     },
     MpvEvent {
         name: &'static str,
+        #[serde(skip_serializing_if = "is_false")]
+        external: bool,
     },
     MpvEnded {
         reason: &'static str,
+        error: Option<String>,
+        #[serde(skip_serializing_if = "is_false")]
+        external: bool,
+    },
+    /// The players this computer can start; empty where the app may not start programs.
+    ExternalPlayers {
+        players: Vec<ExternalPlayer>,
+    },
+    /// The external player closed, or with `error`, never started.
+    ExternalEnded {
         error: Option<String>,
     },
     Fullscreen {
@@ -134,6 +168,16 @@ pub enum Outbound {
     },
 }
 
+#[derive(Debug, Serialize)]
+pub struct ExternalPlayer {
+    pub id: &'static str,
+    pub path: Option<String>,
+}
+
+fn is_false(value: &bool) -> bool {
+    !value
+}
+
 impl Outbound {
     pub fn to_json(&self) -> String {
         serde_json::to_string(self).unwrap_or_default()
@@ -157,6 +201,7 @@ pub const OBSERVED: &[(&str, Kind)] = &[
     ("track-list", Kind::Json),
     ("chapter-list", Kind::Json),
     ("video-params", Kind::Json),
+    ("fullscreen", Kind::Flag),
 ];
 
 pub const THROTTLED: &[&str] = &["time-pos", "demuxer-cache-time"];
@@ -189,6 +234,7 @@ const SETTABLE: &[&str] = &[
     "hwdec",
     "audio-channels",
     "audio-spdif",
+    "fullscreen",
 ];
 
 const LOADFILE_OPTIONS: &[&str] = &[
@@ -324,7 +370,7 @@ pub fn command(args: &[Value]) -> Result<Vec<String>, String> {
                 return Err("too many arguments".into());
             }
         }
-        "stop" | "frame-step" | "frame-back-step" => {
+        "stop" | "frame-step" | "frame-back-step" | "playlist-clear" => {
             if args.len() > 1 {
                 return Err("too many arguments".into());
             }
