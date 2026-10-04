@@ -239,6 +239,16 @@ export async function resolveConfigFor(
   return entry ? { uuid, userData: entry.userData } : null;
 }
 
+/** A persona with a history of its own keeps its watch state and preferences apart. */
+export function watchScopeOf(
+  uuid: string,
+  persona: JellyfinPersona | null | undefined
+): WatchScope {
+  return persona && persona.history !== 'shared'
+    ? { uuid, persona: persona.id }
+    : accountScope(uuid);
+}
+
 export function personasOf(userData: UserData): JellyfinPersona[] {
   return userData.jellyfin?.personas ?? [];
 }
@@ -561,10 +571,7 @@ async function buildContext(
     return (primaryEngine ??= configFor(primaryVariants).then(engineOf));
   };
   const userId = personaUserId(uuid, persona?.id ?? '');
-  const watch: WatchScope =
-    persona && persona.history !== 'shared'
-      ? { uuid, persona: persona.id }
-      : accountScope(uuid);
+  const watch = watchScopeOf(uuid, persona);
   return {
     uuid,
     encryptedPassword,

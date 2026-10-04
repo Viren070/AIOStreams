@@ -1,7 +1,6 @@
 import { createHash } from 'crypto';
 import { Router, type Request } from 'express';
 import {
-  accountScope,
   config as appConfig,
   createLogger,
   encryptString,
@@ -35,6 +34,7 @@ import {
   lockTag,
   userUnlocks,
   personasOf,
+  watchScopeOf,
   qs,
   resolveConfig,
   resolvePickerAlias,
@@ -255,14 +255,10 @@ export async function authenticationResult(
   opts: { provedPassword?: boolean } = {}
 ) {
   const client = clientOf(req);
-  const scope =
-    persona && persona.history !== 'shared'
-      ? { uuid, persona: persona.id }
-      : accountScope(uuid);
   return {
     User: {
       ...userDto(uuid, userData, persona),
-      Configuration: await storedUserConfiguration(scope),
+      Configuration: await storedUserConfiguration(watchScopeOf(uuid, persona)),
     },
     SessionInfo: sessionInfo(uuid, userData, persona, client, req.userIp),
     AccessToken: mintToken({
@@ -556,9 +552,12 @@ router.get(
         : (personasOf(ctx.userData).find(
             (p) => personaUserId(ctx.uuid, p.id) === wanted
           ) ?? ctx.persona);
-    res.json(
-      userDto(ctx.uuid, ctx.userData, persona, { forKey: !!ctx.apiKey })
-    );
+    res.json({
+      ...userDto(ctx.uuid, ctx.userData, persona, { forKey: !!ctx.apiKey }),
+      Configuration: await storedUserConfiguration(
+        watchScopeOf(ctx.uuid, persona)
+      ),
+    });
   })
 );
 /* A user token only ever reads and writes its own preferences. */
