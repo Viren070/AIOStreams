@@ -1,14 +1,15 @@
-import { currentHost } from './hosts';
-import { ticksToMs } from './format';
-import { navigate, to } from './paths';
+import { currentHost } from '../hosts';
+import { ticksToMs } from '../format';
+import { navigate, to } from '../paths';
 import { externalReturnUrl } from './external-return';
-import { chosenPlayer, playerLink } from './external-player';
-import { directUrl, subtitleUrl, textSubtitles } from './playback';
-import { useSession } from './session';
-import { storedMap } from './storage';
-import { usePlaybackPrefs } from './user-config';
-import { sameLanguage } from './languages';
-import type { BaseItemDto, PlaybackInfoResponse, SourceInfo } from './types';
+import { chosenPlayer, playerLink } from './player-choice';
+import { directUrl } from './stream';
+import { subtitleUrl, textSubtitles } from '../subtitles/tracks';
+import { useSession } from '../session';
+import { storedMap } from '../storage';
+import { usePlaybackPrefs } from '../user-config';
+import { sameLanguage } from '../languages';
+import type { BaseItemDto, PlaybackInfoResponse, SourceInfo } from '../types';
 
 /** The version each item last played in, which resuming it goes straight to. */
 export const lastVersions = storedMap<string>(

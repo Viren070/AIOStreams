@@ -1,14 +1,15 @@
 import React from 'react';
-import { currentHost } from './hosts';
-import { mediaKeyJustTaken } from './input';
-import type { MediaKey } from './hosts/shell';
-import { itemSubtitle, itemTitle } from './format';
-import { landscapeUrl, posterUrl } from './images';
-import { useItem } from './queries';
-import { useSession } from './session';
-import { settings, useSetting } from './settings';
-import { useLatest, type PlayerController } from './player';
-import type { BaseItemDto } from './types';
+import { currentHost } from '../hosts';
+import { mediaKeyJustTaken } from '../input';
+import type { MediaKey } from '../hosts/shell/bridge';
+import { itemSubtitle, itemTitle } from '../format';
+import { landscapeUrl, posterUrl } from '../images';
+import { useItem } from '../queries';
+import { useSession } from '../session';
+import { settings, useSetting } from '../settings';
+import { useLatest } from '../use-latest';
+import type { PlayerController } from './controller';
+import type { BaseItemDto } from '../types';
 
 /** How far the position may stray from where it should be before the browser is told again. */
 const DRIFT_MS = 2000;

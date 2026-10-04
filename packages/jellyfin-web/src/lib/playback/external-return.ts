@@ -1,13 +1,13 @@
 import React from 'react';
 import { useRouterState } from '@tanstack/react-router';
 import { toast } from 'sonner';
-import { currentHost } from './hosts';
-import { itemPath } from './paths';
-import { PlaybackReporter } from './playback';
-import { useRefreshAll } from './queries';
-import { useSession } from './session';
-import { clock } from './format';
-import type { BaseItemDto, SourceInfo } from './types';
+import { currentHost } from '../hosts';
+import { itemPath } from '../paths';
+import { PlaybackReporter } from './reporter';
+import { useRefreshAll } from '../queries';
+import { useSession } from '../session';
+import { clock } from '../format';
+import type { BaseItemDto, SourceInfo } from '../types';
 
 /**
  * The item's page, marked with what played, for a player that reports where it

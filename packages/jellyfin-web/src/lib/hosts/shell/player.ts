@@ -1,103 +1,31 @@
 import React from 'react';
-import { toast } from 'sonner';
-import { storage } from '../storage';
-import { subtitleUrl, textSubtitles } from '../playback';
-import { itemSubtitle, itemTitle } from '../format';
-import { base64, checkSubtitleFile } from '../subtitle-files';
-import { sameLanguage } from '../languages';
-import { parseChapters, type Chapter } from '../chapters';
-import {
-  settings,
-  useSetting,
-  onSettingsChange,
-  type UpdateChannelSetting,
-  type SubtitleStyle,
-} from '../settings';
-import type { PlaybackPrefs } from '../user-config';
+import { storage } from '../../storage';
+import { subtitleUrl, textSubtitles } from '../../subtitles/tracks';
+import { itemSubtitle, itemTitle } from '../../format';
+import { base64, checkSubtitleFile } from '../../subtitles/files';
+import { sameLanguage } from '../../languages';
+import { parseChapters, type Chapter } from '../../playback/chapters';
+import { settings, useSetting, type SubtitleStyle } from '../../settings';
+import type { PlaybackPrefs } from '../../user-config';
 import {
   clampDelay,
-  parseSubtitleLines,
   savedSubtitleDelay,
   saveSubtitleDelay,
-} from '../subtitle-lines';
-import { MPV_OUTLINE, mpvColor, subtitleScale } from '../subtitle-style';
+} from '../../subtitles/delay';
+import { parseSubtitleLines } from '../../subtitles/cues';
+import { MPV_OUTLINE, mpvColor, subtitleScale } from '../../subtitles/style';
 import {
   initialState,
   storedVolume,
   trackLabel,
-  useLatest,
   VOLUME_KEY,
   type NativePlayerOptions,
   type PlayerController,
   type PlayerState,
   type QueuedEpisode,
   type Track,
-} from '../player';
-import type { Host } from '.';
-
-/** `external` marks what the player in its own window sends. */
-export type ShellMessage =
-  | { type: 'mpv-prop'; name: string; data: unknown; external?: boolean }
-  | { type: 'mpv-event'; name: string; external?: boolean }
-  | {
-      type: 'mpv-ended';
-      reason: string;
-      error: string | null;
-      external?: boolean;
-    }
-  | {
-      type: 'external-players';
-      players: { id: string; path: string | null }[];
-    }
-  | { type: 'external-ended'; error: string | null }
-  | { type: 'fullscreen'; value: boolean }
-  | { type: 'window-state'; maximized: boolean }
-  | {
-      type: 'app-info';
-      app: string;
-      platform: string;
-      mpv: string | null;
-      ffmpeg: string | null;
-    }
-  | { type: 'diagnostics'; text: string }
-  | {
-      type: 'update-state';
-      state: 'checking' | 'downloading' | 'ready' | 'current' | 'error' | 'off';
-      channel: 'stable' | 'nightly' | null;
-      version: string | null;
-      error: string | null;
-    }
-  | {
-      type: 'discord-status';
-      state: 'connected' | 'not-found' | 'failed' | 'refused';
-      message: string | null;
-    }
-  | { type: 'link'; url: string }
-  | { type: 'media-key'; key: MediaKey }
-  | { type: 'error'; message: string };
-
-/** A press on the system's media controls; positions and offsets are milliseconds. */
-export type MediaKey =
-  | { action: 'play' | 'pause' | 'toggle' | 'stop' | 'next' | 'previous' }
-  | { action: 'seek'; position: number }
-  | { action: 'skip'; offset: number };
-
-/** The AIOStreams desktop app's bridge to mpv. */
-interface ShellBridge {
-  protocol: number;
-  version: string;
-  platform: string;
-  /** The computer's name. */
-  device: string;
-  send(message: { type: string; [key: string]: unknown }): void;
-  subscribe(listener: (message: ShellMessage) => void): () => void;
-}
-
-declare global {
-  interface Window {
-    aiostreamsDesktop?: ShellBridge;
-  }
-}
+} from '../../playback/controller';
+import { useLatest } from '../../use-latest';
 
 interface MpvTrack {
   id: number;
@@ -577,223 +505,10 @@ function applySubtitleStyle(
   setProp('sub-pos', 100 - style.position);
 }
 
-function applyDesktopSettings(): void {
+export function applyDesktopSettings(): void {
   const { hardwareDecoding, audioChannels, passthrough } = settings.desktop;
   const channels = audioChannels.read();
   setProp('hwdec', hardwareDecoding.read() ? 'auto-safe' : 'no');
   setProp('audio-channels', channels === 'auto' ? 'auto-safe' : channels);
   setProp('audio-spdif', passthrough.read() ? 'ac3,eac3,dts-hd,truehd' : '');
-}
-
-export type UpdateState = Extract<ShellMessage, { type: 'update-state' }>;
-
-/* The last report, for a settings page opened after it came. */
-let updateState: UpdateState | null = null;
-const updateListeners = new Set<() => void>();
-
-function subscribeUpdates(listener: () => void): () => void {
-  updateListeners.add(listener);
-  return () => updateListeners.delete(listener);
-}
-
-export function useUpdateState(): UpdateState | null {
-  return React.useSyncExternalStore(subscribeUpdates, () => updateState);
-}
-
-export function checkForUpdates(channel: UpdateChannelSetting): void {
-  window.aiostreamsDesktop?.send({
-    type: 'update-check',
-    channel: channel === 'installed' ? null : channel,
-  });
-}
-
-export function applyUpdate(): void {
-  window.aiostreamsDesktop?.send({ type: 'update-apply' });
-}
-
-function onUpdateState(next: UpdateState) {
-  const announced = updateState?.state === 'ready';
-  updateState = next;
-  for (const listener of updateListeners) listener();
-  if (next.state === 'ready' && !announced)
-    toast('Update ready', {
-      description: `Version ${next.version} installs on the next start.`,
-      action: { label: 'Restart now', onClick: applyUpdate },
-      duration: Infinity,
-    });
-}
-
-export type DiscordStatus = Extract<ShellMessage, { type: 'discord-status' }>;
-
-let discordStatus: DiscordStatus | null = null;
-const discordListeners = new Set<() => void>();
-
-function subscribeDiscord(listener: () => void): () => void {
-  discordListeners.add(listener);
-  return () => discordListeners.delete(listener);
-}
-
-export function useDiscordStatus(): DiscordStatus | null {
-  return React.useSyncExternalStore(subscribeDiscord, () => discordStatus);
-}
-
-export function checkDiscord(): void {
-  window.aiostreamsDesktop?.send({ type: 'discord-check' });
-}
-
-function onDiscordStatus(next: DiscordStatus) {
-  discordStatus = next;
-  for (const listener of discordListeners) listener();
-}
-
-/** The browser's own menu only where it edits or copies; Shift still opens it. */
-function onContextMenu(e: MouseEvent) {
-  const target = e.target as HTMLElement | null;
-  const editable = target?.closest('input, textarea, [contenteditable="true"]');
-  if (e.shiftKey || editable || !!window.getSelection()?.toString()) return;
-  e.preventDefault();
-}
-
-let windowFullscreen = false;
-
-/** Keeps mpv in step with this device's settings, checks for updates, and handles right clicks. */
-export function ShellSetup() {
-  React.useEffect(() => {
-    const shell = window.aiostreamsDesktop;
-    if (!shell) return;
-    const { updateChannel } = settings.desktop;
-    let channel = updateChannel.read();
-    const apply = () => {
-      applyDesktopSettings();
-      if (updateChannel.read() !== channel) {
-        channel = updateChannel.read();
-        checkForUpdates(channel);
-      }
-    };
-    apply();
-    checkForUpdates(channel);
-    const unsubscribeSettings = onSettingsChange(apply);
-    const unsubscribe = shell.subscribe((m) => {
-      if (m.type === 'fullscreen') windowFullscreen = m.value;
-      else if (m.type === 'update-state') onUpdateState(m);
-      else if (m.type === 'discord-status') onDiscordStatus(m);
-      else if (m.type === 'external-players') onExternalPlayers(m.players);
-    });
-    window.addEventListener('contextmenu', onContextMenu);
-    shell.send({ type: 'mpv-sync' });
-    return () => {
-      unsubscribeSettings();
-      unsubscribe();
-      window.removeEventListener('contextmenu', onContextMenu);
-    };
-  }, []);
-  return null;
-}
-
-export type ExternalPlayers = Extract<
-  ShellMessage,
-  { type: 'external-players' }
->['players'];
-
-let externalPlayers: ExternalPlayers | null = null;
-const externalPlayerListeners = new Set<() => void>();
-
-function subscribeExternalPlayers(listener: () => void): () => void {
-  externalPlayerListeners.add(listener);
-  return () => externalPlayerListeners.delete(listener);
-}
-
-/** The players the desktop app can start, and where it found each. */
-export function useExternalPlayers(): ExternalPlayers | null {
-  React.useEffect(() => {
-    window.aiostreamsDesktop?.send({ type: 'external-players' });
-  }, []);
-  return React.useSyncExternalStore(
-    subscribeExternalPlayers,
-    () => externalPlayers
-  );
-}
-
-export function chooseExternalPlayer(id: string): void {
-  window.aiostreamsDesktop?.send({ type: 'external-choose', player: id });
-}
-
-function onExternalPlayers(next: ExternalPlayers) {
-  externalPlayers = next;
-  for (const listener of externalPlayerListeners) listener();
-}
-
-export type ShellInfo = Extract<ShellMessage, { type: 'app-info' }>;
-
-export function useShellInfo(): ShellInfo | null {
-  const [info, setInfo] = React.useState<ShellInfo | null>(null);
-  React.useEffect(() => {
-    const shell = window.aiostreamsDesktop;
-    if (!shell) return;
-    const unsubscribe = shell.subscribe((m) => {
-      if (m.type === 'app-info') setInfo(m);
-    });
-    shell.send({ type: 'app-info' });
-    return unsubscribe;
-  }, []);
-  return info;
-}
-
-/** The `aiostreams://` links the app is opened with, including the one that started it. */
-export function useShellLinks(onLink: (url: string) => void): void {
-  const latest = useLatest(onLink);
-  React.useEffect(() => {
-    const shell = window.aiostreamsDesktop;
-    if (!shell) return;
-    const unsubscribe = shell.subscribe((m) => {
-      if (m.type === 'link') latest.current(m.url);
-    });
-    shell.send({ type: 'links-ready' });
-    return unsubscribe;
-  }, [latest]);
-}
-
-export function openMpvConfig(): void {
-  window.aiostreamsDesktop?.send({ type: 'open-mpv-config' });
-}
-
-export function openLogs(): void {
-  window.aiostreamsDesktop?.send({ type: 'open-logs' });
-}
-
-/** Versions, paths and the recent log, for a bug report. */
-export function requestDiagnostics(server: string | null): Promise<string> {
-  const shell = window.aiostreamsDesktop;
-  if (!shell)
-    return Promise.reject(new Error('Only the desktop app has these'));
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      unsubscribe();
-      reject(new Error('The app did not answer'));
-    }, 5000);
-    const unsubscribe = shell.subscribe((m) => {
-      if (m.type !== 'diagnostics') return;
-      clearTimeout(timer);
-      unsubscribe();
-      resolve(m.text);
-    });
-    shell.send({ type: 'diagnostics', web: __APP_COMMIT__, server });
-  });
-}
-
-const host: Host = {
-  name: 'desktop',
-  device: () => ({ name: window.aiostreamsDesktop?.device }),
-  usePlayer: useShellPlayer,
-  playerFeatures: ['audio', 'chapters', 'stats'],
-  back: () => {
-    if (!windowFullscreen) return false;
-    window.aiostreamsDesktop?.send({ type: 'fullscreen', value: false });
-    return true;
-  },
-};
-
-/** The AIOStreams desktop app, which plays in mpv. */
-export function shellHost(): Host | null {
-  return window.aiostreamsDesktop?.protocol === 1 ? host : null;
 }

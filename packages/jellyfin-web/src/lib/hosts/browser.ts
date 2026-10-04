@@ -1,6 +1,6 @@
 import React from 'react';
 import { storage } from '../storage';
-import { subtitleUrl, textSubtitles } from '../playback';
+import { subtitleUrl, textSubtitles } from '../subtitles/tracks';
 import { sameLanguage } from '../languages';
 import type { PlaybackPrefs } from '../user-config';
 import { currentHost } from '.';
@@ -8,20 +8,20 @@ import {
   clampDelay,
   savedSubtitleDelay,
   saveSubtitleDelay,
-} from '../subtitle-lines';
+} from '../subtitles/delay';
 import type { MediaStream } from '../types';
-import { checkSubtitleFile, readSubtitleCues } from '../subtitle-files';
-import { subtitleLine } from '../subtitle-style';
+import { checkSubtitleFile, readSubtitleCues } from '../subtitles/files';
+import { subtitleLine } from '../subtitles/style';
 import {
   initialState,
   storedVolume,
   trackLabel,
-  useLatest,
   VOLUME_KEY,
   type PlayerController,
   type PlayerOptions,
   type PlayerState,
-} from '../player';
+} from '../playback/controller';
+import { useLatest } from '../use-latest';
 
 /** The text subtitle the user's language and subtitle mode start with. */
 function preferredSubtitle(

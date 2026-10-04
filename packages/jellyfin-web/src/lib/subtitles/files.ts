@@ -1,4 +1,4 @@
-import { parseAssCues, parseCues, type SubtitleCue } from './subtitle-lines';
+import { parseAssCues, parseCues, type SubtitleCue } from './cues';
 
 const MAX_BYTES = 10 * 1024 * 1024;
 

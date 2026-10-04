@@ -1,11 +1,10 @@
-import React from 'react';
-import { storage } from './storage';
-import type { JellyfinClient } from './client';
+import { storage } from '../storage';
+import type { JellyfinClient } from '../client';
 import type { Chapter } from './chapters';
-import type { SubtitleStyle } from './settings';
-import type { SubtitleLine } from './subtitle-lines';
-import type { PlaybackPrefs } from './user-config';
-import type { BaseItemDto, MediaStream, SourceInfo } from './types';
+import type { SubtitleStyle } from '../settings';
+import type { SubtitleLine } from '../subtitles/cues';
+import type { PlaybackPrefs } from '../user-config';
+import type { BaseItemDto, MediaStream, SourceInfo } from '../types';
 
 export interface Track {
   id: string;
@@ -131,12 +130,6 @@ export function initialState(source: SourceInfo, startMs: number): PlayerState {
     maxVolume: 1,
     ...storedVolume(),
   };
-}
-
-export function useLatest<T>(value: T) {
-  const ref = React.useRef(value);
-  ref.current = value;
-  return ref;
 }
 
 export function trackLabel(stream: MediaStream, n: number): string {

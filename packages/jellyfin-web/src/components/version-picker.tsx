@@ -29,14 +29,14 @@ import {
   useRefreshPlaybackInfo,
   useSetPlayed,
 } from '../lib/queries';
-import { directUrl } from '../lib/playback';
-import { chosenPlayer } from '../lib/external-player';
+import { directUrl } from '../lib/playback/stream';
+import { chosenPlayer } from '../lib/playback/player-choice';
 import {
   lastVersions,
   noticeSources,
   playableSources,
   usePlay,
-} from '../lib/use-play';
+} from '../lib/playback/play';
 import { currentHost } from '../lib/hosts';
 import { clock, itemSubtitle, itemTitle, ticksToMs } from '../lib/format';
 import { cn } from '@aiostreams/ui/core/styling';

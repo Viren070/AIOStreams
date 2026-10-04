@@ -7,12 +7,13 @@ import { useAdjacentEpisodes, usePlaybackInfoOptions } from '../lib/queries';
 import { landscapeUrl } from '../lib/images';
 import { episodeCode, itemSubtitle, ticksToMs } from '../lib/format';
 import { navigate, to, versionsPath } from '../lib/paths';
-import { playableSources } from '../lib/use-play';
-import { streamUrl } from '../lib/playback';
+import { playableSources } from '../lib/playback/play';
+import { streamUrl } from '../lib/playback/stream';
 import { focusOn, keyboardFocus, useAction } from '../lib/input';
 import { settings, useSetting, type NextPrompt } from '../lib/settings';
 import { usePlaybackPrefs } from '../lib/user-config';
-import { useLatest, type PlayerController } from '../lib/player';
+import { useLatest } from '../lib/use-latest';
+import type { PlayerController } from '../lib/playback/controller';
 import type { BaseItemDto, MediaSegmentDto, SourceInfo } from '../lib/types';
 
 type Direction = 'previous' | 'next';

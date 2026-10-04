@@ -1,4 +1,4 @@
-import type { MediaSegmentDto } from './types';
+import type { MediaSegmentDto } from '../types';
 
 type Kind = MediaSegmentDto['Type'];
 

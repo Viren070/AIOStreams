@@ -1,5 +1,5 @@
 import type { Host } from '../hosts';
-import type { PlayerFeature } from '../player';
+import type { PlayerFeature } from '../playback/controller';
 import { settings, useSetting } from '../settings';
 
 export type ActionGroup = 'general' | 'navigation' | 'player' | 'sync';

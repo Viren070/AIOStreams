@@ -9,7 +9,7 @@ import {
 import type { BaseItemDto, SourceInfo } from '../types';
 import type { Host } from '.';
 import { mediaInfo } from './native-shell';
-import type { MediaKey } from './shell';
+import type { MediaKey } from './shell/bridge';
 
 interface AndroidPlayer {
   isEnabled(): boolean;

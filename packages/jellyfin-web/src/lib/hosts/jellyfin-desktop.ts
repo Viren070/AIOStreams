@@ -1,6 +1,6 @@
 import React from 'react';
 import { storage } from '../storage';
-import { subtitleUrl } from '../playback';
+import { subtitleUrl } from '../subtitles/tracks';
 import type { BaseItemDto } from '../types';
 import type { Host } from '.';
 import { nativeShellParts } from './native-shell';
@@ -9,12 +9,12 @@ import {
   ofType,
   storedVolume,
   trackLabel,
-  useLatest,
   VOLUME_KEY,
   type NativePlayerOptions,
   type PlayerController,
   type PlayerState,
-} from '../player';
+} from '../playback/controller';
+import { useLatest } from '../use-latest';
 
 /** Signals the desktop client's player exposes over its web channel. */
 interface JmpSignal<T extends unknown[] = []> {

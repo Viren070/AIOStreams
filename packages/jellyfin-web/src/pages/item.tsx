@@ -81,7 +81,7 @@ import { PickOnArrival, useVersionPicker } from '../components/version-picker';
 import { BackdropFrame } from '../components/hero';
 import type { BaseItemDto } from '../lib/types';
 import { useHold } from '../lib/use-hold';
-import { useExternalReturn } from '../lib/external-return';
+import { useExternalReturn } from '../lib/playback/external-return';
 
 export function ItemPage({
   itemId,

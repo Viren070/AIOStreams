@@ -1,5 +1,5 @@
 import React from 'react';
-import { chapterAt } from '../lib/chapters';
+import { chapterAt } from '../lib/playback/chapters';
 import { currentHost } from '../lib/hosts';
 import {
   focusOn,
@@ -9,14 +9,15 @@ import {
   type ActionHandler,
   type ActionId,
 } from '../lib/input';
-import { useLatest, type PlayerController } from '../lib/player';
+import { useLatest } from '../lib/use-latest';
+import type { PlayerController } from '../lib/playback/controller';
 import { settings } from '../lib/settings';
-import { delayLabel, SUBTITLE_DELAY_STEP_MS } from '../lib/subtitle-lines';
+import { delayLabel, SUBTITLE_DELAY_STEP_MS } from '../lib/subtitles/delay';
 import {
   stepSubtitleHeight,
   stepSubtitleSize,
   SUBTITLE_SIZE_LABELS,
-} from '../lib/subtitle-style';
+} from '../lib/subtitles/style';
 
 export const RATES = [0.5, 0.75, 1, 1.25, 1.5, 2];
 

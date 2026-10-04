@@ -65,14 +65,14 @@ import {
   subtitleCss,
   subtitleLine,
   SUBTITLE_SIZE_LABELS,
-} from '../lib/subtitle-style';
+} from '../lib/subtitles/style';
 import { usePlaybackPrefs, type SubtitleMode } from '../lib/user-config';
 import {
   CUSTOM_LINK,
   LAUNCHED_PLAYERS,
   LINK_PLAYERS,
   playerOptions,
-} from '../lib/external-player';
+} from '../lib/playback/player-choice';
 import {
   settings,
   useSetting,

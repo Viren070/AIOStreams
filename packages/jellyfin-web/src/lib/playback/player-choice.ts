@@ -1,6 +1,6 @@
-import { currentHost } from './hosts';
-import { settings } from './settings';
-import { storage } from './storage';
+import { currentHost } from '../hosts';
+import { settings } from '../settings';
+import { storage } from '../storage';
 
 type Platform = 'ios' | 'android' | 'macos';
 

@@ -42,14 +42,14 @@ import {
 import { LoadingSpinner } from '@aiostreams/ui/loading-spinner';
 import { cn } from '@aiostreams/ui/core/styling';
 import { clock, itemSubtitle, itemTitle, ticksToMs } from '../lib/format';
-import {
-  useLatest,
-  type PlayerController,
-  type PlayerState,
-  type Track,
-} from '../lib/player';
+import { useLatest } from '../lib/use-latest';
+import type {
+  PlayerController,
+  PlayerState,
+  Track,
+} from '../lib/playback/controller';
 import { currentHost } from '../lib/hosts';
-import { delayLabel, SUBTITLE_DELAY_STEP_MS } from '../lib/subtitle-lines';
+import { delayLabel, SUBTITLE_DELAY_STEP_MS } from '../lib/subtitles/delay';
 import {
   settings,
   useSetting,
@@ -63,10 +63,10 @@ import {
   stepSubtitleHeight,
   stepSubtitleSize,
   SUBTITLE_SIZE_LABELS,
-} from '../lib/subtitle-style';
+} from '../lib/subtitles/style';
 import { SyncByEar, SyncToLine } from './subtitle-sync';
 import { RATES, usePlayerKeys } from './player-keys';
-import { chapterAt, type Chapter } from '../lib/chapters';
+import { chapterAt, type Chapter } from '../lib/playback/chapters';
 import type { BaseItemDto, MediaSegmentDto } from '../lib/types';
 
 const IDLE_MS = 2000;

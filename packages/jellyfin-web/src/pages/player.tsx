@@ -12,27 +12,26 @@ import {
   useRefreshAll,
   useSegments,
 } from '../lib/queries';
-import { lastVersions, playableSources } from '../lib/use-play';
-import { chosenPlayer } from '../lib/external-player';
-import {
-  directUrl,
-  PlaybackReporter,
-  streamUrl,
-  subtitleUrl,
-  textSubtitles,
-} from '../lib/playback';
+import { lastVersions, playableSources } from '../lib/playback/play';
+import { chosenPlayer } from '../lib/playback/player-choice';
+import { directUrl, streamUrl } from '../lib/playback/stream';
+import { PlaybackReporter } from '../lib/playback/reporter';
+import { subtitleUrl, textSubtitles } from '../lib/subtitles/tracks';
 import { currentHost } from '../lib/hosts';
 import { useFeature } from '../lib/server-info';
 import { useBrowserPlayer, usePhoneFullscreen } from '../lib/hosts/browser';
-import { useNowPlaying } from '../lib/now-playing';
-import type { NativePlayerOptions, PlayerController } from '../lib/player';
+import { useNowPlaying } from '../lib/playback/now-playing';
+import type {
+  NativePlayerOptions,
+  PlayerController,
+} from '../lib/playback/controller';
 import {
   settings,
   useSetting,
   type SubtitleStyle,
   type VideoFit,
 } from '../lib/settings';
-import { subtitleCss, subtitleScale } from '../lib/subtitle-style';
+import { subtitleCss, subtitleScale } from '../lib/subtitles/style';
 import { usePlaybackPrefs, type PlaybackPrefs } from '../lib/user-config';
 import { backdropUrl } from '../lib/images';
 import { goBack, navigate, to, versionsPath } from '../lib/paths';
@@ -42,7 +41,7 @@ import {
   useVersionPicker,
   VersionPickerProvider,
 } from '../components/version-picker';
-import { chapterSegments, guessedSegments } from '../lib/chapters';
+import { chapterSegments, guessedSegments } from '../lib/playback/chapters';
 import type { BaseItemDto, MediaSegmentDto, SourceInfo } from '../lib/types';
 
 interface PlayerProps {

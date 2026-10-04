@@ -1,57 +1,5 @@
-import type { JellyfinClient } from './client';
-import { TICKS_PER_MS } from './format';
-import type { MediaStream, SourceInfo } from './types';
-
-/**
- * The server's stream route. A player cannot send the sign-in header, so the
- * token rides in the query, which servers that guard the route require.
- */
-export function streamUrl(
-  client: JellyfinClient,
-  itemId: string,
-  source: SourceInfo,
-  playSessionId?: string | null
-): string {
-  return client.url(`/Videos/${itemId}/stream`, {
-    static: true,
-    MediaSourceId: source.Id,
-    PlaySessionId: playSessionId,
-    ApiKey: client.token,
-  });
-}
-
-/** The source's own address, which outlives this session. */
-export function directUrl(
-  client: JellyfinClient,
-  itemId: string,
-  source: SourceInfo
-): string {
-  return source.Path && /^https?:\/\//i.test(source.Path)
-    ? source.Path
-    : streamUrl(client, itemId, source);
-}
-
-export function textSubtitles(source: SourceInfo): MediaStream[] {
-  return (source.MediaStreams ?? []).filter(
-    (s) => s.Type === 'Subtitle' && s.DeliveryMethod === 'External'
-  );
-}
-
-/**
- * An absolute address for an external subtitle stream, converted to the
- * WebVTT a `<video>` element reads unless `original` keeps the file's format.
- */
-export function subtitleUrl(
-  client: JellyfinClient,
-  stream: MediaStream,
-  { original = false } = {}
-): string | null {
-  if (!stream.DeliveryUrl) return null;
-  const path = original
-    ? stream.DeliveryUrl
-    : stream.DeliveryUrl.replace(/Stream\.\w+(?=\?|$)/, 'Stream.vtt');
-  return new URL(client.url(path), window.location.origin).toString();
-}
+import type { JellyfinClient } from '../client';
+import { TICKS_PER_MS } from '../format';
 
 const PROGRESS_EVERY_MS = 10_000;
 

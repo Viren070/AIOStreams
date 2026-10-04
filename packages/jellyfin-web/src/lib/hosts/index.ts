@@ -3,12 +3,13 @@ import type {
   NativePlayerOptions,
   PlayerController,
   PlayerFeature,
-} from '../player';
+} from '../playback/controller';
 import type { BaseItemDto, SourceInfo } from '../types';
 import { androidHost } from './jellyfin-android';
 import { jellyfinDesktopHost } from './jellyfin-desktop';
 import { nativeShellHost } from './native-shell';
-import { shellHost, type MediaKey } from './shell';
+import { shellHost } from './shell';
+import type { MediaKey } from './shell/bridge';
 
 export interface NowPlaying {
   itemId: string;

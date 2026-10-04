@@ -8,12 +8,8 @@ import { cn } from '@aiostreams/ui/core/styling';
 import { clock } from '../lib/format';
 import { useAction, useKeys } from '../lib/input';
 import { KeyCaps } from './key-caps';
-import {
-  delayForLine,
-  delayForTaps,
-  delayLabel,
-  type SubtitleLine,
-} from '../lib/subtitle-lines';
+import { delayForLine, delayForTaps, delayLabel } from '../lib/subtitles/delay';
+import type { SubtitleLine } from '../lib/subtitles/cues';
 
 type Tap = 'heard' | 'saw';
 
