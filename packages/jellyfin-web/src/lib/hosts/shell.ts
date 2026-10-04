@@ -2,6 +2,7 @@ import React from 'react';
 import { toast } from 'sonner';
 import { storage } from '../storage';
 import { subtitleUrl, textSubtitles } from '../playback';
+import { itemSubtitle, itemTitle } from '../format';
 import { sameLanguage } from '../languages';
 import { parseChapters, type Chapter } from '../chapters';
 import {
@@ -28,14 +29,26 @@ import {
   type NativePlayerOptions,
   type PlayerController,
   type PlayerState,
+  type QueuedEpisode,
   type Track,
 } from '../player';
 import type { Host } from '.';
 
+/** `external` marks what the player in its own window sends. */
 export type ShellMessage =
-  | { type: 'mpv-prop'; name: string; data: unknown }
-  | { type: 'mpv-event'; name: string }
-  | { type: 'mpv-ended'; reason: string; error: string | null }
+  | { type: 'mpv-prop'; name: string; data: unknown; external?: boolean }
+  | { type: 'mpv-event'; name: string; external?: boolean }
+  | {
+      type: 'mpv-ended';
+      reason: string;
+      error: string | null;
+      external?: boolean;
+    }
+  | {
+      type: 'external-players';
+      players: { id: string; path: string | null }[];
+    }
+  | { type: 'external-ended'; error: string | null }
   | { type: 'fullscreen'; value: boolean }
   | { type: 'window-state'; maximized: boolean }
   | {
@@ -116,17 +129,26 @@ const STATS_PAGES: Track[] = [
   { id: '5', label: 'Tracks' },
 ];
 
+/** How long a player in its own window waits for the next episode's page. */
+const LINGER_MS = 10_000;
+let linger: ReturnType<typeof setTimeout> | undefined;
+/** The episode a launched player moved on to by itself, which the next page takes over. */
+let advanced: { itemId: string; sourceId: string } | null = null;
+
 /**
- * The AIOStreams desktop app's mpv, drawn beneath the page. Its tracks are the
+ * The AIOStreams desktop app's mpv, drawn beneath the page, or with
+ * `launched`, the user's own player in its own window. Its tracks are the
  * file's own, plus the server's external subtitles, which mpv downloads only
  * when picked: a version can carry dozens.
  */
 export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
-  const { source, startMs, url } = opts;
+  const { item, source, startMs, url, launched } = opts;
+  const external = !!launched;
   const [state, setState] = React.useState(() => initialState(source, startMs));
   const [tracks, setTracks] = React.useState<MpvTrack[]>([]);
   const [chapters, setChapters] = React.useState<Chapter[]>([]);
   const latest = useLatest({ ...opts, state });
+  const queued = React.useRef<QueuedEpisode | null>(null);
   const externals = React.useMemo(
     () =>
       textSubtitles(source)
@@ -159,10 +181,11 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
   const patch = (next: Partial<PlayerState>) =>
     setState((s) => ({ ...s, ...next }));
   const shell = window.aiostreamsDesktop!;
+  const target = external ? { external: true } : {};
   const set = (name: string, value: unknown) =>
-    shell.send({ type: 'mpv-set-prop', name, value });
+    shell.send({ type: 'mpv-set-prop', name, value, ...target });
   const command = (...args: unknown[]) =>
-    shell.send({ type: 'mpv-command', args });
+    shell.send({ type: 'mpv-command', args, ...target });
 
   const [statsPage, setStatsPage] = React.useState<string | null>(null);
   const shownStats = useLatest(statsPage);
@@ -181,8 +204,10 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
     []
   );
 
+  // The user's own player keeps its own look.
   const [fit] = useSetting(settings.videoFit);
   React.useEffect(() => {
+    if (external) return;
     set('keepaspect', fit !== 'stretch');
     set('panscan', fit === 'crop' ? 1 : 0);
     set('sub-ass-force-margins', fit === 'crop');
@@ -191,16 +216,23 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
 
   const imageSubtitle = React.useRef(false);
   const { subtitleStyle } = opts;
-  React.useEffect(
-    () => applySubtitleStyle(subtitleStyle, imageSubtitle.current),
-    [subtitleStyle]
-  );
+  React.useEffect(() => {
+    if (!external) applySubtitleStyle(subtitleStyle, imageSubtitle.current);
+  }, [subtitleStyle, external]);
 
   React.useEffect(() => {
     // mpv refuses anything above its volume-max.
     const { volume, muted } = storedVolume(Infinity);
     let cache = false;
     let seeking = false;
+    let moved = false;
+    // Set while the launched player may already play this version, until it says whether it is idle.
+    let adopting =
+      external &&
+      advanced?.itemId === item.Id &&
+      advanced?.sourceId === source.Id;
+    let preferOnTracks = false;
+    advanced = null;
 
     let fileTracks: MpvTrack[] = [];
     let sid: string | null = null;
@@ -210,7 +242,7 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
       );
       const image = IMAGE_SUBTITLE_CODECS.has(track?.codec ?? '');
       const style = latest.current.subtitleStyle;
-      if (image === imageSubtitle.current || !style) return;
+      if (external || image === imageSubtitle.current || !style) return;
       imageSubtitle.current = image;
       set('sub-scale', image ? 1 : subtitleScale(style));
     };
@@ -238,6 +270,13 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
           external.lang
         );
     };
+    const load = () => {
+      const options = [
+        ...(startMs ? [`start=${(startMs / 1000).toFixed(3)}`] : []),
+        ...trackOptions(latest.current.prefs ?? {}),
+      ];
+      command('loadfile', url, 'replace', -1, options.join(','));
+    };
     const onProp = (name: string, data: unknown) => {
       const num = typeof data === 'number' ? data : null;
       switch (name) {
@@ -259,6 +298,16 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
           else cache = data === true;
           patch({ waiting: cache || seeking });
           break;
+        case 'idle-active':
+          if (!adopting) break;
+          adopting = false;
+          if (data === true) load();
+          else {
+            patch({ started: true, waiting: false });
+            command('playlist-clear');
+            preferOnTracks = true;
+          }
+          break;
         case 'volume':
           if (num !== null) patch({ volume: num / 100 });
           break;
@@ -270,6 +319,9 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
           break;
         case 'speed':
           if (num !== null) patch({ rate: num });
+          break;
+        case 'fullscreen':
+          if (external) patch({ fullscreen: data === true });
           break;
         case 'aid':
         case 'sid': {
@@ -286,6 +338,10 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
           fileTracks = Array.isArray(data) ? (data as MpvTrack[]) : [];
           setTracks(fileTracks);
           syncSubtitleScale();
+          if (preferOnTracks) {
+            preferOnTracks = false;
+            addPreferredSubtitle();
+          }
           break;
         case 'chapter-list':
           setChapters(parseChapters(data));
@@ -294,34 +350,67 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
     };
 
     const unsubscribe = shell.subscribe((m) => {
+      const fromMpv =
+        m.type === 'mpv-prop' ||
+        m.type === 'mpv-event' ||
+        m.type === 'mpv-ended';
+      const toLaunched = 'external' in m && m.external === true;
+      if (fromMpv && (moved || toLaunched !== external)) return;
       if (m.type === 'mpv-prop') onProp(m.name, m.data);
-      else if (m.type === 'fullscreen') patch({ fullscreen: m.value });
+      else if (m.type === 'fullscreen' && !external)
+        patch({ fullscreen: m.value });
       else if (m.type === 'error') console.warn(m.message);
-      else if (m.type === 'mpv-event' && m.name === 'playback-restart')
+      // The next file it starts is the queued episode.
+      else if (m.type === 'mpv-event' && m.name === 'start-file') {
+        const next = queued.current;
+        if (!next) return;
+        moved = true;
+        advanced = { itemId: next.itemId, sourceId: next.sourceId };
+        latest.current.onAdvance?.(next);
+      } else if (m.type === 'mpv-event' && m.name === 'playback-restart')
         patch({ started: true, waiting: false });
       else if (m.type === 'mpv-event' && m.name === 'file-loaded')
         addPreferredSubtitle();
-      else if (m.type === 'mpv-ended' && m.reason === 'eof')
-        latest.current.onEnded();
-      else if (m.type === 'mpv-ended' && m.reason === 'error')
+      else if (m.type === 'mpv-ended' && m.reason === 'eof') {
+        if (!queued.current) latest.current.onEnded();
+      } else if (m.type === 'mpv-ended' && m.reason === 'error')
         patch({ error: m.error ?? 'mpv could not play this version' });
+      else if (m.type === 'external-ended' && external) {
+        if (m.error) patch({ error: m.error });
+        else latest.current.onClosed?.();
+      }
     });
-    shell.send({ type: 'mpv-sync' });
+    if (launched) {
+      clearTimeout(linger);
+      const title = [
+        itemTitle(item),
+        item.Type === 'Episode' && itemSubtitle(item),
+      ];
+      shell.send({
+        type: 'external-open',
+        player: launched.id,
+        title: title.filter(Boolean).join(' · '),
+      });
+    }
+    shell.send({ type: 'mpv-sync', ...target });
     // mpv keeps pause from the last file.
     set('pause', false);
-    set('volume', Math.round(volume * 100));
-    set('mute', muted);
+    if (!external) {
+      set('volume', Math.round(volume * 100));
+      set('mute', muted);
+    }
     const delay = savedSubtitleDelay(source.Id);
     set('sub-delay', delay / 1000);
     patch({ subtitleDelayMs: delay });
-    const options = [
-      ...(startMs ? [`start=${(startMs / 1000).toFixed(3)}`] : []),
-      ...trackOptions(latest.current.prefs ?? {}),
-    ];
-    command('loadfile', url, 'replace', -1, options.join(','));
+    if (!adopting) load();
     return () => {
       unsubscribe();
-      command('stop');
+      if (!external) return command('stop');
+      if (!moved) set('pause', true);
+      linger = setTimeout(
+        () => shell.send({ type: 'external-close' }),
+        LINGER_MS
+      );
     };
     // Reloading restarts playback, so only a new url or start does it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -330,7 +419,7 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
   const setVolume = (volume: number, muted = volume === 0) => {
     set('volume', Math.round(volume * 100));
     set('mute', muted);
-    storage.set(VOLUME_KEY, { volume, muted });
+    if (!external) storage.set(VOLUME_KEY, { volume, muted });
     patch({ volume, muted });
   };
 
@@ -386,9 +475,31 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
       const res = await fetch(external.url);
       return res.ok ? parseSubtitleLines(await res.text()) : null;
     },
-    toggleFullscreen: () => shell.send({ type: 'fullscreen' }),
+    toggleFullscreen: external
+      ? () => command('cycle', 'fullscreen')
+      : () => shell.send({ type: 'fullscreen' }),
     chapters,
     stats: { pages: STATS_PAGES, page: statsPage, show: showStats },
+    external: launched?.name,
+    close: external
+      ? () => {
+          clearTimeout(linger);
+          shell.send({ type: 'external-close' });
+        }
+      : undefined,
+    queueNext: external
+      ? (episode) => {
+          if (queued.current) return;
+          queued.current = episode;
+          const options = [
+            ...(episode.startMs
+              ? [`start=${(episode.startMs / 1000).toFixed(3)}`]
+              : []),
+            ...trackOptions(latest.current.prefs ?? {}),
+          ];
+          command('loadfile', episode.url, 'append', -1, options.join(','));
+        }
+      : undefined,
   };
 }
 
@@ -553,6 +664,7 @@ export function ShellSetup() {
       if (m.type === 'fullscreen') windowFullscreen = m.value;
       else if (m.type === 'update-state') onUpdateState(m);
       else if (m.type === 'discord-status') onDiscordStatus(m);
+      else if (m.type === 'external-players') onExternalPlayers(m.players);
     });
     window.addEventListener('contextmenu', onContextMenu);
     shell.send({ type: 'mpv-sync' });
@@ -563,6 +675,39 @@ export function ShellSetup() {
     };
   }, []);
   return null;
+}
+
+export type ExternalPlayers = Extract<
+  ShellMessage,
+  { type: 'external-players' }
+>['players'];
+
+let externalPlayers: ExternalPlayers | null = null;
+const externalPlayerListeners = new Set<() => void>();
+
+function subscribeExternalPlayers(listener: () => void): () => void {
+  externalPlayerListeners.add(listener);
+  return () => externalPlayerListeners.delete(listener);
+}
+
+/** The players the desktop app can start, and where it found each. */
+export function useExternalPlayers(): ExternalPlayers | null {
+  React.useEffect(() => {
+    window.aiostreamsDesktop?.send({ type: 'external-players' });
+  }, []);
+  return React.useSyncExternalStore(
+    subscribeExternalPlayers,
+    () => externalPlayers
+  );
+}
+
+export function chooseExternalPlayer(id: string): void {
+  window.aiostreamsDesktop?.send({ type: 'external-choose', player: id });
+}
+
+function onExternalPlayers(next: ExternalPlayers) {
+  externalPlayers = next;
+  for (const listener of externalPlayerListeners) listener();
 }
 
 export type ShellInfo = Extract<ShellMessage, { type: 'app-info' }>;

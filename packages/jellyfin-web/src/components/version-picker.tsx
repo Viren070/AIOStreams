@@ -29,16 +29,12 @@ import {
   useRefreshPlaybackInfo,
   useSetPlayed,
 } from '../lib/queries';
-import {
-  directUrl,
-  externalAlways,
-  externalPlayerTemplate,
-} from '../lib/playback';
+import { directUrl } from '../lib/playback';
+import { chosenPlayer } from '../lib/external-player';
 import {
   lastVersions,
   noticeSources,
   playableSources,
-  usePlayExternally,
   usePlay,
 } from '../lib/use-play';
 import { currentHost } from '../lib/hosts';
@@ -124,7 +120,7 @@ export function VersionPickerProvider({
         startMs > 0 &&
         !opts?.playing &&
         !currentHost().play &&
-        !externalAlways()
+        chosenPlayer().kind !== 'link'
           ? lastVersions.get(item.Id!)
           : undefined;
       if (last) navigate(to.play(item.Id!, last, startMs));
@@ -226,10 +222,8 @@ function Versions({
   const refreshing = info.isFetching || refresh.isPending;
   const canRefresh = useFeature('refreshVersions');
   const play = usePlay();
-  const playExternally = usePlayExternally();
   const queryClient = useQueryClient();
   const infoOptions = usePlaybackInfoOptions();
-  const template = externalPlayerTemplate();
   const [startMs, setStartMs] = React.useState(request.startMs);
   const [filter, setFilter] = React.useState('');
   const sources = playableSources(info.data);
@@ -428,18 +422,6 @@ function Versions({
         {shown.map((source) => {
           const link = directUrl(client, item.Id!, source);
           const actions = [
-            ...(template
-              ? [
-                  {
-                    name: 'external-player',
-                    label: 'Open in external player',
-                    icon: <BiLinkExternal />,
-                    run: () => {
-                      if (!playExternally(item, source, startMs)) onExternal();
-                    },
-                  },
-                ]
-              : []),
             {
               name: 'copy-link',
               label: 'Copy stream link',

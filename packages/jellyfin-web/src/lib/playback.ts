@@ -1,6 +1,5 @@
 import type { JellyfinClient } from './client';
 import { TICKS_PER_MS } from './format';
-import { storage } from './storage';
 import type { MediaStream, SourceInfo } from './types';
 
 /**
@@ -52,88 +51,6 @@ export function subtitleUrl(
     ? stream.DeliveryUrl
     : stream.DeliveryUrl.replace(/Stream\.\w+(?=\?|$)/, 'Stream.vtt');
   return new URL(client.url(path), window.location.origin).toString();
-}
-
-const EXTERNAL_PLAYER_KEY = 'aiostreams-web-external-player';
-const EXTERNAL_ALWAYS_KEY = 'aiostreams-web-external-always';
-
-/**
- * A URL template kept per device: `{url}` or `{encodedUrl}`, and optionally
- * `{position}` (seconds to start at), `{returnUrl}` (where a player that
- * reports back sends the position it stopped at), `{filename}` and
- * `{subtitles}` (its parameter repeated once per external subtitle).
- */
-export function externalPlayerTemplate(): string {
-  return storage.get<string>(EXTERNAL_PLAYER_KEY) ?? '';
-}
-
-export function setExternalPlayerTemplate(template: string): void {
-  if (template.trim()) storage.set(EXTERNAL_PLAYER_KEY, template.trim());
-  else storage.remove(EXTERNAL_PLAYER_KEY);
-}
-
-/** Whether playing a version opens the external player instead. */
-export function externalAlways(): boolean {
-  return (
-    !!externalPlayerTemplate() &&
-    storage.get<boolean>(EXTERNAL_ALWAYS_KEY) === true
-  );
-}
-
-export function setExternalAlways(value: boolean): void {
-  if (value) storage.set(EXTERNAL_ALWAYS_KEY, true);
-  else storage.remove(EXTERNAL_ALWAYS_KEY);
-}
-
-/**
- * Writes the parameter holding `{placeholder}` once per value, and drops it
- * when there are none rather than sending it empty.
- */
-function fillParam(
-  template: string,
-  placeholder: string,
-  values: string[]
-): string {
-  const match = new RegExp(`([?&])([^=&?]+)=\{${placeholder}\}`).exec(template);
-  if (!match) {
-    return template.replace(
-      `{${placeholder}}`,
-      encodeURIComponent(values[0] ?? '')
-    );
-  }
-  const [param, separator, name] = match;
-  const written = values
-    .map((v, i) => `${i ? '&' : separator}${name}=${encodeURIComponent(v)}`)
-    .join('');
-  const filled = template.replace(param, written);
-  return written ? filled : filled.replace(/^([^?]*)&/, '$1?');
-}
-
-export function externalPlayerUrl(
-  template: string,
-  url: string,
-  opts: {
-    startMs?: number;
-    returnUrl?: string;
-    filename?: string;
-    subtitles?: string[];
-  } = {}
-): string {
-  let filled = template.replace(
-    '{position}',
-    String(Math.floor((opts.startMs ?? 0) / 1000))
-  );
-  filled = fillParam(
-    filled,
-    'returnUrl',
-    opts.returnUrl ? [opts.returnUrl] : []
-  );
-  filled = fillParam(filled, 'filename', opts.filename ? [opts.filename] : []);
-  filled = fillParam(filled, 'subtitles', opts.subtitles ?? []);
-  if (filled.includes('{encodedUrl}'))
-    return filled.replace('{encodedUrl}', encodeURIComponent(url));
-  if (filled.includes('{url}')) return filled.replace('{url}', url);
-  return `${filled}${url}`;
 }
 
 const PROGRESS_EVERY_MS = 10_000;

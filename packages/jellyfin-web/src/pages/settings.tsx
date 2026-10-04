@@ -53,6 +53,8 @@ import {
   useUpdateState,
   checkDiscord,
   useDiscordStatus,
+  chooseExternalPlayer,
+  useExternalPlayers,
   type DiscordStatus,
   type ShellInfo,
   type UpdateState,
@@ -66,11 +68,11 @@ import {
 } from '../lib/subtitle-style';
 import { usePlaybackPrefs, type SubtitleMode } from '../lib/user-config';
 import {
-  externalAlways,
-  externalPlayerTemplate,
-  setExternalAlways,
-  setExternalPlayerTemplate,
-} from '../lib/playback';
+  CUSTOM_LINK,
+  LAUNCHED_PLAYERS,
+  LINK_PLAYERS,
+  playerOptions,
+} from '../lib/external-player';
 import {
   settings,
   useSetting,
@@ -139,17 +141,6 @@ const SUBTITLE_MODES: { value: SubtitleMode; label: string; help: string }[] = [
   { value: 'None', label: 'Off', help: 'Starts without subtitles.' },
 ];
 
-const PLAYER_PRESETS = [
-  { name: 'VLC', template: 'vlc://{url}' },
-  {
-    name: 'Infuse',
-    template:
-      'infuse://x-callback-url/play?url={encodedUrl}&filename={filename}&sub={subtitles}&position={position}&x-success={returnUrl}',
-  },
-  { name: 'Outplayer', template: 'outplayer://{url}' },
-  { name: 'IINA', template: 'iina://weblink?url={encodedUrl}' },
-];
-
 const ON_DEVICE = 'Kept on this device.';
 const ON_ACCOUNT =
   'Saved to your account, so your other devices and Jellyfin apps use it too.';
@@ -214,16 +205,6 @@ function PlaybackSection() {
   );
   const bingeGroups = useFeature('versions');
   const shell = currentHost().name === 'desktop';
-  const [template, setTemplate] = React.useState(externalPlayerTemplate);
-  const [always, setAlways] = React.useState(externalAlways);
-  const changeTemplate = (value: string) => {
-    setTemplate(value);
-    setExternalPlayerTemplate(value);
-  };
-  const changeAlways = (value: boolean) => {
-    setAlways(value);
-    setExternalAlways(value);
-  };
 
   return (
     <>
@@ -359,48 +340,85 @@ function PlaybackSection() {
           />
         </SettingsCard>
       )}
-      <SettingsCard title="External player" description={ON_DEVICE}>
-        <div className="space-y-3">
-          <TextInput
-            label="Player link"
-            placeholder="vlc://{url}"
-            value={template}
-            onValueChange={changeTemplate}
-            help="Adds an open-in-player button to each version. {url} is the stream address, {encodedUrl} the same address URL-encoded, {filename} the file's name, {subtitles} each external subtitle (its parameter repeats per file), {position} the second to start at, and {returnUrl} a link back here for a player that reports where it stopped. Values other than {url} are URL-encoded."
-          />
-          <div className="flex flex-wrap gap-2">
-            {PLAYER_PRESETS.map((p) => (
-              <Button
-                key={p.name}
-                size="sm"
-                intent="gray-outline"
-                className="rounded-full"
-                onClick={() => changeTemplate(p.template)}
-              >
-                {p.name}
-              </Button>
-            ))}
-            <Button
-              size="sm"
-              intent="gray-subtle"
-              className="rounded-full"
-              onClick={() => changeTemplate('')}
-            >
-              None
-            </Button>
-          </div>
-        </div>
-        {template.trim() && (
-          <Switch
-            side="right"
-            label="Play every version in it"
-            help="Picking a version opens it in your player instead of here."
-            value={always}
-            onValueChange={changeAlways}
-          />
-        )}
-      </SettingsCard>
+      {!currentHost().play && <PlayerCard />}
     </>
+  );
+}
+
+function PlayerCard() {
+  const [player, setPlayer] = useSetting(settings.player);
+  const [link, setLink] = useSetting(settings.playerLink);
+  const found = useExternalPlayers();
+  const launched = LAUNCHED_PLAYERS.find((p) => p.id === player);
+  const preset = LINK_PLAYERS.find((p) => p.id === player);
+  const program = found?.find((p) => p.id === player)?.path;
+  let help: React.ReactNode;
+  if (launched)
+    help = (
+      <>
+        The {launched.name} installed on this computer, in a window of its own
+        with its own controls and configuration. This app still saves your
+        place, marks what you watched and plays the next episode. Compared with
+        the built-in player, you lose:
+        <ul className="mt-1 list-disc pl-5">
+          <li>
+            The controls, skip buttons and next episode card over the video.
+            They stay in this window, which works as a remote.
+          </li>
+          <li>
+            This app&apos;s subtitle style, video fit, hardware decoding and
+            audio output settings.
+          </li>
+        </ul>
+      </>
+    );
+  else if (preset)
+    help = preset.template.includes('{returnUrl}')
+      ? `Opens versions in ${preset.name}, which brings you back here with your place saved.`
+      : `Opens versions in ${preset.name}. It can't tell this app where you stopped, so you mark what you watched yourself.`;
+  else if (player !== CUSTOM_LINK)
+    help =
+      currentHost().name === 'desktop'
+        ? "mpv inside this window, with this app's controls and playback settings. Your own mpv.conf, scripts and shaders work here too: put them in its mpv folder under Desktop app."
+        : 'Versions play in this browser. Choose another player to open them in it instead.';
+  return (
+    <SettingsCard title="Player" description={ON_DEVICE}>
+      <Select
+        label="Play versions in"
+        help={help}
+        options={playerOptions(found?.map((p) => p.id) ?? [])}
+        value={player}
+        onValueChange={setPlayer}
+      />
+      {launched && (
+        <SettingsRow
+          label={`Your ${launched.name}`}
+          help={
+            <span className="[overflow-wrap:anywhere]">
+              {program ??
+                `Not found on this computer. Choose where ${launched.name} is installed.`}
+            </span>
+          }
+        >
+          <Button
+            intent="gray-outline"
+            className="w-full rounded-full sm:w-auto"
+            onClick={() => chooseExternalPlayer(launched.id)}
+          >
+            Choose
+          </Button>
+        </SettingsRow>
+      )}
+      {player === CUSTOM_LINK && (
+        <TextInput
+          label="Player link"
+          placeholder="vlc://{url}"
+          value={link}
+          onValueChange={setLink}
+          help="{url} is the stream address, {encodedUrl} the same address URL-encoded, {filename} the file's name, {subtitles} each external subtitle (its parameter repeats per file), {position} the second to start at, and {returnUrl} a link back here for a player that reports where it stopped. Values other than {url} are URL-encoded."
+        />
+      )}
+    </SettingsCard>
   );
 }
 
@@ -747,7 +765,7 @@ function DesktopSection() {
       <SettingsCard title="mpv">
         <SettingsRow
           label="mpv configuration"
-          help="mpv.conf, input.conf, scripts and shaders in this folder apply to playback."
+          help="mpv.conf, input.conf, scripts and shaders in this folder apply to the built-in mpv."
         >
           <Button
             intent="gray-outline"

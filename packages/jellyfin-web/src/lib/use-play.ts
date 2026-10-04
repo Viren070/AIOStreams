@@ -2,14 +2,8 @@ import { currentHost } from './hosts';
 import { ticksToMs } from './format';
 import { navigate, to } from './paths';
 import { externalReturnUrl } from './external-return';
-import {
-  directUrl,
-  externalAlways,
-  externalPlayerTemplate,
-  externalPlayerUrl,
-  subtitleUrl,
-  textSubtitles,
-} from './playback';
+import { chosenPlayer, playerLink } from './external-player';
+import { directUrl, subtitleUrl, textSubtitles } from './playback';
 import { useSession } from './session';
 import { storedMap } from './storage';
 import { usePlaybackPrefs } from './user-config';
@@ -43,11 +37,15 @@ export function noticeSources(
 const MAX_EXTERNAL_SUBTITLES = 10;
 
 /** The returned function says whether the player was given a way to report back. */
-export function usePlayExternally() {
+function useOpenLink() {
   const { client } = useSession();
   const { prefs } = usePlaybackPrefs();
-  return (item: BaseItemDto, source: SourceInfo, startMs = 0): boolean => {
-    const template = externalPlayerTemplate();
+  return (
+    template: string,
+    item: BaseItemDto,
+    source: SourceInfo,
+    startMs: number
+  ): boolean => {
     const returnUrl = template.includes('{returnUrl}')
       ? externalReturnUrl(item, source)
       : undefined;
@@ -62,7 +60,7 @@ export function usePlayExternally() {
       .slice(0, MAX_EXTERNAL_SUBTITLES)
       .map((s) => subtitleUrl(client, s, { original: true }))
       .filter((u): u is string => !!u);
-    window.location.href = externalPlayerUrl(
+    window.location.href = playerLink(
       template,
       directUrl(client, item.Id!, source),
       { startMs, returnUrl, filename, subtitles }
@@ -71,9 +69,9 @@ export function usePlayExternally() {
   };
 }
 
-/** Plays an item on whatever player this page runs in. */
+/** Plays an item on the player chosen for this device. */
 export function usePlay() {
-  const playExternally = usePlayExternally();
+  const openLink = useOpenLink();
   return async (
     item: BaseItemDto,
     opts: {
@@ -89,13 +87,14 @@ export function usePlay() {
       opts.startMs ?? ticksToMs(item.UserData?.PlaybackPositionTicks);
 
     const { play } = currentHost();
-    if (externalAlways() && !play) {
-      if (!playExternally(item, source, startMs)) opts.onExternal?.();
-      return;
-    }
-
     if (play) {
       play(item, source, startMs);
+      return;
+    }
+    const player = chosenPlayer();
+    if (player.kind === 'link') {
+      if (!openLink(player.template, item, source, startMs))
+        opts.onExternal?.();
       return;
     }
     navigate(to.play(item.Id!, source.Id, startMs), { replace: opts.replace });

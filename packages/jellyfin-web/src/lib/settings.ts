@@ -484,6 +484,9 @@ export const settings = {
   /** How the picture fills a screen of another shape; kept for this device's screen. */
   videoFit: device<VideoFit>('aiostreams-web-video-fit', 'fit', VIDEO_FITS),
   skipVersionList: device<boolean>('aiostreams-web-skip-versions', false),
+  /** `app`, a player's id, or `custom` for `playerLink`. */
+  player: device<string>('aiostreams-web-player', 'app'),
+  playerLink: device<string>('aiostreams-web-player-link', ''),
   seekStep: device<number>('aiostreams-web-seek-step', 10, SEEK_STEPS),
   volumeStep: device<number>('aiostreams-web-volume-step', 5, VOLUME_STEPS),
   /** Keys changed from the defaults, by action. */

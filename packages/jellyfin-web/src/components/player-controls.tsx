@@ -790,7 +790,9 @@ export function PlayerControls({
     resume: boolean;
   } | null>(null);
   const [byEar, setByEar] = React.useState(false);
+  // A player in its own window is watched there, so its controls here stay.
   const visible =
+    !!player.external ||
     !idle ||
     state.paused ||
     menus > 0 ||
@@ -1168,7 +1170,7 @@ export function PlayerControls({
                           }
                         />
                       )}
-                      <SubtitleStyleSteppers />
+                      {!player.external && <SubtitleStyleSteppers />}
                     </>
                   )
                 }
@@ -1222,9 +1224,8 @@ export function PlayerControls({
               onSelect={(id) => id && player.setRate(Number(id))}
               onOpenChange={onMenu}
             />
-            {(!currentHost().usePlayer || currentHost().name === 'desktop') && (
-              <FitButton />
-            )}
+            {(!currentHost().usePlayer || currentHost().name === 'desktop') &&
+              !player.external && <FitButton />}
             {player.stats && (
               <Menu
                 name="statistics"

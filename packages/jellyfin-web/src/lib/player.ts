@@ -63,6 +63,19 @@ export interface PlayerController {
     page: string | null;
     show(page: string | null): void;
   };
+  /** The name of the player in its own window that these controls drive. */
+  external?: string;
+  /** Closes a player in its own window. */
+  close?: () => void;
+  /** Puts the next episode after this one in the player's own playlist. */
+  queueNext?: (episode: QueuedEpisode) => void;
+}
+
+export interface QueuedEpisode {
+  itemId: string;
+  sourceId: string;
+  startMs: number;
+  url: string;
 }
 
 export interface PlayerOptions {
@@ -78,6 +91,12 @@ export interface NativePlayerOptions extends PlayerOptions {
   client: JellyfinClient;
   item: BaseItemDto;
   url: string;
+  /** Plays in this player's own window instead. */
+  launched?: { id: string; name: string };
+  /** The user closed that window. */
+  onClosed?: () => void;
+  /** That player moved on to the episode it was given with `queueNext`. */
+  onAdvance?: (episode: QueuedEpisode) => void;
 }
 
 export const VOLUME_KEY = 'aiostreams-web-volume';

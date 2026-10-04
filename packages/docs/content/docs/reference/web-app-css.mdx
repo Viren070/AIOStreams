@@ -432,17 +432,17 @@ States are attributes set only while true, such as `data-watched`. Match them wi
 
 ### Versions
 
-| Selector                                                                | What it is                                                                                            |
-| ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `dialog[data-name='versions']`                                          | The version list's dialog box                                                                         |
-| `versions-banner`, `versions-header`, `versions-count`, `versions-list` | The parts of the list                                                                                 |
-| `versions-action`                                                       | The buttons at the top; `data-name` is `details` or `search-again`                                    |
-| `versions-start`, `versions-filter`                                     | The choice between resuming and starting over, and the box to filter versions                         |
-| `version`                                                               | One version; `data-playing` marks the one playing, `data-cached` a cached one                         |
-| `version-play`, `version-play-icon`                                     | The part you press to play it, and its play icon                                                      |
-| `version-name`, `version-description`, `version-playing`                | Its title, the lines under it, and the **Playing** label                                              |
-| `version-action`, `version-menu`                                        | Its buttons, and the menu that holds them on a phone; `data-name` is `external-player` or `copy-link` |
-| `version-notice`                                                        | A message instead of a version; `data-type` says what kind                                            |
+| Selector                                                                | What it is                                                                       |
+| ----------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `dialog[data-name='versions']`                                          | The version list's dialog box                                                    |
+| `versions-banner`, `versions-header`, `versions-count`, `versions-list` | The parts of the list                                                            |
+| `versions-action`                                                       | The buttons at the top; `data-name` is `details` or `search-again`               |
+| `versions-start`, `versions-filter`                                     | The choice between resuming and starting over, and the box to filter versions    |
+| `version`                                                               | One version; `data-playing` marks the one playing, `data-cached` a cached one    |
+| `version-play`, `version-play-icon`                                     | The part you press to play it, and its play icon                                 |
+| `version-name`, `version-description`, `version-playing`                | Its title, the lines under it, and the **Playing** label                         |
+| `version-action`, `version-menu`                                        | Its buttons, and the menu that holds them on a phone; `data-name` is `copy-link` |
+| `version-notice`                                                        | A message instead of a version; `data-type` says what kind                       |
 
 ### Player
 
@@ -464,6 +464,7 @@ States are attributes set only while true, such as `data-watched`. Match them wi
 | `next-episode-card`, `next-episode-image`, `next-episode-action`, `next-episode-countdown`                   | The next episode's card near the end; its buttons have `data-name` `play` or `hide`                                                                                                            |
 | `sync-by-ear`, `sync-lines`, `sync-line`                                                                     | Subtitle syncing; `data-closest` marks the line nearest now                                                                                                                                    |
 | `player-cover`, `player-cover-image`, `player-error`                                                         | What shows while a video loads, and when it fails                                                                                                                                              |
+| `player-external`                                                                                            | In the desktop app, the note that the video plays in your own player's window                                                                                                                  |
 
 ### Other pages
 

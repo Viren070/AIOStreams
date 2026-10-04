@@ -8,10 +8,11 @@ import { landscapeUrl } from '../lib/images';
 import { episodeCode, itemSubtitle, ticksToMs } from '../lib/format';
 import { navigate, to, versionsPath } from '../lib/paths';
 import { playableSources } from '../lib/use-play';
+import { streamUrl } from '../lib/playback';
 import { focusOn, keyboardFocus, useAction } from '../lib/input';
 import { settings, useSetting, type NextPrompt } from '../lib/settings';
 import { usePlaybackPrefs } from '../lib/user-config';
-import type { PlayerController } from '../lib/player';
+import { useLatest, type PlayerController } from '../lib/player';
 import type { BaseItemDto, MediaSegmentDto, SourceInfo } from '../lib/types';
 
 type Direction = 'previous' | 'next';
@@ -162,6 +163,39 @@ export function useNextEpisodePrompt({
   React.useEffect(() => {
     if (shown && next) void queryClient.prefetchQuery(infoOptions(next.Id!));
   }, [shown, next, queryClient, infoOptions]);
+
+  // A player with a playlist of its own gets the next episode once this one plays.
+  const queueNext = useLatest(player.queueNext);
+  const canQueue = !!player.queueNext && autoplay && player.state.started;
+  React.useEffect(() => {
+    if (!canQueue || !next) return;
+    let current = true;
+    queryClient
+      .fetchQuery(infoOptions(next.Id!))
+      .then((info) => {
+        const target = carryOn(playableSources(info), source, fallbackFirst);
+        if (!current || !target) return;
+        queueNext.current?.({
+          itemId: next.Id!,
+          sourceId: target.Id!,
+          startMs: resumeMs(next),
+          url: streamUrl(client, next.Id!, target, info.PlaySessionId),
+        });
+      })
+      .catch(() => {});
+    return () => {
+      current = false;
+    };
+  }, [
+    canQueue,
+    next,
+    queryClient,
+    infoOptions,
+    source,
+    fallbackFirst,
+    client,
+    queueNext,
+  ]);
 
   const [leftMs, setLeftMs] = React.useState(countdown * 1000);
   const counting = shown && autoplay && !paused;
