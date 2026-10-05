@@ -123,6 +123,11 @@ export function canonicalNzbHash(url: string): {
     : { hash: md5(cleanNzbUrl(source)), known: false };
 }
 
+/** The hash a service that cleans the URL it is sent files the NZB under. */
+export function sentNzbHash(url: string): string {
+  return md5(shapedNzbUrl(url) ?? cleanNzbUrl(url));
+}
+
 /**
  * Build the cache key used to store / look up NZB failover entries.
  */

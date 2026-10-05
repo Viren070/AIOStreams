@@ -1,5 +1,6 @@
 import {
   BuiltinServiceId,
+  constants,
   createLogger,
   getTimeTakenSincePoint,
   mergeParsedMediaInfos,
@@ -26,6 +27,7 @@ import {
   isUsenetDebridService,
   TitleMetadata,
   hashNzbUrl,
+  sentNzbHash,
   parseFileNames,
 } from '../../debrid/index.js';
 import { ParsedResult } from '@viren070/parse-torrent-title';
@@ -662,20 +664,20 @@ async function processNZBsForDebridService(
 
   const results: NZBWithSelectedFile[] = [];
 
-  if (service.id === 'torbox') {
-    // update the hashes to be the md5 of the URL without cleaning.
-    // torbox still hash entire URl instead of removing query params.
-    // TODO: remove once torbox hashes after cleaning.
-    nzbs = nzbs.map((nzb) => {
-      if (nzb.nzb) {
-        const hash = hashNzbUrl(nzb.nzb, false);
-        return {
-          ...nzb,
-          hash,
-        };
-      }
-      return nzb;
-    });
+  // A service checks the hash of the URL it is sent, which can be our NZB
+  // proxy's rather than the one behind it. TorBox hashes it without cleaning.
+  if (service.id !== constants.AIOSTREAMS_SERVICE) {
+    nzbs = nzbs.map((nzb) =>
+      nzb.nzb
+        ? {
+            ...nzb,
+            hash:
+              service.id === 'torbox'
+                ? hashNzbUrl(nzb.nzb, false)
+                : sentNzbHash(nzb.nzb),
+          }
+        : nzb
+    );
   }
 
   const nzbCheckResults = await debridService.checkNzbs(
