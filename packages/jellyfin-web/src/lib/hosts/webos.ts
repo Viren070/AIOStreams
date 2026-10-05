@@ -3,6 +3,7 @@ import type { Host } from '.';
 interface WebOSSystem {
   deviceInfo?: string;
   platformBack?(): void;
+  setWindowProperty?(name: string, value: string): void;
 }
 
 declare global {
@@ -29,6 +30,8 @@ const host: Host = {
   name: 'webos',
   device,
   exit: () => system()?.platformBack?.(),
+  keepAwake: (on) =>
+    system()?.setWindowProperty?.('blockScreenSaver', String(on)),
 };
 
 /** LG's TVs, running the packaged app. */

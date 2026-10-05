@@ -336,6 +336,16 @@ function cueCss(style: SubtitleStyle): string {
   }`;
 }
 
+function useKeepAwake(player: PlayerController) {
+  const awake = player.state.started && !player.state.paused;
+  React.useEffect(() => {
+    const { keepAwake } = currentHost();
+    if (!awake || !keepAwake) return;
+    keepAwake(true);
+    return () => keepAwake(false);
+  }, [awake]);
+}
+
 function BrowserPlayer({
   item,
   source,
@@ -370,6 +380,7 @@ function BrowserPlayer({
     onNext: next.next ? next.playNext : undefined,
     onPrevious: next.previous ? next.playPrevious : undefined,
   });
+  useKeepAwake(player);
 
   return (
     <div data-page="player" className="fixed inset-0 bg-black">
