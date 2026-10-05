@@ -1,15 +1,17 @@
 import React from 'react';
 import { storage } from '../storage';
-import { subtitleUrl, textSubtitles } from '../subtitles/tracks';
+import {
+  preferredSubtitle,
+  subtitleUrl,
+  textSubtitles,
+} from '../subtitles/tracks';
 import { sameLanguage } from '../languages';
-import type { PlaybackPrefs } from '../user-config';
 import { currentHost } from '.';
 import {
   clampDelay,
   savedSubtitleDelay,
   saveSubtitleDelay,
 } from '../subtitles/delay';
-import type { MediaStream } from '../types';
 import { checkSubtitleFile, readSubtitleCues } from '../subtitles/files';
 import { subtitleLine } from '../subtitles/style';
 import {
@@ -24,26 +26,6 @@ import {
   type Track,
 } from '../playback/controller';
 import { useLatest } from '../use-latest';
-
-/** The text subtitle the user's language and subtitle mode start with. */
-function preferredSubtitle(
-  subtitles: MediaStream[],
-  prefs: PlaybackPrefs
-): MediaStream | undefined {
-  const lang = prefs.SubtitleLanguagePreference;
-  switch (prefs.SubtitleMode) {
-    case 'None':
-      return undefined;
-    case 'OnlyForced':
-      return subtitles.find(
-        (s) => s.IsForced && (!lang || sameLanguage(lang, s.Language))
-      );
-    default:
-      return lang
-        ? subtitles.find((s) => sameLanguage(lang, s.Language))
-        : undefined;
-  }
-}
 
 function isPhone(): boolean {
   return (

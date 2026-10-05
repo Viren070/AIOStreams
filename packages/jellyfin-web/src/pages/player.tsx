@@ -31,7 +31,11 @@ import {
   type SubtitleStyle,
   type VideoFit,
 } from '../lib/settings';
-import { subtitleCss, subtitleScale } from '../lib/subtitles/style';
+import {
+  subtitleCss,
+  subtitleLine,
+  subtitleScale,
+} from '../lib/subtitles/style';
 import { usePlaybackPrefs, type PlaybackPrefs } from '../lib/user-config';
 import { backdropUrl } from '../lib/images';
 import { goBack, navigate, to, versionsPath } from '../lib/paths';
@@ -336,6 +340,31 @@ function cueCss(style: SubtitleStyle): string {
   }`;
 }
 
+/** For a player that draws no subtitles, placed and sized as the page's own video draws cues. */
+function SubtitleText({ text, style }: { text: string; style: SubtitleStyle }) {
+  const { fontWeight, color, backgroundColor, textShadow } = subtitleCss(style);
+  return (
+    <div
+      data-ui="player-subtitle"
+      className="pointer-events-none fixed inset-x-0 flex justify-center px-[5%] text-center"
+      style={{ bottom: `${100 - subtitleLine(style)}%` }}
+    >
+      <span
+        className="whitespace-pre-line px-2"
+        style={{
+          fontSize: `calc(${subtitleScale(style)} * 5vh)`,
+          fontWeight,
+          color,
+          backgroundColor,
+          textShadow,
+        }}
+      >
+        {text}
+      </span>
+    </div>
+  );
+}
+
 function useKeepAwake(player: PlayerController) {
   const awake = player.state.started && !player.state.paused;
   React.useEffect(() => {
@@ -524,6 +553,9 @@ function NativePlayer({
   return (
     <div data-page="player" className="fixed inset-0">
       <Cover item={item} hidden={player.state.started && !launched} />
+      {player.subtitleText && (
+        <SubtitleText text={player.subtitleText} style={subtitleStyle} />
+      )}
       {launched && (
         <p
           data-ui="player-external"

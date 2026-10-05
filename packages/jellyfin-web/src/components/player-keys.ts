@@ -82,7 +82,9 @@ export function usePlayerKeys(keys: PlayerKeys): void {
       k().notice(`Subtitle height ${height}%`);
     };
     const changeRate = (rate: number) => {
-      player().setRate(rate);
+      const { setRate } = player();
+      if (!setRate) return false;
+      setRate(rate);
       k().notice(`Speed ${rateLabel(rate).toLowerCase()}`);
     };
     const stepRate = (sign: number) => {
@@ -93,7 +95,7 @@ export function usePlayerKeys(keys: PlayerKeys): void {
         0
       );
       const next = Math.min(RATES.length - 1, Math.max(0, nearest + sign));
-      changeRate(RATES[next]);
+      return changeRate(RATES[next]);
     };
     const showSubtitle = (id: string | null) => {
       const { subtitleTracks, setSubtitle } = player();
@@ -190,7 +192,7 @@ export function usePlayerKeys(keys: PlayerKeys): void {
       'player.slower': () => stepRate(-1),
       'player.faster': () => stepRate(1),
       'player.normalSpeed': () => changeRate(1),
-      'player.fullscreen': () => player().toggleFullscreen(),
+      'player.fullscreen': () => call(player().toggleFullscreen),
       'player.stats': () => {
         const { stats } = player();
         if (!stats) return false;

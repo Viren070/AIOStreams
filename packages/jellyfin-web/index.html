@@ -20,9 +20,9 @@
     <link rel="apple-touch-icon" href="<%= root %>apple-icon.png" />
     <link rel="manifest" href="<%= root %>manifest.json" />
     <script>
-      // The desktop app draws its player beneath its web view, which only
-      // renders transparency properly for a page transparent from the start.
-      if (window.jmpInfo || window.aiostreamsDesktop) {
+      // Players drawn beneath the page show through it, which the desktop
+      // apps' web views only render for a page transparent from the start.
+      if (window.jmpInfo || window.aiostreamsDesktop || window.tizen) {
         document.documentElement.classList.add('see-through');
         document.querySelector('meta[name="color-scheme"]').remove();
       }

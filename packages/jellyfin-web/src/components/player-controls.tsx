@@ -1062,7 +1062,7 @@ export function PlayerControls({
           if (pointerType.current !== 'touch') togglePlay();
         }}
         onDoubleClick={() => {
-          if (pointerType.current !== 'touch') player.toggleFullscreen();
+          if (pointerType.current !== 'touch') player.toggleFullscreen?.();
         }}
       />
 
@@ -1309,18 +1309,20 @@ export function PlayerControls({
                 onOpenChange={onMenu}
               />
             )}
-            <Menu
-              name="speed"
-              label="Speed"
-              icon={<LuGauge />}
-              options={RATES.map((rate) => ({
-                id: String(rate),
-                label: rate === 1 ? 'Normal' : `${rate}×`,
-              }))}
-              value={String(state.rate)}
-              onSelect={(id) => id && player.setRate(Number(id))}
-              onOpenChange={onMenu}
-            />
+            {player.setRate && (
+              <Menu
+                name="speed"
+                label="Speed"
+                icon={<LuGauge />}
+                options={RATES.map((rate) => ({
+                  id: String(rate),
+                  label: rate === 1 ? 'Normal' : `${rate}×`,
+                }))}
+                value={String(state.rate)}
+                onSelect={(id) => id && player.setRate?.(Number(id))}
+                onOpenChange={onMenu}
+              />
+            )}
             {(!currentHost().usePlayer || currentHost().name === 'desktop') &&
               !player.external && <FitButton />}
             {player.stats && (
@@ -1334,13 +1336,15 @@ export function PlayerControls({
                 onOpenChange={onMenu}
               />
             )}
-            <ControlButton
-              name="fullscreen"
-              label={state.fullscreen ? 'Exit full screen' : 'Full screen'}
-              onClick={player.toggleFullscreen}
-            >
-              {state.fullscreen ? <LuMinimize /> : <LuMaximize />}
-            </ControlButton>
+            {player.toggleFullscreen && (
+              <ControlButton
+                name="fullscreen"
+                label={state.fullscreen ? 'Exit full screen' : 'Full screen'}
+                onClick={player.toggleFullscreen}
+              >
+                {state.fullscreen ? <LuMinimize /> : <LuMaximize />}
+              </ControlButton>
+            )}
           </div>
         </div>
       </div>

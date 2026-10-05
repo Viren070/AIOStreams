@@ -48,7 +48,8 @@ export interface PlayerController {
   seek(ms: number): void;
   setVolume(volume: number): void;
   toggleMute(): void;
-  setRate(rate: number): void;
+  /** Missing where the player plays at one speed. */
+  setRate?: (rate: number) => void;
   setAudio(id: string): void;
   setSubtitle(id: string | null): void;
   /** Missing where the player cannot shift subtitles. */
@@ -57,7 +58,10 @@ export interface PlayerController {
   subtitleLines?: () => Promise<SubtitleLine[] | null>;
   /** Whether `subtitleLines` can read this subtitle; every one when missing. */
   canReadSubtitle?: (id: string) => boolean;
-  toggleFullscreen(): void;
+  /** The subtitle the page draws, for a player that draws none itself. */
+  subtitleText?: string;
+  /** Missing where the page always fills the screen. */
+  toggleFullscreen?: () => void;
   /** The file's chapters, where the player reads them. */
   chapters?: Chapter[];
   /** Where the player draws playback statistics over the video. */

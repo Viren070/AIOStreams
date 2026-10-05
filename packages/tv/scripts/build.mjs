@@ -30,7 +30,7 @@ function run(command, args, options = {}) {
   if (status !== 0) process.exit(status ?? 1);
 }
 
-function stageApp(manifest, withVersion) {
+function stageApp(manifest, withVersion, scripts = []) {
   const stage = join(out, platform);
   rmSync(stage, { recursive: true, force: true });
   cpSync(join(root, '../jellyfin-web/dist-standalone'), stage, {
@@ -41,10 +41,12 @@ function stageApp(manifest, withVersion) {
   const file = join(stage, manifest);
   writeFileSync(file, withVersion(readFileSync(file, 'utf8')));
   const index = join(stage, 'index.html');
-  const html = readFileSync(index, 'utf8');
+  const tags = ['boot.js', ...scripts].map(
+    (src) => `<script src="${src}"></script>`
+  );
   writeFileSync(
     index,
-    html.replace('<head>', '<head><script src="boot.js"></script>')
+    readFileSync(index, 'utf8').replace('<head>', `<head>${tags.join('')}`)
   );
   return stage;
 }
@@ -85,8 +87,10 @@ if (platform === 'webos') {
     '--no-minify',
   ]);
 } else if (platform === 'tizen') {
-  const stage = stageApp('config.xml', (text) =>
-    text.replace('<widget ', `<widget version="${version}" `)
+  const stage = stageApp(
+    'config.xml',
+    (text) => text.replace('<widget ', `<widget version="${version}" `),
+    ['$WEBAPIS/webapis/webapis.js']
   );
   const profile = process.env.TIZEN_PROFILE;
   if (profile) sign(stage, profile);
