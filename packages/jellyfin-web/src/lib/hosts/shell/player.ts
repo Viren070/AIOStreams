@@ -307,7 +307,7 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
       else if (m.type === 'mpv-ended' && m.reason === 'eof') {
         if (!queued.current) latest.current.onEnded();
       } else if (m.type === 'mpv-ended' && m.reason === 'error')
-        patch({ error: m.error ?? 'mpv could not play this version' });
+        patch({ error: failure(m.error, m.cause) });
       else if (m.type === 'external-ended' && external) {
         if (m.error) patch({ error: m.error });
         else latest.current.onClosed?.();
@@ -442,6 +442,29 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
         }
       : undefined,
   };
+}
+
+function statusMeaning(status: number): string | undefined {
+  if (status === 401 || status === 403) return 'refused';
+  if (status === 404 || status === 410) return 'not found';
+  if (status === 429) return 'too many requests';
+  return status >= 500 ? 'server error' : undefined;
+}
+
+function failure(error: string | null, cause?: string): string {
+  const status = Number(cause?.match(/^HTTP error (\d{3})/)?.[1]);
+  if (status) {
+    const meaning = statusMeaning(status);
+    return `the link answered HTTP ${status}${meaning ? ` (${meaning})` : ''}`;
+  }
+  if (cause) {
+    const text = cause.replace(/^error: /, '');
+    return text.charAt(0).toLowerCase() + text.slice(1);
+  }
+  // What a link answering with a web page fails as.
+  if (error === 'unrecognized file format')
+    return 'the link returned something other than a video';
+  return error ?? 'mpv could not play this version';
 }
 
 /**

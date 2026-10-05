@@ -6,6 +6,7 @@ export type ShellMessage =
       type: 'mpv-ended';
       reason: string;
       error: string | null;
+      cause?: string;
       external?: boolean;
     }
   | {
