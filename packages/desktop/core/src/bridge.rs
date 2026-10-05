@@ -124,6 +124,8 @@ pub enum Outbound {
     MpvEnded {
         reason: &'static str,
         error: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        cause: Option<String>,
         #[serde(skip_serializing_if = "is_false")]
         external: bool,
     },

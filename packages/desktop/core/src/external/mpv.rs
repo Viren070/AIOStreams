@@ -350,6 +350,7 @@ fn relay(event: &Value, throttle: &mut Throttle, emit: &Emit) {
             emit(Outbound::MpvEnded {
                 reason,
                 error,
+                cause: None,
                 external: true,
             });
         }

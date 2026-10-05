@@ -341,6 +341,8 @@ fn pump(mpv: &Mpv, emit: &Emit, quit: &AtomicBool) {
     let mut mpv_log = MpvLog::default();
     // Seeks restart playback too; only the first restart of a file is logged.
     let mut reported = false;
+    // mpv's error names only the step that failed; its http reader's first error says why.
+    let mut cause: Option<String> = None;
 
     while !quit.load(Ordering::SeqCst) {
         if let Some(event) = mpv.wait_event(throttle.wait().as_secs_f64(), json) {
@@ -350,9 +352,18 @@ fn pump(mpv: &Mpv, emit: &Emit, quit: &AtomicBool) {
                     prefix,
                     level,
                     text,
-                } => mpv_log.push(&level, &prefix, &text),
+                } => {
+                    if cause.is_none()
+                        && prefix == "curl"
+                        && matches!(level.as_str(), "error" | "fatal")
+                    {
+                        cause = Some(text.trim_end().to_string());
+                    }
+                    mpv_log.push(&level, &prefix, &text)
+                }
                 Event::StartFile => {
                     reported = false;
+                    cause = None;
                     emit(Outbound::MpvEvent {
                         name: "start-file",
                         external: false,
@@ -382,9 +393,11 @@ fn pump(mpv: &Mpv, emit: &Emit, quit: &AtomicBool) {
                         Some(e) => log::warn!("ended reason={reason} error=\"{e}\""),
                         None => log::info!("ended reason={reason}"),
                     }
+                    let cause = cause.take().filter(|_| error.is_some());
                     emit(Outbound::MpvEnded {
                         reason,
                         error,
+                        cause,
                         external: false,
                     });
                 }
