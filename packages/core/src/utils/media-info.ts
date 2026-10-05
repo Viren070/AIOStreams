@@ -461,7 +461,6 @@ export function parseMediaInfo(
   const info = asMediaInfo(mediaInfo);
   if (!info) return undefined;
 
-  // undefined, not [], when the prober gave no track list at all.
   const audioTracks = Array.isArray(info.audio) ? info.audio : undefined;
   const subtitleTracks = Array.isArray(info.subtitle)
     ? info.subtitle
@@ -559,7 +558,7 @@ export function parseMediaInfo(
   return normalised;
 }
 
-function mergeParsedMediaInfo(
+export function mergeParsedMediaInfo(
   base: Partial<ParsedMediaInfo> | undefined,
   preferred: Partial<ParsedMediaInfo> | undefined
 ): ParsedMediaInfo | undefined {
