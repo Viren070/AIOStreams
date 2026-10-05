@@ -88,15 +88,12 @@ export function ItemPage({
   seasonId,
   episodeId,
   pickId,
-  playId,
 }: {
   itemId: string;
   seasonId?: string;
   episodeId?: string;
   /** Opens this item's version list as the page arrives. */
   pickId?: string;
-  /** Plays this item as the page arrives, through the list unless it is skipped. */
-  playId?: string;
 }) {
   const { client } = useSession();
   const item = useItem(itemId);
@@ -126,9 +123,7 @@ export function ItemPage({
       data-favourite={data?.UserData?.IsFavorite || undefined}
       className="relative"
     >
-      {(pickId || playId) && (
-        <PickOnArrival itemId={(pickId || playId)!} play={!pickId} />
-      )}
+      {pickId && <PickOnArrival itemId={pickId} />}
       <Backdrop
         images={data ? backdropUrls(client, data, { maxWidth: 1920 }) : []}
         poster={data ? posterUrl(client, data, { maxWidth: 160 }) : null}

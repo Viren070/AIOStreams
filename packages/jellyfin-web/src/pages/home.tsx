@@ -36,6 +36,10 @@ import { FollowHero, Hero } from '../components/hero';
 import { MediaRow } from '../components/media-row';
 import { PosterCard, WideCard } from '../components/cards';
 import { ItemMenu } from '../components/item-menu';
+import {
+  useStraightPlay,
+  useVersionPicker,
+} from '../components/version-picker';
 import { NoCatalogs } from '../components/no-catalogs';
 import { FILL_WINDOW } from '../components/layout';
 import type { BaseItemDto } from '../lib/types';
@@ -209,7 +213,10 @@ export function HomePage() {
   );
 }
 
-/** Resume points and next episodes play from their own page, which stays behind. */
+/**
+ * Resume points and next episodes play from the row, or list their versions
+ * on their own page, which stays behind.
+ */
 function EpisodeRow({
   id,
   title,
@@ -224,6 +231,8 @@ function EpisodeRow({
   loading: boolean;
 }) {
   const { client } = useSession();
+  const picker = useVersionPicker();
+  const straight = useStraightPlay();
   return (
     <MediaRow
       id={id}
@@ -237,7 +246,11 @@ function EpisodeRow({
         return (
           <ItemMenu key={item.Id} item={item}>
             <WideCard
-              onClick={() => navigate(versionsPath(item, { play: true }))}
+              onClick={() => {
+                const startMs = ticksToMs(item.UserData?.PlaybackPositionTicks);
+                if (straight(item, startMs)) picker.play(item, { startMs });
+                else navigate(versionsPath(item));
+              }}
               image={(width) =>
                 landscapeUrls(client, item, { maxWidth: width })
               }

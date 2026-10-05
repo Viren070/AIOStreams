@@ -55,36 +55,39 @@ interface Request {
 interface PickerValue {
   /** Lists the item's versions; nothing is resolved until this is called. */
   open(item: BaseItemDto, opts?: { startMs?: number; playing?: string }): void;
-  /**
-   * What Play does: the list, or a version straight away when the user skips
-   * the list. A hold does the other.
-   */
+  /** What Play does (see `useStraightPlay`); a hold does the other. */
   play(item: BaseItemDto, opts?: { startMs?: number; held?: boolean }): void;
 }
 
 const PickerContext = React.createContext<PickerValue | null>(null);
 
+const rememberedVersion = (item: BaseItemDto, startMs: number) =>
+  startMs > 0 ? lastVersions.get(item.Id!) : undefined;
+
+export function useStraightPlay(): (
+  item: BaseItemDto,
+  startMs: number
+) => boolean {
+  const [autoPlay] = useSetting(settings.autoPlayFirst);
+  return React.useCallback(
+    (item, startMs) => autoPlay || !!rememberedVersion(item, startMs),
+    [autoPlay]
+  );
+}
+
 /** Opens the picker once, then drops `pick` from the address. */
-export function PickOnArrival({
-  itemId,
-  play,
-}: {
-  itemId: string;
-  /** As Play does, which skips the list when the setting says so. */
-  play?: boolean;
-}) {
+export function PickOnArrival({ itemId }: { itemId: string }) {
   const item = useItem(itemId);
   const picker = useVersionPicker();
   const opened = React.useRef(false);
   React.useEffect(() => {
     if (!item.data || opened.current) return;
     opened.current = true;
-    const startMs = ticksToMs(item.data.UserData?.PlaybackPositionTicks);
-    // First, since resuming a remembered version goes straight to the player.
+    picker.open(item.data, {
+      startMs: ticksToMs(item.data.UserData?.PlaybackPositionTicks),
+    });
     navigate(itemPath(item.data), { replace: true });
-    if (play) picker.play(item.data, { startMs });
-    else picker.open(item.data, { startMs });
-  }, [item.data, picker, play]);
+  }, [item.data, picker]);
   return null;
 }
 
@@ -101,35 +104,28 @@ export function VersionPickerProvider({
 }) {
   const [request, setRequest] = React.useState<Request | null>(null);
   const [external, setExternal] = React.useState<BaseItemDto | null>(null);
-  const [skipList] = useSetting(settings.skipVersionList);
+  const straight = useStraightPlay();
   const queryClient = useQueryClient();
   const infoOptions = usePlaybackInfoOptions();
   const playVersion = usePlay();
   const latest = React.useRef({
-    skipList,
+    straight,
     queryClient,
     infoOptions,
     playVersion,
   });
-  latest.current = { skipList, queryClient, infoOptions, playVersion };
+  latest.current = { straight, queryClient, infoOptions, playVersion };
 
   const value = React.useMemo<PickerValue>(() => {
-    const open: PickerValue['open'] = (item, opts) => {
-      const startMs = opts?.startMs ?? 0;
-      const last =
-        startMs > 0 &&
-        !opts?.playing &&
-        !currentHost().play &&
-        chosenPlayer().kind !== 'link'
-          ? lastVersions.get(item.Id!)
-          : undefined;
-      if (last) navigate(to.play(item.Id!, last, startMs));
-      else setRequest({ item, startMs, playing: opts?.playing });
-    };
     // The version last played when resuming, else the first; the list when none plays.
     const playStraight = async (item: BaseItemDto, startMs: number) => {
       const { queryClient, infoOptions, playVersion } = latest.current;
-      const last = startMs > 0 ? lastVersions.get(item.Id!) : undefined;
+      const last = rememberedVersion(item, startMs);
+      // The player page finds the version itself, and lists them if it is gone.
+      if (last && !currentHost().play && chosenPlayer().kind !== 'link') {
+        navigate(to.play(item.Id!, last, startMs));
+        return;
+      }
       const notice = toast.loading('Finding a version…');
       try {
         const info = await queryClient.fetchQuery(infoOptions(item.Id!));
@@ -149,13 +145,17 @@ export function VersionPickerProvider({
       }
     };
     return {
-      open,
+      open: (item, opts) =>
+        setRequest({
+          item,
+          startMs: opts?.startMs ?? 0,
+          playing: opts?.playing,
+        }),
       play: (item, opts) => {
         const startMs = opts?.startMs ?? 0;
-        if (latest.current.skipList !== !!opts?.held)
+        if (latest.current.straight(item, startMs) !== !!opts?.held)
           void playStraight(item, startMs);
-        else if (opts?.held) setRequest({ item, startMs });
-        else open(item, { startMs });
+        else setRequest({ item, startMs });
       },
     };
   }, []);

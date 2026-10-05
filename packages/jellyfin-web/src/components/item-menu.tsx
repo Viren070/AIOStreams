@@ -27,10 +27,32 @@ import {
 } from '../lib/queries';
 import { itemTitle, ticksToMs } from '../lib/format';
 import { itemPath, navigate } from '../lib/paths';
-import { settings, useSetting } from '../lib/settings';
-import { useVersionPicker } from './version-picker';
+import { useStraightPlay, useVersionPicker } from './version-picker';
 import { useHeroTarget } from './hero';
 import type { BaseItemDto } from '../lib/types';
+
+function PlayEntries({ item }: { item: BaseItemDto }) {
+  const picker = useVersionPicker();
+  const resumeMs = ticksToMs(item.UserData?.PlaybackPositionTicks);
+  const straight = useStraightPlay()(item, resumeMs);
+  return (
+    <>
+      <ContextMenuItem
+        data-name="play"
+        onSelect={() => picker.play(item, { startMs: resumeMs })}
+      >
+        <BiPlay /> {resumeMs ? 'Resume' : 'Play'}
+      </ContextMenuItem>
+      <ContextMenuItem
+        data-name={straight ? 'choose-version' : 'play-now'}
+        onSelect={() => picker.play(item, { startMs: resumeMs, held: true })}
+      >
+        {straight ? <BiListUl /> : <BiSkipNext />}
+        {straight ? 'Choose a version' : 'Play straight away'}
+      </ContextMenuItem>
+    </>
+  );
+}
 
 /** Right click, or a long press on touch, for what a card's item offers. */
 export function ItemMenu({
@@ -43,7 +65,6 @@ export function ItemMenu({
   onPage?: boolean;
   children: React.ReactNode;
 }) {
-  const picker = useVersionPicker();
   const heroTarget = useHeroTarget(item);
   const setPlayed = useSetPlayed();
   const setPlayedUpTo = useSetPlayedUpTo();
@@ -56,7 +77,6 @@ export function ItemMenu({
   const played = !!item.UserData?.Played;
   const favorite = !!item.UserData?.IsFavorite;
   const resumeMs = ticksToMs(item.UserData?.PlaybackPositionTicks);
-  const [skipList] = useSetting(settings.skipVersionList);
 
   return (
     <ContextMenu>
@@ -67,25 +87,7 @@ export function ItemMenu({
         <ContextMenuLabel className="line-clamp-1">
           {onPage ? item.Name : itemTitle(item)}
         </ContextMenuLabel>
-        {playable && (
-          <ContextMenuItem
-            data-name="play"
-            onSelect={() => picker.play(item, { startMs: resumeMs })}
-          >
-            <BiPlay /> {resumeMs ? 'Resume' : 'Play'}
-          </ContextMenuItem>
-        )}
-        {playable && (
-          <ContextMenuItem
-            data-name={skipList ? 'choose-version' : 'play-now'}
-            onSelect={() =>
-              picker.play(item, { startMs: resumeMs, held: true })
-            }
-          >
-            {skipList ? <BiListUl /> : <BiSkipNext />}
-            {skipList ? 'Choose a version' : 'Play straight away'}
-          </ContextMenuItem>
-        )}
+        {playable && <PlayEntries item={item} />}
         {!onPage && (
           <ContextMenuItem
             data-name="open"

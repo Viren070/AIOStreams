@@ -199,7 +199,7 @@ function PlaybackSection() {
   const { prefs, update } = usePlaybackPrefs();
   const [seekStep, setSeekStep] = useSetting(settings.seekStep);
   const [volumeStep, setVolumeStep] = useSetting(settings.volumeStep);
-  const [skipList, setSkipList] = useSetting(settings.skipVersionList);
+  const [autoPlay, setAutoPlay] = useSetting(settings.autoPlayFirst);
   const [nextPrompt, setNextPrompt] = useSetting(settings.next.prompt);
   const [nextLead, setNextLead] = useSetting(settings.next.lead);
   const [nextCountdown, setNextCountdown] = useSetting(settings.next.countdown);
@@ -220,14 +220,14 @@ function PlaybackSection() {
       <SettingsCard title="Versions" description={ON_DEVICE}>
         <Switch
           side="right"
-          label="Skip the version list"
+          label="Auto-play the first version"
           help={
-            skipList
-              ? 'Play starts the version you last watched, or the first one. Hold Play to choose instead.'
-              : 'Play lists the versions to choose from. Hold Play to start the first one instead.'
+            autoPlay
+              ? 'Play starts the first version, and resuming goes back to the version you were watching. Hold Play to choose instead.'
+              : 'Play lists the versions to choose from, but resuming goes back to the version you were watching. Hold Play to do the other: start the first version, or list them when resuming.'
           }
-          value={skipList}
-          onValueChange={setSkipList}
+          value={autoPlay}
+          onValueChange={setAutoPlay}
         />
       </SettingsCard>
       <SettingsCard
