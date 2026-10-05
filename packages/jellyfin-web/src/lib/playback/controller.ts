@@ -35,6 +35,10 @@ export interface PlayerState {
 /** What some players add to what a browser's video can do. */
 export type PlayerFeature = 'audio' | 'chapters' | 'stats';
 
+/** Engines that list a file's audio tracks let the page's own video switch them. */
+export const browserFeatures: readonly PlayerFeature[] =
+  'audioTracks' in HTMLMediaElement.prototype ? ['audio'] : [];
+
 /** One set of controls over whichever player the page runs in. */
 export interface PlayerController {
   state: PlayerState;
@@ -134,6 +138,17 @@ export function initialState(source: SourceInfo, startMs: number): PlayerState {
 
 export function trackLabel(stream: MediaStream, n: number): string {
   return stream.DisplayTitle || stream.Title || stream.Language || `Track ${n}`;
+}
+
+/** A track as the player itself lists it. */
+export function ownTrackLabel(
+  title: string | undefined,
+  lang: string | undefined,
+  n: number
+): string {
+  return (
+    [title, lang?.toUpperCase()].filter(Boolean).join(' · ') || `Track ${n}`
+  );
 }
 
 export function ofType(source: SourceInfo, type: MediaStream['Type']) {

@@ -1,5 +1,5 @@
 import type { Host } from '../hosts';
-import type { PlayerFeature } from '../playback/controller';
+import { browserFeatures, type PlayerFeature } from '../playback/controller';
 import { settings, useSetting } from '../settings';
 
 export type ActionGroup = 'general' | 'navigation' | 'player' | 'sync';
@@ -258,7 +258,8 @@ export function actionsFor(input: string): readonly ActionId[] {
 export function worksOn(id: ActionId, host: Host): boolean {
   const { group, needs } = action(id);
   if ((group === 'player' || group === 'sync') && host.play) return false;
-  return !needs || !!host.playerFeatures?.includes(needs);
+  const features = host.usePlayer ? host.playerFeatures : browserFeatures;
+  return !needs || !!features?.includes(needs);
 }
 
 export const groupActions = (group: ActionGroup, host: Host) =>

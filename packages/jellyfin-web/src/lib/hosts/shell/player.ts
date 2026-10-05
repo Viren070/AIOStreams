@@ -17,6 +17,7 @@ import { parseSubtitleLines } from '../../subtitles/cues';
 import { MPV_OUTLINE, mpvColor, subtitleScale } from '../../subtitles/style';
 import {
   initialState,
+  ownTrackLabel,
   storedVolume,
   trackLabel,
   VOLUME_KEY,
@@ -44,11 +45,6 @@ const IMAGE_SUBTITLE_CODECS = new Set([
   'dvd_subtitle',
   'dvb_subtitle',
 ]);
-
-function mpvTrackLabel(track: MpvTrack): string {
-  const parts = [track.title, track.lang?.toUpperCase()].filter(Boolean);
-  return parts.join(' · ') || `Track ${track.id}`;
-}
 
 const EXTERNAL = 'ext:';
 
@@ -359,7 +355,7 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
 
   const toTrack = (t: MpvTrack): Track => ({
     id: String(t.id),
-    label: mpvTrackLabel(t),
+    label: ownTrackLabel(t.title, t.lang, t.id),
   });
   return {
     state: { ...state, subtitle: subtitleId(state.subtitle) },
