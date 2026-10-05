@@ -1,0 +1,47 @@
+---
+title: Private Trackers
+description: How AIOStreams avoids hit-and-runs on private trackers, and how to configure it to never risk one.
+---
+
+Private trackers require every download to be seeded back; failing to do so is a hit-and-run (H&R) and gets accounts banned. AIOStreams never seeds on your behalf and never adds a torrent to your debrid service unless you press play — here's exactly when that happens, and the settings that make it impossible to trigger by accident.
+
+## Search vs. Playback
+
+**Search** (listing results) only checks whether each result's hash is already **cached** on your debrid service, to show the ⚡/⏳ badge. Nothing is added or downloaded — an uncached private result sitting in your list costs you nothing.
+
+**Playback** is the only moment anything is added:
+
+- **Cached** → the debrid service already has it stored from a prior fetch (by any user). Nothing new is downloaded, nothing to seed back.
+- **Uncached** → pressing play makes the debrid service fetch it from the tracker's swarm. This is the only point a seeding obligation can start, and only for the result you clicked.
+
+## Protecting an Uncached Private Torrent
+
+Once an uncached private torrent is added, AIOStreams protects the seed afterwards:
+
+- **Auto Remove Downloads** (Services → Built-in) skips anything flagged `private` — it's never cleaned up out from under you.
+- A losing failover race normally drops the magnet it just added; private torrents are excluded from that cleanup too.
+- **Use torrent download URLs** (`BUILTIN_DEBRID_USE_TORRENT_DOWNLOAD_URL`, instance-level, on by default) prefers a tracker's `.torrent` URL over a bare magnet, since most private trackers embed your passkey there — needed for the debrid service's download to attribute correctly to your account.
+- The `private` flag comes from the indexer's `type="private"` attribute, or, when a `.torrent` had to be downloaded (see below), the BEP27 flag parsed from it directly.
+
+## Hash-less Indexers (a separate, non-H&R issue)
+
+A Torznab/Newznab feed should include each result's hash directly (`torznab:attr infohash` or a magnet enclosure). When it does, AIOStreams never touches the tracker again until playback. When it doesn't, AIOStreams must download the `.torrent` file for **every** candidate result just to get its hash — not only the one you play. That's slower and can trip an indexer's rate limit from the extra request volume (a request-rate problem, not a seeding one).
+
+Use **Test Connection** on a Torznab/Newznab addon to check which case you're in — it flags a missing hash with:
+
+> This indexer may need to download the torrent file for every result, which can affect performance or hit request limits. Consider lowering the results limit if you notice issues.
+
+This only applies to indexers added directly as **Torznab**/**Newznab** — going through NZBHydra2 or Prowlarr means the manager decides whether a hash comes back. Curated mid-to-high-tier trackers rarely hit this in practice — a search returns few results, so even hash-less ones mean few forced downloads.
+
+## Trumping Trackers
+
+Some trackers replace individual episode torrents with a season pack once one is uploaded. For these, set the addon's **Season/Episode Search Strategy** to `Dynamic (Season Preferred)` so AIOStreams still finds the pack after the episodes are pruned, paired with the **Season/Episode Matching** filter to reject mismatches.
+
+## Summary
+
+| Moment                        | AIOStreams does                         | H&R risk                   |
+|-------------------------------|-----------------------------------------|----------------------------|
+| Search                        | Checks cache status only                | None                       |
+| Play, cached                  | Instant playback, nothing fetched       | None                       |
+| Play, uncached                | Debrid fetches from the tracker's swarm | Starts here — seed it back |
+| After an uncached private add | Never auto-removed                      | Protected                  |

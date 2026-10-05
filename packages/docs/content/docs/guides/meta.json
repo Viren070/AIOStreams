@@ -3,6 +3,7 @@
   "pages": [
     "groups",
     "usenet",
+    "private-trackers",
     "sonarr-radarr",
     "release-blocklist",
     "scored-sorting",
