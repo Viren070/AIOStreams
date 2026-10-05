@@ -51,16 +51,15 @@ export const NEWZNAB_INDEXERS: {
     apiKeyUrl: 'https://amenzb.moe/profile',
     remuxDbIndexer: 'amenzb',
   },
-  // AnimeTosho needs no key at all
+  // Neither Anime Tosho requires an API key
   {
-    label: 'AnimeTosho',
+    label: 'Anime Tosho (ARCHIVED)',
     value: 'https://feed.animetosho.org/api',
     remuxDbIndexer: 'animetosho',
   },
   {
-    label: 'AnimeTosho (NEW)',
-    value: 'https://feed.animetosho.xyz/api',
-    apiKeyUrl: 'https://animetosho.xyz/profile',
+    label: 'Anime Tosho (NEW)',
+    value: 'https://feed.animetosho.net/api',
     remuxDbIndexer: 'animetosho',
   },
   {

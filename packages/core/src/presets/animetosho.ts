@@ -9,7 +9,7 @@ export class AnimeToshoPreset extends TorznabPreset {
     const supportedResources = [constants.STREAM_RESOURCE];
     const options: Option[] = [
       ...baseOptions(
-        'AnimeTosho',
+        'Anime Tosho (ARCHIVED)',
         supportedResources,
         appConfig.builtins.animetosho.timeout ??
           appConfig.presets.defaultTimeout
@@ -57,7 +57,7 @@ export class AnimeToshoPreset extends TorznabPreset {
         id: 'useMultipleInstances',
         name: 'Use Multiple Instances',
         description:
-          'AnimeTosho supports multiple services in one instance of the addon - which is used by default. If this is enabled, then the addon will be created for each service.',
+          'Anime Tosho supports multiple services in one instance of the addon - which is used by default. If this is enabled, then the addon will be created for each service.',
         type: 'boolean',
         default: false,
         showInSimpleMode: false,
@@ -66,7 +66,7 @@ export class AnimeToshoPreset extends TorznabPreset {
 
     return {
       ID: 'animetosho',
-      NAME: 'AnimeTosho',
+      NAME: 'Anime Tosho (ARCHIVED)',
       LOGO: '/assets/animetosho_logo.png',
       URL: [appConfig.builtins.animetosho.url],
       TIMEOUT:
@@ -75,7 +75,7 @@ export class AnimeToshoPreset extends TorznabPreset {
       USER_AGENT: appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: StremThruPreset.supportedServices,
       DESCRIPTION:
-        'An addon to get debrid results from AnimeTosho which mirrors most results from Nyaa.si and TokyoTosho.',
+        'An addon to get debrid results from Anime Tosho which mirrors most results from Nyaa.si and TokyoTosho. Anime Tosho stopped accepting new content on 2026-05-09, and its feed server is being shut down in October 2026, after which this addon will stop returning results. Several community projects have picked up where it left off, including Anime Tosho (New), AmeNZB, Aninzb and TsukiHime.',
       OPTIONS: options,
       SUPPORTED_STREAM_TYPES: [constants.DEBRID_STREAM_TYPE],
       SUPPORTED_RESOURCES: supportedResources,

@@ -15,14 +15,6 @@ export class AnimeToshoNewPreset extends TorznabPreset {
           appConfig.presets.defaultTimeout
       ).filter((option) => option.id !== 'url' && option.id !== 'resources'),
       {
-        id: 'apiKey',
-        name: 'API Key',
-        description:
-          'Anime Tosho (New) API key. Register a free account and find this in your [profile settings](https://animetosho.xyz/profile).',
-        type: 'password',
-        required: true,
-      },
-      {
         id: 'services',
         name: 'Services',
         description:
@@ -83,7 +75,7 @@ export class AnimeToshoNewPreset extends TorznabPreset {
       USER_AGENT: appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: StremThruPreset.supportedServices,
       DESCRIPTION:
-        'An addon to get debrid results from Anime Tosho, mirroring Nyaa.si, TokyoTosho and other anime release sources. Requires a free API key.',
+        'An addon to get debrid results from Anime Tosho, mirroring Nyaa.si, TokyoTosho and other anime release sources. One of several community projects that continued after the original Anime Tosho stopped accepting new content.',
       OPTIONS: options,
       SUPPORTED_STREAM_TYPES: [constants.DEBRID_STREAM_TYPE],
       SUPPORTED_RESOURCES: supportedResources,
@@ -102,7 +94,6 @@ export class AnimeToshoNewPreset extends TorznabPreset {
       ...this.getBaseConfig(userData, services),
       url: animeToshoNewUrl,
       apiPath: '/api',
-      apiKey: options.apiKey,
       paginate: false,
     };
 

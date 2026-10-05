@@ -728,7 +728,7 @@ export const builtinsSchema = {
   animeToshoNew: {
     url: {
       schema: urlString,
-      default: 'https://feed.animetosho.xyz',
+      default: 'https://feed.animetosho.net',
       label: 'Anime Tosho (New) URL',
       env: 'BUILTIN_ANIME_TOSHO_NEW_URL',
       description: 'Base URL for the Anime Tosho (New) built-in addon.',
