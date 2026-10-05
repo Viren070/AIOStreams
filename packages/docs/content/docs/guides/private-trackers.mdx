@@ -18,16 +18,16 @@ Private trackers require every download to be seeded back; failing to do so is a
 
 Once an uncached private torrent is added, AIOStreams protects the seed afterwards:
 
-- **Auto Remove Downloads** (Services → Built-in) skips anything flagged `private` — it's never cleaned up out from under you.
-- A losing failover race normally drops the magnet it just added; private torrents are excluded from that cleanup too.
+- **Auto Remove Downloads** (Services → Built-in) skips cleanup for a download the debrid service itself reports as private — the normal case on a private-tracker-aware service like TorBox.
+- A losing failover race's cleanup is slightly more thorough here: it also falls back to the indexer's own private flag if the debrid service didn't report one.
 - **Use torrent download URLs** (`BUILTIN_DEBRID_USE_TORRENT_DOWNLOAD_URL`, instance-level, on by default) prefers a tracker's `.torrent` URL over a bare magnet, since most private trackers embed your passkey there — needed for the debrid service's download to attribute correctly to your account.
-- The `private` flag comes from the indexer's `type="private"` attribute, or, when a `.torrent` had to be downloaded (see below), the BEP27 flag parsed from it directly.
+- The indexer-derived `private` flag comes from the indexer's `type="private"` attribute, or, when a `.torrent` had to be downloaded (see below), the BEP27 flag parsed from it directly — separate from the debrid service's own `private` field that Auto Remove Downloads checks.
 
 ## Hash-less Indexers (a separate, non-H&R issue)
 
 A Torznab/Newznab feed should include each result's hash directly (`torznab:attr infohash` or a magnet enclosure). When it does, AIOStreams never touches the tracker again until playback. When it doesn't, AIOStreams must download the `.torrent` file for **every** candidate result just to get its hash — not only the one you play. That's slower and can trip an indexer's rate limit from the extra request volume (a request-rate problem, not a seeding one).
 
-Use **Test Connection** on a Torznab/Newznab addon to check which case you're in — it flags a missing hash with:
+Use **Test Connection** on a Torznab addon to check which case you're in — it flags a missing hash with:
 
 > This indexer may need to download the torrent file for every result, which can affect performance or hit request limits. Consider lowering the results limit if you notice issues.
 
@@ -39,9 +39,9 @@ Some trackers replace individual episode torrents with a season pack once one is
 
 ## Summary
 
-| Moment                        | AIOStreams does                         | H&R risk                   |
-|-------------------------------|-----------------------------------------|----------------------------|
-| Search                        | Checks cache status only                | None                       |
-| Play, cached                  | Instant playback, nothing fetched       | None                       |
-| Play, uncached                | Debrid fetches from the tracker's swarm | Starts here — seed it back |
-| After an uncached private add | Never auto-removed                      | Protected                  |
+| Moment                        | AIOStreams does                                       | H&R risk                                       |
+|-------------------------------|-------------------------------------------------------|------------------------------------------------|
+| Search                        | Checks cache status only                              | None                                           |
+| Play, cached                  | Instant playback, nothing fetched                     | None                                           |
+| Play, uncached                | Debrid fetches from the tracker's swarm               | Starts here — seed it back                     |
+| After an uncached private add | Skipped when the debrid service reports it as private | Protected (on a private-tracker-aware service) |
