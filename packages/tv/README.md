@@ -34,6 +34,10 @@ changelog through the `chore(tv): update the web app` pull request that moves `w
 forward. The TV Check workflow builds both packages when anything here changes; run it by hand to
 get them as artifacts of the run.
 
+Each release also refreshes the rolling `tv` release, which holds the newest packages as
+`aiostreams-webos.ipk` and `aiostreams-tizen.wgt` (its notes come from `feed-release.md`), and the
+`tv-feed` branch, whose one file is the Homebrew Channel repository for the webOS package.
+
 ## Install
 
 ### webOS
@@ -49,6 +53,10 @@ cd packages/tv
 pnpm exec ares-setup-device   # add the TV: IP, port 9922, the passphrase
 pnpm exec ares-install --device <name> out/io.github.viren070.aiostreams_<version>_all.ipk
 ```
+
+With the [Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel) on the TV, add
+`https://raw.githubusercontent.com/Viren070/AIOStreams/tv-feed/apps.json` as a repository in its
+settings instead: the app then installs and updates from the channel.
 
 ### Tizen
 

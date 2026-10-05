@@ -108,3 +108,63 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE: ${{ inputs.release }}
         run: gh release upload "$RELEASE" "packages/tv/out/$WGT" --clobber
+
+  # A release also refreshes the rolling `tv` release, the newest packages under
+  # names that stay the same, and the Homebrew Channel repository on `tv-feed`.
+  feed:
+    needs: [web, webos, tizen]
+    if: inputs.release != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE: ${{ inputs.release }}
+      VERSION: ${{ needs.web.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            packages/tv/feed-release.md
+            packages/tv/webos/appinfo.json
+          sparse-checkout-cone-mode: false
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: aiostreams-*
+          merge-multiple: true
+          path: feed
+      - run: |
+          repo="https://github.com/${{ github.repository }}"
+          raw="https://raw.githubusercontent.com/${{ github.repository }}"
+          cp "feed/aiostreams-webos-$VERSION.ipk" feed/aiostreams-webos.ipk
+          cp "feed/aiostreams-tizen-$VERSION.wgt" feed/aiostreams-tizen.wgt
+          # The repository points at this release's own copy, which never changes under its hash.
+          jq -n \
+            --slurpfile app packages/tv/webos/appinfo.json \
+            --arg version "$VERSION" \
+            --arg ipk "$repo/releases/download/$RELEASE/aiostreams-webos-$VERSION.ipk" \
+            --arg sha256 "$(sha256sum feed/aiostreams-webos.ipk | cut -d' ' -f1)" \
+            --arg icon "$raw/main/packages/tv/webos/largeIcon.png" \
+            --arg source "$repo" \
+            '$app[0] as $a | {packages: [{
+              id: $a.id, title: $a.title, iconUri: $icon,
+              shortDescription: "The AIOStreams app for LG TVs.",
+              manifest: {
+                id: $a.id, version: $version, type: $a.type, title: $a.title, iconUri: $icon,
+                sourceUrl: $source, rootRequired: false, ipkUrl: $ipk, ipkHash: {sha256: $sha256}
+              }
+            }]}' >feed/apps.json
+          # The channel fetches it across origins, which release downloads refuse.
+          mkdir branch && cp feed/apps.json branch/
+          git -C branch init -q
+          git -C branch add apps.json
+          git -C branch -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -qm "webOS repository for $RELEASE"
+          git -C branch push -qf "https://x-access-token:$GH_TOKEN@github.com/${{ github.repository }}" HEAD:refs/heads/tv-feed
+          sed -e "s|@BASE@|$repo/releases/download/tv|g" \
+            -e "s|@REPOSITORY@|$raw/tv-feed/apps.json|g" \
+            packages/tv/feed-release.md >notes.md
+          if gh release view tv >/dev/null 2>&1; then
+            gh release edit tv --title "TV apps" --notes-file notes.md
+          else
+            gh release create tv --latest=false --title "TV apps" --notes-file notes.md
+          fi
+          gh release upload tv feed/aiostreams-webos.ipk feed/aiostreams-tizen.wgt --clobber
