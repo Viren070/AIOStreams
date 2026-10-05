@@ -190,13 +190,34 @@ export function packInfo(json: string): Buffer {
   ]);
 }
 
-export function unpackInfo(value: string | Buffer | Uint8Array): string {
+/** `maxBytes` caps the inflated size, for records from another instance. */
+export function unpackInfo(
+  value: string | Buffer | Uint8Array,
+  maxBytes?: number
+): string {
   if (typeof value === 'string') return value;
   const bytes = Buffer.isBuffer(value) ? value : Buffer.from(value);
   if (bytes[0] === PACKED) {
     return inflateRawSync(bytes.subarray(1), {
       dictionary: DICTIONARY,
+      ...(maxBytes ? { maxOutputLength: maxBytes } : {}),
     }).toString('utf8');
   }
   return bytes.toString('utf8');
+}
+
+/** A stored record as packed bytes, packing one written before packing. */
+export function asPacked(value: string | Buffer | Uint8Array): Buffer {
+  if (typeof value !== 'string' && value[0] === PACKED) {
+    return Buffer.isBuffer(value) ? value : Buffer.from(value);
+  }
+  return packInfo(unpackInfo(value));
+}
+
+/** {@link asPacked} for a stored record already in base64, line breaks and all. */
+export function asPackedBase64(stored: string): string {
+  const base64 = stored.replaceAll('\n', '');
+  return Buffer.from(base64.slice(0, 4), 'base64')[0] === PACKED
+    ? base64
+    : asPacked(Buffer.from(base64, 'base64')).toString('base64');
 }

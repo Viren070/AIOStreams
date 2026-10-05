@@ -34,7 +34,11 @@ router.post('/lookup', async (req, res, next) => {
   }
   try {
     const rows = await sharedRows(parsed.data.keys);
-    res.status(200).json(createResponse({ success: true, data: { rows } }));
+    // Not res.json: a POST is never revalidated, so its ETag hash is wasted.
+    res
+      .status(200)
+      .type('json')
+      .end(JSON.stringify(createResponse({ success: true, data: { rows } })));
   } catch (err) {
     next(err);
   }

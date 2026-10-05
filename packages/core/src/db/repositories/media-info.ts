@@ -1,6 +1,11 @@
 import { getDb } from '../db.js';
-import { join, sql } from '../sql.js';
-import { packInfo, unpackInfo } from './media-info-codec.js';
+import { join, raw, sql, type SqlFragment } from '../sql.js';
+import {
+  asPacked,
+  asPackedBase64,
+  packInfo,
+  unpackInfo,
+} from './media-info-codec.js';
 import {
   MEDIA_INFO_VERSION,
   type MediaInfoRecord,
@@ -14,6 +19,8 @@ export type MediaInfoOrigin = 'local' | 'stremthru' | 'realdebrid';
 export type StoredFile = Omit<MediaInfoRow, 'info'> & {
   info?: MediaInfoRecord;
 };
+
+export type PackedRow = Omit<MediaInfoRow, 'info'> & { packed: string };
 
 export interface MediaInfoRow {
   releaseKey: string;
@@ -40,6 +47,13 @@ interface DbRow {
 }
 
 const CHUNK = 200;
+
+// Postgres parses and plans one array parameter faster than a list of them.
+function keyIn(keys: string[]): SqlFragment {
+  return getDb().dialect === 'postgres'
+    ? sql`release_key = ANY(${keys}::text[])`
+    : sql`release_key IN (${join(keys.map((k) => sql`${k}`))})`;
+}
 export const LIST_COUNT_CAP = 10_000;
 const EMPTY: MediaInfoRecord = { chapters: false, tracks: [] };
 
@@ -99,16 +113,42 @@ function keysOf(search: string): string[] | undefined {
 
 export class MediaInfoRepository {
   static async getByKeys(releaseKeys: string[]): Promise<MediaInfoRow[]> {
+    return (await this.rowsByKeys(releaseKeys)).map(toRow);
+  }
+
+  /** Records left packed, in base64, as another instance reads them. */
+  static async getPackedByKeys(releaseKeys: string[]): Promise<PackedRow[]> {
+    const pg = getDb().dialect === 'postgres';
+    // Postgres sends bytea as hex text, twice the bytes, to be decoded here.
+    const info = raw(pg ? `encode(info, 'base64')` : 'info');
+    return (await this.rowsByKeys(releaseKeys, info)).map((r) => ({
+      releaseKey: r.release_key,
+      file: r.file,
+      origin: r.origin,
+      releaseFiles: Number(r.release_files),
+      size: r.size === null ? null : Number(r.size),
+      packed: pg
+        ? asPackedBase64(r.info as string)
+        : asPacked(r.info).toString('base64'),
+      version: Number(r.version),
+      title: r.title,
+    }));
+  }
+
+  private static async rowsByKeys(
+    releaseKeys: string[],
+    info = raw('info')
+  ): Promise<DbRow[]> {
     const wanted = [...new Set(releaseKeys.filter(Boolean))];
-    const out: MediaInfoRow[] = [];
+    const out: DbRow[] = [];
     for (let i = 0; i < wanted.length; i += CHUNK) {
-      const list = join(wanted.slice(i, i + CHUNK).map((k) => sql`${k}`));
-      const rows = await getDb().query<DbRow>(
-        sql`SELECT release_key, file, origin, release_files, size, info,
-                   version, title
-              FROM media_info WHERE release_key IN (${list})`
+      out.push(
+        ...(await getDb().query<DbRow>(
+          sql`SELECT release_key, file, origin, release_files, size,
+                     ${info} AS info, version, title
+                FROM media_info WHERE ${keyIn(wanted.slice(i, i + CHUNK))}`
+        ))
       );
-      for (const row of rows) out.push(toRow(row));
     }
     return out;
   }
@@ -118,11 +158,10 @@ export class MediaInfoRepository {
     const wanted = [...new Set(releaseKeys.filter(Boolean))];
     const out: StoredFile[] = [];
     for (let i = 0; i < wanted.length; i += CHUNK) {
-      const list = join(wanted.slice(i, i + CHUNK).map((k) => sql`${k}`));
       const rows = await getDb().query<DbRow>(
         sql`SELECT release_key, file, origin, release_files, size, version,
                    title
-              FROM media_info WHERE release_key IN (${list})`
+              FROM media_info WHERE ${keyIn(wanted.slice(i, i + CHUNK))}`
       );
       for (const r of rows) {
         out.push({
@@ -268,13 +307,13 @@ export class MediaInfoRepository {
     const counts = new Map<string, number>();
     const keys = [...new Set(nzbHashes)].map((h) => `nh1:${h}`);
     for (let i = 0; i < keys.length; i += CHUNK) {
-      const list = join(keys.slice(i, i + CHUNK).map((k) => sql`${k}`));
       const rows = await getDb().query<{
         release_key: string;
         n: number | string;
       }>(
         sql`SELECT release_key, COUNT(*) AS n FROM media_info
-             WHERE release_key IN (${list}) AND origin = ${LOCAL_ORIGIN}
+             WHERE ${keyIn(keys.slice(i, i + CHUNK))}
+               AND origin = ${LOCAL_ORIGIN}
              GROUP BY release_key`
       );
       for (const r of rows) counts.set(r.release_key.slice(4), Number(r.n));
