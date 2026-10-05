@@ -31,7 +31,20 @@ export function contentDispositionName(
     }
   }
   const plain = /filename\s*=\s*"?([^";]+)"?/i.exec(header);
-  return plain?.[1]?.trim() || undefined;
+  const name = plain?.[1]?.trim();
+  return name ? fromHeaderBytes(name) : undefined;
+}
+
+const utf8 = new TextDecoder('utf-8', { fatal: true });
+
+/** Header values arrive a byte per character, but most stores send UTF-8. */
+function fromHeaderBytes(value: string): string {
+  if (!/[\x80-\xff]/.test(value) || /[^\x00-\xff]/.test(value)) return value;
+  try {
+    return utf8.decode(Buffer.from(value, 'latin1'));
+  } catch {
+    return value;
+  }
 }
 
 /** A video file's name in the URL path, as most stores' links carry it. */
