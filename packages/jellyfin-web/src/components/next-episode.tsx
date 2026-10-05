@@ -30,6 +30,10 @@ function dismissNotice() {
 const MIN_DURATION_MS = 40_000;
 /** Credits count as the end when they finish this close to it. */
 const CREDITS_TAIL_MS = 30_000;
+/** How long before the next episode comes up its versions are looked up. */
+const LIST_LEAD_MS = 2 * 60_000;
+/** With no prompt, how long before the end the version that plays on is opened. */
+const OPEN_LEAD_MS = 30_000;
 
 /**
  * When the prompt shows: at the credits when they end the video, else `lead`
@@ -161,9 +165,33 @@ export function useNextEpisodePrompt({
     [playEpisode, previous]
   );
 
+  // Naming a version opens its stream on some servers, so that waits until it plays on.
+  const comesUpAt = at ?? durationMs;
+  const listDue =
+    !!next &&
+    durationMs >= MIN_DURATION_MS &&
+    (at !== null || autoplay) &&
+    positionMs >= comesUpAt - LIST_LEAD_MS;
+  const openDue =
+    listDue && autoplay && positionMs >= (at ?? durationMs - OPEN_LEAD_MS);
   React.useEffect(() => {
-    if (shown && next) void queryClient.prefetchQuery(infoOptions(next.Id!));
-  }, [shown, next, queryClient, infoOptions]);
+    if (listDue && next) void queryClient.prefetchQuery(infoOptions(next.Id!));
+  }, [listDue, next, queryClient, infoOptions]);
+  React.useEffect(() => {
+    if (!openDue || !next) return;
+    let current = true;
+    queryClient
+      .fetchQuery(infoOptions(next.Id!))
+      .then((info) => {
+        const target = carryOn(playableSources(info), source, fallbackFirst);
+        if (current && target)
+          void queryClient.prefetchQuery(infoOptions(next.Id!, target.Id!));
+      })
+      .catch(() => {});
+    return () => {
+      current = false;
+    };
+  }, [openDue, next, queryClient, infoOptions, source, fallbackFirst]);
 
   // A player with a playlist of its own gets the next episode once this one plays.
   const queueNext = useLatest(player.queueNext);
