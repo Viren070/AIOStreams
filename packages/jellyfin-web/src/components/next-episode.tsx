@@ -9,7 +9,13 @@ import { episodeCode, itemSubtitle, ticksToMs } from '../lib/format';
 import { navigate, to, versionsPath } from '../lib/paths';
 import { playableSources } from '../lib/playback/play';
 import { streamUrl } from '../lib/playback/stream';
-import { focusOn, keyboardFocus, useAction } from '../lib/input';
+import {
+  focusOn,
+  inputCount,
+  keyboardFocus,
+  noteInput,
+  useAction,
+} from '../lib/input';
 import { settings, useSetting, type NextPrompt } from '../lib/settings';
 import { usePlaybackPrefs } from '../lib/user-config';
 import { useLatest } from '../lib/use-latest';
@@ -79,20 +85,45 @@ function resumeMs(item: BaseItemDto): number {
     : ticksToMs(item.UserData?.PlaybackPositionTicks);
 }
 
+/** Episodes the player moved on to by itself since the last input it saw. */
+const unattended = { episodes: 0, inputs: -1 };
+
+function unattendedEpisodes(): number {
+  const inputs = inputCount();
+  if (inputs !== unattended.inputs) {
+    unattended.episodes = 0;
+    unattended.inputs = inputs;
+  }
+  return unattended.episodes;
+}
+
+export function countPlayedOn(): void {
+  unattendedEpisodes();
+  unattended.episodes++;
+}
+
+/** Whether playing on now would make `limit` episodes in a row with nobody there. */
+function asksFirst(limit: number): boolean {
+  return limit > 0 && unattendedEpisodes() + 1 >= limit;
+}
+
 /**
  * Offers the next episode near the end, counting down to it when the user
- * lets episodes play on. `playNext` also serves the end of the file.
+ * lets episodes play on, and asks whether anyone is still watching after a
+ * run of them. `playOn` serves the end of the file.
  */
 export function useNextEpisodePrompt({
   item,
   source,
   player,
   segments,
+  onBack,
 }: {
   item: BaseItemDto;
   source: SourceInfo;
   player: PlayerController;
   segments: MediaSegmentDto[] | null | undefined;
+  onBack: () => void;
 }) {
   const { client } = useSession();
   const queryClient = useQueryClient();
@@ -104,6 +135,7 @@ export function useNextEpisodePrompt({
   const [lead] = useSetting(settings.next.lead);
   const [countdown] = useSetting(settings.next.countdown);
   const [fallbackFirst] = useSetting(settings.next.fallbackFirst);
+  const [stillWatching] = useSetting(settings.next.stillWatching);
   const { prefs } = usePlaybackPrefs();
   const autoplay = prefs.EnableNextEpisodeAutoPlay !== false;
   const { positionMs, durationMs, paused } = player.state;
@@ -114,7 +146,8 @@ export function useNextEpisodePrompt({
   const [dismissed, setDismissed] = React.useState(false);
   // Seeking back before the prompt brings it back next time.
   if (!due && dismissed) setDismissed(false);
-  const shown = due && !dismissed;
+  const [asking, setAsking] = React.useState(false);
+  const shown = due && !dismissed && !asking;
 
   const leaving = React.useRef(false);
   // The latest press wins; a lookup it overtook is dropped when it lands.
@@ -165,6 +198,30 @@ export function useNextEpisodePrompt({
     [playEpisode, previous]
   );
 
+  const latestPlayer = useLatest(player);
+  const playOn = React.useCallback(
+    ({ pause = false } = {}) => {
+      if (!next) return Promise.resolve(false);
+      if (asksFirst(stillWatching)) {
+        const { state, togglePlay } = latestPlayer.current;
+        if (pause && !state.paused) togglePlay();
+        setAsking(true);
+        return Promise.resolve(true);
+      }
+      countPlayedOn();
+      return playNext();
+    },
+    [next, stillWatching, playNext, latestPlayer]
+  );
+
+  // A player in its own window takes input there; its pauses are what the page sees of it.
+  const external = !!player.external;
+  const wasPaused = React.useRef(paused);
+  React.useEffect(() => {
+    if (external && wasPaused.current !== paused) noteInput();
+    wasPaused.current = paused;
+  }, [external, paused]);
+
   // Naming a version opens its stream on some servers, so that waits until it plays on.
   const comesUpAt = at ?? durationMs;
   const listDue =
@@ -173,7 +230,10 @@ export function useNextEpisodePrompt({
     (at !== null || autoplay) &&
     positionMs >= comesUpAt - LIST_LEAD_MS;
   const openDue =
-    listDue && autoplay && positionMs >= (at ?? durationMs - OPEN_LEAD_MS);
+    listDue &&
+    autoplay &&
+    !asksFirst(stillWatching) &&
+    positionMs >= (at ?? durationMs - OPEN_LEAD_MS);
   React.useEffect(() => {
     if (listDue && next) void queryClient.prefetchQuery(infoOptions(next.Id!));
   }, [listDue, next, queryClient, infoOptions]);
@@ -195,7 +255,11 @@ export function useNextEpisodePrompt({
 
   // A player with a playlist of its own gets the next episode once this one plays.
   const queueNext = useLatest(player.queueNext);
-  const canQueue = !!player.queueNext && autoplay && player.state.started;
+  const canQueue =
+    !!player.queueNext &&
+    autoplay &&
+    player.state.started &&
+    !asksFirst(stillWatching);
   React.useEffect(() => {
     if (!canQueue || !next) return;
     let current = true;
@@ -237,8 +301,8 @@ export function useNextEpisodePrompt({
     return () => clearInterval(timer);
   }, [counting]);
   React.useEffect(() => {
-    if (counting && leftMs <= 0) void playNext();
-  }, [counting, leftMs, playNext]);
+    if (counting && leftMs <= 0) void playOn({ pause: true });
+  }, [counting, leftMs, playOn]);
 
   // While it shows, it stands in for the skip button, and Back from it hides it.
   const card = React.useRef<HTMLDivElement>(null);
@@ -264,7 +328,14 @@ export function useNextEpisodePrompt({
 
   const image = next ? landscapeUrl(client, next, { maxWidth: 320 }) : null;
   const element =
-    shown && next ? (
+    asking && next ? (
+      <StillWatching
+        next={next}
+        loading={loading === 'next'}
+        onContinue={() => void playNext()}
+        onBack={onBack}
+      />
+    ) : shown && next ? (
       <div
         ref={card}
         data-ui="next-episode-card"
@@ -323,11 +394,74 @@ export function useNextEpisodePrompt({
 
   return {
     element,
+    asking,
     next,
     previous,
     autoplay,
     playNext,
+    playOn,
     playPrevious,
     loading,
   };
+}
+
+function StillWatching({
+  next,
+  loading,
+  onContinue,
+  onBack,
+}: {
+  next: BaseItemDto;
+  loading: boolean;
+  onContinue: () => void;
+  onBack: () => void;
+}) {
+  const { client } = useSession();
+  const image = landscapeUrl(client, next, { maxWidth: 480 });
+  useAction('back', onBack);
+  return (
+    <div
+      data-ui="still-watching"
+      className="fixed inset-0 z-30 flex items-center justify-center bg-black/80 p-6 duration-300 animate-in fade-in-0"
+    >
+      <div className="w-full max-w-sm space-y-5 text-center">
+        {image && (
+          <img
+            data-ui="still-watching-image"
+            src={image}
+            alt=""
+            className="aspect-video w-full rounded-xl object-cover"
+          />
+        )}
+        <div className="space-y-1">
+          <p className="text-2xl font-semibold">Are you still watching?</p>
+          <p className="line-clamp-2 text-sm text-[--muted]">
+            Up next: {itemSubtitle(next)}
+          </p>
+        </div>
+        <div className="flex flex-col justify-center gap-2 sm:flex-row">
+          <Button
+            data-ui="still-watching-action"
+            data-name="continue"
+            intent="white"
+            className="rounded-full"
+            loading={loading}
+            autoFocus
+            onClick={onContinue}
+          >
+            Continue watching
+          </Button>
+          <Button
+            data-ui="still-watching-action"
+            data-name="back"
+            intent="gray-outline"
+            className="rounded-full"
+            onClick={onBack}
+          >
+            Back
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
 }

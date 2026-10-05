@@ -86,6 +86,7 @@ import {
   MAX_FEATURED,
   NEXT_COUNTDOWNS,
   NEXT_LEADS,
+  STILL_WATCHING_AFTER,
   SEEK_STEPS,
   VOLUME_STEPS,
   SEGMENT_ACTIONS,
@@ -206,6 +207,10 @@ function PlaybackSection() {
   const [nextFallbackFirst, setNextFallbackFirst] = useSetting(
     settings.next.fallbackFirst
   );
+  const [stillWatching, setStillWatching] = useSetting(
+    settings.next.stillWatching
+  );
+  const autoplay = prefs.EnableNextEpisodeAutoPlay !== false;
   const [hardwareDecoding, setHardwareDecoding] = useSetting(
     settings.desktop.hardwareDecoding
   );
@@ -242,7 +247,7 @@ function PlaybackSection() {
               ? 'Counts down, then plays the next episode in the same kind of version. Off, the prompt waits for you.'
               : 'Counts down, then plays the next episode. Off, the prompt waits for you.'
           }
-          value={prefs.EnableNextEpisodeAutoPlay !== false}
+          value={autoplay}
           onValueChange={(v) => update({ EnableNextEpisodeAutoPlay: v })}
         />
         <Switch
@@ -299,6 +304,18 @@ function PlaybackSection() {
             }))}
             value={String(nextCountdown)}
             onValueChange={(v) => setNextCountdown(Number(v))}
+          />
+        )}
+        {autoplay && (
+          <Select
+            label="Ask if you are still watching"
+            help="Pauses and asks before the next episode once this many have played in a row without a key, click or button press."
+            options={STILL_WATCHING_AFTER.map((n) => ({
+              value: String(n),
+              label: n ? `After ${n} episodes` : 'Never',
+            }))}
+            value={String(stillWatching)}
+            onValueChange={(v) => setStillWatching(Number(v))}
           />
         )}
       </SettingsCard>

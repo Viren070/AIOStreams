@@ -366,6 +366,8 @@ export const NEXT_PROMPTS = ['credits', 'end', 'off'] as const;
 export type NextPrompt = (typeof NEXT_PROMPTS)[number];
 export const NEXT_LEADS = [15, 30, 45, 60, 90, 120] as const;
 export const NEXT_COUNTDOWNS = [5, 10, 15, 30] as const;
+/** Episodes in a row with no input before asking; 0 never asks. */
+export const STILL_WATCHING_AFTER = [0, 2, 3, 4, 5, 8] as const;
 
 const subtitle = {
   size: device<SubtitleSize>(
@@ -527,6 +529,11 @@ export const settings = {
       NEXT_COUNTDOWNS
     ),
     fallbackFirst: device<boolean>('aiostreams-web-next-fallback-first', true),
+    stillWatching: device<number>(
+      'aiostreams-web-still-watching',
+      3,
+      STILL_WATCHING_AFTER
+    ),
   },
 };
 

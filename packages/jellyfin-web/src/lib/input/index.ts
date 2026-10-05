@@ -12,8 +12,10 @@ export {
   type ActionId,
 } from './actions';
 export {
+  inputCount,
   mediaKeyJustTaken,
   movesFocus,
+  noteInput,
   onAction,
   record,
   runAction,

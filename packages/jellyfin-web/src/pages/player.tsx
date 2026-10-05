@@ -40,7 +40,10 @@ import { usePlaybackPrefs, type PlaybackPrefs } from '../lib/user-config';
 import { backdropUrl } from '../lib/images';
 import { goBack, navigate, to, versionsPath } from '../lib/paths';
 import { PlayerControls } from '../components/player-controls';
-import { useNextEpisodePrompt } from '../components/next-episode';
+import {
+  countPlayedOn,
+  useNextEpisodePrompt,
+} from '../components/next-episode';
 import {
   useVersionPicker,
   VersionPickerProvider,
@@ -161,7 +164,7 @@ function useEnded(item: BaseItemDto, close?: () => void) {
   const connect = (next: ReturnType<typeof useNextEpisodePrompt>) => {
     ended.current = () => {
       if (!next.autoplay || !next.next) return back();
-      void next.playNext().then((ok) => {
+      void next.playOn().then((ok) => {
         if (!ok) back();
       });
     };
@@ -400,6 +403,7 @@ function BrowserPlayer({
     source,
     player,
     segments: segments.data?.Items,
+    onBack: back,
   });
   connect(next);
   const switchVersion = useSwitchVersion(item, source, player);
@@ -446,17 +450,19 @@ function BrowserPlayer({
         />
       ) : (
         <>
-          <PlayerControls
-            item={item}
-            player={player}
-            segments={segments.data?.Items}
-            onBack={back}
-            offeringNext={!!next.element}
-            onVersions={switchVersion}
-            onPrevious={next.previous ? next.playPrevious : undefined}
-            onNext={next.next ? next.playNext : undefined}
-            loadingEpisode={next.loading}
-          />
+          {!next.asking && (
+            <PlayerControls
+              item={item}
+              player={player}
+              segments={segments.data?.Items}
+              onBack={back}
+              offeringNext={!!next.element}
+              onVersions={switchVersion}
+              onPrevious={next.previous ? next.playPrevious : undefined}
+              onNext={next.next ? next.playNext : undefined}
+              loadingEpisode={next.loading}
+            />
+          )}
           {next.element}
         </>
       )}
@@ -521,10 +527,12 @@ function NativePlayer({
     startMs,
     onEnded,
     onClosed: back,
-    onAdvance: (episode) =>
+    onAdvance: (episode) => {
+      countPlayedOn();
       navigate(to.play(episode.itemId, episode.source.Id!, episode.startMs), {
         replace: true,
-      }),
+      });
+    },
     prefs,
     subtitleStyle,
     launched,
@@ -540,6 +548,7 @@ function NativePlayer({
     source,
     player,
     segments,
+    onBack: back,
   });
   connect(next);
   const switchVersion = useSwitchVersion(item, source, player);
@@ -574,17 +583,19 @@ function NativePlayer({
         />
       ) : (
         <>
-          <PlayerControls
-            item={item}
-            player={player}
-            segments={segments}
-            onBack={back}
-            offeringNext={!!next.element}
-            onVersions={switchVersion}
-            onPrevious={next.previous ? next.playPrevious : undefined}
-            onNext={next.next ? next.playNext : undefined}
-            loadingEpisode={next.loading}
-          />
+          {!next.asking && (
+            <PlayerControls
+              item={item}
+              player={player}
+              segments={segments}
+              onBack={back}
+              offeringNext={!!next.element}
+              onVersions={switchVersion}
+              onPrevious={next.previous ? next.playPrevious : undefined}
+              onNext={next.next ? next.playNext : undefined}
+              loadingEpisode={next.loading}
+            />
+          )}
           {next.element}
         </>
       )}

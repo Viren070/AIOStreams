@@ -72,7 +72,17 @@ let keys = false;
 /** Whether keys, a remote or a gamepad came last, rather than a pointer. */
 export const usingKeys = () => keys;
 
+let inputs = 0;
+
+/** Grows with every press, click or turn of the wheel: someone is there. */
+export const inputCount = () => inputs;
+
+export function noteInput(): void {
+  inputs++;
+}
+
 const onPointer = () => {
+  inputs++;
   keys = false;
   markPointerFocus(true);
 };
@@ -92,6 +102,7 @@ export function record(listener: (input: string) => void): () => void {
 const worksInDialogs = (id: ActionId) => id === 'back' || id.startsWith('nav.');
 
 export function dispatch(input: string, repeat = false): boolean {
+  inputs++;
   // The wheel is a pointer's.
   if (!input.startsWith('Wheel')) keys = true;
   if (recorder) {
@@ -220,6 +231,7 @@ function onKey(e: KeyboardEvent, early: boolean): void {
   const input = keyInput(e);
   if (!input) return;
   keys = true;
+  if (early) inputs++;
   if (early && takesHold(e, input)) return;
   if (recorder) {
     if (!early) return;

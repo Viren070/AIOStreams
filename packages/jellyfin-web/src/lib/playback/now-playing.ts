@@ -1,6 +1,6 @@
 import React from 'react';
 import { currentHost } from '../hosts';
-import { mediaKeyJustTaken } from '../input';
+import { mediaKeyJustTaken, noteInput } from '../input';
 import type { MediaKey } from '../hosts/shell/bridge';
 import { itemSubtitle, itemTitle } from '../format';
 import { landscapeUrl, posterUrl } from '../images';
@@ -59,6 +59,7 @@ export function useNowPlaying(
   const latest = useLatest({ player, actions });
   const press = React.useCallback((key: MediaKey) => {
     if (mediaKeyJustTaken()) return;
+    noteInput();
     const { player, actions } = latest.current;
     const { paused, positionMs, durationMs } = player.state;
     switch (key.action) {
