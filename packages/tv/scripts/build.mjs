@@ -1,9 +1,17 @@
 // The manifests carry no version; package.json's is written in.
 import { spawnSync } from 'node:child_process';
-import { cpSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  cpSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { createRequire } from 'node:module';
-import { dirname, join } from 'node:path';
+import { dirname, join, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { zipSync } from 'fflate';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const platform = process.argv[2];
@@ -34,6 +42,26 @@ function stageApp(manifest, withVersion) {
   return stage;
 }
 
+function sign(stage, profile) {
+  // The CLI resolves relative paths against its own folder. On Windows it is a
+  // batch file, so it runs in a shell, which needs the paths quoted.
+  const shell = process.platform === 'win32';
+  const path = (p) => (shell ? `"${p}"` : p);
+  const args = ['package', '-t', 'wgt', '-s', profile, '-o', path(out)];
+  run('tizen', [...args, '--', path(stage)], { shell });
+}
+
+// Installers sign it for each TV with that TV's own certificate.
+function writeUnsigned(stage, file) {
+  const files = {};
+  for (const name of readdirSync(stage, { recursive: true })) {
+    const path = join(stage, name);
+    if (statSync(path).isFile())
+      files[name.split(sep).join('/')] = readFileSync(path);
+  }
+  writeFileSync(file, zipSync(files));
+}
+
 if (platform === 'webos') {
   const stage = stageApp('appinfo.json', (text) => {
     const { id, ...rest } = JSON.parse(text);
@@ -50,23 +78,12 @@ if (platform === 'webos') {
     '--no-minify',
   ]);
 } else if (platform === 'tizen') {
-  const profile = process.env.TIZEN_PROFILE;
-  if (!profile) {
-    console.error('Set TIZEN_PROFILE to a Tizen security profile (README.md).');
-    process.exit(1);
-  }
   const stage = stageApp('config.xml', (text) =>
     text.replace('<widget ', `<widget version="${version}" `)
   );
-  // The CLI resolves relative paths against its own folder. On Windows it is a
-  // batch file, so it runs in a shell, which needs the paths quoted.
-  const shell = process.platform === 'win32';
-  const path = (p) => (shell ? `"${p}"` : p);
-  run(
-    'tizen',
-    ['package', '-t', 'wgt', '-s', profile, '-o', path(out), '--', path(stage)],
-    { shell }
-  );
+  const profile = process.env.TIZEN_PROFILE;
+  if (profile) sign(stage, profile);
+  else writeUnsigned(stage, join(out, 'AIOStreams.wgt'));
 } else {
   console.error('Usage: node scripts/build.mjs <webos|tizen>');
   process.exit(1);

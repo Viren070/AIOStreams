@@ -11,15 +11,16 @@ Expect 2023 or newer TVs (webOS 23, Tizen 7). Older engines lack CSS the app use
 ## Build
 
 ```sh
-pnpm -F @aiostreams/tv build:webos                       # out/io.github.viren070.aiostreams_<version>_all.ipk
-TIZEN_PROFILE=<profile> pnpm -F @aiostreams/tv build:tizen  # out/AIOStreams.wgt
+pnpm -F @aiostreams/tv build:webos   # out/io.github.viren070.aiostreams_<version>_all.ipk
+pnpm -F @aiostreams/tv build:tizen   # out/AIOStreams.wgt
 ```
 
 Both build the web app first. The version comes from `package.json` and is written into the
 manifest (`webos/appinfo.json`, `tizen/config.xml`), which carries none itself.
 
-The Tizen build needs Tizen Studio's `tizen` command on `PATH` and a security profile to sign
-with, named by `TIZEN_PROFILE`.
+The `.wgt` is unsigned. A Samsung TV only installs a package signed for that TV, so whatever
+installs it signs it first (below). With `TIZEN_PROFILE` set to a Tizen Studio security profile,
+the build signs it with that profile instead, through Tizen Studio's `tizen` command.
 
 ## Releases
 
@@ -29,12 +30,6 @@ requests), and the TV Release workflow attaches `aiostreams-webos-<version>.ipk`
 changelog through the `chore(tv): update the web app` pull request that moves `web-app.lock`
 forward. The TV Check workflow builds both packages when anything here changes; run it by hand to
 get them as artifacts of the run.
-
-CI signs the `.wgt` with the `TIZEN_AUTHOR_KEY` secret (a base64 author `.p12`) and
-`TIZEN_AUTHOR_PASSWORD` (make it 27 letters: the Tizen CLI misreads some passwords), or a one-off
-author certificate when they are missing. Either way a TV
-needs it re-signed for itself (below), so the author only matters for keeping one identity across
-releases.
 
 ## Install
 
@@ -55,7 +50,7 @@ pnpm exec ares-install --device <name> out/io.github.viren070.aiostreams_<versio
 ### Tizen
 
 A Samsung TV in developer mode installs a `.wgt` only when it is signed with a Samsung certificate
-that lists that TV's device ID (DUID), so one signed file can't serve everyone.
+that lists that TV's device ID (DUID), so releases ship it unsigned.
 
 - **Apps2Samsung** does all of it: pick **Custom WGT File** in its release list and choose the
   `.wgt`. It signs the app with a certificate made from your Samsung account for that TV.

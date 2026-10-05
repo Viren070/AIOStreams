@@ -21,4 +21,3 @@ jobs:
   build:
     if: "${{ !startsWith(github.head_ref, 'release-please--') && !startsWith(github.event.head_commit.message, 'chore(tv): release ') }}"
     uses: ./.github/workflows/tv-build.yml
-    secrets: inherit

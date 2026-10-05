@@ -17,4 +17,3 @@ jobs:
     uses: ./.github/workflows/tv-build.yml
     with:
       release: ${{ inputs.tag }}
-    secrets: inherit

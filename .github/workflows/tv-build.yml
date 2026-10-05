@@ -11,9 +11,6 @@ on:
         type: string
         default: ''
 
-env:
-  TIZEN_STUDIO_VERSION: '6.1'
-
 jobs:
   # The page both packages hold, built once.
   web:
@@ -82,72 +79,25 @@ jobs:
   tizen:
     needs: web
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 10
     env:
       WGT: aiostreams-tizen-${{ needs.web.outputs.version }}.wgt
     steps:
       - uses: actions/checkout@v7
-        with:
-          sparse-checkout: packages/tv
+      - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
           node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter @aiostreams/tv
       - uses: actions/download-artifact@v8
         with:
           name: tv-web
           path: packages/jellyfin-web/dist-standalone
-      # Tizen's download server is slow, and the installer only changes with its version.
-      - id: installer
-        uses: actions/cache@v6
-        with:
-          path: ~/tizen-studio-cli.bin
-          key: tizen-studio-cli-${{ env.TIZEN_STUDIO_VERSION }}
-      - if: steps.installer.outputs.cache-hit != 'true'
-        run: |
-          curl -fsSL --retry 3 -o ~/tizen-studio-cli.bin \
-            "https://download.tizen.org/sdk/Installer/tizen-studio_$TIZEN_STUDIO_VERSION/web-cli_Tizen_Studio_${TIZEN_STUDIO_VERSION}_ubuntu-64.bin"
-      - name: Install the Tizen CLI
-        run: |
-          chmod +x ~/tizen-studio-cli.bin
-          ~/tizen-studio-cli.bin --accept-license "$HOME/tizen-studio" >/dev/null
-          echo "$HOME/tizen-studio/tools/ide/bin" >>"$GITHUB_PATH"
-      - name: Add a signing profile
-        env:
-          AUTHOR_KEY: ${{ secrets.TIZEN_AUTHOR_KEY }}
-          AUTHOR_PASSWORD: ${{ secrets.TIZEN_AUTHOR_PASSWORD }}
-        run: |
-          if [ -n "$AUTHOR_KEY" ]; then
-            key="$RUNNER_TEMP/author.p12"
-            echo "$AUTHOR_KEY" | base64 -d >"$key"
-            password=$AUTHOR_PASSWORD
-          else
-            echo "::warning::No TIZEN_AUTHOR_KEY secret, so a one-off author certificate signs this build"
-            # The CLI misreads some passwords from the profile; 27 letters is known to work.
-            password=$(openssl rand -base64 96 | tr -dc 'A-Za-z' | head -c 27)
-            tizen certificate -a aiostreams -p "$password" -f aiostreams
-            key="$HOME/tizen-studio-data/keystore/author/aiostreams.p12"
-          fi
-          # Written by hand: a profile from `tizen security-profiles add` fails to sign on a runner.
-          certs="$HOME/tizen-studio/tools/certificate-generator/certificates"
-          profiles=$(tizen cli-config -l | sed -n 's/^default\.profiles\.path=//p')
-          mkdir -p "$(dirname "$profiles")"
-          cat >"$profiles" <<EOF
-          <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-          <profiles active="aiostreams" version="3.1">
-          <profile name="aiostreams">
-          <profileitem ca="$certs/developer/tizen-developer-ca.cer" distributor="0" key="$key" password="$password" rootca=""/>
-          <profileitem ca="$certs/distributor/tizen-distributor-ca.cer" distributor="1" key="$certs/distributor/tizen-distributor-signer.p12" password="tizenpkcs12passfordsigner" rootca=""/>
-          <profileitem ca="" distributor="2" key="" password="" rootca=""/>
-          </profile>
-          </profiles>
-          EOF
-          chmod a-w "$profiles"
       - working-directory: packages/tv
-        env:
-          TIZEN_PROFILE: aiostreams
         run: |
           node scripts/build.mjs tizen
-          mv out/*.wgt "out/$WGT"
+          mv out/AIOStreams.wgt "out/$WGT"
       - uses: actions/upload-artifact@v7
         with:
           name: ${{ env.WGT }}

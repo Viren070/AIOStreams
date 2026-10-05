@@ -8,6 +8,7 @@
     "build:tizen": "pnpm -F @aiostreams/jellyfin-web build:standalone && node scripts/build.mjs tizen"
   },
   "devDependencies": {
-    "@webos-tools/cli": "^3.2.6"
+    "@webos-tools/cli": "^3.2.6",
+    "fflate": "^0.8.3"
   }
 }
