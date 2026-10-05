@@ -520,7 +520,9 @@ export function parseMediaInfo(
     hearingImpaired: track.hearing_impaired === true,
   }));
 
-  const visualTags = info.video ? normaliseVisualTags(info.video) : undefined;
+  const visualTags = Array.isArray(info.video?.hdr)
+    ? normaliseVisualTags(info.video)
+    : undefined;
   const encode = normaliseEncode(info.video);
   const resolution = normaliseResolution(info.video?.w, info.video?.h);
   const duration =

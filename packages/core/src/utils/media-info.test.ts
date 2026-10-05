@@ -27,6 +27,13 @@ describe('parseMediaInfo', () => {
     assert.equal(result?.mediaInfoQuality, 'probe');
   });
 
+  it('leaves visual tags unset when the video section has no hdr info, rather than confirming "no HDR"', () => {
+    const result = parseMediaInfo({
+      video: { codec: 'hevc', w: 1920, h: 1080 },
+    });
+    assert.equal(result?.visualTags, undefined);
+  });
+
   it('reports real languages and subtitles for a typical probe', () => {
     const result = parseMediaInfo({
       audio: [{ codec: 'aac', lang: 'eng' }],
