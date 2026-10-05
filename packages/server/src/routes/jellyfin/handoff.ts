@@ -415,6 +415,7 @@ export async function reportPlayback(
     durationMs?: number;
     /** A stop's own threshold decision; a played row may be mid rewatch. */
     played?: boolean;
+    sessionStartedAt?: number;
   } = {}
 ): Promise<void> {
   if (!appConfig.watchState.reportEnabled) return;
@@ -434,6 +435,7 @@ export async function reportPlayback(
       positionMs: opts.positionMs ?? opts.row?.positionMs,
       durationMs: opts.durationMs || opts.row?.durationMs,
       played: opts.played ?? (opts.row ? opts.row.played : undefined),
+      sessionStartedAt: opts.sessionStartedAt,
       providerIds,
     });
   } catch (error) {

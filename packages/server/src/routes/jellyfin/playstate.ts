@@ -219,7 +219,7 @@ async function record(
   const row = await provider.record(ctx.watch, event);
 
   if (type === 'start') {
-    await openWatchSession(session, ref, {
+    const opened = await openWatchSession(session, ref, {
       positionMs,
       durationMs,
       paused: false,
@@ -229,6 +229,7 @@ async function record(
       item,
       positionMs,
       durationMs,
+      sessionStartedAt: opened?.startedAt,
     });
     if (undrops)
       await reportListChange(ctx, 'undropped', {
@@ -240,13 +241,15 @@ async function record(
   }
 
   if (type === 'stop') {
-    await closeWatchSession(session);
+    const closed = await closeWatchSession(session);
     await reportPlayback(ctx, 'stop', ref, {
       row,
       item,
       positionMs,
       durationMs,
       played: playedThrough(positionMs ?? 0, durationMs || row?.durationMs),
+      sessionStartedAt:
+        closed?.itemKey === identity.itemKey ? closed.startedAt : undefined,
     });
     return;
   }
@@ -281,6 +284,7 @@ async function progressed(
       row,
       positionMs,
       durationMs: existing.durationMs || undefined,
+      sessionStartedAt: existing.startedAt,
     });
 }
 

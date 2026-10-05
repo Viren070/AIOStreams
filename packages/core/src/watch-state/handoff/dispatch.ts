@@ -25,13 +25,14 @@ const logger = createLogger('playback-handoff');
 
 /**
  * Transitions key on position, not a clock bucket, so a pause and the resume
- * after it stay two events. A mark has no position and keys on its timestamp.
+ * after it stay two events, and on when the playback began, so a later viewing
+ * never repeats an earlier one's ids. A mark keys on its timestamp.
  */
 function idempotencyKeyFor(event: PlaybackEventInput, at: number): string {
   const suffix =
     event.kind === 'played' || event.kind === 'unplayed'
       ? at
-      : Math.round(event.positionMs ?? 0);
+      : `${Math.round(event.positionMs ?? 0)}${event.sessionStartedAt ? `|${event.sessionStartedAt}` : ''}`;
   return `${event.itemKey}|${event.kind}|${suffix}`;
 }
 
@@ -67,6 +68,7 @@ export interface PlaybackEventInput {
   durationMs?: number;
   /** Our threshold decision, so the addon does not re-derive it. */
   played?: boolean;
+  sessionStartedAt?: number;
   providerIds?: Record<string, string>;
 }
 

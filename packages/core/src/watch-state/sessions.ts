@@ -49,9 +49,9 @@ export async function openWatchSession(
   ctx: SessionContext,
   ref: ContentRef,
   opts: { positionMs?: number; durationMs?: number; paused?: boolean } = {}
-): Promise<void> {
+): Promise<WatchSessionRow | null> {
   const identity = await watchIdentityFor(ref);
-  await WatchSessionRepository.open(ctx.scope, ctx.sessionKey, {
+  return WatchSessionRepository.open(ctx.scope, ctx.sessionKey, {
     userPersona: ctx.user ?? null,
     itemKey: identity.itemKey,
     kind: identity.kind,
@@ -91,8 +91,10 @@ export async function checkInWatchSession(
   return { transition: patch.paused ? 'pause' : 'start', row: existing };
 }
 
-export async function closeWatchSession(ctx: SessionContext): Promise<void> {
-  await WatchSessionRepository.close(ctx.scope, ctx.sessionKey, Date.now());
+export async function closeWatchSession(
+  ctx: SessionContext
+): Promise<WatchSessionRow | null> {
+  return WatchSessionRepository.close(ctx.scope, ctx.sessionKey, Date.now());
 }
 
 /** Rebuilds the routing a stop needs from the sink row, with no config in hand. */
@@ -175,6 +177,7 @@ export async function sweepIdleWatchSessions(): Promise<{
           session.positionMs,
           session.durationMs || row?.durationMs
         ),
+        sessionStartedAt: session.startedAt,
       });
       reported++;
     } catch (error) {

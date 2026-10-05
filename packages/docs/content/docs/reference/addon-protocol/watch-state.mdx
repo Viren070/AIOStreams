@@ -67,7 +67,7 @@ Content-Type: application/json
 
 ```json
 {
-  "id": "e|tt0903747:3:7|stop|2680000",
+  "id": "e|tt0903747:3:7|stop|2680000|1757438900000",
   "event": "stop",
   "scope": "episode",
   "at": 1757441718,
@@ -148,10 +148,11 @@ unreachable addon never delays playback. A failed delivery retries over about a 
 
 ### Idempotency
 
-`start`, `pause` and `stop` ids end in the position; `played` and `unplayed` ids end in the
-timestamp. **Deduplicate on `id`** if a duplicate scrobble would be visible: some clients report one
-stop twice, in two different shapes. A position rather than a time bucket matters, because a pause
-and a resume inside the same minute are two real transitions.
+`start`, `pause` and `stop` ids end in the position and the time that playback began; `played` and
+`unplayed` ids end in the timestamp. **Deduplicate on `id`** if a duplicate scrobble would be
+visible: some clients report one stop twice, in two different shapes. A position rather than a time
+bucket matters, because a pause and a resume inside the same minute are two real transitions, and
+the start time keeps a rewatch from repeating the ids of the earlier viewing.
 
 ### Bulk marks
 

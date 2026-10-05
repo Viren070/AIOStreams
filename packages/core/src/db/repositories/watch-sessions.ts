@@ -128,9 +128,9 @@ export class WatchSessionRepository {
     scope: WatchScope,
     sessionKey: string,
     input: WatchSessionUpsert
-  ): Promise<void> {
+  ): Promise<WatchSessionRow | null> {
     const now = Date.now();
-    await getDb().exec(
+    const row = await getDb().maybeOne<DbRow>(
       sql`INSERT INTO watch_sessions
             (uuid, persona, session_key, user_persona, item_key, kind,
              media_type, base_id, season, episode, video_id, play_session_id,
@@ -168,8 +168,10 @@ export class WatchSessionRepository {
                                    AND watch_sessions.ended_at IS NULL
                               THEN watch_sessions.started_at ELSE excluded.started_at END,
             last_checkin_at = excluded.last_checkin_at,
-            ended_at = NULL`
+            ended_at = NULL
+          RETURNING *`
     );
+    return row ? toRow(row) : null;
   }
 
   /** A closed session stays closed, so a late tick cannot reopen it. */
@@ -198,12 +200,14 @@ export class WatchSessionRepository {
     scope: WatchScope,
     sessionKey: string,
     at: number
-  ): Promise<void> {
-    await getDb().exec(
+  ): Promise<WatchSessionRow | null> {
+    const row = await getDb().maybeOne<DbRow>(
       sql`UPDATE watch_sessions SET ended_at = ${at}, last_checkin_at = ${at}
            WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
-             AND session_key = ${sessionKey}`
+             AND session_key = ${sessionKey}
+          RETURNING *`
     );
+    return row ? toRow(row) : null;
   }
 
   /** One scope's sessions, open and recently closed, most recent first. */
