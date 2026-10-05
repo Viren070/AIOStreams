@@ -7,7 +7,7 @@ Private trackers require every download to be seeded back; failing to do so is a
 
 ## Search vs. Playback
 
-**Search** (listing results) only checks whether each result's hash is already **cached** on your debrid service, to show the ⚡/⏳ badge. Nothing is added or downloaded — an uncached private result sitting in your list costs you nothing.
+**Search** (listing results) checks whether each result's hash is already **cached** on your debrid service, to show the ⚡/⏳ badge — it never adds anything to your debrid service. For hash-less results it may fetch the `.torrent` file to resolve a hash (see [Hash-less Indexers](#hash-less-indexers-a-separate-non-hr-issue)), but that's just a metadata read, not a download from the tracker's swarm — no seeding obligation starts from it.
 
 **Playback** is the only moment anything is added:
 
