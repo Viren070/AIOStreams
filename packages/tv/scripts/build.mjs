@@ -37,8 +37,15 @@ function stageApp(manifest, withVersion) {
     recursive: true,
   });
   cpSync(join(root, platform), stage, { recursive: true });
+  cpSync(join(root, 'boot.js'), join(stage, 'boot.js'));
   const file = join(stage, manifest);
   writeFileSync(file, withVersion(readFileSync(file, 'utf8')));
+  const index = join(stage, 'index.html');
+  const html = readFileSync(index, 'utf8');
+  writeFileSync(
+    index,
+    html.replace('<head>', '<head><script src="boot.js"></script>')
+  );
   return stage;
 }
 

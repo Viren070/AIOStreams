@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets" id="https://github.com/Viren070/AIOStreams" viewmodes="maximized">
-    <tizen:application id="AIOStreams.aiostreams" package="AIOStreams" required_version="7.0"/>
+    <tizen:application id="AIOStreams.aiostreams" package="AIOStreams" required_version="2.3"/>
     <tizen:profile name="tv"/>
     <name>AIOStreams</name>
     <icon src="icon.png"/>
