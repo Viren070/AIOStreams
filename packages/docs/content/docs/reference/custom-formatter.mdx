@@ -110,6 +110,7 @@ Modifiers are chained with `::`:
 **When accurate media info is available**, `languages` contains audio track languages and `subtitles` contains embedded subtitle languages. This is the case for:
 
 - Debrid results from built-in and service-wrapped addons that have `media_info` from StremThru (crowdsourced/probed via FFmpeg)
+- Files this instance has read with ffprobe, and tracks it has stored or looks up on another instance, matched to any addon's results by info hash or NZB (see [Media info](/configuration/environment-variables#media-info))
 - Torznab/Newznab results from indexers that provide separate audio/subtitle metadata
 - nekoBT results (all results have accurate audio/subtitle info)
 - Torrentio anime results (subtitles field may be populated)
@@ -120,9 +121,9 @@ Modifiers are chained with `::`:
 
 #### Media info
 
-| Variable                    | Type   | Description                                                                                                              |
-| ---------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------- |
-| `{stream.mediaInfoQuality}` | string | Confidence tier for how the stream's media info (languages, subtitles, audio, etc.) was determined: `probe` (ffprobe-derived, e.g. StremThru), `indexer`, or `addon` |
+| Variable                    | Type   | Description                                                                                                                                                                                                                |
+| --------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `{stream.mediaInfoQuality}` | string | Confidence tier for how the stream's media info (languages, subtitles, audio, etc.) was determined: `probe` (ffprobe-derived: StremThru, stored or looked-up tracks, or this instance's own probes), `indexer`, or `addon` |
 
 #### Tracks
 

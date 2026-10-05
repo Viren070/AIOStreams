@@ -60,7 +60,7 @@ export const httpSchema = {
     default: [] as string[],
     label: 'Addon proxy URL(s)',
     description:
-      'Outbound HTTP proxy URL(s) used when fetching addon endpoints.',
+      "Outbound HTTP proxy URL(s) for this instance's own requests, such as to addons, indexers and metadata providers. Without **Addon proxy config**, every request uses the first one.",
     env: 'ADDON_PROXY',
     requiresRestart: false,
     secret: false,

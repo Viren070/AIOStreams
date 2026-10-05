@@ -126,6 +126,10 @@ Subtitles from your subtitle addons show up as subtitle tracks in every app. The
 - **Only the languages**, as some addons and indexers report: one numbered track per language, such as **Audio 2** or **Subtitle 1**. A file with two tracks in one language has one more than is listed.
 - **Nothing:** one audio track and none of the file's subtitles.
 
+Unless the instance owner has turned it off, AIOStreams reads a file's tracks the first time it plays through the built-in usenet service, TorBox, or a proxy set up under **Proxy** on the configure page, and remembers them for everyone on the instance. Debrid files played any other way are never read, since that could add an IP to the account. From the next play on, that version lists every track.
+
+To get every track on the first play too, set **Wait for tracks on play** on the **Playback** tab. Playing a version whose tracks aren't known yet then waits for them, for up to that many seconds. Some apps give up after about 20 seconds, so stay below that. The setting only shows when the instance reads files on play and your configuration plays something it can read.
+
 Apps that read the tracks from the file themselves, and the [desktop app](/guides/desktop-app), list every track regardless.
 
 ### When nothing plays
