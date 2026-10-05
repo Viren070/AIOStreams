@@ -356,13 +356,14 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
   const toTrack = (t: MpvTrack): Track => ({
     id: String(t.id),
     label: ownTrackLabel(t.title, t.lang, t.id),
+    lang: t.lang,
   });
   return {
     state: { ...state, subtitle: subtitleId(state.subtitle) },
     audioTracks: tracks.filter((t) => t.type === 'audio').map(toTrack),
     subtitleTracks: [
       ...tracks.filter((t) => t.type === 'sub' && !fromServer(t)).map(toTrack),
-      ...externals.map(({ id, label }) => ({ id, label })),
+      ...externals.map(({ id, label, lang }) => ({ id, label, lang })),
     ],
     togglePlay: () => set('pause', !latest.current.state.paused),
     seek: (ms) => {

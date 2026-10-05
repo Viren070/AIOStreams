@@ -195,6 +195,7 @@ export function useBrowserPlayer(
         tracks.map((t, i) => ({
           id: String(i),
           label: ownTrackLabel(t.label, t.language, i + 1),
+          lang: t.language,
         }))
       );
       const on = tracks.findIndex((t) => t.enabled);
@@ -275,6 +276,7 @@ export function useBrowserPlayer(
       ...subtitles.map((s, i) => ({
         id: String(s.Index),
         label: trackLabel(s, i + 1),
+        lang: s.Language ?? undefined,
       })),
       ...fileList.map(({ id, label }) => ({ id, label })),
     ],

@@ -9,6 +9,7 @@ import type { BaseItemDto, MediaStream, SourceInfo } from '../types';
 export interface Track {
   id: string;
   label: string;
+  lang?: string;
 }
 
 export interface PlayerState {

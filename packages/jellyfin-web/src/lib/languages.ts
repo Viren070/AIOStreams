@@ -55,6 +55,15 @@ export const LANGUAGES: Language[] = [
   { code: 'vie', name: 'Vietnamese', aliases: ['vi'] },
 ];
 
+/** The code Jellyfin stores for the language a track's tag names. */
+export function languageCode(tag: string): string {
+  const lower = tag.toLowerCase();
+  return (
+    LANGUAGES.find((l) => l.code === lower || l.aliases.includes(lower))
+      ?.code ?? lower
+  );
+}
+
 /** Every tag a track in this language may carry; empty when none is set. */
 export function languageTags(code: string | null | undefined): string[] {
   if (!code) return [];

@@ -229,15 +229,18 @@ export function useDesktopPlayer(opts: NativePlayerOptions): PlayerController {
     audioTracks: audio.map((s, i) => ({
       id: String(i + 1),
       label: trackLabel(s, i + 1),
+      lang: s.Language ?? undefined,
     })),
     subtitleTracks: [
       ...embedded.map((s, i) => ({
         id: `embedded:${i + 1}`,
         label: trackLabel(s, i + 1),
+        lang: s.Language ?? undefined,
       })),
       ...external.map((s, i) => ({
         id: `external:${s.Index}`,
         label: trackLabel(s, embedded.length + i + 1),
+        lang: s.Language ?? undefined,
       })),
     ],
     togglePlay: () =>

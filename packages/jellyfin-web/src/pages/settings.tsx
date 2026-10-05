@@ -502,6 +502,13 @@ function AudioSection() {
             onValueChange={(v) => update({ PlayDefaultAudioTrack: v })}
           />
         )}
+        <Switch
+          side="right"
+          label="Remember picks per show"
+          help="An audio track you pick while watching a show sets the language for its other episodes. Picking the language above again forgets it."
+          value={prefs.RememberAudioSelections !== false}
+          onValueChange={(v) => update({ RememberAudioSelections: v })}
+        />
       </SettingsCard>
       {currentHost().name === 'desktop' && (
         <SettingsCard title="Output" description={ON_DEVICE}>
@@ -567,6 +574,13 @@ function SubtitlesSection() {
           options={SUBTITLE_MODES.map(({ value, label }) => ({ value, label }))}
           value={mode}
           onValueChange={(v) => update({ SubtitleMode: v as SubtitleMode })}
+        />
+        <Switch
+          side="right"
+          label="Remember picks per show"
+          help="Subtitles you pick or turn off while watching a show stay that way for its other episodes. Picking what the settings above would show forgets it."
+          value={prefs.RememberSubtitleSelections !== false}
+          onValueChange={(v) => update({ RememberSubtitleSelections: v })}
         />
       </SettingsCard>
       <SettingsCard title="Preview">

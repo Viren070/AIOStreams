@@ -296,17 +296,23 @@ export function useAvPlayer(opts: NativePlayerOptions): PlayerController {
 
   return {
     state,
-    audioTracks: audioTracks.map(({ index, label }) => ({
+    audioTracks: audioTracks.map(({ index, label, language }) => ({
       id: String(index),
       label,
+      lang: language,
     })),
     subtitleTracks: [
       ...embedded.map(
-        ({ index, label }): Track => ({ id: `${EMBEDDED}${index}`, label })
+        ({ index, label, language }): Track => ({
+          id: `${EMBEDDED}${index}`,
+          label,
+          lang: language,
+        })
       ),
       ...external.map((s, i) => ({
         id: `${EXTERNAL}${s.Index}`,
         label: trackLabel(s, embedded.length + i + 1),
+        lang: s.Language ?? undefined,
       })),
     ],
     subtitleText,

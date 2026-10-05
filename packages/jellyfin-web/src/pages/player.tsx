@@ -21,6 +21,11 @@ import { currentHost } from '../lib/hosts';
 import { useFeature } from '../lib/server-info';
 import { useBrowserPlayer, usePhoneFullscreen } from '../lib/hosts/browser';
 import { useNowPlaying } from '../lib/playback/now-playing';
+import {
+  useShowPicks,
+  useShowTrackPicks,
+  withShowPick,
+} from '../lib/playback/show-tracks';
 import type {
   NativePlayerOptions,
   PlayerController,
@@ -96,6 +101,7 @@ export function PlayerPage({
   const item = useItem(itemId);
   const info = usePlaybackInfo(itemId, { sourceId: sourceId || undefined });
   const playback = usePlaybackPrefs();
+  const picks = useShowPicks();
   usePlayerPage();
   usePhoneFullscreen(!currentHost().usePlayer);
 
@@ -112,19 +118,31 @@ export function PlayerPage({
     lastVersions.set(itemId, undefined);
     navigate(versionsPath(item.data), { replace: true });
   }, [missing, item.data, itemId]);
-  if (!playing && item.data && source && !playback.isLoading) {
+  if (
+    !playing &&
+    item.data &&
+    source &&
+    !playback.isLoading &&
+    !picks.isLoading
+  ) {
     const player = chosenPlayer();
     setPlaying({
       item: item.data,
       source,
       playSessionId: info.data?.PlaySessionId ?? null,
-      prefs: playback.prefs,
+      prefs: withShowPick(playback.prefs, picks.data, item.data),
       launched: player.kind === 'launched' ? player : undefined,
     });
   }
 
   if (!playing) {
-    if (item.isLoading || info.isLoading || playback.isLoading || missing) {
+    if (
+      item.isLoading ||
+      info.isLoading ||
+      playback.isLoading ||
+      picks.isLoading ||
+      missing
+    ) {
       return (
         <Cover item={item.data}>
           <LoadingSpinner />
@@ -407,6 +425,7 @@ function BrowserPlayer({
   });
   connect(next);
   const switchVersion = useSwitchVersion(item, source, player);
+  const controls = useShowTrackPicks(player, item, source);
   useReporting(player, { item, source, playSessionId });
   useNowPlaying(item, player, {
     onStop: back,
@@ -453,7 +472,7 @@ function BrowserPlayer({
           {!next.asking && (
             <PlayerControls
               item={item}
-              player={player}
+              player={controls}
               segments={segments.data?.Items}
               onBack={back}
               offeringNext={!!next.element}
@@ -552,6 +571,7 @@ function NativePlayer({
   });
   connect(next);
   const switchVersion = useSwitchVersion(item, source, player);
+  const controls = useShowTrackPicks(player, item, source);
   useReporting(player, { item, source, playSessionId });
   useNowPlaying(item, player, {
     onStop: back,
@@ -586,7 +606,7 @@ function NativePlayer({
           {!next.asking && (
             <PlayerControls
               item={item}
-              player={player}
+              player={controls}
               segments={segments}
               onBack={back}
               offeringNext={!!next.element}

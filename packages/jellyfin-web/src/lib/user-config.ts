@@ -20,6 +20,9 @@ export interface PlaybackPrefs {
   SubtitleLanguagePreference?: string | null;
   SubtitleMode?: SubtitleMode;
   EnableNextEpisodeAutoPlay?: boolean;
+  /** Off only when false, as in Jellyfin. */
+  RememberAudioSelections?: boolean;
+  RememberSubtitleSelections?: boolean;
 }
 
 type Configuration = NonNullable<UserDto['Configuration']>;
