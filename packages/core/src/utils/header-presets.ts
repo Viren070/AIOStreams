@@ -26,7 +26,7 @@ export const HEADER_PRESETS: Record<string, Record<string, string>> = {
   nzbhydra2: {
     Accept: 'application/xml',
     'Content-Type': 'application/xml',
-    'User-Agent': 'NZBHydra2 9.0.6',
+    'User-Agent': 'NZBHydra2 9.1.1',
   },
   chrome: {
     'User-Agent':
