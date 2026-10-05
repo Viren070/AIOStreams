@@ -26,6 +26,7 @@ export function toWireMediaInfo(record: MediaInfoRecord): MediaInfo {
   return {
     video: video
       ? {
+          index: video.index,
           codec: video.codec,
           w: video.width,
           h: video.height,
@@ -33,6 +34,7 @@ export function toWireMediaInfo(record: MediaInfoRecord): MediaInfo {
         }
       : undefined,
     audio: audio.map((t) => ({
+      index: t.index,
       codec: t.codec,
       profile: t.profile,
       lang: t.language,
@@ -47,6 +49,7 @@ export function toWireMediaInfo(record: MediaInfoRecord): MediaInfo {
       visual_impaired: t.visualImpaired,
     })),
     subtitle: subtitles.map((t) => ({
+      index: t.index,
       codec: t.codec,
       lang: t.language,
       title: t.title,

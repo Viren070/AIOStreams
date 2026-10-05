@@ -650,6 +650,12 @@ class StreamDeduplicator {
         }
       }
 
+      if (
+        probed &&
+        (fields.includes('languages') || fields.includes('subtitles'))
+      ) {
+        winner.parsedFile.videoIndex = probed.videoIndex;
+      }
       if (bestTier && bestTier !== winner.parsedFile.mediaInfoQuality) {
         winner.parsedFile.mediaInfoQuality = bestTier;
       }

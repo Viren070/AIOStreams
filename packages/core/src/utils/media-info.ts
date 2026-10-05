@@ -2,6 +2,8 @@ import * as constants from './constants.js';
 import { normaliseLanguage, normaliseLangCode } from './languages.js';
 
 export interface ParsedMediaTrack {
+  /** The track's stream index in the file. */
+  index?: number;
   lang?: string;
   codec?: string;
   title?: string;
@@ -26,6 +28,7 @@ export interface ParsedMediaInfo {
   visualTags?: string[];
   audioTracks?: ParsedMediaTrack[];
   subtitleTracks?: ParsedMediaTrack[];
+  videoIndex?: number;
   /** Duration in seconds */
   duration?: number;
   bitrate?: number;
@@ -42,6 +45,7 @@ export function hasTrackLists(
 }
 
 type MediaInfoAudioTrack = {
+  index?: unknown;
   codec?: unknown;
   profile?: unknown;
   lang?: unknown;
@@ -57,6 +61,7 @@ type MediaInfoAudioTrack = {
 };
 
 type MediaInfoSubtitleTrack = {
+  index?: unknown;
   codec?: unknown;
   lang?: unknown;
   title?: unknown;
@@ -66,6 +71,7 @@ type MediaInfoSubtitleTrack = {
 };
 
 type MediaInfoVideo = {
+  index?: unknown;
   codec?: unknown;
   hdr?: unknown;
   h?: unknown;
@@ -123,6 +129,12 @@ function asMediaInfo(value: unknown): MediaInfo | undefined {
   return value as MediaInfo;
 }
 
+function asStreamIndex(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0
+    ? value
+    : undefined;
+}
+
 function asTrackText(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
   const trimmed = value.trim();
@@ -132,7 +144,9 @@ function asTrackText(value: unknown): string | undefined {
 /** An empty track is kept: players number tracks by position, unknown ones included. */
 function normaliseTrack(track: ParsedMediaTrack | undefined): ParsedMediaTrack {
   if (!track) return {};
+  const index = asStreamIndex(track.index);
   return {
+    ...(index !== undefined ? { index } : {}),
     ...(track.lang ? { lang: track.lang } : {}),
     ...(track.codec ? { codec: track.codec } : {}),
     ...(track.title ? { title: track.title } : {}),
@@ -158,7 +172,9 @@ function normaliseTrackList(
 export function describedTracks<T extends object>(
   tracks: T[] | undefined
 ): T[] {
-  return (tracks ?? []).filter((track) => Object.keys(track).length > 0);
+  return (tracks ?? []).filter((track) =>
+    Object.keys(track).some((key) => key !== 'index')
+  );
 }
 
 function normaliseLanguageList(values: unknown[]): string[] {
@@ -341,6 +357,7 @@ export function normaliseParsedMediaInfo(
 
   const audioTracks = normaliseTrackList(parsedMediaInfo.audioTracks);
   const subtitleTracks = normaliseTrackList(parsedMediaInfo.subtitleTracks);
+  const videoIndex = asStreamIndex(parsedMediaInfo.videoIndex);
 
   const hasAnyData =
     languages.length > 0 ||
@@ -367,6 +384,7 @@ export function normaliseParsedMediaInfo(
     ...(visualTags.length > 0 ? { visualTags } : {}),
     ...(audioTracks.length > 0 ? { audioTracks } : {}),
     ...(subtitleTracks.length > 0 ? { subtitleTracks } : {}),
+    ...(videoIndex !== undefined ? { videoIndex } : {}),
     ...(encode ? { encode } : {}),
     ...(resolution ? { resolution } : {}),
     ...(parsedMediaInfo?.duration
@@ -412,6 +430,7 @@ export function parseMediaInfo(
   ];
 
   const audioTrackList = audioTracks.map((track) => ({
+    index: asStreamIndex(track.index),
     lang: normaliseLanguage(resolveTrackLang(track.lang, track.title)),
     codec: asTrackText(track.codec)?.toLowerCase(),
     title: asTrackText(track.title),
@@ -425,6 +444,7 @@ export function parseMediaInfo(
     visualImpaired: track.visual_impaired === true,
   }));
   const subtitleTrackList = subtitleTracks.map((track) => ({
+    index: asStreamIndex(track.index),
     lang: normaliseLanguage(resolveTrackLang(track.lang, track.title)),
     codec: asTrackText(track.codec)?.toLowerCase(),
     title: asTrackText(track.title),
@@ -459,6 +479,7 @@ export function parseMediaInfo(
     visualTags,
     audioTracks: audioTrackList,
     subtitleTracks: subtitleTrackList,
+    videoIndex: asStreamIndex(info.video?.index),
     encode,
     resolution,
     duration,
@@ -484,6 +505,10 @@ export function mergeParsedMediaInfo(
     visualTags: preferred?.visualTags ?? base?.visualTags,
     audioTracks: preferred?.audioTracks ?? base?.audioTracks,
     subtitleTracks: preferred?.subtitleTracks ?? base?.subtitleTracks,
+    // Only meaningful beside the track lists it was probed with.
+    videoIndex: hasTrackLists(preferred)
+      ? preferred?.videoIndex
+      : base?.videoIndex,
     encode: preferred?.encode ?? base?.encode,
     resolution: preferred?.resolution ?? base?.resolution,
     duration: preferred?.duration ?? base?.duration,

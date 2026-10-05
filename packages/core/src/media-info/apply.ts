@@ -33,6 +33,7 @@ export function applyMediaInfo(
       ? merged.audioTags
       : (stream.parsedFile?.audioTags ?? []),
     hasChapters: merged.hasChapters ?? stream.parsedFile?.hasChapters,
+    videoIndex: merged.videoIndex,
   };
   if (record.duration && !stream.duration) {
     stream.duration = record.duration * 1000;

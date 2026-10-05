@@ -405,17 +405,14 @@ function placeholderLanguages(pf: ParsedFile | undefined, list?: string[]) {
   return (list ?? []).filter((l) => l && !NOT_A_TRACK.has(l));
 }
 
-function audioStreams(
-  pf: ParsedFile | undefined,
-  startIndex: number
-): JellyfinMediaStream[] {
+function audioStreams(pf: ParsedFile | undefined): JellyfinMediaStream[] {
   if (pf?.audioTracks?.length) {
     return pf.audioTracks.map((track, i) => {
       const tag = track.tag as AudioTag | undefined;
       const channelTag = track.channels as AudioChannels | undefined;
       return {
         Type: 'Audio',
-        Index: startIndex + i,
+        Index: i,
         ...STREAM_FLAGS,
         Codec: track.codec ?? (tag ? AUDIO_CODEC[tag] : undefined),
         Language: track.lang ? languageToIso6392(track.lang) : undefined,
@@ -438,7 +435,7 @@ function audioStreams(
   if (placeholders.length > 1) {
     return placeholders.map((_, i) => ({
       Type: 'Audio',
-      Index: startIndex + i,
+      Index: i,
       ...STREAM_FLAGS,
       DisplayTitle: `Audio ${i + 1}`,
       IsDefault: i === 0,
@@ -458,7 +455,7 @@ function audioStreams(
   return [
     {
       Type: 'Audio',
-      Index: startIndex,
+      Index: 0,
       ...STREAM_FLAGS,
       Codec: codec,
       Language:
@@ -478,8 +475,7 @@ function audioStreams(
 const IMAGE_SUBTITLE_CODEC = /pgs|dvd_?sub|dvb_?sub|vobsub|xsub/i;
 
 function embeddedSubtitleStreams(
-  pf: ParsedFile | undefined,
-  startIndex: number
+  pf: ParsedFile | undefined
 ): JellyfinMediaStream[] {
   const tracks =
     pf?.mediaInfoQuality === 'probe' ? (pf.subtitleTracks ?? []) : [];
@@ -488,7 +484,7 @@ function embeddedSubtitleStreams(
     const only = languages.length === 1 ? languages[0] : undefined;
     return languages.map((_, i) => ({
       Type: 'Subtitle',
-      Index: startIndex + i,
+      Index: i,
       ...STREAM_FLAGS,
       Language: only ? languageToIso6392(only) : undefined,
       DisplayTitle: only ?? `Subtitle ${i + 1}`,
@@ -499,7 +495,7 @@ function embeddedSubtitleStreams(
   }
   return tracks.map((track, i) => ({
     Type: 'Subtitle',
-    Index: startIndex + i,
+    Index: i,
     ...STREAM_FLAGS,
     Codec: track.codec,
     Language: track.lang ? languageToIso6392(track.lang) : undefined,
@@ -514,6 +510,49 @@ function embeddedSubtitleStreams(
     IsTextSubtitleStream: !IMAGE_SUBTITLE_CODEC.test(track.codec ?? ''),
     DeliveryMethod: 'Embed',
   }));
+}
+
+/** Each row's stream index in the file, when a probe gave every one of them. */
+function fileIndexes(
+  pf: ParsedFile | undefined,
+  audioRows: number,
+  subtitleRows: number
+): number[] | undefined {
+  const audio = pf?.audioTracks ?? [];
+  const subtitles =
+    pf?.mediaInfoQuality === 'probe' ? (pf.subtitleTracks ?? []) : [];
+  if (audio.length !== audioRows || subtitles.length !== subtitleRows) {
+    return undefined;
+  }
+  const indexes = [
+    pf?.videoIndex,
+    ...[...audio, ...subtitles].map((t) => t.index),
+  ];
+  if (indexes.some((i) => i === undefined)) return undefined;
+  return new Set(indexes).size === indexes.length
+    ? (indexes as number[])
+    : undefined;
+}
+
+/**
+ * The file's own streams in its order, numbered by position: players match a
+ * row to their track by its number or by its position among all of them.
+ */
+function embeddedStreams(
+  pf: ParsedFile | undefined,
+  bitrate: number | undefined
+): JellyfinMediaStream[] {
+  const audio = audioStreams(pf);
+  const subtitles = embeddedSubtitleStreams(pf);
+  const rows = [videoStream(pf, bitrate), ...audio, ...subtitles];
+  const indexes = fileIndexes(pf, audio.length, subtitles.length);
+  const ordered = indexes
+    ? rows
+        .map((row, i) => ({ row, at: indexes[i] }))
+        .sort((a, b) => a.at - b.at)
+        .map(({ row }) => row)
+    : rows;
+  return ordered.map((row, i) => ({ ...row, Index: i }));
 }
 
 function externalSubtitleTitle(
@@ -568,10 +607,7 @@ export function externalSubtitleFor(
   const position =
     urlIndex >= EXTERNAL_SUBTITLE_URL_BASE
       ? urlIndex - EXTERNAL_SUBTITLE_URL_BASE
-      : urlIndex -
-        (1 +
-          audioStreams(record.parsedFile, 0).length +
-          embeddedSubtitleStreams(record.parsedFile, 0).length);
+      : urlIndex - embeddedStreams(record.parsedFile, record.bitrate).length;
   return record.subtitles[position];
 }
 
@@ -588,11 +624,7 @@ export function buildMediaStreams(
   ]
     .filter(Boolean)
     .join('&');
-  const streams: JellyfinMediaStream[] = [
-    videoStream(record.parsedFile, record.bitrate),
-  ];
-  streams.push(...audioStreams(record.parsedFile, streams.length));
-  streams.push(...embeddedSubtitleStreams(record.parsedFile, streams.length));
+  const streams = embeddedStreams(record.parsedFile, record.bitrate);
   const externalStart = streams.length;
   record.subtitles.forEach((sub, i) => {
     const index = externalStart + i;

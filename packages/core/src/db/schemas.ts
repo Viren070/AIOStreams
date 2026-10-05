@@ -1385,6 +1385,7 @@ export const MEDIA_INFO_QUALITY_TIERS = ['probe', 'indexer', 'addon'] as const;
 
 /** One probed audio or subtitle track; see ParsedMediaTrack in utils/media-info. */
 export const MediaTrackSchema = z.object({
+  index: z.number().int().nonnegative().optional(),
   lang: z.string().optional(),
   codec: z.string().optional(),
   title: z.string().optional(),
@@ -1413,6 +1414,7 @@ export const ParsedFileSchema = z.object({
   subtitles: z.array(z.string()).optional(),
   audioTracks: z.array(MediaTrackSchema).optional(),
   subtitleTracks: z.array(MediaTrackSchema).optional(),
+  videoIndex: z.number().int().nonnegative().optional(),
   subbed: z.boolean().optional(),
   dubbed: z.boolean().optional(),
   title: z.string().optional(),
