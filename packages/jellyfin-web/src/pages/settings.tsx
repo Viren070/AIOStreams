@@ -210,6 +210,9 @@ function PlaybackSection() {
   const [stillWatching, setStillWatching] = useSetting(
     settings.next.stillWatching
   );
+  const [skipFillers, setSkipFillers] = useSetting(settings.next.skipFillers);
+  const [skipRecaps, setSkipRecaps] = useSetting(settings.next.skipRecaps);
+  const marked = useFeature('fillers');
   const autoplay = prefs.EnableNextEpisodeAutoPlay !== false;
   const [hardwareDecoding, setHardwareDecoding] = useSetting(
     settings.desktop.hardwareDecoding
@@ -304,6 +307,24 @@ function PlaybackSection() {
             }))}
             value={String(nextCountdown)}
             onValueChange={(v) => setNextCountdown(Number(v))}
+          />
+        )}
+        {marked && (
+          <Switch
+            side="right"
+            label="Skip filler episodes"
+            help="Playing on and the next and previous buttons pass over episodes marked as filler. You can still play one yourself."
+            value={skipFillers}
+            onValueChange={setSkipFillers}
+          />
+        )}
+        {marked && (
+          <Switch
+            side="right"
+            label="Skip recap episodes"
+            help="The same for episodes marked as a recap."
+            value={skipRecaps}
+            onValueChange={setSkipRecaps}
           />
         )}
         {autoplay && (

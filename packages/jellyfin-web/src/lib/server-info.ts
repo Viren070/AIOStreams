@@ -12,7 +12,8 @@ export type Feature =
   | 'dropped'
   | 'refreshVersions'
   | 'versions'
-  | 'genreRequired';
+  | 'genreRequired'
+  | 'fillers';
 
 /** What a server's public info says about it. */
 export interface ServerInfo extends Branding {

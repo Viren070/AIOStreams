@@ -99,6 +99,16 @@ export function unavailableLabel(item: BaseItemDto): string | null {
   return Number.isNaN(at) || at > Date.now() ? 'Unaired' : 'Missing';
 }
 
+/** Marks a server with the `fillers` feature puts on an episode. */
+export function episodeMarks(item: BaseItemDto): ('Filler' | 'Recap')[] {
+  const marks = (item as { aiostreams?: { filler?: boolean; recap?: boolean } })
+    .aiostreams;
+  return [
+    ...(marks?.filler === true ? (['Filler'] as const) : []),
+    ...(marks?.recap === true ? (['Recap'] as const) : []),
+  ];
+}
+
 /** `20 Jan 2008` */
 export function shortDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, {

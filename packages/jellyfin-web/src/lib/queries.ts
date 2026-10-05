@@ -9,7 +9,8 @@ import {
 } from '@tanstack/react-query';
 import { useSession } from './session';
 import { useFeature } from './server-info';
-import { ticksToMs, unavailableLabel } from './format';
+import { settings, useSetting } from './settings';
+import { episodeMarks, ticksToMs, unavailableLabel } from './format';
 import type {
   BaseItemDto,
   BaseItemDtoQueryResult,
@@ -779,27 +780,47 @@ export function useClearHistory() {
 
 /** The episode after this one in its series, across seasons. */
 /**
- * The episodes either side of this one. A server that ignores `AdjacentTo`
- * sends the whole show, so the neighbours are found by position.
+ * The episodes either side of this one, past the fillers and recaps the user
+ * skips. A server that ignores `AdjacentTo` sends the whole show, so the
+ * neighbours are found by position.
  */
 export function useAdjacentEpisodes(item: BaseItemDto) {
   const { client, user } = useSession();
   const seriesId = item.Type === 'Episode' ? item.SeriesId : undefined;
+  const marked = useFeature('fillers');
+  const [skipFillers] = useSetting(settings.next.skipFillers);
+  const [skipRecaps] = useSetting(settings.next.skipRecaps);
+  const fillers = marked && skipFillers;
+  const recaps = marked && skipRecaps;
   return useQuery({
-    queryKey: [...useKey(), 'adjacent-episodes', item.Id],
+    queryKey: [...useKey(), 'adjacent-episodes', item.Id, fillers, recaps],
     queryFn: async () => {
-      const res = await client.get<BaseItemDtoQueryResult>(
-        `/Shows/${seriesId}/Episodes`,
-        { userId: user.Id, AdjacentTo: item.Id }
-      );
-      const items = res.Items ?? [];
+      const skipped = (e: BaseItemDto) =>
+        e.Id !== item.Id &&
+        episodeMarks(e).some((m) => (m === 'Filler' ? fillers : recaps));
+      const episodes = (query: Record<string, string>) =>
+        client
+          .get<BaseItemDtoQueryResult>(`/Shows/${seriesId}/Episodes`, {
+            userId: user.Id,
+            ...query,
+          })
+          .then((res) => res.Items ?? []);
+      let items = await episodes({ AdjacentTo: item.Id! });
+      // A run of skipped episodes needs the rest of the show.
+      if (items.some(skipped)) items = await episodes({});
       const at = items.findIndex((e) => e.Id === item.Id);
-      const playable = (e: BaseItemDto | undefined) =>
-        at >= 0 && e && !unavailableLabel(e) ? e : null;
-      return {
-        previous: playable(items[at - 1]),
-        next: playable(items[at + 1]),
+      const along = (step: 1 | -1) => {
+        for (
+          let i = at + step;
+          at >= 0 && i >= 0 && i < items.length;
+          i += step
+        ) {
+          if (unavailableLabel(items[i])) return null;
+          if (!skipped(items[i])) return items[i];
+        }
+        return null;
       };
+      return { previous: along(-1), next: along(1) };
     },
     enabled: !!seriesId,
     staleTime: 10 * 60_000,

@@ -534,6 +534,8 @@ export const settings = {
       3,
       STILL_WATCHING_AFTER
     ),
+    skipFillers: device<boolean>('aiostreams-web-skip-fillers', true),
+    skipRecaps: device<boolean>('aiostreams-web-skip-recaps', true),
   },
 };
 

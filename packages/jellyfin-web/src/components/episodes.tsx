@@ -10,6 +10,7 @@ import { landscapeUrls } from '../lib/images';
 import {
   dayLabel,
   duration,
+  episodeMarks,
   progressOf,
   shortDate,
   ticksToMs,
@@ -118,6 +119,10 @@ function Thumb({
 }) {
   const { client } = useSession();
   const unavailable = unavailableLabel(episode);
+  const labels = [
+    ...(unavailable ? [unavailable] : []),
+    ...episodeMarks(episode),
+  ];
   const progress = progressOf(episode);
   return (
     <div
@@ -145,11 +150,16 @@ function Thumb({
           <BiPlay className="text-4xl text-white opacity-0 drop-shadow transition-opacity group-hover/episode:opacity-90" />
         </div>
       )}
-      {unavailable && (
-        <div data-ui="episode-status" className="absolute left-1.5 top-1.5">
-          <Badge size="sm" intent="gray-solid">
-            {unavailable}
-          </Badge>
+      {labels.length > 0 && (
+        <div
+          data-ui="episode-status"
+          className="absolute left-1.5 top-1.5 flex gap-1"
+        >
+          {labels.map((label) => (
+            <Badge key={label} size="sm" intent="gray-solid">
+              {label}
+            </Badge>
+          ))}
         </div>
       )}
       {progress != null && progress > 0 && <ProgressBar percent={progress} />}
