@@ -19,19 +19,14 @@ export function layerMediaInfo(
   return {
     ...parsedFile,
     ...merged,
-    languages: merged.languages?.length
-      ? merged.languages
-      : (parsedFile?.languages ?? []),
-    subtitles: merged.subtitles?.length
-      ? merged.subtitles
-      : (parsedFile?.subtitles ?? []),
-    audioChannels: merged.audioChannels?.length
-      ? merged.audioChannels
-      : (parsedFile?.audioChannels ?? []),
+    // merged already resolved these (preferring info, falling back to
+    // parsedFile); re-checking .length here would discard a confirmed-empty
+    // probe result in favour of the stale pre-probe guess.
+    languages: merged.languages ?? parsedFile?.languages ?? [],
+    subtitles: merged.subtitles ?? parsedFile?.subtitles ?? [],
+    audioChannels: merged.audioChannels ?? parsedFile?.audioChannels ?? [],
     visualTags: mergeVisualTags(parsedFile?.visualTags, info?.visualTags),
-    audioTags: merged.audioTags?.length
-      ? merged.audioTags
-      : (parsedFile?.audioTags ?? []),
+    audioTags: merged.audioTags ?? parsedFile?.audioTags ?? [],
     hasChapters: merged.hasChapters ?? parsedFile?.hasChapters,
     videoIndex: merged.videoIndex,
   };
