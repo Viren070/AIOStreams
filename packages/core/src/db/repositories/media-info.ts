@@ -325,8 +325,13 @@ export class MediaInfoRepository {
    * Rows written together for one file and record are one probe, listed under
    * its best key.
    */
-  static async upsert(rows: MediaInfoRow[]): Promise<void> {
-    if (rows.length === 0) return;
+  static async upsert(written: MediaInfoRow[]): Promise<void> {
+    if (written.length === 0) return;
+    const rows = [
+      ...new Map(
+        written.map((r) => [`${r.releaseKey}\0${r.file}\0${r.origin}`, r])
+      ).values(),
+    ];
     const now = Date.now();
     const texts = rows.map((r) => JSON.stringify(r.info));
     const best = new Map<string, number>();
