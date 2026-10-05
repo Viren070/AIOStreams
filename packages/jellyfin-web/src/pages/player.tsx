@@ -287,6 +287,7 @@ function Failure({
             intent="gray-outline"
             className="rounded-full"
             leftIcon={<BiArrowBack />}
+            autoFocus={!onVersions}
             onClick={() => goBack(to.item(itemId))}
           >
             Back
@@ -296,6 +297,7 @@ function Failure({
               intent="white"
               className="rounded-full"
               leftIcon={<BiLayer />}
+              autoFocus
               onClick={onVersions}
             >
               Other versions
@@ -393,19 +395,8 @@ function BrowserPlayer({
           ) : null;
         })}
       </video>
-      <PlayerControls
-        item={item}
-        player={player}
-        segments={segments.data?.Items}
-        onBack={back}
-        offeringNext={!!next.element}
-        onVersions={switchVersion}
-        onPrevious={next.previous ? next.playPrevious : undefined}
-        onNext={next.next ? next.playNext : undefined}
-        loadingEpisode={next.loading}
-      />
-      {next.element}
-      {player.state.error && (
+      {/* A failed player's controls would only take keys and focus from it. */}
+      {player.state.error ? (
         <Failure
           itemId={item.Id!}
           item={item}
@@ -413,6 +404,21 @@ function BrowserPlayer({
           message={player.state.error}
           onVersions={switchVersion}
         />
+      ) : (
+        <>
+          <PlayerControls
+            item={item}
+            player={player}
+            segments={segments.data?.Items}
+            onBack={back}
+            offeringNext={!!next.element}
+            onVersions={switchVersion}
+            onPrevious={next.previous ? next.playPrevious : undefined}
+            onNext={next.next ? next.playNext : undefined}
+            loadingEpisode={next.loading}
+          />
+          {next.element}
+        </>
       )}
     </div>
   );
@@ -515,19 +521,7 @@ function NativePlayer({
           Playing in {launched.name}
         </p>
       )}
-      <PlayerControls
-        item={item}
-        player={player}
-        segments={segments}
-        onBack={back}
-        offeringNext={!!next.element}
-        onVersions={switchVersion}
-        onPrevious={next.previous ? next.playPrevious : undefined}
-        onNext={next.next ? next.playNext : undefined}
-        loadingEpisode={next.loading}
-      />
-      {next.element}
-      {player.state.error && (
+      {player.state.error ? (
         <Failure
           itemId={item.Id!}
           item={item}
@@ -535,6 +529,21 @@ function NativePlayer({
           message={`Playback failed: ${player.state.error}`}
           onVersions={switchVersion}
         />
+      ) : (
+        <>
+          <PlayerControls
+            item={item}
+            player={player}
+            segments={segments}
+            onBack={back}
+            offeringNext={!!next.element}
+            onVersions={switchVersion}
+            onPrevious={next.previous ? next.playPrevious : undefined}
+            onNext={next.next ? next.playNext : undefined}
+            loadingEpisode={next.loading}
+          />
+          {next.element}
+        </>
       )}
     </div>
   );
