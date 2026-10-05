@@ -59,6 +59,8 @@ export interface VideoEnrichment {
   rating?: number;
   runtimeMs?: number;
   people: EnrichedPerson[];
+  filler: boolean;
+  recap: boolean;
 }
 
 export interface SubtitleEnrichment {
@@ -458,6 +460,8 @@ export function readVideoEnrichment(
     rating: upTo(10, video.rating),
     runtimeMs: parseRuntimeMs(video.runtime),
     people: declaredPeople(video.people),
+    filler: (video.filler ?? video.isFiller) === true,
+    recap: (video.recap ?? video.isRecap) === true,
   };
 }
 

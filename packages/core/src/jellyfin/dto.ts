@@ -779,6 +779,12 @@ export function buildEpisode(
     ExternalUrls: externalUrls(extra.providerIds, 'episode'),
     UserData: userDataFromRow(id, playstate, runtimeMs),
     Path: path,
+    ...((extra.filler || extra.recap) && {
+      aiostreams: {
+        ...(extra.filler && { filler: true }),
+        ...(extra.recap && { recap: true }),
+      },
+    }),
     ...(missing || !ctx.listVersions
       ? {}
       : {

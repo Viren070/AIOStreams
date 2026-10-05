@@ -60,6 +60,8 @@ These go on entries in a meta's `videos`.
 | `rating` | number or numeric string, 0 to 10 | The episode's rating                |
 | `ids`    | object of [provider ids](#ids)    | The episode's own ids and IMDb link |
 | `people` | list of [people](#people)         | Guest stars and episode credits     |
+| `filler` | boolean                           | A filler mark in the web app        |
+| `recap`  | boolean                           | A recap mark in the web app         |
 
 A video's `ids` are the episode's own. A [watch state](/reference/addon-protocol/watch-state) event
 for an episode always carries the show's ids instead.

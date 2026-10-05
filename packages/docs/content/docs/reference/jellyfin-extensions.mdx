@@ -29,7 +29,8 @@ Standard Jellyfin clients ignore all of these, so offering them never breaks one
       "dropped": 1,
       "refreshVersions": 1,
       "versions": 1,
-      "genreRequired": 1
+      "genreRequired": 1,
+      "fillers": 1
     }
   }
 }
@@ -57,6 +58,7 @@ value is that feature's version.
 | `refreshVersions` | [`Refresh` in a `PlaybackInfo` body](#versions) runs the lookup for versions again        |
 | `versions`        | [Every version carries the `aiostreams` object](#versions), with its own `id`             |
 | `genreRequired`   | [A library that needs a genre picked says so](#libraries)                                 |
+| `fillers`         | [A filler or recap episode says so](#episodes)                                            |
 
 Every `/AIOStreams/*` endpoint takes the same authorization as the rest of the API. AIOStreams
 refuses them to API keys, which belong to other tools.
@@ -96,6 +98,13 @@ carries `"aiostreams": { "genreRequired": true }`. Asked for without a genre, su
 nothing. Its genres come from `/Genres?ParentId={library}` as usual, and a genre named `None` stands
 for all of it. The app opens it on `None` where that is offered and on its first genre otherwise, and
 offers All only where `None` is there to send.
+
+## Episodes
+
+With `fillers`, a filler episode carries `"aiostreams": { "filler": true }` and a recap
+`"aiostreams": { "recap": true }`. The web app marks them in episode lists and passes over them when
+it plays on to the next episode, unless the user turns that off. Without the feature, those settings
+are hidden.
 
 ## Users
 

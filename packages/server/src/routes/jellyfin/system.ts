@@ -44,6 +44,8 @@ const FEATURES = {
   versions: 1,
   /** A library that needs a genre picked says so, as `aiostreams.genreRequired`. */
   genreRequired: 1,
+  /** A filler or recap episode says so, as `aiostreams.filler` or `aiostreams.recap`. */
+  fillers: 1,
 } as const;
 
 export function publicInfo(req: Request) {
