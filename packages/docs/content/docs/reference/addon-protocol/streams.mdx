@@ -7,11 +7,16 @@ These fields sit in a stream's `behaviorHints` alongside the Stremio ones. Witho
 works the values out from the stream's name and description where it can, so send them whenever
 your addon knows them.
 
-| Field        | Shape                                        | Used for                                                                                         |
-| ------------ | -------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `duration`   | number, in seconds                           | The runtime, and the bitrate worked out from it and the size                                     |
-| `folderName` | string, the torrent or folder the file is in | Parsed with the filename: its seasons mark a season pack, and it fills in details the file lacks |
-| `folderSize` | number, in bytes                             | The torrent or folder size; a file much smaller than its folder marks a season pack              |
+| Field         | Shape                                        | Used for                                                                                         |
+| ------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `service`     | string, a [service id](#service-ids)         | The debrid or usenet service the stream plays through                                            |
+| `cached`      | boolean, sent with `service`                 | Whether the file is ready to play on that service now                                            |
+| `seeders`     | number                                       | The torrent's seeders                                                                            |
+| `indexer`     | string                                       | The indexer or tracker the release came from                                                     |
+| `publishDate` | ISO 8601 date                                | The release's age                                                                                |
+| `duration`    | number, in seconds                           | The runtime, and the bitrate worked out from it and the size                                     |
+| `folderName`  | string, the torrent or folder the file is in | Parsed with the filename: its seasons mark a season pack, and it fills in details the file lacks |
+| `folderSize`  | number, in bytes                             | The torrent or folder size; a file much smaller than its folder marks a season pack              |
 
 Keyword and regex filters match `folderName` as well as the filename.
 
@@ -24,6 +29,12 @@ On a `url` stream for a torrent, send its `infoHash` and `fileIdx` too. Stremio 
 Subtitles attached to a stream take the fields on the [Subtitles](/reference/addon-protocol/subtitles)
 page.
 
+## Service ids
+
+`realdebrid`, `alldebrid`, `premiumize`, `debridlink`, `torbox`, `easydebrid`, `debrider`,
+`offcloud`, `pikpak`, `putio`, `seedr`, `torrin`, `easynews`, `nzbdav`, `altmount`,
+`stremio_nntp`, `stremthru_newz`, `aiostreams`
+
 ## Example
 
 ```json
@@ -31,9 +42,16 @@ page.
   "name": "MyAddon\n1080p",
   "description": "Show S01E05 • 1.2 GB • 20:28",
   "url": "https://…/Show.S01E05.1080p.WEB-DL.x264-GROUP.mkv",
+  "infoHash": "0123456789abcdef0123456789abcdef01234567",
+  "fileIdx": 4,
   "behaviorHints": {
     "filename": "Show.S01E05.1080p.WEB-DL.x264-GROUP.mkv",
     "videoSize": 1288490189,
+    "service": "realdebrid",
+    "cached": true,
+    "seeders": 52,
+    "indexer": "Nyaa",
+    "publishDate": "2026-09-30T18:00:00Z",
     "duration": 1228,
     "folderName": "Show.S01.1080p.WEB-DL.x264-GROUP",
     "folderSize": 13421772800
@@ -41,4 +59,5 @@ page.
 }
 ```
 
-This is episode 5 of a season 1 pack, 20 minutes 28 seconds long, at about 8.4 Mbps.
+This is episode 5 of a season 1 pack, cached on Real-Debrid, 20 minutes 28 seconds long, at about
+8.4 Mbps.

@@ -400,6 +400,10 @@ class StreamParser {
     stream: Stream,
     currentParsedStream: ParsedStream
   ): number | undefined {
+    const seeders = stream.behaviorHints?.seeders;
+    if (typeof seeders === 'number' && seeders >= 0) {
+      return Math.round(seeders);
+    }
     const regex = this.seedersRegex;
     if (!regex) {
       return undefined;
@@ -416,6 +420,13 @@ class StreamParser {
     stream: Stream,
     currentParsedStream: ParsedStream
   ): number | undefined {
+    const publishDate = stream.behaviorHints?.publishDate;
+    if (typeof publishDate === 'string') {
+      const published = Date.parse(publishDate);
+      if (!Number.isNaN(published)) {
+        return Math.max(0, (Date.now() - published) / 3_600_000);
+      }
+    }
     const regex = this.ageRegex;
     if (!regex) {
       return undefined;
@@ -456,6 +467,10 @@ class StreamParser {
     stream: Stream,
     currentParsedStream: ParsedStream
   ): string | undefined {
+    const indexer = stream.behaviorHints?.indexer;
+    if (typeof indexer === 'string' && indexer.trim()) {
+      return indexer.trim();
+    }
     const regex = this.indexerRegex;
     if (!regex) {
       return undefined;
@@ -483,6 +498,16 @@ class StreamParser {
     stream: Stream,
     currentParsedStream: ParsedStream
   ): ParsedStream['service'] | undefined {
+    const service = stream.behaviorHints?.service;
+    if (
+      typeof service === 'string' &&
+      (constants.SERVICES as readonly string[]).includes(service)
+    ) {
+      return {
+        id: service as ServiceId,
+        cached: stream.behaviorHints?.cached === true,
+      };
+    }
     return this.parseServiceData(stream.name || '');
   }
 
