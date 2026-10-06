@@ -88,6 +88,11 @@ export class ArgentinaTVPreset extends Preset {
       OPTIONS: options,
       SUPPORTED_STREAM_TYPES: [LIVE_STREAM_TYPE],
       SUPPORTED_RESOURCES: supportedResources,
+      DISABLED: {
+        removed: true,
+        disabled: true,
+        reason: 'Addon is no longer hosted.',
+      },
     };
   }
 

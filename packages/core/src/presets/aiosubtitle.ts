@@ -393,6 +393,12 @@ export class AIOSubtitlePreset extends Preset {
       SUPPORTED_STREAM_TYPES: [],
       SUPPORTED_RESOURCES: supportedResources,
       CATEGORY: constants.PresetCategory.SUBTITLES,
+      DISABLED: {
+        removed: true,
+        disabled: true,
+        reason:
+          'Addon is no longer hosted. Its developer has moved to a new version at aiosubtitle.org.',
+      },
     };
   }
 
