@@ -7,7 +7,10 @@ export interface ParsedMediaTrack {
   lang?: string;
   codec?: string;
   title?: string;
+  /** @deprecated the first of `tags` */
   tag?: string;
+  /** Audio format first, then what the profile adds. */
+  tags?: string[];
   channels?: string;
   default?: boolean;
   forced?: boolean;
@@ -76,6 +79,7 @@ type MediaInfoVideo = {
   hdr?: unknown;
   h?: unknown;
   w?: unknown;
+  bit_depth?: unknown;
 };
 
 type MediaInfoFormat = {
@@ -145,12 +149,18 @@ function asTrackText(value: unknown): string | undefined {
 function normaliseTrack(track: ParsedMediaTrack | undefined): ParsedMediaTrack {
   if (!track) return {};
   const index = asStreamIndex(track.index);
+  const tags = track.tags?.length
+    ? track.tags
+    : track.tag
+      ? [track.tag]
+      : undefined;
   return {
     ...(index !== undefined ? { index } : {}),
     ...(track.lang ? { lang: track.lang } : {}),
     ...(track.codec ? { codec: track.codec } : {}),
     ...(track.title ? { title: track.title } : {}),
     ...(track.tag ? { tag: track.tag } : {}),
+    ...(tags ? { tags } : {}),
     ...(track.channels ? { channels: track.channels } : {}),
     ...(track.default ? { default: true } : {}),
     ...(track.forced ? { forced: true } : {}),
@@ -191,14 +201,21 @@ function normaliseLanguageList(values: unknown[]): string[] {
   return out;
 }
 
-export function normaliseAudioTag(
-  codec: unknown,
-  profile: unknown
-): string | undefined {
+export function normaliseAudioTags(codec: unknown, profile: unknown): string[] {
   const codecStr = typeof codec === 'string' ? codec.toLowerCase().trim() : '';
   const profileStr =
     typeof profile === 'string' ? profile.toLowerCase().trim() : '';
+  const format = audioFormat(codecStr, profileStr);
 
+  // ffprobe names these "Dolby TrueHD + Dolby Atmos", "DTS-HD MA + DTS:X"
+  return [
+    ...(format ? [format] : []),
+    ...(profileStr.includes('atmos') ? ['Atmos'] : []),
+    ...(profileStr.includes('dts:x') ? ['DTS:X'] : []),
+  ];
+}
+
+function audioFormat(codecStr: string, profileStr: string): string | undefined {
   if (codecStr === 'eac3' || codecStr === 'ec-3') return 'DD+';
   if (codecStr === 'ac3' || codecStr === 'ac-3') return 'DD';
   if (codecStr === 'truehd') return 'TrueHD';
@@ -211,6 +228,7 @@ export function normaliseAudioTag(
   if (codecStr === 'opus') return 'OPUS';
   if (codecStr === 'flac') return 'FLAC';
   if (codecStr === 'aac' || codecStr === 'faad') return 'AAC';
+  if (codecStr.startsWith('pcm_')) return 'PCM';
 
   if (profileStr.includes('dolby digital plus')) return 'DD+';
   if (profileStr.includes('dolby digital')) return 'DD';
@@ -239,10 +257,10 @@ function normaliseAudioChannels(
 }
 
 function normaliseVisualTags(video: MediaInfoVideo | undefined): string[] {
-  if (!video || !Array.isArray(video.hdr)) return [];
+  if (!video) return [];
 
   const tags = new Set<string>();
-  for (const rawTag of video.hdr) {
+  for (const rawTag of Array.isArray(video.hdr) ? video.hdr : []) {
     if (typeof rawTag !== 'string') continue;
     const tag = rawTag.toLowerCase().trim();
 
@@ -252,8 +270,36 @@ function normaliseVisualTags(video: MediaInfoVideo | undefined): string[] {
     else if (tag === 'hlg') tags.add('HLG');
     else if (tag === 'hdr') tags.add('HDR');
   }
+  if (typeof video.bit_depth === 'number' && video.bit_depth >= 10) {
+    tags.add('10bit');
+  }
 
   return [...tags];
+}
+
+const DYNAMIC_RANGE_TAGS: ReadonlySet<string> = new Set([
+  'DV',
+  'HDR10+',
+  'HDR10',
+  'HDR',
+  'HLG',
+  'SDR',
+]);
+
+/** A probe's range tags replace the name's if it found any; the rest stay. */
+export function mergeVisualTags(
+  named: string[] | undefined,
+  probed: string[] | undefined
+): string[] {
+  const probedRange = !!probed?.some((tag) => DYNAMIC_RANGE_TAGS.has(tag));
+  return [
+    ...new Set([
+      ...(probed ?? []),
+      ...(named ?? []).filter(
+        (tag) => !probedRange || !DYNAMIC_RANGE_TAGS.has(tag)
+      ),
+    ]),
+  ];
 }
 
 export function normaliseEncode(
@@ -413,13 +459,10 @@ export function parseMediaInfo(
     subtitleTracks.map((track) => resolveTrackLang(track.lang, track.title))
   );
 
-  const audioTags = [
-    ...new Set(
-      audioTracks
-        .map((track) => normaliseAudioTag(track.codec, track.profile))
-        .filter((tag): tag is string => !!tag)
-    ),
-  ];
+  const trackAudioTags = audioTracks.map((track) =>
+    normaliseAudioTags(track.codec, track.profile)
+  );
+  const audioTags = [...new Set(trackAudioTags.flat())];
 
   const audioChannels = [
     ...new Set(
@@ -429,12 +472,13 @@ export function parseMediaInfo(
     ),
   ];
 
-  const audioTrackList = audioTracks.map((track) => ({
+  const audioTrackList = audioTracks.map((track, i) => ({
     index: asStreamIndex(track.index),
     lang: normaliseLanguage(resolveTrackLang(track.lang, track.title)),
     codec: asTrackText(track.codec)?.toLowerCase(),
     title: asTrackText(track.title),
-    tag: normaliseAudioTag(track.codec, track.profile),
+    tag: trackAudioTags[i][0],
+    tags: trackAudioTags[i],
     channels: normaliseAudioChannels(track),
     default: track.default === true,
     commentary: track.commentary === true,

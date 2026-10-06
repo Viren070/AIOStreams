@@ -8,11 +8,13 @@ import type {
 
 function hdrTags(track: VideoTrack): string[] {
   if (track.hdr) return track.hdr.map((tag) => tag.toLowerCase());
-  if ((track.dvProfile ?? 0) > 0) return ['dv'];
-  if (track.hdr10Plus) return ['hdr10+'];
-  if (track.colorTransfer === 'smpte2084') return ['hdr10'];
-  if (track.colorTransfer === 'arib-std-b67') return ['hlg'];
-  return [];
+  const tags = (track.dvProfile ?? 0) > 0 ? ['dv'] : [];
+  // profile 5 has no base layer a player without Dolby Vision can show
+  if (track.dvProfile === 5) return tags;
+  if (track.hdr10Plus) tags.push('hdr10+');
+  else if (track.colorTransfer === 'smpte2084') tags.push('hdr10');
+  else if (track.colorTransfer === 'arib-std-b67') tags.push('hlg');
+  return tags;
 }
 
 /** The shape `parseMediaInfo` reads. */
@@ -31,6 +33,7 @@ export function toWireMediaInfo(record: MediaInfoRecord): MediaInfo {
           w: video.width,
           h: video.height,
           hdr: hdrTags(video),
+          bit_depth: video.bitDepth,
         }
       : undefined,
     audio: audio.map((t) => ({

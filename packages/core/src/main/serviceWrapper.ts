@@ -6,8 +6,8 @@ import {
   getSimpleTextHash,
   encryptString,
   BuiltinServiceId,
-  mergeParsedMediaInfos,
 } from '../utils/index.js';
+import { layerMediaInfo } from '../media-info/apply.js';
 import {
   Torrent,
   BuiltinDebridServices,
@@ -468,32 +468,12 @@ async function buildDebridStreams(
         },
       };
 
-      const parsedMediaInfo = mergeParsedMediaInfos(
-        original?.parsedFile,
-        result.parsedMediaInfo
-      );
-      if (result.parsedMediaInfo && parsedMediaInfo) {
-        debridStream.parsedFile = {
-          ...debridStream.parsedFile,
-          ...parsedMediaInfo,
-          languages: parsedMediaInfo.languages?.length
-            ? parsedMediaInfo.languages
-            : (debridStream.parsedFile?.languages ?? []),
-          subtitles: parsedMediaInfo.subtitles?.length
-            ? parsedMediaInfo.subtitles
-            : (debridStream.parsedFile?.subtitles ?? []),
-          audioChannels: parsedMediaInfo.audioChannels?.length
-            ? parsedMediaInfo.audioChannels
-            : (debridStream.parsedFile?.audioChannels ?? []),
-          visualTags: parsedMediaInfo.visualTags?.length
-            ? parsedMediaInfo.visualTags
-            : (debridStream.parsedFile?.visualTags ?? []),
-          audioTags: parsedMediaInfo.audioTags?.length
-            ? parsedMediaInfo.audioTags
-            : (debridStream.parsedFile?.audioTags ?? []),
-          hasChapters:
-            parsedMediaInfo.hasChapters ?? debridStream.parsedFile?.hasChapters,
-        };
+      const parsedMediaInfo = result.parsedMediaInfo;
+      if (parsedMediaInfo) {
+        debridStream.parsedFile = layerMediaInfo(
+          original?.parsedFile,
+          parsedMediaInfo
+        );
         debridStream.duration =
           parsedMediaInfo.duration != null
             ? parsedMediaInfo.duration * 1000

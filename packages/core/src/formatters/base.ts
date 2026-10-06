@@ -46,6 +46,7 @@ const TRACK_DEFAULTS: FormatterTrack = {
   lang: null,
   codec: null,
   tag: null,
+  tags: null,
   channels: null,
   title: null,
   default: false,

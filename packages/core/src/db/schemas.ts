@@ -1389,7 +1389,9 @@ export const MediaTrackSchema = z.object({
   lang: z.string().optional(),
   codec: z.string().optional(),
   title: z.string().optional(),
+  /** @deprecated the first of `tags` */
   tag: z.string().optional(),
+  tags: z.array(z.string()).optional(),
   channels: z.string().optional(),
   default: z.boolean().optional(),
   forced: z.boolean().optional(),

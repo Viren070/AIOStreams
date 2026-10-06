@@ -146,6 +146,7 @@ export const FIELD_REGISTRY: Readonly<Record<string, readonly string[]>> = {
     'lang',
     'codec',
     'tag',
+    'tags',
     'channels',
     'title',
     'default',

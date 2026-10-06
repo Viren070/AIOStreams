@@ -538,7 +538,9 @@ function compileParameterised(
         const found = new Set<string>();
         for (const item of value as Record<string, unknown>[]) {
           const field = item[key];
-          if (typeof field === 'string' && field) found.add(sanitise(field));
+          for (const entry of Array.isArray(field) ? field : [field]) {
+            if (typeof entry === 'string' && entry) found.add(sanitise(entry));
+          }
         }
         return [...found];
       };

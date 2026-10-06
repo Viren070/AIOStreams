@@ -1,6 +1,7 @@
 /**
  * All must hold: `key` (truthy), `key=a|b` (equals one), `key~a|b` (contains
- * one). Case-insensitive; a leading `!` negates.
+ * one). Case-insensitive; a leading `!` negates. A list matches when any of
+ * its entries does.
  *
  * A value may be `{section.property}`, which reads a list from the caller's
  * `resolve`. Without one, a reference contributes no values.
@@ -73,8 +74,11 @@ function compileCondition(condition: string): ObjectFilter {
         ]
       : literals;
     const actual = (object as Record<string, unknown>)[key];
+    const entries = Array.isArray(actual) ? actual : [actual];
     return (
-      (actual != null && test(values, String(actual).toLowerCase())) !== negate
+      entries.some(
+        (entry) => entry != null && test(values, String(entry).toLowerCase())
+      ) !== negate
     );
   };
 }

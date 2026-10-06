@@ -131,20 +131,21 @@ Modifiers are chained with `::`:
 
 Inside `::each`, the track being rendered is available as `{track.*}`:
 
-| Variable                  | Type    | Tracks   | Description                                                                 |
-| ------------------------- | ------- | -------- | --------------------------------------------------------------------------- |
-| `{track.lang}`            | string  | both     | Language (e.g. `English`)                                                   |
-| `{track.title}`           | string  | both     | The track's name (e.g. `SDH`, `Director's Commentary`)                      |
-| `{track.codec}`           | string  | both     | ffprobe's codec name (e.g. `truehd`, `eac3`, `subrip`, `hdmv_pgs_subtitle`) |
-| `{track.tag}`             | string  | audio    | Audio format as in `audioTags` (e.g. `TrueHD`, `DD+`)                       |
-| `{track.channels}`        | string  | audio    | Channels (e.g. `5.1`)                                                       |
-| `{track.default}`         | boolean | both     | Marked as the default track                                                 |
-| `{track.forced}`          | boolean | subtitle | Forced subtitles                                                            |
-| `{track.hearingImpaired}` | boolean | both     | For the hearing impaired (SDH)                                              |
-| `{track.commentary}`      | boolean | audio    | Commentary track                                                            |
-| `{track.dub}`             | boolean | audio    | Dubbed audio                                                                |
-| `{track.original}`        | boolean | audio    | Original-language audio                                                     |
-| `{track.visualImpaired}`  | boolean | audio    | Audio description                                                           |
+| Variable                  | Type     | Tracks   | Description                                                                 |
+| ------------------------- | -------- | -------- | --------------------------------------------------------------------------- |
+| `{track.lang}`            | string   | both     | Language (e.g. `English`)                                                   |
+| `{track.title}`           | string   | both     | The track's name (e.g. `SDH`, `Director's Commentary`)                      |
+| `{track.codec}`           | string   | both     | ffprobe's codec name (e.g. `truehd`, `eac3`, `subrip`, `hdmv_pgs_subtitle`) |
+| `{track.tags}`            | string[] | audio    | Audio format, then Atmos or DTS:X if present (e.g. `DD+`, `Atmos`)          |
+| `{track.tag}`             | string   | audio    | Deprecated: the first of `{track.tags}`                                     |
+| `{track.channels}`        | string   | audio    | Channels (e.g. `5.1`)                                                       |
+| `{track.default}`         | boolean  | both     | Marked as the default track                                                 |
+| `{track.forced}`          | boolean  | subtitle | Forced subtitles                                                            |
+| `{track.hearingImpaired}` | boolean  | both     | For the hearing impaired (SDH)                                              |
+| `{track.commentary}`      | boolean  | audio    | Commentary track                                                            |
+| `{track.dub}`             | boolean  | audio    | Dubbed audio                                                                |
+| `{track.original}`        | boolean  | audio    | Original-language audio                                                     |
+| `{track.visualImpaired}`  | boolean  | audio    | Audio description                                                           |
 
 The flags are whatever the file itself marks. Many releases only say `SDH` or `Commentary` in the track's title, so `title~sdh` catches more than `hearingImpaired` does.
 
@@ -506,14 +507,14 @@ Each `::where` condition is one of:
 | `field~a\|b` | the field contains one of the values                  |
 | `!…`         | the condition after `!` does not hold, e.g. `!forced` |
 
-Comparisons ignore case. Because every condition must hold on the same item, `::where('lang=English', 'forced')` keeps English forced tracks only. A value may also be a `{field}` reference, so `::where('lang={user.languages}')` keeps the tracks in the languages you configured — see [Referencing a field](#referencing-a-field).
+Comparisons ignore case. Because every condition must hold on the same item, `::where('lang=English', 'forced')` keeps English forced tracks only. A value may also be a `{field}` reference, so `::where('lang={user.languages}')` keeps the tracks in the languages you configured — see [Referencing a field](#referencing-a-field). A list field such as `tags` matches when any of its entries does, so `::where('tags=Atmos')` keeps Atmos tracks, and `::pluck('tags')` gives every entry.
 
 ```
 {stream.subtitleTracks::where('hearingImpaired')::exists["CC"||""]}
 {stream.subtitleTracks::where('forced')::pluck('lang')::languageEmoji::join(' ')}
 {stream.audioTracks::where('commentary')::exists["🎙️"||""]}
 {stream.subtitleTracks::where('title~ubtitle')::length}
-{stream.audioTracks::each("{track.lang::languageCode} {track.tag} {track.channels}")::join(' | ')}
+{stream.audioTracks::each("{track.lang::languageCode} {track.tags::join(' ')} {track.channels}")::join(' | ')}
 
   ->  EN TrueHD 7.1 | EN DD 2.0 | FR DD+ 5.1
 ```

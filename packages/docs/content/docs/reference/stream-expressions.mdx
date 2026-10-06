@@ -474,7 +474,8 @@ Each condition is a string:
 | `field~a\|b` | the field contains one of the values                  |
 | `!…`         | the condition after `!` does not hold, e.g. `!forced` |
 
-Comparisons ignore case.
+Comparisons ignore case. `tags` is a list, and a condition on it holds when any
+entry does, so `tags=Atmos` matches an Atmos track.
 
 **Fields:**
 
@@ -483,7 +484,8 @@ Comparisons ignore case.
 | `lang`            | both     | `English`, `French`                                                                          |
 | `title`           | both     | `SDH`, `Director's Commentary`, `VFQ`                                                        |
 | `codec`           | both     | ffprobe's codec name: `truehd`, `eac3`, `subrip`, `ass`, `hdmv_pgs_subtitle`, `dvd_subtitle` |
-| `tag`             | audio    | `TrueHD`, `DD+`, `DTS-HD MA`, the same names as `audioTag()`                                 |
+| `tags`            | audio    | `TrueHD`, `DD+`, `Atmos`, `DTS:X`, the same names as `audioTag()`                            |
+| `tag`             | audio    | deprecated: the first of `tags`                                                              |
 | `channels`        | audio    | `2.0`, `5.1`, `7.1`                                                                          |
 | `default`         | both     | flag                                                                                         |
 | `forced`          | subtitle | flag                                                                                         |
@@ -502,7 +504,8 @@ subtitleTrack(streams, 'title~ubtitle')                  // "Subtitle", "Dubtitl
 subtitleTrack(streams, 'lang=English', 'hearingImpaired')
 subtitleTrack(streams, 'forced', '!lang=English')
 audioTrack(streams, 'lang=Japanese', 'original')
-audioTrack(streams, 'tag=TrueHD|DTS-HD MA', 'channels=7.1')
+audioTrack(streams, 'tags=TrueHD|DTS-HD MA', 'channels=7.1')
+audioTrack(streams, 'lang=English', 'tags=Atmos')
 negate(subtitleTrack(streams, 'codec~pgs'), streams)     // no PGS subtitles
 ```
 

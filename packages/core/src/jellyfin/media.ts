@@ -119,13 +119,22 @@ const VIDEO_RANGE_TYPE = {
   Unknown: undefined,
 } satisfies Record<VisualTag, string | undefined>;
 
-const RANGE_PRIORITY = ['DOVI', 'HDR10Plus', 'HDR10', 'HLG', 'SDR'];
+const BASE_RANGE_PRIORITY = ['HDR10Plus', 'HDR10', 'HLG', 'SDR'];
+
+const DOVI_WITH: Record<string, string> = {
+  HDR10Plus: 'DOVIWithHDR10Plus',
+  HDR10: 'DOVIWithHDR10',
+  HLG: 'DOVIWithHLG',
+  SDR: 'DOVIWithSDR',
+};
 
 function videoRangeTypeOf(tags: string[]): string {
   const found = tags
     .map((t) => VIDEO_RANGE_TYPE[t as VisualTag])
     .filter((v): v is string => !!v);
-  return RANGE_PRIORITY.find((r) => found.includes(r)) ?? 'SDR';
+  const base = BASE_RANGE_PRIORITY.find((r) => found.includes(r));
+  if (!found.includes('DOVI')) return base ?? 'SDR';
+  return base ? DOVI_WITH[base] : 'DOVI';
 }
 
 export function containerOf(stream: ParsedStream): string {
@@ -373,7 +382,8 @@ function videoStream(
     AspectRatio: size ? (size[0] / size[1] >= 1.7 ? '16:9' : '4:3') : undefined,
     IsDefault: true,
     IsTextSubtitleStream: false,
-    VideoRange: rangeType === 'SDR' ? 'SDR' : 'HDR',
+    VideoRange:
+      rangeType === 'SDR' || rangeType === 'DOVIWithSDR' ? 'SDR' : 'HDR',
     VideoRangeType: rangeType,
     BitDepth: tenBit ? 10 : 8,
     BitRate: bitrate,
@@ -381,7 +391,9 @@ function videoStream(
       [
         resolution !== 'Unknown' ? resolution : undefined,
         encode !== 'Unknown' ? encode : undefined,
-        rangeType !== 'SDR' ? rangeType : undefined,
+        rangeType !== 'SDR'
+          ? rangeType.replace('DOVIWith', 'DOVI ')
+          : undefined,
       ]
         .filter(Boolean)
         .join(' ') || 'Video',
@@ -408,16 +420,23 @@ function placeholderLanguages(pf: ParsedFile | undefined, list?: string[]) {
 function audioStreams(pf: ParsedFile | undefined): JellyfinMediaStream[] {
   if (pf?.audioTracks?.length) {
     return pf.audioTracks.map((track, i) => {
-      const tag = track.tag as AudioTag | undefined;
+      const tags = track.tags ?? [];
+      const format = tags[0] as AudioTag | undefined;
       const channelTag = track.channels as AudioChannels | undefined;
       return {
         Type: 'Audio',
         Index: i,
         ...STREAM_FLAGS,
-        Codec: track.codec ?? (tag ? AUDIO_CODEC[tag] : undefined),
+        Codec: track.codec ?? (format ? AUDIO_CODEC[format] : undefined),
         Language: track.lang ? languageToIso6392(track.lang) : undefined,
         DisplayTitle:
-          [track.lang, track.title, tag, channelTag, ...trackFlagLabels(track)]
+          [
+            track.lang,
+            track.title,
+            ...tags,
+            channelTag,
+            ...trackFlagLabels(track),
+          ]
             .filter(Boolean)
             .join(' ') || 'Audio',
         Title: track.title,
