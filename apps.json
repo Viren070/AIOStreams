@@ -1,0 +1,23 @@
+{
+  "packages": [
+    {
+      "id": "io.github.viren070.aiostreams",
+      "title": "AIOStreams",
+      "iconUri": "https://raw.githubusercontent.com/Viren070/AIOStreams/main/packages/tv/webos/largeIcon.png",
+      "shortDescription": "The AIOStreams app for LG TVs.",
+      "manifest": {
+        "id": "io.github.viren070.aiostreams",
+        "version": "0.2.0",
+        "type": "web",
+        "title": "AIOStreams",
+        "iconUri": "https://raw.githubusercontent.com/Viren070/AIOStreams/main/packages/tv/webos/largeIcon.png",
+        "sourceUrl": "https://github.com/Viren070/AIOStreams",
+        "rootRequired": false,
+        "ipkUrl": "https://github.com/Viren070/AIOStreams/releases/download/tv-v0.2.0/aiostreams-webos-0.2.0.ipk",
+        "ipkHash": {
+          "sha256": "9311b42a9feba1c9848eea14040ecdc82d7934b83e20a86c116d688b0f3a821a"
+        }
+      }
+    }
+  ]
+}
