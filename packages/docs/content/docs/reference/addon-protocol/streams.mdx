@@ -1,0 +1,44 @@
+---
+title: Streams
+description: Extra stream fields AIOStreams reads, and what each one fills in.
+---
+
+These fields sit in a stream's `behaviorHints` alongside the Stremio ones. Without them, AIOStreams
+works the values out from the stream's name and description where it can, so send them whenever
+your addon knows them.
+
+| Field        | Shape                                        | Used for                                                                                         |
+| ------------ | -------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `duration`   | number, in seconds                           | The runtime, and the bitrate worked out from it and the size                                     |
+| `folderName` | string, the torrent or folder the file is in | Parsed with the filename: its seasons mark a season pack, and it fills in details the file lacks |
+| `folderSize` | number, in bytes                             | The torrent or folder size; a file much smaller than its folder marks a season pack              |
+
+Keyword and regex filters match `folderName` as well as the filename.
+
+The standard `filename` and `videoSize` hints work the same way: AIOStreams uses them before
+anything in the description.
+
+On a `url` stream for a torrent, send its `infoHash` and `fileIdx` too. Stremio still plays the
+`url`, and AIOStreams uses them to spot the same file coming from other addons.
+
+Subtitles attached to a stream take the fields on the [Subtitles](/reference/addon-protocol/subtitles)
+page.
+
+## Example
+
+```json
+{
+  "name": "MyAddon\n1080p",
+  "description": "Show S01E05 • 1.2 GB • 20:28",
+  "url": "https://…/Show.S01E05.1080p.WEB-DL.x264-GROUP.mkv",
+  "behaviorHints": {
+    "filename": "Show.S01E05.1080p.WEB-DL.x264-GROUP.mkv",
+    "videoSize": 1288490189,
+    "duration": 1228,
+    "folderName": "Show.S01.1080p.WEB-DL.x264-GROUP",
+    "folderSize": 13421772800
+  }
+}
+```
+
+This is episode 5 of a season 1 pack, 20 minutes 28 seconds long, at about 8.4 Mbps.

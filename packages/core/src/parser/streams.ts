@@ -526,6 +526,10 @@ class StreamParser {
     stream: Stream,
     currentParsedStream: ParsedStream
   ): number | undefined {
+    const duration = stream.behaviorHints?.duration;
+    if (typeof duration === 'number' && duration > 0) {
+      return Math.round(duration * 1000);
+    }
     return parseDuration(stream.description || '');
   }
 

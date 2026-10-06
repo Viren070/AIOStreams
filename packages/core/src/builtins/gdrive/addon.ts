@@ -464,18 +464,16 @@ export class GDriveAddon {
     };
   }
 
-  private createStream(
-    file: GDriveFile,
-    accessToken: string
-  ): Stream & { duration: number | undefined } {
+  private createStream(file: GDriveFile, accessToken: string): Stream {
+    const durationMs = file.videoMediaMetadata?.durationMs;
     return {
       name: `Stremio GDrive`,
       subtitles: [],
       url: `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`,
-      duration: file.videoMediaMetadata?.durationMs,
       behaviorHints: {
         filename: file.name,
         videoSize: file.size ? Number(file.size) : undefined,
+        duration: durationMs ? durationMs / 1000 : undefined,
         notWebReady: true,
         proxyHeaders: {
           request: {

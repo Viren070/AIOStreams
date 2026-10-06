@@ -21,12 +21,6 @@ export class GDriveParser extends StreamParser {
       throw new Error(stream.description ?? 'Unknown error');
     }
   }
-  protected getDuration(
-    stream: Stream,
-    currentParsedStream: ParsedStream
-  ): number | undefined {
-    return (stream as any).duration as number | undefined;
-  }
 }
 
 export class GDrivePreset extends Preset {
