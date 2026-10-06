@@ -74,7 +74,7 @@ import {
 import {
   CUSTOM_LINK,
   LAUNCHED_PLAYERS,
-  LINK_PLAYERS,
+  linkPreset,
   playerOptions,
 } from '../lib/playback/player-choice';
 import {
@@ -397,7 +397,7 @@ function PlayerCard() {
   const [link, setLink] = useSetting(settings.playerLink);
   const found = useExternalPlayers();
   const launched = LAUNCHED_PLAYERS.find((p) => p.id === player);
-  const preset = LINK_PLAYERS.find((p) => p.id === player);
+  const preset = linkPreset(player);
   const program = found?.find((p) => p.id === player)?.path;
   let help: React.ReactNode;
   if (launched)
@@ -421,8 +421,8 @@ function PlayerCard() {
     );
   else if (preset)
     help = preset.template.includes('{returnUrl}')
-      ? `Opens versions in ${preset.name}, which brings you back here with your place saved.`
-      : `Opens versions in ${preset.name}. It can't tell this app where you stopped, so you mark what you watched yourself.`;
+      ? `Opens versions in ${preset.target ?? preset.name}, which brings you back here with your place saved.`
+      : `Opens versions in ${preset.target ?? preset.name}. It can't tell this app where you stopped, so you mark what you watched yourself.`;
   else if (player !== CUSTOM_LINK)
     help =
       currentHost().name === 'desktop'
@@ -462,7 +462,7 @@ function PlayerCard() {
           placeholder="vlc://{url}"
           value={link}
           onValueChange={setLink}
-          help="{url} is the stream address, {encodedUrl} the same address URL-encoded, {scheme} its scheme, {filename} the file's name, {subtitles} each external subtitle (its parameter repeats per file), {position} the second to start at, and {returnUrl} a link back here for a player that reports where it stopped. Values other than {url} are URL-encoded. After intent://, {url} goes without its scheme."
+          help="{url} is the stream address, {encodedUrl} the same address URL-encoded, {scheme} its scheme, {filename} the file's name, {subtitles} each external subtitle (its parameter repeats per file), {title} the title with the episode, {position} the second to start at ({positionMs} in milliseconds), and {returnUrl} a link back here for a player that reports where it stopped. Values other than {url} are URL-encoded. After intent://, {url} goes without its scheme."
         />
       )}
     </SettingsCard>

@@ -7,10 +7,21 @@ type Platform = 'ios' | 'android' | 'macos';
 /** Players the desktop app starts and drives itself, as it names them. */
 export const LAUNCHED_PLAYERS = [{ id: 'mpv', name: 'mpv' }] as const;
 
-/** Players opened by a link, on the platforms whose apps take one. */
+/** Extras the Android players read: a title, and where to start in ms. */
+const ANDROID_EXTRAS = 'S.title={title};i.position={positionMs}';
+
+const androidIntent = (target: string) =>
+  `intent://{url}#Intent;${target};type=video/*;scheme={scheme};${ANDROID_EXTRAS};end`;
+
+/**
+ * Players opened by a link, on the platforms whose apps take one. An id can
+ * have one entry per platform, so a saved choice follows the app across them.
+ */
 export const LINK_PLAYERS: readonly {
   id: string;
   name: string;
+  /** What the help calls it, when the name doesn't fit a sentence. */
+  target?: string;
   template: string;
   platforms: readonly Platform[];
 }[] = [
@@ -18,7 +29,32 @@ export const LINK_PLAYERS: readonly {
     id: 'vlc',
     name: 'VLC',
     template: 'vlc://{url}',
-    platforms: ['ios', 'android'],
+    platforms: ['ios'],
+  },
+  {
+    id: 'vlc',
+    name: 'VLC',
+    template: androidIntent('package=org.videolan.vlc'),
+    platforms: ['android'],
+  },
+  {
+    id: 'mx-player',
+    name: 'MX Player',
+    template: androidIntent('package=com.mxtech.videoplayer.ad'),
+    platforms: ['android'],
+  },
+  {
+    id: 'mpv-android',
+    name: 'mpv',
+    template: androidIntent('package=is.xyz.mpv'),
+    platforms: ['android'],
+  },
+  {
+    id: 'android-app',
+    name: 'Other app',
+    target: 'the video app Android picks',
+    template: androidIntent('action=android.intent.action.VIEW'),
+    platforms: ['android'],
   },
   {
     id: 'infuse',
@@ -30,7 +66,8 @@ export const LINK_PLAYERS: readonly {
   {
     id: 'outplayer',
     name: 'Outplayer',
-    template: 'outplayer://{url}',
+    template:
+      'outplayer://x-callback-url/play?url={encodedUrl}&position={position}&subtitle={subtitles}&x-cancel={returnUrl}&x-success={returnUrl}',
     platforms: ['ios'],
   },
   {
@@ -48,14 +85,21 @@ export type PlayerChoice =
   | { kind: 'launched'; id: string; name: string }
   | { kind: 'link'; id: string; name: string; template: string };
 
+/** Earlier templates of presets, as the old link setting saved them. */
+const OLD_TEMPLATES: Record<string, string> = {
+  'outplayer://{url}': 'outplayer',
+};
+
 /** What the link and the switch that came before the choice amounted to. */
 function migrate() {
   const template = storage.get<unknown>('aiostreams-web-external-player');
   if (typeof template !== 'string') return;
-  const preset = LINK_PLAYERS.find((p) => p.template === template);
+  const preset =
+    OLD_TEMPLATES[template] ??
+    LINK_PLAYERS.find((p) => p.template === template)?.id;
   if (!preset) settings.playerLink.write(template);
   if (storage.get<boolean>('aiostreams-web-external-always') === true)
-    settings.player.write(preset?.id ?? CUSTOM_LINK);
+    settings.player.write(preset ?? CUSTOM_LINK);
   storage.remove('aiostreams-web-external-player');
   storage.remove('aiostreams-web-external-always');
 }
@@ -72,6 +116,15 @@ function platform(): Platform | null {
   return null;
 }
 
+/** The link preset saved as `id`, in this platform's form when it has one. */
+export function linkPreset(id: string) {
+  const os = platform();
+  return (
+    LINK_PLAYERS.find((p) => p.id === id && os && p.platforms.includes(os)) ??
+    LINK_PLAYERS.find((p) => p.id === id)
+  );
+}
+
 /** Where Play sends a version on this device; an app's own player always wins. */
 export function chosenPlayer(): PlayerChoice {
   const host = currentHost();
@@ -80,7 +133,7 @@ export function chosenPlayer(): PlayerChoice {
   const launched = LAUNCHED_PLAYERS.find((p) => p.id === id);
   if (launched && host.name === 'desktop')
     return { kind: 'launched', ...launched };
-  const preset = LINK_PLAYERS.find((p) => p.id === id);
+  const preset = linkPreset(id);
   if (preset) return { kind: 'link', ...preset };
   const template = settings.playerLink.read().trim();
   if (id === CUSTOM_LINK && template)
@@ -104,40 +157,46 @@ export function playerOptions(
       (p) => p.id === current || launched.includes(p.id)
     ).map((p) => ({ value: p.id, label: `Your own ${p.name}` })),
     ...LINK_PLAYERS.filter(
-      (p) => p.id === current || (os && p.platforms.includes(os))
+      (p) =>
+        p === linkPreset(p.id) &&
+        (p.id === current || (os && p.platforms.includes(os)))
     ).map((p) => ({ value: p.id, label: p.name })),
     { value: CUSTOM_LINK, label: 'Custom link' },
   ];
 }
 
 /**
- * Writes the parameter holding `{placeholder}` once per value, and drops it
- * when there are none rather than sending it empty.
+ * Writes each parameter (or intent extra) holding `{placeholder}` once per
+ * value, and drops it when there are none rather than sending it empty.
  */
 function fillParam(
   template: string,
   placeholder: string,
   values: string[]
 ): string {
-  const match = new RegExp(`([?&])([^=&?]+)=\{${placeholder}\}`).exec(template);
-  if (!match) {
+  const params = new RegExp(`([?&;])([^=&?;]+)=\\{${placeholder}\\}`, 'g');
+  if (template.search(params) < 0) {
     return template.replace(
       `{${placeholder}}`,
       encodeURIComponent(values[0] ?? '')
     );
   }
-  const [param, separator, name] = match;
-  const written = values
-    .map((v, i) => `${i ? '&' : separator}${name}=${encodeURIComponent(v)}`)
-    .join('');
-  const filled = template.replace(param, written);
-  return written ? filled : filled.replace(/^([^?]*)&/, '$1?');
+  const filled = template.replace(params, (_, separator: string, name) => {
+    const between = separator === ';' ? ';' : '&';
+    return values
+      .map(
+        (v, i) => `${i ? between : separator}${name}=${encodeURIComponent(v)}`
+      )
+      .join('');
+  });
+  return values.length ? filled : filled.replace(/^([^?]*)&/, '$1?');
 }
 
 /**
  * Fills a player link: `{url}` or `{encodedUrl}`, and optionally `{scheme}`
- * (the address's), `{position}` (seconds to start at), `{returnUrl}` (where a
- * player that reports back sends the position it stopped at), `{filename}` and
+ * (the address's), `{position}` (seconds to start at) or `{positionMs}`,
+ * `{title}` (with the episode for an episode), `{returnUrl}` (where a player
+ * that reports back sends the position it stopped at), `{filename}` and
  * `{subtitles}` (its parameter repeated once per external subtitle).
  */
 export function playerLink(
@@ -145,14 +204,18 @@ export function playerLink(
   url: string,
   opts: {
     startMs?: number;
+    title?: string;
     returnUrl?: string;
     filename?: string;
     subtitles?: string[];
   } = {}
 ): string {
+  const startMs = Math.floor(opts.startMs ?? 0);
   let filled = template
     .replace('{scheme}', new URL(url, location.href).protocol.slice(0, -1))
-    .replace('{position}', String(Math.floor((opts.startMs ?? 0) / 1000)));
+    .replace('{positionMs}', String(startMs))
+    .replace('{position}', String(Math.floor(startMs / 1000)));
+  filled = fillParam(filled, 'title', opts.title ? [opts.title] : []);
   filled = fillParam(
     filled,
     'returnUrl',

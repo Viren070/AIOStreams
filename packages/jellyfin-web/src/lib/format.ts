@@ -59,6 +59,13 @@ export function itemTitle(item: BaseItemDto): string {
   return (item.Type === 'Episode' && item.SeriesName) || item.Name || '';
 }
 
+/** The title with the episode for an episode, for another player's window. */
+export function fullTitle(item: BaseItemDto): string {
+  return [itemTitle(item), item.Type === 'Episode' && itemSubtitle(item)]
+    .filter(Boolean)
+    .join(' · ');
+}
+
 export function progressOf(item: BaseItemDto): number | null {
   const pct = item.UserData?.PlayedPercentage;
   if (pct != null && pct > 0) return Math.min(100, pct);

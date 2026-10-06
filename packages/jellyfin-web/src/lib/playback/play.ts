@@ -1,5 +1,5 @@
 import { currentHost } from '../hosts';
-import { ticksToMs } from '../format';
+import { fullTitle, ticksToMs } from '../format';
 import { navigate, to } from '../paths';
 import { externalReturnUrl } from './external-return';
 import { chosenPlayer, playerLink } from './player-choice';
@@ -64,7 +64,7 @@ function useOpenLink() {
     window.location.href = playerLink(
       template,
       directUrl(client, item.Id!, source),
-      { startMs, returnUrl, filename, subtitles }
+      { startMs, title: fullTitle(item), returnUrl, filename, subtitles }
     );
     return !!returnUrl;
   };

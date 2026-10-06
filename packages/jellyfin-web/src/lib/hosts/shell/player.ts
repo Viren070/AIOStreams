@@ -1,7 +1,7 @@
 import React from 'react';
 import { storage } from '../../storage';
 import { subtitleUrl, textSubtitles } from '../../subtitles/tracks';
-import { itemSubtitle, itemTitle } from '../../format';
+import { fullTitle } from '../../format';
 import { base64, checkSubtitleFile } from '../../subtitles/files';
 import { sameLanguage } from '../../languages';
 import { parseChapters, type Chapter } from '../../playback/chapters';
@@ -312,14 +312,10 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
     });
     if (launched) {
       clearTimeout(linger);
-      const title = [
-        itemTitle(item),
-        item.Type === 'Episode' && itemSubtitle(item),
-      ];
       shell.send({
         type: 'external-open',
         player: launched.id,
-        title: title.filter(Boolean).join(' · '),
+        title: fullTitle(item),
       });
     }
     shell.send({ type: 'mpv-sync', ...target });
