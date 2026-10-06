@@ -44,6 +44,7 @@ export function AddonCard({
                   src={preset.LOGO}
                   alt={preset.NAME}
                   className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
                 />
               </div>
             ) : (

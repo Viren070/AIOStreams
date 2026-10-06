@@ -73,6 +73,7 @@ function SortableReorderItem({ item }: { item: ReorderItem }) {
             src={item.logo}
             alt={item.name}
             className="absolute inset-0 w-full h-full object-contain rounded"
+            referrerPolicy="no-referrer"
           />
         ) : item.type === 'custom' ? (
           <PlusIcon className="w-full h-full text-[--brand]" />
