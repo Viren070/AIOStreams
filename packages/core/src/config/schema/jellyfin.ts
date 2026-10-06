@@ -96,7 +96,7 @@ export const jellyfinSchema = {
     ui: { min: 1, max: 365 },
   },
   maxVersions: {
-    schema: z.number().int().min(1).max(50),
+    schema: z.number().int().min(1).max(500),
     default: 25,
     label: 'Max versions per item',
     description:
@@ -104,7 +104,7 @@ export const jellyfinSchema = {
     env: 'JELLYFIN_MAX_VERSIONS',
     requiresRestart: false,
     secret: false,
-    ui: { min: 1, max: 50 },
+    ui: { min: 1, max: 500 },
   },
   maxPersonas: {
     schema: z.number().int().min(0).max(100),
