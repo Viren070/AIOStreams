@@ -1,27 +1,42 @@
 import React from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'motion/react';
-import { BiPlus, BiX } from 'react-icons/bi';
+import { BiDotsVerticalRounded, BiPlus } from 'react-icons/bi';
 import { Button, IconButton } from '@aiostreams/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from '@aiostreams/ui/dropdown-menu';
 import { TextInput } from '@aiostreams/ui/text-input';
+import { cn } from '@aiostreams/ui/core/styling';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
 } from '@aiostreams/ui/shared/confirmation-dialog';
 import { UserAvatar } from '../components/user-avatar';
+import { JellyfinClient } from '../lib/client';
+import { readCredentials } from '../lib/credentials';
+import { endSession } from '../lib/session';
 import {
+  checkServer,
   findServer,
   forgetServer,
   savedServers,
   serverAddress,
   type SavedServer,
+  type ServerStatus,
 } from '../lib/servers';
 import {
   AUTH_CARD,
   ErrorLine,
   FADE,
   FormLink,
+  publicAvatar,
   RISE,
   Screen,
+  SPRING,
   useShake,
 } from './sign-in';
 
@@ -92,67 +107,222 @@ function AddServer({
   );
 }
 
+const TILE = {
+  hidden: { opacity: 0, y: 14, scale: 0.96 },
+  shown: { opacity: 1, y: 0, scale: 1 },
+};
+
+/** Wraps, as configurations on one host differ only at the end. */
+function Address({ base }: { base: string }) {
+  const address = serverAddress(base);
+  return (
+    <span
+      title={address}
+      className="line-clamp-2 break-all text-xs text-[--muted]"
+    >
+      {address}
+    </span>
+  );
+}
+
+function StatusLine({
+  base,
+  status,
+}: {
+  base: string;
+  status: ServerStatus | undefined;
+}) {
+  const avatar = React.useMemo(
+    () =>
+      status?.kind === 'signed-in'
+        ? publicAvatar(new JellyfinClient(base), status.user)
+        : null,
+    [base, status]
+  );
+  switch (status?.kind) {
+    case 'signed-in':
+      return (
+        <>
+          <UserAvatar
+            name={status.user.Name}
+            src={avatar}
+            className="size-6 text-[0.65rem]"
+          />
+          <span className="truncate">{status.user.Name}</span>
+        </>
+      );
+    case 'signed-out':
+      return <span className="text-[--muted]">Signed out</span>;
+    case 'unreachable':
+      return (
+        <span className="flex items-center gap-2 text-red-300">
+          <span className="size-1.5 rounded-full bg-red-400" />
+          Can’t reach
+        </span>
+      );
+    default:
+      return null;
+  }
+}
+
+/** The logo over a blurred copy of itself, or the name's initial without one. */
+function Banner({ name, logo }: { name: string; logo: string | null }) {
+  const [failed, setFailed] = React.useState(false);
+  React.useEffect(() => setFailed(false), [logo]);
+  const shown = logo && !failed ? logo : null;
+  const lift = 'transition-transform group-hover/server:scale-105';
+  return (
+    <span className="relative flex h-28 w-full flex-none items-center justify-center overflow-hidden bg-white/[0.03]">
+      {shown ? (
+        <>
+          <img
+            src={shown}
+            alt=""
+            className="absolute inset-0 size-full scale-150 object-cover opacity-50 blur-2xl"
+          />
+          <img
+            src={shown}
+            alt=""
+            onError={() => setFailed(true)}
+            className={cn(
+              'relative size-16 object-contain drop-shadow-lg',
+              lift
+            )}
+          />
+        </>
+      ) : (
+        <UserAvatar
+          name={name}
+          className={cn('size-16 rounded-2xl text-2xl shadow-lg', lift)}
+        />
+      )}
+    </span>
+  );
+}
+
+function ServerCard({
+  server,
+  onChoose,
+  onSignOut,
+  onForget,
+}: {
+  server: SavedServer;
+  onChoose(): void;
+  onSignOut(): void;
+  onForget(): void;
+}) {
+  const check = useQuery({
+    queryKey: ['server-check', server.base],
+    queryFn: () => checkServer(server.base),
+    staleTime: 0,
+  });
+  const { name, logo } = check.data?.label ?? server;
+  const status = check.data?.status;
+  return (
+    <motion.li
+      variants={TILE}
+      transition={SPRING}
+      data-ui="server"
+      className="relative w-full sm:w-72"
+    >
+      <button
+        type="button"
+        onClick={onChoose}
+        className="group/server flex h-full w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-gray-950/80 text-left shadow-xl transition-colors hover:border-white/25"
+      >
+        <Banner name={name} logo={logo} />
+        <span className="flex w-full flex-1 flex-col gap-3 p-4">
+          <span className="block min-w-0 space-y-0.5">
+            <span className="block truncate font-semibold">{name}</span>
+            <Address base={server.base} />
+          </span>
+          <span
+            data-ui="server-status"
+            className="mt-auto flex h-6 items-center gap-2 text-sm"
+          >
+            <StatusLine base={server.base} status={status} />
+          </span>
+        </span>
+      </button>
+      <DropdownMenu
+        align="end"
+        trigger={
+          <IconButton
+            size="sm"
+            intent="gray-subtle"
+            className="absolute right-2 top-2 rounded-full"
+            icon={<BiDotsVerticalRounded />}
+            aria-label={`Options for ${name}`}
+          />
+        }
+      >
+        {/* The whole address, which the card cuts short when it is long. */}
+        <DropdownMenuLabel className="max-w-72 select-text break-all text-xs font-normal">
+          {serverAddress(server.base)}
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {status?.kind === 'signed-in' && (
+          <DropdownMenuItem onClick={onSignOut}>Sign out</DropdownMenuItem>
+        )}
+        <DropdownMenuItem onClick={onForget} className="text-red-300">
+          Remove
+        </DropdownMenuItem>
+      </DropdownMenu>
+    </motion.li>
+  );
+}
+
 function ServerList({
   servers,
   onChoose,
+  onSignOut,
   onForget,
   onAdd,
 }: {
   servers: SavedServer[];
   onChoose(server: SavedServer): void;
+  onSignOut(server: SavedServer): void;
   onForget(server: SavedServer): void;
   onAdd(): void;
 }) {
   return (
-    <div data-ui="auth-card" className={AUTH_CARD}>
-      <h1 data-ui="page-title" className="text-center text-xl font-semibold">
+    <div className="space-y-8">
+      <h1 data-ui="page-title" className="text-center text-2xl font-semibold">
         Choose a server
       </h1>
-      <ul className="space-y-2">
-        {servers.map((server) => (
-          <li
-            key={server.base}
-            data-ui="server"
-            className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 pr-2 transition-colors hover:bg-white/10"
-          >
-            <button
-              type="button"
-              onClick={() => onChoose(server)}
-              className="flex min-w-0 flex-1 items-center gap-3 p-3 text-left"
-            >
-              <UserAvatar
-                name={server.name}
-                src={server.logo}
-                className="size-10 flex-none"
-              />
-              <span className="min-w-0">
-                <span className="block truncate font-medium">
-                  {server.name}
-                </span>
-                <span className="block truncate text-xs text-[--muted]">
-                  {serverAddress(server.base)}
-                </span>
-              </span>
-            </button>
-            <IconButton
-              size="sm"
-              intent="gray-subtle"
-              className="size-8 flex-none rounded-full"
-              icon={<BiX />}
-              aria-label={`Remove ${server.name}`}
-              onClick={() => onForget(server)}
-            />
-          </li>
-        ))}
-      </ul>
-      <Button
-        intent="gray-outline"
-        className="w-full rounded-full"
-        leftIcon={<BiPlus />}
-        onClick={onAdd}
+      <motion.ul
+        data-ui="servers"
+        className="flex flex-wrap justify-center gap-4"
+        initial="hidden"
+        animate="shown"
+        variants={{ shown: { transition: { staggerChildren: 0.05 } } }}
       >
-        Add a server
-      </Button>
+        {servers.map((server) => (
+          <ServerCard
+            key={server.base}
+            server={server}
+            onChoose={() => onChoose(server)}
+            onSignOut={() => onSignOut(server)}
+            onForget={() => onForget(server)}
+          />
+        ))}
+        <motion.li
+          variants={TILE}
+          transition={SPRING}
+          className="w-full sm:w-72"
+        >
+          <button
+            type="button"
+            onClick={onAdd}
+            className="flex h-full min-h-28 w-full flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-white/15 p-4 text-sm text-[--muted] transition-colors hover:border-white/30 hover:text-white"
+          >
+            <span className="flex size-12 items-center justify-center rounded-full bg-white/5 text-2xl">
+              <BiPlus />
+            </span>
+            Add a server
+          </button>
+        </motion.li>
+      </motion.ul>
     </div>
   );
 }
@@ -165,23 +335,36 @@ export function ServersPage({
   /** Filled into the add form, as from a link. */
   address?: string | null;
 }) {
+  const queryClient = useQueryClient();
   const [servers, setServers] = React.useState(savedServers);
   const [adding, setAdding] = React.useState(servers.length === 0 || !!address);
   React.useEffect(() => {
     document.title = 'AIOStreams';
   }, []);
 
-  const [forgetting, setForgetting] = React.useState<SavedServer | null>(null);
+  const [target, setTarget] = React.useState<SavedServer | null>(null);
+  const confirmSignOut = useConfirmationDialog({
+    title: 'Sign out',
+    description: target ? `Sign out of ${target.name}?` : undefined,
+    actionText: 'Sign out',
+    onConfirm: () => {
+      if (!target) return;
+      endSession(target.base, readCredentials(target.base)?.token ?? null);
+      void queryClient.invalidateQueries({
+        queryKey: ['server-check', target.base],
+      });
+    },
+  });
   const confirmForget = useConfirmationDialog({
     title: 'Remove server',
-    description: forgetting
-      ? `Remove ${forgetting.name} from this device? You will need to add it and sign in again.`
+    description: target
+      ? `Remove ${target.name} from this device? You will need to add it and sign in again.`
       : undefined,
     actionText: 'Remove',
     actionIntent: 'alert-subtle',
     onConfirm: () => {
-      if (!forgetting) return;
-      forgetServer(forgetting.base);
+      if (!target) return;
+      forgetServer(target.base);
       const rest = savedServers();
       setServers(rest);
       if (!rest.length) setAdding(true);
@@ -189,7 +372,7 @@ export function ServersPage({
   });
 
   return (
-    <Screen name="servers">
+    <Screen name="servers" className={adding ? undefined : 'max-w-5xl'}>
       <motion.div {...RISE}>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div key={adding ? 'add' : 'list'} {...FADE}>
@@ -203,8 +386,12 @@ export function ServersPage({
               <ServerList
                 servers={servers}
                 onChoose={onChoose}
+                onSignOut={(server) => {
+                  setTarget(server);
+                  confirmSignOut.open();
+                }}
                 onForget={(server) => {
-                  setForgetting(server);
+                  setTarget(server);
                   confirmForget.open();
                 }}
                 onAdd={() => setAdding(true)}
@@ -213,6 +400,7 @@ export function ServersPage({
           </motion.div>
         </AnimatePresence>
       </motion.div>
+      <ConfirmationDialog {...confirmSignOut} />
       <ConfirmationDialog {...confirmForget} />
     </Screen>
   );

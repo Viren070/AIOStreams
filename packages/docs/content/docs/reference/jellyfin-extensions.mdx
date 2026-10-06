@@ -44,6 +44,9 @@ Standard Jellyfin clients ignore all of these, so offering them never breaks one
 | `features`     | name to version number | Turns on the parts below; a missing name, or no `aiostreams` object, means "off" |
 | `version`      | object of strings      | Shows the build in About and diagnostics: `commit` on nightly or dev, else `tag` |
 
+The server list reads `ServerName` and `logo` before signing in, so a server that hosts several
+accounts at their own addresses should answer with the one the address names.
+
 The web app checks `features` for each part it uses, never whether the server is AIOStreams. Each
 value is that feature's version.
 

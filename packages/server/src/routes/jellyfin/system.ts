@@ -48,14 +48,16 @@ const FEATURES = {
   fillers: 1,
 } as const;
 
-export function publicInfo(req: Request) {
+export async function publicInfo(req: Request) {
   const addressed = addressedConfig(req);
+  const config = await configOf(req);
   return {
     LocalAddress: `${requestOrigin(req)}${req.baseUrl}`.replace(/\/$/, ''),
-    ServerName: req.jf?.userData.addonName || serverName(),
+    ServerName: config?.addonName || serverName(),
     // Jellyfin has no field for a logo; clients ignore what they don't know.
     aiostreams: {
-      logo: req.jf?.userData.addonLogo ?? null,
+      // The instance's own logo when unset, as the Stremio manifest falls back too.
+      logo: config?.addonLogo || `${requestOrigin(req)}/logo.png`,
       configureUrl: addressed
         ? `${requestOrigin(req)}/stremio/${addressed.uuid}/${addressed.encryptedPassword}/configure`
         : `${requestOrigin(req)}/stremio/configure`,
@@ -75,15 +77,15 @@ export function publicInfo(req: Request) {
   };
 }
 
-router.get('/System/Info/Public', (req, res) => {
-  res.json(publicInfo(req));
+router.get('/System/Info/Public', async (req, res) => {
+  res.json(await publicInfo(req));
 });
 
 router.get(
   '/System/Info',
   jf(async (req, res) => {
     res.json({
-      ...publicInfo(req),
+      ...(await publicInfo(req)),
       SystemArchitecture: 'X64',
       OperatingSystemDisplayName: '',
       HasPendingRestart: false,
@@ -269,13 +271,18 @@ function mountOf(req: Request) {
   return req.jfMount ?? addressedConfig(req);
 }
 
+/** The signed-in configuration, else the one a picker address names. */
+async function configOf(req: Request) {
+  if (req.jf) return req.jf.userData;
+  const mount = mountOf(req);
+  return mount
+    ? resolveConfig(mount.uuid, mount.encryptedPassword).catch(() => null)
+    : null;
+}
+
 /** The web app's name: its configuration's addon name on a picker address. */
 export async function webAppName(req: Request): Promise<string> {
-  const mount = mountOf(req);
-  const userData = mount
-    ? await resolveConfig(mount.uuid, mount.encryptedPassword).catch(() => null)
-    : null;
-  return userData?.addonName || serverName();
+  return (await configOf(req))?.addonName || serverName();
 }
 
 const WEB_APP_COLOUR = '#070707';

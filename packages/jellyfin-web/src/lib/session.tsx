@@ -54,6 +54,17 @@ export type SessionPhase =
 
 const lastUserKey = (base: string) => `aiostreams-web-last-user:${base}`;
 
+/** Ends the token on the server and forgets the sign-in here. */
+export function endSession(base: string, token: string | null): void {
+  if (token) {
+    void new JellyfinClient(base, token)
+      .post('/Sessions/Logout')
+      .catch(() => undefined);
+  }
+  clearCredentials(base);
+  storage.remove(lastUserKey(base));
+}
+
 /** The configuration page's hand-off, which asks first when the account has a PIN. */
 type WebTokenResult =
   | AuthenticationResult
@@ -254,11 +265,7 @@ export function useSessionPhase(base: string) {
   }, [phase, switchTo]);
 
   const signOut = React.useCallback(() => {
-    if (phase.kind === 'ready') {
-      void phase.client.post('/Sessions/Logout').catch(() => undefined);
-    }
-    clearCredentials(base);
-    storage.remove(lastUserKey(base));
+    endSession(base, phase.kind === 'ready' ? phase.client.token : null);
     queryClient.removeQueries({ queryKey: ['jf'] });
     setPhase({ kind: 'signed-out' });
   }, [base, phase, queryClient]);

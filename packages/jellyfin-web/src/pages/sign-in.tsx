@@ -75,9 +75,11 @@ export const AUTH_CARD =
 
 export function Screen({
   name,
+  className,
   children,
 }: {
   name: string;
+  className?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -86,7 +88,7 @@ export function Screen({
       data-name={name}
       className="relative flex min-h-screen items-center justify-center bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.18),transparent_60%)] px-4 pb-[max(3rem,env(safe-area-inset-bottom))] pt-[max(3rem,env(safe-area-inset-top))]"
     >
-      <div className="w-full max-w-3xl space-y-8">
+      <div className={cn('w-full max-w-3xl space-y-8', className)}>
         <motion.div
           initial={{ opacity: 0, scale: 0.92 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -325,7 +327,10 @@ export function Unreachable({
 }
 
 /** A user's picture, as a server that lists its users gives it. */
-function publicAvatar(client: JellyfinClient, user: UserDto): string | null {
+export function publicAvatar(
+  client: JellyfinClient,
+  user: UserDto
+): string | null {
   return user.PrimaryImageTag
     ? client.url(`/Users/${user.Id}/Images/Primary`, {
         tag: user.PrimaryImageTag,

@@ -1,5 +1,7 @@
 import { storage } from './storage';
-import { clearCredentials } from './credentials';
+import { JellyfinClient } from './client';
+import { clearCredentials, readCredentials } from './credentials';
+import type { UserDto } from './types';
 
 /** A server the standalone build has connected to; `base` is its API base. */
 export interface SavedServer {
@@ -53,20 +55,79 @@ interface PublicInfo {
   aiostreams?: { logo?: string | null };
 }
 
-async function publicInfo(base: string): Promise<PublicInfo | null> {
+/** Null when nothing answers in time, or the answer is not JSON. */
+async function quickGet<T>(
+  url: string,
+  headers?: Record<string, string>
+): Promise<{ status: number; body: T | null } | null> {
   // Older engines lack AbortSignal.timeout.
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10_000);
   try {
-    const res = await fetch(`${base}/System/Info/Public`, {
-      signal: controller.signal,
-    });
-    return res.ok ? ((await res.json()) as PublicInfo) : null;
+    const res = await fetch(url, { headers, signal: controller.signal });
+    return {
+      status: res.status,
+      body: res.ok ? ((await res.json()) as T) : null,
+    };
   } catch {
     return null;
   } finally {
     clearTimeout(timer);
   }
+}
+
+type Label = Pick<SavedServer, 'name' | 'logo'>;
+
+function labelOf(info: PublicInfo, base: string): Label {
+  return {
+    name: info.ServerName || new URL(base).host,
+    logo: info.aiostreams?.logo ?? null,
+  };
+}
+
+async function publicInfo(base: string): Promise<PublicInfo | null> {
+  return (
+    (await quickGet<PublicInfo>(`${base}/System/Info/Public`))?.body ?? null
+  );
+}
+
+export type ServerStatus =
+  | { kind: 'signed-in'; user: UserDto }
+  | { kind: 'signed-out' }
+  | { kind: 'unreachable' };
+
+export interface ServerCheck {
+  status: ServerStatus;
+  /** Its name and logo now, saved over the old ones; null when it did not answer. */
+  label: Label | null;
+}
+
+/** Who this device is signed in as there, if the server answers. */
+export async function checkServer(base: string): Promise<ServerCheck> {
+  const stored = readCredentials(base);
+  const client = new JellyfinClient(base, stored?.token ?? null);
+  // Some servers only name the configuration to a signed-in request.
+  const headers = stored ? { Authorization: client.authorization } : undefined;
+  const [info, me] = await Promise.all([
+    quickGet<PublicInfo>(client.url('/System/Info/Public'), headers),
+    stored ? quickGet<UserDto>(client.url('/Users/Me'), headers) : null,
+  ]);
+  const label = info?.body ? labelOf(info.body, base) : null;
+  if (label) {
+    storage.set(
+      SERVERS_KEY,
+      (storage.get<SavedServer[]>(SERVERS_KEY) ?? []).map((s) =>
+        s.base === base ? { ...s, ...label } : s
+      )
+    );
+  }
+  let status: ServerStatus;
+  if (me?.body) status = { kind: 'signed-in', user: me.body };
+  // As the session reads it: only a rejected token means signed out.
+  else if (stored)
+    status = { kind: me?.status === 401 ? 'signed-out' : 'unreachable' };
+  else status = { kind: label ? 'signed-out' : 'unreachable' };
+  return { status, label };
 }
 
 /**
@@ -90,14 +151,7 @@ export async function findServer(input: string): Promise<SavedServer> {
   for (const candidate of path ? [path] : ['/jellyfin', '']) {
     const base = url.origin + candidate;
     const info = await publicInfo(base);
-    if (info?.Id) {
-      return {
-        base,
-        name: info.ServerName || url.host,
-        logo: info.aiostreams?.logo ?? null,
-        lastUsed: Date.now(),
-      };
-    }
+    if (info?.Id) return { base, ...labelOf(info, base), lastUsed: Date.now() };
   }
   throw new Error('No server answered at that address.');
 }
