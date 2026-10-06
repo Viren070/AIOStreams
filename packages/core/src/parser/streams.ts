@@ -563,7 +563,7 @@ class StreamParser {
       return 'live';
     }
 
-    if (stream.externalUrl) {
+    if (stream.externalUrl && !stream.url) {
       return 'external';
     }
 
