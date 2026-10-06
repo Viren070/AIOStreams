@@ -20,7 +20,10 @@ import {
   type AnalyticsErrorKind,
   type AnalyticsStatus,
 } from '../analytics/index.js';
-import { resolveRemuxDbMediaInfo } from '../remuxdb/wrap.js';
+import {
+  resolveRemuxDbMediaInfo,
+  startRemuxDbLookup,
+} from '../remuxdb/wrap.js';
 import { resolveStoredMediaInfo } from '../media-info/lookup.js';
 
 /**
@@ -84,6 +87,7 @@ class StreamFetcher {
     const { type, id, queryType } = context;
 
     context.startAllFetches();
+    startRemuxDbLookup(context, this.userData);
 
     const allErrors: {
       title: string;

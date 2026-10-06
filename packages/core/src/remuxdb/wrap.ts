@@ -39,8 +39,28 @@ async function lookupVersions(
   return versions;
 }
 
+function versionsFor(context: StreamContext): Promise<MediaProbeVersion[]> {
+  let lookup = lookups.get(context);
+  if (!lookup) {
+    // Started before anything awaits it, so it must never reject.
+    lookup = lookupVersions(context).catch((error) => {
+      logger.debug(`remuxdb lookup failed: ${error}`);
+      return [];
+    });
+    lookups.set(context, lookup);
+  }
+  return lookup;
+}
+
 export function isRemuxDbEnabled(userData: UserData): boolean {
-  return appConfig.remuxdb.enabled && userData.remuxDb?.enabled === true;
+  return appConfig.remuxdb.enabled && userData.remuxDb?.enabled !== false;
+}
+
+export function startRemuxDbLookup(
+  context: StreamContext,
+  userData: UserData
+): void {
+  if (isRemuxDbEnabled(userData)) void versionsFor(context);
 }
 
 export async function resolveRemuxDbMediaInfo(
@@ -56,12 +76,7 @@ export async function resolveRemuxDbMediaInfo(
     );
     if (eligible.length === 0) return;
 
-    let lookup = lookups.get(context);
-    if (!lookup) {
-      lookup = lookupVersions(context);
-      lookups.set(context, lookup);
-    }
-    const versions = await lookup;
+    const versions = await versionsFor(context);
     if (versions.length === 0) return;
 
     let matched = 0;

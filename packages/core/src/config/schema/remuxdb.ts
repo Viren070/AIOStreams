@@ -15,7 +15,7 @@ export const remuxdbSchema = {
   },
   contribute: {
     schema: z.boolean(),
-    default: false,
+    default: true,
     label: 'Contribute to RemuxDB',
     description:
       "Send what the media info probe reads from played files to RemuxDB, unless it already has them, so other RemuxDB users get them too. Each submission names the torrent's info hash, or the indexer and the release id on it, along with the file name, the title it was played for and a random id for this instance. Needs **RemuxDB** on.",

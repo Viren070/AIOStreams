@@ -174,7 +174,7 @@ async function _fetchFromApi(
 
     const response = await makeRequest(url, {
       method: 'GET',
-      timeout: 5000,
+      timeout: 2000,
       headers: { 'x-client-id': instanceId() },
     });
     if (response.status === 404) return [];

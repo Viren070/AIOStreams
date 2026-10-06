@@ -4211,7 +4211,8 @@ function Content() {
                     <Switch
                       label="Enable"
                       side="right"
-                      value={userData.remuxDb?.enabled ?? false}
+                      value={userData.remuxDb?.enabled ?? true}
+                      defaultValue={true}
                       onValueChange={(value) => {
                         setUserData((prev) => ({
                           ...prev,
