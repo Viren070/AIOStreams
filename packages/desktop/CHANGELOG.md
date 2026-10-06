@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.11.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.10.1...desktop-v0.11.0) (2026-10-06)
+
+
+### Features
+
+* **desktop:** add mpv's first http error to mpv-ended ([701eed8](https://github.com/Viren070/AIOStreams/commit/701eed82974c70802a2462b7f229fbd0a54a2bf5))
+* **desktop:** load subtitle files the page sends ([eb4fc05](https://github.com/Viren070/AIOStreams/commit/eb4fc05792fffff7dc65359e41844d5ec754b0ef))
+* **desktop:** start the user's own mpv and drive it over its IPC ([2aa49ee](https://github.com/Viren070/AIOStreams/commit/2aa49ee6efc2b98dec94cc7737af1b25b50dcb5e)), closes [#1425](https://github.com/Viren070/AIOStreams/issues/1425)
+* **jellyfin-web:** add Android players to the player choice ([29be572](https://github.com/Viren070/AIOStreams/commit/29be572e18bcd96886c7016030840789e182f536))
+* **jellyfin-web:** ask whether anyone is still watching before playing on ([29be572](https://github.com/Viren070/AIOStreams/commit/29be572e18bcd96886c7016030840789e182f536))
+* **jellyfin-web:** block the webOS screensaver while the video plays ([29be572](https://github.com/Viren070/AIOStreams/commit/29be572e18bcd96886c7016030840789e182f536))
+* **jellyfin-web:** hand the Android app's player the episodes that follow ([29be572](https://github.com/Viren070/AIOStreams/commit/29be572e18bcd96886c7016030840789e182f536))
+* **jellyfin-web:** look up the next episode's versions before its prompt ([29be572](https://github.com/Viren070/AIOStreams/commit/29be572e18bcd96886c7016030840789e182f536))
+* **jellyfin-web:** play through AVPlay on Samsung TVs ([29be572](https://github.com/Viren070/AIOStreams/commit/29be572e18bcd96886c7016030840789e182f536))
+* **jellyfin-web:** redesign server picker ([29be572](https://github.com/Viren070/AIOStreams/commit/29be572e18bcd96886c7016030840789e182f536))
+* **jellyfin-web:** refresh watch state on the server socket's pushes ([29be572](https://github.com/Viren070/AIOStreams/commit/29be572e18bcd96886c7016030840789e182f536))
+* **jellyfin-web:** remember audio and subtitle picks per show ([29be572](https://github.com/Viren070/AIOStreams/commit/29be572e18bcd96886c7016030840789e182f536))
+* **jellyfin-web:** show filler and recap marks and skip them when playing on ([29be572](https://github.com/Viren070/AIOStreams/commit/29be572e18bcd96886c7016030840789e182f536))
+* **jellyfin-web:** switch audio tracks the video element lists ([29be572](https://github.com/Viren070/AIOStreams/commit/29be572e18bcd96886c7016030840789e182f536))
+
+
+### Bug Fixes
+
+* **jellyfin-web:** hold Play to list the versions of a resume ([29be572](https://github.com/Viren070/AIOStreams/commit/29be572e18bcd96886c7016030840789e182f536))
+
 ## [0.10.1](https://github.com/Viren070/AIOStreams/compare/desktop-v0.10.0...desktop-v0.10.1) (2026-10-03)
 
 
