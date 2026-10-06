@@ -631,6 +631,19 @@ export function useRefreshAll() {
   return () => queryClient.invalidateQueries({ queryKey: key });
 }
 
+const NOT_WATCH_STATE = new Set(['playback-info', 'segments']);
+
+/** {@link useRefreshAll} for the server's pushes, which come during playback, so versions stay. */
+export function useRefreshWatchState() {
+  const queryClient = useQueryClient();
+  const key = useKey();
+  return () =>
+    queryClient.invalidateQueries({
+      queryKey: key,
+      predicate: (query) => !NOT_WATCH_STATE.has(String(query.queryKey[3])),
+    });
+}
+
 /** Marks as another user when the item is in that user's history. */
 export function useSetPlayed() {
   const { clientFor, user } = useSession();

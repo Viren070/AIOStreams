@@ -49,6 +49,7 @@ import { currentHost } from '../lib/hosts';
 import { serverAddress } from '../lib/servers';
 import { useServerInfo } from '../lib/server-info';
 import { useDiscordBrowsing } from '../lib/discord';
+import { useServerEvents } from '../lib/server-events';
 import { useAction } from '../lib/input';
 import { UserAvatar } from './user-avatar';
 import { BrandLogo } from './brand-logo';
@@ -280,6 +281,7 @@ export function WebLayout() {
   const several = (users.data?.length ?? 0) > 1;
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   useDiscordBrowsing(pathname);
+  useServerEvents();
   useAction('search', () => navigate(to.search()));
   useAction('home', () => navigate(to.home));
   const activity: SidebarItem = {
