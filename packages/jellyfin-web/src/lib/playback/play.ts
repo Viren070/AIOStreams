@@ -8,6 +8,7 @@ import { subtitleUrl, textSubtitles } from '../subtitles/tracks';
 import { useSession } from '../session';
 import { storedMap } from '../storage';
 import { usePlaybackPrefs } from '../user-config';
+import { useEpisodesAfter } from '../queries';
 import { sameLanguage } from '../languages';
 import type { BaseItemDto, PlaybackInfoResponse, SourceInfo } from '../types';
 
@@ -73,6 +74,8 @@ function useOpenLink() {
 /** Plays an item on the player chosen for this device. */
 export function usePlay() {
   const openLink = useOpenLink();
+  const episodesAfter = useEpisodesAfter();
+  const { prefs } = usePlaybackPrefs();
   return async (
     item: BaseItemDto,
     opts: {
@@ -89,7 +92,16 @@ export function usePlay() {
 
     const { play } = currentHost();
     if (play) {
-      play(item, source, startMs);
+      const next =
+        prefs.EnableNextEpisodeAutoPlay !== false
+          ? await episodesAfter(item).catch(() => [])
+          : [];
+      play(
+        item,
+        source,
+        startMs,
+        next.map((e) => e.Id!)
+      );
       return;
     }
     const player = chosenPlayer();

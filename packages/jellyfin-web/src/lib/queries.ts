@@ -778,7 +778,22 @@ export function useClearHistory() {
   });
 }
 
-/** The episode after this one in its series, across seasons. */
+function useSkippedMarks() {
+  const marked = useFeature('fillers');
+  const [skipFillers] = useSetting(settings.next.skipFillers);
+  const [skipRecaps] = useSetting(settings.next.skipRecaps);
+  return { fillers: marked && skipFillers, recaps: marked && skipRecaps };
+}
+
+function isSkipped(
+  episode: BaseItemDto,
+  skip: { fillers: boolean; recaps: boolean }
+): boolean {
+  return episodeMarks(episode).some((m) =>
+    m === 'Filler' ? skip.fillers : skip.recaps
+  );
+}
+
 /**
  * The episodes either side of this one, past the fillers and recaps the user
  * skips. A server that ignores `AdjacentTo` sends the whole show, so the
@@ -787,17 +802,13 @@ export function useClearHistory() {
 export function useAdjacentEpisodes(item: BaseItemDto) {
   const { client, user } = useSession();
   const seriesId = item.Type === 'Episode' ? item.SeriesId : undefined;
-  const marked = useFeature('fillers');
-  const [skipFillers] = useSetting(settings.next.skipFillers);
-  const [skipRecaps] = useSetting(settings.next.skipRecaps);
-  const fillers = marked && skipFillers;
-  const recaps = marked && skipRecaps;
+  const skip = useSkippedMarks();
+  const { fillers, recaps } = skip;
   return useQuery({
     queryKey: [...useKey(), 'adjacent-episodes', item.Id, fillers, recaps],
     queryFn: async () => {
       const skipped = (e: BaseItemDto) =>
-        e.Id !== item.Id &&
-        episodeMarks(e).some((m) => (m === 'Filler' ? fillers : recaps));
+        e.Id !== item.Id && isSkipped(e, skip);
       const episodes = (query: Record<string, string>) =>
         client
           .get<BaseItemDtoQueryResult>(`/Shows/${seriesId}/Episodes`, {
@@ -825,4 +836,31 @@ export function useAdjacentEpisodes(item: BaseItemDto) {
     enabled: !!seriesId,
     staleTime: 10 * 60_000,
   });
+}
+
+const EPISODES_AFTER = 100;
+
+export function useEpisodesAfter() {
+  const { client, user } = useSession();
+  const skip = useSkippedMarks();
+  return async (item: BaseItemDto): Promise<BaseItemDto[]> => {
+    if (item.Type !== 'Episode' || !item.SeriesId) return [];
+    // A long show's whole list stops short of its later episodes.
+    const { Items = [] } = await client.get<BaseItemDtoQueryResult>(
+      `/Shows/${item.SeriesId}/Episodes`,
+      {
+        userId: user.Id,
+        StartItemId: item.Id!,
+        Limit: String(EPISODES_AFTER + 1),
+      }
+    );
+    const at = Items.findIndex((e) => e.Id === item.Id);
+    if (at < 0) return [];
+    const after: BaseItemDto[] = [];
+    for (const episode of Items.slice(at + 1)) {
+      if (unavailableLabel(episode)) break;
+      if (!isSkipped(episode, skip)) after.push(episode);
+    }
+    return after;
+  };
 }

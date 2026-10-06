@@ -35,8 +35,13 @@ export interface Host {
   /** A player drawn beneath the page. */
   usePlayer?(opts: NativePlayerOptions): PlayerController;
   playerFeatures?: readonly PlayerFeature[];
-  /** The app's own player takes over from the page. */
-  play?(item: BaseItemDto, source: SourceInfo, startMs: number): void;
+  /** The app's own player takes over from the page and plays on through the `next` item ids. */
+  play?(
+    item: BaseItemDto,
+    source: SourceInfo,
+    startMs: number,
+    next: string[]
+  ): void;
   selectServer?(): void;
   /** The app's own settings, which get a tab. */
   settings?: { label: string; description: string; help: string; open(): void };

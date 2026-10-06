@@ -152,9 +152,14 @@ function handleBack(): void {
   helper.goBack = () => void runAction('back');
 }
 
-function play(item: BaseItemDto, source: SourceInfo, startMs: number): void {
+function play(
+  item: BaseItemDto,
+  source: SourceInfo,
+  startMs: number,
+  next: string[]
+): void {
   const options = JSON.stringify({
-    ids: [item.Id],
+    ids: [item.Id, ...next],
     mediaSourceId: source.Id,
     startIndex: 0,
     startPositionTicks: Math.round(startMs) * TICKS_PER_MS,
