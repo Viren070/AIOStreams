@@ -161,7 +161,7 @@ export class NZBHydraPreset extends NewznabPreset {
     return {
       ID: 'nzbhydra',
       NAME: 'NZBHydra',
-      LOGO: 'https://raw.githubusercontent.com/theotherp/nzbhydra2/refs/heads/master/core/ui-src/img/logo.png',
+      LOGO: 'https://raw.githubusercontent.com/theotherp/nzbhydra2/refs/heads/master/misc/images/favicons/favicon196.png',
       URL: [`${appConfig.bootstrap.internalUrl}/builtins/newznab`],
       TIMEOUT:
         appConfig.builtins.nzbhydra.timeout ?? appConfig.presets.defaultTimeout,
