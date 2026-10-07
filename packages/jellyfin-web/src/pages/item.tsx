@@ -58,7 +58,7 @@ import {
   unavailableLabel,
   untilLabel,
 } from '../lib/format';
-import { href, itemPath, navigate } from '../lib/paths';
+import { href, itemPath, navigate, to } from '../lib/paths';
 import { settings, useSetting } from '../lib/settings';
 import { useInView } from '../lib/use-in-view';
 import { MediaRow } from '../components/media-row';
@@ -626,15 +626,26 @@ function Seasons({
   const layout = layoutPref === 'auto' ? (wide ? 'row' : 'list') : layoutPref;
   const seasons = useSeasons(series.Id!, true);
   const list = React.useMemo(() => seasons.data?.Items ?? [], [seasons.data]);
-  const [seasonId, setSeasonId] = React.useState(initialSeasonId);
-  React.useEffect(() => {
-    if (seasonId || !list.length) return;
-    // The first season with something left, skipping specials.
+  const [chosen, setChosen] = React.useState(initialSeasonId);
+  // The first season with something left, skipping specials.
+  const fallback = React.useMemo(() => {
     const regular = list.filter((s) => (s.IndexNumber ?? 1) > 0);
-    const next =
-      regular.find((s) => !s.UserData?.Played) ?? regular[0] ?? list[0];
-    setSeasonId(next.Id!);
-  }, [list, seasonId]);
+    return (regular.find((s) => !s.UserData?.Played) ?? regular[0] ?? list[0])
+      ?.Id;
+  }, [list]);
+  // Waits for the server's answer, so a saved copy of the list doesn't pick it.
+  const settled = !seasons.isFetching;
+  React.useEffect(() => {
+    if (!chosen && settled && fallback) setChosen(fallback);
+  }, [chosen, settled, fallback]);
+  const seasonId = chosen ?? fallback;
+  const pick = (id: string) => {
+    setChosen(id);
+    navigate(`${to.item(series.Id!)}?season=${id}`, {
+      replace: true,
+      keepScroll: true,
+    });
+  };
   const season = list.find((s) => s.Id === seasonId);
   React.useEffect(() => onSeason(season), [season, onSeason]);
   React.useEffect(() => () => onSeason(undefined), [onSeason]);
@@ -690,7 +701,7 @@ function Seasons({
                   type="button"
                   data-ui="season-poster"
                   data-selected={selected || undefined}
-                  onClick={() => setSeasonId(s.Id!)}
+                  onClick={() => pick(s.Id!)}
                   className="group/season w-full space-y-2 text-left"
                 >
                   <div className="relative aspect-[2/3] overflow-hidden rounded-lg bg-gray-900">
@@ -738,11 +749,7 @@ function Seasons({
           })}
         </MediaRow>
       ) : (
-        <SeasonPills
-          seasons={list}
-          selected={seasonId}
-          onSelect={setSeasonId}
-        />
+        <SeasonPills seasons={list} selected={seasonId} onSelect={pick} />
       )}
       {season?.Overview && (
         <p

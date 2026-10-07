@@ -65,7 +65,12 @@ export function configureUrl(base: string, info: ServerInfo): string | null {
   return url ? new URL(url, base).href : null;
 }
 
-type Push = (path: string, replace?: boolean) => void;
+interface NavigateOptions {
+  replace?: boolean;
+  keepScroll?: boolean;
+}
+
+type Push = (path: string, opts: NavigateOptions) => void;
 
 let push: Push = (path) => {
   window.location.hash = path;
@@ -75,8 +80,8 @@ export function setNavigator(fn: Push): void {
   push = fn;
 }
 
-export function navigate(path: string, opts: { replace?: boolean } = {}) {
-  push(path, opts.replace);
+export function navigate(path: string, opts: NavigateOptions = {}) {
+  push(path, opts);
 }
 
 /** Back where the user came from, or to `fallback` on a page opened directly. */

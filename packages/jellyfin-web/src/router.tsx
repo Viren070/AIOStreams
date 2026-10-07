@@ -250,11 +250,13 @@ export const webRouter = createRouter({
   scrollRestoration: true,
 });
 
-setNavigator((path, replace) => {
-  if (!replace) return webRouter.history.push(path);
-  webRouter.history.replace(path);
+setNavigator((path, { replace, keepScroll }) => {
+  if (keepScroll)
+    void webRouter.navigate({ href: path, replace, resetScroll: false });
+  else if (replace) webRouter.history.replace(path);
+  else return webRouter.history.push(path);
   // The history batches a tick's changes into one, so a push right after would drop this.
-  webRouter.history.flush();
+  if (replace) webRouter.history.flush();
 });
 
 /*
