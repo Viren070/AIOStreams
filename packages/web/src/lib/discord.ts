@@ -2,6 +2,7 @@ import React from 'react';
 import { useItem } from './queries';
 import { itemTitle } from './format';
 import { settings, useSetting, type DiscordEvent } from './settings';
+import { appBridge } from './hosts/shell/bridge';
 
 /** How long a page stays open before Discord is told, so passing through one does not show. */
 const DWELL_MS = 2000;
@@ -34,7 +35,7 @@ function showBrowsing(presence: ReturnType<typeof browsing> | null) {
   const key = presence && JSON.stringify(presence);
   if (key === shown) return;
   shown = key;
-  window.aiostreamsDesktop?.send({ type: 'presence', presence });
+  appBridge()?.send({ type: 'presence', presence });
 }
 
 export function useDiscordBrowsing(pathname: string) {
@@ -54,7 +55,7 @@ export function useDiscordBrowsing(pathname: string) {
   const key = presence === undefined ? undefined : JSON.stringify(presence);
 
   React.useEffect(() => {
-    if (key === undefined || !window.aiostreamsDesktop) return;
+    if (key === undefined || !appBridge()) return;
     const next = JSON.parse(key) as ReturnType<typeof browsing> | null;
     const timer = setTimeout(() => showBrowsing(next), next ? DWELL_MS : 0);
     return () => clearTimeout(timer);

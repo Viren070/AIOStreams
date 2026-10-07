@@ -227,7 +227,7 @@ target; to look at one locally:
 
 ## Bridge
 
-The page sees `window.aiostreamsDesktop` (`protocol`, `version`, `platform`, `send`, `subscribe`) on
+The page sees `window.aiostreamsApp` (`protocol`, `version`, `platform`, `send`, `subscribe`) on
 the app's own origin only. Messages from any other origin are dropped, navigation away from it opens
 the default browser, and every mpv command, property and `loadfile` option is checked against an
 allowlist in `core/src/bridge.rs`: pages can play http(s) URLs, not local files or scripts. A page

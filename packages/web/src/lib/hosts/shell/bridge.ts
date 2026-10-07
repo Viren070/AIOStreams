@@ -60,12 +60,13 @@ export type MediaKey =
   | { action: 'seek'; position: number }
   | { action: 'skip'; offset: number };
 
-/** The AIOStreams desktop app's bridge to mpv. */
+/** The AIOStreams apps' bridge to their player and system, on the desktop and Android. */
 interface ShellBridge {
   protocol: number;
   version: string;
+  /** `windows`, `macos`, `linux` or `android`. */
   platform: string;
-  /** The computer's name. */
+  /** The device's name. */
   device: string;
   send(message: { type: string; [key: string]: unknown }): void;
   subscribe(listener: (message: ShellMessage) => void): () => void;
@@ -73,6 +74,10 @@ interface ShellBridge {
 
 declare global {
   interface Window {
-    aiostreamsDesktop?: ShellBridge;
+    aiostreamsApp?: ShellBridge;
   }
+}
+
+export function appBridge(): ShellBridge | undefined {
+  return window.aiostreamsApp;
 }

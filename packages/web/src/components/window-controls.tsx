@@ -7,6 +7,7 @@ import {
   VscScreenNormal,
 } from 'react-icons/vsc';
 import { cn } from '@aiostreams/ui/core/styling';
+import { appBridge } from '../lib/hosts/shell/bridge';
 
 const STRIP_PX = 40;
 const EDGE_PX = 4;
@@ -22,7 +23,7 @@ const INTERACTIVE =
  * left to the page there.
  */
 export function WindowControls() {
-  const shell = window.aiostreamsDesktop!;
+  const shell = appBridge()!;
   const native = shell.platform === 'macos';
   const [maximized, setMaximized] = React.useState(false);
   const [fullscreen, setFullscreen] = React.useState(false);

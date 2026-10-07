@@ -1,9 +1,10 @@
 import { storage } from './storage';
 import { currentHost } from './hosts';
 import { reached, unreachable } from './connection';
+import { appBridge } from './hosts/shell/bridge';
 
 // The desktop app is its own client, on the computer it runs on.
-const shell = window.aiostreamsDesktop;
+const shell = appBridge();
 const CLIENT_NAME = shell ? 'AIOStreams Desktop' : 'AIOStreams Web';
 const CLIENT_VERSION = shell?.version ?? '1.0.0';
 const DEVICE_KEY = 'aiostreams-web-device';

@@ -48,20 +48,22 @@ import { configureUrl } from '../lib/paths';
 import { currentHost } from '../lib/hosts';
 import {
   openLogs,
-  openMpvConfig,
   requestDiagnostics,
   useShellInfo,
   applyUpdate,
   checkForUpdates,
   useUpdateState,
-  checkDiscord,
-  useDiscordStatus,
   chooseExternalPlayer,
   useExternalPlayers,
-  type DiscordStatus,
   type ShellInfo,
   type UpdateState,
 } from '../lib/hosts/shell';
+import {
+  checkDiscord,
+  openMpvConfig,
+  useDiscordStatus,
+  type DiscordStatus,
+} from '../lib/hosts/shell/desktop';
 import { LANGUAGES } from '../lib/languages';
 import { serverAddress } from '../lib/servers';
 import {

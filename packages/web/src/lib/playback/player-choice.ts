@@ -1,6 +1,7 @@
 import { currentHost } from '../hosts';
 import { settings } from '../settings';
 import { storage } from '../storage';
+import { appBridge } from '../hosts/shell/bridge';
 
 type Platform = 'ios' | 'android' | 'macos';
 
@@ -106,7 +107,7 @@ function migrate() {
 migrate();
 
 function platform(): Platform | null {
-  if (window.aiostreamsDesktop?.platform === 'macos') return 'macos';
+  if (appBridge()?.platform === 'macos') return 'macos';
   const ua = navigator.userAgent;
   if (/android/i.test(ua)) return 'android';
   if (/iphone|ipad|ipod/i.test(ua)) return 'ios';

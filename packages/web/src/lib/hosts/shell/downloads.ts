@@ -1,7 +1,8 @@
 import type { DownloadsHost } from '../../downloads/types';
+import { appBridge } from './bridge';
 
 function send(message: { type: string; [key: string]: unknown }) {
-  window.aiostreamsDesktop?.send(message);
+  appBridge()?.send(message);
 }
 
 /** The desktop app's download queue, which keeps going while the page reloads. */
@@ -12,7 +13,7 @@ export const shellDownloads: DownloadsHost = {
   list: () => send({ type: 'download-list' }),
   configure: ({ concurrent }) => send({ type: 'download-config', concurrent }),
   subscribe: (listener) =>
-    window.aiostreamsDesktop?.subscribe((m) => {
+    appBridge()?.subscribe((m) => {
       if (m.type === 'download-state')
         listener({ type: 'state', folder: m.folder, jobs: m.jobs });
       else if (m.type === 'download-progress')

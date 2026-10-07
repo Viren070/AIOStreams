@@ -28,6 +28,7 @@ import {
   type Track,
 } from '../../playback/controller';
 import { useLatest } from '../../use-latest';
+import { appBridge } from './bridge';
 
 interface MpvTrack {
   id: number;
@@ -112,7 +113,7 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
   };
   const patch = (next: Partial<PlayerState>) =>
     setState((s) => ({ ...s, ...next }));
-  const shell = window.aiostreamsDesktop!;
+  const shell = appBridge()!;
   const target = external ? { external: true } : {};
   const set = (name: string, value: unknown) =>
     shell.send({ type: 'mpv-set-prop', name, value, ...target });
@@ -507,7 +508,7 @@ function trackOptions(prefs: PlaybackPrefs, source: SourceInfo): string[] {
 }
 
 function setProp(name: string, value: unknown) {
-  window.aiostreamsDesktop?.send({ type: 'mpv-set-prop', name, value });
+  appBridge()?.send({ type: 'mpv-set-prop', name, value });
 }
 
 /** Image subtitles keep their own size. */

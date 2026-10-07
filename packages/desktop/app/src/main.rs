@@ -306,7 +306,7 @@ fn main() {
 }
 
 pub fn receive_script(message: &Outbound) -> String {
-    format!("window.__aiostreamsDesktopReceive?.({})", message.to_json())
+    format!("window.__aiostreamsAppReceive?.({})", message.to_json())
 }
 
 fn mpv_config_dir(config_dir: &Path) -> PathBuf {

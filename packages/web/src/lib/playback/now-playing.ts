@@ -10,6 +10,7 @@ import { settings, useSetting } from '../settings';
 import { useLatest } from '../use-latest';
 import type { PlayerController } from './controller';
 import type { BaseItemDto } from '../types';
+import { appBridge } from '../hosts/shell/bridge';
 
 /** How far the position may stray from where it should be before the browser is told again. */
 const DRIFT_MS = 2000;
@@ -90,7 +91,7 @@ export function useNowPlaying(
   }, []);
 
   React.useEffect(() => {
-    const shell = window.aiostreamsDesktop;
+    const shell = appBridge();
     if (!desktop || !shell || !started) return;
     shell.send({
       type: 'now-playing',
@@ -117,7 +118,7 @@ export function useNowPlaying(
   ]);
 
   React.useEffect(() => {
-    const shell = window.aiostreamsDesktop;
+    const shell = appBridge();
     if (!desktop || !shell) return;
     const unsubscribe = shell.subscribe((m) => {
       if (m.type === 'media-key') press(m.key);

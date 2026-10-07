@@ -1,10 +1,10 @@
 (() => {
-  if (window.top !== window || window.aiostreamsDesktop) return;
+  if (window.top !== window || window.aiostreamsApp) return;
   const listeners = new Set();
   let idle = true;
   const send = (message) => window.ipc.postMessage(JSON.stringify(message));
 
-  Object.defineProperty(window, '__aiostreamsDesktopReceive', {
+  Object.defineProperty(window, '__aiostreamsAppReceive', {
     value(message) {
       const own = message.type === 'mpv-prop' && !message.external;
       if (own && message.name === 'idle-active') idle = message.data !== false;
@@ -18,7 +18,7 @@
     },
   });
 
-  window.aiostreamsDesktop = Object.freeze({
+  window.aiostreamsApp = Object.freeze({
     protocol: __PROTOCOL__,
     version: __VERSION__,
     platform: __PLATFORM__,

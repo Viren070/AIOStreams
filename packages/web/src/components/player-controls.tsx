@@ -68,6 +68,7 @@ import { SyncByEar, SyncToLine } from './subtitle-sync';
 import { RATES, usePlayerKeys } from './player-keys';
 import { chapterAt, type Chapter } from '../lib/playback/chapters';
 import type { BaseItemDto, MediaSegmentDto } from '../lib/types';
+import { appBridge } from '../lib/hosts/shell/bridge';
 
 const IDLE_MS = 2000;
 const SKIP_BUTTON_MS = 8000;
@@ -856,13 +857,13 @@ export function PlayerControls({
     byEar;
   // macOS draws its window buttons over the video, so they hide with the controls.
   React.useEffect(() => {
-    const shell = window.aiostreamsDesktop;
+    const shell = appBridge();
     if (shell?.platform === 'macos')
       shell.send({ type: 'window-buttons', visible });
   }, [visible]);
   React.useEffect(
     () => () => {
-      const shell = window.aiostreamsDesktop;
+      const shell = appBridge();
       if (shell?.platform === 'macos')
         shell.send({ type: 'window-buttons', visible: true });
     },

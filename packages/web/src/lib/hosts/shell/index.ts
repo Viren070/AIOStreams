@@ -7,9 +7,10 @@ import {
 } from '../../settings';
 import { useLatest } from '../../use-latest';
 import type { Host } from '..';
-import type { ShellMessage } from './bridge';
-import { shellDownloads } from './downloads';
-import { applyDesktopSettings, useShellPlayer } from './player';
+import { androidHost } from './android';
+import { appBridge, type ShellMessage } from './bridge';
+import { desktopHost, setupDesktop } from './desktop';
+import { applyDesktopSettings } from './player';
 
 export type UpdateState = Extract<ShellMessage, { type: 'update-state' }>;
 
@@ -27,14 +28,14 @@ export function useUpdateState(): UpdateState | null {
 }
 
 export function checkForUpdates(channel: UpdateChannelSetting): void {
-  window.aiostreamsDesktop?.send({
+  appBridge()?.send({
     type: 'update-check',
     channel: channel === 'installed' ? null : channel,
   });
 }
 
 export function applyUpdate(): void {
-  window.aiostreamsDesktop?.send({ type: 'update-apply' });
+  appBridge()?.send({ type: 'update-apply' });
 }
 
 function onUpdateState(next: UpdateState) {
@@ -49,43 +50,10 @@ function onUpdateState(next: UpdateState) {
     });
 }
 
-export type DiscordStatus = Extract<ShellMessage, { type: 'discord-status' }>;
-
-let discordStatus: DiscordStatus | null = null;
-const discordListeners = new Set<() => void>();
-
-function subscribeDiscord(listener: () => void): () => void {
-  discordListeners.add(listener);
-  return () => discordListeners.delete(listener);
-}
-
-export function useDiscordStatus(): DiscordStatus | null {
-  return React.useSyncExternalStore(subscribeDiscord, () => discordStatus);
-}
-
-export function checkDiscord(): void {
-  window.aiostreamsDesktop?.send({ type: 'discord-check' });
-}
-
-function onDiscordStatus(next: DiscordStatus) {
-  discordStatus = next;
-  for (const listener of discordListeners) listener();
-}
-
-/** The browser's own menu only where it edits or copies; Shift still opens it. */
-function onContextMenu(e: MouseEvent) {
-  const target = e.target as HTMLElement | null;
-  const editable = target?.closest('input, textarea, [contenteditable="true"]');
-  if (e.shiftKey || editable || !!window.getSelection()?.toString()) return;
-  e.preventDefault();
-}
-
-let windowFullscreen = false;
-
-/** Keeps mpv in step with this device's settings, checks for updates, and handles right clicks. */
+/** Keeps mpv in step with this device's settings and checks for updates. */
 export function ShellSetup() {
   React.useEffect(() => {
-    const shell = window.aiostreamsDesktop;
+    const shell = appBridge();
     if (!shell) return;
     const { updateChannel } = settings.desktop;
     let channel = updateChannel.read();
@@ -100,17 +68,15 @@ export function ShellSetup() {
     checkForUpdates(channel);
     const unsubscribeSettings = onSettingsChange(apply);
     const unsubscribe = shell.subscribe((m) => {
-      if (m.type === 'fullscreen') windowFullscreen = m.value;
-      else if (m.type === 'update-state') onUpdateState(m);
-      else if (m.type === 'discord-status') onDiscordStatus(m);
+      if (m.type === 'update-state') onUpdateState(m);
       else if (m.type === 'external-players') onExternalPlayers(m.players);
     });
-    window.addEventListener('contextmenu', onContextMenu);
+    const desktop = shell.platform === 'android' ? null : setupDesktop();
     shell.send({ type: 'mpv-sync' });
     return () => {
       unsubscribeSettings();
       unsubscribe();
-      window.removeEventListener('contextmenu', onContextMenu);
+      desktop?.();
     };
   }, []);
   return null;
@@ -132,7 +98,7 @@ function subscribeExternalPlayers(listener: () => void): () => void {
 /** The players the desktop app can start, and where it found each. */
 export function useExternalPlayers(): ExternalPlayers | null {
   React.useEffect(() => {
-    window.aiostreamsDesktop?.send({ type: 'external-players' });
+    appBridge()?.send({ type: 'external-players' });
   }, []);
   return React.useSyncExternalStore(
     subscribeExternalPlayers,
@@ -141,7 +107,7 @@ export function useExternalPlayers(): ExternalPlayers | null {
 }
 
 export function chooseExternalPlayer(id: string): void {
-  window.aiostreamsDesktop?.send({ type: 'external-choose', player: id });
+  appBridge()?.send({ type: 'external-choose', player: id });
 }
 
 function onExternalPlayers(next: ExternalPlayers) {
@@ -154,7 +120,7 @@ export type ShellInfo = Extract<ShellMessage, { type: 'app-info' }>;
 export function useShellInfo(): ShellInfo | null {
   const [info, setInfo] = React.useState<ShellInfo | null>(null);
   React.useEffect(() => {
-    const shell = window.aiostreamsDesktop;
+    const shell = appBridge();
     if (!shell) return;
     const unsubscribe = shell.subscribe((m) => {
       if (m.type === 'app-info') setInfo(m);
@@ -169,7 +135,7 @@ export function useShellInfo(): ShellInfo | null {
 export function useShellLinks(onLink: (url: string) => void): void {
   const latest = useLatest(onLink);
   React.useEffect(() => {
-    const shell = window.aiostreamsDesktop;
+    const shell = appBridge();
     if (!shell) return;
     const unsubscribe = shell.subscribe((m) => {
       if (m.type === 'link') latest.current(m.url);
@@ -179,19 +145,17 @@ export function useShellLinks(onLink: (url: string) => void): void {
   }, [latest]);
 }
 
-export function openMpvConfig(): void {
-  window.aiostreamsDesktop?.send({ type: 'open-mpv-config' });
-}
-
 export function openLogs(): void {
-  window.aiostreamsDesktop?.send({ type: 'open-logs' });
+  appBridge()?.send({ type: 'open-logs' });
 }
 
 /** Versions, paths and the recent log, for a bug report. */
 export function requestDiagnostics(server: string | null): Promise<string> {
-  const shell = window.aiostreamsDesktop;
+  const shell = appBridge();
   if (!shell)
-    return Promise.reject(new Error('Only the desktop app has these'));
+    return Promise.reject(
+      new Error('Only the desktop and Android apps have these')
+    );
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       unsubscribe();
@@ -207,20 +171,9 @@ export function requestDiagnostics(server: string | null): Promise<string> {
   });
 }
 
-const host: Host = {
-  name: 'desktop',
-  device: () => ({ name: window.aiostreamsDesktop?.device }),
-  usePlayer: useShellPlayer,
-  playerFeatures: ['audio', 'chapters', 'stats'],
-  downloads: shellDownloads,
-  back: () => {
-    if (!windowFullscreen) return false;
-    window.aiostreamsDesktop?.send({ type: 'fullscreen', value: false });
-    return true;
-  },
-};
-
-/** The AIOStreams desktop app, which plays in mpv. */
+/** The AIOStreams apps, which play in mpv. */
 export function shellHost(): Host | null {
-  return window.aiostreamsDesktop?.protocol === 1 ? host : null;
+  const bridge = appBridge();
+  if (bridge?.protocol !== 1) return null;
+  return bridge.platform === 'android' ? androidHost : desktopHost;
 }
