@@ -18,6 +18,7 @@ import io.github.viren070.aiostreams.engine.mpv.MpvEngine
 import io.github.viren070.aiostreams.playback.PlayerChannel
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
@@ -29,6 +30,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var engine: MpvEngine
     private lateinit var player: PlayerChannel
     private val screen = PlayerWindow(this)
+    private val levels by lazy { Levels(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -72,6 +74,18 @@ class MainActivity : ComponentActivity() {
                 put("ffmpeg", engine.property("ffmpeg-version"))
             })
             "fullscreen" -> setFullscreen(message["value"]?.jsonPrimitive?.booleanOrNull ?: !screen.fullscreen)
+            "levels" -> bridge.send(buildJsonObject {
+                put("type", "levels")
+                put("volume", levels.volume)
+                put("brightness", levels.brightness)
+            })
+            "set-level" -> {
+                val value = message["value"]?.jsonPrimitive?.floatOrNull
+                when (message["level"]?.jsonPrimitive?.content) {
+                    "volume" -> value?.let(levels::setVolume)
+                    "brightness" -> levels.setBrightness(value)
+                }
+            }
             "web-error" -> Log.e("page", message["message"]?.jsonPrimitive?.content.orEmpty())
         }
     }
