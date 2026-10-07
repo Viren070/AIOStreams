@@ -370,6 +370,9 @@ export const NEXT_COUNTDOWNS = [5, 10, 15, 30] as const;
 /** Episodes in a row with no input before asking; 0 never asks. */
 export const STILL_WATCHING_AFTER = [0, 2, 3, 4, 5, 8] as const;
 
+export const DOWNLOADS_AT_ONCE = [1, 2, 3, 4] as const;
+export const DOWNLOAD_SEARCHES = [1, 2, 3, 4, 6, 8] as const;
+
 /** Days a saved page is shown for while online; 0 has no limit. */
 export const CACHE_MAX_STALE_DAYS = [1, 3, 7, 14, 30, 0] as const;
 export const CACHE_SIZES_MB = [250, 500, 1000, 2000, 5000] as const;
@@ -553,6 +556,19 @@ export const settings = {
     categories: record(CACHE_CATEGORIES, (category) =>
       device<boolean>(`aiostreams-web-cache-${category}`, true)
     ),
+  },
+  downloads: {
+    concurrent: device<number>(
+      'aiostreams-web-downloads-at-once',
+      2,
+      DOWNLOADS_AT_ONCE
+    ),
+    searches: device<number>(
+      'aiostreams-web-download-searches',
+      3,
+      DOWNLOAD_SEARCHES
+    ),
+    subtitles: device<boolean>('aiostreams-web-download-subtitles', true),
   },
 };
 

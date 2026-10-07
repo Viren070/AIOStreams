@@ -7,6 +7,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
+import type { JellyfinClient } from './client';
 import { useSession } from './session';
 import { useFeature } from './server-info';
 import { settings, useSetting } from './settings';
@@ -336,21 +337,27 @@ const DETAIL_FIELDS = [
  * Looked up by id, not at `/Items/{id}`, which always carries the versions and
  * so makes a server run its addons for every page.
  */
+export async function requestItem(
+  client: JellyfinClient,
+  userId: string,
+  itemId: string
+): Promise<BaseItemDto> {
+  const { Items } = await client.get<BaseItemDtoQueryResult>('/Items', {
+    userId,
+    Ids: itemId,
+    Fields: DETAIL_FIELDS,
+  });
+  const item = Items?.[0];
+  if (!item) throw new Error('This item was not found');
+  return item;
+}
+
 export function useItem(itemId: string) {
   const { client, user } = useSession();
   return useQuery({
     queryKey: [...useKey(), 'item', itemId],
     meta: { cache: 'titles' },
-    queryFn: async () => {
-      const { Items } = await client.get<BaseItemDtoQueryResult>('/Items', {
-        userId: user.Id,
-        Ids: itemId,
-        Fields: DETAIL_FIELDS,
-      });
-      const item = Items?.[0];
-      if (!item) throw new Error('This item was not found');
-      return item;
-    },
+    queryFn: () => requestItem(client, user.Id!, itemId),
     enabled: !!itemId,
   });
 }
@@ -429,21 +436,29 @@ function withOwnId(source: SourceInfo): SourceInfo {
 }
 
 /** Naming a version also gets its subtitles from subtitle addons. */
+export async function requestPlaybackInfo(
+  client: JellyfinClient,
+  userId: string,
+  itemId: string,
+  opts: { refresh?: boolean; sourceId?: string; profile?: object } = {}
+): Promise<PlaybackInfoResponse> {
+  const info = await client.post<PlaybackInfoResponse>(
+    `/Items/${itemId}/PlaybackInfo`,
+    {
+      UserId: userId,
+      DeviceProfile: opts.profile ?? DEVICE_PROFILE,
+      ...(opts.sourceId ? { MediaSourceId: opts.sourceId } : { Fresh: true }),
+      ...(opts.refresh && { Refresh: true }),
+    },
+    { userId }
+  );
+  return { ...info, MediaSources: info.MediaSources?.map(withOwnId) };
+}
+
 function usePlaybackInfoRequest() {
   const { client, user } = useSession();
-  return async (itemId: string, refresh = false, sourceId?: string) => {
-    const info = await client.post<PlaybackInfoResponse>(
-      `/Items/${itemId}/PlaybackInfo`,
-      {
-        UserId: user.Id,
-        DeviceProfile: DEVICE_PROFILE,
-        ...(sourceId ? { MediaSourceId: sourceId } : { Fresh: true }),
-        ...(refresh && { Refresh: true }),
-      },
-      { userId: user.Id }
-    );
-    return { ...info, MediaSources: info.MediaSources?.map(withOwnId) };
-  };
+  return (itemId: string, refresh = false, sourceId?: string) =>
+    requestPlaybackInfo(client, user.Id!, itemId, { refresh, sourceId });
 }
 
 export function usePlaybackInfoOptions() {

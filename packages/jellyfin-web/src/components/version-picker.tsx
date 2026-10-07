@@ -4,6 +4,7 @@ import {
   BiBarChartAlt2,
   BiCopy,
   BiDotsVerticalRounded,
+  BiDownload,
   BiErrorCircle,
   BiInfoCircle,
   BiLink,
@@ -30,6 +31,12 @@ import {
   useSetPlayed,
 } from '../lib/queries';
 import { directUrl } from '../lib/playback/stream';
+import {
+  downloadsHost,
+  useAddDownloads,
+  useReplaceVersion,
+  type Download,
+} from '../lib/downloads';
 import { chosenPlayer } from '../lib/playback/player-choice';
 import {
   lastVersions,
@@ -51,6 +58,8 @@ interface Request {
   startMs: number;
   /** From the player: the version playing, which a pick replaces. */
   playing?: string;
+  /** A pick downloads `items`, which start with `item`, or replaces `replace`'s version. */
+  download?: { items: BaseItemDto[]; replace?: Download };
 }
 
 interface PickerValue {
@@ -58,6 +67,11 @@ interface PickerValue {
   open(item: BaseItemDto, opts?: { startMs?: number; playing?: string }): void;
   /** What Play does (see `useStraightPlay`); a hold does the other. */
   play(item: BaseItemDto, opts?: { startMs?: number; held?: boolean }): void;
+  /**
+   * Downloads the items, the first one's pick deciding the rest, or with
+   * `replace` gives that download another version.
+   */
+  download(items: BaseItemDto[], opts?: { replace?: Download }): void;
 }
 
 const PickerContext = React.createContext<PickerValue | null>(null);
@@ -109,13 +123,24 @@ export function VersionPickerProvider({
   const queryClient = useQueryClient();
   const infoOptions = usePlaybackInfoOptions();
   const playVersion = usePlay();
+  const addDownloads = useAddDownloads();
+  const [autoPick] = useSetting(settings.autoPlayFirst);
   const latest = React.useRef({
     straight,
     queryClient,
     infoOptions,
     playVersion,
+    addDownloads,
+    autoPick,
   });
-  latest.current = { straight, queryClient, infoOptions, playVersion };
+  latest.current = {
+    straight,
+    queryClient,
+    infoOptions,
+    playVersion,
+    addDownloads,
+    autoPick,
+  };
 
   const value = React.useMemo<PickerValue>(() => {
     // The version last played when resuming, else the first; the list when none plays.
@@ -157,6 +182,18 @@ export function VersionPickerProvider({
         if (latest.current.straight(item, startMs) !== !!opts?.held)
           void playStraight(item, startMs);
         else setRequest({ item, startMs });
+      },
+      download: (items, opts) => {
+        if (!items.length || !downloadsHost()) return;
+        // As Play does, the setting skips the list and takes the first version.
+        if (latest.current.autoPick && !opts?.replace)
+          void latest.current.addDownloads(items);
+        else
+          setRequest({
+            item: items[0],
+            startMs: 0,
+            download: { items, replace: opts?.replace },
+          });
       },
     };
   }, []);
@@ -225,6 +262,10 @@ function Versions({
   const play = usePlay();
   const queryClient = useQueryClient();
   const infoOptions = usePlaybackInfoOptions();
+  const addDownloads = useAddDownloads();
+  const replaceVersion = useReplaceVersion();
+  const download = request.download;
+  const canDownload = !!downloadsHost();
   const [startMs, setStartMs] = React.useState(request.startMs);
   const [filter, setFilter] = React.useState('');
   const sources = playableSources(info.data);
@@ -256,6 +297,12 @@ function Versions({
   }, []);
 
   const start = (source: SourceInfo) => {
+    if (download) {
+      onDone();
+      if (download.replace) replaceVersion(download.replace, source);
+      else void addDownloads(download.items, source);
+      return;
+    }
     // The player's cached answer may predate this list and lack the version.
     queryClient.removeQueries({
       queryKey: infoOptions(item.Id!, source.Id ?? undefined).queryKey,
@@ -342,6 +389,13 @@ function Versions({
             </Tooltip>
           )}
         </div>
+        {download && (
+          <p data-ui="versions-download-hint" className="text-sm text-gray-300">
+            {download.items.length > 1
+              ? `Pick the version to download. The other ${download.items.length - 1} episodes get the same release where they have it.`
+              : 'Pick the version to download.'}
+          </p>
+        )}
         {request.startMs > 0 && (
           <div
             data-ui="versions-start"
@@ -423,6 +477,19 @@ function Versions({
         {shown.map((source) => {
           const link = directUrl(client, item.Id!, source);
           const actions = [
+            ...(canDownload && !download
+              ? [
+                  {
+                    name: 'download',
+                    label: 'Download',
+                    icon: <BiDownload />,
+                    run: () => {
+                      onDone();
+                      void addDownloads([item], source);
+                    },
+                  },
+                ]
+              : []),
             {
               name: 'copy-link',
               label: 'Copy stream link',
@@ -452,7 +519,11 @@ function Versions({
                   data-ui="version-play-icon"
                   className="hidden size-9 flex-none items-center justify-center rounded-full bg-white/10 text-white transition-colors group-hover/version:bg-white group-hover/version:text-black sm:flex"
                 >
-                  <BiPlay className="text-xl" />
+                  {download ? (
+                    <BiDownload className="text-xl" />
+                  ) : (
+                    <BiPlay className="text-xl" />
+                  )}
                 </span>
                 <span className="min-w-0 flex-1 space-y-1">
                   {/* Room for the menu, so only the first line gives way. */}

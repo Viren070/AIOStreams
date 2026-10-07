@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-router';
 import {
   BiCalendar,
+  BiDownload,
   BiCompass,
   BiHeart,
   BiHistory,
@@ -55,6 +56,7 @@ import { useServerInfo } from '../lib/server-info';
 import { useDiscordBrowsing } from '../lib/discord';
 import { useServerEvents } from '../lib/server-events';
 import { retryNow, useReachable } from '../lib/connection';
+import { downloadsHost, useDownloadRunner } from '../lib/downloads';
 import { settings, useSetting } from '../lib/settings';
 import { useAction } from '../lib/input';
 import { UserAvatar } from './user-avatar';
@@ -362,6 +364,7 @@ export function WebLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   useDiscordBrowsing(pathname);
   useServerEvents();
+  useDownloadRunner();
   useAction('search', () => navigate(to.search()));
   useAction('home', () => navigate(to.home));
   const activity: SidebarItem = {
@@ -419,6 +422,17 @@ export function WebLayout() {
     },
     calendar,
     activity,
+    ...(downloadsHost()
+      ? [
+          {
+            id: 'downloads',
+            name: 'Downloads',
+            iconType: BiDownload,
+            isCurrent: pathname.startsWith('/downloads'),
+            onClick: () => navigate(to.downloads),
+          },
+        ]
+      : []),
   ];
 
   const settings: SidebarItem = {

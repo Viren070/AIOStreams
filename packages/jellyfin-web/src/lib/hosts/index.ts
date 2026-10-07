@@ -1,4 +1,5 @@
 import type { JellyfinClient } from '../client';
+import type { DownloadsHost } from '../downloads/types';
 import type {
   NativePlayerOptions,
   PlayerController,
@@ -61,6 +62,8 @@ export interface Host {
   };
   start?(ctx: { base: string }): () => void;
   signedIn?(client: JellyfinClient): void;
+  /** Saves what the page asks for to the device. */
+  downloads?: DownloadsHost;
 }
 
 const browserHost: Host = { name: 'browser' };

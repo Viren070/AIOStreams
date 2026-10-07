@@ -2,6 +2,7 @@ import React from 'react';
 import {
   BiCheck,
   BiCheckDouble,
+  BiDownload,
   BiHeart,
   BiInfoCircle,
   BiListUl,
@@ -25,8 +26,14 @@ import {
   useSetPlayed,
   useSetPlayedUpTo,
 } from '../lib/queries';
+import { toast } from 'sonner';
 import { itemTitle, ticksToMs } from '../lib/format';
-import { itemPath, navigate } from '../lib/paths';
+import { itemPath, navigate, to } from '../lib/paths';
+import {
+  downloadsHost,
+  useDownloadOf,
+  useEpisodesToDownload,
+} from '../lib/downloads';
 import { useStraightPlay, useVersionPicker } from './version-picker';
 import { useHeroTarget } from './hero';
 import type { BaseItemDto } from '../lib/types';
@@ -51,6 +58,43 @@ function PlayEntries({ item }: { item: BaseItemDto }) {
         {straight ? 'Choose a version' : 'Play straight away'}
       </ContextMenuItem>
     </>
+  );
+}
+
+function DownloadEntry({
+  item,
+  playable,
+}: {
+  item: BaseItemDto;
+  playable: boolean;
+}) {
+  const picker = useVersionPicker();
+  const episodes = useEpisodesToDownload();
+  const download = useDownloadOf(item.Id);
+  if (!downloadsHost() || (!playable && item.Type !== 'Series')) return null;
+  if (download)
+    return (
+      <ContextMenuItem
+        data-name="downloads"
+        onSelect={() => navigate(to.downloads)}
+      >
+        <BiDownload /> See the download
+      </ContextMenuItem>
+    );
+  return (
+    <ContextMenuItem
+      data-name="download"
+      onSelect={() =>
+        item.Type === 'Series'
+          ? void episodes(item.Id!).then(
+              (items) => items.length && picker.download(items),
+              () => toast.error('Could not list the episodes')
+            )
+          : picker.download([item])
+      }
+    >
+      <BiDownload /> {item.Type === 'Series' ? 'Download the show' : 'Download'}
+    </ContextMenuItem>
   );
 }
 
@@ -88,6 +132,7 @@ export function ItemMenu({
           {onPage ? item.Name : itemTitle(item)}
         </ContextMenuLabel>
         {playable && <PlayEntries item={item} />}
+        <DownloadEntry item={item} playable={playable} />
         {!onPage && (
           <ContextMenuItem
             data-name="open"

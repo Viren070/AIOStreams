@@ -7,6 +7,7 @@ import {
   LuCaptions,
   LuCirclePlay,
   LuDatabase,
+  LuDownload,
   LuHeart,
   LuInfo,
   LuKeyboard,
@@ -85,6 +86,8 @@ import {
   AUDIO_CHANNELS,
   CACHE_MAX_STALE_DAYS,
   CACHE_SIZES_MB,
+  DOWNLOAD_SEARCHES,
+  DOWNLOADS_AT_ONCE,
   CUSTOM_CSS_OFF,
   MAX_CUSTOM_CSS,
   MAX_FEATURED,
@@ -119,6 +122,7 @@ import {
   usage as cacheUsage,
   type CacheCategory,
 } from '../lib/cache';
+import { downloadsHost, useDownloadFolder } from '../lib/downloads';
 import { PageBody } from '../components/layout';
 import { UserAvatar } from '../components/user-avatar';
 import { ShortcutSettings } from '../components/shortcut-settings';
@@ -1192,6 +1196,74 @@ function CacheSection() {
   );
 }
 
+function DownloadsSection() {
+  const host = downloadsHost();
+  const folder = useDownloadFolder();
+  const [concurrent, setConcurrent] = useSetting(settings.downloads.concurrent);
+  const [searches, setSearches] = useSetting(settings.downloads.searches);
+  const [subtitles, setSubtitles] = useSetting(settings.downloads.subtitles);
+  const button = 'w-full rounded-full sm:w-auto';
+  return (
+    <SettingsCard description={ON_DEVICE}>
+      {host?.folder && (
+        <SettingsRow
+          label="Folder"
+          help={
+            <span className="break-all">
+              {folder ?? '…'}. New downloads go here; ones already saved stay
+              where they are.
+            </span>
+          }
+        >
+          <div className="flex gap-2">
+            <Button
+              intent="gray-outline"
+              className={button}
+              onClick={() => host.folder?.open()}
+            >
+              Open
+            </Button>
+            <Button
+              intent="gray-outline"
+              className={button}
+              onClick={() => host.folder?.choose()}
+            >
+              Change
+            </Button>
+          </div>
+        </SettingsRow>
+      )}
+      <Select
+        label="Downloads at once"
+        help="The rest wait their turn."
+        options={DOWNLOADS_AT_ONCE.map((n) => ({
+          value: String(n),
+          label: String(n),
+        }))}
+        value={String(concurrent)}
+        onValueChange={(value) => setConcurrent(Number(value))}
+      />
+      <Select
+        label="Version searches at once"
+        help="Versions are found for this many episodes at a time when a season or show is added."
+        options={DOWNLOAD_SEARCHES.map((n) => ({
+          value: String(n),
+          label: String(n),
+        }))}
+        value={String(searches)}
+        onValueChange={(value) => setSearches(Number(value))}
+      />
+      <Switch
+        side="right"
+        label="Save subtitles"
+        help="Subtitle files go next to the video, named so players find them."
+        value={subtitles}
+        onValueChange={setSubtitles}
+      />
+    </SettingsCard>
+  );
+}
+
 const KEEP_CSS_MS = 15_000;
 const DOCS_URL = 'https://docs.aiostreams.viren070.me';
 const CSS_DOCS_URL = `${DOCS_URL}/reference/web-app-css`;
@@ -1644,6 +1716,18 @@ function sections(): Section[] {
       group: 'App',
       Content: ThemeSection,
     },
+    ...(host.downloads
+      ? [
+          {
+            id: 'downloads',
+            label: 'Downloads',
+            description: 'Where they go and how many run at once',
+            icon: LuDownload,
+            group: 'App',
+            Content: DownloadsSection,
+          },
+        ]
+      : []),
     {
       id: 'cache',
       label: 'Cache',

@@ -17,6 +17,7 @@ import { SearchPage } from './pages/search';
 import { ItemPage } from './pages/item';
 import { PersonPage } from './pages/person';
 import { HistoryPage } from './pages/history';
+import { DownloadsPage } from './pages/downloads';
 import { PlayerPage } from './pages/player';
 import { Button } from '@aiostreams/ui/button';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
@@ -40,6 +41,12 @@ const historyRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/history',
   component: HistoryPage,
+});
+
+const downloadsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/downloads',
+  component: DownloadsPage,
 });
 
 const favouritesRoute = createRoute({
@@ -203,6 +210,7 @@ const routeTree = rootRoute.addChildren([
   shellRoute.addChildren([
     homeRoute,
     historyRoute,
+    downloadsRoute,
     favouritesRoute,
     calendarRoute,
     settingsRoute,

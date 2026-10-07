@@ -8,6 +8,7 @@ import {
 import { useLatest } from '../../use-latest';
 import type { Host } from '..';
 import type { ShellMessage } from './bridge';
+import { shellDownloads } from './downloads';
 import { applyDesktopSettings, useShellPlayer } from './player';
 
 export type UpdateState = Extract<ShellMessage, { type: 'update-state' }>;
@@ -211,6 +212,7 @@ const host: Host = {
   device: () => ({ name: window.aiostreamsDesktop?.device }),
   usePlayer: useShellPlayer,
   playerFeatures: ['audio', 'chapters', 'stats'],
+  downloads: shellDownloads,
   back: () => {
     if (!windowFullscreen) return false;
     window.aiostreamsDesktop?.send({ type: 'fullscreen', value: false });

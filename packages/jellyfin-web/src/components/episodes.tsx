@@ -21,6 +21,7 @@ import { Artwork, OpenedPulse, ProgressBar } from './cards';
 import { OverviewInfo } from './overview';
 import { ItemMenu } from './item-menu';
 import { useVersionPicker } from './version-picker';
+import { DownloadButton } from './download-button';
 import { useHold } from '../lib/use-hold';
 import type { BaseItemDto } from '../lib/types';
 
@@ -249,6 +250,7 @@ function Head({
               />
             }
           />
+          {play && <DownloadButton item={episode} className="size-8" />}
           {play && (
             <IconButton
               data-ui="episode-action"

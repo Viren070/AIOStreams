@@ -1,3 +1,5 @@
+import type { HostEvent } from '../../downloads/types';
+
 /** `external` marks what the player in its own window sends. */
 export type ShellMessage =
   | { type: 'mpv-prop'; name: string; data: unknown; external?: boolean }
@@ -38,7 +40,19 @@ export type ShellMessage =
     }
   | { type: 'link'; url: string }
   | { type: 'media-key'; key: MediaKey }
-  | { type: 'error'; message: string };
+  | { type: 'error'; message: string }
+  | {
+      type: 'download-state';
+      folder: string;
+      jobs: Extract<HostEvent, { type: 'state' }>['jobs'];
+    }
+  | {
+      type: 'download-progress';
+      id: string;
+      bytes: number;
+      total: number | null;
+      speed: number;
+    };
 
 /** A press on the system's media controls; positions and offsets are milliseconds. */
 export type MediaKey =

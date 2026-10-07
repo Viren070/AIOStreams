@@ -83,6 +83,10 @@ import type { BaseItemDto } from '../lib/types';
 import { useHold } from '../lib/use-hold';
 import { useExternalReturn } from '../lib/playback/external-return';
 import { CachedImage } from '../components/cached-image';
+import {
+  DownloadButton,
+  ShowDownloadMenu,
+} from '../components/download-button';
 
 export function ItemPage({
   itemId,
@@ -522,6 +526,12 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
           )}
           {(item.Type === 'Movie' || item.Type === 'Series') && (
             <RatingButton item={item} />
+          )}
+          {item.Type === 'Movie' && item.LocationType !== 'Virtual' && (
+            <DownloadButton item={item} className="size-10 text-lg" />
+          )}
+          {item.Type === 'Series' && (
+            <ShowDownloadMenu series={item} season={season} />
           )}
           {!!links?.length && (
             <span
