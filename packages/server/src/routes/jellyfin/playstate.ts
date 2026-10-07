@@ -743,9 +743,15 @@ router.post(
       (d.k === 'movie' || d.k === 'episode')
     ) {
       const item = await itemFromDescriptor(ctx, d).catch(() => null);
+      const at =
+        typeof body.LastPlayedDate === 'string'
+          ? Date.parse(body.LastPlayedDate)
+          : NaN;
       await getWatchStateProvider().record(ctx.watch, {
         type: 'stop',
         identity: await watchIdentityFor(contentRefOf(d)),
+        // A time ahead of now would outrank every later play.
+        at: at > 0 && at <= Date.now() ? at : undefined,
         positionMs: ticksToMs(body.PlaybackPositionTicks),
         durationMs:
           typeof item?.RunTimeTicks === 'number'

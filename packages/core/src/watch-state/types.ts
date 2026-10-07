@@ -168,6 +168,8 @@ export interface WatchProgressEvent {
   positionMs?: number;
   durationMs?: number;
   snapshot?: WatchSnapshot;
+  /** When a stop sent after the fact happened, as from an app that was offline. */
+  at?: number;
 }
 
 export interface WatchFlagEvent {

@@ -123,11 +123,12 @@ export class LocalWatchStateProvider implements WatchStateProvider {
       }
       case 'stop': {
         this.pending.delete(key);
-        return this.write(
-          scope,
-          event.identity,
-          await this.stopPatch(scope, event)
-        );
+        const patch = await this.stopPatch(scope, event);
+        if (!patch)
+          return WatchStateRepository.get(scope, event.identity.itemKey).then(
+            (row) => row ?? null
+          );
+        return this.write(scope, event.identity, patch);
       }
       case 'played':
         this.pending.delete(key);
@@ -279,17 +280,19 @@ export class LocalWatchStateProvider implements WatchStateProvider {
     };
   }
 
+  /** Null for a late report older than what the item already holds. */
   private async stopPatch(
     scope: WatchScope,
     event: WatchProgressEvent
-  ): Promise<WatchStatePatch> {
+  ): Promise<WatchStatePatch | null> {
     const existing = await WatchStateRepository.get(
       scope,
       event.identity.itemKey
     );
+    if (event.at && (existing?.lastPlayedAt ?? 0) > event.at) return null;
     const dur = event.durationMs || existing?.durationMs || 0;
     const pos = event.positionMs ?? 0;
-    const now = Date.now();
+    const now = event.at ?? Date.now();
     if (playedThrough(pos, dur)) {
       return {
         positionMs: 0,
