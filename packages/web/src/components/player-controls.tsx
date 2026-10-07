@@ -66,6 +66,7 @@ import {
 } from '../lib/subtitles/style';
 import { SyncByEar, SyncToLine } from './subtitle-sync';
 import { RATES, usePlayerKeys } from './player-keys';
+import { usePlayerGestures } from './player-gestures';
 import { chapterAt, type Chapter } from '../lib/playback/chapters';
 import type { BaseItemDto, MediaSegmentDto } from '../lib/types';
 import { appBridge } from '../lib/hosts/shell/bridge';
@@ -848,7 +849,9 @@ export function PlayerControls({
   const root = React.useRef<HTMLDivElement>(null);
   const [menus, setMenus] = React.useState(0);
   const pointerType = React.useRef('mouse');
-  const shownOnPress = React.useRef(false);
+  const [touch, setTouch] = React.useState(
+    () => matchMedia('(pointer: coarse)').matches
+  );
   const segments = React.useMemo(() => segmentsOf(rawSegments), [rawSegments]);
   // Set while picking the line heard; playback waits, then resumes if it ran.
   const [picking, setPicking] = React.useState<{
@@ -927,6 +930,14 @@ export function PlayerControls({
     burstSeek(deltaMs);
     showSeekFlash(deltaMs);
   };
+  const shown = useLatest(visible);
+  const gestures = usePlayerGestures({
+    player,
+    seekBy,
+    seekStepMs: seekStep * 1000,
+    notice: showNotice,
+    onTap: () => (shown.current ? hide() : wake()),
+  });
 
   const [segmentActions] = useSetting(settings.segmentActions);
   const inside = segments.filter(
@@ -978,9 +989,14 @@ export function PlayerControls({
   const subtitleOptions = [{ id: '', label: 'Off' }, ...player.subtitleTracks];
   const chapters = player.chapters ?? [];
   const fade = visible ? 'opacity-100' : 'pointer-events-none opacity-0';
+  // The bars' shaded space passes taps through to the video.
+  const barFade = cn(
+    'pointer-events-none',
+    visible ? 'opacity-100 [&>*]:pointer-events-auto' : 'opacity-0'
+  );
   const isEpisode = item.Type === 'Episode';
   // Below lg the bar has no room for these, so they move to the middle.
-  const middle = pointerType.current === 'touch' ? '' : 'lg:hidden';
+  const middle = touch ? '' : 'lg:hidden';
   const time = (
     <>
       {clock(state.positionMs)}
@@ -997,13 +1013,14 @@ export function PlayerControls({
       icon: loadingEpisode === 'previous' ? spinner : <LuSkipBack />,
       onClick: onPrevious,
     },
-    back: {
+    // Touch seeks with a double tap on either side instead.
+    back: !touch && {
       name: 'back',
       label: `Back ${seekStep} seconds`,
       icon: <LuRotateCcw />,
       onClick: () => seekBy(-seekStep * 1000),
     },
-    forward: {
+    forward: !touch && {
       name: 'forward',
       label: `Forward ${seekStep} seconds`,
       icon: <LuRotateCw />,
@@ -1064,18 +1081,17 @@ export function PlayerControls({
       onContextMenu={(e) => e.preventDefault()}
       onPointerDown={(e) => {
         pointerType.current = e.pointerType;
-        shownOnPress.current = visible;
+        setTouch(e.pointerType === 'touch');
         // A tap on hidden controls only shows them, so it can't land on a button that appears under it.
         if (e.pointerType !== 'touch' || visible) wake();
       }}
     >
-      {/* A tap shows or hides the controls; a click plays or pauses. */}
+      {/* A click plays or pauses; touch has its own gestures. */}
       <div
-        className="absolute inset-0"
+        className="absolute inset-0 touch-none"
+        {...gestures}
         onClick={() => {
           if (pointerType.current !== 'touch') togglePlay();
-          else if (shownOnPress.current) hide();
-          else wake();
         }}
         onDoubleClick={() => {
           if (pointerType.current !== 'touch') player.toggleFullscreen?.();
@@ -1086,7 +1102,7 @@ export function PlayerControls({
         data-ui="player-top-bar"
         className={cn(
           'absolute inset-x-0 top-0 flex items-center gap-3 bg-gradient-to-b from-black/80 to-transparent pb-12 pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pt-[calc(0.75rem+env(safe-area-inset-top))] transition-opacity duration-300 sm:pl-[max(1.25rem,env(safe-area-inset-left))] sm:pr-[max(1.25rem,env(safe-area-inset-right))] sm:pt-[calc(1.25rem+env(safe-area-inset-top))]',
-          fade
+          barFade
         )}
       >
         <ControlButton name="exit" label="Back" onClick={onBack}>
@@ -1210,7 +1226,7 @@ export function PlayerControls({
         data-ui="player-bottom-bar"
         className={cn(
           'absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent pb-[calc(0.5rem+env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pt-16 transition-opacity duration-300 sm:pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pl-[max(1.25rem,env(safe-area-inset-left))] sm:pr-[max(1.25rem,env(safe-area-inset-right))]',
-          fade
+          barFade
         )}
       >
         <p

@@ -17,6 +17,7 @@ export type ShellMessage =
     }
   | { type: 'external-ended'; error: string | null }
   | { type: 'fullscreen'; value: boolean }
+  | { type: 'levels'; volume: number; brightness: number }
   | { type: 'window-state'; maximized: boolean }
   | {
       type: 'app-info';

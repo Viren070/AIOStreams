@@ -48,6 +48,13 @@ export interface Host {
   settings?: { label: string; description: string; help: string; open(): void };
   /** Full screen for a web view without the fullscreen API. */
   fullscreen?: { active(): boolean; set(on: boolean): void };
+  /** The device's media volume and screen brightness, 0 to 1, which swipes on the video set. */
+  levels?: {
+    read(): Promise<{ volume: number; brightness: number }>;
+    set(level: 'volume' | 'brightness', value: number): void;
+    /** Hands the brightness back to the system. */
+    release(): void;
+  };
   /** Takes Back before the page does; true when it acted. */
   back?(): boolean;
   /** Back from the first page leaves the app. */

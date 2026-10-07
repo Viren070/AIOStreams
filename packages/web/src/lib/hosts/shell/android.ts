@@ -24,4 +24,24 @@ export const androidHost: Host = {
     active: () => fullscreen,
     set: (on) => appBridge()?.send({ type: 'fullscreen', value: on }),
   },
+  levels: {
+    read: () =>
+      new Promise((resolve) => {
+        const bridge = appBridge();
+        const stop = bridge?.subscribe((m) => {
+          if (m.type !== 'levels') return;
+          stop?.();
+          resolve(m);
+        });
+        bridge?.send({ type: 'levels' });
+      }),
+    set: (level, value) =>
+      appBridge()?.send({ type: 'set-level', level, value }),
+    release: () =>
+      appBridge()?.send({
+        type: 'set-level',
+        level: 'brightness',
+        value: null,
+      }),
+  },
 };

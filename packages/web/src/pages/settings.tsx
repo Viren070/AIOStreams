@@ -375,7 +375,7 @@ function PlaybackSection() {
       <SettingsCard title="Controls" description={ON_DEVICE}>
         <Select
           label="Skip length"
-          help="How far the skip buttons and the arrow keys jump."
+          help="How far the skip buttons, double taps and the arrow keys jump."
           options={SEEK_STEPS.map((s) => ({
             value: String(s),
             label: `${s} seconds`,
