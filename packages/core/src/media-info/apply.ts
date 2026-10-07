@@ -19,9 +19,6 @@ export function layerMediaInfo(
   return {
     ...parsedFile,
     ...merged,
-    // merged already resolved these (preferring info, falling back to
-    // parsedFile); re-checking .length here would discard a confirmed-empty
-    // probe result in favour of the stale pre-probe guess.
     languages: merged.languages ?? parsedFile?.languages ?? [],
     subtitles: merged.subtitles ?? parsedFile?.subtitles ?? [],
     audioChannels: merged.audioChannels ?? parsedFile?.audioChannels ?? [],
