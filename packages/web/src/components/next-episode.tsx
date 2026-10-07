@@ -340,14 +340,14 @@ export function useNextEpisodePrompt({
       <div
         ref={card}
         data-ui="next-episode-card"
-        className="fixed bottom-24 right-4 z-20 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-white/10 bg-gray-950/90 shadow-2xl backdrop-blur duration-300 animate-in fade-in-0 slide-in-from-right-4"
+        className="fixed bottom-[calc(2rem+env(safe-area-inset-bottom))] right-4 z-20 transition-[bottom] peer-data-[visible]:bottom-24 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-white/10 bg-gray-950 shadow-2xl duration-300 animate-in fade-in-0 slide-in-from-right-4"
       >
         {image && (
           <CachedImage
             data-ui="next-episode-image"
             src={image}
             alt=""
-            className="aspect-video w-full object-cover"
+            className="aspect-video w-full object-cover [@media(max-height:640px)]:hidden"
           />
         )}
         <div className="space-y-3 p-4">

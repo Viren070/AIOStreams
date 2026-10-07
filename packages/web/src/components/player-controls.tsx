@@ -1071,8 +1071,9 @@ export function PlayerControls({
       data-visible={visible || undefined}
       data-paused={state.paused || undefined}
       data-waiting={(state.waiting && !state.error) || undefined}
+      // The next episode card is its peer, moving above the bar while it shows.
       className={cn(
-        'fixed inset-0 z-10 select-none',
+        'peer fixed inset-0 z-10 select-none',
         !visible && 'cursor-none'
       )}
       onFocus={wake}
