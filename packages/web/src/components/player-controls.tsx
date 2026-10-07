@@ -100,23 +100,27 @@ function segmentsOf(items: MediaSegmentDto[] | null | undefined): Segment[] {
     .filter((s) => s.endMs > s.startMs);
 }
 
-function useIdle(ms: number): [boolean, () => void, () => void] {
+/** `hide` keeps the controls hidden until the next input, even while paused. */
+function useIdle(ms: number) {
   const [idle, setIdle] = React.useState(false);
+  const [hidden, setHidden] = React.useState(false);
   const timer = React.useRef<ReturnType<typeof setTimeout>>(undefined);
   const wake = React.useCallback(() => {
     setIdle(false);
+    setHidden(false);
     clearTimeout(timer.current);
     timer.current = setTimeout(() => setIdle(true), ms);
   }, [ms]);
-  const sleep = React.useCallback(() => {
+  const hide = React.useCallback(() => {
     clearTimeout(timer.current);
     setIdle(true);
+    setHidden(true);
   }, []);
   React.useEffect(() => {
     wake();
     return () => clearTimeout(timer.current);
   }, [wake]);
-  return [idle, wake, sleep];
+  return { idle, hidden, wake, hide };
 }
 
 function ControlButton({
@@ -835,10 +839,11 @@ export function PlayerControls({
   offeringNext?: boolean;
 }) {
   const { state } = player;
-  const [idle, wake, sleep] = useIdle(IDLE_MS);
+  const { idle, hidden, wake, hide } = useIdle(IDLE_MS);
   const root = React.useRef<HTMLDivElement>(null);
   const [menus, setMenus] = React.useState(0);
   const pointerType = React.useRef('mouse');
+  const shownOnPress = React.useRef(false);
   const segments = React.useMemo(() => segmentsOf(rawSegments), [rawSegments]);
   // Set while picking the line heard; playback waits, then resumes if it ran.
   const [picking, setPicking] = React.useState<{
@@ -849,12 +854,13 @@ export function PlayerControls({
   // A player in its own window is watched there, so its controls here stay.
   const visible =
     !!player.external ||
-    !idle ||
-    state.paused ||
-    menus > 0 ||
-    !state.started ||
-    picking !== null ||
-    byEar;
+    (!hidden &&
+      (!idle ||
+        state.paused ||
+        menus > 0 ||
+        !state.started ||
+        picking !== null ||
+        byEar));
   // macOS draws its window buttons over the video, so they hide with the controls.
   React.useEffect(() => {
     const shell = appBridge();
@@ -954,7 +960,7 @@ export function PlayerControls({
     player,
     root,
     wake,
-    hide: sleep,
+    hide,
     notice: showNotice,
     togglePlay,
     seekBy,
@@ -1053,14 +1059,18 @@ export function PlayerControls({
       onContextMenu={(e) => e.preventDefault()}
       onPointerDown={(e) => {
         pointerType.current = e.pointerType;
-        wake();
+        shownOnPress.current = visible;
+        // A tap on hidden controls only shows them, so it can't land on a button that appears under it.
+        if (e.pointerType !== 'touch' || visible) wake();
       }}
     >
-      {/* A tap shows the controls; a click plays or pauses. */}
+      {/* A tap shows or hides the controls; a click plays or pauses. */}
       <div
         className="absolute inset-0"
         onClick={() => {
           if (pointerType.current !== 'touch') togglePlay();
+          else if (shownOnPress.current) hide();
+          else wake();
         }}
         onDoubleClick={() => {
           if (pointerType.current !== 'touch') player.toggleFullscreen?.();
