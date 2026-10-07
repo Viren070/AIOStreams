@@ -187,7 +187,39 @@ function mayImport(
   return incomingAt > (existing.externalAt ?? 0);
 }
 
+/** Trackers hold a rounded percentage of their own runtime, not our position. */
+const SAME_PROGRESS_PERCENT = 2;
+
+function percentOf(positionMs: number, durationMs: number | null | undefined) {
+  return durationMs && durationMs > 0 ? (positionMs / durationMs) * 100 : null;
+}
+
 type MatchKeys = Map<string, string | null>;
+
+/**
+ * Our own rows of each key's item under its other spellings. A tracker can echo
+ * our report under its own id, which as the newer spelling takes the item over.
+ */
+async function ownSpellings(
+  scope: WatchScope,
+  keys: string[],
+  matches: MatchKeys,
+  db: DbDriver
+): Promise<(key: string) => WatchStateRow[]> {
+  const rows = await WatchStateRepository.getSpellings(
+    scope,
+    keys.flatMap((key) => [key, matches.get(key) ?? '']),
+    db
+  );
+  const spellings = bySpelling(rows.filter((row) => row.origin === 'local'));
+  return (key) => {
+    const match = matches.get(key);
+    return [
+      ...(spellings.get(key) ?? []),
+      ...(match ? (spellings.get(match) ?? []) : []),
+    ].filter((row) => row.itemKey !== key);
+  };
+}
 
 function matchedIdentityFrom(
   videoId: string,
@@ -397,6 +429,7 @@ async function importItems(
       : `m|${i.metaId}`
   );
   const existingRows = await WatchStateRepository.getMany(scope, keys, db);
+  const ownRows = await ownSpellings(scope, keys, matches, db);
 
   const rows: ImportRow[] = [];
   const listed: string[] = [];
@@ -406,6 +439,42 @@ async function importItems(
     const key = keys[i];
     const existing = existingRows.get(key);
     const at = atMs(item.at, now);
+
+    const position = positionOf(item, existing);
+    const finished =
+      !!position && playedThrough(position.positionMs, position.durationMs);
+    // A paused point never unwatches a title.
+    const played =
+      finished ||
+      item.played === true ||
+      !!existing?.played ||
+      watched.has(key);
+
+    const tooEarly =
+      !!position &&
+      position.durationMs > 0 &&
+      position.positionMs <
+        (position.durationMs *
+          Math.min(RESUME_MIN_PERCENT, appConfig.watchState.minResumePercent)) /
+          100;
+    const positionMs = finished || tooEarly ? 0 : (position?.positionMs ?? 0);
+    const progress = position
+      ? percentOf(position.positionMs, position.durationMs)
+      : null;
+    const sameAs = (row: WatchStateRow) => {
+      const held = percentOf(row.positionMs, row.durationMs);
+      return (
+        row.played === played &&
+        progress !== null &&
+        held !== null &&
+        Math.abs(held - progress) <= SAME_PROGRESS_PERCENT
+      );
+    };
+
+    if (ownRows(key).some((row) => !mayImport(row, at, now) || sameAs(row))) {
+      skipped++;
+      continue;
+    }
 
     if (!mayImport(existing, at, now)) {
       skipped++;
@@ -429,33 +498,16 @@ async function importItems(
       matches
     );
 
-    const position = positionOf(item, existing);
     if (item.played !== true && !position) {
       skipped++;
       if (existing) listed.push(key);
       continue;
     }
-    const finished =
-      !!position && playedThrough(position.positionMs, position.durationMs);
-    // A paused point never unwatches a title.
-    const played =
-      finished ||
-      item.played === true ||
-      !!existing?.played ||
-      watched.has(key);
-
-    const tooEarly =
-      !!position &&
-      position.durationMs > 0 &&
-      position.positionMs <
-        (position.durationMs *
-          Math.min(RESUME_MIN_PERCENT, appConfig.watchState.minResumePercent)) /
-          100;
 
     rows.push({
       identity,
       values: WatchStateRepository.importValues(scope, identity, {
-        positionMs: finished || tooEarly ? 0 : (position?.positionMs ?? 0),
+        positionMs,
         durationMs: position?.durationMs ?? 0,
         played,
         lastPlayedAt: at,
@@ -505,11 +557,9 @@ async function importWatched(
   }
   for (const row of nextUp) noteWatch(row.metaId, row.at);
 
-  const existingRows = await WatchStateRepository.getMany(
-    scope,
-    watchedKeysOf(watched),
-    db
-  );
+  const keys = watchedKeysOf(watched);
+  const existingRows = await WatchStateRepository.getMany(scope, keys, db);
+  const ownRows = await ownSpellings(scope, keys, matches, db);
 
   const rows: ImportRow[] = [];
   const listed: string[] = [];
@@ -520,6 +570,10 @@ async function importWatched(
     identity: WatchIdentity,
     existing?: WatchStateRow
   ) => {
+    if (ownRows(key).some((row) => row.played || !mayImport(row, now, now))) {
+      skipped++;
+      return;
+    }
     const showAt = watchedAt.get(identity.baseId) ?? 0;
     /* Imported as played, or mid rewatch: marking it seen is enough. */
     if (
