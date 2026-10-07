@@ -558,6 +558,19 @@ pub fn choose_program(_window: &Window, title: &str) -> Option<PathBuf> {
     Some(path)
 }
 
+pub fn choose_folder(_window: &Window, title: &str) -> Option<PathBuf> {
+    let panel = NSOpenPanel::openPanel(MainThreadMarker::new()?);
+    panel.setCanChooseFiles(false);
+    panel.setCanChooseDirectories(true);
+    panel.setCanCreateDirectories(true);
+    panel.setAllowsMultipleSelection(false);
+    panel.setMessage(Some(&NSString::from_str(title)));
+    if panel.runModal() != NSModalResponseOK {
+        return None;
+    }
+    Some(PathBuf::from(panel.URL()?.path()?.to_string()))
+}
+
 pub fn fatal(message: &str) -> ! {
     log::error!("{message}");
     eprintln!("AIOStreams: {message}");

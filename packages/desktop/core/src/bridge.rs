@@ -105,6 +105,73 @@ pub enum Inbound {
     },
     /// The page can take `link` messages, and any that arrived before it loaded.
     LinksReady,
+    /// Downloads to fetch; one already known keeps its state.
+    DownloadAdd {
+        jobs: Vec<DownloadJob>,
+    },
+    /// `pause`, `resume` or `retry`.
+    DownloadControl {
+        id: String,
+        action: String,
+    },
+    /// Forgets a download, and with `files` deletes what it saved.
+    DownloadRemove {
+        id: String,
+        files: bool,
+    },
+    /// Asks for a `download-state` answer.
+    DownloadList,
+    /// Lets the user pick the folder new downloads go to.
+    DownloadFolder,
+    /// Shows the downloads folder, or one download's, in the file manager.
+    DownloadOpen {
+        id: Option<String>,
+    },
+    DownloadConfig {
+        concurrent: u32,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum FileKind {
+    Video,
+    Subtitle,
+    Image,
+}
+
+/// A file to fetch, at a path relative to the downloads folder.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DownloadFile {
+    pub url: String,
+    pub path: String,
+    pub kind: FileKind,
+}
+
+/// A file the page writes itself, such as the item's details.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DownloadText {
+    pub path: String,
+    pub text: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DownloadJob {
+    pub id: String,
+    pub title: String,
+    pub files: Vec<DownloadFile>,
+    #[serde(default)]
+    pub texts: Vec<DownloadText>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DownloadStatus {
+    pub id: String,
+    /// `queued`, `downloading`, `paused`, `failed` or `done`.
+    pub state: &'static str,
+    pub bytes: u64,
+    pub total: Option<u64>,
+    pub error: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -174,6 +241,17 @@ pub enum Outbound {
     },
     Error {
         message: String,
+    },
+    DownloadState {
+        folder: String,
+        jobs: Vec<DownloadStatus>,
+    },
+    /// The running download's video; `speed` in bytes a second.
+    DownloadProgress {
+        id: String,
+        bytes: u64,
+        total: Option<u64>,
+        speed: u64,
     },
 }
 

@@ -15,6 +15,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 
 use aiostreams_desktop_core::bridge::{Inbound, Outbound, PROTOCOL_VERSION, origin};
+use aiostreams_desktop_core::downloads::{self, Downloads};
 use aiostreams_desktop_core::external::{self, External};
 use aiostreams_desktop_core::player::Player;
 use aiostreams_desktop_core::{discord, now_playing};
@@ -37,6 +38,7 @@ pub enum UserEvent {
     Link(String),
     LinksReady,
     ChoosePlayer(external::Kind),
+    ChooseDownloadFolder,
 }
 
 /// The window edges the page resizes from; the system handles the others.
@@ -191,6 +193,10 @@ pub struct Paths {
     log_file: PathBuf,
     players: PathBuf,
     subtitles: PathBuf,
+    /// The download queue, kept across restarts.
+    downloads: PathBuf,
+    /// Where downloads go until the user picks a folder.
+    download_folder: PathBuf,
 }
 
 pub struct App {
@@ -243,9 +249,14 @@ fn main() {
     velopack.run();
     #[cfg(windows)]
     platform::claim_app_id();
-    let (config_dir, data_dir) = match portable_root() {
+    let portable = portable_root();
+    let (config_dir, data_dir) = match &portable {
         Some(root) => (root.join("data"), root.join("data")),
         None => (app_dir(dirs::config_dir()), app_dir(dirs::data_local_dir())),
+    };
+    let download_folder = match (&portable, dirs::video_dir()) {
+        (None, Some(videos)) => videos.join("AIOStreams"),
+        _ => data_dir.join("downloads"),
     };
     let logs = data_dir.join("logs");
     let log_file = logging::init(&logs);
@@ -280,6 +291,8 @@ fn main() {
         log_file,
         players: config_dir.join("players.json"),
         subtitles,
+        downloads: data_dir.join("downloads.json"),
+        download_folder,
     });
     shell::run(App {
         args,
@@ -378,6 +391,11 @@ pub fn start_external(paths: &Paths, emit: impl Fn(Outbound) + Send + Sync + 'st
     )
 }
 
+/// `emit` is called on the download queue's thread.
+pub fn start_downloads(paths: &Paths, emit: impl Fn(Outbound) + Send + 'static) -> Downloads {
+    Downloads::start(paths.downloads.clone(), paths.download_folder.clone(), emit)
+}
+
 const SUBTITLE_TYPES: &[&str] = &["srt", "vtt", "ass", "ssa", "sub", "sup"];
 const MAX_SUBTITLE_BYTES: usize = 10 << 20;
 
@@ -442,6 +460,7 @@ pub fn handle(
     send: &dyn Fn(UserEvent),
     paths: &Paths,
     updater: &Option<Updater>,
+    downloads: &Downloads,
 ) {
     let emit = |message: Outbound| send(UserEvent::Emit(receive_script(&message)));
     let fail = |message: String| {
@@ -561,6 +580,28 @@ pub fn handle(
         Inbound::NowPlaying { item } => now_playing::set_item(item),
         Inbound::DiscordCheck => discord::check(),
         Inbound::LinksReady => send(UserEvent::LinksReady),
+        Inbound::DownloadAdd { jobs } => downloads.send(downloads::Command::Add(jobs)),
+        Inbound::DownloadControl { id, action } => match action.as_str() {
+            "pause" => downloads.send(downloads::Command::Pause(id)),
+            "resume" => downloads.send(downloads::Command::Resume(id)),
+            "retry" => downloads.send(downloads::Command::Retry(id)),
+            _ => log::warn!("download-control: unknown action {action}"),
+        },
+        Inbound::DownloadRemove { id, files } => {
+            downloads.send(downloads::Command::Remove { id, files })
+        }
+        Inbound::DownloadList => downloads.send(downloads::Command::List),
+        Inbound::DownloadFolder => send(UserEvent::ChooseDownloadFolder),
+        Inbound::DownloadOpen { id } => {
+            let folder = id
+                .and_then(|id| downloads.job_folder(&id))
+                .unwrap_or_else(|| downloads.folder());
+            let _ = std::fs::create_dir_all(&folder);
+            platform::open_external(&folder.to_string_lossy());
+        }
+        Inbound::DownloadConfig { concurrent } => {
+            downloads.send(downloads::Command::SetConcurrent(concurrent))
+        }
         Inbound::WebError { message } => {
             let message: String = message.chars().take(4000).collect();
             log::error!(target: "web", "{message}");

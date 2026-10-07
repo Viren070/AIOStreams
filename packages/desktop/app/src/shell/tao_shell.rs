@@ -24,8 +24,9 @@ use crate::placement::{self, MIN_SIZE, Placement, SETTLE};
 use crate::updates::Updater;
 use crate::{
     App, Edge, UserEvent, allowed_navigation, handle, platform, receive_script, serve,
-    start_external, start_player,
+    start_downloads, start_external, start_player,
 };
+use aiostreams_desktop_core::downloads::Command as DownloadCommand;
 
 pub fn webview_version() -> String {
     wry::webview_version().unwrap_or_else(|_| "missing".into())
@@ -189,6 +190,12 @@ pub fn run(app: App) {
             let _ = proxy.send_event(UserEvent::Emit(receive_script(&message)));
         }
     }));
+    let downloads = Rc::new(start_downloads(&paths, {
+        let proxy = proxy.clone();
+        move |message: Outbound| {
+            let _ = proxy.send_event(UserEvent::Emit(receive_script(&message)));
+        }
+    }));
     let keys = {
         let proxy = proxy.clone();
         move |key| {
@@ -223,6 +230,7 @@ pub fn run(app: App) {
         .with_ipc_handler({
             let (player, proxy, app_origin) = (player.clone(), proxy.clone(), app_origin.clone());
             let (external, paths, updater) = (external.clone(), paths.clone(), updater.clone());
+            let downloads = downloads.clone();
             move |req: Request<String>| {
                 let from = origin(&req.uri().to_string()).unwrap_or_default();
                 if from != app_origin {
@@ -232,7 +240,9 @@ pub fn run(app: App) {
                     let _ = proxy.send_event(event);
                 };
                 match serde_json::from_str::<Inbound>(req.body()) {
-                    Ok(message) => handle(message, &player, &external, &send, &paths, &updater),
+                    Ok(message) => handle(
+                        message, &player, &external, &send, &paths, &updater, &downloads,
+                    ),
                     Err(e) => log::warn!("bad message: {e}"),
                 }
             }
@@ -397,6 +407,12 @@ pub fn run(app: App) {
                     external.set_program(kind, path);
                 }
                 emit(external.players());
+            }
+            Event::UserEvent(UserEvent::ChooseDownloadFolder) => {
+                if let Some(folder) = platform::choose_folder(&window, "Choose where downloads go")
+                {
+                    downloads.send(DownloadCommand::SetFolder(folder));
+                }
             }
             Event::UserEvent(UserEvent::Sync) => {
                 if let Some(p) = player.borrow().as_ref() {

@@ -29,7 +29,10 @@ windows = { version = "0.62", features = [
   "Media",
   "Storage_Streams",
   "Win32_Foundation",
+  "Win32_System_Com",
   "Win32_System_WinRT",
+  "Win32_UI_Shell",
+  "Win32_UI_Shell_Common",
 ] }
 windows-sys = { workspace = true, features = [
   "Win32_Foundation",

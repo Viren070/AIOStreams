@@ -19,8 +19,9 @@ use crate::placement::{self, MIN_SIZE, Placement, SETTLE};
 use crate::updates::Updater;
 use crate::{
     App, Edge, Served, UserEvent, allowed_navigation, handle, platform, receive_script, serve,
-    start_external, start_player,
+    start_downloads, start_external, start_player,
 };
+use aiostreams_desktop_core::downloads::{Command as DownloadCommand, Downloads};
 
 /// The bridge posts through `window.ipc`, as wry names it on the other platforms.
 const IPC_SHIM: &str = "window.ipc = { postMessage: (message) => window.webkit.messageHandlers.ipc.postMessage(message) };";
@@ -49,6 +50,7 @@ struct Shell {
     video: platform::VideoSurface,
     player: Rc<RefCell<Option<Player>>>,
     external: Rc<External>,
+    downloads: Rc<Downloads>,
     press: RefCell<Option<Press>>,
     links: RefCell<Inbox>,
     main_loop: glib::MainLoop,
@@ -186,6 +188,18 @@ impl Shell {
                     }
                 });
             }
+            UserEvent::ChooseDownloadFolder => {
+                let dialog = gtk4::FileDialog::builder()
+                    .title("Choose where downloads go")
+                    .modal(true)
+                    .build();
+                let downloads = self.downloads.clone();
+                dialog.select_folder(Some(&self.window), None::<&gio::Cancellable>, move |file| {
+                    if let Some(folder) = file.ok().and_then(|f| f.path()) {
+                        downloads.send(DownloadCommand::SetFolder(folder));
+                    }
+                });
+            }
         }
     }
 
@@ -261,6 +275,9 @@ pub fn run(app: App) {
     let updater = Rc::new(Updater::start(|message| {
         post(UserEvent::Emit(receive_script(&message)))
     }));
+    let downloads = Rc::new(start_downloads(&paths, |message| {
+        post(UserEvent::Emit(receive_script(&message)))
+    }));
     discord::start(|message| post(UserEvent::Emit(receive_script(&message))));
     media::start(|key| post(UserEvent::Emit(receive_script(&Outbound::MediaKey { key }))));
 
@@ -302,6 +319,7 @@ pub fn run(app: App) {
         let (webview, player, app_origin) =
             (webview.downgrade(), player.clone(), app_origin.clone());
         let (external, paths, updater) = (external.clone(), paths.clone(), updater.clone());
+        let downloads = downloads.clone();
         move |_, value| {
             let page = webview.upgrade().and_then(|w| w.uri()).unwrap_or_default();
             let from = origin(&page).unwrap_or_default();
@@ -309,7 +327,9 @@ pub fn run(app: App) {
                 return log::warn!("ignored a message from {from}");
             }
             match serde_json::from_str::<Inbound>(&value.to_str()) {
-                Ok(message) => handle(message, &player, &external, &post, &paths, &updater),
+                Ok(message) => handle(
+                    message, &player, &external, &post, &paths, &updater, &downloads,
+                ),
                 Err(e) => log::warn!("bad message: {e}"),
             }
         }
@@ -434,6 +454,7 @@ pub fn run(app: App) {
             video,
             player,
             external,
+            downloads,
             press: RefCell::new(None),
             links: RefCell::new(Inbox::default()),
             main_loop: main_loop.clone(),
