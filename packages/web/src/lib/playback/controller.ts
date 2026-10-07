@@ -57,6 +57,8 @@ export interface PlayerController {
   setSubtitle(id: string | null): void;
   /** Missing where the player cannot shift subtitles. */
   setSubtitleDelay?: (ms: number) => void;
+  /** Keeps the subtitles above this share of the height, which the controls cover; 0 when they hide. */
+  liftSubtitles?: (share: number) => void;
   /** The shown subtitle's lines, or null when the player cannot read them. */
   subtitleLines?: () => Promise<SubtitleLine[] | null>;
   /** Whether `subtitleLines` can read this subtitle; every one when missing. */

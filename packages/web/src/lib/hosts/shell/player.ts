@@ -14,7 +14,12 @@ import {
   saveSubtitleDelay,
 } from '../../subtitles/delay';
 import { parseSubtitleLines } from '../../subtitles/cues';
-import { MPV_OUTLINE, mpvColor, subtitleScale } from '../../subtitles/style';
+import {
+  MPV_OUTLINE,
+  mpvColor,
+  subtitleHeight,
+  subtitleScale,
+} from '../../subtitles/style';
 import {
   initialState,
   ownTrackLabel,
@@ -153,10 +158,15 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
   }, [fit]);
 
   const imageSubtitle = React.useRef(false);
+  const [lift, setLift] = React.useState(0);
   const { subtitleStyle } = opts;
   React.useEffect(() => {
     if (!external) applySubtitleStyle(subtitleStyle, imageSubtitle.current);
   }, [subtitleStyle, external]);
+  React.useEffect(() => {
+    if (!external)
+      setProp('sub-pos', 100 - subtitleHeight(subtitleStyle, lift));
+  }, [subtitleStyle, lift, external]);
 
   React.useEffect(() => {
     // mpv refuses anything above its volume-max.
@@ -402,6 +412,7 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
       saveSubtitleDelay(source.Id, delay);
       patch({ subtitleDelayMs: delay });
     },
+    liftSubtitles: setLift,
     // Only external subtitles can be read; mpv keeps embedded ones to itself.
     canReadSubtitle: (id) => externals.some((e) => e.id === id),
     subtitleLines: async () => {
@@ -537,7 +548,6 @@ function applySubtitleStyle(
     style.backgroundOpacity > 0 ? 'background-box' : 'outline-and-shadow'
   );
   setProp('sub-ass-override', style.overrideStyled ? 'force' : 'scale');
-  setProp('sub-pos', 100 - style.position);
 }
 
 export function applyDesktopSettings(): void {

@@ -140,7 +140,8 @@ export function useBrowserPlayer(
   }, [video]);
   // Browsers disagree on where a cue the file leaves unplaced goes.
   const placed = React.useRef(new WeakSet<VTTCue>());
-  const line = subtitleLine(opts.subtitleStyle);
+  const [lift, setLift] = React.useState(0);
+  const line = subtitleLine(opts.subtitleStyle, lift);
   const placeCues = React.useCallback(() => {
     for (const track of Array.from(video.current?.textTracks ?? [])) {
       for (const cue of Array.from(track.cues ?? [])) {
@@ -316,6 +317,7 @@ export function useBrowserPlayer(
       saveSubtitleDelay(source.Id, delayMs.current);
       patch({ subtitleDelayMs: delayMs.current });
     },
+    liftSubtitles: setLift,
     subtitleLines: async () => {
       const index = subtitles.findIndex(
         (s) => String(s.Index) === state.subtitle

@@ -61,9 +61,13 @@ export const MPV_OUTLINE: Record<SubtitleOutline, number> = {
 
 export const subtitleScale = (style: SubtitleStyle) => SCALE[style.size];
 
+/** How high subtitles sit, in percent: the chosen height, or above what covers the bottom. */
+export const subtitleHeight = (style?: SubtitleStyle, lift = 0) =>
+  Math.max(style?.position ?? 0, Math.round(lift * 100));
+
 /** Percent from the top where an unplaced subtitle's bottom sits, as mpv places it. */
-export const subtitleLine = (style?: SubtitleStyle) =>
-  97 - (style?.position ?? 0);
+export const subtitleLine = (style?: SubtitleStyle, lift = 0) =>
+  97 - subtitleHeight(style, lift);
 
 function rgba(hex: string, opacity: number): string {
   const n = parseInt(hex.slice(1), 16);

@@ -891,6 +891,23 @@ export function PlayerControls({
   }, [visible]);
   const positionNow = usePositionClock(state);
   const latest = useLatest(player);
+  const bottomBar = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    const lift = () => {
+      const tops = Array.from(bottomBar.current?.children ?? [])
+        .map((child) => child.getBoundingClientRect())
+        .filter((r) => r.height > 0)
+        .map((r) => r.top);
+      latest.current.liftSubtitles?.(
+        visible && tops.length ? 1 - Math.min(...tops) / innerHeight : 0
+      );
+    };
+    lift();
+    if (!visible) return;
+    window.addEventListener('resize', lift);
+    return () => window.removeEventListener('resize', lift);
+  }, [visible, latest]);
+  React.useEffect(() => () => latest.current.liftSubtitles?.(0), [latest]);
   const loadLines = React.useCallback(
     () => latest.current.subtitleLines?.() ?? Promise.resolve(null),
     [latest]
@@ -1224,6 +1241,7 @@ export function PlayerControls({
       )}
 
       <div
+        ref={bottomBar}
         data-ui="player-bottom-bar"
         className={cn(
           'absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent pb-[calc(0.5rem+env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pt-16 transition-opacity duration-300 sm:pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pl-[max(1.25rem,env(safe-area-inset-left))] sm:pr-[max(1.25rem,env(safe-area-inset-right))]',
