@@ -83,11 +83,16 @@ class ExoEngine(private val context: Context) :
     private var volume = 100.0
     private var muted = false
     private val externals = mutableListOf<ExternalSubtitle>()
+    private val texts = TextTracks()
     private var shownCues: List<Cue> = emptyList()
 
     // Read on the playback thread too.
     @Volatile
     private var external: ExternalSubtitle? = null
+
+    /** The text subtitle the engine times itself, rather than the player. */
+    @Volatile
+    private var text: TextTimeline? = null
 
     @Volatile
     private var delayUs = 0L
@@ -96,7 +101,7 @@ class ExoEngine(private val context: Context) :
     private var lastFrameUs = 0L
 
     init {
-        val sources = DefaultMediaSourceFactory(data, AssExtractors(ass::sink)).setSubtitleParserFactory(AssParsers)
+        val sources = DefaultMediaSourceFactory(data, SubtitleExtractors { SubtitleSink(ass.sink(), texts.sink()) })
         val renderers = DefaultRenderersFactory(context)
             .setEnableDecoderFallback(true)
             .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
@@ -247,6 +252,7 @@ class ExoEngine(private val context: Context) :
         restarting = true
         clearExternals()
         ass.reset()
+        texts.reset()
         listener?.onEvent("start-file")
         report("idle-active", false)
         report("chapter-list", JsonArray(emptyList()))
@@ -359,16 +365,24 @@ class ExoEngine(private val context: Context) :
         }
     }
 
-    /** Hands the subtitle showing to libass when it is ASS, or to the subtitle view. */
     private fun showSubtitles() {
         val added = external
+        val format = tracks.format("sub")
+        val id = format?.id?.substringAfter(':')
         ass.select(
             when {
                 !style.visible -> null
                 added != null -> added.key.takeIf { added.script != null }
-                else -> tracks.format("sub")?.takeIf(::isAss)?.id?.substringAfter(':')
+                format != null && isAss(format) -> id
+                else -> null
             },
         )
+        text = when {
+            !style.visible -> null
+            added != null -> added.text
+            format != null && !isAss(format) -> id?.let(texts::get)
+            else -> null
+        }
         shownCues = emptyList()
         stage?.subtitles?.setCues(emptyList())
         showCues(lastFrameUs)
@@ -388,20 +402,18 @@ class ExoEngine(private val context: Context) :
     ) {
         lastFrameUs = presentationTimeUs
         ass.render(presentationTimeUs - delayUs, releaseTimeNs)
-        if (external?.script == null && external != null) main.post { showCues(presentationTimeUs) }
+        if (text != null) main.post { showCues(presentationTimeUs) }
     }
 
-    /** The lines of a text file the page added, which the engine times itself. */
     private fun showCues(frameUs: Long) {
-        val added = external?.takeIf { it.script == null } ?: return
-        val cues = if (style.visible) added.cuesAt(frameUs - delayUs) else emptyList()
+        val cues = text?.cuesAt(frameUs - delayUs) ?: return
         if (cues == shownCues) return
         shownCues = cues
         stage?.subtitles?.setCues(cues)
     }
 
     override fun onCues(cueGroup: CueGroup) {
-        if (external == null) stage?.subtitles?.setCues(if (style.visible) cueGroup.cues else emptyList())
+        if (text == null && external == null) stage?.subtitles?.setCues(if (style.visible) cueGroup.cues else emptyList())
     }
 
     private fun onStageLayout(width: Int, height: Int, video: Rect) {

@@ -33,41 +33,27 @@ internal interface AssSink {
     fun line(track: String, startMs: Long, durationMs: Long, line: ByteArray)
 }
 
-internal fun isAss(format: Format) = format.sampleMimeType == MimeTypes.TEXT_SSA || format.codecs == MimeTypes.TEXT_SSA
+/** Where a file's other subtitles go as Media3 parses them. */
+internal interface TextSink {
+    /** `replace` when each line takes the place of the one before, as in bitmap subtitles. */
+    fun track(track: String, replace: Boolean)
 
-/** Media3's subtitle parsers, except that ASS, which libass draws, gives the player no cues. */
-@OptIn(UnstableApi::class)
-internal object AssParsers : SubtitleParser.Factory {
-    private val defaults = DefaultSubtitleParserFactory()
-
-    override fun supportsFormat(format: Format) = defaults.supportsFormat(format)
-
-    override fun getCueReplacementBehavior(format: Format) = defaults.getCueReplacementBehavior(format)
-
-    override fun create(format: Format): SubtitleParser = if (isAss(format)) Silent else defaults.create(format)
-
-    private object Silent : SubtitleParser {
-        override fun parse(
-            data: ByteArray,
-            offset: Int,
-            length: Int,
-            outputOptions: SubtitleParser.OutputOptions,
-            output: Consumer<CuesWithTiming>,
-        ) {}
-
-        override fun getCueReplacementBehavior() = Format.CUE_REPLACEMENT_BEHAVIOR_REPLACE
-    }
+    fun cues(track: String, cues: CuesWithTiming)
 }
 
-/** Media3's extractors, with Matroska's sending its ASS to the file's [AssSink]. */
-@OptIn(UnstableApi::class)
-internal class AssExtractors(private val sink: () -> AssSink) : ExtractorsFactory {
-    private val defaults = DefaultExtractorsFactory().setSubtitleParserFactory(AssParsers)
+internal class SubtitleSink(val ass: AssSink, val text: TextSink)
 
-    override fun createExtractors() = withAss(defaults.createExtractors())
+internal fun isAss(format: Format) = format.sampleMimeType == MimeTypes.TEXT_SSA || format.codecs == MimeTypes.TEXT_SSA
+
+/** Media3's extractors, with Matroska's sending its subtitles to the file's [SubtitleSink]. */
+@OptIn(UnstableApi::class)
+internal class SubtitleExtractors(private val sink: () -> SubtitleSink) : ExtractorsFactory {
+    private val defaults = DefaultExtractorsFactory()
+
+    override fun createExtractors() = withSubtitles(defaults.createExtractors())
 
     override fun createExtractors(uri: Uri, responseHeaders: Map<String, List<String>>) =
-        withAss(defaults.createExtractors(uri, responseHeaders))
+        withSubtitles(defaults.createExtractors(uri, responseHeaders))
 
     override fun setSubtitleParserFactory(subtitleParserFactory: SubtitleParser.Factory) = apply {
         defaults.setSubtitleParserFactory(subtitleParserFactory)
@@ -78,24 +64,25 @@ internal class AssExtractors(private val sink: () -> AssSink) : ExtractorsFactor
         defaults.setTextTrackTranscodingEnabled(textTrackTranscodingEnabled)
     }
 
-    private fun withAss(extractors: Array<Extractor>) =
-        extractors.map { if (it is MatroskaExtractor) AssMatroska(sink()) else it }.toTypedArray()
+    private fun withSubtitles(extractors: Array<Extractor>) =
+        extractors.map { if (it is MatroskaExtractor) SubtitleMatroska(sink()) else it }.toTypedArray()
 }
 
 /**
- * Matroska, read by Media3, with its attached fonts and ASS lines taken on the
- * way: the lines before Media3 parses them, which drops their timing.
+ * Matroska, read by Media3, with its attached fonts and subtitles taken on the
+ * way, before Media3 parses them and drops their timing. The player gets no
+ * cues for them: the engine times them itself, so its delay applies to them.
  */
 @OptIn(UnstableApi::class)
-private class AssMatroska(private val sink: AssSink) : Extractor {
-    private val matroska = Attachments(sink)
+private class SubtitleMatroska(private val sink: SubtitleSink) : Extractor {
+    private val matroska = Attachments(sink.ass)
     private var transcoder: SubtitleTranscodingExtractorOutput? = null
 
     override fun sniff(input: ExtractorInput) = matroska.sniff(input)
 
     override fun init(output: ExtractorOutput) {
-        val transcoder = SubtitleTranscodingExtractorOutput(output, AssParsers).also { transcoder = it }
-        matroska.init(Lines(transcoder, sink))
+        val transcoder = SubtitleTranscodingExtractorOutput(output, Silent).also { transcoder = it }
+        matroska.init(Subtitles(transcoder, sink))
     }
 
     override fun read(input: ExtractorInput, seekPosition: PositionHolder) = matroska.read(input, seekPosition)
@@ -108,6 +95,30 @@ private class AssMatroska(private val sink: AssSink) : Extractor {
     override fun release() = matroska.release()
 
     override fun getUnderlyingImplementation(): Extractor = matroska
+}
+
+private val parsers = DefaultSubtitleParserFactory()
+
+/** Media3's subtitle formats, which here give the player no cues. */
+@OptIn(UnstableApi::class)
+private object Silent : SubtitleParser.Factory {
+    override fun supportsFormat(format: Format) = parsers.supportsFormat(format)
+
+    override fun getCueReplacementBehavior(format: Format) = parsers.getCueReplacementBehavior(format)
+
+    override fun create(format: Format): SubtitleParser = Nothing
+
+    private object Nothing : SubtitleParser {
+        override fun parse(
+            data: ByteArray,
+            offset: Int,
+            length: Int,
+            outputOptions: SubtitleParser.OutputOptions,
+            output: Consumer<CuesWithTiming>,
+        ) {}
+
+        override fun getCueReplacementBehavior() = Format.CUE_REPLACEMENT_BEHAVIOR_REPLACE
+    }
 }
 
 /** Matroska's extractor, which also reads the fonts the file carries for its subtitles. */
@@ -159,25 +170,37 @@ private class Attachments(private val sink: AssSink) : MatroskaExtractor(FLAG_EM
     }
 }
 
-/** Takes each ASS line, with the time Matroska gives it, on its way to the player. */
+/** Takes each subtitle sample, with the time Matroska gives it, on its way to the player. */
 @OptIn(UnstableApi::class)
-private class Lines(private val output: ExtractorOutput, private val sink: AssSink) : ExtractorOutput by output {
+private class Subtitles(private val output: ExtractorOutput, private val sink: SubtitleSink) : ExtractorOutput by output {
     override fun track(id: Int, type: Int): TrackOutput {
         val track = output.track(id, type)
-        return if (type == C.TRACK_TYPE_TEXT) LineOutput(track, sink) else track
+        return if (type == C.TRACK_TYPE_TEXT) SubtitleOutput(track, sink) else track
     }
 }
 
 @OptIn(UnstableApi::class)
-private class LineOutput(private val track: TrackOutput, private val sink: AssSink) : TrackOutput by track {
-    /** The track's id while it is ASS. */
+private class SubtitleOutput(private val track: TrackOutput, private val sink: SubtitleSink) : TrackOutput by track {
     private var id: String? = null
+    private var parser: SubtitleParser? = null
+    private var offsetUs = Format.OFFSET_SAMPLE_RELATIVE
     private var pending = ByteArray(4096)
     private var filled = 0
 
     override fun format(format: Format) {
-        id = format.id?.takeIf { isAss(format) }
-        id?.let { id -> format.initializationData.getOrNull(1)?.let { sink.header(id, it) } }
+        id = format.id
+        parser = null
+        offsetUs = format.subsampleOffsetUs
+        when {
+            id == null -> {}
+            isAss(format) -> format.initializationData.getOrNull(1)?.let { sink.ass.header(id!!, it) }
+            parsers.supportsFormat(format) -> {
+                parser = parsers.create(format)
+                val replace = parsers.getCueReplacementBehavior(format) == Format.CUE_REPLACEMENT_BEHAVIOR_REPLACE
+                sink.text.track(id!!, replace)
+            }
+            else -> id = null
+        }
         track.format(format)
     }
 
@@ -213,11 +236,28 @@ private class LineOutput(private val track: TrackOutput, private val sink: AssSi
         val id = id
         if (id != null) {
             val end = filled - offset
-            if (timeUs != C.TIME_UNSET) dialogue(end - size, end)?.let { (durationMs, line) -> sink.line(id, timeUs / 1000, durationMs, line) }
+            if (timeUs != C.TIME_UNSET) take(id, timeUs, end - size, end)
             System.arraycopy(pending, end, pending, 0, offset)
             filled = offset
         }
         track.sampleMetadata(timeUs, flags, size, offset, cryptoData)
+    }
+
+    private fun take(id: String, timeUs: Long, from: Int, to: Int) {
+        val parser = parser
+        if (parser == null) {
+            dialogue(from, to)?.let { (durationMs, line) -> sink.ass.line(id, timeUs / 1000, durationMs, line) }
+            return
+        }
+        parser.parse(pending, from, to - from, SubtitleParser.OutputOptions.allCues()) { cues ->
+            // Timed as Media3's own transcoder times them.
+            val startUs = when {
+                cues.startTimeUs == C.TIME_UNSET -> timeUs
+                offsetUs == Format.OFFSET_SAMPLE_RELATIVE -> timeUs + cues.startTimeUs
+                else -> cues.startTimeUs + offsetUs
+            }
+            sink.text.cues(id, CuesWithTiming(cues.cues, startUs, cues.durationUs))
+        }
     }
 
     private fun reserve(length: Int) {
