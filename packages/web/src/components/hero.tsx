@@ -48,7 +48,7 @@ export function BackdropFrame({
     <div
       data-ui="backdrop-frame"
       className={cn(
-        'absolute inset-y-0 right-0 w-full lg:[mask-image:linear-gradient(to_right,transparent,black_12rem)]',
+        'absolute inset-y-0 right-0 w-full landscape:[mask-image:linear-gradient(to_right,transparent,black_12rem)] lg:[mask-image:linear-gradient(to_right,transparent,black_12rem)]',
         className
       )}
     >
