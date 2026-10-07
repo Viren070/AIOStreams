@@ -5,6 +5,8 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
+import android.webkit.ValueCallback
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
@@ -21,8 +23,9 @@ class WebApp(private val devUrl: String?) {
 
     val origins: Set<String> = setOfNotNull(ORIGIN, devUrl?.let(::originOf))
 
+    /** `chooseFiles` shows the system's picker for a file input, as a WebView doesn't on its own. */
     @SuppressLint("SetJavaScriptEnabled")
-    fun configure(webView: WebView) {
+    fun configure(webView: WebView, chooseFiles: (multiple: Boolean, picked: ValueCallback<Array<Uri>>) -> Unit) {
         val assets = WebViewAssetLoader.AssetsPathHandler(webView.context)
         val loader = WebViewAssetLoader.Builder()
             .setDomain(HOST)
@@ -42,6 +45,16 @@ class WebApp(private val devUrl: String?) {
         webView.setBackgroundColor(Color.TRANSPARENT)
         // Kept alive behind other apps, where the page still reports playback.
         webView.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false)
+        webView.webChromeClient = object : WebChromeClient() {
+            override fun onShowFileChooser(
+                view: WebView,
+                picked: ValueCallback<Array<Uri>>,
+                params: FileChooserParams,
+            ): Boolean {
+                chooseFiles(params.mode == FileChooserParams.MODE_OPEN_MULTIPLE, picked)
+                return true
+            }
+        }
         webView.webViewClient = object : WebViewClientCompat() {
             override fun shouldInterceptRequest(
                 view: WebView,

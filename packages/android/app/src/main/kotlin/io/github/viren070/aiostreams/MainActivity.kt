@@ -1,15 +1,20 @@
 package io.github.viren070.aiostreams
 
 import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.ComponentName
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
 import android.view.SurfaceView
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import android.webkit.ValueCallback
+import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
@@ -27,6 +32,7 @@ import io.github.viren070.aiostreams.bridge.WebApp
 import io.github.viren070.aiostreams.downloads.DownloadChannel
 import io.github.viren070.aiostreams.engine.mpv.MpvEngine
 import io.github.viren070.aiostreams.playback.PlayerChannel
+import java.io.File
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.floatOrNull
@@ -47,6 +53,11 @@ class MainActivity : ComponentActivity() {
     private val screen = PlayerWindow(this)
     private val levels by lazy { Levels(this) }
     private val notifications = registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
+    private var picked: ValueCallback<Array<Uri>>? = null
+    private val pickFiles = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        picked?.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(it.resultCode, it.data))
+        picked = null
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,12 +73,17 @@ class MainActivity : ComponentActivity() {
         })
 
         val app = WebApp(BuildConfig.WEB_URL.ifEmpty { null })
-        app.configure(web)
+        app.configure(web, ::chooseFiles)
         engine = MpvEngine(this)
         val queue = Downloads.queue(this)
         queue.send = { message -> runOnUiThread { bridge.send(message) } }
         downloads = DownloadChannel(queue, onAdd = ::askForNotifications)
-        player = PlayerChannel(engine, send = { bridge.send(it) }, isLocal = queue::isLocal)
+        player = PlayerChannel(
+            engine,
+            send = { bridge.send(it) },
+            isLocal = queue::isLocal,
+            subtitles = File(cacheDir, "subtitles"),
+        )
         bridge = AppBridge(web, app.origins, AppIdentity(BuildConfig.VERSION_NAME, deviceName()), ::onMessage)
         pip = PictureInPicture(this, video)
         focus = AudioFocus(
@@ -136,6 +152,22 @@ class MainActivity : ComponentActivity() {
             put("type", "fullscreen")
             put("value", on)
         })
+    }
+
+    /** Any type: subtitle formats rarely carry a MIME type the picker knows, and the page checks the name. */
+    private fun chooseFiles(multiple: Boolean, callback: ValueCallback<Array<Uri>>) {
+        picked?.onReceiveValue(null)
+        picked = callback
+        val intent = Intent(Intent.ACTION_GET_CONTENT)
+            .addCategory(Intent.CATEGORY_OPENABLE)
+            .setType("*/*")
+            .putExtra(Intent.EXTRA_ALLOW_MULTIPLE, multiple)
+        try {
+            pickFiles.launch(intent)
+        } catch (_: ActivityNotFoundException) {
+            picked = null
+            callback.onReceiveValue(null)
+        }
     }
 
     /** Asked on the first download, whose progress shows in one. */

@@ -4,6 +4,9 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
+import java.io.File
+import java.util.Base64
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -24,6 +27,8 @@ class PlayerChannel(
     private val send: (JsonObject) -> Unit,
     /** A downloaded file, which the page may play. */
     private val isLocal: (String) -> Boolean,
+    /** Where subtitle files the page adds are written. */
+    private val subtitles: File,
 ) : Engine.Listener {
     private val main = Handler(Looper.getMainLooper())
     private val latest = mutableMapOf<String, JsonElement>()
@@ -50,6 +55,7 @@ class PlayerChannel(
                     .onFailure { reject(it) }
             }
             "mpv-sync" -> latest.forEach { (name, value) -> send(property(name, value)) }
+            "subtitle-file" -> runCatching { addSubtitle(message) }.onFailure { reject(it) }
             "now-playing" -> session.setItem((message["item"] as? JsonObject)?.let(::itemOf))
             else -> return false
         }
@@ -95,6 +101,19 @@ class PlayerChannel(
         send(property(name, value))
     }
 
+    /** The page never names a path for mpv to open, so the file is written here first. */
+    private fun addSubtitle(message: JsonObject) {
+        val name = message["name"]?.jsonPrimitive?.content ?: error("subtitle file without a name")
+        val extension = name.substringAfterLast('.', "").lowercase()
+        require(extension in SUBTITLE_TYPES) { "$name is not a subtitle file" }
+        val bytes = Base64.getDecoder().decode(message["data"]?.jsonPrimitive?.content ?: "")
+        require(bytes.size <= MAX_SUBTITLE_BYTES) { "$name is too big" }
+        subtitles.mkdirs()
+        val file = File(subtitles, "${next.getAndIncrement()}.$extension")
+        file.writeBytes(bytes)
+        engine.command(listOf("sub-add", file.path, "select", name.take(200)))
+    }
+
     private fun reject(error: Throwable) {
         Log.w(TAG, "refused: ${error.message}")
         send(buildJsonObject {
@@ -112,6 +131,9 @@ class PlayerChannel(
     private companion object {
         const val TAG = "player"
         const val THROTTLE_MS = 250L
+        const val MAX_SUBTITLE_BYTES = 10 shl 20
+        val SUBTITLE_TYPES = setOf("srt", "vtt", "ass", "ssa", "sub", "sup")
+        val next = AtomicInteger()
 
         fun itemOf(item: JsonObject): NowPlayingItem? {
             fun text(name: String) = (item[name] as? JsonPrimitive)?.takeIf { it.isString }?.content
