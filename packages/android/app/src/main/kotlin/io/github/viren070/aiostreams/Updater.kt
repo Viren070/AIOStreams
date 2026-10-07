@@ -157,6 +157,7 @@ class Updater(private val activity: ComponentActivity, private val send: (JsonOb
                 }
             }
             val id = installer.createSession(params)
+            UpdatedReceiver.expect(activity, update.version)
             installer.openSession(id).use { session ->
                 session.openWrite("update.apk", 0, update.file.length()).use { out ->
                     update.file.inputStream().use { it.copyTo(out) }

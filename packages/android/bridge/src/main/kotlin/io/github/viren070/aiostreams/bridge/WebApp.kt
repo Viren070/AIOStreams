@@ -23,9 +23,16 @@ class WebApp(private val devUrl: String?) {
 
     val origins: Set<String> = setOfNotNull(ORIGIN, devUrl?.let(::originOf))
 
-    /** `chooseFiles` shows the system's picker for a file input, as a WebView doesn't on its own. */
+    /**
+     * `chooseFiles` shows the system's picker for a file input and `openIntent`
+     * an `intent:` link, which a WebView can't do on its own.
+     */
     @SuppressLint("SetJavaScriptEnabled")
-    fun configure(webView: WebView, chooseFiles: (multiple: Boolean, picked: ValueCallback<Array<Uri>>) -> Unit) {
+    fun configure(
+        webView: WebView,
+        chooseFiles: (multiple: Boolean, picked: ValueCallback<Array<Uri>>) -> Unit,
+        openIntent: (link: String) -> Unit,
+    ) {
         val assets = WebViewAssetLoader.AssetsPathHandler(webView.context)
         val loader = WebViewAssetLoader.Builder()
             .setDomain(HOST)
@@ -63,6 +70,10 @@ class WebApp(private val devUrl: String?) {
 
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 if (originOf(request.url.toString()) in origins) return false
+                if (request.url.scheme == "intent") {
+                    openIntent(request.url.toString())
+                    return true
+                }
                 try {
                     view.context.startActivity(
                         Intent(Intent.ACTION_VIEW, request.url).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
