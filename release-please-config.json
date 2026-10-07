@@ -18,7 +18,7 @@
         "packages/seanime-extensions",
         "packages/seanime-extension",
         "packages/desktop",
-        "packages/tv"
+        "packages/smart-tv"
       ],
       "pull-request-title-pattern": "chore: release ${version}"
     },
@@ -64,12 +64,12 @@
         }
       ]
     },
-    "packages/tv": {
+    "packages/smart-tv": {
       "release-type": "node",
-      "component": "tv",
+      "component": "smart-tv",
       "include-component-in-tag": true,
       "include-v-in-tag": true,
-      "pull-request-title-pattern": "chore(tv): release ${version}"
+      "pull-request-title-pattern": "chore(smart-tv): release ${version}"
     }
   }
 }

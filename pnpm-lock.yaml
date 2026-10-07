@@ -437,7 +437,7 @@ importers:
         specifier: ^8.18.1
         version: 8.18.1
 
-  packages/tv:
+  packages/smart-tv:
     devDependencies:
       '@webos-tools/cli':
         specifier: ^3.2.6

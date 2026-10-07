@@ -1,0 +1,23 @@
+name: Smart TV Check
+
+# Packages the TV apps when their packaging changes. A manual run leaves both
+# packages on the run as artifacts.
+on:
+  pull_request:
+    paths: &tv
+      - 'packages/smart-tv/**'
+      - '!packages/smart-tv/**/*.md'
+      - '.github/workflows/smart-tv-*.yml'
+  push:
+    branches: [main]
+    paths: *tv
+  workflow_dispatch:
+
+concurrency:
+  group: smart-tv-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: "${{ !startsWith(github.head_ref, 'release-please--') && !startsWith(github.event.head_commit.message, 'chore(smart-tv): release ') }}"
+    uses: ./.github/workflows/smart-tv-build.yml

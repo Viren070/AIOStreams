@@ -14,8 +14,8 @@ stopped the app starting, as a TV has no console.
 ## Build
 
 ```sh
-pnpm -F @aiostreams/tv build:webos   # out/io.github.viren070.aiostreams_<version>_all.ipk
-pnpm -F @aiostreams/tv build:tizen   # out/AIOStreams.wgt
+pnpm -F @aiostreams/smart-tv build:webos   # out/io.github.viren070.aiostreams_<version>_all.ipk
+pnpm -F @aiostreams/smart-tv build:tizen   # out/AIOStreams.wgt
 ```
 
 Both build the web app first. The version comes from `package.json` and is written into the
@@ -27,16 +27,16 @@ the build signs it with that profile instead, through Tizen Studio's `tizen` com
 
 ## Releases
 
-release-please releases this package on its own (`tv-v*` tags, `chore(tv): release` pull
+release-please releases this package on its own (`smart-tv-v*` tags, `chore(smart-tv): release` pull
 requests), and the TV Release workflow attaches `aiostreams-webos-<version>.ipk` and
 `aiostreams-tizen-<version>.wgt` to each release. Like the desktop app, page changes reach the
-changelog through the `chore(tv): update the web app` pull request that moves `web-app.lock`
+changelog through the `chore(smart-tv): update the web app` pull request that moves `web-app.lock`
 forward. The TV Check workflow builds both packages when anything here changes; run it by hand to
 get them as artifacts of the run.
 
 Each release also refreshes the rolling `tv` release, which holds the newest packages as
 `aiostreams-webos.ipk` and `aiostreams-tizen.wgt` (its notes come from `feed-release.md`), and the
-`tv-feed` branch, whose one file is the Homebrew Channel repository for the webOS package.
+`smart-tv-feed` branch, whose one file is the Homebrew Channel repository for the webOS package.
 
 ## Install
 
@@ -49,13 +49,13 @@ Each release also refreshes the rolling `tv` release, which holds the newest pac
    with the CLI this package already depends on:
 
 ```sh
-cd packages/tv
+cd packages/smart-tv
 pnpm exec ares-setup-device   # add the TV: IP, port 9922, the passphrase
 pnpm exec ares-install --device <name> out/io.github.viren070.aiostreams_<version>_all.ipk
 ```
 
 With the [Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel) on the TV, add
-`https://raw.githubusercontent.com/Viren070/AIOStreams/tv-feed/apps.json` as a repository in its
+`https://raw.githubusercontent.com/Viren070/AIOStreams/smart-tv-feed/apps.json` as a repository in its
 settings instead: the app then installs and updates from the channel.
 
 ### Tizen

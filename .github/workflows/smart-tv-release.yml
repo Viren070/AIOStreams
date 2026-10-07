@@ -1,11 +1,11 @@
 name: TV Release
 
-# Started by the release workflow once release-please tags a tv-v* release.
+# Started by the release workflow once release-please tags a smart-tv-v* release.
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: The tv-v* tag to build
+        description: The smart-tv-v* tag to build
         required: true
         type: string
 
@@ -14,6 +14,6 @@ permissions:
 
 jobs:
   build:
-    uses: ./.github/workflows/tv-build.yml
+    uses: ./.github/workflows/smart-tv-build.yml
     with:
       release: ${{ inputs.tag }}

@@ -31,7 +31,7 @@ jobs:
         include:
           - app: desktop
             label: desktop
-          - app: tv
+          - app: smart-tv
             label: TV
     env:
       # A token of its own lets the pull request run CI, as release-please's do.
