@@ -460,10 +460,15 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
   };
 }
 
+let engine: string | null = null;
+
+export function setEngine(name: string): void {
+  engine = name;
+}
+
 /** Whether the Android app plays with ExoPlayer, which has none of mpv's own options or stats. */
 export const playsWithExoPlayer = () =>
-  appBridge()?.platform === 'android' &&
-  settings.android.engine.read() === 'exoplayer';
+  appBridge()?.platform === 'android' && engine === 'exoplayer';
 
 function statusMeaning(status: number): string | undefined {
   if (status === 401 || status === 403) return 'refused';

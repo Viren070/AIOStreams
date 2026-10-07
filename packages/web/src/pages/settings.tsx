@@ -247,7 +247,7 @@ function PlaybackSection() {
   const bingeGroups = useFeature('versions');
   const shell = !!shellHost();
   const [engine] = useSetting(settings.android.engine);
-  // ExoPlayer decodes with the hardware it picks itself.
+  // ExoPlayer decodes with the hardware it picks itself; `auto` may still use mpv.
   const decoding =
     shell && !(currentHost().name === 'android-app' && engine === 'exoplayer');
 
@@ -421,11 +421,13 @@ function PlaybackSection() {
 }
 
 const ENGINE_OPTIONS: { value: PlayerEngine; label: string }[] = [
+  { value: 'auto', label: 'Automatic' },
   { value: 'mpv', label: 'mpv' },
   { value: 'exoplayer', label: 'ExoPlayer' },
 ];
 
 const ENGINE_HELP: Record<PlayerEngine, string> = {
+  auto: 'ExoPlayer, which uses less battery, and mpv for a video this device has no decoder for.',
   mpv: 'Decodes nearly any video, in software where the device has no decoder for it. Takes your mpv.conf under Android app.',
   exoplayer:
     "Android's own player, which uses less battery: the screen shows the video as the device decodes it, at the video's frame rate. Plays video the device can decode. Styled subtitles look as they do in mpv.",
@@ -978,7 +980,7 @@ function AndroidSection() {
           onValueChange={setBackground}
         />
       </SettingsCard>
-      {engine === 'mpv' && <MpvConfigCard />}
+      {engine !== 'exoplayer' && <MpvConfigCard />}
       <SettingsCard title="Troubleshooting">
         <DiagnosticsRow />
       </SettingsCard>

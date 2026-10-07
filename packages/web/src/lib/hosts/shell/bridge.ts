@@ -19,6 +19,8 @@ export type ShellMessage =
   | { type: 'fullscreen'; value: boolean }
   | { type: 'pip'; value: boolean }
   | { type: 'back' }
+  /** The engine the Android app plays with now. */
+  | { type: 'player-engine'; name: string }
   | { type: 'mpv-config'; text: string }
   | { type: 'levels'; volume: number; brightness: number }
   | { type: 'window-state'; maximized: boolean }

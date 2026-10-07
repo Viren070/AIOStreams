@@ -3,7 +3,7 @@ import { runAction } from '../../input';
 import { onSettingsChange, settings, type PlayerEngine } from '../../settings';
 import { appBridge } from './bridge';
 import { shellDownloads } from './downloads';
-import { playsWithExoPlayer, useShellPlayer } from './player';
+import { playsWithExoPlayer, setEngine, useShellPlayer } from './player';
 
 let fullscreen = false;
 
@@ -24,6 +24,7 @@ export function setupAndroid(): () => void {
   const unsubscribe = bridge?.subscribe((m) => {
     if (m.type === 'fullscreen') fullscreen = m.value;
     else if (m.type === 'back') runAction('back');
+    else if (m.type === 'player-engine') setEngine(m.name);
   });
   return () => {
     unsubscribeSettings();

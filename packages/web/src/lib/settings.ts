@@ -351,7 +351,7 @@ export const AUDIO_CHANNELS = ['auto', 'stereo', '5.1', '7.1'] as const;
 export type AudioChannels = (typeof AUDIO_CHANNELS)[number];
 
 /** What plays versions inside the Android app. */
-export const PLAYER_ENGINES = ['mpv', 'exoplayer'] as const;
+export const PLAYER_ENGINES = ['auto', 'mpv', 'exoplayer'] as const;
 export type PlayerEngine = (typeof PLAYER_ENGINES)[number];
 
 /** `installed` follows the channel this copy of the desktop app came from. */
@@ -539,7 +539,7 @@ export const settings = {
     background: device<boolean>('aiostreams-android-background', false),
     engine: device<PlayerEngine>(
       'aiostreams-android-engine',
-      'mpv',
+      'auto',
       PLAYER_ENGINES
     ),
   },
