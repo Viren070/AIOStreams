@@ -1,13 +1,18 @@
 package io.github.viren070.aiostreams.playback
 
-import android.view.SurfaceHolder
+import android.content.Context
+import android.view.View
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 
 /**
  * A player the page drives in mpv's terms: its commands and properties, and
- * mpv's names for what it reports. Callbacks come on the engine's own thread.
+ * mpv's names for what it reports. Callbacks may come on any thread.
  */
 interface Engine {
+    /** Its name and version, for diagnostics. */
+    val description: String
+
     fun start(listener: Listener)
 
     fun command(args: List<String>)
@@ -16,8 +21,11 @@ interface Engine {
 
     fun property(name: String): String?
 
-    /** Attach to the view the video is drawn in. */
-    val surface: SurfaceHolder.Callback
+    /** The view the video is drawn in, which goes beneath the page. */
+    fun createView(context: Context): View
+
+    /** Frames shown and dropped so far, and what else measures the playback. */
+    fun stats(): JsonObject
 
     fun release()
 

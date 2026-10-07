@@ -3,6 +3,8 @@ package io.github.viren070.aiostreams.engine.mpv
 import android.content.Context
 import android.util.Log
 import android.view.SurfaceHolder
+import android.view.SurfaceView
+import android.view.View
 import io.github.viren070.aiostreams.playback.Engine
 import io.github.viren070.aiostreams.playback.MpvProtocol
 import `is`.xyz.mpv.MPV
@@ -14,9 +16,12 @@ import java.util.concurrent.TimeUnit
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
-/** libmpv, drawing into the activity's video surface. */
+/** libmpv, drawing into a surface of its own. */
 class MpvEngine(private val context: Context) : Engine {
     private val mpv = MPV()
     // The page's calls wait on mpv, never the main thread.
@@ -28,14 +33,15 @@ class MpvEngine(private val context: Context) : Engine {
 
     private val dir = File(context.filesDir, "mpv")
 
-    /** The user's own options, which mpv reads at start and on [reloadConfig]. */
-    val configFile = File(dir, "mpv.conf")
+    override val description: String
+        get() = property("mpv-version") ?: "mpv"
 
     override fun start(listener: Engine.Listener) {
         this.listener = listener
         dir.mkdirs()
         // mpv looks for its CA bundle and fallback subtitle font beside its config.
-        for (name in listOf("cacert.pem", "subfont.ttf")) copyAsset(name, File(dir, name))
+        copyAsset(context, CA_BUNDLE, File(dir, CA_BUNDLE))
+        fallbackFont(context)
         mpv.create(context)
         val options = mapOf(
             "config" to "yes",
@@ -69,9 +75,16 @@ class MpvEngine(private val context: Context) : Engine {
 
     override fun property(name: String): String? = mpv.getPropertyString(name)
 
-    fun reloadConfig() = command(listOf("load-config-file", configFile.path))
+    fun reloadConfig() = command(listOf("load-config-file", configFile(context).path))
 
-    override val surface = object : SurfaceHolder.Callback {
+    override fun createView(context: Context): View = SurfaceView(context).apply { holder.addCallback(surface) }
+
+    override fun stats(): JsonObject = buildJsonObject {
+        put("engine", "mpv")
+        for (name in STATS) property(name)?.toLongOrNull()?.let { put(name, it) }
+    }
+
+    private val surface = object : SurfaceHolder.Callback {
         override fun surfaceCreated(holder: SurfaceHolder) = calls.execute {
             mpv.attachSurface(holder.surface)
             mpv.setOptionString("force-window", "yes")
@@ -148,19 +161,30 @@ class MpvEngine(private val context: Context) : Engine {
         listener?.onProperty(name, value)
     }
 
-    private fun copyAsset(name: String, target: File) {
-        if (target.exists()) return
-        context.assets.open(name).use { input -> target.outputStream().use(input::copyTo) }
-    }
+    companion object {
+        /** The user's own options, which mpv reads at start and on [reloadConfig]. */
+        fun configFile(context: Context) = File(File(context.filesDir, "mpv"), "mpv.conf")
 
-    private companion object {
-        const val TAG = "mpv"
-        const val VO = "gpu-next"
-        const val LOG_ERROR = 20
-        const val LOG_WARN = 30
-        val PROTOCOL = Regex("^\\w+: ")
+        /** The font mpv draws subtitles in where a script's own fonts are missing. */
+        fun fallbackFont(context: Context): File =
+            File(File(context.filesDir, "mpv").apply { mkdirs() }, FONT).also { copyAsset(context, FONT, it) }
 
-        fun formatOf(name: String): Int = when (name) {
+        private fun copyAsset(context: Context, name: String, target: File) {
+            if (target.exists()) return
+            context.assets.open(name).use { input -> target.outputStream().use(input::copyTo) }
+        }
+
+        private const val CA_BUNDLE = "cacert.pem"
+        private const val FONT = "subfont.ttf"
+
+        private val STATS = listOf("frame-drop-count", "decoder-frame-drop-count", "vo-delayed-frame-count")
+        private const val TAG = "mpv"
+        private const val VO = "gpu-next"
+        private const val LOG_ERROR = 20
+        private const val LOG_WARN = 30
+        private val PROTOCOL = Regex("^\\w+: ")
+
+        private fun formatOf(name: String): Int = when (name) {
             "pause", "paused-for-cache", "seeking", "idle-active", "mute" -> MPV.mpvFormat.MPV_FORMAT_FLAG
             "aid", "sid" -> MPV.mpvFormat.MPV_FORMAT_STRING
             "track-list", "chapter-list", "video-params" -> MPV.mpvFormat.MPV_FORMAT_NODE

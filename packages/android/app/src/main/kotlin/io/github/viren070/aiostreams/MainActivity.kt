@@ -12,7 +12,6 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
-import android.view.SurfaceView
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
@@ -47,7 +46,7 @@ import kotlinx.serialization.json.put
 class MainActivity : ComponentActivity() {
     private lateinit var web: WebView
     private lateinit var bridge: AppBridge
-    private lateinit var engine: MpvEngine
+    private lateinit var playback: Playback
     private lateinit var player: PlayerChannel
     private lateinit var downloads: DownloadChannel
     private lateinit var updater: Updater
@@ -72,35 +71,33 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG || BuildConfig.INSPECTABLE)
 
-        val video = SurfaceView(this)
+        playback = Playback(this)
         // Edge to edge: the page keeps clear of the system bars with its own safe-area insets.
         web = WebView(this)
         setContentView(FrameLayout(this).apply {
-            addView(video, MATCH_PARENT, MATCH_PARENT)
+            addView(playback.stage, MATCH_PARENT, MATCH_PARENT)
             addView(web, MATCH_PARENT, MATCH_PARENT)
         })
 
         val app = WebApp(BuildConfig.WEB_URL.ifEmpty { null })
         app.configure(web, ::chooseFiles, players::open)
-        engine = MpvEngine(this)
         val queue = Downloads.queue(this)
         queue.send = { message -> runOnUiThread { bridge.send(message) } }
         downloads = DownloadChannel(queue, onAdd = ::askForNotifications)
         player = PlayerChannel(
-            engine,
+            playback.engine,
             send = { bridge.send(it) },
             isLocal = queue::isLocal,
             subtitles = File(cacheDir, "subtitles"),
         )
         bridge = AppBridge(web, app.origins, AppIdentity(BuildConfig.VERSION_NAME, deviceName(), deviceId()), ::onMessage)
         updater = Updater(this) { bridge.send(it) }
-        pip = PictureInPicture(this, video)
+        pip = PictureInPicture(this, playback.stage)
         focus = AudioFocus(
             this,
-            pause = { engine.setProperty("pause", "yes") },
-            resume = { engine.setProperty("pause", "no") },
+            pause = { playback.engine.setProperty("pause", "yes") },
+            resume = { playback.engine.setProperty("pause", "no") },
         )
-        video.holder.addCallback(engine.surface)
         player.start()
         player.session.addListener(object : Player.Listener {
             override fun onEvents(player: Player, events: Player.Events) = onPlayerChanged()
@@ -133,8 +130,9 @@ class MainActivity : ComponentActivity() {
                 put("type", "app-info")
                 put("app", BuildConfig.VERSION_NAME)
                 put("platform", "android")
-                put("mpv", engine.property("mpv-version"))
-                put("ffmpeg", engine.property("ffmpeg-version"))
+                put("mpv", playback.engine.property("mpv-version"))
+                put("ffmpeg", playback.engine.property("ffmpeg-version"))
+                put("player", playback.engine.description)
             })
             "fullscreen" -> setFullscreen(message["value"]?.jsonPrimitive?.booleanOrNull ?: !screen.fullscreen)
             "levels" -> bridge.send(buildJsonObject {
@@ -155,10 +153,11 @@ class MainActivity : ComponentActivity() {
                 linksReady = true
                 sendLinks()
             }
+            "player-engine" -> message["name"]?.jsonPrimitive?.contentOrNull?.let { playback.select(it, player) }
             "mpv-config" -> sendMpvConfig()
             "mpv-config-save" -> {
-                engine.configFile.writeText(message["text"]?.jsonPrimitive?.content.orEmpty())
-                engine.reloadConfig()
+                MpvEngine.configFile(this).writeText(message["text"]?.jsonPrimitive?.content.orEmpty())
+                (playback.engine as? MpvEngine)?.reloadConfig()
                 sendMpvConfig()
             }
             "diagnostics" -> {
@@ -166,7 +165,7 @@ class MainActivity : ComponentActivity() {
                 val server = message["server"]?.jsonPrimitive?.contentOrNull
                 // Reading the log takes a moment.
                 Thread {
-                    val text = diagnostics(engine, web, server)
+                    val text = diagnostics(playback.engine, web, server)
                     runOnUiThread {
                         bridge.send(buildJsonObject {
                             put("type", "diagnostics")
@@ -216,7 +215,7 @@ class MainActivity : ComponentActivity() {
 
     private fun sendMpvConfig() = bridge.send(buildJsonObject {
         put("type", "mpv-config")
-        put("text", engine.configFile.takeIf { it.exists() }?.readText().orEmpty())
+        put("text", MpvEngine.configFile(this@MainActivity).takeIf { it.exists() }?.readText().orEmpty())
     })
 
     private fun setFullscreen(on: Boolean) {
@@ -281,14 +280,14 @@ class MainActivity : ComponentActivity() {
         })
         // Closing the window, rather than opening it full size, stops playback.
         if (!isInPictureInPictureMode && lifecycle.currentState == Lifecycle.State.CREATED) {
-            engine.setProperty("pause", "yes")
+            playback.engine.setProperty("pause", "yes")
         }
     }
 
     override fun onStop() {
         super.onStop()
         val background = player.session.item?.background == true
-        if (!isChangingConfigurations && !isInPictureInPictureMode && !background) engine.setProperty("pause", "yes")
+        if (!isChangingConfigurations && !isInPictureInPictureMode && !background) playback.engine.setProperty("pause", "yes")
     }
 
     override fun onDestroy() {
@@ -297,7 +296,7 @@ class MainActivity : ComponentActivity() {
         MediaController.releaseFuture(controller)
         PlaybackService.player = null
         focus.release()
-        engine.release()
+        playback.engine.release()
         web.destroy()
         super.onDestroy()
     }

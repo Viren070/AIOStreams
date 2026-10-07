@@ -23,7 +23,7 @@ import kotlinx.serialization.json.put
  * app does.
  */
 class PlayerChannel(
-    private val engine: Engine,
+    private var engine: Engine,
     private val send: (JsonObject) -> Unit,
     /** A downloaded file, which the page may play. */
     private val isLocal: (String) -> Boolean,
@@ -38,6 +38,15 @@ class PlayerChannel(
     val session = SessionPlayer(send)
 
     fun start() = engine.start(this)
+
+    /** Hands playback to `next`, releasing the engine it had. */
+    fun replace(next: Engine) {
+        engine.release()
+        latest.clear()
+        held.clear()
+        engine = next
+        next.start(this)
+    }
 
     /** False for a message that isn't the player's. */
     fun handle(type: String, message: JsonObject): Boolean {

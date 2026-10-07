@@ -45,11 +45,13 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: gradle/actions/setup-gradle@v6
-      - name: Install the SDK platform
+      - name: Install the SDK platform, NDK and CMake
         run: |
           sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           yes | "$sdkmanager" --licenses >/dev/null
-          "$sdkmanager" --install "platforms;android-37.2" >/dev/null
+          # The NDK and CMake the native code builds with, as the version catalog pins them.
+          pinned() { sed -n "s/^$1 = \"\(.*\)\"/\1/p" packages/android/gradle/libs.versions.toml; }
+          "$sdkmanager" --install "platforms;android-37.2" "ndk;$(pinned android-ndk)" "cmake;$(pinned android-cmake)" >/dev/null
       - name: Build
         working-directory: packages/android
         env:
