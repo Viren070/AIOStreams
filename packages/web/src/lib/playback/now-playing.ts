@@ -3,7 +3,7 @@ import { currentHost } from '../hosts';
 import { mediaKeyJustTaken, noteInput } from '../input';
 import type { MediaKey } from '../hosts/shell/bridge';
 import { itemSubtitle, itemTitle } from '../format';
-import { landscapeUrl, posterUrl } from '../images';
+import { backdropUrl, landscapeUrl, posterUrl } from '../images';
 import { useItem } from '../queries';
 import { useSession } from '../session';
 import { settings, useSetting } from '../settings';
@@ -51,6 +51,7 @@ export function useNowPlaying(
   const title = itemTitle(item);
   const subtitle = itemSubtitle(item) || null;
   const artwork =
+    backdropUrl(client, item, { maxWidth: 960 }) ??
     landscapeUrl(client, item, { maxWidth: 320 }) ??
     posterUrl(client, item, { maxWidth: 200 });
   const { started, paused, positionMs, durationMs, rate } = player.state;
