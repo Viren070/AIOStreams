@@ -109,6 +109,7 @@ import {
   SUBTITLE_POSITION_MAX,
   SUBTITLE_SIZES,
   type AudioChannels,
+  type PlayerEngine,
   type EpisodeLayout,
   type TouchNavigation,
   type HeroMode,
@@ -245,6 +246,10 @@ function PlaybackSection() {
   );
   const bingeGroups = useFeature('versions');
   const shell = !!shellHost();
+  const [engine] = useSetting(settings.android.engine);
+  // ExoPlayer decodes with the hardware it picks itself.
+  const decoding =
+    shell && !(currentHost().name === 'android-app' && engine === 'exoplayer');
 
   return (
     <>
@@ -399,7 +404,7 @@ function PlaybackSection() {
           onValueChange={(v) => setVolumeStep(Number(v))}
         />
       </SettingsCard>
-      {shell && (
+      {decoding && (
         <SettingsCard title="Video" description={ON_DEVICE}>
           <Switch
             side="right"
@@ -415,9 +420,21 @@ function PlaybackSection() {
   );
 }
 
+const ENGINE_OPTIONS: { value: PlayerEngine; label: string }[] = [
+  { value: 'mpv', label: 'mpv' },
+  { value: 'exoplayer', label: 'ExoPlayer' },
+];
+
+const ENGINE_HELP: Record<PlayerEngine, string> = {
+  mpv: 'Decodes nearly any video, in software where the device has no decoder for it. Takes your mpv.conf under Android app.',
+  exoplayer:
+    "Android's own player, which uses less battery: the screen shows the video as the device decodes it, at the video's frame rate. Plays video the device can decode. Styled subtitles look as they do in mpv.",
+};
+
 function PlayerCard() {
   const [player, setPlayer] = useSetting(settings.player);
   const [link, setLink] = useSetting(settings.playerLink);
+  const [engine, setEngine] = useSetting(settings.android.engine);
   const found = useExternalPlayers();
   const launched = LAUNCHED_PLAYERS.find((p) => p.id === player);
   const preset = linkPreset(player);
@@ -465,6 +482,18 @@ function PlayerCard() {
         value={player}
         onValueChange={setPlayer}
       />
+      {currentHost().name === 'android-app' &&
+        !launched &&
+        !preset &&
+        player !== CUSTOM_LINK && (
+          <Select
+            label="Engine"
+            help={ENGINE_HELP[engine]}
+            options={ENGINE_OPTIONS}
+            value={engine}
+            onValueChange={(v) => setEngine(v as PlayerEngine)}
+          />
+        )}
       {launched && (
         <SettingsRow
           label={`Your ${launched.name}`}
@@ -927,6 +956,7 @@ function DiagnosticsRow() {
 }
 
 function AndroidSection() {
+  const [engine] = useSetting(settings.android.engine);
   const [pip, setPip] = useSetting(settings.android.pip);
   const [background, setBackground] = useSetting(settings.android.background);
   return (
@@ -948,7 +978,7 @@ function AndroidSection() {
           onValueChange={setBackground}
         />
       </SettingsCard>
-      <MpvConfigCard />
+      {engine === 'mpv' && <MpvConfigCard />}
       <SettingsCard title="Troubleshooting">
         <DiagnosticsRow />
       </SettingsCard>
@@ -1690,8 +1720,12 @@ function AboutSection() {
             shell.platform === 'android' ? 'Android app' : 'Desktop app',
             shell.app,
           ],
-          ['mpv', shell.mpv],
-          ['FFmpeg', shell.ffmpeg],
+          ...(shell.player && !shell.mpv
+            ? [['Player', shell.player]]
+            : [
+                ['mpv', shell.mpv],
+                ['FFmpeg', shell.ffmpeg],
+              ]),
         ] as [string, string | null][])
       : []),
   ];

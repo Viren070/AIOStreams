@@ -28,6 +28,8 @@ export type ShellMessage =
       platform: string;
       mpv: string | null;
       ffmpeg: string | null;
+      /** The Android app's player and its version. */
+      player?: string;
     }
   | { type: 'diagnostics'; text: string }
   | {

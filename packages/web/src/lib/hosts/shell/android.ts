@@ -1,19 +1,34 @@
 import type { Host } from '..';
 import { runAction } from '../../input';
+import { onSettingsChange, settings, type PlayerEngine } from '../../settings';
 import { appBridge } from './bridge';
 import { shellDownloads } from './downloads';
-import { useShellPlayer } from './player';
+import { playsWithExoPlayer, useShellPlayer } from './player';
 
 let fullscreen = false;
 
-/** Follows the app's full screen, which hides the system bars and turns to landscape, and takes its Back. */
+/**
+ * Follows the app's full screen, which hides the system bars and turns to
+ * landscape, takes its Back, and tells it which player to play with.
+ */
 export function setupAndroid(): () => void {
-  return (
-    appBridge()?.subscribe((m) => {
-      if (m.type === 'fullscreen') fullscreen = m.value;
-      else if (m.type === 'back') runAction('back');
-    }) ?? (() => {})
-  );
+  const bridge = appBridge();
+  let engine: PlayerEngine | null = null;
+  const sendEngine = () => {
+    if (settings.android.engine.read() === engine) return;
+    engine = settings.android.engine.read();
+    bridge?.send({ type: 'player-engine', name: engine });
+  };
+  sendEngine();
+  const unsubscribeSettings = onSettingsChange(sendEngine);
+  const unsubscribe = bridge?.subscribe((m) => {
+    if (m.type === 'fullscreen') fullscreen = m.value;
+    else if (m.type === 'back') runAction('back');
+  });
+  return () => {
+    unsubscribeSettings();
+    unsubscribe?.();
+  };
 }
 
 /** The app's mpv.conf, as it answers `mpv-config` and `mpv-config-save`. */
@@ -50,7 +65,11 @@ export const androidHost: Host = {
   name: 'android-app',
   device: () => ({ id: appBridge()?.deviceId, name: appBridge()?.device }),
   usePlayer: useShellPlayer,
-  playerFeatures: ['audio', 'chapters', 'stats'],
+  get playerFeatures() {
+    return playsWithExoPlayer()
+      ? (['audio', 'chapters'] as const)
+      : (['audio', 'chapters', 'stats'] as const);
+  },
   downloads: shellDownloads,
   fullscreen: {
     active: () => fullscreen,

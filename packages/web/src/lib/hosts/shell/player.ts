@@ -434,7 +434,9 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
       ? () => command('cycle', 'fullscreen')
       : () => shell.send({ type: 'fullscreen' }),
     chapters,
-    stats: { pages: STATS_PAGES, page: statsPage, show: showStats },
+    stats: playsWithExoPlayer()
+      ? undefined
+      : { pages: STATS_PAGES, page: statsPage, show: showStats },
     external: launched?.name,
     close: external
       ? () => {
@@ -457,6 +459,11 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
       : undefined,
   };
 }
+
+/** Whether the Android app plays with ExoPlayer, which has none of mpv's own options or stats. */
+export const playsWithExoPlayer = () =>
+  appBridge()?.platform === 'android' &&
+  settings.android.engine.read() === 'exoplayer';
 
 function statusMeaning(status: number): string | undefined {
   if (status === 401 || status === 403) return 'refused';

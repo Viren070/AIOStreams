@@ -350,6 +350,10 @@ const isPercent = (value: number) => value >= 0 && value <= 100;
 export const AUDIO_CHANNELS = ['auto', 'stereo', '5.1', '7.1'] as const;
 export type AudioChannels = (typeof AUDIO_CHANNELS)[number];
 
+/** What plays versions inside the Android app. */
+export const PLAYER_ENGINES = ['mpv', 'exoplayer'] as const;
+export type PlayerEngine = (typeof PLAYER_ENGINES)[number];
+
 /** `installed` follows the channel this copy of the desktop app came from. */
 export const UPDATE_CHANNELS = ['installed', 'stable', 'nightly'] as const;
 export type UpdateChannelSetting = (typeof UPDATE_CHANNELS)[number];
@@ -533,6 +537,11 @@ export const settings = {
   android: {
     pip: device<boolean>('aiostreams-android-pip', true),
     background: device<boolean>('aiostreams-android-background', false),
+    engine: device<PlayerEngine>(
+      'aiostreams-android-engine',
+      'mpv',
+      PLAYER_ENGINES
+    ),
   },
   discord,
   discordEvents: group(discord),
