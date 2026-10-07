@@ -13,6 +13,7 @@ import {
   LuKeyboard,
   LuLayoutGrid,
   LuMonitor,
+  LuSmartphone,
   LuPalette,
   LuUser,
   LuVolume2,
@@ -50,6 +51,7 @@ import {
   openLogs,
   requestDiagnostics,
   useShellInfo,
+  shellHost,
   applyUpdate,
   checkForUpdates,
   useUpdateState,
@@ -64,6 +66,8 @@ import {
   useDiscordStatus,
   type DiscordStatus,
 } from '../lib/hosts/shell/desktop';
+import { readMpvConfig, saveMpvConfig } from '../lib/hosts/shell/android';
+import { appBridge } from '../lib/hosts/shell/bridge';
 import { LANGUAGES } from '../lib/languages';
 import { serverAddress } from '../lib/servers';
 import {
@@ -240,10 +244,7 @@ function PlaybackSection() {
     settings.desktop.chapterSkips
   );
   const bingeGroups = useFeature('versions');
-  const shell = currentHost().name === 'desktop';
-  const android = currentHost().name === 'android-app';
-  const [pip, setPip] = useSetting(settings.android.pip);
-  const [background, setBackground] = useSetting(settings.android.background);
+  const shell = !!shellHost();
 
   return (
     <>
@@ -398,24 +399,6 @@ function PlaybackSection() {
           onValueChange={(v) => setVolumeStep(Number(v))}
         />
       </SettingsCard>
-      {android && (
-        <SettingsCard title="Leaving the app" description={ON_DEVICE}>
-          <Switch
-            side="right"
-            label="Picture-in-picture"
-            help="Keeps the video playing in a small window when you leave the app."
-            value={pip}
-            onValueChange={setPip}
-          />
-          <Switch
-            side="right"
-            label="Play in the background"
-            help="Keeps the sound going with the screen off, or when you leave without picture-in-picture."
-            value={background}
-            onValueChange={setBackground}
-          />
-        </SettingsCard>
-      )}
       {shell && (
         <SettingsCard title="Video" description={ON_DEVICE}>
           <Switch
@@ -719,6 +702,7 @@ const CHANNEL_LABELS: Record<AudioChannels, string> = {
 };
 
 function updateStatus(update: UpdateState | null): string {
+  const android = appBridge()?.platform === 'android';
   switch (update?.state) {
     case undefined:
       return 'Not checked yet.';
@@ -729,7 +713,9 @@ function updateStatus(update: UpdateState | null): string {
     case 'downloading':
       return `Downloading version ${update.version}\u2026`;
     case 'ready':
-      return `Version ${update.version} installs on the next start.`;
+      return android
+        ? `Version ${update.version} is ready to install.`
+        : `Version ${update.version} installs on the next start.`;
     case 'current':
       return 'Up to date.';
     case 'error':
@@ -759,7 +745,7 @@ function UpdatesCard() {
       <SettingsRow label="Status" help={updateStatus(update)}>
         {update?.state === 'ready' ? (
           <Button intent="white" className={button} onClick={applyUpdate}>
-            Restart now
+            {appBridge()?.platform === 'android' ? 'Install' : 'Restart now'}
           </Button>
         ) : (
           <Button
@@ -871,7 +857,6 @@ function AppSection() {
 }
 
 function DesktopSection() {
-  const server = useServerInfo();
   return (
     <>
       <UpdatesCard />
@@ -903,31 +888,106 @@ function DesktopSection() {
             Open folder
           </Button>
         </SettingsRow>
-        <SettingsRow
-          label="Diagnostics"
-          help="Versions and the recent log, to paste into a bug report."
-        >
-          <Button
-            intent="gray-outline"
-            className="w-full rounded-full sm:w-auto"
-            onClick={() =>
-              requestDiagnostics(
-                server.version && `AIOStreams ${server.version}`
-              )
-                .then((text) =>
-                  copyToClipboard(text, {
-                    onSuccess: () => toast.success('Diagnostics copied'),
-                    onError: () => toast.error('Could not copy them'),
-                  })
-                )
-                .catch((e: Error) => toast.error(e.message))
-            }
-          >
-            Copy
-          </Button>
-        </SettingsRow>
+        <DiagnosticsRow />
       </SettingsCard>
     </>
+  );
+}
+
+function DiagnosticsRow() {
+  const server = useServerInfo();
+  return (
+    <SettingsRow
+      label="Diagnostics"
+      help="Versions and the recent log, to paste into a bug report."
+    >
+      <Button
+        intent="gray-outline"
+        className="w-full rounded-full sm:w-auto"
+        onClick={() =>
+          requestDiagnostics(server.version && `AIOStreams ${server.version}`)
+            .then((text) =>
+              copyToClipboard(text, {
+                onSuccess: () => toast.success('Diagnostics copied'),
+                onError: () => toast.error('Could not copy them'),
+              })
+            )
+            .catch((e: Error) => toast.error(e.message))
+        }
+      >
+        Copy
+      </Button>
+    </SettingsRow>
+  );
+}
+
+function AndroidSection() {
+  const [pip, setPip] = useSetting(settings.android.pip);
+  const [background, setBackground] = useSetting(settings.android.background);
+  return (
+    <>
+      <UpdatesCard />
+      <SettingsCard title="Leaving the app" description={ON_DEVICE}>
+        <Switch
+          side="right"
+          label="Picture-in-picture"
+          help="Keeps the video playing in a small window when you leave the app."
+          value={pip}
+          onValueChange={setPip}
+        />
+        <Switch
+          side="right"
+          label="Play in the background"
+          help="Keeps the sound going with the screen off, or when you leave without picture-in-picture."
+          value={background}
+          onValueChange={setBackground}
+        />
+      </SettingsCard>
+      <MpvConfigCard />
+      <SettingsCard title="Troubleshooting">
+        <DiagnosticsRow />
+      </SettingsCard>
+    </>
+  );
+}
+
+/** mpv.conf, written by the app and applied to what plays next. */
+function MpvConfigCard() {
+  const [text, setText] = React.useState<string | null>(null);
+  const [saving, setSaving] = React.useState(false);
+  React.useEffect(() => {
+    readMpvConfig().then(setText, () => setText(''));
+  }, []);
+  return (
+    <SettingsCard title="mpv">
+      <Textarea
+        label="mpv.conf"
+        help="Options for the built-in mpv, one per line, as mpv's manual lists them."
+        value={text ?? ''}
+        disabled={text === null}
+        onValueChange={setText}
+        rows={8}
+        spellCheck={false}
+        className="font-mono text-sm"
+      />
+      <Button
+        intent="gray-outline"
+        className="w-full rounded-full sm:w-auto"
+        loading={saving}
+        disabled={text === null}
+        onClick={() => {
+          setSaving(true);
+          saveMpvConfig(text ?? '')
+            .then(
+              () => toast.success('Saved'),
+              (e: Error) => toast.error(e.message)
+            )
+            .finally(() => setSaving(false));
+        }}
+      >
+        Save
+      </Button>
+    </SettingsCard>
   );
 }
 
@@ -1621,7 +1681,10 @@ function AboutSection() {
     ['Web app', __APP_COMMIT__],
     ...(shell
       ? ([
-          ['Desktop app', shell.app],
+          [
+            shell.platform === 'android' ? 'Android app' : 'Desktop app',
+            shell.app,
+          ],
           ['mpv', shell.mpv],
           ['FFmpeg', shell.ffmpeg],
         ] as [string, string | null][])
@@ -1824,6 +1887,18 @@ function sections(): Section[] {
             icon: LuMonitor,
             group: 'App',
             Content: DesktopSection,
+          },
+        ]
+      : []),
+    ...(host.name === 'android-app'
+      ? [
+          {
+            id: 'android',
+            label: 'Android app',
+            description: 'Updates, picture-in-picture, mpv and troubleshooting',
+            icon: LuSmartphone,
+            group: 'App',
+            Content: AndroidSection,
           },
         ]
       : []),

@@ -42,12 +42,18 @@ function onUpdateState(next: UpdateState) {
   const announced = updateState?.state === 'ready';
   updateState = next;
   for (const listener of updateListeners) listener();
-  if (next.state === 'ready' && !announced)
-    toast('Update ready', {
-      description: `Version ${next.version} installs on the next start.`,
-      action: { label: 'Restart now', onClick: applyUpdate },
-      duration: Infinity,
-    });
+  if (next.state !== 'ready' || announced) return;
+  const android = appBridge()?.platform === 'android';
+  toast('Update ready', {
+    description: android
+      ? `Version ${next.version} is ready to install.`
+      : `Version ${next.version} installs on the next start.`,
+    action: {
+      label: android ? 'Install' : 'Restart now',
+      onClick: applyUpdate,
+    },
+    duration: Infinity,
+  });
 }
 
 /** Keeps mpv in step with this device's settings and checks for updates. */

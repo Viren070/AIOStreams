@@ -14,6 +14,36 @@ export function setupAndroid(): () => void {
   );
 }
 
+/** The app's mpv.conf, as it answers `mpv-config` and `mpv-config-save`. */
+function mpvConfig(message: { type: string; text?: string }): Promise<string> {
+  const bridge = appBridge();
+  if (!bridge) return Promise.reject(new Error('Only the Android app has one'));
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      stop();
+      reject(new Error('The app did not answer'));
+    }, 5000);
+    const stop = bridge.subscribe((m) => {
+      if (m.type === 'error') {
+        clearTimeout(timer);
+        stop();
+        reject(new Error(m.message));
+      } else if (m.type === 'mpv-config') {
+        clearTimeout(timer);
+        stop();
+        resolve(m.text);
+      }
+    });
+    bridge.send(message);
+  });
+}
+
+export const readMpvConfig = () => mpvConfig({ type: 'mpv-config' });
+
+/** Saves it and applies it to what plays next. */
+export const saveMpvConfig = (text: string) =>
+  mpvConfig({ type: 'mpv-config-save', text });
+
 export const androidHost: Host = {
   name: 'android-app',
   device: () => ({ name: appBridge()?.device }),
