@@ -86,9 +86,10 @@ function subtitleFiles(
   client: JellyfinClient,
   source: SourceInfo,
   at: string
-): HostFile[] {
+): { files: HostFile[]; streams: number[] } {
   const used = new Set<string>();
   const files: HostFile[] = [];
+  const streams: number[] = [];
   for (const stream of textSubtitles(source)) {
     const url = subtitleUrl(client, stream, { original: true });
     const type = url?.match(/Stream\.(\w+)(?=\?|$)/)?.[1]?.toLowerCase();
@@ -101,8 +102,9 @@ function subtitleFiles(
     for (let n = 2; used.has(name); n++) name = `${at}.${n}.${tags}`;
     used.add(name);
     files.push({ url, path: `${name}.${type}`, kind: 'subtitle' });
+    streams.push(stream.Index!);
   }
-  return files;
+  return { files, streams };
 }
 
 function imageFiles(
@@ -132,7 +134,7 @@ function imageFiles(
 }
 
 /** The version's details without its addresses, which carry the sign-in. */
-function versionDetails(source: SourceInfo) {
+export function versionDetails(source: SourceInfo): SourceInfo {
   const { Path: _path, TranscodingUrl: _transcode, ...rest } = source;
   return {
     ...rest,
@@ -148,19 +150,22 @@ export function hostJob(
   series: BaseItemDto | undefined,
   source: SourceInfo,
   opts: { subtitles: boolean }
-): HostJob {
+): { job: HostJob; subtitleStreams: number[] } {
   const place = placeOf(item, series);
   const at = `${place.folder}/${place.base}`;
   const video = client.url(`/Items/${item.Id}/Download`, {
     MediaSourceId: source.Id,
     ApiKey: client.token,
   });
-  return {
+  const subtitles = opts.subtitles
+    ? subtitleFiles(client, source, at)
+    : { files: [], streams: [] };
+  const job: HostJob = {
     id,
     title: place.base,
     files: [
       { url: video, path: `${at}.${videoType(source)}`, kind: 'video' },
-      ...(opts.subtitles ? subtitleFiles(client, source, at) : []),
+      ...subtitles.files,
       ...imageFiles(client, item, series, place),
     ],
     texts: [
@@ -174,4 +179,5 @@ export function hostJob(
       },
     ],
   };
+  return { job, subtitleStreams: subtitles.streams };
 }

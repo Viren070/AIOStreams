@@ -34,6 +34,7 @@ import { directUrl } from '../lib/playback/stream';
 import {
   downloadsHost,
   useAddDownloads,
+  useFindDownloaded,
   useReplaceVersion,
   type Download,
 } from '../lib/downloads';
@@ -124,6 +125,7 @@ export function VersionPickerProvider({
   const infoOptions = usePlaybackInfoOptions();
   const playVersion = usePlay();
   const addDownloads = useAddDownloads();
+  const downloaded = useFindDownloaded();
   const [autoPick] = useSetting(settings.autoPlayFirst);
   const latest = React.useRef({
     straight,
@@ -131,6 +133,7 @@ export function VersionPickerProvider({
     infoOptions,
     playVersion,
     addDownloads,
+    downloaded,
     autoPick,
   });
   latest.current = {
@@ -139,6 +142,7 @@ export function VersionPickerProvider({
     infoOptions,
     playVersion,
     addDownloads,
+    downloaded,
     autoPick,
   };
 
@@ -179,6 +183,12 @@ export function VersionPickerProvider({
         }),
       play: (item, opts) => {
         const startMs = opts?.startMs ?? 0;
+        // Holding still lists the versions.
+        const local = !opts?.held && latest.current.downloaded(item);
+        if (local && chosenPlayer().kind !== 'link') {
+          navigate(to.play(item.Id!, local.source!.Id!, startMs));
+          return;
+        }
         if (latest.current.straight(item, startMs) !== !!opts?.held)
           void playStraight(item, startMs);
         else setRequest({ item, startMs });

@@ -478,12 +478,13 @@ export function usePlaybackInfoOptions() {
  */
 export function usePlaybackInfo(
   itemId: string,
-  opts: { listing?: boolean; sourceId?: string } = {}
+  opts: { listing?: boolean; sourceId?: string; enabled?: boolean } = {}
 ) {
   const options = usePlaybackInfoOptions();
   return useQuery({
     ...options(itemId, opts.sourceId),
     refetchOnMount: opts.listing ? 'always' : true,
+    enabled: opts.enabled ?? true,
   });
 }
 

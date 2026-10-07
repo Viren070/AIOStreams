@@ -1,4 +1,4 @@
-import type { BaseItemDto } from '../types';
+import type { BaseItemDto, SourceInfo } from '../types';
 
 export type DownloadState =
   | 'finding'
@@ -43,6 +43,12 @@ export interface Download {
   error?: string;
   /** Set once a version is chosen. */
   job?: HostJob;
+  /** The version without its addresses, to play the file from. */
+  source?: SourceInfo;
+  /** The `Index` of each subtitle stream saved, in the order the host lists their files. */
+  subtitleStreams?: number[];
+  /** Where the host saved the video and subtitles, once done. */
+  local?: { video: string; subtitles: string[] };
   addedAt: number;
 }
 
@@ -56,6 +62,8 @@ export type HostEvent =
         bytes: number;
         total: number | null;
         error: string | null;
+        video?: string | null;
+        subtitles?: string[];
       }[];
     }
   | {

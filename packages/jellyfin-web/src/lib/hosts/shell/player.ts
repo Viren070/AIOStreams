@@ -82,7 +82,9 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
       textSubtitles(source)
         .filter((s) => s.IsExternal)
         .flatMap((s, i) => {
-          const link = subtitleUrl(opts.client, s);
+          const link = opts.subtitleUrl
+            ? opts.subtitleUrl(s)
+            : subtitleUrl(opts.client, s);
           return link
             ? [
                 {
@@ -94,7 +96,7 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
               ]
             : [];
         }),
-    [source, opts.client]
+    [source, opts.client, opts.subtitleUrl]
   );
   const fromServer = (track: MpvTrack) =>
     externals.some((e) => e.url === track['external-filename']);

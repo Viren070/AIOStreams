@@ -104,6 +104,8 @@ export interface NativePlayerOptions extends PlayerOptions {
   client: JellyfinClient;
   item: BaseItemDto;
   url: string;
+  /** Where an external subtitle is, when not the server's address, as for a download. */
+  subtitleUrl?: (stream: MediaStream) => string | null;
   /** Plays in this player's own window instead. */
   launched?: { id: string; name: string };
   /** The user closed that window. */

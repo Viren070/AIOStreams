@@ -54,7 +54,13 @@ import {
   VersionPickerProvider,
 } from '../components/version-picker';
 import { chapterSegments, guessedSegments } from '../lib/playback/chapters';
-import type { BaseItemDto, MediaSegmentDto, SourceInfo } from '../lib/types';
+import type {
+  BaseItemDto,
+  MediaSegmentDto,
+  MediaStream,
+  SourceInfo,
+} from '../lib/types';
+import { useDownloadOf, type Download } from '../lib/downloads';
 import { CachedImage } from '../components/cached-image';
 
 interface PlayerProps {
@@ -64,6 +70,7 @@ interface PlayerProps {
   startMs: number;
   prefs: PlaybackPrefs;
   launched?: NativePlayerOptions['launched'];
+  local?: Download;
 }
 
 /**
@@ -99,8 +106,21 @@ export function PlayerPage({
   sourceId: string;
   startMs: number;
 }) {
-  const item = useItem(itemId);
-  const info = usePlaybackInfo(itemId, { sourceId: sourceId || undefined });
+  const download = useDownloadOf(itemId);
+  // A finished download plays its own file, with or without the server.
+  const local =
+    download?.state === 'done' &&
+    download.local &&
+    download.source &&
+    (!sourceId || sourceId === download.source.Id)
+      ? download
+      : undefined;
+  const fetched = useItem(itemId);
+  const item = { ...fetched, data: fetched.data ?? local?.item };
+  const info = usePlaybackInfo(itemId, {
+    sourceId: sourceId || undefined,
+    enabled: !local,
+  });
   const playback = usePlaybackPrefs();
   const picks = useShowPicks();
   usePlayerPage();
@@ -111,7 +131,7 @@ export function PlayerPage({
     PlayerProps,
     'startMs'
   > | null>(null);
-  const sources = playableSources(info.data);
+  const sources = local ? [local.source!] : playableSources(info.data);
   const source = sourceId ? sources.find((s) => s.Id === sourceId) : sources[0];
   const missing = !playing && !!item.data && !!info.data && !source;
   React.useEffect(() => {
@@ -133,12 +153,13 @@ export function PlayerPage({
       playSessionId: info.data?.PlaySessionId ?? null,
       prefs: withShowPick(playback.prefs, picks.data, item.data),
       launched: player.kind === 'launched' ? player : undefined,
+      local,
     });
   }
 
   if (!playing) {
     if (
-      item.isLoading ||
+      (!item.data && item.isLoading) ||
       info.isLoading ||
       playback.isLoading ||
       picks.isLoading ||
@@ -213,7 +234,7 @@ function useReporting(
     playSessionId,
   }: Pick<PlayerProps, 'item' | 'source' | 'playSessionId'>
 ) {
-  const { client } = useSession();
+  const { client, user } = useSession();
   const state = React.useRef(player.state);
   state.current = player.state;
   const reporter = React.useRef<PlaybackReporter | null>(null);
@@ -232,7 +253,12 @@ function useReporting(
     if (!started) return;
     const current = new PlaybackReporter(
       client,
-      { itemId: item.Id!, mediaSourceId: source.Id!, playSessionId },
+      {
+        itemId: item.Id!,
+        mediaSourceId: source.Id!,
+        playSessionId,
+        userId: user.Id,
+      },
       () => ({ ms: state.current.positionMs, paused: state.current.paused })
     );
     current.start();
@@ -245,7 +271,7 @@ function useReporting(
       void current.stop().then(() => refresh.current());
       reporter.current = null;
     };
-  }, [started, client, item.Id, source.Id, playSessionId]);
+  }, [started, client, user.Id, item.Id, source.Id, playSessionId]);
 
   React.useEffect(() => {
     reporter.current?.progress(paused ? 'Pause' : 'Unpause');
@@ -531,6 +557,7 @@ function NativePlayer({
   startMs,
   prefs,
   launched,
+  local,
   usePlayer,
 }: PlayerProps & {
   usePlayer: (opts: NativePlayerOptions) => PlayerController;
@@ -539,10 +566,20 @@ function NativePlayer({
   const close = React.useRef<() => void>(undefined);
   const { back, onEnded, connect } = useEnded(item, () => close.current?.());
   const [subtitleStyle] = useSetting(settings.subtitleStyle);
+  const localSubtitle = React.useCallback(
+    (stream: MediaStream) => {
+      const at = local?.subtitleStreams?.indexOf(stream.Index!) ?? -1;
+      return at >= 0 ? (local?.local?.subtitles[at] ?? null) : null;
+    },
+    [local]
+  );
   const player = usePlayer({
     client,
     item,
-    url: streamUrl(client, item.Id!, source, playSessionId),
+    url: local?.local
+      ? local.local.video
+      : streamUrl(client, item.Id!, source, playSessionId),
+    subtitleUrl: local ? localSubtitle : undefined,
     source,
     startMs,
     onEnded,

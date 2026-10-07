@@ -10,7 +10,7 @@ import { onSettingsChange, settings } from '../settings';
 import { unavailableLabel } from '../format';
 import type { BaseItemDto, BaseItemDtoQueryResult, SourceInfo } from '../types';
 import { useLatest } from '../use-latest';
-import { hostJob } from './files';
+import { hostJob, versionDetails } from './files';
 import {
   addDownloads,
   allDownloads,
@@ -106,9 +106,14 @@ async function place(
 ): Promise<void> {
   const source = await forDownload(client, download, picked);
   const series = await seriesOf(client, download.userId, download.item);
-  const job = hostJob(client, download.id, download.item, series, source, {
-    subtitles: settings.downloads.subtitles.read(),
-  });
+  const { job, subtitleStreams } = hostJob(
+    client,
+    download.id,
+    download.item,
+    series,
+    source,
+    { subtitles: settings.downloads.subtitles.read() }
+  );
   updateDownloads([
     {
       id: download.id,
@@ -116,6 +121,8 @@ async function place(
         state: 'queued',
         version: versionOf(source),
         job,
+        source: versionDetails(source),
+        subtitleStreams,
         error: undefined,
       },
     },
@@ -254,6 +261,26 @@ export function useEpisodesToDownload() {
   );
 }
 
+/** Finds an item's finished download on this device, for this server and user. */
+export function useFindDownloaded() {
+  const { client, user } = useSession();
+  return React.useCallback(
+    (item: BaseItemDto): Download | undefined =>
+      downloadsHost()
+        ? allDownloads().find(
+            (d) =>
+              d.item.Id === item.Id &&
+              d.state === 'done' &&
+              d.local &&
+              d.source &&
+              d.base === client.base &&
+              d.userId === user.Id
+          )
+        : undefined,
+    [client.base, user.Id]
+  );
+}
+
 /** The download of an item, if there is one for this server and user. */
 export function useDownloadOf(
   itemId: string | undefined
@@ -286,15 +313,20 @@ function onHostEvent(event: HostEvent, readded: Set<string>) {
   for (const d of allDownloads()) {
     const job = reported.get(d.id);
     if (job) {
+      const local = job.video
+        ? { video: job.video, subtitles: job.subtitles ?? [] }
+        : undefined;
       const patch = {
         state: job.state,
         bytes: job.bytes,
         total: job.total ?? undefined,
         error: job.error ?? undefined,
+        local,
       };
       if (
         patch.state !== d.state ||
         patch.error !== d.error ||
+        local?.video !== d.local?.video ||
         (patch.state !== 'downloading' && patch.bytes !== d.bytes)
       )
         changes.push({ id: d.id, patch });

@@ -57,6 +57,7 @@ import { useDiscordBrowsing } from '../lib/discord';
 import { useServerEvents } from '../lib/server-events';
 import { retryNow, useReachable } from '../lib/connection';
 import { downloadsHost, useDownloadRunner } from '../lib/downloads';
+import { usePendingStops } from '../lib/playback/reporter';
 import { settings, useSetting } from '../lib/settings';
 import { useAction } from '../lib/input';
 import { UserAvatar } from './user-avatar';
@@ -365,6 +366,7 @@ export function WebLayout() {
   useDiscordBrowsing(pathname);
   useServerEvents();
   useDownloadRunner();
+  usePendingStops();
   useAction('search', () => navigate(to.search()));
   useAction('home', () => navigate(to.home));
   const activity: SidebarItem = {
