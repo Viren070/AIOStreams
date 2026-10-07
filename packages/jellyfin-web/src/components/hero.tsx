@@ -114,13 +114,16 @@ function Backdrops({
     else if (loaded.has(current)) setShown(current);
   }, [current, loaded]);
 
-  return sources.map((src) => (
+  // Only what is shown, next, or already loaded, so the rest never download.
+  const mounted = sources.filter(
+    (src) => src === current || src === shown || loaded.has(src)
+  );
+  return mounted.map((src) => (
     <img
       key={src}
       data-ui="hero-backdrop"
       src={src}
       alt=""
-      loading={src === current ? 'eager' : 'lazy'}
       onLoad={() => setLoaded((set) => new Set(set).add(src))}
       className={cn(
         'absolute inset-0 h-full w-full object-cover object-top transition-opacity duration-700',
