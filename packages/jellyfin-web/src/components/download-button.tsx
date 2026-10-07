@@ -60,6 +60,8 @@ function describe(download: Download | undefined): string {
   switch (download.state) {
     case 'done':
       return 'Downloaded';
+    case 'sent':
+      return "In the app's downloads";
     case 'failed':
     case 'needs-version':
       return 'Download needs attention';
@@ -89,7 +91,7 @@ export function DownloadButton({
   const label = describe(download);
   const icon = !download ? (
     <BiDownload />
-  ) : state === 'done' ? (
+  ) : state === 'done' || state === 'sent' ? (
     <BiSolidDownload />
   ) : state === 'failed' || state === 'needs-version' ? (
     <BiErrorCircle />
@@ -103,7 +105,11 @@ export function DownloadButton({
           data-ui="download-button"
           data-state={state}
           size="sm"
-          intent={state === 'done' ? 'primary-subtle' : 'gray-subtle'}
+          intent={
+            state === 'done' || state === 'sent'
+              ? 'primary-subtle'
+              : 'gray-subtle'
+          }
           className={cn('rounded-full', className)}
           icon={icon}
           aria-label={label}

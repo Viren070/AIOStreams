@@ -114,11 +114,12 @@ async function place(
     source,
     { subtitles: settings.downloads.subtitles.read() }
   );
+  const host = downloadsHost();
   updateDownloads([
     {
       id: download.id,
       patch: {
-        state: 'queued',
+        state: host?.handsOff ? 'sent' : 'queued',
         version: versionOf(source),
         job,
         source: versionDetails(source),
@@ -127,7 +128,7 @@ async function place(
       },
     },
   ]);
-  downloadsHost()?.add([job]);
+  host?.add([job]);
 }
 
 /** The rest of a batch follows its leader's binge group, or none if it has none. */

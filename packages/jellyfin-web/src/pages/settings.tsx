@@ -1233,16 +1233,32 @@ function DownloadsSection() {
           </div>
         </SettingsRow>
       )}
-      <Select
-        label="Downloads at once"
-        help="The rest wait their turn."
-        options={DOWNLOADS_AT_ONCE.map((n) => ({
-          value: String(n),
-          label: String(n),
-        }))}
-        value={String(concurrent)}
-        onValueChange={(value) => setConcurrent(Number(value))}
-      />
+      {host?.handsOff && (
+        <SettingsRow
+          label="The app's downloads"
+          help="The app saves what you download and plays it without a connection."
+        >
+          <Button
+            intent="gray-outline"
+            className={button}
+            onClick={() => host.handsOff?.open()}
+          >
+            Open
+          </Button>
+        </SettingsRow>
+      )}
+      {!host?.handsOff && (
+        <Select
+          label="Downloads at once"
+          help="The rest wait their turn."
+          options={DOWNLOADS_AT_ONCE.map((n) => ({
+            value: String(n),
+            label: String(n),
+          }))}
+          value={String(concurrent)}
+          onValueChange={(value) => setConcurrent(Number(value))}
+        />
+      )}
       <Select
         label="Version searches at once"
         help="Versions are found for this many episodes at a time when a season or show is added."
@@ -1253,13 +1269,15 @@ function DownloadsSection() {
         value={String(searches)}
         onValueChange={(value) => setSearches(Number(value))}
       />
-      <Switch
-        side="right"
-        label="Save subtitles"
-        help="Subtitle files go next to the video, named so players find them."
-        value={subtitles}
-        onValueChange={setSubtitles}
-      />
+      {!host?.handsOff && (
+        <Switch
+          side="right"
+          label="Save subtitles"
+          help="Subtitle files go next to the video, named so players find them."
+          value={subtitles}
+          onValueChange={setSubtitles}
+        />
+      )}
     </SettingsCard>
   );
 }

@@ -163,6 +163,7 @@ export function hostJob(
   const job: HostJob = {
     id,
     title: place.base,
+    versionId: source.Id!,
     files: [
       { url: video, path: `${at}.${videoType(source)}`, kind: 'video' },
       ...subtitles.files,

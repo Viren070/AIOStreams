@@ -6,6 +6,7 @@ import {
   settings,
   type SegmentAction,
 } from '../settings';
+import type { DownloadsHost } from '../downloads/types';
 import type { BaseItemDto, SourceInfo } from '../types';
 import type { Host } from '.';
 import { mediaInfo } from './native-shell';
@@ -17,6 +18,9 @@ interface AndroidPlayer {
 }
 
 interface AndroidInterface {
+  /** Items to download, as JSON `[{ itemId }]`; the app fetches each one's file itself. */
+  downloadFiles?(items: string): void;
+  openDownloadManager?(): void;
   exitApp?(): void;
   openClientSettings?(): void;
   openServerSelection?(): void;
@@ -177,6 +181,26 @@ function play(
   );
 }
 
+/*
+ * The app downloads an item's file under the id it is given; a version's id
+ * names the item with that version picked, so the pick is what it saves.
+ */
+function downloadsOf(app: AndroidInterface): DownloadsHost | undefined {
+  if (!app.downloadFiles) return undefined;
+  return {
+    add: (jobs) =>
+      app.downloadFiles?.(
+        JSON.stringify(jobs.map((job) => ({ itemId: job.versionId })))
+      ),
+    control() {},
+    remove() {},
+    list() {},
+    configure() {},
+    subscribe: () => () => {},
+    handsOff: { open: () => app.openDownloadManager?.() },
+  };
+}
+
 function build(app: AndroidInterface): { page: Host; player: Host } {
   const page: Host = {
     name: 'android',
@@ -199,6 +223,7 @@ function build(app: AndroidInterface): { page: Host; player: Host } {
       listen,
     },
     exit: app.exitApp && (() => app.exitApp?.()),
+    downloads: downloadsOf(app),
     start: ({ base }) => {
       announce(base);
       handleBack();

@@ -58,6 +58,8 @@ function status(download: Download, speed: number | undefined): string {
       return download.error ?? 'Failed';
     case 'done':
       return formatBytes(total ?? bytes);
+    case 'sent':
+      return "In the app's downloads";
     case 'downloading': {
       const left =
         speed && total ? duration(((total - bytes) / speed) * 1000) : '';
@@ -220,7 +222,7 @@ function DownloadRow({
             />
           }
         >
-          {state === 'done' ? (
+          {state === 'sent' ? null : state === 'done' ? (
             <DropdownMenuItem
               data-name="delete"
               onClick={() => removeDownloads([download], true)}
@@ -235,7 +237,7 @@ function DownloadRow({
               <BiX /> Cancel
             </DropdownMenuItem>
           )}
-          {state === 'done' && (
+          {(state === 'done' || state === 'sent') && (
             <DropdownMenuItem
               data-name="forget"
               onClick={() => removeDownloads([download], false)}
@@ -341,6 +343,7 @@ export function DownloadsPage() {
     (d) => d.state === 'failed' || d.state === 'needs-version'
   );
   const done = mine.filter((d) => d.state === 'done');
+  const sent = mine.filter((d) => d.state === 'sent');
   const pausable = running.filter(
     (d) => d.state === 'downloading' || d.state === 'queued'
   );
@@ -358,6 +361,17 @@ export function DownloadsPage() {
               {folder ? `Saved to ${folder}` : null}
               {done.length > 0 && ` · ${formatBytes(sizeOf(done))} downloaded`}
             </p>
+            {host?.handsOff && (
+              <Button
+                size="sm"
+                intent="gray-outline"
+                className="rounded-full"
+                leftIcon={<BiFolderOpen />}
+                onClick={() => host.handsOff?.open()}
+              >
+                Open the app's downloads
+              </Button>
+            )}
             {host?.folder && (
               <>
                 <Button
@@ -426,6 +440,14 @@ export function DownloadsPage() {
         {attention.length > 0 && (
           <Section name="attention" title="Needs attention">
             {attention.map((d) => (
+              <DownloadRow key={d.id} download={d} />
+            ))}
+          </Section>
+        )}
+
+        {sent.length > 0 && (
+          <Section name="sent" title="In the app's downloads">
+            {sent.map((d) => (
               <DownloadRow key={d.id} download={d} />
             ))}
           </Section>

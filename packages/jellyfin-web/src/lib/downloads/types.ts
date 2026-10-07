@@ -7,7 +7,9 @@ export type DownloadState =
   | 'downloading'
   | 'paused'
   | 'failed'
-  | 'done';
+  | 'done'
+  /** Handed to an app that downloads on its own and reports nothing back. */
+  | 'sent';
 
 /** A file for the host to fetch, at a path relative to its downloads folder. */
 export interface HostFile {
@@ -20,6 +22,7 @@ export interface HostFile {
 export interface HostJob {
   id: string;
   title: string;
+  versionId: string;
   files: HostFile[];
   /** Files the page writes itself, such as the item's details. */
   texts: { path: string; text: string }[];
@@ -85,4 +88,6 @@ export interface DownloadsHost {
   subscribe(listener: (event: HostEvent) => void): () => void;
   /** Picks and shows the folder; the folder's own name comes in `state`. */
   folder?: { choose(): void; open(id?: string): void };
+  /** Takes downloads over entirely, with a screen of its own to show them. */
+  handsOff?: { open(): void };
 }
