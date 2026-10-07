@@ -71,6 +71,7 @@ function jumpTo(emblaApi: EmblaApi, location: number) {
     vector.set(at);
   }
   engine.translate.to(at);
+  engine.index.set(engine.scrollTarget.byDistance(0, false).index);
 }
 
 /**
@@ -186,9 +187,12 @@ export const Carousel = React.forwardRef<HTMLDivElement, CarouselProps>(
     useRestorePosition(api, restoreKey);
     useFollowFocus(api);
 
+    // Embla's own answer is about the selected snap, which a free drag can
+    // leave short of the edge.
     const onSelect = React.useCallback((emblaApi: EmblaApi) => {
-      setCanScrollPrev(emblaApi.canScrollPrev());
-      setCanScrollNext(emblaApi.canScrollNext());
+      const { limit, target } = emblaApi.internalEngine();
+      setCanScrollPrev(target.get() < limit.max - 0.5);
+      setCanScrollNext(target.get() > limit.min + 0.5);
     }, []);
 
     const scrollPrev = React.useCallback(() => api?.scrollPrev(), [api]);
