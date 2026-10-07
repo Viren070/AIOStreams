@@ -23,19 +23,36 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
-/** Where the video sits on the stage, and how subtitles are placed over it. */
+/** Where the video sits on the stage, and the page's `sub-*` options for ASS. */
 internal data class AssLayout(
     val stageWidth: Int = 0,
     val stageHeight: Int = 0,
     val video: Rect = Rect(),
     val videoWidth: Int = 0,
     val videoHeight: Int = 0,
-    val fontScale: Float = 1f,
-    /** Percent from the bottom where unplaced lines sit. */
-    val linePosition: Double = 0.0,
-    /** Unplaced lines may go in the bars around the video. */
-    val useMargins: Boolean = false,
+    val scale: Double = 1.0,
+    /** mpv's `sub-pos`. */
+    val position: Double = 100.0,
+    val forceMargins: Boolean = false,
+    val style: AssStyle = AssStyle(),
 )
+
+/** mpv's `sub-ass-override`, and the look it forces on dialogue. Colours are ASS's RGBA. */
+internal data class AssStyle(
+    val override: Int = SCALE,
+    val color: Int = 0xFFFFFF00.toInt(),
+    val outlineColor: Int = 0x00000000,
+    val backColor: Int = 0x00000050,
+    val outlineSize: Double = 1.65,
+    val borderStyle: Int = 1,
+    val bold: Boolean = false,
+) {
+    companion object {
+        const val NONE = 0
+        const val SCALE = 1
+        const val FORCE = 2
+    }
+}
 
 /**
  * libass, drawing ASS into a surface of its own between the video and the
@@ -242,16 +259,31 @@ internal class AssSurface(context: Context, font: () -> File) : SurfaceHolder.Ca
         nativePost(native)
     }
 
+    // mpv's configure_ass(): its own options reach ASS only as far as the override allows.
     private fun applyLayout() {
         val stage = layout
         if (native == 0L || stage.stageWidth == 0 || width == 0) return
         val sx = width.toDouble() / stage.stageWidth
         val sy = height.toDouble() / stage.stageHeight
+        val style = stage.style
+        val force = style.override == AssStyle.FORCE
+        val useMargins = force || stage.forceMargins
+        var fontScale = if (style.override == AssStyle.NONE) 1.0 else stage.scale
+        if (force) {
+            // Sized to the screen rather than the video, as mpv's sub-scale-with-window does.
+            val videoWidth = stage.video.width() * sx
+            val videoHeight = stage.video.height() * sy
+            if (videoWidth >= 1) fontScale *= height / minOf(height.toDouble(), width / videoWidth * videoHeight)
+        }
         nativeSetLayout(
             native, stage.videoWidth, stage.videoHeight,
             (stage.video.top * sy).roundToInt(), ((stage.stageHeight - stage.video.bottom) * sy).roundToInt(),
             (stage.video.left * sx).roundToInt(), ((stage.stageWidth - stage.video.right) * sx).roundToInt(),
-            stage.useMargins, stage.fontScale, stage.linePosition,
+            useMargins, fontScale.toFloat(), if (style.override == AssStyle.NONE) 0.0 else 100 - stage.position,
+        )
+        nativeSetStyle(
+            native, style.override, style.color, style.outlineColor, style.backColor,
+            style.outlineSize, style.borderStyle, style.bold,
         )
     }
 
@@ -294,6 +326,12 @@ internal class AssSurface(context: Context, font: () -> File) : SurfaceHolder.Ca
         external fun nativeSetLayout(
             handle: Long, videoWidth: Int, videoHeight: Int, top: Int, bottom: Int, left: Int, right: Int,
             useMargins: Boolean, fontScale: Float, linePosition: Double,
+        )
+
+        @JvmStatic
+        external fun nativeSetStyle(
+            handle: Long, override: Int, color: Int, outlineColor: Int, backColor: Int,
+            outlineSize: Double, borderStyle: Int, bold: Boolean,
         )
 
         @JvmStatic

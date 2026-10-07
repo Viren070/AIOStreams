@@ -411,9 +411,10 @@ class ExoEngine(private val context: Context) :
 
     private fun updateLayout() {
         val next = layout.copy(
-            fontScale = style.scale.toFloat(),
-            linePosition = 100 - style.position,
-            useMargins = style.forceMargins,
+            scale = style.scale,
+            position = style.position,
+            forceMargins = style.forceMargins,
+            style = style.assStyle(),
         )
         layout = next
         if (next == sentLayout) return

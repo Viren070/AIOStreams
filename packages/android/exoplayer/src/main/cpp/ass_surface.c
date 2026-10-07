@@ -17,7 +17,8 @@
     X(library_init) X(library_done) X(set_message_cb) X(set_extract_fonts) X(add_font) X(clear_fonts) \
     X(renderer_init) X(renderer_done) X(set_fonts) X(set_frame_size) X(set_storage_size) X(set_margins) \
     X(set_use_margins) X(set_font_scale) X(set_line_position) X(new_track) X(free_track) \
-    X(process_codec_private) X(process_chunk) X(read_memory) X(render_frame)
+    X(process_codec_private) X(process_chunk) X(read_memory) X(render_frame) \
+    X(set_selective_style_override_enabled) X(set_selective_style_override)
 
 static struct {
 #define MEMBER(name) __typeof__(ass_##name) *name;
@@ -209,6 +210,39 @@ JNIEXPORT void JNICALL METHOD(nativeSetLayout)(
     libass.set_use_margins(renderer, useMargins);
     libass.set_font_scale(renderer, fontScale);
     libass.set_line_position(renderer, linePosition);
+}
+
+// `override` is AssStyle's NONE, SCALE or FORCE.
+JNIEXPORT void JNICALL METHOD(nativeSetStyle)(
+        JNIEnv *env, jclass clazz, jlong handle, jint override, jint color, jint outlineColor,
+        jint backColor, jdouble outlineSize, jint borderStyle, jboolean bold) {
+    ASS_Renderer *renderer = ((Surface *) handle)->renderer;
+    int flags = override ? ASS_OVERRIDE_BIT_SELECTIVE_FONT_SCALE : 0;
+    if (override == 2) {
+        flags |= ASS_OVERRIDE_BIT_FONT_NAME | ASS_OVERRIDE_BIT_FONT_SIZE_FIELDS | ASS_OVERRIDE_BIT_COLORS |
+                 ASS_OVERRIDE_BIT_BORDER | ASS_OVERRIDE_BIT_BLUR;
+    }
+    libass.set_selective_style_override_enabled(renderer, flags);
+    // mpv's defaults, in its 720-line units, scaled to the 288 lines the style is set at.
+    double scale = 288 / 720.0;
+    ASS_Style style = {
+        .FontName = "sans-serif",
+        .FontSize = 38 * scale,
+        .PrimaryColour = color,
+        .SecondaryColour = color,
+        .OutlineColour = outlineColor,
+        .BackColour = backColor,
+        .Bold = bold,
+        .ScaleX = 1,
+        .ScaleY = 1,
+        .BorderStyle = borderStyle,
+        .Outline = outlineSize * scale,
+        .Alignment = 2,
+        .MarginL = 19 * scale,
+        .MarginR = 19 * scale,
+        .MarginV = 34 * scale,
+    };
+    libass.set_selective_style_override(renderer, &style);
 }
 
 // Renders the track at `timeMs`; true when the picture changed and needs drawing.

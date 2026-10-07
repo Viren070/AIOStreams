@@ -27,7 +27,7 @@ internal class SubtitleStyle {
     private var backColor = Color.TRANSPARENT
     private var box = false
     private var bold = false
-    private var force = false
+    private var override = AssStyle.SCALE
 
     /** False for a property that isn't a subtitle style. */
     fun set(name: String, value: String): Boolean {
@@ -42,7 +42,11 @@ internal class SubtitleStyle {
             "sub-back-color" -> backColor = colorOf(value) ?: backColor
             "sub-border-style" -> box = value == "background-box"
             "sub-bold" -> bold = value == "yes"
-            "sub-ass-override" -> force = value == "force"
+            "sub-ass-override" -> override = when (value) {
+                "no" -> AssStyle.NONE
+                "force", "strip" -> AssStyle.FORCE
+                else -> AssStyle.SCALE
+            }
             else -> return false
         }
         return true
@@ -60,15 +64,26 @@ internal class SubtitleStyle {
                 if (bold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT,
             ),
         )
-        view.setApplyEmbeddedStyles(!force)
-        view.setApplyEmbeddedFontSizes(!force)
+        view.setApplyEmbeddedStyles(override != AssStyle.FORCE)
+        view.setApplyEmbeddedFontSizes(override != AssStyle.FORCE)
         view.setFractionalTextSize(SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * scale.toFloat())
         view.setBottomPaddingFraction(SubtitleView.DEFAULT_BOTTOM_PADDING_FRACTION + (100 - position.toFloat()) / 100)
     }
 
+    fun assStyle() = AssStyle(
+        override, assColor(color), assColor(outlineColor), assColor(backColor), outlineSize,
+        // mpv's numbers for outline-and-shadow and background-box.
+        if (box) 4 else 1,
+        bold,
+    )
+
     private companion object {
         /** mpv writes `#AARRGGBB`, as Android reads it. */
         fun colorOf(value: String) = runCatching { Color.parseColor(value) }.getOrNull()
+
+        /** ASS keeps alpha last, and counts it as transparency. */
+        fun assColor(argb: Int) =
+            (Color.red(argb) shl 24) or (Color.green(argb) shl 16) or (Color.blue(argb) shl 8) or (255 - Color.alpha(argb))
     }
 }
 
