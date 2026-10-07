@@ -432,35 +432,40 @@ function Menu({
       }
     >
       <DropdownMenuLabel>{label}</DropdownMenuLabel>
-      <div className="min-h-0 overflow-y-auto">
-        {options.map((option) => (
-          <DropdownMenuItem
-            key={option.id}
-            data-ui="player-menu-item"
-            data-selected={(value ?? '') === option.id || undefined}
-            onClick={() => onSelect(option.id === '' ? null : option.id)}
-          >
-            <LuCheck
-              className={cn(
-                'flex-none',
-                (value ?? '') === option.id ? 'opacity-100' : 'opacity-0'
-              )}
-            />
-            <span className="[overflow-wrap:anywhere]">{option.label}</span>
-          </DropdownMenuItem>
-        ))}
-        {action && (
-          <DropdownMenuItem
-            data-ui="player-menu-action"
-            data-name={action.name}
-            onClick={action.run}
-          >
-            {action.icon}
-            {action.label}
-          </DropdownMenuItem>
+      {/* The list scrolls under a pinned footer; a short screen scrolls both together. */}
+      <div className="-mx-2 flex min-h-0 flex-col overflow-x-hidden px-2 [@media(max-height:640px)]:overflow-y-auto">
+        <div className="min-h-0 overflow-y-auto [@media(max-height:640px)]:shrink-0 [@media(max-height:640px)]:overflow-y-visible">
+          {options.map((option) => (
+            <DropdownMenuItem
+              key={option.id}
+              data-ui="player-menu-item"
+              data-selected={(value ?? '') === option.id || undefined}
+              onClick={() => onSelect(option.id === '' ? null : option.id)}
+            >
+              <LuCheck
+                className={cn(
+                  'flex-none',
+                  (value ?? '') === option.id ? 'opacity-100' : 'opacity-0'
+                )}
+              />
+              <span className="[overflow-wrap:anywhere]">{option.label}</span>
+            </DropdownMenuItem>
+          ))}
+          {action && (
+            <DropdownMenuItem
+              data-ui="player-menu-action"
+              data-name={action.name}
+              onClick={action.run}
+            >
+              {action.icon}
+              {action.label}
+            </DropdownMenuItem>
+          )}
+        </div>
+        {footer && (
+          <div className="-mx-2 mt-1 shrink-0 border-t px-2">{footer}</div>
         )}
       </div>
-      {footer && <div className="-mx-2 mt-1 border-t px-2">{footer}</div>}
     </DropdownMenu>
   );
 }
