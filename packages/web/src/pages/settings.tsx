@@ -1245,6 +1245,7 @@ function DownloadsSection() {
   const [concurrent, setConcurrent] = useSetting(settings.downloads.concurrent);
   const [searches, setSearches] = useSetting(settings.downloads.searches);
   const [subtitles, setSubtitles] = useSetting(settings.downloads.subtitles);
+  const [wifiOnly, setWifiOnly] = useSetting(settings.downloads.wifiOnly);
   const button = 'w-full rounded-full sm:w-auto';
   return (
     <SettingsCard description={ON_DEVICE}>
@@ -1319,6 +1320,15 @@ function DownloadsSection() {
           help="Subtitle files go next to the video, named so players find them."
           value={subtitles}
           onValueChange={setSubtitles}
+        />
+      )}
+      {currentHost().name === 'android-app' && (
+        <Switch
+          side="right"
+          label="Only on Wi-Fi"
+          help="Downloads wait for Wi-Fi or another unmetered network rather than use mobile data."
+          value={wifiOnly}
+          onValueChange={setWifiOnly}
         />
       )}
     </SettingsCard>

@@ -366,7 +366,10 @@ export function useDownloadRunner(): void {
       setReady(true);
     });
     const configure = () =>
-      host.configure({ concurrent: settings.downloads.concurrent.read() });
+      host.configure({
+        concurrent: settings.downloads.concurrent.read(),
+        wifiOnly: settings.downloads.wifiOnly.read(),
+      });
     configure();
     const unsubscribeSettings = onSettingsChange(configure);
     return () => {

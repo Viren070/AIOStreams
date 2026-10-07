@@ -84,7 +84,8 @@ export interface DownloadsHost {
   remove(id: string, files: boolean): void;
   /** Asks for a `state` event. */
   list(): void;
-  configure(opts: { concurrent: number }): void;
+  /** `wifiOnly` makes downloads wait while only a metered network is up. */
+  configure(opts: { concurrent: number; wifiOnly: boolean }): void;
   subscribe(listener: (event: HostEvent) => void): () => void;
   /** Picks and shows the folder; the folder's own name comes in `state`. */
   folder?: { choose(): void; open(id?: string): void };

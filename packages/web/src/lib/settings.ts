@@ -582,6 +582,7 @@ export const settings = {
       DOWNLOAD_SEARCHES
     ),
     subtitles: device<boolean>('aiostreams-web-download-subtitles', true),
+    wifiOnly: device<boolean>('aiostreams-web-download-wifi-only', true),
   },
 };
 

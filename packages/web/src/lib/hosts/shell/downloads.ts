@@ -5,13 +5,14 @@ function send(message: { type: string; [key: string]: unknown }) {
   appBridge()?.send(message);
 }
 
-/** The desktop app's download queue, which keeps going while the page reloads. */
+/** The apps' download queue, which keeps going while the page reloads. */
 export const shellDownloads: DownloadsHost = {
   add: (jobs) => send({ type: 'download-add', jobs }),
   control: (id, action) => send({ type: 'download-control', id, action }),
   remove: (id, files) => send({ type: 'download-remove', id, files }),
   list: () => send({ type: 'download-list' }),
-  configure: ({ concurrent }) => send({ type: 'download-config', concurrent }),
+  configure: ({ concurrent, wifiOnly }) =>
+    send({ type: 'download-config', concurrent, wifiOnly }),
   subscribe: (listener) =>
     appBridge()?.subscribe((m) => {
       if (m.type === 'download-state')
@@ -25,8 +26,4 @@ export const shellDownloads: DownloadsHost = {
           speed: m.speed,
         });
     }) ?? (() => {}),
-  folder: {
-    choose: () => send({ type: 'download-folder' }),
-    open: (id) => send({ type: 'download-open', id: id ?? null }),
-  },
 };

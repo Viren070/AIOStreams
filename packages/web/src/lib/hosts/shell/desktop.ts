@@ -59,7 +59,14 @@ export const desktopHost: Host = {
   device: () => ({ name: appBridge()?.device }),
   usePlayer: useShellPlayer,
   playerFeatures: ['audio', 'chapters', 'stats'],
-  downloads: shellDownloads,
+  downloads: {
+    ...shellDownloads,
+    folder: {
+      choose: () => appBridge()?.send({ type: 'download-folder' }),
+      open: (id) =>
+        appBridge()?.send({ type: 'download-open', id: id ?? null }),
+    },
+  },
   back: () => {
     if (!windowFullscreen) return false;
     appBridge()?.send({ type: 'fullscreen', value: false });
