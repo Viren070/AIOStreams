@@ -357,12 +357,30 @@ export function normaliseParsedMediaInfo(
 ): ParsedMediaInfo | undefined {
   if (!parsedMediaInfo) return undefined;
 
-  const languages = normaliseLanguageList(parsedMediaInfo.languages ?? []);
-  const subtitles = normaliseLanguageList(parsedMediaInfo.subtitles ?? []);
+  const audioTracks = normaliseTrackList(parsedMediaInfo.audioTracks);
+  const subtitleTracks = normaliseTrackList(parsedMediaInfo.subtitleTracks);
+
+  const languages =
+    parsedMediaInfo.languages !== undefined
+      ? normaliseLanguageList(parsedMediaInfo.languages)
+      : normaliseLanguageList(
+          audioTracks.map((track) => track.lang).filter((l): l is string => !!l)
+        );
+  const subtitles =
+    parsedMediaInfo.subtitles !== undefined
+      ? normaliseLanguageList(parsedMediaInfo.subtitles)
+      : normaliseLanguageList(
+          subtitleTracks
+            .map((track) => track.lang)
+            .filter((l): l is string => !!l)
+        );
 
   const audioTags = [
     ...new Set(
-      (parsedMediaInfo.audioTags ?? []).filter((tag) =>
+      (parsedMediaInfo.audioTags !== undefined
+        ? parsedMediaInfo.audioTags
+        : audioTracks.flatMap((track) => track.tags ?? [])
+      ).filter((tag) =>
         constants.AUDIO_TAGS.includes(
           tag as (typeof constants.AUDIO_TAGS)[number]
         )
@@ -371,7 +389,12 @@ export function normaliseParsedMediaInfo(
   ];
   const audioChannels = [
     ...new Set(
-      (parsedMediaInfo.audioChannels ?? []).filter((channel) =>
+      (parsedMediaInfo.audioChannels !== undefined
+        ? parsedMediaInfo.audioChannels
+        : audioTracks
+            .map((track) => track.channels)
+            .filter((c): c is string => !!c)
+      ).filter((channel) =>
         constants.AUDIO_CHANNELS.includes(
           channel as (typeof constants.AUDIO_CHANNELS)[number]
         )
@@ -401,8 +424,6 @@ export function normaliseParsedMediaInfo(
       : undefined;
   }
 
-  const audioTracks = normaliseTrackList(parsedMediaInfo.audioTracks);
-  const subtitleTracks = normaliseTrackList(parsedMediaInfo.subtitleTracks);
   const videoIndex = asStreamIndex(parsedMediaInfo.videoIndex);
 
   const hasAnyData =
