@@ -33,6 +33,8 @@ jobs:
             label: desktop
           - app: smart-tv
             label: TV
+          - app: android
+            label: Android
     env:
       # A token of its own lets the pull request run CI, as release-please's do.
       GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}

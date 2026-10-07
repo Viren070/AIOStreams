@@ -43,9 +43,17 @@ jobs:
         run: |
           gh workflow run --repo ${GITHUB_REPOSITORY} smart-tv-release.yml --ref ${TAG_NAME} -f tag=${TAG_NAME}
 
+      - name: Trigger Android Release
+        if: ${{ steps.release.outputs['packages/android--release_created'] }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ steps.release.outputs['packages/android--tag_name'] }}
+        run: |
+          gh workflow run --repo ${GITHUB_REPOSITORY} android-release.yml --ref ${TAG_NAME} -f tag=${TAG_NAME}
+
       # GitHub marks the newest release latest, and the README's release badge and link follow it.
       - name: Keep the server's release latest
-        if: ${{ steps.release.outputs['packages/desktop--release_created'] || steps.release.outputs['packages/smart-tv--release_created'] || steps.release.outputs['packages/seanime-extensions--release_created'] }}
+        if: ${{ steps.release.outputs['packages/desktop--release_created'] || steps.release.outputs['packages/smart-tv--release_created'] || steps.release.outputs['packages/android--release_created'] || steps.release.outputs['packages/seanime-extensions--release_created'] }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

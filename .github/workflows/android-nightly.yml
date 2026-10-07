@@ -1,0 +1,45 @@
+name: Android Nightly
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/android/**'
+      - '!packages/android/web-app.lock'
+      - '!packages/android/README.md'
+      - '!packages/android/CHANGELOG.md'
+      - 'packages/web/**'
+      - 'packages/ui/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# A newer push replaces a nightly still building. A release commit builds nothing, so it
+# runs in a group of its own instead of cancelling one.
+concurrency:
+  group: "${{ startsWith(github.event.head_commit.message, 'chore(android): release ') && format('android-nightly-skip-{0}', github.run_id) || 'android-nightly' }}"
+  cancel-in-progress: true
+
+jobs:
+  version:
+    if: "${{ !startsWith(github.event.head_commit.message, 'chore(android): release ') }}"
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      # Ahead of the last release, so a nightly always reads as newer than it.
+      - id: version
+        run: |
+          current=$(jq -r '."packages/android"' .release-please-manifest.json)
+          IFS=. read -r major minor patch <<< "$current"
+          echo "version=$major.$minor.$((patch + 1))-nightly.$(date -u +%Y%m%d%H%M)" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: version
+    uses: ./.github/workflows/android-build.yml
+    secrets: inherit
+    with:
+      version: ${{ needs.version.outputs.version }}
+      channel: nightly

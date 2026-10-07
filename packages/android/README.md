@@ -29,12 +29,12 @@ newer build installs over an older one.
 
 The release builds are signed with a key the repository keeps as secrets:
 
-| Secret | Value |
-| --- | --- |
-| `ANDROID_KEYSTORE_BASE64` | The keystore, base64-encoded |
-| `ANDROID_KEYSTORE_PASSWORD` | Its password |
-| `ANDROID_KEY_ALIAS` | The key's alias |
-| `ANDROID_KEY_PASSWORD` | The key's password |
+| Secret                      | Value                        |
+| --------------------------- | ---------------------------- |
+| `ANDROID_KEYSTORE_BASE64`   | The keystore, base64-encoded |
+| `ANDROID_KEYSTORE_PASSWORD` | Its password                 |
+| `ANDROID_KEY_ALIAS`         | The key's alias              |
+| `ANDROID_KEY_PASSWORD`      | The key's password           |
 
 ```sh
 keytool -genkeypair -keystore release.keystore -alias aiostreams -keyalg RSA -keysize 4096 -validity 36500

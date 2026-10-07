@@ -2,5 +2,6 @@
   ".": "2.35.9",
   "packages/seanime-extensions": "0.10.2",
   "packages/desktop": "0.11.0",
-  "packages/smart-tv": "0.2.0"
+  "packages/smart-tv": "0.2.0",
+  "packages/android": "0.1.0"
 }

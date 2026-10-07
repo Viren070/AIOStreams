@@ -1,0 +1,52 @@
+name: Android Check
+
+# Builds the Android app when it changes. A manual run leaves the debug APKs on
+# the run as artifacts.
+on:
+  pull_request:
+    paths: &android
+      - 'packages/android/**'
+      - '!packages/android/**/*.md'
+      - '!packages/android/web-app.lock'
+      - '.github/workflows/android-*.yml'
+  push:
+    branches: [main]
+    paths: *android
+  workflow_dispatch:
+
+concurrency:
+  group: android-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: "${{ !startsWith(github.head_ref, 'release-please--') && !startsWith(github.event.head_commit.message, 'chore(android): release ') }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter "@aiostreams/web..."
+      - run: pnpm -F @aiostreams/web build:standalone
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Install the SDK platform
+        run: |
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$sdkmanager" --licenses >/dev/null
+          "$sdkmanager" --install "platforms;android-37.2" >/dev/null
+      - working-directory: packages/android
+        run: ./gradlew :app:assembleDebug
+      - if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v7
+        with:
+          name: aiostreams-android-debug
+          path: packages/android/app/build/outputs/apk/debug/*.apk
+          compression-level: 0

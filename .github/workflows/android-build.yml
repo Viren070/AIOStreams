@@ -1,0 +1,104 @@
+name: Android Build
+
+# Builds, signs and publishes the Android app, an APK per processor. A channel's
+# newest build lives on one release that every build replaces, beside the
+# update.json installed copies read, so the app always finds it at one address.
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: SemVer for this build
+        required: true
+        type: string
+      channel:
+        description: stable or nightly
+        required: true
+        type: string
+      release:
+        description: Versioned release to attach the APKs to, if any
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ inputs.version }}
+      FEED: ${{ inputs.channel == 'nightly' && 'android-nightly' || 'android' }}
+      TITLE: ${{ inputs.channel == 'nightly' && 'Android app, nightly' || 'Android app' }}
+      SUFFIX: ${{ inputs.channel == 'nightly' && '-nightly' || '' }}
+      PRERELEASE: ${{ inputs.channel == 'nightly' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter "@aiostreams/web..."
+      - run: pnpm -F @aiostreams/web build:standalone
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Install the SDK platform
+        run: |
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$sdkmanager" --licenses >/dev/null
+          "$sdkmanager" --install "platforms;android-37.2" >/dev/null
+      - name: Build
+        working-directory: packages/android
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::The ANDROID_KEYSTORE_BASE64 secret is missing; see packages/android/README.md"
+            exit 1
+          fi
+          export ANDROID_KEYSTORE="$RUNNER_TEMP/release.keystore"
+          echo "$KEYSTORE_BASE64" | base64 -d >"$ANDROID_KEYSTORE"
+          # Minutes since 2024, so every build, either channel, counts past the one before.
+          code=$(( ($(date -u +%s) - 1704067200) / 60 ))
+          # Without the configuration cache, which would keep the passwords.
+          ./gradlew --no-configuration-cache :app:assembleRelease \
+            -Paiostreams.version="$VERSION" -Paiostreams.versionCode="$code"
+          mkdir -p out
+          apks='{}'
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            name="aiostreams-android-$abi$SUFFIX.apk"
+            cp "app/build/outputs/apk/release/app-$abi-release.apk" "out/$name"
+            apks=$(jq --arg abi "$abi" --arg name "$name" \
+              --arg sha256 "$(sha256sum "out/$name" | cut -d' ' -f1)" \
+              --argjson size "$(stat -c %s "out/$name")" \
+              '.[$abi] = {name: $name, sha256: $sha256, size: $size}' <<<"$apks")
+          done
+          jq -n --arg version "$VERSION" --argjson code "$code" --argjson apks "$apks" \
+            '{version: $version, versionCode: $code, apks: $apks}' >out/update.json
+          cat out/update.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: aiostreams-android-${{ inputs.version }}
+          path: packages/android/out
+          compression-level: 0
+      - name: Publish to the feed
+        run: |
+          base="https://github.com/${{ github.repository }}/releases/download/$FEED"
+          sed -e "s|@BASE@|$base|g" -e "s|@SUFFIX@|$SUFFIX|g" packages/android/feed-release.md >notes.md
+          if gh release view "$FEED" >/dev/null 2>&1; then
+            gh release edit "$FEED" --prerelease="$PRERELEASE" --title "$TITLE" --notes-file notes.md
+          else
+            gh release create "$FEED" --prerelease="$PRERELEASE" --latest=false --title "$TITLE" --notes-file notes.md
+          fi
+          # The APKs first, so update.json never names one that isn't there yet.
+          gh release upload "$FEED" packages/android/out/*.apk --clobber
+          gh release upload "$FEED" packages/android/out/update.json --clobber
+      - name: Attach to the release
+        if: inputs.release != ''
+        run: gh release upload "${{ inputs.release }}" packages/android/out/*.apk --clobber
