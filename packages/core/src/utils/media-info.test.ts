@@ -25,6 +25,18 @@ describe('parseMediaInfo', () => {
     const result = parseMediaInfo({ audio: [{ codec: 'aac', lang: 'eng' }] });
     assert.equal(result?.visualTags, undefined);
   });
+
+  it('leaves visual tags unset when the video section reports neither hdr nor bit depth', () => {
+    const result = parseMediaInfo({
+      video: { codec: 'hevc', w: 1920, h: 1080 },
+    });
+    assert.equal(result?.visualTags, undefined);
+  });
+
+  it('confirms the 10bit tag from bit depth alone, even without hdr info', () => {
+    const result = parseMediaInfo({ video: { codec: 'hevc', bit_depth: 10 } });
+    assert.deepEqual(result?.visualTags, ['10bit']);
+  });
 });
 
 describe('normaliseParsedMediaInfo', () => {
