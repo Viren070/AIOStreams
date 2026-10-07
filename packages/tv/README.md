@@ -1,6 +1,6 @@
 # AIOStreams TV apps
 
-The AIOStreams app (`packages/jellyfin-web`) packaged for LG (webOS) and Samsung (Tizen) TVs. Each
+The AIOStreams app (`packages/web`) packaged for LG (webOS) and Samsung (Tizen) TVs. Each
 package holds the web app's standalone build, which picks its own server, plus the platform's
 manifest and icons, and `boot.js`, which runs first. The TV loads the files from the package. LG
 TVs play through the page's `<video>` element, Samsung TVs through Samsung's own player (AVPlay),

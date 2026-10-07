@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build:webos": "pnpm -F @aiostreams/jellyfin-web build:standalone && node scripts/build.mjs webos",
-    "build:tizen": "pnpm -F @aiostreams/jellyfin-web build:standalone && node scripts/build.mjs tizen"
+    "build:webos": "pnpm -F @aiostreams/web build:standalone && node scripts/build.mjs webos",
+    "build:tizen": "pnpm -F @aiostreams/web build:standalone && node scripts/build.mjs tizen"
   },
   "devDependencies": {
     "@webos-tools/cli": "^3.2.6",

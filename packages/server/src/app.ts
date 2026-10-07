@@ -100,7 +100,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export const frontendRoot = path.join(__dirname, '../../frontend/dist');
-export const jellyfinWebRoot = path.join(__dirname, '../../jellyfin-web/dist');
+export const jellyfinWebRoot = path.join(__dirname, '../../web/dist');
 export const staticRoot = path.join(__dirname, './static');
 
 app.use(ipMiddleware);

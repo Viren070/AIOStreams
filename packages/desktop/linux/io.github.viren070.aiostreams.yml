@@ -158,7 +158,7 @@ modules:
           - linux/.flatpak-builder
           - linux/screenshots
       - type: dir
-        path: ../../jellyfin-web/dist-standalone
+        path: ../../web/dist-standalone
         dest: web
       - type: file
         path: ../../../LICENSE

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Assembles AIOStreams.app from a release build, on a Mac:
 #   ./scripts/make-app-macos.sh <version> <output dir>
-# The web app is expected in jellyfin-web/dist-standalone.
+# The web app is expected in web/dist-standalone.
 set -euo pipefail
 
 version=$1
@@ -12,7 +12,7 @@ app="$out/AIOStreams.app"
 rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Frameworks" "$app/Contents/Resources"
 cp "$desktop/target/release/aiostreams-desktop" "$app/Contents/MacOS/"
-cp -R "$desktop/../jellyfin-web/dist-standalone" "$app/Contents/Resources/web"
+cp -R "$desktop/../web/dist-standalone" "$app/Contents/Resources/web"
 cp "$desktop/THIRD-PARTY.md" "$app/Contents/Resources/"
 # From `cargo about`, when the caller generated it.
 if [ -f "$desktop/target/third-party-licenses.html" ]; then

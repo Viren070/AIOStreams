@@ -41,12 +41,12 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-      - run: pnpm install --frozen-lockfile --filter "@aiostreams/jellyfin-web..."
-      - run: pnpm -F @aiostreams/jellyfin-web build:standalone
+      - run: pnpm install --frozen-lockfile --filter "@aiostreams/web..."
+      - run: pnpm -F @aiostreams/web build:standalone
       - uses: actions/upload-artifact@v7
         with:
           name: web
-          path: packages/jellyfin-web/dist-standalone
+          path: packages/web/dist-standalone
           retention-days: 1
 
   # The Rust crates' licences, a page per target, made once for every build;
@@ -154,7 +154,7 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           name: web
-          path: packages/jellyfin-web/dist-standalone
+          path: packages/web/dist-standalone
 
       - uses: actions/download-artifact@v8
         with:
@@ -192,7 +192,7 @@ jobs:
           Copy-Item packages/desktop/vendor/${{ matrix.mpv }}/libmpv-2.dll $stage
           Copy-Item packages/desktop/vendor/${{ matrix.mpv }}/vulkan "$stage/vulkan" -Recurse
           Copy-Item packages/desktop/THIRD-PARTY.md $stage
-          Copy-Item packages/jellyfin-web/dist-standalone "$stage/web" -Recurse
+          Copy-Item packages/web/dist-standalone "$stage/web" -Recurse
           Copy-Item packages/desktop/licences/${{ matrix.target }}.html "$stage/third-party-licenses.html"
 
       - name: Pack
@@ -255,7 +255,7 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           name: web
-          path: packages/jellyfin-web/dist-standalone
+          path: packages/web/dist-standalone
 
       - uses: actions/setup-dotnet@v6
         with:
@@ -373,7 +373,7 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           name: web
-          path: packages/jellyfin-web/dist-standalone
+          path: packages/web/dist-standalone
 
       - name: Install Flatpak
         run: |

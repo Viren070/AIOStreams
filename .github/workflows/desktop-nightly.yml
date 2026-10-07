@@ -9,7 +9,7 @@ on:
       - '!packages/desktop/README.md'
       - '!packages/desktop/CHANGELOG.md'
       - '!packages/desktop/linux/screenshots/**'
-      - 'packages/jellyfin-web/**'
+      - 'packages/web/**'
       - 'packages/ui/**'
   workflow_dispatch:
     inputs:

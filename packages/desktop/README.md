@@ -1,6 +1,6 @@
 # AIOStreams Desktop
 
-The AIOStreams app (`packages/jellyfin-web`) in a native window, playing through mpv. It
+The AIOStreams app (`packages/web`) in a native window, playing through mpv. It
 runs on Windows, Linux and macOS, with downloads for each, and is in alpha. This file
 covers building it and how it works; using it is in the docs'
 [Desktop app guide](https://docs.aiostreams.viren070.me/guides/desktop-app).
@@ -60,7 +60,7 @@ The code is a Cargo workspace, outside the pnpm build:
 The page comes first on every platform:
 
 ```sh
-pnpm -F @aiostreams/jellyfin-web build:standalone   # into jellyfin-web/dist-standalone
+pnpm -F @aiostreams/web build:standalone   # into web/dist-standalone
 ```
 
 A debug build finds the page in the repo, and on Windows libmpv too. A release build looks next to
@@ -122,7 +122,7 @@ from a release build.
 
 | Flag                          | Does                                                                            |
 | ----------------------------- | ------------------------------------------------------------------------------- |
-| `--web <url>`                 | Loads this page instead, e.g. `pnpm -F @aiostreams/jellyfin-web dev:standalone` |
+| `--web <url>`                 | Loads this page instead, e.g. `pnpm -F @aiostreams/web dev:standalone` |
 | `--web-dir <dir>`             | Serves the standalone build from this folder                                    |
 | `--devtools`                  | Allows DevTools in a release build                                              |
 | `--remote-debugging-port <n>` | Opens the web view's debugging port, for driving tests                          |

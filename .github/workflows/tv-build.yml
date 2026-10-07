@@ -35,12 +35,12 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-      - run: pnpm install --frozen-lockfile --filter "@aiostreams/jellyfin-web..."
-      - run: pnpm -F @aiostreams/jellyfin-web build:standalone
+      - run: pnpm install --frozen-lockfile --filter "@aiostreams/web..."
+      - run: pnpm -F @aiostreams/web build:standalone
       - uses: actions/upload-artifact@v7
         with:
           name: tv-web
-          path: packages/jellyfin-web/dist-standalone
+          path: packages/web/dist-standalone
           retention-days: 1
 
   webos:
@@ -60,7 +60,7 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           name: tv-web
-          path: packages/jellyfin-web/dist-standalone
+          path: packages/web/dist-standalone
       - working-directory: packages/tv
         run: |
           node scripts/build.mjs webos
@@ -93,7 +93,7 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           name: tv-web
-          path: packages/jellyfin-web/dist-standalone
+          path: packages/web/dist-standalone
       - working-directory: packages/tv
         run: |
           node scripts/build.mjs tizen

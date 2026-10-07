@@ -1,6 +1,6 @@
 #!/bin/sh
 # Builds the Linux app as a Flatpak bundle, from the standalone web app built beforehand:
-#   pnpm -F jellyfin-web build:standalone && packages/desktop/scripts/make-flatpak.sh
+#   pnpm -F web build:standalone && packages/desktop/scripts/make-flatpak.sh
 set -e
 desktop=$(cd "$(dirname "$0")/.." && pwd)
 linux="$desktop/linux"
@@ -8,8 +8,8 @@ linux="$desktop/linux"
 work=${FLATPAK_WORK:-$linux}
 id=io.github.viren070.aiostreams
 
-if [ ! -f "$desktop/../jellyfin-web/dist-standalone/index.html" ]; then
-  echo "Build the web app first: pnpm -F jellyfin-web build:standalone" >&2
+if [ ! -f "$desktop/../web/dist-standalone/index.html" ]; then
+  echo "Build the web app first: pnpm -F web build:standalone" >&2
   exit 1
 fi
 

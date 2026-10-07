@@ -33,7 +33,7 @@ function run(command, args, options = {}) {
 function stageApp(manifest, withVersion, scripts = []) {
   const stage = join(out, platform);
   rmSync(stage, { recursive: true, force: true });
-  cpSync(join(root, '../jellyfin-web/dist-standalone'), stage, {
+  cpSync(join(root, '../web/dist-standalone'), stage, {
     recursive: true,
   });
   cpSync(join(root, platform), stage, { recursive: true });

@@ -108,7 +108,7 @@ fn web_dir(args: &Args) -> PathBuf {
     if cfg!(debug_assertions) {
         candidates.push(PathBuf::from(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../jellyfin-web/dist-standalone"
+            "/../../web/dist-standalone"
         )));
     }
     candidates
@@ -117,7 +117,7 @@ fn web_dir(args: &Args) -> PathBuf {
         .cloned()
         .unwrap_or_else(|| {
             platform::fatal(&format!(
-                "The web app was not found. Build it with `pnpm -F @aiostreams/jellyfin-web build:standalone`. Looked in:\n{}",
+                "The web app was not found. Build it with `pnpm -F @aiostreams/web build:standalone`. Looked in:\n{}",
                 candidates
                     .iter()
                     .map(|p| p.display().to_string())
