@@ -4,6 +4,7 @@ import { href, to } from '../lib/paths';
 import { FocusRing } from './cards';
 import { MediaRow } from './media-row';
 import type { BaseItemPerson } from '../lib/types';
+import { CachedImage } from './cached-image';
 
 const PERSON_WIDTH = 'basis-[6.5rem] sm:basis-[7.5rem]';
 
@@ -30,7 +31,7 @@ export function PersonCard({
         className="relative mx-auto size-20 overflow-hidden rounded-full bg-gray-900 ring-1 ring-white/10 transition group-hover:ring-white/40 sm:size-24"
       >
         {image ? (
-          <img
+          <CachedImage
             src={image}
             alt=""
             loading="lazy"

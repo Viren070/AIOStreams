@@ -82,6 +82,7 @@ import { BackdropFrame } from '../components/hero';
 import type { BaseItemDto } from '../lib/types';
 import { useHold } from '../lib/use-hold';
 import { useExternalReturn } from '../lib/playback/external-return';
+import { CachedImage } from '../components/cached-image';
 
 export function ItemPage({
   itemId,
@@ -178,7 +179,7 @@ function Backdrop({
   const src = sources[attempt];
   const wash = attempt >= images.length;
   const image = src && (
-    <img
+    <CachedImage
       key={src}
       data-ui="item-backdrop-image"
       data-wash={wash || undefined}
@@ -352,7 +353,7 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
       className="flex flex-col gap-6 md:flex-row md:items-end md:gap-8"
     >
       {poster && (
-        <img
+        <CachedImage
           data-ui="item-poster"
           src={poster}
           alt=""
@@ -366,7 +367,7 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
       )}
       <div className="min-w-0 max-w-3xl flex-1 space-y-4">
         {logo && !logoFailed ? (
-          <img
+          <CachedImage
             data-ui="item-logo"
             src={logo}
             alt={item.Name ?? ''}
@@ -684,7 +685,7 @@ function Seasons({
                 >
                   <div className="relative aspect-[2/3] overflow-hidden rounded-lg bg-gray-900">
                     {poster && (
-                      <img
+                      <CachedImage
                         src={poster}
                         alt=""
                         loading="lazy"

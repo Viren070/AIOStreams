@@ -21,6 +21,7 @@ import { usePlaybackPrefs } from '../lib/user-config';
 import { useLatest } from '../lib/use-latest';
 import type { PlayerController } from '../lib/playback/controller';
 import type { BaseItemDto, MediaSegmentDto, SourceInfo } from '../lib/types';
+import { CachedImage } from './cached-image';
 
 type Direction = 'previous' | 'next';
 
@@ -342,7 +343,7 @@ export function useNextEpisodePrompt({
         className="fixed bottom-24 right-4 z-20 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-white/10 bg-gray-950/90 shadow-2xl backdrop-blur duration-300 animate-in fade-in-0 slide-in-from-right-4"
       >
         {image && (
-          <img
+          <CachedImage
             data-ui="next-episode-image"
             src={image}
             alt=""
@@ -426,7 +427,7 @@ function StillWatching({
     >
       <div className="w-full max-w-sm space-y-5 text-center">
         {image && (
-          <img
+          <CachedImage
             data-ui="still-watching-image"
             src={image}
             alt=""

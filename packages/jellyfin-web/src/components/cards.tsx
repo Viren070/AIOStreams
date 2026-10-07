@@ -5,6 +5,7 @@ import { cn } from '@aiostreams/ui/core/styling';
 import { useInView } from '../lib/use-in-view';
 import { canShrink, shrinkArtwork } from '../lib/artwork';
 import { settings, useSetting } from '../lib/settings';
+import { CachedImage } from './cached-image';
 
 type Sources = string | string[] | null;
 
@@ -133,7 +134,7 @@ export function Artwork({
           onPlain={() => setPlain(current)}
         />
       ) : (
-        <img
+        <CachedImage
           ref={measure}
           data-ui="artwork"
           src={current}

@@ -41,6 +41,7 @@ export function useShowPicks() {
   const { client, user } = useSession();
   return useQuery({
     queryKey: usePicksKey(),
+    meta: { cache: 'account' },
     queryFn: async () => {
       const prefs = await client.get<{
         CustomPrefs?: Record<string, string | null>;

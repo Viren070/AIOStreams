@@ -10,6 +10,8 @@ import {
 } from './credentials';
 import { storage } from './storage';
 import { syncPreferences } from './settings';
+import { forgetSavedUser, forgetUser, savedUser, saveUser } from './cache';
+import { watchServer } from './connection';
 import type {
   AuthenticationResult,
   Branding,
@@ -61,6 +63,7 @@ export function endSession(base: string, token: string | null): void {
       .post('/Sessions/Logout')
       .catch(() => undefined);
   }
+  forgetUser(base, readCredentials(base)?.userId);
   clearCredentials(base);
   storage.remove(lastUserKey(base));
 }
@@ -91,6 +94,7 @@ export function pickerAccount(base: string): string {
 export function useSessionPhase(base: string) {
   const queryClient = useQueryClient();
   const [phase, setPhase] = React.useState<SessionPhase>({ kind: 'loading' });
+  React.useEffect(() => watchServer(base), [base]);
 
   const adopt = React.useCallback(
     (proof: JellyfinClient, auth: AuthenticationResult) => {
@@ -101,6 +105,7 @@ export function useSessionPhase(base: string) {
         userId: user.Id!,
       });
       storage.set(lastUserKey(base), user.Id);
+      saveUser(base, user);
       setPhase({
         kind: 'ready',
         client: proof.withToken(auth.AccessToken!),
@@ -165,18 +170,31 @@ export function useSessionPhase(base: string) {
       const stored = readCredentials(base);
       if (stored) {
         const client = anonymous.withToken(stored.token);
+        // Opens with the saved user at once; the server's answer replaces it.
+        const saved = savedUser(base, stored.userId);
+        if (saved && !cancelled)
+          setPhase({ kind: 'ready', client, user: saved });
         const me = await client.get<UserDto>('/Users/Me').then(
           (user) => ({ user }),
           (error: unknown) => ({ error })
         );
         if ('user' in me) {
-          if (!cancelled) setPhase({ kind: 'ready', client, user: me.user });
+          saveUser(base, me.user);
+          if (!cancelled)
+            setPhase((current) =>
+              current.kind === 'ready' &&
+              current.client === client &&
+              JSON.stringify(current.user) === JSON.stringify(me.user)
+                ? current
+                : { kind: 'ready', client, user: me.user }
+            );
           return;
         }
         if (!isUnauthorized(me.error)) {
-          if (!cancelled) setPhase({ kind: 'unreachable' });
+          if (!cancelled && !saved) setPhase({ kind: 'unreachable' });
           return;
         }
+        forgetSavedUser(base);
       }
       if (!__STANDALONE__ && hasConfigSessionCookie() && !signedOut(base)) {
         const auth = await configSessionToken<WebTokenResult>().catch(

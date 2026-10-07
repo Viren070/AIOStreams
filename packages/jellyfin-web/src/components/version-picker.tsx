@@ -44,6 +44,7 @@ import { backdropUrl, landscapeUrl } from '../lib/images';
 import { itemPath, navigate, to } from '../lib/paths';
 import { settings, useSetting } from '../lib/settings';
 import type { BaseItemDto, SourceInfo } from '../lib/types';
+import { CachedImage } from './cached-image';
 
 interface Request {
   item: BaseItemDto;
@@ -282,7 +283,7 @@ function Versions({
           className="pointer-events-none absolute inset-x-0 top-0 overflow-hidden"
           style={{ height: artHeight }}
         >
-          <img
+          <CachedImage
             src={art}
             alt=""
             className="absolute inset-x-0 top-0 aspect-video min-h-full w-full object-cover opacity-25"

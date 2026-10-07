@@ -1,5 +1,6 @@
 import { storage } from './storage';
 import { currentHost } from './hosts';
+import { reached, unreachable } from './connection';
 
 // The desktop app is its own client, on the computer it runs on.
 const shell = window.aiostreamsDesktop;
@@ -66,6 +67,15 @@ export class JellyfinError extends Error {
   }
 }
 
+/** No answer from the server itself: offline, or a proxy in front of it says it is down. */
+export class ConnectionError extends Error {
+  constructor() {
+    super("Can't reach the server");
+  }
+}
+
+const GATEWAY_DOWN = new Set([502, 504, 520, 521, 522, 523, 524, 530]);
+
 /** A minimal client for the Jellyfin API this server speaks. */
 export class JellyfinClient {
   readonly deviceId = deviceId();
@@ -110,12 +120,23 @@ export class JellyfinClient {
       Authorization: this.authorization,
     };
     if (init.body !== undefined) headers['Content-Type'] = 'application/json';
-    const res = await fetch(this.url(path, init.query), {
-      method,
-      headers,
-      body: init.body === undefined ? undefined : JSON.stringify(init.body),
-      keepalive: init.keepalive,
-    });
+    let res: Response;
+    try {
+      res = await fetch(this.url(path, init.query), {
+        method,
+        headers,
+        body: init.body === undefined ? undefined : JSON.stringify(init.body),
+        keepalive: init.keepalive,
+      });
+    } catch {
+      unreachable();
+      throw new ConnectionError();
+    }
+    if (GATEWAY_DOWN.has(res.status)) {
+      unreachable();
+      throw new ConnectionError();
+    }
+    reached();
     if (!res.ok) {
       const message = await res
         .json()

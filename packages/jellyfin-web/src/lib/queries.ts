@@ -50,6 +50,7 @@ export function useViews() {
   const { client, user } = useSession();
   return useQuery({
     queryKey: [...useKey(), 'views'],
+    meta: { cache: 'home' },
     queryFn: () =>
       client.get<BaseItemDtoQueryResult>('/UserViews', { userId: user.Id }),
     select: shownLibraries,
@@ -75,6 +76,7 @@ export function useResume() {
   const { client, user } = useSession();
   return useQuery({
     queryKey: [...useKey(), 'resume'],
+    meta: { cache: 'home' },
     queryFn: () =>
       client.get<BaseItemDtoQueryResult>('/UserItems/Resume', {
         userId: user.Id,
@@ -88,6 +90,7 @@ export function useNextUp() {
   const { client, user } = useSession();
   return useQuery({
     queryKey: [...useKey(), 'next-up'],
+    meta: { cache: 'home' },
     queryFn: () =>
       client.get<BaseItemDtoQueryResult>('/Shows/NextUp', {
         userId: user.Id,
@@ -133,6 +136,7 @@ export function useItemPages(
       opts.recursive,
       pageSize,
     ],
+    meta: { cache: 'home' },
     initialPageParam: 0,
     queryFn: ({ pageParam }) =>
       client.get<BaseItemDtoQueryResult>('/Items', {
@@ -166,6 +170,7 @@ export function useLibraryHeads(views: BaseItemDto[], limit: number) {
   return useQueries({
     queries: views.map((view) => ({
       queryKey: [...key, 'head', view.Id, limit],
+      meta: { cache: 'home' },
       queryFn: async () => {
         const required = genreRequired && needsGenre(view);
         // A server with the feature flags every library that needs a genre.
@@ -195,6 +200,7 @@ export function usePersonItems(personId: string, types: string) {
   const { client, user } = useSession();
   return useInfiniteQuery({
     queryKey: [...useKey(), 'person-items', personId, types],
+    meta: { cache: 'titles' },
     initialPageParam: 0,
     queryFn: ({ pageParam }) =>
       client.get<BaseItemDtoQueryResult>('/Items', {
@@ -220,6 +226,7 @@ export function useUpcoming() {
   const { client, user } = useSession();
   return useQuery({
     queryKey: [...useKey(), 'upcoming'],
+    meta: { cache: 'home' },
     queryFn: () =>
       client.get<BaseItemDtoQueryResult>('/Shows/Upcoming', {
         userId: user.Id,
@@ -234,6 +241,7 @@ export function useCalendar(from: Date, to: Date) {
   const { client, user } = useSession();
   return useQuery({
     queryKey: [...useKey(), 'calendar', from.getTime(), to.getTime()],
+    meta: { cache: 'home' },
     queryFn: () =>
       client.get<BaseItemDtoQueryResult>('/Items', {
         userId: user.Id,
@@ -254,6 +262,7 @@ function useGenresOptions() {
   return (viewId: string) =>
     queryOptions({
       queryKey: [...key, 'genres', viewId],
+      meta: { cache: 'home' },
       queryFn: () =>
         client.get<BaseItemDtoQueryResult>('/Genres', {
           userId: user.Id,
@@ -294,6 +303,7 @@ export function useSearch(
   const { client, user } = useSession();
   return useQuery({
     queryKey: [...useKey(), 'search', types, term],
+    meta: { cache: 'search' },
     queryFn: () =>
       client.get<BaseItemDtoQueryResult>('/Items', {
         userId: user.Id,
@@ -330,6 +340,7 @@ export function useItem(itemId: string) {
   const { client, user } = useSession();
   return useQuery({
     queryKey: [...useKey(), 'item', itemId],
+    meta: { cache: 'titles' },
     queryFn: async () => {
       const { Items } = await client.get<BaseItemDtoQueryResult>('/Items', {
         userId: user.Id,
@@ -348,6 +359,7 @@ export function useSeasons(seriesId: string, enabled: boolean) {
   const { client, user } = useSession();
   return useQuery({
     queryKey: [...useKey(), 'seasons', seriesId],
+    meta: { cache: 'titles' },
     queryFn: () =>
       client.get<BaseItemDtoQueryResult>(`/Shows/${seriesId}/Seasons`, {
         userId: user.Id,
@@ -360,6 +372,7 @@ export function useEpisodes(seriesId: string, seasonId: string | undefined) {
   const { client, user } = useSession();
   return useQuery({
     queryKey: [...useKey(), 'episodes', seriesId, seasonId],
+    meta: { cache: 'titles' },
     queryFn: () =>
       client.get<BaseItemDtoQueryResult>(`/Shows/${seriesId}/Episodes`, {
         userId: user.Id,
@@ -374,6 +387,7 @@ export function useNextUpFor(seriesId: string, enabled: boolean) {
   const { client, user } = useSession();
   return useQuery({
     queryKey: [...useKey(), 'next-up', seriesId],
+    meta: { cache: 'titles' },
     queryFn: () =>
       client.get<BaseItemDtoQueryResult>('/Shows/NextUp', {
         userId: user.Id,
@@ -388,6 +402,7 @@ export function useSimilar(itemId: string, enabled: boolean) {
   const { client, user } = useSession();
   return useQuery({
     queryKey: [...useKey(), 'similar', itemId],
+    meta: { cache: 'titles' },
     queryFn: () =>
       client.get<BaseItemDtoQueryResult>(`/Items/${itemId}/Similar`, {
         userId: user.Id,
@@ -473,6 +488,7 @@ export function useSegments(itemId: string) {
   const { client } = useSession();
   return useQuery({
     queryKey: [...useKey(), 'segments', itemId],
+    meta: { cache: 'titles' },
     queryFn: () =>
       client.get<MediaSegmentDtoQueryResult>(`/MediaSegments/${itemId}`),
     staleTime: 60 * 60_000,
@@ -484,6 +500,7 @@ export function usePickableUsers() {
   const { client } = useSession();
   return useQuery({
     queryKey: [...useKey(), 'pickable-users'],
+    meta: { cache: 'account' },
     queryFn: () => client.get<PickableUser[]>('/AIOStreams/Users'),
     enabled: useFeature('users'),
     staleTime: 5 * 60_000,
@@ -508,6 +525,7 @@ export function useHistory(
   const { client } = useSession();
   return useInfiniteQuery({
     queryKey: [...useKey(), 'history', userId, localOnly],
+    meta: { cache: 'history' },
     initialPageParam: null as string | null,
     queryFn: ({ pageParam }) =>
       client.get<HistoryPage>('/AIOStreams/History', {
@@ -554,6 +572,7 @@ export function useOwnHistory(enabled: boolean) {
   const { client, user } = useSession();
   return useInfiniteQuery({
     queryKey: [...useKey(), 'own-history'],
+    meta: { cache: 'history' },
     initialPageParam: 0,
     queryFn: async ({ pageParam }): Promise<HistoryPage> => {
       const res = await client.get<BaseItemDtoQueryResult>('/Items', {
@@ -608,6 +627,7 @@ export function useOwnTotals(enabled: boolean) {
   const results = useQueries({
     queries: OWN_TOTALS.map(([path, filter], i) => ({
       queryKey: [...key, 'own-total', i],
+      meta: { cache: 'history' },
       queryFn: async () =>
         (
           await client.get<BaseItemDtoQueryResult>(path, {
@@ -819,6 +839,7 @@ export function useAdjacentEpisodes(item: BaseItemDto) {
   const { fillers, recaps } = skip;
   return useQuery({
     queryKey: [...useKey(), 'adjacent-episodes', item.Id, fillers, recaps],
+    meta: { cache: 'titles' },
     queryFn: async () => {
       const skipped = (e: BaseItemDto) =>
         e.Id !== item.Id && isSkipped(e, skip);

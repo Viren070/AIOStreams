@@ -39,6 +39,7 @@ export function usePlaybackPrefs() {
   const queryKey = useConfigurationKey();
   const query = useQuery({
     queryKey,
+    meta: { cache: 'account' },
     queryFn: async () =>
       (await client.get<UserDto>('/Users/Me')).Configuration ?? {},
     staleTime: 5 * 60_000,

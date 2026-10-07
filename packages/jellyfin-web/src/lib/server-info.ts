@@ -75,6 +75,7 @@ export function useFeature(feature: Feature): boolean {
 export function useServerInfoQuery(client: JellyfinClient) {
   return useQuery({
     queryKey: ['jf-server-info', client.base, client.token],
+    meta: { cache: 'account' },
     queryFn: async (): Promise<ServerInfo> => {
       const data = await client.get<PublicSystemInfo>('/System/Info/Public');
       return {

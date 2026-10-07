@@ -12,6 +12,7 @@ import { ExternalLinks } from '../components/external-links';
 import { Overview } from '../components/overview';
 import { KINDS, KindTabs } from '../components/kind-tabs';
 import type { BaseItemDto } from '../lib/types';
+import { CachedImage } from '../components/cached-image';
 
 function longDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, {
@@ -62,7 +63,11 @@ function Header({ person }: { person: BaseItemDto }) {
         className="aspect-[2/3] w-36 flex-none overflow-hidden rounded-xl bg-gray-900 shadow-2xl ring-1 ring-white/10 sm:w-48"
       >
         {photo && (
-          <img src={photo} alt="" className="h-full w-full object-cover" />
+          <CachedImage
+            src={photo}
+            alt=""
+            className="h-full w-full object-cover"
+          />
         )}
       </div>
       <div className="min-w-0 max-w-3xl flex-1 space-y-3">

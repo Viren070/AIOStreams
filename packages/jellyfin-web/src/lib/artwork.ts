@@ -4,11 +4,17 @@
  * lines into dots.
  */
 
+import { maybeSaved, noteSaved, saving, schedulePrune } from './cache';
+import { isReachable } from './connection';
+
 export interface ShrinkJob {
   id: number;
   url: string;
   width: number;
   height: number;
+  save: boolean;
+  /** Reads the device's saved copy first. */
+  look: boolean;
   accept: string;
 }
 
@@ -20,6 +26,8 @@ export interface ShrinkReply {
   blocked?: true;
   /** The worker cannot draw at all, so no later job will fare better. */
   unsupported?: true;
+  /** Sent on its own with the address once a fetched image is saved. */
+  saved?: string;
 }
 
 export type Shrunk = { bitmap: ImageBitmap } | { plain: true };
@@ -49,7 +57,7 @@ export const canShrink =
 
 const IN_FLIGHT = 4;
 
-interface Pending extends Omit<ShrinkJob, 'accept'> {
+interface Pending extends Omit<ShrinkJob, 'save' | 'look' | 'accept'> {
   resolve: (result: Shrunk) => void;
   cancelled: boolean;
 }
@@ -73,14 +81,20 @@ function readsFor(url: string) {
   return entry;
 }
 
-function refused(url: string): boolean {
+export function refused(url: string): boolean {
   const { blocked, read } = readsFor(url);
   return blocked >= 8 && read === 0;
 }
 
+/** Offline, a failed fetch says nothing about the host. */
+export function noteRead(url: string, readable: boolean): void {
+  if (readable) readsFor(url).read++;
+  else if (isReachable()) readsFor(url).blocked++;
+}
+
 function settle(job: Pending, reply: ShrinkReply) {
-  if (reply.blocked) readsFor(job.url).blocked++;
-  else if (reply.bitmap) readsFor(job.url).read++;
+  if (reply.blocked) noteRead(job.url, false);
+  else if (reply.bitmap) noteRead(job.url, true);
   if (job.cancelled) reply.bitmap?.close();
   else job.resolve(reply.bitmap ? { bitmap: reply.bitmap } : { plain: true });
 }
@@ -95,6 +109,10 @@ function start(): Worker | null {
   }
   worker.onmessage = (e: MessageEvent<ShrinkReply>) => {
     if (e.data.unsupported) broken = true;
+    if (e.data.saved) {
+      noteSaved(e.data.saved);
+      schedulePrune();
+    }
     const job = running.get(e.data.id);
     if (!job) return;
     running.delete(e.data.id);
@@ -126,7 +144,15 @@ function pump() {
     }
     running.set(job.id, job);
     const { id, url, width, height } = job;
-    w.postMessage({ id, url, width, height, accept } satisfies ShrinkJob);
+    w.postMessage({
+      id,
+      url,
+      width,
+      height,
+      save: saving('artwork'),
+      look: saving('artwork') && maybeSaved(url),
+      accept,
+    } satisfies ShrinkJob);
   }
 }
 

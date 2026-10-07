@@ -1,4 +1,5 @@
 import type { ShrinkJob, ShrinkReply } from './artwork';
+import { readImage, writeImage } from './cache/store';
 
 const scope = self as unknown as Worker;
 
@@ -97,26 +98,43 @@ function cover(w: number, h: number, width: number, height: number) {
   return [(w - sw) / 2, (h - sh) / 2, sw, sh] as const;
 }
 
-async function shrink({
-  id,
-  url,
-  width,
-  height,
-  accept,
-}: ShrinkJob): Promise<ShrinkReply> {
-  if (typeof OffscreenCanvas !== 'function')
-    return { id, error: 'no OffscreenCanvas', unsupported: true };
+async function load(
+  url: string,
+  accept: string
+): Promise<ArrayBuffer | Omit<ShrinkReply, 'id'>> {
   let res: Response;
   try {
     res = await fetch(url, { headers: { Accept: accept } });
   } catch (err) {
     // Usually a host that does not allow reading its images across origins.
-    return { id, error: String(err), blocked: true };
+    return { error: String(err), blocked: true };
   }
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const data = await res.arrayBuffer();
+  return res.arrayBuffer();
+}
+
+async function shrink({
+  id,
+  url,
+  width,
+  height,
+  save,
+  look,
+  accept,
+}: ShrinkJob): Promise<ShrinkReply> {
+  if (typeof OffscreenCanvas !== 'function')
+    return { id, error: 'no OffscreenCanvas', unsupported: true };
+  const kept = look ? await readImage(url).catch(() => null) : null;
+  const data = kept?.bytes ?? (await load(url, accept));
+  if (!(data instanceof ArrayBuffer)) return { id, ...data };
   const head = sniff(new Uint8Array(data, 0, Math.min(data.byteLength, 65536)));
   if (!head) throw new Error('unknown image type');
+  // Saved alongside, so drawing never waits on the disk.
+  if (save && !kept)
+    void writeImage(url, head.type, data).then(
+      () => scope.postMessage({ id: -1, saved: url } satisfies ShrinkReply),
+      () => undefined
+    );
 
   let size: { width: number; height: number } | undefined;
   if (head.type === 'image/jpeg' && head.width && head.height) {

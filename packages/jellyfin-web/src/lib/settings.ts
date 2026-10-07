@@ -1,6 +1,7 @@
 import React from 'react';
 import type { JellyfinClient } from './client';
 import { storage } from './storage';
+import { CACHE_CATEGORIES } from './cache/store';
 
 /** A source the home page features from: `resume`, `next-up` or `view:<library id>`. */
 export type FeaturedSource = string;
@@ -369,6 +370,10 @@ export const NEXT_COUNTDOWNS = [5, 10, 15, 30] as const;
 /** Episodes in a row with no input before asking; 0 never asks. */
 export const STILL_WATCHING_AFTER = [0, 2, 3, 4, 5, 8] as const;
 
+/** Days a saved page is shown for while online; 0 has no limit. */
+export const CACHE_MAX_STALE_DAYS = [1, 3, 7, 14, 30, 0] as const;
+export const CACHE_SIZES_MB = [250, 500, 1000, 2000, 5000] as const;
+
 const subtitle = {
   size: device<SubtitleSize>(
     'aiostreams-web-subtitle-size',
@@ -536,6 +541,18 @@ export const settings = {
     ),
     skipFillers: device<boolean>('aiostreams-web-skip-fillers', true),
     skipRecaps: device<boolean>('aiostreams-web-skip-recaps', true),
+  },
+  cache: {
+    enabled: device<boolean>('aiostreams-web-cache', true),
+    maxStaleDays: device<number>(
+      'aiostreams-web-cache-max-stale',
+      7,
+      CACHE_MAX_STALE_DAYS
+    ),
+    maxSizeMb: device<number>('aiostreams-web-cache-size', 500, CACHE_SIZES_MB),
+    categories: record(CACHE_CATEGORIES, (category) =>
+      device<boolean>(`aiostreams-web-cache-${category}`, true)
+    ),
   },
 };
 

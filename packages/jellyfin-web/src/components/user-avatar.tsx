@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '@aiostreams/ui/core/styling';
+import { CachedImage } from './cached-image';
 
 export function UserAvatar({
   name,
@@ -21,7 +22,7 @@ export function UserAvatar({
       )}
     >
       {src && !failed ? (
-        <img
+        <CachedImage
           src={src}
           alt=""
           onError={() => setFailed(true)}

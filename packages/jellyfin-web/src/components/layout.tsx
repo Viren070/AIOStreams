@@ -11,12 +11,15 @@ import {
   BiHeart,
   BiHistory,
   BiHomeAlt2,
+  BiLoaderAlt,
   BiLogOutCircle,
   BiCog,
   BiSearch,
   BiServer,
   BiSliderAlt,
   BiTransferAlt,
+  BiWifiOff,
+  BiX,
 } from 'react-icons/bi';
 import {
   AppLayout,
@@ -35,6 +38,7 @@ import {
 import { LuCircleArrowLeft, LuCircleArrowRight } from 'react-icons/lu';
 import { VerticalMenu } from '@aiostreams/ui/vertical-menu';
 import { HoverCard } from '@aiostreams/ui/hover-card';
+import { Tooltip } from '@aiostreams/ui/tooltip';
 import type { IconType } from 'react-icons';
 import { Sidebar, type SidebarItem } from '@aiostreams/ui/shared/sidebar';
 import {
@@ -50,6 +54,8 @@ import { serverAddress } from '../lib/servers';
 import { useServerInfo } from '../lib/server-info';
 import { useDiscordBrowsing } from '../lib/discord';
 import { useServerEvents } from '../lib/server-events';
+import { retryNow, useReachable } from '../lib/connection';
+import { settings, useSetting } from '../lib/settings';
 import { useAction } from '../lib/input';
 import { UserAvatar } from './user-avatar';
 import { BrandLogo } from './brand-logo';
@@ -274,6 +280,80 @@ function pageName(pathname: string): string {
   return pathname.split('/')[1] || 'home';
 }
 
+/** While the server can't be reached, a note that it keeps trying; dismissed, it shrinks to an icon. */
+function ConnectionNote() {
+  // Mounted per outage, so the next one shows the full note again.
+  return useReachable() ? null : <Unreachable />;
+}
+
+const NOTE_PLACE =
+  'fixed right-4 z-[100] border border-white/10 bg-gray-950/90 shadow-lg backdrop-blur max-lg:bottom-[calc(5.5rem+env(safe-area-inset-bottom))] lg:bottom-4';
+
+function Unreachable() {
+  const [saved] = useSetting(settings.cache.enabled);
+  const [small, setSmall] = React.useState(false);
+  if (small) {
+    return (
+      <Tooltip
+        trigger={
+          <button
+            type="button"
+            data-ui="connection-note"
+            data-state="small"
+            aria-label="Can't reach the server"
+            onClick={() => {
+              setSmall(false);
+              retryNow();
+            }}
+            className={cn(
+              NOTE_PLACE,
+              'flex size-9 items-center justify-center rounded-full text-base text-[--muted] transition-colors hover:text-white'
+            )}
+          >
+            <BiWifiOff />
+          </button>
+        }
+      >
+        Can't reach the server
+      </Tooltip>
+    );
+  }
+  return (
+    <div
+      data-ui="connection-note"
+      className={cn(
+        NOTE_PLACE,
+        'flex items-center rounded-xl text-sm duration-300 animate-in fade-in-0 slide-in-from-right-4'
+      )}
+    >
+      <button
+        type="button"
+        onClick={retryNow}
+        className="flex items-center gap-2.5 py-2 pl-4 pr-2 text-left"
+      >
+        <BiLoaderAlt className="flex-none animate-spin text-base text-[--muted]" />
+        <span>
+          <span className="block font-semibold">Reconnecting…</span>
+          {saved && (
+            <span className="block text-xs text-[--muted]">
+              Showing saved pages
+            </span>
+          )}
+        </span>
+      </button>
+      <button
+        type="button"
+        data-ui="connection-note-dismiss"
+        aria-label="Dismiss"
+        onClick={() => setSmall(true)}
+        className="mr-2 flex size-7 flex-none items-center justify-center rounded-full text-base text-[--muted] transition-colors hover:bg-white/10 hover:text-white"
+      >
+        <BiX />
+      </button>
+    </div>
+  );
+}
+
 export function WebLayout() {
   const { client, signOut, switchUser, changeServer } = useSession();
   const configure = configureUrl(client.base, useServerInfo());
@@ -421,6 +501,7 @@ export function WebLayout() {
         places={[activity, calendar]}
         menuItems={[settings, ...accountItems]}
       />
+      <ConnectionNote />
       <ConfirmationDialog {...confirmSignOut} />
     </AppSidebarProvider>
   );

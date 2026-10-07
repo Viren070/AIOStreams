@@ -13,6 +13,7 @@ import { useVersionPicker } from './version-picker';
 import type { JellyfinClient } from '../lib/client';
 import type { BaseItemDto } from '../lib/types';
 import { useHold } from '../lib/use-hold';
+import { CachedImage } from './cached-image';
 
 const ROTATE_MS = 9000;
 /** How long the pointer rests on a card before the hero follows it. */
@@ -119,7 +120,7 @@ function Backdrops({
     (src) => src === current || src === shown || loaded.has(src)
   );
   return mounted.map((src) => (
-    <img
+    <CachedImage
       key={src}
       data-ui="hero-backdrop"
       src={src}
@@ -174,7 +175,7 @@ function HeroDetails({
   return (
     <>
       {logo ? (
-        <img
+        <CachedImage
           data-ui="hero-logo"
           src={logo}
           alt={item.Name ?? ''}

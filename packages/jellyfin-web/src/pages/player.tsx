@@ -55,6 +55,7 @@ import {
 } from '../components/version-picker';
 import { chapterSegments, guessedSegments } from '../lib/playback/chapters';
 import type { BaseItemDto, MediaSegmentDto, SourceInfo } from '../lib/types';
+import { CachedImage } from '../components/cached-image';
 
 interface PlayerProps {
   item: BaseItemDto;
@@ -271,7 +272,7 @@ function Cover({
       )}
     >
       {backdrop && (
-        <img
+        <CachedImage
           data-ui="player-cover-image"
           src={backdrop}
           alt=""
