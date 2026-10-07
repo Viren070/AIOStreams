@@ -9,6 +9,7 @@ export interface ShrinkJob {
   url: string;
   width: number;
   height: number;
+  accept: string;
 }
 
 export interface ShrinkReply {
@@ -23,6 +24,24 @@ export interface ShrinkReply {
 
 export type Shrunk = { bitmap: ImageBitmap } | { plain: true };
 
+// What an `<img>` asks for. A fetch accepts anything, which image hosts answer
+// with the original JPEG or PNG instead of a WebP or AVIF of half the size.
+const ACCEPT = 'image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8';
+/** The smallest AVIF there is; older WebKit can't decode AVIF, so it's tried first. */
+const AVIF_PROBE =
+  'data:image/avif;base64,AAAAIGZ0eXBhdmlmAAAAAGF2aWZtaWYxbWlhZk1BMUIAAADybWV0YQAAAAAAAAAoaGRscgAAAAAAAAAAcGljdAAAAAAAAAAAAAAAAGxpYmF2aWYAAAAADnBpdG0AAAAAAAEAAAAeaWxvYwAAAABEAAABAAEAAAABAAABGgAAAB0AAAAoaWluZgAAAAAAAQAAABppbmZlAgAAAAABAABhdjAxQ29sb3IAAAAAamlwcnAAAABLaXBjbwAAABRpc3BlAAAAAAAAAAIAAAACAAAAEHBpeGkAAAAAAwgICAAAAAxhdjFDgQ0MAAAAABNjb2xybmNseAACAAIAAYAAAAAXaXBtYQAAAAAAAAABAAEEAQKDBAAAACVtZGF0EgAKCBgANogQEAwgMg8f8D///8WfhwB8+ErK42A=';
+let accept = ACCEPT;
+const probe = new Image();
+probe.src = AVIF_PROBE;
+probe.decode().then(
+  () => (accept = `image/avif,${ACCEPT}`),
+  () => undefined
+);
+
+export function imageAccept(): string {
+  return accept;
+}
+
 export const canShrink =
   typeof Worker === 'function' &&
   typeof OffscreenCanvas === 'function' &&
@@ -30,7 +49,7 @@ export const canShrink =
 
 const IN_FLIGHT = 4;
 
-interface Pending extends ShrinkJob {
+interface Pending extends Omit<ShrinkJob, 'accept'> {
   resolve: (result: Shrunk) => void;
   cancelled: boolean;
 }
@@ -107,7 +126,7 @@ function pump() {
     }
     running.set(job.id, job);
     const { id, url, width, height } = job;
-    w.postMessage({ id, url, width, height } satisfies ShrinkJob);
+    w.postMessage({ id, url, width, height, accept } satisfies ShrinkJob);
   }
 }
 

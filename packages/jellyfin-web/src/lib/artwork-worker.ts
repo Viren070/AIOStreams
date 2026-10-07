@@ -102,12 +102,13 @@ async function shrink({
   url,
   width,
   height,
+  accept,
 }: ShrinkJob): Promise<ShrinkReply> {
   if (typeof OffscreenCanvas !== 'function')
     return { id, error: 'no OffscreenCanvas', unsupported: true };
   let res: Response;
   try {
-    res = await fetch(url);
+    res = await fetch(url, { headers: { Accept: accept } });
   } catch (err) {
     // Usually a host that does not allow reading its images across origins.
     return { id, error: String(err), blocked: true };
