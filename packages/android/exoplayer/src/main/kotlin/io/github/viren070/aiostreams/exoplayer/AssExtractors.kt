@@ -1,4 +1,4 @@
-package io.github.viren070.aiostreams.engine.exo
+package io.github.viren070.aiostreams.exoplayer
 
 import android.net.Uri
 import androidx.annotation.OptIn

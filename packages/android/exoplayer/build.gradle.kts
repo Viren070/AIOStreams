@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "io.github.viren070.aiostreams.engine.exo"
+    namespace = "io.github.viren070.aiostreams.exoplayer"
     ndkVersion = libs.versions.android.ndk.get()
 
     defaultConfig {
@@ -26,5 +26,5 @@ dependencies {
     // FFmpeg's audio decoders, for what the device's own can't play, such as DTS and TrueHD.
     implementation(libs.jellyfin.media3.ffmpeg)
     // libmpv's libass draws the subtitles, with mpv's fallback font.
-    implementation(project(":engine-mpv"))
+    implementation(project(":mpv"))
 }

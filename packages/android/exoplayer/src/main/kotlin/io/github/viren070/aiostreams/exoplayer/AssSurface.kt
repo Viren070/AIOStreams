@@ -1,4 +1,4 @@
-package io.github.viren070.aiostreams.engine.exo
+package io.github.viren070.aiostreams.exoplayer
 
 import android.content.Context
 import android.graphics.PixelFormat

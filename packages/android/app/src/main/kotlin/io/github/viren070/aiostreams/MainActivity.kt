@@ -30,7 +30,7 @@ import io.github.viren070.aiostreams.bridge.AppBridge
 import io.github.viren070.aiostreams.bridge.AppIdentity
 import io.github.viren070.aiostreams.bridge.WebApp
 import io.github.viren070.aiostreams.downloads.DownloadChannel
-import io.github.viren070.aiostreams.engine.mpv.MpvEngine
+import io.github.viren070.aiostreams.mpv.MpvEngine
 import io.github.viren070.aiostreams.playback.PlayerChannel
 import java.io.File
 import java.util.UUID

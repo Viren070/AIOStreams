@@ -47,10 +47,12 @@ Keep a copy of the keystore: installed copies only update to builds signed with 
 
 | Module        | What it holds                                                                |
 | ------------- | ---------------------------------------------------------------------------- |
-| `app`         | The activity: video surface, WebView, window state                           |
+| `app`         | The activity: the player's view, WebView, window state                       |
 | `bridge`      | The WebView setup, the bundled page's origin, and `window.aiostreamsApp`     |
 | `playback`    | The engine interface in mpv's terms, the page's allowlist, the `mpv-*` relay |
-| `engine-mpv`  | libmpv                                                                       |
+| `mpv`         | libmpv                                                                       |
+| `exoplayer`   | Media3 ExoPlayer, with libmpv's libass drawing ASS subtitles                 |
+| `downloads`   | The download queue and its foreground service                                |
 | `build-logic` | The SDK levels and Java version every module shares                          |
 
 ## Debugging

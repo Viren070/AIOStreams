@@ -1,4 +1,4 @@
-package io.github.viren070.aiostreams.engine.exo
+package io.github.viren070.aiostreams.exoplayer
 
 import android.content.Context
 import android.graphics.Rect
@@ -37,7 +37,7 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.UnrecognizedInputFormatException
 import androidx.media3.exoplayer.video.VideoFrameMetadataListener
 import androidx.media3.extractor.metadata.Chapter
-import io.github.viren070.aiostreams.engine.mpv.MpvEngine
+import io.github.viren070.aiostreams.mpv.MpvEngine
 import io.github.viren070.aiostreams.playback.Engine
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch

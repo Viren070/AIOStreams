@@ -94,8 +94,8 @@ androidComponents {
 dependencies {
     implementation(project(":bridge"))
     implementation(project(":playback"))
-    implementation(project(":engine-mpv"))
-    implementation(project(":engine-exo"))
+    implementation(project(":mpv"))
+    implementation(project(":exoplayer"))
     implementation(project(":downloads"))
     implementation(libs.androidx.activity)
     implementation(libs.androidx.core)

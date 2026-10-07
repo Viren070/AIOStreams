@@ -121,7 +121,7 @@ static void include(ARect *rect, int left, int top, int right, int bottom) {
     if (bottom > rect->bottom) rect->bottom = bottom;
 }
 
-#define METHOD(name) Java_io_github_viren070_aiostreams_engine_exo_AssSurface_##name
+#define METHOD(name) Java_io_github_viren070_aiostreams_exoplayer_AssSurface_##name
 
 // Zero when libmpv can't be loaded. `font` is drawn where a script's fonts are missing, as mpv does.
 JNIEXPORT jlong JNICALL METHOD(nativeCreate)(JNIEnv *env, jclass clazz, jstring font) {

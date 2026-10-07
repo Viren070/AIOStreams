@@ -3,8 +3,8 @@ package io.github.viren070.aiostreams
 import android.content.Context
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.widget.FrameLayout
-import io.github.viren070.aiostreams.engine.exo.ExoEngine
-import io.github.viren070.aiostreams.engine.mpv.MpvEngine
+import io.github.viren070.aiostreams.exoplayer.ExoEngine
+import io.github.viren070.aiostreams.mpv.MpvEngine
 import io.github.viren070.aiostreams.playback.Engine
 import io.github.viren070.aiostreams.playback.PlayerChannel
 

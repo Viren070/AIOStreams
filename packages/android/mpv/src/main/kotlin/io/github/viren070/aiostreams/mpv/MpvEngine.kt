@@ -1,4 +1,4 @@
-package io.github.viren070.aiostreams.engine.mpv
+package io.github.viren070.aiostreams.mpv
 
 import android.content.Context
 import android.util.Log

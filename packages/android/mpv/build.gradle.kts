@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "io.github.viren070.aiostreams.engine.mpv"
+    namespace = "io.github.viren070.aiostreams.mpv"
     defaultConfig {
         consumerProguardFiles("consumer-rules.pro")
     }
