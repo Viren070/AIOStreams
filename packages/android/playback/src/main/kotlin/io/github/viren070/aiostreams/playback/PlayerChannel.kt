@@ -6,6 +6,7 @@ import android.os.SystemClock
 import android.util.Log
 import java.io.File
 import java.util.Base64
+import java.util.Locale
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -14,6 +15,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
@@ -29,23 +31,34 @@ class PlayerChannel(
     private val isLocal: (String) -> Boolean,
     /** Where subtitle files the page adds are written. */
     private val subtitles: File,
+    /** Picks the engine for the file about to load. */
+    private val beforeLoad: () -> Unit = {},
+    /** Hands a file the engine can't decode to another engine; false when there is none. */
+    private val fallBack: () -> Boolean = { false },
 ) : Engine.Listener {
     private val main = Handler(Looper.getMainLooper())
     private val latest = mutableMapOf<String, JsonElement>()
     private val held = mutableMapOf<String, JsonElement>()
     private val sentAt = mutableMapOf<String, Long>()
+    /** The page's properties, which a new engine takes over. */
+    private val settings = LinkedHashMap<String, String>()
+    /** The file playing, which a new engine loads again. */
+    private var loaded: List<String>? = null
 
     val session = SessionPlayer(send)
 
     fun start() = engine.start(this)
 
-    /** Hands playback to `next`, releasing the engine it had. */
-    fun replace(next: Engine) {
+    /** Hands playback to `next`, releasing the engine it had; with `reload`, at the same place in the file. */
+    fun replace(next: Engine, reload: Boolean) {
+        val at = (latest["time-pos"] as? JsonPrimitive)?.doubleOrNull
         engine.release()
         latest.clear()
         held.clear()
         engine = next
         next.start(this)
+        for ((name, value) in settings) next.setProperty(name, value)
+        if (reload) loaded?.let { next.command(resumed(it, at)) }
     }
 
     /** False for a message that isn't the player's. */
@@ -54,13 +67,16 @@ class PlayerChannel(
             "mpv-command" -> {
                 val args = message["args"] as? JsonArray ?: return true
                 MpvProtocol.command(args, isLocal)
-                    .onSuccess(engine::command)
+                    .onSuccess(::command)
                     .onFailure { reject(it) }
             }
             "mpv-set-prop" -> {
                 val name = message["name"]?.jsonPrimitive?.content ?: return true
                 MpvProtocol.setProperty(name, message["value"] ?: JsonNull)
-                    .onSuccess { engine.setProperty(name, it) }
+                    .onSuccess { value ->
+                        remember(name, value)
+                        engine.setProperty(name, value)
+                    }
                     .onFailure { reject(it) }
             }
             "mpv-sync" -> latest.forEach { (name, value) -> send(property(name, value)) }
@@ -69,6 +85,33 @@ class PlayerChannel(
             else -> return false
         }
         return true
+    }
+
+    private fun command(args: List<String>) {
+        when (args[0]) {
+            "loadfile" -> {
+                beforeLoad()
+                loaded = args
+            }
+            "stop" -> loaded = null
+            "set" -> remember(args[1], args[2])
+        }
+        engine.command(args)
+    }
+
+    private fun remember(name: String, value: String) {
+        if (name !in TRANSIENT) settings[name] = value
+    }
+
+    override fun onUnplayable(error: String) {
+        main.post {
+            if (fallBack()) return@post
+            send(buildJsonObject {
+                put("type", "mpv-ended")
+                put("reason", "error")
+                put("error", error)
+            })
+        }
     }
 
     override fun onProperty(name: String, value: JsonElement) {
@@ -142,6 +185,17 @@ class PlayerChannel(
         const val THROTTLE_MS = 250L
         const val MAX_SUBTITLE_BYTES = 10 shl 20
         val SUBTITLE_TYPES = setOf("srt", "vtt", "ass", "ssa", "sub", "sup")
+        /** Seeks and track picks, which belong to the file rather than the page's settings. */
+        val TRANSIENT = setOf("time-pos", "aid", "sid", "secondary-sid")
+
+        /** `loadfile`, starting where the last engine was. */
+        fun resumed(load: List<String>, at: Double?): List<String> {
+            val options = load.getOrNull(4).orEmpty().split(',').filter { it.isNotEmpty() }
+            val start = at?.takeIf { it > 0 }?.let { "start=%.3f".format(Locale.ROOT, it) }
+            val kept = if (start == null) options else listOf(start) + options.filterNot { it.startsWith("start=") }
+            return listOf(load[0], load[1], "replace", "-1", kept.joinToString(","))
+        }
+
         val next = AtomicInteger()
 
         fun itemOf(item: JsonObject): NowPlayingItem? {

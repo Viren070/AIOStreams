@@ -8,10 +8,14 @@ import io.github.viren070.aiostreams.mpv.MpvEngine
 import io.github.viren070.aiostreams.playback.Engine
 import io.github.viren070.aiostreams.playback.PlayerChannel
 
-/** The engine the page picked, mpv or ExoPlayer, drawing beneath it. */
-class Playback(private val context: Context) {
+/**
+ * The engine drawing beneath the page: the one the page picked, or with
+ * `auto`, ExoPlayer for each file and mpv for a file ExoPlayer can't decode.
+ */
+class Playback(private val context: Context, private val announce: (engine: String) -> Unit) {
     private val saved = context.getSharedPreferences("playback", Context.MODE_PRIVATE)
-    private var name = saved.getString("engine", null)?.takeIf { it in ENGINES } ?: MPV
+    private var choice = saved.getString("engine", null)?.takeIf { it in CHOICES } ?: AUTO
+    private var name = engineFor(choice)
 
     /** Where the engine's view goes. */
     val stage = FrameLayout(context)
@@ -23,17 +27,35 @@ class Playback(private val context: Context) {
         stage.addView(engine.createView(context), MATCH_PARENT, MATCH_PARENT)
     }
 
-    /** Switches to `name`'s engine, which the next start uses too. */
-    fun select(name: String, player: PlayerChannel) {
-        if (name == this.name || name !in ENGINES) return
-        this.name = name
-        saved.edit().putString("engine", name).apply()
+    /** The page's pick, which the next start keeps too. */
+    fun choose(choice: String, player: PlayerChannel) {
+        if (choice !in CHOICES) return
+        this.choice = choice
+        saved.edit().putString("engine", choice).apply()
+        use(engineFor(choice), player, reload = false)
+        announce(name)
+    }
+
+    /** Each file starts on the picked engine again, whatever the last one needed. */
+    fun beforeLoad(player: PlayerChannel) = use(engineFor(choice), player, reload = false)
+
+    /** mpv takes the file over where ExoPlayer stopped; false when the pick doesn't allow it. */
+    fun fallBack(player: PlayerChannel): Boolean {
+        if (choice != AUTO || name == MPV) return false
+        use(MPV, player, reload = true)
+        return true
+    }
+
+    private fun use(next: String, player: PlayerChannel, reload: Boolean) {
+        if (next == name) return
+        name = next
         // The old engine lets go of its surface while it still runs.
         stage.removeAllViews()
-        val next = create(name)
-        stage.addView(next.createView(context), MATCH_PARENT, MATCH_PARENT)
-        player.replace(next)
-        engine = next
+        val engine = create(next)
+        stage.addView(engine.createView(context), MATCH_PARENT, MATCH_PARENT)
+        player.replace(engine, reload)
+        this.engine = engine
+        announce(next)
     }
 
     private fun create(name: String): Engine = when (name) {
@@ -42,8 +64,11 @@ class Playback(private val context: Context) {
     }
 
     private companion object {
+        const val AUTO = "auto"
         const val MPV = "mpv"
         const val EXOPLAYER = "exoplayer"
-        val ENGINES = setOf(MPV, EXOPLAYER)
+        val CHOICES = setOf(AUTO, MPV, EXOPLAYER)
+
+        fun engineFor(choice: String) = if (choice == MPV) MPV else EXOPLAYER
     }
 }

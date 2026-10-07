@@ -487,6 +487,12 @@ class ExoEngine(private val context: Context) :
         this.tracks.update(tracks)
         if (!chosen && !this.tracks.isEmpty()) {
             chosen = true
+            undecodable(tracks)?.let { error ->
+                url = null
+                player.stop()
+                listener?.onUnplayable(error)
+                return
+            }
             val audio = this.tracks.chooseAudio(options)
             val subtitle = this.tracks.chooseSubtitle(options, this.tracks.languageOfTrack("audio", audio))
             player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
@@ -531,10 +537,12 @@ class ExoEngine(private val context: Context) :
 
     override fun onPlayerError(error: PlaybackException) {
         url = null
-        val (message, cause) = failureOf(error)
         Log.w(TAG, "playback failed", error)
-        listener?.onEnded("error", message, cause)
         report("idle-active", true)
+        val undecodable = undecodable(error)
+        if (undecodable != null) return listener?.onUnplayable(undecodable) ?: Unit
+        val (message, cause) = failureOf(error)
+        listener?.onEnded("error", message, cause)
     }
 
     override fun onVideoDecoderInitialized(
@@ -612,19 +620,42 @@ class ExoEngine(private val context: Context) :
             return when (error.errorCode) {
                 PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED -> "loading failed" to "could not connect to the server"
                 PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT -> "loading failed" to "the server took too long to answer"
-                PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
-                PlaybackException.ERROR_CODE_DECODING_FAILED,
-                PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED,
-                PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES,
-                PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED,
-                -> {
-                    val format = (error as? ExoPlaybackException)?.rendererFormat
-                    val kind = if (MimeTypes.isAudio(format?.sampleMimeType)) "audio" else "video"
-                    val codec = format?.let(ExoTracks::codecOf)?.takeIf { it.isNotEmpty() }
-                    "this device can't play ${listOfNotNull(codec, kind).joinToString(" ")}" to null
-                }
                 else -> error.errorCodeName.removePrefix("ERROR_CODE_").lowercase().replace('_', ' ') to null
             }
         }
+
+        fun undecodable(error: PlaybackException): String? {
+            if (error.errorCode !in DECODING) return null
+            val format = (error as? ExoPlaybackException)?.rendererFormat
+            return cantPlay(format, if (MimeTypes.isAudio(format?.sampleMimeType)) "audio" else "video")
+        }
+
+        /** The file's video, or all of its audio, which the device has no decoder for at all. */
+        fun undecodable(tracks: Tracks): String? {
+            for ((type, kind) in listOf(C.TRACK_TYPE_VIDEO to "video", C.TRACK_TYPE_AUDIO to "audio")) {
+                val groups = tracks.groups.filter { it.type == type }
+                val decodable = groups.any { group -> (0 until group.length).any { group.isTrackSupported(it, true) } }
+                if (groups.isNotEmpty() && !decodable) return cantPlay(groups[0].getTrackFormat(0), kind)
+            }
+            return null
+        }
+
+        fun cantPlay(format: Format?, kind: String): String {
+            val codec = when (format?.sampleMimeType) {
+                // Not codecOf's hevc: the device may well play HEVC, just not this profile.
+                MimeTypes.VIDEO_DOLBY_VISION ->
+                    "Dolby Vision" + format.codecs?.split('.')?.getOrNull(1)?.toIntOrNull()?.let { " profile $it" }.orEmpty()
+                else -> format?.let(ExoTracks::codecOf)?.takeIf { it.isNotEmpty() }
+            }
+            return "this device can't play ${listOfNotNull(codec, kind).joinToString(" ")}"
+        }
+
+        val DECODING = setOf(
+            PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
+            PlaybackException.ERROR_CODE_DECODING_FAILED,
+            PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED,
+            PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES,
+            PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED,
+        )
     }
 }

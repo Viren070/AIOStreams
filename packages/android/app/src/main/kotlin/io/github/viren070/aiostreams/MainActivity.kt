@@ -71,7 +71,12 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG || BuildConfig.INSPECTABLE)
 
-        playback = Playback(this)
+        playback = Playback(this) { engine ->
+            if (::bridge.isInitialized) bridge.send(buildJsonObject {
+                put("type", "player-engine")
+                put("name", engine)
+            })
+        }
         // Edge to edge: the page keeps clear of the system bars with its own safe-area insets.
         web = WebView(this)
         setContentView(FrameLayout(this).apply {
@@ -89,6 +94,8 @@ class MainActivity : ComponentActivity() {
             send = { bridge.send(it) },
             isLocal = queue::isLocal,
             subtitles = File(cacheDir, "subtitles"),
+            beforeLoad = { playback.beforeLoad(player) },
+            fallBack = { playback.fallBack(player) },
         )
         bridge = AppBridge(web, app.origins, AppIdentity(BuildConfig.VERSION_NAME, deviceName(), deviceId()), ::onMessage)
         updater = Updater(this) { bridge.send(it) }
@@ -153,7 +160,7 @@ class MainActivity : ComponentActivity() {
                 linksReady = true
                 sendLinks()
             }
-            "player-engine" -> message["name"]?.jsonPrimitive?.contentOrNull?.let { playback.select(it, player) }
+            "player-engine" -> message["name"]?.jsonPrimitive?.contentOrNull?.let { playback.choose(it, player) }
             "mpv-config" -> sendMpvConfig()
             "mpv-config-save" -> {
                 MpvEngine.configFile(this).writeText(message["text"]?.jsonPrimitive?.content.orEmpty())
