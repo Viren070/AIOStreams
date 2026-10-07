@@ -40,19 +40,23 @@ object MpvProtocol {
 
     private val loadFlags = setOf("replace", "append", "append-play", "insert-next", "insert-next-play")
 
-    fun command(raw: List<JsonElement>): Result<List<String>> = runCatching {
+    fun command(raw: List<JsonElement>, isLocal: (String) -> Boolean): Result<List<String>> = runCatching {
         val args = raw.map(::argument)
         val name = args.firstOrNull() ?: error("empty command")
         when (name) {
             "loadfile" -> {
-                require(args.getOrNull(1)?.let(::isWebUrl) == true) { "loadfile takes an http(s) url" }
+                require(args.getOrNull(1)?.let { isWebUrl(it) || isLocal(it) } == true) {
+                    "loadfile takes an http(s) url or a download"
+                }
                 flags(args.getOrNull(2), loadFlags)
                 number(args.getOrNull(3))
                 args.getOrNull(4)?.let(::options)
                 require(args.size <= 5) { "too many arguments" }
             }
             "sub-add", "audio-add" -> {
-                require(args.getOrNull(1)?.let(::isWebUrl) == true) { "$name takes an http(s) url" }
+                require(args.getOrNull(1)?.let { isWebUrl(it) || isLocal(it) } == true) {
+                    "$name takes an http(s) url or a download"
+                }
                 flags(args.getOrNull(2), setOf("select", "auto", "cached"))
                 require(args.size <= 5) { "too many arguments" }
             }

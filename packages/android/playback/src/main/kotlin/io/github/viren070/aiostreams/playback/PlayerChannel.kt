@@ -22,6 +22,8 @@ import kotlinx.serialization.json.put
 class PlayerChannel(
     private val engine: Engine,
     private val send: (JsonObject) -> Unit,
+    /** A downloaded file, which the page may play. */
+    private val isLocal: (String) -> Boolean,
 ) : Engine.Listener {
     private val main = Handler(Looper.getMainLooper())
     private val latest = mutableMapOf<String, JsonElement>()
@@ -37,7 +39,7 @@ class PlayerChannel(
         when (type) {
             "mpv-command" -> {
                 val args = message["args"] as? JsonArray ?: return true
-                MpvProtocol.command(args)
+                MpvProtocol.command(args, isLocal)
                     .onSuccess(engine::command)
                     .onFailure { reject(it) }
             }

@@ -62,6 +62,7 @@ dependencies {
     implementation(project(":bridge"))
     implementation(project(":playback"))
     implementation(project(":engine-mpv"))
+    implementation(project(":downloads"))
     implementation(libs.androidx.activity)
     implementation(libs.androidx.core)
     implementation(libs.androidx.media3.datasource)

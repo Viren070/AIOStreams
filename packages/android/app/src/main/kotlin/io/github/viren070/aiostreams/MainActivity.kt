@@ -1,6 +1,8 @@
 package io.github.viren070.aiostreams
 
+import android.Manifest
 import android.content.ComponentName
+import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
@@ -13,6 +15,7 @@ import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
 import androidx.activity.addCallback
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.Lifecycle
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
@@ -21,6 +24,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import io.github.viren070.aiostreams.bridge.AppBridge
 import io.github.viren070.aiostreams.bridge.AppIdentity
 import io.github.viren070.aiostreams.bridge.WebApp
+import io.github.viren070.aiostreams.downloads.DownloadChannel
 import io.github.viren070.aiostreams.engine.mpv.MpvEngine
 import io.github.viren070.aiostreams.playback.PlayerChannel
 import kotlinx.serialization.json.JsonObject
@@ -36,11 +40,13 @@ class MainActivity : ComponentActivity() {
     private lateinit var bridge: AppBridge
     private lateinit var engine: MpvEngine
     private lateinit var player: PlayerChannel
+    private lateinit var downloads: DownloadChannel
     private lateinit var pip: PictureInPicture
     private lateinit var focus: AudioFocus
     private lateinit var controller: ListenableFuture<MediaController>
     private val screen = PlayerWindow(this)
     private val levels by lazy { Levels(this) }
+    private val notifications = registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,7 +64,10 @@ class MainActivity : ComponentActivity() {
         val app = WebApp(BuildConfig.WEB_URL.ifEmpty { null })
         app.configure(web)
         engine = MpvEngine(this)
-        player = PlayerChannel(engine, send = { bridge.send(it) })
+        val queue = Downloads.queue(this)
+        queue.send = { message -> runOnUiThread { bridge.send(message) } }
+        downloads = DownloadChannel(queue, onAdd = ::askForNotifications)
+        player = PlayerChannel(engine, send = { bridge.send(it) }, isLocal = queue::isLocal)
         bridge = AppBridge(web, app.origins, AppIdentity(BuildConfig.VERSION_NAME, deviceName()), ::onMessage)
         pip = PictureInPicture(this, video)
         focus = AudioFocus(
@@ -87,7 +96,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun onMessage(type: String, message: JsonObject) {
-        if (player.handle(type, message)) return
+        if (player.handle(type, message) || downloads.handle(type, message)) return
         when (type) {
             "app-info" -> bridge.send(buildJsonObject {
                 put("type", "app-info")
@@ -129,6 +138,16 @@ class MainActivity : ComponentActivity() {
         })
     }
 
+    /** Asked on the first download, whose progress shows in one. */
+    private fun askForNotifications() {
+        val permission = Manifest.permission.POST_NOTIFICATIONS
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED
+        ) {
+            notifications.launch(permission)
+        }
+    }
+
     private fun deviceName(): String =
         Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME) ?: Build.MODEL
 
@@ -156,6 +175,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        Downloads.queue(this).send = null
         MediaController.releaseFuture(controller)
         PlaybackService.player = null
         focus.release()
