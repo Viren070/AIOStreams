@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@orama/orama": "^3.1.18",
-    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-dialog": "^1.2.0",
     "@takumi-rs/image-response": "^0.69.5",
     "fumadocs-core": "16.6.9",
     "fumadocs-mdx": "14.2.9",
