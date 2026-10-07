@@ -11,27 +11,31 @@ import type { BaseItemDto, SourceInfo } from '../types';
 
 /**
  * The item's page, marked with what played, for a player that reports where it
- * stopped: a browser tab reopens it by its address, the desktop app by its link.
+ * stopped: a browser tab reopens it by its address, the apps by their link.
  */
 export function externalReturnUrl(
   item: BaseItemDto,
-  source: SourceInfo
+  source: SourceInfo,
+  template: string
 ): string | undefined {
   const host = currentHost().name;
-  if (host !== 'desktop' && host !== 'browser') return undefined;
+  const app = host === 'desktop' || host === 'android-app';
+  if (!app && host !== 'browser') return undefined;
+  // A player an intent link opens answers only the Android app that opened it.
+  if (!app && template.startsWith('intent:')) return undefined;
   const path = itemPath(item);
   const marks = new URLSearchParams({ played: item.Id!, source: source.Id! });
   const marked = `${path}${path.includes('?') ? '&' : '?'}${marks}`;
-  if (host === 'desktop') return `aiostreams://return${marked}`;
+  if (app) return `aiostreams://return${marked}`;
   const { origin, pathname } = window.location;
   return `${origin}${pathname}#${marked}`;
 }
 
-const MARKS = ['played', 'source', 'position', 'lastPlayedUrl'];
+const MARKS = ['played', 'source', 'position', 'finished', 'lastPlayedUrl'];
 
 /** Saves the position a player sent back, which lands before or after the hash depending on the player. */
 export function useExternalReturn() {
-  const { client } = useSession();
+  const { client, user } = useSession();
   const refreshAll = useRefreshAll();
   // A return to a page already open changes only the hash.
   const href = useRouterState({ select: (s) => s.location.href });
@@ -48,6 +52,8 @@ export function useExternalReturn() {
     const sourceId = read('source');
     if (!itemId || !sourceId) return;
     const ms = Number(read('position')) * 1000;
+    // A player that played to the end may not say where that was.
+    const finished = read('finished') === '1';
 
     for (const key of MARKS) inHash.delete(key);
     const rest = inHash.toString();
@@ -56,6 +62,15 @@ export function useExternalReturn() {
       '',
       `${window.location.pathname}${hashPath}${rest ? `?${rest}` : ''}`
     );
+    if (finished) {
+      void client
+        .post(`/UserPlayedItems/${itemId}`, undefined, { userId: user.Id })
+        .then(() => {
+          void refreshAll();
+          toast.success('Marked as watched');
+        });
+      return;
+    }
     if (!(ms > 0)) return;
     void new PlaybackReporter(
       client,

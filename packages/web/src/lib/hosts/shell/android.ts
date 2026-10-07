@@ -46,7 +46,7 @@ export const saveMpvConfig = (text: string) =>
 
 export const androidHost: Host = {
   name: 'android-app',
-  device: () => ({ name: appBridge()?.device }),
+  device: () => ({ id: appBridge()?.deviceId, name: appBridge()?.device }),
   usePlayer: useShellPlayer,
   playerFeatures: ['audio', 'chapters', 'stats'],
   downloads: shellDownloads,

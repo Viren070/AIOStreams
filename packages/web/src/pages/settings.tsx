@@ -443,14 +443,19 @@ function PlayerCard() {
       </>
     );
   else if (preset)
-    help = preset.template.includes('{returnUrl}')
-      ? `Opens versions in ${preset.target ?? preset.name}, which brings you back here with your place saved.`
-      : `Opens versions in ${preset.target ?? preset.name}. It can't tell this app where you stopped, so you mark what you watched yourself.`;
+    help =
+      preset.template.includes('{returnUrl}') &&
+      (!preset.template.startsWith('intent:') ||
+        currentHost().name === 'android-app')
+        ? `Opens versions in ${preset.target ?? preset.name}, which brings you back here with your place saved.`
+        : `Opens versions in ${preset.target ?? preset.name}. It can't tell this app where you stopped, so you mark what you watched yourself.`;
   else if (player !== CUSTOM_LINK)
     help =
       currentHost().name === 'desktop'
         ? "mpv inside this window, with this app's controls and playback settings. Your own mpv.conf, scripts and shaders work here too: put them in its mpv folder under Desktop app."
-        : 'Versions play in this browser. Choose another player to open them in it instead.';
+        : currentHost().name === 'android-app'
+          ? 'Versions play in the app, with its controls and playback settings. Choose another player to open them in it instead.'
+          : 'Versions play in this browser. Choose another player to open them in it instead.';
   return (
     <SettingsCard title="Player" description={ON_DEVICE}>
       <Select

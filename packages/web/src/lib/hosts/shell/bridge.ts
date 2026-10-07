@@ -71,6 +71,8 @@ interface ShellBridge {
   platform: string;
   /** The device's name. */
   device: string;
+  /** The app's own id for this device, where it keeps one. */
+  deviceId?: string;
   send(message: { type: string; [key: string]: unknown }): void;
   subscribe(listener: (message: ShellMessage) => void): () => void;
 }

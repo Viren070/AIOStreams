@@ -8,8 +8,9 @@ type Platform = 'ios' | 'android' | 'macos';
 /** Players the desktop app starts and drives itself, as it names them. */
 export const LAUNCHED_PLAYERS = [{ id: 'mpv', name: 'mpv' }] as const;
 
-/** Extras the Android players read: a title, and where to start in ms. */
-const ANDROID_EXTRAS = 'S.title={title};i.position={positionMs}';
+/** Extras the Android players read (a title, where to start in ms) and the return link the app answers with. */
+const ANDROID_EXTRAS =
+  'S.title={title};i.position={positionMs};S.aiostreams.return={returnUrl}';
 
 const androidIntent = (target: string) =>
   `intent://{url}#Intent;${target};type=video/*;scheme={scheme};${ANDROID_EXTRAS};end`;

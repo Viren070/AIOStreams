@@ -49,7 +49,7 @@ function useOpenLink() {
     startMs: number
   ): boolean => {
     const returnUrl = template.includes('{returnUrl}')
-      ? externalReturnUrl(item, source)
+      ? externalReturnUrl(item, source, template)
       : undefined;
     // A server's own file path ends in the name; a stream address does not.
     const lastSegment = source.Path?.split(/[\\/]/).pop();
