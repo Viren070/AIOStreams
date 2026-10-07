@@ -520,7 +520,7 @@ export function parseMediaInfo(
     subtitles: Array.isArray(info.subtitle) ? subtitles : undefined,
     audioTags: Array.isArray(info.audio) ? audioTags : undefined,
     audioChannels: Array.isArray(info.audio) ? audioChannels : undefined,
-    visualTags,
+    visualTags: info.video ? visualTags : undefined,
     audioTracks: Array.isArray(info.audio) ? audioTrackList : undefined,
     subtitleTracks: Array.isArray(info.subtitle)
       ? subtitleTrackList

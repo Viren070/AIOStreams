@@ -8,6 +8,23 @@ describe('parseMediaInfo', () => {
     assert.deepEqual(result?.languages, []);
     assert.equal(result?.mediaInfoQuality, 'probe');
   });
+
+  it('confirms an empty audio list rather than dropping it, when the probe reports no audio tracks at all', () => {
+    const result = parseMediaInfo({ audio: [] });
+    assert.deepEqual(result?.languages, []);
+    assert.deepEqual(result?.audioTracks, []);
+  });
+
+  it('confirms an empty subtitle list rather than dropping it, when the probe reports no subtitle tracks at all', () => {
+    const result = parseMediaInfo({ subtitle: [] });
+    assert.deepEqual(result?.subtitles, []);
+    assert.deepEqual(result?.subtitleTracks, []);
+  });
+
+  it('leaves visual tags unset when the probe has no video section at all', () => {
+    const result = parseMediaInfo({ audio: [{ codec: 'aac', lang: 'eng' }] });
+    assert.equal(result?.visualTags, undefined);
+  });
 });
 
 describe('normaliseParsedMediaInfo', () => {
