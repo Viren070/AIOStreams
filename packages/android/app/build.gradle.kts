@@ -64,4 +64,6 @@ dependencies {
     implementation(project(":engine-mpv"))
     implementation(libs.androidx.activity)
     implementation(libs.androidx.core)
+    implementation(libs.androidx.media3.datasource)
+    implementation(libs.androidx.media3.session)
 }
