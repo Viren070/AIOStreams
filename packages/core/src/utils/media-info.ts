@@ -357,30 +357,12 @@ export function normaliseParsedMediaInfo(
 ): ParsedMediaInfo | undefined {
   if (!parsedMediaInfo) return undefined;
 
-  const audioTracks = normaliseTrackList(parsedMediaInfo.audioTracks);
-  const subtitleTracks = normaliseTrackList(parsedMediaInfo.subtitleTracks);
-
-  const languages =
-    parsedMediaInfo.languages !== undefined
-      ? normaliseLanguageList(parsedMediaInfo.languages)
-      : normaliseLanguageList(
-          audioTracks.map((track) => track.lang).filter((l): l is string => !!l)
-        );
-  const subtitles =
-    parsedMediaInfo.subtitles !== undefined
-      ? normaliseLanguageList(parsedMediaInfo.subtitles)
-      : normaliseLanguageList(
-          subtitleTracks
-            .map((track) => track.lang)
-            .filter((l): l is string => !!l)
-        );
+  const languages = normaliseLanguageList(parsedMediaInfo.languages ?? []);
+  const subtitles = normaliseLanguageList(parsedMediaInfo.subtitles ?? []);
 
   const audioTags = [
     ...new Set(
-      (parsedMediaInfo.audioTags !== undefined
-        ? parsedMediaInfo.audioTags
-        : audioTracks.flatMap((track) => track.tags ?? [])
-      ).filter((tag) =>
+      (parsedMediaInfo.audioTags ?? []).filter((tag) =>
         constants.AUDIO_TAGS.includes(
           tag as (typeof constants.AUDIO_TAGS)[number]
         )
@@ -389,12 +371,7 @@ export function normaliseParsedMediaInfo(
   ];
   const audioChannels = [
     ...new Set(
-      (parsedMediaInfo.audioChannels !== undefined
-        ? parsedMediaInfo.audioChannels
-        : audioTracks
-            .map((track) => track.channels)
-            .filter((c): c is string => !!c)
-      ).filter((channel) =>
+      (parsedMediaInfo.audioChannels ?? []).filter((channel) =>
         constants.AUDIO_CHANNELS.includes(
           channel as (typeof constants.AUDIO_CHANNELS)[number]
         )
@@ -424,6 +401,8 @@ export function normaliseParsedMediaInfo(
       : undefined;
   }
 
+  const audioTracks = normaliseTrackList(parsedMediaInfo.audioTracks);
+  const subtitleTracks = normaliseTrackList(parsedMediaInfo.subtitleTracks);
   const videoIndex = asStreamIndex(parsedMediaInfo.videoIndex);
 
   const hasAnyData =
@@ -444,25 +423,13 @@ export function normaliseParsedMediaInfo(
     ...(parsedMediaInfo.mediaInfoQuality && hasAnyData
       ? { mediaInfoQuality: parsedMediaInfo.mediaInfoQuality }
       : {}),
-    ...(parsedMediaInfo.languages !== undefined ||
-    parsedMediaInfo.audioTracks !== undefined
-      ? { languages }
-      : {}),
-    ...(parsedMediaInfo.subtitles !== undefined ||
-    parsedMediaInfo.subtitleTracks !== undefined
-      ? { subtitles }
-      : {}),
-    ...(parsedMediaInfo.audioTags !== undefined ||
-    parsedMediaInfo.audioTracks !== undefined
-      ? { audioTags }
-      : {}),
-    ...(parsedMediaInfo.audioChannels !== undefined ||
-    parsedMediaInfo.audioTracks !== undefined
-      ? { audioChannels }
-      : {}),
+    ...(parsedMediaInfo.languages !== undefined ? { languages } : {}),
+    ...(parsedMediaInfo.subtitles !== undefined ? { subtitles } : {}),
+    ...(parsedMediaInfo.audioTags !== undefined ? { audioTags } : {}),
+    ...(parsedMediaInfo.audioChannels !== undefined ? { audioChannels } : {}),
     ...(parsedMediaInfo.visualTags !== undefined ? { visualTags } : {}),
-    ...(audioTracks.length > 0 ? { audioTracks } : {}),
-    ...(subtitleTracks.length > 0 ? { subtitleTracks } : {}),
+    ...(parsedMediaInfo.audioTracks !== undefined ? { audioTracks } : {}),
+    ...(parsedMediaInfo.subtitleTracks !== undefined ? { subtitleTracks } : {}),
     ...(videoIndex !== undefined ? { videoIndex } : {}),
     ...(encode ? { encode } : {}),
     ...(resolution ? { resolution } : {}),
@@ -482,46 +449,36 @@ export function parseMediaInfo(
   const info = asMediaInfo(mediaInfo);
   if (!info) return undefined;
 
-  const audioTracks = Array.isArray(info.audio) ? info.audio : undefined;
-  const subtitleTracks = Array.isArray(info.subtitle)
-    ? info.subtitle
-    : undefined;
+  const audioTracks = Array.isArray(info.audio) ? info.audio : [];
+  const subtitleTracks = Array.isArray(info.subtitle) ? info.subtitle : [];
 
-  const languages = audioTracks
-    ? normaliseLanguageList(
-        audioTracks.map((track) => resolveTrackLang(track.lang, track.title))
-      )
-    : undefined;
-  const subtitles = subtitleTracks
-    ? normaliseLanguageList(
-        subtitleTracks.map((track) => resolveTrackLang(track.lang, track.title))
-      )
-    : undefined;
+  const languages = normaliseLanguageList(
+    audioTracks.map((track) => resolveTrackLang(track.lang, track.title))
+  );
+  const subtitles = normaliseLanguageList(
+    subtitleTracks.map((track) => resolveTrackLang(track.lang, track.title))
+  );
 
-  const trackAudioTags = audioTracks?.map((track) =>
+  const trackAudioTags = audioTracks.map((track) =>
     normaliseAudioTags(track.codec, track.profile)
   );
-  const audioTags = trackAudioTags
-    ? [...new Set(trackAudioTags.flat())]
-    : undefined;
+  const audioTags = [...new Set(trackAudioTags.flat())];
 
-  const audioChannels = audioTracks
-    ? [
-        ...new Set(
-          audioTracks
-            .map((track) => normaliseAudioChannels(track))
-            .filter((channel): channel is string => !!channel)
-        ),
-      ]
-    : undefined;
+  const audioChannels = [
+    ...new Set(
+      audioTracks
+        .map((track) => normaliseAudioChannels(track))
+        .filter((channel): channel is string => !!channel)
+    ),
+  ];
 
-  const audioTrackList = audioTracks?.map((track, i) => ({
+  const audioTrackList = audioTracks.map((track, i) => ({
     index: asStreamIndex(track.index),
     lang: normaliseLanguage(resolveTrackLang(track.lang, track.title)),
     codec: asTrackText(track.codec)?.toLowerCase(),
     title: asTrackText(track.title),
-    tag: trackAudioTags![i][0],
-    tags: trackAudioTags![i],
+    tag: trackAudioTags[i][0],
+    tags: trackAudioTags[i],
     channels: normaliseAudioChannels(track),
     default: track.default === true,
     commentary: track.commentary === true,
@@ -530,7 +487,7 @@ export function parseMediaInfo(
     hearingImpaired: track.hearing_impaired === true,
     visualImpaired: track.visual_impaired === true,
   }));
-  const subtitleTrackList = subtitleTracks?.map((track) => ({
+  const subtitleTrackList = subtitleTracks.map((track) => ({
     index: asStreamIndex(track.index),
     lang: normaliseLanguage(resolveTrackLang(track.lang, track.title)),
     codec: asTrackText(track.codec)?.toLowerCase(),
@@ -540,9 +497,7 @@ export function parseMediaInfo(
     hearingImpaired: track.hearing_impaired === true,
   }));
 
-  const visualTags = Array.isArray(info.video?.hdr)
-    ? normaliseVisualTags(info.video)
-    : undefined;
+  const visualTags = normaliseVisualTags(info.video);
   const encode = normaliseEncode(info.video);
   const resolution = normaliseResolution(info.video?.w, info.video?.h);
   const duration =
@@ -561,13 +516,15 @@ export function parseMediaInfo(
 
   const normalised = normaliseParsedMediaInfo({
     mediaInfoQuality: 'probe',
-    languages,
-    subtitles,
-    audioTags,
-    audioChannels,
+    languages: Array.isArray(info.audio) ? languages : undefined,
+    subtitles: Array.isArray(info.subtitle) ? subtitles : undefined,
+    audioTags: Array.isArray(info.audio) ? audioTags : undefined,
+    audioChannels: Array.isArray(info.audio) ? audioChannels : undefined,
     visualTags,
-    audioTracks: audioTrackList,
-    subtitleTracks: subtitleTrackList,
+    audioTracks: Array.isArray(info.audio) ? audioTrackList : undefined,
+    subtitleTracks: Array.isArray(info.subtitle)
+      ? subtitleTrackList
+      : undefined,
     videoIndex: asStreamIndex(info.video?.index),
     encode,
     resolution,
