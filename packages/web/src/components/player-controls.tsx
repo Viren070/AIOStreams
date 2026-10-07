@@ -477,14 +477,18 @@ const FIT_BUTTON: Record<VideoFit, { label: string; icon: React.ReactNode }> = {
   stretch: { label: 'Stretch', icon: <LuStretchHorizontal /> },
 };
 
-function FitButton() {
+/** Says the fit it moves to, which its icon alone doesn't make plain. */
+function FitButton({ notice }: { notice: (text: string) => void }) {
   const [fit, setFit] = useSetting(settings.videoFit);
   const next = VIDEO_FITS[(VIDEO_FITS.indexOf(fit) + 1) % VIDEO_FITS.length];
   return (
     <ControlButton
       name="fit"
       label={`Picture: ${FIT_BUTTON[fit].label}`}
-      onClick={() => setFit(next)}
+      onClick={() => {
+        setFit(next);
+        notice(`Picture: ${FIT_BUTTON[next].label}`);
+      }}
     >
       {FIT_BUTTON[fit].icon}
     </ControlButton>
@@ -1375,7 +1379,7 @@ export function PlayerControls({
               />
             )}
             {(!currentHost().usePlayer || appBridge()) && !player.external && (
-              <FitButton />
+              <FitButton notice={showNotice} />
             )}
             {player.stats && (
               <Menu
