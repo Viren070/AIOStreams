@@ -115,9 +115,11 @@ class MainActivity : ComponentActivity() {
         getSystemService(NotificationManager::class.java).cancel(UpdatedReceiver.NOTIFICATION)
         web.loadUrl(app.startUrl)
 
+        // The page's own Back closes what is open, leaves the player and goes back, and
+        // says `exit` on its first page.
         onBackPressedDispatcher.addCallback(this) {
             when {
-                screen.fullscreen -> setFullscreen(false)
+                bridge.connected -> bridge.send(buildJsonObject { put("type", "back") })
                 web.canGoBack() -> web.goBack()
                 else -> finish()
             }
@@ -148,6 +150,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
             "web-error" -> Log.e("page", message["message"]?.jsonPrimitive?.content.orEmpty())
+            "exit" -> moveTaskToBack(true)
             "links-ready" -> {
                 linksReady = true
                 sendLinks()

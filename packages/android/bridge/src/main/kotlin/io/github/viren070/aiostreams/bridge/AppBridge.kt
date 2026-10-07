@@ -44,6 +44,10 @@ class AppBridge(
     }
 
     /** On the main thread only. */
+    /** Whether a page is listening. */
+    val connected: Boolean
+        get() = reply != null
+
     fun send(message: JsonObject) {
         reply?.postMessage(message.toString())
     }
