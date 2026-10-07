@@ -28,6 +28,7 @@ import {
   type Track,
 } from '../../playback/controller';
 import { useLatest } from '../../use-latest';
+import { currentHost } from '..';
 import { appBridge } from './bridge';
 
 interface MpvTrack {
@@ -73,7 +74,11 @@ const SUBTITLE_TYPES = ['srt', 'vtt', 'ass', 'ssa', 'sub', 'sup'];
 export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
   const { item, source, startMs, url, launched } = opts;
   const external = !!launched;
-  const [state, setState] = React.useState(() => initialState(source, startMs));
+  // The app can be full screen already, from before this player mounted.
+  const [state, setState] = React.useState(() => ({
+    ...initialState(source, startMs),
+    fullscreen: !external && !!currentHost().fullscreen?.active(),
+  }));
   const [tracks, setTracks] = React.useState<MpvTrack[]>([]);
   const [chapters, setChapters] = React.useState<Chapter[]>([]);
   const latest = useLatest({ ...opts, state });

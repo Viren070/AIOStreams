@@ -7,7 +7,7 @@ import {
 } from '../../settings';
 import { useLatest } from '../../use-latest';
 import type { Host } from '..';
-import { androidHost } from './android';
+import { androidHost, setupAndroid } from './android';
 import { appBridge, type ShellMessage } from './bridge';
 import { desktopHost, setupDesktop } from './desktop';
 import { applyDesktopSettings } from './player';
@@ -71,12 +71,13 @@ export function ShellSetup() {
       if (m.type === 'update-state') onUpdateState(m);
       else if (m.type === 'external-players') onExternalPlayers(m.players);
     });
-    const desktop = shell.platform === 'android' ? null : setupDesktop();
+    const teardown =
+      shell.platform === 'android' ? setupAndroid() : setupDesktop();
     shell.send({ type: 'mpv-sync' });
     return () => {
       unsubscribeSettings();
       unsubscribe();
-      desktop?.();
+      teardown();
     };
   }, []);
   return null;

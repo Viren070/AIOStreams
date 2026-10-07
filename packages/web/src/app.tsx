@@ -25,7 +25,7 @@ import {
 } from './lib/servers';
 import { ServersPage } from './pages/servers';
 import { currentHost } from './lib/hosts';
-import { ShellSetup, useShellLinks } from './lib/hosts/shell';
+import { ShellSetup, shellHost, useShellLinks } from './lib/hosts/shell';
 import { parseAppLink } from './lib/app-links';
 import { toast } from 'sonner';
 import {
@@ -60,12 +60,8 @@ export default function JellyfinWebApp() {
         <PageBackground />
         <ThemeStyles />
         <InputSetup router={webRouter} />
-        {currentHost().name === 'desktop' && (
-          <>
-            <ShellSetup />
-            <WindowControls />
-          </>
-        )}
+        {shellHost() && <ShellSetup />}
+        {currentHost().name === 'desktop' && <WindowControls />}
         {__STANDALONE__ ? <Standalone /> : <Served />}
       </MotionConfig>
     </ThemeProvider>

@@ -124,7 +124,8 @@ export function PlayerPage({
   const playback = usePlaybackPrefs();
   const picks = useShowPicks();
   usePlayerPage();
-  usePhoneFullscreen(!currentHost().usePlayer);
+  const host = currentHost();
+  usePhoneFullscreen(!host.usePlayer || !!host.fullscreen);
 
   // Pinned once found: a refreshed version list must not restart playback.
   const [playing, setPlaying] = React.useState<Omit<

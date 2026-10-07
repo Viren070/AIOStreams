@@ -1334,8 +1334,9 @@ export function PlayerControls({
                 onOpenChange={onMenu}
               />
             )}
-            {(!currentHost().usePlayer || currentHost().name === 'desktop') &&
-              !player.external && <FitButton />}
+            {(!currentHost().usePlayer || appBridge()) && !player.external && (
+              <FitButton />
+            )}
             {player.stats && (
               <Menu
                 name="statistics"
