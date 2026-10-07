@@ -473,10 +473,11 @@ pub fn handle(
             args,
             external: to_external,
         } => {
+            let local = |path: &str| downloads.is_local(path);
             let done = if to_external {
-                Some(external.command(&args))
+                Some(external.command(&args, &local))
             } else {
-                player.as_ref().map(|p| p.command(&args))
+                player.as_ref().map(|p| p.command(&args, &local))
             };
             if let Some(Err(e)) = done {
                 fail(format!("mpv command {args:?}: {e}"));

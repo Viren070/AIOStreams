@@ -195,8 +195,8 @@ impl External {
         }
     }
 
-    pub fn command(&self, args: &[Value]) -> Result<(), String> {
-        let args = bridge::command(args)?;
+    pub fn command(&self, args: &[Value], local: &dyn Fn(&str) -> bool) -> Result<(), String> {
+        let args = bridge::command(args, local)?;
         self.with(|backend| backend.command(args));
         Ok(())
     }

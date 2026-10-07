@@ -98,8 +98,8 @@ impl Player {
     }
 
     /// Errs only on refused arguments; mpv's own errors reach the page as a message.
-    pub fn command(&self, args: &[Value]) -> Result<(), String> {
-        let args = bridge::command(args)?;
+    pub fn command(&self, args: &[Value], local: &dyn Fn(&str) -> bool) -> Result<(), String> {
+        let args = bridge::command(args, local)?;
         match args.as_slice() {
             [name, url, _, _, options, ..] if name == "loadfile" => {
                 log::info!("load url={url} options={options}")

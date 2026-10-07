@@ -109,6 +109,7 @@ struct Shared {
     jobs: HashMap<String, Placed>,
 }
 
+#[derive(Default)]
 struct Placed {
     done: bool,
     video: Option<PathBuf>,
@@ -171,6 +172,18 @@ impl Downloads {
             .unwrap_or_default()
     }
 
+    pub fn is_local(&self, path: &str) -> bool {
+        let Ok(shared) = self.shared.lock() else {
+            return false;
+        };
+        let path = Path::new(path);
+        shared
+            .jobs
+            .values()
+            .filter(|p| p.done)
+            .any(|p| p.video.as_deref() == Some(path) || p.subtitles.iter().any(|s| s == path))
+    }
+
     pub fn job_folder(&self, id: &str) -> Option<PathBuf> {
         let shared = self.shared.lock().ok()?;
         shared
@@ -180,21 +193,6 @@ impl Downloads {
             .as_ref()?
             .parent()
             .map(Path::to_path_buf)
-    }
-
-    /// `download:<id>` is a finished download's video, `download:<id>/<n>` its nth subtitle.
-    pub fn local_file(&self, reference: &str) -> Option<PathBuf> {
-        let rest = reference.strip_prefix("download:")?;
-        let (id, index) = match rest.split_once('/') {
-            Some((id, n)) => (id, Some(n.parse::<usize>().ok()?)),
-            None => (rest, None),
-        };
-        let shared = self.shared.lock().ok()?;
-        let placed = shared.jobs.get(id).filter(|p| p.done)?;
-        match index {
-            None => placed.video.clone(),
-            Some(n) => placed.subtitles.get(n).cloned(),
-        }
     }
 }
 
@@ -378,12 +376,25 @@ impl Queue {
             jobs: self
                 .jobs
                 .iter()
-                .map(|j| DownloadStatus {
-                    id: j.spec.id.clone(),
-                    state: j.state.name(),
-                    bytes: j.bytes,
-                    total: j.total,
-                    error: j.error.clone(),
+                .map(|j| {
+                    let placed = if j.state == State::Done {
+                        self.placed(j)
+                    } else {
+                        Placed::default()
+                    };
+                    DownloadStatus {
+                        id: j.spec.id.clone(),
+                        state: j.state.name(),
+                        bytes: j.bytes,
+                        total: j.total,
+                        error: j.error.clone(),
+                        video: placed.video.map(|p| p.to_string_lossy().into_owned()),
+                        subtitles: placed
+                            .subtitles
+                            .iter()
+                            .map(|p| p.to_string_lossy().into_owned())
+                            .collect(),
+                    }
                 })
                 .collect(),
         });
@@ -428,32 +439,31 @@ impl Queue {
         }
     }
 
-    fn share(&self) {
-        let Ok(mut shared) = self.shared.lock() else {
-            return;
+    fn placed(&self, job: &Job) -> Placed {
+        let of = |kind| {
+            job.spec
+                .files
+                .iter()
+                .filter(move |f| f.kind == kind)
+                .filter_map(|f| place(&job.folder, &f.path).ok())
         };
-        shared.folder = self.folder.clone();
-        shared.jobs = self
+        Placed {
+            done: job.state == State::Done,
+            video: of(FileKind::Video).next(),
+            subtitles: of(FileKind::Subtitle).collect(),
+        }
+    }
+
+    fn share(&self) {
+        let jobs = self
             .jobs
             .iter()
-            .map(|job| {
-                let of = |kind| {
-                    job.spec
-                        .files
-                        .iter()
-                        .filter(move |f| f.kind == kind)
-                        .filter_map(|f| place(&job.folder, &f.path).ok())
-                };
-                (
-                    job.spec.id.clone(),
-                    Placed {
-                        done: job.state == State::Done,
-                        video: of(FileKind::Video).next(),
-                        subtitles: of(FileKind::Subtitle).collect(),
-                    },
-                )
-            })
+            .map(|job| (job.spec.id.clone(), self.placed(job)))
             .collect();
+        if let Ok(mut shared) = self.shared.lock() {
+            shared.folder = self.folder.clone();
+            shared.jobs = jobs;
+        }
     }
 
     /// Leaves files another download still uses, such as a show's poster.

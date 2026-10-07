@@ -172,6 +172,9 @@ pub struct DownloadStatus {
     pub bytes: u64,
     pub total: Option<u64>,
     pub error: Option<String>,
+    /// Where a finished download's video and subtitles are, for playing it.
+    pub video: Option<String>,
+    pub subtitles: Vec<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -408,14 +411,16 @@ fn check_number(v: Option<&String>) -> Result<(), String> {
     }
 }
 
-pub fn command(args: &[Value]) -> Result<Vec<String>, String> {
+/// `local` says whether a path is one of the app's own downloads, the only
+/// files the page may open.
+pub fn command(args: &[Value], local: &dyn Fn(&str) -> bool) -> Result<Vec<String>, String> {
     let args = args.iter().map(arg_string).collect::<Result<Vec<_>, _>>()?;
     let name = args.first().ok_or("empty command")?.as_str();
     match name {
         // loadfile <url> [<flags> [<index> [<options>]]]
         "loadfile" => {
-            if !args.get(1).is_some_and(|u| is_web_url(u)) {
-                return Err("loadfile takes an http(s) url".into());
+            if !args.get(1).is_some_and(|u| is_web_url(u) || local(u)) {
+                return Err("loadfile takes an http(s) url or a download".into());
             }
             check_flags(
                 args.get(2),
@@ -436,8 +441,8 @@ pub fn command(args: &[Value]) -> Result<Vec<String>, String> {
             }
         }
         "sub-add" | "audio-add" => {
-            if !args.get(1).is_some_and(|u| is_web_url(u)) {
-                return Err(format!("{name} takes an http(s) url"));
+            if !args.get(1).is_some_and(|u| is_web_url(u) || local(u)) {
+                return Err(format!("{name} takes an http(s) url or a download"));
             }
             check_flags(args.get(2), &["select", "auto", "cached"])?;
             if args.len() > 5 {
