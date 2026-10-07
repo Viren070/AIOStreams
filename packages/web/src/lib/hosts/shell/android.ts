@@ -1,15 +1,17 @@
 import type { Host } from '..';
+import { runAction } from '../../input';
 import { appBridge } from './bridge';
 import { shellDownloads } from './downloads';
 import { useShellPlayer } from './player';
 
 let fullscreen = false;
 
-/** Follows the app's full screen, which hides the system bars and turns to landscape. */
+/** Follows the app's full screen, which hides the system bars and turns to landscape, and takes its Back. */
 export function setupAndroid(): () => void {
   return (
     appBridge()?.subscribe((m) => {
       if (m.type === 'fullscreen') fullscreen = m.value;
+      else if (m.type === 'back') runAction('back');
     }) ?? (() => {})
   );
 }
@@ -54,6 +56,13 @@ export const androidHost: Host = {
     active: () => fullscreen,
     set: (on) => appBridge()?.send({ type: 'fullscreen', value: on }),
   },
+  // Back ends at Home, as in other Android apps, rather than walking the history before it.
+  back: () => {
+    if ((location.hash.slice(1).split('?')[0] || '/') !== '/') return false;
+    appBridge()?.send({ type: 'exit' });
+    return true;
+  },
+  exit: () => appBridge()?.send({ type: 'exit' }),
   levels: {
     read: () =>
       new Promise((resolve) => {

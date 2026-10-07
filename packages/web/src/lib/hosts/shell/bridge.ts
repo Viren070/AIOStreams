@@ -18,6 +18,7 @@ export type ShellMessage =
   | { type: 'external-ended'; error: string | null }
   | { type: 'fullscreen'; value: boolean }
   | { type: 'pip'; value: boolean }
+  | { type: 'back' }
   | { type: 'mpv-config'; text: string }
   | { type: 'levels'; volume: number; brightness: number }
   | { type: 'window-state'; maximized: boolean }
