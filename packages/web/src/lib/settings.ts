@@ -521,6 +521,10 @@ export const settings = {
     /** Read by the page only; the app itself never needs it. */
     chapterSkips: device<boolean>('aiostreams-desktop-chapter-skips', true),
   },
+  android: {
+    pip: device<boolean>('aiostreams-android-pip', true),
+    background: device<boolean>('aiostreams-android-background', false),
+  },
   discord,
   discordEvents: group(discord),
   next: {

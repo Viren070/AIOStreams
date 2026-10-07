@@ -34,8 +34,8 @@ interface Actions {
 
 /**
  * Tells the system's media controls what plays and takes their presses: through
- * the desktop app, which also shows it on Discord, the app around the page, or
- * the browser.
+ * the AIOStreams app (the desktop one also shows it on Discord), the app around
+ * the page, or the browser.
  */
 export function useNowPlaying(
   item: BaseItemDto,
@@ -44,6 +44,8 @@ export function useNowPlaying(
 ) {
   const { client } = useSession();
   const [discord] = useSetting(settings.discord['playing']);
+  const [pip] = useSetting(settings.android.pip);
+  const [background] = useSetting(settings.android.background);
   const show = useItem(item.SeriesId ?? item.Id!);
   const imdb = (item.Type === 'Episode' ? show.data : item)?.ProviderIds?.Imdb;
   const title = itemTitle(item);
@@ -55,7 +57,6 @@ export function useNowPlaying(
   const hasNext = !!actions.onNext;
   const hasPrevious = !!actions.onPrevious;
   const host = currentHost();
-  const desktop = host.name === 'desktop';
 
   const latest = useLatest({ player, actions });
   const press = React.useCallback((key: MediaKey) => {
@@ -92,7 +93,7 @@ export function useNowPlaying(
 
   React.useEffect(() => {
     const shell = appBridge();
-    if (!desktop || !shell || !started) return;
+    if (!shell || !started) return;
     shell.send({
       type: 'now-playing',
       item: {
@@ -103,10 +104,11 @@ export function useNowPlaying(
         previous: hasPrevious,
         next: hasNext,
         discord,
+        pip,
+        background,
       },
     });
   }, [
-    desktop,
     started,
     title,
     subtitle,
@@ -115,11 +117,13 @@ export function useNowPlaying(
     hasPrevious,
     hasNext,
     discord,
+    pip,
+    background,
   ]);
 
   React.useEffect(() => {
     const shell = appBridge();
-    if (!desktop || !shell) return;
+    if (!shell) return;
     const unsubscribe = shell.subscribe((m) => {
       if (m.type === 'media-key') press(m.key);
     });
@@ -127,7 +131,7 @@ export function useNowPlaying(
       unsubscribe();
       shell.send({ type: 'now-playing', item: null });
     };
-  }, [desktop, press]);
+  }, [press]);
 
   const app = host.usePlayer ? undefined : host.mediaSession;
   React.useEffect(() => {

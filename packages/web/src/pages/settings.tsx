@@ -240,6 +240,9 @@ function PlaybackSection() {
   );
   const bingeGroups = useFeature('versions');
   const shell = currentHost().name === 'desktop';
+  const android = currentHost().name === 'android-app';
+  const [pip, setPip] = useSetting(settings.android.pip);
+  const [background, setBackground] = useSetting(settings.android.background);
 
   return (
     <>
@@ -394,6 +397,24 @@ function PlaybackSection() {
           onValueChange={(v) => setVolumeStep(Number(v))}
         />
       </SettingsCard>
+      {android && (
+        <SettingsCard title="Leaving the app" description={ON_DEVICE}>
+          <Switch
+            side="right"
+            label="Picture-in-picture"
+            help="Keeps the video playing in a small window when you leave the app."
+            value={pip}
+            onValueChange={setPip}
+          />
+          <Switch
+            side="right"
+            label="Play in the background"
+            help="Keeps the sound going with the screen off, or when you leave without picture-in-picture."
+            value={background}
+            onValueChange={setBackground}
+          />
+        </SettingsCard>
+      )}
       {shell && (
         <SettingsCard title="Video" description={ON_DEVICE}>
           <Switch

@@ -618,6 +618,8 @@ function NativePlayer({
     onPrevious: next.previous ? next.playPrevious : undefined,
   });
 
+  if (player.state.pictureInPicture)
+    return <div data-page="player" className="fixed inset-0" />;
   return (
     <div data-page="player" className="fixed inset-0">
       <Cover item={item} hidden={player.state.started && !launched} />

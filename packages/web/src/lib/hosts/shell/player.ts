@@ -297,6 +297,7 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
       if (m.type === 'mpv-prop') onProp(m.name, m.data);
       else if (m.type === 'fullscreen' && !external)
         patch({ fullscreen: m.value });
+      else if (m.type === 'pip') patch({ pictureInPicture: m.value });
       else if (m.type === 'error') console.warn(m.message);
       // The next file it starts is the queued episode.
       else if (m.type === 'mpv-event' && m.name === 'start-file') {

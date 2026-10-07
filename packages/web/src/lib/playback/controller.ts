@@ -31,6 +31,8 @@ export interface PlayerState {
   /** Positive shows subtitles later. */
   subtitleDelayMs: number;
   error: string | null;
+  /** The video plays in a small window of its own, with nothing over it. */
+  pictureInPicture?: boolean;
 }
 
 /** What some players add to what a browser's video can do. */
