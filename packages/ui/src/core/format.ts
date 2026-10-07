@@ -19,9 +19,9 @@ interface BytesOptions {
 
 /**
  * Format a byte count with an SI unit (k = 1000), e.g. `0 B`, `512 B`,
- * `1.5 MB`, `4.2 GB`. Whole bytes are shown without decimals; everything
- * larger uses a single decimal place. Nullish/NaN inputs render the
- * `placeholder` (default `'—'`).
+ * `1.5 MB`, `4 GB`. Whole bytes are shown without decimals; everything
+ * larger uses a single decimal place, left off when it is zero. Nullish/NaN
+ * inputs render the `placeholder` (default `'—'`).
  */
 export function formatBytes(
   bytes: number | null | undefined,
@@ -33,7 +33,8 @@ export function formatBytes(
     BYTE_UNITS.length - 1,
     Math.max(0, Math.floor(Math.log(Math.abs(bytes)) / Math.log(SI)))
   );
-  return `${(bytes / SI ** i).toFixed(i === 0 ? 0 : 1)} ${BYTE_UNITS[i]}`;
+  const value = (bytes / SI ** i).toFixed(i === 0 ? 0 : 1).replace(/\.0$/, '');
+  return `${value} ${BYTE_UNITS[i]}`;
 }
 
 /**
