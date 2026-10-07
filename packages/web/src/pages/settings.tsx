@@ -106,6 +106,7 @@ import {
   SUBTITLE_SIZES,
   type AudioChannels,
   type EpisodeLayout,
+  type TouchNavigation,
   type HeroMode,
   type NextPrompt,
   type PosterLine,
@@ -941,6 +942,9 @@ function InterfaceSection() {
   const [posterSize, setPosterSize] = useSetting(settings.posterSize);
   const [posterLines, setPosterLines] = useSetting(settings.posterLines);
   const [episodeLayout, setEpisodeLayout] = useSetting(settings.episodeLayout);
+  const [touchNavigation, setTouchNavigation] = useSetting(
+    settings.touchNavigation
+  );
 
   const featuredOptions = [
     {
@@ -1054,6 +1058,22 @@ function InterfaceSection() {
           onValueChange={(value) => setEpisodeLayout(value as EpisodeLayout)}
         />
       </SettingsCard>
+      {matchMedia('(pointer: coarse)').matches && (
+        <SettingsCard title="Navigation" description={ON_DEVICE}>
+          <Select
+            label="On wide screens"
+            help="Where the navigation goes when the screen is wide enough for a sidebar, such as a tablet held sideways."
+            options={[
+              { value: 'rail', label: 'Side rail' },
+              { value: 'bar', label: 'Bottom bar' },
+            ]}
+            value={touchNavigation}
+            onValueChange={(value) =>
+              setTouchNavigation(value as TouchNavigation)
+            }
+          />
+        </SettingsCard>
+      )}
     </>
   );
 }

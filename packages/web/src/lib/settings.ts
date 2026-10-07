@@ -20,6 +20,9 @@ export type EpisodeLayout = (typeof EPISODE_LAYOUTS)[number];
 
 export type HeroMode = 'rotate' | 'follow';
 
+export const TOUCH_NAVIGATIONS = ['rail', 'bar'] as const;
+export type TouchNavigation = (typeof TOUCH_NAVIGATIONS)[number];
+
 const POSTER_LINES: PosterLine[] = ['title', 'year'];
 
 /** A stored value; `read` returns the same reference until it changes. */
@@ -490,6 +493,12 @@ export const settings = {
     'aiostreams-web-episode-layout',
     'auto',
     EPISODE_LAYOUTS
+  ),
+  /** Where a touch screen wide enough for the sidebar keeps the navigation. */
+  touchNavigation: device<TouchNavigation>(
+    'aiostreams-web-touch-navigation',
+    'rail',
+    TOUCH_NAVIGATIONS
   ),
   /** How the picture fills a screen of another shape; kept for this device's screen. */
   videoFit: device<VideoFit>('aiostreams-web-video-fit', 'fit', VIDEO_FITS),

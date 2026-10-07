@@ -3,6 +3,16 @@
 @import 'tailwindcss/utilities';
 @import '@aiostreams/ui/theme.css';
 
+/* The room the floating nav bar takes, which pages keep free. */
+:root {
+  --nav-bar: calc(5rem + env(safe-area-inset-bottom));
+}
+@media (min-width: 1024px) {
+  :root:not([data-nav='bar']) {
+    --nav-bar: 0px;
+  }
+}
+
 /* see index.html; the page's background is then drawn by an element */
 html.see-through,
 html.see-through body {

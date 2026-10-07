@@ -47,6 +47,7 @@ import {
   useConfirmationDialog,
 } from '@aiostreams/ui/shared/confirmation-dialog';
 import { cn } from '@aiostreams/ui/core/styling';
+import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
 import { useSession } from '../lib/session';
 import { usePickableUsers } from '../lib/queries';
 import { configureUrl, navigate, to } from '../lib/paths';
@@ -56,7 +57,11 @@ import { useServerInfo } from '../lib/server-info';
 import { useDiscordBrowsing } from '../lib/discord';
 import { useServerEvents } from '../lib/server-events';
 import { retryNow, useReachable } from '../lib/connection';
-import { downloadsHost, useDownloadRunner } from '../lib/downloads';
+import {
+  downloadsHost,
+  useDownloadList,
+  useDownloadRunner,
+} from '../lib/downloads';
 import { usePendingStops } from '../lib/playback/reporter';
 import { settings, useSetting } from '../lib/settings';
 import { useAction } from '../lib/input';
@@ -92,6 +97,79 @@ function SidebarAvatar({ className }: { className?: string }) {
       src={avatar}
       className={cn(className, 'size-6 !text-[0.7rem] !text-white')}
     />
+  );
+}
+
+/** The avatar, ringed with the progress of running downloads. */
+function YouIcon() {
+  const running = useDownloadList().filter(
+    (d) => d.state === 'downloading' || d.state === 'queued'
+  );
+  const total = running.reduce((sum, d) => sum + (d.total ?? 0), 0);
+  const bytes = running.reduce((sum, d) => sum + d.bytes, 0);
+  return (
+    <span className="relative flex">
+      <SidebarAvatar />
+      {running.length > 0 && (
+        <svg
+          data-ui="download-ring"
+          viewBox="0 0 32 32"
+          className="pointer-events-none absolute -inset-1 size-8 -rotate-90"
+        >
+          <circle
+            cx="16"
+            cy="16"
+            r="14"
+            fill="none"
+            strokeWidth="2.5"
+            className="stroke-white/15"
+          />
+          <circle
+            cx="16"
+            cy="16"
+            r="14"
+            fill="none"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            pathLength={100}
+            strokeDasharray={100}
+            strokeDashoffset={100 - (total ? (bytes / total) * 100 : 0)}
+            className="stroke-brand-500 transition-[stroke-dashoffset]"
+          />
+        </svg>
+      )}
+    </span>
+  );
+}
+
+/** An icon over its label, sized for a finger. */
+function NavTab({
+  item,
+  icon,
+  className,
+  ...props
+}: {
+  item: Pick<SidebarItem, 'id' | 'name' | 'isCurrent'>;
+  icon: React.ReactNode;
+} & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <button
+      type="button"
+      data-ui="nav-item"
+      data-name={item.id}
+      aria-current={item.isCurrent ? 'page' : undefined}
+      className={cn(
+        'flex min-w-0 flex-col items-center font-medium transition-colors',
+        item.isCurrent
+          ? 'bg-white/10 text-white'
+          : 'text-gray-400 hover:text-white',
+        className
+      )}
+      {...props}
+    >
+      {icon}
+      <span className="max-w-full truncate">{item.name}</span>
+    </button>
   );
 }
 
@@ -290,11 +368,12 @@ function ConnectionNote() {
 }
 
 const NOTE_PLACE =
-  'fixed right-4 z-[100] border border-white/10 bg-gray-950/90 shadow-lg backdrop-blur max-lg:bottom-[calc(5.5rem+env(safe-area-inset-bottom))] lg:bottom-4';
+  'fixed bottom-[max(1rem,calc(var(--nav-bar)+0.5rem))] right-4 z-[100] border border-white/10 bg-gray-950/90 shadow-lg backdrop-blur';
 
 function Unreachable() {
   const [saved] = useSetting(settings.cache.enabled);
   const [small, setSmall] = React.useState(false);
+  const downloaded = useDownloadList().some((d) => d.state === 'done');
   if (small) {
     return (
       <Tooltip
@@ -344,6 +423,16 @@ function Unreachable() {
           )}
         </span>
       </button>
+      {downloaded && (
+        <button
+          type="button"
+          data-ui="connection-note-downloads"
+          onClick={() => navigate(to.downloads)}
+          className="rounded-full px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-white/10"
+        >
+          Downloads
+        </button>
+      )}
       <button
         type="button"
         data-ui="connection-note-dismiss"
@@ -376,6 +465,22 @@ export function WebLayout() {
     isCurrent: pathname.startsWith('/history'),
     onClick: () => navigate(to.history),
   };
+  const downloads: SidebarItem | null = downloadsHost()
+    ? {
+        id: 'downloads',
+        name: 'Downloads',
+        iconType: BiDownload,
+        isCurrent: pathname.startsWith('/downloads'),
+        onClick: () => navigate(to.downloads),
+      }
+    : null;
+  const touch = useMediaQuery('(pointer: coarse)');
+  const [touchNavigation] = useSetting(settings.touchNavigation);
+  // What wide screens show; narrow ones always have the bar.
+  const nav = touch ? touchNavigation : 'sidebar';
+  React.useEffect(() => {
+    document.documentElement.dataset.nav = nav;
+  }, [nav]);
   const calendar: SidebarItem = {
     id: 'calendar',
     name: 'Calendar',
@@ -424,20 +529,10 @@ export function WebLayout() {
     },
     calendar,
     activity,
-    ...(downloadsHost()
-      ? [
-          {
-            id: 'downloads',
-            name: 'Downloads',
-            iconType: BiDownload,
-            isCurrent: pathname.startsWith('/downloads'),
-            onClick: () => navigate(to.downloads),
-          },
-        ]
-      : []),
+    ...(downloads ? [downloads] : []),
   ];
 
-  const settings: SidebarItem = {
+  const settingsItem: SidebarItem = {
     id: 'settings',
     name: 'Settings',
     iconType: BiCog,
@@ -486,16 +581,26 @@ export function WebLayout() {
 
   return (
     <AppSidebarProvider>
-      <AppLayout withSidebar sidebarSize="slim">
-        <AppLayoutSidebar data-ui="sidebar">
-          <Sidebar
-            header={<Logo />}
-            items={items}
-            belowItems={<HistoryButtons />}
-            footerItems={[settings]}
-            footer={<SidebarAccount items={accountItems} />}
-          />
-        </AppLayoutSidebar>
+      <AppLayout withSidebar={nav !== 'bar'} sidebarSize="slim">
+        {nav !== 'bar' && (
+          <AppLayoutSidebar data-ui="sidebar">
+            {nav === 'rail' ? (
+              <TouchRail
+                items={items}
+                footerItems={[settingsItem]}
+                accountItems={accountItems}
+              />
+            ) : (
+              <Sidebar
+                header={<Logo />}
+                items={items}
+                belowItems={<HistoryButtons />}
+                footerItems={[settingsItem]}
+                footer={<SidebarAccount items={accountItems} />}
+              />
+            )}
+          </AppLayoutSidebar>
+        )}
         <AppLayout>
           <AppLayoutContent>
             <VersionPickerProvider>
@@ -503,7 +608,12 @@ export function WebLayout() {
                 key={pathname}
                 data-page={pageName(pathname)}
                 {...PAGE_FADE}
-                className="relative pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] max-lg:pb-[calc(5rem+env(safe-area-inset-bottom))]"
+                className={cn(
+                  'relative pb-[var(--nav-bar)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]',
+                  // In place of the sidebar's gutter, which pages leave to it.
+                  nav === 'bar' &&
+                    'lg:pl-[calc(2.5rem+env(safe-area-inset-left))]'
+                )}
               >
                 <Outlet />
                 <PageScroll />
@@ -513,9 +623,12 @@ export function WebLayout() {
         </AppLayout>
       </AppLayout>
       <MobileNav
-        items={items.filter((i) => i !== calendar && i !== activity)}
-        places={[activity, calendar]}
-        menuItems={[settings, ...accountItems]}
+        items={items.filter(
+          (i) => i !== calendar && i !== activity && i !== downloads
+        )}
+        places={[...(downloads ? [downloads] : []), activity, calendar]}
+        menuItems={[settingsItem, ...accountItems]}
+        wide={nav === 'bar'}
       />
       <ConnectionNote />
       <ConfirmationDialog {...confirmSignOut} />
@@ -523,47 +636,47 @@ export function WebLayout() {
   );
 }
 
+function select(item: SidebarItem) {
+  return (e: React.MouseEvent<HTMLButtonElement>) => {
+    (document.activeElement as HTMLElement | null)?.blur();
+    item.onClick?.(e);
+  };
+}
+
 function MobileNav({
   items,
   places,
   menuItems,
+  wide,
 }: {
   items: SidebarItem[];
   places: SidebarItem[];
   menuItems: SidebarItem[];
+  /** Shown on wide screens too, in place of the sidebar. */
+  wide: boolean;
 }) {
   const inMenu = [...places, ...menuItems].some((item) => item.isCurrent);
-  const tab =
-    'flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-full px-1 py-1.5 text-[0.65rem] font-medium transition-colors';
+  const tab = 'flex-1 gap-0.5 rounded-full px-1 py-1.5 text-[0.65rem]';
   return (
     <nav
       data-ui="mobile-nav"
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:hidden"
+      className={cn(
+        'pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]',
+        !wide && 'lg:hidden'
+      )}
     >
       <div className="pointer-events-auto flex w-full max-w-md items-center gap-1 rounded-full border border-white/10 bg-gray-950/80 p-1.5 shadow-2xl shadow-black/60 backdrop-blur-xl">
         {items.map((item) => {
           const Icon = item.iconType;
           return (
-            <button
-              key={item.name}
-              type="button"
+            <NavTab
+              key={item.id}
               data-ui="mobile-nav-item"
-              data-name={item.id}
-              aria-current={item.isCurrent ? 'page' : undefined}
-              onClick={(e) => {
-                (document.activeElement as HTMLElement | null)?.blur();
-                item.onClick?.(e);
-              }}
-              className={cn(
-                tab,
-                item.isCurrent
-                  ? 'bg-white/10 text-white'
-                  : 'text-gray-400 hover:text-white'
-              )}
-            >
-              {Icon && <Icon className="text-xl" />}
-              <span className="truncate">{item.name}</span>
-            </button>
+              item={item}
+              icon={Icon && <Icon className="text-xl" />}
+              onClick={select(item)}
+              className={tab}
+            />
           );
         })}
         <AccountMenu
@@ -573,22 +686,66 @@ function MobileNav({
           places={places}
           items={menuItems}
           trigger={
-            <button
-              type="button"
+            <NavTab
               data-ui="mobile-nav-item"
-              data-name="account"
-              aria-current={inMenu ? 'page' : undefined}
               aria-label="Account"
-              className={cn(
-                tab,
-                inMenu
-                  ? 'bg-white/10 text-white'
-                  : 'text-gray-400 hover:text-white'
-              )}
-            >
-              <SidebarAvatar />
-              <span className="max-w-full truncate">You</span>
-            </button>
+              item={{ id: 'account', name: 'You', isCurrent: inMenu }}
+              icon={<YouIcon />}
+              className={tab}
+            />
+          }
+        />
+      </div>
+    </nav>
+  );
+}
+
+/** The sidebar on a touch screen: each item labelled and big enough for a finger. */
+function TouchRail({
+  items,
+  footerItems,
+  accountItems,
+}: {
+  items: SidebarItem[];
+  footerItems: SidebarItem[];
+  accountItems: SidebarItem[];
+}) {
+  const tab = 'w-full gap-1 rounded-2xl px-0.5 py-2.5 text-[0.7rem]';
+  const railItem = (item: SidebarItem) => {
+    const Icon = item.iconType;
+    return (
+      <NavTab
+        key={item.id}
+        data-ui="rail-item"
+        item={item}
+        icon={Icon && <Icon className="text-2xl" />}
+        onClick={select(item)}
+        className={tab}
+      />
+    );
+  };
+  return (
+    <nav
+      data-ui="touch-rail"
+      className="flex h-full flex-col items-center gap-1 overflow-y-auto px-1 pb-[calc(0.75rem+env(safe-area-inset-bottom))]"
+    >
+      <Logo />
+      {items.map(railItem)}
+      <div className="mt-auto flex w-full flex-col gap-1 pt-4">
+        {footerItems.map(railItem)}
+        <AccountMenu
+          side="right"
+          align="end"
+          sideOffset={8}
+          items={accountItems}
+          trigger={
+            <NavTab
+              data-ui="rail-item"
+              aria-label="Account"
+              item={{ id: 'account', name: 'You' }}
+              icon={<YouIcon />}
+              className={tab}
+            />
           }
         />
       </div>
@@ -609,8 +766,7 @@ export function PageBody({ children }: { children: React.ReactNode }) {
 }
 
 /** The window's height less the phone nav bar, which pages are padded for. */
-export const FILL_WINDOW =
-  'min-h-[calc(100dvh-5rem-env(safe-area-inset-bottom))] lg:min-h-dvh';
+export const FILL_WINDOW = 'min-h-[calc(100dvh-var(--nav-bar))]';
 
 export function PageMessage({ children }: { children: React.ReactNode }) {
   return (
