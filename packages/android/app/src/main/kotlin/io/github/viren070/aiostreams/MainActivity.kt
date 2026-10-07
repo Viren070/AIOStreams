@@ -35,6 +35,7 @@ import io.github.viren070.aiostreams.playback.PlayerChannel
 import java.io.File
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -47,6 +48,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var engine: MpvEngine
     private lateinit var player: PlayerChannel
     private lateinit var downloads: DownloadChannel
+    private lateinit var updater: Updater
     private lateinit var pip: PictureInPicture
     private lateinit var focus: AudioFocus
     private lateinit var controller: ListenableFuture<MediaController>
@@ -62,7 +64,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG)
+        WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG || BuildConfig.INSPECTABLE)
 
         val video = SurfaceView(this)
         // Edge to edge: the page keeps clear of the system bars with its own safe-area insets.
@@ -85,6 +87,7 @@ class MainActivity : ComponentActivity() {
             subtitles = File(cacheDir, "subtitles"),
         )
         bridge = AppBridge(web, app.origins, AppIdentity(BuildConfig.VERSION_NAME, deviceName()), ::onMessage)
+        updater = Updater(this) { bridge.send(it) }
         pip = PictureInPicture(this, video)
         focus = AudioFocus(
             this,
@@ -112,7 +115,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun onMessage(type: String, message: JsonObject) {
-        if (player.handle(type, message) || downloads.handle(type, message)) return
+        if (player.handle(type, message) || downloads.handle(type, message) || updater.handle(type, message)) return
         when (type) {
             "app-info" -> bridge.send(buildJsonObject {
                 put("type", "app-info")
@@ -135,6 +138,26 @@ class MainActivity : ComponentActivity() {
                 }
             }
             "web-error" -> Log.e("page", message["message"]?.jsonPrimitive?.content.orEmpty())
+            "mpv-config" -> sendMpvConfig()
+            "mpv-config-save" -> {
+                engine.configFile.writeText(message["text"]?.jsonPrimitive?.content.orEmpty())
+                engine.reloadConfig()
+                sendMpvConfig()
+            }
+            "diagnostics" -> {
+                val web = message["web"]?.jsonPrimitive?.contentOrNull
+                val server = message["server"]?.jsonPrimitive?.contentOrNull
+                // Reading the log takes a moment.
+                Thread {
+                    val text = diagnostics(engine, web, server)
+                    runOnUiThread {
+                        bridge.send(buildJsonObject {
+                            put("type", "diagnostics")
+                            put("text", text)
+                        })
+                    }
+                }.start()
+            }
         }
     }
 
@@ -145,6 +168,11 @@ class MainActivity : ComponentActivity() {
         focus.update(playing)
         pip.update(playing && session.item?.pip == true, session.videoSize)
     }
+
+    private fun sendMpvConfig() = bridge.send(buildJsonObject {
+        put("type", "mpv-config")
+        put("text", engine.configFile.takeIf { it.exists() }?.readText().orEmpty())
+    })
 
     private fun setFullscreen(on: Boolean) {
         screen.setFullscreen(on)
@@ -183,6 +211,11 @@ class MainActivity : ComponentActivity() {
     private fun deviceName(): String =
         Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME) ?: Build.MODEL
 
+    override fun onResume() {
+        super.onResume()
+        updater.onResume()
+    }
+
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
         pip.onUserLeaveHint()
@@ -207,6 +240,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        updater.release()
         Downloads.queue(this).send = null
         MediaController.releaseFuture(controller)
         PlaybackService.player = null

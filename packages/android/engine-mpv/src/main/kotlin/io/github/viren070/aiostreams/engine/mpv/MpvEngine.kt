@@ -26,9 +26,14 @@ class MpvEngine(private val context: Context) : Engine {
     @Volatile
     private var cause: String? = null
 
+    private val dir = File(context.filesDir, "mpv")
+
+    /** The user's own options, which mpv reads at start and on [reloadConfig]. */
+    val configFile = File(dir, "mpv.conf")
+
     override fun start(listener: Engine.Listener) {
         this.listener = listener
-        val dir = File(context.filesDir, "mpv").apply { mkdirs() }
+        dir.mkdirs()
         // mpv looks for its CA bundle and fallback subtitle font beside its config.
         for (name in listOf("cacert.pem", "subfont.ttf")) copyAsset(name, File(dir, name))
         mpv.create(context)
@@ -63,6 +68,8 @@ class MpvEngine(private val context: Context) : Engine {
     override fun setProperty(name: String, value: String) = calls.execute { mpv.setPropertyString(name, value) }
 
     override fun property(name: String): String? = mpv.getPropertyString(name)
+
+    fun reloadConfig() = command(listOf("load-config-file", configFile.path))
 
     override val surface = object : SurfaceHolder.Callback {
         override fun surfaceCreated(holder: SurfaceHolder) = calls.execute {
