@@ -160,8 +160,11 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
       controlledValue ?? defaultValue
     );
 
+    const picked = React.useRef(false);
+
     const handleOnValueChange = React.useCallback(
       (value: string) => {
+        picked.current = true;
         if (value === '__placeholder__') {
           _setValue('');
           onValueChange?.('');
@@ -179,6 +182,15 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
       }
       isFirst.current = false;
     }, [controlledValue]);
+
+    // A pick the parent didn't take shows its value again, as a controlled
+    // <select> does.
+    React.useEffect(() => {
+      if (!picked.current) return;
+      picked.current = false;
+      if (controlledValue !== undefined && controlledValue !== _value)
+        _setValue(controlledValue);
+    });
 
     return (
       <BasicField {...basicFieldProps}>
