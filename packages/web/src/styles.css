@@ -110,9 +110,11 @@ html[data-pointer-focus] :focus-visible [data-ui='focus-ring'] {
   outline: none !important;
   --tw-ring-color: transparent !important;
 }
-/* Rows and the hero clip anything past their edges. */
+/* Rows, the hero and scrolling menus clip anything past their edges. */
 .UI-Carousel__content :focus-visible:not([data-focus='own']):not(input),
-[data-ui='hero'] :focus-visible:not([data-focus='own']):not(input) {
+[data-ui='hero'] :focus-visible:not([data-focus='own']):not(input),
+[role^='menuitem']:focus-visible:not([data-focus='own']),
+[role='option']:focus-visible:not([data-focus='own']) {
   outline-offset: -2px;
 }
 
