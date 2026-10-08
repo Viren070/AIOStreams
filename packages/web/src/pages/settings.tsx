@@ -18,6 +18,7 @@ import {
   LuMonitor,
   LuSmartphone,
   LuPalette,
+  LuTv,
   LuUser,
   LuVolume2,
   LuX,
@@ -1113,21 +1114,28 @@ function AndroidSection() {
   const [engine] = useSetting(settings.android.engine);
   const [pip, setPip] = useSetting(settings.android.pip);
   const [background, setBackground] = useSetting(settings.android.background);
+  const canPip = appBridge()?.pip !== false;
   return (
     <>
       <UpdatesCard />
       <SettingsCard title="Leaving the app" description={ON_DEVICE}>
-        <Switch
-          side="right"
-          label="Picture-in-picture"
-          help="Keeps the video playing in a small window when you leave the app."
-          value={pip}
-          onValueChange={setPip}
-        />
+        {canPip && (
+          <Switch
+            side="right"
+            label="Picture-in-picture"
+            help="Keeps the video playing in a small window when you leave the app."
+            value={pip}
+            onValueChange={setPip}
+          />
+        )}
         <Switch
           side="right"
           label="Play in the background"
-          help="Keeps the sound going with the screen off, or when you leave without picture-in-picture."
+          help={
+            canPip
+              ? 'Keeps the sound going with the screen off, or when you leave without picture-in-picture.'
+              : 'Keeps the sound going with the screen off, or when you leave the app.'
+          }
           value={background}
           onValueChange={setBackground}
         />
@@ -2104,8 +2112,11 @@ function sections(): Section[] {
           {
             id: 'android',
             label: 'Android app',
-            description: 'Updates, picture-in-picture, mpv and troubleshooting',
-            icon: LuSmartphone,
+            description:
+              appBridge()?.pip === false
+                ? 'Updates, mpv and troubleshooting'
+                : 'Updates, picture-in-picture, mpv and troubleshooting',
+            icon: host.tv ? LuTv : LuSmartphone,
             group: 'App',
             Content: AndroidSection,
           },
