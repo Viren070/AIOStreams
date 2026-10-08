@@ -354,6 +354,7 @@ export function MediaRow({
       data-row={id}
       data-shape={shape}
       data-nav-group
+      data-nav-box
     >
       {native ? (
         <>
