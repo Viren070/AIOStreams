@@ -565,7 +565,12 @@ function applySubtitleStyle(
 export function applyDesktopSettings(): void {
   const { hardwareDecoding, audioChannels, passthrough } = settings.desktop;
   const channels = audioChannels.read();
-  setProp('hwdec', hardwareDecoding.read() ? 'auto-safe' : 'no');
+  // On Android, auto-safe only tries copying every frame back from MediaCodec.
+  const hwdec =
+    appBridge()?.platform === 'android'
+      ? 'mediacodec,mediacodec-copy'
+      : 'auto-safe';
+  setProp('hwdec', hardwareDecoding.read() ? hwdec : 'no');
   setProp('audio-channels', channels === 'auto' ? 'auto-safe' : channels);
   setProp('audio-spdif', passthrough.read() ? 'ac3,eac3,dts-hd,truehd' : '');
 }
