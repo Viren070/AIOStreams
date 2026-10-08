@@ -70,9 +70,17 @@ const HORIZONTAL = ['ArrowLeft', 'ArrowRight'];
 
 export function ownsKey(el: Element | null, input: string): boolean {
   if (!el) return false;
+  // Even read-only, as a TV keeps an open list's filter.
+  if (el.matches('[role=combobox][aria-expanded=true]')) return true;
+  // Nothing is typed into a read-only field, so the arrows leave it.
+  if (
+    (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) &&
+    el.readOnly
+  )
+    return false;
   if (
     el.matches(
-      'textarea, select, [contenteditable=""], [contenteditable=true], [role=spinbutton], [role=combobox][aria-expanded=true]'
+      'textarea, select, [contenteditable=""], [contenteditable=true], [role=spinbutton]'
     )
   )
     return true;
