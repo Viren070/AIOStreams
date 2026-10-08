@@ -1,7 +1,7 @@
 import type { JellyfinClient } from '../client';
-import { sameLanguage } from '../languages';
+import { firstInLanguages } from '../languages';
 import type { MediaStream, SourceInfo } from '../types';
-import type { PlaybackPrefs } from '../user-config';
+import { subtitleLanguages, type PlaybackPrefs } from '../user-config';
 
 export function textSubtitles(source: SourceInfo): MediaStream[] {
   return (source.MediaStreams ?? []).filter(
@@ -29,17 +29,17 @@ export function subtitleUrl(
 export function preferredSubtitle<
   T extends Pick<MediaStream, 'Language' | 'IsForced'>,
 >(subtitles: T[], prefs: PlaybackPrefs): T | undefined {
-  const lang = prefs.SubtitleLanguagePreference;
+  const languages = subtitleLanguages(prefs);
   switch (prefs.SubtitleMode) {
     case 'None':
       return undefined;
-    case 'OnlyForced':
-      return subtitles.find(
-        (s) => s.IsForced && (!lang || sameLanguage(lang, s.Language))
-      );
+    case 'OnlyForced': {
+      const forced = subtitles.filter((s) => s.IsForced);
+      return languages.length
+        ? firstInLanguages(languages, forced, (s) => s.Language)
+        : forced[0];
+    }
     default:
-      return lang
-        ? subtitles.find((s) => sameLanguage(lang, s.Language))
-        : undefined;
+      return firstInLanguages(languages, subtitles, (s) => s.Language);
   }
 }

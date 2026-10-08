@@ -77,3 +77,16 @@ export function sameLanguage(
 ): boolean {
   return !!tag && languageTags(code).includes(tag.toLowerCase());
 }
+
+/** The first of `items` in the earliest of `codes` that any is in. */
+export function firstInLanguages<T>(
+  codes: string[],
+  items: T[],
+  tagOf: (item: T) => string | null | undefined
+): T | undefined {
+  for (const code of codes) {
+    const found = items.find((item) => sameLanguage(code, tagOf(item)));
+    if (found) return found;
+  }
+  return undefined;
+}

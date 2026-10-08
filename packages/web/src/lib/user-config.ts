@@ -14,16 +14,31 @@ export const ORIGINAL_LANGUAGE = 'OriginalLanguage';
 
 /** The playback preferences in Jellyfin's user configuration. */
 export interface PlaybackPrefs {
-  /** A language code, or `OriginalLanguage`. */
+  /** A language code, or `OriginalLanguage`; the first of `AudioLanguages`. */
   AudioLanguagePreference?: string | null;
+  /** Tried in order, a list this server keeps beside Jellyfin's one language. */
+  AudioLanguages?: string[];
   PlayDefaultAudioTrack?: boolean;
   SubtitleLanguagePreference?: string | null;
+  SubtitleLanguages?: string[];
   SubtitleMode?: SubtitleMode;
   EnableNextEpisodeAutoPlay?: boolean;
   /** Off only when false, as in Jellyfin. */
   RememberAudioSelections?: boolean;
   RememberSubtitleSelections?: boolean;
 }
+
+// A server without the lists has only the single language.
+const languages = (
+  list: string[] | undefined,
+  one: string | null | undefined
+) => (list?.length ? list : one ? [one] : []);
+
+export const audioLanguages = (prefs: PlaybackPrefs) =>
+  languages(prefs.AudioLanguages, prefs.AudioLanguagePreference);
+
+export const subtitleLanguages = (prefs: PlaybackPrefs) =>
+  languages(prefs.SubtitleLanguages, prefs.SubtitleLanguagePreference);
 
 type Configuration = NonNullable<UserDto['Configuration']>;
 

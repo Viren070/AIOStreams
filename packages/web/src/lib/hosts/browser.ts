@@ -5,7 +5,8 @@ import {
   subtitleUrl,
   textSubtitles,
 } from '../subtitles/tracks';
-import { sameLanguage } from '../languages';
+import { firstInLanguages } from '../languages';
+import { audioLanguages } from '../user-config';
 import { currentHost } from '.';
 import {
   clampDelay,
@@ -208,11 +209,13 @@ export function useBrowserPlayer(
         patch({ durationMs: el.duration * 1000 || 0 });
         const first = preferredSubtitle(subtitles, prefs.current ?? {});
         if (first) showSubtitle(String(first.Index));
-        const lang = prefs.current?.AudioLanguagePreference;
-        const preferred = audio
-          ? listed(audio).findIndex((t) => sameLanguage(lang, t.language))
-          : -1;
-        if (preferred >= 0) showAudio(String(preferred));
+        const tracks = audio ? listed(audio) : [];
+        const preferred = firstInLanguages(
+          audioLanguages(prefs.current ?? {}),
+          tracks,
+          (t) => t.language
+        );
+        if (preferred) showAudio(String(tracks.indexOf(preferred)));
       },
       durationchange: () => patch({ durationMs: el.duration * 1000 || 0 }),
       playing: () => patch({ started: true, paused: false, waiting: false }),

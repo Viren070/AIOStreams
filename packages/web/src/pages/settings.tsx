@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 import type { IconType } from 'react-icons';
 import {
   LuAppWindow,
+  LuArrowDown,
+  LuArrowUp,
   LuCaptions,
   LuCirclePlay,
   LuDatabase,
@@ -18,6 +20,7 @@ import {
   LuPalette,
   LuUser,
   LuVolume2,
+  LuX,
 } from 'react-icons/lu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@aiostreams/ui/tabs';
 import { Card } from '@aiostreams/ui/card';
@@ -33,7 +36,8 @@ import {
   THEME_PRESETS,
 } from '@aiostreams/ui/utils/palette';
 import { TextInput } from '@aiostreams/ui/text-input';
-import { Button } from '@aiostreams/ui/button';
+import { Button, IconButton } from '@aiostreams/ui/button';
+import { BasicField } from '@aiostreams/ui/basic-field';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
@@ -77,10 +81,13 @@ import {
   SUBTITLE_SIZE_LABELS,
 } from '../lib/subtitles/style';
 import {
+  audioLanguages,
   ORIGINAL_LANGUAGE,
+  subtitleLanguages,
   usePlaybackPrefs,
   type SubtitleMode,
 } from '../lib/user-config';
+import { focusOn } from '../lib/input';
 import {
   CUSTOM_LINK,
   LAUNCHED_PLAYERS,
@@ -142,16 +149,126 @@ import {
   SettingsRow,
 } from '../components/settings-card';
 
-const ANY = 'any';
+const LANGUAGE_OPTIONS = LANGUAGES.map((l) => ({
+  value: l.code,
+  label: l.name,
+}));
 const AUDIO_LANGUAGE_OPTIONS = [
-  { value: ANY, label: 'No preference' },
   { value: ORIGINAL_LANGUAGE, label: 'Original language' },
-  ...LANGUAGES.map((l) => ({ value: l.code, label: l.name })),
+  ...LANGUAGE_OPTIONS,
 ];
-const LANGUAGE_OPTIONS = [
-  { value: ANY, label: 'No preference' },
-  ...LANGUAGES.map((l) => ({ value: l.code, label: l.name })),
-];
+
+/** Languages in order, each movable, with a picker for another. */
+function LanguageList({
+  label,
+  help,
+  options,
+  value,
+  max,
+  onChange,
+}: {
+  label: string;
+  help: string;
+  options: { value: string; label: string }[];
+  value: string[];
+  /** One for a server that keeps only Jellyfin's single language. */
+  max?: number;
+  onChange: (next: string[]) => void;
+}) {
+  const list = React.useRef<HTMLOListElement>(null);
+  const add = React.useRef<HTMLButtonElement>(null);
+  const nameOf = (code: string) =>
+    options.find((o) => o.value === code)?.label ?? code;
+  const move = (from: number, to: number) => {
+    if (to < 0 || to >= value.length) return;
+    const next = [...value];
+    next.splice(to, 0, ...next.splice(from, 1));
+    onChange(next);
+  };
+  // A removed row takes focus with it, so the next row's button takes it over.
+  const removed = React.useRef<number | null>(null);
+  React.useLayoutEffect(() => {
+    const at = removed.current;
+    if (at === null) return;
+    removed.current = null;
+    const left =
+      list.current?.querySelectorAll<HTMLElement>('[data-name=remove]');
+    const next = left?.[Math.min(at, left.length - 1)] ?? add.current;
+    if (next) focusOn(next);
+  }, [value]);
+  const remove = (at: number) => {
+    removed.current = at;
+    onChange(value.filter((_, i) => i !== at));
+  };
+  const button = (
+    name: string,
+    label: string,
+    icon: React.ReactElement,
+    onClick: () => void,
+    dim = false
+  ) => (
+    <IconButton
+      data-name={name}
+      size="sm"
+      intent={name === 'remove' ? 'alert-subtle' : 'gray-subtle'}
+      // Enabled at the ends, as a remote's focus can't rest on a disabled button.
+      className={cn('size-8 rounded-full', dim && 'opacity-40')}
+      icon={icon}
+      aria-label={label}
+      aria-disabled={dim || undefined}
+      onClick={onClick}
+    />
+  );
+  return (
+    <BasicField label={label} help={help}>
+      {value.length > 0 && (
+        <ol ref={list} data-ui="language-list" className="space-y-1">
+          {value.map((code, i) => (
+            <li
+              key={code}
+              className="flex items-center gap-2 rounded-xl bg-[--subtle] py-1 pl-3 pr-1"
+            >
+              <span className="w-4 text-sm tabular-nums text-[--muted]">
+                {i + 1}
+              </span>
+              <span className="min-w-0 flex-1 truncate text-sm">
+                {nameOf(code)}
+              </span>
+              {button(
+                'up',
+                `Move ${nameOf(code)} up`,
+                <LuArrowUp />,
+                () => move(i, i - 1),
+                i === 0
+              )}
+              {button(
+                'down',
+                `Move ${nameOf(code)} down`,
+                <LuArrowDown />,
+                () => move(i, i + 1),
+                i === value.length - 1
+              )}
+              {button('remove', `Remove ${nameOf(code)}`, <LuX />, () =>
+                remove(i)
+              )}
+            </li>
+          ))}
+        </ol>
+      )}
+      {(max === undefined || value.length < max) && (
+        <Select
+          ref={add}
+          // Required leaves the placeholder out of the list it opens.
+          required
+          placeholder={value.length ? 'Add another language' : 'Add a language'}
+          options={options.filter((o) => !value.includes(o.value))}
+          value=""
+          onValueChange={(v) => v && onChange([...value, v])}
+        />
+      )}
+    </BasicField>
+  );
+}
 
 const SUBTITLE_MODES: { value: SubtitleMode; label: string; help: string }[] = [
   {
@@ -555,6 +672,8 @@ function PlayerCard() {
 
 function AudioSection() {
   const { prefs, update } = usePlaybackPrefs();
+  const audio = audioLanguages(prefs);
+  const audioLists = Array.isArray(prefs.AudioLanguages);
   const [audioChannels, setAudioChannels] = useSetting(
     settings.desktop.audioChannels
   );
@@ -564,24 +683,24 @@ function AudioSection() {
   return (
     <>
       <SettingsCard title="Language" description={ON_ACCOUNT}>
-        <Select
-          label="Audio language"
-          help={
-            prefs.AudioLanguagePreference === ORIGINAL_LANGUAGE
-              ? "The language the title was made in, when a version has it; otherwise the version's own default plays."
-              : "Picked when a version has it; otherwise the version's own default plays."
-          }
+        <LanguageList
+          label="Audio languages"
+          help="A version plays the first of these it has, otherwise its own default. Original language is the one the title was made in."
           options={AUDIO_LANGUAGE_OPTIONS}
-          value={prefs.AudioLanguagePreference || ANY}
-          onValueChange={(v) =>
-            update({ AudioLanguagePreference: v === ANY ? '' : v })
+          value={audio}
+          max={audioLists ? undefined : 1}
+          onChange={(next) =>
+            update({
+              ...(audioLists && { AudioLanguages: next }),
+              AudioLanguagePreference: next[0] ?? '',
+            })
           }
         />
-        {!!prefs.AudioLanguagePreference && (
+        {audio.length > 0 && (
           <Switch
             side="right"
             label="Play the version's default track first"
-            help="A track the version marks as its default plays even when another is in the language above. Turn this off for the language to always win."
+            help="A track the version marks as its default plays even when another is in one of your languages. Turn this off for your languages to always win."
             value={prefs.PlayDefaultAudioTrack !== false}
             onValueChange={(v) => update({ PlayDefaultAudioTrack: v })}
           />
@@ -589,7 +708,7 @@ function AudioSection() {
         <Switch
           side="right"
           label="Remember picks per show"
-          help="An audio track you pick while watching a show sets the language for its other episodes. Picking the language above again forgets it."
+          help="An audio track you pick while watching a show sets the language for its other episodes. Picking the one your languages would play forgets it."
           value={prefs.RememberAudioSelections !== false}
           onValueChange={(v) => update({ RememberAudioSelections: v })}
         />
@@ -624,6 +743,7 @@ function AudioSection() {
 function SubtitlesSection() {
   const { prefs, update } = usePlaybackPrefs();
   const mode = prefs.SubtitleMode ?? 'Default';
+  const subtitleLists = Array.isArray(prefs.SubtitleLanguages);
   const [size, setSize] = useSetting(settings.subtitle.size);
   const [bold, setBold] = useSetting(settings.subtitle.bold);
   const [textColor, setTextColor] = useSetting(settings.subtitle.textColor);
@@ -646,12 +766,17 @@ function SubtitlesSection() {
   return (
     <>
       <SettingsCard title="Language" description={ON_ACCOUNT}>
-        <Select
-          label="Subtitle language"
+        <LanguageList
+          label="Subtitle languages"
+          help="Tried in order for the subtitles the setting below shows."
           options={LANGUAGE_OPTIONS}
-          value={prefs.SubtitleLanguagePreference || ANY}
-          onValueChange={(v) =>
-            update({ SubtitleLanguagePreference: v === ANY ? '' : v })
+          value={subtitleLanguages(prefs)}
+          max={subtitleLists ? undefined : 1}
+          onChange={(next) =>
+            update({
+              ...(subtitleLists && { SubtitleLanguages: next }),
+              SubtitleLanguagePreference: next[0] ?? '',
+            })
           }
         />
         <Select

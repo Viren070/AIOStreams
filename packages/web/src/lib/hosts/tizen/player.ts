@@ -1,5 +1,6 @@
 import React from 'react';
-import { sameLanguage } from '../../languages';
+import { firstInLanguages, sameLanguage } from '../../languages';
+import { audioLanguages } from '../../user-config';
 import { parseCues, type SubtitleCue } from '../../subtitles/cues';
 import {
   clampDelay,
@@ -68,10 +69,11 @@ function tracksOf(av: AvPlay, type: 'AUDIO' | 'TEXT'): AvTrack[] {
 function startAudio(
   tracks: AvTrack[],
   current: number | undefined,
-  lang: string | null | undefined
+  languages: string[]
 ): number | undefined {
   const playing = tracks.find((t) => t.index === current);
-  const wanted = tracks.some((t) => sameLanguage(lang, t.language))
+  const lang = firstInLanguages(languages, tracks, (t) => t.language)?.language;
+  const wanted = lang
     ? tracks.filter((t) => sameLanguage(lang, t.language))
     : tracks.filter((t) => t.language === playing?.language);
   const decoded = wanted.filter((t) => !DTS.test(t.codec ?? ''));
@@ -203,7 +205,7 @@ export function useAvPlayer(opts: NativePlayerOptions): PlayerController {
         .getCurrentStreamInfo()
         .find((t) => t.type === 'AUDIO')?.index;
       const { prefs = {} } = latest.current;
-      const start = startAudio(audio, current, prefs.AudioLanguagePreference);
+      const start = startAudio(audio, current, audioLanguages(prefs));
       if (start !== undefined && start !== current)
         av.setSelectTrack('AUDIO', start);
       patch({ audio: start === undefined ? null : String(start) });

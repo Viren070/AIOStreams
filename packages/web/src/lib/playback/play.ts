@@ -7,7 +7,7 @@ import { directUrl } from './stream';
 import { subtitleUrl, textSubtitles } from '../subtitles/tracks';
 import { useSession } from '../session';
 import { storedMap } from '../storage';
-import { usePlaybackPrefs } from '../user-config';
+import { subtitleLanguages, usePlaybackPrefs } from '../user-config';
 import { useEpisodesAfter } from '../queries';
 import { sameLanguage } from '../languages';
 import type { BaseItemDto, PlaybackInfoResponse, SourceInfo } from '../types';
@@ -56,9 +56,12 @@ function useOpenLink() {
     const filename =
       source.aiostreams?.filename ??
       (lastSegment && /\.\w{2,4}$/.test(lastSegment) ? lastSegment : undefined);
-    const lang = prefs.SubtitleLanguagePreference;
+    const languages = subtitleLanguages(prefs);
+    const rank = (language: string | null | undefined) =>
+      languages.findIndex((l) => sameLanguage(l, language));
     const subtitles = textSubtitles(source)
-      .filter((s) => !lang || sameLanguage(lang, s.Language))
+      .filter((s) => !languages.length || rank(s.Language) >= 0)
+      .sort((a, b) => rank(a.Language) - rank(b.Language))
       .slice(0, MAX_EXTERNAL_SUBTITLES)
       .map((s) => subtitleUrl(client, s, { original: true }))
       .filter((u): u is string => !!u);

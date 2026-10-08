@@ -1,7 +1,12 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSession } from '../session';
-import { languageCode, sameLanguage } from '../languages';
-import { ORIGINAL_LANGUAGE, usePlaybackPrefs } from '../user-config';
+import { firstInLanguages, languageCode } from '../languages';
+import {
+  audioLanguages,
+  ORIGINAL_LANGUAGE,
+  subtitleLanguages,
+  usePlaybackPrefs,
+} from '../user-config';
 import type { PlaybackPrefs } from '../user-config';
 import type { PlayerController, Track } from './controller';
 import type { BaseItemDto, SourceInfo } from '../types';
@@ -60,7 +65,7 @@ export function useShowPicks() {
   });
 }
 
-/** The user's languages, with the ones they picked for this show in their place. */
+/** The user's languages, with the ones they picked for this show first. */
 export function withShowPick(
   prefs: PlaybackPrefs,
   picks: Picks | undefined,
@@ -71,12 +76,14 @@ export function withShowPick(
   const { audio, subtitle } = pickOf(picks, showId);
   const out = { ...prefs };
   if (audio && prefs.RememberAudioSelections !== false) {
+    out.AudioLanguages = [audio, ...audioLanguages(prefs)];
     out.AudioLanguagePreference = audio;
     out.PlayDefaultAudioTrack = false;
   }
   if (subtitle && prefs.RememberSubtitleSelections !== false) {
     if (subtitle === OFF) out.SubtitleMode = 'None';
     else {
+      out.SubtitleLanguages = [subtitle, ...subtitleLanguages(prefs)];
       out.SubtitleLanguagePreference = subtitle;
       out.SubtitleMode = 'Always';
     }
@@ -84,15 +91,16 @@ export function withShowPick(
   return out;
 }
 
-/** The audio language the user's settings pick. */
+/** The audio language the user's settings pick: their first one the version has. */
 function settingsAudio(prefs: PlaybackPrefs, source: SourceInfo) {
-  const lang =
-    prefs.AudioLanguagePreference === ORIGINAL_LANGUAGE
-      ? source.MediaStreams?.find(
-          (s) =>
-            s.Type === 'Audio' && s.Index === source.DefaultAudioStreamIndex
-        )?.Language
-      : prefs.AudioLanguagePreference;
+  const tracks = (source.MediaStreams ?? []).filter((s) => s.Type === 'Audio');
+  const original = tracks.find(
+    (s) => s.Index === source.DefaultAudioStreamIndex
+  )?.Language;
+  const languages = audioLanguages(prefs)
+    .map((l) => (l === ORIGINAL_LANGUAGE ? original : l))
+    .filter((l): l is string => !!l);
+  const lang = firstInLanguages(languages, tracks, (s) => s.Language)?.Language;
   return lang ? languageCode(lang) : undefined;
 }
 
@@ -160,9 +168,12 @@ export function useShowTrackPicks(
       }
       const lang = langOf(player.subtitleTracks.find((t) => t.id === id));
       if (!lang) return;
-      const usual =
-        prefs.SubtitleMode === 'Always' &&
-        sameLanguage(prefs.SubtitleLanguagePreference, lang);
+      const first = firstInLanguages(
+        subtitleLanguages(prefs),
+        player.subtitleTracks,
+        (t) => t.lang
+      );
+      const usual = prefs.SubtitleMode === 'Always' && langOf(first) === lang;
       save(showId, { subtitle: usual ? undefined : lang });
     },
   };

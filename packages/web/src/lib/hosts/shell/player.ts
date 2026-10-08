@@ -6,7 +6,12 @@ import { base64, checkSubtitleFile } from '../../subtitles/files';
 import { sameLanguage } from '../../languages';
 import { parseChapters, type Chapter } from '../../playback/chapters';
 import { settings, useSetting, type SubtitleStyle } from '../../settings';
-import { ORIGINAL_LANGUAGE, type PlaybackPrefs } from '../../user-config';
+import {
+  audioLanguages,
+  ORIGINAL_LANGUAGE,
+  subtitleLanguages,
+  type PlaybackPrefs,
+} from '../../user-config';
 import type { SourceInfo } from '../../types';
 import {
   clampDelay,
@@ -199,22 +204,26 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
       imageSubtitle.current = image;
       set('sub-scale', image ? 1 : subtitleScale(style));
     };
-    // Shows an external subtitle in the user's language when their mode wants
-    // one and the file has none of its own; Default only honours the file's.
+    // An external subtitle when the mode wants one and the file has none of its
+    // own in that language or an earlier one; Default only honours the file's.
     const addPreferredSubtitle = () => {
-      const { SubtitleLanguagePreference: lang, SubtitleMode: mode } =
-        latest.current.prefs ?? {};
-      if (!lang || (mode !== 'Always' && mode !== 'Smart')) return;
-      const has = (type: MpvTrack['type']) =>
-        fileTracks.some(
-          (t) =>
-            t.type === type &&
-            (type === 'sub' ? !t.external : t.selected) &&
-            sameLanguage(lang, t.lang)
+      const prefs = latest.current.prefs ?? {};
+      const mode = prefs.SubtitleMode;
+      if (mode !== 'Always' && mode !== 'Smart') return;
+      const languages = subtitleLanguages(prefs);
+      const playing = fileTracks.find((t) => t.type === 'audio' && t.selected);
+      if (
+        mode === 'Smart' &&
+        languages.some((l) => sameLanguage(l, playing?.lang))
+      )
+        return;
+      for (const lang of languages) {
+        const own = fileTracks.some(
+          (t) => t.type === 'sub' && !t.external && sameLanguage(lang, t.lang)
         );
-      if (has('sub') || (mode === 'Smart' && has('audio'))) return;
-      const external = externals.find((e) => sameLanguage(lang, e.lang));
-      if (external)
+        if (own) return;
+        const external = externals.find((e) => sameLanguage(lang, e.lang));
+        if (!external) continue;
         command(
           'sub-add',
           external.url,
@@ -222,6 +231,8 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
           external.label,
           external.lang
         );
+        return;
+      }
     };
     const load = () => {
       const options = [
@@ -532,17 +543,15 @@ function failure(error: string | null, cause?: string): string {
  */
 function trackOptions(prefs: PlaybackPrefs, source: SourceInfo): string[] {
   const options: string[] = [];
-  const audio =
-    prefs.AudioLanguagePreference === ORIGINAL_LANGUAGE
-      ? source.MediaStreams?.find(
-          (s) =>
-            s.Type === 'Audio' && s.Index === source.DefaultAudioStreamIndex
-        )?.Language
-      : prefs.AudioLanguagePreference;
-  if (audio) options.push(`alang=${audio}`);
-  const slang = prefs.SubtitleLanguagePreference
-    ? [`slang=${prefs.SubtitleLanguagePreference}`]
-    : [];
+  const original = source.MediaStreams?.find(
+    (s) => s.Type === 'Audio' && s.Index === source.DefaultAudioStreamIndex
+  )?.Language;
+  const alang = audioLanguages(prefs)
+    .map((l) => (l === ORIGINAL_LANGUAGE ? original : l))
+    .filter(Boolean);
+  if (alang.length) options.push(`alang=${alang.join(',')}`);
+  const subtitles = subtitleLanguages(prefs);
+  const slang = subtitles.length ? [`slang=${subtitles.join(',')}`] : [];
   switch (prefs.SubtitleMode) {
     case 'None':
       options.push('sid=no');
