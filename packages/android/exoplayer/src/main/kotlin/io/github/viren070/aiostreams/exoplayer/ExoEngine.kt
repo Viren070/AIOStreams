@@ -29,6 +29,7 @@ import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.HttpDataSource
+import androidx.media3.exoplayer.DecoderReuseEvaluation
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlaybackException
 import androidx.media3.exoplayer.ExoPlayer
@@ -261,6 +262,7 @@ class ExoEngine(private val context: Context) :
         listener?.onEvent("start-file")
         report("idle-active", false)
         report("chapter-list", JsonArray(emptyList()))
+        report("container-fps", null)
         // Close to what mpv picks, so the first selection rarely changes.
         player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
             .clearOverrides()
@@ -409,6 +411,14 @@ class ExoEngine(private val context: Context) :
         lastFrameUs = presentationTimeUs
         ass.render(presentationTimeUs - delayUs, releaseTimeNs)
         if (text != null) main.post { showCues(presentationTimeUs) }
+    }
+
+    override fun onVideoInputFormatChanged(
+        eventTime: AnalyticsListener.EventTime,
+        format: Format,
+        decoderReuseEvaluation: DecoderReuseEvaluation?,
+    ) {
+        if (format.frameRate > 0) report("container-fps", format.frameRate.toDouble())
     }
 
     private fun showCues(frameUs: Long) {

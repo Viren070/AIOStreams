@@ -108,7 +108,7 @@ private class SubtitleMatroska(private val sink: SubtitleSink, private val readB
                 transcoder.seekMap(ReadBack(seekMap))
             }
         }
-        matroska.init(Subtitles(seeking, sink))
+        matroska.init(Subtitles(FrameRates(seeking, matroska::frameDurationNs), sink))
     }
 
     override fun read(input: ExtractorInput, seekPosition: PositionHolder) = matroska.read(input, seekPosition)
@@ -190,6 +190,12 @@ private class Matroska(private val sink: AssSink) :
     private var entryZlib = false
     private var algorithm = ZLIB
 
+    /** Each track's DefaultDuration, which Media3 makes no frame rate of. */
+    private val frameDurations = HashMap<Long, Long>()
+    private var entryDuration = -1L
+
+    fun frameDurationNs(track: Int): Long? = frameDurations[track.toLong()]
+
     // A read error can stop a block part way, and the next read carries on in it.
     private var inMedia3Block = false
     private var takeSize = -1
@@ -232,6 +238,7 @@ private class Matroska(private val sink: AssSink) :
             TRACK_ENTRY -> {
                 entryNumber = -1
                 entryZlib = false
+                entryDuration = -1
             }
             // Matroska's default when the file leaves it out, which Media3 then takes as no compression.
             CONTENT_COMPRESSION -> algorithm = ZLIB
@@ -254,7 +261,10 @@ private class Matroska(private val sink: AssSink) :
             // Before Media3 sends the seek map that reads it.
             CUES -> index.finish()
             CONTENT_COMPRESSION -> if (algorithm == ZLIB) entryZlib = true
-            TRACK_ENTRY -> if (entryZlib && entryNumber >= 0) zlibTracks += entryNumber
+            TRACK_ENTRY -> if (entryNumber >= 0) {
+                if (entryZlib) zlibTracks += entryNumber
+                if (entryDuration > 0) frameDurations[entryNumber] = entryDuration
+            }
         }
         super.endMasterElement(id)
     }
@@ -263,6 +273,7 @@ private class Matroska(private val sink: AssSink) :
         when (id) {
             TIMECODE_SCALE -> timecodeScale = value
             TRACK_NUMBER -> entryNumber = value
+            DEFAULT_DURATION -> entryDuration = value
             CONTENT_COMPRESSION_ALGORITHM -> {
                 algorithm = value
                 // Media3 rejects it.
@@ -389,6 +400,7 @@ private class Matroska(private val sink: AssSink) :
         const val TIMECODE_SCALE = 0x2AD7B1
         const val TRACK_ENTRY = 0xAE
         const val TRACK_NUMBER = 0xD7
+        const val DEFAULT_DURATION = 0x23E383
         const val CONTENT_COMPRESSION = 0x5034
         const val CONTENT_COMPRESSION_ALGORITHM = 0x4254
         const val CONTENT_COMPRESSION_SETTINGS = 0x4255
@@ -481,6 +493,20 @@ private class SubtitleIndex {
     private companion object {
         // mpv's demuxer-mkv-subtitle-preroll-secs-index.
         const val READ_BACK_US = 10_000_000L
+    }
+}
+
+@OptIn(UnstableApi::class)
+private class FrameRates(private val output: ExtractorOutput, private val durationNs: (Int) -> Long?) :
+    ExtractorOutput by output {
+    override fun track(id: Int, type: Int): TrackOutput {
+        val track = output.track(id, type)
+        val ns = durationNs(id)?.takeIf { type == C.TRACK_TYPE_VIDEO } ?: return track
+        return object : TrackOutput by track {
+            override fun format(format: Format) = track.format(
+                if (format.frameRate > 0) format else format.buildUpon().setFrameRate(1e9f / ns).build(),
+            )
+        }
     }
 }
 

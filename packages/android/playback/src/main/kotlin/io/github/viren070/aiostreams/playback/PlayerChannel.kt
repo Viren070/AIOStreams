@@ -35,6 +35,8 @@ class PlayerChannel(
     private val beforeLoad: () -> Unit = {},
     /** Hands a file the engine can't decode to another engine; false when there is none. */
     private val fallBack: () -> Boolean = { false },
+    /** The video's frame rate, or null once the page closes the player. */
+    private val frameRate: (Double?) -> Unit = {},
 ) : Engine.Listener {
     private val main = Handler(Looper.getMainLooper())
     private val latest = mutableMapOf<String, JsonElement>()
@@ -81,7 +83,11 @@ class PlayerChannel(
             }
             "mpv-sync" -> latest.forEach { (name, value) -> send(property(name, value)) }
             "subtitle-file" -> runCatching { addSubtitle(message) }.onFailure { reject(it) }
-            "now-playing" -> session.setItem((message["item"] as? JsonObject)?.let(::itemOf))
+            "now-playing" -> {
+                val item = message["item"] as? JsonObject
+                session.setItem(item?.let(::itemOf))
+                if (item == null) frameRate(null)
+            }
             else -> return false
         }
         return true
@@ -139,9 +145,12 @@ class PlayerChannel(
         }
     }
 
+    val paused get() = (latest["pause"] as? JsonPrimitive)?.booleanOrNull != false
+
     private fun receive(name: String, value: JsonElement) {
         latest[name] = value
         session.onProperty(name, value)
+        if (name == "container-fps") (value as? JsonPrimitive)?.doubleOrNull?.takeIf { it > 0 }?.let(frameRate)
         if (name !in MpvProtocol.throttled) return send(property(name, value))
         val wait = THROTTLE_MS - (SystemClock.uptimeMillis() - (sentAt[name] ?: 0))
         if (wait <= 0) return emitNow(name, value)

@@ -11,7 +11,7 @@ object MpvProtocol {
     val observed = listOf(
         "time-pos", "duration", "demuxer-cache-time", "pause", "paused-for-cache", "seeking",
         "idle-active", "volume", "volume-max", "mute", "speed", "aid", "sid",
-        "track-list", "chapter-list", "video-params",
+        "track-list", "chapter-list", "video-params", "container-fps",
     )
 
     val throttled = setOf("time-pos", "demuxer-cache-time")

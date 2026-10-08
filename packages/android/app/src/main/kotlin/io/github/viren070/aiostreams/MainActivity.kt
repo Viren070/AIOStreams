@@ -66,6 +66,7 @@ class MainActivity : ComponentActivity() {
         picked?.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(it.resultCode, it.data))
         picked = null
     }
+    private lateinit var frameRates: FrameRateMatch
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -90,6 +91,15 @@ class MainActivity : ComponentActivity() {
         val queue = Downloads.queue(this)
         queue.send = { message -> runOnUiThread { bridge.send(message) } }
         downloads = DownloadChannel(queue, onAdd = ::askForNotifications)
+        frameRates = FrameRateMatch(
+            this,
+            hold = {
+                val playing = !player.paused
+                if (playing) playback.engine.setProperty("pause", "yes")
+                playing
+            },
+            resume = { playback.engine.setProperty("pause", "no") },
+        )
         player = PlayerChannel(
             playback.engine,
             send = { bridge.send(it) },
@@ -97,6 +107,7 @@ class MainActivity : ComponentActivity() {
             subtitles = File(cacheDir, "subtitles"),
             beforeLoad = { playback.beforeLoad(player) },
             fallBack = { playback.fallBack(player) },
+            frameRate = frameRates::match,
         )
         bridge = AppBridge(web, app.origins, AppIdentity(BuildConfig.VERSION_NAME, deviceName(), deviceId(), onTv()), ::onMessage)
         updater = Updater(this) { bridge.send(it) }
@@ -163,6 +174,9 @@ class MainActivity : ComponentActivity() {
             }
             "player-engine" -> message["name"]?.jsonPrimitive?.contentOrNull?.let { playback.choose(it, player) }
             "player-retry" -> message["name"]?.jsonPrimitive?.contentOrNull?.let { playback.retry(it, player) }
+            "player-options" -> {
+                message["frameRate"]?.jsonPrimitive?.booleanOrNull?.let { frameRates.enabled = it }
+            }
             "mpv-config" -> sendMpvConfig()
             "mpv-config-save" -> {
                 MpvEngine.configFile(this).writeText(message["text"]?.jsonPrimitive?.content.orEmpty())
