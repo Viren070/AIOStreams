@@ -1,3 +1,4 @@
+import { appBridge } from '../hosts/shell/bridge';
 import { dispatch, holdable, pressAndHold } from './dispatch';
 import { sendKey } from './focus';
 
@@ -49,11 +50,36 @@ function pressed(): Set<string> {
   return down;
 }
 
-/** Polls connected gamepads while the window has focus. */
+/**
+ * Polls connected gamepads while the window has focus. The Android app's web
+ * view polls on a thread of its own from the first gamepad listener, so there
+ * it starts only while the app reports a controller.
+ */
 export function startGamepads(): () => void {
   // The Xbox web view turns its controller into keys itself.
   if (!navigator.getGamepads || /Xbox/.test(navigator.userAgent))
     return () => {};
+  const bridge = appBridge();
+  if (bridge?.platform !== 'android') return pollGamepads();
+  let stop: (() => void) | null = null;
+  const update = (connected: boolean) => {
+    if (connected && !stop) stop = pollGamepads();
+    else if (!connected && stop) {
+      stop();
+      stop = null;
+    }
+  };
+  update(!!bridge.gamepads);
+  const unsubscribe = bridge.subscribe((m) => {
+    if (m.type === 'gamepads') update(m.connected);
+  });
+  return () => {
+    unsubscribe();
+    stop?.();
+  };
+}
+
+function pollGamepads(): () => void {
   const held = new Map<
     string,
     { since: number; last: number; release?: (drop?: boolean) => void }

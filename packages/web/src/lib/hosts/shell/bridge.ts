@@ -48,6 +48,7 @@ export type ShellMessage =
     }
   | { type: 'link'; url: string }
   | { type: 'voice-result'; text: string | null }
+  | { type: 'gamepads'; connected: boolean }
   | { type: 'media-key'; key: MediaKey }
   | { type: 'error'; message: string }
   | {
@@ -79,6 +80,8 @@ interface ShellBridge {
   tv?: boolean;
   /** The Android app on a device with a speech recogniser. */
   voice?: boolean;
+  /** The Android app with a game controller attached. */
+  gamepads?: boolean;
   /** The device's name. */
   device: string;
   /** The app's own id for this device, where it keeps one. */
