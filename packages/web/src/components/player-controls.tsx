@@ -1025,6 +1025,8 @@ export function PlayerControls({
     visible ? 'opacity-100 [&>*]:pointer-events-auto' : 'opacity-0'
   );
   const isEpisode = item.Type === 'Episode';
+  // A remote's keys already play, pause, seek and skip.
+  const tv = !!currentHost().tv;
   // Below lg the bar has no room for these, so they move to the middle.
   const middle = touch ? '' : 'lg:hidden';
   const time = (
@@ -1064,6 +1066,7 @@ export function PlayerControls({
     },
   };
   const middleButton = (b: (typeof buttons)[keyof typeof buttons]) =>
+    !tv &&
     b && (
       <button
         type="button"
@@ -1156,7 +1159,7 @@ export function PlayerControls({
         {middleButton(buttons.back)}
         {state.waiting && !state.error ? (
           <LoadingSpinner containerClass="size-16 flex-none" iconClass="mr-0" />
-        ) : (
+        ) : tv ? null : (
           <button
             type="button"
             data-ui="player-middle-button"
@@ -1289,7 +1292,8 @@ export function PlayerControls({
             {barButton(buttons.previous)}
             {barButton(buttons.next)}
           </div>
-          <Volume player={player} />
+          {/* Phones and remotes have volume keys. */}
+          {!touch && !tv && <Volume player={player} />}
           <span
             data-ui="player-time"
             className="ml-2 hidden whitespace-nowrap text-sm tabular-nums text-gray-200 sm:inline"
@@ -1400,7 +1404,7 @@ export function PlayerControls({
                 onOpenChange={onMenu}
               />
             )}
-            {player.toggleFullscreen && (
+            {player.toggleFullscreen && !tv && (
               <ControlButton
                 name="fullscreen"
                 label={state.fullscreen ? 'Exit full screen' : 'Full screen'}
