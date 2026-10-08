@@ -1,8 +1,15 @@
 import React from 'react';
 import { BiHistory, BiSearch, BiX } from 'react-icons/bi';
 import { Button, IconButton } from '@aiostreams/ui/button';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from '@aiostreams/ui/context-menu';
 import { TextInput } from '@aiostreams/ui/text-input';
 import { useDebounce } from '@aiostreams/ui/hooks/debounce';
+import { currentHost } from '../lib/hosts';
 import { useSession } from '../lib/session';
 import type { JellyfinClient } from '../lib/client';
 import { useSearch } from '../lib/queries';
@@ -87,26 +94,38 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
                 data-ui="search-history-item"
                 className="flex items-center rounded-lg transition-colors hover:bg-white/[0.04]"
               >
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTerm(t);
-                    history.add(t);
-                  }}
-                  className="flex min-w-0 flex-1 items-center gap-3 px-2 py-2 text-left"
-                >
-                  <BiHistory className="flex-none text-lg text-[--muted]" />
-                  <span className="truncate">{t}</span>
-                </button>
-                <IconButton
-                  data-nav-tv="skip"
-                  size="sm"
-                  intent="gray-basic"
-                  className="mr-1 flex-none rounded-full"
-                  icon={<BiX className="text-lg" />}
-                  aria-label={`Remove ${t}`}
-                  onClick={() => history.remove(t)}
-                />
+                {/* A TV, with no remove button, holds Select for it. */}
+                <ContextMenu>
+                  <ContextMenuTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTerm(t);
+                        history.add(t);
+                      }}
+                      className="flex min-w-0 flex-1 items-center gap-3 px-2 py-2 text-left"
+                    >
+                      <BiHistory className="flex-none text-lg text-[--muted]" />
+                      <span className="truncate">{t}</span>
+                    </button>
+                  </ContextMenuTrigger>
+                  <ContextMenuContent data-ui="search-history-menu">
+                    <ContextMenuItem onClick={() => history.remove(t)}>
+                      <BiX />
+                      Remove
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                </ContextMenu>
+                {!currentHost().tv && (
+                  <IconButton
+                    size="sm"
+                    intent="gray-basic"
+                    className="mr-1 flex-none rounded-full"
+                    icon={<BiX className="text-lg" />}
+                    aria-label={`Remove ${t}`}
+                    onClick={() => history.remove(t)}
+                  />
+                )}
               </li>
             ))}
           </ul>
