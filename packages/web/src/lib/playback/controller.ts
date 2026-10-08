@@ -86,6 +86,8 @@ export interface PlayerController {
   close?: () => void;
   /** Puts the next episode after this one in the player's own playlist. */
   queueNext?: (episode: QueuedEpisode) => void;
+  /** Plays the file again on another engine, after it failed on this one. */
+  retry?: { label: string; run(): void };
 }
 
 export interface QueuedEpisode {

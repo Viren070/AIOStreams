@@ -1,6 +1,6 @@
 import React from 'react';
 import { toast } from 'sonner';
-import { BiArrowBack, BiCopy, BiLayer } from 'react-icons/bi';
+import { BiArrowBack, BiCopy, BiLayer, BiRefresh } from 'react-icons/bi';
 import { Button } from '@aiostreams/ui/button';
 import { LoadingSpinner } from '@aiostreams/ui/loading-spinner';
 import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
@@ -317,12 +317,14 @@ function Failure({
   item,
   source,
   onVersions,
+  retry,
 }: {
   itemId: string;
   message: string;
   item?: BaseItemDto;
   source?: SourceInfo;
   onVersions?: () => void;
+  retry?: { label: string; run(): void };
 }) {
   const { client } = useSession();
   const link = item && source ? directUrl(client, item.Id!, source) : null;
@@ -340,17 +342,28 @@ function Failure({
             intent="gray-outline"
             className="rounded-full"
             leftIcon={<BiArrowBack />}
-            autoFocus={!onVersions}
+            autoFocus={!onVersions && !retry}
             onClick={() => goBack(to.item(itemId))}
           >
             Back
           </Button>
-          {onVersions && (
+          {retry && (
             <Button
               intent="white"
               className="rounded-full"
-              leftIcon={<BiLayer />}
+              leftIcon={<BiRefresh />}
               autoFocus
+              onClick={retry.run}
+            >
+              {retry.label}
+            </Button>
+          )}
+          {onVersions && (
+            <Button
+              intent={retry ? 'gray-outline' : 'white'}
+              className="rounded-full"
+              leftIcon={<BiLayer />}
+              autoFocus={!retry}
               onClick={onVersions}
             >
               Other versions
@@ -641,6 +654,7 @@ function NativePlayer({
           source={source}
           message={`Playback failed: ${player.state.error}`}
           onVersions={switchVersion}
+          retry={player.retry}
         />
       ) : (
         <>

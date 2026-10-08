@@ -86,6 +86,9 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
   }));
   const [tracks, setTracks] = React.useState<MpvTrack[]>([]);
   const [chapters, setChapters] = React.useState<Chapter[]>([]);
+  // Offered once per file.
+  const [retryable, setRetryable] = React.useState(false);
+  const retried = React.useRef(false);
   const latest = useLatest({ ...opts, state });
   const queued = React.useRef<QueuedEpisode | null>(null);
   const externals = React.useMemo(
@@ -181,6 +184,8 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
       advanced?.sourceId === source.Id;
     let preferOnTracks = false;
     advanced = null;
+    retried.current = false;
+    setRetryable(false);
 
     let fileTracks: MpvTrack[] = [];
     let sid: string | null = null;
@@ -322,9 +327,10 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
         addPreferredSubtitle();
       else if (m.type === 'mpv-ended' && m.reason === 'eof') {
         if (!queued.current) latest.current.onEnded();
-      } else if (m.type === 'mpv-ended' && m.reason === 'error')
+      } else if (m.type === 'mpv-ended' && m.reason === 'error') {
+        setRetryable(!retried.current && !LINK_FAILURES.has(m.error ?? ''));
         patch({ error: failure(m.error, m.cause) });
-      else if (m.type === 'external-ended' && external) {
+      } else if (m.type === 'external-ended' && external) {
         if (m.error) patch({ error: m.error });
         else latest.current.onClosed?.();
       }
@@ -457,8 +463,32 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
           command('loadfile', episode.url, 'append', -1, options.join(','));
         }
       : undefined,
+    retry:
+      retryable &&
+      !external &&
+      appBridge()?.platform === 'android' &&
+      // Automatic has tried both engines before a failure reaches the page.
+      settings.android.engine.read() !== 'auto'
+        ? {
+            label: playsWithExoPlayer()
+              ? 'Play with mpv'
+              : 'Play with ExoPlayer',
+            run: () => {
+              retried.current = true;
+              setRetryable(false);
+              patch({ error: null, started: false, waiting: true });
+              shell.send({
+                type: 'player-retry',
+                name: playsWithExoPlayer() ? 'mpv' : 'exoplayer',
+              });
+            },
+          }
+        : undefined,
   };
 }
+
+/** mpv's words for a link that gave it no video, which the other engine can't play either. */
+const LINK_FAILURES = new Set(['loading failed', 'unrecognized file format']);
 
 let engine: string | null = null;
 
