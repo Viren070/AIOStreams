@@ -99,39 +99,65 @@ function useKeepPositionOnReInit(api: CarouselApi) {
   }, [api]);
 }
 
+/** How long a row glides to a focused slide. */
+const GLIDE_MS = 300;
+
 /**
  * Scrolls a focused slide just into view. Focus would otherwise scroll the
- * clipped viewport itself, which Embla can't see.
+ * clipped viewport itself, which Embla can't see. The row jumps and a CSS
+ * transition eases it on the compositor, where Embla's own easing would run
+ * script on every frame for over a second.
  */
 function useFollowFocus(api: CarouselApi) {
   React.useEffect(() => {
     if (!api) return;
     const viewport = api.rootNode();
+    const container = api.containerNode();
+    let settle = 0;
+    const still = () => {
+      window.clearTimeout(settle);
+      container.style.transition = '';
+    };
     const follow = () => {
       viewport.scrollLeft = 0;
       const focused = document.activeElement;
       const slide = api.slideNodes().find((s) => s.contains(focused));
       if (!slide) return;
       const engine = api.internalEngine();
-      // Where the slide lands once any scroll under way finishes.
-      const ahead = engine.target.get() - engine.location.get();
       const view = viewport.getBoundingClientRect();
+      const box = container.getBoundingClientRect();
       const rect = slide.getBoundingClientRect();
-      const left = rect.left + ahead - view.left;
-      const right = rect.right + ahead - view.right;
+      // Where the row shows now, short of Embla's target while it glides.
+      const { transform } = getComputedStyle(container);
+      const shown =
+        transform === 'none' ? 0 : new DOMMatrixReadOnly(transform).m41;
+      const left =
+        box.left -
+        shown +
+        engine.target.get() +
+        rect.left -
+        box.left -
+        view.left;
+      const right = left + rect.width - view.width;
       const shift = left < 0 ? left : right > 0 ? Math.min(right, left) : 0;
       if (!shift) return;
-      engine.scrollBody.useBaseDuration().useBaseFriction();
-      engine.scrollTo.distance(-shift, false);
+      window.clearTimeout(settle);
+      container.style.transition = `transform ${GLIDE_MS}ms ease-out`;
+      settle = window.setTimeout(still, GLIDE_MS + 50);
+      jumpTo(api, engine.target.get() - shift);
+      api.emit('scroll');
     };
     const onScroll = () => {
       if (viewport.scrollLeft) follow();
     };
     viewport.addEventListener('focusin', follow);
     viewport.addEventListener('scroll', onScroll);
+    api.on('pointerDown', still);
     return () => {
+      still();
       viewport.removeEventListener('focusin', follow);
       viewport.removeEventListener('scroll', onScroll);
+      api.off('pointerDown', still);
     };
   }, [api]);
 }
