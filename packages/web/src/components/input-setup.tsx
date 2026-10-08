@@ -14,9 +14,11 @@ import {
   onAction,
   openMenu,
   returnFocus,
+  scrollStep,
   startGamepads,
   startInput,
   type ActionGroup,
+  type Direction,
 } from '../lib/input';
 import { navigate, to } from '../lib/paths';
 import { settings, useSetting } from '../lib/settings';
@@ -42,6 +44,17 @@ function back(history: History): boolean {
   return true;
 }
 
+/**
+ * A TV's web view moves focus by its own rules on an arrow the page leaves, so
+ * a TV keeps them all, scrolling a step where nothing lies that way.
+ */
+function step(dir: Direction): boolean {
+  if (move(dir)) return true;
+  if (!currentHost().tv) return false;
+  if (dir === 'up' || dir === 'down') scrollStep(dir);
+  return true;
+}
+
 /** Keys, the wheel and gamepads, and what they do on every screen. */
 export function InputSetup({ router }: { router: AnyRouter }) {
   const [help, setHelp] = React.useState(false);
@@ -52,10 +65,10 @@ export function InputSetup({ router }: { router: AnyRouter }) {
       startInput(),
       startGamepads(),
       returnFocus(router),
-      onAction('nav.up', () => move('up'), fallback),
-      onAction('nav.down', () => move('down'), fallback),
-      onAction('nav.left', () => move('left'), fallback),
-      onAction('nav.right', () => move('right'), fallback),
+      onAction('nav.up', () => step('up'), fallback),
+      onAction('nav.down', () => step('down'), fallback),
+      onAction('nav.left', () => step('left'), fallback),
+      onAction('nav.right', () => step('right'), fallback),
       onAction('nav.select', () => activate(), fallback),
       onAction('nav.menu', openMenu, fallback),
       onAction('back', () => back(history), fallback),

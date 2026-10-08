@@ -30,6 +30,8 @@ export {
   keyboardFocus,
   move,
   openMenu,
+  scrollStep,
+  type Direction,
 } from './focus';
 export { startGamepads } from './gamepad';
 export { returnFocus } from './return';

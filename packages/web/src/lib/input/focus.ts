@@ -311,6 +311,26 @@ function reveal(el: HTMLElement): void {
   if (dy) window.scrollTo({ top: scrollY + dy, behavior });
 }
 
+/** Scrolls the box holding focus, or else the page, a step up or down. */
+export function scrollStep(dir: 'up' | 'down'): void {
+  const dy = (dir === 'up' ? -1 : 1) * Math.round(innerHeight / 4);
+  const behavior = smooth();
+  for (
+    let box = document.activeElement?.parentElement;
+    box && box !== document.body && box !== document.documentElement;
+    box = box.parentElement
+  ) {
+    if (!/auto|scroll/.test(getComputedStyle(box).overflowY)) continue;
+    if (
+      dy < 0
+        ? box.scrollTop > 0
+        : box.scrollTop + box.clientHeight < box.scrollHeight - 1
+    )
+      return box.scrollBy({ top: dy, behavior });
+  }
+  window.scrollBy({ top: dy, behavior });
+}
+
 export function focusOn(el: HTMLElement): void {
   // Script focus after a click hides the ring, which a remote or gamepad needs.
   el.focus({ preventScroll: true, focusVisible: true } as FocusOptions);
