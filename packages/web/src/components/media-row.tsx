@@ -3,8 +3,8 @@ import { motion } from 'motion/react';
 import { useRouter } from '@tanstack/react-router';
 import {
   Carousel,
+  CarouselAnatomy,
   CarouselContent,
-  CarouselItem,
   CarouselNext,
   CarouselPrevious,
   useCarousel,
@@ -79,6 +79,26 @@ function useEntryKey(id: string | undefined) {
   return id ? `${entry}|${id}` : undefined;
 }
 
+/** A row's card, as Embla's slide or a TV row's. */
+function Slide({
+  className,
+  children,
+}: {
+  className: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      role="group"
+      aria-roledescription="slide"
+      data-ui="media-row-item"
+      className={cn(CarouselAnatomy.item({ gap: 'md' }), className)}
+    >
+      {children}
+    </div>
+  );
+}
+
 /**
  * Marks the cards in `box` out of sight of `root` (and `rootMargin` around it)
  * `data-nav-out`, so arrow navigation needn't measure them. `count` re-arms it
@@ -103,6 +123,140 @@ function useMarkOutOfView(
     for (const card of cards) observer.observe(card);
     return () => observer.disconnect();
   }, [box, count, root, rootMargin]);
+}
+
+const savedScroll = new Map<string, number>();
+
+/** How long a TV row glides to a focused card, and the room after it; a card's padding leaves the room before. */
+const GLIDE_MS = 250;
+const ROOM = 16;
+
+/**
+ * Layers the glides take turns on, as nested transforms add up: a glide under
+ * way carries on, where reading its place back comes out stale and jerks the
+ * row. Three cover a held key's repeats.
+ */
+const GLIDE_LAYERS = 3;
+
+/**
+ * A TV's row: a plain scroller, as Embla's measuring and scripted easing are
+ * too much for a TV's CPU. Focus jumps it, and an animated transform eases the
+ * jump on the compositor.
+ */
+function NativeRow({
+  restoreKey,
+  start,
+  onEnd,
+  count,
+  children,
+}: {
+  restoreKey: string | undefined;
+  start: number;
+  onEnd?: () => void;
+  /** How many cards, so new ones are watched too. */
+  count: number;
+  children: React.ReactNode;
+}) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const content = React.useRef<HTMLDivElement>(null);
+  const layers = React.useRef<HTMLDivElement[]>([]);
+  React.useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const saved = restoreKey ? savedScroll.get(restoreKey) : undefined;
+    const card = content.current?.children[start];
+    if (saved !== undefined) el.scrollLeft = saved;
+    else if (start && card instanceof HTMLElement && content.current)
+      el.scrollLeft = content.current.offsetLeft + card.offsetLeft;
+    // Once, as the carousel reads its start once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  React.useEffect(() => {
+    const el = ref.current;
+    const row = content.current;
+    if (!el || !row) return;
+    const glides: (Animation | undefined)[] = [];
+    let next = 0;
+    const follow = (e: FocusEvent) => {
+      const card =
+        e.target instanceof Element
+          ? e.target.closest('[data-ui=media-row-item]')
+          : null;
+      if (!(card instanceof HTMLElement) || card.parentElement !== row) return;
+      // Layout's own offsets, which a glide under way leaves alone.
+      const left = row.offsetLeft + card.offsetLeft;
+      const right = left + card.offsetWidth;
+      const from = el.scrollLeft;
+      const to =
+        left < from
+          ? left
+          : right + ROOM > from + el.clientWidth
+            ? Math.min(right + ROOM - el.clientWidth, left)
+            : from;
+      if (to === from) return;
+      el.scrollLeft = to;
+      const moved = el.scrollLeft - from;
+      const layer = layers.current[next];
+      glides[next]?.finish();
+      glides[next] = layer?.animate(
+        [{ transform: `translateX(${moved}px)` }, { transform: 'none' }],
+        { duration: GLIDE_MS, easing: 'ease-out' }
+      );
+      next = (next + 1) % GLIDE_LAYERS;
+    };
+    el.addEventListener('focusin', follow);
+    return () => {
+      for (const glide of glides) glide?.cancel();
+      el.removeEventListener('focusin', follow);
+    };
+  }, []);
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const check = () => {
+      if (restoreKey) savedScroll.set(restoreKey, el.scrollLeft);
+      const range = el.scrollWidth - el.clientWidth;
+      if (onEnd && (range <= 1 || el.scrollLeft / range > 0.7)) onEnd();
+    };
+    check();
+    el.addEventListener('scroll', check, { passive: true });
+    return () => el.removeEventListener('scroll', check);
+  }, [restoreKey, onEnd, count]);
+  useMarkOutOfView(content, count, ref);
+  return (
+    <div
+      ref={ref}
+      data-nav-self-scroll
+      className={cn(
+        CarouselAnatomy.content(),
+        'relative -mr-4 overflow-x-auto overflow-y-hidden lg:-mr-10'
+      )}
+    >
+      {Array.from({ length: GLIDE_LAYERS }).reduceRight<React.ReactNode>(
+        (inside, _, i) => (
+          <div
+            ref={(el) => {
+              if (el) layers.current[i] = el;
+            }}
+            // Kept as layers, since one made as a glide starts draws nothing for a frame.
+            className="will-change-transform"
+          >
+            {inside}
+          </div>
+        ),
+        <div
+          ref={content}
+          className={cn(
+            CarouselAnatomy.innerContent({ gap: 'md' }),
+            // A scroller leaves the last card's margin out of its end.
+            "relative mt-3 after:shrink-0 after:basis-4 after:content-['']"
+          )}
+        >
+          {children}
+        </div>
+      )}
+    </div>
+  );
 }
 
 /** A titled, draggable row of cards that pages as it nears its end. */
@@ -144,13 +298,10 @@ export function MediaRow({
   const width = itemClass ?? ITEM_WIDTH[shape];
   const items = React.Children.toArray(children);
   if (!loading && !items.length) return null;
+  const native = !!currentHost().tv;
   const skeletons = (count: number) =>
     Array.from({ length: count }, (_, i) => (
-      <CarouselItem
-        key={`skeleton-${i}`}
-        data-ui="media-row-item"
-        className={width}
-      >
+      <Slide key={`skeleton-${i}`} className={width}>
         <Skeleton
           className={cn(
             'h-auto w-full rounded-xl',
@@ -158,8 +309,44 @@ export function MediaRow({
             waiting && 'animate-none'
           )}
         />
-      </CarouselItem>
+      </Slide>
     ));
+  const cards = [
+    ...(loading
+      ? skeletons(8)
+      : items.map((child, i) => (
+          <Slide key={i} className={width}>
+            <motion.div {...fadeIn(i)}>{child}</motion.div>
+          </Slide>
+        ))),
+    ...(!loading && loadingMore ? skeletons(4) : []),
+  ];
+  const head = (
+    <div className="-mr-4 flex items-center justify-between gap-3 pr-4 lg:-mr-10">
+      {title ? (
+        <h2
+          data-ui="media-row-title"
+          data-nav-tv="skip"
+          // Room inside the truncating box for a link's focus outline.
+          className="-m-1 min-w-0 truncate p-1 text-lg font-semibold sm:text-xl"
+        >
+          {title}
+        </h2>
+      ) : (
+        <div data-nav-tv="skip" className="min-w-0">
+          {header}
+        </div>
+      )}
+      <div className="flex flex-none items-center gap-2">
+        {action && (
+          <div data-ui="media-row-action" className="flex">
+            {action}
+          </div>
+        )}
+        {!native && <RowNav />}
+      </div>
+    </div>
+  );
   return (
     <section
       ref={rowRef}
@@ -168,54 +355,34 @@ export function MediaRow({
       data-shape={shape}
       data-nav-group
     >
-      <Carousel
-        opts={{ align: 'start', dragFree: true, startIndex: start }}
-        restoreKey={restoreKey}
-      >
-        {onEndReached && <EndWatcher onEnd={onEndReached} />}
-        <div className="-mr-4 flex items-center justify-between gap-3 pr-4 lg:-mr-10">
-          {title ? (
-            <h2
-              data-ui="media-row-title"
-              data-nav-tv="skip"
-              // Room inside the truncating box for a link's focus outline.
-              className="-m-1 min-w-0 truncate p-1 text-lg font-semibold sm:text-xl"
-            >
-              {title}
-            </h2>
-          ) : (
-            <div data-nav-tv="skip" className="min-w-0">
-              {header}
-            </div>
-          )}
-          <div className="flex flex-none items-center gap-2">
-            {action && (
-              <div data-ui="media-row-action" className="flex">
-                {action}
-              </div>
-            )}
-            <RowNav />
-          </div>
-        </div>
-        {/* Embla counts the last card's margin as the row's end gap. */}
-        <CarouselContent
-          contentClass="-mr-4 lg:-mr-10"
-          className="mt-3 [&>*:last-child]:mr-4"
+      {native ? (
+        <>
+          {head}
+          <NativeRow
+            restoreKey={restoreKey}
+            start={start}
+            onEnd={onEndReached}
+            count={cards.length}
+          >
+            {cards}
+          </NativeRow>
+        </>
+      ) : (
+        <Carousel
+          opts={{ align: 'start', dragFree: true, startIndex: start }}
+          restoreKey={restoreKey}
         >
-          {loading
-            ? skeletons(8)
-            : items.map((child, i) => (
-                <CarouselItem
-                  key={i}
-                  data-ui="media-row-item"
-                  className={width}
-                >
-                  <motion.div {...fadeIn(i)}>{child}</motion.div>
-                </CarouselItem>
-              ))}
-          {!loading && loadingMore && skeletons(4)}
-        </CarouselContent>
-      </Carousel>
+          {onEndReached && <EndWatcher onEnd={onEndReached} />}
+          {head}
+          {/* Embla counts the last card's margin as the row's end gap. */}
+          <CarouselContent
+            contentClass="-mr-4 lg:-mr-10"
+            className="mt-3 [&>*:last-child]:mr-4"
+          >
+            {cards}
+          </CarouselContent>
+        </Carousel>
+      )}
     </section>
   );
 }
