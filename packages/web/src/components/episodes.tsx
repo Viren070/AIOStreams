@@ -353,6 +353,7 @@ export function EpisodeCard({
         <div
           ref={details.root}
           data-ui="episode-card"
+          data-nav-box
           {...episodeState(episode)}
           data-highlighted={highlighted || undefined}
           className="group/episode relative space-y-2"
@@ -434,6 +435,7 @@ function EpisodeListItem({
         <div
           ref={details.root}
           data-ui="episode-list-item"
+          data-nav-box
           {...episodeState(episode)}
           data-highlighted={highlighted || undefined}
           className="group/episode relative grid grid-cols-[40%_minmax(0,1fr)] gap-x-3 gap-y-2 rounded-xl p-2 transition-colors focus-within:bg-white/10 hover:bg-white/[0.04] sm:grid-cols-[13rem_minmax(0,1fr)] sm:grid-rows-[auto_1fr] sm:gap-x-4 sm:gap-y-1"

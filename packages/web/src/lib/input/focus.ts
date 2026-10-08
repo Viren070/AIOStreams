@@ -291,9 +291,12 @@ function shortfall(
   return 0;
 }
 
-/** Scrolls each box holding `el`, innermost first; carousels move themselves. */
+/**
+ * Scrolls each box holding `el`, innermost first; carousels move themselves.
+ * Inside a `data-nav-box`, that box comes into view.
+ */
 function reveal(el: HTMLElement): void {
-  let rect = el.getBoundingClientRect();
+  let rect = (el.closest('[data-nav-box]') ?? el).getBoundingClientRect();
   let behavior: ScrollBehavior | undefined;
   for (let box = el.parentElement; box; box = box.parentElement) {
     if (box === document.body || box === document.documentElement) break;
