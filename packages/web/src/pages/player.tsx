@@ -327,7 +327,10 @@ function Failure({
   retry?: { label: string; run(): void };
 }) {
   const { client } = useSession();
-  const link = item && source ? directUrl(client, item.Id!, source) : null;
+  const link =
+    item && source && !currentHost().tv
+      ? directUrl(client, item.Id!, source)
+      : null;
   return (
     <div
       data-ui="player-error"

@@ -515,16 +515,21 @@ function Versions({
                   },
                 ]
               : []),
-            {
-              name: 'copy-link',
-              label: 'Copy stream link',
-              icon: <BiCopy />,
-              run: () =>
-                copyToClipboard(link, {
-                  onSuccess: () => toast.success('Stream link copied'),
-                  onError: () => toast.error('Could not copy the link'),
-                }),
-            },
+            // A TV has nowhere to paste it.
+            ...(currentHost().tv
+              ? []
+              : [
+                  {
+                    name: 'copy-link',
+                    label: 'Copy stream link',
+                    icon: <BiCopy />,
+                    run: () =>
+                      copyToClipboard(link, {
+                        onSuccess: () => toast.success('Stream link copied'),
+                        onError: () => toast.error('Could not copy the link'),
+                      }),
+                  },
+                ]),
           ];
           return (
             <div
@@ -580,53 +585,57 @@ function Versions({
                   )}
                 </span>
               </button>
-              <div className="absolute right-1.5 top-1.5 sm:hidden">
-                <DropdownMenu
-                  data-ui="version-menu"
-                  align="end"
-                  trigger={
-                    <IconButton
-                      size="sm"
-                      intent="gray-basic"
-                      className="rounded-full"
-                      icon={<BiDotsVerticalRounded />}
-                      aria-label="More"
-                    />
-                  }
-                >
-                  {actions.map((a) => (
-                    <DropdownMenuItem
-                      key={a.label}
-                      data-name={a.name}
-                      onClick={a.run}
-                    >
-                      {a.icon}
-                      {a.label}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenu>
-              </div>
-              <div className="hidden flex-none gap-1 p-2 sm:flex">
-                {actions.map((a) => (
-                  <Tooltip
-                    key={a.label}
+              {!!actions.length && (
+                <div className="absolute right-1.5 top-1.5 sm:hidden">
+                  <DropdownMenu
+                    data-ui="version-menu"
+                    align="end"
                     trigger={
                       <IconButton
-                        data-ui="version-action"
-                        data-name={a.name}
                         size="sm"
                         intent="gray-basic"
                         className="rounded-full"
-                        icon={a.icon}
-                        aria-label={a.label}
-                        onClick={a.run}
+                        icon={<BiDotsVerticalRounded />}
+                        aria-label="More"
                       />
                     }
                   >
-                    {a.label}
-                  </Tooltip>
-                ))}
-              </div>
+                    {actions.map((a) => (
+                      <DropdownMenuItem
+                        key={a.label}
+                        data-name={a.name}
+                        onClick={a.run}
+                      >
+                        {a.icon}
+                        {a.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenu>
+                </div>
+              )}
+              {!!actions.length && (
+                <div className="hidden flex-none gap-1 p-2 sm:flex">
+                  {actions.map((a) => (
+                    <Tooltip
+                      key={a.label}
+                      trigger={
+                        <IconButton
+                          data-ui="version-action"
+                          data-name={a.name}
+                          size="sm"
+                          intent="gray-basic"
+                          className="rounded-full"
+                          icon={a.icon}
+                          aria-label={a.label}
+                          onClick={a.run}
+                        />
+                      }
+                    >
+                      {a.label}
+                    </Tooltip>
+                  ))}
+                </div>
+              )}
             </div>
           );
         })}
