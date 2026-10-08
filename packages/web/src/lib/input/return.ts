@@ -51,9 +51,10 @@ export function returnFocus(router: AnyRouter): () => void {
   document.addEventListener('focusin', track);
   const leave = router.subscribe('onBeforeNavigate', ({ fromLocation }) => {
     if (!fromLocation) return;
-    const el = usingKeys() && onPage?.isConnected ? onPage : null;
-    if (el) spots.set(keyOf(fromLocation), spotOf(el));
-    else spots.delete(keyOf(fromLocation));
+    if (!usingKeys()) spots.delete(keyOf(fromLocation));
+    // A redirect as the next page opens leaves again, after the page is gone.
+    else if (onPage?.isConnected)
+      spots.set(keyOf(fromLocation), spotOf(onPage));
   });
   const arrive = router.subscribe('onRendered', ({ toLocation }) => {
     cancelAnimationFrame(frame);
