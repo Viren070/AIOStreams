@@ -160,7 +160,7 @@ async function submit(release: Contribution): Promise<void> {
         isEpisode ? episode : undefined
       );
     }
-    logger.debug(
+    logger.info(
       { source: label, filename: release.file },
       'contributed to remuxdb'
     );
