@@ -312,6 +312,7 @@ export function Hero({
               type="button"
               data-ui="hero-dot"
               data-current={i === index || undefined}
+              data-nav-tv="skip"
               aria-label={`Show ${f.Name}`}
               onClick={() => setIndex(i)}
               className={cn(

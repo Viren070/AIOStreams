@@ -10,6 +10,7 @@ import {
 } from 'react-icons/si';
 import { IconButton } from '@aiostreams/ui/button';
 import { Tooltip } from '@aiostreams/ui/tooltip';
+import { currentHost } from '../lib/hosts';
 import { AnidbIcon, TvdbIcon } from './brand-icons';
 
 const ICONS: Record<string, IconType> = {
@@ -31,7 +32,8 @@ export function ExternalLinks({
   const usable = (links ?? []).filter(
     (link): link is { Name: string; Url: string } => !!link.Name && !!link.Url
   );
-  if (!usable.length) return null;
+  // A TV has no browser to open them in.
+  if (!usable.length || currentHost().tv) return null;
   return (
     <div
       data-ui="external-links"
