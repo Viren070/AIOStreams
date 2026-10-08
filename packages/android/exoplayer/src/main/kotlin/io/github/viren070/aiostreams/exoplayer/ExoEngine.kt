@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.Choreographer
 import android.view.View
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
@@ -37,6 +38,7 @@ import androidx.media3.exoplayer.SeekParameters
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.UnrecognizedInputFormatException
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.video.VideoFrameMetadataListener
 import androidx.media3.extractor.metadata.Chapter
 import io.github.viren070.aiostreams.mpv.MpvEngine
@@ -104,6 +106,11 @@ class ExoEngine(private val context: Context) :
 
     @Volatile
     private var lastFrameUs = 0L
+
+    @Volatile
+    private var lastFrameAtNs = 0L
+
+    private var tunneling = false
 
     init {
         val sources = DefaultMediaSourceFactory(data, SubtitleExtractors({ readBack }) { SubtitleSink(ass.sink(), texts.sink()) })
@@ -409,8 +416,35 @@ class ExoEngine(private val context: Context) :
         mediaFormat: MediaFormat?,
     ) {
         lastFrameUs = presentationTimeUs
+        lastFrameAtNs = System.nanoTime()
         ass.render(presentationTimeUs - delayUs, releaseTimeNs)
         if (text != null) main.post { showCues(presentationTimeUs) }
+    }
+
+    fun setTunneling(on: Boolean) = main.post {
+        val selector = player.trackSelector as? DefaultTrackSelector ?: return@post
+        selector.setParameters(selector.buildUponParameters().setTunnelingEnabled(on))
+        tunneling = on
+        updateClock()
+    }
+
+    // Tunneled frames skip the frame callbacks, so subtitles follow the playback clock.
+    private val clock = object : Choreographer.FrameCallback {
+        override fun doFrame(frameTimeNanos: Long) {
+            if (!tunneling || !player.isPlaying) return
+            if (System.nanoTime() - lastFrameAtNs > FRAMES_STOPPED_NS) {
+                val us = player.currentPosition * 1000
+                lastFrameUs = us
+                ass.render(us - delayUs, frameTimeNanos)
+                showCues(us)
+            }
+            Choreographer.getInstance().postFrameCallback(this)
+        }
+    }
+
+    private fun updateClock() {
+        Choreographer.getInstance().removeFrameCallback(clock)
+        if (tunneling && player.isPlaying) Choreographer.getInstance().postFrameCallback(clock)
     }
 
     override fun onVideoInputFormatChanged(
@@ -481,7 +515,10 @@ class ExoEngine(private val context: Context) :
         updatePolling()
     }
 
-    override fun onIsPlayingChanged(isPlaying: Boolean) = updatePolling()
+    override fun onIsPlayingChanged(isPlaying: Boolean) {
+        updatePolling()
+        updateClock()
+    }
 
     override fun onPlaybackParametersChanged(parameters: PlaybackParameters) = report("speed", parameters.speed.toDouble())
 
@@ -625,6 +662,7 @@ class ExoEngine(private val context: Context) :
     private companion object {
         const val TAG = "exo"
         const val POLL_MS = 250L
+        const val FRAMES_STOPPED_NS = 100_000_000L
 
         /** Errors loading the link. */
         val LINK = 2000..2999

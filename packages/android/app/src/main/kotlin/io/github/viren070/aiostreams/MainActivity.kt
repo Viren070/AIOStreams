@@ -176,6 +176,7 @@ class MainActivity : ComponentActivity() {
             "player-retry" -> message["name"]?.jsonPrimitive?.contentOrNull?.let { playback.retry(it, player) }
             "player-options" -> {
                 message["frameRate"]?.jsonPrimitive?.booleanOrNull?.let { frameRates.enabled = it }
+                message["tunneling"]?.jsonPrimitive?.booleanOrNull?.let { playback.tunneling = it }
             }
             "mpv-config" -> sendMpvConfig()
             "mpv-config-save" -> {

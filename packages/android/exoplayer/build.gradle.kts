@@ -20,7 +20,7 @@ android {
 
 dependencies {
     implementation(project(":playback"))
-    implementation(libs.androidx.media3.exoplayer)
+    api(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.ui)
     // FFmpeg's audio decoders, for what the device's own can't play, such as DTS and TrueHD.
     implementation(libs.jellyfin.media3.ffmpeg)

@@ -20,6 +20,12 @@ class Playback(private val context: Context, private val announce: (engine: Stri
     /** Where the engine's view goes. */
     val stage = FrameLayout(context)
 
+    var tunneling = false
+        set(value) {
+            field = value
+            (engine as? ExoEngine)?.setTunneling(value)
+        }
+
     var engine: Engine = create(name)
         private set
 
@@ -64,7 +70,7 @@ class Playback(private val context: Context, private val announce: (engine: Stri
     }
 
     private fun create(name: String): Engine = when (name) {
-        EXOPLAYER -> ExoEngine(context)
+        EXOPLAYER -> ExoEngine(context).also { it.setTunneling(tunneling) }
         else -> MpvEngine(context)
     }
 
