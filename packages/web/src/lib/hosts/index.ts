@@ -75,6 +75,8 @@ export interface Host {
   downloads?: DownloadsHost;
   /** What the device's speech recogniser heard, or null for nothing. */
   listen?(): Promise<string | null>;
+  /** Saves a file the page made, for a web view that drops download links. */
+  saveFile?(name: string, type: string, text: string): void;
 }
 
 const browserHost: Host = { name: 'browser' };

@@ -116,6 +116,8 @@ export const androidHost: Host = {
   get listen() {
     return appBridge()?.tv && appBridge()?.voice ? listen : undefined;
   },
+  saveFile: (name, type, text) =>
+    appBridge()?.send({ type: 'save-file', name, mime: type, text }),
   fullscreen: {
     active: () => fullscreen,
     set: (on) => appBridge()?.send({ type: 'fullscreen', value: on }),

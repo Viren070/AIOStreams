@@ -34,6 +34,7 @@ import {
 import { posterUrl, landscapeUrls } from '../lib/images';
 import { clock, duration, episodeCode, relativeTime } from '../lib/format';
 import { href, itemPath, navigate, to } from '../lib/paths';
+import { currentHost } from '../lib/hosts';
 import { PageBody } from '../components/layout';
 import { SessionsRow } from '../components/sessions';
 import { PillTabs } from '../components/pill-tabs';
@@ -602,14 +603,19 @@ function ExportButton() {
     setBusy(true);
     try {
       const data = await client.get<unknown>('/AIOStreams/History/Export');
-      const blob = new Blob([JSON.stringify(data, null, 2)], {
-        type: 'application/json',
-      });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `watch-history-${new Date().toISOString().slice(0, 10)}.json`;
-      link.click();
-      URL.revokeObjectURL(link.href);
+      const name = `watch-history-${new Date().toISOString().slice(0, 10)}.json`;
+      const text = JSON.stringify(data, null, 2);
+      const save = currentHost().saveFile;
+      if (save) save(name, 'application/json', text);
+      else {
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(
+          new Blob([text], { type: 'application/json' })
+        );
+        link.download = name;
+        link.click();
+        URL.revokeObjectURL(link.href);
+      }
     } catch (error) {
       toast.error((error as Error).message);
     } finally {
