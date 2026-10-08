@@ -87,7 +87,10 @@ export const androidHost: Host = {
       ? (['audio', 'chapters'] as const)
       : (['audio', 'chapters', 'stats'] as const);
   },
-  downloads: shellDownloads,
+  // A TV has little storage and is always online.
+  get downloads() {
+    return appBridge()?.tv ? undefined : shellDownloads;
+  },
   fullscreen: {
     active: () => fullscreen,
     set: (on) => appBridge()?.send({ type: 'fullscreen', value: on }),
