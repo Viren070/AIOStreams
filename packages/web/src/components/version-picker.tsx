@@ -46,6 +46,7 @@ import {
   usePlay,
 } from '../lib/playback/play';
 import { currentHost } from '../lib/hosts';
+import { focusOn, keyboardFocus } from '../lib/input';
 import { clock, itemSubtitle, itemTitle, ticksToMs } from '../lib/format';
 import { cn } from '@aiostreams/ui/core/styling';
 import { backdropUrl, landscapeUrl } from '../lib/images';
@@ -305,6 +306,19 @@ function Versions({
     update();
     return () => observer.disconnect();
   }, []);
+  // Keys start on the actions above while the versions load, then on the first version.
+  const firstShown = shown[0]?.Id;
+  React.useEffect(() => {
+    // After the dialog puts focus on its first button.
+    const timer = setTimeout(() => {
+      const list = listRef.current;
+      const at = keyboardFocus();
+      const first = list?.querySelector<HTMLElement>('[data-ui=version-play]');
+      if (!firstShown || !list || !first || !at || list.contains(at)) return;
+      if (list.closest('[role=dialog]')?.contains(at)) focusOn(first);
+    });
+    return () => clearTimeout(timer);
+  }, [firstShown]);
 
   const start = (source: SourceInfo) => {
     if (download) {
