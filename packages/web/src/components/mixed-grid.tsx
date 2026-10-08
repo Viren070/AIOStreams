@@ -6,7 +6,6 @@ import { href, itemPath } from '../lib/paths';
 import type { BaseItemDto } from '../lib/types';
 import { PosterCard } from './cards';
 import { ItemMenu } from './item-menu';
-import { motion } from 'motion/react';
 import { CardGrid, fadeIn } from './media-row';
 
 /** Cards in the shape their art was made for; collections may be landscape. */
@@ -29,7 +28,7 @@ export function MixedGrid({
           <Skeleton key={i} className="aspect-[2/3] h-auto w-full rounded-lg" />
         ))}
       {items.map((child, i) => (
-        <motion.div key={child.Id} {...fadeIn(i)}>
+        <div key={child.Id} {...fadeIn(i)}>
           <ItemMenu item={child}>
             <PosterCard
               href={href(itemPath(child))}
@@ -42,7 +41,7 @@ export function MixedGrid({
               progress={progressOf(child)}
             />
           </ItemMenu>
-        </motion.div>
+        </div>
       ))}
     </CardGrid>
   );

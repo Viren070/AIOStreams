@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'motion/react';
 import { useRouter } from '@tanstack/react-router';
 import {
   Carousel,
@@ -30,13 +29,27 @@ const SKELETON_SHAPE = {
 
 export type RowShape = keyof typeof ITEM_WIDTH;
 
+const reducedMotion =
+  typeof matchMedia === 'function'
+    ? matchMedia('(prefers-reduced-motion: reduce)')
+    : null;
+
+// Script animations, as CSS ones send each card's start and end through the
+// page's event handling.
+const CARD_IN = Array.from(
+  { length: 20 },
+  (_, i) => (el: HTMLElement | null) =>
+    void el?.animate(
+      reducedMotion?.matches
+        ? { opacity: [0, 1] }
+        : { opacity: [0, 1], transform: ['translateY(8px)', 'none'] },
+      { duration: 300, delay: i * 25, easing: 'ease-out', fill: 'backwards' }
+    )
+);
+
 /** Cards fade in a little after one another, a page at a time. */
 export function fadeIn(index: number) {
-  return {
-    initial: { opacity: 0, y: 8 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.3, delay: (index % 20) * 0.025 },
-  };
+  return { ref: CARD_IN[index % 20] };
 }
 
 /** Asks for more once the row is scrolled most of the way. */
@@ -316,7 +329,7 @@ export function MediaRow({
       ? skeletons(8)
       : items.map((child, i) => (
           <Slide key={i} className={width}>
-            <motion.div {...fadeIn(i)}>{child}</motion.div>
+            <div {...fadeIn(i)}>{child}</div>
           </Slide>
         ))),
     ...(!loading && loadingMore ? skeletons(4) : []),
