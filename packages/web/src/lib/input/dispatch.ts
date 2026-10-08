@@ -143,7 +143,14 @@ export function pressAndHold(
   };
 }
 
-let holding: { key: string; release: (drop?: boolean) => void } | null = null;
+let holding: {
+  key: string;
+  at: number;
+  release: (drop?: boolean) => void;
+} | null = null;
+
+/** A held key's next press within this long is a repeat. */
+const REPEAT_GAP_MS = 1000;
 
 const swallow = (e: Event) => {
   e.preventDefault();
@@ -158,7 +165,9 @@ function replay(input: string, key: string): void {
 
 function takesHold(e: KeyboardEvent, input: string): boolean {
   if (holding?.key === e.key) {
-    if (e.repeat) {
+    // Android's web view sends a held key's repeats without `repeat`.
+    if (e.repeat || e.timeStamp - holding.at < REPEAT_GAP_MS) {
+      holding.at = e.timeStamp;
       swallow(e);
       return true;
     }
@@ -172,6 +181,7 @@ function takesHold(e: KeyboardEvent, input: string): boolean {
   swallow(e);
   holding = {
     key: e.key,
+    at: e.timeStamp,
     release: pressAndHold(input, () => replay(input, e.key)),
   };
   return true;
