@@ -192,6 +192,7 @@ function takesHold(e: KeyboardEvent, input: string): boolean {
 }
 
 function onKeyUp(e: KeyboardEvent): void {
+  down.delete(e.key);
   if (holding?.key !== e.key) return;
   swallow(e);
   const { release } = holding;
@@ -200,6 +201,7 @@ function onKeyUp(e: KeyboardEvent): void {
 }
 
 function onBlur(): void {
+  down.clear();
   holding?.release(true);
   holding = null;
 }
@@ -212,16 +214,28 @@ let mediaKeyAt = -Infinity;
  */
 export const mediaKeyJustTaken = () => performance.now() - mediaKeyAt < 500;
 
-/** Held keys repeat at most this often, keeping the last outcome in between. */
+/** When each key last went down, since Android's web view sends a held key's repeats without `repeat`. */
+const down = new Map<string, number>();
+const repeats = new WeakSet<KeyboardEvent>();
+
+/**
+ * Held keys repeat at most this often, and only once the last press reached
+ * the screen, so a slow device drops repeats rather than falling behind.
+ */
 const REPEAT_MS = 100;
 const held = new Map<string, { at: number; handled: boolean }>();
+let drawing = false;
 
 function throttled(e: KeyboardEvent, input: string, run: () => boolean) {
   const last = held.get(input);
-  if (e.repeat && last && e.timeStamp - last.at < REPEAT_MS)
+  if (repeats.has(e) && last && (drawing || e.timeStamp - last.at < REPEAT_MS))
     return last.handled;
   const handled = run();
   held.set(input, { at: e.timeStamp, handled });
+  if (handled && !drawing) {
+    drawing = true;
+    requestAnimationFrame(() => setTimeout(() => (drawing = false)));
+  }
   return handled;
 }
 
@@ -245,7 +259,13 @@ function onKey(e: KeyboardEvent, early: boolean): void {
   const input = keyInput(e);
   if (!input) return;
   keys = true;
-  if (early) inputs++;
+  if (early) {
+    inputs++;
+    const at = down.get(e.key);
+    if (e.repeat || (at !== undefined && e.timeStamp - at < REPEAT_GAP_MS))
+      repeats.add(e);
+    down.set(e.key, e.timeStamp);
+  }
   if (early && takesHold(e, input)) return;
   if (recorder) {
     if (!early) return;
@@ -266,7 +286,7 @@ function onKey(e: KeyboardEvent, early: boolean): void {
   const handled = throttled(e, input, () =>
     typing
       ? ids.includes('back') && runAction('back', input)
-      : dispatch(input, e.repeat)
+      : dispatch(input, repeats.has(e))
   );
   if (!handled) return;
   if (input.split('+').pop()!.startsWith('Media'))
