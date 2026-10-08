@@ -596,10 +596,13 @@ export function applyDesktopSettings(): void {
   const { hardwareDecoding, audioChannels, passthrough } = settings.desktop;
   const channels = audioChannels.read();
   // On Android, auto-safe only tries copying every frame back from MediaCodec.
+  // TVs copy them: some draw direct frames wrong, and they have no battery to save.
   const hwdec =
-    appBridge()?.platform === 'android'
-      ? 'mediacodec,mediacodec-copy'
-      : 'auto-safe';
+    appBridge()?.platform !== 'android'
+      ? 'auto-safe'
+      : currentHost().tv
+        ? 'mediacodec-copy'
+        : 'mediacodec,mediacodec-copy';
   setProp('hwdec', hardwareDecoding.read() ? hwdec : 'no');
   setProp('audio-channels', channels === 'auto' ? 'auto-safe' : channels);
   setProp('audio-spdif', passthrough.read() ? 'ac3,eac3,dts-hd,truehd' : '');
