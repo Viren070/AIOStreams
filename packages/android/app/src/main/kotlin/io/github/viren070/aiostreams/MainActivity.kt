@@ -3,6 +3,7 @@ package io.github.viren070.aiostreams
 import android.Manifest
 import android.content.ActivityNotFoundException
 import android.content.ComponentName
+import android.content.ContentValues
 import android.content.Intent
 import android.app.NotificationManager
 import android.app.UiModeManager
@@ -11,6 +12,7 @@ import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.MediaStore
 import android.provider.Settings
 import android.speech.RecognizerIntent
 import android.util.Log
@@ -21,6 +23,7 @@ import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.widget.FrameLayout
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.addCallback
 import androidx.activity.enableEdgeToEdge
@@ -189,6 +192,11 @@ class MainActivity : ComponentActivity() {
                 message["tunneling"]?.jsonPrimitive?.booleanOrNull?.let { playback.tunneling = it }
             }
             "voice-search" -> listen()
+            "save-file" -> saveFile(
+                message["name"]?.jsonPrimitive?.contentOrNull ?: "aiostreams.txt",
+                message["mime"]?.jsonPrimitive?.contentOrNull ?: "text/plain",
+                message["text"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+            )
             "mpv-config" -> sendMpvConfig()
             "mpv-config-save" -> {
                 MpvEngine.configFile(this).writeText(message["text"]?.jsonPrimitive?.content.orEmpty())
@@ -210,6 +218,27 @@ class MainActivity : ComponentActivity() {
                 }.start()
             }
         }
+    }
+
+    /** Into the shared Downloads folder, which needs no permission from Android 10 on. */
+    private fun saveFile(name: String, mime: String, text: String) {
+        Thread {
+            val saved = runCatching {
+                val values = ContentValues().apply {
+                    put(MediaStore.Downloads.DISPLAY_NAME, name)
+                    put(MediaStore.Downloads.MIME_TYPE, mime)
+                }
+                val uri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                    ?: error("no Downloads entry")
+                contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray()) }
+                    ?: error("no Downloads stream")
+            }
+            saved.exceptionOrNull()?.let { Log.e("save-file", "saving $name", it) }
+            runOnUiThread {
+                val note = if (saved.isSuccess) "Saved $name to Downloads" else "Couldn't save $name"
+                Toast.makeText(this, note, Toast.LENGTH_LONG).show()
+            }
+        }.start()
     }
 
     private fun onPlayerChanged() {
