@@ -9,12 +9,15 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.Consumer
 import androidx.media3.common.util.ParsableByteArray
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.common.util.Util
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.Extractor
 import androidx.media3.extractor.ExtractorInput
 import androidx.media3.extractor.ExtractorOutput
 import androidx.media3.extractor.ExtractorsFactory
 import androidx.media3.extractor.PositionHolder
+import androidx.media3.extractor.SeekMap
+import androidx.media3.extractor.SeekPoint
 import androidx.media3.extractor.TrackOutput
 import androidx.media3.extractor.mkv.EbmlProcessor
 import androidx.media3.extractor.mkv.MatroskaExtractor
@@ -47,7 +50,11 @@ internal fun isAss(format: Format) = format.sampleMimeType == MimeTypes.TEXT_SSA
 
 /** Media3's extractors, with Matroska's sending its subtitles to the file's [SubtitleSink]. */
 @OptIn(UnstableApi::class)
-internal class SubtitleExtractors(private val sink: () -> SubtitleSink) : ExtractorsFactory {
+internal class SubtitleExtractors(
+    /** The subtitle track whose lines a seek reads back for, or [ANY_TRACK] before the engine picks one. */
+    private val readBack: () -> String?,
+    private val sink: () -> SubtitleSink,
+) : ExtractorsFactory {
     private val defaults = DefaultExtractorsFactory()
 
     override fun createExtractors() = withSubtitles(defaults.createExtractors())
@@ -60,12 +67,17 @@ internal class SubtitleExtractors(private val sink: () -> SubtitleSink) : Extrac
     }
 
     @Deprecated("Media3's own, kept as it forwards")
+    @Suppress("DEPRECATION")
     override fun experimentalSetTextTrackTranscodingEnabled(textTrackTranscodingEnabled: Boolean) = apply {
         defaults.setTextTrackTranscodingEnabled(textTrackTranscodingEnabled)
     }
 
     private fun withSubtitles(extractors: Array<Extractor>) =
-        extractors.map { if (it is MatroskaExtractor) SubtitleMatroska(sink()) else it }.toTypedArray()
+        extractors.map { if (it is MatroskaExtractor) SubtitleMatroska(sink(), readBack) else it }.toTypedArray()
+
+    companion object {
+        const val ANY_TRACK = "*"
+    }
 }
 
 /**
@@ -74,15 +86,24 @@ internal class SubtitleExtractors(private val sink: () -> SubtitleSink) : Extrac
  * cues for them: the engine times them itself, so its delay applies to them.
  */
 @OptIn(UnstableApi::class)
-private class SubtitleMatroska(private val sink: SubtitleSink) : Extractor {
-    private val matroska = Attachments(sink.ass)
+private class SubtitleMatroska(private val sink: SubtitleSink, private val readBack: () -> String?) : Extractor {
+    private val matroska = Matroska(sink.ass)
     private var transcoder: SubtitleTranscodingExtractorOutput? = null
+
+    @Volatile
+    private var seekMap: SeekMap? = null
 
     override fun sniff(input: ExtractorInput) = matroska.sniff(input)
 
     override fun init(output: ExtractorOutput) {
         val transcoder = SubtitleTranscodingExtractorOutput(output, Silent).also { transcoder = it }
-        matroska.init(Subtitles(transcoder, sink))
+        val seeking = object : ExtractorOutput by transcoder {
+            override fun seekMap(seekMap: SeekMap) {
+                this@SubtitleMatroska.seekMap = seekMap
+                transcoder.seekMap(ReadBack(seekMap))
+            }
+        }
+        matroska.init(Subtitles(seeking, sink))
     }
 
     override fun read(input: ExtractorInput, seekPosition: PositionHolder) = matroska.read(input, seekPosition)
@@ -90,11 +111,25 @@ private class SubtitleMatroska(private val sink: SubtitleSink) : Extractor {
     override fun seek(position: Long, timeUs: Long) {
         transcoder?.resetSubtitleParsers()
         matroska.seek(position, timeUs)
+        // Media3 itself starts at the keyframe's cluster, so starting earlier is a read-back.
+        val keyframe = seekMap?.getSeekPoints(timeUs)?.first?.position ?: return
+        matroska.readBack(if (position < keyframe) keyframe else -1, readBack())
     }
 
     override fun release() = matroska.release()
 
     override fun getUnderlyingImplementation(): Extractor = matroska
+
+    /** Media3's seek map, starting each seek early enough to read the subtitle lines already showing at its target. */
+    private inner class ReadBack(private val map: SeekMap) : SeekMap by map {
+        override fun getSeekPoints(timeUs: Long): SeekMap.SeekPoints {
+            val points = map.getSeekPoints(timeUs)
+            val from = matroska.index.earliest(readBack(), timeUs)
+            if (from == null || from >= points.first.position) return points
+            val first = SeekPoint(points.first.timeUs, from)
+            return if (points.second == points.first) SeekMap.SeekPoints(first) else SeekMap.SeekPoints(first, points.second)
+        }
+    }
 }
 
 private val parsers = DefaultSubtitleParserFactory()
@@ -121,25 +156,84 @@ private object Silent : SubtitleParser.Factory {
     }
 }
 
-/** Matroska's extractor, which also reads the fonts the file carries for its subtitles. */
+/**
+ * Matroska's extractor, which also reads the fonts the file carries for its
+ * subtitles and where its index puts their lines.
+ */
 @OptIn(UnstableApi::class)
-private class Attachments(private val sink: AssSink) : MatroskaExtractor(FLAG_EMIT_RAW_SUBTITLE_DATA) {
+private class Matroska(private val sink: AssSink) :
+    MatroskaExtractor(SubtitleParser.Factory.UNSUPPORTED, FLAG_EMIT_RAW_SUBTITLE_DATA) {
+    val index = SubtitleIndex()
     private var name: String? = null
     private var mime: String? = null
+    private var segment = 0L
+    private var timecodeScale = 1_000_000L
+    private var cueTime = -1L
+    private var cueTrack = -1L
+    private var cuePosition = -1L
+    private var cueDuration = -1L
+
+    /** Before this cluster, only [readBackTrack]'s blocks are read. */
+    private var readBackUntil = -1L
+    private var readBackTrack: String? = null
+    private var readingBack = false
+    private val varint = ByteArray(8)
+
+    fun readBack(until: Long, track: String?) {
+        readBackUntil = until
+        readBackTrack = track
+        readingBack = false
+    }
 
     override fun getElementType(id: Int) = when (id) {
         ATTACHMENTS, ATTACHED_FILE -> EbmlProcessor.ELEMENT_TYPE_MASTER
         FILE_NAME, FILE_MIME_TYPE -> EbmlProcessor.ELEMENT_TYPE_STRING
         FILE_DATA -> EbmlProcessor.ELEMENT_TYPE_BINARY
+        CUE_DURATION -> EbmlProcessor.ELEMENT_TYPE_UNSIGNED_INT
         else -> super.getElementType(id)
     }
 
     override fun isLevel1Element(id: Int) = id == ATTACHMENTS || super.isLevel1Element(id)
 
     override fun startMasterElement(id: Int, contentPosition: Long, contentSize: Long) {
-        if (id != ATTACHED_FILE) return super.startMasterElement(id, contentPosition, contentSize)
-        name = null
-        mime = null
+        when (id) {
+            ATTACHED_FILE -> {
+                name = null
+                mime = null
+                return
+            }
+            SEGMENT -> segment = contentPosition
+            CLUSTER -> readingBack = contentPosition < readBackUntil
+            CUE_POINT -> cueTime = -1
+            CUE_TRACK_POSITIONS -> {
+                cueTrack = -1
+                cuePosition = -1
+                cueDuration = -1
+            }
+        }
+        super.startMasterElement(id, contentPosition, contentSize)
+    }
+
+    override fun endMasterElement(id: Int) {
+        when (id) {
+            CUE_TRACK_POSITIONS -> if (cueTime >= 0 && cueTrack >= 0 && cuePosition >= 0 && cueDuration > 0) {
+                index.add(cueTrack, scale(cueTime), scale(cueDuration), segment + cuePosition)
+            }
+            // Before Media3 sends the seek map that reads it.
+            CUES -> index.finish()
+        }
+        super.endMasterElement(id)
+    }
+
+    override fun integerElement(id: Int, value: Long) {
+        when (id) {
+            TIMECODE_SCALE -> timecodeScale = value
+            CUE_TIME -> cueTime = value
+            CUE_TRACK -> cueTrack = value
+            CUE_CLUSTER_POSITION -> cuePosition = value
+            CUE_DURATION -> return run { cueDuration = value }
+        }
+        super.integerElement(id, value)
     }
 
     override fun stringElement(id: Int, value: String) {
@@ -151,13 +245,47 @@ private class Attachments(private val sink: AssSink) : MatroskaExtractor(FLAG_EM
     }
 
     override fun binaryElement(id: Int, contentSize: Int, input: ExtractorInput) {
-        if (id != FILE_DATA) return super.binaryElement(id, contentSize, input)
-        val name = name
-        if (name == null || !isFont(name, mime)) return input.skipFully(contentSize)
-        sink.font(name, ByteArray(contentSize).also { input.readFully(it, 0, contentSize) })
+        if (id == FILE_DATA) return font(contentSize, input)
+        if (readingBack && (id == SIMPLE_BLOCK || id == BLOCK) && !readsBack(input)) return input.skipFully(contentSize)
+        super.binaryElement(id, contentSize, input)
     }
 
+    private fun font(size: Int, input: ExtractorInput) {
+        val name = name
+        if (name == null || !isFont(name, mime)) return input.skipFully(size)
+        sink.font(name, ByteArray(size).also { input.readFully(it, 0, size) })
+    }
+
+    /** Whether the block about to be read is one of [readBackTrack]'s, by the track number it starts with. */
+    private fun readsBack(input: ExtractorInput): Boolean {
+        input.peekFully(varint, 0, 1)
+        val length = Integer.numberOfLeadingZeros(varint[0].toInt() and 0xFF) - 23
+        if (length !in 1..8) return true.also { input.resetPeekPosition() }
+        if (length > 1) input.peekFully(varint, 1, length - 1)
+        input.resetPeekPosition()
+        var track = varint[0].toLong() and (0xFFL shr length)
+        for (i in 1 until length) track = (track shl 8) or (varint[i].toLong() and 0xFF)
+        return when (val showing = readBackTrack) {
+            SubtitleExtractors.ANY_TRACK -> index.has(track)
+            else -> track.toString() == showing
+        }
+    }
+
+    private fun scale(timecode: Long) = Util.scaleLargeTimestamp(timecode, timecodeScale, 1000)
+
     private companion object {
+        const val SEGMENT = 0x18538067
+        const val TIMECODE_SCALE = 0x2AD7B1
+        const val CLUSTER = 0x1F43B675
+        const val SIMPLE_BLOCK = 0xA3
+        const val BLOCK = 0xA1
+        const val CUES = 0x1C53BB6B
+        const val CUE_POINT = 0xBB
+        const val CUE_TIME = 0xB3
+        const val CUE_TRACK_POSITIONS = 0xB7
+        const val CUE_TRACK = 0xF7
+        const val CUE_CLUSTER_POSITION = 0xF1
+        const val CUE_DURATION = 0xB2
         const val ATTACHMENTS = 0x1941A469
         const val ATTACHED_FILE = 0x61A7
         const val FILE_NAME = 0x466E
@@ -167,6 +295,61 @@ private class Attachments(private val sink: AssSink) : MatroskaExtractor(FLAG_EM
         fun isFont(name: String, mime: String?) =
             mime?.let { "font" in it || "truetype" in it || "opentype" in it } == true ||
                 name.substringAfterLast('.').lowercase() in setOf("ttf", "otf", "ttc", "woff", "woff2")
+    }
+}
+
+/** Where the subtitle lines with a duration in Matroska's index sit in the file. */
+private class SubtitleIndex {
+    private class Line(val startUs: Long, val endUs: Long, val position: Long)
+
+    private val reading = HashMap<Long, MutableList<Line>>()
+
+    @Volatile
+    private var tracks: Map<Long, List<Line>>? = null
+
+    fun add(track: Long, startUs: Long, durationUs: Long, position: Long) {
+        if (tracks == null) reading.getOrPut(track) { mutableListOf() } += Line(startUs, startUs + durationUs, position)
+    }
+
+    fun finish() {
+        if (tracks == null) tracks = reading.mapValues { (_, lines) -> lines.sortedBy { it.startUs } }
+        reading.clear()
+    }
+
+    fun has(track: Long) = tracks?.containsKey(track) == true
+
+    /** Where the first of `track`'s lines showing at `timeUs` sits, of those begun up to [READ_BACK_US] before. */
+    fun earliest(track: String?, timeUs: Long): Long? {
+        val tracks = tracks ?: return null
+        val lines = when (track) {
+            null -> return null
+            SubtitleExtractors.ANY_TRACK -> tracks.values
+            else -> listOfNotNull(track.toLongOrNull()?.let(tracks::get))
+        }
+        var earliest: Long? = null
+        for (list in lines) {
+            var i = firstFrom(list, timeUs - READ_BACK_US)
+            while (i < list.size && list[i].startUs <= timeUs) {
+                val line = list[i++]
+                if (line.endUs > timeUs && line.position < (earliest ?: Long.MAX_VALUE)) earliest = line.position
+            }
+        }
+        return earliest
+    }
+
+    private fun firstFrom(lines: List<Line>, timeUs: Long): Int {
+        var low = 0
+        var high = lines.size
+        while (low < high) {
+            val mid = (low + high) ushr 1
+            if (lines[mid].startUs < timeUs) low = mid + 1 else high = mid
+        }
+        return low
+    }
+
+    private companion object {
+        // mpv's demuxer-mkv-subtitle-preroll-secs-index.
+        const val READ_BACK_US = 10_000_000L
     }
 }
 

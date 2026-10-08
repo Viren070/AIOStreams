@@ -95,13 +95,16 @@ class ExoEngine(private val context: Context) :
     private var text: TextTimeline? = null
 
     @Volatile
+    private var readBack: String? = null
+
+    @Volatile
     private var delayUs = 0L
 
     @Volatile
     private var lastFrameUs = 0L
 
     init {
-        val sources = DefaultMediaSourceFactory(data, SubtitleExtractors { SubtitleSink(ass.sink(), texts.sink()) })
+        val sources = DefaultMediaSourceFactory(data, SubtitleExtractors({ readBack }) { SubtitleSink(ass.sink(), texts.sink()) })
         val renderers = DefaultRenderersFactory(context)
             .setEnableDecoderFallback(true)
             .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
@@ -253,6 +256,7 @@ class ExoEngine(private val context: Context) :
         clearExternals()
         ass.reset()
         texts.reset()
+        readBack = if (options.sid == "no") null else SubtitleExtractors.ANY_TRACK
         listener?.onEvent("start-file")
         report("idle-active", false)
         report("chapter-list", JsonArray(emptyList()))
@@ -383,6 +387,7 @@ class ExoEngine(private val context: Context) :
             format != null && !isAss(format) -> id?.let(texts::get)
             else -> null
         }
+        if (chosen) readBack = id.takeIf { style.visible && added == null }
         shownCues = emptyList()
         stage?.subtitles?.setCues(emptyList())
         showCues(lastFrameUs)
