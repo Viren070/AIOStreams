@@ -74,6 +74,8 @@ interface ShellBridge {
   version: string;
   /** `windows`, `macos`, `linux` or `android`. */
   platform: string;
+  /** The Android app on a TV. */
+  tv?: boolean;
   /** The device's name. */
   device: string;
   /** The app's own id for this device, where it keeps one. */

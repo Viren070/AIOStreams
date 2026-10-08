@@ -31,6 +31,8 @@ export interface NowPlaying {
 export interface Host {
   /** `data-host` on the page's root, which custom CSS matches, so it can't change. */
   name: string;
+  /** A TV, which gets the TV layout. */
+  tv?: boolean;
   /** The app's own name for this device, and its id where its player reports as it. */
   device?(): { id?: string; name?: string } | null;
   /** A player drawn beneath the page. */

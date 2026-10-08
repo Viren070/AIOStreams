@@ -112,6 +112,7 @@ import {
   type PlayerEngine,
   type EpisodeLayout,
   type TouchNavigation,
+  type TvNavigation,
   type HeroMode,
   type NextPrompt,
   type PosterLine,
@@ -1042,6 +1043,7 @@ function InterfaceSection() {
   const [touchNavigation, setTouchNavigation] = useSetting(
     settings.touchNavigation
   );
+  const [tvNavigation, setTvNavigation] = useSetting(settings.tvNavigation);
 
   const featuredOptions = [
     {
@@ -1155,6 +1157,21 @@ function InterfaceSection() {
           onValueChange={(value) => setEpisodeLayout(value as EpisodeLayout)}
         />
       </SettingsCard>
+      {currentHost().tv && (
+        <SettingsCard title="Navigation" description={ON_DEVICE}>
+          <Select
+            label="Style"
+            help="Side rail shows each page's name only while you're in it; Sidebar always shows them; Top tabs sit along the top of each page."
+            options={[
+              { value: 'rail', label: 'Side rail' },
+              { value: 'sidebar', label: 'Sidebar' },
+              { value: 'top', label: 'Top tabs' },
+            ]}
+            value={tvNavigation}
+            onValueChange={(value) => setTvNavigation(value as TvNavigation)}
+          />
+        </SettingsCard>
+      )}
       {matchMedia('(pointer: coarse)').matches && (
         <SettingsCard title="Navigation" description={ON_DEVICE}>
           <Select

@@ -14,8 +14,10 @@ import {
 import JellyfinWebApp from './app';
 import { persister } from './lib/cache';
 import { followReachable } from './lib/connection';
+import { setupTv } from './lib/tv';
 
 onlineManager.setEventListener(followReachable);
+setupTv();
 
 const queryClient = new QueryClient({
   defaultOptions: {

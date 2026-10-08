@@ -167,6 +167,14 @@ function nearest(
   return other;
 }
 
+/** A box marked `data-nav-enter` takes focus from outside on what that selector names. */
+function entry(to: HTMLElement, from: HTMLElement): HTMLElement {
+  const box = to.closest<HTMLElement>('[data-nav-enter]');
+  if (!box || box.contains(from)) return to;
+  const named = box.querySelector<HTMLElement>(box.dataset.navEnter!);
+  return named && canFocus(named) ? named : to;
+}
+
 function fixedBox(el: Element): Element | null {
   for (let box: Element | null = el; box; box = box.parentElement)
     if (getComputedStyle(box).position === 'fixed') return box;
@@ -285,8 +293,9 @@ export function move(dir: Direction): boolean {
     root.contains(lastMove.from)
       ? lastMove.from
       : null;
-  const to = back && canFocus(back) ? back : nearest(root, from, dir);
-  if (!to) return false;
+  const near = back && canFocus(back) ? back : nearest(root, from, dir);
+  if (!near) return false;
+  const to = near === back ? near : entry(near, from);
   lastMove = { from, to, dir };
   focusOn(to);
   return true;

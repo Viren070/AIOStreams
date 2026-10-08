@@ -476,8 +476,14 @@ export function WebLayout() {
     : null;
   const touch = useMediaQuery('(pointer: coarse)');
   const [touchNavigation] = useSetting(settings.touchNavigation);
+  const [tvNavigation] = useSetting(settings.tvNavigation);
   // What wide screens show; narrow ones always have the bar.
-  const nav = touch ? touchNavigation : 'sidebar';
+  const nav = currentHost().tv
+    ? (`tv-${tvNavigation}` as const)
+    : touch
+      ? touchNavigation
+      : 'sidebar';
+  const side = nav !== 'bar' && nav !== 'tv-top';
   React.useEffect(() => {
     document.documentElement.dataset.nav = nav;
   }, [nav]);
@@ -581,14 +587,24 @@ export function WebLayout() {
 
   return (
     <AppSidebarProvider>
-      <AppLayout withSidebar={nav !== 'bar'} sidebarSize="slim">
-        {nav !== 'bar' && (
+      <AppLayout
+        withSidebar={side}
+        sidebarSize={nav === 'tv-sidebar' ? 'sm' : 'slim'}
+      >
+        {side && (
           <AppLayoutSidebar data-ui="sidebar">
             {nav === 'rail' ? (
               <TouchRail
                 items={items}
                 footerItems={[settingsItem]}
                 accountItems={accountItems}
+              />
+            ) : nav === 'tv-rail' || nav === 'tv-sidebar' ? (
+              <TvRail
+                items={items}
+                footerItems={[settingsItem]}
+                accountItems={accountItems}
+                open={nav === 'tv-sidebar'}
               />
             ) : (
               <Sidebar
@@ -603,6 +619,13 @@ export function WebLayout() {
         )}
         <AppLayout>
           <AppLayoutContent>
+            {nav === 'tv-top' && (
+              <TvTabs
+                items={items}
+                footerItems={[settingsItem]}
+                accountItems={accountItems}
+              />
+            )}
             <VersionPickerProvider>
               <motion.div
                 key={pathname}
@@ -611,7 +634,7 @@ export function WebLayout() {
                 className={cn(
                   'relative pb-[var(--nav-bar)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]',
                   // In place of the sidebar's gutter, which pages leave to it.
-                  nav === 'bar' &&
+                  (nav === 'bar' || nav === 'tv-top') &&
                     'lg:pl-[calc(2.5rem+env(safe-area-inset-left))]'
                 )}
               >
@@ -745,6 +768,172 @@ function TouchRail({
               item={{ id: 'account', name: 'You' }}
               icon={<YouIcon />}
               className={tab}
+            />
+          }
+        />
+      </div>
+    </nav>
+  );
+}
+
+/** Moving into a TV's navigation lands on the current page, as on TV menus. */
+const ENTER_CURRENT = '[aria-current="page"]';
+
+/** A TV's entry: an icon, and its name beside it where there is room. */
+function TvNavItem({
+  item,
+  icon,
+  labelClassName,
+  className,
+  ...props
+}: {
+  item: Pick<SidebarItem, 'id' | 'name' | 'isCurrent'>;
+  icon: React.ReactNode;
+  labelClassName?: string;
+} & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <button
+      type="button"
+      data-ui="nav-item"
+      data-name={item.id}
+      data-focus="own"
+      aria-current={item.isCurrent ? 'page' : undefined}
+      className={cn(
+        'flex h-12 flex-none items-center gap-4 overflow-hidden whitespace-nowrap rounded-full px-3.5 font-medium transition-[color,box-shadow] focus-visible:text-white',
+        // A shadow, as a fading background or opacity shows its start again for a frame as it ends in a TV's web view.
+        'focus-visible:shadow-[inset_0_0_0_999px_rgb(255_255_255/0.2)]',
+        item.isCurrent ? 'bg-white/10 text-white' : 'text-gray-400',
+        className
+      )}
+      {...props}
+    >
+      <span className="flex w-6 flex-none justify-center text-2xl">{icon}</span>
+      <span className={labelClassName}>{item.name}</span>
+    </button>
+  );
+}
+
+/** A TV's navigation down the side, which opens out with names while it has focus. */
+function TvRail({
+  items,
+  footerItems,
+  accountItems,
+  open,
+}: {
+  items: SidebarItem[];
+  footerItems: SidebarItem[];
+  accountItems: SidebarItem[];
+  /** Always shows the names. */
+  open: boolean;
+}) {
+  const label = open
+    ? undefined
+    : 'opacity-0 transition-opacity group-focus-within/rail:opacity-100';
+  const entry = (item: SidebarItem) => {
+    const Icon = item.iconType;
+    return (
+      <TvNavItem
+        key={item.id}
+        item={item}
+        icon={Icon && <Icon />}
+        onClick={select(item)}
+        labelClassName={label}
+        className="w-full"
+      />
+    );
+  };
+  return (
+    <nav
+      data-ui="tv-rail"
+      data-nav-enter={ENTER_CURRENT}
+      className={cn(
+        'group/rail absolute inset-y-0 left-0 flex flex-col gap-1 px-3 py-8 transition-[width] duration-200',
+        open ? 'w-full' : 'w-20 focus-within:w-64'
+      )}
+    >
+      {!open && (
+        <div className="pointer-events-none fixed inset-y-0 left-0 -z-10 w-[36rem] bg-gradient-to-r from-black via-black/85 to-transparent opacity-0 transition-opacity duration-200 group-focus-within/rail:opacity-100" />
+      )}
+      <BrandLogo className="mx-3.5 mb-6 h-8 w-6 flex-none object-contain" />
+      {items.map(entry)}
+      <div className="mt-auto flex flex-col gap-1">
+        {footerItems.map(entry)}
+        <AccountMenu
+          side="right"
+          align="end"
+          sideOffset={8}
+          items={accountItems}
+          trigger={
+            <TvNavItem
+              aria-label="Account"
+              item={{ id: 'account', name: 'You' }}
+              icon={<YouIcon />}
+              labelClassName={label}
+              className="w-full"
+            />
+          }
+        />
+      </div>
+    </nav>
+  );
+}
+
+function TvTabs({
+  items,
+  footerItems,
+  accountItems,
+}: {
+  items: SidebarItem[];
+  footerItems: SidebarItem[];
+  accountItems: SidebarItem[];
+}) {
+  const tab = (item: SidebarItem) => {
+    const Icon = item.iconType;
+    return (
+      <TvNavItem
+        key={item.id}
+        item={item}
+        icon={Icon && <Icon />}
+        onClick={select(item)}
+        className="pr-5"
+      />
+    );
+  };
+  return (
+    <nav
+      data-ui="tv-tabs"
+      data-nav-enter={ENTER_CURRENT}
+      className="relative z-40 flex items-center gap-6 px-10 pb-2 pt-8"
+    >
+      <BrandLogo className="h-8 w-6 flex-none object-contain" />
+      <div className="flex flex-1 items-center justify-center gap-1">
+        {items.map(tab)}
+      </div>
+      <div className="flex items-center gap-1">
+        {footerItems.map((item) => {
+          const Icon = item.iconType;
+          return (
+            <TvNavItem
+              key={item.id}
+              aria-label={item.name}
+              item={item}
+              icon={Icon && <Icon />}
+              onClick={select(item)}
+              labelClassName="hidden"
+            />
+          );
+        })}
+        <AccountMenu
+          side="bottom"
+          align="end"
+          sideOffset={8}
+          items={accountItems}
+          trigger={
+            <TvNavItem
+              aria-label="Account"
+              item={{ id: 'account', name: 'You' }}
+              icon={<YouIcon />}
+              labelClassName="hidden"
             />
           }
         />
