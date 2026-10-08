@@ -22,6 +22,7 @@ export function setupAndroid(): () => void {
     }
     const next = {
       frameRate: settings.android.frameRate.read(),
+      tunneling: settings.android.tunneling.read(),
     };
     if (JSON.stringify(next) === options) return;
     options = JSON.stringify(next);

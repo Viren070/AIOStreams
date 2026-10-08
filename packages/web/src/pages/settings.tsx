@@ -250,6 +250,7 @@ function PlaybackSection() {
   const shell = !!shellHost();
   const [engine] = useSetting(settings.android.engine);
   const [frameRate, setFrameRate] = useSetting(settings.android.frameRate);
+  const [tunneling, setTunneling] = useSetting(settings.android.tunneling);
   const androidTv = currentHost().name === 'android-app' && !!currentHost().tv;
   // ExoPlayer decodes with the hardware it picks itself; `auto` may still use mpv.
   const decoding =
@@ -426,6 +427,15 @@ function PlaybackSection() {
               help="Switches the TV to a refresh rate that suits each video, so motion plays smoothly, and back when you stop. The screen goes blank for a moment as it switches."
               value={frameRate}
               onValueChange={setFrameRate}
+            />
+          )}
+          {androidTv && engine !== 'mpv' && (
+            <Switch
+              side="right"
+              label="Tunneled playback"
+              help={`Lets the TV's decoder keep picture and sound in step itself, which plays 4K and HDR more smoothly on some TVs.${engine === 'auto' ? ' Only for videos ExoPlayer plays.' : ''} Turn it off if video stutters or stays black.`}
+              value={tunneling}
+              onValueChange={setTunneling}
             />
           )}
         </SettingsCard>

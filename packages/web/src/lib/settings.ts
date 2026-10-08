@@ -552,6 +552,7 @@ export const settings = {
       PLAYER_ENGINES
     ),
     frameRate: device<boolean>('aiostreams-android-frame-rate', false),
+    tunneling: device<boolean>('aiostreams-android-tunneling', false),
   },
   discord,
   discordEvents: group(discord),
