@@ -29,12 +29,12 @@ export interface SavedQuery {
 
 export interface SavedImage {
   type: string;
-  bytes: ArrayBuffer;
+  blob: Blob;
 }
 
 type Body =
   | { id: string; savedAt: number; json: string }
-  | { id: string; type: string; bytes: ArrayBuffer };
+  | { id: string; type: string; blob: Blob };
 
 const NAME = 'aiostreams-web-cache';
 const ENTRIES = 'entries';
@@ -199,20 +199,22 @@ export async function savedImageUrls(): Promise<Set<string>> {
   return new Set(keys as string[]);
 }
 
+/** Kept as Blobs, so a page URL for one needn't copy its bytes. */
 export async function readImage(url: string): Promise<SavedImage | null> {
   const body = await read(url);
-  if (!body || !('bytes' in body)) return null;
-  return { type: body.type, bytes: body.bytes };
+  if (!body || !('blob' in body)) return null;
+  return { type: body.type, blob: body.blob };
 }
 
 export function writeImage(
   url: string,
   type: string,
-  bytes: ArrayBuffer
+  data: Blob | ArrayBuffer
 ): Promise<void> {
+  const blob = data instanceof Blob ? data : new Blob([data], { type });
   return write(
-    { id: url, category: 'artwork', scope: '', size: bytes.byteLength },
-    { id: url, type, bytes }
+    { id: url, category: 'artwork', scope: '', size: blob.size },
+    { id: url, type, blob }
   );
 }
 

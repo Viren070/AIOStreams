@@ -42,9 +42,7 @@ async function fetchAndSave(src: string): Promise<string> {
   if (!res.ok) return src;
   noteRead(src, true);
   const blob = await res.blob();
-  void blob
-    .arrayBuffer()
-    .then((bytes) => writeImage(src, blob.type, bytes))
+  void writeImage(src, blob.type, blob)
     .then(() => {
       noteSaved(src);
       schedulePrune();
@@ -57,11 +55,7 @@ function lookUp(src: string): Promise<string> {
   let pending = lookups.get(src);
   if (!pending) {
     pending = (maybeSaved(src) ? readImage(src) : Promise.resolve(null))
-      .then((saved) =>
-        saved
-          ? keep(src, new Blob([saved.bytes], { type: saved.type }))
-          : fetchAndSave(src)
-      )
+      .then((saved) => (saved ? keep(src, saved.blob) : fetchAndSave(src)))
       .catch(() => src)
       .finally(() => lookups.delete(src));
     lookups.set(src, pending);

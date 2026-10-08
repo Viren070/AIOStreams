@@ -125,7 +125,7 @@ async function shrink({
   if (typeof OffscreenCanvas !== 'function')
     return { id, error: 'no OffscreenCanvas', unsupported: true };
   const kept = look ? await readImage(url).catch(() => null) : null;
-  const data = kept?.bytes ?? (await load(url, accept));
+  const data = kept ? await kept.blob.arrayBuffer() : await load(url, accept);
   if (!(data instanceof ArrayBuffer)) return { id, ...data };
   const head = sniff(new Uint8Array(data, 0, Math.min(data.byteLength, 65536)));
   if (!head) throw new Error('unknown image type');
