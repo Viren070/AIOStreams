@@ -126,7 +126,9 @@ export function ItemMenu({
   const resumeMs = ticksToMs(item.UserData?.PlaybackPositionTicks);
 
   return (
-    <ContextMenu>
+    // Not modal: a modal menu turns the whole page's pointer events off and on,
+    // restyling every element as it opens and closes.
+    <ContextMenu modal={false}>
       <ContextMenuTrigger asChild>
         <div {...heroTarget}>{children}</div>
       </ContextMenuTrigger>
