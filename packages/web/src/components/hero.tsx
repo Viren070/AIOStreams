@@ -81,7 +81,7 @@ function HeroSkeleton() {
       aria-hidden
       data-ui="hero"
       data-loading
-      className="relative h-[26rem] w-full overflow-hidden sm:h-[30rem] lg:h-[max(36rem,53vh)]"
+      className="relative -mt-[var(--top-bar,0px)] h-[26rem] w-full overflow-hidden sm:h-[30rem] lg:h-[calc(max(36rem,53vh)+var(--top-bar,0px))]"
     >
       <div className="absolute inset-0 animate-pulse bg-[--subtle]" />
       <Shade />
@@ -286,7 +286,7 @@ export function Hero({
   return (
     <section
       data-ui="hero"
-      className="relative h-[26rem] w-full overflow-hidden sm:h-[30rem] lg:h-[max(36rem,53vh)]"
+      className="relative -mt-[var(--top-bar,0px)] h-[26rem] w-full overflow-hidden sm:h-[30rem] lg:h-[calc(max(36rem,53vh)+var(--top-bar,0px))]"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
@@ -432,11 +432,13 @@ export function FollowHero({
   return (
     <FollowContext.Provider value={follow}>
       <FollowBackdrop item={item} />
-      <div className="relative z-[1] flex h-dvh flex-col">
+      <div className="relative z-[1] -mt-[var(--top-bar,0px)] flex h-dvh flex-col">
         <section
           data-ui="hero"
           data-follow
-          className="flex h-[55%] flex-none flex-col justify-end"
+          // Fixed, so the rows don't move as details change. A top bar mostly
+          // covers artwork, so it takes only part of its height from the rows.
+          className="flex h-[calc(55%+var(--top-bar,0px)*0.3)] flex-none flex-col justify-end"
         >
           <div
             data-ui="hero-content"

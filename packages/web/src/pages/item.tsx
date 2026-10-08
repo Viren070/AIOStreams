@@ -204,7 +204,7 @@ function Backdrop({
       aria-hidden
       data-ui="item-backdrop"
       // Fades out at its edge, where some GPUs draw the art's last row past the shade.
-      className="pointer-events-none absolute inset-x-0 top-0 h-[55vh] overflow-hidden [mask-image:linear-gradient(to_top,transparent,black_2px)] lg:h-[85vh]"
+      className="pointer-events-none absolute inset-x-0 top-[calc(var(--top-bar,0px)*-1)] h-[calc(55vh+var(--top-bar,0px))] overflow-hidden [mask-image:linear-gradient(to_top,transparent,black_2px)] lg:h-[calc(85vh+var(--top-bar,0px))]"
     >
       {wash ? (
         image

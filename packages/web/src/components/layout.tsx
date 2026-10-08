@@ -63,10 +63,11 @@ import {
   useDownloadRunner,
 } from '../lib/downloads';
 import { usePendingStops } from '../lib/playback/reporter';
-import { settings, useSetting } from '../lib/settings';
+import { settings, useSetting, type TvTopBar } from '../lib/settings';
 import { useAction } from '../lib/input';
 import { UserAvatar } from './user-avatar';
 import { BrandLogo } from './brand-logo';
+import { Glass } from './glass';
 import { VersionPickerProvider } from './version-picker';
 import { ItemMenuHost } from './item-menu';
 
@@ -478,6 +479,7 @@ export function WebLayout() {
   const touch = useMediaQuery('(pointer: coarse)');
   const [touchNavigation] = useSetting(settings.touchNavigation);
   const [tvNavigation] = useSetting(settings.tvNavigation);
+  const [tvTopBar] = useSetting(settings.tvTopBar);
   // What wide screens show; narrow ones always have the bar.
   const nav = currentHost().tv
     ? (`tv-${tvNavigation}` as const)
@@ -619,9 +621,18 @@ export function WebLayout() {
           </AppLayoutSidebar>
         )}
         <AppLayout>
-          <AppLayoutContent>
+          <AppLayoutContent
+            style={
+              nav === 'tv-top'
+                ? ({
+                    '--top-bar': TOP_BAR_HEIGHT[tvTopBar],
+                  } as React.CSSProperties)
+                : undefined
+            }
+          >
             {nav === 'tv-top' && (
               <TvTabs
+                style={tvTopBar}
                 items={items}
                 footerItems={[settingsItem]}
                 accountItems={accountItems}
@@ -634,7 +645,7 @@ export function WebLayout() {
                   data-page={pageName(pathname)}
                   {...PAGE_FADE}
                   className={cn(
-                    'relative pb-[var(--nav-bar)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]',
+                    'relative pb-[var(--nav-bar)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pt-[var(--top-bar,0px)]',
                     // In place of the sidebar's gutter, which pages leave to it.
                     (nav === 'bar' || nav === 'tv-top') &&
                       'lg:pl-[calc(2.5rem+env(safe-area-inset-left))]'
@@ -693,7 +704,7 @@ function MobileNav({
         !wide && 'lg:hidden'
       )}
     >
-      <div className="pointer-events-auto flex w-full max-w-md items-center gap-1 rounded-full border border-white/10 bg-gray-950/80 p-1.5 shadow-2xl shadow-black/60 backdrop-blur-xl">
+      <Glass className="pointer-events-auto flex w-full max-w-md items-center gap-1 rounded-full p-1.5">
         {items.map((item) => {
           const Icon = item.iconType;
           return (
@@ -723,7 +734,7 @@ function MobileNav({
             />
           }
         />
-      </div>
+      </Glass>
     </nav>
   );
 }
@@ -883,11 +894,24 @@ function TvRail({
   );
 }
 
+/**
+ * How much of the page a TV's top bar covers: pages start below it and their
+ * heroes reach up under it.
+ */
+const TOP_BAR_HEIGHT: Record<TvTopBar, string> = {
+  pill: 'calc(5.75rem + 2px)',
+  bar: 'calc(5rem + 1px)',
+  fade: '5.5rem',
+};
+
+/** A TV's navigation along the top, over the page. */
 function TvTabs({
+  style,
   items,
   footerItems,
   accountItems,
 }: {
+  style: TvTopBar;
   items: SidebarItem[];
   footerItems: SidebarItem[];
   accountItems: SidebarItem[];
@@ -904,45 +928,85 @@ function TvTabs({
       />
     );
   };
+  const logo = <BrandLogo className="h-8 w-6 flex-none object-contain" />;
+  const tabs = items.map(tab);
+  const end = (
+    <>
+      {footerItems.map((item) => {
+        const Icon = item.iconType;
+        return (
+          <TvNavItem
+            key={item.id}
+            aria-label={item.name}
+            item={item}
+            icon={Icon && <Icon />}
+            onClick={select(item)}
+            labelClassName="hidden"
+          />
+        );
+      })}
+      <AccountMenu
+        side="bottom"
+        align="end"
+        sideOffset={8}
+        items={accountItems}
+        trigger={
+          <TvNavItem
+            aria-label="Account"
+            item={{ id: 'account', name: 'You' }}
+            icon={<YouIcon />}
+            labelClassName="hidden"
+          />
+        }
+      />
+    </>
+  );
   return (
     <nav
       data-ui="tv-tabs"
+      data-style={style}
       data-nav-enter={ENTER_CURRENT}
-      className="relative z-40 flex items-center gap-6 px-10 pb-2 pt-8"
+      className="absolute inset-x-0 top-0 z-40"
     >
-      <BrandLogo className="h-8 w-6 flex-none object-contain" />
-      <div className="flex flex-1 items-center justify-center gap-1">
-        {items.map(tab)}
-      </div>
-      <div className="flex items-center gap-1">
-        {footerItems.map((item) => {
-          const Icon = item.iconType;
-          return (
-            <TvNavItem
-              key={item.id}
-              aria-label={item.name}
-              item={item}
-              icon={Icon && <Icon />}
-              onClick={select(item)}
-              labelClassName="hidden"
-            />
-          );
-        })}
-        <AccountMenu
-          side="bottom"
-          align="end"
-          sideOffset={8}
-          items={accountItems}
-          trigger={
-            <TvNavItem
-              aria-label="Account"
-              item={{ id: 'account', name: 'You' }}
-              icon={<YouIcon />}
-              labelClassName="hidden"
-            />
-          }
+      {style !== 'bar' && (
+        // Keeps what isn't on glass readable over a bright hero.
+        <div
+          aria-hidden
+          className={cn(
+            'pointer-events-none absolute inset-x-0 top-0 h-[180%] bg-gradient-to-b to-transparent',
+            style === 'fade' ? 'from-black/85 via-black/55' : 'from-black/50'
+          )}
         />
-      </div>
+      )}
+      {style === 'bar' ? (
+        <Glass className="relative flex items-center gap-6 rounded-none border-x-0 border-t-0 px-10 py-4">
+          {logo}
+          <div className="flex flex-1 items-center justify-center gap-1">
+            {tabs}
+          </div>
+          <div className="flex items-center gap-1">{end}</div>
+        </Glass>
+      ) : style === 'pill' ? (
+        <div className="relative flex items-center gap-6 px-10 pb-2 pt-6">
+          {logo}
+          <div className="flex flex-1 justify-center">
+            <Glass className="flex items-center gap-1 rounded-full p-1.5">
+              {tabs}
+            </Glass>
+          </div>
+          <Glass className="flex items-center gap-1 rounded-full p-1.5">
+            {end}
+          </Glass>
+        </div>
+      ) : (
+        <div className="relative flex items-center gap-6 px-10 pb-2 pt-8">
+          {logo}
+          <div className="flex flex-1 items-center justify-center gap-1">
+            {tabs}
+          </div>
+          <div className="flex items-center gap-1">{end}</div>
+        </div>
+      )}
     </nav>
   );
 }

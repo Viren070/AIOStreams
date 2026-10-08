@@ -89,6 +89,7 @@ import {
   type SubtitleMode,
 } from '../lib/user-config';
 import { focusOn } from '../lib/input';
+import { canRefract } from '../components/glass';
 import {
   CUSTOM_LINK,
   LAUNCHED_PLAYERS,
@@ -120,8 +121,10 @@ import {
   type AudioChannels,
   type PlayerEngine,
   type EpisodeLayout,
+  type GlassStyle,
   type TouchNavigation,
   type TvNavigation,
+  type TvTopBar,
   type HeroMode,
   type NextPrompt,
   type PosterLine,
@@ -1203,6 +1206,7 @@ function InterfaceSection() {
     settings.touchNavigation
   );
   const [tvNavigation, setTvNavigation] = useSetting(settings.tvNavigation);
+  const [tvTopBar, setTvTopBar] = useSetting(settings.tvTopBar);
 
   const featuredOptions = [
     {
@@ -1329,6 +1333,19 @@ function InterfaceSection() {
             value={tvNavigation}
             onValueChange={(value) => setTvNavigation(value as TvNavigation)}
           />
+          {tvNavigation === 'top' && (
+            <Select
+              label="Top bar"
+              help="What the tabs sit on over the page: floating panes of glass, one glass bar across the top, or a fade down from the top edge."
+              options={[
+                { value: 'pill', label: 'Floating glass' },
+                { value: 'bar', label: 'Glass bar' },
+                { value: 'fade', label: 'Fade' },
+              ]}
+              value={tvTopBar}
+              onValueChange={(value) => setTvTopBar(value as TvTopBar)}
+            />
+          )}
         </SettingsCard>
       )}
       {matchMedia('(pointer: coarse)').matches && (
@@ -1614,6 +1631,7 @@ const CSS_DOCS_URL = `${DOCS_URL}/reference/web-app-css`;
 
 function ThemeSection() {
   const [colors, setColors] = useSetting(settings.themeColors);
+  const [glass, setGlass] = useSetting(settings.glass);
   const [css, setCss] = useSetting(settings.customCss);
   const [draft, setDraft] = React.useState(css);
   const accent = colors.accent ?? DEFAULT_ACCENT;
@@ -1649,120 +1667,136 @@ function ThemeSection() {
     pending.current = { id, previous };
   };
   return (
-    <SettingsCard
-      title="Theme"
-      description="Saved to your account, so it follows you to every device."
-    >
-      <div className="space-y-2">
-        <p className="text-sm font-semibold">Presets</p>
-        <div className="flex flex-wrap gap-2">
-          {THEME_PRESETS.map((preset) => {
-            const selected =
-              preset.accent === accent && preset.background === background;
-            return (
-              <button
-                key={preset.name}
-                type="button"
-                data-ui="theme-preset"
-                aria-pressed={selected}
-                onClick={() => pick(preset)}
-                className={cn(
-                  'flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-sm transition-colors hover:bg-white/5',
-                  selected
-                    ? 'border-[--brand] ring-1 ring-[--brand]'
-                    : 'border-white/10'
-                )}
-              >
-                <span
-                  className="flex size-6 items-center justify-center rounded-full ring-1 ring-white/15"
-                  style={{ backgroundColor: preset.background }}
+    <>
+      <SettingsCard
+        title="Theme"
+        description="Saved to your account, so it follows you to every device."
+      >
+        <div className="space-y-2">
+          <p className="text-sm font-semibold">Presets</p>
+          <div className="flex flex-wrap gap-2">
+            {THEME_PRESETS.map((preset) => {
+              const selected =
+                preset.accent === accent && preset.background === background;
+              return (
+                <button
+                  key={preset.name}
+                  type="button"
+                  data-ui="theme-preset"
+                  aria-pressed={selected}
+                  onClick={() => pick(preset)}
+                  className={cn(
+                    'flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-sm transition-colors hover:bg-white/5',
+                    selected
+                      ? 'border-[--brand] ring-1 ring-[--brand]'
+                      : 'border-white/10'
+                  )}
                 >
                   <span
-                    className="size-3 rounded-full"
-                    style={{ backgroundColor: preset.accent }}
-                  />
-                </span>
-                {preset.name}
-              </button>
-            );
-          })}
+                    className="flex size-6 items-center justify-center rounded-full ring-1 ring-white/15"
+                    style={{ backgroundColor: preset.background }}
+                  >
+                    <span
+                      className="size-3 rounded-full"
+                      style={{ backgroundColor: preset.accent }}
+                    />
+                  </span>
+                  {preset.name}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
-      <ColorInput
-        label="Accent"
-        help="Buttons, progress bars and highlights."
-        value={accent}
-        onValueChange={(value) => pick({ accent: value, background })}
-      />
-      <ColorInput
-        label="Background"
-        help="Pages and panels take their shades from it. Dark colours read best."
-        value={background}
-        onValueChange={(value) => pick({ accent, background: value })}
-      />
-      <Textarea
-        data-ui="custom-css-editor"
-        label="Custom CSS"
-        help={
-          CUSTOM_CSS_OFF ? (
-            <>
-              Off for this visit, since the address ends in <code>?safe</code>.
-              Fix or clear it here, then open the app without it.
-            </>
-          ) : (
-            <>
-              Applied on top of the theme. Parts of the app carry a{' '}
-              <code>data-ui</code> attribute to style them by, such as{' '}
-              <code>[data-ui=&quot;progress-bar&quot;]</code>. If it ever hides
-              the page, add <code>?safe</code> to the address to turn it off.
-              See the{' '}
-              <a
-                href={CSS_DOCS_URL}
-                target="_blank"
-                rel="noreferrer"
-                className="text-[--brand] hover:underline"
-              >
-                guide
-              </a>{' '}
-              for every selector and examples.
-            </>
-          )
-        }
-        value={draft}
-        onValueChange={setDraft}
-        maxLength={MAX_CUSTOM_CSS}
-        spellCheck={false}
-        placeholder={
-          '[data-ui="progress-bar-fill"] {\n  background: hotpink;\n}'
-        }
-        className="min-h-60 font-mono text-xs"
-      />
-      <div className="flex flex-wrap gap-2">
-        <Button
-          size="sm"
-          intent="white"
-          className="rounded-full max-sm:w-full"
-          disabled={draft.trim() === css.trim()}
-          onClick={apply}
-        >
-          Apply CSS
-        </Button>
-        {(colors.accent || colors.background || css) && (
+        <ColorInput
+          label="Accent"
+          help="Buttons, progress bars and highlights."
+          value={accent}
+          onValueChange={(value) => pick({ accent: value, background })}
+        />
+        <ColorInput
+          label="Background"
+          help="Pages and panels take their shades from it. Dark colours read best."
+          value={background}
+          onValueChange={(value) => pick({ accent, background: value })}
+        />
+        <Textarea
+          data-ui="custom-css-editor"
+          label="Custom CSS"
+          help={
+            CUSTOM_CSS_OFF ? (
+              <>
+                Off for this visit, since the address ends in <code>?safe</code>
+                . Fix or clear it here, then open the app without it.
+              </>
+            ) : (
+              <>
+                Applied on top of the theme. Parts of the app carry a{' '}
+                <code>data-ui</code> attribute to style them by, such as{' '}
+                <code>[data-ui=&quot;progress-bar&quot;]</code>. If it ever
+                hides the page, add <code>?safe</code> to the address to turn it
+                off. See the{' '}
+                <a
+                  href={CSS_DOCS_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[--brand] hover:underline"
+                >
+                  guide
+                </a>{' '}
+                for every selector and examples.
+              </>
+            )
+          }
+          value={draft}
+          onValueChange={setDraft}
+          maxLength={MAX_CUSTOM_CSS}
+          spellCheck={false}
+          placeholder={
+            '[data-ui="progress-bar-fill"] {\n  background: hotpink;\n}'
+          }
+          className="min-h-60 font-mono text-xs"
+        />
+        <div className="flex flex-wrap gap-2">
           <Button
             size="sm"
-            intent="gray-outline"
+            intent="white"
             className="rounded-full max-sm:w-full"
-            onClick={() => {
-              setColors({});
-              setCss('');
-              setDraft('');
-            }}
+            disabled={draft.trim() === css.trim()}
+            onClick={apply}
           >
-            Reset theme
+            Apply CSS
           </Button>
-        )}
-      </div>
-    </SettingsCard>
+          {(colors.accent || colors.background || css) && (
+            <Button
+              size="sm"
+              intent="gray-outline"
+              className="rounded-full max-sm:w-full"
+              onClick={() => {
+                setColors({});
+                setCss('');
+                setDraft('');
+              }}
+            >
+              Reset theme
+            </Button>
+          )}
+        </div>
+      </SettingsCard>
+      {canRefract && (
+        <SettingsCard title="Glass" description={ON_DEVICE}>
+          <Select
+            label="Bars"
+            help="Liquid glass bends what's behind the bars at their edges; frosted only blurs it, which costs less on a slow device."
+            options={[
+              { value: 'frosted', label: 'Frosted' },
+              { value: 'liquid', label: 'Liquid glass' },
+            ]}
+            value={glass}
+            onValueChange={(value) => setGlass(value as GlassStyle)}
+          />
+        </SettingsCard>
+      )}
+    </>
   );
 }
 
