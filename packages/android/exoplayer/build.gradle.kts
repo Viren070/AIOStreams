@@ -4,7 +4,6 @@ plugins {
 
 android {
     namespace = "io.github.viren070.aiostreams.exoplayer"
-    ndkVersion = libs.versions.android.ndk.get()
 
     defaultConfig {
         // The processors the app ships.
