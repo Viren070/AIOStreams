@@ -120,8 +120,14 @@ const OPPOSITE: Record<Direction, Direction> = {
   right: 'left',
 };
 
+interface Way {
+  score: number;
+  /** It overlaps `from` across the way. */
+  inLine: boolean;
+}
+
 /** How far `to` lies from `from` going `dir`, or null when it lies another way. */
-function distance(from: DOMRect, to: DOMRect, dir: Direction): number | null {
+function distance(from: DOMRect, to: DOMRect, dir: Direction): Way | null {
   let gap: number;
   switch (dir) {
     case 'right':
@@ -146,8 +152,13 @@ function distance(from: DOMRect, to: DOMRect, dir: Direction): number | null {
       : [from.left, from.right, to.left, to.right];
   const [a1, a2, b1, b2] = across;
   const off = Math.max(0, b1 - a2, a1 - b2);
-  // Of those in line, the one whose edge lines up with this one's.
-  return Math.max(0, gap) + off * 2 + Math.abs(b1 - a1) / 100;
+  // Only partly that way, it is beside this one unless in line with it.
+  if (gap < 0 && off > 0) return null;
+  return {
+    // Of those in line, the one whose edge lines up with this one's.
+    score: Math.max(0, gap) + off * 2 + Math.abs(b1 - a1) / 100,
+    inLine: off === 0,
+  };
 }
 
 function nearest(
@@ -156,23 +167,49 @@ function nearest(
   dir: Direction
 ): HTMLElement | null {
   const rect = from.getBoundingClientRect();
-  const scored: { el: HTMLElement; score: number }[] = [];
+  const scored: (Way & { el: HTMLElement })[] = [];
   for (const el of root.querySelectorAll<HTMLElement>(FOCUSABLE)) {
     if (el === from || el.contains(from) || from.contains(el)) continue;
-    const score = distance(rect, el.getBoundingClientRect(), dir);
-    if (score !== null) scored.push({ el, score });
+    const way = distance(rect, el.getBoundingClientRect(), dir);
+    if (way) scored.push({ ...way, el });
   }
   scored.sort((a, b) => a.score - b.score);
-  // A fixed bar, such as the sidebar, stays put as the page scrolls past it, so
-  // focus only crosses between it and the page when its own side has nothing.
-  const home = fixedBox(from);
+  // A fixed or sticky bar, such as the sidebar, stays put as the page scrolls
+  // past it, so focus keeps to its own side over a nearer bar for what's in line.
+  const home = barOf(from);
   let other: HTMLElement | null = null;
-  for (const { el } of scored) {
-    if (!canFocus(el)) continue;
-    if (fixedBox(el) === home) return el;
-    other ??= el;
+  for (const way of scored) {
+    if (!canFocus(way.el)) continue;
+    const bar = barOf(way.el);
+    if (bar === home) {
+      if (way.inLine || !other) return way.el;
+    } else if (!other && crosses(home ?? from, bar ?? way.el, way.el, dir)) {
+      other = way.el;
+    }
   }
   return other;
+}
+
+/** Focus crosses only to what's in view, into a bar or part of the page wholly that way from the one it leaves. */
+function crosses(
+  left: Element,
+  entered: Element,
+  to: HTMLElement,
+  dir: Direction
+): boolean {
+  if (!inView(to)) return false;
+  const a = left.getBoundingClientRect();
+  const b = entered.getBoundingClientRect();
+  switch (dir) {
+    case 'right':
+      return b.left >= a.right - 1;
+    case 'left':
+      return b.right <= a.left + 1;
+    case 'down':
+      return b.top >= a.bottom - 1;
+    case 'up':
+      return b.bottom <= a.top + 1;
+  }
 }
 
 /** A box marked `data-nav-enter` takes focus from outside on what that selector names. */
@@ -183,9 +220,11 @@ function entry(to: HTMLElement, from: HTMLElement): HTMLElement {
   return named && canFocus(named) ? named : to;
 }
 
-function fixedBox(el: Element): Element | null {
-  for (let box: Element | null = el; box; box = box.parentElement)
-    if (getComputedStyle(box).position === 'fixed') return box;
+function barOf(el: Element): Element | null {
+  for (let box: Element | null = el; box; box = box.parentElement) {
+    const { position } = getComputedStyle(box);
+    if (position === 'fixed' || position === 'sticky') return box;
+  }
   return null;
 }
 
