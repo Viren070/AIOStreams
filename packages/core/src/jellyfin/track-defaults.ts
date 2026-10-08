@@ -11,10 +11,10 @@ export const SUBTITLE_MODES = [
 export type SubtitleMode = (typeof SUBTITLE_MODES)[number];
 
 export interface TrackPreferences {
-  /** A language code, `OriginalLanguage`, or empty for none. */
-  audioLanguage: string;
+  /** Language codes in order, any of them `OriginalLanguage`. */
+  audioLanguages: string[];
   playDefaultAudioTrack: boolean;
-  subtitleLanguage: string;
+  subtitleLanguages: string[];
   subtitleMode: SubtitleMode;
 }
 
@@ -22,13 +22,22 @@ export interface TrackPreferences {
 export function trackPreferencesFrom(
   config: Record<string, unknown> | null | undefined
 ): TrackPreferences {
-  const text = (key: string) =>
-    typeof config?.[key] === 'string' ? (config[key] as string) : '';
+  // The ordered list where there is one, else Jellyfin's single language.
+  const languages = (list: string, single: string) => {
+    const value = config?.[list];
+    if (Array.isArray(value) && value.length)
+      return value.filter((v): v is string => typeof v === 'string' && !!v);
+    const one = config?.[single];
+    return typeof one === 'string' && one ? [one] : [];
+  };
   const mode = SUBTITLE_MODES.find((m) => m === config?.SubtitleMode);
   return {
-    audioLanguage: text('AudioLanguagePreference'),
+    audioLanguages: languages('AudioLanguages', 'AudioLanguagePreference'),
     playDefaultAudioTrack: config?.PlayDefaultAudioTrack !== false,
-    subtitleLanguage: text('SubtitleLanguagePreference'),
+    subtitleLanguages: languages(
+      'SubtitleLanguages',
+      'SubtitleLanguagePreference'
+    ),
     subtitleMode: mode ?? 'Default',
   };
 }
@@ -63,6 +72,13 @@ function canonical(code: unknown): string | undefined {
   if (!lower) return undefined;
   return TERMINOLOGIC[lower] ?? languageToIso6392(lower) ?? lower;
 }
+
+const isOriginal = (language: string | undefined) =>
+  language?.toLowerCase() === 'originallanguage';
+
+const known = (codes: (string | undefined)[]) => [
+  ...new Set(codes.filter((c): c is string => !!c)),
+];
 
 const UNDEFINED_LANGUAGES = new Set([
   'und',
@@ -131,24 +147,15 @@ function defaultAudio(
 ): number | undefined {
   const audio = streams.filter((s) => s.Type === 'Audio');
   const original = canonical(originalLanguage);
-  if (prefs.audioLanguage.toLowerCase() !== 'originallanguage') {
-    const preferred = canonical(prefs.audioLanguage);
-    return audioIndex(
-      audio,
-      preferred ? [preferred] : [],
-      prefs.playDefaultAudioTrack
-    );
-  }
-  if (!prefs.playDefaultAudioTrack) {
+  if (isOriginal(prefs.audioLanguages[0]) && !prefs.playDefaultAudioTrack) {
     const flagged = audio.find((s) => flag(s, 'IsOriginal'));
     if (flagged && (!original || canonical(flagged.Language) === original))
       return flagged.Index;
   }
-  return audioIndex(
-    audio,
-    original ? [original] : [],
-    prefs.playDefaultAudioTrack
+  const preferred = known(
+    prefs.audioLanguages.map((l) => (isOriginal(l) ? original : canonical(l)))
   );
+  return audioIndex(audio, preferred, prefs.playDefaultAudioTrack);
 }
 
 function onlyForced(
@@ -170,14 +177,13 @@ function onlyForced(
  * external ones and Default mode never turns an external one on: those come
  * from subtitle addons in every language, not files placed beside the video.
  */
-function defaultSubtitle(
+function subtitleIn(
   streams: JellyfinMediaStream[],
   prefs: TrackPreferences,
+  preferred: string[],
+  listed: string[],
   audioLanguage: string | undefined
 ): number {
-  if (prefs.subtitleMode === 'None') return -1;
-  const language = canonical(prefs.subtitleLanguage);
-  const preferred = language ? [language] : [];
   const sorted = sortBy(
     streams.filter((s) => s.Type === 'Subtitle'),
     (s) => !flag(s, 'IsExternal'),
@@ -196,8 +202,9 @@ function defaultSubtitle(
           (flag(s, 'IsDefault') || flag(s, 'IsForced'))
       );
       break;
+    // Audio in any of the user's languages needs no more than forced lines.
     case 'Smart':
-      stream = preferred.includes(canonical(audioLanguage) ?? '')
+      stream = listed.includes(canonical(audioLanguage) ?? '')
         ? onlyForced(sorted, preferred)
         : sorted.find((s) => matches(s, preferred));
       break;
@@ -211,6 +218,27 @@ function defaultSubtitle(
       break;
   }
   return stream?.Index ?? -1;
+}
+
+/** Each language in turn, as the one Jellyfin knows, until one finds a track. */
+function defaultSubtitle(
+  streams: JellyfinMediaStream[],
+  prefs: TrackPreferences,
+  audioLanguage: string | undefined
+): number {
+  if (prefs.subtitleMode === 'None') return -1;
+  const languages = known(prefs.subtitleLanguages.map(canonical));
+  for (const language of languages.length ? languages : [undefined]) {
+    const index = subtitleIn(
+      streams,
+      prefs,
+      language ? [language] : [],
+      languages,
+      audioLanguage
+    );
+    if (index !== -1) return index;
+  }
+  return -1;
 }
 
 /**
