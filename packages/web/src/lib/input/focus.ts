@@ -122,6 +122,7 @@ const OPPOSITE: Record<Direction, Direction> = {
 
 interface Way {
   score: number;
+  gap: number;
   /** How far it lies beside `from`, across the way. */
   off: number;
   /** It overlaps `from` across the way. */
@@ -159,6 +160,7 @@ function distance(from: DOMRect, to: DOMRect, dir: Direction): Way | null {
   return {
     // Of those in line, the one whose edge lines up with this one's.
     score: Math.max(0, gap) + off * 2 + Math.abs(b1 - a1) / 100,
+    gap,
     off,
     inLine: off === 0,
   };
@@ -194,13 +196,38 @@ function nearest(
     if (bar === home) {
       if (way.inLine) return way.el;
       if (sideways) beside ||= way.off <= rect.height;
-      else if (!other) return way.el;
+      else if (!other) return inNearestRow(scored, way, home);
     } else if (!other && crosses(home ?? from, bar ?? way.el, way.el, dir)) {
       other = way.el;
     }
   }
   // Sideways, a bar is entered only when nothing on this side sits just beside focus.
   return beside ? null : other;
+}
+
+/**
+ * Up or down with nothing in line, the best of the nearest row, or of its
+ * whole `data-nav-group`, so focus never jumps a row.
+ */
+function inNearestRow(
+  ways: Candidate[],
+  pick: Candidate,
+  home: Element | null
+): HTMLElement {
+  const valid = (way: Candidate) => canFocus(way.el) && barOf(way.el) === home;
+  const nearer = ways
+    .filter((way) => way.gap < pick.gap)
+    .sort((a, b) => a.gap - b.gap)
+    .find(valid);
+  if (!nearer) return pick.el;
+  const group = nearer.el.closest(GROUP);
+  const row = nearer.rect;
+  return ways.find(
+    (way) =>
+      (group
+        ? group.contains(way.el)
+        : way.rect.top < row.bottom && way.rect.bottom > row.top) && valid(way)
+  )!.el;
 }
 
 /** Focus crosses only to what's in view, into a bar or part of the page wholly that way from the one it leaves. */
