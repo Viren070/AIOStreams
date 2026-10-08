@@ -30,6 +30,8 @@ interface PlayerKeys {
   player: PlayerController;
   /** The controls, which Back leaves before it leaves the player. */
   root: React.RefObject<HTMLElement | null>;
+  /** Whether the controls show, which Back hides first on a TV. */
+  visible: boolean;
   wake(): void;
   hide(): void;
   notice(text: string): void;
@@ -214,7 +216,8 @@ export function usePlayerKeys(keys: PlayerKeys): void {
         if (el && k().root.current?.contains(el)) {
           el.blur();
           k().hide();
-        } else if (!currentHost().back?.()) k().onBack();
+        } else if (currentHost().tv && k().visible) k().hide();
+        else if (!currentHost().back?.()) k().onBack();
       })
     );
     return () => stops.forEach((stop) => stop());

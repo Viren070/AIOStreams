@@ -996,6 +996,7 @@ export function PlayerControls({
   usePlayerKeys({
     player,
     root,
+    visible,
     wake,
     hide,
     notice: showNotice,
