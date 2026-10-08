@@ -18,6 +18,8 @@ data class AppIdentity(
     val tv: Boolean,
     /** A speech recogniser the page can ask for. */
     val voice: Boolean,
+    /** A game controller attached, so the page's gamepad support may start. */
+    val gamepads: Boolean,
 )
 
 /**
@@ -87,6 +89,7 @@ class AppBridge(
             platform: 'android',
             tv: ${identity.tv},
             voice: ${identity.voice},
+            gamepads: ${identity.gamepads},
             device: ${JsonPrimitive(identity.device)},
             deviceId: ${JsonPrimitive(identity.deviceId)},
             send,

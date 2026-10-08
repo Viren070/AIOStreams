@@ -14,6 +14,8 @@ import android.os.Bundle
 import android.provider.Settings
 import android.speech.RecognizerIntent
 import android.util.Log
+import android.hardware.input.InputManager
+import android.view.InputDevice
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
@@ -114,7 +116,9 @@ class MainActivity : ComponentActivity() {
             fallBack = { playback.fallBack(player) },
             frameRate = frameRates::match,
         )
-        val identity = AppIdentity(BuildConfig.VERSION_NAME, deviceName(), deviceId(), onTv(), canListen())
+        gamepads = hasGamepad()
+        getSystemService(InputManager::class.java).registerInputDeviceListener(controllers, null)
+        val identity = AppIdentity(BuildConfig.VERSION_NAME, deviceName(), deviceId(), onTv(), canListen(), gamepads)
         bridge = AppBridge(web, app.origins, identity, ::onMessage)
         updater = Updater(this) { bridge.send(it) }
         pip = PictureInPicture(this, playback.stage)
@@ -284,6 +288,29 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private var gamepads = false
+
+    private val controllers = object : InputManager.InputDeviceListener {
+        override fun onInputDeviceAdded(deviceId: Int) = update()
+        override fun onInputDeviceRemoved(deviceId: Int) = update()
+        override fun onInputDeviceChanged(deviceId: Int) = update()
+
+        private fun update() {
+            val now = hasGamepad()
+            if (now == gamepads) return
+            gamepads = now
+            bridge.send(buildJsonObject {
+                put("type", "gamepads")
+                put("connected", now)
+            })
+        }
+    }
+
+    /** As the web view counts gamepads: joystick devices. */
+    private fun hasGamepad() = InputDevice.getDeviceIds().any { id ->
+        InputDevice.getDevice(id)?.let { !it.isVirtual && it.supportsSource(InputDevice.SOURCE_JOYSTICK) } == true
+    }
+
     private fun canListen() =
         packageManager.queryIntentActivities(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH), 0).isNotEmpty()
 
@@ -344,6 +371,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        getSystemService(InputManager::class.java).unregisterInputDeviceListener(controllers)
         updater.release()
         Downloads.queue(this).send = null
         MediaController.releaseFuture(controller)
