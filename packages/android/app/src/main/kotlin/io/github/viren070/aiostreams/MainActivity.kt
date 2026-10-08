@@ -12,6 +12,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.speech.RecognizerIntent
 import android.util.Log
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.webkit.ValueCallback
@@ -66,6 +67,10 @@ class MainActivity : ComponentActivity() {
         picked?.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(it.resultCode, it.data))
         picked = null
     }
+    private val listen = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val heard = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+        sendHeard(heard.takeIf { result.resultCode == RESULT_OK })
+    }
     private lateinit var frameRates: FrameRateMatch
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -109,7 +114,8 @@ class MainActivity : ComponentActivity() {
             fallBack = { playback.fallBack(player) },
             frameRate = frameRates::match,
         )
-        bridge = AppBridge(web, app.origins, AppIdentity(BuildConfig.VERSION_NAME, deviceName(), deviceId(), onTv()), ::onMessage)
+        val identity = AppIdentity(BuildConfig.VERSION_NAME, deviceName(), deviceId(), onTv(), canListen())
+        bridge = AppBridge(web, app.origins, identity, ::onMessage)
         updater = Updater(this) { bridge.send(it) }
         pip = PictureInPicture(this, playback.stage)
         focus = AudioFocus(
@@ -178,6 +184,7 @@ class MainActivity : ComponentActivity() {
                 message["frameRate"]?.jsonPrimitive?.booleanOrNull?.let { frameRates.enabled = it }
                 message["tunneling"]?.jsonPrimitive?.booleanOrNull?.let { playback.tunneling = it }
             }
+            "voice-search" -> listen()
             "mpv-config" -> sendMpvConfig()
             "mpv-config-save" -> {
                 MpvEngine.configFile(this).writeText(message["text"]?.jsonPrimitive?.content.orEmpty())
@@ -265,6 +272,25 @@ class MainActivity : ComponentActivity() {
             callback.onReceiveValue(null)
         }
     }
+
+    private fun listen() {
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+        try {
+            listen.launch(intent)
+        } catch (_: ActivityNotFoundException) {
+            sendHeard(null)
+        }
+    }
+
+    private fun canListen() =
+        packageManager.queryIntentActivities(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH), 0).isNotEmpty()
+
+    private fun sendHeard(text: String?) = bridge.send(buildJsonObject {
+        put("type", "voice-result")
+        put("text", text)
+    })
 
     /** Asked on the first download, whose progress shows in one. */
     private fun askForNotifications() {
