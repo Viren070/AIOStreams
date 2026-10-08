@@ -26,9 +26,22 @@ export function setupAndroid(): () => void {
     else if (m.type === 'back') runAction('back');
     else if (m.type === 'player-engine') setEngine(m.name);
   });
+  // The keyboard opening over a field that already had focus doesn't bring it into view.
+  const showField = () => {
+    const field = document.activeElement;
+    if (
+      field instanceof HTMLInputElement ||
+      field instanceof HTMLTextAreaElement
+    )
+      field.scrollIntoView({ block: 'nearest' });
+  };
+  window.addEventListener('resize', showField);
+  window.visualViewport?.addEventListener('resize', showField);
   return () => {
     unsubscribeSettings();
     unsubscribe?.();
+    window.removeEventListener('resize', showField);
+    window.visualViewport?.removeEventListener('resize', showField);
   };
 }
 
