@@ -21,6 +21,8 @@ export const ModalAnatomy = defineStyleAnatomy({
   content: cva([
     'UI-Modal__content',
     'z-50 grid relative w-full w-full shadow-xl border border-[rgb(255_255_255_/_5%)] max-w-lg gap-4 bg-[--paper] p-6 duration-200',
+    // A column no wider than the box, which unwrapped text would widen past it.
+    'grid-cols-[minmax(0,1fr)]',
     'data-[state=open]:animate-in data-[state=closed]:animate-out',
     'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
     // "data-[state=open]:slide-in-from-top-[40%] data-[state=closed]:slide-out-to-bottom-[40%]",
