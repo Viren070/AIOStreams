@@ -104,6 +104,7 @@ html.dark {
 }
 /* Focus that came from a pointer (markPointerFocus). */
 html[data-pointer-focus] :focus-visible:not(input):not(textarea),
+html[data-pointer-focus] :focus-visible:not(input):not(textarea)::before,
 html[data-pointer-focus] :focus-visible:not(input):not(textarea)::after,
 html[data-pointer-focus] :focus-visible [data-ui='focus-ring'] {
   outline: none !important;

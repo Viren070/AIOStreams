@@ -203,6 +203,7 @@ function Head({
   onHold,
   className,
   oneLine,
+  thumbRing,
 }: {
   episode: BaseItemDto;
   play: (() => void) | undefined;
@@ -211,6 +212,8 @@ function Head({
   className?: string;
   /** Keeps a row's cards level. */
   oneLine?: boolean;
+  /** Focus rings a card's thumbnail, as other cards do; a list's row marks it itself. */
+  thumbRing?: boolean;
 }) {
   const { client } = useSession();
   const hold = useHold(onHold, { touch: false });
@@ -279,7 +282,11 @@ function Head({
           onClick={() => play()}
           {...hold}
           data-focus="own"
-          className="mt-0.5 text-left text-sm font-semibold after:absolute after:inset-0 after:rounded-xl after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-[--ring] sm:text-base"
+          className={cn(
+            "mt-0.5 text-left text-sm font-semibold after:absolute after:inset-0 after:rounded-xl after:content-[''] sm:text-base",
+            thumbRing &&
+              "before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:z-[1] before:aspect-video before:rounded-xl before:content-[''] focus-visible:before:ring-2 focus-visible:before:ring-inset focus-visible:before:ring-[--ring] [[data-tv]_&]:focus-visible:before:ring-[3px]"
+          )}
         >
           <span className={clamp} title={oneLine ? title : undefined}>
             {title}
@@ -350,7 +357,13 @@ export function EpisodeCard({
           className="rounded-xl"
           numberClass="text-5xl"
         />
-        <Head episode={episode} play={play} className="px-0.5 pt-2" oneLine />
+        <Head
+          episode={episode}
+          play={play}
+          className="px-0.5 pt-2"
+          oneLine
+          thumbRing
+        />
         <Synopsis episode={episode} className="line-clamp-3 px-0.5" />
       </div>
     </ItemMenu>
@@ -371,7 +384,7 @@ function EpisodeListItem({
         data-ui="episode-list-item"
         {...episodeState(episode)}
         data-highlighted={highlighted || undefined}
-        className="group/episode relative grid grid-cols-[40%_minmax(0,1fr)] gap-x-3 gap-y-2 rounded-xl p-2 transition-colors hover:bg-white/[0.04] sm:grid-cols-[13rem_minmax(0,1fr)] sm:grid-rows-[auto_1fr] sm:gap-x-4 sm:gap-y-1"
+        className="group/episode relative grid grid-cols-[40%_minmax(0,1fr)] gap-x-3 gap-y-2 rounded-xl p-2 transition-colors focus-within:bg-white/10 hover:bg-white/[0.04] sm:grid-cols-[13rem_minmax(0,1fr)] sm:grid-rows-[auto_1fr] sm:gap-x-4 sm:gap-y-1"
       >
         {highlighted && <OpenedPulse />}
         <Thumb
