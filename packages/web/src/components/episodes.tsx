@@ -4,6 +4,7 @@ import { Badge } from '@aiostreams/ui/badge';
 import { IconButton } from '@aiostreams/ui/button';
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import { cn } from '@aiostreams/ui/core/styling';
+import { currentHost } from '../lib/hosts';
 import { useSession } from '../lib/session';
 import { useSetPlayed } from '../lib/queries';
 import { landscapeUrls } from '../lib/images';
@@ -230,49 +231,52 @@ function Head({
         >
           <Kicker episode={episode} />
         </p>
-        <div
-          data-ui="episode-actions"
-          className="relative z-[1] flex flex-none items-center gap-1.5"
-        >
-          <OverviewInfo
-            title={seasonEpisodeTitle(episode)}
-            line={episodeLine(episode)}
-            overview={episode.Overview}
-            image={landscapeUrls(client, episode, { maxWidth: 480 })}
-            trigger={
-              <IconButton
-                data-ui="episode-action"
-                data-name="details"
-                // A playable episode is one stop, and its menu has the rest.
-                data-nav={play ? 'skip' : undefined}
-                size="sm"
-                intent="gray-subtle"
-                className="size-8 rounded-full"
-                icon={<BiInfoCircle />}
-                aria-label="Episode details"
-              />
-            }
-          />
-          {play && <DownloadButton item={episode} className="size-8" />}
-          {play && (
-            <IconButton
-              data-ui="episode-action"
-              data-name="watched"
-              data-active={played || undefined}
-              data-nav="skip"
-              size="sm"
-              intent={played ? 'primary' : 'gray-subtle'}
-              className="size-8 rounded-full"
-              icon={<BiCheck />}
-              aria-label={played ? 'Mark unwatched' : 'Mark watched'}
-              aria-pressed={played}
-              loading={setPlayed.isPending}
-              onClick={() =>
-                setPlayed.mutate({ itemId: episode.Id!, played: !played })
+        {/* A TV's remote can't reach them, and the menu has them. */}
+        {!(play && currentHost().tv) && (
+          <div
+            data-ui="episode-actions"
+            className="relative z-[1] flex flex-none items-center gap-1.5"
+          >
+            <OverviewInfo
+              title={seasonEpisodeTitle(episode)}
+              line={episodeLine(episode)}
+              overview={episode.Overview}
+              image={landscapeUrls(client, episode, { maxWidth: 480 })}
+              trigger={
+                <IconButton
+                  data-ui="episode-action"
+                  data-name="details"
+                  // A playable episode is one stop, and its menu has the rest.
+                  data-nav={play ? 'skip' : undefined}
+                  size="sm"
+                  intent="gray-subtle"
+                  className="size-8 rounded-full"
+                  icon={<BiInfoCircle />}
+                  aria-label="Episode details"
+                />
               }
             />
-          )}
-        </div>
+            {play && <DownloadButton item={episode} className="size-8" />}
+            {play && (
+              <IconButton
+                data-ui="episode-action"
+                data-name="watched"
+                data-active={played || undefined}
+                data-nav="skip"
+                size="sm"
+                intent={played ? 'primary' : 'gray-subtle'}
+                className="size-8 rounded-full"
+                icon={<BiCheck />}
+                aria-label={played ? 'Mark unwatched' : 'Mark watched'}
+                aria-pressed={played}
+                loading={setPlayed.isPending}
+                onClick={() =>
+                  setPlayed.mutate({ itemId: episode.Id!, played: !played })
+                }
+              />
+            )}
+          </div>
+        )}
       </div>
       {/* Its overlay makes the whole episode the play button. */}
       {play ? (
@@ -342,31 +346,76 @@ export function EpisodeCard({
   highlighted?: boolean;
 }) {
   const play = usePlay(episode);
+  const details = useDetails(episode);
   return (
-    <ItemMenu item={episode} onPage>
-      <div
-        data-ui="episode-card"
-        {...episodeState(episode)}
-        data-highlighted={highlighted || undefined}
-        className="group/episode relative space-y-2"
-      >
-        <Thumb
-          episode={episode}
-          playable={!!play}
-          highlighted={highlighted}
-          className="rounded-xl"
-          numberClass="text-5xl"
-        />
-        <Head
-          episode={episode}
-          play={play}
-          className="px-0.5 pt-2"
-          oneLine
-          thumbRing
-        />
-        <Synopsis episode={episode} className="line-clamp-3 px-0.5" />
-      </div>
-    </ItemMenu>
+    <>
+      <ItemMenu item={episode} onPage onDetails={details.show}>
+        <div
+          ref={details.root}
+          data-ui="episode-card"
+          {...episodeState(episode)}
+          data-highlighted={highlighted || undefined}
+          className="group/episode relative space-y-2"
+        >
+          <Thumb
+            episode={episode}
+            playable={!!play}
+            highlighted={highlighted}
+            className="rounded-xl"
+            numberClass="text-5xl"
+          />
+          <Head
+            episode={episode}
+            play={play}
+            className="px-0.5 pt-2"
+            oneLine
+            thumbRing
+          />
+          <Synopsis episode={episode} className="line-clamp-3 px-0.5" />
+        </div>
+      </ItemMenu>
+      {details.dialog}
+    </>
+  );
+}
+
+/** Its details opened from its menu, which hand focus back to the episode on closing. */
+function useDetails(episode: BaseItemDto) {
+  const root = React.useRef<HTMLDivElement>(null);
+  const [open, setOpen] = React.useState(false);
+  const close = () => {
+    setOpen(false);
+    // Once the dialog lets go of it, as the menu that opened it is gone.
+    setTimeout(() =>
+      root.current
+        ?.querySelector<HTMLElement>('[data-ui=episode-title]')
+        ?.focus()
+    );
+  };
+  return {
+    root,
+    show: () => setOpen(true),
+    dialog: open && <EpisodeDetails episode={episode} onClose={close} />,
+  };
+}
+
+function EpisodeDetails({
+  episode,
+  onClose,
+}: {
+  episode: BaseItemDto;
+  onClose: () => void;
+}) {
+  const { client } = useSession();
+  return (
+    <OverviewInfo
+      title={seasonEpisodeTitle(episode)}
+      line={episodeLine(episode)}
+      overview={episode.Overview}
+      image={landscapeUrls(client, episode, { maxWidth: 480 })}
+      open
+      onOpenChange={(open) => !open && onClose()}
+    />
   );
 }
 
@@ -378,34 +427,39 @@ function EpisodeListItem({
   highlighted?: boolean;
 }) {
   const play = usePlay(episode);
+  const details = useDetails(episode);
   return (
-    <ItemMenu item={episode} onPage>
-      <div
-        data-ui="episode-list-item"
-        {...episodeState(episode)}
-        data-highlighted={highlighted || undefined}
-        className="group/episode relative grid grid-cols-[40%_minmax(0,1fr)] gap-x-3 gap-y-2 rounded-xl p-2 transition-colors focus-within:bg-white/10 hover:bg-white/[0.04] sm:grid-cols-[13rem_minmax(0,1fr)] sm:grid-rows-[auto_1fr] sm:gap-x-4 sm:gap-y-1"
-      >
-        {highlighted && <OpenedPulse />}
-        <Thumb
-          episode={episode}
-          playable={!!play}
-          className="rounded-lg sm:row-span-2"
-          numberClass="text-3xl sm:text-4xl"
-        />
-        <Head
-          episode={episode}
-          play={play}
-          onHold={play && (() => play({ held: true }))}
-          className="self-start"
-        />
-        {/* Beside a phone's thumbnail it would get a few words a line. */}
-        <Synopsis
-          episode={episode}
-          className="col-span-2 line-clamp-2 self-start sm:col-span-1 sm:col-start-2"
-        />
-      </div>
-    </ItemMenu>
+    <>
+      <ItemMenu item={episode} onPage onDetails={details.show}>
+        <div
+          ref={details.root}
+          data-ui="episode-list-item"
+          {...episodeState(episode)}
+          data-highlighted={highlighted || undefined}
+          className="group/episode relative grid grid-cols-[40%_minmax(0,1fr)] gap-x-3 gap-y-2 rounded-xl p-2 transition-colors focus-within:bg-white/10 hover:bg-white/[0.04] sm:grid-cols-[13rem_minmax(0,1fr)] sm:grid-rows-[auto_1fr] sm:gap-x-4 sm:gap-y-1"
+        >
+          {highlighted && <OpenedPulse />}
+          <Thumb
+            episode={episode}
+            playable={!!play}
+            className="rounded-lg sm:row-span-2"
+            numberClass="text-3xl sm:text-4xl"
+          />
+          <Head
+            episode={episode}
+            play={play}
+            onHold={play && (() => play({ held: true }))}
+            className="self-start"
+          />
+          {/* Beside a phone's thumbnail it would get a few words a line. */}
+          <Synopsis
+            episode={episode}
+            className="col-span-2 line-clamp-2 self-start sm:col-span-1 sm:col-start-2"
+          />
+        </div>
+      </ItemMenu>
+      {details.dialog}
+    </>
   );
 }
 

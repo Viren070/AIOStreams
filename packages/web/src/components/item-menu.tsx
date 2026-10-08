@@ -102,11 +102,14 @@ function DownloadEntry({
 export function ItemMenu({
   item,
   onPage,
+  onDetails,
   children,
 }: {
   item: BaseItemDto;
   /** Shown on the page the item opens, so it offers no way there. */
   onPage?: boolean;
+  /** Opens the item's details, from a card that has them. */
+  onDetails?: () => void;
   children: React.ReactNode;
 }) {
   const heroTarget = useHeroTarget(item);
@@ -132,6 +135,11 @@ export function ItemMenu({
           {onPage ? item.Name : itemTitle(item)}
         </ContextMenuLabel>
         {playable && <PlayEntries item={item} />}
+        {onDetails && (
+          <ContextMenuItem data-name="details" onSelect={onDetails}>
+            <BiInfoCircle /> Details
+          </ContextMenuItem>
+        )}
         <DownloadEntry item={item} playable={playable} />
         {!onPage && (
           <ContextMenuItem

@@ -34,7 +34,14 @@ export function OverviewInfo({
   overview,
   image,
   trigger,
-}: OverviewDetails & { trigger: React.ReactElement }) {
+  open,
+  onOpenChange,
+}: OverviewDetails & {
+  /** Without one, it opens with `open`, as a dialog. */
+  trigger?: React.ReactElement;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
   const wide = useMediaQuery('(min-width: 1024px)');
   const text = (
     <p
@@ -45,7 +52,7 @@ export function OverviewInfo({
     </p>
   );
 
-  if (wide) {
+  if (wide && trigger) {
     return (
       <Popover
         trigger={trigger}
@@ -69,6 +76,8 @@ export function OverviewInfo({
       data-ui="dialog"
       data-name="overview"
       trigger={trigger}
+      open={open}
+      onOpenChange={onOpenChange}
       title={title}
       description={line}
       contentClass="overflow-hidden"
