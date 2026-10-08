@@ -73,6 +73,8 @@ export interface Host {
   signedIn?(client: JellyfinClient): void;
   /** Saves what the page asks for to the device. */
   downloads?: DownloadsHost;
+  /** What the device's speech recogniser heard, or null for nothing. */
+  listen?(): Promise<string | null>;
 }
 
 const browserHost: Host = { name: 'browser' };

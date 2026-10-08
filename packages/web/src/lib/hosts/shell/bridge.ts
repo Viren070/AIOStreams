@@ -47,6 +47,7 @@ export type ShellMessage =
       message: string | null;
     }
   | { type: 'link'; url: string }
+  | { type: 'voice-result'; text: string | null }
   | { type: 'media-key'; key: MediaKey }
   | { type: 'error'; message: string }
   | {
@@ -76,6 +77,8 @@ interface ShellBridge {
   platform: string;
   /** The Android app on a TV. */
   tv?: boolean;
+  /** The Android app on a device with a speech recogniser. */
+  voice?: boolean;
   /** The device's name. */
   device: string;
   /** The app's own id for this device, where it keeps one. */

@@ -1,5 +1,5 @@
 import React from 'react';
-import { BiHistory, BiSearch, BiX } from 'react-icons/bi';
+import { BiHistory, BiMicrophone, BiSearch, BiX } from 'react-icons/bi';
 import { Button, IconButton } from '@aiostreams/ui/button';
 import {
   ContextMenu,
@@ -35,6 +35,7 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
   const movies = useSearch(debounced, 'Movie', !combine);
   const shows = useSearch(debounced, 'Series', !combine);
   const history = useSearchHistory(user.Id!);
+  const listen = currentHost().listen;
 
   // Keeps the term in the address, so back returns to the same results.
   React.useEffect(() => {
@@ -59,21 +60,39 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
       <h1 data-ui="page-title" className="text-3xl font-bold">
         Search
       </h1>
-      <TextInput
-        autoFocus
-        type="search"
-        autoComplete="off"
-        enterKeyHint="search"
-        value={term}
-        onValueChange={setTerm}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') history.add(term);
-        }}
-        placeholder="Movies and shows"
-        leftIcon={<BiSearch className="text-xl" />}
-        data-ui="search-input"
-        className="max-w-xl"
-      />
+      <div className="flex max-w-xl items-center gap-2">
+        <TextInput
+          autoFocus
+          type="search"
+          autoComplete="off"
+          enterKeyHint="search"
+          value={term}
+          onValueChange={setTerm}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') history.add(term);
+          }}
+          placeholder="Movies and shows"
+          leftIcon={<BiSearch className="text-xl" />}
+          data-ui="search-input"
+          fieldClass="flex-1"
+        />
+        {listen && (
+          <IconButton
+            data-ui="search-voice"
+            intent="gray-subtle"
+            className="flex-none rounded-full"
+            icon={<BiMicrophone className="text-xl" />}
+            aria-label="Search by voice"
+            onClick={() =>
+              listen().then((heard) => {
+                if (!heard) return;
+                setTerm(heard);
+                history.add(heard);
+              })
+            }
+          />
+        )}
+      </div>
       {!term.trim() && history.terms.length > 0 && (
         <section data-ui="search-history" className="max-w-xl space-y-1">
           <div className="flex items-center justify-between gap-3">

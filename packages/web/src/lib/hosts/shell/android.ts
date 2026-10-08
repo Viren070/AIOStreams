@@ -80,6 +80,18 @@ function mpvConfig(message: { type: string; text?: string }): Promise<string> {
 
 export const readMpvConfig = () => mpvConfig({ type: 'mpv-config' });
 
+function listen(): Promise<string | null> {
+  return new Promise((resolve) => {
+    const bridge = appBridge();
+    const stop = bridge?.subscribe((m) => {
+      if (m.type !== 'voice-result') return;
+      stop?.();
+      resolve(m.text);
+    });
+    bridge?.send({ type: 'voice-search' });
+  });
+}
+
 /** Saves it and applies it to what plays next. */
 export const saveMpvConfig = (text: string) =>
   mpvConfig({ type: 'mpv-config-save', text });
@@ -99,6 +111,10 @@ export const androidHost: Host = {
   // A TV has little storage and is always online.
   get downloads() {
     return appBridge()?.tv ? undefined : shellDownloads;
+  },
+  // A phone's keyboard has a microphone of its own.
+  get listen() {
+    return appBridge()?.tv && appBridge()?.voice ? listen : undefined;
   },
   fullscreen: {
     active: () => fullscreen,
