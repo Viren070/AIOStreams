@@ -429,7 +429,7 @@ function Versions({
             </Button>
           </div>
         )}
-        {sources.length >= FILTER_FROM && (
+        {sources.length >= FILTER_FROM && !currentHost().tv && (
           <TextInput
             data-ui="versions-filter"
             value={filter}
