@@ -23,7 +23,7 @@ import kotlinx.serialization.json.put
 
 /** libmpv, drawing into a surface of its own. */
 class MpvEngine(private val context: Context) : Engine {
-    private val mpv = MPV()
+    private lateinit var mpv: MPV
     // The page's calls wait on mpv, never the main thread.
     private val calls = Executors.newSingleThreadExecutor { Thread(it, "mpv-calls") }
     private var listener: Engine.Listener? = null
@@ -42,7 +42,6 @@ class MpvEngine(private val context: Context) : Engine {
         // mpv looks for its CA bundle and fallback subtitle font beside its config.
         copyAsset(context, CA_BUNDLE, File(dir, CA_BUNDLE))
         fallbackFont(context)
-        mpv.create(context)
         val options = mapOf(
             "config" to "yes",
             "config-dir" to dir.path,
@@ -53,7 +52,6 @@ class MpvEngine(private val context: Context) : Engine {
             "hwdec" to "mediacodec,mediacodec-copy",
             "tls-verify" to "yes",
             "tls-ca-file" to File(dir, "cacert.pem").path,
-            "idle" to "yes",
             "keep-open" to "no",
             "force-window" to "no",
             "input-default-bindings" to "no",
@@ -62,8 +60,10 @@ class MpvEngine(private val context: Context) : Engine {
             "osd-bar" to "no",
             "ytdl" to "no",
         )
-        for ((name, value) in options) mpv.setOptionString(name, value)
-        mpv.init()
+        mpv = MPV(context) { for ((name, value) in options) it.setOptionString(name, value) }
+        // MPV leaves mpv paused, and idling only until its first file ends.
+        mpv.setOptionString("idle", "yes")
+        mpv.setPropertyBoolean("pause", false)
         mpv.addObserver(observer)
         mpv.addLogObserver(logs)
         for (name in MpvProtocol.observed) mpv.observeProperty(name, formatOf(name))
@@ -111,7 +111,7 @@ class MpvEngine(private val context: Context) : Engine {
         mpv.removeObserver(observer)
         mpv.removeLogObserver(logs)
         calls.shutdown()
-        mpv.destroy()
+        mpv.close()
     }
 
     private val observer = object : MPV.EventObserver {

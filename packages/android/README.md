@@ -19,6 +19,10 @@ adb install -r app/build/outputs/apk/debug/app-arm64-v8a-debug.apk
 Each build is an APK per processor (`arm64-v8a`, `armeabi-v7a`, `x86_64`). Debug builds install as
 `io.github.viren070.aiostreams.debug`, named "AIOStreams Debug", beside a released copy.
 
+libmpv comes from `libmpv.pin`: a release of [Viren070/mpv-android](https://github.com/Viren070/mpv-android),
+which pins every source it builds, and the AAR's SHA-256. The `mpv` module downloads it and refuses one
+that hashes differently, so a new libmpv is a tag there, then its URL and hash here.
+
 ## Releases
 
 release-please versions the app in `version.txt` and tags `android-v*`; Android Release builds that
@@ -53,7 +57,7 @@ Keep a copy of the keystore: installed copies only update to builds signed with 
 | `mpv`         | libmpv                                                                       |
 | `exoplayer`   | Media3 ExoPlayer, with libmpv's libass drawing ASS subtitles                 |
 | `downloads`   | The download queue and its foreground service                                |
-| `build-logic` | The SDK levels and Java version every module shares                          |
+| `build-logic` | The SDK levels, NDK and Java version every module shares; the libmpv fetch   |
 
 ## Debugging
 

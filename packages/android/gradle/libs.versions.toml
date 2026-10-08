@@ -12,8 +12,8 @@ androidx-media3 = "1.11.1"
 androidx-webkit = "1.15.0"
 jellyfin-media3-ffmpeg = "1.9.0+1"
 kotlin = "2.4.20"
+kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.11.0"
-mpv-android-lib = "0.1.12"
 okhttp = "5.5.0"
 
 [libraries]
@@ -29,6 +29,6 @@ androidx-webkit = { module = "androidx.webkit:webkit", version.ref = "androidx-w
 jellyfin-media3-ffmpeg = { module = "org.jellyfin.media3:media3-ffmpeg-decoder", version.ref = "jellyfin-media3-ffmpeg" }
 kotlin-gradle = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 kotlin-serialization = { module = "org.jetbrains.kotlin:kotlin-serialization", version.ref = "kotlin" }
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinx-coroutines" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
-mpv-android-lib = { module = "io.github.abdallahmehiz:mpv-android-lib", version.ref = "mpv-android-lib" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
