@@ -645,14 +645,16 @@ export function WebLayout() {
           </AppLayoutContent>
         </AppLayout>
       </AppLayout>
-      <MobileNav
-        items={items.filter(
-          (i) => i !== calendar && i !== activity && i !== downloads
-        )}
-        places={[...(downloads ? [downloads] : []), activity, calendar]}
-        menuItems={[settingsItem, ...accountItems]}
-        wide={nav === 'bar'}
-      />
+      {!currentHost().tv && (
+        <MobileNav
+          items={items.filter(
+            (i) => i !== calendar && i !== activity && i !== downloads
+          )}
+          places={[...(downloads ? [downloads] : []), activity, calendar]}
+          menuItems={[settingsItem, ...accountItems]}
+          wide={nav === 'bar'}
+        />
+      )}
       <ConnectionNote />
       <ConfirmationDialog {...confirmSignOut} />
     </AppSidebarProvider>
