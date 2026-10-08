@@ -893,6 +893,14 @@ export function PlayerControls({
     if (!visible && el instanceof HTMLElement && root.current?.contains(el))
       el.blur();
   }, [visible]);
+  // The page takes the arrows before the controls see them, so keys keep them awake from here.
+  React.useEffect(() => {
+    const onKey = () => {
+      if (root.current?.contains(document.activeElement)) wake();
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [wake]);
   const positionNow = usePositionClock(state);
   const latest = useLatest(player);
   const bottomBar = React.useRef<HTMLDivElement>(null);
@@ -1099,7 +1107,6 @@ export function PlayerControls({
         !visible && 'cursor-none'
       )}
       onFocus={wake}
-      onKeyDown={wake}
       onPointerMove={wake}
       onContextMenu={(e) => e.preventDefault()}
       onPointerDown={(e) => {
