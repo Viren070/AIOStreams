@@ -414,6 +414,7 @@ export function EpisodeList({
   return (
     <div
       data-ui="episode-list"
+      data-nav-group
       className={cn(
         '-mx-2 grid gap-x-6 gap-y-1',
         columns && 'xl:grid-cols-2 min-[1800px]:grid-cols-3'

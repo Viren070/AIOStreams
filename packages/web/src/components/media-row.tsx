@@ -126,7 +126,13 @@ export function MediaRow({
       </CarouselItem>
     ));
   return (
-    <section ref={rowRef} data-ui="media-row" data-row={id} data-shape={shape}>
+    <section
+      ref={rowRef}
+      data-ui="media-row"
+      data-row={id}
+      data-shape={shape}
+      data-nav-group
+    >
       <Carousel
         opts={{ align: 'start', dragFree: true, startIndex: start }}
         restoreKey={restoreKey}
@@ -207,6 +213,7 @@ export function CardGrid({
       data-ui="card-grid"
       data-shape={shape}
       data-size={size}
+      data-nav-group
       className={cn(
         'grid gap-4',
         shape === 'wide' ? GRID_COLUMNS[size].wide : GRID_COLUMNS[size].poster

@@ -8,6 +8,7 @@ import {
   isQuiet,
   isTextField,
   markPointerFocus,
+  remember,
   overlayOpen,
   ownsKey,
   sendKey,
@@ -87,7 +88,10 @@ const onPointer = () => {
   markPointerFocus(true);
 };
 
-const onFocus = () => markPointerFocus(!keys);
+const onFocus = (e: FocusEvent) => {
+  markPointerFocus(!keys);
+  if (e.target instanceof Element) remember(e.target);
+};
 
 let recorder: ((input: string) => void) | null = null;
 

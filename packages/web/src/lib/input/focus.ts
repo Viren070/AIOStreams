@@ -212,12 +212,31 @@ function crosses(
   }
 }
 
-/** A box marked `data-nav-enter` takes focus from outside on what that selector names. */
+/**
+ * Focus coming into a box from outside lands on what its `data-nav-enter`
+ * selector names, or in a `data-nav-group` where it last was there.
+ */
 function entry(to: HTMLElement, from: HTMLElement): HTMLElement {
   const box = to.closest<HTMLElement>('[data-nav-enter]');
-  if (!box || box.contains(from)) return to;
-  const named = box.querySelector<HTMLElement>(box.dataset.navEnter!);
-  return named && canFocus(named) ? named : to;
+  if (box && !box.contains(from)) {
+    const named = box.querySelector<HTMLElement>(box.dataset.navEnter!);
+    if (named && canFocus(named)) return named;
+  }
+  const group = to.closest(GROUP);
+  if (!group || group.contains(from)) return to;
+  const last = lastIn.get(group);
+  return last && group.contains(last) && canFocus(last) ? last : to;
+}
+
+const GROUP = '[data-nav-group]';
+const lastIn = new WeakMap<Element, HTMLElement>();
+
+export function remember(el: Element): void {
+  if (!(el instanceof HTMLElement)) return;
+  for (let group = el.closest(GROUP); group; ) {
+    lastIn.set(group, el);
+    group = group.parentElement?.closest(GROUP) ?? null;
+  }
 }
 
 function barOf(el: Element): Element | null {

@@ -444,6 +444,7 @@ function Versions({
       <div
         ref={listRef}
         data-ui="versions-list"
+        data-nav-group
         className={cn(
           'relative z-[1] min-h-0 flex-1 space-y-2 overflow-y-auto border-t border-white/5 px-3 pb-5 pt-3 max-md:pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:px-5',
           info.isLoading && 'overflow-hidden'
