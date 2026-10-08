@@ -244,6 +244,8 @@ export function FocusRing({ className }: { className: string }) {
       data-ui="focus-ring"
       className={cn(
         'pointer-events-none absolute inset-0 z-[1] rounded-[inherit] opacity-0 ring-2 ring-inset ring-[--ring]',
+        // Seen from across a room.
+        '[[data-tv]_&]:ring-[3px]',
         className
       )}
     />
