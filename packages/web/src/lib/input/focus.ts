@@ -122,6 +122,8 @@ const OPPOSITE: Record<Direction, Direction> = {
 
 interface Way {
   score: number;
+  /** How far it lies beside `from`, across the way. */
+  off: number;
   /** It overlaps `from` across the way. */
   inLine: boolean;
 }
@@ -157,9 +159,12 @@ function distance(from: DOMRect, to: DOMRect, dir: Direction): Way | null {
   return {
     // Of those in line, the one whose edge lines up with this one's.
     score: Math.max(0, gap) + off * 2 + Math.abs(b1 - a1) / 100,
+    off,
     inLine: off === 0,
   };
 }
+
+type Candidate = Way & { el: HTMLElement; rect: DOMRect };
 
 function nearest(
   root: Element,
@@ -167,27 +172,35 @@ function nearest(
   dir: Direction
 ): HTMLElement | null {
   const rect = from.getBoundingClientRect();
-  const scored: (Way & { el: HTMLElement })[] = [];
+  const scored: Candidate[] = [];
   for (const el of root.querySelectorAll<HTMLElement>(FOCUSABLE)) {
     if (el === from || el.contains(from) || from.contains(el)) continue;
-    const way = distance(rect, el.getBoundingClientRect(), dir);
-    if (way) scored.push({ ...way, el });
+    const to = el.getBoundingClientRect();
+    const way = distance(rect, to, dir);
+    if (way) scored.push({ ...way, el, rect: to });
   }
   scored.sort((a, b) => a.score - b.score);
   // A fixed or sticky bar, such as the sidebar, stays put as the page scrolls
   // past it, so focus keeps to its own side over a nearer bar for what's in line.
   const home = barOf(from);
+  // Sideways keeps to its own line, so focus stops at a row's end.
+  const sideways = dir === 'left' || dir === 'right';
   let other: HTMLElement | null = null;
+  let beside = false;
   for (const way of scored) {
+    if (sideways && !way.inLine && !inView(way.rect)) continue;
     if (!canFocus(way.el)) continue;
     const bar = barOf(way.el);
     if (bar === home) {
-      if (way.inLine || !other) return way.el;
+      if (way.inLine) return way.el;
+      if (sideways) beside ||= way.off <= rect.height;
+      else if (!other) return way.el;
     } else if (!other && crosses(home ?? from, bar ?? way.el, way.el, dir)) {
       other = way.el;
     }
   }
-  return other;
+  // Sideways, a bar is entered only when nothing on this side sits just beside focus.
+  return beside ? null : other;
 }
 
 /** Focus crosses only to what's in view, into a bar or part of the page wholly that way from the one it leaves. */
@@ -247,8 +260,8 @@ function barOf(el: Element): Element | null {
   return null;
 }
 
-const inView = (el: HTMLElement) => {
-  const r = el.getBoundingClientRect();
+const inView = (el: HTMLElement | DOMRect) => {
+  const r = el instanceof DOMRect ? el : el.getBoundingClientRect();
   return (
     r.bottom > 0 && r.right > 0 && r.top < innerHeight && r.left < innerWidth
   );
