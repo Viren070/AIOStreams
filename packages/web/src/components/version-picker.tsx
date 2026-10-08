@@ -542,8 +542,10 @@ function Versions({
               <button
                 type="button"
                 data-ui="version-play"
+                // Inside the card's border, where an outline would ring it twice.
+                data-focus="own"
                 onClick={() => start(source)}
-                className="flex min-w-0 flex-1 items-start gap-3 rounded-xl p-3 text-left"
+                className="flex min-w-0 flex-1 items-start gap-3 rounded-xl p-3 text-left focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[--ring]"
               >
                 <span
                   data-ui="version-play-icon"
