@@ -80,8 +80,9 @@ function EpisodeRow({ item }: { item: BaseItemDto }) {
       href={href(itemPath(item))}
       data-ui="calendar-entry"
       data-watched={played || undefined}
+      data-focus="own"
       className={cn(
-        'flex items-center gap-3 rounded-xl p-1 transition-colors hover:bg-white/5',
+        'flex items-center gap-3 rounded-xl p-1 transition-colors hover:bg-white/5 focus-visible:bg-white/10',
         played && 'text-[--muted]'
       )}
     >
@@ -139,7 +140,7 @@ function DayCell({
       className={cn(
         'group/day relative flex h-40 min-w-0 flex-col justify-between overflow-hidden rounded-lg bg-white/[0.03] p-2 transition-colors',
         items.length && 'cursor-pointer hover:bg-white/[0.05]',
-        outside && 'opacity-30'
+        outside && 'opacity-30 focus-within:opacity-100'
       )}
     >
       {shown && (
@@ -185,10 +186,11 @@ function DayCell({
               href={href(itemPath(item))}
               data-ui="calendar-entry"
               data-watched={item.UserData?.Played || undefined}
+              data-focus="own"
               onClick={(e) => e.stopPropagation()}
               onPointerEnter={() => setHovered(item)}
               onPointerLeave={() => setHovered(undefined)}
-              className="block min-w-0 rounded-md px-1 transition-colors duration-200 hover:bg-white/10"
+              className="block min-w-0 rounded-md px-1 transition-colors duration-200 hover:bg-white/10 focus-visible:bg-white/20 focus-visible:[&_p]:text-white"
             >
               <p
                 className={cn(

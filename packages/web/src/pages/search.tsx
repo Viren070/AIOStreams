@@ -103,7 +103,8 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
                         setTerm(t);
                         history.add(t);
                       }}
-                      className="flex min-w-0 flex-1 items-center gap-3 px-2 py-2 text-left"
+                      data-focus="own"
+                      className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-2 text-left focus-visible:bg-white/10 [[data-tv]_&]:py-3"
                     >
                       <BiHistory className="flex-none text-lg text-[--muted]" />
                       <span className="truncate">{t}</span>
