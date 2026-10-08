@@ -68,6 +68,7 @@ import { useAction } from '../lib/input';
 import { UserAvatar } from './user-avatar';
 import { BrandLogo } from './brand-logo';
 import { VersionPickerProvider } from './version-picker';
+import { ItemMenuHost } from './item-menu';
 
 const PAGE_FADE = {
   initial: { opacity: 0, top: 6 },
@@ -627,20 +628,22 @@ export function WebLayout() {
               />
             )}
             <VersionPickerProvider>
-              <motion.div
-                key={pathname}
-                data-page={pageName(pathname)}
-                {...PAGE_FADE}
-                className={cn(
-                  'relative pb-[var(--nav-bar)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]',
-                  // In place of the sidebar's gutter, which pages leave to it.
-                  (nav === 'bar' || nav === 'tv-top') &&
-                    'lg:pl-[calc(2.5rem+env(safe-area-inset-left))]'
-                )}
-              >
-                <Outlet />
-                <PageScroll />
-              </motion.div>
+              <ItemMenuHost>
+                <motion.div
+                  key={pathname}
+                  data-page={pageName(pathname)}
+                  {...PAGE_FADE}
+                  className={cn(
+                    'relative pb-[var(--nav-bar)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]',
+                    // In place of the sidebar's gutter, which pages leave to it.
+                    (nav === 'bar' || nav === 'tv-top') &&
+                      'lg:pl-[calc(2.5rem+env(safe-area-inset-left))]'
+                  )}
+                >
+                  <Outlet />
+                  <PageScroll />
+                </motion.div>
+              </ItemMenuHost>
             </VersionPickerProvider>
           </AppLayoutContent>
         </AppLayout>
