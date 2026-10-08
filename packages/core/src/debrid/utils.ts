@@ -240,6 +240,7 @@ export interface NZB extends BaseFile {
   zyclopsHealth?: string;
   serviceItemId?: string;
   releaseKey?: string;
+  infoUrl?: string;
 }
 
 export interface TorrentWithSelectedFile extends Torrent {

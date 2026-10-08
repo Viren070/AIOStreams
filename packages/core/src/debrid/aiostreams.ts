@@ -362,6 +362,7 @@ export class NativeUsenetService implements UsenetDebridService {
       filename: chosenFilename,
       releaseKey: playbackInfo.releaseKey,
       indexer: playbackInfo.indexer,
+      infoUrl: playbackInfo.infoUrl,
       owner: this.owner,
       imdbId: playbackInfo.metadata?.imdbId ?? undefined,
       tmdbId: playbackInfo.metadata?.tmdbId ?? undefined,

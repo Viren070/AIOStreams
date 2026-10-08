@@ -209,6 +209,8 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
           0,
         type: 'usenet',
         parsedMediaInfo,
+        // As Prowlarr does: https://github.com/Prowlarr/Prowlarr/blob/3c6e1d97ac485a70cc9d4063dd5d17af7a77584d/src/NzbDrone.Core/Indexers/Definitions/Newznab/NewznabRssParser.cs#L123-L126
+        infoUrl: result.comments?.replace(/#comments$/, ''),
       };
 
       const keySize =

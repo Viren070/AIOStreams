@@ -1337,6 +1337,7 @@ export const ReleaseKeySchema = z
 export const StreamSchema = z.looseObject({
   url: z.string().or(z.null()).optional(),
   nzbUrl: z.string().or(z.null()).optional(),
+  infoUrl: z.string().or(z.null()).optional(),
   releaseKey: ReleaseKeySchema,
   idMatched: z.boolean().optional(),
   servers: z.array(z.string().min(1)).nullable().optional(),
@@ -1521,6 +1522,7 @@ export const ParsedStreamSchema = z.object({
   passthrough: PassthroughSchema.optional(),
   url: z.string().optional(),
   nzbUrl: z.string().optional(),
+  infoUrl: z.string().optional(),
   releaseKey: ReleaseKeySchema,
   // Same-release failover targets harvested from discarded duplicates by the
   // deduplicator merge step. Each is another playback URL for the *same*

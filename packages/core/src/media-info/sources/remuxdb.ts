@@ -1,9 +1,5 @@
 import type { ParsedStream } from '../../db/schemas.js';
-import {
-  extractNzbGuid,
-  fromRemuxDbVersion,
-  resolveRemuxDbIndexer,
-} from '../../remuxdb/adapter.js';
+import { fromRemuxDbVersion, nzbIndexerGuid } from '../../remuxdb/adapter.js';
 import type { MediaProbeVersion } from '../../remuxdb/client.js';
 import { releaseKeyKind, torrentKey } from '../../release-blocklist/keys.js';
 import { nzbUrlKey } from '../identity.js';
@@ -26,8 +22,8 @@ export function queueRemuxDbMatch(
     const key = torrentKey(hash);
     if (key) releaseKeys = [key];
   } else if (stream.nzbUrl) {
-    const indexer = resolveRemuxDbIndexer(stream.nzbUrl);
-    const guid = extractNzbGuid(stream.nzbUrl);
+    const { indexer, guid } =
+      nzbIndexerGuid(stream.nzbUrl, stream.infoUrl) ?? {};
     source = version.sources.find(
       (s) => !!indexer && s.indexer === indexer && s.indexer_guid === guid
     );
