@@ -1913,8 +1913,8 @@ function sections(): Section[] {
       group: 'App',
       Content: InterfaceSection,
     },
-    // A touch screen has no keys to set.
-    ...(matchMedia('(pointer: coarse)').matches
+    // A touch screen has no keys to set, and a remote too few to move around.
+    ...(host.tv || matchMedia('(pointer: coarse)').matches
       ? []
       : [
           {
