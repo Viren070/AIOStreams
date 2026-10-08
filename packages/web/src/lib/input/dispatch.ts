@@ -243,11 +243,10 @@ function onKey(e: KeyboardEvent, early: boolean): void {
   const target = e.target instanceof Element ? e.target : null;
   if (movesFocus(input) !== early) return;
   const ids = actionsFor(input);
-  if (
-    inKeyedList(target) ||
-    (early ? ownsKey(target, input) : e.defaultPrevented)
-  )
-    return;
+  // A list closes on Esc itself, but not on a remote's Back.
+  const listKey =
+    inKeyedList(target) && !(ids.includes('back') && input !== 'Escape');
+  if (listKey || (early ? ownsKey(target, input) : e.defaultPrevented)) return;
   // A field keeps the keys typed into it, except Back.
   const typing = !early && (isTextField(target) || !!target?.matches('select'));
   const handled = throttled(e, input, () =>
