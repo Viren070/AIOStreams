@@ -1123,7 +1123,7 @@ function InterfaceSection() {
         />
         <Select
           label="Hero"
-          help="Following pins it above the rows and shows the card the pointer rests on or the keyboard is on, starting with a featured title. Touch screens and narrow windows keep it rotating."
+          help="Following pins it above the rows and shows the card the pointer, keyboard or remote is on, starting with a featured title. Touch screens and narrow windows keep it rotating."
           options={[
             { value: 'rotate', label: 'Rotates through featured titles' },
             { value: 'follow', label: 'Follows the selected card' },

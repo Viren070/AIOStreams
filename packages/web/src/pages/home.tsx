@@ -43,6 +43,7 @@ import {
 import { NoCatalogs } from '../components/no-catalogs';
 import { FILL_WINDOW } from '../components/layout';
 import type { BaseItemDto } from '../lib/types';
+import { currentHost } from '../lib/hosts';
 
 const HERO_ITEMS = 8;
 const HERO_MAX = 10;
@@ -135,11 +136,12 @@ export function HomePage() {
     (sources.includes('resume') && continueLoading) ||
     (sources.includes('next-up') && nextUp.isLoading) ||
     heads.some((h) => h.isLoading);
-  // Following needs a pointer to rest on cards and room for rows under the hero.
+  // Following needs a pointer or remote to rest on cards and room for rows under the hero.
   const [heroMode] = useSetting(settings.heroMode);
-  const canFollow = useMediaQuery(
+  const pointer = useMediaQuery(
     '(min-width: 1024px) and (hover: hover) and (pointer: fine)'
   );
+  const canFollow = pointer || !!currentHost().tv;
   const follow = heroMode === 'follow' && canFollow;
 
   const rows = (

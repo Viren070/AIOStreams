@@ -16,7 +16,7 @@ import { useHold } from '../lib/use-hold';
 import { CachedImage } from './cached-image';
 
 const ROTATE_MS = 9000;
-/** How long the pointer rests on a card before the hero follows it. */
+/** How long the pointer or focus rests on a card before the hero follows it. */
 const FOLLOW_DELAY_MS = 300;
 
 function Shade() {
@@ -328,11 +328,9 @@ export function Hero({
 }
 
 interface Follow {
-  /** The pointer came to rest on a card. */
+  /** The pointer or focus came to rest on a card. */
   rest(item: BaseItemDto): void;
   leave(): void;
-  /** Keyboard focus, which the hero follows at once. */
-  pick(item: BaseItemDto): void;
 }
 
 const FollowContext = React.createContext<Follow | null>(null);
@@ -346,7 +344,7 @@ export function useHeroTarget(item: BaseItemDto) {
       if (e.pointerType === 'mouse') follow.rest(item);
     },
     onPointerLeave: follow.leave,
-    onFocus: () => follow.pick(item),
+    onFocus: () => follow.rest(item),
   };
 }
 
@@ -416,10 +414,6 @@ export function FollowHero({
         timer.current = setTimeout(() => setPicked(item), FOLLOW_DELAY_MS);
       },
       leave: () => clearTimeout(timer.current),
-      pick: (item) => {
-        clearTimeout(timer.current);
-        setPicked(item);
-      },
     }),
     []
   );
