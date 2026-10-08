@@ -347,10 +347,12 @@ export function openMenu(): boolean {
 }
 
 /** The key where a widget handles it, which menus and pickers open on; a click otherwise. */
-export function activate(key = ' '): boolean {
+export function activate(key?: string): boolean {
   const el = document.activeElement;
   // With nothing focused, a press shows where focus starts, as an arrow does.
   if (!(el instanceof HTMLElement) || el === document.body) return move('down');
+  // A field types a space, and picks a list's highlighted option on Enter.
+  key ??= isTextField(el) ? 'Enter' : ' ';
   if (!sendKey(key, { quiet: true }).defaultPrevented) el.click();
   return true;
 }
