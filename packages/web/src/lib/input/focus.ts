@@ -330,7 +330,12 @@ function reveal(el: HTMLElement): void {
     });
     rect = new DOMRect(rect.x - dx, rect.y - dy, rect.width, rect.height);
   }
-  const room = Math.min(96, innerHeight * 0.15);
+  // A dialog or bar stays put as the page behind it scrolls.
+  if (barOf(el)) return;
+  // A TV keeps focus off the screen's edges, where it's hard to follow from across a room.
+  const room = document.documentElement.hasAttribute('data-tv')
+    ? innerHeight / 4
+    : Math.min(96, innerHeight * 0.15);
   const dy = shortfall(
     { start: 0, end: innerHeight },
     rect.top,
