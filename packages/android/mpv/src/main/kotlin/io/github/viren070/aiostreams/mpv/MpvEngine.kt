@@ -1,6 +1,7 @@
 package io.github.viren070.aiostreams.mpv
 
 import android.content.Context
+import android.util.Base64
 import android.util.Log
 import android.view.SurfaceHolder
 import android.view.SurfaceView
@@ -10,6 +11,7 @@ import io.github.viren070.aiostreams.playback.MpvProtocol
 import `is`.xyz.mpv.MPV
 import `is`.xyz.mpv.MPVNode
 import java.io.File
+import java.security.KeyStore
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -39,8 +41,8 @@ class MpvEngine(private val context: Context) : Engine {
     override fun start(listener: Engine.Listener) {
         this.listener = listener
         dir.mkdirs()
-        // mpv looks for its CA bundle and fallback subtitle font beside its config.
-        copyAsset(context, CA_BUNDLE, File(dir, CA_BUNDLE))
+        // mpv's TLS can't read Android's certificate store, so it gets a copy each start.
+        writeCertificates(File(dir, CA_BUNDLE))
         fallbackFont(context)
         val options = mapOf(
             "config" to "yes",
@@ -51,7 +53,7 @@ class MpvEngine(private val context: Context) : Engine {
             "gpu-context" to "android",
             "hwdec" to "mediacodec,mediacodec-copy",
             "tls-verify" to "yes",
-            "tls-ca-file" to File(dir, "cacert.pem").path,
+            "tls-ca-file" to File(dir, CA_BUNDLE).path,
             "keep-open" to "no",
             "force-window" to "no",
             "input-default-bindings" to "no",
@@ -168,6 +170,19 @@ class MpvEngine(private val context: Context) : Engine {
         /** The font mpv draws subtitles in where a script's own fonts are missing. */
         fun fallbackFont(context: Context): File =
             File(File(context.filesDir, "mpv").apply { mkdirs() }, FONT).also { copyAsset(context, FONT, it) }
+
+        /** Every certificate Android trusts, the user's own included, as PEM. */
+        private fun writeCertificates(target: File) {
+            val store = KeyStore.getInstance("AndroidCAStore").apply { load(null) }
+            target.writeText(buildString {
+                for (alias in store.aliases()) {
+                    val certificate = store.getCertificate(alias) ?: continue
+                    append("-----BEGIN CERTIFICATE-----\n")
+                    append(Base64.encodeToString(certificate.encoded, Base64.DEFAULT))
+                    append("-----END CERTIFICATE-----\n")
+                }
+            })
+        }
 
         private fun copyAsset(context: Context, name: String, target: File) {
             if (target.exists()) return
