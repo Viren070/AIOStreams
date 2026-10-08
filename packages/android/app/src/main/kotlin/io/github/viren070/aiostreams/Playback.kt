@@ -46,6 +46,11 @@ class Playback(private val context: Context, private val announce: (engine: Stri
         return true
     }
 
+    /** The page's retry of a file that failed, on the other engine; the next file starts on the pick again. */
+    fun retry(next: String, player: PlayerChannel) {
+        if (next == MPV || next == EXOPLAYER) use(next, player, reload = true)
+    }
+
     private fun use(next: String, player: PlayerChannel, reload: Boolean) {
         if (next == name) return
         name = next

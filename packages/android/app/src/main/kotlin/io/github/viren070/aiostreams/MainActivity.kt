@@ -162,6 +162,7 @@ class MainActivity : ComponentActivity() {
                 sendLinks()
             }
             "player-engine" -> message["name"]?.jsonPrimitive?.contentOrNull?.let { playback.choose(it, player) }
+            "player-retry" -> message["name"]?.jsonPrimitive?.contentOrNull?.let { playback.retry(it, player) }
             "mpv-config" -> sendMpvConfig()
             "mpv-config-save" -> {
                 MpvEngine.configFile(this).writeText(message["text"]?.jsonPrimitive?.content.orEmpty())
