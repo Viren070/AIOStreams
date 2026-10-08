@@ -70,7 +70,7 @@ export class CauldronPreset extends BuiltinAddonPreset {
     return {
       ID: 'cauldron',
       NAME: 'Cauldron',
-      LOGO: '',
+      LOGO: '/assets/cauldron_logo.png',
       URL: [`${appConfig.bootstrap.internalUrl}/builtins/cauldron`],
       TIMEOUT: appConfig.presets.defaultTimeout,
       USER_AGENT: appConfig.http.defaultUserAgent,
