@@ -246,8 +246,17 @@ function first(root: Element): HTMLElement | null {
   );
 }
 
-const smooth = (): ScrollBehavior =>
-  matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+let scrolledAt = -Infinity;
+
+/** Restarting a smooth scroll that's still going, as a held key does, only creeps, so that one jumps. */
+function scrollBehavior(): ScrollBehavior {
+  const now = performance.now();
+  const going = now - scrolledAt < 300;
+  scrolledAt = now;
+  return going || matchMedia('(prefers-reduced-motion: reduce)').matches
+    ? 'auto'
+    : 'smooth';
+}
 
 /** How far a box must scroll to show `rect` with some room around it. */
 function shortfall(
@@ -266,7 +275,7 @@ function shortfall(
 /** Scrolls each box holding `el`, innermost first; carousels move themselves. */
 function reveal(el: HTMLElement): void {
   let rect = el.getBoundingClientRect();
-  const behavior = smooth();
+  let behavior: ScrollBehavior | undefined;
   for (let box = el.parentElement; box; box = box.parentElement) {
     if (box === document.body || box === document.documentElement) break;
     const style = getComputedStyle(box);
@@ -294,6 +303,7 @@ function reveal(el: HTMLElement): void {
         )
       : 0;
     if (!dx && !dy) continue;
+    behavior ??= scrollBehavior();
     box.scrollTo({
       top: box.scrollTop + dy,
       left: box.scrollLeft + dx,
@@ -308,13 +318,17 @@ function reveal(el: HTMLElement): void {
     rect.bottom,
     room
   );
-  if (dy) window.scrollTo({ top: scrollY + dy, behavior });
+  if (dy)
+    window.scrollTo({
+      top: scrollY + dy,
+      behavior: behavior ?? scrollBehavior(),
+    });
 }
 
 /** Scrolls the box holding focus, or else the page, a step up or down. */
 export function scrollStep(dir: 'up' | 'down'): void {
   const dy = (dir === 'up' ? -1 : 1) * Math.round(innerHeight / 4);
-  const behavior = smooth();
+  const behavior = scrollBehavior();
   for (
     let box = document.activeElement?.parentElement;
     box && box !== document.body && box !== document.documentElement;
