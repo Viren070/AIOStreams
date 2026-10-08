@@ -356,6 +356,7 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
   return (
     <div
       data-ui="item-header"
+      data-nav-top
       className="flex flex-col gap-6 md:flex-row md:items-end md:gap-8"
     >
       {poster && (

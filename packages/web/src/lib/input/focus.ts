@@ -420,7 +420,7 @@ function shownBox(el: HTMLElement): Element {
 /**
  * Scrolls each box holding `el`, innermost first; carousels and boxes marked
  * `data-nav-self-scroll` move themselves. Inside `data-nav-box`es, the
- * outermost comes into view.
+ * outermost comes into view; inside `data-nav-top`, the page goes to its top.
  */
 function reveal(el: HTMLElement): void {
   let rect = shownBox(el).getBoundingClientRect();
@@ -467,12 +467,9 @@ function reveal(el: HTMLElement): void {
   const room = document.documentElement.hasAttribute('data-tv')
     ? innerHeight / 4
     : Math.min(96, innerHeight * 0.15);
-  const dy = shortfall(
-    { start: 0, end: innerHeight },
-    rect.top,
-    rect.bottom,
-    room
-  );
+  const dy = el.closest('[data-nav-top]')
+    ? -scrollY
+    : shortfall({ start: 0, end: innerHeight }, rect.top, rect.bottom, room);
   if (dy)
     window.scrollTo({
       top: scrollY + dy,
