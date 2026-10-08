@@ -11,7 +11,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /** Whatever the page reads from `window.aiostreamsApp` as it starts. */
-data class AppIdentity(val version: String, val device: String, val deviceId: String)
+data class AppIdentity(val version: String, val device: String, val deviceId: String, val tv: Boolean)
 
 /**
  * The page's `window.aiostreamsApp`, the desktop app's protocol carried by a
@@ -78,6 +78,7 @@ class AppBridge(
             protocol: 1,
             version: ${JsonPrimitive(identity.version)},
             platform: 'android',
+            tv: ${identity.tv},
             device: ${JsonPrimitive(identity.device)},
             deviceId: ${JsonPrimitive(identity.deviceId)},
             send,

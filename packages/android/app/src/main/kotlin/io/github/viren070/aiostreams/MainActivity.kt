@@ -5,6 +5,7 @@ import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Intent
 import android.app.NotificationManager
+import android.app.UiModeManager
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.net.Uri
@@ -97,7 +98,7 @@ class MainActivity : ComponentActivity() {
             beforeLoad = { playback.beforeLoad(player) },
             fallBack = { playback.fallBack(player) },
         )
-        bridge = AppBridge(web, app.origins, AppIdentity(BuildConfig.VERSION_NAME, deviceName(), deviceId()), ::onMessage)
+        bridge = AppBridge(web, app.origins, AppIdentity(BuildConfig.VERSION_NAME, deviceName(), deviceId(), onTv()), ::onMessage)
         updater = Updater(this) { bridge.send(it) }
         pip = PictureInPicture(this, playback.stage)
         focus = AudioFocus(
@@ -260,6 +261,9 @@ class MainActivity : ComponentActivity() {
     }
 
     /** Kept by the app, as the page's storage goes with the address it loads from. */
+    private fun onTv() =
+        getSystemService(UiModeManager::class.java).currentModeType == Configuration.UI_MODE_TYPE_TELEVISION
+
     private fun deviceId(): String {
         val saved = getSharedPreferences("device", MODE_PRIVATE)
         return saved.getString("id", null)

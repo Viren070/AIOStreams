@@ -48,6 +48,9 @@ class WebApp(private val devUrl: String?) {
             allowContentAccess = false
             // A pinch or double tap would otherwise zoom the page.
             setSupportZoom(false)
+            // Lets a TV's page lay out wider than the screen's dp and fit it.
+            useWideViewPort = true
+            loadWithOverviewMode = true
         }
         webView.setBackgroundColor(Color.TRANSPARENT)
         // Kept alive behind other apps, where the page still reports playback.
