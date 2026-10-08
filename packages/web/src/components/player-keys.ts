@@ -161,8 +161,11 @@ export function usePlayerKeys(keys: PlayerKeys): void {
       'player.skipSegment': () => call(k().skipSegment),
       'player.previous': () => call(k().onPrevious),
       'player.next': () => call(k().onNext),
-      'player.volumeUp': () => nudgeVolume(1),
-      'player.volumeDown': () => nudgeVolume(-1),
+      // A remote's own volume keys set a TV's volume, so Up and Down bring the controls back.
+      'player.volumeUp': () =>
+        currentHost().tv ? focusControls() : nudgeVolume(1),
+      'player.volumeDown': () =>
+        currentHost().tv ? focusControls() : nudgeVolume(-1),
       'player.mute': () => player().toggleMute(),
       'player.audio': () => {
         const { audioTracks, state, setAudio } = player();
