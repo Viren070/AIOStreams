@@ -1,4 +1,5 @@
 import React from 'react';
+import { useReducedMotion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import type { IconType } from 'react-icons';
@@ -1992,6 +1993,8 @@ export function SettingsPage({
 }) {
   const all = React.useMemo(sections, []);
   const donation = useDisclosure(false);
+  // With no marker sliding, the tabs keep the usual focus mark.
+  const still = useReducedMotion();
   const active = all.find((s) => s.id === tab) ?? all[0];
   const groups = new Map<string, Section[]>();
   for (const s of all) groups.set(s.group, [...(groups.get(s.group) ?? []), s]);
@@ -2009,8 +2012,11 @@ export function SettingsPage({
         triggerClass={cn(
           'h-9 w-fit rounded-lg border-0 px-3 text-base lg:w-full lg:justify-start',
           'data-[state=active]:bg-[--subtle] data-[state=active]:text-white dark:hover:text-white',
-          'transition-all duration-200 hover:bg-[--subtle]/50'
+          'transition-all duration-200 hover:bg-[--subtle]/50 focus-visible:ring-0 focus-visible:ring-offset-0',
+          'motion-reduce:[[data-tv]_&]:focus-visible:bg-white/20'
         )}
+        // The sliding marker carries the focus mark, so the two move together.
+        indicatorClass="group-focus-visible:outline group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-[--ring] [[data-tv]_&]:group-focus-visible:bg-white/20 [[data-tv]_&]:group-focus-visible:outline-none [html[data-pointer-focus]_&]:!outline-none"
         listClass="h-fit w-full flex flex-wrap lg:block lg:flex-nowrap"
       >
         <TabsList className="max-w-full flex-wrap lg:sticky lg:top-6 lg:space-y-3">
@@ -2027,6 +2033,7 @@ export function SettingsPage({
                   key={s.id}
                   value={s.id}
                   data-name={s.id}
+                  data-focus={still && !currentHost().tv ? undefined : 'own'}
                   className="group"
                 >
                   <s.icon className="mr-3 text-xl transition-transform duration-200 group-hover:translate-x-0.5" />

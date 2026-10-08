@@ -117,7 +117,7 @@ export function Overview({
                 type="button"
                 data-ui="overview-more"
                 data-focus="own"
-                className="relative z-[1] clear-both float-right pl-5 font-medium text-[--muted] transition-colors hover:text-white focus-visible:text-white focus-visible:underline"
+                className="relative z-[1] clear-both float-right pl-5 font-medium text-[--muted] transition-[color,box-shadow] hover:text-white focus-visible:text-white focus-visible:underline [[data-tv]_&]:ml-5 [[data-tv]_&]:rounded-full [[data-tv]_&]:px-2 [[data-tv]_&]:focus-visible:shadow-[inset_0_0_0_999px_rgb(255_255_255/0.2)] [[data-tv]_&]:focus-visible:no-underline"
               >
                 More
               </button>
