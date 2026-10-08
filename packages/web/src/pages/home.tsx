@@ -358,6 +358,7 @@ function LibraryRow({ view }: { view: BaseItemDto }) {
       }
       shape={landscape ? 'wide' : 'poster'}
       loading={!pages.data && !pages.isError}
+      waiting={!near}
       loadingMore={isFetchingNextPage}
       onEndReached={more}
     >

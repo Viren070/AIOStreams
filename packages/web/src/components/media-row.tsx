@@ -86,6 +86,7 @@ export function MediaRow({
   shape,
   itemClass,
   loading,
+  waiting,
   loadingMore,
   onEndReached,
   startIndex,
@@ -101,6 +102,8 @@ export function MediaRow({
   /** Replaces the shape's card width, for rows of something else. */
   itemClass?: string;
   loading?: boolean;
+  /** Not fetching yet, so its placeholders hold still rather than pulse unseen. */
+  waiting?: boolean;
   loadingMore?: boolean;
   onEndReached?: () => void;
   /** Read once, so the row stays put as its items change. */
@@ -122,7 +125,11 @@ export function MediaRow({
         className={width}
       >
         <Skeleton
-          className={cn('h-auto w-full rounded-xl', SKELETON_SHAPE[shape])}
+          className={cn(
+            'h-auto w-full rounded-xl',
+            SKELETON_SHAPE[shape],
+            waiting && 'animate-none'
+          )}
         />
       </CarouselItem>
     ));
