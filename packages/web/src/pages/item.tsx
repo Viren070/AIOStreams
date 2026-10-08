@@ -65,7 +65,7 @@ import { useInView } from '../lib/use-in-view';
 import { MediaRow } from '../components/media-row';
 import { PageMessage } from '../components/layout';
 import { MixedGrid } from '../components/mixed-grid';
-import { PosterCard } from '../components/cards';
+import { FocusRing, PosterCard } from '../components/cards';
 import { Overview } from '../components/overview';
 import {
   EpisodeCard,
@@ -704,6 +704,7 @@ function Seasons({
                   type="button"
                   data-ui="season-poster"
                   data-selected={selected || undefined}
+                  data-focus="own"
                   onClick={() => pick(s.Id!)}
                   className="group/season w-full space-y-2 text-left"
                 >
@@ -716,10 +717,11 @@ function Seasons({
                         className={cn(
                           'absolute inset-0 h-full w-full object-cover transition-opacity',
                           !selected &&
-                            'opacity-60 group-hover/season:opacity-100'
+                            'opacity-60 group-hover/season:opacity-100 group-focus-visible/season:opacity-100'
                         )}
                       />
                     )}
+                    <FocusRing className="group-focus-visible/season:opacity-100" />
                     {/* Drawn inside, since the row clips anything outside it. */}
                     <span
                       className={cn(
@@ -741,7 +743,7 @@ function Seasons({
                       'truncate text-sm',
                       selected
                         ? 'font-semibold text-white'
-                        : 'text-[--muted] group-hover/season:text-white'
+                        : 'text-[--muted] group-hover/season:text-white group-focus-visible/season:text-white'
                     )}
                   >
                     {s.Name}
