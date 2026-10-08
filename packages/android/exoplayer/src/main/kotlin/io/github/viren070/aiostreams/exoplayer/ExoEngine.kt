@@ -36,6 +36,8 @@ import androidx.media3.exoplayer.ExoPlaybackException
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.SeekParameters
 import androidx.media3.exoplayer.analytics.AnalyticsListener
+import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.audio.ForwardingAudioSink
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.UnrecognizedInputFormatException
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
@@ -110,11 +112,21 @@ class ExoEngine(private val context: Context) :
     @Volatile
     private var lastFrameAtNs = 0L
 
+    @Volatile
+    private var passthrough = false
+
     private var tunneling = false
 
     init {
         val sources = DefaultMediaSourceFactory(data, SubtitleExtractors({ readBack }) { SubtitleSink(ass.sink(), texts.sink()) })
-        val renderers = DefaultRenderersFactory(context)
+        val renderers = object : DefaultRenderersFactory(context) {
+            override fun buildAudioSink(
+                context: Context,
+                enableFloatOutput: Boolean,
+                enableAudioOutputPlaybackParameters: Boolean,
+            ): AudioSink? = super.buildAudioSink(context, enableFloatOutput, enableAudioOutputPlaybackParameters)
+                ?.let { PassthroughSink(it) { passthrough } }
+        }
             .setEnableDecoderFallback(true)
             .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
         val audio = AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build()
@@ -244,6 +256,8 @@ class ExoEngine(private val context: Context) :
                 redrawSubtitles()
             }
             "time-pos" -> value.toDoubleOrNull()?.let { seek(it, "absolute") }
+            // Applies from the next audio track it picks.
+            "audio-spdif" -> passthrough = value.isNotEmpty()
             "keepaspect" -> stage?.keepAspect = value == "yes"
             "panscan" -> stage?.panscan = value.toDoubleOrNull() ?: 0.0
             else -> if (style.set(name, value)) {
@@ -657,6 +671,15 @@ class ExoEngine(private val context: Context) :
         }
         done.await(2, TimeUnit.SECONDS)
         return result?.getOrThrow() ?: error("the player didn't answer")
+    }
+
+    private class PassthroughSink(sink: AudioSink, private val on: () -> Boolean) : ForwardingAudioSink(sink) {
+        private fun allowed(format: Format) = on() || format.sampleMimeType == MimeTypes.AUDIO_RAW
+
+        override fun supportsFormat(format: Format) = allowed(format) && super.supportsFormat(format)
+
+        override fun getFormatSupport(format: Format) =
+            if (allowed(format)) super.getFormatSupport(format) else AudioSink.SINK_FORMAT_UNSUPPORTED
     }
 
     private companion object {
