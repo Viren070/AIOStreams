@@ -594,18 +594,20 @@ function AudioSection() {
           onValueChange={(v) => update({ RememberAudioSelections: v })}
         />
       </SettingsCard>
-      {currentHost().name === 'desktop' && (
+      {shellHost() && (
         <SettingsCard title="Output" description={ON_DEVICE}>
-          <Select
-            label="Channels"
-            help="What your speakers or receiver take."
-            options={AUDIO_CHANNELS.map((c) => ({
-              value: c,
-              label: CHANNEL_LABELS[c],
-            }))}
-            value={audioChannels}
-            onValueChange={(v) => setAudioChannels(v as AudioChannels)}
-          />
+          {currentHost().name === 'desktop' && (
+            <Select
+              label="Channels"
+              help="What your speakers or receiver take."
+              options={AUDIO_CHANNELS.map((c) => ({
+                value: c,
+                label: CHANNEL_LABELS[c],
+              }))}
+              value={audioChannels}
+              onValueChange={(v) => setAudioChannels(v as AudioChannels)}
+            />
+          )}
           <Switch
             side="right"
             label="Pass surround audio through"
