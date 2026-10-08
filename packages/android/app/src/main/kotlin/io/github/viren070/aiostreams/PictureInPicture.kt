@@ -2,6 +2,8 @@ package io.github.viren070.aiostreams
 
 import android.app.Activity
 import android.app.PictureInPictureParams
+import android.content.Context
+import android.content.pm.PackageManager
 import android.graphics.Rect
 import android.os.Build
 import android.util.Rational
@@ -10,11 +12,12 @@ import androidx.media3.common.VideoSize
 
 /** The video in a small window of its own, entered on leaving the app while it plays. */
 class PictureInPicture(private val activity: Activity, private val video: View) {
+    private val supported = supported(activity)
     private var allowed = false
     private var size = VideoSize.UNKNOWN
 
     fun update(allowed: Boolean, size: VideoSize) {
-        if (allowed == this.allowed && size == this.size) return
+        if (!supported || (allowed == this.allowed && size == this.size)) return
         this.allowed = allowed
         this.size = size
         activity.setPictureInPictureParams(params())
@@ -54,7 +57,10 @@ class PictureInPicture(private val activity: Activity, private val video: View) 
         }
     }
 
-    private companion object {
-        const val MAX_RATIO = 2.39f
+    companion object {
+        private const val MAX_RATIO = 2.39f
+
+        fun supported(context: Context) =
+            context.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
     }
 }

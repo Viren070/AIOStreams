@@ -121,7 +121,15 @@ class MainActivity : ComponentActivity() {
         )
         gamepads = hasGamepad()
         getSystemService(InputManager::class.java).registerInputDeviceListener(controllers, null)
-        val identity = AppIdentity(BuildConfig.VERSION_NAME, deviceName(), deviceId(), onTv(), canListen(), gamepads)
+        val identity = AppIdentity(
+            BuildConfig.VERSION_NAME,
+            deviceName(),
+            deviceId(),
+            onTv(),
+            canListen(),
+            gamepads,
+            PictureInPicture.supported(this),
+        )
         bridge = AppBridge(web, app.origins, identity, ::onMessage)
         updater = Updater(this) { bridge.send(it) }
         pip = PictureInPicture(this, playback.stage)

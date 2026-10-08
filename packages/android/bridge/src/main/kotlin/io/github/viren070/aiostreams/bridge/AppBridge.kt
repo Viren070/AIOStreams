@@ -20,6 +20,8 @@ data class AppIdentity(
     val voice: Boolean,
     /** A game controller attached, so the page's gamepad support may start. */
     val gamepads: Boolean,
+    /** Picture-in-picture, which many TVs leave out. */
+    val pip: Boolean,
 )
 
 /**
@@ -90,6 +92,7 @@ class AppBridge(
             tv: ${identity.tv},
             voice: ${identity.voice},
             gamepads: ${identity.gamepads},
+            pip: ${identity.pip},
             device: ${JsonPrimitive(identity.device)},
             deviceId: ${JsonPrimitive(identity.deviceId)},
             send,
