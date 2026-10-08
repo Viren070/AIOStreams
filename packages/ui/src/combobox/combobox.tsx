@@ -329,6 +329,11 @@ export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
           <Popover
             open={open}
             onOpenChange={setOpen}
+            // Opened from keys, focus moves into the list; a pointer or touch keeps it.
+            onOpenAutoFocus={(e) => {
+              if (!buttonRef.current?.matches(':focus-visible'))
+                e.preventDefault();
+            }}
             className={cn(ComboboxAnatomy.popover(), popoverClass)}
             trigger={
               <button
