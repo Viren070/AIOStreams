@@ -56,17 +56,27 @@ export const canShrink =
   typeof createImageBitmap === 'function';
 
 const IN_FLIGHT = 4;
+/** One core is left to the page. */
+const WORKERS = Math.max(
+  1,
+  Math.min(3, (navigator.hardwareConcurrency || 2) - 1)
+);
 
 interface Pending extends Omit<ShrinkJob, 'save' | 'look' | 'accept'> {
   resolve: (result: Shrunk) => void;
   cancelled: boolean;
 }
 
-let worker: Worker | null = null;
+interface Slot {
+  worker: Worker;
+  busy: number;
+}
+
+const slots: Slot[] = [];
 let broken = false;
 let nextId = 0;
 const queue: Pending[] = [];
-const running = new Map<number, Pending>();
+const running = new Map<number, { job: Pending; slot: Slot }>();
 
 /*
  * A plain image cannot reuse a refused fetch's download, as the two are cached
@@ -99,52 +109,72 @@ function settle(job: Pending, reply: ShrinkReply) {
   else job.resolve(reply.bitmap ? { bitmap: reply.bitmap } : { plain: true });
 }
 
-function start(): Worker | null {
-  if (worker || broken) return worker;
+function start(): Slot | null {
+  let worker: Worker;
   try {
     worker = new Worker(new URL('./artwork-worker.ts', import.meta.url));
   } catch {
     broken = true;
     return null;
   }
+  const slot = { worker, busy: 0 };
   worker.onmessage = (e: MessageEvent<ShrinkReply>) => {
     if (e.data.unsupported) broken = true;
     if (e.data.saved) {
       noteSaved(e.data.saved);
       schedulePrune();
     }
-    const job = running.get(e.data.id);
-    if (!job) return;
+    const entry = running.get(e.data.id);
+    if (!entry) return;
     running.delete(e.data.id);
-    settle(job, e.data);
+    slot.busy--;
+    settle(entry.job, e.data);
     pump();
   };
   worker.onerror = () => {
     broken = true;
-    worker?.terminate();
-    worker = null;
-    for (const job of [...running.values(), ...queue.splice(0)])
+    for (const s of slots.splice(0)) s.worker.terminate();
+    for (const job of [
+      ...[...running.values()].map((r) => r.job),
+      ...queue.splice(0),
+    ])
       settle(job, { id: job.id, error: 'worker failed' });
     running.clear();
   };
-  return worker;
+  slots.push(slot);
+  return slot;
+}
+
+/** Starts another worker only while every one is busy. */
+function freeSlot(): Slot | null {
+  if (broken) return null;
+  const least = slots.reduce<Slot | null>(
+    (best, s) => (!best || s.busy < best.busy ? s : best),
+    null
+  );
+  if ((!least || least.busy > 0) && slots.length < WORKERS) return start();
+  return least && least.busy < IN_FLIGHT ? least : null;
 }
 
 function pump() {
-  while (running.size < IN_FLIGHT && queue.length) {
-    const job = queue.shift()!;
+  while (queue.length) {
+    const job = queue[0];
     if (refused(job.url)) {
+      queue.shift();
       job.resolve({ plain: true });
       continue;
     }
-    const w = start();
-    if (!w) {
-      settle(job, { id: job.id, error: 'no worker' });
+    const slot = freeSlot();
+    if (!slot) {
+      if (broken) settle(queue.shift()!, { id: job.id, error: 'no worker' });
+      else return;
       continue;
     }
-    running.set(job.id, job);
+    queue.shift();
+    slot.busy++;
+    running.set(job.id, { job, slot });
     const { id, url, width, height } = job;
-    w.postMessage({
+    slot.worker.postMessage({
       id,
       url,
       width,
