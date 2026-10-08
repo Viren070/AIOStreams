@@ -109,10 +109,16 @@ function Backdrops({
   current: string | undefined;
 }) {
   const [loaded, setLoaded] = React.useState<ReadonlySet<string>>(new Set());
-  const [shown, setShown] = React.useState<string>();
+  const [[shown, fading], setShown] = React.useState<[string?, string?]>([]);
   React.useEffect(() => {
-    if (!current) setShown(undefined);
-    else if (loaded.has(current)) setShown(current);
+    setShown((was) => {
+      const next = !current
+        ? undefined
+        : loaded.has(current)
+          ? current
+          : was[0];
+      return next === was[0] ? was : [next, was[0]];
+    });
   }, [current, loaded]);
 
   // Only what is shown, next, or already loaded, so the rest never download.
@@ -128,7 +134,10 @@ function Backdrops({
       onLoad={() => setLoaded((set) => new Set(set).add(src))}
       className={cn(
         'absolute inset-0 h-full w-full object-cover object-top transition-opacity duration-700',
-        src === shown ? 'opacity-100' : 'opacity-0'
+        src === shown ? 'opacity-100' : 'opacity-0',
+        // A layer made as a fade starts or ends draws nothing for a frame.
+        (src === shown || src === current || src === fading) &&
+          'will-change-[opacity]'
       )}
     />
   ));
