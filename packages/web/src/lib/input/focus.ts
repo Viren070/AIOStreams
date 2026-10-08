@@ -349,7 +349,8 @@ export function openMenu(): boolean {
 /** The key where a widget handles it, which menus and pickers open on; a click otherwise. */
 export function activate(key = ' '): boolean {
   const el = document.activeElement;
-  if (!(el instanceof HTMLElement) || el === document.body) return false;
+  // With nothing focused, a press shows where focus starts, as an arrow does.
+  if (!(el instanceof HTMLElement) || el === document.body) return move('down');
   if (!sendKey(key, { quiet: true }).defaultPrevented) el.click();
   return true;
 }

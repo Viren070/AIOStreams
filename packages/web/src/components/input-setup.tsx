@@ -56,7 +56,7 @@ export function InputSetup({ router }: { router: AnyRouter }) {
       onAction('nav.down', () => move('down'), fallback),
       onAction('nav.left', () => move('left'), fallback),
       onAction('nav.right', () => move('right'), fallback),
-      onAction('nav.select', () => activate() || move('down'), fallback),
+      onAction('nav.select', () => activate(), fallback),
       onAction('nav.menu', openMenu, fallback),
       onAction('back', () => back(history), fallback),
       onAction('help', () => setHelp(true), fallback),
