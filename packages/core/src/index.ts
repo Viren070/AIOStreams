@@ -67,6 +67,7 @@ export {
   EasynewsAuthSchema,
   EasynewsNzbParamsSchema,
   EasynewsApi,
+  CauldronAddon,
   type EasynewsNzbParams,
   SeaDexDataset,
   LibraryAddon,

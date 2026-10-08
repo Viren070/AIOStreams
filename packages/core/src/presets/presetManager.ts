@@ -81,6 +81,7 @@ import { NekoBtPreset } from './nekoBt.js';
 import { EasynewsSearchPreset } from './easynewsSearch.js';
 import { SeaDexPreset } from './seadex.js';
 import { StreamNZBPreset } from './streamnzb.js';
+import { CauldronPreset } from './cauldron.js';
 import { DavexPreset } from './davex.js';
 import { HdHubPreset } from './hdhub.js';
 import { PenguPlayPreset } from './penguplay.js';
@@ -101,6 +102,7 @@ let PRESET_LIST: string[] = [
   'sootio',
   'zilean',
   'knaben',
+  'cauldron',
   'library',
   'eztv',
   'therarbg',
@@ -333,6 +335,8 @@ export class PresetManager {
         return NZBHydraPreset;
       case 'knaben':
         return KnabenPreset;
+      case 'cauldron':
+        return CauldronPreset;
       case 'library':
         return LibraryPreset;
       case 'eztv':
