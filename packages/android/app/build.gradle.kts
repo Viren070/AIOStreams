@@ -10,6 +10,11 @@ abstract class BundleWebApp : DefaultTask() {
     @get:OutputDirectory
     abstract val output: DirectoryProperty
 
+    init {
+        // The web build replaces the folder, which Gradle's file-system watching can miss.
+        outputs.upToDateWhen { false }
+    }
+
     @TaskAction
     fun bundle() {
         val target = output.get().asFile.resolve("web")
