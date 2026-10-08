@@ -10,7 +10,7 @@ import io.github.viren070.aiostreams.playback.PlayerChannel
 
 /**
  * The engine drawing beneath the page: the one the page picked, or with
- * `auto`, ExoPlayer for each file and mpv for a file ExoPlayer can't decode.
+ * `auto`, ExoPlayer for each file and mpv for a file ExoPlayer can't play.
  */
 class Playback(private val context: Context, private val announce: (engine: String) -> Unit) {
     private val saved = context.getSharedPreferences("playback", Context.MODE_PRIVATE)

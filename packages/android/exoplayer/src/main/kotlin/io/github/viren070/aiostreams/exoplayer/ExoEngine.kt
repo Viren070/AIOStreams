@@ -15,6 +15,7 @@ import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaLibraryInfo
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.ParserException
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
@@ -544,8 +545,8 @@ class ExoEngine(private val context: Context) :
         url = null
         Log.w(TAG, "playback failed", error)
         report("idle-active", true)
-        val undecodable = undecodable(error)
-        if (undecodable != null) return listener?.onUnplayable(undecodable) ?: Unit
+        // mpv can't load a link that failed to either; anything else it may well play.
+        if (error.errorCode !in LINK) return listener?.onUnplayable(unplayable(error)) ?: Unit
         val (message, cause) = failureOf(error)
         listener?.onEnded("error", message, cause)
     }
@@ -615,17 +616,42 @@ class ExoEngine(private val context: Context) :
         const val TAG = "exo"
         const val POLL_MS = 250L
 
-        /** mpv's words for a failure, which the page knows, and the network error behind it. */
-        fun failureOf(error: PlaybackException): Pair<String, String?> {
+        /** Errors loading the link. */
+        val LINK = 2000..2999
+
+        /** mpv's words for a link that failed to load, which the page knows, and why it failed. */
+        fun failureOf(error: PlaybackException): Pair<String, String> {
             val causes = generateSequence<Throwable>(error) { it.cause }.toList()
             causes.filterIsInstance<HttpDataSource.InvalidResponseCodeException>().firstOrNull()?.let {
                 return "loading failed" to "HTTP error ${it.responseCode} ${it.responseMessage.orEmpty()}".trim()
             }
-            if (causes.any { it is UnrecognizedInputFormatException }) return "unrecognized file format" to null
-            return when (error.errorCode) {
-                PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED -> "loading failed" to "could not connect to the server"
-                PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT -> "loading failed" to "the server took too long to answer"
-                else -> error.errorCodeName.removePrefix("ERROR_CODE_").lowercase().replace('_', ' ') to null
+            return "loading failed" to when (error.errorCode) {
+                PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED -> "could not connect to the server"
+                PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT -> "the server took too long to answer"
+                else -> error.errorCodeName.removePrefix("ERROR_CODE_IO_").lowercase().replace('_', ' ')
+            }
+        }
+
+        /** Why ExoPlayer can't play the file, with Media3's own reason. */
+        fun unplayable(error: PlaybackException): String {
+            undecodable(error)?.let { return it }
+            val causes = generateSequence<Throwable>(error) { it.cause }.toList()
+            if (causes.any { it is UnrecognizedInputFormatException }) return "ExoPlayer doesn't recognise this file's format"
+            val reason = causes.filterIsInstance<ParserException>().firstNotNullOfOrNull { reasonOf(it) }
+                ?: error.errorCodeName.removePrefix("ERROR_CODE_").lowercase().replace('_', ' ')
+            return "ExoPlayer can't play this file: $reason"
+        }
+
+        /** The parser's message, in plain words where it's a known one. */
+        fun reasonOf(error: ParserException): String? {
+            // Media3 adds its fields to the message.
+            val message = error.message.substringBefore("{contentIsMalformed").trim().takeIf { it.isNotEmpty() }
+            val algorithm = message?.let { Regex("""^ContentCompAlgo (\d+) not supported""").find(it) }?.groupValues?.get(1)
+            return when (algorithm) {
+                null -> message
+                "1" -> "it has bzip2-compressed tracks"
+                "2" -> "it has LZO-compressed tracks"
+                else -> "it has tracks compressed in a way it can't read"
             }
         }
 

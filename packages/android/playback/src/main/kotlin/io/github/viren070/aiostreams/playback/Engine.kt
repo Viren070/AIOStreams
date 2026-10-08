@@ -37,7 +37,7 @@ interface Engine {
         /** `cause` is the network error behind a failed load, where there was one. */
         fun onEnded(reason: String, error: String?, cause: String?)
 
-        /** The engine can't decode the file, which another engine might. */
+        /** The engine can't play the file, which another engine might. */
         fun onUnplayable(error: String)
     }
 }
