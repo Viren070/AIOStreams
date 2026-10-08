@@ -99,16 +99,15 @@ function scope(): Element {
   return dialogs[dialogs.length - 1] ?? document.body;
 }
 
-function canFocus(el: HTMLElement): boolean {
-  if (
-    el.matches(
-      ':disabled, input[type=hidden], [contenteditable=false], [role=tabpanel], [data-nav=skip], [tabindex="-1"]:not([role=tab]):not([role=radio])'
-    ) ||
-    el.closest('[inert], [aria-hidden=true], [data-tv] [data-nav-tv=skip]')
-  )
-    return false;
-  const rect = el.getBoundingClientRect();
-  if (!rect.width || !rect.height) return false;
+/** Out of reach by its markup alone, before anything is measured. */
+const ruledOut = (el: HTMLElement) =>
+  el.matches(
+    ':disabled, input[type=hidden], [contenteditable=false], [role=tabpanel], [data-nav=skip], [tabindex="-1"]:not([role=tab]):not([role=radio])'
+  ) ||
+  !!el.closest('[inert], [aria-hidden=true], [data-tv] [data-nav-tv=skip]');
+
+function canFocus(el: HTMLElement, rect = el.getBoundingClientRect()): boolean {
+  if (ruledOut(el) || !rect.width || !rect.height) return false;
   const style = getComputedStyle(el);
   return style.visibility !== 'hidden' && style.pointerEvents !== 'none';
 }
@@ -168,30 +167,90 @@ function distance(from: DOMRect, to: DOMRect, dir: Direction): Way | null {
 
 type Candidate = Way & { el: HTMLElement; rect: DOMRect };
 
+/** Neighbours in focus's own group that a sideways move may reach out of sight. */
+const NEIGHBOURS = 3;
+
+/**
+ * What a move weighs, as measuring each costs a slow TV dearly: not slides
+ * scrolled out of sight (`data-nav-out`) save focus's neighbours, nor groups a
+ * screen or more away, or sideways, beside focus's own band.
+ */
+function candidates(
+  root: Element,
+  from: HTMLElement,
+  rect: DOMRect,
+  sideways: boolean
+): HTMLElement[] {
+  const all = [...root.querySelectorAll<HTMLElement>(FOCUSABLE)];
+  const group = from.closest(GROUP);
+  const near = new Set<HTMLElement>();
+  const at = all.indexOf(from);
+  if (sideways && group && at >= 0)
+    for (let i = at - NEIGHBOURS; i <= at + NEIGHBOURS; i++)
+      if (all[i] && group.contains(all[i])) near.add(all[i]);
+  const far = new Map<Element, boolean>();
+  return all.filter((el) => {
+    if (ruledOut(el)) return false;
+    if (near.has(el)) return true;
+    if (el.closest('[data-nav-out]')) return false;
+    const box = el.closest(GROUP);
+    if (!box) return true;
+    let away = far.get(box);
+    if (away === undefined) {
+      const r = box.getBoundingClientRect();
+      away = sideways
+        ? r.bottom < rect.top - rect.height || r.top > rect.bottom + rect.height
+        : r.bottom < -innerHeight || r.top > 2 * innerHeight;
+      far.set(box, away);
+    }
+    return !away;
+  });
+}
+
 function nearest(
   root: Element,
   from: HTMLElement,
-  dir: Direction
+  dir: Direction,
+  everything = false
 ): HTMLElement | null {
+  // Sideways keeps to its own line, so focus stops at a row's end.
+  const sideways = dir === 'left' || dir === 'right';
   const rect = from.getBoundingClientRect();
   const scored: Candidate[] = [];
-  for (const el of root.querySelectorAll<HTMLElement>(FOCUSABLE)) {
+  const els = everything
+    ? [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
+        (el) => !el.closest('[data-nav-out]')
+      )
+    : candidates(root, from, rect, sideways);
+  for (const el of els) {
     if (el === from || el.contains(from) || from.contains(el)) continue;
     const to = el.getBoundingClientRect();
     const way = distance(rect, to, dir);
     if (way) scored.push({ ...way, el, rect: to });
   }
   scored.sort((a, b) => a.score - b.score);
+  const found = pick(scored, from, rect, dir, sideways);
+  // Something only out of sight or far off that way.
+  return found || everything || sideways
+    ? found
+    : nearest(root, from, dir, true);
+}
+
+function pick(
+  scored: Candidate[],
+  from: HTMLElement,
+  rect: DOMRect,
+  dir: Direction,
+  sideways: boolean
+): HTMLElement | null {
   // A fixed or sticky bar, such as the sidebar, stays put as the page scrolls
   // past it, so focus keeps to its own side over a nearer bar for what's in line.
   const home = barOf(from);
-  // Sideways keeps to its own line, so focus stops at a row's end.
-  const sideways = dir === 'left' || dir === 'right';
   let other: HTMLElement | null = null;
   let beside = false;
   for (const way of scored) {
     if (sideways && !way.inLine && !inView(way.rect)) continue;
-    if (!canFocus(way.el)) continue;
+    if (!canFocus(way.el, way.rect)) continue;
     const bar = barOf(way.el);
     if (bar === home) {
       if (way.inLine) return way.el;
@@ -214,7 +273,8 @@ function inNearestRow(
   pick: Candidate,
   home: Element | null
 ): HTMLElement {
-  const valid = (way: Candidate) => canFocus(way.el) && barOf(way.el) === home;
+  const valid = (way: Candidate) =>
+    canFocus(way.el, way.rect) && barOf(way.el) === home;
   const nearer = ways
     .filter((way) => way.gap < pick.gap)
     .sort((a, b) => a.gap - b.gap)
@@ -279,12 +339,27 @@ export function remember(el: Element): void {
   }
 }
 
+/** Each ancestor's bar during one search, as candidates share most of theirs. */
+let bars: Map<Element, Element | null> | null = null;
+
 function barOf(el: Element): Element | null {
+  const path: Element[] = [];
+  let bar: Element | null = null;
   for (let box: Element | null = el; box; box = box.parentElement) {
+    const known = bars?.get(box);
+    if (known !== undefined) {
+      bar = known;
+      break;
+    }
+    path.push(box);
     const { position } = getComputedStyle(box);
-    if (position === 'fixed' || position === 'sticky') return box;
+    if (position === 'fixed' || position === 'sticky') {
+      bar = box;
+      break;
+    }
   }
-  return null;
+  for (const box of path) bars?.set(box, bar);
+  return bar;
 }
 
 const inView = (el: HTMLElement | DOMRect) => {
@@ -300,7 +375,7 @@ function first(root: Element): HTMLElement | null {
   const all = (el: Element) => [...el.querySelectorAll<HTMLElement>(FOCUSABLE)];
   return (
     all(area).find((el) => inView(el) && canFocus(el)) ??
-    all(root).find(canFocus) ??
+    all(root).find((el) => canFocus(el)) ??
     null
   );
 }
@@ -340,12 +415,12 @@ function reveal(el: HTMLElement): void {
   let behavior: ScrollBehavior | undefined;
   for (let box = el.parentElement; box; box = box.parentElement) {
     if (box === document.body || box === document.documentElement) break;
+    const overY = box.scrollHeight > box.clientHeight;
+    const overX = box.scrollWidth > box.clientWidth;
+    if (!overY && !overX) continue;
     const style = getComputedStyle(box);
-    const scrollsY =
-      /auto|scroll/.test(style.overflowY) &&
-      box.scrollHeight > box.clientHeight;
-    const scrollsX =
-      /auto|scroll/.test(style.overflowX) && box.scrollWidth > box.clientWidth;
+    const scrollsY = overY && /auto|scroll/.test(style.overflowY);
+    const scrollsX = overX && /auto|scroll/.test(style.overflowX);
     if (!scrollsY && !scrollsX) continue;
     const view = box.getBoundingClientRect();
     const dy = scrollsY
@@ -441,7 +516,9 @@ export function move(dir: Direction): boolean {
     root.contains(lastMove.from)
       ? lastMove.from
       : null;
+  bars = new Map();
   const near = back && canFocus(back) ? back : nearest(root, from, dir);
+  bars = null;
   if (!near) return false;
   const to = near === back ? near : entry(near, from);
   lastMove = { from, to, dir };

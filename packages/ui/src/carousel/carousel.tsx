@@ -136,6 +136,35 @@ function useFollowFocus(api: CarouselApi) {
   }, [api]);
 }
 
+/**
+ * Marks slides scrolled out of sight `data-nav-out`, from Embla's own
+ * tracking, so arrow navigation needn't measure them. Unmarked until Embla
+ * reports, so a new slide is never wrongly out.
+ */
+function useMarkOutOfView(api: CarouselApi) {
+  React.useEffect(() => {
+    if (!api) return;
+    const clear = (emblaApi: EmblaApi) => {
+      for (const node of emblaApi.slideNodes())
+        node.removeAttribute('data-nav-out');
+    };
+    const mark = (emblaApi: EmblaApi) => {
+      const seen = new Set(emblaApi.slidesInView());
+      emblaApi
+        .slideNodes()
+        .forEach((node, i) =>
+          node.toggleAttribute('data-nav-out', !seen.has(i))
+        );
+    };
+    api.on('reInit', clear);
+    api.on('slidesInView', mark);
+    return () => {
+      api.off('reInit', clear);
+      api.off('slidesInView', mark);
+    };
+  }, [api]);
+}
+
 const savedPositions = new Map<string, number>();
 
 function useRestorePosition(api: CarouselApi, key: string | undefined) {
@@ -186,6 +215,7 @@ export const Carousel = React.forwardRef<HTMLDivElement, CarouselProps>(
     useKeepPositionOnReInit(api);
     useRestorePosition(api, restoreKey);
     useFollowFocus(api);
+    useMarkOutOfView(api);
 
     // Embla's own answer is about the selected snap, which a free drag can
     // leave short of the edge.

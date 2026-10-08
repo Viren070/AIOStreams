@@ -13,6 +13,7 @@ import { Skeleton } from '@aiostreams/ui/skeleton';
 import { cn } from '@aiostreams/ui/core/styling';
 import { currentHost } from '../lib/hosts';
 import { settings, useSetting, type PosterSize } from '../lib/settings';
+import { ScrollRoot } from '../lib/use-in-view';
 
 const ITEM_WIDTH = {
   poster:
@@ -76,6 +77,32 @@ function useEntryKey(id: string | undefined) {
     return location.state.__TSR_key ?? location.href;
   });
   return id ? `${entry}|${id}` : undefined;
+}
+
+/**
+ * Marks the cards in `box` out of sight of `root` (and `rootMargin` around it)
+ * `data-nav-out`, so arrow navigation needn't measure them. `count` re-arms it
+ * for cards added since.
+ */
+function useMarkOutOfView(
+  box: React.RefObject<HTMLElement | null>,
+  count: number,
+  root: React.RefObject<Element | null> | Element | null,
+  rootMargin?: string
+) {
+  React.useEffect(() => {
+    const cards = box.current?.children;
+    if (!cards) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries)
+          entry.target.toggleAttribute('data-nav-out', !entry.isIntersecting);
+      },
+      { root: root && 'current' in root ? root.current : root, rootMargin }
+    );
+    for (const card of cards) observer.observe(card);
+    return () => observer.disconnect();
+  }, [box, count, root, rootMargin]);
 }
 
 /** A titled, draggable row of cards that pages as it nears its end. */
@@ -219,8 +246,17 @@ export function CardGrid({
   children: React.ReactNode;
 }) {
   const [size] = useSetting(settings.posterSize);
+  const grid = React.useRef<HTMLDivElement>(null);
+  // Half a screen past each edge, so the next row down is still weighed.
+  useMarkOutOfView(
+    grid,
+    React.Children.count(children),
+    React.useContext(ScrollRoot),
+    '50% 0px'
+  );
   return (
     <div
+      ref={grid}
       data-ui="card-grid"
       data-shape={shape}
       data-size={size}
