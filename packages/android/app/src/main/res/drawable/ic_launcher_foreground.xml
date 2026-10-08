@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- branding/SVG/Logo White (No BG).svg, its canvas spread over the icon's 108dp. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="1080"
+    android:viewportHeight="1080">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M508.34,338.5h3.14c65.24,0,106.01,70.62,73.39,127.12l-160.44,277.88h0c-66.63,0-108.27,-72.13 -74.96,-129.83l158.87,-275.17Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M547.53,644.5a97.36,99 0,1 0,194.72 0a97.36,99 0,1 0,-194.72 0Z" />
+</vector>
