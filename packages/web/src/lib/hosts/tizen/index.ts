@@ -90,6 +90,7 @@ export function tizenHost(): Host | null {
   if (!window.tizen) return null;
   host ??= {
     name: 'tizen',
+    tv: true,
     device: () => ({ name: 'Samsung TV' }),
     exit: () => window.tizen?.application.getCurrentApplication().exit(),
     start: registerMediaKeys,

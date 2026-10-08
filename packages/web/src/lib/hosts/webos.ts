@@ -28,6 +28,7 @@ function device(): { name: string } {
 
 const host: Host = {
   name: 'webos',
+  tv: true,
   device,
   exit: () => system()?.platformBack?.(),
   keepAwake: (on) =>
