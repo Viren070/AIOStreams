@@ -45,9 +45,17 @@ function keyboardOnSelect(): void {
     'keydown',
     (e) => {
       const field = asField(e.target);
-      if (e.key !== 'Enter' || !field || !waiting.has(field)) return;
+      if (e.key !== 'Enter' || !field) return;
       // In an open list's filter, Enter picks the highlighted option.
       if (field.getAttribute('aria-expanded') === 'true') return;
+      if (!waiting.has(field)) {
+        // The keyboard's own Enter puts it away, leaving the field read-only.
+        if (field instanceof HTMLInputElement) {
+          field.blur();
+          field.focus();
+        }
+        return;
+      }
       e.preventDefault();
       e.stopPropagation();
       release(field);
