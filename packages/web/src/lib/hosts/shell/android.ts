@@ -14,13 +14,21 @@ let fullscreen = false;
 export function setupAndroid(): () => void {
   const bridge = appBridge();
   let engine: PlayerEngine | null = null;
-  const sendEngine = () => {
-    if (settings.android.engine.read() === engine) return;
-    engine = settings.android.engine.read();
-    bridge?.send({ type: 'player-engine', name: engine });
+  let options = '';
+  const sendSettings = () => {
+    if (settings.android.engine.read() !== engine) {
+      engine = settings.android.engine.read();
+      bridge?.send({ type: 'player-engine', name: engine });
+    }
+    const next = {
+      frameRate: settings.android.frameRate.read(),
+    };
+    if (JSON.stringify(next) === options) return;
+    options = JSON.stringify(next);
+    bridge?.send({ type: 'player-options', ...next });
   };
-  sendEngine();
-  const unsubscribeSettings = onSettingsChange(sendEngine);
+  sendSettings();
+  const unsubscribeSettings = onSettingsChange(sendSettings);
   const unsubscribe = bridge?.subscribe((m) => {
     if (m.type === 'fullscreen') fullscreen = m.value;
     else if (m.type === 'back') runAction('back');

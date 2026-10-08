@@ -249,6 +249,8 @@ function PlaybackSection() {
   const bingeGroups = useFeature('versions');
   const shell = !!shellHost();
   const [engine] = useSetting(settings.android.engine);
+  const [frameRate, setFrameRate] = useSetting(settings.android.frameRate);
+  const androidTv = currentHost().name === 'android-app' && !!currentHost().tv;
   // ExoPlayer decodes with the hardware it picks itself; `auto` may still use mpv.
   const decoding =
     shell && !(currentHost().name === 'android-app' && engine === 'exoplayer');
@@ -406,15 +408,26 @@ function PlaybackSection() {
           onValueChange={(v) => setVolumeStep(Number(v))}
         />
       </SettingsCard>
-      {decoding && (
+      {(decoding || androidTv) && (
         <SettingsCard title="Video" description={ON_DEVICE}>
-          <Switch
-            side="right"
-            label="Hardware decoding"
-            help="Decodes on the graphics card. Turn it off if video shows artefacts or stays black."
-            value={hardwareDecoding}
-            onValueChange={setHardwareDecoding}
-          />
+          {decoding && (
+            <Switch
+              side="right"
+              label="Hardware decoding"
+              help="Decodes on the graphics card. Turn it off if video shows artefacts or stays black."
+              value={hardwareDecoding}
+              onValueChange={setHardwareDecoding}
+            />
+          )}
+          {androidTv && (
+            <Switch
+              side="right"
+              label="Match the video's frame rate"
+              help="Switches the TV to a refresh rate that suits each video, so motion plays smoothly, and back when you stop. The screen goes blank for a moment as it switches."
+              value={frameRate}
+              onValueChange={setFrameRate}
+            />
+          )}
         </SettingsCard>
       )}
       {!currentHost().play && <PlayerCard />}

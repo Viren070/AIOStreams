@@ -551,6 +551,7 @@ export const settings = {
       'auto',
       PLAYER_ENGINES
     ),
+    frameRate: device<boolean>('aiostreams-android-frame-rate', false),
   },
   discord,
   discordEvents: group(discord),
