@@ -28,6 +28,7 @@ import { Tooltip } from '@aiostreams/ui/tooltip';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
+import { currentHost } from '../lib/hosts';
 import { useSession } from '../lib/session';
 import { useFeature } from '../lib/server-info';
 import {
@@ -649,8 +650,10 @@ function Seasons({
   const season = list.find((s) => s.Id === seasonId);
   React.useEffect(() => onSeason(season), [season, onSeason]);
   React.useEffect(() => () => onSeason(undefined), [onSeason]);
-  // A show of one season is rated as the show.
-  const rateSeason = list.filter((s) => (s.IndexNumber ?? 0) > 0).length > 1;
+  // A show of one season is rated as the show, as is any show on a TV.
+  const rateSeason =
+    !currentHost().tv &&
+    list.filter((s) => (s.IndexNumber ?? 0) > 0).length > 1;
   const episodes = useEpisodes(series.Id!, seasonId);
   const items = episodes.data?.Items ?? [];
   const loading = seasons.isLoading || episodes.isLoading;

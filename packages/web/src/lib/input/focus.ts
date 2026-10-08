@@ -104,7 +104,7 @@ function canFocus(el: HTMLElement): boolean {
     el.matches(
       ':disabled, input[type=hidden], [contenteditable=false], [role=tabpanel], [data-nav=skip], [tabindex="-1"]:not([role=tab]):not([role=radio])'
     ) ||
-    el.closest('[inert], [aria-hidden=true]')
+    el.closest('[inert], [aria-hidden=true], [data-tv] [data-nav-tv=skip]')
   )
     return false;
   const rect = el.getBoundingClientRect();

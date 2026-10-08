@@ -99,6 +99,7 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
                   <span className="truncate">{t}</span>
                 </button>
                 <IconButton
+                  data-nav-tv="skip"
                   size="sm"
                   intent="gray-basic"
                   className="mr-1 flex-none rounded-full"

@@ -11,6 +11,7 @@ import {
 } from '@aiostreams/ui/carousel';
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import { cn } from '@aiostreams/ui/core/styling';
+import { currentHost } from '../lib/hosts';
 import { settings, useSetting, type PosterSize } from '../lib/settings';
 
 const ITEM_WIDTH = {
@@ -55,10 +56,10 @@ function EndWatcher({ onEnd }: { onEnd: () => void }) {
   return null;
 }
 
-/** The row's arrows, only while there is somewhere to scroll. */
+/** The row's arrows, only while there is somewhere to scroll and not on a TV, where focus scrolls it. */
 function RowNav() {
   const { canScrollPrev, canScrollNext } = useCarousel();
-  if (!canScrollPrev && !canScrollNext) return null;
+  if (currentHost().tv || (!canScrollPrev && !canScrollNext)) return null;
   return (
     <div data-ui="media-row-nav" className="hidden gap-1 md:flex">
       <CarouselPrevious />
@@ -142,13 +143,16 @@ export function MediaRow({
           {title ? (
             <h2
               data-ui="media-row-title"
+              data-nav-tv="skip"
               // Room inside the truncating box for a link's focus outline.
               className="-m-1 min-w-0 truncate p-1 text-lg font-semibold sm:text-xl"
             >
               {title}
             </h2>
           ) : (
-            <div className="min-w-0">{header}</div>
+            <div data-nav-tv="skip" className="min-w-0">
+              {header}
+            </div>
           )}
           <div className="flex flex-none items-center gap-2">
             {action && (
