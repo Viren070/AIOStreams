@@ -81,6 +81,11 @@ html body[data-scroll-locked] {
     scrollbar-color: rgb(128 128 128 / 0.4) transparent;
   }
 }
+/* A TV has nothing to drag a scrollbar with. */
+[data-tv]::-webkit-scrollbar,
+[data-tv] ::-webkit-scrollbar {
+  display: none;
+}
 
 /* One focus mark everywhere, in the accent, over the shared components' faint
    rings. Fields keep their own, and anything else drawing one sets
