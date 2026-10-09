@@ -19,7 +19,7 @@ import { PlaybackReporter } from '../lib/playback/reporter';
 import { subtitleUrl, textSubtitles } from '../lib/subtitles/tracks';
 import { currentHost } from '../lib/hosts';
 import { useFeature } from '../lib/server-info';
-import { useBrowserPlayer, usePhoneFullscreen } from '../lib/hosts/browser';
+import { useBrowserPlayer, usePlayerFullscreen } from '../lib/hosts/browser';
 import { useNowPlaying } from '../lib/playback/now-playing';
 import {
   useShowPicks,
@@ -125,7 +125,7 @@ export function PlayerPage({
   const picks = useShowPicks();
   usePlayerPage();
   const host = currentHost();
-  usePhoneFullscreen(!host.usePlayer || !!host.fullscreen);
+  usePlayerFullscreen(!host.usePlayer || !!host.fullscreen);
 
   // Pinned once found: a refreshed version list must not restart playback.
   const [playing, setPlaying] = React.useState<Omit<

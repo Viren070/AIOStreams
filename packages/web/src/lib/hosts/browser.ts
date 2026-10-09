@@ -59,10 +59,13 @@ function toggleDocumentFullscreen(): void {
   void (isFullscreen() ? exitFullscreen() : enterFullscreen()).catch(() => {});
 }
 
-/** Phones play full screen in landscape, as their own players do. */
-export function usePhoneFullscreen(enabled: boolean): void {
+/** Phones play full screen in landscape, as their own players do, and tablets in the app either way up. */
+export function usePlayerFullscreen(enabled: boolean): void {
   React.useEffect(() => {
-    if (!enabled || !isPhone()) return;
+    const host = currentHost();
+    const tablet =
+      !!host.fullscreen && !host.tv && matchMedia('(pointer: coarse)').matches;
+    if (!enabled || !(isPhone() || tablet)) return;
     if (!isFullscreen()) void enterFullscreen().catch(() => {});
     return () => {
       // The next episode's player keeps it, as it could not enter again without a tap.
