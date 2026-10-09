@@ -125,12 +125,21 @@ export interface CooldownKey {
   anon: boolean;
 }
 
+const INDEXER_CONTEXTS: (FetchContext | undefined)[] = [
+  'newznab',
+  'torznab',
+  'nzb_grabs',
+  'torrent_grabs',
+];
+
 // Upstreams limit a user (forwarded IP or credential) across all paths, and
-// anonymous requests by the address they come from.
+// anonymous requests by the address they come from. Indexer managers serve each
+// indexer under its own path with one API key.
 export function cooldownKey(
   urlObj: URL,
   headers: Headers,
-  egress: string
+  egress: string,
+  context?: FetchContext
 ): CooldownKey {
   const user: string[] = [];
   const auth =
@@ -143,8 +152,12 @@ export function cooldownKey(
   for (const [name, value] of urlObj.searchParams) {
     if (CREDENTIAL_PARAM.test(name)) user.push(`${name}=${value}`);
   }
+  const { origin, pathname } = urlObj;
+  const scope = INDEXER_CONTEXTS.includes(context)
+    ? origin + pathname.slice(0, pathname.lastIndexOf('/'))
+    : origin;
   return {
-    key: `${urlObj.origin}|${getSimpleTextHash([egress, ...user].join('&'))}`,
+    key: `${scope}|${getSimpleTextHash([egress, ...user].join('&'))}`,
     anon: user.length === 0,
   };
 }
@@ -160,7 +173,12 @@ async function checkCooldown(
   headers: Headers,
   options: RequestOptions
 ): Promise<CooldownKey> {
-  const cooldown = cooldownKey(urlObj, headers, getEgress(urlObj, options));
+  const cooldown = cooldownKey(
+    urlObj,
+    headers,
+    getEgress(urlObj, options),
+    options.context
+  );
   if (options.ignoreCooldown) return cooldown;
   const entry = await cooldowns.get(cooldown.key);
   const remaining = entry ? entry.until - Date.now() : 0;
