@@ -7,7 +7,7 @@ import { useSession } from '../lib/session';
 import { currentHost } from '../lib/hosts';
 import { usePageShown } from '../lib/page-shown';
 import { useItem } from '../lib/queries';
-import { ScrollRoot } from '../lib/use-in-view';
+import { ScrollRoot, watch } from '../lib/use-in-view';
 import { backdropUrl, landscapeUrl, logoUrl } from '../lib/images';
 import { itemSubtitle, itemTitle, ticksToMs } from '../lib/format';
 import { itemPath, navigate } from '../lib/paths';
@@ -276,16 +276,23 @@ export function Hero({
   const [index, setIndex] = React.useState(0);
   const [paused, setPaused] = React.useState(false);
   const shown = usePageShown();
+  const section = React.useRef<HTMLElement>(null);
+  const [inSight, setInSight] = React.useState(true);
+  React.useEffect(() => {
+    const el = section.current;
+    if (!el) return;
+    return watch(el, null, '0px', (entry) => setInSight(entry.isIntersecting));
+  }, [loading, featured.length]);
 
   React.useEffect(() => setIndex(0), [featured.length]);
   React.useEffect(() => {
-    if (paused || !shown || featured.length < 2) return;
+    if (paused || !shown || !inSight || featured.length < 2) return;
     const timer = setTimeout(
       () => setIndex((i) => (i + 1) % featured.length),
       ROTATE_MS
     );
     return () => clearTimeout(timer);
-  }, [index, paused, shown, featured.length]);
+  }, [index, paused, shown, inSight, featured.length]);
 
   if (loading) return <HeroSkeleton />;
   const item = featured[index];
@@ -293,6 +300,7 @@ export function Hero({
 
   return (
     <section
+      ref={section}
       data-ui="hero"
       data-nav-top
       className="relative -mt-[var(--top-bar,0px)] h-[26rem] w-full overflow-hidden sm:h-[30rem] lg:-ml-[var(--side-bar,0px)] lg:h-[calc(max(36rem,53vh)+var(--top-bar,0px))] lg:w-[calc(100%+var(--side-bar,0px))]"
