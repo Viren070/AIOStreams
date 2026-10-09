@@ -137,11 +137,21 @@ const METAHUB_STILL =
   /^(https:\/\/episodes\.metahub\.space\/.+\/)w(\d+)(\.jpg)$/;
 const METAHUB_STILL_WIDTHS = [185, 300, 500, 780];
 
+// AIOMetadata's poster cache, which names the image it serves in its own path.
+const POSTER_CACHE =
+  /^(https?:\/\/[^/]+\/poster-cache\/(?:[a-z]+\/)?)(https?):(\/\/?)(.+)$/;
+
 /**
  * The smallest rendition at least `width` wide, for hosts whose URLs name
  * one, and never larger than the URL already asks for.
  */
 function sized(url: string, width: number): string {
+  const cached = POSTER_CACHE.exec(url);
+  if (cached) {
+    const [, prefix, scheme, slashes, rest] = cached;
+    const inner = sized(`${scheme}://${rest}`, width);
+    return `${prefix}${inner.replace('://', `:${slashes}`)}`;
+  }
   const tmdb = TMDB.exec(url);
   if (tmdb) {
     const current = tmdb[1] ? Number(tmdb[1]) : Infinity;
