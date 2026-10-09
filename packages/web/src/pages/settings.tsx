@@ -523,16 +523,18 @@ function PlaybackSection() {
           value={String(seekStep)}
           onValueChange={(v) => setSeekStep(Number(v))}
         />
-        <Select
-          label="Volume step"
-          help="How much the volume keys and the scroll wheel change the volume."
-          options={VOLUME_STEPS.map((s) => ({
-            value: String(s),
-            label: `${s}%`,
-          }))}
-          value={String(volumeStep)}
-          onValueChange={(v) => setVolumeStep(Number(v))}
-        />
+        {!currentHost().tv && (
+          <Select
+            label="Volume step"
+            help="How much the volume keys and the scroll wheel change the volume."
+            options={VOLUME_STEPS.map((s) => ({
+              value: String(s),
+              label: `${s}%`,
+            }))}
+            value={String(volumeStep)}
+            onValueChange={(v) => setVolumeStep(Number(v))}
+          />
+        )}
         <Select
           label="Held speed"
           help="How fast playback runs while you press and hold the video, or hold Space or Select."
