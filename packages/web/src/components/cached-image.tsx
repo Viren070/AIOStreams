@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSavedSrc } from '../lib/cache/images';
-import { useInView } from '../lib/use-in-view';
+import { useNear } from '../lib/use-in-view';
 
 /** An `<img>` that shows the device's saved copy, and saves what it loads. */
 export function CachedImage({
@@ -11,8 +11,7 @@ export function CachedImage({
   ...props
 }: React.ComponentProps<'img'>) {
   // A lazy image waits until it nears the screen, as the browser would.
-  const [near, setNear] = React.useState(loading !== 'lazy');
-  const view = useInView<HTMLImageElement>(() => setNear(true), '300px');
+  const [view, near] = useNear<HTMLImageElement>('300px', loading !== 'lazy');
   const shown = useSavedSrc(src, near);
   const refs = React.useCallback(
     (el: HTMLImageElement | null) => {

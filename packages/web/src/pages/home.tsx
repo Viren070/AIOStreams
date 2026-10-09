@@ -31,7 +31,7 @@ import {
 import { href, itemPath, navigate, to, versionsPath } from '../lib/paths';
 import { settings, useSetting, type FeaturedSource } from '../lib/settings';
 import { useFeature } from '../lib/server-info';
-import { useInView } from '../lib/use-in-view';
+import { useNear } from '../lib/use-in-view';
 import { FollowHero, Hero } from '../components/hero';
 import { MediaRow } from '../components/media-row';
 import { PosterCard, WideCard } from '../components/cards';
@@ -323,8 +323,7 @@ const ROW_PAGE = 20;
 /** A library's row, fetched once near the screen and paged as it scrolls. */
 function LibraryRow({ view }: { view: BaseItemDto }) {
   const { client } = useSession();
-  const [near, setNear] = React.useState(false);
-  const ref = useInView<HTMLElement>(() => setNear(true), '400px');
+  const [ref, near] = useNear<HTMLElement>('400px');
   const pages = useItemPages(view.Id!, {
     types: libraryTypes(view),
     recursive: true,

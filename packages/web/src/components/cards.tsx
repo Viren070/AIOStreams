@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { BiCheck, BiPlay } from 'react-icons/bi';
 import { cn } from '@aiostreams/ui/core/styling';
-import { useInView } from '../lib/use-in-view';
+import { useNear } from '../lib/use-in-view';
 import { canShrink, shrinkArtwork } from '../lib/artwork';
 import { settings, useSetting } from '../lib/settings';
 import { CachedImage } from './cached-image';
@@ -176,8 +176,7 @@ function ShrunkImage({
   onLoad: () => void;
   onPlain: () => void;
 }) {
-  const [visible, setVisible] = React.useState(false);
-  const view = useInView<HTMLCanvasElement>(() => setVisible(true), '300px');
+  const [view, visible] = useNear<HTMLCanvasElement>('300px');
   const ref = React.useCallback(
     (el: HTMLCanvasElement | null) => {
       view.current = el;

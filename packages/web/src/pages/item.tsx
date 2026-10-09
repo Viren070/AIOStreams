@@ -61,7 +61,7 @@ import {
 } from '../lib/format';
 import { href, itemPath, navigate, to } from '../lib/paths';
 import { settings, useSetting } from '../lib/settings';
-import { useInView } from '../lib/use-in-view';
+import { useInView, useNear } from '../lib/use-in-view';
 import { MediaRow } from '../components/media-row';
 import { PageMessage } from '../components/layout';
 import { MixedGrid } from '../components/mixed-grid';
@@ -1090,8 +1090,7 @@ function Details({ item }: { item: BaseItemDto }) {
 /** Loaded once scrolled near, since it reads a catalog. */
 function Similar({ itemId }: { itemId: string }) {
   const { client } = useSession();
-  const [near, setNear] = React.useState(false);
-  const ref = useInView<HTMLDivElement>(() => setNear(true), '400px');
+  const [ref, near] = useNear<HTMLDivElement>('400px');
   const similar = useSimilar(itemId, near);
   return (
     <div
