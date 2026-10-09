@@ -31,7 +31,21 @@ const queryClient = new QueryClient({
   },
 });
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const container = document.getElementById('root')!;
+// React listens at its root and at the body, where portals go, for every event
+// it knows, so the browser would build and send one for each CSS transition and
+// animation, which nothing uses.
+for (const el of [container, document.body]) {
+  const listen = el.addEventListener;
+  el.addEventListener = function (
+    this: HTMLElement,
+    ...args: Parameters<HTMLElement['addEventListener']>
+  ) {
+    if (!/^(transition|animation)/.test(args[0])) listen.apply(this, args);
+  };
+}
+
+ReactDOM.createRoot(container).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <JellyfinWebApp />
