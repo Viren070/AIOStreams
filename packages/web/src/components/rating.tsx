@@ -2,6 +2,7 @@ import React from 'react';
 import { BiSolidStar, BiSolidStarHalf, BiStar } from 'react-icons/bi';
 import { Button, IconButton } from '@aiostreams/ui/button';
 import { Popover } from '@aiostreams/ui/popover';
+import { Tooltip } from '@aiostreams/ui/tooltip';
 import { useSetRating } from '../lib/queries';
 import type { BaseItemDto } from '../lib/types';
 
@@ -59,7 +60,7 @@ export function RatingButton({
     }
   };
 
-  return (
+  const picker = (
     <Popover
       open={open}
       onOpenChange={(next) => {
@@ -152,5 +153,12 @@ export function RatingButton({
         )}
       </div>
     </Popover>
+  );
+  if (inline) return picker;
+  return (
+    // Popover hands a trigger's props to its content, so the tooltip gets a span.
+    <Tooltip trigger={<span className="inline-flex">{picker}</span>}>
+      {rating != null ? 'Your rating' : label}
+    </Tooltip>
   );
 }
