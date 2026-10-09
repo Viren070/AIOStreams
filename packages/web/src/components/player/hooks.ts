@@ -1,9 +1,6 @@
 import React from 'react';
 import { useLatest } from '../../lib/use-latest';
-import type {
-  PlayerController,
-  PlayerState,
-} from '../../lib/playback/controller';
+import type { PlayerController } from '../../lib/playback/controller';
 
 /** Skips this close together add up to one seek. */
 const SEEK_BURST_MS = 400;
@@ -32,12 +29,21 @@ export function useIdle(ms: number) {
 }
 
 /** The position at this moment, between the player's few reports a second. */
-export function usePositionClock(state: PlayerState): () => number {
+export function usePositionClock(player: PlayerController): () => number {
   const last = React.useRef({ positionMs: 0, at: 0, paused: true, rate: 1 });
-  const { positionMs, paused, rate } = state;
+  const { playhead } = player;
+  const { paused, rate } = player.state;
   React.useEffect(() => {
-    last.current = { positionMs, at: performance.now(), paused, rate };
-  }, [positionMs, paused, rate]);
+    const note = () =>
+      (last.current = {
+        positionMs: playhead.positionMs,
+        at: performance.now(),
+        paused,
+        rate,
+      });
+    note();
+    return playhead.subscribe(note);
+  }, [playhead, paused, rate]);
   return React.useCallback(() => {
     const l = last.current;
     return l.paused
@@ -58,10 +64,10 @@ export function useBurstSeek(
   React.useEffect(() => () => clearTimeout(burst.current?.timer), []);
   return React.useCallback(
     (deltaMs: number) => {
-      const { state, seek } = latest.current;
+      const { state, playhead, seek } = latest.current;
       const last = burst.current;
       clearTimeout(last?.timer);
-      const to = Math.max(0, (last?.target ?? state.positionMs) + deltaMs);
+      const to = Math.max(0, (last?.target ?? playhead.positionMs) + deltaMs);
       const target = state.durationMs ? Math.min(state.durationMs, to) : to;
       const settle = () => {
         const current = burst.current;

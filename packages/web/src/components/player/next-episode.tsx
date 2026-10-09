@@ -22,6 +22,7 @@ import type { PlayerController } from '../../lib/playback/controller';
 import type { BaseItemDto, MediaSegmentDto, SourceInfo } from '../../lib/types';
 import { CachedImage } from '../cached-image';
 import { PlayerAction } from './buttons';
+import { usePlayhead } from '../../lib/playback/playhead';
 
 type Direction = 'previous' | 'next';
 
@@ -139,11 +140,26 @@ export function useNextEpisodePrompt({
   const [stillWatching] = useSetting(settings.next.stillWatching);
   const { prefs } = usePlaybackPrefs();
   const autoplay = prefs.EnableNextEpisodeAutoPlay !== false;
-  const { positionMs, durationMs, paused } = player.state;
+  const { durationMs, paused } = player.state;
 
   const outro = segments?.find((s) => String(s.Type) === 'Outro');
   const at = promptAt(durationMs, outro, prompt, lead);
-  const due = !!next && at !== null && positionMs >= at;
+  // Naming a version opens its stream on some servers, so that waits until it plays on.
+  const comesUpAt = at ?? durationMs;
+  const { playhead } = player;
+  const pastPrompt = usePlayhead(
+    playhead,
+    (h) => h.positionMs >= (at ?? Infinity)
+  );
+  const pastList = usePlayhead(
+    playhead,
+    (h) => h.positionMs >= comesUpAt - LIST_LEAD_MS
+  );
+  const pastOpen = usePlayhead(
+    playhead,
+    (h) => h.positionMs >= (at ?? durationMs - OPEN_LEAD_MS)
+  );
+  const due = !!next && pastPrompt;
   const [dismissed, setDismissed] = React.useState(false);
   // Seeking back before the prompt brings it back next time.
   if (!due && dismissed) setDismissed(false);
@@ -223,18 +239,12 @@ export function useNextEpisodePrompt({
     wasPaused.current = paused;
   }, [external, paused]);
 
-  // Naming a version opens its stream on some servers, so that waits until it plays on.
-  const comesUpAt = at ?? durationMs;
   const listDue =
     !!next &&
     durationMs >= MIN_DURATION_MS &&
     (at !== null || autoplay) &&
-    positionMs >= comesUpAt - LIST_LEAD_MS;
-  const openDue =
-    listDue &&
-    autoplay &&
-    !asksFirst(stillWatching) &&
-    positionMs >= (at ?? durationMs - OPEN_LEAD_MS);
+    pastList;
+  const openDue = listDue && autoplay && !asksFirst(stillWatching) && pastOpen;
   React.useEffect(() => {
     if (listDue && next) void queryClient.prefetchQuery(infoOptions(next.Id!));
   }, [listDue, next, queryClient, infoOptions]);

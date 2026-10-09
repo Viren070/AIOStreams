@@ -23,6 +23,7 @@ import {
 } from '../../playback/controller';
 import { useLatest } from '../../use-latest';
 import type { AvPlay } from '.';
+import { usePlayheadWriter } from '../../playback/playhead';
 
 interface AvTrack {
   index: number;
@@ -103,7 +104,7 @@ export function useAvPlayer(opts: NativePlayerOptions): PlayerController {
   const { source, startMs, url } = opts;
   const audioControl = window.tizen?.tvaudiocontrol;
   const [state, setState] = React.useState<PlayerState>(() => ({
-    ...initialState(source, startMs),
+    ...initialState(source),
     volume: (audioControl?.getVolume() ?? 100) / 100,
     muted: audioControl?.isMute() ?? false,
     subtitleDelayMs: savedSubtitleDelay(source.Id),
@@ -114,6 +115,7 @@ export function useAvPlayer(opts: NativePlayerOptions): PlayerController {
   const latest = useLatest(opts);
   const patch = (next: Partial<PlayerState>) =>
     setState((s) => ({ ...s, ...next }));
+  const playhead = usePlayheadWriter(startMs);
   const external = React.useMemo(() => textSubtitles(source), [source]);
   const av = window.webapis!.avplay!;
 
@@ -141,7 +143,7 @@ export function useAvPlayer(opts: NativePlayerOptions): PlayerController {
 
   const seekTo = (ms: number) => {
     position.current = ms;
-    patch({ positionMs: ms });
+    playhead.set({ positionMs: ms });
     if (seeking.current) {
       nextSeek.current = ms;
       return;
@@ -259,11 +261,8 @@ export function useAvPlayer(opts: NativePlayerOptions): PlayerController {
       const playing = av.getState();
       if (playing !== 'PLAYING' && playing !== 'PAUSED') return;
       position.current = av.getCurrentTime();
-      patch({
-        positionMs: position.current,
-        started: true,
-        paused: playing === 'PAUSED',
-      });
+      playhead.set({ positionMs: position.current });
+      patch({ started: true, paused: playing === 'PAUSED' });
       showText();
     }, TICK_MS);
 
@@ -298,6 +297,7 @@ export function useAvPlayer(opts: NativePlayerOptions): PlayerController {
 
   return {
     state,
+    playhead,
     audioTracks: audioTracks.map(({ index, label, language }) => ({
       id: String(index),
       label,

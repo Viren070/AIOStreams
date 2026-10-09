@@ -2,15 +2,16 @@ import React from 'react';
 import { cn } from '@aiostreams/ui/core/styling';
 import { clock } from '../../lib/format';
 import { chapterAt, type Chapter } from '../../lib/playback/chapters';
+import { usePlayhead, type Playhead } from '../../lib/playback/playhead';
 import type { Segment } from './segments';
 
 export const arrowDirection = (key: string) =>
   key === 'ArrowRight' ? 1 : key === 'ArrowLeft' ? -1 : 0;
 
 export function SeekBar({
-  positionMs,
+  playhead,
+  live,
   durationMs,
-  bufferedMs,
   segments,
   chapters,
   previewMs,
@@ -18,9 +19,10 @@ export function SeekBar({
   onSeek,
   onStep,
 }: {
-  positionMs: number;
+  playhead: Playhead;
+  /** Held still while the controls hide. */
+  live: boolean;
   durationMs: number;
-  bufferedMs: number;
   segments: Segment[];
   chapters: Chapter[];
   /** Where a swipe on the video would seek to. */
@@ -30,6 +32,8 @@ export function SeekBar({
   onSeek(ms: number): void;
   onStep(direction: number): void;
 }) {
+  const positionMs = usePlayhead(playhead, (h) => h.positionMs, live);
+  const bufferedMs = usePlayhead(playhead, (h) => h.bufferedMs, live);
   const bar = React.useRef<HTMLDivElement>(null);
   const [hover, setHover] = React.useState<number | null>(null);
   const [drag, setDrag] = React.useState<number | null>(null);

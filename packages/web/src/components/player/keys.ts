@@ -107,10 +107,10 @@ export function usePlayerKeys(keys: PlayerKeys): void {
       k().notice(label ? `Subtitles: ${label}` : 'Subtitles off');
     };
     const chapterStep = (sign: number) => {
-      const { chapters, state, seek } = player();
+      const { chapters, playhead, seek } = player();
       if (!chapters?.length) return false;
-      const at = chapterAt(chapters, state.positionMs);
-      const into = state.positionMs - (chapters[at]?.startMs ?? 0);
+      const at = chapterAt(chapters, playhead.positionMs);
+      const into = playhead.positionMs - (chapters[at]?.startMs ?? 0);
       const to =
         sign > 0
           ? at + 1

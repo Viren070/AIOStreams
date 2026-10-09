@@ -39,6 +39,7 @@ import { skipLabel, useSegmentSkip } from './segments';
 import { useHeldSpeed } from './speed';
 import { SyncByEar, SyncToLine } from './subtitle-sync';
 import { Volume } from './volume';
+import { usePlayhead, type Playhead } from '../../lib/playback/playhead';
 
 const IDLE_MS = 2000;
 
@@ -131,7 +132,7 @@ export function PlayerControls({
   });
   const speed = useHeldSpeed(player);
 
-  const positionNow = usePositionClock(state);
+  const positionNow = usePositionClock(player);
   const loadLines = React.useCallback(
     () => latest.current.subtitleLines?.() ?? Promise.resolve(null),
     [latest]
@@ -170,8 +171,9 @@ export function PlayerControls({
     onDoubleClick: () => latest.current.toggleFullscreen?.(),
     hold: speed.start,
     onScrub: (deltaMs) => {
-      const { positionMs, durationMs } = latest.current.state;
-      const fromMs = scrubbing.current?.fromMs ?? positionMs;
+      const { state, playhead } = latest.current;
+      const fromMs = scrubbing.current?.fromMs ?? playhead.positionMs;
+      const { durationMs } = state;
       const to = Math.max(0, fromMs + deltaMs);
       scrubbing.current = {
         fromMs,
@@ -275,12 +277,11 @@ export function PlayerControls({
       </ControlButton>
     );
   const time = (
-    <>
-      {clock(state.positionMs)}
-      {state.durationMs > 0 && (
-        <span className="text-gray-400"> / {clock(state.durationMs)}</span>
-      )}
-    </>
+    <PlayerTime
+      playhead={player.playhead}
+      durationMs={state.durationMs}
+      live={visible}
+    />
   );
 
   return (
@@ -464,9 +465,9 @@ export function PlayerControls({
           {time}
         </p>
         <SeekBar
-          positionMs={state.positionMs}
+          playhead={player.playhead}
+          live={visible}
           durationMs={state.durationMs}
-          bufferedMs={state.bufferedMs}
           segments={segments}
           chapters={player.chapters ?? []}
           previewMs={scrub?.toMs ?? null}
@@ -579,4 +580,28 @@ function useLiftSubtitles(
     return () => window.removeEventListener('resize', lift);
   }, [visible, latest, bottomBar]);
   React.useEffect(() => () => latest.current.liftSubtitles?.(0), [latest]);
+}
+
+function PlayerTime({
+  playhead,
+  durationMs,
+  live,
+}: {
+  playhead: Playhead;
+  durationMs: number;
+  live: boolean;
+}) {
+  const seconds = usePlayhead(
+    playhead,
+    (h) => Math.floor(h.positionMs / 1000),
+    live
+  );
+  return (
+    <>
+      {clock(seconds * 1000)}
+      {durationMs > 0 && (
+        <span className="text-gray-400"> / {clock(durationMs)}</span>
+      )}
+    </>
+  );
 }

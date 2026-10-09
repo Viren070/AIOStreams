@@ -37,6 +37,7 @@ import {
   type QueuedEpisode,
   type Track,
 } from '../../playback/controller';
+import { usePlayheadWriter } from '../../playback/playhead';
 import { useLatest } from '../../use-latest';
 import { currentHost } from '..';
 import { appBridge } from './bridge';
@@ -86,9 +87,10 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
   const external = !!launched;
   // The app can be full screen already, from before this player mounted.
   const [state, setState] = React.useState(() => ({
-    ...initialState(source, startMs),
+    ...initialState(source),
     fullscreen: !external && !!currentHost().fullscreen?.active(),
   }));
+  const playhead = usePlayheadWriter(startMs);
   const [tracks, setTracks] = React.useState<MpvTrack[]>([]);
   const [chapters, setChapters] = React.useState<Chapter[]>([]);
   // Offered once per file.
@@ -245,13 +247,13 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
       const num = typeof data === 'number' ? data : null;
       switch (name) {
         case 'time-pos':
-          if (num !== null) patch({ positionMs: num * 1000 });
+          if (num !== null) playhead.set({ positionMs: num * 1000 });
           break;
         case 'duration':
           if (num !== null) patch({ durationMs: num * 1000 });
           break;
         case 'demuxer-cache-time':
-          if (num !== null) patch({ bufferedMs: num * 1000 });
+          if (num !== null) playhead.set({ bufferedMs: num * 1000 });
           break;
         case 'pause':
           patch({ paused: data === true });
@@ -392,6 +394,7 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
   });
   return {
     state: { ...state, subtitle: subtitleId(state.subtitle) },
+    playhead,
     audioTracks: tracks.filter((t) => t.type === 'audio').map(toTrack),
     subtitleTracks: [
       ...tracks.filter((t) => t.type === 'sub' && !fromServer(t)).map(toTrack),
@@ -400,7 +403,7 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
     togglePlay: () => set('pause', !latest.current.state.paused),
     seek: (ms) => {
       command('seek', ms / 1000, 'absolute');
-      patch({ positionMs: ms });
+      playhead.set({ positionMs: ms });
     },
     setVolume: (volume) => setVolume(volume),
     toggleMute: () => {

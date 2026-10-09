@@ -54,7 +54,8 @@ export function useNowPlaying(
     backdropUrl(client, item, { maxWidth: 960 }) ??
     landscapeUrl(client, item, { maxWidth: 320 }) ??
     posterUrl(client, item, { maxWidth: 200 });
-  const { started, paused, positionMs, durationMs, rate } = player.state;
+  const { started, paused, durationMs, rate } = player.state;
+  const { playhead } = player;
   const hasNext = !!actions.onNext;
   const hasPrevious = !!actions.onPrevious;
   const host = currentHost();
@@ -64,7 +65,8 @@ export function useNowPlaying(
     if (mediaKeyJustTaken()) return;
     noteInput();
     const { player, actions } = latest.current;
-    const { paused, positionMs, durationMs } = player.state;
+    const { paused, durationMs } = player.state;
+    const { positionMs } = player.playhead;
     switch (key.action) {
       case 'play':
       case 'pause':
@@ -152,22 +154,28 @@ export function useNowPlaying(
   React.useEffect(() => {
     if (!app || !started) return;
     const key = JSON.stringify([item.Id, title, subtitle, artwork, paused]);
-    const last = toldApp.current;
-    const expected =
-      last && last.key === key
-        ? last.positionMs + (paused ? 0 : (Date.now() - last.at) * rate)
-        : null;
-    if (expected != null && Math.abs(expected - positionMs) < DRIFT_MS) return;
-    toldApp.current = { at: Date.now(), positionMs, key };
-    app.update({
-      itemId: item.Id!,
-      title,
-      artist: subtitle ?? '',
-      imageUrl: artwork ?? '',
-      positionMs,
-      durationMs,
-      paused,
-    });
+    const tell = () => {
+      const { positionMs } = playhead;
+      const last = toldApp.current;
+      const expected =
+        last && last.key === key
+          ? last.positionMs + (paused ? 0 : (Date.now() - last.at) * rate)
+          : null;
+      if (expected != null && Math.abs(expected - positionMs) < DRIFT_MS)
+        return;
+      toldApp.current = { at: Date.now(), positionMs, key };
+      app.update({
+        itemId: item.Id!,
+        title,
+        artist: subtitle ?? '',
+        imageUrl: artwork ?? '',
+        positionMs,
+        durationMs,
+        paused,
+      });
+    };
+    tell();
+    return playhead.subscribe(tell);
   }, [
     app,
     started,
@@ -176,7 +184,7 @@ export function useNowPlaying(
     subtitle,
     artwork,
     paused,
-    positionMs,
+    playhead,
     durationMs,
     rate,
   ]);
@@ -241,16 +249,22 @@ export function useNowPlaying(
 
   React.useEffect(() => {
     if (!session || !durationMs) return;
-    const last = told.current;
-    const expected = last
-      ? last.positionMs + (paused ? 0 : (Date.now() - last.at) * rate)
-      : null;
-    if (expected != null && Math.abs(expected - positionMs) < DRIFT_MS) return;
-    told.current = { at: Date.now(), positionMs };
-    session.setPositionState({
-      duration: durationMs / 1000,
-      position: Math.min(positionMs, durationMs) / 1000,
-      playbackRate: rate,
-    });
-  }, [session, paused, positionMs, durationMs, rate]);
+    const tell = () => {
+      const { positionMs } = playhead;
+      const last = told.current;
+      const expected = last
+        ? last.positionMs + (paused ? 0 : (Date.now() - last.at) * rate)
+        : null;
+      if (expected != null && Math.abs(expected - positionMs) < DRIFT_MS)
+        return;
+      told.current = { at: Date.now(), positionMs };
+      session.setPositionState({
+        duration: durationMs / 1000,
+        position: Math.min(positionMs, durationMs) / 1000,
+        playbackRate: rate,
+      });
+    };
+    tell();
+    return playhead.subscribe(tell);
+  }, [session, paused, playhead, durationMs, rate]);
 }

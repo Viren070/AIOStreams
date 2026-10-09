@@ -15,6 +15,7 @@ import {
   type PlayerState,
 } from '../playback/controller';
 import { useLatest } from '../use-latest';
+import { usePlayheadWriter } from '../playback/playhead';
 
 /** Signals the desktop client's player exposes over its web channel. */
 interface JmpSignal<T extends unknown[] = []> {
@@ -110,9 +111,10 @@ function loadMetadata(item: BaseItemDto): Record<string, unknown> {
 export function useDesktopPlayer(opts: NativePlayerOptions): PlayerController {
   const { source, startMs, url } = opts;
   const [state, setState] = React.useState(() => ({
-    ...initialState(source, startMs),
+    ...initialState(source),
     fullscreen: desktopFullscreen(),
   }));
+  const playhead = usePlayheadWriter(startMs);
   const [player, setPlayer] = React.useState<JmpPlayer | null>(null);
   const latest = useLatest({ ...opts, state });
   const patch = (next: Partial<PlayerState>) =>
@@ -168,7 +170,7 @@ export function useDesktopPlayer(opts: NativePlayerOptions): PlayerController {
         },
         paused: () => patch({ paused: true, waiting: false }),
         buffering: () => patch({ waiting: true }),
-        positionUpdate: (ms: number) => patch({ positionMs: ms }),
+        positionUpdate: (ms: number) => playhead.set({ positionMs: ms }),
         updateDuration: (ms: number) => patch({ durationMs: ms }),
         finished: () => latest.current.onEnded(),
         error: (message: string) => patch({ error: message }),
@@ -226,6 +228,7 @@ export function useDesktopPlayer(opts: NativePlayerOptions): PlayerController {
 
   return {
     state,
+    playhead,
     audioTracks: audio.map((s, i) => ({
       id: String(i + 1),
       label: trackLabel(s, i + 1),
@@ -247,7 +250,7 @@ export function useDesktopPlayer(opts: NativePlayerOptions): PlayerController {
       latest.current.state.paused ? player?.play() : player?.pause(),
     seek: (ms) => {
       player?.seekTo(ms);
-      patch({ positionMs: ms });
+      playhead.set({ positionMs: ms });
     },
     setVolume: (volume) => setVolume(volume),
     toggleMute: () => {

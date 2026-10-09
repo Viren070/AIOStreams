@@ -47,6 +47,7 @@ import {
 } from '../../lib/subtitles/style';
 import { ControlButton } from './buttons';
 import { RATES, rateLabel } from './keys';
+import { usePlayhead } from '../../lib/playback/playhead';
 
 function Menu({
   name,
@@ -308,6 +309,9 @@ export function OptionButtons({
 }) {
   const { state } = player;
   const chapters = player.chapters ?? [];
+  const chapter = usePlayhead(player.playhead, (h) =>
+    chapterAt(chapters, h.positionMs)
+  );
   const tv = !!currentHost().tv;
   return (
     <div className="ml-auto flex items-center sm:gap-1">
@@ -359,7 +363,7 @@ export function OptionButtons({
             id: String(i),
             label: `${c.title || `Chapter ${i + 1}`} · ${clock(c.startMs)}`,
           }))}
-          value={String(chapterAt(chapters, state.positionMs))}
+          value={String(chapter)}
           onSelect={(id) => id && player.seek(chapters[Number(id)].startMs)}
           onOpenChange={onMenu}
         />

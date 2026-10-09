@@ -221,7 +221,7 @@ function useSwitchVersion(
   const picker = useVersionPicker();
   return () =>
     picker.open(item, {
-      startMs: player.state.positionMs,
+      startMs: player.playhead.positionMs,
       playing: source.Id ?? undefined,
     });
 }
@@ -260,7 +260,7 @@ function useReporting(
         playSessionId,
         userId: user.Id,
       },
-      () => ({ ms: state.current.positionMs, paused: state.current.paused })
+      () => ({ ms: player.playhead.positionMs, paused: state.current.paused })
     );
     current.start();
     reporter.current = current;

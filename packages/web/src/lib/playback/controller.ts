@@ -3,6 +3,7 @@ import type { JellyfinClient } from '../client';
 import type { Chapter } from './chapters';
 import type { SubtitleStyle } from '../settings';
 import type { SubtitleLine } from '../subtitles/cues';
+import type { Playhead } from './playhead';
 import type { PlaybackPrefs } from '../user-config';
 import type { BaseItemDto, MediaStream, SourceInfo } from '../types';
 
@@ -17,9 +18,7 @@ export interface PlayerState {
   started: boolean;
   paused: boolean;
   waiting: boolean;
-  positionMs: number;
   durationMs: number;
-  bufferedMs: number;
   volume: number;
   /** Above 1 where the player can boost past the file's own level. */
   maxVolume: number;
@@ -45,6 +44,7 @@ export const browserFeatures: readonly PlayerFeature[] =
 /** One set of controls over whichever player the page runs in. */
 export interface PlayerController {
   state: PlayerState;
+  playhead: Playhead;
   audioTracks: Track[];
   subtitleTracks: Track[];
   togglePlay(): void;
@@ -130,14 +130,12 @@ export function storedVolume(max = 1): { volume: number; muted: boolean } {
   };
 }
 
-export function initialState(source: SourceInfo, startMs: number): PlayerState {
+export function initialState(source: SourceInfo): PlayerState {
   return {
     started: false,
     paused: false,
     waiting: true,
-    positionMs: startMs,
     durationMs: source.RunTimeTicks ? source.RunTimeTicks / 10_000 : 0,
-    bufferedMs: 0,
     rate: 1,
     fullscreen: false,
     audio: null,

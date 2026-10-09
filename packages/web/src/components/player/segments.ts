@@ -4,6 +4,7 @@ import { settings, useSetting, type SegmentType } from '../../lib/settings';
 import { useLatest } from '../../lib/use-latest';
 import type { PlayerController } from '../../lib/playback/controller';
 import type { MediaSegmentDto } from '../../lib/types';
+import { usePlayhead } from '../../lib/playback/playhead';
 
 /** How long the skip button stays once its segment starts, with the controls hidden. */
 const SKIP_BUTTON_MS = 8000;
@@ -52,10 +53,16 @@ export function useSegmentSkip({
 }) {
   const segments = React.useMemo(() => segmentsOf(items), [items]);
   const [actions] = useSetting(settings.segmentActions);
-  const { positionMs, started } = player.state;
+  const { started } = player.state;
   const latest = useLatest(player);
-  const inside = segments.filter(
-    (s) => positionMs >= s.startMs && positionMs < s.endMs - 1000
+  const insideIds = usePlayhead(player.playhead, ({ positionMs }) =>
+    segments
+      .filter((s) => positionMs >= s.startMs && positionMs < s.endMs - 1000)
+      .map(segmentId)
+      .join('|')
+  );
+  const inside = segments.filter((s) =>
+    insideIds.split('|').includes(segmentId(s))
   );
   const actionOf = (s: Segment) => actions[s.type as SegmentType] ?? 'ask';
   // Each segment skips once; seeking back into one offers the button instead.

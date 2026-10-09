@@ -27,6 +27,7 @@ import {
   type Track,
 } from '../playback/controller';
 import { useLatest } from '../use-latest';
+import { usePlayheadWriter } from '../playback/playhead';
 
 function isPhone(): boolean {
   return (
@@ -113,9 +114,10 @@ export function useBrowserPlayer(
 ): PlayerController {
   const { source, startMs } = opts;
   const [state, setState] = React.useState(() => ({
-    ...initialState(source, startMs),
+    ...initialState(source),
     subtitleDelayMs: savedSubtitleDelay(source.Id),
   }));
+  const playhead = usePlayheadWriter(startMs);
   const onEnded = useLatest(opts.onEnded);
   const prefs = useLatest(opts.prefs);
   const subtitles = React.useMemo(() => textSubtitles(source), [source]);
@@ -227,8 +229,11 @@ export function useBrowserPlayer(
       waiting: () => patch({ waiting: true }),
       canplay: () => patch({ waiting: false }),
       timeupdate: () =>
-        patch({ positionMs: el.currentTime * 1000, bufferedMs: bufferedEnd() }),
-      progress: () => patch({ bufferedMs: bufferedEnd() }),
+        playhead.set({
+          positionMs: el.currentTime * 1000,
+          bufferedMs: bufferedEnd(),
+        }),
+      progress: () => playhead.set({ bufferedMs: bufferedEnd() }),
       volumechange: () => {
         patch({ volume: el.volume, muted: el.muted });
         storage.set(VOLUME_KEY, { volume: el.volume, muted: el.muted });
@@ -278,6 +283,7 @@ export function useBrowserPlayer(
   const el = () => video.current;
   return {
     state,
+    playhead,
     audioTracks,
     subtitleTracks: [
       ...subtitles.map((s, i) => ({
@@ -297,7 +303,7 @@ export function useBrowserPlayer(
       const v = el();
       if (!v) return;
       v.currentTime = ms / 1000;
-      patch({ positionMs: ms });
+      playhead.set({ positionMs: ms });
     },
     setVolume: (volume) => {
       const v = el();
