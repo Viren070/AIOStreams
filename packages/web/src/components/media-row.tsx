@@ -17,7 +17,7 @@ import {
   type PosterLine,
   type PosterSize,
 } from '../lib/settings';
-import { ScrollRoot } from '../lib/use-in-view';
+import { RowScroller, ScrollRoot } from '../lib/use-in-view';
 
 /**
  * Each shape's card width, narrowed where a box sets `--row-card-h` so its
@@ -283,7 +283,7 @@ function NativeRow({
             "relative mt-3 after:shrink-0 after:basis-4 after:content-['']"
           )}
         >
-          {children}
+          <RowScroller.Provider value={ref}>{children}</RowScroller.Provider>
         </div>
       )}
     </div>

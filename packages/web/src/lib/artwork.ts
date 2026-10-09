@@ -20,7 +20,14 @@ export interface ShrinkJob {
 
 export interface ShrinkReply {
   id: number;
+  /** The image as it is, at a blob address the worker made. */
+  src?: string;
+  /** How large the image at `src` is. */
+  bytes?: number;
+  /** The image shrunk to the box. */
   bitmap?: ImageBitmap;
+  /** Sent on its own once a shrunk image has a small encoded copy. */
+  encoded?: { url: string; bytes: number } & Drawn;
   error?: string;
   /** The fetch itself failed, as it does when the host refuses cross-origin reads. */
   blocked?: true;
@@ -30,7 +37,108 @@ export interface ShrinkReply {
   saved?: string;
 }
 
-export type Shrunk = { bitmap: ImageBitmap } | { plain: true };
+export type Shrunk =
+  | { src: string }
+  | { bitmap: ImageBitmap }
+  | { plain: true };
+
+export interface Drawn {
+  src: string;
+  width: number;
+  height: number;
+}
+
+/** An image's address without the size asked of it, naming it at any size. */
+export function artworkKey(url: string): string {
+  const parsed = new URL(url, location.href);
+  parsed.searchParams.delete('maxWidth');
+  return parsed.href;
+}
+
+interface Kept extends Drawn {
+  bytes: number;
+  /** The worker that made the address `src`, which revokes it. */
+  maker: Worker;
+}
+
+/** Artwork by image, oldest first, so a card drawn again shows it at once. */
+const drawn = new Map<string, Kept>();
+let drawnBytes = 0;
+/** Some hundreds of posters at the sizes servers send for a card. */
+const DRAWN_BUDGET = 24_000_000;
+
+export function drawnArtwork(url: string): Drawn | undefined {
+  const key = artworkKey(url);
+  const entry = drawn.get(key);
+  if (entry) {
+    drawn.delete(key);
+    drawn.set(key, entry);
+  }
+  return entry;
+}
+
+// Addresses left out of the cache are revoked once no card shows them.
+const shown = new Map<string, number>();
+const dropped = new Map<string, Worker>();
+
+/** Marks the address as shown until the returned function is called. */
+export function holdArtwork(src: string): () => void {
+  shown.set(src, (shown.get(src) ?? 0) + 1);
+  return () => {
+    const left = (shown.get(src) ?? 1) - 1;
+    if (left > 0) return void shown.set(src, left);
+    shown.delete(src);
+    const maker = dropped.get(src);
+    if (!maker) return;
+    dropped.delete(src);
+    maker.postMessage({ revoke: src });
+  };
+}
+
+function drop(entry: Kept) {
+  if (shown.has(entry.src)) dropped.set(entry.src, entry.maker);
+  else entry.maker.postMessage({ revoke: entry.src });
+}
+
+const waiting = new Map<string, Set<(src: string) => void>>();
+
+/** Calls `onCopy` with the image's encoded copy once one exists. */
+export function onDrawn(
+  url: string,
+  onCopy: (src: string) => void
+): () => void {
+  const key = artworkKey(url);
+  let set = waiting.get(key);
+  if (!set) waiting.set(key, (set = new Set()));
+  set.add(onCopy);
+  return () => {
+    set.delete(onCopy);
+    if (!set.size) waiting.delete(key);
+  };
+}
+
+function keep(url: string, entry: Kept) {
+  const key = artworkKey(url);
+  const was = drawn.get(key);
+  if (was) {
+    drawnBytes -= was.bytes;
+    if (was.src !== entry.src) drop(was);
+  }
+  drawn.delete(key);
+  drawn.set(key, entry);
+  drawnBytes += entry.bytes;
+  for (const [oldest, old] of drawn) {
+    if (drawnBytes <= DRAWN_BUDGET) break;
+    drawn.delete(oldest);
+    drawnBytes -= old.bytes;
+    drop(old);
+  }
+  for (const onCopy of waiting.get(key) ?? []) onCopy(entry.src);
+}
+
+/** Drawn a little larger is close enough, as an `<img>` shrinks that cleanly. */
+const fits = (entry: Drawn, width: number, height: number) =>
+  entry.width >= width && entry.height >= height && entry.width <= width * 1.5;
 
 // What an `<img>` asks for. A fetch accepts anything, which image hosts answer
 // with the original JPEG or PNG instead of a WebP or AVIF of half the size.
@@ -65,6 +173,8 @@ const WORKERS = Math.max(
 interface Pending extends Omit<ShrinkJob, 'save' | 'look' | 'accept'> {
   resolve: (result: Shrunk) => void;
   cancelled: boolean;
+  /** Only coming up, as a row's next cards are, so it waits for a free worker. */
+  ahead: boolean;
 }
 
 interface Slot {
@@ -102,11 +212,26 @@ export function noteRead(url: string, readable: boolean): void {
   else if (isReachable()) readsFor(url).blocked++;
 }
 
-function settle(job: Pending, reply: ShrinkReply) {
+function settle(job: Pending, reply: ShrinkReply, maker?: Worker) {
   if (reply.blocked) noteRead(job.url, false);
-  else if (reply.bitmap) noteRead(job.url, true);
+  else if (reply.src || reply.bitmap) noteRead(job.url, true);
+  if (reply.src && maker)
+    keep(job.url, {
+      src: reply.src,
+      width: job.width,
+      height: job.height,
+      bytes: reply.bytes ?? 0,
+      maker,
+    });
   if (job.cancelled) reply.bitmap?.close();
-  else job.resolve(reply.bitmap ? { bitmap: reply.bitmap } : { plain: true });
+  else
+    job.resolve(
+      reply.src
+        ? { src: reply.src }
+        : reply.bitmap
+          ? { bitmap: reply.bitmap }
+          : { plain: true }
+    );
 }
 
 function start(): Slot | null {
@@ -124,11 +249,15 @@ function start(): Slot | null {
       noteSaved(e.data.saved);
       schedulePrune();
     }
+    if (e.data.encoded) {
+      const { url, ...entry } = e.data.encoded;
+      keep(url, { ...entry, maker: worker });
+    }
     const entry = running.get(e.data.id);
     if (!entry) return;
     running.delete(e.data.id);
     slot.busy--;
-    settle(entry.job, e.data);
+    settle(entry.job, e.data, worker);
     pump();
   };
   worker.onerror = () => {
@@ -146,31 +275,36 @@ function start(): Slot | null {
 }
 
 /** Starts another worker only while every one is busy. */
-function freeSlot(): Slot | null {
+function freeSlot(ahead: boolean): Slot | null {
   if (broken) return null;
   const least = slots.reduce<Slot | null>(
     (best, s) => (!best || s.busy < best.busy ? s : best),
     null
   );
   if ((!least || least.busy > 0) && slots.length < WORKERS) return start();
-  return least && least.busy < IN_FLIGHT ? least : null;
+  if (!least) return null;
+  return least.busy < (ahead ? 1 : IN_FLIGHT) ? least : null;
 }
 
 function pump() {
   while (queue.length) {
-    const job = queue[0];
+    const sooner = queue.findIndex((j) => !j.ahead);
+    const at = sooner >= 0 ? sooner : 0;
+    const job = queue[at];
     if (refused(job.url)) {
-      queue.shift();
+      queue.splice(at, 1);
       job.resolve({ plain: true });
       continue;
     }
-    const slot = freeSlot();
+    const slot = freeSlot(job.ahead);
     if (!slot) {
-      if (broken) settle(queue.shift()!, { id: job.id, error: 'no worker' });
-      else return;
+      if (broken) {
+        queue.splice(at, 1);
+        settle(job, { id: job.id, error: 'no worker' });
+      } else return;
       continue;
     }
-    queue.shift();
+    queue.splice(at, 1);
     slot.busy++;
     running.set(job.id, { job, slot });
     const { id, url, width, height } = job;
@@ -186,17 +320,31 @@ function pump() {
   }
 }
 
-/** A bitmap of exactly `width`x`height`, or `plain` when an `<img>` should draw it. */
+/**
+ * The image for a `width`x`height` box: as it is when near that size, else
+ * shrunk to it, or `plain` when an `<img>` should fetch the original itself.
+ */
 export function shrinkArtwork(
   url: string,
   width: number,
-  height: number
+  height: number,
+  ahead = false
 ): { promise: Promise<Shrunk>; cancel: () => void } {
   let job!: Pending;
   const promise = new Promise<Shrunk>((resolve) => {
-    job = { id: nextId++, url, width, height, resolve, cancelled: false };
+    job = {
+      id: nextId++,
+      url,
+      width,
+      height,
+      resolve,
+      cancelled: false,
+      ahead,
+    };
   });
-  if (broken || refused(url)) job.resolve({ plain: true });
+  const kept = drawnArtwork(url);
+  if (kept && fits(kept, width, height)) job.resolve({ src: kept.src });
+  else if (broken || refused(url)) job.resolve({ plain: true });
   else {
     queue.push(job);
     pump();

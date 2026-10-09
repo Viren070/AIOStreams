@@ -6,6 +6,24 @@ import React from 'react';
  */
 export const ScrollRoot = React.createContext<Element | null>(null);
 
+/**
+ * A row's own scroller, which clips its cards so a page's margin never reaches
+ * them: in a row nearness is measured by it, a row's width either way.
+ */
+export const RowScroller =
+  React.createContext<React.RefObject<Element | null> | null>(null);
+
+const ROW_MARGIN = '0px 100%';
+
+/** In the row's own width, rather than in the width it reaches ahead by on each side. */
+function inRowSight(entry: IntersectionObserverEntry): boolean {
+  const root = entry.rootBounds;
+  if (!root) return true;
+  const ahead = root.width / 3;
+  const box = entry.boundingClientRect;
+  return box.left < root.right - ahead && box.right > root.left + ahead;
+}
+
 type Watch = (entry: IntersectionObserverEntry) => void;
 
 interface Pool {
@@ -82,23 +100,35 @@ export function useInView<T extends Element>(
   return ref;
 }
 
-/** Whether the element has come near the screen, which it then stays. */
+/**
+ * Whether the element has come near the screen, which it then stays, and
+ * whether it was in sight then rather than only coming up in a row.
+ */
 export function useNear<T extends Element>(
   rootMargin = '600px',
   already = false
 ) {
   const ref = React.useRef<T>(null);
   const root = React.useContext(ScrollRoot);
+  const row = React.useContext(RowScroller);
   const [near, setNear] = React.useState(already);
+  const [sight, setSight] = React.useState(true);
   React.useEffect(() => {
     const el = ref.current;
     if (near || !el) return;
-    const stop = watch(el, root, rootMargin, (entry) => {
-      if (!entry.isIntersecting) return;
-      stop();
-      setNear(true);
-    });
+    const scroller = row?.current;
+    const stop = watch(
+      el,
+      scroller ?? root,
+      scroller ? ROW_MARGIN : rootMargin,
+      (entry) => {
+        if (!entry.isIntersecting) return;
+        stop();
+        if (scroller) setSight(inRowSight(entry));
+        setNear(true);
+      }
+    );
     return stop;
-  }, [near, root, rootMargin]);
-  return [ref, near] as const;
+  }, [near, root, row, rootMargin]);
+  return [ref, near, sight] as const;
 }

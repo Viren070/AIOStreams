@@ -3,7 +3,14 @@ import { motion } from 'motion/react';
 import { BiCheck, BiPlay } from 'react-icons/bi';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useNear } from '../lib/use-in-view';
-import { canShrink, shrinkArtwork } from '../lib/artwork';
+import {
+  artworkKey,
+  canShrink,
+  drawnArtwork,
+  holdArtwork,
+  onDrawn,
+  shrinkArtwork,
+} from '../lib/artwork';
 import { settings, useSetting } from '../lib/settings';
 import { CachedImage } from './cached-image';
 
@@ -66,6 +73,15 @@ function useBox() {
   return [box, measure] as const;
 }
 
+function decoded(src: string): Promise<void> {
+  const image = new Image();
+  image.src = src;
+  return image.decode();
+}
+
+const firstOf = (sources: Sources) =>
+  (Array.isArray(sources) ? sources[0] : sources) ?? undefined;
+
 /** A list is tried in order, moving on when an image fails to load. */
 export function Artwork({
   src,
@@ -90,14 +106,22 @@ export function Artwork({
       ? [resolved]
       : [];
   const key = sources.join('|');
+  // What an earlier card drew of the image, shown before this one is measured,
+  // so a page built again shows its artwork at once.
+  const [early] = React.useState(() => {
+    const first = firstOf(typeof src === 'function' ? src(1) : src);
+    const kept = first ? drawnArtwork(first) : undefined;
+    return kept && first ? { key: artworkKey(first), src: kept.src } : null;
+  });
   // Tied to the list and the source rather than reset by an effect, which a
   // cached image can finish loading before.
   const [failed, setFailed] = React.useState({ key: '', count: 0 });
   const attempt = failed.key === key ? failed.count : 0;
-  const [loadedSrc, setLoadedSrc] = React.useState<string | null>(null);
+  const [loadedKey, setLoadedKey] = React.useState(early?.key ?? null);
   const [plain, setPlain] = React.useState<string | null>(null);
   const current = sources[attempt];
-  const loaded = !!current && loadedSrc === current;
+  const currentKey = current && artworkKey(current);
+  const loaded = currentKey ? loadedKey === currentKey : !!early;
   const imageClass = cn(
     // A focus's scale keeps up with focus; a loaded image fades in slower.
     'absolute inset-0 h-full w-full object-cover transition-[transform,opacity] [transition-duration:200ms,500ms]',
@@ -105,10 +129,10 @@ export function Artwork({
     className
   );
   // Laid out empty first when the URL waits on the drawn width.
-  if (resolved === undefined)
+  if (resolved === undefined && !early)
     return <div ref={measure} className={imageClass} />;
   const borrowed = attempt >= (own ?? sources.length) ? standIn : null;
-  if (!current) {
+  if (resolved !== undefined && !current) {
     if (borrowed) return borrowed;
     return (
       <div
@@ -127,12 +151,13 @@ export function Artwork({
       {canShrink && plain !== current ? (
         <ShrunkImage
           src={current}
+          early={early?.src}
           alt={alt}
           className={imageClass}
           size={box?.device}
           measure={measure}
-          onLoad={() => setLoadedSrc(current)}
-          onPlain={() => setPlain(current)}
+          onLoad={() => currentKey && setLoadedKey(currentKey)}
+          onPlain={() => setPlain(current ?? null)}
         />
       ) : (
         <CachedImage
@@ -143,7 +168,7 @@ export function Artwork({
           loading="lazy"
           decoding="async"
           draggable={false}
-          onLoad={() => setLoadedSrc(current)}
+          onLoad={() => currentKey && setLoadedKey(currentKey)}
           onError={() =>
             setFailed((f) => ({
               key,
@@ -158,9 +183,13 @@ export function Artwork({
   );
 }
 
-/** `src` drawn at the canvas's device size, or handed back for a plain image. */
+/**
+ * `src` read in a worker: shown as it is when near the box's device size, else
+ * drawn shrunk to it, or handed back for a plain image.
+ */
 function ShrunkImage({
   src,
+  early,
   alt,
   className,
   size,
@@ -168,7 +197,9 @@ function ShrunkImage({
   onLoad,
   onPlain,
 }: {
-  src: string;
+  src: string | undefined;
+  /** An earlier card's copy, shown until this one's arrives. */
+  early?: string;
   alt: string;
   className: string;
   size: { width: number; height: number } | undefined;
@@ -176,46 +207,96 @@ function ShrunkImage({
   onLoad: () => void;
   onPlain: () => void;
 }) {
-  const [view, visible] = useNear<HTMLCanvasElement>('300px');
+  const [view, visible, sight] = useNear<HTMLElement>('300px');
+  const canvas = React.useRef<HTMLCanvasElement | null>(null);
   const ref = React.useCallback(
-    (el: HTMLCanvasElement | null) => {
+    (el: HTMLElement | null) => {
       view.current = el;
+      canvas.current = el instanceof HTMLCanvasElement ? el : null;
       measure(el);
     },
     [view, measure]
   );
+  const [shown, setShown] = React.useState(early);
+  const [bitmap, setBitmap] = React.useState<ImageBitmap | null>(null);
+  React.useEffect(() => (shown ? holdArtwork(shown) : undefined), [shown]);
   const done = React.useRef({ onLoad, onPlain });
   done.current = { onLoad, onPlain };
 
   React.useEffect(() => {
-    if (!visible || !size) return;
-    const job = shrinkArtwork(src, size.width, size.height);
+    if (!src || !visible || !size) return;
+    let live = true;
+    const job = shrinkArtwork(src, size.width, size.height, !sight);
     void job.promise.then((result) => {
-      if (!('bitmap' in result)) return done.current.onPlain();
-      const el = view.current;
-      if (el) {
-        el.width = result.bitmap.width;
-        el.height = result.bitmap.height;
-        // A CPU-backed canvas paints with the page instead of becoming a layer.
-        el.getContext('2d', { willReadFrequently: true })?.drawImage(
-          result.bitmap,
-          0,
-          0
-        );
-        done.current.onLoad();
-      }
-      result.bitmap.close();
+      if ('bitmap' in result) return setBitmap(result.bitmap);
+      if (!('src' in result)) return done.current.onPlain();
+      // Decoded first, so it shows whole, and in one render with its loading.
+      decoded(result.src).then(
+        () => {
+          if (!live) return;
+          setShown(result.src);
+          done.current.onLoad();
+        },
+        () => live && done.current.onPlain()
+      );
     });
-    return job.cancel;
-  }, [visible, size, src, view]);
+    return () => {
+      live = false;
+      job.cancel();
+    };
+  }, [visible, sight, size, src]);
 
-  return (
+  // A canvas holds its pixels for good, so it gives way to the image's small
+  // copy once the worker has made one.
+  React.useEffect(() => {
+    if (!src || !bitmap) return;
+    let live = true;
+    const stop = onDrawn(src, (copy) => {
+      void decoded(copy).then(
+        () => {
+          if (!live) return;
+          setShown(copy);
+          setBitmap(null);
+        },
+        () => undefined
+      );
+    });
+    return () => {
+      live = false;
+      stop();
+    };
+  }, [src, bitmap]);
+
+  React.useLayoutEffect(() => {
+    const el = canvas.current;
+    if (!bitmap || !el) return;
+    el.width = bitmap.width;
+    el.height = bitmap.height;
+    // A CPU-backed canvas paints with the page instead of becoming a layer.
+    el.getContext('2d', { willReadFrequently: true })?.drawImage(bitmap, 0, 0);
+    bitmap.close();
+    done.current.onLoad();
+  }, [bitmap]);
+
+  return bitmap ? (
     <canvas
       ref={ref}
       data-ui="artwork"
       role="img"
       aria-label={alt || undefined}
       aria-hidden={!alt || undefined}
+      className={className}
+    />
+  ) : (
+    <img
+      ref={ref}
+      data-ui="artwork"
+      src={shown}
+      alt={alt}
+      decoding="async"
+      draggable={false}
+      // Without a source an image would show its alt text while looking.
+      style={shown ? undefined : { visibility: 'hidden' }}
       className={className}
     />
   );

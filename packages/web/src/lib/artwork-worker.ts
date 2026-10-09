@@ -5,6 +5,8 @@ const scope = self as unknown as Worker;
 
 /** Decoding to about this much over the box keeps the filtered last step sharp. */
 const HEADROOM = 1.5;
+/** An image no larger than this over its box is drawn as it is, which shrinks it cleanly. */
+const PLAIN = 1.5;
 
 interface Head {
   type: string;
@@ -30,6 +32,46 @@ function jpegSize(b: Uint8Array): { width: number; height: number } | null {
   return null;
 }
 
+function webpSize(b: Uint8Array): { width: number; height: number } | null {
+  const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  switch (String.fromCharCode(...b.subarray(12, 16))) {
+    case 'VP8X':
+      return {
+        width: 1 + (v.getUint32(24, true) & 0xffffff),
+        height: 1 + (v.getUint32(27, true) & 0xffffff),
+      };
+    case 'VP8 ':
+      return {
+        width: v.getUint16(26, true) & 0x3fff,
+        height: v.getUint16(28, true) & 0x3fff,
+      };
+    case 'VP8L': {
+      const bits = v.getUint32(21, true);
+      return {
+        width: (bits & 0x3fff) + 1,
+        height: ((bits >> 14) & 0x3fff) + 1,
+      };
+    }
+  }
+  return null;
+}
+
+/** From the first image spatial extents box. */
+function avifSize(b: Uint8Array): { width: number; height: number } | null {
+  for (let i = 4; i + 16 <= b.length; i++) {
+    if (
+      b[i] !== 0x69 ||
+      b[i + 1] !== 0x73 ||
+      b[i + 2] !== 0x70 ||
+      b[i + 3] !== 0x65
+    )
+      continue;
+    const v = new DataView(b.buffer, b.byteOffset + i + 8, 8);
+    return { width: v.getUint32(0), height: v.getUint32(4) };
+  }
+  return null;
+}
+
 // The type is read from the bytes, as image hosts often send a generic one.
 function sniff(b: Uint8Array): Head | null {
   if (b[0] === 0xff && b[1] === 0xd8)
@@ -44,8 +86,9 @@ function sniff(b: Uint8Array): Head | null {
   }
   const tag = String.fromCharCode(...b.subarray(0, 12));
   if (tag.startsWith('RIFF') && tag.endsWith('WEBP'))
-    return { type: 'image/webp' };
-  if (tag.slice(4, 12) === 'ftypavif') return { type: 'image/avif' };
+    return { type: 'image/webp', ...webpSize(b) };
+  if (tag.slice(4, 12) === 'ftypavif')
+    return { type: 'image/avif', ...avifSize(b) };
   return null;
 }
 
@@ -136,6 +179,19 @@ async function shrink({
       () => undefined
     );
 
+  // Mostly a server's rendition near the box's size, which an `<img>` decodes
+  // when shown and can let go of again, unlike a canvas.
+  if (
+    head.width &&
+    head.height &&
+    Math.min(head.width / width, head.height / height) <= PLAIN
+  )
+    return {
+      id,
+      src: URL.createObjectURL(new Blob([data], { type: head.type })),
+      bytes: data.byteLength,
+    };
+
   let size: { width: number; height: number } | undefined;
   if (head.type === 'image/jpeg' && head.width && head.height) {
     // JPEG decodes in eighths and rounds a requested size down, so ask for the eighth above.
@@ -154,8 +210,8 @@ async function shrink({
   const image = await decode(data, head.type, size).catch((err) =>
     size ? decode(data, head.type) : Promise.reject(err)
   );
+  const canvas = new OffscreenCanvas(width, height);
   try {
-    const canvas = new OffscreenCanvas(width, height);
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return { id, error: 'no 2d context', unsupported: true };
     ctx.imageSmoothingQuality = 'high';
@@ -167,19 +223,71 @@ async function shrink({
       width,
       height
     );
-    return { id, bitmap: canvas.transferToImageBitmap() };
   } finally {
     image.close();
   }
+  const bitmap = await createImageBitmap(canvas);
+  later.push({ url, width, height, canvas });
+  if (later.length > LATER_MAX) later.shift();
+  return { id, bitmap };
 }
 
-scope.onmessage = (e: MessageEvent<ShrinkJob>) => {
-  shrink(e.data).then(
-    (reply) => scope.postMessage(reply, reply.bitmap ? [reply.bitmap] : []),
-    (err) =>
+/**
+ * Shrunk images waiting for a small encoded copy, made only while no image
+ * waits on this worker, so a page can swap its canvases for images it keeps.
+ */
+const later: {
+  url: string;
+  width: number;
+  height: number;
+  canvas: OffscreenCanvas;
+}[] = [];
+const LATER_MAX = 60;
+let active = 0;
+let encoding = false;
+
+async function encodeLater() {
+  if (encoding) return;
+  encoding = true;
+  try {
+    while (active === 0 && later.length) {
+      const { url, width, height, canvas } = later.shift()!;
+      const blob = await canvas
+        .convertToBlob({ type: 'image/webp', quality: 0.92 })
+        .catch(() => null);
+      if (!blob) continue;
       scope.postMessage({
-        id: e.data.id,
-        error: String(err),
-      } satisfies ShrinkReply)
-  );
+        id: -1,
+        encoded: {
+          url,
+          width,
+          height,
+          src: URL.createObjectURL(blob),
+          bytes: blob.size,
+        },
+      } satisfies ShrinkReply);
+    }
+  } finally {
+    encoding = false;
+  }
+}
+
+scope.onmessage = (e: MessageEvent<ShrinkJob | { revoke: string }>) => {
+  // An address made here, which the page no longer shows.
+  if ('revoke' in e.data) return URL.revokeObjectURL(e.data.revoke);
+  const job = e.data;
+  active++;
+  shrink(job)
+    .then(
+      (reply) => scope.postMessage(reply, reply.bitmap ? [reply.bitmap] : []),
+      (err) =>
+        scope.postMessage({
+          id: job.id,
+          error: String(err),
+        } satisfies ShrinkReply)
+    )
+    .finally(() => {
+      active--;
+      if (!active) void encodeLater();
+    });
 };
