@@ -15,6 +15,9 @@ export interface ShrinkJob {
   save: boolean;
   /** Reads the device's saved copy first. */
   look: boolean;
+  /** What the small encoded copy for this box is saved as. */
+  copy: string;
+  lookCopy: boolean;
   accept: string;
 }
 
@@ -170,7 +173,10 @@ const WORKERS = Math.max(
   Math.min(3, (navigator.hardwareConcurrency || 2) - 1)
 );
 
-interface Pending extends Omit<ShrinkJob, 'save' | 'look' | 'accept'> {
+interface Pending extends Omit<
+  ShrinkJob,
+  'save' | 'look' | 'copy' | 'lookCopy' | 'accept'
+> {
   resolve: (result: Shrunk) => void;
   cancelled: boolean;
   /** Only coming up, as a row's next cards are, so it waits for a free worker. */
@@ -308,13 +314,17 @@ function pump() {
     slot.busy++;
     running.set(job.id, { job, slot });
     const { id, url, width, height } = job;
+    const save = saving('artwork');
+    const copy = `${artworkKey(url)}#${width}x${height}`;
     slot.worker.postMessage({
       id,
       url,
       width,
       height,
-      save: saving('artwork'),
-      look: saving('artwork') && maybeSaved(url),
+      save,
+      look: save && maybeSaved(url),
+      copy,
+      lookCopy: save && maybeSaved(copy),
       accept,
     } satisfies ShrinkJob);
   }

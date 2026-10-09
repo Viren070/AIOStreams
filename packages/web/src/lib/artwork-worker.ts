@@ -163,10 +163,19 @@ async function shrink({
   height,
   save,
   look,
+  copy,
+  lookCopy,
   accept,
 }: ShrinkJob): Promise<ShrinkReply> {
   if (typeof OffscreenCanvas !== 'function')
     return { id, error: 'no OffscreenCanvas', unsupported: true };
+  const copied = lookCopy ? await readImage(copy).catch(() => null) : null;
+  if (copied)
+    return {
+      id,
+      src: URL.createObjectURL(copied.blob),
+      bytes: copied.blob.size,
+    };
   const kept = look ? await readImage(url).catch(() => null) : null;
   const data = kept ? await kept.blob.arrayBuffer() : await load(url, accept);
   if (!(data instanceof ArrayBuffer)) return { id, ...data };
@@ -227,7 +236,7 @@ async function shrink({
     image.close();
   }
   const bitmap = await createImageBitmap(canvas);
-  later.push({ url, width, height, canvas });
+  later.push({ url, width, height, canvas, copy: save ? copy : null });
   if (later.length > LATER_MAX) later.shift();
   return { id, bitmap };
 }
@@ -241,6 +250,7 @@ const later: {
   width: number;
   height: number;
   canvas: OffscreenCanvas;
+  copy: string | null;
 }[] = [];
 const LATER_MAX = 60;
 let active = 0;
@@ -251,11 +261,17 @@ async function encodeLater() {
   encoding = true;
   try {
     while (active === 0 && later.length) {
-      const { url, width, height, canvas } = later.shift()!;
+      const { url, width, height, canvas, copy } = later.shift()!;
       const blob = await canvas
         .convertToBlob({ type: 'image/webp', quality: 0.92 })
         .catch(() => null);
       if (!blob) continue;
+      if (copy)
+        void writeImage(copy, blob.type, blob).then(
+          () =>
+            scope.postMessage({ id: -1, saved: copy } satisfies ShrinkReply),
+          () => undefined
+        );
       scope.postMessage({
         id: -1,
         encoded: {
