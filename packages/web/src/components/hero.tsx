@@ -432,13 +432,16 @@ export function FollowHero({
   return (
     <FollowContext.Provider value={follow}>
       <FollowBackdrop item={item} />
-      <div className="relative z-[1] -mt-[var(--top-bar,0px)] flex h-dvh flex-col">
+      <div
+        // The hero's height is fixed, so the rows don't move as details
+        // change. A top bar mostly covers artwork, so it takes only part of its
+        // height from the rows.
+        className="relative z-[1] -mt-[var(--top-bar,0px)] flex h-dvh flex-col [--hero-h:calc(55dvh+var(--top-bar,0px)*0.3)]"
+      >
         <section
           data-ui="hero"
           data-follow
-          // Fixed, so the rows don't move as details change. A top bar mostly
-          // covers artwork, so it takes only part of its height from the rows.
-          className="flex h-[calc(55%+var(--top-bar,0px)*0.3)] flex-none flex-col justify-end"
+          className="flex h-[var(--hero-h)] flex-none flex-col justify-end"
         >
           <div
             data-ui="hero-content"
@@ -455,7 +458,9 @@ export function FollowHero({
           ref={setScroller}
           data-ui="hero-rows"
           data-scroll-restoration-id="home-rows"
-          className="min-h-0 flex-1 overflow-y-auto [mask-image:linear-gradient(to_bottom,transparent,black_2rem)]"
+          // What a card may take of the rows' height, past the room above a
+          // revealed row and its header.
+          className="min-h-0 flex-1 overflow-y-auto [--row-card-h:calc(100dvh-var(--hero-h)-4.25rem)] [mask-image:linear-gradient(to_bottom,transparent,black_2rem)]"
         >
           <ScrollRoot.Provider value={scroller}>{children}</ScrollRoot.Provider>
         </div>

@@ -14,11 +14,16 @@ import { currentHost } from '../lib/hosts';
 import { settings, useSetting, type PosterSize } from '../lib/settings';
 import { ScrollRoot } from '../lib/use-in-view';
 
+/**
+ * Each shape's card width, narrowed where a box sets `--row-card-h` so its
+ * artwork, caption and the slide's padding fit that height.
+ */
 const ITEM_WIDTH = {
   poster:
-    'basis-[9rem] sm:basis-[10.5rem] lg:basis-[11.5rem] 2xl:basis-[12.5rem]',
-  square: 'basis-[10rem] sm:basis-[11.5rem] lg:basis-[12.5rem]',
-  wide: 'basis-[16rem] sm:basis-[18rem] lg:basis-[20rem] 2xl:basis-[22rem]',
+    'basis-[9rem] sm:basis-[10.5rem] lg:basis-[11.5rem] 2xl:basis-[12.5rem] max-w-[calc((var(--row-card-h,100vh)-2.75rem)*2/3+1rem)]',
+  square:
+    'basis-[10rem] sm:basis-[11.5rem] lg:basis-[12.5rem] max-w-[calc(var(--row-card-h,100vh)-2.75rem+1rem)]',
+  wide: 'basis-[16rem] sm:basis-[18rem] lg:basis-[20rem] 2xl:basis-[22rem] max-w-[calc((var(--row-card-h,100vh)-3.25rem)*16/9+1rem)]',
 };
 
 const SKELETON_SHAPE = {
