@@ -21,6 +21,7 @@ export {
   runAction,
   startInput,
   useAction,
+  usingKeys,
   type ActionHandler,
 } from './dispatch';
 export {

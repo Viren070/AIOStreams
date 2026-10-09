@@ -217,7 +217,7 @@ function Head({
   thumbRing?: boolean;
 }) {
   const { client } = useSession();
-  const hold = useHold(onHold, { touch: false });
+  const hold = useHold(onHold, { menu: true });
   const setPlayed = useSetPlayed();
   const title = episode.Name || seasonEpisodeTitle(episode);
   const played = !!episode.UserData?.Played;
