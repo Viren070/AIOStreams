@@ -45,6 +45,9 @@ typedef struct {
     ARect drawn;
     ANativeWindow_Buffer buffer;
     int locked;
+    char *font;
+    int width;
+    int height;
 } Surface;
 
 static void message(int level, const char *format, va_list args, void *data) {
@@ -124,6 +127,12 @@ static void include(ARect *rect, int left, int top, int right, int bottom) {
 
 #define METHOD(name) Java_io_github_viren070_aiostreams_exoplayer_AssSurface_##name
 
+static void start_renderer(Surface *surface) {
+    surface->renderer = libass.renderer_init(surface->library);
+    libass.set_fonts(surface->renderer, surface->font, "sans-serif", ASS_FONTPROVIDER_AUTODETECT, NULL, 1);
+    if (surface->width) libass.set_frame_size(surface->renderer, surface->width, surface->height);
+}
+
 // Zero when libmpv can't be loaded. `font` is drawn where a script's fonts are missing, as mpv does.
 JNIEXPORT jlong JNICALL METHOD(nativeCreate)(JNIEnv *env, jclass clazz, jstring font) {
     if (!load_libass()) return 0;
@@ -131,10 +140,10 @@ JNIEXPORT jlong JNICALL METHOD(nativeCreate)(JNIEnv *env, jclass clazz, jstring 
     surface->library = libass.library_init();
     libass.set_message_cb(surface->library, message, NULL);
     libass.set_extract_fonts(surface->library, 1);
-    surface->renderer = libass.renderer_init(surface->library);
     const char *path = (*env)->GetStringUTFChars(env, font, NULL);
-    libass.set_fonts(surface->renderer, path, "sans-serif", ASS_FONTPROVIDER_AUTODETECT, NULL, 1);
+    surface->font = strdup(path);
     (*env)->ReleaseStringUTFChars(env, font, path);
+    start_renderer(surface);
     return (jlong) surface;
 }
 
@@ -147,8 +156,13 @@ JNIEXPORT void JNICALL METHOD(nativeAddFont)(JNIEnv *env, jclass clazz, jlong ha
     (*env)->ReleaseStringUTFChars(env, name, chars);
 }
 
+// libass frees a library's fonts safely only once no renderer uses them, so the renderer starts over.
 JNIEXPORT void JNICALL METHOD(nativeClearFonts)(JNIEnv *env, jclass clazz, jlong handle) {
-    libass.clear_fonts(((Surface *) handle)->library);
+    Surface *surface = (Surface *) handle;
+    surface->images = NULL;
+    libass.renderer_done(surface->renderer);
+    libass.clear_fonts(surface->library);
+    start_renderer(surface);
 }
 
 // A track of the file's, from its header; Matroska sends its lines one by one.
@@ -194,6 +208,8 @@ JNIEXPORT void JNICALL METHOD(nativeSetWindow)(
     surface->drawn = (ARect) {0, 0, 0, 0};
     surface->images = NULL;
     if (surface->window) {
+        surface->width = width;
+        surface->height = height;
         ANativeWindow_setBuffersGeometry(surface->window, width, height, WINDOW_FORMAT_RGBA_8888);
         libass.set_frame_size(surface->renderer, width, height);
     }
@@ -300,5 +316,6 @@ JNIEXPORT void JNICALL METHOD(nativeRelease)(JNIEnv *env, jclass clazz, jlong ha
     if (surface->window) ANativeWindow_release(surface->window);
     libass.renderer_done(surface->renderer);
     libass.library_done(surface->library);
+    free(surface->font);
     free(surface);
 }

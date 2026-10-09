@@ -125,6 +125,7 @@ internal class AssSurface(context: Context, font: () -> File) : SurfaceHolder.Ca
         queue {
             freeTracks()
             nativeClearFonts(native)
+            applyLayout()
             shown = null
             redraw()
         }
