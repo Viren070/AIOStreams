@@ -67,7 +67,9 @@ export function returnFocus(router: AnyRouter): () => void {
     // Rows and catalogs can render a while after the page; anything focused meanwhile wins.
     const look = () => {
       const active = document.activeElement;
-      if (active && active !== document.body) return;
+      // Focus left on a page kept hidden (inert) is on its way out.
+      if (active && active !== document.body && !active.closest('[inert]'))
+        return;
       const el = spot ? find(spot) : startOf();
       if (el?.getClientRects().length) focusOn(el);
       else if (performance.now() < until) frame = requestAnimationFrame(look);

@@ -358,8 +358,8 @@ function crosses(
 
 /**
  * Focus coming into a box from outside lands on what its `data-nav-enter`
- * selector names, or in a `data-nav-group` where it last was there. From
- * outside any group, a group is entered at the start of the row it lands in.
+ * selector names. From outside any group, a `data-nav-group` is entered where
+ * focus last was there, else at the start of the row it lands in.
  */
 function entry(to: HTMLElement, from: HTMLElement): HTMLElement {
   const box = to.closest<HTMLElement>('[data-nav-enter]');
@@ -368,10 +368,10 @@ function entry(to: HTMLElement, from: HTMLElement): HTMLElement {
     if (named && canFocus(named)) return named;
   }
   const group = to.closest(GROUP);
-  if (!group || group.contains(from)) return to;
+  // From another group, as from one row to the next, the one beside it.
+  if (!group || group.contains(from) || from.closest(GROUP)) return to;
   const last = lastIn.get(group);
   if (last && group.contains(last) && canFocus(last)) return last;
-  if (from.closest(GROUP)) return to;
   const row = rectOf(to);
   const edge = group.getBoundingClientRect();
   for (const el of group.querySelectorAll<HTMLElement>(FOCUSABLE)) {
@@ -446,9 +446,17 @@ const inView = (el: HTMLElement | DOMRect) => {
   );
 };
 
-/** What `data-nav-start` marks, or the first focusable inside it. */
+/** Also false in a row scrolled out of its own scroller. */
+function onScreen(el: HTMLElement): boolean {
+  if (!inView(el)) return false;
+  const group = el.closest(GROUP);
+  return !group || !clippedAway(group, group.getBoundingClientRect());
+}
+
 export function startOf(root: ParentNode = document): HTMLElement | null {
-  const mark = root.querySelector<HTMLElement>('[data-nav-start]');
+  const mark = [...root.querySelectorAll<HTMLElement>('[data-nav-start]')].find(
+    (m) => !m.closest('[inert]')
+  );
   const el = mark?.matches(FOCUSABLE)
     ? mark
     : mark?.querySelector<HTMLElement>(FOCUSABLE);
@@ -462,7 +470,7 @@ function first(root: Element): HTMLElement | null {
   const area = root.querySelector('main') ?? root;
   const all = (el: Element) => [...el.querySelectorAll<HTMLElement>(FOCUSABLE)];
   return (
-    all(area).find((el) => inView(el) && canFocus(el)) ??
+    all(area).find((el) => onScreen(el) && canFocus(el)) ??
     all(root).find((el) => canFocus(el)) ??
     null
   );
@@ -577,8 +585,10 @@ export function scrollStep(dir: 'up' | 'down'): void {
     )
       return glideBy(box, 0, dy);
   }
-  // The page behind a dialog stays put.
-  if (scope() === document.body) glideBy(document.documentElement, 0, dy);
+  // The page behind a dialog, or beside the navigation, stays put.
+  const nav = document.activeElement?.closest('[data-nav-back]');
+  if (scope() === document.body && !nav)
+    glideBy(document.documentElement, 0, dy);
 }
 
 export function focusOn(el: HTMLElement): void {
@@ -630,10 +640,20 @@ export function move(dir: Direction): boolean {
       ? back
       : nearest(exit && !out ? exit : root, from, dir);
   bars = null;
-  if (!near) {
+  const grid = from.closest('[data-nav-wrap]');
+  if (!near || (grid && near !== back && !grid.contains(near))) {
     const next = wrapped(from, dir);
-    if (next) moveTo(next, dir);
-    return !!next;
+    if (next) {
+      moveTo(next, dir);
+      return true;
+    }
+  }
+  if (!near) {
+    // Out of such a box with nowhere it came from, the page's start.
+    const start = out ? first(root) : null;
+    if (!start || exit!.contains(start)) return false;
+    moveTo(start, dir);
+    return true;
   }
   moveTo(near === back ? near : entry(near, from), dir);
   return true;

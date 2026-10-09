@@ -1041,6 +1041,8 @@ function TvRail({
       data-ui="tv-rail"
       data-nav-enter={ENTER_CURRENT}
       data-nav-back="left"
+      // Open, it covers the page beside it, which can leave nothing in line.
+      data-nav-exit="right"
       className={cn(
         'group/rail absolute inset-y-0 left-0 flex flex-col gap-1 px-3 py-8 transition-[width] duration-200',
         open ? 'w-full' : 'w-20 focus-within:w-64'
