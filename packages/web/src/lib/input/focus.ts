@@ -327,7 +327,8 @@ function crosses(
 
 /**
  * Focus coming into a box from outside lands on what its `data-nav-enter`
- * selector names, or in a `data-nav-group` where it last was there.
+ * selector names, or in a `data-nav-group` where it last was there. From
+ * outside any group, a group is entered at the start of the row it lands in.
  */
 function entry(to: HTMLElement, from: HTMLElement): HTMLElement {
   const box = to.closest<HTMLElement>('[data-nav-enter]');
@@ -338,7 +339,22 @@ function entry(to: HTMLElement, from: HTMLElement): HTMLElement {
   const group = to.closest(GROUP);
   if (!group || group.contains(from)) return to;
   const last = lastIn.get(group);
-  return last && group.contains(last) && canFocus(last) ? last : to;
+  if (last && group.contains(last) && canFocus(last)) return last;
+  if (from.closest(GROUP)) return to;
+  const row = rectOf(to);
+  const edge = group.getBoundingClientRect();
+  for (const el of group.querySelectorAll<HTMLElement>(FOCUSABLE)) {
+    if (ruledOut(el) || el.closest('[data-nav-out]')) continue;
+    const r = rectOf(el);
+    if (r.bottom <= row.top || r.top >= row.bottom) continue;
+    if (
+      r.left >= Math.max(edge.left, 0) - 1 &&
+      r.right <= Math.min(edge.right, innerWidth) + 1 &&
+      canFocus(el, r)
+    )
+      return el;
+  }
+  return to;
 }
 
 const GROUP = '[data-nav-group]';
