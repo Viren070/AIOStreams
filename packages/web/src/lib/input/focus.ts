@@ -179,6 +179,34 @@ type Candidate = Way & { el: HTMLElement; rect: DOMRect };
 /** Neighbours in focus's own group that a sideways move may reach out of sight. */
 const NEIGHBOURS = 3;
 
+/** Each group's nearest box that clips it top and bottom, found once. */
+const clippers = new WeakMap<Element, Element | null>();
+
+/**
+ * Scrolled wholly out of the box that clips it, as rows in a page's own
+ * scroller are, which still lie beside what is on screen. Never in `from`'s
+ * own scroller, which brings them in.
+ */
+function clippedAway(group: Element, r: DOMRect, from?: Element): boolean {
+  let clip = clippers.get(group);
+  if (clip === undefined) {
+    clip = null;
+    for (
+      let up = group.parentElement;
+      up && up !== document.body;
+      up = up.parentElement
+    )
+      if (/auto|scroll|hidden/.test(getComputedStyle(up).overflowY)) {
+        clip = up;
+        break;
+      }
+    clippers.set(group, clip);
+  }
+  if (!clip || (from && clip.contains(from))) return false;
+  const view = clip.getBoundingClientRect();
+  return r.bottom <= view.top || r.top >= view.bottom;
+}
+
 /**
  * What a move weighs, as measuring each costs a slow TV dearly: not slides
  * scrolled out of sight (`data-nav-out`) save focus's neighbours, nor groups a
@@ -209,11 +237,14 @@ function candidates(
     let away = far.get(box);
     if (away === undefined) {
       const r = box.getBoundingClientRect();
-      away = sideways
-        ? r.bottom < rect.top - rect.height || r.top > rect.bottom + rect.height
-        : r.bottom < -innerHeight ||
-          r.top > 2 * innerHeight ||
-          (dir === 'down' ? r.bottom <= rect.bottom : r.top >= rect.top);
+      away =
+        (sideways
+          ? r.bottom < rect.top - rect.height ||
+            r.top > rect.bottom + rect.height
+          : r.bottom < -innerHeight ||
+            r.top > 2 * innerHeight ||
+            (dir === 'down' ? r.bottom <= rect.bottom : r.top >= rect.top)) ||
+        clippedAway(box, r, from);
       far.set(box, away);
     }
     return !away;
