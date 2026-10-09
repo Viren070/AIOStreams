@@ -5,6 +5,7 @@ import { Skeleton } from '@aiostreams/ui/skeleton';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '../lib/session';
 import { currentHost } from '../lib/hosts';
+import { usePageShown } from '../lib/page-shown';
 import { useItem } from '../lib/queries';
 import { ScrollRoot } from '../lib/use-in-view';
 import { backdropUrl, landscapeUrl, logoUrl } from '../lib/images';
@@ -273,16 +274,17 @@ export function Hero({
   const featured = items.filter((i) => backdropSrc(client, i));
   const [index, setIndex] = React.useState(0);
   const [paused, setPaused] = React.useState(false);
+  const shown = usePageShown();
 
   React.useEffect(() => setIndex(0), [featured.length]);
   React.useEffect(() => {
-    if (paused || featured.length < 2) return;
+    if (paused || !shown || featured.length < 2) return;
     const timer = setTimeout(
       () => setIndex((i) => (i + 1) % featured.length),
       ROTATE_MS
     );
     return () => clearTimeout(timer);
-  }, [index, paused, featured.length]);
+  }, [index, paused, shown, featured.length]);
 
   if (loading) return <HeroSkeleton />;
   const item = featured[index];

@@ -9,7 +9,6 @@ import {
 import { PageMessage, WebLayout } from './components/layout';
 import { navigate, setNavigator, to } from './lib/paths';
 import { lastCatalog } from './lib/settings';
-import { HomePage } from './pages/home';
 import { DiscoverIndex, DiscoverPage } from './pages/discover';
 import { FavouritesPage } from './pages/favourites';
 import { CalendarPage } from './pages/calendar';
@@ -31,10 +30,11 @@ const shellRoute = createRoute({
   component: WebLayout,
 });
 
+// The layout renders the home page itself, to keep it while others are open.
 const homeRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/',
-  component: HomePage,
+  component: () => null,
 });
 
 const historyRoute = createRoute({

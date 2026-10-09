@@ -70,6 +70,8 @@ import { BrandLogo } from './brand-logo';
 import { BarSurface } from './bar-surface';
 import { VersionPickerProvider } from './version-picker';
 import { ItemMenuHost } from './item-menu';
+import { HomePage } from '../pages/home';
+import { PageShown } from '../lib/page-shown';
 
 const PAGE_FADE = {
   initial: { opacity: 0, top: 6 },
@@ -458,6 +460,16 @@ export function WebLayout() {
   const users = usePickableUsers();
   const several = (users.data?.length ?? 0) > 1;
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const entry = useRouterState({
+    select: (s) => s.location.state.__TSR_key ?? s.location.href,
+  });
+  const onHome = pathname === '/';
+  // Home stays, hidden, while other pages are open: going back to its entry
+  // shows it again rather than building it anew. Any other visit starts afresh,
+  // and playback lets it go, to leave the player the memory.
+  const [kept, setKept] = React.useState<string>();
+  if (onHome && kept !== entry) setKept(entry);
+  if (kept && pathname.startsWith('/play/')) setKept(undefined);
   useDiscordBrowsing(pathname);
   useServerEvents();
   useDownloadRunner();
@@ -597,6 +609,15 @@ export function WebLayout() {
     },
   ];
 
+  const page = cn(
+    'relative pb-[var(--nav-bar)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pt-[var(--top-bar,0px)]',
+    // In place of the sidebar's gutter, which pages leave to it.
+    (nav === 'bar' || nav === 'tv-top' || shape === 'corner') &&
+      'lg:pl-[calc(2.5rem+env(safe-area-inset-left))]',
+    shape === 'floating' &&
+      'lg:pl-[calc(var(--side-bar)+env(safe-area-inset-left))]'
+  );
+
   return (
     <AppSidebarProvider>
       <AppLayout
@@ -689,22 +710,35 @@ export function WebLayout() {
             )}
             <VersionPickerProvider>
               <ItemMenuHost>
-                <motion.div
-                  key={pathname}
-                  data-page={pageName(pathname)}
-                  {...PAGE_FADE}
-                  className={cn(
-                    'relative pb-[var(--nav-bar)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pt-[var(--top-bar,0px)]',
-                    // In place of the sidebar's gutter, which pages leave to it.
-                    (nav === 'bar' || nav === 'tv-top' || shape === 'corner') &&
-                      'lg:pl-[calc(2.5rem+env(safe-area-inset-left))]',
-                    shape === 'floating' &&
-                      'lg:pl-[calc(var(--side-bar)+env(safe-area-inset-left))]'
-                  )}
-                >
-                  <Outlet />
-                  <PageScroll />
-                </motion.div>
+                {kept && (
+                  <motion.div
+                    key={kept}
+                    data-page="home"
+                    {...PAGE_FADE}
+                    inert={!onHome}
+                    className={cn(
+                      page,
+                      !onHome &&
+                        'absolute inset-x-0 top-0 [content-visibility:hidden]'
+                    )}
+                  >
+                    <PageShown.Provider value={onHome}>
+                      <HomePage />
+                    </PageShown.Provider>
+                    {onHome && <PageScroll />}
+                  </motion.div>
+                )}
+                {!onHome && (
+                  <motion.div
+                    key={pathname}
+                    data-page={pageName(pathname)}
+                    {...PAGE_FADE}
+                    className={page}
+                  >
+                    <Outlet />
+                    <PageScroll />
+                  </motion.div>
+                )}
               </ItemMenuHost>
             </VersionPickerProvider>
           </AppLayoutContent>
