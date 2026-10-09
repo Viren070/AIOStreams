@@ -122,6 +122,8 @@ import {
   type PlayerEngine,
   type EpisodeLayout,
   type BarBackground,
+  type RailNames,
+  type RailShape,
   type TouchNavigation,
   type TvNavigation,
   type TvTopBar,
@@ -1202,35 +1204,26 @@ function NavigationCard() {
   );
   const [tvNavigation, setTvNavigation] = useSetting(settings.tvNavigation);
   const [tvTopBar, setTvTopBar] = useSetting(settings.tvTopBar);
+  const [railShape, setRailShape] = useSetting(settings.railShape);
+  const [railNames, setRailNames] = useSetting(settings.railNames);
   const [background, setBackground] = useSetting(settings.barBackground);
-  // A TV's rail, sidebar and fade sit on nothing.
-  const onBar = !tv || (tvNavigation === 'top' && tvTopBar !== 'fade');
+  const rail = tv
+    ? tvNavigation === 'rail'
+    : touch && touchNavigation === 'rail';
+  // A TV's docked rail and fade sit on nothing.
+  const onBar = !tv || (rail ? railShape !== 'docked' : tvTopBar !== 'fade');
   return (
     <SettingsCard title="Navigation" description={ON_DEVICE}>
       {tv && (
         <Select
           label="Style"
-          help="Side rail shows each page's name only while you're in it; Sidebar always shows them; Top tabs sit along the top of each page."
+          help="Side rail runs down the left of the screen; Top tabs sit along the top of each page."
           options={[
             { value: 'rail', label: 'Side rail' },
-            { value: 'sidebar', label: 'Sidebar' },
             { value: 'top', label: 'Top tabs' },
           ]}
           value={tvNavigation}
           onValueChange={(value) => setTvNavigation(value as TvNavigation)}
-        />
-      )}
-      {tv && tvNavigation === 'top' && (
-        <Select
-          label="Top bar"
-          help="How the tabs sit over the page: as floating pills, on a bar across the top, or on nothing but a fade down from the top edge."
-          options={[
-            { value: 'pill', label: 'Floating pills' },
-            { value: 'bar', label: 'Bar' },
-            { value: 'fade', label: 'Fade' },
-          ]}
-          value={tvTopBar}
-          onValueChange={(value) => setTvTopBar(value as TvTopBar)}
         />
       )}
       {!tv && touch && (
@@ -1247,10 +1240,59 @@ function NavigationCard() {
           }
         />
       )}
+      {rail && (
+        <Select
+          label="Rail"
+          help="Docked keeps it in a column of its own. Floating hovers it over the page, a little in from the edge. Corner button shrinks it to the current page's button in the top corner, which opens into the whole menu."
+          options={[
+            { value: 'docked', label: 'Docked' },
+            { value: 'floating', label: 'Floating' },
+            { value: 'corner', label: 'Corner button' },
+          ]}
+          value={railShape}
+          onValueChange={(value) => setRailShape(value as RailShape)}
+        />
+      )}
+      {rail && railShape !== 'corner' && (
+        <Select
+          label="Page names"
+          help={
+            tv
+              ? "Whether the rail names each page only while you're in it, or all the time."
+              : 'Whether the rail names each page under its icon.'
+          }
+          options={
+            tv
+              ? [
+                  { value: 'auto', label: "While you're in it" },
+                  { value: 'always', label: 'Always' },
+                ]
+              : [
+                  { value: 'auto', label: 'Shown' },
+                  { value: 'never', label: 'Hidden' },
+                ]
+          }
+          value={railNames}
+          onValueChange={(value) => setRailNames(value as RailNames)}
+        />
+      )}
+      {tv && tvNavigation === 'top' && (
+        <Select
+          label="Top bar"
+          help="How the tabs sit over the page: as floating pills, on a bar across the top, or on nothing but a fade down from the top edge."
+          options={[
+            { value: 'pill', label: 'Floating pills' },
+            { value: 'bar', label: 'Bar' },
+            { value: 'fade', label: 'Fade' },
+          ]}
+          value={tvTopBar}
+          onValueChange={(value) => setTvTopBar(value as TvTopBar)}
+        />
+      )}
       {onBar && (
         <Select
           label="Background"
-          help="What the navigation bar sits on: the app's own colour, or glass that shows the page through it. Liquid glass also bends what's behind its edges, which costs more on a slow device."
+          help="What the navigation sits on over the page: the app's own colour, or glass that shows the page through it. Liquid glass also bends what's behind its edges, which costs more on a slow device."
           options={[
             { value: 'solid', label: 'Solid' },
             { value: 'frosted', label: 'Frosted glass' },

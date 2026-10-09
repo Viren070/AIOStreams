@@ -81,11 +81,11 @@ function HeroSkeleton() {
       aria-hidden
       data-ui="hero"
       data-loading
-      className="relative -mt-[var(--top-bar,0px)] h-[26rem] w-full overflow-hidden sm:h-[30rem] lg:h-[calc(max(36rem,53vh)+var(--top-bar,0px))]"
+      className="relative -mt-[var(--top-bar,0px)] h-[26rem] w-full overflow-hidden sm:h-[30rem] lg:-ml-[var(--side-bar,0px)] lg:h-[calc(max(36rem,53vh)+var(--top-bar,0px))] lg:w-[calc(100%+var(--side-bar,0px))]"
     >
       <div className="absolute inset-0 animate-pulse bg-[--subtle]" />
       <Shade />
-      <div className="absolute inset-x-0 bottom-0 space-y-4 px-4 pb-8 lg:max-w-3xl lg:pl-0 lg:pr-10 lg:pb-14">
+      <div className="absolute inset-x-0 bottom-0 space-y-4 px-4 pb-8 lg:left-[var(--side-bar,0px)] lg:max-w-3xl lg:pl-0 lg:pr-10 lg:pb-14">
         <HeroTextSkeleton />
       </div>
     </section>
@@ -286,7 +286,7 @@ export function Hero({
   return (
     <section
       data-ui="hero"
-      className="relative -mt-[var(--top-bar,0px)] h-[26rem] w-full overflow-hidden sm:h-[30rem] lg:h-[calc(max(36rem,53vh)+var(--top-bar,0px))]"
+      className="relative -mt-[var(--top-bar,0px)] h-[26rem] w-full overflow-hidden sm:h-[30rem] lg:-ml-[var(--side-bar,0px)] lg:h-[calc(max(36rem,53vh)+var(--top-bar,0px))] lg:w-[calc(100%+var(--side-bar,0px))]"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
@@ -302,7 +302,7 @@ export function Hero({
 
       <div
         data-ui="hero-content"
-        className="absolute inset-x-0 bottom-0 space-y-4 px-4 pb-8 lg:max-w-3xl lg:pl-0 lg:pr-10 lg:pb-14"
+        className="absolute inset-x-0 bottom-0 space-y-4 px-4 pb-8 lg:left-[var(--side-bar,0px)] lg:max-w-3xl lg:pl-0 lg:pr-10 lg:pb-14"
       >
         <HeroDetails
           item={item}

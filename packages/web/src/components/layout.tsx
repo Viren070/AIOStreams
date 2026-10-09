@@ -64,7 +64,7 @@ import {
 } from '../lib/downloads';
 import { usePendingStops } from '../lib/playback/reporter';
 import { settings, useSetting, type TvTopBar } from '../lib/settings';
-import { useAction } from '../lib/input';
+import { useAction, usingKeys } from '../lib/input';
 import { UserAvatar } from './user-avatar';
 import { BrandLogo } from './brand-logo';
 import { BarSurface } from './bar-surface';
@@ -148,11 +148,13 @@ function YouIcon() {
 function NavTab({
   item,
   icon,
+  named = true,
   className,
   ...props
 }: {
   item: Pick<SidebarItem, 'id' | 'name' | 'isCurrent'>;
   icon: React.ReactNode;
+  named?: boolean;
 } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <button
@@ -170,7 +172,9 @@ function NavTab({
       {...props}
     >
       {icon}
-      <span className="max-w-full truncate">{item.name}</span>
+      <span className={cn('max-w-full truncate', !named && 'sr-only')}>
+        {item.name}
+      </span>
     </button>
   );
 }
@@ -480,13 +484,18 @@ export function WebLayout() {
   const [touchNavigation] = useSetting(settings.touchNavigation);
   const [tvNavigation] = useSetting(settings.tvNavigation);
   const [tvTopBar] = useSetting(settings.tvTopBar);
+  const [railShape] = useSetting(settings.railShape);
+  const [railNames] = useSetting(settings.railNames);
   // What wide screens show; narrow ones always have the bar.
   const nav = currentHost().tv
     ? (`tv-${tvNavigation}` as const)
     : touch
       ? touchNavigation
       : 'sidebar';
-  const side = nav !== 'bar' && nav !== 'tv-top';
+  const shape = nav === 'rail' || nav === 'tv-rail' ? railShape : undefined;
+  const side = nav === 'sidebar' || shape === 'docked';
+  const named =
+    nav === 'tv-rail' ? railNames === 'always' : railNames !== 'never';
   React.useEffect(() => {
     document.documentElement.dataset.nav = nav;
   }, [nav]);
@@ -592,7 +601,7 @@ export function WebLayout() {
     <AppSidebarProvider>
       <AppLayout
         withSidebar={side}
-        sidebarSize={nav === 'tv-sidebar' ? 'sm' : 'slim'}
+        sidebarSize={nav === 'tv-rail' && named ? 'sm' : 'slim'}
       >
         {side && (
           <AppLayoutSidebar data-ui="sidebar">
@@ -601,13 +610,14 @@ export function WebLayout() {
                 items={items}
                 footerItems={[settingsItem]}
                 accountItems={accountItems}
+                named={named}
               />
-            ) : nav === 'tv-rail' || nav === 'tv-sidebar' ? (
+            ) : nav === 'tv-rail' ? (
               <TvRail
                 items={items}
                 footerItems={[settingsItem]}
                 accountItems={accountItems}
-                open={nav === 'tv-sidebar'}
+                open={named}
               />
             ) : (
               <Sidebar
@@ -620,6 +630,24 @@ export function WebLayout() {
             )}
           </AppLayoutSidebar>
         )}
+        {shape === 'floating' &&
+          (nav === 'rail' ? (
+            <TouchRail
+              items={items}
+              footerItems={[settingsItem]}
+              accountItems={accountItems}
+              named={named}
+              floating
+            />
+          ) : (
+            <TvRail
+              items={items}
+              footerItems={[settingsItem]}
+              accountItems={accountItems}
+              open={named}
+              floating
+            />
+          ))}
         <AppLayout>
           <AppLayoutContent
             style={
@@ -627,9 +655,30 @@ export function WebLayout() {
                 ? ({
                     '--top-bar': TOP_BAR_HEIGHT[tvTopBar],
                   } as React.CSSProperties)
-                : undefined
+                : shape === 'floating'
+                  ? ({
+                      '--side-bar':
+                        FLOAT_GUTTER[nav === 'rail' ? 'touch' : 'tv'][
+                          named ? 'named' : 'icons'
+                        ],
+                    } as React.CSSProperties)
+                  : undefined
             }
+            className={cn(
+              shape === 'corner' &&
+                (nav === 'rail'
+                  ? 'lg:[--top-bar:calc(1rem+3.875rem)]'
+                  : '[--top-bar:calc(1.5rem+3.875rem)]')
+            )}
           >
+            {shape === 'corner' && (
+              <CornerMenu
+                items={items}
+                footerItems={[settingsItem]}
+                accountItems={accountItems}
+                tv={nav === 'tv-rail'}
+              />
+            )}
             {nav === 'tv-top' && (
               <TvTabs
                 style={tvTopBar}
@@ -647,8 +696,10 @@ export function WebLayout() {
                   className={cn(
                     'relative pb-[var(--nav-bar)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pt-[var(--top-bar,0px)]',
                     // In place of the sidebar's gutter, which pages leave to it.
-                    (nav === 'bar' || nav === 'tv-top') &&
-                      'lg:pl-[calc(2.5rem+env(safe-area-inset-left))]'
+                    (nav === 'bar' || nav === 'tv-top' || shape === 'corner') &&
+                      'lg:pl-[calc(2.5rem+env(safe-area-inset-left))]',
+                    shape === 'floating' &&
+                      'lg:pl-[calc(var(--side-bar)+env(safe-area-inset-left))]'
                   )}
                 >
                   <Outlet />
@@ -739,17 +790,24 @@ function MobileNav({
   );
 }
 
-/** The sidebar on a touch screen: each item labelled and big enough for a finger. */
+/** The sidebar on a touch screen: each item big enough for a finger. */
 function TouchRail({
   items,
   footerItems,
   accountItems,
+  named,
+  floating = false,
 }: {
   items: SidebarItem[];
   footerItems: SidebarItem[];
   accountItems: SidebarItem[];
+  named: boolean;
+  floating?: boolean;
 }) {
-  const tab = 'w-full gap-1 rounded-2xl px-0.5 py-2.5 text-[0.7rem]';
+  const tab = cn(
+    'w-full gap-1 rounded-2xl px-0.5 text-[0.7rem]',
+    named ? 'py-2.5' : 'py-3'
+  );
   const railItem = (item: SidebarItem) => {
     const Icon = item.iconType;
     return (
@@ -758,11 +816,51 @@ function TouchRail({
         data-ui="rail-item"
         item={item}
         icon={Icon && <Icon className="text-2xl" />}
+        named={named}
         onClick={select(item)}
         className={tab}
       />
     );
   };
+  const account = (
+    <AccountMenu
+      side="right"
+      align="end"
+      sideOffset={8}
+      items={accountItems}
+      trigger={
+        <NavTab
+          data-ui="rail-item"
+          aria-label="Account"
+          item={{ id: 'account', name: 'You' }}
+          icon={<YouIcon />}
+          named={named}
+          className={tab}
+        />
+      }
+    />
+  );
+  if (floating) {
+    return (
+      <nav
+        data-ui="touch-rail"
+        data-shape="floating"
+        className="pointer-events-none fixed inset-y-0 left-0 z-50 hidden items-center py-4 pl-[calc(1rem+env(safe-area-inset-left))] lg:flex"
+      >
+        <BarSurface
+          className={cn(
+            'pointer-events-auto flex max-h-full flex-col gap-1 overflow-y-auto rounded-[1.375rem] p-1.5',
+            named ? 'w-[calc(4.75rem+2px)]' : 'w-[calc(3.75rem+2px)]'
+          )}
+        >
+          {items.map(railItem)}
+          <div className="mx-2 my-1 h-px flex-none bg-white/10" />
+          {footerItems.map(railItem)}
+          {account}
+        </BarSurface>
+      </nav>
+    );
+  }
   return (
     <nav
       data-ui="touch-rail"
@@ -772,31 +870,29 @@ function TouchRail({
       {items.map(railItem)}
       <div className="mt-auto flex w-full flex-col gap-1 pt-4">
         {footerItems.map(railItem)}
-        <AccountMenu
-          side="right"
-          align="end"
-          sideOffset={8}
-          items={accountItems}
-          trigger={
-            <NavTab
-              data-ui="rail-item"
-              aria-label="Account"
-              item={{ id: 'account', name: 'You' }}
-              icon={<YouIcon />}
-              className={tab}
-            />
-          }
-        />
+        {account}
       </div>
     </nav>
   );
 }
 
+/** How much of the page's left a floating rail keeps clear. */
+const FLOAT_GUTTER = {
+  touch: {
+    named: 'calc(1rem + 4.75rem + 2px + 1rem)',
+    icons: 'calc(1rem + 3.75rem + 2px + 1rem)',
+  },
+  tv: {
+    named: 'calc(1.5rem + 14rem + 1.5rem)',
+    icons: 'calc(1.5rem + 4rem + 2px + 1.5rem)',
+  },
+};
+
 /** Moving into a TV's navigation lands on the current page, as on TV menus. */
 const ENTER_CURRENT = '[aria-current="page"]';
 
-/** A TV's entry: an icon, and its name beside it where there is room. */
-function TvNavItem({
+/** An entry: an icon, and its name beside it where there is room. */
+function NavEntry({
   item,
   icon,
   labelClassName,
@@ -835,12 +931,14 @@ function TvRail({
   footerItems,
   accountItems,
   open,
+  floating = false,
 }: {
   items: SidebarItem[];
   footerItems: SidebarItem[];
   accountItems: SidebarItem[];
   /** Always shows the names. */
   open: boolean;
+  floating?: boolean;
 }) {
   const label = open
     ? undefined
@@ -848,7 +946,7 @@ function TvRail({
   const entry = (item: SidebarItem) => {
     const Icon = item.iconType;
     return (
-      <TvNavItem
+      <NavEntry
         key={item.id}
         item={item}
         icon={Icon && <Icon />}
@@ -858,6 +956,52 @@ function TvRail({
       />
     );
   };
+  const account = (
+    <AccountMenu
+      side="right"
+      align="end"
+      sideOffset={8}
+      items={accountItems}
+      trigger={
+        <NavEntry
+          aria-label="Account"
+          item={{ id: 'account', name: 'You' }}
+          icon={<YouIcon />}
+          labelClassName={label}
+          className="w-full"
+        />
+      }
+    />
+  );
+  const shade = !open && (
+    <div className="pointer-events-none fixed inset-y-0 left-0 -z-10 w-[36rem] bg-gradient-to-r from-black via-black/85 to-transparent opacity-0 transition-opacity duration-200 group-focus-within/rail:opacity-100" />
+  );
+  if (floating) {
+    return (
+      <nav
+        data-ui="tv-rail"
+        data-shape="floating"
+        data-nav-enter={ENTER_CURRENT}
+        data-nav-back="left"
+        // Open, it covers the page's first column.
+        data-nav-exit="right"
+        className="group/rail fixed inset-y-0 left-0 z-50 flex items-center pl-6"
+      >
+        {shade}
+        <BarSurface
+          className={cn(
+            'flex flex-col gap-1 rounded-[1.875rem] p-1.5 transition-[width] duration-200',
+            open ? 'w-56' : 'w-[calc(4rem+2px)] group-focus-within/rail:w-56'
+          )}
+        >
+          {items.map(entry)}
+          <div className="mx-3 my-1 h-px flex-none bg-white/10" />
+          {footerItems.map(entry)}
+          {account}
+        </BarSurface>
+      </nav>
+    );
+  }
   return (
     <nav
       data-ui="tv-rail"
@@ -868,29 +1012,139 @@ function TvRail({
         open ? 'w-full' : 'w-20 focus-within:w-64'
       )}
     >
-      {!open && (
-        <div className="pointer-events-none fixed inset-y-0 left-0 -z-10 w-[36rem] bg-gradient-to-r from-black via-black/85 to-transparent opacity-0 transition-opacity duration-200 group-focus-within/rail:opacity-100" />
-      )}
+      {shade}
       <BrandLogo className="mx-3.5 mb-6 h-8 w-6 flex-none object-contain" />
       {items.map(entry)}
       <div className="mt-auto flex flex-col gap-1">
         {footerItems.map(entry)}
-        <AccountMenu
-          side="right"
-          align="end"
-          sideOffset={8}
-          items={accountItems}
-          trigger={
-            <TvNavItem
-              aria-label="Account"
-              item={{ id: 'account', name: 'You' }}
-              icon={<YouIcon />}
-              labelClassName={label}
-              className="w-full"
-            />
-          }
-        />
+        {account}
       </div>
+    </nav>
+  );
+}
+
+/** The shut corner menu's size: an entry, the padding round it and the border. */
+const CORNER_SHUT = 62;
+
+/**
+ * The navigation shrunk to the current page's button in the top corner, which
+ * opens down into the whole menu: on a TV while it has focus, on a touch
+ * screen when tapped.
+ */
+function CornerMenu({
+  items,
+  footerItems,
+  accountItems,
+  tv,
+}: {
+  items: SidebarItem[];
+  footerItems: SidebarItem[];
+  accountItems: SidebarItem[];
+  tv: boolean;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const list = React.useRef<HTMLDivElement>(null);
+  const [size, setSize] = React.useState({ width: 0, height: 0, shift: 0 });
+  const shown =
+    [...items, ...footerItems].find((item) => item.isCurrent) ?? items[0];
+  React.useLayoutEffect(() => {
+    const el = list.current;
+    if (!el) return;
+    const measure = () => {
+      const at = el.querySelector<HTMLElement>(`[data-name="${shown?.id}"]`);
+      const first = el.firstElementChild as HTMLElement;
+      setSize({
+        width: el.offsetWidth + 2,
+        height: el.offsetHeight + 2,
+        shift: (at?.offsetTop ?? 0) - first.offsetTop,
+      });
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [shown?.id]);
+  const label = cn('transition-opacity duration-300', !open && 'opacity-0');
+  const entry = (item: SidebarItem) => {
+    const Icon = item.iconType;
+    return (
+      <NavEntry
+        key={item.id}
+        item={item}
+        icon={Icon && <Icon />}
+        labelClassName={label}
+        inert={!open && item !== shown}
+        onClick={(e) => {
+          if (!open) return setOpen(true);
+          setOpen(false);
+          select(item)(e);
+        }}
+        // Shut, the icon sits in the middle of the round button.
+        className={cn('w-full pl-3 pr-5', !open && 'bg-transparent')}
+      />
+    );
+  };
+  return (
+    <nav
+      data-ui="corner-menu"
+      data-open={open || undefined}
+      data-nav-enter={ENTER_CURRENT}
+      data-nav-back="up"
+      data-nav-exit="right"
+      // Focus moving within, or into the account menu, blurs then focuses in one go.
+      onFocus={() => usingKeys() && setOpen(true)}
+      onBlur={() => usingKeys() && setOpen(false)}
+      className={cn(
+        'z-40 transition-transform duration-200 ease-out',
+        tv
+          ? 'absolute left-6 top-6 [[data-in-rows]_&]:-translate-y-[180%]'
+          : 'fixed left-[calc(1rem+env(safe-area-inset-left))] top-[calc(1rem+env(safe-area-inset-top))] hidden lg:block'
+      )}
+    >
+      <div
+        aria-hidden
+        // Open, it takes a tap anywhere else, which only shuts the menu.
+        onPointerDown={() => setOpen(false)}
+        className={cn(
+          'fixed inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,rgb(0_0_0/0.75),transparent_70%)] transition-opacity duration-300',
+          open ? 'opacity-100' : 'pointer-events-none opacity-0'
+        )}
+      />
+      <BarSurface
+        className="relative overflow-hidden rounded-[31px] transition-[width,height] duration-300 ease-out"
+        style={{
+          width: open ? size.width : CORNER_SHUT,
+          height: open ? size.height : CORNER_SHUT,
+        }}
+      >
+        <div
+          ref={list}
+          className="absolute left-0 top-0 flex w-max min-w-48 flex-col gap-1 p-1.5 transition-transform duration-300 ease-out"
+          style={{
+            transform: open ? undefined : `translateY(${-size.shift}px)`,
+          }}
+        >
+          {items.map(entry)}
+          <div className="mx-3 my-1 h-px flex-none bg-white/10" />
+          {footerItems.map(entry)}
+          <AccountMenu
+            side="right"
+            align="start"
+            sideOffset={8}
+            items={accountItems}
+            trigger={
+              <NavEntry
+                aria-label="Account"
+                item={{ id: 'account', name: 'You' }}
+                icon={<YouIcon />}
+                labelClassName={label}
+                inert={!open}
+                className="w-full pl-3 pr-5"
+              />
+            }
+          />
+        </div>
+      </BarSurface>
     </nav>
   );
 }
@@ -920,7 +1174,7 @@ function TvTabs({
   const tab = (item: SidebarItem) => {
     const Icon = item.iconType;
     return (
-      <TvNavItem
+      <NavEntry
         key={item.id}
         item={item}
         icon={Icon && <Icon />}
@@ -936,7 +1190,7 @@ function TvTabs({
       {footerItems.map((item) => {
         const Icon = item.iconType;
         return (
-          <TvNavItem
+          <NavEntry
             key={item.id}
             aria-label={item.name}
             item={item}
@@ -952,7 +1206,7 @@ function TvTabs({
         sideOffset={8}
         items={accountItems}
         trigger={
-          <TvNavItem
+          <NavEntry
             aria-label="Account"
             item={{ id: 'account', name: 'You' }}
             icon={<YouIcon />}

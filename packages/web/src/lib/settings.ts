@@ -23,8 +23,14 @@ export type HeroMode = 'rotate' | 'follow';
 export const TOUCH_NAVIGATIONS = ['rail', 'bar'] as const;
 export type TouchNavigation = (typeof TOUCH_NAVIGATIONS)[number];
 
-export const TV_NAVIGATIONS = ['rail', 'sidebar', 'top'] as const;
+export const TV_NAVIGATIONS = ['rail', 'top'] as const;
 export type TvNavigation = (typeof TV_NAVIGATIONS)[number];
+
+export const RAIL_SHAPES = ['docked', 'floating', 'corner'] as const;
+export type RailShape = (typeof RAIL_SHAPES)[number];
+
+export const RAIL_NAMES = ['auto', 'always', 'never'] as const;
+export type RailNames = (typeof RAIL_NAMES)[number];
 
 export const TV_TOP_BARS = ['pill', 'bar', 'fade'] as const;
 export type TvTopBar = (typeof TV_TOP_BARS)[number];
@@ -519,6 +525,17 @@ export const settings = {
     'rail',
     TV_NAVIGATIONS
   ),
+  /**
+   * How a side rail sits: in a column of its own, floating over the page, or
+   * shrunk to the current page's button in the corner.
+   */
+  railShape: device<RailShape>(
+    'aiostreams-web-rail-shape',
+    'docked',
+    RAIL_SHAPES
+  ),
+  /** `auto` names pages under each icon on a touch screen, and on a TV while the rail has focus. */
+  railNames: device<RailNames>('aiostreams-web-rail-names', 'auto', RAIL_NAMES),
   /** How a TV's top tabs sit over the page. */
   tvTopBar: device<TvTopBar>('aiostreams-web-tv-top-bar', 'pill', TV_TOP_BARS),
   /** What the navigation bars over the page sit on. */
