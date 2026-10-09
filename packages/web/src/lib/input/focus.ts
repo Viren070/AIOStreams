@@ -507,6 +507,12 @@ export function focusOn(el: HTMLElement): void {
 let lastMove: { from: HTMLElement; to: HTMLElement; dir: Direction } | null =
   null;
 
+/**
+ * Where focus came into a `data-nav-exit` box from, which a move out its exit
+ * side returns to, whatever lies that way.
+ */
+const cameFrom = new WeakMap<Element, HTMLElement>();
+
 /** Moves focus to the nearest thing that way; nothing focused starts at the first. */
 export function move(dir: Direction): boolean {
   const root = scope();
@@ -520,6 +526,13 @@ export function move(dir: Direction): boolean {
     if (start) focusOn(start);
     return !!start;
   }
+  const exit = from.closest<HTMLElement>('[data-nav-exit]');
+  const out = exit?.dataset.navExit === dir;
+  const came = out ? cameFrom.get(exit!) : undefined;
+  if (came?.isConnected && canFocus(came)) {
+    moveTo(came, dir);
+    return true;
+  }
   // Going back the way it came returns to where it was.
   const back =
     lastMove?.to === from &&
@@ -528,7 +541,11 @@ export function move(dir: Direction): boolean {
       ? lastMove.from
       : null;
   bars = new Map();
-  const near = back && canFocus(back) ? back : nearest(root, from, dir);
+  // Any other way stays in such a box, as what it covers lies beside it.
+  const near =
+    back && canFocus(back)
+      ? back
+      : nearest(exit && !out ? exit : root, from, dir);
   bars = null;
   if (!near) return false;
   moveTo(near === back ? near : entry(near, from), dir);
@@ -538,10 +555,15 @@ export function move(dir: Direction): boolean {
 /** Focuses `to` as a move `dir` would, so the other way comes back. */
 export function moveTo(to: HTMLElement, dir: Direction): void {
   const from = document.activeElement;
-  lastMove =
-    from instanceof HTMLElement && from !== document.body
-      ? { from, to, dir }
-      : null;
+  if (!(from instanceof HTMLElement) || from === document.body) {
+    lastMove = null;
+    return focusOn(to);
+  }
+  const box = to.closest<HTMLElement>('[data-nav-exit]');
+  const exit = box && !box.contains(from) && box.dataset.navExit;
+  if (exit) cameFrom.set(box, from);
+  // Into such a box, only its exit leads back.
+  lastMove = { from, to, dir: exit ? OPPOSITE[exit as Direction] : dir };
   focusOn(to);
 }
 
