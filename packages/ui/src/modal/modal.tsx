@@ -18,20 +18,32 @@ export const ModalAnatomy = defineStyleAnatomy({
     'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
     // "overflow-y-auto p-0 md:p-4 grid place-items-center",
   ]),
-  content: cva([
-    'UI-Modal__content',
-    'z-50 grid relative w-full w-full shadow-xl border border-[rgb(255_255_255_/_5%)] max-w-lg gap-4 bg-[--paper] p-6 duration-200',
-    // A column no wider than the box, which unwrapped text would widen past it.
-    'grid-cols-[minmax(0,1fr)]',
-    'data-[state=open]:animate-in data-[state=closed]:animate-out',
-    'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
-    // "data-[state=open]:slide-in-from-top-[40%] data-[state=closed]:slide-out-to-bottom-[40%]",
-    // "data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
-    'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
-    // process.env.NEXT_PUBLIC_PLATFORM === "desktop" && "mt-10",
-    // process.env.NEXT_PUBLIC_PLATFORM === "desktop" && "select-none",
-    'sm:rounded-2xl',
-  ]),
+  content: cva(
+    [
+      'UI-Modal__content',
+      'z-50 grid relative w-full w-full shadow-xl border border-[rgb(255_255_255_/_5%)] max-w-lg gap-4 bg-[--paper] p-6 duration-200',
+      // A column no wider than the box, which unwrapped text would widen past it.
+      'grid-cols-[minmax(0,1fr)]',
+      'data-[state=open]:animate-in data-[state=closed]:animate-out',
+      'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+    ],
+    {
+      variants: {
+        side: {
+          center: [
+            'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
+            'sm:rounded-2xl',
+          ],
+          right: [
+            'h-full max-w-md border-y-0 border-r-0 duration-300',
+            'data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right',
+            'pr-[env(safe-area-inset-right)]',
+          ],
+        },
+      },
+      defaultVariants: { side: 'center' },
+    }
+  ),
   close: cva(['UI-Modal__close', 'absolute right-4 top-4 !mt-0']),
   header: cva([
     'UI-Modal__header',
@@ -93,6 +105,7 @@ export type ModalProps = Omit<
      * Whether to hide the close button
      */
     hideCloseButton?: boolean;
+    side?: 'center' | 'right';
   };
 
 export function Modal(props: ModalProps) {
@@ -112,6 +125,7 @@ export function Modal(props: ModalProps) {
     titleClass,
     descriptionClass,
     hideCloseButton,
+    side = 'center',
     // Content
     onOpenAutoFocus,
     onCloseAutoFocus,
@@ -140,17 +154,25 @@ export function Modal(props: ModalProps) {
       <DialogPrimitive.Portal>
         <InnerLayerSnapshotter targetRef={innerLayerWasOpenRef} />
         <DialogPrimitive.Overlay
-          className={cn(ModalAnatomy.overlay(), overlayClass)}
+          className={cn(
+            ModalAnatomy.overlay(),
+            side === 'right' && 'bg-black/50',
+            overlayClass
+          )}
         >
           <div
             className={cn(
-              'overflow-y-auto absolute inset-0 grid place-items-center p-0 md:p-4',
-              process.env.NEXT_PUBLIC_PLATFORM === 'desktop' && 'md:p-8'
+              side === 'right'
+                ? 'absolute inset-0 flex justify-end'
+                : 'overflow-y-auto absolute inset-0 grid place-items-center p-0 md:p-4',
+              side === 'center' &&
+                process.env.NEXT_PUBLIC_PLATFORM === 'desktop' &&
+                'md:p-8'
             )}
           >
             <DialogPrimitive.Content
               {...data}
-              className={cn(ModalAnatomy.content(), contentClass)}
+              className={cn(ModalAnatomy.content({ side }), contentClass)}
               onOpenAutoFocus={onOpenAutoFocus}
               onCloseAutoFocus={onCloseAutoFocus}
               onEscapeKeyDown={onEscapeKeyDown}
