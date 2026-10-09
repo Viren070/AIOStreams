@@ -4,6 +4,7 @@ import { Button } from '@aiostreams/ui/button';
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '../lib/session';
+import { currentHost } from '../lib/hosts';
 import { useItem } from '../lib/queries';
 import { ScrollRoot } from '../lib/use-in-view';
 import { backdropUrl, landscapeUrl, logoUrl } from '../lib/images';
@@ -147,9 +148,11 @@ function Backdrops({
 function HeroDetails({
   item,
   overviewClass,
+  actions = true,
 }: {
   item: BaseItemDto;
   overviewClass: string;
+  actions?: boolean;
 }) {
   const { client } = useSession();
   const picker = useVersionPicker();
@@ -223,35 +226,37 @@ function HeroDetails({
           {item.Overview}
         </p>
       )}
-      <div data-ui="hero-actions" className="flex flex-wrap gap-2">
-        {playable && (
+      {actions && (
+        <div data-ui="hero-actions" className="flex flex-wrap gap-2">
+          {playable && (
+            <Button
+              data-ui="hero-action"
+              data-name="play"
+              intent="white"
+              className="rounded-full"
+              leftIcon={<BiPlay className="text-xl" />}
+              onClick={() =>
+                picker.play(item, {
+                  startMs: ticksToMs(item.UserData?.PlaybackPositionTicks),
+                })
+              }
+              {...holdPlay}
+            >
+              Play
+            </Button>
+          )}
           <Button
             data-ui="hero-action"
-            data-name="play"
-            intent="white"
+            data-name="info"
+            intent={playable ? 'gray-outline' : 'white'}
             className="rounded-full"
-            leftIcon={<BiPlay className="text-xl" />}
-            onClick={() =>
-              picker.play(item, {
-                startMs: ticksToMs(item.UserData?.PlaybackPositionTicks),
-              })
-            }
-            {...holdPlay}
+            leftIcon={<BiInfoCircle className="text-xl" />}
+            onClick={() => navigate(itemPath(item))}
           >
-            Play
+            {playable ? 'More info' : 'Open'}
           </Button>
-        )}
-        <Button
-          data-ui="hero-action"
-          data-name="info"
-          intent={playable ? 'gray-outline' : 'white'}
-          className="rounded-full"
-          leftIcon={<BiInfoCircle className="text-xl" />}
-          onClick={() => navigate(itemPath(item))}
-        >
-          {playable ? 'More info' : 'Open'}
-        </Button>
-      </div>
+        </div>
+      )}
     </>
   );
 }
@@ -388,6 +393,8 @@ function FollowDetails({ item }: { item: BaseItemDto }) {
       item={details.data ?? item}
       // Three lines kept, so the title does not jump as details arrive.
       overviewClass="line-clamp-3 h-[3lh] sm:text-base"
+      // On a TV it shows the card with focus, which Select already opens.
+      actions={!currentHost().tv}
     />
   );
 }
