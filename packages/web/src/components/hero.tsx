@@ -286,6 +286,7 @@ export function Hero({
   return (
     <section
       data-ui="hero"
+      data-nav-top
       className="relative -mt-[var(--top-bar,0px)] h-[26rem] w-full overflow-hidden sm:h-[30rem] lg:-ml-[var(--side-bar,0px)] lg:h-[calc(max(36rem,53vh)+var(--top-bar,0px))] lg:w-[calc(100%+var(--side-bar,0px))]"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
