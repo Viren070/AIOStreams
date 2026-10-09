@@ -209,14 +209,25 @@ export function VersionPickerProvider({
     };
   }, []);
   const item = request?.item;
+  const open = !!request;
+  // Opened from code, it has no trigger for focus to go back to.
+  const opener = React.useRef<Element | null>(null);
+  React.useLayoutEffect(() => {
+    if (open) opener.current = document.activeElement;
+  }, [open]);
   return (
     <PickerContext.Provider value={value}>
       {children}
       <Modal
         data-ui="dialog"
         data-name="versions"
-        open={!!request}
+        open={open}
         onOpenChange={(open) => !open && setRequest(null)}
+        onCloseAutoFocus={(e) => {
+          if (!(opener.current instanceof HTMLElement)) return;
+          e.preventDefault();
+          opener.current.focus({ preventScroll: true });
+        }}
         title={item ? itemTitle(item) : undefined}
         description={
           item?.Type === 'Episode'
