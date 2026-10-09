@@ -5,9 +5,94 @@ import {
   getLanguagesAfterMarker,
   getRegexForTextAfterEmojis,
   extractInfoHashFromMagnet,
+  reconcileParsedName,
+  titleMatchWithLang,
 } from './utils.js';
+import { partial_ratio } from 'fuzzball';
+import FileParser from './file.js';
 
 const VALID_HASH = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+
+it('recovers explicit country suffix case variants against known titles without stripping genuine words', () => {
+  for (const tag of [
+    'UK',
+    'Uk',
+    'uk',
+    'US',
+    'Us',
+    'us',
+    'AU',
+    'Au',
+    'au',
+    'NZ',
+    'Nz',
+    'nz',
+  ]) {
+    const filename = `Shared.Show.${tag}.S01E04.mkv`;
+    for (const titles of [
+      ['Shared Show'],
+      ['Shared Show', `Shared Show ${tag}`],
+    ]) {
+      const name = reconcileParsedName(
+        FileParser.parse(filename),
+        [filename],
+        titles,
+        2015,
+        'Shared Show'
+      );
+      assert.equal(name.title, 'Shared Show');
+      assert.equal(
+        name.country === 'UK' ? 'GB' : name.country,
+        tag.toUpperCase() === 'UK' ? 'GB' : tag.toUpperCase()
+      );
+    }
+  }
+  for (const title of ['Us', 'US', 'This Is Us', 'This Is US']) {
+    const filename = `${title.replaceAll(' ', '.')}.S01E04.mkv`;
+    const name = reconcileParsedName(
+      FileParser.parse(filename),
+      [filename],
+      [title],
+      2015,
+      title
+    );
+    assert.equal(name.title?.toLowerCase(), title.toLowerCase());
+    assert.equal(name.country, undefined);
+  }
+  const named = reconcileParsedName(
+    { title: 'Different Show Uk' },
+    ['Different.Show.Uk.S01E04.mkv'],
+    ['Shared Show'],
+    2015,
+    'Shared Show'
+  );
+  assert.equal(named.title, 'Different Show Uk');
+  assert.equal(named.country, undefined);
+});
+
+it('leaves title-less parsed files untouched during name reconciliation', () => {
+  const parsed = { year: '1994' };
+  assert.equal(
+    reconcileParsedName(parsed, ['Unknown.mkv'], ['Shared Show']),
+    parsed
+  );
+});
+
+it('resolves contains-score ties to the closest complete alias', () => {
+  const titles = [{ title: 'Katekyo Hitman Reborn' }, { title: 'Reborn' }];
+  for (const title of ['Reborn', 'Katekyo Hitman Reborn']) {
+    const result = titleMatchWithLang(
+      title.replaceAll(' ', '').toLowerCase(),
+      titles,
+      {
+        threshold: 1,
+        scorer: partial_ratio,
+      }
+    );
+    assert.equal(result.matched, true);
+    assert.equal(result.matchedTitle, title);
+  }
+});
 
 describe('extractInfoHashFromMagnet', () => {
   it('extracts a hex BTIH followed by another param', () => {

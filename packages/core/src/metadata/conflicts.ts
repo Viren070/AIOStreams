@@ -3,6 +3,7 @@
  * filters can tell them apart. The TVDB source falls back to Skyhook when no
  * key is set or the keyed search fails.
  */
+import { untilAborted } from '../utils/abort.js';
 import { createLogger } from '../logging/logger.js';
 import { normaliseTitle } from '../parser/utils.js';
 import { appConfig } from '../utils/index.js';
@@ -12,8 +13,6 @@ import { TVDBMetadata } from './tvdb.js';
 import { SkyhookMetadata } from './skyhook.js';
 
 const logger = createLogger('title-conflicts');
-
-const MAX_CONFLICTS = 10;
 
 /** Strips disambiguators TVDB embeds in names: "The Office (CA) (2012)". */
 export function stripTitleDisambiguators(title: string): string {
@@ -44,11 +43,14 @@ export interface DetectConflictsInput {
   tvdbId?: number | null;
   tmdbAuth?: { accessToken?: string; apiKey?: string };
   tvdbApiKey?: string;
+  signal?: AbortSignal;
+  onProgress?: (conflicts: TitleConflict[]) => void;
 }
 
 export async function detectTitleConflicts(
   input: DetectConflictsInput
 ): Promise<TitleConflict[]> {
+  if (input.signal?.aborted) return [];
   const baseTitle = stripTitleDisambiguators(input.title);
   const normBase = normaliseTitle(baseTitle);
   if (!normBase) return [];
@@ -65,7 +67,7 @@ export async function detectTitleConflicts(
 
   const tmdbPromise: Promise<Candidate[]> = tmdbAvailable
     ? new TMDBMetadata(input.tmdbAuth)
-        .searchSeries(baseTitle)
+        .searchSeries(baseTitle, input.signal)
         .then((results) =>
           results
             .filter(
@@ -82,13 +84,13 @@ export async function detectTitleConflicts(
         )
         .catch((error) => {
           logger.debug(`TMDB conflict search failed: ${error}`);
-          return [];
+          throw error;
         })
     : Promise.resolve([]);
 
   const skyhookSearch = (): Promise<Candidate[]> =>
     new SkyhookMetadata()
-      .search(baseTitle)
+      .search(baseTitle, input.signal)
       .then((results) =>
         results
           .filter(
@@ -104,12 +106,12 @@ export async function detectTitleConflicts(
       )
       .catch((error) => {
         logger.debug(`Skyhook conflict search failed: ${error}`);
-        return [];
+        throw error;
       });
 
   const tvdbPromise: Promise<Candidate[]> = tvdbKeyAvailable
     ? new TVDBMetadata({ apiKey: input.tvdbApiKey })
-        .searchSeries(baseTitle)
+        .searchSeries(baseTitle, input.signal)
         .then((results) =>
           results
             .filter(
@@ -127,42 +129,81 @@ export async function detectTitleConflicts(
           logger.debug(
             `TVDB conflict search failed, falling back to Skyhook: ${error}`
           );
+          if (input.signal?.aborted) throw error;
           return skyhookSearch();
         })
     : skyhookSearch();
 
-  const [tmdbCandidates, tvdbCandidates] = await Promise.all([
-    tmdbPromise,
-    tvdbPromise,
-  ]);
+  const completed: Candidate[][] = [[], []];
+  let failed = false;
+  await Promise.all(
+    [tmdbPromise, tvdbPromise].map((operation, index) =>
+      untilAborted(
+        operation
+          .then((candidates) => {
+            if (input.signal?.aborted) return candidates;
+            completed[index] = candidates;
+            input.onProgress?.(
+              conflictsFromCandidates(completed.flat(), input)
+            );
+            return candidates;
+          })
+          .catch(() => {
+            failed = true;
+          }),
+        input.signal
+      )
+    )
+  );
+  if (failed) throw new Error('Title conflict search unavailable');
+  return conflictsFromCandidates(completed.flat(), input);
+}
 
-  const isSelf = (c: Candidate) =>
-    (c.tmdbId != null && input.tmdbId != null && c.tmdbId === input.tmdbId) ||
-    (c.tvdbId != null && input.tvdbId != null && c.tvdbId === input.tvdbId) ||
-    // cross-source identity when the id from that source is unknown
-    (input.year !== undefined &&
-      input.country !== undefined &&
-      c.year === input.year &&
-      c.country === input.country);
-
-  // TMDB and TVDB entries for the same show carry different ids, so
-  // cross-source dedup keys on (year, country).
-  const byKey = new Map<string, Candidate>();
-  for (const candidate of [...tmdbCandidates, ...tvdbCandidates]) {
+function conflictsFromCandidates(
+  candidates: Candidate[],
+  input: DetectConflictsInput
+): TitleConflict[] {
+  const providerIds = ['tmdbId', 'tvdbId'] as const;
+  const isSelf = (candidate: Candidate) => {
+    const comparable = providerIds.filter(
+      (key) => candidate[key] != null && input[key] != null
+    );
+    return (
+      comparable.length > 0 &&
+      comparable.every((key) => candidate[key] === input[key])
+    );
+  };
+  // Year/country agreement neither establishes self identity nor links two
+  // providers. Keep their IDs separate unless a shared namespace identifies them.
+  const byId = new Map<string, Candidate[]>();
+  for (const candidate of candidates) {
     if (isSelf(candidate)) continue;
-    if (candidate.year === undefined && candidate.country === undefined)
-      continue;
-    const key = `${candidate.year ?? '?'}:${candidate.country ?? '?'}`;
-    const existing = byKey.get(key);
-    if (existing) {
-      existing.tmdbId ??= candidate.tmdbId;
-      existing.tvdbId ??= candidate.tvdbId;
-    } else {
-      byKey.set(key, { ...candidate });
-    }
+    const provider = providerIds.find(
+      (key) => Number.isSafeInteger(candidate[key]) && candidate[key]! > 0
+    );
+    if (!provider) continue;
+    const key = `${provider}:${candidate[provider]}`;
+    const group = byId.get(key) ?? [];
+    group.push(candidate);
+    byId.set(key, group);
   }
-
-  return [...byKey.values()]
-    .sort((a, b) => (a.year ?? Infinity) - (b.year ?? Infinity))
-    .slice(0, MAX_CONFLICTS);
+  return [...byId.values()]
+    .map((group) => {
+      const years = new Set(
+        group.flatMap((candidate) =>
+          candidate.year === undefined ? [] : [candidate.year]
+        )
+      );
+      const countries = new Set(
+        group.flatMap((candidate) =>
+          candidate.country === undefined ? [] : [candidate.country]
+        )
+      );
+      return {
+        ...group[0],
+        year: years.size === 1 ? [...years][0] : undefined,
+        country: countries.size === 1 ? [...countries][0] : undefined,
+      };
+    })
+    .sort((a, b) => (a.year ?? Infinity) - (b.year ?? Infinity));
 }

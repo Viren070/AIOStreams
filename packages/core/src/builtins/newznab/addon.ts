@@ -16,6 +16,8 @@ import {
   NabAddonConfigSchema,
   NabAddonConfig,
   parseNabParsedFileInfo,
+  parseNabReleaseIds,
+  parseNabReleaseMedium,
 } from '../base/nab/addon.js';
 import { ageInHoursSince } from '../utils/general.js';
 import { BuiltinProxy, createProxy } from '../../proxy/index.js';
@@ -190,7 +192,10 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
       const parsedMediaInfo = parseNabParsedFileInfo({
         audioLanguages: result.newznab?.language,
         subtitleLanguages: result.newznab?.subs,
+        audioTracks: result.newznab?.audio_tracks,
       });
+      const releaseMedium = parseNabReleaseMedium(result.newznab);
+      const releaseIds = parseNabReleaseIds(result.newznab);
       const nzb: NZB = {
         confirmed: meta.searchType === 'id',
         hash: md5,
@@ -209,6 +214,8 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
           0,
         type: 'usenet',
         parsedMediaInfo,
+        releaseIds,
+        releaseMedium,
       };
 
       const keySize =

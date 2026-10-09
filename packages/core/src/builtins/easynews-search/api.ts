@@ -12,6 +12,7 @@ import {
   formatZodError,
   makeRequest,
   DistributedLock,
+  type ParsedMediaTrack,
 } from '../../utils/index.js';
 import { config as appConfig } from '../../config/index.js';
 import { searchWithBackgroundRefresh } from '../utils/general.js';
@@ -19,6 +20,7 @@ import { VIDEO_FILE_EXTENSIONS } from '../../debrid/utils.js';
 import { parseDuration } from '../../parser/utils.js';
 import bytes from 'bytes';
 import pLimit, { type LimitFunction } from 'p-limit';
+import { parseIndexerAudioTracks } from '../../utils/media-info.js';
 
 const logger = createLogger('easynews');
 
@@ -101,6 +103,8 @@ export interface EasynewsSearchItem {
   duration?: number;
   /** Audio track language codes, e.g. ['eng','spa'] (from audio_tracks/alangs/alang) */
   audioLangs?: string[];
+  /** Explicit provider track roles; language lists alone never imply original audio. */
+  audioTracks?: ParsedMediaTrack[];
   /** Subtitle track language codes (from subtitle_tracks/slangs/slang) */
   subLangs?: string[];
   /** Raw audio codec reported by Easynews, e.g. 'EAC3','AC3','AAC','DCA' */
@@ -234,7 +238,7 @@ export class EasynewsApi {
   private readonly searchCache = Cache.getInstance<
     string,
     EasynewsSearchResult
-  >('easynews:search');
+  >('easynews:search:v2');
 
   private skipReasons = new Map<string, string[]>();
 
@@ -306,7 +310,7 @@ export class EasynewsApi {
     return searchWithBackgroundRefresh({
       searchCache: this.searchCache,
       searchCacheKey: cacheKey,
-      bgCacheKey: `easynews:${cacheKey}`,
+      bgCacheKey: `easynews:v2:${cacheKey}`,
       cacheTTL: appConfig.builtins.easynews.searchCacheTtl,
       fetchFn: () => this.performSearchWithPagination(options),
       isEmptyResult: (result) => result.results.length === 0,
@@ -597,6 +601,7 @@ export class EasynewsApi {
     let displayFn: string | null = null;
     let durationRaw: number | string | null = null;
     let audioLangs: string[] = [];
+    let audioTracks: ParsedMediaTrack[] | undefined;
     let subLangs: string[] = [];
     let acodec: string | undefined;
     let vcodec: string | undefined;
@@ -691,6 +696,20 @@ export class EasynewsApi {
         obj['alangs'],
         obj['alang']
       );
+      const rawTracks = obj['audio_tracks'];
+      if (Array.isArray(rawTracks)) {
+        const objects = rawTracks.filter(
+          (track) =>
+            track !== null && typeof track === 'object' && !Array.isArray(track)
+        );
+        if (objects.length) {
+          const info = parseIndexerAudioTracks(rawTracks);
+          audioTracks = info?.audioTracks;
+          audioLangs = [
+            ...new Set([...audioLangs, ...(info?.languages ?? [])]),
+          ];
+        }
+      }
       subLangs = firstNonEmpty(
         obj['subtitle_tracks'],
         obj['slangs'],
@@ -775,6 +794,7 @@ export class EasynewsApi {
       posted: postedRaw ?? undefined,
       duration,
       audioLangs: audioLangs.length ? audioLangs : undefined,
+      audioTracks,
       subLangs: subLangs.length ? subLangs : undefined,
       acodec,
       vcodec,
