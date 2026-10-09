@@ -38,6 +38,7 @@ export type TabsVariant = 'underline' | 'pill';
 
 interface TabsContextValue extends ComponentAnatomy<typeof TabsAnatomy> {
   activeTab?: string;
+  markedTab?: string;
   layoutId?: string;
   variant?: TabsVariant;
   indicatorClass?: string;
@@ -60,6 +61,8 @@ export type TabsProps = React.ComponentPropsWithoutRef<
      * moves on reflow, such as a centred modal, or the slide replays each time.
      */
     animated?: boolean;
+    /** The tab the sliding marker is on when it isn't the active one. */
+    marked?: string;
   };
 
 export const Tabs = React.forwardRef<HTMLDivElement, TabsProps>(
@@ -72,6 +75,7 @@ export const Tabs = React.forwardRef<HTMLDivElement, TabsProps>(
       variant = 'underline',
       indicatorClass,
       animated = true,
+      marked,
       value: valueProp,
       defaultValue,
       onValueChange,
@@ -111,6 +115,7 @@ export const Tabs = React.forwardRef<HTMLDivElement, TabsProps>(
           triggerClass,
           contentClass,
           activeTab,
+          markedTab: marked ?? activeTab,
           layoutId,
           variant,
           indicatorClass,
@@ -171,11 +176,11 @@ export const TabsTrigger = React.forwardRef<
 >((props, ref) => {
   const { className, children, ...rest } = props;
 
-  const { triggerClass, activeTab, layoutId, variant, indicatorClass } =
+  const { triggerClass, markedTab, layoutId, variant, indicatorClass } =
     React.useContext(__TabsAnatomyContext);
   const reducedMotion = useReducedMotion();
 
-  const isActive = activeTab === rest.value;
+  const isMarked = markedTab === rest.value;
   const animated = !reducedMotion && !!layoutId;
 
   // The static active style has to give way, or it would show at the
@@ -200,7 +205,7 @@ export const TabsTrigger = React.forwardRef<
       {...rest}
     >
       {children}
-      {animated && isActive && (
+      {animated && isMarked && (
         <motion.span
           layoutId={layoutId}
           transition={{ type: 'spring', stiffness: 500, damping: 38 }}

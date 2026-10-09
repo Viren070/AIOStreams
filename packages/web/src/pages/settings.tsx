@@ -2243,6 +2243,8 @@ function sections(): Section[] {
   ];
 }
 
+const TAB_REST_MS = 350;
+
 export function SettingsPage({
   tab,
   onTabChange,
@@ -2255,6 +2257,10 @@ export function SettingsPage({
   // With no marker sliding, the tabs keep the usual focus mark.
   const still = useReducedMotion();
   const active = all.find((s) => s.id === tab) ?? all[0];
+  // Passing through tabs would build every section on the way.
+  const [focused, setFocused] = React.useState<string | null>(null);
+  const resting = React.useRef<ReturnType<typeof setTimeout>>(undefined);
+  React.useEffect(() => () => clearTimeout(resting.current), []);
   const groups = new Map<string, Section[]>();
   for (const s of all) groups.set(s.group, [...(groups.get(s.group) ?? []), s]);
 
@@ -2266,6 +2272,8 @@ export function SettingsPage({
       <Tabs
         value={active.id}
         onValueChange={onTabChange}
+        activationMode="manual"
+        marked={focused ?? undefined}
         variant="pill"
         className="grid w-full grid-cols-1 gap-6 lg:grid-cols-[240px,1fr]"
         triggerClass={cn(
@@ -2297,6 +2305,18 @@ export function SettingsPage({
                   data-name={s.id}
                   data-focus={still && !currentHost().tv ? undefined : 'own'}
                   className="group"
+                  onFocus={() => {
+                    setFocused(s.id);
+                    clearTimeout(resting.current);
+                    resting.current = setTimeout(
+                      () => onTabChange(s.id),
+                      TAB_REST_MS
+                    );
+                  }}
+                  onBlur={() => {
+                    setFocused(null);
+                    clearTimeout(resting.current);
+                  }}
                 >
                   <s.icon className="mr-3 text-xl transition-transform duration-200 group-hover:translate-x-0.5" />
                   {s.label}
