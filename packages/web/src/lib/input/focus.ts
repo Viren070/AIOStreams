@@ -1,3 +1,5 @@
+import { glideBy, glideTo, headedTo } from './glide';
+
 export type Direction = 'up' | 'down' | 'left' | 'right';
 
 const FOCUSABLE =
@@ -380,18 +382,6 @@ function first(root: Element): HTMLElement | null {
   );
 }
 
-let scrolledAt = -Infinity;
-
-/** Restarting a smooth scroll that's still going, as a held key does, only creeps, so that one jumps. */
-function scrollBehavior(): ScrollBehavior {
-  const now = performance.now();
-  const going = now - scrolledAt < 300;
-  scrolledAt = now;
-  return going || matchMedia('(prefers-reduced-motion: reduce)').matches
-    ? 'auto'
-    : 'smooth';
-}
-
 /** How far a box must scroll to show `rect` with some room around it. */
 function shortfall(
   view: { start: number; end: number },
@@ -424,7 +414,6 @@ function shownBox(el: HTMLElement): Element {
  */
 function reveal(el: HTMLElement): void {
   let rect = shownBox(el).getBoundingClientRect();
-  let behavior: ScrollBehavior | undefined;
   for (let box = el.parentElement; box; box = box.parentElement) {
     if (box === document.body || box === document.documentElement) break;
     if (box.hasAttribute('data-nav-self-scroll')) continue;
@@ -436,6 +425,14 @@ function reveal(el: HTMLElement): void {
     const scrollsX = overX && /auto|scroll/.test(style.overflowX);
     if (!scrollsY && !scrollsX) continue;
     const view = box.getBoundingClientRect();
+    // Measured from where a scroll under way ends.
+    const [left, top] = headedTo(box);
+    rect = new DOMRect(
+      rect.x - (left - box.scrollLeft),
+      rect.y - (top - box.scrollTop),
+      rect.width,
+      rect.height
+    );
     const dy = scrollsY
       ? shortfall(
           { start: view.top, end: view.bottom },
@@ -453,12 +450,7 @@ function reveal(el: HTMLElement): void {
         )
       : 0;
     if (!dx && !dy) continue;
-    behavior ??= scrollBehavior();
-    box.scrollTo({
-      top: box.scrollTop + dy,
-      left: box.scrollLeft + dx,
-      behavior,
-    });
+    glideTo(box, left + dx, top + dy);
     rect = new DOMRect(rect.x - dx, rect.y - dy, rect.width, rect.height);
   }
   // A dialog or bar stays put as the page behind it scrolls.
@@ -467,20 +459,22 @@ function reveal(el: HTMLElement): void {
   const room = document.documentElement.hasAttribute('data-tv')
     ? innerHeight / 4
     : Math.min(96, innerHeight * 0.15);
+  const page = document.documentElement;
+  const [left, top] = headedTo(page);
   const dy = el.closest('[data-nav-top]')
-    ? -scrollY
-    : shortfall({ start: 0, end: innerHeight }, rect.top, rect.bottom, room);
-  if (dy)
-    window.scrollTo({
-      top: scrollY + dy,
-      behavior: behavior ?? scrollBehavior(),
-    });
+    ? -top
+    : shortfall(
+        { start: 0, end: innerHeight },
+        rect.top - (top - scrollY),
+        rect.bottom - (top - scrollY),
+        room
+      );
+  if (dy) glideTo(page, left, top + dy);
 }
 
 /** Scrolls the box holding focus, or else the page, a step up or down. */
 export function scrollStep(dir: 'up' | 'down'): void {
   const dy = (dir === 'up' ? -1 : 1) * Math.round(innerHeight / 4);
-  const behavior = scrollBehavior();
   for (
     let box = document.activeElement?.parentElement;
     box && box !== document.body && box !== document.documentElement;
@@ -492,9 +486,9 @@ export function scrollStep(dir: 'up' | 'down'): void {
         ? box.scrollTop > 0
         : box.scrollTop + box.clientHeight < box.scrollHeight - 1
     )
-      return box.scrollBy({ top: dy, behavior });
+      return glideBy(box, 0, dy);
   }
-  window.scrollBy({ top: dy, behavior });
+  glideBy(document.documentElement, 0, dy);
 }
 
 export function focusOn(el: HTMLElement): void {
