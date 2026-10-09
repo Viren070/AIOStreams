@@ -546,7 +546,8 @@ export function scrollStep(dir: 'up' | 'down'): void {
     )
       return glideBy(box, 0, dy);
   }
-  glideBy(document.documentElement, 0, dy);
+  // The page behind a dialog stays put.
+  if (scope() === document.body) glideBy(document.documentElement, 0, dy);
 }
 
 export function focusOn(el: HTMLElement): void {
