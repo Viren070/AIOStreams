@@ -99,7 +99,8 @@ export function Artwork({
   const current = sources[attempt];
   const loaded = !!current && loadedSrc === current;
   const imageClass = cn(
-    'absolute inset-0 h-full w-full object-cover transition-[transform,opacity] duration-500',
+    // A focus's scale keeps up with focus; a loaded image fades in slower.
+    'absolute inset-0 h-full w-full object-cover transition-[transform,opacity] [transition-duration:200ms,500ms]',
     loaded ? 'opacity-100' : 'opacity-0',
     className
   );
