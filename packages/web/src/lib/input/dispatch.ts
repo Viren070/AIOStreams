@@ -15,8 +15,10 @@ import {
 } from './focus';
 import { keyInput } from './keys';
 
-/** False passes the input on to the next handler. */
-export type ActionHandler = (input: string) => boolean | void;
+/** False passes the input on; a function a `Hold+` handler returns runs when the key is let go. */
+export type ActionHandler = (input: string) => boolean | void | (() => void);
+
+type Outcome = boolean | (() => void);
 
 interface Entry {
   id: ActionId;
@@ -51,22 +53,26 @@ export function useAction(
   }, [id, enabled, latest]);
 }
 
-function runHandlers(ids: readonly ActionId[], input: string): boolean {
+function runHandlers(ids: readonly ActionId[], input: string): Outcome {
   // Back closes an open dialog or menu first, as Esc does.
   if (ids.includes('back') && overlayOpen()) {
     sendKey('Escape', { quiet: true });
     return true;
   }
-  return [...entries]
+  const ordered = [...entries]
     .filter((e) => ids.includes(e.id))
     .sort(
       (a, b) => Number(a.fallback) - Number(b.fallback) || b.order - a.order
-    )
-    .some((e) => e.run(input) !== false);
+    );
+  for (const e of ordered) {
+    const result = e.run(input);
+    if (result !== false) return typeof result === 'function' ? result : true;
+  }
+  return false;
 }
 
 export const runAction = (id: ActionId, input = ''): boolean =>
-  runHandlers([id], input);
+  !!runHandlers([id], input);
 
 let keys = false;
 
@@ -105,7 +111,7 @@ export function record(listener: (input: string) => void): () => void {
 
 const worksInDialogs = (id: ActionId) => id === 'back' || id.startsWith('nav.');
 
-export function dispatch(input: string, repeat = false): boolean {
+export function dispatch(input: string, repeat = false): Outcome {
   inputs++;
   // The wheel is a pointer's.
   if (!input.startsWith('Wheel')) keys = true;
@@ -125,25 +131,29 @@ export function dispatch(input: string, repeat = false): boolean {
 
 const HOLD_MS = 500;
 
-/** A key with a `Hold+` binding, or any key while recording, waits for its release. */
-export const holdable = (input: string) =>
-  !!recorder || actionsFor(`Hold+${input}`).length > 0;
+export function holdable(input: string): boolean {
+  if (recorder) return true;
+  const ids = actionsFor(`Hold+${input}`);
+  return [...entries].some((e) => ids.includes(e.id));
+}
 
 /**
  * Runs the `Hold+` form of `input` once it has been down long enough. The
- * returned release runs `press` when the hold did nothing, or drops the press.
+ * returned release ends what the hold started, runs `press` when the hold did
+ * nothing, or drops the press.
  */
 export function pressAndHold(
   input: string,
   press: () => void
 ): (drop?: boolean) => void {
-  let took = false;
+  let took: Outcome = false;
   const timer = setTimeout(() => {
     took = dispatch(`Hold+${input}`);
   }, HOLD_MS);
   return (drop) => {
     clearTimeout(timer);
-    if (!took && !drop) press();
+    if (typeof took === 'function') took();
+    else if (!took && !drop) press();
   };
 }
 
@@ -286,7 +296,7 @@ function onKey(e: KeyboardEvent, early: boolean): void {
   const handled = throttled(e, input, () =>
     typing
       ? ids.includes('back') && runAction('back', input)
-      : dispatch(input, repeats.has(e))
+      : !!dispatch(input, repeats.has(e))
   );
   if (!handled) return;
   if (input.split('+').pop()!.startsWith('Media'))
