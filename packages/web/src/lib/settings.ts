@@ -328,6 +328,8 @@ export const SEEK_STEPS = [5, 10, 15, 30] as const;
 /** Percentages. */
 export const VOLUME_STEPS = [1, 2, 5, 10] as const;
 
+export const HOLD_RATES = [1.5, 2, 3] as const;
+
 export const SEGMENT_TYPES = [
   'Intro',
   'Recap',
@@ -552,6 +554,8 @@ export const settings = {
   playerLink: device<string>('aiostreams-web-player-link', ''),
   seekStep: device<number>('aiostreams-web-seek-step', 10, SEEK_STEPS),
   volumeStep: device<number>('aiostreams-web-volume-step', 5, VOLUME_STEPS),
+  /** The speed while a long press or a held key speeds playback up. */
+  holdRate: device<number>('aiostreams-web-hold-rate', 2, HOLD_RATES),
   /** Keys changed from the defaults, by action. */
   shortcuts: deviceLists('aiostreams-web-shortcuts'),
   segment,

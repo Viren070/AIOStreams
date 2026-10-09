@@ -44,11 +44,11 @@ import {
 import { usePlaybackPrefs, type PlaybackPrefs } from '../lib/user-config';
 import { backdropUrl } from '../lib/images';
 import { goBack, navigate, to, versionsPath } from '../lib/paths';
-import { PlayerControls } from '../components/player-controls';
+import { PlayerControls } from '../components/player/controls';
 import {
   countPlayedOn,
   useNextEpisodePrompt,
-} from '../components/next-episode';
+} from '../components/player/next-episode';
 import {
   useVersionPicker,
   VersionPickerProvider,

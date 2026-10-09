@@ -205,6 +205,12 @@ export const ACTIONS = {
     group: 'player',
     keys: ['Backspace'],
   },
+  'player.speedUp': {
+    label: 'Speed up while held',
+    help: 'Plays faster for as long as the key is held, at the speed set in Playback settings.',
+    group: 'player',
+    keys: ['Hold+Space', 'Hold+Enter', 'Hold+GamepadX'],
+  },
   'player.fullscreen': { label: 'Full screen', group: 'player', keys: ['F'] },
   'player.stats': {
     label: 'Statistics',

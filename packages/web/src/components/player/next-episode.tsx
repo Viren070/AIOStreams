@@ -1,27 +1,27 @@
 import React from 'react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
-import { Button } from '@aiostreams/ui/button';
-import { useSession } from '../lib/session';
-import { useAdjacentEpisodes, usePlaybackInfoOptions } from '../lib/queries';
-import { landscapeUrl } from '../lib/images';
-import { episodeCode, itemSubtitle, ticksToMs } from '../lib/format';
-import { navigate, to, versionsPath } from '../lib/paths';
-import { playableSources } from '../lib/playback/play';
-import { streamUrl } from '../lib/playback/stream';
+import { useSession } from '../../lib/session';
+import { useAdjacentEpisodes, usePlaybackInfoOptions } from '../../lib/queries';
+import { landscapeUrl } from '../../lib/images';
+import { episodeCode, itemSubtitle, ticksToMs } from '../../lib/format';
+import { navigate, to, versionsPath } from '../../lib/paths';
+import { playableSources } from '../../lib/playback/play';
+import { streamUrl } from '../../lib/playback/stream';
 import {
   focusOn,
   inputCount,
   keyboardFocus,
   noteInput,
   useAction,
-} from '../lib/input';
-import { settings, useSetting, type NextPrompt } from '../lib/settings';
-import { usePlaybackPrefs } from '../lib/user-config';
-import { useLatest } from '../lib/use-latest';
-import type { PlayerController } from '../lib/playback/controller';
-import type { BaseItemDto, MediaSegmentDto, SourceInfo } from '../lib/types';
-import { CachedImage } from './cached-image';
+} from '../../lib/input';
+import { settings, useSetting, type NextPrompt } from '../../lib/settings';
+import { usePlaybackPrefs } from '../../lib/user-config';
+import { useLatest } from '../../lib/use-latest';
+import type { PlayerController } from '../../lib/playback/controller';
+import type { BaseItemDto, MediaSegmentDto, SourceInfo } from '../../lib/types';
+import { CachedImage } from '../cached-image';
+import { PlayerAction } from './buttons';
 
 type Direction = 'previous' | 'next';
 
@@ -358,26 +358,24 @@ export function useNextEpisodePrompt({
             <p className="line-clamp-2 font-semibold">{itemSubtitle(next)}</p>
           </div>
           <div className="flex gap-2">
-            <Button
+            <PlayerAction
+              primary
               data-ui="next-episode-action"
               data-name="play"
-              intent="white"
-              className="flex-1 rounded-full"
+              className="flex-1"
               onClick={() => void playNext()}
             >
               {counting
                 ? `Play in ${Math.max(1, Math.ceil(leftMs / 1000))}s`
                 : 'Play now'}
-            </Button>
-            <Button
+            </PlayerAction>
+            <PlayerAction
               data-ui="next-episode-action"
               data-name="hide"
-              intent="gray-outline"
-              className="rounded-full"
               onClick={() => setDismissed(true)}
             >
               Hide
-            </Button>
+            </PlayerAction>
           </div>
         </div>
         {autoplay && (
@@ -431,7 +429,7 @@ function StillWatching({
             data-ui="still-watching-image"
             src={image}
             alt=""
-            className="aspect-video w-full rounded-xl object-cover"
+            className="aspect-video w-full rounded-xl object-cover [@media(max-height:640px)]:hidden"
           />
         )}
         <div className="space-y-1">
@@ -441,26 +439,23 @@ function StillWatching({
           </p>
         </div>
         <div className="flex flex-col justify-center gap-2 sm:flex-row">
-          <Button
+          <PlayerAction
+            primary
             data-ui="still-watching-action"
             data-name="continue"
-            intent="white"
-            className="rounded-full"
             loading={loading}
             autoFocus
             onClick={onContinue}
           >
             Continue watching
-          </Button>
-          <Button
+          </PlayerAction>
+          <PlayerAction
             data-ui="still-watching-action"
             data-name="back"
-            intent="gray-outline"
-            className="rounded-full"
             onClick={onBack}
           >
             Back
-          </Button>
+          </PlayerAction>
         </div>
       </div>
     </div>

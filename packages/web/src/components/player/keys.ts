@@ -1,6 +1,6 @@
 import React from 'react';
-import { chapterAt } from '../lib/playback/chapters';
-import { currentHost } from '../lib/hosts';
+import { chapterAt } from '../../lib/playback/chapters';
+import { currentHost } from '../../lib/hosts';
 import {
   focusOn,
   keyboardFocus,
@@ -8,20 +8,20 @@ import {
   onAction,
   type ActionHandler,
   type ActionId,
-} from '../lib/input';
-import { useLatest } from '../lib/use-latest';
-import type { PlayerController } from '../lib/playback/controller';
-import { settings } from '../lib/settings';
-import { delayLabel, SUBTITLE_DELAY_STEP_MS } from '../lib/subtitles/delay';
+} from '../../lib/input';
+import { useLatest } from '../../lib/use-latest';
+import type { PlayerController } from '../../lib/playback/controller';
+import { settings } from '../../lib/settings';
+import { delayLabel, SUBTITLE_DELAY_STEP_MS } from '../../lib/subtitles/delay';
 import {
   stepSubtitleHeight,
   stepSubtitleSize,
   SUBTITLE_SIZE_LABELS,
-} from '../lib/subtitles/style';
+} from '../../lib/subtitles/style';
 
 export const RATES = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
-const rateLabel = (rate: number) => (rate === 1 ? 'Normal' : `${rate}×`);
+export const rateLabel = (rate: number) => (rate === 1 ? 'Normal' : `${rate}×`);
 
 /** Back to a chapter's start, or the one before when it has only just begun. */
 const RESTART_CHAPTER_MS = 3000;
@@ -42,6 +42,7 @@ interface PlayerKeys {
   onNext?: () => void;
   /** Set while the skip button shows. */
   skipSegment?: () => void;
+  speedUp(): (() => void) | false;
 }
 
 /** The player's shortcuts, each of which also shows the controls. */
@@ -212,6 +213,12 @@ export function usePlayerKeys(keys: PlayerKeys): void {
         if (run(input) === false) return false;
         k().wake();
       })
+    );
+    // A focused control keeps its key.
+    stops.push(
+      onAction('player.speedUp', () =>
+        keyboardFocus() ? false : k().speedUp()
+      )
     );
     stops.push(
       onAction('back', () => {

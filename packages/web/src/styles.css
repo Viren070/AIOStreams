@@ -118,6 +118,27 @@ html[data-pointer-focus] :focus-visible [data-ui='focus-ring'] {
   outline-offset: -2px;
 }
 
+[data-ui='player-controls'] {
+  --control: 2.5rem;
+  --icon: 1.4rem;
+  --title: 1rem;
+  --time: 0.875rem;
+}
+@media (min-width: 1600px) and (min-height: 860px) {
+  [data-ui='player-controls'] {
+    --control: 3rem;
+    --icon: 1.65rem;
+    --title: 1.125rem;
+    --time: 1rem;
+  }
+}
+[data-tv] [data-ui='player-controls'] {
+  --control: 3.25rem;
+  --icon: 1.85rem;
+  --title: 1.25rem;
+  --time: 1.125rem;
+}
+
 /* Glass for bars over the page; the grain breaks up the bands a strong blur leaves. */
 .bar-surface {
   border: 1px solid rgb(255 255 255 / 0.1);

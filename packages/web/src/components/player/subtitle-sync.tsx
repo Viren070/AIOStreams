@@ -5,11 +5,15 @@ import { Modal } from '@aiostreams/ui/modal';
 import { TextInput } from '@aiostreams/ui/text-input';
 import { LoadingSpinner } from '@aiostreams/ui/loading-spinner';
 import { cn } from '@aiostreams/ui/core/styling';
-import { clock } from '../lib/format';
-import { useAction, useKeys } from '../lib/input';
-import { KeyCaps } from './key-caps';
-import { delayForLine, delayForTaps, delayLabel } from '../lib/subtitles/delay';
-import type { SubtitleLine } from '../lib/subtitles/cues';
+import { clock } from '../../lib/format';
+import { useAction, useKeys } from '../../lib/input';
+import { KeyCaps } from '../key-caps';
+import {
+  delayForLine,
+  delayForTaps,
+  delayLabel,
+} from '../../lib/subtitles/delay';
+import type { SubtitleLine } from '../../lib/subtitles/cues';
 
 type Tap = 'heard' | 'saw';
 

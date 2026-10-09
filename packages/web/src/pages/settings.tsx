@@ -110,6 +110,7 @@ import {
   NEXT_COUNTDOWNS,
   NEXT_LEADS,
   STILL_WATCHING_AFTER,
+  HOLD_RATES,
   SEEK_STEPS,
   VOLUME_STEPS,
   SEGMENT_ACTIONS,
@@ -349,6 +350,7 @@ function PlaybackSection() {
   const { prefs, update } = usePlaybackPrefs();
   const [seekStep, setSeekStep] = useSetting(settings.seekStep);
   const [volumeStep, setVolumeStep] = useSetting(settings.volumeStep);
+  const [holdRate, setHoldRate] = useSetting(settings.holdRate);
   const [autoPlay, setAutoPlay] = useSetting(settings.autoPlayFirst);
   const [nextPrompt, setNextPrompt] = useSetting(settings.next.prompt);
   const [nextLead, setNextLead] = useSetting(settings.next.lead);
@@ -530,6 +532,16 @@ function PlaybackSection() {
           }))}
           value={String(volumeStep)}
           onValueChange={(v) => setVolumeStep(Number(v))}
+        />
+        <Select
+          label="Held speed"
+          help="How fast playback runs while you press and hold the video, or hold Space or Select."
+          options={HOLD_RATES.map((r) => ({
+            value: String(r),
+            label: `${r}×`,
+          }))}
+          value={String(holdRate)}
+          onValueChange={(v) => setHoldRate(Number(v))}
         />
       </SettingsCard>
       {(decoding || androidTv) && (
