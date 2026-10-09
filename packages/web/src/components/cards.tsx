@@ -410,7 +410,7 @@ export function PosterCard(props: PosterCardProps) {
         />
         <div
           data-ui="poster-card-shade"
-          className="absolute inset-0 bg-black/0 transition-colors group-hover/poster:bg-black/20 group-focus-visible/poster:bg-black/20"
+          className="absolute inset-0 bg-black/20 opacity-0 transition-opacity group-hover/poster:opacity-100 group-focus-visible/poster:opacity-100"
         />
         <FocusRing className="group-focus-visible/poster:opacity-100" />
         {watched && <WatchedMark />}
@@ -505,9 +505,9 @@ export function WideCard(props: WideCardProps) {
         {!unavailable && (
           <div
             data-ui="wide-card-play"
-            className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover/wide:bg-black/30 group-focus-visible/wide-link:bg-black/30"
+            className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity group-hover/wide:opacity-100 group-focus-visible/wide-link:opacity-100"
           >
-            <BiPlay className="text-5xl text-white opacity-0 drop-shadow transition-opacity group-hover/wide:opacity-90 group-focus-visible/wide-link:opacity-90" />
+            <BiPlay className="text-5xl text-white opacity-90 drop-shadow" />
           </div>
         )}
         {badge && (
