@@ -210,6 +210,9 @@ export function VersionPickerProvider({
   }, []);
   const item = request?.item;
   const open = !!request;
+  // Kept while it closes, so it leaves the way it came.
+  const [sheet, setSheet] = React.useState(false);
+  if (request && sheet !== !!request.playing) setSheet(!!request.playing);
   // Opened from code, it has no trigger for focus to go back to.
   const opener = React.useRef<Element | null>(null);
   React.useLayoutEffect(() => {
@@ -234,9 +237,23 @@ export function VersionPickerProvider({
             ? itemSubtitle(item)
             : item?.ProductionYear || undefined
         }
-        contentClass="flex w-full max-w-4xl flex-col gap-0 overflow-hidden p-0 max-md:h-[100dvh] max-md:rounded-none max-md:border-0 md:max-h-[85vh]"
-        headerClass="relative z-[1] px-4 pb-3 pr-14 pt-5 text-left max-md:pt-[calc(1.25rem+env(safe-area-inset-top))] sm:px-5 sm:pr-14"
-        closeClass="z-[2] max-md:top-[calc(1rem+env(safe-area-inset-top))]"
+        side={sheet ? 'right' : 'center'}
+        contentClass={
+          sheet
+            ? 'flex flex-col gap-0 overflow-hidden p-0'
+            : 'flex w-full max-w-4xl flex-col gap-0 overflow-hidden p-0 max-md:h-[100dvh] max-md:rounded-none max-md:border-0 md:max-h-[85vh]'
+        }
+        headerClass={
+          sheet
+            ? 'relative z-[1] px-4 pb-2 pr-14 pt-[calc(1rem+env(safe-area-inset-top))] text-left'
+            : 'relative z-[1] px-4 pb-3 pr-14 pt-5 text-left max-md:pt-[calc(1.25rem+env(safe-area-inset-top))] sm:px-5 sm:pr-14'
+        }
+        titleClass={sheet ? 'text-lg' : undefined}
+        closeClass={
+          sheet
+            ? 'z-[2] top-[calc(0.75rem+env(safe-area-inset-top))]'
+            : 'z-[2] max-md:top-[calc(1rem+env(safe-area-inset-top))]'
+        }
       >
         {request && (
           <Versions
@@ -375,7 +392,10 @@ function Versions({
       )}
       <div
         data-ui="versions-header"
-        className="relative z-[1] space-y-3 px-4 pb-3 sm:px-5"
+        className={cn(
+          'relative z-[1] px-4',
+          request.playing ? 'space-y-2 pb-2' : 'space-y-3 pb-3 sm:px-5'
+        )}
       >
         <div className="flex flex-wrap items-center gap-2">
           <p
