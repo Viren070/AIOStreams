@@ -948,8 +948,8 @@ function NavEntry({
       data-focus="own"
       aria-current={item.isCurrent ? 'page' : undefined}
       className={cn(
-        'flex h-12 flex-none items-center gap-4 overflow-hidden whitespace-nowrap rounded-full px-3.5 font-medium transition-[color,box-shadow] focus-visible:text-white',
-        // A shadow, as a fading background or opacity shows its start again for a frame as it ends in a TV's web view.
+        'flex h-12 flex-none items-center gap-4 overflow-hidden whitespace-nowrap rounded-full px-3.5 font-medium focus-visible:text-white',
+        // A shadow, as an ending background or opacity fade flashes its start for a frame in a TV's web view.
         'focus-visible:shadow-[inset_0_0_0_999px_rgb(255_255_255/0.2)]',
         item.isCurrent ? 'bg-white/10 text-white' : 'text-gray-400',
         className
@@ -977,9 +977,12 @@ function TvRail({
   open: boolean;
   floating?: boolean;
 }) {
-  const label = open
-    ? undefined
-    : 'opacity-0 transition-opacity group-focus-within/rail:opacity-100';
+  const label =
+    open || !floating
+      ? undefined
+      : 'opacity-0 transition-opacity group-focus-within/rail:opacity-100';
+  // Shut, the clear panel is clipped to its icons; its buttons keep pointer events, which focus moves need.
+  const reach = !open && !floating && 'pointer-events-auto';
   const entry = (item: SidebarItem) => {
     const Icon = item.iconType;
     return (
@@ -989,7 +992,7 @@ function TvRail({
         icon={Icon && <Icon />}
         onClick={select(item)}
         labelClassName={label}
-        className="w-full"
+        className={cn('w-full', reach)}
       />
     );
   };
@@ -1005,7 +1008,7 @@ function TvRail({
           item={{ id: 'account', name: 'You' }}
           icon={<YouIcon />}
           labelClassName={label}
-          className="w-full"
+          className={cn('w-full', reach)}
         />
       }
     />
@@ -1039,6 +1042,23 @@ function TvRail({
       </nav>
     );
   }
+  const logo = (
+    <BrandLogo className="mx-3.5 mb-6 h-8 w-6 flex-none object-contain" />
+  );
+  const glyph = (
+    item: Pick<SidebarItem, 'id' | 'isCurrent'>,
+    icon: React.ReactNode
+  ) => (
+    <span
+      key={item.id}
+      className={cn(
+        'flex h-12 flex-none items-center rounded-full px-3.5',
+        item.isCurrent ? 'bg-white/10 text-white' : 'text-gray-400'
+      )}
+    >
+      <span className="flex w-6 justify-center text-2xl">{icon}</span>
+    </span>
+  );
   return (
     <nav
       data-ui="tv-rail"
@@ -1047,16 +1067,42 @@ function TvRail({
       // Open, it covers the page beside it, which can leave nothing in line.
       data-nav-exit="right"
       className={cn(
-        'group/rail absolute inset-y-0 left-0 flex flex-col gap-1 px-3 py-8 transition-[width] duration-200',
-        open ? 'w-full' : 'w-20 focus-within:w-64'
+        'group/rail absolute inset-y-0 left-0',
+        open
+          ? 'w-full'
+          : 'pointer-events-none w-64 focus-within:pointer-events-auto'
       )}
     >
       {shade}
-      <BrandLogo className="mx-3.5 mb-6 h-8 w-6 flex-none object-contain" />
-      {items.map(entry)}
-      <div className="mt-auto flex flex-col gap-1">
-        {footerItems.map(entry)}
-        {account}
+      {!open && (
+        // The open panel fades in over these, as a changing width lays the page out every frame.
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 left-0 flex w-20 flex-col gap-1 px-3 py-8 transition-opacity duration-200 group-focus-within/rail:opacity-0"
+        >
+          {logo}
+          {items.map((item) => glyph(item, item.iconType && <item.iconType />))}
+          <div className="mt-auto flex flex-col gap-1">
+            {footerItems.map((item) =>
+              glyph(item, item.iconType && <item.iconType />)
+            )}
+            {glyph({ id: 'account' }, <YouIcon />)}
+          </div>
+        </div>
+      )}
+      <div
+        className={cn(
+          'flex h-full flex-col gap-1 px-3 py-8',
+          !open &&
+            'opacity-0 transition-opacity duration-200 [clip-path:inset(0_calc(100%-5rem)_0_0)] group-focus-within/rail:opacity-100 group-focus-within/rail:[clip-path:none]'
+        )}
+      >
+        {logo}
+        {items.map(entry)}
+        <div className="mt-auto flex flex-col gap-1">
+          {footerItems.map(entry)}
+          {account}
+        </div>
       </div>
     </nav>
   );
