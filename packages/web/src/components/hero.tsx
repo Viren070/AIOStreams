@@ -16,6 +16,7 @@ import type { JellyfinClient } from '../lib/client';
 import type { BaseItemDto } from '../lib/types';
 import { useHold } from '../lib/use-hold';
 import { CachedImage } from './cached-image';
+import { GlideLayers } from './glide-layers';
 
 const ROTATE_MS = 9000;
 /** How long the pointer or focus rests on a card before the hero follows it. */
@@ -489,7 +490,9 @@ export function FollowHero({
           // revealed row and its header.
           className="min-h-0 flex-1 overflow-y-auto [--row-card-h:calc(100dvh-var(--hero-h)-4.25rem)] [mask-image:linear-gradient(to_bottom,transparent,black_2rem)]"
         >
-          <ScrollRoot.Provider value={scroller}>{children}</ScrollRoot.Provider>
+          <ScrollRoot.Provider value={scroller}>
+            <GlideLayers>{children}</GlideLayers>
+          </ScrollRoot.Provider>
         </div>
       </div>
     </FollowContext.Provider>

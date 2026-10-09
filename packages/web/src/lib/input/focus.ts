@@ -1,4 +1,4 @@
-import { glideBy, glideTo, headedTo } from './glide';
+import { glideBy, glideOffset, glideTo, headedTo } from './glide';
 
 export type Direction = 'up' | 'down' | 'left' | 'right';
 
@@ -523,11 +523,11 @@ function reveal(el: HTMLElement): void {
       /auto|scroll/.test(style.overflowX) && box.scrollWidth > box.clientWidth;
     if (!scrollsY && !scrollsX) continue;
     const view = box.getBoundingClientRect();
-    // Measured from where a scroll under way ends.
+    // Measured from where a scroll under way ends, not where its easing draws it.
     const [left, top] = headedTo(box);
     rect = new DOMRect(
       rect.x - (left - box.scrollLeft),
-      rect.y - (top - box.scrollTop),
+      rect.y - (top - box.scrollTop) - glideOffset(box),
       rect.width,
       rect.height
     );
@@ -558,12 +558,13 @@ function reveal(el: HTMLElement): void {
     : Math.min(96, innerHeight * 0.15);
   const page = document.documentElement;
   const [left, top] = headedTo(page);
+  const drawn = glideOffset(page);
   const dy = el.closest('[data-nav-top]')
     ? -top
     : shortfall(
         { start: 0, end: innerHeight },
-        rect.top - (top - scrollY),
-        rect.bottom - (top - scrollY),
+        rect.top - (top - scrollY) - drawn,
+        rect.bottom - (top - scrollY) - drawn,
         room
       );
   if (dy) glideTo(page, left, top + dy);

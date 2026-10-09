@@ -23,6 +23,83 @@ interface Glide {
 const glides = new Map<Element, Glide>();
 let frame = 0;
 
+const EASED_MS = 250;
+
+/** Each jump takes the next layer, as nested transforms add up and one under way carries on. */
+interface Eased {
+  layers: HTMLElement[];
+  jumps: { animation: Animation; dy: number }[];
+  next: number;
+}
+
+const eased = new WeakMap<Element, Eased>();
+
+function layersOf(box: Element): HTMLElement[] | null {
+  const outer =
+    box === document.documentElement
+      ? document.querySelector<HTMLElement>('[data-glide-layers=page]')
+      : box.querySelector<HTMLElement>(':scope > [data-glide-layers]');
+  if (!outer) return null;
+  const layers: HTMLElement[] = [];
+  let el: Element | null = outer;
+  while (el instanceof HTMLElement && el.hasAttribute('data-glide-layer')) {
+    layers.push(el);
+    el = el.firstElementChild;
+  }
+  return layers.length ? layers : null;
+}
+
+/** How far a scroller's content is still drawn from its scroll position by jumps under way. */
+export function glideOffset(box: Element): number {
+  let dy = 0;
+  for (const jump of eased.get(box)?.jumps ?? []) {
+    const progress = jump.animation.effect?.getComputedTiming().progress;
+    if (progress != null) dy += jump.dy * (1 - progress);
+  }
+  return dy;
+}
+
+/**
+ * A sticky bar, marked `data-sticky`, stuck now or by the end of a `dy` scroll,
+ * which eased layers would carry off with the page.
+ */
+function pinned(box: Element, layers: HTMLElement[], dy: number): boolean {
+  const bars = layers[0].querySelectorAll<HTMLElement>('[data-sticky]');
+  if (!bars.length) return false;
+  const view =
+    box === document.documentElement ? 0 : box.getBoundingClientRect().top;
+  const offset = glideOffset(box);
+  for (const el of bars) {
+    const style = getComputedStyle(el);
+    if (style.position !== 'sticky') continue;
+    const top = view + (parseFloat(style.top) || 0);
+    const at = el.getBoundingClientRect().top - offset;
+    if (at <= top + 1 || at - dy <= top + 1) return true;
+  }
+  return false;
+}
+
+function easeJump(box: Element, layers: HTMLElement[], top: number): void {
+  glides.delete(box);
+  const from = box.scrollTop;
+  box.scrollTo(box.scrollLeft, top);
+  const dy = box.scrollTop - from;
+  if (!dy) return;
+  let state = eased.get(box);
+  if (!state || state.layers[0] !== layers[0])
+    eased.set(box, (state = { layers, jumps: [], next: 0 }));
+  const layer = state.layers[state.next];
+  state.jumps[state.next]?.animation.finish();
+  state.jumps[state.next] = {
+    animation: layer.animate(
+      [{ transform: `translateY(${dy}px)` }, { transform: 'none' }],
+      { duration: EASED_MS, easing: 'ease-out' }
+    ),
+    dy,
+  };
+  state.next = (state.next + 1) % state.layers.length;
+}
+
 /** A critically damped spring's exact place after `time`, however long. */
 function advance(glide: Glide, time: number): void {
   const t = (time - glide.time) / 1000;
@@ -48,11 +125,16 @@ export function glideTo(box: Element, left: number, top: number): void {
     Math.max(0, Math.min(left, box.scrollWidth - box.clientWidth)),
     Math.max(0, Math.min(top, box.scrollHeight - box.clientHeight)),
   ];
+  if (!glides.has(box) && to[0] === box.scrollLeft && to[1] === box.scrollTop)
+    return;
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
     glides.delete(box);
     box.scrollTo(...to);
     return;
   }
+  const layers = to[0] === box.scrollLeft ? layersOf(box) : null;
+  if (layers && !pinned(box, layers, to[1] - box.scrollTop))
+    return easeJump(box, layers, to[1]);
   const now = performance.now();
   let glide = glides.get(box);
   if (glide) {

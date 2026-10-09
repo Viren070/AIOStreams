@@ -72,6 +72,7 @@ import { VersionPickerProvider } from './version-picker';
 import { ItemMenuHost } from './item-menu';
 import { HomePage } from '../pages/home';
 import { PageShown } from '../lib/page-shown';
+import { GlideLayers } from './glide-layers';
 
 const PAGE_FADE = {
   initial: { opacity: 0, top: 6 },
@@ -710,35 +711,37 @@ export function WebLayout() {
             )}
             <VersionPickerProvider>
               <ItemMenuHost>
-                {kept && (
-                  <motion.div
-                    key={kept}
-                    data-page="home"
-                    {...PAGE_FADE}
-                    inert={!onHome}
-                    className={cn(
-                      page,
-                      !onHome &&
-                        'absolute inset-x-0 top-0 [content-visibility:hidden]'
-                    )}
-                  >
-                    <PageShown.Provider value={onHome}>
-                      <HomePage />
-                    </PageShown.Provider>
-                    {onHome && <PageScroll />}
-                  </motion.div>
-                )}
-                {!onHome && (
-                  <motion.div
-                    key={pathname}
-                    data-page={pageName(pathname)}
-                    {...PAGE_FADE}
-                    className={page}
-                  >
-                    <Outlet />
-                    <PageScroll />
-                  </motion.div>
-                )}
+                <GlideLayers name="page">
+                  {kept && (
+                    <motion.div
+                      key={kept}
+                      data-page="home"
+                      {...PAGE_FADE}
+                      inert={!onHome}
+                      className={cn(
+                        page,
+                        !onHome &&
+                          'absolute inset-x-0 top-0 [content-visibility:hidden]'
+                      )}
+                    >
+                      <PageShown.Provider value={onHome}>
+                        <HomePage />
+                      </PageShown.Provider>
+                      {onHome && <PageScroll />}
+                    </motion.div>
+                  )}
+                  {!onHome && (
+                    <motion.div
+                      key={pathname}
+                      data-page={pageName(pathname)}
+                      {...PAGE_FADE}
+                      className={page}
+                    >
+                      <Outlet />
+                      <PageScroll />
+                    </motion.div>
+                  )}
+                </GlideLayers>
               </ItemMenuHost>
             </VersionPickerProvider>
           </AppLayoutContent>

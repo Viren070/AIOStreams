@@ -2278,7 +2278,10 @@ export function SettingsPage({
         indicatorClass="group-focus-visible:outline group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-[--ring] [[data-tv]_&]:group-focus-visible:bg-white/20 [[data-tv]_&]:group-focus-visible:outline-none [html[data-pointer-focus]_&]:!outline-none"
         listClass="h-fit w-full flex flex-wrap lg:block lg:flex-nowrap"
       >
-        <TabsList className="max-w-full flex-wrap lg:sticky lg:top-6 lg:space-y-3">
+        <TabsList
+          data-sticky
+          className="max-w-full flex-wrap lg:sticky lg:top-6 lg:space-y-3"
+        >
           {[...groups.entries()].map(([group, items]) => (
             <Card
               key={group}

@@ -675,7 +675,10 @@ function HistoryTable({
   return (
     <div className="space-y-3">
       {picked.size > 0 && (
-        <div className="sticky top-[calc(0.5rem+env(safe-area-inset-top))] z-[5] flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-gray-950/95 p-3 backdrop-blur">
+        <div
+          data-sticky
+          className="sticky top-[calc(0.5rem+env(safe-area-inset-top))] z-[5] flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-gray-950/95 p-3 backdrop-blur"
+        >
           <span className="text-sm">{picked.size} selected</span>
           <div className="flex gap-2">
             <Button
