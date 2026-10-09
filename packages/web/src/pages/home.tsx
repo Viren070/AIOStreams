@@ -177,7 +177,9 @@ export function HomePage() {
           <NoCatalogs />
         </div>
       ) : (
-        onHome.map((view) => <LibraryRow key={view.Id} view={view} />)
+        onHome.map((view, i) => (
+          <LibraryRow key={view.Id} view={view} first={i === 0} />
+        ))
       )}
     </>
   );
@@ -320,10 +322,14 @@ function UpcomingRow() {
 
 const ROW_PAGE = 20;
 
-/** A library's row, fetched once near the screen and paged as it scrolls. */
-function LibraryRow({ view }: { view: BaseItemDto }) {
+/**
+ * A library's row, fetched and drawn once near the screen and paged as it
+ * scrolls. Its cards wait too when already fetched, as most rows are out of
+ * sight: only the first starts drawn, as a page opens at its top.
+ */
+function LibraryRow({ view, first }: { view: BaseItemDto; first: boolean }) {
   const { client } = useSession();
-  const [ref, near] = useNear<HTMLElement>('400px');
+  const [ref, near] = useNear<HTMLElement>('400px', first);
   const pages = useItemPages(view.Id!, {
     types: libraryTypes(view),
     recursive: true,
@@ -358,25 +364,26 @@ function LibraryRow({ view }: { view: BaseItemDto }) {
         </a>
       }
       shape={landscape ? 'wide' : 'poster'}
-      loading={!pages.data && !pages.isError}
+      loading={!near || (!pages.data && !pages.isError)}
       waiting={!near}
       loadingMore={isFetchingNextPage}
       onEndReached={more}
     >
-      {items.map((item) => (
-        <ItemMenu key={item.Id} item={item}>
-          <PosterCard
-            href={href(itemPath(item))}
-            shape={landscape ? 'landscape' : cardShape(item)}
-            image={(width) => posterUrl(client, item, { maxWidth: width })}
-            title={item.Name ?? ''}
-            subtitle={itemSubtitle(item)}
-            watched={item.UserData?.Played}
-            unwatched={item.UserData?.UnplayedItemCount ?? undefined}
-            progress={progressOf(item)}
-          />
-        </ItemMenu>
-      ))}
+      {near &&
+        items.map((item) => (
+          <ItemMenu key={item.Id} item={item}>
+            <PosterCard
+              href={href(itemPath(item))}
+              shape={landscape ? 'landscape' : cardShape(item)}
+              image={(width) => posterUrl(client, item, { maxWidth: width })}
+              title={item.Name ?? ''}
+              subtitle={itemSubtitle(item)}
+              watched={item.UserData?.Played}
+              unwatched={item.UserData?.UnplayedItemCount ?? undefined}
+              progress={progressOf(item)}
+            />
+          </ItemMenu>
+        ))}
     </MediaRow>
   );
 }
