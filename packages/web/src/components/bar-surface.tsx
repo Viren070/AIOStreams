@@ -89,6 +89,9 @@ export function BarSurface({
   const liquid = look === 'liquid' && canRefract;
   const ref = React.useRef<HTMLDivElement>(null);
   const [size, setSize] = React.useState<Size>();
+  // Only blurred while its size changes, as a bend drawn for one size leaves
+  // the rest of another unblurred.
+  const [moving, setMoving] = React.useState(false);
   const id = `lens-${React.useId().replace(/[^\w-]/g, '')}`;
   React.useLayoutEffect(() => {
     const el = ref.current;
@@ -108,27 +111,43 @@ export function BarSurface({
           : next
       );
     };
+    let waiting = false;
+    const settle = () => {
+      const running = el.getAnimations();
+      if (!running.length) {
+        setMoving(false);
+        return measure();
+      }
+      setMoving(true);
+      if (waiting) return;
+      waiting = true;
+      void Promise.allSettled(running.map((a) => a.finished)).then(() => {
+        waiting = false;
+        settle();
+      });
+    };
     measure();
-    const observer = new ResizeObserver(measure);
+    const observer = new ResizeObserver(settle);
     observer.observe(el);
     return () => observer.disconnect();
   }, [liquid]);
   const map =
-    liquid && size?.width && size.height
+    liquid && !moving && size?.width && size.height
       ? displacementMap(size.width, size.height, size.radius)
       : null;
+  const glass = !!map || (liquid && moving);
   return (
     <div
       ref={ref}
-      data-surface={map ? 'liquid' : look === 'solid' ? 'solid' : 'frosted'}
+      data-surface={glass ? 'liquid' : look === 'solid' ? 'solid' : 'frosted'}
       className={cn('bar-surface', className)}
       style={
-        map
+        glass
           ? {
               ...style,
               // Blurred before bending: enough that text behind doesn't fight the
               // labels, and the bent rim doesn't fray into streaks.
-              backdropFilter: `blur(4px) url(#${id}) saturate(1.8)`,
+              backdropFilter: `blur(4px)${map ? ` url(#${id})` : ''} saturate(1.8)`,
             }
           : style
       }
