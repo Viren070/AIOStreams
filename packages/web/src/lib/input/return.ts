@@ -38,7 +38,10 @@ function find(spot: Spot): HTMLElement | null {
   );
 }
 
-/** Going back to a page puts the keyboard or remote back where it left it. */
+/**
+ * Going back to a page puts the keyboard or remote back where it left it; a
+ * page they open starts on its `data-nav-start`, where it has one.
+ */
 export function returnFocus(router: AnyRouter): () => void {
   const spots = new Map<string, Spot>();
   let frame = 0;
@@ -59,13 +62,15 @@ export function returnFocus(router: AnyRouter): () => void {
   const arrive = router.subscribe('onRendered', ({ toLocation }) => {
     cancelAnimationFrame(frame);
     const spot = spots.get(keyOf(toLocation));
-    if (!spot) return;
+    if (!spot && !usingKeys()) return;
     const until = performance.now() + RETRY_MS;
     // Rows can render a little after the page; anything focused meanwhile wins.
     const look = () => {
       const active = document.activeElement;
       if (active && active !== document.body) return;
-      const el = find(spot);
+      const el = spot
+        ? find(spot)
+        : document.querySelector<HTMLElement>('[data-nav-start]');
       if (el?.getClientRects().length) focusOn(el);
       else if (performance.now() < until) frame = requestAnimationFrame(look);
     };

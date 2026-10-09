@@ -426,6 +426,7 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
               <Button
                 data-ui="item-action"
                 data-name="play"
+                data-nav-start
                 intent="white"
                 className="flex-1 rounded-full sm:flex-none"
                 leftIcon={<BiPlay className="text-xl" />}
