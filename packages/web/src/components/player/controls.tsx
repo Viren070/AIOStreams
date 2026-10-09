@@ -76,8 +76,9 @@ export function PlayerControls({
   const root = React.useRef<HTMLDivElement>(null);
   const bottomBar = React.useRef<HTMLDivElement>(null);
   const { idle, hidden, wake, hide } = useIdle(IDLE_MS);
+  // Some TVs' web views report a coarse pointer.
   const [touch, setTouch] = React.useState(
-    () => matchMedia('(pointer: coarse)').matches
+    () => !tv && matchMedia('(pointer: coarse)').matches
   );
   const [menus, setMenus] = React.useState(0);
   const onMenu = (open: boolean) => setMenus((n) => n + (open ? 1 : -1));
@@ -298,7 +299,7 @@ export function PlayerControls({
       onPointerMove={wake}
       onContextMenu={(e) => e.preventDefault()}
       onPointerDown={(e) => {
-        setTouch(e.pointerType === 'touch');
+        setTouch(!tv && e.pointerType === 'touch');
         // A tap on hidden controls must not press what appears under it.
         if (e.pointerType !== 'touch' || visible) wake();
       }}
