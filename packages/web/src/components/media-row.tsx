@@ -11,7 +11,12 @@ import {
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import { cn } from '@aiostreams/ui/core/styling';
 import { currentHost } from '../lib/hosts';
-import { settings, useSetting, type PosterSize } from '../lib/settings';
+import {
+  settings,
+  useSetting,
+  type PosterLine,
+  type PosterSize,
+} from '../lib/settings';
 import { ScrollRoot } from '../lib/use-in-view';
 
 /**
@@ -20,9 +25,9 @@ import { ScrollRoot } from '../lib/use-in-view';
  */
 const ITEM_WIDTH = {
   poster:
-    'basis-[9rem] sm:basis-[10.5rem] lg:basis-[11.5rem] 2xl:basis-[12.5rem] max-w-[calc((var(--row-card-h,100vh)-2.75rem)*2/3+1rem)]',
+    'basis-[9rem] sm:basis-[10.5rem] lg:basis-[11.5rem] 2xl:basis-[12.5rem] max-w-[calc((var(--row-card-h,100vh)-var(--poster-text))*2/3+1rem)]',
   square:
-    'basis-[10rem] sm:basis-[11.5rem] lg:basis-[12.5rem] max-w-[calc(var(--row-card-h,100vh)-2.75rem+1rem)]',
+    'basis-[10rem] sm:basis-[11.5rem] lg:basis-[12.5rem] max-w-[calc(var(--row-card-h,100vh)-var(--poster-text)+1rem)]',
   wide: 'basis-[16rem] sm:basis-[18rem] lg:basis-[20rem] 2xl:basis-[22rem] max-w-[calc((var(--row-card-h,100vh)-3.25rem)*16/9+1rem)]',
 };
 
@@ -33,6 +38,10 @@ const SKELETON_SHAPE = {
 };
 
 export type RowShape = keyof typeof ITEM_WIDTH;
+
+/** A poster caption's height, which a `--row-card-h` cap leaves room for. */
+const posterText = (lines: PosterLine[]) =>
+  `calc(${lines.length ? '0.5rem' : '0rem'}${lines.includes('title') ? ' + 1.25rem' : ''}${lines.includes('year') ? ' + 1rem' : ''})`;
 
 const reducedMotion =
   typeof matchMedia === 'function'
@@ -317,6 +326,7 @@ export function MediaRow({
 }) {
   const restoreKey = useEntryKey(id);
   const [start] = React.useState(startIndex ?? 0);
+  const [lines] = useSetting(settings.posterLines);
   const width = itemClass ?? ITEM_WIDTH[shape];
   const items = React.Children.toArray(children);
   if (!loading && !items.length) return null;
@@ -377,6 +387,7 @@ export function MediaRow({
       data-shape={shape}
       data-nav-group
       data-nav-box
+      style={{ '--poster-text': posterText(lines) } as React.CSSProperties}
     >
       {native ? (
         <>
