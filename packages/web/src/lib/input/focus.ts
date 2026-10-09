@@ -108,6 +108,13 @@ const ruledOut = (el: HTMLElement) =>
   ) ||
   !!el.closest('[inert], [aria-hidden=true], [data-tv] [data-nav-tv=skip]');
 
+/** A focusable standing for its whole card (`data-nav-card`) is measured as its `data-nav-box`. */
+const rectOf = (el: HTMLElement) =>
+  (el.hasAttribute('data-nav-card')
+    ? (el.closest('[data-nav-box]') ?? el)
+    : el
+  ).getBoundingClientRect();
+
 function canFocus(el: HTMLElement, rect = el.getBoundingClientRect()): boolean {
   if (ruledOut(el) || !rect.width || !rect.height) return false;
   const style = getComputedStyle(el);
@@ -221,7 +228,7 @@ function nearest(
 ): HTMLElement | null {
   // Sideways keeps to its own line, so focus stops at a row's end.
   const sideways = dir === 'left' || dir === 'right';
-  const rect = from.getBoundingClientRect();
+  const rect = rectOf(from);
   const scored: Candidate[] = [];
   const els = everything
     ? [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
@@ -230,7 +237,7 @@ function nearest(
     : candidates(root, from, rect, dir);
   for (const el of els) {
     if (el === from || el.contains(from) || from.contains(el)) continue;
-    const to = el.getBoundingClientRect();
+    const to = rectOf(el);
     const way = distance(rect, to, dir);
     if (way) scored.push({ ...way, el, rect: to });
   }

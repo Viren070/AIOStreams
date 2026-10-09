@@ -286,6 +286,7 @@ function Head({
           onClick={() => play()}
           {...hold}
           data-focus="own"
+          data-nav-card
           className={cn(
             "mt-0.5 text-left text-sm font-semibold after:absolute after:inset-0 after:rounded-xl after:content-[''] sm:text-base",
             thumbRing &&
