@@ -17,7 +17,7 @@ import {
   type PosterLine,
   type PosterSize,
 } from '../lib/settings';
-import { RowScroller, ScrollRoot } from '../lib/use-in-view';
+import { RowScroller, ScrollRoot, watch } from '../lib/use-in-view';
 
 /**
  * Each shape's card width, narrowed where a box sets `--row-card-h` so its
@@ -140,15 +140,15 @@ function useMarkOutOfView(
   React.useEffect(() => {
     const cards = box.current?.children;
     if (!cards) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries)
-          entry.target.toggleAttribute('data-nav-out', !entry.isIntersecting);
-      },
-      { root: root && 'current' in root ? root.current : root, rootMargin }
+    const stops = [...cards].map((card) =>
+      watch(
+        card,
+        root && 'current' in root ? root.current : root,
+        rootMargin ?? '0px',
+        (entry) => card.toggleAttribute('data-nav-out', !entry.isIntersecting)
+      )
     );
-    for (const card of cards) observer.observe(card);
-    return () => observer.disconnect();
+    return () => stops.forEach((stop) => stop());
   }, [box, count, root, rootMargin]);
 }
 

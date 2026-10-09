@@ -12,6 +12,7 @@ import { IconButton } from '@aiostreams/ui/button';
 import { Tooltip } from '@aiostreams/ui/tooltip';
 import { currentHost } from '../lib/hosts';
 import { AnidbIcon, TvdbIcon } from './brand-icons';
+import { Anchor } from './anchor';
 
 const ICONS: Record<string, IconType> = {
   imdb: SiImdb,
@@ -45,7 +46,7 @@ export function ExternalLinks({
           <Tooltip
             key={link.Url}
             trigger={
-              <a
+              <Anchor
                 href={link.Url}
                 target="_blank"
                 rel="noreferrer"
@@ -58,7 +59,7 @@ export function ExternalLinks({
                   icon={<Icon className="text-xl" />}
                   tabIndex={-1}
                 />
-              </a>
+              </Anchor>
             }
           >
             {link.Name}

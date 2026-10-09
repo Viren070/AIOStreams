@@ -44,6 +44,7 @@ import { NoCatalogs } from '../components/no-catalogs';
 import { FILL_WINDOW } from '../components/layout';
 import type { BaseItemDto } from '../lib/types';
 import { currentHost } from '../lib/hosts';
+import { Anchor } from '../components/anchor';
 
 const HERO_ITEMS = 8;
 const HERO_MAX = 10;
@@ -352,7 +353,7 @@ function LibraryRow({ view, first }: { view: BaseItemDto; first: boolean }) {
       rowRef={ref}
       id={`view:${view.Id}`}
       title={
-        <a
+        <Anchor
           href={href(to.discover(view.Id!))}
           className="group/title inline-flex items-baseline gap-2"
         >
@@ -361,7 +362,7 @@ function LibraryRow({ view, first }: { view: BaseItemDto; first: boolean }) {
             <span className="text-sm font-normal text-[--muted]">{label}</span>
           )}
           <BiChevronRight className="self-center text-xl text-[--muted] transition-transform group-hover/title:translate-x-0.5" />
-        </a>
+        </Anchor>
       }
       shape={landscape ? 'wide' : 'poster'}
       loading={!near || (!pages.data && !pages.isError)}

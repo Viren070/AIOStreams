@@ -12,7 +12,8 @@ export function CachedImage({
 }: React.ComponentProps<'img'>) {
   // A lazy image waits until it nears the screen, as the browser would.
   const [view, near] = useNear<HTMLImageElement>('300px', loading !== 'lazy');
-  const shown = useSavedSrc(src, near);
+  const saved = useSavedSrc(src, near);
+  const shown = near ? saved : undefined;
   const refs = React.useCallback(
     (el: HTMLImageElement | null) => {
       view.current = el;
@@ -26,7 +27,6 @@ export function CachedImage({
       {...props}
       ref={refs}
       src={shown}
-      loading={loading}
       // Without a source an image would show its alt text while looking.
       style={shown === undefined ? { ...style, visibility: 'hidden' } : style}
     />

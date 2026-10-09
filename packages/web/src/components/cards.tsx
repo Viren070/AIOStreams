@@ -13,6 +13,7 @@ import {
 } from '../lib/artwork';
 import { settings, useSetting } from '../lib/settings';
 import { CachedImage } from './cached-image';
+import { Anchor } from './anchor';
 
 type Sources = string | string[] | null;
 
@@ -386,7 +387,7 @@ export function PosterCard(props: PosterCardProps) {
   const showTitle = lines.includes('title');
   const showSubtitle = !!subtitle && lines.includes('year');
   return (
-    <a
+    <Anchor
       data-ui="poster-card"
       data-shape={shape}
       data-watched={watched || undefined}
@@ -445,7 +446,7 @@ export function PosterCard(props: PosterCardProps) {
           )}
         </div>
       )}
-    </a>
+    </Anchor>
   );
 }
 
@@ -566,13 +567,13 @@ export function WideCard(props: WideCardProps) {
       className={cn('group/wide relative space-y-2', props.className)}
     >
       {href ? (
-        <a
+        <Anchor
           href={href}
           data-focus="own"
           className="group/wide-link block space-y-2"
         >
           {body}
-        </a>
+        </Anchor>
       ) : onClick ? (
         <button
           type="button"

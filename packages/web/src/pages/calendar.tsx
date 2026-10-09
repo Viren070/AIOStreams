@@ -19,6 +19,7 @@ import { href, itemPath, navigate, to } from '../lib/paths';
 import { PageBody } from '../components/layout';
 import { Artwork } from '../components/cards';
 import type { BaseItemDto } from '../lib/types';
+import { Anchor } from '../components/anchor';
 
 function monthKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -76,7 +77,7 @@ function EpisodeRow({ item }: { item: BaseItemDto }) {
   const { client } = useSession();
   const played = !!item.UserData?.Played;
   return (
-    <a
+    <Anchor
       href={href(itemPath(item))}
       data-ui="calendar-entry"
       data-watched={played || undefined}
@@ -100,7 +101,7 @@ function EpisodeRow({ item }: { item: BaseItemDto }) {
             .join(' · ')}
         </p>
       </div>
-    </a>
+    </Anchor>
   );
 }
 
@@ -182,7 +183,7 @@ function DayCell({
       <ol className="relative space-y-1">
         {listed.map((item) => (
           <li key={item.Id}>
-            <a
+            <Anchor
               href={href(itemPath(item))}
               data-ui="calendar-entry"
               data-watched={item.UserData?.Played || undefined}
@@ -208,7 +209,7 @@ function DayCell({
                   .filter(Boolean)
                   .join(' · ')}
               </p>
-            </a>
+            </Anchor>
           </li>
         ))}
         {extra > 0 && (

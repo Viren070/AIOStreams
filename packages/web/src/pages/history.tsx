@@ -41,6 +41,8 @@ import { PillTabs } from '../components/pill-tabs';
 import { Artwork, type ArtworkSource } from '../components/cards';
 import { UserAvatar } from '../components/user-avatar';
 import type { HistoryEntry, WebUser } from '../lib/types';
+import { Anchor } from '../components/anchor';
+import { useInView } from '../lib/use-in-view';
 
 type View = 'days' | 'table';
 
@@ -72,20 +74,14 @@ export function HistoryPage() {
     [users]
   );
 
-  const sentinel = React.useRef<HTMLDivElement>(null);
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = history;
-  React.useEffect(() => {
-    const el = sentinel.current;
-    if (!el || !hasNextPage) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !isFetchingNextPage) void fetchNextPage();
-      },
-      { rootMargin: '600px' }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  const sentinel = useInView<HTMLDivElement>(
+    () => {
+      if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+    },
+    '600px',
+    [hasNextPage, isFetchingNextPage, unlisted]
+  );
 
   const selected = owners.find((u) => u.user.Id === userId);
 
@@ -372,18 +368,18 @@ function DayTile({
       )}
     >
       <div className="flex gap-3 p-3">
-        <a href={titleHref} className="w-14 flex-none">
+        <Anchor href={titleHref} className="w-14 flex-none">
           <Poster
             src={(width) => posterUrl(client, item, { maxWidth: width })}
           />
-        </a>
+        </Anchor>
         <div className="min-w-0 flex-1 space-y-0.5">
-          <a
+          <Anchor
             href={titleHref}
             className="block truncate font-semibold hover:underline"
           >
             {tile.show ? item.SeriesName || item.Name : item.Name}
-          </a>
+          </Anchor>
           {names && (
             <p className="truncate text-xs text-[--muted]">
               {names.get(first.userId)}
@@ -422,7 +418,10 @@ function DayTile({
               data-ui="history-entry"
               className="flex items-center gap-3 rounded-lg bg-gray-900/60 p-2"
             >
-              <a href={href(itemPath(entry.item))} className="w-24 flex-none">
+              <Anchor
+                href={href(itemPath(entry.item))}
+                className="w-24 flex-none"
+              >
                 <div className="relative aspect-video overflow-hidden rounded-md bg-gray-900">
                   <Artwork
                     src={(width) =>
@@ -431,7 +430,7 @@ function DayTile({
                     alt=""
                   />
                 </div>
-              </a>
+              </Anchor>
               <div className="min-w-0 flex-1">
                 <EntryLine entry={entry} showName />
               </div>
@@ -750,7 +749,7 @@ function HistoryTable({
                     </td>
                   )}
                   <td className="p-3">
-                    <a
+                    <Anchor
                       href={href(itemPath(item))}
                       className="flex items-center gap-3 hover:underline"
                     >
@@ -782,7 +781,7 @@ function HistoryTable({
                           </span>
                         )}
                       </span>
-                    </a>
+                    </Anchor>
                   </td>
                   {names && (
                     <td className="hidden p-3 text-[--muted] sm:table-cell">

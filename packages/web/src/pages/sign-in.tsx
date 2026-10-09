@@ -13,6 +13,7 @@ import type { JellyfinClient } from '../lib/client';
 import { configureUrl } from '../lib/paths';
 import { useServerInfo } from '../lib/server-info';
 import type { PickableUser, QuickConnectResult, UserDto } from '../lib/types';
+import { Anchor } from '../components/anchor';
 
 /** Must match the server's `PIN_REQUIRED`. */
 const PIN_REQUIRED = 'PIN required';
@@ -270,14 +271,14 @@ export function SignInPage({
             </FormLink>
           ))}
           {configure && (
-            <a
+            <Anchor
               href={configure}
               target={__STANDALONE__ ? '_blank' : undefined}
               rel="noreferrer"
               className="block text-center text-sm text-[--muted] hover:text-white"
             >
               Open the configuration page
-            </a>
+            </Anchor>
           )}
           {onChangeServer && (
             <FormLink onClick={onChangeServer}>Change server</FormLink>

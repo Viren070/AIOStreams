@@ -155,6 +155,7 @@ import {
   SettingsPageHeader,
   SettingsRow,
 } from '../components/settings-card';
+import { Anchor } from '../components/anchor';
 
 const LANGUAGE_OPTIONS = LANGUAGES.map((l) => ({
   value: l.code,
@@ -1814,14 +1815,14 @@ function ThemeSection() {
               <code>[data-ui=&quot;progress-bar&quot;]</code>. If it ever hides
               the page, add <code>?safe</code> to the address to turn it off.
               See the{' '}
-              <a
+              <Anchor
                 href={CSS_DOCS_URL}
                 target="_blank"
                 rel="noreferrer"
                 className="text-[--brand] hover:underline"
               >
                 guide
-              </a>{' '}
+              </Anchor>{' '}
               for every selector and examples.
             </>
           )

@@ -5,6 +5,7 @@ import { FocusRing } from './cards';
 import { MediaRow } from './media-row';
 import type { BaseItemPerson } from '../lib/types';
 import { CachedImage } from './cached-image';
+import { Anchor } from './anchor';
 
 const PERSON_WIDTH = 'basis-[6.5rem] sm:basis-[7.5rem]';
 
@@ -61,14 +62,14 @@ export function PersonCard({
     </>
   );
   return person.Id ? (
-    <a
+    <Anchor
       data-ui="person-card"
       href={href(to.person(person.Id))}
       data-focus="own"
       className="group block text-center"
     >
       {body}
-    </a>
+    </Anchor>
   ) : (
     <div data-ui="person-card" className="text-center">
       {body}

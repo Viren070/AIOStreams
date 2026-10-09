@@ -17,10 +17,13 @@ const keyOf = (location: ParsedLocation) =>
 const labelOf = (el: Element) =>
   (el.getAttribute('aria-label') ?? el.textContent ?? '').trim();
 
+const addressOf = (el: Element) =>
+  el.getAttribute('href') ?? el.getAttribute('data-href');
+
 function spotOf(el: HTMLElement): Spot {
   return {
     row: el.closest('[data-row]')?.getAttribute('data-row') ?? null,
-    href: el.getAttribute('href'),
+    href: addressOf(el),
     label: labelOf(el),
     tag: el.tagName,
   };
@@ -31,9 +34,7 @@ function find(spot: Spot): HTMLElement | null {
     spot.row && document.querySelector(`[data-row="${CSS.escape(spot.row)}"]`);
   return (
     [...(row || document).querySelectorAll<HTMLElement>(spot.tag)].find((el) =>
-      spot.href
-        ? el.getAttribute('href') === spot.href
-        : labelOf(el) === spot.label
+      spot.href ? addressOf(el) === spot.href : labelOf(el) === spot.label
     ) ?? null
   );
 }
