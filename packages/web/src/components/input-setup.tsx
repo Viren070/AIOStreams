@@ -17,6 +17,7 @@ import {
   scrollStep,
   startGamepads,
   startInput,
+  startSubmitButtons,
   type ActionGroup,
   type Direction,
 } from '../lib/input';
@@ -64,6 +65,7 @@ export function InputSetup({ router }: { router: AnyRouter }) {
     const stops = [
       startInput(),
       startGamepads(),
+      startSubmitButtons(),
       returnFocus(router),
       onAction('nav.up', () => step('up'), fallback),
       onAction('nav.down', () => step('down'), fallback),
