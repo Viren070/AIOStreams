@@ -415,8 +415,19 @@ const inView = (el: HTMLElement | DOMRect) => {
   );
 };
 
-/** The first thing on screen, in the page's main content where it has one. */
+/** What `data-nav-start` marks, or the first focusable inside it. */
+export function startOf(root: ParentNode = document): HTMLElement | null {
+  const mark = root.querySelector<HTMLElement>('[data-nav-start]');
+  const el = mark?.matches(FOCUSABLE)
+    ? mark
+    : mark?.querySelector<HTMLElement>(FOCUSABLE);
+  return el && canFocus(el) ? el : null;
+}
+
+/** The page's start, else the first thing on screen, in its main content where it has one. */
 function first(root: Element): HTMLElement | null {
+  const start = startOf(root);
+  if (start) return start;
   const area = root.querySelector('main') ?? root;
   const all = (el: Element) => [...el.querySelectorAll<HTMLElement>(FOCUSABLE)];
   return (

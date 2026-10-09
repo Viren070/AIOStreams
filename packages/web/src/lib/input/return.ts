@@ -1,6 +1,6 @@
 import type { AnyRouter, ParsedLocation } from '@tanstack/react-router';
 import { usingKeys } from './dispatch';
-import { focusOn, inOverlay } from './focus';
+import { focusOn, inOverlay, startOf } from './focus';
 
 interface Spot {
   row: string | null;
@@ -9,7 +9,7 @@ interface Spot {
   tag: string;
 }
 
-const RETRY_MS = 2000;
+const RETRY_MS = 5000;
 
 const keyOf = (location: ParsedLocation) =>
   location.state.__TSR_key ?? location.href;
@@ -64,13 +64,11 @@ export function returnFocus(router: AnyRouter): () => void {
     const spot = spots.get(keyOf(toLocation));
     if (!spot && !usingKeys()) return;
     const until = performance.now() + RETRY_MS;
-    // Rows can render a little after the page; anything focused meanwhile wins.
+    // Rows and catalogs can render a while after the page; anything focused meanwhile wins.
     const look = () => {
       const active = document.activeElement;
       if (active && active !== document.body) return;
-      const el = spot
-        ? find(spot)
-        : document.querySelector<HTMLElement>('[data-nav-start]');
+      const el = spot ? find(spot) : startOf();
       if (el?.getClientRects().length) focusOn(el);
       else if (performance.now() < until) frame = requestAnimationFrame(look);
     };

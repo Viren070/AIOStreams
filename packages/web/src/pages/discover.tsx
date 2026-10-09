@@ -307,7 +307,13 @@ export function DiscoverPage({
         <LuffyError title="Could not load this catalog" />
       ) : (
         <>
-          <MixedGrid items={items} client={client} loading={pages.isLoading} />
+          <div data-nav-start>
+            <MixedGrid
+              items={items}
+              client={client}
+              loading={pages.isLoading}
+            />
+          </div>
           {!pages.isLoading && !items.length && (
             <p className="text-[--muted]">Nothing here.</p>
           )}
