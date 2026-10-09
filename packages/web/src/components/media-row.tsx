@@ -18,6 +18,7 @@ import {
   type PosterSize,
 } from '../lib/settings';
 import { RowScroller, ScrollRoot, watch } from '../lib/use-in-view';
+import { GLIDE_MS } from '../lib/input/glide';
 
 /**
  * Each shape's card width, narrowed where a box sets `--row-card-h` so its
@@ -154,8 +155,7 @@ function useMarkOutOfView(
 
 const savedScroll = new Map<string, number>();
 
-/** How long a TV row glides to a focused card, and the room after it; a card's padding leaves the room before. */
-const GLIDE_MS = 250;
+/** The room after a focused card in a TV row; a card's padding leaves the room before. */
 const ROOM = 16;
 
 /**

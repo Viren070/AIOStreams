@@ -125,7 +125,7 @@ export function Artwork({
   const loaded = currentKey ? loadedKey === currentKey : !!early;
   const imageClass = cn(
     // A focus's scale keeps up with focus; a loaded image fades in slower.
-    'absolute inset-0 h-full w-full object-cover transition-[transform,opacity] [transition-duration:200ms,500ms]',
+    'absolute inset-0 h-full w-full object-cover transition-[transform,opacity] [transition-duration:250ms,500ms]',
     loaded ? 'opacity-100' : 'opacity-0',
     className
   );
@@ -411,7 +411,7 @@ export function PosterCard(props: PosterCardProps) {
         />
         <div
           data-ui="poster-card-shade"
-          className="absolute inset-0 bg-black/20 opacity-0 transition-opacity group-hover/poster:opacity-100 group-focus-visible/poster:opacity-100"
+          className="absolute inset-0 bg-black/20 opacity-0 transition-opacity [transition-duration:250ms] group-hover/poster:opacity-100 group-focus-visible/poster:opacity-100"
         />
         <FocusRing className="group-focus-visible/poster:opacity-100" />
         {watched && <WatchedMark />}
@@ -506,7 +506,7 @@ export function WideCard(props: WideCardProps) {
         {!unavailable && (
           <div
             data-ui="wide-card-play"
-            className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity group-hover/wide:opacity-100 group-focus-visible/wide-link:opacity-100"
+            className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity [transition-duration:250ms] group-hover/wide:opacity-100 group-focus-visible/wide-link:opacity-100"
           >
             <BiPlay className="text-5xl text-white opacity-90 drop-shadow" />
           </div>

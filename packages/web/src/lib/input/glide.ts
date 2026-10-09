@@ -23,7 +23,11 @@ interface Glide {
 const glides = new Map<Element, Glide>();
 let frame = 0;
 
-const EASED_MS = 250;
+/**
+ * How long a keyed glide takes. Focus transitions on cards take as long, as
+ * composited animations that end apart run main-thread frames in between.
+ */
+export const GLIDE_MS = 250;
 
 /** Each jump takes the next layer, as nested transforms add up and one under way carries on. */
 interface Eased {
@@ -93,7 +97,7 @@ function easeJump(box: Element, layers: HTMLElement[], top: number): void {
   state.jumps[state.next] = {
     animation: layer.animate(
       [{ transform: `translateY(${dy}px)` }, { transform: 'none' }],
-      { duration: EASED_MS, easing: 'ease-out' }
+      { duration: GLIDE_MS, easing: 'ease-out' }
     ),
     dy,
   };

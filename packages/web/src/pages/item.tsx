@@ -718,7 +718,7 @@ function Seasons({
                         alt=""
                         loading="lazy"
                         className={cn(
-                          'absolute inset-0 h-full w-full object-cover transition-opacity',
+                          'absolute inset-0 h-full w-full object-cover transition-opacity [transition-duration:250ms]',
                           !selected &&
                             'opacity-60 group-hover/season:opacity-100 group-focus-visible/season:opacity-100'
                         )}
