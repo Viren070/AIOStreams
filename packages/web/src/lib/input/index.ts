@@ -29,6 +29,7 @@ export {
   isTextField,
   keyboardFocus,
   move,
+  moveTo,
   openMenu,
   scrollStep,
   type Direction,

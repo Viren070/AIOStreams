@@ -11,6 +11,7 @@ import {
   isTextField,
   keysOf,
   move,
+  moveTo,
   onAction,
   openMenu,
   returnFocus,
@@ -30,8 +31,9 @@ interface History {
   back(): void;
 }
 
-/** Back where no page takes it: out of a field, out of full screen, then a page back. */
+/** Back where no page takes it: into a TV's navigation, out of a field, out of full screen, then a page back. */
 function back(history: History): boolean {
+  if (toNavigation()) return true;
   const el = document.activeElement;
   if (isTextField(el)) {
     el.blur();
@@ -42,6 +44,18 @@ function back(history: History): boolean {
   if (history.canGoBack()) history.back();
   else if (host.exit) host.exit();
   else return false;
+  return true;
+}
+
+/**
+ * From a page the navigation leads to, onto its entry in the navigation, which
+ * `data-nav-back` marks with the way it lies from the page.
+ */
+function toNavigation(): boolean {
+  const nav = document.querySelector<HTMLElement>('[data-nav-back]');
+  const current = nav?.querySelector<HTMLElement>('[aria-current=page]');
+  if (!nav || !current || nav.contains(document.activeElement)) return false;
+  moveTo(current, nav.dataset.navBack as Direction);
   return true;
 }
 

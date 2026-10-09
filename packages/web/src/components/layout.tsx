@@ -862,6 +862,7 @@ function TvRail({
     <nav
       data-ui="tv-rail"
       data-nav-enter={ENTER_CURRENT}
+      data-nav-back="left"
       className={cn(
         'group/rail absolute inset-y-0 left-0 flex flex-col gap-1 px-3 py-8 transition-[width] duration-200',
         open ? 'w-full' : 'w-20 focus-within:w-64'
@@ -966,6 +967,7 @@ function TvTabs({
       data-ui="tv-tabs"
       data-style={style}
       data-nav-enter={ENTER_CURRENT}
+      data-nav-back="up"
       className="absolute inset-x-0 top-0 z-40"
     >
       {style !== 'bar' && (

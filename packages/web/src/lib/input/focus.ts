@@ -530,10 +530,18 @@ export function move(dir: Direction): boolean {
   const near = back && canFocus(back) ? back : nearest(root, from, dir);
   bars = null;
   if (!near) return false;
-  const to = near === back ? near : entry(near, from);
-  lastMove = { from, to, dir };
-  focusOn(to);
+  moveTo(near === back ? near : entry(near, from), dir);
   return true;
+}
+
+/** Focuses `to` as a move `dir` would, so the other way comes back. */
+export function moveTo(to: HTMLElement, dir: Direction): void {
+  const from = document.activeElement;
+  lastMove =
+    from instanceof HTMLElement && from !== document.body
+      ? { from, to, dir }
+      : null;
+  focusOn(to);
 }
 
 const quiet = new WeakSet<Event>();
