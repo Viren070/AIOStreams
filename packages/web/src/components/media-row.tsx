@@ -231,9 +231,13 @@ function NativeRow({
       const range = el.scrollWidth - el.clientWidth;
       if (onEnd && (range <= 1 || el.scrollLeft / range > 0.7)) onEnd();
     };
-    check();
+    // In a frame, which lays the row out anyway, rather than forcing it now.
+    const first = requestAnimationFrame(check);
     el.addEventListener('scroll', check, { passive: true });
-    return () => el.removeEventListener('scroll', check);
+    return () => {
+      cancelAnimationFrame(first);
+      el.removeEventListener('scroll', check);
+    };
   }, [restoreKey, onEnd, count]);
   useMarkOutOfView(content, count, ref);
   return (
