@@ -357,6 +357,23 @@ function entry(to: HTMLElement, from: HTMLElement): HTMLElement {
   return to;
 }
 
+/** Off a row's end in a `data-nav-wrap` grid, the next item along, as text wraps. */
+function wrapped(from: HTMLElement, dir: Direction): HTMLElement | null {
+  const grid = from.closest('[data-nav-wrap]');
+  if (!grid || (dir !== 'left' && dir !== 'right')) return null;
+  let cell: Element | null = from;
+  while (cell && cell.parentElement !== grid) cell = cell.parentElement;
+  const step = (el: Element) =>
+    dir === 'right' ? el.nextElementSibling : el.previousElementSibling;
+  for (let next = cell && step(cell); next; next = step(next)) {
+    const el = next.matches(FOCUSABLE)
+      ? (next as HTMLElement)
+      : next.querySelector<HTMLElement>(FOCUSABLE);
+    if (el && canFocus(el)) return el;
+  }
+  return null;
+}
+
 const GROUP = '[data-nav-group]';
 const lastIn = new WeakMap<Element, HTMLElement>();
 
@@ -570,7 +587,11 @@ export function move(dir: Direction): boolean {
       ? back
       : nearest(exit && !out ? exit : root, from, dir);
   bars = null;
-  if (!near) return false;
+  if (!near) {
+    const next = wrapped(from, dir);
+    if (next) moveTo(next, dir);
+    return !!next;
+  }
   moveTo(near === back ? near : entry(near, from), dir);
   return true;
 }

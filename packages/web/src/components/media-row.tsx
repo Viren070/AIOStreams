@@ -451,6 +451,7 @@ export function CardGrid({
       data-shape={shape}
       data-size={size}
       data-nav-group
+      data-nav-wrap
       className={cn(
         'grid gap-4',
         shape === 'wide' ? GRID_COLUMNS[size].wide : GRID_COLUMNS[size].poster
