@@ -8,8 +8,9 @@ export const canRefract =
   CSS.supports('backdrop-filter', 'url(#a)') &&
   /Chrome\//.test(navigator.userAgent);
 
-/** How far the rim bends what's behind it, in CSS pixels. */
-const BEND = 16;
+/** How wide the bent rim is, and how far at most it moves what's behind, in CSS pixels. */
+const RIM = 30;
+const BEND = 45;
 
 const maps = new Map<string, string>();
 
@@ -28,7 +29,7 @@ function displacementMap(width: number, height: number, radius: number) {
   if (!ctx) return null;
   const image = ctx.createImageData(width, height);
   const r = Math.min(radius, width / 2, height / 2);
-  const rim = Math.min(BEND, width / 2, height / 2);
+  const rim = Math.min(RIM, width / 2, height / 2);
   const cx = width / 2;
   const cy = height / 2;
   for (let y = 0; y < height; y++) {
@@ -54,7 +55,7 @@ function displacementMap(width: number, height: number, radius: number) {
         ny = 1;
       }
       const t = Math.min(1, Math.max(0, 1 - depth / rim));
-      const bend = t * t * 127;
+      const bend = t * t * (3 - 2 * t) * 127;
       const i = (y * width + x) * 4;
       image.data[i] = 128 - Math.sign(px) * nx * bend;
       image.data[i + 1] = 128 - Math.sign(py) * ny * bend;
@@ -124,7 +125,7 @@ export function Glass({
               ...style,
               // Blurred before bending: enough that text behind doesn't fight the
               // labels, and the bent rim doesn't fray into streaks.
-              backdropFilter: `blur(5px) url(#${id}) saturate(1.7)`,
+              backdropFilter: `blur(4px) url(#${id}) saturate(1.8)`,
             }
           : style
       }

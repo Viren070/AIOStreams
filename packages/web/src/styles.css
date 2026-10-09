@@ -131,11 +131,13 @@ html[data-pointer-focus] :focus-visible [data-ui='focus-ring'] {
   backdrop-filter: blur(24px) saturate(1.8);
 }
 .glass[data-glass='liquid'] {
-  background-color: rgb(14 14 18 / 0.42);
+  background-color: rgb(14 14 18 / 0.34);
+  border-color: rgb(255 255 255 / 0.14);
   box-shadow:
-    inset 1px 1px 0 rgb(255 255 255 / 0.3),
-    inset -1px -1px 0 rgb(255 255 255 / 0.08),
-    inset 0 0 18px rgb(255 255 255 / 0.06),
+    inset 0 1px 0 rgb(255 255 255 / 0.42),
+    inset 0 -1px 0 rgb(255 255 255 / 0.12),
+    inset 0 12px 18px -14px rgb(255 255 255 / 0.32),
+    inset 0 -10px 16px -14px rgb(255 255 255 / 0.12),
     0 12px 32px -12px rgb(0 0 0 / 0.6);
 }
 /* Over a bright picture, grey labels are lost. */
