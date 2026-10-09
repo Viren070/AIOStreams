@@ -119,18 +119,24 @@ html[data-pointer-focus] :focus-visible [data-ui='focus-ring'] {
 }
 
 /* Glass for bars over the page; the grain breaks up the bands a strong blur leaves. */
-.glass {
+.bar-surface {
+  border: 1px solid rgb(255 255 255 / 0.1);
+  box-shadow: 0 12px 32px -12px rgb(0 0 0 / 0.7);
+}
+.bar-surface[data-surface='solid'] {
+  background-color: var(--background);
+}
+.bar-surface:not([data-surface='solid']) {
   background-color: rgb(14 14 18 / 0.55);
   background-image:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0.07 0 0 0 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
     linear-gradient(to bottom, rgb(255 255 255 / 0.09), rgb(255 255 255 / 0.02));
-  border: 1px solid rgb(255 255 255 / 0.1);
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 0.12),
     0 12px 32px -12px rgb(0 0 0 / 0.7);
   backdrop-filter: blur(24px) saturate(1.8);
 }
-.glass[data-glass='liquid'] {
+.bar-surface[data-surface='liquid'] {
   background-color: rgb(14 14 18 / 0.34);
   border-color: rgb(255 255 255 / 0.14);
   box-shadow:
@@ -141,7 +147,7 @@ html[data-pointer-focus] :focus-visible [data-ui='focus-ring'] {
     0 12px 32px -12px rgb(0 0 0 / 0.6);
 }
 /* Over a bright picture, grey labels are lost. */
-:is(.glass, [data-ui='tv-tabs'])
+:is(.bar-surface:not([data-surface='solid']), [data-ui='tv-tabs'])
   :is([data-ui='nav-item'], [data-ui='mobile-nav-item']):not(
     [aria-current='page']
   ) {

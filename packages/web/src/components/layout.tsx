@@ -67,7 +67,7 @@ import { settings, useSetting, type TvTopBar } from '../lib/settings';
 import { useAction } from '../lib/input';
 import { UserAvatar } from './user-avatar';
 import { BrandLogo } from './brand-logo';
-import { Glass } from './glass';
+import { BarSurface } from './bar-surface';
 import { VersionPickerProvider } from './version-picker';
 import { ItemMenuHost } from './item-menu';
 
@@ -704,7 +704,7 @@ function MobileNav({
         !wide && 'lg:hidden'
       )}
     >
-      <Glass className="pointer-events-auto flex w-full max-w-md items-center gap-1 rounded-full p-1.5">
+      <BarSurface className="pointer-events-auto flex w-full max-w-md items-center gap-1 rounded-full p-1.5">
         {items.map((item) => {
           const Icon = item.iconType;
           return (
@@ -734,7 +734,7 @@ function MobileNav({
             />
           }
         />
-      </Glass>
+      </BarSurface>
     </nav>
   );
 }
@@ -976,7 +976,7 @@ function TvTabs({
       )}
     >
       {style !== 'bar' && (
-        // Keeps what isn't on glass readable over a bright hero.
+        // Keeps what sits straight on the page readable over a bright hero.
         <div
           aria-hidden
           className={cn(
@@ -986,24 +986,24 @@ function TvTabs({
         />
       )}
       {style === 'bar' ? (
-        <Glass className="relative flex items-center gap-6 rounded-none border-x-0 border-t-0 px-10 py-4">
+        <BarSurface className="relative flex items-center gap-6 rounded-none border-x-0 border-t-0 px-10 py-4">
           {logo}
           <div className="flex flex-1 items-center justify-center gap-1">
             {tabs}
           </div>
           <div className="flex items-center gap-1">{end}</div>
-        </Glass>
+        </BarSurface>
       ) : style === 'pill' ? (
         <div className="relative flex items-center gap-6 px-10 pb-2 pt-6">
           {logo}
           <div className="flex flex-1 justify-center">
-            <Glass className="flex items-center gap-1 rounded-full p-1.5">
+            <BarSurface className="flex items-center gap-1 rounded-full p-1.5">
               {tabs}
-            </Glass>
+            </BarSurface>
           </div>
-          <Glass className="flex items-center gap-1 rounded-full p-1.5">
+          <BarSurface className="flex items-center gap-1 rounded-full p-1.5">
             {end}
-          </Glass>
+          </BarSurface>
         </div>
       ) : (
         <div className="relative flex items-center gap-6 px-10 pb-2 pt-8">

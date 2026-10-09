@@ -29,8 +29,8 @@ export type TvNavigation = (typeof TV_NAVIGATIONS)[number];
 export const TV_TOP_BARS = ['pill', 'bar', 'fade'] as const;
 export type TvTopBar = (typeof TV_TOP_BARS)[number];
 
-export const GLASS_STYLES = ['frosted', 'liquid'] as const;
-export type GlassStyle = (typeof GLASS_STYLES)[number];
+export const BAR_BACKGROUNDS = ['solid', 'frosted', 'liquid'] as const;
+export type BarBackground = (typeof BAR_BACKGROUNDS)[number];
 
 const POSTER_LINES: PosterLine[] = ['title', 'year'];
 
@@ -519,10 +519,14 @@ export const settings = {
     'rail',
     TV_NAVIGATIONS
   ),
-  /** What holds a TV's top tabs over the page. */
+  /** How a TV's top tabs sit over the page. */
   tvTopBar: device<TvTopBar>('aiostreams-web-tv-top-bar', 'pill', TV_TOP_BARS),
-  /** The material of the bars that float over the page. */
-  glass: device<GlassStyle>('aiostreams-web-glass', 'frosted', GLASS_STYLES),
+  /** What the navigation bars over the page sit on. */
+  barBackground: device<BarBackground>(
+    'aiostreams-web-bar-background',
+    'frosted',
+    BAR_BACKGROUNDS
+  ),
   /** How the picture fills a screen of another shape; kept for this device's screen. */
   videoFit: device<VideoFit>('aiostreams-web-video-fit', 'fit', VIDEO_FITS),
   autoPlayFirst: device<boolean>('aiostreams-web-skip-versions', false),

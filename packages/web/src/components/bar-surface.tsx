@@ -75,18 +75,21 @@ interface Size {
   radius: number;
 }
 
-/** A pane of glass: frosted, or with a bending rim where set and drawable. */
-export function Glass({
+/**
+ * What a navigation bar sits on: the app's own background, or glass, frosted
+ * or with a bending rim where set and drawable.
+ */
+export function BarSurface({
   className,
   style,
   children,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
-  const [glass] = useSetting(settings.glass);
-  const liquid = glass === 'liquid' && canRefract;
+  const [look] = useSetting(settings.barBackground);
+  const liquid = look === 'liquid' && canRefract;
   const ref = React.useRef<HTMLDivElement>(null);
   const [size, setSize] = React.useState<Size>();
-  const id = `glass-${React.useId().replace(/[^\w-]/g, '')}`;
+  const id = `lens-${React.useId().replace(/[^\w-]/g, '')}`;
   React.useLayoutEffect(() => {
     const el = ref.current;
     if (!liquid || !el) return setSize(undefined);
@@ -117,8 +120,8 @@ export function Glass({
   return (
     <div
       ref={ref}
-      data-glass={map ? 'liquid' : 'frosted'}
-      className={cn('glass', className)}
+      data-surface={map ? 'liquid' : look === 'solid' ? 'solid' : 'frosted'}
+      className={cn('bar-surface', className)}
       style={
         map
           ? {
