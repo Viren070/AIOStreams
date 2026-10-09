@@ -968,7 +968,12 @@ function TvTabs({
       data-style={style}
       data-nav-enter={ENTER_CURRENT}
       data-nav-back="up"
-      className="absolute inset-x-0 top-0 z-40"
+      className={cn(
+        'absolute inset-x-0 top-0 z-40 transition-transform duration-200 ease-out will-change-transform',
+        // Past its scrim too. A slide rather than a fade, as fading would stop
+        // its glass blurring the page.
+        '[[data-in-rows]_&]:-translate-y-[180%]'
+      )}
     >
       {style !== 'bar' && (
         // Keeps what isn't on glass readable over a bright hero.

@@ -427,6 +427,23 @@ export function FollowHero({
     []
   );
   React.useEffect(() => () => clearTimeout(timer.current), []);
+  // A TV's top bar steps aside while focus is in the rows, showing more of the
+  // hero; Back still reaches it.
+  React.useEffect(() => {
+    if (!scroller) return;
+    const root = document.documentElement;
+    const mark = () =>
+      root.toggleAttribute(
+        'data-in-rows',
+        scroller.contains(document.activeElement)
+      );
+    mark();
+    document.addEventListener('focusin', mark);
+    return () => {
+      document.removeEventListener('focusin', mark);
+      root.removeAttribute('data-in-rows');
+    };
+  }, [scroller]);
   const item = picked ?? items.find((i) => backdropSrc(client, i)) ?? items[0];
 
   return (
