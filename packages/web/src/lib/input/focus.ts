@@ -175,14 +175,16 @@ const NEIGHBOURS = 3;
 /**
  * What a move weighs, as measuring each costs a slow TV dearly: not slides
  * scrolled out of sight (`data-nav-out`) save focus's neighbours, nor groups a
- * screen or more away, or sideways, beside focus's own band.
+ * screen or more away, wholly the other way, or sideways, beside focus's own
+ * band.
  */
 function candidates(
   root: Element,
   from: HTMLElement,
   rect: DOMRect,
-  sideways: boolean
+  dir: Direction
 ): HTMLElement[] {
+  const sideways = dir === 'left' || dir === 'right';
   const all = [...root.querySelectorAll<HTMLElement>(FOCUSABLE)];
   const group = from.closest(GROUP);
   const near = new Set<HTMLElement>();
@@ -202,7 +204,9 @@ function candidates(
       const r = box.getBoundingClientRect();
       away = sideways
         ? r.bottom < rect.top - rect.height || r.top > rect.bottom + rect.height
-        : r.bottom < -innerHeight || r.top > 2 * innerHeight;
+        : r.bottom < -innerHeight ||
+          r.top > 2 * innerHeight ||
+          (dir === 'down' ? r.bottom <= rect.bottom : r.top >= rect.top);
       far.set(box, away);
     }
     return !away;
@@ -223,7 +227,7 @@ function nearest(
     ? [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
         (el) => !el.closest('[data-nav-out]')
       )
-    : candidates(root, from, rect, sideways);
+    : candidates(root, from, rect, dir);
   for (const el of els) {
     if (el === from || el.contains(from) || from.contains(el)) continue;
     const to = el.getBoundingClientRect();
@@ -414,15 +418,19 @@ function shownBox(el: HTMLElement): Element {
  */
 function reveal(el: HTMLElement): void {
   let rect = shownBox(el).getBoundingClientRect();
-  for (let box = el.parentElement; box; box = box.parentElement) {
+  // A dialog or bar stays put as the page behind it scrolls.
+  let onBar = false;
+  for (let box: HTMLElement | null = el; box; box = box.parentElement) {
     if (box === document.body || box === document.documentElement) break;
-    if (box.hasAttribute('data-nav-self-scroll')) continue;
-    const overY = box.scrollHeight > box.clientHeight;
-    const overX = box.scrollWidth > box.clientWidth;
-    if (!overY && !overX) continue;
+    // Style first, as few boxes scroll and each size read is a layout check.
     const style = getComputedStyle(box);
-    const scrollsY = overY && /auto|scroll/.test(style.overflowY);
-    const scrollsX = overX && /auto|scroll/.test(style.overflowX);
+    if (style.position === 'fixed' || style.position === 'sticky') onBar = true;
+    if (box === el || box.hasAttribute('data-nav-self-scroll')) continue;
+    const scrollsY =
+      /auto|scroll/.test(style.overflowY) &&
+      box.scrollHeight > box.clientHeight;
+    const scrollsX =
+      /auto|scroll/.test(style.overflowX) && box.scrollWidth > box.clientWidth;
     if (!scrollsY && !scrollsX) continue;
     const view = box.getBoundingClientRect();
     // Measured from where a scroll under way ends.
@@ -453,8 +461,7 @@ function reveal(el: HTMLElement): void {
     glideTo(box, left + dx, top + dy);
     rect = new DOMRect(rect.x - dx, rect.y - dy, rect.width, rect.height);
   }
-  // A dialog or bar stays put as the page behind it scrolls.
-  if (barOf(el)) return;
+  if (onBar) return;
   // A TV keeps focus off the screen's edges, where it's hard to follow from across a room.
   const room = document.documentElement.hasAttribute('data-tv')
     ? innerHeight / 4
