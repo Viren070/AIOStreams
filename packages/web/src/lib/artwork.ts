@@ -193,6 +193,37 @@ let broken = false;
 let nextId = 0;
 const queue: Pending[] = [];
 const running = new Map<number, { job: Pending; slot: Slot }>();
+/** Blobs a worker is making an address for, kept to make one here if it fails. */
+const addressing = new Map<
+  number,
+  { blob: Blob; resolve: (address: BlobAddress) => void }
+>();
+
+export interface BlobAddress {
+  src: string;
+  revoke: () => void;
+}
+
+function addressHere(blob: Blob): BlobAddress {
+  const src = URL.createObjectURL(blob);
+  return { src, revoke: () => URL.revokeObjectURL(src) };
+}
+
+/** An address for `blob`, made by a worker: making one waits on the browser, which is slow while the app starts. */
+export function blobAddress(blob: Blob): Promise<BlobAddress> {
+  const slot = broken
+    ? null
+    : slots.reduce<Slot | null>(
+        (best, s) => (!best || s.busy < best.busy ? s : best),
+        null
+      );
+  if (!slot) return Promise.resolve(addressHere(blob));
+  const id = nextId++;
+  return new Promise((resolve) => {
+    addressing.set(id, { blob, resolve });
+    slot.worker.postMessage({ id, blob });
+  });
+}
 
 /*
  * A plain image cannot reuse a refused fetch's download, as the two are cached
@@ -259,6 +290,17 @@ function start(): Slot | null {
       const { url, ...entry } = e.data.encoded;
       keep(url, { ...entry, maker: worker });
     }
+    const asked = addressing.get(e.data.id);
+    if (asked) {
+      addressing.delete(e.data.id);
+      const src = e.data.src;
+      asked.resolve(
+        src
+          ? { src, revoke: () => worker.postMessage({ revoke: src }) }
+          : addressHere(asked.blob)
+      );
+      return;
+    }
     const entry = running.get(e.data.id);
     if (!entry) return;
     running.delete(e.data.id);
@@ -275,10 +317,16 @@ function start(): Slot | null {
     ])
       settle(job, { id: job.id, error: 'worker failed' });
     running.clear();
+    for (const { blob, resolve } of addressing.values())
+      resolve(addressHere(blob));
+    addressing.clear();
   };
   slots.push(slot);
   return slot;
 }
+
+// Started with the page, so the first artwork doesn't wait on the workers loading.
+if (canShrink) for (let i = 0; i < WORKERS; i++) start();
 
 /** Starts another worker only while every one is busy. */
 function freeSlot(ahead: boolean): Slot | null {

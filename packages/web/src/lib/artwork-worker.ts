@@ -288,9 +288,16 @@ async function encodeLater() {
   }
 }
 
-scope.onmessage = (e: MessageEvent<ShrinkJob | { revoke: string }>) => {
+scope.onmessage = (
+  e: MessageEvent<ShrinkJob | { revoke: string } | { id: number; blob: Blob }>
+) => {
   // An address made here, which the page no longer shows.
   if ('revoke' in e.data) return URL.revokeObjectURL(e.data.revoke);
+  if ('blob' in e.data)
+    return scope.postMessage({
+      id: e.data.id,
+      src: URL.createObjectURL(e.data.blob),
+    } satisfies ShrinkReply);
   const job = e.data;
   active++;
   shrink(job)

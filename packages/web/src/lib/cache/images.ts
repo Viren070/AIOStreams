@@ -1,5 +1,11 @@
 import React from 'react';
-import { imageAccept, noteRead, refused } from '../artwork';
+import {
+  blobAddress,
+  imageAccept,
+  noteRead,
+  refused,
+  type BlobAddress,
+} from '../artwork';
 import { isReachable } from '../connection';
 import { settings, useSetting } from '../settings';
 import { maybeSaved, noteSaved, schedulePrune } from '.';
@@ -7,21 +13,21 @@ import { readImage, writeImage } from './store';
 
 const MAX_URLS = 400;
 
-const urls = new Map<string, string>();
+const urls = new Map<string, BlobAddress>();
 const lookups = new Map<string, Promise<string>>();
 /** Images whose host refused to let the page read them, so they load plainly. */
 const unreadable = new Set<string>();
 
-function keep(src: string, blob: Blob): string {
-  const url = URL.createObjectURL(blob);
-  urls.set(src, url);
+async function keep(src: string, blob: Blob): Promise<string> {
+  const address = await blobAddress(blob);
+  urls.set(src, address);
   if (urls.size > MAX_URLS) {
     // An image already drawn keeps its picture after its URL is revoked.
-    const [oldest, objectUrl] = urls.entries().next().value!;
+    const [oldest, old] = urls.entries().next().value!;
     urls.delete(oldest);
-    URL.revokeObjectURL(objectUrl);
+    old.revoke();
   }
-  return url;
+  return address.src;
 }
 
 /*
@@ -78,7 +84,7 @@ export function useSavedSrc(
   wanted: boolean
 ): string | undefined {
   const on = useArtworkSaved();
-  const known = src && on ? urls.get(src) : undefined;
+  const known = src && on ? urls.get(src)?.src : undefined;
   const [found, setFound] = React.useState<{ src: string; url: string }>();
   React.useEffect(() => {
     if (!src || !on || known || !wanted) return;
