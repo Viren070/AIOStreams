@@ -1,4 +1,4 @@
-import { glideBy, glideOffset, glideTo, headedTo } from './glide';
+import { drift, glideBy, glideTo, headedTo } from './glide';
 
 export type Direction = 'up' | 'down' | 'left' | 'right';
 
@@ -109,11 +109,32 @@ const ruledOut = (el: HTMLElement) =>
   !!el.closest('[inert], [aria-hidden=true], [data-tv] [data-nav-tv=skip]');
 
 /** A focusable standing for its whole card (`data-nav-card`) is measured as its `data-nav-box`. */
-const rectOf = (el: HTMLElement) =>
-  (el.hasAttribute('data-nav-card')
+const rectOf = (el: HTMLElement) => {
+  const box = el.hasAttribute('data-nav-card')
     ? (el.closest('[data-nav-box]') ?? el)
-    : el
-  ).getBoundingClientRect();
+    : el;
+  return settled(box, box.getBoundingClientRect());
+};
+
+const shifted = (r: DOMRect, x: number, y: number) =>
+  new DOMRect(r.x + x, r.y + y, r.width, r.height);
+
+/** Scrolls under way around focus during a search, measured from where they end. */
+let drifts: [Element, number, number][] = [];
+
+function settled(el: Element, r: DOMRect): DOMRect {
+  let dx = 0;
+  let dy = 0;
+  for (const [box, x, y] of drifts) {
+    if (box === el || !box.contains(el)) continue;
+    // A bar inside the box stays put as it scrolls.
+    const bar = barOf(el);
+    if (bar && bar !== box && box.contains(bar)) continue;
+    dx += x;
+    dy += y;
+  }
+  return dx || dy ? shifted(r, dx, dy) : r;
+}
 
 function canFocus(el: HTMLElement, rect = el.getBoundingClientRect()): boolean {
   if (ruledOut(el) || !rect.width || !rect.height) return false;
@@ -236,7 +257,7 @@ function candidates(
     if (!box) return true;
     let away = far.get(box);
     if (away === undefined) {
-      const r = box.getBoundingClientRect();
+      const r = settled(box, box.getBoundingClientRect());
       away =
         (sideways
           ? r.bottom < rect.top - rect.height ||
@@ -525,12 +546,7 @@ function reveal(el: HTMLElement): void {
     const view = box.getBoundingClientRect();
     // Measured from where a scroll under way ends, not where its easing draws it.
     const [left, top] = headedTo(box);
-    rect = new DOMRect(
-      rect.x - (left - box.scrollLeft),
-      rect.y - (top - box.scrollTop) - glideOffset(box),
-      rect.width,
-      rect.height
-    );
+    rect = shifted(rect, ...drift(box));
     const dy = scrollsY
       ? shortfall(
           { start: view.top, end: view.bottom },
@@ -549,7 +565,7 @@ function reveal(el: HTMLElement): void {
       : 0;
     if (!dx && !dy) continue;
     glideTo(box, left + dx, top + dy);
-    rect = new DOMRect(rect.x - dx, rect.y - dy, rect.width, rect.height);
+    rect = shifted(rect, -dx, -dy);
   }
   if (onBar) return;
   // A TV keeps focus off the screen's edges, where it's hard to follow from across a room.
@@ -558,13 +574,13 @@ function reveal(el: HTMLElement): void {
     : Math.min(96, innerHeight * 0.15);
   const page = document.documentElement;
   const [left, top] = headedTo(page);
-  const drawn = glideOffset(page);
+  const [, drawn] = drift(page);
   const dy = el.closest('[data-nav-top]')
     ? -top
     : shortfall(
         { start: 0, end: innerHeight },
-        rect.top - (top - scrollY) - drawn,
-        rect.bottom - (top - scrollY) - drawn,
+        rect.top + drawn,
+        rect.bottom + drawn,
         room
       );
   if (dy) glideTo(page, left, top + dy);
@@ -635,12 +651,17 @@ export function move(dir: Direction): boolean {
       ? lastMove.from
       : null;
   bars = new Map();
+  for (let box = from.parentElement; box; box = box.parentElement) {
+    const [x, y] = drift(box);
+    if (x || y) drifts.push([box, x, y]);
+  }
   // Any other way stays in such a box, as what it covers lies beside it.
   const near =
     back && canFocus(back)
       ? back
       : nearest(exit && !out ? exit : root, from, dir);
   bars = null;
+  drifts = [];
   const grid = from.closest('[data-nav-wrap]');
   if (!near || (grid && near !== back && !grid.contains(near))) {
     const next = wrapped(from, dir);

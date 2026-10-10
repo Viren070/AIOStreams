@@ -168,6 +168,14 @@ export function glideTo(box: Element, left: number, top: number): void {
 export const headedTo = (box: Element): [number, number] =>
   glides.get(box)?.to ?? [box.scrollLeft, box.scrollTop];
 
+/** How far `box`'s content still moves on screen before scrolls and jumps under way end. */
+export function drift(box: Element): [number, number] {
+  const glide = glides.get(box);
+  const offset = glideOffset(box);
+  if (!glide) return [0, -offset];
+  return [box.scrollLeft - glide.to[0], box.scrollTop - glide.to[1] - offset];
+}
+
 /** Scrolls `box` on from wherever a scroll under way ends. */
 export function glideBy(box: Element, dx: number, dy: number): void {
   const [left, top] = headedTo(box);
