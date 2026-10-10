@@ -33,6 +33,8 @@ import { partial_ratio } from 'fuzzball';
 import { ParsedResult } from '@viren070/parse-torrent-title';
 import { parseTorrentTitleCached } from '../parser/title.js';
 import { unwrapProxyUrl } from '../proxy/token.js';
+import { isRecoveredAnimeEpisodeWrong } from '../parser/anime-release.js';
+import { recoverMovieRelease, recoverNzbRelease } from '../parser/release.js';
 
 const logger = createLogger('debrid');
 
@@ -466,6 +468,10 @@ export function selectableFiles<T extends DebridFile>(files: T[]): T[] {
   return kept.length > 0 ? kept : files.slice(0, 1);
 }
 
+/**
+ * Recover request-specific names on a local parse map and score playable video
+ * files, rejecting contradictory episode evidence before returning a candidate.
+ */
 export async function selectFileInTorrentOrNZB(
   torrentOrNZB: Torrent | NZB,
   debridDownload: DebridDownload,
@@ -506,6 +512,36 @@ export async function selectFileInTorrentOrNZB(
     };
   }
 
+  const isMovieRequest = metadata?.mediaType === 'movie';
+  const recoveredEpisodeMismatches = new Set<string>();
+  const recoveredMovieNames = new Set<string>();
+  if (isMovieRequest || (torrentOrNZB.type === 'usenet' && metadata?.isAnime)) {
+    // Recover only the names this selection reads. The shared map also contains
+    // other releases; scanning it for every selection makes a batch quadratic.
+    // Keep recovery local so another request or service sees its original parses.
+    const names = new Set([
+      torrentOrNZB.title ?? debridDownload.name ?? '',
+      ...debridDownload.files.map((file) => file.name ?? ''),
+    ]);
+    const recoveredFiles = new Map<string, ParsedResult>();
+    for (const name of names) {
+      const parsed = parsedFiles.get(name);
+      if (!parsed) continue;
+      const recovered = isMovieRequest
+        ? recoverMovieRelease(name, parsed, metadata)
+        : recoverNzbRelease(name, parsed, metadata);
+      if (isMovieRequest && recovered !== parsed) recoveredMovieNames.add(name);
+      if (
+        recovered !== parsed &&
+        isRecoveredAnimeEpisodeWrong(recovered, metadata)
+      ) {
+        recoveredEpisodeMismatches.add(name);
+      }
+      recoveredFiles.set(name, recovered);
+    }
+    parsedFiles = recoveredFiles;
+  }
+
   const isVideo = debridDownload.files.map((file) => isVideoFile(file));
   const isNotVideo = debridDownload.files.map((file) => isNotVideoFile(file));
   const videoExists = isVideo.map((f) => f == true);
@@ -515,6 +551,9 @@ export async function selectFileInTorrentOrNZB(
     : null;
   const knownTitles = metadata?.titles ?? [];
   const files = debridDownload.files;
+  const hasRecoveredMovieFile = files.some(
+    (file) => !isNotVideoFile(file) && recoveredMovieNames.has(file.name ?? '')
+  );
   const maxSize =
     torrentOrNZB.size || files.reduce((max, f) => Math.max(max, f.size), 0);
 
@@ -537,6 +576,12 @@ export async function selectFileInTorrentOrNZB(
       skipReason: null,
     };
 
+    if (recoveredEpisodeMismatches.has(file.name ?? '')) {
+      fileReport.skipped = true;
+      fileReport.skipReason = 'Recovered absolute episode mismatch';
+      report.files.push(fileReport);
+      continue;
+    }
     if (isNotVideo[index]) {
       fileReport.skipped = true;
       fileReport.skipReason = 'Not a video file';
@@ -548,6 +593,18 @@ export async function selectFileInTorrentOrNZB(
       logger.warn(`Parsed file not found for ${file.name}`);
       fileReport.skipped = true;
       fileReport.skipReason = 'No parsed metadata available';
+      report.files.push(fileReport);
+      continue;
+    }
+
+    if (
+      hasRecoveredMovieFile &&
+      !recoveredMovieNames.has(file.name ?? '') &&
+      (parsed.seasons?.length || parsed.episodes?.length)
+    ) {
+      fileReport.skipped = true;
+      fileReport.skipReason =
+        'Unresolved episode numbering beside an exact movie file';
       report.files.push(fileReport);
       continue;
     }
@@ -618,7 +675,7 @@ export async function selectFileInTorrentOrNZB(
         score -= 800;
         fileReport.scoreBreakdown.wrongDatePenalty = -800;
       }
-    } else if (parsed && !isEpisodeWrong(parsed, metadata)) {
+    } else if (!isMovieRequest && parsed && !isEpisodeWrong(parsed, metadata)) {
       const parsedEpisodesCount = parsed.episodes?.length || 0;
       const parsedHasSeason = parsed.seasons && parsed.seasons.length > 0;
       const isExactMatch = parsedEpisodesCount === 1;

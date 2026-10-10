@@ -31,6 +31,13 @@ import { iso6391ToLanguage, languageToCode } from '../utils/languages.js';
 import { ReleaseDate } from '../metadata/tmdb.js';
 import { StreamContext, ExtendedMetadata } from './context.js';
 
+import {
+  recoverAnimeRelease,
+  isRecoveredAnimeEpisodeWrong,
+} from '../parser/anime-release.js';
+import { recoverMovieRelease } from '../parser/release.js';
+import { parseTorrentTitleCached } from '../parser/title.js';
+
 const logger = createLogger('filterer');
 
 const FILTER_SLICE_MS = 8;
@@ -387,6 +394,10 @@ class StreamFilterer {
     return { filterDetails, includedDetails };
   }
 
+  /**
+   * Recover request-anchored filename metadata and apply the user's stream
+   * filters, recording rejection reasons and phase timings.
+   */
   public async filter(
     streams: ParsedStream[],
     context: StreamContext
@@ -489,6 +500,7 @@ class StreamFilterer {
       this.requestedTitleStrings.set(requestedMetadata, requestedTitleStrings);
     }
 
+    const recoveredEpisodeMismatches = new Set<ParsedStream>();
     if (requestedTitleStrings.length) {
       let reconcileSliceStart = performance.now();
       for (const stream of streams) {
@@ -497,6 +509,70 @@ class StreamFilterer {
           reconcileSliceStart = performance.now();
         }
         if (!stream.parsedFile?.title) continue;
+        if (type === 'movie' && stream.filename) {
+          const original = parseTorrentTitleCached(stream.filename);
+          const recovered = recoverMovieRelease(stream.filename, original, {
+            mediaType: type,
+            titles: requestedTitleStrings,
+          });
+          // Merged folder/inner-file coordinates must not be erased by a name
+          // recovery unless the raw filename itself contains those coordinates.
+          if (
+            recovered !== original &&
+            !stream.parsedFile.seasons?.length &&
+            (!stream.parsedFile.episodes?.length ||
+              (stream.parsedFile.episodes.length === 1 &&
+                original.episodes?.length === 1 &&
+                stream.parsedFile.episodes[0] === original.episodes[0]))
+          ) {
+            stream.parsedFile = {
+              ...stream.parsedFile,
+              title: recovered.title,
+              episodes: recovered.episodes,
+              episodeTitle: recovered.episodeTitle,
+              releaseGroup: recovered.group ?? stream.parsedFile.releaseGroup,
+            };
+          }
+        }
+        if (
+          context.isAnime &&
+          stream.filename &&
+          (stream.type === 'usenet' || stream.type === 'stremio-usenet')
+        ) {
+          const original = parseTorrentTitleCached(stream.filename);
+          const recovered = recoverAnimeRelease(stream.filename, original, {
+            isAnime: context.isAnime && (type === 'series' || type === 'anime'),
+            episode: parsedId?.episode ? Number(parsedId.episode) : undefined,
+            absoluteEpisode: requestedMetadata?.absoluteEpisode,
+            titles: requestedTitleStrings,
+          });
+          // A raw filename mismatch remains evidence even when merged folder
+          // coordinates must be preserved instead of replaced by recovery.
+          if (
+            recovered !== original &&
+            isRecoveredAnimeEpisodeWrong(recovered, {
+              episode: parsedId?.episode ? Number(parsedId.episode) : undefined,
+              absoluteEpisode: requestedMetadata?.absoluteEpisode,
+              relativeAbsoluteEpisode:
+                requestedMetadata?.relativeAbsoluteEpisode,
+            })
+          )
+            recoveredEpisodeMismatches.add(stream);
+          if (
+            recovered !== original &&
+            (!stream.parsedFile.episodes?.length ||
+              (stream.parsedFile.episodes.length === 1 &&
+                stream.parsedFile.episodes[0] === recovered.episodes?.[0])) &&
+            !stream.parsedFile.seasons?.length
+          ) {
+            stream.parsedFile = {
+              ...stream.parsedFile,
+              title: recovered.title,
+              episodes: recovered.episodes,
+              releaseGroup: recovered.group ?? stream.parsedFile.releaseGroup,
+            };
+          }
+        }
         const reconciled = reconcileParsedName(
           stream.parsedFile,
           [stream.filename, stream.folderName],
@@ -1173,6 +1249,8 @@ class StreamFilterer {
       ) {
         return true;
       }
+
+      if (recoveredEpisodeMismatches.has(stream)) return false;
 
       // if the requested content is a movie and season/episode is present, filter out
       if (
