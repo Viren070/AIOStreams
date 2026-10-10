@@ -14,6 +14,7 @@ export const ButtonAnatomy = defineStyleAnatomy({
       'inline-flex items-center text-white text-center justify-center',
       'focus-visible:outline-none focus-visible:ring-1 ring-offset-1 ring-offset-[--background] focus-visible:ring-white/40',
       'disabled:opacity-50 disabled:pointer-events-none disabled:transform-none',
+      'aria-busy:opacity-50 aria-busy:pointer-events-none aria-busy:transform-none',
     ],
     {
       variants: {
@@ -133,6 +134,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       loading,
       iconClass,
       disabled,
+      onClick,
       hideTextOnSmallScreen,
       hideTextOnLargeScreen,
       ...rest
@@ -150,8 +152,11 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           }),
           className
         )}
-        disabled={disabled || loading}
-        aria-disabled={disabled}
+        // A disabled button drops focus, so a loading one only ignores presses.
+        disabled={disabled}
+        aria-disabled={disabled || loading || undefined}
+        aria-busy={loading || undefined}
+        onClick={loading ? (e) => e.preventDefault() : onClick}
         {...rest}
         ref={ref}
       >
