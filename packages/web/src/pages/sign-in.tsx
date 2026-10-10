@@ -8,6 +8,7 @@ import { PasswordInput } from '@aiostreams/ui/password-input';
 import { cn } from '@aiostreams/ui/core/styling';
 import { LoadingOverlay, LoadingSpinner } from '@aiostreams/ui/loading-spinner';
 import { UserAvatar } from '../components/user-avatar';
+import { FocusRing } from '../components/cards';
 import { BrandLogo } from '../components/brand-logo';
 import type { JellyfinClient } from '../lib/client';
 import { configureUrl } from '../lib/paths';
@@ -757,6 +758,7 @@ export function UserPicker({
                       transition={SPRING}
                       whileTap={busy ? undefined : { scale: 0.96 }}
                       data-ui="user-picker-user"
+                      data-focus="own"
                       className="group/user flex w-28 flex-col items-center sm:w-32"
                     >
                       <span
@@ -766,7 +768,7 @@ export function UserPicker({
                           busy && busy !== u.user.Id && 'opacity-40'
                         )}
                       >
-                        <span className="relative">
+                        <span className="relative rounded-full transition-transform group-focus-visible/user:scale-110">
                           <SharedAvatar
                             user={u}
                             className={cn(
@@ -775,6 +777,7 @@ export function UserPicker({
                                 'animate-pulse ring-brand-400'
                             )}
                           />
+                          <FocusRing className="group-focus-visible/user:opacity-100" />
                           {(u.needs === 'pin' ||
                             u.needs === 'password-pin') && (
                             <span className="absolute bottom-0 right-0 flex size-7 items-center justify-center rounded-full bg-gray-900 text-sm ring-2 ring-[--background]">

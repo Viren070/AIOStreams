@@ -4,6 +4,14 @@ import { AnimatePresence, motion } from 'motion/react';
 import { BiDotsVerticalRounded, BiPlus } from 'react-icons/bi';
 import { Button, IconButton } from '@aiostreams/ui/button';
 import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@aiostreams/ui/context-menu';
+import {
   DropdownMenu,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -17,6 +25,7 @@ import {
 } from '@aiostreams/ui/shared/confirmation-dialog';
 import { UserAvatar } from '../components/user-avatar';
 import { JellyfinClient } from '../lib/client';
+import { currentHost } from '../lib/hosts';
 import { readCredentials } from '../lib/credentials';
 import { endSession } from '../lib/session';
 import {
@@ -170,7 +179,8 @@ function Banner({ name, logo }: { name: string; logo: string | null }) {
   const [failed, setFailed] = React.useState(false);
   React.useEffect(() => setFailed(false), [logo]);
   const shown = logo && !failed ? logo : null;
-  const lift = 'transition-transform group-hover/server:scale-105';
+  const lift =
+    'transition-transform group-hover/server:scale-105 group-focus-visible/server:scale-105';
   return (
     <span className="relative flex h-28 w-full flex-none items-center justify-center overflow-hidden bg-white/[0.03]">
       {shown ? (
@@ -218,6 +228,35 @@ function ServerCard({
   });
   const { name, logo } = check.data?.label ?? server;
   const status = check.data?.status;
+  const actions = [
+    ...(status?.kind === 'signed-in'
+      ? [{ label: 'Sign out', run: onSignOut, className: undefined }]
+      : []),
+    { label: 'Remove', run: onForget, className: 'text-red-300' },
+  ];
+  // The whole address, which the card cuts short when it is long.
+  const address = serverAddress(server.base);
+  const card = (
+    <button
+      type="button"
+      onClick={onChoose}
+      className="group/server flex h-full w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-gray-950/80 text-left shadow-xl transition-colors hover:border-white/25 focus-visible:border-white/25"
+    >
+      <Banner name={name} logo={logo} />
+      <span className="flex w-full flex-1 flex-col gap-3 p-4">
+        <span className="block min-w-0 space-y-0.5">
+          <span className="block truncate font-semibold">{name}</span>
+          <Address base={server.base} />
+        </span>
+        <span
+          data-ui="server-status"
+          className="mt-auto flex h-6 items-center gap-2 text-sm"
+        >
+          <StatusLine base={server.base} status={status} />
+        </span>
+      </span>
+    </button>
+  );
   return (
     <motion.li
       variants={TILE}
@@ -225,49 +264,57 @@ function ServerCard({
       data-ui="server"
       className="relative w-full sm:w-72"
     >
-      <button
-        type="button"
-        onClick={onChoose}
-        className="group/server flex h-full w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-gray-950/80 text-left shadow-xl transition-colors hover:border-white/25"
-      >
-        <Banner name={name} logo={logo} />
-        <span className="flex w-full flex-1 flex-col gap-3 p-4">
-          <span className="block min-w-0 space-y-0.5">
-            <span className="block truncate font-semibold">{name}</span>
-            <Address base={server.base} />
-          </span>
-          <span
-            data-ui="server-status"
-            className="mt-auto flex h-6 items-center gap-2 text-sm"
+      {currentHost().tv ? (
+        // A remote can't reach a button inside the card; a held Select opens this.
+        <ContextMenu modal={false}>
+          <ContextMenuTrigger asChild>{card}</ContextMenuTrigger>
+          <ContextMenuContent>
+            <ContextMenuLabel className="max-w-72 break-all text-xs font-normal">
+              {address}
+            </ContextMenuLabel>
+            <ContextMenuSeparator />
+            {actions.map((a) => (
+              <ContextMenuItem
+                key={a.label}
+                onClick={a.run}
+                className={a.className}
+              >
+                {a.label}
+              </ContextMenuItem>
+            ))}
+          </ContextMenuContent>
+        </ContextMenu>
+      ) : (
+        <>
+          {card}
+          <DropdownMenu
+            align="end"
+            trigger={
+              <IconButton
+                size="sm"
+                intent="gray-subtle"
+                className="absolute right-2 top-2 rounded-full"
+                icon={<BiDotsVerticalRounded />}
+                aria-label={`Options for ${name}`}
+              />
+            }
           >
-            <StatusLine base={server.base} status={status} />
-          </span>
-        </span>
-      </button>
-      <DropdownMenu
-        align="end"
-        trigger={
-          <IconButton
-            size="sm"
-            intent="gray-subtle"
-            className="absolute right-2 top-2 rounded-full"
-            icon={<BiDotsVerticalRounded />}
-            aria-label={`Options for ${name}`}
-          />
-        }
-      >
-        {/* The whole address, which the card cuts short when it is long. */}
-        <DropdownMenuLabel className="max-w-72 select-text break-all text-xs font-normal">
-          {serverAddress(server.base)}
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {status?.kind === 'signed-in' && (
-          <DropdownMenuItem onClick={onSignOut}>Sign out</DropdownMenuItem>
-        )}
-        <DropdownMenuItem onClick={onForget} className="text-red-300">
-          Remove
-        </DropdownMenuItem>
-      </DropdownMenu>
+            <DropdownMenuLabel className="max-w-72 select-text break-all text-xs font-normal">
+              {address}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {actions.map((a) => (
+              <DropdownMenuItem
+                key={a.label}
+                onClick={a.run}
+                className={a.className}
+              >
+                {a.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenu>
+        </>
+      )}
     </motion.li>
   );
 }
@@ -314,7 +361,7 @@ function ServerList({
           <button
             type="button"
             onClick={onAdd}
-            className="flex h-full min-h-28 w-full flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-white/15 p-4 text-sm text-[--muted] transition-colors hover:border-white/30 hover:text-white"
+            className="flex h-full min-h-28 w-full flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-white/15 p-4 text-sm text-[--muted] transition-colors hover:border-white/30 hover:text-white focus-visible:border-white/30 focus-visible:text-white"
           >
             <span className="flex size-12 items-center justify-center rounded-full bg-white/5 text-2xl">
               <BiPlus />
