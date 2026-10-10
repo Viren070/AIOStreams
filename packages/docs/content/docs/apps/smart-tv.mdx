@@ -1,0 +1,69 @@
+---
+title: Smart TV apps
+description: The AIOStreams app for LG and Samsung TVs, installed from a file, playing through the TV's own player.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Steps, Step } from 'fumadocs-ui/components/steps';
+
+The [AIOStreams app](/apps) also comes packaged for **LG TVs** (webOS) and **Samsung TVs** (Tizen), with the layout made for the remote that the [Android app](/apps/android#on-a-tv) has on a TV. Neither store carries it, so you install it from a file, the way developers install their own apps. On an Android TV, Google TV or Fire TV, use the [Android app](/apps/android) instead.
+
+<Callout type="warn">
+  The TV apps are new and have only been tried in LG's and Samsung's TV
+  emulators so far, not on real TVs. Expect rough edges, and please report how
+  they run on yours.
+</Callout>
+
+- **Which TVs.** They are made for TVs from 2023 or later (webOS 23, Tizen 7). On an older TV, the app says it may not work and offers to try anyway.
+- **What plays.** The TVs play through their own player, so the TV decides which formats play. Most recent TVs play HEVC and HDR, but not every audio or subtitle format.
+- **Speed.** Like the Android app, the TV apps draw their screens with the TV's web engine, so moving around can feel slower than in the TV's own apps.
+
+Both packages are on the [TV apps release](https://github.com/Viren070/AIOStreams/releases/tag/smart-tv).
+
+## LG TVs
+
+<Steps>
+  <Step>
+    Install **Developer Mode** from the LG Content Store, sign in with an LG account and turn it
+    on. It shows the TV's IP address and a passphrase.
+  </Step>
+  <Step>
+    On a computer on the same network, download
+    [aiostreams-webos.ipk](https://github.com/Viren070/AIOStreams/releases/download/smart-tv/aiostreams-webos.ipk)
+    and install it with [webOS Dev Manager](https://github.com/webosbrew/dev-manager-desktop): add
+    the TV with its IP address and passphrase, then install the file.
+  </Step>
+</Steps>
+
+A Developer Mode session lasts a limited time, and the TV removes apps installed this way when it runs out. Extend it in the Developer Mode app before then.
+
+If your TV has the [Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel), add this repository in its settings instead:
+
+```
+https://raw.githubusercontent.com/Viren070/AIOStreams/smart-tv-feed/apps.json
+```
+
+The app then installs from the channel and updates there too.
+
+## Samsung TVs
+
+A Samsung TV only installs an app signed for that TV, so the release's
+[aiostreams-tizen.wgt](https://github.com/Viren070/AIOStreams/releases/download/smart-tv/aiostreams-tizen.wgt)
+is unsigned, and the tool that installs it signs it first.
+
+- **Apps2Samsung** does all of it from a computer: turn on developer mode on the TV as it explains, pick **Custom WGT File** in its list, and choose the `.wgt`. It signs the app with a certificate from your Samsung account for that TV.
+- **Tizen Studio**, Samsung's own tool: in its Certificate Manager, create a Samsung certificate profile with your TV's device ID (DUID). Turn on developer mode on the TV (open **Apps**, type `12345`, and enter the computer's IP address), then sign the file with that profile, connect and install:
+
+```sh
+tizen package -t wgt -s <profile> -- aiostreams-tizen.wgt
+sdb connect <tv-ip>
+tizen install -n aiostreams-tizen.wgt -t <device-name>   # the name from `sdb devices`
+```
+
+## Signing in
+
+Add your server, then choose **Quick Connect** on the sign-in screen and approve the code it shows on the configure page, so nothing needs typing. With a share alias in your [profile](/guides/config-profiles), the picker address is short enough to type: `https://your-instance/jellyfin/u/<alias>`. See [signing in](/apps#signing-in).
+
+## Updates
+
+With the Homebrew Channel, the LG app updates from the channel. Otherwise, install the newer package from the release the same way; your sign-ins and settings stay.

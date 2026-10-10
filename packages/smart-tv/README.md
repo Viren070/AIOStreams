@@ -34,7 +34,7 @@ changelog through the `chore(smart-tv): update the web app` pull request that mo
 forward. The TV Check workflow builds both packages when anything here changes; run it by hand to
 get them as artifacts of the run.
 
-Each release also refreshes the rolling `tv` release, which holds the newest packages as
+Each release also refreshes the rolling `smart-tv` release, which holds the newest packages as
 `aiostreams-webos.ipk` and `aiostreams-tizen.wgt` (its notes come from `feed-release.md`), and the
 `smart-tv-feed` branch, whose one file is the Homebrew Channel repository for the webOS package.
 

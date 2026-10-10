@@ -73,13 +73,15 @@ Add any Stremio addon you already use - Torrentio, Comet, MediaFusion, and many 
 Watch without Stremio, with the same addons, filters, sorting and formatting. There's nothing extra to self-host and no Jellyfin to install: it runs on your AIOStreams instance. Public instances have it on except ElfHosted's, and ElfHosted's private instances have it off until you turn it on. It plays streams with a link, such as debrid and Usenet ones, so P2P torrents aren't supported.
 
 <p align="center">
-  <img src="packages/docs/public/guides/app/hero.webp" alt="The AIOStreams app on a computer and a phone" width="850" />
+  <img src="packages/docs/public/apps/hero.webp" alt="The AIOStreams app on a computer and a phone" width="850" />
 </p>
 
 **Where you can watch**
 
 - **In Your Browser**: On any device. Add it to your phone's home screen and it opens like an app.
 - **Desktop App** (alpha): For Windows, macOS and Linux, with a built-in player that plays what a browser can't, including HDR on Windows. It keeps itself up to date on Windows and macOS, and comes as a Flatpak on Linux. **[Download it here](https://github.com/Viren070/AIOStreams/releases/tag/desktop)**.
+- **Android App** (new): For phones, tablets and TVs, including Google TV and Fire TV, with a layout made for the remote on TVs. ExoPlayer and mpv play the video: HDR and Dolby Vision, converting profile 7 to 8.1 where a device needs it, styled subtitles that look as they do in mpv, surround passthrough, picture-in-picture and touch gestures. Its screens are a web page drawn over the native player, so low-end TV sticks can feel slow to browse. **[Get it here](https://docs.aiostreams.viren070.me/apps/android)**.
+- **Smart TVs** (new): Apps for LG and Samsung TVs, installed from a file. So far only tried in the TV makers' emulators. **[Install guide](https://docs.aiostreams.viren070.me/apps/smart-tv)**.
 - **Jellyfin Apps**: Your configuration is also a Jellyfin-compatible server, so Swiftfin, Findroid, Infuse, Kodi, Android TV and other Jellyfin apps can sign in to it too, on a TV with a Quick Connect code.
 
 **What's inside**
@@ -91,6 +93,7 @@ Watch without Stremio, with the same addons, filters, sorting and formatting. Th
 - **Activity**: Your watch history by day or as a table, to mark unwatched, remove or export. The main profile also sees everyone's history and what each person is playing right now.
 - **Household Profiles**: A profile for everyone, each with its own Continue Watching and an optional PIN. Switch between them without signing out.
 - **Tracker Sync**: Addons that support [Watch State](https://docs.aiostreams.viren070.me/reference/addon-protocol/watch-state) can record what you play and bring in the history they hold, so what you watched elsewhere can show up in Continue Watching.
+- **Downloads and Offline**: Download movies, episodes and whole seasons in the desktop and Android apps to watch without a connection. Every app also keeps what you browse, so pages open instantly and can be browsed offline.
 - **Custom Themes and CSS**: Preset themes, your own accent and background colours, and custom CSS with [documented hooks](https://docs.aiostreams.viren070.me/reference/web-app-css), all following you to every device.
 - **Desktop Extras**: mpv playback for MKV, HEVC, AV1 and styled subtitles, surround output with Dolby and DTS passthrough, chapters, your own `mpv.conf`, `input.conf`, scripts and shaders, what you're watching in the system's media controls and on your Discord profile, the keyboard's media keys, and background updates with an optional nightly channel on Windows and macOS.
 
@@ -225,7 +228,7 @@ Take control of your Stremio home page from one place.
 
 4. **Install the addon**
    - Use the Installation Options provided to install the addon to whatever app you are using.
-   - Or watch without Stremio: under **AIOStreams app**, open the app in your browser or download the desktop app, or connect a Jellyfin app under **Jellyfin apps**.
+   - Or watch without Stremio: under **AIOStreams app**, open the app in your browser or get it for your computer, phone or TV, or connect a Jellyfin app under **Jellyfin apps**.
 
 For full setup and configuration instructions, see the **[documentation](https://docs.aiostreams.viren070.me)**.
 

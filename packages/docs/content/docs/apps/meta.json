@@ -1,0 +1,12 @@
+{
+  "title": "Apps",
+  "pages": [
+    "index",
+    "desktop",
+    "android",
+    "smart-tv",
+    "offline",
+    "media-server",
+    "jellyfin"
+  ]
+}

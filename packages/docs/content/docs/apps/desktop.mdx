@@ -6,7 +6,7 @@ description: The web app in a window of its own, with a video player that plays 
 import { Callout } from 'fumadocs-ui/components/callout';
 import { Steps, Step } from 'fumadocs-ui/components/steps';
 
-The desktop app is the [AIOStreams app](/guides/app) for Windows, Mac and Linux, in a window of its own, with [mpv](https://mpv.io) playing the video. It signs in to your configuration's [media server](/guides/media-server), so there is nothing to self-host. Your addons still run on your AIOStreams instance: the app sees what they find through the server, as libraries and versions, and never installs or runs an addon itself.
+The desktop app is the [AIOStreams app](/apps) for Windows, Mac and Linux, in a window of its own, with [mpv](https://mpv.io) playing the video. It signs in to your configuration's [media server](/apps/media-server), so there is nothing to self-host. Your addons still run on your AIOStreams instance: the app sees what they find through the server, as libraries and versions, and never installs or runs an addon itself.
 
 A browser only plays some formats, so many streams fail there. mpv plays nearly any stream as it is: MKV files, HEVC and AV1 video, Dolby and DTS surround audio, and styled subtitles.
 
@@ -15,49 +15,49 @@ Everything else is the app you know from the browser: the same home page, catalo
 <Gallery
   slides={[
     {
-      src: '/guides/desktop-app/home.webp',
+      src: '/apps/desktop/home.webp',
       alt: "The desktop app's home page, with The Love Hypothesis featured above Continue watching",
       caption: 'Home, with a featured title that rotates',
       width: 2288,
       height: 1430,
     },
     {
-      src: '/guides/desktop-app/home-follow.webp',
+      src: '/apps/desktop/home-follow.webp',
       alt: 'The home page with its featured title pinned above the rows, showing Supergirl, the poster the pointer rests on in the Trending row',
       caption: 'Or one that follows the card you point at',
       width: 2288,
       height: 1430,
     },
     {
-      src: '/guides/desktop-app/collections.webp',
+      src: '/apps/desktop/collections.webp',
       alt: 'The Studios library, with collections for 20th Century Fox, DC, Disney Animated, DreamWorks, Illumination, Lucasfilm, Marvel, Pixar and Universal',
       caption: 'Catalogs of collections become libraries of collections',
       width: 2288,
       height: 1430,
     },
     {
-      src: '/guides/desktop-app/collection.webp',
+      src: '/apps/desktop/collection.webp',
       alt: "The Marvel collection's page, with a grid of its movies and shows and a filter for each",
       caption: 'A collection holds movies and shows together',
       width: 2288,
       height: 1430,
     },
     {
-      src: '/guides/desktop-app/episodes-row.webp',
+      src: '/apps/desktop/episodes-row.webp',
       alt: "Severance's episodes in a row, starting at the episode to watch next, Episode 4 of season 2",
       caption: 'Episodes in a row, starting where you are',
       width: 2288,
       height: 1430,
     },
     {
-      src: '/guides/desktop-app/episodes-list.webp',
+      src: '/apps/desktop/episodes-list.webp',
       alt: "Severance's second season as a list of episodes, with their descriptions and watched marks",
       caption: 'Or as a list, under Settings → Interface → Episode layout',
       width: 2288,
       height: 1430,
     },
     {
-      src: '/guides/desktop-app/versions.webp',
+      src: '/apps/desktop/versions.webp',
       alt: 'The version list for Dune: Part Two, with seven versions described by the formatter and a choice to resume or start over',
       caption: 'Pick a version, described by your formatter',
       width: 2288,
@@ -100,8 +100,8 @@ It needs Windows 10 or 11, macOS 11 or later, or a Linux distribution with Flatp
     paste one into the app; the address with a sign-in picker is the easiest.
   </Step>
   <Step>
-    Sign in as you would [in a browser](/guides/app#in-a-browser): pick a
-    user, then enter the password or PIN.
+    [Sign in](/apps#signing-in) as in any AIOStreams app: pick a user, then enter the password
+    or PIN.
   </Step>
 </Steps>
 
@@ -124,21 +124,21 @@ When subtitles are out of time, the subtitle menu fixes them, and the timing is 
 <Gallery
   slides={[
     {
-      src: '/guides/desktop-app/player.webp',
+      src: '/apps/desktop/player.webp',
       alt: "Sintel paused in the desktop app's player, with a subtitle and the player's controls over the video",
       caption: 'The player, with mpv underneath',
       width: 2288,
       height: 1430,
     },
     {
-      src: '/guides/desktop-app/sync-line.webp',
+      src: '/apps/desktop/sync-line.webp',
       alt: "The Sync to a line panel over Sintel, listing the subtitle's lines around the current moment",
       caption: 'Sync to a line: pick the line being spoken',
       width: 2288,
       height: 1430,
     },
     {
-      src: '/guides/desktop-app/sync-ear.webp',
+      src: '/apps/desktop/sync-ear.webp',
       alt: 'The Sync by ear panel over Sintel, with a Heard and a Saw button',
       caption: 'Sync by ear: tap Heard, then Saw',
       width: 2288,
@@ -156,6 +156,10 @@ To play in your own mpv, in its own window with its settings and scripts, pick *
 For your mpv settings without a second window, put them in the app's own mpv folder instead (see [Settings](#settings)).
 
 Other keys: `Space` or `k` to play and pause, `←` `→` or `j` `l` to skip back and forward, `↑` `↓` or the scroll wheel for volume, `m` to mute, `f` for fullscreen, and `Shift+P` and `Shift+N` for the previous and next episode. Press `?` anywhere for the full list, and change any of them under **Settings → Shortcuts**, which also takes a remote's or gamepad's buttons. The arrow keys, a remote or a gamepad move between everything on screen, and `Esc` goes back.
+
+## Downloads
+
+The desktop app downloads movies, episodes and whole seasons into a folder you choose, filed by show and season, to watch without a connection. See [Downloads and offline](/apps/offline).
 
 ## Settings
 

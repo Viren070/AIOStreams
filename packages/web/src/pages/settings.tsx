@@ -1968,7 +1968,7 @@ const LINKS = [
   {
     name: 'Documentation',
     help: 'How to use the app and what each setting does.',
-    url: `${DOCS_URL}/guides/app`,
+    url: `${DOCS_URL}/apps`,
   },
 ];
 

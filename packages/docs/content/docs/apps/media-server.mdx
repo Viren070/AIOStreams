@@ -6,7 +6,7 @@ description: Your configuration as a server, with your catalogs as libraries, yo
 import { Callout } from 'fumadocs-ui/components/callout';
 import { Steps, Step } from 'fumadocs-ui/components/steps';
 
-Every configuration is also a **media server**. The [AIOStreams app](/guides/app), in a browser or on your computer, signs in to it, and so does any [Jellyfin app](/guides/jellyfin), because the server speaks the same API as Jellyfin. You don't need to install or host anything for it: it runs on your AIOStreams instance. Public instances have it on except ElfHosted's, and ElfHosted's private instances have it off until you turn it on. Nothing is downloaded or stored either: when you press play, AIOStreams searches your addons exactly as it does for Stremio.
+Every configuration is also a **media server**. The [AIOStreams app](/apps), in a browser or on your computer, phone, tablet or TV, signs in to it, and so does any [Jellyfin app](/apps/jellyfin), because the server speaks the same API as Jellyfin. You don't need to install or host anything for it: it runs on your AIOStreams instance. Public instances have it on except ElfHosted's, and ElfHosted's private instances have it off until you turn it on. Nothing is downloaded or stored either: when you press play, AIOStreams searches your addons exactly as it does for Stremio.
 
 | In AIOStreams                     | In the apps                                             |
 | --------------------------------- | ------------------------------------------------------- |
@@ -47,7 +47,7 @@ Removing a user keeps their watch history. Adding a user again under the same na
 
 ### PINs
 
-Give a user a PIN of 4 to 12 digits to stop others in the household signing in as them. PINs are an AIOStreams addition, so [Jellyfin apps](/guides/jellyfin) have no box for one: type it in the password box after the password, as `yourpassword/1234`. Without it, an app only reports a failed sign-in. The AIOStreams app is the exception and asks for the PIN on its own, both at sign-in and when switching to that user. Quick Connect asks for it before approving. API keys can't act as a user with a PIN.
+Give a user a PIN of 4 to 12 digits to stop others in the household signing in as them. PINs are an AIOStreams addition, so [Jellyfin apps](/apps/jellyfin) have no box for one: type it in the password box after the password, as `yourpassword/1234`. Without it, an app only reports a failed sign-in. The AIOStreams app is the exception and asks for the PIN on its own, both at sign-in and when switching to that user. Quick Connect asks for it before approving. API keys can't act as a user with a PIN.
 
 - Five wrong PINs in a row pause sign-in to that user for 15 minutes.
 - Changing or removing a user's PIN signs that user out on every device.
@@ -65,7 +65,7 @@ The primary user sees everyone's activity and history, so a PIN on it keeps the 
 Sometimes the people you set up users for shouldn't know your configuration password, because it also opens the configure page. If the instance owner allows it, each of them can sign in with their own PIN instead. The Connect tab says whether your instance does.
 
 1. Give each person's user a PIN of **6 or more digits**.
-2. Give them the [**Address with a sign-in picker**](/guides/jellyfin#connecting-an-app), their user name and their PIN.
+2. Give them the [**Address with a sign-in picker**](/apps/jellyfin#connecting-an-app), their user name and their PIN.
 3. They pick their user and enter the PIN as the password.
 
 This only works on the sign-in picker address or a [separate user's own address](#users-outside-your-household), and only for users other than the primary user. The primary user, and users without a PIN, still need your configuration password, and a PIN shorter than 6 digits only works together with it. Anyone with the picker address or your install links who learns or guesses a PIN can sign in as that user, so pick PINs that aren't easy to guess.
@@ -78,13 +78,13 @@ To share your setup with someone who shouldn't see your household, turn on **Kee
 - sees no other user once signed in, and can't switch to anyone;
 - gets an address of their own, shown under the switch with a **Copy** button: `https://your-instance/jellyfin/p/<code>`.
 
-Give them only that address. It signs in that one user, doesn't show your other users, and has no secret in it, unlike the picker address and your install links. They sign in with their PIN if the instance [allows PIN-only sign-in](#letting-people-sign-in-with-only-their-pin); otherwise approve each of their devices with [Quick Connect](/guides/jellyfin#on-a-tv-quick-connect). The address starts working once you save, and **New address** replaces it, so a leaked one stops working.
+Give them only that address. It signs in that one user, doesn't show your other users, and has no secret in it, unlike the picker address and your install links. They sign in with their PIN if the instance [allows PIN-only sign-in](#letting-people-sign-in-with-only-their-pin); otherwise approve each of their devices with [Quick Connect](/apps/jellyfin#on-a-tv-quick-connect). The address starts working once you save, and **New address** replaces it, so a leaked one stops working.
 
 Give a separate user their own history. A user that shares the primary user's history also sees its Continue Watching.
 
 ### Switching users
 
-In the [AIOStreams app](/guides/app), you can switch users without signing out:
+In the [AIOStreams app](/apps), you can switch users without signing out:
 
 - Switching to a user with a PIN asks for their PIN.
 - A device that signed in with your configuration password switches to users without a PIN freely.
@@ -128,7 +128,7 @@ Two settings on the **Playback** tab control this:
 
 A title's versions are reused for a few minutes, so opening it and then playing it searches once.
 
-Anything an addon sent with nothing to play, such as a notice, an error, or a link to its own website, is listed after the versions, along with any statistics you have switched on. Stremio offers these as links to open in a browser, which a Jellyfin app has no way to do, so only their text is any use there, and playing one gets you a short clip saying so. The [AIOStreams app](/guides/app) shows them as text too, with a button to open any link. They do not count towards **Versions per item**, and errors follow your **Hide Errors** setting.
+Anything an addon sent with nothing to play, such as a notice, an error, or a link to its own website, is listed after the versions, along with any statistics you have switched on. Stremio offers these as links to open in a browser, which a Jellyfin app has no way to do, so only their text is any use there, and playing one gets you a short clip saying so. The [AIOStreams app](/apps) shows them as text too, with a button to open any link. They do not count towards **Versions per item**, and errors follow your **Hide Errors** setting.
 
 ### Audio and subtitle tracks
 
@@ -142,7 +142,7 @@ Unless the instance owner has turned it off, AIOStreams reads a file's tracks th
 
 To get every track on the first play too, set **Wait for tracks on play** on the **Playback** tab. Playing a version whose tracks aren't known yet then waits for them, for up to that many seconds. Some apps give up after about 20 seconds, so stay below that. The setting only shows when the instance reads files on play and your configuration plays something it can read.
 
-Apps that read the tracks from the file themselves, and the [desktop app](/guides/desktop-app), list every track regardless.
+Apps that read the tracks from the file themselves, and the [desktop](/apps/desktop) and [Android](/apps/android) apps, list every track regardless.
 
 ### When nothing plays
 

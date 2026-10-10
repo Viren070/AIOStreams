@@ -1,4 +1,4 @@
-The latest AIOStreams Android app, for Android 10 and later. Pick the download for your device; once installed, the app keeps itself up to date.
+The latest AIOStreams Android app, for Android 7.0 and later on phones, tablets and TVs. Pick the download for your device; once installed, the app keeps itself up to date. The [Android app guide](https://docs.aiostreams.viren070.me/apps/android) covers installing it on Fire TV and Android TV.
 
 | Your device | Download |
 | --- | --- |

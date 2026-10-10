@@ -3,7 +3,7 @@
 The AIOStreams app (`packages/web`) in a native window, playing through mpv. It
 runs on Windows, Linux and macOS, with downloads for each, and is in alpha. This file
 covers building it and how it works; using it is in the docs'
-[Desktop app guide](https://docs.aiostreams.viren070.me/guides/desktop-app).
+[Desktop app guide](https://docs.aiostreams.viren070.me/apps/desktop).
 
 The window shows the web app's standalone build, which picks its own server: any Jellyfin server
 works, and AIOStreams servers get the extras. Switching servers happens in the page.

@@ -108,6 +108,12 @@ export default function HomePage() {
           >
             Read the docs
           </Link>
+          <Link
+            href="/apps#get-the-app"
+            className="inline-flex items-center gap-2 rounded-md border border-fd-border px-4 py-2 text-sm font-medium transition-colors hover:bg-fd-muted"
+          >
+            Get the app
+          </Link>
           <DonateButton className="inline-flex items-center gap-2 rounded-md border border-fd-border px-4 py-2 text-sm font-medium transition-colors hover:bg-fd-muted" />
         </div>
       </div>

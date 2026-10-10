@@ -64,6 +64,11 @@ export function baseOptions(): BaseLayoutProps {
     links: [
       {
         type: 'main',
+        text: 'Apps',
+        url: '/apps',
+      },
+      {
+        type: 'main',
         text: 'Changelog',
         url: '/changelog',
       },
