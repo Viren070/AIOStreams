@@ -15,7 +15,7 @@ import { Tooltip } from '@aiostreams/ui/tooltip';
 import { cn } from '@aiostreams/ui/core/styling';
 import { formatBytes, formatSpeed } from '@aiostreams/ui/core/format';
 import { useSession } from '../lib/session';
-import { duration, fullTitle, itemTitle } from '../lib/format';
+import { duration, fullTitle, itemSubtitle, itemTitle } from '../lib/format';
 import { landscapeUrl, posterUrl } from '../lib/images';
 import { itemPath, navigate } from '../lib/paths';
 import {
@@ -60,14 +60,16 @@ function status(download: Download, speed: number | undefined): string {
       return formatBytes(total ?? bytes);
     case 'sent':
       return "In the app's downloads";
-    case 'downloading': {
-      const left =
-        speed && total ? duration(((total - bytes) / speed) * 1000) : '';
-      return [of, speed ? formatSpeed(speed) : null, left && `${left} left`]
-        .filter(Boolean)
-        .join(' · ');
-    }
+    case 'downloading':
+      return speed ? `${of} · ${formatSpeed(speed)}` : of;
   }
+}
+
+function timeLeft(download: Download, speed: number | undefined): string {
+  const { bytes, total } = download;
+  return speed && total
+    ? `${duration(((total - bytes) / speed) * 1000)} left`
+    : '';
 }
 
 function DownloadRow({
@@ -135,7 +137,7 @@ function DownloadRow({
     <div
       data-ui="download"
       data-state={state}
-      className="flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.03] p-2 pr-3"
+      className="flex items-start gap-3 rounded-xl border border-white/5 bg-white/[0.03] p-2 sm:items-center sm:pr-3"
     >
       <button
         type="button"
@@ -152,8 +154,8 @@ function DownloadRow({
         )}
       </button>
       <div className="min-w-0 flex-1 space-y-1">
-        <p className="truncate text-sm font-semibold sm:text-base">
-          {episodeOnly ? item.Name : fullTitle(item)}
+        <p className="line-clamp-2 text-sm font-semibold [overflow-wrap:anywhere] sm:text-base">
+          {episodeOnly ? itemSubtitle(item) : fullTitle(item)}
         </p>
         {download.version && (
           <p className="truncate text-xs text-[--muted]">
@@ -163,7 +165,7 @@ function DownloadRow({
         <p
           data-ui="download-status"
           className={cn(
-            'truncate text-xs sm:text-sm',
+            'line-clamp-3 text-xs [overflow-wrap:anywhere] sm:text-sm',
             state === 'failed' || state === 'needs-version'
               ? 'text-red-300'
               : 'text-gray-300'
@@ -174,24 +176,31 @@ function DownloadRow({
         {(state === 'downloading' ||
           state === 'paused' ||
           (state === 'queued' && download.bytes > 0)) && (
-          <div className="h-1 overflow-hidden rounded-full bg-white/10">
-            <div
-              className={cn(
-                'h-full rounded-full',
-                state === 'paused' ? 'bg-gray-400' : 'bg-brand-500'
-              )}
-              style={{ width: `${percent ?? 0}%` }}
-            />
+          <div className="flex items-center gap-2">
+            <div className="h-1 flex-1 overflow-hidden rounded-full bg-white/10">
+              <div
+                className={cn(
+                  'h-full rounded-full',
+                  state === 'paused' ? 'bg-gray-400' : 'bg-brand-500'
+                )}
+                style={{ width: `${percent ?? 0}%` }}
+              />
+            </div>
+            {state === 'downloading' && (
+              <span className="flex-none text-xs text-gray-300">
+                {timeLeft(download, speed)}
+              </span>
+            )}
           </div>
         )}
       </div>
-      <div className="flex flex-none items-center gap-1">
+      <div className="flex flex-none flex-col items-center gap-1 sm:flex-row">
         {state === 'finding' && (
           <span className="px-2 text-lg text-[--muted]">
             <ProgressRing percent={null} />
           </span>
         )}
-        {actions.map((a) => (
+        {actions.map((a, i) => (
           <Tooltip
             key={a.name}
             trigger={
@@ -200,7 +209,8 @@ function DownloadRow({
                 data-name={a.name}
                 size="sm"
                 intent="gray-subtle"
-                className="rounded-full"
+                // A phone keeps one beside the menu, which holds the rest.
+                className={cn('rounded-full', i > 0 && 'max-sm:hidden')}
                 icon={a.icon}
                 aria-label={a.label}
                 onClick={a.run}
@@ -222,6 +232,16 @@ function DownloadRow({
             />
           }
         >
+          {actions.slice(1).map((a) => (
+            <DropdownMenuItem
+              key={a.name}
+              data-name={a.name}
+              className="sm:hidden"
+              onClick={a.run}
+            >
+              {a.icon} {a.label}
+            </DropdownMenuItem>
+          ))}
           {state === 'sent' ? null : state === 'done' ? (
             <DropdownMenuItem
               data-name="delete"
@@ -299,16 +319,15 @@ function Downloaded({ downloads }: { downloads: Download[] }) {
             className="space-y-2"
           >
             <div className="flex items-center gap-2">
-              <p className="mr-auto font-semibold">
-                {itemTitle(first)}{' '}
-                <span className="font-normal text-[--muted]">
-                  ·{' '}
+              <div className="mr-auto min-w-0">
+                <p className="truncate font-semibold">{itemTitle(first)}</p>
+                <p className="text-sm text-[--muted]">
                   {sorted.length === 1
                     ? '1 episode'
                     : `${sorted.length} episodes`}{' '}
                   · {formatBytes(sizeOf(sorted))}
-                </span>
-              </p>
+                </p>
+              </div>
               <Button
                 size="sm"
                 intent="gray-subtle"
@@ -357,10 +376,14 @@ export function DownloadsPage() {
             Downloads
           </h1>
           <div className="flex flex-wrap items-center gap-2">
-            <p className="mr-auto min-w-0 break-all text-sm text-[--muted]">
-              {folder ? `Saved to ${folder}` : null}
-              {done.length > 0 && ` · ${formatBytes(sizeOf(done))} downloaded`}
-            </p>
+            <div className="mr-auto min-w-0 text-sm text-[--muted]">
+              {done.length > 0 && <p>{formatBytes(sizeOf(done))} downloaded</p>}
+              {folder && (
+                <p className="truncate" title={folder}>
+                  Saved to {folder}
+                </p>
+              )}
+            </div>
             {host?.handsOff && (
               <Button
                 size="sm"
