@@ -585,8 +585,8 @@ function PlaybackSection() {
 
 const ENGINE_OPTIONS: { value: PlayerEngine; label: string }[] = [
   { value: 'auto', label: 'Automatic' },
-  { value: 'mpv', label: 'mpv' },
   { value: 'exoplayer', label: 'ExoPlayer' },
+  { value: 'mpv', label: 'mpv' },
 ];
 
 const ENGINE_HELP: Record<PlayerEngine, string> = {
