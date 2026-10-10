@@ -137,7 +137,10 @@ class MpvEngine(private val context: Context) : Engine {
                     cause = null
                     listener.onEvent("start-file")
                 }
-                MPV.mpvEvent.MPV_EVENT_FILE_LOADED -> listener.onEvent("file-loaded")
+                MPV.mpvEvent.MPV_EVENT_FILE_LOADED -> {
+                    calls.execute(::decodeProfile5InSoftware)
+                    listener.onEvent("file-loaded")
+                }
                 MPV.mpvEvent.MPV_EVENT_SEEK -> listener.onEvent("seek")
                 MPV.mpvEvent.MPV_EVENT_PLAYBACK_RESTART -> listener.onEvent("playback-restart")
                 MPV.mpvEvent.MPV_EVENT_END_FILE -> {
@@ -148,6 +151,15 @@ class MpvEngine(private val context: Context) : Engine {
                 }
             }
         }
+    }
+
+    /**
+     * Dolby Vision profile 5's metadata has to reshape every frame, which
+     * MediaCodec's frames reach mpv too late for. FFmpeg's decoder keeps it.
+     */
+    private fun decodeProfile5InSoftware() {
+        if (mpv.getPropertyString("current-tracks/video/dolby-vision-profile") != "5") return
+        mpv.setPropertyString("file-local-options/hwdec", "no")
     }
 
     private val logs = object : MPV.LogObserver {
