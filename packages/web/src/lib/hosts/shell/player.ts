@@ -118,6 +118,14 @@ function profileOf(codecs: string | undefined): string | undefined {
   return undefined;
 }
 
+/** Android's display HDR types. */
+const HDR_TYPES: Record<number, string> = {
+  1: 'Dolby Vision',
+  2: 'HDR10',
+  3: 'HLG',
+  4: 'HDR10+',
+};
+
 function exoStatsText(
   stats: Record<string, unknown>,
   cpu: number | undefined
@@ -126,20 +134,33 @@ function exoStatsText(
     typeof stats[key] === 'number' ? (stats[key] as number) : undefined;
   const str = (key: string) =>
     typeof stats[key] === 'string' ? (stats[key] as string) : undefined;
+  const list = (key: string) =>
+    Array.isArray(stats[key]) ? (stats[key] as number[]) : [];
   const codec = (mime?: string) => (mime && (CODECS[mime] ?? mime)) || '?';
   const rate = (bits?: number) =>
     bits && bits > 0 ? ` · ${(bits / 1e6).toFixed(1)} Mbps` : '';
   const lines = ['Engine     ExoPlayer'];
   if (str('videoMime')) {
     const fps = num('frameRate');
-    const profile = profileOf(str('videoCodecs'));
+    // A Dolby Vision track played as its base layer comes out as plain HEVC.
+    const profile = profileOf(str('dolbyVisionCodecs') ?? str('videoCodecs'));
     const vision = profile?.startsWith('Dolby');
     lines.push(
       `Video      ${codec(str('videoMime'))}${profile && !vision ? ` ${profile}` : ''} ${num('width')}×${num('height')}${fps && fps > 0 ? ` ${fps.toFixed(3)} fps` : ''}${rate(num('videoBitrate'))}`,
       `Colour     ${[vision && profile, TRANSFERS[num('colorTransfer') ?? -1] ?? (vision ? undefined : 'SDR'), num('colorSpace') === BT2020 && 'BT.2020'].filter(Boolean).join(' · ')}`,
       `Decoder    ${str('videoDecoder') ?? 'none'}`
     );
+    const route = str('dolbyVisionRoute');
+    if (route) lines.push(`Plays as   ${route}`);
   }
+  const hdr = list('hdrTypes')
+    .map((type) => HDR_TYPES[type])
+    .filter(Boolean);
+  const profiles = list('dolbyVisionProfiles');
+  lines.push(
+    `Display    ${hdr.length ? hdr.join(', ') : 'SDR'}`,
+    `DV decoder ${profiles.length ? `profiles ${profiles.join(', ')}` : 'none'}`
+  );
   if (str('audioMime')) {
     const hz = num('sampleRate');
     lines.push(
