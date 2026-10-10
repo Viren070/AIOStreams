@@ -374,8 +374,17 @@ export function useHeroTarget(item: BaseItemDto) {
   };
 }
 
-/** The whole window's backdrop, over the last few selected so going back is instant. */
-function FollowBackdrop({ item }: { item: BaseItemDto | undefined }) {
+/**
+ * The whole window's backdrop, or the hero's top corner's, over the last few
+ * selected so going back is instant.
+ */
+function FollowBackdrop({
+  item,
+  corner,
+}: {
+  item: BaseItemDto | undefined;
+  corner: boolean;
+}) {
   const { client } = useSession();
   const src = item && backdropSrc(client, item);
   const [recent, setRecent] = React.useState<string[]>([]);
@@ -383,10 +392,23 @@ function FollowBackdrop({ item }: { item: BaseItemDto | undefined }) {
     if (src) setRecent((r) => [src, ...r.filter((s) => s !== src)].slice(0, 6));
   }, [src]);
 
+  if (corner)
+    return (
+      <div
+        aria-hidden
+        data-ui="hero-corner"
+        // Masks rather than shades, which leave a seam beside the fading layers.
+        className="pointer-events-none fixed right-0 top-0 -z-10 aspect-video max-h-[calc(var(--hero-h)*1.4)] w-[70vw] overflow-hidden [mask-image:linear-gradient(to_right,transparent,rgb(0_0_0/0.4)_20%,black_45%)]"
+      >
+        <div className="absolute inset-0 [mask-image:linear-gradient(to_bottom,black_45%,rgb(0_0_0/0.4)_75%,transparent)]">
+          <Backdrops sources={recent} current={src} />
+        </div>
+      </div>
+    );
   return (
     <div
       aria-hidden
-      className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
+      className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
     >
       <BackdropFrame className="max-w-[calc(100vh*2.6)]">
         <Backdrops sources={recent} current={src} />
@@ -415,16 +437,19 @@ const lastPicks = new Map<string, BaseItemDto>();
 
 /**
  * The hero pinned above the rows, showing the card the pointer rests on or the
- * keyboard is on. The rows scroll beneath it, over the whole window's backdrop.
+ * keyboard is on. The rows scroll beneath it, over the whole window's backdrop
+ * unless it keeps to the `corner`.
  */
 export function FollowHero({
   items,
   loading,
+  corner = false,
   children,
 }: {
   /** Candidates until a card is picked; the first with a backdrop is shown. */
   items: BaseItemDto[];
   loading: boolean;
+  corner?: boolean;
   children: React.ReactNode;
 }) {
   const { client, user } = useSession();
@@ -467,13 +492,18 @@ export function FollowHero({
 
   return (
     <FollowContext.Provider value={follow}>
-      <FollowBackdrop item={item} />
       <div
         // The hero's height is fixed, so the rows don't move as details
         // change. A top bar mostly covers artwork, so it takes only part of its
         // height from the rows.
-        className="relative z-[1] -mt-[var(--top-bar,0px)] flex h-dvh flex-col [--hero-h:calc(55dvh+var(--top-bar,0px)*0.3)]"
+        className={cn(
+          'relative z-[1] -mt-[var(--top-bar,0px)] flex h-dvh flex-col',
+          corner
+            ? '[--hero-h:calc(45dvh+var(--top-bar,0px)*0.3)]'
+            : '[--hero-h:calc(55dvh+var(--top-bar,0px)*0.3)]'
+        )}
       >
+        <FollowBackdrop item={item} corner={corner} />
         <section
           data-ui="hero"
           data-follow
@@ -481,7 +511,10 @@ export function FollowHero({
         >
           <div
             data-ui="hero-content"
-            className="max-w-3xl space-y-4 pb-4 pr-10"
+            className={cn(
+              'max-w-3xl space-y-4 pb-4 pr-10',
+              corner && 'lg:max-w-[40vw]'
+            )}
           >
             {item ? (
               <FollowDetails item={item} />
@@ -493,6 +526,7 @@ export function FollowHero({
         <div
           ref={setScroller}
           data-ui="hero-rows"
+          data-nav-snap
           data-scroll-restoration-id="home-rows"
           // What a card may take of the rows' height, past the room above a
           // revealed row and its header.

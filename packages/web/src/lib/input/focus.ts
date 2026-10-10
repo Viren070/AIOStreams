@@ -525,7 +525,8 @@ function shownBox(el: HTMLElement): Element {
 /**
  * Scrolls each box holding `el`, innermost first; carousels and boxes marked
  * `data-nav-self-scroll` move themselves. Inside `data-nav-box`es, the
- * outermost comes into view; inside `data-nav-top`, the page goes to its top.
+ * outermost comes into view, at the top of a `data-nav-snap` box; inside
+ * `data-nav-top`, the page goes to its top.
  */
 function reveal(el: HTMLElement): void {
   let rect = shownBox(el).getBoundingClientRect();
@@ -547,14 +548,16 @@ function reveal(el: HTMLElement): void {
     // Measured from where a scroll under way ends, not where its easing draws it.
     const [left, top] = headedTo(box);
     rect = shifted(rect, ...drift(box));
-    const dy = scrollsY
-      ? shortfall(
-          { start: view.top, end: view.bottom },
-          rect.top,
-          rect.bottom,
-          24
-        )
-      : 0;
+    const dy = !scrollsY
+      ? 0
+      : box.hasAttribute('data-nav-snap')
+        ? Math.round(rect.top - view.top - 24)
+        : shortfall(
+            { start: view.top, end: view.bottom },
+            rect.top,
+            rect.bottom,
+            24
+          );
     const dx = scrollsX
       ? shortfall(
           { start: view.left, end: view.right },

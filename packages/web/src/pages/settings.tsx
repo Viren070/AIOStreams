@@ -1385,10 +1385,14 @@ function InterfaceSection() {
         />
         <Select
           label="Hero"
-          help="Following pins it above the rows and shows the card the pointer, keyboard or remote is on, starting with a featured title. Touch screens and narrow windows keep it rotating."
+          help="Following pins it above the rows and shows the card the pointer, keyboard or remote is on, starting with a featured title, behind the whole page or in its top corner. Touch screens and narrow windows keep it rotating."
           options={[
             { value: 'rotate', label: 'Rotates through featured titles' },
             { value: 'follow', label: 'Follows the selected card' },
+            {
+              value: 'corner',
+              label: 'Follows the selected card, in the corner',
+            },
           ]}
           value={heroMode}
           onValueChange={(value) => setHeroMode(value as HeroMode)}

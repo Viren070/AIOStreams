@@ -18,7 +18,8 @@ export type PosterLine = 'title' | 'year';
 export const EPISODE_LAYOUTS = ['auto', 'row', 'list'] as const;
 export type EpisodeLayout = (typeof EPISODE_LAYOUTS)[number];
 
-export type HeroMode = 'rotate' | 'follow';
+export const HERO_MODES = ['rotate', 'follow', 'corner'] as const;
+export type HeroMode = (typeof HERO_MODES)[number];
 
 export const TOUCH_NAVIGATIONS = ['rail', 'bar'] as const;
 export type TouchNavigation = (typeof TOUCH_NAVIGATIONS)[number];
@@ -500,7 +501,7 @@ export const settings = {
   combineSearch: syncedFlag('combineSearch'),
   heroMode: synced<HeroMode>(
     'heroMode',
-    (raw) => (raw === 'follow' ? 'follow' : 'rotate'),
+    (raw) => HERO_MODES.find((mode) => mode === raw) ?? 'rotate',
     (value) => (value === 'rotate' ? undefined : value)
   ),
   themeColors,

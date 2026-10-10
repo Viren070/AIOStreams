@@ -143,7 +143,7 @@ export function HomePage() {
     '(min-width: 1024px) and (hover: hover) and (pointer: fine)'
   );
   const canFollow = pointer || !!currentHost().tv;
-  const follow = heroMode === 'follow' && canFollow;
+  const follow = heroMode !== 'rotate' && canFollow;
 
   const rows = (
     <>
@@ -191,6 +191,7 @@ export function HomePage() {
       <FollowHero
         items={heroItems.length ? heroItems : continueItems}
         loading={heroLoading}
+        corner={heroMode === 'corner'}
       >
         <div
           data-ui="home-rows"
