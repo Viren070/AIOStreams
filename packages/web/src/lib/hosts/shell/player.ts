@@ -68,6 +68,97 @@ const STATS_PAGES: Track[] = [
   { id: '5', label: 'Tracks' },
 ];
 
+/** ExoPlayer draws no statistics, so the page asks for its numbers while they show. */
+const EXO_STATS: Track[] = [{ id: 'exo', label: 'Playback' }];
+const STATS_MS = 1000;
+
+const CODECS: Record<string, string> = {
+  'video/avc': 'H.264',
+  'video/hevc': 'HEVC',
+  'video/av01': 'AV1',
+  'video/x-vnd.on2.vp9': 'VP9',
+  'audio/mp4a-latm': 'AAC',
+  'audio/ac3': 'AC-3',
+  'audio/eac3': 'E-AC-3',
+  'audio/eac3-joc': 'E-AC-3 Atmos',
+  'audio/true-hd': 'TrueHD',
+  'audio/vnd.dts': 'DTS',
+  'audio/vnd.dts.hd': 'DTS-HD',
+  'audio/opus': 'Opus',
+  'audio/flac': 'FLAC',
+  'audio/raw': 'PCM',
+};
+
+/** Media3's C.COLOR_TRANSFER_* values. */
+const TRANSFERS: Record<number, string> = { 6: 'HDR10 (PQ)', 7: 'HLG' };
+/** Media3's C.COLOR_SPACE_BT2020. */
+const BT2020 = 6;
+
+const HEVC_PROFILES: Record<string, string> = {
+  '1': 'Main',
+  '2': 'Main 10',
+  '3': 'Main Still',
+};
+const AVC_PROFILES: Record<string, string> = {
+  '42': 'Baseline',
+  '4D': 'Main',
+  '64': 'High',
+  '6E': 'High 10',
+};
+
+/** The profile a codec string names, as `hvc1.2.4.L153` or `dvhe.08.06` do. */
+function profileOf(codecs: string | undefined): string | undefined {
+  const [kind = '', a = '', b = ''] = codecs?.split('.') ?? [];
+  if (/^(dvhe|dvh1|dav1|dva1|dvav)$/.test(kind))
+    return `Dolby Vision profile ${Number(a)}, level ${Number(b)}`;
+  if (kind === 'hvc1' || kind === 'hev1')
+    return HEVC_PROFILES[a.replace(/^[A-C]/, '')];
+  if (kind === 'avc1' || kind === 'avc3')
+    return AVC_PROFILES[a.slice(0, 2).toUpperCase()];
+  return undefined;
+}
+
+function exoStatsText(
+  stats: Record<string, unknown>,
+  cpu: number | undefined
+): string {
+  const num = (key: string) =>
+    typeof stats[key] === 'number' ? (stats[key] as number) : undefined;
+  const str = (key: string) =>
+    typeof stats[key] === 'string' ? (stats[key] as string) : undefined;
+  const codec = (mime?: string) => (mime && (CODECS[mime] ?? mime)) || '?';
+  const rate = (bits?: number) =>
+    bits && bits > 0 ? ` · ${(bits / 1e6).toFixed(1)} Mbps` : '';
+  const lines = ['Engine     ExoPlayer'];
+  if (str('videoMime')) {
+    const fps = num('frameRate');
+    const profile = profileOf(str('videoCodecs'));
+    const vision = profile?.startsWith('Dolby');
+    lines.push(
+      `Video      ${codec(str('videoMime'))}${profile && !vision ? ` ${profile}` : ''} ${num('width')}×${num('height')}${fps && fps > 0 ? ` ${fps.toFixed(3)} fps` : ''}${rate(num('videoBitrate'))}`,
+      `Colour     ${[vision && profile, TRANSFERS[num('colorTransfer') ?? -1] ?? (vision ? undefined : 'SDR'), num('colorSpace') === BT2020 && 'BT.2020'].filter(Boolean).join(' · ')}`,
+      `Decoder    ${str('videoDecoder') ?? 'none'}`
+    );
+  }
+  if (str('audioMime')) {
+    const hz = num('sampleRate');
+    lines.push(
+      `Audio      ${codec(str('audioMime'))} ${num('channels') ?? '?'} ch${hz && hz > 0 ? ` ${hz / 1000} kHz` : ''}${rate(num('audioBitrate'))}`,
+      `Decoder    ${str('audioDecoder') ?? 'passthrough'}`
+    );
+  }
+  const buffered = num('bufferedMs');
+  if (buffered !== undefined)
+    lines.push(`Buffered   ${(buffered / 1000).toFixed(1)} s`);
+  const shown = num('renderedFrames');
+  if (shown !== undefined)
+    lines.push(
+      `Frames     ${shown} shown · ${num('droppedFrames') ?? 0} dropped`
+    );
+  if (cpu !== undefined) lines.push(`App CPU    ${Math.round(cpu)}% of a core`);
+  return lines.join('\n');
+}
+
 /** How long a player in its own window waits for the next episode's page. */
 const LINGER_MS = 10_000;
 let linger: ReturnType<typeof setTimeout> | undefined;
@@ -141,6 +232,28 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
     shell.send({ type: 'mpv-command', args, ...target });
 
   const [statsPage, setStatsPage] = React.useState<string | null>(null);
+  const exo = playsWithExoPlayer();
+  const [exoStats, setExoStats] = React.useState<string>();
+  React.useEffect(() => {
+    if (!exo || !statsPage) return setExoStats(undefined);
+    let last: { cpuMs: number; atMs: number } | undefined;
+    const stop = shell.subscribe((m) => {
+      if (m.type !== 'player-stats') return;
+      const cpu =
+        last && m.atMs > last.atMs
+          ? ((m.cpuMs - last.cpuMs) / (m.atMs - last.atMs)) * 100
+          : undefined;
+      last = m;
+      setExoStats(exoStatsText(m.stats, cpu));
+    });
+    const ask = () => shell.send({ type: 'player-stats' });
+    ask();
+    const timer = setInterval(ask, STATS_MS);
+    return () => {
+      clearInterval(timer);
+      stop();
+    };
+  }, [exo, statsPage, shell]);
   const shownStats = useLatest(statsPage);
   const showStats = (page: string | null) => {
     if (shownStats.current)
@@ -454,8 +567,13 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
       ? () => command('cycle', 'fullscreen')
       : () => shell.send({ type: 'fullscreen' }),
     chapters,
-    stats: playsWithExoPlayer()
-      ? undefined
+    stats: exo
+      ? {
+          pages: EXO_STATS,
+          page: statsPage,
+          show: setStatsPage,
+          text: exoStats,
+        }
       : { pages: STATS_PAGES, page: statsPage, show: showStats },
     external: launched?.name,
     close: external

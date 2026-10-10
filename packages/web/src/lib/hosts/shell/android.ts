@@ -3,7 +3,7 @@ import { runAction } from '../../input';
 import { onSettingsChange, settings, type PlayerEngine } from '../../settings';
 import { appBridge } from './bridge';
 import { shellDownloads } from './downloads';
-import { playsWithExoPlayer, setEngine, useShellPlayer } from './player';
+import { setEngine, useShellPlayer } from './player';
 
 let fullscreen = false;
 
@@ -103,11 +103,7 @@ export const androidHost: Host = {
   },
   device: () => ({ id: appBridge()?.deviceId, name: appBridge()?.device }),
   usePlayer: useShellPlayer,
-  get playerFeatures() {
-    return playsWithExoPlayer()
-      ? (['audio', 'chapters'] as const)
-      : (['audio', 'chapters', 'stats'] as const);
-  },
+  playerFeatures: ['audio', 'chapters', 'stats'],
   // A TV has little storage and is always online.
   get downloads() {
     return appBridge()?.tv ? undefined : shellDownloads;

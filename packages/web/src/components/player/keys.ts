@@ -202,7 +202,7 @@ export function usePlayerKeys(keys: PlayerKeys): void {
       'player.stats': () => {
         const { stats } = player();
         if (!stats) return false;
-        stats.show(stats.page ? null : '1');
+        stats.show(stats.page ? null : stats.pages[0].id);
       },
     };
 

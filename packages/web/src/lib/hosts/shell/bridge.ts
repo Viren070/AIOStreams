@@ -22,6 +22,13 @@ export type ShellMessage =
   /** The engine the Android app plays with now. */
   | { type: 'player-engine'; name: string }
   | { type: 'mpv-config'; text: string }
+  | {
+      type: 'player-stats';
+      stats: Record<string, unknown>;
+      /** The app's own process, which decoders and the page run outside. */
+      cpuMs: number;
+      atMs: number;
+    }
   | { type: 'levels'; volume: number; brightness: number }
   | { type: 'window-state'; maximized: boolean }
   | {

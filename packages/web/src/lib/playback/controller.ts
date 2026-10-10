@@ -69,11 +69,12 @@ export interface PlayerController {
   toggleFullscreen?: () => void;
   /** The file's chapters, where the player reads them. */
   chapters?: Chapter[];
-  /** Where the player draws playback statistics over the video. */
+  /** Playback statistics over the video, as `text` the page draws for a player that draws none. */
   stats?: {
     pages: Track[];
     page: string | null;
     show(page: string | null): void;
+    text?: string;
   };
   /** Loads a subtitle file from this device; `types` are the extensions it reads. */
   subtitleFiles?: {

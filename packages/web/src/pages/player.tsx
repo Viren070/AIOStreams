@@ -642,6 +642,14 @@ function NativePlayer({
       {player.subtitleText && (
         <SubtitleText text={player.subtitleText} style={subtitleStyle} />
       )}
+      {player.stats?.text && (
+        <pre
+          data-ui="player-stats"
+          className="pointer-events-none fixed left-[calc(1rem+env(safe-area-inset-left))] top-[calc(4.5rem+env(safe-area-inset-top))] rounded-lg bg-black/60 px-3 py-2 font-mono text-xs leading-relaxed text-white/90"
+        >
+          {player.stats.text}
+        </pre>
+      )}
       {launched && (
         <p
           data-ui="player-external"
