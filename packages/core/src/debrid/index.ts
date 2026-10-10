@@ -82,6 +82,21 @@ export function getDebridService(
       return createStremThruNewzService(config, pollInterval, maxWaitTime);
     case constants.AIOSTREAMS_SERVICE:
       return new NativeUsenetService(config);
+    case constants.TORRIN_SERVICE:
+      return new StremThruService({
+        serviceName,
+        clientIp: config.clientIp,
+        stremthru: {
+          baseUrl: appConfig.builtins.stremthru.url,
+          store: serviceName,
+          token: config.token,
+        },
+        capabilities: { torrents: true, usenet: true },
+        cacheAndPlayOptions: {
+          pollingInterval: pollInterval,
+          maxWaitTime: maxWaitTime,
+        },
+      });
     default:
       if (StremThruPreset.supportedServices.includes(serviceName)) {
         return new StremThruService({
