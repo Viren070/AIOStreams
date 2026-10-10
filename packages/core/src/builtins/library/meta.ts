@@ -4,6 +4,7 @@ import {
   createLogger,
 } from '../../utils/index.js';
 import {
+  DebridCapability,
   DebridDownload,
   DebridFile,
   getDebridService,
@@ -55,12 +56,14 @@ export async function fetchItem(
   serviceCredential: string,
   itemType: 'torrent' | 'usenet',
   itemId: string,
-  clientIp?: string
+  clientIp?: string,
+  disabledCapabilities?: DebridCapability[]
 ): Promise<DebridDownload> {
   const debridService = getDebridService(
     serviceId,
     serviceCredential,
-    clientIp
+    clientIp,
+    disabledCapabilities
   );
 
   if (itemType === 'torrent') {

@@ -263,7 +263,8 @@ async function processTorrentsForDebridService(
   const debridService = getDebridService(
     service.id,
     service.credential,
-    clientIp
+    clientIp,
+    service.disabledCapabilities
   );
   if (!isTorrentDebridService(debridService)) {
     logger.warn(
@@ -645,7 +646,8 @@ async function processNZBsForDebridService(
   const debridService = getDebridService(
     service.id,
     service.credential,
-    clientIp
+    clientIp,
+    service.disabledCapabilities
   );
   if (!isUsenetDebridService(debridService)) {
     logger.warn(

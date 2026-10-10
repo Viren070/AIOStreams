@@ -386,6 +386,14 @@ set resultLimits.global = 10
 set services[id=realdebrid].credentials.apiKey = "SECOND_ACCOUNT_KEY"
 ```
 
+**Debrid only, or Usenet only.** Turn off one side of a service that does both, instead of disabling the whole service.
+
+```
+set services[id=torbox].disabledCapabilities = ["usenet"]
+```
+
+Use `["torrents"]` for a Usenet-only variant.
+
 **Instant playback only.** Cached results, no failover attempts.
 
 ```
