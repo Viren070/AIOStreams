@@ -32,7 +32,7 @@ import {
   AUTH_CARD,
   ErrorLine,
   FADE,
-  FormLink,
+  LinkRow,
   publicAvatar,
   RISE,
   Screen,
@@ -102,7 +102,7 @@ function AddServer({
       >
         Connect
       </Button>
-      {onBack && <FormLink onClick={onBack}>Back</FormLink>}
+      <LinkRow links={[!!onBack && { label: 'Back', onClick: onBack }]} />
     </form>
   );
 }

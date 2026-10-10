@@ -1,5 +1,5 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { JellyfinClient } from './client';
 import type { Branding } from './types';
 
@@ -93,5 +93,7 @@ export function useServerInfoQuery(client: JellyfinClient) {
       };
     },
     staleTime: 5 * 60_000,
+    // A new token asks again; the screen fading out meanwhile must not change.
+    placeholderData: keepPreviousData,
   });
 }

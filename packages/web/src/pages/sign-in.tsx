@@ -13,7 +13,6 @@ import type { JellyfinClient } from '../lib/client';
 import { configureUrl } from '../lib/paths';
 import { useServerInfo } from '../lib/server-info';
 import type { PickableUser, QuickConnectResult, UserDto } from '../lib/types';
-import { Anchor } from '../components/anchor';
 
 /** Must match the server's `PIN_REQUIRED`. */
 const PIN_REQUIRED = 'PIN required';
@@ -103,20 +102,47 @@ export function Screen({
   );
 }
 
-export function FormLink(props: React.ComponentPropsWithoutRef<'button'>) {
+export type SignInLink = { label: string; onClick: () => void };
+
+/** The ways off a sign-in screen. */
+export function LinkRow({ links }: { links: (SignInLink | false | null)[] }) {
+  const shown = links.filter((l): l is SignInLink => !!l);
+  if (!shown.length) return null;
   return (
-    <button
-      type="button"
-      className="block w-full text-center text-sm text-[--muted] hover:text-white"
-      {...props}
-    />
+    <div
+      data-ui="sign-in-links"
+      className="flex flex-wrap justify-center gap-2"
+    >
+      {shown.map((link) => (
+        <Button
+          key={link.label}
+          size="sm"
+          intent="gray-subtle"
+          className="rounded-full"
+          onClick={link.onClick}
+        >
+          {link.label}
+        </Button>
+      ))}
+    </div>
   );
 }
 
-type SignInLink = { label: string; onClick: () => void };
-
 /** What a sign-in form asks for, by what the server takes. */
-function signInCopy(configSignIn: boolean, pinSignIn: boolean, user: boolean) {
+function signInCopy(
+  configSignIn: boolean,
+  pinSignIn: boolean,
+  user: boolean,
+  personal: boolean
+) {
+  if (personal)
+    return pinSignIn
+      ? { help: 'Use your PIN.', username: 'User name', password: 'PIN' }
+      : {
+          help: 'Use Quick Connect, or the configuration’s password.',
+          username: 'User name',
+          password: 'Password',
+        };
   if (!configSignIn)
     return {
       help: user ? 'Enter your password.' : 'Use your user name and password.',
@@ -143,7 +169,6 @@ export function SignInPage({
   user,
   avatar = null,
   links = [],
-  configure,
   onChangeServer,
 }: {
   onSignIn: (username: string, password: string) => Promise<void>;
@@ -152,12 +177,11 @@ export function SignInPage({
   user?: UserDto;
   avatar?: string | null;
   links?: SignInLink[];
-  configure: string | null;
   onChangeServer?: () => void;
 }) {
   const info = useServerInfo();
   const configSignIn = !!info.features.configSignIn;
-  const copy = signInCopy(configSignIn, info.pinSignIn, !!user);
+  const copy = signInCopy(configSignIn, info.pinSignIn, !!user, info.personal);
   const [username, setUsername] = React.useState(user?.Name ?? defaultUsername);
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState<string | null>(null);
@@ -265,24 +289,15 @@ export function SignInPage({
           >
             Sign in
           </Button>
-          {links.map((link) => (
-            <FormLink key={link.label} onClick={link.onClick}>
-              {link.label}
-            </FormLink>
-          ))}
-          {configure && (
-            <Anchor
-              href={configure}
-              target={__STANDALONE__ ? '_blank' : undefined}
-              rel="noreferrer"
-              className="block text-center text-sm text-[--muted] hover:text-white"
-            >
-              Open the configuration page
-            </Anchor>
-          )}
-          {onChangeServer && (
-            <FormLink onClick={onChangeServer}>Change server</FormLink>
-          )}
+          <LinkRow
+            links={[
+              ...links,
+              !!onChangeServer && {
+                label: 'Change server',
+                onClick: onChangeServer,
+              },
+            ]}
+          />
         </form>
       </motion.div>
     </Screen>
@@ -319,9 +334,14 @@ export function Unreachable({
         >
           Try again
         </Button>
-        {onChangeServer && (
-          <FormLink onClick={onChangeServer}>Change server</FormLink>
-        )}
+        <LinkRow
+          links={[
+            !!onChangeServer && {
+              label: 'Change server',
+              onClick: onChangeServer,
+            },
+          ]}
+        />
       </motion.div>
     </Screen>
   );
@@ -435,15 +455,15 @@ function QuickConnectPage({
             New code
           </Button>
         )}
-        <FormLink onClick={onBack}>Back</FormLink>
+        <LinkRow links={[{ label: 'Back', onClick: onBack }]} />
       </motion.div>
     </Screen>
   );
 }
 
 /**
- * Signing in: the users a server lists, when it lists more than one, then a
- * form for the one picked; typing a name or Quick Connect stay a click away.
+ * Signing in: the users a server lists, then a form for the one picked; typing
+ * a name or Quick Connect stay a click away. A user's own address opens on them.
  */
 export function SignInScreen({
   client,
@@ -485,20 +505,15 @@ export function SignInScreen({
     );
 
   const users = listed.data ?? [];
+  const personal = info.personal;
   const user = typing
     ? null
-    : (chosen ?? (users.length === 1 ? users[0] : null));
-  const typeInstead: SignInLink = {
-    label: info.features.configSignIn
-      ? 'Use a UUID instead'
-      : 'Type a user name',
-    onClick: () => setTyping(true),
-  };
+    : (chosen ?? (personal && users.length === 1 ? users[0] : null));
   const quickConnectLinks: SignInLink[] = quickConnectEnabled.data
-    ? [{ label: 'Use Quick Connect', onClick: () => setQuickConnect(true) }]
+    ? [{ label: 'Quick Connect', onClick: () => setQuickConnect(true) }]
     : [];
 
-  if (users.length > 1 && !user && !typing) {
+  if (users.length && !user && !typing) {
     return (
       <UserPicker
         users={users.map((u) => ({
@@ -512,21 +527,21 @@ export function SignInScreen({
           if (picked.HasPassword) setChosen(picked);
           else await onSignIn(picked.Name ?? '', '');
         }}
-        links={[typeInstead, ...quickConnectLinks]}
+        links={[
+          ...(personal
+            ? []
+            : [{ label: 'Other user', onClick: () => setTyping(true) }]),
+          ...quickConnectLinks,
+        ]}
         onChangeServer={onChangeServer}
       />
     );
   }
-  const back: SignInLink[] = user
-    ? [
-        users.length > 1
-          ? { label: 'Choose another user', onClick: () => setChosen(null) }
-          : typeInstead,
-      ]
-    : users.length
+  const back: SignInLink[] =
+    users.length && !personal
       ? [
           {
-            label: 'Choose a user',
+            label: 'Back',
             onClick: () => {
               setChosen(null);
               setTyping(false);
@@ -542,7 +557,6 @@ export function SignInScreen({
       user={user ?? undefined}
       avatar={user && publicAvatar(client, user)}
       links={[...back, ...quickConnectLinks]}
-      configure={configureUrl(client.base, info)}
       onChangeServer={onChangeServer}
     />
   );
@@ -648,7 +662,7 @@ function SecretPrompt({
         >
           Continue
         </Button>
-        <FormLink onClick={onBack}>Back</FormLink>
+        <LinkRow links={[{ label: 'Back', onClick: onBack }]} />
       </motion.div>
     </form>
   );
@@ -776,14 +790,15 @@ export function UserPicker({
                   ))}
                 </motion.div>
                 <ErrorLine error={error} />
-                {links.map((link) => (
-                  <FormLink key={link.label} onClick={link.onClick}>
-                    {link.label}
-                  </FormLink>
-                ))}
-                {onChangeServer && (
-                  <FormLink onClick={onChangeServer}>Change server</FormLink>
-                )}
+                <LinkRow
+                  links={[
+                    ...links,
+                    !!onChangeServer && {
+                      label: 'Change server',
+                      onClick: onChangeServer,
+                    },
+                  ]}
+                />
               </motion.div>
             )}
           </AnimatePresence>
