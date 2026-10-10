@@ -1,6 +1,7 @@
 package io.github.viren070.aiostreams
 
 import android.content.Context
+import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.widget.FrameLayout
 import io.github.viren070.aiostreams.exoplayer.ExoEngine
@@ -31,6 +32,11 @@ class Playback(private val context: Context, private val announce: (engine: Stri
 
     init {
         stage.addView(engine.createView(context), MATCH_PARENT, MATCH_PARENT)
+    }
+
+    /** Hidden while nothing plays: a surface keeps showing its last frame, and an HDR one keeps the display in HDR. */
+    fun showVideo(shown: Boolean) {
+        stage.visibility = if (shown) View.VISIBLE else View.INVISIBLE
     }
 
     /** The page's pick, which the next start keeps too. */

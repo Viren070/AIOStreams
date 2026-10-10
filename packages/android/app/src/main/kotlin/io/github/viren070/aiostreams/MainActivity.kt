@@ -129,6 +129,7 @@ class MainActivity : ComponentActivity() {
             beforeLoad = { playback.beforeLoad(player) },
             fallBack = { playback.fallBack(player) },
             frameRate = frameRates::match,
+            showVideo = playback::showVideo,
         )
         gamepads = hasGamepad()
         getSystemService(InputManager::class.java).registerInputDeviceListener(controllers, null)

@@ -38,6 +38,7 @@ class PlayerChannel(
     private val fallBack: () -> Boolean = { false },
     /** The video's frame rate, or null once the page closes the player. */
     private val frameRate: (Double?) -> Unit = {},
+    private val showVideo: (Boolean) -> Unit = {},
 ) : Engine.Listener {
     private val main = Handler(Looper.getMainLooper())
     private val latest = mutableMapOf<String, JsonElement>()
@@ -93,7 +94,10 @@ class PlayerChannel(
             "now-playing" -> {
                 val item = message["item"] as? JsonObject
                 session.setItem(item?.let(::itemOf))
-                if (item == null) frameRate(null)
+                if (item == null) {
+                    frameRate(null)
+                    showVideo(false)
+                }
             }
             else -> return false
         }
@@ -104,6 +108,7 @@ class PlayerChannel(
         when (args[0]) {
             "loadfile" -> {
                 beforeLoad()
+                showVideo(true)
                 loaded = args
             }
             "stop" -> loaded = null

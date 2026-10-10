@@ -49,7 +49,8 @@ class MpvEngine(private val context: Context) : Engine {
             "config-dir" to dir.path,
             "gpu-shader-cache-dir" to context.cacheDir.path,
             "icc-cache-dir" to context.cacheDir.path,
-            "vo" to VO,
+            // The surface brings the real output; a file opened before it would otherwise get none.
+            "vo" to "null",
             "gpu-context" to "android",
             "hwdec" to "mediacodec,mediacodec-copy",
             "tls-verify" to "yes",
