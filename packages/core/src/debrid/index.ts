@@ -3,6 +3,7 @@ export * from './utils.js';
 export * from './stremthru.js';
 export * from './torbox.js';
 export * from './nzbdav.js';
+export * from './qbittorrent/index.js';
 export * from './altmount.js';
 export * from './aiostreams.js';
 
@@ -22,6 +23,7 @@ import { AltmountService } from './altmount.js';
 import { StremioNNTPService } from './stremio-nntp.js';
 import { EasynewsService } from './easynews.js';
 import { NativeUsenetService } from './aiostreams.js';
+import { QBittorrentService } from './qbittorrent/index.js';
 
 export function getDebridService(
   serviceName: ServiceId,
@@ -82,6 +84,11 @@ export function getDebridService(
       return createStremThruNewzService(config, pollInterval, maxWaitTime);
     case constants.AIOSTREAMS_SERVICE:
       return new NativeUsenetService(config);
+    case constants.QBITTORRENT_SERVICE:
+      return new QBittorrentService(config, {
+        pollInterval,
+        maxWaitTime,
+      });
     default:
       if (StremThruPreset.supportedServices.includes(serviceName)) {
         return new StremThruService({

@@ -176,8 +176,21 @@ export async function buildPlayChain(
   );
 
   const items: PlayChainItem[] = eligible.map((s) => {
+    // qBittorrent streams never join failover chains, a chained add would
+    // create snatch/seeding obligations for releases the user never chose.
+    if (s.service?.id === constants.QBITTORRENT_SERVICE) {
+      return {
+        url: s.url!,
+        type: (s.type === 'usenet' ? 'usenet' : 'debrid') as FailoverContentType,
+        serviceId: s.service.id,
+        filename: s.filename,
+        proxied: shouldProxyStream(s, opts.proxyConfig),
+        kind: isOwnedPlayback(s) ? 'owned' : 'external',
+      };
+    }
     const variants: PlayChainItem[] = (s.failoverVariants ?? [])
       .filter((v) => opts.contentTypes.includes(v.type))
+      .filter((v) => v.serviceId !== constants.QBITTORRENT_SERVICE)
       .map((v) => ({
         url: v.url,
         type: v.type,
@@ -367,6 +380,9 @@ export async function getPlayChain(
     for (const item of record.items.slice(decoded.index + 1)) {
       if (fallbacks.length >= maxAttempts) break;
       if (!passesFilter(item)) continue;
+      // qBittorrent streams are never auto-fallbacks, resolving one adds a
+      // torrent to the user's client. Direct picks only.
+      if (item.serviceId === constants.QBITTORRENT_SERVICE) continue;
       const key = targetIdentity(item);
       if (seen.has(key)) continue; // already covered (e.g. as a clicked variant)
       seen.add(key);
