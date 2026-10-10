@@ -85,6 +85,7 @@ import { DavexPreset } from './davex.js';
 import { HdHubPreset } from './hdhub.js';
 import { PenguPlayPreset } from './penguplay.js';
 import { BaguettioPreset } from './baguettio.js';
+import { TorrentClawPreset } from './torrentclaw.js';
 import { Preset } from './index.js';
 
 let PRESET_LIST: string[] = [
@@ -96,6 +97,7 @@ let PRESET_LIST: string[] = [
   'comet',
   'meteor',
   'mediafusion',
+  'torrentclaw',
   'stremthruTorz',
   'stremthruStore',
   'sootio',
@@ -207,6 +209,8 @@ export class PresetManager {
         return MeteorPreset;
       case 'mediafusion':
         return MediaFusionPreset;
+      case 'torrentclaw':
+        return TorrentClawPreset;
       case 'custom':
         return CustomPreset;
       case 'torbox':
