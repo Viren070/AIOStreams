@@ -126,6 +126,8 @@ export function Artwork({
   const imageClass = cn(
     // A focus's scale keeps up with focus; a loaded image fades in slower.
     'absolute inset-0 h-full w-full object-cover transition-[transform,opacity] [transition-duration:250ms,500ms]',
+    // Scaled at rest too: gaining or losing a transform costs a layout, changing one doesn't.
+    'scale-100',
     loaded ? 'opacity-100' : 'opacity-0',
     className
   );

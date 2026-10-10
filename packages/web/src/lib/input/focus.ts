@@ -37,7 +37,18 @@ export function isTextField(el: Element | null): el is HTMLElement {
 
 export const inKeyedList = (el: Element | null) => !!el?.closest(KEYED_LIST);
 
-export const dialogOpen = () => !!document.querySelector(OPEN_DIALOG);
+/** Open dialogs, topmost last. Radix portals them beside the app's root, whose large tree is skipped. */
+function openDialogs(): Element[] {
+  const found: Element[] = [];
+  for (const child of document.body.children) {
+    if (child.id === 'root') continue;
+    if (child.matches(OPEN_DIALOG)) found.push(child);
+    found.push(...child.querySelectorAll(OPEN_DIALOG));
+  }
+  return found;
+}
+
+export const dialogOpen = () => openDialogs().length > 0;
 
 const POINTER_FOCUS = 'data-pointer-focus';
 
@@ -97,8 +108,7 @@ export function ownsKey(el: Element | null, input: string): boolean {
 
 /** The open dialog on top, or the page. */
 function scope(): Element {
-  const dialogs = document.querySelectorAll(OPEN_DIALOG);
-  return dialogs[dialogs.length - 1] ?? document.body;
+  return openDialogs().at(-1) ?? document.body;
 }
 
 /** Out of reach by its markup alone, before anything is measured. */
