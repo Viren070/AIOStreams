@@ -7,7 +7,7 @@ import { Callout } from 'fumadocs-ui/components/callout';
 
 The AIOStreams app browses and plays what your configuration finds, with your catalogs as libraries and your streams as versions, sorted and named by your formatter as in Stremio. There's nothing to self-host and no Jellyfin to install: it signs in to your configuration's [media server](/apps/media-server), which runs on your AIOStreams instance. It plays streams with a link, such as debrid and Usenet ones; P2P torrents are [left out](/apps/media-server#before-you-start).
 
-![The AIOStreams app on a computer and a phone: the home page with Slow Horses featured, and Severance's show page](/apps/hero.webp)
+![The AIOStreams app on a TV, a computer and a phone: Sintel playing with styled subtitles on the TV, the home page with Practical Magic featured on the computer, and Severance's show page on the phone](/apps/hero.webp)
 
 ## Get the app
 
@@ -59,6 +59,62 @@ After you sign in as the primary user, the app asks which user is watching, or o
 ## Settings
 
 Some settings are saved to your account and follow you to every device: what is featured on the home page, whether next up joins the continue watching row, the poster size and what shows under posters, and your audio and subtitle languages. The rest, such as the player, the subtitle style and the navigation, stay on the device, so each can suit its screen.
+
+The navigation and home page change to suit you, under **Settings → Interface**. On a TV, the navigation runs along the top as floating pills, a bar or a fade, or down the side as a rail, a floating rail or a button in the corner. The bars sit on solid, frosted or liquid glass, and the featured title at the top of the home page rotates, follows the card you are on, or follows it from the corner.
+
+<Gallery
+  slides={[
+    {
+      src: '/apps/android/tv-style-rail-floating.webp',
+      alt: 'The TV home page with a floating side rail on liquid glass, showing the page names',
+      caption: 'A floating rail on liquid glass',
+      width: 1920,
+      height: 1080,
+    },
+    {
+      src: '/apps/android/tv-style-rail-corner.webp',
+      alt: 'The TV home page with the navigation folded into a corner button, opened as a menu',
+      caption: 'The navigation in a corner button',
+      width: 1920,
+      height: 1080,
+    },
+    {
+      src: '/apps/android/tv-style-top-pills.webp',
+      alt: 'The TV home page with the navigation as floating pills on frosted glass',
+      caption: 'Floating pills along the top',
+      width: 1920,
+      height: 1080,
+    },
+    {
+      src: '/apps/android/tv-style-top-bar.webp',
+      alt: 'The TV home page with the navigation as a bar across the top on liquid glass',
+      caption: 'Or a bar',
+      width: 1920,
+      height: 1080,
+    },
+    {
+      src: '/apps/android/tv-hero-follow.webp',
+      alt: 'The TV home page featuring Dune: Part Two, the card focused in Continue watching',
+      caption: 'A featured title that follows the card you are on',
+      width: 1920,
+      height: 1080,
+    },
+    {
+      src: '/apps/android/tv-hero-corner.webp',
+      alt: 'The TV home page featuring Dune: Part Two from the corner, with the backdrop on the right',
+      caption: 'Or follows it from the corner',
+      width: 1920,
+      height: 1080,
+    },
+    {
+      src: '/apps/android/phone-bars.webp',
+      alt: "A phone's bottom navigation three times: on a solid background, on frosted glass and on liquid glass",
+      caption: 'Solid, frosted glass and liquid glass',
+      width: 2400,
+      height: 267,
+    },
+  ]}
+/>
 
 Under **Settings → Theme** you can pick a preset or your own accent and background colours, and add custom CSS. These follow you too. See [web app themes and custom CSS](/reference/web-app-css) for the parts of the app CSS can target.
 

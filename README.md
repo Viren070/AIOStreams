@@ -73,7 +73,7 @@ Add any Stremio addon you already use - Torrentio, Comet, MediaFusion, and many 
 Watch without Stremio, with the same addons, filters, sorting and formatting. There's nothing extra to self-host and no Jellyfin to install: it runs on your AIOStreams instance. Public instances have it on except ElfHosted's, and ElfHosted's private instances have it off until you turn it on. It plays streams with a link, such as debrid and Usenet ones, so P2P torrents aren't supported.
 
 <p align="center">
-  <img src="packages/docs/public/apps/hero.webp" alt="The AIOStreams app on a computer and a phone" width="850" />
+  <img src="packages/docs/public/apps/hero.webp" alt="The AIOStreams app on a TV, a computer and a phone" width="850" />
 </p>
 
 **Where you can watch**
