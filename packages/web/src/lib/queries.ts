@@ -1,5 +1,7 @@
+import React from 'react';
 import {
   keepPreviousData,
+  type QueryCache,
   queryOptions,
   useInfiniteQuery,
   useMutation,
@@ -352,14 +354,54 @@ export async function requestItem(
   return item;
 }
 
-export function useItem(itemId: string) {
+/** The lists a query's answer holds: a page of items, pages of them, or items. */
+function listsIn(data: unknown): unknown[][] {
+  if (Array.isArray(data)) return [data];
+  const { Items, pages } = (data ?? {}) as { Items?: unknown; pages?: unknown };
+  if (Array.isArray(Items)) return [Items];
+  if (Array.isArray(pages)) return pages.flatMap(listsIn);
+  return [];
+}
+
+function listedItem(
+  cache: QueryCache,
+  base: string,
+  userId: string | undefined,
+  itemId: string
+): BaseItemDto | undefined {
+  for (const query of cache.getAll()) {
+    const [jf, server, user] = query.queryKey;
+    if (jf !== 'jf' || server !== base || user !== userId) continue;
+    for (const list of listsIn(query.state.data)) {
+      const found = list.find((entry) => (entry as BaseItemDto)?.Id === itemId);
+      if (found) return found as BaseItemDto;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * With `page`, for the title's page: a list already loaded that shows the item
+ * stands in until it arrives, and it is asked for as the page starts to draw.
+ */
+export function useItem(itemId: string, opts: { page?: boolean } = {}) {
   const { client, user } = useSession();
-  return useQuery({
+  const queryClient = useQueryClient();
+  const listed = React.useMemo(
+    () =>
+      opts.page
+        ? listedItem(queryClient.getQueryCache(), client.base, user.Id, itemId)
+        : undefined,
+    [opts.page, queryClient, client.base, user.Id, itemId]
+  );
+  const options = queryOptions({
     queryKey: [...useKey(), 'item', itemId],
     meta: { cache: 'titles' },
     queryFn: () => requestItem(client, user.Id!, itemId),
-    enabled: !!itemId,
   });
+  if (opts.page && itemId && !queryClient.getQueryState(options.queryKey))
+    void queryClient.prefetchQuery(options);
+  return useQuery({ ...options, placeholderData: listed, enabled: !!itemId });
 }
 
 export function useSeasons(seriesId: string, enabled: boolean) {

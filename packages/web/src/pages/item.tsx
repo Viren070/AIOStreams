@@ -102,7 +102,7 @@ export function ItemPage({
   pickId?: string;
 }) {
   const { client } = useSession();
-  const item = useItem(itemId);
+  const item = useItem(itemId, { page: true });
   const data = item.data;
   const [season, setSeason] = React.useState<BaseItemDto>();
   useExternalReturn();
