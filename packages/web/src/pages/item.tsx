@@ -37,8 +37,10 @@ import {
   useItemPages,
   useNextUpFor,
   useSeasons,
+  openingSeason,
   useSetDropped,
   useSetFavorite,
+  useShowAhead,
   useSetPlayed,
   useSimilar,
 } from '../lib/queries';
@@ -104,6 +106,7 @@ export function ItemPage({
   const { client } = useSession();
   const item = useItem(itemId, { page: true });
   const data = item.data;
+  useShowAhead(itemId, data?.Type === 'Series', seasonId);
   const [season, setSeason] = React.useState<BaseItemDto>();
   useExternalReturn();
 
@@ -631,12 +634,7 @@ function Seasons({
   const seasons = useSeasons(series.Id!, true);
   const list = React.useMemo(() => seasons.data?.Items ?? [], [seasons.data]);
   const [chosen, setChosen] = React.useState(initialSeasonId);
-  // The first season with something left, skipping specials.
-  const fallback = React.useMemo(() => {
-    const regular = list.filter((s) => (s.IndexNumber ?? 1) > 0);
-    return (regular.find((s) => !s.UserData?.Played) ?? regular[0] ?? list[0])
-      ?.Id;
-  }, [list]);
+  const fallback = React.useMemo(() => openingSeason(list)?.Id, [list]);
   // Waits for the server's answer, so a saved copy of the list doesn't pick it.
   const settled = !seasons.isFetching;
   React.useEffect(() => {

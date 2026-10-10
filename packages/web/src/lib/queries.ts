@@ -404,47 +404,89 @@ export function useItem(itemId: string, opts: { page?: boolean } = {}) {
   return useQuery({ ...options, placeholderData: listed, enabled: !!itemId });
 }
 
-export function useSeasons(seriesId: string, enabled: boolean) {
+function useShowOptions() {
   const { client, user } = useSession();
-  return useQuery({
-    queryKey: [...useKey(), 'seasons', seriesId],
-    meta: { cache: 'titles' },
-    queryFn: () =>
-      client.get<BaseItemDtoQueryResult>(`/Shows/${seriesId}/Seasons`, {
-        userId: user.Id,
+  const key = useKey();
+  return {
+    seasons: (seriesId: string) =>
+      queryOptions({
+        queryKey: [...key, 'seasons', seriesId],
+        meta: { cache: 'titles' },
+        queryFn: () =>
+          client.get<BaseItemDtoQueryResult>(`/Shows/${seriesId}/Seasons`, {
+            userId: user.Id,
+          }),
       }),
-    enabled,
-  });
+    episodes: (seriesId: string, seasonId: string | undefined) =>
+      queryOptions({
+        queryKey: [...key, 'episodes', seriesId, seasonId],
+        meta: { cache: 'titles' },
+        queryFn: () =>
+          client.get<BaseItemDtoQueryResult>(`/Shows/${seriesId}/Episodes`, {
+            userId: user.Id,
+            SeasonId: seasonId,
+          }),
+      }),
+    nextUp: (seriesId: string) =>
+      queryOptions({
+        queryKey: [...key, 'next-up', seriesId],
+        meta: { cache: 'titles' },
+        queryFn: () =>
+          client.get<BaseItemDtoQueryResult>('/Shows/NextUp', {
+            userId: user.Id,
+            SeriesId: seriesId,
+            Limit: 1,
+          }),
+      }),
+  };
+}
+
+export function useSeasons(seriesId: string, enabled: boolean) {
+  return useQuery({ ...useShowOptions().seasons(seriesId), enabled });
 }
 
 export function useEpisodes(seriesId: string, seasonId: string | undefined) {
-  const { client, user } = useSession();
   return useQuery({
-    queryKey: [...useKey(), 'episodes', seriesId, seasonId],
-    meta: { cache: 'titles' },
-    queryFn: () =>
-      client.get<BaseItemDtoQueryResult>(`/Shows/${seriesId}/Episodes`, {
-        userId: user.Id,
-        SeasonId: seasonId,
-      }),
+    ...useShowOptions().episodes(seriesId, seasonId),
     enabled: !!seasonId,
   });
 }
 
 /** The episode a show continues with. */
 export function useNextUpFor(seriesId: string, enabled: boolean) {
-  const { client, user } = useSession();
-  return useQuery({
-    queryKey: [...useKey(), 'next-up', seriesId],
-    meta: { cache: 'titles' },
-    queryFn: () =>
-      client.get<BaseItemDtoQueryResult>('/Shows/NextUp', {
-        userId: user.Id,
-        SeriesId: seriesId,
-        Limit: 1,
-      }),
-    enabled,
-  });
+  return useQuery({ ...useShowOptions().nextUp(seriesId), enabled });
+}
+
+/** The season a show's page opens on: the first with something left, skipping specials. */
+export function openingSeason(seasons: BaseItemDto[]): BaseItemDto | undefined {
+  const regular = seasons.filter((s) => (s.IndexNumber ?? 1) > 0);
+  return regular.find((s) => !s.UserData?.Played) ?? regular[0] ?? seasons[0];
+}
+
+/**
+ * Asks for a show's next episode, seasons and opening episodes as its page
+ * starts to draw, rather than each once the page has drawn the one before.
+ */
+export function useShowAhead(
+  seriesId: string,
+  isShow: boolean,
+  seasonId: string | undefined
+) {
+  const queryClient = useQueryClient();
+  const show = useShowOptions();
+  if (!isShow) return;
+  const nextUp = show.nextUp(seriesId);
+  if (!queryClient.getQueryState(nextUp.queryKey))
+    void queryClient.prefetchQuery(nextUp);
+  const seasons = show.seasons(seriesId);
+  if (queryClient.getQueryState(seasons.queryKey)) return;
+  queryClient
+    .fetchQuery(seasons)
+    .then((result) => {
+      const id = seasonId ?? openingSeason(result.Items ?? [])?.Id;
+      if (id) void queryClient.prefetchQuery(show.episodes(seriesId, id));
+    })
+    .catch(() => {});
 }
 
 export function useSimilar(itemId: string, enabled: boolean) {
