@@ -26,9 +26,12 @@ describe('decryptString padding oracle', () => {
     cipher.final(),
   ]);
 
-  // Same ciphertext with the last byte flipped -> PKCS#7 padding check fails.
+  // Flip the last byte of the second-to-last block. CBC XORs it straight into
+  // the final plaintext byte, turning the 0x09 pad byte into 0xf6, so the
+  // PKCS#7 check fails every run (flipping the last block itself randomises
+  // the whole block and leaves valid padding ~1/256 of the time).
   const badPaddingCt = Buffer.from(validPaddingCt);
-  badPaddingCt[badPaddingCt.length - 1] ^= 0xff;
+  badPaddingCt[badPaddingCt.length - 17] ^= 0xff;
 
   test('valid padding and bad padding return the same error', () => {
     const good = decryptString(wrap(iv, validPaddingCt), key);
