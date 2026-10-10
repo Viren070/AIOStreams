@@ -336,12 +336,13 @@ function allUsers(
 }
 
 /** A personal address lists its own user, any other picker everyone not hidden. */
-function pickerUsers(mount: PickerMount, userData: UserData) {
-  return (
-    mount.persona
-      ? personasOf(userData).filter((p) => p.id === mount.persona && p.hidden)
-      : [null, ...personasOf(userData)].filter((p) => !isHidden(userData, p))
-  ).map((p) => userDto(mount.uuid, userData, p));
+export function pickerListed(
+  mount: PickerMount,
+  userData: UserData
+): (JellyfinPersona | null)[] {
+  return mount.persona
+    ? personasOf(userData).filter((p) => p.id === mount.persona && p.hidden)
+    : [null, ...personasOf(userData)].filter((p) => !isHidden(userData, p));
 }
 
 /**
@@ -371,7 +372,13 @@ router.get(
       : null;
     // Without a configuration to list for, an empty list is what makes a
     // client show the manual form that takes a uuid or alias.
-    res.json(mount && userData ? pickerUsers(mount, userData) : []);
+    res.json(
+      mount && userData
+        ? pickerListed(mount, userData).map((p) =>
+            userDto(mount.uuid, userData, p)
+          )
+        : []
+    );
   })
 );
 

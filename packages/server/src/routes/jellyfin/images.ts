@@ -19,8 +19,10 @@ import {
   personasOf,
   qi,
   qs,
+  resolveConfig,
 } from './context.js';
 import { itemFromDescriptor } from './items.js';
+import { pickerListed } from './users.js';
 
 const logger = createLogger('jellyfin');
 const router: Router = Router({ mergeParams: true });
@@ -322,19 +324,30 @@ router.get(
   jfOptional(personImage)
 );
 
-/* Anonymous on the picker, where the address is the credential. */
+/* Anonymous on the picker, where the address is the credential: only for the users it lists. */
 router.get(
   ['/Users/:userId/Images/:type', '/Users/:userId/Images/:type/:index'],
   jfOptional(async (req, res, ctx) => {
     const wanted = param(req, 'userId').toLowerCase();
-    let avatar: string | undefined;
-    if (ctx && wanted === personaUserId(ctx.uuid, '')) {
-      avatar = ctx.userData.jellyfin?.primary?.avatar;
-    } else if (ctx) {
-      avatar = personasOf(ctx.userData).find(
-        (p) => personaUserId(ctx.uuid, p.id) === wanted
-      )?.avatar;
-    }
+    const mount = ctx ? undefined : req.jfMount;
+    const uuid = ctx?.uuid ?? mount?.uuid;
+    const userData =
+      ctx?.userData ??
+      (mount && (await resolveConfig(mount.uuid, mount.encryptedPassword)));
+    const users = !userData
+      ? []
+      : mount
+        ? pickerListed(mount, userData)
+        : [null, ...personasOf(userData)];
+    const user = users.find(
+      (p) => uuid && personaUserId(uuid, p?.id ?? '') === wanted
+    );
+    const avatar =
+      user === undefined
+        ? undefined
+        : user
+          ? user.avatar
+          : userData?.jellyfin?.primary?.avatar;
     if (!avatar) {
       res.status(404).end();
       return;
