@@ -9,7 +9,11 @@ import TheRARBGAPI, { TheRARBGCategory, getTheRARBGUrl } from './api.js';
 import { NZB, UnprocessedTorrent } from '../../debrid/utils.js';
 import { validateInfoHash } from '../utils/debrid.js';
 import { config as appConfig } from '../../config/index.js';
-import { createQueryLimit, getTitleLanguagesForUrl } from '../utils/general.js';
+import {
+  createQueryLimit,
+  getTitleLanguagesForUrl,
+  getTitleLimitForUrl,
+} from '../utils/general.js';
 
 const logger = createLogger('therarbg');
 
@@ -44,6 +48,7 @@ export class TheRARBGAddon extends BaseDebridAddon<TheRARBGAddonConfig> {
 
     const queries = this.buildQueries(parsedId, metadata, {
       titleLanguages: getTitleLanguagesForUrl(getTheRARBGUrl(), this.id),
+      titleLimit: getTitleLimitForUrl(getTheRARBGUrl(), this.id),
     });
     if (metadata.imdbId) {
       queries.push(metadata.imdbId);
