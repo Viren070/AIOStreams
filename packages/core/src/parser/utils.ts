@@ -52,16 +52,28 @@ const asciiFoldMap: Record<string, string> = {
   Þ: 'Th',
 };
 
-function foldToAscii(title: string, language?: string): string {
+function stripDiacritics(text: string): string {
+  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+// Cyrillic й, ё and ї are letters of their own, not accented и, е and і, and
+// release names keep them, so `keepCyrillic` leaves Cyrillic letters whole.
+function foldToAscii(
+  title: string,
+  language?: string,
+  keepCyrillic = false
+): string {
   // every step below only rewrites non-ascii characters
   if (!/[^\x00-\x7f]/.test(title)) return title;
   const digraphMap = language ? languageDigraphMaps[language] : undefined;
-  return (
+  const folded = (
     digraphMap ? title.replace(/[ÄäÖöÜüÅå]/g, (c) => digraphMap[c] ?? c) : title
-  )
-    .replace(/[ßıøØłŁđĐæÆœŒðÐþÞ]/g, (c) => asciiFoldMap[c])
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
+  ).replace(/[ßıøØłŁđĐæÆœŒðÐþÞ]/g, (c) => asciiFoldMap[c]);
+  // compose first: a decomposed й would leave its combining breve, which is
+  // not Cyrillic script, in a run that gets stripped
+  return keepCyrillic
+    ? folded.normalize('NFC').replace(/\P{Script=Cyrillic}+/gu, stripDiacritics)
+    : stripDiacritics(folded);
 }
 
 type TitleMatchOptions = {
@@ -392,8 +404,10 @@ export function normaliseTitle(title: string) {
   );
 }
 
+// Unlike normaliseTitle, keeps Cyrillic letters whole: search queries need
+// them, while matching keys fold them so releases that write е for ё match.
 export function cleanTitle(title: string, language?: string) {
-  return foldToAscii(title, language)
+  return foldToAscii(title, language, true)
     .replace(/[♪♫★☆♡♥\-;:]/g, ' ')
     .replace(/&/g, 'and')
     .replace(/[^\p{L}\p{N}\s]/gu, '') // Remove remaining special chars
