@@ -67,6 +67,62 @@ export function fadeIn(index: number) {
   return { ref: CARD_IN[index % 20] };
 }
 
+/** Past this many cards, a row draws only those near its view; the rest hold their places empty. */
+const WINDOWED = 40;
+/** Cards drawn past each side of the view, so the next one a key moves to is there. */
+const MARGIN = 12;
+
+/** The cards a long row draws: around its start at first, then wherever it has been scrolled. */
+function useWindow(count: number, start: number, loading: boolean) {
+  // Decided as the cards first arrive, so a row that grows as it pages keeps them all.
+  const [windowed, setWindowed] = React.useState<boolean>();
+  if (windowed === undefined && !loading && count)
+    setWindowed(count > WINDOWED);
+  const [first] = React.useState<[number, number]>([
+    Math.max(0, start - MARGIN),
+    start + 2 * MARGIN,
+  ]);
+  const [range, setRange] = React.useState(first);
+  const view = React.useCallback((from: number, to: number) => {
+    setRange((r) =>
+      from - MARGIN < r[0] || to + MARGIN > r[1]
+        ? [
+            Math.max(0, Math.min(r[0], from - MARGIN)),
+            Math.max(r[1], to + 2 * MARGIN),
+          ]
+        : r
+    );
+  }, []);
+  if (!windowed) return { drawn: () => true, fades: () => true };
+  return {
+    drawn: (i: number) => i >= range[0] && i < range[1],
+    // Only the first cards fade in; later ones are drawn ahead of the view.
+    fades: (i: number) => i >= first[0] && i < first[1],
+    onView: view,
+  };
+}
+
+function ViewWatcher({
+  onView,
+}: {
+  onView: (first: number, last: number) => void;
+}) {
+  const { api } = useCarousel();
+  React.useEffect(() => {
+    if (!api) return;
+    const check = () => {
+      const seen = api.slidesInView();
+      if (seen.length) onView(Math.min(...seen), Math.max(...seen));
+    };
+    check();
+    api.on('slidesInView', check);
+    return () => {
+      api.off('slidesInView', check);
+    };
+  }, [api, onView]);
+  return null;
+}
+
 /** Asks for more once the row is scrolled most of the way. */
 function EndWatcher({ onEnd }: { onEnd: () => void }) {
   const { api } = useCarousel();
@@ -113,12 +169,13 @@ function Slide({
   children,
 }: {
   className: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }) {
   return (
     <div
       role="group"
       aria-roledescription="slide"
+      aria-hidden={children ? undefined : true}
       data-ui="media-row-item"
       className={cn(CarouselAnatomy.item({ gap: 'md' }), className)}
     >
@@ -174,12 +231,15 @@ function NativeRow({
   restoreKey,
   start,
   onEnd,
+  onView,
   count,
   children,
 }: {
   restoreKey: string | undefined;
   start: number;
   onEnd?: () => void;
+  /** Told the first and last card in view as the row scrolls. */
+  onView?: (first: number, last: number) => void;
   /** How many cards, so new ones are watched too. */
   count: number;
   children: React.ReactNode;
@@ -244,6 +304,23 @@ function NativeRow({
       if (restoreKey) savedScroll.set(restoreKey, el.scrollLeft);
       const range = el.scrollWidth - el.clientWidth;
       if (onEnd && (range <= 1 || el.scrollLeft / range > 0.7)) onEnd();
+      const row = content.current;
+      const [first, second] = row?.children ?? [];
+      if (
+        !onView ||
+        !row ||
+        !(first instanceof HTMLElement) ||
+        !(second instanceof HTMLElement)
+      )
+        return;
+      // The cards are all one width.
+      const pitch = second.offsetLeft - first.offsetLeft;
+      const from = el.scrollLeft - row.offsetLeft - first.offsetLeft;
+      if (pitch > 0)
+        onView(
+          Math.floor(from / pitch),
+          Math.ceil((from + el.clientWidth) / pitch)
+        );
     };
     // In a frame, which lays the row out anyway, rather than forcing it now.
     const first = requestAnimationFrame(check);
@@ -252,7 +329,7 @@ function NativeRow({
       cancelAnimationFrame(first);
       el.removeEventListener('scroll', check);
     };
-  }, [restoreKey, onEnd, count]);
+  }, [restoreKey, onEnd, onView, count]);
   useMarkOutOfView(content, count, ref);
   return (
     <div
@@ -329,6 +406,7 @@ export function MediaRow({
   const [lines] = useSetting(settings.posterLines);
   const width = itemClass ?? ITEM_WIDTH[shape];
   const items = React.Children.toArray(children);
+  const { drawn, fades, onView } = useWindow(items.length, start, !!loading);
   if (!loading && !items.length) return null;
   const native = !!currentHost().tv;
   const skeletons = (count: number) =>
@@ -346,11 +424,15 @@ export function MediaRow({
   const cards = [
     ...(loading
       ? skeletons(8)
-      : items.map((child, i) => (
-          <Slide key={i} className={width}>
-            <div {...fadeIn(i)}>{child}</div>
-          </Slide>
-        ))),
+      : items.map((child, i) =>
+          drawn(i) ? (
+            <Slide key={i} className={width}>
+              <div {...(fades(i) ? fadeIn(i) : {})}>{child}</div>
+            </Slide>
+          ) : (
+            <Slide key={i} className={width} />
+          )
+        )),
     ...(!loading && loadingMore ? skeletons(4) : []),
   ];
   const head = (
@@ -396,6 +478,7 @@ export function MediaRow({
             restoreKey={restoreKey}
             start={start}
             onEnd={onEndReached}
+            onView={onView}
             count={cards.length}
           >
             {cards}
@@ -407,6 +490,7 @@ export function MediaRow({
           restoreKey={restoreKey}
         >
           {onEndReached && <EndWatcher onEnd={onEndReached} />}
+          {onView && <ViewWatcher onView={onView} />}
           {head}
           {/* Embla counts the last card's margin as the row's end gap. */}
           <CarouselContent
