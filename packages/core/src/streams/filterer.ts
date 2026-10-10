@@ -24,6 +24,10 @@ import {
   reconcileParsedName,
   titleMatchWithLang,
 } from '../parser/utils.js';
+import {
+  getAnimeReleaseTitle,
+  isExplicitAnimeParentTitle,
+} from '../anime-database/sibling-titles.js';
 import { normaliseCountryCode } from '../utils/countries.js';
 import { partial_ratio } from 'fuzzball';
 import { formatBitrate, formatBytes } from '../formatters/utils.js';
@@ -892,6 +896,9 @@ class StreamFilterer {
       ...(this.userData.titleMatching ?? {}),
     };
 
+    const siblingTitleKeys = new Set(
+      isAnime ? context.animeEntry?.siblingTitles?.map(normaliseTitle) : []
+    );
     const performTitleMatch = (stream: ParsedStream) => {
       if (!titleMatchingOptions || !titleMatchingOptions.enabled) {
         return true;
@@ -924,6 +931,24 @@ class StreamFilterer {
         // only filter out movies without a year as series results usually don't include a year
         return false;
       }
+
+      if (isAnime)
+        streamTitle = getAnimeReleaseTitle(
+          streamTitle,
+          stream.filename,
+          context.animeEntry
+        );
+      // Exact sibling identity outranks a fuzzy match to the requested part.
+      if (
+        siblingTitleKeys.has(normaliseTitle(streamTitle)) &&
+        !isExplicitAnimeParentTitle(
+          streamTitle,
+          context.animeEntry,
+          stream.parsedFile?.seasons,
+          Number(parsedId?.season)
+        )
+      )
+        return false;
 
       streamTitle = preprocessTitle(
         streamTitle,
