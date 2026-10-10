@@ -33,8 +33,13 @@ function find(spot: Spot): HTMLElement | null {
   const row =
     spot.row && document.querySelector(`[data-row="${CSS.escape(spot.row)}"]`);
   return (
-    [...(row || document).querySelectorAll<HTMLElement>(spot.tag)].find((el) =>
-      spot.href ? addressOf(el) === spot.href : labelOf(el) === spot.label
+    [...(row || document).querySelectorAll<HTMLElement>(spot.tag)].find(
+      (el) =>
+        (spot.href
+          ? addressOf(el) === spot.href
+          : labelOf(el) === spot.label) &&
+        // Home, kept hidden behind other pages, has many of the same items.
+        !el.closest('[inert]')
     ) ?? null
   );
 }
