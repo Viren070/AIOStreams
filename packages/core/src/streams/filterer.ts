@@ -22,6 +22,7 @@ import {
   normaliseTitle,
   preprocessTitle,
   reconcileParsedName,
+  reconcileBareAnimeEpisode,
   titleMatchWithLang,
 } from '../parser/utils.js';
 import { normaliseCountryCode } from '../utils/countries.js';
@@ -505,6 +506,16 @@ class StreamFilterer {
         );
         stream.parsedFile.title = reconciled.title;
         stream.parsedFile.year = reconciled.year;
+        if (isAnime && type === 'series') {
+          stream.parsedFile = reconcileBareAnimeEpisode(
+            stream.parsedFile,
+            requestedTitleStrings,
+            [
+              requestedMetadata?.absoluteEpisode,
+              requestedMetadata?.relativeAbsoluteEpisode,
+            ]
+          );
+        }
       }
     }
 
