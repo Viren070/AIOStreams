@@ -17,6 +17,14 @@ import kotlinx.serialization.json.putJsonArray
 data class Running(val title: String, val bytes: Long, val total: Long?)
 
 /**
+ * What the queue has to do, for what keeps the app running while it does;
+ * `fetched` counts every byte downloaded since the queue started.
+ */
+data class Workload(val running: List<Running>, val waiting: Int, val wifiOnly: Boolean, val fetched: Long) {
+    val idle get() = running.isEmpty() && waiting == 0
+}
+
+/**
  * Downloads the page hands over, as the desktop app's queue does: each runs on
  * its own thread, resumes from what is already on disk, and the queue outlives
  * the app. Everything but the workers runs on the queue's own thread.
@@ -32,9 +40,8 @@ class DownloadQueue(
     @Volatile
     var send: ((JsonObject) -> Unit)? = null
 
-    /** What runs, empty once nothing does. */
     @Volatile
-    var onRunning: ((List<Running>) -> Unit)? = null
+    var onWorkload: ((Workload) -> Unit)? = null
 
     private val thread = Executors.newSingleThreadScheduledExecutor { Thread(it, "downloads") }
     private val workers = Executors.newCachedThreadPool { Thread(it, "download") }
@@ -48,6 +55,7 @@ class DownloadQueue(
     /** Removed while running: its files go once its worker lets go of them. */
     private val removing = mutableMapOf<String, Job>()
     private val speeds = mutableMapOf<String, Speed>()
+    private var fetched = 0L
 
     @Volatile
     private var localFiles = emptySet<String>()
@@ -179,7 +187,7 @@ class DownloadQueue(
         save()
         localFiles = jobs.filter { it.state == State.Done }.flatMap { placed(it) }.map { it.path }.toSet()
         send?.invoke(state())
-        onRunning?.invoke(runningNow())
+        onWorkload?.invoke(workloadNow())
     }
 
     private fun start(job: Job) {
@@ -224,6 +232,7 @@ class DownloadQueue(
 
     private fun progress(id: String, bytes: Long, total: Long?) {
         val job = jobs.find { it.spec.id == id } ?: return
+        fetched += (bytes - job.bytes).coerceAtLeast(0)
         job.bytes = bytes
         job.total = total ?: job.total
     }
@@ -248,10 +257,15 @@ class DownloadQueue(
                 put("speed", speed.value)
             })
         }
-        if (downloading.isNotEmpty()) onRunning?.invoke(runningNow())
+        if (downloading.isNotEmpty()) onWorkload?.invoke(workloadNow())
     }
 
-    private fun runningNow() = jobs.filter { it.state == State.Downloading }.map { Running(it.spec.title, it.bytes, it.total) }
+    private fun workloadNow() = Workload(
+        running = jobs.filter { it.state == State.Downloading }.map { Running(it.spec.title, it.bytes, it.total) },
+        waiting = jobs.count { it.state == State.Queued },
+        wifiOnly = wifiOnly,
+        fetched = fetched,
+    )
 
     private fun state() = buildJsonObject {
         put("type", "download-state")

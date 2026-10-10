@@ -18,7 +18,7 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import io.github.viren070.aiostreams.downloads.Running
 
-/** Keeps downloads going out of sight, with their progress in a notification. */
+/** Keeps downloads going out of sight before Android 14, with their progress in a notification. */
 class DownloadService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -35,7 +35,7 @@ class DownloadService : Service() {
     }
 
     companion object {
-        private const val NOTIFICATION = 2
+        const val NOTIFICATION = 2
         private const val CHANNEL = "downloads"
         private const val UPDATE_MS = 1_000L
 
@@ -71,7 +71,7 @@ class DownloadService : Service() {
             if (notifications.areNotificationsEnabled()) notifications.notify(NOTIFICATION, notification(context, running))
         }
 
-        private fun notification(context: Context, running: List<Running>): Notification {
+        fun notification(context: Context, running: List<Running>): Notification {
             context.getSystemService(NotificationManager::class.java).createNotificationChannel(
                 NotificationChannel(CHANNEL, "Downloads", NotificationManager.IMPORTANCE_LOW),
             )

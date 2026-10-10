@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
+import android.os.Build
 import android.os.Environment
 import io.github.viren070.aiostreams.downloads.DownloadQueue
 import java.io.File
@@ -30,7 +31,11 @@ object Downloads {
             userAgent = "AIOStreams Android/${BuildConfig.VERSION_NAME}",
             unmetered = { unmetered },
         )
-        queue.onRunning = { DownloadService.update(context, it) }
+        queue.onWorkload = { work ->
+            // A service where Android refuses the job, as from the background.
+            val job = Build.VERSION.SDK_INT >= 34 && DownloadJob.update(context, work)
+            DownloadService.update(context, if (job) emptyList() else work.running)
+        }
         connectivity.registerDefaultNetworkCallback(object : ConnectivityManager.NetworkCallback() {
             override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
                 setUnmetered(
