@@ -31,7 +31,12 @@ import {
 } from './context.js';
 import { summaryItem } from './items.js';
 import { mapLimited, ROW_CONCURRENCY } from './library.js';
-import { authenticationResult, sessionFromRow, userDto } from './users.js';
+import {
+  authenticationResult,
+  listedFor,
+  sessionFromRow,
+  userDto,
+} from './users.js';
 import { jellyfinLoginRateLimiter } from '../../middlewares/ratelimit.js';
 
 /* The server's own web app; an API key is another tool's credential and may not use it. */
@@ -223,22 +228,23 @@ router.get(
   })
 );
 
-/*
- * Who the user picker offers. Hidden users show only to the account, which
- * keeps them, and to themselves.
- */
+/** Who the caller may switch to: the account everyone, as it keeps them. */
+function switchable(ctx: JellyfinRequestContext): WebUser[] {
+  const users = usersOf(ctx);
+  if (!ctx.persona) return users;
+  return users.filter((u) => listedFor(ctx.userData, ctx.persona, u.persona));
+}
+
 router.get(
   '/AIOStreams/Users',
   web(async (_req, res, ctx) => {
     res.json(
-      usersOf(ctx)
-        .filter((u) => !u.persona?.hidden || !ctx.persona || isCaller(ctx, u))
-        .map((u) => ({
-          user: userDto(ctx.uuid, ctx.userData, u.persona),
-          avatar: avatarOf(ctx, u),
-          hidden: !!u.persona?.hidden,
-          needs: secretFor(ctx, u),
-        }))
+      switchable(ctx).map((u) => ({
+        user: userDto(ctx.uuid, ctx.userData, u.persona),
+        avatar: avatarOf(ctx, u),
+        hidden: !!u.persona?.hidden,
+        needs: secretFor(ctx, u),
+      }))
     );
   })
 );
@@ -442,7 +448,7 @@ router.post(
     const body = bodyOf(req);
     const wanted = String(body.UserId ?? '').toLowerCase();
     const secret = String(body.Pw ?? '');
-    const user = usersOf(ctx).find((u) => u.id === wanted);
+    const user = switchable(ctx).find((u) => u.id === wanted);
     if (!user) {
       res.status(404).json({ Message: 'User not found' });
       return;

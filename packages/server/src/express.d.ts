@@ -15,7 +15,8 @@ declare global {
       jf?: JellyfinRequestContext;
       jfClient?: ClientInfo;
       /** The configuration a picker address names. */
-      jfMount?: { uuid: string; encryptedPassword: string };
+      /** `persona` is set on a user's own sign-in address. */
+      jfMount?: { uuid: string; encryptedPassword: string; persona?: string };
     }
   }
 }

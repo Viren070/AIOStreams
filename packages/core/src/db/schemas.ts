@@ -145,8 +145,13 @@ const JellyfinPersonaSchema = z.object({
   history: z.enum(['own', 'shared']).default('own'),
   /** Preset ids of the trackers it syncs with; absent is automatic. */
   trackers: z.array(z.string().min(1)).max(50).optional(),
-  /** Kept out of the picker; still usable by name. */
+  /** Kept out of the picker and apart from the other users; still usable by name. */
   hidden: z.boolean().optional(),
+  /** The code of a hidden user's own sign-in address, `/jellyfin/p/<address>`. */
+  address: z
+    .string()
+    .regex(/^[a-z0-9]{10,32}$/)
+    .optional(),
   lock: UserLockSchema,
 });
 
@@ -187,6 +192,8 @@ const JellyfinSettingsFields = z.object({
         .optional(),
       /** Preset ids of the trackers it syncs with; absent means all. */
       trackers: z.array(z.string().min(1)).max(50).optional(),
+      /** Kept out of the picker; still signs in by name. */
+      hidden: z.boolean().optional(),
       lock: UserLockSchema,
     })
     .optional(),
@@ -205,7 +212,17 @@ const JellyfinSettingsFields = z.object({
       }
       const ids = new Set<string>();
       const names = new Set<string>();
+      const addresses = new Set<string>();
       for (const persona of personas) {
+        if (persona.address) {
+          if (addresses.has(persona.address)) {
+            ctx.addIssue({
+              code: 'custom',
+              message: 'Two users have the same sign-in address.',
+            });
+          }
+          addresses.add(persona.address);
+        }
         if (ids.has(persona.id)) {
           ctx.addIssue({
             code: 'custom',

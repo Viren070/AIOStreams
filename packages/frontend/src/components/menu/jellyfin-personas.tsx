@@ -15,6 +15,7 @@ import { TextInput } from '@aiostreams/ui/text-input';
 import { Select } from '@aiostreams/ui/select';
 import { Switch } from '@aiostreams/ui/switch';
 import { Modal } from '@aiostreams/ui/modal';
+import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
 import { toast } from 'sonner';
 import { FiEdit2, FiPlus, FiTrash2 } from 'react-icons/fi';
 import type { UserData } from '@aiostreams/core';
@@ -29,6 +30,61 @@ const UUID_SHAPE =
 /** Fallback until the status call lands; the instance cap is the real bound. */
 const DEFAULT_MAX_PERSONAS = 20;
 const NO_TRACKER_OPTIONS: WatchStateTrackerOption[] = [];
+
+const ADDRESS_CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789';
+const ADDRESS_LENGTH = 10;
+
+/** Random, so an address gives away neither the configuration nor the user. */
+function newAddress(): string {
+  let code = '';
+  while (code.length < ADDRESS_LENGTH) {
+    for (const byte of crypto.getRandomValues(new Uint8Array(16))) {
+      // 252 is the largest multiple of 36 under 256, so every character is as likely.
+      if (byte < 252 && code.length < ADDRESS_LENGTH)
+        code += ADDRESS_CHARS[byte % ADDRESS_CHARS.length];
+    }
+  }
+  return code;
+}
+
+function PersonalAddress({
+  url,
+  pinSignIn,
+  onRenew,
+}: {
+  url: string;
+  pinSignIn: boolean;
+  onRenew: () => void;
+}) {
+  const copy = () =>
+    copyToClipboard(url, {
+      onSuccess: () => toast.success('Address copied to clipboard'),
+      onError: () => toast.error('Failed to copy address'),
+    });
+  return (
+    <div className="space-y-2">
+      <TextInput
+        label="Their address"
+        value={url}
+        readOnly
+        onFocus={(e) => e.currentTarget.select()}
+        help={
+          pinSignIn
+            ? 'Signs in this user alone, with their PIN. Works once you save, and a new address turns this one off.'
+            : 'Signs in this user alone. This instance asks for your password there, so approve their devices with Quick Connect instead. Works once you save, and a new address turns this one off.'
+        }
+      />
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" intent="white" rounded onClick={() => void copy()}>
+          Copy
+        </Button>
+        <Button size="sm" intent="gray-subtle" rounded onClick={onRenew}>
+          New address
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 /** Tracker addons repeat this rule to match a name to its id, so it must not change. */
 function slugOf(name: string): string {
@@ -350,6 +406,7 @@ export function JellyfinPersonas() {
     status?.settings?.jellyfin?.maxPersonas ?? DEFAULT_MAX_PERSONAS;
   const maxTrackers = status?.settings?.jellyfin?.maxTrackers;
   const pinSignIn = status?.settings?.jellyfin?.pinSignIn ?? false;
+  const baseUrl = status?.settings?.baseUrl || window.location.origin;
   const personas = userData.jellyfin?.personas ?? [];
   const primary = userData.jellyfin?.primary;
   const primaryName = primary?.name || userData.addonName || 'Primary user';
@@ -476,6 +533,7 @@ export function JellyfinPersonas() {
       variants: draft.variants?.length ? draft.variants : undefined,
       trackers,
       hidden: draft.hidden || undefined,
+      address: draft.hidden ? (draft.address ?? newAddress()) : undefined,
       lock: draft.lock || undefined,
     };
     if (editing !== null && editing < personas.length) next[editing] = value;
@@ -525,6 +583,7 @@ export function JellyfinPersonas() {
         ? primaryDraft.variants
         : undefined,
       trackers: primaryDraft.trackers,
+      hidden: primaryDraft.hidden || undefined,
       lock: primaryDraft.lock || undefined,
     };
     patch({ primary: Object.values(value).some(Boolean) ? value : undefined });
@@ -581,6 +640,7 @@ export function JellyfinPersonas() {
             primary?.trackers
               ? trackersLabel(primary.trackers)
               : 'all trackers',
+            primary?.hidden ? 'hidden from the picker' : null,
             primary?.lock ? 'PIN' : null,
           ]
             .filter(Boolean)
@@ -604,13 +664,18 @@ export function JellyfinPersonas() {
               persona.id !== slugOf(persona.name)
                 ? `tracker id ${persona.id}`
                 : null,
-              persona.hidden ? 'hidden from the picker' : null,
+              persona.hidden ? 'kept separate' : null,
               persona.lock ? 'PIN' : null,
             ]
               .filter(Boolean)
               .join(' · ')}
             onEdit={() => {
-              setDraft({ ...persona });
+              setDraft({
+                ...persona,
+                address: persona.hidden
+                  ? (persona.address ?? newAddress())
+                  : undefined,
+              });
               setEditing(index);
             }}
             onDelete={() => {
@@ -690,6 +755,15 @@ export function JellyfinPersonas() {
               value={primaryDraft.avatar ?? ''}
               onValueChange={(value) =>
                 setPrimaryDraft({ ...primaryDraft, avatar: value || undefined })
+              }
+            />
+            <Switch
+              label="Hide from the sign-in picker"
+              help="Still signs in by name. Other users can't switch to it."
+              side="right"
+              value={primaryDraft.hidden ?? false}
+              onValueChange={(value) =>
+                setPrimaryDraft({ ...primaryDraft, hidden: value || undefined })
               }
             />
             <PinField
@@ -779,21 +853,32 @@ export function JellyfinPersonas() {
             />
 
             <Switch
-              label="Hide from the sign-in picker"
-              help="Still signs in by name."
+              label="Keep separate from other users"
+              help="Left off the sign-in picker and other users' lists, and sees no one else. Signs in on an address of its own."
               side="right"
               value={draft.hidden ?? false}
               onValueChange={(value) =>
-                setDraft({ ...draft, hidden: value || undefined })
+                setDraft({
+                  ...draft,
+                  hidden: value || undefined,
+                  address: value ? newAddress() : undefined,
+                })
               }
             />
+            {draft.hidden && draft.address && (
+              <PersonalAddress
+                url={`${baseUrl}/jellyfin/p/${draft.address}`}
+                pinSignIn={pinSignIn}
+                onRenew={() => setDraft({ ...draft, address: newAddress() })}
+              />
+            )}
 
             <PinField
               value={draft.lock}
               onChange={(lock) => setDraft({ ...draft, lock })}
               help={
                 pinSignIn
-                  ? `Signing in as this user needs it, typed after the password as password/PIN. On the sign-in picker address, a PIN of ${PIN_ONLY_LENGTH} or more digits also works on its own, without your configuration password. Anyone who can edit this configuration can still change or remove it.`
+                  ? `Signing in as this user needs it, typed after the password as password/PIN. On the sign-in picker or the user's own address, a PIN of ${PIN_ONLY_LENGTH} or more digits also works on its own, without your configuration password. Anyone who can edit this configuration can still change or remove it.`
                   : undefined
               }
             />

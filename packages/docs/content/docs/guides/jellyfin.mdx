@@ -21,11 +21,12 @@ Swiftfin, Findroid, Streamyfin, Jellyfin for Android TV, Jellyfin for Kodi and I
 
 Everything an app needs is on the configure page, under **Save & Install → Jellyfin apps → Connect**. There are three ways in:
 
-| Way                                               | Use it for                                     | What you enter                                    |
-| ------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------- |
-| **Address with a sign-in picker** (best)          | Your own devices and your household's          | Pick a user, then the password                    |
-| [Quick Connect](#on-a-tv-quick-connect)           | TVs and anything you type on with a remote     | Nothing; you approve a code on the configure page |
-| [Server address](#using-the-plain-server-address) | A device you'd rather not give the picker link | Your UUID or alias, then the password             |
+| Way                                                                       | Use it for                                     | What you enter                                    |
+| ------------------------------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------- |
+| **Address with a sign-in picker** (best)                                  | Your own devices and your household's          | Pick a user, then the password                    |
+| [Quick Connect](#on-a-tv-quick-connect)                                   | TVs and anything you type on with a remote     | Nothing; you approve a code on the configure page |
+| [A user's own address](/guides/media-server#users-outside-your-household) | Someone outside your household                 | Their PIN, or Quick Connect                       |
+| [Server address](#using-the-plain-server-address)                         | A device you'd rather not give the picker link | Your UUID or alias, then the password             |
 
 The sign-in picker is the easiest: the app lists your configuration's users on its sign-in screen, the way a normal Jellyfin server does, so nobody types a UUID.
 
@@ -66,7 +67,7 @@ If the instance allows it, a user with a PIN of 6 or more digits can [enter just
   Treat it like one of them and only put it on devices in your household.
 </Callout>
 
-A user hidden from the picker can still sign in: choose the app's option to sign in manually and type their name, just the name.
+A user left off the picker can still sign in: choose the app's option to sign in manually and type their name, just the name. A user kept [separate from the others](/guides/media-server#users-outside-your-household) has an address of their own instead.
 
 ### On a TV: Quick Connect
 

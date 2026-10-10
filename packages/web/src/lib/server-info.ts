@@ -20,6 +20,8 @@ export interface ServerInfo extends Branding {
   /** Where the account behind this server is configured. */
   configureUrl: string | null;
   pinSignIn: boolean;
+  /** A user's own sign-in address, which signs in that user alone. */
+  personal: boolean;
   /** Each extension it implements, with its version. */
   features: Partial<Record<Feature, number>>;
   /** The server's build, like `v2.35.0` or `nightly a1b2c3d4`. */
@@ -31,6 +33,7 @@ export const NO_SERVER_INFO: ServerInfo = {
   logo: null,
   configureUrl: null,
   pinSignIn: false,
+  personal: false,
   features: {},
   version: null,
 };
@@ -41,6 +44,7 @@ interface PublicSystemInfo {
     logo?: string | null;
     configureUrl?: string | null;
     pinSignIn?: boolean;
+    personal?: boolean;
     features?: ServerInfo['features'];
     version?: { tag?: string; channel?: string; commit?: string };
   };
@@ -83,6 +87,7 @@ export function useServerInfoQuery(client: JellyfinClient) {
         logo: data.aiostreams?.logo ?? null,
         configureUrl: data.aiostreams?.configureUrl ?? null,
         pinSignIn: data.aiostreams?.pinSignIn ?? false,
+        personal: data.aiostreams?.personal ?? false,
         features: data.aiostreams?.features ?? {},
         version: buildVersion(data.aiostreams?.version),
       };

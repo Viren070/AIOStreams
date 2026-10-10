@@ -21,6 +21,7 @@ import {
 } from '../../utils/index.js';
 import { ConfigProfileRepository } from './config-profiles.js';
 import { ConfigSessionRepository } from './config-sessions.js';
+import { JellyfinAddressRepository } from './jellyfin-addresses.js';
 import { LinkedAccountRepository } from './linked-accounts.js';
 
 const APIError = constants.APIError;
@@ -148,6 +149,12 @@ export class UserRepository {
         await tx.exec(
           sql`INSERT INTO users (uuid, password_hash, config, config_salt)
               VALUES (${uuid}, ${hashedPassword}, ${encryptedConfig}, ${configSalt})`
+        );
+        await JellyfinAddressRepository.syncForUuid(
+          tx,
+          uuid,
+          encryptedPassword,
+          validatedConfig.jellyfin?.personas ?? []
         );
       });
       logger.info(`Created a new user with UUID: ${uuid}`);
@@ -424,10 +431,21 @@ export class UserRepository {
       current.config_salt
     );
 
+    const encryptedPassword = encryptString(password);
+    if (!encryptedPassword.success) {
+      throw new APIError(constants.ErrorCode.ENCRYPTION_ERROR);
+    }
+
     try {
       await db.tx(async (tx) => {
         await tx.exec(
           sql`UPDATE users SET config = ${encryptedConfig}, updated_at = CURRENT_TIMESTAMP WHERE uuid = ${uuid}`
+        );
+        await JellyfinAddressRepository.syncForUuid(
+          tx,
+          uuid,
+          encryptedPassword.data,
+          validatedConfig.jellyfin?.personas ?? []
         );
       });
       logger.info(`Updated user ${uuid} with an updated configuration`);
@@ -554,6 +572,11 @@ export class UserRepository {
           newEncryptedPasswordToken
         );
         await LinkedAccountRepository.rewriteManifestUrlsForUuid(
+          tx,
+          uuid,
+          newEncryptedPasswordToken
+        );
+        await JellyfinAddressRepository.reencryptForUuid(
           tx,
           uuid,
           newEncryptedPasswordToken

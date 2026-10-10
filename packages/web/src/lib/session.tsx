@@ -82,9 +82,10 @@ type WebTokenResult =
 export function pickerAccount(base: string): string {
   const parts = new URL(base).pathname.split('/').filter(Boolean);
   if (parts.length < 3) return '';
-  return parts[1].toLowerCase() === 'u'
-    ? decodeURIComponent(parts[2]).toLowerCase()
-    : parts[1];
+  const kind = parts[1].toLowerCase();
+  // A user's own address names no account.
+  if (kind === 'p') return '';
+  return kind === 'u' ? decodeURIComponent(parts[2]).toLowerCase() : parts[1];
 }
 
 /**

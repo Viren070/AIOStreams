@@ -21,6 +21,7 @@ Standard Jellyfin clients ignore all of these, so offering them never breaks one
     "logo": "https://…/logo.png",
     "configureUrl": "https://example.com/configure",
     "pinSignIn": false,
+    "personal": false,
     "version": { "tag": "v2.35.0", "channel": "stable", "commit": "a1b2c3d4" },
     "features": {
       "users": 1,
@@ -41,6 +42,7 @@ Standard Jellyfin clients ignore all of these, so offering them never breaks one
 | `logo`         | URL or `null`          | Shows it on the sign-in screen, in the sidebar and in the server list            |
 | `configureUrl` | URL or `null`          | Links to it as the place to change the account's setup                           |
 | `pinSignIn`    | boolean                | AIOStreams only; see [what stays with AIOStreams](#what-stays-with-aiostreams)   |
+| `personal`     | boolean                | AIOStreams only; opens straight on the one listed user's sign-in                 |
 | `features`     | name to version number | Turns on the parts below; a missing name, or no `aiostreams` object, means "off" |
 | `version`      | object of strings      | Shows the build in About and diagnostics: `commit` on nightly or dev, else `tag` |
 
@@ -125,7 +127,8 @@ are hidden.
 ```
 
 `user` is a standard `UserDto`. `needs` says what switching to that user asks for: `null` for
-nothing, `"pin"`, `"password"` or `"password-pin"`.
+nothing, `"pin"`, `"password"` or `"password-pin"`. A hidden user is listed only to the account and
+to itself, and a hidden user's own list holds only itself.
 
 `POST /AIOStreams/Token` with `{ "UserId": "…", "Pw": "…" }` switches: `Pw` is what `needs` asked
 for, with a password and PIN written as `password/PIN`. It answers like
@@ -222,5 +225,7 @@ These belong to how AIOStreams signs in to a configuration, and other servers ha
 - Signing in with a configuration's UUID or alias, `<uuid>/<user>` as the user name and
   `password/PIN` as the password, and the `configSignIn` feature that announces it.
 - Signing in with a PIN alone (`pinSignIn`), on the addresses that name a configuration:
-  `/jellyfin/<uuid>/<encrypted password>` and `/jellyfin/u/<alias>`.
+  `/jellyfin/<uuid>/<encrypted password>`, `/jellyfin/u/<alias>` and `/jellyfin/p/<code>`.
+- A separate user's own address, `/jellyfin/p/<code>` (`personal`), which lists and signs in that
+  one user and no other.
 - The web app signing in from the configure page, through AIOStreams' own API.

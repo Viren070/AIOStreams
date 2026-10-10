@@ -13,6 +13,7 @@ import {
   getSimpleTextHash,
   isConfigUuid,
   isEncrypted,
+  JellyfinAddressRepository,
   PERSONA_PIN_PATTERN,
   verifyHash,
   mintToken,
@@ -608,6 +609,8 @@ async function buildContext(
   };
 }
 
+const ADDRESS_CODE = /^[a-z0-9]{10,32}$/;
+
 export const jellyfinContext: RequestHandler = async (req, res, next) => {
   try {
     const params = req.params as Record<string, string | undefined>;
@@ -638,6 +641,15 @@ export const jellyfinContext: RequestHandler = async (req, res, next) => {
       const target = await resolvePickerAlias(params.alias);
       if (!target) {
         res.status(401).json({ Message: 'Unknown configuration' });
+        return;
+      }
+      req.jfMount = target;
+    } else if (params.code) {
+      const target = ADDRESS_CODE.test(params.code)
+        ? await JellyfinAddressRepository.resolve(params.code)
+        : null;
+      if (!target) {
+        res.status(401).json({ Message: 'Unknown address' });
         return;
       }
       req.jfMount = target;

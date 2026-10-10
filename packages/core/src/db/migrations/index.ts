@@ -43,6 +43,7 @@ import { watchAirTimes } from './0042_watch_air_times.js';
 import { mediaInfo } from './0043_media_info.js';
 import { mediaInfoProbes } from './0044_media_info_probes.js';
 import { mediaInfoSources } from './0045_media_info_sources.js';
+import { jellyfinUserAddresses } from './0046_jellyfin_user_addresses.js';
 import type { Migration } from './types.js';
 
 export const MIGRATIONS: readonly Migration[] = [
@@ -91,6 +92,7 @@ export const MIGRATIONS: readonly Migration[] = [
   mediaInfo,
   mediaInfoProbes,
   mediaInfoSources,
+  jellyfinUserAddresses,
 ];
 
 export type { Migration } from './types.js';

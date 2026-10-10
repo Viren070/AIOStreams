@@ -62,6 +62,8 @@ export async function publicInfo(req: Request) {
         ? `${requestOrigin(req)}/stremio/${addressed.uuid}/${addressed.encryptedPassword}/configure`
         : `${requestOrigin(req)}/stremio/configure`,
       pinSignIn: appConfig.jellyfin.pinSignIn && !!mountOf(req),
+      /** A user's own sign-in address, which signs in that user alone. */
+      personal: !!req.jfMount?.persona,
       features: FEATURES,
       version: {
         tag: appConfig.bootstrap.tag,

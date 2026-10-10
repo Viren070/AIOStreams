@@ -74,6 +74,10 @@ export {
 } from './repositories/config-sessions.js';
 export { LinkedAccountRepository } from './repositories/linked-accounts.js';
 export {
+  JellyfinAddressRepository,
+  type JellyfinAddressTarget,
+} from './repositories/jellyfin-addresses.js';
+export {
   CommunityRepository,
   type CommunityItemInsert,
   type CommunityLiveUpdate,
