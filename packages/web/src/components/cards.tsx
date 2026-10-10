@@ -123,9 +123,10 @@ export function Artwork({
   const current = sources[attempt];
   const currentKey = current && artworkKey(current);
   const loaded = currentKey ? loadedKey === currentKey : !!early;
+  const onLoad = () => currentKey && setLoadedKey(currentKey);
   const imageClass = cn(
     // A focus's scale keeps up with focus; a loaded image fades in slower.
-    'absolute inset-0 h-full w-full object-cover transition-[transform,opacity] [transition-duration:250ms,500ms]',
+    'absolute inset-0 h-full w-full object-cover transition-[transform,opacity] [transition-duration:250ms,300ms]',
     // Scaled at rest too: gaining or losing a transform costs a layout, changing one doesn't.
     'scale-100',
     loaded ? 'opacity-100' : 'opacity-0',
@@ -159,7 +160,7 @@ export function Artwork({
           className={imageClass}
           size={box?.device}
           measure={measure}
-          onLoad={() => currentKey && setLoadedKey(currentKey)}
+          onLoad={onLoad}
           onPlain={() => setPlain(current ?? null)}
         />
       ) : (
@@ -171,7 +172,7 @@ export function Artwork({
           loading="lazy"
           decoding="async"
           draggable={false}
-          onLoad={() => currentKey && setLoadedKey(currentKey)}
+          onLoad={onLoad}
           onError={() =>
             setFailed((f) => ({
               key,

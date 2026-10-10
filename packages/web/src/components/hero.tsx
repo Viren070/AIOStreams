@@ -51,7 +51,7 @@ export function BackdropFrame({
     <div
       data-ui="backdrop-frame"
       className={cn(
-        'absolute inset-y-0 right-0 w-full landscape:[mask-image:linear-gradient(to_right,transparent,black_12rem)] lg:[mask-image:linear-gradient(to_right,transparent,black_12rem)]',
+        'absolute inset-y-0 right-0 isolate w-full landscape:[mask-image:linear-gradient(to_right,transparent,black_12rem)] lg:[mask-image:linear-gradient(to_right,transparent,black_12rem)]',
         className
       )}
     >
@@ -103,47 +103,99 @@ function backdropSrc(client: JellyfinClient, item: BaseItemDto) {
   );
 }
 
-/** Cross-fading backdrops that keep the last one shown until the next has loaded. */
-function Backdrops({
-  sources,
-  current,
-}: {
-  sources: string[];
-  current: string | undefined;
-}) {
+interface Layer {
+  src: string;
+  id: number;
+  /** Faded in from nothing, which is quicker than over another. */
+  quick: boolean;
+  gone?: boolean;
+}
+
+let nextLayer = 0;
+/** Fading layers kept at once, as each holds a whole decoded backdrop. */
+const MAX_LAYERS = 4;
+/** How long the last backdrop waits on the next before fading, so it doesn't sit behind another item. */
+const WAIT_MS = 500;
+
+const fadeAll = (all: Layer[]) =>
+  all.every((l) => l.gone) ? all : all.map((l) => ({ ...l, gone: true }));
+
+/**
+ * Backdrops stacked as they are shown, each fading in over the ones before,
+ * which stay as they are until it is whole, so nothing behind shows through.
+ */
+function Backdrops({ current }: { current: string | undefined }) {
   const [loaded, setLoaded] = React.useState<ReadonlySet<string>>(new Set());
-  const [[shown, fading], setShown] = React.useState<[string?, string?]>([]);
+  const [layers, setLayers] = React.useState<Layer[]>([]);
   React.useEffect(() => {
-    setShown((was) => {
-      const next = !current
-        ? undefined
-        : loaded.has(current)
-          ? current
-          : was[0];
-      return next === was[0] ? was : [next, was[0]];
+    if (!current) return setLayers(fadeAll);
+    if (!loaded.has(current)) {
+      const timer = setTimeout(() => setLayers(fadeAll), WAIT_MS);
+      return () => clearTimeout(timer);
+    }
+    setLayers((all) => {
+      const top = all.at(-1);
+      if (top?.src === current && !top.gone) return all;
+      return [
+        ...all.slice(1 - MAX_LAYERS),
+        { src: current, id: nextLayer++, quick: all.every((l) => l.gone) },
+      ];
     });
   }, [current, loaded]);
 
-  // Only what is shown, next, or already loaded, so the rest never download.
-  const mounted = sources.filter(
-    (src) => src === current || src === shown || loaded.has(src)
-  );
-  return mounted.map((src) => (
-    <CachedImage
-      key={src}
-      data-ui="hero-backdrop"
-      src={src}
-      alt=""
-      onLoad={() => setLoaded((set) => new Set(set).add(src))}
-      className={cn(
-        'absolute inset-0 h-full w-full object-cover object-top transition-opacity duration-700',
-        src === shown ? 'opacity-100' : 'opacity-0',
-        // A layer made as a fade starts or ends draws nothing for a frame.
-        (src === shown || src === current || src === fading) &&
-          'will-change-[opacity]'
+  const loading = current && !loaded.has(current) ? current : undefined;
+  return (
+    <>
+      {loading && (
+        <CachedImage
+          key={`loading ${loading}`}
+          src={loading}
+          alt=""
+          // Decoded before its layer fades in, which would otherwise start with nothing drawn.
+          onLoad={(e) =>
+            void e.currentTarget
+              .decode()
+              .catch(() => undefined)
+              .then(() => setLoaded((set) => new Set(set).add(loading)))
+          }
+          className="absolute inset-0 h-full w-full opacity-0"
+        />
       )}
-    />
-  ));
+      {layers.map((layer) => (
+        <CachedImage
+          key={layer.id}
+          data-ui="hero-backdrop"
+          src={layer.src}
+          alt=""
+          onAnimationEnd={(e) => {
+            if (e.target !== e.currentTarget) return;
+            setLayers((all) =>
+              all.slice(
+                Math.max(
+                  0,
+                  all.findIndex((l) => l.id === layer.id)
+                )
+              )
+            );
+          }}
+          onTransitionEnd={(e) => {
+            if (e.target !== e.currentTarget || !layer.gone) return;
+            setLayers((all) => all.filter((l) => l.id !== layer.id));
+          }}
+          className={cn(
+            // A layer made as a fade starts or ends draws nothing for a frame.
+            'absolute inset-0 h-full w-full object-cover object-top will-change-[opacity]',
+            layer.gone
+              ? 'opacity-0 transition-opacity duration-700'
+              : cn(
+                  'animate-in fade-in-0',
+                  layer.quick ? '[animation-duration:400ms]' : 'duration-700'
+                )
+          )}
+        />
+      ))}
+    </>
+  );
 }
 
 /** An item's logo or title, facts, overview and buttons. */
@@ -308,12 +360,7 @@ export function Hero({
       onMouseLeave={() => setPaused(false)}
     >
       <BackdropFrame className="max-w-[calc(26rem*2.6)] sm:max-w-[calc(30rem*2.6)] lg:max-w-[calc(max(36rem,53vh)*2.6)]">
-        <Backdrops
-          sources={[
-            ...new Set(featured.flatMap((f) => backdropSrc(client, f) ?? [])),
-          ]}
-          current={backdropSrc(client, item)}
-        />
+        <Backdrops current={backdropSrc(client, item)} />
       </BackdropFrame>
       <Shade />
 
@@ -374,10 +421,7 @@ export function useHeroTarget(item: BaseItemDto) {
   };
 }
 
-/**
- * The whole window's backdrop, or the hero's top corner's, over the last few
- * selected so going back is instant.
- */
+/** The whole window's backdrop, or the hero's top corner's. */
 function FollowBackdrop({
   item,
   corner,
@@ -387,10 +431,6 @@ function FollowBackdrop({
 }) {
   const { client } = useSession();
   const src = item && backdropSrc(client, item);
-  const [recent, setRecent] = React.useState<string[]>([]);
-  React.useEffect(() => {
-    if (src) setRecent((r) => [src, ...r.filter((s) => s !== src)].slice(0, 6));
-  }, [src]);
 
   if (corner)
     return (
@@ -401,7 +441,7 @@ function FollowBackdrop({
         className="pointer-events-none fixed right-0 top-0 -z-10 aspect-video max-h-[calc(var(--hero-h)*1.4)] w-[70vw] overflow-hidden [mask-image:linear-gradient(to_right,transparent,rgb(0_0_0/0.4)_20%,black_45%)]"
       >
         <div className="absolute inset-0 [mask-image:linear-gradient(to_bottom,black_45%,rgb(0_0_0/0.4)_75%,transparent)]">
-          <Backdrops sources={recent} current={src} />
+          <Backdrops current={src} />
         </div>
       </div>
     );
@@ -411,7 +451,7 @@ function FollowBackdrop({
       className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
     >
       <BackdropFrame className="max-w-[calc(100vh*2.6)]">
-        <Backdrops sources={recent} current={src} />
+        <Backdrops current={src} />
       </BackdropFrame>
       <Shade />
     </div>
