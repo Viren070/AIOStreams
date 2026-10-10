@@ -32,6 +32,7 @@ import {
   PlusIcon,
   Rss,
   SearchIcon,
+  Smartphone,
   UploadIcon,
   Users,
 } from 'lucide-react';
@@ -646,6 +647,9 @@ function AppBlock({
   disabledReason?: string;
 }) {
   const download = useDesktopDownload();
+  const android = /Android/.test(navigator.userAgent);
+  const own = download.os ? 'desktop' : android ? 'android' : null;
+  const open = (url: string) => () => window.open(url, '_blank', 'noopener');
   return (
     <div className="w-full rounded-xl border border-gray-700 bg-gray-800/30 p-5 shadow-inner">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 lg:items-center">
@@ -663,8 +667,8 @@ function AppBlock({
                 AIOStreams app
               </h3>
               <p className="text-sm text-gray-400">
-                Browse your catalogs and play in your browser, or on your
-                computer with the desktop app. Nothing else to install or host.
+                Browse your catalogs and play them in your browser, or in the
+                app on your computer, phone or TV. No server to host.
               </p>
             </div>
           </div>
@@ -679,26 +683,36 @@ function AppBlock({
             >
               Open in browser
             </Button>
-            {download.os && (
+            {own && (
               <Button
                 onClick={() => window.open(desktopLink)}
                 intent="gray-outline"
                 className="w-full"
-                leftIcon={<Monitor className="h-4 w-4" />}
+                leftIcon={
+                  own === 'desktop' ? (
+                    <Monitor className="h-4 w-4" />
+                  ) : (
+                    <Smartphone className="h-4 w-4" />
+                  )
+                }
                 disabled={disabled}
               >
-                Open in desktop app
+                {own === 'desktop' ? 'Open in desktop app' : 'Open in app'}
               </Button>
             )}
-            <Button
-              onClick={() => window.open(download.url, '_blank', 'noopener')}
-              intent="gray-outline"
-              className={download.os ? 'w-full' : 'w-full sm:col-span-2'}
-              leftIcon={<DownloadIcon className="h-4 w-4" />}
-              disabled={disabled}
-            >
-              {download.label}
-            </Button>
+            {own && (
+              <Button
+                onClick={open(
+                  own === 'desktop' ? download.url : ANDROID_DOWNLOAD_URL
+                )}
+                intent="gray-outline"
+                className="w-full"
+                leftIcon={<DownloadIcon className="h-4 w-4" />}
+                disabled={disabled}
+              >
+                {own === 'desktop' ? download.label : 'Download for Android'}
+              </Button>
+            )}
           </div>
           {disabledReason && (
             <p className="text-xs text-amber-300">{disabledReason}</p>
@@ -717,40 +731,62 @@ function AppBlock({
               across devices.
             </AppFact>
             <AppFact icon={<Monitor className="h-4 w-4" />}>
-              The desktop app for Windows, Mac and Linux plays what a browser
-              can&apos;t.{' '}
+              The apps play what a browser can&apos;t, and on computers and
+              phones download to watch offline.{' '}
               <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-300">
                 Alpha
               </span>
             </AppFact>
           </ul>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-            <button
-              type="button"
-              onClick={() => onOpenServer('connect')}
-              disabled={disabled}
-              className="text-brand-400 hover:underline disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:no-underline"
-            >
-              Sign-in addresses
-            </button>
-            <button
-              type="button"
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            <Button
+              size="sm"
+              intent="gray-outline"
+              rounded
+              className="w-full sm:w-auto"
+              leftIcon={<Users className="h-4 w-4" />}
               onClick={() => onOpenServer('users')}
               disabled={disabled}
-              className="text-brand-400 hover:underline disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:no-underline"
             >
               Users, trackers and playback
-            </button>
-            <a
-              href={DESKTOP_GUIDE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-brand-400 hover:underline"
+            </Button>
+            <Button
+              size="sm"
+              intent="gray-outline"
+              rounded
+              className="w-full sm:w-auto"
+              leftIcon={<KeyRound className="h-4 w-4" />}
+              onClick={() => onOpenServer('connect')}
+              disabled={disabled}
             >
-              All downloads
-            </a>
+              Sign-in addresses
+            </Button>
           </div>
         </div>
+      </div>
+      <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-gray-700/50 pt-4">
+        <span className="mr-1 text-xs text-gray-500">Also on</span>
+        {APP_PLATFORMS.filter((p) => p.id !== own).map((p) => (
+          <Button
+            key={p.id}
+            size="sm"
+            intent="gray-outline"
+            rounded
+            onClick={open(p.url)}
+            disabled={disabled}
+          >
+            {p.label}
+          </Button>
+        ))}
+        <Button
+          size="sm"
+          intent="gray-outline"
+          rounded
+          onClick={open(`${DOCS_APPS_URL}#get-the-app`)}
+          disabled={disabled}
+        >
+          All apps
+        </Button>
       </div>
     </div>
   );
@@ -1091,8 +1127,30 @@ const DESKTOP_DOWNLOAD_URL =
   'https://github.com/Viren070/AIOStreams/releases/tag/desktop';
 const DESKTOP_ASSET_URL =
   'https://github.com/Viren070/AIOStreams/releases/download/desktop/aiostreams-desktop-';
-const DESKTOP_GUIDE_URL =
-  'https://docs.aiostreams.viren070.me/guides/desktop-app#download';
+const DOCS_APPS_URL = 'https://docs.aiostreams.viren070.me/apps';
+const ANDROID_DOWNLOAD_URL =
+  'https://github.com/Viren070/AIOStreams/releases/download/android/aiostreams-android-arm64-v8a.apk';
+
+/** Where each device gets the app; the visitor's own has its buttons instead. */
+const APP_PLATFORMS = [
+  {
+    id: 'desktop',
+    label: 'Windows, Mac & Linux',
+    url: `${DOCS_APPS_URL}/desktop#download`,
+  },
+  { id: 'android', label: 'Android', url: `${DOCS_APPS_URL}/android#download` },
+  {
+    id: 'android-tv',
+    label: 'Android TV & Fire TV',
+    url: `${DOCS_APPS_URL}/android#on-a-tv`,
+  },
+  { id: 'lg', label: 'LG TV', url: `${DOCS_APPS_URL}/smart-tv#lg-tvs` },
+  {
+    id: 'samsung',
+    label: 'Samsung TV',
+    url: `${DOCS_APPS_URL}/smart-tv#samsung-tvs`,
+  },
+] as const;
 
 interface DesktopDownload {
   label: string;
