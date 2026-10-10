@@ -262,6 +262,7 @@ const UsenetInfoSchema = BaseFileInfoSchema.extend({
   nzb: z.string(),
   releaseKey: z.string().regex(WD1_KEY_REGEX).optional().catch(undefined),
   indexer: z.string().optional(),
+  infoUrl: z.string().optional(),
   type: z.literal('usenet'),
 });
 

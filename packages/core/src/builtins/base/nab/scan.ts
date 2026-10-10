@@ -52,7 +52,13 @@ const ITEMS_PER_CLOCK_CHECK = 32;
 const CAPS_AVAILABLE = 'yes';
 
 /** Element names whose text a profile can ask for. */
-export type NabTextField = 'title' | 'guid' | 'pubDate' | 'size' | 'type';
+export type NabTextField =
+  | 'title'
+  | 'guid'
+  | 'comments'
+  | 'pubDate'
+  | 'size'
+  | 'type';
 /** Indexer-name elements Prowlarr and Jackett add to each item. */
 export type NabIndexerField = 'prowlarrindexer' | 'jackettindexer';
 export type NabAttrType = 'string' | 'number';
@@ -84,6 +90,7 @@ export interface NabEnclosure {
 export interface NabScanItem {
   title: string;
   guid?: string;
+  comments?: string;
   pubDate?: string;
   size?: number;
   type?: string;
@@ -560,6 +567,7 @@ export class NabScanner {
     let attrs: NabAttrs | undefined;
     let title: string | undefined;
     let guid: string | undefined;
+    let comments: string | undefined;
     let pubDate: string | undefined;
     let sizeText: string | undefined;
     let type: string | undefined;
@@ -636,6 +644,9 @@ export class NabScanner {
             case 'guid':
               guid = read.text;
               break;
+            case 'comments':
+              comments = read.text;
+              break;
             case 'pubDate':
               pubDate = read.text;
               break;
@@ -651,7 +662,7 @@ export class NabScanner {
         continue;
       }
 
-      // Anything else (description, category, comments, link, ...) is stepped
+      // Anything else (description, category, link, ...) is stepped
       // over without ever being decoded.
       pos = selfClosing
         ? contentStart
@@ -662,6 +673,7 @@ export class NabScanner {
 
     const item: NabScanItem = { title, enclosure, attrs: attrs ?? {} };
     if (guid !== undefined) item.guid = guid;
+    if (comments !== undefined) item.comments = comments;
     if (pubDate !== undefined) item.pubDate = pubDate;
     if (sizeText !== undefined) item.size = toNumber(sizeText);
     if (type !== undefined) item.type = type;
