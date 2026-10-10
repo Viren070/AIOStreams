@@ -4,9 +4,9 @@ import android.os.Handler
 import android.os.Looper
 import android.os.Process
 import android.os.SystemClock
+import android.util.Base64
 import android.util.Log
 import java.io.File
-import java.util.Base64
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.serialization.json.JsonArray
@@ -174,7 +174,7 @@ class PlayerChannel(
         val name = message["name"]?.jsonPrimitive?.content ?: error("subtitle file without a name")
         val extension = name.substringAfterLast('.', "").lowercase()
         require(extension in SUBTITLE_TYPES) { "$name is not a subtitle file" }
-        val bytes = Base64.getDecoder().decode(message["data"]?.jsonPrimitive?.content ?: "")
+        val bytes = Base64.decode(message["data"]?.jsonPrimitive?.content ?: "", Base64.DEFAULT)
         require(bytes.size <= MAX_SUBTITLE_BYTES) { "$name is too big" }
         subtitles.mkdirs()
         val file = File(subtitles, "${next.getAndIncrement()}.$extension")

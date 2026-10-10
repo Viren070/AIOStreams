@@ -106,5 +106,6 @@ dependencies {
     implementation(libs.androidx.core)
     implementation(libs.androidx.media3.datasource)
     implementation(libs.androidx.media3.session)
+    implementation(libs.androidx.webkit)
     implementation(libs.okhttp)
 }

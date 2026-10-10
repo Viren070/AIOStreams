@@ -1,12 +1,13 @@
 package io.github.viren070.aiostreams
 
+import android.content.Context
 import android.os.Build
 import android.os.Process
-import android.webkit.WebView
+import androidx.webkit.WebViewCompat
 import io.github.viren070.aiostreams.playback.Engine
 
 /** Versions, the device and the recent log, for a bug report. */
-fun diagnostics(engine: Engine, web: String?, server: String?): String = buildString {
+fun diagnostics(context: Context, engine: Engine, web: String?, server: String?): String = buildString {
     val build = if (BuildConfig.DEBUG) ", debug" else ""
     appendLine("AIOStreams Android ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}$build)")
     appendLine("web=\"${web.orEmpty()}\" server=\"${server.orEmpty()}\"")
@@ -17,7 +18,7 @@ fun diagnostics(engine: Engine, web: String?, server: String?): String = buildSt
     appendLine("stats=${runCatching { engine.stats() }.getOrNull()}")
     appendLine(
         "device=\"${Build.MANUFACTURER} ${Build.MODEL}\" android=${Build.VERSION.RELEASE} api=${Build.VERSION.SDK_INT} " +
-            "abi=${Build.SUPPORTED_ABIS.joinToString(",")} webview=${WebView.getCurrentWebViewPackage()?.versionName.orEmpty()}",
+            "abi=${Build.SUPPORTED_ABIS.joinToString(",")} webview=${WebViewCompat.getCurrentWebViewPackage(context)?.versionName.orEmpty()}",
     )
     appendLine()
     append(recentLog())

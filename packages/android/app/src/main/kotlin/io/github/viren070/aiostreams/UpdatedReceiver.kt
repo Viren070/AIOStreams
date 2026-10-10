@@ -1,12 +1,11 @@
 package io.github.viren070.aiostreams
 
 import android.annotation.SuppressLint
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 
@@ -25,8 +24,8 @@ class UpdatedReceiver : BroadcastReceiver() {
         saved.edit().remove(INSTALLING).apply()
         val notifications = NotificationManagerCompat.from(context)
         if (!notifications.areNotificationsEnabled()) return
-        context.getSystemService(NotificationManager::class.java).createNotificationChannel(
-            NotificationChannel(CHANNEL, "Updates", NotificationManager.IMPORTANCE_DEFAULT),
+        NotificationManagerCompat.from(context).createNotificationChannel(
+            NotificationChannelCompat.Builder(CHANNEL, NotificationManagerCompat.IMPORTANCE_DEFAULT).setName("Updates").build(),
         )
         val open = Intent(context, MainActivity::class.java)
         notifications.notify(

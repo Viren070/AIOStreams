@@ -37,10 +37,7 @@ class AppBridge(
     private var reply: JavaScriptReplyProxy? = null
 
     init {
-        check(
-            WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER) &&
-                WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
-        ) { "This WebView is too old to host the app" }
+        check(supported()) { "This WebView is too old to host the app" }
         WebViewCompat.addWebMessageListener(webView, PORT, origins) { _, message, _, isMainFrame, replyProxy ->
             if (!isMainFrame) return@addWebMessageListener
             // A page that loads again brings a new proxy, announced by its first message.
@@ -105,8 +102,12 @@ class AppBridge(
         })();
     """.trimIndent()
 
-    private companion object {
-        const val PORT = "aiostreamsNative"
-        const val HELLO = "hello"
+    companion object {
+        private const val PORT = "aiostreamsNative"
+        private const val HELLO = "hello"
+
+        fun supported() =
+            WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER) &&
+                WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
     }
 }

@@ -1,6 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@android:color/black" />
-    <foreground android:drawable="@drawable/ic_launcher_foreground" />
-    <monochrome android:drawable="@drawable/ic_launcher_foreground" />
-</adaptive-icon>
+<!-- Before adaptive icons: the foreground's visible 72dp of 108 on a black disc. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="720"
+    android:viewportHeight="720">
+    <path
+        android:fillColor="#000000"
+        android:pathData="M360,0a360,360 0,1 1,0 720a360,360 0,1 1,0 -720Z" />
+    <group
+        android:translateX="-180"
+        android:translateY="-180">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M508.34,338.5h3.14c65.24,0,106.01,70.62,73.39,127.12l-160.44,277.88h0c-66.63,0-108.27,-72.13 -74.96,-129.83l158.87,-275.17Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M547.53,644.5a97.36,99 0,1 0,194.72 0a97.36,99 0,1 0,-194.72 0Z" />
+    </group>
+</vector>

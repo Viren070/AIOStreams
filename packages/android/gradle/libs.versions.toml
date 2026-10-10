@@ -2,7 +2,7 @@
 android-gradle = "9.4.1"
 android-compileSdk = "37"
 android-compileSdkMinor = "2"
-android-minSdk = "29"
+android-minSdk = "24"
 android-targetSdk = "36"
 android-ndk = "30.0.16248370"
 android-cmake = "4.1.2"

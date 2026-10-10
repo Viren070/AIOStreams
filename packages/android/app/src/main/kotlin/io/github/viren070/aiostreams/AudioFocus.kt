@@ -4,23 +4,28 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.media.AudioAttributes
-import android.media.AudioFocusRequest
 import android.media.AudioManager
+import androidx.annotation.OptIn
 import androidx.core.content.ContextCompat
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
+import androidx.media3.common.audio.AudioFocusRequestCompat
+import androidx.media3.common.audio.AudioManagerCompat
+import androidx.media3.common.util.UnstableApi
 
 /** Holds audio focus while playing; calls, other players and unplugged headphones pause. */
+@OptIn(UnstableApi::class)
 class AudioFocus(
     private val context: Context,
     private val pause: () -> Unit,
     private val resume: () -> Unit,
 ) {
     private val audio = context.getSystemService(AudioManager::class.java)
-    private val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+    private val request = AudioFocusRequestCompat.Builder(AudioManagerCompat.AUDIOFOCUS_GAIN)
         .setAudioAttributes(
             AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_MEDIA)
-                .setContentType(AudioAttributes.CONTENT_TYPE_MOVIE)
+                .setUsage(C.USAGE_MEDIA)
+                .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
                 .build()
         )
         .setOnAudioFocusChangeListener(::onChange)
@@ -36,21 +41,21 @@ class AudioFocus(
         this.playing = playing
         if (playing) {
             resumeOnGain = false
-            audio.requestAudioFocus(request)
+            AudioManagerCompat.requestAudioFocus(audio, request)
             ContextCompat.registerReceiver(
                 context, noisy, IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY),
                 ContextCompat.RECEIVER_NOT_EXPORTED,
             )
         } else {
             // A pause for a call keeps the focus, to hear when it ends.
-            if (!resumeOnGain) audio.abandonAudioFocusRequest(request)
+            if (!resumeOnGain) AudioManagerCompat.abandonAudioFocusRequest(audio, request)
             context.unregisterReceiver(noisy)
         }
     }
 
     fun release() {
         update(false)
-        audio.abandonAudioFocusRequest(request)
+        AudioManagerCompat.abandonAudioFocusRequest(audio, request)
     }
 
     private fun onChange(change: Int) {

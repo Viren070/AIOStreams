@@ -2,8 +2,6 @@ package io.github.viren070.aiostreams
 
 import android.annotation.SuppressLint
 import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
@@ -12,6 +10,7 @@ import android.content.pm.ServiceInfo
 import android.os.IBinder
 import android.os.SystemClock
 import android.util.Log
+import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
@@ -72,8 +71,8 @@ class DownloadService : Service() {
         }
 
         fun notification(context: Context, running: List<Running>): Notification {
-            context.getSystemService(NotificationManager::class.java).createNotificationChannel(
-                NotificationChannel(CHANNEL, "Downloads", NotificationManager.IMPORTANCE_LOW),
+            NotificationManagerCompat.from(context).createNotificationChannel(
+                NotificationChannelCompat.Builder(CHANNEL, NotificationManagerCompat.IMPORTANCE_LOW).setName("Downloads").build(),
             )
             val total = running.sumOf { it.total ?: 0 }
             val known = running.all { it.total != null } && total > 0

@@ -12,6 +12,7 @@ import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.provider.MediaStore
 import android.provider.Settings
 import android.speech.RecognizerIntent
@@ -63,6 +64,13 @@ class MainActivity : ComponentActivity() {
     private val screen = PlayerWindow(this)
     private val levels by lazy { Levels(this) }
     private val notifications = registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
+    /** A save waiting on storage access, run either way so a refusal reports as a failure. */
+    private var unsaved: (() -> Unit)? = null
+    private val storage = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+        val save = unsaved
+        unsaved = null
+        save?.invoke()
+    }
     private val players = ExternalPlayers(this, ::receiveLink)
     /** `aiostreams://` links, held until the page listens. */
     private val links = ArrayDeque<String>()
@@ -77,9 +85,12 @@ class MainActivity : ComponentActivity() {
         sendHeard(heard.takeIf { result.resultCode == RESULT_OK })
     }
     private lateinit var frameRates: FrameRateMatch
+    /** False when onCreate only showed the outdated WebView message. */
+    private val started get() = ::bridge.isInitialized
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (!webViewUsable(this)) return setContentView(outdatedWebView(this))
         enableEdgeToEdge()
         WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG || BuildConfig.INSPECTABLE)
 
@@ -216,7 +227,7 @@ class MainActivity : ComponentActivity() {
                 val server = message["server"]?.jsonPrimitive?.contentOrNull
                 // Reading the log takes a moment.
                 Thread {
-                    val text = diagnostics(playback.engine, web, server)
+                    val text = diagnostics(this, playback.engine, web, server)
                     runOnUiThread {
                         bridge.send(buildJsonObject {
                             put("type", "diagnostics")
@@ -228,18 +239,36 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** Into the shared Downloads folder, which needs no permission from Android 10 on. */
+    /** Into the shared Downloads folder, which needs storage access before Android 10. */
     private fun saveFile(name: String, mime: String, text: String) {
+        val permission = Manifest.permission.WRITE_EXTERNAL_STORAGE
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
+            checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED
+        ) {
+            unsaved = { writeFile(name, mime, text) }
+            storage.launch(permission)
+            return
+        }
+        writeFile(name, mime, text)
+    }
+
+    private fun writeFile(name: String, mime: String, text: String) {
         Thread {
             val saved = runCatching {
-                val values = ContentValues().apply {
-                    put(MediaStore.Downloads.DISPLAY_NAME, name)
-                    put(MediaStore.Downloads.MIME_TYPE, mime)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    val values = ContentValues().apply {
+                        put(MediaStore.Downloads.DISPLAY_NAME, name)
+                        put(MediaStore.Downloads.MIME_TYPE, mime)
+                    }
+                    val uri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                        ?: error("no Downloads entry")
+                    contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray()) }
+                        ?: error("no Downloads stream")
+                } else {
+                    val folder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                    folder.mkdirs()
+                    File(folder, name).writeText(text)
                 }
-                val uri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-                    ?: error("no Downloads entry")
-                contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray()) }
-                    ?: error("no Downloads stream")
             }
             saved.exceptionOrNull()?.let { Log.e("save-file", "saving $name", it) }
             runOnUiThread {
@@ -381,12 +410,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        updater.onResume()
+        if (started) updater.onResume()
     }
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        pip.onUserLeaveHint()
+        if (started) pip.onUserLeaveHint()
     }
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
@@ -403,11 +432,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
+        if (!started) return
         val background = player.session.item?.background == true
         if (!isChangingConfigurations && !isInPictureInPictureMode && !background) playback.engine.setProperty("pause", "yes")
     }
 
     override fun onDestroy() {
+        if (!started) return super.onDestroy()
         getSystemService(InputManager::class.java).unregisterInputDeviceListener(controllers)
         updater.release()
         Downloads.queue(this).send = null

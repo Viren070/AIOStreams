@@ -90,7 +90,7 @@ class Updater(private val activity: ComponentActivity, private val send: (JsonOb
     }
 
     fun onResume() {
-        if (installing && activity.packageManager.canRequestPackageInstalls()) {
+        if (installing && canInstall()) {
             installing = false
             worker.execute { apply() }
         }
@@ -138,9 +138,13 @@ class Updater(private val activity: ComponentActivity, private val send: (JsonOb
         }
     }
 
+    /** Before Android 8 one setting allows every source, and the installer asks for it itself. */
+    private fun canInstall() =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.O || activity.packageManager.canRequestPackageInstalls()
+
     private fun apply() {
         val update = ready ?: return
-        if (!activity.packageManager.canRequestPackageInstalls()) {
+        if (!canInstall()) {
             installing = true
             activity.startActivity(
                 Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${activity.packageName}")),
