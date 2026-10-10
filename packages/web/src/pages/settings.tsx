@@ -2293,6 +2293,7 @@ export function SettingsPage({
       >
         <TabsList
           data-sticky
+          data-nav-enter="[role=tab][data-state=active]"
           className="max-w-full flex-wrap lg:sticky lg:top-6 lg:space-y-3"
         >
           {[...groups.entries()].map(([group, items]) => (

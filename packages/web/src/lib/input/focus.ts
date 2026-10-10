@@ -312,6 +312,8 @@ function pick(
   // past it, so focus keeps to its own side over a nearer bar for what's in line.
   const home = barOf(from);
   let other: HTMLElement | null = null;
+  let otherGap = Infinity;
+  const gaps = new Map<Element, number | null>();
   let beside = false;
   for (const way of scored) {
     if (sideways && !way.inLine && !inView(way.rect)) continue;
@@ -321,8 +323,15 @@ function pick(
       if (way.inLine) return way.el;
       if (sideways) beside ||= way.off <= rect.height;
       else if (!other) return inNearestRow(scored, way, home);
-    } else if (!other && crosses(home ?? from, bar ?? way.el, way.el, dir)) {
-      other = way.el;
+    } else if (inView(way.el)) {
+      // The nearest bar that way, as a page's own sticky column before the sidebar past it.
+      const box = bar ?? way.el;
+      if (!gaps.has(box)) gaps.set(box, barGap(home ?? from, box, dir));
+      const gap = gaps.get(box);
+      if (gap != null && gap < otherGap) {
+        other = way.el;
+        otherGap = gap;
+      }
     }
   }
   // Sideways, a bar is entered only when nothing on this side sits just beside focus.
@@ -355,26 +364,26 @@ function inNearestRow(
   )!.el;
 }
 
-/** Focus crosses only to what's in view, into a bar or part of the page wholly that way from the one it leaves. */
-function crosses(
+/**
+ * How far a bar, or part of the page, lies wholly that way from the one focus
+ * leaves, which focus crosses into only then.
+ */
+function barGap(
   left: Element,
   entered: Element,
-  to: HTMLElement,
   dir: Direction
-): boolean {
-  if (!inView(to)) return false;
+): number | null {
   const a = left.getBoundingClientRect();
   const b = entered.getBoundingClientRect();
-  switch (dir) {
-    case 'right':
-      return b.left >= a.right - 1;
-    case 'left':
-      return b.right <= a.left + 1;
-    case 'down':
-      return b.top >= a.bottom - 1;
-    case 'up':
-      return b.bottom <= a.top + 1;
-  }
+  const gap =
+    dir === 'right'
+      ? b.left - a.right
+      : dir === 'left'
+        ? a.left - b.right
+        : dir === 'down'
+          ? b.top - a.bottom
+          : a.top - b.bottom;
+  return gap >= -1 ? gap : null;
 }
 
 /**
