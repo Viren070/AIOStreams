@@ -49,9 +49,9 @@ async function fetchAndSave(src: string): Promise<string> {
   noteRead(src, true);
   const blob = await res.blob();
   void writeImage(src, blob.type, blob)
-    .then(() => {
+    .then((bytes) => {
       noteSaved(src);
-      schedulePrune();
+      schedulePrune(bytes);
     })
     .catch(() => undefined);
   return keep(src, blob);

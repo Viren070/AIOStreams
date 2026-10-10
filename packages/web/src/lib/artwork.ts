@@ -36,8 +36,8 @@ export interface ShrinkReply {
   blocked?: true;
   /** The worker cannot draw at all, so no later job will fare better. */
   unsupported?: true;
-  /** Sent on its own with the address once a fetched image is saved. */
-  saved?: string;
+  /** Sent on its own once a fetched image is saved. */
+  saved?: { url: string; bytes: number };
 }
 
 export type Shrunk =
@@ -283,8 +283,8 @@ function start(): Slot | null {
   worker.onmessage = (e: MessageEvent<ShrinkReply>) => {
     if (e.data.unsupported) broken = true;
     if (e.data.saved) {
-      noteSaved(e.data.saved);
-      schedulePrune();
+      noteSaved(e.data.saved.url);
+      schedulePrune(e.data.saved.bytes);
     }
     if (e.data.encoded) {
       const { url, ...entry } = e.data.encoded;

@@ -155,12 +155,13 @@ async function flush() {
   );
 }
 
-function write(entry: Omit<Entry, 'usedAt'>, body: Body): Promise<void> {
+/** Resolves with the bytes it saved. */
+function write(entry: Omit<Entry, 'usedAt'>, body: Body): Promise<number> {
   return new Promise((resolve, reject) => {
     batch.push({
       entry: { ...entry, usedAt: Date.now() },
       body,
-      done: (error) => (error ? reject(error) : resolve()),
+      done: (error) => (error ? reject(error) : resolve(entry.size)),
     });
     flushTimer ??= setTimeout(() => void flush(), 250);
   });
@@ -176,7 +177,7 @@ export function writeQuery(
   entry: { id: string; category: CacheCategory; scope: string },
   savedAt: number,
   data: unknown
-): Promise<void> {
+): Promise<number> {
   const json = JSON.stringify(data);
   // UTF-16, as the engine keeps it.
   return write(
@@ -210,7 +211,7 @@ export function writeImage(
   url: string,
   type: string,
   data: Blob | ArrayBuffer
-): Promise<void> {
+): Promise<number> {
   const blob = data instanceof Blob ? data : new Blob([data], { type });
   return write(
     { id: url, category: 'artwork', scope: '', size: blob.size },
@@ -277,23 +278,27 @@ export async function usage(): Promise<Record<CacheCategory, number>> {
   return sizes;
 }
 
-export async function prune(maxBytes: number): Promise<void> {
+export async function prune(
+  maxBytes: number
+): Promise<{ total: number; removed: string[] }> {
   const entries = await allEntries();
-  let total = entries.reduce((sum, e) => sum + e.size, 0);
-  if (total <= maxBytes) return;
+  const total = entries.reduce((sum, e) => sum + e.size, 0);
+  if (total <= maxBytes) return { total, removed: [] };
   entries.sort((a, b) => a.usedAt - b.usedAt);
-  const ids: string[] = [];
+  const removed: string[] = [];
+  let left = total;
   for (const entry of entries) {
-    if (total <= maxBytes * PRUNE_TO) break;
-    total -= entry.size;
-    ids.push(entry.id);
+    if (left <= maxBytes * PRUNE_TO) break;
+    left -= entry.size;
+    removed.push(entry.id);
   }
   const db = await open();
-  if (!db) return;
+  if (!db) return { total, removed: [] };
   const tx = db.transaction([ENTRIES, BODIES], 'readwrite');
-  for (const id of ids) {
+  for (const id of removed) {
     tx.objectStore(ENTRIES).delete(id);
     tx.objectStore(BODIES).delete(id);
   }
   await committed(tx);
+  return { total: left, removed };
 }

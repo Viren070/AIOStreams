@@ -44,13 +44,10 @@ export function saving(category: CacheCategory): boolean {
 
 let savedArtwork: Set<string> | null = null;
 
-function loadSavedArtwork() {
-  void savedImageUrls().then(
-    (urls) => (savedArtwork = urls),
-    () => undefined
-  );
-}
-loadSavedArtwork();
+void savedImageUrls().then(
+  (urls) => (savedArtwork = urls),
+  () => undefined
+);
 
 /** False only for an image known not to be saved, which then skips the read. */
 export function maybeSaved(url: string): boolean {
@@ -62,14 +59,26 @@ export function noteSaved(url: string): void {
 }
 
 let pruneTimer: ReturnType<typeof setTimeout> | undefined;
+/** What the last prune counted and what was saved since, so it only reads every entry again once the limit could be passed. */
+let counted: number | null = null;
+let savedSince = 0;
+
+const maxBytes = () => settings.cache.maxSizeMb.read() * 1_000_000;
 
 export function pruneCache(): Promise<void> {
-  return prune(settings.cache.maxSizeMb.read() * 1_000_000)
-    .then(loadSavedArtwork)
+  const before = savedSince;
+  return prune(maxBytes())
+    .then(({ total, removed }) => {
+      counted = total;
+      savedSince -= before;
+      for (const id of removed) savedArtwork?.delete(id);
+    })
     .catch(() => undefined);
 }
 
-export function schedulePrune(): void {
+export function schedulePrune(bytes: number): void {
+  savedSince += bytes;
+  if (counted !== null && counted + savedSince <= maxBytes()) return;
   clearTimeout(pruneTimer);
   pruneTimer = setTimeout(() => void pruneCache(), 10_000);
 }

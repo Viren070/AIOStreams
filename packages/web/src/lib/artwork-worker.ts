@@ -184,7 +184,11 @@ async function shrink({
   // Saved alongside, so drawing never waits on the disk.
   if (save && !kept)
     void writeImage(url, head.type, data).then(
-      () => scope.postMessage({ id: -1, saved: url } satisfies ShrinkReply),
+      (bytes) =>
+        scope.postMessage({
+          id: -1,
+          saved: { url, bytes },
+        } satisfies ShrinkReply),
       () => undefined
     );
 
@@ -268,8 +272,11 @@ async function encodeLater() {
       if (!blob) continue;
       if (copy)
         void writeImage(copy, blob.type, blob).then(
-          () =>
-            scope.postMessage({ id: -1, saved: copy } satisfies ShrinkReply),
+          (bytes) =>
+            scope.postMessage({
+              id: -1,
+              saved: { url: copy, bytes },
+            } satisfies ShrinkReply),
           () => undefined
         );
       scope.postMessage({
