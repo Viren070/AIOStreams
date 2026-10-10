@@ -37,6 +37,7 @@ export const DrawerAnatomy = defineStyleAnatomy({
   overlay: cva([
     'UI-Drawer__overlay',
     'fixed inset-0 w-screen z-[50] bg-black/80',
+    'will-change-[opacity]',
     'data-[state=open]:animate-in data-[state=closed]:animate-out',
     'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
     // "transition-opacity duration-300",
@@ -45,6 +46,7 @@ export const DrawerAnatomy = defineStyleAnatomy({
     [
       'UI-Drawer__content',
       'fixed z-50 w-full gap-4 bg-[--background] p-6 shadow-lg overflow-y-auto',
+      'will-change-transform',
       'transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-500 data-[state=open]:duration-500',
       'focus:outline-none focus-visible:outline-none',
       process.env.NEXT_PUBLIC_PLATFORM === 'desktop' && 'select-none',
@@ -180,8 +182,13 @@ export function Drawer(props: DrawerProps) {
     onInteractOutside,
     portalContainer,
     mangaReader,
-    ...rest
+    ...others
   } = props;
+  const rest: Record<string, unknown> = {};
+  const data: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(others)) {
+    (key.startsWith('data-') ? data : rest)[key] = value;
+  }
 
   const id = React.useId();
 
@@ -203,6 +210,7 @@ export function Drawer(props: DrawerProps) {
         />
 
         <DialogPrimitive.Content
+          {...data}
           className={cn(
             DrawerAnatomy.content({
               size,

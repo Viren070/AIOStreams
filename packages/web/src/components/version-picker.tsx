@@ -15,7 +15,9 @@ import {
 } from 'react-icons/bi';
 import { Button, IconButton } from '@aiostreams/ui/button';
 import { DropdownMenu, DropdownMenuItem } from '@aiostreams/ui/dropdown-menu';
+import { Drawer } from '@aiostreams/ui/drawer';
 import { Modal } from '@aiostreams/ui/modal';
+import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import { TextInput } from '@aiostreams/ui/text-input';
 import { Tooltip } from '@aiostreams/ui/tooltip';
@@ -210,63 +212,73 @@ export function VersionPickerProvider({
   }, []);
   const item = request?.item;
   const open = !!request;
+  // A sheet over the player, or where a short screen leaves a dialog no room.
+  const short = useMediaQuery('(max-height: 500px)');
   // Kept while it closes, so it leaves the way it came.
   const [sheet, setSheet] = React.useState(false);
-  if (request && sheet !== !!request.playing) setSheet(!!request.playing);
+  const wantSheet = !!request?.playing || short;
+  if (request && sheet !== wantSheet) setSheet(wantSheet);
   // Opened from code, it has no trigger for focus to go back to.
   const opener = React.useRef<Element | null>(null);
   React.useLayoutEffect(() => {
     if (open) opener.current = document.activeElement;
   }, [open]);
+  const restoreFocus = (e: Event) => {
+    if (!(opener.current instanceof HTMLElement)) return;
+    e.preventDefault();
+    opener.current.focus({ preventScroll: true });
+  };
+  const versions = request && (
+    <Versions
+      key={request.item.Id}
+      request={request}
+      compact={sheet}
+      onDone={() => setRequest(null)}
+      onExternal={() => {
+        setExternal(request.item);
+        setRequest(null);
+      }}
+    />
+  );
   return (
     <PickerContext.Provider value={value}>
       {children}
-      <Modal
-        data-ui="dialog"
-        data-name="versions"
-        open={open}
-        onOpenChange={(open) => !open && setRequest(null)}
-        onCloseAutoFocus={(e) => {
-          if (!(opener.current instanceof HTMLElement)) return;
-          e.preventDefault();
-          opener.current.focus({ preventScroll: true });
-        }}
-        title={item ? itemTitle(item) : undefined}
-        description={
-          item?.Type === 'Episode'
-            ? itemSubtitle(item)
-            : item?.ProductionYear || undefined
-        }
-        side={sheet ? 'right' : 'center'}
-        contentClass={
-          sheet
-            ? 'flex flex-col gap-0 overflow-hidden p-0'
-            : 'flex w-full max-w-4xl flex-col gap-0 overflow-hidden p-0 max-md:h-[100dvh] max-md:rounded-none max-md:border-0 md:max-h-[85vh]'
-        }
-        headerClass={
-          sheet
-            ? 'relative z-[1] px-4 pb-2 pr-14 pt-[calc(1rem+env(safe-area-inset-top))] text-left'
-            : 'relative z-[1] px-4 pb-3 pr-14 pt-5 text-left max-md:pt-[calc(1.25rem+env(safe-area-inset-top))] sm:px-5 sm:pr-14'
-        }
-        titleClass={sheet ? 'text-lg' : undefined}
-        closeClass={
-          sheet
-            ? 'z-[2] top-[calc(0.75rem+env(safe-area-inset-top))]'
-            : 'z-[2] max-md:top-[calc(1rem+env(safe-area-inset-top))]'
-        }
-      >
-        {request && (
-          <Versions
-            key={request.item.Id}
-            request={request}
-            onDone={() => setRequest(null)}
-            onExternal={() => {
-              setExternal(request.item);
-              setRequest(null);
-            }}
-          />
-        )}
-      </Modal>
+      {sheet ? (
+        <Drawer
+          data-ui="dialog"
+          data-name="versions"
+          open={open}
+          onOpenChange={(open) => !open && setRequest(null)}
+          onCloseAutoFocus={restoreFocus}
+          title={item ? itemTitle(item) : 'Versions'}
+          headerClass="sr-only"
+          side="right"
+          size="md"
+          contentClass="flex flex-col gap-0 overflow-hidden p-0"
+          closeClass="right-2 top-[calc(0.75rem+env(safe-area-inset-top))]"
+        >
+          {versions}
+        </Drawer>
+      ) : (
+        <Modal
+          data-ui="dialog"
+          data-name="versions"
+          open={open}
+          onOpenChange={(open) => !open && setRequest(null)}
+          onCloseAutoFocus={restoreFocus}
+          title={item ? itemTitle(item) : undefined}
+          description={
+            item?.Type === 'Episode'
+              ? itemSubtitle(item)
+              : item?.ProductionYear || undefined
+          }
+          contentClass="flex w-full max-w-4xl flex-col gap-0 overflow-hidden p-0 max-md:h-[100dvh] max-md:rounded-none max-md:border-0 md:max-h-[85vh]"
+          headerClass="relative z-[1] px-4 pb-3 pr-14 pt-5 text-left max-md:pt-[calc(1.25rem+env(safe-area-inset-top))] sm:px-5 sm:pr-14"
+          closeClass="z-[2] max-md:top-[calc(1rem+env(safe-area-inset-top))]"
+        >
+          {versions}
+        </Modal>
+      )}
       <ExternalPrompt item={external} onClose={() => setExternal(null)} />
     </PickerContext.Provider>
   );
@@ -287,10 +299,13 @@ function Versions({
   request,
   onDone,
   onExternal,
+  compact,
 }: {
   request: Request;
   onDone: () => void;
   onExternal: () => void;
+  /** In a narrow sheet, however wide the screen. */
+  compact: boolean;
 }) {
   const { client } = useSession();
   const { item } = request;
@@ -373,9 +388,66 @@ function Versions({
       onError: (e) => toast.error(e.message),
     });
 
+  const count = info.data
+    ? sources.length === 1
+      ? '1 version'
+      : `${sources.length} versions`
+    : 'Finding versions';
+  const filtering = sources.length >= FILTER_FROM && !currentHost().tv;
+  const searchAgain = canRefresh && (
+    <Tooltip
+      trigger={
+        <IconButton
+          data-ui="versions-action"
+          data-name="search-again"
+          size="sm"
+          intent="gray-subtle"
+          className="rounded-full"
+          icon={<BiRefresh className={cn(refreshing && 'animate-spin')} />}
+          aria-label="Search again"
+          disabled={refreshing}
+          onClick={retry}
+        />
+      }
+    >
+      Search again
+    </Tooltip>
+  );
+  const downloadHint = download && (
+    <p data-ui="versions-download-hint" className="text-sm text-gray-300">
+      {download.items.length > 1
+        ? `Pick the version to download. The other ${download.items.length - 1} episodes get the same release where they have it.`
+        : 'Pick the version to download.'}
+    </p>
+  );
+  // A version switched to while playing carries on where it was.
+  const resumeToggle = request.startMs > 0 && !request.playing && (
+    <div
+      data-ui="versions-start"
+      className="grid grid-cols-2 gap-1 rounded-full bg-black/40 p-1"
+    >
+      <Button
+        size="sm"
+        intent={startMs ? 'white' : 'gray-basic'}
+        className="rounded-full"
+        onClick={() => setStartMs(request.startMs)}
+      >
+        Resume from {clock(request.startMs)}
+      </Button>
+      <Button
+        size="sm"
+        intent={startMs ? 'gray-basic' : 'white'}
+        className="rounded-full"
+        onClick={() => setStartMs(0)}
+      >
+        From the start
+      </Button>
+    </div>
+  );
+
   return (
     <>
-      {art && (
+      {art && !compact && (
         <div
           aria-hidden
           data-ui="versions-banner"
@@ -390,108 +462,86 @@ function Versions({
           <div className="absolute inset-0 bg-gradient-to-b from-[--paper]/30 via-[--paper]/70 to-[--paper]" />
         </div>
       )}
-      <div
-        data-ui="versions-header"
-        className={cn(
-          'relative z-[1] px-4',
-          request.playing ? 'space-y-2 pb-2' : 'space-y-3 pb-3 sm:px-5'
-        )}
-      >
-        <div className="flex flex-wrap items-center gap-2">
-          <p
-            data-ui="versions-count"
-            className="mr-auto text-sm text-[--muted]"
-          >
-            {info.data
-              ? sources.length === 1
-                ? '1 version'
-                : `${sources.length} versions`
-              : 'Finding versions'}
-          </p>
-          <Button
-            data-ui="versions-action"
-            data-name="details"
-            size="sm"
-            intent="gray-subtle"
-            className="rounded-full"
-            leftIcon={<BiInfoCircle />}
-            onClick={() => {
-              onDone();
-              navigate(itemPath(item));
-            }}
-          >
-            Details
-          </Button>
-          {canRefresh && (
-            <Tooltip
-              trigger={
-                <IconButton
-                  data-ui="versions-action"
-                  data-name="search-again"
-                  size="sm"
-                  intent="gray-subtle"
+      {compact ? (
+        <div
+          data-ui="versions-header"
+          className="space-y-2 px-3 pb-2 pt-[calc(0.5rem+env(safe-area-inset-top))]"
+        >
+          <div className="flex items-center gap-2 pr-9">
+            {filtering ? (
+              <div className="min-w-0 flex-1">
+                <TextInput
+                  data-ui="versions-filter"
+                  value={filter}
+                  onValueChange={setFilter}
+                  placeholder={`Filter ${count}`}
+                  leftIcon={<BiSearch />}
                   className="rounded-full"
-                  icon={
-                    <BiRefresh className={cn(refreshing && 'animate-spin')} />
-                  }
-                  aria-label="Search again"
-                  disabled={refreshing}
-                  onClick={retry}
                 />
-              }
+              </div>
+            ) : (
+              <p
+                data-ui="versions-count"
+                className="mr-auto text-sm text-[--muted]"
+              >
+                {count}
+              </p>
+            )}
+            {searchAgain}
+          </div>
+          {downloadHint}
+          {resumeToggle}
+        </div>
+      ) : (
+        <div
+          data-ui="versions-header"
+          className="relative z-[1] space-y-3 px-4 pb-3 sm:px-5"
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <p
+              data-ui="versions-count"
+              className="mr-auto text-sm text-[--muted]"
             >
-              Search again
-            </Tooltip>
+              {count}
+            </p>
+            <Button
+              data-ui="versions-action"
+              data-name="details"
+              size="sm"
+              intent="gray-subtle"
+              className="rounded-full"
+              leftIcon={<BiInfoCircle />}
+              onClick={() => {
+                onDone();
+                navigate(itemPath(item));
+              }}
+            >
+              Details
+            </Button>
+            {searchAgain}
+          </div>
+          {downloadHint}
+          {resumeToggle}
+          {filtering && (
+            <TextInput
+              data-ui="versions-filter"
+              value={filter}
+              onValueChange={setFilter}
+              placeholder="Filter versions"
+              leftIcon={<BiSearch />}
+              className="rounded-full"
+            />
           )}
         </div>
-        {download && (
-          <p data-ui="versions-download-hint" className="text-sm text-gray-300">
-            {download.items.length > 1
-              ? `Pick the version to download. The other ${download.items.length - 1} episodes get the same release where they have it.`
-              : 'Pick the version to download.'}
-          </p>
-        )}
-        {request.startMs > 0 && (
-          <div
-            data-ui="versions-start"
-            className="grid grid-cols-2 gap-1 rounded-full bg-black/40 p-1"
-          >
-            <Button
-              size="sm"
-              intent={startMs ? 'white' : 'gray-basic'}
-              className="rounded-full"
-              onClick={() => setStartMs(request.startMs)}
-            >
-              Resume from {clock(request.startMs)}
-            </Button>
-            <Button
-              size="sm"
-              intent={startMs ? 'gray-basic' : 'white'}
-              className="rounded-full"
-              onClick={() => setStartMs(0)}
-            >
-              From the start
-            </Button>
-          </div>
-        )}
-        {sources.length >= FILTER_FROM && !currentHost().tv && (
-          <TextInput
-            data-ui="versions-filter"
-            value={filter}
-            onValueChange={setFilter}
-            placeholder="Filter versions"
-            leftIcon={<BiSearch />}
-            className="rounded-full"
-          />
-        )}
-      </div>
+      )}
 
       <div
         ref={listRef}
         data-ui="versions-list"
         data-nav-group
         className={cn(
-          'relative z-[1] min-h-0 flex-1 space-y-2 overflow-y-auto border-t border-white/5 px-3 pb-5 pt-3 max-md:pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:px-5',
+          'relative z-[1] min-h-0 flex-1 space-y-2 overflow-y-auto border-t border-white/5 px-3 pb-5 pt-3 max-md:pb-[calc(1.25rem+env(safe-area-inset-bottom))]',
+          !compact && 'sm:px-5',
           info.isLoading && 'overflow-hidden'
         )}
       >
@@ -580,7 +630,10 @@ function Versions({
               >
                 <span
                   data-ui="version-play-icon"
-                  className="hidden size-9 flex-none items-center justify-center rounded-full bg-white/10 text-white transition-colors group-hover/version:bg-white group-hover/version:text-black sm:flex"
+                  className={cn(
+                    'hidden size-9 flex-none items-center justify-center rounded-full bg-white/10 text-white transition-colors group-hover/version:bg-white group-hover/version:text-black',
+                    !compact && 'sm:flex'
+                  )}
                 >
                   {download ? (
                     <BiDownload className="text-xl" />
@@ -592,7 +645,10 @@ function Versions({
                   {/* Room for the menu, so only the first line gives way. */}
                   <span
                     aria-hidden
-                    className="float-right ml-2 h-6 w-8 sm:hidden"
+                    className={cn(
+                      'float-right ml-2 h-6 w-8',
+                      !compact && 'sm:hidden'
+                    )}
                   />
                   {source.Id === request.playing && (
                     <span
@@ -604,14 +660,20 @@ function Versions({
                   )}
                   <span
                     data-ui="version-name"
-                    className="block whitespace-pre-line text-sm font-medium [overflow-wrap:anywhere] sm:text-base"
+                    className={cn(
+                      'block whitespace-pre-line text-sm font-medium [overflow-wrap:anywhere]',
+                      !compact && 'sm:text-base'
+                    )}
                   >
                     {source.aiostreams?.name || source.Name}
                   </span>
                   {source.aiostreams?.description && (
                     <span
                       data-ui="version-description"
-                      className="block whitespace-pre-line text-xs text-gray-300 [overflow-wrap:anywhere] sm:text-sm"
+                      className={cn(
+                        'block whitespace-pre-line text-xs text-gray-300 [overflow-wrap:anywhere]',
+                        !compact && 'sm:text-sm'
+                      )}
                     >
                       {source.aiostreams.description}
                     </span>
@@ -619,7 +681,12 @@ function Versions({
                 </span>
               </button>
               {!!actions.length && (
-                <div className="absolute right-1.5 top-1.5 sm:hidden">
+                <div
+                  className={cn(
+                    'absolute right-1.5 top-1.5',
+                    !compact && 'sm:hidden'
+                  )}
+                >
                   <DropdownMenu
                     data-ui="version-menu"
                     align="end"
@@ -647,7 +714,12 @@ function Versions({
                 </div>
               )}
               {!!actions.length && (
-                <div className="hidden flex-none gap-1 p-2 sm:flex">
+                <div
+                  className={cn(
+                    'hidden flex-none gap-1 p-2',
+                    !compact && 'sm:flex'
+                  )}
+                >
                   {actions.map((a) => (
                     <Tooltip
                       key={a.label}
