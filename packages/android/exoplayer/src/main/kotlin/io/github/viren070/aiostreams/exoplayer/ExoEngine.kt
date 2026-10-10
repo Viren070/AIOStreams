@@ -115,10 +115,23 @@ class ExoEngine(private val context: Context) :
     @Volatile
     private var passthrough = false
 
+    @Volatile
+    private var caps = MediaCaps(emptySet(), emptySet())
+
+    /** The Dolby Vision track's codec string and how it plays, once the file says it has one. */
+    @Volatile
+    private var dolbyVision: Pair<String, DolbyVisionRoute>? = null
+
     private var tunneling = false
 
     init {
-        val sources = DefaultMediaSourceFactory(data, SubtitleExtractors({ readBack }) { SubtitleSink(ass.sink(), texts.sink()) })
+        val extractors = SubtitleExtractors(
+            readBack = { readBack },
+            sink = { SubtitleSink(ass.sink(), texts.sink()) },
+            route = { dolbyVisionRoute(it, caps) },
+            onRoute = { codecs, route -> dolbyVision = codecs to route },
+        )
+        val sources = DefaultMediaSourceFactory(data, extractors)
         val renderers = object : DefaultRenderersFactory(context) {
             override fun buildAudioSink(
                 context: Context,
@@ -197,6 +210,12 @@ class ExoEngine(private val context: Context) :
                 put("channels", audio.channelCount)
                 put("sampleRate", audio.sampleRate)
                 put("audioBitrate", audio.bitrate)
+            }
+            put("hdrTypes", JsonArray(caps.hdrTypes.sorted().map { JsonPrimitive(it) }))
+            put("dolbyVisionProfiles", JsonArray(caps.dolbyVisionProfiles.sorted().map { JsonPrimitive(it) }))
+            dolbyVision?.let { (codecs, route) ->
+                put("dolbyVisionCodecs", codecs)
+                put("dolbyVisionRoute", route.label)
             }
             put("bufferedMs", player.totalBufferedDuration)
             player.videoDecoderCounters?.let { counters ->
@@ -292,6 +311,8 @@ class ExoEngine(private val context: Context) :
         val values = rawOptions.split(',').filter { '=' in it }.associate { it.substringBefore('=') to it.substringAfter('=') }
         this.url = url
         options = TrackOptions(values)
+        caps = MediaCaps.read(context)
+        dolbyVision = null
         loaded = false
         chosen = false
         restarting = true

@@ -53,12 +53,17 @@ internal class SubtitleSink(val ass: AssSink, val text: TextSink)
 
 internal fun isAss(format: Format) = format.sampleMimeType == MimeTypes.TEXT_SSA || format.codecs == MimeTypes.TEXT_SSA
 
-/** Media3's extractors, with Matroska's sending its subtitles to the file's [SubtitleSink]. */
+/**
+ * Media3's extractors, with Matroska's sending its subtitles to the file's
+ * [SubtitleSink], and every one's Dolby Vision tracks routed for the device.
+ */
 @OptIn(UnstableApi::class)
 internal class SubtitleExtractors(
     /** The subtitle track whose lines a seek reads back for, or [ANY_TRACK] before the engine picks one. */
     private val readBack: () -> String?,
     private val sink: () -> SubtitleSink,
+    private val route: (Int) -> DolbyVisionRoute,
+    private val onRoute: (codecs: String, DolbyVisionRoute) -> Unit,
 ) : ExtractorsFactory {
     private val defaults = DefaultExtractorsFactory()
 
@@ -77,8 +82,9 @@ internal class SubtitleExtractors(
         defaults.setTextTrackTranscodingEnabled(textTrackTranscodingEnabled)
     }
 
-    private fun withSubtitles(extractors: Array<Extractor>) =
-        extractors.map { if (it is MatroskaExtractor) SubtitleMatroska(sink(), readBack) else it }.toTypedArray()
+    private fun withSubtitles(extractors: Array<Extractor>) = extractors.map {
+        if (it is MatroskaExtractor) SubtitleMatroska(sink(), readBack, route, onRoute) else DolbyVisionExtractor(it, route, onRoute)
+    }.toTypedArray()
 
     companion object {
         const val ANY_TRACK = "*"
@@ -91,7 +97,12 @@ internal class SubtitleExtractors(
  * cues for them: the engine times them itself, so its delay applies to them.
  */
 @OptIn(UnstableApi::class)
-private class SubtitleMatroska(private val sink: SubtitleSink, private val readBack: () -> String?) : Extractor {
+private class SubtitleMatroska(
+    private val sink: SubtitleSink,
+    private val readBack: () -> String?,
+    private val route: (Int) -> DolbyVisionRoute,
+    private val onRoute: (codecs: String, DolbyVisionRoute) -> Unit,
+) : Extractor {
     private val matroska = Matroska(sink.ass)
     private var transcoder: SubtitleTranscodingExtractorOutput? = null
 
@@ -108,7 +119,7 @@ private class SubtitleMatroska(private val sink: SubtitleSink, private val readB
                 transcoder.seekMap(ReadBack(seekMap))
             }
         }
-        matroska.init(Subtitles(FrameRates(seeking, matroska::frameDurationNs), sink))
+        matroska.init(DolbyVisionOutput(Subtitles(FrameRates(seeking, matroska::frameDurationNs), sink), route, onRoute))
     }
 
     override fun read(input: ExtractorInput, seekPosition: PositionHolder) = matroska.read(input, seekPosition)
