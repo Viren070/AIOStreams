@@ -457,6 +457,13 @@ export function useNextUpFor(seriesId: string, enabled: boolean) {
   return useQuery({ ...useShowOptions().nextUp(seriesId), enabled });
 }
 
+/** Waits for the episode a show continues with, sharing a request already on its way. */
+export function useNextUpLater(seriesId: string) {
+  const queryClient = useQueryClient();
+  const nextUp = useShowOptions().nextUp(seriesId);
+  return () => queryClient.fetchQuery(nextUp).then((res) => res.Items?.[0]);
+}
+
 /** The season a show's page opens on: the first with something left, skipping specials. */
 export function openingSeason(seasons: BaseItemDto[]): BaseItemDto | undefined {
   const regular = seasons.filter((s) => (s.IndexNumber ?? 1) > 0);

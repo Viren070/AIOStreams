@@ -36,6 +36,7 @@ import {
   useItem,
   useItemPages,
   useNextUpFor,
+  useNextUpLater,
   useSeasons,
   openingSeason,
   useSetDropped,
@@ -323,6 +324,9 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
   const setFavorite = useSetFavorite();
   const setDropped = useSetDropped();
   const nextUp = useNextUpFor(item.Id!, item.Type === 'Series');
+  const nextUpLater = useNextUpLater(item.Id!);
+  // Play holds its place, and focus, while a show's next episode is on its way.
+  const nextUpPending = item.Type === 'Series' && nextUp.isPending;
   const logo = logoUrl(client, item, { maxWidth: 416 });
   const [logoFailed, setLogoFailed] = React.useState(false);
   const poster = posterUrl(client, item, { maxWidth: 320 });
@@ -424,21 +428,36 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
           data-ui="item-actions"
           className="flex flex-wrap items-center gap-2"
         >
-          {target && (
+          {(target || nextUpPending) && (
             <div className="flex w-full items-center gap-2 sm:w-auto">
               <Button
                 data-ui="item-action"
                 data-name="play"
                 data-nav-start
                 intent="white"
-                className="flex-1 rounded-full sm:flex-none"
+                className={cn(
+                  'flex-1 rounded-full sm:flex-none',
+                  item.Type === 'Series' && 'sm:min-w-[9.5rem]'
+                )}
                 leftIcon={<BiPlay className="text-xl" />}
-                onClick={() => picker.play(target, { startMs: resumeMs })}
+                onClick={() =>
+                  target
+                    ? picker.play(target, { startMs: resumeMs })
+                    : void nextUpLater().then(
+                        (episode) =>
+                          episode &&
+                          picker.play(episode, {
+                            startMs: ticksToMs(
+                              episode.UserData?.PlaybackPositionTicks
+                            ),
+                          })
+                      )
+                }
                 {...holdPlay}
               >
                 {playLabel}
               </Button>
-              {!!resumeMs && (
+              {!!resumeMs && target && (
                 <Tooltip
                   trigger={
                     <IconButton
