@@ -116,18 +116,26 @@ const OpenMenu = React.createContext<
   ((target: MenuTarget, at: Point) => void) | null
 >(null);
 
+/** A phone's menu width, as `max-sm:w-60`, and the room kept beside it. */
+const PHONE_MENU = 240 + 8;
+
 /** The one menu all cards open, so a page of cards doesn't mount one each. */
 export function ItemMenuHost({ children }: { children: React.ReactNode }) {
   const [target, setTarget] = React.useState<MenuTarget | null>(null);
   const trigger = React.useRef<HTMLSpanElement>(null);
   const open = React.useCallback((next: MenuTarget, at: Point) => {
     flushSync(() => setTarget(next));
+    // The menu opens beside the point and never slides, so a phone's point leaves it room.
+    const clientX =
+      innerWidth < 640
+        ? Math.min(at.clientX, innerWidth - PHONE_MENU)
+        : at.clientX;
     // The trigger places the menu where it was right clicked.
     trigger.current?.dispatchEvent(
       new MouseEvent('contextmenu', {
         bubbles: true,
         cancelable: true,
-        clientX: at.clientX,
+        clientX,
         clientY: at.clientY,
       })
     );
@@ -201,7 +209,7 @@ function ItemMenuContent({ item, onPage, onDetails }: MenuTarget) {
   const resumeMs = ticksToMs(item.UserData?.PlaybackPositionTicks);
 
   return (
-    <ContextMenuContent data-ui="item-menu">
+    <ContextMenuContent data-ui="item-menu" className="max-sm:w-60">
       <ContextMenuLabel className="line-clamp-1">
         {onPage ? item.Name : itemTitle(item)}
       </ContextMenuLabel>
