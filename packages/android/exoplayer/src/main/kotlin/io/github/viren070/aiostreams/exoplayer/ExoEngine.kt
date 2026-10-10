@@ -180,6 +180,25 @@ class ExoEngine(private val context: Context) :
         buildJsonObject {
             put("engine", "exoplayer")
             for ((type, name) in decoders) put("${type}Decoder", name)
+            player.videoFormat?.let { video ->
+                put("videoMime", video.sampleMimeType)
+                put("videoCodecs", video.codecs)
+                put("width", video.width)
+                put("height", video.height)
+                put("frameRate", video.frameRate)
+                put("videoBitrate", video.bitrate)
+                video.colorInfo?.let {
+                    put("colorTransfer", it.colorTransfer)
+                    put("colorSpace", it.colorSpace)
+                }
+            }
+            player.audioFormat?.let { audio ->
+                put("audioMime", audio.sampleMimeType)
+                put("channels", audio.channelCount)
+                put("sampleRate", audio.sampleRate)
+                put("audioBitrate", audio.bitrate)
+            }
+            put("bufferedMs", player.totalBufferedDuration)
             player.videoDecoderCounters?.let { counters ->
                 counters.ensureUpdated()
                 put("renderedFrames", counters.renderedOutputBufferCount)

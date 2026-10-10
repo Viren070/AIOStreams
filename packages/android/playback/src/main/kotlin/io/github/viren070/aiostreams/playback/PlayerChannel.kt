@@ -2,6 +2,7 @@ package io.github.viren070.aiostreams.playback
 
 import android.os.Handler
 import android.os.Looper
+import android.os.Process
 import android.os.SystemClock
 import android.util.Log
 import java.io.File
@@ -82,6 +83,12 @@ class PlayerChannel(
                     .onFailure { reject(it) }
             }
             "mpv-sync" -> latest.forEach { (name, value) -> send(property(name, value)) }
+            "player-stats" -> send(buildJsonObject {
+                put("type", "player-stats")
+                put("stats", engine.stats())
+                put("cpuMs", Process.getElapsedCpuTime())
+                put("atMs", SystemClock.elapsedRealtime())
+            })
             "subtitle-file" -> runCatching { addSubtitle(message) }.onFailure { reject(it) }
             "now-playing" -> {
                 val item = message["item"] as? JsonObject
