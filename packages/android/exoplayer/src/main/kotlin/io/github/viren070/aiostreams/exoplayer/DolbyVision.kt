@@ -79,7 +79,7 @@ internal class DolbyVisionExtractor(
 }
 
 @OptIn(UnstableApi::class)
-internal class DolbyVisionOutput(
+private class DolbyVisionOutput(
     private val output: ExtractorOutput,
     private val route: (Int) -> DolbyVisionRoute,
     private val onRoute: (codecs: String, DolbyVisionRoute) -> Unit,

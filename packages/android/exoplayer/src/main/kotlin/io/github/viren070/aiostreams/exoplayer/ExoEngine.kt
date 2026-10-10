@@ -125,7 +125,7 @@ class ExoEngine(private val context: Context) :
     private var tunneling = false
 
     init {
-        val extractors = SubtitleExtractors(
+        val extractors = Extractors(
             readBack = { readBack },
             sink = { SubtitleSink(ass.sink(), texts.sink()) },
             route = { dolbyVisionRoute(it, caps) },
@@ -319,7 +319,7 @@ class ExoEngine(private val context: Context) :
         clearExternals()
         ass.reset()
         texts.reset()
-        readBack = if (options.sid == "no") null else SubtitleExtractors.ANY_TRACK
+        readBack = if (options.sid == "no") null else Extractors.ANY_TRACK
         listener?.onEvent("start-file")
         report("idle-active", false)
         report("chapter-list", JsonArray(emptyList()))
