@@ -14,6 +14,8 @@ export const ModalAnatomy = defineStyleAnatomy({
   overlay: cva([
     'UI-Modal__overlay',
     'fixed inset-0 w-screen z-50 bg-black/80',
+    // A layer that outlives the fade, which an Android web view draws empty for a frame as it ends.
+    'will-change-[opacity]',
     'data-[state=open]:animate-in data-[state=closed]:animate-out',
     'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
     // "overflow-y-auto p-0 md:p-4 grid place-items-center",
@@ -24,6 +26,7 @@ export const ModalAnatomy = defineStyleAnatomy({
       'z-50 grid relative w-full w-full shadow-xl border border-[rgb(255_255_255_/_5%)] max-w-lg gap-4 bg-[--paper] p-6 duration-200',
       // A column no wider than the box, which unwrapped text would widen past it.
       'grid-cols-[minmax(0,1fr)]',
+      'will-change-[opacity,transform]',
       'data-[state=open]:animate-in data-[state=closed]:animate-out',
       'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
     ],
