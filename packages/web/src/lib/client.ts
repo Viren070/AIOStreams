@@ -3,9 +3,9 @@ import { currentHost } from './hosts';
 import { reached, unreachable } from './connection';
 import { appBridge } from './hosts/shell/bridge';
 
-// The desktop app is its own client, on the computer it runs on.
+// The apps are their own clients, on the device they run on.
 const shell = appBridge();
-const CLIENT_NAME = shell ? 'AIOStreams Desktop' : 'AIOStreams Web';
+const CLIENT_NAME = clientName();
 const CLIENT_VERSION = shell?.version ?? '1.0.0';
 const DEVICE_KEY = 'aiostreams-web-device';
 
@@ -17,6 +17,12 @@ export function apiBase(): string {
   const { origin, pathname } = window.location;
   const mount = pathname.replace(/\/web(\/(index\.html)?)?$/i, '');
   return origin + (mount && mount !== pathname ? mount : '/jellyfin');
+}
+
+function clientName(): string {
+  if (!shell) return 'AIOStreams Web';
+  if (shell.platform !== 'android') return 'AIOStreams Desktop';
+  return shell.tv ? 'AIOStreams Android TV' : 'AIOStreams Android';
 }
 
 function deviceId(): string {
