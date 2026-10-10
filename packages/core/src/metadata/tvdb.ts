@@ -4,6 +4,7 @@ import { Metadata, MetadataTitle } from './utils.js';
 import { iso6392ToIso6391 } from '../utils/languages.js';
 import { normaliseCountryCode } from '../utils/countries.js';
 import { makeRequest } from '../utils/http.js';
+import { isClosedSeries } from './series-status.js';
 import { z, ZodError } from 'zod';
 
 const logger = createLogger('tvdb');
@@ -171,6 +172,40 @@ const SeriesEpisodesResponseSchema = z.discriminatedUnion('status', [
   TVDBErrorSchema,
 ]);
 
+/** ID-validated status, with a complete default-order catalog for closed series. */
+export interface TVDBEpisodeCatalog {
+  tvdbId: number;
+  title: string;
+  status?: string;
+  episodes: {
+    seasonNumber: number;
+    episodeNumber: number;
+    absoluteEpisodeNumber?: number | null;
+  }[];
+}
+
+const EpisodeCatalogResponseSchema = z.object({
+  status: z.literal('success'),
+  data: z.object({
+    series: z.object({
+      id: z.number(),
+      name: z.string().optional(),
+      status: z.object({ name: z.string() }).optional().catch(undefined),
+    }),
+    episodes: z.array(
+      z.object({
+        seasonNumber: z.number().int().nonnegative(),
+        number: z.number().int().nonnegative(),
+        absoluteNumber: z.number().int().nonnegative().nullable().optional(),
+      })
+    ),
+  }),
+  links: z.object({
+    next: z.string().nullable(),
+    total_items: z.number().int().nonnegative(),
+  }),
+});
+
 const SearchResultSchema = z.looseObject({
   tvdb_id: z.string().optional(),
   name: z.string().optional(),
@@ -213,6 +248,20 @@ export class TVDBMetadata {
   private static readonly ID_CACHE_TTL = 30 * 24 * 60 * 60; // 30 days
   private readonly api: TVDBApi;
 
+  private readonly numberingVetoes = new Set<number>();
+
+  public hasObservedNumberingContradiction(tvdbId: number): boolean {
+    return this.numberingVetoes.has(tvdbId);
+  }
+
+  private observeSeriesStatus(
+    tvdbId: number,
+    status: string | null | undefined
+  ) {
+    if (status?.trim() && !isClosedSeries(status))
+      this.numberingVetoes.add(tvdbId);
+  }
+
   private idCache = Cache.getInstance<string, string>('tvdb:id-map');
 
   public constructor(config: TVDBMetadataConfig) {
@@ -223,8 +272,8 @@ export class TVDBMetadata {
     this.api = new TVDBApi(apiKey);
   }
 
-  private async ensureToken(): Promise<void> {
-    await this.api.ensureToken();
+  private async ensureToken(signal?: AbortSignal): Promise<void> {
+    await this.api.ensureToken(signal);
   }
 
   /**
@@ -273,9 +322,70 @@ export class TVDBMetadata {
     }
   }
 
-  public async searchSeries(query: string): Promise<TVDBSeriesSearchResult[]> {
-    await this.ensureToken();
-    const results = await this.api.search(query, 'series');
+  /** Use the authenticated API when a keyless competitor lookup is unavailable. */
+  public async getEpisodeCatalog(
+    tvdbId: number,
+    signal?: AbortSignal
+  ): Promise<TVDBEpisodeCatalog | undefined> {
+    try {
+      await this.ensureToken(signal);
+      this.observeSeriesStatus(
+        tvdbId,
+        await this.api.getCachedSeriesStatus(tvdbId)
+      );
+      const catalog = await this.api.getEpisodeCatalog(tvdbId, signal);
+      if (catalog.tvdbId !== tvdbId)
+        throw new Error('TVDB catalog identity mismatch');
+      this.observeSeriesStatus(tvdbId, catalog.status);
+      // A language/status read may complete while this cached catalogue loads.
+      this.observeSeriesStatus(
+        tvdbId,
+        await this.api.getCachedSeriesStatus(tvdbId)
+      );
+      return this.numberingVetoes.has(tvdbId) && isClosedSeries(catalog.status)
+        ? undefined
+        : catalog;
+    } catch {
+      logger.debug('TVDB competitor episode catalog unavailable', { tvdbId });
+      return undefined;
+    }
+  }
+
+  /** An ID-validated status needs no complete episode catalog. */
+  public async getSeriesStatus(
+    tvdbId: number,
+    signal?: AbortSignal
+  ): Promise<string | undefined> {
+    await this.ensureToken(signal);
+    const series = (await this.api.getSeries(tvdbId, signal)).data;
+    if (series?.id !== tvdbId) throw new Error('TVDB series identity mismatch');
+    this.observeSeriesStatus(tvdbId, series.status?.name);
+    return series.status?.name ?? undefined;
+  }
+
+  /** Read the original language without loading aliases or episode catalogs. */
+  public async getOriginalLanguage(
+    tvdbId: number,
+    signal?: AbortSignal
+  ): Promise<string | undefined> {
+    try {
+      await this.ensureToken(signal);
+      const series = (await this.api.getSeries(tvdbId, signal)).data;
+      if (series?.id !== tvdbId) return undefined;
+      this.observeSeriesStatus(tvdbId, series.status?.name);
+      return series.originalLanguage;
+    } catch {
+      return undefined;
+    }
+  }
+
+  public async searchSeries(
+    query: string,
+    signal?: AbortSignal
+  ): Promise<TVDBSeriesSearchResult[]> {
+    signal?.throwIfAborted();
+    await this.ensureToken(signal);
+    const results = await this.api.search(query, 'series', signal);
     return results
       .filter((r) => r.tvdb_id && r.name)
       .map((r) => {
@@ -438,6 +548,9 @@ class TVDBApi {
   // Cache instances
   private readonly cache = {
     token: Cache.getInstance<string, string>('tvdb:token'),
+    episodeCatalog: Cache.getInstance<number, TVDBEpisodeCatalog>(
+      'tvdb:episodeCatalog:v2'
+    ),
     series: Cache.getInstance<number, z.infer<typeof SeriesResponseSchema>>(
       'tvdb:series'
     ),
@@ -468,8 +581,9 @@ class TVDBApi {
     this.headers.Authorization = `Bearer ${token}`;
   }
 
-  public async ensureToken(): Promise<void> {
+  public async ensureToken(signal?: AbortSignal): Promise<void> {
     const getToken = async () => {
+      signal?.throwIfAborted();
       logger.debug('Logging in to TVDB API');
       const response = await this.request<z.infer<typeof AuthTokenSchema>>(
         '/login',
@@ -477,6 +591,7 @@ class TVDBApi {
           schema: AuthTokenSchema,
           method: 'POST',
           timeout: 3000,
+          signal,
           body: {
             apikey: this.apiKey,
           },
@@ -519,18 +634,22 @@ class TVDBApi {
 
   public async search(
     query: string,
-    type: 'series' | 'movie'
+    type: 'series' | 'movie',
+    signal?: AbortSignal
   ): Promise<z.infer<typeof SearchResultSchema>[]> {
     return this.cache.search.wrap(
       async () => {
+        signal?.throwIfAborted();
         logger.debug(`Searching TVDB: ${query} (${type})`);
         const response = await this.request<
           z.infer<typeof SearchResponseSchema>
         >(`/search?query=${encodeURIComponent(query)}&type=${type}`, {
           schema: SearchResponseSchema,
           timeout: 5000,
+          signal,
         });
-        return response.status === 'success' ? response.data : [];
+        if (response.status !== 'success') throw new Error(response.message);
+        return response.data;
       },
       `${type}:${query.toLowerCase()}`,
       7 * 24 * 60 * 60 // 7 days
@@ -538,21 +657,91 @@ class TVDBApi {
   }
 
   public async getSeries(
-    id: number
+    id: number,
+    signal?: AbortSignal
   ): Promise<z.infer<typeof SeriesResponseSchema>> {
     return this.cache.series.wrap(
       async () => {
+        signal?.throwIfAborted();
         logger.debug(`Getting series: ${id}`);
         return this.request<z.infer<typeof SeriesResponseSchema>>(
           `/series/${id}`,
           {
             schema: SeriesResponseSchema,
             timeout: 5000,
+            signal,
           }
         );
       },
       id,
       7 * 24 * 60 * 60 // 7 days
+    );
+  }
+
+  /** Reuse an already fetched, ID-validated series status without another request. */
+  public async getCachedSeriesStatus(
+    id: number
+  ): Promise<string | null | undefined> {
+    const response = await this.cache.series.get(id);
+    return response?.status === 'success' && response.data.id === id
+      ? response.data.status?.name
+      : undefined;
+  }
+
+  /** Load every page of a closed series catalog within the caller's budget. */
+  public async getEpisodeCatalog(
+    id: number,
+    signal?: AbortSignal
+  ): Promise<TVDBEpisodeCatalog> {
+    return this.cache.episodeCatalog.wrap(
+      async () => {
+        const catalog: TVDBEpisodeCatalog = {
+          tvdbId: id,
+          title: '',
+          episodes: [],
+        };
+        for (let page = 0; page < 10; page++) {
+          signal?.throwIfAborted();
+          const response = await this.request<
+            z.infer<typeof EpisodeCatalogResponseSchema>
+          >(`/series/${id}/episodes/default?page=${page}`, {
+            schema: EpisodeCatalogResponseSchema,
+            timeout: 5000,
+            signal,
+          });
+          if (response.data.series.id !== id)
+            throw new Error('Episode catalog identity mismatch');
+          catalog.title = response.data.series.name ?? '';
+          const status = response.data.series.status?.name;
+          if (page && status !== catalog.status)
+            throw new Error('Conflicting series status across catalog pages');
+          catalog.status = status;
+          // Preserve an ID-validated open status without pretending the
+          // partial episode list supplies bounds.
+          if (status?.trim() && !isClosedSeries(status)) return catalog;
+          if (!isClosedSeries(status))
+            throw new Error('Competitor is not known to be ended');
+          catalog.episodes.push(
+            ...response.data.episodes.map((episode) => ({
+              seasonNumber: episode.seasonNumber,
+              episodeNumber: episode.number,
+              // TVDB uses zero when no absolute number has been assigned.
+              absoluteEpisodeNumber: episode.absoluteNumber || undefined,
+            }))
+          );
+          if (!response.links.next) {
+            if (catalog.episodes.length !== response.links.total_items)
+              throw new Error('Incomplete episode catalog');
+            return catalog;
+          }
+          if (!response.data.episodes.length)
+            throw new Error('Empty intermediate episode page');
+        }
+        // A truncated catalog must never become evidence that a show is shorter.
+        throw new Error('Episode catalog pagination limit reached');
+      },
+      id,
+      24 * 60 * 60
     );
   }
 
@@ -650,6 +839,7 @@ class TVDBApi {
       body?: unknown;
       method?: string;
       timeout?: number;
+      signal?: AbortSignal;
     }
   ): Promise<T> {
     const { schema, body, method = 'GET' } = options;
@@ -659,11 +849,20 @@ class TVDBApi {
     logger.debug(`Making ${method} request to ${path}`);
 
     try {
+      options.signal?.throwIfAborted();
       const response = await makeRequest(url.toString(), {
         method,
         headers: this.headers,
         body: body ? JSON.stringify(body) : undefined,
         timeout: options.timeout ?? appConfig.userLimits.timeouts.maxTimeout,
+        signal: options.signal
+          ? AbortSignal.any([
+              options.signal,
+              AbortSignal.timeout(
+                options.timeout ?? appConfig.userLimits.timeouts.maxTimeout
+              ),
+            ])
+          : undefined,
       });
 
       const data = (await response.json()) as unknown;

@@ -1,5 +1,6 @@
 import bytes from 'bytes';
 import { Stream, ParsedStream, Addon, ParsedFile } from '../db/index.js';
+import { ReleaseIdsSchema } from '../db/schemas.js';
 import {
   constants,
   createLogger,
@@ -95,6 +96,17 @@ class StreamParser {
     return undefined;
   }
 
+  protected getReleaseIds(stream: Stream): ParsedStream['releaseIds'] {
+    const result = ReleaseIdsSchema.safeParse(stream.releaseIds);
+    return result.success && (result.data.imdbId || result.data.tvdbId)
+      ? result.data
+      : undefined;
+  }
+
+  protected getReleaseMedium(stream: Stream): ParsedStream['releaseMedium'] {
+    return undefined;
+  }
+
   parse(stream: Stream): ParsedStream | { skip: true } {
     if (this.shouldSkip(stream)) {
       return { skip: true };
@@ -114,6 +126,8 @@ class StreamParser {
       nzbUrl: stream.nzbUrl || undefined,
       releaseKey: this.getReleaseKey(stream),
       idMatched: this.getIdMatched(stream),
+      releaseIds: this.getReleaseIds(stream),
+      releaseMedium: this.getReleaseMedium(stream),
       tarUrls: stream.tarUrls ?? undefined,
       tgzUrls: stream.tgzUrls ?? undefined,
       '7zipUrls': stream['7zipUrls'] ?? undefined,

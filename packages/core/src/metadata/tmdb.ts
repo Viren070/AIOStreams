@@ -1,4 +1,10 @@
-﻿import { Headers } from 'undici';
+﻿import pLimit from 'p-limit';
+import { isClosedSeries } from './series-status.js';
+import type {
+  ConflictEpisodeCatalog,
+  ConflictNumberingBounds,
+} from '../streams/title-conflict-episodes.js';
+import { Headers } from 'undici';
 import {
   appConfig,
   Cache,
@@ -293,6 +299,65 @@ const IdTypeMap: Partial<Record<IdType, TMDBIdType>> = {
   themoviedbId: 'tmdb_id',
 };
 
+// Each fact is validated separately after checking the response ID.
+const ConflictShowSchema = z.object({
+  id: z.number().int().positive(),
+  status: z.unknown().optional(),
+  original_language: z.unknown().optional(),
+  genres: z.unknown().optional(),
+  number_of_seasons: z.unknown().optional(),
+  number_of_episodes: z.unknown().optional(),
+  seasons: z.unknown().optional(),
+});
+const ConflictSeasonSummarySchema = z
+  .object({
+    status: z.string().optional().catch(undefined),
+    number_of_seasons: z.number().int().positive(),
+    seasons: z.array(
+      z.object({ season_number: z.number().int().nonnegative() })
+    ),
+  })
+  .refine((show) => {
+    const seasons = show.seasons
+      .map((s) => s.season_number)
+      .filter((n) => n > 0)
+      .sort((a, b) => a - b);
+    return (
+      seasons.length === show.number_of_seasons &&
+      seasons.every((n, i) => n === i + 1)
+    );
+  }, 'Incomplete TMDB season summary');
+const ConflictCatalogSummarySchema = z
+  .object({
+    status: z.string().optional().catch(undefined),
+    number_of_seasons: z.number().int().positive(),
+    number_of_episodes: z.number().int().positive(),
+    seasons: z.array(
+      z.object({
+        season_number: z.number().int().nonnegative(),
+        episode_count: z.number().int().nonnegative(),
+      })
+    ),
+  })
+  .refine((show) => {
+    const seasons = show.seasons
+      .filter((s) => s.season_number > 0)
+      .sort((a, b) => a.season_number - b.season_number);
+    return (
+      seasons.length === show.number_of_seasons &&
+      seasons.every(
+        (s, i) => s.season_number === i + 1 && s.episode_count > 0
+      ) &&
+      seasons.reduce((n, s) => n + s.episode_count, 0) ===
+        show.number_of_episodes
+    );
+  }, 'Incomplete TMDB catalog summary');
+const OriginalLanguageSchema = z.string().trim().min(1);
+const ConflictStatusSchema = z.string().trim().min(1);
+const ConflictGenresSchema = z.array(
+  GenreSchema.extend({ name: z.string().trim().min(1) })
+);
+
 export class TMDBMetadata {
   private readonly TMDB_ID_REGEX = /^(?:tmdb)[-:](\d+)(?::\d+:\d+)?$/;
   private readonly TVDB_ID_REGEX = /^(?:tvdb)[-:](\d+)(?::\d+:\d+)?$/;
@@ -303,6 +368,14 @@ export class TMDBMetadata {
   >('tmdb_id_conversion');
   private static readonly metadataCache: Cache<string, Metadata> =
     Cache.getInstance<string, Metadata>('tmdb_metadata');
+  private static readonly catalogCache = Cache.getInstance<
+    number,
+    ConflictEpisodeCatalog
+  >('tmdb_episode_catalog:v3');
+  private static readonly conflictShowCache = Cache.getInstance<
+    number,
+    z.infer<typeof ConflictShowSchema>
+  >('tmdb_conflict_show:v2');
   private readonly accessToken: string | undefined;
   private readonly apiKey: string | undefined;
   private static readonly validationCache: Cache<string, boolean> =
@@ -319,6 +392,58 @@ export class TMDBMetadata {
     Cache.getInstance<string, TMDBTitle[]>('tmdb_recommendations');
   private static readonly imdbIdCache: Cache<string, string> =
     Cache.getInstance<string, string>('tmdb_imdb_id');
+  private readonly conflictShowRequests = new Map<
+    number,
+    Promise<z.infer<typeof ConflictShowSchema>>
+  >();
+  private readonly numberingVetoes = new Set<number>();
+  private readonly numberingObservations = new Map<
+    number,
+    ConflictNumberingBounds
+  >();
+
+  /** Contradictory response facts cannot be hidden by memoized bounds. */
+  public hasObservedNumberingContradiction(tmdbId: number): boolean {
+    return this.numberingVetoes.has(tmdbId);
+  }
+
+  /** Read verified counts already observed by this client, without a lookup. */
+  public getObservedNumberingBounds(
+    tmdbId: number
+  ): Readonly<ConflictNumberingBounds> | undefined {
+    return this.numberingObservations.get(tmdbId);
+  }
+
+  private observeConflictShow(show: z.infer<typeof ConflictShowSchema>) {
+    if (
+      ConflictStatusSchema.safeParse(show.status).success &&
+      !isClosedSeries(show.status)
+    )
+      this.numberingVetoes.add(show.id);
+    const season = ConflictSeasonSummarySchema.safeParse(show);
+    if (!season.success) return;
+    const catalog = ConflictCatalogSummarySchema.safeParse(show);
+    const previous = this.numberingObservations.get(show.id);
+    if (!isClosedSeries(show.status)) {
+      if (
+        previous &&
+        (season.data.number_of_seasons > previous.season ||
+          (catalog.success &&
+            previous.episode !== undefined &&
+            catalog.data.number_of_episodes > previous.episode))
+      )
+        this.numberingVetoes.add(show.id);
+      return;
+    }
+    this.numberingObservations.set(show.id, {
+      season: Math.max(previous?.season ?? 0, season.data.number_of_seasons),
+      episode: catalog.success
+        ? Math.max(previous?.episode ?? 0, catalog.data.number_of_episodes)
+        : season.data.number_of_seasons <= (previous?.season ?? 0)
+          ? previous?.episode
+          : undefined,
+    });
+  }
   public constructor(auth?: { accessToken?: string; apiKey?: string }) {
     if (
       !auth?.accessToken &&
@@ -655,6 +780,226 @@ export class TMDBMetadata {
     return data.results.flatMap((result) => result.release_dates);
   }
 
+  /** A missing language must not invalidate otherwise usable show facts. */
+  public async getOriginalLanguage(
+    tmdbId: number,
+    signal?: AbortSignal
+  ): Promise<string> {
+    const show = await this.getConflictShow(
+      tmdbId,
+      signal,
+      (cached) =>
+        OriginalLanguageSchema.safeParse(cached.original_language).success
+    );
+    return OriginalLanguageSchema.parse(show.original_language);
+  }
+
+  /** Validate the complete season list independently of individual episode data. */
+  public async getSeasonBound(
+    tmdbId: number,
+    signal?: AbortSignal
+  ): Promise<number> {
+    return (await this.getSeasonSummary(tmdbId, signal)).seasonBound;
+  }
+
+  public async getGenres(
+    tmdbId: number,
+    signal?: AbortSignal
+  ): Promise<string[] | undefined> {
+    const show = await this.getConflictShow(
+      tmdbId,
+      signal,
+      (cached) => ConflictGenresSchema.safeParse(cached.genres).success
+    );
+    return ConflictGenresSchema.optional()
+      .catch(undefined)
+      .parse(show.genres)
+      ?.map((genre) => genre.name);
+  }
+
+  /** Check each consumer's cache needs, then share only the HTTP refresh. */
+  private async getConflictShow(
+    tmdbId: number,
+    signal?: AbortSignal,
+    usable = (_show: z.infer<typeof ConflictShowSchema>) => true
+  ) {
+    signal?.throwIfAborted();
+    const stored = await TMDBMetadata.conflictShowCache.get(tmdbId);
+    const cached = stored?.id === tmdbId ? stored : undefined;
+    if (cached) this.observeConflictShow(cached);
+    if (cached && usable(cached)) return cached;
+    signal?.throwIfAborted();
+    const pending = this.conflictShowRequests.get(tmdbId);
+    if (pending) return pending;
+    const request = (async () => {
+      const show = ConflictShowSchema.parse(
+        await this.getJson(`/tv/${tmdbId}`, {}, signal)
+      );
+      if (show.id !== tmdbId) throw new Error('TMDB series identity mismatch');
+      if (cached) {
+        // A partial refresh must not erase independently validated facts.
+        for (const [field, schema] of [
+          ['original_language', OriginalLanguageSchema],
+          ['genres', ConflictGenresSchema],
+        ] as const)
+          if (
+            !schema.safeParse(show[field]).success &&
+            schema.safeParse(cached[field]).success
+          )
+            show[field] = cached[field];
+        // Keep numbering together; never combine counts from different replies.
+        if (
+          show.number_of_seasons === undefined &&
+          show.number_of_episodes === undefined &&
+          show.seasons === undefined &&
+          (show.status === undefined ||
+            (isClosedSeries(cached.status) && isClosedSeries(show.status)))
+        ) {
+          show.number_of_seasons = cached.number_of_seasons;
+          show.number_of_episodes = cached.number_of_episodes;
+          show.seasons = cached.seasons;
+          // Counts observed while ongoing/unknown cannot become final merely
+          // because a later status-only reply says the series has ended.
+          if (show.status === undefined) show.status = cached.status;
+        }
+      }
+      this.observeConflictShow(show);
+      await TMDBMetadata.conflictShowCache.set(tmdbId, show, 24 * 60 * 60);
+      return show;
+    })();
+    this.conflictShowRequests.set(tmdbId, request);
+    try {
+      return await request;
+    } finally {
+      this.conflictShowRequests.delete(tmdbId);
+    }
+  }
+
+  private async getSeasonSummary(tmdbId: number, signal?: AbortSignal) {
+    const facts = await this.getConflictShow(
+      tmdbId,
+      signal,
+      (cached) =>
+        ConflictStatusSchema.safeParse(cached.status).success &&
+        (!isClosedSeries(cached.status) ||
+          ConflictSeasonSummarySchema.safeParse(cached).success)
+    );
+    if (!isClosedSeries(facts.status))
+      throw new Error('Competitor is not known to be ended');
+    const show = ConflictSeasonSummarySchema.parse(facts);
+    return { seasonBound: show.number_of_seasons, status: show.status };
+  }
+
+  /** Fetch a complete regular-season catalog; failures and partial data are not cached. */
+  public async getEpisodeCatalog(
+    tmdbId: number,
+    signal?: AbortSignal
+  ): Promise<ConflictEpisodeCatalog> {
+    const catalog = await TMDBMetadata.catalogCache.wrap(
+      async () => {
+        const read = async (path: string) => {
+          signal?.throwIfAborted();
+          const url = new URL(API_BASE_URL + path);
+          this.addSearchParams(url);
+          const response = await makeRequest(url.toString(), {
+            timeout: 5000,
+            signal,
+            headers: this.getHeaders(),
+          });
+          if (!response.ok)
+            throw new Error(`TMDB catalog request failed: ${response.status}`);
+          return response.json();
+        };
+        const facts = await this.getConflictShow(
+          tmdbId,
+          signal,
+          (cached) =>
+            ConflictStatusSchema.safeParse(cached.status).success &&
+            (!isClosedSeries(cached.status) ||
+              ConflictCatalogSummarySchema.safeParse(cached).success)
+        );
+        if (!isClosedSeries(facts.status))
+          throw new Error('Competitor is not known to be ended');
+        const show = ConflictCatalogSummarySchema.parse(facts);
+        const seasons = show.seasons
+          .filter((s) => s.season_number > 0)
+          .sort((a, b) => a.season_number - b.season_number);
+        const limit = pLimit(3);
+        const lists = await Promise.all(
+          seasons.map((season) =>
+            limit(async () => {
+              const data = z
+                .object({
+                  season_number: z.number().int(),
+                  episodes: z.array(
+                    z.object({
+                      show_id: z.number().int(),
+                      season_number: z.number().int(),
+                      episode_number: z.number().int().positive(),
+                    })
+                  ),
+                })
+                .parse(
+                  await read(`/tv/${tmdbId}/season/${season.season_number}`)
+                );
+              const episodes = data.episodes.sort(
+                (a, b) => a.episode_number - b.episode_number
+              );
+              if (
+                data.season_number !== season.season_number ||
+                episodes.length !== season.episode_count ||
+                episodes.some(
+                  (e, i) =>
+                    e.show_id !== tmdbId ||
+                    e.season_number !== season.season_number ||
+                    e.episode_number !== i + 1
+                )
+              )
+                throw new Error('Incomplete or mismatched TMDB season catalog');
+              return episodes.map((e) => ({
+                seasonNumber: e.season_number,
+                episodeNumber: e.episode_number,
+              }));
+            })
+          )
+        );
+        return { tmdbId, status: show.status, episodes: lists.flat() };
+      },
+      tmdbId,
+      24 * 60 * 60
+    );
+    // Recheck already observed show facts even on a catalog-cache hit, and after
+    // page loading: a concurrent refresh can supersede the catalog's status.
+    const latest = await TMDBMetadata.conflictShowCache.get(tmdbId);
+    if (latest?.id === tmdbId) {
+      this.observeConflictShow(latest);
+      if (!isClosedSeries(latest.status)) {
+        await TMDBMetadata.catalogCache.delete(tmdbId);
+        throw new Error('Competitor is not known to be ended');
+      }
+      const counts = ConflictCatalogSummarySchema.safeParse(latest);
+      if (!counts.success) {
+        await TMDBMetadata.catalogCache.delete(tmdbId);
+        throw new Error('Cached TMDB catalog lacks coherent current numbering');
+      }
+      const episodes = catalog.episodes ?? [];
+      if (
+        counts.data.number_of_seasons !==
+          Math.max(...episodes.map((e) => e.seasonNumber ?? 0)) ||
+        counts.data.seasons.some(
+          (s) =>
+            s.season_number > 0 &&
+            s.episode_count !==
+              episodes.filter((e) => e.seasonNumber === s.season_number).length
+        )
+      ) {
+        await TMDBMetadata.catalogCache.delete(tmdbId);
+        throw new Error('Cached TMDB catalog contradicts current show facts');
+      }
+    }
+    return catalog;
+  }
+
   public async getEpisodeDetails(
     tmdbId: number,
     seasonNumber: number,
@@ -711,14 +1056,19 @@ export class TMDBMetadata {
     return details;
   }
 
-  public async searchSeries(query: string): Promise<TMDBSeriesSearchResult[]> {
+  public async searchSeries(
+    query: string,
+    signal?: AbortSignal
+  ): Promise<TMDBSeriesSearchResult[]> {
     return TMDBMetadata.searchCache.wrap(
       async () => {
+        signal?.throwIfAborted();
         const url = new URL(API_BASE_URL + '/search/tv');
         url.searchParams.set('query', query);
         this.addSearchParams(url);
         const response = await makeRequest(url.toString(), {
           timeout: 5000,
+          signal,
           headers: this.getHeaders(),
         });
         if (!response.ok) {
@@ -782,7 +1132,12 @@ export class TMDBMetadata {
     );
   }
 
-  private async getJson(path: string, params: Record<string, string> = {}) {
+  private async getJson(
+    path: string,
+    params: Record<string, string> = {},
+    signal?: AbortSignal
+  ) {
+    signal?.throwIfAborted();
     const url = new URL(API_BASE_URL + path);
     for (const [key, value] of Object.entries(params)) {
       url.searchParams.set(key, value);
@@ -790,6 +1145,7 @@ export class TMDBMetadata {
     this.addSearchParams(url);
     const response = await makeRequest(url.toString(), {
       timeout: 5000,
+      signal,
       headers: this.getHeaders(),
     });
     if (response.status === 404) return undefined;
