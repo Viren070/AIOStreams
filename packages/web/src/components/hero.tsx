@@ -211,6 +211,8 @@ function HeroDetails({
   const { client } = useSession();
   const picker = useVersionPicker();
   const logo = logoUrl(client, item, { maxWidth: 384 });
+  // By address, since the hero swaps items under the same details.
+  const [failedLogo, setFailedLogo] = React.useState<string>();
   // Jellyfin cannot play a virtual item, such as an episode not yet aired.
   const playable =
     (item.Type === 'Movie' || item.Type === 'Episode') &&
@@ -240,11 +242,12 @@ function HeroDetails({
 
   return (
     <>
-      {logo ? (
+      {logo && failedLogo !== logo ? (
         <CachedImage
           data-ui="hero-logo"
           src={logo}
           alt={item.Name ?? ''}
+          onError={() => setFailedLogo(logo)}
           className="max-h-20 max-w-[min(24rem,75%)] object-contain object-left lg:max-h-28"
         />
       ) : (
