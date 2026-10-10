@@ -2284,7 +2284,7 @@ export function SettingsPage({
         triggerClass={cn(
           'h-9 w-fit rounded-lg border-0 px-3 text-base lg:w-full lg:justify-start',
           'data-[state=active]:bg-[--subtle] data-[state=active]:text-white dark:hover:text-white',
-          'transition-all duration-200 hover:bg-[--subtle]/50 focus-visible:ring-0 focus-visible:ring-offset-0',
+          'transition duration-200 hover:bg-[--subtle]/50 focus-visible:ring-0 focus-visible:ring-offset-0',
           'motion-reduce:[[data-tv]_&]:focus-visible:bg-white/20'
         )}
         // The sliding marker carries the focus mark, so the two move together.
