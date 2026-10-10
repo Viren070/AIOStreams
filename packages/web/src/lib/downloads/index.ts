@@ -1,6 +1,6 @@
 import React from 'react';
 import { toast } from 'sonner';
-import type { JellyfinClient } from '../client';
+import { JellyfinError, type JellyfinClient } from '../client';
 import { currentHost } from '../hosts';
 import { playableSources } from '../playback/play';
 import { requestItem, requestPlaybackInfo } from '../queries';
@@ -343,6 +343,9 @@ function onHostEvent(event: HostEvent, readded: Set<string>) {
   }
 }
 
+/** The server's default window for version searches, where it doesn't say how long to wait. */
+const RATE_LIMITED_MS = 15_000;
+
 /**
  * Keeps the page's downloads and the app's in step, and finds versions for
  * this server's downloads, a few at a time.
@@ -353,6 +356,9 @@ export function useDownloadRunner(): void {
   const host = downloadsHost();
   const active = React.useRef(new Set<string>());
   const [ready, setReady] = React.useState(false);
+  // Searches the server turned away wait until it takes them again.
+  const limitedUntil = React.useRef(0);
+  const [retry, setRetry] = React.useState(0);
 
   React.useEffect(() => {
     if (!host) return;
@@ -404,6 +410,13 @@ export function useDownloadRunner(): void {
       release(download, pick.aiostreams?.bingeGroup ?? null);
       await place(client, download, pick);
     } catch (e) {
+      if (e instanceof JellyfinError && e.status === 429) {
+        limitedUntil.current = Math.max(
+          limitedUntil.current,
+          Date.now() + (e.retryAfterMs ?? RATE_LIMITED_MS)
+        );
+        return;
+      }
       updateDownloads([
         {
           id: download.id,
@@ -419,6 +432,11 @@ export function useDownloadRunner(): void {
 
   React.useEffect(() => {
     if (!host || !ready) return;
+    const wait = limitedUntil.current - Date.now();
+    if (wait > 0) {
+      const timer = setTimeout(() => setRetry((n) => n + 1), wait);
+      return () => clearTimeout(timer);
+    }
     const cap = settings.downloads.searches.read();
     const waiting = list.filter(
       (d) =>
@@ -438,5 +456,5 @@ export function useDownloadRunner(): void {
         updateDownloads([{ id: d.id, patch: {} }], false);
       });
     }
-  }, [host, ready, list, client.base, user.Id, resolve]);
+  }, [host, ready, list, client.base, user.Id, resolve, retry]);
 }

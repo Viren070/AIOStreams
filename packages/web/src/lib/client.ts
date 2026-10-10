@@ -62,7 +62,9 @@ function deviceName(): string {
 export class JellyfinError extends Error {
   constructor(
     readonly status: number,
-    message: string
+    message: string,
+    /** How long the server asks to wait before trying again, where it says. */
+    readonly retryAfterMs?: number
   ) {
     super(message);
   }
@@ -143,9 +145,11 @@ export class JellyfinClient {
         .json()
         .then((body: { Message?: string }) => body?.Message)
         .catch(() => undefined);
+      const retryAfter = Number(res.headers.get('Retry-After') ?? NaN);
       throw new JellyfinError(
         res.status,
-        message || `Request failed (${res.status})`
+        message || `Request failed (${res.status})`,
+        Number.isFinite(retryAfter) ? retryAfter * 1000 : undefined
       );
     }
     const text = await res.text();
