@@ -545,39 +545,31 @@ export class WatchStateRepository {
     const shown = new Set<string>();
     for (let offset = 0; ; offset += page) {
       // Picks the series first, so only their rows are ranked, not the history.
-      const latest = await getDb().query<{
-        series_key: string;
-        at: number | string;
-      }>(
-        sql`SELECT series_key, MAX(sort_at) AS at FROM watch_state
-             WHERE ${where}
-             GROUP BY series_key
-             ORDER BY at DESC, series_key
-             LIMIT ${page} OFFSET ${offset}`
-      );
-      if (!latest.length) return;
-      const lastAt = new Map(latest.map((l) => [l.series_key, Number(l.at)]));
-      const anchors = join(
-        latest.map(
-          (l) =>
-            sql`(series_key = ${l.series_key} AND sort_at = ${Number(l.at)})`
-        ),
-        ' OR '
-      );
       const rows = (
         await getDb().query<DbRow>(
-          sql`SELECT * FROM (
-                 SELECT *, ROW_NUMBER() OVER (
-                          PARTITION BY series_key
-                          ORDER BY season DESC, episode DESC
+          sql`WITH latest AS (
+                 SELECT series_key, MAX(sort_at) AS at FROM watch_state
+                  WHERE ${where}
+                  GROUP BY series_key
+                  ORDER BY at DESC, series_key
+                  LIMIT ${page} OFFSET ${offset}
+               )
+               SELECT * FROM (
+                 SELECT w.*, ROW_NUMBER() OVER (
+                          PARTITION BY w.series_key
+                          ORDER BY w.season DESC, w.episode DESC
                         ) AS series_rank
-                   FROM watch_state
-                  WHERE ${where} AND (${anchors})
+                   FROM latest l
+                   JOIN watch_state w
+                     ON w.uuid = ${scope.uuid} AND w.persona = ${scope.persona}
+                    AND w.series_key = l.series_key AND w.sort_at = l.at
+                  WHERE w.episode IS NOT NULL AND ${WATCHED}
                ) ranked
                WHERE series_rank = 1
                ORDER BY sort_at DESC, season DESC, episode DESC`
         )
       ).map(toRow);
+      if (!rows.length) return;
       const showOf = (row: WatchStateRow) =>
         row.matchKey ? seriesKeyOfMatch(row.matchKey, row.mediaType) : null;
       const droppedAt = await this.dropTimes(scope, [
@@ -587,12 +579,12 @@ export class WatchStateRepository {
           )
         ),
       ]);
-      const kept = rows.filter((row) => {
-        const at = lastAt.get(row.seriesKey!) ?? 0;
-        return ![row.seriesKey, showOf(row)].some(
-          (key) => key && (droppedAt.get(key) ?? 0) > at
-        );
-      });
+      const kept = rows.filter(
+        (row) =>
+          ![row.seriesKey, showOf(row)].some(
+            (key) => key && (droppedAt.get(key) ?? 0) > row.sortAt
+          )
+      );
       const bySeries = new Map(kept.map((row) => [row.seriesKey!, row]));
       for (const row of kept) {
         const show = showOf(row) ?? row.seriesKey!;
@@ -601,7 +593,7 @@ export class WatchStateRepository {
         const whole = bySeries.get(show);
         yield whole && whole !== row ? underShow(row, whole) : row;
       }
-      if (latest.length < page) return;
+      if (rows.length < page) return;
     }
   }
 
