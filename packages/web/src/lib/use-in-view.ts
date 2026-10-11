@@ -121,16 +121,18 @@ let listening = false;
 function listen() {
   if (listening) return;
   listening = true;
-  const all = () => {
-    layout++;
-    measureTwice([...measured]);
-  };
   document.addEventListener('scroll', onScroll, {
     capture: true,
     passive: true,
   });
-  addEventListener('resize', all);
-  addEventListener('hashchange', all);
+  addEventListener('resize', () => {
+    layout++;
+    measureTwice([...measured]);
+  });
+  addEventListener('hashchange', () => {
+    layout++;
+    measureSoon();
+  });
   new ResizeObserver(() => {
     layout++;
     measureSoon();
