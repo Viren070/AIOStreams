@@ -646,7 +646,6 @@ function Seasons({
   focusEpisodeId?: string;
   onSeason: (season: BaseItemDto | undefined) => void;
 }) {
-  const { client } = useSession();
   const [layoutPref] = useSetting(settings.episodeLayout);
   const wide = useMediaQuery('(min-width: 1024px)');
   const layout = layoutPref === 'auto' ? (wide ? 'row' : 'list') : layoutPref;
@@ -660,13 +659,16 @@ function Seasons({
     if (!chosen && settled && fallback) setChosen(fallback);
   }, [chosen, settled, fallback]);
   const seasonId = chosen ?? fallback;
-  const pick = (id: string) => {
-    setChosen(id);
-    navigate(`${to.item(series.Id!)}?season=${id}`, {
-      replace: true,
-      keepScroll: true,
-    });
-  };
+  const pick = React.useCallback(
+    (id: string) => {
+      setChosen(id);
+      navigate(`${to.item(series.Id!)}?season=${id}`, {
+        replace: true,
+        keepScroll: true,
+      });
+    },
+    [series.Id]
+  );
   const season = list.find((s) => s.Id === seasonId);
   React.useEffect(() => onSeason(season), [season, onSeason]);
   React.useEffect(() => () => onSeason(undefined), [onSeason]);
@@ -709,70 +711,7 @@ function Seasons({
   return (
     <Section name="episodes" title={ownPosters ? undefined : 'Episodes'}>
       {ownPosters ? (
-        <MediaRow
-          id="seasons"
-          title="Episodes"
-          shape="poster"
-          itemClass="basis-[7rem] sm:basis-[8rem] lg:basis-[8.5rem]"
-        >
-          {list.map((s) => {
-            const selected = s.Id === seasonId;
-            const poster = posterUrl(client, s, { maxWidth: 120 });
-            return (
-              <ItemMenu key={s.Id} item={s} onPage>
-                <button
-                  type="button"
-                  data-ui="season-poster"
-                  data-selected={selected || undefined}
-                  data-focus="own"
-                  onClick={() => pick(s.Id!)}
-                  className="group/season w-full space-y-2 text-left"
-                >
-                  <div className="relative aspect-[2/3] overflow-hidden rounded-lg bg-gray-900">
-                    {poster && (
-                      <CachedImage
-                        src={poster}
-                        alt=""
-                        loading="lazy"
-                        className={cn(
-                          'absolute inset-0 h-full w-full object-cover transition-opacity [transition-duration:250ms]',
-                          !selected &&
-                            'opacity-60 group-hover/season:opacity-100 group-focus-visible/season:opacity-100'
-                        )}
-                      />
-                    )}
-                    <FocusRing className="group-focus-visible/season:opacity-100" />
-                    {/* Drawn inside, since the row clips anything outside it. */}
-                    <span
-                      className={cn(
-                        'pointer-events-none absolute inset-0 rounded-lg ring-inset',
-                        selected ? 'ring-2 ring-white' : 'ring-1 ring-white/10'
-                      )}
-                    />
-                    {s.UserData?.Played && (
-                      <span
-                        data-ui="watched-badge"
-                        className="absolute right-1.5 top-1.5 flex size-5 items-center justify-center rounded-full bg-brand-500 text-white"
-                      >
-                        <BiCheck />
-                      </span>
-                    )}
-                  </div>
-                  <p
-                    className={cn(
-                      'truncate text-sm',
-                      selected
-                        ? 'font-semibold text-white'
-                        : 'text-[--muted] group-hover/season:text-white group-focus-visible/season:text-white'
-                    )}
-                  >
-                    {s.Name}
-                  </p>
-                </button>
-              </ItemMenu>
-            );
-          })}
-        </MediaRow>
+        <SeasonPosters seasons={list} selected={seasonId} onSelect={pick} />
       ) : (
         <SeasonPills seasons={list} selected={seasonId} onSelect={pick} />
       )}
@@ -835,6 +774,85 @@ function Seasons({
 
 const ROW_WIDTH =
   'basis-[85%] sm:basis-[20rem] lg:basis-[22rem] 2xl:basis-[24rem]';
+
+// Apart from the episodes below, which redraw as they arrive and as the season settles.
+const SeasonPosters = React.memo(function SeasonPosters({
+  seasons,
+  selected,
+  onSelect,
+}: {
+  seasons: BaseItemDto[];
+  selected?: string;
+  onSelect: (id: string) => void;
+}) {
+  const { client } = useSession();
+  return (
+    <MediaRow
+      id="seasons"
+      title="Episodes"
+      shape="poster"
+      itemClass="basis-[7rem] sm:basis-[8rem] lg:basis-[8.5rem]"
+    >
+      {seasons.map((s) => {
+        const isSelected = s.Id === selected;
+        const poster = posterUrl(client, s, { maxWidth: 120 });
+        return (
+          <ItemMenu key={s.Id} item={s} onPage>
+            <button
+              type="button"
+              data-ui="season-poster"
+              data-selected={isSelected || undefined}
+              data-focus="own"
+              onClick={() => onSelect(s.Id!)}
+              className="group/season w-full space-y-2 text-left"
+            >
+              <div className="relative aspect-[2/3] overflow-hidden rounded-lg bg-gray-900">
+                {poster && (
+                  <CachedImage
+                    src={poster}
+                    alt=""
+                    loading="lazy"
+                    className={cn(
+                      'absolute inset-0 h-full w-full object-cover transition-opacity [transition-duration:250ms]',
+                      !isSelected &&
+                        'opacity-60 group-hover/season:opacity-100 group-focus-visible/season:opacity-100'
+                    )}
+                  />
+                )}
+                <FocusRing className="group-focus-visible/season:opacity-100" />
+                {/* Drawn inside, since the row clips anything outside it. */}
+                <span
+                  className={cn(
+                    'pointer-events-none absolute inset-0 rounded-lg ring-inset',
+                    isSelected ? 'ring-2 ring-white' : 'ring-1 ring-white/10'
+                  )}
+                />
+                {s.UserData?.Played && (
+                  <span
+                    data-ui="watched-badge"
+                    className="absolute right-1.5 top-1.5 flex size-5 items-center justify-center rounded-full bg-brand-500 text-white"
+                  >
+                    <BiCheck />
+                  </span>
+                )}
+              </div>
+              <p
+                className={cn(
+                  'truncate text-sm',
+                  isSelected
+                    ? 'font-semibold text-white'
+                    : 'text-[--muted] group-hover/season:text-white group-focus-visible/season:text-white'
+                )}
+              >
+                {s.Name}
+              </p>
+            </button>
+          </ItemMenu>
+        );
+      })}
+    </MediaRow>
+  );
+});
 
 function SeasonPills({
   seasons,
