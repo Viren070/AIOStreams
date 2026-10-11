@@ -24,6 +24,12 @@ export interface NowPlaying {
   paused: boolean;
 }
 
+/** A sound level from 0 to 1, and the words so far. */
+export interface Hearing {
+  level: number;
+  text: string | null;
+}
+
 /**
  * The app the page runs in, from the bridge it injects. Anything left out
  * falls back to what a browser does.
@@ -74,7 +80,10 @@ export interface Host {
   /** Saves what the page asks for to the device. */
   downloads?: DownloadsHost;
   /** What the device's speech recogniser heard, or null for nothing. */
-  listen?(): Promise<string | null>;
+  listen?(opts: {
+    hearing(heard: Hearing): void;
+    signal: AbortSignal;
+  }): Promise<string | null>;
   /** Saves a file the page made, for a web view that drops download links. */
   saveFile?(name: string, type: string, text: string): void;
 }

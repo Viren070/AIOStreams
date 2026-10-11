@@ -54,7 +54,12 @@ export type ShellMessage =
       message: string | null;
     }
   | { type: 'link'; url: string }
-  | { type: 'voice-result'; text: string | null }
+  | { type: 'voice-hearing'; level?: number; text: string | null }
+  | {
+      type: 'voice-result';
+      text: string | null;
+      error?: 'no-speech' | 'failed';
+    }
   | { type: 'gamepads'; connected: boolean }
   | { type: 'media-key'; key: MediaKey }
   | { type: 'error'; message: string }

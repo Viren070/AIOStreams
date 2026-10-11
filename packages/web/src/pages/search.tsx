@@ -1,4 +1,5 @@
 import React from 'react';
+import { toast } from 'sonner';
 import { BiHistory, BiMicrophone, BiSearch, BiX } from 'react-icons/bi';
 import { Button, IconButton } from '@aiostreams/ui/button';
 import {
@@ -9,7 +10,8 @@ import {
 } from '@aiostreams/ui/context-menu';
 import { TextInput } from '@aiostreams/ui/text-input';
 import { useDebounce } from '@aiostreams/ui/hooks/debounce';
-import { currentHost } from '../lib/hosts';
+import { currentHost, type Hearing } from '../lib/hosts';
+import { useAction } from '../lib/input';
 import { useSession } from '../lib/session';
 import type { JellyfinClient } from '../lib/client';
 import { useSearch } from '../lib/queries';
@@ -35,7 +37,12 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
   const movies = useSearch(debounced, 'Movie', !combine);
   const shows = useSearch(debounced, 'Series', !combine);
   const history = useSearchHistory(user.Id!);
-  const listen = currentHost().listen;
+  const voice = useVoice((heard) => {
+    setTerm(heard);
+    history.add(heard);
+  }, setTerm);
+  // A remote reaches the microphone in one press, and the keyboard only on Select.
+  const voiceFirst = !!voice && !!currentHost().tv;
 
   // Keeps the term in the address, so back returns to the same results.
   React.useEffect(() => {
@@ -61,8 +68,9 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
         Search
       </h1>
       <div className="flex max-w-xl items-center gap-2">
+        {voiceFirst && voice.button}
         <TextInput
-          autoFocus
+          autoFocus={!voiceFirst}
           type="search"
           autoComplete="off"
           enterKeyHint="search"
@@ -71,27 +79,12 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
           onKeyDown={(e) => {
             if (e.key === 'Enter') history.add(term);
           }}
-          placeholder="Movies and shows"
+          placeholder={voice?.hearing ? 'Listening…' : 'Movies and shows'}
           leftIcon={<BiSearch className="text-xl" />}
           data-ui="search-input"
           fieldClass="flex-1"
         />
-        {listen && (
-          <IconButton
-            data-ui="search-voice"
-            intent="gray-subtle"
-            className="flex-none rounded-full"
-            icon={<BiMicrophone className="text-xl" />}
-            aria-label="Search by voice"
-            onClick={() =>
-              listen().then((heard) => {
-                if (!heard) return;
-                setTerm(heard);
-                history.add(heard);
-              })
-            }
-          />
-        )}
+        {!voiceFirst && voice?.button}
       </div>
       {!term.trim() && history.terms.length > 0 && (
         <section data-ui="search-history" className="max-w-xl space-y-1">
@@ -230,4 +223,64 @@ function ResultRow({
       ))}
     </MediaRow>
   );
+}
+
+function useVoice(
+  onHeard: (heard: string) => void,
+  onWords: (words: string) => void
+) {
+  const listen = currentHost().listen;
+  const [hearing, setHearing] = React.useState<Hearing | null>(null);
+  const listening = React.useRef<AbortController | null>(null);
+  React.useEffect(() => () => listening.current?.abort(), []);
+  useAction(
+    'back',
+    () => {
+      listening.current?.abort();
+    },
+    !!hearing
+  );
+  if (!listen) return null;
+  const toggle = () => {
+    if (listening.current) return listening.current.abort();
+    const current = new AbortController();
+    listening.current = current;
+    setHearing({ level: 0, text: null });
+    listen({
+      hearing: (heard) => {
+        setHearing(heard);
+        if (heard.text) onWords(heard.text);
+      },
+      signal: current.signal,
+    })
+      .then((heard) => heard && onHeard(heard))
+      .catch((e: Error) => toast(e.message))
+      .finally(() => {
+        listening.current = null;
+        setHearing(null);
+      });
+  };
+  const button = (
+    <div className="relative flex-none">
+      {hearing && (
+        <span
+          aria-hidden
+          className="absolute inset-0 rounded-full bg-brand-500/40 transition-transform duration-100"
+          style={{ transform: `scale(${1 + hearing.level * 0.6})` }}
+        />
+      )}
+      <IconButton
+        data-ui="search-voice"
+        data-listening={!!hearing || undefined}
+        autoFocus={!!currentHost().tv}
+        intent={hearing ? 'primary' : 'gray-subtle'}
+        className="relative rounded-full"
+        icon={<BiMicrophone className="text-xl" />}
+        aria-label={hearing ? 'Stop listening' : 'Search by voice'}
+        aria-pressed={!!hearing}
+        onClick={toggle}
+      />
+    </div>
+  );
+  return { hearing, button };
 }

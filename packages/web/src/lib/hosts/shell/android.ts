@@ -80,17 +80,31 @@ function mpvConfig(message: { type: string; text?: string }): Promise<string> {
 
 export const readMpvConfig = () => mpvConfig({ type: 'mpv-config' });
 
-function listen(): Promise<string | null> {
-  return new Promise((resolve) => {
+const VOICE_ERRORS = {
+  'no-speech': 'Nothing was heard',
+  failed: 'Voice search failed',
+};
+
+const listen: NonNullable<Host['listen']> = ({ hearing, signal }) =>
+  new Promise((resolve, reject) => {
     const bridge = appBridge();
+    let level = 0;
+    const cancel = () => bridge?.send({ type: 'voice-cancel' });
     const stop = bridge?.subscribe((m) => {
+      if (m.type === 'voice-hearing') {
+        level = m.level ?? level;
+        hearing({ level, text: m.text });
+        return;
+      }
       if (m.type !== 'voice-result') return;
       stop?.();
-      resolve(m.text);
+      signal.removeEventListener('abort', cancel);
+      if (m.error) reject(new Error(VOICE_ERRORS[m.error]));
+      else resolve(m.text);
     });
+    signal.addEventListener('abort', cancel, { once: true });
     bridge?.send({ type: 'voice-search' });
   });
-}
 
 /** Saves it and applies it to what plays next. */
 export const saveMpvConfig = (text: string) =>

@@ -16,7 +16,6 @@ import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
 import android.provider.Settings
-import android.speech.RecognizerIntent
 import android.util.Log
 import android.hardware.input.InputManager
 import android.view.InputDevice
@@ -82,10 +81,7 @@ class MainActivity : ComponentActivity() {
         picked?.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(it.resultCode, it.data))
         picked = null
     }
-    private val listen = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        val heard = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
-        sendHeard(heard.takeIf { result.resultCode == RESULT_OK })
-    }
+    private val voice = Voice(this) { bridge.send(it) }
     private lateinit var frameRates: FrameRateMatch
     /** False when onCreate only showed the outdated WebView message. */
     private val started get() = ::bridge.isInitialized
@@ -142,7 +138,7 @@ class MainActivity : ComponentActivity() {
             deviceName(),
             deviceId(),
             onTv(),
-            canListen(),
+            voice.available,
             gamepads,
             PictureInPicture.supported(this),
         )
@@ -215,7 +211,8 @@ class MainActivity : ComponentActivity() {
                 message["frameRate"]?.jsonPrimitive?.booleanOrNull?.let { frameRates.enabled = it }
                 message["tunneling"]?.jsonPrimitive?.booleanOrNull?.let { playback.tunneling = it }
             }
-            "voice-search" -> listen()
+            "voice-search" -> voice.listen()
+            "voice-cancel" -> voice.cancel()
             "save-file" -> saveFile(
                 message["name"]?.jsonPrimitive?.contentOrNull ?: "aiostreams.txt",
                 message["mime"]?.jsonPrimitive?.contentOrNull ?: "text/plain",
@@ -348,17 +345,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun listen() {
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-        try {
-            listen.launch(intent)
-        } catch (_: ActivityNotFoundException) {
-            sendHeard(null)
-        }
-    }
-
     private var gamepads = false
 
     private val controllers = object : InputManager.InputDeviceListener {
@@ -381,14 +367,6 @@ class MainActivity : ComponentActivity() {
     private fun hasGamepad() = InputDevice.getDeviceIds().any { id ->
         InputDevice.getDevice(id)?.let { !it.isVirtual && it.supportsSource(InputDevice.SOURCE_JOYSTICK) } == true
     }
-
-    private fun canListen() =
-        packageManager.queryIntentActivities(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH), 0).isNotEmpty()
-
-    private fun sendHeard(text: String?) = bridge.send(buildJsonObject {
-        put("type", "voice-result")
-        put("text", text)
-    })
 
     /** Asked on the first download, whose progress shows in one. */
     private fun askForNotifications() {
@@ -446,6 +424,7 @@ class MainActivity : ComponentActivity() {
         if (!started) return super.onDestroy()
         getSystemService(InputManager::class.java).unregisterInputDeviceListener(controllers)
         updater.release()
+        voice.release()
         Downloads.queue(this).send = null
         MediaController.releaseFuture(controller)
         PlaybackService.player = null
