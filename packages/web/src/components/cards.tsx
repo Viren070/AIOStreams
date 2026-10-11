@@ -351,7 +351,7 @@ export function OpenedPulse() {
   );
 }
 
-function WatchedMark() {
+export function WatchedMark() {
   return (
     <span
       data-ui="watched-badge"

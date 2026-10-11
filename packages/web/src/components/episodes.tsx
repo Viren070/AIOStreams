@@ -18,7 +18,7 @@ import {
   unavailableLabel,
   untilLabel,
 } from '../lib/format';
-import { Artwork, OpenedPulse, ProgressBar } from './cards';
+import { Artwork, OpenedPulse, ProgressBar, WatchedMark } from './cards';
 import { OverviewInfo } from './overview';
 import { ItemMenu } from './item-menu';
 import { useVersionPicker } from './version-picker';
@@ -94,6 +94,9 @@ function ownImages(episode: BaseItemDto): number {
   return episode.ImageTags?.Primary ? 1 : 0;
 }
 
+/** A TV's remote can't reach a playable episode's buttons, and its menu has them. */
+const hasButtons = (play: unknown) => !(play && currentHost().tv);
+
 function usePlay(
   episode: BaseItemDto
 ): ((opts?: { held?: boolean }) => void) | undefined {
@@ -109,12 +112,14 @@ function usePlay(
 function Thumb({
   episode,
   playable,
+  watched,
   highlighted,
   className,
   numberClass,
 }: {
   episode: BaseItemDto;
   playable: boolean;
+  watched?: boolean;
   highlighted?: boolean;
   className?: string;
   numberClass: string;
@@ -164,6 +169,7 @@ function Thumb({
           ))}
         </div>
       )}
+      {watched && <WatchedMark />}
       {progress != null && progress > 0 && <ProgressBar percent={progress} />}
       {highlighted && <OpenedPulse />}
     </div>
@@ -231,8 +237,7 @@ function Head({
         >
           <Kicker episode={episode} />
         </p>
-        {/* A TV's remote can't reach them, and the menu has them. */}
-        {!(play && currentHost().tv) && (
+        {hasButtons(play) && (
           <div
             data-ui="episode-actions"
             className="relative z-[1] flex flex-none items-center gap-1.5"
@@ -362,6 +367,7 @@ export function EpisodeCard({
           <Thumb
             episode={episode}
             playable={!!play}
+            watched={!hasButtons(play) && !!episode.UserData?.Played}
             highlighted={highlighted}
             className="rounded-xl"
             numberClass="text-5xl"
@@ -445,6 +451,7 @@ function EpisodeListItem({
           <Thumb
             episode={episode}
             playable={!!play}
+            watched={!hasButtons(play) && !!episode.UserData?.Played}
             className="rounded-lg sm:row-span-2"
             numberClass="text-3xl sm:text-4xl"
           />
