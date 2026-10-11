@@ -4,6 +4,10 @@ import type { PlayerController } from '../../lib/playback/controller';
 
 /** Skips this close together add up to one seek. */
 const SEEK_BURST_MS = 400;
+/** How long a burst's target shows after its last seek, if the player never gets there. */
+const TARGET_HOLD_MS = 2000;
+/** Within this of the target, the player has got there. */
+const ARRIVED_MS = 1500;
 
 /** `hide` keeps the controls hidden until the next input, even while paused. */
 export function useIdle(ms: number) {
@@ -52,17 +56,33 @@ export function usePositionClock(player: PlayerController): () => number {
   }, []);
 }
 
+/** Also where a burst is headed, until the player gets there. */
 export function useBurstSeek(
   player: PlayerController
-): (deltaMs: number) => void {
+): [(deltaMs: number) => void, number | null] {
   const latest = useLatest(player);
   const burst = React.useRef<{
     target: number;
     sent: boolean;
     timer: ReturnType<typeof setTimeout>;
   } | null>(null);
+  const [heading, setHeading] = React.useState<number | null>(null);
+  const [landed, setLanded] = React.useState(false);
   React.useEffect(() => () => clearTimeout(burst.current?.timer), []);
-  return React.useCallback(
+  React.useEffect(() => {
+    if (heading === null || !landed) return;
+    const { playhead } = latest.current;
+    const arrived = () =>
+      Math.abs(playhead.positionMs - heading) < ARRIVED_MS && setHeading(null);
+    arrived();
+    const timer = setTimeout(() => setHeading(null), TARGET_HOLD_MS);
+    const stop = playhead.subscribe(arrived);
+    return () => {
+      clearTimeout(timer);
+      stop();
+    };
+  }, [heading, landed, latest]);
+  const seekBy = React.useCallback(
     (deltaMs: number) => {
       const { state, playhead, seek } = latest.current;
       const last = burst.current;
@@ -73,6 +93,7 @@ export function useBurstSeek(
         const current = burst.current;
         if (!current || current.sent) {
           burst.current = null;
+          setLanded(true);
           return;
         }
         latest.current.seek(current.target);
@@ -85,9 +106,12 @@ export function useBurstSeek(
         sent: !last,
         timer: setTimeout(settle, SEEK_BURST_MS),
       };
+      setHeading(target);
+      setLanded(false);
     },
     [latest]
   );
+  return [seekBy, heading];
 }
 
 export function useFileDrop(

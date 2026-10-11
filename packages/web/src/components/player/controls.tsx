@@ -124,7 +124,7 @@ export function PlayerControls({
   };
 
   const [seekStep] = useSetting(settings.seekStep);
-  const burstSeek = useBurstSeek(player);
+  const [burstSeek, seekingTo] = useBurstSeek(player);
   const seekBy = (deltaMs: number) => {
     burstSeek(deltaMs);
     showSeekFlash(deltaMs);
@@ -282,11 +282,13 @@ export function PlayerControls({
         {b.icon}
       </ControlButton>
     );
+  const shownAt = scrub?.toMs ?? seekingTo;
   const time = (
     <PlayerTime
       playhead={player.playhead}
       durationMs={state.durationMs}
       live={visible}
+      atMs={shownAt}
     />
   );
 
@@ -476,7 +478,7 @@ export function PlayerControls({
           durationMs={state.durationMs}
           segments={segments}
           chapters={player.chapters ?? []}
-          previewMs={scrub?.toMs ?? null}
+          previewMs={shownAt}
           handle={touch}
           onSeek={player.seek}
           onStep={(direction) => seekBy(direction * seekStep * 1000)}
@@ -604,10 +606,13 @@ function PlayerTime({
   playhead,
   durationMs,
   live,
+  atMs,
 }: {
   playhead: Playhead;
   durationMs: number;
   live: boolean;
+  /** Shown in place of the playhead, as a seek is under way. */
+  atMs: number | null;
 }) {
   const seconds = usePlayhead(
     playhead,
@@ -616,7 +621,7 @@ function PlayerTime({
   );
   return (
     <>
-      {clock(seconds * 1000)}
+      {clock(atMs ?? seconds * 1000)}
       {durationMs > 0 && (
         <span className="text-gray-400"> / {clock(durationMs)}</span>
       )}
