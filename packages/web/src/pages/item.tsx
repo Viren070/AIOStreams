@@ -252,7 +252,7 @@ function Dot() {
   );
 }
 
-function MetaRow({ item }: { item: BaseItemDto }) {
+const MetaRow = React.memo(function MetaRow({ item }: { item: BaseItemDto }) {
   const parts: [string, React.ReactNode][] = [];
   const start = item.ProductionYear;
   const end = item.EndDate ? new Date(item.EndDate).getFullYear() : null;
@@ -304,7 +304,7 @@ function MetaRow({ item }: { item: BaseItemDto }) {
       ))}
     </div>
   );
-}
+});
 
 /** The show's links, with the selected season's own in place of the show's. */
 function linksFor(item: BaseItemDto, season?: BaseItemDto) {
@@ -320,9 +320,6 @@ function linksFor(item: BaseItemDto, season?: BaseItemDto) {
 function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
   const { client } = useSession();
   const picker = useVersionPicker();
-  const setPlayed = useSetPlayed();
-  const setFavorite = useSetFavorite();
-  const setDropped = useSetDropped();
   const nextUp = useNextUpFor(item.Id!, item.Type === 'Series');
   const nextUpLater = useNextUpLater(item.Id!);
   // Play holds its place, and focus, while a show's next episode is on its way.
@@ -330,11 +327,11 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
   const logo = logoUrl(client, item, { maxWidth: 416 });
   const [logoFailed, setLogoFailed] = React.useState(false);
   const poster = posterUrl(client, item, { maxWidth: 320 });
-  const played = !!item.UserData?.Played;
-  const favorite = !!item.UserData?.IsFavorite;
-  const dropped = item.UserData?.Likes === false;
-  const canDrop = useFeature('dropped');
-  const links = linksFor(item, season);
+  const links = React.useMemo(() => linksFor(item, season), [item, season]);
+  const overviewImage = React.useMemo(
+    () => landscapeUrls(client, item, { maxWidth: 480 }),
+    [client, item]
+  );
   const trailer = item.RemoteTrailers?.[0]?.Url;
 
   const target =
@@ -420,7 +417,7 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
             .filter(Boolean)
             .join(' · ')}
           overview={item.Overview}
-          image={landscapeUrls(client, item, { maxWidth: 480 })}
+          image={overviewImage}
           clampClass="max-h-[4lh]"
           className="text-sm leading-relaxed text-gray-300 sm:text-base"
         />
@@ -489,67 +486,13 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
               Trailer
             </Button>
           )}
-          {item.Type !== 'BoxSet' && (
-            <Tooltip
-              trigger={
-                <IconButton
-                  data-ui="item-action"
-                  data-name="watched"
-                  data-active={played || undefined}
-                  intent={played ? 'primary-subtle' : 'gray-subtle'}
-                  className="rounded-full"
-                  icon={<BiCheck />}
-                  aria-label={played ? 'Mark unwatched' : 'Mark watched'}
-                  loading={setPlayed.isPending}
-                  onClick={() =>
-                    setPlayed.mutate({ itemId: item.Id!, played: !played })
-                  }
-                />
-              }
-            >
-              {played ? 'Mark unwatched' : 'Mark watched'}
-            </Tooltip>
-          )}
-          <Tooltip
-            trigger={
-              <IconButton
-                data-ui="item-action"
-                data-name="favourite"
-                data-active={favorite || undefined}
-                intent={favorite ? 'alert-subtle' : 'gray-subtle'}
-                className="rounded-full"
-                icon={favorite ? <BiSolidHeart /> : <BiHeart />}
-                aria-label={favorite ? 'Remove favourite' : 'Add favourite'}
-                loading={setFavorite.isPending}
-                onClick={() =>
-                  setFavorite.mutate({ itemId: item.Id!, favorite: !favorite })
-                }
-              />
-            }
-          >
-            {favorite ? 'Remove favourite' : 'Add favourite'}
-          </Tooltip>
-          {canDrop && item.Type === 'Series' && (
-            <Tooltip
-              trigger={
-                <IconButton
-                  data-ui="item-action"
-                  data-name="drop"
-                  data-active={dropped || undefined}
-                  intent={dropped ? 'warning-subtle' : 'gray-subtle'}
-                  className="rounded-full"
-                  icon={dropped ? <BiSolidDislike /> : <BiDislike />}
-                  aria-label={dropped ? 'Undrop show' : 'Drop show'}
-                  loading={setDropped.isPending}
-                  onClick={() =>
-                    setDropped.mutate({ itemId: item.Id!, dropped: !dropped })
-                  }
-                />
-              }
-            >
-              {dropped ? 'Undrop show' : 'Drop show'}
-            </Tooltip>
-          )}
+          <ItemToggles
+            itemId={item.Id!}
+            type={item.Type}
+            played={!!item.UserData?.Played}
+            favorite={!!item.UserData?.IsFavorite}
+            dropped={item.UserData?.Likes === false}
+          />
           {(item.Type === 'Movie' || item.Type === 'Series') && (
             <RatingButton item={item} />
           )}
@@ -574,6 +517,85 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
     </div>
   );
 }
+
+// Apart from the header, which redraws as the next episode and the season arrive.
+const ItemToggles = React.memo(function ItemToggles({
+  itemId,
+  type,
+  played,
+  favorite,
+  dropped,
+}: {
+  itemId: string;
+  type: BaseItemDto['Type'];
+  played: boolean;
+  favorite: boolean;
+  dropped: boolean;
+}) {
+  const setPlayed = useSetPlayed();
+  const setFavorite = useSetFavorite();
+  const setDropped = useSetDropped();
+  const canDrop = useFeature('dropped');
+  return (
+    <>
+      {type !== 'BoxSet' && (
+        <Tooltip
+          trigger={
+            <IconButton
+              data-ui="item-action"
+              data-name="watched"
+              data-active={played || undefined}
+              intent={played ? 'primary-subtle' : 'gray-subtle'}
+              className="rounded-full"
+              icon={<BiCheck />}
+              aria-label={played ? 'Mark unwatched' : 'Mark watched'}
+              loading={setPlayed.isPending}
+              onClick={() => setPlayed.mutate({ itemId, played: !played })}
+            />
+          }
+        >
+          {played ? 'Mark unwatched' : 'Mark watched'}
+        </Tooltip>
+      )}
+      <Tooltip
+        trigger={
+          <IconButton
+            data-ui="item-action"
+            data-name="favourite"
+            data-active={favorite || undefined}
+            intent={favorite ? 'alert-subtle' : 'gray-subtle'}
+            className="rounded-full"
+            icon={favorite ? <BiSolidHeart /> : <BiHeart />}
+            aria-label={favorite ? 'Remove favourite' : 'Add favourite'}
+            loading={setFavorite.isPending}
+            onClick={() => setFavorite.mutate({ itemId, favorite: !favorite })}
+          />
+        }
+      >
+        {favorite ? 'Remove favourite' : 'Add favourite'}
+      </Tooltip>
+      {canDrop && type === 'Series' && (
+        <Tooltip
+          trigger={
+            <IconButton
+              data-ui="item-action"
+              data-name="drop"
+              data-active={dropped || undefined}
+              intent={dropped ? 'warning-subtle' : 'gray-subtle'}
+              className="rounded-full"
+              icon={dropped ? <BiSolidDislike /> : <BiDislike />}
+              aria-label={dropped ? 'Undrop show' : 'Drop show'}
+              loading={setDropped.isPending}
+              onClick={() => setDropped.mutate({ itemId, dropped: !dropped })}
+            />
+          }
+        >
+          {dropped ? 'Undrop show' : 'Drop show'}
+        </Tooltip>
+      )}
+    </>
+  );
+});
 
 /**
  * The next episode of a show still airing, from its latest season, which is

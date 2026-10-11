@@ -90,7 +90,7 @@ export function OverviewInfo({
   );
 }
 
-export function Overview({
+export const Overview = React.memo(function Overview({
   clampClass,
   className,
   ...details
@@ -137,4 +137,4 @@ export function Overview({
       </p>
     </div>
   );
-}
+});

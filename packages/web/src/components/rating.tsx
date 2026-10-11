@@ -20,7 +20,7 @@ function Star({ fill }: { fill: number }) {
 }
 
 /** Ten stars in half steps, on the 0 to 10 scale Jellyfin keeps. */
-export function RatingButton({
+export const RatingButton = React.memo(function RatingButton({
   item,
   label = 'Rate',
   inline,
@@ -161,4 +161,4 @@ export function RatingButton({
       {rating != null ? 'Your rating' : label}
     </Tooltip>
   );
-}
+});
