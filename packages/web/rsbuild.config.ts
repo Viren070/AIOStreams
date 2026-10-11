@@ -68,7 +68,10 @@ export default defineConfig(({ envMode }) => {
     return {
       plugins: [pluginReact()],
       source: { entry: { index: './src/main.tsx' }, define },
-      html: { template: './index.html', templateParameters: { root: './' } },
+      html: {
+        template: './index.html',
+        templateParameters: { root: './', icons: false },
+      },
       output: {
         distPath: { root: 'dist-standalone' },
         // Relative, since the TV apps load it from their package's files.
@@ -81,7 +84,10 @@ export default defineConfig(({ envMode }) => {
   return {
     plugins: [pluginReact()],
     source: { entry: { index: './src/main.tsx' }, define },
-    html: { template: './index.html', templateParameters: { root: '/' } },
+    html: {
+      template: './index.html',
+      templateParameters: { root: '/', icons: true },
+    },
     output: { assetPrefix: ASSET_PREFIX },
     dev: { assetPrefix: ASSET_PREFIX },
     server: {
