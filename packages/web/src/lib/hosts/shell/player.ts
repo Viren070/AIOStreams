@@ -690,10 +690,9 @@ function trackOptions(prefs: PlaybackPrefs, source: SourceInfo): string[] {
   )?.Language;
   const alang = audioLanguages(prefs)
     .map((l) => (l === ORIGINAL_LANGUAGE ? original : l))
-    .filter(Boolean);
-  if (alang.length) options.push(`alang=${alang.join(',')}`);
-  const subtitles = subtitleLanguages(prefs);
-  const slang = subtitles.length ? [`slang=${subtitles.join(',')}`] : [];
+    .filter((l): l is string => !!l);
+  options.push(...listOption('alang', alang));
+  const slang = listOption('slang', subtitleLanguages(prefs));
   switch (prefs.SubtitleMode) {
     case 'None':
       options.push('sid=no');
@@ -715,6 +714,11 @@ function trackOptions(prefs: PlaybackPrefs, source: SourceInfo): string[] {
       options.push(...slang);
   }
   return options;
+}
+
+/** Commas separate the options themselves, so each further entry is appended. */
+function listOption(name: string, values: string[]): string[] {
+  return values.map((v, i) => `${name}${i ? '-append' : ''}=${v}`);
 }
 
 function setProp(name: string, value: unknown) {

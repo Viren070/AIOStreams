@@ -25,8 +25,8 @@ object MpvProtocol {
     )
 
     private val loadfileOptions = setOf(
-        "start", "aid", "sid", "alang", "slang", "force-media-title", "subs-fallback",
-        "subs-fallback-forced", "subs-with-matching-audio",
+        "start", "aid", "sid", "alang", "alang-append", "slang", "slang-append", "force-media-title",
+        "subs-fallback", "subs-fallback-forced", "subs-with-matching-audio",
     )
 
     private val statsBindings = setOf(

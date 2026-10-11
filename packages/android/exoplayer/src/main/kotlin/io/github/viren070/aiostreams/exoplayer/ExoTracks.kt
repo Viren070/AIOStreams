@@ -14,17 +14,25 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 /** `loadfile`'s track options, which pick the tracks as mpv would. */
-internal class TrackOptions(options: Map<String, String>) {
+internal class TrackOptions(pairs: List<Pair<String, String>>) {
+    private val options = pairs.toMap()
     val aid = options["aid"]
     val sid = options["sid"]
-    val alang = languages(options["alang"])
-    val slang = languages(options["slang"])
+    val alang = languages(pairs, "alang")
+    val slang = languages(pairs, "slang")
     val subsFallback = options["subs-fallback"] ?: "default"
     val subsFallbackForced = options["subs-fallback-forced"] ?: "yes"
     val subsWithMatchingAudio = options["subs-with-matching-audio"] != "no"
 
     private companion object {
-        fun languages(value: String?) = value.orEmpty().split(',').filter { it.isNotBlank() }.map(::languageOf)
+        fun languages(pairs: List<Pair<String, String>>, name: String) =
+            pairs.fold(emptyList<String>()) { list, (key, value) ->
+                when (key) {
+                    name -> value.split(',')
+                    "$name-append" -> list + value
+                    else -> list
+                }
+            }.filter { it.isNotBlank() }.map(::languageOf)
     }
 }
 

@@ -80,7 +80,7 @@ class ExoEngine(private val context: Context) :
 
     // The file playing and what the page asked of it.
     private var url: String? = null
-    private var options = TrackOptions(emptyMap())
+    private var options = TrackOptions(emptyList())
     private var loaded = false
     private var chosen = false
     private var seeking = false
@@ -308,9 +308,10 @@ class ExoEngine(private val context: Context) :
 
     private fun load(url: String, rawOptions: String) {
         if (this.url != null) listener?.onEnded("stop", null, null)
-        val values = rawOptions.split(',').filter { '=' in it }.associate { it.substringBefore('=') to it.substringAfter('=') }
+        val pairs = rawOptions.split(',').filter { '=' in it }.map { it.substringBefore('=') to it.substringAfter('=') }
+        val values = pairs.toMap()
         this.url = url
-        options = TrackOptions(values)
+        options = TrackOptions(pairs)
         caps = MediaCaps.read(context)
         dolbyVision = null
         loaded = false
