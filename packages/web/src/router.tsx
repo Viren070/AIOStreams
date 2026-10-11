@@ -184,7 +184,7 @@ function PersonRouteView(): React.ReactElement {
 }
 
 const playRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => shellRoute,
   path: '/play/$itemId',
   validateSearch: (search: Record<string, unknown>) => ({
     source: search.source == null ? '' : String(search.source),
@@ -220,8 +220,8 @@ const routeTree = rootRoute.addChildren([
     libraryRoute,
     itemRoute,
     personRoute,
+    playRoute,
   ]),
-  playRoute,
 ]);
 
 function NotFoundPage(): React.ReactElement {
