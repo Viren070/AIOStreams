@@ -48,7 +48,7 @@ import {
   usePlay,
 } from '../lib/playback/play';
 import { currentHost } from '../lib/hosts';
-import { focusOn, keyboardFocus } from '../lib/input';
+import { focusOn, keyboardFocus, useRestoreFocus } from '../lib/input';
 import { clock, itemSubtitle, itemTitle, ticksToMs } from '../lib/format';
 import { cn } from '@aiostreams/ui/core/styling';
 import { backdropUrl, landscapeUrl } from '../lib/images';
@@ -218,16 +218,7 @@ export function VersionPickerProvider({
   const [sheet, setSheet] = React.useState(false);
   const wantSheet = !!request?.playing || short;
   if (request && sheet !== wantSheet) setSheet(wantSheet);
-  // Opened from code, it has no trigger for focus to go back to.
-  const opener = React.useRef<Element | null>(null);
-  React.useLayoutEffect(() => {
-    if (open) opener.current = document.activeElement;
-  }, [open]);
-  const restoreFocus = (e: Event) => {
-    if (!(opener.current instanceof HTMLElement)) return;
-    e.preventDefault();
-    opener.current.focus({ preventScroll: true });
-  };
+  const restoreFocus = useRestoreFocus(open);
   const versions = request && (
     <Versions
       key={request.item.Id}

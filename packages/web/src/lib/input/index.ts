@@ -37,5 +37,6 @@ export {
 } from './focus';
 export { startGamepads } from './gamepad';
 export { returnFocus } from './return';
+export { useRestoreFocus } from './restore-focus';
 export { startSubmitButtons } from './submit-buttons';
 export { inputLabels } from './keys';
