@@ -14,6 +14,8 @@ const HOLD_MS = 500;
 const SCRUB_SPAN_MS = 90_000;
 /** Sideways swipes from this close to a side are the system's back gesture. */
 const EDGE_PX = 24;
+/** Swipes from this close to the top or bottom are the system's. */
+const END_EDGE_PX = 40;
 const PINCH_RATIO = 1.2;
 
 type Level = 'volume' | 'brightness';
@@ -33,7 +35,8 @@ interface Press {
   x: number;
   y: number;
   side: -1 | 1;
-  edge: boolean;
+  sideEdge: boolean;
+  endEdge: boolean;
   kind: 'pending' | 'levels' | 'scrub' | 'held' | 'none';
   swipe: Swipe | null;
   /** Where the scrub started, past the move that made it one. */
@@ -173,7 +176,9 @@ export function usePlayerGestures(gestures: Gestures) {
       x: e.clientX,
       y: e.clientY,
       side: e.clientX < r.left + r.width / 2 ? -1 : 1,
-      edge: e.clientX - r.left < EDGE_PX || r.right - e.clientX < EDGE_PX,
+      sideEdge: e.clientX - r.left < EDGE_PX || r.right - e.clientX < EDGE_PX,
+      endEdge:
+        e.clientY - r.top < END_EDGE_PX || r.bottom - e.clientY < END_EDGE_PX,
       kind: 'pending',
       swipe: null,
       scrubX: 0,
@@ -210,11 +215,12 @@ export function usePlayerGestures(gestures: Gestures) {
     const dy = e.clientY - p.y;
     if (p.kind === 'pending' && Math.hypot(dx, dy) > SWIPE_PX) {
       clearTimeout(p.timer);
-      if (Math.abs(dy) > Math.abs(dx)) {
+      if (p.endEdge) p.kind = 'none';
+      else if (Math.abs(dy) > Math.abs(dx)) {
         p.swipe = startSwipe(p.side, e.clientY, e.currentTarget.clientHeight);
         p.kind = p.swipe ? 'levels' : 'none';
       } else {
-        p.kind = p.edge ? 'none' : 'scrub';
+        p.kind = p.sideEdge ? 'none' : 'scrub';
         p.scrubX = e.clientX;
       }
     }
