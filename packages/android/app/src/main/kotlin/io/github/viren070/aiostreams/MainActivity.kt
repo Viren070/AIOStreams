@@ -9,6 +9,7 @@ import android.app.NotificationManager
 import android.app.UiModeManager
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -26,6 +27,7 @@ import android.webkit.WebView
 import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.addCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -91,7 +93,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (!webViewUsable(this)) return setContentView(outdatedWebView(this))
-        enableEdgeToEdge()
+        // The page is dark whatever the system's theme, so the bars keep light icons.
+        val dark = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) { true }
+        enableEdgeToEdge(dark, dark)
         WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG || BuildConfig.INSPECTABLE)
 
         playback = Playback(this) { engine ->
