@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSession } from '../session';
-import { firstInLanguages, languageCode } from '../languages';
+import { firstInLanguages, languageCode, sameLanguage } from '../languages';
 import {
   audioLanguages,
   ORIGINAL_LANGUAGE,
@@ -76,14 +76,20 @@ export function withShowPick(
   const { audio, subtitle } = pickOf(picks, showId);
   const out = { ...prefs };
   if (audio && prefs.RememberAudioSelections !== false) {
-    out.AudioLanguages = [audio, ...audioLanguages(prefs)];
+    out.AudioLanguages = [
+      audio,
+      ...audioLanguages(prefs).filter((l) => !sameLanguage(l, audio)),
+    ];
     out.AudioLanguagePreference = audio;
     out.PlayDefaultAudioTrack = false;
   }
   if (subtitle && prefs.RememberSubtitleSelections !== false) {
     if (subtitle === OFF) out.SubtitleMode = 'None';
     else {
-      out.SubtitleLanguages = [subtitle, ...subtitleLanguages(prefs)];
+      out.SubtitleLanguages = [
+        subtitle,
+        ...subtitleLanguages(prefs).filter((l) => !sameLanguage(l, subtitle)),
+      ];
       out.SubtitleLanguagePreference = subtitle;
       out.SubtitleMode = 'Always';
     }
