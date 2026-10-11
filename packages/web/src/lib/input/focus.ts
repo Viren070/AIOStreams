@@ -420,6 +420,23 @@ function barGap(
   return gap >= -1 ? gap : null;
 }
 
+/** A `data-nav-wait` box, as a row still loading, lies that way before `to`. */
+function waitsFor(
+  root: Element,
+  rect: DOMRect,
+  to: HTMLElement | null,
+  dir: Direction
+): boolean {
+  const boxes = root.querySelectorAll('[data-nav-wait]');
+  if (!boxes.length) return false;
+  const past = to && distance(rect, rectOf(to), dir);
+  for (const box of boxes) {
+    const way = distance(rect, settled(box, box.getBoundingClientRect()), dir);
+    if (way?.inLine && (!past || way.gap < past.gap)) return true;
+  }
+  return false;
+}
+
 /**
  * Focus coming into a box from outside lands on what its `data-nav-enter`
  * selector names. From outside any group, a `data-nav-group` is entered where
@@ -702,12 +719,12 @@ export function move(dir: Direction): boolean {
     if (x || y) drifts.push([box, x, y]);
   }
   // Any other way stays in such a box, as what it covers lies beside it.
-  const near =
-    back && canFocus(back)
-      ? back
-      : nearest(exit && !out ? exit : root, from, dir);
+  const within = exit && !out ? exit : root;
+  const near = back && canFocus(back) ? back : nearest(within, from, dir);
+  const wait = waitsFor(within, rectOf(from), near, dir);
   bars = null;
   drifts = [];
+  if (wait) return true;
   const grid = from.closest('[data-nav-wrap]');
   if (!near || (grid && near !== back && !grid.contains(near))) {
     const next = wrapped(from, dir);

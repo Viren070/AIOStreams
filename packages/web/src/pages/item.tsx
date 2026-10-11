@@ -748,7 +748,14 @@ function Seasons({
       {layout === 'list' && summaryLine}
       {layout === 'row' ? (
         loading ? (
-          <MediaRow key="loading" shape="wide" itemClass={ROW_WIDTH} loading />
+          <div data-nav-wait>
+            <MediaRow
+              key="loading"
+              shape="wide"
+              itemClass={ROW_WIDTH}
+              loading
+            />
+          </div>
         ) : (
           <div ref={focusIndex >= 0 ? focused : undefined}>
             <MediaRow
@@ -780,7 +787,9 @@ function Seasons({
           </div>
         )
       ) : loading ? (
-        <EpisodeListSkeleton columns />
+        <div data-nav-wait>
+          <EpisodeListSkeleton columns />
+        </div>
       ) : (
         <EpisodeList
           episodes={items}
