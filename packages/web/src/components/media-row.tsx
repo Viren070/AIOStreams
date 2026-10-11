@@ -393,7 +393,7 @@ export function MediaRow({
   /** Replaces the shape's card width, for rows of something else. */
   itemClass?: string;
   loading?: boolean;
-  /** Not fetching yet, so its placeholders hold still rather than pulse unseen. */
+  /** Not fetching yet, out of sight, so one still placeholder holds its place. */
   waiting?: boolean;
   loadingMore?: boolean;
   onEndReached?: () => void;
@@ -427,7 +427,7 @@ export function MediaRow({
     ));
   const cards = [
     ...(loading
-      ? skeletons(8)
+      ? skeletons(waiting ? 1 : 8)
       : items.map((child, i) =>
           drawn(i) ? (
             <Slide key={i} className={width}>
