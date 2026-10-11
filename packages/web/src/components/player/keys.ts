@@ -140,6 +140,12 @@ export function usePlayerKeys(keys: PlayerKeys): void {
     const actions: Partial<Record<ActionId, ActionHandler>> = {
       'player.controls': () => {
         if (keyboardFocus()) return false;
+        if (
+          k().root.current?.querySelector(
+            '[data-ui=skip-segment][data-visible]'
+          )
+        )
+          return call(k().skipSegment);
         focusControls();
       },
       'player.playPause': () => k().togglePlay(),

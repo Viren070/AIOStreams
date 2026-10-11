@@ -2,6 +2,7 @@ import React from 'react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSession } from '../../lib/session';
+import { currentHost } from '../../lib/hosts';
 import { useAdjacentEpisodes, usePlaybackInfoOptions } from '../../lib/queries';
 import { landscapeUrl } from '../../lib/images';
 import { episodeCode, itemSubtitle, ticksToMs } from '../../lib/format';
@@ -320,6 +321,12 @@ export function useNextEpisodePrompt({
 
   // While it shows, it stands in for the skip button, and Back from it hides it.
   const card = React.useRef<HTMLDivElement>(null);
+  // A remote is on it as it comes up, rather than a press away.
+  React.useEffect(() => {
+    if (!shown || !currentHost().tv || keyboardFocus()) return;
+    const play = card.current?.querySelector<HTMLElement>('[data-name=play]');
+    if (play) focusOn(play);
+  }, [shown]);
   useAction('player.skipSegment', () => void playNext(), shown);
   useAction(
     'player.controls',
