@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.1](https://github.com/Viren070/AIOStreams/compare/smart-tv-v0.3.0...smart-tv-v0.3.1) (2026-10-11)
+
+
+### Bug Fixes
+
+* send alang and slang lists to mpv as -append options ([3ad8488](https://github.com/Viren070/AIOStreams/commit/3ad84889896937bbf7c1f349154c1df889208c3a))
+* **web:** drop a show's picked language from the rest of its list ([3ad8488](https://github.com/Viren070/AIOStreams/commit/3ad84889896937bbf7c1f349154c1df889208c3a))
+
 ## [0.3.0](https://github.com/Viren070/AIOStreams/compare/smart-tv-v0.2.0...smart-tv-v0.3.0) (2026-10-10)
 
 
