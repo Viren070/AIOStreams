@@ -550,6 +550,8 @@ export const settings = {
   /** How the picture fills a screen of another shape; kept for this device's screen. */
   videoFit: device<VideoFit>('aiostreams-web-video-fit', 'fit', VIDEO_FITS),
   autoPlayFirst: device<boolean>('aiostreams-web-skip-versions', false),
+  /** Opens on who's watching rather than straight in as the last user. */
+  askWho: device<boolean>('aiostreams-web-ask-who', false),
   /** `app`, a player's id, or `custom` for `playerLink`. */
   player: device<string>('aiostreams-web-player', 'app'),
   playerLink: device<string>('aiostreams-web-player-link', ''),

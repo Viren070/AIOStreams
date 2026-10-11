@@ -1875,6 +1875,7 @@ function AccountSection() {
   const users = usePickableUsers();
   const avatar = users.data?.find((u) => u.user.Id === user.Id)?.avatar ?? null;
   const several = (users.data?.length ?? 0) > 1;
+  const [askWho, setAskWho] = useSetting(settings.askWho);
   const configure = configureUrl(client.base, info);
   const confirmSignOut = useConfirmationDialog({
     title: 'Sign out',
@@ -1950,6 +1951,17 @@ function AccountSection() {
           </SettingsRow>
         )}
       </SettingsCard>
+      {several && (
+        <SettingsCard title="Who's watching" description={ON_DEVICE}>
+          <Switch
+            side="right"
+            label="Ask when the app opens"
+            help="Also when you come back to it after half an hour. A user with a PIN is always asked for it then."
+            value={askWho}
+            onValueChange={setAskWho}
+          />
+        </SettingsCard>
+      )}
       <ConfirmationDialog {...confirmSignOut} />
     </>
   );
