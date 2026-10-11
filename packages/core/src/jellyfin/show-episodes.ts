@@ -3,6 +3,7 @@ import { Cache } from '../utils/cache.js';
 import { getSimpleTextHash } from '../utils/crypto.js';
 import type { ContentRef } from '../watch-state/types.js';
 import { groupSeasons } from './dto.js';
+import { statusFrom } from './enrichment.js';
 import { firstWriteOf } from './write-once.js';
 
 /** The episodes a show's played state counts; specials never do. */
@@ -18,6 +19,8 @@ const shows = Cache.getInstance<string, ShowEpisodes>(
   10_000
 );
 const SHOW_EPISODES_TTL = 24 * 60 * 60;
+/** An ended show's episodes rarely change, and Next Up checks every finished show it passes. */
+const ENDED_SHOW_EPISODES_TTL = 7 * 24 * 60 * 60;
 
 export function showEpisodesOf(meta: ParsedMeta): ShowEpisodes {
   const episodes: ShowEpisodes['episodes'] = [];
@@ -52,7 +55,9 @@ export function rememberShowEpisodes(
   const key = showKey(scope, type, id);
   if (!firstWriteOf(`show:${key}:${getSimpleTextHash(JSON.stringify(value))}`))
     return;
-  void shows.set(key, value, SHOW_EPISODES_TTL).catch(() => undefined);
+  const ttl =
+    statusFrom(meta) === 'Ended' ? ENDED_SHOW_EPISODES_TTL : SHOW_EPISODES_TTL;
+  void shows.set(key, value, ttl).catch(() => undefined);
 }
 
 export async function rememberedShowEpisodes(

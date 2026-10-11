@@ -271,7 +271,7 @@ function peopleFrom(meta: AnyMeta): EnrichedPerson[] {
   ]);
 }
 
-function statusFrom(meta: AnyMeta): 'Continuing' | 'Ended' | undefined {
+export function statusFrom(meta: AnyMeta): 'Continuing' | 'Ended' | undefined {
   const explicit = str(meta.status)?.toLowerCase();
   if (
     explicit === 'continuing' ||
