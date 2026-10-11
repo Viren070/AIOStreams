@@ -18,6 +18,7 @@ export function SeekBar({
   handle,
   onSeek,
   onStep,
+  onTogglePlay,
 }: {
   playhead: Playhead;
   /** Held still while the controls hide. */
@@ -31,6 +32,7 @@ export function SeekBar({
   handle: boolean;
   onSeek(ms: number): void;
   onStep(direction: number): void;
+  onTogglePlay(): void;
 }) {
   const positionMs = usePlayhead(playhead, (h) => h.positionMs, live);
   const bufferedMs = usePlayhead(playhead, (h) => h.bufferedMs, live);
@@ -63,9 +65,10 @@ export function SeekBar({
       className="group/seek relative flex h-5 cursor-pointer touch-none items-center rounded-full outline-none before:absolute before:inset-x-0 before:-top-6 before:bottom-0 before:content-['']"
       onKeyDown={(e) => {
         const direction = arrowDirection(e.key);
-        if (!direction) return;
+        if (!direction && e.key !== 'Enter') return;
         e.preventDefault();
-        onStep(direction);
+        if (direction) onStep(direction);
+        else onTogglePlay();
       }}
       onPointerDown={(e) => {
         if (!durationMs) return;

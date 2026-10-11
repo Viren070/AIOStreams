@@ -474,6 +474,7 @@ export function PlayerControls({
           handle={touch}
           onSeek={player.seek}
           onStep={(direction) => seekBy(direction * seekStep * 1000)}
+          onTogglePlay={togglePlay}
         />
         <div className="flex items-center gap-1">
           <div className={cn('hidden items-center gap-1', !touch && 'lg:flex')}>
