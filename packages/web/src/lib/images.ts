@@ -51,8 +51,12 @@ export function posterUrl(
     );
   }
   if (item.Type === 'Season') {
+    const own = item.ImageTags?.Primary;
+    // A season showing its show's poster asks for the show's, which every such season then shares.
     return (
-      image(client, item.Id, 'Primary', item.ImageTags?.Primary, size) ??
+      (own !== item.SeriesPrimaryImageTag
+        ? image(client, item.Id, 'Primary', own, size)
+        : null) ??
       image(client, item.SeriesId, 'Primary', item.SeriesPrimaryImageTag, size)
     );
   }
