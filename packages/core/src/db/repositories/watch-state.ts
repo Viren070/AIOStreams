@@ -267,12 +267,14 @@ export class WatchStateRepository {
   ): Promise<WatchStateRow[]> {
     const out = new Map<string, WatchStateRow>();
     const wanted = [...new Set(keys.filter(Boolean))];
+    const owner = sql`uuid = ${scope.uuid} AND persona = ${scope.persona}`;
     for (let i = 0; i < wanted.length; i += CHUNK) {
       const list = join(wanted.slice(i, i + CHUNK).map((k) => sql`${k}`));
+      // Two branches, not an OR: SQLite only uses both indexes this way.
       const rows = await db.query<DbRow>(
-        sql`SELECT * FROM watch_state
-             WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
-               AND (item_key IN (${list}) OR match_key IN (${list}))`
+        sql`SELECT * FROM watch_state WHERE ${owner} AND item_key IN (${list})
+            UNION ALL
+            SELECT * FROM watch_state WHERE ${owner} AND match_key IN (${list})`
       );
       for (const r of rows) out.set(r.item_key, toRow(r));
     }
