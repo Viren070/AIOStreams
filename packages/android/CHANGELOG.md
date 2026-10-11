@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.1](https://github.com/Viren070/AIOStreams/compare/android-v0.2.0...android-v0.2.1) (2026-10-11)
+
+
+### Bug Fixes
+
+* send alang and slang lists to mpv as -append options ([fc10515](https://github.com/Viren070/AIOStreams/commit/fc10515af600dd9d667035830435bcd5d95d6823))
+* **web:** drop a show's picked language from the rest of its list ([2b81254](https://github.com/Viren070/AIOStreams/commit/2b8125435d1483f8eccbe68918dd10f836610ba8))
+
 ## [0.2.0](https://github.com/Viren070/AIOStreams/compare/android-v0.1.0...android-v0.2.0) (2026-10-10)
 
 
