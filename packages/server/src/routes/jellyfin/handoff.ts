@@ -198,6 +198,74 @@ async function sinksFor(
   return sinks;
 }
 
+/** Only presentation labels cross the Jellyfin boundary; never sink addresses or ids. */
+function serviceName(name: string): string | undefined {
+  const label = name.trim().replace(/ +/g, ' ');
+  // Reject URL/credential-like labels and control characters instead of redacting
+  // them into a misleading service name. Preserve ordinary international names.
+  return label.length > 0 &&
+    label.length <= 80 &&
+    /^[\p{L}\p{M}\p{N} .&+'()_-]+$/u.test(label)
+    ? label
+    : undefined;
+}
+
+/**
+ * Optional current-user extension. This describes configured exchanges, not
+ * successful delivery, history completeness, or a count of synced lists.
+ * Resolve directly: reading a user must not retire trackers or reuse a stale
+ * sink-cache entry. Failed resolution is unknown, distinct from no services.
+ */
+export async function watchHistorySync(
+  ctx: JellyfinRequestContext
+): Promise<{ services: string[] } | undefined> {
+  try {
+    const { reportEnabled, pullEnabled, maxSinks } = appConfig.watchState;
+    if ((!reportEnabled && !pullEnabled) || maxSinks <= 0)
+      return { services: [] };
+    const mode = modeOf(ctx);
+    const picks =
+      mode === 'own'
+        ? ctx.persona?.trackers
+        : ctx.userData.jellyfin?.primary?.trackers;
+    if (picks?.length === 0) return { services: [] };
+    const primary = await ctx.primaryEngine();
+    // Own-history routing also relies on knowing the primary user's claims.
+    if (
+      primary.hasAddonInitialisationErrors(
+        mode === 'own' ? undefined : ctx.userData.jellyfin?.primary?.trackers
+      )
+    )
+      return undefined;
+    if (
+      mode === 'own' &&
+      (await ctx.engine()).hasAddonInitialisationErrors(ctx.persona?.trackers)
+    )
+      return undefined;
+    const resolved = await resolveSinks(ctx, mode);
+    if (resolved.unloaded.length) return undefined;
+    const services = new Map<string, string>();
+    for (const sink of resolved.sinks.slice(0, maxSinks)) {
+      if (
+        !(reportEnabled && sink.events.length > 0) &&
+        !(pullEnabled && sink.pullable)
+      )
+        continue;
+      if (await isRefusedUrl(sink.baseUrl)) continue;
+      const name = serviceName(sink.name);
+      if (!name) return undefined;
+      if (!services.has(name.toLowerCase()))
+        services.set(name.toLowerCase(), name);
+    }
+    return { services: [...services.values()] };
+  } catch {
+    // This optional advertisement must neither break user reads nor turn an
+    // outage into a false claim that the user has no tracking services.
+    logger.debug('watch history service advertisement unavailable');
+    return undefined;
+  }
+}
+
 /** The primary user, then each persona with a history of its own. */
 async function historyContexts(
   req: Request,
