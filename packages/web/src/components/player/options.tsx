@@ -8,6 +8,7 @@ import {
   LuCrop,
   LuEar,
   LuFilePlus,
+  LuGalleryVerticalEnd,
   LuGauge,
   LuLayers,
   LuListOrdered,
@@ -294,6 +295,7 @@ export function OptionButtons({
   player,
   onMenu,
   onVersions,
+  onEpisodes,
   onAddFile,
   onSyncByEar,
   onSyncToLine,
@@ -302,6 +304,7 @@ export function OptionButtons({
   player: PlayerController;
   onMenu(open: boolean): void;
   onVersions?: () => void;
+  onEpisodes?: () => void;
   onAddFile(): void;
   onSyncByEar(): void;
   onSyncToLine(): void;
@@ -315,6 +318,11 @@ export function OptionButtons({
   const tv = !!currentHost().tv;
   return (
     <div className="ml-auto flex items-center sm:gap-1">
+      {onEpisodes && (
+        <ControlButton name="episodes" label="Episodes" onClick={onEpisodes}>
+          <LuGalleryVerticalEnd />
+        </ControlButton>
+      )}
       {(player.subtitleTracks.length > 0 || player.subtitleFiles) && (
         <Menu
           name="subtitles"

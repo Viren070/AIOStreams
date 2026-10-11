@@ -22,6 +22,7 @@ import { delayLabel } from '../../lib/subtitles/delay';
 import { useLatest } from '../../lib/use-latest';
 import type { BaseItemDto, MediaSegmentDto } from '../../lib/types';
 import { ControlButton, MiddleButton, PlayerAction } from './buttons';
+import { EpisodesSheet } from './episodes';
 import {
   ScrubReadout,
   SpeedPill,
@@ -58,7 +59,8 @@ export function PlayerControls({
   onVersions,
   onPrevious,
   onNext,
-  loadingEpisode,
+  onEpisode,
+  loadingEpisode = null,
   offeringNext = false,
 }: {
   item: BaseItemDto;
@@ -68,7 +70,8 @@ export function PlayerControls({
   onVersions?: () => void;
   onPrevious?: () => void;
   onNext?: () => void;
-  loadingEpisode?: 'previous' | 'next' | null;
+  onEpisode?: (episode: BaseItemDto) => void;
+  loadingEpisode?: string | null;
   offeringNext?: boolean;
 }) {
   const { state } = player;
@@ -89,6 +92,7 @@ export function PlayerControls({
     resume: boolean;
   } | null>(null);
   const [byEar, setByEar] = React.useState(false);
+  const [episodes, setEpisodes] = React.useState(false);
   const [scrub, setScrub] = React.useState<{
     fromMs: number;
     toMs: number;
@@ -105,6 +109,7 @@ export function PlayerControls({
         !state.started ||
         picking !== null ||
         byEar ||
+        episodes ||
         scrub !== null));
   useWindowButtons(visible);
   useFocusInside(root, visible, wake);
@@ -221,6 +226,7 @@ export function PlayerControls({
     visible ? 'opacity-100 [&>*]:pointer-events-auto' : 'opacity-0'
   );
   const isEpisode = item.Type === 'Episode';
+  const listsEpisodes = isEpisode && !!item.SeriesId && !!onEpisode;
   const spinner = <LuLoaderCircle className="animate-spin" />;
   const buttons: Record<string, Transport | false> = {
     previous: isEpisode && {
@@ -501,6 +507,7 @@ export function PlayerControls({
             player={player}
             onMenu={onMenu}
             onVersions={onVersions}
+            onEpisodes={listsEpisodes ? () => setEpisodes(true) : undefined}
             onAddFile={() => fileInput.current?.click()}
             onSyncByEar={() => setByEar(true)}
             onSyncToLine={pickLine}
@@ -508,6 +515,16 @@ export function PlayerControls({
           />
         </div>
       </div>
+
+      {listsEpisodes && (
+        <EpisodesSheet
+          item={item}
+          open={episodes}
+          loadingId={loadingEpisode}
+          onPlay={onEpisode}
+          onClose={() => setEpisodes(false)}
+        />
+      )}
 
       {locked && (
         <ScreenLock

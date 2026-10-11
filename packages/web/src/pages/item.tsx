@@ -14,14 +14,6 @@ import {
 } from 'react-icons/bi';
 import { Badge } from '@aiostreams/ui/badge';
 import { Button, IconButton } from '@aiostreams/ui/button';
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-  useCarousel,
-} from '@aiostreams/ui/carousel';
 import { Modal } from '@aiostreams/ui/modal';
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import { Tooltip } from '@aiostreams/ui/tooltip';
@@ -77,6 +69,7 @@ import {
   upToIndex,
 } from '../components/episodes';
 import { ItemMenu } from '../components/item-menu';
+import { SeasonPills } from '../components/season-pills';
 import { RatingButton } from '../components/rating';
 import { ExternalLinks } from '../components/external-links';
 import { CastAndCrew } from '../components/people';
@@ -884,126 +877,6 @@ const SeasonPosters = React.memo(function SeasonPosters({
     </MediaRow>
   );
 });
-
-function SeasonPills({
-  seasons,
-  selected,
-  onSelect,
-}: {
-  seasons: BaseItemDto[];
-  selected: string | undefined;
-  onSelect: (id: string) => void;
-}) {
-  const pills = seasons.map((s) => (
-    <ItemMenu key={s.Id} item={s} onPage>
-      <Button
-        data-ui="season-pill"
-        data-selected={s.Id === selected || undefined}
-        size="sm"
-        intent={s.Id === selected ? 'white' : 'gray-subtle'}
-        className="rounded-full"
-        rightIcon={s.UserData?.Played ? <BiCheck /> : undefined}
-        iconSpacing="0.25rem"
-        onClick={() => onSelect(s.Id!)}
-      >
-        {s.Name}
-      </Button>
-    </ItemMenu>
-  ));
-  // Embla watches its slides with an intersection observer (see lib/use-in-view.ts).
-  if (currentHost().tv) return <TvPills selected={selected}>{pills}</TvPills>;
-  return (
-    <Carousel
-      gap="sm"
-      opts={{ align: 'start', dragFree: true, slidesToScroll: 'auto' }}
-      className="flex items-center gap-2"
-    >
-      <PillArrow
-        arrow="prev"
-        follow={seasons.findIndex((s) => s.Id === selected)}
-      />
-      <PillTrack>
-        {pills.map((pill) => (
-          <CarouselItem key={pill.key} className="basis-auto">
-            {pill}
-          </CarouselItem>
-        ))}
-      </PillTrack>
-      <PillArrow arrow="next" />
-    </Carousel>
-  );
-}
-
-/** Starts scrolled to the selected pill. */
-function TvPills({
-  selected,
-  children,
-}: {
-  selected: string | undefined;
-  children: React.ReactNode;
-}) {
-  const track = React.useRef<HTMLDivElement>(null);
-  React.useLayoutEffect(() => {
-    const el = track.current;
-    const pill = el?.querySelector<HTMLElement>('[data-selected]');
-    if (!el || !pill) return;
-    if (
-      pill.offsetLeft < el.scrollLeft ||
-      pill.offsetLeft + pill.offsetWidth > el.scrollLeft + el.clientWidth
-    )
-      el.scrollLeft = pill.offsetLeft;
-  }, [selected]);
-  return (
-    <div ref={track} className="relative flex gap-2 overflow-x-auto">
-      {children}
-    </div>
-  );
-}
-
-/** `follow` scrolls that pill into view when it is out of it. */
-function PillArrow({
-  arrow,
-  follow,
-}: {
-  arrow: 'prev' | 'next';
-  follow?: number;
-}) {
-  const { api, canScrollPrev, canScrollNext } = useCarousel();
-  React.useEffect(() => {
-    if (!api || follow == null || follow < 0) return;
-    const node = api.slideNodes()[follow];
-    if (!node) return;
-    const root = api.rootNode().getBoundingClientRect();
-    const rect = node.getBoundingClientRect();
-    if (rect.left < root.left || rect.right > root.right) {
-      api.scrollTo(Math.min(follow, api.scrollSnapList().length - 1));
-    }
-  }, [api, follow]);
-  if (!canScrollPrev && !canScrollNext) return null;
-  const Arrow = arrow === 'prev' ? CarouselPrevious : CarouselNext;
-  return (
-    <Arrow className="hidden flex-none disabled:opacity-30 md:inline-flex" />
-  );
-}
-
-function PillTrack({ children }: { children: React.ReactNode }) {
-  const { canScrollPrev, canScrollNext } = useCarousel();
-  return (
-    <CarouselContent
-      contentClass={cn(
-        'min-w-0 flex-1',
-        canScrollPrev && canScrollNext
-          ? '[mask-image:linear-gradient(to_right,transparent,black_2.5rem,black_calc(100%-2.5rem),transparent)]'
-          : canScrollPrev
-            ? '[mask-image:linear-gradient(to_right,transparent,black_2.5rem)]'
-            : canScrollNext &&
-              '[mask-image:linear-gradient(to_left,transparent,black_2.5rem)]'
-      )}
-    >
-      {children}
-    </CarouselContent>
-  );
-}
 
 function AllEpisodes({
   title,

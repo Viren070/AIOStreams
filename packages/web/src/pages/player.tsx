@@ -523,6 +523,7 @@ function BrowserPlayer({
               onVersions={switchVersion}
               onPrevious={next.previous ? next.playPrevious : undefined}
               onNext={next.next ? next.playNext : undefined}
+              onEpisode={next.playEpisode}
               loadingEpisode={next.loading}
             />
           )}
@@ -679,6 +680,7 @@ function NativePlayer({
               onVersions={switchVersion}
               onPrevious={next.previous ? next.playPrevious : undefined}
               onNext={next.next ? next.playNext : undefined}
+              onEpisode={next.playEpisode}
               loadingEpisode={next.loading}
             />
           )}
