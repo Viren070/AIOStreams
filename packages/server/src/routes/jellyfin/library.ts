@@ -338,16 +338,6 @@ export async function mapLimited<T, R>(
   return out;
 }
 
-async function take<T>(source: AsyncIterator<T>, n: number): Promise<T[]> {
-  const out: T[] = [];
-  while (out.length < n) {
-    const next = await source.next();
-    if (next.done) break;
-    out.push(next.value);
-  }
-  return out;
-}
-
 const CATALOG_READ_AHEAD = 4;
 
 /**
@@ -929,34 +919,38 @@ router.get(
       const recent = provider.recentSeries(ctx.watch, limit * 4);
       /* One show can sit under several series keys; see `itemsFromRows`. */
       const shown = new Set<string>();
-      // Reaching the limit mid-batch wastes at most the rest of that batch.
-      for (
-        let checked = 0;
-        items.length < limit && checked < NEXT_UP_SHOWS;
-        checked += ROW_CONCURRENCY
-      ) {
-        const rows = await take(recent, ROW_CONCURRENCY);
-        if (!rows.length) break;
-        const batch = await mapLimited(rows, ROW_CONCURRENCY, async (row) => {
-          const d = {
-            t: row.mediaType,
-            i: seriesIdOf(row.baseId, row.videoId, row.mediaType),
-          };
-          // A part-played anchor can still come back to resume.
-          if (row.played && (await caughtUpOn(ctx, d).catch(() => false)))
-            return null;
-          return nextUpForSeries(ctx, d, row, { includeResumable }).catch(
-            () => null
-          );
-        });
-        for (const next of batch) {
-          if (items.length >= limit) break;
-          if (!next || (next.UserData as { Played: boolean }).Played) continue;
-          const series = String(next.SeriesId ?? next.Id);
-          if (shown.has(series)) continue;
-          shown.add(series);
-          items.push(next);
+      const check = async (row: WatchStateRow) => {
+        const d = {
+          t: row.mediaType,
+          i: seriesIdOf(row.baseId, row.videoId, row.mediaType),
+        };
+        // A part-played anchor can still come back to resume.
+        if (row.played && (await caughtUpOn(ctx, d).catch(() => false)))
+          return null;
+        return nextUpForSeries(ctx, d, row, { includeResumable }).catch(
+          () => null
+        );
+      };
+      // A new check starts as each one ends, and answers are taken in the shows' order.
+      const running: Promise<JellyfinItem | null>[] = [];
+      let started = 0;
+      const fill = async () => {
+        while (running.length < ROW_CONCURRENCY && started < NEXT_UP_SHOWS) {
+          const row = await recent.next();
+          if (row.done) return;
+          started++;
+          running.push(check(row.value));
         }
+      };
+      await fill();
+      while (running.length && items.length < limit) {
+        const next = await running.shift()!;
+        await fill();
+        if (!next || (next.UserData as { Played: boolean }).Played) continue;
+        const series = String(next.SeriesId ?? next.Id);
+        if (shown.has(series)) continue;
+        shown.add(series);
+        items.push(next);
       }
     }
     send(req, res, items, items.length, 0);
