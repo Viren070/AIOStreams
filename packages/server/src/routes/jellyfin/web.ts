@@ -113,16 +113,16 @@ type Secret = 'pin' | 'password' | 'password-pin';
 
 /** What switching to `user` asks of the caller. */
 function secretFor(ctx: JellyfinRequestContext, user: WebUser): Secret | null {
-  if (isCaller(ctx, user)) return null;
   const locked = user.persona
     ? personaLocked(user.persona)
     : accountLocked(ctx.userData);
+  // A PIN is asked on every switch, to the signed-in user too, or handing over
+  // a signed-in device would hand over the account.
+  if (isCaller(ctx, user)) return locked ? 'pin' : null;
   // A persona session may have begun with its PIN alone.
   if (!provedPassword(ctx) && (!user.persona || !locked)) {
     return locked ? 'password-pin' : 'password';
   }
-  // A PIN is asked on every switch, or handing over a signed-in device would
-  // hand over the account.
   return locked ? 'pin' : null;
 }
 
