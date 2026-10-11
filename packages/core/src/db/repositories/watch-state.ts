@@ -458,7 +458,7 @@ export class WatchStateRepository {
             last_played_at = CASE WHEN ${setLastPlayed} = 1 THEN ${lastPlayed} ELSE watch_state.last_played_at END,
             -- Maintained on write so the shelves can order on a plain indexed
             -- column instead of a COALESCE the index cannot serve.
-            sort_at = excluded.sort_at,
+            sort_at = CASE WHEN ${setLastPlayed} = 1 THEN excluded.sort_at ELSE watch_state.sort_at END,
             updated_at = excluded.updated_at,
             origin = excluded.origin,
             sink_id = excluded.sink_id,
