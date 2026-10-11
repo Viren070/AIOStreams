@@ -9,6 +9,7 @@ import { useSession } from '../lib/session';
 import { currentHost } from '../lib/hosts';
 import { usePageShown } from '../lib/page-shown';
 import { useItem } from '../lib/queries';
+import { focusOn, keyboardFocus, useAction } from '../lib/input';
 import { ScrollRoot, watch } from '../lib/use-in-view';
 import { backdropUrl, landscapeUrl, logoUrl } from '../lib/images';
 import { itemSubtitle, itemTitle, ticksToMs } from '../lib/format';
@@ -507,6 +508,7 @@ export function Hero({
     featured.length > 1;
   const shown = usePageShown();
   const section = React.useRef<HTMLElement>(null);
+  const [focused, setFocused] = React.useState(false);
   const [inSight, setInSight] = React.useState(true);
   React.useEffect(() => {
     const el = section.current;
@@ -516,13 +518,47 @@ export function Hero({
 
   React.useEffect(() => setIndex(0), [featured.length]);
   React.useEffect(() => {
-    if (paused || dragging || !shown || !inSight || featured.length < 2) return;
+    if (
+      paused ||
+      focused ||
+      dragging ||
+      !shown ||
+      !inSight ||
+      featured.length < 2
+    )
+      return;
     const timer = setTimeout(
       () => setIndex((i) => (i + 1) % featured.length),
       ROTATE_MS
     );
     return () => clearTimeout(timer);
-  }, [index, paused, dragging, shown, inSight, featured.length]);
+  }, [index, paused, focused, dragging, shown, inSight, featured.length]);
+
+  const landing = React.useRef<'first' | 'last' | null>(null);
+  const turn = (step: 1 | -1) => {
+    const actions = [
+      ...(section.current?.querySelectorAll<HTMLElement>(
+        '[data-ui=hero-action]'
+      ) ?? []),
+    ];
+    const at = actions.indexOf(keyboardFocus()!);
+    // From the first title, Left leaves for the navigation.
+    if (at < 0 || actions[at + step] || (step < 0 && !index)) return false;
+    landing.current = step > 0 ? 'first' : 'last';
+    setIndex((i) => (i + step + featured.length) % featured.length);
+  };
+  const turning = !!currentHost().tv && focused && featured.length > 1;
+  useAction('nav.right', () => turn(1), turning);
+  useAction('nav.left', () => turn(-1), turning);
+  React.useLayoutEffect(() => {
+    const to = landing.current;
+    landing.current = null;
+    const actions = section.current?.querySelectorAll<HTMLElement>(
+      '[data-ui=hero-action]'
+    );
+    const el = to === 'first' ? actions?.[0] : actions?.[actions.length - 1];
+    if (to && el) focusOn(el);
+  }, [index]);
 
   if (loading) return <HeroSkeleton />;
   if (!featured[index]) return null;
@@ -548,6 +584,10 @@ export function Hero({
       className="relative -mt-[var(--top-bar,0px)] h-[26rem] w-full touch-pan-y touch-pinch-zoom overflow-hidden sm:h-[30rem] lg:-ml-[var(--side-bar,0px)] lg:h-[calc(max(36rem,53vh)+var(--top-bar,0px))] lg:w-[calc(100%+var(--side-bar,0px))]"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
+      onFocus={() => setFocused(true)}
+      onBlur={(e) =>
+        !e.currentTarget.contains(e.relatedTarget) && setFocused(false)
+      }
       {...(swipeable ? swipe : {})}
     >
       <div className="absolute inset-0 isolate">
