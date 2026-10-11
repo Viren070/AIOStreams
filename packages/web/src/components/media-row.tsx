@@ -10,6 +10,7 @@ import {
 } from '@aiostreams/ui/carousel';
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import { cn } from '@aiostreams/ui/core/styling';
+import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
 import { currentHost } from '../lib/hosts';
 import {
   settings,
@@ -193,11 +194,12 @@ function useMarkOutOfView(
   box: React.RefObject<HTMLElement | null>,
   count: number,
   root: React.RefObject<Element | null> | Element | null,
-  rootMargin?: string
+  rootMargin?: string,
+  enabled = true
 ) {
   React.useEffect(() => {
     const cards = box.current?.children;
-    if (!cards) return;
+    if (!cards || !enabled) return;
     const stops = [...cards].map((card) =>
       watch(
         card,
@@ -207,7 +209,7 @@ function useMarkOutOfView(
       )
     );
     return () => stops.forEach((stop) => stop());
-  }, [box, count, root, rootMargin]);
+  }, [box, count, root, rootMargin, enabled]);
 }
 
 const savedScroll = new Map<string, number>();
@@ -223,9 +225,9 @@ const ROOM = 16;
 const GLIDE_LAYERS = 3;
 
 /**
- * A TV's row: a plain scroller, as Embla's measuring and scripted easing are
- * too much for a TV's CPU. Focus jumps it, and an animated transform eases the
- * jump on the compositor.
+ * A TV's or touch screen's row: a plain scroller, as Embla's measuring and
+ * scripted easing are too much for a TV's CPU and stutter a swipe. Focus jumps
+ * it, and an animated transform eases the jump on the compositor.
  */
 function NativeRow({
   restoreKey,
@@ -330,14 +332,14 @@ function NativeRow({
       el.removeEventListener('scroll', check);
     };
   }, [restoreKey, onEnd, onView, count]);
-  useMarkOutOfView(content, count, ref);
+  useMarkOutOfView(content, count, ref, undefined, !!currentHost().tv);
   return (
     <div
       ref={ref}
       data-nav-self-scroll
       className={cn(
         CarouselAnatomy.content(),
-        'relative -mr-4 overflow-x-auto overflow-y-hidden lg:-mr-10'
+        'relative -mr-4 overflow-x-auto overflow-y-hidden [scrollbar-width:none] lg:-mr-10 [&::-webkit-scrollbar]:hidden'
       )}
     >
       {Array.from({ length: GLIDE_LAYERS }).reduceRight<React.ReactNode>(
@@ -407,8 +409,10 @@ export function MediaRow({
   const width = itemClass ?? ITEM_WIDTH[shape];
   const items = React.Children.toArray(children);
   const { drawn, fades, onView } = useWindow(items.length, start, !!loading);
+  // A finger scrolls a plain scroller on the compositor; Embla is for a mouse to drag.
+  const touch = useMediaQuery('(pointer: coarse)');
   if (!loading && !items.length) return null;
-  const native = !!currentHost().tv;
+  const native = !!currentHost().tv || touch;
   const skeletons = (count: number) =>
     Array.from({ length: count }, (_, i) => (
       <Slide key={`skeleton-${i}`} className={width}>
