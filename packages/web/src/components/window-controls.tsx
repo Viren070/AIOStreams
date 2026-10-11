@@ -37,27 +37,40 @@ export function WindowControls() {
       else if (m.type === 'fullscreen') setFullscreen(m.value);
     });
     shell.send({ type: 'window-state' });
-    const onDown = (e: MouseEvent) => {
+    const taken = (e: MouseEvent): 'resize' | 'move' | null => {
       const { maximized, fullscreen } = latest.current;
-      if (e.button !== 0 || fullscreen || e.clientY > STRIP_PX) return;
-      if (e.clientY <= EDGE_PX && !maximized && !native) {
+      if (e.button !== 0 || fullscreen || e.clientY > STRIP_PX) return null;
+      if (e.clientY <= EDGE_PX && !maximized && !native) return 'resize';
+      if ((e.target as HTMLElement | null)?.closest(INTERACTIVE)) return null;
+      return 'move';
+    };
+    // The system keeps the release of a press that moves the window, so the
+    // page never sees the press, or a hold it starts never ends.
+    const onPointerDown = (e: PointerEvent) => {
+      if (e.pointerType === 'mouse' && taken(e)) e.stopPropagation();
+    };
+    const onDown = (e: MouseEvent) => {
+      const press = taken(e);
+      if (!press) return;
+      e.preventDefault();
+      if (press === 'resize') {
         const edge =
           e.clientX <= CORNER_PX
             ? 'nw'
             : e.clientX >= window.innerWidth - CORNER_PX
               ? 'ne'
               : 'n';
-        e.preventDefault();
         shell.send({ type: 'window-resize', edge });
-        return;
-      }
-      if ((e.target as HTMLElement | null)?.closest(INTERACTIVE)) return;
-      e.preventDefault();
-      shell.send({ type: e.detail === 2 ? 'window-maximize' : 'window-drag' });
+      } else
+        shell.send({
+          type: e.detail === 2 ? 'window-maximize' : 'window-drag',
+        });
     };
+    window.addEventListener('pointerdown', onPointerDown, true);
     window.addEventListener('mousedown', onDown);
     return () => {
       unsubscribe();
+      window.removeEventListener('pointerdown', onPointerDown, true);
       window.removeEventListener('mousedown', onDown);
     };
   }, [shell, native]);
