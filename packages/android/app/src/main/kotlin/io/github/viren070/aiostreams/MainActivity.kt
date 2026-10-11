@@ -64,7 +64,13 @@ class MainActivity : ComponentActivity() {
     private lateinit var controller: ListenableFuture<MediaController>
     private val screen = PlayerWindow(this)
     private val levels by lazy { Levels(this) }
-    private val notifications = registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
+    /** Run once the notification question is answered, either way. */
+    private var afterNotifications: (() -> Unit)? = null
+    private val notifications = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+        val next = afterNotifications
+        afterNotifications = null
+        next?.invoke()
+    }
     /** A save waiting on storage access, run either way so a refusal reports as a failure. */
     private var unsaved: (() -> Unit)? = null
     private val storage = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
@@ -111,7 +117,7 @@ class MainActivity : ComponentActivity() {
         app.configure(web, ::chooseFiles, players::open)
         val queue = Downloads.queue(this)
         queue.send = { message -> runOnUiThread { bridge.send(message) } }
-        downloads = DownloadChannel(queue, onAdd = ::askForNotifications)
+        downloads = DownloadChannel(queue, onAdd = { askForNotifications() })
         frameRates = FrameRateMatch(
             this,
             hold = {
@@ -143,7 +149,7 @@ class MainActivity : ComponentActivity() {
             PictureInPicture.supported(this),
         )
         bridge = AppBridge(web, app.origins, identity, ::onMessage)
-        updater = Updater(this) { bridge.send(it) }
+        updater = Updater(this, ::askForNotifications) { bridge.send(it) }
         pip = PictureInPicture(this, playback.stage)
         focus = AudioFocus(
             this,
@@ -368,14 +374,16 @@ class MainActivity : ComponentActivity() {
         InputDevice.getDevice(id)?.let { !it.isVirtual && it.supportsSource(InputDevice.SOURCE_JOYSTICK) } == true
     }
 
-    /** Asked on the first download, whose progress shows in one. */
-    private fun askForNotifications() {
+    /** Asked on the first download, whose progress shows in one, and before an update. */
+    private fun askForNotifications(then: () -> Unit = {}) {
         val permission = Manifest.permission.POST_NOTIFICATIONS
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED
         ) {
-            notifications.launch(permission)
+            return then()
         }
+        afterNotifications = then
+        notifications.launch(permission)
     }
 
     /** Kept by the app, as the page's storage goes with the address it loads from. */

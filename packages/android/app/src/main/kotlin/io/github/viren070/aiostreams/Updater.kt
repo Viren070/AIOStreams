@@ -34,7 +34,11 @@ import okhttp3.Request
  * build sits on one release that every build replaces, with an `update.json`
  * naming the APK for each kind of processor. Installing asks the user.
  */
-class Updater(private val activity: ComponentActivity, private val send: (JsonObject) -> Unit) {
+class Updater(
+    private val activity: ComponentActivity,
+    private val beforeInstall: (then: () -> Unit) -> Unit,
+    private val send: (JsonObject) -> Unit,
+) {
     private val worker = Executors.newSingleThreadExecutor { Thread(it, "updates") }
     private val main = Handler(Looper.getMainLooper())
     private val client = OkHttpClient()
@@ -83,7 +87,7 @@ class Updater(private val activity: ComponentActivity, private val send: (JsonOb
     fun handle(type: String, message: JsonObject): Boolean {
         when (type) {
             "update-check" -> check(message["channel"]?.jsonPrimitive?.contentOrNull)
-            "update-apply" -> worker.execute { apply() }
+            "update-apply" -> beforeInstall { worker.execute { apply() } }
             else -> return false
         }
         return true
