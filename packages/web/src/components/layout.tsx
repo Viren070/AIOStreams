@@ -53,6 +53,7 @@ import { useSession } from '../lib/session';
 import { usePickableUsers } from '../lib/queries';
 import { configureUrl, navigate, to } from '../lib/paths';
 import { currentHost } from '../lib/hosts';
+import { shellHost } from '../lib/hosts/shell';
 import { serverAddress } from '../lib/servers';
 import { useServerInfo } from '../lib/server-info';
 import { useDiscordBrowsing } from '../lib/discord';
@@ -74,6 +75,7 @@ import { ItemMenuHost } from './item-menu';
 import { HomePage } from '../pages/home';
 import { PageShown } from '../lib/page-shown';
 import { GlideLayers } from './glide-layers';
+import { UpdatePrompt } from './update-prompt';
 
 // Kept mounted under every page, so it skips the layout's render on each route change.
 const KeptHome = React.memo(HomePage);
@@ -782,7 +784,7 @@ function PagesWork({ pathname }: { pathname: string }) {
   usePendingStops();
   useAction('search', () => navigate(to.search()));
   useAction('home', () => navigate(to.home));
-  return null;
+  return shellHost() ? <UpdatePrompt /> : null;
 }
 
 function select(item: SidebarItem) {

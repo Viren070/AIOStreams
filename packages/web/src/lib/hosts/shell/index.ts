@@ -1,5 +1,4 @@
 import React from 'react';
-import { toast } from 'sonner';
 import {
   settings,
   onSettingsChange,
@@ -38,22 +37,34 @@ export function applyUpdate(): void {
   appBridge()?.send({ type: 'update-apply' });
 }
 
+export const applyLabel = () =>
+  appBridge()?.platform === 'android' ? 'Install' : 'Restart now';
+
+export function updateStatus(update: UpdateState | null): string {
+  const android = appBridge()?.platform === 'android';
+  switch (update?.state) {
+    case undefined:
+      return 'Not checked yet.';
+    case 'off':
+      return 'This copy does not update itself.';
+    case 'checking':
+      return 'Checking\u2026';
+    case 'downloading':
+      return `Downloading version ${update.version}\u2026`;
+    case 'ready':
+      return android
+        ? `Version ${update.version} is ready to install.`
+        : `Version ${update.version} installs on the next start.`;
+    case 'current':
+      return 'Up to date.';
+    case 'error':
+      return `Could not check: ${update.error}`;
+  }
+}
+
 function onUpdateState(next: UpdateState) {
-  const announced = updateState?.state === 'ready';
   updateState = next;
   for (const listener of updateListeners) listener();
-  if (next.state !== 'ready' || announced) return;
-  const android = appBridge()?.platform === 'android';
-  toast('Update ready', {
-    description: android
-      ? `Version ${next.version} is ready to install.`
-      : `Version ${next.version} installs on the next start.`,
-    action: {
-      label: android ? 'Install' : 'Restart now',
-      onClick: applyUpdate,
-    },
-    duration: Infinity,
-  });
 }
 
 /** Keeps mpv in step with this device's settings and checks for updates. */
