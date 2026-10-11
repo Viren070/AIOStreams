@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.12.1](https://github.com/Viren070/AIOStreams/compare/desktop-v0.12.0...desktop-v0.12.1) (2026-10-11)
+
+
+### Bug Fixes
+
+* send alang and slang lists to mpv as -append options ([fc10515](https://github.com/Viren070/AIOStreams/commit/fc10515af600dd9d667035830435bcd5d95d6823))
+* **web:** drop a show's picked language from the rest of its list ([1ced0e6](https://github.com/Viren070/AIOStreams/commit/1ced0e68f43035e665db34bc00ef3c3f301a217b))
+
 ## [0.12.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.11.0...desktop-v0.12.0) (2026-10-10)
 
 
