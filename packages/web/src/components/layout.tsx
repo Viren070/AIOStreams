@@ -74,6 +74,9 @@ import { HomePage } from '../pages/home';
 import { PageShown } from '../lib/page-shown';
 import { GlideLayers } from './glide-layers';
 
+// Kept mounted under every page, so it skips the layout's render on each route change.
+const KeptHome = React.memo(HomePage);
+
 const PAGE_FADE = {
   initial: { opacity: 0, top: 6 },
   animate: { opacity: 1, top: 0 },
@@ -725,7 +728,7 @@ export function WebLayout() {
                       )}
                     >
                       <PageShown.Provider value={onHome}>
-                        <HomePage />
+                        <KeptHome />
                       </PageShown.Provider>
                       {onHome && <PageScroll />}
                     </motion.div>
