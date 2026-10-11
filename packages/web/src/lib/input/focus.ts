@@ -282,6 +282,28 @@ function candidates(
   });
 }
 
+/** In a `data-nav-row`, whose cards lie in their order, the next one that way. */
+function along(
+  from: HTMLElement,
+  rect: DOMRect,
+  dir: Direction
+): HTMLElement | null {
+  const row = from.closest('[data-nav-row]');
+  if (!row) return null;
+  const all = [...row.querySelectorAll<HTMLElement>(FOCUSABLE)];
+  const at = all.indexOf(from);
+  if (at < 0) return null;
+  const step = dir === 'right' ? 1 : -1;
+  for (let i = at + step; i >= 0 && i < all.length; i += step) {
+    if (ruledOut(all[i])) continue;
+    const to = rectOf(all[i]);
+    return distance(rect, to, dir)?.inLine && canFocus(all[i], to)
+      ? all[i]
+      : null;
+  }
+  return null;
+}
+
 function nearest(
   root: Element,
   from: HTMLElement,
@@ -291,6 +313,8 @@ function nearest(
   // Sideways keeps to its own line, so focus stops at a row's end.
   const sideways = dir === 'left' || dir === 'right';
   const rect = rectOf(from);
+  const next = sideways && !everything ? along(from, rect, dir) : null;
+  if (next) return next;
   const scored: Candidate[] = [];
   const els = everything
     ? [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(

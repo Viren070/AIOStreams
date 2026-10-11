@@ -356,6 +356,7 @@ function NativeRow({
         ),
         <div
           ref={content}
+          data-nav-row
           className={cn(
             CarouselAnatomy.innerContent({ gap: 'md' }),
             // A scroller leaves the last card's margin out of its end.
