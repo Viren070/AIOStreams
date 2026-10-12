@@ -300,7 +300,10 @@ function Versions({
 }) {
   const { client } = useSession();
   const { item } = request;
-  const info = usePlaybackInfo(item.Id!, { listing: true });
+  const info = usePlaybackInfo(
+    item.Id!,
+    request.playing ? { kept: true } : { listing: true }
+  );
   const refresh = useRefreshPlaybackInfo(item.Id!);
   const refreshing = info.isFetching || refresh.isPending;
   const canRefresh = useFeature('refreshVersions');

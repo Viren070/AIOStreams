@@ -553,14 +553,22 @@ export async function requestPlaybackInfo(
   client: JellyfinClient,
   userId: string,
   itemId: string,
-  opts: { refresh?: boolean; sourceId?: string; profile?: object } = {}
+  opts: {
+    refresh?: boolean;
+    sourceId?: string;
+    profile?: object;
+    /** The list the server kept, however old. */
+    kept?: boolean;
+  } = {}
 ): Promise<PlaybackInfoResponse> {
   const info = await client.post<PlaybackInfoResponse>(
     `/Items/${itemId}/PlaybackInfo`,
     {
       UserId: userId,
       DeviceProfile: opts.profile ?? DEVICE_PROFILE,
-      ...(opts.sourceId ? { MediaSourceId: opts.sourceId } : { Fresh: true }),
+      ...(opts.sourceId
+        ? { MediaSourceId: opts.sourceId }
+        : !opts.kept && { Fresh: true }),
       ...(opts.refresh && { Refresh: true }),
     },
     { userId }
@@ -570,8 +578,10 @@ export async function requestPlaybackInfo(
 
 function usePlaybackInfoRequest() {
   const { client, user } = useSession();
-  return (itemId: string, refresh = false, sourceId?: string) =>
-    requestPlaybackInfo(client, user.Id!, itemId, { refresh, sourceId });
+  return (
+    itemId: string,
+    opts: { refresh?: boolean; sourceId?: string; kept?: boolean } = {}
+  ) => requestPlaybackInfo(client, user.Id!, itemId, opts);
 }
 
 export function usePlaybackInfoOptions() {
@@ -580,22 +590,33 @@ export function usePlaybackInfoOptions() {
   return (itemId: string, sourceId?: string) =>
     queryOptions({
       queryKey: [...key, 'playback-info', itemId, sourceId ?? null],
-      queryFn: () => request(itemId, false, sourceId),
+      queryFn: () => request(itemId, { sourceId }),
       staleTime: 10 * 60_000,
     });
 }
 
 /**
  * The version list asks on every open, as the server decides when a result is
- * too old; the player reuses whatever the list showed.
+ * too old; the player reuses whatever the list showed. The player's own list
+ * (`kept`) asks once, as asking again can search every indexer anew.
  */
 export function usePlaybackInfo(
   itemId: string,
-  opts: { listing?: boolean; sourceId?: string; enabled?: boolean } = {}
+  opts: {
+    listing?: boolean;
+    kept?: boolean;
+    sourceId?: string;
+    enabled?: boolean;
+  } = {}
 ) {
   const options = usePlaybackInfoOptions();
+  const request = usePlaybackInfoRequest();
   return useQuery({
     ...options(itemId, opts.sourceId),
+    ...(opts.kept && {
+      queryFn: () => request(itemId, { kept: true }),
+      staleTime: Infinity,
+    }),
     refetchOnMount: opts.listing ? 'always' : true,
     enabled: opts.enabled ?? true,
   });
@@ -606,7 +627,7 @@ export function useRefreshPlaybackInfo(itemId: string) {
   const request = usePlaybackInfoRequest();
   const options = usePlaybackInfoOptions();
   return useMutation({
-    mutationFn: () => request(itemId, true),
+    mutationFn: () => request(itemId, { refresh: true }),
     onSuccess: (data) =>
       queryClient.setQueryData(options(itemId).queryKey, data),
   });
