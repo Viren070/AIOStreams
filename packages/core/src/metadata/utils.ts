@@ -81,6 +81,8 @@ export interface Metadata {
   country?: string;
   /** Same-name series that results could belong to instead of this one. */
   titleConflicts?: TitleConflict[];
+  /** Discovery failed; an empty/partial list cannot certify the primary title. */
+  titleConflictsUnavailable?: boolean;
   /** Known names of the requested episode, across sources and languages. */
   episodeTitles?: MetadataTitle[];
   /**

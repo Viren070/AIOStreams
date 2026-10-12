@@ -534,6 +534,38 @@ export function parseMediaInfo(
   return normalised;
 }
 
+/** Optional indexer track extension; only explicit boolean roles provide evidence. */
+export function parseIndexerAudioTracks(
+  value: unknown
+): ParsedMediaInfo | undefined {
+  if (typeof value === 'string') {
+    if (value.length > 65536) return undefined;
+    try {
+      value = JSON.parse(value);
+    } catch {
+      return undefined;
+    }
+  }
+  if (!Array.isArray(value) || !value.length || value.length > 128)
+    return undefined;
+  const info = parseMediaInfo({
+    audio: value.map((track) => {
+      if (typeof track === 'string') return { lang: track };
+      if (!track || typeof track !== 'object' || Array.isArray(track))
+        return {};
+      return {
+        ...track,
+        lang: track.lang ?? track.language,
+        visual_impaired:
+          track.visual_impaired === true || track.visualImpaired === true,
+        hearing_impaired:
+          track.hearing_impaired === true || track.hearingImpaired === true,
+      };
+    }),
+  });
+  return info ? { ...info, mediaInfoQuality: 'indexer' } : undefined;
+}
+
 export function mergeParsedMediaInfo(
   base: Partial<ParsedMediaInfo> | undefined,
   preferred: Partial<ParsedMediaInfo> | undefined

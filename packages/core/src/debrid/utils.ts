@@ -13,6 +13,7 @@ import {
   ParsedMediaInfo,
 } from '../utils/index.js';
 import { promises as fs } from 'fs';
+import type { ReleaseIds } from '../db/schemas.js';
 import path from 'path';
 import { createHash } from 'crypto';
 import {
@@ -207,6 +208,8 @@ interface BaseFile {
   seeders?: number;
   group?: string;
   parsedMediaInfo?: ParsedMediaInfo;
+  releaseIds?: ReleaseIds;
+  releaseMedium?: 'animation';
   age?: number; // age in hours
   downloadvolumefactor?: number; // multiplier for the download volume that counts toward the user’s account on the tracker
   library?: boolean; // whether the file is already in the user's library
