@@ -64,10 +64,16 @@ export default defineConfig(({ envMode }) => {
     __STANDALONE__: JSON.stringify(standalone),
     __APP_COMMIT__: JSON.stringify(buildCommit()),
   };
+  const source = {
+    entry: { index: './src/main.tsx' },
+    define,
+    // Dependencies too, which are otherwise shipped as published: older browsers can't parse some of their syntax.
+    include: [/[\\/]node_modules[\\/]/],
+  };
   if (standalone) {
     return {
       plugins: [pluginReact()],
-      source: { entry: { index: './src/main.tsx' }, define },
+      source,
       html: {
         template: './index.html',
         templateParameters: { root: './', icons: false },
@@ -83,7 +89,7 @@ export default defineConfig(({ envMode }) => {
   }
   return {
     plugins: [pluginReact()],
-    source: { entry: { index: './src/main.tsx' }, define },
+    source,
     html: {
       template: './index.html',
       templateParameters: { root: '/', icons: true },
