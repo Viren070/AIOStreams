@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/Viren070/AIOStreams/compare/android-v0.4.0...android-v0.4.1) (2026-10-12)
+
+
+### Bug Fixes
+
+* **android:** install updates with an automatic install location ([d1e4c80](https://github.com/Viren070/AIOStreams/commit/d1e4c80215b228cc4594a6338de3fb673d8b460c))
+
 ## [0.4.0](https://github.com/Viren070/AIOStreams/compare/android-v0.3.0...android-v0.4.0) (2026-10-12)
 
 
