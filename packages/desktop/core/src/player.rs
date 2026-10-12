@@ -375,6 +375,19 @@ fn strip_dolby_vision(mpv: &Mpv) -> bool {
     }
 }
 
+/// FFmpeg's reader logs a failed status as a warning, as it may retry it.
+fn reader_error(prefix: &str, level: &str, text: &str) -> Option<String> {
+    let text = text.trim_end();
+    match prefix {
+        "curl" if matches!(level, "error" | "fatal") => Some(text.to_string()),
+        "ffmpeg" => text
+            .strip_prefix("http: ")
+            .filter(|t| t.starts_with("HTTP error "))
+            .map(String::from),
+        _ => None,
+    }
+}
+
 fn pump(mpv: &Mpv, emit: &Emit, quit: &AtomicBool, dolby_vision: &AtomicBool) {
     let json = |id: u64| {
         OBSERVED
@@ -398,11 +411,8 @@ fn pump(mpv: &Mpv, emit: &Emit, quit: &AtomicBool, dolby_vision: &AtomicBool) {
                     level,
                     text,
                 } => {
-                    if cause.is_none()
-                        && prefix == "curl"
-                        && matches!(level.as_str(), "error" | "fatal")
-                    {
-                        cause = Some(text.trim_end().to_string());
+                    if cause.is_none() {
+                        cause = reader_error(&prefix, &level, &text);
                     }
                     mpv_log.push(&level, &prefix, &text)
                 }
