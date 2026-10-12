@@ -86,6 +86,23 @@ export function subtitleUrl(
   return new URL(client.url(path), window.location.href).toString();
 }
 
+export function splitByLanguage<T extends { id: string; lang?: string }>(
+  tracks: T[],
+  languages: string[],
+  current: string | null
+): { shown: T[]; hidden: T[] } {
+  if (!languages.length) return { shown: tracks, hidden: [] };
+  const mine = (t: T) =>
+    !t.lang ||
+    t.lang === 'und' ||
+    t.id === current ||
+    languages.some((l) => sameLanguage(l, t.lang));
+  return {
+    shown: tracks.filter(mine),
+    hidden: tracks.filter((t) => !mine(t)),
+  };
+}
+
 /** The subtitle the user's languages, subtitle mode and subtitle types start with. */
 export function preferredSubtitle<T extends StreamFacts>(
   subtitles: T[],

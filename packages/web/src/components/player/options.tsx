@@ -5,6 +5,7 @@ import {
   LuCaptions,
   LuCaptionsOff,
   LuCheck,
+  LuChevronDown,
   LuCrop,
   LuEar,
   LuFilePlus,
@@ -46,6 +47,8 @@ import {
   stepSubtitleSize,
   SUBTITLE_SIZE_LABELS,
 } from '../../lib/subtitles/style';
+import { splitByLanguage } from '../../lib/subtitles/tracks';
+import { subtitleLanguages, usePlaybackPrefs } from '../../lib/user-config';
 import { ControlButton } from './buttons';
 import { RATES, rateLabel } from './keys';
 import { usePlayhead } from '../../lib/playback/playhead';
@@ -60,6 +63,7 @@ function Menu({
   onOpenChange,
   action,
   footer,
+  more,
 }: {
   name: string;
   label: string;
@@ -70,7 +74,31 @@ function Menu({
   onOpenChange(open: boolean): void;
   action?: { name: string; label: string; icon: React.ReactNode; run(): void };
   footer?: React.ReactNode;
+  /** Listed after a press on `label`, which stands in for them until the menu closes. */
+  more?: { label: string; options: Track[] };
 }) {
+  const [expanded, setExpanded] = React.useState(false);
+  const firstMore = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    if (expanded) firstMore.current?.focus();
+  }, [expanded]);
+  const item = (option: Track, ref?: React.Ref<HTMLDivElement>) => (
+    <DropdownMenuItem
+      key={option.id}
+      ref={ref}
+      data-ui="player-menu-item"
+      data-selected={(value ?? '') === option.id || undefined}
+      onClick={() => onSelect(option.id === '' ? null : option.id)}
+    >
+      <LuCheck
+        className={cn(
+          'flex-none',
+          (value ?? '') === option.id ? 'opacity-100' : 'opacity-0'
+        )}
+      />
+      <span className="[overflow-wrap:anywhere]">{option.label}</span>
+    </DropdownMenuItem>
+  );
   return (
     <DropdownMenu
       data-ui="player-menu"
@@ -78,7 +106,10 @@ function Menu({
       side="top"
       align="end"
       sideOffset={8}
-      onOpenChange={onOpenChange}
+      onOpenChange={(open) => {
+        if (!open) setExpanded(false);
+        onOpenChange(open);
+      }}
       className="flex max-h-[60vh] min-w-[12rem] max-w-[min(22rem,90vw)] flex-col bg-gray-950/95"
       trigger={
         <ControlButton name={name} label={label}>
@@ -90,22 +121,26 @@ function Menu({
       {/* The list scrolls under a pinned footer; a short screen scrolls both together. */}
       <div className="-mx-2 flex min-h-0 flex-col overflow-x-hidden px-2 [@media(max-height:640px)]:overflow-y-auto">
         <div className="min-h-0 overflow-y-auto [@media(max-height:640px)]:shrink-0 [@media(max-height:640px)]:overflow-y-visible">
-          {options.map((option) => (
-            <DropdownMenuItem
-              key={option.id}
-              data-ui="player-menu-item"
-              data-selected={(value ?? '') === option.id || undefined}
-              onClick={() => onSelect(option.id === '' ? null : option.id)}
-            >
-              <LuCheck
-                className={cn(
-                  'flex-none',
-                  (value ?? '') === option.id ? 'opacity-100' : 'opacity-0'
-                )}
-              />
-              <span className="[overflow-wrap:anywhere]">{option.label}</span>
-            </DropdownMenuItem>
-          ))}
+          {options.map((option) => item(option))}
+          {more &&
+            more.options.length > 0 &&
+            (expanded ? (
+              more.options.map((option, i) =>
+                item(option, i === 0 ? firstMore : undefined)
+              )
+            ) : (
+              <DropdownMenuItem
+                data-ui="player-menu-action"
+                data-name="more"
+                onSelect={(e) => {
+                  e.preventDefault();
+                  setExpanded(true);
+                }}
+              >
+                <LuChevronDown className="flex-none" />
+                {more.label}
+              </DropdownMenuItem>
+            ))}
           {action && (
             <DropdownMenuItem
               data-ui="player-menu-action"
@@ -311,6 +346,15 @@ export function OptionButtons({
   notice(text: string): void;
 }) {
   const { state } = player;
+  const { prefs } = usePlaybackPrefs();
+  const subtitles =
+    prefs.ListPreferredSubtitlesOnly === false
+      ? { shown: player.subtitleTracks, hidden: [] }
+      : splitByLanguage(
+          player.subtitleTracks,
+          subtitleLanguages(prefs),
+          state.subtitle
+        );
   const chapters = player.chapters ?? [];
   const chapter = usePlayhead(player.playhead, (h) =>
     chapterAt(chapters, h.positionMs)
@@ -328,7 +372,11 @@ export function OptionButtons({
           name="subtitles"
           label="Subtitles"
           icon={state.subtitle ? <LuCaptions /> : <LuCaptionsOff />}
-          options={[{ id: '', label: 'Off' }, ...player.subtitleTracks]}
+          options={[{ id: '', label: 'Off' }, ...subtitles.shown]}
+          more={{
+            label: `More languages (${subtitles.hidden.length})`,
+            options: subtitles.hidden,
+          }}
           value={state.subtitle}
           onSelect={player.setSubtitle}
           onOpenChange={onMenu}

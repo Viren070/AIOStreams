@@ -55,6 +55,7 @@ export function userConfiguration() {
     SubtitleLanguagePreference: '',
     SubtitleLanguages: [] as string[],
     SubtitleTypes: [...SUBTITLE_TYPES] as string[],
+    ListPreferredSubtitlesOnly: true,
     DisplayMissingEpisodes: true,
     GroupedFolders: [],
     SubtitleMode: 'Default',
@@ -87,6 +88,7 @@ const USER_PREFERENCES: Record<string, (value: unknown) => boolean> = {
     v.length <= SUBTITLE_TYPES.length &&
     new Set(v).size === v.length &&
     v.every((t) => SUBTITLE_TYPES.some((type) => type === t)),
+  ListPreferredSubtitlesOnly: (v) => typeof v === 'boolean',
   PlayDefaultAudioTrack: (v) => typeof v === 'boolean',
   RememberAudioSelections: (v) => typeof v === 'boolean',
   RememberSubtitleSelections: (v) => typeof v === 'boolean',

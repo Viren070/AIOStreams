@@ -867,6 +867,15 @@ function SubtitlesSection() {
             onChange={(next) => update({ SubtitleTypes: next })}
           />
         )}
+        {typeof prefs.ListPreferredSubtitlesOnly === 'boolean' && (
+          <Switch
+            side="right"
+            label="List only my languages"
+            help="The player's subtitle menu lists subtitles in your languages, ones without a language and the one on. The rest wait under More languages."
+            value={prefs.ListPreferredSubtitlesOnly}
+            onValueChange={(v) => update({ ListPreferredSubtitlesOnly: v })}
+          />
+        )}
         <Switch
           side="right"
           label="Remember picks per show"
