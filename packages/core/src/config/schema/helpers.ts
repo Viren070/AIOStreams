@@ -65,6 +65,19 @@ export const urlString = z
   })
   .transform(trimTrailingSlash);
 
+/** A URL or null, where an empty env value means null. */
+export const optionalUrlString = z.union([
+  z.null(),
+  z.string().transform((value, ctx) => {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const url = urlString.safeParse(trimmed);
+    if (url.success) return url.data;
+    ctx.addIssue({ code: 'custom', message: `Invalid URL: "${value}"` });
+    return z.NEVER;
+  }),
+]);
+
 /**
  * Accepts a single URL string, an array of URL strings, or a JSON-encoded
  * array of URL strings (env shape). Produces a non-empty `string[]`.

@@ -1611,6 +1611,10 @@ const SEGMENT_PROVIDERS = ['introdb', 'aniskip', 'animeskip', 'pmdb'] as const;
 
 export type SegmentProviderId = (typeof SEGMENT_PROVIDERS)[number];
 
+const SUGGESTION_PROVIDERS = ['lumieredb', 'cinemeta'] as const;
+
+export type SuggestionProviderId = (typeof SUGGESTION_PROVIDERS)[number];
+
 export const RESOURCE_LABELS: Record<Resource, string> = {
   [STREAM_RESOURCE]: 'Stream',
   [SUBTITLES_RESOURCE]: 'Subtitles',
@@ -1821,6 +1825,7 @@ export {
   LANGUAGES,
   RESOURCES,
   SEGMENT_PROVIDERS,
+  SUGGESTION_PROVIDERS,
   STREAM_RESOURCE,
   SUBTITLES_RESOURCE,
   CATALOG_RESOURCE,

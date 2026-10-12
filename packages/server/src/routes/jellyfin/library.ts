@@ -1,7 +1,10 @@
 import { Router, type Request, type Response } from 'express';
 import {
+  buildContentItem,
   buildGenre,
   catalogHasCollections,
+  encodeImageTag,
+  suggestTitles,
   filmographyCredits,
   findPerson,
   recommendedPreviews,
@@ -67,6 +70,7 @@ import {
   seasonsForSeries,
   viewItems,
 } from './items.js';
+import { metahubPoster } from './images.js';
 import { getMeta } from './resolve.js';
 
 const router: Router = Router({ mergeParams: true });
@@ -1494,6 +1498,41 @@ router.get(
   })
 );
 
+async function hintItems(
+  ctx: JellyfinRequestContext,
+  term: string,
+  limit: number,
+  types: Set<string> | null
+): Promise<JellyfinItem[]> {
+  const kinds = searchKindsFor(types);
+  const suggested = await suggestTitles(
+    term,
+    kinds ?? ['movie', 'series'],
+    limit
+  );
+  if (!suggested) {
+    const engine = await ctx.engine();
+    const previews = await searchCatalogs(
+      engine,
+      term,
+      limit,
+      kinds,
+      ctx.userData
+    );
+    return itemsFromPreviews(ctx, previews);
+  }
+  // Tagged rather than built with a poster, which would be remembered as the title's own.
+  return suggested.map((s) => ({
+    ...buildContentItem(ctx.build, {
+      id: s.id,
+      type: s.type,
+      name: s.name,
+      releaseInfo: s.year?.toString(),
+    }),
+    ImageTags: { Primary: encodeImageTag(metahubPoster(s.id)) },
+  }));
+}
+
 router.get(
   '/Search/Hints',
   jf(async (req, res, ctx) => {
@@ -1504,15 +1543,7 @@ router.get(
       res.json({ SearchHints: [], TotalRecordCount: 0 });
       return;
     }
-    const engine = await ctx.engine();
-    const previews = await searchCatalogs(
-      engine,
-      term,
-      limit,
-      searchKindsFor(types),
-      ctx.userData
-    );
-    const items = filterByType(await itemsFromPreviews(ctx, previews), types);
+    const items = filterByType(await hintItems(ctx, term, limit, types), types);
     res.json({
       SearchHints: items.map((i) => ({
         ItemId: i.Id,

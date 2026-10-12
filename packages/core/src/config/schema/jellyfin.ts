@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import * as constants from '../../utils/constants.js';
-import { seconds, byteSize } from './helpers.js';
+import { seconds, byteSize, optionalUrlString } from './helpers.js';
 import type { RuntimeConfigSection } from '../types.js';
 
 /**
@@ -134,6 +134,26 @@ export const jellyfinSchema = {
     description:
       'Stock clients build their version picker from the item page, which means fetching streams before playback starts. **always** does that for everyone, **never** only resolves on play (the picker shows a placeholder until then), **user** lets each configuration choose, though an app that asks the item for its versions gets them either way.',
     env: 'JELLYFIN_RESOLVE_ON_OPEN',
+    requiresRestart: false,
+    secret: false,
+  },
+  searchSuggestions: {
+    schema: z.enum([...constants.SUGGESTION_PROVIDERS, 'catalogs'] as const),
+    default: 'cinemeta',
+    label: 'Search suggestions',
+    description:
+      "What suggests titles while someone types a search, in the web app and in apps that ask for Jellyfin's search hints. **lumieredb** asks the LumiereDB instance below, which knows every IMDb title, tolerates typos and finds titles by their original names; **cinemeta** matches the English names in Cinemeta's list of about 20,000 popular movies and series, which this server downloads and keeps in memory; **catalogs** runs the configuration's own catalog search, which knows what its addons do but costs as much as a full search.",
+    env: 'JELLYFIN_SEARCH_SUGGESTIONS',
+    requiresRestart: false,
+    secret: false,
+  },
+  lumiereDbUrl: {
+    schema: optionalUrlString,
+    default: null,
+    label: 'LumiereDB URL',
+    description:
+      'A LumiereDB instance started with `SUGGEST_ENABLED=true`, such as `http://lumiere-db:8000` on the same Docker network. **lumieredb** search suggestions come from Cinemeta until this is set.',
+    env: 'JELLYFIN_LUMIEREDB_URL',
     requiresRestart: false,
     secret: false,
   },

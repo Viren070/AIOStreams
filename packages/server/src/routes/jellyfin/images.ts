@@ -30,6 +30,10 @@ const router: Router = Router({ mergeParams: true });
 const FALLBACK_IMAGE = '/logo.png';
 const RELAY_TIMEOUT_MS = 15_000;
 
+export function metahubPoster(imdbId: string): string {
+  return `https://images.metahub.space/poster/medium/${imdbId}/img`;
+}
+
 function metahubFor(d: ContentDescriptor, type: string): string | null {
   if (!d.i.startsWith('tt')) return null;
   const base = `https://images.metahub.space`;
@@ -38,7 +42,7 @@ function metahubFor(d: ContentDescriptor, type: string): string | null {
     case 'thumb':
       return d.k === 'episode'
         ? `${base}/background/medium/${d.i}/img`
-        : `${base}/poster/medium/${d.i}/img`;
+        : metahubPoster(d.i);
     case 'backdrop':
     case 'art':
     case 'banner':

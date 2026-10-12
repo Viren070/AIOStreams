@@ -15,3 +15,4 @@ export * from './segments/index.js';
 export * from './people.js';
 export * from './season-ids.js';
 export * from './tmdb-titles.js';
+export * from './suggestions/index.js';
