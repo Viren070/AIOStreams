@@ -122,6 +122,7 @@ import {
   SUBTITLE_SIZES,
   type AudioChannels,
   type PlayerEngine,
+  type Passthrough,
   type EpisodeLayout,
   type BarBackground,
   type RailNames,
@@ -584,6 +585,19 @@ function PlaybackSection() {
   );
 }
 
+const PASSTHROUGH_OPTIONS: { value: Passthrough; label: string }[] = [
+  { value: 'auto', label: 'When the TV or receiver decodes it' },
+  { value: 'always', label: 'Always' },
+  { value: 'off', label: 'Off' },
+];
+
+const PASSTHROUGH_HELP: Record<Passthrough, string> = {
+  auto: 'Sends Dolby and DTS audio as it is when your TV or receiver says it decodes them, which keeps Atmos. Otherwise this app decodes it.',
+  always:
+    'Sends Dolby and DTS audio as it is even when your TV or receiver does not say it decodes them, as some do without saying so.',
+  off: 'This app decodes Dolby and DTS audio itself, which loses Atmos.',
+};
+
 const ENGINE_OPTIONS: { value: PlayerEngine; label: string }[] = [
   { value: 'auto', label: 'Automatic' },
   { value: 'exoplayer', label: 'ExoPlayer' },
@@ -702,6 +716,9 @@ function AudioSection() {
   const [passthrough, setPassthrough] = useSetting(
     settings.desktop.passthrough
   );
+  const [androidPassthrough, setAndroidPassthrough] = useSetting(
+    settings.android.passthrough
+  );
   return (
     <>
       <SettingsCard title="Language" description={ON_ACCOUNT}>
@@ -749,13 +766,23 @@ function AudioSection() {
               onValueChange={(v) => setAudioChannels(v as AudioChannels)}
             />
           )}
-          <Switch
-            side="right"
-            label="Pass surround audio through"
-            help="Sends Dolby and DTS audio to your receiver as it is. Only turn this on if your receiver decodes them."
-            value={passthrough}
-            onValueChange={setPassthrough}
-          />
+          {currentHost().name === 'android-app' ? (
+            <Select
+              label="Pass surround audio through"
+              help={PASSTHROUGH_HELP[androidPassthrough]}
+              options={PASSTHROUGH_OPTIONS}
+              value={androidPassthrough}
+              onValueChange={(v) => setAndroidPassthrough(v as Passthrough)}
+            />
+          ) : (
+            <Switch
+              side="right"
+              label="Pass surround audio through"
+              help="Sends Dolby and DTS audio to your receiver as it is. Only turn this on if your receiver decodes them."
+              value={passthrough}
+              onValueChange={setPassthrough}
+            />
+          )}
         </SettingsCard>
       )}
     </>

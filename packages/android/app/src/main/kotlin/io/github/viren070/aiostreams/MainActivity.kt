@@ -61,6 +61,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var updater: Updater
     private lateinit var pip: PictureInPicture
     private lateinit var focus: AudioFocus
+    private lateinit var passthrough: Passthrough
     private lateinit var controller: ListenableFuture<MediaController>
     private val screen = PlayerWindow(this)
     private val levels by lazy { Levels(this) }
@@ -127,6 +128,7 @@ class MainActivity : ComponentActivity() {
             },
             resume = { playback.engine.setProperty("pause", "no") },
         )
+        passthrough = Passthrough(this) { player.outputChanged() }
         player = PlayerChannel(
             playback.engine,
             send = { bridge.send(it) },
@@ -136,6 +138,7 @@ class MainActivity : ComponentActivity() {
             fallBack = { playback.fallBack(player) },
             frameRate = frameRates::match,
             showVideo = playback::showVideo,
+            passthrough = passthrough::codecs,
         )
         gamepads = hasGamepad()
         getSystemService(InputManager::class.java).registerInputDeviceListener(controllers, null)
@@ -437,6 +440,7 @@ class MainActivity : ComponentActivity() {
         MediaController.releaseFuture(controller)
         PlaybackService.player = null
         focus.release()
+        passthrough.release()
         playback.engine.release()
         web.destroy()
         super.onDestroy()

@@ -39,6 +39,8 @@ class PlayerChannel(
     /** The video's frame rate, or null once the page closes the player. */
     private val frameRate: (Double?) -> Unit = {},
     private val showVideo: (Boolean) -> Unit = {},
+    /** The formats the audio output decodes itself, which the page's `auto` passthrough sends. */
+    private val passthrough: () -> String = { "" },
 ) : Engine.Listener {
     private val main = Handler(Looper.getMainLooper())
     private val latest = mutableMapOf<String, JsonElement>()
@@ -61,8 +63,13 @@ class PlayerChannel(
         held.clear()
         engine = next
         next.start(this)
-        for ((name, value) in settings) next.setProperty(name, value)
+        for ((name, value) in settings) next.setProperty(name, applied(name, value))
         if (reload) loaded?.let { next.command(resumed(it, at)) }
+    }
+
+    /** The audio output now decodes other formats. */
+    fun outputChanged() {
+        if (settings["audio-spdif"] == AUTO) engine.setProperty("audio-spdif", passthrough())
     }
 
     /** False for a message that isn't the player's. */
@@ -79,7 +86,7 @@ class PlayerChannel(
                 MpvProtocol.setProperty(name, message["value"] ?: JsonNull)
                     .onSuccess { value ->
                         remember(name, value)
-                        engine.setProperty(name, value)
+                        engine.setProperty(name, applied(name, value))
                     }
                     .onFailure { reject(it) }
             }
@@ -116,6 +123,9 @@ class PlayerChannel(
         }
         engine.command(args)
     }
+
+    private fun applied(name: String, value: String) =
+        if (name == "audio-spdif" && value == AUTO) passthrough() else value
 
     private fun remember(name: String, value: String) {
         if (name !in TRANSIENT) settings[name] = value
@@ -205,6 +215,7 @@ class PlayerChannel(
         const val TAG = "player"
         const val THROTTLE_MS = 250L
         const val MAX_SUBTITLE_BYTES = 10 shl 20
+        const val AUTO = "auto"
         val SUBTITLE_TYPES = setOf("srt", "vtt", "ass", "ssa", "sub", "sup")
         /** Seeks and track picks, which belong to the file rather than the page's settings. */
         val TRANSIENT = setOf("time-pos", "aid", "sid", "secondary-sid")

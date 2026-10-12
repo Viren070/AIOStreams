@@ -760,5 +760,13 @@ export function applyDesktopSettings(): void {
         : 'mediacodec,mediacodec-copy';
   setProp('hwdec', hardwareDecoding.read() ? hwdec : 'no');
   setProp('audio-channels', channels === 'auto' ? 'auto-safe' : channels);
-  setProp('audio-spdif', passthrough.read() ? 'ac3,eac3,dts-hd,truehd' : '');
+  const always = 'ac3,eac3,dts-hd,truehd';
+  // The Android app turns `auto` into what the audio output decodes.
+  const spdif =
+    appBridge()?.platform === 'android'
+      ? { off: '', auto: 'auto', always }[settings.android.passthrough.read()]
+      : passthrough.read()
+        ? always
+        : '';
+  setProp('audio-spdif', spdif);
 }
