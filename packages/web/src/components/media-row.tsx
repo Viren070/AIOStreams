@@ -324,7 +324,7 @@ function NativeRow({
       )}
     >
       {/* Kept as a layer, since one made as a glide starts draws nothing for a frame. */}
-      <div ref={layer} className="will-change-transform">
+      <div ref={layer} data-glide-layer className="will-change-transform">
         <div
           ref={content}
           data-nav-row

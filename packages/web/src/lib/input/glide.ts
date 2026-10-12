@@ -42,10 +42,10 @@ const chases = new WeakMap<HTMLElement, Chase>();
 /** The share of a jump that a chase eases out over; it covers the rest at an even speed. */
 const SETTLE = 0.25;
 
-function drawnOffset(layer: HTMLElement, axis: 'X' | 'Y'): number {
-  if (chases.get(layer)?.animation.playState !== 'running') return 0;
+function drawnShift(layer: HTMLElement): [number, number] {
+  if (chases.get(layer)?.animation.playState !== 'running') return [0, 0];
   const at = new DOMMatrixReadOnly(getComputedStyle(layer).transform);
-  return axis === 'X' ? at.m41 : at.m42;
+  return [at.m41, at.m42];
 }
 
 /**
@@ -62,7 +62,7 @@ export function easeLayer(
   // Read and restarted on the same clock, so the compositor carries on unbroken.
   const now = document.timeline.currentTime as number;
   const chase = chases.get(layer);
-  const drawn = drawnOffset(layer, axis);
+  const drawn = drawnShift(layer)[axis === 'X' ? 0 : 1];
   chase?.animation.cancel();
   const total = drawn + moved;
   let pace = 0;
@@ -110,7 +110,15 @@ const layerOf = (box: Element) =>
 /** How far a scroller's content is still drawn from its scroll position by a jump under way. */
 export function glideOffset(box: Element): number {
   const layer = layerOf(box);
-  return layer ? drawnOffset(layer, 'Y') : 0;
+  return layer ? drawnShift(layer)[1] : 0;
+}
+
+/** The layer a scroller's content glides in, and how far a jump under way draws it. */
+export function glideShift(
+  box: Element
+): { layer: HTMLElement; shift: [number, number] } | null {
+  const layer = layerOf(box);
+  return layer && { layer, shift: drawnShift(layer) };
 }
 
 /**
