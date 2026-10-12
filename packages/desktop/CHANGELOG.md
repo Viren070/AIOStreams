@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.1](https://github.com/Viren070/AIOStreams/compare/desktop-v0.14.0...desktop-v0.14.1) (2026-10-12)
+
+
+### Bug Fixes
+
+* **web:** hide pages kept beneath others with visibility as well ([4437cd1](https://github.com/Viren070/AIOStreams/commit/4437cd1996243d2aecc580ef0b7575ed3c2dbca8))
+
 ## [0.14.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.13.0...desktop-v0.14.0) (2026-10-12)
 
 
