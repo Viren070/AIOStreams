@@ -381,9 +381,11 @@ fn reader_error(prefix: &str, level: &str, text: &str) -> Option<String> {
     match prefix {
         "curl" if matches!(level, "error" | "fatal") => Some(text.to_string()),
         "ffmpeg" => text
-            .strip_prefix("http: ")
-            .filter(|t| t.starts_with("HTTP error "))
-            .map(String::from),
+            .split_once(": ")
+            .filter(|(protocol, t)| {
+                matches!(*protocol, "http" | "https") && t.starts_with("HTTP error ")
+            })
+            .map(|(_, t)| t.to_string()),
         _ => None,
     }
 }
