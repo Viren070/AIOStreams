@@ -1,5 +1,57 @@
 # Changelog
 
+## [0.4.0](https://github.com/Viren070/AIOStreams/compare/smart-tv-v0.3.1...smart-tv-v0.4.0) (2026-10-12)
+
+
+### Features
+
+* **android:** pass surround audio through by what the output reports ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **android:** run voice search in the app ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **jellyfin:** rank subtitle tracks by type ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** add a Dolby Vision switch that plays the HDR10 picture instead ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** add a trailer player and a sheet of named trailers ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** add an episode list to the player ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** add data-ui hooks to the parts that had none ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** ask who's watching when the app opens ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** crossfade the home hero's titles with a swipe ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** list only the user's subtitle languages in the subtitle menu ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** offer a ready update in a dialog on TVs ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** press a showing skip button on Select ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** reuse the server's kept version list in the player ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** show where a run of skips is headed on the seek bar ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** step through the TV hero's titles with Left and Right ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** suggest titles from search hints while typing ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** toggle playback with Enter on the seek bar ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+
+
+### Bug Fixes
+
+* **web:** draw the watched mark on episode images on TVs ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** fill the player controls' focus with an inset shadow ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** hold focus at a loading episode row ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** ignore player swipes from the top and bottom edges ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** keep presses that move the desktop window from the page ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** measure in-view targets on each scroll, without the glide's offset ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** show an early end of file as a failure with a resume button ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** stack keyed glides on layers again, easing held repeats in and out ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+
+
+### Performance Improvements
+
+* **web:** ask for a title before reading its saved copy ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** ask for the show's poster for a season that carries it ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** chase keyed jumps on one layer at an even speed ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** give the apps' build an empty page icon ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** hold an unfetched row's place with one placeholder ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** keep the layout and Home mounted under the player ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** measure in-view targets once a scroll settles ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** measure in-view targets once after a navigation ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** memoise the Home page kept under other pages ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** memoise the item header's toggles, overview, rating and links ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** memoise the season posters row ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** scroll rows natively on touch screens ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+* **web:** step along a row's cards without measuring the others ([3fd07de](https://github.com/Viren070/AIOStreams/commit/3fd07deb1dba590e38e28172c91ee42ccb64110e))
+
 ## [0.3.1](https://github.com/Viren070/AIOStreams/compare/smart-tv-v0.3.0...smart-tv-v0.3.1) (2026-10-11)
 
 
