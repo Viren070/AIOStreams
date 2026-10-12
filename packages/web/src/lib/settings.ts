@@ -581,6 +581,7 @@ export const settings = {
       AUDIO_CHANNELS
     ),
     passthrough: device<boolean>('aiostreams-desktop-passthrough', false),
+    dolbyVision: device<boolean>('aiostreams-desktop-dolby-vision', true),
     /** Read by the page only; the app itself never needs it. */
     chapterSkips: device<boolean>('aiostreams-desktop-chapter-skips', true),
   },

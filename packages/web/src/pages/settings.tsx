@@ -374,6 +374,9 @@ function PlaybackSection() {
   const [chapterSkips, setChapterSkips] = useSetting(
     settings.desktop.chapterSkips
   );
+  const [dolbyVision, setDolbyVision] = useSetting(
+    settings.desktop.dolbyVision
+  );
   const bingeGroups = useFeature('versions');
   const shell = !!shellHost();
   const [engine] = useSetting(settings.android.engine);
@@ -549,7 +552,7 @@ function PlaybackSection() {
           onValueChange={(v) => setHoldRate(Number(v))}
         />
       </SettingsCard>
-      {(decoding || androidTv) && (
+      {shell && (
         <SettingsCard title="Video" description={ON_DEVICE}>
           {decoding && (
             <Switch
@@ -560,6 +563,13 @@ function PlaybackSection() {
               onValueChange={setHardwareDecoding}
             />
           )}
+          <Switch
+            side="right"
+            label="Dolby Vision"
+            help="Plays Dolby Vision where the screen shows it. Turn it off to play the HDR10 picture most of these videos also carry, if Dolby Vision looks dim or flickers. Videos with no HDR10 picture still play in Dolby Vision."
+            value={dolbyVision}
+            onValueChange={setDolbyVision}
+          />
           {androidTv && (
             <Switch
               side="right"

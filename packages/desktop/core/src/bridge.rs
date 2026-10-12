@@ -38,6 +38,11 @@ pub enum Inbound {
         #[serde(default)]
         external: bool,
     },
+    /// Player choices with no mpv property of their own.
+    PlayerOptions {
+        #[serde(rename = "dolbyVision")]
+        dolby_vision: Option<bool>,
+    },
     /// A subtitle file the user dropped or picked, base64-encoded.
     SubtitleFile {
         name: String,

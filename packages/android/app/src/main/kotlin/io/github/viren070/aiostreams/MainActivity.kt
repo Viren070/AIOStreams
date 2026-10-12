@@ -219,6 +219,7 @@ class MainActivity : ComponentActivity() {
             "player-options" -> {
                 message["frameRate"]?.jsonPrimitive?.booleanOrNull?.let { frameRates.enabled = it }
                 message["tunneling"]?.jsonPrimitive?.booleanOrNull?.let { playback.tunneling = it }
+                message["dolbyVision"]?.jsonPrimitive?.booleanOrNull?.let { playback.dolbyVision = it }
             }
             "voice-search" -> voice.listen()
             "voice-cancel" -> voice.cancel()

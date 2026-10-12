@@ -124,11 +124,14 @@ class ExoEngine(private val context: Context) :
 
     private var tunneling = false
 
+    @Volatile
+    private var useDolbyVision = true
+
     init {
         val extractors = Extractors(
             readBack = { readBack },
             sink = { SubtitleSink(ass.sink(), texts.sink()) },
-            route = { dolbyVisionRoute(it, caps) },
+            route = { dolbyVisionRoute(it, caps, useDolbyVision) },
             onRoute = { codecs, route -> dolbyVision = codecs to route },
         )
         val sources = DefaultMediaSourceFactory(data, extractors)
@@ -474,6 +477,10 @@ class ExoEngine(private val context: Context) :
         lastFrameAtNs = System.nanoTime()
         ass.render(presentationTimeUs - delayUs, releaseTimeNs)
         if (text != null) main.post { showCues(presentationTimeUs) }
+    }
+
+    override fun setDolbyVision(on: Boolean) {
+        useDolbyVision = on
     }
 
     fun setTunneling(on: Boolean) = main.post {

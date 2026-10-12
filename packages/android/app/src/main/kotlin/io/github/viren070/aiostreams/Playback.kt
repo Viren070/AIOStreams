@@ -27,6 +27,12 @@ class Playback(private val context: Context, private val announce: (engine: Stri
             (engine as? ExoEngine)?.setTunneling(value)
         }
 
+    var dolbyVision = true
+        set(value) {
+            field = value
+            engine.setDolbyVision(value)
+        }
+
     var engine: Engine = create(name)
         private set
 
@@ -78,7 +84,7 @@ class Playback(private val context: Context, private val announce: (engine: Stri
     private fun create(name: String): Engine = when (name) {
         EXOPLAYER -> ExoEngine(context).also { it.setTunneling(tunneling) }
         else -> MpvEngine(context)
-    }
+    }.also { it.setDolbyVision(dolbyVision) }
 
     private companion object {
         const val AUTO = "auto"

@@ -27,6 +27,9 @@ interface Engine {
     /** Frames shown and dropped so far, and what else measures the playback. */
     fun stats(): JsonObject
 
+    /** False plays the HDR10 picture a Dolby Vision video carries instead, from the next file. */
+    fun setDolbyVision(on: Boolean)
+
     fun release()
 
     interface Listener {

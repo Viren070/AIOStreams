@@ -21,14 +21,15 @@ internal enum class DolbyVisionRoute(val label: String) {
 }
 
 /**
- * The route for a profile: Dolby Vision where the display shows it, profile 7
- * as 8.1 where only a profile 8 decoder takes it, else the base layer the
- * profile carries for other displays. Profile 5 has none, so it's the Dolby
- * Vision decoder or nothing.
+ * The route for a profile: Dolby Vision where the display shows it and [use]
+ * allows, profile 7 as 8.1 where only a profile 8 decoder takes it, else the
+ * base layer the profile carries for other displays. Profile 5 has none, so
+ * it's the Dolby Vision decoder or nothing.
  */
-internal fun dolbyVisionRoute(profile: Int, caps: MediaCaps): DolbyVisionRoute = when {
-    caps.showsDolbyVision(profile) || baseOf(profile) == null -> DolbyVisionRoute.DOLBY_VISION
-    profile == 7 && caps.showsDolbyVision(8) && DolbyVisionNative.converts -> DolbyVisionRoute.CONVERTED
+internal fun dolbyVisionRoute(profile: Int, caps: MediaCaps, use: Boolean = true): DolbyVisionRoute = when {
+    baseOf(profile) == null -> DolbyVisionRoute.DOLBY_VISION
+    use && caps.showsDolbyVision(profile) -> DolbyVisionRoute.DOLBY_VISION
+    use && profile == 7 && caps.showsDolbyVision(8) && DolbyVisionNative.converts -> DolbyVisionRoute.CONVERTED
     profile in DUAL_LAYER -> DolbyVisionRoute.STRIPPED
     else -> DolbyVisionRoute.BASE_LAYER
 }

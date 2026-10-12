@@ -497,6 +497,11 @@ pub fn handle(
                 fail(format!("mpv set {name}={value}: {e}"));
             }
         }
+        Inbound::PlayerOptions { dolby_vision } => {
+            if let (Some(p), Some(on)) = (player.as_ref(), dolby_vision) {
+                p.set_dolby_vision(on);
+            }
+        }
         Inbound::MpvSync { external: true } => external.sync(),
         Inbound::MpvSync { external: false } => send(UserEvent::Sync),
         Inbound::SubtitleFile {

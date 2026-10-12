@@ -33,6 +33,10 @@ class MpvEngine(private val context: Context) : Engine {
     @Volatile
     private var cause: String? = null
 
+    @Volatile
+    private var dolbyVision = true
+    private var stripping = false
+
     private val dir = File(context.filesDir, "mpv")
 
     override val description: String
@@ -79,6 +83,10 @@ class MpvEngine(private val context: Context) : Engine {
     override fun property(name: String): String? = mpv.getPropertyString(name)
 
     fun reloadConfig() = command(listOf("load-config-file", configFile(context).path))
+
+    override fun setDolbyVision(on: Boolean) {
+        dolbyVision = on
+    }
 
     override fun createView(context: Context): View = SurfaceView(context).apply { holder.addCallback(surface) }
 
@@ -139,7 +147,7 @@ class MpvEngine(private val context: Context) : Engine {
                     listener.onEvent("start-file")
                 }
                 MPV.mpvEvent.MPV_EVENT_FILE_LOADED -> {
-                    calls.execute(::decodeProfile5InSoftware)
+                    calls.execute(::routeDolbyVision)
                     listener.onEvent("file-loaded")
                 }
                 MPV.mpvEvent.MPV_EVENT_SEEK -> listener.onEvent("seek")
@@ -157,10 +165,19 @@ class MpvEngine(private val context: Context) : Engine {
     /**
      * Dolby Vision profile 5's metadata has to reshape every frame, which
      * MediaCodec's frames reach mpv too late for. FFmpeg's decoder keeps it.
+     * Other profiles carry an HDR10 picture, which plays without it when asked.
      */
-    private fun decodeProfile5InSoftware() {
-        if (mpv.getPropertyString("current-tracks/video/dolby-vision-profile") != "5") return
-        mpv.setPropertyString("file-local-options/hwdec", "no")
+    private fun routeDolbyVision() {
+        if (stripping) runCatching { mpv.command("vf", "remove", DOLBY_VISION_FILTER) }
+        stripping = false
+        when (mpv.getPropertyString("current-tracks/video/dolby-vision-profile")) {
+            null, "" -> {}
+            "5" -> mpv.setPropertyString("file-local-options/hwdec", "no")
+            else -> if (!dolbyVision) {
+                mpv.command("vf", "add", "$DOLBY_VISION_FILTER:format=dolbyvision=no")
+                stripping = true
+            }
+        }
     }
 
     private val logs = object : MPV.LogObserver {
@@ -177,6 +194,9 @@ class MpvEngine(private val context: Context) : Engine {
     }
 
     companion object {
+        /** Labelled, so the user's own `vf` stays as it is. */
+        private const val DOLBY_VISION_FILTER = "@aiostreams-dovi"
+
         /** The user's own options, which mpv reads at start and on [reloadConfig]. */
         fun configFile(context: Context) = File(File(context.filesDir, "mpv"), "mpv.conf")
 
