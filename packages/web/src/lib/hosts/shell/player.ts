@@ -7,7 +7,7 @@ import {
   textSubtitles,
   type SubtitleFacts,
 } from '../../subtitles/tracks';
-import { fullTitle } from '../../format';
+import { clock, fullTitle } from '../../format';
 import { base64, checkSubtitleFile } from '../../subtitles/files';
 import { sameLanguage } from '../../languages';
 import { parseChapters, type Chapter } from '../../playback/chapters';
@@ -196,6 +196,8 @@ function exoStatsText(
 
 /** How long a player in its own window waits for the next episode's page. */
 const LINGER_MS = 10_000;
+/** An end of file this far before the duration is a stream that gave out, not the end. */
+const EARLY_END_MS = 30_000;
 let linger: ReturnType<typeof setTimeout> | undefined;
 /** The episode a launched player moved on to by itself, which the next page takes over. */
 let advanced: { itemId: string; sourceId: string } | null = null;
@@ -222,6 +224,7 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
   // Offered once per file.
   const [retryable, setRetryable] = React.useState(false);
   const retried = React.useRef(false);
+  const [endedEarlyAt, setEndedEarlyAt] = React.useState<number | null>(null);
   const latest = useLatest({ ...opts, state });
   const queued = React.useRef<QueuedEpisode | null>(null);
   const externals = React.useMemo(
@@ -265,6 +268,13 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
     shell.send({ type: 'mpv-set-prop', name, value, ...target });
   const command = (...args: unknown[]) =>
     shell.send({ type: 'mpv-command', args, ...target });
+  const fileOptions = (fromMs: number, source: SourceInfo) =>
+    [
+      ...(fromMs ? [`start=${(fromMs / 1000).toFixed(3)}`] : []),
+      ...trackOptions(latest.current.prefs ?? {}, source),
+    ].join(',');
+  const load = (fromMs: number) =>
+    command('loadfile', url, 'replace', -1, fileOptions(fromMs, source));
 
   const [statsPage, setStatsPage] = React.useState<string | null>(null);
   const exo = playsWithExoPlayer();
@@ -341,6 +351,7 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
     advanced = null;
     retried.current = false;
     setRetryable(false);
+    setEndedEarlyAt(null);
 
     let fileTracks: MpvTrack[] = [];
     let sid: string | null = null;
@@ -405,13 +416,6 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
         return;
       }
     };
-    const load = () => {
-      const options = [
-        ...(startMs ? [`start=${(startMs / 1000).toFixed(3)}`] : []),
-        ...trackOptions(latest.current.prefs ?? {}, source),
-      ];
-      command('loadfile', url, 'replace', -1, options.join(','));
-    };
     const onProp = (name: string, data: unknown) => {
       const num = typeof data === 'number' ? data : null;
       switch (name) {
@@ -436,7 +440,7 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
         case 'idle-active':
           if (!adopting) break;
           adopting = false;
-          if (data === true) load();
+          if (data === true) load(startMs);
           else {
             patch({ started: true, waiting: false });
             command('playlist-clear');
@@ -509,7 +513,12 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
         rankSubtitle();
         addPreferredSubtitle();
       } else if (m.type === 'mpv-ended' && m.reason === 'eof') {
-        if (!queued.current) latest.current.onEnded();
+        if (queued.current) return;
+        const at = playhead.positionMs;
+        if (latest.current.state.durationMs - at > EARLY_END_MS) {
+          setEndedEarlyAt(at);
+          patch({ error: 'the stream ended early' });
+        } else latest.current.onEnded();
       } else if (m.type === 'mpv-ended' && m.reason === 'error') {
         setRetryable(!retried.current && !LINK_FAILURES.has(m.error ?? ''));
         patch({ error: failure(m.error, m.cause) });
@@ -536,7 +545,7 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
     const delay = savedSubtitleDelay(source.Id);
     set('sub-delay', delay / 1000);
     patch({ subtitleDelayMs: delay });
-    if (!adopting) load();
+    if (!adopting) load(startMs);
     return () => {
       unsubscribe();
       if (!external) return command('stop');
@@ -643,36 +652,45 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
       ? (episode) => {
           if (queued.current) return;
           queued.current = episode;
-          const options = [
-            ...(episode.startMs
-              ? [`start=${(episode.startMs / 1000).toFixed(3)}`]
-              : []),
-            ...trackOptions(latest.current.prefs ?? {}, episode.source),
-          ];
-          command('loadfile', episode.url, 'append', -1, options.join(','));
+          command(
+            'loadfile',
+            episode.url,
+            'append',
+            -1,
+            fileOptions(episode.startMs, episode.source)
+          );
         }
       : undefined,
     retry:
-      retryable &&
-      !external &&
-      appBridge()?.platform === 'android' &&
-      // Automatic has tried both engines before a failure reaches the page.
-      settings.android.engine.read() !== 'auto'
+      endedEarlyAt !== null
         ? {
-            label: playsWithExoPlayer()
-              ? 'Play with mpv'
-              : 'Play with ExoPlayer',
+            label: `Resume from ${clock(endedEarlyAt)}`,
             run: () => {
-              retried.current = true;
-              setRetryable(false);
+              setEndedEarlyAt(null);
               patch({ error: null, started: false, waiting: true });
-              shell.send({
-                type: 'player-retry',
-                name: playsWithExoPlayer() ? 'mpv' : 'exoplayer',
-              });
+              load(endedEarlyAt);
             },
           }
-        : undefined,
+        : retryable &&
+            !external &&
+            appBridge()?.platform === 'android' &&
+            // Automatic has tried both engines before a failure reaches the page.
+            settings.android.engine.read() !== 'auto'
+          ? {
+              label: playsWithExoPlayer()
+                ? 'Play with mpv'
+                : 'Play with ExoPlayer',
+              run: () => {
+                retried.current = true;
+                setRetryable(false);
+                patch({ error: null, started: false, waiting: true });
+                shell.send({
+                  type: 'player-retry',
+                  name: playsWithExoPlayer() ? 'mpv' : 'exoplayer',
+                });
+              },
+            }
+          : undefined,
   };
 }
 
