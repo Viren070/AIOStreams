@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.14.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.13.0...desktop-v0.14.0) (2026-10-12)
+
+
+### Features
+
+* **android:** pass surround audio through by what the output reports ([61c0515](https://github.com/Viren070/AIOStreams/commit/61c0515aec20cb853dd9d056fc633022578c2ea4))
+* **jellyfin:** rank subtitle tracks by type ([61c0515](https://github.com/Viren070/AIOStreams/commit/61c0515aec20cb853dd9d056fc633022578c2ea4))
+* **web:** add a Dolby Vision switch that plays the HDR10 picture instead ([e27353e](https://github.com/Viren070/AIOStreams/commit/e27353e9883eb8ff5ef62fa11e821bfbe30c489b))
+* **web:** add a trailer player and a sheet of named trailers ([b1c84c1](https://github.com/Viren070/AIOStreams/commit/b1c84c17ab15cdd371e0dc1a29dacc3a0fee4714))
+* **web:** add data-ui hooks to the parts that had none ([61c0515](https://github.com/Viren070/AIOStreams/commit/61c0515aec20cb853dd9d056fc633022578c2ea4))
+* **web:** list only the user's subtitle languages in the subtitle menu ([61c0515](https://github.com/Viren070/AIOStreams/commit/61c0515aec20cb853dd9d056fc633022578c2ea4))
+* **web:** reuse the server's kept version list in the player ([61c0515](https://github.com/Viren070/AIOStreams/commit/61c0515aec20cb853dd9d056fc633022578c2ea4))
+* **web:** suggest titles from search hints while typing ([61c0515](https://github.com/Viren070/AIOStreams/commit/61c0515aec20cb853dd9d056fc633022578c2ea4))
+
+
+### Bug Fixes
+
+* **desktop:** read streams with curl again ([d877bd1](https://github.com/Viren070/AIOStreams/commit/d877bd10281ef95061fd3a633685d4b5beedbb2f))
+* **desktop:** read streams with FFmpeg's reader and reconnect options ([3c4fff3](https://github.com/Viren070/AIOStreams/commit/3c4fff3ddd770cbde3a95c67dc7220bc7962c4d8))
+* **web:** fill the player controls' focus with an inset shadow ([61c0515](https://github.com/Viren070/AIOStreams/commit/61c0515aec20cb853dd9d056fc633022578c2ea4))
+* **web:** show an early end of file as a failure with a resume button ([61c0515](https://github.com/Viren070/AIOStreams/commit/61c0515aec20cb853dd9d056fc633022578c2ea4))
+* **web:** stack keyed glides on layers again, easing held repeats in and out ([61c0515](https://github.com/Viren070/AIOStreams/commit/61c0515aec20cb853dd9d056fc633022578c2ea4))
+
 ## [0.13.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.12.1...desktop-v0.13.0) (2026-10-12)
 
 
