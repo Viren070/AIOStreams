@@ -28,6 +28,7 @@ title.
 | `airTime`            | string, e.g. `"21:00"`                                    | As above                                                  |
 | `seasons`            | list of [seasons](#seasons)                               | Season names, overviews, posters and premiere dates       |
 | `collection`         | [collection block](/reference/addon-protocol/collections) | A collection                                              |
+| `trailers`           | list of [trailers](#trailers)                             | The title's trailers, by name                             |
 
 ### People
 
@@ -41,6 +42,24 @@ title.
 | `role`      | Required. One of `actor`, `director`, `writer`, `producer`, `composer`, `creator`, `guestStar`; any other role is ignored. |
 | `character` | Who an actor plays.                                                                                                        |
 | `photo`     | A portrait URL.                                                                                                            |
+
+### Trailers
+
+Stremio's `trailers`, with a `name` added:
+
+```json
+{ "source": "dQw4w9WgXcQ", "type": "Trailer", "name": "Official Trailer" }
+```
+
+| Field    | Meaning                                                                                                                                      |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `source` | Required. A YouTube video id, or a video's address.                                                                                          |
+| `type`   | Required. `Trailer` for a YouTube video, which Stremio plays too. Give a video's address another type, such as `Video`, so Stremio skips it. |
+| `name`   | What the trailer is called, such as `Teaser`. Shown as **Trailer** when absent.                                                              |
+
+`trailerStreams`, a list of stream objects that Stremio's apps read in place of `trailers` when a
+meta has both, is read too, for any trailer or name `trailers` doesn't have. Video addresses are
+listed before YouTube trailers.
 
 ### Seasons
 
@@ -115,6 +134,7 @@ events. Values are strings; numbers are accepted.
       { "name": "Bryan Cranston", "role": "actor", "character": "Walter White", "photo": "https://…" }
     ],
     "seasons": [{ "season": 1, "poster": "https://…", "released": "2008-01-20" }],
+    "trailers": [{ "source": "…", "type": "Trailer", "name": "Official Trailer" }],
     "videos": [
       {
         "id": "tt0903747:1:1",

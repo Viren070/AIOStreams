@@ -144,6 +144,8 @@ To get every track on the first play too, set **Wait for tracks on play** on the
 
 Apps that read the tracks from the file themselves, and the [desktop](/apps/desktop) and [Android](/apps/android) apps, list every track regardless.
 
+The tracks a version starts on follow each user's audio and subtitle languages and subtitle types, set in the AIOStreams app under **Settings → Audio** and **Settings → Subtitles**, so Jellyfin apps start on the same tracks.
+
 ### When nothing plays
 
 - **No streams found** is shown when your addons returned nothing playable and none of them reported why. When one did, its error is listed in place of it, the same message Stremio would show. Either is looked up again after a few minutes.
@@ -254,18 +256,51 @@ What a tool can't get from AIOStreams:
 
 The media server, skip markers and watch-state sync are on by default. The settings are under **Dashboard → Settings → Media server** and **Watch State**; see [environment variables](/configuration/environment-variables) for all of them.
 
-| Variable                         | Default | What it does                                                                                                             |
-| -------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `JELLYFIN_ENABLED`               | `true`  | Turns the media server on or off, for the AIOStreams app and Jellyfin apps.                                              |
-| `JELLYFIN_MAX_LIBRARIES`         | `20`    | Catalogs shown as libraries per configuration. `0` shows them all.                                                       |
-| `JELLYFIN_MAX_CATALOG_ITEMS`     | `250`   | Titles listed per library.                                                                                               |
-| `JELLYFIN_MAX_VERSIONS`          | `25`    | The most versions a configuration can ask for.                                                                           |
-| `JELLYFIN_RESOLVE_ON_OPEN`       | `user`  | `always` or `never` force resolving on open for everyone; `user` leaves it to each configuration.                        |
-| `JELLYFIN_MAX_PERSONAS`          | `20`    | Household users per configuration. `0` allows none.                                                                      |
-| `JELLYFIN_PIN_SIGN_IN`           | `false` | Lets a household user with a PIN of 6 or more digits sign in on the picker address with the PIN alone.                   |
-| `JELLYFIN_SEGMENTS_ENABLED`      | `true`  | Offers skip markers. It sends what is being played to the marker databases.                                              |
-| `WATCH_STATE_REPORT_ENABLED`     | `true`  | Sends plays to tracker addons.                                                                                           |
-| `WATCH_STATE_PULL_ENABLED`       | `true`  | Imports history from tracker addons.                                                                                     |
-| `WATCH_STATE_MIN_RESUME_PERCENT` | `5`     | Stopping before this much has played keeps no resume point.                                                              |
-| `WATCH_STATE_PLAYED_PERCENT`     | `90`    | Playing this much marks a title played.                                                                                  |
-| `ALLOW_PRIVATE_URLS`             | `true`  | Lets this server reach private addresses, such as a tracker addon on a Docker network. Turn it off on a public instance. |
+| Variable                         | Default    | What it does                                                                                                             |
+| -------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `JELLYFIN_ENABLED`               | `true`     | Turns the media server on or off, for the AIOStreams app and Jellyfin apps.                                              |
+| `JELLYFIN_MAX_LIBRARIES`         | `20`       | Catalogs shown as libraries per configuration. `0` shows them all.                                                       |
+| `JELLYFIN_MAX_CATALOG_ITEMS`     | `250`      | Titles listed per library.                                                                                               |
+| `JELLYFIN_MAX_VERSIONS`          | `25`       | The most versions a configuration can ask for.                                                                           |
+| `JELLYFIN_RESOLVE_ON_OPEN`       | `user`     | `always` or `never` force resolving on open for everyone; `user` leaves it to each configuration.                        |
+| `JELLYFIN_MAX_PERSONAS`          | `20`       | Household users per configuration. `0` allows none.                                                                      |
+| `JELLYFIN_PIN_SIGN_IN`           | `false`    | Lets a household user with a PIN of 6 or more digits sign in on the picker address with the PIN alone.                   |
+| `JELLYFIN_SEGMENTS_ENABLED`      | `true`     | Offers skip markers. It sends what is being played to the marker databases.                                              |
+| `JELLYFIN_SEARCH_SUGGESTIONS`    | `cinemeta` | Where [search suggestions](#search-suggestions) come from: `cinemeta`, `lumieredb` or `catalogs`.                        |
+| `JELLYFIN_LUMIEREDB_URL`         |            | The LumiereDB instance for `lumieredb` suggestions.                                                                      |
+| `WATCH_STATE_REPORT_ENABLED`     | `true`     | Sends plays to tracker addons.                                                                                           |
+| `WATCH_STATE_PULL_ENABLED`       | `true`     | Imports history from tracker addons.                                                                                     |
+| `WATCH_STATE_MIN_RESUME_PERCENT` | `5`        | Stopping before this much has played keeps no resume point.                                                              |
+| `WATCH_STATE_PLAYED_PERCENT`     | `90`       | Playing this much marks a title played.                                                                                  |
+| `ALLOW_PRIVATE_URLS`             | `true`     | Lets this server reach private addresses, such as a tracker addon on a Docker network. Turn it off on a public instance. |
+
+### Search suggestions
+
+While someone types a search, the AIOStreams app suggests titles under the search box, and Jellyfin apps that show search hints get the same titles. **Search suggestions** (`JELLYFIN_SEARCH_SUGGESTIONS`) decides where they come from:
+
+| Value       | Where suggestions come from                                                                                                                                                         |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cinemeta`  | Cinemeta's list of about 20,000 popular movies and series, matched by their English names. The server downloads it the first time someone searches and keeps it in memory.          |
+| `lumieredb` | A LumiereDB instance, which knows every IMDb title, copes with typos and finds titles by their original names too. Set its address in **LumiereDB URL** (`JELLYFIN_LUMIEREDB_URL`). |
+| `catalogs`  | Each configuration's own catalog search, which knows what its addons do but costs as much as a full search.                                                                         |
+
+LumiereDB is a self-hosted index of IMDb's datasets. Add it to the same compose file as AIOStreams, so AIOStreams reaches it by its container name:
+
+```yaml
+services:
+  lumiere-db:
+    image: ghcr.io/0xconstant1/lumiere-db:latest
+    container_name: lumiere-db
+    restart: unless-stopped
+    user: '${PUID}:${PGID}'
+    stop_grace_period: 75s
+    expose:
+      - 8000
+    environment:
+      - CACHE_MAX_BYTES=256MB
+      - SUGGEST_ENABLED=true
+    volumes:
+      - ${DOCKER_DATA_DIR}/lumiere-db:/data
+```
+
+Create the data folder as your own user before the first start, or Docker creates it as root and LumiereDB can't write to it. The first start downloads about 2 GB from IMDb and builds its index, which takes a while, and it needs about 5 GB of disk. Then set **LumiereDB URL** to `http://lumiere-db:8000` and **Search suggestions** to `lumieredb`. Until LumiereDB URL is set, `lumieredb` suggestions come from Cinemeta. IMDb's datasets are for personal, non-commercial use.

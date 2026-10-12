@@ -16,10 +16,11 @@ a layout made for the remote, with navigation and a home page you can style to s
 The desktop and Android apps **download** movies and episodes to watch offline, and every
 app keeps the pages you browse, so it opens straight away and still works without a
 connection. The player has been reworked, with **touch gestures**, **hold to play faster**
-and an **episode list**. The app also passes over **filler and recap episodes**, asks
-**whether you are still watching**, remembers your **audio and subtitle picks** for each
-show, can ask **who is watching** every time it opens, and sends versions to **the player of
-your choice**, your own mpv included.
+and an **episode list**, and **trailers** play in the app. The app also passes over **filler
+and recap episodes**, asks **whether you are still watching**, remembers your **audio and
+subtitle picks** for each show, can ask **who is watching** every time it opens, sends
+versions to **the player of your choice**, your own mpv included, and **suggests titles** as
+you type a search.
 
 For everyone, AIOStreams now **reads the files you play**. The first play of a file records
 its real audio and subtitle tracks, and every stream list after that shows them, in Stremio
@@ -80,9 +81,9 @@ Vision, surround sound and styled subtitles all play.
   the screen, and keep watching in **picture-in-picture** or with the screen off. Movies,
   episodes and whole seasons [download](#downloads-and-saved-pages) to watch offline.
 - **On a TV**, the app opens in the [layout made for the remote](#on-a-tv). It can switch the
-  TV to each video's frame rate, play with tunneled playback, and pass surround audio through
-  to a receiver. On Android TV and Google TV, the search page has a microphone for voice
-  search.
+  TV to each video's frame rate and play with tunneled playback. Surround audio passes through
+  to the TV or receiver as it is whenever they say they decode it, which keeps Atmos. On
+  Android TV and Google TV, the search page has a microphone for voice search.
 - **Other players.** Versions can open in VLC, MX Player, mpv or another video app instead.
 - **Updates.** The app checks for updates and installs them under **Settings → Android app**,
   from releases or nightly builds.
@@ -296,10 +297,23 @@ The player's controls have been reworked, and they are bigger on TVs and large s
 - **Episodes.** The **Episodes** button lists the show's seasons and episodes beside the
   video, and picking one plays it, in the same release where there is one.
 - **Versions** open in a sheet beside the video, so it stays in view while you pick another.
+- **Dolby Vision or HDR10.** In the desktop and Android apps, turn off **Dolby Vision** under
+  **Settings → Playback → Video** to play the HDR10 picture most Dolby Vision releases also
+  carry, for a screen where Dolby Vision looks dim or flickers.
 - Skip a few times in a row, and the seek bar shows where you will land straight away.
 - In the Android app, the player opens full screen, in landscape on a phone.
 
 ![Sintel paused in the desktop app's player, with a gold sign reading The land of the gatekeepers above a styled subtitle](/changelog/v2.36/player-desktop.webp)
+
+### Trailers
+
+**Trailer** on a title's page plays its trailer in the app. When the metadata lists several,
+such as a teaser and the main trailer, **Trailers** lists them by name with a picture of
+each, and the player steps between them with previous and next.
+
+The desktop and Android apps play YouTube trailers in their own player, and a browser plays
+them in YouTube's. The LG and Samsung TV apps can't play YouTube trailers yet, and offer to
+open the trailer's page instead.
 
 ### Fillers and recaps
 
@@ -332,6 +346,11 @@ the prompt, so they are ready when the countdown ends.
   choices, and plays each title in the language it was made in, Japanese for anime or Korean
   for a K-drama. The server picks each version's tracks from the same lists, so Jellyfin apps
   start in your languages too.
+- **Subtitle types in order.** When a version has more than one subtitle in your language,
+  **Subtitle types** under **Settings → Subtitles** decides which shows: full subtitles, SDH
+  with sounds described, forced subtitles for foreign parts only, or signs and songs. Full
+  subtitles come first unless you change it, and commentary always comes last. The server
+  picks from the same order for Jellyfin apps.
 - **Remembered per show.** Pick an audio track or subtitles while watching a show, and its
   other episodes start on the same choice. This is on by default as **Remember picks per show**,
   and it is saved to your account, so it follows you to other devices.
@@ -375,6 +394,15 @@ the prompt, so they are ready when the countdown ends.
 
 This replaces the **External player** setting and the **Open in external player** button on
 each version. If you had every version opening in your external player, that carries over.
+
+### Search suggestions
+
+While you type a search, up to five titles show under the search box, and picking one
+searches for it. In the Android app they also show above the keyboard, where a TV remote
+reaches them without closing it. Jellyfin apps that show search hints as you type get the
+same titles. They come from Cinemeta's popular titles unless your instance has
+[LumiereDB](#running-lumieredb), which knows every IMDb title, copes with typos and finds
+titles by their original names too.
 
 ### Calendar and Upcoming
 
@@ -476,6 +504,9 @@ with an English Atmos track.
 - **Filler and recap marks.** Set `filler` or `recap` to `true` on a video in your meta, and
   the AIOStreams app marks the episode and passes over it when playing on. AIOMetadata's
   `isFiller` and `isRecap` are read too. See [Metadata](/reference/addon-protocol/metadata).
+- **Named trailers.** A `trailers` entry can carry a `name`, which the apps show, and its
+  `source` can be a video's address, which they play as it is, ahead of YouTube trailers.
+  `trailerStreams` are still read. See [Metadata](/reference/addon-protocol/metadata#trailers).
 - **Watch State.** A pulled watchlist or rating entry can carry `kind`, `movie` or `series`,
   for meta types that don't say which, such as `anime`. A pulled Next Up entry can carry
   `airsAt`, so an episode that hasn't aired yet waits until it has. See
@@ -509,6 +540,36 @@ instance, looked up by info hash or NZB key. That does show which releases have 
 there, and the instance that looks up sends the info hashes and NZB keys of every stream list's
 results, so only pair instances that trust each other.
 
+### Running LumiereDB
+
+[Search suggestions](#search-suggestions) can come from LumiereDB, a self-hosted index of
+IMDb's datasets. Add it to the same compose file as AIOStreams, so AIOStreams reaches it by
+its container name:
+
+```yaml
+services:
+  lumiere-db:
+    image: ghcr.io/0xconstant1/lumiere-db:latest
+    container_name: lumiere-db
+    restart: unless-stopped
+    user: '${PUID}:${PGID}'
+    stop_grace_period: 75s
+    expose:
+      - 8000
+    environment:
+      - CACHE_MAX_BYTES=256MB
+      - SUGGEST_ENABLED=true
+    volumes:
+      - ${DOCKER_DATA_DIR}/lumiere-db:/data
+```
+
+Create the data folder as your own user before the first start, or Docker creates it as root
+and LumiereDB can't write to it. The first start downloads about 2 GB from IMDb and builds its
+index, which takes a while, and it needs about 5 GB of disk. Then set **LumiereDB URL** to
+`http://lumiere-db:8000` and **Search suggestions** to `lumieredb`, both under **Settings →
+Media server**. IMDb's datasets are for personal, non-commercial use.
+[Search suggestions](/apps/media-server#search-suggestions) has the details.
+
 ### New settings
 
 - **Media info**, under **Settings → Media Info**. **Probe played files** (`MEDIA_INFO_PROBE`,
@@ -525,6 +586,12 @@ results, so only pair instances that trust each other.
   default. See [Upgrading](#upgrading).
 - **Max versions per item**, under **Settings → Media server** (`JELLYFIN_MAX_VERSIONS`), now
   defaults to 25 and goes up to 500.
+- **Search suggestions**, under **Settings → Media server** (`JELLYFIN_SEARCH_SUGGESTIONS`,
+  `cinemeta`). `cinemeta` matches Cinemeta's list of about 20,000 popular movies and series,
+  which the server downloads and keeps in memory. `lumieredb` asks the instance in **LumiereDB
+  URL** (`JELLYFIN_LUMIEREDB_URL`), see [Running LumiereDB](#running-lumieredb). `catalogs`
+  runs each configuration's own catalog search, which knows what its addons do but costs as
+  much as a full search.
 
 ## Upgrading
 
@@ -555,13 +622,19 @@ up to 25 versions instead of 10. Set it back to 10 to keep the old limit.
 work, but `tags` replaces them and also holds Atmos and DTS:X. Templates that show
 `{track.tag}` keep showing the format alone.
 
+**Search hints.** Jellyfin's search hints, which some Jellyfin apps show as you type, came from
+each configuration's catalog search and now come from Cinemeta's list of popular titles. Set
+**Settings → Media server → Search suggestions** to `catalogs` to keep the old behaviour.
+
 **AIO Subtitle and Argentina TV are removed.** Neither addon is hosted any more. A
 configuration that still has one skips it and says why. AIO Subtitle's developer has moved to
 a new version at aiosubtitle.org.
 
 **What is on by default.** Probing played files, keeping what StremThru reports, RemuxDB
-lookups and contributions. [New settings](#new-settings) says where to switch each one off.
-Sharing media info with other instances is off.
+lookups and contributions, and search suggestions from Cinemeta's list, which the server
+downloads from Cinemeta the first time someone searches, and again at most every 8 hours.
+[New settings](#new-settings) says where to switch each one off. Sharing media info with
+other instances is off.
 
 ## Credits
 
@@ -578,6 +651,8 @@ AIOStreams builds on others' work:
 - **[ExoPlayer](https://developer.android.com/media/media3/exoplayer)** plays video in the
   Android app, with **[libass](https://github.com/libass/libass)** drawing styled subtitles and
   **[libdovi](https://github.com/quietvoid/dovi_tool)** by quietvoid converting Dolby Vision.
+- **LumiereDB** by 0xconstant1, and **Cinemeta**'s list of popular titles, supply search
+  suggestions.
 - **[Seanime](https://github.com/5rahim/seanime)** by 5rahim. The configure page and the
   AIOStreams app are built on its UI components.
 

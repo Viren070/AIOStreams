@@ -66,7 +66,7 @@ It needs **Android 7.0 or later** and a recent web engine: Android System WebVie
 
 ## On a TV
 
-On Android TV, Google TV and Fire TV, the app opens in a layout made for the remote. The arrows move between everything on screen, **Back** goes back, and holding **Select** on a title opens its menu. Voice search works from the search page on Android TV and Google TV.
+On Android TV, Google TV and Fire TV, the app opens in a layout made for the remote. The arrows move between everything on screen, **Back** goes back, and holding **Select** on a title opens its menu. Voice search works from the search page on Android TV and Google TV, and while you type a search, suggested titles show above the keyboard's keys.
 
 <Gallery
   slides={[
@@ -142,7 +142,7 @@ Two settings under **Settings → Playback** show only on a TV:
 - **Match the video's frame rate** switches the TV to a refresh rate that suits each video, so motion plays smoothly.
 - **Tunneled playback** lets the TV's decoder keep picture and sound in step, which plays 4K and HDR more smoothly on some TVs. Turn it off if video stutters or stays black.
 
-With a receiver or soundbar, turn on **Pass surround audio through** under **Settings → Audio**. It sends Dolby Digital, Dolby Digital Plus, TrueHD and DTS, including DTS-HD, to the receiver as they are, where the device's output takes them.
+**Pass surround audio through**, under **Settings → Audio**, sends Dolby Digital, Dolby Digital Plus, TrueHD and DTS, including DTS-HD, to the TV, receiver or soundbar as they are, which keeps Atmos. By default it does so for the formats they say they decode. **Always** sends them even when they don't say so, as some decode them without saying, and **Off** decodes them in the app.
 
 ## Playing
 
@@ -157,7 +157,7 @@ The app plays with one of two engines, under **Settings → Playback → Player 
 When a video fails to play, the error screen offers to try the other engine.
 
 - **Styled subtitles.** Subtitles with their own styling, such as most anime releases, are drawn by the same renderer mpv uses in both engines, so their fonts, positions and effects look the same in ExoPlayer as in mpv.
-- **Dolby Vision** plays as Dolby Vision where the screen and the device's decoder take it. Profile 7 releases are converted to profile 8.1 on the fly where the decoder only takes profile 8, and on a screen without Dolby Vision the HDR10 or HLG picture underneath plays instead. Profile 5, which has no such picture, plays in mpv with its colours worked out in software, which works but is heavy on the processor. **Statistics** in the player's menu shows how a video is playing.
+- **Dolby Vision** plays as Dolby Vision where the screen and the device's decoder take it. Profile 7 releases are converted to profile 8.1 on the fly where the decoder only takes profile 8, and on a screen without Dolby Vision the HDR10 or HLG picture underneath plays instead. Profile 5, which has no such picture, plays in mpv with its colours worked out in software, which works but is heavy on the processor. If Dolby Vision looks dim or flickers, turn off **Dolby Vision** under **Settings → Playback → Video** to play the HDR10 picture most of these videos also carry. **Statistics** in the player's menu shows how a video is playing.
 - **Leaving the app.** On a phone or tablet, **Picture-in-picture** keeps the video playing in a small window, and **Play in the background** keeps the sound going with the screen off. Both are under **Settings → Android app**.
 - **Other players.** Under **Settings → Playback → Player**, **Play versions in** opens versions in VLC, MX Player, mpv or another video app instead, which comes back to the app with your place saved.
 
