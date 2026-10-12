@@ -77,7 +77,7 @@ interface PlayerProps {
  * The page keeps no scrollbar, or the space reserved for one, over the video,
  * and no backdrop (see PageBackground).
  */
-function usePlayerPage() {
+export function usePlayerPage() {
   React.useLayoutEffect(() => {
     const html = document.documentElement;
     const previous = [html.style.overflowY, html.style.scrollbarGutter];
@@ -91,7 +91,7 @@ function usePlayerPage() {
   }, []);
 }
 
-const OBJECT_FIT: Record<VideoFit, string> = {
+export const OBJECT_FIT: Record<VideoFit, string> = {
   fit: 'object-contain',
   crop: 'object-cover',
   stretch: 'object-fill',
@@ -279,7 +279,7 @@ function useReporting(
   }, [paused]);
 }
 
-function Cover({
+export function Cover({
   item,
   hidden,
   children,

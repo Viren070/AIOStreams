@@ -18,6 +18,7 @@ import { PersonPage } from './pages/person';
 import { HistoryPage } from './pages/history';
 import { DownloadsPage } from './pages/downloads';
 import { PlayerPage } from './pages/player';
+import { TrailerPage } from './pages/trailer';
 import { Button } from '@aiostreams/ui/button';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import { SettingsPage } from './pages/settings';
@@ -193,6 +194,23 @@ const playRoute = createRoute({
   component: PlayRouteView,
 });
 
+const trailerRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/play/trailer/$itemId',
+  validateSearch: (search: Record<string, unknown>) => ({
+    trailer: Number(search.trailer) || 0,
+  }),
+  component: TrailerRouteView,
+});
+
+function TrailerRouteView(): React.ReactElement {
+  const { itemId } = trailerRoute.useParams();
+  const { trailer } = trailerRoute.useSearch();
+  return (
+    <TrailerPage key={`${itemId}|${trailer}`} itemId={itemId} index={trailer} />
+  );
+}
+
 function PlayRouteView(): React.ReactElement {
   const { itemId } = playRoute.useParams();
   const { source, start } = playRoute.useSearch();
@@ -221,6 +239,7 @@ const routeTree = rootRoute.addChildren([
     itemRoute,
     personRoute,
     playRoute,
+    trailerRoute,
   ]),
 ]);
 

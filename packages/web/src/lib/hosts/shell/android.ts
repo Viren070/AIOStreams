@@ -4,6 +4,7 @@ import { onSettingsChange, settings, type PlayerEngine } from '../../settings';
 import { appBridge } from './bridge';
 import { shellDownloads } from './downloads';
 import { setEngine, useShellPlayer } from './player';
+import { resolveYouTube } from './youtube';
 
 let fullscreen = false;
 
@@ -113,6 +114,7 @@ export const saveMpvConfig = (text: string) =>
 
 export const androidHost: Host = {
   name: 'android-app',
+  resolveYouTube,
   get tv() {
     return appBridge()?.tv === true;
   },

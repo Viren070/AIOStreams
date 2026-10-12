@@ -6,3 +6,4 @@ pub mod mpv;
 pub mod now_playing;
 pub mod player;
 pub mod render;
+pub mod youtube;

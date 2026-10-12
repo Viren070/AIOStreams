@@ -39,6 +39,7 @@ pub struct Player {
     /// The last value of each logged setting, so re-applying one logs nothing.
     logged: Mutex<HashMap<String, String>>,
     dolby_vision: Arc<AtomicBool>,
+    emit: Emit,
 }
 
 impl Player {
@@ -79,7 +80,7 @@ impl Player {
         let worker = std::thread::Builder::new()
             .name("mpv-requests".into())
             .spawn({
-                let mpv = mpv.clone();
+                let (mpv, emit) = (mpv.clone(), emit.clone());
                 move || serve(&mpv, &emit, &inbox)
             })
             .map_err(|e| e.to_string())?;
@@ -92,7 +93,21 @@ impl Player {
             versions,
             logged: Mutex::default(),
             dolby_vision,
+            emit,
         })
+    }
+
+    pub fn resolve_youtube(&self, request: String, id: String) {
+        let emit = self.emit.clone();
+        let spawned = std::thread::Builder::new()
+            .name("youtube".into())
+            .spawn(move || {
+                let url = crate::youtube::resolve(&id);
+                emit(Outbound::YoutubeResolved { request, url })
+            });
+        if let Err(e) = spawned {
+            log::warn!("youtube: {e}");
+        }
     }
 
     /// Takes effect from the next file.

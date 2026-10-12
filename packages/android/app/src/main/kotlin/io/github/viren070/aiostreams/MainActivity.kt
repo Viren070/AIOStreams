@@ -62,6 +62,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var pip: PictureInPicture
     private lateinit var focus: AudioFocus
     private lateinit var passthrough: Passthrough
+    private val youtube = YouTube { message -> runOnUiThread { bridge.send(message) } }
     private lateinit var controller: ListenableFuture<MediaController>
     private val screen = PlayerWindow(this)
     private val levels by lazy { Levels(this) }
@@ -221,6 +222,10 @@ class MainActivity : ComponentActivity() {
                 message["tunneling"]?.jsonPrimitive?.booleanOrNull?.let { playback.tunneling = it }
                 message["dolbyVision"]?.jsonPrimitive?.booleanOrNull?.let { playback.dolbyVision = it }
             }
+            "youtube-resolve" -> youtube.resolve(
+                message["request"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                message["id"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+            )
             "voice-search" -> voice.listen()
             "voice-cancel" -> voice.cancel()
             "save-file" -> saveFile(
@@ -442,6 +447,7 @@ class MainActivity : ComponentActivity() {
         PlaybackService.player = null
         focus.release()
         passthrough.release()
+        youtube.release()
         playback.engine.release()
         web.destroy()
         super.onDestroy()

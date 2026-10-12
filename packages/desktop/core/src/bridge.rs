@@ -38,6 +38,11 @@ pub enum Inbound {
         #[serde(default)]
         external: bool,
     },
+    /// Answered with `youtube-resolved` carrying the same `request`.
+    YoutubeResolve {
+        request: String,
+        id: String,
+    },
     /// Player choices with no mpv property of their own.
     PlayerOptions {
         #[serde(rename = "dolbyVision")]
@@ -185,6 +190,10 @@ pub struct DownloadStatus {
 #[derive(Debug, Serialize)]
 #[serde(tag = "type", rename_all = "kebab-case")]
 pub enum Outbound {
+    YoutubeResolved {
+        request: String,
+        url: Option<String>,
+    },
     MpvProp {
         name: String,
         data: Value,

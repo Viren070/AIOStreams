@@ -62,6 +62,8 @@ export function PlayerControls({
   onEpisode,
   loadingEpisode = null,
   offeringNext = false,
+  caption,
+  steps,
 }: {
   item: BaseItemDto;
   player: PlayerController;
@@ -73,6 +75,10 @@ export function PlayerControls({
   onEpisode?: (episode: BaseItemDto) => void;
   loadingEpisode?: string | null;
   offeringNext?: boolean;
+  /** Under the title, in place of an episode's own line. */
+  caption?: string;
+  /** What previous and next move between, where it isn't the show's episodes. */
+  steps?: string;
 }) {
   const { state } = player;
   const latest = useLatest(player);
@@ -227,11 +233,13 @@ export function PlayerControls({
   );
   const isEpisode = item.Type === 'Episode';
   const listsEpisodes = isEpisode && !!item.SeriesId && !!onEpisode;
+  const stepping = steps ?? (isEpisode ? 'episode' : undefined);
+  const subtitle = caption ?? (isEpisode ? itemSubtitle(item) : undefined);
   const spinner = <LuLoaderCircle className="animate-spin" />;
   const buttons: Record<string, Transport | false> = {
-    previous: isEpisode && {
+    previous: !!stepping && {
       name: 'previous',
-      label: 'Previous episode',
+      label: `Previous ${stepping}`,
       icon: loadingEpisode === 'previous' ? spinner : <LuSkipBack />,
       onClick: onPrevious,
     },
@@ -247,9 +255,9 @@ export function PlayerControls({
       icon: <LuRotateCw />,
       onClick: () => seekBy(seekStep * 1000),
     },
-    next: isEpisode && {
+    next: !!stepping && {
       name: 'next',
-      label: 'Next episode',
+      label: `Next ${stepping}`,
       icon: loadingEpisode === 'next' ? spinner : <LuSkipForward />,
       onClick: onNext,
     },
@@ -330,10 +338,8 @@ export function PlayerControls({
           className="min-w-0 text-[length:var(--title)]"
         >
           <p className="truncate font-semibold">{itemTitle(item)}</p>
-          {isEpisode && (
-            <p className="truncate text-[0.875em] text-gray-300">
-              {itemSubtitle(item)}
-            </p>
+          {subtitle && (
+            <p className="truncate text-[0.875em] text-gray-300">{subtitle}</p>
           )}
         </div>
         {touch && !tv && (

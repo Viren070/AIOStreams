@@ -497,6 +497,11 @@ pub fn handle(
                 fail(format!("mpv set {name}={value}: {e}"));
             }
         }
+        Inbound::YoutubeResolve { request, id } => {
+            if let Some(p) = player.as_ref() {
+                p.resolve_youtube(request, id);
+            }
+        }
         Inbound::PlayerOptions { dolby_vision } => {
             if let (Some(p), Some(on)) = (player.as_ref(), dolby_vision) {
                 p.set_dolby_vision(on);

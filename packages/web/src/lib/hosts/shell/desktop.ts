@@ -4,6 +4,7 @@ import { onSettingsChange, settings } from '../../settings';
 import { appBridge, type ShellMessage } from './bridge';
 import { shellDownloads } from './downloads';
 import { useShellPlayer } from './player';
+import { resolveYouTube } from './youtube';
 
 export type DiscordStatus = Extract<ShellMessage, { type: 'discord-status' }>;
 
@@ -69,6 +70,7 @@ export const desktopHost: Host = {
   device: () => ({ name: appBridge()?.device }),
   usePlayer: useShellPlayer,
   playerFeatures: ['audio', 'chapters', 'stats'],
+  resolveYouTube,
   downloads: {
     ...shellDownloads,
     folder: {

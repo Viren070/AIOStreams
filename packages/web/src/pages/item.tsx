@@ -5,7 +5,6 @@ import {
   BiChevronRight,
   BiDislike,
   BiHeart,
-  BiMoviePlay,
   BiPlay,
   BiRevision,
   BiSolidDislike,
@@ -80,6 +79,7 @@ import type { BaseItemDto } from '../lib/types';
 import { useHold } from '../lib/use-hold';
 import { useExternalReturn } from '../lib/playback/external-return';
 import { CachedImage } from '../components/cached-image';
+import { TrailerButton } from '../components/trailers';
 import {
   DownloadButton,
   ShowDownloadMenu,
@@ -325,7 +325,6 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
     () => landscapeUrls(client, item, { maxWidth: 480 }),
     [client, item]
   );
-  const trailer = item.RemoteTrailers?.[0]?.Url;
 
   const target =
     item.Type === 'Series'
@@ -467,18 +466,7 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
               )}
             </div>
           )}
-          {trailer && (
-            <Button
-              data-ui="item-action"
-              data-name="trailer"
-              intent="gray-outline"
-              className="rounded-full"
-              leftIcon={<BiMoviePlay className="text-lg" />}
-              onClick={() => window.open(trailer, '_blank', 'noopener')}
-            >
-              Trailer
-            </Button>
-          )}
+          <TrailerButton item={item} />
           <ItemToggles
             itemId={item.Id!}
             type={item.Type}

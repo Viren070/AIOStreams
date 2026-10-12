@@ -32,6 +32,8 @@ export const to = {
   person: (personId: string) => `/person/${personId}`,
   play: (itemId: string, sourceId: string, startMs = 0) =>
     `/play/${itemId}?source=${sourceId}${startMs ? `&start=${Math.round(startMs)}` : ''}`,
+  trailer: (itemId: string, index = 0) =>
+    `/play/trailer/${itemId}${index ? `?trailer=${index}` : ''}`,
 };
 
 /** An episode has no page of its own; it opens its show at its season. */

@@ -2,6 +2,7 @@ import type { HostEvent } from '../../downloads/types';
 
 /** `external` marks what the player in its own window sends. */
 export type ShellMessage =
+  | { type: 'youtube-resolved'; request: string; url: string | null }
   | { type: 'mpv-prop'; name: string; data: unknown; external?: boolean }
   | { type: 'mpv-event'; name: string; external?: boolean }
   | {

@@ -79,6 +79,8 @@ export interface Host {
   signedIn?(client: JellyfinClient): void;
   /** Saves what the page asks for to the device. */
   downloads?: DownloadsHost;
+  /** A YouTube video's stream, which only plays from the address that asked. */
+  resolveYouTube?(id: string): Promise<string | null>;
   /** What the device's speech recogniser heard, or null for nothing. */
   listen?(opts: {
     hearing(heard: Hearing): void;
