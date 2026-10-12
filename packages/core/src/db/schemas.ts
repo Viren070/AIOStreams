@@ -1588,6 +1588,7 @@ const TrailerSchema = z
   .object({
     source: z.string().optional(),
     type: z.string().optional(),
+    name: z.string().nullish(),
   })
   .passthrough();
 
