@@ -183,7 +183,7 @@ async function _fetchFromApi(
     }
     return z.array(MediaProbeVersionSchema).parse(await response.json());
   } catch (error) {
-    logger.error(`remuxdb lookup failed for ${imdbId}: ${error}`);
+    logger.warn(`remuxdb lookup failed for ${imdbId}: ${error}`);
     return null;
   }
 }

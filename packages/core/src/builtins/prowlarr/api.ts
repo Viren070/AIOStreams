@@ -60,6 +60,7 @@ const ProwlarrApiSearchItemSchema = z.object({
   title: z.string(),
   downloadUrl: z.url().optional(),
   magnetUrl: z.url().optional(),
+  infoUrl: z.string().optional(),
   infoHash: z
     .string()
     .optional()

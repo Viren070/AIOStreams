@@ -6,7 +6,7 @@ import type {
   Contribution,
   ContributionTarget,
 } from '../media-info/contribute.js';
-import { extractNzbGuid, resolveRemuxDbIndexer } from './adapter.js';
+import { nzbIndexerGuid } from './adapter.js';
 import {
   fetchProbeVersions,
   invalidateProbeVersions,
@@ -91,8 +91,7 @@ function sourcePayload(
         ),
     };
   }
-  const indexer = resolveRemuxDbIndexer(source.nzbUrl);
-  const guid = extractNzbGuid(source.nzbUrl);
+  const { indexer, guid } = nzbIndexerGuid(source.nzbUrl, source.infoUrl) ?? {};
   if (!indexer || !guid) return null;
   return {
     body: { nzb: { indexer, indexer_guid: guid, title: filename } },
@@ -106,10 +105,6 @@ async function submit(release: Contribution): Promise<void> {
   const { imdbId, tmdbId, tvdbId, season, episode, record } = release;
   const source = sourcePayload(release.source, release.file);
   if (!source || !record.size || !(imdbId || tmdbId || tvdbId)) return;
-  const label =
-    release.source.kind === 'nzb'
-      ? resolveRemuxDbIndexer(release.source.nzbUrl)
-      : 'torrent';
   const isEpisode = season !== undefined && episode !== undefined;
   try {
     if (imdbId) {
@@ -145,7 +140,7 @@ async function submit(release: Contribution): Promise<void> {
     if (!response.ok) {
       logger.warn(
         {
-          source: label,
+          source: source.body,
           status: response.status,
           body: (await response.text().catch(() => '')).slice(0, 300),
         },
@@ -160,13 +155,13 @@ async function submit(release: Contribution): Promise<void> {
         isEpisode ? episode : undefined
       );
     }
-    logger.debug(
-      { source: label, filename: release.file },
+    logger.info(
+      { source: source.body, filename: release.file },
       'contributed to remuxdb'
     );
   } catch (err) {
     logger.warn(
-      { source: label, err: (err as Error)?.message },
+      { source: source.body, err: (err as Error)?.message },
       'remuxdb contribution failed'
     );
   }

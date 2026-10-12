@@ -42,6 +42,19 @@ export function extractNzbGuid(nzbUrl: string | undefined): string | undefined {
   }
 }
 
+/** The indexer and guid; Prowlarr and NZBHydra NZB URLs need the info URL. */
+export function nzbIndexerGuid(
+  nzbUrl: string | undefined,
+  infoUrl: string | undefined
+): { indexer: string; guid: string } | undefined {
+  for (const url of [nzbUrl, infoUrl]) {
+    const indexer = resolveRemuxDbIndexer(url);
+    const guid = extractNzbGuid(url);
+    if (indexer && guid) return { indexer, guid };
+  }
+  return undefined;
+}
+
 const baseName = (path: string | null | undefined) =>
   path?.split('/').pop()?.toLowerCase();
 
@@ -76,8 +89,7 @@ export function matchEntry(
     if (match) return match;
   }
 
-  const indexer = resolveRemuxDbIndexer(stream.nzbUrl);
-  const guid = extractNzbGuid(stream.nzbUrl);
+  const { indexer, guid } = nzbIndexerGuid(stream.nzbUrl, stream.infoUrl) ?? {};
   if (indexer && guid) {
     return versions.find((v) =>
       v.sources.some((s) => s.indexer === indexer && s.indexer_guid === guid)

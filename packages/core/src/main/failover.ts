@@ -71,6 +71,7 @@ function buildPlaybackInfo(
         nzb: fileInfo.nzb,
         releaseKey: fileInfo.releaseKey,
         indexer: fileInfo.indexer,
+        infoUrl: fileInfo.infoUrl,
         easynewsUrl: fileInfo.easynewsUrl,
         index: fileInfo.index,
         filename,

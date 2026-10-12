@@ -108,7 +108,11 @@ export async function queueEngineProbe(
     reader: 'engine',
     onStored: async (record) =>
       contribute({
-        source: { kind: 'nzb', nzbUrl: decoded.nzb },
+        source: {
+          kind: 'nzb',
+          nzbUrl: decoded.nzb,
+          infoUrl: decoded.infoUrl,
+        },
         file: decoded.filename ?? file,
         record,
         imdbId: decoded.imdbId,
@@ -184,7 +188,9 @@ function queueDebridProbe(input: {
       title: fileInfo.title,
       pendingName: input.filename,
       path: input.path,
-      source: fileInfo.nzb ? { kind: 'nzb', nzbUrl: fileInfo.nzb } : undefined,
+      source: fileInfo.nzb
+        ? { kind: 'nzb', nzbUrl: fileInfo.nzb, infoUrl: fileInfo.infoUrl }
+        : undefined,
       ids: input.ids,
       waited: input.waited,
     });

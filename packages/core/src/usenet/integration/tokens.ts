@@ -22,6 +22,8 @@ export interface UsenetStreamToken {
    * Search-time indexer name.
    */
   indexer?: string;
+  /** Search-time indexer info URL. */
+  infoUrl?: string;
   /**
    * Username the stream is attributed to, for stream accounting and limits.
    * Absent on tokens minted before this existed; those streams are listed as

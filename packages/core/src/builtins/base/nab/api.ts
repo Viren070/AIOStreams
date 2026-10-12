@@ -77,7 +77,7 @@ const TORZNAB_PROFILE: NabScanProfile = {
 
 const NEWZNAB_PROFILE: NabScanProfile = {
   attrElement: 'newznab:attr',
-  fields: new Set<NabTextField>(['title', 'pubDate', 'size']),
+  fields: new Set<NabTextField>(['title', 'comments', 'pubDate', 'size']),
   indexers: new Set(['prowlarrindexer'] as const),
   enclosureLength: true,
   attrs: new Map<string, NabAttrType>([
@@ -96,6 +96,8 @@ interface NabSearchResultItemBase {
   title: string;
   /** Torznab only, but the base addon's duplicate-page check reads it. */
   guid?: string;
+  /** Newznab only: the indexer's info URL. */
+  comments?: string;
   pubDate?: string;
   size?: number;
   enclosure: NabEnclosure[];

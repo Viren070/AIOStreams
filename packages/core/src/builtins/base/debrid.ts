@@ -898,6 +898,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
             hash: torrentOrNzb.hash,
             releaseKey: torrentOrNzb.releaseKey,
             indexer: torrentOrNzb.indexer,
+            infoUrl: torrentOrNzb.infoUrl,
             index: torrentOrNzb.file.index,
             easynewsUrl:
               torrentOrNzb.service?.id === 'easynews'
@@ -943,6 +944,8 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
             )
           : undefined,
       nzbUrl: torrentOrNzb.type === 'usenet' ? torrentOrNzb.nzb : undefined,
+      infoUrl:
+        torrentOrNzb.type === 'usenet' ? torrentOrNzb.infoUrl : undefined,
       releaseKey:
         torrentOrNzb.type === 'usenet' ? torrentOrNzb.releaseKey : undefined,
       idMatched: torrentOrNzb.confirmed === true ? true : undefined,

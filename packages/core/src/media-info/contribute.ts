@@ -5,7 +5,7 @@ import type { MediaInfoRecord } from './record.js';
 const logger = createLogger('media-info');
 
 export type ContributedSource =
-  | { kind: 'nzb'; nzbUrl: string }
+  | { kind: 'nzb'; nzbUrl: string; infoUrl?: string }
   | { kind: 'torrent'; infoHash: string };
 
 /** The title a contribution is filed under. */

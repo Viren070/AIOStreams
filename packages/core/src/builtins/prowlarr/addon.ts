@@ -292,6 +292,7 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
         size: result.size,
         indexer: result.indexer,
         type: 'usenet',
+        infoUrl: result.infoUrl,
       });
     }
     return nzbs;

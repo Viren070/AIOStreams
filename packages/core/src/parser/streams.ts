@@ -112,6 +112,7 @@ class StreamParser {
       proxied: this.isProxied(stream),
       url: this.applyUrlModifications(stream.url ?? undefined),
       nzbUrl: stream.nzbUrl || undefined,
+      infoUrl: stream.infoUrl || undefined,
       releaseKey: this.getReleaseKey(stream),
       idMatched: this.getIdMatched(stream),
       tarUrls: stream.tarUrls ?? undefined,
