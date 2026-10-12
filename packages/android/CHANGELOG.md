@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.4.0](https://github.com/Viren070/AIOStreams/compare/android-v0.3.0...android-v0.4.0) (2026-10-12)
+
+
+### Features
+
+* **android:** pass surround audio through by what the output reports ([6cc6828](https://github.com/Viren070/AIOStreams/commit/6cc6828e1afeb49773bf7244445d241e8340085a))
+* **jellyfin:** rank subtitle tracks by type ([d37af67](https://github.com/Viren070/AIOStreams/commit/d37af67e46ce9b8180250a19ce92bf4c61863e6f)), closes [#1485](https://github.com/Viren070/AIOStreams/issues/1485)
+* **web:** add a Dolby Vision switch that plays the HDR10 picture instead ([e27353e](https://github.com/Viren070/AIOStreams/commit/e27353e9883eb8ff5ef62fa11e821bfbe30c489b))
+* **web:** add a trailer player and a sheet of named trailers ([b1c84c1](https://github.com/Viren070/AIOStreams/commit/b1c84c17ab15cdd371e0dc1a29dacc3a0fee4714))
+* **web:** add data-ui hooks to the parts that had none ([5143370](https://github.com/Viren070/AIOStreams/commit/5143370f6b8b0c24be3603d538a0b2e89bbe921e))
+* **web:** list only the user's subtitle languages in the subtitle menu ([5143370](https://github.com/Viren070/AIOStreams/commit/5143370f6b8b0c24be3603d538a0b2e89bbe921e))
+* **web:** reuse the server's kept version list in the player ([5143370](https://github.com/Viren070/AIOStreams/commit/5143370f6b8b0c24be3603d538a0b2e89bbe921e))
+* **web:** suggest titles from search hints while typing ([9f36d38](https://github.com/Viren070/AIOStreams/commit/9f36d38c4ceb92309834c647ec979ddab9748367)), closes [#1491](https://github.com/Viren070/AIOStreams/issues/1491)
+
+
+### Bug Fixes
+
+* **web:** fill the player controls' focus with an inset shadow ([5143370](https://github.com/Viren070/AIOStreams/commit/5143370f6b8b0c24be3603d538a0b2e89bbe921e))
+* **web:** show an early end of file as a failure with a resume button ([5143370](https://github.com/Viren070/AIOStreams/commit/5143370f6b8b0c24be3603d538a0b2e89bbe921e))
+* **web:** stack keyed glides on layers again, easing held repeats in and out ([5143370](https://github.com/Viren070/AIOStreams/commit/5143370f6b8b0c24be3603d538a0b2e89bbe921e))
+
 ## [0.3.0](https://github.com/Viren070/AIOStreams/compare/android-v0.2.1...android-v0.3.0) (2026-10-12)
 
 
