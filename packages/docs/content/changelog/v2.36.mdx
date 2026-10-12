@@ -27,7 +27,9 @@ its real audio and subtitle tracks, and every stream list after that shows them,
 as well as the apps.
 
 For self-hosters, a **Media info** page on the dashboard shows what has been read, and
-instances can share what they read with each other.
+instances can share what they read with each other. If you run an instance, consider
+turning on [**RemuxDB contributions**](#contribute-to-remuxdb): what your instance reads then
+fills in stream lists on every other instance too.
 
 <video
   src="/changelog/v2.36/apps.mp4"
@@ -471,12 +473,12 @@ In the apps, the first play of a file that hasn't been read yet still shows plac
 waits up to that many seconds, so the first play lists every track too. Some apps give up after
 about 20 seconds, so stay below that.
 
-**RemuxDB is now on by default.** The RemuxDB lookup, which fills in media info from RemuxDB's
-database of probed files, runs for every configuration that hasn't turned it off under
-**Filters → Miscellaneous**. It now runs alongside the addon search, so it doesn't add to the
-wait. Anything this instance has read itself, or kept from StremThru, comes first. Instances
-also send RemuxDB the tracks they read that it doesn't have yet. [Upgrading](#upgrading) says
-what is sent and how to turn either off.
+**RemuxDB lookups are now on by default.** The RemuxDB lookup, which fills in media info from
+RemuxDB's database of probed files, runs for every configuration that hasn't turned it off
+under **Filters → Miscellaneous**. It runs alongside the addon search, so it doesn't add
+to the wait. Anything this instance has read itself, or kept from StremThru, comes first.
+[Upgrading](#upgrading) says what a lookup sends and how to turn it off. What your instance
+reads can go to RemuxDB too, if you [contribute](#contribute-to-remuxdb).
 
 The probe builds on work by [webstreamr](https://github.com/webstreamr).
 
@@ -513,6 +515,21 @@ with an English Atmos track.
   [Watch State](/reference/addon-protocol/watch-state).
 
 ## For self-hosters
+
+### Contribute to RemuxDB
+
+RemuxDB is a shared database of probed files, and AIOStreams instances look files up in it.
+Now that AIOStreams reads the files you play, your instance can add what it reads, so the
+next person who finds that release sees its real tracks without anyone playing it first. The
+more instances contribute, the more of every stream list RemuxDB fills in, on self-hosted and
+public instances alike.
+
+Contributing is off unless you turn it on, with **Settings → RemuxDB → Contribute to RemuxDB**
+or `REMUXDB_CONTRIBUTE=true`. Your instance then sends RemuxDB the tracks it reads from played
+files that RemuxDB doesn't have yet. Each submission names the torrent's info hash, or the
+indexer and the release id on it, along with the file name, the title it was played for and a
+random id for your instance. It is sent after a file has been read, so it never slows down a
+stream list.
 
 ### The Media info page
 
@@ -582,8 +599,6 @@ Media server**. IMDb's datasets are for personal, non-commercial use.
   (`MEDIA_INFO_MAX_QUEUED_PROBES`, 50) and **Probe timeout** (`MEDIA_INFO_PROBE_TIMEOUT`,
   90 seconds) bound the work, and **ffprobe path** (`FFPROBE_PATH`) points at ffprobe if it is
   not on the PATH.
-- **Contribute to RemuxDB**, under **Settings → RemuxDB** (`REMUXDB_CONTRIBUTE`), is now on by
-  default. See [Upgrading](#upgrading).
 - **Max versions per item**, under **Settings → Media server** (`JELLYFIN_MAX_VERSIONS`), now
   defaults to 25 and goes up to 500.
 - **Search suggestions**, under **Settings → Media server** (`JELLYFIN_SEARCH_SUGGESTIONS`,
@@ -601,13 +616,6 @@ worth checking.
 **ffprobe.** The Docker image includes a small ffprobe. Running from source, install FFmpeg's
 ffprobe, version 7 or newer to tell DTS:X apart, or set **ffprobe path**. Without it nothing is
 probed, and the Media info page says so.
-
-**RemuxDB contributions are on.** Unless you turn it off, your instance sends RemuxDB the tracks
-it reads from played files that RemuxDB doesn't have yet. Each submission names the torrent's
-info hash, or the indexer and the release id on it, along with the file name, the title it was
-played for and a random id for your instance. Until you set it either way, the server log
-says so at startup. To stop, turn off **Settings → RemuxDB → Contribute to RemuxDB**, or set
-`REMUXDB_CONTRIBUTE=false`.
 
 **RemuxDB lookups are on for every configuration.** Each lookup sends the title's IMDb ID, with
 the season and episode, from your instance. A configuration that turned **RemuxDB
@@ -631,10 +639,10 @@ configuration that still has one skips it and says why. AIO Subtitle's developer
 a new version at aiosubtitle.org.
 
 **What is on by default.** Probing played files, keeping what StremThru reports, RemuxDB
-lookups and contributions, and search suggestions from Cinemeta's list, which the server
-downloads from Cinemeta the first time someone searches, and again at most every 8 hours.
+lookups, and search suggestions from Cinemeta's list, which the server downloads from
+Cinemeta the first time someone searches, and again at most every 8 hours.
 [New settings](#new-settings) says where to switch each one off. Sharing media info with
-other instances is off.
+other instances and [contributing to RemuxDB](#contribute-to-remuxdb) are off.
 
 ## Credits
 
