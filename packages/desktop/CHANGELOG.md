@@ -1,5 +1,46 @@
 # Changelog
 
+## [0.13.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.12.1...desktop-v0.13.0) (2026-10-12)
+
+
+### Features
+
+* **android:** run voice search in the app ([f609796](https://github.com/Viren070/AIOStreams/commit/f609796ac6a69fac863f86b500cf8def2e71c216))
+* **web:** add an episode list to the player ([f609796](https://github.com/Viren070/AIOStreams/commit/f609796ac6a69fac863f86b500cf8def2e71c216))
+* **web:** ask who's watching when the app opens ([f609796](https://github.com/Viren070/AIOStreams/commit/f609796ac6a69fac863f86b500cf8def2e71c216))
+* **web:** crossfade the home hero's titles with a swipe ([f609796](https://github.com/Viren070/AIOStreams/commit/f609796ac6a69fac863f86b500cf8def2e71c216))
+* **web:** offer a ready update in a dialog on TVs ([f609796](https://github.com/Viren070/AIOStreams/commit/f609796ac6a69fac863f86b500cf8def2e71c216))
+* **web:** press a showing skip button on Select ([f609796](https://github.com/Viren070/AIOStreams/commit/f609796ac6a69fac863f86b500cf8def2e71c216))
+* **web:** show where a run of skips is headed on the seek bar ([f609796](https://github.com/Viren070/AIOStreams/commit/f609796ac6a69fac863f86b500cf8def2e71c216))
+* **web:** step through the TV hero's titles with Left and Right ([f609796](https://github.com/Viren070/AIOStreams/commit/f609796ac6a69fac863f86b500cf8def2e71c216))
+* **web:** toggle playback with Enter on the seek bar ([f609796](https://github.com/Viren070/AIOStreams/commit/f609796ac6a69fac863f86b500cf8def2e71c216))
+
+
+### Bug Fixes
+
+* **web:** draw the watched mark on episode images on TVs ([f609796](https://github.com/Viren070/AIOStreams/commit/f609796ac6a69fac863f86b500cf8def2e71c216))
+* **web:** hold focus at a loading episode row ([f609796](https://github.com/Viren070/AIOStreams/commit/f609796ac6a69fac863f86b500cf8def2e71c216))
+* **web:** ignore player swipes from the top and bottom edges ([f609796](https://github.com/Viren070/AIOStreams/commit/f609796ac6a69fac863f86b500cf8def2e71c216))
+* **web:** keep presses that move the desktop window from the page ([f609796](https://github.com/Viren070/AIOStreams/commit/f609796ac6a69fac863f86b500cf8def2e71c216))
+* **web:** measure in-view targets on each scroll, without the glide's offset ([f609796](https://github.com/Viren070/AIOStreams/commit/f609796ac6a69fac863f86b500cf8def2e71c216))
+
+
+### Performance Improvements
+
+* **web:** ask for a title before reading its saved copy ([f609796](https://github.com/Viren070/AIOStreams/commit/f609796ac6a69fac863f86b500cf8def2e71c216))
+* **web:** ask for the show's poster for a season that carries it ([f609796](https://github.com/Viren070/AIOStreams/commit/f609796ac6a69fac863f86b500cf8def2e71c216))
+* **web:** chase keyed jumps on one layer at an even speed ([f609796](https://github.com/Viren070/AIOStreams/commit/f609796ac6a69fac863f86b500cf8def2e71c216))
+* **web:** give the apps' build an empty page icon ([f609796](https://github.com/Viren070/AIOStreams/commit/f609796ac6a69fac863f86b500cf8def2e71c216))
+* **web:** hold an unfetched row's place with one placeholder ([f609796](https://github.com/Viren070/AIOStreams/commit/f609796ac6a69fac863f86b500cf8def2e71c216))
+* **web:** keep the layout and Home mounted under the player ([f609796](https://github.com/Viren070/AIOStreams/commit/f609796ac6a69fac863f86b500cf8def2e71c216))
+* **web:** measure in-view targets once a scroll settles ([f609796](https://github.com/Viren070/AIOStreams/commit/f609796ac6a69fac863f86b500cf8def2e71c216))
+* **web:** measure in-view targets once after a navigation ([f609796](https://github.com/Viren070/AIOStreams/commit/f609796ac6a69fac863f86b500cf8def2e71c216))
+* **web:** memoise the Home page kept under other pages ([f609796](https://github.com/Viren070/AIOStreams/commit/f609796ac6a69fac863f86b500cf8def2e71c216))
+* **web:** memoise the item header's toggles, overview, rating and links ([f609796](https://github.com/Viren070/AIOStreams/commit/f609796ac6a69fac863f86b500cf8def2e71c216))
+* **web:** memoise the season posters row ([f609796](https://github.com/Viren070/AIOStreams/commit/f609796ac6a69fac863f86b500cf8def2e71c216))
+* **web:** scroll rows natively on touch screens ([f609796](https://github.com/Viren070/AIOStreams/commit/f609796ac6a69fac863f86b500cf8def2e71c216))
+* **web:** step along a row's cards without measuring the others ([f609796](https://github.com/Viren070/AIOStreams/commit/f609796ac6a69fac863f86b500cf8def2e71c216))
+
 ## [0.12.1](https://github.com/Viren070/AIOStreams/compare/desktop-v0.12.0...desktop-v0.12.1) (2026-10-11)
 
 
