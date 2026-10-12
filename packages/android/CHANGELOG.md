@@ -1,5 +1,48 @@
 # Changelog
 
+## [0.3.0](https://github.com/Viren070/AIOStreams/compare/android-v0.2.1...android-v0.3.0) (2026-10-12)
+
+
+### Features
+
+* **android:** ask for notifications before installing an update ([bbb97a3](https://github.com/Viren070/AIOStreams/commit/bbb97a3e74460651e54eacee6cc1d8bfcf0c556d))
+* **android:** run voice search in the app ([cf0939c](https://github.com/Viren070/AIOStreams/commit/cf0939ca54d3c5946c92dc0ec593940aaa591ad8))
+* **web:** add an episode list to the player ([29b5335](https://github.com/Viren070/AIOStreams/commit/29b533521744a1c88bdcf969d39e33a82df83633))
+* **web:** ask who's watching when the app opens ([29b5335](https://github.com/Viren070/AIOStreams/commit/29b533521744a1c88bdcf969d39e33a82df83633))
+* **web:** crossfade the home hero's titles with a swipe ([29b5335](https://github.com/Viren070/AIOStreams/commit/29b533521744a1c88bdcf969d39e33a82df83633))
+* **web:** offer a ready update in a dialog on TVs ([29b5335](https://github.com/Viren070/AIOStreams/commit/29b533521744a1c88bdcf969d39e33a82df83633))
+* **web:** press a showing skip button on Select ([29b5335](https://github.com/Viren070/AIOStreams/commit/29b533521744a1c88bdcf969d39e33a82df83633))
+* **web:** show where a run of skips is headed on the seek bar ([29b5335](https://github.com/Viren070/AIOStreams/commit/29b533521744a1c88bdcf969d39e33a82df83633))
+* **web:** step through the TV hero's titles with Left and Right ([29b5335](https://github.com/Viren070/AIOStreams/commit/29b533521744a1c88bdcf969d39e33a82df83633))
+* **web:** toggle playback with Enter on the seek bar ([29b5335](https://github.com/Viren070/AIOStreams/commit/29b533521744a1c88bdcf969d39e33a82df83633))
+
+
+### Bug Fixes
+
+* **android:** keep the system bars in their dark style ([de0f134](https://github.com/Viren070/AIOStreams/commit/de0f134a5390b8e59a01f9e512410285804311f3))
+* **web:** draw the watched mark on episode images on TVs ([29b5335](https://github.com/Viren070/AIOStreams/commit/29b533521744a1c88bdcf969d39e33a82df83633))
+* **web:** hold focus at a loading episode row ([29b5335](https://github.com/Viren070/AIOStreams/commit/29b533521744a1c88bdcf969d39e33a82df83633))
+* **web:** ignore player swipes from the top and bottom edges ([29b5335](https://github.com/Viren070/AIOStreams/commit/29b533521744a1c88bdcf969d39e33a82df83633))
+* **web:** keep presses that move the desktop window from the page ([29b5335](https://github.com/Viren070/AIOStreams/commit/29b533521744a1c88bdcf969d39e33a82df83633))
+* **web:** measure in-view targets on each scroll, without the glide's offset ([29b5335](https://github.com/Viren070/AIOStreams/commit/29b533521744a1c88bdcf969d39e33a82df83633))
+
+
+### Performance Improvements
+
+* **web:** ask for a title before reading its saved copy ([29b5335](https://github.com/Viren070/AIOStreams/commit/29b533521744a1c88bdcf969d39e33a82df83633))
+* **web:** ask for the show's poster for a season that carries it ([29b5335](https://github.com/Viren070/AIOStreams/commit/29b533521744a1c88bdcf969d39e33a82df83633))
+* **web:** chase keyed jumps on one layer at an even speed ([29b5335](https://github.com/Viren070/AIOStreams/commit/29b533521744a1c88bdcf969d39e33a82df83633))
+* **web:** give the apps' build an empty page icon ([29b5335](https://github.com/Viren070/AIOStreams/commit/29b533521744a1c88bdcf969d39e33a82df83633))
+* **web:** hold an unfetched row's place with one placeholder ([29b5335](https://github.com/Viren070/AIOStreams/commit/29b533521744a1c88bdcf969d39e33a82df83633))
+* **web:** keep the layout and Home mounted under the player ([29b5335](https://github.com/Viren070/AIOStreams/commit/29b533521744a1c88bdcf969d39e33a82df83633))
+* **web:** measure in-view targets once a scroll settles ([29b5335](https://github.com/Viren070/AIOStreams/commit/29b533521744a1c88bdcf969d39e33a82df83633))
+* **web:** measure in-view targets once after a navigation ([29b5335](https://github.com/Viren070/AIOStreams/commit/29b533521744a1c88bdcf969d39e33a82df83633))
+* **web:** memoise the Home page kept under other pages ([29b5335](https://github.com/Viren070/AIOStreams/commit/29b533521744a1c88bdcf969d39e33a82df83633))
+* **web:** memoise the item header's toggles, overview, rating and links ([29b5335](https://github.com/Viren070/AIOStreams/commit/29b533521744a1c88bdcf969d39e33a82df83633))
+* **web:** memoise the season posters row ([29b5335](https://github.com/Viren070/AIOStreams/commit/29b533521744a1c88bdcf969d39e33a82df83633))
+* **web:** scroll rows natively on touch screens ([29b5335](https://github.com/Viren070/AIOStreams/commit/29b533521744a1c88bdcf969d39e33a82df83633))
+* **web:** step along a row's cards without measuring the others ([29b5335](https://github.com/Viren070/AIOStreams/commit/29b533521744a1c88bdcf969d39e33a82df83633))
+
 ## [0.2.1](https://github.com/Viren070/AIOStreams/compare/android-v0.2.0...android-v0.2.1) (2026-10-11)
 
 
