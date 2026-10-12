@@ -4,7 +4,7 @@ import { cn } from '@aiostreams/ui/core/styling';
 import { currentHost } from '../../lib/hosts';
 
 const FOCUS_FILL =
-  '[html:not([data-pointer-focus])_&:focus-visible]:bg-white [html:not([data-pointer-focus])_&:focus-visible]:text-black';
+  '[html:not([data-pointer-focus])_&:focus-visible]:shadow-[inset_0_0_0_var(--control)_white] [html:not([data-pointer-focus])_&:focus-visible]:text-black';
 
 type IconButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   /** Stays the same as the label changes, for custom CSS. */
