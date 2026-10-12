@@ -141,6 +141,7 @@ function DownloadRow({
     >
       <button
         type="button"
+        data-ui="download-image"
         onClick={() => navigate(itemPath(item))}
         className="relative aspect-video w-28 flex-none overflow-hidden rounded-lg bg-gray-900 sm:w-36"
       >
@@ -154,11 +155,17 @@ function DownloadRow({
         )}
       </button>
       <div className="min-w-0 flex-1 space-y-1">
-        <p className="line-clamp-2 text-sm font-semibold [overflow-wrap:anywhere] sm:text-base">
+        <p
+          data-ui="download-title"
+          className="line-clamp-2 text-sm font-semibold [overflow-wrap:anywhere] sm:text-base"
+        >
           {episodeOnly ? itemSubtitle(item) : fullTitle(item)}
         </p>
         {download.version && (
-          <p className="truncate text-xs text-[--muted]">
+          <p
+            data-ui="download-version"
+            className="truncate text-xs text-[--muted]"
+          >
             {download.version.label.split('\n')[0]}
           </p>
         )}
@@ -224,6 +231,8 @@ function DownloadRow({
           align="end"
           trigger={
             <IconButton
+              data-ui="download-action"
+              data-name="more"
               size="sm"
               intent="gray-basic"
               className="rounded-full"
@@ -329,6 +338,8 @@ function Downloaded({ downloads }: { downloads: Download[] }) {
                 </p>
               </div>
               <Button
+                data-ui="downloads-action"
+                data-name="delete-all"
                 size="sm"
                 intent="gray-subtle"
                 className="rounded-full"
@@ -376,7 +387,10 @@ export function DownloadsPage() {
             Downloads
           </h1>
           <div className="flex flex-wrap items-center gap-2">
-            <div className="mr-auto min-w-0 text-sm text-[--muted]">
+            <div
+              data-ui="downloads-summary"
+              className="mr-auto min-w-0 text-sm text-[--muted]"
+            >
               {done.length > 0 && <p>{formatBytes(sizeOf(done))} downloaded</p>}
               {folder && (
                 <p className="truncate" title={folder}>
@@ -386,6 +400,8 @@ export function DownloadsPage() {
             </div>
             {host?.handsOff && (
               <Button
+                data-ui="downloads-action"
+                data-name="open-app"
                 size="sm"
                 intent="gray-outline"
                 className="rounded-full"
@@ -398,6 +414,8 @@ export function DownloadsPage() {
             {host?.folder && (
               <>
                 <Button
+                  data-ui="downloads-action"
+                  data-name="open-folder"
                   size="sm"
                   intent="gray-outline"
                   className="rounded-full"
@@ -407,6 +425,8 @@ export function DownloadsPage() {
                   Open folder
                 </Button>
                 <Button
+                  data-ui="downloads-action"
+                  data-name="change-folder"
                   size="sm"
                   intent="gray-outline"
                   className="rounded-full"
@@ -433,6 +453,8 @@ export function DownloadsPage() {
             actions={
               pausable.length > 0 ? (
                 <Button
+                  data-ui="downloads-action"
+                  data-name="pause-all"
                   size="sm"
                   intent="gray-subtle"
                   className="rounded-full"
@@ -443,6 +465,8 @@ export function DownloadsPage() {
                 </Button>
               ) : paused.length > 0 ? (
                 <Button
+                  data-ui="downloads-action"
+                  data-name="resume-all"
                   size="sm"
                   intent="gray-subtle"
                   className="rounded-full"

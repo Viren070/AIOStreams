@@ -147,7 +147,7 @@ function NativeTrailer({
     subtitleStyle,
   });
   return (
-    <div data-page="player" className="fixed inset-0">
+    <div data-page="player" data-name="trailer" className="fixed inset-0">
       <Cover item={props.item} hidden={player.state.started} />
       <Controls {...props} player={player} />
     </div>
@@ -167,7 +167,11 @@ function BrowserTrailer({ url, ...props }: TrailerProps & { url: string }) {
     subtitleStyle,
   });
   return (
-    <div data-page="player" className="fixed inset-0 bg-black">
+    <div
+      data-page="player"
+      data-name="trailer"
+      className="fixed inset-0 bg-black"
+    >
       <video
         ref={video}
         data-ui="video"
@@ -209,7 +213,11 @@ function EmbeddedTrailer({
     />
   );
   return (
-    <div data-page="player" className="fixed inset-0 flex flex-col bg-black">
+    <div
+      data-page="player"
+      data-name="trailer"
+      className="fixed inset-0 flex flex-col bg-black"
+    >
       <div
         data-ui="trailer-bar"
         className="flex items-center gap-3 px-[max(1rem,env(safe-area-inset-left))] pb-2 pt-[max(0.5rem,env(safe-area-inset-top))]"

@@ -43,6 +43,7 @@ export function SeasonPills({
   if (currentHost().tv) return <TvPills selected={selected}>{pills}</TvPills>;
   return (
     <Carousel
+      data-ui="season-pills"
       gap="sm"
       opts={{ align: 'start', dragFree: true, slidesToScroll: 'auto' }}
       className="flex items-center gap-2"
@@ -83,7 +84,11 @@ function TvPills({
       el.scrollLeft = pill.offsetLeft;
   }, [selected]);
   return (
-    <div ref={track} className="relative flex gap-2 overflow-x-auto">
+    <div
+      ref={track}
+      data-ui="season-pills"
+      className="relative flex gap-2 overflow-x-auto"
+    >
       {children}
     </div>
   );

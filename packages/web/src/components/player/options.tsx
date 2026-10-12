@@ -153,7 +153,12 @@ function Menu({
           )}
         </div>
         {footer && (
-          <div className="-mx-2 mt-1 shrink-0 border-t px-2">{footer}</div>
+          <div
+            data-ui="player-menu-footer"
+            className="-mx-2 mt-1 shrink-0 border-t px-2"
+          >
+            {footer}
+          </div>
         )}
       </div>
     </DropdownMenu>

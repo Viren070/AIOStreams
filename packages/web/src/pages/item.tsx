@@ -1016,17 +1016,22 @@ function Details({ item }: { item: BaseItemDto }) {
         year: 'numeric',
       })
     : null;
-  const rows: [string, React.ReactNode][] = (
+  const rows: [string, string, React.ReactNode][] = (
     [
-      ['Studios', item.Studios?.map((s) => s.Name).join(', ')],
-      [item.Type === 'Series' ? 'First aired' : 'Released', released],
+      ['studios', 'Studios', item.Studios?.map((s) => s.Name).join(', ')],
       [
+        'released',
+        item.Type === 'Series' ? 'First aired' : 'Released',
+        released,
+      ],
+      [
+        'airs',
         'Airs',
         item.Type === 'Series' && item.Status === 'Continuing' ? airs : null,
       ],
-      ['Country', item.ProductionLocations?.join(', ')],
-    ] as [string, React.ReactNode][]
-  ).filter(([, value]) => !!value);
+      ['country', 'Country', item.ProductionLocations?.join(', ')],
+    ] as [string, string, React.ReactNode][]
+  ).filter(([, , value]) => !!value);
   if (!rows.length) return null;
   return (
     <Section name="details" title="Details">
@@ -1034,8 +1039,8 @@ function Details({ item }: { item: BaseItemDto }) {
         data-ui="item-details"
         className="grid max-w-5xl grid-cols-1 gap-x-10 gap-y-4 sm:grid-cols-2 xl:grid-cols-3"
       >
-        {rows.map(([label, value]) => (
-          <div key={label}>
+        {rows.map(([name, label, value]) => (
+          <div key={name} data-ui="item-detail" data-name={name}>
             <dt className="text-xs uppercase tracking-wide text-[--muted]">
               {label}
             </dt>

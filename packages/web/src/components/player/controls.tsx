@@ -337,9 +337,16 @@ export function PlayerControls({
           data-ui="player-title"
           className="min-w-0 text-[length:var(--title)]"
         >
-          <p className="truncate font-semibold">{itemTitle(item)}</p>
+          <p data-name="name" className="truncate font-semibold">
+            {itemTitle(item)}
+          </p>
           {subtitle && (
-            <p className="truncate text-[0.875em] text-gray-300">{subtitle}</p>
+            <p
+              data-name="detail"
+              className="truncate text-[0.875em] text-gray-300"
+            >
+              {subtitle}
+            </p>
           )}
         </div>
         {touch && !tv && (

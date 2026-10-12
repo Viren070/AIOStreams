@@ -26,7 +26,12 @@ export function SettingsCard({
             </p>
           )}
           {description && (
-            <p className="text-sm text-[--muted]">{description}</p>
+            <p
+              data-ui="settings-card-description"
+              className="text-sm text-[--muted]"
+            >
+              {description}
+            </p>
           )}
         </div>
       )}
@@ -36,7 +41,10 @@ export function SettingsCard({
       >
         {React.Children.map(children, (child) =>
           child ? (
-            <div className="p-3 transition-colors hover:bg-gray-900">
+            <div
+              data-ui="settings-card-item"
+              className="p-3 transition-colors hover:bg-gray-900"
+            >
               {child}
             </div>
           ) : null
@@ -64,7 +72,9 @@ export function SettingsPageHeader({
         <h2 data-ui="section-title" className="text-xl font-semibold">
           {title}
         </h2>
-        <p className="text-[--muted]">{description}</p>
+        <p data-ui="settings-header-description" className="text-[--muted]">
+          {description}
+        </p>
       </div>
     </div>
   );

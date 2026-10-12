@@ -48,6 +48,8 @@ export const ExternalLinks = React.memo(function ExternalLinks({
             key={link.Url}
             trigger={
               <Anchor
+                data-ui="external-link"
+                data-name={link.Name.toLowerCase()}
                 href={link.Url}
                 target="_blank"
                 rel="noreferrer"

@@ -66,6 +66,7 @@ function GenreFilter({
   if (genres.length > PILL_LIMIT || characters > PILL_CHARACTERS) {
     return (
       <Combobox
+        data-ui="genre-picker"
         aria-label="Filter"
         placeholder="Search"
         emptyMessage="Nothing matches."
@@ -123,6 +124,7 @@ function CatalogPicker({
   if (views.length < 2) return null;
   return (
     <Combobox
+      data-ui="catalog-picker"
       aria-label="Catalog"
       placeholder="Search"
       emptyMessage="Nothing matches."
@@ -257,9 +259,15 @@ export function DiscoverPage({
         <h1 data-ui="page-title" className="text-3xl font-bold">
           {view?.Name ?? 'Discover'}
         </h1>
-        {label && <span className="text-[--muted]">{label}</span>}
+        {label && (
+          <span data-ui="discover-label" className="text-[--muted]">
+            {label}
+          </span>
+        )}
         {total != null && !filter && (
-          <span className="text-sm text-[--muted]">{total} titles</span>
+          <span data-ui="discover-count" className="text-sm text-[--muted]">
+            {total} titles
+          </span>
         )}
       </div>
 

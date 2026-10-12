@@ -335,8 +335,9 @@ export function CalendarPage({ month }: { month?: string }) {
           <h1 data-ui="page-title" className="text-3xl font-bold">
             Calendar
           </h1>
-          <div className="flex items-center gap-1">
+          <div data-ui="calendar-nav" className="flex items-center gap-1">
             <IconButton
+              data-name="previous"
               size="sm"
               intent="gray-subtle"
               className="rounded-full"
@@ -345,6 +346,7 @@ export function CalendarPage({ month }: { month?: string }) {
               onClick={() => go(-1)}
             />
             <IconButton
+              data-name="next"
               size="sm"
               intent="gray-subtle"
               className="rounded-full"
@@ -352,7 +354,10 @@ export function CalendarPage({ month }: { month?: string }) {
               aria-label="Next month"
               onClick={() => go(1)}
             />
-            <span className="ml-2 text-lg font-semibold">
+            <span
+              data-ui="calendar-month"
+              className="ml-2 text-lg font-semibold"
+            >
               {first.toLocaleDateString(undefined, {
                 month: 'long',
                 year: 'numeric',
@@ -361,6 +366,7 @@ export function CalendarPage({ month }: { month?: string }) {
           </div>
           {monthKey(first) !== monthKey(new Date()) && (
             <Button
+              data-ui="calendar-today"
               size="sm"
               intent="gray-outline"
               className="rounded-full"

@@ -420,7 +420,10 @@ function QuickConnectPage({
         </p>
         <div className="flex h-14 items-center justify-center">
           {request.data ? (
-            <span className="select-all font-mono text-4xl font-semibold tracking-[0.3em]">
+            <span
+              data-ui="quick-connect-code"
+              className="select-all font-mono text-4xl font-semibold tracking-[0.3em]"
+            >
               {request.data.Code}
             </span>
           ) : (

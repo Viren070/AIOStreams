@@ -2351,6 +2351,7 @@ export function SettingsPage({
         listClass="h-fit w-full flex flex-wrap lg:block lg:flex-nowrap"
       >
         <TabsList
+          data-ui="settings-tabs"
           data-sticky
           data-nav-enter="[role=tab][data-state=active]"
           className="max-w-full flex-wrap lg:sticky lg:top-6 lg:space-y-3"
@@ -2358,6 +2359,8 @@ export function SettingsPage({
           {[...groups.entries()].map(([group, items]) => (
             <Card
               key={group}
+              data-ui="settings-tab-group"
+              data-name={group.toLowerCase()}
               className="contents border-0 bg-transparent lg:block lg:border lg:border-white/10 lg:bg-gray-950/70 lg:p-2"
             >
               <p className="hidden px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[--muted] lg:block">
@@ -2367,6 +2370,7 @@ export function SettingsPage({
                 <TabsTrigger
                   key={s.id}
                   value={s.id}
+                  data-ui="settings-tab"
                   data-name={s.id}
                   data-focus={still && !currentHost().tv ? undefined : 'own'}
                   className="group"
@@ -2391,6 +2395,7 @@ export function SettingsPage({
           ))}
           <div className="flex basis-full justify-center pt-1">
             <Button
+              data-ui="settings-donate"
               size="sm"
               intent="gray-outline"
               className="rounded-full"
@@ -2407,6 +2412,7 @@ export function SettingsPage({
               key={s.id}
               value={s.id}
               tabIndex={-1}
+              data-ui="settings-panel"
               data-name={s.id}
               className="space-y-6 duration-300 animate-in fade-in-0 slide-in-from-bottom-2"
             >
