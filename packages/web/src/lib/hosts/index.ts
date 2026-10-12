@@ -81,6 +81,8 @@ export interface Host {
   downloads?: DownloadsHost;
   /** A YouTube video's stream, which only plays from the address that asked. */
   resolveYouTube?(id: string): Promise<string | null>;
+  /** Shows these above the on-screen keyboard's keys, for the field it types into. */
+  keyboardCompletions?(names: string[]): void;
   /** What the device's speech recogniser heard, or null for nothing. */
   listen?(opts: {
     hearing(heard: Hearing): void;

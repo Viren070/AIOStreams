@@ -131,6 +131,8 @@ export const androidHost: Host = {
   },
   saveFile: (name, type, text) =>
     appBridge()?.send({ type: 'save-file', name, mime: type, text }),
+  keyboardCompletions: (names) =>
+    appBridge()?.send({ type: 'keyboard-completions', items: names }),
   fullscreen: {
     active: () => fullscreen,
     set: (on) => appBridge()?.send({ type: 'fullscreen', value: on }),

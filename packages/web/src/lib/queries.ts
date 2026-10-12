@@ -22,6 +22,7 @@ import type {
   MediaSegmentDtoQueryResult,
   PickableUser,
   PlaybackInfoResponse,
+  SearchHintResult,
   SessionInfoDto,
   SourceInfo,
   WebActivity,
@@ -316,6 +317,27 @@ export function useSearch(
         Limit: 48,
       }),
     enabled: enabled && term.length >= 2,
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useSearchSuggestions(
+  term: string,
+  limit: number,
+  enabled = true
+) {
+  const { client, user } = useSession();
+  return useQuery({
+    queryKey: [...useKey(), 'search-suggestions', term, limit],
+    queryFn: () =>
+      client.get<SearchHintResult>('/Search/Hints', {
+        userId: user.Id,
+        SearchTerm: term,
+        IncludeItemTypes: 'Movie,Series',
+        Limit: limit,
+      }),
+    enabled: enabled && term.length >= 2,
+    staleTime: 5 * 60_000,
     placeholderData: keepPreviousData,
   });
 }

@@ -9,12 +9,13 @@ import {
   ContextMenuTrigger,
 } from '@aiostreams/ui/context-menu';
 import { TextInput } from '@aiostreams/ui/text-input';
+import { cn } from '@aiostreams/ui/core/styling';
 import { useDebounce } from '@aiostreams/ui/hooks/debounce';
 import { currentHost, type Hearing } from '../lib/hosts';
 import { useAction } from '../lib/input';
 import { useSession } from '../lib/session';
 import type { JellyfinClient } from '../lib/client';
-import { useSearch } from '../lib/queries';
+import { useSearch, useSearchSuggestions } from '../lib/queries';
 import { settings, useSetting } from '../lib/settings';
 import { useSearchHistory } from '../lib/search-history';
 import { cardShape, posterUrl } from '../lib/images';
@@ -27,31 +28,51 @@ import { MediaRow } from '../components/media-row';
 import { PosterCard } from '../components/cards';
 import { ItemMenu } from '../components/item-menu';
 
+const SUGGESTIONS = 5;
+
 export function SearchPage({ initialTerm }: { initialTerm: string }) {
   const { client, user } = useSession();
   const [term, setTerm] = React.useState(initialTerm);
-  const debounced = useDebounce(term.trim(), 400);
+  // A term picked rather than typed, which searches at once and suggests nothing.
+  const [chosen, setChosen] = React.useState(initialTerm);
+  const typed = term.trim();
+  const debounced = useDebounce(typed, 400);
+  const query = typed === chosen ? typed : debounced;
   const [combine] = useSetting(settings.combineSearch);
   // One search per kind, so neither fills the other's result limit.
-  const mixed = useSearch(debounced, 'Movie,Series', combine);
-  const movies = useSearch(debounced, 'Movie', !combine);
-  const shows = useSearch(debounced, 'Series', !combine);
+  const mixed = useSearch(query, 'Movie,Series', combine);
+  const movies = useSearch(query, 'Movie', !combine);
+  const shows = useSearch(query, 'Series', !combine);
+  const suggesting = typed !== chosen;
+  const suggestions = useSearchSuggestions(
+    useDebounce(typed, 200),
+    SUGGESTIONS,
+    suggesting
+  );
   const history = useSearchHistory(user.Id!);
-  const voice = useVoice((heard) => {
-    setTerm(heard);
-    history.add(heard);
-  }, setTerm);
+  const choose = (picked: string) => {
+    const next = picked.trim();
+    setTerm(next);
+    setChosen(next);
+    history.add(next);
+  };
+  const voice = useVoice(choose, setTerm);
   // A remote reaches the microphone in one press, and the keyboard only on Select.
   const voiceFirst = !!voice && !!currentHost().tv;
 
   // Keeps the term in the address, so back returns to the same results.
   React.useEffect(() => {
-    if (debounced !== initialTerm) {
-      navigate(to.search(debounced), { replace: true });
+    if (query !== initialTerm) {
+      navigate(to.search(query), { replace: true });
     }
-  }, [debounced, initialTerm]);
+  }, [query, initialTerm]);
 
-  const searching = debounced.length >= 2;
+  const hints =
+    suggesting && typed.length >= 2
+      ? (suggestions.data?.SearchHints ?? [])
+      : [];
+  useKeyboardCompletions(hints.map((h) => h.Name ?? '').filter(Boolean));
+  const searching = query.length >= 2;
   // The kinds answer at different speeds, so a row never shows the last term.
   const movieItems = movies.isPlaceholderData ? [] : (movies.data?.Items ?? []);
   const showItems = shows.isPlaceholderData ? [] : (shows.data?.Items ?? []);
@@ -77,7 +98,7 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
           value={term}
           onValueChange={setTerm}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') history.add(term);
+            if (e.key === 'Enter') choose(term);
           }}
           placeholder={voice?.hearing ? 'Listening…' : 'Movies and shows'}
           leftIcon={<BiSearch className="text-xl" />}
@@ -86,7 +107,25 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
         />
         {!voiceFirst && voice?.button}
       </div>
-      {!term.trim() && history.terms.length > 0 && (
+      {hints.length > 0 && (
+        <ul data-ui="search-suggestions" className="-mx-2 max-w-xl">
+          {hints.map((hint) => (
+            <li
+              key={hint.Id}
+              data-ui="search-suggestion"
+              className="flex rounded-lg transition-colors hover:bg-white/[0.04]"
+            >
+              <TermButton
+                icon={<BiSearch />}
+                label={hint.Name ?? ''}
+                detail={hint.ProductionYear?.toString()}
+                onClick={() => choose(hint.Name ?? '')}
+              />
+            </li>
+          ))}
+        </ul>
+      )}
+      {!typed && history.terms.length > 0 && (
         <section data-ui="search-history" className="max-w-xl space-y-1">
           <div className="flex items-center justify-between gap-3">
             <h2
@@ -109,18 +148,11 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
                 {/* A TV, with no remove button, holds Select for it. */}
                 <ContextMenu>
                   <ContextMenuTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setTerm(t);
-                        history.add(t);
-                      }}
-                      data-focus="own"
-                      className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-2 text-left focus-visible:bg-white/10 [[data-tv]_&]:py-3"
-                    >
-                      <BiHistory className="flex-none text-lg text-[--muted]" />
-                      <span className="truncate">{t}</span>
-                    </button>
+                    <TermButton
+                      icon={<BiHistory />}
+                      label={t}
+                      onClick={() => choose(t)}
+                    />
                   </ContextMenuTrigger>
                   <ContextMenuContent data-ui="search-history-menu">
                     <ContextMenuItem onClick={() => history.remove(t)}>
@@ -148,7 +180,7 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
         <div
           data-ui="search-results"
           onClickCapture={(e) => {
-            if ((e.target as HTMLElement).closest('a')) history.add(debounced);
+            if ((e.target as HTMLElement).closest('a')) history.add(query);
           }}
         >
           {combine ? (
@@ -178,11 +210,51 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
         </div>
       )}
       {searching && !loading && !found && (
-        <p className="text-[--muted]">Nothing found for “{debounced}”.</p>
+        <p className="text-[--muted]">Nothing found for “{query}”.</p>
       )}
     </PageBody>
   );
 }
+
+/** Offers the suggestions on the on-screen keyboard too, where a remote can reach them while typing. */
+function useKeyboardCompletions(names: string[]) {
+  const show = currentHost().keyboardCompletions;
+  const key = names.join('\n');
+  React.useEffect(() => {
+    show?.(key ? key.split('\n') : []);
+  }, [show, key]);
+  React.useEffect(() => () => show?.([]), [show]);
+}
+
+const TermButton = React.forwardRef<
+  HTMLButtonElement,
+  React.ButtonHTMLAttributes<HTMLButtonElement> & {
+    icon: React.ReactElement<{ className?: string }>;
+    label: string;
+    detail?: string;
+  }
+>(function TermButton({ icon, label, detail, className, ...props }, ref) {
+  return (
+    <button
+      ref={ref}
+      type="button"
+      data-focus="own"
+      className={cn(
+        'flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-2 text-left focus-visible:bg-white/10 [[data-tv]_&]:py-3',
+        className
+      )}
+      {...props}
+    >
+      {React.cloneElement(icon, {
+        className: 'flex-none text-lg text-[--muted]',
+      })}
+      <span className="truncate">{label}</span>
+      {detail && (
+        <span className="flex-none text-sm text-[--muted]">{detail}</span>
+      )}
+    </button>
+  );
+});
 
 function ResultRow({
   id,

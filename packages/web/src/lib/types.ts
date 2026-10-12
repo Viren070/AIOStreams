@@ -16,6 +16,8 @@ export type {
   MediaStream,
   PlaybackInfoResponse,
   QuickConnectResult,
+  SearchHint,
+  SearchHintResult,
   SessionInfoDto,
   UserDto,
 } from '@jellyfin/sdk/lib/generated-client/models';
