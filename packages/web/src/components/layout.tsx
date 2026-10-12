@@ -628,7 +628,7 @@ export function WebLayout() {
       <div
         data-ui="shell"
         inert={playing}
-        className={cn(playing && '[content-visibility:hidden]')}
+        className={cn(playing && 'invisible [content-visibility:hidden]')}
       >
         <AppSidebarProvider>
           <AppLayout
@@ -731,7 +731,7 @@ export function WebLayout() {
                           className={cn(
                             page,
                             !onHome &&
-                              'absolute inset-x-0 top-0 [content-visibility:hidden]'
+                              'invisible absolute inset-x-0 top-0 [content-visibility:hidden]'
                           )}
                         >
                           <PageShown.Provider value={onHome}>
