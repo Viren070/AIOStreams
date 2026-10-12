@@ -19,7 +19,7 @@ import {
   type PosterSize,
 } from '../lib/settings';
 import { RowScroller, ScrollRoot, watch } from '../lib/use-in-view';
-import { GLIDE_MS } from '../lib/input/glide';
+import { easeLayer } from '../lib/input/glide';
 
 /**
  * Each shape's card width, narrowed where a box sets `--row-card-h` so its
@@ -218,13 +218,6 @@ const savedScroll = new Map<string, number>();
 const ROOM = 16;
 
 /**
- * Layers the glides take turns on, as nested transforms add up: a glide under
- * way carries on, where reading its place back comes out stale and jerks the
- * row. Three cover a held key's repeats.
- */
-const GLIDE_LAYERS = 3;
-
-/**
  * A TV's or touch screen's row: a plain scroller, as Embla's measuring and
  * scripted easing are too much for a TV's CPU and stutter a swipe. Focus jumps
  * it, and an animated transform eases the jump on the compositor.
@@ -248,7 +241,7 @@ function NativeRow({
 }) {
   const ref = React.useRef<HTMLDivElement>(null);
   const content = React.useRef<HTMLDivElement>(null);
-  const layers = React.useRef<HTMLDivElement[]>([]);
+  const layer = React.useRef<HTMLDivElement>(null);
   React.useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -264,8 +257,6 @@ function NativeRow({
     const el = ref.current;
     const row = content.current;
     if (!el || !row) return;
-    const glides: (Animation | undefined)[] = [];
-    let next = 0;
     const follow = (e: FocusEvent) => {
       const card =
         e.target instanceof Element
@@ -284,20 +275,10 @@ function NativeRow({
             : from;
       if (to === from) return;
       el.scrollLeft = to;
-      const moved = el.scrollLeft - from;
-      const layer = layers.current[next];
-      glides[next]?.finish();
-      glides[next] = layer?.animate(
-        [{ transform: `translateX(${moved}px)` }, { transform: 'none' }],
-        { duration: GLIDE_MS, easing: 'ease-out' }
-      );
-      next = (next + 1) % GLIDE_LAYERS;
+      if (layer.current) easeLayer(layer.current, 'X', el.scrollLeft - from);
     };
     el.addEventListener('focusin', follow);
-    return () => {
-      for (const glide of glides) glide?.cancel();
-      el.removeEventListener('focusin', follow);
-    };
+    return () => el.removeEventListener('focusin', follow);
   }, []);
   React.useEffect(() => {
     const el = ref.current;
@@ -342,18 +323,8 @@ function NativeRow({
         'relative -mr-4 overflow-x-auto overflow-y-hidden [scrollbar-width:none] lg:-mr-10 [&::-webkit-scrollbar]:hidden'
       )}
     >
-      {Array.from({ length: GLIDE_LAYERS }).reduceRight<React.ReactNode>(
-        (inside, _, i) => (
-          <div
-            ref={(el) => {
-              if (el) layers.current[i] = el;
-            }}
-            // Kept as layers, since one made as a glide starts draws nothing for a frame.
-            className="will-change-transform"
-          >
-            {inside}
-          </div>
-        ),
+      {/* Kept as a layer, since one made as a glide starts draws nothing for a frame. */}
+      <div ref={layer} className="will-change-transform">
         <div
           ref={content}
           data-nav-row
@@ -365,7 +336,7 @@ function NativeRow({
         >
           <RowScroller.Provider value={ref}>{children}</RowScroller.Provider>
         </div>
-      )}
+      </div>
     </div>
   );
 }

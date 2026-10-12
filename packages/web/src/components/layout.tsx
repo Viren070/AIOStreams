@@ -74,7 +74,7 @@ import { VersionPickerProvider } from './version-picker';
 import { ItemMenuHost } from './item-menu';
 import { HomePage } from '../pages/home';
 import { PageShown } from '../lib/page-shown';
-import { GlideLayers } from './glide-layers';
+import { GlideLayer } from './glide-layer';
 import { UpdatePrompt } from './update-prompt';
 
 // Kept mounted under every page, so it skips the layout's render on each route change.
@@ -721,7 +721,7 @@ export function WebLayout() {
                 )}
                 <VersionPickerProvider>
                   <ItemMenuHost>
-                    <GlideLayers name="page">
+                    <GlideLayer name="page">
                       {kept && (
                         <motion.div
                           key={kept}
@@ -751,7 +751,7 @@ export function WebLayout() {
                           <PageScroll />
                         </motion.div>
                       )}
-                    </GlideLayers>
+                    </GlideLayer>
                   </ItemMenuHost>
                 </VersionPickerProvider>
               </AppLayoutContent>
