@@ -256,11 +256,11 @@ function normaliseAudioChannels(
   return undefined;
 }
 
-function normaliseVisualTags(video: MediaInfoVideo | undefined): string[] {
-  if (!video) return [];
-
+function normaliseVisualTags(
+  video: MediaInfoVideo | undefined
+): string[] | undefined {
   const tags = new Set<string>();
-  for (const rawTag of Array.isArray(video.hdr) ? video.hdr : []) {
+  for (const rawTag of Array.isArray(video?.hdr) ? video.hdr : []) {
     if (typeof rawTag !== 'string') continue;
     const tag = rawTag.toLowerCase().trim();
 
@@ -270,11 +270,11 @@ function normaliseVisualTags(video: MediaInfoVideo | undefined): string[] {
     else if (tag === 'hlg') tags.add('HLG');
     else if (tag === 'hdr') tags.add('HDR');
   }
-  if (typeof video.bit_depth === 'number' && video.bit_depth >= 10) {
+  if (typeof video?.bit_depth === 'number' && video.bit_depth >= 10) {
     tags.add('10bit');
   }
 
-  return [...tags];
+  return tags.size > 0 ? [...tags] : undefined;
 }
 
 const DYNAMIC_RANGE_TAGS: ReadonlySet<string> = new Set([
@@ -406,13 +406,13 @@ export function normaliseParsedMediaInfo(
   const videoIndex = asStreamIndex(parsedMediaInfo.videoIndex);
 
   const hasAnyData =
-    languages.length > 0 ||
-    subtitles.length > 0 ||
-    audioTags.length > 0 ||
-    audioChannels.length > 0 ||
-    visualTags.length > 0 ||
-    audioTracks.length > 0 ||
-    subtitleTracks.length > 0 ||
+    parsedMediaInfo.languages !== undefined ||
+    parsedMediaInfo.subtitles !== undefined ||
+    parsedMediaInfo.audioTags !== undefined ||
+    parsedMediaInfo.audioChannels !== undefined ||
+    parsedMediaInfo.visualTags !== undefined ||
+    parsedMediaInfo.audioTracks !== undefined ||
+    parsedMediaInfo.subtitleTracks !== undefined ||
     !!encode ||
     !!resolution ||
     !!parsedMediaInfo?.duration ||
@@ -423,13 +423,13 @@ export function normaliseParsedMediaInfo(
     ...(parsedMediaInfo.mediaInfoQuality && hasAnyData
       ? { mediaInfoQuality: parsedMediaInfo.mediaInfoQuality }
       : {}),
-    ...(languages.length > 0 ? { languages } : {}),
-    ...(subtitles.length > 0 ? { subtitles } : {}),
-    ...(audioTags.length > 0 ? { audioTags } : {}),
-    ...(audioChannels.length > 0 ? { audioChannels } : {}),
-    ...(visualTags.length > 0 ? { visualTags } : {}),
-    ...(audioTracks.length > 0 ? { audioTracks } : {}),
-    ...(subtitleTracks.length > 0 ? { subtitleTracks } : {}),
+    ...(parsedMediaInfo.languages !== undefined ? { languages } : {}),
+    ...(parsedMediaInfo.subtitles !== undefined ? { subtitles } : {}),
+    ...(parsedMediaInfo.audioTags !== undefined ? { audioTags } : {}),
+    ...(parsedMediaInfo.audioChannels !== undefined ? { audioChannels } : {}),
+    ...(parsedMediaInfo.visualTags !== undefined ? { visualTags } : {}),
+    ...(parsedMediaInfo.audioTracks !== undefined ? { audioTracks } : {}),
+    ...(parsedMediaInfo.subtitleTracks !== undefined ? { subtitleTracks } : {}),
     ...(videoIndex !== undefined ? { videoIndex } : {}),
     ...(encode ? { encode } : {}),
     ...(resolution ? { resolution } : {}),
@@ -516,13 +516,15 @@ export function parseMediaInfo(
 
   const normalised = normaliseParsedMediaInfo({
     mediaInfoQuality: 'probe',
-    languages,
-    subtitles,
-    audioTags,
-    audioChannels,
+    languages: Array.isArray(info.audio) ? languages : undefined,
+    subtitles: Array.isArray(info.subtitle) ? subtitles : undefined,
+    audioTags: Array.isArray(info.audio) ? audioTags : undefined,
+    audioChannels: Array.isArray(info.audio) ? audioChannels : undefined,
     visualTags,
-    audioTracks: audioTrackList,
-    subtitleTracks: subtitleTrackList,
+    audioTracks: Array.isArray(info.audio) ? audioTrackList : undefined,
+    subtitleTracks: Array.isArray(info.subtitle)
+      ? subtitleTrackList
+      : undefined,
     videoIndex: asStreamIndex(info.video?.index),
     encode,
     resolution,
