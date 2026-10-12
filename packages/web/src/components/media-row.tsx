@@ -19,7 +19,7 @@ import {
   type PosterSize,
 } from '../lib/settings';
 import { RowScroller, ScrollRoot, watch } from '../lib/use-in-view';
-import { easeLayer } from '../lib/input/glide';
+import { easeLayers, GLIDE_LAYERS } from '../lib/input/glide';
 
 /**
  * Each shape's card width, narrowed where a box sets `--row-card-h` so its
@@ -275,7 +275,7 @@ function NativeRow({
             : from;
       if (to === from) return;
       el.scrollLeft = to;
-      if (layer.current) easeLayer(layer.current, 'X', el.scrollLeft - from);
+      if (layer.current) easeLayers(layer.current, 'X', el.scrollLeft - from);
     };
     el.addEventListener('focusin', follow);
     return () => el.removeEventListener('focusin', follow);
@@ -323,8 +323,17 @@ function NativeRow({
         'relative -mr-4 overflow-x-auto overflow-y-hidden [scrollbar-width:none] lg:-mr-10 [&::-webkit-scrollbar]:hidden'
       )}
     >
-      {/* Kept as a layer, since one made as a glide starts draws nothing for a frame. */}
-      <div ref={layer} data-glide-layer className="will-change-transform">
+      {Array.from({ length: GLIDE_LAYERS }).reduceRight<React.ReactNode>(
+        (inside, _, i) => (
+          <div
+            ref={i === 0 ? layer : undefined}
+            data-glide-layer
+            // Kept as layers, since one made as a glide starts draws nothing for a frame.
+            className="will-change-transform"
+          >
+            {inside}
+          </div>
+        ),
         <div
           ref={content}
           data-nav-row
@@ -336,7 +345,7 @@ function NativeRow({
         >
           <RowScroller.Provider value={ref}>{children}</RowScroller.Provider>
         </div>
-      </div>
+      )}
     </div>
   );
 }

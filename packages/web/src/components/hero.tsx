@@ -20,7 +20,7 @@ import type { BaseItemDto } from '../lib/types';
 import { useHold } from '../lib/use-hold';
 import { useLatest } from '../lib/use-latest';
 import { CachedImage } from './cached-image';
-import { GlideLayer } from './glide-layer';
+import { GlideLayers } from './glide-layers';
 
 const ROTATE_MS = 9000;
 const DRAG_SLOP_PX = 8;
@@ -823,7 +823,7 @@ export function FollowHero({
           className="min-h-0 flex-1 overflow-y-auto [--row-card-h:calc(100dvh-var(--hero-h)-4.25rem)] [mask-image:linear-gradient(to_bottom,transparent,black_2rem)]"
         >
           <ScrollRoot.Provider value={scroller}>
-            <GlideLayer>{children}</GlideLayer>
+            <GlideLayers>{children}</GlideLayers>
           </ScrollRoot.Provider>
         </div>
       </div>

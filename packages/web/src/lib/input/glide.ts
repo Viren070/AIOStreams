@@ -29,77 +29,92 @@ let frame = 0;
  */
 export const GLIDE_MS = 250;
 
-/** `pace` in ms between jumps and `speed` in px/ms, both 0 for a lone jump. */
-interface Chase {
-  animation: Animation;
+/** Jumps a scroller's layers carry at once, as a held key's repeats overlap. */
+export const GLIDE_LAYERS = 3;
+
+/** Each jump takes the next layer, as nested transforms add up and one under way carries on. */
+interface Eased {
+  jumps: ({ animation: Animation; moved: [number, number] } | undefined)[];
+  next: number;
   at: number;
+  /** The time between a held key's repeats, smoothed; 0 after a press. */
   pace: number;
-  speed: number;
 }
 
-const chases = new WeakMap<HTMLElement, Chase>();
+const eased = new WeakMap<HTMLElement, Eased>();
 
-/** The share of a jump that a chase eases out over; it covers the rest at an even speed. */
-const SETTLE = 0.25;
+let repeating = false;
 
-function drawnShift(layer: HTMLElement): [number, number] {
-  if (chases.get(layer)?.animation.playState !== 'running') return [0, 0];
-  const at = new DOMMatrixReadOnly(getComputedStyle(layer).transform);
-  return [at.m41, at.m42];
+export function setRepeating(on: boolean): void {
+  repeating = on;
 }
 
 /**
- * Draws `layer` back over a jump of `moved` px along `axis`, then eases it home
- * on the compositor. A jump while one is under way carries on from where the
- * layer is drawn at an even speed, timed to the jumps' pace, so a held key
- * glides rather than surging and slowing per jump.
+ * Draws `outer`'s layers back over a jump of `moved` px along `axis`, then eases
+ * them home on the compositor. A press eases out. A held key's repeat eases in
+ * and out over two of the repeats' gaps, which overlapping add up to an even
+ * speed.
  */
-export function easeLayer(
-  layer: HTMLElement,
+export function easeLayers(
+  outer: HTMLElement,
   axis: 'X' | 'Y',
   moved: number
 ): void {
-  // Read and restarted on the same clock, so the compositor carries on unbroken.
-  const now = document.timeline.currentTime as number;
-  const chase = chases.get(layer);
-  const drawn = drawnShift(layer)[axis === 'X' ? 0 : 1];
-  chase?.animation.cancel();
-  const total = drawn + moved;
-  let pace = 0;
-  let speed = 0;
-  let animation: Animation;
-  if (chase && drawn * moved > 0) {
-    // Smoothed, as repeats land a frame early or late.
-    const gap = Math.min(Math.max(now - chase.at, 40), GLIDE_MS);
-    pace = chase.pace ? chase.pace + (gap - chase.pace) * 0.3 : gap;
-    const tail = moved * SETTLE;
-    speed = (total - tail) / pace;
-    if (chase.speed) speed = (speed + chase.speed) / 2;
-    const even = (total - tail) / speed;
-    // No sooner than a lone jump ends, so a late repeat finds it still moving.
-    const settle = Math.max((2 * tail) / speed, GLIDE_MS - even);
-    // The curve's slope at its start, y1 / x1, meets the even part's speed.
-    const slope = (speed * settle) / tail;
-    const x1 = Math.min(0.25, 1 / slope);
-    animation = layer.animate(
-      [
-        { transform: `translate${axis}(${total}px)`, easing: 'linear' },
-        {
-          transform: `translate${axis}(${tail}px)`,
-          offset: even / (even + settle),
-          easing: `cubic-bezier(${x1}, ${x1 * slope}, 0.5, 1)`,
-        },
-        { transform: 'none' },
-      ],
-      even + settle
-    );
-  } else
-    animation = layer.animate(
+  const layers: HTMLElement[] = [];
+  for (
+    let el: Element | null = outer;
+    el instanceof HTMLElement && el.hasAttribute('data-glide-layer');
+    el = el.firstElementChild
+  )
+    layers.push(el);
+  let state = eased.get(outer);
+  if (!state)
+    eased.set(outer, (state = { jumps: [], next: 0, at: 0, pace: 0 }));
+  const now = performance.now();
+  const gap = Math.min(Math.max(now - state.at, 80), GLIDE_MS);
+  state.at = now;
+  // The first repeat's gap is the key's delay before repeating, not its pace.
+  state.pace = repeating
+    ? state.pace
+      ? (state.pace + gap) / 2
+      : GLIDE_MS / 2
+    : 0;
+  const at = state.next % layers.length;
+  const busy = state.jumps[at];
+  // A jump still under way hands what it has left to the one taking its layer.
+  const left = busy ? toGo(busy)[axis === 'X' ? 0 : 1] : 0;
+  busy?.animation.cancel();
+  const total = moved + left;
+  state.jumps[at] = {
+    animation: layers[at].animate(
       [{ transform: `translate${axis}(${total}px)` }, { transform: 'none' }],
-      { duration: GLIDE_MS, easing: 'ease-out' }
-    );
-  animation.startTime = now;
-  chases.set(layer, { animation, at: now, pace, speed });
+      state.pace
+        ? { duration: 2 * state.pace, easing: 'cubic-bezier(0.5, 0, 0.5, 1)' }
+        : { duration: GLIDE_MS, easing: 'ease-out' }
+    ),
+    moved: axis === 'X' ? [total, 0] : [0, total],
+  };
+  state.next = at + 1;
+}
+
+type Jump = NonNullable<Eased['jumps'][number]>;
+
+function toGo(jump: Jump): [number, number] {
+  const progress = jump.animation.effect?.getComputedTiming().progress;
+  return progress == null
+    ? [0, 0]
+    : [jump.moved[0] * (1 - progress), jump.moved[1] * (1 - progress)];
+}
+
+function drawnShift(outer: HTMLElement): [number, number] {
+  const shift: [number, number] = [0, 0];
+  for (const jump of eased.get(outer)?.jumps ?? []) {
+    if (!jump) continue;
+    const [x, y] = toGo(jump);
+    shift[0] += x;
+    shift[1] += y;
+  }
+  return shift;
 }
 
 const layerOf = (box: Element) =>
@@ -107,13 +122,13 @@ const layerOf = (box: Element) =>
     ? document.querySelector<HTMLElement>('[data-glide-layer=page]')
     : box.querySelector<HTMLElement>(':scope > [data-glide-layer]');
 
-/** How far a scroller's content is still drawn from its scroll position by a jump under way. */
+/** How far a scroller's content is still drawn from its scroll position by jumps under way. */
 export function glideOffset(box: Element): number {
   const layer = layerOf(box);
   return layer ? drawnShift(layer)[1] : 0;
 }
 
-/** The layer a scroller's content glides in, and how far a jump under way draws it. */
+/** The layers a scroller's content glides in, and how far jumps under way draw them. */
 export function glideShift(
   box: Element
 ): { layer: HTMLElement; shift: [number, number] } | null {
@@ -145,7 +160,7 @@ function easeJump(box: Element, layer: HTMLElement, top: number): void {
   glides.delete(box);
   const from = box.scrollTop;
   box.scrollTo(box.scrollLeft, top);
-  if (box.scrollTop !== from) easeLayer(layer, 'Y', box.scrollTop - from);
+  if (box.scrollTop !== from) easeLayers(layer, 'Y', box.scrollTop - from);
 }
 
 /** A critically damped spring's exact place after `time`, however long. */

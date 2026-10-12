@@ -14,6 +14,7 @@ import {
   sendKey,
 } from './focus';
 import { keyInput } from './keys';
+import { setRepeating } from './glide';
 
 /** False passes the input on; a function a `Hold+` handler returns runs when the key is let go. */
 export type ActionHandler = (input: string) => boolean | void | (() => void);
@@ -120,13 +121,18 @@ export function dispatch(input: string, repeat = false): Outcome {
     return true;
   }
   const inDialog = dialogOpen();
-  return runHandlers(
-    actionsFor(input).filter(
-      (id) =>
-        (!repeat || action(id).repeat) && (!inDialog || worksInDialogs(id))
-    ),
-    input
-  );
+  setRepeating(repeat);
+  try {
+    return runHandlers(
+      actionsFor(input).filter(
+        (id) =>
+          (!repeat || action(id).repeat) && (!inDialog || worksInDialogs(id))
+      ),
+      input
+    );
+  } finally {
+    setRepeating(false);
+  }
 }
 
 const HOLD_MS = 500;
