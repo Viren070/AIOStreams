@@ -10,12 +10,17 @@ export const SUBTITLE_MODES = [
 ] as const;
 export type SubtitleMode = (typeof SUBTITLE_MODES)[number];
 
+/** The kinds of subtitle track a user ranks; commentary always comes last. */
+export const SUBTITLE_TYPES = ['normal', 'sdh', 'forced', 'signs'] as const;
+export type SubtitleType = (typeof SUBTITLE_TYPES)[number];
+
 export interface TrackPreferences {
   /** Language codes in order, any of them `OriginalLanguage`. */
   audioLanguages: string[];
   playDefaultAudioTrack: boolean;
   subtitleLanguages: string[];
   subtitleMode: SubtitleMode;
+  subtitleTypes: SubtitleType[];
 }
 
 /** A stored configuration, with Jellyfin's defaults for what it leaves out. */
@@ -31,6 +36,15 @@ export function trackPreferencesFrom(
     return typeof one === 'string' && one ? [one] : [];
   };
   const mode = SUBTITLE_MODES.find((m) => m === config?.SubtitleMode);
+  const types = Array.isArray(config?.SubtitleTypes)
+    ? SUBTITLE_TYPES.filter((t) =>
+        (config.SubtitleTypes as unknown[]).includes(t)
+      ).sort(
+        (a, b) =>
+          (config.SubtitleTypes as unknown[]).indexOf(a) -
+          (config.SubtitleTypes as unknown[]).indexOf(b)
+      )
+    : [];
   return {
     audioLanguages: languages('AudioLanguages', 'AudioLanguagePreference'),
     playDefaultAudioTrack: config?.PlayDefaultAudioTrack !== false,
@@ -39,6 +53,7 @@ export function trackPreferencesFrom(
       'SubtitleLanguagePreference'
     ),
     subtitleMode: mode ?? 'Default',
+    subtitleTypes: [...new Set([...types, ...SUBTITLE_TYPES])],
   };
 }
 
@@ -99,6 +114,28 @@ function matches(stream: JellyfinMediaStream, preferred: string[]): boolean {
 }
 
 const flag = (stream: JellyfinMediaStream, key: string) => stream[key] === true;
+
+const COMMENTARY = /\bcommentary\b/;
+const SIGNS = /\b(signs?|songs?)\b/;
+const FORCED = /\bforced\b/;
+const SDH = /\b(sdh|cc|hearing[ -]impaired)\b/;
+
+/** Signs before forced, as files often flag a signs and songs track forced. */
+function subtitleType(
+  stream: JellyfinMediaStream
+): SubtitleType | 'commentary' {
+  const title =
+    typeof stream.Title === 'string' ? stream.Title.toLowerCase() : '';
+  if (COMMENTARY.test(title)) return 'commentary';
+  if (SIGNS.test(title)) return 'signs';
+  if (flag(stream, 'IsForced') || FORCED.test(title)) return 'forced';
+  if (flag(stream, 'IsHearingImpaired') || SDH.test(title)) return 'sdh';
+  return 'normal';
+}
+
+/** Only forced lines, which a signs and songs track also is. */
+const forcedOnly = (stream: JellyfinMediaStream) =>
+  ['forced', 'signs'].includes(subtitleType(stream));
 
 /** Stable, so equal keys keep the file's order. */
 function sortBy(
@@ -164,8 +201,7 @@ function onlyForced(
 ): JellyfinMediaStream | undefined {
   return sortBy(
     sorted.filter(
-      (s) =>
-        flag(s, 'IsForced') && (matches(s, preferred) || undefinedLanguage(s))
+      (s) => forcedOnly(s) && (matches(s, preferred) || undefinedLanguage(s))
     ),
     (s) => matches(s, preferred),
     undefinedLanguage
@@ -176,6 +212,7 @@ function onlyForced(
  * Jellyfin's subtitle modes, except that the file's own tracks come before
  * external ones and Default mode never turns an external one on: those come
  * from subtitle addons in every language, not files placed beside the video.
+ * The user's subtitle types rank tracks before the file's default does.
  */
 function subtitleIn(
   streams: JellyfinMediaStream[],
@@ -184,14 +221,15 @@ function subtitleIn(
   listed: string[],
   audioLanguage: string | undefined
 ): number {
+  const order = prefs.subtitleTypes;
   const sorted = sortBy(
     streams.filter((s) => s.Type === 'Subtitle'),
     (s) => !flag(s, 'IsExternal'),
-    (s) => flag(s, 'IsDefault'),
-    (s) => !flag(s, 'IsForced') && matches(s, preferred),
-    (s) => flag(s, 'IsForced') && matches(s, preferred),
-    (s) => flag(s, 'IsForced') && undefinedLanguage(s),
-    (s) => flag(s, 'IsForced')
+    (s) => {
+      const type = subtitleType(s);
+      return type === 'commentary' ? 0 : order.length - order.indexOf(type);
+    },
+    (s) => flag(s, 'IsDefault')
   );
   let stream: JellyfinMediaStream | undefined;
   switch (prefs.subtitleMode) {
@@ -210,7 +248,7 @@ function subtitleIn(
       break;
     case 'Always':
       stream =
-        sorted.find((s) => !flag(s, 'IsForced') && matches(s, preferred)) ??
+        sorted.find((s) => matches(s, preferred)) ??
         onlyForced(sorted, preferred);
       break;
     case 'OnlyForced':

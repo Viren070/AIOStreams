@@ -22,6 +22,8 @@ export interface PlaybackPrefs {
   SubtitleLanguagePreference?: string | null;
   SubtitleLanguages?: string[];
   SubtitleMode?: SubtitleMode;
+  /** Subtitle kinds in the order a version's track is picked, a list this server keeps. */
+  SubtitleTypes?: string[];
   EnableNextEpisodeAutoPlay?: boolean;
   /** Off only when false, as in Jellyfin. */
   RememberAudioSelections?: boolean;

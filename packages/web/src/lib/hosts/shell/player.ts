@@ -1,6 +1,12 @@
 import React from 'react';
 import { storage } from '../../storage';
-import { subtitleUrl, textSubtitles } from '../../subtitles/tracks';
+import {
+  bestOfTypes,
+  forcedOnly,
+  subtitleUrl,
+  textSubtitles,
+  type SubtitleFacts,
+} from '../../subtitles/tracks';
 import { fullTitle } from '../../format';
 import { base64, checkSubtitleFile } from '../../subtitles/files';
 import { sameLanguage } from '../../languages';
@@ -51,7 +57,15 @@ interface MpvTrack {
   'external-filename'?: string;
   selected?: boolean;
   codec?: string;
+  forced?: boolean;
+  'hearing-impaired'?: boolean;
 }
+
+const mpvFacts = (track: MpvTrack): SubtitleFacts => ({
+  title: track.title,
+  forced: track.forced,
+  hearingImpaired: track['hearing-impaired'],
+});
 
 const IMAGE_SUBTITLE_CODECS = new Set([
   'hdmv_pgs_subtitle',
@@ -342,6 +356,27 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
     };
     // An external subtitle when the mode wants one and the file has none of its
     // own in that language or an earlier one; Default only honours the file's.
+    // The player picks the language by the user's settings; the type is ranked here.
+    const rankSubtitle = () => {
+      const prefs = latest.current.prefs ?? {};
+      const subtitles = fileTracks.filter((t) => t.type === 'sub');
+      const chosen = subtitles.find((t) => t.selected);
+      if (!chosen) return;
+      const playing = fileTracks.find((t) => t.type === 'audio' && t.selected);
+      const onlyForced =
+        prefs.SubtitleMode === 'OnlyForced' ||
+        (prefs.SubtitleMode === 'Smart' &&
+          subtitleLanguages(prefs).some((l) => sameLanguage(l, playing?.lang)));
+      const same = subtitles.filter(
+        (t) => t === chosen || (!!t.lang && t.lang === chosen.lang)
+      );
+      const best = bestOfTypes(
+        onlyForced ? same.filter((t) => forcedOnly(mpvFacts(t))) : same,
+        mpvFacts,
+        prefs
+      );
+      if (best && best !== chosen) set('sid', best.id);
+    };
     const addPreferredSubtitle = () => {
       const prefs = latest.current.prefs ?? {};
       const mode = prefs.SubtitleMode;
@@ -470,9 +505,10 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
         latest.current.onAdvance?.(next);
       } else if (m.type === 'mpv-event' && m.name === 'playback-restart')
         patch({ started: true, waiting: false });
-      else if (m.type === 'mpv-event' && m.name === 'file-loaded')
+      else if (m.type === 'mpv-event' && m.name === 'file-loaded') {
+        rankSubtitle();
         addPreferredSubtitle();
-      else if (m.type === 'mpv-ended' && m.reason === 'eof') {
+      } else if (m.type === 'mpv-ended' && m.reason === 'eof') {
         if (!queued.current) latest.current.onEnded();
       } else if (m.type === 'mpv-ended' && m.reason === 'error') {
         setRetryable(!retried.current && !LINK_FAILURES.has(m.error ?? ''));

@@ -15,6 +15,7 @@ import {
   sessionKeyFor,
   msToTicks,
   SUBTITLE_MODES,
+  SUBTITLE_TYPES,
   WatchSessionRepository,
   type ClientInfo,
   type JellyfinPersona,
@@ -53,6 +54,7 @@ export function userConfiguration() {
     PlayDefaultAudioTrack: true,
     SubtitleLanguagePreference: '',
     SubtitleLanguages: [] as string[],
+    SubtitleTypes: [...SUBTITLE_TYPES] as string[],
     DisplayMissingEpisodes: true,
     GroupedFolders: [],
     SubtitleMode: 'Default',
@@ -80,6 +82,11 @@ const USER_PREFERENCES: Record<string, (value: unknown) => boolean> = {
   SubtitleLanguagePreference: isLanguage,
   SubtitleLanguages: isLanguageList,
   SubtitleMode: (v) => SUBTITLE_MODES.some((mode) => mode === v),
+  SubtitleTypes: (v) =>
+    Array.isArray(v) &&
+    v.length <= SUBTITLE_TYPES.length &&
+    new Set(v).size === v.length &&
+    v.every((t) => SUBTITLE_TYPES.some((type) => type === t)),
   PlayDefaultAudioTrack: (v) => typeof v === 'boolean',
   RememberAudioSelections: (v) => typeof v === 'boolean',
   RememberSubtitleSelections: (v) => typeof v === 'boolean',

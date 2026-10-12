@@ -82,6 +82,7 @@ import {
   subtitleLine,
   SUBTITLE_SIZE_LABELS,
 } from '../lib/subtitles/style';
+import { subtitleTypes, type SubtitleType } from '../lib/subtitles/tracks';
 import {
   audioLanguages,
   ORIGINAL_LANGUAGE,
@@ -175,6 +176,7 @@ function LanguageList({
   options,
   value,
   max,
+  fixed,
   onChange,
 }: {
   label: string;
@@ -183,6 +185,8 @@ function LanguageList({
   value: string[];
   /** One for a server that keeps only Jellyfin's single language. */
   max?: number;
+  /** Every option always listed, only reordered. */
+  fixed?: boolean;
   onChange: (next: string[]) => void;
 }) {
   const list = React.useRef<HTMLOListElement>(null);
@@ -258,14 +262,15 @@ function LanguageList({
                 () => move(i, i + 1),
                 i === value.length - 1
               )}
-              {button('remove', `Remove ${nameOf(code)}`, <LuX />, () =>
-                remove(i)
-              )}
+              {!fixed &&
+                button('remove', `Remove ${nameOf(code)}`, <LuX />, () =>
+                  remove(i)
+                )}
             </li>
           ))}
         </ol>
       )}
-      {(max === undefined || value.length < max) && (
+      {!fixed && (max === undefined || value.length < max) && (
         <Select
           ref={add}
           // Required leaves the placeholder out of the list it opens.
@@ -302,6 +307,13 @@ const SUBTITLE_MODES: { value: SubtitleMode; label: string; help: string }[] = [
     help: 'Only subtitles for foreign-language parts.',
   },
   { value: 'None', label: 'Off', help: 'Starts without subtitles.' },
+];
+
+const SUBTITLE_TYPE_OPTIONS: { value: SubtitleType; label: string }[] = [
+  { value: 'normal', label: 'Full' },
+  { value: 'sdh', label: 'SDH, with sounds described' },
+  { value: 'forced', label: 'Forced, for foreign parts only' },
+  { value: 'signs', label: 'Signs and songs' },
 ];
 
 const ON_DEVICE = 'Kept on this device.';
@@ -845,6 +857,16 @@ function SubtitlesSection() {
           value={mode}
           onValueChange={(v) => update({ SubtitleMode: v as SubtitleMode })}
         />
+        {Array.isArray(prefs.SubtitleTypes) && (
+          <LanguageList
+            label="Subtitle types"
+            help="When a version has more than one subtitle in your language, the first of these it has shows. Commentary comes last."
+            options={SUBTITLE_TYPE_OPTIONS}
+            value={subtitleTypes(prefs)}
+            fixed
+            onChange={(next) => update({ SubtitleTypes: next })}
+          />
+        )}
         <Switch
           side="right"
           label="Remember picks per show"
