@@ -1,4 +1,4 @@
-import { isUnsafeRemoteUrl } from '../release-blocklist/url-safety.js';
+import { isUnsafeRemoteUrl } from '../utils/url-safety.js';
 
 export const FAILOVER_ORDER_PATH = 'failover_order';
 
