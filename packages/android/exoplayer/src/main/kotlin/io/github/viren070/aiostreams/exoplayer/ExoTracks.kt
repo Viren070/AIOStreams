@@ -80,6 +80,7 @@ internal class ExoTracks {
             put("default", entry.default)
             put("forced", entry.forced)
             put("hearing-impaired", format.roleFlags and C.ROLE_FLAG_DESCRIBES_MUSIC_AND_SOUND != 0)
+            put("visual-impaired", format.roleFlags and C.ROLE_FLAG_DESCRIBES_VIDEO != 0)
             if (format.width > 0) put("demux-w", format.width)
             if (format.height > 0) put("demux-h", format.height)
             if (format.channelCount > 0) put("demux-channel-count", format.channelCount)
