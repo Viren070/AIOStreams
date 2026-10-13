@@ -15,6 +15,17 @@ internal class SoundLevels {
     @Volatile
     var gain = 1f
 
+    /** The most channels to play, as the next track starts; 0 plays them as decoded. */
+    @Volatile
+    var maxChannels = 0
+
+    /** Stereo, or 5.1 from more, where there are more channels than that. */
+    fun outputs(channels: Int) = when {
+        maxChannels == 0 || channels <= maxChannels -> channels
+        maxChannels < 6 -> 2
+        else -> 6
+    }
+
     /** Whether the levels change sound with this many channels at all. */
     fun shape(channels: Int) = nightMode || gain != 1f || centreGain(channels) != 1f
 
@@ -27,8 +38,8 @@ internal class SoundLevels {
 }
 
 /**
- * Dialogue boost, night mode and volume past full, a limiter catching what
- * they push past full scale, done natively on interleaved 16-bit sound.
+ * Dialogue boost, night mode, volume past full and mixing down, with a limiter
+ * catching what they push past full scale, done natively on interleaved 16-bit sound.
  */
 internal class SoundShaper(private val levels: SoundLevels) {
     /** The compressor's level and gain and the limiter's gain, between calls. */
@@ -47,7 +58,7 @@ internal class SoundShaper(private val levels: SoundLevels) {
 
     /**
      * Shapes [frames] frames from [input]'s position, its channel `map[c]` as channel `c`, into
-     * [output] from sample [outputAt]: 16-bit in the mapped layout, or float folded to [outputChannels].
+     * [output] from sample [outputAt], 16-bit or float, mixed down to [outputChannels] where fewer.
      */
     fun shape(
         input: ByteBuffer,

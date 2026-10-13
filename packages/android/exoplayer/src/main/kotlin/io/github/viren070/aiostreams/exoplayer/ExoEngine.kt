@@ -317,6 +317,7 @@ class ExoEngine(private val context: Context) :
                 updateEncoding()
             }
             "audio-delay" -> output.delayUs = ((value.toDoubleOrNull() ?: 0.0) * 1e6).toLong()
+            "audio-channels" -> levels.maxChannels = CHANNELS[value] ?: 0
             "keepaspect" -> stage?.keepAspect = value == "yes"
             "panscan" -> stage?.panscan = value.toDoubleOrNull() ?: 0.0
             else -> if (style.set(name, value)) {
@@ -759,6 +760,9 @@ class ExoEngine(private val context: Context) :
         const val POLL_MS = 250L
         const val FRAMES_STOPPED_NS = 100_000_000L
         const val VOLUME_MAX = 130.0
+
+        /** mpv's names for the layouts the page offers. */
+        val CHANNELS = mapOf("stereo" to 2, "5.1" to 6, "7.1" to 8)
 
         /** Errors loading the link. */
         val LINK = 2000..2999
