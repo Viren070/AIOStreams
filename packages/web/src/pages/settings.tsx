@@ -828,18 +828,16 @@ function OutputCard() {
   return (
     <SettingsCard title="Output" description={ON_DEVICE}>
       {!android && <AudioDeviceSelect />}
-      {!android && (
-        <Select
-          label="Channels"
-          help="What your speakers or receiver take."
-          options={AUDIO_CHANNELS.map((c) => ({
-            value: c,
-            label: CHANNEL_LABELS[c],
-          }))}
-          value={audioChannels}
-          onValueChange={(v) => setAudioChannels(v as AudioChannels)}
-        />
-      )}
+      <Select
+        label="Channels"
+        help="What your speakers or receiver take. Surround sound with more is mixed down, with its dialogue kept in."
+        options={AUDIO_CHANNELS.map((c) => ({
+          value: c,
+          label: CHANNEL_LABELS[c],
+        }))}
+        value={audioChannels}
+        onValueChange={(v) => setAudioChannels(v as AudioChannels)}
+      />
       {android ? (
         <Select
           label="Pass surround audio through"
