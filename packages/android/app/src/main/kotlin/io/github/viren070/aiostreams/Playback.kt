@@ -8,6 +8,7 @@ import io.github.viren070.aiostreams.exoplayer.ExoEngine
 import io.github.viren070.aiostreams.mpv.MpvEngine
 import io.github.viren070.aiostreams.playback.Engine
 import io.github.viren070.aiostreams.playback.PlayerChannel
+import io.github.viren070.aiostreams.playback.Sound
 
 /**
  * The engine drawing beneath the page: the one the page picked, or with
@@ -31,6 +32,12 @@ class Playback(private val context: Context, private val announce: (engine: Stri
         set(value) {
             field = value
             engine.setDolbyVision(value)
+        }
+
+    var sound = Sound()
+        set(value) {
+            field = value
+            engine.setSound(value)
         }
 
     var engine: Engine = create(name)
@@ -84,7 +91,10 @@ class Playback(private val context: Context, private val announce: (engine: Stri
     private fun create(name: String): Engine = when (name) {
         EXOPLAYER -> ExoEngine(context).also { it.setTunneling(tunneling) }
         else -> MpvEngine(context)
-    }.also { it.setDolbyVision(dolbyVision) }
+    }.also {
+        it.setDolbyVision(dolbyVision)
+        it.setSound(sound)
+    }
 
     private companion object {
         const val AUTO = "auto"

@@ -41,6 +41,8 @@ import io.github.viren070.aiostreams.bridge.WebApp
 import io.github.viren070.aiostreams.downloads.DownloadChannel
 import io.github.viren070.aiostreams.mpv.MpvEngine
 import io.github.viren070.aiostreams.playback.PlayerChannel
+import io.github.viren070.aiostreams.playback.Sound
+import `is`.xyz.mpv.AudioEncoder
 import java.io.File
 import java.util.UUID
 import kotlinx.serialization.json.JsonArray
@@ -48,6 +50,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.floatOrNull
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
@@ -140,7 +143,7 @@ class MainActivity : ComponentActivity() {
             fallBack = { playback.fallBack(player) },
             frameRate = frameRates::match,
             showVideo = playback::showVideo,
-            passthrough = passthrough::codecs,
+            passthrough = passthrough::supported,
         )
         gamepads = hasGamepad()
         getSystemService(InputManager::class.java).registerInputDeviceListener(controllers, null)
@@ -196,6 +199,7 @@ class MainActivity : ComponentActivity() {
                 put("mpv", playback.engine.property("mpv-version"))
                 put("ffmpeg", playback.engine.property("ffmpeg-version"))
                 put("player", playback.engine.description)
+                put("ac3Encoder", AudioEncoder.has("ac3"))
             })
             "fullscreen" -> setFullscreen(message["value"]?.jsonPrimitive?.booleanOrNull ?: !screen.fullscreen)
             "levels" -> bridge.send(buildJsonObject {
@@ -222,6 +226,11 @@ class MainActivity : ComponentActivity() {
                 message["frameRate"]?.jsonPrimitive?.booleanOrNull?.let { frameRates.enabled = it }
                 message["tunneling"]?.jsonPrimitive?.booleanOrNull?.let { playback.tunneling = it }
                 message["dolbyVision"]?.jsonPrimitive?.booleanOrNull?.let { playback.dolbyVision = it }
+                playback.sound = Sound(
+                    dialogueBoost = message["dialogueBoost"]?.jsonPrimitive?.intOrNull ?: 0,
+                    nightMode = message["nightMode"]?.jsonPrimitive?.booleanOrNull == true,
+                    ac3Encode = message["ac3Encode"]?.jsonPrimitive?.booleanOrNull == true,
+                )
             }
             "youtube-resolve" -> youtube.resolve(
                 message["request"]?.jsonPrimitive?.contentOrNull.orEmpty(),

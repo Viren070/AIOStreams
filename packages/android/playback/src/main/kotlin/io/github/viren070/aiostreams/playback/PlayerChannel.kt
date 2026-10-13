@@ -39,8 +39,8 @@ class PlayerChannel(
     /** The video's frame rate, or null once the page closes the player. */
     private val frameRate: (Double?) -> Unit = {},
     private val showVideo: (Boolean) -> Unit = {},
-    /** The formats the audio output decodes itself, which the page's `auto` passthrough sends. */
-    private val passthrough: () -> String = { "" },
+    /** Those of the formats the audio output decodes itself, for the page's `auto:<formats>` passthrough. */
+    private val passthrough: (List<String>) -> String = { "" },
 ) : Engine.Listener {
     private val main = Handler(Looper.getMainLooper())
     private val latest = mutableMapOf<String, JsonElement>()
@@ -69,7 +69,7 @@ class PlayerChannel(
 
     /** The audio output now decodes other formats. */
     fun outputChanged() {
-        if (settings["audio-spdif"] == AUTO) engine.setProperty("audio-spdif", passthrough())
+        settings["audio-spdif"]?.takeIf { it.startsWith(AUTO) }?.let { engine.setProperty("audio-spdif", applied("audio-spdif", it)) }
     }
 
     /** False for a message that isn't the player's. */
@@ -125,7 +125,7 @@ class PlayerChannel(
     }
 
     private fun applied(name: String, value: String) =
-        if (name == "audio-spdif" && value == AUTO) passthrough() else value
+        if (name == "audio-spdif" && value.startsWith(AUTO)) passthrough(value.removePrefix(AUTO).split(',')) else value
 
     private fun remember(name: String, value: String) {
         if (name !in TRANSIENT) settings[name] = value
@@ -215,7 +215,7 @@ class PlayerChannel(
         const val TAG = "player"
         const val THROTTLE_MS = 250L
         const val MAX_SUBTITLE_BYTES = 10 shl 20
-        const val AUTO = "auto"
+        const val AUTO = "auto:"
         val SUBTITLE_TYPES = setOf("srt", "vtt", "ass", "ssa", "sub", "sup")
         /** Seeks and track picks, which belong to the file rather than the page's settings. */
         val TRANSIENT = setOf("time-pos", "aid", "sid", "secondary-sid")

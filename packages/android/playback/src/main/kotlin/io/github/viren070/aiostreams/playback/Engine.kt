@@ -30,6 +30,8 @@ interface Engine {
     /** False plays the HDR10 picture a Dolby Vision video carries instead, from the next file. */
     fun setDolbyVision(on: Boolean)
 
+    fun setSound(sound: Sound)
+
     fun release()
 
     interface Listener {

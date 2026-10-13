@@ -8,6 +8,7 @@ import android.view.SurfaceView
 import android.view.View
 import io.github.viren070.aiostreams.playback.Engine
 import io.github.viren070.aiostreams.playback.MpvProtocol
+import io.github.viren070.aiostreams.playback.Sound
 import `is`.xyz.mpv.MPV
 import `is`.xyz.mpv.MPVNode
 import java.io.File
@@ -36,6 +37,12 @@ class MpvEngine(private val context: Context) : Engine {
     @Volatile
     private var dolbyVision = true
     private var stripping = false
+
+    @Volatile
+    private var sound = Sound()
+
+    // Used on the calls thread only.
+    private var filters: SoundFilters? = null
 
     private val dir = File(context.filesDir, "mpv")
 
@@ -74,6 +81,8 @@ class MpvEngine(private val context: Context) : Engine {
         mpv.addObserver(observer)
         mpv.addLogObserver(logs)
         for (name in MpvProtocol.observed) mpv.observeProperty(name, formatOf(name))
+        mpv.observeProperty(AUDIO_PARAMS, MPV.mpvFormat.MPV_FORMAT_NODE)
+        calls.execute { filters = SoundFilters(mpv) }
     }
 
     override fun command(args: List<String>) = calls.execute { mpv.command(*args.toTypedArray()) }
@@ -86,6 +95,18 @@ class MpvEngine(private val context: Context) : Engine {
 
     override fun setDolbyVision(on: Boolean) {
         dolbyVision = on
+    }
+
+    override fun setSound(sound: Sound) {
+        this.sound = sound
+        calls.execute { filters?.apply(sound) }
+    }
+
+    private fun updateFilters(change: SoundFilters.() -> Unit) = calls.execute {
+        filters?.run {
+            change()
+            apply(sound)
+        }
     }
 
     override fun createView(context: Context): View = SurfaceView(context).apply { holder.addCallback(surface) }
@@ -126,7 +147,8 @@ class MpvEngine(private val context: Context) : Engine {
     }
 
     private val observer = object : MPV.EventObserver {
-        override fun eventProperty(property: String) = emit(property, JsonNull)
+        override fun eventProperty(property: String) =
+            if (property == AUDIO_PARAMS) updateFilters { decoded(null) } else emit(property, JsonNull)
 
         override fun eventProperty(property: String, value: Long) = emit(property, JsonPrimitive(value))
 
@@ -136,18 +158,23 @@ class MpvEngine(private val context: Context) : Engine {
 
         override fun eventProperty(property: String, value: Double) = emit(property, JsonPrimitive(value))
 
-        override fun eventProperty(property: String, value: MPVNode) =
+        override fun eventProperty(property: String, value: MPVNode) = if (property == AUDIO_PARAMS) {
+            updateFilters { decoded(value) }
+        } else {
             emit(property, runCatching { Json.parseToJsonElement(value.toJson()) }.getOrDefault(JsonNull))
+        }
 
         override fun event(eventId: Int, data: MPVNode) {
             val listener = listener ?: return
             when (eventId) {
                 MPV.mpvEvent.MPV_EVENT_START_FILE -> {
                     cause = null
+                    updateFilters { startFile() }
                     listener.onEvent("start-file")
                 }
                 MPV.mpvEvent.MPV_EVENT_FILE_LOADED -> {
                     calls.execute(::routeDolbyVision)
+                    updateFilters { loaded() }
                     listener.onEvent("file-loaded")
                 }
                 MPV.mpvEvent.MPV_EVENT_SEEK -> listener.onEvent("seek")
@@ -185,6 +212,7 @@ class MpvEngine(private val context: Context) : Engine {
             val line = text.trimEnd()
             // mpv's error names only the step that failed; FFmpeg's first network error says why.
             if (level <= LOG_ERROR && prefix == "ffmpeg" && cause == null) cause = line.replace(PROTOCOL, "")
+            if (level <= LOG_ERROR) updateFilters { refused(prefix, line) }
             if (level <= LOG_WARN) Log.println(if (level <= LOG_ERROR) Log.ERROR else Log.WARN, TAG, "[$prefix] $line")
         }
     }
@@ -196,6 +224,9 @@ class MpvEngine(private val context: Context) : Engine {
     companion object {
         /** Labelled, so the user's own `vf` stays as it is. */
         private const val DOLBY_VISION_FILTER = "@aiostreams-dovi"
+
+        /** Observed for the sound filters rather than the page. */
+        private const val AUDIO_PARAMS = "audio-params"
 
         /** The user's own options, which mpv reads at start and on [reloadConfig]. */
         fun configFile(context: Context) = File(File(context.filesDir, "mpv"), "mpv.conf")

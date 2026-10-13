@@ -9,3 +9,7 @@ target_link_libraries(aiostreams_ass PRIVATE android dl log)
 add_library(aiostreams_dolby_vision SHARED dolby_vision.c)
 target_compile_options(aiostreams_dolby_vision PRIVATE -O3 -Wall)
 target_link_libraries(aiostreams_dolby_vision PRIVATE dl)
+
+add_library(aiostreams_sound SHARED sound_shaper.c)
+target_compile_options(aiostreams_sound PRIVATE -O3 -Wall)
+target_link_libraries(aiostreams_sound PRIVATE m)

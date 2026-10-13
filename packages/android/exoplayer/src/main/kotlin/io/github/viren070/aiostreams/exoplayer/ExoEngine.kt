@@ -37,7 +37,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.SeekParameters
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.audio.AudioSink
-import androidx.media3.exoplayer.audio.ForwardingAudioSink
+import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.UnrecognizedInputFormatException
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
@@ -45,10 +45,14 @@ import androidx.media3.exoplayer.video.VideoFrameMetadataListener
 import androidx.media3.extractor.metadata.Chapter
 import io.github.viren070.aiostreams.mpv.MpvEngine
 import io.github.viren070.aiostreams.playback.Engine
+import io.github.viren070.aiostreams.playback.Sound
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.pow
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -70,6 +74,9 @@ class ExoEngine(private val context: Context) :
     private val ass = AssSurface(context) { MpvEngine.fallbackFont(context) }
     private val player: ExoPlayer
     private val tracks = ExoTracks()
+    private val levels = SoundLevels()
+    private lateinit var ac3: Ac3Sink
+    private lateinit var output: OutputSink
     private val style = SubtitleStyle()
     private val reported = ConcurrentHashMap<String, JsonElement>()
     private val decoders = ConcurrentHashMap<String, String>()
@@ -113,9 +120,6 @@ class ExoEngine(private val context: Context) :
     private var lastFrameAtNs = 0L
 
     @Volatile
-    private var passthrough = false
-
-    @Volatile
     private var caps = MediaCaps(emptySet(), emptySet())
 
     /** The Dolby Vision track's codec string and how it plays, once the file says it has one. */
@@ -126,6 +130,9 @@ class ExoEngine(private val context: Context) :
 
     @Volatile
     private var useDolbyVision = true
+
+    @Volatile
+    private var ac3Encode = false
 
     init {
         val extractors = Extractors(
@@ -140,8 +147,16 @@ class ExoEngine(private val context: Context) :
                 context: Context,
                 enableFloatOutput: Boolean,
                 enableAudioOutputPlaybackParameters: Boolean,
-            ): AudioSink? = super.buildAudioSink(context, enableFloatOutput, enableAudioOutputPlaybackParameters)
-                ?.let { PassthroughSink(it) { passthrough } }
+            ): AudioSink {
+                val sink = DefaultAudioSink.Builder(context)
+                    .setEnableFloatOutput(enableFloatOutput)
+                    .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParameters)
+                    .setAudioProcessors(arrayOf(SoundProcessor(levels)))
+                    .build()
+                ac3 = Ac3Sink(sink, levels)
+                output = OutputSink(ac3)
+                return output
+            }
         }
             .setEnableDecoderFallback(true)
             .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
@@ -163,7 +178,7 @@ class ExoEngine(private val context: Context) :
         report("idle-active", true)
         report("pause", false)
         report("volume", volume)
-        report("volume-max", 100.0)
+        report("volume-max", VOLUME_MAX)
         report("mute", false)
         report("speed", 1.0)
         report("aid", "no")
@@ -280,7 +295,7 @@ class ExoEngine(private val context: Context) :
         when (name) {
             "pause" -> player.playWhenReady = value != "yes"
             "volume" -> {
-                volume = value.toDoubleOrNull()?.coerceIn(0.0, 100.0) ?: volume
+                volume = value.toDoubleOrNull()?.coerceIn(0.0, VOLUME_MAX) ?: volume
                 applyVolume()
                 report("volume", volume)
             }
@@ -297,8 +312,11 @@ class ExoEngine(private val context: Context) :
                 redrawSubtitles()
             }
             "time-pos" -> value.toDoubleOrNull()?.let { seek(it, "absolute") }
-            // Applies from the next audio track it picks.
-            "audio-spdif" -> passthrough = value.isNotEmpty()
+            "audio-spdif" -> {
+                output.setSpdif(value)
+                updateEncoding()
+            }
+            "audio-delay" -> output.delayUs = ((value.toDoubleOrNull() ?: 0.0) * 1e6).toLong()
             "keepaspect" -> stage?.keepAspect = value == "yes"
             "panscan" -> stage?.panscan = value.toDoubleOrNull() ?: 0.0
             else -> if (style.set(name, value)) {
@@ -374,8 +392,11 @@ class ExoEngine(private val context: Context) :
         reportPosition()
     }
 
+    /** Past full, the sound processor raises the sound further. */
     private fun applyVolume() {
-        player.volume = if (muted) 0f else (volume / 100).toFloat()
+        val level = (volume / 100).toFloat()
+        player.volume = if (muted) 0f else min(level, 1f)
+        levels.gain = max(level, 1f)
     }
 
     private fun selectTrack(type: String, id: Int?) {
@@ -481,6 +502,18 @@ class ExoEngine(private val context: Context) :
 
     override fun setDolbyVision(on: Boolean) {
         useDolbyVision = on
+    }
+
+    override fun setSound(sound: Sound) {
+        levels.centreGain = 10f.pow(sound.dialogueBoost / 20f)
+        levels.nightMode = sound.nightMode
+        ac3Encode = sound.ac3Encode
+        updateEncoding()
+    }
+
+    /** Encoding to Dolby Digital needs it to pass through. */
+    private fun updateEncoding() {
+        ac3.enabled = ac3Encode && MimeTypes.AUDIO_AC3 in output.passthrough
     }
 
     fun setTunneling(on: Boolean) = main.post {
@@ -721,19 +754,11 @@ class ExoEngine(private val context: Context) :
         return result?.getOrThrow() ?: error("the player didn't answer")
     }
 
-    private class PassthroughSink(sink: AudioSink, private val on: () -> Boolean) : ForwardingAudioSink(sink) {
-        private fun allowed(format: Format) = on() || format.sampleMimeType == MimeTypes.AUDIO_RAW
-
-        override fun supportsFormat(format: Format) = allowed(format) && super.supportsFormat(format)
-
-        override fun getFormatSupport(format: Format) =
-            if (allowed(format)) super.getFormatSupport(format) else AudioSink.SINK_FORMAT_UNSUPPORTED
-    }
-
     private companion object {
         const val TAG = "exo"
         const val POLL_MS = 250L
         const val FRAMES_STOPPED_NS = 100_000_000L
+        const val VOLUME_MAX = 130.0
 
         /** Errors loading the link. */
         val LINK = 2000..2999

@@ -23,7 +23,7 @@ androidComponents {
 
 dependencies {
     implementation(project(":playback"))
-    implementation(files(libmpv.flatMap { it.classes }))
+    api(files(libmpv.flatMap { it.classes }))
     implementation(libs.androidx.core)
     implementation(libs.kotlinx.coroutines.android)
 }
