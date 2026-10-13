@@ -9,6 +9,7 @@ export interface AudioFacts {
   title?: string;
   lang?: string;
   visualImpaired?: boolean;
+  default?: boolean;
 }
 
 const DESCRIPTION =
@@ -35,14 +36,20 @@ export function betterAudioFor<T extends AudioFacts>(
   tracks: T[],
   chosen: T,
   order: AudioType[],
-  languages: string[]
+  languages: string[],
+  preferDefault: boolean
 ): T | undefined {
   const rank = (track: T) => order.indexOf(audioType(track));
   const usual = tracks.filter((track) => rank(track) <= order.indexOf('main'));
-  const base =
-    usual.length && !usual.includes(chosen)
-      ? (firstInLanguages(languages, usual, (track) => track.lang) ?? usual[0])
-      : chosen;
+  const pool = usual.length ? usual : tracks;
+  const inLanguages = (from: T[]) =>
+    firstInLanguages(languages, from, (track) => track.lang) ?? from[0];
+  const defaults = preferDefault ? pool.filter((track) => track.default) : [];
+  const base = defaults.length
+    ? inLanguages(defaults)
+    : pool.includes(chosen)
+      ? chosen
+      : inLanguages(pool);
   let best = base;
   for (const track of tracks) {
     const same = base.lang ? sameLanguage(base.lang, track.lang) : !track.lang;

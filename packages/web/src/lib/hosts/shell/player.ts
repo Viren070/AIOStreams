@@ -62,6 +62,7 @@ interface MpvTrack {
   forced?: boolean;
   'hearing-impaired'?: boolean;
   'visual-impaired'?: boolean;
+  default?: boolean;
 }
 
 const mpvFacts = (track: MpvTrack): SubtitleFacts => ({
@@ -380,7 +381,8 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
           audio,
           chosen,
           audioTypes(prefs),
-          audioCodes(prefs, source)
+          audioCodes(prefs, source),
+          prefs.PlayDefaultAudioTrack !== false
         );
       if (better) set('aid', better.id);
     };
