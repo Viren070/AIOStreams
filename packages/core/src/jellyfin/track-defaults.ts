@@ -14,13 +14,27 @@ export type SubtitleMode = (typeof SUBTITLE_MODES)[number];
 export const SUBTITLE_TYPES = ['normal', 'sdh', 'forced', 'signs'] as const;
 export type SubtitleType = (typeof SUBTITLE_TYPES)[number];
 
+/** The kinds of audio track a user ranks. */
+export const AUDIO_TYPES = ['main', 'description', 'commentary'] as const;
+export type AudioType = (typeof AUDIO_TYPES)[number];
+
 export interface TrackPreferences {
   /** Language codes in order, any of them `OriginalLanguage`. */
   audioLanguages: string[];
   playDefaultAudioTrack: boolean;
+  audioTypes: AudioType[];
   subtitleLanguages: string[];
   subtitleMode: SubtitleMode;
   subtitleTypes: SubtitleType[];
+}
+
+/** The stored order of `all`, any it leaves out after the rest. */
+function ranked<T extends string>(stored: unknown, all: readonly T[]): T[] {
+  const order = Array.isArray(stored) ? stored : [];
+  const saved = all
+    .filter((t) => order.includes(t))
+    .sort((a, b) => order.indexOf(a) - order.indexOf(b));
+  return [...new Set([...saved, ...all])];
 }
 
 /** A stored configuration, with Jellyfin's defaults for what it leaves out. */
@@ -36,24 +50,16 @@ export function trackPreferencesFrom(
     return typeof one === 'string' && one ? [one] : [];
   };
   const mode = SUBTITLE_MODES.find((m) => m === config?.SubtitleMode);
-  const types = Array.isArray(config?.SubtitleTypes)
-    ? SUBTITLE_TYPES.filter((t) =>
-        (config.SubtitleTypes as unknown[]).includes(t)
-      ).sort(
-        (a, b) =>
-          (config.SubtitleTypes as unknown[]).indexOf(a) -
-          (config.SubtitleTypes as unknown[]).indexOf(b)
-      )
-    : [];
   return {
     audioLanguages: languages('AudioLanguages', 'AudioLanguagePreference'),
     playDefaultAudioTrack: config?.PlayDefaultAudioTrack !== false,
+    audioTypes: ranked(config?.AudioTypes, AUDIO_TYPES),
     subtitleLanguages: languages(
       'SubtitleLanguages',
       'SubtitleLanguagePreference'
     ),
     subtitleMode: mode ?? 'Default',
-    subtitleTypes: [...new Set([...types, ...SUBTITLE_TYPES])],
+    subtitleTypes: ranked(config?.SubtitleTypes, SUBTITLE_TYPES),
   };
 }
 
@@ -116,6 +122,7 @@ function matches(stream: JellyfinMediaStream, preferred: string[]): boolean {
 const flag = (stream: JellyfinMediaStream, key: string) => stream[key] === true;
 
 const COMMENTARY = /\bcommentary\b/;
+const DESCRIPTION = /\b(audio description|descriptive audio|described video)\b/;
 const SIGNS = /\b(signs?|songs?)\b/;
 const FORCED = /\bforced\b/;
 const SDH = /\b(sdh|cc|hearing[ -]impaired)\b/;
@@ -165,16 +172,41 @@ function score(stream: JellyfinMediaStream, preferred: string[]): number {
   return total;
 }
 
+function audioType(stream: JellyfinMediaStream): AudioType {
+  const title = [stream.Title, stream.DisplayTitle]
+    .filter((t) => typeof t === 'string')
+    .join(' ')
+    .toLowerCase();
+  if (DESCRIPTION.test(title)) return 'description';
+  if (COMMENTARY.test(title)) return 'commentary';
+  return 'main';
+}
+
+/**
+ * The language as before, from kinds the user ranks no lower than main where
+ * the version has any, then the best-ranked kind in that language.
+ */
 function audioIndex(
   streams: JellyfinMediaStream[],
   preferred: string[],
-  preferDefault: boolean
+  preferDefault: boolean,
+  types: AudioType[]
 ): number | undefined {
-  const sorted = sortBy(streams, (s) => score(s, preferred));
-  return (
+  const rank = (s: JellyfinMediaStream) => types.indexOf(audioType(s));
+  const usual = streams.filter((s) => rank(s) <= types.indexOf('main'));
+  const sorted = sortBy(usual.length ? usual : streams, (s) =>
+    score(s, preferred)
+  );
+  const chosen =
     (preferDefault ? sorted.find((s) => flag(s, 'IsDefault')) : undefined) ??
-    sorted[0]
-  )?.Index;
+    sorted[0];
+  if (!chosen) return undefined;
+  const language = canonical(chosen.Language);
+  return sortBy(
+    streams.filter((s) => canonical(s.Language) === language),
+    (s) => -rank(s),
+    (s) => score(s, preferred)
+  )[0].Index;
 }
 
 function defaultAudio(
@@ -192,7 +224,12 @@ function defaultAudio(
   const preferred = known(
     prefs.audioLanguages.map((l) => (isOriginal(l) ? original : canonical(l)))
   );
-  return audioIndex(audio, preferred, prefs.playDefaultAudioTrack);
+  return audioIndex(
+    audio,
+    preferred,
+    prefs.playDefaultAudioTrack,
+    prefs.audioTypes
+  );
 }
 
 function onlyForced(
