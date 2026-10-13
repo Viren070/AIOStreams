@@ -217,6 +217,7 @@ export const Slider = React.forwardRef<HTMLSpanElement, SliderProps>(
 
           <SliderPrimitive.Root
             ref={mergeRefs([ref])}
+            data-nav-box
             className={cn(SliderAnatomy.root({ size }), className)}
             value={_value}
             onValueChange={handleOnValueChange}
@@ -267,6 +268,7 @@ export const Slider = React.forwardRef<HTMLSpanElement, SliderProps>(
             {_value.map((_, i) => (
               <SliderPrimitive.Thumb
                 key={i}
+                data-nav-card
                 className={cn(SliderAnatomy.thumb({ size }), thumbClass)}
               />
             ))}
