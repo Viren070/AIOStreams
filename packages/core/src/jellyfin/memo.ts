@@ -16,8 +16,8 @@ export const PLAYBACK_MEMO_TTL = 4 * 60 * 60;
 
 /* ~20 KB per memo, so the cap is low; an eviction costs a re-resolve. */
 const MEMO_CAP = 10_000;
-/* The play session, notices and list markers, beside one pointer per version. */
-const POINTER_SPARE = 5;
+/* The play session and its clients, notices and list markers, beside one pointer per version. */
+const POINTER_SPARE = 6;
 
 const memos = Cache.getInstance<string, PlaybackMemo>(
   'jellyfin-playback',
@@ -52,17 +52,26 @@ export function newPlaySessionId(): string {
   return randomBytes(16).toString('hex');
 }
 
-export async function writePlaybackMemo(
-  memo: PlaybackMemo,
-  scope: string,
-  persona?: string
-): Promise<void> {
-  const pointer: MemoPointer = {
+function pointerTo(memo: PlaybackMemo, persona?: string): MemoPointer {
+  return {
     uuid: memo.uuid,
     encryptedPassword: memo.encryptedPassword,
     itemId: memo.itemId,
     persona,
   };
+}
+
+/* Hashed: a token carries the configuration's credentials. */
+function clientKey(token: string, itemId: string) {
+  return `client:${getSimpleTextHash(token)}:${itemId}`;
+}
+
+export async function writePlaybackMemo(
+  memo: PlaybackMemo,
+  scope: string,
+  persona?: string
+): Promise<void> {
+  const pointer = pointerTo(memo, persona);
   await Promise.all([
     memos.set(
       itemKey(memo.uuid, scope, memo.itemId),
@@ -111,6 +120,35 @@ export function resolveByPlaySession(
   psid: string
 ): Promise<MemoPointer | undefined> {
   return pointers.get(`psid:${psid}`, PLAYBACK_MEMO_TTL).catch(() => undefined);
+}
+
+/**
+ * The play session a signed-in client was given for an item, for a player that
+ * fetches the stream with neither it nor the app's headers.
+ */
+export async function writeClientSession(
+  token: string,
+  memo: PlaybackMemo,
+  scope: string,
+  persona?: string
+): Promise<void> {
+  await pointers
+    .set(
+      clientKey(token, memo.itemId),
+      { ...pointerTo(memo, persona), scope },
+      PLAYBACK_MEMO_TTL,
+      true
+    )
+    .catch(() => undefined);
+}
+
+export function resolveByClient(
+  token: string,
+  itemId: string
+): Promise<MemoPointer | undefined> {
+  return pointers
+    .get(clientKey(token, itemId), PLAYBACK_MEMO_TTL)
+    .catch(() => undefined);
 }
 
 export function resolveByMediaSource(

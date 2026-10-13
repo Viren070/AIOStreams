@@ -105,7 +105,7 @@ export interface MemoPointer {
   encryptedPassword: string;
   itemId: string;
   persona?: string;
-  /** Only on a play session's pointer. */
+  /** Only on the pointers to a play session. */
   scope?: string;
 }
 

@@ -10,9 +10,12 @@ import {
   segmentsFor,
   resolveByMediaSource,
   resolveByPlaySession,
+  resolveByClient,
+  writeClientSession,
   type ContentDescriptor,
   type DeviceProfile,
   type MediaSourceRecord,
+  type MemoPointer,
   type PlaybackMemo,
 } from '@aiostreams/core';
 import {
@@ -70,21 +73,21 @@ async function locate(
     qs(req, 'MediaSourceId') ??
     (typeof bodyMsid === 'string' && bodyMsid ? bodyMsid : undefined) ??
     opts.hintMsid;
+  const itemId = rawItemId.replace(/-/g, '').toLowerCase();
   let ctx = req.jf;
-  const session =
-    psid && (!ctx || opts.bySession)
-      ? await resolveByPlaySession(psid)
-      : undefined;
+  let session: MemoPointer | undefined;
+  if (psid && (!ctx || opts.bySession))
+    session = await resolveByPlaySession(psid);
+  else if (ctx && opts.bySession)
+    session = await resolveByClient(ctx.token, itemId);
 
   if (!ctx) {
     const pointer =
       session ??
-      (rawMsid &&
-      rawMsid.replace(/-/g, '').toLowerCase() !==
-        rawItemId.replace(/-/g, '').toLowerCase()
+      (rawMsid && rawMsid.replace(/-/g, '').toLowerCase() !== itemId
         ? await resolveByMediaSource(rawMsid.replace(/-/g, '').toLowerCase())
         : undefined) ??
-      (await resolveByMediaSource(rawItemId.replace(/-/g, '').toLowerCase()));
+      (await resolveByMediaSource(itemId));
     if (!pointer) return null;
     ctx =
       (await contextFromCredentials(
@@ -114,7 +117,6 @@ async function locate(
     d.k !== 'season'
   )
     return null;
-  const itemId = rawItemId.replace(/-/g, '').toLowerCase();
   if (rawMsid) {
     const norm = rawMsid.replace(/-/g, '').toLowerCase();
     if (norm !== itemId) requestedMsid = norm;
@@ -225,6 +227,13 @@ async function playbackInfo(req: Request, res: Response) {
     });
     return;
   }
+  if (req.jf)
+    await writeClientSession(
+      req.jf.token,
+      memo,
+      loc.ctx.scope(),
+      loc.ctx.persona?.id
+    );
   await enrichSourceSubtitles(loc.ctx, memo, loc.requestedMsid);
   await applyProbedMediaInfo(loc.ctx, memo, loc.requestedMsid, {
     playing: isPlaying(req, loc),
