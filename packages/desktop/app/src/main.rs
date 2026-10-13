@@ -502,9 +502,20 @@ pub fn handle(
                 p.resolve_youtube(request, id);
             }
         }
-        Inbound::PlayerOptions { dolby_vision } => {
-            if let (Some(p), Some(on)) = (player.as_ref(), dolby_vision) {
-                p.set_dolby_vision(on);
+        Inbound::PlayerOptions {
+            dolby_vision,
+            sound,
+        } => {
+            if let Some(p) = player.as_ref() {
+                if let Some(on) = dolby_vision {
+                    p.set_dolby_vision(on);
+                }
+                p.set_sound(sound);
+            }
+        }
+        Inbound::AudioDevices => {
+            if let Some(p) = player.as_ref() {
+                p.audio_devices();
             }
         }
         Inbound::MpvSync { external: true } => external.sync(),
@@ -555,6 +566,7 @@ pub fn handle(
                 platform: platform::PLATFORM,
                 mpv,
                 ffmpeg,
+                ac3_encoder: player.as_ref().is_some_and(Player::ac3_encoder),
             });
         }
         Inbound::OpenMpvConfig => platform::open_external(&paths.mpv.to_string_lossy()),

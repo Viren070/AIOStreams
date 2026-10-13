@@ -9,6 +9,7 @@ use serde_json::Value;
 
 use crate::bridge::{self, OBSERVED, Outbound, THROTTLE_MS, THROTTLED};
 use crate::mpv::{Event, Kind, Mpv};
+use crate::sound::{self, Filters, Sound};
 
 pub type Emit = Arc<dyn Fn(Outbound) + Send + Sync>;
 
@@ -20,12 +21,18 @@ const LOGGED_PROPS: &[&str] = &[
     "hwdec",
     "audio-channels",
     "audio-spdif",
+    "audio-device",
+    "audio-delay",
 ];
+
+/// Observed for the sound filters, past the ids of the page's properties.
+const AUDIO_PARAMS: u64 = 1000;
 
 enum Request {
     Command(Vec<String>),
     SetProp(String, String),
     Sync,
+    AudioDevices,
 }
 
 /// Makes the page's mpv calls on a thread of its own: the caller may be the render thread mpv waits on.
@@ -39,6 +46,9 @@ pub struct Player {
     /// The last value of each logged setting, so re-applying one logs nothing.
     logged: Mutex<HashMap<String, String>>,
     dolby_vision: Arc<AtomicBool>,
+    /// Settings the event thread hasn't applied yet.
+    sound: Arc<Mutex<Option<Sound>>>,
+    ac3_encoder: bool,
     emit: Emit,
 }
 
@@ -60,6 +70,7 @@ impl Player {
         for (id, (name, kind)) in OBSERVED.iter().enumerate() {
             mpv.observe(name, *kind, id as u64)?;
         }
+        mpv.observe("audio-params", Kind::Json, AUDIO_PARAMS)?;
         let versions = (text(&mpv, "mpv-version"), text(&mpv, "ffmpeg-version"));
         log::info!(
             "mpv started version=\"{}\" ffmpeg={}",
@@ -68,12 +79,14 @@ impl Player {
         );
         let quit = Arc::new(AtomicBool::new(false));
         let dolby_vision = Arc::new(AtomicBool::new(true));
+        let ac3_encoder = sound::encodes_ac3(&mpv);
+        let sound = Arc::new(Mutex::new(None));
         let events = std::thread::Builder::new()
             .name("mpv-events".into())
             .spawn({
                 let (mpv, emit, quit) = (mpv.clone(), emit.clone(), quit.clone());
-                let dolby_vision = dolby_vision.clone();
-                move || pump(&mpv, &emit, &quit, &dolby_vision)
+                let (dolby_vision, sound) = (dolby_vision.clone(), sound.clone());
+                move || pump(&mpv, &emit, &quit, &dolby_vision, &sound)
             })
             .map_err(|e| e.to_string())?;
         let (requests, inbox) = mpsc::channel();
@@ -93,6 +106,8 @@ impl Player {
             versions,
             logged: Mutex::default(),
             dolby_vision,
+            sound,
+            ac3_encoder,
             emit,
         })
     }
@@ -115,6 +130,18 @@ impl Player {
         if self.dolby_vision.swap(on, Ordering::SeqCst) != on {
             log::info!("set dolby-vision={on}");
         }
+    }
+
+    pub fn set_sound(&self, sound: Sound) {
+        log::info!("set sound={sound:?}");
+        if let Ok(mut pending) = self.sound.lock() {
+            *pending = Some(sound);
+        }
+        self.mpv.wakeup();
+    }
+
+    pub fn ac3_encoder(&self) -> bool {
+        self.ac3_encoder
     }
 
     fn send(&self, request: Request) {
@@ -155,6 +182,11 @@ impl Player {
 
     pub fn sync(&self) {
         self.send(Request::Sync);
+    }
+
+    /// Answered with `audio-devices`.
+    pub fn audio_devices(&self) {
+        self.send(Request::AudioDevices);
     }
 
     /// Takes a file the app wrote itself, which the bridge's checks would refuse.
@@ -223,6 +255,12 @@ fn serve(mpv: &Mpv, emit: &Emit, inbox: &mpsc::Receiver<Request>) {
                         external: false,
                     });
                 }
+            }
+            Request::AudioDevices => {
+                let devices = mpv
+                    .get_property("audio-device-list", Kind::Json)
+                    .unwrap_or(Value::Null);
+                emit(Outbound::AudioDevices { devices });
             }
         }
     }
@@ -390,11 +428,18 @@ fn reader_error(prefix: &str, level: &str, text: &str) -> Option<String> {
     }
 }
 
-fn pump(mpv: &Mpv, emit: &Emit, quit: &AtomicBool, dolby_vision: &AtomicBool) {
+fn pump(
+    mpv: &Mpv,
+    emit: &Emit,
+    quit: &AtomicBool,
+    dolby_vision: &AtomicBool,
+    pending: &Mutex<Option<Sound>>,
+) {
     let json = |id: u64| {
-        OBSERVED
-            .get(id as usize)
-            .is_some_and(|(_, k)| *k == Kind::Json)
+        id == AUDIO_PARAMS
+            || OBSERVED
+                .get(id as usize)
+                .is_some_and(|(_, k)| *k == Kind::Json)
     };
     let mut throttle = Throttle::default();
     let mut mpv_log = MpvLog::default();
@@ -403,8 +448,14 @@ fn pump(mpv: &Mpv, emit: &Emit, quit: &AtomicBool, dolby_vision: &AtomicBool) {
     // mpv's error names only the step that failed; its http reader's first error says why.
     let mut cause: Option<String> = None;
     let mut stripping = false;
+    let mut sound = Sound::default();
+    let mut filters = Filters::default();
 
     while !quit.load(Ordering::SeqCst) {
+        if let Some(next) = pending.lock().ok().and_then(|mut p| p.take()) {
+            sound = next;
+            filters.apply(mpv, sound);
+        }
         if let Some(event) = mpv.wait_event(throttle.wait().as_secs_f64(), json) {
             match event {
                 Event::Shutdown => break,
@@ -416,11 +467,16 @@ fn pump(mpv: &Mpv, emit: &Emit, quit: &AtomicBool, dolby_vision: &AtomicBool) {
                     if cause.is_none() {
                         cause = reader_error(&prefix, &level, &text);
                     }
+                    if filters.refused(&prefix, &text) {
+                        filters.apply(mpv, sound);
+                    }
                     mpv_log.push(&level, &prefix, &text)
                 }
                 Event::StartFile => {
                     reported = false;
                     cause = None;
+                    filters.start_file();
+                    filters.apply(mpv, sound);
                     emit(Outbound::MpvEvent {
                         name: "start-file",
                         external: false,
@@ -431,6 +487,8 @@ fn pump(mpv: &Mpv, emit: &Emit, quit: &AtomicBool, dolby_vision: &AtomicBool) {
                         let _ = mpv.command(&["vf", "remove", DOLBY_VISION_FILTER]);
                     }
                     stripping = !dolby_vision.load(Ordering::SeqCst) && strip_dolby_vision(mpv);
+                    filters.loaded(mpv);
+                    filters.apply(mpv, sound);
                     emit(Outbound::MpvEvent {
                         name: "file-loaded",
                         external: false,
@@ -463,6 +521,14 @@ fn pump(mpv: &Mpv, emit: &Emit, quit: &AtomicBool, dolby_vision: &AtomicBool) {
                         cause,
                         external: false,
                     });
+                }
+                Event::Property {
+                    id: AUDIO_PARAMS,
+                    value,
+                    ..
+                } => {
+                    filters.decoded(&value);
+                    filters.apply(mpv, sound);
                 }
                 Event::Property { name, value, .. } => {
                     if let Some((name, data)) = throttle.pass(name, value) {

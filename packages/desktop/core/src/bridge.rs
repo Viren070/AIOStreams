@@ -7,6 +7,7 @@ use serde_json::Value;
 use crate::discord::Presence;
 use crate::mpv::Kind;
 use crate::now_playing::{self, MediaKey};
+use crate::sound::Sound;
 
 /// Bumped when a message changes shape, so pages can tell shells apart.
 pub const PROTOCOL_VERSION: u32 = 1;
@@ -47,7 +48,11 @@ pub enum Inbound {
     PlayerOptions {
         #[serde(rename = "dolbyVision")]
         dolby_vision: Option<bool>,
+        #[serde(flatten)]
+        sound: Sound,
     },
+    /// Asks for an `audio-devices` answer.
+    AudioDevices,
     /// A subtitle file the user dropped or picked, base64-encoded.
     SubtitleFile {
         name: String,
@@ -232,6 +237,12 @@ pub enum Outbound {
         platform: &'static str,
         mpv: Option<String>,
         ffmpeg: Option<String>,
+        #[serde(rename = "ac3Encoder")]
+        ac3_encoder: bool,
+    },
+    /// mpv's `audio-device-list`.
+    AudioDevices {
+        devices: Value,
     },
     Diagnostics {
         text: String,
@@ -338,6 +349,7 @@ const SETTABLE: &[&str] = &[
     "hwdec",
     "audio-channels",
     "audio-spdif",
+    "audio-device",
     "fullscreen",
 ];
 
