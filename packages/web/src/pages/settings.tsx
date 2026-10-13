@@ -83,6 +83,7 @@ import {
   SUBTITLE_SIZE_LABELS,
 } from '../lib/subtitles/style';
 import { subtitleTypes, type SubtitleType } from '../lib/subtitles/tracks';
+import { audioTypes, type AudioType } from '../lib/playback/audio-tracks';
 import {
   audioLanguages,
   ORIGINAL_LANGUAGE,
@@ -307,6 +308,15 @@ const SUBTITLE_MODES: { value: SubtitleMode; label: string; help: string }[] = [
     help: 'Only subtitles for foreign-language parts.',
   },
   { value: 'None', label: 'Off', help: 'Starts without subtitles.' },
+];
+
+const AUDIO_TYPE_OPTIONS: { value: AudioType; label: string }[] = [
+  { value: 'main', label: 'Main' },
+  {
+    value: 'description',
+    label: 'Audio description, narrating what is on screen',
+  },
+  { value: 'commentary', label: 'Commentary' },
 ];
 
 const SUBTITLE_TYPE_OPTIONS: { value: SubtitleType; label: string }[] = [
@@ -764,6 +774,16 @@ function AudioSection() {
             help="A track the version marks as its default plays even when another is in one of your languages. Turn this off for your languages to always win."
             value={prefs.PlayDefaultAudioTrack !== false}
             onValueChange={(v) => update({ PlayDefaultAudioTrack: v })}
+          />
+        )}
+        {Array.isArray(prefs.AudioTypes) && (
+          <LanguageList
+            label="Audio types"
+            help="When a version has more than one kind of audio track, the first of these it has plays."
+            options={AUDIO_TYPE_OPTIONS}
+            value={audioTypes(prefs)}
+            fixed
+            onChange={(next) => update({ AudioTypes: next })}
           />
         )}
         <Switch

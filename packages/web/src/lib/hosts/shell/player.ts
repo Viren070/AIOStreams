@@ -10,6 +10,7 @@ import {
 import { clock, fullTitle } from '../../format';
 import { base64, checkSubtitleFile } from '../../subtitles/files';
 import { sameLanguage } from '../../languages';
+import { audioTypes, betterAudioFor } from '../../playback/audio-tracks';
 import { parseChapters, type Chapter } from '../../playback/chapters';
 import { settings, useSetting, type SubtitleStyle } from '../../settings';
 import {
@@ -59,6 +60,7 @@ interface MpvTrack {
   codec?: string;
   forced?: boolean;
   'hearing-impaired'?: boolean;
+  'visual-impaired'?: boolean;
 }
 
 const mpvFacts = (track: MpvTrack): SubtitleFacts => ({
@@ -365,6 +367,22 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
       imageSubtitle.current = image;
       set('sub-scale', image ? 1 : subtitleScale(style));
     };
+    const rankAudio = () => {
+      const audio = fileTracks
+        .filter((t) => t.type === 'audio')
+        .map((t) => ({ ...t, visualImpaired: t['visual-impaired'] }));
+      const chosen = audio.find((t) => t.selected);
+      const { prefs = {}, source } = latest.current;
+      const better =
+        chosen &&
+        betterAudioFor(
+          audio,
+          chosen,
+          audioTypes(prefs),
+          audioCodes(prefs, source)
+        );
+      if (better) set('aid', better.id);
+    };
     // An external subtitle when the mode wants one and the file has none of its
     // own in that language or an earlier one; Default only honours the file's.
     // The player picks the language by the user's settings; the type is ranked here.
@@ -510,6 +528,7 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
       } else if (m.type === 'mpv-event' && m.name === 'playback-restart')
         patch({ started: true, waiting: false });
       else if (m.type === 'mpv-event' && m.name === 'file-loaded') {
+        rankAudio();
         rankSubtitle();
         addPreferredSubtitle();
       } else if (m.type === 'mpv-ended' && m.reason === 'eof') {
@@ -739,13 +758,7 @@ function failure(error: string | null, cause?: string): string {
  */
 function trackOptions(prefs: PlaybackPrefs, source: SourceInfo): string[] {
   const options: string[] = [];
-  const original = source.MediaStreams?.find(
-    (s) => s.Type === 'Audio' && s.Index === source.DefaultAudioStreamIndex
-  )?.Language;
-  const alang = audioLanguages(prefs)
-    .map((l) => (l === ORIGINAL_LANGUAGE ? original : l))
-    .filter((l): l is string => !!l);
-  options.push(...listOption('alang', alang));
+  options.push(...listOption('alang', audioCodes(prefs, source)));
   const slang = listOption('slang', subtitleLanguages(prefs));
   switch (prefs.SubtitleMode) {
     case 'None':
@@ -768,6 +781,15 @@ function trackOptions(prefs: PlaybackPrefs, source: SourceInfo): string[] {
       options.push(...slang);
   }
   return options;
+}
+
+function audioCodes(prefs: PlaybackPrefs, source: SourceInfo): string[] {
+  const original = source.MediaStreams?.find(
+    (s) => s.Type === 'Audio' && s.Index === source.DefaultAudioStreamIndex
+  )?.Language;
+  return audioLanguages(prefs)
+    .map((l) => (l === ORIGINAL_LANGUAGE ? original : l))
+    .filter((l): l is string => !!l);
 }
 
 /** Commas separate the options themselves, so each further entry is appended. */

@@ -19,6 +19,8 @@ export interface PlaybackPrefs {
   /** Tried in order, a list this server keeps beside Jellyfin's one language. */
   AudioLanguages?: string[];
   PlayDefaultAudioTrack?: boolean;
+  /** Audio kinds in the order a version's track is picked, a list this server keeps. */
+  AudioTypes?: string[];
   SubtitleLanguagePreference?: string | null;
   SubtitleLanguages?: string[];
   SubtitleMode?: SubtitleMode;
