@@ -9,7 +9,7 @@ import type { Host } from '..';
 import { androidHost, setupAndroid } from './android';
 import { appBridge, type ShellMessage } from './bridge';
 import { desktopHost, setupDesktop } from './desktop';
-import { applyDesktopSettings } from './player';
+import { applyPlayerSettings } from './player';
 
 export type UpdateState = Extract<ShellMessage, { type: 'update-state' }>;
 
@@ -75,7 +75,7 @@ export function ShellSetup() {
     const { updateChannel } = settings.desktop;
     let channel = updateChannel.read();
     const apply = () => {
-      applyDesktopSettings();
+      applyPlayerSettings();
       if (updateChannel.read() !== channel) {
         channel = updateChannel.read();
         checkForUpdates(channel);

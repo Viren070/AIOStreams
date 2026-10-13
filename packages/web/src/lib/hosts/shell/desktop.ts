@@ -4,6 +4,7 @@ import { onSettingsChange, settings } from '../../settings';
 import { appBridge, type ShellMessage } from './bridge';
 import { shellDownloads } from './downloads';
 import { useShellPlayer } from './player';
+import { soundOptions } from './sound';
 import { resolveYouTube } from './youtube';
 
 export type DiscordStatus = Extract<ShellMessage, { type: 'discord-status' }>;
@@ -41,11 +42,15 @@ let windowFullscreen = false;
 
 /** Follows the window's full screen and Discord, and keeps the browser's menu off the page. */
 export function setupDesktop(): () => void {
-  let dolbyVision: boolean | null = null;
+  let options = '';
   const sendOptions = () => {
-    if (settings.desktop.dolbyVision.read() === dolbyVision) return;
-    dolbyVision = settings.desktop.dolbyVision.read();
-    appBridge()?.send({ type: 'player-options', dolbyVision });
+    const next = {
+      dolbyVision: settings.desktop.dolbyVision.read(),
+      ...soundOptions(),
+    };
+    if (JSON.stringify(next) === options) return;
+    options = JSON.stringify(next);
+    appBridge()?.send({ type: 'player-options', ...next });
   };
   sendOptions();
   const unsubscribeSettings = onSettingsChange(sendOptions);
@@ -59,6 +64,22 @@ export function setupDesktop(): () => void {
     unsubscribe?.();
     window.removeEventListener('contextmenu', onContextMenu);
   };
+}
+
+export type AudioDevice = { name: string; description: string };
+
+/** The outputs mpv can play to, asked for each time they are shown. */
+export function useAudioDevices(): AudioDevice[] | null {
+  const [devices, setDevices] = React.useState<AudioDevice[] | null>(null);
+  React.useEffect(() => {
+    const bridge = appBridge();
+    const unsubscribe = bridge?.subscribe((m) => {
+      if (m.type === 'audio-devices') setDevices(m.devices ?? []);
+    });
+    bridge?.send({ type: 'audio-devices' });
+    return unsubscribe;
+  }, []);
+  return devices;
 }
 
 export function openMpvConfig(): void {

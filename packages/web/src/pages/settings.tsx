@@ -70,6 +70,7 @@ import {
 import {
   checkDiscord,
   openMpvConfig,
+  useAudioDevices,
   useDiscordStatus,
   type DiscordStatus,
 } from '../lib/hosts/shell/desktop';
@@ -99,10 +100,15 @@ import {
   linkPreset,
   playerOptions,
 } from '../lib/playback/player-choice';
+import { audioDelayLabel, dialogueLabel } from '../lib/playback/sound';
 import {
   settings,
   useSetting,
   AUDIO_CHANNELS,
+  AUDIO_DELAY_LIMIT_MS,
+  AUDIO_DELAY_STEP_MS,
+  DIALOGUE_BOOSTS,
+  PASSTHROUGH_FORMATS,
   CACHE_MAX_STALE_DAYS,
   CACHE_SIZES_MB,
   DOWNLOAD_SEARCHES,
@@ -125,6 +131,7 @@ import {
   type AudioChannels,
   type PlayerEngine,
   type Passthrough,
+  type PassthroughFormat,
   type EpisodeLayout,
   type BarBackground,
   type RailNames,
@@ -742,15 +749,6 @@ function AudioSection() {
   const { prefs, update } = usePlaybackPrefs();
   const audio = audioLanguages(prefs);
   const audioLists = Array.isArray(prefs.AudioLanguages);
-  const [audioChannels, setAudioChannels] = useSetting(
-    settings.desktop.audioChannels
-  );
-  const [passthrough, setPassthrough] = useSetting(
-    settings.desktop.passthrough
-  );
-  const [androidPassthrough, setAndroidPassthrough] = useSetting(
-    settings.android.passthrough
-  );
   return (
     <>
       <SettingsCard title="Language" description={ON_ACCOUNT}>
@@ -795,39 +793,160 @@ function AudioSection() {
         />
       </SettingsCard>
       {shellHost() && (
-        <SettingsCard title="Output" description={ON_DEVICE}>
-          {currentHost().name === 'desktop' && (
-            <Select
-              label="Channels"
-              help="What your speakers or receiver take."
-              options={AUDIO_CHANNELS.map((c) => ({
-                value: c,
-                label: CHANNEL_LABELS[c],
-              }))}
-              value={audioChannels}
-              onValueChange={(v) => setAudioChannels(v as AudioChannels)}
-            />
-          )}
-          {currentHost().name === 'android-app' ? (
-            <Select
-              label="Pass surround audio through"
-              help={PASSTHROUGH_HELP[androidPassthrough]}
-              options={PASSTHROUGH_OPTIONS}
-              value={androidPassthrough}
-              onValueChange={(v) => setAndroidPassthrough(v as Passthrough)}
-            />
-          ) : (
-            <Switch
-              side="right"
-              label="Pass surround audio through"
-              help="Sends Dolby and DTS audio to your receiver as it is. Only turn this on if your receiver decodes them."
-              value={passthrough}
-              onValueChange={setPassthrough}
-            />
-          )}
-        </SettingsCard>
+        <>
+          <OutputCard />
+          <SoundCard />
+        </>
       )}
     </>
+  );
+}
+
+const FORMAT_LABELS: Record<PassthroughFormat, string> = {
+  ac3: 'Dolby Digital',
+  eac3: 'Dolby Digital Plus',
+  dts: 'DTS',
+  'dts-hd': 'DTS-HD',
+  truehd: 'Dolby TrueHD',
+};
+
+function OutputCard() {
+  const android = currentHost().name === 'android-app';
+  const [audioChannels, setAudioChannels] = useSetting(
+    settings.desktop.audioChannels
+  );
+  const [passthrough, setPassthrough] = useSetting(
+    settings.desktop.passthrough
+  );
+  const [androidPassthrough, setAndroidPassthrough] = useSetting(
+    settings.android.passthrough
+  );
+  const [formats, setFormats] = useSetting(settings.sound.passthroughFormats);
+  const [ac3Encode, setAc3Encode] = useSetting(settings.sound.ac3Encode);
+  const info = useShellInfo();
+  const passing = android ? androidPassthrough !== 'off' : passthrough;
+  return (
+    <SettingsCard title="Output" description={ON_DEVICE}>
+      {!android && <AudioDeviceSelect />}
+      {!android && (
+        <Select
+          label="Channels"
+          help="What your speakers or receiver take."
+          options={AUDIO_CHANNELS.map((c) => ({
+            value: c,
+            label: CHANNEL_LABELS[c],
+          }))}
+          value={audioChannels}
+          onValueChange={(v) => setAudioChannels(v as AudioChannels)}
+        />
+      )}
+      {android ? (
+        <Select
+          label="Pass surround audio through"
+          help={PASSTHROUGH_HELP[androidPassthrough]}
+          options={PASSTHROUGH_OPTIONS}
+          value={androidPassthrough}
+          onValueChange={(v) => setAndroidPassthrough(v as Passthrough)}
+        />
+      ) : (
+        <Switch
+          side="right"
+          label="Pass surround audio through"
+          help="Sends Dolby and DTS audio to your receiver as it is. Only turn this on if your receiver decodes them."
+          value={passthrough}
+          onValueChange={setPassthrough}
+        />
+      )}
+      {passing && (
+        <Combobox
+          multiple
+          label="Formats"
+          help="Only the ones your TV or receiver decodes; this app decodes the rest. DTS-HD needs DTS too."
+          placeholder="None"
+          emptyMessage="Nothing matches."
+          options={PASSTHROUGH_FORMATS.map((f) => ({
+            value: f,
+            label: FORMAT_LABELS[f],
+            textValue: FORMAT_LABELS[f],
+          }))}
+          value={PASSTHROUGH_FORMATS.filter((f) => formats[f])}
+          onValueChange={(on) =>
+            setFormats(
+              Object.fromEntries(
+                PASSTHROUGH_FORMATS.map((f) => [f, on.includes(f)])
+              ) as Record<PassthroughFormat, boolean>
+            )
+          }
+        />
+      )}
+      {passing && formats.ac3 && info?.ac3Encoder !== false && (
+        <Switch
+          side="right"
+          label="Turn other surround sound into Dolby Digital"
+          help="For a receiver on an optical or ARC link, which gets other surround formats as stereo otherwise."
+          value={ac3Encode}
+          onValueChange={setAc3Encode}
+        />
+      )}
+    </SettingsCard>
+  );
+}
+
+function AudioDeviceSelect() {
+  const [audioDevice, setAudioDevice] = useSetting(
+    settings.desktop.audioDevice
+  );
+  const devices = useAudioDevices();
+  const options = (devices ?? []).map((d) => ({
+    value: d.name,
+    label: d.name === 'auto' ? 'System default' : d.description || d.name,
+  }));
+  // One unplugged now stays picked until another is.
+  if (!options.some((o) => o.value === audioDevice))
+    options.push({ value: audioDevice, label: audioDevice });
+  return (
+    <Select
+      label="Device"
+      options={options}
+      value={audioDevice}
+      onValueChange={setAudioDevice}
+    />
+  );
+}
+
+function SoundCard() {
+  const [boost, setBoost] = useSetting(settings.sound.dialogueBoost);
+  const [nightMode, setNightMode] = useSetting(settings.sound.nightMode);
+  const [delay, setDelay] = useSetting(settings.sound.delayMs);
+  return (
+    <SettingsCard title="Sound" description={ON_DEVICE}>
+      <Select
+        label="Dialogue boost"
+        help="Raises the centre channel, where surround sound puts dialogue. Not for sound passed through."
+        options={DIALOGUE_BOOSTS.map((db) => ({
+          value: String(db),
+          label: dialogueLabel(db),
+        }))}
+        value={String(boost)}
+        onValueChange={(v) => setBoost(Number(v))}
+      />
+      <Switch
+        side="right"
+        label="Night mode"
+        help="Evens out loud and quiet scenes, for listening at a low volume. Not for sound passed through."
+        value={nightMode}
+        onValueChange={setNightMode}
+      />
+      <Slider
+        label={`Delay: ${audioDelayLabel(delay)}`}
+        help="Below zero plays the sound earlier, as for wireless headphones that lag behind the picture."
+        min={-AUDIO_DELAY_LIMIT_MS}
+        max={AUDIO_DELAY_LIMIT_MS}
+        step={AUDIO_DELAY_STEP_MS}
+        value={[delay]}
+        onValueChange={([v]) => setDelay(v)}
+      />
+    </SettingsCard>
   );
 }
 

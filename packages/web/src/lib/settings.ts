@@ -375,6 +375,22 @@ export type PlayerEngine = (typeof PLAYER_ENGINES)[number];
 export const PASSTHROUGH = ['off', 'auto', 'always'] as const;
 export type Passthrough = (typeof PASSTHROUGH)[number];
 
+/** mpv's names for the formats that can pass through. */
+export const PASSTHROUGH_FORMATS = [
+  'ac3',
+  'eac3',
+  'dts',
+  'dts-hd',
+  'truehd',
+] as const;
+export type PassthroughFormat = (typeof PASSTHROUGH_FORMATS)[number];
+
+/** Decibels the centre channel, where films put dialogue, is raised by. */
+export const DIALOGUE_BOOSTS: readonly number[] = [0, 3, 6, 9, 12];
+
+export const AUDIO_DELAY_LIMIT_MS = 1000;
+export const AUDIO_DELAY_STEP_MS = 50;
+
 /** `installed` follows the channel this copy of the desktop app came from. */
 export const UPDATE_CHANNELS = ['installed', 'stable', 'nightly'] as const;
 export type UpdateChannelSetting = (typeof UPDATE_CHANNELS)[number];
@@ -462,6 +478,10 @@ const segment = record(SEGMENT_TYPES, (type) =>
     'ask',
     SEGMENT_ACTIONS
   )
+);
+
+const passthroughFormat = record(PASSTHROUGH_FORMATS, (format) =>
+  device<boolean>(`aiostreams-app-passthrough-${format}`, true)
 );
 
 const discord = record(DISCORD_EVENTS, (event) =>
@@ -581,6 +601,8 @@ export const settings = {
       AUDIO_CHANNELS
     ),
     passthrough: device<boolean>('aiostreams-desktop-passthrough', false),
+    /** mpv's name for the output, or `auto` for the system's default. */
+    audioDevice: device<string>('aiostreams-desktop-audio-device', 'auto'),
     dolbyVision: device<boolean>('aiostreams-desktop-dolby-vision', true),
     /** Read by the page only; the app itself never needs it. */
     chapterSkips: device<boolean>('aiostreams-desktop-chapter-skips', true),
@@ -600,6 +622,24 @@ export const settings = {
       'auto',
       PASSTHROUGH
     ),
+  },
+  /** How the desktop and Android apps play sound. */
+  sound: {
+    passthroughFormat,
+    passthroughFormats: group(passthroughFormat),
+    dialogueBoost: device<number>(
+      'aiostreams-app-dialogue-boost',
+      0,
+      DIALOGUE_BOOSTS
+    ),
+    nightMode: device<boolean>('aiostreams-app-night-mode', false),
+    /** Positive plays the sound later than the picture. */
+    delayMs: device<number>(
+      'aiostreams-app-audio-delay',
+      0,
+      (v) => Math.abs(v) <= AUDIO_DELAY_LIMIT_MS
+    ),
+    ac3Encode: device<boolean>('aiostreams-app-ac3-encode', false),
   },
   discord,
   discordEvents: group(discord),

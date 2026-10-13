@@ -17,6 +17,11 @@ export type ShellMessage =
       players: { id: string; path: string | null }[];
     }
   | { type: 'external-ended'; error: string | null }
+  /** mpv's outputs on the desktop, as its `audio-device-list`. */
+  | {
+      type: 'audio-devices';
+      devices: { name: string; description: string }[] | null;
+    }
   | { type: 'fullscreen'; value: boolean }
   | { type: 'pip'; value: boolean }
   | { type: 'back' }
@@ -40,6 +45,8 @@ export type ShellMessage =
       ffmpeg: string | null;
       /** The Android app's player and its version. */
       player?: string;
+      /** Whether the app can re-encode sound to Dolby Digital. */
+      ac3Encoder?: boolean;
     }
   | { type: 'diagnostics'; text: string }
   | {

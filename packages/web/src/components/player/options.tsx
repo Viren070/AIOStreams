@@ -36,11 +36,18 @@ import type { PlayerController, Track } from '../../lib/playback/controller';
 import {
   settings,
   useSetting,
+  AUDIO_DELAY_LIMIT_MS,
+  DIALOGUE_BOOSTS,
   SUBTITLE_POSITION_MAX,
   SUBTITLE_SIZES,
   VIDEO_FITS,
   type VideoFit,
 } from '../../lib/settings';
+import {
+  audioDelayLabel,
+  dialogueLabel,
+  stepAudioDelay,
+} from '../../lib/playback/sound';
 import { delayLabel, SUBTITLE_DELAY_STEP_MS } from '../../lib/subtitles/delay';
 import {
   stepSubtitleHeight,
@@ -286,6 +293,64 @@ function SubtitleStyleSteppers() {
   );
 }
 
+function SoundControls() {
+  const [boost, setBoost] = useSetting(settings.sound.dialogueBoost);
+  const [nightMode, setNightMode] = useSetting(settings.sound.nightMode);
+  const [delay, setDelay] = useSetting(settings.sound.delayMs);
+  const at = DIALOGUE_BOOSTS.indexOf(boost);
+  return (
+    <>
+      <DropdownMenuLabel className="pt-3">Sound</DropdownMenuLabel>
+      <Stepper
+        label="Dialogue"
+        value={dialogueLabel(boost)}
+        less={{
+          label: 'Less dialogue boost',
+          onClick: at > 0 ? () => setBoost(DIALOGUE_BOOSTS[at - 1]) : undefined,
+        }}
+        more={{
+          label: 'More dialogue boost',
+          onClick:
+            at < DIALOGUE_BOOSTS.length - 1
+              ? () => setBoost(DIALOGUE_BOOSTS[at + 1])
+              : undefined,
+        }}
+      />
+      <Stepper
+        label="Delay"
+        value={audioDelayLabel(delay)}
+        less={{
+          label: 'Play the sound earlier',
+          onClick:
+            delay > -AUDIO_DELAY_LIMIT_MS
+              ? () => stepAudioDelay(-1)
+              : undefined,
+        }}
+        more={{
+          label: 'Play the sound later',
+          onClick:
+            delay < AUDIO_DELAY_LIMIT_MS ? () => stepAudioDelay(1) : undefined,
+        }}
+      />
+      <DropdownMenuItem
+        onSelect={keepOpen}
+        onClick={() => setNightMode(!nightMode)}
+      >
+        <LuCheck
+          className={cn('flex-none', nightMode ? 'opacity-100' : 'opacity-0')}
+        />
+        Night mode
+      </DropdownMenuItem>
+      {delay !== 0 && (
+        <DropdownMenuItem onSelect={keepOpen} onClick={() => setDelay(0)}>
+          <LuUndo2 className="flex-none" />
+          Reset delay
+        </DropdownMenuItem>
+      )}
+    </>
+  );
+}
+
 function SubtitleSync({
   delayMs,
   onChange,
@@ -434,7 +499,7 @@ export function OptionButtons({
           <LuLayers />
         </ControlButton>
       )}
-      {player.audioTracks.length > 1 && (
+      {(player.audioTracks.length > 1 || player.sound) && (
         <Menu
           name="audio"
           label="Audio"
@@ -443,6 +508,7 @@ export function OptionButtons({
           value={state.audio}
           onSelect={(id) => id && player.setAudio(id)}
           onOpenChange={onMenu}
+          footer={player.sound && <SoundControls />}
         />
       )}
       {player.setRate && (

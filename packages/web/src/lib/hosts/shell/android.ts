@@ -4,6 +4,7 @@ import { onSettingsChange, settings, type PlayerEngine } from '../../settings';
 import { appBridge } from './bridge';
 import { shellDownloads } from './downloads';
 import { setEngine, useShellPlayer } from './player';
+import { soundOptions } from './sound';
 import { resolveYouTube } from './youtube';
 
 let fullscreen = false;
@@ -25,6 +26,7 @@ export function setupAndroid(): () => void {
       frameRate: settings.android.frameRate.read(),
       tunneling: settings.android.tunneling.read(),
       dolbyVision: settings.desktop.dolbyVision.read(),
+      ...soundOptions(),
     };
     if (JSON.stringify(next) === options) return;
     options = JSON.stringify(next);

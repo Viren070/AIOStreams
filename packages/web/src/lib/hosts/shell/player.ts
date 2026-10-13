@@ -48,6 +48,7 @@ import { usePlayheadWriter } from '../../playback/playhead';
 import { useLatest } from '../../use-latest';
 import { currentHost } from '..';
 import { appBridge } from './bridge';
+import { passthroughValue } from './sound';
 
 interface MpvTrack {
   id: number;
@@ -661,6 +662,7 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
         }
       : { pages: STATS_PAGES, page: statsPage, show: showStats },
     external: launched?.name,
+    sound: !external,
     close: external
       ? () => {
           clearTimeout(linger);
@@ -823,26 +825,20 @@ function applySubtitleStyle(
   setProp('sub-ass-override', style.overrideStyled ? 'force' : 'scale');
 }
 
-export function applyDesktopSettings(): void {
-  const { hardwareDecoding, audioChannels, passthrough } = settings.desktop;
+export function applyPlayerSettings(): void {
+  const { hardwareDecoding, audioChannels, audioDevice } = settings.desktop;
+  const android = appBridge()?.platform === 'android';
   const channels = audioChannels.read();
   // On Android, auto-safe only tries copying every frame back from MediaCodec.
   // TVs copy them: some draw direct frames wrong, and they have no battery to save.
-  const hwdec =
-    appBridge()?.platform !== 'android'
-      ? 'auto-safe'
-      : currentHost().tv
-        ? 'mediacodec-copy'
-        : 'mediacodec,mediacodec-copy';
+  const hwdec = !android
+    ? 'auto-safe'
+    : currentHost().tv
+      ? 'mediacodec-copy'
+      : 'mediacodec,mediacodec-copy';
   setProp('hwdec', hardwareDecoding.read() ? hwdec : 'no');
   setProp('audio-channels', channels === 'auto' ? 'auto-safe' : channels);
-  const always = 'ac3,eac3,dts-hd,truehd';
-  // The Android app turns `auto` into what the audio output decodes.
-  const spdif =
-    appBridge()?.platform === 'android'
-      ? { off: '', auto: 'auto', always }[settings.android.passthrough.read()]
-      : passthrough.read()
-        ? always
-        : '';
-  setProp('audio-spdif', spdif);
+  setProp('audio-spdif', passthroughValue());
+  setProp('audio-delay', settings.sound.delayMs.read() / 1000);
+  if (!android) setProp('audio-device', audioDevice.read());
 }

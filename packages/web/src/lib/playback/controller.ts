@@ -87,6 +87,8 @@ export interface PlayerController {
   close?: () => void;
   /** Puts the next episode after this one in the player's own playlist. */
   queueNext?: (episode: QueuedEpisode) => void;
+  /** Whether the app's sound settings apply, which they do to its own player. */
+  sound?: boolean;
   /** Plays the file again after it failed, from where it stopped or on another engine. */
   retry?: { label: string; run(): void };
 }
