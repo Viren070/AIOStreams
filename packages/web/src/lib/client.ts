@@ -17,7 +17,8 @@ export type Query = Record<string, QueryValue>;
 export function apiBase(): string {
   const { origin, pathname } = window.location;
   const mount = pathname.replace(/\/web(\/(index\.html)?)?$/i, '');
-  return origin + (mount && mount !== pathname ? mount : '/jellyfin');
+  // An empty mount is the site root's own API.
+  return origin + (mount !== pathname ? mount : '/jellyfin');
 }
 
 /* eslint-disable lingui/no-unlocalized-strings -- names the server lists devices by */
