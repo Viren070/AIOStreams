@@ -4,26 +4,30 @@ import { useStatus } from '@/context/status';
 import { Option } from '@aiostreams/core';
 import { SettingsCard } from '../../../shared/settings-card';
 import { Button, IconButton } from '@aiostreams/ui/button';
+import { Checkbox } from '@aiostreams/ui/checkbox';
+import {
+  DropdownMenu,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from '@aiostreams/ui/dropdown-menu';
 import { Switch } from '@aiostreams/ui/switch';
 import { Modal } from '@aiostreams/ui/modal';
 import { TextInput } from '@aiostreams/ui/text-input';
+import { cn } from '@aiostreams/ui/core/styling';
 import TemplateOption from '../../../shared/template-option';
 import { useDisclosure } from '@aiostreams/ui/hooks/disclosure';
 import { useMode } from '@/context/mode';
 import { toast } from 'sonner';
-import { PlusIcon, SearchIcon } from 'lucide-react';
+import { SearchIcon } from 'lucide-react';
 import { BiEdit, BiTrash } from 'react-icons/bi';
 import {
-  LuSettings,
   LuExternalLink,
   LuCircleCheck,
   LuArrowUpDown,
-  LuSquareCheck,
-  LuPencil,
-  LuTrash2,
-  LuTag,
-  LuPower,
-  LuPowerOff,
+  LuChevronDown,
+  LuLink,
+  LuSettings,
   LuArrowLeft,
 } from 'react-icons/lu';
 import { IoExtensionPuzzle } from 'react-icons/io5';
@@ -177,10 +181,21 @@ function getCategoryColor(
 
 export { manifestCache };
 
+function hostOf(url: string | undefined): string | undefined {
+  if (!url) return undefined;
+  try {
+    return new URL(url.replace(/^stremio:\/\//, 'https://')).host;
+  } catch {
+    return undefined;
+  }
+}
+
 export function MyAddons({
   onEdit,
+  onAddCustom,
 }: {
   onEdit: (preset: any, presetMetadata: any) => void;
+  onAddCustom?: () => void;
 }) {
   const { userData, setUserData } = useUserData();
   const { status } = useStatus();
@@ -275,17 +290,8 @@ export function MyAddons({
   const isAllSelected =
     filteredPresets.length > 0 &&
     filteredPresets.every((p) => selectedIds.has(p.instanceId));
-  const hasSelection = selectedIds.size > 0;
-
-  // toggle enables if more than 50% of selected presets are disabled and vice versa
-  const toggleWillEnable = useMemo(() => {
-    const selectedPresets = userData.presets.filter((p) =>
-      selectedIds.has(p.instanceId)
-    );
-    const enabled = selectedPresets.filter((p: any) => p.enabled).length;
-    const disabled = selectedPresets.filter((p: any) => !p.enabled).length;
-    return disabled > enabled;
-  }, [userData.presets, selectedIds]);
+  const none = selectedIds.size === 0;
+  const enabledCount = userData.presets.filter((p) => p.enabled).length;
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -296,12 +302,35 @@ export function MyAddons({
     });
   };
 
-  const toggleSelectAll = () => {
-    if (isAllSelected) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(filteredPresets.map((p) => p.instanceId)));
-    }
+  const toggleSelectGroup = (ids: string[]) => {
+    const allSelected = ids.every((id) => selectedIds.has(id));
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) {
+        if (allSelected) next.delete(id);
+        else next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const removePreset = (instanceId: string) => {
+    setUserData((prev) => {
+      const cloned = structuredClone(prev);
+      cloned.presets = cloned.presets.filter(
+        (a) => a.instanceId !== instanceId
+      );
+      return removeInvalidPresetReferences(cloned);
+    });
+  };
+
+  const setPresetEnabled = (instanceId: string, enabled: boolean) => {
+    setUserData((prev) => ({
+      ...prev,
+      presets: prev.presets.map((p) =>
+        p.instanceId === instanceId ? { ...p, enabled } : p
+      ),
+    }));
   };
 
   // Only clear selection on filter/search change
@@ -336,8 +365,7 @@ export function MyAddons({
   }, [selectedIds, userData.presets, presetMetadataMap]);
 
   // ── Batch actions (do NOT clear selection) ──
-  const batchToggleEnabled = () => {
-    const enabled = toggleWillEnable;
+  const setSelectedEnabled = (enabled: boolean) => {
     setUserData((prev) => ({
       ...prev,
       presets: prev.presets.map((p) =>
@@ -428,258 +456,238 @@ export function MyAddons({
 
   const getCategoryLabel = (cat: string) => DEFAULT_CATEGORY_LABELS[cat] || cat;
 
+  const renderAddon = (preset: any) => (
+    <AddonListItem
+      key={preset.instanceId}
+      preset={preset}
+      presetMetadata={presetMetadataMap.get(preset.type)}
+      isSelected={selectedIds.has(preset.instanceId)}
+      onToggleSelect={() => toggleSelect(preset.instanceId)}
+      onEdit={() => onEdit(preset, presetMetadataMap.get(preset.type))}
+      onRemove={() => removePreset(preset.instanceId)}
+      onToggleEnabled={(v) => setPresetEnabled(preset.instanceId, v)}
+    />
+  );
+  const listClass = 'grid grid-cols-1 gap-1.5 xl:grid-cols-2 3xl:grid-cols-3';
+  const pillClass = (active: boolean, activeClass: string) =>
+    cn(
+      'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
+      active
+        ? activeClass
+        : 'border-[--border] text-[--muted] hover:bg-[--subtle] hover:text-[--foreground]'
+    );
+
   return (
     <>
       <SettingsCard
         title="My Addons"
         description="Manage your installed addons. Reorder, batch edit, or categorise by type."
         action={
-          <div className="flex items-center gap-2">
-            <IconButton
-              rounded
-              intent="primary-subtle"
-              icon={<LuArrowUpDown className="w-5 h-5" />}
-              onClick={() => reorderModal.open()}
-              disabled={userData.presets.length < 2}
-              title="Reorder Priority"
-            />
-            <IconButton
-              rounded
-              intent={isAllSelected ? 'primary' : 'primary-subtle'}
-              icon={<LuSquareCheck className="w-5 h-5" />}
-              onClick={toggleSelectAll}
-              disabled={filteredPresets.length === 0}
-              title={isAllSelected ? 'Deselect All' : 'Select All'}
-            />
-          </div>
+          <IconButton
+            rounded
+            intent="primary-subtle"
+            icon={<LuArrowUpDown className="w-5 h-5" />}
+            onClick={() => reorderModal.open()}
+            disabled={userData.presets.length < 2}
+            title="Reorder priority"
+            aria-label="Reorder priority"
+          />
         }
       >
-        {/* ── Always-visible toolbar ── */}
-        {userData.presets.length > 0 && (
-          <div className="space-y-3 mb-4">
-            {/* Row 1: Search bar + action icons (actions wrap to own row on mobile) */}
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex-1 min-w-[140px]">
-                <TextInput
-                  value={search}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setSearch(e.target.value)
-                  }
-                  placeholder="Search addons..."
-                  leftIcon={<SearchIcon className="w-4 h-4" />}
-                />
-              </div>
-              {hasSelection && (
-                <div className="flex items-center gap-1.5 animate-in fade-in duration-150">
-                  <span className="text-xs font-semibold text-[--brand] whitespace-nowrap">
-                    {selectedIds.size} selected
-                  </span>
-                  <IconButton
-                    size="sm"
-                    rounded
-                    intent="primary-subtle"
-                    icon={
-                      toggleWillEnable ? (
-                        <LuPower className="w-3.5 h-3.5" />
-                      ) : (
-                        <LuPowerOff className="w-3.5 h-3.5" />
-                      )
-                    }
-                    onClick={batchToggleEnabled}
-                    title={
-                      toggleWillEnable ? 'Enable selected' : 'Disable selected'
-                    }
-                  />
-                  {mode === 'pro' && commonOptions.length > 0 && (
-                    <IconButton
-                      size="sm"
-                      rounded
-                      intent="primary-subtle"
-                      icon={<LuPencil className="w-3.5 h-3.5" />}
-                      onClick={openBatchEdit}
-                      title="Edit common fields"
-                    />
-                  )}
-                  <IconButton
-                    size="sm"
-                    rounded
-                    intent="primary-subtle"
-                    icon={<LuTag className="w-3.5 h-3.5" />}
-                    onClick={() => categoryModal.open()}
-                    title="Set category"
-                  />
-                  <IconButton
-                    size="sm"
-                    rounded
-                    intent="alert-subtle"
-                    icon={<LuTrash2 className="w-3.5 h-3.5" />}
-                    onClick={() => confirmBatchDelete.open()}
-                    title="Delete selected"
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Row 2: Category pills (wraps naturally on mobile) */}
-            <div className="flex flex-wrap gap-1.5">
-              <button
-                onClick={() => setCategoryFilter('all')}
-                className={`px-2.5 py-1 text-xs font-medium rounded-full border transition-colors ${
-                  categoryFilter === 'all'
-                    ? 'bg-[--brand]/20 text-[--brand] border-[--brand]/50'
-                    : 'bg-transparent text-[--muted] border-[--border] hover:bg-[--subtle]'
-                }`}
-              >
-                All ({userData.presets.length})
-              </button>
-              {orderedCategories.map((cat) => {
-                const count = allCategories.get(cat) || 0;
-                const colors = getCategoryColor(
-                  cat,
-                  userData.addonCategoryColors
-                );
-                return (
-                  <button
-                    key={cat}
-                    onClick={() =>
-                      setCategoryFilter(categoryFilter === cat ? 'all' : cat)
-                    }
-                    className={`px-2.5 py-1 text-xs font-medium rounded-full border transition-colors ${
-                      categoryFilter === cat
-                        ? `${colors.bg} ${colors.text} ${colors.border}`
-                        : 'bg-transparent text-[--muted] border-[--border] hover:bg-[--subtle]'
-                    }`}
-                  >
-                    {getCategoryLabel(cat)} ({count})
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* ── Addon list ── */}
         {userData.presets.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12">
-            <span className="text-lg text-muted-foreground font-semibold text-center">
-              Looks like you don't have any addons...
-              <br />
-              Add some from the marketplace!
-            </span>
-          </div>
-        ) : filteredPresets.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8">
-            <span className="text-sm text-[--muted]">
-              No addons match your search.
-            </span>
-          </div>
-        ) : categoryFilter === 'all' && !search.trim() ? (
-          <div className="space-y-4">
-            {orderedCategories.map((cat) => {
-              const presets = groupedPresets[cat];
-              if (!presets || presets.length === 0) return null;
-              const colors = getCategoryColor(
-                cat,
-                userData.addonCategoryColors
-              );
-              return (
-                <div key={cat}>
-                  <button
-                    className="flex items-center gap-2 mb-2 group cursor-pointer"
-                    onClick={() => {
-                      const catIds = presets.map((p) => p.instanceId);
-                      const allSelected = catIds.every((id) =>
-                        selectedIds.has(id)
-                      );
-                      setSelectedIds((prev) => {
-                        const next = new Set(prev);
-                        for (const id of catIds) {
-                          if (allSelected) next.delete(id);
-                          else next.add(id);
-                        }
-                        return next;
-                      });
-                    }}
-                    title={`Select all in ${getCategoryLabel(cat)}`}
-                  >
-                    <span
-                      className={`inline-block w-2.5 h-2.5 rounded-full ${colors.swatch}`}
-                    />
-                    <h4 className="text-xs font-semibold uppercase tracking-wider text-[--muted] group-hover:text-[--foreground] transition-colors">
-                      {getCategoryLabel(cat)}
-                    </h4>
-                  </button>
-                  <ul className="space-y-1.5">
-                    {presets.map((preset) => (
-                      <AddonListItem
-                        key={preset.instanceId}
-                        preset={preset}
-                        presetMetadata={presetMetadataMap.get(preset.type)}
-                        isSelected={selectedIds.has(preset.instanceId)}
-                        onToggleSelect={() => toggleSelect(preset.instanceId)}
-                        onEdit={() =>
-                          onEdit(preset, presetMetadataMap.get(preset.type))
-                        }
-                        onRemove={() => {
-                          setUserData((prev) => {
-                            const cloned = structuredClone(prev);
-                            cloned.presets = cloned.presets.filter(
-                              (a) => a.instanceId !== preset.instanceId
-                            );
-                            return removeInvalidPresetReferences(cloned);
-                          });
-                        }}
-                        onToggleEnabled={(v) => {
-                          setUserData((prev) => ({
-                            ...prev,
-                            presets: prev.presets.map((p) =>
-                              p.instanceId === preset.instanceId
-                                ? { ...p, enabled: v }
-                                : p
-                            ),
-                          }));
-                        }}
-                      />
-                    ))}
-                  </ul>
-                </div>
-              );
-            })}
-          </div>
+          <p className="my-8 text-center text-[--muted]">
+            You haven't installed any addons yet. Find some in the Marketplace.
+          </p>
         ) : (
-          <ul className="space-y-1.5">
-            {filteredPresets.map((preset) => (
-              <AddonListItem
-                key={preset.instanceId}
-                preset={preset}
-                presetMetadata={presetMetadataMap.get(preset.type)}
-                isSelected={selectedIds.has(preset.instanceId)}
-                onToggleSelect={() => toggleSelect(preset.instanceId)}
-                onEdit={() =>
-                  onEdit(preset, presetMetadataMap.get(preset.type))
-                }
-                onRemove={() => {
-                  setUserData((prev) => {
-                    const cloned = structuredClone(prev);
-                    cloned.presets = cloned.presets.filter(
-                      (a) => a.instanceId !== preset.instanceId
+          <>
+            <div className="sticky top-0 z-10 -mx-4 space-y-2 border-b bg-[--background] px-4 pb-3 pt-2 lg:bg-gray-950">
+              <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3">
+                <div className="lg:w-72 lg:flex-none">
+                  <TextInput
+                    value={search}
+                    onValueChange={setSearch}
+                    placeholder="Search addons"
+                    leftIcon={<SearchIcon className="h-4 w-4" />}
+                  />
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setCategoryFilter('all')}
+                    className={pillClass(
+                      categoryFilter === 'all',
+                      'border-brand-500/50 bg-brand-500/15 text-[--brand]'
+                    )}
+                  >
+                    All
+                    <span className="opacity-60">
+                      {userData.presets.length}
+                    </span>
+                  </button>
+                  {orderedCategories.map((cat) => {
+                    const colors = getCategoryColor(
+                      cat,
+                      userData.addonCategoryColors
                     );
-                    return removeInvalidPresetReferences(cloned);
-                  });
-                }}
-                onToggleEnabled={(v) => {
-                  setUserData((prev) => ({
-                    ...prev,
-                    presets: prev.presets.map((p) =>
-                      p.instanceId === preset.instanceId
-                        ? { ...p, enabled: v }
-                        : p
-                    ),
-                  }));
-                }}
-              />
-            ))}
-          </ul>
+                    return (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() =>
+                          setCategoryFilter(
+                            categoryFilter === cat ? 'all' : cat
+                          )
+                        }
+                        className={pillClass(
+                          categoryFilter === cat,
+                          `${colors.bg} ${colors.text} ${colors.border}`
+                        )}
+                      >
+                        <span
+                          className={`h-2 w-2 rounded-full ${colors.swatch}`}
+                        />
+                        {getCategoryLabel(cat)}
+                        <span className="opacity-60">
+                          {allCategories.get(cat) || 0}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  fieldClass="flex w-auto flex-none"
+                  aria-label="Select every addon shown"
+                  value={isAllSelected ? true : none ? false : 'indeterminate'}
+                  disabled={filteredPresets.length === 0}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setSelectedIds(
+                      isAllSelected
+                        ? new Set()
+                        : new Set(filteredPresets.map((p) => p.instanceId))
+                    );
+                  }}
+                />
+                <p className="min-w-0 flex-1 truncate text-sm text-[--muted]">
+                  {none
+                    ? `${filteredPresets.length} shown`
+                    : `${selectedIds.size} selected`}{' '}
+                  · {enabledCount}/{userData.presets.length} on
+                </p>
+                <DropdownMenu
+                  align="end"
+                  trigger={
+                    <Button
+                      size="sm"
+                      intent="gray-outline"
+                      rounded
+                      rightIcon={<LuChevronDown />}
+                    >
+                      Actions
+                    </Button>
+                  }
+                >
+                  <DropdownMenuLabel>
+                    {none
+                      ? 'Select addons to change them'
+                      : `${selectedIds.size} selected`}
+                  </DropdownMenuLabel>
+                  <DropdownMenuItem
+                    disabled={none}
+                    onSelect={() => setSelectedEnabled(true)}
+                  >
+                    Turn on
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={none}
+                    onSelect={() => setSelectedEnabled(false)}
+                  >
+                    Turn off
+                  </DropdownMenuItem>
+                  {mode === 'pro' && (
+                    <DropdownMenuItem
+                      disabled={commonOptions.length === 0}
+                      onSelect={openBatchEdit}
+                    >
+                      Edit common fields…
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem
+                    disabled={none}
+                    onSelect={() => categoryModal.open()}
+                  >
+                    Set category…
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    disabled={none}
+                    className="text-[--red]"
+                    onSelect={() => confirmBatchDelete.open()}
+                  >
+                    Delete…
+                  </DropdownMenuItem>
+                </DropdownMenu>
+              </div>
+            </div>
+
+            {filteredPresets.length === 0 ? (
+              <p className="my-8 text-center text-sm text-[--muted]">
+                No addons match.
+              </p>
+            ) : categoryFilter === 'all' && !search.trim() ? (
+              <div className="space-y-4">
+                {orderedCategories.map((cat) => {
+                  const presets = groupedPresets[cat];
+                  if (!presets?.length) return null;
+                  const colors = getCategoryColor(
+                    cat,
+                    userData.addonCategoryColors
+                  );
+                  return (
+                    <section key={cat}>
+                      <button
+                        type="button"
+                        className="group mb-2 flex items-center gap-2"
+                        onClick={() =>
+                          toggleSelectGroup(presets.map((p) => p.instanceId))
+                        }
+                        title={`Select all in ${getCategoryLabel(cat)}`}
+                      >
+                        <span
+                          className={`h-2.5 w-2.5 rounded-full ${colors.swatch}`}
+                        />
+                        <span className="text-xs font-semibold uppercase tracking-wider text-[--muted] transition-colors group-hover:text-[--foreground]">
+                          {getCategoryLabel(cat)}
+                        </span>
+                      </button>
+                      <ul className={listClass}>{presets.map(renderAddon)}</ul>
+                    </section>
+                  );
+                })}
+              </div>
+            ) : (
+              <ul className={listClass}>{filteredPresets.map(renderAddon)}</ul>
+            )}
+          </>
+        )}
+        {onAddCustom && (
+          <div className="flex flex-col gap-2 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-[--muted]">
+              Using an addon that isn't in the Marketplace?
+            </p>
+            <Button
+              size="sm"
+              intent="gray-outline"
+              rounded
+              leftIcon={<LuLink />}
+              className="w-full sm:w-auto"
+              onClick={onAddCustom}
+            >
+              Add by URL
+            </Button>
+          </div>
         )}
       </SettingsCard>
 
@@ -971,7 +979,7 @@ function AddonListItem({
       const cached = manifestCache.get(std);
       if (cached) {
         setIsConfigurable(cached.behaviorHints?.configurable === true);
-        setLogo(cached.logo);
+        setLogo(cached.logo || preset.logo || presetMetadata?.LOGO);
         return;
       }
       fetch(std)
@@ -980,7 +988,7 @@ function AddonListItem({
           manifestCache.set(std, manifest);
           if (active) {
             setIsConfigurable(manifest?.behaviorHints?.configurable === true);
-            setLogo(manifest?.logo);
+            setLogo(manifest?.logo || preset.logo || presetMetadata?.LOGO);
           }
         })
         .catch(() => {
@@ -1045,96 +1053,102 @@ function AddonListItem({
     );
   };
 
+  const name: string =
+    preset.options?.name?.trim() || presetMetadata?.NAME || preset.type;
+  const enabled = preset.enabled ?? false;
+  const host = hostOf(getManifestUrl());
+  const details = [presetMetadata?.NAME !== name && presetMetadata?.NAME, host]
+    .filter(Boolean)
+    .join(' · ');
+
   return (
     <li>
       <div
-        className={`px-2.5 py-2 rounded-[--radius-md] border flex gap-2 sm:gap-3 items-center transition-colors ${
-          isSelected
-            ? 'border-brand-500/50 bg-brand-500/10'
-            : 'bg-[var(--background)] border-[--border]'
-        }`}
+        data-selected={isSelected || undefined}
+        className="relative flex items-center gap-2 rounded-[--radius-md] border bg-[var(--background)] px-2 py-1.5 transition-colors data-[selected]:border-[--brand] [@media(hover:hover)]:hover:bg-[--subtle] md:gap-3"
       >
-        {/* Checkbox */}
+        <Checkbox
+          value={isSelected}
+          fieldClass="relative z-[1] flex w-auto flex-none"
+          containerClass="-m-2 p-2"
+          aria-label={`Select ${name}`}
+          onClick={(e) => {
+            e.preventDefault();
+            onToggleSelect();
+          }}
+        />
         <button
-          onClick={onToggleSelect}
-          className="flex items-center justify-center flex-shrink-0"
+          type="button"
+          onClick={onEdit}
+          title={`Edit ${name}`}
+          className="flex min-w-0 flex-1 items-center gap-3 text-left outline-none after:absolute after:inset-0 after:rounded-[--radius-md] focus-visible:after:ring-1 focus-visible:after:ring-white/40"
         >
-          <div
-            className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-              isSelected
-                ? 'bg-brand-600 border-brand-600'
-                : 'border-gray-500 hover:border-gray-400'
-            }`}
-          >
-            {isSelected && (
-              <svg
-                className="w-3 h-3 text-white"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={3}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
+          <span
+            className={cn(
+              'hidden h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-md bg-[--subtle] sm:flex',
+              !enabled && 'opacity-50'
             )}
-          </div>
+          >
+            {logo ? (
+              <img
+                src={logo}
+                alt=""
+                className="h-full w-full object-contain"
+                referrerPolicy="no-referrer"
+                onError={() => setLogo(undefined)}
+              />
+            ) : name ? (
+              <span className="text-base font-semibold">
+                {name[0].toUpperCase()}
+              </span>
+            ) : (
+              <IoExtensionPuzzle className="h-5 w-5 text-[--brand]" />
+            )}
+          </span>
+          <span className={cn('min-w-0 flex-1', !enabled && 'opacity-50')}>
+            <span className="line-clamp-2 text-sm font-medium [overflow-wrap:anywhere]">
+              {name}
+            </span>
+            {details && (
+              <span className="block truncate text-xs text-[--muted]">
+                {details}
+              </span>
+            )}
+          </span>
         </button>
-
-        {/* Logo */}
-        <div className="relative flex-shrink-0 h-8 w-8 hidden sm:block">
-          {logo ? (
-            <img
-              src={logo}
-              alt={presetMetadata?.NAME || ''}
-              className="absolute inset-0 w-full h-full object-contain rounded-md"
-              referrerPolicy="no-referrer"
-            />
-          ) : presetMetadata?.ID === 'custom' ? (
-            <PlusIcon className="w-full h-full object-contain text-[--brand]" />
-          ) : preset.options.name?.trim()?.[0] ? (
-            <div className="w-full h-full flex items-center justify-center rounded-md bg-gray-950">
-              <p className="text-lg font-bold">
-                {preset.options.name?.trim()?.[0]?.toUpperCase() || '?'}
-              </p>
-            </div>
-          ) : (
-            <IoExtensionPuzzle className="w-full h-full object-contain text-[--brand]" />
-          )}
-        </div>
-
-        {/* Name */}
-        <p className="text-base line-clamp-1 truncate block flex-1 min-w-0">
-          {preset.options.name}
-        </p>
-
-        {/* Actions */}
-        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+        <div className="relative z-[1] flex flex-shrink-0 items-center gap-1 md:gap-2">
           <Switch
-            value={preset.enabled ?? false}
+            value={enabled}
             onValueChange={onToggleEnabled}
+            aria-label={`Turn ${name} on or off`}
           />
           {isConfigurable && (
             <IconButton
-              className="rounded-full h-8 w-8 md:h-10 md:w-10"
-              icon={<LuSettings />}
+              rounded
+              className="h-8 w-8 text-lg"
               intent="primary-subtle"
+              icon={<LuSettings />}
+              title="Reconfigure"
+              aria-label={`Reconfigure ${name}`}
               onClick={() => configModalOpen.open()}
             />
           )}
           <IconButton
-            className="rounded-full h-8 w-8 md:h-10 md:w-10"
-            icon={<BiEdit />}
+            rounded
+            className="h-8 w-8 text-lg"
             intent="primary-subtle"
+            icon={<BiEdit />}
+            title="Edit"
+            aria-label={`Edit ${name}`}
             onClick={onEdit}
           />
           <IconButton
-            className="rounded-full h-8 w-8 md:h-10 md:w-10"
-            icon={<BiTrash />}
+            rounded
+            className="h-8 w-8 text-lg"
             intent="alert-subtle"
+            icon={<BiTrash />}
+            title="Delete"
+            aria-label={`Delete ${name}`}
             onClick={() => confirmDelete.open()}
           />
         </div>

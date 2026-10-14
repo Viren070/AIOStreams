@@ -32,6 +32,7 @@ import * as constants from '../../../../../core/src/utils/constants';
 
 import { AddonCard } from './_components/addon-card';
 import { AddonModal } from './_components/addon-modal';
+import { AddCustomAddonModal } from './_components/add-custom-addon';
 import { AddonFetchingBehaviorCard } from './_components/addon-fetching-behavior';
 import { CatalogSettingsCard } from './_components/catalog-settings';
 import {
@@ -81,6 +82,7 @@ function Content() {
   );
   const currentAddons = useRef(addonsKey);
   currentAddons.current = addonsKey;
+  const fetchedFor = useRef<string | null>(null);
   const { mutate: fetchCatalogsData, isPending: catalogLoading } = useMutation({
     mutationFn: (currentUserData: typeof userData) =>
       fetchCatalogs(currentUserData),
@@ -180,6 +182,7 @@ function Content() {
       });
     },
     onError: (error) => {
+      fetchedFor.current = null;
       console.error('Error fetching catalogs:', error);
       if (error instanceof APIError) {
         toast.error((error as APIError).message);
@@ -200,10 +203,14 @@ function Content() {
     [fetchCatalogsData, userData]
   );
 
+  const catalogsShown = page === 'installed' && installedTab === 'catalogs';
   useEffect(() => {
-    if (userData.presets?.length) fetchCatalogsData(userData);
+    if (!catalogsShown || !userData.presets?.length) return;
+    if (fetchedFor.current === addonsKey) return;
+    fetchedFor.current = addonsKey;
+    fetchCatalogsData(userData);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [addonsKey]);
+  }, [catalogsShown, addonsKey]);
 
   const [search, setSearch] = useState('');
   // Filter states
@@ -264,17 +271,20 @@ function Content() {
     streamTypeFilter,
   ]);
 
+  const customPreset = status?.settings?.presets.find(
+    (p) => p.ID === 'custom' && !p.DISABLED
+  );
+  const [addCustomOpen, setAddCustomOpen] = useState(false);
+  const openAddCustom = customPreset ? () => setAddCustomOpen(true) : undefined;
+
   // AddonModal handlers
   function handleAddPreset(preset: any) {
+    if (preset.ID === 'custom') {
+      setAddCustomOpen(true);
+      return;
+    }
     setModalPreset(preset);
-    setModalInitialValues({
-      options: Object.fromEntries(
-        (preset.OPTIONS || []).map((opt: any) => [
-          opt.id,
-          opt.forced ?? opt.default ?? undefined,
-        ])
-      ),
-    });
+    setModalInitialValues({ options: defaultOptions(preset) });
     setModalMode('add');
     setEditingAddonId(null);
     setModalOpen(true);
@@ -290,25 +300,28 @@ function Content() {
     return id;
   }
 
+  function installPreset(preset: any, options: Record<string, any>) {
+    const newPreset = {
+      type: preset.ID,
+      instanceId: getUniqueId(),
+      enabled: true,
+      options,
+    };
+    const newKey = getPresetUniqueKey(newPreset);
+    if (userData.presets.some((a) => getPresetUniqueKey(a) === newKey)) {
+      toast.error('You already have an addon with the same options added.');
+      return;
+    }
+    setUserData((prev) => ({
+      ...prev,
+      presets: [...prev.presets, newPreset],
+    }));
+    toast.info('Addon installed successfully!');
+  }
+
   function handleModalSubmit(values: Record<string, any>) {
     if (modalMode === 'add' && modalPreset) {
-      const newPreset = {
-        type: modalPreset.ID,
-        instanceId: getUniqueId(),
-        enabled: true,
-        options: values.options,
-      };
-      const newKey = getPresetUniqueKey(newPreset);
-      if (userData.presets.some((a) => getPresetUniqueKey(a) === newKey)) {
-        toast.error('You already have an addon with the same options added.');
-        setModalOpen(false);
-        return;
-      }
-      setUserData((prev) => ({
-        ...prev,
-        presets: [...prev.presets, newPreset],
-      }));
-      toast.info('Addon installed successfully!');
+      installPreset(modalPreset, values.options);
       setModalOpen(false);
     } else if (modalMode === 'edit' && editingAddonId) {
       setUserData((prev) => ({
@@ -440,7 +453,10 @@ function Content() {
                     icon: <IoExtensionPuzzle className="w-4 h-4" />,
                     content: (
                       <div className="space-y-6">
-                        <MyAddons onEdit={handleEditFromMyAddons} />
+                        <MyAddons
+                          onEdit={handleEditFromMyAddons}
+                          onAddCustom={openAddCustom}
+                        />
                         {userData.presets.length > 0 && mode === 'pro' && (
                           <AddonFetchingBehaviorCard />
                         )}
@@ -499,6 +515,19 @@ function Content() {
                 <h2>Marketplace</h2>
                 <p className="text-[--muted] text-sm">
                   Browse and install addons from the marketplace.
+                  {openAddCustom && (
+                    <>
+                      {' '}
+                      Not listed?{' '}
+                      <button
+                        type="button"
+                        className="text-[--brand] hover:underline"
+                        onClick={openAddCustom}
+                      >
+                        Add it by URL
+                      </button>
+                    </>
+                  )}
                 </p>
               </div>
 
@@ -591,10 +620,20 @@ function Content() {
 
               {/* Addon cards by category */}
               {filteredPresets.length === 0 && (
-                <Card className="p-8 text-center">
+                <Card className="p-8 text-center space-y-3">
                   <p className="text-[--muted]">
                     No addons found matching your criteria.
                   </p>
+                  {openAddCustom && (
+                    <Button
+                      size="sm"
+                      intent="gray-outline"
+                      rounded
+                      onClick={openAddCustom}
+                    >
+                      Add one by URL
+                    </Button>
+                  )}
                 </Card>
               )}
 
@@ -678,7 +717,28 @@ function Content() {
         initialValues={modalInitialValues as any}
         onSubmit={handleModalSubmit}
       />
+      <AddCustomAddonModal
+        open={addCustomOpen}
+        onOpenChange={setAddCustomOpen}
+        onSubmit={(options) => {
+          if (!customPreset) return;
+          installPreset(customPreset, {
+            ...defaultOptions(customPreset),
+            ...options,
+          });
+          setAddCustomOpen(false);
+        }}
+      />
     </>
+  );
+}
+
+function defaultOptions(preset: any): Record<string, any> {
+  return Object.fromEntries(
+    (preset.OPTIONS || []).map((opt: any) => [
+      opt.id,
+      opt.forced ?? opt.default ?? undefined,
+    ])
   );
 }
 
