@@ -166,7 +166,7 @@ class ExoEngine(private val context: Context) :
                 return output
             }
 
-            // After the device's own decoders, for what they can't play, such as DTS and TrueHD.
+            // After the device's own decoders, for what they can't play, such as TrueHD. DTS skips them, as some play silence.
             override fun buildAudioRenderers(
                 context: Context,
                 extensionRendererMode: Int,
@@ -177,8 +177,11 @@ class ExoEngine(private val context: Context) :
                 eventListener: AudioRendererEventListener,
                 out: ArrayList<Renderer>,
             ) {
+                val decoders = MediaCodecSelector { mime, secure, tunneling ->
+                    if (mime in DTS) emptyList() else mediaCodecSelector.getDecoderInfos(mime, secure, tunneling)
+                }
                 super.buildAudioRenderers(
-                    context, extensionRendererMode, mediaCodecSelector, enableDecoderFallback,
+                    context, extensionRendererMode, decoders, enableDecoderFallback,
                     audioSink, eventHandler, eventListener, out,
                 )
                 out += FfmpegAudioRenderer(eventHandler, eventListener, audioSink)
@@ -803,6 +806,9 @@ class ExoEngine(private val context: Context) :
 
         /** mpv's names for the layouts the page offers. */
         val CHANNELS = mapOf("stereo" to 2, "5.1" to 6, "7.1" to 8)
+
+        /** The DTS types FFmpeg decodes. */
+        val DTS = setOf(MimeTypes.AUDIO_DTS, MimeTypes.AUDIO_DTS_EXPRESS, MimeTypes.AUDIO_DTS_HD)
 
         /** The sound type an audio track carries, PCM for any decoded sound. */
         fun mimeOf(encoding: Int) = when (encoding) {
