@@ -124,6 +124,8 @@ const DEFAULT_METADATA: PreviewMetadata = {
   hasSeaDex: false,
 };
 
+export const MAX_PREVIEW_FAILOVERS = 50;
+
 export const DEFAULT_PREVIEW_INPUT: PreviewInput = {
   scenario: 'movie',
 
@@ -507,7 +509,7 @@ export function buildParsedStream(input: PreviewInput): ParsedStream {
     },
     library: input.library,
     failoverVariants: Array.from(
-      { length: Math.min(input.failovers, 50) },
+      { length: Math.min(input.failovers, MAX_PREVIEW_FAILOVERS) },
       (_, i) => ({
         url: `https://example.com/playback/${i}`,
         type: 'usenet' as const,
