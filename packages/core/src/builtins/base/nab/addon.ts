@@ -228,11 +228,17 @@ export abstract class BaseNabAddon<
       const { season, ep, ...rest } = queryParams;
       absoluteParams = { ...rest, ep: metadata.absoluteEpisode.toString() };
       // tvdb's absolute order keeps the whole show in one season
-      if (metadata.absoluteOrder && season !== undefined)
+      if (metadata.absoluteOrder && season !== undefined) {
         absoluteParams.season = '1';
+      }
       // the season/episode search already asks for this episode number
-      if (absoluteHandling === 'both' && absoluteParams.ep === ep)
+      if (
+        absoluteHandling === 'both' &&
+        absoluteParams.ep === ep &&
+        absoluteParams.season === season
+      ) {
         absoluteParams = undefined;
+      }
     }
 
     let primaryParams = queryParams;
@@ -332,6 +338,12 @@ export abstract class BaseNabAddon<
         searchSeasonEpisode(),
         search(absoluteParams),
       ]);
+      if (
+        seasonEpisodeResult.status === 'rejected' &&
+        absoluteResult.status === 'rejected'
+      ) {
+        throw seasonEpisodeResult.reason;
+      }
       results = [
         ...(seasonEpisodeResult.status === 'fulfilled'
           ? seasonEpisodeResult.value
