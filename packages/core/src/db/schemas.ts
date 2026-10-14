@@ -172,7 +172,7 @@ const JellyfinSettingsFields = z.object({
   /** Resolve streams when an item is opened so clients can offer a version picker. Default on. */
   resolveOnOpen: z.boolean().optional(),
   /** Versions offered per item; the instance setting caps it. */
-  maxVersions: z.number().int().min(1).max(50).optional(),
+  maxVersions: z.number().int().min(1).max(500).optional(),
   /** Offer skip markers, when the instance has them enabled at all. Default on. */
   segments: z.boolean().optional(),
   /** Which markers to offer. Absent means all of them. */
