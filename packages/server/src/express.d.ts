@@ -16,7 +16,13 @@ declare global {
       jfClient?: ClientInfo;
       /** The configuration a picker address names. */
       /** `persona` is set on a user's own sign-in address. */
-      jfMount?: { uuid: string; encryptedPassword: string; persona?: string };
+      /** `root` is set on the site root, which lists no users. */
+      jfMount?: {
+        uuid: string;
+        encryptedPassword: string;
+        persona?: string;
+        root?: boolean;
+      };
     }
   }
 }

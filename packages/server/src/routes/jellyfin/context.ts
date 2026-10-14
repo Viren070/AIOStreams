@@ -655,6 +655,9 @@ async function buildContext(
   };
 }
 
+/** The configuration the site root signs in to: the one aliased `default`. */
+const ROOT_ALIAS = 'default';
+
 export const jellyfinContext: RequestHandler = async (req, res, next) => {
   try {
     const params = req.params as Record<string, string | undefined>;
@@ -695,6 +698,10 @@ export const jellyfinContext: RequestHandler = async (req, res, next) => {
         return;
       }
       req.jfMount = target;
+    } else if (req.baseUrl === '') {
+      // Without that alias the root is the bare `/jellyfin` address.
+      const target = await resolvePickerAlias(ROOT_ALIAS);
+      if (target) req.jfMount = { ...target, root: true };
     }
     if (
       payload &&

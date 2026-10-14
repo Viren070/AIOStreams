@@ -28,7 +28,7 @@ const MAX_SOCKETS_TOTAL = 50_000;
 const KEEPALIVE_SECONDS = 60;
 
 const SOCKET_PATH =
-  /^\/jellyfin(?:\/([^/?]+)\/([^/?]+))?(?:\/(?:emby|mediabrowser))?\/(?:socket|websocket)(?:\?|$)/i;
+  /^(?:\/jellyfin(?:\/([^/?]+)\/([^/?]+))?)?(?:\/(?:emby|mediabrowser))?\/(?:socket|websocket)(?:\?|$)/i;
 
 interface SocketUser {
   /** The rows this socket follows. */
