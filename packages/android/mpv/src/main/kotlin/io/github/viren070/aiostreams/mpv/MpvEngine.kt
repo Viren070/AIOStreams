@@ -53,7 +53,7 @@ class MpvEngine(private val context: Context) : Engine {
         this.listener = listener
         dir.mkdirs()
         // mpv's TLS can't read Android's certificate store, so it gets a copy each start.
-        writeCertificates(File(dir, CA_BUNDLE))
+        writeCertificates(context, File(dir, CA_BUNDLE))
         fallbackFont(context)
         val options = mapOf(
             "config" to "yes",
@@ -236,7 +236,7 @@ class MpvEngine(private val context: Context) : Engine {
             File(File(context.filesDir, "mpv").apply { mkdirs() }, FONT).also { copyAsset(context, FONT, it) }
 
         /** Every certificate Android trusts, the user's own included, as PEM. */
-        private fun writeCertificates(target: File) {
+        private fun writeCertificates(context: Context, target: File) {
             val store = KeyStore.getInstance("AndroidCAStore").apply { load(null) }
             target.writeText(buildString {
                 for (alias in store.aliases()) {
@@ -244,6 +244,10 @@ class MpvEngine(private val context: Context) : Engine {
                     append("-----BEGIN CERTIFICATE-----\n")
                     append(Base64.encodeToString(certificate.encoded, Base64.DEFAULT))
                     append("-----END CERTIFICATE-----\n")
+                }
+                // Same extra roots as the network security config, for mpv's own TLS.
+                for (id in listOf(R.raw.isrg_root_x1, R.raw.isrg_root_x2)) {
+                    append(context.resources.openRawResource(id).bufferedReader().use { it.readText() })
                 }
             })
         }
