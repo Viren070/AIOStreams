@@ -328,9 +328,16 @@ export abstract class BaseNabAddon<
     if (absoluteParams && absoluteHandling === 'absolute') {
       results = await search(absoluteParams);
     } else if (absoluteParams) {
-      results = (
-        await Promise.all([searchSeasonEpisode(), search(absoluteParams)])
-      ).flat();
+      const [seasonEpisodeResult, absoluteResult] = await Promise.allSettled([
+        searchSeasonEpisode(),
+        search(absoluteParams),
+      ]);
+      results = [
+        ...(seasonEpisodeResult.status === 'fulfilled'
+          ? seasonEpisodeResult.value
+          : []),
+        ...(absoluteResult.status === 'fulfilled' ? absoluteResult.value : []),
+      ];
     } else {
       results = await searchSeasonEpisode();
     }
