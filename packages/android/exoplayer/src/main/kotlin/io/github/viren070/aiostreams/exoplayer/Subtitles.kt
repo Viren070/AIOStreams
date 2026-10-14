@@ -24,12 +24,11 @@ internal interface AssSink {
     fun line(track: String, startMs: Long, durationMs: Long, line: ByteArray)
 }
 
-/** Where a file's other subtitles go as Media3 parses them. */
+/** Where a file's other subtitles go, unparsed, as they are read. */
 internal interface TextSink {
-    /** `replace` when each line takes the place of the one before, as in bitmap subtitles. */
-    fun track(track: String, replace: Boolean)
+    fun track(track: String, parser: SampleParser)
 
-    fun cues(track: String, cues: CuesWithTiming)
+    fun sample(track: String, timeUs: Long, data: ByteArray)
 }
 
 internal class SubtitleSink(val ass: AssSink, val text: TextSink)
@@ -60,6 +59,26 @@ internal object Silent : SubtitleParser.Factory {
     }
 }
 
+/** Parses a file track's samples, timed as Media3's own transcoder times them. */
+@OptIn(UnstableApi::class)
+internal class SampleParser(format: Format) {
+    private val parser = parsers.create(format)
+    private val offsetUs = format.subsampleOffsetUs
+
+    /** Whether each line takes the place of the one before, as in bitmap subtitles. */
+    val replace = parsers.getCueReplacementBehavior(format) == Format.CUE_REPLACEMENT_BEHAVIOR_REPLACE
+
+    fun parse(timeUs: Long, data: ByteArray, output: (CuesWithTiming) -> Unit) =
+        parser.parse(data, SubtitleParser.OutputOptions.allCues()) { cues ->
+            val startUs = when {
+                cues.startTimeUs == C.TIME_UNSET -> timeUs
+                offsetUs == Format.OFFSET_SAMPLE_RELATIVE -> timeUs + cues.startTimeUs
+                else -> cues.startTimeUs + offsetUs
+            }
+            output(CuesWithTiming(cues.cues, startUs, cues.durationUs))
+        }
+}
+
 /** Takes each subtitle sample, with the time Matroska gives it, on its way to the player. */
 @OptIn(UnstableApi::class)
 internal class Subtitles(private val output: ExtractorOutput, private val sink: SubtitleSink) : ExtractorOutput by output {
@@ -72,22 +91,19 @@ internal class Subtitles(private val output: ExtractorOutput, private val sink: 
 @OptIn(UnstableApi::class)
 private class SubtitleOutput(private val track: TrackOutput, private val sink: SubtitleSink) : TrackOutput by track {
     private var id: String? = null
-    private var parser: SubtitleParser? = null
-    private var offsetUs = Format.OFFSET_SAMPLE_RELATIVE
+    private var text = false
     private var pending = ByteArray(4096)
     private var filled = 0
 
     override fun format(format: Format) {
         id = format.id
-        parser = null
-        offsetUs = format.subsampleOffsetUs
+        text = false
         when {
             id == null -> {}
             isAss(format) -> format.initializationData.getOrNull(1)?.let { sink.ass.header(id!!, it) }
             parsers.supportsFormat(format) -> {
-                parser = parsers.create(format)
-                val replace = parsers.getCueReplacementBehavior(format) == Format.CUE_REPLACEMENT_BEHAVIOR_REPLACE
-                sink.text.track(id!!, replace)
+                text = true
+                sink.text.track(id!!, SampleParser(format))
             }
             else -> id = null
         }
@@ -134,20 +150,8 @@ private class SubtitleOutput(private val track: TrackOutput, private val sink: S
     }
 
     private fun take(id: String, timeUs: Long, from: Int, to: Int) {
-        val parser = parser
-        if (parser == null) {
-            dialogue(from, to)?.let { (durationMs, line) -> sink.ass.line(id, timeUs / 1000, durationMs, line) }
-            return
-        }
-        parser.parse(pending, from, to - from, SubtitleParser.OutputOptions.allCues()) { cues ->
-            // Timed as Media3's own transcoder times them.
-            val startUs = when {
-                cues.startTimeUs == C.TIME_UNSET -> timeUs
-                offsetUs == Format.OFFSET_SAMPLE_RELATIVE -> timeUs + cues.startTimeUs
-                else -> cues.startTimeUs + offsetUs
-            }
-            sink.text.cues(id, CuesWithTiming(cues.cues, startUs, cues.durationUs))
-        }
+        if (text) return sink.text.sample(id, timeUs, pending.copyOfRange(from, to))
+        dialogue(from, to)?.let { (durationMs, line) -> sink.ass.line(id, timeUs / 1000, durationMs, line) }
     }
 
     private fun reserve(length: Int) {

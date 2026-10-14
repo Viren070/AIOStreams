@@ -92,9 +92,12 @@ internal class SubtitleStyle {
 
 /** A text subtitle's lines, which the engine shows on the video's frames so its delay applies. */
 @OptIn(UnstableApi::class)
-internal class TextTimeline(private val replace: Boolean) {
+internal class TextTimeline(private val replace: Boolean, private val parser: SampleParser? = null) {
     private val lines = TreeMap<Long, MutableList<CuesWithTiming>>()
     private var longestUs = 0L
+
+    /** A file track's samples, parsed only once a frame showing the track reaches them. */
+    private val samples = TreeMap<Long, MutableList<ByteArray>>()
 
     @Synchronized
     fun add(cues: CuesWithTiming) {
@@ -106,7 +109,22 @@ internal class TextTimeline(private val replace: Boolean) {
     }
 
     @Synchronized
+    fun sample(timeUs: Long, data: ByteArray) {
+        val starting = samples.getOrPut(timeUs) { mutableListOf() }
+        if (starting.none { it.contentEquals(data) }) starting += data
+        val from = timeUs - KEPT_US
+        samples.headMap(samples.floorKey(from) ?: from).clear()
+        lines.headMap(if (replace) lines.floorKey(from) ?: from else from - longestUs).clear()
+    }
+
+    @Synchronized
     fun cuesAt(timeUs: Long): List<Cue> {
+        if (replace) samples.floorKey(timeUs)?.let { samples.headMap(it).clear() }
+        while (true) {
+            val due = samples.firstEntry()?.takeIf { it.key <= timeUs } ?: break
+            samples.pollFirstEntry()
+            for (data in due.value) parser?.parse(due.key, data, ::add)
+        }
         if (replace) {
             val line = lines.floorEntry(timeUs)?.value?.last() ?: return emptyList()
             return if (line.durationUs == C.TIME_UNSET || timeUs < line.endTimeUs) line.cues else emptyList()
@@ -115,9 +133,14 @@ internal class TextTimeline(private val replace: Boolean) {
             .filter { timeUs < it.endTimeUs }
             .flatMap { it.cues }
     }
+
+    private companion object {
+        /* Media3 reads up to 50 s ahead of the frames, and a delay shows lines up to a minute old. */
+        const val KEPT_US = 120_000_000L
+    }
 }
 
-/** The file's text subtitles, as its reader parses them. */
+/** The file's text subtitles, as its reader takes them. */
 internal class TextTracks {
     private val timelines = ConcurrentHashMap<String, TextTimeline>()
 
@@ -136,12 +159,12 @@ internal class TextTracks {
     fun sink(): TextSink {
         val opened = file
         return object : TextSink {
-            override fun track(track: String, replace: Boolean) {
-                if (opened == file) timelines.putIfAbsent(track, TextTimeline(replace))
+            override fun track(track: String, parser: SampleParser) {
+                if (opened == file) timelines.putIfAbsent(track, TextTimeline(parser.replace, parser))
             }
 
-            override fun cues(track: String, cues: CuesWithTiming) {
-                if (opened == file) timelines[track]?.add(cues)
+            override fun sample(track: String, timeUs: Long, data: ByteArray) {
+                if (opened == file) timelines[track]?.sample(timeUs, data)
             }
         }
     }
