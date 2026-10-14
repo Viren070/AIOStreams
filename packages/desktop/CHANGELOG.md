@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.15.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.14.1...desktop-v0.15.0) (2026-10-14)
+
+
+### Features
+
+* **desktop:** add audio filters for dialogue boost, night mode and AC-3 encoding ([31c16c9](https://github.com/Viren070/AIOStreams/commit/31c16c95607aee1211dc92a98d974fba0a9cd935))
+* **web:** add sound and output settings for the apps ([69023d4](https://github.com/Viren070/AIOStreams/commit/69023d45cb7b41c149214fdbde9e4be9c2d06765))
+* **web:** honour "play the version's default track first" when re-picking audio ([69023d4](https://github.com/Viren070/AIOStreams/commit/69023d45cb7b41c149214fdbde9e4be9c2d06765))
+* **web:** re-pick the audio track by the user's audio types ([69023d4](https://github.com/Viren070/AIOStreams/commit/69023d45cb7b41c149214fdbde9e4be9c2d06765))
+* **web:** show the audio output and memory in ExoPlayer's stats ([69023d4](https://github.com/Viren070/AIOStreams/commit/69023d45cb7b41c149214fdbde9e4be9c2d06765))
+* **web:** show the channel setting in the Android app ([69023d4](https://github.com/Viren070/AIOStreams/commit/69023d45cb7b41c149214fdbde9e4be9c2d06765))
+
+
+### Bug Fixes
+
+* **ui:** measure a slider's thumb as the whole slider for key navigation ([69023d4](https://github.com/Viren070/AIOStreams/commit/69023d45cb7b41c149214fdbde9e4be9c2d06765))
+* **web:** compile dependencies to the build's browser targets ([69023d4](https://github.com/Viren070/AIOStreams/commit/69023d45cb7b41c149214fdbde9e4be9c2d06765))
+
 ## [0.14.1](https://github.com/Viren070/AIOStreams/compare/desktop-v0.14.0...desktop-v0.14.1) (2026-10-12)
 
 
