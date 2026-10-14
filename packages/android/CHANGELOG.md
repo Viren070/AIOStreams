@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.5.0](https://github.com/Viren070/AIOStreams/compare/android-v0.4.1...android-v0.5.0) (2026-10-14)
+
+
+### Features
+
+* **android:** add dialogue boost, night mode, audio delay and AC-3 encoding ([1f86c38](https://github.com/Viren070/AIOStreams/commit/1f86c384b7f7f1a8a5da6e08a396f55bf8e90b8c)), closes [#1504](https://github.com/Viren070/AIOStreams/issues/1504)
+* **android:** mix ExoPlayer's sound down to the channel setting ([d2d403a](https://github.com/Viren070/AIOStreams/commit/d2d403ae83aaa9fdadd205ba4d6ad85e092d69df))
+* **android:** report ExoPlayer's audio description tracks ([7cc4044](https://github.com/Viren070/AIOStreams/commit/7cc4044c166a13747a5ec387db0ae36a09e227c8))
+* **android:** report ExoPlayer's audio output and memory in its stats ([8065692](https://github.com/Viren070/AIOStreams/commit/80656922b60f344ab4ab0a4c12fdab5d25626696))
+* **web:** add sound and output settings for the apps ([59ce8ca](https://github.com/Viren070/AIOStreams/commit/59ce8cad61f354c6b626871829184c54345c9d9c))
+* **web:** honour "play the version's default track first" when re-picking audio ([59ce8ca](https://github.com/Viren070/AIOStreams/commit/59ce8cad61f354c6b626871829184c54345c9d9c))
+* **web:** re-pick the audio track by the user's audio types ([59ce8ca](https://github.com/Viren070/AIOStreams/commit/59ce8cad61f354c6b626871829184c54345c9d9c))
+* **web:** show the audio output and memory in ExoPlayer's stats ([59ce8ca](https://github.com/Viren070/AIOStreams/commit/59ce8cad61f354c6b626871829184c54345c9d9c))
+* **web:** show the channel setting in the Android app ([59ce8ca](https://github.com/Viren070/AIOStreams/commit/59ce8cad61f354c6b626871829184c54345c9d9c))
+
+
+### Bug Fixes
+
+* **android:** decode the sound the device can't with libmpv's FFmpeg ([b6b78f4](https://github.com/Viren070/AIOStreams/commit/b6b78f4115b8799913176109206a46683184a959))
+* **android:** parse ExoPlayer's file subtitles only as a shown track reaches them ([8ec4679](https://github.com/Viren070/AIOStreams/commit/8ec4679efa1566319df8626072aecb44d717be00))
+* **ui:** measure a slider's thumb as the whole slider for key navigation ([59ce8ca](https://github.com/Viren070/AIOStreams/commit/59ce8cad61f354c6b626871829184c54345c9d9c))
+* **web:** compile dependencies to the build's browser targets ([59ce8ca](https://github.com/Viren070/AIOStreams/commit/59ce8cad61f354c6b626871829184c54345c9d9c))
+* **web:** hide pages kept beneath others with visibility as well ([59ce8ca](https://github.com/Viren070/AIOStreams/commit/59ce8cad61f354c6b626871829184c54345c9d9c))
+
 ## [0.4.1](https://github.com/Viren070/AIOStreams/compare/android-v0.4.0...android-v0.4.1) (2026-10-12)
 
 
