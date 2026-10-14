@@ -14,6 +14,7 @@ export const FIELD_REGISTRY: Readonly<Record<string, readonly string[]>> = {
     'bitrate',
     'folderSize',
     'library',
+    'failovers',
     'quality',
     'resolution',
     'subbed',

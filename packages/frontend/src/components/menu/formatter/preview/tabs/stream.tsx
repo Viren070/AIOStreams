@@ -113,6 +113,14 @@ export function StreamTab({
           min={0}
           step={1000000000}
         />
+        <NumberField
+          field="stream.failovers"
+          label="Failover variants"
+          value={input.failovers}
+          onChange={(failovers) => patch({ failovers: failovers ?? 0 })}
+          min={0}
+          step={1}
+        />
       </FieldGrid>
 
       <TextField
