@@ -113,7 +113,7 @@ class MainActivity : ComponentActivity() {
             })
         }
         // Edge to edge: the page keeps clear of the system bars with its own safe-area insets.
-        web = CompletingWebView(this)
+        web = CompletingWebView(this, onTv())
         setContentView(FrameLayout(this).apply {
             addView(playback.stage, MATCH_PARENT, MATCH_PARENT)
             addView(web, MATCH_PARENT, MATCH_PARENT)
