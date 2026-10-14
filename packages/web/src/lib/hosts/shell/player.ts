@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatBytes } from '@aiostreams/ui/core/format';
 import { storage } from '../../storage';
 import {
   bestOfTypes,
@@ -102,6 +103,8 @@ const CODECS: Record<string, string> = {
   'audio/true-hd': 'TrueHD',
   'audio/vnd.dts': 'DTS',
   'audio/vnd.dts.hd': 'DTS-HD',
+  'audio/vnd.dts.uhd;profile=p2': 'DTS:X',
+  'audio/ac4': 'AC-4',
   'audio/opus': 'Opus',
   'audio/flac': 'FLAC',
   'audio/raw': 'PCM',
@@ -185,6 +188,19 @@ function exoStatsText(
       `Audio      ${codec(str('audioMime'))} ${num('channels') ?? '?'} ch${hz && hz > 0 ? ` ${hz / 1000} kHz` : ''}${rate(num('audioBitrate'))}`,
       `Decoder    ${str('audioDecoder') ?? 'passthrough'}`
     );
+    const output = str('outputMime');
+    const outputs = num('outputChannels') ?? 0;
+    const inputs = num('channels') ?? 0;
+    if (output === 'audio/raw')
+      lines.push(
+        `Output     PCM ${outputs} ch${inputs > outputs ? `, mixed from ${inputs}` : ''}`
+      );
+    else if (output === 'audio/ac3' && str('audioMime') !== output)
+      lines.push(`Output     AC-3 ${outputs} ch, re-encoded`);
+    else if (output)
+      lines.push(
+        `Output     ${codec(output)} passthrough (sound settings don't apply)`
+      );
   }
   const buffered = num('bufferedMs');
   if (buffered !== undefined)
@@ -193,6 +209,12 @@ function exoStatsText(
   if (shown !== undefined)
     lines.push(
       `Frames     ${shown} shown · ${num('droppedFrames') ?? 0} dropped`
+    );
+  const javaHeap = num('javaHeap');
+  const nativeHeap = num('nativeHeap');
+  if (javaHeap !== undefined && nativeHeap !== undefined)
+    lines.push(
+      `Memory     Java ${formatBytes(javaHeap)} · native ${formatBytes(nativeHeap)}`
     );
   if (cpu !== undefined) lines.push(`App CPU    ${Math.round(cpu)}% of a core`);
   return lines.join('\n');
