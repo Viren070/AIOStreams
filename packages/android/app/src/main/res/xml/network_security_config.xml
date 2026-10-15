@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Self-hosted servers: plain http on the local network, and private CAs installed by the user. -->
+<!-- Self-hosted servers: plain http on the local network, and private CAs installed by the user.
+     The ISRG roots are bundled for old devices whose system store predates Let's Encrypt's current chain. -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="true">
         <trust-anchors>
             <certificates src="system" />
             <certificates src="user" />
+            <certificates src="@raw/isrg_root_x1" />
+            <certificates src="@raw/isrg_root_x2" />
         </trust-anchors>
     </base-config>
 </network-security-config>
