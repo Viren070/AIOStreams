@@ -31,8 +31,10 @@ Standard Jellyfin clients ignore all of these, so offering them never breaks one
       "refreshVersions": 1,
       "versions": 1,
       "genreRequired": 1,
-      "fillers": 1
-    }
+      "fillers": 1,
+      "parties": 1
+    },
+    "parties": { "relay": "off", "defaultRelay": null }
   }
 }
 ```
@@ -45,6 +47,7 @@ Standard Jellyfin clients ignore all of these, so offering them never breaks one
 | `personal`     | boolean                | AIOStreams only; opens straight on the one listed user's sign-in                 |
 | `features`     | name to version number | Turns on the parts below; a missing name, or no `aiostreams` object, means "off" |
 | `version`      | object of strings      | Shows the build in About and diagnostics: `commit` on nightly or dev, else `tag` |
+| `parties`      | object                 | Who the server's [party relay](#watch-parties) admits, and the relay it suggests |
 
 The server list reads `ServerName` and `logo` before signing in, so a server that hosts several
 accounts at their own addresses should answer with the one the address names.
@@ -64,6 +67,7 @@ value is that feature's version.
 | `versions`        | [Every version carries the `aiostreams` object](#versions), with its own `id`             |
 | `genreRequired`   | [A library that needs a genre picked says so](#libraries)                                 |
 | `fillers`         | [A filler or recap episode says so](#episodes)                                            |
+| `parties`         | [SyncPlay, and a watch party relay](#watch-parties) on the server's origin                |
 
 Every `/AIOStreams/*` endpoint takes the same authorization as the rest of the API. AIOStreams
 refuses them to API keys, which belong to other tools.
@@ -116,6 +120,12 @@ With `fillers`, a filler episode carries `"aiostreams": { "filler": true }` and 
 `"aiostreams": { "recap": true }`. The web app marks them in episode lists and passes over them when
 it plays on to the next episode, unless the user turns that off. Without the feature, those settings
 are hidden.
+
+An episode whose `Id` only its own server resolves, because its series is known by one id and its
+episodes by another (an anime listed by its MyAnimeList id, with IMDb episode ids), carries
+`"aiostreams": { "sharedId": "…" }`: the same episode's id under its own episode id, which any
+AIOStreams server resolves. A watch party sends it along, so members on other servers open the same
+episode.
 
 ## Users
 
@@ -223,6 +233,30 @@ drops it: it leaves Next Up until it is played again, and the drop reaches the u
 app shows "Drop show" on series only where the server has the feature, since elsewhere the rating
 would do nothing. It undrops with `Likes=true`, since clearing the rating would also clear a
 numeric one.
+
+## Watch parties
+
+With `parties`, the server offers standard SyncPlay (`/SyncPlay/*`, `/GetUtcTime` and the
+`SyncPlayCommand` and `SyncPlayGroupUpdate` socket messages) to Jellyfin apps, and runs a relay that
+the web app's watch parties use, on the same server and across servers:
+
+| Path                     | What it is                                                                    |
+| ------------------------ | ----------------------------------------------------------------------------- |
+| `GET /party/v1`          | `{ "v": 1, "relay": "off" }`: the protocol version and who the relay admits   |
+| `/party/v1` (WebSocket)  | The relay: JSON text frames, one party per connection                         |
+| `GET /party/v1/parties`  | With a user's token, the parties of that user's household, each with its code |
+| `GET /party/join#{code}` | The page an invite link opens, which hands the invite to the app              |
+
+`aiostreams.parties.relay` is `off` (only the server's users, who send their token), `users` (its
+users start parties, anyone with an invite joins) or `public`. While it is `off`, `defaultRelay` is
+the address of a relay the server suggests for parties with people elsewhere, or `null`.
+
+An invite is a relay and a 10-character code from `0123456789ABCDEFGHJKMNPQRSTVWXYZ`. PBKDF2 with
+SHA-256 over the code, salt `aiostreams-party-1` and 100,000 iterations gives 48 bytes: the first 16
+are the party's id on the relay, in base64url, and the other 32 an AES-GCM key. Names, chat,
+reactions and what plays travel sealed with that key, as base64url of a 12-byte nonce followed by the
+ciphertext of their JSON, so a relay keeps only timing. The messages themselves are typed in
+`packages/core/src/sync/protocol.ts`.
 
 ## What stays with AIOStreams
 

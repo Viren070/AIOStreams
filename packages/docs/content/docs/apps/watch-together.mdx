@@ -1,0 +1,92 @@
+---
+title: Watch together
+description: Watch in sync with friends and family, on your server or on theirs, with chat and reactions.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+A watch party keeps everyone's player at the same moment: when anyone pauses, seeks or skips, it happens for everyone. Each person plays the title from their own server and their own addons, so nobody shares a stream, a debrid account or a login.
+
+Parties work in every [AIOStreams app](/apps) with its own player: in a browser, on Windows, Mac and Linux, on Android phones, tablets and TVs, and on LG and Samsung TVs. A player in another app (VLC, Infuse and the like) can't follow a party.
+
+## Starting a party
+
+Press **Watch together** on a title's page, in the player's controls, or in the app's navigation, and pick where the party runs:
+
+- **This server**: the server you're signed in to. Whether people from other servers can join depends on how its owner set it up; the app says which.
+- **A relay** your server suggests (`aiostreams.viren070.me`, unless its owner picked another), or **another relay** you enter. A relay is any AIOStreams server that lets parties in; use one when friends are on other servers.
+
+Then pick a version as you would to play it. The party starts on it, and when you start an episode, the ones after it are lined up so the party plays on.
+
+## Inviting people
+
+The player's **Watch party** button opens the party's panel, where **People and invite** shows the invite:
+
+- **Link**: send it to anyone. It opens the app on their device, or shows the code to type in.
+- **Code**: ten characters, easy to type with a remote. Enter it under **Watch together → Join a party**, with the relay it's on.
+- **QR code**: shown on a TV, so a phone can scan the invite.
+
+People signed in to the same server see its parties under **Join a party** without an invite.
+
+Before joining, whether from a link, a code or that list, the app shows whose party it is, who's in it and what it's watching.
+
+## During a party
+
+- **Everyone controls playback.** Pausing, seeking and skipping act for the whole party, and the others see who did it. The host can turn on **Only I control playback**, close the party to new people, and remove someone.
+- **Skipping intros and credits** shows a button rather than skipping on its own, and pressing it skips for everyone.
+- **The next episode** plays for everyone together.
+- **Versions.** Each person's app picks the version closest to the one the party started with, the same file where they have it, so everyone sees the same cut. You can switch to another version; the app finds its place again.
+- **Chat** shows over the video for a few seconds and stays in the panel's **Chat** tab; the party button counts messages you haven't read. **Reactions** sit above the message box; on a TV, which has no keyboard, they take its place. To keep messages or reactions off the video, turn them off under **People and invite → Over the video**, or in **Settings → Playback**.
+- **Leaving the player** keeps you in the party. **Watch along** in the party panel takes you back to where everyone is. **Leave the party** leaves it.
+- **Who's behind.** The party panel shows who is loading, who lost their connection and anyone more than a second away.
+- **Buffering.** If someone's video stalls for more than 3 seconds, everyone waits for them, for up to 10 seconds. A shorter stall costs only them: their player catches up by itself.
+- **Losing the connection.** Your player plays on by itself, its controls work just for you, and messages you send wait. Once the connection is back, they go out and your player catches up with everyone, without pausing anyone.
+
+Progress and watch history stay your own: each person's server records what they watched, as it would without a party.
+
+<Callout type="info">
+  A relay never learns what you watch. Names, chat, reactions and what's
+  playing are encrypted on your device with a key from the invite, which the
+  relay never receives. It sees only when the party plays, pauses and seeks.
+</Callout>
+
+## Jellyfin apps
+
+The media server also offers SyncPlay, the watch-together feature of Jellyfin apps that have it, such as the Jellyfin web client, Jellyfin Media Player and Streamyfin. Groups are shared between the apps signed in to the same configuration, or the whole server if its owner allows it. These groups are separate from the AIOStreams app's parties.
+
+## For instance owners
+
+Parties for the people signed in to your server are on by default. Whether others can use your server as a relay is up to you, under **Dashboard → Settings → Watch Parties**:
+
+| Variable              | Default                          | What it does                                                                                                                                                                                                |
+| --------------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PARTY_RELAY`         | `off`                            | **off**: only your server's users start and join parties. **users**: your users start parties and anyone with an invite joins. **public**: anyone starts and joins parties, for a relay meant for everyone. |
+| `PARTY_SCOPE`         | `configuration`                  | Who sees each other's parties without an invite: the users of one configuration, or with `instance`, everyone on the server.                                                                                |
+| `PARTY_DEFAULT_RELAY` | `https://aiostreams.viren070.me` | While `PARTY_RELAY` is `off`, the relay the apps offer for parties with people on other servers. Empty offers none.                                                                                         |
+| `PARTY_MAX_PARTIES`   | `1000`                           | Parties held at once.                                                                                                                                                                                       |
+
+`users` needs `AIOSTREAMS_AUTH_REQUIRED`: with a public configuration page, anyone could make a configuration and start parties. Without it, `users` acts as `off`.
+
+### Letting friends in through your server
+
+Your server needs an https address friends' apps can reach. Their apps use only the relay at `/party/`, and the invite page's files are under `/assets/`, so a reverse proxy can open just those two paths to the internet and keep the rest of your server private:
+
+```nginx
+location /party/ {
+    proxy_pass http://aiostreams:3000;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+}
+
+location /assets/ {
+    proxy_pass http://aiostreams:3000;
+}
+```
+
+Guests get nothing else from your server: they play from their own, and only timing passes through yours, never video. A guest can't start parties of their own, and someone they pass the invite to can join only that party, where the host sees them and can remove them.
+
+### Limits
+
+A relay holds parties in memory, so they take a few kilobytes each, plus each member's connection. A party has at most 16 people, closes after 6 hours without activity, and lasts a day at most. Each address may hold a few connections, start a few parties an hour and try a few invites a minute, so codes can't be guessed. A restart doesn't end parties: their members' apps bring them back.
