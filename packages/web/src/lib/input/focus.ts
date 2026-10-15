@@ -693,6 +693,8 @@ export function move(dir: Direction): boolean {
   if (
     !(from instanceof HTMLElement) ||
     from === document.body ||
+    // A dialog holds focus itself once what had it is gone.
+    from === root ||
     !root.contains(from)
   ) {
     const start = first(root);
