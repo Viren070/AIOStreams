@@ -14,6 +14,7 @@ import {
   requestOrigin,
   resolveConfig,
 } from './context.js';
+import { relayMode } from '../../party/mode.js';
 
 const router: Router = Router({ mergeParams: true });
 
@@ -46,6 +47,8 @@ const FEATURES = {
   genreRequired: 1,
   /** A filler or recap episode says so, as `aiostreams.filler` or `aiostreams.recap`. */
   fillers: 1,
+  /** SyncPlay, and a watch party relay at `/party/v1`; `aiostreams.parties` says who it admits. */
+  parties: 1,
 } as const;
 
 export async function publicInfo(req: Request) {
@@ -65,6 +68,11 @@ export async function publicInfo(req: Request) {
       /** A user's own sign-in address, which signs in that user alone. */
       personal: !!req.jfMount?.persona,
       features: FEATURES,
+      parties: {
+        relay: relayMode(),
+        defaultRelay:
+          relayMode() === 'off' ? appConfig.party.defaultRelay : null,
+      },
       version: {
         tag: appConfig.bootstrap.tag,
         channel: appConfig.bootstrap.channel,

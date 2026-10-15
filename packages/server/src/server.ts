@@ -8,6 +8,7 @@ import {
   settleMetricsHistory,
   stopMetricsHistory,
 } from './utils/system-metrics.js';
+import { attachPartyRelay } from './party/relay.js';
 import { startNfsShare, stopNfsShare } from './nfs.js';
 import { startFuseMount, stopFuseMount } from './fuse.js';
 
@@ -439,6 +440,7 @@ async function start() {
       settleMetricsHistory();
     });
     attachJellyfinWebSocket(server);
+    attachPartyRelay(server);
   } catch (error) {
     if (error instanceof ConfigStartupError) throw error;
     logger.error('Failed to start server:', error);
