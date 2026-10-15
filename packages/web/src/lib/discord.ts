@@ -43,7 +43,7 @@ export function useDiscordBrowsing(pathname: string) {
   const item = useItem(itemId).data;
   const page = PAGES.find(([pattern]) => pattern.test(pathname));
   const event = itemId ? 'titles' : page?.[1];
-  const [enabled] = useSetting(settings.discord[event ?? 'titles']);
+  const [enabled] = useSetting(settings.app.discord[event ?? 'titles']);
   // Undefined while a title loads, which leaves the last status up meanwhile.
   let presence: ReturnType<typeof browsing> | null | undefined = null;
   if (event && enabled) {

@@ -2,6 +2,7 @@ import React from 'react';
 import type { JellyfinClient } from './client';
 import { storage } from './storage';
 import { CACHE_CATEGORIES } from './cache/store';
+import { appBridge } from './hosts/shell/bridge';
 
 /** A source the home page features from: `resume`, `next-up` or `view:<library id>`. */
 export type FeaturedSource = string;
@@ -66,45 +67,46 @@ export function onSettingsChange(listener: () => void): () => void {
   return subscribe(listener);
 }
 
+/** An older key of a setting, with a reader where the value's shape changed. */
+type Was<T> = string | { key: string; read: (old: unknown) => T | undefined };
+
+const wasKey = (old: Was<unknown>) => (typeof old === 'string' ? old : old.key);
+
+function readWas<T>(was: Was<T>[]): { value: unknown } | null {
+  for (const old of was) {
+    const stored = storage.get<unknown>(wasKey(old));
+    if (stored === null) continue;
+    return { value: typeof old === 'string' ? stored : old.read(stored) };
+  }
+  return null;
+}
+
+function forget(was: Was<unknown>[]) {
+  for (const old of was) storage.remove(wasKey(old));
+}
+
 /*
  * Settings that follow the user, kept in Jellyfin's display preferences on the
  * server. The device holds a copy so a page never waits on them; the server's
  * wins once it answers.
  */
-interface Synced {
-  featured?: string;
-  posterSize?: string;
-  posterText?: string;
-  mergeNextUp?: string;
-  combineSearch?: string;
-  heroMode?: string;
-  accentColor?: string;
-  backgroundColor?: string;
-  customCss?: string;
-}
+type Synced = Record<string, string>;
 
-const SYNCED_KEYS: (keyof Synced)[] = [
-  'featured',
-  'posterSize',
-  'posterText',
-  'mergeNextUp',
-  'combineSearch',
-  'heroMode',
-  'accentColor',
-  'backgroundColor',
-  'customCss',
-];
+const SYNCED_KEYS = new Set<string>();
+
+/** Settings this device kept before they followed the user. */
+const moved = new Map<
+  string,
+  { was: Was<unknown>[]; format: (value: never) => string | undefined }
+>();
 
 const PREFS_ID = 'aiostreams-web';
 /** Set on every save, so preferences reset to their defaults still count as saved. */
 const SAVED_MARK = 'saved';
-const LEGACY_KEYS = {
-  featured: 'aiostreams-web-featured',
-  posterSize: 'aiostreams-web-poster-size',
-} as const;
 const CATALOG_KEY = 'aiostreams-web-catalog';
 
 const cacheKey = (userId: string) => `aiostreams-web-prefs:${userId}`;
+const movedKey = (userId: string) => `aiostreams-web-prefs-moved:${userId}`;
 let current: Synced = {};
 let session: { client: JellyfinClient; userId: string } | null = null;
 let generation = 0;
@@ -118,12 +120,17 @@ function known(prefs: Record<string, unknown> | null | undefined): Synced {
   return out;
 }
 
-/** What this device kept before settings followed the user. */
-function legacy(): Synced {
-  return known({
-    featured: storage.get<string>(LEGACY_KEYS.featured),
-    posterSize: storage.get<string>(LEGACY_KEYS.posterSize),
-  });
+function fromDevice(): Synced {
+  const out: Synced = {};
+  for (const [key, { was, format }] of moved) {
+    const found = readWas(was);
+    if (!found || found.value === undefined) continue;
+    try {
+      const text = format(found.value as never);
+      if (text) out[key] = text;
+    } catch {}
+  }
+  return out;
 }
 
 function publish(next: Synced) {
@@ -148,14 +155,23 @@ function push(prefs: Synced, target = session) {
     .catch(() => undefined);
 }
 
-/** A user with nothing saved yet takes this device's settings. */
+/**
+ * A user with nothing saved yet takes this device's settings. Moved settings
+ * fill an account's gaps once, or a reset elsewhere would keep coming back.
+ */
 export function syncPreferences(
   client: JellyfinClient,
   userId: string
 ): () => void {
   const mine = ++generation;
   session = { client, userId };
-  current = storage.get<Synced>(cacheKey(userId)) ?? legacy();
+  const folded = storage.get<unknown>(movedKey(userId));
+  const older = Object.fromEntries(
+    Object.entries(fromDevice()).filter(
+      ([key]) => !(Array.isArray(folded) && folded.includes(key))
+    )
+  );
+  current = { ...older, ...(storage.get<Synced>(cacheKey(userId)) ?? {}) };
   announce();
   void client
     .get<{
@@ -163,8 +179,12 @@ export function syncPreferences(
     }>(`/DisplayPreferences/${PREFS_ID}`, { client: PREFS_ID, userId })
     .then((remote) => {
       if (mine !== generation) return;
-      if (remote.CustomPrefs?.[SAVED_MARK]) publish(known(remote.CustomPrefs));
-      else if (Object.keys(current).length) push(current);
+      if (remote.CustomPrefs?.[SAVED_MARK]) {
+        const theirs = known(remote.CustomPrefs);
+        publish({ ...older, ...theirs });
+        if (Object.keys(older).some((key) => !(key in theirs))) push(current);
+      } else if (Object.keys(current).length) push(current);
+      storage.set(movedKey(userId), [...moved.keys()]);
     })
     .catch(() => undefined);
   return () => {
@@ -177,7 +197,9 @@ export function syncPreferences(
 
 let pushTimer: ReturnType<typeof setTimeout> | undefined;
 
-function update(key: keyof Synced, value: string | undefined) {
+function update(key: string, value: string | undefined) {
+  const was = moved.get(key)?.was;
+  if (was) forget(was);
   const next = { ...current };
   if (value) next[key] = value;
   else delete next[key];
@@ -190,10 +212,13 @@ function update(key: keyof Synced, value: string | undefined) {
 
 /** A setting that follows the user; `format` returns undefined for the default. */
 function synced<T>(
-  key: keyof Synced,
+  key: string,
   parse: (raw: string | undefined) => T,
-  format: (value: T) => string | undefined
+  format: (value: T) => string | undefined,
+  was: Was<T>[] = []
 ): Setting<T> {
+  SYNCED_KEYS.add(key);
+  if (was.length) moved.set(key, { was, format });
   let raw: string | undefined;
   let value = parse(undefined);
   return {
@@ -208,14 +233,29 @@ function synced<T>(
   };
 }
 
-const syncedFlag = (key: keyof Synced) =>
+const syncedFlag = (key: string, fallback = false, was: Was<boolean>[] = []) =>
   synced<boolean>(
     key,
-    (raw) => raw === '1',
-    (value) => (value ? '1' : undefined)
+    (raw) => (raw === undefined ? fallback : raw === '1'),
+    (value) => (value === fallback ? undefined : value ? '1' : '0'),
+    was
   );
 
-const syncedText = (key: keyof Synced) =>
+function syncedChoice<T extends string | number>(
+  key: string,
+  options: readonly T[],
+  fallback: T,
+  was: Was<T>[] = []
+): Setting<T> {
+  return synced<T>(
+    key,
+    (raw) => options.find((o) => String(o) === raw) ?? fallback,
+    (value) => (value === fallback ? undefined : String(value)),
+    was
+  );
+}
+
+const syncedText = (key: string) =>
   synced<string | undefined>(
     key,
     (raw) => raw,
@@ -228,18 +268,23 @@ type Valid<T> = readonly T[] | ((value: T) => boolean);
 function device<T extends string | number | boolean>(
   key: string,
   fallback: T,
-  valid?: Valid<T>
+  valid?: Valid<T>,
+  was: Was<T>[] = []
 ): Setting<T> {
+  const ok = (value: unknown): value is T =>
+    typeof value === typeof fallback &&
+    (!valid ||
+      (typeof valid === 'function'
+        ? valid(value as T)
+        : valid.includes(value as T)));
   return {
     read() {
-      const stored = storage.get<T>(key);
-      if (stored === null || typeof stored !== typeof fallback) return fallback;
-      if (!valid) return stored;
-      const ok =
-        typeof valid === 'function' ? valid(stored) : valid.includes(stored);
-      return ok ? stored : fallback;
+      const stored = storage.get<unknown>(key);
+      const value = stored === null ? readWas(was)?.value : stored;
+      return ok(value) ? value : fallback;
     },
     write(value) {
+      forget(was);
       if (value === fallback) storage.remove(key);
       else storage.set(key, value);
       announce();
@@ -248,12 +293,15 @@ function device<T extends string | number | boolean>(
 }
 
 /** Lists of strings by name, kept on this device; an empty record clears it. */
-function deviceLists(key: string): Setting<Record<string, string[]>> {
+function deviceLists(
+  key: string,
+  was: string[] = []
+): Setting<Record<string, string[]>> {
   let seen: string | undefined;
   let value: Record<string, string[]> = {};
   return {
     read() {
-      const stored = storage.get<unknown>(key);
+      const stored = storage.get<unknown>(key) ?? readWas(was)?.value;
       const text = JSON.stringify(stored);
       if (text !== seen) {
         seen = text;
@@ -270,6 +318,7 @@ function deviceLists(key: string): Setting<Record<string, string[]>> {
       return value;
     },
     write(next) {
+      forget(was);
       if (Object.keys(next).length) storage.set(key, next);
       else storage.remove(key);
       announce();
@@ -372,6 +421,7 @@ export type AudioChannels = (typeof AUDIO_CHANNELS)[number];
 export const PLAYER_ENGINES = ['auto', 'mpv', 'exoplayer'] as const;
 export type PlayerEngine = (typeof PLAYER_ENGINES)[number];
 
+/** `auto` asks the output what it decodes, which only the Android app can. */
 export const PASSTHROUGH = ['off', 'auto', 'always'] as const;
 export type Passthrough = (typeof PASSTHROUGH)[number];
 
@@ -391,7 +441,7 @@ export const DIALOGUE_BOOSTS: readonly number[] = [0, 3, 6, 9, 12];
 export const AUDIO_DELAY_LIMIT_MS = 1000;
 export const AUDIO_DELAY_STEP_MS = 50;
 
-/** `installed` follows the channel this copy of the desktop app came from. */
+/** `installed` follows the channel this copy of the app came from. */
 export const UPDATE_CHANNELS = ['installed', 'stable', 'nightly'] as const;
 export type UpdateChannelSetting = (typeof UPDATE_CHANNELS)[number];
 
@@ -421,7 +471,14 @@ export const DOWNLOAD_SEARCHES = [1, 2, 3, 4, 6, 8] as const;
 export const CACHE_MAX_STALE_DAYS = [1, 3, 7, 14, 30, 0] as const;
 export const CACHE_SIZES_MB = [250, 500, 1000, 2000, 5000] as const;
 
-const subtitle = {
+const parseFeatured = (raw = 'auto'): Featured =>
+  raw === 'auto'
+    ? 'auto'
+    : raw === 'none'
+      ? []
+      : raw.split(',').filter(Boolean).slice(0, MAX_FEATURED);
+
+const subtitleLook = {
   size: device<SubtitleSize>(
     'aiostreams-web-subtitle-size',
     'normal',
@@ -464,206 +521,320 @@ const subtitle = {
   ),
 };
 
-const subtitleStyle: Setting<SubtitleStyle> = group(subtitle);
-
-/** Unset colours keep the stylesheet's own. */
-const themeColors: Setting<ThemeColors> = group({
-  accent: syncedText('accentColor'),
-  background: syncedText('backgroundColor'),
-});
-
 const segment = record(SEGMENT_TYPES, (type) =>
-  device<SegmentAction>(
+  syncedChoice<SegmentAction>(`segment${type}`, SEGMENT_ACTIONS, 'ask', [
     `aiostreams-web-segment-${type.toLowerCase()}`,
-    'ask',
-    SEGMENT_ACTIONS
-  )
+  ])
 );
 
 const passthroughFormat = record(PASSTHROUGH_FORMATS, (format) =>
-  device<boolean>(`aiostreams-app-passthrough-${format}`, true)
+  device<boolean>(
+    `aiostreams-web-audio-passthrough-${format}`,
+    true,
+    undefined,
+    [`aiostreams-app-passthrough-${format}`]
+  )
 );
 
 const discord = record(DISCORD_EVENTS, (event) =>
   device<boolean>(
-    event === 'playing'
-      ? 'aiostreams-desktop-discord'
-      : `aiostreams-desktop-discord-${event}`,
-    event === 'playing'
+    `aiostreams-web-app-discord-${event}`,
+    event === 'playing',
+    undefined,
+    [
+      event === 'playing'
+        ? 'aiostreams-desktop-discord'
+        : `aiostreams-desktop-discord-${event}`,
+    ]
   )
 );
 
+/*
+ * Grouped as the settings page lists them. How the user likes to watch
+ * follows their account; what suits this device's screen, input, sound or
+ * hardware stays on it.
+ */
 export const settings = {
-  featured: synced<Featured>(
-    'featured',
-    (raw = 'auto') =>
-      raw === 'auto'
-        ? 'auto'
-        : raw === 'none'
-          ? []
-          : raw.split(',').filter(Boolean).slice(0, MAX_FEATURED),
-    (value) =>
-      value === 'auto' ? undefined : value.length ? value.join(',') : 'none'
-  ),
-  posterSize: synced<PosterSize>(
-    'posterSize',
-    (raw) => (raw === 'small' || raw === 'large' ? raw : 'medium'),
-    (value) => (value === 'medium' ? undefined : value)
-  ),
-  posterLines: synced<PosterLine[]>(
-    'posterText',
-    (raw = 'title,year') =>
-      POSTER_LINES.filter((line) => raw.split(',').includes(line)),
-    (value) => {
-      const lines = POSTER_LINES.filter((line) => value.includes(line));
-      if (lines.length === POSTER_LINES.length) return undefined;
-      return lines.length ? lines.join(',') : 'none';
-    }
-  ),
-  mergeNextUp: syncedFlag('mergeNextUp'),
-  combineSearch: syncedFlag('combineSearch'),
-  heroMode: synced<HeroMode>(
-    'heroMode',
-    (raw) => HERO_MODES.find((mode) => mode === raw) ?? 'rotate',
-    (value) => (value === 'rotate' ? undefined : value)
-  ),
-  themeColors,
-  customCss: synced<string>(
-    'customCss',
-    (raw) => raw ?? '',
-    (value) => (value.trim() ? value.slice(0, MAX_CUSTOM_CSS) : undefined)
-  ),
-  /** Kept on the device, since a phone and a TV want different layouts. */
-  episodeLayout: device<EpisodeLayout>(
-    'aiostreams-web-episode-layout',
-    'auto',
-    EPISODE_LAYOUTS
-  ),
-  /** Where a touch screen wide enough for the sidebar keeps the navigation. */
-  touchNavigation: device<TouchNavigation>(
-    'aiostreams-web-touch-navigation',
-    'rail',
-    TOUCH_NAVIGATIONS
-  ),
-  /** How a TV shows the navigation. */
-  tvNavigation: device<TvNavigation>(
-    'aiostreams-web-tv-navigation',
-    'rail',
-    TV_NAVIGATIONS
-  ),
-  /**
-   * How a side rail sits: in a column of its own, floating over the page, or
-   * shrunk to the current page's button in the corner.
-   */
-  railShape: device<RailShape>(
-    'aiostreams-web-rail-shape',
-    'docked',
-    RAIL_SHAPES
-  ),
-  /** `auto` names pages under each icon on a touch screen, and on a TV while the rail has focus. */
-  railNames: device<RailNames>('aiostreams-web-rail-names', 'auto', RAIL_NAMES),
-  /** How a TV's top tabs sit over the page. */
-  tvTopBar: device<TvTopBar>('aiostreams-web-tv-top-bar', 'pill', TV_TOP_BARS),
-  /** What the navigation bars over the page sit on. */
-  barBackground: device<BarBackground>(
-    'aiostreams-web-bar-background',
-    'frosted',
-    BAR_BACKGROUNDS
-  ),
-  /** How the picture fills a screen of another shape; kept for this device's screen. */
-  videoFit: device<VideoFit>('aiostreams-web-video-fit', 'fit', VIDEO_FITS),
-  autoPlayFirst: device<boolean>('aiostreams-web-skip-versions', false),
-  /** Opens on who's watching rather than straight in as the last user. */
-  askWho: device<boolean>('aiostreams-web-ask-who', false),
-  /** `app`, a player's id, or `custom` for `playerLink`. */
-  player: device<string>('aiostreams-web-player', 'app'),
-  playerLink: device<string>('aiostreams-web-player-link', ''),
-  seekStep: device<number>('aiostreams-web-seek-step', 10, SEEK_STEPS),
-  volumeStep: device<number>('aiostreams-web-volume-step', 5, VOLUME_STEPS),
-  /** The speed while a long press or a held key speeds playback up. */
-  holdRate: device<number>('aiostreams-web-hold-rate', 2, HOLD_RATES),
-  /** Keys changed from the defaults, by action. */
-  shortcuts: deviceLists('aiostreams-web-shortcuts'),
-  segment,
-  segmentActions: group(segment),
-  subtitle,
-  subtitleStyle,
-  desktop: {
-    updateChannel: device<UpdateChannelSetting>(
-      'aiostreams-desktop-update-channel',
-      'installed',
-      UPDATE_CHANNELS
+  interface: {
+    featured: synced<Featured>(
+      'featured',
+      parseFeatured,
+      (value) =>
+        value === 'auto' ? undefined : value.length ? value.join(',') : 'none',
+      [
+        {
+          key: 'aiostreams-web-featured',
+          read: (old) =>
+            typeof old === 'string' ? parseFeatured(old) : undefined,
+        },
+      ]
     ),
-    hardwareDecoding: device<boolean>('aiostreams-desktop-hwdec', true),
-    audioChannels: device<AudioChannels>(
-      'aiostreams-desktop-audio-channels',
+    posterSize: synced<PosterSize>(
+      'posterSize',
+      (raw) => (raw === 'small' || raw === 'large' ? raw : 'medium'),
+      (value) => (value === 'medium' ? undefined : value),
+      ['aiostreams-web-poster-size']
+    ),
+    posterLines: synced<PosterLine[]>(
+      'posterText',
+      (raw = 'title,year') =>
+        POSTER_LINES.filter((line) => raw.split(',').includes(line)),
+      (value) => {
+        const lines = POSTER_LINES.filter((line) => value.includes(line));
+        if (lines.length === POSTER_LINES.length) return undefined;
+        return lines.length ? lines.join(',') : 'none';
+      }
+    ),
+    mergeNextUp: syncedFlag('mergeNextUp'),
+    combineSearch: syncedFlag('combineSearch'),
+    heroMode: syncedChoice<HeroMode>('heroMode', HERO_MODES, 'rotate'),
+    episodeLayout: device<EpisodeLayout>(
+      'aiostreams-web-interface-episode-layout',
       'auto',
-      AUDIO_CHANNELS
+      EPISODE_LAYOUTS,
+      ['aiostreams-web-episode-layout']
     ),
-    passthrough: device<boolean>('aiostreams-desktop-passthrough', false),
-    /** mpv's name for the output, or `auto` for the system's default. */
-    audioDevice: device<string>('aiostreams-desktop-audio-device', 'auto'),
-    dolbyVision: device<boolean>('aiostreams-desktop-dolby-vision', true),
-    /** Read by the page only; the app itself never needs it. */
-    chapterSkips: device<boolean>('aiostreams-desktop-chapter-skips', true),
+    /** Where a touch screen wide enough for the sidebar keeps the navigation. */
+    touchNavigation: device<TouchNavigation>(
+      'aiostreams-web-interface-touch-navigation',
+      'rail',
+      TOUCH_NAVIGATIONS,
+      ['aiostreams-web-touch-navigation']
+    ),
+    /** How a TV shows the navigation. */
+    tvNavigation: device<TvNavigation>(
+      'aiostreams-web-interface-tv-navigation',
+      'rail',
+      TV_NAVIGATIONS,
+      ['aiostreams-web-tv-navigation']
+    ),
+    /**
+     * How a side rail sits: in a column of its own, floating over the page, or
+     * shrunk to the current page's button in the corner.
+     */
+    railShape: device<RailShape>(
+      'aiostreams-web-interface-rail-shape',
+      'docked',
+      RAIL_SHAPES,
+      ['aiostreams-web-rail-shape']
+    ),
+    /** `auto` names pages under each icon on a touch screen, and on a TV while the rail has focus. */
+    railNames: device<RailNames>(
+      'aiostreams-web-interface-rail-names',
+      'auto',
+      RAIL_NAMES,
+      ['aiostreams-web-rail-names']
+    ),
+    /** How a TV's top tabs sit over the page. */
+    tvTopBar: device<TvTopBar>(
+      'aiostreams-web-interface-tv-top-bar',
+      'pill',
+      TV_TOP_BARS,
+      ['aiostreams-web-tv-top-bar']
+    ),
+    /** What the navigation bars over the page sit on. */
+    barBackground: device<BarBackground>(
+      'aiostreams-web-interface-bar-background',
+      'frosted',
+      BAR_BACKGROUNDS,
+      ['aiostreams-web-bar-background']
+    ),
   },
-  android: {
-    pip: device<boolean>('aiostreams-android-pip', true),
-    background: device<boolean>('aiostreams-android-background', false),
+  theme: {
+    /** Unset colours keep the stylesheet's own. */
+    colors: group({
+      accent: syncedText('accentColor'),
+      background: syncedText('backgroundColor'),
+    }) as Setting<ThemeColors>,
+    customCss: synced<string>(
+      'customCss',
+      (raw) => raw ?? '',
+      (value) => (value.trim() ? value.slice(0, MAX_CUSTOM_CSS) : undefined)
+    ),
+  },
+  playback: {
+    autoPlayFirst: syncedFlag('autoPlayFirst', false, [
+      'aiostreams-web-skip-versions',
+    ]),
+    chapterSkips: syncedFlag('chapterSkips', true, [
+      'aiostreams-desktop-chapter-skips',
+    ]),
+    segment,
+    segmentActions: group(segment),
+  },
+  next: {
+    prompt: syncedChoice<NextPrompt>('nextPrompt', NEXT_PROMPTS, 'credits', [
+      'aiostreams-web-next-prompt',
+    ]),
+    /** Seconds before the end the prompt shows when there are no credits to go by. */
+    lead: syncedChoice<number>('nextLead', NEXT_LEADS, 30, [
+      'aiostreams-web-next-lead',
+    ]),
+    countdown: syncedChoice<number>('nextCountdown', NEXT_COUNTDOWNS, 15, [
+      'aiostreams-web-next-countdown',
+    ]),
+    fallbackFirst: syncedFlag('nextFallbackFirst', true, [
+      'aiostreams-web-next-fallback-first',
+    ]),
+    stillWatching: syncedChoice<number>(
+      'stillWatching',
+      STILL_WATCHING_AFTER,
+      3,
+      ['aiostreams-web-still-watching']
+    ),
+    skipFillers: syncedFlag('skipFillers', true, [
+      'aiostreams-web-skip-fillers',
+    ]),
+    skipRecaps: syncedFlag('skipRecaps', true, ['aiostreams-web-skip-recaps']),
+  },
+  controls: {
+    seekStep: device<number>(
+      'aiostreams-web-controls-seek-step',
+      10,
+      SEEK_STEPS,
+      ['aiostreams-web-seek-step']
+    ),
+    volumeStep: device<number>(
+      'aiostreams-web-controls-volume-step',
+      5,
+      VOLUME_STEPS,
+      ['aiostreams-web-volume-step']
+    ),
+    /** The speed while a long press or a held key speeds playback up. */
+    holdRate: device<number>(
+      'aiostreams-web-controls-hold-rate',
+      2,
+      HOLD_RATES,
+      ['aiostreams-web-hold-rate']
+    ),
+    /** Keys changed from the defaults, by action. */
+    shortcuts: deviceLists('aiostreams-web-controls-shortcuts', [
+      'aiostreams-web-shortcuts',
+    ]),
+  },
+  player: {
+    /** `app`, a player's id, or `custom` for `link`. */
+    choice: device<string>('aiostreams-web-player-choice', 'app', undefined, [
+      'aiostreams-web-player',
+    ]),
+    link: device<string>('aiostreams-web-player-link', ''),
     engine: device<PlayerEngine>(
-      'aiostreams-android-engine',
+      'aiostreams-web-player-engine',
       'auto',
-      PLAYER_ENGINES
-    ),
-    frameRate: device<boolean>('aiostreams-android-frame-rate', false),
-    tunneling: device<boolean>('aiostreams-android-tunneling', false),
-    passthrough: device<Passthrough>(
-      'aiostreams-android-passthrough',
-      'auto',
-      PASSTHROUGH
+      PLAYER_ENGINES,
+      ['aiostreams-android-engine']
     ),
   },
-  /** How the desktop and Android apps play sound. */
-  sound: {
+  video: {
+    fit: device<VideoFit>('aiostreams-web-video-fit', 'fit', VIDEO_FITS),
+    hardwareDecoding: device<boolean>(
+      'aiostreams-web-video-hardware-decoding',
+      true,
+      undefined,
+      ['aiostreams-desktop-hwdec']
+    ),
+    dolbyVision: device<boolean>(
+      'aiostreams-web-video-dolby-vision',
+      true,
+      undefined,
+      ['aiostreams-desktop-dolby-vision']
+    ),
+    frameRate: device<boolean>(
+      'aiostreams-web-video-frame-rate',
+      false,
+      undefined,
+      ['aiostreams-android-frame-rate']
+    ),
+    tunneling: device<boolean>(
+      'aiostreams-web-video-tunneling',
+      false,
+      undefined,
+      ['aiostreams-android-tunneling']
+    ),
+  },
+  audio: {
+    channels: device<AudioChannels>(
+      'aiostreams-web-audio-channels',
+      'auto',
+      AUDIO_CHANNELS,
+      ['aiostreams-desktop-audio-channels']
+    ),
+    /** mpv's name for the output, or `auto` for the system's default. */
+    device: device<string>('aiostreams-web-audio-device', 'auto', undefined, [
+      'aiostreams-desktop-audio-device',
+    ]),
+    passthrough: device<Passthrough>(
+      'aiostreams-web-audio-passthrough',
+      appBridge()?.platform === 'android' ? 'auto' : 'off',
+      PASSTHROUGH,
+      [
+        'aiostreams-android-passthrough',
+        {
+          key: 'aiostreams-desktop-passthrough',
+          read: (on) =>
+            on === true ? 'always' : on === false ? 'off' : undefined,
+        },
+      ]
+    ),
     passthroughFormat,
     passthroughFormats: group(passthroughFormat),
     dialogueBoost: device<number>(
-      'aiostreams-app-dialogue-boost',
+      'aiostreams-web-audio-dialogue-boost',
       0,
-      DIALOGUE_BOOSTS
+      DIALOGUE_BOOSTS,
+      ['aiostreams-app-dialogue-boost']
     ),
-    nightMode: device<boolean>('aiostreams-app-night-mode', false),
+    nightMode: device<boolean>(
+      'aiostreams-web-audio-night-mode',
+      false,
+      undefined,
+      ['aiostreams-app-night-mode']
+    ),
     /** Positive plays the sound later than the picture. */
     delayMs: device<number>(
-      'aiostreams-app-audio-delay',
+      'aiostreams-web-audio-delay',
       0,
-      (v) => Math.abs(v) <= AUDIO_DELAY_LIMIT_MS
+      (v) => Math.abs(v) <= AUDIO_DELAY_LIMIT_MS,
+      ['aiostreams-app-audio-delay']
     ),
-    ac3Encode: device<boolean>('aiostreams-app-ac3-encode', false),
+    ac3Encode: device<boolean>(
+      'aiostreams-web-audio-ac3-encode',
+      false,
+      undefined,
+      ['aiostreams-app-ac3-encode']
+    ),
   },
-  discord,
-  discordEvents: group(discord),
-  next: {
-    prompt: device<NextPrompt>(
-      'aiostreams-web-next-prompt',
-      'credits',
-      NEXT_PROMPTS
+  subtitle: {
+    ...subtitleLook,
+    style: group(subtitleLook) as Setting<SubtitleStyle>,
+  },
+  account: {
+    /** Opens on who's watching rather than straight in as the last user. */
+    askWho: device<boolean>(
+      'aiostreams-web-account-ask-who',
+      false,
+      undefined,
+      ['aiostreams-web-ask-who']
     ),
-    /** Seconds before the end the prompt shows when there are no credits to go by. */
-    lead: device<number>('aiostreams-web-next-lead', 30, NEXT_LEADS),
-    countdown: device<number>(
-      'aiostreams-web-next-countdown',
-      15,
-      NEXT_COUNTDOWNS
+  },
+  app: {
+    updateChannel: device<UpdateChannelSetting>(
+      'aiostreams-web-app-update-channel',
+      'installed',
+      UPDATE_CHANNELS,
+      ['aiostreams-desktop-update-channel']
     ),
-    fallbackFirst: device<boolean>('aiostreams-web-next-fallback-first', true),
-    stillWatching: device<number>(
-      'aiostreams-web-still-watching',
-      3,
-      STILL_WATCHING_AFTER
+    pip: device<boolean>('aiostreams-web-app-pip', true, undefined, [
+      'aiostreams-android-pip',
+    ]),
+    background: device<boolean>(
+      'aiostreams-web-app-background',
+      false,
+      undefined,
+      ['aiostreams-android-background']
     ),
-    skipFillers: device<boolean>('aiostreams-web-skip-fillers', true),
-    skipRecaps: device<boolean>('aiostreams-web-skip-recaps', true),
+    discord,
+    discordEvents: group(discord),
   },
   cache: {
     enabled: device<boolean>('aiostreams-web-cache', true),
@@ -684,12 +855,23 @@ export const settings = {
       DOWNLOADS_AT_ONCE
     ),
     searches: device<number>(
-      'aiostreams-web-download-searches',
+      'aiostreams-web-downloads-searches',
       3,
-      DOWNLOAD_SEARCHES
+      DOWNLOAD_SEARCHES,
+      ['aiostreams-web-download-searches']
     ),
-    subtitles: device<boolean>('aiostreams-web-download-subtitles', true),
-    wifiOnly: device<boolean>('aiostreams-web-download-wifi-only', true),
+    subtitles: device<boolean>(
+      'aiostreams-web-downloads-subtitles',
+      true,
+      undefined,
+      ['aiostreams-web-download-subtitles']
+    ),
+    wifiOnly: device<boolean>(
+      'aiostreams-web-downloads-wifi-only',
+      true,
+      undefined,
+      ['aiostreams-web-download-wifi-only']
+    ),
   },
 };
 

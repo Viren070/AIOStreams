@@ -124,8 +124,8 @@ function PlayedTrailer({ url, ...props }: TrailerProps & { url: string }) {
   const { client } = useSession();
   const video = React.useRef<HTMLVideoElement>(null);
   const [hostPlayer] = React.useState(() => currentHost().player);
-  const [fit] = useSetting(settings.videoFit);
-  const [subtitleStyle] = useSetting(settings.subtitleStyle);
+  const [fit] = useSetting(settings.video.fit);
+  const [subtitleStyle] = useSetting(settings.subtitle.style);
   const source = React.useMemo(() => sourceOf(url), [url]);
   const player = usePlayer(hostPlayer ?? videoEngine(video), {
     client,

@@ -12,8 +12,8 @@ export function audioDelayLabel(ms: number): string {
 }
 
 export function stepAudioDelay(steps: number): void {
-  const next = settings.sound.delayMs.read() + steps * AUDIO_DELAY_STEP_MS;
-  settings.sound.delayMs.write(
+  const next = settings.audio.delayMs.read() + steps * AUDIO_DELAY_STEP_MS;
+  settings.audio.delayMs.write(
     Math.max(-AUDIO_DELAY_LIMIT_MS, Math.min(AUDIO_DELAY_LIMIT_MS, next))
   );
 }

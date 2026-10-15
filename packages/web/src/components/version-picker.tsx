@@ -87,7 +87,7 @@ export function useStraightPlay(): (
   item: BaseItemDto,
   startMs: number
 ) => boolean {
-  const [autoPlay] = useSetting(settings.autoPlayFirst);
+  const [autoPlay] = useSetting(settings.playback.autoPlayFirst);
   return React.useCallback(
     (item, startMs) => autoPlay || !!rememberedVersion(item, startMs),
     [autoPlay]
@@ -129,7 +129,7 @@ export function VersionPickerProvider({
   const playVersion = usePlay();
   const addDownloads = useAddDownloads();
   const downloaded = useFindDownloaded();
-  const [autoPick] = useSetting(settings.autoPlayFirst);
+  const [autoPick] = useSetting(settings.playback.autoPlayFirst);
   const latest = React.useRef({
     straight,
     queryClient,

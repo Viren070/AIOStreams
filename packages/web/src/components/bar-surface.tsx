@@ -85,7 +85,7 @@ export function BarSurface({
   children,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
-  const [look] = useSetting(settings.barBackground);
+  const [look] = useSetting(settings.interface.barBackground);
   const liquid = look === 'liquid' && canRefract;
   const ref = React.useRef<HTMLDivElement>(null);
   const [size, setSize] = React.useState<Size>();

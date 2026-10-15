@@ -184,7 +184,7 @@ const FIT_ICONS: Record<VideoFit, React.ReactNode> = {
 };
 
 function FitButton({ notice }: { notice: (text: string) => void }) {
-  const [fit, setFit] = useSetting(settings.videoFit);
+  const [fit, setFit] = useSetting(settings.video.fit);
   const next = VIDEO_FITS[(VIDEO_FITS.indexOf(fit) + 1) % VIDEO_FITS.length];
   return (
     <ControlButton
@@ -289,9 +289,9 @@ function SubtitleStyleSteppers() {
 }
 
 function SoundControls() {
-  const [boost, setBoost] = useSetting(settings.sound.dialogueBoost);
-  const [nightMode, setNightMode] = useSetting(settings.sound.nightMode);
-  const [delay, setDelay] = useSetting(settings.sound.delayMs);
+  const [boost, setBoost] = useSetting(settings.audio.dialogueBoost);
+  const [nightMode, setNightMode] = useSetting(settings.audio.nightMode);
+  const [delay, setDelay] = useSetting(settings.audio.delayMs);
   const at = DIALOGUE_BOOSTS.indexOf(boost);
   return (
     <>

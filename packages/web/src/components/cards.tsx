@@ -386,7 +386,7 @@ export interface PosterCardProps {
 export function PosterCard(props: PosterCardProps) {
   const { href, image, title, subtitle, watched, unwatched, progress } = props;
   const shape = props.shape ?? 'poster';
-  const [lines] = useSetting(settings.posterLines);
+  const [lines] = useSetting(settings.interface.posterLines);
   const showTitle = lines.includes('title');
   const showSubtitle = !!subtitle && lines.includes('year');
   return (

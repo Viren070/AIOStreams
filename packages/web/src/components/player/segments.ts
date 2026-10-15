@@ -52,7 +52,7 @@ export function useSegmentSkip({
   notice(text: string): void;
 }) {
   const segments = React.useMemo(() => segmentsOf(items), [items]);
-  const [actions] = useSetting(settings.segmentActions);
+  const [actions] = useSetting(settings.playback.segmentActions);
   const { started } = player.state;
   const latest = useLatest(player);
   const insideIds = usePlayhead(player.playhead, ({ positionMs }) =>

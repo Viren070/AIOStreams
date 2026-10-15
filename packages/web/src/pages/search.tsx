@@ -38,7 +38,7 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
   const typed = term.trim();
   const debounced = useDebounce(typed, 400);
   const query = typed === chosen ? typed : debounced;
-  const [combine] = useSetting(settings.combineSearch);
+  const [combine] = useSetting(settings.interface.combineSearch);
   // One search per kind, so neither fills the other's result limit.
   const mixed = useSearch(query, 'Movie,Series', combine);
   const movies = useSearch(query, 'Movie', !combine);

@@ -386,7 +386,7 @@ export function MediaRow({
 }) {
   const restoreKey = useEntryKey(id);
   const [start] = React.useState(startIndex ?? 0);
-  const [lines] = useSetting(settings.posterLines);
+  const [lines] = useSetting(settings.interface.posterLines);
   const width = itemClass ?? ITEM_WIDTH[shape];
   const items = React.Children.toArray(children);
   const { drawn, fades, onView } = useWindow(items.length, start, !!loading);
@@ -515,7 +515,7 @@ export function CardGrid({
   shape?: RowShape;
   children: React.ReactNode;
 }) {
-  const [size] = useSetting(settings.posterSize);
+  const [size] = useSetting(settings.interface.posterSize);
   const grid = React.useRef<HTMLDivElement>(null);
   // Half a screen past each edge, so the next row down is still weighed.
   useMarkOutOfView(

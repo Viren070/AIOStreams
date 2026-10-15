@@ -462,7 +462,7 @@ function useShownSegments(
 ) {
   const { chapters } = player;
   const { durationMs } = player.state;
-  const [preferChapters] = useSetting(settings.desktop.chapterSkips);
+  const [preferChapters] = useSetting(settings.playback.chapterSkips);
   const episode = item.Type === 'Episode';
   return React.useMemo(() => {
     const named = chapterSegments(chapters ?? [], durationMs);
@@ -499,8 +499,8 @@ function Player({
   const [hostPlayer] = React.useState(() => currentHost().player);
   const close = React.useRef<() => void>(undefined);
   const { back, onEnded, connect } = useEnded(item, () => close.current?.());
-  const [subtitleStyle] = useSetting(settings.subtitleStyle);
-  const [fit] = useSetting(settings.videoFit);
+  const [subtitleStyle] = useSetting(settings.subtitle.style);
+  const [fit] = useSetting(settings.video.fit);
   const localSubtitle = React.useCallback(
     (stream: MediaStream) => {
       const at = local?.subtitleStreams?.indexOf(stream.Index!) ?? -1;

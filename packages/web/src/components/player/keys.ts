@@ -60,7 +60,7 @@ export function usePlayerKeys(keys: PlayerKeys): void {
 
     const nudgeVolume = (sign: number) => {
       const { state, setVolume } = player();
-      const by = (sign * settings.volumeStep.read()) / 100;
+      const by = (sign * settings.controls.volumeStep.read()) / 100;
       const next = Math.round((state.volume + by) * 100) / 100;
       const volume = Math.min(state.maxVolume, Math.max(0, next));
       setVolume(volume);
@@ -156,8 +156,8 @@ export function usePlayerKeys(keys: PlayerKeys): void {
         if (!player().state.paused) k().togglePlay();
       },
       'player.stop': () => k().onBack(),
-      'player.skipBack': () => k().seekBy(-settings.seekStep.read() * 1000),
-      'player.skipForward': () => k().seekBy(settings.seekStep.read() * 1000),
+      'player.skipBack': () => k().seekBy(-settings.controls.seekStep.read() * 1000),
+      'player.skipForward': () => k().seekBy(settings.controls.seekStep.read() * 1000),
       'player.jump': (input) => {
         const { state, seek } = player();
         if (!state.durationMs) return false;

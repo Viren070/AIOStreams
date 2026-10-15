@@ -129,7 +129,7 @@ export function PlayerControls({
     latest.current.togglePlay();
   };
 
-  const [seekStep] = useSetting(settings.seekStep);
+  const [seekStep] = useSetting(settings.controls.seekStep);
   const [burstSeek, seekingTo] = useBurstSeek(player);
   const seekBy = (deltaMs: number) => {
     burstSeek(deltaMs);
@@ -170,7 +170,7 @@ export function PlayerControls({
     player.subtitleFiles ? addSubtitleFile : undefined
   );
 
-  const [fit, setFit] = useSetting(settings.videoFit);
+  const [fit, setFit] = useSetting(settings.video.fit);
   const shown = useLatest(visible);
   const gestures = usePlayerGestures({
     player,

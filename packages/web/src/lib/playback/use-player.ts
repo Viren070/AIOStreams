@@ -95,7 +95,7 @@ export function usePlayer(
   const [statsText, setStatsText] = React.useState<string>();
   const [retry, setRetry] = React.useState<PlayerController['retry']>();
   const [lift, setLift] = React.useState(0);
-  const [fit] = useSetting(settings.videoFit);
+  const [fit] = useSetting(settings.video.fit);
   const servers = React.useMemo(
     () =>
       serverSubtitles(client, source, !!engine.ownSubtitles, opts.subtitleUrl),

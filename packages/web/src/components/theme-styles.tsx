@@ -5,8 +5,8 @@ import { settings, useSetting, CUSTOM_CSS_OFF } from '../lib/settings';
 
 /** Last on the page, so the user's colours and CSS win ties. */
 export function ThemeStyles() {
-  const [colors] = useSetting(settings.themeColors);
-  const [css] = useSetting(settings.customCss);
+  const [colors] = useSetting(settings.theme.colors);
+  const [css] = useSetting(settings.theme.customCss);
   const vars = React.useMemo(
     () =>
       Object.entries(themeVariables(colors))

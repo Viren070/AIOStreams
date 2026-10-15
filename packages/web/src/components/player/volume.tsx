@@ -14,7 +14,7 @@ function VolumeBar({
   max: number;
   onChange(volume: number): void;
 }) {
-  const [step] = useSetting(settings.volumeStep);
+  const [step] = useSetting(settings.controls.volumeStep);
   const bar = React.useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = React.useState(false);
   const at = (clientX: number) => {

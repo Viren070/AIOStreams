@@ -128,9 +128,9 @@ const ANDROID_SEGMENT_ACTIONS: Record<SegmentAction, string> = {
 function syncSegments(): () => void {
   const bridge = window.MediaSegments;
   if (!bridge) return () => undefined;
-  let sent: ReturnType<typeof settings.segmentActions.read> | undefined;
+  let sent: ReturnType<typeof settings.playback.segmentActions.read> | undefined;
   const apply = () => {
-    const actions = settings.segmentActions.read();
+    const actions = settings.playback.segmentActions.read();
     if (actions === sent) return;
     sent = actions;
     for (const type of SEGMENT_TYPES)

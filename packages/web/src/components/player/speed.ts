@@ -5,7 +5,7 @@ import type { PlayerController } from '../../lib/playback/controller';
 
 /** `start` gives the function that lets go, or false when the speed can't change. */
 export function useHeldSpeed(player: PlayerController) {
-  const [rate] = useSetting(settings.holdRate);
+  const [rate] = useSetting(settings.controls.holdRate);
   const latest = useLatest({ player, rate });
   const [held, setHeld] = React.useState<number | null>(null);
   const before = React.useRef<number | null>(null);

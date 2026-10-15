@@ -104,7 +104,7 @@ function ShortcutsHelp({
   open: boolean;
   onOpenChange(open: boolean): void;
 }) {
-  const [overrides] = useSetting(settings.shortcuts);
+  const [overrides] = useSetting(settings.controls.shortcuts);
   return (
     <Modal
       open={open}

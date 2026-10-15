@@ -336,6 +336,7 @@ const SUBTITLE_TYPE_OPTIONS: { value: SubtitleType; label: string }[] = [
 const ON_DEVICE = 'Kept on this device.';
 const ON_ACCOUNT =
   'Saved to your account, so your other devices and Jellyfin apps use it too.';
+const FOLLOWS_YOU = 'Saved to your account, so it follows you to every device.';
 
 const NEXT_PROMPT_HELP: Record<NextPrompt, string> = {
   credits:
@@ -359,7 +360,7 @@ const SEGMENT_ACTION_LABELS: Record<SegmentAction, string> = {
 };
 
 function SegmentActionSelect({ type }: { type: SegmentType }) {
-  const [action, setAction] = useSetting(settings.segment[type]);
+  const [action, setAction] = useSetting(settings.playback.segment[type]);
   return (
     <Select
       label={SEGMENT_LABELS[type]}
@@ -380,10 +381,10 @@ function SegmentActionSelect({ type }: { type: SegmentType }) {
 
 function PlaybackSection() {
   const { prefs, update } = usePlaybackPrefs();
-  const [seekStep, setSeekStep] = useSetting(settings.seekStep);
-  const [volumeStep, setVolumeStep] = useSetting(settings.volumeStep);
-  const [holdRate, setHoldRate] = useSetting(settings.holdRate);
-  const [autoPlay, setAutoPlay] = useSetting(settings.autoPlayFirst);
+  const [seekStep, setSeekStep] = useSetting(settings.controls.seekStep);
+  const [volumeStep, setVolumeStep] = useSetting(settings.controls.volumeStep);
+  const [holdRate, setHoldRate] = useSetting(settings.controls.holdRate);
+  const [autoPlay, setAutoPlay] = useSetting(settings.playback.autoPlayFirst);
   const [nextPrompt, setNextPrompt] = useSetting(settings.next.prompt);
   const [nextLead, setNextLead] = useSetting(settings.next.lead);
   const [nextCountdown, setNextCountdown] = useSetting(settings.next.countdown);
@@ -398,19 +399,19 @@ function PlaybackSection() {
   const marked = useFeature('fillers');
   const autoplay = prefs.EnableNextEpisodeAutoPlay !== false;
   const [hardwareDecoding, setHardwareDecoding] = useSetting(
-    settings.desktop.hardwareDecoding
+    settings.video.hardwareDecoding
   );
   const [chapterSkips, setChapterSkips] = useSetting(
-    settings.desktop.chapterSkips
+    settings.playback.chapterSkips
   );
   const [dolbyVision, setDolbyVision] = useSetting(
-    settings.desktop.dolbyVision
+    settings.video.dolbyVision
   );
   const bingeGroups = useFeature('versions');
   const shell = !!shellHost();
-  const [engine] = useSetting(settings.android.engine);
-  const [frameRate, setFrameRate] = useSetting(settings.android.frameRate);
-  const [tunneling, setTunneling] = useSetting(settings.android.tunneling);
+  const [engine] = useSetting(settings.player.engine);
+  const [frameRate, setFrameRate] = useSetting(settings.video.frameRate);
+  const [tunneling, setTunneling] = useSetting(settings.video.tunneling);
   const androidTv = currentHost().name === 'android-app' && !!currentHost().tv;
   // ExoPlayer decodes with the hardware it picks itself; `auto` may still use mpv.
   const decoding =
@@ -418,7 +419,7 @@ function PlaybackSection() {
 
   return (
     <>
-      <SettingsCard title="Versions" description={ON_DEVICE}>
+      <SettingsCard title="Versions" description={FOLLOWS_YOU}>
         <Switch
           side="right"
           label="Auto-play the first version"
@@ -431,10 +432,7 @@ function PlaybackSection() {
           onValueChange={setAutoPlay}
         />
       </SettingsCard>
-      <SettingsCard
-        title="Next episode"
-        description="Whether it plays on is saved to your account; the rest is kept on this device."
-      >
+      <SettingsCard title="Next episode" description={FOLLOWS_YOU}>
         <Switch
           side="right"
           label="Play it automatically"
@@ -533,7 +531,7 @@ function PlaybackSection() {
           />
         )}
       </SettingsCard>
-      <SettingsCard title="Skipping" description={ON_DEVICE}>
+      <SettingsCard title="Skipping" description={FOLLOWS_YOU}>
         {SEGMENT_TYPES.map((type) => (
           <SegmentActionSelect key={type} type={type} />
         ))}
@@ -651,9 +649,9 @@ const ENGINE_HELP: Record<PlayerEngine, string> = {
 };
 
 function PlayerCard() {
-  const [player, setPlayer] = useSetting(settings.player);
-  const [link, setLink] = useSetting(settings.playerLink);
-  const [engine, setEngine] = useSetting(settings.android.engine);
+  const [player, setPlayer] = useSetting(settings.player.choice);
+  const [link, setLink] = useSetting(settings.player.link);
+  const [engine, setEngine] = useSetting(settings.player.engine);
   const found = useExternalPlayers();
   const launched = LAUNCHED_PLAYERS.find((p) => p.id === player);
   const preset = linkPreset(player);
@@ -813,18 +811,13 @@ const FORMAT_LABELS: Record<PassthroughFormat, string> = {
 function OutputCard() {
   const android = currentHost().name === 'android-app';
   const [audioChannels, setAudioChannels] = useSetting(
-    settings.desktop.audioChannels
+    settings.audio.channels
   );
-  const [passthrough, setPassthrough] = useSetting(
-    settings.desktop.passthrough
-  );
-  const [androidPassthrough, setAndroidPassthrough] = useSetting(
-    settings.android.passthrough
-  );
-  const [formats, setFormats] = useSetting(settings.sound.passthroughFormats);
-  const [ac3Encode, setAc3Encode] = useSetting(settings.sound.ac3Encode);
+  const [passthrough, setPassthrough] = useSetting(settings.audio.passthrough);
+  const [formats, setFormats] = useSetting(settings.audio.passthroughFormats);
+  const [ac3Encode, setAc3Encode] = useSetting(settings.audio.ac3Encode);
   const info = useShellInfo();
-  const passing = android ? androidPassthrough !== 'off' : passthrough;
+  const passing = passthrough !== 'off';
   return (
     <SettingsCard title="Output" description={ON_DEVICE}>
       {!android && <AudioDeviceSelect />}
@@ -841,18 +834,18 @@ function OutputCard() {
       {android ? (
         <Select
           label="Pass surround audio through"
-          help={PASSTHROUGH_HELP[androidPassthrough]}
+          help={PASSTHROUGH_HELP[passthrough]}
           options={PASSTHROUGH_OPTIONS}
-          value={androidPassthrough}
-          onValueChange={(v) => setAndroidPassthrough(v as Passthrough)}
+          value={passthrough}
+          onValueChange={(v) => setPassthrough(v as Passthrough)}
         />
       ) : (
         <Switch
           side="right"
           label="Pass surround audio through"
           help="Sends Dolby and DTS audio to your receiver as it is. Only turn this on if your receiver decodes them."
-          value={passthrough}
-          onValueChange={setPassthrough}
+          value={passing}
+          onValueChange={(on) => setPassthrough(on ? 'always' : 'off')}
         />
       )}
       {passing && (
@@ -892,7 +885,7 @@ function OutputCard() {
 
 function AudioDeviceSelect() {
   const [audioDevice, setAudioDevice] = useSetting(
-    settings.desktop.audioDevice
+    settings.audio.device
   );
   const devices = useAudioDevices();
   const options = (devices ?? []).map((d) => ({
@@ -913,9 +906,9 @@ function AudioDeviceSelect() {
 }
 
 function SoundCard() {
-  const [boost, setBoost] = useSetting(settings.sound.dialogueBoost);
-  const [nightMode, setNightMode] = useSetting(settings.sound.nightMode);
-  const [delay, setDelay] = useSetting(settings.sound.delayMs);
+  const [boost, setBoost] = useSetting(settings.audio.dialogueBoost);
+  const [nightMode, setNightMode] = useSetting(settings.audio.nightMode);
+  const [delay, setDelay] = useSetting(settings.audio.delayMs);
   return (
     <SettingsCard title="Sound" description={ON_DEVICE}>
       <Select
@@ -969,7 +962,7 @@ function SubtitlesSection() {
     settings.subtitle.overrideStyled
   );
   const [position, setPosition] = useSetting(settings.subtitle.position);
-  const [style] = useSetting(settings.subtitleStyle);
+  const [style] = useSetting(settings.subtitle.style);
   const css = subtitleCss(style);
   return (
     <>
@@ -1117,7 +1110,7 @@ const CHANNEL_LABELS: Record<AudioChannels, string> = {
 };
 
 function UpdatesCard() {
-  const [setting, setSetting] = useSetting(settings.desktop.updateChannel);
+  const [setting, setSetting] = useSetting(settings.app.updateChannel);
   const update = useUpdateState();
   const channel =
     setting === 'installed' ? (update?.channel ?? 'stable') : setting;
@@ -1189,7 +1182,7 @@ function discordStatus(status: DiscordStatus | null): string {
 }
 
 function DiscordEventSwitch({ event }: { event: DiscordEvent }) {
-  const [value, setValue] = useSetting(settings.discord[event]);
+  const [value, setValue] = useSetting(settings.app.discord[event]);
   const { label, help } = DISCORD_LABELS[event];
   return (
     <Switch
@@ -1203,7 +1196,7 @@ function DiscordEventSwitch({ event }: { event: DiscordEvent }) {
 }
 
 function DiscordCard() {
-  const [events] = useSetting(settings.discordEvents);
+  const [events] = useSetting(settings.app.discordEvents);
   const any = Object.values(events).some(Boolean);
   const status = useDiscordStatus();
   React.useEffect(() => {
@@ -1315,9 +1308,9 @@ function DiagnosticsRow() {
 }
 
 function AndroidSection() {
-  const [engine] = useSetting(settings.android.engine);
-  const [pip, setPip] = useSetting(settings.android.pip);
-  const [background, setBackground] = useSetting(settings.android.background);
+  const [engine] = useSetting(settings.player.engine);
+  const [pip, setPip] = useSetting(settings.app.pip);
+  const [background, setBackground] = useSetting(settings.app.background);
   const canPip = appBridge()?.pip !== false;
   return (
     <>
@@ -1399,13 +1392,13 @@ function NavigationCard() {
   const tv = !!currentHost().tv;
   const touch = matchMedia('(pointer: coarse)').matches;
   const [touchNavigation, setTouchNavigation] = useSetting(
-    settings.touchNavigation
+    settings.interface.touchNavigation
   );
-  const [tvNavigation, setTvNavigation] = useSetting(settings.tvNavigation);
-  const [tvTopBar, setTvTopBar] = useSetting(settings.tvTopBar);
-  const [railShape, setRailShape] = useSetting(settings.railShape);
-  const [railNames, setRailNames] = useSetting(settings.railNames);
-  const [background, setBackground] = useSetting(settings.barBackground);
+  const [tvNavigation, setTvNavigation] = useSetting(settings.interface.tvNavigation);
+  const [tvTopBar, setTvTopBar] = useSetting(settings.interface.tvTopBar);
+  const [railShape, setRailShape] = useSetting(settings.interface.railShape);
+  const [railNames, setRailNames] = useSetting(settings.interface.railNames);
+  const [background, setBackground] = useSetting(settings.interface.barBackground);
   const rail = tv
     ? tvNavigation === 'rail'
     : touch && touchNavigation === 'rail';
@@ -1509,13 +1502,13 @@ function NavigationCard() {
 
 function InterfaceSection() {
   const views = useViews();
-  const [featured, setFeatured] = useSetting(settings.featured);
-  const [heroMode, setHeroMode] = useSetting(settings.heroMode);
-  const [mergeNextUp, setMergeNextUp] = useSetting(settings.mergeNextUp);
-  const [combineSearch, setCombineSearch] = useSetting(settings.combineSearch);
-  const [posterSize, setPosterSize] = useSetting(settings.posterSize);
-  const [posterLines, setPosterLines] = useSetting(settings.posterLines);
-  const [episodeLayout, setEpisodeLayout] = useSetting(settings.episodeLayout);
+  const [featured, setFeatured] = useSetting(settings.interface.featured);
+  const [heroMode, setHeroMode] = useSetting(settings.interface.heroMode);
+  const [mergeNextUp, setMergeNextUp] = useSetting(settings.interface.mergeNextUp);
+  const [combineSearch, setCombineSearch] = useSetting(settings.interface.combineSearch);
+  const [posterSize, setPosterSize] = useSetting(settings.interface.posterSize);
+  const [posterLines, setPosterLines] = useSetting(settings.interface.posterLines);
+  const [episodeLayout, setEpisodeLayout] = useSetting(settings.interface.episodeLayout);
 
   const featuredOptions = [
     {
@@ -1552,10 +1545,7 @@ function InterfaceSection() {
 
   return (
     <>
-      <SettingsCard
-        title="Home and grids"
-        description="Saved to your account, so they follow you to every device."
-      >
+      <SettingsCard title="Home and grids" description={FOLLOWS_YOU}>
         <Combobox
           multiple
           label="Featured on home"
@@ -1900,8 +1890,8 @@ const DOCS_URL = 'https://docs.aiostreams.viren070.me';
 const CSS_DOCS_URL = `${DOCS_URL}/reference/web-app-css`;
 
 function ThemeSection() {
-  const [colors, setColors] = useSetting(settings.themeColors);
-  const [css, setCss] = useSetting(settings.customCss);
+  const [colors, setColors] = useSetting(settings.theme.colors);
+  const [css, setCss] = useSetting(settings.theme.customCss);
   const [draft, setDraft] = React.useState(css);
   const accent = colors.accent ?? DEFAULT_ACCENT;
   const background = colors.background ?? DEFAULT_BACKGROUND;
@@ -1936,10 +1926,7 @@ function ThemeSection() {
     pending.current = { id, previous };
   };
   return (
-    <SettingsCard
-      title="Theme"
-      description="Saved to your account, so it follows you to every device."
-    >
+    <SettingsCard title="Theme" description={FOLLOWS_YOU}>
       <div className="space-y-2">
         <p className="text-sm font-semibold">Presets</p>
         <div className="flex flex-wrap gap-2">
@@ -2059,7 +2046,7 @@ function AccountSection() {
   const users = usePickableUsers();
   const avatar = users.data?.find((u) => u.user.Id === user.Id)?.avatar ?? null;
   const several = (users.data?.length ?? 0) > 1;
-  const [askWho, setAskWho] = useSetting(settings.askWho);
+  const [askWho, setAskWho] = useSetting(settings.account.askWho);
   const configure = configureUrl(client.base, info);
   const confirmSignOut = useConfirmationDialog({
     title: 'Sign out',
@@ -2324,7 +2311,7 @@ function sections(): Section[] {
     {
       id: 'audio',
       label: 'Audio',
-      description: host.name === 'desktop' ? 'Language and output' : 'Language',
+      description: shellHost() ? 'Language and output' : 'Language',
       icon: LuVolume2,
       group: 'Watching',
       Content: AudioSection,

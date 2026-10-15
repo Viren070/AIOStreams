@@ -115,7 +115,7 @@ function ShortcutRow({
 }
 
 export function ShortcutSettings() {
-  const [overrides, setOverrides] = useSetting(settings.shortcuts);
+  const [overrides, setOverrides] = useSetting(settings.controls.shortcuts);
   const [recording, setRecording] = React.useState<ActionId | null>(null);
 
   React.useEffect(() => {

@@ -16,8 +16,8 @@ export function setupAndroid(): () => void {
   const bridge = appBridge();
   let engine: PlayerEngine | null = null;
   const sendEngine = () => {
-    if (settings.android.engine.read() === engine) return;
-    engine = settings.android.engine.read();
+    if (settings.player.engine.read() === engine) return;
+    engine = settings.player.engine.read();
     bridge?.send({ type: 'player-engine', name: engine });
   };
   sendEngine();

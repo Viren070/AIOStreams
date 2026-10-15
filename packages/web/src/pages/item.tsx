@@ -649,7 +649,7 @@ function Seasons({
   focusEpisodeId?: string;
   onSeason: (season: BaseItemDto | undefined) => void;
 }) {
-  const [layoutPref] = useSetting(settings.episodeLayout);
+  const [layoutPref] = useSetting(settings.interface.episodeLayout);
   const wide = useMediaQuery('(min-width: 1024px)');
   const layout = layoutPref === 'auto' ? (wide ? 'row' : 'list') : layoutPref;
   const seasons = useSeasons(series.Id!, true);

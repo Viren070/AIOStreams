@@ -92,8 +92,8 @@ export function HomePage() {
   const resume = useResume();
   const nextUp = useNextUp();
   const views = useViews();
-  const [featured] = useSetting(settings.featured);
-  const [mergeNextUp] = useSetting(settings.mergeNextUp);
+  const [featured] = useSetting(settings.interface.featured);
+  const [mergeNextUp] = useSetting(settings.interface.mergeNextUp);
   const continueItems = React.useMemo(
     () =>
       mergeRows(resume.data?.Items, mergeNextUp ? nextUp.data?.Items : null),
@@ -138,7 +138,7 @@ export function HomePage() {
     (sources.includes('next-up') && nextUp.isLoading) ||
     heads.some((h) => h.isLoading);
   // Following needs a pointer or remote to rest on cards and room for rows under the hero.
-  const [heroMode] = useSetting(settings.heroMode);
+  const [heroMode] = useSetting(settings.interface.heroMode);
   const pointer = useMediaQuery(
     '(min-width: 1024px) and (hover: hover) and (pointer: fine)'
   );

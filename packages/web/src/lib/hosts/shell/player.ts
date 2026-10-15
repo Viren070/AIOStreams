@@ -356,7 +356,7 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
               !LINK_FAILURES.has(m.error ?? '') &&
               appBridge()?.platform === 'android' &&
               // Automatic has tried both engines before a failure reaches the page.
-              settings.android.engine.read() !== 'auto';
+              settings.player.engine.read() !== 'auto';
             return emit({
               type: 'failed',
               error: failure(m.error, m.status, m.cause),
@@ -540,22 +540,21 @@ function subtitleLook(style: SubtitleStyle, lift: number) {
 /** This device's player settings, which each app applies its own way. */
 export function playerSettings() {
   const android = appBridge()?.platform === 'android';
-  const { hardwareDecoding, audioChannels, audioDevice } = settings.desktop;
-  const { dialogueBoost, nightMode, ac3Encode, delayMs } = settings.sound;
+  const { video, audio } = settings;
   return {
-    hardwareDecoding: hardwareDecoding.read(),
-    audioChannels: audioChannels.read(),
+    hardwareDecoding: video.hardwareDecoding.read(),
+    audioChannels: audio.channels.read(),
     ...passthroughFormats(),
-    audioDelayMs: delayMs.read(),
-    dolbyVision: settings.desktop.dolbyVision.read(),
-    dialogueBoost: dialogueBoost.read(),
-    nightMode: nightMode.read(),
-    ac3Encode: ac3Encode.read(),
+    audioDelayMs: audio.delayMs.read(),
+    dolbyVision: video.dolbyVision.read(),
+    dialogueBoost: audio.dialogueBoost.read(),
+    nightMode: audio.nightMode.read(),
+    ac3Encode: audio.ac3Encode.read(),
     ...(android
       ? {
-          frameRate: settings.android.frameRate.read(),
-          tunneling: settings.android.tunneling.read(),
+          frameRate: video.frameRate.read(),
+          tunneling: video.tunneling.read(),
         }
-      : { audioDevice: audioDevice.read() }),
+      : { audioDevice: audio.device.read() }),
   };
 }

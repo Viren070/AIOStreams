@@ -1,5 +1,4 @@
 import { settings, type PassthroughFormat } from '../../settings';
-import { appBridge } from './bridge';
 
 /** The formats left on, as mpv names them; `dts-hd` passes DTS's core too. */
 function formatList(formats: Record<PassthroughFormat, boolean>): string[] {
@@ -16,12 +15,10 @@ export function passthroughFormats(): {
   passthrough: string[];
   passthroughAuto?: boolean;
 } {
-  const list = formatList(settings.sound.passthroughFormats.read());
-  if (appBridge()?.platform !== 'android')
-    return { passthrough: settings.desktop.passthrough.read() ? list : [] };
-  const mode = settings.android.passthrough.read();
+  const mode = settings.audio.passthrough.read();
   return {
-    passthrough: mode === 'off' ? [] : list,
+    passthrough:
+      mode === 'off' ? [] : formatList(settings.audio.passthroughFormats.read()),
     passthroughAuto: mode === 'auto',
   };
 }

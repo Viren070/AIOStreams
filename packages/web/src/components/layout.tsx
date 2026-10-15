@@ -497,11 +497,11 @@ export function WebLayout() {
       }
     : null;
   const touch = useMediaQuery('(pointer: coarse)');
-  const [touchNavigation] = useSetting(settings.touchNavigation);
-  const [tvNavigation] = useSetting(settings.tvNavigation);
-  const [tvTopBar] = useSetting(settings.tvTopBar);
-  const [railShape] = useSetting(settings.railShape);
-  const [railNames] = useSetting(settings.railNames);
+  const [touchNavigation] = useSetting(settings.interface.touchNavigation);
+  const [tvNavigation] = useSetting(settings.interface.tvNavigation);
+  const [tvTopBar] = useSetting(settings.interface.tvTopBar);
+  const [railShape] = useSetting(settings.interface.railShape);
+  const [railNames] = useSetting(settings.interface.railNames);
   // What wide screens show; narrow ones always have the bar.
   const nav = currentHost().tv
     ? (`tv-${tvNavigation}` as const)

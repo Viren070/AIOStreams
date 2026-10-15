@@ -71,7 +71,7 @@ function asksWho(base: string, users: PickableUser[], userId: string): boolean {
       lockedKey(base),
       locked ? [...known, userId] : known.filter((id) => id !== userId)
     );
-  return locked || (settings.askWho.read() && users.length > 1);
+  return locked || (settings.account.askWho.read() && users.length > 1);
 }
 
 /** Ends the token on the server and forgets the sign-in here. */
@@ -186,7 +186,7 @@ export function useSessionPhase(base: string) {
       } else if (
         !target ||
         target.needs ||
-        (settings.askWho.read() && users.length > 1)
+        (settings.account.askWho.read() && users.length > 1)
       ) {
         pick(proof, users);
       } else {
@@ -212,7 +212,7 @@ export function useSessionPhase(base: string) {
         // Opens with the saved user at once; the server's answer replaces it.
         const saved = savedUser(base, stored.userId);
         const mayAsk =
-          settings.askWho.read() || lockedUsers(base).includes(stored.userId);
+          settings.account.askWho.read() || lockedUsers(base).includes(stored.userId);
         if (saved && !mayAsk && !cancelled)
           setPhase({ kind: 'ready', client, user: saved });
         const [me, asking] = await Promise.all([

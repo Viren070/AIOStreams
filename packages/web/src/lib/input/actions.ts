@@ -233,7 +233,7 @@ type Overrides = Record<string, string[]>;
 
 export function keysOf(
   id: ActionId,
-  overrides: Overrides = settings.shortcuts.read()
+  overrides: Overrides = settings.controls.shortcuts.read()
 ): readonly string[] {
   const { keys, fixed } = action(id);
   const override = overrides[id];
@@ -241,7 +241,7 @@ export function keysOf(
 }
 
 export function useKeys(id: ActionId): readonly string[] {
-  const [overrides] = useSetting(settings.shortcuts);
+  const [overrides] = useSetting(settings.controls.shortcuts);
   return keysOf(id, overrides);
 }
 
@@ -249,7 +249,7 @@ let index: { overrides: Overrides; byInput: Map<string, ActionId[]> } | null =
   null;
 
 export function actionsFor(input: string): readonly ActionId[] {
-  const overrides = settings.shortcuts.read();
+  const overrides = settings.controls.shortcuts.read();
   if (index?.overrides !== overrides) {
     const byInput = new Map<string, ActionId[]>();
     for (const id of ACTION_IDS)
@@ -273,11 +273,11 @@ export const groupActions = (group: ActionGroup, host: Host) =>
 
 /** The defaults clear the change. */
 export function setKeys(id: ActionId, keys: string[]): void {
-  const { [id]: _, ...rest } = settings.shortcuts.read();
+  const { [id]: _, ...rest } = settings.controls.shortcuts.read();
   const defaults = action(id).keys;
   const same =
     keys.length === defaults.length && keys.every((k, i) => k === defaults[i]);
-  settings.shortcuts.write(same ? rest : { ...rest, [id]: keys });
+  settings.controls.shortcuts.write(same ? rest : { ...rest, [id]: keys });
 }
 
 /** Actions of one group, or any that work everywhere, can't share an input. */

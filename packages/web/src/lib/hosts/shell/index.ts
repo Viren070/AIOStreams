@@ -56,7 +56,7 @@ export function ShellSetup() {
   React.useEffect(() => {
     const shell = appBridge();
     if (!shell) return;
-    const { updateChannel } = settings.desktop;
+    const { updateChannel } = settings.app;
     let channel = updateChannel.read();
     let sent = '';
     const apply = () => {

@@ -43,9 +43,9 @@ export function useNowPlaying(
   actions: Actions
 ) {
   const { client } = useSession();
-  const [discord] = useSetting(settings.discord['playing']);
-  const [pip] = useSetting(settings.android.pip);
-  const [background] = useSetting(settings.android.background);
+  const [discord] = useSetting(settings.app.discord['playing']);
+  const [pip] = useSetting(settings.app.pip);
+  const [background] = useSetting(settings.app.background);
   const show = useItem(item.SeriesId ?? item.Id!);
   const imdb = (item.Type === 'Episode' ? show.data : item)?.ProviderIds?.Imdb;
   const title = itemTitle(item);
