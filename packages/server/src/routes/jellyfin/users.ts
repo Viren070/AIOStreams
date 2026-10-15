@@ -138,7 +138,9 @@ export async function storedUserConfiguration(scope: WatchScope) {
   return { ...userConfiguration(), ...userPreferences(stored) };
 }
 
-export function userPolicy(opts: { admin?: boolean; hidden?: boolean } = {}) {
+export function userPolicy(
+  opts: { admin?: boolean; hidden?: boolean; forKey?: boolean } = {}
+) {
   return {
     IsAdministrator: opts.admin ?? false,
     IsHidden: opts.hidden ?? false,
@@ -183,7 +185,8 @@ export function userPolicy(opts: { admin?: boolean; hidden?: boolean } = {}) {
       'Jellyfin.Server.Implementations.Users.DefaultAuthenticationProvider',
     PasswordResetProviderId:
       'Jellyfin.Server.Implementations.Users.DefaultPasswordResetProvider',
-    SyncPlayAccess: 'None',
+    // A key has no session to join a group with.
+    SyncPlayAccess: opts.forKey ? 'None' : 'CreateAndJoinGroups',
   };
 }
 
@@ -225,7 +228,7 @@ export function userDto(
     LastActivityDate: now,
     Configuration: userConfiguration(),
     Policy: opts.forKey
-      ? userPolicy({ admin: !persona, hidden: persona?.hidden })
+      ? userPolicy({ admin: !persona, hidden: persona?.hidden, forKey: true })
       : userPolicy(),
   };
 }

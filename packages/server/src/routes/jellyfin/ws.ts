@@ -1,20 +1,21 @@
 import type { Server as HttpServer, IncomingMessage } from 'http';
 import type { Duplex } from 'stream';
-import { randomUUID } from 'crypto';
 import { WebSocketServer, type WebSocket } from 'ws';
 import {
-  accountScope,
   config as appConfig,
   createLogger,
   getWatchStateProvider,
   itemIdForWatchRow,
-  personaUserId,
-  readToken,
   userDataFromRow,
-  type UserData,
   type WatchScope,
 } from '@aiostreams/core';
-import { lockTag, personaById, resolveConfigFor } from './context.js';
+import { userForToken } from './context.js';
+import {
+  addClientSocket,
+  clientKey,
+  frame,
+  removeClientSocket,
+} from './session-sockets.js';
 
 const logger = createLogger('jellyfin');
 
@@ -30,6 +31,7 @@ interface SocketUser {
   scope: WatchScope;
   /** The id the client signed in as, stamped on every push so it keeps it. */
   userId: string;
+  deviceId: string;
 }
 
 function reject(socket: Duplex, status: number, text: string) {
@@ -47,43 +49,19 @@ async function authenticateUpgrade(url: string): Promise<SocketUser | null> {
     query.get('apikey') ??
     query.get('token') ??
     '';
-  const payload = apiKey ? readToken(apiKey) : null;
   // Nothing here pushes sessions; a tool polls /Sessions once its socket fails.
-  if (!payload || payload.a) return null;
+  const user = apiKey ? await userForToken(apiKey) : null;
+  if (!user) return null;
   if (
     m[1] &&
-    decodeURIComponent(m[1]).toLowerCase() !== payload.u.toLowerCase()
+    decodeURIComponent(m[1]).toLowerCase() !== user.payload.u.toLowerCase()
   )
     return null;
-  // Resolved rather than verified: see `resolveConfigFor`. The config this
-  // proves the credentials with is the same one the persona is read from, so
-  // the persona branch costs nothing extra.
-  const resolved: { uuid: string; userData: UserData } | null =
-    await resolveConfigFor(payload.u, payload.p);
-  const personaKey = payload.k ?? '';
-  if (!resolved) return null;
-  const { uuid, userData } = resolved;
-  const persona = personaKey ? personaById(userData, personaKey) : null;
-  if (personaKey && !persona) return null;
-  if ((payload.l ?? '') !== lockTag(userData, persona)) return null;
-  if (!persona) {
-    return { scope: accountScope(uuid), userId: personaUserId(uuid, '') };
-  }
   return {
-    scope:
-      persona.history === 'shared'
-        ? accountScope(uuid)
-        : { uuid, persona: persona.id },
-    userId: personaUserId(uuid, persona.id),
+    scope: user.watch,
+    userId: user.userId,
+    deviceId: query.get('deviceId') ?? user.payload.d ?? '',
   };
-}
-
-function frame(MessageType: string, Data: unknown = null): string {
-  return JSON.stringify({
-    MessageType,
-    MessageId: randomUUID().replace(/-/g, ''),
-    Data,
-  });
 }
 
 function scopeKey(scope: WatchScope): string {
@@ -91,8 +69,8 @@ function scopeKey(scope: WatchScope): string {
 }
 
 /**
- * Keepalive plus `UserDataChanged` pushes for the connected history. Clients
- * treat the socket as optional, so nothing here is load-bearing.
+ * Keepalive, `UserDataChanged` pushes for the connected history, and SyncPlay's
+ * pushes to each client (see session-sockets).
  */
 export function attachJellyfinWebSocket(server: HttpServer): void {
   const wss = new WebSocketServer({ noServer: true });
@@ -133,6 +111,8 @@ export function attachJellyfinWebSocket(server: HttpServer): void {
         byScope.set(key, sockets);
       }
       sockets.set(ws, user.userId);
+      const client = clientKey(user.userId, user.deviceId);
+      addClientSocket(client, ws);
       send(ws, 'ForceKeepAlive', KEEPALIVE_SECONDS);
       const timer = setInterval(
         () => send(ws, 'ForceKeepAlive', KEEPALIVE_SECONDS),
@@ -140,6 +120,7 @@ export function attachJellyfinWebSocket(server: HttpServer): void {
       );
       const release = () => {
         clearInterval(timer);
+        removeClientSocket(client, ws);
         const s = byScope.get(key);
         if (s) {
           s.delete(ws);

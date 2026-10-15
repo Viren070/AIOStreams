@@ -37,6 +37,7 @@ import {
   type LeafEvidence,
   listViews,
   type ParsedMeta,
+  type TokenPayload,
   type ViewEntry,
   type UserData,
   type WatchScope,
@@ -240,6 +241,39 @@ export async function resolveConfigFor(
   return entry ? { uuid, userData: entry.userData } : null;
 }
 
+export interface TokenUser {
+  uuid: string;
+  userData: UserData;
+  persona: JellyfinPersona | null;
+  userId: string;
+  watch: WatchScope;
+  payload: TokenPayload;
+}
+
+/**
+ * The user a session token signs in, or null once it no longer does. API keys
+ * act for no one in particular, so they are none.
+ */
+export async function userForToken(token: string): Promise<TokenUser | null> {
+  const payload = readToken(token);
+  if (!payload || payload.a) return null;
+  // Resolved rather than verified: see `resolveConfigFor`.
+  const resolved = await resolveConfigFor(payload.u, payload.p);
+  if (!resolved) return null;
+  const { uuid, userData } = resolved;
+  const persona = payload.k ? personaById(userData, payload.k) : null;
+  if (payload.k && !persona) return null;
+  if ((payload.l ?? '') !== lockTag(userData, persona)) return null;
+  return {
+    uuid,
+    userData,
+    persona,
+    userId: personaUserId(uuid, persona?.id ?? ''),
+    watch: watchScopeOf(uuid, persona),
+    payload,
+  };
+}
+
 /** A persona with a history of its own keeps its watch state and preferences apart. */
 export function watchScopeOf(
   uuid: string,
@@ -410,6 +444,7 @@ const ANONYMOUS_OK = [
   /^\/system\/info\/public$/i,
   /^\/system\/ping$/i,
   /^\/system\/endpoint$/i,
+  /^\/getutctime$/i,
   /^\/users\/authenticatebyname$/i,
   /^\/users\/authenticatewithquickconnect$/i,
   /^\/users\/public$/i,
