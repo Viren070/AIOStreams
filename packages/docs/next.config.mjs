@@ -4,7 +4,7 @@ const withMDX = createMDX();
 
 /** @type {import('next').NextConfig} */
 const config = {
-  serverExternalPackages: ['@takumi-rs/image-response'],
+  serverExternalPackages: ['takumi-js'],
   output: process.env.NODE_ENV === 'production' ? 'export' : undefined,
   reactStrictMode: true,
   trailingSlash: true,

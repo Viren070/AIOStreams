@@ -340,7 +340,7 @@ pub fn run(app: App) {
             let uri = decision
                 .downcast_ref::<NavigationPolicyDecision>()
                 .and_then(|d| d.navigation_action())
-                .and_then(|mut a| a.request())
+                .and_then(|a| a.request())
                 .and_then(|r| r.uri());
             let Some(uri) = uri else { return false };
             let leave = match kind {

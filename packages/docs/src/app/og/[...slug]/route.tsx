@@ -1,6 +1,6 @@
 import { getPageImage, source } from '@/lib/source';
 import { notFound } from 'next/navigation';
-import { ImageResponse } from '@takumi-rs/image-response';
+import { ImageResponse } from 'takumi-js/response';
 import { generate as DefaultImage } from 'fumadocs-ui/og/takumi';
 import { ogBrand, ogLogo } from '@/lib/og';
 

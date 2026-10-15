@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { ImageResponse } from '@takumi-rs/image-response';
+import { ImageResponse } from 'takumi-js/response';
 import { changelogSource, formatChangelogDate } from '@/lib/source';
 import { ogBrand, ogLogo } from '@/lib/og';
 

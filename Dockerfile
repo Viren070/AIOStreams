@@ -126,7 +126,7 @@ RUN curl -fsSL -o ffmpeg.tar.xz "https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VER
   && make -j"$(nproc)" ffprobe \
   && strip ffprobe
 
-FROM gcr.io/distroless/nodejs24-debian12 AS production
+FROM gcr.io/distroless/nodejs24-debian13 AS production
 
 LABEL org.opencontainers.image.title="AIOStreams"
 LABEL org.opencontainers.image.source="https://github.com/Viren070/AIOStreams"

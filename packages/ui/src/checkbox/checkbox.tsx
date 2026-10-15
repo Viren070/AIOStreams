@@ -146,7 +146,7 @@ export const Checkbox = React.forwardRef<HTMLButtonElement, CheckboxProps>(
     );
 
     const handleOnValueChange = React.useCallback(
-      (value: boolean) => {
+      (value: CheckboxPrimitive.CheckedState) => {
         _setValue(value);
         onValueChange?.(value);
       },

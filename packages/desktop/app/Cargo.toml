@@ -49,8 +49,8 @@ windows-sys = { workspace = true, features = [
 ] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
-gtk4 = { version = "0.9", features = ["v4_14"] }
-webkit6 = "0.4"
+gtk4 = { version = "0.11", features = ["v4_14"] }
+webkit6 = "0.6"
 libc = "0.2"
 libloading.workspace = true
 

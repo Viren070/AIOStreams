@@ -1,5 +1,4 @@
-import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared';
-import type { LinkItemType } from 'fumadocs-ui/utils/link-item';
+import type { BaseLayoutProps, LinkItemType } from 'fumadocs-ui/layouts/shared';
 import Image from 'next/image';
 import { DonateIconButton } from '@/components/donate-button';
 import { SiDiscord, SiGithubsponsors, SiKofi } from 'react-icons/si';

@@ -15,20 +15,20 @@
     "@aiostreams/core": "workspace:*",
     "@viren070/fsmux": "^0.3.0",
     "@viren070/fsmux-fuse": "^0.3.0",
-    "express": "^5.2.1",
-    "express-rate-limit": "^8.5.1",
-    "multer": "^2.1.1",
-    "proxy-addr": "^2.0.7",
-    "rate-limit-redis": "^4.3.1",
-    "undici": "^7.25.0",
-    "ws": "^8.21.3",
-    "zod": "^4.4.3"
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.1",
+    "multer": "^2.4.0",
+    "proxy-addr": "^2.0.8",
+    "rate-limit-redis": "^6.0.1",
+    "undici": "^7.30.0",
+    "ws": "^8.22.0",
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
-    "@types/multer": "^2.1.0",
-    "@types/node": "^24.13.5",
+    "@types/multer": "^2.3.0",
+    "@types/node": "^24.19.2",
     "@types/proxy-addr": "^2.0.3",
-    "@types/ws": "^8.18.1"
+    "@types/ws": "^8.18.2"
   }
 }
