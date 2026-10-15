@@ -219,7 +219,7 @@ class DownloadQueue(
         for (file in spec.files.sortedBy { it.kind == Kind.Video }) {
             val target = place(folder, file.path)
             try {
-                fetcher.fetch(file.url, target, stop) { bytes, total ->
+                fetcher.fetch(file.url, file.headers, target, stop) { bytes, total ->
                     if (file.kind == Kind.Video) post { progress(spec.id, bytes, total) }
                 }
             } catch (e: Failed) {
@@ -326,6 +326,7 @@ class DownloadQueue(
         require(spec.id.isNotEmpty() && spec.id.length <= 64 && spec.id.all { it.isLetterOrDigit() || it in "-_" }) { "bad id" }
         for (file in spec.files) {
             require(file.url.startsWith("http://") || file.url.startsWith("https://")) { "only http(s) addresses" }
+            for ((name, value) in file.headers) require(Fetcher.allowed(name, value)) { "header $name is not allowed" }
             place(folder, file.path)
         }
         for (text in spec.texts) place(folder, text.path)

@@ -14,7 +14,12 @@ data class DownloadSpec(
 )
 
 @Serializable
-data class SpecFile(val url: String, val path: String, val kind: Kind)
+data class SpecFile(
+    val url: String,
+    val path: String,
+    val kind: Kind,
+    val headers: Map<String, String> = emptyMap(),
+)
 
 @Serializable
 data class SpecText(val path: String, val text: String)

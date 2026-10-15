@@ -21,12 +21,19 @@ internal class Fetcher(userAgent: String) {
         // this and the next one carries on from what was written.
         .callTimeout(90, TimeUnit.SECONDS)
         .connectTimeout(20, TimeUnit.SECONDS)
-        .addNetworkInterceptor { chain ->
-            chain.proceed(chain.request().newBuilder().header("User-Agent", userAgent).build())
+        // A file's own User-Agent wins over the app's.
+        .addInterceptor { chain ->
+            val request = chain.request()
+            chain.proceed(
+                if (request.header("User-Agent") != null) request
+                else request.newBuilder().header("User-Agent", userAgent).build(),
+            )
         }
         .build()
 
-    fun fetch(url: String, target: File, stop: AtomicBoolean, report: (Long, Long?) -> Unit) {
+    private val manual = client.newBuilder().followRedirects(false).followSslRedirects(false).build()
+
+    fun fetch(url: String, headers: Map<String, String>, target: File, stop: AtomicBoolean, report: (Long, Long?) -> Unit) {
         if (target.exists()) return report(target.length(), target.length())
         target.parentFile?.mkdirs()
         val part = partOf(target)
@@ -39,11 +46,8 @@ internal class Fetcher(userAgent: String) {
             if (stop.get()) throw Stopped()
             var have = if (part.exists()) part.length() else 0
             if (total != null && have >= total) return finish(part, target)
-            val request = Request.Builder().url(address)
-                .apply { if (have > 0) header("Range", "bytes=$have-") }
-                .build()
             val error = try {
-                client.newCall(request).execute().use { response ->
+                call(address, headers, have).use { response ->
                     when {
                         response.code == 416 && have > 0 -> return finish(part, target)
                         response.code in EXPIRED && address != url -> {
@@ -77,6 +81,23 @@ internal class Fetcher(userAgent: String) {
         }
     }
 
+    /** With headers, follows redirects itself, as OkHttp drops `Authorization` on the way to another host. */
+    private fun call(url: String, headers: Map<String, String>, from: Long): Response {
+        var address = url
+        repeat(MAX_REDIRECTS + 1) {
+            val request = Request.Builder().url(address)
+                .apply { for ((name, value) in headers) header(name, value) }
+                .apply { if (from > 0) header("Range", "bytes=$from-") }
+                .build()
+            if (headers.isEmpty()) return client.newCall(request).execute()
+            val response = manual.newCall(request).execute()
+            val location = response.header("Location")?.takeIf { response.isRedirect } ?: return response
+            response.close()
+            address = response.request.url.resolve(location)?.toString() ?: throw Failed("Bad redirect to $location")
+        }
+        throw Failed("Too many redirects")
+    }
+
     /** `whole` once the answer ended; a dropped connection leaves the rest to the next range. */
     private class Copied(val written: Long, val whole: Boolean)
 
@@ -104,12 +125,18 @@ internal class Fetcher(userAgent: String) {
         if (!part.renameTo(target)) throw Failed("Could not save ${target.name}")
     }
 
-    private companion object {
-        val RETRY_SECONDS = longArrayOf(2, 5, 15, 30, 60)
-        val EXPIRED = setOf(401, 403, 404, 410)
+    companion object {
+        private val RETRY_SECONDS = longArrayOf(2, 5, 15, 30, 60)
+        private const val MAX_REDIRECTS = 10
+        private val EXPIRED = setOf(401, 403, 404, 410)
+
+        /** A header OkHttp takes without throwing. */
+        fun allowed(name: String, value: String) =
+            name.isNotEmpty() && name.all { it in 'a'..'z' || it in 'A'..'Z' || it in '0'..'9' || it in "!#$%&'*+-.^_`|~" } &&
+                value.all { it in ' '..'~' }
 
         /** `bytes a-b/total`, or the length of a whole answer. */
-        fun totalOf(response: Response, offset: Long): Long? {
+        private fun totalOf(response: Response, offset: Long): Long? {
             response.header("Content-Range")?.let { return it.substringAfterLast('/').toLongOrNull() }
             return response.header("Content-Length")?.toLongOrNull()?.plus(offset)
         }
