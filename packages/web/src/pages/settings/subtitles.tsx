@@ -18,6 +18,7 @@ import {
   useSetting,
   SUBTITLE_POSITION_MAX,
   SUBTITLE_SIZES,
+  type SubtitleFont,
   type SubtitleOutline,
   type SubtitleSize,
 } from '../../lib/settings';
@@ -53,6 +54,16 @@ const SUBTITLE_MODES: { value: SubtitleMode; label: string; help: string }[] = [
   { value: 'None', label: 'Off', help: 'Starts without subtitles.' },
 ];
 
+const FONT_OPTIONS: { value: SubtitleFont; label: string }[] = [
+  { value: 'default', label: 'Default' },
+  { value: 'sans-serif', label: 'Sans serif' },
+  { value: 'serif', label: 'Serif' },
+  { value: 'monospace', label: 'Monospace' },
+  { value: 'serif-monospace', label: 'Typewriter' },
+  { value: 'casual', label: 'Casual' },
+  { value: 'cursive', label: 'Cursive' },
+];
+
 const SUBTITLE_TYPE_OPTIONS: { value: SubtitleType; label: string }[] = [
   { value: 'normal', label: 'Full' },
   { value: 'sdh', label: 'SDH, with sounds described' },
@@ -65,12 +76,14 @@ export function SubtitlesSection() {
   const mode = prefs.SubtitleMode ?? 'Default';
   const subtitleLists = Array.isArray(prefs.SubtitleLanguages);
   const [size, setSize] = useSetting(settings.subtitle.size);
+  const [font, setFont] = useSetting(settings.subtitle.font);
   const [bold, setBold] = useSetting(settings.subtitle.bold);
   const [textColor, setTextColor] = useSetting(settings.subtitle.textColor);
   const [outline, setOutline] = useSetting(settings.subtitle.outline);
   const [outlineColor, setOutlineColor] = useSetting(
     settings.subtitle.outlineColor
   );
+  const [shadow, setShadow] = useSetting(settings.subtitle.shadow);
   const [backgroundColor, setBackgroundColor] = useSetting(
     settings.subtitle.backgroundColor
   );
@@ -153,6 +166,12 @@ export function SubtitlesSection() {
           value={size}
           onValueChange={(v) => setSize(v as SubtitleSize)}
         />
+        <Select
+          label="Font"
+          options={FONT_OPTIONS}
+          value={font}
+          onValueChange={(v) => setFont(v as SubtitleFont)}
+        />
         <ColorInput
           label="Colour"
           value={textColor}
@@ -174,7 +193,7 @@ export function SubtitlesSection() {
           onValueChange={([v]) => setPosition(v)}
         />
       </SettingsCard>
-      <SettingsCard title="Outline">
+      <SettingsCard title="Outline and shadow">
         <Select
           label="Width"
           options={[
@@ -185,6 +204,12 @@ export function SubtitlesSection() {
           ]}
           value={outline}
           onValueChange={(v) => setOutline(v as SubtitleOutline)}
+        />
+        <Switch
+          side="right"
+          label="Shadow"
+          value={shadow}
+          onValueChange={setShadow}
         />
         <ColorInput
           label="Colour"

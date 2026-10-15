@@ -5,6 +5,7 @@ import { settings, type SubtitleStyle } from '../../settings';
 import { subtitleLanguages } from '../../user-config';
 import {
   MPV_OUTLINE,
+  MPV_SHADOW,
   mpvColor,
   subtitleHeight,
   subtitleScale,
@@ -530,6 +531,8 @@ function subtitleLook(style: SubtitleStyle, lift: number) {
     color: mpvColor(style.textColor),
     outlineColor: mpvColor(style.outlineColor),
     outlineSize: MPV_OUTLINE[style.outline],
+    shadowSize: style.shadow ? MPV_SHADOW : 0,
+    font: style.font === 'default' ? undefined : style.font,
     backColor: mpvColor(style.backgroundColor, style.backgroundOpacity),
     box: style.backgroundOpacity > 0,
     override: style.overrideStyled ? 'force' : 'scale',

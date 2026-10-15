@@ -393,16 +393,30 @@ export type SegmentAction = (typeof SEGMENT_ACTIONS)[number];
 
 export const SUBTITLE_SIZES = ['small', 'normal', 'large', 'huge'] as const;
 export type SubtitleSize = (typeof SUBTITLE_SIZES)[number];
+/** `default` keeps the player's own font. */
+export const SUBTITLE_FONTS = [
+  'default',
+  'sans-serif',
+  'serif',
+  'monospace',
+  'serif-monospace',
+  'casual',
+  'cursive',
+] as const;
+export type SubtitleFont = (typeof SUBTITLE_FONTS)[number];
 export const SUBTITLE_OUTLINES = ['none', 'thin', 'normal', 'thick'] as const;
 export type SubtitleOutline = (typeof SUBTITLE_OUTLINES)[number];
 export const SUBTITLE_POSITION_MAX = 30;
 
 export interface SubtitleStyle {
   size: SubtitleSize;
+  font: SubtitleFont;
   bold: boolean;
   textColor: string;
   outline: SubtitleOutline;
   outlineColor: string;
+  /** Drawn in the outline's colour. */
+  shadow: boolean;
   backgroundColor: string;
   /** 0 to 100; 0 draws no background. */
   backgroundOpacity: number;
@@ -484,6 +498,11 @@ const subtitleLook = {
     'normal',
     SUBTITLE_SIZES
   ),
+  font: device<SubtitleFont>(
+    'aiostreams-web-subtitle-font',
+    'default',
+    SUBTITLE_FONTS
+  ),
   bold: device<boolean>('aiostreams-web-subtitle-bold', false),
   textColor: device<string>(
     'aiostreams-web-subtitle-text-color',
@@ -500,6 +519,7 @@ const subtitleLook = {
     '#000000',
     isHex
   ),
+  shadow: device<boolean>('aiostreams-web-subtitle-shadow', false),
   backgroundColor: device<string>(
     'aiostreams-web-subtitle-background-color',
     '#000000',

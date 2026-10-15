@@ -412,12 +412,14 @@ function cueCss(style: SubtitleStyle): string {
     color: ${css.color};
     background-color: ${css.backgroundColor};
     text-shadow: ${css.textShadow};
+    ${css.fontFamily ? `font-family: ${css.fontFamily};` : ''}
   }`;
 }
 
 /** For a player that draws no subtitles, placed and sized as the page's own video draws cues. */
 function SubtitleText({ text, style }: { text: string; style: SubtitleStyle }) {
-  const { fontWeight, color, backgroundColor, textShadow } = subtitleCss(style);
+  const { fontWeight, fontFamily, color, backgroundColor, textShadow } =
+    subtitleCss(style);
   return (
     <div
       data-ui="player-subtitle"
@@ -429,6 +431,7 @@ function SubtitleText({ text, style }: { text: string; style: SubtitleStyle }) {
         style={{
           fontSize: `calc(${subtitleScale(style)} * 5vh)`,
           fontWeight,
+          fontFamily,
           color,
           backgroundColor,
           textShadow,
