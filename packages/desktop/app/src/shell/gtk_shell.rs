@@ -105,7 +105,9 @@ fn turn_features_off(settings: &webkit6::Settings) {
     };
     for i in 0..features.length() {
         if let Some(feature) = features.get(i)
-            && feature.identifier().is_some_and(|id| FEATURES_OFF.contains(&id.as_str()))
+            && feature
+                .identifier()
+                .is_some_and(|id| FEATURES_OFF.contains(&id.as_str()))
         {
             settings.set_feature_enabled(&feature, false);
         }
