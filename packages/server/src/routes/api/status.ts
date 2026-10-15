@@ -12,7 +12,12 @@ import {
 } from '@aiostreams/core';
 import { StatusResponse } from '@aiostreams/core';
 import { encryptString } from '@aiostreams/core';
-import { RegexAccess, FeatureControl, isOidcAvailable } from '@aiostreams/core';
+import {
+  RegexAccess,
+  FeatureControl,
+  isOidcAvailable,
+  libraryLimit,
+} from '@aiostreams/core';
 import { createResponse } from '../../utils/responses.js';
 import { getSeanimeExtensionVersion } from '../../utils/seanime.js';
 
@@ -62,7 +67,7 @@ const statusInfo = async (): Promise<StatusResponse> => {
         maxVersions: appConfig.jellyfin.maxVersions,
         resolveOnOpen: appConfig.jellyfin.resolveOnOpen,
         maxCatalogItems: appConfig.jellyfin.maxCatalogItems,
-        maxLibraries: appConfig.jellyfin.maxLibraries,
+        maxLibraries: libraryLimit(),
         maxPersonas: appConfig.jellyfin.maxPersonas,
         pinSignIn: appConfig.jellyfin.pinSignIn,
         maxTrackers: appConfig.watchState.maxSinks,

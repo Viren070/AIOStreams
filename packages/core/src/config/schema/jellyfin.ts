@@ -75,14 +75,25 @@ export const jellyfinSchema = {
   },
   maxLibraries: {
     schema: z.number().int().min(0),
-    default: 20,
+    default: 500,
     label: 'Max libraries per configuration',
     description:
-      "How many of a configuration's catalogs appear as Jellyfin libraries, in the configuration's own catalog order. Most Jellyfin apps load every library's latest row at once when the home screen opens, so each library is another upstream request on every visit. Catalogs past the limit are not shown as libraries. 0 shows them all.",
+      "How many of a configuration's catalogs appear as Jellyfin libraries, in the configuration's own catalog order. Catalogs past the limit are not shown as libraries. Never more than 500, which 0 also means.",
     env: 'JELLYFIN_MAX_LIBRARIES',
     requiresRestart: false,
     secret: false,
-    ui: { min: 0 },
+    ui: { min: 0, max: 500 },
+  },
+  catalogConcurrency: {
+    schema: z.number().int().min(1).max(64),
+    default: 8,
+    label: 'Concurrent catalog requests',
+    description:
+      "How many catalog requests one configuration's media server sends to its addons at once. Most Jellyfin apps load every library's latest row together when the home screen opens; the rest wait their turn.",
+    env: 'JELLYFIN_CATALOG_CONCURRENCY',
+    requiresRestart: false,
+    secret: false,
+    ui: { min: 1, max: 64 },
   },
   upcomingDays: {
     schema: z.number().int().min(1).max(365),

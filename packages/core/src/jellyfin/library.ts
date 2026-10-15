@@ -1,4 +1,4 @@
-import pLimit from 'p-limit';
+import pLimit, { type LimitFunction } from 'p-limit';
 import { config as appConfig } from '../config/index.js';
 import type { Meta, MetaPreview, UserData } from '../db/schemas.js';
 import type { AIOStreams } from '../main/index.js';
@@ -102,6 +102,36 @@ const WALK_TRAIL_TTL = 300;
 const WALK_CONCURRENCY = 4;
 /** Searchable catalogs queried at once; search runs on every keystroke. */
 const SEARCH_CONCURRENCY = 4;
+
+const MAX_LIBRARIES = 500;
+/** Per configuration, so the rows of one home screen can't flood its addons. */
+const catalogLimits = new Map<string, LimitFunction>();
+
+export const libraryLimit = () =>
+  Math.min(appConfig.jellyfin.maxLibraries || MAX_LIBRARIES, MAX_LIBRARIES);
+
+function limitedCatalog<T>(
+  uuid: string,
+  request: () => Promise<T>
+): Promise<T> {
+  let limit = catalogLimits.get(uuid);
+  if (!limit) {
+    limit = pLimit(appConfig.jellyfin.catalogConcurrency);
+    catalogLimits.set(uuid, limit);
+  }
+  const own = limit;
+  // p-limit frees the slot just after the request settles.
+  return own(request).finally(() =>
+    setTimeout(() => {
+      if (
+        !own.activeCount &&
+        !own.pendingCount &&
+        catalogLimits.get(uuid) === own
+      )
+        catalogLimits.delete(uuid);
+    })
+  );
+}
 
 function markFor(trail: WalkTrail, startIndex: number): WalkMark | undefined {
   let best: WalkMark | undefined;
@@ -208,7 +238,9 @@ export async function getCatalogPage(
       search: opts.search,
       skip: pageSkip,
     });
-    const res = await engine.getCatalog(catalog.type, catalog.id, extras);
+    const res = await limitedCatalog(engine.getUserData().uuid ?? '', () =>
+      engine.getCatalog(catalog.type, catalog.id, extras)
+    );
     if (res.errors?.length) {
       logger.debug(
         {
@@ -571,7 +603,7 @@ export async function listViews(
   engine: AIOStreams,
   userData: UserData
 ): Promise<ViewEntry[]> {
-  const catalogs = exposedCatalogs(engine);
+  const catalogs = exposedCatalogs(engine).slice(0, libraryLimit());
   const sniffed = await Promise.all(
     catalogs.map(async (catalog) => {
       const key = viewTypeKey(userData, catalog);
@@ -583,11 +615,9 @@ export async function listViews(
     })
   );
 
-  const max = appConfig.jellyfin.maxLibraries;
   const pending: typeof sniffed = [];
   const out: ViewEntry[] = [];
   for (const entry of sniffed) {
-    if (max > 0 && out.length >= max) break;
     const { catalog, evidence } = entry;
     if (!evidence) pending.push(entry);
     const kind = collectionTypeFor(catalog, evidence?.types ?? []);
