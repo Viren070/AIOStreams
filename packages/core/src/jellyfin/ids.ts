@@ -183,6 +183,29 @@ function tryPack(d: ContentDescriptor): string | null {
   return buf.toString('hex');
 }
 
+/**
+ * An episode's id under its own video id, when its series is known by another
+ * id and so its usual id is hashed: unlike that, any server resolves this one.
+ */
+export function sharedEpisodeId(d: ContentDescriptor): string | undefined {
+  if (d.k !== 'episode' || tryPack(d)) return undefined;
+  const parsed = IdParser.parse(d.v, d.t);
+  if (!parsed?.season || !parsed.episode || !ID_TYPE_CODES[parsed.type])
+    return undefined;
+  const numeric = numericOf(parsed);
+  if (numeric === null) return undefined;
+  return (
+    tryPack({
+      k: 'episode',
+      t: d.t,
+      i: rebuildBaseId(parsed.type, numeric),
+      s: Number(parsed.season),
+      e: Number(parsed.episode),
+      v: d.v,
+    }) ?? undefined
+  );
+}
+
 function unpack(buf: Buffer): ContentDescriptor | null {
   const kind = KIND_BY_CODE[buf[1] >> 4];
   const idType = ID_TYPE_BY_CODE[buf[1] & 0x0f];

@@ -17,6 +17,7 @@ import {
   genreId,
   personId,
   resolveMarkerId,
+  sharedEpisodeId,
   studioId,
   viewId,
 } from './ids.js';
@@ -733,6 +734,7 @@ export function buildEpisode(
   rememberImages(id, images);
 
   const extra = readVideoEnrichment(video);
+  const sharedId = sharedEpisodeId(descriptor);
   const runtimeMs = extra.runtimeMs ?? parseRuntimeMs(meta.runtime);
   const premiere = toIso(video.released);
   const unaired = isUnairedVideo(video);
@@ -779,10 +781,11 @@ export function buildEpisode(
     ExternalUrls: externalUrls(extra.providerIds, 'episode'),
     UserData: userDataFromRow(id, playstate, runtimeMs),
     Path: path,
-    ...((extra.filler || extra.recap) && {
+    ...((extra.filler || extra.recap || sharedId) && {
       aiostreams: {
         ...(extra.filler && { filler: true }),
         ...(extra.recap && { recap: true }),
+        ...(sharedId && { sharedId }),
       },
     }),
     ...(missing || !ctx.listVersions
