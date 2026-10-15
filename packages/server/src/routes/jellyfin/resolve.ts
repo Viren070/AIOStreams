@@ -9,6 +9,7 @@ import {
   DistributedLock,
   hasProgrammeVideos,
   encodeItemId,
+  FULL_SUPPORT,
   requestLockType,
   isPlayable,
   resolveMarkerId as markerIdFor,
@@ -132,7 +133,7 @@ export async function playTargetFor(
   return null;
 }
 
-function maxVersionsFor(ctx: JellyfinRequestContext): number {
+export function maxVersionsFor(ctx: JellyfinRequestContext): number {
   const cap = appConfig.jellyfin.maxVersions;
   const wanted = ctx.userData.jellyfin?.maxVersions ?? cap;
   return Math.max(1, Math.min(cap, wanted));
@@ -156,7 +157,7 @@ function noticeStreamsOf(
   );
   return all.filter(
     (stream) =>
-      !isPlayable(stream) &&
+      !isPlayable(stream, FULL_SUPPORT) &&
       NOTICE_TYPES.includes(stream.type) &&
       !(stream.externalUrl && playableUrls.has(stream.externalUrl))
   );
@@ -274,14 +275,14 @@ async function resolveUncached(
       ? { ...stream, type: constants.LIVE_STREAM_TYPE }
       : stream;
   const inline = (target.streams ?? []) as ParsedStream[];
-  const ownPlayable = inline.filter(isPlayable);
+  const ownPlayable = inline.filter((s) => isPlayable(s, FULL_SUPPORT));
   const streamsRes = ownPlayable.length
     ? undefined
     : await engine.getStreams(target.videoId, target.type);
   const all = (
     ownPlayable.length ? inline : (streamsRes?.data?.streams ?? [])
   ) as ParsedStream[];
-  const playable = all.filter(isPlayable);
+  const playable = all.filter((s) => isPlayable(s, FULL_SUPPORT));
   const addonSubtitles: SubtitleTrack[] = [];
 
   const streamContext = engine.getStreamContext();
@@ -300,7 +301,10 @@ async function resolveUncached(
       return fallback;
     }
   };
-  const top = playable.slice(0, maxVersionsFor(ctx));
+  // A client that plays only plain URLs is offered its own first `max`.
+  const max = maxVersionsFor(ctx);
+  const plain = new Set(all.filter((s) => isPlayable(s)).slice(0, max));
+  const top = playable.filter((s, i) => i < max || plain.has(s));
   const identities = sourceIdentities(itemId, top);
 
   const sources: MediaSourceRecord[] = [];

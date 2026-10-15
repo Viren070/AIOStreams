@@ -32,6 +32,7 @@ import {
   isUnairedVideo,
   itemKeyFor,
   placeholderMediaSource,
+  offeredSources,
   playableSources,
   airedEpisodeRefs,
   rememberedShowEpisodes,
@@ -62,6 +63,7 @@ import {
   type MetaPreview,
   type ParsedMeta,
   type PlaybackMemo,
+  type PlaySupport,
   type WatchStateRow,
   type SeasonGroup,
   type TrackPreferences,
@@ -73,7 +75,12 @@ import {
   ANDROID_PLAYER_CLIENT,
   type JellyfinRequestContext,
 } from './context.js';
-import { getMeta, resolveMarkerId, resolvePlayback } from './resolve.js';
+import {
+  getMeta,
+  maxVersionsFor,
+  resolveMarkerId,
+  resolvePlayback,
+} from './resolve.js';
 
 export function contentRefOf(d: ContentDescriptor): ContentRef {
   switch (d.k) {
@@ -745,6 +752,7 @@ export function mediaSourcesFrom(
     firstId: string;
     tracks: TrackPreferences;
     requestedMsid?: string;
+    support?: PlaySupport;
     profile?: DeviceProfile;
     hasSegments?: boolean;
   }
@@ -758,7 +766,11 @@ export function mediaSourcesFrom(
         header: (name) => req.get(name),
         query: req.query as Record<string, unknown>,
       }).token;
-  let ordered = memo.sources;
+  let ordered = offeredSources(
+    memo.sources,
+    opts.support ?? {},
+    maxVersionsFor(ctx)
+  );
   if (opts.requestedMsid) {
     const idx = ordered.findIndex((s) => s.msid === opts.requestedMsid);
     if (idx > 0)
@@ -867,12 +879,14 @@ export async function detailItem(
   };
   const memo = reusable ?? (shouldResolve ? await resolveNow() : null);
 
-  if (memo && memo.sources.length) {
-    const sources = mediaSourcesFrom(req, ctx, memo, {
-      firstId: itemId,
-      tracks: await trackPreferences(ctx),
-      requestedMsid: opts.requestedMsid,
-    });
+  const sources = memo
+    ? mediaSourcesFrom(req, ctx, memo, {
+        firstId: itemId,
+        tracks: await trackPreferences(ctx),
+        requestedMsid: opts.requestedMsid,
+      })
+    : [];
+  if (sources.length) {
     item.MediaSources = sources;
     item.MediaStreams = sources[0].MediaStreams;
     item.Container = sources[0].Container;

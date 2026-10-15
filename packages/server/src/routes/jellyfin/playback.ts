@@ -5,6 +5,7 @@ import {
   lookupFor,
   couldHaveSegments,
   isMemoFresh,
+  offeredSources,
   playableSources,
   resolveByItem,
   segmentsFor,
@@ -17,6 +18,7 @@ import {
   type MediaSourceRecord,
   type MemoPointer,
   type PlaybackMemo,
+  type PlaySupport,
 } from '@aiostreams/core';
 import {
   bodyField,
@@ -37,6 +39,7 @@ import {
 import {
   applyProbedMediaInfo,
   enrichSourceSubtitles,
+  maxVersionsFor,
   resolvePlayback,
 } from './resolve.js';
 
@@ -184,13 +187,22 @@ function isPlaying(req: Request, loc: Located): boolean {
   return PLAY_ONLY_CLIENTS.test(loc.ctx.client.name);
 }
 
+/** Without an id, the first version every client is offered. */
 function pickSource(
   memo: PlaybackMemo,
   requestedMsid?: string
 ): MediaSourceRecord | undefined {
   return requestedMsid
     ? memo.sources.find((s) => s.msid === requestedMsid)
-    : memo.sources[0];
+    : memo.sources.find((s) => !s.needs);
+}
+
+function playSupportOf(req: Request): PlaySupport {
+  const body = bodyOf(req);
+  return {
+    headers: body.EnableRequiredHttpHeaders === true,
+    youtube: body.EnableYouTube === true,
+  };
 }
 
 /**
@@ -218,8 +230,12 @@ async function playbackInfo(req: Request, res: Response) {
     return;
   }
   const profile = bodyOf(req).DeviceProfile as DeviceProfile | undefined;
+  const support = playSupportOf(req);
   const memo = await ensureMemo(loc, listingOptions(req, loc));
-  if (!memo || !memo.sources.length) {
+  const offered = memo
+    ? offeredSources(memo.sources, support, maxVersionsFor(loc.ctx))
+    : [];
+  if (!memo || !offered.length) {
     res.json({
       MediaSources: placeholderSources(req, loc.ctx, loc.itemId, true),
       PlaySessionId: memo?.psid ?? '',
@@ -234,18 +250,20 @@ async function playbackInfo(req: Request, res: Response) {
       loc.ctx.scope(),
       loc.ctx.persona?.id
     );
-  await enrichSourceSubtitles(loc.ctx, memo, loc.requestedMsid);
-  await applyProbedMediaInfo(loc.ctx, memo, loc.requestedMsid, {
+  const target = loc.requestedMsid ?? offered[0].msid;
+  await enrichSourceSubtitles(loc.ctx, memo, target);
+  await applyProbedMediaInfo(loc.ctx, memo, target, {
     playing: isPlaying(req, loc),
   });
   // A version no longer listed must not lend its id to another.
-  const requested = memo.sources.some((s) => s.msid === loc.requestedMsid)
+  const requested = offered.some((s) => s.msid === loc.requestedMsid)
     ? loc.requestedMsid
     : undefined;
   const sources = mediaSourcesFrom(req, loc.ctx, memo, {
     firstId: requested ?? loc.itemId,
     tracks: await trackPreferences(loc.ctx),
     requestedMsid: requested,
+    support,
     profile,
     hasSegments: hasSegments(loc.ctx, memo),
   });

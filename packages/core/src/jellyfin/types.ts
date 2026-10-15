@@ -55,6 +55,8 @@ export interface AiostreamsSourceExtension {
   mediaInfoQuality?: string;
   filename?: string;
   externalUrl?: string;
+  /** A YouTube video, which the client opens itself. */
+  ytId?: string;
   type: string;
   /** Stremio's: the next episode's version with the same group plays on. */
   bingeGroup?: string;
@@ -80,7 +82,16 @@ export interface MediaSourceRecord {
   live: boolean;
   /** Carries text only: an addon notice, a pipeline error or a statistic. */
   notice?: boolean;
+  /** Offered only to clients that support it. */
+  needs?: keyof PlaySupport;
   extension: AiostreamsSourceExtension;
+}
+
+/** What a client can play beyond a plain URL, as it says in PlaybackInfo. */
+export interface PlaySupport {
+  /** Sends a version's `RequiredHttpHeaders`. */
+  headers?: boolean;
+  youtube?: boolean;
 }
 
 export interface PlaybackMemo {

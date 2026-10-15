@@ -79,6 +79,7 @@ object:
 | `name`        | string | The version's title in the version list, instead of `Name`                               |
 | `description` | string | The lines under the title in the version list                                            |
 | `bingeGroup`  | string | Autoplay picks the next episode's version with the same group, as Stremio's `bingeGroup` |
+| `ytId`        | string | A YouTube video, which the app's player opens itself rather than the version's address   |
 
 The first version's `Id` is the item's own id, as in standard Jellyfin, so `id` is how the app tells
 versions apart across listings. Without the feature, the next episode settings say nothing of
@@ -90,11 +91,16 @@ should only do so for `PlaybackInfo`, or for a lookup that asks for `MediaSource
 
 In the `PlaybackInfo` body:
 
-| Field           | Meaning                                                                                  |
-| --------------- | ---------------------------------------------------------------------------------------- |
-| `Fresh`         | The app is listing versions: answer with a list no older than the server keeps one for   |
-| `Refresh`       | Look versions up again even if a recent list exists (with the `refreshVersions` feature) |
-| `MediaSourceId` | Standard. The app is playing that version: answer from the list it came from             |
+| Field                       | Meaning                                                                                  |
+| --------------------------- | ---------------------------------------------------------------------------------------- |
+| `Fresh`                     | The app is listing versions: answer with a list no older than the server keeps one for   |
+| `Refresh`                   | Look versions up again even if a recent list exists (with the `refreshVersions` feature) |
+| `MediaSourceId`             | Standard. The app is playing that version: answer from the list it came from             |
+| `EnableRequiredHttpHeaders` | The app's player sends a version's standard `RequiredHttpHeaders` with its requests      |
+| `EnableYouTube`             | The app's player opens a version by its `ytId`                                           |
+
+Other clients send neither, so a version that only plays with its headers, or only as a YouTube
+video, is listed only when the body says the app can play it.
 
 ## Libraries
 
