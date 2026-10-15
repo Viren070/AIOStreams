@@ -95,6 +95,11 @@ export function PlaybackSection() {
   const [skipFillers, setSkipFillers] = useSetting(settings.next.skipFillers);
   const [skipRecaps, setSkipRecaps] = useSetting(settings.next.skipRecaps);
   const marked = useFeature('fillers');
+  const parties = useFeature('parties');
+  const [partyMessages, setPartyMessages] = useSetting(settings.party.messages);
+  const [partyReactions, setPartyReactions] = useSetting(
+    settings.party.reactions
+  );
   const autoplay = prefs.EnableNextEpisodeAutoPlay !== false;
   const [hardwareDecoding, setHardwareDecoding] = useSetting(
     settings.video.hardwareDecoding
@@ -241,6 +246,23 @@ export function PlaybackSection() {
           />
         )}
       </SettingsCard>
+      {parties && (
+        <SettingsCard title="Watch parties" description={FOLLOWS_YOU}>
+          <Switch
+            side="right"
+            label="Show messages over the video"
+            help="What the people you watch with say shows for a few seconds. It always stays in the party's chat."
+            value={partyMessages}
+            onValueChange={setPartyMessages}
+          />
+          <Switch
+            side="right"
+            label="Show reactions over the video"
+            value={partyReactions}
+            onValueChange={setPartyReactions}
+          />
+        </SettingsCard>
+      )}
       <SettingsCard title="Controls" description={ON_DEVICE}>
         <Select
           label="Skip length"

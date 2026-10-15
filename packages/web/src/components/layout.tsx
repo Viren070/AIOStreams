@@ -8,6 +8,7 @@ import {
 } from '@tanstack/react-router';
 import {
   BiCalendar,
+  BiGroup,
   BiDownload,
   BiCompass,
   BiHeart,
@@ -69,6 +70,9 @@ import { HomePage } from '../pages/home';
 import { PageShown } from '../lib/page-shown';
 import { GlideLayers } from './glide-layers';
 import { UpdatePrompt } from './update-prompt';
+import { PartyHost } from './party/party-host';
+import { openPartySheet } from './party/party-sheet';
+import { useParty } from '../lib/party/party';
 
 // Kept mounted under every page, so it skips the layout's render on each route change.
 const KeptHome = React.memo(HomePage);
@@ -505,6 +509,13 @@ export function WebLayout() {
     isCurrent: pathname.startsWith('/calendar'),
     onClick: () => navigate(to.calendar()),
   };
+  const inParty = !!useParty();
+  const together: SidebarItem = {
+    id: 'party',
+    name: inParty ? 'Watch party' : 'Watch together',
+    iconType: BiGroup,
+    onClick: () => openPartySheet(),
+  };
   const items: SidebarItem[] = [
     {
       id: 'home',
@@ -537,6 +548,7 @@ export function WebLayout() {
     },
     calendar,
     activity,
+    together,
     ...(downloads ? [downloads] : []),
   ];
 
@@ -663,8 +675,9 @@ export function WebLayout() {
                 {nav === 'tv-top' && (
                   <TvTabs
                     style={tvTopBar}
-                    items={items}
-                    footerItems={[settingsItem]}
+                    // A row of named tabs fills up; this one sits with the icons at its end.
+                    items={items.filter((i) => i !== together)}
+                    footerItems={[together, settingsItem]}
                     you={you}
                   />
                 )}
@@ -709,9 +722,18 @@ export function WebLayout() {
           {!currentHost().tv && (
             <MobileNav
               items={items.filter(
-                (i) => i !== calendar && i !== activity && i !== downloads
+                (i) =>
+                  i !== calendar &&
+                  i !== activity &&
+                  i !== downloads &&
+                  i !== together
               )}
-              places={[...(downloads ? [downloads] : []), activity, calendar]}
+              places={[
+                ...(downloads ? [downloads] : []),
+                activity,
+                calendar,
+                together,
+              ]}
               menuItems={several ? [settingsItem, switchItem] : [settingsItem]}
               wide={nav === 'bar'}
             />
@@ -720,6 +742,7 @@ export function WebLayout() {
         </AppSidebarProvider>
       </div>
       {playing && <Outlet />}
+      <PartyHost />
     </>
   );
 }

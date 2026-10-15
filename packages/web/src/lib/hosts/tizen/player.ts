@@ -191,6 +191,7 @@ export const avPlayEngine: EngineFactory = (emit) => {
         report({ audio: current === undefined ? null : String(current) });
         emit({ type: 'loaded' });
         if (next.startMs) seekTo(next.startMs);
+        if (next.paused) return report({ paused: true });
         run(() => {
           av.play();
           report({ paused: false });

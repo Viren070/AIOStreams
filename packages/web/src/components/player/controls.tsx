@@ -64,6 +64,7 @@ export function PlayerControls({
   offeringNext = false,
   caption,
   steps,
+  onParty,
 }: {
   item: BaseItemDto;
   player: PlayerController;
@@ -79,6 +80,7 @@ export function PlayerControls({
   caption?: string;
   /** What previous and next move between, where it isn't the show's episodes. */
   steps?: string;
+  onParty?: () => void;
 }) {
   const { state } = player;
   const latest = useLatest(player);
@@ -526,6 +528,7 @@ export function PlayerControls({
             onAddFile={() => fileInput.current?.click()}
             onSyncByEar={() => setByEar(true)}
             onSyncToLine={pickLine}
+            onParty={onParty}
             notice={showNotice}
           />
         </div>

@@ -10,6 +10,8 @@ import { storedMap } from '../storage';
 import { subtitleLanguages, usePlaybackPrefs } from '../user-config';
 import { useEpisodesAfter } from '../queries';
 import { sameLanguage } from '../languages';
+import { party } from '../party/party';
+import { usePlayForParty } from '../party/actions';
 import type { BaseItemDto, PlaybackInfoResponse, SourceInfo } from '../types';
 
 /** The version each item last played in, which resuming it goes straight to. */
@@ -74,10 +76,11 @@ function useOpenLink() {
   };
 }
 
-/** Plays an item on the player chosen for this device. */
+/** Plays an item on the player chosen for this device, or for the party it is in. */
 export function usePlay() {
   const openLink = useOpenLink();
   const episodesAfter = useEpisodesAfter();
+  const playForParty = usePlayForParty();
   const { prefs } = usePlaybackPrefs();
   return async (
     item: BaseItemDto,
@@ -92,6 +95,8 @@ export function usePlay() {
     if (!source.Id) throw new Error('No playable version was found');
     const startMs =
       opts.startMs ?? ticksToMs(item.UserData?.PlaybackPositionTicks);
+    if (party.state()?.status === 'live')
+      return playForParty(item, source, startMs);
 
     const { play } = currentHost();
     if (play) {

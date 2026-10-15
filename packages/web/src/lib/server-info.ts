@@ -1,5 +1,6 @@
 import React from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import type { PartyRelayMode } from '@aiostreams/core';
 import type { JellyfinClient } from './client';
 import type { Branding } from './types';
 
@@ -13,7 +14,8 @@ export type Feature =
   | 'refreshVersions'
   | 'versions'
   | 'genreRequired'
-  | 'fillers';
+  | 'fillers'
+  | 'parties';
 
 /** What a server's public info says about it. */
 export interface ServerInfo extends Branding {
@@ -26,6 +28,8 @@ export interface ServerInfo extends Branding {
   features: Partial<Record<Feature, number>>;
   /** The server's build, like `v2.35.0` or `nightly a1b2c3d4`. */
   version: string | null;
+  /** Who its party relay admits besides its users, and the relay it suggests for the rest. */
+  parties: { relay: PartyRelayMode; defaultRelay: string | null } | null;
 }
 
 export const NO_SERVER_INFO: ServerInfo = {
@@ -36,6 +40,7 @@ export const NO_SERVER_INFO: ServerInfo = {
   personal: false,
   features: {},
   version: null,
+  parties: null,
 };
 
 interface PublicSystemInfo {
@@ -46,6 +51,7 @@ interface PublicSystemInfo {
     pinSignIn?: boolean;
     personal?: boolean;
     features?: ServerInfo['features'];
+    parties?: ServerInfo['parties'];
     version?: { tag?: string; channel?: string; commit?: string };
   };
 }
@@ -90,6 +96,7 @@ export function useServerInfoQuery(client: JellyfinClient) {
         personal: data.aiostreams?.personal ?? false,
         features: data.aiostreams?.features ?? {},
         version: buildVersion(data.aiostreams?.version),
+        parties: data.aiostreams?.parties ?? null,
       };
     },
     staleTime: 5 * 60_000,

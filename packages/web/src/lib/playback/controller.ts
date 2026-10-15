@@ -16,6 +16,8 @@ export interface Track {
 export interface PlayerState {
   /** The first frame has played. */
   started: boolean;
+  /** The file is open and its tracks known, whether or not it plays yet. */
+  loaded: boolean;
   paused: boolean;
   waiting: boolean;
   durationMs: number;
@@ -48,6 +50,7 @@ export interface PlayerController {
   audioTracks: Track[];
   subtitleTracks: Track[];
   togglePlay(): void;
+  setPaused(paused: boolean): void;
   seek(ms: number): void;
   setVolume(volume: number): void;
   toggleMute(): void;
@@ -93,6 +96,8 @@ export interface PlayerController {
   fit?: boolean;
   /** Plays the file again after it failed, from where it stopped or on another engine. */
   retry?: { label: string; run(): void };
+  /** Others watch along, so nothing acts on its own, like skipping or speeding up. */
+  shared?: boolean;
 }
 
 export interface QueuedEpisode {
@@ -121,6 +126,7 @@ export interface PlayerOptions {
   onClosed?: () => void;
   /** That player moved on to the episode it was given with `queueNext`. */
   onAdvance?: (episode: QueuedEpisode) => void;
+  startPaused?: boolean;
 }
 
 export const VOLUME_KEY = 'aiostreams-web-volume';
@@ -136,6 +142,7 @@ export function storedVolume(max = 1): { volume: number; muted: boolean } {
 export function initialState(source: SourceInfo): PlayerState {
   return {
     started: false,
+    loaded: false,
     paused: false,
     waiting: true,
     durationMs: source.RunTimeTicks ? source.RunTimeTicks / 10_000 : 0,

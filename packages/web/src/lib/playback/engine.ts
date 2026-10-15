@@ -29,6 +29,8 @@ export interface EngineFile {
   url: string;
   headers?: Record<string, string>;
   startMs: number;
+  /** Opens without playing. */
+  paused?: boolean;
   item: BaseItemDto;
   source: SourceInfo;
   prefs: PlaybackPrefs;
@@ -49,6 +51,7 @@ export type EngineState = Partial<
   Pick<
     PlayerState,
     | 'started'
+    | 'loaded'
     | 'paused'
     | 'waiting'
     | 'durationMs'

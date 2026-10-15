@@ -107,6 +107,7 @@ export function usePlayer(
     url,
     headers: opts.headers,
     startMs: from,
+    paused: opts.startPaused,
     item: opts.item,
     source,
     prefs: opts.prefs ?? {},
@@ -131,7 +132,7 @@ export function usePlayer(
   };
   const restart = () => {
     setRetry(undefined);
-    patch({ error: null, started: false, waiting: true });
+    patch({ error: null, started: false, loaded: false, waiting: true });
   };
 
   handle.current = (event) => {
@@ -146,6 +147,7 @@ export function usePlayer(
       case 'chapters':
         return setChapters(event.chapters);
       case 'loaded': {
+        patch({ loaded: true });
         const { tracks, audio, subtitle } = live.current;
         const shown = shownSubtitle(tracks, subtitle);
         const picks = chooseTracks(
@@ -229,6 +231,7 @@ export function usePlayer(
     ],
     subtitleText,
     togglePlay: () => engine.setPaused(!live.current.paused),
+    setPaused: (paused) => engine.setPaused(paused),
     seek: (ms) => {
       engine.seek(ms);
       playhead.set({ positionMs: ms });

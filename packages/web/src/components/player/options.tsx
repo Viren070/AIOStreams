@@ -21,6 +21,7 @@ import {
   LuRatio,
   LuStretchHorizontal,
   LuUndo2,
+  LuUsers,
 } from 'react-icons/lu';
 import {
   DropdownMenu,
@@ -56,6 +57,7 @@ import {
 import { splitByLanguage } from '../../lib/subtitles/tracks';
 import { subtitleLanguages, usePlaybackPrefs } from '../../lib/user-config';
 import { ControlButton } from './buttons';
+import { useParty } from '../../lib/party/party';
 import { RATES, rateLabel } from './keys';
 import { usePlayhead } from '../../lib/playback/playhead';
 
@@ -399,10 +401,12 @@ export function OptionButtons({
   onAddFile,
   onSyncByEar,
   onSyncToLine,
+  onParty,
   notice,
 }: {
   player: PlayerController;
   onMenu(open: boolean): void;
+  onParty?: () => void;
   onVersions?: () => void;
   onEpisodes?: () => void;
   onAddFile(): void;
@@ -425,8 +429,33 @@ export function OptionButtons({
     chapterAt(chapters, h.positionMs)
   );
   const tv = !!currentHost().tv;
+  const unread = useParty()?.unread ?? 0;
   return (
     <div className="ml-auto flex items-center sm:gap-1">
+      {onParty && (
+        <ControlButton
+          name="party"
+          label={
+            unread
+              ? `Watch party, ${unread} new ${unread === 1 ? 'message' : 'messages'}`
+              : player.shared
+                ? 'Watch party'
+                : 'Watch together'
+          }
+          onClick={onParty}
+          className="relative"
+        >
+          <LuUsers />
+          {unread > 0 && (
+            <span
+              data-ui="party-unread"
+              className="absolute right-0.5 top-0.5 min-w-4 rounded-full bg-brand-500 px-1 text-[10px] font-semibold leading-4 text-white"
+            >
+              {unread > 9 ? '9+' : unread}
+            </span>
+          )}
+        </ControlButton>
+      )}
       {onEpisodes && (
         <ControlButton name="episodes" label="Episodes" onClick={onEpisodes}>
           <LuGalleryVerticalEnd />

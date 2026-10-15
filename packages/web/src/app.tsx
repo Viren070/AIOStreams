@@ -27,6 +27,7 @@ import { ServersPage } from './pages/servers';
 import { currentHost } from './lib/hosts';
 import { ShellSetup, shellHost, useShellLinks } from './lib/hosts/shell';
 import { parseAppLink } from './lib/app-links';
+import { party } from './lib/party/party';
 import { toast } from 'sonner';
 import {
   ConfirmationDialog,
@@ -139,6 +140,7 @@ function Standalone() {
     const link = parseAppLink(raw);
     if (!link) return void toast.error('The app cannot open that link');
     if (link.kind === 'route') return navigate(link.path);
+    if (link.kind === 'party') return party.hold(link.invite);
     if (!base) return setLinked(link.address);
     setAsking(link.address);
     openConfirm();

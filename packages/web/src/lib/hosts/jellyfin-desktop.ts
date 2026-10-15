@@ -169,6 +169,8 @@ const jmpEngine: EngineFactory = (emit) => {
           playing: () => {
             if (!started) {
               started = true;
+              // Its player only opens a file by playing it.
+              if (next.paused) mpv.pause();
               if (next.volume) {
                 mpv.setVolume(
                   Math.round(Math.min(1, next.volume.volume) * 100)

@@ -1,3 +1,4 @@
+import { parseInvite, type Invite } from './party/invite';
 import { to } from './paths';
 
 /**
@@ -6,7 +7,8 @@ import { to } from './paths';
  */
 export type AppLink =
   | { kind: 'server'; address: string }
-  | { kind: 'route'; path: string };
+  | { kind: 'route'; path: string }
+  | { kind: 'party'; invite: Invite };
 
 const LINK = /^aiostreams:\/\/([^/?#]+)(\/[^?#]*)?(?:\?([^#]*))?/i;
 
@@ -40,6 +42,10 @@ export function parseAppLink(raw: string): AppLink | null {
     }
     case 'search':
       return { kind: 'route', path: to.search(param(query, 'q') ?? undefined) };
+    case 'party': {
+      const invite = parseInvite(raw);
+      return invite ? { kind: 'party', invite } : null;
+    }
     // Handed on as it came; the item page decodes what the player added.
     case 'return':
       return path.startsWith('/item/')

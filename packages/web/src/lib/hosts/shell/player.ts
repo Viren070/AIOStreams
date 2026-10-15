@@ -398,7 +398,7 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
       send('player-sync');
       // The player keeps pause from the last file.
       send('player-set', {
-        paused: false,
+        paused: !!next.paused,
         subtitleDelayMs: next.subtitleDelayMs,
         ...next.volume,
       });

@@ -200,6 +200,8 @@ export function videoEngine(
           document.removeEventListener('fullscreenchange', onFullscreen);
         };
         onFullscreen();
+        el.autoplay = !next.paused;
+        if (next.paused) set({ paused: true });
         el.src = next.url;
       },
       // Browsers keep a closed player in their media controls until its video drops the stream.

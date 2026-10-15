@@ -189,3 +189,18 @@ html[data-pointer-focus] :focus-visible [data-ui='focus-ring'] {
     -webkit-user-drag: none;
   }
 }
+
+/* A party member's reaction rises over the video and fades. */
+@keyframes party-rise {
+  from {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-12rem);
+    opacity: 0;
+  }
+}

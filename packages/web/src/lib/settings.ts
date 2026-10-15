@@ -719,6 +719,11 @@ export const settings = {
     ]),
     skipRecaps: syncedFlag('skipRecaps', true, ['aiostreams-web-skip-recaps']),
   },
+  party: {
+    /** What other members send shows over the video. */
+    messages: syncedFlag('partyMessages', true),
+    reactions: syncedFlag('partyReactions', true),
+  },
   controls: {
     seekStep: device<number>(
       'aiostreams-web-controls-seek-step',

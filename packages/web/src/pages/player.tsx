@@ -48,6 +48,7 @@ import {
 } from '../lib/subtitles/style';
 import { usePlaybackPrefs, type PlaybackPrefs } from '../lib/user-config';
 import { backdropUrl } from '../lib/images';
+import { fullTitle } from '../lib/format';
 import { goBack, navigate, to, versionsPath } from '../lib/paths';
 import { PlayerControls } from '../components/player/controls';
 import {
@@ -67,6 +68,12 @@ import type {
 } from '../lib/types';
 import { useDownloadOf, type Download } from '../lib/downloads';
 import { CachedImage } from '../components/cached-image';
+import { party, useParty } from '../lib/party/party';
+import { leavePartyPlayback, usePartyBinding } from '../lib/party/follow';
+import { usePlayForParty } from '../lib/party/actions';
+import { usePartyPlayer } from '../lib/party/playback';
+import { PartyLayer } from '../components/party/party-layer';
+import { openPartySheet } from '../components/party/party-sheet';
 
 interface PlayerProps {
   item: BaseItemDto;
@@ -500,7 +507,25 @@ function Player({
   const video = React.useRef<HTMLVideoElement>(null);
   const [hostPlayer] = React.useState(() => currentHost().player);
   const close = React.useRef<() => void>(undefined);
-  const { back, onEnded, connect } = useEnded(item, () => close.current?.());
+  const ended = useEnded(item, () => close.current?.());
+  const { connect } = ended;
+  const playlistItemId = usePartyBinding(item.Id!);
+  // What the party plays opens paused, until the party starts it.
+  const [startPaused] = React.useState(() => !!playlistItemId);
+  const inParty = !!useParty();
+  const playForParty = usePlayForParty();
+  const back = React.useCallback(() => {
+    if (playlistItemId) leavePartyPlayback();
+    ended.back();
+  }, [playlistItemId, ended]);
+  const onEnded = React.useCallback(() => {
+    if (!playlistItemId) return ended.onEnded();
+    const state = party.state();
+    const more = !!state && state.queue.length > state.playingIndex + 1;
+    party.request(
+      more ? { type: 'NextItem', playlistItemId } : { type: 'Stop' }
+    );
+  }, [playlistItemId, ended]);
   const [subtitleStyle] = useSetting(settings.subtitle.style);
   const [fit] = useSetting(settings.video.fit);
   const localSubtitle = React.useCallback(
@@ -510,7 +535,7 @@ function Player({
     },
     [local]
   );
-  const player = usePlayer(hostPlayer ?? videoEngine(video), {
+  const own = usePlayer(hostPlayer ?? videoEngine(video), {
     client,
     item,
     url: local?.local
@@ -531,12 +556,34 @@ function Player({
     prefs,
     subtitleStyle,
     launched,
+    startPaused,
   });
+  const player = usePartyPlayer(own, playlistItemId);
   close.current = player.close;
   const segments = useShownSegments(
     item,
     useSegments(item.Id!).data?.Items,
     player
+  );
+  const group = React.useMemo(
+    () =>
+      playlistItemId
+        ? {
+            step: (direction: 'next' | 'previous', episode: BaseItemDto) => {
+              const state = party.state();
+              const at =
+                (state?.playingIndex ?? 0) + (direction === 'next' ? 1 : -1);
+              if (state?.queue[at])
+                party.request({
+                  type: direction === 'next' ? 'NextItem' : 'PreviousItem',
+                  playlistItemId,
+                });
+              else void playForParty(episode, null);
+            },
+            play: (episode: BaseItemDto) => void playForParty(episode, null),
+          }
+        : undefined,
+    [playlistItemId, playForParty]
   );
   const next = useNextEpisodePrompt({
     item,
@@ -544,9 +591,24 @@ function Player({
     player,
     segments,
     onBack: back,
+    group,
   });
   connect(next);
   const switchVersion = useSwitchVersion(item, source, player);
+  const together = () =>
+    openPartySheet(
+      inParty
+        ? {}
+        : {
+            play: {
+              title: fullTitle(item),
+              run: () => {
+                own.setPaused(true);
+                return playForParty(item, source, own.playhead.positionMs);
+              },
+            },
+          }
+    );
   const controls = useShowTrackPicks(player, item, source);
   useReporting(player, { item, source, playSessionId });
   useNowPlaying(item, player, {
@@ -619,8 +681,10 @@ function Player({
               onNext={next.next ? next.playNext : undefined}
               onEpisode={next.playEpisode}
               loadingEpisode={next.loading}
+              onParty={together}
             />
           )}
+          {inParty && <PartyLayer />}
           {next.element}
         </>
       )}

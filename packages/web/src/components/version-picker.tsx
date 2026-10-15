@@ -42,6 +42,7 @@ import {
   type Download,
 } from '../lib/downloads';
 import { chosenPlayer } from '../lib/playback/player-choice';
+import { party } from '../lib/party/party';
 import {
   lastVersions,
   noticeSources,
@@ -156,7 +157,12 @@ export function VersionPickerProvider({
       const { queryClient, infoOptions, playVersion } = latest.current;
       const last = rememberedVersion(item, startMs);
       // The player page finds the version itself, and lists them if it is gone.
-      if (last && !currentHost().play && chosenPlayer().kind !== 'link') {
+      if (
+        last &&
+        !currentHost().play &&
+        chosenPlayer().kind !== 'link' &&
+        party.state()?.status !== 'live'
+      ) {
         navigate(to.play(item.Id!, last, startMs));
         return;
       }
