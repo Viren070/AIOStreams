@@ -34,6 +34,7 @@ import {
 import { SplashscreenPage } from './routes/splashscreen-page';
 import { ConfigureRoute } from './routes/configure-route';
 import { OAuthCallback } from './routes/oauth-callback';
+import { PartyInvitePage } from './routes/party-invite-page';
 import { sessionQuery, statusQuery } from './lib/queries';
 import { queryClient } from './lib/query-client';
 import type { StatusResponse } from '@aiostreams/core';
@@ -79,6 +80,12 @@ const splashscreenRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/splashscreen',
   component: SplashscreenPage,
+});
+
+const partyInviteRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/party/join',
+  component: PartyInvitePage,
 });
 
 // Auth gate for the configure routes: if the instance is protected, a valid
@@ -364,6 +371,7 @@ const routeTree = rootRoute.addChildren([
   loginRoute,
   oauthGdriveRoute,
   splashscreenRoute,
+  partyInviteRoute,
   dashboardRoute.addChildren([
     dashboardIndexRoute,
     dashboardAnalyticsRoute,

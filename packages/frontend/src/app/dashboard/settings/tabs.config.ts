@@ -14,6 +14,7 @@ import {
   BiKey,
   BiListUl,
   BiNetworkChart,
+  BiParty,
   BiPalette,
   BiPlayCircle,
   BiPlug,
@@ -419,6 +420,12 @@ export const TAB_MANIFEST: Record<string, Omit<TabDef, 'section'>> = {
     icon: BiTv,
     group: 'Integrations',
     order: 410,
+  },
+  party: {
+    label: 'Watch Parties',
+    icon: BiParty,
+    group: 'Integrations',
+    order: 415,
   },
   watchState: {
     label: 'Watch State',
