@@ -83,7 +83,7 @@ class AppBridge(
           };
           const send = (message) => port.postMessage(JSON.stringify(message));
           window.aiostreamsApp = Object.freeze({
-            protocol: 1,
+            protocol: 2,
             version: ${JsonPrimitive(identity.version)},
             platform: 'android',
             tv: ${identity.tv},

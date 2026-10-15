@@ -14,14 +14,8 @@ import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.doubleOrNull
-import kotlinx.serialization.json.intOrNull
-import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
 /** What the page says plays, and what it allows once the app is out of sight. */
@@ -35,7 +29,7 @@ data class NowPlayingItem(
     val background: Boolean,
 )
 
-/** mpv as a Media3 player for the media session, whose commands go to the page as `media-key`s. */
+/** The engine as a Media3 player for the media session, whose commands go to the page as `media-key`s. */
 @OptIn(UnstableApi::class)
 class SessionPlayer(private val send: (JsonObject) -> Unit) : SimpleBasePlayer(Looper.getMainLooper()) {
     private val main = Handler(Looper.getMainLooper())
@@ -58,28 +52,30 @@ class SessionPlayer(private val send: (JsonObject) -> Unit) : SimpleBasePlayer(L
         invalidateState()
     }
 
-    fun onProperty(name: String, value: JsonElement) {
-        val primitive = value as? JsonPrimitive
-        when (name) {
-            "pause" -> paused = primitive?.booleanOrNull ?: true
-            "idle-active" -> idle = primitive?.booleanOrNull ?: true
-            "paused-for-cache" -> buffering = primitive?.booleanOrNull ?: false
-            "speed" -> speed = primitive?.doubleOrNull?.toFloat() ?: 1f
-            "duration" -> durationMs = primitive?.doubleOrNull?.let { (it * 1000).toLong() } ?: C.TIME_UNSET
-            "video-params" -> size = sizeOf(value as? JsonObject)
-            "time-pos" -> {
-                positionMs = ((primitive?.doubleOrNull ?: 0.0) * 1000).toLong()
-                // Otherwise the session extrapolates; a seek's position can arrive either side of its event.
-                if (!seeked) return
-            }
-            else -> return
+    fun onState(state: PlayerState) {
+        state.paused?.let {
+            paused = it
+            settle(PAUSED)
         }
-        settle(name)
+        state.idle?.let {
+            idle = it
+            settle(IDLE)
+        }
+        state.buffering?.let { buffering = it }
+        state.speed?.let { speed = it.toFloat() }
+        state.durationMs?.let { durationMs = it.toLong() }
+        state.positionMs?.let { positionMs = it.toLong() }
+        // Otherwise the session extrapolates; a seek's position can arrive either side of its event.
+        if (state.copy(positionMs = null, bufferedMs = null) != PlayerState() || seeked) invalidateState()
+    }
+
+    fun onVideoSize(width: Int, height: Int) {
+        size = VideoSize(width, height)
         invalidateState()
     }
 
     fun onEvent(name: String) {
-        if (name == "playback-restart") seeked = true
+        if (name == RESTART) seeked = true
         settle(name)
         invalidateState()
     }
@@ -123,23 +119,23 @@ class SessionPlayer(private val send: (JsonObject) -> Unit) : SimpleBasePlayer(L
     }
 
     override fun handleSetPlayWhenReady(playWhenReady: Boolean): ListenableFuture<*> =
-        press(buildJsonObject { put("action", if (playWhenReady) "play" else "pause") }, until = "pause")
+        press(buildJsonObject { put("action", if (playWhenReady) "play" else "pause") }, until = PAUSED)
 
-    override fun handleStop(): ListenableFuture<*> = press(buildJsonObject { put("action", "stop") }, until = "idle-active")
+    override fun handleStop(): ListenableFuture<*> = press(buildJsonObject { put("action", "stop") }, until = IDLE)
 
     override fun handleSeek(mediaItemIndex: Int, positionMs: Long, seekCommand: Int): ListenableFuture<*> =
         when (seekCommand) {
             COMMAND_SEEK_TO_NEXT, COMMAND_SEEK_TO_NEXT_MEDIA_ITEM ->
-                press(buildJsonObject { put("action", "next") }, until = "start-file")
+                press(buildJsonObject { put("action", "next") }, until = START)
             COMMAND_SEEK_TO_PREVIOUS, COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM ->
-                press(buildJsonObject { put("action", "previous") }, until = "start-file")
+                press(buildJsonObject { put("action", "previous") }, until = START)
             else -> press(buildJsonObject {
                 put("action", "seek")
                 put("position", positionMs)
-            }, until = "playback-restart")
+            }, until = RESTART)
         }
 
-    /** Holds the session's guess of the outcome until mpv reports `until`, or gives up. */
+    /** Holds the session's guess of the outcome until the engine reports `until`, or gives up. */
     private fun press(key: JsonObject, until: String): ListenableFuture<*> {
         send(buildJsonObject {
             put("type", "media-key")
@@ -171,15 +167,14 @@ class SessionPlayer(private val send: (JsonObject) -> Unit) : SimpleBasePlayer(L
     private companion object {
         const val PREVIOUS = "previous"
         const val NEXT = "next"
+        const val PAUSED = "paused"
+        const val IDLE = "idle"
+        const val START = "start"
+        const val RESTART = "restart"
         const val SKIP_MS = 10_000L
         const val SETTLE_MS = 2_000L
 
         fun neighbour(uid: String) = MediaItemData.Builder(uid).setIsPlaceholder(true).build()
 
-        fun sizeOf(params: JsonObject?): VideoSize {
-            val width = params?.get("dw")?.jsonPrimitive?.intOrNull ?: return VideoSize.UNKNOWN
-            val height = params["dh"]?.jsonPrimitive?.intOrNull ?: return VideoSize.UNKNOWN
-            return VideoSize(width, height)
-        }
     }
 }

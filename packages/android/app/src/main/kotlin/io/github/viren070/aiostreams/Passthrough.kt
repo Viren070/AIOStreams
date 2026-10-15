@@ -27,10 +27,9 @@ class Passthrough(context: Context, changed: () -> Unit) {
     }
 
     /** In mpv's `audio-spdif` names; DTS-HD falls back to DTS's core. */
-    fun supported(wanted: List<String>): String {
+    fun supported(wanted: List<String>): List<String> {
         val codecs = SPDIF.filter { (encodings) -> encodings.any(capabilities::supportsEncoding) }.map { it.second }
         return wanted.mapNotNull { name -> name.takeIf { it in codecs } ?: "dts".takeIf { name == "dts-hd" && it in codecs } }
-            .joinToString(",")
     }
 
     fun release() = receiver.unregister()

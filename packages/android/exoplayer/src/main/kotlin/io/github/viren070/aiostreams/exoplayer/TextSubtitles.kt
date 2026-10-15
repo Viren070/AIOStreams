@@ -10,6 +10,7 @@ import androidx.media3.common.text.Cue
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.extractor.text.CuesWithTiming
 import androidx.media3.extractor.text.DefaultSubtitleParserFactory
+import io.github.viren070.aiostreams.playback.SubtitleLook
 import androidx.media3.extractor.text.SubtitleParser
 import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.SubtitleView
@@ -32,27 +33,17 @@ internal class SubtitleStyle {
     private var bold = false
     private var override = AssStyle.SCALE
 
-    /** False for a property that isn't a subtitle style. */
-    fun set(name: String, value: String): Boolean {
-        when (name) {
-            "sub-visibility" -> visible = value == "yes"
-            "sub-scale" -> scale = value.toDoubleOrNull() ?: 1.0
-            "sub-pos" -> position = value.toDoubleOrNull() ?: 100.0
-            "sub-ass-force-margins" -> forceMargins = value == "yes"
-            "sub-color" -> color = colorOf(value) ?: color
-            "sub-outline-color" -> outlineColor = colorOf(value) ?: outlineColor
-            "sub-outline-size" -> outlineSize = value.toDoubleOrNull() ?: outlineSize
-            "sub-back-color" -> backColor = colorOf(value) ?: backColor
-            "sub-border-style" -> box = value == "background-box"
-            "sub-bold" -> bold = value == "yes"
-            "sub-ass-override" -> override = when (value) {
-                "no" -> AssStyle.NONE
-                "force", "strip" -> AssStyle.FORCE
-                else -> AssStyle.SCALE
-            }
-            else -> return false
-        }
-        return true
+    fun apply(look: SubtitleLook, forceMargins: Boolean) {
+        scale = look.scale
+        position = look.position
+        this.forceMargins = forceMargins
+        color = colorOf(look.color) ?: color
+        outlineColor = colorOf(look.outlineColor) ?: outlineColor
+        outlineSize = look.outlineSize
+        backColor = colorOf(look.backColor) ?: backColor
+        box = look.box
+        bold = look.bold
+        override = if (look.forceStyle) AssStyle.FORCE else AssStyle.SCALE
     }
 
     fun apply(view: SubtitleView) {

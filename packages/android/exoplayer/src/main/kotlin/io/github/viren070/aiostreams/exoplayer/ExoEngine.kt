@@ -48,9 +48,17 @@ import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.video.VideoFrameMetadataListener
 import androidx.media3.extractor.metadata.Chapter
 import io.github.viren070.aiostreams.mpv.MpvEngine
+import io.github.viren070.aiostreams.playback.Change
 import io.github.viren070.aiostreams.playback.Engine
-import io.github.viren070.aiostreams.playback.MpvProtocol
+import io.github.viren070.aiostreams.playback.Fit
+import io.github.viren070.aiostreams.playback.LoadRequest
+import io.github.viren070.aiostreams.playback.Pick
+import io.github.viren070.aiostreams.playback.PlayerChapter
+import io.github.viren070.aiostreams.playback.PlayerSettings
+import io.github.viren070.aiostreams.playback.PlayerState
+import io.github.viren070.aiostreams.playback.PlayerTrack
 import io.github.viren070.aiostreams.playback.Sound
+import io.github.viren070.aiostreams.playback.Style
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -59,16 +67,14 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
 import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 /**
- * ExoPlayer, driven in mpv's terms. libass draws ASS subtitles over the video;
- * the player's subtitle view draws the rest.
+ * ExoPlayer. libass draws ASS subtitles over the video; the player's subtitle
+ * view draws the rest.
  */
 @OptIn(UnstableApi::class)
 class ExoEngine(private val context: Context) :
@@ -84,7 +90,8 @@ class ExoEngine(private val context: Context) :
     private lateinit var ac3: Ac3Sink
     private lateinit var output: OutputSink
     private val style = SubtitleStyle()
-    private val reported = ConcurrentHashMap<String, JsonElement>()
+    @Volatile
+    private var reported = PlayerState()
     private val decoders = ConcurrentHashMap<String, String>()
     private var listener: Engine.Listener? = null
     private var stage: Stage? = null
@@ -93,7 +100,7 @@ class ExoEngine(private val context: Context) :
 
     // The file playing and what the page asked of it.
     private var url: String? = null
-    private var options = TrackOptions(emptyList())
+    private var options = TrackOptions(null)
     private var loaded = false
     private var chosen = false
     private var seeking = false
@@ -205,16 +212,14 @@ class ExoEngine(private val context: Context) :
 
     override fun start(listener: Engine.Listener) {
         this.listener = listener
-        report("idle-active", true)
-        report("pause", false)
-        report("volume", volume)
-        report("volume-max", VOLUME_MAX)
-        report("mute", false)
-        report("speed", 1.0)
-        report("aid", "no")
-        report("sid", "no")
-        report("track-list", JsonArray(emptyList()))
-        report("chapter-list", JsonArray(emptyList()))
+        state(
+            PlayerState(
+                idle = true, paused = false, volume = volume / 100, maxVolume = VOLUME_MAX / 100,
+                muted = false, speed = 1.0, audio = Pick(null), subtitle = Pick(null),
+            ),
+        )
+        listener.onTracks(emptyList())
+        listener.onChapters(emptyList())
     }
 
     override fun createView(context: Context): View = Stage(context, ::onStageLayout).also { stage ->
@@ -224,18 +229,67 @@ class ExoEngine(private val context: Context) :
         player.setVideoSurfaceView(stage.video)
     }
 
-    override fun command(args: List<String>) {
-        main.post { runCatching { run(args) }.onFailure { Log.w(TAG, "${args.firstOrNull()} failed", it) } }
+    private fun post(block: () -> Unit) {
+        main.post { runCatching(block).onFailure { Log.w(TAG, "player call failed", it) } }
     }
 
-    override fun setProperty(name: String, value: String) {
-        main.post { set(name, value) }
+    // Exo has no queue of its own, so a file to play next waits for the page to load it.
+    override fun load(request: LoadRequest) = post { if (!request.append) open(request) }
+
+    override fun stop() = post {
+        if (url == null) return@post
+        url = null
+        player.stop()
+        player.clearMediaItems()
+        clearExternals()
+        listener?.onEnded("stop", null, null)
+        state(PlayerState(idle = true))
     }
 
-    override fun property(name: String): String? = when (name) {
-        "hwdec-current" -> decoders["video"]
-        else -> (reported[name] as? JsonPrimitive)?.content
+    override fun change(change: Change) = post {
+        change.paused?.let { player.playWhenReady = !it }
+        change.volume?.let {
+            volume = (it * 100).coerceIn(0.0, VOLUME_MAX)
+            applyVolume()
+            state(PlayerState(volume = volume / 100))
+        }
+        change.muted?.let {
+            muted = it
+            applyVolume()
+            state(PlayerState(muted = it))
+        }
+        change.speed?.let { player.playbackParameters = PlaybackParameters(it.toFloat()) }
+        change.audio?.let { selectTrack("audio", it.id?.toIntOrNull()) }
+        change.subtitle?.let { selectSubtitle(it.id?.toIntOrNull()) }
+        change.subtitleDelayMs?.let {
+            delayUs = (it * 1000).toLong()
+            redrawSubtitles()
+        }
     }
+
+    override fun seek(positionMs: Double) = post { seekTo(positionMs.toLong(), SeekParameters.EXACT) }
+
+    override fun addSubtitle(url: String, title: String?, language: String?) = post {
+        addSubtitle(url, "select", title, language)
+    }
+
+    override fun setStyle(style: Style) = post {
+        stage?.keepAspect = style.fit != Fit.STRETCH
+        stage?.panscan = if (style.fit == Fit.CROP) 1.0 else 0.0
+        this.style.apply(style.subtitles, forceMargins = style.fit == Fit.CROP)
+        stage?.let { this.style.apply(it.subtitles) }
+        updateLayout()
+        showSubtitles()
+    }
+
+    override fun setSettings(settings: PlayerSettings) = post {
+        output.setSpdif(settings.passthrough.joinToString(","))
+        updateEncoding()
+        output.delayUs = (settings.audioDelayMs * 1000).toLong()
+        levels.maxChannels = CHANNELS[settings.audioChannels] ?: 0
+    }
+
+    override fun property(name: String): String? = if (name == "hwdec-current") decoders["video"] else null
 
     override fun stats(): JsonObject = onMain {
         buildJsonObject {
@@ -293,85 +347,11 @@ class ExoEngine(private val context: Context) :
         }
     }
 
-    private fun run(args: List<String>) {
-        when (args[0]) {
-            "loadfile" -> load(args[1], args.getOrNull(4).orEmpty())
-            "sub-add" -> addSubtitle(args[1], args.getOrNull(2), args.getOrNull(3), args.getOrNull(4))
-            "sub-remove" -> removeSubtitle(args.getOrNull(1)?.toIntOrNull() ?: selectedSubtitle())
-            "seek" -> seek(args[1].toDouble(), args.getOrNull(2) ?: "relative")
-            "stop" -> stop()
-            "frame-step", "frame-back-step" -> {
-                player.playWhenReady = false
-                val frameMs = 1000 / (tracks.format("video")?.frameRate?.takeIf { it > 0 } ?: 24f)
-                val step = if (args[0] == "frame-step") frameMs else -frameMs
-                seekTo(player.currentPosition + step.toLong(), SeekParameters.EXACT)
-            }
-            "set" -> set(args[1], args[2])
-            "cycle" -> when (args[1]) {
-                "pause" -> set("pause", if (player.playWhenReady) "yes" else "no")
-                "mute" -> set("mute", if (muted) "no" else "yes")
-                "sub-visibility" -> set("sub-visibility", if (style.visible) "no" else "yes")
-            }
-            "add" -> {
-                val step = args.getOrNull(2)?.toDoubleOrNull() ?: 1.0
-                val now = when (args[1]) {
-                    "volume" -> volume
-                    "speed" -> player.playbackParameters.speed.toDouble()
-                    "sub-delay" -> delayUs / 1e6
-                    "sub-scale" -> style.scale
-                    "sub-pos" -> style.position
-                    else -> return
-                }
-                set(args[1], (now + step).toString())
-            }
-            // The rest has no meaning here: the stats overlay and the queue are mpv's.
-        }
-    }
-
-    private fun set(name: String, value: String) {
-        when (name) {
-            "pause" -> player.playWhenReady = value != "yes"
-            "volume" -> {
-                volume = value.toDoubleOrNull()?.coerceIn(0.0, VOLUME_MAX) ?: volume
-                applyVolume()
-                report("volume", volume)
-            }
-            "mute" -> {
-                muted = value == "yes"
-                applyVolume()
-                report("mute", muted)
-            }
-            "speed" -> value.toFloatOrNull()?.let { player.playbackParameters = PlaybackParameters(it) }
-            "aid" -> selectTrack("audio", value.toIntOrNull())
-            "sid" -> selectSubtitle(value.toIntOrNull())
-            "sub-delay" -> {
-                delayUs = ((value.toDoubleOrNull() ?: 0.0) * 1e6).toLong()
-                redrawSubtitles()
-            }
-            "time-pos" -> value.toDoubleOrNull()?.let { seek(it, "absolute") }
-            "audio-spdif" -> {
-                output.setSpdif(value)
-                updateEncoding()
-            }
-            "audio-delay" -> output.delayUs = ((value.toDoubleOrNull() ?: 0.0) * 1e6).toLong()
-            "audio-channels" -> levels.maxChannels = CHANNELS[value] ?: 0
-            "keepaspect" -> stage?.keepAspect = value == "yes"
-            "panscan" -> stage?.panscan = value.toDoubleOrNull() ?: 0.0
-            else -> if (style.set(name, value)) {
-                stage?.let { style.apply(it.subtitles) }
-                updateLayout()
-                showSubtitles()
-            }
-        }
-    }
-
-    private fun load(url: String, rawOptions: String) {
+    private fun open(request: LoadRequest) {
         if (this.url != null) listener?.onEnded("stop", null, null)
-        val pairs = MpvProtocol.optionPairs(rawOptions)
-        val values = pairs.toMap()
-        http.setDefaultRequestProperties(MpvProtocol.headerFields(values[MpvProtocol.HEADER_FIELDS]))
-        this.url = url
-        options = TrackOptions(pairs)
+        http.setDefaultRequestProperties(request.headers)
+        url = request.url
+        options = TrackOptions(request)
         caps = MediaCaps.read(context)
         dolbyVision = null
         audioTrack = null
@@ -381,44 +361,20 @@ class ExoEngine(private val context: Context) :
         clearExternals()
         ass.reset()
         texts.reset()
-        readBack = if (options.sid == "no") null else Extractors.ANY_TRACK
-        listener?.onEvent("start-file")
-        report("idle-active", false)
-        report("chapter-list", JsonArray(emptyList()))
-        report("container-fps", null)
+        readBack = if (options.none) null else Extractors.ANY_TRACK
+        listener?.onEvent("start")
+        state(PlayerState(idle = false))
+        listener?.onChapters(emptyList())
         // Close to what mpv picks, so the first selection rarely changes.
         player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
             .clearOverrides()
-            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, options.sid == "no")
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, options.none)
             .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
             .setPreferredAudioLanguages(*options.alang.toTypedArray())
             .setPreferredTextLanguages(*options.slang.toTypedArray())
             .build()
-        val start = values["start"]?.toDoubleOrNull()?.let { (it * 1000).toLong() } ?: 0L
-        player.setMediaItem(MediaItem.fromUri(url), start)
+        player.setMediaItem(MediaItem.fromUri(request.url), request.startMs.toLong())
         player.prepare()
-    }
-
-    private fun stop() {
-        if (url == null) return
-        url = null
-        player.stop()
-        player.clearMediaItems()
-        clearExternals()
-        listener?.onEnded("stop", null, null)
-        report("idle-active", true)
-    }
-
-    private fun seek(target: Double, flags: String) {
-        val duration = player.duration.takeIf { it != C.TIME_UNSET } ?: 0L
-        val parts = flags.split('+')
-        val ms = when {
-            "absolute-percent" in parts -> (duration * target / 100).toLong()
-            "relative-percent" in parts -> player.currentPosition + (duration * target / 100).toLong()
-            "absolute" in parts -> (target * 1000).toLong()
-            else -> player.currentPosition + (target * 1000).toLong()
-        }
-        seekTo(ms, if ("keyframes" in parts) SeekParameters.CLOSEST_SYNC else SeekParameters.EXACT)
     }
 
     private fun seekTo(ms: Long, parameters: SeekParameters) {
@@ -427,8 +383,7 @@ class ExoEngine(private val context: Context) :
         player.seekTo(ms.coerceAtLeast(0))
         seeking = true
         restarting = true
-        report("seeking", true)
-        listener?.onEvent("seek")
+        state(PlayerState(seeking = true))
         reportPosition()
     }
 
@@ -587,7 +542,7 @@ class ExoEngine(private val context: Context) :
         format: Format,
         decoderReuseEvaluation: DecoderReuseEvaluation?,
     ) {
-        if (format.frameRate > 0) report("container-fps", format.frameRate.toDouble())
+        if (format.frameRate > 0) listener?.onVideo(frameRate = format.frameRate.toDouble())
     }
 
     private fun showCues(frameUs: Long) {
@@ -624,29 +579,29 @@ class ExoEngine(private val context: Context) :
             Player.STATE_READY -> {
                 if (!loaded) {
                     loaded = true
-                    listener?.onEvent("file-loaded")
-                    report("duration", player.duration.takeIf { it != C.TIME_UNSET }?.let { it / 1000.0 })
+                    listener?.onEvent("loaded")
+                    player.duration.takeIf { it != C.TIME_UNSET }?.let { state(PlayerState(durationMs = it.toDouble())) }
                 }
                 if (restarting) {
                     restarting = false
                     seeking = false
-                    report("seeking", false)
-                    listener?.onEvent("playback-restart")
+                    state(PlayerState(seeking = false))
+                    listener?.onEvent("restart")
                 }
-                report("paused-for-cache", false)
+                state(PlayerState(buffering = false))
             }
-            Player.STATE_BUFFERING -> if (loaded && !seeking) report("paused-for-cache", true)
+            Player.STATE_BUFFERING -> if (loaded && !seeking) state(PlayerState(buffering = true))
             Player.STATE_ENDED -> {
                 url = null
                 listener?.onEnded("eof", null, null)
-                report("idle-active", true)
+                state(PlayerState(idle = true))
             }
         }
         reportPosition()
     }
 
     override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
-        report("pause", !playWhenReady)
+        state(PlayerState(paused = !playWhenReady))
         updatePolling()
     }
 
@@ -655,20 +610,15 @@ class ExoEngine(private val context: Context) :
         updateClock()
     }
 
-    override fun onPlaybackParametersChanged(parameters: PlaybackParameters) = report("speed", parameters.speed.toDouble())
+    override fun onPlaybackParametersChanged(parameters: PlaybackParameters) =
+        state(PlayerState(speed = parameters.speed.toDouble()))
 
     override fun onVideoSizeChanged(size: VideoSize) {
         stage?.videoSize = size
         if (size.width == 0 || size.height == 0) return
         layout = layout.copy(videoWidth = size.width, videoHeight = size.height)
         updateLayout()
-        report("video-params", buildJsonObject {
-            put("w", size.width)
-            put("h", size.height)
-            put("dw", (size.width * size.pixelWidthHeightRatio).toInt())
-            put("dh", size.height)
-            put("aspect", size.width * size.pixelWidthHeightRatio / size.height)
-        })
+        listener?.onVideo(width = (size.width * size.pixelWidthHeightRatio).toInt(), height = size.height)
     }
 
     override fun onTracksChanged(tracks: Tracks) {
@@ -695,38 +645,38 @@ class ExoEngine(private val context: Context) :
 
     private fun reportTracks() {
         val added = externals.map { sub ->
-            buildJsonObject {
-                put("id", sub.id)
-                put("type", "sub")
-                sub.title?.let { put("title", it) }
-                sub.lang?.let { put("lang", it) }
-                put("codec", sub.codec)
-                put("external", true)
-                put("external-filename", sub.url)
-                put("selected", sub == external)
-            }
+            PlayerTrack(
+                id = sub.id.toString(),
+                type = "subtitle",
+                title = sub.title,
+                language = sub.lang,
+                codec = sub.codec,
+                external = true,
+                url = sub.url,
+            )
         }
-        report("track-list", JsonArray(tracks.list() + added))
-        report("aid", tracks.selected("audio")?.toString() ?: "no")
-        report("sid", selectedSubtitle()?.toString() ?: "no")
+        listener?.onTracks(tracks.list() + added)
+        state(
+            PlayerState(
+                audio = Pick(tracks.selected("audio")?.toString()),
+                subtitle = Pick(selectedSubtitle()?.toString()),
+            ),
+        )
     }
 
     /** The file's chapters, which Media3 gives every track's format. */
     private fun reportChapters() {
         val metadata = tracks.format("video")?.metadata ?: tracks.format("audio")?.metadata ?: return
         val chapters = (0 until metadata.length()).map(metadata::get).filterIsInstance<Chapter>().filterNot { it.isHidden }
-        report("chapter-list", JsonArray(chapters.sortedBy { it.startTimeMs }.map { chapter ->
-            buildJsonObject {
-                put("title", chapter.title?.value.orEmpty())
-                put("time", chapter.startTimeMs / 1000.0)
-            }
-        }))
+        listener?.onChapters(
+            chapters.sortedBy { it.startTimeMs }.map { PlayerChapter(it.title?.value, it.startTimeMs.toDouble()) },
+        )
     }
 
     override fun onPlayerError(error: PlaybackException) {
         url = null
         Log.w(TAG, "playback failed", error)
-        report("idle-active", true)
+        state(PlayerState(idle = true))
         // mpv can't load a link that failed to either; anything else it may well play.
         if (error.errorCode !in LINK) return listener?.onUnplayable(unplayable(error)) ?: Unit
         val (message, cause) = failureOf(error)
@@ -773,20 +723,18 @@ class ExoEngine(private val context: Context) :
 
     private fun reportPosition() {
         if (url == null) return
-        report("time-pos", player.currentPosition / 1000.0)
-        report("demuxer-cache-time", player.bufferedPosition / 1000.0)
+        state(
+            PlayerState(
+                positionMs = player.currentPosition.toDouble(),
+                bufferedMs = player.bufferedPosition.toDouble(),
+            ),
+        )
     }
 
-    private fun report(name: String, value: Any?) {
-        val element = when (value) {
-            null -> JsonNull
-            is JsonElement -> value
-            is Boolean -> JsonPrimitive(value)
-            is Number -> JsonPrimitive(value)
-            else -> JsonPrimitive(value.toString())
-        }
-        if (reported.put(name, element) == element) return
-        listener?.onProperty(name, element)
+    private fun state(update: PlayerState) {
+        val changed = update.changesFrom(reported)
+        reported = reported.then(update)
+        if (changed != PlayerState()) listener?.onState(changed)
     }
 
     private fun <T> onMain(block: () -> T): T {
@@ -807,7 +755,7 @@ class ExoEngine(private val context: Context) :
         const val FRAMES_STOPPED_NS = 100_000_000L
         const val VOLUME_MAX = 130.0
 
-        /** mpv's names for the layouts the page offers. */
+        /** The layouts the page offers. */
         val CHANNELS = mapOf("stereo" to 2, "5.1" to 6, "7.1" to 8)
 
         /** The DTS types FFmpeg decodes. */

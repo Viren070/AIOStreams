@@ -2,23 +2,35 @@ package io.github.viren070.aiostreams.playback
 
 import android.content.Context
 import android.view.View
-import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 
-/**
- * A player the page drives in mpv's terms: its commands and properties, and
- * mpv's names for what it reports. Callbacks may come on any thread.
- */
+/** A player the page drives through [PlayerProtocol]'s requests. Callbacks may come on any thread. */
 interface Engine {
     /** Its name and version, for diagnostics. */
     val description: String
 
     fun start(listener: Listener)
 
-    fun command(args: List<String>)
+    fun load(request: LoadRequest)
 
-    fun setProperty(name: String, value: String)
+    fun stop()
 
+    fun change(change: Change)
+
+    fun seek(positionMs: Double)
+
+    /** Adds a subtitle file, from the server or this device, and shows it. */
+    fun addSubtitle(url: String, title: String?, language: String?)
+
+    fun setStyle(style: Style)
+
+    /** [PlayerSettings.passthrough] is already the formats the output takes. */
+    fun setSettings(settings: PlayerSettings)
+
+    /** mpv's own stats overlay, on one of its pages or off. */
+    fun showStatsOverlay(page: String?) {}
+
+    /** One of mpv's properties, or the engine's own answer to it, for diagnostics. */
     fun property(name: String): String?
 
     /** The view the video is drawn in, which goes beneath the page. */
@@ -35,8 +47,13 @@ interface Engine {
     fun release()
 
     interface Listener {
-        fun onProperty(name: String, value: JsonElement)
+        fun onState(state: PlayerState)
 
+        fun onTracks(tracks: List<PlayerTrack>)
+
+        fun onChapters(chapters: List<PlayerChapter>)
+
+        /** `start`, `loaded` or `restart`. */
         fun onEvent(name: String)
 
         /** `cause` is the network error behind a failed load, where there was one. */
@@ -44,5 +61,8 @@ interface Engine {
 
         /** The engine can't play the file, which another engine might. */
         fun onUnplayable(error: String)
+
+        /** The picture's display size and the stream's frame rate, each once known. */
+        fun onVideo(width: Int? = null, height: Int? = null, frameRate: Double? = null)
     }
 }

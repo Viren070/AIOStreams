@@ -9,34 +9,30 @@ import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.util.Util
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
+import io.github.viren070.aiostreams.playback.LoadRequest
+import io.github.viren070.aiostreams.playback.PlayerTrack
+import io.github.viren070.aiostreams.playback.SubtitleMode
 
-/** `loadfile`'s track options, which pick the tracks as mpv would. */
-internal class TrackOptions(pairs: List<Pair<String, String>>) {
-    private val options = pairs.toMap()
-    val aid = options["aid"]
-    val sid = options["sid"]
-    val alang = languages(pairs, "alang")
-    val slang = languages(pairs, "slang")
-    val subsFallback = options["subs-fallback"] ?: "default"
-    val subsFallbackForced = options["subs-fallback-forced"] ?: "yes"
-    val subsWithMatchingAudio = options["subs-with-matching-audio"] != "no"
-
-    private companion object {
-        fun languages(pairs: List<Pair<String, String>>, name: String) =
-            pairs.fold(emptyList<String>()) { list, (key, value) ->
-                when (key) {
-                    name -> value.split(',')
-                    "$name-append" -> list + value
-                    else -> list
-                }
-            }.filter { it.isNotBlank() }.map(::languageOf)
+/** The load's track choices, which pick the tracks as mpv would. */
+internal class TrackOptions(request: LoadRequest?) {
+    private val mode = request?.subtitleMode ?: SubtitleMode.DEFAULT
+    val alang = request?.audioLanguages.orEmpty().map(::languageOf)
+    val slang = if (mode == SubtitleMode.FORCED || mode == SubtitleMode.NONE) {
+        emptyList()
+    } else {
+        request?.subtitleLanguages.orEmpty().map(::languageOf)
     }
+    val none = mode == SubtitleMode.NONE
+    val subsFallback = when (mode) {
+        SubtitleMode.ALWAYS -> "yes"
+        SubtitleMode.FORCED -> "no"
+        else -> "default"
+    }
+    val subsFallbackForced = if (mode == SubtitleMode.FORCED) "always" else "yes"
+    val subsWithMatchingAudio = mode != SubtitleMode.SMART
 }
 
-/** The file's tracks in mpv's terms: numbered from 1 within each type, as `track-list` lists them. */
+/** The file's tracks, numbered from 1 within each type as mpv numbers them. */
 @OptIn(UnstableApi::class)
 internal class ExoTracks {
     private class Entry(val type: String, val id: Int, val group: Tracks.Group, val index: Int) {
@@ -68,23 +64,19 @@ internal class ExoTracks {
 
     fun format(type: String): Format? = entries.firstOrNull { it.type == type && it.selected }?.format
 
-    fun list(): List<JsonObject> = entries.map { entry ->
+    fun list(): List<PlayerTrack> = entries.filter { it.type != "video" }.map { entry ->
         val format = entry.format
-        buildJsonObject {
-            put("id", entry.id)
-            put("type", entry.type)
-            format.label?.let { put("title", it) }
-            format.language?.takeIf { it != C.LANGUAGE_UNDETERMINED }?.let { put("lang", it) }
-            put("codec", codecOf(format))
-            put("selected", entry.selected)
-            put("default", entry.default)
-            put("forced", entry.forced)
-            put("hearing-impaired", format.roleFlags and C.ROLE_FLAG_DESCRIBES_MUSIC_AND_SOUND != 0)
-            put("visual-impaired", format.roleFlags and C.ROLE_FLAG_DESCRIBES_VIDEO != 0)
-            if (format.width > 0) put("demux-w", format.width)
-            if (format.height > 0) put("demux-h", format.height)
-            if (format.channelCount > 0) put("demux-channel-count", format.channelCount)
-        }
+        PlayerTrack(
+            id = entry.id.toString(),
+            type = if (entry.type == "sub") "subtitle" else entry.type,
+            title = format.label,
+            language = format.language?.takeIf { it != C.LANGUAGE_UNDETERMINED },
+            codec = codecOf(format),
+            default = entry.default,
+            forced = entry.forced,
+            hearingImpaired = format.roleFlags and C.ROLE_FLAG_DESCRIBES_MUSIC_AND_SOUND != 0,
+            visualImpaired = format.roleFlags and C.ROLE_FLAG_DESCRIBES_VIDEO != 0,
+        )
     }
 
     /** Plays track `id` of `type`, or none of that type for `null`. */
@@ -99,7 +91,6 @@ internal class ExoTracks {
     /** The audio track mpv picks: the first language asked for, then the file's default. */
     fun chooseAudio(options: TrackOptions): Int? {
         val audio = entries.filter { it.type == "audio" }
-        options.aid?.let { return it.toIntOrNull() }
         return options.alang.firstNotNullOfOrNull { lang -> audio.find { it.lang == lang } }?.id
             ?: audio.find { it.default }?.id
             ?: audio.firstOrNull()?.id
@@ -107,8 +98,7 @@ internal class ExoTracks {
 
     /** The subtitle track mpv picks, from the languages asked for and its fallbacks. */
     fun chooseSubtitle(options: TrackOptions, audioLang: String?): Int? {
-        if (options.sid == "no") return null
-        options.sid?.toIntOrNull()?.let { return it }
+        if (options.none) return null
         val subs = entries.filter { it.type == "sub" }
         val forcedForAudio = subs.find { it.forced && it.lang == audioLang }
         if (options.subsFallbackForced == "always" && forcedForAudio != null) return forcedForAudio.id

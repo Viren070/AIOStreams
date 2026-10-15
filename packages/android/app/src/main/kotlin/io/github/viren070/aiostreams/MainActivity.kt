@@ -40,7 +40,9 @@ import io.github.viren070.aiostreams.bridge.AppIdentity
 import io.github.viren070.aiostreams.bridge.WebApp
 import io.github.viren070.aiostreams.downloads.DownloadChannel
 import io.github.viren070.aiostreams.mpv.MpvEngine
+import io.github.viren070.aiostreams.playback.Change
 import io.github.viren070.aiostreams.playback.PlayerChannel
+import io.github.viren070.aiostreams.playback.PlayerProtocol
 import io.github.viren070.aiostreams.playback.Sound
 import `is`.xyz.mpv.AudioEncoder
 import java.io.File
@@ -128,10 +130,10 @@ class MainActivity : ComponentActivity() {
             this,
             hold = {
                 val playing = !player.paused
-                if (playing) playback.engine.setProperty("pause", "yes")
+                if (playing) player.change(Change(paused = true))
                 playing
             },
-            resume = { playback.engine.setProperty("pause", "no") },
+            resume = { player.change(Change(paused = false)) },
         )
         passthrough = Passthrough(this) { player.outputChanged() }
         player = PlayerChannel(
@@ -161,8 +163,8 @@ class MainActivity : ComponentActivity() {
         pip = PictureInPicture(this, playback.stage)
         focus = AudioFocus(
             this,
-            pause = { playback.engine.setProperty("pause", "yes") },
-            resume = { playback.engine.setProperty("pause", "no") },
+            pause = { player.change(Change(paused = true)) },
+            resume = { player.change(Change(paused = false)) },
         )
         player.start()
         player.session.addListener(object : Player.Listener {
@@ -222,7 +224,8 @@ class MainActivity : ComponentActivity() {
             }
             "player-engine" -> message["name"]?.jsonPrimitive?.contentOrNull?.let { playback.choose(it, player) }
             "player-retry" -> message["name"]?.jsonPrimitive?.contentOrNull?.let { playback.retry(it, player) }
-            "player-options" -> {
+            "player-settings" -> {
+                player.setSettings(PlayerProtocol.settings(message))
                 message["frameRate"]?.jsonPrimitive?.booleanOrNull?.let { frameRates.enabled = it }
                 message["tunneling"]?.jsonPrimitive?.booleanOrNull?.let { playback.tunneling = it }
                 message["dolbyVision"]?.jsonPrimitive?.booleanOrNull?.let { playback.dolbyVision = it }
@@ -439,7 +442,7 @@ class MainActivity : ComponentActivity() {
         })
         // Closing the window, rather than opening it full size, stops playback.
         if (!isInPictureInPictureMode && lifecycle.currentState == Lifecycle.State.CREATED) {
-            playback.engine.setProperty("pause", "yes")
+            player.change(Change(paused = true))
         }
     }
 
@@ -447,7 +450,7 @@ class MainActivity : ComponentActivity() {
         super.onStop()
         if (!started) return
         val background = player.session.item?.background == true
-        if (!isChangingConfigurations && !isInPictureInPictureMode && !background) playback.engine.setProperty("pause", "yes")
+        if (!isChangingConfigurations && !isInPictureInPictureMode && !background) player.change(Change(paused = true))
     }
 
     override fun onDestroy() {

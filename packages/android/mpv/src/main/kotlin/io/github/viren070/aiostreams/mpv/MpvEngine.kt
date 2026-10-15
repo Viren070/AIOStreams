@@ -1,27 +1,45 @@
 package io.github.viren070.aiostreams.mpv
 
+import android.app.UiModeManager
 import android.content.Context
+import android.content.res.Configuration
 import android.util.Base64
 import android.util.Log
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.View
+import io.github.viren070.aiostreams.playback.Change
 import io.github.viren070.aiostreams.playback.Engine
-import io.github.viren070.aiostreams.playback.MpvProtocol
+import io.github.viren070.aiostreams.playback.Fit
+import io.github.viren070.aiostreams.playback.LoadRequest
+import io.github.viren070.aiostreams.playback.Pick
+import io.github.viren070.aiostreams.playback.PlayerChapter
+import io.github.viren070.aiostreams.playback.PlayerSettings
+import io.github.viren070.aiostreams.playback.PlayerState
+import io.github.viren070.aiostreams.playback.PlayerTrack
 import io.github.viren070.aiostreams.playback.Sound
+import io.github.viren070.aiostreams.playback.Style
+import io.github.viren070.aiostreams.playback.SubtitleMode
 import `is`.xyz.mpv.MPV
 import `is`.xyz.mpv.MPVNode
 import java.io.File
 import java.security.KeyStore
+import java.util.Locale
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 
 /** libmpv, drawing into a surface of its own. */
@@ -43,6 +61,19 @@ class MpvEngine(private val context: Context) : Engine {
 
     // Used on the calls thread only.
     private var filters: SoundFilters? = null
+    private var subtitleScale: Double? = null
+    private var statsPage: String? = null
+
+    // The shown subtitle and the file's picture subtitles, which keep their own size.
+    @Volatile
+    private var shownSubtitle: String? = null
+
+    @Volatile
+    private var pictures = emptySet<String>()
+    private var picture = false
+
+    private val tv = context.getSystemService(UiModeManager::class.java).currentModeType ==
+        Configuration.UI_MODE_TYPE_TELEVISION
 
     private val dir = File(context.filesDir, "mpv")
 
@@ -80,18 +111,102 @@ class MpvEngine(private val context: Context) : Engine {
         mpv.setPropertyBoolean("pause", false)
         mpv.addObserver(observer)
         mpv.addLogObserver(logs)
-        for (name in MpvProtocol.observed) mpv.observeProperty(name, formatOf(name))
+        for (name in OBSERVED) mpv.observeProperty(name, formatOf(name))
         mpv.observeProperty(AUDIO_PARAMS, MPV.mpvFormat.MPV_FORMAT_NODE)
         calls.execute { filters = SoundFilters(mpv) }
     }
 
-    override fun command(args: List<String>) = calls.execute { mpv.command(*args.toTypedArray()) }
+    private fun command(vararg args: String) = calls.execute { mpv.command(*args) }
 
-    override fun setProperty(name: String, value: String) = calls.execute { mpv.setPropertyString(name, value) }
+    private fun set(name: String, value: String) = mpv.setPropertyString(name, value)
 
     override fun property(name: String): String? = mpv.getPropertyString(name)
 
-    fun reloadConfig() = command(listOf("load-config-file", configFile(context).path))
+    fun reloadConfig() = command("load-config-file", configFile(context).path)
+
+    override fun load(request: LoadRequest) = calls.execute {
+        val options = buildList {
+            if (request.startMs > 0) add("start=${seconds(request.startMs)}")
+            addAll(listOption("alang", request.audioLanguages))
+            val slang = listOption("slang", request.subtitleLanguages)
+            when (request.subtitleMode) {
+                SubtitleMode.NONE -> add("sid=no")
+                SubtitleMode.FORCED -> addAll(listOf("subs-fallback=no", "subs-fallback-forced=always"))
+                SubtitleMode.ALWAYS -> addAll(slang + listOf("subs-fallback=yes", "subs-with-matching-audio=yes"))
+                SubtitleMode.SMART -> addAll(slang + "subs-with-matching-audio=no")
+                SubtitleMode.DEFAULT -> addAll(slang)
+            }
+            headerFields(request.headers)?.let(::add)
+        }
+        // A queued file replaces whatever was queued before it.
+        if (request.append) mpv.command("playlist-clear")
+        mpv.command("loadfile", request.url, if (request.append) "append" else "replace", "-1", options.joinToString(","))
+    }
+
+    override fun stop() = command("stop")
+
+    override fun change(change: Change) = calls.execute {
+        change.paused?.let { set("pause", flag(it)) }
+        change.volume?.let { set("volume", Math.round(it * 100).toString()) }
+        change.muted?.let { set("mute", flag(it)) }
+        change.speed?.let { set("speed", it.toString()) }
+        change.audio?.let { set("aid", it.id ?: "no") }
+        change.subtitle?.let { set("sid", it.id ?: "no") }
+        change.subtitleDelayMs?.let { set("sub-delay", seconds(it)) }
+    }
+
+    override fun seek(positionMs: Double) = command("seek", seconds(positionMs), "absolute")
+
+    override fun addSubtitle(url: String, title: String?, language: String?) =
+        command("sub-add", url, "select", title.orEmpty(), language.orEmpty())
+
+    override fun setStyle(style: Style) = calls.execute {
+        val s = style.subtitles
+        set("keepaspect", flag(style.fit != Fit.STRETCH))
+        set("panscan", if (style.fit == Fit.CROP) "1" else "0")
+        set("sub-ass-force-margins", flag(style.fit == Fit.CROP))
+        set("sub-bold", flag(s.bold))
+        set("sub-color", s.color)
+        set("sub-outline-color", s.outlineColor)
+        set("sub-outline-size", s.outlineSize.toString())
+        set("sub-back-color", s.backColor)
+        set("sub-border-style", if (s.box) "background-box" else "outline-and-shadow")
+        set("sub-ass-override", if (s.forceStyle) "force" else "scale")
+        set("sub-pos", Math.round(s.position).toString())
+        subtitleScale = s.scale
+        set("sub-scale", if (picture) "1" else s.scale.toString())
+    }
+
+    // TVs copy MediaCodec's frames back: some draw direct ones wrong, and they have no battery to save.
+    override fun setSettings(settings: PlayerSettings) = calls.execute {
+        set(
+            "hwdec",
+            when {
+                !settings.hardwareDecoding -> "no"
+                tv -> "mediacodec-copy"
+                else -> "mediacodec,mediacodec-copy"
+            },
+        )
+        set("audio-channels", settings.audioChannels.takeIf { it in setOf("stereo", "5.1", "7.1") } ?: "auto-safe")
+        set("audio-spdif", settings.passthrough.joinToString(","))
+        set("audio-delay", seconds(settings.audioDelayMs))
+    }
+
+    override fun showStatsOverlay(page: String?) = calls.execute {
+        if (page != null && page !in STATS_PAGES) return@execute
+        if (statsPage != null) mpv.command("script-binding", "stats/display-stats-toggle")
+        if (page != null) mpv.command("script-binding", "stats/display-page-$page-toggle")
+        statsPage = page
+    }
+
+    /** Keeps a picture subtitle at its own size. */
+    private fun followSubtitle() {
+        val now = shownSubtitle in pictures
+        if (now == picture) return
+        picture = now
+        val scale = subtitleScale ?: return
+        set("sub-scale", if (now) "1" else scale.toString())
+    }
 
     override fun setDolbyVision(on: Boolean) {
         dolbyVision = on
@@ -148,20 +263,20 @@ class MpvEngine(private val context: Context) : Engine {
 
     private val observer = object : MPV.EventObserver {
         override fun eventProperty(property: String) =
-            if (property == AUDIO_PARAMS) updateFilters { decoded(null) } else emit(property, JsonNull)
+            if (property == AUDIO_PARAMS) updateFilters { decoded(null) } else report(property, JsonNull)
 
-        override fun eventProperty(property: String, value: Long) = emit(property, JsonPrimitive(value))
+        override fun eventProperty(property: String, value: Long) = report(property, JsonPrimitive(value))
 
-        override fun eventProperty(property: String, value: Boolean) = emit(property, JsonPrimitive(value))
+        override fun eventProperty(property: String, value: Boolean) = report(property, JsonPrimitive(value))
 
-        override fun eventProperty(property: String, value: String) = emit(property, JsonPrimitive(value))
+        override fun eventProperty(property: String, value: String) = report(property, JsonPrimitive(value))
 
-        override fun eventProperty(property: String, value: Double) = emit(property, JsonPrimitive(value))
+        override fun eventProperty(property: String, value: Double) = report(property, JsonPrimitive(value))
 
         override fun eventProperty(property: String, value: MPVNode) = if (property == AUDIO_PARAMS) {
             updateFilters { decoded(value) }
         } else {
-            emit(property, runCatching { Json.parseToJsonElement(value.toJson()) }.getOrDefault(JsonNull))
+            report(property, runCatching { Json.parseToJsonElement(value.toJson()) }.getOrDefault(JsonNull))
         }
 
         override fun event(eventId: Int, data: MPVNode) {
@@ -170,15 +285,14 @@ class MpvEngine(private val context: Context) : Engine {
                 MPV.mpvEvent.MPV_EVENT_START_FILE -> {
                     cause = null
                     updateFilters { startFile() }
-                    listener.onEvent("start-file")
+                    listener.onEvent("start")
                 }
                 MPV.mpvEvent.MPV_EVENT_FILE_LOADED -> {
                     calls.execute(::routeDolbyVision)
                     updateFilters { loaded() }
-                    listener.onEvent("file-loaded")
+                    listener.onEvent("loaded")
                 }
-                MPV.mpvEvent.MPV_EVENT_SEEK -> listener.onEvent("seek")
-                MPV.mpvEvent.MPV_EVENT_PLAYBACK_RESTART -> listener.onEvent("playback-restart")
+                MPV.mpvEvent.MPV_EVENT_PLAYBACK_RESTART -> listener.onEvent("restart")
                 MPV.mpvEvent.MPV_EVENT_END_FILE -> {
                     val fields = runCatching { data.asMap() }.getOrNull().orEmpty()
                     val error = fields["file_error"]?.asString()
@@ -217,11 +331,106 @@ class MpvEngine(private val context: Context) : Engine {
         }
     }
 
-    private fun emit(name: String, value: JsonElement) {
-        listener?.onProperty(name, value)
+    /** An observed property's change, in the page's terms. */
+    private fun report(name: String, value: JsonElement) {
+        val listener = listener ?: return
+        val primitive = value as? JsonPrimitive
+        val number = primitive?.doubleOrNull
+        val on = primitive?.booleanOrNull == true
+        val state = when (name) {
+            "time-pos" -> PlayerState(positionMs = (number ?: return) * 1000)
+            "duration" -> PlayerState(durationMs = (number ?: return) * 1000)
+            "demuxer-cache-time" -> PlayerState(bufferedMs = (number ?: return) * 1000)
+            "pause" -> PlayerState(paused = on)
+            "paused-for-cache" -> PlayerState(buffering = on)
+            "seeking" -> PlayerState(seeking = on)
+            "idle-active" -> PlayerState(idle = on)
+            "volume" -> PlayerState(volume = (number ?: return) / 100)
+            "volume-max" -> PlayerState(maxVolume = (number ?: return) / 100)
+            "mute" -> PlayerState(muted = on)
+            "speed" -> PlayerState(speed = number ?: return)
+            "aid" -> PlayerState(audio = Pick(trackId(primitive)))
+            "sid" -> {
+                shownSubtitle = trackId(primitive)
+                calls.execute(::followSubtitle)
+                PlayerState(subtitle = Pick(shownSubtitle))
+            }
+            "track-list" -> {
+                val list = (value as? JsonArray).orEmpty().filterIsInstance<JsonObject>()
+                pictures = list.filter { it.text("type") == "sub" && it.text("codec") in PICTURE_CODECS }
+                    .mapNotNull { it.text("id") }.toSet()
+                calls.execute(::followSubtitle)
+                return listener.onTracks(list.mapNotNull(::trackOf))
+            }
+            "chapter-list" -> return listener.onChapters(
+                (value as? JsonArray).orEmpty().filterIsInstance<JsonObject>().map {
+                    PlayerChapter(it.text("title"), ((it["time"] as? JsonPrimitive)?.doubleOrNull ?: 0.0) * 1000)
+                },
+            )
+            "video-params" -> {
+                val params = value as? JsonObject ?: return
+                return listener.onVideo(
+                    width = (params["dw"] as? JsonPrimitive)?.intOrNull,
+                    height = (params["dh"] as? JsonPrimitive)?.intOrNull,
+                )
+            }
+            "container-fps" -> return listener.onVideo(frameRate = number ?: return)
+            else -> return
+        }
+        listener.onState(state)
     }
 
     companion object {
+        private val OBSERVED = listOf(
+            "time-pos", "duration", "demuxer-cache-time", "pause", "paused-for-cache", "seeking",
+            "idle-active", "volume", "volume-max", "mute", "speed", "aid", "sid",
+            "track-list", "chapter-list", "video-params", "container-fps",
+        )
+        private val STATS_PAGES = setOf("1", "2", "3", "5")
+        private val PICTURE_CODECS = setOf("hdmv_pgs_subtitle", "dvd_subtitle", "dvb_subtitle")
+
+        private fun flag(on: Boolean) = if (on) "yes" else "no"
+
+        private fun seconds(ms: Double) = "%.3f".format(Locale.ROOT, ms / 1000)
+
+        private fun listOption(name: String, values: List<String>) =
+            values.mapIndexed { i, value -> "$name${if (i > 0) "-append" else ""}=$value" }
+
+        /** mpv's `http-header-fields` option for the headers, as the desktop app builds it. */
+        private fun headerFields(headers: Map<String, String>): String? {
+            if (headers.isEmpty()) return null
+            val list = headers.entries.joinToString(",") { (name, value) -> "$name: ${value.replace(",", "\\,")}" }
+            // The length prefix keeps the list's commas inside the one option.
+            return "http-header-fields=%${list.length}%$list"
+        }
+
+        /** mpv reads a track id as `auto` until a file picks one. */
+        private fun trackId(value: JsonPrimitive?) = value?.contentOrNull?.takeIf { it.isNotEmpty() && it.all(Char::isDigit) }
+
+        private fun JsonObject.text(name: String) = (this[name] as? JsonPrimitive)?.contentOrNull
+
+        private fun trackOf(track: JsonObject): PlayerTrack? {
+            val type = when (track.text("type")) {
+                "audio" -> "audio"
+                "sub" -> "subtitle"
+                else -> return null
+            }
+            fun on(name: String) = (track[name] as? JsonPrimitive)?.booleanOrNull == true
+            return PlayerTrack(
+                id = (track["id"] as? JsonPrimitive)?.longOrNull?.toString() ?: return null,
+                type = type,
+                title = track.text("title"),
+                language = track.text("lang"),
+                codec = track.text("codec"),
+                default = on("default"),
+                forced = on("forced"),
+                hearingImpaired = on("hearing-impaired"),
+                visualImpaired = on("visual-impaired"),
+                external = on("external"),
+                url = track.text("external-filename"),
+            )
+        }
+
         /** Labelled, so the user's own `vf` stays as it is. */
         private const val DOLBY_VISION_FILTER = "@aiostreams-dovi"
 
