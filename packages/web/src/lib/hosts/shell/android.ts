@@ -1,7 +1,7 @@
 import type { Host } from '..';
 import { runAction } from '../../input';
 import { onSettingsChange, settings, type PlayerEngine } from '../../settings';
-import { appBridge } from './bridge';
+import { appBridge, ask } from './bridge';
 import { shellDownloads } from './downloads';
 import { setEngine, useShellPlayer } from './player';
 import { soundOptions } from './sound';
@@ -59,28 +59,10 @@ export function setupAndroid(): () => void {
 }
 
 /** The app's mpv.conf, as it answers `mpv-config` and `mpv-config-save`. */
-function mpvConfig(message: { type: string; text?: string }): Promise<string> {
-  const bridge = appBridge();
-  if (!bridge) return Promise.reject(new Error('Only the Android app has one'));
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      stop();
-      reject(new Error('The app did not answer'));
-    }, 5000);
-    const stop = bridge.subscribe((m) => {
-      if (m.type === 'error') {
-        clearTimeout(timer);
-        stop();
-        reject(new Error(m.message));
-      } else if (m.type === 'mpv-config') {
-        clearTimeout(timer);
-        stop();
-        resolve(m.text);
-      }
-    });
-    bridge.send(message);
-  });
-}
+const mpvConfig = (message: { type: string; text?: string }) =>
+  ask(message, 'mpv-config', { timeoutMs: 5000, errors: true }).then(
+    (m) => m.text
+  );
 
 export const readMpvConfig = () => mpvConfig({ type: 'mpv-config' });
 
@@ -147,16 +129,7 @@ export const androidHost: Host = {
   },
   exit: () => appBridge()?.send({ type: 'exit' }),
   levels: {
-    read: () =>
-      new Promise((resolve) => {
-        const bridge = appBridge();
-        const stop = bridge?.subscribe((m) => {
-          if (m.type !== 'levels') return;
-          stop?.();
-          resolve(m);
-        });
-        bridge?.send({ type: 'levels' });
-      }),
+    read: () => ask({ type: 'levels' }, 'levels'),
     set: (level, value) =>
       appBridge()?.send({ type: 'set-level', level, value }),
     release: () =>

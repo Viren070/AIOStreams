@@ -1,3 +1,4 @@
+import React from 'react';
 import type { HostEvent } from '../../downloads/types';
 
 /** `external` marks what the player in its own window sends. */
@@ -120,4 +121,66 @@ declare global {
 
 export function appBridge(): ShellBridge | undefined {
   return window.aiostreamsApp;
+}
+
+export type ShellAnswer<T extends ShellMessage['type']> = Extract<
+  ShellMessage,
+  { type: T }
+>;
+
+/** Sends `message` and resolves with the first `answer` it gets. */
+export function ask<T extends ShellMessage['type']>(
+  message: { type: string; [key: string]: unknown },
+  answer: T,
+  opts: {
+    timeoutMs?: number;
+    matches?: (m: ShellAnswer<T>) => boolean;
+    /** Fails on the next `error` the app sends, which only some requests answer with. */
+    errors?: boolean;
+  } = {}
+): Promise<ShellAnswer<T>> {
+  const bridge = appBridge();
+  if (!bridge) return Promise.reject(new Error('Only the apps answer this'));
+  return new Promise((resolve, reject) => {
+    const done = () => {
+      clearTimeout(timer);
+      stop();
+    };
+    const timer =
+      opts.timeoutMs === undefined
+        ? undefined
+        : setTimeout(() => {
+            done();
+            reject(new Error('The app did not answer'));
+          }, opts.timeoutMs);
+    const stop = bridge.subscribe((m) => {
+      if (m.type === 'error' && opts.errors) {
+        done();
+        reject(new Error(m.message));
+      } else if (m.type === answer && (opts.matches?.(m as never) ?? true)) {
+        done();
+        resolve(m as ShellAnswer<T>);
+      }
+    });
+    bridge.send(message);
+  });
+}
+
+/** The last `type` message the app sent, for a page that opens after it came. */
+export function bridgeStore<T extends ShellMessage['type']>(type: T) {
+  let last: ShellAnswer<T> | null = null;
+  const listeners = new Set<() => void>();
+  appBridge()?.subscribe((m) => {
+    if (m.type !== type) return;
+    last = m as ShellAnswer<T>;
+    for (const listener of listeners) listener();
+  });
+  const subscribe = (listener: () => void) => {
+    listeners.add(listener);
+    return () => void listeners.delete(listener);
+  };
+  return {
+    get: () => last,
+    use: () => React.useSyncExternalStore(subscribe, () => last),
+  };
 }

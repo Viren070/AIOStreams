@@ -7,24 +7,13 @@ import {
 import { useLatest } from '../../use-latest';
 import type { Host } from '..';
 import { androidHost, setupAndroid } from './android';
-import { appBridge, type ShellMessage } from './bridge';
+import { appBridge, ask, bridgeStore, type ShellAnswer } from './bridge';
 import { desktopHost, setupDesktop } from './desktop';
 import { applyPlayerSettings } from './player';
 
-export type UpdateState = Extract<ShellMessage, { type: 'update-state' }>;
+export type UpdateState = ShellAnswer<'update-state'>;
 
-/* The last report, for a settings page opened after it came. */
-let updateState: UpdateState | null = null;
-const updateListeners = new Set<() => void>();
-
-function subscribeUpdates(listener: () => void): () => void {
-  updateListeners.add(listener);
-  return () => updateListeners.delete(listener);
-}
-
-export function useUpdateState(): UpdateState | null {
-  return React.useSyncExternalStore(subscribeUpdates, () => updateState);
-}
+export const useUpdateState = bridgeStore('update-state').use;
 
 export function checkForUpdates(channel: UpdateChannelSetting): void {
   appBridge()?.send({
@@ -62,11 +51,6 @@ export function updateStatus(update: UpdateState | null): string {
   }
 }
 
-function onUpdateState(next: UpdateState) {
-  updateState = next;
-  for (const listener of updateListeners) listener();
-}
-
 /** Keeps mpv in step with this device's settings and checks for updates. */
 export function ShellSetup() {
   React.useEffect(() => {
@@ -84,67 +68,45 @@ export function ShellSetup() {
     apply();
     checkForUpdates(channel);
     const unsubscribeSettings = onSettingsChange(apply);
-    const unsubscribe = shell.subscribe((m) => {
-      if (m.type === 'update-state') onUpdateState(m);
-      else if (m.type === 'external-players') onExternalPlayers(m.players);
-    });
     const teardown =
       shell.platform === 'android' ? setupAndroid() : setupDesktop();
     shell.send({ type: 'mpv-sync' });
     return () => {
       unsubscribeSettings();
-      unsubscribe();
       teardown();
     };
   }, []);
   return null;
 }
 
-export type ExternalPlayers = Extract<
-  ShellMessage,
-  { type: 'external-players' }
->['players'];
+export type ExternalPlayers = ShellAnswer<'external-players'>['players'];
 
-let externalPlayers: ExternalPlayers | null = null;
-const externalPlayerListeners = new Set<() => void>();
-
-function subscribeExternalPlayers(listener: () => void): () => void {
-  externalPlayerListeners.add(listener);
-  return () => externalPlayerListeners.delete(listener);
-}
+const externalPlayers = bridgeStore('external-players');
 
 /** The players the desktop app can start, and where it found each. */
 export function useExternalPlayers(): ExternalPlayers | null {
   React.useEffect(() => {
     appBridge()?.send({ type: 'external-players' });
   }, []);
-  return React.useSyncExternalStore(
-    subscribeExternalPlayers,
-    () => externalPlayers
-  );
+  return externalPlayers.use()?.players ?? null;
 }
 
 export function chooseExternalPlayer(id: string): void {
   appBridge()?.send({ type: 'external-choose', player: id });
 }
 
-function onExternalPlayers(next: ExternalPlayers) {
-  externalPlayers = next;
-  for (const listener of externalPlayerListeners) listener();
-}
-
-export type ShellInfo = Extract<ShellMessage, { type: 'app-info' }>;
+export type ShellInfo = ShellAnswer<'app-info'>;
 
 export function useShellInfo(): ShellInfo | null {
   const [info, setInfo] = React.useState<ShellInfo | null>(null);
   React.useEffect(() => {
-    const shell = appBridge();
-    if (!shell) return;
-    const unsubscribe = shell.subscribe((m) => {
-      if (m.type === 'app-info') setInfo(m);
-    });
-    shell.send({ type: 'app-info' });
-    return unsubscribe;
+    let live = true;
+    ask({ type: 'app-info' }, 'app-info')
+      .then((m) => live && setInfo(m))
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
   }, []);
   return info;
 }
@@ -169,24 +131,11 @@ export function openLogs(): void {
 
 /** Versions, paths and the recent log, for a bug report. */
 export function requestDiagnostics(server: string | null): Promise<string> {
-  const shell = appBridge();
-  if (!shell)
-    return Promise.reject(
-      new Error('Only the desktop and Android apps have these')
-    );
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      unsubscribe();
-      reject(new Error('The app did not answer'));
-    }, 5000);
-    const unsubscribe = shell.subscribe((m) => {
-      if (m.type !== 'diagnostics') return;
-      clearTimeout(timer);
-      unsubscribe();
-      resolve(m.text);
-    });
-    shell.send({ type: 'diagnostics', web: __APP_COMMIT__, server });
-  });
+  return ask(
+    { type: 'diagnostics', web: __APP_COMMIT__, server },
+    'diagnostics',
+    { timeoutMs: 5000 }
+  ).then((m) => m.text);
 }
 
 /** The AIOStreams apps, which play in mpv. */
