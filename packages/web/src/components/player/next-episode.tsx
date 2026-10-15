@@ -283,12 +283,7 @@ export function useNextEpisodePrompt({
       .then(async (info) => {
         const target = carryOn(playableSources(info), source, fallbackFirst);
         if (!current || !target) return;
-        const url = await playerUrl(
-          client,
-          next.Id!,
-          target,
-          info.PlaySessionId
-        );
+        const url = await playerUrl(client, next.Id!, target);
         if (!current || !url) return;
         queueNext.current?.({
           itemId: next.Id!,
