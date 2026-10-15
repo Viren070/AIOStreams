@@ -272,11 +272,15 @@ pub fn check_url(url: &str, local: &dyn Fn(&str) -> bool) -> Result<(), String> 
     }
 }
 
-fn is_header_name(name: &str) -> bool {
+pub(crate) fn is_header_name(name: &str) -> bool {
     !name.is_empty()
         && name
             .bytes()
             .all(|b| b.is_ascii_alphanumeric() || b"!#$%&'*+-.^_`|~".contains(&b))
+}
+
+pub(crate) fn is_header_value(value: &str) -> bool {
+    value.bytes().all(|b| (b' '..=b'~').contains(&b))
 }
 
 fn is_language(code: &str) -> bool {
@@ -390,10 +394,7 @@ fn header_fields(headers: &BTreeMap<String, String>) -> Result<Option<String>, S
     let mut fields = Vec::new();
     for (name, value) in headers {
         // A backslash before the list's separator would escape it.
-        if !is_header_name(name)
-            || !value.bytes().all(|b| (b' '..=b'~').contains(&b))
-            || value.ends_with('\\')
-        {
+        if !is_header_name(name) || !is_header_value(value) || value.ends_with('\\') {
             return Err(format!("header {name} is not allowed"));
         }
         fields.push(format!("{name}: {}", value.replace(',', "\\,")));

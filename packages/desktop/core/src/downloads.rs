@@ -1,7 +1,7 @@
 //! Downloads the page hands over. Each runs on its own thread, resumes from
 //! what is already on disk, and the queue outlives the app.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fs::{self, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Component, Path, PathBuf};
@@ -15,12 +15,14 @@ use serde::{Deserialize, Serialize};
 use ureq::ResponseExt;
 
 use crate::bridge::{DownloadJob, DownloadStatus, FileKind, Outbound};
+use crate::playback::{is_header_name, is_header_value};
 
 const PROGRESS_EVERY: Duration = Duration::from_millis(500);
 /// No timeout bounds a stalled read on its own, so each request ends after
 /// this and the next one carries on from what was written.
 const REQUEST_LIMIT: Duration = Duration::from_secs(90);
 const RETRY_SECONDS: &[u64] = &[2, 5, 15, 30, 60];
+const MAX_REDIRECTS: usize = 10;
 const MAX_CONCURRENT: u32 = 4;
 const EXTENSIONS: &[&str] = &[
     "mkv", "mp4", "m4v", "avi", "mov", "webm", "ts", "m2ts", "wmv", "flv", "mpg", "mpeg", "ogv",
@@ -522,6 +524,11 @@ fn check(spec: &DownloadJob) -> Result<(), String> {
         if !file.url.starts_with("http://") && !file.url.starts_with("https://") {
             return Err("only http(s) addresses".into());
         }
+        for (name, value) in &file.headers {
+            if !is_header_name(name) || !is_header_value(value) {
+                return Err(format!("header {name} is not allowed"));
+            }
+        }
         place(Path::new("."), &file.path)?;
     }
     for text in &spec.texts {
@@ -599,7 +606,7 @@ fn work(
                     });
                 }
             };
-            match fetch(&agent, &file.url, &path, &stop, report) {
+            match fetch(&agent, &file.url, &file.headers, &path, &stop, report) {
                 // Art or a subtitle missing never costs the video.
                 Err(Failure::Error(e)) if file.kind != FileKind::Video => {
                     log::warn!("download {}: skipped {}: {e}", spec.id, file.path)
@@ -634,9 +641,44 @@ fn total_of(response: &ureq::http::Response<ureq::Body>, offset: u64) -> Option<
         .map(|n| n + offset)
 }
 
+/// With headers, follows redirects itself, as ureq drops `Authorization` and `Cookie` on the way.
+fn get(
+    agent: &ureq::Agent,
+    url: &str,
+    headers: &BTreeMap<String, String>,
+    from: u64,
+) -> Result<ureq::http::Response<ureq::Body>, ureq::Error> {
+    let mut address = url.to_string();
+    for _ in 0..=MAX_REDIRECTS {
+        let mut request = agent.get(&address);
+        if from > 0 {
+            request = request.header("Range", format!("bytes={from}-"));
+        }
+        if headers.is_empty() {
+            return request.call();
+        }
+        for (name, value) in headers {
+            request = request.header(name, value);
+        }
+        let response = request.config().max_redirects(0).build().call()?;
+        let location = response.headers().get("location");
+        let Some(location) = location.filter(|_| response.status().is_redirection()) else {
+            return Ok(response);
+        };
+        let next = location
+            .to_str()
+            .ok()
+            .and_then(|l| url::Url::parse(&address).ok()?.join(l).ok())
+            .ok_or_else(|| ureq::Error::BadUri(format!("{location:?}")))?;
+        address = next.into();
+    }
+    Err(ureq::Error::TooManyRedirects)
+}
+
 fn fetch(
     agent: &ureq::Agent,
     url: &str,
+    headers: &BTreeMap<String, String>,
     path: &Path,
     stop: &AtomicBool,
     report: impl Fn(u64, Option<u64>),
@@ -663,11 +705,7 @@ fn fetch(
         if total.is_some_and(|t| have >= t) {
             return fs::rename(&part, path).map_err(fail);
         }
-        let mut request = agent.get(&address);
-        if have > 0 {
-            request = request.header("Range", format!("bytes={have}-"));
-        }
-        let error = match request.call() {
+        let error = match get(agent, &address, headers, have) {
             Ok(response) => {
                 if response.status() == 200 && have > 0 {
                     have = 0;

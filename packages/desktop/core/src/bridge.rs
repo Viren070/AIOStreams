@@ -1,5 +1,7 @@
 //! Messages between the page and the shell.
 
+use std::collections::BTreeMap;
+
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -187,6 +189,8 @@ pub struct DownloadFile {
     pub url: String,
     pub path: String,
     pub kind: FileKind,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub headers: BTreeMap<String, String>,
 }
 
 /// A file the page writes itself, such as the item's details.
