@@ -2,6 +2,7 @@ package io.github.viren070.aiostreams.playback
 
 import android.net.Uri
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
@@ -81,6 +82,59 @@ object MpvProtocol {
         }
         args
     }
+
+    /** Adds the headers to a checked `loadfile` as its `http-header-fields` option. */
+    fun withHeaders(args: List<String>, headers: JsonElement?): List<String> {
+        val fields = (headers as? JsonObject).orEmpty().map { (name, value) ->
+            val text = (value as? JsonPrimitive)?.takeIf { it.isString }?.content
+            // A backslash before the list's separator would escape it.
+            require(isHeaderName(name) && text != null && text.all { it in ' '..'~' } && !text.endsWith('\\')) {
+                "header $name is not allowed"
+            }
+            "$name: ${text.replace(",", "\\,")}"
+        }
+        if (fields.isEmpty()) return args
+        require(args.first() == "loadfile") { "only loadfile takes headers" }
+        val list = fields.joinToString(",")
+        // The length prefix keeps the list's commas inside the one option.
+        val option = "$HEADER_FIELDS=%${list.length}%$list"
+        val full = args + listOf("replace", "-1", "").drop(args.size - 2)
+        return full.take(4) + full[4].let { if (it.isEmpty()) option else "$it,$option" }
+    }
+
+    /** A `loadfile`'s options, reading a `%n%` length prefix as mpv does. */
+    fun optionPairs(value: String): List<Pair<String, String>> {
+        val pairs = mutableListOf<Pair<String, String>>()
+        var rest = value
+        while (rest.isNotEmpty()) {
+            val key = rest.substringBefore('=')
+            rest = rest.substringAfter('=', "")
+            val prefix = LENGTH_PREFIX.matchAt(rest, 0)
+            val text = if (prefix != null) {
+                rest.drop(prefix.value.length).take(prefix.groupValues[1].toInt())
+            } else {
+                rest.substringBefore(',')
+            }
+            rest = rest.drop((prefix?.value?.length ?: 0) + text.length).removePrefix(",")
+            pairs += key to text
+        }
+        return pairs
+    }
+
+    fun joinOptions(pairs: List<Pair<String, String>>): String =
+        pairs.joinToString(",") { (key, value) -> if (',' in value) "$key=%${value.length}%$value" else "$key=$value" }
+
+    fun headerFields(list: String?): Map<String, String> =
+        list.orEmpty().split(UNESCAPED_COMMA).filter { ':' in it }.associate { field ->
+            field.substringBefore(':') to field.substringAfter(':').trimStart().replace("\\,", ",")
+        }
+
+    const val HEADER_FIELDS = "http-header-fields"
+    private val LENGTH_PREFIX = Regex("%(\\d+)%")
+    private val UNESCAPED_COMMA = Regex("(?<!\\\\),")
+
+    private fun isHeaderName(name: String) =
+        name.isNotEmpty() && name.all { it in 'a'..'z' || it in 'A'..'Z' || it in '0'..'9' || it in "!#\$%&'*+-.^_`|~" }
 
     fun setProperty(name: String, value: JsonElement): Result<String> = runCatching {
         require(name in settable) { "property $name is not settable" }

@@ -49,6 +49,7 @@ import androidx.media3.exoplayer.video.VideoFrameMetadataListener
 import androidx.media3.extractor.metadata.Chapter
 import io.github.viren070.aiostreams.mpv.MpvEngine
 import io.github.viren070.aiostreams.playback.Engine
+import io.github.viren070.aiostreams.playback.MpvProtocol
 import io.github.viren070.aiostreams.playback.Sound
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
@@ -74,7 +75,8 @@ class ExoEngine(private val context: Context) :
     Engine, Player.Listener, AnalyticsListener, VideoFrameMetadataListener {
     private val main = Handler(Looper.getMainLooper())
     private val loader = Executors.newSingleThreadExecutor { Thread(it, "exo-loader") }
-    private val data = DefaultDataSource.Factory(context, DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true))
+    private val http = DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true)
+    private val data = DefaultDataSource.Factory(context, http)
     private val ass = AssSurface(context) { MpvEngine.fallbackFont(context) }
     private val player: ExoPlayer
     private val tracks = ExoTracks()
@@ -365,8 +367,9 @@ class ExoEngine(private val context: Context) :
 
     private fun load(url: String, rawOptions: String) {
         if (this.url != null) listener?.onEnded("stop", null, null)
-        val pairs = rawOptions.split(',').filter { '=' in it }.map { it.substringBefore('=') to it.substringAfter('=') }
+        val pairs = MpvProtocol.optionPairs(rawOptions)
         val values = pairs.toMap()
+        http.setDefaultRequestProperties(MpvProtocol.headerFields(values[MpvProtocol.HEADER_FIELDS]))
         this.url = url
         options = TrackOptions(pairs)
         caps = MediaCaps.read(context)

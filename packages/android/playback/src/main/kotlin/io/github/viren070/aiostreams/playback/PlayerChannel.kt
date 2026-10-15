@@ -78,6 +78,7 @@ class PlayerChannel(
             "mpv-command" -> {
                 val args = message["args"] as? JsonArray ?: return true
                 MpvProtocol.command(args, isLocal)
+                    .mapCatching { MpvProtocol.withHeaders(it, message["headers"]) }
                     .onSuccess(::command)
                     .onFailure { reject(it) }
             }
@@ -222,10 +223,10 @@ class PlayerChannel(
 
         /** `loadfile`, starting where the last engine was. */
         fun resumed(load: List<String>, at: Double?): List<String> {
-            val options = load.getOrNull(4).orEmpty().split(',').filter { it.isNotEmpty() }
-            val start = at?.takeIf { it > 0 }?.let { "start=%.3f".format(Locale.ROOT, it) }
-            val kept = if (start == null) options else listOf(start) + options.filterNot { it.startsWith("start=") }
-            return listOf(load[0], load[1], "replace", "-1", kept.joinToString(","))
+            val options = MpvProtocol.optionPairs(load.getOrNull(4).orEmpty())
+            val start = at?.takeIf { it > 0 }?.let { "start" to "%.3f".format(Locale.ROOT, it) }
+            val kept = if (start == null) options else listOf(start) + options.filterNot { it.first == "start" }
+            return listOf(load[0], load[1], "replace", "-1", MpvProtocol.joinOptions(kept))
         }
 
         val next = AtomicInteger()
