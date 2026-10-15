@@ -81,6 +81,14 @@ internal class SubtitleStyle {
     }
 }
 
+/** WebVTT's automatic line arrives as the last line, which the view's bottom padding never moves. */
+internal fun unplaced(cue: Cue): Cue =
+    if (cue.verticalType == Cue.TYPE_UNSET && cue.lineType == Cue.LINE_TYPE_NUMBER && cue.line == -1f) {
+        cue.buildUpon().setLine(Cue.DIMEN_UNSET, Cue.TYPE_UNSET).build()
+    } else {
+        cue
+    }
+
 /** A text subtitle's lines, which the engine shows on the video's frames so its delay applies. */
 @OptIn(UnstableApi::class)
 internal class TextTimeline(private val replace: Boolean, private val parser: SampleParser? = null) {

@@ -549,11 +549,11 @@ class ExoEngine(private val context: Context) :
         val cues = text?.cuesAt(frameUs - delayUs) ?: return
         if (cues == shownCues) return
         shownCues = cues
-        stage?.subtitles?.setCues(cues)
+        stage?.subtitles?.setCues(cues.map(::unplaced))
     }
 
     override fun onCues(cueGroup: CueGroup) {
-        if (text == null && external == null) stage?.subtitles?.setCues(if (style.visible) cueGroup.cues else emptyList())
+        if (text == null && external == null) stage?.subtitles?.setCues(if (style.visible) cueGroup.cues.map(::unplaced) else emptyList())
     }
 
     private fun onStageLayout(width: Int, height: Int, video: Rect) {
