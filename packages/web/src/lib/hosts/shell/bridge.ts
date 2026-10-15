@@ -1,15 +1,59 @@
 import React from 'react';
 import type { HostEvent } from '../../downloads/types';
 
+/** A track as the app's player lists it; `url` is where an added one came from. */
+export interface AppTrack {
+  id: string;
+  type: 'audio' | 'subtitle';
+  title?: string;
+  language?: string;
+  codec?: string;
+  default: boolean;
+  forced: boolean;
+  hearingImpaired: boolean;
+  visualImpaired: boolean;
+  external: boolean;
+  url?: string;
+}
+
 /** `external` marks what the player in its own window sends. */
 export type ShellMessage =
   | { type: 'youtube-resolved'; request: string; url: string | null }
-  | { type: 'mpv-prop'; name: string; data: unknown; external?: boolean }
-  | { type: 'mpv-event'; name: string; external?: boolean }
   | {
-      type: 'mpv-ended';
+      type: 'player-state';
+      positionMs?: number;
+      durationMs?: number;
+      bufferedMs?: number;
+      paused?: boolean;
+      buffering?: boolean;
+      seeking?: boolean;
+      idle?: boolean;
+      volume?: number;
+      maxVolume?: number;
+      muted?: boolean;
+      speed?: number;
+      audio?: string | null;
+      subtitle?: string | null;
+      fullscreen?: boolean;
+      external?: boolean;
+    }
+  | { type: 'player-tracks'; tracks: AppTrack[]; external?: boolean }
+  | {
+      type: 'player-chapters';
+      chapters: { title?: string; startMs: number }[];
+      external?: boolean;
+    }
+  | {
+      type: 'player-event';
+      name: 'start' | 'loaded' | 'restart';
+      external?: boolean;
+    }
+  | {
+      type: 'player-ended';
       reason: string;
       error: string | null;
+      /** The HTTP status a failed load answered with. */
+      status?: number;
       cause?: string;
       external?: boolean;
     }

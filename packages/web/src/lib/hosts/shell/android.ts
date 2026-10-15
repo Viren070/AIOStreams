@@ -4,7 +4,6 @@ import { onSettingsChange, settings, type PlayerEngine } from '../../settings';
 import { appBridge, ask } from './bridge';
 import { shellDownloads } from './downloads';
 import { appEngine, setEngine } from './player';
-import { soundOptions } from './sound';
 import { resolveYouTube } from './youtube';
 
 let fullscreen = false;
@@ -16,24 +15,13 @@ let fullscreen = false;
 export function setupAndroid(): () => void {
   const bridge = appBridge();
   let engine: PlayerEngine | null = null;
-  let options = '';
-  const sendSettings = () => {
-    if (settings.android.engine.read() !== engine) {
-      engine = settings.android.engine.read();
-      bridge?.send({ type: 'player-engine', name: engine });
-    }
-    const next = {
-      frameRate: settings.android.frameRate.read(),
-      tunneling: settings.android.tunneling.read(),
-      dolbyVision: settings.desktop.dolbyVision.read(),
-      ...soundOptions(),
-    };
-    if (JSON.stringify(next) === options) return;
-    options = JSON.stringify(next);
-    bridge?.send({ type: 'player-options', ...next });
+  const sendEngine = () => {
+    if (settings.android.engine.read() === engine) return;
+    engine = settings.android.engine.read();
+    bridge?.send({ type: 'player-engine', name: engine });
   };
-  sendSettings();
-  const unsubscribeSettings = onSettingsChange(sendSettings);
+  sendEngine();
+  const unsubscribeSettings = onSettingsChange(sendEngine);
   const unsubscribe = bridge?.subscribe((m) => {
     if (m.type === 'fullscreen') fullscreen = m.value;
     else if (m.type === 'back') runAction('back');

@@ -7,17 +7,15 @@ export interface Chapter {
   startMs: number;
 }
 
-/** mpv's `chapter-list`, in order, without chapters it gives no time for. */
-export function parseChapters(data: unknown): Chapter[] {
-  if (!Array.isArray(data)) return [];
-  return data
-    .filter(
-      (c): c is { title?: unknown; time: number } =>
-        typeof c?.time === 'number' && Number.isFinite(c.time)
-    )
+/** The app's chapters, in order. */
+export function parseChapters(
+  chapters: { title?: string; startMs: number }[]
+): Chapter[] {
+  return chapters
+    .filter((c) => Number.isFinite(c.startMs))
     .map((c) => ({
-      title: typeof c.title === 'string' ? c.title.trim() : '',
-      startMs: Math.max(0, c.time * 1000),
+      title: c.title?.trim() ?? '',
+      startMs: Math.max(0, c.startMs),
     }))
     .sort((a, b) => a.startMs - b.startMs);
 }

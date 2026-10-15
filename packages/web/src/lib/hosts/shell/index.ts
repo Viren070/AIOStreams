@@ -9,7 +9,7 @@ import type { Host } from '..';
 import { androidHost, setupAndroid } from './android';
 import { appBridge, ask, bridgeStore, type ShellAnswer } from './bridge';
 import { desktopHost, setupDesktop } from './desktop';
-import { applyPlayerSettings } from './player';
+import { playerSettings } from './player';
 
 export type UpdateState = ShellAnswer<'update-state'>;
 
@@ -51,15 +51,20 @@ export function updateStatus(update: UpdateState | null): string {
   }
 }
 
-/** Keeps mpv in step with this device's settings and checks for updates. */
+/** Keeps the app's player in step with this device's settings and checks for updates. */
 export function ShellSetup() {
   React.useEffect(() => {
     const shell = appBridge();
     if (!shell) return;
     const { updateChannel } = settings.desktop;
     let channel = updateChannel.read();
+    let sent = '';
     const apply = () => {
-      applyPlayerSettings();
+      const next = JSON.stringify(playerSettings());
+      if (next !== sent) {
+        sent = next;
+        shell.send({ type: 'player-settings', ...JSON.parse(next) });
+      }
       if (updateChannel.read() !== channel) {
         channel = updateChannel.read();
         checkForUpdates(channel);
@@ -70,7 +75,7 @@ export function ShellSetup() {
     const unsubscribeSettings = onSettingsChange(apply);
     const teardown =
       shell.platform === 'android' ? setupAndroid() : setupDesktop();
-    shell.send({ type: 'mpv-sync' });
+    shell.send({ type: 'player-sync' });
     return () => {
       unsubscribeSettings();
       teardown();
@@ -138,9 +143,9 @@ export function requestDiagnostics(server: string | null): Promise<string> {
   ).then((m) => m.text);
 }
 
-/** The AIOStreams apps, which play in mpv. */
+/** The AIOStreams apps. */
 export function shellHost(): Host | null {
   const bridge = appBridge();
-  if (bridge?.protocol !== 1) return null;
+  if (bridge?.protocol !== 2) return null;
   return bridge.platform === 'android' ? androidHost : desktopHost;
 }
