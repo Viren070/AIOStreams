@@ -457,7 +457,8 @@ pub fn style(style: &Style, own_font: &str) -> Result<Vec<(&'static str, String)
         ("sub-shadow-color", s.outline_color.clone()),
         (
             "sub-font",
-            s.font.map_or_else(|| own_font.into(), |f| f.family().into()),
+            s.font
+                .map_or_else(|| own_font.into(), |f| f.family().into()),
         ),
         ("sub-back-color", s.back_color.clone()),
         (
