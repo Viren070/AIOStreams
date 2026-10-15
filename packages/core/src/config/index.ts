@@ -37,6 +37,7 @@ import {
   watchStateSchema,
   remuxdbSchema,
   mediaInfoSchema,
+  partySchema,
 } from './schema/index.js';
 
 export const runtimeSchemas = {
@@ -69,6 +70,7 @@ export const runtimeSchemas = {
   watchState: watchStateSchema,
   remuxdb: remuxdbSchema,
   mediaInfo: mediaInfoSchema,
+  party: partySchema,
 } as const;
 
 export const runtimeKeyAliases: Record<string, string> = {

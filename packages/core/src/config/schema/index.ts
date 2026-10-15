@@ -27,3 +27,4 @@ export { jellyfinSchema } from './jellyfin.js';
 export { watchStateSchema } from './watch-state.js';
 export { remuxdbSchema } from './remuxdb.js';
 export { mediaInfoSchema } from './media-info.js';
+export { partySchema } from './party.js';
