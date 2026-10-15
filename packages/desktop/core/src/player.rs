@@ -89,6 +89,7 @@ pub struct Player {
     /// The stats overlay's page, while it shows.
     stats: Mutex<Option<String>>,
     ac3_encoder: bool,
+    own_font: String,
     emit: Emit,
 }
 
@@ -120,6 +121,7 @@ impl Player {
         let quit = Arc::new(AtomicBool::new(false));
         let dolby_vision = Arc::new(AtomicBool::new(true));
         let ac3_encoder = sound::encodes_ac3(&mpv);
+        let own_font = text(&mpv, "sub-font").unwrap_or_default();
         let sound = Arc::new(Mutex::new(None));
         let subtitles = Arc::new(Mutex::new(SubtitleScale::default()));
         let events = std::thread::Builder::new()
@@ -152,6 +154,7 @@ impl Player {
             subtitles,
             stats: Mutex::default(),
             ac3_encoder,
+            own_font,
             emit,
         })
     }
@@ -239,7 +242,7 @@ impl Player {
     }
 
     pub fn style(&self, style: &Style) -> Result<(), String> {
-        for (name, value) in playback::style(style)? {
+        for (name, value) in playback::style(style, &self.own_font)? {
             self.set(name, value);
         }
         let scale = self.subtitles.lock().ok().and_then(|mut s| {

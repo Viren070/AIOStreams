@@ -107,6 +107,45 @@ pub enum Override {
     Force,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Font {
+    SansSerif,
+    Serif,
+    Monospace,
+    SerifMonospace,
+    Casual,
+    Cursive,
+}
+
+impl Font {
+    /// libass knows generic names only through Linux's fontconfig.
+    fn family(self) -> &'static str {
+        let mac = cfg!(target_os = "macos");
+        if cfg!(target_os = "linux") {
+            return match self {
+                Font::SansSerif => "sans-serif",
+                Font::Serif => "serif",
+                Font::Monospace => "monospace",
+                Font::SerifMonospace => "Courier",
+                Font::Casual => "Comic Sans MS",
+                Font::Cursive => "cursive",
+            };
+        }
+        match self {
+            Font::SansSerif if mac => "Helvetica",
+            Font::SansSerif => "Arial",
+            Font::Serif => "Times New Roman",
+            Font::Monospace if mac => "Menlo",
+            Font::Monospace => "Consolas",
+            Font::SerifMonospace => "Courier New",
+            Font::Casual => "Comic Sans MS",
+            Font::Cursive if mac => "Snell Roundhand",
+            Font::Cursive => "Segoe Script",
+        }
+    }
+}
+
 /// Colours are `#AARRGGBB` or `#RRGGBB`, sizes in mpv's units.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -116,6 +155,9 @@ pub struct SubtitleLook {
     pub color: String,
     pub outline_color: String,
     pub outline_size: f64,
+    #[serde(default)]
+    pub shadow_size: f64,
+    pub font: Option<Font>,
     pub back_color: String,
     #[serde(rename = "box")]
     pub boxed: bool,
@@ -391,7 +433,8 @@ pub fn change(change: &Change) -> Result<Vec<(&'static str, String)>, String> {
 }
 
 /// Everything but `sub-scale`, which waits on whether the subtitle is a picture.
-pub fn style(style: &Style) -> Result<Vec<(&'static str, String)>, String> {
+/// `own_font` is mpv's font from before the page set one.
+pub fn style(style: &Style, own_font: &str) -> Result<Vec<(&'static str, String)>, String> {
     let s = &style.subtitles;
     for colour in [&s.color, &s.outline_color, &s.back_color] {
         if !is_colour(colour) {
@@ -409,6 +452,12 @@ pub fn style(style: &Style) -> Result<Vec<(&'static str, String)>, String> {
         ("sub-color", s.color.clone()),
         ("sub-outline-color", s.outline_color.clone()),
         ("sub-outline-size", s.outline_size.to_string()),
+        ("sub-shadow-offset", s.shadow_size.to_string()),
+        ("sub-shadow-color", s.outline_color.clone()),
+        (
+            "sub-font",
+            s.font.map_or_else(|| own_font.into(), |f| f.family().into()),
+        ),
         ("sub-back-color", s.back_color.clone()),
         (
             "sub-border-style",
