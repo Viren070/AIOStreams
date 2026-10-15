@@ -255,6 +255,31 @@ function syncedChoice<T extends string | number>(
   );
 }
 
+const syncedColor = (key: string, fallback: string, was: Was<string>[] = []) =>
+  synced<string>(
+    key,
+    (raw) => (raw && isHex(raw) ? raw : fallback),
+    (value) => (value === fallback ? undefined : value),
+    was
+  );
+
+function syncedNumber(
+  key: string,
+  fallback: number,
+  valid: (value: number) => boolean,
+  was: Was<number>[] = []
+): Setting<number> {
+  return synced<number>(
+    key,
+    (raw) => {
+      const value = Number(raw);
+      return raw && Number.isFinite(value) && valid(value) ? value : fallback;
+    },
+    (value) => (value === fallback ? undefined : String(value)),
+    was
+  );
+}
+
 const syncedText = (key: string) =>
   synced<string | undefined>(
     key,
@@ -493,51 +518,38 @@ const parseFeatured = (raw = 'auto'): Featured =>
       : raw.split(',').filter(Boolean).slice(0, MAX_FEATURED);
 
 const subtitleLook = {
-  size: device<SubtitleSize>(
+  size: syncedChoice<SubtitleSize>('subtitleSize', SUBTITLE_SIZES, 'normal', [
     'aiostreams-web-subtitle-size',
-    'normal',
-    SUBTITLE_SIZES
-  ),
-  font: device<SubtitleFont>(
-    'aiostreams-web-subtitle-font',
-    'default',
-    SUBTITLE_FONTS
-  ),
-  bold: device<boolean>('aiostreams-web-subtitle-bold', false),
-  textColor: device<string>(
+  ]),
+  font: syncedChoice<SubtitleFont>('subtitleFont', SUBTITLE_FONTS, 'default'),
+  bold: syncedFlag('subtitleBold', false, ['aiostreams-web-subtitle-bold']),
+  textColor: syncedColor('subtitleColor', '#ffffff', [
     'aiostreams-web-subtitle-text-color',
-    '#ffffff',
-    isHex
-  ),
-  outline: device<SubtitleOutline>(
-    'aiostreams-web-subtitle-outline',
+  ]),
+  outline: syncedChoice<SubtitleOutline>(
+    'subtitleOutline',
+    SUBTITLE_OUTLINES,
     'normal',
-    SUBTITLE_OUTLINES
+    ['aiostreams-web-subtitle-outline']
   ),
-  outlineColor: device<string>(
+  outlineColor: syncedColor('subtitleOutlineColor', '#000000', [
     'aiostreams-web-subtitle-outline-color',
-    '#000000',
-    isHex
-  ),
-  shadow: device<boolean>('aiostreams-web-subtitle-shadow', false),
-  backgroundColor: device<string>(
+  ]),
+  shadow: syncedFlag('subtitleShadow'),
+  backgroundColor: syncedColor('subtitleBackgroundColor', '#000000', [
     'aiostreams-web-subtitle-background-color',
-    '#000000',
-    isHex
-  ),
-  backgroundOpacity: device<number>(
+  ]),
+  backgroundOpacity: syncedNumber('subtitleBackgroundOpacity', 0, isPercent, [
     'aiostreams-web-subtitle-background-opacity',
-    0,
-    isPercent
-  ),
-  overrideStyled: device<boolean>(
+  ]),
+  overrideStyled: syncedFlag('subtitleOverrideStyled', false, [
     'aiostreams-web-subtitle-override-styled',
-    false
-  ),
-  position: device<number>(
-    'aiostreams-web-subtitle-position',
+  ]),
+  position: syncedNumber(
+    'subtitlePosition',
     0,
-    (v) => v >= 0 && v <= SUBTITLE_POSITION_MAX
+    (v) => v >= 0 && v <= SUBTITLE_POSITION_MAX,
+    ['aiostreams-web-subtitle-position']
   ),
 };
 

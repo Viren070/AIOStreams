@@ -26,7 +26,7 @@ import { SettingsCard } from '../../components/settings-card';
 import {
   LANGUAGE_OPTIONS,
   LanguageList,
-  ON_DEVICE,
+  FOLLOWS_YOU,
   ON_ACCOUNT,
 } from './common';
 
@@ -156,7 +156,7 @@ export function SubtitlesSection() {
           </span>
         </div>
       </SettingsCard>
-      <SettingsCard title="Text" description={ON_DEVICE}>
+      <SettingsCard title="Text" description={FOLLOWS_YOU}>
         <Select
           label="Size"
           options={SUBTITLE_SIZES.map((value) => ({
