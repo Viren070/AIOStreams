@@ -10,6 +10,7 @@ import androidx.media3.common.text.Cue
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.extractor.text.CuesWithTiming
 import androidx.media3.extractor.text.DefaultSubtitleParserFactory
+import io.github.viren070.aiostreams.playback.SubtitleFont
 import io.github.viren070.aiostreams.playback.SubtitleLook
 import androidx.media3.extractor.text.SubtitleParser
 import androidx.media3.ui.CaptionStyleCompat
@@ -28,6 +29,8 @@ internal class SubtitleStyle {
     private var color = Color.WHITE
     private var outlineColor = Color.BLACK
     private var outlineSize = 1.65
+    private var shadowSize = 0.0
+    private var font: SubtitleFont? = null
     private var backColor = Color.TRANSPARENT
     private var box = false
     private var bold = false
@@ -40,6 +43,8 @@ internal class SubtitleStyle {
         color = colorOf(look.color) ?: color
         outlineColor = colorOf(look.outlineColor) ?: outlineColor
         outlineSize = look.outlineSize
+        shadowSize = look.shadowSize
+        font = look.font
         backColor = colorOf(look.backColor) ?: backColor
         box = look.box
         bold = look.bold
@@ -47,7 +52,14 @@ internal class SubtitleStyle {
     }
 
     fun apply(view: SubtitleView) {
-        val edge = if (!box && outlineSize > 0) CaptionStyleCompat.EDGE_TYPE_OUTLINE else CaptionStyleCompat.EDGE_TYPE_NONE
+        // The view draws one edge, so a shadow takes the outline's place.
+        val edge = when {
+            box -> CaptionStyleCompat.EDGE_TYPE_NONE
+            shadowSize > 0 -> CaptionStyleCompat.EDGE_TYPE_DROP_SHADOW
+            outlineSize > 0 -> CaptionStyleCompat.EDGE_TYPE_OUTLINE
+            else -> CaptionStyleCompat.EDGE_TYPE_NONE
+        }
+        val family = font?.let { Typeface.create(it.id, Typeface.NORMAL) } ?: Typeface.DEFAULT
         view.setStyle(
             CaptionStyleCompat(
                 color,
@@ -55,7 +67,7 @@ internal class SubtitleStyle {
                 Color.TRANSPARENT,
                 edge,
                 outlineColor,
-                if (bold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT,
+                Typeface.create(family, if (bold) Typeface.BOLD else Typeface.NORMAL),
             ),
         )
         view.setApplyEmbeddedStyles(override != AssStyle.FORCE)
@@ -65,10 +77,13 @@ internal class SubtitleStyle {
     }
 
     fun assStyle() = AssStyle(
-        override, assColor(color), assColor(outlineColor), assColor(backColor), outlineSize,
+        // Outside a box, ASS draws the shadow in its back colour.
+        override, assColor(color), assColor(outlineColor), assColor(if (box) backColor else outlineColor), outlineSize,
         // mpv's numbers for outline-and-shadow and background-box.
         if (box) 4 else 1,
         bold,
+        shadowSize,
+        font?.file?.takeIf { it.canRead() }?.path,
     )
 
     private companion object {

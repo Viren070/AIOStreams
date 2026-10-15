@@ -46,6 +46,9 @@ internal data class AssStyle(
     val outlineSize: Double = 1.65,
     val borderStyle: Int = 1,
     val bold: Boolean = false,
+    val shadowSize: Double = 0.0,
+    /** Drawn in place of the bundled font where the style is forced; null keeps it. */
+    val fontFile: String? = null,
 ) {
     companion object {
         const val NONE = 0
@@ -284,7 +287,8 @@ internal class AssSurface(context: Context, font: () -> File) : SurfaceHolder.Ca
         )
         nativeSetStyle(
             native, style.override, style.color, style.outlineColor, style.backColor,
-            style.outlineSize, style.borderStyle, style.bold,
+            style.outlineSize, style.borderStyle, style.bold, style.shadowSize,
+            style.fontFile.takeIf { force },
         )
     }
 
@@ -332,7 +336,7 @@ internal class AssSurface(context: Context, font: () -> File) : SurfaceHolder.Ca
         @JvmStatic
         external fun nativeSetStyle(
             handle: Long, override: Int, color: Int, outlineColor: Int, backColor: Int,
-            outlineSize: Double, borderStyle: Int, bold: Boolean,
+            outlineSize: Double, borderStyle: Int, bold: Boolean, shadowSize: Double, fontFile: String?,
         )
 
         @JvmStatic

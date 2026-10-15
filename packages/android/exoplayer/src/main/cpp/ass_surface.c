@@ -45,6 +45,7 @@ typedef struct {
     ARect drawn;
     ANativeWindow_Buffer buffer;
     int locked;
+    char *bundled;
     char *font;
     int width;
     int height;
@@ -141,6 +142,7 @@ JNIEXPORT jlong JNICALL METHOD(nativeCreate)(JNIEnv *env, jclass clazz, jstring 
     libass.set_message_cb(surface->library, message, NULL);
     libass.set_extract_fonts(surface->library, 1);
     const char *path = (*env)->GetStringUTFChars(env, font, NULL);
+    surface->bundled = strdup(path);
     surface->font = strdup(path);
     (*env)->ReleaseStringUTFChars(env, font, path);
     start_renderer(surface);
@@ -228,11 +230,26 @@ JNIEXPORT void JNICALL METHOD(nativeSetLayout)(
     libass.set_line_position(renderer, linePosition);
 }
 
+static void use_font(Surface *surface, const char *path) {
+    if (!strcmp(path, surface->font)) return;
+    free(surface->font);
+    surface->font = strdup(path);
+    libass.set_fonts(surface->renderer, surface->font, "sans-serif", ASS_FONTPROVIDER_AUTODETECT, NULL, 1);
+}
+
 // `override` is AssStyle's NONE, SCALE or FORCE.
 JNIEXPORT void JNICALL METHOD(nativeSetStyle)(
         JNIEnv *env, jclass clazz, jlong handle, jint override, jint color, jint outlineColor,
-        jint backColor, jdouble outlineSize, jint borderStyle, jboolean bold) {
-    ASS_Renderer *renderer = ((Surface *) handle)->renderer;
+        jint backColor, jdouble outlineSize, jint borderStyle, jboolean bold, jdouble shadowSize, jstring fontFile) {
+    Surface *surface = (Surface *) handle;
+    ASS_Renderer *renderer = surface->renderer;
+    if (fontFile) {
+        const char *path = (*env)->GetStringUTFChars(env, fontFile, NULL);
+        use_font(surface, path);
+        (*env)->ReleaseStringUTFChars(env, fontFile, path);
+    } else {
+        use_font(surface, surface->bundled);
+    }
     int flags = override ? ASS_OVERRIDE_BIT_SELECTIVE_FONT_SCALE : 0;
     if (override == 2) {
         flags |= ASS_OVERRIDE_BIT_FONT_NAME | ASS_OVERRIDE_BIT_FONT_SIZE_FIELDS | ASS_OVERRIDE_BIT_COLORS |
@@ -253,6 +270,7 @@ JNIEXPORT void JNICALL METHOD(nativeSetStyle)(
         .ScaleY = 1,
         .BorderStyle = borderStyle,
         .Outline = outlineSize * scale,
+        .Shadow = shadowSize * scale,
         .Alignment = 2,
         .MarginL = 19 * scale,
         .MarginR = 19 * scale,
@@ -316,6 +334,7 @@ JNIEXPORT void JNICALL METHOD(nativeRelease)(JNIEnv *env, jclass clazz, jlong ha
     if (surface->window) ANativeWindow_release(surface->window);
     libass.renderer_done(surface->renderer);
     libass.library_done(surface->library);
+    free(surface->bundled);
     free(surface->font);
     free(surface);
 }

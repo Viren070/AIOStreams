@@ -1,6 +1,7 @@
 package io.github.viren070.aiostreams.playback
 
 import android.net.Uri
+import java.io.File
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -59,12 +60,27 @@ data class SubtitleLook(
     val color: String,
     val outlineColor: String,
     val outlineSize: Double,
+    val shadowSize: Double,
+    val font: SubtitleFont?,
     val backColor: String,
     val box: Boolean,
     val forceStyle: Boolean,
     /** Percent of the height from the top where the bottom line sits. */
     val position: Double,
 )
+
+/**
+ * The page's font families, which `id` also names on Android; libass knows
+ * them by `family`, from the system's `file`. Sans serif is the bundled font.
+ */
+enum class SubtitleFont(val id: String, val family: String, val file: File?) {
+    SANS_SERIF("sans-serif", "sans-serif", null),
+    SERIF("serif", "Noto Serif", File("/system/fonts/NotoSerif-Regular.ttf")),
+    MONOSPACE("monospace", "Droid Sans Mono", File("/system/fonts/DroidSansMono.ttf")),
+    SERIF_MONOSPACE("serif-monospace", "Cutive Mono", File("/system/fonts/CutiveMono.ttf")),
+    CASUAL("casual", "Coming Soon", File("/system/fonts/ComingSoon.ttf")),
+    CURSIVE("cursive", "Dancing Script", File("/system/fonts/DancingScript-Regular.ttf")),
+}
 
 enum class Fit { FIT, CROP, STRETCH }
 
@@ -190,6 +206,10 @@ object PlayerProtocol {
                 color = colour("color"),
                 outlineColor = colour("outlineColor"),
                 outlineSize = look.number("outlineSize") ?: 0.0,
+                shadowSize = look.number("shadowSize") ?: 0.0,
+                font = look.text("font")?.let { name ->
+                    SubtitleFont.entries.find { it.id == name } ?: error("$name is not a font")
+                },
                 backColor = colour("backColor"),
                 box = look.flag("box") == true,
                 forceStyle = look.text("override") == "force",

@@ -19,6 +19,7 @@ import io.github.viren070.aiostreams.playback.PlayerState
 import io.github.viren070.aiostreams.playback.PlayerTrack
 import io.github.viren070.aiostreams.playback.Sound
 import io.github.viren070.aiostreams.playback.Style
+import io.github.viren070.aiostreams.playback.SubtitleFont
 import io.github.viren070.aiostreams.playback.SubtitleMode
 import `is`.xyz.mpv.MPV
 import `is`.xyz.mpv.MPVNode
@@ -62,6 +63,7 @@ class MpvEngine(private val context: Context) : Engine {
     // Used on the calls thread only.
     private var filters: SoundFilters? = null
     private var subtitleScale: Double? = null
+    private var ownFont = ""
     private var statsPage: String? = null
 
     // The shown subtitle and the file's picture subtitles, which keep their own size.
@@ -86,6 +88,7 @@ class MpvEngine(private val context: Context) : Engine {
         // mpv's TLS can't read Android's certificate store, so it gets a copy each start.
         writeCertificates(File(dir, CA_BUNDLE))
         fallbackFont(context)
+        copyFonts()
         val options = mapOf(
             "config" to "yes",
             "config-dir" to dir.path,
@@ -109,6 +112,7 @@ class MpvEngine(private val context: Context) : Engine {
         // MPV leaves mpv paused, and idling only until its first file ends.
         mpv.setOptionString("idle", "yes")
         mpv.setPropertyBoolean("pause", false)
+        ownFont = mpv.getPropertyString("sub-font").orEmpty()
         mpv.addObserver(observer)
         mpv.addLogObserver(logs)
         for (name in OBSERVED) mpv.observeProperty(name, formatOf(name))
@@ -121,6 +125,15 @@ class MpvEngine(private val context: Context) : Engine {
     private fun set(name: String, value: String) = mpv.setPropertyString(name, value)
 
     override fun property(name: String): String? = mpv.getPropertyString(name)
+
+    /** libass here finds fonts only in mpv's fonts folder. */
+    private fun copyFonts() {
+        val fonts = File(dir, "fonts").apply { mkdirs() }
+        for (file in SubtitleFont.entries.mapNotNull { it.file }) {
+            val copy = File(fonts, file.name)
+            if (!copy.exists() && file.canRead()) runCatching { file.copyTo(copy) }
+        }
+    }
 
     fun reloadConfig() = command("load-config-file", configFile(context).path)
 
@@ -169,6 +182,9 @@ class MpvEngine(private val context: Context) : Engine {
         set("sub-color", s.color)
         set("sub-outline-color", s.outlineColor)
         set("sub-outline-size", s.outlineSize.toString())
+        set("sub-shadow-offset", s.shadowSize.toString())
+        set("sub-shadow-color", s.outlineColor)
+        set("sub-font", s.font?.family ?: ownFont)
         set("sub-back-color", s.backColor)
         set("sub-border-style", if (s.box) "background-box" else "outline-and-shadow")
         set("sub-ass-override", if (s.forceStyle) "force" else "scale")
