@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { JellyfinError, type JellyfinClient } from '../client';
 import { currentHost } from '../hosts';
 import { playableSources } from '../playback/play';
+import { requiredHeaders } from '../playback/stream';
 import { requestItem, requestPlaybackInfo } from '../queries';
 import { textSubtitles } from '../subtitles/tracks';
 import { useSession } from '../session';
@@ -31,6 +32,21 @@ const HOSTED = new Set(['queued', 'downloading', 'paused', 'failed', 'done']);
 
 export function downloadsHost(): DownloadsHost | null {
   return currentHost().downloads ?? null;
+}
+
+const downloadSupport = () => ({
+  headers: !!downloadsHost()?.headers,
+  youtube: false,
+});
+
+/** Whether a download can fetch the version; a YouTube one has no single file to save. */
+export function downloadable(source: SourceInfo): boolean {
+  const support = downloadSupport();
+  return (
+    !!downloadsHost() &&
+    !source.aiostreams?.ytId &&
+    (support.headers || !requiredHeaders(source))
+  );
 }
 
 function newId(): string {
@@ -91,7 +107,7 @@ async function forDownload(
     download.item.Id!,
     {
       profile: DOWNLOAD_PROFILE,
-      plain: true,
+      support: downloadSupport(),
     }
   ).catch(() => null);
   return (
@@ -394,7 +410,7 @@ export function useDownloadRunner(): void {
         download.item.Id!,
         {
           profile: DOWNLOAD_PROFILE,
-          plain: true,
+          support: downloadSupport(),
         }
       );
       const sources = playableSources(info);

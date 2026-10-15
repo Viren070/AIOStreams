@@ -560,11 +560,11 @@ export async function requestPlaybackInfo(
     profile?: object;
     /** The list the server kept, however old. */
     kept?: boolean;
-    /** Only versions any player opens, as a download needs. */
-    plain?: boolean;
+    /** What the versions may need; the chosen player's by default. */
+    support?: { headers: boolean; youtube: boolean };
   } = {}
 ): Promise<PlaybackInfoResponse> {
-  const support = opts.plain ? null : playerSupport();
+  const support = opts.support ?? playerSupport();
   const info = await client.post<PlaybackInfoResponse>(
     `/Items/${itemId}/PlaybackInfo`,
     {
@@ -574,8 +574,8 @@ export async function requestPlaybackInfo(
         ? { MediaSourceId: opts.sourceId }
         : !opts.kept && { Fresh: true }),
       ...(opts.refresh && { Refresh: true }),
-      ...(support?.headers && { EnableRequiredHttpHeaders: true }),
-      ...(support?.youtube && { EnableYouTube: true }),
+      ...(support.headers && { EnableRequiredHttpHeaders: true }),
+      ...(support.youtube && { EnableYouTube: true }),
     },
     { userId }
   );

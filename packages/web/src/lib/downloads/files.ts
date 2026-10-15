@@ -1,5 +1,6 @@
 import type { JellyfinClient } from '../client';
 import { backdropUrl, logoUrl, posterUrl } from '../images';
+import { requiredHeaders } from '../playback/stream';
 import { textSubtitles, subtitleUrl } from '../subtitles/tracks';
 import type { BaseItemDto, SourceInfo } from '../types';
 import type { HostFile, HostJob } from './types';
@@ -133,9 +134,14 @@ function imageFiles(
   return files;
 }
 
-/** The version's details without its addresses, which carry the sign-in. */
+/** The version's details without its addresses and headers, which can carry sign-ins. */
 export function versionDetails(source: SourceInfo): SourceInfo {
-  const { Path: _path, TranscodingUrl: _transcode, ...rest } = source;
+  const {
+    Path: _path,
+    TranscodingUrl: _transcode,
+    RequiredHttpHeaders: _headers,
+    ...rest
+  } = source;
   return {
     ...rest,
     MediaStreams: source.MediaStreams?.map(({ DeliveryUrl: _url, ...s }) => s),
@@ -165,7 +171,12 @@ export function hostJob(
     title: place.base,
     versionId: source.Id!,
     files: [
-      { url: video, path: `${at}.${videoType(source)}`, kind: 'video' },
+      {
+        url: video,
+        path: `${at}.${videoType(source)}`,
+        kind: 'video',
+        headers: requiredHeaders(source),
+      },
       ...subtitles.files,
       ...imageFiles(client, item, series, place),
     ],

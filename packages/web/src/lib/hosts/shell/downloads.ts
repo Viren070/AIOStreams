@@ -11,6 +11,7 @@ export const shellDownloads: DownloadsHost = {
   control: (id, action) => send({ type: 'download-control', id, action }),
   remove: (id, files) => send({ type: 'download-remove', id, files }),
   list: () => send({ type: 'download-list' }),
+  headers: true,
   configure: ({ concurrent, wifiOnly }) =>
     send({ type: 'download-config', concurrent, wifiOnly }),
   subscribe: (listener) =>

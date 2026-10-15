@@ -16,6 +16,8 @@ export interface HostFile {
   url: string;
   path: string;
   kind: 'video' | 'subtitle' | 'image';
+  /** Sent with every request for the file, redirects included. */
+  headers?: Record<string, string>;
 }
 
 /** What the host needs to fetch a download, without the page. */
@@ -91,4 +93,6 @@ export interface DownloadsHost {
   folder?: { choose(): void; open(id?: string): void };
   /** Takes downloads over entirely, with a screen of its own to show them. */
   handsOff?: { open(): void };
+  /** Sends a file's `headers`. */
+  headers?: boolean;
 }
