@@ -14,6 +14,7 @@ import { useSession } from './session';
 import { useFeature } from './server-info';
 import { settings, useSetting } from './settings';
 import { episodeMarks, ticksToMs, unavailableLabel } from './format';
+import { playerSupport } from './playback/player-choice';
 import type {
   BaseItemDto,
   BaseItemDtoQueryResult,
@@ -559,8 +560,11 @@ export async function requestPlaybackInfo(
     profile?: object;
     /** The list the server kept, however old. */
     kept?: boolean;
+    /** Only versions any player opens, as a download needs. */
+    plain?: boolean;
   } = {}
 ): Promise<PlaybackInfoResponse> {
+  const support = opts.plain ? null : playerSupport();
   const info = await client.post<PlaybackInfoResponse>(
     `/Items/${itemId}/PlaybackInfo`,
     {
@@ -570,6 +574,8 @@ export async function requestPlaybackInfo(
         ? { MediaSourceId: opts.sourceId }
         : !opts.kept && { Fresh: true }),
       ...(opts.refresh && { Refresh: true }),
+      ...(support?.headers && { EnableRequiredHttpHeaders: true }),
+      ...(support?.youtube && { EnableYouTube: true }),
     },
     { userId }
   );

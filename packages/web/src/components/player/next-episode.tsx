@@ -8,7 +8,7 @@ import { landscapeUrl } from '../../lib/images';
 import { episodeCode, itemSubtitle, ticksToMs } from '../../lib/format';
 import { navigate, to, versionsPath } from '../../lib/paths';
 import { playableSources } from '../../lib/playback/play';
-import { streamUrl } from '../../lib/playback/stream';
+import { playerUrl, requiredHeaders } from '../../lib/playback/stream';
 import {
   focusOn,
   inputCount,
@@ -280,14 +280,22 @@ export function useNextEpisodePrompt({
     let current = true;
     queryClient
       .fetchQuery(infoOptions(next.Id!))
-      .then((info) => {
+      .then(async (info) => {
         const target = carryOn(playableSources(info), source, fallbackFirst);
         if (!current || !target) return;
+        const url = await playerUrl(
+          client,
+          next.Id!,
+          target,
+          info.PlaySessionId
+        );
+        if (!current || !url) return;
         queueNext.current?.({
           itemId: next.Id!,
           source: target,
           startMs: resumeMs(next),
-          url: streamUrl(client, next.Id!, target, info.PlaySessionId),
+          url,
+          headers: requiredHeaders(target),
         });
       })
       .catch(() => {});

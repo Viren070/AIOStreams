@@ -32,7 +32,7 @@ import {
   useRefreshPlaybackInfo,
   useSetPlayed,
 } from '../lib/queries';
-import { directUrl } from '../lib/playback/stream';
+import { directUrl, needsAppPlayer } from '../lib/playback/stream';
 import {
   downloadsHost,
   useAddDownloads,
@@ -316,7 +316,9 @@ function Versions({
   const canDownload = !!downloadsHost();
   const [startMs, setStartMs] = React.useState(request.startMs);
   const [filter, setFilter] = React.useState('');
-  const sources = playableSources(info.data);
+  const sources = playableSources(info.data).filter(
+    (s) => !download || !needsAppPlayer(s)
+  );
   const notices = noticeSources(info.data);
   const terms = filter.toLowerCase().split(/\s+/).filter(Boolean);
   const shown = terms.length
@@ -577,7 +579,7 @@ function Versions({
         {shown.map((source) => {
           const link = directUrl(client, item.Id!, source);
           const actions = [
-            ...(canDownload && !download
+            ...(canDownload && !download && !needsAppPlayer(source)
               ? [
                   {
                     name: 'download',

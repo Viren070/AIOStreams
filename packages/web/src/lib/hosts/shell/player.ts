@@ -299,8 +299,27 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
       ...(fromMs ? [`start=${(fromMs / 1000).toFixed(3)}`] : []),
       ...trackOptions(latest.current.prefs ?? {}, source),
     ].join(',');
+  const loadFile = (
+    file: Pick<QueuedEpisode, 'url' | 'source' | 'startMs' | 'headers'>,
+    flags: 'replace' | 'append'
+  ) =>
+    shell.send({
+      type: 'mpv-command',
+      args: [
+        'loadfile',
+        file.url,
+        flags,
+        -1,
+        fileOptions(file.startMs, file.source),
+      ],
+      headers: file.headers,
+      ...target,
+    });
   const load = (fromMs: number) =>
-    command('loadfile', url, 'replace', -1, fileOptions(fromMs, source));
+    loadFile(
+      { url, source, startMs: fromMs, headers: opts.headers },
+      'replace'
+    );
 
   const [statsPage, setStatsPage] = React.useState<string | null>(null);
   const exo = playsWithExoPlayer();
@@ -697,13 +716,7 @@ export function useShellPlayer(opts: NativePlayerOptions): PlayerController {
       ? (episode) => {
           if (queued.current) return;
           queued.current = episode;
-          command(
-            'loadfile',
-            episode.url,
-            'append',
-            -1,
-            fileOptions(episode.startMs, episode.source)
-          );
+          loadFile(episode, 'append');
         }
       : undefined,
     retry:

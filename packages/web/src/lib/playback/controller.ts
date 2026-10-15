@@ -35,7 +35,7 @@ export interface PlayerState {
 }
 
 /** What some players add to what a browser's video can do. */
-export type PlayerFeature = 'audio' | 'chapters' | 'stats';
+export type PlayerFeature = 'audio' | 'chapters' | 'stats' | 'headers';
 
 /** Engines that list a file's audio tracks let the page's own video switch them. */
 export const browserFeatures: readonly PlayerFeature[] =
@@ -98,6 +98,7 @@ export interface QueuedEpisode {
   source: SourceInfo;
   startMs: number;
   url: string;
+  headers?: Record<string, string>;
 }
 
 export interface PlayerOptions {
@@ -113,6 +114,7 @@ export interface NativePlayerOptions extends PlayerOptions {
   client: JellyfinClient;
   item: BaseItemDto;
   url: string;
+  headers?: Record<string, string>;
   /** Where an external subtitle is, when not the server's address, as for a download. */
   subtitleUrl?: (stream: MediaStream) => string | null;
   /** Plays in this player's own window instead. */

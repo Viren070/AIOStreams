@@ -91,6 +91,7 @@ async function forDownload(
     download.item.Id!,
     {
       profile: DOWNLOAD_PROFILE,
+      plain: true,
     }
   ).catch(() => null);
   return (
@@ -393,6 +394,7 @@ export function useDownloadRunner(): void {
         download.item.Id!,
         {
           profile: DOWNLOAD_PROFILE,
+          plain: true,
         }
       );
       const sources = playableSources(info);

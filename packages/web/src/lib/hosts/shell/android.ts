@@ -122,7 +122,7 @@ export const androidHost: Host = {
   },
   device: () => ({ id: appBridge()?.deviceId, name: appBridge()?.device }),
   usePlayer: useShellPlayer,
-  playerFeatures: ['audio', 'chapters', 'stats'],
+  playerFeatures: ['audio', 'chapters', 'stats', 'headers'],
   // A TV has little storage and is always online.
   get downloads() {
     return appBridge()?.tv ? undefined : shellDownloads;

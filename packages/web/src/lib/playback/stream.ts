@@ -1,4 +1,6 @@
+import { useQuery } from '@tanstack/react-query';
 import type { JellyfinClient } from '../client';
+import { currentHost } from '../hosts';
 import type { SourceInfo } from '../types';
 
 /**
@@ -29,3 +31,40 @@ export function directUrl(
     ? source.Path
     : streamUrl(client, itemId, source);
 }
+
+export function requiredHeaders(
+  source: SourceInfo
+): Record<string, string> | undefined {
+  const entries = Object.entries(source.RequiredHttpHeaders ?? {}).filter(
+    (entry): entry is [string, string] => typeof entry[1] === 'string'
+  );
+  return entries.length ? Object.fromEntries(entries) : undefined;
+}
+
+export const needsAppPlayer = (source: SourceInfo) =>
+  !!source.aiostreams?.ytId || !!requiredHeaders(source);
+
+async function youTubeStream(id: string): Promise<string | null> {
+  return (await currentHost().resolveYouTube?.(id)) ?? null;
+}
+
+export async function playerUrl(
+  client: JellyfinClient,
+  itemId: string,
+  source: SourceInfo,
+  playSessionId?: string | null
+): Promise<string | null> {
+  const id = source.aiostreams?.ytId;
+  return id
+    ? youTubeStream(id)
+    : streamUrl(client, itemId, source, playSessionId);
+}
+
+/** Asked for on every play, as YouTube's links expire. */
+export const useYouTubeStream = (id: string | undefined) =>
+  useQuery({
+    queryKey: ['youtube-stream', id],
+    queryFn: () => youTubeStream(id!),
+    enabled: !!id,
+    gcTime: 0,
+  });

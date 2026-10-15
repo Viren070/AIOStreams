@@ -14,7 +14,12 @@ import {
 } from '../lib/queries';
 import { lastVersions, playableSources } from '../lib/playback/play';
 import { chosenPlayer } from '../lib/playback/player-choice';
-import { directUrl, streamUrl } from '../lib/playback/stream';
+import {
+  directUrl,
+  requiredHeaders,
+  streamUrl,
+  useYouTubeStream,
+} from '../lib/playback/stream';
 import { PlaybackReporter } from '../lib/playback/reporter';
 import { subtitleUrl, textSubtitles } from '../lib/subtitles/tracks';
 import { currentHost } from '../lib/hosts';
@@ -71,6 +76,8 @@ interface PlayerProps {
   prefs: PlaybackPrefs;
   launched?: NativePlayerOptions['launched'];
   local?: Download;
+  /** A YouTube version's stream. */
+  youTube?: string;
 }
 
 /**
@@ -135,6 +142,8 @@ export function PlayerPage({
   const sources = local ? [local.source!] : playableSources(info.data);
   const source = sourceId ? sources.find((s) => s.Id === sourceId) : sources[0];
   const missing = !playing && !!item.data && !!info.data && !source;
+  const youTubeId = playing ? undefined : source?.aiostreams?.ytId;
+  const youTube = useYouTubeStream(youTubeId);
   React.useEffect(() => {
     if (!missing || !item.data) return;
     lastVersions.set(itemId, undefined);
@@ -144,6 +153,7 @@ export function PlayerPage({
     !playing &&
     item.data &&
     source &&
+    (!youTubeId || youTube.data) &&
     !playback.isLoading &&
     !picks.isLoading
   ) {
@@ -155,6 +165,7 @@ export function PlayerPage({
       prefs: withShowPick(playback.prefs, picks.data, item.data),
       launched: player.kind === 'launched' ? player : undefined,
       local,
+      youTube: youTube.data ?? undefined,
     });
   }
 
@@ -164,6 +175,7 @@ export function PlayerPage({
       info.isLoading ||
       playback.isLoading ||
       picks.isLoading ||
+      youTube.isLoading ||
       missing
     ) {
       return (
@@ -172,6 +184,8 @@ export function PlayerPage({
         </Cover>
       );
     }
+    if (youTubeId && !youTube.data)
+      return <Failure itemId={itemId} message="This video didn't load." />;
     return (
       <Failure itemId={itemId} message="This version is no longer available." />
     );
@@ -576,6 +590,7 @@ function NativePlayer({
   prefs,
   launched,
   local,
+  youTube,
   usePlayer,
 }: PlayerProps & {
   usePlayer: (opts: NativePlayerOptions) => PlayerController;
@@ -596,7 +611,8 @@ function NativePlayer({
     item,
     url: local?.local
       ? local.local.video
-      : streamUrl(client, item.Id!, source, playSessionId),
+      : (youTube ?? streamUrl(client, item.Id!, source, playSessionId)),
+    headers: local?.local ? undefined : requiredHeaders(source),
     subtitleUrl: local ? localSubtitle : undefined,
     source,
     startMs,
