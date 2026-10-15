@@ -1229,7 +1229,7 @@ async function validateGroup(group: Group, healthIds: string[] = []) {
   }
 }
 
-function validateOption(
+export function validateOption(
   option: Option,
   value: any,
   decryptValues: boolean = false
@@ -1344,27 +1344,31 @@ function validateOption(
     }
   }
 
-  if (option.type === 'password') {
-    if (isEncrypted(value) && decryptValues) {
-      const { success, data, error } = decryptString(value);
-      if (!success) {
-        throw new Error(
-          `Option ${option.id} is encrypted but failed to decrypt: ${error}`
-        );
-      }
-      value = data;
-    }
-  }
-
   if (option.type === 'url') {
-    if (forcedValue !== undefined) {
-      value = forcedValue;
-    }
     if (typeof value !== 'string') {
       throw new Error(
         `Option ${option.id} must be a string, got ${typeof value}`
       );
     }
+  }
+
+  // Not only passwords: DEFAULT_SERVICE_CREDENTIALS and FORCED_SERVICE_CREDENTIALS
+  // reach the config encrypted whatever the type (getEnvironmentServiceDetails),
+  // e.g. a NzbDAV or AltMount URL.
+  if (
+    (option.type === 'password' ||
+      option.type === 'string' ||
+      option.type === 'url') &&
+    decryptValues &&
+    isEncrypted(value)
+  ) {
+    const { success, data, error } = decryptString(value);
+    if (!success) {
+      throw new Error(
+        `Option ${option.id} is encrypted but failed to decrypt: ${error}`
+      );
+    }
+    value = data;
   }
 
   return value;
