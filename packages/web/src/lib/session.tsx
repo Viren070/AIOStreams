@@ -56,23 +56,12 @@ export type SessionPhase =
   | { kind: 'ready'; client: JellyfinClient; user: UserDto };
 
 const lastUserKey = (base: string) => `aiostreams-web-last-user:${base}`;
-/** Users of the server known to have a PIN, so the app never opens on them unasked. */
-const lockedKey = (base: string) => `aiostreams-web-locked-users:${base}`;
+/**
+ * The user who left for the picker here. Until then a user with a PIN stays
+ * unlocked; after, they need it to come back, even once the app restarts.
+ */
+const leftKey = (base: string) => `aiostreams-web-left-user:${base}`;
 const AWAY_MS = 30 * 60_000;
-
-const lockedUsers = (base: string) =>
-  storage.get<string[]>(lockedKey(base)) ?? [];
-
-function asksWho(base: string, users: PickableUser[], userId: string): boolean {
-  const locked = !!users.find((u) => u.user.Id === userId)?.needs;
-  const known = lockedUsers(base);
-  if (locked !== known.includes(userId))
-    storage.set(
-      lockedKey(base),
-      locked ? [...known, userId] : known.filter((id) => id !== userId)
-    );
-  return locked || (settings.account.askWho.read() && users.length > 1);
-}
 
 /** Ends the token on the server and forgets the sign-in here. */
 export function endSession(base: string, token: string | null): void {
@@ -84,6 +73,7 @@ export function endSession(base: string, token: string | null): void {
   forgetUser(base, readCredentials(base)?.userId);
   clearCredentials(base);
   storage.remove(lastUserKey(base));
+  storage.remove(leftKey(base));
 }
 
 /** The configuration page's hand-off, which asks first when the account has a PIN. */
@@ -124,6 +114,7 @@ export function useSessionPhase(base: string) {
         userId: user.Id!,
       });
       storage.set(lastUserKey(base), user.Id);
+      storage.remove(leftKey(base));
       saveUser(base, user);
       setPhase({
         kind: 'ready',
@@ -146,25 +137,33 @@ export function useSessionPhase(base: string) {
     [adopt, queryClient]
   );
 
+  /** `stay`, still signed in here, carries on without a PIN. */
   const pick = React.useCallback(
-    (proof: JellyfinClient, users: PickableUser[]) =>
+    (proof: JellyfinClient, users: PickableUser[], stay?: UserDto) =>
       setPhase({
         kind: 'picking',
         client: proof,
-        users,
-        choose: (id, secret) => switchTo(proof, id, secret),
+        users: users.map((u) =>
+          stay && u.user.Id === stay.Id ? { ...u, needs: null } : u
+        ),
+        choose: async (id, secret) => {
+          if (!stay || id !== stay.Id) return switchTo(proof, id, secret);
+          setPhase({ kind: 'ready', client: proof, user: stay });
+        },
       }),
     [switchTo]
   );
 
-  const relock = React.useCallback(
-    async (proof: JellyfinClient, userId: string) => {
+  /** Who to pick from as the app opens, or null to carry on as before. */
+  const askWho = React.useCallback(
+    async (proof: JellyfinClient, left: boolean) => {
+      if (!left && !settings.account.askWho.read()) return null;
       const users = await proof
         .get<PickableUser[]>('/AIOStreams/Users')
         .catch(() => null);
-      return users && asksWho(base, users, userId) ? users : null;
+      return users && (left || users.length > 1) ? users : null;
     },
-    [base]
+    []
   );
 
   /** Takes the only user or the last one used, and asks otherwise. */
@@ -211,8 +210,8 @@ export function useSessionPhase(base: string) {
         const client = anonymous.withToken(stored.token);
         // Opens with the saved user at once; the server's answer replaces it.
         const saved = savedUser(base, stored.userId);
-        const mayAsk =
-          settings.account.askWho.read() || lockedUsers(base).includes(stored.userId);
+        const left = storage.get<string>(leftKey(base)) === stored.userId;
+        const mayAsk = left || settings.account.askWho.read();
         if (saved && !mayAsk && !cancelled)
           setPhase({ kind: 'ready', client, user: saved });
         const [me, asking] = await Promise.all([
@@ -220,11 +219,12 @@ export function useSessionPhase(base: string) {
             (user) => ({ user }),
             (error: unknown) => ({ error })
           ),
-          relock(client, stored.userId),
+          askWho(client, left),
         ]);
         if ('user' in me) {
           saveUser(base, me.user);
-          if (!cancelled && asking) return pick(client, asking);
+          if (!cancelled && asking)
+            return pick(client, asking, left ? undefined : me.user);
           if (!cancelled)
             setPhase((current) =>
               current.kind === 'ready' &&
@@ -293,7 +293,7 @@ export function useSessionPhase(base: string) {
     return () => {
       cancelled = true;
     };
-  }, [base, enter, pick, relock, attempt]);
+  }, [base, enter, pick, askWho, attempt]);
 
   const signIn = React.useCallback(
     async (username: string, password: string) => {
@@ -326,26 +326,28 @@ export function useSessionPhase(base: string) {
   const switchUser = React.useCallback(async () => {
     if (phase.kind !== 'ready') return;
     const proof = phase.client;
-    pick(proof, await proof.get<PickableUser[]>('/AIOStreams/Users'));
-  }, [phase, pick]);
+    const users = await proof.get<PickableUser[]>('/AIOStreams/Users');
+    storage.set(leftKey(base), phase.user.Id);
+    pick(proof, users);
+  }, [base, phase, pick]);
 
   // Back after a while away counts as opening the app.
-  const latest = useLatest({ phase, pick, relock });
+  const latest = useLatest({ phase, pick, askWho });
   React.useEffect(() => {
     let hiddenAt = 0;
     const onVisibility = () => {
       if (document.hidden) return void (hiddenAt = Date.now());
       const away = hiddenAt > 0 && Date.now() - hiddenAt >= AWAY_MS;
       hiddenAt = 0;
-      const { phase, pick, relock } = latest.current;
+      const { phase, pick, askWho } = latest.current;
       if (
         !away ||
         phase.kind !== 'ready' ||
         location.hash.startsWith('#/play/')
       )
         return;
-      void relock(phase.client, phase.user.Id!).then(
-        (users) => users && pick(phase.client, users)
+      void askWho(phase.client, false).then(
+        (users) => users && pick(phase.client, users, phase.user)
       );
     };
     document.addEventListener('visibilitychange', onVisibility);

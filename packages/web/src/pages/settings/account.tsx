@@ -59,7 +59,7 @@ export function AccountSection() {
         {several && (
           <SettingsRow
             label="Switch user"
-            help="Watch as someone else on this configuration."
+            help="Watch as someone else on this configuration. A user with a PIN needs it again after switching away."
           >
             <Button
               intent="gray-outline"
@@ -101,7 +101,7 @@ export function AccountSection() {
           <Switch
             side="right"
             label="Ask when the app opens"
-            help="Also when you come back to it after half an hour. A user with a PIN is always asked for it then."
+            help="Also when you come back to it after half an hour. Whoever was watching carries on without their PIN."
             value={askWho}
             onValueChange={setAskWho}
           />
