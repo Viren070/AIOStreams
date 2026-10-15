@@ -90,6 +90,30 @@ fn add_frame_style(window: &gtk4::Window) {
     );
 }
 
+/// Skia compositing (2.54+) flashes stale opacity when an animation ends, and redrawing only what
+/// changed leaves parts of the page stale.
+const FEATURES_OFF: &[&str] = &[
+    "UseSkiaForComposition",
+    "UseDamagingInformationForCompositing",
+    "PropagateDamagingInformation",
+];
+
+/// Skips a feature this WebKitGTK does not have.
+fn turn_features_off(settings: &webkit6::Settings) {
+    let Some(features) = webkit6::Settings::all_features() else {
+        return;
+    };
+    for i in 0..features.length() {
+        if let Some(feature) = features.get(i)
+            && feature
+                .identifier()
+                .is_some_and(|id| FEATURES_OFF.contains(&id.as_str()))
+        {
+            settings.set_feature_enabled(&feature, false);
+        }
+    }
+}
+
 fn respond(request: &webkit6::URISchemeRequest, served: Served) {
     let length = served.body.len() as i64;
     let stream = gio::MemoryInputStream::from_bytes(&glib::Bytes::from_owned(served.body));
@@ -305,6 +329,7 @@ pub fn run(app: App) {
     content.register_script_message_handler("ipc", None);
     let settings = webkit6::Settings::new();
     settings.set_enable_developer_extras(args.devtools);
+    turn_features_off(&settings);
     let webview = webkit6::WebView::builder()
         .web_context(&context)
         .network_session(&session)
