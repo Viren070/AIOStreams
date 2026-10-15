@@ -12,6 +12,13 @@
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest watch"
   },
+  "browserslist": [
+    "chrome >= 109",
+    "edge >= 109",
+    "firefox >= 115",
+    "safari >= 16.4",
+    "ios_saf >= 16.4"
+  ],
   "devDependencies": {
     "@aiostreams/core": "workspace:*",
     "@aiostreams/ui": "workspace:*",
@@ -29,9 +36,9 @@
     "@fontsource/inter": "^5.3.0",
     "@headlessui/react": "^2.2.10",
     "@radix-ui/react-dismissable-layer": "^1.2.0",
-    "@rsbuild/core": "^1.7.6",
+    "@rsbuild/core": "^2.2.12",
     "@rsbuild/plugin-node-polyfill": "^1.4.6",
-    "@rsbuild/plugin-react": "^1.4.6",
+    "@rsbuild/plugin-react": "^2.1.1",
     "@tailwindcss/postcss": "^4.3.3",
     "@tanstack/react-devtools": "^0.10.13",
     "@tanstack/react-query": "^5.104.2",
