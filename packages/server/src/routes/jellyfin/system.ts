@@ -166,9 +166,17 @@ router.get(
   })
 );
 
-router.get('/Branding/Configuration', (_req, res) => {
+/** What a sign-in form under this address asks for. */
+function loginDisclaimer(req: Request): string {
+  // The site root takes a user's name and PIN.
+  if (req.jfMount?.root)
+    return 'Sign in with your name and PIN. On a TV, pick Quick Connect and approve the code in the app on your phone.';
+  return `Sign in with your ${serverName()} configuration UUID or alias and its password, or approve a Quick Connect code from the configuration page.`;
+}
+
+router.get('/Branding/Configuration', (req, res) => {
   res.json({
-    LoginDisclaimer: `Sign in with your ${serverName()} configuration UUID or alias and its password, or approve a Quick Connect code from the configuration page.`,
+    LoginDisclaimer: loginDisclaimer(req),
     CustomCss: '',
     SplashscreenEnabled: false,
   });
