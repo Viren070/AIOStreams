@@ -6,8 +6,8 @@
 
   Object.defineProperty(window, '__aiostreamsAppReceive', {
     value(message) {
-      const own = message.type === 'mpv-prop' && !message.external;
-      if (own && message.name === 'idle-active') idle = message.data !== false;
+      const own = message.type === 'player-state' && !message.external;
+      if (own && 'idle' in message) idle = message.idle !== false;
       for (const listener of listeners) {
         try {
           listener(message);
@@ -118,7 +118,7 @@
       return;
     setTimeout(() => {
       const key = !e.defaultPrevented && mpvKey(e);
-      if (key) send({ type: 'mpv-command', args: ['keypress', key] });
+      if (key) send({ type: 'player-key', key });
     });
   });
 })();

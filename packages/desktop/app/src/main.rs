@@ -17,6 +17,7 @@ use std::sync::{Arc, Mutex};
 use aiostreams_desktop_core::bridge::{Inbound, Outbound, PROTOCOL_VERSION, origin};
 use aiostreams_desktop_core::downloads::{self, Downloads};
 use aiostreams_desktop_core::external::{self, External};
+use aiostreams_desktop_core::playback::PlayerState;
 use aiostreams_desktop_core::player::Player;
 use aiostreams_desktop_core::{discord, now_playing};
 use base64::Engine;
@@ -368,10 +369,10 @@ pub fn start_player(
     platform::load_vulkan_loader(library);
     let awake = Mutex::new(Awake::default());
     let emit = move |message: Outbound| {
-        if let Outbound::MpvProp { name, data, .. } = &message
+        if let Outbound::PlayerState { state, .. } = &message
             && let Ok(mut awake) = awake.lock()
         {
-            awake.update(name, data);
+            awake.update(state);
         }
         now_playing::observe(&message);
         emit(message)
@@ -439,12 +440,12 @@ impl Default for Awake {
 }
 
 impl Awake {
-    fn update(&mut self, name: &str, data: &serde_json::Value) {
-        match name {
-            "pause" => self.paused = data == true,
-            "idle-active" => self.idle = data == true,
-            _ => return,
+    fn update(&mut self, state: &PlayerState) {
+        if state.paused.is_none() && state.idle.is_none() {
+            return;
         }
+        self.paused = state.paused.unwrap_or(self.paused);
+        self.idle = state.idle.unwrap_or(self.idle);
         let on = !self.paused && !self.idle;
         if on != self.on {
             self.on = on;
@@ -469,33 +470,94 @@ pub fn handle(
     };
     let player = player.borrow();
     match message {
-        Inbound::MpvCommand {
-            args,
+        Inbound::PlayerLoad {
+            load,
             external: to_external,
-            headers,
         } => {
             let local = |path: &str| downloads.is_local(path);
             let done = if to_external {
-                Some(external.command(&args, &headers, &local))
+                Some(external.load(&load, &local))
             } else {
-                player.as_ref().map(|p| p.command(&args, &headers, &local))
+                player.as_ref().map(|p| p.load(&load, &local))
             };
             if let Some(Err(e)) = done {
-                fail(format!("mpv command {args:?}: {e}"));
+                fail(format!("player-load: {e}"));
             }
         }
-        Inbound::MpvSetProp {
-            name,
-            value,
+        Inbound::PlayerStop { external: true } => external.stop(),
+        Inbound::PlayerStop { external: false } => {
+            if let Some(p) = player.as_ref() {
+                p.stop();
+            }
+        }
+        Inbound::PlayerSet {
+            change,
             external: to_external,
         } => {
             let done = if to_external {
-                Some(external.set_prop(&name, &value))
+                Some(external.change(&change))
             } else {
-                player.as_ref().map(|p| p.set_prop(&name, &value))
+                player.as_ref().map(|p| p.change(&change))
             };
             if let Some(Err(e)) = done {
-                fail(format!("mpv set {name}={value}: {e}"));
+                fail(format!("player-set: {e}"));
+            }
+        }
+        Inbound::PlayerSeek {
+            position_ms,
+            external: true,
+        } => external.seek(position_ms),
+        Inbound::PlayerSeek { position_ms, .. } => {
+            if let Some(p) = player.as_ref() {
+                p.seek(position_ms);
+            }
+        }
+        Inbound::PlayerSubtitleAdd {
+            url,
+            title,
+            language,
+            external: to_external,
+        } => {
+            let local = |path: &str| downloads.is_local(path);
+            let done = if to_external {
+                Some(external.add_subtitle_url(&url, &title, &language, &local))
+            } else {
+                player
+                    .as_ref()
+                    .map(|p| p.add_subtitle_url(&url, &title, &language, &local))
+            };
+            if let Some(Err(e)) = done {
+                fail(format!("player-subtitle-add: {e}"));
+            }
+        }
+        Inbound::PlayerStyle(style) => {
+            if let Some(Err(e)) = player.as_ref().map(|p| p.style(&style)) {
+                fail(format!("player-style: {e}"));
+            }
+        }
+        Inbound::PlayerStatsOverlay {
+            page,
+            external: to_external,
+        } => {
+            let done = if to_external {
+                Some(external.stats_overlay(page.as_deref()))
+            } else {
+                player.as_ref().map(|p| p.stats_overlay(page.as_deref()))
+            };
+            if let Some(Err(e)) = done {
+                fail(format!("player-stats-overlay: {e}"));
+            }
+        }
+        Inbound::PlayerSync { external: true } => external.sync(),
+        Inbound::PlayerSync { external: false } => send(UserEvent::Sync),
+        Inbound::PlayerKey { key } => {
+            if let Some(Err(e)) = player.as_ref().map(|p| p.keypress(&key)) {
+                fail(format!("player-key: {e}"));
+            }
+        }
+        Inbound::PlayerSettings(settings) => {
+            if let Some(p) = player.as_ref() {
+                p.settings(&settings);
             }
         }
         Inbound::YoutubeResolve { request, id } => {
@@ -503,24 +565,11 @@ pub fn handle(
                 p.resolve_youtube(request, id);
             }
         }
-        Inbound::PlayerOptions {
-            dolby_vision,
-            sound,
-        } => {
-            if let Some(p) = player.as_ref() {
-                if let Some(on) = dolby_vision {
-                    p.set_dolby_vision(on);
-                }
-                p.set_sound(sound);
-            }
-        }
         Inbound::AudioDevices => {
             if let Some(p) = player.as_ref() {
                 p.audio_devices();
             }
         }
-        Inbound::MpvSync { external: true } => external.sync(),
-        Inbound::MpvSync { external: false } => send(UserEvent::Sync),
         Inbound::SubtitleFile {
             name,
             data,

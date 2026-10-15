@@ -95,33 +95,32 @@ pub fn browsing(presence: Option<Presence>) {
 pub fn observe(message: &Outbound) {
     let Ok(mut state) = STATE.lock() else { return };
     match message {
-        Outbound::MpvProp { name, data, .. } => match name.as_str() {
-            "pause" => {
-                state.paused = data == true;
+        Outbound::PlayerState {
+            state: player,
+            external: false,
+        } => {
+            if let Some(paused) = player.paused {
+                state.paused = paused;
                 publish(&mut state);
             }
-            "idle-active" => {
-                state.idle = data == true;
+            if let Some(idle) = player.idle {
+                state.idle = idle;
                 publish(&mut state);
             }
-            "duration" => {
-                let duration = data.as_f64().map(|s| s * 1000.0);
-                if duration != state.duration_ms {
-                    state.duration_ms = duration;
-                    publish(&mut state);
-                }
+            if player.duration_ms.is_some() && player.duration_ms != state.duration_ms {
+                state.duration_ms = player.duration_ms;
+                publish(&mut state);
             }
-            "time-pos" => {
-                state.position_ms = data.as_f64().map_or(0.0, |s| s * 1000.0);
+            if let Some(position) = player.position_ms {
+                state.position_ms = position;
                 if std::mem::take(&mut state.seeked) {
                     publish(&mut state);
                 }
             }
-            _ => {}
-        },
-        Outbound::MpvEvent {
-            name: "playback-restart",
-            ..
+        }
+        Outbound::PlayerEvent {
+            name: "restart",
+            external: false,
         } => {
             state.seeked = true;
             publish(&mut state);

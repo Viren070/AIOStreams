@@ -4,14 +4,13 @@
 mod mpv;
 mod pipe;
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
-use serde_json::Value;
-
-use crate::bridge::{self, ExternalPlayer, Outbound};
+use crate::bridge::{ExternalPlayer, Outbound};
+use crate::playback::{self, Change, Load, Loadfile};
 use crate::player::Emit;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -46,8 +45,8 @@ impl Kind {
     }
 }
 
-/// A running player. Requests arrive in mpv's terms, already checked by the
-/// bridge, and it reports back in mpv's property and event names.
+/// A running player. Requests arrive in mpv's terms, built and checked by
+/// `playback`, and it reports back in the page's.
 trait Backend: Send {
     fn command(&self, args: Vec<String>);
     fn set_prop(&self, name: &str, value: &str);
@@ -76,6 +75,8 @@ pub struct External {
     /// The programs the user picked, by player id.
     programs: Mutex<HashMap<String, PathBuf>>,
     session: Mutex<Option<Session>>,
+    /// The stats overlay's page, while it shows.
+    stats: Mutex<Option<String>>,
 }
 
 impl External {
@@ -89,6 +90,7 @@ impl External {
             store,
             programs: Mutex::new(programs),
             session: Mutex::default(),
+            stats: Mutex::default(),
         }
     }
 
@@ -195,20 +197,71 @@ impl External {
         }
     }
 
-    pub fn command(
-        &self,
-        args: &[Value],
-        headers: &BTreeMap<String, String>,
-        local: &dyn Fn(&str) -> bool,
-    ) -> Result<(), String> {
-        let args = bridge::with_headers(bridge::command(args, local)?, headers)?;
-        self.with(|backend| backend.command(args));
+    pub fn load(&self, load: &Load, local: &dyn Fn(&str) -> bool) -> Result<(), String> {
+        let file = Loadfile::new(load, local)?;
+        self.with(|backend| {
+            for command in file.commands() {
+                backend.command(command);
+            }
+        });
         Ok(())
     }
 
-    pub fn set_prop(&self, name: &str, value: &Value) -> Result<(), String> {
-        let value = bridge::set_prop(name, value)?;
-        self.with(|backend| backend.set_prop(name, &value));
+    pub fn stop(&self) {
+        self.with(|backend| backend.command(vec!["stop".into()]));
+    }
+
+    pub fn change(&self, change: &Change) -> Result<(), String> {
+        let props = playback::change(change)?;
+        self.with(|backend| {
+            for (name, value) in props {
+                backend.set_prop(name, &value);
+            }
+        });
+        Ok(())
+    }
+
+    pub fn seek(&self, position_ms: f64) {
+        self.with(|backend| {
+            backend.command(vec![
+                "seek".into(),
+                format!("{:.3}", position_ms / 1000.0),
+                "absolute".into(),
+            ])
+        });
+    }
+
+    pub fn add_subtitle_url(
+        &self,
+        url: &str,
+        title: &str,
+        language: &str,
+        local: &dyn Fn(&str) -> bool,
+    ) -> Result<(), String> {
+        playback::check_url(url, local)?;
+        self.with(|backend| {
+            backend.command(vec![
+                "sub-add".into(),
+                url.into(),
+                "select".into(),
+                title.into(),
+                language.into(),
+            ])
+        });
+        Ok(())
+    }
+
+    pub fn stats_overlay(&self, page: Option<&str>) -> Result<(), String> {
+        let Ok(mut shown) = self.stats.lock() else {
+            return Ok(());
+        };
+        let commands = playback::stats_overlay(shown.as_deref(), page)?;
+        self.with(|backend| {
+            for command in commands {
+                backend.command(command);
+            }
+        });
+        *shown = page.map(String::from);
         Ok(())
     }
 

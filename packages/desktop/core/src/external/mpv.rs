@@ -14,13 +14,13 @@ use serde_json::{Value, json};
 
 use super::Backend;
 use super::pipe::{self, Stream};
-use crate::bridge::{OBSERVED, Outbound};
+use crate::bridge::Outbound;
 use crate::mpv::Kind;
+use crate::playback::{self, OBSERVED};
 use crate::player::{Emit, Throttle};
 
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 
-const EVENTS: &[&str] = &["start-file", "file-loaded", "seek", "playback-restart"];
 const END_REASONS: &[&str] = &["eof", "stop", "quit", "error", "redirect"];
 
 pub fn candidates() -> Vec<PathBuf> {
@@ -293,7 +293,7 @@ fn serve(client: &mut Client, messages: &mpsc::Receiver<Message>, emit: &Emit) {
                         "get_property"
                     };
                     let data = client.request(json!([get, name])).unwrap_or(Value::Null);
-                    emit(prop((*name).into(), data));
+                    report(name, &data, emit);
                 }
             }
             Ok(Message::Event(event)) => relay(&event, &mut throttle, emit),
@@ -301,7 +301,7 @@ fn serve(client: &mut Client, messages: &mpsc::Receiver<Message>, emit: &Emit) {
             Err(RecvTimeoutError::Timeout) => {}
         }
         for (name, data) in throttle.due() {
-            emit(prop(name, data));
+            report(&name, &data, emit);
         }
     }
 }
@@ -316,11 +316,9 @@ fn command(args: &[String]) -> Value {
     }
 }
 
-fn prop(name: String, data: Value) -> Outbound {
-    Outbound::MpvProp {
-        name,
-        data,
-        external: true,
+fn report(name: &str, data: &Value, emit: &Emit) {
+    if let Some(message) = playback::report(name, data, true) {
+        emit(message);
     }
 }
 
@@ -333,7 +331,7 @@ fn relay(event: &Value, throttle: &mut Throttle, emit: &Emit) {
             };
             let data = event.get("data").cloned().unwrap_or(Value::Null);
             if let Some((name, data)) = throttle.pass(property.into(), data) {
-                emit(prop(name, data));
+                report(&name, &data, emit);
             }
         }
         "end-file" => {
@@ -347,19 +345,11 @@ fn relay(event: &Value, throttle: &mut Throttle, emit: &Emit) {
                 Some(e) => log::warn!("external ended reason={reason} error=\"{e}\""),
                 None => log::info!("external ended reason={reason}"),
             }
-            emit(Outbound::MpvEnded {
-                reason,
-                error,
-                cause: None,
-                external: true,
-            });
+            emit(playback::ended(reason, error, None, true));
         }
         _ => {
-            if let Some(name) = EVENTS.iter().find(|e| **e == name) {
-                emit(Outbound::MpvEvent {
-                    name,
-                    external: true,
-                });
+            if let Some(message) = playback::event(name, true) {
+                emit(message);
             }
         }
     }

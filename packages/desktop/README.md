@@ -239,7 +239,7 @@ app as data, which it writes into its own folder for mpv to load.
 
 The design follows Stremio's shells. On Windows,
 [stremio-shell-ng](https://github.com/Stremio/stremio-shell-ng): mpv drawing into the window beneath
-a transparent WebView2, and the `mpv-command` / `mpv-set-prop` message names. On Linux,
+a transparent WebView2. On Linux,
 [stremio-linux-shell](https://github.com/Stremio/stremio-linux-shell): a `GtkGLArea` under a
 transparent WebKitGTK view, given the Wayland display. On macOS, the community
 [stremio-community-v5-mac](https://github.com/nnocte/stremio-community-v5-mac) port and
