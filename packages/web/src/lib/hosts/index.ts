@@ -1,10 +1,7 @@
 import type { JellyfinClient } from '../client';
 import type { DownloadsHost } from '../downloads/types';
-import type {
-  NativePlayerOptions,
-  PlayerController,
-  PlayerFeature,
-} from '../playback/controller';
+import type { PlayerFeature } from '../playback/controller';
+import type { EngineFactory } from '../playback/engine';
 import type { BaseItemDto, SourceInfo } from '../types';
 import { androidHost } from './jellyfin-android';
 import { jellyfinDesktopHost } from './jellyfin-desktop';
@@ -41,8 +38,8 @@ export interface Host {
   tv?: boolean;
   /** The app's own name for this device, and its id where its player reports as it. */
   device?(): { id?: string; name?: string } | null;
-  /** A player drawn beneath the page. */
-  usePlayer?(opts: NativePlayerOptions): PlayerController;
+  /** A player drawn beneath the page, in place of the page's own video. */
+  player?: EngineFactory;
   playerFeatures?: readonly PlayerFeature[];
   /** The app's own player takes over from the page and plays on through the `next` item ids. */
   play?(

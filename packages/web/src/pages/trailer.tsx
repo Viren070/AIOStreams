@@ -7,7 +7,9 @@ import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '../lib/session';
 import { useItem } from '../lib/queries';
 import { currentHost } from '../lib/hosts';
-import { useBrowserPlayer, usePlayerFullscreen } from '../lib/hosts/browser';
+import { usePlayerFullscreen } from '../lib/playback/fullscreen';
+import { usePlayer } from '../lib/playback/use-player';
+import { videoEngine } from '../lib/playback/video';
 import { useAction } from '../lib/input';
 import { settings, useSetting } from '../lib/settings';
 import { goBack, navigate, to } from '../lib/paths';
@@ -17,10 +19,7 @@ import {
   youTubeId,
   type Trailer,
 } from '../lib/playback/trailers';
-import type {
-  NativePlayerOptions,
-  PlayerController,
-} from '../lib/playback/controller';
+import type { PlayerController } from '../lib/playback/controller';
 import type { BaseItemDto, SourceInfo } from '../lib/types';
 import { PlayerControls } from '../components/player/controls';
 import { Cover, OBJECT_FIT, usePlayerPage } from './player';
@@ -44,7 +43,7 @@ export function TrailerPage({
   const item = useItem(itemId);
   usePlayerPage();
   const host = currentHost();
-  usePlayerFullscreen(!host.usePlayer || !!host.fullscreen);
+  usePlayerFullscreen(!host.player || !!host.fullscreen);
   const trailers = item.data ? trailersOf(item.data) : [];
   const trailer = trailers[index];
   const playback = useTrailerPlayback(trailer?.url);
@@ -84,11 +83,7 @@ export function TrailerPage({
     );
   if (found.kind === 'embed')
     return <EmbeddedTrailer {...props} id={found.id} />;
-  return host.usePlayer ? (
-    <NativeTrailer {...props} url={found.url} usePlayer={host.usePlayer} />
-  ) : (
-    <BrowserTrailer {...props} url={found.url} />
-  );
+  return <PlayedTrailer {...props} url={found.url} />;
 }
 
 const sourceOf = (url: string): SourceInfo => ({
@@ -125,18 +120,14 @@ function Controls({
   );
 }
 
-function NativeTrailer({
-  usePlayer,
-  url,
-  ...props
-}: TrailerProps & {
-  url: string;
-  usePlayer: (opts: NativePlayerOptions) => PlayerController;
-}) {
+function PlayedTrailer({ url, ...props }: TrailerProps & { url: string }) {
   const { client } = useSession();
+  const video = React.useRef<HTMLVideoElement>(null);
+  const [hostPlayer] = React.useState(() => currentHost().player);
+  const [fit] = useSetting(settings.videoFit);
   const [subtitleStyle] = useSetting(settings.subtitleStyle);
   const source = React.useMemo(() => sourceOf(url), [url]);
-  const player = usePlayer({
+  const player = usePlayer(hostPlayer ?? videoEngine(video), {
     client,
     item: props.item,
     url,
@@ -147,39 +138,22 @@ function NativeTrailer({
     subtitleStyle,
   });
   return (
-    <div data-page="player" data-name="trailer" className="fixed inset-0">
-      <Cover item={props.item} hidden={player.state.started} />
-      <Controls {...props} player={player} />
-    </div>
-  );
-}
-
-function BrowserTrailer({ url, ...props }: TrailerProps & { url: string }) {
-  const video = React.useRef<HTMLVideoElement>(null);
-  const [fit] = useSetting(settings.videoFit);
-  const [subtitleStyle] = useSetting(settings.subtitleStyle);
-  const source = React.useMemo(() => sourceOf(url), [url]);
-  const player = useBrowserPlayer(video, {
-    source,
-    startMs: 0,
-    onEnded: props.onBack,
-    prefs: {},
-    subtitleStyle,
-  });
-  return (
     <div
       data-page="player"
       data-name="trailer"
-      className="fixed inset-0 bg-black"
+      className={cn('fixed inset-0', !hostPlayer && 'bg-black')}
     >
-      <video
-        ref={video}
-        data-ui="video"
-        src={url}
-        className={cn('h-full w-full', OBJECT_FIT[fit])}
-        autoPlay
-        playsInline
-      />
+      {hostPlayer ? (
+        <Cover item={props.item} hidden={player.state.started} />
+      ) : (
+        <video
+          ref={video}
+          data-ui="video"
+          className={cn('h-full w-full', OBJECT_FIT[fit])}
+          autoPlay
+          playsInline
+        />
+      )}
       <Controls {...props} player={player} />
     </div>
   );

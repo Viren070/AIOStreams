@@ -3,7 +3,7 @@ import { runAction } from '../../input';
 import { onSettingsChange, settings, type PlayerEngine } from '../../settings';
 import { appBridge, ask } from './bridge';
 import { shellDownloads } from './downloads';
-import { setEngine, useShellPlayer } from './player';
+import { appEngine, setEngine } from './player';
 import { soundOptions } from './sound';
 import { resolveYouTube } from './youtube';
 
@@ -103,7 +103,7 @@ export const androidHost: Host = {
     return appBridge()?.tv === true;
   },
   device: () => ({ id: appBridge()?.deviceId, name: appBridge()?.device }),
-  usePlayer: useShellPlayer,
+  player: appEngine,
   playerFeatures: ['audio', 'chapters', 'stats', 'headers'],
   // A TV has little storage and is always online.
   get downloads() {

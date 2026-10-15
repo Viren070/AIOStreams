@@ -146,7 +146,7 @@ export function chosenPlayer(): PlayerChoice {
 /** What the player chosen here plays besides a plain address. */
 export function playerSupport(): { headers: boolean; youtube: boolean } {
   const host = currentHost();
-  const page = !host.play && !!host.usePlayer && chosenPlayer().kind !== 'link';
+  const page = !host.play && !!host.player && chosenPlayer().kind !== 'link';
   return {
     headers: page && !!host.playerFeatures?.includes('headers'),
     youtube: page && !!host.resolveYouTube,

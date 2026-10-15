@@ -3,7 +3,7 @@ import type { Host } from '..';
 import { onSettingsChange, settings } from '../../settings';
 import { appBridge, ask, bridgeStore, type ShellAnswer } from './bridge';
 import { shellDownloads } from './downloads';
-import { useShellPlayer } from './player';
+import { appEngine } from './player';
 import { soundOptions } from './sound';
 import { resolveYouTube } from './youtube';
 
@@ -74,7 +74,7 @@ export function openMpvConfig(): void {
 export const desktopHost: Host = {
   name: 'desktop',
   device: () => ({ name: appBridge()?.device }),
-  usePlayer: useShellPlayer,
+  player: appEngine,
   playerFeatures: ['audio', 'chapters', 'stats', 'headers'],
   resolveYouTube,
   downloads: {

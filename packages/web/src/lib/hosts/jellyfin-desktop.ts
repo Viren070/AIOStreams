@@ -1,21 +1,15 @@
-import React from 'react';
-import { storage } from '../storage';
-import { subtitleUrl } from '../subtitles/tracks';
 import type { BaseItemDto } from '../types';
 import type { Host } from '.';
 import { nativeShellParts } from './native-shell';
-import {
-  initialState,
-  ofType,
-  storedVolume,
-  trackLabel,
-  VOLUME_KEY,
-  type NativePlayerOptions,
-  type PlayerController,
-  type PlayerState,
-} from '../playback/controller';
-import { useLatest } from '../use-latest';
-import { usePlayheadWriter } from '../playback/playhead';
+import { ofType, trackLabel } from '../playback/controller';
+import type {
+  EngineFactory,
+  EngineFile,
+  EngineState,
+  EngineTrack,
+} from '../playback/engine';
+
+const EMBEDDED = 'embedded:';
 
 /** Signals the desktop client's player exposes over its web channel. */
 interface JmpSignal<T extends unknown[] = []> {
@@ -106,176 +100,163 @@ function loadMetadata(item: BaseItemDto): Record<string, unknown> {
 
 /**
  * The desktop app's mpv, drawn beneath the page. It picks tracks by their
- * position within each type.
+ * position within each type, starting on the server's defaults.
  */
-export function useDesktopPlayer(opts: NativePlayerOptions): PlayerController {
-  const { source, startMs, url } = opts;
-  const [state, setState] = React.useState(() => ({
-    ...initialState(source),
-    fullscreen: desktopFullscreen(),
-  }));
-  const playhead = usePlayheadWriter(startMs);
-  const [player, setPlayer] = React.useState<JmpPlayer | null>(null);
-  const latest = useLatest({ ...opts, state });
-  const patch = (next: Partial<PlayerState>) =>
-    setState((s) => ({ ...s, ...next }));
+const jmpEngine: EngineFactory = (emit) => {
+  const report = (state: EngineState) => emit({ type: 'state', state });
+  let player: JmpPlayer | null = null;
+  let file: EngineFile | null = null;
+  let teardown = () => {};
 
-  const audio = ofType(source, 'Audio');
-  const subtitles = ofType(source, 'Subtitle');
-  const embedded = subtitles.filter((s) => s.DeliveryMethod !== 'External');
-  const external = subtitles.filter((s) => s.DeliveryMethod === 'External');
-  const defaultAudio = Math.max(
-    1,
-    audio.findIndex((s) => s.Index === source.DefaultAudioStreamIndex) + 1
-  );
-  const startSubtitle = subtitles.find(
-    (s) => s.Index === source.DefaultSubtitleStreamIndex
-  );
-  const startSubtitleId = !startSubtitle
-    ? null
-    : embedded.includes(startSubtitle)
-      ? `embedded:${embedded.indexOf(startSubtitle) + 1}`
-      : `external:${startSubtitle.Index}`;
   /** The player's subtitle stream: a position among the embedded ones, or `#,` and a link. */
-  const desktopSubtitle = (id: string): number | string | null => {
-    if (id.startsWith('embedded:')) return Number(id.slice('embedded:'.length));
-    const stream = external.find((s) => `external:${s.Index}` === id);
-    const link = stream && subtitleUrl(opts.client, stream);
-    return link ? `#,${link}` : null;
-  };
-
-  React.useEffect(
-    () => onDesktopSettings(() => patch({ fullscreen: desktopFullscreen() })),
-    []
-  );
-
-  React.useEffect(() => {
-    let cancelled = false;
-    let cleanup = () => {};
-    void desktopApi().then((api) => {
-      if (!api || cancelled) return;
-      const mpv = api.player;
-      setPlayer(mpv);
-      let started = false;
-      const { volume, muted } = storedVolume();
-      const handlers = {
-        playing: () => {
-          if (!started) {
-            started = true;
-            mpv.setVolume(Math.round(volume * 100));
-            mpv.setMuted(muted);
-            mpv.setVideoRectangle(0, 0, 0, 0);
-          }
-          patch({ started: true, paused: false, waiting: false });
-        },
-        paused: () => patch({ paused: true, waiting: false }),
-        buffering: () => patch({ waiting: true }),
-        positionUpdate: (ms: number) => playhead.set({ positionMs: ms }),
-        updateDuration: (ms: number) => patch({ durationMs: ms }),
-        finished: () => latest.current.onEnded(),
-        error: (message: string) => patch({ error: message }),
-      };
-      mpv.playing.connect(handlers.playing);
-      mpv.paused.connect(handlers.paused);
-      mpv.buffering.connect(handlers.buffering);
-      mpv.positionUpdate.connect(handlers.positionUpdate);
-      mpv.updateDuration.connect(handlers.updateDuration);
-      mpv.finished.connect(handlers.finished);
-      mpv.error.connect(handlers.error);
-      mpv.load(
-        url,
-        { startMilliseconds: startMs, autoplay: true },
-        {
-          type: 'video',
-          headers: { 'User-Agent': window.jmpInfo?.userAgent ?? '' },
-          metadata: loadMetadata(latest.current.item),
-          media: {},
-        },
-        defaultAudio,
-        (startSubtitleId && desktopSubtitle(startSubtitleId)) ?? -1,
-        () => {}
-      );
-      patch({
-        audio: audio.length ? String(defaultAudio) : null,
-        subtitle: startSubtitleId,
-      });
-      cleanup = () => {
-        mpv.playing.disconnect(handlers.playing);
-        mpv.paused.disconnect(handlers.paused);
-        mpv.buffering.disconnect(handlers.buffering);
-        mpv.positionUpdate.disconnect(handlers.positionUpdate);
-        mpv.updateDuration.disconnect(handlers.updateDuration);
-        mpv.finished.disconnect(handlers.finished);
-        mpv.error.disconnect(handlers.error);
-        mpv.stop();
-        mpv.setVideoRectangle(-1, 0, 0, 0);
-      };
-    });
-    return () => {
-      cancelled = true;
-      cleanup();
-    };
-    // Reloading restarts playback, so only a new url or start does it.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [url, startMs]);
-
-  const setVolume = (volume: number, muted = volume === 0) => {
-    player?.setVolume(Math.round(volume * 100));
-    player?.setMuted(muted);
-    storage.set(VOLUME_KEY, { volume, muted });
-    patch({ volume, muted });
+  const subtitleStream = (id: string): number | string | null => {
+    if (id.startsWith(EMBEDDED)) return Number(id.slice(EMBEDDED.length));
+    const server = file?.subtitles.find((s) => s.id === id);
+    return server ? `#,${server.url}` : null;
   };
 
   return {
-    state,
-    playhead,
-    audioTracks: audio.map((s, i) => ({
-      id: String(i + 1),
-      label: trackLabel(s, i + 1),
-      lang: s.Language ?? undefined,
-    })),
-    subtitleTracks: [
-      ...embedded.map((s, i) => ({
-        id: `embedded:${i + 1}`,
-        label: trackLabel(s, i + 1),
-        lang: s.Language ?? undefined,
-      })),
-      ...external.map((s, i) => ({
-        id: `external:${s.Index}`,
-        label: trackLabel(s, embedded.length + i + 1),
-        lang: s.Language ?? undefined,
-      })),
-    ],
-    togglePlay: () =>
-      latest.current.state.paused ? player?.play() : player?.pause(),
-    seek: (ms) => {
-      player?.seekTo(ms);
-      playhead.set({ positionMs: ms });
+    load(next) {
+      teardown();
+      file = next;
+      const { source } = next;
+      const audio = ofType(source, 'Audio');
+      const subtitles = ofType(source, 'Subtitle');
+      const embedded = subtitles.filter((s) => s.DeliveryMethod !== 'External');
+      const defaultAudio = Math.max(
+        1,
+        audio.findIndex((s) => s.Index === source.DefaultAudioStreamIndex) + 1
+      );
+      const startSubtitle = subtitles.find(
+        (s) => s.Index === source.DefaultSubtitleStreamIndex
+      );
+      const startSubtitleId = !startSubtitle
+        ? null
+        : embedded.includes(startSubtitle)
+          ? `${EMBEDDED}${embedded.indexOf(startSubtitle) + 1}`
+          : `server:${startSubtitle.Index}`;
+      const tracks: EngineTrack[] = [
+        ...audio.map((s, i) => ({
+          id: String(i + 1),
+          type: 'audio' as const,
+          label: trackLabel(s, i + 1),
+          lang: s.Language ?? undefined,
+          title: s.Title ?? undefined,
+          default: s.IsDefault,
+        })),
+        ...embedded.map((s, i) => ({
+          id: `${EMBEDDED}${i + 1}`,
+          type: 'subtitle' as const,
+          label: trackLabel(s, i + 1),
+          lang: s.Language ?? undefined,
+          title: s.Title ?? undefined,
+          forced: s.IsForced,
+          hearingImpaired: s.IsHearingImpaired,
+        })),
+      ];
+      report({ fullscreen: desktopFullscreen() });
+      const stopSettings = onDesktopSettings(() =>
+        report({ fullscreen: desktopFullscreen() })
+      );
+      let cancelled = false;
+      let cleanup = () => {};
+      void desktopApi().then((api) => {
+        if (!api || cancelled) return;
+        const mpv = api.player;
+        player = mpv;
+        let started = false;
+        const handlers = {
+          playing: () => {
+            if (!started) {
+              started = true;
+              if (next.volume) {
+                mpv.setVolume(
+                  Math.round(Math.min(1, next.volume.volume) * 100)
+                );
+                mpv.setMuted(next.volume.muted);
+              }
+              mpv.setVideoRectangle(0, 0, 0, 0);
+              emit({ type: 'tracks', tracks });
+              emit({ type: 'loaded' });
+            }
+            report({ started: true, paused: false, waiting: false });
+          },
+          paused: () => report({ paused: true, waiting: false }),
+          buffering: () => report({ waiting: true }),
+          positionUpdate: (ms: number) =>
+            emit({ type: 'position', positionMs: ms }),
+          updateDuration: (ms: number) => report({ durationMs: ms }),
+          finished: () => emit({ type: 'ended' }),
+          error: (message: string) => emit({ type: 'failed', error: message }),
+        };
+        mpv.playing.connect(handlers.playing);
+        mpv.paused.connect(handlers.paused);
+        mpv.buffering.connect(handlers.buffering);
+        mpv.positionUpdate.connect(handlers.positionUpdate);
+        mpv.updateDuration.connect(handlers.updateDuration);
+        mpv.finished.connect(handlers.finished);
+        mpv.error.connect(handlers.error);
+        mpv.load(
+          next.url,
+          { startMilliseconds: next.startMs, autoplay: true },
+          {
+            type: 'video',
+            headers: { 'User-Agent': window.jmpInfo?.userAgent ?? '' },
+            metadata: loadMetadata(next.item),
+            media: {},
+          },
+          defaultAudio,
+          (startSubtitleId && subtitleStream(startSubtitleId)) ?? -1,
+          () => {}
+        );
+        report({
+          audio: audio.length ? String(defaultAudio) : null,
+          subtitle: startSubtitleId,
+        });
+        cleanup = () => {
+          mpv.playing.disconnect(handlers.playing);
+          mpv.paused.disconnect(handlers.paused);
+          mpv.buffering.disconnect(handlers.buffering);
+          mpv.positionUpdate.disconnect(handlers.positionUpdate);
+          mpv.updateDuration.disconnect(handlers.updateDuration);
+          mpv.finished.disconnect(handlers.finished);
+          mpv.error.disconnect(handlers.error);
+          mpv.stop();
+          mpv.setVideoRectangle(-1, 0, 0, 0);
+        };
+      });
+      teardown = () => {
+        cancelled = true;
+        stopSettings();
+        cleanup();
+      };
     },
-    setVolume: (volume) => setVolume(volume),
-    toggleMute: () => {
-      const { volume, muted } = latest.current.state;
-      setVolume(muted && volume === 0 ? 0.5 : volume, !muted);
+    close() {
+      teardown();
+      teardown = () => {};
     },
-    setRate: (rate) => {
+    setPaused: (paused) => (paused ? player?.pause() : player?.play()),
+    seek: (ms) => player?.seekTo(ms),
+    setVolume(volume, muted) {
+      player?.setVolume(Math.round(Math.min(1, volume) * 100));
+      player?.setMuted(muted);
+    },
+    setRate(rate) {
       player?.setPlaybackRate(rate * 1000);
-      patch({ rate });
+      report({ rate });
     },
-    setAudio: (id) => {
-      player?.setAudioStream(Number(id));
-      patch({ audio: id });
-    },
-    setSubtitle: (id) => {
-      const stream = id ? desktopSubtitle(id) : 0;
+    setAudio: (id) => player?.setAudioStream(Number(id)),
+    setSubtitle(id) {
+      const stream = id ? subtitleStream(id) : 0;
       if (stream !== null) player?.setSubtitleStream(stream);
-      patch({ subtitle: id });
     },
     toggleFullscreen: () =>
       void desktopApi().then((api) =>
         api?.input.executeActions(['host:fullscreen'])
       ),
+    picksTracks: true,
   };
-}
+};
 
 let host: Host | undefined;
 
@@ -285,7 +266,7 @@ export function jellyfinDesktopHost(): Host | null {
   host ??= {
     ...(window.NativeShell && nativeShellParts(window.NativeShell)),
     name: 'jellyfin-desktop',
-    usePlayer: useDesktopPlayer,
+    player: jmpEngine,
     playerFeatures: ['audio'],
   };
   return host;

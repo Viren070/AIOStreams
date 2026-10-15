@@ -1,5 +1,5 @@
 import type { Host } from '..';
-import { useAvPlayer } from './player';
+import { avPlayEngine } from './player';
 
 export interface AvPlayTrack {
   index: number;
@@ -95,7 +95,7 @@ export function tizenHost(): Host | null {
     exit: () => window.tizen?.application.getCurrentApplication().exit(),
     start: registerMediaKeys,
     ...(window.webapis?.avplay && {
-      usePlayer: useAvPlayer,
+      player: avPlayEngine,
       playerFeatures: ['audio'],
     }),
   };

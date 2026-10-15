@@ -264,7 +264,7 @@ export function actionsFor(input: string): readonly ActionId[] {
 export function worksOn(id: ActionId, host: Host): boolean {
   const { group, needs } = action(id);
   if ((group === 'player' || group === 'sync') && host.play) return false;
-  const features = host.usePlayer ? host.playerFeatures : browserFeatures;
+  const features = host.player ? host.playerFeatures : browserFeatures;
   return !needs || !!features?.includes(needs);
 }
 

@@ -136,7 +136,7 @@ export function useNowPlaying(
     };
   }, [press]);
 
-  const app = host.usePlayer ? undefined : host.mediaSession;
+  const app = host.player ? undefined : host.mediaSession;
   React.useEffect(() => {
     if (!app) return;
     const stop = app.listen?.(press);
@@ -190,7 +190,7 @@ export function useNowPlaying(
   ]);
 
   const session =
-    !host.usePlayer && !app && 'mediaSession' in navigator
+    !host.player && !app && 'mediaSession' in navigator
       ? navigator.mediaSession
       : null;
 
