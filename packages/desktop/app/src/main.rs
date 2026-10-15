@@ -472,12 +472,13 @@ pub fn handle(
         Inbound::MpvCommand {
             args,
             external: to_external,
+            headers,
         } => {
             let local = |path: &str| downloads.is_local(path);
             let done = if to_external {
-                Some(external.command(&args, &local))
+                Some(external.command(&args, &headers, &local))
             } else {
-                player.as_ref().map(|p| p.command(&args, &local))
+                player.as_ref().map(|p| p.command(&args, &headers, &local))
             };
             if let Some(Err(e)) = done {
                 fail(format!("mpv command {args:?}: {e}"));

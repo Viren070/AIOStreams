@@ -1,6 +1,8 @@
 //! Messages between the page and the shell. Anything the page asks of mpv is
 //! checked here first, since a page must not reach local files or scripts.
 
+use std::collections::BTreeMap;
+
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -27,6 +29,9 @@ pub enum Inbound {
         args: Vec<Value>,
         #[serde(default)]
         external: bool,
+        /// The HTTP headers a `loadfile`'s url needs.
+        #[serde(default)]
+        headers: BTreeMap<String, String>,
     },
     MpvSetProp {
         name: String,
@@ -516,6 +521,50 @@ pub fn command(args: &[Value], local: &dyn Fn(&str) -> bool) -> Result<Vec<Strin
         }
         _ => return Err(format!("command {name} is not allowed")),
     }
+    Ok(args)
+}
+
+fn is_header_name(name: &str) -> bool {
+    !name.is_empty()
+        && name
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b"!#$%&'*+-.^_`|~".contains(&b))
+}
+
+/// Adds the headers to a checked `loadfile` as its `http-header-fields` option.
+pub fn with_headers(
+    mut args: Vec<String>,
+    headers: &BTreeMap<String, String>,
+) -> Result<Vec<String>, String> {
+    if headers.is_empty() {
+        return Ok(args);
+    }
+    if args.first().map(String::as_str) != Some("loadfile") {
+        return Err("only loadfile takes headers".into());
+    }
+    let mut fields = Vec::new();
+    for (name, value) in headers {
+        // A backslash before the list's separator would escape it.
+        if !is_header_name(name)
+            || !value.bytes().all(|b| (b' '..=b'~').contains(&b))
+            || value.ends_with('\\')
+        {
+            return Err(format!("header {name} is not allowed"));
+        }
+        fields.push(format!("{name}: {}", value.replace(',', "\\,")));
+    }
+    let list = fields.join(",");
+    // The length prefix keeps the list's commas inside the one option.
+    let option = format!("http-header-fields=%{}%{list}", list.len());
+    const DEFAULTS: [&str; 3] = ["replace", "-1", ""];
+    while args.len() < 5 {
+        args.push(DEFAULTS[args.len() - 2].into());
+    }
+    let options = &mut args[4];
+    if !options.is_empty() {
+        options.push(',');
+    }
+    options.push_str(&option);
     Ok(args)
 }
 

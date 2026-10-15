@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, mpsc};
@@ -151,8 +151,14 @@ impl Player {
     }
 
     /// Errs only on refused arguments; mpv's own errors reach the page as a message.
-    pub fn command(&self, args: &[Value], local: &dyn Fn(&str) -> bool) -> Result<(), String> {
+    pub fn command(
+        &self,
+        args: &[Value],
+        headers: &BTreeMap<String, String>,
+        local: &dyn Fn(&str) -> bool,
+    ) -> Result<(), String> {
         let args = bridge::command(args, local)?;
+        // Before the headers go in, as they can carry credentials.
         match args.as_slice() {
             [name, url, _, _, options, ..] if name == "loadfile" => {
                 log::info!("load url={url} options={options}")
@@ -160,6 +166,7 @@ impl Player {
             [name, url, ..] if name == "sub-add" => log::info!("add subtitle url={url}"),
             _ => log::debug!("command {args:?}"),
         }
+        let args = bridge::with_headers(args, headers)?;
         self.send(Request::Command(args));
         Ok(())
     }

@@ -4,7 +4,7 @@
 mod mpv;
 mod pipe;
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -195,8 +195,13 @@ impl External {
         }
     }
 
-    pub fn command(&self, args: &[Value], local: &dyn Fn(&str) -> bool) -> Result<(), String> {
-        let args = bridge::command(args, local)?;
+    pub fn command(
+        &self,
+        args: &[Value],
+        headers: &BTreeMap<String, String>,
+        local: &dyn Fn(&str) -> bool,
+    ) -> Result<(), String> {
+        let args = bridge::with_headers(bridge::command(args, local)?, headers)?;
         self.with(|backend| backend.command(args));
         Ok(())
     }
