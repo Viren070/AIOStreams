@@ -162,6 +162,14 @@ const COMMON_ROWS: readonly Row[] = [
     help: 'Set when media info is confirmed, rather than guessed',
   },
   {
+    key: 'mediaInfoSource',
+    label: 'Media info source',
+    field: 'stream.mediaInfoSource',
+    kind: 'enum',
+    options: ['local', 'stremthru', 'remuxdb', 'remote', 'stremthru-addon'],
+    help: 'Which probe source the media info came from',
+  },
+  {
     key: 'subtitles',
     label: 'Subtitles',
     field: SUBTITLE_FIELDS,

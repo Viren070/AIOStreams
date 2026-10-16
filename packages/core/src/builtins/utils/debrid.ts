@@ -438,7 +438,7 @@ async function processTorrentsForDebridService(
     if (file) {
       const parsedMediaInfo = mergeParsedMediaInfos(
         torrent.parsedMediaInfo,
-        parseMediaInfo(file.mediaInfo)
+        parseMediaInfo(file.mediaInfo, file.mediaInfoSource)
       );
 
       results.push({
@@ -800,7 +800,7 @@ async function processNZBsForDebridService(
         file,
         parsedMediaInfo: mergeParsedMediaInfos(
           nzb.parsedMediaInfo,
-          parseMediaInfo(file.mediaInfo)
+          parseMediaInfo(file.mediaInfo, file.mediaInfoSource)
         ),
         service: {
           id: service.id,

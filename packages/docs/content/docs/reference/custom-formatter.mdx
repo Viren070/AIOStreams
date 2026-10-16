@@ -124,6 +124,7 @@ Modifiers are chained with `::`:
 | Variable                    | Type   | Description                                                                                                                                                                                                                |
 | --------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `{stream.mediaInfoQuality}` | string | Confidence tier for how the stream's media info (languages, subtitles, audio, etc.) was determined: `probe` (ffprobe-derived: StremThru, stored or looked-up tracks, or this instance's own probes), `indexer`, or `addon` |
+| `{stream.mediaInfoSource}`  | string | Which source a probe's media info came from: `local` (this instance's own probe), `stremthru` (a full per-file probe), `remuxdb`, `remote` (another AIOStreams instance), or `stremthru-addon` (what the StremThru addon's stream description reports, without track lists). Empty when the media info did not come from a probe |
 
 #### Tracks
 

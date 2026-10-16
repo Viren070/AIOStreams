@@ -1,5 +1,6 @@
 import * as constants from './constants.js';
 import { normaliseLanguage, normaliseLangCode } from './languages.js';
+import type { MediaInfoSource } from '../db/schemas.js';
 
 export interface ParsedMediaTrack {
   /** The track's stream index in the file. */
@@ -24,6 +25,7 @@ export interface ParsedMediaTrack {
 export interface ParsedMediaInfo {
   /** Provenance tier; unset means unconfirmed. */
   mediaInfoQuality?: 'probe' | 'indexer' | 'addon';
+  mediaInfoSource?: MediaInfoSource;
   languages?: string[];
   subtitles?: string[];
   audioTags?: string[];
@@ -423,6 +425,9 @@ export function normaliseParsedMediaInfo(
     ...(parsedMediaInfo.mediaInfoQuality && hasAnyData
       ? { mediaInfoQuality: parsedMediaInfo.mediaInfoQuality }
       : {}),
+    ...(parsedMediaInfo.mediaInfoSource && hasAnyData
+      ? { mediaInfoSource: parsedMediaInfo.mediaInfoSource }
+      : {}),
     ...(parsedMediaInfo.languages !== undefined ? { languages } : {}),
     ...(parsedMediaInfo.subtitles !== undefined ? { subtitles } : {}),
     ...(parsedMediaInfo.audioTags !== undefined ? { audioTags } : {}),
@@ -444,7 +449,8 @@ export function normaliseParsedMediaInfo(
 }
 
 export function parseMediaInfo(
-  mediaInfo: unknown
+  mediaInfo: unknown,
+  mediaInfoSource?: MediaInfoSource
 ): ParsedMediaInfo | undefined {
   const info = asMediaInfo(mediaInfo);
   if (!info) return undefined;
@@ -516,6 +522,7 @@ export function parseMediaInfo(
 
   const normalised = normaliseParsedMediaInfo({
     mediaInfoQuality: 'probe',
+    mediaInfoSource,
     languages: Array.isArray(info.audio) ? languages : undefined,
     subtitles: Array.isArray(info.subtitle) ? subtitles : undefined,
     audioTags: Array.isArray(info.audio) ? audioTags : undefined,
@@ -544,6 +551,7 @@ export function mergeParsedMediaInfo(
 
   const merged = normaliseParsedMediaInfo({
     mediaInfoQuality: preferred?.mediaInfoQuality ?? base?.mediaInfoQuality,
+    mediaInfoSource: preferred?.mediaInfoSource ?? base?.mediaInfoSource,
     languages: preferred?.languages ?? base?.languages,
     subtitles: preferred?.subtitles ?? base?.subtitles,
     audioTags: preferred?.audioTags ?? base?.audioTags,

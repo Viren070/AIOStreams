@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import * as constants from '../utils/constants.js';
 import { config } from '../config/index.js';
+import { MEDIA_INFO_BACKFILL_SOURCES } from '../config/schema/media-info.js';
 import { WD1_KEY_REGEX } from '../release-blocklist/keys.js';
 
 /**
@@ -1401,6 +1402,15 @@ export type Stream = z.infer<typeof StreamSchema>;
 /** Best-to-worst provenance tiers for ParsedFile.mediaInfoQuality. */
 export const MEDIA_INFO_QUALITY_TIERS = ['probe', 'indexer', 'addon'] as const;
 
+export const MEDIA_INFO_SOURCES = [
+  'local',
+  ...MEDIA_INFO_BACKFILL_SOURCES,
+  'remote',
+  'stremthru-addon',
+] as const;
+
+export type MediaInfoSource = (typeof MEDIA_INFO_SOURCES)[number];
+
 /** One probed audio or subtitle track; see ParsedMediaTrack in utils/media-info. */
 export const MediaTrackSchema = z.object({
   index: z.number().int().nonnegative().optional(),
@@ -1430,6 +1440,7 @@ export const ParsedFileSchema = z.object({
   visualTags: z.array(z.string()),
   audioTags: z.array(z.string()),
   mediaInfoQuality: z.enum(MEDIA_INFO_QUALITY_TIERS).optional(),
+  mediaInfoSource: z.enum(MEDIA_INFO_SOURCES).optional(),
   languages: z.array(z.string()),
   subtitles: z.array(z.string()).optional(),
   audioTracks: z.array(MediaTrackSchema).optional(),
