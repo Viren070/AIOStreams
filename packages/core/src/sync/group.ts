@@ -2,6 +2,7 @@ import {
   syncId,
   PlayQueue,
   type PlaylistItem,
+  type SavedQueue,
   type QueueItem,
   type QueueMode,
   type RepeatMode,
@@ -115,6 +116,7 @@ export interface PlayingOnCreate {
 
 export const DEFAULT_PING_MS = 500;
 const MAX_PING_MS = 10_000;
+const PING_STEP_MS = 50;
 /** Beyond this a member's clock is taken to be wrong. */
 const TIME_SYNC_OFFSET_MS = 2_000;
 const MAX_PLAYBACK_OFFSET_MS = 500;
@@ -123,6 +125,9 @@ const MAX_CATCH_UP_OFFSET_MS = 60_000;
 /** Opening a new item can take a while; buffering mid-play gets less. */
 export const LOAD_WAIT_MS = 30_000;
 export const BUFFER_WAIT_MS = 10_000;
+
+const clampPing = (ping: number) =>
+  Math.min(Math.max(ping || 0, 0), MAX_PING_MS);
 
 type State =
   | { type: 'Idle' }
@@ -136,12 +141,23 @@ type State =
     };
 
 type Waiting = Extract<State, { type: 'Waiting' }>;
+
+export interface SavedGroup {
+  id: string;
+  name: string;
+  state: State;
+  members: GroupMember[];
+  runtimeMs: number;
+  positionMs: number;
+  lastActivity: number;
+  waitDeadline: number | null;
+  queue: SavedQueue;
+}
 type Report = Extract<GroupRequest, { type: 'Buffer' | 'Ready' }>;
 type Broadcast = 'all' | 'self' | 'others' | 'ready';
 
 export class SyncGroup {
-  readonly id = syncId();
-  readonly queue = new PlayQueue();
+  queue: PlayQueue;
   private readonly members = new Map<string, GroupMember>();
   private state: State = { type: 'Idle' };
   private runtimeMs = 0;
@@ -154,9 +170,43 @@ export class SyncGroup {
   constructor(
     public name: string,
     private readonly send: GroupSend,
-    private readonly now: () => number = Date.now
+    private readonly now: () => number = Date.now,
+    readonly id = syncId()
   ) {
+    this.queue = new PlayQueue(now);
     this.lastActivity = now();
+  }
+
+  /** `items` are the queue's, which `save` leaves out. */
+  static restore(
+    saved: SavedGroup,
+    items: readonly PlaylistItem[],
+    send: GroupSend,
+    now?: () => number
+  ): SyncGroup {
+    const group = new SyncGroup(saved.name, send, now, saved.id);
+    group.queue = PlayQueue.restore(saved.queue, items, now);
+    for (const m of saved.members) group.members.set(m.id, { ...m });
+    group.state = { ...saved.state };
+    group.runtimeMs = saved.runtimeMs;
+    group.positionMs = saved.positionMs;
+    group.lastActivity = saved.lastActivity;
+    group.waitDeadline = saved.waitDeadline;
+    return group;
+  }
+
+  save(): SavedGroup {
+    return {
+      id: this.id,
+      name: this.name,
+      state: this.state,
+      members: [...this.members.values()],
+      runtimeMs: this.runtimeMs,
+      positionMs: this.positionMs,
+      lastActivity: this.lastActivity,
+      waitDeadline: this.waitDeadline,
+      queue: this.queue.save(),
+    };
   }
 
   get stateType(): GroupStateType {
@@ -183,6 +233,12 @@ export class SyncGroup {
       participants: [...new Set(this.memberList().map((m) => m.name))],
       lastUpdatedAt: this.now(),
     };
+  }
+
+  /** Whether a ping moved enough to store; smaller moves barely shift when unpauses land. */
+  pingMoved(id: string, ping: number): boolean {
+    const member = this.members.get(id);
+    return !!member && Math.abs(clampPing(ping) - member.ping) >= PING_STEP_MS;
   }
 
   currentPositionMs(): number {
@@ -510,8 +566,7 @@ export class SyncGroup {
         return this.queueUpdate('ShuffleMode', 'all', from);
       case 'Ping': {
         const member = this.members.get(from);
-        if (member)
-          member.ping = Math.min(Math.max(request.ping || 0, 0), MAX_PING_MS);
+        if (member) member.ping = clampPing(request.ping);
         return;
       }
     }

@@ -17,6 +17,16 @@ export interface PlaylistItem extends QueueItem {
 
 const NONE = -1;
 
+/** A queue less its items, which are stored apart. */
+export interface SavedQueue {
+  /** The shuffled order, as positions in the items. */
+  shuffled?: number[];
+  playingIndex: number;
+  lastChange: number;
+  shuffleMode: ShuffleMode;
+  repeatMode: RepeatMode;
+}
+
 export const syncId = () => randomUUID().replace(/-/g, '');
 
 function shuffled<T>(list: T[]): T[] {
@@ -33,16 +43,55 @@ export class PlayQueue {
   private sorted: PlaylistItem[] = [];
   private shuffledList: PlaylistItem[] = [];
   playingIndex = NONE;
-  lastChange = Date.now();
+  lastChange: number;
   shuffleMode: ShuffleMode = 'Sorted';
   repeatMode: RepeatMode = 'RepeatNone';
+
+  constructor(private readonly now: () => number = Date.now) {
+    this.lastChange = now();
+  }
+
+  /** Items are never changed in place, so a restored queue shares them. */
+  static restore(
+    saved: SavedQueue,
+    items: readonly PlaylistItem[],
+    now?: () => number
+  ): PlayQueue {
+    const queue = new PlayQueue(now);
+    queue.sorted = [...items];
+    queue.shuffledList = saved.shuffled?.map((i) => items[i]) ?? [];
+    queue.playingIndex = saved.playingIndex;
+    queue.lastChange = saved.lastChange;
+    queue.shuffleMode = saved.shuffleMode;
+    queue.repeatMode = saved.repeatMode;
+    return queue;
+  }
+
+  /** In order, unshuffled. */
+  get items(): readonly PlaylistItem[] {
+    return this.sorted;
+  }
+
+  save(): SavedQueue {
+    const { sorted } = this;
+    return {
+      shuffled:
+        this.shuffleMode === 'Shuffle'
+          ? this.shuffledList.map((item) => sorted.indexOf(item))
+          : undefined,
+      playingIndex: this.playingIndex,
+      lastChange: this.lastChange,
+      shuffleMode: this.shuffleMode,
+      repeatMode: this.repeatMode,
+    };
+  }
 
   private get list(): PlaylistItem[] {
     return this.shuffleMode === 'Shuffle' ? this.shuffledList : this.sorted;
   }
 
   private touch(): void {
-    this.lastChange = Date.now();
+    this.lastChange = this.now();
   }
 
   playlist(): readonly PlaylistItem[] {
