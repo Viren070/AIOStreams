@@ -89,4 +89,8 @@ Guests get nothing else from your server: they play from their own, and only tim
 
 ### Limits
 
-A relay holds parties in memory, so they take a few kilobytes each, plus each member's connection. A party has at most 16 people, closes after 6 hours without activity, and lasts a day at most. Each address may hold a few connections, start a few parties an hour and try a few invites a minute, so codes can't be guessed. A restart doesn't end parties: their members' apps bring them back.
+A relay keeps parties in memory, or in Redis when the server has `REDIS_URI`. Each takes a few kilobytes, plus each member's connection. A party has at most 16 people, closes after 6 hours without activity, and lasts a day at most. Each address may hold a few connections, start a few parties an hour and try a few invites a minute, so codes can't be guessed. A restart doesn't end parties: in Redis they carry on, and in memory their members' apps bring them back.
+
+### Running several replicas
+
+With `REDIS_URI`, replicas of a server behind one address share parties and SyncPlay groups: members on different replicas watch together, and when a replica stops, its members reconnect to the others and keep their seats. The limits on each address apply per replica.
