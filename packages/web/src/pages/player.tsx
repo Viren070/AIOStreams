@@ -7,11 +7,9 @@ import { Button } from '@aiostreams/ui/button';
 import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '../lib/session';
-import { useQueryClient } from '@tanstack/react-query';
 import {
   useItem,
   usePlaybackInfo,
-  usePlaybackInfoOptions,
   useRefreshAll,
   useSegments,
 } from '../lib/queries';
@@ -93,6 +91,8 @@ interface PlayerProps {
   youTube?: string;
   /** Whether the cover still hides the player, until its first frame. */
   onCovered(covered: boolean): void;
+  /** The version list it started from, which a failed start moves along. */
+  versions: SourceInfo[];
 }
 
 /**
@@ -194,6 +194,7 @@ export function PlayerPage({
       launched: player.kind === 'launched' ? player : undefined,
       local,
       youTube: youTube.data ?? undefined,
+      versions: sources,
     });
   }
 
@@ -280,55 +281,41 @@ const sameVersion = (a: SourceInfo, b: SourceInfo) =>
   (!!a.Name && a.Name === b.Name);
 
 /**
- * A version that fails before it starts hands over to the next in the list,
- * which puts versions a TV can't decode last (`settings.playback.failover`).
- * Not in a party, whose version everyone shares, nor for a download.
+ * A version that fails before it starts hands over to the next in `versions`,
+ * the list the player started from, which puts versions a TV can't decode
+ * last (`settings.playback.failover`). Asking for the list anew could search
+ * every indexer again. Not in a party, whose version everyone shares, nor
+ * for a download.
  */
 function useFailover(
   item: BaseItemDto,
   source: SourceInfo,
+  versions: SourceInfo[],
   player: PlayerController,
   startMs: number,
   off: boolean
 ) {
   const [on] = useSetting(settings.playback.failover);
-  const queryClient = useQueryClient();
-  const options = usePlaybackInfoOptions();
   const play = usePlay();
   const { started } = player.state;
   const failed = !!player.state.error && !started;
-  const next = React.useRef<(current: () => boolean) => void>(undefined);
-  next.current = (current) => {
-    const tried = triedVersions.get(item.Id!) ?? new Set<string>();
-    triedVersions.set(item.Id!, tried.add(versionKey(source)));
-    // The list the player and the picker showed: asking anew can search every indexer again.
-    void queryClient.fetchQuery(options(item.Id!)).then(
-      (info) => {
-        // Gone back, or on another version, by the time the list came.
-        if (!current()) return;
-        const sources = playableSources(info);
-        const exact = sources.findIndex((s) => !!s.Id && s.Id === source.Id);
-        const at =
-          exact >= 0 ? exact : sources.findIndex((s) => sameVersion(s, source));
-        const to = sources.slice(at + 1).find((s) => !tried.has(versionKey(s)));
-        if (!to) return;
-        toast.info("This version didn't play, so the next one is starting.");
-        void play(item, { source: to, startMs, replace: true });
-      },
-      () => undefined
-    );
-  };
   React.useEffect(() => {
     if (started) triedVersions.delete(item.Id!);
   }, [started, item.Id]);
   React.useEffect(() => {
     if (!on || off || !failed) return;
-    let current = true;
-    next.current?.(() => current);
-    return () => {
-      current = false;
-    };
-  }, [on, off, failed]);
+    const tried = triedVersions.get(item.Id!) ?? new Set<string>();
+    // Once for each failed version, however often this runs again.
+    if (tried.has(versionKey(source))) return;
+    triedVersions.set(item.Id!, tried.add(versionKey(source)));
+    const exact = versions.findIndex((s) => !!s.Id && s.Id === source.Id);
+    const at =
+      exact >= 0 ? exact : versions.findIndex((s) => sameVersion(s, source));
+    const to = versions.slice(at + 1).find((s) => !tried.has(versionKey(s)));
+    if (!to) return;
+    toast.info("This version didn't play, so the next one is starting.");
+    void play(item, { source: to, startMs, replace: true });
+  }, [on, off, failed, item, source, versions, startMs, play]);
 }
 
 /** Reports the playback the way a Jellyfin client does once it starts. */
@@ -590,6 +577,7 @@ function Player({
   local,
   youTube,
   onCovered,
+  versions,
 }: PlayerProps) {
   const { client } = useSession();
   const video = React.useRef<HTMLVideoElement>(null);
@@ -648,7 +636,7 @@ function Player({
   });
   const player = usePartyPlayer(own, playlistItemId);
   close.current = player.close;
-  useFailover(item, source, player, startMs, !!local || inParty);
+  useFailover(item, source, versions, player, startMs, !!local || inParty);
   const segments = useShownSegments(
     item,
     useSegments(item.Id!).data?.Items,
