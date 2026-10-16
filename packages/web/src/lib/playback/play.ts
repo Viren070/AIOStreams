@@ -8,6 +8,7 @@ import { directUrl } from './stream';
 import { subtitleUrl, textSubtitles } from '../subtitles/tracks';
 import { useSession } from '../session';
 import { storedMap } from '../storage';
+import { unsupportedOnTv } from './support';
 import { subtitleLanguages, usePlaybackPrefs } from '../user-config';
 import { useEpisodesAfter } from '../queries';
 import { sameLanguage } from '../languages';
@@ -21,13 +22,20 @@ export const lastVersions = storedMap<string>(
   500
 );
 
-/** Versions that can play; notices from addons carry text only. */
+/**
+ * Versions that can play; notices from addons carry text only. Those a TV
+ * can't decode go last, so whatever takes the first takes one it plays.
+ */
 export function playableSources(
   info: PlaybackInfoResponse | undefined
 ): SourceInfo[] {
-  return (info?.MediaSources ?? []).filter(
+  const sources = (info?.MediaSources ?? []).filter(
     (s) => s.Type !== 'Placeholder'
   ) as SourceInfo[];
+  const plays = sources.filter((s) => !unsupportedOnTv(s));
+  return plays.length === sources.length
+    ? sources
+    : [...plays, ...sources.filter((s) => !plays.includes(s))];
 }
 
 export function noticeSources(

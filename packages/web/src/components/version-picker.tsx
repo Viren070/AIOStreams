@@ -44,6 +44,7 @@ import {
   type Download,
 } from '../lib/downloads';
 import { chosenPlayer } from '../lib/playback/player-choice';
+import { unsupportedOnTv } from '../lib/playback/support';
 import { party } from '../lib/party/party';
 import {
   lastVersions,
@@ -764,9 +765,17 @@ function Versions({
                   {source.Id === request.playing && (
                     <span
                       data-ui="version-playing"
-                      className="mb-1 inline-block rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-black"
+                      className="mb-1 mr-1 inline-block rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-black"
                     >
                       <Trans>Playing</Trans>
+                    </span>
+                  )}
+                  {unsupportedOnTv(source) && (
+                    <span
+                      data-ui="version-unsupported"
+                      className="mb-1 inline-block rounded-full bg-red-500/20 px-2 py-0.5 text-xs font-semibold text-red-300"
+                    >
+                      This TV can't play {unsupportedOnTv(source)}
                     </span>
                   )}
                   <span
