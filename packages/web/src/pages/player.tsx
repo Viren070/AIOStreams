@@ -15,6 +15,7 @@ import {
   useSegments,
 } from '../lib/queries';
 import { lastVersions, playableSources, usePlay } from '../lib/playback/play';
+import { unsupportedOnTv } from '../lib/playback/support';
 import { chosenPlayer } from '../lib/playback/player-choice';
 import {
   directUrl,
@@ -308,10 +309,14 @@ function useFailover(
     const at =
       exact >= 0 ? exact : versions.findIndex((s) => sameVersion(s, source));
     if (at < 0) return;
-    // Those after it, then round to those before: one a TV can't decode is listed last.
-    const to = [...versions.slice(at + 1), ...versions.slice(0, at)].find(
-      (s) => !tried.has(versionKey(s))
-    );
+    // Those after it, then round to those before, as one a TV can't decode is
+    // listed last; those the TV decodes first, so a failed one of those that
+    // can't isn't followed by the rest of them.
+    const untried = [
+      ...versions.slice(at + 1),
+      ...versions.slice(0, at),
+    ].filter((s) => !tried.has(versionKey(s)));
+    const to = untried.find((s) => !unsupportedOnTv(s)) ?? untried[0];
     if (!to) {
       // Out of versions: the next try starts afresh.
       triedVersions.delete(item.Id!);
