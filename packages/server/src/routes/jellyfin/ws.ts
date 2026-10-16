@@ -9,7 +9,11 @@ import {
   userDataFromRow,
   type WatchScope,
 } from '@aiostreams/core';
-import { userForToken } from './context.js';
+import {
+  resolveAddressCode,
+  resolvePickerAlias,
+  userForToken,
+} from './context.js';
 import {
   addClientSocket,
   clientKey,
@@ -24,7 +28,7 @@ const MAX_SOCKETS_TOTAL = 50_000;
 const KEEPALIVE_SECONDS = 60;
 
 const SOCKET_PATH =
-  /^\/jellyfin(?:\/([^/?]+)\/[^/?]+)?(?:\/(?:emby|mediabrowser))?\/(?:socket|websocket)(?:\?|$)/i;
+  /^\/jellyfin(?:\/([^/?]+)\/([^/?]+))?(?:\/(?:emby|mediabrowser))?\/(?:socket|websocket)(?:\?|$)/i;
 
 interface SocketUser {
   /** The rows this socket follows. */
@@ -37,6 +41,18 @@ interface SocketUser {
 function reject(socket: Duplex, status: number, text: string) {
   socket.write(`HTTP/1.1 ${status} ${text}\r\nConnection: close\r\n\r\n`);
   socket.destroy();
+}
+
+/** The configuration a mount names, as the HTTP routes find it. */
+async function mountUuid(
+  first: string,
+  second: string
+): Promise<string | null> {
+  const kind = first.toLowerCase();
+  const value = decodeURIComponent(second);
+  if (kind === 'u') return (await resolvePickerAlias(value))?.uuid ?? null;
+  if (kind === 'p') return (await resolveAddressCode(value))?.uuid ?? null;
+  return decodeURIComponent(first);
 }
 
 async function authenticateUpgrade(url: string): Promise<SocketUser | null> {
@@ -52,11 +68,10 @@ async function authenticateUpgrade(url: string): Promise<SocketUser | null> {
   // Nothing here pushes sessions; a tool polls /Sessions once its socket fails.
   const user = apiKey ? await userForToken(apiKey) : null;
   if (!user) return null;
-  if (
-    m[1] &&
-    decodeURIComponent(m[1]).toLowerCase() !== user.payload.u.toLowerCase()
-  )
-    return null;
+  if (m[1] && m[2]) {
+    const mount = await mountUuid(m[1], m[2]);
+    if (mount?.toLowerCase() !== user.payload.u.toLowerCase()) return null;
+  }
   return {
     scope: user.watch,
     userId: user.userId,

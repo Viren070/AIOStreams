@@ -171,6 +171,17 @@ export async function resolvePickerAlias(
   );
 }
 
+const ADDRESS_CODE = /^[a-z0-9]{10,32}$/;
+
+/** The configuration a `/p/<code>` sign-in address names. */
+export async function resolveAddressCode(
+  code: string
+): Promise<{ uuid: string; encryptedPassword: string } | null> {
+  return ADDRESS_CODE.test(code)
+    ? JellyfinAddressRepository.resolve(code)
+    : null;
+}
+
 export async function resolveUuid(uuidOrAlias: string): Promise<string | null> {
   if (isConfigUuid(uuidOrAlias)) return uuidOrAlias;
   const alias = await resolveConfigAlias(uuidOrAlias);
@@ -644,8 +655,6 @@ async function buildContext(
   };
 }
 
-const ADDRESS_CODE = /^[a-z0-9]{10,32}$/;
-
 export const jellyfinContext: RequestHandler = async (req, res, next) => {
   try {
     const params = req.params as Record<string, string | undefined>;
@@ -680,9 +689,7 @@ export const jellyfinContext: RequestHandler = async (req, res, next) => {
       }
       req.jfMount = target;
     } else if (params.code) {
-      const target = ADDRESS_CODE.test(params.code)
-        ? await JellyfinAddressRepository.resolve(params.code)
-        : null;
+      const target = await resolveAddressCode(params.code);
       if (!target) {
         res.status(401).json({ Message: 'Unknown address' });
         return;
