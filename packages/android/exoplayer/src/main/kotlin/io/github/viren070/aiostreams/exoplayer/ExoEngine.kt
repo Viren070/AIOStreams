@@ -214,7 +214,7 @@ class ExoEngine(private val context: Context) :
         this.listener = listener
         state(
             PlayerState(
-                idle = true, paused = false, volume = volume / 100, maxVolume = VOLUME_MAX / 100,
+                idle = true, paused = !player.playWhenReady, volume = volume / 100, maxVolume = VOLUME_MAX / 100,
                 muted = false, speed = 1.0, audio = Pick(null), subtitle = Pick(null),
             ),
         )
