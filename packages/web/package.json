@@ -9,6 +9,7 @@
     "build": "rsbuild build",
     "build:standalone": "rsbuild build --env-mode standalone",
     "typecheck": "tsc --noEmit",
+    "test": "node --test legacy-css.test.ts",
     "preview": "rsbuild preview",
     "lint": "eslint src",
     "i18n:extract": "lingui extract --clean && lingui extract-template"
@@ -41,6 +42,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "autoprefixer": "^10.6.1",
+    "core-js": "^3.50.0",
     "eslint": "^10.13.0",
     "eslint-plugin-lingui": "^0.16.0",
     "eslint-plugin-react-hooks": "^7.1.1",
@@ -49,6 +51,7 @@
     "postcss": "^8.5.29",
     "postcss-import": "^16.2.0",
     "postcss-nesting": "^13.0.2",
+    "postcss-selector-parser": "^7.1.6",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-icons": "^5.7.0",
