@@ -93,8 +93,8 @@ export type PartyClientMessage =
   /** `rtt` is the round trip the last pong measured. */
   | { t: 'ping'; t0: number; rtt?: number }
   | { t: 'request'; request: PartyRequest }
-  /** Where the member is, `at` on the relay's clock. */
-  | { t: 'report'; positionMs: number; at: number }
+  /** How far behind the party the member plays, sent as it changes; absent once in step. */
+  | { t: 'offset'; offsetMs?: number }
   | { t: 'chat'; text: string }
   | { t: 'react'; emoji: string }
   | { t: 'name'; name: string }
