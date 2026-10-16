@@ -98,6 +98,8 @@ export function usePlay() {
       startMs?: number;
       replace?: boolean;
       onExternal?: () => void;
+      /** Whether to still play, once what it waits on has come. */
+      current?: () => boolean;
     }
   ) => {
     const { source } = opts;
@@ -113,6 +115,7 @@ export function usePlay() {
         prefs.EnableNextEpisodeAutoPlay !== false
           ? await episodesAfter(item).catch(() => [])
           : [];
+      if (opts.current?.() === false) return;
       play(
         item,
         source,
