@@ -24,13 +24,19 @@ export type SourcePriority =
 
 function forType(
   priority: SourcePriority,
-  mediaType: MediaType
+  mediaType: MediaType,
+  preferred: readonly MetadataSource[] = []
 ): readonly MetadataSource[] {
-  return Array.isArray(priority)
+  const base = Array.isArray(priority)
     ? priority
     : (priority as Exclude<SourcePriority, readonly MetadataSource[]>)[
         mediaType
       ];
+  if (!preferred.length) return base;
+  const promoted = preferred.filter((s) => base.includes(s));
+  return promoted.length
+    ? [...promoted, ...base.filter((s) => !promoted.includes(s))]
+    : base;
 }
 
 /** Absent fields are not contributed. */
@@ -113,9 +119,10 @@ const TITLE_ORDER: readonly {
 export function resolveSource(
   contributions: SourceContributions,
   field: PickedField,
-  mediaType: MediaType
+  mediaType: MediaType,
+  preferred: readonly MetadataSource[] = []
 ): MetadataSource | undefined {
-  for (const source of forType(FIELD_PRIORITY[field], mediaType)) {
+  for (const source of forType(FIELD_PRIORITY[field], mediaType, preferred)) {
     if (contributions[source]?.[field]) return source;
   }
   return undefined;
@@ -124,9 +131,10 @@ export function resolveSource(
 function resolve<K extends PickedField>(
   contributions: SourceContributions,
   field: K,
-  mediaType: MediaType
+  mediaType: MediaType,
+  preferred: readonly MetadataSource[] = []
 ): SourceContribution[K] | undefined {
-  const source = resolveSource(contributions, field, mediaType);
+  const source = resolveSource(contributions, field, mediaType, preferred);
   return source ? contributions[source]?.[field] : undefined;
 }
 
@@ -138,14 +146,16 @@ function resolve<K extends PickedField>(
  */
 function resolveYears(
   contributions: SourceContributions,
-  mediaType: MediaType
+  mediaType: MediaType,
+  preferred: readonly MetadataSource[] = []
 ): { year?: number; yearEnd?: number } {
-  const yearOrder = forType(FIELD_PRIORITY.year, mediaType);
-  const yearEndOrder = forType(FIELD_PRIORITY.yearEnd, mediaType);
+  const yearOrder = forType(FIELD_PRIORITY.year, mediaType, preferred);
+  const yearEndOrder = forType(FIELD_PRIORITY.yearEnd, mediaType, preferred);
   const cinemetaAt = yearEndOrder.indexOf('cinemeta');
 
   let year: number | undefined;
   let yearEnd: number | undefined;
+  let resolvedYearSource: MetadataSource | undefined;
 
   // yearEnd sources that outrank cinemeta resolve independently of year
   for (const source of cinemetaAt === -1
@@ -166,11 +176,15 @@ function resolveYears(
         continue;
       year = contribution.year;
       if (contribution.yearEnd !== undefined) yearEnd = contribution.yearEnd;
-      if (year) break;
+      if (year) {
+        resolvedYearSource = source;
+        break;
+      }
       continue;
     }
     if (contribution.year) {
       year = contribution.year;
+      resolvedYearSource = source;
       break;
     }
   }
@@ -185,8 +199,10 @@ function resolveYears(
     }
   }
 
-  // Release names follow IMDb, so it decides when TVDB and TMDB disagree. Only
-  // ever one of their two values: an odd IMDb record cannot invent a year.
+  // Release names follow IMDb, so it decides when TVDB and TMDB disagree -
+  // unless a user preference already chose the winning source, which
+  // shouldn't get silently overridden. Only ever one of their two values:
+  // an odd IMDb record cannot invent a year.
   const tvdbYear = contributions.tvdb?.year;
   const tmdbYear = contributions.tmdb?.year;
   const imdbYear = contributions.imdbSuggestion?.year;
@@ -194,7 +210,8 @@ function resolveYears(
     tvdbYear &&
     tmdbYear &&
     tvdbYear !== tmdbYear &&
-    (imdbYear === tvdbYear || imdbYear === tmdbYear)
+    (imdbYear === tvdbYear || imdbYear === tmdbYear) &&
+    !(resolvedYearSource && preferred.includes(resolvedYearSource))
   ) {
     year = imdbYear;
   }
@@ -249,16 +266,18 @@ export type MergedMetadata = Pick<
 /** Returns `title: ''` when no source had one; callers decide if that is fatal. */
 export function mergeMetadata(
   contributions: SourceContributions,
-  mediaType: MediaType
+  mediaType: MediaType,
+  preferred: readonly MetadataSource[] = []
 ): MergedMetadata {
-  const primaryTitle = forType(PRIMARY_TITLE_PRIORITY, mediaType)
+  const primaryTitle = forType(PRIMARY_TITLE_PRIORITY, mediaType, preferred)
     .map((source) => contributions[source]?.primaryTitle)
     .find(Boolean);
 
   const originalLanguage = resolve(
     contributions,
     'originalLanguage',
-    mediaType
+    mediaType,
+    preferred
   );
 
   const titles = assembleTitles(contributions);
@@ -267,13 +286,13 @@ export function mergeMetadata(
 
   const genres = [
     ...new Set(
-      forType(GENRE_SOURCES, mediaType).flatMap(
+      forType(GENRE_SOURCES, mediaType, preferred).flatMap(
         (source) => contributions[source]?.genres ?? []
       )
     ),
   ];
 
-  const { year, yearEnd } = resolveYears(contributions, mediaType);
+  const { year, yearEnd } = resolveYears(contributions, mediaType, preferred);
 
   return {
     title: uniqueTitles[0]?.title ?? '',
@@ -282,15 +301,25 @@ export function mergeMetadata(
     year,
     yearEnd,
     originalLanguage,
-    country: resolve(contributions, 'country', mediaType),
-    releaseDate: resolve(contributions, 'releaseDate', mediaType),
-    runtime: resolve(contributions, 'runtime', mediaType),
-    seasons: resolve(contributions, 'seasons', mediaType),
+    country: resolve(contributions, 'country', mediaType, preferred),
+    releaseDate: resolve(contributions, 'releaseDate', mediaType, preferred),
+    runtime: resolve(contributions, 'runtime', mediaType, preferred),
+    seasons: resolve(contributions, 'seasons', mediaType, preferred),
     genres,
-    nextAirDate: resolve(contributions, 'nextAirDate', mediaType),
-    firstAiredDate: resolve(contributions, 'firstAiredDate', mediaType),
-    lastAiredDate: resolve(contributions, 'lastAiredDate', mediaType),
-    tmdbId: resolve(contributions, 'tmdbId', mediaType) ?? null,
-    tvdbId: resolve(contributions, 'tvdbId', mediaType) ?? null,
+    nextAirDate: resolve(contributions, 'nextAirDate', mediaType, preferred),
+    firstAiredDate: resolve(
+      contributions,
+      'firstAiredDate',
+      mediaType,
+      preferred
+    ),
+    lastAiredDate: resolve(
+      contributions,
+      'lastAiredDate',
+      mediaType,
+      preferred
+    ),
+    tmdbId: resolve(contributions, 'tmdbId', mediaType, preferred) ?? null,
+    tvdbId: resolve(contributions, 'tvdbId', mediaType, preferred) ?? null,
   };
 }
