@@ -433,6 +433,13 @@ export const presetsSchema = {
     timeoutEnv: 'DEFAULT_RPDB_CATALOGS_TIMEOUT',
     userAgentEnv: 'DEFAULT_RPDB_CATALOGS_USER_AGENT',
   }),
+  oneZeroOneCatalogs: basicPreset({
+    label: '101Catalogs',
+    default: ['https://api.101catalogs.xyz'],
+    envBase: 'ONE_ZERO_ONE_CATALOGS_URL',
+    timeoutEnv: 'DEFAULT_ONE_ZERO_ONE_CATALOGS_TIMEOUT',
+    userAgentEnv: 'DEFAULT_ONE_ZERO_ONE_CATALOGS_USER_AGENT',
+  }),
   streamingCatalogs: basicPreset({
     label: 'Streaming Catalogs',
     default: [
