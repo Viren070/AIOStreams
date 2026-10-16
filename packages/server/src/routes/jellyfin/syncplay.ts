@@ -4,18 +4,23 @@ import {
   createLogger,
   descriptorForWatchRow,
   encodeItemId,
-  GroupHub,
   hyphenless,
   isGuidLike,
   msToTicks,
   sessionKeyFor,
+  sharedBackend,
+  SharedTx,
+  syncId,
+  SyncGroup,
   WatchSessionRepository,
   type GroupMessage,
   type GroupRequest,
   type PlayingOnCreate,
+  type PlaylistItem,
   type QueueItem,
   type QueueSnapshot,
-  type SyncGroup,
+  type SavedGroup,
+  type SharedMessage,
 } from '@aiostreams/core';
 import {
   bodyField,
@@ -27,14 +32,16 @@ import {
 import { accountName } from './users.js';
 import {
   clientKey,
-  clientOnline,
+  frame,
   onClientOffline,
-  sendToClient,
+  onClientOnline,
+  sendFrameToClient,
 } from './session-sockets.js';
 
 /*
  * Jellyfin's SyncPlay for Jellyfin apps, over the shared group engine. Members
- * are clients (a user on a device), which hear the group on their session socket.
+ * are clients (a user on a device), which hear the group on their session
+ * socket, on whichever replica holds it.
  */
 
 const logger = createLogger('jellyfin');
@@ -52,8 +59,55 @@ interface Home {
   hidden: boolean;
 }
 
-const homes = new WeakMap<SyncGroup, Home>();
-const graces = new Map<string, ReturnType<typeof setTimeout>>();
+interface Group {
+  group: SyncGroup;
+  home: Home;
+  /** Members without a socket anywhere, and when they are given up. */
+  away: Record<string, number>;
+}
+
+interface SavedGroupRecord {
+  group: SavedGroup;
+  home: Home;
+  away: Record<string, number>;
+}
+
+const store = sharedBackend();
+const groups = store.records<Group>({
+  name: 'syncplay',
+  save: (g): SavedGroupRecord => ({
+    group: g.group.save(),
+    home: g.home,
+    away: g.away,
+  }),
+  bulk: (g) => g.group.queue.items,
+  load: (saved: SavedGroupRecord, items: PlaylistItem[] | null) => ({
+    ...saved,
+    group: SyncGroup.restore(saved.group, items ?? [], deliver),
+  }),
+  due: (g) => {
+    let due = g.group.waitDeadline ?? Infinity;
+    for (const until of Object.values(g.away)) due = Math.min(due, until);
+    return Number.isFinite(due) ? due : null;
+  },
+  tags: () => ['groups'],
+  refs: (g) => g.group.memberList().map((m) => m.id),
+  receive,
+  lapse,
+  orphaned,
+});
+
+/** The group being changed, which its messages go out through. */
+let current: { group: SyncGroup; tx: SharedTx } | undefined;
+
+function changing<R>(g: Group, tx: SharedTx, fn: () => R): R {
+  current = { group: g.group, tx };
+  try {
+    return fn();
+  } finally {
+    current = undefined;
+  }
+}
 
 const ticks = (ms: number) => msToTicks(Math.max(ms, 0));
 const iso = (ms: number) => new Date(ms).toISOString();
@@ -89,11 +143,9 @@ function groupUpdate(group: SyncGroup, type: string, data: unknown) {
   return { GroupId: group.id, Type: type, Data: data };
 }
 
-function deliver(
-  group: SyncGroup,
-  to: readonly string[],
-  message: GroupMessage
-): void {
+function deliver(to: readonly string[], message: GroupMessage): void {
+  if (!current) return;
+  const { group, tx } = current;
   let type = 'SyncPlayGroupUpdate';
   let data: unknown;
   switch (message.kind) {
@@ -130,28 +182,91 @@ function deliver(
       });
       break;
   }
-  for (const key of to) sendToClient(key, type, data);
+  tx.send(to, Buffer.from(frame(type, data)));
 }
 
-const hub = new GroupHub(deliver);
+function receive(_id: string, messages: readonly SharedMessage[]): void {
+  for (const { to, data } of messages)
+    for (const key of to) sendFrameToClient(key, data);
+}
 
-onClientOffline((key) => {
-  if (!hub.groupOf(key) || graces.has(key)) return;
-  graces.set(
-    key,
-    setTimeout(() => {
-      graces.delete(key);
-      if (!clientOnline(key)) hub.leave(key);
-    }, GRACE_MS).unref()
+/** Members away too long leave, unless they came back meanwhile; waits run out. */
+async function lapse(id: string): Promise<void> {
+  const found = await groups.get(id);
+  if (!found) return;
+  const at = Date.now();
+  const gone = Object.keys(found.away).filter((key) => found.away[key] <= at);
+  const back = new Set<string>();
+  for (const key of gone) if (await store.presence.online(key)) back.add(key);
+  await groups.update(id, (g, tx) =>
+    changing(g, tx, () => {
+      for (const key of gone) {
+        if (!(key in g.away)) continue;
+        delete g.away[key];
+        if (!back.has(key)) g.group.leave(key);
+      }
+      if (!g.group.size) return tx.drop();
+      g.group.tick();
+    })
   );
-});
+}
 
-function notice(key: string, type: string) {
-  sendToClient(key, 'SyncPlayGroupUpdate', {
-    GroupId: '',
-    Type: type,
-    Data: '',
+/** Clients of a replica that went without saying are away, unless elsewhere. */
+async function orphaned(replica: string): Promise<void> {
+  for (const key of await store.presence.of(replica)) await went(key);
+}
+
+async function went(key: string): Promise<void> {
+  const id = await groups.find(key);
+  if (!id || (await store.presence.online(key))) return;
+  await groups.update(id, (g) => {
+    if (g.group.member(key)) g.away[key] = Date.now() + GRACE_MS;
   });
+}
+
+async function returned(key: string): Promise<void> {
+  const id = await groups.find(key);
+  if (!id) return;
+  await groups.update(id, (g) => {
+    delete g.away[key];
+  });
+}
+
+const failed = (err: unknown) =>
+  logger.warn(
+    { err: err instanceof Error ? err.message : err },
+    'syncplay presence failed'
+  );
+
+onClientOffline((key) => void went(key).catch(failed));
+onClientOnline((key) => void returned(key).catch(failed));
+
+/** To the client's socket, on whichever replica holds it. */
+function notice(key: string, type: string) {
+  const tx = new SharedTx();
+  tx.send(
+    [key],
+    Buffer.from(
+      frame('SyncPlayGroupUpdate', { GroupId: '', Type: type, Data: '' })
+    )
+  );
+  groups.broadcast(tx);
+}
+
+/** Takes the client out of its group, which ends once empty. */
+async function leave(key: string): Promise<boolean> {
+  const id = await groups.find(key);
+  if (!id) return false;
+  const left = await groups.update(id, (g, tx) =>
+    changing(g, tx, () => {
+      if (!g.group.member(key)) return false;
+      delete g.away[key];
+      g.group.leave(key);
+      if (!g.group.size) tx.drop();
+      return true;
+    })
+  );
+  return !!left;
 }
 
 const keyOf = (ctx: JellyfinRequestContext) =>
@@ -167,9 +282,8 @@ function memberOf(ctx: JellyfinRequestContext) {
   };
 }
 
-function visibleTo(group: SyncGroup, ctx: JellyfinRequestContext): boolean {
-  const home = homes.get(group);
-  if (!home) return false;
+function visibleTo(g: Group, ctx: JellyfinRequestContext): boolean {
+  const { home } = g;
   if (home.hidden || ctx.persona?.hidden) return home.userId === ctx.userId;
   return appConfig.party.scope === 'instance' || home.uuid === ctx.uuid;
 }
@@ -323,12 +437,13 @@ router.get(
 
 router.get(
   '/SyncPlay/List',
-  jf((_req, res, ctx) => {
+  jf(async (_req, res, ctx) => {
+    const ids = await groups.tagged('groups');
+    const found = await Promise.all(ids.map((id) => groups.get(id)));
     res.json(
-      hub
-        .list()
-        .filter((group) => visibleTo(group, ctx))
-        .map(groupInfo)
+      found
+        .filter((g): g is Group => !!g && visibleTo(g, ctx))
+        .map((g) => groupInfo(g.group))
     );
   })
 );
@@ -336,79 +451,116 @@ router.get(
 router.post(
   '/SyncPlay/New',
   jf(async (req, res, ctx) => {
-    if (GroupHub.total() >= appConfig.party.maxParties) {
+    const raw = bodyField(req, 'GroupName');
+    const member = memberOf(ctx);
+    const name =
+      (typeof raw === 'string' && raw.trim().slice(0, MAX_NAME)) ||
+      `${member.name}'s group`;
+    // A client is in one group at most.
+    await leave(member.id);
+    const playing = await playingOf(ctx);
+    const id = syncId();
+    let made: SyncGroup | undefined;
+    const created = await groups.create(
+      id,
+      (tx) => {
+        const g: Group = {
+          group: new SyncGroup(name, deliver, undefined, id),
+          home: {
+            uuid: ctx.uuid,
+            userId: ctx.userId,
+            hidden: !!ctx.persona?.hidden,
+          },
+          away: {},
+        };
+        changing(g, tx, () => g.group.create(member, playing));
+        made = g.group;
+        return g;
+      },
+      appConfig.party.maxParties
+    );
+    if (created !== 'ok' || !made) {
       res.status(503).json({ Message: 'Too many groups on this server' });
       return;
     }
-    const raw = bodyField(req, 'GroupName');
-    const name =
-      (typeof raw === 'string' && raw.trim().slice(0, MAX_NAME)) ||
-      `${memberOf(ctx).name}'s group`;
-    const member = memberOf(ctx);
-    const group = hub.create(name, member, {
-      playing: await playingOf(ctx),
-    });
-    homes.set(group, {
-      uuid: ctx.uuid,
-      userId: ctx.userId,
-      hidden: !!ctx.persona?.hidden,
-    });
-    logger.debug({ group: group.id, uuid: ctx.uuid }, 'syncplay group created');
-    res.json(groupInfo(group));
+    logger.debug({ group: id, uuid: ctx.uuid }, 'syncplay group created');
+    res.json(groupInfo(made));
   })
 );
 
 router.post(
   '/SyncPlay/Join',
-  jf((req, res, ctx) => {
+  jf(async (req, res, ctx) => {
     const id = guid(bodyField(req, 'GroupId'));
-    const group = id ? hub.get(id) : undefined;
-    if (!group || !visibleTo(group, ctx))
-      notice(keyOf(ctx), 'GroupDoesNotExist');
-    else hub.join(group.id, memberOf(ctx));
+    const found = id ? await groups.get(id) : undefined;
+    const member = memberOf(ctx);
+    let joined = false;
+    if (id && found && visibleTo(found, ctx)) {
+      if ((await groups.find(member.id)) !== id) await leave(member.id);
+      joined = !!(await groups.update(id, (g, tx) =>
+        changing(g, tx, () => {
+          delete g.away[member.id];
+          g.group.join(member);
+          return true;
+        })
+      ));
+    }
+    if (!joined) notice(member.id, 'GroupDoesNotExist');
     res.status(204).end();
   })
 );
 
 router.post(
   '/SyncPlay/Leave',
-  jf((_req, res, ctx) => {
-    if (!hub.leave(keyOf(ctx))) notice(keyOf(ctx), 'NotInGroup');
+  jf(async (_req, res, ctx) => {
+    if (!(await leave(keyOf(ctx)))) notice(keyOf(ctx), 'NotInGroup');
     res.status(204).end();
   })
 );
 
 router.get(
   '/SyncPlay/:groupId',
-  jf((req, res, ctx) => {
+  jf(async (req, res, ctx) => {
     const id = guid(param(req, 'groupId'));
-    const group = id ? hub.get(id) : undefined;
-    if (!group || !visibleTo(group, ctx)) {
+    const found = id ? await groups.get(id) : undefined;
+    if (!found || !visibleTo(found, ctx)) {
       res.status(404).json({ Message: 'Group not found' });
       return;
     }
-    res.json(groupInfo(group));
+    res.json(groupInfo(found.group));
   })
 );
 
 router.post(
   '/SyncPlay/:action',
-  jf((req: Request, res: Response, ctx) => {
+  jf(async (req: Request, res: Response, ctx) => {
     const request = requestFor(param(req, 'action').toLowerCase(), req);
     if (!request) {
       res.status(404).json({ Message: 'Unknown SyncPlay request' });
       return;
     }
     const key = keyOf(ctx);
-    if (!hub.request(key, request)) notice(key, 'NotInGroup');
+    const id = await groups.find(key);
+    const handled =
+      id &&
+      (await groups.update(id, (g, tx) => {
+        if (!g.group.member(key)) return false;
+        if (request.type === 'Ping' && !g.group.pingMoved(key, request.ping))
+          return true;
+        changing(g, tx, () => g.group.handle(key, request));
+        return true;
+      }));
+    if (!handled) notice(key, 'NotInGroup');
     res.status(204).end();
   })
 );
 
 /* Signing out ends the client's place in a group, as its session ends. */
 router.post('/Sessions/Logout', (req, _res, next) => {
-  if (req.jf) hub.leave(keyOf(req.jf));
-  next();
+  if (!req.jf) return next();
+  void leave(keyOf(req.jf))
+    .catch(failed)
+    .finally(() => next());
 });
 
 export default router;
