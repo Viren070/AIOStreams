@@ -12,6 +12,7 @@ import { usePlayer } from '../lib/playback/use-player';
 import { videoEngine } from '../lib/playback/video';
 import { useAction } from '../lib/input';
 import { settings, useSetting } from '../lib/settings';
+import { usePlaybackPrefs, type PlaybackPrefs } from '../lib/user-config';
 import { goBack, navigate, to } from '../lib/paths';
 import {
   trailersOf,
@@ -47,11 +48,12 @@ export function TrailerPage({
   const trailers = item.data ? trailersOf(item.data) : [];
   const trailer = trailers[index];
   const playback = useTrailerPlayback(trailer?.url);
+  const prefs = usePlaybackPrefs();
   const back = () => goBack(to.item(itemId));
   const step = (by: number) =>
     navigate(to.trailer(itemId, index + by), { replace: true });
 
-  if (!item.data || (trailer && !playback.data)) {
+  if (!item.data || (trailer && !playback.data) || prefs.isLoading) {
     if (item.isError || playback.isError)
       return (
         <TrailerFailure message="This trailer didn't load." onBack={back} />
@@ -83,7 +85,7 @@ export function TrailerPage({
     );
   if (found.kind === 'embed')
     return <EmbeddedTrailer {...props} id={found.id} />;
-  return <PlayedTrailer {...props} url={found.url} />;
+  return <PlayedTrailer {...props} url={found.url} prefs={prefs.prefs} />;
 }
 
 const sourceOf = (url: string): SourceInfo => ({
@@ -120,7 +122,11 @@ function Controls({
   );
 }
 
-function PlayedTrailer({ url, ...props }: TrailerProps & { url: string }) {
+function PlayedTrailer({
+  url,
+  prefs,
+  ...props
+}: TrailerProps & { url: string; prefs: PlaybackPrefs }) {
   const { client } = useSession();
   const video = React.useRef<HTMLVideoElement>(null);
   const [hostPlayer] = React.useState(() => currentHost().player);
@@ -134,7 +140,7 @@ function PlayedTrailer({ url, ...props }: TrailerProps & { url: string }) {
     source,
     startMs: 0,
     onEnded: props.onBack,
-    prefs: {},
+    prefs,
     subtitleStyle,
   });
   return (
