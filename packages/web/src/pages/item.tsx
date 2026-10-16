@@ -179,13 +179,12 @@ function Backdrop({
 }) {
   const sources = poster ? [...images, poster] : images;
   const key = sources.join('|');
-  const [attempt, setAttempt] = React.useState(0);
-  const [loaded, setLoaded] = React.useState(false);
-  React.useEffect(() => {
-    setAttempt(0);
-    setLoaded(false);
-  }, [key]);
+  // Tied to the sources, not reset by an effect, which a cached image can load before.
+  const [failed, setFailed] = React.useState({ key: '', count: 0 });
+  const attempt = failed.key === key ? failed.count : 0;
+  const [loadedSrc, setLoadedSrc] = React.useState<string | null>(null);
   const src = sources[attempt];
+  const loaded = !!src && loadedSrc === src;
   const wash = attempt >= images.length;
   const image = src && (
     <CachedImage
@@ -194,8 +193,13 @@ function Backdrop({
       data-wash={wash || undefined}
       src={src}
       alt=""
-      onLoad={() => setLoaded(true)}
-      onError={() => setAttempt((n) => n + 1)}
+      onLoad={() => setLoadedSrc(src)}
+      onError={() =>
+        setFailed((f) => ({
+          key,
+          count: (f.key === key ? f.count : 0) + 1,
+        }))
+      }
       className={cn(
         'absolute inset-0 h-full w-full object-cover transition-opacity duration-700',
         wash ? 'scale-125 blur-3xl saturate-150' : 'object-top',
