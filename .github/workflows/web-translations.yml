@@ -34,6 +34,8 @@ jobs:
         run: corepack enable
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
+      - name: Build core
+        run: pnpm -F @aiostreams/core build
       - name: Lint
         run: pnpm -F @aiostreams/web lint
       - name: Extract messages
