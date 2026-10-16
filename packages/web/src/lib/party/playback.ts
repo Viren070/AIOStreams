@@ -16,7 +16,7 @@ const SEEK_COOLDOWN_MS = 2_000;
 /** A shorter stall costs only this member, who catches up after it. */
 const BUFFER_AFTER_MS = 3_000;
 const TICK_MS = 250;
-const REPORT_MS = 5_000;
+const SAVE_MS = 5_000;
 /** Positions this close count as there. */
 const ACCURATE_MS = 250;
 /** Close enough to play at normal speed. */
@@ -47,7 +47,7 @@ class Follower {
   private awaitingReady = true;
   private own: { paused: boolean; at: number } | null = null;
   private pauseAt: number | null = null;
-  private lastReport = 0;
+  private lastSave = 0;
   private stopped = false;
 
   constructor(
@@ -241,9 +241,9 @@ class Follower {
     }
     const timeline = this.timeline;
     if (!timeline) return;
-    if (!state.paused && now - this.lastReport >= REPORT_MS) {
-      this.lastReport = now;
-      party.report(this.position());
+    if (!state.paused && now - this.lastSave >= SAVE_MS) {
+      this.lastSave = now;
+      party.save(this.position());
     }
     if (this.pauseAt !== null) {
       if (this.position() >= this.pauseAt - IN_STEP_MS)
@@ -257,6 +257,7 @@ class Follower {
     if (now < this.settleUntil) return;
     const expected = this.expected(timeline);
     const drift = this.position() - expected;
+    party.offset(-drift);
     const limit = this.speed ? SEEK_DRIFT_MS : SEEK_DRIFT_FIXED_MS;
     if (Math.abs(drift) > limit) {
       if (now - this.lastSeekAt > SEEK_COOLDOWN_MS)

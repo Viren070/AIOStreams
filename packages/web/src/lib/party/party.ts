@@ -116,6 +116,9 @@ const MAX_CHAT = 100;
 export const PARTY_OUTBOX = 5;
 /** Starting or joining waits this long for the relay before giving up. */
 const HELLO_MS = 15_000;
+/** Offsets the relay shows are rounded to this, and smaller ones not shown. */
+const OFFSET_STEP_MS = 500;
+const OFFSET_MIN_MS = 1_000;
 
 interface Saved {
   invite: Invite;
@@ -211,6 +214,8 @@ class Session {
   /** Back into a party this device was in, which waits out a relay that is away. */
   private readonly rejoining: boolean;
   private sent = 0;
+  /** The offset the relay last heard from here, null when it has none. */
+  private offsetSent: number | undefined | null = null;
   private settle?: { resolve(): void; reject(error: Error): void };
 
   constructor(
@@ -358,6 +363,8 @@ class Session {
   }
 
   private command(command: GroupCommand): void {
+    // The relay forgets offsets at a command, so this one's goes again.
+    this.offsetSent = null;
     const timeline: Timeline | null =
       command.command === 'Stop'
         ? null
@@ -378,6 +385,7 @@ class Session {
     switch (m.t) {
       case 'welcome': {
         this.welcomed = true;
+        this.offsetSent = null;
         this.resuming = false;
         this.seat = m.seat;
         this.ticket = m.ticket;
@@ -532,6 +540,17 @@ class Session {
 
   send(message: PartyClientMessage): void {
     this.connection.send(message);
+  }
+
+  offset(behindMs: number): void {
+    if (!this.connection.clock.synced) return;
+    const offsetMs =
+      Math.abs(behindMs) < OFFSET_MIN_MS
+        ? undefined
+        : Math.round(behindMs / OFFSET_STEP_MS) * OFFSET_STEP_MS;
+    if (offsetMs === this.offsetSent) return;
+    this.offsetSent = offsetMs;
+    this.send({ t: 'offset', offsetMs });
   }
 
   sealed(value: unknown): string {
@@ -757,11 +776,14 @@ export const party = {
       : null;
   },
 
-  report(positionMs: number): void {
-    const clock = session?.connection.clock;
-    if (!session || !clock?.synced) return;
-    session.send({ t: 'report', positionMs, at: clock.now() });
-    session.save(positionMs);
+  /** How far behind the party this member plays, which the relay hears as it changes. */
+  offset(behindMs: number): void {
+    session?.offset(behindMs);
+  },
+
+  /** Where the party plays, kept to bring it back after the relay restarts. */
+  save(positionMs: number): void {
+    session?.save(positionMs);
   },
 
   chat(text: string): void {
