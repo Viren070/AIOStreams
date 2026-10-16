@@ -54,7 +54,8 @@ const ENCODE_CODEC = {
 } satisfies Record<Encode, string | undefined>;
 
 const AUDIO_CODEC = {
-  Atmos: 'truehd',
+  // A format TrueHD and DD+ both carry, so it names no codec; the tag beside it does.
+  Atmos: undefined,
   TrueHD: 'truehd',
   'DTS:X': 'dts',
   'DTS-HD MA': 'dts',
@@ -461,11 +462,15 @@ function placeholderLanguages(pf: ParsedFile | undefined, list?: string[]) {
   return (list ?? []).filter((l) => l && !NOT_A_TRACK.has(l));
 }
 
+/** The first of a release's audio tags that names a codec. */
+const codecTag = (tags: readonly string[]) =>
+  tags.find((t) => AUDIO_CODEC[t as AudioTag]) as AudioTag | undefined;
+
 function audioStreams(pf: ParsedFile | undefined): JellyfinMediaStream[] {
   if (pf?.audioTracks?.length) {
     return pf.audioTracks.map((track, i) => {
       const tags = track.tags ?? [];
-      const format = tags[0] as AudioTag | undefined;
+      const format = codecTag(tags);
       const channelTag = track.channels as AudioChannels | undefined;
       return {
         Type: 'Audio',
@@ -508,7 +513,8 @@ function audioStreams(pf: ParsedFile | undefined): JellyfinMediaStream[] {
   const languages = (pf?.languages ?? []).filter((l) => l && l !== 'Unknown');
   const audioTag = (pf?.audioTags ?? []).find((t) => t !== 'Unknown') as
     AudioTag | undefined;
-  const codec = audioTag ? AUDIO_CODEC[audioTag] : undefined;
+  const codecFrom = codecTag(pf?.audioTags ?? []);
+  const codec = codecFrom ? AUDIO_CODEC[codecFrom] : undefined;
   const channelTag = (pf?.audioChannels ?? []).find((c) => c !== 'Unknown') as
     AudioChannels | undefined;
   const channels = channelTag ? CHANNEL_COUNT[channelTag] : undefined;
