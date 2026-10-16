@@ -11,6 +11,10 @@
   :root:not([data-nav='bar']) {
     --nav-bar: 0px;
   }
+  /* Home's row buttons open pages the bar keeps in a menu but other navs list. */
+  :root:not([data-nav='bar']) [data-page='home'] [data-ui='media-row-action'] {
+    display: none;
+  }
 }
 
 /* see index.html; the page's background is then drawn by an element */
