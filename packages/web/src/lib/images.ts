@@ -33,9 +33,11 @@ function tvScale(): number {
  * wider than the screen, as a TV decoding 4K backdrops stutters.
  */
 function deviceWidth(css: number): number {
-  const screenPx = screen.width * (window.devicePixelRatio || 1);
+  const screenPx = Math.ceil(screen.width * (window.devicePixelRatio || 1));
   const px = Math.min(css * pixelRatio(), screenPx || Infinity);
-  return STEPS.find((step) => step >= px) ?? Math.ceil(px);
+  const step = STEPS.find((s) => s >= px) ?? Math.ceil(px);
+  // A step can round past the screen, as 1366 does to 1600.
+  return screenPx ? Math.min(step, screenPx) : step;
 }
 
 function image(
