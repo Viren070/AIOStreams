@@ -1,14 +1,18 @@
-import { describe, it } from 'node:test';
+import { before, describe, it, mock } from 'node:test';
 import assert from 'node:assert/strict';
 // Use the normal core entry point to initialise the builtins' dependency graph.
 import '../../index.js';
-import { BaseDebridAddon } from './debrid.js';
+import { BaseDebridAddon, type SearchMetadata } from './debrid.js';
 import StreamParser from '../../parser/streams.js';
 import type { Stream, ParsedStream } from '../../db/schemas.js';
 import type {
   TorrentWithSelectedFile,
   NZBWithSelectedFile,
 } from '../../debrid/utils.js';
+import type { ParsedId } from '../../utils/id-parser.js';
+import { deduplicateTitles } from '../../metadata/utils.js';
+import { settingsStore } from '../../config/index.js';
+import { SettingsRepository } from '../../db/repositories/settings.js';
 
 type SelectedFile = TorrentWithSelectedFile | NZBWithSelectedFile;
 
@@ -77,5 +81,62 @@ describe('BaseDebridAddon seeder metadata', () => {
       },
       undefined
     );
+  });
+});
+
+describe('BaseDebridAddon title language queries', () => {
+  before(async () => {
+    mock.method(SettingsRepository, 'getAll', async () => []);
+    mock.method(SettingsRepository, 'getVersion', async () => 0);
+    await settingsStore.initialise();
+  });
+
+  const queryBuilder = Object.create(BaseDebridAddon.prototype) as {
+    buildQueries: (
+      parsedId: ParsedId,
+      metadata: SearchMetadata,
+      options: { titleLanguages: string[] }
+    ) => string[];
+  };
+  // TMDB's ru translation and BG alternative title share the Cyrillic name.
+  const titlesWithLang = deduplicateTitles([
+    { title: 'Pokémon Detective Pikachu', language: 'en' },
+    { title: 'Покемон: Детектив Пикачу', language: 'ru' },
+    { title: 'Покемон: Детектив Пикачу', language: 'bg' },
+    { title: 'Покемон: Детектив Пікачу', language: 'uk' },
+  ]);
+  const metadata = {
+    primaryTitle: 'pokemon detective pikachu',
+    titles: titlesWithLang.map((t) => t.title),
+    titlesWithLang,
+    year: 2019,
+  } as SearchMetadata;
+  const queries = (spec: string) =>
+    queryBuilder.buildQueries({ mediaType: 'movie' } as ParsedId, metadata, {
+      titleLanguages: [spec],
+    });
+
+  it('finds a title that several languages share by each of them', () => {
+    assert.deepEqual(queries('ru'), ['покемон детектив пикачу 2019']);
+    assert.deepEqual(queries('bg'), ['покемон детектив пикачу 2019']);
+  });
+
+  it('finds a shared title by the original language', () => {
+    assert.deepEqual(
+      queryBuilder.buildQueries(
+        { mediaType: 'movie' } as ParsedId,
+        { ...metadata, originalLanguage: 'ru' },
+        { titleLanguages: ['original'] }
+      ),
+      ['покемон детектив пикачу 2019']
+    );
+  });
+
+  it('still finds a title only one language uses', () => {
+    assert.deepEqual(queries('uk'), ['покемон детектив пікачу 2019']);
+  });
+
+  it('falls back to the primary title for a language with no title', () => {
+    assert.deepEqual(queries('sr'), ['pokemon detective pikachu 2019']);
   });
 });
