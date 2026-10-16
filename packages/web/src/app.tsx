@@ -33,7 +33,7 @@ import {
   ConfirmationDialog,
   useConfirmationDialog,
 } from '@aiostreams/ui/shared/confirmation-dialog';
-import { ThemeStyles } from './components/theme-styles';
+import { ServerStyles, ThemeStyles } from './components/theme-styles';
 import { WindowControls } from './components/window-controls';
 import { InputSetup } from './components/input-setup';
 
@@ -266,6 +266,7 @@ function Session({
 
   return (
     <ServerInfoProvider value={info}>
+      <ServerStyles />
       <AnimatePresence mode="wait">
         <motion.div
           key={ready ? `ready-${ready.user.Id}` : phase.kind}

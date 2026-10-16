@@ -8,6 +8,7 @@ import {
   THEME_PRESETS,
 } from '@aiostreams/ui/utils/palette';
 import { Button } from '@aiostreams/ui/button';
+import { Switch } from '@aiostreams/ui/switch';
 import { cn } from '@aiostreams/ui/core/styling';
 import {
   settings,
@@ -15,6 +16,7 @@ import {
   CUSTOM_CSS_OFF,
   MAX_CUSTOM_CSS,
 } from '../../lib/settings';
+import { useServerInfo } from '../../lib/server-info';
 import { SettingsCard } from '../../components/settings-card';
 import { Anchor } from '../../components/anchor';
 import { FOLLOWS_YOU, DOCS_URL } from './common';
@@ -26,6 +28,8 @@ const CSS_DOCS_URL = `${DOCS_URL}/reference/web-app-css`;
 export function ThemeSection() {
   const [colors, setColors] = useSetting(settings.theme.colors);
   const [css, setCss] = useSetting(settings.theme.customCss);
+  const [serverCss, setServerCss] = useSetting(settings.theme.serverCss);
+  const server = useServerInfo();
   const [draft, setDraft] = React.useState(css);
   const accent = colors.accent ?? DEFAULT_ACCENT;
   const background = colors.background ?? DEFAULT_BACKGROUND;
@@ -108,6 +112,15 @@ export function ThemeSection() {
         value={background}
         onValueChange={(value) => pick({ accent, background: value })}
       />
+      {server.css && (
+        <Switch
+          side="right"
+          label="Use this server's CSS"
+          help="This server styles the app for everyone. Your own CSS applies on top of it."
+          value={serverCss}
+          onValueChange={setServerCss}
+        />
+      )}
       <Textarea
         data-ui="custom-css-editor"
         label="Custom CSS"

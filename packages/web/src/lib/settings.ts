@@ -683,6 +683,7 @@ export const settings = {
       (raw) => raw ?? '',
       (value) => (value.trim() ? value.slice(0, MAX_CUSTOM_CSS) : undefined)
     ),
+    serverCss: syncedFlag('serverCss', true),
   },
   playback: {
     autoPlayFirst: syncedFlag('autoPlayFirst', false, [

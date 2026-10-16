@@ -28,6 +28,8 @@ export interface ServerInfo extends Branding {
   features: Partial<Record<Feature, number>>;
   /** The server's build, like `v2.35.0` or `nightly a1b2c3d4`. */
   version: string | null;
+  /** CSS for everyone on the server, under each person's own. */
+  css: string | null;
   /** Who its party relay admits besides its users, and the relay it suggests for the rest. */
   parties: { relay: PartyRelayMode; defaultRelay: string | null } | null;
 }
@@ -40,6 +42,7 @@ export const NO_SERVER_INFO: ServerInfo = {
   personal: false,
   features: {},
   version: null,
+  css: null,
   parties: null,
 };
 
@@ -51,6 +54,7 @@ interface PublicSystemInfo {
     pinSignIn?: boolean;
     personal?: boolean;
     features?: ServerInfo['features'];
+    css?: string | null;
     parties?: ServerInfo['parties'];
     version?: { tag?: string; channel?: string; commit?: string };
   };
@@ -96,6 +100,7 @@ export function useServerInfoQuery(client: JellyfinClient) {
         personal: data.aiostreams?.personal ?? false,
         features: data.aiostreams?.features ?? {},
         version: buildVersion(data.aiostreams?.version),
+        css: data.aiostreams?.css || null,
         parties: data.aiostreams?.parties ?? null,
       };
     },
