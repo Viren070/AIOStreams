@@ -1,7 +1,7 @@
 name: Web App Translations
 
-# Fails when text a person reads skips Lingui, or when the catalogs Weblate
-# translates are behind the code.
+# Fails when text a person reads skips Lingui, or when the source catalog and
+# the template Weblate starts languages from are behind the code.
 on:
   pull_request:
     paths: &web
@@ -41,10 +41,12 @@ jobs:
       - name: Extract messages
         run: pnpm -F @aiostreams/web i18n:extract
       - name: Check the catalogs are committed
+        # Other languages may trail the code; the next extract brings them up to date.
         run: |
-          if [ -n "$(git status --porcelain -- packages/web/src/locales)" ]; then
-            git status --short -- packages/web/src/locales
-            git diff --stat -- packages/web/src/locales
+          source=(packages/web/src/locales/en-GB.po packages/web/src/locales/messages.pot)
+          if [ -n "$(git status --porcelain -- "${source[@]}")" ]; then
+            git status --short -- "${source[@]}"
+            git diff --stat -- "${source[@]}"
             echo "::error::The catalogs are out of date. Run 'pnpm -F @aiostreams/web i18n:extract' and commit packages/web/src/locales."
             exit 1
           fi
