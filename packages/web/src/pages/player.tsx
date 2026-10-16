@@ -380,7 +380,7 @@ function useReporting(
     );
     current.start();
     reporter.current = current;
-    const onHide = () => void current.stop();
+    const onHide = () => void current.stop(true);
     window.addEventListener('pagehide', onHide);
     return () => {
       window.removeEventListener('pagehide', onHide);

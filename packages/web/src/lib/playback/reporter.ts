@@ -83,16 +83,20 @@ export class PlaybackReporter {
       .catch(() => {});
   }
 
-  stop(): Promise<void> {
+  /**
+   * `keepalive` lets the report leave while the page is closing, so it's asked
+   * only then: Chromium 69 (2020 Samsung TVs) refuses it on a cross-origin
+   * request, where the report is kept and sent later. A `pagehide` passes it,
+   * as Chromium 69 hides the page only after.
+   */
+  stop(keepalive = document.visibilityState === 'hidden'): Promise<void> {
     if (this.stopped) return Promise.resolve();
     this.stopped = true;
     if (this.timer) clearInterval(this.timer);
-    // keepalive lets the report leave while the page is closing. Only then:
-    // Chromium 69 (2020 Samsung TVs) refuses it on a cross-origin request.
     return this.client
       .request('POST', '/Sessions/Playing/Stopped', {
         body: this.body(),
-        keepalive: document.visibilityState === 'hidden',
+        keepalive,
       })
       .then(
         () => {},
