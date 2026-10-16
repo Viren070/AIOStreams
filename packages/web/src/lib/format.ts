@@ -149,13 +149,43 @@ export function episodeMarks(item: BaseItemDto): EpisodeMark[] {
 export const markLabel = (mark: EpisodeMark) =>
   mark === 'filler' ? t`Filler` : t`Recap`;
 
+/**
+ * Made on first use and kept until the language changes: building a formatter
+ * costs about 10 ms on a 2020 Samsung TV, which a list of episodes would pay
+ * for each one.
+ */
+function perLocale<T>(make: (locale: string) => T): () => T {
+  let locale: string | undefined;
+  let made: T | undefined;
+  return () => {
+    if (locale !== formatLocale()) made = make((locale = formatLocale()));
+    return made!;
+  };
+}
+const SHORT_DATE = perLocale(
+  (locale) =>
+    new Intl.DateTimeFormat(locale, {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    })
+);
+const AIR_TIME = perLocale(
+  (locale) =>
+    new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' })
+);
+const DAY_LABEL = perLocale(
+  (locale) =>
+    new Intl.DateTimeFormat(locale, {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    })
+);
+
 /** `20 Jan 2008` */
 export function shortDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(formatLocale(), {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
+  return SHORT_DATE().format(new Date(iso));
 }
 
 /**
@@ -176,19 +206,12 @@ export function airDay(iso: string): Date {
 
 export function airTime(iso: string): string | null {
   if (dateOnly(iso)) return null;
-  return new Date(iso).toLocaleTimeString(formatLocale(), {
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+  return AIR_TIME().format(new Date(iso));
 }
 
 /** `Sun, 28 Sep` */
 export function dayLabel(iso: string): string {
-  return airDay(iso).toLocaleDateString(formatLocale(), {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-  });
+  return DAY_LABEL().format(airDay(iso));
 }
 
 /** `today`, `tomorrow`, `in 6 days` or `in 3 weeks`, counted in calendar days. */
