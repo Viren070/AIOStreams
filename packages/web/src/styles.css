@@ -41,6 +41,20 @@ html.playing [data-ui='window-controls'][data-fullscreen] {
 html[data-platform='macos'] [data-ui='sidebar-logo'] {
   padding-top: 2.25rem;
 }
+/* Drawers on the window buttons' side open below them. */
+html[data-host='desktop']:not([data-platform='macos'])
+  .UI-Drawer__content[data-side='right'],
+html[data-platform='macos'] .UI-Drawer__content[data-side='left'] {
+  margin-top: 2.5rem;
+  height: calc(100% - 2.5rem);
+}
+@media (min-width: 1024px) {
+  html[data-host='desktop']:not([data-platform='macos'])
+    .UI-Drawer__content[data-side='right'],
+  html[data-platform='macos'] .UI-Drawer__content[data-side='left'] {
+    height: calc(100% - 2.5rem - 10px);
+  }
+}
 html[data-platform='macos'] [data-ui='player-top-bar'] {
   padding-left: 5.25rem;
 }
