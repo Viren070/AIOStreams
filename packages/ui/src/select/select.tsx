@@ -17,6 +17,7 @@ import {
   InputIcon,
   InputStyling,
 } from '../input';
+import { uiText } from '../core/text';
 
 /* -------------------------------------------------------------------------------------------------
  * Anatomy
@@ -223,7 +224,7 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
                 SelectAnatomy.root(),
                 className
               )}
-              aria-label={basicFieldProps.name || 'Select'}
+              aria-label={basicFieldProps.name || uiText.select}
               {...rest}
             >
               <SelectPrimitive.Value placeholder={placeholder} />

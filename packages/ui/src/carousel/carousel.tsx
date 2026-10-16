@@ -6,6 +6,7 @@ import { WheelGesturesPlugin } from 'embla-carousel-wheel-gestures';
 import * as React from 'react';
 import { IconButton } from '../button';
 import { cn, defineStyleAnatomy } from '../core/styling';
+import { uiText } from '../core/text';
 
 /* -------------------------------------------------------------------------------------------------
  * Anatomy
@@ -398,7 +399,7 @@ export const CarouselPrevious = React.forwardRef<
       disabled={!canScrollPrev}
       onClick={scrollPrev}
       tabIndex={-1}
-      aria-label="Previous"
+      aria-label={uiText.previous}
       icon={<Chevron path="m15 18-6-6 6-6" className={chevronIconClass} />}
       {...rest}
     />
@@ -427,7 +428,7 @@ export const CarouselNext = React.forwardRef<
       disabled={!canScrollNext}
       onClick={scrollNext}
       tabIndex={-1}
-      aria-label="Next"
+      aria-label={uiText.next}
       icon={<Chevron path="m9 18 6-6-6-6" className={chevronIconClass} />}
       {...rest}
     />

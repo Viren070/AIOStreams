@@ -27,6 +27,7 @@ import {
   InputStyling,
 } from '../input';
 import { Popover } from '../popover';
+import { uiText } from '../core/text';
 
 /* -------------------------------------------------------------------------------------------------
  * Anatomy
@@ -233,10 +234,11 @@ export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
 
     const counts: Record<string, number> = {};
     const options = rawOptions.map((option) => {
-      const textValue = (option.textValue || option.value)?.trim() || 'Unnamed';
+      const textValue =
+        (option.textValue || option.value)?.trim() || uiText.unnamed;
       const label =
         typeof option.label === 'string'
-          ? option.label?.trim() || 'Unnamed'
+          ? option.label?.trim() || uiText.unnamed
           : option.label;
       counts[textValue] = (counts[textValue] || 0) + 1;
       return {

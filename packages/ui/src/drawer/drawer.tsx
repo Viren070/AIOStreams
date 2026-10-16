@@ -6,6 +6,7 @@ import { CloseButton } from '../button';
 import { cn, ComponentAnatomy, defineStyleAnatomy } from '../core/styling';
 import { keepsModalOpen } from '../core/utils';
 import { useState } from 'react';
+import { uiText } from '../core/text';
 
 function useDrawerBodyBehavior(id: string, open: boolean | undefined) {
   const [openDrawers, setOpenDrawers] = useState<string[]>([]);
@@ -232,7 +233,7 @@ export function Drawer(props: DrawerProps) {
         >
           {!title && !description ? (
             <VisuallyHidden>
-              <DialogPrimitive.Title>Drawer</DialogPrimitive.Title>
+              <DialogPrimitive.Title>{uiText.drawer}</DialogPrimitive.Title>
             </VisuallyHidden>
           ) : (
             <div className={cn(DrawerAnatomy.header(), headerClass)}>

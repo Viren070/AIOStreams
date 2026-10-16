@@ -3,6 +3,7 @@ import { colord } from 'colord';
 import { HexColorPicker } from 'react-colorful';
 import { Popover } from '../popover';
 import { TextInput, type TextInputProps } from '../text-input';
+import { uiText } from '../core/text';
 
 export type ColorInputProps = Omit<
   TextInputProps,
@@ -41,7 +42,7 @@ export const ColorInput = React.forwardRef<HTMLInputElement, ColorInputProps>(
             trigger={
               <button
                 type="button"
-                aria-label="Pick a colour"
+                aria-label={uiText.pickColour}
                 className="size-7 cursor-pointer rounded-[--radius-md] border border-white/20"
                 style={{ backgroundColor: value }}
               />

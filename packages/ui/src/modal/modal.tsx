@@ -5,6 +5,7 @@ import * as React from 'react';
 import { CloseButton } from '../button';
 import { cn, ComponentAnatomy, defineStyleAnatomy } from '../core/styling';
 import { keepsModalOpen } from '../core/utils';
+import { uiText } from '../core/text';
 
 /* -------------------------------------------------------------------------------------------------
  * Anatomy
@@ -169,7 +170,7 @@ export function Modal(props: ModalProps) {
             >
               {!title && !description ? (
                 <VisuallyHidden>
-                  <DialogPrimitive.Title>Dialog</DialogPrimitive.Title>
+                  <DialogPrimitive.Title>{uiText.dialog}</DialogPrimitive.Title>
                 </VisuallyHidden>
               ) : (
                 <div className={cn(ModalAnatomy.header(), headerClass)}>

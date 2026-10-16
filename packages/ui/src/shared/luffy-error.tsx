@@ -1,6 +1,7 @@
 import { Button } from '../button';
 import { cn } from '../core/styling';
 import React from 'react';
+import { uiText } from '../core/text';
 
 interface LuffyErrorProps {
   children?: React.ReactNode;
@@ -15,7 +16,7 @@ export const LuffyError: React.FC<LuffyErrorProps> = (props) => {
     children,
     reset,
     className,
-    title = 'Oops!',
+    title = uiText.oops,
     showRefreshButton = false,
     ...rest
   } = props;
@@ -52,7 +53,7 @@ export const LuffyError: React.FC<LuffyErrorProps> = (props) => {
                 intent="warning-subtle"
                 onClick={() => window.location.reload()}
               >
-                Retry
+                {uiText.retry}
               </Button>
             )}
             {!!reset && (
@@ -61,7 +62,7 @@ export const LuffyError: React.FC<LuffyErrorProps> = (props) => {
                 intent="warning-subtle"
                 onClick={reset}
               >
-                Retry
+                {uiText.retry}
               </Button>
             )}
           </div>
