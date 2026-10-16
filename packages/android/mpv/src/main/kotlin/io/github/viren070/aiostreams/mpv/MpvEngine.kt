@@ -306,6 +306,8 @@ class MpvEngine(private val context: Context) : Engine {
                 MPV.mpvEvent.MPV_EVENT_FILE_LOADED -> {
                     calls.execute(::routeDolbyVision)
                     updateFilters { loaded() }
+                    // mpv reports the tracks it picked only after this event, which the page re-picks on.
+                    for (name in listOf("aid", "sid")) mpv.getPropertyString(name)?.let { report(name, JsonPrimitive(it)) }
                     listener.onEvent("loaded")
                 }
                 MPV.mpvEvent.MPV_EVENT_PLAYBACK_RESTART -> listener.onEvent("restart")
