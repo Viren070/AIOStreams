@@ -63,6 +63,21 @@ export function posterUrl(
   return image(client, item.Id, 'Primary', item.ImageTags?.Primary, size);
 }
 
+/** A card's images, best first: a landscape card takes the landscape art made for it before the poster. */
+export function cardImages(
+  client: JellyfinClient,
+  item: BaseItemDto,
+  shape: 'poster' | 'landscape' | 'square',
+  size?: Size
+): string[] {
+  return [
+    shape === 'landscape'
+      ? image(client, item.Id, 'Thumb', item.ImageTags?.Thumb, size)
+      : null,
+    posterUrl(client, item, size),
+  ].filter((url): url is string => !!url);
+}
+
 /** A landscape still: an episode's own, else a thumb or backdrop. */
 export function landscapeUrl(
   client: JellyfinClient,

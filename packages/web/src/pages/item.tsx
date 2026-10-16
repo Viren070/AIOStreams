@@ -42,6 +42,7 @@ import {
 } from '../lib/queries';
 import {
   backdropUrls,
+  cardImages,
   cardShape,
   landscapeUrls,
   logoUrl,
@@ -1001,7 +1002,14 @@ function SubCollections({ parent }: { parent: BaseItemDto }) {
           <PosterCard
             href={href(itemPath(item))}
             shape={landscape ? 'landscape' : cardShape(item)}
-            image={(width) => posterUrl(client, item, { maxWidth: width })}
+            image={(width) =>
+              cardImages(
+                client,
+                item,
+                landscape ? 'landscape' : cardShape(item),
+                { maxWidth: width }
+              )
+            }
             title={item.Name ?? ''}
             subtitle={itemSubtitle(item)}
             watched={item.UserData?.Played}

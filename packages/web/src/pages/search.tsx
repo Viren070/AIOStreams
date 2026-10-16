@@ -20,7 +20,7 @@ import type { JellyfinClient } from '../lib/client';
 import { useSearch, useSearchSuggestions } from '../lib/queries';
 import { settings, useSetting } from '../lib/settings';
 import { useSearchHistory } from '../lib/search-history';
-import { cardShape, posterUrl } from '../lib/images';
+import { cardImages, cardShape } from '../lib/images';
 import { itemSubtitle, progressOf } from '../lib/format';
 import { href, itemPath, navigate, to } from '../lib/paths';
 import type { BaseItemDto } from '../lib/types';
@@ -288,7 +288,14 @@ function ResultRow({
           <PosterCard
             href={href(itemPath(item))}
             shape={landscape ? 'landscape' : cardShape(item)}
-            image={(width) => posterUrl(client, item, { maxWidth: width })}
+            image={(width) =>
+              cardImages(
+                client,
+                item,
+                landscape ? 'landscape' : cardShape(item),
+                { maxWidth: width }
+              )
+            }
             title={item.Name ?? ''}
             subtitle={itemSubtitle(item)}
             watched={item.UserData?.Played}
