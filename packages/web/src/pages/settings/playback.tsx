@@ -36,6 +36,7 @@ import {
 } from '../../lib/settings';
 import { useFeature } from '../../lib/server-info';
 import { SettingsCard, SettingsRow } from '../../components/settings-card';
+import { BadgesRow, QuickFiltersRow } from '../../components/version-settings';
 import { onDevice, followsYou } from './common';
 
 const nextPromptHelp = (prompt: NextPrompt) =>
@@ -146,6 +147,8 @@ export function PlaybackSection() {
           value={autoPlay}
           onValueChange={setAutoPlay}
         />
+        <QuickFiltersRow />
+        <BadgesRow />
       </SettingsCard>
       <SettingsCard
         name="next-episode"

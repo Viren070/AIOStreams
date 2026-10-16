@@ -11,12 +11,26 @@ msgstr ""
 msgid "(you)"
 msgstr ""
 
+#. placeholder {0}: badges.length
+#: src/components/version-settings.tsx
+msgid "{0, plural, one {# badge of your own} other {# badges of your own}}"
+msgstr ""
+
+#. placeholder {0}: links.length
+#: src/components/version-settings.tsx
+msgid "{0, plural, one {# pack} other {# packs}}"
+msgstr ""
+
 #: src/pages/sign-in.tsx
 msgid "{address} did not answer. Check that it is running, then try again."
 msgstr ""
 
 #: src/pages/history.tsx
 msgid "{cleared, plural, one {Removed # title from the history} other {Removed # titles from the history}}"
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "{count, plural, one {# badge} other {# badges}}"
 msgstr ""
 
 #: src/pages/settings/playback.tsx
@@ -29,6 +43,14 @@ msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "{count, plural, one {# watching · on {on}} other {# watching · on {on}}}"
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "{count, plural, one {Added # badge} other {Added # badges}}"
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "{count, plural, one {Added # quick filter} other {Added # quick filters}}"
 msgstr ""
 
 #: src/lib/downloads/index.ts
@@ -141,6 +163,10 @@ msgstr ""
 
 #: src/components/version-picker.tsx
 msgid "{others, plural, one {Pick the version to download. The other episode gets the same release where it has it.} other {Pick the version to download. The other # episodes get the same release where they have it.}}"
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "{packs} and {own}"
 msgstr ""
 
 #: src/pages/settings/playback.tsx
@@ -264,6 +290,10 @@ msgstr ""
 msgid "7.1 surround"
 msgstr ""
 
+#: src/components/version-settings.tsx
+msgid "A badge shows on each version whose text matches its pattern: the name and description your formatter writes, the file name, and the tags read from it."
+msgstr ""
+
 #: src/components/party/party-sheet.tsx
 msgid "A code is looked up on the relay picked above."
 msgstr ""
@@ -274,6 +304,10 @@ msgstr ""
 
 #: src/pages/settings/cache.tsx
 msgid "A month"
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "A regular expression. Case never matters."
 msgstr ""
 
 #: src/components/party/party-sheet.tsx
@@ -329,8 +363,20 @@ msgstr ""
 msgid "Activity"
 msgstr ""
 
+#: src/components/version-settings.tsx
+msgid "Add"
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "Add a badge"
+msgstr ""
+
 #: src/components/player/options.tsx
 msgid "Add a file…"
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "Add a filter"
 msgstr ""
 
 #: src/components/shortcut-settings.tsx
@@ -392,6 +438,7 @@ msgid "Airs {until}"
 msgstr ""
 
 #: src/components/kind-tabs.tsx
+#: src/components/version-picker.tsx
 #: src/pages/discover.tsx
 #: src/pages/favourites.tsx
 msgid "All"
@@ -399,6 +446,10 @@ msgstr ""
 
 #: src/pages/item.tsx
 msgid "All episodes"
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "All fields"
 msgstr ""
 
 #: src/lib/downloads/index.ts
@@ -553,6 +604,7 @@ msgstr ""
 msgid "Back button"
 msgstr ""
 
+#: src/components/version-settings.tsx
 #: src/pages/settings/interface.tsx
 #: src/pages/settings/subtitles.tsx
 #: src/pages/settings/theme.tsx
@@ -561,6 +613,10 @@ msgstr ""
 
 #: src/lib/input/keys.ts
 msgid "Backspace"
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "Badges"
 msgstr ""
 
 #: src/pages/settings/interface.tsx
@@ -580,8 +636,20 @@ msgstr ""
 msgid "Bigger subtitles"
 msgstr ""
 
+#: src/lib/i18n.ts
+msgid "Black"
+msgstr ""
+
+#: src/lib/i18n.ts
+msgid "Blue"
+msgstr ""
+
 #: src/pages/settings/subtitles.tsx
 msgid "Bold"
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "Border"
 msgstr ""
 
 #: src/pages/person.tsx
@@ -666,6 +734,7 @@ msgstr ""
 msgid "Can’t reach the server"
 msgstr ""
 
+#: src/components/version-settings.tsx
 #: src/lib/i18n.ts
 #: src/pages/downloads.tsx
 msgid "Cancel"
@@ -699,6 +768,10 @@ msgstr ""
 
 #: src/components/input-setup.tsx
 msgid "Change shortcuts"
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "Change these on a phone, a computer or in a browser."
 msgstr ""
 
 #: src/pages/settings/apps.tsx
@@ -844,8 +917,16 @@ msgstr ""
 msgid "Controls"
 msgstr ""
 
+#: src/components/version-settings.tsx
+msgid "Copied as JSON"
+msgstr ""
+
 #: src/pages/settings/apps.tsx
 msgid "Copy"
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "Copy as JSON"
 msgstr ""
 
 #: src/components/party/party-sheet.tsx
@@ -886,6 +967,7 @@ msgstr ""
 msgid "Could not copy the link"
 msgstr ""
 
+#: src/components/version-settings.tsx
 #: src/pages/settings/apps.tsx
 msgid "Could not copy them"
 msgstr ""
@@ -1032,6 +1114,10 @@ msgstr ""
 msgid "Custom link"
 msgstr ""
 
+#: src/lib/i18n.ts
+msgid "Cyan"
+msgstr ""
+
 #: src/pages/history.tsx
 msgid "Date not known"
 msgstr ""
@@ -1052,6 +1138,9 @@ msgstr ""
 msgid "Deep purple"
 msgstr ""
 
+#. No colour of its own
+#: src/components/version-settings.tsx
+#: src/lib/i18n.ts
 #: src/pages/settings/subtitles.tsx
 #: src/pages/settings/theme.tsx
 msgid "Default"
@@ -1179,6 +1268,7 @@ msgid "Donate to Me"
 msgstr ""
 
 #: src/components/player/subtitle-sync.tsx
+#: src/components/version-settings.tsx
 msgid "Done"
 msgstr ""
 
@@ -1252,6 +1342,14 @@ msgstr ""
 #. An episode number, as in E04
 #: src/lib/format.ts
 msgid "E{e}"
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "Each filter shows as a pill above the version list. Its search is words that must all appear, or a regular expression between slashes, such as /2160p|4k/. Case never matters. Pick fields to search only those parts of a version."
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "Edit"
 msgstr ""
 
 #: src/pages/settings/playback.tsx
@@ -1372,6 +1470,10 @@ msgstr ""
 msgid "Featured on home"
 msgstr ""
 
+#: src/components/version-settings.tsx
+msgid "Fields"
+msgstr ""
+
 #: src/lib/format.ts
 msgid "Filler"
 msgstr ""
@@ -1490,6 +1592,18 @@ msgstr ""
 msgid "Go to show"
 msgstr ""
 
+#: src/lib/i18n.ts
+msgid "Green"
+msgstr ""
+
+#: src/lib/i18n.ts
+msgid "Grey"
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "Group"
+msgstr ""
+
 #: src/pages/history.tsx
 msgid "Group by day"
 msgstr ""
@@ -1593,12 +1707,24 @@ msgstr ""
 msgid "How the tabs sit over the page: as floating pills, on a bar across the top, or on nothing but a fade down from the top edge."
 msgstr ""
 
+#: src/components/version-settings.tsx
+msgid "How these work"
+msgstr ""
+
 #: src/pages/settings/about.tsx
 msgid "How to use the app and what each setting does."
 msgstr ""
 
 #: src/lib/subtitles/style.ts
 msgid "Huge"
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "Image"
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "Import"
 msgstr ""
 
 #: src/lib/discord.ts
@@ -1720,6 +1846,10 @@ msgstr ""
 msgid "Keys, remotes and gamepads"
 msgstr ""
 
+#: src/components/version-settings.tsx
+msgid "Label"
+msgstr ""
+
 #: src/pages/settings/audio.tsx
 #: src/pages/settings/index.tsx
 #: src/pages/settings/interface.tsx
@@ -1788,6 +1918,10 @@ msgstr ""
 msgid "Lets the TV's decoder keep picture and sound in step itself, which plays 4K and HDR more smoothly on some TVs. Turn it off if video stutters or stays black."
 msgstr ""
 
+#: src/components/version-settings.tsx
+msgid "Link a pack someone shares, in this app's format or the one Fusion and Nuvio use. It stays up to date with its author's changes."
+msgstr ""
+
 #: src/pages/settings/interface.tsx
 msgid "Liquid glass"
 msgstr ""
@@ -1806,6 +1940,10 @@ msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "Loading"
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "Loading…"
 msgstr ""
 
 #: src/components/player/controls.tsx
@@ -1827,6 +1965,10 @@ msgstr ""
 #: src/components/player/options.tsx
 #: src/lib/input/actions.ts
 msgid "Lower subtitles"
+msgstr ""
+
+#: src/lib/i18n.ts
+msgid "Magenta"
 msgstr ""
 
 #: src/pages/settings/audio.tsx
@@ -1940,6 +2082,14 @@ msgstr ""
 msgid "Move {name} up"
 msgstr ""
 
+#: src/components/version-settings.tsx
+msgid "Move down"
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "Move up"
+msgstr ""
+
 #: src/components/shortcut-settings.tsx
 msgid "Moves between what's on screen, and to Search and Home. A gamepad's d-pad and left stick move too."
 msgstr ""
@@ -1979,6 +2129,10 @@ msgstr ""
 
 #: src/lib/input/keys.ts
 msgid "Mute key"
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "Name"
 msgstr ""
 
 #: src/pages/settings/interface.tsx
@@ -2057,6 +2211,10 @@ msgstr ""
 
 #: src/pages/settings/apps.tsx
 msgid "Nightly builds come from every change, ahead of releases, and can break."
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "No badges match."
 msgstr ""
 
 #: src/components/no-catalogs.tsx
@@ -2176,6 +2334,7 @@ msgstr ""
 msgid "Nothing marked as a favourite yet."
 msgstr ""
 
+#: src/components/version-settings.tsx
 #: src/pages/discover.tsx
 #: src/pages/settings/audio.tsx
 #: src/pages/settings/interface.tsx
@@ -2343,6 +2502,18 @@ msgstr ""
 msgid "Opens versions in {target}. It can't tell this app where you stopped, so you mark what you watched yourself."
 msgstr ""
 
+#: src/components/version-settings.tsx
+msgid "Optional. An image address, shown in place of the label."
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "Optional. Match only these parts of a version, named as the formatter names them, such as seMatched for the stream expression it matched."
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "Optional. Only the first badge of a group that matches shows."
+msgstr ""
+
 #: src/lib/input/actions.ts
 msgid "Options"
 msgstr ""
@@ -2395,6 +2566,14 @@ msgstr ""
 msgid "Over the video"
 msgstr ""
 
+#: src/components/version-settings.tsx
+msgid "Pack address"
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "Packs"
+msgstr ""
+
 #. A button on a gamepad, as in Pad A
 #: src/lib/input/keys.ts
 msgid "Pad {button}"
@@ -2438,6 +2617,18 @@ msgstr ""
 
 #: src/pages/settings/cache.tsx
 msgid "Past this, what was used longest ago goes first."
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "Paste badges as JSON to add them to yours, or paste a pack's address to link it."
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "Paste quick filters as JSON, or the address of a file with them, to add them to these."
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "Pattern"
 msgstr ""
 
 #: src/components/player/controls.tsx
@@ -2505,6 +2696,10 @@ msgstr ""
 
 #: src/components/player/controls.tsx
 msgid "Picture: {label}"
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "Pills above the version list that each apply a search you save, such as one for 4K versions."
 msgstr ""
 
 #: src/pages/sign-in.tsx
@@ -2678,6 +2873,7 @@ msgstr ""
 msgid "Press a key"
 msgstr ""
 
+#: src/components/version-settings.tsx
 #: src/pages/settings/subtitles.tsx
 msgid "Preview"
 msgstr ""
@@ -2730,6 +2926,11 @@ msgstr ""
 
 #: src/pages/sign-in.tsx
 msgid "Quick Connect is unavailable: {message}"
+msgstr ""
+
+#: src/components/version-picker.tsx
+#: src/components/version-settings.tsx
+msgid "Quick filters"
 msgstr ""
 
 #: src/pages/settings/interface.tsx
@@ -2785,6 +2986,10 @@ msgstr ""
 msgid "Reconnecting…"
 msgstr ""
 
+#: src/lib/i18n.ts
+msgid "Red"
+msgstr ""
+
 #: src/components/no-catalogs.tsx
 msgid "Refresh"
 msgstr ""
@@ -2810,6 +3015,7 @@ msgstr ""
 msgid "Remember picks per show"
 msgstr ""
 
+#: src/components/version-settings.tsx
 #: src/pages/search.tsx
 #: src/pages/servers.tsx
 msgid "Remove"
@@ -2958,6 +3164,7 @@ msgstr ""
 msgid "Sans serif"
 msgstr ""
 
+#: src/components/version-settings.tsx
 #: src/pages/settings/apps.tsx
 msgid "Save"
 msgstr ""
@@ -3027,6 +3234,7 @@ msgid "SDH, with sounds described"
 msgstr ""
 
 #: src/components/layout.tsx
+#: src/components/version-settings.tsx
 #: src/lib/input/actions.ts
 #: src/pages/discover.tsx
 #: src/pages/search.tsx
@@ -3346,6 +3554,10 @@ msgstr ""
 msgid "Small"
 msgstr ""
 
+#: src/components/version-settings.tsx
+msgid "Small labels on each version for what it has, from packs you link or badges you make."
+msgstr ""
+
 #: src/components/player/options.tsx
 #: src/lib/input/actions.ts
 msgid "Smaller subtitles"
@@ -3595,8 +3807,13 @@ msgstr ""
 msgid "Tap when you hear a line and when its subtitle shows, in either order."
 msgstr ""
 
+#: src/components/version-settings.tsx
 #: src/pages/settings/subtitles.tsx
 msgid "Text"
+msgstr ""
+
+#: src/components/version-badges.tsx
+msgid "That address answered {status}."
 msgstr ""
 
 #: src/pages/sign-in.tsx
@@ -3607,8 +3824,20 @@ msgstr ""
 msgid "That file is too big"
 msgstr ""
 
+#: src/components/version-settings.tsx
+msgid "That has no badges this app can read."
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "That has no quick filters this app can read."
+msgstr ""
+
 #: src/lib/servers.ts
 msgid "That is not a valid address."
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "That is not a valid regular expression."
 msgstr ""
 
 #: src/lib/party/party.ts
@@ -3621,6 +3850,10 @@ msgstr ""
 
 #: src/lib/party/party.ts
 msgid "That party is not letting anyone new in."
+msgstr ""
+
+#: src/components/version-picker.tsx
+msgid "That pattern is not a valid regular expression."
 msgstr ""
 
 #: src/lib/party/party.ts
@@ -3781,8 +4014,16 @@ msgstr ""
 msgid "Theme"
 msgstr ""
 
+#: src/components/version-badges.tsx
+msgid "There are no badges this app can read at that address."
+msgstr ""
+
 #: src/router.tsx
 msgid "There is nothing here"
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "These come before the packs' badges. Badges that share a group are alternatives: only the first that matches shows."
 msgstr ""
 
 #: src/components/player/subtitle-sync.tsx
@@ -3959,6 +4200,10 @@ msgstr ""
 msgid "Try starting the party again."
 msgstr ""
 
+#: src/components/version-settings.tsx
+msgid "Try them"
+msgstr ""
+
 #: src/pages/settings/playback.tsx
 msgid "Tunneled playback"
 msgstr ""
@@ -3975,6 +4220,10 @@ msgstr ""
 msgid "Two weeks"
 msgstr ""
 
+#: src/components/version-settings.tsx
+msgid "Type a release name to see the badges it gets."
+msgstr ""
+
 #: src/pages/settings/subtitles.tsx
 msgid "Typewriter"
 msgstr ""
@@ -3989,6 +4238,10 @@ msgstr ""
 
 #: src/pages/item.tsx
 msgid "Undrop show"
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "Unfinished"
 msgstr ""
 
 #: src/components/player/volume.tsx
@@ -4365,6 +4618,10 @@ msgstr ""
 msgid "While you're in it"
 msgstr ""
 
+#: src/lib/i18n.ts
+msgid "White"
+msgstr ""
+
 #: src/pages/settings/index.tsx
 msgid "Who you are signed in as"
 msgstr ""
@@ -4393,12 +4650,20 @@ msgstr ""
 msgid "With {names}"
 msgstr ""
 
+#: src/components/version-settings.tsx
+msgid "Words or /pattern/"
+msgstr ""
+
 #: src/components/people.tsx
 msgid "Writer"
 msgstr ""
 
 #: src/pages/settings/interface.tsx
 msgid "Year"
+msgstr ""
+
+#: src/lib/i18n.ts
+msgid "Yellow"
 msgstr ""
 
 #: src/components/layout.tsx
@@ -4411,6 +4676,10 @@ msgstr ""
 
 #: src/pages/settings/playback.tsx
 msgid "Your {name}"
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "Your badges"
 msgstr ""
 
 #: src/lib/playback/player-choice.ts

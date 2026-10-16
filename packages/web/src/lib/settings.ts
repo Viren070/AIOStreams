@@ -3,6 +3,8 @@ import type { JellyfinClient } from './client';
 import { storage } from './storage';
 import { CACHE_CATEGORIES } from './cache/store';
 import { appBridge } from './hosts/shell/bridge';
+import { readQuickFilters, type QuickFilter } from './versions';
+import { readBadgeSettings, type BadgeSettings } from './badges';
 
 /** A source the home page features from: `resume`, `next-up` or `view:<library id>`. */
 export type FeaturedSource = string;
@@ -698,6 +700,19 @@ export const settings = {
     ]),
     segment,
     segmentActions: group(segment),
+    quickFilters: synced<QuickFilter[]>(
+      'versionFilters',
+      readQuickFilters,
+      (value) => (value.length ? JSON.stringify(value) : undefined)
+    ),
+    badges: synced<BadgeSettings>(
+      'versionBadges',
+      readBadgeSettings,
+      (value) =>
+        value.links.length || value.badges.length
+          ? JSON.stringify(value)
+          : undefined
+    ),
   },
   next: {
     prompt: syncedChoice<NextPrompt>('nextPrompt', NEXT_PROMPTS, 'credits', [

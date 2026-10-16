@@ -59,7 +59,10 @@ import { backdropUrl, landscapeUrl } from '../lib/images';
 import { itemPath, navigate, to } from '../lib/paths';
 import { settings, useSetting } from '../lib/settings';
 import type { BaseItemDto, SourceInfo } from '../lib/types';
+import { compileQuery, versionText } from '../lib/versions';
+import { matchBadges } from '../lib/badges';
 import { CachedImage } from './cached-image';
+import { BadgeChip, useBadges } from './version-badges';
 
 interface Request {
   item: BaseItemDto;
@@ -286,14 +289,8 @@ export function VersionPickerProvider({
 
 const FILTER_FROM = 8;
 
-function sourceText(source: SourceInfo): string {
-  return [
-    source.aiostreams?.name || source.Name,
-    source.aiostreams?.description,
-  ]
-    .filter(Boolean)
-    .join('\n');
-}
+/** Versions drawn at a time; more come as the list nears its end. */
+const PAGE = 40;
 
 function Versions({
   request,
@@ -324,17 +321,46 @@ function Versions({
   const download = request.download;
   const [startMs, setStartMs] = React.useState(request.startMs);
   const [filter, setFilter] = React.useState('');
-  const sources = playableSources(info.data).filter(
-    (s) => !download || downloadable(s)
+  const [quickFilters] = useSetting(settings.playback.quickFilters);
+  const [quickName, setQuickName] = React.useState<string | null>(null);
+  const badges = useBadges();
+  const sources = React.useMemo(
+    () =>
+      playableSources(info.data).filter((s) => !download || downloadable(s)),
+    [info.data, download]
   );
+  const texts = React.useMemo(
+    () => new Map(sources.map((s) => [s, versionText(s)])),
+    [sources]
+  );
+  const shownBadges = React.useMemo(
+    () => new Map(sources.map((s) => [s, matchBadges(texts.get(s)!, badges)])),
+    [sources, texts, badges]
+  );
+  const quick = React.useMemo(
+    () =>
+      quickFilters.map((q) => {
+        const test = compileQuery(q.query, q.fields);
+        const count = test
+          ? sources.filter((s) => test(texts.get(s)!)).length
+          : 0;
+        return { ...q, test, count };
+      }),
+    [quickFilters, sources, texts]
+  );
+  const chosen = quick.find((q) => q.name === quickName);
+  const typed = React.useMemo(() => compileQuery(filter), [filter]);
+  const filtered = !!filter.trim() || !!chosen;
   const notices = noticeSources(info.data);
-  const terms = filter.toLowerCase().split(/\s+/).filter(Boolean);
-  const shown = terms.length
-    ? sources.filter((s) => {
-        const text = sourceText(s).toLowerCase();
-        return terms.every((t) => text.includes(t));
-      })
-    : sources;
+  const shown = sources.filter((s) => {
+    const text = texts.get(s)!;
+    return (!chosen || !!chosen.test?.(text)) && !!typed?.(text);
+  });
+  const pageKey = `${quickName ?? ''}|${filter}`;
+  const [paged, setPaged] = React.useState({ key: pageKey, limit: PAGE });
+  const limit = paged.key === pageKey ? paged.limit : PAGE;
+  const partial = limit < shown.length;
+  const more = React.useRef<HTMLDivElement>(null);
   const art =
     backdropUrl(client, item, { maxWidth: 896 }) ??
     landscapeUrl(client, item, { maxWidth: 896 });
@@ -353,11 +379,15 @@ function Versions({
     update();
     return () => observer.disconnect();
   }, []);
-  // Keys start on the actions above while the versions load, then on the first version.
+  // Keys start on the actions above while the versions load, then once on the
+  // first version, so a filter changing what shows leaves them where they are.
   const firstShown = shown[0]?.Id;
+  const placed = React.useRef(false);
   React.useEffect(() => {
+    if (!firstShown || placed.current) return;
     // After the dialog puts focus on its first button.
     const timer = setTimeout(() => {
+      placed.current = true;
       const list = listRef.current;
       const at = keyboardFocus();
       const first = list?.querySelector<HTMLElement>('[data-ui=version-play]');
@@ -366,6 +396,21 @@ function Versions({
     });
     return () => clearTimeout(timer);
   }, [firstShown]);
+  React.useEffect(() => {
+    const list = listRef.current;
+    const end = more.current;
+    if (!partial || !list || !end) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[entries.length - 1].isIntersecting)
+          setPaged({ key: pageKey, limit: limit + PAGE });
+      },
+      // eslint-disable-next-line lingui/no-unlocalized-strings -- a root margin
+      { root: list, rootMargin: '0px 0px 150% 0px' }
+    );
+    observer.observe(end);
+    return () => observer.disconnect();
+  }, [partial, limit, pageKey]);
 
   const start = (source: SourceInfo) => {
     if (download) {
@@ -434,6 +479,50 @@ function Versions({
           })
         : t`Pick the version to download.`}
     </p>
+  );
+  const quickRow = !!quick.length && !!sources.length && (
+    <div
+      data-ui="versions-quick"
+      data-nav-group
+      data-nav-enter="[role=tab][aria-selected=true]"
+      role="tablist"
+      aria-label={t`Quick filters`}
+      className="-m-1 flex gap-1.5 overflow-x-auto p-1 [scrollbar-width:none]"
+    >
+      <Button
+        data-ui="versions-quick-filter"
+        role="tab"
+        size="sm"
+        intent={chosen ? 'gray-subtle' : 'white'}
+        className="flex-none rounded-full"
+        aria-selected={!chosen}
+        tabIndex={chosen ? -1 : 0}
+        onFocus={() => setQuickName(null)}
+        onClick={() => setQuickName(null)}
+      >
+        <Trans>All</Trans>
+      </Button>
+      {quick.map((q) => (
+        <Button
+          key={q.name}
+          data-ui="versions-quick-filter"
+          role="tab"
+          size="sm"
+          intent={chosen === q ? 'white' : 'gray-subtle'}
+          className="flex-none rounded-full"
+          aria-selected={chosen === q}
+          tabIndex={chosen === q ? 0 : -1}
+          data-count={q.count}
+          data-empty={!q.count || undefined}
+          disabled={!q.count && chosen !== q}
+          onFocus={() => setQuickName(q.name)}
+          onClick={() => setQuickName(q.name)}
+        >
+          {q.name}
+          <span className="ms-1.5 opacity-60">{q.count}</span>
+        </Button>
+      ))}
+    </div>
   );
   const resumeAt = clock(request.startMs);
   // A version switched to while playing carries on where it was.
@@ -505,6 +594,7 @@ function Versions({
             )}
             {searchAgain}
           </div>
+          {quickRow}
           {downloadHint}
           {resumeToggle}
         </div>
@@ -548,6 +638,7 @@ function Versions({
               className="rounded-full"
             />
           )}
+          {quickRow}
         </div>
       )}
 
@@ -592,11 +683,15 @@ function Versions({
         )}
         {!!sources.length && !shown.length && (
           <p className="py-6 text-center text-sm text-[--muted]">
-            <Trans>No versions match.</Trans>
+            {typed ? (
+              <Trans>No versions match.</Trans>
+            ) : (
+              <Trans>That pattern is not a valid regular expression.</Trans>
+            )}
           </p>
         )}
 
-        {shown.map((source) => {
+        {shown.slice(0, limit).map((source) => {
           const link = directUrl(client, item.Id!, source);
           const actions = [
             ...(!download && downloadable(source)
@@ -634,7 +729,7 @@ function Versions({
               data-ui="version"
               data-playing={source.Id === request.playing || undefined}
               data-cached={source.aiostreams?.cached || undefined}
-              className="group/version relative flex items-start rounded-xl border border-white/5 bg-white/[0.03] transition-colors hover:border-white/10 hover:bg-white/[0.06]"
+              className="group/version relative flex items-start rounded-xl border border-white/5 bg-white/[0.03] transition-colors [contain-intrinsic-size:auto_7rem] [content-visibility:auto] hover:border-white/10 hover:bg-white/[0.06]"
             >
               <button
                 type="button"
@@ -692,6 +787,19 @@ function Versions({
                       )}
                     >
                       {source.aiostreams.description}
+                    </span>
+                  )}
+                  {!!shownBadges.get(source)?.length && (
+                    <span
+                      data-ui="version-badges"
+                      className="flex flex-wrap gap-1 pt-1"
+                    >
+                      {shownBadges.get(source)!.map((badge) => (
+                        <BadgeChip
+                          key={badge.image ?? badge.label}
+                          badge={badge}
+                        />
+                      ))}
                     </span>
                   )}
                 </span>
@@ -761,7 +869,9 @@ function Versions({
           );
         })}
 
-        {!terms.length &&
+        {partial && <div ref={more} aria-hidden className="h-px" />}
+        {!filtered &&
+          !partial &&
           notices.map((notice) => <Notice key={notice.Id} notice={notice} />)}
       </div>
     </>
