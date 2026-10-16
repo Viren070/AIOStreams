@@ -83,15 +83,9 @@ function judge(source: SourceInfo): string | null {
   const videoCodec = VIDEO[video?.Codec?.toLowerCase() ?? ''];
   if (videoCodec && !decodes('video', videoCodec))
     return video!.Codec!.toUpperCase();
-  // The server reads an "Atmos" tag alone as TrueHD, though Atmos rides on DD+
-  // as often, and on almost every web release: a TrueHD it can't vouch for counts
-  // as unknown.
-  const atmosOnly =
-    !!tags?.audioTags.includes('Atmos') && !tags.audioTags.includes('TrueHD');
   const probed = streams
     .filter((s) => s.Type === 'Audio' && s.Codec)
-    .map((s) => s.Codec!.toLowerCase())
-    .filter((c) => !(atmosOnly && c === 'truehd'));
+    .map((s) => s.Codec!.toLowerCase());
   const audio = (
     probed.length
       ? probed

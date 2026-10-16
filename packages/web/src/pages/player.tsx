@@ -276,19 +276,15 @@ function useSwitchVersion(
 const triedVersions = new Map<string, { at: number; keys: Set<string> }>();
 /** How long a run of failed versions is remembered, so a later try starts afresh. */
 const TRIED_MS = 10 * 60_000;
+// The server's own id holds when a fresh list numbers versions anew.
 const versionKey = (s: SourceInfo) => s.aiostreams?.id ?? s.Id ?? '';
-// A fresh version list can number versions anew; the server's own id and the name hold.
-const sameVersion = (a: SourceInfo, b: SourceInfo) =>
-  a.Id === b.Id ||
-  versionKey(a) === versionKey(b) ||
-  (!!a.Name && a.Name === b.Name);
 
 /**
  * A version that fails before it starts hands over to the next in `versions`,
- * the list the player started from, which puts versions a TV can't decode
- * last (`settings.playback.failover`). Asking for the list anew could search
- * every indexer again. Not in a party, whose version everyone shares, nor
- * for a download.
+ * the list the player started from, which lists those a TV can decode first
+ * (`settings.playback.failover`). The next version's page asks the server for
+ * that one, which answers from the list it keeps rather than searching anew.
+ * Not in a party, whose version everyone shares, nor for a download.
  */
 function useFailover(
   item: BaseItemDto,
@@ -311,7 +307,12 @@ function useFailover(
     if (started) triedVersions.delete(item.Id!);
   }, [started, item.Id]);
   React.useEffect(() => {
-    if (!on || off || !failed || done.current) return;
+    if (!failed) {
+      // A retry that fails again fails over then.
+      done.current = false;
+      return;
+    }
+    if (!on || off || done.current) return;
     done.current = true;
     const { item, source, versions, startMs, play } = latest.current;
     const run = triedVersions.get(item.Id!);
@@ -321,18 +322,11 @@ function useFailover(
       at: Date.now(),
       keys: tried.add(versionKey(source)),
     });
-    // The server lists the version asked for first, the rest in its order.
-    const exact = versions.findIndex((s) => !!s.Id && s.Id === source.Id);
-    const at =
-      exact >= 0 ? exact : versions.findIndex((s) => sameVersion(s, source));
-    if (at < 0) return;
-    // Those after it, then round to those before, as one a TV can't decode is
-    // listed last; those the TV decodes first, so a failed one of those that
-    // can't isn't followed by the rest of them.
-    const untried = [
-      ...versions.slice(at + 1),
-      ...versions.slice(0, at),
-    ].filter((s) => !tried.has(versionKey(s)));
+    // In the list's order: the failed version comes first, as the server lists
+    // the one asked for first, and those a TV can't decode come last.
+    const untried = versions.filter(
+      (s) => s !== source && !tried.has(versionKey(s))
+    );
     const to = untried.find((s) => !unsupportedOnTv(s)) ?? untried[0];
     if (!to) {
       // Out of versions: the next try starts afresh.
