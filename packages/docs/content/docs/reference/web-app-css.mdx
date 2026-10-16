@@ -24,6 +24,10 @@ Once kept, it is saved to your account and applies on every device you sign in o
   visit, so you can fix or clear it in the settings.
 </Callout>
 
+## A server's own CSS
+
+A server's owner can style the app for everyone signed in to it, with **App custom CSS** in the dashboard's Branding settings, or `APP_CUSTOM_CSS`. It applies on the sign-in screens too, and before everyone's own custom CSS, so yours still wins. To leave it out for yourself, turn off **Use this server's CSS** under **Settings → Theme**. `?safe` turns it off for that visit as well.
+
 ## Finding what to style
 
 Parts of the app carry a `data-ui` attribute naming what they are, and other `data-*` attributes saying which one or what state it's in. Aim your CSS at these rather than at class names, which change between versions.
