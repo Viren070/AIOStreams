@@ -19,7 +19,7 @@ export const ContextMenuAnatomy = defineStyleAnatomy({
     'UI-ContextMenu__item',
     'relative flex cursor-pointer select-none items-center rounded-[--radius] px-2 py-2 text-sm outline-none transition-colors',
     'focus:bg-[--subtle] data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
-    '[&>svg]:mr-2 [&>svg]:text-lg',
+    '[&>svg]:me-2 [&>svg]:text-lg',
   ]),
   label: cva([
     'UI-ContextMenu__label',

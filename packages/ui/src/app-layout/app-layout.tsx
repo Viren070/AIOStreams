@@ -30,27 +30,27 @@ export const AppLayoutAnatomy = defineStyleAnatomy({
       {
         withSidebar: true,
         sidebarSize: 'slim',
-        className: 'lg:[&>.appLayout]:pl-20',
+        className: 'lg:[&>.appLayout]:ps-20',
       },
       {
         withSidebar: true,
         sidebarSize: 'sm',
-        className: 'lg:[&>.appLayout]:pl-48',
+        className: 'lg:[&>.appLayout]:ps-48',
       },
       {
         withSidebar: true,
         sidebarSize: 'md',
-        className: 'lg:[&>.appLayout]:pl-64',
+        className: 'lg:[&>.appLayout]:ps-64',
       },
       {
         withSidebar: true,
         sidebarSize: 'lg',
-        className: 'lg:[&>.appLayout]:pl-[20rem]',
+        className: 'lg:[&>.appLayout]:ps-[20rem]',
       },
       {
         withSidebar: true,
         sidebarSize: 'xl',
-        className: 'lg:[&>.appLayout]:pl-[25rem]',
+        className: 'lg:[&>.appLayout]:ps-[25rem]',
       },
     ],
   }),

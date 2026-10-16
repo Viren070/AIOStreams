@@ -213,7 +213,7 @@ export const TabsTrigger = React.forwardRef<
           className={cn(
             variant === 'pill'
               ? 'absolute inset-0 -z-10 rounded-[inherit] bg-[--subtle]'
-              : 'absolute bottom-0 left-0 right-0 h-0.5 bg-[--brand]',
+              : 'absolute bottom-0 start-0 end-0 h-0.5 bg-[--brand]',
             indicatorClass
           )}
         />

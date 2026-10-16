@@ -16,15 +16,15 @@ export const CarouselAnatomy = defineStyleAnatomy({
   content: cva(['UI-Carousel__content', 'overflow-hidden']),
   innerContent: cva(['UI-Carousel__innerContent', 'flex'], {
     variants: {
-      gap: { none: 'ml-0', sm: '-ml-2', md: '-ml-4', lg: '-ml-6' },
+      gap: { none: 'ms-0', sm: '-ms-2', md: '-ms-4', lg: '-ms-6' },
     },
   }),
   item: cva(['UI-Carousel__item', 'min-w-0 shrink-0 grow-0 basis-full'], {
     variants: {
-      gap: { none: 'pl-0', sm: 'pl-2', md: 'pl-4', lg: 'pl-6' },
+      gap: { none: 'ps-0', sm: 'ps-2', md: 'ps-4', lg: 'ps-6' },
     },
   }),
-  chevronIcon: cva(['UI-Carousel__chevronIcon', 'size-6']),
+  chevronIcon: cva(['UI-Carousel__chevronIcon', 'size-6 rtl:-scale-x-100']),
 });
 
 /* -------------------------------------------------------------------------------------------------
@@ -57,6 +57,8 @@ export function useCarousel() {
   }
   return context;
 }
+
+const rtl = () => document.documentElement.dir === 'rtl';
 
 /** `scrollTo` only lands on snaps. */
 function jumpTo(emblaApi: EmblaApi, location: number) {
@@ -131,20 +133,16 @@ function useFollowFocus(api: CarouselApi) {
       const { transform } = getComputedStyle(container);
       const shown =
         transform === 'none' ? 0 : new DOMMatrixReadOnly(transform).m41;
-      const left =
-        box.left -
-        shown +
-        engine.target.get() +
-        rect.left -
-        box.left -
-        view.left;
+      // Embla draws a right-to-left row mirrored: its target, negated.
+      const sign = rtl() ? -1 : 1;
+      const left = rect.left - view.left + sign * engine.target.get() - shown;
       const right = left + rect.width - view.width;
       const shift = left < 0 ? left : right > 0 ? Math.min(right, left) : 0;
       if (!shift) return;
       window.clearTimeout(settle);
       container.style.transition = `transform ${GLIDE_MS}ms ease-out`;
       settle = window.setTimeout(still, GLIDE_MS + 50);
-      jumpTo(api, engine.target.get() - shift);
+      jumpTo(api, engine.target.get() - sign * shift);
       api.emit('scroll');
     };
     const onScroll = () => {
@@ -233,7 +231,12 @@ export const Carousel = React.forwardRef<HTMLDivElement, CarouselProps>(
     } = props;
 
     const [carouselRef, api] = useEmblaCarousel(
-      { ...opts, axis: 'x', watchFocus: false },
+      {
+        ...opts,
+        axis: 'x',
+        direction: rtl() ? 'rtl' : 'ltr',
+        watchFocus: false,
+      },
       [WheelGesturesPlugin(), ...(plugins ?? [])]
     );
     const [canScrollPrev, setCanScrollPrev] = React.useState(false);

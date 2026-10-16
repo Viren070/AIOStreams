@@ -43,7 +43,7 @@ export const AlertAnatomy = defineStyleAnatomy({
   ]),
   textContainer: cva([
     'UI-Alert__textContainer',
-    'flex flex-col self-start ml-3 gap-0.5',
+    'flex flex-col self-start ms-3 gap-0.5',
   ]),
   title: cva([
     'UI-Alert__title',
@@ -75,7 +75,7 @@ export const AlertAnatomy = defineStyleAnatomy({
   ),
   closeButton: cva([
     'UI-Alert__closeButton',
-    'flex-none self-start text-lg hover:opacity-80 active:opacity-100 transition-opacity duration-150 cursor-pointer h-5 w-5 ml-4 opacity-50 dark:text-gray-400 dark:hover:text-gray-200',
+    'flex-none self-start text-lg hover:opacity-80 active:opacity-100 transition-opacity duration-150 cursor-pointer h-5 w-5 ms-4 opacity-50 dark:text-gray-400 dark:hover:text-gray-200',
   ]),
 });
 

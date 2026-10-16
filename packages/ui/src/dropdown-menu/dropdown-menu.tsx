@@ -35,7 +35,7 @@ export const DropdownMenuAnatomy = defineStyleAnatomy({
     'relative flex cursor-default select-none items-center rounded-[--radius] cursor-pointer px-2 py-2 text-sm outline-none transition-colors',
     'focus:bg-[--subtle] data-[disabled]:pointer-events-none',
     'data-[disabled]:opacity-50',
-    '[&>svg]:mr-2 [&>svg]:text-lg',
+    '[&>svg]:me-2 [&>svg]:text-lg',
   ]),
   group: cva(['UI-DropdownMenu__group']),
   label: cva([
@@ -48,7 +48,7 @@ export const DropdownMenuAnatomy = defineStyleAnatomy({
   ]),
   shortcut: cva([
     'UI-DropdownMenu__shortcut',
-    'ml-auto text-xs tracking-widest opacity-60',
+    'ms-auto text-xs tracking-widest opacity-60',
   ]),
 });
 
@@ -226,7 +226,7 @@ export const DropdownMenuSub = React.forwardRef<
         className={cn(
           DropdownMenuAnatomy.item(),
           DropdownMenuAnatomy.subTrigger(),
-          triggerInset && 'pl-8',
+          triggerInset && 'ps-8',
           _subTriggerClass,
           subTriggerClass,
           className
@@ -242,7 +242,7 @@ export const DropdownMenuSub = React.forwardRef<
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className={cn(DropdownMenuAnatomy.shortcut(), 'w-4 h-4 ml-auto')}
+          className={cn(DropdownMenuAnatomy.shortcut(), 'w-4 h-4 ms-auto')}
         >
           <path d="m9 18 6-6-6-6" />
         </svg>
@@ -291,7 +291,7 @@ export const DropdownMenuItem = React.forwardRef<
       ref={ref}
       className={cn(
         DropdownMenuAnatomy.item(),
-        inset && 'pl-8',
+        inset && 'ps-8',
         itemClass,
         className
       )}
@@ -324,7 +324,7 @@ export const DropdownMenuLabel = React.forwardRef<
       ref={ref}
       className={cn(
         DropdownMenuAnatomy.label(),
-        inset && 'pl-8',
+        inset && 'ps-8',
         labelClass,
         className
       )}

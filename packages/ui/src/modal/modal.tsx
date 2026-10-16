@@ -31,10 +31,10 @@ export const ModalAnatomy = defineStyleAnatomy({
     'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
     'sm:rounded-2xl',
   ]),
-  close: cva(['UI-Modal__close', 'absolute right-4 top-4 !mt-0']),
+  close: cva(['UI-Modal__close', 'absolute end-4 top-4 !mt-0']),
   header: cva([
     'UI-Modal__header',
-    'flex flex-col space-y-1.5 min-w-0 text-center sm:text-left',
+    'flex flex-col space-y-1.5 min-w-0 text-center sm:text-start',
   ]),
   footer: cva([
     'UI-Modal__footer',

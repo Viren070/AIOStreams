@@ -20,7 +20,7 @@ export const StaticTabsAnatomy = defineStyleAnatomy({
     'data-[current=true]:font-semibold data-[current=true]:text-white',
     'focus-visible:bg-[--subtle]',
   ]),
-  icon: cva(['UI-StaticTabs__icon', '-ml-0.5 mr-2 h-4 w-4']),
+  icon: cva(['UI-StaticTabs__icon', '-ms-0.5 me-2 h-4 w-4']),
 });
 
 /* -------------------------------------------------------------------------------------------------

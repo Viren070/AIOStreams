@@ -382,7 +382,7 @@ const RadioCardsField = React.memo(
             //     "border border-transparent data-[state=checked]:border-[--brand] data-[state=checked]:ring-offset-0",
             // )}
             // itemClass={cn(
-            //     "border-transparent absolute top-2 right-2 bg-transparent dark:bg-transparent dark:data-[state=unchecked]:bg-transparent",
+            //     "border-transparent absolute top-2 end-2 bg-transparent dark:bg-transparent dark:data-[state=unchecked]:bg-transparent",
             //     "data-[state=unchecked]:bg-transparent data-[state=unchecked]:hover:bg-transparent
             // dark:data-[state=unchecked]:hover:bg-transparent", "focus-visible:ring-0 focus-visible:ring-offset-0
             // focus-visible:ring-offset-transparent", )} itemIndicatorClass="hidden" itemLabelClass="font-medium flex flex-col items-center
@@ -396,7 +396,7 @@ const RadioCardsField = React.memo(
               itemContainerClass
             )}
             itemClass={cn(
-              'border-transparent absolute top-2 right-2 bg-transparent dark:bg-transparent dark:data-[state=unchecked]:bg-transparent',
+              'border-transparent absolute top-2 end-2 bg-transparent dark:bg-transparent dark:data-[state=unchecked]:bg-transparent',
               'data-[state=unchecked]:bg-transparent data-[state=unchecked]:hover:bg-transparent dark:data-[state=unchecked]:hover:bg-transparent',
               'focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:ring-offset-transparent',
               itemClass

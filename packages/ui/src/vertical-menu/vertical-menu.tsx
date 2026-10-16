@@ -1,6 +1,7 @@
 import { cva, VariantProps } from 'class-variance-authority';
 import * as React from 'react';
 import { useContext } from 'react';
+import { useDirection } from '@radix-ui/react-direction';
 import { cn, ComponentAnatomy, defineStyleAnatomy } from '../core/styling';
 import {
   Disclosure,
@@ -83,12 +84,12 @@ export const VerticalMenuAnatomy = defineStyleAnatomy({
     {
       variants: {
         size: {
-          sm: 'right-3',
-          md: 'right-3',
-          lg: 'right-3',
+          sm: 'end-3',
+          md: 'end-3',
+          lg: 'end-3',
         },
         collapsed: {
-          true: 'top-1 left-1 size-3',
+          true: 'top-1 start-1 size-3',
           false: null,
         },
       },
@@ -101,7 +102,7 @@ export const VerticalMenuAnatomy = defineStyleAnatomy({
   itemIcon: cva(
     [
       'UI-VerticalMenu__itemIcon',
-      'flex-shrink-0 mr-3 transition',
+      'flex-shrink-0 me-3 transition',
       'text-[--muted] text-xl',
       'group-hover/verticalMenu_item:text-[--foreground]',
       'group-data-[current=true]/verticalMenu_item:text-[--foreground]',
@@ -114,7 +115,7 @@ export const VerticalMenuAnatomy = defineStyleAnatomy({
           lg: 'size-7',
         },
         collapsed: {
-          true: 'mr-0',
+          true: 'me-0',
           false: null,
         },
         isSidebar: {
@@ -226,6 +227,8 @@ export const VerticalMenu = React.forwardRef<HTMLDivElement, VerticalMenuProps>(
         item.onClick?.(e);
       };
 
+    // Away from the sidebar, which moves right in right-to-left layouts.
+    const away = useDirection() === 'rtl' ? 'left' : 'right';
     const ItemContentWrapper = React.useCallback(
       (props: {
         children: React.ReactElement;
@@ -239,7 +242,7 @@ export const VerticalMenu = React.forwardRef<HTMLDivElement, VerticalMenuProps>(
           return (
             <HoverCard
               trigger={props.children}
-              side="right"
+              side={away}
               align="center"
               openDelay={120}
               closeDelay={120}
@@ -251,12 +254,12 @@ export const VerticalMenu = React.forwardRef<HTMLDivElement, VerticalMenuProps>(
             </HoverCard>
           );
         return (
-          <Tooltip trigger={props.children} side="right" {...itemTooltipProps}>
+          <Tooltip trigger={props.children} side={away} {...itemTooltipProps}>
             {props.name}
           </Tooltip>
         );
       },
-      [collapsed, itemTooltipProps]
+      [collapsed, itemTooltipProps, away]
     );
 
     const ItemContent = React.useCallback(

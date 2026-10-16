@@ -59,13 +59,14 @@ export const SwitchAnatomy = defineStyleAnatomy({
       'UI-Switch__thumb',
       'pointer-events-none block rounded-full data-[state=checked]:bg-white shadow-lg ring-0 transition-transform',
       'data-[state=unchecked]:translate-x-[0.15rem] data-[state=unchecked]:bg-white/50',
+      'rtl:data-[state=unchecked]:-translate-x-[0.15rem]',
     ],
     {
       variants: {
         size: {
-          sm: 'h-3 w-3 data-[state=checked]:translate-x-[1.05rem]',
-          md: 'h-4 w-4 data-[state=checked]:translate-x-[1.05rem]',
-          lg: 'h-5 w-5 data-[state=checked]:translate-x-[1.9rem]',
+          sm: 'h-3 w-3 data-[state=checked]:translate-x-[1.05rem] rtl:data-[state=checked]:-translate-x-[1.05rem]',
+          md: 'h-4 w-4 data-[state=checked]:translate-x-[1.05rem] rtl:data-[state=checked]:-translate-x-[1.05rem]',
+          lg: 'h-5 w-5 data-[state=checked]:translate-x-[1.9rem] rtl:data-[state=checked]:-translate-x-[1.9rem]',
         },
       },
       defaultVariants: {
@@ -169,7 +170,7 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
         fieldClass={cn(
           'w-fit',
           row &&
-            'relative w-full group/switch hover:bg-white/5 rounded-[--radius] p-2 w-[calc(100%_+_1rem)] -ml-2'
+            'relative w-full group/switch hover:bg-white/5 rounded-[--radius] p-2 w-[calc(100%_+_1rem)] -ms-2'
         )}
         fieldHelpTextClass={cn('')}
       >
