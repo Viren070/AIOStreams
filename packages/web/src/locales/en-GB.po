@@ -11,19 +11,13 @@ msgstr ""
 msgid "(you)"
 msgstr "(you)"
 
-#. placeholder {0}: badges.length
-#: src/components/version-settings.tsx
-msgid "{0, plural, one {# badge of your own} other {# badges of your own}}"
-msgstr "{0, plural, one {# badge of your own} other {# badges of your own}}"
-
-#. placeholder {0}: links.length
-#: src/components/version-settings.tsx
-msgid "{0, plural, one {# pack} other {# packs}}"
-msgstr "{0, plural, one {# pack} other {# packs}}"
-
 #: src/pages/sign-in.tsx
 msgid "{address} did not answer. Check that it is running, then try again."
 msgstr "{address} did not answer. Check that it is running, then try again."
+
+#: src/components/version-settings.tsx
+msgid "{badgeCount, plural, one {# badge of your own} other {# badges of your own}}"
+msgstr "{badgeCount, plural, one {# badge of your own} other {# badges of your own}}"
 
 #: src/pages/history.tsx
 msgid "{cleared, plural, one {Removed # title from the history} other {Removed # titles from the history}}"
@@ -164,6 +158,10 @@ msgstr "{name} left the party"
 #: src/components/version-picker.tsx
 msgid "{others, plural, one {Pick the version to download. The other episode gets the same release where it has it.} other {Pick the version to download. The other # episodes get the same release where they have it.}}"
 msgstr "{others, plural, one {Pick the version to download. The other episode gets the same release where it has it.} other {Pick the version to download. The other # episodes get the same release where they have it.}}"
+
+#: src/components/version-settings.tsx
+msgid "{packCount, plural, one {# pack} other {# packs}}"
+msgstr "{packCount, plural, one {# pack} other {# packs}}"
 
 #: src/components/version-settings.tsx
 msgid "{packs} and {own}"

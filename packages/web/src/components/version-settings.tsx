@@ -408,17 +408,19 @@ function ModalFooter({
 export function BadgesRow() {
   const [{ links, badges }] = useSetting(settings.playback.badges);
   const [open, setOpen] = React.useState(false);
-  const packs = plural(links.length, { one: '# pack', other: '# packs' });
-  const own = plural(badges.length, {
+  const packCount = links.length;
+  const badgeCount = badges.length;
+  const packs = plural(packCount, { one: '# pack', other: '# packs' });
+  const own = plural(badgeCount, {
     one: '# badge of your own',
     other: '# badges of your own',
   });
   const summary =
-    links.length && badges.length
+    packCount && badgeCount
       ? t`${packs} and ${own}`
-      : links.length
+      : packCount
         ? packs
-        : badges.length
+        : badgeCount
           ? own
           : t`Small labels on each version for what it has, from packs you link or badges you make.`;
   return (

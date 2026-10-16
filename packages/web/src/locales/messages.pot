@@ -10,18 +10,12 @@ msgstr ""
 msgid "(you)"
 msgstr ""
 
-#. placeholder {0}: badges.length
-#: src/components/version-settings.tsx
-msgid "{0, plural, one {# badge of your own} other {# badges of your own}}"
-msgstr ""
-
-#. placeholder {0}: links.length
-#: src/components/version-settings.tsx
-msgid "{0, plural, one {# pack} other {# packs}}"
-msgstr ""
-
 #: src/pages/sign-in.tsx
 msgid "{address} did not answer. Check that it is running, then try again."
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "{badgeCount, plural, one {# badge of your own} other {# badges of your own}}"
 msgstr ""
 
 #: src/pages/history.tsx
@@ -162,6 +156,10 @@ msgstr ""
 
 #: src/components/version-picker.tsx
 msgid "{others, plural, one {Pick the version to download. The other episode gets the same release where it has it.} other {Pick the version to download. The other # episodes get the same release where they have it.}}"
+msgstr ""
+
+#: src/components/version-settings.tsx
+msgid "{packCount, plural, one {# pack} other {# packs}}"
 msgstr ""
 
 #: src/components/version-settings.tsx
