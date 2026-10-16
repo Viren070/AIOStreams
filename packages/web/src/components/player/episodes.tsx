@@ -64,13 +64,13 @@ export function EpisodesSheet({
       side="right"
       size="md"
       contentClass="flex flex-col gap-0 overflow-hidden p-0"
-      closeClass="right-2 top-[calc(0.75rem+env(safe-area-inset-top))]"
+      closeClass="end-2 top-[calc(0.75rem+env(safe-area-inset-top))]"
     >
       <div
         data-ui="player-episodes-header"
         className="space-y-3 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))]"
       >
-        <div className="min-w-0 px-4 pr-12">
+        <div className="min-w-0 px-4 pe-12">
           <p className="text-xs font-semibold uppercase tracking-wider text-[--muted]">
             Episodes
           </p>
@@ -153,7 +153,7 @@ function EpisodeRow({
       disabled={unavailable}
       onClick={onPick}
       className={cn(
-        'group/episode flex w-full items-start gap-3 rounded-xl p-2 text-left outline-none transition-colors hover:bg-white/5 focus-visible:bg-white/10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[--ring] disabled:pointer-events-none [[data-tv]_&]:focus-visible:ring-[3px]',
+        'group/episode flex w-full items-start gap-3 rounded-xl p-2 text-start outline-none transition-colors hover:bg-white/5 focus-visible:bg-white/10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[--ring] disabled:pointer-events-none [[data-tv]_&]:focus-visible:ring-[3px]',
         current && 'bg-white/10'
       )}
     >

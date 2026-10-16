@@ -11,6 +11,7 @@ import {
 } from '@aiostreams/ui/carousel';
 import { cn } from '@aiostreams/ui/core/styling';
 import { currentHost } from '../lib/hosts';
+import { scrolled, scrollToStart, startOf } from '../lib/direction';
 import type { BaseItemDto } from '../lib/types';
 import { ItemMenu } from './item-menu';
 
@@ -77,11 +78,12 @@ function TvPills({
     const el = track.current;
     const pill = el?.querySelector<HTMLElement>('[data-selected]');
     if (!el || !pill) return;
+    const at = startOf(pill, el);
     if (
-      pill.offsetLeft < el.scrollLeft ||
-      pill.offsetLeft + pill.offsetWidth > el.scrollLeft + el.clientWidth
+      at < scrolled(el) ||
+      at + pill.offsetWidth > scrolled(el) + el.clientWidth
     )
-      el.scrollLeft = pill.offsetLeft;
+      scrollToStart(el, at);
   }, [selected]);
   return (
     <div
@@ -129,9 +131,9 @@ function PillTrack({ children }: { children: React.ReactNode }) {
         canScrollPrev && canScrollNext
           ? '[mask-image:linear-gradient(to_right,transparent,black_2.5rem,black_calc(100%-2.5rem),transparent)]'
           : canScrollPrev
-            ? '[mask-image:linear-gradient(to_right,transparent,black_2.5rem)]'
+            ? '[mask-image:linear-gradient(to_right,transparent,black_2.5rem)] rtl:[mask-image:linear-gradient(to_left,transparent,black_2.5rem)]'
             : canScrollNext &&
-              '[mask-image:linear-gradient(to_left,transparent,black_2.5rem)]'
+              '[mask-image:linear-gradient(to_left,transparent,black_2.5rem)] rtl:[mask-image:linear-gradient(to_right,transparent,black_2.5rem)]'
       )}
     >
       {children}

@@ -242,9 +242,9 @@ function UserChips({
           >
             {owner.user.Name}
             {shared.length > 0 && (
-              <span className="ml-1 text-[--muted]">+ {shared.join(', ')}</span>
+              <span className="ms-1 text-[--muted]">+ {shared.join(', ')}</span>
             )}
-            <span className="ml-2 tabular-nums text-[--muted]">
+            <span className="ms-2 tabular-nums text-[--muted]">
               {owner.counts?.played ?? 0}
             </span>
           </Button>
@@ -708,7 +708,7 @@ function HistoryTable({
         className="overflow-x-auto rounded-xl border border-white/5"
       >
         <table className="w-full text-sm">
-          <thead className="bg-gray-900/60 text-left text-xs uppercase text-[--muted]">
+          <thead className="bg-gray-900/60 text-start text-xs uppercase text-[--muted]">
             <tr>
               {full && (
                 <th className="w-10 p-3">

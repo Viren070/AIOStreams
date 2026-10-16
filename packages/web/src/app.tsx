@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useLingui } from '@lingui/react';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@aiostreams/ui/toaster';
+import { DirectionProvider } from '@aiostreams/ui/core/direction';
 import { LoadingOverlay } from '@aiostreams/ui/loading-spinner';
 import { pickerAccount, SessionProvider, useSessionPhase } from './lib/session';
 import { webRouter } from './router';
@@ -26,6 +27,7 @@ import {
 } from './lib/servers';
 import { ServersPage } from './pages/servers';
 import { currentHost } from './lib/hosts';
+import { isRtl } from './lib/i18n';
 import { ShellSetup, shellHost, useShellLinks } from './lib/hosts/shell';
 import { parseAppLink } from './lib/app-links';
 import { party } from './lib/party/party';
@@ -51,22 +53,29 @@ export default function JellyfinWebApp() {
   }, []);
   useStableScrollbar();
   useNoFileDrops();
+  const { i18n } = useLingui();
+  const rtl = isRtl(i18n.locale);
   return (
-    <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark">
-      <MotionConfig reducedMotion="user">
-        <Toaster
-          swipeDirections={['top', 'right']}
-          offset={{ top: 'calc(24px + env(safe-area-inset-top))' }}
-          mobileOffset={{ top: 'calc(16px + env(safe-area-inset-top))' }}
-        />
-        <PageBackground />
-        <ThemeStyles />
-        <InputSetup router={webRouter} />
-        {shellHost() && <ShellSetup />}
-        {currentHost().name === 'desktop' && <WindowControls />}
-        {__STANDALONE__ ? <Standalone /> : <Served />}
-      </MotionConfig>
-    </ThemeProvider>
+    <DirectionProvider dir={rtl ? 'rtl' : 'ltr'}>
+      <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark">
+        <MotionConfig reducedMotion="user">
+          <Toaster
+            // It reads its props once.
+            key={rtl ? 'rtl' : 'ltr'}
+            dir={rtl ? 'rtl' : 'ltr'}
+            swipeDirections={['top', rtl ? 'left' : 'right']}
+            offset={{ top: 'calc(24px + env(safe-area-inset-top))' }}
+            mobileOffset={{ top: 'calc(16px + env(safe-area-inset-top))' }}
+          />
+          <PageBackground />
+          <ThemeStyles />
+          <InputSetup router={webRouter} />
+          {shellHost() && <ShellSetup />}
+          {currentHost().name === 'desktop' && <WindowControls />}
+          {__STANDALONE__ ? <Standalone /> : <Served />}
+        </MotionConfig>
+      </ThemeProvider>
+    </DirectionProvider>
   );
 }
 

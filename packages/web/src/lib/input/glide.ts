@@ -178,6 +178,14 @@ function advance(glide: Glide, time: number): void {
   glide.time = time;
 }
 
+/** Right to left, a scroller runs from 0 down to minus its span. */
+function clampX(box: Element, left: number): number {
+  const span = box.scrollWidth - box.clientWidth;
+  return getComputedStyle(box).direction === 'rtl'
+    ? Math.min(0, Math.max(-span, left))
+    : Math.max(0, Math.min(span, left));
+}
+
 /**
  * Scrolls `box` to a place, carrying on at the speed a scroll under way has:
  * the browser's own smooth scroll starts again from a standstill, so quick
@@ -185,7 +193,7 @@ function advance(glide: Glide, time: number): void {
  */
 export function glideTo(box: Element, left: number, top: number): void {
   const to: [number, number] = [
-    Math.max(0, Math.min(left, box.scrollWidth - box.clientWidth)),
+    left === box.scrollLeft ? left : clampX(box, left),
     Math.max(0, Math.min(top, box.scrollHeight - box.clientHeight)),
   ];
   if (!glides.has(box) && to[0] === box.scrollLeft && to[1] === box.scrollTop)

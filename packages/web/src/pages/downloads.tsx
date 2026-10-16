@@ -137,7 +137,7 @@ function DownloadRow({
     <div
       data-ui="download"
       data-state={state}
-      className="flex items-start gap-3 rounded-xl border border-white/5 bg-white/[0.03] p-2 sm:items-center sm:pr-3"
+      className="flex items-start gap-3 rounded-xl border border-white/5 bg-white/[0.03] p-2 sm:items-center sm:pe-3"
     >
       <button
         type="button"
@@ -294,7 +294,7 @@ function Section({
   return (
     <section data-ui="downloads-section" data-name={name} className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="mr-auto text-xl font-semibold">{title}</h2>
+        <h2 className="me-auto text-xl font-semibold">{title}</h2>
         {actions}
       </div>
       <div className="space-y-2">{children}</div>
@@ -328,7 +328,7 @@ function Downloaded({ downloads }: { downloads: Download[] }) {
             className="space-y-2"
           >
             <div className="flex items-center gap-2">
-              <div className="mr-auto min-w-0">
+              <div className="me-auto min-w-0">
                 <p className="truncate font-semibold">{itemTitle(first)}</p>
                 <p className="text-sm text-[--muted]">
                   {sorted.length === 1
@@ -389,7 +389,7 @@ export function DownloadsPage() {
           <div className="flex flex-wrap items-center gap-2">
             <div
               data-ui="downloads-summary"
-              className="mr-auto min-w-0 text-sm text-[--muted]"
+              className="me-auto min-w-0 text-sm text-[--muted]"
             >
               {done.length > 0 && <p>{formatBytes(sizeOf(done))} downloaded</p>}
               {folder && (

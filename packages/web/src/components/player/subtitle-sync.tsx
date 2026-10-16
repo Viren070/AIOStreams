@@ -78,7 +78,7 @@ export function SyncByEar({
       {keys[kind] && (
         <KeyCaps
           input={keys[kind]}
-          className="ml-2 hidden opacity-60 sm:inline-flex"
+          className="ms-2 hidden opacity-60 sm:inline-flex"
         />
       )}
     </Button>
@@ -200,7 +200,7 @@ export function SyncToLine({
           />
           <div
             data-ui="sync-lines"
-            className="max-h-[50vh] space-y-1 overflow-y-auto pr-1"
+            className="max-h-[50vh] space-y-1 overflow-y-auto pe-1"
           >
             {shown.map((line) => {
               const isClosest = !term && line === lines[closest];
@@ -213,7 +213,7 @@ export function SyncToLine({
                   data-closest={isClosest || undefined}
                   onClick={() => onPick(delayForLine(heardAtMs, line))}
                   className={cn(
-                    'flex w-full gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-white/10',
+                    'flex w-full gap-3 rounded-lg px-3 py-2 text-start text-sm transition-colors hover:bg-white/10',
                     isClosest && 'bg-white/5'
                   )}
                 >

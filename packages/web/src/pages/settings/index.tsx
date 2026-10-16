@@ -264,7 +264,7 @@ export function SettingsPage({
                     clearTimeout(resting.current);
                   }}
                 >
-                  <s.icon className="mr-3 text-xl transition-transform duration-200 group-hover:translate-x-0.5" />
+                  <s.icon className="me-3 text-xl transition-transform duration-200 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5" />
                   {s.label}
                 </TabsTrigger>
               ))}

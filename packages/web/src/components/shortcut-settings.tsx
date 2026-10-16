@@ -104,7 +104,7 @@ function ShortcutRow({
             size="sm"
             intent="gray-basic"
             className="size-7 rounded-full"
-            icon={<LuUndo2 />}
+            icon={<LuUndo2 className="rtl:-scale-x-100" />}
             aria-label={`Reset ${label}`}
             onClick={() => setKeys(id, [...action(id).keys])}
           />

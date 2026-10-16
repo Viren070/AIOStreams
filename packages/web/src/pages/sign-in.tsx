@@ -783,7 +783,7 @@ export function UserPicker({
                           <FocusRing className="group-focus-visible/user:opacity-100" />
                           {(u.needs === 'pin' ||
                             u.needs === 'password-pin') && (
-                            <span className="absolute bottom-0 right-0 flex size-7 items-center justify-center rounded-full bg-gray-900 text-sm ring-2 ring-[--background]">
+                            <span className="absolute bottom-0 end-0 flex size-7 items-center justify-center rounded-full bg-gray-900 text-sm ring-2 ring-[--background]">
                               <BiLockAlt aria-label="Has a PIN" />
                             </span>
                           )}

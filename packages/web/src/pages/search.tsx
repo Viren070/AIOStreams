@@ -165,7 +165,7 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
                   <IconButton
                     size="sm"
                     intent="gray-basic"
-                    className="mr-1 flex-none rounded-full"
+                    className="me-1 flex-none rounded-full"
                     icon={<BiX className="text-lg" />}
                     aria-label={`Remove ${t}`}
                     onClick={() => history.remove(t)}
@@ -240,7 +240,7 @@ const TermButton = React.forwardRef<
       type="button"
       data-focus="own"
       className={cn(
-        'flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-2 text-left focus-visible:bg-white/10 [[data-tv]_&]:py-3',
+        'flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-2 text-start focus-visible:bg-white/10 [[data-tv]_&]:py-3',
         className
       )}
       {...props}

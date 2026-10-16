@@ -369,7 +369,7 @@ function PlayerCard() {
         with its own controls and configuration. This app still saves your
         place, marks what you watched and plays the next episode. Compared with
         the built-in player, you lose:
-        <ul className="mt-1 list-disc pl-5">
+        <ul className="mt-1 list-disc ps-5">
           <li>
             The controls, skip buttons and next episode card over the video.
             They stay in this window, which works as a remote.

@@ -138,7 +138,7 @@ export function ItemPage({
       />
       <div
         data-ui="item-body"
-        className="relative z-[1] space-y-12 px-4 pb-16 pt-[38vh] lg:pl-0 lg:pr-10 lg:pt-[26vh]"
+        className="relative z-[1] space-y-12 px-4 pb-16 pt-[38vh] lg:ps-0 lg:pe-10 lg:pt-[26vh]"
       >
         {!data || data.Type === 'Episode' ? (
           <HeaderSkeleton />
@@ -218,7 +218,7 @@ function Backdrop({
       <div
         data-ui="item-backdrop-shade"
         data-name="side"
-        className="absolute inset-0 hidden bg-gradient-to-r from-[--background] via-[--background]/60 via-40% to-transparent lg:block"
+        className="absolute inset-0 hidden bg-gradient-to-r from-[--background] via-[--background]/60 via-40% to-transparent lg:block rtl:bg-gradient-to-l"
       />
       <div
         data-ui="item-backdrop-shade"
@@ -849,7 +849,7 @@ const SeasonPosters = React.memo(function SeasonPosters({
               data-selected={isSelected || undefined}
               data-focus="own"
               onClick={() => onSelect(s.Id!)}
-              className="group/season w-full space-y-2 text-left"
+              className="group/season w-full space-y-2 text-start"
             >
               <div className="relative aspect-[2/3] overflow-hidden rounded-lg bg-gray-900">
                 {poster && (
@@ -875,7 +875,7 @@ const SeasonPosters = React.memo(function SeasonPosters({
                 {s.UserData?.Played && (
                   <span
                     data-ui="watched-badge"
-                    className="absolute right-1.5 top-1.5 flex size-5 items-center justify-center rounded-full bg-brand-500 text-white"
+                    className="absolute end-1.5 top-1.5 flex size-5 items-center justify-center rounded-full bg-brand-500 text-white"
                   >
                     <BiCheck />
                   </span>
@@ -918,7 +918,7 @@ function AllEpisodes({
           size="sm"
           intent="gray-outline"
           className="flex-none rounded-full"
-          rightIcon={<BiChevronRight />}
+          rightIcon={<BiChevronRight className="rtl:-scale-x-100" />}
           iconSpacing="0.25rem"
         >
           All episodes

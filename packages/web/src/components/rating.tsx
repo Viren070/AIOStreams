@@ -3,6 +3,7 @@ import { BiSolidStar, BiSolidStarHalf, BiStar } from 'react-icons/bi';
 import { Button, IconButton } from '@aiostreams/ui/button';
 import { Popover } from '@aiostreams/ui/popover';
 import { Tooltip } from '@aiostreams/ui/tooltip';
+import { pageRtl } from '../lib/direction';
 import { useSetRating } from '../lib/queries';
 import type { BaseItemDto } from '../lib/types';
 
@@ -15,7 +16,8 @@ function formatRating(value: number): string {
 
 function Star({ fill }: { fill: number }) {
   if (fill >= 1) return <BiSolidStar className="text-brand-500" />;
-  if (fill >= STEP) return <BiSolidStarHalf className="text-brand-500" />;
+  if (fill >= STEP)
+    return <BiSolidStarHalf className="text-brand-500 rtl:-scale-x-100" />;
   return <BiStar className="text-white/30" />;
 }
 
@@ -42,13 +44,18 @@ export const RatingButton = React.memo(function RatingButton({
   };
   const valueAt = (e: React.PointerEvent | React.MouseEvent, star: number) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    return star + (e.clientX - rect.left < rect.width / 2 ? STEP : 1);
+    const into = pageRtl() ? rect.right - e.clientX : e.clientX - rect.left;
+    return star + (into < rect.width / 2 ? STEP : 1);
   };
   const onKey = (e: React.KeyboardEvent) => {
+    // The stars fill from the right, right to left.
+    const [more, less] = pageRtl()
+      ? ['ArrowLeft', 'ArrowRight']
+      : ['ArrowRight', 'ArrowLeft'];
     const step =
-      e.key === 'ArrowRight' || e.key === 'ArrowUp'
+      e.key === more || e.key === 'ArrowUp'
         ? STEP
-        : e.key === 'ArrowLeft' || e.key === 'ArrowDown'
+        : e.key === less || e.key === 'ArrowDown'
           ? -STEP
           : 0;
     if (step) {

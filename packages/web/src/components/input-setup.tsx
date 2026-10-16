@@ -12,6 +12,7 @@ import {
   keysOf,
   move,
   moveTo,
+  navSide,
   onAction,
   openMenu,
   returnFocus,
@@ -55,7 +56,7 @@ function toNavigation(): boolean {
   const nav = document.querySelector<HTMLElement>('[data-nav-back]');
   const current = nav?.querySelector<HTMLElement>('[aria-current=page]');
   if (!nav || !current || nav.contains(document.activeElement)) return false;
-  moveTo(current, nav.dataset.navBack as Direction);
+  moveTo(current, navSide(nav.dataset.navBack)!);
   return true;
 }
 

@@ -37,6 +37,7 @@ function VolumeBar({
       // The volume has its own keys, so arrows pass over it.
       data-nav="skip"
       data-ui="volume-bar"
+      dir="ltr"
       className="relative flex h-5 w-20 flex-none cursor-pointer touch-none items-center rounded-full"
       onKeyDown={(e) => {
         const direction = arrowDirection(e.key);
@@ -62,19 +63,19 @@ function VolumeBar({
         {max > 1 && (
           <div
             data-ui="volume-boost"
-            className="absolute inset-y-0 right-0 bg-white/15"
+            className="absolute inset-y-0 end-0 bg-white/15"
             style={{ left: `${share(1)}%` }}
           />
         )}
         <div
           data-ui="volume-level"
-          className="absolute inset-y-0 left-0 bg-white"
+          className="absolute inset-y-0 start-0 bg-white"
           style={{ width: `${share(level)}%` }}
         />
         {level > 1 && max > 1 && (
           <div
             data-ui="volume-boost-level"
-            className="absolute inset-y-0 left-0 bg-red-400"
+            className="absolute inset-y-0 start-0 bg-red-400"
             style={{
               width: `${share(level)}%`,
               opacity: (Math.min(level, max) - 1) / (max - 1),

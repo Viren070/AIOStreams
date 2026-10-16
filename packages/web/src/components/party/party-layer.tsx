@@ -83,7 +83,7 @@ export function PartyLayer() {
       </div>
       <div
         data-ui="party-bubbles"
-        className="absolute bottom-[calc(7rem+env(safe-area-inset-bottom))] left-[max(1rem,env(safe-area-inset-left))] flex max-w-[min(24rem,70vw)] flex-col items-start gap-2"
+        className="absolute bottom-[calc(7rem+env(safe-area-inset-bottom))] start-[max(1rem,env(safe-area-inset-left))] flex max-w-[min(24rem,70vw)] flex-col items-start gap-2"
       >
         {bubbles.map((b) => (
           <p
@@ -96,14 +96,14 @@ export function PartyLayer() {
       </div>
       <div
         data-ui="party-reactions"
-        className="absolute bottom-[calc(7rem+env(safe-area-inset-bottom))] right-[max(1.5rem,env(safe-area-inset-right))] h-64 w-24"
+        className="absolute bottom-[calc(7rem+env(safe-area-inset-bottom))] end-[max(1.5rem,env(safe-area-inset-right))] h-64 w-24"
       >
         {reactions.map((r, i) => (
           <span
             key={r.key}
             className={cn(
               'absolute bottom-0 flex flex-col items-center [animation:party-rise_3s_ease-out_forwards]',
-              i % 2 ? 'right-2' : 'right-10'
+              i % 2 ? 'end-2' : 'end-10'
             )}
           >
             <span className="text-4xl">{r.text}</span>

@@ -340,7 +340,7 @@ function SoundControls() {
       </DropdownMenuItem>
       {delay !== 0 && (
         <DropdownMenuItem onSelect={keepOpen} onClick={() => setDelay(0)}>
-          <LuUndo2 className="flex-none" />
+          <LuUndo2 className="flex-none rtl:-scale-x-100" />
           Reset delay
         </DropdownMenuItem>
       )}
@@ -385,7 +385,7 @@ function SubtitleSync({
       )}
       {delayMs !== 0 && (
         <DropdownMenuItem onSelect={keepOpen} onClick={() => onChange(0)}>
-          <LuUndo2 className="flex-none" />
+          <LuUndo2 className="flex-none rtl:-scale-x-100" />
           Reset
         </DropdownMenuItem>
       )}
@@ -431,7 +431,7 @@ export function OptionButtons({
   const tv = !!currentHost().tv;
   const unread = useParty()?.unread ?? 0;
   return (
-    <div className="ml-auto flex items-center sm:gap-1">
+    <div className="ms-auto flex items-center sm:gap-1">
       {onParty && (
         <ControlButton
           name="party"
@@ -449,7 +449,7 @@ export function OptionButtons({
           {unread > 0 && (
             <span
               data-ui="party-unread"
-              className="absolute right-0.5 top-0.5 min-w-4 rounded-full bg-brand-500 px-1 text-[10px] font-semibold leading-4 text-white"
+              className="absolute end-0.5 top-0.5 min-w-4 rounded-full bg-brand-500 px-1 text-[10px] font-semibold leading-4 text-white"
             >
               {unread > 9 ? '9+' : unread}
             </span>

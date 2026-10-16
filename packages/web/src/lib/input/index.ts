@@ -31,6 +31,7 @@ export {
   keyboardFocus,
   move,
   moveTo,
+  navSide,
   openMenu,
   scrollStep,
   type Direction,

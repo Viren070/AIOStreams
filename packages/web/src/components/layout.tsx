@@ -47,6 +47,7 @@ import { useSession } from '../lib/session';
 import { usePickableUsers } from '../lib/queries';
 import { navigate, to } from '../lib/paths';
 import { currentHost } from '../lib/hosts';
+import { pageRtl } from '../lib/direction';
 import { shellHost } from '../lib/hosts/shell';
 import { serverAddress } from '../lib/servers';
 import { useServerInfo } from '../lib/server-info';
@@ -306,7 +307,7 @@ function HistoryButton({
       )}
       {...props}
     >
-      <Icon className="text-2xl transition group-hover/history:-rotate-2 group-hover/history:scale-[1.05]" />
+      <Icon className="text-2xl transition group-hover/history:-rotate-2 group-hover/history:scale-[1.05] rtl:-scale-x-100 rtl:group-hover/history:rotate-2 rtl:group-hover/history:-scale-x-[1.05]" />
     </button>
   );
 }
@@ -340,11 +341,11 @@ function HistoryButtons() {
         back
       ) : (
         <HoverCard
-          side="right"
+          side={pageRtl() ? 'left' : 'right'}
           sideOffset={0}
           openDelay={150}
           closeDelay={150}
-          className="w-auto border-none bg-transparent p-0 pl-1.5 shadow-none"
+          className="w-auto border-none bg-transparent p-0 ps-1.5 shadow-none"
           trigger={<span className="flex">{back}</span>}
         >
           <HistoryButton
@@ -371,7 +372,7 @@ function ConnectionNote() {
 }
 
 const NOTE_PLACE =
-  'fixed bottom-[max(1rem,calc(var(--nav-bar)+0.5rem))] right-4 z-[100] border border-white/10 bg-gray-950/90 shadow-lg backdrop-blur';
+  'fixed bottom-[max(1rem,calc(var(--nav-bar)+0.5rem))] end-4 z-[100] border border-white/10 bg-gray-950/90 shadow-lg backdrop-blur';
 
 function Unreachable() {
   const [saved] = useSetting(settings.cache.enabled);
@@ -408,13 +409,13 @@ function Unreachable() {
       data-ui="connection-note"
       className={cn(
         NOTE_PLACE,
-        'flex items-center rounded-xl text-sm duration-300 animate-in fade-in-0 slide-in-from-right-4'
+        'flex items-center rounded-xl text-sm duration-300 animate-in fade-in-0 slide-in-from-right-4 rtl:slide-in-from-left-4'
       )}
     >
       <button
         type="button"
         onClick={retryNow}
-        className="flex items-center gap-2.5 py-2 pl-4 pr-2 text-left"
+        className="flex items-center gap-2.5 py-2 ps-4 pe-2 text-start"
       >
         <BiLoaderAlt className="flex-none animate-spin text-base text-[--muted]" />
         <span>
@@ -441,7 +442,7 @@ function Unreachable() {
         data-ui="connection-note-dismiss"
         aria-label="Dismiss"
         onClick={() => setSmall(true)}
-        className="mr-2 flex size-7 flex-none items-center justify-center rounded-full text-base text-[--muted] transition-colors hover:bg-white/10 hover:text-white"
+        className="me-2 flex size-7 flex-none items-center justify-center rounded-full text-base text-[--muted] transition-colors hover:bg-white/10 hover:text-white"
       >
         <BiX />
       </button>
@@ -575,12 +576,12 @@ export function WebLayout() {
       };
 
   const page = cn(
-    'relative pb-[var(--nav-bar)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pt-[var(--top-bar,0px)]',
+    'relative pb-[var(--nav-bar)] ps-[env(safe-area-inset-left)] pe-[env(safe-area-inset-right)] pt-[var(--top-bar,0px)]',
     // In place of the sidebar's gutter, which pages leave to it.
     (nav === 'bar' || nav === 'tv-top' || shape === 'corner') &&
-      'lg:pl-[calc(2.5rem+env(safe-area-inset-left))]',
+      'lg:ps-[calc(2.5rem+env(safe-area-inset-left))]',
     shape === 'floating' &&
-      'lg:pl-[calc(var(--side-bar)+env(safe-area-inset-left))]'
+      'lg:ps-[calc(var(--side-bar)+env(safe-area-inset-left))]'
   );
 
   return (
@@ -870,7 +871,7 @@ function TouchRail({
       <nav
         data-ui="touch-rail"
         data-shape="floating"
-        className="pointer-events-none fixed inset-y-0 left-0 z-50 hidden items-center py-4 pl-[calc(1rem+env(safe-area-inset-left))] lg:flex"
+        className="pointer-events-none fixed inset-y-0 start-0 z-50 hidden items-center py-4 ps-[calc(1rem+env(safe-area-inset-left))] lg:flex"
       >
         <BarSurface
           className={cn(
@@ -995,7 +996,7 @@ function TvRail({
     />
   );
   const shade = !open && (
-    <div className="pointer-events-none fixed inset-y-0 left-0 -z-10 w-[36rem] bg-gradient-to-r from-black via-black/85 to-transparent opacity-0 transition-opacity duration-200 group-focus-within/rail:opacity-100" />
+    <div className="pointer-events-none fixed inset-y-0 start-0 -z-10 w-[36rem] bg-gradient-to-r from-black via-black/85 to-transparent rtl:bg-gradient-to-l opacity-0 transition-opacity duration-200 group-focus-within/rail:opacity-100" />
   );
   if (floating) {
     return (
@@ -1003,10 +1004,10 @@ function TvRail({
         data-ui="tv-rail"
         data-shape="floating"
         data-nav-enter={ENTER_CURRENT}
-        data-nav-back="left"
+        data-nav-back="start"
         // Open, it covers the page's first column.
-        data-nav-exit="right"
-        className="group/rail fixed inset-y-0 left-0 z-50 flex items-center pl-6"
+        data-nav-exit="end"
+        className="group/rail fixed inset-y-0 start-0 z-50 flex items-center ps-6"
       >
         {shade}
         <BarSurface
@@ -1044,11 +1045,11 @@ function TvRail({
     <nav
       data-ui="tv-rail"
       data-nav-enter={ENTER_CURRENT}
-      data-nav-back="left"
+      data-nav-back="start"
       // Open, it covers the page beside it, which can leave nothing in line.
-      data-nav-exit="right"
+      data-nav-exit="end"
       className={cn(
-        'group/rail absolute inset-y-0 left-0',
+        'group/rail absolute inset-y-0 start-0',
         open
           ? 'w-full'
           : 'pointer-events-none w-64 focus-within:pointer-events-auto'
@@ -1059,7 +1060,7 @@ function TvRail({
         // The open panel fades in over these, as a changing width lays the page out every frame.
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-y-0 left-0 flex w-20 flex-col gap-1 px-3 py-8 transition-opacity duration-200 group-focus-within/rail:opacity-0"
+          className="pointer-events-none absolute inset-y-0 start-0 flex w-20 flex-col gap-1 px-3 py-8 transition-opacity duration-200 group-focus-within/rail:opacity-0"
         >
           {logo}
           {items.map((item) => glyph(item, item.iconType && <item.iconType />))}
@@ -1146,7 +1147,7 @@ function CornerMenu({
           select(item)(e);
         }}
         // Shut, the icon sits in the middle of the round button.
-        className={cn('w-full pl-3 pr-5', !open && 'bg-transparent')}
+        className={cn('w-full ps-3 pe-5', !open && 'bg-transparent')}
       />
     );
   };
@@ -1156,15 +1157,15 @@ function CornerMenu({
       data-open={open || undefined}
       data-nav-enter={ENTER_CURRENT}
       data-nav-back="up"
-      data-nav-exit="right"
+      data-nav-exit="end"
       // Focus moving within, or into the account menu, blurs then focuses in one go.
       onFocus={() => usingKeys() && setOpen(true)}
       onBlur={() => usingKeys() && setOpen(false)}
       className={cn(
         'z-40 transition-transform duration-200 ease-out',
         tv
-          ? 'absolute left-6 top-6 [[data-in-rows]_&]:-translate-y-[180%]'
-          : 'fixed left-[calc(1rem+env(safe-area-inset-left))] top-[calc(1rem+env(safe-area-inset-top))] hidden lg:block'
+          ? 'absolute start-6 top-6 [[data-in-rows]_&]:-translate-y-[180%]'
+          : 'fixed start-[calc(1rem+env(safe-area-inset-left))] top-[calc(1rem+env(safe-area-inset-top))] hidden lg:block'
       )}
     >
       <div
@@ -1185,7 +1186,7 @@ function CornerMenu({
       >
         <div
           ref={list}
-          className="absolute left-0 top-0 flex w-max min-w-48 flex-col gap-1 p-1.5 transition-transform duration-300 ease-out"
+          className="absolute start-0 top-0 flex w-max min-w-48 flex-col gap-1 p-1.5 transition-transform duration-300 ease-out"
           style={{
             transform: open ? undefined : `translateY(${-size.shift}px)`,
           }}
@@ -1200,7 +1201,7 @@ function CornerMenu({
             onClick={select(you)}
             labelClassName={label}
             inert={!open}
-            className="w-full pl-3 pr-5"
+            className="w-full ps-3 pe-5"
           />
         </div>
       </BarSurface>
@@ -1238,7 +1239,7 @@ function TvTabs({
         item={item}
         icon={Icon && <Icon />}
         onClick={select(item)}
-        className="pr-5"
+        className="pe-5"
       />
     );
   };
@@ -1329,7 +1330,7 @@ export function PageBody({ children }: { children: React.ReactNode }) {
   return (
     <div
       data-ui="page-body"
-      className="relative z-[1] space-y-8 px-4 pb-16 pt-[calc(1.5rem+env(safe-area-inset-top))] lg:pl-0 lg:pr-10 lg:pt-[calc(2.5rem+env(safe-area-inset-top))]"
+      className="relative z-[1] space-y-8 px-4 pb-16 pt-[calc(1.5rem+env(safe-area-inset-top))] lg:ps-0 lg:pe-10 lg:pt-[calc(2.5rem+env(safe-area-inset-top))]"
     >
       {children}
     </div>
@@ -1344,7 +1345,7 @@ export function PageMessage({ children }: { children: React.ReactNode }) {
     <div
       data-ui="page-message"
       className={cn(
-        'relative z-[1] flex flex-col justify-center px-4 py-10 lg:pl-0 lg:pr-10',
+        'relative z-[1] flex flex-col justify-center px-4 py-10 lg:ps-0 lg:pe-10',
         FILL_WINDOW
       )}
     >

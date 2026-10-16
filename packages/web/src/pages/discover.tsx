@@ -251,7 +251,7 @@ export function DiscoverPage({
   );
 
   return (
-    <div className="space-y-6 px-4 pb-16 pt-6 lg:pl-0 lg:pr-10 lg:pt-10">
+    <div className="space-y-6 px-4 pb-16 pt-6 lg:ps-0 lg:pe-10 lg:pt-10">
       <div
         data-ui="page-header"
         className="flex flex-wrap items-baseline gap-x-3 gap-y-1"
@@ -360,7 +360,7 @@ export function DiscoverIndex({ lastViewId }: { lastViewId: string | null }) {
     );
   }
   return (
-    <div className="space-y-4 px-4 pb-16 pt-6 lg:pl-0 lg:pr-10 lg:pt-10">
+    <div className="space-y-4 px-4 pb-16 pt-6 lg:ps-0 lg:pe-10 lg:pt-10">
       <Skeleton className="h-10 w-64" />
       <Skeleton className="h-64 w-full rounded-xl" />
     </div>

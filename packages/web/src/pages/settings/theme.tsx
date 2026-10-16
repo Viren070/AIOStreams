@@ -79,7 +79,7 @@ export function ThemeSection() {
                 aria-pressed={selected}
                 onClick={() => pick(preset)}
                 className={cn(
-                  'flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-sm transition-colors hover:bg-white/5',
+                  'flex items-center gap-2 rounded-full border py-1 ps-1 pe-3 text-sm transition-colors hover:bg-white/5',
                   selected
                     ? 'border-[--brand] ring-1 ring-[--brand]'
                     : 'border-white/10'

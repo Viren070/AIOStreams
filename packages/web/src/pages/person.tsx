@@ -113,7 +113,7 @@ function Filmography({ personId }: { personId: string }) {
         <h2 data-ui="section-title" className="text-xl font-semibold">
           Filmography
           {total != null && (
-            <span className="ml-2 text-base font-normal text-[--muted]">
+            <span className="ms-2 text-base font-normal text-[--muted]">
               {total}
             </span>
           )}

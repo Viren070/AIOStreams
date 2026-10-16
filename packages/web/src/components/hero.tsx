@@ -17,6 +17,7 @@ import { itemPath, navigate } from '../lib/paths';
 import { useVersionPicker } from './version-picker';
 import type { JellyfinClient } from '../lib/client';
 import type { BaseItemDto } from '../lib/types';
+import { pageRtl } from '../lib/direction';
 import { useHold } from '../lib/use-hold';
 import { useLatest } from '../lib/use-latest';
 import { CachedImage } from './cached-image';
@@ -36,7 +37,7 @@ function Shade() {
       <div
         data-ui="hero-shade"
         data-name="side"
-        className="absolute inset-0 bg-gradient-to-r from-[--background] via-[--background]/70 via-35% to-transparent"
+        className="absolute inset-0 bg-gradient-to-r from-[--background] via-[--background]/70 via-35% to-transparent rtl:bg-gradient-to-l"
       />
       <div
         data-ui="hero-shade"
@@ -59,7 +60,8 @@ export function BackdropFrame({
     <div
       data-ui="backdrop-frame"
       className={cn(
-        'absolute inset-y-0 right-0 isolate w-full landscape:[mask-image:linear-gradient(to_right,transparent,black_12rem)] lg:[mask-image:linear-gradient(to_right,transparent,black_12rem)]',
+        'absolute inset-y-0 end-0 isolate w-full landscape:[mask-image:linear-gradient(to_right,transparent,black_12rem)] lg:[mask-image:linear-gradient(to_right,transparent,black_12rem)]',
+        'rtl:landscape:[mask-image:linear-gradient(to_left,transparent,black_12rem)] rtl:lg:[mask-image:linear-gradient(to_left,transparent,black_12rem)]',
         className
       )}
     >
@@ -92,11 +94,11 @@ function HeroSkeleton() {
       aria-hidden
       data-ui="hero"
       data-loading
-      className="relative -mt-[var(--top-bar,0px)] h-[26rem] w-full overflow-hidden sm:h-[30rem] lg:-ml-[var(--side-bar,0px)] lg:h-[calc(max(36rem,53vh)+var(--top-bar,0px))] lg:w-[calc(100%+var(--side-bar,0px))]"
+      className="relative -mt-[var(--top-bar,0px)] h-[26rem] w-full overflow-hidden sm:h-[30rem] lg:-ms-[var(--side-bar,0px)] lg:h-[calc(max(36rem,53vh)+var(--top-bar,0px))] lg:w-[calc(100%+var(--side-bar,0px))]"
     >
       <div className="absolute inset-0 animate-pulse bg-[--subtle]" />
       <Shade />
-      <div className="absolute inset-x-0 bottom-0 space-y-4 px-4 pb-8 lg:left-[var(--side-bar,0px)] lg:max-w-3xl lg:pl-0 lg:pr-10 lg:pb-14">
+      <div className="absolute inset-x-0 bottom-0 space-y-4 px-4 pb-8 lg:start-[var(--side-bar,0px)] lg:max-w-3xl lg:ps-0 lg:pe-10 lg:pb-14">
         <HeroTextSkeleton />
       </div>
     </section>
@@ -457,7 +459,8 @@ function useSwipeFade(
     onPointerMove: (e: React.PointerEvent) => {
       const d = drag.current;
       if (d?.id !== e.pointerId) return;
-      const moved = e.clientX - d.startX;
+      // Toward the row's end, which is leftward right to left.
+      const moved = (e.clientX - d.startX) * (pageRtl() ? -1 : 1);
       if (!d.side) {
         if (
           Math.abs(moved) < DRAG_SLOP_PX ||
@@ -548,8 +551,10 @@ export function Hero({
     setIndex((i) => (i + step + featured.length) % featured.length);
   };
   const turning = !!currentHost().tv && focused && featured.length > 1;
-  useAction('nav.right', () => turn(1), turning);
-  useAction('nav.left', () => turn(-1), turning);
+  // Right to left, the next title lies to the left.
+  const [right, left]: (1 | -1)[] = pageRtl() ? [-1, 1] : [1, -1];
+  useAction('nav.right', () => turn(right), turning);
+  useAction('nav.left', () => turn(left), turning);
   React.useLayoutEffect(() => {
     const to = landing.current;
     landing.current = null;
@@ -581,7 +586,7 @@ export function Hero({
       ref={section}
       data-ui="hero"
       data-nav-top
-      className="relative -mt-[var(--top-bar,0px)] h-[26rem] w-full touch-pan-y touch-pinch-zoom overflow-hidden sm:h-[30rem] lg:-ml-[var(--side-bar,0px)] lg:h-[calc(max(36rem,53vh)+var(--top-bar,0px))] lg:w-[calc(100%+var(--side-bar,0px))]"
+      className="relative -mt-[var(--top-bar,0px)] h-[26rem] w-full touch-pan-y touch-pinch-zoom overflow-hidden sm:h-[30rem] lg:-ms-[var(--side-bar,0px)] lg:h-[calc(max(36rem,53vh)+var(--top-bar,0px))] lg:w-[calc(100%+var(--side-bar,0px))]"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setFocused(true)}
@@ -614,7 +619,7 @@ export function Hero({
         >
           <div
             data-ui="hero-content"
-            className="absolute inset-x-0 bottom-0 space-y-4 px-4 pb-8 lg:left-[var(--side-bar,0px)] lg:max-w-3xl lg:pl-0 lg:pr-10 lg:pb-14"
+            className="absolute inset-x-0 bottom-0 space-y-4 px-4 pb-8 lg:start-[var(--side-bar,0px)] lg:max-w-3xl lg:ps-0 lg:pe-10 lg:pb-14"
           >
             <HeroDetails
               item={item}
@@ -627,7 +632,7 @@ export function Hero({
       {featured.length > 1 && (
         <div
           data-ui="hero-dots"
-          className="absolute bottom-6 right-4 flex gap-1.5 lg:bottom-14"
+          className="absolute bottom-6 end-4 flex gap-1.5 lg:bottom-14"
         >
           {featured.map((f, i) => (
             <button
@@ -688,7 +693,7 @@ function FollowBackdrop({
         aria-hidden
         data-ui="hero-corner"
         // Masks rather than shades, which leave a seam beside the fading layers.
-        className="pointer-events-none fixed right-0 top-0 -z-10 aspect-video max-h-[calc(var(--hero-h)*1.4)] w-[70vw] overflow-hidden [mask-image:linear-gradient(to_right,transparent,rgb(0_0_0/0.4)_20%,black_45%)]"
+        className="pointer-events-none fixed end-0 top-0 -z-10 aspect-video max-h-[calc(var(--hero-h)*1.4)] w-[70vw] overflow-hidden [mask-image:linear-gradient(to_right,transparent,rgb(0_0_0/0.4)_20%,black_45%)] rtl:[mask-image:linear-gradient(to_left,transparent,rgb(0_0_0/0.4)_20%,black_45%)]"
       >
         <div className="absolute inset-0 [mask-image:linear-gradient(to_bottom,black_45%,rgb(0_0_0/0.4)_75%,transparent)]">
           <Backdrops current={src} />
@@ -802,7 +807,7 @@ export function FollowHero({
           <div
             data-ui="hero-content"
             className={cn(
-              'max-w-3xl space-y-4 pb-4 pr-10',
+              'max-w-3xl space-y-4 pb-4 pe-10',
               corner && 'lg:max-w-[40vw]'
             )}
           >

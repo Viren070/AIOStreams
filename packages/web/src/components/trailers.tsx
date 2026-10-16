@@ -94,9 +94,9 @@ function TrailersSheet({
       side="right"
       size="md"
       contentClass="flex flex-col gap-0 overflow-hidden p-0"
-      closeClass="right-2 top-[calc(0.75rem+env(safe-area-inset-top))]"
+      closeClass="end-2 top-[calc(0.75rem+env(safe-area-inset-top))]"
     >
-      <div className="min-w-0 px-4 pb-3 pr-12 pt-[calc(0.75rem+env(safe-area-inset-top))]">
+      <div className="min-w-0 px-4 pb-3 pe-12 pt-[calc(0.75rem+env(safe-area-inset-top))]">
         <p className="text-xs font-semibold uppercase tracking-wider text-[--muted]">
           Trailers
         </p>
@@ -119,7 +119,7 @@ function TrailersSheet({
               onClick={() => onPlay(i)}
               onFocus={() => prefetch(trailer.url)}
               onPointerEnter={() => prefetch(trailer.url)}
-              className="group/trailer flex w-full items-center gap-3 rounded-xl p-2 text-left outline-none transition-colors hover:bg-white/5 focus-visible:bg-white/10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[--ring] [[data-tv]_&]:focus-visible:ring-[3px]"
+              className="group/trailer flex w-full items-center gap-3 rounded-xl p-2 text-start outline-none transition-colors hover:bg-white/5 focus-visible:bg-white/10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[--ring] [[data-tv]_&]:focus-visible:ring-[3px]"
             >
               <div className="relative aspect-video w-32 flex-none overflow-hidden rounded-lg bg-gray-900 sm:w-36">
                 {(id || backdrop) && (

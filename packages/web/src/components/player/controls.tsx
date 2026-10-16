@@ -328,12 +328,12 @@ export function PlayerControls({
       <div
         data-ui="player-top-bar"
         className={cn(
-          'absolute inset-x-0 top-0 flex items-center gap-3 bg-gradient-to-b from-black/80 to-transparent pb-12 pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pt-[calc(0.75rem+env(safe-area-inset-top))] transition-opacity duration-300 sm:pl-[max(1.25rem,env(safe-area-inset-left))] sm:pr-[max(1.25rem,env(safe-area-inset-right))] sm:pt-[calc(1.25rem+env(safe-area-inset-top))]',
+          'absolute inset-x-0 top-0 flex items-center gap-3 bg-gradient-to-b from-black/80 to-transparent pb-12 ps-[max(0.75rem,env(safe-area-inset-left))] pe-[max(0.75rem,env(safe-area-inset-right))] pt-[calc(0.75rem+env(safe-area-inset-top))] transition-opacity duration-300 sm:ps-[max(1.25rem,env(safe-area-inset-left))] sm:pe-[max(1.25rem,env(safe-area-inset-right))] sm:pt-[calc(1.25rem+env(safe-area-inset-top))]',
           barFade
         )}
       >
         <ControlButton name="exit" label="Back" onClick={onBack}>
-          <LuArrowLeft />
+          <LuArrowLeft className="rtl:-scale-x-100" />
         </ControlButton>
         <div
           data-ui="player-title"
@@ -355,7 +355,7 @@ export function PlayerControls({
           <ControlButton
             name="lock"
             label="Lock screen"
-            className="ml-auto"
+            className="ms-auto"
             onClick={() => {
               setLocked(true);
               hide();
@@ -373,7 +373,7 @@ export function PlayerControls({
         {middleButton(buttons.previous)}
         {middleButton(buttons.back)}
         {state.waiting && !state.error ? (
-          <LoadingSpinner containerClass="size-16 flex-none" iconClass="mr-0" />
+          <LoadingSpinner containerClass="size-16 flex-none" iconClass="me-0" />
         ) : (
           !tv && (
             <MiddleButton
@@ -455,7 +455,7 @@ export function PlayerControls({
           data-type={segment.type}
           data-visible={visible || fresh || undefined}
           className={cn(
-            'absolute right-[max(1rem,env(safe-area-inset-right))] z-20 transition-[bottom,opacity] duration-300 sm:right-[max(2rem,env(safe-area-inset-right))]',
+            'absolute end-[max(1rem,env(safe-area-inset-right))] z-20 transition-[bottom,opacity] duration-300 sm:end-[max(2rem,env(safe-area-inset-right))]',
             visible
               ? 'bottom-[calc(7rem+env(safe-area-inset-bottom))] sm:bottom-[calc(8rem+env(safe-area-inset-bottom))]'
               : 'bottom-[calc(2rem+env(safe-area-inset-bottom))]',
@@ -477,7 +477,7 @@ export function PlayerControls({
         ref={bottomBar}
         data-ui="player-bottom-bar"
         className={cn(
-          'absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent pb-[calc(0.5rem+env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pt-16 transition-opacity duration-300 sm:pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pl-[max(1.25rem,env(safe-area-inset-left))] sm:pr-[max(1.25rem,env(safe-area-inset-right))]',
+          'absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent pb-[calc(0.5rem+env(safe-area-inset-bottom))] ps-[max(0.75rem,env(safe-area-inset-left))] pe-[max(0.75rem,env(safe-area-inset-right))] pt-16 transition-opacity duration-300 sm:pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:ps-[max(1.25rem,env(safe-area-inset-left))] sm:pe-[max(1.25rem,env(safe-area-inset-right))]',
           barFade
         )}
       >
@@ -516,7 +516,7 @@ export function PlayerControls({
           {!touch && !tv && <Volume player={player} />}
           <span
             data-ui="player-time"
-            className="ml-2 hidden whitespace-nowrap text-[length:var(--time)] tabular-nums text-gray-200 sm:inline"
+            className="ms-2 hidden whitespace-nowrap text-[length:var(--time)] tabular-nums text-gray-200 sm:inline"
           >
             {time}
           </span>

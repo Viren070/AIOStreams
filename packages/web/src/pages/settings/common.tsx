@@ -91,7 +91,7 @@ export function LanguageList({
           {value.map((code, i) => (
             <li
               key={code}
-              className="flex items-center gap-2 rounded-xl bg-[--subtle] py-1 pl-3 pr-1"
+              className="flex items-center gap-2 rounded-xl bg-[--subtle] py-1 ps-3 pe-1"
             >
               <span className="w-4 text-sm tabular-nums text-[--muted]">
                 {i + 1}

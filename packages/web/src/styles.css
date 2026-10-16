@@ -45,17 +45,27 @@ html.playing [data-ui='window-controls'][data-fullscreen] {
 html[data-platform='macos'] [data-ui='sidebar-logo'] {
   padding-top: 2.25rem;
 }
-/* Drawers on the window buttons' side open below them. */
-html[data-host='desktop']:not([data-platform='macos'])
+/* Drawers on the window buttons' side open below them. A drawer's side is
+   its start or end, so right to left a left drawer opens on the right. */
+html[data-host='desktop']:not([data-platform='macos']):not([dir='rtl'])
   .UI-Drawer__content[data-side='right'],
-html[data-platform='macos'] .UI-Drawer__content[data-side='left'] {
+html[data-host='desktop']:not([data-platform='macos'])[dir='rtl']
+  .UI-Drawer__content[data-side='left'],
+html[data-platform='macos']:not([dir='rtl'])
+  .UI-Drawer__content[data-side='left'],
+html[data-platform='macos'][dir='rtl'] .UI-Drawer__content[data-side='right'] {
   margin-top: 2.5rem;
   height: calc(100% - 2.5rem);
 }
 @media (min-width: 1024px) {
-  html[data-host='desktop']:not([data-platform='macos'])
+  html[data-host='desktop']:not([data-platform='macos']):not([dir='rtl'])
     .UI-Drawer__content[data-side='right'],
-  html[data-platform='macos'] .UI-Drawer__content[data-side='left'] {
+  html[data-host='desktop']:not([data-platform='macos'])[dir='rtl']
+    .UI-Drawer__content[data-side='left'],
+  html[data-platform='macos']:not([dir='rtl'])
+    .UI-Drawer__content[data-side='left'],
+  html[data-platform='macos'][dir='rtl']
+    .UI-Drawer__content[data-side='right'] {
     height: calc(100% - 2.5rem - 10px);
   }
 }

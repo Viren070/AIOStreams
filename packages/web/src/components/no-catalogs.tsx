@@ -59,7 +59,7 @@ export function NoCatalogs() {
         <Alert
           data-ui="no-catalogs-tip"
           intent="info-basic"
-          className="mx-auto mt-6 max-w-md text-left"
+          className="mx-auto mt-6 max-w-md text-start"
           description="Install catalog addons from Addons → Marketplace. For one that isn't listed, use the Custom addon there."
         />
       )}

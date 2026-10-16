@@ -195,7 +195,7 @@ export function HomePage() {
       >
         <div
           data-ui="home-rows"
-          className="space-y-10 px-4 pb-16 pt-8 lg:pl-0 lg:pr-10"
+          className="space-y-10 px-4 pb-16 pt-8 lg:ps-0 lg:pe-10"
         >
           {rows}
         </div>
@@ -208,8 +208,8 @@ export function HomePage() {
         data-ui="home-rows"
         className={cn(
           heroItems.length || heroLoading
-            ? 'relative z-[1] space-y-10 px-4 pt-2 lg:pl-0 lg:pr-10'
-            : 'relative z-[1] space-y-10 px-4 pt-[calc(1.5rem+env(safe-area-inset-top))] lg:pl-0 lg:pr-10 lg:pt-[calc(2.5rem+env(safe-area-inset-top))]',
+            ? 'relative z-[1] space-y-10 px-4 pt-2 lg:ps-0 lg:pe-10'
+            : 'relative z-[1] space-y-10 px-4 pt-[calc(1.5rem+env(safe-area-inset-top))] lg:ps-0 lg:pe-10 lg:pt-[calc(2.5rem+env(safe-area-inset-top))]',
           noCatalogs && 'flex flex-1 flex-col'
         )}
       >
@@ -362,7 +362,7 @@ function LibraryRow({ view, first }: { view: BaseItemDto; first: boolean }) {
           {label && (
             <span className="text-sm font-normal text-[--muted]">{label}</span>
           )}
-          <BiChevronRight className="self-center text-xl text-[--muted] transition-transform group-hover/title:translate-x-0.5" />
+          <BiChevronRight className="self-center text-xl text-[--muted] transition-transform group-hover/title:translate-x-0.5 rtl:-scale-x-100 rtl:group-hover/title:-translate-x-0.5" />
         </Anchor>
       }
       shape={landscape ? 'wide' : 'poster'}

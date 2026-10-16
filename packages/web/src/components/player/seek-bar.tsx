@@ -60,6 +60,8 @@ export function SeekBar({
       aria-valuetext={clock(shown)}
       tabIndex={0}
       data-ui="seek-bar"
+      // A timeline runs left to right in every language.
+      dir="ltr"
       data-focus="own"
       // The space above it takes presses too, so a finger finds it.
       className="group/seek relative flex h-5 cursor-pointer touch-none items-center rounded-full outline-none before:absolute before:inset-x-0 before:-top-6 before:bottom-0 before:content-['']"

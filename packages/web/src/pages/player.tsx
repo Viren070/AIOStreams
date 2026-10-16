@@ -360,7 +360,7 @@ function Failure({
           <Button
             intent="gray-outline"
             className="rounded-full"
-            leftIcon={<BiArrowBack />}
+            leftIcon={<BiArrowBack className="rtl:-scale-x-100" />}
             autoFocus={!onVersions && !retry}
             onClick={() => goBack(to.item(itemId))}
           >
@@ -645,7 +645,7 @@ function Player({
       {player.stats?.text && (
         <pre
           data-ui="player-stats"
-          className="pointer-events-none fixed left-[calc(1rem+env(safe-area-inset-left))] top-[calc(4.5rem+env(safe-area-inset-top))] rounded-lg bg-black/60 px-3 py-2 font-mono text-xs leading-relaxed text-white/90"
+          className="pointer-events-none fixed start-[calc(1rem+env(safe-area-inset-left))] top-[calc(4.5rem+env(safe-area-inset-top))] rounded-lg bg-black/60 px-3 py-2 font-mono text-xs leading-relaxed text-white/90"
         >
           {player.stats.text}
         </pre>

@@ -342,7 +342,7 @@ export function CalendarPage({ month }: { month?: string }) {
               size="sm"
               intent="gray-subtle"
               className="rounded-full"
-              icon={<LuChevronLeft />}
+              icon={<LuChevronLeft className="rtl:-scale-x-100" />}
               aria-label="Previous month"
               onClick={() => go(-1)}
             />
@@ -351,13 +351,13 @@ export function CalendarPage({ month }: { month?: string }) {
               size="sm"
               intent="gray-subtle"
               className="rounded-full"
-              icon={<LuChevronRight />}
+              icon={<LuChevronRight className="rtl:-scale-x-100" />}
               aria-label="Next month"
               onClick={() => go(1)}
             />
             <span
               data-ui="calendar-month"
-              className="ml-2 text-lg font-semibold"
+              className="ms-2 text-lg font-semibold"
             >
               {first.toLocaleDateString(formatLocale(), {
                 month: 'long',

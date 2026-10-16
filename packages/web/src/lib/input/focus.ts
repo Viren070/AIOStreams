@@ -1,4 +1,5 @@
 import { drift, glideBy, glideTo, headedTo } from './glide';
+import { pageRtl } from '../direction';
 
 export type Direction = 'up' | 'down' | 'left' | 'right';
 
@@ -517,7 +518,7 @@ const lastIn = new WeakMap<Element, HTMLElement>();
 
 export function remember(el: Element): void {
   if (!(el instanceof HTMLElement)) return;
-  for (let group = el.closest(GROUP); group; ) {
+  for (let group = el.closest(GROUP); group;) {
     lastIn.set(group, el);
     group = group.parentElement?.closest(GROUP) ?? null;
   }
@@ -747,6 +748,13 @@ let lastMove: { from: HTMLElement; to: HTMLElement; dir: Direction } | null =
  */
 const cameFrom = new WeakMap<Element, HTMLElement>();
 
+/** A side a `data-nav-*` mark names; `start` and `end` follow the page's direction. */
+export function navSide(value: string | undefined): Direction | undefined {
+  if (value === 'start') return pageRtl() ? 'right' : 'left';
+  if (value === 'end') return pageRtl() ? 'left' : 'right';
+  return value as Direction | undefined;
+}
+
 /** Moves focus to the nearest thing that way; nothing focused starts at the first. */
 export function move(dir: Direction): boolean {
   const root = scope();
@@ -763,7 +771,7 @@ export function move(dir: Direction): boolean {
     return !!start;
   }
   const exit = from.closest<HTMLElement>('[data-nav-exit]');
-  const out = exit?.dataset.navExit === dir;
+  const out = navSide(exit?.dataset.navExit) === dir;
   const came = out ? cameFrom.get(exit!) : undefined;
   if (came?.isConnected && canFocus(came)) {
     moveTo(came, dir);
@@ -815,10 +823,10 @@ export function moveTo(to: HTMLElement, dir: Direction): void {
     return focusOn(to);
   }
   const box = to.closest<HTMLElement>('[data-nav-exit]');
-  const exit = box && !box.contains(from) && box.dataset.navExit;
+  const exit = box && !box.contains(from) && navSide(box.dataset.navExit);
   if (exit) cameFrom.set(box, from);
   // Into such a box, only its exit leads back.
-  lastMove = { from, to, dir: exit ? OPPOSITE[exit as Direction] : dir };
+  lastMove = { from, to, dir: exit ? OPPOSITE[exit] : dir };
   focusOn(to);
 }
 

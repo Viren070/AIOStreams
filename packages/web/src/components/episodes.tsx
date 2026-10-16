@@ -160,7 +160,7 @@ export function EpisodeThumb({
       {labels.length > 0 && (
         <div
           data-ui="episode-status"
-          className="absolute left-1.5 top-1.5 flex gap-1"
+          className="absolute start-1.5 top-1.5 flex gap-1"
         >
           {labels.map((label) => (
             <Badge key={label} size="sm" intent="gray-solid">
@@ -293,7 +293,7 @@ function Head({
           data-focus="own"
           data-nav-card
           className={cn(
-            "mt-0.5 text-left text-sm font-semibold after:absolute after:inset-0 after:rounded-xl after:content-[''] sm:text-base",
+            "mt-0.5 text-start text-sm font-semibold after:absolute after:inset-0 after:rounded-xl after:content-[''] sm:text-base",
             thumbRing &&
               "before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:z-[1] before:aspect-video before:rounded-xl before:content-[''] focus-visible:before:ring-2 focus-visible:before:ring-inset focus-visible:before:ring-[--ring] [[data-tv]_&]:focus-visible:before:ring-[3px]"
           )}

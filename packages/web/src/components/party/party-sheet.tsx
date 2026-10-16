@@ -92,7 +92,7 @@ function useSheet() {
 export const usePartySheetOpen = () => useSheet().open;
 
 /** Content clear of a landscape phone's notch on the right. */
-const GUTTER = 'pl-4 pr-[max(1rem,env(safe-area-inset-right))]';
+const GUTTER = 'ps-4 pe-[max(1rem,env(safe-area-inset-right))]';
 
 /** The watch party panel: starting or joining one, then the party itself. */
 export function PartySheet() {
@@ -116,7 +116,7 @@ export function PartySheet() {
       size="sm"
       contentClass="flex flex-col gap-0 overflow-hidden p-0"
       headerClass={cn(GUTTER, 'pb-3 pt-[calc(1rem+env(safe-area-inset-top))]')}
-      closeClass="right-[max(0.5rem,env(safe-area-inset-right))] top-[calc(0.75rem+env(safe-area-inset-top))]"
+      closeClass="end-[max(0.5rem,env(safe-area-inset-right))] top-[calc(0.75rem+env(safe-area-inset-top))]"
     >
       {state && !invite ? (
         <InParty state={state} />
@@ -306,7 +306,7 @@ function RelayOption({
       data-ui="party-relay"
       onClick={onPick}
       className={cn(
-        'flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--ring]',
+        'flex w-full items-start gap-3 rounded-xl border p-3 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--ring]',
         checked
           ? 'border-white/40 bg-white/10'
           : 'border-white/10 hover:bg-white/5'
@@ -648,7 +648,7 @@ function PartyDetails({ state }: { state: PartyState }) {
         <Button
           intent="gray-outline"
           className="w-full rounded-full"
-          leftIcon={<LuLogOut />}
+          leftIcon={<LuLogOut className="rtl:-scale-x-100" />}
           onClick={() => {
             party.leave();
             closePartySheet();
@@ -928,7 +928,7 @@ function Chat({ state }: { state: PartyState }) {
               type="submit"
               intent="white"
               className="flex-none rounded-full"
-              icon={<LuSend />}
+              icon={<LuSend className="rtl:-scale-x-100" />}
               aria-label="Send"
               disabled={!text.trim() || full}
             />

@@ -253,7 +253,7 @@ export function VersionPickerProvider({
           side="right"
           size="md"
           contentClass="flex flex-col gap-0 overflow-hidden p-0"
-          closeClass="right-2 top-[calc(0.75rem+env(safe-area-inset-top))]"
+          closeClass="end-2 top-[calc(0.75rem+env(safe-area-inset-top))]"
         >
           {versions}
         </Drawer>
@@ -271,7 +271,7 @@ export function VersionPickerProvider({
               : item?.ProductionYear || undefined
           }
           contentClass="flex w-full max-w-4xl flex-col gap-0 overflow-hidden p-0 max-md:h-[100dvh] max-md:rounded-none max-md:border-0 md:max-h-[85vh]"
-          headerClass="relative z-[1] px-4 pb-3 pr-14 pt-5 text-left max-md:pt-[calc(1.25rem+env(safe-area-inset-top))] sm:px-5 sm:pr-14"
+          headerClass="relative z-[1] px-4 pb-3 pe-14 pt-5 text-start max-md:pt-[calc(1.25rem+env(safe-area-inset-top))] sm:px-5 sm:pe-14"
           closeClass="z-[2] max-md:top-[calc(1rem+env(safe-area-inset-top))]"
         >
           {versions}
@@ -469,7 +469,7 @@ function Versions({
           data-ui="versions-header"
           className="space-y-2 px-3 pb-2 pt-[calc(0.5rem+env(safe-area-inset-top))]"
         >
-          <div className="flex items-center gap-2 pr-9">
+          <div className="flex items-center gap-2 pe-9">
             {filtering ? (
               <div className="min-w-0 flex-1">
                 <TextInput
@@ -484,7 +484,7 @@ function Versions({
             ) : (
               <p
                 data-ui="versions-count"
-                className="mr-auto text-sm text-[--muted]"
+                className="me-auto text-sm text-[--muted]"
               >
                 {count}
               </p>
@@ -502,7 +502,7 @@ function Versions({
           <div className="flex flex-wrap items-center gap-2">
             <p
               data-ui="versions-count"
-              className="mr-auto text-sm text-[--muted]"
+              className="me-auto text-sm text-[--muted]"
             >
               {count}
             </p>
@@ -628,7 +628,7 @@ function Versions({
                 // Inside the card's border, where an outline would ring it twice.
                 data-focus="own"
                 onClick={() => start(source)}
-                className="flex min-w-0 flex-1 items-start gap-3 rounded-xl p-3 text-left focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[--ring]"
+                className="flex min-w-0 flex-1 items-start gap-3 rounded-xl p-3 text-start focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[--ring]"
               >
                 <span
                   data-ui="version-play-icon"
@@ -648,7 +648,7 @@ function Versions({
                   <span
                     aria-hidden
                     className={cn(
-                      'float-right ml-2 h-6 w-8',
+                      'float-right rtl:float-left ms-2 h-6 w-8',
                       !compact && 'sm:hidden'
                     )}
                   />
@@ -685,7 +685,7 @@ function Versions({
               {!!actions.length && (
                 <div
                   className={cn(
-                    'absolute right-1.5 top-1.5',
+                    'absolute end-1.5 top-1.5',
                     !compact && 'sm:hidden'
                   )}
                 >

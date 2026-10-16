@@ -202,7 +202,12 @@ function EmbeddedTrailer({
         data-ui="trailer-bar"
         className="flex items-center gap-3 px-[max(1rem,env(safe-area-inset-left))] pb-2 pt-[max(0.5rem,env(safe-area-inset-top))]"
       >
-        {button('exit', 'Back', <LuArrowLeft />, onBack)}
+        {button(
+          'exit',
+          'Back',
+          <LuArrowLeft className="rtl:-scale-x-100" />,
+          onBack
+        )}
         <div className="min-w-0 flex-1">
           <p className="truncate font-semibold">{item.Name}</p>
           <p className="truncate text-sm text-gray-300">{trailer.name}</p>
@@ -249,7 +254,7 @@ function TrailerFailure({
           <Button
             intent={external ? 'gray-outline' : 'white'}
             className="rounded-full"
-            leftIcon={<BiArrowBack />}
+            leftIcon={<BiArrowBack className="rtl:-scale-x-100" />}
             autoFocus={!external}
             onClick={onBack}
           >

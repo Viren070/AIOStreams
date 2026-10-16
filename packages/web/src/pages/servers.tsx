@@ -240,7 +240,7 @@ function ServerCard({
     <button
       type="button"
       onClick={onChoose}
-      className="group/server flex h-full w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-gray-950/80 text-left shadow-xl transition-colors hover:border-white/25 focus-visible:border-white/25"
+      className="group/server flex h-full w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-gray-950/80 text-start shadow-xl transition-colors hover:border-white/25 focus-visible:border-white/25"
     >
       <Banner name={name} logo={logo} />
       <span className="flex w-full flex-1 flex-col gap-3 p-4">
@@ -293,7 +293,7 @@ function ServerCard({
               <IconButton
                 size="sm"
                 intent="gray-subtle"
-                className="absolute right-2 top-2 rounded-full"
+                className="absolute end-2 top-2 rounded-full"
                 icon={<BiDotsVerticalRounded />}
                 aria-label={`Options for ${name}`}
               />
