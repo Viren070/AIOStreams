@@ -272,7 +272,9 @@ function useSwitchVersion(
 }
 
 /** Versions tried for each item since one last started, so failing over never comes back round. */
-const triedVersions = new Map<string, Set<string>>();
+const triedVersions = new Map<string, { at: number; keys: Set<string> }>();
+/** How long a run of failed versions is remembered, so a later try starts afresh. */
+const TRIED_MS = 10 * 60_000;
 const versionKey = (s: SourceInfo) => s.aiostreams?.id ?? s.Id ?? '';
 // A fresh version list can number versions anew; the server's own id and the name hold.
 const sameVersion = (a: SourceInfo, b: SourceInfo) =>
@@ -311,15 +313,27 @@ function useFailover(
     if (!on || off || !failed || done.current) return;
     done.current = true;
     const { item, source, versions, startMs, play } = latest.current;
-    const tried = triedVersions.get(item.Id!) ?? new Set<string>();
-    triedVersions.set(item.Id!, tried.add(versionKey(source)));
+    const run = triedVersions.get(item.Id!);
+    const tried =
+      run && Date.now() - run.at < TRIED_MS ? run.keys : new Set<string>();
+    triedVersions.set(item.Id!, {
+      at: Date.now(),
+      keys: tried.add(versionKey(source)),
+    });
     // The server lists the version asked for first, the rest in its order.
     const exact = versions.findIndex((s) => !!s.Id && s.Id === source.Id);
     const at =
       exact >= 0 ? exact : versions.findIndex((s) => sameVersion(s, source));
     if (at < 0) return;
-    const to = versions.slice(at + 1).find((s) => !tried.has(versionKey(s)));
-    if (!to) return;
+    // Those after it, then round to those before: one a TV can't decode is listed last.
+    const to = [...versions.slice(at + 1), ...versions.slice(0, at)].find(
+      (s) => !tried.has(versionKey(s))
+    );
+    if (!to) {
+      // Out of versions: the next try starts afresh.
+      triedVersions.delete(item.Id!);
+      return;
+    }
     toast.info("This version didn't play, so the next one is starting.");
     // A host's own player waits on the episodes after it, so leaving can come first.
     let current = true;

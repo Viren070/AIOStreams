@@ -34,10 +34,13 @@ export function playableSources(
   const sources = ((info?.MediaSources ?? []) as SourceInfo[]).filter(
     (s) => !isNotice(s)
   );
-  const plays = sources.filter((s) => !unsupportedOnTv(s));
-  return plays.length === sources.length
-    ? sources
-    : [...plays, ...sources.filter((s) => !plays.includes(s))];
+  const unplayable = new Set(sources.filter((s) => unsupportedOnTv(s)));
+  return unplayable.size
+    ? [
+        ...sources.filter((s) => !unplayable.has(s)),
+        ...sources.filter((s) => unplayable.has(s)),
+      ]
+    : sources;
 }
 
 /** Notices by the version each came after, `null` for those before them all. */
