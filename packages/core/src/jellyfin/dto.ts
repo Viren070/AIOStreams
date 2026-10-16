@@ -564,6 +564,11 @@ export function buildContentItem(
   if (typeof meta.language === 'string')
     item.PreferredMetadataLanguage = meta.language;
   if (typeof meta.website === 'string') item.HomePageUrl = meta.website;
+  if (
+    typeof meta.animatedPoster === 'string' &&
+    /^https?:\/\//i.test(meta.animatedPoster)
+  )
+    item.aiostreams = { animatedPoster: meta.animatedPoster };
   if (jellyfinType === 'Movie' && ctx.listVersions) {
     item.EnableMediaSourceDisplay = true;
     item.MediaSources = listPlaceholderSources(
