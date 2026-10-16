@@ -766,6 +766,8 @@ export const settings = {
     autoPlayFirst: syncedFlag('autoPlayFirst', false, [
       'aiostreams-web-skip-versions',
     ]),
+    /** A version that fails to start hands over to the next one. */
+    failover: syncedFlag('versionFailover', true),
     chapterSkips: syncedFlag('chapterSkips', true, [
       'aiostreams-desktop-chapter-skips',
     ]),
