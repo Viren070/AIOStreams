@@ -32,10 +32,13 @@ export function playableSources(
   const sources = (info?.MediaSources ?? []).filter(
     (s) => s.Type !== 'Placeholder'
   ) as SourceInfo[];
-  const plays = sources.filter((s) => !unsupportedOnTv(s));
-  return plays.length === sources.length
-    ? sources
-    : [...plays, ...sources.filter((s) => !plays.includes(s))];
+  const unplayable = new Set(sources.filter((s) => unsupportedOnTv(s)));
+  return unplayable.size
+    ? [
+        ...sources.filter((s) => !unplayable.has(s)),
+        ...sources.filter((s) => unplayable.has(s)),
+      ]
+    : sources;
 }
 
 export function noticeSources(

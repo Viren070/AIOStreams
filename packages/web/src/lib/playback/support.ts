@@ -63,6 +63,15 @@ function decodes(kind: 'video' | 'audio', codec: string): boolean {
  */
 export function unsupportedOnTv(source: SourceInfo): string | null {
   if (!currentHost().tv) return null;
+  let verdict = verdicts.get(source);
+  if (verdict === undefined) verdicts.set(source, (verdict = judge(source)));
+  return verdict;
+}
+
+/** Each version's verdict, as lists and their rows ask on every render. */
+const verdicts = new WeakMap<SourceInfo, string | null>();
+
+function judge(source: SourceInfo): string | null {
   const streams = source.MediaStreams ?? [];
   const tags = source.aiostreams;
   const video = streams.find((s) => s.Type === 'Video');
@@ -74,9 +83,15 @@ export function unsupportedOnTv(source: SourceInfo): string | null {
   const videoCodec = VIDEO[video?.Codec?.toLowerCase() ?? ''];
   if (videoCodec && !decodes('video', videoCodec))
     return video!.Codec!.toUpperCase();
+  // The server reads an "Atmos" tag alone as TrueHD, though Atmos rides on DD+
+  // as often, and on almost every web release: a TrueHD it can't vouch for counts
+  // as unknown.
+  const atmosOnly =
+    !!tags?.audioTags.includes('Atmos') && !tags.audioTags.includes('TrueHD');
   const probed = streams
     .filter((s) => s.Type === 'Audio' && s.Codec)
-    .map((s) => s.Codec!.toLowerCase());
+    .map((s) => s.Codec!.toLowerCase())
+    .filter((c) => !(atmosOnly && c === 'truehd'));
   const audio = (
     probed.length
       ? probed
