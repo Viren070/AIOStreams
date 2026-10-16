@@ -9,13 +9,13 @@ import { Steps, Step } from 'fumadocs-ui/components/steps';
 The [AIOStreams app](/apps) also comes packaged for **LG TVs** (webOS) and **Samsung TVs** (Tizen), with the layout made for the remote that the [Android app](/apps/android#on-a-tv) has on a TV. Neither store carries it, so you install it from a file, the way developers install their own apps. On an Android TV, Google TV or Fire TV, use the [Android app](/apps/android) instead.
 
 <Callout type="warn">
-  The TV apps are new and have only been tried in LG's and Samsung's TV
-  emulators so far, not on real TVs. Expect rough edges, and please report how
-  they run on yours.
+  The TV apps are new. The Samsung app has been used on a 2020 Samsung TV; the
+  LG app has only been tried in LG's emulator. Expect rough edges, and please
+  report how they run on yours.
 </Callout>
 
-- **Which TVs.** They are made for TVs from 2023 or later (webOS 23, Tizen 7). On an older TV, the app says it may not work and offers to try anyway.
-- **What plays.** The TVs play through their own player, so the TV decides which formats play. Most recent TVs play HEVC and HDR, but not every audio or subtitle format.
+- **Which TVs.** LG TVs from 2023 or later (webOS 23), and Samsung TVs from 2020 or later (Tizen 5.5). On an older TV, the app says it may not work and offers to try anyway.
+- **What plays.** The TVs play through their own player, so the TV decides which formats play. Most recent TVs play HEVC and HDR, but not every audio or subtitle format: Samsung TVs play no Dolby Vision or TrueHD, and those from 2018 to 2022 no DTS. The app asks the TV what it decodes and lists the versions it can't play last, marked as such, so Play picks one that plays; you can still choose them.
 - **Speed.** Like the Android app, the TV apps draw their screens with the TV's web engine, so moving around can feel slower than in the TV's own apps.
 
 Both packages are on the [TV apps release](https://github.com/Viren070/AIOStreams/releases/tag/smart-tv).
