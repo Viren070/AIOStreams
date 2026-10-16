@@ -56,11 +56,13 @@ export function FavouritesPage({ kind }: { kind?: string }) {
           <LuffyError title="Could not load your favourites" />
         ) : (
           <>
-            <MixedGrid
-              items={items}
-              client={client}
-              loading={pages.isLoading}
-            />
+            <div data-nav-start>
+              <MixedGrid
+                items={items}
+                client={client}
+                loading={pages.isLoading}
+              />
+            </div>
             {!pages.isLoading && !items.length && (
               <p className="text-[--muted]">
                 Nothing marked as a favourite yet.
