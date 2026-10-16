@@ -19,6 +19,7 @@ import {
   MAX_CUSTOM_CSS,
 } from '../../lib/settings';
 import { useServerInfo } from '../../lib/server-info';
+import { currentHost } from '../../lib/hosts';
 import { SettingsCard } from '../../components/settings-card';
 import { Anchor } from '../../components/anchor';
 import { followsYou, DOCS_URL } from './common';
@@ -119,12 +120,22 @@ export function ThemeSection() {
         </div>
       </div>
       <ColorInput
+        picker={!currentHost().tv}
+        swatches={THEME_PRESETS.map((p) => ({
+          value: p.accent,
+          name: presetName(p.name),
+        }))}
         label={t`Accent`}
         help={t`Buttons, progress bars and highlights.`}
         value={accent}
         onValueChange={(value) => pick({ accent: value, background })}
       />
       <ColorInput
+        picker={!currentHost().tv}
+        swatches={THEME_PRESETS.map((p) => ({
+          value: p.background,
+          name: presetName(p.name),
+        }))}
         label={t`Background`}
         help={t`Pages and panels take their shades from it. Dark colours read best.`}
         value={background}

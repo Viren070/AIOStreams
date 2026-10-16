@@ -3,7 +3,6 @@ import { Trans } from '@lingui/react/macro';
 import { Select } from '@aiostreams/ui/select';
 import { Switch } from '@aiostreams/ui/switch';
 import { Slider } from '@aiostreams/ui/slider';
-import { ColorInput } from '@aiostreams/ui/color-input';
 import {
   subtitleCss,
   subtitleLine,
@@ -24,6 +23,8 @@ import {
   type SubtitleOutline,
   type SubtitleSize,
 } from '../../lib/settings';
+import { ColorInput } from '@aiostreams/ui/color-input';
+import { currentHost } from '../../lib/hosts';
 import { SettingsCard } from '../../components/settings-card';
 import { languageOptions, LanguageList, followsYou, onAccount } from './common';
 
@@ -179,6 +180,7 @@ export function SubtitlesSection() {
           onValueChange={(v) => setFont(v as SubtitleFont)}
         />
         <ColorInput
+          picker={!currentHost().tv}
           label={t`Colour`}
           value={textColor}
           onValueChange={setTextColor}
@@ -218,6 +220,7 @@ export function SubtitlesSection() {
           onValueChange={setShadow}
         />
         <ColorInput
+          picker={!currentHost().tv}
           label={t`Colour`}
           value={outlineColor}
           onValueChange={setOutlineColor}
@@ -225,6 +228,7 @@ export function SubtitlesSection() {
       </SettingsCard>
       <SettingsCard name="background" title={t`Background`}>
         <ColorInput
+          picker={!currentHost().tv}
           label={t`Colour`}
           value={backgroundColor}
           onValueChange={setBackgroundColor}
