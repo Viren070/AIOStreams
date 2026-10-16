@@ -1,4 +1,4 @@
-﻿import { DistributedLock } from '../utils/distributed-lock.js';
+import { DistributedLock } from '../utils/distributed-lock.js';
 import {
   deduplicateTitles,
   Metadata,
@@ -37,7 +37,10 @@ import {
   CinemetaVideo,
 } from './episode-resolver.js';
 import { SceneMappingDataset } from './scene-mappings.js';
-import { resolveCrossProviderIds } from './id-resolution.js';
+import {
+  resolveCrossProviderIds,
+  scopeAnimeEpisodeMappings,
+} from './id-resolution.js';
 import { SkyhookMetadata } from './skyhook.js';
 
 const logger = createLogger('metadata-service');
@@ -77,7 +80,8 @@ export class MetadataService {
             let cinemetaVideos: CinemetaVideo[] | undefined;
 
             // Check anime database first
-            const animeEntry = await AnimeDatabase.getInstance().getEntryById(
+            const animeDb = AnimeDatabase.getInstance();
+            let animeEntry = await animeDb.getEntryById(
               id.type,
               id.value,
               id.season ? Number(id.season) : undefined,
@@ -89,6 +93,32 @@ export class MetadataService {
               animeEntry,
               type === 'movie' ? 'movie' : 'series'
             );
+
+            const suppressWholeShowAliases =
+              appConfig.metadata.animeDb.suppressSiblingAliases &&
+              !!animeEntry &&
+              (
+                await Promise.all([
+                  animeDb
+                    .hasSiblingRecords(id.type, id.value)
+                    .catch(() => false),
+                  tmdbId
+                    ? animeDb
+                        .hasSiblingRecords('themoviedbId', tmdbId)
+                        .catch(() => false)
+                    : false,
+                  tvdbId
+                    ? animeDb
+                        .hasSiblingRecords('thetvdbId', tvdbId)
+                        .catch(() => false)
+                    : false,
+                  imdbId
+                    ? animeDb
+                        .hasSiblingRecords('imdbId', imdbId)
+                        .catch(() => false)
+                    : false,
+                ])
+              ).some(Boolean);
 
             if (animeEntry) {
               const aliases: MetadataTitle[] = [];
@@ -416,7 +446,6 @@ export class MetadataService {
                 cinemeta.runtime =
                   minutes !== undefined && minutes <= 1 ? undefined : minutes;
               }
-
               contributions.cinemeta = cinemeta;
             } else if (imdbResult.status === 'rejected') {
               logger.warn(
@@ -441,7 +470,10 @@ export class MetadataService {
             }
 
             const mediaType = type === 'movie' ? 'movie' : 'series';
-            let merged = mergeMetadata(contributions, mediaType);
+            let merged = mergeMetadata(contributions, mediaType, {
+              suppressWholeShowAliases,
+            });
+            animeEntry = scopeAnimeEpisodeMappings(animeEntry, merged);
 
             // series only: movie results carry a year already
             let titleConflictsPromise: Promise<TitleConflict[]> | undefined;
@@ -620,8 +652,7 @@ export class MetadataService {
                     }
                   : undefined;
               let tvdbEp:
-                | { airDate?: string; titles: MetadataTitle[] }
-                | undefined;
+                { airDate?: string; titles: MetadataTitle[] } | undefined;
               if (tvdbEpisodes.status === 'fulfilled' && tvdbEpisodes.value) {
                 const match = tvdbEpisodes.value.find(
                   (e) => e.number === episodeNumber
@@ -640,8 +671,7 @@ export class MetadataService {
                 }
               }
               let skyhookEp:
-                | { airDate?: string; titles: MetadataTitle[] }
-                | undefined;
+                { airDate?: string; titles: MetadataTitle[] } | undefined;
               if (skyhookShow.status === 'fulfilled' && skyhookShow.value) {
                 for (const episode of skyhookShow.value.episodes ?? []) {
                   if (episode.seasonNumber !== seasonNumber) continue;
@@ -832,7 +862,9 @@ export class MetadataService {
             }
 
             // re-merge: the episode and scene steps added contributions
-            merged = mergeMetadata(contributions, mediaType);
+            merged = mergeMetadata(contributions, mediaType, {
+              suppressWholeShowAliases,
+            });
 
             if (
               !merged.titles.length ||
