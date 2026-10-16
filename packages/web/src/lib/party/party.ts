@@ -9,13 +9,13 @@ import type {
   PartyLock,
   PartyMemberInfo,
   PartyRequest,
+  PartyResumeState,
   PartyServerMessage,
   PartyProtocol,
   QueueSnapshot,
   RequestType,
 } from '@aiostreams/core';
 import { clock } from '../format';
-import { storage } from '../storage';
 import { partyKeys, seal, unseal, type PartyKeys } from './crypto';
 import { newCode, type Invite } from './invite';
 import { partyItemTitle, type PartyItem } from './items';
@@ -108,9 +108,6 @@ export interface PartyIdentity {
 }
 
 const PROTOCOL: PartyProtocol = 1;
-const SAVED = 'aiostreams-web-party';
-/** A party left longer than this is not rejoined on its own. */
-const REJOIN_MS = 6 * 60 * 60_000;
 const MAX_CHAT = 100;
 /** Messages held while the relay is away; the relay takes 5 at once. */
 export const PARTY_OUTBOX = 5;
@@ -119,22 +116,6 @@ const HELLO_MS = 15_000;
 /** Offsets the relay shows are rounded to this, and smaller ones not shown. */
 const OFFSET_STEP_MS = 500;
 const OFFSET_MIN_MS = 1_000;
-
-interface Saved {
-  invite: Invite;
-  server: string;
-  userId: string;
-  seat?: string;
-  ticket?: string;
-  hostTicket?: string;
-  savedAt: number;
-  playing?: {
-    items: { ref: string; runtimeMs: number }[];
-    index: number;
-    positionMs: number;
-    playing: boolean;
-  };
-}
 
 export const REFUSALS: Record<PartyErrorCode, string> = {
   version: 'That relay runs a different version of watch parties.',
@@ -207,12 +188,10 @@ class Session {
   private ticket?: string;
   private hostTicket?: string;
   /** What the party played last, which brings it back after the relay restarts. */
-  private resumeState?: Saved['playing'];
+  private resumeState?: PartyResumeState;
   private resuming = false;
   private welcomed = false;
   private ended = false;
-  /** Back into a party this device was in, which waits out a relay that is away. */
-  private readonly rejoining: boolean;
   private sent = 0;
   /** The offset the relay last heard from here, null when it has none. */
   private offsetSent: number | undefined | null = null;
@@ -223,16 +202,10 @@ class Session {
     readonly keys: PartyKeys,
     readonly identity: PartyIdentity,
     private readonly mode: 'create' | 'join',
-    saved: Saved | null,
     private readonly onChange: (session: Session) => void,
     private readonly onEvent: (event: PartyEvent) => void,
     private readonly onEnd: (session: Session, reason: string) => void
   ) {
-    this.rejoining = !!saved;
-    this.seat = saved?.seat;
-    this.ticket = saved?.ticket;
-    this.hostTicket = saved?.hostTicket;
-    this.resumeState = saved?.playing;
     this.state = {
       invite,
       status: 'joining',
@@ -252,8 +225,7 @@ class Session {
       message: (m) => this.receive(m),
       connected: (open) => {
         if (open) return;
-        if (this.welcomed || this.rejoining)
-          this.patch({ status: 'reconnecting' });
+        if (this.welcomed) this.patch({ status: 'reconnecting' });
         // Someone waiting on start or join hears now, not after retries.
         else this.end(`Couldn't reach ${relayHost(invite.relay)}.`);
       },
@@ -265,7 +237,6 @@ class Session {
     return new Promise((resolve, reject) => {
       this.settle = { resolve, reject };
       this.connection.start();
-      if (this.rejoining) return;
       setTimeout(() => {
         if (!this.welcomed)
           this.end(`${relayHost(this.invite.relay)} didn't answer.`);
@@ -406,7 +377,7 @@ class Session {
           if (message.status === 'sending') this.sendChat(message);
         this.settle?.resolve();
         this.settle = undefined;
-        return this.save();
+        return;
       }
       case 'members': {
         const members = this.members(m.members);
@@ -438,7 +409,7 @@ class Session {
       }
       case 'queue':
         this.queue(m.queue);
-        this.save();
+        this.resumeAt();
         return this.action(m.by, m.queue.reason);
       case 'state':
         this.patch({ group: m.state });
@@ -479,7 +450,7 @@ class Session {
         return this.patch({ lock: m.lock });
       case 'host':
         this.hostTicket = m.ticket;
-        return this.save();
+        return;
       case 'error':
         return this.refused(m.code);
       case 'closed':
@@ -510,7 +481,7 @@ class Session {
       this.connection.send(this.hello());
       return;
     }
-    if (code === 'not-found' && !this.welcomed && !this.rejoining)
+    if (code === 'not-found' && !this.welcomed)
       return this.end(
         `No party has that code on ${relayHost(this.invite.relay)}.`
       );
@@ -616,28 +587,15 @@ class Session {
     });
   }
 
-  /** Keeps what a rejoin needs, and enough to bring the party back. */
-  save(positionMs?: number): void {
+  resumeAt(positionMs?: number): void {
     const { queue, playingIndex, timeline } = this.state;
-    if (queue.length && timeline) {
-      this.resumeState = {
-        items: queue.map((e) => ({ ref: e.ref, runtimeMs: e.runtimeMs })),
-        index: Math.max(playingIndex, 0),
-        positionMs: positionMs ?? timeline.positionMs,
-        playing: timeline.playing,
-      };
-    }
-    const saved: Saved = {
-      invite: this.invite,
-      server: this.identity.server,
-      userId: this.identity.userId,
-      seat: this.seat,
-      ticket: this.ticket,
-      hostTicket: this.hostTicket,
-      savedAt: Date.now(),
-      playing: this.resumeState,
+    if (!queue.length || !timeline) return;
+    this.resumeState = {
+      items: queue.map((e) => ({ ref: e.ref, runtimeMs: e.runtimeMs })),
+      index: Math.max(playingIndex, 0),
+      positionMs: positionMs ?? timeline.positionMs,
+      playing: timeline.playing,
     };
-    storage.set(SAVED, saved);
   }
 }
 
@@ -658,8 +616,7 @@ const emit = (event: PartyEvent) => {
 async function enter(
   invite: Invite,
   identity: PartyIdentity,
-  mode: 'create' | 'join',
-  saved: Saved | null
+  mode: 'create' | 'join'
 ): Promise<void> {
   const keys = await partyKeys(invite.code);
   const previous = session;
@@ -668,13 +625,11 @@ async function enter(
     keys,
     identity,
     mode,
-    saved,
     (s) => s === session && notify(),
     (event) => next === session && emit(event),
     (s, reason) => {
       if (s !== session) return;
       session = null;
-      storage.remove(SAVED);
       notify();
       emit({ type: 'ended', reason });
     }
@@ -696,10 +651,10 @@ export const party = {
   clock: () => session?.connection.clock ?? null,
 
   start: (relay: string, identity: PartyIdentity) =>
-    enter({ relay, code: newCode() }, identity, 'create', null),
+    enter({ relay, code: newCode() }, identity, 'create'),
 
   join: (invite: Invite, identity: PartyIdentity) =>
-    enter(invite, identity, 'join', null),
+    enter(invite, identity, 'join'),
 
   async peek(invite: Invite, identity: PartyIdentity): Promise<PartyPreview> {
     const { id, key } = await partyKeys(invite.code);
@@ -732,20 +687,6 @@ export const party = {
         paused: state === 'Paused',
       },
     };
-  },
-
-  /** Back into the party this device was in, if it still is the same user's. */
-  async rejoin(identity: PartyIdentity): Promise<void> {
-    const saved = storage.get<Saved>(SAVED);
-    if (
-      session ||
-      !saved ||
-      saved.server !== identity.server ||
-      saved.userId !== identity.userId ||
-      Date.now() - saved.savedAt > REJOIN_MS
-    )
-      return;
-    await enter(saved.invite, identity, 'join', saved).catch(() => {});
   },
 
   hold(invite: Invite): void {
@@ -781,9 +722,9 @@ export const party = {
     session?.offset(behindMs);
   },
 
-  /** Where the party plays, kept to bring it back after the relay restarts. */
-  save(positionMs: number): void {
-    session?.save(positionMs);
+  /** Where the party plays, for bringing it back after the relay restarts. */
+  resumeAt(positionMs: number): void {
+    session?.resumeAt(positionMs);
   },
 
   chat(text: string): void {

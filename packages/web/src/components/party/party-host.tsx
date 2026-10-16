@@ -1,5 +1,5 @@
 import { toast } from 'sonner';
-import { useHeldInvites, useRejoinParty } from '../../lib/party/actions';
+import { useHeldInvites } from '../../lib/party/actions';
 import { usePartyFollow } from '../../lib/party/follow';
 import { usePartyEvent } from '../../lib/party/party';
 import {
@@ -13,7 +13,6 @@ const onPlayer = () => /^#\/play\//.test(window.location.hash);
 
 /** What a party needs whatever page is open. Once, in the layout. */
 export function PartyHost() {
-  useRejoinParty();
   useHeldInvites((invite) => openPartySheet({ invite }));
   // The video is what someone joining came for.
   usePartyFollow(closePartySheet);

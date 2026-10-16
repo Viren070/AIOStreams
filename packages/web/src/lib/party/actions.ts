@@ -107,11 +107,3 @@ export function useHeldInvites(onInvite: (invite: Invite) => void): void {
     return party.subscribe(take);
   }, []);
 }
-
-/** Back into this device's party after the app reloads. Once, in the layout. */
-export function useRejoinParty(): void {
-  const identity = usePartyIdentity();
-  React.useEffect(() => {
-    void party.rejoin(identity);
-  }, [identity]);
-}
