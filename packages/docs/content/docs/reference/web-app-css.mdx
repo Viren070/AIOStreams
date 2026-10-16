@@ -228,6 +228,17 @@ Blur the text inside an episode's title rather than the title itself: the title 
 [data-ui='dialog'][data-name='versions'] {
   max-width: 72rem;
 }
+
+/* Hide quick filters that find nothing for this title */
+[data-ui='versions-quick-filter'][data-empty] {
+  display: none;
+}
+
+/* Bigger badges */
+[data-ui='version-badge'] {
+  height: 1.75rem;
+  font-size: 0.8125rem;
+}
 ```
 
 Leave choosing which versions appear to your filters, rather than hiding some with CSS. Hidden versions still count, and playing straight away or carrying on to the next episode can still pick them.
@@ -400,7 +411,7 @@ States are attributes set only while true, such as `data-watched`. Match them wi
 | `update-toast`                                                            | The message that an app update is ready. On a TV it's a dialog instead                                                                                                                                                                           |
 | `window-controls`                                                         | The window buttons in the desktop app; each has `data-name`: `minimise`, `maximise`, `fullscreen` or `close`, and `data-fullscreen` is set while the window is full screen                                                                       |
 | `pill-tabs`, `pill-tab`                                                   | A row of choices such as Movies / Shows; `data-name` says which row, `data-selected` marks the choice                                                                                                                                            |
-| `dialog`                                                                  | A dialog box; `data-name` is `versions`, `overview`, `all-episodes`, `episodes` (the player's), `calendar-day`, `sync-to-line`, `external-player`, `trailers` or `update`                                                                        |
+| `dialog`                                                                  | A dialog box; `data-name` is `versions`, `overview`, `all-episodes`, `episodes` (the player's), `calendar-day`, `sync-to-line`, `external-player`, `trailers`, `update`, or `quick-filters` and `badges` (their settings editors)                                                                        |
 | `avatar`                                                                  | A user's picture or initial                                                                                                                                                                                                                      |
 
 ### Rows, grids and cards
@@ -469,6 +480,8 @@ States are attributes set only while true, such as `data-watched`. Match them wi
 | `version-name`, `version-description`, `version-playing`                | Its title, the lines under it, and the **Playing** label                                                              |
 | `version-action`, `version-menu`                                        | Its buttons, and the menu that holds them on a phone; `data-name` is `copy-link` or `download`                        |
 | `version-notice`                                                        | A message instead of a version; `data-type` says what kind                                                            |
+| `versions-quick`, `versions-quick-filter`                               | The row of [quick filters](/reference/version-badges#quick-filters), and one of them; `aria-selected` marks the one picked, `data-count` holds how many versions it finds, and `data-empty` marks one that finds none |
+| `version-badges`, `version-badge`                                       | A version's [badges](/reference/version-badges#badges), and one of them                                                |
 
 ### Player
 

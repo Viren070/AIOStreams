@@ -87,6 +87,16 @@ object:
 | `bingeGroup`  | string | Autoplay picks the next episode's version with the same group, as Stremio's `bingeGroup` |
 | `ytId`        | string | A YouTube video, which the app's player opens itself rather than the version's address   |
 
+The [version search, quick filters and badges](/reference/version-badges) also read these, all optional:
+
+| Field                                                                                                   | Shape             | What it is                                                         |
+| ------------------------------------------------------------------------------------------------------- | ----------------- | ------------------------------------------------------------------ |
+| `filename`, `folderName`, `resolution`, `quality`, `encode`, `releaseGroup`, `indexer`, `addon`, `service` | string            | Read from the release, as the formatter has them                   |
+| `visualTags`, `audioTags`, `audioChannels`, `languages`, `editions`                                     | string[]          | The same                                                           |
+| `seMatched`, `regexMatched`                                                                             | string            | The stream expression and regex it matched first, by name          |
+| `rseMatched`, `rankedRegexMatched`                                                                      | string[]          | The ranked stream expressions and ranked regexes it matched        |
+| `seadex`                                                                                                | `best` or `alt`   | Listed on SeaDex, as a best or an alternative release              |
+
 The first version's `Id` is the item's own id, as in standard Jellyfin, so `id` is how the app tells
 versions apart across listings. Without the feature, the next episode settings say nothing of
 matching versions.
