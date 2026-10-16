@@ -299,23 +299,40 @@ function useFailover(
   const play = usePlay();
   const { started } = player.state;
   const failed = !!player.state.error && !started;
+  // Read when it fails, so renders in between don't run the effect again.
+  const latest = React.useRef({ item, source, versions, startMs, play });
+  latest.current = { item, source, versions, startMs, play };
+  // Once per player: each version plays on a page of its own.
+  const done = React.useRef(false);
   React.useEffect(() => {
     if (started) triedVersions.delete(item.Id!);
   }, [started, item.Id]);
   React.useEffect(() => {
-    if (!on || off || !failed) return;
+    if (!on || off || !failed || done.current) return;
+    done.current = true;
+    const { item, source, versions, startMs, play } = latest.current;
     const tried = triedVersions.get(item.Id!) ?? new Set<string>();
-    // Once for each failed version, however often this runs again.
-    if (tried.has(versionKey(source))) return;
     triedVersions.set(item.Id!, tried.add(versionKey(source)));
+    // The server lists the version asked for first, the rest in its order.
     const exact = versions.findIndex((s) => !!s.Id && s.Id === source.Id);
     const at =
       exact >= 0 ? exact : versions.findIndex((s) => sameVersion(s, source));
+    if (at < 0) return;
     const to = versions.slice(at + 1).find((s) => !tried.has(versionKey(s)));
     if (!to) return;
     toast.info("This version didn't play, so the next one is starting.");
-    void play(item, { source: to, startMs, replace: true });
-  }, [on, off, failed, item, source, versions, startMs, play]);
+    // A host's own player waits on the episodes after it, so leaving can come first.
+    let current = true;
+    void play(item, {
+      source: to,
+      startMs,
+      replace: true,
+      current: () => current,
+    });
+    return () => {
+      current = false;
+    };
+  }, [on, off, failed]);
 }
 
 /** Reports the playback the way a Jellyfin client does once it starts. */
