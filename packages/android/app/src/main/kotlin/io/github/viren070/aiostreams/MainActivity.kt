@@ -305,7 +305,7 @@ class MainActivity : ComponentActivity() {
             }
             saved.exceptionOrNull()?.let { Log.e("save-file", "saving $name", it) }
             runOnUiThread {
-                val note = if (saved.isSuccess) "Saved $name to Downloads" else "Couldn't save $name"
+                val note = getString(if (saved.isSuccess) R.string.file_saved else R.string.file_not_saved, name)
                 Toast.makeText(this, note, Toast.LENGTH_LONG).show()
             }
         }.start()

@@ -70,7 +70,9 @@ class Updater(
                 else -> {
                     val message = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: "status $status"
                     Log.w(TAG, "install failed: $message")
-                    worker.execute { report("error", ready?.version, "The install failed: $message") }
+                    worker.execute {
+                        report("error", ready?.version, activity.getString(R.string.update_install_failed, message))
+                    }
                 }
             }
         }
@@ -125,7 +127,7 @@ class Updater(
             if (update["versionCode"]!!.jsonPrimitive.long <= BuildConfig.VERSION_CODE) return@execute report("current")
             val apks = update["apks"]!!.jsonObject
             val abi = Build.SUPPORTED_ABIS.firstOrNull { it in apks }
-                ?: return@execute report("error", error = "No build for this device's processor")
+                ?: return@execute report("error", error = activity.getString(R.string.update_no_build))
             val apk = apks[abi]!!.jsonObject
             val name = apk["name"]!!.jsonPrimitive.content
             report("downloading", version)
@@ -133,7 +135,7 @@ class Updater(
             fetch("$feed/$name").use { response -> file.outputStream().use { response.body.byteStream().copyTo(it) } }
             if (sha256(file) != apk["sha256"]!!.jsonPrimitive.content) {
                 file.delete()
-                return@execute report("error", error = "The download was damaged")
+                return@execute report("error", error = activity.getString(R.string.update_damaged))
             }
             ready = Ready(file, version)
             report("ready", version)
@@ -182,14 +184,14 @@ class Updater(
             }
         } catch (e: Exception) {
             Log.w(TAG, "install", e)
-            report("error", update.version, "The install failed: ${e.message}")
+            report("error", update.version, activity.getString(R.string.update_install_failed, e.message))
         }
     }
 
     private fun fetch(url: String) = client.newCall(Request.Builder().url(url).build()).execute().also {
         if (!it.isSuccessful) {
             it.close()
-            error("The feed answered ${it.code}")
+            error(activity.getString(R.string.update_feed_answered, it.code))
         }
     }
 

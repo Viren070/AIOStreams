@@ -25,15 +25,16 @@ class UpdatedReceiver : BroadcastReceiver() {
         val notifications = NotificationManagerCompat.from(context)
         if (!notifications.areNotificationsEnabled()) return
         NotificationManagerCompat.from(context).createNotificationChannel(
-            NotificationChannelCompat.Builder(CHANNEL, NotificationManagerCompat.IMPORTANCE_DEFAULT).setName("Updates").build(),
+            NotificationChannelCompat.Builder(CHANNEL, NotificationManagerCompat.IMPORTANCE_DEFAULT)
+                .setName(context.getString(R.string.channel_updates)).build(),
         )
         val open = Intent(context, MainActivity::class.java)
         notifications.notify(
             NOTIFICATION,
             NotificationCompat.Builder(context, CHANNEL)
                 .setSmallIcon(android.R.drawable.stat_sys_download_done)
-                .setContentTitle("Updated to $version")
-                .setContentText("Tap to open")
+                .setContentTitle(context.getString(R.string.updated_to, version))
+                .setContentText(context.getString(R.string.tap_to_open))
                 .setContentIntent(PendingIntent.getActivity(context, 0, open, PendingIntent.FLAG_IMMUTABLE))
                 .setAutoCancel(true)
                 .build(),
