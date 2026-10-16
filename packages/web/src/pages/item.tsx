@@ -20,6 +20,7 @@ import { Tooltip } from '@aiostreams/ui/tooltip';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
+import { formatLocale } from '../lib/i18n';
 import { currentHost } from '../lib/hosts';
 import { useSession } from '../lib/session';
 import { useFeature } from '../lib/server-info';
@@ -1042,7 +1043,7 @@ function Details({ item }: { item: BaseItemDto }) {
       }`
     : null;
   const released = item.PremiereDate
-    ? new Date(item.PremiereDate).toLocaleDateString(undefined, {
+    ? new Date(item.PremiereDate).toLocaleDateString(formatLocale(), {
         day: 'numeric',
         month: 'long',
         year: 'numeric',

@@ -2,6 +2,7 @@ import React from 'react';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import { RouterProvider } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
+import { useLingui } from '@lingui/react';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@aiostreams/ui/toaster';
 import { LoadingOverlay } from '@aiostreams/ui/loading-spinner';
@@ -184,6 +185,8 @@ function Session({
   React.useEffect(() => currentHost().start?.({ base }), [base]);
 
   const ready = phase.kind === 'ready' ? phase : null;
+  // Built anew in another language, as some text is written outside React.
+  const { i18n } = useLingui();
   const anonymous = React.useMemo(() => new JellyfinClient(base), [base]);
   const infoQuery = useServerInfoQuery(
     phase.kind === 'ready' || phase.kind === 'picking'
@@ -269,7 +272,7 @@ function Session({
       <ServerStyles />
       <AnimatePresence mode="wait">
         <motion.div
-          key={ready ? `ready-${ready.user.Id}` : phase.kind}
+          key={`${ready ? `ready-${ready.user.Id}` : phase.kind}-${i18n.locale}`}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}

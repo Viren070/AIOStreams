@@ -5,6 +5,7 @@ import { Modal } from '@aiostreams/ui/modal';
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import { cn } from '@aiostreams/ui/core/styling';
+import { formatLocale } from '../lib/i18n';
 import { useSession } from '../lib/session';
 import { useCalendar } from '../lib/queries';
 import {
@@ -40,7 +41,7 @@ function parseMonth(month: string | undefined): Date {
 /** The locale's first day of the week, as `Date.getDay` numbers it; Monday where unknown. */
 function weekStart(): number {
   try {
-    const locale = new Intl.Locale(navigator.language) as Intl.Locale & {
+    const locale = new Intl.Locale(formatLocale()) as Intl.Locale & {
       getWeekInfo?(): { firstDay: number };
       weekInfo?: { firstDay: number };
     };
@@ -66,7 +67,7 @@ function gridDays(first: Date, startDay: number): Date[] {
 }
 
 function longDay(d: Date): string {
-  return d.toLocaleDateString(undefined, {
+  return d.toLocaleDateString(formatLocale(), {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -243,7 +244,7 @@ function MonthGrid({
             key={d.getDay()}
             className="py-1 text-center text-xs font-semibold uppercase tracking-wide text-[--muted]"
           >
-            {d.toLocaleDateString(undefined, { weekday: 'short' })}
+            {d.toLocaleDateString(formatLocale(), { weekday: 'short' })}
           </div>
         ))}
       </div>
@@ -358,7 +359,7 @@ export function CalendarPage({ month }: { month?: string }) {
               data-ui="calendar-month"
               className="ml-2 text-lg font-semibold"
             >
-              {first.toLocaleDateString(undefined, {
+              {first.toLocaleDateString(formatLocale(), {
                 month: 'long',
                 year: 'numeric',
               })}

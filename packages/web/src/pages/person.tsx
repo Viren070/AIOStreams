@@ -1,6 +1,7 @@
 import React from 'react';
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
+import { formatLocale } from '../lib/i18n';
 import { useSession } from '../lib/session';
 import { useItem, usePersonItems } from '../lib/queries';
 import { posterUrl } from '../lib/images';
@@ -15,7 +16,7 @@ import type { BaseItemDto } from '../lib/types';
 import { CachedImage } from '../components/cached-image';
 
 function longDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
+  return new Date(iso).toLocaleDateString(formatLocale(), {
     day: 'numeric',
     month: 'long',
     year: 'numeric',

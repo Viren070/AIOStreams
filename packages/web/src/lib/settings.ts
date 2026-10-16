@@ -588,6 +588,8 @@ const discord = record(DISCORD_EVENTS, (event) =>
  */
 export const settings = {
   interface: {
+    /** A catalog's locale, or `auto` for the system's language. */
+    language: device<string>('aiostreams-web-interface-language', 'auto'),
     featured: synced<Featured>(
       'featured',
       parseFeatured,

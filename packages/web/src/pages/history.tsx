@@ -20,6 +20,7 @@ import {
   useConfirmationDialog,
 } from '@aiostreams/ui/shared/confirmation-dialog';
 import { cn } from '@aiostreams/ui/core/styling';
+import { formatLocale } from '../lib/i18n';
 import { useSession } from '../lib/session';
 import { useFeature } from '../lib/server-info';
 import {
@@ -171,7 +172,7 @@ export function HistoryPage() {
 }
 
 function count(n: number, one: string, many: string): string {
-  return `${n.toLocaleString()} ${n === 1 ? one : many}`;
+  return `${n.toLocaleString(formatLocale())} ${n === 1 ? one : many}`;
 }
 
 function OwnTotals() {
@@ -181,7 +182,9 @@ function OwnTotals() {
     t.episodes ? count(t.episodes, 'episode', 'episodes') : null,
   ].filter(Boolean);
   const more = [
-    t.inProgress ? `${t.inProgress.toLocaleString()} in progress` : null,
+    t.inProgress
+      ? `${t.inProgress.toLocaleString(formatLocale())} in progress`
+      : null,
     t.favorites ? count(t.favorites, 'favourite', 'favourites') : null,
   ].filter(Boolean);
   const parts = [
@@ -304,7 +307,7 @@ function Days({
         <section key={day.key} data-ui="history-day" className="space-y-3">
           <div className="flex flex-wrap items-baseline gap-x-3">
             <h2 data-ui="section-title" className="text-lg font-semibold">
-              {day.date?.toLocaleDateString(undefined, {
+              {day.date?.toLocaleDateString(formatLocale(), {
                 weekday: 'long',
                 day: 'numeric',
                 month: 'long',
@@ -793,7 +796,7 @@ function HistoryTable({
                   </td>
                   <td className="hidden whitespace-nowrap p-3 text-xs text-[--muted] md:table-cell">
                     {at(entry)
-                      ? new Date(at(entry)!).toLocaleString(undefined, {
+                      ? new Date(at(entry)!).toLocaleString(formatLocale(), {
                           dateStyle: 'medium',
                           timeStyle: 'short',
                         })

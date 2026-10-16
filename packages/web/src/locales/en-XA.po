@@ -1,0 +1,28 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-10-16 19:20+0100\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: en-XA\n"
+
+#: src/pages/settings/interface.tsx
+msgid "App language"
+msgstr ""
+
+#: src/pages/settings/interface.tsx
+msgid "Kept on this device."
+msgstr ""
+
+#: src/pages/settings/interface.tsx
+msgid "Language"
+msgstr ""
+
+#: src/pages/settings/interface.tsx
+msgid "System ({system})"
+msgstr ""
+
+#: src/pages/settings/interface.tsx
+msgid "Titles, synopses and stream names stay in the language your addons send."
+msgstr ""

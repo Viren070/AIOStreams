@@ -9,7 +9,9 @@
     "build": "rsbuild build",
     "build:standalone": "rsbuild build --env-mode standalone",
     "typecheck": "tsc --noEmit",
-    "preview": "rsbuild preview"
+    "preview": "rsbuild preview",
+    "lint": "eslint src",
+    "i18n:extract": "lingui extract --clean"
   },
   "browserslist": [
     "chrome >= 94",
@@ -23,6 +25,12 @@
     "@aiostreams/ui": "workspace:*",
     "@fontsource/inter": "^5.3.0",
     "@jellyfin/sdk": "^1.0.0",
+    "@lingui/cli": "^6.10.0",
+    "@lingui/core": "^6.10.0",
+    "@lingui/format-po": "^6.10.0",
+    "@lingui/loader": "^6.10.0",
+    "@lingui/react": "^6.10.0",
+    "@lingui/swc-plugin": "^6.7.1",
     "@noble/ciphers": "^2.4.0",
     "@noble/hashes": "^2.4.0",
     "@rsbuild/core": "^2.2.12",
@@ -33,6 +41,9 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "autoprefixer": "^10.6.1",
+    "eslint": "^10.13.0",
+    "eslint-plugin-lingui": "^0.16.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "motion": "^12.43.0",
     "next-themes": "^0.4.6",
     "postcss": "^8.5.29",
@@ -44,6 +55,7 @@
     "sonner": "2.0.5",
     "tailwindcss": "^3.4.19",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.71.2",
     "uqr": "^0.1.3"
   }
 }

@@ -1,3 +1,4 @@
+import { formatLocale } from './i18n';
 import type { BaseItemDto } from './types';
 
 export const TICKS_PER_MS = 10_000;
@@ -33,7 +34,7 @@ export function relativeTime(at: number | null | undefined): string {
   if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} min ago`;
   if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} h ago`;
   if (diff < 7 * 86_400_000) return `${Math.floor(diff / 86_400_000)} d ago`;
-  return new Date(at).toLocaleDateString();
+  return new Date(at).toLocaleDateString(formatLocale());
 }
 
 /** `S01E04`, or `E04` for absolute numbering. */
@@ -118,7 +119,7 @@ export function episodeMarks(item: BaseItemDto): ('Filler' | 'Recap')[] {
 
 /** `20 Jan 2008` */
 export function shortDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
+  return new Date(iso).toLocaleDateString(formatLocale(), {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -143,7 +144,7 @@ export function airDay(iso: string): Date {
 
 export function airTime(iso: string): string | null {
   if (dateOnly(iso)) return null;
-  return new Date(iso).toLocaleTimeString(undefined, {
+  return new Date(iso).toLocaleTimeString(formatLocale(), {
     hour: 'numeric',
     minute: '2-digit',
   });
@@ -151,7 +152,7 @@ export function airTime(iso: string): string | null {
 
 /** `Sun, 28 Sep` */
 export function dayLabel(iso: string): string {
-  return airDay(iso).toLocaleDateString(undefined, {
+  return airDay(iso).toLocaleDateString(formatLocale(), {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
@@ -165,7 +166,9 @@ export function untilLabel(iso: string): string {
   const days = Math.round(
     (midnight(airDay(iso)) - midnight(new Date())) / DAY_MS
   );
-  const format = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+  const format = new Intl.RelativeTimeFormat(formatLocale(), {
+    numeric: 'auto',
+  });
   return days < 14
     ? format.format(days, 'day')
     : format.format(Math.round(days / 7), 'week');

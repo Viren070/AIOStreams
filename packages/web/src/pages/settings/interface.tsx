@@ -1,9 +1,16 @@
+import { useLingui } from '@lingui/react/macro';
 import { Select } from '@aiostreams/ui/select';
 import { Combobox } from '@aiostreams/ui/combobox';
 import { Switch } from '@aiostreams/ui/switch';
 import { useViews } from '../../lib/queries';
 import { libraryLabel } from '../../lib/format';
 import { currentHost } from '../../lib/hosts';
+import {
+  LOCALES,
+  PSEUDO_LOCALES,
+  localeName,
+  systemLocale,
+} from '../../lib/i18n';
 import { canRefract } from '../../components/bar-surface';
 import {
   settings,
@@ -142,6 +149,29 @@ function NavigationCard() {
   );
 }
 
+/** The app's own language; test languages are listed in development only. */
+function LanguageCard() {
+  const { t } = useLingui();
+  const [language, setLanguage] = useSetting(settings.interface.language);
+  const listed = LOCALES.filter(
+    (l) => !PSEUDO_LOCALES.includes(l) || import.meta.env.DEV || l === language
+  )
+    .map((l) => ({ value: l, label: localeName(l) }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+  const system = localeName(systemLocale());
+  return (
+    <SettingsCard title={t`Language`} description={t`Kept on this device.`}>
+      <Select
+        label={t`App language`}
+        help={t`Titles, synopses and stream names stay in the language your addons send.`}
+        options={[{ value: 'auto', label: t`System (${system})` }, ...listed]}
+        value={LOCALES.includes(language) ? language : 'auto'}
+        onValueChange={setLanguage}
+      />
+    </SettingsCard>
+  );
+}
+
 export function InterfaceSection() {
   const views = useViews();
   const [featured, setFeatured] = useSetting(settings.interface.featured);
@@ -195,6 +225,7 @@ export function InterfaceSection() {
 
   return (
     <>
+      <LanguageCard />
       <SettingsCard title="Home and grids" description={FOLLOWS_YOU}>
         <Combobox
           multiple

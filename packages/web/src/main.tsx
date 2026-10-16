@@ -6,6 +6,8 @@ import '@fontsource/inter/700.css';
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { i18n } from '@lingui/core';
+import { I18nProvider } from '@lingui/react';
 import {
   onlineManager,
   QueryClient,
@@ -14,6 +16,7 @@ import {
 import JellyfinWebApp from './app';
 import { persister } from './lib/cache';
 import { followReachable } from './lib/connection';
+import { startI18n } from './lib/i18n';
 import { setupTv } from './lib/tv';
 
 onlineManager.setEventListener(followReachable);
@@ -45,10 +48,15 @@ for (const el of [container, document.body]) {
   };
 }
 
-ReactDOM.createRoot(container).render(
-  <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <JellyfinWebApp />
-    </QueryClientProvider>
-  </React.StrictMode>
+// The page waits for its language, so it never shows English first.
+void startI18n().then(() =>
+  ReactDOM.createRoot(container).render(
+    <React.StrictMode>
+      <I18nProvider i18n={i18n}>
+        <QueryClientProvider client={queryClient}>
+          <JellyfinWebApp />
+        </QueryClientProvider>
+      </I18nProvider>
+    </React.StrictMode>
+  )
 );
