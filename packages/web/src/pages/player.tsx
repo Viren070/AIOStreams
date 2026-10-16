@@ -8,13 +8,15 @@ import { LoadingSpinner } from '@aiostreams/ui/loading-spinner';
 import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '../lib/session';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   useItem,
   usePlaybackInfo,
+  usePlaybackInfoOptions,
   useRefreshAll,
   useSegments,
 } from '../lib/queries';
-import { lastVersions, playableSources } from '../lib/playback/play';
+import { lastVersions, playableSources, usePlay } from '../lib/playback/play';
 import { chosenPlayer } from '../lib/playback/player-choice';
 import {
   directUrl,
@@ -249,6 +251,57 @@ function useSwitchVersion(
       startMs: player.playhead.positionMs,
       playing: source.Id ?? undefined,
     });
+}
+
+/** Versions tried for each item since one last started, so failing over never comes back round. */
+const triedVersions = new Map<string, Set<string>>();
+const versionKey = (s: SourceInfo) => s.aiostreams?.id ?? s.Id ?? '';
+// A fresh version list can number versions anew; the server's own id and the name hold.
+const sameVersion = (a: SourceInfo, b: SourceInfo) =>
+  a.Id === b.Id ||
+  versionKey(a) === versionKey(b) ||
+  (!!a.Name && a.Name === b.Name);
+
+/**
+ * A version that fails before it starts hands over to the next in the list,
+ * which puts versions a TV can't decode last (`settings.playback.failover`).
+ * Not in a party, whose version everyone shares, nor for a download.
+ */
+function useFailover(
+  item: BaseItemDto,
+  source: SourceInfo,
+  player: PlayerController,
+  startMs: number,
+  off: boolean
+) {
+  const [on] = useSetting(settings.playback.failover);
+  const queryClient = useQueryClient();
+  const options = usePlaybackInfoOptions();
+  const play = usePlay();
+  const { started } = player.state;
+  const failed = !!player.state.error && !started;
+  const next = React.useRef<() => void>(undefined);
+  next.current = () => {
+    const tried = triedVersions.get(item.Id!) ?? new Set<string>();
+    triedVersions.set(item.Id!, tried.add(versionKey(source)));
+    void queryClient.fetchQuery(options(item.Id!)).then(
+      (info) => {
+        const sources = playableSources(info);
+        const at = sources.findIndex((s) => sameVersion(s, source));
+        const to = sources.slice(at + 1).find((s) => !tried.has(versionKey(s)));
+        if (!to) return;
+        toast.info("This version didn't play, so the next one is starting.");
+        void play(item, { source: to, startMs, replace: true });
+      },
+      () => undefined
+    );
+  };
+  React.useEffect(() => {
+    if (started) triedVersions.delete(item.Id!);
+  }, [started, item.Id]);
+  React.useEffect(() => {
+    if (on && !off && failed) next.current?.();
+  }, [on, off, failed]);
 }
 
 /** Reports the playback the way a Jellyfin client does once it starts. */
@@ -569,6 +622,7 @@ function Player({
   });
   const player = usePartyPlayer(own, playlistItemId);
   close.current = player.close;
+  useFailover(item, source, player, startMs, !!local || inParty);
   const segments = useShownSegments(
     item,
     useSegments(item.Id!).data?.Items,

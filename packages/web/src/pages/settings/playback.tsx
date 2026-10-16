@@ -94,6 +94,7 @@ export function PlaybackSection() {
   const [volumeStep, setVolumeStep] = useSetting(settings.controls.volumeStep);
   const [holdRate, setHoldRate] = useSetting(settings.controls.holdRate);
   const [autoPlay, setAutoPlay] = useSetting(settings.playback.autoPlayFirst);
+  const [failover, setFailover] = useSetting(settings.playback.failover);
   const [nextPrompt, setNextPrompt] = useSetting(settings.next.prompt);
   const [nextLead, setNextLead] = useSetting(settings.next.lead);
   const [nextCountdown, setNextCountdown] = useSetting(settings.next.countdown);
@@ -149,6 +150,13 @@ export function PlaybackSection() {
         />
         <QuickFiltersRow />
         <BadgesRow />
+        <Switch
+          side="right"
+          label={t`Try the next version if one fails`}
+          help={t`When a version doesn't start, the next one in the list plays instead, from the same point.`}
+          value={failover}
+          onValueChange={setFailover}
+        />
       </SettingsCard>
       <SettingsCard
         name="next-episode"
