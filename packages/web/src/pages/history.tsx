@@ -176,14 +176,25 @@ export function HistoryPage() {
 }
 
 function watchedLine(movieCount: number, episodeCount: number) {
-  const movies = plural(movieCount, { one: '# movie', other: '# movies' });
-  const episodes = plural(episodeCount, {
-    one: '# episode',
-    other: '# episodes',
-  });
-  if (movieCount && episodeCount) return t`${movies} and ${episodes} watched`;
-  if (movieCount) return t`${movies} watched`;
-  if (episodeCount) return t`${episodes} watched`;
+  if (movieCount && episodeCount) {
+    const movies = plural(movieCount, { one: '# movie', other: '# movies' });
+    const episodes = plural(episodeCount, {
+      one: '# episode',
+      other: '# episodes',
+    });
+    return t`${movies} and ${episodes} watched`;
+  }
+  // Whole messages, as some languages make "watched" agree with the count.
+  if (movieCount)
+    return plural(movieCount, {
+      one: '# movie watched',
+      other: '# movies watched',
+    });
+  if (episodeCount)
+    return plural(episodeCount, {
+      one: '# episode watched',
+      other: '# episodes watched',
+    });
   return null;
 }
 

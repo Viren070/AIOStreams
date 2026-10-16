@@ -59,13 +59,13 @@ msgstr ""
 msgid "{downloaded} downloaded"
 msgstr ""
 
+#: src/pages/history.tsx
+msgid "{episodeCount, plural, one {# episode watched} other {# episodes watched}}"
+msgstr ""
+
 #: src/pages/downloads.tsx
 #: src/pages/history.tsx
 msgid "{episodeCount, plural, one {# episode} other {# episodes}}"
-msgstr ""
-
-#: src/pages/history.tsx
-msgid "{episodes} watched"
 msgstr ""
 
 #: src/pages/history.tsx
@@ -132,15 +132,15 @@ msgid "{minutes}m"
 msgstr ""
 
 #: src/pages/history.tsx
+msgid "{movieCount, plural, one {# movie watched} other {# movies watched}}"
+msgstr ""
+
+#: src/pages/history.tsx
 msgid "{movieCount, plural, one {# movie} other {# movies}}"
 msgstr ""
 
 #: src/pages/history.tsx
 msgid "{movies} and {episodes} watched"
-msgstr ""
-
-#: src/pages/history.tsx
-msgid "{movies} watched"
 msgstr ""
 
 #: src/pages/settings/playback.tsx

@@ -59,14 +59,14 @@ msgstr "{count, plural, one {Trailer} other {Trailers}}"
 msgid "{downloaded} downloaded"
 msgstr "{downloaded} downloaded"
 
+#: src/pages/history.tsx
+msgid "{episodeCount, plural, one {# episode watched} other {# episodes watched}}"
+msgstr "{episodeCount, plural, one {# episode watched} other {# episodes watched}}"
+
 #: src/pages/downloads.tsx
 #: src/pages/history.tsx
 msgid "{episodeCount, plural, one {# episode} other {# episodes}}"
 msgstr "{episodeCount, plural, one {# episode} other {# episodes}}"
-
-#: src/pages/history.tsx
-msgid "{episodes} watched"
-msgstr "{episodes} watched"
 
 #: src/pages/history.tsx
 msgid "{favorites, plural, one {# favourite} other {# favourites}}"
@@ -132,16 +132,16 @@ msgid "{minutes}m"
 msgstr "{minutes}m"
 
 #: src/pages/history.tsx
+msgid "{movieCount, plural, one {# movie watched} other {# movies watched}}"
+msgstr "{movieCount, plural, one {# movie watched} other {# movies watched}}"
+
+#: src/pages/history.tsx
 msgid "{movieCount, plural, one {# movie} other {# movies}}"
 msgstr "{movieCount, plural, one {# movie} other {# movies}}"
 
 #: src/pages/history.tsx
 msgid "{movies} and {episodes} watched"
 msgstr "{movies} and {episodes} watched"
-
-#: src/pages/history.tsx
-msgid "{movies} watched"
-msgstr "{movies} watched"
 
 #: src/pages/settings/playback.tsx
 msgid "{n, plural, one {After # episode} other {After # episodes}}"
