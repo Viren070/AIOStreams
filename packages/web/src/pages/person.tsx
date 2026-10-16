@@ -1,3 +1,5 @@
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
@@ -23,24 +25,39 @@ function longDate(iso: string): string {
   });
 }
 
+function bornLine(
+  born: string | null | undefined,
+  died: string | null | undefined,
+  place: string | undefined
+): string | null {
+  if (!born) return place ? t`Born in ${place}` : null;
+  const date = longDate(born);
+  if (died) return place ? t`Born ${date} in ${place}` : t`Born ${date}`;
+  const age = yearsBetween(born);
+  return place
+    ? t`Born ${date} (age ${age}) in ${place}`
+    : t`Born ${date} (age ${age})`;
+}
+
+function diedLine(
+  born: string | null | undefined,
+  died: string | null | undefined
+): string | null {
+  if (!died) return null;
+  const date = longDate(died);
+  if (!born) return t`Died ${date}`;
+  const age = yearsBetween(born, died);
+  return t`Died ${date} (aged ${age})`;
+}
+
 /** Born and died lines as Jellyfin shows them, with the age reached. */
 function LifeDates({ person }: { person: BaseItemDto }) {
   const born = person.PremiereDate;
   const died = person.EndDate;
   const place = person.ProductionLocations?.[0];
-  const lines = [
-    (born || place) &&
-      [
-        'Born',
-        born && longDate(born),
-        born && !died && `(age ${yearsBetween(born)})`,
-        place && `in ${place}`,
-      ]
-        .filter(Boolean)
-        .join(' '),
-    died &&
-      `Died ${longDate(died)}${born ? ` (aged ${yearsBetween(born, died)})` : ''}`,
-  ].filter(Boolean);
+  const lines = [bornLine(born, died, place), diedLine(born, died)].filter(
+    Boolean
+  );
   if (!lines.length) return null;
   return (
     <div data-ui="person-dates" className="space-y-0.5 text-sm text-gray-300">
@@ -111,7 +128,7 @@ function Filmography({ personId }: { personId: string }) {
     <section data-ui="section" data-name="filmography" className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 data-ui="section-title" className="text-xl font-semibold">
-          Filmography
+          <Trans>Filmography</Trans>
           {total != null && (
             <span className="ms-2 text-base font-normal text-[--muted]">
               {total}
@@ -121,12 +138,14 @@ function Filmography({ personId }: { personId: string }) {
         <KindTabs types={types} onChange={setTypes} />
       </div>
       {pages.isError ? (
-        <LuffyError title="Could not load their work" />
+        <LuffyError title={t`Could not load their work`} />
       ) : (
         <>
           <MixedGrid items={items} client={client} loading={pages.isLoading} />
           {!pages.isLoading && !items.length && (
-            <p className="text-[--muted]">Nothing found.</p>
+            <p className="text-[--muted]">
+              <Trans>Nothing found.</Trans>
+            </p>
           )}
         </>
       )}
@@ -144,7 +163,7 @@ export function PersonPage({ personId }: { personId: string }) {
   if (person.isError) {
     return (
       <PageMessage>
-        <LuffyError title="Could not load this person" className="mt-0" />
+        <LuffyError title={t`Could not load this person`} className="mt-0" />
       </PageMessage>
     );
   }

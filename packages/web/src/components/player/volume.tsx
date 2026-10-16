@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import React from 'react';
 import { LuVolume1, LuVolume2, LuVolumeX } from 'react-icons/lu';
 import { settings, useSetting } from '../../lib/settings';
@@ -29,7 +30,7 @@ function VolumeBar({
     <div
       ref={bar}
       role="slider"
-      aria-label="Volume"
+      aria-label={t`Volume`}
       aria-valuemin={0}
       aria-valuemax={Math.round(max * 100)}
       aria-valuenow={Math.round(level * 100)}
@@ -100,7 +101,7 @@ export function Volume({ player }: { player: PlayerController }) {
     <div data-ui="volume" className="group/volume hidden items-center sm:flex">
       <ControlButton
         name="mute"
-        label={muted ? 'Unmute' : 'Mute'}
+        label={muted ? t`Unmute` : t`Mute`}
         onClick={player.toggleMute}
       >
         <Icon />

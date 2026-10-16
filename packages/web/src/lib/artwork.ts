@@ -41,9 +41,7 @@ export interface ShrinkReply {
 }
 
 export type Shrunk =
-  | { src: string }
-  | { bitmap: ImageBitmap }
-  | { plain: true };
+  { src: string } | { bitmap: ImageBitmap } | { plain: true };
 
 export interface Drawn {
   src: string;
@@ -315,6 +313,7 @@ function start(): Slot | null {
       ...[...running.values()].map((r) => r.job),
       ...queue.splice(0),
     ])
+      // eslint-disable-next-line lingui/no-unlocalized-strings -- only logged
       settle(job, { id: job.id, error: 'worker failed' });
     running.clear();
     for (const { blob, resolve } of addressing.values())
@@ -354,6 +353,7 @@ function pump() {
     if (!slot) {
       if (broken) {
         queue.splice(at, 1);
+        // eslint-disable-next-line lingui/no-unlocalized-strings -- only logged
         settle(job, { id: job.id, error: 'no worker' });
       } else return;
       continue;

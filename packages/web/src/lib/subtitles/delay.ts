@@ -1,3 +1,5 @@
+import { t } from '@lingui/core/macro';
+import { formatLocale } from '../i18n';
 import { storedMap } from '../storage';
 
 import type { SubtitleLine } from './cues';
@@ -35,9 +37,24 @@ export function delayForTaps(
   return Math.abs(gap) > MAX_TAP_GAP_MS ? null : clampDelay(delayMs + gap);
 }
 
+/** How far subtitles are moved, as `+1.5s`. */
+export function delayAmount(ms: number): string {
+  const seconds = (Math.abs(ms) / 1000).toLocaleString(formatLocale(), {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
+  return ms > 0 ? t`+${seconds}s` : t`−${seconds}s`;
+}
+
 export function delayLabel(ms: number): string {
-  if (!ms) return 'In sync';
-  return `${ms > 0 ? '+' : '−'}${(Math.abs(ms) / 1000).toFixed(1)}s`;
+  return ms ? delayAmount(ms) : t`In sync`;
+}
+
+/** What the player says when subtitles move. */
+export function delayNotice(ms: number): string {
+  if (!ms) return t`Subtitles in sync`;
+  const amount = delayAmount(ms);
+  return t`Subtitles ${amount}`;
 }
 
 /*

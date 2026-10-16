@@ -405,6 +405,7 @@ export const VOLUME_STEPS = [1, 2, 5, 10] as const;
 
 export const HOLD_RATES = [1.5, 2, 3] as const;
 
+/* eslint-disable lingui/no-unlocalized-strings -- Jellyfin's segment kinds */
 export const SEGMENT_TYPES = [
   'Intro',
   'Recap',
@@ -412,6 +413,7 @@ export const SEGMENT_TYPES = [
   'Preview',
   'Commercial',
 ] as const;
+/* eslint-enable lingui/no-unlocalized-strings */
 export type SegmentType = (typeof SEGMENT_TYPES)[number];
 export const SEGMENT_ACTIONS = ['ask', 'skip', 'none'] as const;
 export type SegmentAction = (typeof SEGMENT_ACTIONS)[number];

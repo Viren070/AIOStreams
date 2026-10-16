@@ -1,3 +1,4 @@
+import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { LuLock } from 'react-icons/lu';
@@ -38,7 +39,9 @@ export function ScreenLock({ onUnlock }: { onUnlock(): void }) {
         )}
       >
         <LuLock className="text-3xl" />
-        <span className="text-sm font-medium">Tap to unlock</span>
+        <span className="text-sm font-medium">
+          <Trans>Tap to unlock</Trans>
+        </span>
       </button>
     </div>,
     document.body

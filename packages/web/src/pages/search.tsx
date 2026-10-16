@@ -1,3 +1,5 @@
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { toast } from 'sonner';
 import { BiHistory, BiMicrophone, BiSearch, BiX } from 'react-icons/bi';
@@ -86,7 +88,7 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
   return (
     <PageBody>
       <h1 data-ui="page-title" className="text-3xl font-bold">
-        Search
+        <Trans>Search</Trans>
       </h1>
       <div className="flex max-w-xl items-center gap-2">
         {voiceFirst && voice.button}
@@ -100,7 +102,7 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
           onKeyDown={(e) => {
             if (e.key === 'Enter') choose(term);
           }}
-          placeholder={voice?.hearing ? 'Listening…' : 'Movies and shows'}
+          placeholder={voice?.hearing ? t`Listening…` : t`Movies and shows`}
           leftIcon={<BiSearch className="text-xl" />}
           data-ui="search-input"
           fieldClass="flex-1"
@@ -132,16 +134,16 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
               data-ui="section-title"
               className="text-sm font-semibold text-[--muted]"
             >
-              Recent searches
+              <Trans>Recent searches</Trans>
             </h2>
             <Button size="sm" intent="gray-link" onClick={history.clear}>
-              Clear all
+              <Trans>Clear all</Trans>
             </Button>
           </div>
           <ul className="-mx-2">
-            {history.terms.map((t) => (
+            {history.terms.map((term) => (
               <li
-                key={t}
+                key={term}
                 data-ui="search-history-item"
                 className="flex items-center rounded-lg transition-colors hover:bg-white/[0.04]"
               >
@@ -150,14 +152,14 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
                   <ContextMenuTrigger asChild>
                     <TermButton
                       icon={<BiHistory />}
-                      label={t}
-                      onClick={() => choose(t)}
+                      label={term}
+                      onClick={() => choose(term)}
                     />
                   </ContextMenuTrigger>
                   <ContextMenuContent data-ui="search-history-menu">
-                    <ContextMenuItem onClick={() => history.remove(t)}>
+                    <ContextMenuItem onClick={() => history.remove(term)}>
                       <BiX />
-                      Remove
+                      <Trans>Remove</Trans>
                     </ContextMenuItem>
                   </ContextMenuContent>
                 </ContextMenu>
@@ -167,8 +169,8 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
                     intent="gray-basic"
                     className="me-1 flex-none rounded-full"
                     icon={<BiX className="text-lg" />}
-                    aria-label={`Remove ${t}`}
-                    onClick={() => history.remove(t)}
+                    aria-label={t`Remove ${term}`}
+                    onClick={() => history.remove(term)}
                   />
                 )}
               </li>
@@ -193,14 +195,14 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
             <div className="space-y-8">
               <ResultRow
                 id="search:movies"
-                title="Movies"
+                title={t`Movies`}
                 items={movieItems}
                 loading={moviesLoading}
                 client={client}
               />
               <ResultRow
                 id="search:shows"
-                title="Shows"
+                title={t`Shows`}
                 items={showItems}
                 loading={showsLoading}
                 client={client}
@@ -210,7 +212,9 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
         </div>
       )}
       {searching && !loading && !found && (
-        <p className="text-[--muted]">Nothing found for “{query}”.</p>
+        <p className="text-[--muted]">
+          <Trans>Nothing found for “{query}”.</Trans>
+        </p>
       )}
     </PageBody>
   );
@@ -348,7 +352,7 @@ function useVoice(
         intent={hearing ? 'primary' : 'gray-subtle'}
         className="relative rounded-full"
         icon={<BiMicrophone className="text-xl" />}
-        aria-label={hearing ? 'Stop listening' : 'Search by voice'}
+        aria-label={hearing ? t`Stop listening` : t`Search by voice`}
         aria-pressed={!!hearing}
         onClick={toggle}
       />

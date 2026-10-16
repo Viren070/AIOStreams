@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import React from 'react';
 import { cn } from '@aiostreams/ui/core/styling';
 import { clock } from '../../lib/format';
@@ -53,7 +54,7 @@ export function SeekBar({
     <div
       ref={bar}
       role="slider"
-      aria-label="Seek"
+      aria-label={t`Seek`}
       aria-valuemin={0}
       aria-valuemax={Math.round(durationMs / 1000)}
       aria-valuenow={Math.round(shown / 1000)}

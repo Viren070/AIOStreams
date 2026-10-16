@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import { toast } from 'sonner';
 import { useHeldInvites } from '../../lib/party/actions';
 import { usePartyFollow } from '../../lib/party/follow';
@@ -20,8 +21,14 @@ export function PartyHost() {
   usePartyEvent((event) => {
     switch (event.type) {
       case 'members':
-        if (event.joined) toast(`${event.joined.name} joined the party`);
-        if (event.left) toast(`${event.left.name} left the party`);
+        if (event.joined) {
+          const { name } = event.joined;
+          toast(t`${name} joined the party`);
+        }
+        if (event.left) {
+          const { name } = event.left;
+          toast(t`${name} left the party`);
+        }
         return;
       case 'chat':
         // The player shows messages over the video, and the panel lists them.

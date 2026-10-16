@@ -1,3 +1,5 @@
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { flushSync } from 'react-dom';
 import { BiInfoCircle, BiPlay, BiSolidStar } from 'react-icons/bi';
@@ -320,7 +322,7 @@ function HeroDetails({
               }
               {...holdPlay}
             >
-              Play
+              <Trans>Play</Trans>
             </Button>
           )}
           <Button
@@ -331,7 +333,7 @@ function HeroDetails({
             leftIcon={<BiInfoCircle className="text-xl" />}
             onClick={() => navigate(itemPath(item))}
           >
-            {playable ? 'More info' : 'Open'}
+            {playable ? t`More info` : t`Open`}
           </Button>
         </div>
       )}
@@ -481,6 +483,14 @@ function useSwipeFade(
     // A system gesture takes the pointer, so the fade is undone.
     onPointerCancel: (e: React.PointerEvent) => release(e, true),
   };
+}
+
+function dotLabel(item: BaseItemDto): string {
+  const name = item.Name ?? '';
+  return t({
+    comment: 'A dot under the banner that brings this title up',
+    message: `Show ${name}`,
+  });
 }
 
 /** A rotating feature of a few titles at the top of the home page. */
@@ -641,7 +651,7 @@ export function Hero({
               data-ui="hero-dot"
               data-current={i === index || undefined}
               data-nav-tv="skip"
-              aria-label={`Show ${f.Name}`}
+              aria-label={dotLabel(f)}
               onClick={() => setIndex(i)}
               className={cn(
                 'h-1.5 rounded-full transition-all',

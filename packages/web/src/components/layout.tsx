@@ -1,4 +1,6 @@
 import React from 'react';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import { motion } from 'motion/react';
 import {
   Outlet,
@@ -208,7 +210,7 @@ function AccountMenu({
       trigger={trigger}
     >
       <DropdownMenuLabel>
-        <span className="block truncate">{user.Name ?? 'You'}</span>
+        <span className="block truncate">{user.Name ?? t`You`}</span>
         <span className="block truncate text-xs font-normal text-[--muted]">
           {info.name ?? serverAddress(client.base)}
         </span>
@@ -249,7 +251,7 @@ function SidebarAccount({ you }: { you: SidebarItem }) {
       items={[
         {
           id: 'account',
-          name: user.Name ?? 'You',
+          name: user.Name ?? t`You`,
           iconType: SidebarAvatar,
           onClick: you.onClick,
         },
@@ -325,7 +327,7 @@ function HistoryButtons() {
   const back = (
     <HistoryButton
       data-name="back"
-      label="Back"
+      label={t`Back`}
       icon={LuCircleArrowLeft}
       disabled={nav?.canGoBack === false}
       onClick={() => window.history.back()}
@@ -350,7 +352,7 @@ function HistoryButtons() {
         >
           <HistoryButton
             data-name="forward"
-            label="Forward"
+            label={t`Forward`}
             icon={LuCircleArrowRight}
             className="border border-white/10 bg-[--paper] shadow-lg shadow-black/50"
             onClick={() => window.history.forward()}
@@ -386,7 +388,7 @@ function Unreachable() {
             type="button"
             data-ui="connection-note"
             data-state="small"
-            aria-label="Can't reach the server"
+            aria-label={t`Can't reach the server`}
             onClick={() => {
               setSmall(false);
               retryNow();
@@ -400,7 +402,7 @@ function Unreachable() {
           </button>
         }
       >
-        Can't reach the server
+        <Trans>Can't reach the server</Trans>
       </Tooltip>
     );
   }
@@ -419,10 +421,12 @@ function Unreachable() {
       >
         <BiLoaderAlt className="flex-none animate-spin text-base text-[--muted]" />
         <span>
-          <span className="block font-semibold">Reconnecting…</span>
+          <span className="block font-semibold">
+            <Trans>Reconnecting…</Trans>
+          </span>
           {saved && (
             <span className="block text-xs text-[--muted]">
-              Showing saved pages
+              <Trans>Showing saved pages</Trans>
             </span>
           )}
         </span>
@@ -434,13 +438,13 @@ function Unreachable() {
           onClick={() => navigate(to.downloads)}
           className="rounded-full px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-white/10"
         >
-          Downloads
+          <Trans>Downloads</Trans>
         </button>
       )}
       <button
         type="button"
         data-ui="connection-note-dismiss"
-        aria-label="Dismiss"
+        aria-label={t`Dismiss`}
         onClick={() => setSmall(true)}
         className="me-2 flex size-7 flex-none items-center justify-center rounded-full text-base text-[--muted] transition-colors hover:bg-white/10 hover:text-white"
       >
@@ -470,7 +474,7 @@ export function WebLayout() {
   if (onHome && kept !== entry) setKept(entry);
   const activity: SidebarItem = {
     id: 'activity',
-    name: 'Activity',
+    name: t`Activity`,
     iconType: BiHistory,
     isCurrent: pathname.startsWith('/history'),
     onClick: () => navigate(to.history),
@@ -478,7 +482,7 @@ export function WebLayout() {
   const downloads: SidebarItem | null = downloadsHost()
     ? {
         id: 'downloads',
-        name: 'Downloads',
+        name: t`Downloads`,
         iconType: BiDownload,
         isCurrent: pathname.startsWith('/downloads'),
         onClick: () => navigate(to.downloads),
@@ -505,7 +509,7 @@ export function WebLayout() {
   }, [nav]);
   const calendar: SidebarItem = {
     id: 'calendar',
-    name: 'Calendar',
+    name: t`Calendar`,
     iconType: BiCalendar,
     isCurrent: pathname.startsWith('/calendar'),
     onClick: () => navigate(to.calendar()),
@@ -513,21 +517,21 @@ export function WebLayout() {
   const inParty = !!useParty();
   const together: SidebarItem = {
     id: 'party',
-    name: inParty ? 'Watch party' : 'Watch together',
+    name: inParty ? t`Watch party` : t`Watch together`,
     iconType: BiGroup,
     onClick: () => openPartySheet(),
   };
   const items: SidebarItem[] = [
     {
       id: 'home',
-      name: 'Home',
+      name: t`Home`,
       iconType: BiHomeAlt2,
       isCurrent: pathname === '/',
       onClick: () => navigate(to.home),
     },
     {
       id: 'discover',
-      name: 'Discover',
+      name: t`Discover`,
       iconType: BiCompass,
       isCurrent:
         pathname.startsWith('/discover') || pathname.startsWith('/library'),
@@ -535,14 +539,14 @@ export function WebLayout() {
     },
     {
       id: 'search',
-      name: 'Search',
+      name: t`Search`,
       iconType: BiSearch,
       isCurrent: pathname.startsWith('/search'),
       onClick: () => navigate(to.search()),
     },
     {
       id: 'favourites',
-      name: 'Favourites',
+      name: t`Favourites`,
       iconType: BiHeart,
       isCurrent: pathname.startsWith('/favourites'),
       onClick: () => navigate(to.favourites()),
@@ -555,7 +559,7 @@ export function WebLayout() {
 
   const settingsItem: SidebarItem = {
     id: 'settings',
-    name: 'Settings',
+    name: t`Settings`,
     iconType: BiCog,
     isCurrent: pathname.startsWith('/settings'),
     onClick: () => navigate(to.settings()),
@@ -563,7 +567,7 @@ export function WebLayout() {
 
   const switchItem: SidebarItem = {
     id: 'switch-user',
-    name: 'Switch user',
+    name: t`Switch user`,
     iconType: BiTransferAlt,
     onClick: switchUser,
   };
@@ -571,7 +575,7 @@ export function WebLayout() {
     ? switchItem
     : {
         id: 'account',
-        name: 'Account',
+        name: t`Account`,
         onClick: () => navigate(to.settings('account')),
       };
 
@@ -811,8 +815,8 @@ function MobileNav({
           trigger={
             <NavTab
               data-ui="mobile-nav-item"
-              aria-label="Account"
-              item={{ id: 'account', name: 'You', isCurrent: inMenu }}
+              aria-label={t`Account`}
+              item={{ id: 'account', name: t`You`, isCurrent: inMenu }}
               icon={<YouIcon />}
               className={tab}
             />
@@ -859,7 +863,7 @@ function TouchRail({
     <NavTab
       data-ui="rail-item"
       aria-label={you.name}
-      item={{ id: 'account', name: 'You' }}
+      item={{ id: 'account', name: t`You` }}
       icon={<YouIcon />}
       named={named}
       onClick={select(you)}
@@ -988,7 +992,7 @@ function TvRail({
   const account = (
     <NavEntry
       aria-label={you.name}
-      item={{ id: 'account', name: 'You' }}
+      item={{ id: 'account', name: t`You` }}
       icon={<YouIcon />}
       onClick={select(you)}
       labelClassName={label}
@@ -1196,7 +1200,7 @@ function CornerMenu({
           {footerItems.map(entry)}
           <NavEntry
             aria-label={you.name}
-            item={{ id: 'account', name: 'You' }}
+            item={{ id: 'account', name: t`You` }}
             icon={<YouIcon />}
             onClick={select(you)}
             labelClassName={label}
@@ -1262,7 +1266,7 @@ function TvTabs({
       })}
       <NavEntry
         aria-label={you.name}
-        item={{ id: 'account', name: 'You' }}
+        item={{ id: 'account', name: t`You` }}
         icon={<YouIcon />}
         onClick={select(you)}
         labelClassName="hidden"

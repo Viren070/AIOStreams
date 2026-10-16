@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import {
   settings,
   SUBTITLE_POSITION_MAX,
@@ -15,12 +16,13 @@ const SCALE: Record<SubtitleSize, number> = {
   huge: 1.5,
 };
 
-export const SUBTITLE_SIZE_LABELS: Record<SubtitleSize, string> = {
-  small: 'Small',
-  normal: 'Normal',
-  large: 'Large',
-  huge: 'Huge',
-};
+export const subtitleSizeLabel = (size: SubtitleSize) =>
+  ({
+    small: t`Small`,
+    normal: t`Normal`,
+    large: t`Large`,
+    huge: t`Huge`,
+  })[size];
 
 /** One size up or down; null at either end. */
 export function stepSubtitleSize(sign: number): SubtitleSize | null {
@@ -61,6 +63,7 @@ export const MPV_OUTLINE: Record<SubtitleOutline, number> = {
 };
 
 /** The desktop app's fonts first, then the Android app's names for them. */
+/* eslint-disable lingui/no-unlocalized-strings -- CSS font families */
 const FONT_FAMILIES: Record<Exclude<SubtitleFont, 'default'>, string> = {
   'sans-serif': 'sans-serif',
   serif: 'serif',
@@ -69,6 +72,7 @@ const FONT_FAMILIES: Record<Exclude<SubtitleFont, 'default'>, string> = {
   casual: '"Comic Sans MS", casual, sans-serif',
   cursive: '"Segoe Script", "Snell Roundhand", cursive',
 };
+/* eslint-enable lingui/no-unlocalized-strings */
 
 /** mpv's shadow offset, in the same units, from the outline's edge. */
 export const MPV_SHADOW = 3;
@@ -83,6 +87,7 @@ export const subtitleHeight = (style?: SubtitleStyle, lift = 0) =>
 export const subtitleLine = (style?: SubtitleStyle, lift = 0) =>
   97 - subtitleHeight(style, lift);
 
+/* eslint-disable lingui/no-unlocalized-strings -- CSS values */
 function rgba(hex: string, opacity: number): string {
   const n = parseInt(hex.slice(1), 16);
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${opacity / 100})`;
@@ -119,6 +124,7 @@ export function subtitleCss(style: SubtitleStyle): {
       style.font === 'default' ? undefined : FONT_FAMILIES[style.font],
   };
 }
+/* eslint-enable lingui/no-unlocalized-strings */
 
 /** mpv writes colours with the alpha first: `#AARRGGBB`. */
 export function mpvColor(hex: string, opacity = 100): string {

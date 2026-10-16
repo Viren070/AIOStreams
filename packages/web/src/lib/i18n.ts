@@ -1,5 +1,7 @@
 import { i18n, type Messages } from '@lingui/core';
+import { t } from '@lingui/core/macro';
 import { setFormatLocale } from '@aiostreams/ui/core/format';
+import { setUiText, type uiText } from '@aiostreams/ui/core/text';
 import { messages as sourceMessages } from '../locales/en-GB.po';
 import { onSettingsChange, settings } from './settings';
 
@@ -103,6 +105,26 @@ function formatTagFor(locale: string): string {
   return systemTags().find((tag) => languageOf(tag) === language) ?? locale;
 }
 
+/** What the shared components say themselves. */
+const uiWords = (): typeof uiText => ({
+  previous: t`Previous`,
+  next: t`Next`,
+  pickColour: t`Pick a colour`,
+  unnamed: t`Unnamed`,
+  select: t`Select`,
+  areYouSure: t`Are you sure you want to continue?`,
+  confirm: t`Confirm`,
+  cancel: t`Cancel`,
+  oops: t`Oops!`,
+  retry: t`Retry`,
+  dialog: t`Dialog`,
+  drawer: t`Drawer`,
+  openMenu: t`Open main menu`,
+  donateTitle: t`Support AIOStreams`,
+  donateHeading: t`Donate to Me`,
+  donateBody: t`AIOStreams is a solo project built and maintained by me in my free time. If you find it useful, please consider supporting my work. Your donation helps me keep the project alive and improve it for everyone!`,
+});
+
 let latest: string | undefined;
 
 export async function activate(requested: string): Promise<void> {
@@ -123,6 +145,7 @@ export async function activate(requested: string): Promise<void> {
   formatTag = formatTagFor(locale);
   setFormatLocale(formatTag);
   i18n.loadAndActivate({ locale, messages });
+  setUiText(uiWords());
   const html = document.documentElement;
   html.lang = locale;
   html.dir = isRtl(locale) ? 'rtl' : 'ltr';

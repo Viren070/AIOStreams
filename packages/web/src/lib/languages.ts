@@ -1,4 +1,6 @@
+import { i18n } from '@lingui/core';
 import {
+  iso6392ToIso6391,
   languageToIso6392B,
   tagLanguage,
 } from '@aiostreams/core/src/utils/languages';
@@ -12,6 +14,8 @@ export interface Language {
   code: string;
   name: string;
 }
+
+/* eslint-disable lingui/no-unlocalized-strings -- the addon's own names */
 
 /** Filter labels for several languages or none. */
 const NOT_LANGUAGES = ['Dual Audio', 'Dubbed', 'Multi', 'Original', 'Unknown'];
@@ -28,6 +32,8 @@ const EXTRA: Language[] = [
   { code: 'ice', name: 'Icelandic' },
 ];
 
+/* eslint-enable lingui/no-unlocalized-strings */
+
 export const LANGUAGES: Language[] = [
   ...FILTER_LANGUAGES.filter((name) => !NOT_LANGUAGES.includes(name)).flatMap(
     (name) => {
@@ -43,6 +49,23 @@ export const LANGUAGES: Language[] = [
       ? 1
       : a.name.localeCompare(b.name)
 );
+
+/** A language's name in the app's language; English keeps the addon's names. */
+export function languageName(language: Language): string {
+  if (i18n.locale.startsWith('en')) return language.name;
+  const { code } = language;
+  const tag = code.includes('-') ? code : (iso6392ToIso6391(code) ?? code);
+  try {
+    return (
+      new Intl.DisplayNames([i18n.locale], {
+        type: 'language',
+        fallback: 'none',
+      }).of(tag) ?? language.name
+    );
+  } catch {
+    return language.name;
+  }
+}
 
 /** A code or tag's language by the addon's mapping, else the tag itself. */
 const languageOf = (tag: string) => tagLanguage(tag) ?? tag.toLowerCase();

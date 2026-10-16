@@ -1,3 +1,4 @@
+import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { Modal } from '@aiostreams/ui/modal';
 import { Popover } from '@aiostreams/ui/popover';
@@ -128,7 +129,7 @@ export const Overview = React.memo(function Overview({
                 data-focus="own"
                 className="relative z-[1] clear-both float-right rtl:float-left ps-5 font-medium text-[--muted] transition-[color,box-shadow] hover:text-white focus-visible:text-white focus-visible:underline [[data-tv]_&]:ms-5 [[data-tv]_&]:rounded-full [[data-tv]_&]:px-2 [[data-tv]_&]:focus-visible:shadow-[inset_0_0_0_999px_rgb(255_255_255/0.2)] [[data-tv]_&]:focus-visible:no-underline"
               >
-                More
+                <Trans>More</Trans>
               </button>
             }
           />

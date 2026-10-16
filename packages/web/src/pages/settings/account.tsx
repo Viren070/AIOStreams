@@ -1,3 +1,5 @@
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import { Switch } from '@aiostreams/ui/switch';
 import { Button } from '@aiostreams/ui/button';
 import {
@@ -12,7 +14,7 @@ import { settings, useSetting } from '../../lib/settings';
 import { useServerInfo } from '../../lib/server-info';
 import { UserAvatar } from '../../components/user-avatar';
 import { SettingsCard, SettingsRow } from '../../components/settings-card';
-import { ON_DEVICE } from './common';
+import { onDevice } from './common';
 
 export function AccountSection() {
   const { client, user, switchUser, signOut, changeServer } = useSession();
@@ -23,11 +25,11 @@ export function AccountSection() {
   const [askWho, setAskWho] = useSetting(settings.account.askWho);
   const configure = configureUrl(client.base, info);
   const confirmSignOut = useConfirmationDialog({
-    title: 'Sign out',
+    title: t`Sign out`,
     description: __STANDALONE__
-      ? 'Sign out of this server?'
-      : 'Sign out of this browser?',
-    actionText: 'Sign out',
+      ? t`Sign out of this server?`
+      : t`Sign out of this browser?`,
+    actionText: t`Sign out`,
     onConfirm: signOut,
   });
   const button = 'w-full rounded-full sm:w-auto';
@@ -53,55 +55,59 @@ export function AccountSection() {
             className={button}
             onClick={() => confirmSignOut.open()}
           >
-            Sign out
+            <Trans>Sign out</Trans>
           </Button>
         </SettingsRow>
         {several && (
           <SettingsRow
-            label="Switch user"
-            help="Watch as someone else on this configuration. A user with a PIN needs it again after switching away."
+            label={t`Switch user`}
+            help={t`Watch as someone else on this configuration. A user with a PIN needs it again after switching away.`}
           >
             <Button
               intent="gray-outline"
               className={button}
               onClick={switchUser}
             >
-              Switch
+              <Trans>Switch</Trans>
             </Button>
           </SettingsRow>
         )}
         {changeServer && (
-          <SettingsRow label="Server" help={serverAddress(client.base)}>
+          <SettingsRow label={t`Server`} help={serverAddress(client.base)}>
             <Button
               intent="gray-outline"
               className={button}
               onClick={changeServer}
             >
-              Change server
+              <Trans>Change server</Trans>
             </Button>
           </SettingsRow>
         )}
         {configure && (
           <SettingsRow
-            label="Configuration"
-            help="Addons, catalogs and users are set up on the configuration page."
+            label={t`Configuration`}
+            help={t`Addons, catalogs and users are set up on the configuration page.`}
           >
             <Button
               intent="gray-outline"
               className={button}
               onClick={() => window.open(configure, '_blank')}
             >
-              Open
+              <Trans>Open</Trans>
             </Button>
           </SettingsRow>
         )}
       </SettingsCard>
       {several && (
-        <SettingsCard title="Who's watching" description={ON_DEVICE}>
+        <SettingsCard
+          name="who-s-watching"
+          title={t`Who's watching`}
+          description={onDevice()}
+        >
           <Switch
             side="right"
-            label="Ask when the app opens"
-            help="Also when you come back to it after half an hour. Whoever was watching carries on without their PIN."
+            label={t`Ask when the app opens`}
+            help={t`Also when you come back to it after half an hour. Whoever was watching carries on without their PIN.`}
             value={askWho}
             onValueChange={setAskWho}
           />

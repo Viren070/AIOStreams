@@ -2,6 +2,7 @@ import React from 'react';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import { RouterProvider } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
+import { t } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@aiostreams/ui/toaster';
@@ -64,6 +65,7 @@ export default function JellyfinWebApp() {
             key={rtl ? 'rtl' : 'ltr'}
             dir={rtl ? 'rtl' : 'ltr'}
             swipeDirections={['top', rtl ? 'left' : 'right']}
+            containerAriaLabel={t`Notifications`}
             offset={{ top: 'calc(24px + env(safe-area-inset-top))' }}
             mobileOffset={{ top: 'calc(16px + env(safe-area-inset-top))' }}
           />
@@ -134,12 +136,16 @@ function Standalone() {
     setBase(null);
   }, [queryClient]);
 
+  const from = base ? serverAddress(base) : '';
+  const adding = asking ? serverAddress(asking) : '';
   const confirmLeave = useConfirmationDialog({
-    title: 'Add a server',
-    description: asking
-      ? `Leave ${base ? serverAddress(base) : 'this server'} to add ${serverAddress(asking)}?`
-      : undefined,
-    actionText: 'Continue',
+    title: t`Add a server`,
+    description: !asking
+      ? undefined
+      : base
+        ? t`Leave ${from} to add ${adding}?`
+        : t`Leave this server to add ${adding}?`,
+    actionText: t`Continue`,
     onConfirm: () => {
       setLinked(asking);
       leave();
@@ -148,7 +154,7 @@ function Standalone() {
   const openConfirm = confirmLeave.open;
   useShellLinks((raw) => {
     const link = parseAppLink(raw);
-    if (!link) return void toast.error('The app cannot open that link');
+    if (!link) return void toast.error(t`The app cannot open that link`);
     if (link.kind === 'route') return navigate(link.path);
     if (link.kind === 'party') return party.hold(link.invite);
     if (!base) return setLinked(link.address);

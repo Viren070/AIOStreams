@@ -1,4 +1,4 @@
-import { useLingui } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 import { Select } from '@aiostreams/ui/select';
 import { Combobox } from '@aiostreams/ui/combobox';
 import { Switch } from '@aiostreams/ui/switch';
@@ -28,7 +28,7 @@ import {
   type PosterSize,
 } from '../../lib/settings';
 import { SettingsCard } from '../../components/settings-card';
-import { ON_DEVICE, FOLLOWS_YOU } from './common';
+import { onDevice, followsYou } from './common';
 
 const NOTHING = 'none';
 
@@ -54,14 +54,18 @@ function NavigationCard() {
   // A TV's docked rail and fade sit on nothing.
   const onBar = !tv || (rail ? railShape !== 'docked' : tvTopBar !== 'fade');
   return (
-    <SettingsCard title="Navigation" description={ON_DEVICE}>
+    <SettingsCard
+      name="navigation"
+      title={t`Navigation`}
+      description={onDevice()}
+    >
       {tv && (
         <Select
-          label="Style"
-          help="Side rail runs down the left of the screen; Top tabs sit along the top of each page."
+          label={t`Style`}
+          help={t`Side rail runs down the side of the screen; Top tabs sit along the top of each page.`}
           options={[
-            { value: 'rail', label: 'Side rail' },
-            { value: 'top', label: 'Top tabs' },
+            { value: 'rail', label: t`Side rail` },
+            { value: 'top', label: t`Top tabs` },
           ]}
           value={tvNavigation}
           onValueChange={(value) => setTvNavigation(value as TvNavigation)}
@@ -69,11 +73,11 @@ function NavigationCard() {
       )}
       {!tv && touch && (
         <Select
-          label="On wide screens"
-          help="Where the navigation goes when the screen is wide enough for a sidebar, such as a tablet held sideways."
+          label={t`On wide screens`}
+          help={t`Where the navigation goes when the screen is wide enough for a sidebar, such as a tablet held sideways.`}
           options={[
-            { value: 'rail', label: 'Side rail' },
-            { value: 'bar', label: 'Bottom bar' },
+            { value: 'rail', label: t`Side rail` },
+            { value: 'bar', label: t`Bottom bar` },
           ]}
           value={touchNavigation}
           onValueChange={(value) =>
@@ -83,12 +87,12 @@ function NavigationCard() {
       )}
       {rail && (
         <Select
-          label="Rail"
-          help="Docked keeps it in a column of its own. Floating hovers it over the page, a little in from the edge. Corner button shrinks it to the current page's button in the top corner, which opens into the whole menu."
+          label={t`Rail`}
+          help={t`Docked keeps it in a column of its own. Floating hovers it over the page, a little in from the edge. Corner button shrinks it to the current page's button in the top corner, which opens into the whole menu.`}
           options={[
-            { value: 'docked', label: 'Docked' },
-            { value: 'floating', label: 'Floating' },
-            { value: 'corner', label: 'Corner button' },
+            { value: 'docked', label: t`Docked` },
+            { value: 'floating', label: t`Floating` },
+            { value: 'corner', label: t`Corner button` },
           ]}
           value={railShape}
           onValueChange={(value) => setRailShape(value as RailShape)}
@@ -96,21 +100,21 @@ function NavigationCard() {
       )}
       {rail && railShape !== 'corner' && (
         <Select
-          label="Page names"
+          label={t`Page names`}
           help={
             tv
-              ? "Whether the rail names each page only while you're in it, or all the time."
-              : 'Whether the rail names each page under its icon.'
+              ? t`Whether the rail names each page only while you're in it, or all the time.`
+              : t`Whether the rail names each page under its icon.`
           }
           options={
             tv
               ? [
-                  { value: 'auto', label: "While you're in it" },
-                  { value: 'always', label: 'Always' },
+                  { value: 'auto', label: t`While you're in it` },
+                  { value: 'always', label: t`Always` },
                 ]
               : [
-                  { value: 'auto', label: 'Shown' },
-                  { value: 'never', label: 'Hidden' },
+                  { value: 'auto', label: t`Shown` },
+                  { value: 'never', label: t`Hidden` },
                 ]
           }
           value={railNames}
@@ -119,12 +123,12 @@ function NavigationCard() {
       )}
       {tv && tvNavigation === 'top' && (
         <Select
-          label="Top bar"
-          help="How the tabs sit over the page: as floating pills, on a bar across the top, or on nothing but a fade down from the top edge."
+          label={t`Top bar`}
+          help={t`How the tabs sit over the page: as floating pills, on a bar across the top, or on nothing but a fade down from the top edge.`}
           options={[
-            { value: 'pill', label: 'Floating pills' },
-            { value: 'bar', label: 'Bar' },
-            { value: 'fade', label: 'Fade' },
+            { value: 'pill', label: t`Floating pills` },
+            { value: 'bar', label: t`Bar` },
+            { value: 'fade', label: t`Fade` },
           ]}
           value={tvTopBar}
           onValueChange={(value) => setTvTopBar(value as TvTopBar)}
@@ -132,12 +136,14 @@ function NavigationCard() {
       )}
       {onBar && (
         <Select
-          label="Background"
-          help="What the navigation sits on over the page: the app's own colour, or glass that shows the page through it. Liquid glass also bends what's behind its edges, which costs more on a slow device."
+          label={t`Background`}
+          help={t`What the navigation sits on over the page: the app's own colour, or glass that shows the page through it. Liquid glass also bends what's behind its edges, which costs more on a slow device.`}
           options={[
-            { value: 'solid', label: 'Solid' },
-            { value: 'frosted', label: 'Frosted glass' },
-            ...(canRefract ? [{ value: 'liquid', label: 'Liquid glass' }] : []),
+            { value: 'solid', label: t`Solid` },
+            { value: 'frosted', label: t`Frosted glass` },
+            ...(canRefract
+              ? [{ value: 'liquid', label: t`Liquid glass` }]
+              : []),
           ]}
           value={
             background === 'liquid' && !canRefract ? 'frosted' : background
@@ -151,7 +157,6 @@ function NavigationCard() {
 
 /** The app's own language; test languages are listed in development only. */
 function LanguageCard() {
-  const { t } = useLingui();
   const [language, setLanguage] = useSetting(settings.interface.language);
   const listed = LOCALES.filter(
     (l) => !PSEUDO_LOCALES.includes(l) || import.meta.env.DEV || l === language
@@ -160,7 +165,7 @@ function LanguageCard() {
     .sort((a, b) => a.label.localeCompare(b.label));
   const system = localeName(systemLocale());
   return (
-    <SettingsCard title={t`Language`} description={t`Kept on this device.`}>
+    <SettingsCard name="language" title={t`Language`} description={onDevice()}>
       <Select
         label={t`App language`}
         help={t`Titles, synopses and stream names stay in the language your addons send.`}
@@ -190,18 +195,21 @@ export function InterfaceSection() {
     settings.interface.episodeLayout
   );
 
+  const option = (value: string, label: string) => ({
+    value,
+    label,
+    textValue: label,
+  });
   const featuredOptions = [
-    {
-      value: 'resume',
-      label: 'Continue watching',
-      textValue: 'Continue watching',
-    },
-    { value: 'next-up', label: 'Next up', textValue: 'Next up' },
-    ...(views.data?.Items ?? []).map((v) => {
-      const label = [v.Name, libraryLabel(v)].filter(Boolean).join(' · ');
-      return { value: `view:${v.Id}`, label, textValue: label };
-    }),
-    { value: NOTHING, label: 'Nothing', textValue: 'Nothing' },
+    option('resume', t`Continue watching`),
+    option('next-up', t`Next up`),
+    ...(views.data?.Items ?? []).map((v) =>
+      option(
+        `view:${v.Id}`,
+        [v.Name, libraryLabel(v)].filter(Boolean).join(' · ')
+      )
+    ),
+    option(NOTHING, t`Nothing`),
   ];
   // Catalogs since removed would count towards the limit without showing.
   const known = new Set(featuredOptions.map((o) => o.value));
@@ -226,27 +234,31 @@ export function InterfaceSection() {
   return (
     <>
       <LanguageCard />
-      <SettingsCard title="Home and grids" description={FOLLOWS_YOU}>
+      <SettingsCard
+        name="home-and-grids"
+        title={t`Home and grids`}
+        description={followsYou()}
+      >
         <Combobox
           multiple
-          label="Featured on home"
-          help={`Up to ${MAX_FEATURED}, mixed together. Left empty, your first movie and series catalogs are featured.`}
-          placeholder="Automatic"
-          emptyMessage="Nothing matches."
+          label={t`Featured on home`}
+          help={t`Up to ${MAX_FEATURED}, mixed together. Left empty, your first movie and series catalogs are featured.`}
+          placeholder={t`Automatic`}
+          emptyMessage={t`Nothing matches.`}
           options={featuredOptions}
           maxItems={MAX_FEATURED}
           value={featuredValue}
           onValueChange={changeFeatured}
         />
         <Select
-          label="Hero"
-          help="Following pins it above the rows and shows the card the pointer, keyboard or remote is on, starting with a featured title, behind the whole page or in its top corner. Touch screens and narrow windows keep it rotating."
+          label={t`Hero`}
+          help={t`Following pins it above the rows and shows the card the pointer, keyboard or remote is on, starting with a featured title, behind the whole page or in its top corner. Touch screens and narrow windows keep it rotating.`}
           options={[
-            { value: 'rotate', label: 'Rotates through featured titles' },
-            { value: 'follow', label: 'Follows the selected card' },
+            { value: 'rotate', label: t`Rotates through featured titles` },
+            { value: 'follow', label: t`Follows the selected card` },
             {
               value: 'corner',
-              label: 'Follows the selected card, in the corner',
+              label: t`Follows the selected card, in the corner`,
             },
           ]}
           value={heroMode}
@@ -254,51 +266,52 @@ export function InterfaceSection() {
         />
         <Switch
           side="right"
-          label="Merge continue watching and next up"
-          help="Shows next episodes in the continue watching row, after what you are partway through."
+          label={t`Merge continue watching and next up`}
+          help={t`Shows next episodes in the continue watching row, after what you are partway through.`}
           value={mergeNextUp}
           onValueChange={setMergeNextUp}
         />
         <Switch
           side="right"
-          label="Combine movie and show results"
-          help="Shows search results in one grid instead of a row each for movies and shows."
+          label={t`Combine movie and show results`}
+          help={t`Shows search results in one grid instead of a row each for movies and shows.`}
           value={combineSearch}
           onValueChange={setCombineSearch}
         />
         <Select
-          label="Poster size"
-          help="How large cards are in a grid."
+          label={t`Poster size`}
+          help={t`How large cards are in a grid.`}
           options={[
-            { value: 'small', label: 'Small' },
-            { value: 'medium', label: 'Medium' },
-            { value: 'large', label: 'Large' },
+            { value: 'small', label: t`Small` },
+            { value: 'medium', label: t`Medium` },
+            { value: 'large', label: t`Large` },
           ]}
           value={posterSize}
           onValueChange={(value) => setPosterSize(value as PosterSize)}
         />
         <Combobox
           multiple
-          label="Under posters"
-          help="Left empty, posters stand alone. A poster without artwork still shows its title."
-          placeholder="Nothing"
-          emptyMessage="Nothing matches."
-          options={[
-            { value: 'title', label: 'Title', textValue: 'Title' },
-            { value: 'year', label: 'Year', textValue: 'Year' },
-          ]}
+          label={t`Under posters`}
+          help={t`Left empty, posters stand alone. A poster without artwork still shows its title.`}
+          placeholder={t`Nothing`}
+          emptyMessage={t`Nothing matches.`}
+          options={[option('title', t`Title`), option('year', t`Year`)]}
           value={posterLines}
           onValueChange={(value) => setPosterLines(value as PosterLine[])}
         />
       </SettingsCard>
-      <SettingsCard title="Episodes" description={ON_DEVICE}>
+      <SettingsCard
+        name="episodes"
+        title={t`Episodes`}
+        description={onDevice()}
+      >
         <Select
-          label="Episode layout"
-          help="Automatic lists episodes on narrow screens and puts them in a row on wide ones."
+          label={t`Episode layout`}
+          help={t`Automatic lists episodes on narrow screens and puts them in a row on wide ones.`}
           options={[
-            { value: 'auto', label: 'Automatic' },
-            { value: 'row', label: 'Row' },
-            { value: 'list', label: 'List' },
+            { value: 'auto', label: t`Automatic` },
+            { value: 'row', label: t`Row` },
+            { value: 'list', label: t`List` },
           ]}
           value={episodeLayout}
           onValueChange={(value) => setEpisodeLayout(value as EpisodeLayout)}

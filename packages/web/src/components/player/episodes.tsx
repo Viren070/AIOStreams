@@ -1,10 +1,12 @@
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { LuLoaderCircle } from 'react-icons/lu';
 import { Drawer } from '@aiostreams/ui/drawer';
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import { cn } from '@aiostreams/ui/core/styling';
 import { focusOn, keyboardFocus, useRestoreFocus } from '../../lib/input';
-import { unavailableLabel } from '../../lib/format';
+import { unavailableKind } from '../../lib/format';
 import { useEpisodes, useSeasons } from '../../lib/queries';
 import type { BaseItemDto } from '../../lib/types';
 import { EpisodeThumb, episodeLine, seasonEpisodeTitle } from '../episodes';
@@ -59,7 +61,7 @@ export function EpisodesSheet({
         setPicked(undefined);
       }}
       onCloseAutoFocus={restoreFocus}
-      title="Episodes"
+      title={t`Episodes`}
       headerClass="sr-only"
       side="right"
       size="md"
@@ -72,7 +74,7 @@ export function EpisodesSheet({
       >
         <div className="min-w-0 px-4 pe-12">
           <p className="text-xs font-semibold uppercase tracking-wider text-[--muted]">
-            Episodes
+            <Trans>Episodes</Trans>
           </p>
           <p className="truncate font-semibold">{item.SeriesName}</p>
         </div>
@@ -111,7 +113,7 @@ export function EpisodesSheet({
         >
           {episodes.isError && !items.length && (
             <p className="py-6 text-center text-sm text-[--muted]">
-              Could not load the episodes.
+              <Trans>Could not load the episodes.</Trans>
             </p>
           )}
           {items.map((episode) => (
@@ -142,7 +144,7 @@ function EpisodeRow({
   loading: boolean;
   onPick(): void;
 }) {
-  const unavailable = !!unavailableLabel(episode);
+  const unavailable = !!unavailableKind(episode);
   return (
     <button
       type="button"
@@ -170,7 +172,9 @@ function EpisodeRow({
         </p>
         <p className="mt-1 truncate text-xs text-[--muted]">
           {current ? (
-            <span className="font-medium text-white">Playing</span>
+            <span className="font-medium text-white">
+              <Trans>Playing</Trans>
+            </span>
           ) : (
             episodeLine(episode)
           )}

@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import React from 'react';
 import { useEpisodesAfter } from '../queries';
 import { useServerInfo } from '../server-info';
@@ -16,7 +17,7 @@ export function usePartyIdentity(): PartyIdentity {
   const { client, user } = useSession();
   return React.useMemo(
     () => ({
-      name: user.Name || 'Someone',
+      name: user.Name || t`Someone`,
       server: relayBase(client.base) ?? client.base,
       userId: user.Id!,
       token: client.token ?? undefined,

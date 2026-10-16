@@ -1,14 +1,11 @@
+import { t } from '@lingui/core/macro';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useSession } from './session';
 import type { UserDto } from './types';
 
 export type SubtitleMode =
-  | 'Default'
-  | 'Always'
-  | 'OnlyForced'
-  | 'None'
-  | 'Smart';
+  'Default' | 'Always' | 'OnlyForced' | 'None' | 'Smart';
 
 export const ORIGINAL_LANGUAGE = 'OriginalLanguage';
 
@@ -70,7 +67,7 @@ export function usePlaybackPrefs() {
       client.post('/Users/Configuration', next, { userId: user.Id }),
     onMutate: (next) => queryClient.setQueryData(queryKey, next),
     onError: () => {
-      toast.error('Could not save that setting');
+      toast.error(t`Could not save that setting`);
       void queryClient.invalidateQueries({ queryKey });
     },
   });

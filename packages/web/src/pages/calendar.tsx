@@ -1,3 +1,5 @@
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { LuChevronLeft, LuChevronRight } from 'react-icons/lu';
 import { Button, IconButton } from '@aiostreams/ui/button';
@@ -334,7 +336,7 @@ export function CalendarPage({ month }: { month?: string }) {
           className="flex flex-wrap items-center gap-x-4 gap-y-2"
         >
           <h1 data-ui="page-title" className="text-3xl font-bold">
-            Calendar
+            <Trans>Calendar</Trans>
           </h1>
           <div data-ui="calendar-nav" className="flex items-center gap-1">
             <IconButton
@@ -343,7 +345,7 @@ export function CalendarPage({ month }: { month?: string }) {
               intent="gray-subtle"
               className="rounded-full"
               icon={<LuChevronLeft className="rtl:-scale-x-100" />}
-              aria-label="Previous month"
+              aria-label={t`Previous month`}
               onClick={() => go(-1)}
             />
             <IconButton
@@ -352,7 +354,7 @@ export function CalendarPage({ month }: { month?: string }) {
               intent="gray-subtle"
               className="rounded-full"
               icon={<LuChevronRight className="rtl:-scale-x-100" />}
-              aria-label="Next month"
+              aria-label={t`Next month`}
               onClick={() => go(1)}
             />
             <span
@@ -373,13 +375,13 @@ export function CalendarPage({ month }: { month?: string }) {
               className="rounded-full"
               onClick={() => navigate(to.calendar(), { replace: true })}
             >
-              Today
+              <Trans>Today</Trans>
             </Button>
           )}
         </div>
 
         {calendar.isError ? (
-          <LuffyError title="Could not load the calendar" />
+          <LuffyError title={t`Could not load the calendar`} />
         ) : calendar.isLoading ? (
           <Skeleton className="h-[40rem] w-full rounded-xl" />
         ) : (
@@ -397,7 +399,9 @@ export function CalendarPage({ month }: { month?: string }) {
             </div>
             {!inMonth && (
               <p className="text-[--muted]">
-                Nothing airs this month from your shows or watchlist.
+                <Trans>
+                  Nothing airs this month from your shows or watchlist.
+                </Trans>
               </p>
             )}
           </>

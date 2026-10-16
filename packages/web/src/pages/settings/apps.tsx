@@ -1,4 +1,6 @@
 import React from 'react';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import { toast } from 'sonner';
 import { Select } from '@aiostreams/ui/select';
 import { Switch } from '@aiostreams/ui/switch';
@@ -31,7 +33,7 @@ import {
 } from '../../lib/settings';
 import { useServerInfo } from '../../lib/server-info';
 import { SettingsCard, SettingsRow } from '../../components/settings-card';
-import { ON_DEVICE } from './common';
+import { onDevice } from './common';
 
 function UpdatesCard() {
   const [setting, setSetting] = useSetting(settings.app.updateChannel);
@@ -41,18 +43,18 @@ function UpdatesCard() {
   const busy = update?.state === 'checking' || update?.state === 'downloading';
   const button = 'w-full rounded-full sm:w-auto';
   return (
-    <SettingsCard title="Updates" description={ON_DEVICE}>
+    <SettingsCard name="updates" title={t`Updates`} description={onDevice()}>
       <Select
-        label="Channel"
-        help="Nightly builds come from every change, ahead of releases, and can break."
+        label={t`Channel`}
+        help={t`Nightly builds come from every change, ahead of releases, and can break.`}
         options={[
-          { value: 'stable', label: 'Stable' },
-          { value: 'nightly', label: 'Nightly' },
+          { value: 'stable', label: t`Stable` },
+          { value: 'nightly', label: t`Nightly` },
         ]}
         value={channel}
         onValueChange={(v) => setSetting(v as 'stable' | 'nightly')}
       />
-      <SettingsRow label="Status" help={updateStatus(update)}>
+      <SettingsRow label={t`Status`} help={updateStatus(update)}>
         {update?.state === 'ready' ? (
           <Button intent="white" className={button} onClick={applyUpdate}>
             {applyLabel()}
@@ -65,7 +67,7 @@ function UpdatesCard() {
             disabled={update?.state === 'off'}
             onClick={() => checkForUpdates(setting)}
           >
-            Check now
+            <Trans>Check now</Trans>
           </Button>
         )}
       </SettingsRow>
@@ -73,41 +75,49 @@ function UpdatesCard() {
   );
 }
 
-const DISCORD_LABELS: Record<DiscordEvent, { label: string; help?: string }> = {
-  playing: {
-    label: "What's playing",
-    help: 'The title, the episode and the time left.',
-  },
-  titles: {
-    label: 'Title pages',
-    help: 'The movie or show whose page is open.',
-  },
-  home: { label: 'Home' },
-  discover: { label: 'Discover' },
-  search: { label: 'Search', help: 'That you are searching, not what for.' },
-  calendar: { label: 'Calendar' },
-  favourites: { label: 'Favourites' },
-  activity: { label: 'Activity' },
-};
+const discordLabels = (event: DiscordEvent): { label: string; help?: string } =>
+  ({
+    playing: {
+      label: t`What's playing`,
+      help: t`The title, the episode and the time left.`,
+    },
+    titles: {
+      label: t`Title pages`,
+      help: t`The movie or show whose page is open.`,
+    },
+    home: { label: t`Home` },
+    discover: { label: t`Discover` },
+    search: {
+      label: t`Search`,
+      help: t`That you are searching, not what for.`,
+    },
+    calendar: { label: t`Calendar` },
+    favourites: { label: t`Favourites` },
+    activity: { label: t`Activity` },
+  })[event];
 
 function discordStatus(status: DiscordStatus | null): string {
   switch (status?.state) {
     case undefined:
-      return 'Checking…';
+      return t`Checking…`;
     case 'connected':
-      return 'Connected to Discord.';
+      return t`Connected to Discord.`;
     case 'not-found':
-      return 'Discord is not running on this computer.';
-    case 'failed':
-      return `Could not connect: ${status.message}`;
-    case 'refused':
-      return `Discord refused the status: ${status.message}`;
+      return t`Discord is not running on this computer.`;
+    case 'failed': {
+      const message = status.message ?? '';
+      return t`Could not connect: ${message}`;
+    }
+    case 'refused': {
+      const message = status.message ?? '';
+      return t`Discord refused the status: ${message}`;
+    }
   }
 }
 
 function DiscordEventSwitch({ event }: { event: DiscordEvent }) {
   const [value, setValue] = useSetting(settings.app.discord[event]);
-  const { label, help } = DISCORD_LABELS[event];
+  const { label, help } = discordLabels(event);
   return (
     <Switch
       side="right"
@@ -128,20 +138,21 @@ function DiscordCard() {
   }, [any]);
   return (
     <SettingsCard
-      title="Discord"
-      description={`What your Discord profile shows. ${ON_DEVICE}`}
+      name="discord"
+      title={t`Discord`}
+      description={t`What your Discord profile shows. Kept on this device.`}
     >
       {DISCORD_EVENTS.map((event) => (
         <DiscordEventSwitch key={event} event={event} />
       ))}
       {any && (
-        <SettingsRow label="Status" help={discordStatus(status)}>
+        <SettingsRow label={t`Status`} help={discordStatus(status)}>
           <Button
             intent="gray-outline"
             className="w-full rounded-full sm:w-auto"
             onClick={checkDiscord}
           >
-            Check now
+            <Trans>Check now</Trans>
           </Button>
         </SettingsRow>
       )}
@@ -153,13 +164,13 @@ export function AppSection() {
   const app = currentHost().settings;
   return (
     <SettingsCard>
-      <SettingsRow label="App settings" help={app?.help}>
+      <SettingsRow label={t`App settings`} help={app?.help}>
         <Button
           intent="gray-outline"
           className="w-full rounded-full sm:w-auto"
           onClick={app?.open}
         >
-          Open
+          <Trans>Open</Trans>
         </Button>
       </SettingsRow>
     </SettingsCard>
@@ -171,31 +182,31 @@ export function DesktopSection() {
     <>
       <UpdatesCard />
       <DiscordCard />
-      <SettingsCard title="mpv">
+      <SettingsCard name="mpv" title="mpv">
         <SettingsRow
-          label="mpv configuration"
-          help="mpv.conf, input.conf, scripts and shaders in this folder apply to the built-in mpv."
+          label={t`mpv configuration`}
+          help={t`mpv.conf, input.conf, scripts and shaders in this folder apply to the built-in mpv.`}
         >
           <Button
             intent="gray-outline"
             className="w-full rounded-full sm:w-auto"
             onClick={openMpvConfig}
           >
-            Open folder
+            <Trans>Open folder</Trans>
           </Button>
         </SettingsRow>
       </SettingsCard>
-      <SettingsCard title="Troubleshooting">
+      <SettingsCard name="troubleshooting" title={t`Troubleshooting`}>
         <SettingsRow
-          label="Logs"
-          help="What the app did each day, kept for a week."
+          label={t`Logs`}
+          help={t`What the app did each day, kept for a week.`}
         >
           <Button
             intent="gray-outline"
             className="w-full rounded-full sm:w-auto"
             onClick={openLogs}
           >
-            Open folder
+            <Trans>Open folder</Trans>
           </Button>
         </SettingsRow>
         <DiagnosticsRow />
@@ -208,24 +219,27 @@ function DiagnosticsRow() {
   const server = useServerInfo();
   return (
     <SettingsRow
-      label="Diagnostics"
-      help="Versions and the recent log, to paste into a bug report."
+      label={t`Diagnostics`}
+      help={t`Versions and the recent log, to paste into a bug report.`}
     >
       <Button
         intent="gray-outline"
         className="w-full rounded-full sm:w-auto"
         onClick={() =>
-          requestDiagnostics(server.version && `AIOStreams ${server.version}`)
+          requestDiagnostics(
+            // eslint-disable-next-line lingui/no-unlocalized-strings -- the report's own header
+            server.version && `AIOStreams ${server.version}`
+          )
             .then((text) =>
               copyToClipboard(text, {
-                onSuccess: () => toast.success('Diagnostics copied'),
-                onError: () => toast.error('Could not copy them'),
+                onSuccess: () => toast.success(t`Diagnostics copied`),
+                onError: () => toast.error(t`Could not copy them`),
               })
             )
             .catch((e: Error) => toast.error(e.message))
         }
       >
-        Copy
+        <Trans>Copy</Trans>
       </Button>
     </SettingsRow>
   );
@@ -239,30 +253,34 @@ export function AndroidSection() {
   return (
     <>
       <UpdatesCard />
-      <SettingsCard title="Leaving the app" description={ON_DEVICE}>
+      <SettingsCard
+        name="leaving-the-app"
+        title={t`Leaving the app`}
+        description={onDevice()}
+      >
         {canPip && (
           <Switch
             side="right"
-            label="Picture-in-picture"
-            help="Keeps the video playing in a small window when you leave the app."
+            label={t`Picture-in-picture`}
+            help={t`Keeps the video playing in a small window when you leave the app.`}
             value={pip}
             onValueChange={setPip}
           />
         )}
         <Switch
           side="right"
-          label="Play in the background"
+          label={t`Play in the background`}
           help={
             canPip
-              ? 'Keeps the sound going with the screen off, or when you leave without picture-in-picture.'
-              : 'Keeps the sound going with the screen off, or when you leave the app.'
+              ? t`Keeps the sound going with the screen off, or when you leave without picture-in-picture.`
+              : t`Keeps the sound going with the screen off, or when you leave the app.`
           }
           value={background}
           onValueChange={setBackground}
         />
       </SettingsCard>
       {engine !== 'exoplayer' && <MpvConfigCard />}
-      <SettingsCard title="Troubleshooting">
+      <SettingsCard name="troubleshooting" title={t`Troubleshooting`}>
         <DiagnosticsRow />
       </SettingsCard>
     </>
@@ -277,10 +295,10 @@ function MpvConfigCard() {
     readMpvConfig().then(setText, () => setText(''));
   }, []);
   return (
-    <SettingsCard title="mpv">
+    <SettingsCard name="mpv" title="mpv">
       <Textarea
         label="mpv.conf"
-        help="Options for the built-in mpv, one per line, as mpv's manual lists them."
+        help={t`Options for the built-in mpv, one per line, as mpv's manual lists them.`}
         value={text ?? ''}
         disabled={text === null}
         onValueChange={setText}
@@ -297,13 +315,13 @@ function MpvConfigCard() {
           setSaving(true);
           saveMpvConfig(text ?? '')
             .then(
-              () => toast.success('Saved'),
+              () => toast.success(t`Saved`),
               (e: Error) => toast.error(e.message)
             )
             .finally(() => setSaving(false));
         }}
       >
-        Save
+        <Trans>Save</Trans>
       </Button>
     </SettingsCard>
   );

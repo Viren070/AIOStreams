@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import React from 'react';
 import {
   keepPreviousData,
@@ -13,7 +14,7 @@ import type { JellyfinClient } from './client';
 import { useSession } from './session';
 import { useFeature } from './server-info';
 import { settings, useSetting } from './settings';
-import { episodeMarks, ticksToMs, unavailableLabel } from './format';
+import { episodeMarks, ticksToMs, unavailableKind } from './format';
 import { playerSupport } from './playback/player-choice';
 import type {
   BaseItemDto,
@@ -65,6 +66,7 @@ export function useViews() {
 
 /** What a library holds by its type; one without a type holds both. */
 export function libraryTypes(view: BaseItemDto): string {
+  /* eslint-disable lingui/no-unlocalized-strings -- Jellyfin's item types */
   switch (view.CollectionType) {
     case 'movies':
       return 'Movie';
@@ -75,6 +77,7 @@ export function libraryTypes(view: BaseItemDto): string {
     default:
       return 'Movie,Series';
   }
+  /* eslint-enable lingui/no-unlocalized-strings */
 }
 
 export function useResume() {
@@ -344,6 +347,7 @@ export function useSearchSuggestions(
 }
 
 /** What the item pages show beyond a row's fields. Jellyfin builds `ExternalUrls` from `ProviderIds`. */
+/* eslint-disable lingui/no-unlocalized-strings -- Jellyfin's field names */
 const DETAIL_FIELDS = [
   'AirTime',
   'ExternalUrls',
@@ -357,6 +361,7 @@ const DETAIL_FIELDS = [
   'Studios',
   'Taglines',
 ].join(',');
+/* eslint-enable lingui/no-unlocalized-strings */
 
 /**
  * Looked up by id, not at `/Items/{id}`, which always carries the versions and
@@ -373,7 +378,7 @@ export async function requestItem(
     Fields: DETAIL_FIELDS,
   });
   const item = Items?.[0];
-  if (!item) throw new Error('This item was not found');
+  if (!item) throw new Error(t`This item was not found`);
   return item;
 }
 
@@ -979,7 +984,7 @@ function isSkipped(
   skip: { fillers: boolean; recaps: boolean }
 ): boolean {
   return episodeMarks(episode).some((m) =>
-    m === 'Filler' ? skip.fillers : skip.recaps
+    m === 'filler' ? skip.fillers : skip.recaps
   );
 }
 
@@ -1016,7 +1021,7 @@ export function useAdjacentEpisodes(item: BaseItemDto) {
           at >= 0 && i >= 0 && i < items.length;
           i += step
         ) {
-          if (unavailableLabel(items[i])) return null;
+          if (unavailableKind(items[i])) return null;
           if (!skipped(items[i])) return items[i];
         }
         return null;
@@ -1048,7 +1053,7 @@ export function useEpisodesAfter() {
     if (at < 0) return [];
     const after: BaseItemDto[] = [];
     for (const episode of Items.slice(at + 1)) {
-      if (unavailableLabel(episode)) break;
+      if (unavailableKind(episode)) break;
       if (!isSkipped(episode, skip)) after.push(episode);
     }
     return after;

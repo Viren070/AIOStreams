@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import React from 'react';
 import type {
   GroupCommand,
@@ -85,7 +86,7 @@ export type PartyEvent =
   | { type: 'react'; from: string; name: string; emoji: string }
   | { type: 'members'; joined?: PartyMember; left?: PartyMember }
   /** Another member paused, jumped or started something. */
-  | { type: 'action'; from: string; name: string; text: string }
+  | { type: 'action'; from: string; name: string; action: PartyAction }
   /** The relay turned down a request. */
   | { type: 'notice'; text: string }
   | { type: 'ended'; reason: string };
@@ -117,25 +118,27 @@ const HELLO_MS = 15_000;
 const OFFSET_STEP_MS = 500;
 const OFFSET_MIN_MS = 1_000;
 
-export const REFUSALS: Record<PartyErrorCode, string> = {
-  version: 'That relay runs a different version of watch parties.',
-  invalid: 'The relay could not read that.',
-  'not-found': 'That party has ended.',
-  exists: 'Try starting the party again.',
-  full: 'That party is full.',
-  locked: 'That party is not letting anyone new in.',
-  denied: "That relay doesn't let you in.",
-  busy: 'That relay is too busy for another party.',
-  rate: 'Too many tries. Wait a moment and try again.',
-  control: 'Only the host controls playback.',
-};
+export const refusal = (code: PartyErrorCode): string =>
+  ({
+    version: t`That relay runs a different version of watch parties.`,
+    invalid: t`The relay could not read that.`,
+    'not-found': t`That party has ended.`,
+    exists: t`Try starting the party again.`,
+    full: t`That party is full.`,
+    locked: t`That party is not letting anyone new in.`,
+    denied: t`That relay doesn't let you in.`,
+    busy: t`That relay is too busy for another party.`,
+    rate: t`Too many tries. Wait a moment and try again.`,
+    control: t`Only the host controls playback.`,
+  })[code];
 
-const ENDINGS: Record<PartyCloseReason, string> = {
-  ended: 'The party ended.',
-  removed: 'The host removed you from the party.',
-  idle: 'The party ended after a long time with nothing playing.',
-  left: 'You left the party.',
-};
+const ending = (reason: PartyCloseReason): string =>
+  ({
+    ended: t`The party ended.`,
+    removed: t`The host removed you from the party.`,
+    idle: t`The party ended after a long time with nothing playing.`,
+    left: t`You left the party.`,
+  })[reason];
 
 /** The member's token, for a relay on the server it is signed in to only. */
 function tokenFor(identity: PartyIdentity, relay: string): string | undefined {
@@ -145,27 +148,34 @@ function tokenFor(identity: PartyIdentity, relay: string): string | undefined {
 }
 
 const titleOf = (item: PartyItem | null) =>
-  item ? partyItemTitle(item) : 'something this device cannot read';
+  item ? partyItemTitle(item) : t`something this device cannot read`;
+
+/** What another member did, which the layer over the video says with their name. */
+export type PartyAction =
+  | { kind: 'paused' }
+  | { kind: 'resumed' }
+  | { kind: 'jumped'; to: string }
+  | { kind: 'started'; title: string };
 
 /** What others see a member's request do. Next is left out: players ask for it when an episode ends. */
-function actionText(
+function actionOf(
   reason: RequestType | QueueSnapshot['reason'],
   state: PartyState
-): string | null {
+): PartyAction | null {
   switch (reason) {
     case 'Pause':
-      return 'paused';
+      return { kind: 'paused' };
     case 'Unpause':
-      return 'resumed';
+      return { kind: 'resumed' };
     case 'Seek':
       return state.timeline
-        ? `jumped to ${clock(state.timeline.positionMs)}`
+        ? { kind: 'jumped', to: clock(state.timeline.positionMs) }
         : null;
     case 'NewPlaylist':
     case 'SetCurrentItem':
     case 'PreviousItem': {
       const playing = playingEntry(state);
-      return playing ? `started ${titleOf(playing.item)}` : null;
+      return playing ? { kind: 'started', title: titleOf(playing.item) } : null;
     }
     default:
       return null;
@@ -227,7 +237,10 @@ class Session {
         if (open) return;
         if (this.welcomed) this.patch({ status: 'reconnecting' });
         // Someone waiting on start or join hears now, not after retries.
-        else this.end(`Couldn't reach ${relayHost(invite.relay)}.`);
+        else {
+          const relay = relayHost(invite.relay);
+          this.end(t`Couldn't reach ${relay}.`);
+        }
       },
     });
   }
@@ -238,8 +251,8 @@ class Session {
       this.settle = { resolve, reject };
       this.connection.start();
       setTimeout(() => {
-        if (!this.welcomed)
-          this.end(`${relayHost(this.invite.relay)} didn't answer.`);
+        const relay = relayHost(this.invite.relay);
+        if (!this.welcomed) this.end(t`${relay} didn't answer.`);
       }, HELLO_MS);
     });
   }
@@ -280,7 +293,7 @@ class Session {
   }
 
   private nameOf(sealed: string): string {
-    return unseal<string>(this.keys.key, sealed) ?? 'Someone';
+    return unseal<string>(this.keys.key, sealed) ?? t`Someone`;
   }
 
   private members(list: PartyMemberInfo[]): PartyMember[] {
@@ -300,7 +313,7 @@ class Session {
     return {
       key: `${chat.from}:${chat.at}`,
       from: chat.from,
-      name: from?.name ?? 'Someone',
+      name: from?.name ?? t`Someone`,
       text: unseal<string>(this.keys.key, chat.text) ?? '',
       at: chat.at,
       you: chat.from === this.state.you,
@@ -319,6 +332,7 @@ class Session {
     const opened = queue.reason !== 'Queue' && queue.reason !== 'QueueNext';
     this.patch({
       group:
+        // eslint-disable-next-line lingui/no-unlocalized-strings -- SyncPlay's state
         playing && opened && !queue.isPlaying ? 'Waiting' : this.state.group,
       queue: entries,
       playingIndex: queue.playingIndex,
@@ -441,7 +455,7 @@ class Session {
           this.onEvent({
             type: 'react',
             from: m.from,
-            name: from?.name ?? 'Someone',
+            name: from?.name ?? t`Someone`,
             emoji,
           });
         return;
@@ -454,7 +468,7 @@ class Session {
       case 'error':
         return this.refused(m.code);
       case 'closed':
-        return this.end(ENDINGS[m.reason]);
+        return this.end(ending(m.reason));
     }
   }
 
@@ -463,10 +477,15 @@ class Session {
     reason: RequestType | QueueSnapshot['reason']
   ): void {
     if (!by || by === this.state.you) return;
-    const text = actionText(reason, this.state);
+    const action = actionOf(reason, this.state);
     const name = this.state.members.find((m) => m.id === by)?.name;
-    if (text)
-      this.onEvent({ type: 'action', from: by, name: name ?? 'Someone', text });
+    if (action)
+      this.onEvent({
+        type: 'action',
+        from: by,
+        name: name ?? t`Someone`,
+        action,
+      });
   }
 
   private refused(code: PartyErrorCode): void {
@@ -481,10 +500,10 @@ class Session {
       this.connection.send(this.hello());
       return;
     }
-    if (code === 'not-found' && !this.welcomed)
-      return this.end(
-        `No party has that code on ${relayHost(this.invite.relay)}.`
-      );
+    if (code === 'not-found' && !this.welcomed) {
+      const relay = relayHost(this.invite.relay);
+      return this.end(t`No party has that code on ${relay}.`);
+    }
     // Inside a party only chat is rate limited, and the relay answers in order.
     const sending = this.state.chat.find((c) => c.status === 'sending');
     if (this.welcomed && code === 'rate' && sending)
@@ -494,8 +513,8 @@ class Session {
       this.welcomed &&
       (code === 'control' || code === 'rate' || code === 'invalid')
     )
-      return this.onEvent({ type: 'notice', text: REFUSALS[code] });
-    this.end(REFUSALS[code]);
+      return this.onEvent({ type: 'notice', text: refusal(code) });
+    this.end(refusal(code));
   }
 
   end(reason: string): void {
@@ -642,7 +661,7 @@ async function enter(
   if (!previous) return;
   session = next;
   previous.send({ t: 'leave' });
-  previous.end(ENDINGS.left);
+  previous.end(ending('left'));
   notify();
 }
 
@@ -665,20 +684,20 @@ export const party = {
       party: id,
       token: tokenFor(identity, invite.relay),
     }).catch(() => {
-      throw new Error(`Couldn't reach ${relay}.`);
+      throw new Error(t`Couldn't reach ${relay}.`);
     });
     if (answer.t === 'error')
       throw new Error(
         answer.code === 'not-found'
-          ? `No party has that code on ${relay}.`
-          : REFUSALS[answer.code]
+          ? t`No party has that code on ${relay}.`
+          : refusal(answer.code)
       );
-    if (answer.t !== 'preview') throw new Error(`${relay} didn't answer.`);
+    if (answer.t !== 'preview') throw new Error(t`${relay} didn't answer.`);
     const { members, playing, state, full } = answer.preview;
-    const name = (sealed: string) => unseal<string>(key, sealed) ?? 'Someone';
+    const name = (sealed: string) => unseal<string>(key, sealed) ?? t`Someone`;
     const host = members.find((m) => m.host);
     return {
-      host: host ? name(host.name) : 'Someone',
+      host: host ? name(host.name) : t`Someone`,
       others: members.filter((m) => m !== host).map((m) => name(m.name)),
       full,
       playing: playing && {
@@ -703,7 +722,7 @@ export const party = {
   leave(): void {
     if (!session) return;
     session.send({ t: 'leave' });
-    session.end(ENDINGS.left);
+    session.end(ending('left'));
   },
 
   request(request: PartyRequest): void {

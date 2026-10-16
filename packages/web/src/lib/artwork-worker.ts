@@ -168,6 +168,7 @@ async function shrink({
   accept,
 }: ShrinkJob): Promise<ShrinkReply> {
   if (typeof OffscreenCanvas !== 'function')
+    // eslint-disable-next-line lingui/no-unlocalized-strings -- only logged
     return { id, error: 'no OffscreenCanvas', unsupported: true };
   const copied = lookCopy ? await readImage(copy).catch(() => null) : null;
   if (copied)
@@ -226,6 +227,7 @@ async function shrink({
   const canvas = new OffscreenCanvas(width, height);
   try {
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    // eslint-disable-next-line lingui/no-unlocalized-strings -- only logged
     if (!ctx) return { id, error: 'no 2d context', unsupported: true };
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(

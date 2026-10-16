@@ -91,6 +91,7 @@ export function tizenHost(): Host | null {
   host ??= {
     name: 'tizen',
     tv: true,
+    // eslint-disable-next-line lingui/no-unlocalized-strings -- how the server lists the device
     device: () => ({ name: 'Samsung TV' }),
     exit: () => window.tizen?.application.getCurrentApplication().exit(),
     start: registerMediaKeys,

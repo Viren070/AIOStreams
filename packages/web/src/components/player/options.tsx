@@ -1,3 +1,5 @@
+import { plural, t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import {
   LuActivity,
@@ -52,7 +54,7 @@ import { delayLabel, SUBTITLE_DELAY_STEP_MS } from '../../lib/subtitles/delay';
 import {
   stepSubtitleHeight,
   stepSubtitleSize,
-  SUBTITLE_SIZE_LABELS,
+  subtitleSizeLabel,
 } from '../../lib/subtitles/style';
 import { splitByLanguage } from '../../lib/subtitles/tracks';
 import { subtitleLanguages, usePlaybackPrefs } from '../../lib/user-config';
@@ -173,11 +175,8 @@ function Menu({
   );
 }
 
-export const FIT_LABELS: Record<VideoFit, string> = {
-  fit: 'Fit',
-  crop: 'Crop',
-  stretch: 'Stretch',
-};
+export const fitLabel = (fit: VideoFit) =>
+  ({ fit: t`Fit`, crop: t`Crop`, stretch: t`Stretch` })[fit];
 
 const FIT_ICONS: Record<VideoFit, React.ReactNode> = {
   fit: <LuRatio />,
@@ -188,13 +187,15 @@ const FIT_ICONS: Record<VideoFit, React.ReactNode> = {
 function FitButton({ notice }: { notice: (text: string) => void }) {
   const [fit, setFit] = useSetting(settings.video.fit);
   const next = VIDEO_FITS[(VIDEO_FITS.indexOf(fit) + 1) % VIDEO_FITS.length];
+  const current = fitLabel(fit);
+  const coming = fitLabel(next);
   return (
     <ControlButton
       name="fit"
-      label={`Picture: ${FIT_LABELS[fit]}`}
+      label={t`Picture: ${current}`}
       onClick={() => {
         setFit(next);
-        notice(`Picture: ${FIT_LABELS[next]}`);
+        notice(t`Picture: ${coming}`);
       }}
     >
       {FIT_ICONS[fit]}
@@ -255,16 +256,18 @@ function SubtitleStyleSteppers() {
   const at = SUBTITLE_SIZES.indexOf(size);
   return (
     <>
-      <DropdownMenuLabel className="pt-3">Style</DropdownMenuLabel>
+      <DropdownMenuLabel className="pt-3">
+        <Trans>Style</Trans>
+      </DropdownMenuLabel>
       <Stepper
-        label="Size"
-        value={SUBTITLE_SIZE_LABELS[size]}
+        label={t`Size`}
+        value={subtitleSizeLabel(size)}
         less={{
-          label: 'Smaller subtitles',
+          label: t`Smaller subtitles`,
           onClick: at > 0 ? () => stepSubtitleSize(-1) : undefined,
         }}
         more={{
-          label: 'Bigger subtitles',
+          label: t`Bigger subtitles`,
           onClick:
             at < SUBTITLE_SIZES.length - 1
               ? () => stepSubtitleSize(1)
@@ -272,14 +275,14 @@ function SubtitleStyleSteppers() {
         }}
       />
       <Stepper
-        label="Height"
-        value={`${height}%`}
+        label={t`Height`}
+        value={t`${height}%`}
         less={{
-          label: 'Lower subtitles',
+          label: t`Lower subtitles`,
           onClick: height > 0 ? () => stepSubtitleHeight(-1) : undefined,
         }}
         more={{
-          label: 'Raise subtitles',
+          label: t`Raise subtitles`,
           onClick:
             height < SUBTITLE_POSITION_MAX
               ? () => stepSubtitleHeight(1)
@@ -297,16 +300,18 @@ function SoundControls() {
   const at = DIALOGUE_BOOSTS.indexOf(boost);
   return (
     <>
-      <DropdownMenuLabel className="pt-3">Sound</DropdownMenuLabel>
+      <DropdownMenuLabel className="pt-3">
+        <Trans>Sound</Trans>
+      </DropdownMenuLabel>
       <Stepper
-        label="Dialogue"
+        label={t`Dialogue`}
         value={dialogueLabel(boost)}
         less={{
-          label: 'Less dialogue boost',
+          label: t`Less dialogue boost`,
           onClick: at > 0 ? () => setBoost(DIALOGUE_BOOSTS[at - 1]) : undefined,
         }}
         more={{
-          label: 'More dialogue boost',
+          label: t`More dialogue boost`,
           onClick:
             at < DIALOGUE_BOOSTS.length - 1
               ? () => setBoost(DIALOGUE_BOOSTS[at + 1])
@@ -314,17 +319,17 @@ function SoundControls() {
         }}
       />
       <Stepper
-        label="Delay"
+        label={t`Delay`}
         value={audioDelayLabel(delay)}
         less={{
-          label: 'Play the sound earlier',
+          label: t`Play the sound earlier`,
           onClick:
             delay > -AUDIO_DELAY_LIMIT_MS
               ? () => stepAudioDelay(-1)
               : undefined,
         }}
         more={{
-          label: 'Play the sound later',
+          label: t`Play the sound later`,
           onClick:
             delay < AUDIO_DELAY_LIMIT_MS ? () => stepAudioDelay(1) : undefined,
         }}
@@ -336,12 +341,12 @@ function SoundControls() {
         <LuCheck
           className={cn('flex-none', nightMode ? 'opacity-100' : 'opacity-0')}
         />
-        Night mode
+        <Trans>Night mode</Trans>
       </DropdownMenuItem>
       {delay !== 0 && (
         <DropdownMenuItem onSelect={keepOpen} onClick={() => setDelay(0)}>
           <LuUndo2 className="flex-none rtl:-scale-x-100" />
-          Reset delay
+          <Trans>Reset delay</Trans>
         </DropdownMenuItem>
       )}
     </>
@@ -361,32 +366,34 @@ function SubtitleSync({
 }) {
   return (
     <>
-      <DropdownMenuLabel className="pt-3">Sync</DropdownMenuLabel>
+      <DropdownMenuLabel className="pt-3">
+        <Trans>Sync</Trans>
+      </DropdownMenuLabel>
       <Stepper
         value={delayLabel(delayMs)}
         less={{
-          label: 'Show subtitles earlier',
+          label: t`Show subtitles earlier`,
           onClick: () => onChange(delayMs - SUBTITLE_DELAY_STEP_MS),
         }}
         more={{
-          label: 'Show subtitles later',
+          label: t`Show subtitles later`,
           onClick: () => onChange(delayMs + SUBTITLE_DELAY_STEP_MS),
         }}
       />
       <DropdownMenuItem onClick={onSyncByEar}>
         <LuEar className="flex-none" />
-        Sync by ear…
+        <Trans>Sync by ear…</Trans>
       </DropdownMenuItem>
       {onSyncToLine && (
         <DropdownMenuItem onClick={onSyncToLine}>
           <LuListVideo className="flex-none" />
-          Sync to a line…
+          <Trans>Sync to a line…</Trans>
         </DropdownMenuItem>
       )}
       {delayMs !== 0 && (
         <DropdownMenuItem onSelect={keepOpen} onClick={() => onChange(0)}>
           <LuUndo2 className="flex-none rtl:-scale-x-100" />
-          Reset
+          <Trans>Reset</Trans>
         </DropdownMenuItem>
       )}
     </>
@@ -430,6 +437,7 @@ export function OptionButtons({
   );
   const tv = !!currentHost().tv;
   const unread = useParty()?.unread ?? 0;
+  const hidden = subtitles.hidden.length;
   return (
     <div className="ms-auto flex items-center sm:gap-1">
       {onParty && (
@@ -437,10 +445,13 @@ export function OptionButtons({
           name="party"
           label={
             unread
-              ? `Watch party, ${unread} new ${unread === 1 ? 'message' : 'messages'}`
+              ? plural(unread, {
+                  one: 'Watch party, # new message',
+                  other: 'Watch party, # new messages',
+                })
               : player.shared
-                ? 'Watch party'
-                : 'Watch together'
+                ? t`Watch party`
+                : t`Watch together`
           }
           onClick={onParty}
           className="relative"
@@ -457,18 +468,18 @@ export function OptionButtons({
         </ControlButton>
       )}
       {onEpisodes && (
-        <ControlButton name="episodes" label="Episodes" onClick={onEpisodes}>
+        <ControlButton name="episodes" label={t`Episodes`} onClick={onEpisodes}>
           <LuGalleryVerticalEnd />
         </ControlButton>
       )}
       {(player.subtitleTracks.length > 0 || player.subtitleFiles) && (
         <Menu
           name="subtitles"
-          label="Subtitles"
+          label={t`Subtitles`}
           icon={state.subtitle ? <LuCaptions /> : <LuCaptionsOff />}
-          options={[{ id: '', label: 'Off' }, ...subtitles.shown]}
+          options={[{ id: '', label: t`Off` }, ...subtitles.shown]}
           more={{
-            label: `More languages (${subtitles.hidden.length})`,
+            label: t`More languages (${hidden})`,
             options: subtitles.hidden,
           }}
           value={state.subtitle}
@@ -477,7 +488,7 @@ export function OptionButtons({
           action={
             player.subtitleFiles && {
               name: 'add-file',
-              label: 'Add a file…',
+              label: t`Add a file…`,
               icon: <LuFilePlus className="flex-none" />,
               run: onAddFile,
             }
@@ -507,26 +518,27 @@ export function OptionButtons({
       {chapters.length > 1 && (
         <Menu
           name="chapters"
-          label="Chapters"
+          label={t`Chapters`}
           icon={<LuListOrdered />}
-          options={chapters.map((c, i) => ({
-            id: String(i),
-            label: `${c.title || `Chapter ${i + 1}`} · ${clock(c.startMs)}`,
-          }))}
+          options={chapters.map((c, i) => {
+            const number = i + 1;
+            const title = c.title || t`Chapter ${number}`;
+            return { id: String(i), label: `${title} · ${clock(c.startMs)}` };
+          })}
           value={String(chapter)}
           onSelect={(id) => id && player.seek(chapters[Number(id)].startMs)}
           onOpenChange={onMenu}
         />
       )}
       {onVersions && (
-        <ControlButton name="versions" label="Versions" onClick={onVersions}>
+        <ControlButton name="versions" label={t`Versions`} onClick={onVersions}>
           <LuLayers />
         </ControlButton>
       )}
       {(player.audioTracks.length > 1 || player.sound) && (
         <Menu
           name="audio"
-          label="Audio"
+          label={t`Audio`}
           icon={<LuAudioLines />}
           options={player.audioTracks}
           value={state.audio}
@@ -538,7 +550,7 @@ export function OptionButtons({
       {player.setRate && (
         <Menu
           name="speed"
-          label="Speed"
+          label={t`Speed`}
           icon={<LuGauge />}
           options={RATES.map((rate) => ({
             id: String(rate),
@@ -553,9 +565,9 @@ export function OptionButtons({
       {player.stats && (
         <Menu
           name="statistics"
-          label="Statistics"
+          label={t`Statistics`}
           icon={<LuActivity />}
-          options={[{ id: '', label: 'Off' }, ...player.stats.pages]}
+          options={[{ id: '', label: t`Off` }, ...player.stats.pages]}
           value={player.stats.page}
           onSelect={player.stats.show}
           onOpenChange={onMenu}
@@ -564,7 +576,7 @@ export function OptionButtons({
       {player.toggleFullscreen && !tv && (
         <ControlButton
           name="fullscreen"
-          label={state.fullscreen ? 'Exit full screen' : 'Full screen'}
+          label={state.fullscreen ? t`Exit full screen` : t`Full screen`}
           onClick={player.toggleFullscreen}
         >
           {state.fullscreen ? <LuMinimize /> : <LuMaximize />}

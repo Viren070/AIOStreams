@@ -1,4 +1,6 @@
 import React from 'react';
+import { plural, t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import { toast } from 'sonner';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -19,6 +21,7 @@ import { cn } from '@aiostreams/ui/core/styling';
 import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
 import type { PartyListing } from '@aiostreams/core';
 import { clock } from '../../lib/format';
+import { formatLocale } from '../../lib/i18n';
 import { currentHost } from '../../lib/hosts';
 import { focusOn, useRestoreFocus } from '../../lib/input';
 import { useSession } from '../../lib/session';
@@ -110,7 +113,9 @@ export function PartySheet() {
       open={open}
       onOpenChange={(next) => !next && closePartySheet()}
       onCloseAutoFocus={restoreFocus}
-      title={invite ? 'Join a party' : state ? 'Watch party' : 'Watch together'}
+      title={
+        invite ? t`Join a party` : state ? t`Watch party` : t`Watch together`
+      }
       side="right"
       // Narrow, so a phone on its side keeps most of the video in view.
       size="sm"
@@ -168,7 +173,7 @@ function Section({
 }
 
 function relayLabel(relay: RelayChoice): string {
-  return relay.own ? 'This server' : relayHost(relay.base);
+  return relay.own ? t`This server` : relayHost(relay.base);
 }
 
 function NotInParty({ opening }: { opening: Opening }) {
@@ -182,7 +187,7 @@ function NotInParty({ opening }: { opening: Opening }) {
   const relay = custom ? relayBase(other) : relays[picked]?.base;
 
   const start = async () => {
-    if (!relay) return void toast.error('Enter the address of a relay');
+    if (!relay) return void toast.error(t`Enter the address of a relay`);
     setStarting(true);
     try {
       await actions.start(relay);
@@ -193,7 +198,7 @@ function NotInParty({ opening }: { opening: Opening }) {
       }
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : 'Could not start a party'
+        err instanceof Error ? err.message : t`Could not start a party`
       );
     } finally {
       setStarting(false);
@@ -202,7 +207,7 @@ function NotInParty({ opening }: { opening: Opening }) {
   const join = () => {
     const invite = parseInvite(code, relay);
     if (!invite)
-      return void toast.error('Enter an invite link, or a code and its relay');
+      return void toast.error(t`Enter an invite link, or a code and its relay`);
     showInvite(invite);
   };
 
@@ -210,37 +215,38 @@ function NotInParty({ opening }: { opening: Opening }) {
     <>
       {!canFollow() && (
         <p className="rounded-xl bg-white/5 p-3 text-sm text-[--muted]">
-          Your player plays in another app, which can't follow a party. Choose
-          the app's own player in settings to watch along.
+          <Trans>
+            Your player plays in another app, which can't follow a party. Choose
+            the app's own player in settings to watch along.
+          </Trans>
         </p>
       )}
-      <Section name="start" title="Start a party">
+      <Section name="start" title={t`Start a party`}>
         {opening.play && (
           <p className="text-sm">
-            Plays <span className="font-semibold">{opening.play.title}</span>{' '}
-            for everyone who joins.
+            <PlaysForEveryone title={opening.play.title} />
           </p>
         )}
-        <div role="radiogroup" aria-label="Relay" className="space-y-2">
+        <div role="radiogroup" aria-label={t`Relay`} className="space-y-2">
           {[...relays, null].map((choice, i) => (
             <RelayOption
               key={choice?.base ?? 'other'}
               checked={picked === i}
               onPick={() => setPicked(i)}
-              title={choice ? relayLabel(choice) : 'Another relay'}
+              title={choice ? relayLabel(choice) : t`Another relay`}
               help={
                 choice
                   ? choice.open
-                    ? 'Anyone with the invite can join, from any server.'
-                    : 'Only people signed in to this server can join.'
-                  : 'A relay someone else runs, for people on other servers.'
+                    ? t`Anyone with the invite can join, from any server.`
+                    : t`Only people signed in to this server can join.`
+                  : t`A relay someone else runs, for people on other servers.`
               }
             />
           ))}
         </div>
         {custom && (
           <TextInput
-            label="Relay address"
+            label={t`Relay address`}
             placeholder="https://relay.example.com"
             value={other}
             onValueChange={setOther}
@@ -254,10 +260,10 @@ function NotInParty({ opening }: { opening: Opening }) {
           loading={starting}
           onClick={() => void start()}
         >
-          Start a party
+          <Trans>Start a party</Trans>
         </Button>
       </Section>
-      <Section name="join" title="Join a party">
+      <Section name="join" title={t`Join a party`}>
         <form
           className="flex gap-2"
           onSubmit={(e) => {
@@ -266,8 +272,8 @@ function NotInParty({ opening }: { opening: Opening }) {
           }}
         >
           <TextInput
-            aria-label="Invite code or link"
-            placeholder="Code or invite link"
+            aria-label={t`Invite code or link`}
+            placeholder={t`Code or invite link`}
             value={code}
             onValueChange={setCode}
             spellCheck={false}
@@ -275,11 +281,11 @@ function NotInParty({ opening }: { opening: Opening }) {
             className="flex-1"
           />
           <Button type="submit" intent="gray-outline" className="rounded-full">
-            Join
+            <Trans>Join</Trans>
           </Button>
         </form>
         <p className="text-xs text-[--muted]">
-          A code is looked up on the relay picked above.
+          <Trans>A code is looked up on the relay picked above.</Trans>
         </p>
         <Household onJoin={showInvite} />
       </Section>
@@ -350,29 +356,36 @@ function Household({ onJoin }: { onJoin(invite: PartyInvite): void }) {
   return (
     <div className="space-y-2 pt-2">
       <p className="text-xs font-semibold uppercase tracking-wider text-[--muted]">
-        On this server
+        <Trans>On this server</Trans>
       </p>
-      {parties.map((p) => (
-        <div
-          key={p.party}
-          data-ui="party-listing"
-          className="flex items-center gap-3 rounded-xl bg-white/5 p-3"
-        >
-          <UserAvatar name={p.host} className="size-9" />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{p.host}'s party</p>
-            <p className="text-xs text-[--muted]">{p.members} watching</p>
-          </div>
-          <Button
-            intent="gray-outline"
-            size="sm"
-            className="rounded-full"
-            onClick={() => onJoin({ relay: own!, code: p.code })}
+      {parties.map((p) => {
+        const { host, members } = p;
+        return (
+          <div
+            key={p.party}
+            data-ui="party-listing"
+            className="flex items-center gap-3 rounded-xl bg-white/5 p-3"
           >
-            Join
-          </Button>
-        </div>
-      ))}
+            <UserAvatar name={p.host} className="size-9" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold">
+                <Trans>{host}'s party</Trans>
+              </p>
+              <p className="text-xs text-[--muted]">
+                {plural(members, { one: '# watching', other: '# watching' })}
+              </p>
+            </div>
+            <Button
+              intent="gray-outline"
+              size="sm"
+              className="rounded-full"
+              onClick={() => onJoin({ relay: own!, code: p.code })}
+            >
+              <Trans>Join</Trans>
+            </Button>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -398,7 +411,7 @@ function JoinPreview({
       await actions.join(invite);
       showInvite();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not join');
+      toast.error(err instanceof Error ? err.message : t`Could not join`);
     } finally {
       setJoining(false);
     }
@@ -423,13 +436,13 @@ function JoinPreview({
             role={preview.error ? 'alert' : 'status'}
             className="text-sm text-[--muted]"
           >
-            {preview.error?.message ?? 'Looking for the party…'}
+            {preview.error?.message ?? t`Looking for the party…`}
           </p>
         )}
       </div>
       {inParty && found && (
         <p className="text-xs text-[--muted]">
-          Joining leaves the party you're in.
+          <Trans>Joining leaves the party you're in.</Trans>
         </p>
       )}
       <div className="flex gap-2">
@@ -441,7 +454,7 @@ function JoinPreview({
             onClick={() => void preview.refetch()}
             autoFocus
           >
-            Try again
+            <Trans>Try again</Trans>
           </Button>
         ) : (
           <Button
@@ -452,7 +465,7 @@ function JoinPreview({
             loading={joining}
             onClick={() => void join()}
           >
-            {found?.full ? 'The party is full' : 'Join'}
+            {found?.full ? t`The party is full` : t`Join`}
           </Button>
         )}
         <Button
@@ -460,7 +473,7 @@ function JoinPreview({
           className="rounded-full"
           onClick={() => showInvite()}
         >
-          Back
+          <Trans>Back</Trans>
         </Button>
       </div>
     </Section>
@@ -468,14 +481,50 @@ function JoinPreview({
 }
 
 function nameList(names: string[]): string {
+  const rest = names.length - 2;
   const shown =
     names.length > 3
-      ? [...names.slice(0, 2), `${names.length - 2} more`]
+      ? [...names.slice(0, 2), plural(rest, { one: '# more', other: '# more' })]
       : names;
-  const last = shown[shown.length - 1];
-  return shown.length > 1
-    ? `${shown.slice(0, -1).join(', ')} and ${last}`
-    : last;
+  return new Intl.ListFormat(formatLocale(), { type: 'conjunction' }).format(
+    shown
+  );
+}
+
+/** What starting a party plays, for everyone who joins. */
+function PlaysForEveryone({ title }: { title: string }) {
+  return (
+    <Trans>
+      Plays <span className="font-semibold">{title}</span> for everyone who
+      joins.
+    </Trans>
+  );
+}
+
+function PlayingLine({
+  playing,
+}: {
+  playing: NonNullable<PartyPreview['playing']>;
+}) {
+  const { title } = playing;
+  const at = clock(playing.positionMs);
+  const started = playing.positionMs >= 1_000;
+  const name = <span className="font-semibold">{title}</span>;
+  if (playing.paused)
+    return started ? (
+      <Trans>
+        Paused on {name}, {at} in
+      </Trans>
+    ) : (
+      <Trans>Paused on {name}</Trans>
+    );
+  return started ? (
+    <Trans>
+      Watching {name}, {at} in
+    </Trans>
+  ) : (
+    <Trans>Watching {name}</Trans>
+  );
 }
 
 function PreviewDetails({
@@ -486,30 +535,36 @@ function PreviewDetails({
   relay: string;
 }) {
   const { host, others, playing } = preview;
+  const count = others.length + 1;
+  const on = relayHost(relay);
+  const names = nameList(others);
   return (
     <>
       <div className="flex items-center gap-3">
         <UserAvatar name={host} className="size-10" />
         <div className="min-w-0">
-          <p className="truncate font-semibold">{host}'s party</p>
+          <p className="truncate font-semibold">
+            <Trans>{host}'s party</Trans>
+          </p>
           <p className="truncate text-xs text-[--muted]">
-            {others.length + 1} watching · on {relayHost(relay)}
+            {plural(count, {
+              one: `# watching · on ${on}`,
+              other: `# watching · on ${on}`,
+            })}
           </p>
         </div>
       </div>
       <p className="text-sm">
         {playing ? (
-          <>
-            {playing.paused ? 'Paused on' : 'Watching'}{' '}
-            <span className="font-semibold">{playing.title}</span>
-            {playing.positionMs >= 1_000 && `, ${clock(playing.positionMs)} in`}
-          </>
+          <PlayingLine playing={playing} />
         ) : (
-          'Nothing playing yet.'
+          <Trans>Nothing playing yet.</Trans>
         )}
       </p>
       {others.length > 0 && (
-        <p className="text-sm text-[--muted]">With {nameList(others)}</p>
+        <p className="text-sm text-[--muted]">
+          <Trans>With {names}</Trans>
+        </p>
       )}
     </>
   );
@@ -542,7 +597,7 @@ function InParty({ state }: { state: PartyState }) {
       >
         <TabsList data-ui="party-tabs">
           <TabsTrigger value="chat" data-name="chat">
-            Chat
+            <Trans>Chat</Trans>
             {state.unread > 0 && tab !== 'chat' && (
               <span
                 data-ui="party-unread"
@@ -553,7 +608,7 @@ function InParty({ state }: { state: PartyState }) {
             )}
           </TabsTrigger>
           <TabsTrigger value="party" data-name="party">
-            People and invite
+            <Trans>People and invite</Trans>
           </TabsTrigger>
         </TabsList>
         <TabsContent
@@ -580,6 +635,7 @@ function InParty({ state }: { state: PartyState }) {
 }
 
 function Connection({ state }: { state: PartyState }) {
+  const relay = relayHost(state.invite.relay);
   return (
     <p
       data-ui="party-connection"
@@ -588,8 +644,8 @@ function Connection({ state }: { state: PartyState }) {
     >
       <span className="block rounded-xl bg-white/5 p-3">
         {state.status === 'joining'
-          ? 'Joining the party…'
-          : `Lost the connection to ${relayHost(state.invite.relay)}. Reconnecting… Your player carries on, and gets back in step once it's back.`}
+          ? t`Joining the party…`
+          : t`Lost the connection to ${relay}. Reconnecting… Your player carries on, and gets back in step once it's back.`}
       </span>
     </p>
   );
@@ -599,11 +655,12 @@ function PartyDetails({ state }: { state: PartyState }) {
   const host = !!state.members.find((m) => m.you)?.host;
   const [messages, setMessages] = useSetting(settings.party.messages);
   const [reactions, setReactions] = useSetting(settings.party.reactions);
+  const watching = state.members.length;
   return (
     <>
       <Invite state={state} />
       <NowPlaying state={state} />
-      <Section name="members" title={`Watching (${state.members.length})`}>
+      <Section name="members" title={t`Watching (${watching})`}>
         <ul className="space-y-1">
           {state.members.map((member) => (
             <Member key={member.id} member={member} host={host} />
@@ -611,35 +668,37 @@ function PartyDetails({ state }: { state: PartyState }) {
         </ul>
       </Section>
       {host && (
-        <Section name="host" title="As the host">
+        <Section name="host" title={t`As the host`}>
           <Switch
             side="right"
-            label="Only I control playback"
+            label={t`Only I control playback`}
             value={state.lock.control}
             onValueChange={(control) => party.lock({ control })}
           />
           <Switch
             side="right"
-            label="Let new people join"
+            label={t`Let new people join`}
             value={!state.lock.joins}
             onValueChange={(open) => party.lock({ joins: !open })}
           />
         </Section>
       )}
-      <Section name="overlay" title="Over the video">
+      <Section name="overlay" title={t`Over the video`}>
         <p className="text-xs text-[--muted]">
-          What others send shows over the video for a few seconds. It always
-          stays in the chat.
+          <Trans>
+            What others send shows over the video for a few seconds. It always
+            stays in the chat.
+          </Trans>
         </p>
         <Switch
           side="right"
-          label="Messages"
+          label={t`Messages`}
           value={messages}
           onValueChange={setMessages}
         />
         <Switch
           side="right"
-          label="Reactions"
+          label={t`Reactions`}
           value={reactions}
           onValueChange={setReactions}
         />
@@ -654,7 +713,7 @@ function PartyDetails({ state }: { state: PartyState }) {
             closePartySheet();
           }}
         >
-          Leave the party
+          <Trans>Leave the party</Trans>
         </Button>
       </Section>
     </>
@@ -664,13 +723,14 @@ function PartyDetails({ state }: { state: PartyState }) {
 function Invite({ state }: { state: PartyState }) {
   const [showQr, setShowQr] = React.useState(!!currentHost().tv);
   const link = inviteLink(state.invite);
-  const copy = (text: string, what: string) =>
+  const copy = (text: string, done: string, failed: string) =>
     copyToClipboard(text, {
-      onSuccess: () => toast.success(`${what} copied`),
-      onError: () => toast.error(`Could not copy the ${what.toLowerCase()}`),
+      onSuccess: () => toast.success(done),
+      onError: () => toast.error(failed),
     });
+  const relay = relayHost(state.invite.relay);
   return (
-    <Section name="invite" title="Invite">
+    <Section name="invite" title={t`Invite`}>
       <div className="rounded-xl bg-white/5 p-4 text-center">
         <p
           data-ui="party-code"
@@ -679,7 +739,7 @@ function Invite({ state }: { state: PartyState }) {
           {formatCode(state.invite.code)}
         </p>
         <p className="mt-1 truncate text-xs text-[--muted]">
-          on {relayHost(state.invite.relay)}
+          <Trans>on {relay}</Trans>
         </p>
         {showQr && (
           <div className="mx-auto mt-4 w-44 overflow-hidden rounded-lg">
@@ -693,18 +753,26 @@ function Invite({ state }: { state: PartyState }) {
           size="sm"
           className="rounded-full"
           leftIcon={<LuLink />}
-          onClick={() => copy(link, 'Invite link')}
+          onClick={() =>
+            copy(link, t`Invite link copied`, t`Could not copy the invite link`)
+          }
         >
-          Copy link
+          <Trans>Copy link</Trans>
         </Button>
         <Button
           intent="gray-outline"
           size="sm"
           className="rounded-full"
           leftIcon={<LuCopy />}
-          onClick={() => copy(formatCode(state.invite.code), 'Code')}
+          onClick={() =>
+            copy(
+              formatCode(state.invite.code),
+              t`Code copied`,
+              t`Could not copy the code`
+            )
+          }
         >
-          Copy code
+          <Trans>Copy code</Trans>
         </Button>
         <Button
           intent="gray-outline"
@@ -713,7 +781,7 @@ function Invite({ state }: { state: PartyState }) {
           leftIcon={<LuQrCode />}
           onClick={() => setShowQr((v) => !v)}
         >
-          {showQr ? 'Hide QR code' : 'QR code'}
+          {showQr ? t`Hide QR code` : t`QR code`}
         </Button>
         {typeof navigator.share === 'function' && (
           <IconButton
@@ -721,10 +789,10 @@ function Invite({ state }: { state: PartyState }) {
             size="sm"
             className="rounded-full"
             icon={<LuShare2 />}
-            aria-label="Share the invite"
+            aria-label={t`Share the invite`}
             onClick={() =>
               void navigator
-                .share({ title: 'Watch together', url: link })
+                .share({ title: t`Watch together`, url: link })
                 .catch(() => {})
             }
           />
@@ -739,7 +807,7 @@ const playingTitle = (state: PartyState) => {
   if (!playing) return null;
   return playing.item
     ? partyItemTitle(playing.item)
-    : 'Something this device cannot read';
+    : t`Something this device cannot read`;
 };
 
 /** Above both tabs, since leaving the player is when someone opens the panel. */
@@ -751,7 +819,9 @@ function WatchAlong({ state }: { state: PartyState }) {
     <div data-ui="party-watch-along" className={cn(GUTTER, 'mb-2 flex-none')}>
       <div className="flex items-center gap-3 rounded-xl bg-white/5 p-3">
         <p className="min-w-0 flex-1 text-sm">
-          The party is watching <span className="font-semibold">{title}</span>
+          <Trans>
+            The party is watching <span className="font-semibold">{title}</span>
+          </Trans>
         </p>
         <Button
           intent="white"
@@ -762,7 +832,7 @@ function WatchAlong({ state }: { state: PartyState }) {
             closePartySheet();
           }}
         >
-          Watch along
+          <Trans>Watch along</Trans>
         </Button>
       </div>
     </div>
@@ -772,12 +842,14 @@ function WatchAlong({ state }: { state: PartyState }) {
 function NowPlaying({ state }: { state: PartyState }) {
   const title = playingTitle(state);
   return (
-    <Section name="now-playing" title="Playing">
+    <Section name="now-playing" title={t`Playing`}>
       {title ? (
         <p className="text-sm font-semibold">{title}</p>
       ) : (
         <p className="text-sm text-[--muted]">
-          Nothing yet. Anything anyone plays now plays for everyone.
+          <Trans>
+            Nothing yet. Anything anyone plays now plays for everyone.
+          </Trans>
         </p>
       )}
     </Section>
@@ -786,16 +858,20 @@ function NowPlaying({ state }: { state: PartyState }) {
 
 function offsetLabel(offsetMs: number | undefined): string | null {
   if (offsetMs === undefined) return null;
-  const seconds = Math.abs(offsetMs) / 1000;
-  return `${seconds.toFixed(1)}s ${offsetMs > 0 ? 'behind' : 'ahead'}`;
+  const seconds = (Math.abs(offsetMs) / 1000).toLocaleString(formatLocale(), {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
+  return offsetMs > 0 ? t`${seconds}s behind` : t`${seconds}s ahead`;
 }
 
 function Member({ member, host }: { member: PartyMember; host: boolean }) {
   const status = member.away
-    ? 'Connection lost'
+    ? t`Connection lost`
     : member.buffering
-      ? 'Loading'
+      ? t`Loading`
       : offsetLabel(member.offsetMs);
+  const name = member.name;
   return (
     <li
       data-ui="party-member"
@@ -806,12 +882,15 @@ function Member({ member, host }: { member: PartyMember; host: boolean }) {
         <p className="truncate text-sm font-semibold">
           {member.name}
           {member.you && (
-            <span className="font-normal text-[--muted]"> (you)</span>
+            <span className="font-normal text-[--muted]">
+              {' '}
+              <Trans>(you)</Trans>
+            </span>
           )}
         </p>
         <p className="truncate text-xs text-[--muted]">
-          {[member.host && 'Host', status].filter(Boolean).join(' · ') ||
-            'Watching'}
+          {[member.host && t`Host`, status].filter(Boolean).join(' · ') ||
+            t`Watching`}
         </p>
       </div>
       {host && !member.you && (
@@ -820,7 +899,7 @@ function Member({ member, host }: { member: PartyMember; host: boolean }) {
           size="sm"
           className="rounded-full"
           icon={<LuUserMinus />}
-          aria-label={`Remove ${member.name}`}
+          aria-label={t`Remove ${name}`}
           onClick={() => party.kick(member.id)}
         />
       )}
@@ -838,7 +917,7 @@ function Reactions({ live, compact }: { live: boolean; compact: boolean }) {
           key={emoji}
           type="button"
           data-ui="party-reaction"
-          aria-label={`React with ${emoji}`}
+          aria-label={t`React with ${emoji}`}
           disabled={!live}
           onClick={() => party.react(emoji)}
           className={cn(
@@ -889,8 +968,8 @@ function Chat({ state }: { state: PartyState }) {
         ) : (
           <p className="pt-6 text-center text-sm text-[--muted]">
             {tv
-              ? 'What the others say shows here.'
-              : 'No messages yet. Say hello.'}
+              ? t`What the others say shows here.`
+              : t`No messages yet. Say hello.`}
           </p>
         )}
       </div>
@@ -914,8 +993,8 @@ function Chat({ state }: { state: PartyState }) {
             }}
           >
             <TextInput
-              aria-label="Message"
-              placeholder="Message"
+              aria-label={t`Message`}
+              placeholder={t`Message`}
               value={text}
               onValueChange={setText}
               maxLength={500}
@@ -929,14 +1008,14 @@ function Chat({ state }: { state: PartyState }) {
               intent="white"
               className="flex-none rounded-full"
               icon={<LuSend className="rtl:-scale-x-100" />}
-              aria-label="Send"
+              aria-label={t`Send`}
               disabled={!text.trim() || full}
             />
           </form>
         )}
         {full && (
           <p className="mt-2 text-xs text-[--muted]">
-            More can be sent once the party is back.
+            <Trans>More can be sent once the party is back.</Trans>
           </p>
         )}
       </div>
@@ -974,7 +1053,7 @@ function ChatMessages({ chat, live }: { chat: PartyMessage[]; live: boolean }) {
         </p>
         {m.status === 'sending' && (
           <span className="mt-1 px-1 text-xs text-[--muted]">
-            {live ? 'Sending…' : 'Sends once the party is back'}
+            {live ? t`Sending…` : t`Sends once the party is back`}
           </span>
         )}
         {m.status === 'failed' && (
@@ -983,7 +1062,7 @@ function ChatMessages({ chat, live }: { chat: PartyMessage[]; live: boolean }) {
             onClick={() => party.retryChat(m.key)}
             className="mt-1 rounded px-1 text-xs text-red-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--ring]"
           >
-            Not sent. Try again
+            <Trans>Not sent. Try again</Trans>
           </button>
         )}
       </div>

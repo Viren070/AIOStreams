@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import { formatBytes } from '@aiostreams/ui/core/format';
 import { fullTitle } from '../../format';
 import { base64, checkSubtitleFile } from '../../subtitles/files';
@@ -27,17 +28,18 @@ import { currentHost } from '..';
 import { appBridge, type AppTrack, type ShellMessage } from './bridge';
 import { passthroughFormats } from './sound';
 
-const STATS_PAGES: Track[] = [
-  { id: '1', label: 'Playback' },
-  { id: '2', label: 'Frame timings' },
-  { id: '3', label: 'Cache' },
-  { id: '5', label: 'Tracks' },
+const statsPages = (): Track[] => [
+  { id: '1', label: t`Playback` },
+  { id: '2', label: t`Frame timings` },
+  { id: '3', label: t`Cache` },
+  { id: '5', label: t`Tracks` },
 ];
 
 /** ExoPlayer draws no statistics, so the page asks for its numbers while they show. */
-const EXO_STATS: Track[] = [{ id: 'exo', label: 'Playback' }];
+const exoStats = (): Track[] => [{ id: 'exo', label: t`Playback` }];
 const STATS_MS = 1000;
 
+/* eslint-disable lingui/no-unlocalized-strings -- a technical readout, as mpv's own is */
 const CODECS: Record<string, string> = {
   'video/avc': 'H.264',
   'video/hevc': 'HEVC',
@@ -166,6 +168,7 @@ function exoStatsText(
   if (cpu !== undefined) lines.push(`App CPU    ${Math.round(cpu)}% of a core`);
   return lines.join('\n');
 }
+/* eslint-enable lingui/no-unlocalized-strings */
 
 /** How long a player in its own window waits for the next episode's page. */
 const LINGER_MS = 10_000;
@@ -226,6 +229,7 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
       append,
       audioLanguages: audioCodes(prefs, played.source),
       subtitleLanguages: subtitleLanguages(prefs),
+      // eslint-disable-next-line lingui/no-unlocalized-strings -- Jellyfin's name
       subtitleMode: SUBTITLE_MODES[prefs.SubtitleMode ?? 'Default'],
     });
   };
@@ -364,7 +368,9 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
               retry: offer
                 ? {
                     label:
-                      other === 'mpv' ? 'Play with mpv' : 'Play with ExoPlayer',
+                      other === 'mpv'
+                        ? t`Play with mpv`
+                        : t`Play with ExoPlayer`,
                     run: () => {
                       retried = true;
                       shell.send({ type: 'player-retry', name: other });
@@ -459,8 +465,8 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
     },
     get stats() {
       return playsWithExoPlayer()
-        ? { pages: EXO_STATS, show: showExoStats }
-        : { pages: STATS_PAGES, show: showOverlay };
+        ? { pages: exoStats(), show: showExoStats }
+        : { pages: statsPages(), show: showOverlay };
     },
     picksTracks: true,
     ownSubtitles: true,
@@ -485,7 +491,12 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
 };
 
 /** mpv's words for a link that gave it no video, which the other engine can't play either. */
-const LINK_FAILURES = new Set(['loading failed', 'unrecognized file format']);
+const LINK_FAILURES = new Set([
+  // eslint-disable-next-line lingui/no-unlocalized-strings -- mpv's words
+  'loading failed',
+  // eslint-disable-next-line lingui/no-unlocalized-strings -- mpv's words
+  'unrecognized file format',
+]);
 
 let engine: string | null = null;
 
@@ -498,10 +509,10 @@ export const playsWithExoPlayer = () =>
   appBridge()?.platform === 'android' && engine === 'exoplayer';
 
 function statusMeaning(status: number): string | undefined {
-  if (status === 401 || status === 403) return 'refused';
-  if (status === 404 || status === 410) return 'not found';
-  if (status === 429) return 'too many requests';
-  return status >= 500 ? 'server error' : undefined;
+  if (status === 401 || status === 403) return t`refused`;
+  if (status === 404 || status === 410) return t`not found`;
+  if (status === 429) return t`too many requests`;
+  return status >= 500 ? t`server error` : undefined;
 }
 
 function failure(
@@ -511,16 +522,19 @@ function failure(
 ): string {
   if (status) {
     const meaning = statusMeaning(status);
-    return `the link answered HTTP ${status}${meaning ? ` (${meaning})` : ''}`;
+    return meaning
+      ? t`the link answered HTTP ${status} (${meaning})`
+      : t`the link answered HTTP ${status}`;
   }
   if (cause) {
     const text = cause.replace(/^error: /, '');
     return text.charAt(0).toLowerCase() + text.slice(1);
   }
   // What a link answering with a web page fails as.
+  // eslint-disable-next-line lingui/no-unlocalized-strings -- mpv's words
   if (error === 'unrecognized file format')
-    return 'the link returned something other than a video';
-  return error ?? 'the player could not play this version';
+    return t`the link returned something other than a video`;
+  return error ?? t`the player could not play this version`;
 }
 
 /** The user's subtitle style in the units mpv and libass share. */

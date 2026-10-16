@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import { currentHost } from '../hosts';
 import { settings } from '../settings';
 import { storage } from '../storage';
@@ -41,6 +42,7 @@ export const LINK_PLAYERS: readonly {
   },
   {
     id: 'mx-player',
+    // eslint-disable-next-line lingui/no-unlocalized-strings -- an app's name
     name: 'MX Player',
     template: androidIntent('package=com.mxtech.videoplayer.ad'),
     platforms: ['android'],
@@ -53,13 +55,18 @@ export const LINK_PLAYERS: readonly {
   },
   {
     id: 'android-app',
-    name: 'Other app',
-    target: 'the video app Android picks',
+    get name() {
+      return t`Other app`;
+    },
+    get target() {
+      return t`the video app Android picks`;
+    },
     template: androidIntent('action=android.intent.action.VIEW'),
     platforms: ['android'],
   },
   {
     id: 'infuse',
+    // eslint-disable-next-line lingui/no-unlocalized-strings -- an app's name
     name: 'Infuse',
     template:
       'infuse://x-callback-url/play?url={encodedUrl}&filename={filename}&sub={subtitles}&position={position}&x-success={returnUrl}',
@@ -67,6 +74,7 @@ export const LINK_PLAYERS: readonly {
   },
   {
     id: 'outplayer',
+    // eslint-disable-next-line lingui/no-unlocalized-strings -- an app's name
     name: 'Outplayer',
     template:
       'outplayer://x-callback-url/play?url={encodedUrl}&position={position}&subtitle={subtitles}&x-cancel={returnUrl}&x-success={returnUrl}',
@@ -139,7 +147,7 @@ export function chosenPlayer(): PlayerChoice {
   if (preset) return { kind: 'link', ...preset };
   const template = settings.player.link.read().trim();
   if (id === CUSTOM_LINK && template)
-    return { kind: 'link', id, name: 'your player', template };
+    return { kind: 'link', id, name: t`your player`, template };
   return { kind: 'app' };
 }
 
@@ -163,17 +171,20 @@ export function playerOptions(
     {
       value: 'app',
       label:
-        currentHost().name === 'desktop' ? 'Built-in mpv' : 'Built-in player',
+        currentHost().name === 'desktop' ? t`Built-in mpv` : t`Built-in player`,
     },
     ...LAUNCHED_PLAYERS.filter(
       (p) => p.id === current || launched.includes(p.id)
-    ).map((p) => ({ value: p.id, label: `Your own ${p.name}` })),
+    ).map((p) => {
+      const { name } = p;
+      return { value: p.id, label: t`Your own ${name}` };
+    }),
     ...LINK_PLAYERS.filter(
       (p) =>
         p === linkPreset(p.id) &&
         (p.id === current || (os && p.platforms.includes(os)))
     ).map((p) => ({ value: p.id, label: p.name })),
-    { value: CUSTOM_LINK, label: 'Custom link' },
+    { value: CUSTOM_LINK, label: t`Custom link` },
   ];
 }
 

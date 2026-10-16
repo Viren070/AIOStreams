@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import type { Host, NowPlaying } from '.';
 
 /** The bridge apps hosting jellyfin-web inject, any member of which may be missing. */
@@ -54,9 +55,16 @@ export function nativeShellParts(shell: NativeShell): Omit<Host, 'name'> {
     settings:
       shell.openClientSettings && app?.supports?.('clientsettings') !== false
         ? {
-            label: app?.appName?.() || 'App',
-            description: "The app's own settings",
-            help: 'Options the app keeps for itself.',
+            // Read when shown, after the language is set.
+            get label() {
+              return app?.appName?.() || t`App`;
+            },
+            get description() {
+              return t`The app's own settings`;
+            },
+            get help() {
+              return t`Options the app keeps for itself.`;
+            },
             open: () => shell.openClientSettings?.(),
           }
         : undefined,

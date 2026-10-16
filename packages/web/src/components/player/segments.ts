@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import React from 'react';
 import { ticksToMs } from '../../lib/format';
 import { settings, useSetting, type SegmentType } from '../../lib/settings';
@@ -8,14 +9,6 @@ import { usePlayhead } from '../../lib/playback/playhead';
 
 /** How long the skip button stays once its segment starts, with the controls hidden. */
 const SKIP_BUTTON_MS = 8000;
-
-const SEGMENT_NAME: Record<string, string> = {
-  Intro: 'intro',
-  Recap: 'recap',
-  Outro: 'credits',
-  Preview: 'preview',
-  Commercial: 'ad',
-};
 
 export interface Segment {
   type: string;
@@ -36,7 +29,26 @@ function segmentsOf(items: MediaSegmentDto[] | null | undefined): Segment[] {
 }
 
 export const skipLabel = (s: Segment) =>
-  SEGMENT_NAME[s.type] ? `Skip ${SEGMENT_NAME[s.type]}` : 'Skip';
+  (
+    ({
+      Intro: t`Skip intro`,
+      Recap: t`Skip recap`,
+      Outro: t`Skip credits`,
+      Preview: t`Skip preview`,
+      Commercial: t`Skip ad`,
+    }) as Record<string, string>
+  )[s.type] ?? t`Skip`;
+
+const skippedNotice = (s: Segment) =>
+  (
+    ({
+      Intro: t`Skipped intro`,
+      Recap: t`Skipped recap`,
+      Outro: t`Skipped credits`,
+      Preview: t`Skipped preview`,
+      Commercial: t`Skipped ad`,
+    }) as Record<string, string>
+  )[s.type] ?? t`Skipped segment`;
 
 /** `fresh` is set for the first few seconds of the offered segment. */
 export function useSegmentSkip({
@@ -84,7 +96,7 @@ export function useSegmentSkip({
     skipped.current.add(segmentId(autoSkip));
     if (offeringNext) return;
     latest.current.seek(autoSkip.endMs);
-    notice(`Skipped ${SEGMENT_NAME[autoSkip.type] ?? 'segment'}`);
+    notice(skippedNotice(autoSkip));
   }, [autoSkip, started, offeringNext, notice, latest]);
 
   const [fresh, setFresh] = React.useState(false);

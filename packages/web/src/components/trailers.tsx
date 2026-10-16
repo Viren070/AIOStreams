@@ -1,3 +1,5 @@
+import { plural, t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { BiMoviePlay } from 'react-icons/bi';
 import { LuPlay } from 'react-icons/lu';
@@ -21,6 +23,7 @@ export function TrailerButton({ item }: { item: BaseItemDto }) {
   const prefetch = usePrefetchTrailer();
   if (!trailers.length) return null;
   const play = (index: number) => navigate(to.trailer(item.Id!, index));
+  const count = trailers.length;
   return (
     <>
       <Button
@@ -33,7 +36,7 @@ export function TrailerButton({ item }: { item: BaseItemDto }) {
         onPointerEnter={() => prefetch(trailers[0].url)}
         onClick={() => (trailers.length > 1 ? setListing(true) : play(0))}
       >
-        {trailers.length > 1 ? 'Trailers' : 'Trailer'}
+        {plural(count, { one: 'Trailer', other: 'Trailers' })}
       </Button>
       {trailers.length > 1 && (
         <TrailersSheet
@@ -89,7 +92,7 @@ function TrailersSheet({
       open={open}
       onOpenChange={(next) => !next && onClose()}
       onCloseAutoFocus={restoreFocus}
-      title="Trailers"
+      title={t`Trailers`}
       headerClass="sr-only"
       side="right"
       size="md"
@@ -98,7 +101,7 @@ function TrailersSheet({
     >
       <div className="min-w-0 px-4 pb-3 pe-12 pt-[calc(0.75rem+env(safe-area-inset-top))]">
         <p className="text-xs font-semibold uppercase tracking-wider text-[--muted]">
-          Trailers
+          <Trans>Trailers</Trans>
         </p>
         <p className="truncate font-semibold">{item.Name}</p>
       </div>

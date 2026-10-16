@@ -1,4 +1,6 @@
 import React from 'react';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import {
   BiCalendarAlt,
   BiCheck,
@@ -53,7 +55,7 @@ import {
   fullTitle,
   itemSubtitle,
   ticksToMs,
-  unavailableLabel,
+  unavailableKind,
   untilLabel,
 } from '../lib/format';
 import { href, itemPath, navigate, to } from '../lib/paths';
@@ -118,7 +120,7 @@ export function ItemPage({
   if (item.isError) {
     return (
       <PageMessage>
-        <LuffyError title="Could not load this title" className="mt-0" />
+        <LuffyError title={t`Could not load this title`} className="mt-0" />
       </PageMessage>
     );
   }
@@ -342,9 +344,14 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
     target?.Type === 'Episode'
       ? episodeCode(target.ParentIndexNumber, target.IndexNumber)
       : '';
+  const resumeAt = clock(resumeMs);
   const playLabel = resumeMs
-    ? `Resume${code ? ` ${code}` : ` from ${clock(resumeMs)}`}`
-    : `Play${code ? ` ${code}` : ''}`;
+    ? code
+      ? t`Resume ${code}`
+      : t`Resume from ${resumeAt}`
+    : code
+      ? t`Play ${code}`
+      : t`Play`;
   const holdPlay = useHold(
     target
       ? () => picker.play(target, { startMs: resumeMs, held: true })
@@ -461,13 +468,13 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
                       intent="gray-subtle"
                       className="rounded-full"
                       icon={<BiRevision />}
-                      aria-label="Play from the start"
+                      aria-label={t`Play from the start`}
                       onClick={() => picker.play(target, { startMs: 0 })}
                       {...holdRestart}
                     />
                   }
                 >
-                  Play from the start
+                  <Trans>Play from the start</Trans>
                 </Tooltip>
               )}
             </div>
@@ -481,7 +488,7 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
                 intent="gray-subtle"
                 className="rounded-full"
                 icon={<BiGroup />}
-                aria-label={inParty ? 'Watch party' : 'Watch together'}
+                aria-label={inParty ? t`Watch party` : t`Watch together`}
                 onClick={() =>
                   openPartySheet(
                     target && !inParty
@@ -498,7 +505,7 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
               />
             }
           >
-            {inParty ? 'Watch party' : 'Watch together'}
+            {inParty ? t`Watch party` : t`Watch together`}
           </Tooltip>
           <ItemToggles
             itemId={item.Id!}
@@ -562,13 +569,13 @@ const ItemToggles = React.memo(function ItemToggles({
               intent={played ? 'primary-subtle' : 'gray-subtle'}
               className="rounded-full"
               icon={<BiCheck />}
-              aria-label={played ? 'Mark unwatched' : 'Mark watched'}
+              aria-label={played ? t`Mark unwatched` : t`Mark watched`}
               loading={setPlayed.isPending}
               onClick={() => setPlayed.mutate({ itemId, played: !played })}
             />
           }
         >
-          {played ? 'Mark unwatched' : 'Mark watched'}
+          {played ? t`Mark unwatched` : t`Mark watched`}
         </Tooltip>
       )}
       <Tooltip
@@ -580,13 +587,13 @@ const ItemToggles = React.memo(function ItemToggles({
             intent={favorite ? 'alert-subtle' : 'gray-subtle'}
             className="rounded-full"
             icon={favorite ? <BiSolidHeart /> : <BiHeart />}
-            aria-label={favorite ? 'Remove favourite' : 'Add favourite'}
+            aria-label={favorite ? t`Remove favourite` : t`Add favourite`}
             loading={setFavorite.isPending}
             onClick={() => setFavorite.mutate({ itemId, favorite: !favorite })}
           />
         }
       >
-        {favorite ? 'Remove favourite' : 'Add favourite'}
+        {favorite ? t`Remove favourite` : t`Add favourite`}
       </Tooltip>
       {canDrop && type === 'Series' && (
         <Tooltip
@@ -598,13 +605,13 @@ const ItemToggles = React.memo(function ItemToggles({
               intent={dropped ? 'warning-subtle' : 'gray-subtle'}
               className="rounded-full"
               icon={dropped ? <BiSolidDislike /> : <BiDislike />}
-              aria-label={dropped ? 'Undrop show' : 'Drop show'}
+              aria-label={dropped ? t`Undrop show` : t`Drop show`}
               loading={setDropped.isPending}
               onClick={() => setDropped.mutate({ itemId, dropped: !dropped })}
             />
           }
         >
-          {dropped ? 'Undrop show' : 'Drop show'}
+          {dropped ? t`Undrop show` : t`Drop show`}
         </Tooltip>
       )}
     </>
@@ -729,7 +736,7 @@ function Seasons({
       {summary}
       {summary && rateSeason && season && <span aria-hidden>·</span>}
       {rateSeason && season && (
-        <RatingButton item={season} label="Rate season" inline />
+        <RatingButton item={season} label={t`Rate season`} inline />
       )}
     </p>
   );
@@ -745,7 +752,7 @@ function Seasons({
   }, [episodes.data, focusEpisodeId]);
 
   return (
-    <Section name="episodes" title={ownPosters ? undefined : 'Episodes'}>
+    <Section name="episodes" title={ownPosters ? undefined : t`Episodes`}>
       {ownPosters ? (
         <SeasonPosters seasons={list} selected={seasonId} onSelect={pick} />
       ) : (
@@ -783,7 +790,7 @@ function Seasons({
                 summary &&
                 items.length > 1 && (
                   <AllEpisodes
-                    title={season?.Name ?? 'Episodes'}
+                    title={season?.Name ?? t`Episodes`}
                     summary={summary}
                     episodes={items}
                   />
@@ -834,7 +841,7 @@ const SeasonPosters = React.memo(function SeasonPosters({
   return (
     <MediaRow
       id="seasons"
-      title="Episodes"
+      title={t`Episodes`}
       shape="poster"
       itemClass="basis-[7rem] sm:basis-[8rem] lg:basis-[8.5rem]"
     >
@@ -921,7 +928,7 @@ function AllEpisodes({
           rightIcon={<BiChevronRight className="rtl:-scale-x-100" />}
           iconSpacing="0.25rem"
         >
-          All episodes
+          <Trans>All episodes</Trans>
         </Button>
       }
       title={title}
@@ -950,7 +957,7 @@ function seasonSummary(
   // A season without its own year carries the show's.
   const year = first ? new Date(first).getFullYear() : season.ProductionYear;
   const unaired = episodes.filter(
-    (e) => unavailableLabel(e) === 'Unaired'
+    (e) => unavailableKind(e) === 'unaired'
   ).length;
   return [
     year,
@@ -980,7 +987,7 @@ function SubCollections({ parent }: { parent: BaseItemDto }) {
   return (
     <MediaRow
       id="sub-collections"
-      title="Collections"
+      title={t`Collections`}
       shape={landscape ? 'wide' : 'poster'}
       loadingMore={isFetchingNextPage}
       onEndReached={more}
@@ -1019,14 +1026,16 @@ function Members({ parent }: { parent: BaseItemDto }) {
   return (
     <Section
       name="collection"
-      title="In this collection"
+      title={t`In this collection`}
       action={<KindTabs types={types} onChange={setTypes} />}
     >
       <div data-nav-start>
         <MixedGrid items={items} client={client} loading={pages.isLoading} />
       </div>
       {!pages.isLoading && !items.length && (
-        <p className="text-[--muted]">Nothing here.</p>
+        <p className="text-[--muted]">
+          <Trans>Nothing here.</Trans>
+        </p>
       )}
       {pages.isFetchingNextPage && (
         <Skeleton className="h-40 w-full rounded-xl" />
@@ -1036,12 +1045,37 @@ function Members({ parent }: { parent: BaseItemDto }) {
   );
 }
 
+const WEEKDAYS: NonNullable<BaseItemDto['AirDays']> = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+];
+
+/** When a series airs, in the app's language: `Every Sunday at 21:00`. */
+function airsLine(
+  days: BaseItemDto['AirDays'],
+  time: string | null | undefined
+): string | null {
+  if (!days?.length) return null;
+  const names = days.map((day) =>
+    // 1 January 2023 was a Sunday.
+    new Date(2023, 0, 1 + WEEKDAYS.indexOf(day)).toLocaleDateString(
+      formatLocale(),
+      { weekday: 'long' }
+    )
+  );
+  const list = new Intl.ListFormat(formatLocale(), {
+    type: 'conjunction',
+  }).format(names);
+  return time ? t`Every ${list} at ${time}` : t`Every ${list}`;
+}
+
 function Details({ item }: { item: BaseItemDto }) {
-  const airs = item.AirDays?.length
-    ? `${item.AirDays.map((d) => `${d}s`).join(', ')}${
-        item.AirTime ? ` at ${item.AirTime}` : ''
-      }`
-    : null;
+  const airs = airsLine(item.AirDays, item.AirTime);
   const released = item.PremiereDate
     ? new Date(item.PremiereDate).toLocaleDateString(formatLocale(), {
         day: 'numeric',
@@ -1051,23 +1085,23 @@ function Details({ item }: { item: BaseItemDto }) {
     : null;
   const rows: [string, string, React.ReactNode][] = (
     [
-      ['studios', 'Studios', item.Studios?.map((s) => s.Name).join(', ')],
+      ['studios', t`Studios`, item.Studios?.map((s) => s.Name).join(', ')],
       [
         'released',
-        item.Type === 'Series' ? 'First aired' : 'Released',
+        item.Type === 'Series' ? t`First aired` : t`Released`,
         released,
       ],
       [
         'airs',
-        'Airs',
+        t`Airs`,
         item.Type === 'Series' && item.Status === 'Continuing' ? airs : null,
       ],
-      ['country', 'Country', item.ProductionLocations?.join(', ')],
+      ['country', t`Country`, item.ProductionLocations?.join(', ')],
     ] as [string, string, React.ReactNode][]
   ).filter(([, , value]) => !!value);
   if (!rows.length) return null;
   return (
-    <Section name="details" title="Details">
+    <Section name="details" title={t`Details`}>
       <dl
         data-ui="item-details"
         className="grid max-w-5xl grid-cols-1 gap-x-10 gap-y-4 sm:grid-cols-2 xl:grid-cols-3"
@@ -1099,7 +1133,7 @@ function Similar({ itemId }: { itemId: string }) {
       {near && (
         <MediaRow
           id="similar"
-          title="More like this"
+          title={t`More like this`}
           shape="poster"
           loading={similar.isLoading}
         >

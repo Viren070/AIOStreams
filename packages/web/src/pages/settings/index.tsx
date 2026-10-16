@@ -1,4 +1,6 @@
 import React from 'react';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import { useReducedMotion } from 'motion/react';
 import type { IconType } from 'react-icons';
 import {
@@ -46,43 +48,46 @@ interface Section {
   label: string;
   description: string;
   icon: IconType;
-  group: string;
+  group: 'watching' | 'app';
   Content: React.ComponentType;
 }
+
+const groupLabel = (group: Section['group']) =>
+  group === 'watching' ? t`Watching` : t`App`;
 
 function sections(): Section[] {
   const host = currentHost();
   return [
     {
       id: 'playback',
-      label: 'Playback',
-      description: 'Next episode, controls and players',
+      label: t`Playback`,
+      description: t`Next episode, controls and players`,
       icon: LuCirclePlay,
-      group: 'Watching',
+      group: 'watching' as const,
       Content: PlaybackSection,
     },
     {
       id: 'audio',
-      label: 'Audio',
-      description: shellHost() ? 'Language and output' : 'Language',
+      label: t`Audio`,
+      description: shellHost() ? t`Language and output` : t`Language`,
       icon: LuVolume2,
-      group: 'Watching',
+      group: 'watching' as const,
       Content: AudioSection,
     },
     {
       id: 'subtitles',
-      label: 'Subtitles',
-      description: 'Language and how subtitles look',
+      label: t`Subtitles`,
+      description: t`Language and how subtitles look`,
       icon: LuCaptions,
-      group: 'Watching',
+      group: 'watching' as const,
       Content: SubtitlesSection,
     },
     {
       id: 'interface',
-      label: 'Interface',
-      description: 'Home, grids and episodes',
+      label: t`Interface`,
+      description: t`Language, home, grids and episodes`,
       icon: LuLayoutGrid,
-      group: 'App',
+      group: 'app' as const,
       Content: InterfaceSection,
     },
     // A touch screen has no keys to set, and a remote too few to move around.
@@ -91,57 +96,57 @@ function sections(): Section[] {
       : [
           {
             id: 'shortcuts',
-            label: 'Shortcuts',
-            description: 'Keys, remotes and gamepads',
+            label: t`Shortcuts`,
+            description: t`Keys, remotes and gamepads`,
             icon: LuKeyboard,
-            group: 'App',
+            group: 'app' as const,
             Content: ShortcutSettings,
           },
         ]),
     {
       id: 'theme',
-      label: 'Theme',
-      description: 'Colours and custom CSS',
+      label: t`Theme`,
+      description: t`Colours and custom CSS`,
       icon: LuPalette,
-      group: 'App',
+      group: 'app' as const,
       Content: ThemeSection,
     },
     ...(host.downloads
       ? [
           {
             id: 'downloads',
-            label: 'Downloads',
-            description: 'Where they go and how many run at once',
+            label: t`Downloads`,
+            description: t`Where they go and how many run at once`,
             icon: LuDownload,
-            group: 'App',
+            group: 'app' as const,
             Content: DownloadsSection,
           },
         ]
       : []),
     {
       id: 'cache',
-      label: 'Cache',
-      description: 'Pages and artwork saved on this device',
+      label: t`Cache`,
+      description: t`Pages and artwork saved on this device`,
       icon: LuDatabase,
-      group: 'App',
+      group: 'app' as const,
       Content: CacheSection,
     },
     {
       id: 'account',
-      label: 'Account',
-      description: 'Who you are signed in as',
+      label: t`Account`,
+      description: t`Who you are signed in as`,
       icon: LuUser,
-      group: 'App',
+      group: 'app' as const,
       Content: AccountSection,
     },
     ...(host.name === 'desktop'
       ? [
           {
             id: 'desktop',
-            label: 'Desktop app',
-            description: 'Updates, Discord, mpv and troubleshooting',
+            label: t`Desktop app`,
+            description: t`Updates, Discord, mpv and troubleshooting`,
             icon: LuMonitor,
-            group: 'App',
+            group: 'app' as const,
             Content: DesktopSection,
           },
         ]
@@ -150,13 +155,13 @@ function sections(): Section[] {
       ? [
           {
             id: 'android',
-            label: 'Android app',
+            label: t`Android app`,
             description:
               appBridge()?.pip === false
-                ? 'Updates, mpv and troubleshooting'
-                : 'Updates, picture-in-picture, mpv and troubleshooting',
+                ? t`Updates, mpv and troubleshooting`
+                : t`Updates, picture-in-picture, mpv and troubleshooting`,
             icon: host.tv ? LuTv : LuSmartphone,
-            group: 'App',
+            group: 'app' as const,
             Content: AndroidSection,
           },
         ]
@@ -168,17 +173,17 @@ function sections(): Section[] {
             label: host.settings.label,
             description: host.settings.description,
             icon: LuAppWindow,
-            group: 'App',
+            group: 'app' as const,
             Content: AppSection,
           },
         ]
       : []),
     {
       id: 'about',
-      label: 'About',
-      description: 'Versions and links',
+      label: t`About`,
+      description: t`Versions and links`,
       icon: LuInfo,
-      group: 'App',
+      group: 'app' as const,
       Content: AboutSection,
     },
   ];
@@ -202,13 +207,13 @@ export function SettingsPage({
   const [focused, setFocused] = React.useState<string | null>(null);
   const resting = React.useRef<ReturnType<typeof setTimeout>>(undefined);
   React.useEffect(() => () => clearTimeout(resting.current), []);
-  const groups = new Map<string, Section[]>();
+  const groups = new Map<Section['group'], Section[]>();
   for (const s of all) groups.set(s.group, [...(groups.get(s.group) ?? []), s]);
 
   return (
     <PageBody>
       <h1 data-ui="page-title" className="text-3xl font-bold">
-        Settings
+        <Trans>Settings</Trans>
       </h1>
       <Tabs
         value={active.id}
@@ -241,7 +246,7 @@ export function SettingsPage({
               className="contents border-0 bg-transparent lg:block lg:border lg:border-white/10 lg:bg-gray-950/70 lg:p-2"
             >
               <p className="hidden px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[--muted] lg:block">
-                {group}
+                {groupLabel(group)}
               </p>
               {items.map((s) => (
                 <TabsTrigger
@@ -279,7 +284,7 @@ export function SettingsPage({
               leftIcon={<LuHeart />}
               onClick={donation.open}
             >
-              Donate
+              <Trans>Donate</Trans>
             </Button>
           </div>
         </TabsList>

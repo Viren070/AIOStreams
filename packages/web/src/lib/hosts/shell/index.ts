@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import React from 'react';
 import {
   settings,
@@ -27,27 +28,33 @@ export function applyUpdate(): void {
 }
 
 export const applyLabel = () =>
-  appBridge()?.platform === 'android' ? 'Install' : 'Restart now';
+  appBridge()?.platform === 'android' ? t`Install` : t`Restart now`;
 
 export function updateStatus(update: UpdateState | null): string {
   const android = appBridge()?.platform === 'android';
   switch (update?.state) {
     case undefined:
-      return 'Not checked yet.';
+      return t`Not checked yet.`;
     case 'off':
-      return 'This copy does not update itself.';
+      return t`This copy does not update itself.`;
     case 'checking':
-      return 'Checking\u2026';
-    case 'downloading':
-      return `Downloading version ${update.version}\u2026`;
-    case 'ready':
+      return t`Checking…`;
+    case 'downloading': {
+      const version = update.version ?? '';
+      return t`Downloading version ${version}…`;
+    }
+    case 'ready': {
+      const version = update.version ?? '';
       return android
-        ? `Version ${update.version} is ready to install.`
-        : `Version ${update.version} installs on the next start.`;
+        ? t`Version ${version} is ready to install.`
+        : t`Version ${version} installs on the next start.`;
+    }
     case 'current':
-      return 'Up to date.';
-    case 'error':
-      return `Could not check: ${update.error}`;
+      return t`Up to date.`;
+    case 'error': {
+      const error = update.error ?? '';
+      return t`Could not check: ${error}`;
+    }
   }
 }
 

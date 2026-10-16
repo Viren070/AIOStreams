@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import type { Host } from '..';
 import { runAction } from '../../input';
 import { onSettingsChange, settings, type PlayerEngine } from '../../settings';
@@ -54,10 +55,10 @@ const mpvConfig = (message: { type: string; text?: string }) =>
 
 export const readMpvConfig = () => mpvConfig({ type: 'mpv-config' });
 
-const VOICE_ERRORS = {
-  'no-speech': 'Nothing was heard',
-  failed: 'Voice search failed',
-};
+const voiceErrors = () => ({
+  'no-speech': t`Nothing was heard`,
+  failed: t`Voice search failed`,
+});
 
 const listen: NonNullable<Host['listen']> = ({ hearing, signal }) =>
   new Promise((resolve, reject) => {
@@ -73,7 +74,7 @@ const listen: NonNullable<Host['listen']> = ({ hearing, signal }) =>
       if (m.type !== 'voice-result') return;
       stop?.();
       signal.removeEventListener('abort', cancel);
-      if (m.error) reject(new Error(VOICE_ERRORS[m.error]));
+      if (m.error) reject(new Error(voiceErrors()[m.error]));
       else resolve(m.text);
     });
     signal.addEventListener('abort', cancel, { once: true });

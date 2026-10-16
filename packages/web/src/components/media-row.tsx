@@ -44,6 +44,7 @@ export type RowShape = keyof typeof ITEM_WIDTH;
 
 /** A poster caption's height, which a `--row-card-h` cap leaves room for. */
 const posterText = (lines: PosterLine[]) =>
+  // eslint-disable-next-line lingui/no-unlocalized-strings -- CSS
   `calc(${lines.length ? '0.5rem' : '0rem'}${lines.includes('title') ? ' + 1.25rem' : ''}${lines.includes('year') ? ' + 1rem' : ''})`;
 
 const reducedMotion =
@@ -527,6 +528,7 @@ export function CardGrid({
     grid,
     React.Children.count(children),
     React.useContext(ScrollRoot),
+    // eslint-disable-next-line lingui/no-unlocalized-strings -- a root margin
     '50% 0px'
   );
   return (

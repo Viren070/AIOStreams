@@ -1,3 +1,5 @@
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { BiArrowBack, BiLinkExternal } from 'react-icons/bi';
 import { LuArrowLeft, LuSkipBack, LuSkipForward } from 'react-icons/lu';
@@ -56,7 +58,7 @@ export function TrailerPage({
   if (!item.data || (trailer && !playback.data) || prefs.isLoading) {
     if (item.isError || playback.isError)
       return (
-        <TrailerFailure message="This trailer didn't load." onBack={back} />
+        <TrailerFailure message={t`This trailer didn't load.`} onBack={back} />
       );
     return (
       <Cover item={item.data}>
@@ -65,7 +67,7 @@ export function TrailerPage({
     );
   }
   if (!trailer || !playback.data)
-    return <TrailerFailure message="This trailer is gone." onBack={back} />;
+    return <TrailerFailure message={t`This trailer is gone.`} onBack={back} />;
   const props: TrailerProps = {
     item: item.data,
     trailer,
@@ -78,7 +80,7 @@ export function TrailerPage({
   if (found.kind === 'external')
     return (
       <TrailerFailure
-        message="This trailer can't play in the app."
+        message={t`This trailer can't play in the app.`}
         external={found.url}
         onBack={back}
       />
@@ -102,9 +104,10 @@ function Controls({
   onNext,
   several,
 }: TrailerProps & { player: PlayerController }) {
+  const failure = player.state.error ?? '';
   return player.state.error ? (
     <TrailerFailure
-      message={`This trailer didn't play: ${player.state.error}`}
+      message={t`This trailer didn't play: ${failure}`}
       external={youTubeId(trailer.url) ? trailer.url : undefined}
       onBack={onBack}
     />
@@ -204,7 +207,7 @@ function EmbeddedTrailer({
       >
         {button(
           'exit',
-          'Back',
+          t`Back`,
           <LuArrowLeft className="rtl:-scale-x-100" />,
           onBack
         )}
@@ -214,8 +217,13 @@ function EmbeddedTrailer({
         </div>
         {several && (
           <>
-            {button('previous', 'Previous trailer', <LuSkipBack />, onPrevious)}
-            {button('next', 'Next trailer', <LuSkipForward />, onNext)}
+            {button(
+              'previous',
+              t`Previous trailer`,
+              <LuSkipBack />,
+              onPrevious
+            )}
+            {button('next', t`Next trailer`, <LuSkipForward />, onNext)}
           </>
         )}
       </div>
@@ -258,7 +266,7 @@ function TrailerFailure({
             autoFocus={!external}
             onClick={onBack}
           >
-            Back
+            <Trans>Back</Trans>
           </Button>
           {external && (
             <Button
@@ -268,7 +276,7 @@ function TrailerFailure({
               autoFocus
               onClick={() => window.open(external, '_blank', 'noopener')}
             >
-              Open its page
+              <Trans>Open its page</Trans>
             </Button>
           )}
         </div>

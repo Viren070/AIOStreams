@@ -4,6 +4,8 @@
  * (`GamepadA`) or the mouse wheel (`WheelUp`). Shortcuts bind these names.
  */
 
+import { t } from '@lingui/core/macro';
+
 /** TV remotes and the Xbox web view report these by code only. */
 const KEY_CODES: Record<number, string> = {
   19: 'MediaPause',
@@ -40,6 +42,7 @@ const KEY_CODES: Record<number, string> = {
   10252: 'MediaPlayPause',
 };
 
+/* eslint-disable lingui/no-unlocalized-strings -- key names, not text */
 const ALIASES: Record<string, string> = {
   ' ': 'Space',
   Spacebar: 'Space',
@@ -105,40 +108,58 @@ export function keyInput(e: KeyboardEvent): string | null {
 }
 
 const MAC = /Mac|iPhone|iPad/.test(navigator.platform);
+/* eslint-enable lingui/no-unlocalized-strings */
 
-const LABELS: Record<string, string> = {
+const labels = (): Record<string, string> => ({
   ArrowUp: '↑',
   ArrowDown: '↓',
   ArrowLeft: '←',
   ArrowRight: '→',
-  Escape: 'Esc',
-  ContextMenu: 'Menu key',
+  Escape: t`Esc`,
+  Enter: t`Enter`,
+  Space: t`Space`,
+  Backspace: t`Backspace`,
+  Tab: t`Tab`,
+  Shift: t`Shift`,
+  Ctrl: t`Ctrl`,
+  ContextMenu: t`Menu key`,
   Plus: '+',
-  PageUp: 'Page Up',
-  PageDown: 'Page Down',
-  Meta: MAC ? '⌘' : 'Win',
-  Alt: MAC ? '⌥' : 'Alt',
-  WheelUp: 'Wheel up',
-  WheelDown: 'Wheel down',
-  Back: 'Back button',
-  BrowserHome: 'Browser Home',
-  BrowserSearch: 'Browser Search',
-  MediaPlayPause: 'Play/Pause',
-  MediaPlay: 'Play',
-  MediaPause: 'Pause',
-  MediaStop: 'Stop',
-  MediaRewind: 'Rewind',
-  MediaFastForward: 'Fast forward',
-  MediaTrackPrevious: 'Previous track',
-  MediaTrackNext: 'Next track',
-  AudioVolumeMute: 'Mute key',
-  AudioVolumeUp: 'Volume up key',
-  AudioVolumeDown: 'Volume down key',
-};
+  Hold: t({
+    comment: 'Holding the next key down, as in Hold + Enter',
+    message: 'Hold',
+  }),
+  PageUp: t`Page Up`,
+  PageDown: t`Page Down`,
+  Meta: MAC ? '⌘' : t`Win`,
+  Alt: MAC ? '⌥' : t`Alt`,
+  WheelUp: t`Wheel up`,
+  WheelDown: t`Wheel down`,
+  Back: t`Back button`,
+  BrowserHome: t`Browser Home`,
+  BrowserSearch: t`Browser Search`,
+  MediaPlayPause: t`Play/Pause`,
+  MediaPlay: t`Play`,
+  MediaPause: t`Pause`,
+  MediaStop: t`Stop`,
+  MediaRewind: t`Rewind`,
+  MediaFastForward: t`Fast forward`,
+  MediaTrackPrevious: t`Previous track`,
+  MediaTrackNext: t`Next track`,
+  AudioVolumeMute: t`Mute key`,
+  AudioVolumeUp: t`Volume up key`,
+  AudioVolumeDown: t`Volume down key`,
+});
 
 /** The parts of an input as a person reads them: `Shift+ArrowLeft` is Shift, ←. */
 export function inputLabels(input: string): string[] {
-  return input
-    .split('+')
-    .map((part) => LABELS[part] ?? part.replace(/^Gamepad/, 'Pad '));
+  const names = labels();
+  return input.split('+').map((part) => {
+    if (names[part]) return names[part];
+    const button = part.match(/^Gamepad(.+)/)?.[1];
+    if (!button) return part;
+    return t({
+      comment: 'A button on a gamepad, as in Pad A',
+      message: `Pad ${button}`,
+    });
+  });
 }

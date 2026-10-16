@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import type React from 'react';
 import { checkSubtitleFile, readSubtitleCues } from '../subtitles/files';
 import { subtitleLine } from '../subtitles/style';
@@ -174,8 +175,11 @@ export function videoEngine(
           error: () =>
             emit({
               type: 'failed',
-              error:
-                'this browser cannot play this version. Nothing is converted on the server, so try another version, an external player or the desktop app.',
+              error: t({
+                comment: 'Follows "Playback failed:"',
+                message:
+                  'this browser cannot play this version. Nothing is converted on the server, so try another version, an external player or the desktop app.',
+              }),
             }),
         };
         for (const [event, handler] of Object.entries(handlers))

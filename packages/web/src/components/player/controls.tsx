@@ -1,3 +1,5 @@
+import { plural, t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import {
   LuArrowLeft,
@@ -18,7 +20,7 @@ import { currentHost } from '../../lib/hosts';
 import { appBridge } from '../../lib/hosts/shell/bridge';
 import type { PlayerController } from '../../lib/playback/controller';
 import { settings, useSetting } from '../../lib/settings';
-import { delayLabel } from '../../lib/subtitles/delay';
+import { delayNotice } from '../../lib/subtitles/delay';
 import { useLatest } from '../../lib/use-latest';
 import type { BaseItemDto, MediaSegmentDto } from '../../lib/types';
 import { ControlButton, MiddleButton, PlayerAction } from './buttons';
@@ -34,7 +36,7 @@ import { usePlayerGestures } from './gestures';
 import { useBurstSeek, useFileDrop, useIdle, usePositionClock } from './hooks';
 import { usePlayerKeys } from './keys';
 import { ScreenLock } from './lock';
-import { FIT_LABELS, OptionButtons } from './options';
+import { fitLabel, OptionButtons } from './options';
 import { SeekBar } from './seek-bar';
 import { skipLabel, useSegmentSkip } from './segments';
 import { useHeldSpeed } from './speed';
@@ -79,7 +81,7 @@ export function PlayerControls({
   /** Under the title, in place of an episode's own line. */
   caption?: string;
   /** What previous and next move between, where it isn't the show's episodes. */
-  steps?: string;
+  steps?: 'episode' | 'trailer';
   onParty?: () => void;
 }) {
   const { state } = player;
@@ -165,7 +167,10 @@ export function PlayerControls({
   const fileInput = React.useRef<HTMLInputElement>(null);
   const addSubtitleFile = (file: File) =>
     latest.current.subtitleFiles?.add(file).then(
-      () => showNotice(`Added ${file.name}`),
+      () => {
+        const { name } = file;
+        showNotice(t`Added ${name}`);
+      },
       (e: Error) => showNotice(e.message)
     );
   const dragging = useFileDrop(
@@ -207,7 +212,8 @@ export function PlayerControls({
           const next = out ? 'crop' : 'fit';
           if (next === fit) return;
           setFit(next);
-          showNotice(`Picture: ${FIT_LABELS[next]}`);
+          const label = fitLabel(next);
+          showNotice(t`Picture: ${label}`);
         }
       : undefined,
   });
@@ -236,30 +242,37 @@ export function PlayerControls({
   const isEpisode = item.Type === 'Episode';
   const listsEpisodes = isEpisode && !!item.SeriesId && !!onEpisode;
   const stepping = steps ?? (isEpisode ? 'episode' : undefined);
+  const stepSeconds = seekStep;
   const subtitle = caption ?? (isEpisode ? itemSubtitle(item) : undefined);
   const spinner = <LuLoaderCircle className="animate-spin" />;
   const buttons: Record<string, Transport | false> = {
     previous: !!stepping && {
       name: 'previous',
-      label: `Previous ${stepping}`,
+      label: stepping === 'trailer' ? t`Previous trailer` : t`Previous episode`,
       icon: loadingEpisode === 'previous' ? spinner : <LuSkipBack />,
       onClick: onPrevious,
     },
     back: !touch && {
       name: 'back',
-      label: `Back ${seekStep} seconds`,
+      label: plural(stepSeconds, {
+        one: 'Back # second',
+        other: 'Back # seconds',
+      }),
       icon: <LuRotateCcw />,
       onClick: () => seekBy(-seekStep * 1000),
     },
     forward: !touch && {
       name: 'forward',
-      label: `Forward ${seekStep} seconds`,
+      label: plural(stepSeconds, {
+        one: 'Forward # second',
+        other: 'Forward # seconds',
+      }),
       icon: <LuRotateCw />,
       onClick: () => seekBy(seekStep * 1000),
     },
     next: !!stepping && {
       name: 'next',
-      label: `Next ${stepping}`,
+      label: stepping === 'trailer' ? t`Next trailer` : t`Next episode`,
       icon: loadingEpisode === 'next' ? spinner : <LuSkipForward />,
       onClick: onNext,
     },
@@ -332,7 +345,7 @@ export function PlayerControls({
           barFade
         )}
       >
-        <ControlButton name="exit" label="Back" onClick={onBack}>
+        <ControlButton name="exit" label={t`Back`} onClick={onBack}>
           <LuArrowLeft className="rtl:-scale-x-100" />
         </ControlButton>
         <div
@@ -354,7 +367,7 @@ export function PlayerControls({
         {touch && !tv && (
           <ControlButton
             name="lock"
-            label="Lock screen"
+            label={t`Lock screen`}
             className="ms-auto"
             onClick={() => {
               setLocked(true);
@@ -378,7 +391,7 @@ export function PlayerControls({
           !tv && (
             <MiddleButton
               name="play"
-              label={state.paused ? 'Play' : 'Pause'}
+              label={state.paused ? t`Play` : t`Pause`}
               big
               onClick={togglePlay}
               className={middleShown}
@@ -409,7 +422,9 @@ export function PlayerControls({
         >
           <div className="rounded-2xl border-2 border-dashed border-white/40 px-10 py-8 text-center">
             <LuCaptions className="mx-auto mb-2 text-4xl" />
-            <p className="text-lg font-semibold">Drop to add subtitles</p>
+            <p className="text-lg font-semibold">
+              <Trans>Drop to add subtitles</Trans>
+            </p>
           </div>
         </div>
       )}
@@ -434,7 +449,7 @@ export function PlayerControls({
           onPick={(ms) => {
             player.setSubtitleDelay?.(ms);
             closePicker();
-            showNotice(`Subtitles ${delayLabel(ms).toLowerCase()}`);
+            showNotice(delayNotice(ms));
           }}
           onClose={closePicker}
         />
@@ -503,7 +518,7 @@ export function PlayerControls({
           <div className={cn('hidden items-center gap-1', !touch && 'lg:flex')}>
             <ControlButton
               name="play"
-              label={state.paused ? 'Play' : 'Pause'}
+              label={state.paused ? t`Play` : t`Pause`}
               onClick={togglePlay}
             >
               {state.paused ? <LuPlay /> : <LuPause />}

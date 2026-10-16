@@ -1,3 +1,5 @@
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { BiCalendar, BiChevronRight, BiHistory } from 'react-icons/bi';
 import { Button } from '@aiostreams/ui/button';
@@ -149,7 +151,7 @@ export function HomePage() {
     <>
       <EpisodeRow
         id="resume"
-        title="Continue watching"
+        title={t`Continue watching`}
         items={continueItems}
         loading={continueLoading}
         action={
@@ -160,14 +162,14 @@ export function HomePage() {
             leftIcon={<BiHistory />}
             onClick={() => navigate(to.history)}
           >
-            Activity
+            <Trans>Activity</Trans>
           </Button>
         }
       />
       {!mergeNextUp && (
         <EpisodeRow
           id="next-up"
-          title="Next up"
+          title={t`Next up`}
           items={nextUp.data?.Items}
           loading={nextUp.isLoading}
         />
@@ -284,7 +286,7 @@ function UpcomingRow() {
   return (
     <MediaRow
       id="upcoming"
-      title="Upcoming"
+      title={t`Upcoming`}
       shape="wide"
       loading={upcoming.isLoading}
       action={
@@ -295,7 +297,7 @@ function UpcomingRow() {
           leftIcon={<BiCalendar />}
           onClick={() => navigate(to.calendar())}
         >
-          Calendar
+          <Trans>Calendar</Trans>
         </Button>
       }
     >

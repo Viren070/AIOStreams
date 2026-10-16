@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import React from 'react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
@@ -145,21 +146,21 @@ export function usePartyFollow(onOpen: () => void): void {
     if (!canFollow())
       return sitOut(
         entry,
-        "Your player can't follow a watch party. Pick the app's player in settings to watch along."
+        t`Your player can't follow a watch party. Pick the app's player in settings to watch along.`
       );
     if (!entry.item)
       return sitOut(
         entry,
-        "This device couldn't read what the party is playing."
+        t`This device couldn't read what the party is playing.`
       );
     const item = entry.item;
+    const title = partyItemTitle(item);
     opening.current = entry.playlistItemId;
     const previous = binding?.source;
     void (async () => {
       try {
         const local = await findItem(client, user.Id!, item);
-        if (!local)
-          return sitOut(entry, `${partyItemTitle(item)} isn't on your server.`);
+        if (!local) return sitOut(entry, t`${title} isn't on your server.`);
         const info = await queryClient.fetchQuery(infoOptions(local.Id!));
         const source = matchingVersion(
           playableSources(info),
@@ -172,10 +173,7 @@ export function usePartyFollow(onOpen: () => void): void {
             )
         );
         if (!source?.Id)
-          return sitOut(
-            entry,
-            `No version of ${partyItemTitle(item)} plays here.`
-          );
+          return sitOut(entry, t`No version of ${title} plays here.`);
         const now = party.state();
         if (
           now?.queue[now.playingIndex]?.playlistItemId !== entry.playlistItemId
@@ -200,7 +198,7 @@ export function usePartyFollow(onOpen: () => void): void {
           onOpen();
         }
       } catch {
-        sitOut(entry, `Couldn't open ${partyItemTitle(item)}.`);
+        sitOut(entry, t`Couldn't open ${title}.`);
       } finally {
         if (opening.current === entry.playlistItemId) opening.current = null;
       }

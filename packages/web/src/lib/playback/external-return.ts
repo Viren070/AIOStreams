@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import React from 'react';
 import { useRouterState } from '@tanstack/react-router';
 import { toast } from 'sonner';
@@ -67,7 +68,7 @@ export function useExternalReturn() {
         .post(`/UserPlayedItems/${itemId}`, undefined, { userId: user.Id })
         .then(() => {
           void refreshAll();
-          toast.success('Marked as watched');
+          toast.success(t`Marked as watched`);
         });
       return;
     }
@@ -80,7 +81,8 @@ export function useExternalReturn() {
       .stop()
       .then(() => {
         void refreshAll();
-        toast.success(`Saved your place at ${clock(ms)}`);
+        const at = clock(ms);
+        toast.success(t`Saved your place at ${at}`);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [href]);

@@ -1,3 +1,5 @@
+import { plural, t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { toast } from 'sonner';
 import {
@@ -166,7 +168,7 @@ export function VersionPickerProvider({
         navigate(to.play(item.Id!, last, startMs));
         return;
       }
-      const notice = toast.loading('Finding a version…');
+      const notice = toast.loading(t`Finding a version…`);
       try {
         const info = await queryClient.fetchQuery(infoOptions(item.Id!));
         const sources = playableSources(info);
@@ -248,7 +250,7 @@ export function VersionPickerProvider({
           open={open}
           onOpenChange={(open) => !open && setRequest(null)}
           onCloseAutoFocus={restoreFocus}
-          title={item ? itemTitle(item) : 'Versions'}
+          title={item ? itemTitle(item) : t`Versions`}
           headerClass="sr-only"
           side="right"
           size="md"
@@ -390,12 +392,19 @@ function Versions({
       onError: (e) => toast.error(e.message),
     });
 
+  const found = sources.length;
   const count = info.data
-    ? sources.length === 1
-      ? '1 version'
-      : `${sources.length} versions`
-    : 'Finding versions';
+    ? plural(found, { one: '# version', other: '# versions' })
+    : t`Finding versions`;
+  const filterHint = info.data
+    ? plural(found, {
+        one: 'Filter # version',
+        other: 'Filter # versions',
+      })
+    : t`Finding versions`;
+  const others = download ? download.items.length - 1 : 0;
   const filtering = sources.length >= FILTER_FROM && !currentHost().tv;
+  const loadError = info.error?.message ?? '';
   const searchAgain = canRefresh && (
     <Tooltip
       trigger={
@@ -406,22 +415,27 @@ function Versions({
           intent="gray-subtle"
           className="rounded-full"
           icon={<BiRefresh className={cn(refreshing && 'animate-spin')} />}
-          aria-label="Search again"
+          aria-label={t`Search again`}
           disabled={refreshing}
           onClick={retry}
         />
       }
     >
-      Search again
+      <Trans>Search again</Trans>
     </Tooltip>
   );
   const downloadHint = download && (
     <p data-ui="versions-download-hint" className="text-sm text-gray-300">
       {download.items.length > 1
-        ? `Pick the version to download. The other ${download.items.length - 1} episodes get the same release where they have it.`
-        : 'Pick the version to download.'}
+        ? plural(others, {
+            one: 'Pick the version to download. The other episode gets the same release where it has it.',
+            other:
+              'Pick the version to download. The other # episodes get the same release where they have it.',
+          })
+        : t`Pick the version to download.`}
     </p>
   );
+  const resumeAt = clock(request.startMs);
   // A version switched to while playing carries on where it was.
   const resumeToggle = request.startMs > 0 && !request.playing && (
     <div
@@ -434,7 +448,7 @@ function Versions({
         className="rounded-full"
         onClick={() => setStartMs(request.startMs)}
       >
-        Resume from {clock(request.startMs)}
+        <Trans>Resume from {resumeAt}</Trans>
       </Button>
       <Button
         size="sm"
@@ -442,7 +456,7 @@ function Versions({
         className="rounded-full"
         onClick={() => setStartMs(0)}
       >
-        From the start
+        <Trans>From the start</Trans>
       </Button>
     </div>
   );
@@ -476,7 +490,7 @@ function Versions({
                   data-ui="versions-filter"
                   value={filter}
                   onValueChange={setFilter}
-                  placeholder={`Filter ${count}`}
+                  placeholder={filterHint}
                   leftIcon={<BiSearch />}
                   className="rounded-full"
                 />
@@ -518,7 +532,7 @@ function Versions({
                 navigate(itemPath(item));
               }}
             >
-              Details
+              <Trans>Details</Trans>
             </Button>
             {searchAgain}
           </div>
@@ -529,7 +543,7 @@ function Versions({
               data-ui="versions-filter"
               value={filter}
               onValueChange={setFilter}
-              placeholder="Filter versions"
+              placeholder={t`Filter versions`}
               leftIcon={<BiSearch />}
               className="rounded-full"
             />
@@ -558,7 +572,7 @@ function Versions({
         {info.isError && !info.data && (
           <div className="space-y-3 rounded-xl border border-red-500/20 bg-red-950/20 p-3">
             <p className="select-text text-sm text-red-300 [overflow-wrap:anywhere]">
-              Could not load the versions: {info.error.message}
+              <Trans>Could not load the versions: {loadError}</Trans>
             </p>
             <Button
               size="sm"
@@ -567,18 +581,18 @@ function Versions({
               loading={refreshing}
               onClick={retry}
             >
-              Try again
+              <Trans>Try again</Trans>
             </Button>
           </div>
         )}
         {info.data && !sources.length && (
           <p className="py-6 text-center text-sm text-[--muted]">
-            No versions were found.
+            <Trans>No versions were found.</Trans>
           </p>
         )}
         {!!sources.length && !shown.length && (
           <p className="py-6 text-center text-sm text-[--muted]">
-            No versions match.
+            <Trans>No versions match.</Trans>
           </p>
         )}
 
@@ -589,7 +603,7 @@ function Versions({
               ? [
                   {
                     name: 'download',
-                    label: 'Download',
+                    label: t`Download`,
                     icon: <BiDownload />,
                     run: () => {
                       onDone();
@@ -604,12 +618,12 @@ function Versions({
               : [
                   {
                     name: 'copy-link',
-                    label: 'Copy stream link',
+                    label: t`Copy stream link`,
                     icon: <BiCopy />,
                     run: () =>
                       copyToClipboard(link, {
-                        onSuccess: () => toast.success('Stream link copied'),
-                        onError: () => toast.error('Could not copy the link'),
+                        onSuccess: () => toast.success(t`Stream link copied`),
+                        onError: () => toast.error(t`Could not copy the link`),
                       }),
                   },
                 ]),
@@ -657,7 +671,7 @@ function Versions({
                       data-ui="version-playing"
                       className="mb-1 inline-block rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-black"
                     >
-                      Playing
+                      <Trans>Playing</Trans>
                     </span>
                   )}
                   <span
@@ -698,7 +712,7 @@ function Versions({
                         intent="gray-basic"
                         className="rounded-full"
                         icon={<BiDotsVerticalRounded />}
-                        aria-label="More"
+                        aria-label={t`More`}
                       />
                     }
                   >
@@ -807,12 +821,12 @@ function Notice({ notice }: { notice: SourceInfo }) {
               intent="gray-basic"
               className="flex-none rounded-full"
               icon={<BiLinkExternal />}
-              aria-label="Open link"
+              aria-label={t`Open link`}
               onClick={() => window.open(externalUrl, '_blank', 'noopener')}
             />
           }
         >
-          Open link
+          <Trans>Open link</Trans>
         </Tooltip>
       )}
     </div>
@@ -834,8 +848,8 @@ function ExternalPrompt({
       data-name="external-player"
       open={!!item}
       onOpenChange={(open) => !open && onClose()}
-      title="Playing in your player"
-      description="Your player does not report back, so mark it as watched once you finish."
+      title={t`Playing in your player`}
+      description={t`Your player does not report back, so mark it as watched once you finish.`}
       contentClass="max-w-md"
     >
       {item && (
@@ -850,7 +864,7 @@ function ExternalPrompt({
               className="rounded-full"
               onClick={onClose}
             >
-              Not now
+              <Trans>Not now</Trans>
             </Button>
             <Button
               intent="white"
@@ -863,7 +877,7 @@ function ExternalPrompt({
                 )
               }
             >
-              Mark as watched
+              <Trans>Mark as watched</Trans>
             </Button>
           </div>
         </>
