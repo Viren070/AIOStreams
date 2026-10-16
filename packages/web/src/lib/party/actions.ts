@@ -10,6 +10,8 @@ import { party, type PartyIdentity } from './party';
 /** Episodes queued after the one a party starts, so it plays on by itself. */
 const QUEUED_EPISODES = 10;
 
+const DEFAULT_RELAY = 'https://aiostreams.viren070.me';
+
 export function usePartyIdentity(): PartyIdentity {
   const { client, user } = useSession();
   return React.useMemo(
@@ -43,9 +45,9 @@ export function usePartyRelays(): RelayChoice[] {
         open: info.parties?.relay !== 'off',
         own: true,
       });
-    const suggested = info.parties?.defaultRelay
-      ? relayBase(info.parties.defaultRelay)
-      : null;
+    // A server with no party info gets the public relay; one that sends none means none.
+    const fallback = info.parties ? info.parties.defaultRelay : DEFAULT_RELAY;
+    const suggested = fallback ? relayBase(fallback) : null;
     if (suggested && suggested !== own)
       relays.push({ base: suggested, open: true, own: false });
     return relays;
