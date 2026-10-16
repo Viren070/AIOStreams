@@ -1090,6 +1090,8 @@ function TvRail({
         </div>
       )}
       <div
+        // Shut, it shows only this many rem of its entries (see rectOf).
+        data-nav-clip={open ? undefined : 5}
         className={cn(
           'flex h-full flex-col gap-1 px-3 py-8',
           !open &&
