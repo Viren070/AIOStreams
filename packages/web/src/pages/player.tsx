@@ -104,9 +104,13 @@ export function usePlayerPage() {
     html.style.overflowY = 'hidden';
     html.style.scrollbarGutter = 'auto';
     html.classList.add('playing');
+    // Samsung's player is drawn beneath the page (see index.html).
+    const seeThrough = !!window.tizen;
+    if (seeThrough) html.classList.add('see-through');
     return () => {
       [html.style.overflowY, html.style.scrollbarGutter] = previous;
       html.classList.remove('playing');
+      if (seeThrough) html.classList.remove('see-through');
     };
   }, []);
 }
