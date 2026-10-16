@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 import { BiCheck, BiPlay } from 'react-icons/bi';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useNear } from '../lib/use-in-view';
@@ -381,11 +381,35 @@ export interface PosterCardProps {
   unwatched?: number;
   progress?: number | null;
   className?: string;
+  /** Played over the poster while the card is hovered or focused. */
+  animated?: string;
+}
+
+function AnimatedPoster({ src }: { src: string }) {
+  const [loaded, setLoaded] = React.useState(false);
+  return (
+    <img
+      data-ui="poster-card-animated"
+      src={src}
+      alt=""
+      decoding="async"
+      referrerPolicy="no-referrer"
+      onLoad={() => setLoaded(true)}
+      className={cn(
+        'absolute inset-0 h-full w-full scale-[1.04] object-cover transition-opacity duration-300',
+        loaded ? 'opacity-100' : 'opacity-0'
+      )}
+    />
+  );
 }
 
 export function PosterCard(props: PosterCardProps) {
   const { href, image, title, subtitle, watched, unwatched, progress } = props;
   const shape = props.shape ?? 'poster';
+  // Mounted only while active, so a row of them decodes nothing at rest.
+  const [active, setActive] = React.useState(false);
+  const still = useReducedMotion();
+  const animated = props.animated && !still ? props.animated : undefined;
   const [lines] = useSetting(settings.interface.posterLines);
   const showTitle = lines.includes('title');
   const showSubtitle = !!subtitle && lines.includes('year');
@@ -399,6 +423,13 @@ export function PosterCard(props: PosterCardProps) {
       title={showTitle ? undefined : title}
       data-focus="own"
       className={cn('group/poster block space-y-2', props.className)}
+      {...(animated && {
+        onPointerEnter: () => setActive(true),
+        onPointerLeave: () => setActive(false),
+        onFocus: (e: React.FocusEvent<HTMLAnchorElement>) =>
+          setActive(e.currentTarget.matches(':focus-visible')),
+        onBlur: () => setActive(false),
+      })}
     >
       <div
         data-ui="poster-card-image"
@@ -412,6 +443,7 @@ export function PosterCard(props: PosterCardProps) {
           alt={title}
           className="group-hover/poster:scale-[1.04] group-focus-visible/poster:scale-[1.04]"
         />
+        {animated && active && <AnimatedPoster src={animated} />}
         <div
           data-ui="poster-card-shade"
           className="absolute inset-0 bg-black/20 opacity-0 transition-opacity [transition-duration:250ms] group-hover/poster:opacity-100 group-focus-visible/poster:opacity-100"

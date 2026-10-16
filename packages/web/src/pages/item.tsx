@@ -47,6 +47,7 @@ import {
   landscapeUrls,
   logoUrl,
   posterUrl,
+  animatedPosterOf,
 } from '../lib/images';
 import {
   clock,
@@ -1010,6 +1011,7 @@ function SubCollections({ parent }: { parent: BaseItemDto }) {
                 { maxWidth: width }
               )
             }
+            animated={animatedPosterOf(item)}
             title={item.Name ?? ''}
             subtitle={itemSubtitle(item)}
             watched={item.UserData?.Played}
@@ -1154,6 +1156,7 @@ function Similar({ itemId }: { itemId: string }) {
               <PosterCard
                 href={href(itemPath(item))}
                 image={(width) => posterUrl(client, item, { maxWidth: width })}
+                animated={animatedPosterOf(item)}
                 title={item.Name ?? ''}
                 subtitle={itemSubtitle(item)}
                 watched={item.UserData?.Played}

@@ -20,7 +20,7 @@ import type { JellyfinClient } from '../lib/client';
 import { useSearch, useSearchSuggestions } from '../lib/queries';
 import { settings, useSetting } from '../lib/settings';
 import { useSearchHistory } from '../lib/search-history';
-import { cardImages, cardShape } from '../lib/images';
+import { cardImages, cardShape, animatedPosterOf } from '../lib/images';
 import { itemSubtitle, progressOf } from '../lib/format';
 import { href, itemPath, navigate, to } from '../lib/paths';
 import type { BaseItemDto } from '../lib/types';
@@ -296,6 +296,7 @@ function ResultRow({
                 { maxWidth: width }
               )
             }
+            animated={animatedPosterOf(item)}
             title={item.Name ?? ''}
             subtitle={itemSubtitle(item)}
             watched={item.UserData?.Played}

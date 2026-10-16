@@ -17,7 +17,12 @@ import {
   useUpcoming,
   useViews,
 } from '../lib/queries';
-import { cardImages, cardShape, landscapeUrls } from '../lib/images';
+import {
+  cardImages,
+  cardShape,
+  landscapeUrls,
+  animatedPosterOf,
+} from '../lib/images';
 import {
   clock,
   dayLabel,
@@ -387,6 +392,7 @@ function LibraryRow({ view, first }: { view: BaseItemDto; first: boolean }) {
                   { maxWidth: width }
                 )
               }
+              animated={animatedPosterOf(item)}
               title={item.Name ?? ''}
               subtitle={itemSubtitle(item)}
               watched={item.UserData?.Played}

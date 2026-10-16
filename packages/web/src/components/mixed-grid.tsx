@@ -1,6 +1,6 @@
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import type { JellyfinClient } from '../lib/client';
-import { cardImages, cardShape } from '../lib/images';
+import { cardImages, cardShape, animatedPosterOf } from '../lib/images';
 import { itemSubtitle, progressOf } from '../lib/format';
 import { href, itemPath } from '../lib/paths';
 import type { BaseItemDto } from '../lib/types';
@@ -41,6 +41,7 @@ export function MixedGrid({
                   { maxWidth: width }
                 )
               }
+              animated={animatedPosterOf(child)}
               title={child.Name ?? ''}
               subtitle={itemSubtitle(child)}
               watched={child.UserData?.Played}

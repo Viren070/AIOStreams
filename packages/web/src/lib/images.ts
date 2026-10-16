@@ -153,6 +153,12 @@ export function logoUrl(
   );
 }
 
+export function animatedPosterOf(item: BaseItemDto): string | undefined {
+  const url = (item as { aiostreams?: { animatedPoster?: unknown } }).aiostreams
+    ?.animatedPoster;
+  return typeof url === 'string' ? url : undefined;
+}
+
 /** The shape a collection's own art was made for; everything else is a poster. */
 export function cardShape(
   item: BaseItemDto
