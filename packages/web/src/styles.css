@@ -23,6 +23,13 @@ html.see-through body {
   background: transparent !important;
 }
 
+/* A 2020 Samsung TV lets its video plane tint a page whose body is
+   transparent, even under an opaque html; the player clears it (see-through). */
+html[data-host='tizen'] body,
+html[data-host='tizen'] #root {
+  background-color: var(--background, #070707);
+}
+
 /* Important so custom CSS can't cover the video beneath the page. */
 html.playing .page-background {
   display: none !important;
