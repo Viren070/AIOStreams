@@ -551,7 +551,9 @@ export function mergeParsedMediaInfo(
 
   const merged = normaliseParsedMediaInfo({
     mediaInfoQuality: preferred?.mediaInfoQuality ?? base?.mediaInfoQuality,
-    mediaInfoSource: preferred?.mediaInfoSource ?? base?.mediaInfoSource,
+    mediaInfoSource: preferred?.mediaInfoQuality
+      ? preferred.mediaInfoSource
+      : base?.mediaInfoSource,
     languages: preferred?.languages ?? base?.languages,
     subtitles: preferred?.subtitles ?? base?.subtitles,
     audioTags: preferred?.audioTags ?? base?.audioTags,

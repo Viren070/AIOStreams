@@ -30,6 +30,7 @@ export function layerMediaInfo(
     audioTags: merged.audioTags ?? parsedFile?.audioTags ?? [],
     hasChapters: merged.hasChapters ?? parsedFile?.hasChapters,
     videoIndex: merged.videoIndex,
+    mediaInfoSource: merged.mediaInfoSource,
   };
 }
 
