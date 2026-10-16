@@ -159,14 +159,17 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
       isFirst.current = false;
     }, [controlledValue]);
 
+    const row = side === 'right';
     return (
       <BasicField
         {...basicFieldProps}
         id={basicFieldProps.id}
+        // A remote moves to and shows the whole row.
+        data-nav-box={row || undefined}
         fieldClass={cn(
           'w-fit',
-          side === 'right' &&
-            'w-full group/switch hover:bg-white/5 rounded-[--radius] p-2 w-[calc(100%_+_1rem)] -ml-2'
+          row &&
+            'relative w-full group/switch hover:bg-white/5 rounded-[--radius] p-2 w-[calc(100%_+_1rem)] -ml-2'
         )}
         fieldHelpTextClass={cn('')}
       >
@@ -174,7 +177,14 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
           <SwitchPrimitive.Root
             ref={mergeRefs([buttonRef, ref])}
             id={basicFieldProps.id}
-            className={cn(SwitchAnatomy.root({ size }), className)}
+            data-nav-card={row || undefined}
+            data-focus={row ? 'own' : undefined}
+            className={cn(
+              SwitchAnatomy.root({ size }),
+              row &&
+                "focus-visible:ring-0 focus-visible:ring-offset-0 after:pointer-events-none after:absolute after:inset-0 after:rounded-[--radius] after:content-[''] focus-visible:after:bg-white/5 focus-visible:after:ring-2 focus-visible:after:ring-[--ring]",
+              className
+            )}
             disabled={basicFieldProps.disabled || basicFieldProps.readonly}
             data-disabled={basicFieldProps.disabled}
             data-readonly={basicFieldProps.readonly}
