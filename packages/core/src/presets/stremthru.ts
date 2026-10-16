@@ -94,12 +94,14 @@ export class StremThruStreamParser extends StreamParser {
     if (audioLangs && audioLangs.length > 0) {
       overrides.languages = audioLangs;
       overrides.mediaInfoQuality = 'probe';
+      overrides.mediaInfoSource = 'stremthru-addon';
     }
 
     const subtitleLangs = getLanguagesAfterMarker(stream.description, '💬');
     if (subtitleLangs && subtitleLangs.length > 0) {
       overrides.subtitles = subtitleLangs;
       overrides.mediaInfoQuality = 'probe';
+      overrides.mediaInfoSource = 'stremthru-addon';
     }
 
     const codecText = stream.description?.match(
@@ -133,6 +135,7 @@ export class StremThruStreamParser extends StreamParser {
 
     if (this.getProbedBitrate(stream) !== undefined) {
       overrides.mediaInfoQuality = 'probe';
+      overrides.mediaInfoSource = 'stremthru-addon';
     }
 
     return overrides;

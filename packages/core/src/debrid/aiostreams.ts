@@ -29,8 +29,11 @@ import {
   hasRecentStreamActivity,
   type UsenetStreamToken,
 } from '../usenet/integration/index.js';
-import { storedFileInfo, storedFilesByPost } from '../media-info/lookup.js';
-import type { MediaInfoRecord } from '../media-info/record.js';
+import {
+  storedFileInfo,
+  storedFilesByPost,
+  type StoredInfo,
+} from '../media-info/lookup.js';
 import { toWireMediaInfo } from '../media-info/wire.js';
 import {
   ReleaseBlocklistRepository,
@@ -125,7 +128,7 @@ export class NativeUsenetService implements UsenetDebridService {
 
     const probed = await storedFilesByPost(
       [...library.values()].map((e) => e.nzbHash)
-    ).catch(() => new Map<string, Map<string, MediaInfoRecord>>());
+    ).catch(() => new Map<string, Map<string, StoredInfo>>());
 
     const policy = appConfig.usenet.damagePolicy;
     return nzbs.map(({ name, hash }) => {
@@ -145,8 +148,14 @@ export class NativeUsenetService implements UsenetDebridService {
       const posted = entry ? probed.get(entry.nzbHash) : undefined;
       const files: DebridFile[] | undefined = entry?.files.length
         ? toDebridFiles(entry.files).map((file) => {
-            const info = storedFileInfo(posted, file);
-            return info ? { ...file, mediaInfo: toWireMediaInfo(info) } : file;
+            const stored = storedFileInfo(posted, file);
+            return stored
+              ? {
+                  ...file,
+                  mediaInfo: toWireMediaInfo(stored.info),
+                  mediaInfoSource: stored.source,
+                }
+              : file;
           })
         : undefined;
       return {

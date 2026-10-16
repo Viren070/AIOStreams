@@ -2,6 +2,7 @@
 import { constants, ServiceId, Cache, appConfig } from '../utils/index.js';
 import { registerLockErrorClass } from '../utils/lock-error-registry.js';
 import { WD1_KEY_REGEX } from '../release-blocklist/keys.js';
+import { MEDIA_INFO_SOURCES } from '../db/schemas.js';
 
 type DebridErrorCode =
   | 'BAD_GATEWAY'
@@ -177,6 +178,7 @@ const DebridFileSchema = z.object({
   size: z.number(),
   mimeType: z.string().optional(),
   mediaInfo: z.record(z.string(), z.unknown()).optional(),
+  mediaInfoSource: z.enum(MEDIA_INFO_SOURCES).optional(),
   videoHash: z.string().optional(),
   link: z.string().optional(),
   path: z.string().optional(),
