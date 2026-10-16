@@ -21,6 +21,7 @@ import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
 import { currentHost } from '../lib/hosts';
 import { useRestoreFocus } from '../lib/input';
 import { formatLocale } from '../lib/i18n';
+import { useFeature } from '../lib/server-info';
 import { settings, useSetting } from '../lib/settings';
 import {
   compileQuery,
@@ -171,6 +172,7 @@ function QuickFiltersModal({
   const [pasted, setPasted] = React.useState('');
   const [importError, setImportError] = React.useState<string>();
   const [importing, setImporting] = React.useState(false);
+  const hasFields = useFeature('versions');
   const restoreFocus = useRestoreFocus(open);
   React.useEffect(() => {
     if (!open) return;
@@ -229,12 +231,21 @@ function QuickFiltersModal({
       onCloseAutoFocus={restoreFocus}
       title={t`Quick filters`}
       description={
-        <Trans>
-          Each filter shows as a pill above the version list. Its search is
-          words that must all appear, or a regular expression between slashes,
-          such as /2160p|4k/. Case never matters. Pick fields to search only
-          those parts of a version.
-        </Trans>
+        <>
+          <Trans>
+            Each filter shows as a pill above the version list. Its search is
+            words that must all appear, or a regular expression between slashes,
+            such as /2160p|4k/. Case never matters.
+          </Trans>
+          {hasFields ? (
+            <>
+              {' '}
+              <Trans>
+                Pick fields to search only those parts of a version.
+              </Trans>
+            </>
+          ) : null}
+        </>
       }
       contentClass="max-w-2xl"
     >
@@ -279,10 +290,12 @@ function QuickFiltersModal({
                   }
                 />
               </div>
-              <FieldsPicker
-                value={filter.fields}
-                onValueChange={(fields) => change(index, { fields })}
-              />
+              {hasFields ? (
+                <FieldsPicker
+                  value={filter.fields}
+                  onValueChange={(fields) => change(index, { fields })}
+                />
+              ) : null}
             </div>
           );
         })}
@@ -774,6 +787,7 @@ function BadgeForm({
     onChange(next);
   };
   const invalid = !!badge.match.trim() && !toRegExp(badge.match);
+  const hasFields = useFeature('versions');
   return (
     <div
       data-ui="badge-form"
@@ -806,12 +820,14 @@ function BadgeForm({
         error={invalid ? t`That is not a valid regular expression.` : undefined}
         className="font-mono text-sm"
       />
-      <FieldsPicker
-        label={t`Fields`}
-        help={t`Optional. Match only these parts of a version, named as the formatter names them, such as seMatched for the stream expression it matched.`}
-        value={badge.fields}
-        onValueChange={(fields) => set({ fields })}
-      />
+      {hasFields ? (
+        <FieldsPicker
+          label={t`Fields`}
+          help={t`Optional. Match only these parts of a version, named as the formatter names them, such as seMatched for the stream expression it matched.`}
+          value={badge.fields}
+          onValueChange={(fields) => set({ fields })}
+        />
+      ) : null}
       <TextInput
         label={t`Image`}
         help={t`Optional. An image address, shown in place of the label.`}

@@ -1343,8 +1343,8 @@ msgid "E{e}"
 msgstr "E{e}"
 
 #: src/components/version-settings.tsx
-msgid "Each filter shows as a pill above the version list. Its search is words that must all appear, or a regular expression between slashes, such as /2160p|4k/. Case never matters. Pick fields to search only those parts of a version."
-msgstr "Each filter shows as a pill above the version list. Its search is words that must all appear, or a regular expression between slashes, such as /2160p|4k/. Case never matters. Pick fields to search only those parts of a version."
+msgid "Each filter shows as a pill above the version list. Its search is words that must all appear, or a regular expression between slashes, such as /2160p|4k/. Case never matters."
+msgstr "Each filter shows as a pill above the version list. Its search is words that must all appear, or a regular expression between slashes, such as /2160p|4k/. Case never matters."
 
 #: src/components/version-settings.tsx
 msgid "Edit"
@@ -2671,6 +2671,10 @@ msgstr "Pick a colour"
 #: src/pages/downloads.tsx
 msgid "Pick a version"
 msgstr "Pick a version"
+
+#: src/components/version-settings.tsx
+msgid "Pick fields to search only those parts of a version."
+msgstr "Pick fields to search only those parts of a version."
 
 #: src/components/player/subtitle-sync.tsx
 msgid "Pick the line you heard at {heardAt}."
