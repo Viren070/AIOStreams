@@ -126,6 +126,13 @@ nothing. Its genres come from `/Genres?ParentId={library}` as usual, and a genre
 for all of it. The app opens it on `None` where that is offered and on its first genre otherwise, and
 offers All only where `None` is there to send.
 
+## Titles
+
+A title or collection whose addon sends an [`animatedPoster`](/reference/addon-protocol/metadata)
+carries `"aiostreams": { "animatedPoster": "…" }`, the image's own address. The app plays it over the
+poster while the card is focused or hovered, and not when the device asks for reduced motion. The
+poster stays the still that everything else shows.
+
 ## Episodes
 
 With `fillers`, a filler episode carries `"aiostreams": { "filler": true }` and a recap
