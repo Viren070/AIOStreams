@@ -1,0 +1,138 @@
+---
+title: qBittorrent
+description: Stream torrents through your own qBittorrent client while they download, instead of through a debrid service.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Steps, Step } from 'fumadocs-ui/components/steps';
+
+The qBittorrent service plays torrents through your own qBittorrent client.
+When you press play, AIOStreams adds the torrent to qBittorrent and serves the
+partially downloaded file to your player with HTTP range support, so playback
+starts while the download continues. The torrent is never re-hosted anywhere
+and is never deleted, which makes this the right choice for private trackers:
+seeding, ratios and hit-and-run obligations stay between you and your client.
+
+## Before you start
+
+You need two things already working.
+
+1. **qBittorrent with the WebUI enabled**, reachable from AIOStreams, with a
+   username and password set (Tools → Options → Web UI).
+2. **A shared filesystem.** The qBittorrent WebUI API cannot serve file bytes,
+   so AIOStreams reads the downloaded file from disk. AIOStreams and
+   qBittorrent must run on the same machine, or qBittorrent's download
+   directory must be mounted into AIOStreams (the same requirement Docker
+   users already know from mapping download volumes).
+
+<Callout type="warn">
+  If the paths do not line up, playback fails with a clear error the first
+  time you press play, and the torrent is still added to qBittorrent. Nothing
+  is ever removed from the client, so a misconfiguration cannot damage your
+  seed ratio.
+</Callout>
+
+## Setting it up
+
+<Steps>
+  <Step>
+
+### Add the service
+
+Open your configuration, go to **Services**, enable **qBittorrent** and enter
+your WebUI URL, username and password. A local URL (for example
+`http://localhost:8080`) is usually the right choice when both run on the
+same machine.
+
+  </Step>
+  <Step>
+
+### Point a torrent addon at it
+
+Any built-in torrent addon (Prowlarr, Torznab, and the presets built on them)
+can use the service. For private trackers, the usual shape is one Prowlarr
+instance whose **Services** option selects only qBittorrent, so tracker
+results never route through a debrid account. Everything else keeps using
+your debrid services as before.
+
+  </Step>
+  <Step>
+
+### Play something
+
+Pick a result and press play. The first seconds of playback wait for the
+download to gather a playable prefix; from then on the stream follows the
+download frontier.
+
+  </Step>
+</Steps>
+
+## How playback behaves while downloading
+
+- Torrents are added with **sequential download** and **first and last piece
+  priority**, and the file being played is raised to maximum priority, so the
+  start of the file and the container index (where the duration and seek
+  information live) arrive early. Seeking into a region that has not
+  downloaded yet pauses until the data arrives, and the connection is torn
+  down if the download stalls for a minute; seeking back into downloaded data
+  always works.
+- The full file size is advertised from the first request, so your player
+  shows the correct duration and seek bar even while the download is running.
+- Torrents AIOStreams adds are tagged `aiostreams` (a tag, not a category, so
+  category-based save paths are never touched). Existing torrents are adopted
+  as they are: nothing is re-tagged or removed, and their file priorities are
+  untouched except that a file you pick to play is un-skipped (raised back to
+  normal) if you had skipped it in the client.
+
+### Download only the selected file
+
+In multi-file torrents (a season pack, for example), the service setting
+**Download Only the Selected File** skips the other files and fetches only
+the episode being played, on demand: each resolve raises that episode's
+priority, so episodes arrive as you watch them instead of the whole pack
+downloading up front. The file currently being watched is never skipped (so
+next-episode prefetch and a second screen cannot stall playback), files that
+are already complete are never touched, and if you resume an episode that
+was skipped meanwhile, its download restarts automatically.
+
+<Callout type="warn">
+  **This breaks seeding for private trackers.** A torrent with skipped files
+  can never complete, so it can never fully seed, and most private trackers
+  count that as a hit-and-run. Leave the setting off if you seed private
+  trackers; it is meant for public torrents and tight disk space.
+</Callout>
+
+<Callout type="info">
+  **Why the "cached" badge means something different here.** For debrid
+  services, a cached torrent plays instantly from the cloud. For qBittorrent,
+  a torrent already in your client shows as cached (its data is on disk, or
+  arriving); a new one downloads on your connection first. On a seedbox this
+  is usually seconds.
+</Callout>
+
+## Security notes
+
+- Stream URLs carry no credential: they hold an opaque reference that points
+  at a server-side entry (kept for 12 hours) with the WebUI credential, the
+  torrent and the one selected file. The stored credential is encrypted, so
+  a Redis or SQL cache backend never holds the password in plaintext. A
+  leaked URL can be used to read that one file until the reference expires,
+  it cannot reach your client's WebUI or any other torrent.
+- The WebUI URL is entered by whoever configures the service, and the paths
+  AIOStreams serves come from that client. The service is operator-opt-in:
+  it stays hidden until `QBITTORRENT_ALLOWED_ROOTS` is set (a comma-separated
+  list of absolute download directories), and qBittorrent file paths are
+  then confined to those directories, through symlinks, before anything is
+  served. Scope the roots to what you are comfortable serving to every user
+  who may configure the service: the roots are shared by everyone's
+  configured clients, so on an instance where several people add their own
+  qBittorrent, each of them can stream any file inside the roots.
+- Playing through qBittorrent downloads to the operator's own client, so on
+  an instance with users you don't personally know, it usually should not be
+  user-configurable at all. The standard instance controls all apply: hide
+  it entirely with `DISABLED_SERVICES=qbittorrent:reason`, offer the
+  operator's client with `FORCED_SERVICE_CREDENTIALS`, or pre-fill a shared
+  box's client with `DEFAULT_SERVICE_CREDENTIALS`.
+- qBittorrent bans IPs after repeated failed logins. If you mistype the
+  password, fix it in the service settings before pressing play again.
+- qBittorrent 4.6+ is required; 5.x is recommended.
