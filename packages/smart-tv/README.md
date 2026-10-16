@@ -10,9 +10,9 @@ drawn beneath the page. The web app finds out which TV it's on from what the TV 
 Expect LG TVs from 2023 (webOS 23) and Samsung TVs from 2020 (Tizen 5.5, Chromium 69) or newer.
 The standalone build targets Chromium 69: its scripts are compiled down and polyfilled, and
 `legacy-css.ts` in `packages/web` gives the CSS that engine drops a stand-in, which applies under
-the `no-focus-visible` and `no-flex-gap` classes `boot.js` sets on engines that need them. Older
-TVs still install the packages: `boot.js` says the TV is too old and offers to try. It also shows
-what stopped the app starting, as a TV has no console.
+the `no-focus-visible`, `no-aspect-ratio` and `no-flex-gap` classes `boot.js` sets on engines that
+need them. Older TVs still install the packages: `boot.js` says the TV is too old and offers to
+try. It also shows what stopped the app starting, as a TV has no console.
 
 ## Build
 
