@@ -210,28 +210,16 @@ export function Drawer(props: DrawerProps) {
         />
 
         <DialogPrimitive.Content
+          data-side={mangaReader ? undefined : side}
           {...data}
           className={cn(
             DrawerAnatomy.content({
               size,
               side: mangaReader ? 'mangaReader' : side,
             }),
-            // process.env.NEXT_PUBLIC_PLATFORM === "desktop" && "pt-12",
             !mangaReader && 'lg:m-[10px] rounded-[--radius]',
             contentClass
           )}
-          style={{
-            marginTop:
-              process.env.NEXT_PUBLIC_PLATFORM === 'desktop' && !mangaReader
-                ? '30px'
-                : undefined,
-            height:
-              process.env.NEXT_PUBLIC_PLATFORM === 'desktop' &&
-              !mangaReader &&
-              (side === 'left' || side === 'right')
-                ? 'calc(100dvh - 50px)'
-                : undefined,
-          }}
           onOpenAutoFocus={onOpenAutoFocus}
           onCloseAutoFocus={onCloseAutoFocus}
           onEscapeKeyDown={onEscapeKeyDown}
