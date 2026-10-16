@@ -128,12 +128,29 @@ const ruledOut = (el: HTMLElement) =>
   ) ||
   !!el.closest('[inert], [aria-hidden=true], [data-tv] [data-nav-tv=skip]');
 
-/** A focusable standing for its whole card (`data-nav-card`) is measured as its `data-nav-box`. */
+/**
+ * A focusable standing for its whole card (`data-nav-card`) is measured as its
+ * `data-nav-box`; one in a box clipped to its first `data-nav-clip` rem, as the
+ * shut TV rail, as only that much while focus is outside it.
+ */
 const rectOf = (el: HTMLElement) => {
   const box = el.hasAttribute('data-nav-card')
     ? (el.closest('[data-nav-box]') ?? el)
     : el;
-  return settled(box, box.getBoundingClientRect());
+  let r = box.getBoundingClientRect();
+  const clip = el.closest<HTMLElement>('[data-nav-clip]');
+  if (clip && !clip.contains(document.activeElement)) {
+    const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    const right =
+      clip.getBoundingClientRect().left + Number(clip.dataset.navClip) * rem;
+    r = new DOMRect(
+      r.x,
+      r.y,
+      Math.max(0, Math.min(r.right, right) - r.x),
+      r.height
+    );
+  }
+  return settled(box, r);
 };
 
 const shifted = (r: DOMRect, x: number, y: number) =>
