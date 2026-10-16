@@ -31,6 +31,8 @@ const isObject = (v: unknown): v is Json =>
 const isBool = (v: unknown): v is boolean => typeof v === 'boolean';
 const isNumber = (v: unknown, max: number): v is number =>
   typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= max;
+const isOffset = (v: unknown): v is number =>
+  typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= MAX_MS;
 const isInt = (v: unknown, max: number): v is number =>
   isNumber(v, max) && Number.isInteger(v);
 const isSealed = (v: unknown, max: number): v is string =>
@@ -215,9 +217,10 @@ export function parseMessage(text: string): PartyClientMessage | null {
       const r = request(v.request);
       return r ? { t: 'request', request: r } : null;
     }
-    case 'report':
-      return isNumber(v.positionMs, MAX_MS) && isNumber(v.at, MAX_TIME)
-        ? { t: 'report', positionMs: v.positionMs, at: v.at }
+    case 'offset':
+      if (v.offsetMs === undefined) return { t: 'offset' };
+      return isOffset(v.offsetMs)
+        ? { t: 'offset', offsetMs: v.offsetMs }
         : null;
     case 'chat':
       return isSealed(v.text, PARTY_LIMITS.chat)

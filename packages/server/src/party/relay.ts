@@ -52,21 +52,20 @@ const HELLO_MS = 10_000;
 const SEAT_GRACE_MS = 60_000;
 const IDLE_MS = 6 * 60 * 60_000;
 const LIFETIME_MS = 24 * 60 * 60_000;
-const HEARTBEAT_MS = 30_000;
+const HEARTBEAT_MS = 15_000;
+/** Longer than the apps go without a ping of their own. */
+const QUIET_MS = 35_000;
+const GONE_MS = 60_000;
 const SWEEP_MS = 60_000;
-const REPORT_MS = 5_000;
-/** Reports go stale after missing a few; members report every 5 s. */
-const REPORT_STALE_MS = 15_000;
+const PINGS_MS = 5_000;
 /** Offsets shown are rounded to this, and smaller ones not shown. */
 const OFFSET_STEP_MS = 500;
 const OFFSET_MIN_MS = 1_000;
 /** Chat keeps a party from idling, noted at most this often. */
 const CHAT_ACTIVITY_MS = 60_000;
 const MAX_STRIKES = 5;
-/** Marks commands, after which a member's reports say nothing. */
-const COMMAND = 1;
 /** Marks what may take a seat from a connection, so replicas look again. */
-const RESEAT = 2;
+const RESEAT = 1;
 
 /** Requests any member makes while only the host controls playback. */
 const UNCONTROLLED = new Set(['Buffer', 'Ready', 'IgnoreWait']);
@@ -91,7 +90,7 @@ interface Seat {
   conn: string;
   /** When a seat that is away is given up. */
   awayUntil?: number;
-  /** How far behind the group it plays, from its last report. */
+  /** How far behind the group it plays, as its app last said. */
   offsetMs?: number;
 }
 
@@ -120,8 +119,7 @@ interface Conn {
   seat?: string;
   /** Seated before its join commits, so what that join says reaches it. */
   pending?: boolean;
-  report?: { positionMs: number; at: number };
-  /** The round trip the client last measured, stored with its next report. */
+  /** The round trip the client last measured, stored a few seconds on. */
   rtt?: number;
   /** When anything last came from the client, ping or not. */
   heard: number;
@@ -130,6 +128,7 @@ interface Conn {
   /** Made on first use, as most members never chat or react. */
   chats?: Bucket;
   reactions?: Bucket;
+  offsets?: Bucket;
   hello?: ReturnType<typeof setTimeout>;
   /** Messages after a hello wait their turn. */
   queue?: Promise<void>;
@@ -168,6 +167,8 @@ const parties = store.records<Party>({
 
 /** This replica's members, by party and seat. */
 const here = new Map<string, Map<string, Conn>>();
+/** Parties with members here whose round trip moved enough to store. */
+const pings = new Set<string>();
 const addresses = new AddressBook(32, [20 / 3600, 10], [0.5, 10]);
 let stopping = false;
 
@@ -432,11 +433,7 @@ function deliver(to: readonly string[], message: GroupMessage): void {
         const seat = party.seats.get(id);
         if (seat) seat.offsetMs = undefined;
       }
-      return tx.send(
-        to,
-        encode({ t: 'command', command: message.command }),
-        COMMAND
-      );
+      return tx.send(to, encode({ t: 'command', command: message.command }));
     case 'queue':
       return tx.send(to, encode({ t: 'queue', queue: message.queue, by }));
     case 'state':
@@ -462,13 +459,8 @@ function receive(
   if (!local) return;
   let reseat = false;
   for (const { to, data, mark } of messages) {
-    reseat ||= (mark & RESEAT) !== 0;
-    for (const seat of to) {
-      const conn = local.get(seat);
-      if (!conn) continue;
-      if (mark & COMMAND) conn.report = undefined;
-      sendData(conn, data);
-    }
+    reseat ||= mark === RESEAT;
+    for (const seat of to) sendData(local.get(seat), data);
   }
   if (!record || !reseat) return;
   const party = record();
@@ -695,6 +687,7 @@ async function join(
               seat.at = store.replica;
               seat.conn = conn.id;
               seat.awayUntil = undefined;
+              seat.offsetMs = undefined;
               seat.name = m.name;
               party.group.rejoin(seat.id);
               return 'ok' as const;
@@ -869,9 +862,20 @@ function inParty(conn: Conn, m: PartyClientMessage): void {
         })
       );
     }
-    case 'report':
-      conn.report = { positionMs: m.positionMs, at: m.at };
-      return;
+    case 'offset': {
+      conn.offsets ??= new Bucket(1, 5);
+      if (!conn.offsets.take()) return;
+      const offsetMs =
+        m.offsetMs === undefined || Math.abs(m.offsetMs) < OFFSET_MIN_MS
+          ? undefined
+          : Math.round(m.offsetMs / OFFSET_STEP_MS) * OFFSET_STEP_MS;
+      if (parties.peek(id)?.seats.get(me)?.offsetMs === offsetMs) return;
+      return quietly(
+        asMember(conn, (_party, _tx, seat) => {
+          seat.offsetMs = offsetMs;
+        })
+      );
+    }
     case 'chat': {
       conn.chats ??= new Bucket(1, 5);
       if (!conn.chats.take()) return refuse(conn, 'rate', false);
@@ -1021,51 +1025,27 @@ function dropped(conn: Conn): void {
   unseat(conn);
 }
 
-/** Stores members' offsets and round trips that moved, in one change a party. */
-function report(): void {
-  const at = Date.now();
-  for (const id of here.keys()) {
-    const party = parties.peek(id);
-    if (!party || !moved(party, here.get(id)!, at)) continue;
+function noteRtt(conn: Conn, rtt: number): void {
+  conn.rtt = rtt;
+  const party = conn.party ? parties.peek(conn.party) : undefined;
+  if (party && conn.seat && party.group.pingMoved(conn.seat, rtt))
+    pings.add(party.id);
+}
+
+/** Stores round trips that moved, a party's together. */
+function storePings(): void {
+  for (const id of pings)
     quietly(
       parties.update(id, (party) => {
-        const at = Date.now();
         for (const conn of here.get(id)?.values() ?? []) {
           const seat = conn.seat ? party.seats.get(conn.seat) : undefined;
-          if (seat?.conn !== conn.id) continue;
-          seat.offsetMs = offsetOf(party, conn, at);
-          if (
-            conn.rtt !== undefined &&
-            party.group.pingMoved(seat.id, conn.rtt)
-          )
+          if (seat?.conn !== conn.id || conn.rtt === undefined) continue;
+          if (party.group.pingMoved(seat.id, conn.rtt))
             party.group.handle(seat.id, { type: 'Ping', ping: conn.rtt });
         }
       })
     );
-  }
-}
-
-function moved(party: Party, local: Map<string, Conn>, at: number): boolean {
-  for (const conn of local.values()) {
-    const seat = conn.seat ? party.seats.get(conn.seat) : undefined;
-    if (seat?.conn !== conn.id) continue;
-    if (offsetOf(party, conn, at) !== seat.offsetMs) return true;
-    if (conn.rtt !== undefined && party.group.pingMoved(seat.id, conn.rtt))
-      return true;
-  }
-  return false;
-}
-
-/** How far behind the group a member plays, from its last report. */
-function offsetOf(party: Party, conn: Conn, at: number): number | undefined {
-  const { report } = conn;
-  if (!report || party.group.stateType !== 'Playing') return undefined;
-  if (at - report.at > REPORT_STALE_MS) return undefined;
-  const gap =
-    party.group.currentPositionMs() - (report.positionMs + at - report.at);
-  return Math.abs(gap) < OFFSET_MIN_MS
-    ? undefined
-    : Math.round(gap / OFFSET_STEP_MS) * OFFSET_STEP_MS;
+  pings.clear();
 }
 
 /** Idle and expired parties close, seats away too long go, and waits run out. */
@@ -1156,24 +1136,23 @@ export function attachPartyRelay(server: HttpServer): void {
   });
   const conns = new WeakMap<WebSocket, Conn>();
 
-  // Only connections that went quiet are pinged; a playing member reports every 5 s.
   const heartbeat = setInterval(() => {
     const now = Date.now();
     for (const ws of wss.clients) {
       const conn = conns.get(ws);
       if (!conn) continue;
       const quiet = now - conn.heard;
-      if (quiet > HEARTBEAT_MS * 1.5) ws.terminate();
-      else if (quiet >= HEARTBEAT_MS / 2) ws.ping();
+      if (quiet >= GONE_MS) ws.terminate();
+      else if (quiet >= QUIET_MS) ws.ping();
     }
   }, HEARTBEAT_MS);
   const sweeper = setInterval(() => addresses.prune(), SWEEP_MS);
-  const reporter = setInterval(report, REPORT_MS);
-  for (const timer of [heartbeat, sweeper, reporter]) timer.unref();
+  const pinger = setInterval(storePings, PINGS_MS);
+  for (const timer of [heartbeat, sweeper, pinger]) timer.unref();
   wss.on('close', () => {
     clearInterval(heartbeat);
     clearInterval(sweeper);
-    clearInterval(reporter);
+    clearInterval(pinger);
   });
 
   wss.on(
@@ -1211,7 +1190,7 @@ export function attachPartyRelay(server: HttpServer): void {
             encode({ t: 'pong', t0: m.t0, t1, t2: Date.now() }),
             true
           );
-          if (m.rtt !== undefined) conn.rtt = m.rtt;
+          if (m.rtt !== undefined) noteRtt(conn, m.rtt);
           return;
         }
         run(conn, m);
