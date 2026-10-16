@@ -1,4 +1,4 @@
-import { languageToIso6392 } from '../utils/languages.js';
+import { tagLanguage } from '../utils/languages.js';
 import type { JellyfinMediaStream } from './types.js';
 
 export const SUBTITLE_MODES = [
@@ -63,35 +63,12 @@ export function trackPreferencesFrom(
   };
 }
 
-/** Clients send the bibliographic ISO 639-2 codes; tracks carry the terminologic ones. */
-const TERMINOLOGIC: Record<string, string> = {
-  alb: 'sqi',
-  arm: 'hye',
-  baq: 'eus',
-  bur: 'mya',
-  chi: 'zho',
-  cze: 'ces',
-  dut: 'nld',
-  fre: 'fra',
-  geo: 'kat',
-  ger: 'deu',
-  gre: 'ell',
-  ice: 'isl',
-  mac: 'mkd',
-  mao: 'mri',
-  may: 'msa',
-  per: 'fas',
-  rum: 'ron',
-  slo: 'slk',
-  tib: 'bod',
-  wel: 'cym',
-};
-
+/** The language a code or tag names; one the mapping lacks stays as written. */
 function canonical(code: unknown): string | undefined {
   if (typeof code !== 'string') return undefined;
   const lower = code.trim().toLowerCase();
   if (!lower) return undefined;
-  return TERMINOLOGIC[lower] ?? languageToIso6392(lower) ?? lower;
+  return tagLanguage(lower) ?? lower;
 }
 
 const isOriginal = (language: string | undefined) =>
