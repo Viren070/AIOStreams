@@ -280,14 +280,19 @@ function useFailover(
   const play = usePlay();
   const { started } = player.state;
   const failed = !!player.state.error && !started;
-  const next = React.useRef<() => void>(undefined);
-  next.current = () => {
+  const next = React.useRef<(current: () => boolean) => void>(undefined);
+  next.current = (current) => {
     const tried = triedVersions.get(item.Id!) ?? new Set<string>();
     triedVersions.set(item.Id!, tried.add(versionKey(source)));
+    // The list the player and the picker showed: asking anew can search every indexer again.
     void queryClient.fetchQuery(options(item.Id!)).then(
       (info) => {
+        // Gone back, or on another version, by the time the list came.
+        if (!current()) return;
         const sources = playableSources(info);
-        const at = sources.findIndex((s) => sameVersion(s, source));
+        const exact = sources.findIndex((s) => !!s.Id && s.Id === source.Id);
+        const at =
+          exact >= 0 ? exact : sources.findIndex((s) => sameVersion(s, source));
         const to = sources.slice(at + 1).find((s) => !tried.has(versionKey(s)));
         if (!to) return;
         toast.info("This version didn't play, so the next one is starting.");
@@ -300,7 +305,12 @@ function useFailover(
     if (started) triedVersions.delete(item.Id!);
   }, [started, item.Id]);
   React.useEffect(() => {
-    if (on && !off && failed) next.current?.();
+    if (!on || off || !failed) return;
+    let current = true;
+    next.current?.(() => current);
+    return () => {
+      current = false;
+    };
   }, [on, off, failed]);
 }
 
