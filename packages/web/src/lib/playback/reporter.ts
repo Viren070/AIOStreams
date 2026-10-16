@@ -72,11 +72,12 @@ export class PlaybackReporter {
     if (this.stopped) return Promise.resolve();
     this.stopped = true;
     if (this.timer) clearInterval(this.timer);
-    // keepalive lets the report leave while the page is closing.
+    // keepalive lets the report leave while the page is closing. Only then:
+    // Chromium 69 (2020 Samsung TVs) refuses it on a cross-origin request.
     return this.client
       .request('POST', '/Sessions/Playing/Stopped', {
         body: this.body(),
-        keepalive: true,
+        keepalive: document.visibilityState === 'hidden',
       })
       .then(
         () => {},
