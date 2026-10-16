@@ -29,7 +29,7 @@ router.get('/v1/parties', async (req, res) => {
     res.status(401).json({ error: 'Sign in to this server first' });
     return;
   }
-  res.json({ parties: listedParties(user) });
+  res.json({ parties: await listedParties(user) });
 });
 
 export default router;

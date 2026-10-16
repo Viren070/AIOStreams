@@ -1,16 +1,20 @@
 import type { IncomingMessage, Server as HttpServer } from 'http';
 import type { Duplex } from 'stream';
-import { randomBytes } from 'crypto';
+import { createHmac, randomBytes } from 'crypto';
 import proxyaddr from 'proxy-addr';
 import { ipKeyGenerator } from 'express-rate-limit';
 import { WebSocketServer, type RawData, type WebSocket } from 'ws';
 import {
+  andThen,
   config as appConfig,
   createLogger,
-  GroupHub,
   PARTY_LIMITS,
   PARTY_PROTOCOL,
+  sharedBackend,
+  SharedTx,
+  SyncGroup,
   type GroupMessage,
+  type MaybePromise,
   type PartyChat,
   type PartyClientMessage,
   type PartyCloseReason,
@@ -20,7 +24,9 @@ import {
   type PartyMemberInfo,
   type PartyPreview,
   type PartyServerMessage,
-  type SyncGroup,
+  type PlaylistItem,
+  type SavedGroup,
+  type SharedMessage,
 } from '@aiostreams/core';
 import { isTrustedIp } from '../middlewares/ip.js';
 import { userForToken, type TokenUser } from '../routes/jellyfin/context.js';
@@ -29,6 +35,11 @@ import { AddressBook, Bucket } from './limits.js';
 import { parseMessage } from './messages.js';
 import { ticketExpiry, ticketFor } from './ticket.js';
 import { relayMode } from './mode.js';
+
+/*
+ * Parties live in the shared store, so any replica serves any member: a change
+ * commits there, and each replica writes what it says to its own members.
+ */
 
 const logger = createLogger('party');
 
@@ -49,7 +60,13 @@ const REPORT_STALE_MS = 15_000;
 /** Offsets shown are rounded to this, and smaller ones not shown. */
 const OFFSET_STEP_MS = 500;
 const OFFSET_MIN_MS = 1_000;
+/** Chat keeps a party from idling, noted at most this often. */
+const CHAT_ACTIVITY_MS = 60_000;
 const MAX_STRIKES = 5;
+/** Marks commands, after which a member's reports say nothing. */
+const COMMAND = 1;
+/** Marks what may take a seat from a connection, so replicas look again. */
+const RESEAT = 2;
 
 /** Requests any member makes while only the host controls playback. */
 const UNCONTROLLED = new Set(['Buffer', 'Ready', 'IgnoreWait']);
@@ -66,37 +83,46 @@ interface Seat {
   id: string;
   key: string;
   name: string;
-  conn: Conn | null;
-  away?: ReturnType<typeof setTimeout>;
+  /** Its address, keyed, for bans. */
   address: string;
-  report?: { positionMs: number; at: number };
-  /** Its status as last sent. */
-  shown?: MemberStatus;
+  /** The replica holding its connection; null while it is away. */
+  at: string | null;
+  /** Its connection's id; one taking the seat over closes the older. */
+  conn: string;
+  /** When a seat that is away is given up. */
+  awayUntil?: number;
+  /** How far behind the group it plays, from its last report. */
+  offsetMs?: number;
 }
 
 interface Party {
   id: string;
   group: SyncGroup;
-  ticket: string;
-  hostTicket: string;
   expiresAt: number;
   host: string;
   lock: PartyLock;
   home: Home | null;
   seats: Map<string, Seat>;
-  chat: PartyChat[];
-  banned: Set<string>;
+  banned: string[];
   lastActivity: number;
-  reported: boolean;
-  /** A member's name changed since the list was last sent. */
-  renamed: boolean;
+}
+
+interface SavedParty extends Omit<Party, 'id' | 'group' | 'seats'> {
+  seats: Seat[];
+  group: SavedGroup;
 }
 
 interface Conn {
   ws: WebSocket;
+  id: string;
   address: string;
-  party?: Party;
-  seat?: Seat;
+  party?: string;
+  seat?: string;
+  /** Seated before its join commits, so what that join says reaches it. */
+  pending?: boolean;
+  report?: { positionMs: number; at: number };
+  /** The round trip the client last measured, stored with its next report. */
+  rtt?: number;
   /** When anything last came from the client, ping or not. */
   heard: number;
   strikes: number;
@@ -105,19 +131,108 @@ interface Conn {
   chats?: Bucket;
   reactions?: Bucket;
   hello?: ReturnType<typeof setTimeout>;
-  /** Messages after one waiting on a token check wait their turn. */
+  /** Messages after a hello wait their turn. */
   queue?: Promise<void>;
 }
 
-const key = () => randomBytes(16).toString('base64url');
-const memberId = () => randomBytes(9).toString('base64url');
+type MemberStatus = Omit<PartyMemberInfo, 'name'>;
 
-const parties = new Map<string, Party>();
-const byGroup = new WeakMap<SyncGroup, Party>();
+const key = () => randomBytes(16).toString('base64url');
+const randomId = () => randomBytes(9).toString('base64url');
+
+const store = sharedBackend();
+const parties = store.records<Party>({
+  name: 'relay',
+  save: saveParty,
+  bulk: (party) => party.group.queue.items,
+  load: loadParty,
+  due: dueOf,
+  tags: (party) => {
+    const tags = replicasOf(party).map((replica) => `at:${replica}`);
+    if (party.home) tags.push('homed');
+    return tags;
+  },
+  replicas: replicasOf,
+  before: rosterOf,
+  settle: (party, tx, before) => {
+    // Offsets measured while playing say nothing once it stops.
+    if (party.group.stateType !== 'Playing')
+      for (const seat of party.seats.values()) seat.offsetMs = undefined;
+    showMembers(party, tx, before as Roster);
+  },
+  receive,
+  lapse,
+  orphaned,
+  lost,
+});
+
+/** This replica's members, by party and seat. */
+const here = new Map<string, Map<string, Conn>>();
 const addresses = new AddressBook(32, [20 / 3600, 10], [0.5, 10]);
-const hub = new GroupHub(deliver);
-/** Whose request the group is handling, sent on as `by`. */
-let acting: string | undefined;
+let stopping = false;
+
+/** The party being changed, which the group's messages go out through. */
+let current:
+  { party: Party; tx: SharedTx; by?: string; chat?: PartyChat[] } | undefined;
+
+let addressKey: Buffer | undefined;
+/** An address as a party keeps it, so the store holds no addresses. */
+const keyedAddress = (address: string) =>
+  createHmac(
+    'sha256',
+    (addressKey ??= Buffer.from(
+      `party-address:${appConfig.bootstrap.secretKey}`
+    ))
+  )
+    .update(address)
+    .digest('base64url')
+    .slice(0, 22);
+
+const ticketOf = (party: Party) => ticketFor(party.id, party.expiresAt);
+const hostTicketOf = (party: Party) =>
+  ticketFor(party.id, party.expiresAt, 'host');
+
+function saveParty(party: Party): SavedParty {
+  return {
+    expiresAt: party.expiresAt,
+    host: party.host,
+    lock: party.lock,
+    home: party.home,
+    seats: [...party.seats.values()],
+    banned: party.banned,
+    lastActivity: party.lastActivity,
+    group: party.group.save(),
+  };
+}
+
+function loadParty(
+  saved: SavedParty,
+  items: PlaylistItem[] | null,
+  id: string
+): Party {
+  return {
+    ...saved,
+    id,
+    group: SyncGroup.restore(saved.group, items ?? [], deliver),
+    seats: new Map(saved.seats.map((seat) => [seat.id, seat])),
+  };
+}
+
+function replicasOf(party: Party): string[] {
+  const out: string[] = [];
+  for (const { at } of party.seats.values())
+    if (at && !out.includes(at)) out.push(at);
+  return out;
+}
+
+function dueOf(party: Party): number {
+  let due = Math.min(party.lastActivity + IDLE_MS, party.expiresAt);
+  if (party.group.waitDeadline !== null)
+    due = Math.min(due, party.group.waitDeadline);
+  for (const { awayUntil } of party.seats.values())
+    if (awayUntil !== undefined) due = Math.min(due, awayUntil);
+  return due;
+}
 
 /**
  * A whole text frame. A server's frames are unmasked, so one encoding is the
@@ -143,25 +258,15 @@ function encode(message: PartyServerMessage): Buffer {
 
 /**
  * Sockets hold what they are sent until this turn of the event loop ends, so
- * all a request sends one member, and its party's member list, is one write.
+ * all a change sends one member is one write.
  */
 const corked = new Set<Duplex>();
-const touched = new Set<Party>();
 let flushing: ReturnType<typeof setImmediate> | null = null;
 
 function flush(): void {
-  for (const party of touched)
-    if (parties.get(party.id) === party) showMembers(party);
-  touched.clear();
   for (const socket of corked) socket.uncork();
   corked.clear();
   flushing = null;
-}
-
-/** Sends the member list as this turn ends, once however often it changed. */
-function touch(party: Party): void {
-  touched.add(party);
-  flushing ??= setImmediate(flush);
 }
 
 /** `now` for what is timed, which goes out at once with whatever it waited behind. */
@@ -193,103 +298,128 @@ function sendData(
 const send = (conn: Conn | null | undefined, message: PartyServerMessage) =>
   sendData(conn, encode(message));
 
-function sendTo(party: Party, ids: Iterable<string>, data: Buffer): void {
-  for (const id of ids) sendData(party.seats.get(id)?.conn, data);
-}
+const everyone = (party: Party) => [...party.seats.keys()];
 
-function broadcast(party: Party, message: PartyServerMessage): void {
-  sendTo(party, party.seats.keys(), encode(message));
-}
-
-/** How far behind the group a member plays, from its last report. */
-function offsetOf(party: Party, seat: Seat, now: number): number | undefined {
-  const { report } = seat;
-  if (!report || party.group.stateType !== 'Playing') return undefined;
-  if (now - report.at > REPORT_STALE_MS) return undefined;
-  const gap =
-    party.group.currentPositionMs() - (report.positionMs + now - report.at);
-  return Math.abs(gap) < OFFSET_MIN_MS
-    ? undefined
-    : Math.round(gap / OFFSET_STEP_MS) * OFFSET_STEP_MS;
-}
-
-type MemberStatus = Omit<PartyMemberInfo, 'name'>;
-
-function statusOf(party: Party, seat: Seat, now: number): MemberStatus {
+function statusOf(party: Party, seat: Seat): MemberStatus {
   const buffering = !!party.group.member(seat.id)?.buffering;
   return {
     id: seat.id,
     host: seat.id === party.host,
-    away: !seat.conn,
+    away: seat.at === null,
     buffering,
-    offsetMs: buffering ? undefined : offsetOf(party, seat, now),
+    offsetMs: buffering ? undefined : seat.offsetMs,
   };
 }
 
-const sameStatus = (a: MemberStatus | undefined, b: MemberStatus) =>
-  a?.host === b.host &&
-  a.away === b.away &&
-  a.buffering === b.buffering &&
-  a.offsetMs === b.offsetMs;
-
 function members(party: Party): PartyMemberInfo[] {
-  const now = Date.now();
   return [...party.seats.values()].map((seat) => ({
-    ...statusOf(party, seat, now),
+    ...statusOf(party, seat),
     name: seat.name,
   }));
 }
 
-/** The whole list when who is in the party changed, else the statuses that did. */
-function showMembers(
-  party: Party,
-  change: { joined?: string; left?: string } = {}
-) {
-  party.reported = false;
-  if (change.joined || change.left || party.renamed) {
-    party.renamed = false;
-    const list = members(party);
-    for (const m of list) party.seats.get(m.id)!.shown = m;
-    return broadcast(party, { t: 'members', members: list, ...change });
-  }
-  const now = Date.now();
-  let changed: MemberStatus[] | undefined;
-  for (const seat of party.seats.values()) {
-    const status = statusOf(party, seat, now);
-    if (sameStatus(seat.shown, status)) continue;
-    seat.shown = status;
-    (changed ??= []).push(status);
-  }
-  if (changed) broadcast(party, { t: 'status', members: changed });
+/** A member's status as one number, which is all a roster needs to compare. */
+function statusCode(party: Party, seat: Seat): number {
+  const buffering = !!party.group.member(seat.id)?.buffering;
+  const offset = buffering ? 0 : (seat.offsetMs ?? 0) / OFFSET_STEP_MS;
+  return (
+    offset * 8 +
+    (seat.id === party.host ? 4 : 0) +
+    (seat.at === null ? 2 : 0) +
+    (buffering ? 1 : 0)
+  );
 }
 
-function welcome(party: Party, seat: Seat): PartyServerMessage {
+/** Each member's id, name and status code, in turn. */
+type Roster = (string | number)[];
+
+function rosterOf(party: Party): Roster {
+  const roster: Roster = [];
+  for (const seat of party.seats.values())
+    roster.push(seat.id, seat.name, statusCode(party, seat));
+  return roster;
+}
+
+function inRoster(roster: Roster, id: string): boolean {
+  for (let i = 0; i < roster.length; i += 3) if (roster[i] === id) return true;
+  return false;
+}
+
+/** The whole list when who is in the party changed, else the statuses that did. */
+function showMembers(party: Party, tx: SharedTx, before: Roster): void {
+  if (!party.seats.size) return;
+  let left: string[] | undefined;
+  let renamed = false;
+  let changed: MemberStatus[] | undefined;
+  for (let i = 0; i < before.length; i += 3) {
+    const seat = party.seats.get(before[i] as string);
+    if (!seat) (left ??= []).push(before[i] as string);
+    else if (seat.name !== before[i + 1]) renamed = true;
+    else if (statusCode(party, seat) !== before[i + 2])
+      (changed ??= []).push(statusOf(party, seat));
+  }
+  let joined: string[] | undefined;
+  if (party.seats.size !== before.length / 3 - (left?.length ?? 0))
+    for (const id of party.seats.keys())
+      if (!inRoster(before, id)) (joined ??= []).push(id);
+  if (joined || left || renamed) {
+    const to = everyone(party);
+    const list = members(party);
+    if (!joined && !left)
+      return tx.send(to, encode({ t: 'members', members: list }));
+    for (const id of joined ?? [])
+      tx.send(to, encode({ t: 'members', members: list, joined: id }));
+    for (const id of left ?? [])
+      tx.send(to, encode({ t: 'members', members: list, left: id }));
+    return;
+  }
+  if (changed)
+    tx.send(everyone(party), encode({ t: 'status', members: changed }));
+}
+
+/** Runs `fn` on a party with what its group says going out through `tx`. */
+function changing<R>(
+  party: Party,
+  tx: SharedTx,
+  fn: () => R,
+  opts: { by?: string; chat?: PartyChat[] } = {}
+): R {
+  current = { party, tx, ...opts };
+  try {
+    return fn();
+  } finally {
+    current = undefined;
+  }
+}
+
+function welcome(
+  party: Party,
+  seat: Seat,
+  chat: PartyChat[]
+): PartyServerMessage {
   return {
     t: 'welcome',
     party: party.id,
     you: seat.id,
     seat: seat.key,
-    ticket: party.ticket,
-    host: seat.id === party.host ? party.hostTicket : undefined,
+    ticket: ticketOf(party),
+    host: seat.id === party.host ? hostTicketOf(party) : undefined,
     state: party.group.stateType,
     lock: party.lock,
     members: members(party),
-    chat: party.chat,
+    chat,
     now: Date.now(),
   };
 }
 
-function deliver(
-  group: SyncGroup,
-  to: readonly string[],
-  message: GroupMessage
-): void {
-  const party = byGroup.get(group);
-  if (!party) return;
+function deliver(to: readonly string[], message: GroupMessage): void {
+  if (!current) return;
+  const { party, tx, by } = current;
   switch (message.kind) {
     case 'joined': {
       const seat = party.seats.get(to[0]);
-      if (seat) send(seat.conn, welcome(party, seat));
+      if (seat)
+        tx.send(to, encode(welcome(party, seat, current.chat ?? [])), RESEAT);
       return;
     }
     case 'user-joined':
@@ -297,33 +427,57 @@ function deliver(
     case 'user-left':
       return;
     case 'command':
-      // Positions reported before a pause or seek no longer say anything.
+      // Positions measured before a pause or seek no longer say anything.
       for (const id of to) {
         const seat = party.seats.get(id);
-        if (seat) seat.report = undefined;
+        if (seat) seat.offsetMs = undefined;
       }
-      return sendTo(
-        party,
+      return tx.send(
         to,
-        encode({ t: 'command', command: message.command })
+        encode({ t: 'command', command: message.command }),
+        COMMAND
       );
     case 'queue':
-      return sendTo(
-        party,
-        to,
-        encode({ t: 'queue', queue: message.queue, by: acting })
-      );
+      return tx.send(to, encode({ t: 'queue', queue: message.queue, by }));
     case 'state':
-      return sendTo(
-        party,
+      return tx.send(
         to,
         encode({
           t: 'state',
           state: message.state,
           reason: message.reason,
-          by: acting,
+          by,
         })
       );
+  }
+}
+
+/** Writes a change's messages to this replica's members, and lets go of those it moved. */
+function receive(
+  id: string,
+  messages: readonly SharedMessage[],
+  record?: () => Party | null
+): void {
+  const local = here.get(id);
+  if (!local) return;
+  let reseat = false;
+  for (const { to, data, mark } of messages) {
+    reseat ||= (mark & RESEAT) !== 0;
+    for (const seat of to) {
+      const conn = local.get(seat);
+      if (!conn) continue;
+      if (mark & COMMAND) conn.report = undefined;
+      sendData(conn, data);
+    }
+  }
+  if (!record || !reseat) return;
+  const party = record();
+  for (const [seatId, conn] of local) {
+    if (conn.pending) continue;
+    const seat = party?.seats.get(seatId);
+    if (seat?.conn === conn.id) continue;
+    // Gone from the party, or taken over by a newer connection.
+    unseat(conn, seat ? 4000 : 1000);
   }
 }
 
@@ -334,7 +488,7 @@ function preview(party: Party): PartyPreview {
     members: [...party.seats.values()].map((seat) => ({
       name: seat.name,
       host: seat.id === party.host,
-      away: !seat.conn,
+      away: seat.at === null,
     })),
     state: party.group.stateType,
     playing: playing
@@ -352,89 +506,100 @@ const groupMember = (id: string) => ({
   ignoreWait: false,
 });
 
-function newSeat(conn: Conn, name: string): Seat {
-  return { id: memberId(), key: key(), name, conn, address: conn.address };
+function newSeat(conn: Conn, id: string, name: string): Seat {
+  return {
+    id,
+    key: key(),
+    name,
+    address: keyedAddress(conn.address),
+    at: store.replica,
+    conn: conn.id,
+  };
 }
 
-function seatConn(conn: Conn, party: Party, seat: Seat): void {
+function newParty(
+  id: string,
+  seat: Seat,
+  expiresAt: number,
+  home: Home | null
+): Party {
+  return {
+    id,
+    group: new SyncGroup('party', deliver),
+    expiresAt,
+    host: seat.id,
+    lock: { control: false, joins: false },
+    home,
+    seats: new Map([[seat.id, seat]]),
+    banned: [],
+    lastActivity: Date.now(),
+  };
+}
+
+function localOf(id: string): Map<string, Conn> {
+  let local = here.get(id);
+  if (!local) {
+    here.set(id, (local = new Map()));
+    parties.hold(id);
+  }
+  return local;
+}
+
+function tidy(id: string): void {
+  const local = here.get(id);
+  if (!local || local.size) return;
+  here.delete(id);
+  parties.release(id);
+}
+
+/** Seats a connection here ahead of its join, giving back what it displaced. */
+function seatHere(conn: Conn, party: string, seat: string): Conn | undefined {
   clearTimeout(conn.hello);
   conn.party = party;
   conn.seat = seat;
-  seat.conn = conn;
+  conn.pending = true;
+  const local = localOf(party);
+  const was = local.get(seat);
+  local.set(seat, conn);
+  return was === conn ? undefined : was;
 }
 
 /** Detaches a connection from its seat, so its close no longer holds the seat. */
-function unseat(conn: Conn | null, closeCode?: number): void {
+function unseat(conn: Conn | null | undefined, closeCode?: number): void {
   if (!conn) return;
-  conn.party = undefined;
-  conn.seat = undefined;
+  const { party, seat } = conn;
+  conn.party = conn.seat = undefined;
+  conn.pending = false;
+  if (party && seat) {
+    const local = here.get(party);
+    if (local?.get(seat) === conn) local.delete(seat);
+    tidy(party);
+  }
   if (closeCode) conn.ws.close(closeCode);
 }
 
-function openParty(
-  id: string,
-  conn: Conn,
-  name: string,
-  opts: { ticket?: string; expiresAt?: number; home?: Home | null }
-): Party {
-  const seat = newSeat(conn, name);
-  const expiresAt = opts.expiresAt ?? Date.now() + LIFETIME_MS;
-  let party!: Party;
-  // The welcome goes out from inside create, so the party must be known first.
-  hub.create('party', groupMember(seat.id), {
-    opened: (group) => {
-      party = {
-        id,
-        group,
-        ticket: opts.ticket ?? ticketFor(id, expiresAt),
-        hostTicket: ticketFor(id, expiresAt, 'host'),
-        expiresAt,
-        host: seat.id,
-        lock: { control: false, joins: false },
-        home: opts.home ?? null,
-        seats: new Map([[seat.id, seat]]),
-        chat: [],
-        banned: new Set(),
-        lastActivity: Date.now(),
-        reported: false,
-        renamed: false,
-      };
-      parties.set(id, party);
-      byGroup.set(group, party);
-    },
-  });
-  seatConn(conn, party, seat);
-  seat.shown = statusOf(party, seat, Date.now());
-  return party;
+function close(party: Party, tx: SharedTx, reason: PartyCloseReason): void {
+  tx.send(everyone(party), encode({ t: 'closed', reason }), RESEAT);
+  tx.drop();
 }
 
-function close(party: Party, reason: PartyCloseReason): void {
-  broadcast(party, { t: 'closed', reason });
-  for (const seat of party.seats.values()) {
-    clearTimeout(seat.away);
-    unseat(seat.conn, 1000);
-  }
-  party.seats.clear();
-  hub.drop(party.group);
-  parties.delete(party.id);
-}
-
-function removeSeat(party: Party, seat: Seat): void {
-  clearTimeout(seat.away);
+function removeSeat(party: Party, tx: SharedTx, seat: Seat): void {
   if (!party.seats.delete(seat.id)) return;
-  unseat(seat.conn);
-  hub.leave(seat.id);
-  if (!party.seats.size) {
-    parties.delete(party.id);
-    return;
-  }
+  party.group.leave(seat.id);
+  if (!party.seats.size) return tx.drop();
   if (party.host === seat.id) {
     const seats = [...party.seats.values()];
-    const next = seats.find((s) => s.conn) ?? seats[0];
+    const next = seats.find((s) => s.at !== null) ?? seats[0];
     party.host = next.id;
-    send(next.conn, { t: 'host', ticket: party.hostTicket });
+    tx.send([next.id], encode({ t: 'host', ticket: hostTicketOf(party) }));
   }
-  showMembers(party, { left: seat.id });
+}
+
+/** The group doesn't wait for a member who is gone. */
+function away(party: Party, seat: Seat): void {
+  seat.at = null;
+  seat.awayUntil = Date.now() + SEAT_GRACE_MS;
+  party.group.handle(seat.id, { type: 'IgnoreWait', ignoreWait: true });
 }
 
 function homeOf(user: TokenUser | null, code: string | undefined): Home | null {
@@ -457,6 +622,9 @@ function refuse(conn: Conn, code: PartyErrorCode, end = true): void {
 const userOf = (token: string | undefined) =>
   token ? userForToken(token).catch(() => null) : Promise.resolve(null);
 
+const chatOf = (entries: string[]): PartyChat[] =>
+  entries.map((entry) => JSON.parse(entry) as PartyChat);
+
 async function create(
   conn: Conn,
   m: Extract<PartyClientMessage, { t: 'create' }>
@@ -464,10 +632,28 @@ async function create(
   const user = await userOf(m.token);
   if (relayMode() !== 'public' && !user) return refuse(conn, 'denied');
   if (!addresses.create(conn.address)) return refuse(conn, 'rate');
-  if (GroupHub.total() >= appConfig.party.maxParties)
-    return refuse(conn, 'busy');
-  if (parties.has(m.party)) return refuse(conn, 'exists');
-  openParty(m.party, conn, m.name, { home: homeOf(user, m.code) });
+  const seat = newSeat(conn, randomId(), m.name);
+  seatHere(conn, m.party, seat.id);
+  const created = await settled(conn, () =>
+    parties.create(
+      m.party,
+      (tx) => {
+        const party = newParty(
+          m.party,
+          seat,
+          Date.now() + LIFETIME_MS,
+          homeOf(user, m.code)
+        );
+        changing(party, tx, () => party.group.create(groupMember(seat.id)));
+        return party;
+      },
+      appConfig.party.maxParties
+    )
+  );
+  if (created !== 'ok') {
+    unseat(conn);
+    return refuse(conn, created);
+  }
   logger.debug({ party: m.party, home: !!user }, 'party started');
 }
 
@@ -476,37 +662,94 @@ async function join(
   m: Extract<PartyClientMessage, { t: 'join' | 'resume' }>
 ): Promise<void> {
   if (!addresses.join(conn.address)) return refuse(conn, 'rate');
-  const party = parties.get(m.party);
-  if (!party) {
-    if (m.t === 'resume') return resume(conn, m);
-    return refuse(conn, 'not-found');
-  }
-  const held =
-    m.t === 'join' && m.seat
-      ? [...party.seats.values()].find((s) => s.key === m.seat)
-      : undefined;
-  if (held) {
-    clearTimeout(held.away);
-    held.away = undefined;
-    if (held.conn !== conn) unseat(held.conn, 4000);
-    if (held.name !== m.name) {
-      held.name = m.name;
-      party.renamed = true;
+  localOf(m.party);
+  try {
+    const [found, entries] = await Promise.all([
+      parties.get(m.party),
+      parties.log(m.party),
+    ]);
+    if (!found) {
+      if (m.t === 'resume') return await resume(conn, m);
+      return refuse(conn, 'not-found');
     }
-    seatConn(conn, party, held);
-    party.group.rejoin(held.id);
-    return touch(party);
+    const seatKey = m.t === 'join' ? m.seat : undefined;
+    const held = seatKey
+      ? [...found.seats.values()].find((s) => s.key === seatKey)
+      : undefined;
+    if (!held) {
+      // A resume's ticket shows it was in the party already.
+      const barred = await barredFrom(found, conn, m.token, m.t === 'resume');
+      if (barred) return refuse(conn, barred);
+    }
+    const chat = chatOf(entries);
+    const seatId = held?.id ?? randomId();
+    const replaced = seatHere(conn, m.party, seatId);
+    const result = await settled(conn, () =>
+      parties.update(m.party, (party, tx) => {
+        const seat = party.seats.get(seatId);
+        if (seat && held && seat.key === seatKey) {
+          return changing(
+            party,
+            tx,
+            () => {
+              seat.at = store.replica;
+              seat.conn = conn.id;
+              seat.awayUntil = undefined;
+              seat.name = m.name;
+              party.group.rejoin(seat.id);
+              return 'ok' as const;
+            },
+            { chat }
+          );
+        }
+        const barred = barredIn(party, conn, m.t === 'resume');
+        if (barred) return barred;
+        if (party.seats.size >= PARTY_LIMITS.members) return 'full';
+        return changing(
+          party,
+          tx,
+          () => {
+            const seat = newSeat(conn, seatId, m.name);
+            party.seats.set(seat.id, seat);
+            if (m.t === 'resume' && m.host) claimHost(party, tx, seat, m.host);
+            party.group.join(groupMember(seat.id));
+            return 'ok' as const;
+          },
+          { chat }
+        );
+      })
+    );
+    if (result !== 'ok') {
+      unseat(conn);
+      return refuse(conn, result ?? 'not-found');
+    }
+    unseat(replaced, 4000);
+  } finally {
+    tidy(m.party);
   }
-  // A resume's ticket shows it was in the party already.
-  const barred = await barredFrom(party, conn, m.token, m.t === 'resume');
-  if (barred) return refuse(conn, barred);
-  if (party.seats.size >= PARTY_LIMITS.members) return refuse(conn, 'full');
-  const seat = newSeat(conn, m.name);
-  party.seats.set(seat.id, seat);
-  seatConn(conn, party, seat);
-  if (m.t === 'resume' && m.host) claimHost(party, seat, m.host);
-  hub.join(party.group.id, groupMember(seat.id));
-  showMembers(party, { joined: seat.id });
+}
+
+/** A hello's change, which the connection waits on to be seated or not. */
+async function settled<T>(
+  conn: Conn,
+  change: () => MaybePromise<T>
+): Promise<T> {
+  try {
+    return await change();
+  } finally {
+    conn.pending = false;
+  }
+}
+
+/** Why someone new may not join the party as it is. */
+function barredIn(
+  party: Party,
+  conn: Conn,
+  member: boolean
+): PartyErrorCode | null {
+  if (party.banned.includes(keyedAddress(conn.address))) return 'denied';
+  if (party.lock.joins && !member) return 'locked';
+  return null;
 }
 
 /** Why someone new may not join the party, or see into it. */
@@ -517,11 +760,7 @@ async function barredFrom(
   member = false
 ): Promise<PartyErrorCode | null> {
   if (relayMode() === 'off' && !(await userOf(token))) return 'denied';
-  // It may have closed while the token was checked.
-  if (parties.get(party.id) !== party) return 'not-found';
-  if (party.banned.has(conn.address)) return 'denied';
-  if (party.lock.joins && !member) return 'locked';
-  return null;
+  return barredIn(party, conn, member);
 }
 
 async function peek(
@@ -529,7 +768,7 @@ async function peek(
   m: Extract<PartyClientMessage, { t: 'peek' }>
 ): Promise<void> {
   if (!addresses.join(conn.address)) return refuse(conn, 'rate');
-  const party = parties.get(m.party);
+  const party = await parties.get(m.party);
   if (!party) return refuse(conn, 'not-found');
   const barred = await barredFrom(party, conn, m.token);
   if (barred) return refuse(conn, barred);
@@ -540,13 +779,14 @@ async function peek(
 /** After a restart, the host's ticket makes it host again, whoever came back first. */
 function claimHost(
   party: Party,
+  tx: SharedTx,
   seat: Seat,
   claim: { ticket: string; lock: PartyLock }
 ): void {
   if (!ticketExpiry(party.id, claim.ticket, 'host')) return;
   party.host = seat.id;
   party.lock = claim.lock;
-  broadcast(party, { t: 'lock', lock: party.lock });
+  tx.send(everyone(party), encode({ t: 'lock', lock: party.lock }));
 }
 
 async function resume(
@@ -557,97 +797,163 @@ async function resume(
   if (!expiresAt) return refuse(conn, 'not-found');
   if (relayMode() === 'off' && !(await userOf(m.token)))
     return refuse(conn, 'denied');
-  if (parties.has(m.party)) return join(conn, m);
-  if (GroupHub.total() >= appConfig.party.maxParties)
-    return refuse(conn, 'busy');
-  const party = openParty(m.party, conn, m.name, {
-    ticket: m.ticket,
-    expiresAt,
+  const seat = newSeat(conn, randomId(), m.name);
+  seatHere(conn, m.party, seat.id);
+  const created = await settled(conn, () =>
+    parties.create(
+      m.party,
+      (tx) => {
+        const party = newParty(m.party, seat, expiresAt, null);
+        changing(party, tx, () => {
+          party.group.create(groupMember(seat.id));
+          if (m.host) claimHost(party, tx, seat, m.host);
+          const { items, index, positionMs, playing } = m.state;
+          party.group.handle(seat.id, {
+            type: 'Play',
+            items,
+            index,
+            startMs: positionMs,
+          });
+          if (!playing) party.group.handle(seat.id, { type: 'Pause' });
+        });
+        return party;
+      },
+      appConfig.party.maxParties
+    )
+  );
+  if (created === 'ok') {
+    logger.debug({ party: m.party }, 'party resumed');
+    return;
+  }
+  unseat(conn);
+  // Someone else brought it back first.
+  if (created === 'exists') return join(conn, m);
+  refuse(conn, created);
+}
+
+/** Changes the connection's party as its seat, unless another took that over. */
+function asMember<R>(
+  conn: Conn,
+  change: (party: Party, tx: SharedTx, seat: Seat) => R
+): Promise<R | undefined> | R | undefined {
+  const { party: id, seat: seatId } = conn;
+  if (!id || !seatId) return undefined;
+  return parties.update(id, (party, tx) => {
+    const seat = party.seats.get(seatId);
+    return seat?.conn === conn.id ? change(party, tx, seat) : undefined;
   });
-  if (m.host) claimHost(party, conn.seat!, m.host);
-  const { items, index, positionMs, playing } = m.state;
-  const from = conn.seat!.id;
-  party.group.handle(from, { type: 'Play', items, index, startMs: positionMs });
-  if (!playing) party.group.handle(from, { type: 'Pause' });
-  logger.debug({ party: m.party }, 'party resumed');
+}
+
+/** Logs a change that failed, for one that nobody waits on. */
+function quietly(done: unknown): void {
+  if (done instanceof Promise) done.catch(failed);
 }
 
 function inParty(conn: Conn, m: PartyClientMessage): void {
-  const { party, seat } = conn;
-  if (!party || !seat) return;
+  const { party: id, seat: me } = conn;
+  if (!id || !me) return;
   switch (m.t) {
     case 'request': {
-      const host = seat.id === party.host;
-      if (party.lock.control && !host && !UNCONTROLLED.has(m.request.type))
-        return refuse(conn, 'control', false);
-      party.lastActivity = Date.now();
-      // Buffering and readiness are the player's doing, not the member's.
-      acting = UNCONTROLLED.has(m.request.type) ? undefined : seat.id;
-      try {
-        party.group.handle(seat.id, m.request);
-      } finally {
-        acting = undefined;
-      }
-      return touch(party);
+      const by = UNCONTROLLED.has(m.request.type) ? undefined : me;
+      const done = asMember(conn, (party, tx, seat) => {
+        if (party.lock.control && seat.id !== party.host && by)
+          return 'control';
+        party.lastActivity = Date.now();
+        changing(party, tx, () => party.group.handle(seat.id, m.request), {
+          by,
+        });
+      });
+      return quietly(
+        andThen(done, (result) => {
+          if (result === 'control') refuse(conn, 'control', false);
+        })
+      );
     }
     case 'report':
-      seat.report = { positionMs: m.positionMs, at: m.at };
-      party.reported = true;
+      conn.report = { positionMs: m.positionMs, at: m.at };
       return;
     case 'chat': {
       conn.chats ??= new Bucket(1, 5);
       if (!conn.chats.take()) return refuse(conn, 'rate', false);
-      const message = { from: seat.id, text: m.text, at: Date.now() };
-      party.chat.push(message);
-      if (party.chat.length > PARTY_LIMITS.history) party.chat.shift();
-      party.lastActivity = message.at;
-      return broadcast(party, { t: 'chat', message });
+      const party = parties.peek(id);
+      if (!party) return;
+      const message: PartyChat = { from: me, text: m.text, at: Date.now() };
+      const tx = new SharedTx();
+      tx.send(everyone(party), encode({ t: 'chat', message }));
+      parties.append(id, JSON.stringify(message), PARTY_LIMITS.history, tx);
+      if (message.at - party.lastActivity > CHAT_ACTIVITY_MS)
+        quietly(
+          asMember(conn, (party) => {
+            party.lastActivity = message.at;
+          })
+        );
+      return;
     }
     case 'react': {
       conn.reactions ??= new Bucket(2, 8);
       if (!conn.reactions.take()) return;
-      const data = encode({ t: 'react', from: seat.id, emoji: m.emoji });
-      return sendTo(
-        party,
-        [...party.seats.keys()].filter((id) => id !== seat.id),
-        data
+      const party = parties.peek(id);
+      if (!party) return;
+      const tx = new SharedTx();
+      tx.send(
+        everyone(party).filter((seat) => seat !== me),
+        encode({ t: 'react', from: me, emoji: m.emoji })
       );
+      return parties.publish(id, tx);
     }
     case 'name':
-      seat.name = m.name;
-      party.renamed = true;
-      return touch(party);
-    case 'kick': {
-      const target = party.seats.get(m.member);
-      if (seat.id !== party.host || !target || target === seat) return;
-      send(target.conn, { t: 'closed', reason: 'removed' });
-      target.conn?.ws.close(1000);
-      party.banned.add(target.address);
-      return removeSeat(party, target);
-    }
+      return quietly(
+        asMember(conn, (party, tx, seat) =>
+          changing(party, tx, () => (seat.name = m.name))
+        )
+      );
+    case 'kick':
+      return quietly(
+        asMember(conn, (party, tx, seat) => {
+          const target = party.seats.get(m.member);
+          if (seat.id !== party.host || !target || target === seat) return;
+          changing(party, tx, () => {
+            tx.send(
+              [target.id],
+              encode({ t: 'closed', reason: 'removed' }),
+              RESEAT
+            );
+            party.banned.push(target.address);
+            removeSeat(party, tx, target);
+          });
+        })
+      );
     case 'lock':
-      if (seat.id !== party.host) return;
-      party.lock = {
-        control: m.control ?? party.lock.control,
-        joins: m.joins ?? party.lock.joins,
-      };
-      return broadcast(party, { t: 'lock', lock: party.lock });
-    case 'leave':
-      send(conn, { t: 'closed', reason: 'left' });
-      removeSeat(party, seat);
-      return conn.ws.close(1000);
+      return quietly(
+        asMember(conn, (party, tx, seat) => {
+          if (seat.id !== party.host) return;
+          party.lock = {
+            control: m.control ?? party.lock.control,
+            joins: m.joins ?? party.lock.joins,
+          };
+          tx.send(everyone(party), encode({ t: 'lock', lock: party.lock }));
+        })
+      );
+    case 'leave': {
+      // Its connection closes once what the leave says reaches it.
+      const done = asMember(conn, (party, tx, seat) =>
+        changing(party, tx, () => {
+          tx.send([seat.id], encode({ t: 'closed', reason: 'left' }), RESEAT);
+          removeSeat(party, tx, seat);
+          return true;
+        })
+      );
+      return quietly(
+        andThen(done, (left) => {
+          if (!left) conn.ws.close(1000);
+        })
+      );
+    }
   }
 }
 
-/** A promise when it waits on a token check; otherwise done on return. */
+/** A promise when it waits on a hello; otherwise done on return. */
 function handle(conn: Conn, m: PartyClientMessage): Promise<void> | void {
-  if (m.t === 'ping') {
-    const t1 = Date.now();
-    if (m.rtt !== undefined && conn.seat)
-      conn.party?.group.handle(conn.seat.id, { type: 'Ping', ping: m.rtt });
-    const pong = encode({ t: 'pong', t0: m.t0, t1, t2: Date.now() });
-    return sendData(conn, pong, true);
-  }
   if (
     m.t === 'create' ||
     m.t === 'join' ||
@@ -656,9 +962,18 @@ function handle(conn: Conn, m: PartyClientMessage): Promise<void> | void {
   ) {
     if (conn.party) return refuse(conn, 'invalid', false);
     if (m.v !== PARTY_PROTOCOL) return refuse(conn, 'version');
-    if (m.t === 'create') return create(conn, m);
-    if (m.t === 'peek') return peek(conn, m);
-    return join(conn, m);
+    const hello =
+      m.t === 'create'
+        ? create(conn, m)
+        : m.t === 'peek'
+          ? peek(conn, m)
+          : join(conn, m);
+    // The store failed it; the member tries again later.
+    return hello.catch((err) => {
+      failed(err);
+      unseat(conn);
+      refuse(conn, 'busy');
+    });
   }
   inParty(conn, m);
 }
@@ -676,7 +991,7 @@ function settle(conn: Conn, waiting: Promise<void>): Promise<void> {
   return done;
 }
 
-/** In order: at once, unless an earlier message still waits on a token check. */
+/** In order: at once, unless an earlier message still waits on a hello. */
 function run(conn: Conn, m: PartyClientMessage): void {
   if (conn.queue) {
     conn.queue = settle(
@@ -697,36 +1012,104 @@ function run(conn: Conn, m: PartyClientMessage): void {
 function dropped(conn: Conn): void {
   clearTimeout(conn.hello);
   addresses.disconnect(conn.address);
-  const { party, seat } = conn;
-  if (!party || !seat || seat.conn !== conn) return;
-  seat.conn = null;
-  // The group doesn't wait for a member who is gone.
-  party.group.handle(seat.id, { type: 'IgnoreWait', ignoreWait: true });
-  seat.away = setTimeout(() => removeSeat(party, seat), SEAT_GRACE_MS);
-  seat.away.unref?.();
-  touch(party);
+  if (!conn.party || stopping) return unseat(conn);
+  quietly(
+    asMember(conn, (party, tx, seat) =>
+      changing(party, tx, () => away(party, seat))
+    )
+  );
+  unseat(conn);
 }
 
-function sweep(): void {
-  const now = Date.now();
-  for (const party of parties.values()) {
-    if (now - party.lastActivity > IDLE_MS || now > party.expiresAt)
-      close(party, 'idle');
-  }
-  addresses.prune();
-}
-
+/** Stores members' offsets and round trips that moved, in one change a party. */
 function report(): void {
-  for (const party of parties.values()) if (party.reported) showMembers(party);
+  const at = Date.now();
+  for (const id of here.keys()) {
+    const party = parties.peek(id);
+    if (!party || !moved(party, here.get(id)!, at)) continue;
+    quietly(
+      parties.update(id, (party) => {
+        const at = Date.now();
+        for (const conn of here.get(id)?.values() ?? []) {
+          const seat = conn.seat ? party.seats.get(conn.seat) : undefined;
+          if (seat?.conn !== conn.id) continue;
+          seat.offsetMs = offsetOf(party, conn, at);
+          if (
+            conn.rtt !== undefined &&
+            party.group.pingMoved(seat.id, conn.rtt)
+          )
+            party.group.handle(seat.id, { type: 'Ping', ping: conn.rtt });
+        }
+      })
+    );
+  }
+}
+
+function moved(party: Party, local: Map<string, Conn>, at: number): boolean {
+  for (const conn of local.values()) {
+    const seat = conn.seat ? party.seats.get(conn.seat) : undefined;
+    if (seat?.conn !== conn.id) continue;
+    if (offsetOf(party, conn, at) !== seat.offsetMs) return true;
+    if (conn.rtt !== undefined && party.group.pingMoved(seat.id, conn.rtt))
+      return true;
+  }
+  return false;
+}
+
+/** How far behind the group a member plays, from its last report. */
+function offsetOf(party: Party, conn: Conn, at: number): number | undefined {
+  const { report } = conn;
+  if (!report || party.group.stateType !== 'Playing') return undefined;
+  if (at - report.at > REPORT_STALE_MS) return undefined;
+  const gap =
+    party.group.currentPositionMs() - (report.positionMs + at - report.at);
+  return Math.abs(gap) < OFFSET_MIN_MS
+    ? undefined
+    : Math.round(gap / OFFSET_STEP_MS) * OFFSET_STEP_MS;
+}
+
+/** Idle and expired parties close, seats away too long go, and waits run out. */
+function lapse(id: string): Promise<void> | void {
+  const done = parties.update(id, (party, tx) => {
+    const at = Date.now();
+    if (at - party.lastActivity > IDLE_MS || at > party.expiresAt)
+      return close(party, tx, 'idle');
+    changing(party, tx, () => {
+      for (const seat of [...party.seats.values()])
+        if (seat.awayUntil !== undefined && seat.awayUntil <= at)
+          removeSeat(party, tx, seat);
+      if (party.seats.size) party.group.tick();
+    });
+  });
+  return andThen(done, () => undefined);
+}
+
+/** Members of a replica that went without saying are away, as if they dropped. */
+async function orphaned(replica: string): Promise<void> {
+  for (const id of await parties.tagged(`at:${replica}`)) {
+    await parties.update(id, (party, tx) =>
+      changing(party, tx, () => {
+        for (const seat of party.seats.values())
+          if (seat.at === replica) away(party, seat);
+      })
+    );
+  }
+}
+
+/** Members here may have missed messages; they come back and are caught up. */
+function lost(): void {
+  for (const local of [...here.values()])
+    for (const conn of [...local.values()]) unseat(conn, 1012);
 }
 
 /** Parties a user of this server sees without an invite. */
-export function listedParties(user: TokenUser): PartyListing[] {
+export async function listedParties(user: TokenUser): Promise<PartyListing[]> {
   const instance = appConfig.party.scope === 'instance';
   const out: PartyListing[] = [];
-  for (const party of parties.values()) {
-    const home = party.home;
-    if (!home) continue;
+  const homed = await parties.tagged('homed');
+  for (const party of await Promise.all(homed.map((id) => parties.get(id)))) {
+    const home = party?.home;
+    if (!party || !home) continue;
     const visible =
       home.hidden || user.persona?.hidden
         ? home.userId === user.userId
@@ -741,6 +1124,21 @@ export function listedParties(user: TokenUser): PartyListing[] {
     });
   }
   return out;
+}
+
+/** Marks this replica's members away, for others to take them over. */
+export async function closePartyRelay(): Promise<void> {
+  stopping = true;
+  await Promise.all(
+    [...here.keys()].map((id) =>
+      parties.update(id, (party, tx) =>
+        changing(party, tx, () => {
+          for (const seat of party.seats.values())
+            if (seat.at === store.replica) away(party, seat);
+        })
+      )
+    )
+  ).catch(failed);
 }
 
 function reject(socket: Duplex, status: number, reason: string): void {
@@ -769,7 +1167,7 @@ export function attachPartyRelay(server: HttpServer): void {
       else if (quiet >= HEARTBEAT_MS / 2) ws.ping();
     }
   }, HEARTBEAT_MS);
-  const sweeper = setInterval(sweep, SWEEP_MS);
+  const sweeper = setInterval(() => addresses.prune(), SWEEP_MS);
   const reporter = setInterval(report, REPORT_MS);
   for (const timer of [heartbeat, sweeper, reporter]) timer.unref();
   wss.on('close', () => {
@@ -784,6 +1182,7 @@ export function attachPartyRelay(server: HttpServer): void {
       if (!addresses.connect(address)) return void ws.close(4029);
       const conn: Conn = {
         ws,
+        id: randomId(),
         address,
         heard: Date.now(),
         strikes: 0,
@@ -802,6 +1201,17 @@ export function attachPartyRelay(server: HttpServer): void {
         if (!m) {
           if (++conn.strikes >= MAX_STRIKES) ws.close(4000);
           else send(conn, { t: 'error', code: 'invalid' });
+          return;
+        }
+        // Answered at once, whatever waits: its times are what it measures.
+        if (m.t === 'ping') {
+          const t1 = Date.now();
+          sendData(
+            conn,
+            encode({ t: 'pong', t0: m.t0, t1, t2: Date.now() }),
+            true
+          );
+          if (m.rtt !== undefined) conn.rtt = m.rtt;
           return;
         }
         run(conn, m);
