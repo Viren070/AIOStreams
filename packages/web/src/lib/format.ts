@@ -198,12 +198,21 @@ export function untilLabel(iso: string): string {
   const days = Math.round(
     (midnight(airDay(iso)) - midnight(new Date())) / DAY_MS
   );
-  const format = new Intl.RelativeTimeFormat(formatLocale(), {
+  const [count, unit] =
+    days < 14
+      ? [days, 'day' as const]
+      : [Math.round(days / 7), 'week' as const];
+  // Chromium 69 (2020 Samsung TVs) has no RelativeTimeFormat.
+  if (!Intl.RelativeTimeFormat) {
+    if (unit === 'day' && count === 0) return 'today';
+    if (unit === 'day' && count === 1) return 'tomorrow';
+    if (unit === 'day' && count === -1) return 'yesterday';
+    const units = `${Math.abs(count)} ${unit}${Math.abs(count) === 1 ? '' : 's'}`;
+    return count < 0 ? `${units} ago` : `in ${units}`;
+  }
+  return new Intl.RelativeTimeFormat(formatLocale(), {
     numeric: 'auto',
-  });
-  return days < 14
-    ? format.format(days, 'day')
-    : format.format(Math.round(days / 7), 'week');
+  }).format(count, unit);
 }
 
 /** Whole years from one date to another, or to today. */

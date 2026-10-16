@@ -333,8 +333,15 @@ export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
             onOpenChange={setOpen}
             // Opened from keys, focus moves into the list; a pointer or touch keeps it.
             onOpenAutoFocus={(e) => {
-              if (!buttonRef.current?.matches(':focus-visible'))
-                e.preventDefault();
+              const button = buttonRef.current;
+              let keyed = false;
+              try {
+                keyed = !!button?.matches(':focus-visible');
+              } catch {
+                // Chromium 69 (2020 Samsung TVs) has no :focus-visible.
+                keyed = !!button?.matches(':focus');
+              }
+              if (!keyed) e.preventDefault();
             }}
             className={cn(ComboboxAnatomy.popover(), popoverClass)}
             trigger={
