@@ -37,6 +37,7 @@ Modifiers are chained with `::`:
 | `{stream.proxied}`   | boolean | Whether the stream is proxied (e.g. MediaFlow)                                                      |
 | `{stream.library}`   | boolean | Whether the file is already in your "library" e.g. debrid account                                   |
 | `{stream.idMatched}` | boolean | Whether the source identified the release by external ID rather than by searching its title as text |
+| `{stream.failovers}` | number  | Number of same-release failover links merged into this result (needs deduplicator failover merging) |
 | `{stream.indexer}`   | string  | Source indexer                                                                                      |
 | `{stream.message}`   | string  | Additional status message                                                                           |
 | `{stream.infoHash}`  | string  | Torrent info hash                                                                                   |
@@ -649,6 +650,12 @@ Conditions are evaluated **left to right**: `(x and y or z)` → `((x and y) or 
 
 ```
 {service.cached::isfalse::or::stream.type::=p2p::and::stream.seeders::>0["Seeders: {stream.seeders}"||""]}
+```
+
+**Example:** Show how many same-release failover links were merged into a result, e.g. `+2`:
+
+```
+{stream.failovers::>0[" +{stream.failovers}"||""]}
 ```
 
 ---

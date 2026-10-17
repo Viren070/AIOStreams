@@ -37,6 +37,7 @@ export interface PreviewInput {
   folderSize?: number;
   /** blank derives it from size and duration, as the engine does */
   bitrate?: number;
+  failovers: number;
   infoHash: string;
   message: string;
   library: boolean;
@@ -123,6 +124,8 @@ const DEFAULT_METADATA: PreviewMetadata = {
   hasSeaDex: false,
 };
 
+export const MAX_PREVIEW_FAILOVERS = 50;
+
 export const DEFAULT_PREVIEW_INPUT: PreviewInput = {
   scenario: 'movie',
 
@@ -145,6 +148,7 @@ export const DEFAULT_PREVIEW_INPUT: PreviewInput = {
   size: 62500000000,
   folderSize: 125000000000,
   bitrate: undefined,
+  failovers: 0,
   infoHash: 'dd8255ecdc7ca55fb0bbf81323d87062db1f6d1c',
   message: 'This is a message',
   library: false,
@@ -185,6 +189,7 @@ const STREAM_FIELDS = [
   'stream.size',
   'stream.folderSize',
   'stream.bitrate',
+  'stream.failovers',
   'stream.infoHash',
   'stream.message',
   'stream.library',
@@ -503,6 +508,13 @@ export function buildParsedStream(input: PreviewInput): ParsedStream {
       timeout: 10000,
     },
     library: input.library,
+    failoverVariants: Array.from(
+      { length: Math.min(input.failovers, MAX_PREVIEW_FAILOVERS) },
+      (_, i) => ({
+        url: `https://example.com/playback/${i}`,
+        type: 'usenet' as const,
+      })
+    ),
     parsedFile,
     filename: input.filename,
     folderName: input.folderName,
