@@ -13,6 +13,7 @@ import { settings, syncPreferences } from './settings';
 import { useLatest } from './use-latest';
 import { forgetSavedUser, forgetUser, savedUser, saveUser } from './cache';
 import { watchServer } from './connection';
+import { startOver, to } from './paths';
 import type {
   AuthenticationResult,
   Branding,
@@ -137,9 +138,14 @@ export function useSessionPhase(base: string) {
     [adopt, queryClient]
   );
 
-  /** `stay`, still signed in here, carries on without a PIN. */
+  /**
+   * `stay`, still signed in here, carries on without a PIN. Whoever is picked
+   * starts on Home, with no way back to the pages before.
+   */
   const pick = React.useCallback(
-    (proof: JellyfinClient, users: PickableUser[], stay?: UserDto) =>
+    async (proof: JellyfinClient, users: PickableUser[], stay?: UserDto) => {
+      // Before the session's router unmounts: mounted again, it doesn't load a place it moved to meanwhile.
+      await startOver(to.home);
       setPhase({
         kind: 'picking',
         client: proof,
@@ -150,7 +156,8 @@ export function useSessionPhase(base: string) {
           if (!stay || id !== stay.Id) return switchTo(proof, id, secret);
           setPhase({ kind: 'ready', client: proof, user: stay });
         },
-      }),
+      });
+    },
     [switchTo]
   );
 
@@ -248,6 +255,7 @@ export function useSessionPhase(base: string) {
           return;
         }
         forgetSavedUser(base);
+        await startOver(to.home);
       }
       if (!__STANDALONE__ && hasConfigSessionCookie() && !signedOut(base)) {
         const auth = await configSessionToken<WebTokenResult>().catch(
@@ -327,7 +335,7 @@ export function useSessionPhase(base: string) {
     const proof = phase.client;
     const users = await proof.get<PickableUser[]>('/AIOStreams/Users');
     storage.set(leftKey(base), phase.user.Id);
-    pick(proof, users);
+    await pick(proof, users);
   }, [base, phase, pick]);
 
   // Back after a while away counts as opening the app.
@@ -353,7 +361,8 @@ export function useSessionPhase(base: string) {
     return () => document.removeEventListener('visibilitychange', onVisibility);
   }, [latest]);
 
-  const signOut = React.useCallback(() => {
+  const signOut = React.useCallback(async () => {
+    await startOver(to.home);
     endSession(base, phase.kind === 'ready' ? phase.client.token : null);
     queryClient.removeQueries({ queryKey: ['jf'] });
     setPhase({ kind: 'signed-out' });
