@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { config as appConfig } from '../config/index.js';
 import {
@@ -158,7 +159,10 @@ function toInput(body: AppReportBody): AppReportInput {
 async function forwardReport(body: AppReportBody): Promise<string> {
   const target = new URL('/api/v1/reports', appConfig.appReports.forwardTo!);
   const origin = appConfig.bootstrap.baseUrl
-    ? new URL(appConfig.bootstrap.baseUrl).host
+    ? createHash('sha256')
+        .update(new URL(appConfig.bootstrap.baseUrl).host)
+        .digest('hex')
+        .slice(0, 8)
     : null;
   const res = await makeRequest(target.toString(), {
     method: 'POST',
