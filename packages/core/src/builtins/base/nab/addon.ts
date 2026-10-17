@@ -68,6 +68,9 @@ export const NabAddonConfigSchema = BaseDebridConfigSchema.extend({
   seasonEpisodeStrategy: z
     .enum(['episode', 'season', 'episodeFirst', 'dynamic'])
     .default('episode'),
+  absoluteEpisodeHandling: z
+    .enum(['seasonEpisode', 'absolute', 'both'])
+    .default('seasonEpisode'),
 });
 export type NabAddonConfig = z.infer<typeof NabAddonConfigSchema>;
 
@@ -211,6 +214,33 @@ export abstract class BaseNabAddon<
       queryParams.season &&
       queryParams.ep;
 
+    // the same search asked by absolute episode number, e.g. for anime
+    // releases named "Title - 60" rather than "Title S04E01"
+    const absoluteHandling = this.userData.absoluteEpisodeHandling;
+    let absoluteParams: Record<string, string> | undefined;
+    if (
+      absoluteHandling !== 'seasonEpisode' &&
+      parsedId.mediaType === 'series' &&
+      !isDailySearch &&
+      metadata.absoluteEpisode &&
+      queryParams.ep !== undefined
+    ) {
+      const { season, ep, ...rest } = queryParams;
+      absoluteParams = { ...rest, ep: metadata.absoluteEpisode.toString() };
+      // tvdb's absolute order keeps the whole show in one season
+      if (metadata.absoluteOrder && season !== undefined) {
+        absoluteParams.season = '1';
+      }
+      // the season/episode search already asks for this episode number
+      if (
+        absoluteHandling === 'both' &&
+        absoluteParams.ep === ep &&
+        absoluteParams.season === season
+      ) {
+        absoluteParams = undefined;
+      }
+    }
+
     let primaryParams = queryParams;
     let fallbackParams: Record<string, string> | undefined;
     if (canApplySeasonPackStrategy) {
@@ -245,40 +275,32 @@ export abstract class BaseNabAddon<
           ? false
           : !queryParams.season && !queryParams.ep,
         titleLanguages: getTitleLanguagesForUrl(this.userData.url, this.id),
+        absoluteEpisodeHandling: absoluteHandling,
       });
       searchType = 'query';
     }
-    let results: SearchResultItem<A['namespace']>[] = [];
-    if (queries.length > 0) {
-      const runQueries = (params: Record<string, string>) => {
-        this.logger.debug('Performing queries', { queries });
-        return Promise.all(
-          queries.map((q) =>
-            queryLimit(() =>
-              this.fetchResults(searchFunction, { ...params, q })
-            )
-          )
-        ).then((allResults) => allResults.flat());
-      };
+    const search = (params: Record<string, string>) => {
+      if (queries.length === 0)
+        return this.fetchResults(searchFunction, params);
+      this.logger.debug('Performing queries', { queries });
+      return Promise.all(
+        queries.map((q) =>
+          queryLimit(() => this.fetchResults(searchFunction, { ...params, q }))
+        )
+      ).then((allResults) => allResults.flat());
+    };
 
-      results = await runQueries(primaryParams);
-      if (results.length === 0 && fallbackParams) {
-        this.logger.debug(
-          'No results for initial queries, retrying with alternate season/episode params',
-          { season: queryParams.season, episode: queryParams.ep }
-        );
-        results = await runQueries(fallbackParams);
-      }
-    } else {
-      results = await this.fetchResults(searchFunction, primaryParams);
+    const searchSeasonEpisode = async () => {
+      let results = await search(primaryParams);
       if (results.length === 0 && fallbackParams) {
         this.logger.debug(
           'No results for initial search, retrying with alternate season/episode params',
           { season: queryParams.season, episode: queryParams.ep }
         );
-        results = await this.fetchResults(searchFunction, fallbackParams);
+        results = await search(fallbackParams);
       }
       if (
+        queries.length === 0 &&
         isDailySearch &&
         numericFallbackParams &&
         !results.some((r) =>
@@ -298,6 +320,38 @@ export abstract class BaseNabAddon<
           numericFallbackParams
         );
       }
+      return results;
+    };
+
+    let results: SearchResultItem<A['namespace']>[];
+    if (absoluteParams) {
+      this.logger.debug('Searching by absolute episode', {
+        handling: absoluteHandling,
+        season: absoluteParams.season,
+        episode: absoluteParams.ep,
+      });
+    }
+    if (absoluteParams && absoluteHandling === 'absolute') {
+      results = await search(absoluteParams);
+    } else if (absoluteParams) {
+      const [seasonEpisodeResult, absoluteResult] = await Promise.allSettled([
+        searchSeasonEpisode(),
+        search(absoluteParams),
+      ]);
+      if (
+        seasonEpisodeResult.status === 'rejected' &&
+        absoluteResult.status === 'rejected'
+      ) {
+        throw seasonEpisodeResult.reason;
+      }
+      results = [
+        ...(seasonEpisodeResult.status === 'fulfilled'
+          ? seasonEpisodeResult.value
+          : []),
+        ...(absoluteResult.status === 'fulfilled' ? absoluteResult.value : []),
+      ];
+    } else {
+      results = await searchSeasonEpisode();
     }
     this.logger.info(
       `Completed search for ${capabilities.server.title} in ${getTimeTakenSincePoint(start)}`,

@@ -355,6 +355,21 @@ export class NewznabPreset extends BuiltinAddonPreset {
         ],
       },
       {
+        id: 'absoluteEpisodeHandling',
+        name: 'Absolute Episode Handling',
+        description:
+          'Some shows, mostly anime, are released with one episode number counting across all seasons (e.g. `Title - 60`) instead of a season and episode (`Title S04E01`). This controls which numbering series searches ask the indexer for when an absolute episode number is known. `Both` searches with each and combines the results, at the cost of an extra request. Shows without an absolute episode number always search by season/episode.',
+        type: 'select',
+        required: false,
+        showInSimpleMode: false,
+        default: 'seasonEpisode',
+        options: [
+          { label: 'Only Season/Episode', value: 'seasonEpisode' },
+          { label: 'Only Absolute Episode', value: 'absolute' },
+          { label: 'Both', value: 'both' },
+        ],
+      },
+      {
         id: 'paginate',
         name: 'Paginate Results',
         description:
@@ -594,6 +609,8 @@ export class NewznabPreset extends BuiltinAddonPreset {
       forceQuerySearch: options.forceQuerySearch ?? false,
       paginate: options.paginate ?? false,
       seasonEpisodeStrategy: options.seasonEpisodeStrategy ?? 'episode',
+      absoluteEpisodeHandling:
+        options.absoluteEpisodeHandling ?? 'seasonEpisode',
       zyclopsHealthProxy: zyclopsHealthProxyConfig,
     };
 
