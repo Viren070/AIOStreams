@@ -34,20 +34,22 @@ Standard Jellyfin clients ignore all of these, so offering them never breaks one
       "fillers": 1,
       "parties": 1
     },
+    "css": null,
     "parties": { "relay": "off", "defaultRelay": null }
   }
 }
 ```
 
-| Field          | Shape                  | What the web app does with it                                                    |
-| -------------- | ---------------------- | -------------------------------------------------------------------------------- |
-| `logo`         | URL or `null`          | Shows it on the sign-in screen, in the sidebar and in the server list            |
-| `configureUrl` | URL or `null`          | Links to it as the place to change the account's setup                           |
-| `pinSignIn`    | boolean                | AIOStreams only; see [what stays with AIOStreams](#what-stays-with-aiostreams)   |
-| `personal`     | boolean                | AIOStreams only; opens straight on the one listed user's sign-in                 |
-| `features`     | name to version number | Turns on the parts below; a missing name, or no `aiostreams` object, means "off" |
-| `version`      | object of strings      | Shows the build in About and diagnostics: `commit` on nightly or dev, else `tag` |
-| `parties`      | object                 | Who the server's [party relay](#watch-parties) admits, and the relay it suggests |
+| Field          | Shape                  | What the web app does with it                                                         |
+| -------------- | ---------------------- | ------------------------------------------------------------------------------------- |
+| `logo`         | URL or `null`          | Shows it on the sign-in screen, in the sidebar and in the server list                 |
+| `configureUrl` | URL or `null`          | Links to it as the place to change the account's setup                                |
+| `pinSignIn`    | boolean                | AIOStreams only; see [what stays with AIOStreams](#what-stays-with-aiostreams)        |
+| `personal`     | boolean                | AIOStreams only; opens straight on the one listed user's sign-in                      |
+| `features`     | name to version number | Turns on the parts below; a missing name, or no `aiostreams` object, means "off"      |
+| `version`      | object of strings      | Shows the build in About and diagnostics: `commit` on nightly or dev, else `tag`      |
+| `css`          | text or `null`         | Applies it on every screen, before the user's own custom CSS, unless they turn it off |
+| `parties`      | object                 | Who the server's [party relay](#watch-parties) admits, and the relay it suggests      |
 
 The server list reads `ServerName` and `logo` before signing in, so a server that hosts several
 accounts at their own addresses should answer with the one the address names.
@@ -85,6 +87,16 @@ object:
 | `bingeGroup`  | string | Autoplay picks the next episode's version with the same group, as Stremio's `bingeGroup` |
 | `ytId`        | string | A YouTube video, which the app's player opens itself rather than the version's address   |
 
+The [version search, quick filters and badges](/reference/version-badges) also read these, all optional:
+
+| Field                                                                                                   | Shape             | What it is                                                         |
+| ------------------------------------------------------------------------------------------------------- | ----------------- | ------------------------------------------------------------------ |
+| `filename`, `folderName`, `resolution`, `quality`, `encode`, `releaseGroup`, `indexer`, `addon`, `service` | string            | Read from the release, as the formatter has them                   |
+| `visualTags`, `audioTags`, `audioChannels`, `languages`, `editions`                                     | string[]          | The same                                                           |
+| `seMatched`, `regexMatched`                                                                             | string            | The stream expression and regex it matched first, by name          |
+| `rseMatched`, `rankedRegexMatched`                                                                      | string[]          | The ranked stream expressions and ranked regexes it matched        |
+| `seadex`                                                                                                | `best` or `alt`   | Listed on SeaDex, as a best or an alternative release              |
+
 The first version's `Id` is the item's own id, as in standard Jellyfin, so `id` is how the app tells
 versions apart across listings. Without the feature, the next episode settings say nothing of
 matching versions.
@@ -113,6 +125,13 @@ carries `"aiostreams": { "genreRequired": true }`. Asked for without a genre, su
 nothing. Its genres come from `/Genres?ParentId={library}` as usual, and a genre named `None` stands
 for all of it. The app opens it on `None` where that is offered and on its first genre otherwise, and
 offers All only where `None` is there to send.
+
+## Titles
+
+A title or collection whose addon sends an [`animatedPoster`](/reference/addon-protocol/metadata)
+carries `"aiostreams": { "animatedPoster": "…" }`, the image's own address. The app plays it over the
+poster while the card is focused or hovered, and not when the device asks for reduced motion. The
+poster stays the still that everything else shows.
 
 ## Episodes
 
@@ -249,7 +268,8 @@ the web app's watch parties use, on the same server and across servers:
 
 `aiostreams.parties.relay` is `off` (only the server's users, who send their token), `users` (its
 users start parties, anyone with an invite joins) or `public`. While it is `off`, `defaultRelay` is
-the address of a relay the server suggests for parties with people elsewhere, or `null`.
+the address of a relay the server suggests for parties with people elsewhere, or `null`. With no
+`parties` object at all, the web app suggests `https://aiostreams.viren070.me`.
 
 An invite is a relay and a 10-character code from `0123456789ABCDEFGHJKMNPQRSTVWXYZ`. PBKDF2 with
 SHA-256 over the code, salt `aiostreams-party-1` and 100,000 iterations gives 48 bytes: the first 16

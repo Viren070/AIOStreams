@@ -123,7 +123,7 @@ export const PasswordInput = React.forwardRef<
             />
             <PasswordToggleField.Toggle
               className={cn(
-                'absolute right-0 top-0 h-full px-3',
+                'absolute end-0 top-0 h-full px-3',
                 'text-muted-foreground hover:text-foreground',
                 'focus:outline-none focus:ring-0',
                 'disabled:opacity-50 disabled:pointer-events-none',

@@ -47,7 +47,7 @@ export const SimpleDropzoneAnatomy = defineStyleAnatomy({
   ]),
   listItemRemoveButton: cva([
     'UI-SimpleDropzone__listItemRemoveButton',
-    'ml-2 rounded-full',
+    'ms-2 rounded-full',
   ]),
   imagePreviewGrid: cva([
     'UI-SimpleDropzone__imagePreviewGrid',
@@ -64,7 +64,7 @@ export const SimpleDropzoneAnatomy = defineStyleAnatomy({
   ]),
   imagePreviewRemoveButton: cva([
     'UI-SimpleDropzone__imagePreviewRemoveButton',
-    'absolute top-1 right-1',
+    'absolute top-1 end-1',
   ]),
   fileIcon: cva(['UI-SimpleDropzone__fileIcon', 'w-5 h-5 flex-none']),
   maxSizeText: cva([

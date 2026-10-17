@@ -1,3 +1,5 @@
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { BiCalendar, BiChevronRight, BiHistory } from 'react-icons/bi';
 import { Button } from '@aiostreams/ui/button';
@@ -15,7 +17,12 @@ import {
   useUpcoming,
   useViews,
 } from '../lib/queries';
-import { cardShape, landscapeUrls, posterUrl } from '../lib/images';
+import {
+  cardImages,
+  cardShape,
+  landscapeUrls,
+  animatedPosterOf,
+} from '../lib/images';
 import {
   clock,
   dayLabel,
@@ -149,7 +156,7 @@ export function HomePage() {
     <>
       <EpisodeRow
         id="resume"
-        title="Continue watching"
+        title={t`Continue watching`}
         items={continueItems}
         loading={continueLoading}
         action={
@@ -160,14 +167,14 @@ export function HomePage() {
             leftIcon={<BiHistory />}
             onClick={() => navigate(to.history)}
           >
-            Activity
+            <Trans>Activity</Trans>
           </Button>
         }
       />
       {!mergeNextUp && (
         <EpisodeRow
           id="next-up"
-          title="Next up"
+          title={t`Next up`}
           items={nextUp.data?.Items}
           loading={nextUp.isLoading}
         />
@@ -195,7 +202,7 @@ export function HomePage() {
       >
         <div
           data-ui="home-rows"
-          className="space-y-10 px-4 pb-16 pt-8 lg:pl-0 lg:pr-10"
+          className="space-y-10 px-4 pb-16 pt-8 lg:ps-0 lg:pe-10"
         >
           {rows}
         </div>
@@ -208,8 +215,8 @@ export function HomePage() {
         data-ui="home-rows"
         className={cn(
           heroItems.length || heroLoading
-            ? 'relative z-[1] space-y-10 px-4 pt-2 lg:pl-0 lg:pr-10'
-            : 'relative z-[1] space-y-10 px-4 pt-[calc(1.5rem+env(safe-area-inset-top))] lg:pl-0 lg:pr-10 lg:pt-[calc(2.5rem+env(safe-area-inset-top))]',
+            ? 'relative z-[1] space-y-10 px-4 pt-2 lg:ps-0 lg:pe-10'
+            : 'relative z-[1] space-y-10 px-4 pt-[calc(1.5rem+env(safe-area-inset-top))] lg:ps-0 lg:pe-10 lg:pt-[calc(2.5rem+env(safe-area-inset-top))]',
           noCatalogs && 'flex flex-1 flex-col'
         )}
       >
@@ -284,7 +291,7 @@ function UpcomingRow() {
   return (
     <MediaRow
       id="upcoming"
-      title="Upcoming"
+      title={t`Upcoming`}
       shape="wide"
       loading={upcoming.isLoading}
       action={
@@ -295,7 +302,7 @@ function UpcomingRow() {
           leftIcon={<BiCalendar />}
           onClick={() => navigate(to.calendar())}
         >
-          Calendar
+          <Trans>Calendar</Trans>
         </Button>
       }
     >
@@ -362,7 +369,7 @@ function LibraryRow({ view, first }: { view: BaseItemDto; first: boolean }) {
           {label && (
             <span className="text-sm font-normal text-[--muted]">{label}</span>
           )}
-          <BiChevronRight className="self-center text-xl text-[--muted] transition-transform group-hover/title:translate-x-0.5" />
+          <BiChevronRight className="self-center text-xl text-[--muted] transition-transform group-hover/title:translate-x-0.5 rtl:-scale-x-100 rtl:group-hover/title:-translate-x-0.5" />
         </Anchor>
       }
       shape={landscape ? 'wide' : 'poster'}
@@ -377,7 +384,15 @@ function LibraryRow({ view, first }: { view: BaseItemDto; first: boolean }) {
             <PosterCard
               href={href(itemPath(item))}
               shape={landscape ? 'landscape' : cardShape(item)}
-              image={(width) => posterUrl(client, item, { maxWidth: width })}
+              image={(width) =>
+                cardImages(
+                  client,
+                  item,
+                  landscape ? 'landscape' : cardShape(item),
+                  { maxWidth: width }
+                )
+              }
+              animated={animatedPosterOf(item)}
               title={item.Name ?? ''}
               subtitle={itemSubtitle(item)}
               watched={item.UserData?.Played}

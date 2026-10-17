@@ -1,81 +1,89 @@
+import { i18n } from '@lingui/core';
+import {
+  iso6392ToIso6391,
+  languageToIso6392B,
+  tagLanguage,
+} from '@aiostreams/core/src/utils/languages';
+import { LANGUAGES as FILTER_LANGUAGES } from '@aiostreams/core/src/utils/language-list';
+
 /**
- * Jellyfin stores a preferred language as its ISO 639-2/B code; files tag
- * tracks with that, the /T code or the two-letter one.
+ * Jellyfin stores a preferred language as its ISO 639-2/B code; the two the
+ * addon's filters tell apart from their language keep their region.
  */
 export interface Language {
   code: string;
   name: string;
-  aliases: string[];
 }
 
-export const LANGUAGES: Language[] = [
-  { code: 'eng', name: 'English', aliases: ['en'] },
-  { code: 'ara', name: 'Arabic', aliases: ['ar'] },
-  { code: 'ben', name: 'Bengali', aliases: ['bn'] },
-  { code: 'bul', name: 'Bulgarian', aliases: ['bg'] },
-  { code: 'cat', name: 'Catalan', aliases: ['ca'] },
-  { code: 'chi', name: 'Chinese', aliases: ['zho', 'zh'] },
-  { code: 'hrv', name: 'Croatian', aliases: ['hr'] },
-  { code: 'cze', name: 'Czech', aliases: ['ces', 'cs'] },
-  { code: 'dan', name: 'Danish', aliases: ['da'] },
-  { code: 'dut', name: 'Dutch', aliases: ['nld', 'nl'] },
-  { code: 'est', name: 'Estonian', aliases: ['et'] },
-  { code: 'fil', name: 'Filipino', aliases: ['tgl', 'tl'] },
-  { code: 'fin', name: 'Finnish', aliases: ['fi'] },
-  { code: 'fre', name: 'French', aliases: ['fra', 'fr'] },
-  { code: 'ger', name: 'German', aliases: ['deu', 'de'] },
-  { code: 'gre', name: 'Greek', aliases: ['ell', 'el'] },
-  { code: 'heb', name: 'Hebrew', aliases: ['he'] },
-  { code: 'hin', name: 'Hindi', aliases: ['hi'] },
-  { code: 'hun', name: 'Hungarian', aliases: ['hu'] },
-  { code: 'ice', name: 'Icelandic', aliases: ['isl', 'is'] },
-  { code: 'ind', name: 'Indonesian', aliases: ['id'] },
-  { code: 'ita', name: 'Italian', aliases: ['it'] },
-  { code: 'jpn', name: 'Japanese', aliases: ['ja'] },
-  { code: 'kor', name: 'Korean', aliases: ['ko'] },
-  { code: 'lav', name: 'Latvian', aliases: ['lv'] },
-  { code: 'lit', name: 'Lithuanian', aliases: ['lt'] },
-  { code: 'may', name: 'Malay', aliases: ['msa', 'ms'] },
-  { code: 'nor', name: 'Norwegian', aliases: ['nob', 'nno', 'no', 'nb'] },
-  { code: 'per', name: 'Persian', aliases: ['fas', 'fa'] },
-  { code: 'pol', name: 'Polish', aliases: ['pl'] },
-  { code: 'por', name: 'Portuguese', aliases: ['pt'] },
-  { code: 'rum', name: 'Romanian', aliases: ['ron', 'ro'] },
-  { code: 'rus', name: 'Russian', aliases: ['ru'] },
-  { code: 'srp', name: 'Serbian', aliases: ['sr'] },
-  { code: 'slo', name: 'Slovak', aliases: ['slk', 'sk'] },
-  { code: 'slv', name: 'Slovenian', aliases: ['sl'] },
-  { code: 'spa', name: 'Spanish', aliases: ['es'] },
-  { code: 'swe', name: 'Swedish', aliases: ['sv'] },
-  { code: 'tam', name: 'Tamil', aliases: ['ta'] },
-  { code: 'tel', name: 'Telugu', aliases: ['te'] },
-  { code: 'tha', name: 'Thai', aliases: ['th'] },
-  { code: 'tur', name: 'Turkish', aliases: ['tr'] },
-  { code: 'ukr', name: 'Ukrainian', aliases: ['uk'] },
-  { code: 'vie', name: 'Vietnamese', aliases: ['vi'] },
+/* eslint-disable lingui/no-unlocalized-strings -- the addon's own names */
+
+/** Filter labels for several languages or none. */
+const NOT_LANGUAGES = ['Dual Audio', 'Dubbed', 'Multi', 'Original', 'Unknown'];
+
+const REGIONAL: Record<string, string> = {
+  Latino: 'es-MX',
+  'Portuguese (Brazil)': 'pt-BR',
+};
+
+/** Not in the filters' list, but in settings that name them. */
+const EXTRA: Language[] = [
+  { code: 'cat', name: 'Catalan' },
+  { code: 'fil', name: 'Filipino' },
+  { code: 'ice', name: 'Icelandic' },
 ];
+
+/* eslint-enable lingui/no-unlocalized-strings */
+
+export const LANGUAGES: Language[] = [
+  ...FILTER_LANGUAGES.filter((name) => !NOT_LANGUAGES.includes(name)).flatMap(
+    (name) => {
+      const code = REGIONAL[name] ?? languageToIso6392B(name);
+      return code ? [{ code, name }] : [];
+    }
+  ),
+  ...EXTRA,
+].sort((a, b) =>
+  a.name === 'English'
+    ? -1
+    : b.name === 'English'
+      ? 1
+      : a.name.localeCompare(b.name)
+);
+
+/** A language's name in the app's language; English keeps the addon's names. */
+export function languageName(language: Language): string {
+  if (i18n.locale.startsWith('en')) return language.name;
+  const { code } = language;
+  const tag = code.includes('-') ? code : (iso6392ToIso6391(code) ?? code);
+  try {
+    return (
+      new Intl.DisplayNames([i18n.locale], {
+        type: 'language',
+        fallback: 'none',
+      }).of(tag) ?? language.name
+    );
+  } catch {
+    return language.name;
+  }
+}
+
+/** A code or tag's language by the addon's mapping, else the tag itself. */
+const languageOf = (tag: string) => tagLanguage(tag) ?? tag.toLowerCase();
 
 /** The code Jellyfin stores for the language a track's tag names. */
 export function languageCode(tag: string): string {
-  const lower = tag.toLowerCase();
+  const language = languageOf(tag);
   return (
-    LANGUAGES.find((l) => l.code === lower || l.aliases.includes(lower))
-      ?.code ?? lower
+    LANGUAGES.find((l) => languageOf(l.code) === language)?.code ??
+    tag.toLowerCase()
   );
-}
-
-/** Every tag a track in this language may carry; empty when none is set. */
-export function languageTags(code: string | null | undefined): string[] {
-  if (!code) return [];
-  const language = LANGUAGES.find((l) => l.code === code.toLowerCase());
-  return language ? [language.code, ...language.aliases] : [code.toLowerCase()];
 }
 
 export function sameLanguage(
   code: string | null | undefined,
   tag: string | null | undefined
 ): boolean {
-  return !!tag && languageTags(code).includes(tag.toLowerCase());
+  return !!code && !!tag && languageOf(code) === languageOf(tag);
 }
 
 /** The first of `items` in the earliest of `codes` that any is in. */

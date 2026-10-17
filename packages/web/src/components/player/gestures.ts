@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import React from 'react';
 import { currentHost } from '../../lib/hosts';
 import type { PlayerController } from '../../lib/playback/controller';
@@ -118,7 +119,9 @@ export function usePlayerGestures(gestures: Gestures) {
     else latest.current.player.setVolume(value);
     if (swipe.level === 'brightness') brightened.current = true;
     latest.current.notice(
-      `${swipe.level === 'volume' ? 'Volume' : 'Brightness'} ${percent}%`
+      swipe.level === 'volume'
+        ? t`Volume ${percent}%`
+        : t`Brightness ${percent}%`
     );
   };
 

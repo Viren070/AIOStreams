@@ -1,3 +1,5 @@
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { LuEar, LuEye, LuX } from 'react-icons/lu';
 import { Button } from '@aiostreams/ui/button';
@@ -11,6 +13,7 @@ import { KeyCaps } from '../key-caps';
 import {
   delayForLine,
   delayForTaps,
+  delayAmount,
   delayLabel,
 } from '../../lib/subtitles/delay';
 import type { SubtitleLine } from '../../lib/subtitles/cues';
@@ -44,8 +47,8 @@ export function SyncByEar({
       setFirst({ tap: kind, atMs });
       setStatus(
         kind === 'heard'
-          ? 'Now tap Saw when that line shows.'
-          : 'Now tap Heard when that line is spoken.'
+          ? t`Now tap Saw when that line shows.`
+          : t`Now tap Heard when that line is spoken.`
       );
       return;
     }
@@ -54,18 +57,22 @@ export function SyncByEar({
     const saw = kind === 'saw' ? atMs : first.atMs;
     const next = delayForTaps(delayMs, heard, saw);
     if (next === null) {
-      setStatus('Those were too far apart to be one line. Try another line.');
+      setStatus(t`Those were too far apart to be one line. Try another line.`);
       return;
     }
     onApply(next);
+    const amount = delayAmount(next);
     setStatus(
-      `Subtitles set to ${delayLabel(next).toLowerCase()}. Another line refines it.`
+      next
+        ? t`Subtitles set to ${amount}. Another line refines it.`
+        : t`Subtitles back in sync. Another line refines it.`
     );
   };
   useAction('sync.heard', () => tap('heard'));
   useAction('sync.saw', () => tap('saw'));
   useAction('back', onClose);
   const keys = { heard: useKeys('sync.heard')[0], saw: useKeys('sync.saw')[0] };
+  const shown = delayLabel(delayMs);
 
   const button = (kind: Tap, label: string, icon: React.ReactNode) => (
     <Button
@@ -78,7 +85,7 @@ export function SyncByEar({
       {keys[kind] && (
         <KeyCaps
           input={keys[kind]}
-          className="ml-2 hidden opacity-60 sm:inline-flex"
+          className="ms-2 hidden opacity-60 sm:inline-flex"
         />
       )}
     </Button>
@@ -92,15 +99,17 @@ export function SyncByEar({
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="font-semibold">Sync by ear</p>
+            <p className="font-semibold">
+              <Trans>Sync by ear</Trans>
+            </p>
             <p className="text-sm text-gray-300">
               {status ??
-                'Tap when you hear a line and when its subtitle shows, in either order.'}
+                t`Tap when you hear a line and when its subtitle shows, in either order.`}
             </p>
           </div>
           <button
             type="button"
-            aria-label="Done"
+            aria-label={t`Done`}
             onClick={onClose}
             className="flex-none rounded-full p-1 text-gray-300 hover:bg-white/10 hover:text-white"
           >
@@ -108,11 +117,11 @@ export function SyncByEar({
           </button>
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2">
-          {button('heard', 'Heard', <LuEar />)}
-          {button('saw', 'Saw', <LuEye />)}
+          {button('heard', t`Heard`, <LuEar />)}
+          {button('saw', t`Saw`, <LuEye />)}
         </div>
         <p className="mt-2 text-xs tabular-nums text-gray-400">
-          Now: {delayLabel(delayMs)}
+          <Trans>Now: {shown}</Trans>
         </p>
       </div>
     </div>
@@ -173,19 +182,20 @@ export function SyncToLine({
     if (!term) nearest.current?.scrollIntoView({ block: 'center' });
   }, [lines, term]);
 
+  const heardAt = clock(heardAtMs);
   return (
     <Modal
       data-ui="dialog"
       data-name="sync-to-line"
       open
       onOpenChange={(open) => !open && onClose()}
-      title="Sync to a line"
-      description={`Pick the line you heard at ${clock(heardAtMs)}.`}
+      title={t`Sync to a line`}
+      description={t`Pick the line you heard at ${heardAt}.`}
       contentClass="max-w-lg"
     >
       {failed ? (
         <p className="text-sm text-[--muted]">
-          These subtitles&apos; lines could not be read.
+          <Trans>These subtitles&apos; lines could not be read.</Trans>
         </p>
       ) : !lines ? (
         <div className="flex justify-center py-8">
@@ -194,13 +204,13 @@ export function SyncToLine({
       ) : (
         <div className="space-y-3">
           <TextInput
-            placeholder="Search the lines"
+            placeholder={t`Search the lines`}
             value={search}
             onValueChange={setSearch}
           />
           <div
             data-ui="sync-lines"
-            className="max-h-[50vh] space-y-1 overflow-y-auto pr-1"
+            className="max-h-[50vh] space-y-1 overflow-y-auto pe-1"
           >
             {shown.map((line) => {
               const isClosest = !term && line === lines[closest];
@@ -213,7 +223,7 @@ export function SyncToLine({
                   data-closest={isClosest || undefined}
                   onClick={() => onPick(delayForLine(heardAtMs, line))}
                   className={cn(
-                    'flex w-full gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-white/10',
+                    'flex w-full gap-3 rounded-lg px-3 py-2 text-start text-sm transition-colors hover:bg-white/10',
                     isClosest && 'bg-white/5'
                   )}
                 >
@@ -226,7 +236,7 @@ export function SyncToLine({
             })}
             {!shown.length && (
               <p className="px-3 py-2 text-sm text-[--muted]">
-                No line matches.
+                <Trans>No line matches.</Trans>
               </p>
             )}
           </div>

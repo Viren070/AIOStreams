@@ -13,7 +13,7 @@ export const LoadingSpinnerAnatomy = defineStyleAnatomy({
   ]),
   icon: cva([
     'UI-LoadingSpinner__icon',
-    'inline w-10 h-10 mr-2 animate-spin',
+    'inline w-10 h-10 me-2 animate-spin',
     'text-gray-200 dark:text-gray-600 fill-brand-500',
   ]),
   title: cva([

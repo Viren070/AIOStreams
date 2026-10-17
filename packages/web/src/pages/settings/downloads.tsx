@@ -1,3 +1,5 @@
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import { Select } from '@aiostreams/ui/select';
 import { Switch } from '@aiostreams/ui/switch';
 import { Button } from '@aiostreams/ui/button';
@@ -10,25 +12,27 @@ import {
 } from '../../lib/settings';
 import { downloadsHost, useDownloadFolder } from '../../lib/downloads';
 import { SettingsCard, SettingsRow } from '../../components/settings-card';
-import { ON_DEVICE } from './common';
+import { onDevice } from './common';
 
 export function DownloadsSection() {
   const host = downloadsHost();
-  const folder = useDownloadFolder();
+  const folder = useDownloadFolder() ?? '…';
   const [concurrent, setConcurrent] = useSetting(settings.downloads.concurrent);
   const [searches, setSearches] = useSetting(settings.downloads.searches);
   const [subtitles, setSubtitles] = useSetting(settings.downloads.subtitles);
   const [wifiOnly, setWifiOnly] = useSetting(settings.downloads.wifiOnly);
   const button = 'w-full rounded-full sm:w-auto';
   return (
-    <SettingsCard description={ON_DEVICE}>
+    <SettingsCard description={onDevice()}>
       {host?.folder && (
         <SettingsRow
-          label="Folder"
+          label={t`Folder`}
           help={
             <span className="break-all">
-              {folder ?? '…'}. New downloads go here; ones already saved stay
-              where they are.
+              <Trans>
+                {folder}. New downloads go here; ones already saved stay where
+                they are.
+              </Trans>
             </span>
           }
         >
@@ -38,36 +42,36 @@ export function DownloadsSection() {
               className={button}
               onClick={() => host.folder?.open()}
             >
-              Open
+              <Trans>Open</Trans>
             </Button>
             <Button
               intent="gray-outline"
               className={button}
               onClick={() => host.folder?.choose()}
             >
-              Change
+              <Trans>Change</Trans>
             </Button>
           </div>
         </SettingsRow>
       )}
       {host?.handsOff && (
         <SettingsRow
-          label="The app's downloads"
-          help="The app saves what you download and plays it without a connection."
+          label={t`The app's downloads`}
+          help={t`The app saves what you download and plays it without a connection.`}
         >
           <Button
             intent="gray-outline"
             className={button}
             onClick={() => host.handsOff?.open()}
           >
-            Open
+            <Trans>Open</Trans>
           </Button>
         </SettingsRow>
       )}
       {!host?.handsOff && (
         <Select
-          label="Downloads at once"
-          help="The rest wait their turn."
+          label={t`Downloads at once`}
+          help={t`The rest wait their turn.`}
           options={DOWNLOADS_AT_ONCE.map((n) => ({
             value: String(n),
             label: String(n),
@@ -77,8 +81,8 @@ export function DownloadsSection() {
         />
       )}
       <Select
-        label="Version searches at once"
-        help="Versions are found for this many episodes at a time when a season or show is added."
+        label={t`Version searches at once`}
+        help={t`Versions are found for this many episodes at a time when a season or show is added.`}
         options={DOWNLOAD_SEARCHES.map((n) => ({
           value: String(n),
           label: String(n),
@@ -89,8 +93,8 @@ export function DownloadsSection() {
       {!host?.handsOff && (
         <Switch
           side="right"
-          label="Save subtitles"
-          help="Subtitle files go next to the video, named so players find them."
+          label={t`Save subtitles`}
+          help={t`Subtitle files go next to the video, named so players find them.`}
           value={subtitles}
           onValueChange={setSubtitles}
         />
@@ -98,8 +102,8 @@ export function DownloadsSection() {
       {currentHost().name === 'android-app' && (
         <Switch
           side="right"
-          label="Only on Wi-Fi"
-          help="Downloads wait for Wi-Fi or another unmetered network rather than use mobile data."
+          label={t`Only on Wi-Fi`}
+          help={t`Downloads wait for Wi-Fi or another unmetered network rather than use mobile data.`}
           value={wifiOnly}
           onValueChange={setWifiOnly}
         />

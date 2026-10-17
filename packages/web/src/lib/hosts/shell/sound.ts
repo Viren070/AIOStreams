@@ -18,7 +18,9 @@ export function passthroughFormats(): {
   const mode = settings.audio.passthrough.read();
   return {
     passthrough:
-      mode === 'off' ? [] : formatList(settings.audio.passthroughFormats.read()),
+      mode === 'off'
+        ? []
+        : formatList(settings.audio.passthroughFormats.read()),
     passthroughAuto: mode === 'auto',
   };
 }

@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import React from 'react';
 import { useItem } from './queries';
 import { itemTitle } from './format';
@@ -9,14 +10,25 @@ const DWELL_MS = 2000;
 
 type BrowsingEvent = Exclude<DiscordEvent, 'playing'>;
 
-const PAGES: [RegExp, BrowsingEvent, string][] = [
-  [/^\/$/, 'home', 'On the home page'],
-  [/^\/discover(\/|$)/, 'discover', 'In Discover'],
-  [/^\/search$/, 'search', 'Searching'],
-  [/^\/calendar$/, 'calendar', 'On the calendar'],
-  [/^\/favourites$/, 'favourites', 'In Favourites'],
-  [/^\/history$/, 'activity', 'In Activity'],
+const PAGES: [RegExp, BrowsingEvent][] = [
+  [/^\/$/, 'home'],
+  [/^\/discover(\/|$)/, 'discover'],
+  [/^\/search$/, 'search'],
+  [/^\/calendar$/, 'calendar'],
+  [/^\/favourites$/, 'favourites'],
+  [/^\/history$/, 'activity'],
 ];
+
+/** What Discord shows for the page open. */
+const pageStatus = (event: Exclude<BrowsingEvent, 'titles'>) =>
+  ({
+    home: t`On the home page`,
+    discover: t`In Discover`,
+    search: t`Searching`,
+    calendar: t`On the calendar`,
+    favourites: t`In Favourites`,
+    activity: t`In Activity`,
+  })[event];
 
 const browsing = (title: string, subtitle?: string, imdb?: string | null) => ({
   title,
@@ -47,9 +59,12 @@ export function useDiscordBrowsing(pathname: string) {
   // Undefined while a title loads, which leaves the last status up meanwhile.
   let presence: ReturnType<typeof browsing> | null | undefined = null;
   if (event && enabled) {
-    if (!itemId) presence = browsing(page![2]);
+    if (!itemId)
+      presence = browsing(
+        pageStatus(page![1] as Exclude<BrowsingEvent, 'titles'>)
+      );
     else if (item)
-      presence = browsing(itemTitle(item), 'Browsing', item.ProviderIds?.Imdb);
+      presence = browsing(itemTitle(item), t`Browsing`, item.ProviderIds?.Imdb);
     else presence = undefined;
   }
   const key = presence === undefined ? undefined : JSON.stringify(presence);

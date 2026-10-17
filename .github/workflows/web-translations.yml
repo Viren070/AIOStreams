@@ -1,0 +1,52 @@
+name: Web App Translations
+
+# Fails when text a person reads skips Lingui, or when the source catalog and
+# the template Weblate starts languages from are behind the code.
+on:
+  pull_request:
+    paths: &web
+      - 'packages/web/src/**'
+      - 'packages/web/lingui.config.ts'
+      - 'packages/web/eslint.config.mjs'
+      - 'packages/web/package.json'
+      - '.github/workflows/web-translations.yml'
+  push:
+    branches: [main]
+    paths: *web
+  workflow_dispatch:
+
+concurrency:
+  group: web-translations-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Use Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Install corepack
+        run: corepack enable
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build core
+        run: pnpm -F @aiostreams/core build
+      - name: Lint
+        run: pnpm -F @aiostreams/web lint
+      - name: Extract messages
+        run: pnpm -F @aiostreams/web i18n:extract
+      - name: Check the catalogs are committed
+        # Other languages may trail the code; the next extract brings them up to date.
+        run: |
+          source=(packages/web/src/locales/en-GB.po packages/web/src/locales/messages.pot)
+          if [ -n "$(git status --porcelain -- "${source[@]}")" ]; then
+            git status --short -- "${source[@]}"
+            git diff --stat -- "${source[@]}"
+            echo "::error::The catalogs are out of date. Run 'pnpm -F @aiostreams/web i18n:extract' and commit packages/web/src/locales."
+            exit 1
+          fi

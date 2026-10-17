@@ -12,7 +12,7 @@ export const CalendarAnatomy = defineStyleAnatomy({
   root: cva(['UI-Calendar__root', 'p-3']),
   months: cva([
     'UI-Calendar__months',
-    'relative flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0',
+    'relative flex flex-col sm:flex-row space-y-4 sm:gap-x-4 sm:space-y-0',
   ]),
   month: cva(['UI-Calendar__month', 'space-y-4']),
   monthCaption: cva([
@@ -48,11 +48,11 @@ export const CalendarAnatomy = defineStyleAnatomy({
   day: cva([
     'UI-Calendar__day',
     'h-9 w-9 text-center text-sm p-0 relative',
-    '[&:has([aria-selected].range_end)]:rounded-r-[--radius]',
+    '[&:has([aria-selected].range_end)]:rounded-e-[--radius]',
     '[&:has([aria-selected].outside)]:bg-[--subtle]/50',
     '[&:has([aria-selected])]:bg-[--subtle]',
-    'first:[&:has([aria-selected])]:rounded-l-[--radius]',
-    'last:[&:has([aria-selected])]:rounded-r-[--radius]',
+    'first:[&:has([aria-selected])]:rounded-s-[--radius]',
+    'last:[&:has([aria-selected])]:rounded-e-[--radius]',
     'focus-within:relative focus-within:z-20',
   ]),
   dayButton: cva([

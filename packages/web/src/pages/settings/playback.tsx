@@ -1,4 +1,6 @@
 import React from 'react';
+import { plural, t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import { Select } from '@aiostreams/ui/select';
 import { Switch } from '@aiostreams/ui/switch';
 import { TextInput } from '@aiostreams/ui/text-input';
@@ -34,42 +36,51 @@ import {
 } from '../../lib/settings';
 import { useFeature } from '../../lib/server-info';
 import { SettingsCard, SettingsRow } from '../../components/settings-card';
-import { ON_DEVICE, FOLLOWS_YOU } from './common';
+import { BadgesRow, QuickFiltersRow } from '../../components/version-settings';
+import { onDevice, followsYou } from './common';
 
-const NEXT_PROMPT_HELP: Record<NextPrompt, string> = {
-  credits:
-    'When the credits start, if they run to the end; otherwise a set time before the end.',
-  end: 'A set time before the end.',
-  off: 'Episodes end without offering the next one.',
-};
+const nextPromptHelp = (prompt: NextPrompt) =>
+  ({
+    credits: t`When the credits start, if they run to the end; otherwise a set time before the end.`,
+    end: t`A set time before the end.`,
+    off: t`Episodes end without offering the next one.`,
+  })[prompt];
 
-const SEGMENT_LABELS: Record<SegmentType, string> = {
-  Intro: 'Intros',
-  Recap: 'Recaps',
-  Outro: 'Credits',
-  Preview: 'Previews',
-  Commercial: 'Ads',
-};
+const segmentLabel = (type: SegmentType) =>
+  ({
+    Intro: t`Intros`,
+    Recap: t`Recaps`,
+    Outro: t`Credits`,
+    Preview: t`Previews`,
+    Commercial: t`Ads`,
+  })[type];
 
-const SEGMENT_ACTION_LABELS: Record<SegmentAction, string> = {
-  ask: 'Show a skip button',
-  skip: 'Skip automatically',
-  none: 'Do nothing',
-};
+const segmentActionLabel = (action: SegmentAction) =>
+  ({
+    ask: t`Show a skip button`,
+    skip: t`Skip automatically`,
+    none: t`Do nothing`,
+  })[action];
+
+const seconds = (count: number) =>
+  plural(count, { one: '# second', other: '# seconds' });
+
+const minutes = (count: number) =>
+  plural(count, { one: '# minute', other: '# minutes' });
 
 function SegmentActionSelect({ type }: { type: SegmentType }) {
   const [action, setAction] = useSetting(settings.playback.segment[type]);
   return (
     <Select
-      label={SEGMENT_LABELS[type]}
+      label={segmentLabel(type)}
       help={
         type === 'Outro' && action === 'skip'
-          ? 'Credits that end an episode are left to the next episode prompt when it shows.'
+          ? t`Credits that end an episode are left to the next episode prompt when it shows.`
           : undefined
       }
       options={SEGMENT_ACTIONS.map((a) => ({
         value: a,
-        label: SEGMENT_ACTION_LABELS[a],
+        label: segmentActionLabel(a),
       }))}
       value={action}
       onValueChange={(v) => setAction(v as SegmentAction)}
@@ -120,27 +131,37 @@ export function PlaybackSection() {
 
   return (
     <>
-      <SettingsCard title="Versions" description={FOLLOWS_YOU}>
+      <SettingsCard
+        name="versions"
+        title={t`Versions`}
+        description={followsYou()}
+      >
         <Switch
           side="right"
-          label="Auto-play the first version"
+          label={t`Auto-play the first version`}
           help={
             autoPlay
-              ? 'Play starts the first version, and resuming goes back to the version you were watching. Hold Play to choose instead.'
-              : 'Play lists the versions to choose from, but resuming goes back to the version you were watching. Hold Play to do the other: start the first version, or list them when resuming.'
+              ? t`Play starts the first version, and resuming goes back to the version you were watching. Hold Play to choose instead.`
+              : t`Play lists the versions to choose from, but resuming goes back to the version you were watching. Hold Play to do the other: start the first version, or list them when resuming.`
           }
           value={autoPlay}
           onValueChange={setAutoPlay}
         />
+        <QuickFiltersRow />
+        <BadgesRow />
       </SettingsCard>
-      <SettingsCard title="Next episode" description={FOLLOWS_YOU}>
+      <SettingsCard
+        name="next-episode"
+        title={t`Next episode`}
+        description={followsYou()}
+      >
         <Switch
           side="right"
-          label="Play it automatically"
+          label={t`Play it automatically`}
           help={
             bingeGroups
-              ? 'Counts down, then plays the next episode in the same kind of version. Off, the prompt waits for you.'
-              : 'Counts down, then plays the next episode. Off, the prompt waits for you.'
+              ? t`Counts down, then plays the next episode in the same kind of version. Off, the prompt waits for you.`
+              : t`Counts down, then plays the next episode. Off, the prompt waits for you.`
           }
           value={autoplay}
           onValueChange={(v) => update({ EnableNextEpisodeAutoPlay: v })}
@@ -149,42 +170,39 @@ export function PlaybackSection() {
           side="right"
           label={
             bingeGroups
-              ? 'Play the first version when none matches'
-              : 'Play the first version'
+              ? t`Play the first version when none matches`
+              : t`Play the first version`
           }
           help={
             bingeGroups
-              ? "Otherwise the next episode's version list opens when none is like the one you watched."
-              : "Otherwise the next episode's version list opens when it has more than one."
+              ? t`Otherwise the next episode's version list opens when none is like the one you watched.`
+              : t`Otherwise the next episode's version list opens when it has more than one.`
           }
           value={nextFallbackFirst}
           onValueChange={setNextFallbackFirst}
         />
         <Select
-          label="Show the prompt"
-          help={NEXT_PROMPT_HELP[nextPrompt]}
+          label={t`Show the prompt`}
+          help={nextPromptHelp(nextPrompt)}
           options={[
-            { value: 'credits', label: 'When the credits start' },
-            { value: 'end', label: 'Before the end' },
-            { value: 'off', label: 'Never' },
+            { value: 'credits', label: t`When the credits start` },
+            { value: 'end', label: t`Before the end` },
+            { value: 'off', label: t`Never` },
           ]}
           value={nextPrompt}
           onValueChange={(v) => setNextPrompt(v as NextPrompt)}
         />
         {nextPrompt !== 'off' && (
           <Select
-            label="Before the end"
+            label={t`Before the end`}
             help={
               nextPrompt === 'credits'
-                ? 'Used when an episode has no credits marked.'
+                ? t`Used when an episode has no credits marked.`
                 : undefined
             }
             options={NEXT_LEADS.map((s) => ({
               value: String(s),
-              label:
-                s < 60
-                  ? `${s} seconds`
-                  : `${s / 60} minute${s > 60 ? 's' : ''}`,
+              label: s < 60 ? seconds(s) : minutes(s / 60),
             }))}
             value={String(nextLead)}
             onValueChange={(v) => setNextLead(Number(v))}
@@ -192,10 +210,10 @@ export function PlaybackSection() {
         )}
         {nextPrompt !== 'off' && (
           <Select
-            label="Countdown"
+            label={t`Countdown`}
             options={NEXT_COUNTDOWNS.map((s) => ({
               value: String(s),
-              label: `${s} seconds`,
+              label: seconds(s),
             }))}
             value={String(nextCountdown)}
             onValueChange={(v) => setNextCountdown(Number(v))}
@@ -204,8 +222,8 @@ export function PlaybackSection() {
         {marked && (
           <Switch
             side="right"
-            label="Skip filler episodes"
-            help="Playing on and the next and previous buttons pass over episodes marked as filler. You can still play one yourself."
+            label={t`Skip filler episodes`}
+            help={t`Playing on and the next and previous buttons pass over episodes marked as filler. You can still play one yourself.`}
             value={skipFillers}
             onValueChange={setSkipFillers}
           />
@@ -213,113 +231,130 @@ export function PlaybackSection() {
         {marked && (
           <Switch
             side="right"
-            label="Skip recap episodes"
-            help="The same for episodes marked as a recap."
+            label={t`Skip recap episodes`}
+            help={t`The same for episodes marked as a recap.`}
             value={skipRecaps}
             onValueChange={setSkipRecaps}
           />
         )}
         {autoplay && (
           <Select
-            label="Ask if you are still watching"
-            help="Pauses and asks before the next episode once this many have played in a row without a key, click or button press."
+            label={t`Ask if you are still watching`}
+            help={t`Pauses and asks before the next episode once this many have played in a row without a key, click or button press.`}
             options={STILL_WATCHING_AFTER.map((n) => ({
               value: String(n),
-              label: n ? `After ${n} episodes` : 'Never',
+              label: n
+                ? plural(n, {
+                    one: 'After # episode',
+                    other: 'After # episodes',
+                  })
+                : t`Never`,
             }))}
             value={String(stillWatching)}
             onValueChange={(v) => setStillWatching(Number(v))}
           />
         )}
       </SettingsCard>
-      <SettingsCard title="Skipping" description={FOLLOWS_YOU}>
+      <SettingsCard
+        name="skipping"
+        title={t`Skipping`}
+        description={followsYou()}
+      >
         {SEGMENT_TYPES.map((type) => (
           <SegmentActionSelect key={type} type={type} />
         ))}
         {shell && (
           <Switch
             side="right"
-            label="Skip by the file's chapters"
-            help="Where a file names its intro, credits, recap or preview chapters, skipping uses them instead of the server's times, since they fit that exact file. The rest still come from the server."
+            label={t`Skip by the file's chapters`}
+            help={t`Where a file names its intro, credits, recap or preview chapters, skipping uses them instead of the server's times, since they fit that exact file. The rest still come from the server.`}
             value={chapterSkips}
             onValueChange={setChapterSkips}
           />
         )}
       </SettingsCard>
       {parties && (
-        <SettingsCard title="Watch parties" description={FOLLOWS_YOU}>
+        <SettingsCard
+          name="watch-parties"
+          title={t`Watch parties`}
+          description={followsYou()}
+        >
           <Switch
             side="right"
-            label="Show messages over the video"
-            help="What the people you watch with say shows for a few seconds. It always stays in the party's chat."
+            label={t`Show messages over the video`}
+            help={t`What the people you watch with say shows for a few seconds. It always stays in the party's chat.`}
             value={partyMessages}
             onValueChange={setPartyMessages}
           />
           <Switch
             side="right"
-            label="Show reactions over the video"
+            label={t`Show reactions over the video`}
             value={partyReactions}
             onValueChange={setPartyReactions}
           />
         </SettingsCard>
       )}
-      <SettingsCard title="Controls" description={ON_DEVICE}>
+      <SettingsCard
+        name="controls"
+        title={t`Controls`}
+        description={onDevice()}
+      >
         <Select
-          label="Skip length"
-          help="How far the skip buttons, double taps and the arrow keys jump."
+          label={t`Skip length`}
+          help={t`How far the skip buttons, double taps and the arrow keys jump.`}
           options={SEEK_STEPS.map((s) => ({
             value: String(s),
-            label: `${s} seconds`,
+            label: seconds(s),
           }))}
           value={String(seekStep)}
           onValueChange={(v) => setSeekStep(Number(v))}
         />
         {!currentHost().tv && (
           <Select
-            label="Volume step"
-            help="How much the volume keys and the scroll wheel change the volume."
+            label={t`Volume step`}
+            help={t`How much the volume keys and the scroll wheel change the volume.`}
             options={VOLUME_STEPS.map((s) => ({
               value: String(s),
-              label: `${s}%`,
+              label: t`${s}%`,
             }))}
             value={String(volumeStep)}
             onValueChange={(v) => setVolumeStep(Number(v))}
           />
         )}
         <Select
-          label="Held speed"
-          help="How fast playback runs while you press and hold the video, or hold Space or Select."
+          label={t`Held speed`}
+          help={t`How fast playback runs while you press and hold the video, or hold Space or Select.`}
           options={HOLD_RATES.map((r) => ({
             value: String(r),
-            label: `${r}×`,
+            label: t`${r}×`,
           }))}
           value={String(holdRate)}
           onValueChange={(v) => setHoldRate(Number(v))}
         />
       </SettingsCard>
       {shell && (
-        <SettingsCard title="Video" description={ON_DEVICE}>
+        <SettingsCard name="video" title={t`Video`} description={onDevice()}>
           {decoding && (
             <Switch
               side="right"
-              label="Hardware decoding"
-              help="Decodes on the graphics card. Turn it off if video shows artefacts or stays black."
+              label={t`Hardware decoding`}
+              help={t`Decodes on the graphics card. Turn it off if video shows artefacts or stays black.`}
               value={hardwareDecoding}
               onValueChange={setHardwareDecoding}
             />
           )}
           <Switch
             side="right"
-            label="Dolby Vision"
-            help="Plays Dolby Vision where the screen shows it. Turn it off to play the HDR10 picture most of these videos also carry, if Dolby Vision looks dim or flickers. Videos with no HDR10 picture still play in Dolby Vision."
+            label={t`Dolby Vision`}
+            help={t`Plays Dolby Vision where the screen shows it. Turn it off to play the HDR10 picture most of these videos also carry, if Dolby Vision looks dim or flickers. Videos with no HDR10 picture still play in Dolby Vision.`}
             value={dolbyVision}
             onValueChange={setDolbyVision}
           />
           {androidTv && (
             <Switch
               side="right"
-              label="Match the video's frame rate"
-              help="Switches the TV to a refresh rate that suits each video, so motion plays smoothly, and back when you stop. The screen goes blank for a moment as it switches."
+              label={t`Match the video's frame rate`}
+              help={t`Switches the TV to a refresh rate that suits each video, so motion plays smoothly, and back when you stop. The screen goes blank for a moment as it switches.`}
               value={frameRate}
               onValueChange={setFrameRate}
             />
@@ -327,8 +362,12 @@ export function PlaybackSection() {
           {androidTv && engine !== 'mpv' && (
             <Switch
               side="right"
-              label="Tunneled playback"
-              help={`Lets the TV's decoder keep picture and sound in step itself, which plays 4K and HDR more smoothly on some TVs.${engine === 'auto' ? ' Only for videos ExoPlayer plays.' : ''} Turn it off if video stutters or stays black.`}
+              label={t`Tunneled playback`}
+              help={
+                engine === 'auto'
+                  ? t`Lets the TV's decoder keep picture and sound in step itself, which plays 4K and HDR more smoothly on some TVs. Only for videos ExoPlayer plays. Turn it off if video stutters or stays black.`
+                  : t`Lets the TV's decoder keep picture and sound in step itself, which plays 4K and HDR more smoothly on some TVs. Turn it off if video stutters or stays black.`
+              }
               value={tunneling}
               onValueChange={setTunneling}
             />
@@ -340,17 +379,30 @@ export function PlaybackSection() {
   );
 }
 
-const ENGINE_OPTIONS: { value: PlayerEngine; label: string }[] = [
-  { value: 'auto', label: 'Automatic' },
+const engineOptions = (): { value: PlayerEngine; label: string }[] => [
+  { value: 'auto', label: t`Automatic` },
   { value: 'exoplayer', label: 'ExoPlayer' },
   { value: 'mpv', label: 'mpv' },
 ];
 
-const ENGINE_HELP: Record<PlayerEngine, string> = {
-  auto: 'ExoPlayer, which uses less battery, and mpv for a video this device has no decoder for.',
-  mpv: 'Decodes nearly any video, in software where the device has no decoder for it. Takes your mpv.conf under Android app.',
-  exoplayer:
-    "Android's own player, which uses less battery: the screen shows the video as the device decodes it, at the video's frame rate. Plays video the device can decode. Styled subtitles look as they do in mpv.",
+const engineHelp = (engine: PlayerEngine) =>
+  ({
+    auto: t`ExoPlayer, which uses less battery, and mpv for a video this device has no decoder for.`,
+    mpv: t`Decodes nearly any video, in software where the device has no decoder for it. Takes your mpv.conf under Android app.`,
+    exoplayer: t`Android's own player, which uses less battery: the screen shows the video as the device decodes it, at the video's frame rate. Plays video the device can decode. Styled subtitles look as they do in mpv.`,
+  })[engine];
+
+// What the player link takes, written the same in every language.
+const LINK_TOKENS = {
+  url: '{url}',
+  encodedUrl: '{encodedUrl}',
+  scheme: '{scheme}',
+  filename: '{filename}',
+  subtitles: '{subtitles}',
+  title: '{title}',
+  position: '{position}',
+  positionMs: '{positionMs}',
+  returnUrl: '{returnUrl}',
 };
 
 function PlayerCard() {
@@ -361,15 +413,17 @@ function PlayerCard() {
   const launched = LAUNCHED_PLAYERS.find((p) => p.id === player);
   const preset = linkPreset(player);
   const program = found?.find((p) => p.id === player)?.path;
+  const name = launched?.name ?? '';
+  const target = preset ? (preset.target ?? preset.name) : '';
   let help: React.ReactNode;
   if (launched)
     help = (
-      <>
-        The {launched.name} installed on this computer, in a window of its own
-        with its own controls and configuration. This app still saves your
-        place, marks what you watched and plays the next episode. Compared with
-        the built-in player, you lose:
-        <ul className="mt-1 list-disc pl-5">
+      <Trans>
+        The {name} installed on this computer, in a window of its own with its
+        own controls and configuration. This app still saves your place, marks
+        what you watched and plays the next episode. Compared with the built-in
+        player, you lose:
+        <ul className="mt-1 list-disc ps-5">
           <li>
             The controls, skip buttons and next episode card over the video.
             They stay in this window, which works as a remote.
@@ -379,26 +433,37 @@ function PlayerCard() {
             audio output settings.
           </li>
         </ul>
-      </>
+      </Trans>
     );
   else if (preset)
     help =
       preset.template.includes('{returnUrl}') &&
       (!preset.template.startsWith('intent:') ||
         currentHost().name === 'android-app')
-        ? `Opens versions in ${preset.target ?? preset.name}, which brings you back here with your place saved.`
-        : `Opens versions in ${preset.target ?? preset.name}. It can't tell this app where you stopped, so you mark what you watched yourself.`;
+        ? t`Opens versions in ${target}, which brings you back here with your place saved.`
+        : t`Opens versions in ${target}. It can't tell this app where you stopped, so you mark what you watched yourself.`;
   else if (player !== CUSTOM_LINK)
     help =
       currentHost().name === 'desktop'
-        ? "mpv inside this window, with this app's controls and playback settings. Your own mpv.conf, scripts and shaders work here too: put them in its mpv folder under Desktop app."
+        ? t`mpv inside this window, with this app's controls and playback settings. Your own mpv.conf, scripts and shaders work here too: put them in its mpv folder under Desktop app.`
         : currentHost().name === 'android-app'
-          ? 'Versions play in the app, with its controls and playback settings. Choose another player to open them in it instead.'
-          : 'Versions play in this browser. Choose another player to open them in it instead.';
+          ? t`Versions play in the app, with its controls and playback settings. Choose another player to open them in it instead.`
+          : t`Versions play in this browser. Choose another player to open them in it instead.`;
+  const {
+    url,
+    encodedUrl,
+    scheme,
+    filename,
+    subtitles,
+    title,
+    position,
+    positionMs,
+    returnUrl,
+  } = LINK_TOKENS;
   return (
-    <SettingsCard title="Player" description={ON_DEVICE}>
+    <SettingsCard name="player" title={t`Player`} description={onDevice()}>
       <Select
-        label="Play versions in"
+        label={t`Play versions in`}
         help={help}
         options={playerOptions(found?.map((p) => p.id) ?? [])}
         value={player}
@@ -409,20 +474,20 @@ function PlayerCard() {
         !preset &&
         player !== CUSTOM_LINK && (
           <Select
-            label="Engine"
-            help={ENGINE_HELP[engine]}
-            options={ENGINE_OPTIONS}
+            label={t`Engine`}
+            help={engineHelp(engine)}
+            options={engineOptions()}
             value={engine}
             onValueChange={(v) => setEngine(v as PlayerEngine)}
           />
         )}
       {launched && (
         <SettingsRow
-          label={`Your ${launched.name}`}
+          label={t`Your ${name}`}
           help={
             <span className="[overflow-wrap:anywhere]">
               {program ??
-                `Not found on this computer. Choose where ${launched.name} is installed.`}
+                t`Not found on this computer. Choose where ${name} is installed.`}
             </span>
           }
         >
@@ -431,17 +496,20 @@ function PlayerCard() {
             className="w-full rounded-full sm:w-auto"
             onClick={() => chooseExternalPlayer(launched.id)}
           >
-            Choose
+            <Trans>Choose</Trans>
           </Button>
         </SettingsRow>
       )}
       {player === CUSTOM_LINK && (
         <TextInput
-          label="Player link"
+          label={t`Player link`}
           placeholder="vlc://{url}"
           value={link}
           onValueChange={setLink}
-          help="{url} is the stream address, {encodedUrl} the same address URL-encoded, {scheme} its scheme, {filename} the file's name, {subtitles} each external subtitle (its parameter repeats per file), {title} the title with the episode, {position} the second to start at ({positionMs} in milliseconds), and {returnUrl} a link back here for a player that reports where it stopped. Values other than {url} are URL-encoded. After intent://, {url} goes without its scheme."
+          help={t({
+            comment: 'Each {name} is written in the player link as it is here.',
+            message: `${url} is the stream address, ${encodedUrl} the same address URL-encoded, ${scheme} its scheme, ${filename} the file's name, ${subtitles} each external subtitle (its parameter repeats per file), ${title} the title with the episode, ${position} the second to start at (${positionMs} in milliseconds), and ${returnUrl} a link back here for a player that reports where it stopped. Values other than ${url} are URL-encoded. After intent://, ${url} goes without its scheme.`,
+          })}
         />
       )}
     </SettingsCard>

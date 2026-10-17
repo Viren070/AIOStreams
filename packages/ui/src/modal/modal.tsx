@@ -5,6 +5,7 @@ import * as React from 'react';
 import { CloseButton } from '../button';
 import { cn, ComponentAnatomy, defineStyleAnatomy } from '../core/styling';
 import { keepsModalOpen } from '../core/utils';
+import { uiText } from '../core/text';
 
 /* -------------------------------------------------------------------------------------------------
  * Anatomy
@@ -31,10 +32,10 @@ export const ModalAnatomy = defineStyleAnatomy({
     'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
     'sm:rounded-2xl',
   ]),
-  close: cva(['UI-Modal__close', 'absolute right-4 top-4 !mt-0']),
+  close: cva(['UI-Modal__close', 'absolute end-4 top-4 !mt-0']),
   header: cva([
     'UI-Modal__header',
-    'flex flex-col space-y-1.5 min-w-0 text-center sm:text-left',
+    'flex flex-col space-y-1.5 min-w-0 text-center sm:text-start',
   ]),
   footer: cva([
     'UI-Modal__footer',
@@ -169,7 +170,7 @@ export function Modal(props: ModalProps) {
             >
               {!title && !description ? (
                 <VisuallyHidden>
-                  <DialogPrimitive.Title>Dialog</DialogPrimitive.Title>
+                  <DialogPrimitive.Title>{uiText.dialog}</DialogPrimitive.Title>
                 </VisuallyHidden>
               ) : (
                 <div className={cn(ModalAnatomy.header(), headerClass)}>

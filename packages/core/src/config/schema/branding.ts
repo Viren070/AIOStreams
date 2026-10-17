@@ -35,6 +35,17 @@ export const brandingSchema = {
     secret: false,
     ui: { multiline: true },
   },
+  appCustomCss: {
+    schema: nullableString,
+    default: null,
+    label: 'App custom CSS',
+    description:
+      "CSS the AIOStreams apps apply for everyone signed in to this server. Each person's own custom CSS applies on top of it, and anyone can turn it off in the app's theme settings.",
+    env: 'APP_CUSTOM_CSS',
+    requiresRestart: false,
+    secret: false,
+    ui: { multiline: true },
+  },
   alternateDesign: {
     schema: z.boolean(),
     default: false,

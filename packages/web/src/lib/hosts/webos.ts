@@ -23,6 +23,7 @@ function device(): { name: string } {
     };
     if (modelName) return { name: `LG ${modelName}` };
   } catch {}
+  // eslint-disable-next-line lingui/no-unlocalized-strings -- how the server lists the device
   return { name: 'LG TV' };
 }
 

@@ -194,8 +194,8 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
                 hideTextOnSmallScreen &&
                   cn(
                     'hidden',
-                    leftIcon && 'pl-[0.5rem]',
-                    rightIcon && 'pr-[0.5rem]'
+                    leftIcon && 'ps-[0.5rem]',
+                    rightIcon && 'pe-[0.5rem]'
                   ),
                 hideTextOnLargeScreen
                   ? 'inline-block lg:hidden'

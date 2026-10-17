@@ -1,4 +1,4 @@
-import { firstInLanguages, sameLanguage } from '../languages';
+import { firstInLanguages, languageCode, sameLanguage } from '../languages';
 import {
   bestOfTypes,
   forcedOnly,
@@ -113,7 +113,11 @@ export function chooseTracks(
     const onlyForced =
       mode === 'OnlyForced' || (mode === 'Smart' && audioInLanguages);
     const same = subtitles.filter(
-      (t) => t === chosen || (!!t.lang && t.lang === chosen.lang)
+      (t) =>
+        t === chosen ||
+        (!!t.lang &&
+          !!chosen.lang &&
+          languageCode(t.lang) === languageCode(chosen.lang))
     );
     const best = bestOfTypes(
       onlyForced ? same.filter((t) => forcedOnly(trackFacts(t))) : same,

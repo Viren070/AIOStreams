@@ -27,6 +27,7 @@ import {
   InputStyling,
 } from '../input';
 import { Popover } from '../popover';
+import { uiText } from '../core/text';
 
 /* -------------------------------------------------------------------------------------------------
  * Anatomy
@@ -56,7 +57,7 @@ export const ComboboxAnatomy = defineStyleAnatomy({
   ]),
   item: cva([
     'UI-Combobox__item',
-    'flex gap-1 items-center flex-none truncate bg-gray-100 dark:bg-gray-800 px-2 pr-1 rounded-[--radius] max-w-96',
+    'flex gap-1 items-center flex-none truncate bg-gray-100 dark:bg-gray-800 px-2 pe-1 rounded-[--radius] max-w-96',
   ]),
   placeholder: cva(['UI-Combobox__placeholder', 'text-[--muted] truncate']),
   inputValuesContainer: cva([
@@ -65,7 +66,7 @@ export const ComboboxAnatomy = defineStyleAnatomy({
   ]),
   chevronIcon: cva([
     'UI-Combobox__chevronIcon',
-    'ml-2 h-4 w-4 shrink-0 opacity-50',
+    'ms-2 h-4 w-4 shrink-0 opacity-50',
   ]),
   removeItemButton: cva([
     'UI-Badge__removeItemButton',
@@ -233,10 +234,11 @@ export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
 
     const counts: Record<string, number> = {};
     const options = rawOptions.map((option) => {
-      const textValue = (option.textValue || option.value)?.trim() || 'Unnamed';
+      const textValue =
+        (option.textValue || option.value)?.trim() || uiText.unnamed;
       const label =
         typeof option.label === 'string'
-          ? option.label?.trim() || 'Unnamed'
+          ? option.label?.trim() || uiText.unnamed
           : option.label;
       counts[textValue] = (counts[textValue] || 0) + 1;
       return {
@@ -303,7 +305,7 @@ export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
               <div
                 className={cn(
                   ComboboxAnatomy.item(),
-                  'text-[--muted] pr-2',
+                  'text-[--muted] pe-2',
                   itemClass
                 )}
               >

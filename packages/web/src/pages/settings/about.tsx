@@ -1,4 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import { Button } from '@aiostreams/ui/button';
 import { useSession } from '../../lib/session';
 import { currentHost } from '../../lib/hosts';
@@ -13,15 +15,15 @@ const REPO_URL = 'https://github.com/Viren070/AIOStreams';
 /** The desktop app's stable release, whose notes link each download. */
 const DESKTOP_DOWNLOAD_URL = `${REPO_URL}/releases/tag/desktop`;
 
-const LINKS = [
+const links = () => [
   {
-    name: 'Source code',
-    help: 'Where the app is made, and where to report a problem.',
+    name: t`Source code`,
+    help: t`Where the app is made, and where to report a problem.`,
     url: REPO_URL,
   },
   {
-    name: 'Documentation',
-    help: 'How to use the app and what each setting does.',
+    name: t`Documentation`,
+    help: t`How to use the app and what each setting does.`,
     url: `${DOCS_URL}/apps`,
   },
 ];
@@ -40,23 +42,23 @@ export function AboutSection() {
   });
   const rows: [string, string | null | undefined][] = [
     [
-      'Server',
+      t`Server`,
       info.data?.ServerName &&
         (version
           ? `${info.data.ServerName} (${version})`
           : info.data.ServerName),
     ],
-    ['Address', serverAddress(client.base)],
-    ['Jellyfin API', info.data?.Version],
-    ['Web app', __APP_COMMIT__],
+    [t`Address`, serverAddress(client.base)],
+    [t`Jellyfin API`, info.data?.Version],
+    [t`Web app`, __APP_COMMIT__],
     ...(shell
       ? ([
           [
-            shell.platform === 'android' ? 'Android app' : 'Desktop app',
+            shell.platform === 'android' ? t`Android app` : t`Desktop app`,
             shell.app,
           ],
           ...(shell.player && !shell.mpv
-            ? [['Player', shell.player]]
+            ? [[t`Player`, shell.player]]
             : [
                 ['mpv', shell.mpv],
                 ['FFmpeg', shell.ffmpeg],
@@ -76,8 +78,8 @@ export function AboutSection() {
         ))}
         {currentHost().name === 'browser' && (
           <SettingsRow
-            label="Desktop app"
-            help="This web app with a player of its own, which plays what a browser can't, on Windows, Mac and Linux."
+            label={t`Desktop app`}
+            help={t`This web app with a player of its own, which plays what a browser can't, on Windows, Mac and Linux.`}
           >
             <Button
               intent="gray-outline"
@@ -86,23 +88,23 @@ export function AboutSection() {
                 window.open(DESKTOP_DOWNLOAD_URL, '_blank', 'noopener')
               }
             >
-              Download
+              <Trans>Download</Trans>
             </Button>
           </SettingsRow>
         )}
-        {LINKS.map((link) => (
+        {links().map((link) => (
           <SettingsRow key={link.name} label={link.name} help={link.help}>
             <Button
               intent="gray-outline"
               className="w-full rounded-full sm:w-auto"
               onClick={() => window.open(link.url, '_blank', 'noopener')}
             >
-              Visit
+              <Trans>Visit</Trans>
             </Button>
           </SettingsRow>
         ))}
       </SettingsCard>
-      <SettingsCard title="Credits">
+      <SettingsCard name="credits" title={t`Credits`}>
         {credits(shell).map((credit) => (
           <SettingsRow key={credit.name} label={credit.name} help={credit.help}>
             <Button
@@ -110,7 +112,7 @@ export function AboutSection() {
               className="w-full rounded-full sm:w-auto"
               onClick={() => window.open(credit.url, '_blank', 'noopener')}
             >
-              Visit
+              <Trans>Visit</Trans>
             </Button>
           </SettingsRow>
         ))}
@@ -135,26 +137,26 @@ function credits(
   return [
     {
       name: 'Seanime',
-      help: 'The interface is built on its components.',
+      help: t`The interface is built on its components.`,
       url: 'https://github.com/5rahim/seanime',
     },
     {
       name: 'Jellyfin',
-      help: 'The API this app speaks.',
+      help: t`The API this app speaks.`,
       url: 'https://jellyfin.org',
     },
     ...(shell
       ? [
-          { name: 'mpv', help: 'Plays the video.', url: 'https://mpv.io' },
+          { name: 'mpv', help: t`Plays the video.`, url: 'https://mpv.io' },
           {
             name: 'FFmpeg',
-            help: 'Decodes what mpv plays.',
+            help: t`Decodes what mpv plays.`,
             url: 'https://ffmpeg.org',
           },
         ]
       : []),
     ...(build
-      ? [{ ...build, help: 'Builds the mpv library this app ships with.' }]
+      ? [{ ...build, help: t`Builds the mpv library this app ships with.` }]
       : []),
   ];
 }

@@ -1,6 +1,13 @@
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { cn } from '@aiostreams/ui/core/styling';
-import { useParty, usePartyEvent } from '../../lib/party/party';
+import { formatLocale } from '../../lib/i18n';
+import {
+  useParty,
+  usePartyEvent,
+  type PartyAction,
+} from '../../lib/party/party';
 import { settings, useSetting } from '../../lib/settings';
 
 const BUBBLE_MS = 8_000;
@@ -8,19 +15,19 @@ const REACTION_MS = 3_000;
 const ACTION_MS = 4_000;
 const MAX_BUBBLES = 3;
 
-interface Shown {
+interface Shown<T> {
   key: number;
   name: string;
-  text: string;
+  text: T;
 }
 
 let next = 0;
 
 /** Kept for `ms`, then dropped; the newest `max` at most. */
-function useFleeting(ms: number, max: number) {
-  const [items, setItems] = React.useState<Shown[]>([]);
+function useFleeting<T = string>(ms: number, max: number) {
+  const [items, setItems] = React.useState<Shown<T>[]>([]);
   const add = React.useCallback(
-    (name: string, text: string) => {
+    (name: string, text: T) => {
       const key = next++;
       setItems((list) => [...list, { key, name, text }].slice(-max));
       setTimeout(
@@ -33,12 +40,38 @@ function useFleeting(ms: number, max: number) {
   return [items, add] as const;
 }
 
+function ActionLine({ name, action }: { name: string; action: PartyAction }) {
+  const who = <span className="font-semibold">{name}</span>;
+  switch (action.kind) {
+    case 'paused':
+      return <Trans>{who} paused</Trans>;
+    case 'resumed':
+      return <Trans>{who} resumed</Trans>;
+    case 'jumped': {
+      const { to } = action;
+      return (
+        <Trans>
+          {who} jumped to {to}
+        </Trans>
+      );
+    }
+    case 'started': {
+      const { title } = action;
+      return (
+        <Trans>
+          {who} started {title}
+        </Trans>
+      );
+    }
+  }
+}
+
 /** Over the video: who the party waits for, who did what, what members say, and their reactions. */
 export function PartyLayer() {
   const state = useParty();
   const [bubbles, addBubble] = useFleeting(BUBBLE_MS, MAX_BUBBLES);
   const [reactions, addReaction] = useFleeting(REACTION_MS, 12);
-  const [actions, addAction] = useFleeting(ACTION_MS, 1);
+  const [actions, addAction] = useFleeting<PartyAction>(ACTION_MS, 1);
   const [showMessages] = useSetting(settings.party.messages);
   const [showReactions] = useSetting(settings.party.reactions);
   usePartyEvent((event) => {
@@ -46,15 +79,18 @@ export function PartyLayer() {
       addBubble(event.message.name, event.message.text);
     else if (event.type === 'react' && showReactions)
       addReaction(event.name, event.emoji);
-    else if (event.type === 'action') addAction(event.name, event.text);
+    else if (event.type === 'action') addAction(event.name, event.action);
   });
   if (!state) return null;
   const waitingFor = state.members.filter((m) => m.buffering && !m.you);
+  const names = new Intl.ListFormat(formatLocale(), {
+    type: 'conjunction',
+  }).format(waitingFor.map((m) => m.name));
   const status =
     state.status === 'reconnecting'
-      ? 'Reconnecting to the party…'
+      ? t`Reconnecting to the party…`
       : state.group === 'Waiting' && waitingFor.length
-        ? `Waiting for ${waitingFor.map((m) => m.name).join(', ')}`
+        ? t`Waiting for ${names}`
         : null;
 
   return (
@@ -77,13 +113,13 @@ export function PartyLayer() {
             data-ui="party-action"
             className="max-w-full truncate rounded-full bg-black/70 px-4 py-1.5 text-sm duration-300 animate-in fade-in-0"
           >
-            <span className="font-semibold">{a.name}</span> {a.text}
+            <ActionLine name={a.name} action={a.text} />
           </p>
         ))}
       </div>
       <div
         data-ui="party-bubbles"
-        className="absolute bottom-[calc(7rem+env(safe-area-inset-bottom))] left-[max(1rem,env(safe-area-inset-left))] flex max-w-[min(24rem,70vw)] flex-col items-start gap-2"
+        className="absolute bottom-[calc(7rem+env(safe-area-inset-bottom))] start-[max(1rem,env(safe-area-inset-left))] flex max-w-[min(24rem,70vw)] flex-col items-start gap-2"
       >
         {bubbles.map((b) => (
           <p
@@ -96,14 +132,14 @@ export function PartyLayer() {
       </div>
       <div
         data-ui="party-reactions"
-        className="absolute bottom-[calc(7rem+env(safe-area-inset-bottom))] right-[max(1.5rem,env(safe-area-inset-right))] h-64 w-24"
+        className="absolute bottom-[calc(7rem+env(safe-area-inset-bottom))] end-[max(1.5rem,env(safe-area-inset-right))] h-64 w-24"
       >
         {reactions.map((r, i) => (
           <span
             key={r.key}
             className={cn(
               'absolute bottom-0 flex flex-col items-center [animation:party-rise_3s_ease-out_forwards]',
-              i % 2 ? 'right-2' : 'right-10'
+              i % 2 ? 'end-2' : 'end-10'
             )}
           >
             <span className="text-4xl">{r.text}</span>

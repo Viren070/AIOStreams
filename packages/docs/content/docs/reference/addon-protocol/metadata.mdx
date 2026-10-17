@@ -13,6 +13,7 @@ title.
 | -------------------- | --------------------------------------------------------- | --------------------------------------------------------- |
 | `ids`                | object of [provider ids](#ids)                            | Provider ids and external links                           |
 | `landscapePoster`    | image URL                                                 | The wide card on Continue Watching, Next Up and home rows |
+| `animatedPoster`     | image URL, animated (GIF, animated WebP or APNG)          | Played over the poster while its card is focused or hovered, in the AIOStreams apps |
 | `originalTitle`      | string                                                    | The original title, under the name when they differ       |
 | `tagline`            | string                                                    | The tagline on the detail page                            |
 | `people`             | list of [people](#people)                                 | Cast and crew rows, with photos and characters            |
@@ -21,7 +22,7 @@ title.
 | `criticRating`       | number, 0 to 100                                          | The critic score                                          |
 | `studios`            | list of strings                                           | Studios                                                   |
 | `networks`           | list of strings                                           | Studios, after `studios`                                  |
-| `countries`          | list of strings                                           | Production countries                                      |
+| `countries`          | list of names or ISO 3166 codes                           | Production countries, by their English names              |
 | `tags`               | list of strings                                           | Tags                                                      |
 | `endDate`            | date, a series' last air date                             | The end of a series' year range                           |
 | `airDays`            | list of `"Sunday"` … `"Saturday"`                         | When a series airs                                        |

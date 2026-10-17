@@ -1,3 +1,5 @@
+import { plural, t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { BiMoviePlay } from 'react-icons/bi';
 import { LuPlay } from 'react-icons/lu';
@@ -21,6 +23,7 @@ export function TrailerButton({ item }: { item: BaseItemDto }) {
   const prefetch = usePrefetchTrailer();
   if (!trailers.length) return null;
   const play = (index: number) => navigate(to.trailer(item.Id!, index));
+  const count = trailers.length;
   return (
     <>
       <Button
@@ -33,7 +36,7 @@ export function TrailerButton({ item }: { item: BaseItemDto }) {
         onPointerEnter={() => prefetch(trailers[0].url)}
         onClick={() => (trailers.length > 1 ? setListing(true) : play(0))}
       >
-        {trailers.length > 1 ? 'Trailers' : 'Trailer'}
+        {plural(count, { one: 'Trailer', other: 'Trailers' })}
       </Button>
       {trailers.length > 1 && (
         <TrailersSheet
@@ -89,16 +92,16 @@ function TrailersSheet({
       open={open}
       onOpenChange={(next) => !next && onClose()}
       onCloseAutoFocus={restoreFocus}
-      title="Trailers"
+      title={t`Trailers`}
       headerClass="sr-only"
       side="right"
       size="md"
       contentClass="flex flex-col gap-0 overflow-hidden p-0"
-      closeClass="right-2 top-[calc(0.75rem+env(safe-area-inset-top))]"
+      closeClass="end-2 top-[calc(0.75rem+env(safe-area-inset-top))]"
     >
-      <div className="min-w-0 px-4 pb-3 pr-12 pt-[calc(0.75rem+env(safe-area-inset-top))]">
+      <div className="min-w-0 px-4 pb-3 pe-12 pt-[calc(0.75rem+env(safe-area-inset-top))]">
         <p className="text-xs font-semibold uppercase tracking-wider text-[--muted]">
-          Trailers
+          <Trans>Trailers</Trans>
         </p>
         <p className="truncate font-semibold">{item.Name}</p>
       </div>
@@ -119,7 +122,7 @@ function TrailersSheet({
               onClick={() => onPlay(i)}
               onFocus={() => prefetch(trailer.url)}
               onPointerEnter={() => prefetch(trailer.url)}
-              className="group/trailer flex w-full items-center gap-3 rounded-xl p-2 text-left outline-none transition-colors hover:bg-white/5 focus-visible:bg-white/10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[--ring] [[data-tv]_&]:focus-visible:ring-[3px]"
+              className="group/trailer flex w-full items-center gap-3 rounded-xl p-2 text-start outline-none transition-colors hover:bg-white/5 focus-visible:bg-white/10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[--ring] [[data-tv]_&]:focus-visible:ring-[3px]"
             >
               <div className="relative aspect-video w-32 flex-none overflow-hidden rounded-lg bg-gray-900 sm:w-36">
                 {(id || backdrop) && (

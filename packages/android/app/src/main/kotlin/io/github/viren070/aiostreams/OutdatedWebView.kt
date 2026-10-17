@@ -19,11 +19,11 @@ fun webViewUsable(context: Context): Boolean =
     AppBridge.supported() && (chromium(context) ?: MIN_CHROMIUM) >= MIN_CHROMIUM
 
 fun outdatedWebView(context: Context): View {
-    val version = chromium(context)?.toString() ?: "unknown"
+    val version = chromium(context)?.toString() ?: context.getString(R.string.webview_version_unknown)
     val padding = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 32f, context.resources.displayMetrics).toInt()
     return TextView(context).apply {
-        text = "This device's WebView is too old for the app: version $version, and the app needs $MIN_CHROMIUM or later.\n\n" +
-            "Update Android System WebView, or the system, then open the app again."
+        text = context.getString(R.string.webview_too_old, version, MIN_CHROMIUM) + "\n\n" +
+            context.getString(R.string.webview_update)
         gravity = Gravity.CENTER
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
         setPadding(padding, padding, padding, padding)

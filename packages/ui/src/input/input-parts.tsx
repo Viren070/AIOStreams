@@ -55,51 +55,51 @@ export const InputAnatomy = defineStyleAnatomy({
         {
           hasLeftAddon: true,
           className:
-            'border-l-transparent hover:border-l-transparent rounded-l-none',
+            'border-s-transparent hover:border-s-transparent rounded-s-none',
         },
         /**/
         {
           hasRightAddon: true,
           className:
-            'border-r-transparent hover:border-r-transparent rounded-r-none',
+            'border-e-transparent hover:border-e-transparent rounded-e-none',
         },
         /**/
         {
           hasLeftAddon: false,
           hasLeftIcon: true,
           size: 'sm',
-          className: 'pl-10',
+          className: 'ps-10',
         },
         {
           hasLeftAddon: false,
           hasLeftIcon: true,
           size: 'md',
-          className: 'pl-10',
+          className: 'ps-10',
         },
         {
           hasLeftAddon: false,
           hasLeftIcon: true,
           size: 'lg',
-          className: 'pl-12',
+          className: 'ps-12',
         },
         /**/
         {
           hasRightAddon: false,
           hasRightIcon: true,
           size: 'sm',
-          className: 'pr-10',
+          className: 'pe-10',
         },
         {
           hasRightAddon: false,
           hasRightIcon: true,
           size: 'md',
-          className: 'pr-10',
+          className: 'pe-10',
         },
         {
           hasRightAddon: false,
           hasRightIcon: true,
           size: 'lg',
-          className: 'pr-12',
+          className: 'pe-12',
         },
       ],
       defaultVariants: {
@@ -179,8 +179,8 @@ export const InputAddonsAnatomy = defineStyleAnatomy({
     {
       variants: {
         size: { sm: 'w-10 text-md', md: 'w-12 text-lg', lg: 'w-14 text-2xl' },
-        isLeftIcon: { true: 'left-0', false: null },
-        isRightIcon: { true: 'right-0', false: null },
+        isLeftIcon: { true: 'start-0', false: null },
+        isRightIcon: { true: 'end-0', false: null },
       },
       defaultVariants: {
         size: 'md',
@@ -198,8 +198,8 @@ export const InputAddonsAnatomy = defineStyleAnatomy({
     {
       variants: {
         size: { sm: 'text-sm', md: 'text-md', lg: 'text-lg' },
-        isLeftAddon: { true: 'rounded-l-md border-r-0', false: null },
-        isRightAddon: { true: 'rounded-r-md border-l-0', false: null },
+        isLeftAddon: { true: 'rounded-s-md border-e-0', false: null },
+        isRightAddon: { true: 'rounded-e-md border-s-0', false: null },
         hasLeftIcon: { true: null, false: null },
         hasRightIcon: { true: null, false: null },
       },
@@ -208,37 +208,37 @@ export const InputAddonsAnatomy = defineStyleAnatomy({
           size: 'sm',
           hasLeftIcon: true,
           isLeftAddon: true,
-          className: 'pl-10',
+          className: 'ps-10',
         },
         {
           size: 'sm',
           hasRightIcon: true,
           isRightAddon: true,
-          className: 'pr-10',
+          className: 'pe-10',
         },
         {
           size: 'md',
           hasLeftIcon: true,
           isLeftAddon: true,
-          className: 'pl-10',
+          className: 'ps-10',
         },
         {
           size: 'md',
           hasRightIcon: true,
           isRightAddon: true,
-          className: 'pr-10',
+          className: 'pe-10',
         },
         {
           size: 'lg',
           hasLeftIcon: true,
           isLeftAddon: true,
-          className: 'pl-12',
+          className: 'ps-12',
         },
         {
           size: 'lg',
           hasRightIcon: true,
           isRightAddon: true,
-          className: 'pr-12',
+          className: 'pe-12',
         },
       ],
       defaultVariants: {

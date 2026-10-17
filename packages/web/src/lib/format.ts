@@ -1,3 +1,5 @@
+import { t } from '@lingui/core/macro';
+import { formatLocale } from './i18n';
 import type { BaseItemDto } from './types';
 
 export const TICKS_PER_MS = 10_000;
@@ -20,20 +22,32 @@ export function clock(ms: number): string {
 export function duration(ms: number): string {
   const minutes = Math.round(ms / 60_000);
   if (minutes <= 0) return '';
-  if (minutes < 60) return `${minutes}m`;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return m ? `${h}h ${m}m` : `${h}h`;
+  if (minutes < 60)
+    return t({ comment: 'Minutes, as in 45m', message: `${minutes}m` });
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest
+    ? t({
+        comment: 'Hours and minutes, as in 1h 15m',
+        message: `${hours}h ${rest}m`,
+      })
+    : t({ comment: 'Hours, as in 2h', message: `${hours}h` });
 }
 
 export function relativeTime(at: number | null | undefined): string {
   if (!at) return '';
   const diff = Date.now() - at;
-  if (diff < 60_000) return 'just now';
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} min ago`;
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} h ago`;
-  if (diff < 7 * 86_400_000) return `${Math.floor(diff / 86_400_000)} d ago`;
-  return new Date(at).toLocaleDateString();
+  if (diff < 60_000) return t`just now`;
+  const format = new Intl.RelativeTimeFormat(formatLocale(), {
+    style: 'short',
+  });
+  if (diff < 3_600_000)
+    return format.format(-Math.floor(diff / 60_000), 'minute');
+  if (diff < 86_400_000)
+    return format.format(-Math.floor(diff / 3_600_000), 'hour');
+  if (diff < 7 * 86_400_000)
+    return format.format(-Math.floor(diff / 86_400_000), 'day');
+  return new Date(at).toLocaleDateString(formatLocale());
 }
 
 /** `S01E04`, or `E04` for absolute numbering. */
@@ -42,8 +56,14 @@ export function episodeCode(
   episode: number | null | undefined
 ): string {
   if (episode == null) return '';
-  const e = `E${String(episode).padStart(2, '0')}`;
-  return season == null ? e : `S${String(season).padStart(2, '0')}${e}`;
+  const e = String(episode).padStart(2, '0');
+  if (season == null)
+    return t({ comment: 'An episode number, as in E04', message: `E${e}` });
+  const s = String(season).padStart(2, '0');
+  return t({
+    comment: 'A season and episode number, as in S01E04',
+    message: `S${s}E${e}`,
+  });
 }
 
 /** The line under a title: the episode for an episode, the year otherwise. */
@@ -81,44 +101,57 @@ export function remainingMs(item: BaseItemDto): number {
   return total > pos ? total - pos : 0;
 }
 
-const LIBRARY_KIND: Record<string, string> = {
-  movies: 'Movies',
-  tvshows: 'Shows',
-  boxsets: 'Collections',
-};
-
 /** Tells apart libraries that share a name, such as two "Popular" catalogs. */
 export function libraryLabel(view: BaseItemDto): string | undefined {
-  return view.CollectionType
-    ? LIBRARY_KIND[String(view.CollectionType)]
-    : undefined;
+  switch (view.CollectionType) {
+    case 'movies':
+      return t`Movies`;
+    case 'tvshows':
+      return t`Shows`;
+    case 'boxsets':
+      return t`Collections`;
+    default:
+      return undefined;
+  }
 }
 
 const DAY_MS = 86_400_000;
 
 /**
- * Jellyfin's word for an episode it cannot play: unaired when it is dated in
- * the future, missing otherwise.
+ * Why Jellyfin can't play an episode: unaired when it is dated in the future,
+ * missing otherwise.
  */
-export function unavailableLabel(item: BaseItemDto): string | null {
+export function unavailableKind(
+  item: BaseItemDto
+): 'unaired' | 'missing' | null {
   if (item.LocationType !== 'Virtual') return null;
   const at = item.PremiereDate ? Date.parse(item.PremiereDate) : NaN;
-  return Number.isNaN(at) || at > Date.now() ? 'Unaired' : 'Missing';
+  return Number.isNaN(at) || at > Date.now() ? 'unaired' : 'missing';
 }
 
+export function unavailableLabel(item: BaseItemDto): string | null {
+  const kind = unavailableKind(item);
+  return kind === 'unaired' ? t`Unaired` : kind && t`Missing`;
+}
+
+export type EpisodeMark = 'filler' | 'recap';
+
 /** Marks a server with the `fillers` feature puts on an episode. */
-export function episodeMarks(item: BaseItemDto): ('Filler' | 'Recap')[] {
+export function episodeMarks(item: BaseItemDto): EpisodeMark[] {
   const marks = (item as { aiostreams?: { filler?: boolean; recap?: boolean } })
     .aiostreams;
   return [
-    ...(marks?.filler === true ? (['Filler'] as const) : []),
-    ...(marks?.recap === true ? (['Recap'] as const) : []),
+    ...(marks?.filler === true ? (['filler'] as const) : []),
+    ...(marks?.recap === true ? (['recap'] as const) : []),
   ];
 }
 
+export const markLabel = (mark: EpisodeMark) =>
+  mark === 'filler' ? t`Filler` : t`Recap`;
+
 /** `20 Jan 2008` */
 export function shortDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
+  return new Date(iso).toLocaleDateString(formatLocale(), {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -143,7 +176,7 @@ export function airDay(iso: string): Date {
 
 export function airTime(iso: string): string | null {
   if (dateOnly(iso)) return null;
-  return new Date(iso).toLocaleTimeString(undefined, {
+  return new Date(iso).toLocaleTimeString(formatLocale(), {
     hour: 'numeric',
     minute: '2-digit',
   });
@@ -151,7 +184,7 @@ export function airTime(iso: string): string | null {
 
 /** `Sun, 28 Sep` */
 export function dayLabel(iso: string): string {
-  return airDay(iso).toLocaleDateString(undefined, {
+  return airDay(iso).toLocaleDateString(formatLocale(), {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
@@ -165,7 +198,9 @@ export function untilLabel(iso: string): string {
   const days = Math.round(
     (midnight(airDay(iso)) - midnight(new Date())) / DAY_MS
   );
-  const format = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+  const format = new Intl.RelativeTimeFormat(formatLocale(), {
+    numeric: 'auto',
+  });
   return days < 14
     ? format.format(days, 'day')
     : format.format(Math.round(days / 7), 'week');

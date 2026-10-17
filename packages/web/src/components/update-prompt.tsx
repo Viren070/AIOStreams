@@ -1,3 +1,5 @@
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { toast } from 'sonner';
 import { Button } from '@aiostreams/ui/button';
@@ -40,7 +42,7 @@ export function UpdatePrompt() {
       open={!!asking}
       onOpenChange={(open) => !open && setAsking(null)}
       onCloseAutoFocus={restoreFocus}
-      title="Update ready"
+      title={t`Update ready`}
       description={asking}
       contentClass="max-w-md"
     >
@@ -50,7 +52,7 @@ export function UpdatePrompt() {
           className="rounded-full"
           onClick={() => setAsking(null)}
         >
-          Later
+          <Trans>Later</Trans>
         </Button>
         <Button
           intent="white"
@@ -72,7 +74,9 @@ function UpdateCard({ text, onLater }: { text: string; onLater(): void }) {
   return (
     <div data-ui="update-toast" className="w-full space-y-3">
       <div>
-        <p className="font-semibold">Update ready</p>
+        <p className="font-semibold">
+          <Trans>Update ready</Trans>
+        </p>
         <p className="mt-1 text-xs font-normal text-[--muted] [overflow-wrap:anywhere]">
           {text}
         </p>
@@ -84,7 +88,7 @@ function UpdateCard({ text, onLater }: { text: string; onLater(): void }) {
           className="rounded-full"
           onClick={onLater}
         >
-          Later
+          <Trans>Later</Trans>
         </Button>
         <Button
           size="sm"

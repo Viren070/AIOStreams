@@ -28,7 +28,7 @@ export const NumberInputAnatomy = defineStyleAnatomy({
     variants: {
       hideControls: {
         true: false,
-        false: 'border-r border-r-transparent hover:border-r-[--border]',
+        false: 'border-e border-e-transparent hover:border-e-[--border]',
       },
       size: {
         sm: null,
@@ -38,7 +38,7 @@ export const NumberInputAnatomy = defineStyleAnatomy({
       intent: {
         basic: null,
         filled: null,
-        unstyled: 'border-r-0 hover:border-r-transparent',
+        unstyled: 'border-e-0 hover:border-e-transparent',
       },
     },
     defaultVariants: {
@@ -50,7 +50,7 @@ export const NumberInputAnatomy = defineStyleAnatomy({
     [
       'UI-NumberInput__controlsContainer',
       'form-input w-auto p-0 flex flex-col items-stretch justify-center overflow-hidden max-h-full',
-      'border-l-0 relative z-[1]',
+      'border-s-0 relative z-[1]',
       'shadow-xs',
     ],
     {
@@ -66,7 +66,7 @@ export const NumberInputAnatomy = defineStyleAnatomy({
           unstyled: null,
         },
         hasRightAddon: {
-          true: 'border-r-0',
+          true: 'border-e-0',
           false: null,
         },
       },
@@ -400,7 +400,7 @@ export const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
             className={cn(
               'z-3',
               rightIconProps.className,
-              !rightAddon ? 'mr-6' : null
+              !rightAddon ? 'me-6' : null
             )}
           />
         </InputContainer>

@@ -3,6 +3,7 @@ import * as React from 'react';
 import { AppLayoutAnatomy } from '.';
 import { cn, ComponentAnatomy, defineStyleAnatomy } from '../core/styling';
 import { Drawer, DrawerProps } from '../drawer';
+import { uiText } from '../core/text';
 
 /* -------------------------------------------------------------------------------------------------
  * Context
@@ -40,7 +41,7 @@ export function useAppSidebarContext() {
 export const AppSidebarAnatomy = defineStyleAnatomy({
   sidebar: cva([
     'UI-AppSidebar__sidebar',
-    'flex flex-grow flex-col overflow-y-auto border-r border-transparent bg-[--background]',
+    'flex flex-grow flex-col overflow-y-auto border-e border-transparent bg-[--background]',
   ]),
 });
 
@@ -117,7 +118,7 @@ export const AppSidebarTrigger = React.forwardRef<
       onClick={() => ctx.setOpen(!ctx.open)}
       {...rest}
     >
-      <span className="sr-only">Open main menu</span>
+      <span className="sr-only">{uiText.openMenu}</span>
       {ctx.open ? (
         <svg
           xmlns="http://www.w3.org/2000/svg"

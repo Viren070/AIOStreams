@@ -264,6 +264,72 @@ export function normaliseCountryCode(code?: string | null): string | undefined {
   return undefined;
 }
 
+// Names Intl doesn't give that sources send: TMDB's, and TVmaze's ISO ones.
+const OTHER_NAMES: Record<string, string> = {
+  'United States of America': 'US',
+  'Czech Republic': 'CZ',
+  Turkey: 'TR',
+  Macedonia: 'MK',
+  Swaziland: 'SZ',
+  'Holy See': 'VA',
+  'Korea, Republic of': 'KR',
+  "Korea, Democratic People's Republic of": 'KP',
+  'Russian Federation': 'RU',
+  'Viet Nam': 'VN',
+  'Iran, Islamic Republic of': 'IR',
+  'Taiwan, Province of China': 'TW',
+  'Syrian Arab Republic': 'SY',
+  "Lao People's Democratic Republic": 'LA',
+  'Bolivia, Plurinational State of': 'BO',
+  'Venezuela, Bolivarian Republic of': 'VE',
+  'Tanzania, United Republic of': 'TZ',
+  'Moldova, Republic of': 'MD',
+  'Palestine, State of': 'PS',
+  'Palestinian Territory': 'PS',
+  'Congo, The Democratic Republic of the': 'CD',
+};
+
+// Rather than Intl's "Hong Kong SAR China" or "Myanmar (Burma)".
+const SHORT_NAMES = new Set(['HK', 'MO', 'MM', 'PS']);
+
+// Letters only, so "Cote D'Ivoire" finds "Côte d’Ivoire".
+const nameKey = (name: string) =>
+  name
+    .normalize('NFD')
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z]/g, '');
+
+let names:
+  { byCode: Map<string, string>; byKey: Map<string, string> } | undefined;
+
+function countryNames() {
+  if (names) return names;
+  const long = new Intl.DisplayNames(['en'], { type: 'region' });
+  const short = new Intl.DisplayNames(['en'], {
+    type: 'region',
+    style: 'short',
+  });
+  const byCode = new Map<string, string>();
+  const byKey = new Map<string, string>();
+  for (const code of Object.values(ALPHA3_TO_ALPHA2)) {
+    const full = long.of(code)!;
+    const brief = short.of(code)!;
+    byCode.set(code, SHORT_NAMES.has(code) ? brief : full);
+    byKey.set(nameKey(full), code).set(nameKey(brief), code);
+  }
+  for (const [name, code] of Object.entries(OTHER_NAMES))
+    byKey.set(nameKey(name), code);
+  return (names = { byCode, byKey });
+}
+
+/** One English name for a country, from its code or any source's name for it. */
+export function countryName(country: string): string | undefined {
+  const { byCode, byKey } = countryNames();
+  const code = normaliseCountryCode(country) ?? byKey.get(nameKey(country));
+  return code ? byCode.get(code) : undefined;
+}
+
 /** Only the tags release groups actually use to disambiguate same-name shows. */
 export function countryToReleaseTag(alpha2?: string): string | undefined {
   switch (alpha2) {

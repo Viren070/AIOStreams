@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import React from 'react';
 import { chapterAt } from '../../lib/playback/chapters';
 import { currentHost } from '../../lib/hosts';
@@ -12,16 +13,21 @@ import {
 import { useLatest } from '../../lib/use-latest';
 import type { PlayerController } from '../../lib/playback/controller';
 import { settings } from '../../lib/settings';
-import { delayLabel, SUBTITLE_DELAY_STEP_MS } from '../../lib/subtitles/delay';
+import { delayNotice, SUBTITLE_DELAY_STEP_MS } from '../../lib/subtitles/delay';
+import { formatLocale } from '../../lib/i18n';
 import {
   stepSubtitleHeight,
   stepSubtitleSize,
-  SUBTITLE_SIZE_LABELS,
+  subtitleSizeLabel,
 } from '../../lib/subtitles/style';
 
 export const RATES = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
-export const rateLabel = (rate: number) => (rate === 1 ? 'Normal' : `${rate}×`);
+export function rateLabel(rate: number): string {
+  if (rate === 1) return t`Normal`;
+  const shown = rate.toLocaleString(formatLocale());
+  return t`${shown}×`;
+}
 
 /** Back to a chapter's start, or the one before when it has only just begun. */
 const RESTART_CHAPTER_MS = 3000;
@@ -64,31 +70,34 @@ export function usePlayerKeys(keys: PlayerKeys): void {
       const next = Math.round((state.volume + by) * 100) / 100;
       const volume = Math.min(state.maxVolume, Math.max(0, next));
       setVolume(volume);
-      k().notice(`Volume ${Math.round(volume * 100)}%`);
+      const percent = Math.round(volume * 100);
+      k().notice(t`Volume ${percent}%`);
     };
     const nudgeSubtitles = (sign: number) => {
       const { state, setSubtitleDelay } = player();
       if (!setSubtitleDelay || !state.subtitle) return false;
       const next = state.subtitleDelayMs + sign * SUBTITLE_DELAY_STEP_MS;
       setSubtitleDelay(next);
-      k().notice(`Subtitles ${delayLabel(next).toLowerCase()}`);
+      k().notice(delayNotice(next));
     };
     const resizeSubtitles = (sign: number) => {
       if (!player().state.subtitle) return false;
       const size = stepSubtitleSize(sign) ?? settings.subtitle.size.read();
-      k().notice(`Subtitles ${SUBTITLE_SIZE_LABELS[size].toLowerCase()}`);
+      const label = subtitleSizeLabel(size);
+      k().notice(t`Subtitle size: ${label}`);
     };
     const raiseSubtitles = (sign: number) => {
       if (!player().state.subtitle) return false;
       const height =
         stepSubtitleHeight(sign) ?? settings.subtitle.position.read();
-      k().notice(`Subtitle height ${height}%`);
+      k().notice(t`Subtitle height ${height}%`);
     };
     const changeRate = (rate: number) => {
       const { setRate } = player();
       if (!setRate) return false;
       setRate(rate);
-      k().notice(`Speed ${rateLabel(rate).toLowerCase()}`);
+      const shown = rate.toLocaleString(formatLocale());
+      k().notice(rate === 1 ? t`Normal speed` : t`Speed ${shown}×`);
     };
     const stepRate = (sign: number) => {
       const { rate } = player().state;
@@ -104,7 +113,7 @@ export function usePlayerKeys(keys: PlayerKeys): void {
       const { subtitleTracks, setSubtitle } = player();
       setSubtitle(id);
       const label = subtitleTracks.find((t) => t.id === id)?.label;
-      k().notice(label ? `Subtitles: ${label}` : 'Subtitles off');
+      k().notice(label ? t`Subtitles: ${label}` : t`Subtitles off`);
     };
     const chapterStep = (sign: number) => {
       const { chapters, playhead, seek } = player();
@@ -120,7 +129,8 @@ export function usePlayerKeys(keys: PlayerKeys): void {
       const chapter = chapters[to];
       if (!chapter) return false;
       seek(chapter.startMs);
-      k().notice(chapter.title || `Chapter ${to + 1}`);
+      const number = to + 1;
+      k().notice(chapter.title || t`Chapter ${number}`);
     };
     const call = (fn: (() => void) | undefined) => {
       if (!fn) return false;
@@ -156,8 +166,10 @@ export function usePlayerKeys(keys: PlayerKeys): void {
         if (!player().state.paused) k().togglePlay();
       },
       'player.stop': () => k().onBack(),
-      'player.skipBack': () => k().seekBy(-settings.controls.seekStep.read() * 1000),
-      'player.skipForward': () => k().seekBy(settings.controls.seekStep.read() * 1000),
+      'player.skipBack': () =>
+        k().seekBy(-settings.controls.seekStep.read() * 1000),
+      'player.skipForward': () =>
+        k().seekBy(settings.controls.seekStep.read() * 1000),
       'player.jump': (input) => {
         const { state, seek } = player();
         if (!state.durationMs) return false;
@@ -180,7 +192,8 @@ export function usePlayerKeys(keys: PlayerKeys): void {
         const at = audioTracks.findIndex((t) => t.id === state.audio);
         const next = audioTracks[(at + 1) % audioTracks.length];
         setAudio(next.id);
-        k().notice(`Audio: ${next.label}`);
+        const { label } = next;
+        k().notice(t`Audio: ${label}`);
       },
       'player.subtitles': () => {
         const { subtitleTracks, state } = player();

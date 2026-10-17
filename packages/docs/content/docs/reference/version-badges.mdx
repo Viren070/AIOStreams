@@ -1,0 +1,164 @@
+---
+title: Version filters and badges
+description: Search a title's versions with words or regular expressions, save searches as quick filters, and label versions with badges.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+The apps list a title's versions with the name and description your [formatter](/reference/custom-formatter) writes. Three things help you find the one you want: the search box, quick filters, and badges. Quick filters and badges are set under **Settings → Playback → Versions**. They are saved to your account, so they follow you to every device, TVs included.
+
+## What a version's text is
+
+Search, quick filters and badges all read the same text for each version: the name and description your formatter writes, line by line, then these fields, named as the [formatter](/reference/custom-formatter) names them:
+
+| Field | What it is |
+| ----- | ---------- |
+| `name`, `description` | What your formatter writes |
+| `filename`, `folderName` | The file's name and its folder's |
+| `resolution`, `quality`, `encode` | As read from the release |
+| `visualTags`, `audioTags`, `audioChannels`, `languages`, `editions` | The same, a value per line |
+| `releaseGroup`, `indexer`, `addon`, `service` | Where it came from |
+| `seMatched`, `rseMatched` | The names of the stream expressions it matched, and of the ranked ones |
+| `regexMatched`, `rankedRegexMatched` | The same for regexes |
+| `seadex` | `SeaDex`, or `SeaDex Best` for a best release |
+
+So a search for `atmos` finds versions with Atmos audio even when your formatter shows it as an icon.
+
+These fields come from AIOStreams. On another Jellyfin server a version has only its name, so the editors don't offer fields there, and a filter or badge limited to fields matches nothing.
+
+## Searching
+
+The search box shows once a title has a few versions. What you type is either:
+
+- **Words**, which must all appear, in any order: `remux 2160p`.
+- **A regular expression between slashes**: `/2160p|4k/`. Flags may follow the closing slash, such as `/remux.*atmos/s`.
+
+Case never matters in either.
+
+## Quick filters
+
+A quick filter is a search with a name. Each one shows as a pill above the version list, with how many versions it finds; pick one to show only those, and pick it again, or **All**, to go back. A pill works together with whatever is typed in the search box.
+
+| Name | Search |
+| ---- | ------ |
+| UHD | `/2160p\|4k/` |
+| Remux | `remux` |
+| Atmos | `/atmos/` |
+| Cached | `/⚡/` |
+
+A quick filter can also be limited to some [fields](#what-a-versions-text-is), to search only those parts of a version. A filter named **Top picks** that searches `/^top tier$/` in `seMatched` and `rseMatched` shows the versions your own stream expressions of that name picked out, and nothing that only mentions it.
+
+On a TV, where there is no search box, the pills are how to narrow a long list.
+
+### Sharing quick filters
+
+**Copy as JSON** in the editor copies your quick filters. **Import** adds quick filters from pasted JSON, or from the address of a file with them, which is read once:
+
+```json
+{
+  "quickFilters": [
+    { "name": "UHD", "query": "/2160p|4k/" },
+    { "name": "Top picks", "query": "/^top tier$/", "fields": ["seMatched", "rseMatched"] }
+  ]
+}
+```
+
+A plain list of filters, or a single one, imports too. A filter without a `name` and a `query`, or whose `fields` names none this app knows, is skipped.
+
+## Badges
+
+A badge is a small label a version shows when its text matches the badge's pattern. They come from two places:
+
+- **Packs**, linked by address. The app fetches a pack again from time to time, so its author's changes reach you, and keeps a copy for when it is offline.
+- **Your badges**, made in the app or pasted as JSON. **Copy as JSON** copies them in the format below, to share or move to another account.
+
+Your badges come first, then each pack's, in the order you list them. When two badges that match have the same label or the same image, a version shows only the first, so one of your own can stand in for a pack's.
+
+### The format
+
+A badge file is a JSON object with a `badges` list:
+
+```json
+{
+  "badges": [
+    {
+      "label": "4K",
+      "match": "\\b(2160p|4k|uhd)\\b",
+      "group": "resolution"
+    },
+    {
+      "label": "1080p",
+      "match": "\\b1080p\\b",
+      "group": "resolution"
+    },
+    {
+      "label": "Dolby Vision",
+      "match": "\\b(dv|dovi|dolby ?vision)\\b",
+      "image": "https://example.com/badges/dolby-vision.png",
+      "background": "#000000",
+      "border": "#ffffff"
+    },
+    {
+      "label": "Atmos",
+      "match": "atmos",
+      "color": "#000000",
+      "background": "#ffffff"
+    }
+  ]
+}
+```
+
+| Field | Required | What it does |
+| ----- | -------- | ------------ |
+| `label` | Yes | The text the badge shows, or the image's description when it has one. |
+| `match` | Yes | A regular expression tested against the version's text. Case never matters. |
+| `image` | No | An `http` or `https` image address, shown in place of the label. |
+| `color` | No | The label's colour. |
+| `background` | No | The fill. Without one, the badge has none. |
+| `border` | No | The outline's colour. A label without one gets a light outline; an image gets none. |
+| `group` | No | Badges with the same group are alternatives: only the first that matches shows. |
+| `fields` | No | A list of [fields](#what-a-versions-text-is) to match against, instead of the whole text. |
+
+Colours are hex (`#fff`, `#ffffff`, `#ffffff80`), `transparent`, or `rgb()`/`rgba()`. A field the app cannot read is left out, and a badge without a `label` and `match` is skipped.
+
+Groups make ranked badges simple: list the best match first. In the example above, a version with both `2160p` and `1080p` in its text shows only **4K**.
+
+`fields` keeps a badge to what you mean. To badge the versions your own stream expressions pick out, match their names in `seMatched` and `rseMatched`, where nothing else can match by accident:
+
+```json
+{
+  "label": "Top pick",
+  "match": "^top tier$",
+  "fields": ["seMatched", "rseMatched"]
+}
+```
+
+A badge whose `fields` names none this app knows is skipped.
+
+### Patterns
+
+Patterns are JavaScript regular expressions. A pattern may start with inline flags such as `(?i)` or `(?s)`, as patterns written for other apps often do; the app turns them into the pattern's own flags. A pattern is tested against the whole text with its lines joined by spaces, and, when it uses `^` or `$`, against each line on its own as well.
+
+<Callout type="warn">
+  A pattern this device cannot compile is skipped. JavaScript has no
+  possessive quantifiers or atomic groups, and older browsers and TVs (Safari
+  before 16.4, Chrome before 62) have no lookbehind, `(?<=…)` and `(?<!…)`.
+</Callout>
+
+### Fusion and Nuvio packs
+
+Packs made for Fusion, which Nuvio reads too, work as they are: link one, or paste it. The app reads them into its own format:
+
+| Fusion | This app |
+| ------ | -------- |
+| `name` | `label` |
+| `pattern` | `match` |
+| `imageURL` | `image` |
+| `textColor` | `color` |
+| `tagColor`, when `tagStyle` is `filled` | `background` |
+| `borderColor` | `border` |
+| `isEnabled: false` | the badge is left out |
+
+Fusion writes eight-digit colours with the alpha first (`#AARRGGBB`); the app reads them that way. A pack's `groups` are categories for its editor, not alternatives, so they do not become groups here; ranked packs already rank in their patterns. Nuvio's exported settings work too: the app reads the active pack in them.
+
+Some packs only match text their own formatters write, such as hidden marker characters. Those badges show only with that formatter.

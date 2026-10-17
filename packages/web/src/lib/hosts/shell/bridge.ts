@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import React from 'react';
 import type { HostEvent } from '../../downloads/types';
 
@@ -195,7 +196,7 @@ export function ask<T extends ShellMessage['type']>(
         ? undefined
         : setTimeout(() => {
             done();
-            reject(new Error('The app did not answer'));
+            reject(new Error(t`The app did not answer`));
           }, opts.timeoutMs);
     const stop = bridge.subscribe((m) => {
       if (m.type === 'error' && opts.errors) {

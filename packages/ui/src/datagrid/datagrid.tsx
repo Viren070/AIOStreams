@@ -45,16 +45,16 @@ export const DataGridAnatomy = defineStyleAnatomy({
   tableHead: cva(['UI-DataGrid__tableHead', '']),
   th: cva([
     'UI-DataGrid__th group/th',
-    'px-3 h-12 text-left text-sm font-bold',
+    'px-3 h-12 text-start text-sm font-bold',
     'data-[is-selection-col=true]:px-3 data-[is-selection-col=true]:sm:px-1 data-[is-selection-col=true]:text-center',
   ]),
   titleChevronContainer: cva([
     'UI-DataGrid__titleChevronContainer',
-    'absolute flex items-center inset-y-0 top-1 -right-9 group',
+    'absolute flex items-center inset-y-0 top-1 -end-9 group',
   ]),
   titleChevron: cva([
     'UI-DataGrid__titleChevron',
-    'mr-3 h-4 w-4 text-gray-400 group-hover:text-gray-500 relative bottom-0.5',
+    'me-3 h-4 w-4 text-gray-400 group-hover:text-gray-500 relative bottom-0.5',
   ]),
   tableBody: cva(['UI-DataGrid__tableBody', 'w-full relative border-b']),
   td: cva([
@@ -75,7 +75,7 @@ export const DataGridAnatomy = defineStyleAnatomy({
   ]),
   footerPageDisplayContainer: cva([
     'UI-DataGrid__footerPageDisplayContainer',
-    'flex flex-none items-center gap-1 ml-2 text-sm',
+    'flex flex-none items-center gap-1 ms-2 text-sm',
   ]),
   footerPaginationInputContainer: cva([
     'UI-DataGrid__footerPaginationInputContainer',
@@ -269,7 +269,7 @@ export function DataGrid<T extends Record<string, any>>(
                       ])
                     }
                   >
-                    {icon && <span className="text-md mr-2">{icon}</span>}
+                    {icon && <span className="text-md me-2">{icon}</span>}
                     <span>{name}</span>
                   </DropdownMenuItem>
                 );
@@ -538,9 +538,10 @@ export function DataGrid<T extends Record<string, any>>(
                             row={cell.row}
                             table={table}
                             rowErrors={rowErrors}
-                            meta={
-                              getColumnHelperMeta(cell.column, 'editingMeta')!
-                            }
+                            meta={getColumnHelperMeta(
+                              cell.column,
+                              'editingMeta'
+                            )!}
                             onValueUpdated={handleUpdateValue}
                           />
                         )}

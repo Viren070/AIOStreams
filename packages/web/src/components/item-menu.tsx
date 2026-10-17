@@ -1,3 +1,5 @@
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { flushSync } from 'react-dom';
 import {
@@ -49,14 +51,14 @@ function PlayEntries({ item }: { item: BaseItemDto }) {
         data-name="play"
         onSelect={() => picker.play(item, { startMs: resumeMs })}
       >
-        <BiPlay /> {resumeMs ? 'Resume' : 'Play'}
+        <BiPlay /> {resumeMs ? t`Resume` : t`Play`}
       </ContextMenuItem>
       <ContextMenuItem
         data-name={straight ? 'choose-version' : 'play-now'}
         onSelect={() => picker.play(item, { startMs: resumeMs, held: true })}
       >
         {straight ? <BiListUl /> : <BiSkipNext />}
-        {straight ? 'Choose a version' : 'Play straight away'}
+        {straight ? t`Choose a version` : t`Play straight away`}
       </ContextMenuItem>
     </>
   );
@@ -79,7 +81,7 @@ function DownloadEntry({
         data-name="downloads"
         onSelect={() => navigate(to.downloads)}
       >
-        <BiDownload /> See the download
+        <BiDownload /> <Trans>See the download</Trans>
       </ContextMenuItem>
     );
   return (
@@ -89,12 +91,13 @@ function DownloadEntry({
         item.Type === 'Series'
           ? void episodes(item.Id!).then(
               (items) => items.length && picker.download(items),
-              () => toast.error('Could not list the episodes')
+              () => toast.error(t`Could not list the episodes`)
             )
           : picker.download([item])
       }
     >
-      <BiDownload /> {item.Type === 'Series' ? 'Download the show' : 'Download'}
+      <BiDownload />{' '}
+      {item.Type === 'Series' ? t`Download the show` : t`Download`}
     </ContextMenuItem>
   );
 }
@@ -216,7 +219,7 @@ function ItemMenuContent({ item, onPage, onDetails }: MenuTarget) {
       {playable && <PlayEntries item={item} />}
       {onDetails && (
         <ContextMenuItem data-name="details" onSelect={onDetails}>
-          <BiInfoCircle /> Details
+          <BiInfoCircle /> <Trans>Details</Trans>
         </ContextMenuItem>
       )}
       <DownloadEntry item={item} playable={playable} />
@@ -227,11 +230,11 @@ function ItemMenuContent({ item, onPage, onDetails }: MenuTarget) {
         >
           {item.Type === 'Episode' ? (
             <>
-              <BiTv /> Go to show
+              <BiTv /> <Trans>Go to show</Trans>
             </>
           ) : (
             <>
-              <BiInfoCircle /> Open
+              <BiInfoCircle /> <Trans>Open</Trans>
             </>
           )}
         </ContextMenuItem>
@@ -245,14 +248,14 @@ function ItemMenuContent({ item, onPage, onDetails }: MenuTarget) {
               setPlayed.mutate({ itemId: item.Id!, played: !played })
             }
           >
-            <BiCheck /> {played ? 'Mark unwatched' : 'Mark watched'}
+            <BiCheck /> {played ? t`Mark unwatched` : t`Mark watched`}
           </ContextMenuItem>
           {item.Type === 'Episode' && item.SeriesId && (
             <ContextMenuItem
               data-name="watched-up-to"
               onSelect={() => setPlayedUpTo.mutate(item)}
             >
-              <BiCheckDouble /> Mark watched up to here
+              <BiCheckDouble /> <Trans>Mark watched up to here</Trans>
             </ContextMenuItem>
           )}
           {resumeMs > 0 && (
@@ -260,7 +263,7 @@ function ItemMenuContent({ item, onPage, onDetails }: MenuTarget) {
               data-name="remove-resume"
               onSelect={() => clearResume.mutate(item.Id!)}
             >
-              <BiReset /> Remove from continue watching
+              <BiReset /> <Trans>Remove from continue watching</Trans>
             </ContextMenuItem>
           )}
         </>
@@ -272,7 +275,7 @@ function ItemMenuContent({ item, onPage, onDetails }: MenuTarget) {
         }
       >
         {favorite ? <BiSolidHeart /> : <BiHeart />}
-        {favorite ? 'Remove favourite' : 'Add favourite'}
+        {favorite ? t`Remove favourite` : t`Add favourite`}
       </ContextMenuItem>
     </ContextMenuContent>
   );

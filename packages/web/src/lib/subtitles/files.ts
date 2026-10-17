@@ -1,3 +1,5 @@
+import { t } from '@lingui/core/macro';
+import { formatLocale } from '../i18n';
 import { parseAssCues, parseCues, type SubtitleCue } from './cues';
 
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -42,12 +44,12 @@ function extension(name: string): string {
 /** Throws why a player can't take the file. */
 export function checkSubtitleFile(file: File, types: readonly string[]): void {
   if (!types.includes(extension(file.name))) {
-    const names = types.map((t) => `.${t}`);
-    throw new Error(
-      `Only ${names.slice(0, -1).join(', ')} or ${names.at(-1)} files can be added`
-    );
+    const names = new Intl.ListFormat(formatLocale(), {
+      type: 'disjunction',
+    }).format(types.map((type) => `.${type}`));
+    throw new Error(t`Only ${names} files can be added`);
   }
-  if (file.size > MAX_BYTES) throw new Error('That file is too big');
+  if (file.size > MAX_BYTES) throw new Error(t`That file is too big`);
 }
 
 /** A file neither marked nor valid as UTF-8 is read in the browser language's legacy encoding. */
@@ -71,7 +73,7 @@ export async function readSubtitleCues(file: File): Promise<SubtitleCue[]> {
   const cues = ['ass', 'ssa'].includes(extension(file.name))
     ? parseAssCues(text)
     : parseCues(text);
-  if (!cues.length) throw new Error('No subtitles were found in that file');
+  if (!cues.length) throw new Error(t`No subtitles were found in that file`);
   return cues;
 }
 
@@ -80,7 +82,7 @@ export function base64(file: File): Promise<string> {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result).split(',')[1] ?? '');
     reader.onerror = () =>
-      reject(reader.error ?? new Error('Could not read that file'));
+      reject(reader.error ?? new Error(t`Could not read that file`));
     reader.readAsDataURL(file);
   });
 }

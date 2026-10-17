@@ -19,7 +19,7 @@ export const CommandAnatomy = defineStyleAnatomy({
     'flex items-center px-3 py-2',
     'cmdk-input-wrapper',
   ]),
-  inputIcon: cva(['UI-Command__inputIcon', 'mr-2 h-5 w-5 shrink-0 opacity-50']),
+  inputIcon: cva(['UI-Command__inputIcon', 'me-2 h-5 w-5 shrink-0 opacity-50']),
   list: cva([
     'UI-Command__list',
     'max-h-[300px] overflow-y-auto overflow-x-hidden',
@@ -42,11 +42,11 @@ export const CommandAnatomy = defineStyleAnatomy({
   ]),
   itemIconContainer: cva([
     'UI-Command__itemIconContainer',
-    'mr-2 text-base shrink-0 w-4',
+    'me-2 text-base shrink-0 w-4',
   ]),
   shortcut: cva([
     'UI-Command__shortcut',
-    'ml-auto text-xs tracking-widest text-[--muted]',
+    'ms-auto text-xs tracking-widest text-[--muted]',
   ]),
 });
 

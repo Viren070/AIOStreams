@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import { TICKS_PER_MS } from '../format';
 import { runAction } from '../input';
 import {
@@ -118,17 +119,20 @@ function listen(press: (key: MediaKey) => void): () => void {
   };
 }
 
+/* eslint-disable lingui/no-unlocalized-strings -- the app's own names */
 const ANDROID_SEGMENT_ACTIONS: Record<SegmentAction, string> = {
   ask: 'AskToSkip',
   skip: 'Skip',
   none: 'None',
 };
+/* eslint-enable lingui/no-unlocalized-strings */
 
 /** The Android player keeps its own skip action per segment type. */
 function syncSegments(): () => void {
   const bridge = window.MediaSegments;
   if (!bridge) return () => undefined;
-  let sent: ReturnType<typeof settings.playback.segmentActions.read> | undefined;
+  let sent:
+    ReturnType<typeof settings.playback.segmentActions.read> | undefined;
   const apply = () => {
     const actions = settings.playback.segmentActions.read();
     if (actions === sent) return;
@@ -207,10 +211,17 @@ function build(app: AndroidInterface): { page: Host; player: Host } {
     device,
     selectServer:
       app.openServerSelection && (() => app.openServerSelection?.()),
+    // Read when shown, after the language is set.
     settings: app.openClientSettings && {
-      label: 'Android app',
-      description: "The app's player",
-      help: "The app's player and its options, such as starting videos in landscape.",
+      get label() {
+        return t`Android app`;
+      },
+      get description() {
+        return t`The app's player`;
+      },
+      get help() {
+        return t`The app's player and its options, such as starting videos in landscape.`;
+      },
       open: () => app.openClientSettings?.(),
     },
     fullscreen: app.enableFullscreen && {

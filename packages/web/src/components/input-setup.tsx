@@ -1,17 +1,20 @@
 import React from 'react';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import type { AnyRouter } from '@tanstack/react-router';
 import { Button } from '@aiostreams/ui/button';
 import { Modal } from '@aiostreams/ui/modal';
 import { currentHost } from '../lib/hosts';
 import {
-  GROUP_LABELS,
-  action,
+  actionText,
   activate,
   groupActions,
+  groupLabel,
   isTextField,
   keysOf,
   move,
   moveTo,
+  navSide,
   onAction,
   openMenu,
   returnFocus,
@@ -55,7 +58,7 @@ function toNavigation(): boolean {
   const nav = document.querySelector<HTMLElement>('[data-nav-back]');
   const current = nav?.querySelector<HTMLElement>('[aria-current=page]');
   if (!nav || !current || nav.contains(document.activeElement)) return false;
-  moveTo(current, nav.dataset.navBack as Direction);
+  moveTo(current, navSide(nav.dataset.navBack)!);
   return true;
 }
 
@@ -109,8 +112,8 @@ function ShortcutsHelp({
     <Modal
       open={open}
       onOpenChange={onOpenChange}
-      title="Keyboard shortcuts"
-      description="A remote's or gamepad's buttons work too."
+      title={t`Keyboard shortcuts`}
+      description={t`A remote's or gamepad's buttons work too.`}
       contentClass="max-w-2xl"
     >
       <div
@@ -123,10 +126,10 @@ function ShortcutsHelp({
           return (
             <section key={group} data-name={group}>
               <h3 className="mb-1 text-sm font-semibold text-[--muted]">
-                {GROUP_LABELS[group]}
+                {groupLabel(group)}
               </h3>
               {ids.map((id) => {
-                const { label, help, summary } = action(id);
+                const { label, help, summary } = actionText(id);
                 const bound = keysOf(id, overrides);
                 if (!bound.length) return null;
                 const keys = summary ? [summary] : bound;
@@ -165,7 +168,7 @@ function ShortcutsHelp({
             navigate(to.settings('shortcuts'));
           }}
         >
-          Change shortcuts
+          <Trans>Change shortcuts</Trans>
         </Button>
       </div>
     </Modal>

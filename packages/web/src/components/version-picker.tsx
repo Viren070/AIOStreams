@@ -1,3 +1,5 @@
+import { plural, t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { toast } from 'sonner';
 import {
@@ -57,7 +59,10 @@ import { backdropUrl, landscapeUrl } from '../lib/images';
 import { itemPath, navigate, to } from '../lib/paths';
 import { settings, useSetting } from '../lib/settings';
 import type { BaseItemDto, SourceInfo } from '../lib/types';
+import { compileQuery, versionText } from '../lib/versions';
+import { matchBadges } from '../lib/badges';
 import { CachedImage } from './cached-image';
+import { BadgeChip, useBadges } from './version-badges';
 
 interface Request {
   item: BaseItemDto;
@@ -166,7 +171,7 @@ export function VersionPickerProvider({
         navigate(to.play(item.Id!, last, startMs));
         return;
       }
-      const notice = toast.loading('Finding a version…');
+      const notice = toast.loading(t`Finding a version…`);
       try {
         const info = await queryClient.fetchQuery(infoOptions(item.Id!));
         const sources = playableSources(info);
@@ -248,12 +253,12 @@ export function VersionPickerProvider({
           open={open}
           onOpenChange={(open) => !open && setRequest(null)}
           onCloseAutoFocus={restoreFocus}
-          title={item ? itemTitle(item) : 'Versions'}
+          title={item ? itemTitle(item) : t`Versions`}
           headerClass="sr-only"
           side="right"
           size="md"
           contentClass="flex flex-col gap-0 overflow-hidden p-0"
-          closeClass="right-2 top-[calc(0.75rem+env(safe-area-inset-top))]"
+          closeClass="end-2 top-[calc(0.75rem+env(safe-area-inset-top))]"
         >
           {versions}
         </Drawer>
@@ -271,7 +276,7 @@ export function VersionPickerProvider({
               : item?.ProductionYear || undefined
           }
           contentClass="flex w-full max-w-4xl flex-col gap-0 overflow-hidden p-0 max-md:h-[100dvh] max-md:rounded-none max-md:border-0 md:max-h-[85vh]"
-          headerClass="relative z-[1] px-4 pb-3 pr-14 pt-5 text-left max-md:pt-[calc(1.25rem+env(safe-area-inset-top))] sm:px-5 sm:pr-14"
+          headerClass="relative z-[1] px-4 pb-3 pe-14 pt-5 text-start max-md:pt-[calc(1.25rem+env(safe-area-inset-top))] sm:px-5 sm:pe-14"
           closeClass="z-[2] max-md:top-[calc(1rem+env(safe-area-inset-top))]"
         >
           {versions}
@@ -284,14 +289,8 @@ export function VersionPickerProvider({
 
 const FILTER_FROM = 8;
 
-function sourceText(source: SourceInfo): string {
-  return [
-    source.aiostreams?.name || source.Name,
-    source.aiostreams?.description,
-  ]
-    .filter(Boolean)
-    .join('\n');
-}
+/** Versions drawn at a time; more come as the list nears its end. */
+const PAGE = 40;
 
 function Versions({
   request,
@@ -322,17 +321,46 @@ function Versions({
   const download = request.download;
   const [startMs, setStartMs] = React.useState(request.startMs);
   const [filter, setFilter] = React.useState('');
-  const sources = playableSources(info.data).filter(
-    (s) => !download || downloadable(s)
+  const [quickFilters] = useSetting(settings.playback.quickFilters);
+  const [quickName, setQuickName] = React.useState<string | null>(null);
+  const badges = useBadges();
+  const sources = React.useMemo(
+    () =>
+      playableSources(info.data).filter((s) => !download || downloadable(s)),
+    [info.data, download]
   );
+  const texts = React.useMemo(
+    () => new Map(sources.map((s) => [s, versionText(s)])),
+    [sources]
+  );
+  const shownBadges = React.useMemo(
+    () => new Map(sources.map((s) => [s, matchBadges(texts.get(s)!, badges)])),
+    [sources, texts, badges]
+  );
+  const quick = React.useMemo(
+    () =>
+      quickFilters.map((q) => {
+        const test = compileQuery(q.query, q.fields);
+        const count = test
+          ? sources.filter((s) => test(texts.get(s)!)).length
+          : 0;
+        return { ...q, test, count };
+      }),
+    [quickFilters, sources, texts]
+  );
+  const chosen = quick.find((q) => q.name === quickName);
+  const typed = React.useMemo(() => compileQuery(filter), [filter]);
+  const filtered = !!filter.trim() || !!chosen;
   const notices = noticeSources(info.data);
-  const terms = filter.toLowerCase().split(/\s+/).filter(Boolean);
-  const shown = terms.length
-    ? sources.filter((s) => {
-        const text = sourceText(s).toLowerCase();
-        return terms.every((t) => text.includes(t));
-      })
-    : sources;
+  const shown = sources.filter((s) => {
+    const text = texts.get(s)!;
+    return (!chosen || !!chosen.test?.(text)) && !!typed?.(text);
+  });
+  const pageKey = `${quickName ?? ''}|${filter}`;
+  const [paged, setPaged] = React.useState({ key: pageKey, limit: PAGE });
+  const limit = paged.key === pageKey ? paged.limit : PAGE;
+  const partial = limit < shown.length;
+  const more = React.useRef<HTMLDivElement>(null);
   const art =
     backdropUrl(client, item, { maxWidth: 896 }) ??
     landscapeUrl(client, item, { maxWidth: 896 });
@@ -351,11 +379,15 @@ function Versions({
     update();
     return () => observer.disconnect();
   }, []);
-  // Keys start on the actions above while the versions load, then on the first version.
+  // Keys start on the actions above while the versions load, then once on the
+  // first version, so a filter changing what shows leaves them where they are.
   const firstShown = shown[0]?.Id;
+  const placed = React.useRef(false);
   React.useEffect(() => {
+    if (!firstShown || placed.current) return;
     // After the dialog puts focus on its first button.
     const timer = setTimeout(() => {
+      placed.current = true;
       const list = listRef.current;
       const at = keyboardFocus();
       const first = list?.querySelector<HTMLElement>('[data-ui=version-play]');
@@ -364,6 +396,21 @@ function Versions({
     });
     return () => clearTimeout(timer);
   }, [firstShown]);
+  React.useEffect(() => {
+    const list = listRef.current;
+    const end = more.current;
+    if (!partial || !list || !end) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[entries.length - 1].isIntersecting)
+          setPaged({ key: pageKey, limit: limit + PAGE });
+      },
+      // eslint-disable-next-line lingui/no-unlocalized-strings -- a root margin
+      { root: list, rootMargin: '0px 0px 150% 0px' }
+    );
+    observer.observe(end);
+    return () => observer.disconnect();
+  }, [partial, limit, pageKey]);
 
   const start = (source: SourceInfo) => {
     if (download) {
@@ -390,12 +437,19 @@ function Versions({
       onError: (e) => toast.error(e.message),
     });
 
+  const found = sources.length;
   const count = info.data
-    ? sources.length === 1
-      ? '1 version'
-      : `${sources.length} versions`
-    : 'Finding versions';
+    ? plural(found, { one: '# version', other: '# versions' })
+    : t`Finding versions`;
+  const filterHint = info.data
+    ? plural(found, {
+        one: 'Filter # version',
+        other: 'Filter # versions',
+      })
+    : t`Finding versions`;
+  const others = download ? download.items.length - 1 : 0;
   const filtering = sources.length >= FILTER_FROM && !currentHost().tv;
+  const loadError = info.error?.message ?? '';
   const searchAgain = canRefresh && (
     <Tooltip
       trigger={
@@ -406,22 +460,71 @@ function Versions({
           intent="gray-subtle"
           className="rounded-full"
           icon={<BiRefresh className={cn(refreshing && 'animate-spin')} />}
-          aria-label="Search again"
+          aria-label={t`Search again`}
           disabled={refreshing}
           onClick={retry}
         />
       }
     >
-      Search again
+      <Trans>Search again</Trans>
     </Tooltip>
   );
   const downloadHint = download && (
     <p data-ui="versions-download-hint" className="text-sm text-gray-300">
       {download.items.length > 1
-        ? `Pick the version to download. The other ${download.items.length - 1} episodes get the same release where they have it.`
-        : 'Pick the version to download.'}
+        ? plural(others, {
+            one: 'Pick the version to download. The other episode gets the same release where it has it.',
+            other:
+              'Pick the version to download. The other # episodes get the same release where they have it.',
+          })
+        : t`Pick the version to download.`}
     </p>
   );
+  const quickRow = !!quick.length && !!sources.length && (
+    <div
+      data-ui="versions-quick"
+      data-nav-group
+      data-nav-enter="[role=tab][aria-selected=true]"
+      role="tablist"
+      aria-label={t`Quick filters`}
+      className="-m-1 flex gap-1.5 overflow-x-auto p-1 [scrollbar-width:none]"
+    >
+      <Button
+        data-ui="versions-quick-filter"
+        role="tab"
+        size="sm"
+        intent={chosen ? 'gray-subtle' : 'white'}
+        className="flex-none rounded-full"
+        aria-selected={!chosen}
+        tabIndex={chosen ? -1 : 0}
+        onFocus={() => setQuickName(null)}
+        onClick={() => setQuickName(null)}
+      >
+        <Trans>All</Trans>
+      </Button>
+      {quick.map((q) => (
+        <Button
+          key={q.name}
+          data-ui="versions-quick-filter"
+          role="tab"
+          size="sm"
+          intent={chosen === q ? 'white' : 'gray-subtle'}
+          className="flex-none rounded-full"
+          aria-selected={chosen === q}
+          tabIndex={chosen === q ? 0 : -1}
+          data-count={q.count}
+          data-empty={!q.count || undefined}
+          disabled={!q.count && chosen !== q}
+          onFocus={() => setQuickName(q.name)}
+          onClick={() => setQuickName(q.name)}
+        >
+          {q.name}
+          <span className="ms-1.5 opacity-60">{q.count}</span>
+        </Button>
+      ))}
+    </div>
+  );
+  const resumeAt = clock(request.startMs);
   // A version switched to while playing carries on where it was.
   const resumeToggle = request.startMs > 0 && !request.playing && (
     <div
@@ -434,7 +537,7 @@ function Versions({
         className="rounded-full"
         onClick={() => setStartMs(request.startMs)}
       >
-        Resume from {clock(request.startMs)}
+        <Trans>Resume from {resumeAt}</Trans>
       </Button>
       <Button
         size="sm"
@@ -442,7 +545,7 @@ function Versions({
         className="rounded-full"
         onClick={() => setStartMs(0)}
       >
-        From the start
+        <Trans>From the start</Trans>
       </Button>
     </div>
   );
@@ -469,14 +572,14 @@ function Versions({
           data-ui="versions-header"
           className="space-y-2 px-3 pb-2 pt-[calc(0.5rem+env(safe-area-inset-top))]"
         >
-          <div className="flex items-center gap-2 pr-9">
+          <div className="flex items-center gap-2 pe-9">
             {filtering ? (
               <div className="min-w-0 flex-1">
                 <TextInput
                   data-ui="versions-filter"
                   value={filter}
                   onValueChange={setFilter}
-                  placeholder={`Filter ${count}`}
+                  placeholder={filterHint}
                   leftIcon={<BiSearch />}
                   className="rounded-full"
                 />
@@ -484,13 +587,14 @@ function Versions({
             ) : (
               <p
                 data-ui="versions-count"
-                className="mr-auto text-sm text-[--muted]"
+                className="me-auto text-sm text-[--muted]"
               >
                 {count}
               </p>
             )}
             {searchAgain}
           </div>
+          {quickRow}
           {downloadHint}
           {resumeToggle}
         </div>
@@ -502,7 +606,7 @@ function Versions({
           <div className="flex flex-wrap items-center gap-2">
             <p
               data-ui="versions-count"
-              className="mr-auto text-sm text-[--muted]"
+              className="me-auto text-sm text-[--muted]"
             >
               {count}
             </p>
@@ -518,7 +622,7 @@ function Versions({
                 navigate(itemPath(item));
               }}
             >
-              Details
+              <Trans>Details</Trans>
             </Button>
             {searchAgain}
           </div>
@@ -529,11 +633,12 @@ function Versions({
               data-ui="versions-filter"
               value={filter}
               onValueChange={setFilter}
-              placeholder="Filter versions"
+              placeholder={t`Filter versions`}
               leftIcon={<BiSearch />}
               className="rounded-full"
             />
           )}
+          {quickRow}
         </div>
       )}
 
@@ -558,7 +663,7 @@ function Versions({
         {info.isError && !info.data && (
           <div className="space-y-3 rounded-xl border border-red-500/20 bg-red-950/20 p-3">
             <p className="select-text text-sm text-red-300 [overflow-wrap:anywhere]">
-              Could not load the versions: {info.error.message}
+              <Trans>Could not load the versions: {loadError}</Trans>
             </p>
             <Button
               size="sm"
@@ -567,29 +672,33 @@ function Versions({
               loading={refreshing}
               onClick={retry}
             >
-              Try again
+              <Trans>Try again</Trans>
             </Button>
           </div>
         )}
         {info.data && !sources.length && (
           <p className="py-6 text-center text-sm text-[--muted]">
-            No versions were found.
+            <Trans>No versions were found.</Trans>
           </p>
         )}
         {!!sources.length && !shown.length && (
           <p className="py-6 text-center text-sm text-[--muted]">
-            No versions match.
+            {typed ? (
+              <Trans>No versions match.</Trans>
+            ) : (
+              <Trans>That pattern is not a valid regular expression.</Trans>
+            )}
           </p>
         )}
 
-        {shown.map((source) => {
+        {shown.slice(0, limit).map((source) => {
           const link = directUrl(client, item.Id!, source);
           const actions = [
             ...(!download && downloadable(source)
               ? [
                   {
                     name: 'download',
-                    label: 'Download',
+                    label: t`Download`,
                     icon: <BiDownload />,
                     run: () => {
                       onDone();
@@ -604,12 +713,12 @@ function Versions({
               : [
                   {
                     name: 'copy-link',
-                    label: 'Copy stream link',
+                    label: t`Copy stream link`,
                     icon: <BiCopy />,
                     run: () =>
                       copyToClipboard(link, {
-                        onSuccess: () => toast.success('Stream link copied'),
-                        onError: () => toast.error('Could not copy the link'),
+                        onSuccess: () => toast.success(t`Stream link copied`),
+                        onError: () => toast.error(t`Could not copy the link`),
                       }),
                   },
                 ]),
@@ -620,7 +729,7 @@ function Versions({
               data-ui="version"
               data-playing={source.Id === request.playing || undefined}
               data-cached={source.aiostreams?.cached || undefined}
-              className="group/version relative flex items-start rounded-xl border border-white/5 bg-white/[0.03] transition-colors hover:border-white/10 hover:bg-white/[0.06]"
+              className="group/version relative flex items-start rounded-xl border border-white/5 bg-white/[0.03] transition-colors [contain-intrinsic-size:auto_7rem] [content-visibility:auto] hover:border-white/10 hover:bg-white/[0.06]"
             >
               <button
                 type="button"
@@ -628,7 +737,7 @@ function Versions({
                 // Inside the card's border, where an outline would ring it twice.
                 data-focus="own"
                 onClick={() => start(source)}
-                className="flex min-w-0 flex-1 items-start gap-3 rounded-xl p-3 text-left focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[--ring]"
+                className="flex min-w-0 flex-1 items-start gap-3 rounded-xl p-3 text-start focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[--ring]"
               >
                 <span
                   data-ui="version-play-icon"
@@ -648,7 +757,7 @@ function Versions({
                   <span
                     aria-hidden
                     className={cn(
-                      'float-right ml-2 h-6 w-8',
+                      'float-right rtl:float-left ms-2 h-6 w-8',
                       !compact && 'sm:hidden'
                     )}
                   />
@@ -657,7 +766,7 @@ function Versions({
                       data-ui="version-playing"
                       className="mb-1 inline-block rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-black"
                     >
-                      Playing
+                      <Trans>Playing</Trans>
                     </span>
                   )}
                   <span
@@ -680,12 +789,25 @@ function Versions({
                       {source.aiostreams.description}
                     </span>
                   )}
+                  {!!shownBadges.get(source)?.length && (
+                    <span
+                      data-ui="version-badges"
+                      className="flex flex-wrap gap-1 pt-1"
+                    >
+                      {shownBadges.get(source)!.map((badge) => (
+                        <BadgeChip
+                          key={badge.image ?? badge.label}
+                          badge={badge}
+                        />
+                      ))}
+                    </span>
+                  )}
                 </span>
               </button>
               {!!actions.length && (
                 <div
                   className={cn(
-                    'absolute right-1.5 top-1.5',
+                    'absolute end-1.5 top-1.5',
                     !compact && 'sm:hidden'
                   )}
                 >
@@ -698,7 +820,7 @@ function Versions({
                         intent="gray-basic"
                         className="rounded-full"
                         icon={<BiDotsVerticalRounded />}
-                        aria-label="More"
+                        aria-label={t`More`}
                       />
                     }
                   >
@@ -747,7 +869,9 @@ function Versions({
           );
         })}
 
-        {!terms.length &&
+        {partial && <div ref={more} aria-hidden className="h-px" />}
+        {!filtered &&
+          !partial &&
           notices.map((notice) => <Notice key={notice.Id} notice={notice} />)}
       </div>
     </>
@@ -807,12 +931,12 @@ function Notice({ notice }: { notice: SourceInfo }) {
               intent="gray-basic"
               className="flex-none rounded-full"
               icon={<BiLinkExternal />}
-              aria-label="Open link"
+              aria-label={t`Open link`}
               onClick={() => window.open(externalUrl, '_blank', 'noopener')}
             />
           }
         >
-          Open link
+          <Trans>Open link</Trans>
         </Tooltip>
       )}
     </div>
@@ -834,8 +958,8 @@ function ExternalPrompt({
       data-name="external-player"
       open={!!item}
       onOpenChange={(open) => !open && onClose()}
-      title="Playing in your player"
-      description="Your player does not report back, so mark it as watched once you finish."
+      title={t`Playing in your player`}
+      description={t`Your player does not report back, so mark it as watched once you finish.`}
       contentClass="max-w-md"
     >
       {item && (
@@ -850,7 +974,7 @@ function ExternalPrompt({
               className="rounded-full"
               onClick={onClose}
             >
-              Not now
+              <Trans>Not now</Trans>
             </Button>
             <Button
               intent="white"
@@ -863,7 +987,7 @@ function ExternalPrompt({
                 )
               }
             >
-              Mark as watched
+              <Trans>Mark as watched</Trans>
             </Button>
           </div>
         </>

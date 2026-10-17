@@ -3,6 +3,8 @@ import type { JellyfinClient } from './client';
 import { storage } from './storage';
 import { CACHE_CATEGORIES } from './cache/store';
 import { appBridge } from './hosts/shell/bridge';
+import { readQuickFilters, type QuickFilter } from './versions';
+import { readBadgeSettings, type BadgeSettings } from './badges';
 
 /** A source the home page features from: `resume`, `next-up` or `view:<library id>`. */
 export type FeaturedSource = string;
@@ -405,6 +407,7 @@ export const VOLUME_STEPS = [1, 2, 5, 10] as const;
 
 export const HOLD_RATES = [1.5, 2, 3] as const;
 
+/* eslint-disable lingui/no-unlocalized-strings -- Jellyfin's segment kinds */
 export const SEGMENT_TYPES = [
   'Intro',
   'Recap',
@@ -412,6 +415,7 @@ export const SEGMENT_TYPES = [
   'Preview',
   'Commercial',
 ] as const;
+/* eslint-enable lingui/no-unlocalized-strings */
 export type SegmentType = (typeof SEGMENT_TYPES)[number];
 export const SEGMENT_ACTIONS = ['ask', 'skip', 'none'] as const;
 export type SegmentAction = (typeof SEGMENT_ACTIONS)[number];
@@ -588,6 +592,8 @@ const discord = record(DISCORD_EVENTS, (event) =>
  */
 export const settings = {
   interface: {
+    /** A catalog's locale, or `auto` for the system's language. */
+    language: device<string>('aiostreams-web-interface-language', 'auto'),
     featured: synced<Featured>(
       'featured',
       parseFeatured,
@@ -683,6 +689,7 @@ export const settings = {
       (raw) => raw ?? '',
       (value) => (value.trim() ? value.slice(0, MAX_CUSTOM_CSS) : undefined)
     ),
+    serverCss: syncedFlag('serverCss', true),
   },
   playback: {
     autoPlayFirst: syncedFlag('autoPlayFirst', false, [
@@ -693,6 +700,19 @@ export const settings = {
     ]),
     segment,
     segmentActions: group(segment),
+    quickFilters: synced<QuickFilter[]>(
+      'versionFilters',
+      readQuickFilters,
+      (value) => (value.length ? JSON.stringify(value) : undefined)
+    ),
+    badges: synced<BadgeSettings>(
+      'versionBadges',
+      readBadgeSettings,
+      (value) =>
+        value.links.length || value.badges.length
+          ? JSON.stringify(value)
+          : undefined
+    ),
   },
   next: {
     prompt: syncedChoice<NextPrompt>('nextPrompt', NEXT_PROMPTS, 'credits', [

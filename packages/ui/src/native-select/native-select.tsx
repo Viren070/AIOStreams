@@ -116,7 +116,7 @@ export const NativeSelect = React.forwardRef<
         <InputAddon {...rightAddonProps} />
         <InputIcon
           {...rightIconProps}
-          className={cn(rightIconProps.className, !rightAddon ? 'mr-8' : null)}
+          className={cn(rightIconProps.className, !rightAddon ? 'me-8' : null)}
         />
       </InputContainer>
     </BasicField>

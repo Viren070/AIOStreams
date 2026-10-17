@@ -1,3 +1,5 @@
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
@@ -188,7 +190,8 @@ export function useNextEpisodePrompt({
       wanted.current = key;
       setLoading(key);
       const code = episodeCode(episode.ParentIndexNumber, episode.IndexNumber);
-      toast.loading(`Finding versions of ${code || episode.Name}…`, {
+      const name = code || episode.Name || '';
+      toast.loading(t`Finding versions of ${name}…`, {
         id: NOTICE,
       });
       try {
@@ -204,7 +207,7 @@ export function useNextEpisodePrompt({
         return true;
       } catch {
         if (wanted.current !== key) return true;
-        toast.error('Could not find versions of that episode');
+        toast.error(t`Could not find versions of that episode`);
         return false;
       } finally {
         if (wanted.current === key) {
@@ -321,6 +324,7 @@ export function useNextEpisodePrompt({
 
   const [leftMs, setLeftMs] = React.useState(countdown * 1000);
   const counting = shown && autoplay && !paused;
+  const seconds = Math.max(1, Math.ceil(leftMs / 1000));
   React.useEffect(() => {
     if (!shown) setLeftMs(countdown * 1000);
   }, [shown, countdown]);
@@ -374,7 +378,7 @@ export function useNextEpisodePrompt({
       <div
         ref={card}
         data-ui="next-episode-card"
-        className="fixed bottom-[calc(2rem+env(safe-area-inset-bottom))] right-4 z-20 transition-[bottom] peer-data-[visible]:bottom-24 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-white/10 bg-gray-950 shadow-2xl duration-300 animate-in fade-in-0 slide-in-from-right-4"
+        className="fixed bottom-[calc(2rem+env(safe-area-inset-bottom))] end-4 z-20 transition-[bottom] peer-data-[visible]:bottom-24 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-white/10 bg-gray-950 shadow-2xl duration-300 animate-in fade-in-0 slide-in-from-right-4 rtl:slide-in-from-left-4"
       >
         {image && (
           <CachedImage
@@ -387,7 +391,7 @@ export function useNextEpisodePrompt({
         <div className="space-y-3 p-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-[--muted]">
-              Next episode
+              <Trans>Next episode</Trans>
             </p>
             <p className="line-clamp-2 font-semibold">{itemSubtitle(next)}</p>
           </div>
@@ -399,16 +403,14 @@ export function useNextEpisodePrompt({
               className="flex-1"
               onClick={() => void playNext()}
             >
-              {counting
-                ? `Play in ${Math.max(1, Math.ceil(leftMs / 1000))}s`
-                : 'Play now'}
+              {counting ? t`Play in ${seconds}s` : t`Play now`}
             </PlayerAction>
             <PlayerAction
               data-ui="next-episode-action"
               data-name="hide"
               onClick={() => setDismissed(true)}
             >
-              Hide
+              <Trans>Hide</Trans>
             </PlayerAction>
           </div>
         </div>
@@ -452,6 +454,7 @@ function StillWatching({
 }) {
   const { client } = useSession();
   const image = landscapeUrl(client, next, { maxWidth: 480 });
+  const upNext = itemSubtitle(next);
   useAction('back', onBack);
   return (
     <div
@@ -468,9 +471,11 @@ function StillWatching({
           />
         )}
         <div className="space-y-1">
-          <p className="text-2xl font-semibold">Are you still watching?</p>
+          <p className="text-2xl font-semibold">
+            <Trans>Are you still watching?</Trans>
+          </p>
           <p className="line-clamp-2 text-sm text-[--muted]">
-            Up next: {itemSubtitle(next)}
+            <Trans>Up next: {upNext}</Trans>
           </p>
         </div>
         <div className="flex flex-col justify-center gap-2 sm:flex-row">
@@ -482,14 +487,14 @@ function StillWatching({
             autoFocus
             onClick={onContinue}
           >
-            Continue watching
+            <Trans>Continue watching</Trans>
           </PlayerAction>
           <PlayerAction
             data-ui="still-watching-action"
             data-name="back"
             onClick={onBack}
           >
-            Back
+            <Trans>Back</Trans>
           </PlayerAction>
         </div>
       </div>

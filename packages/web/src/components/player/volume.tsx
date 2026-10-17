@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import React from 'react';
 import { LuVolume1, LuVolume2, LuVolumeX } from 'react-icons/lu';
 import { settings, useSetting } from '../../lib/settings';
@@ -29,7 +30,7 @@ function VolumeBar({
     <div
       ref={bar}
       role="slider"
-      aria-label="Volume"
+      aria-label={t`Volume`}
       aria-valuemin={0}
       aria-valuemax={Math.round(max * 100)}
       aria-valuenow={Math.round(level * 100)}
@@ -37,6 +38,7 @@ function VolumeBar({
       // The volume has its own keys, so arrows pass over it.
       data-nav="skip"
       data-ui="volume-bar"
+      dir="ltr"
       className="relative flex h-5 w-20 flex-none cursor-pointer touch-none items-center rounded-full"
       onKeyDown={(e) => {
         const direction = arrowDirection(e.key);
@@ -62,19 +64,19 @@ function VolumeBar({
         {max > 1 && (
           <div
             data-ui="volume-boost"
-            className="absolute inset-y-0 right-0 bg-white/15"
+            className="absolute inset-y-0 end-0 bg-white/15"
             style={{ left: `${share(1)}%` }}
           />
         )}
         <div
           data-ui="volume-level"
-          className="absolute inset-y-0 left-0 bg-white"
+          className="absolute inset-y-0 start-0 bg-white"
           style={{ width: `${share(level)}%` }}
         />
         {level > 1 && max > 1 && (
           <div
             data-ui="volume-boost-level"
-            className="absolute inset-y-0 left-0 bg-red-400"
+            className="absolute inset-y-0 start-0 bg-red-400"
             style={{
               width: `${share(level)}%`,
               opacity: (Math.min(level, max) - 1) / (max - 1),
@@ -99,7 +101,7 @@ export function Volume({ player }: { player: PlayerController }) {
     <div data-ui="volume" className="group/volume hidden items-center sm:flex">
       <ControlButton
         name="mute"
-        label={muted ? 'Unmute' : 'Mute'}
+        label={muted ? t`Unmute` : t`Mute`}
         onClick={player.toggleMute}
       >
         <Icon />

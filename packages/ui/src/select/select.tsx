@@ -17,6 +17,7 @@ import {
   InputIcon,
   InputStyling,
 } from '../input';
+import { uiText } from '../core/text';
 
 /* -------------------------------------------------------------------------------------------------
  * Anatomy
@@ -29,7 +30,7 @@ export const SelectAnatomy = defineStyleAnatomy({
   ]),
   chevronIcon: cva([
     'UI-Combobox__chevronIcon',
-    'ml-2 h-4 w-4 shrink-0 opacity-50',
+    'ms-2 h-4 w-4 shrink-0 opacity-50',
   ]),
   scrollButton: cva([
     'UI-Select__scrollButton',
@@ -42,14 +43,14 @@ export const SelectAnatomy = defineStyleAnatomy({
   viewport: cva(['UI-Select__viewport', 'p-1 z-10']),
   item: cva([
     'UI-Select__item',
-    'text-base leading-none rounded-[--radius] flex items-center h-8 pr-2 pl-8 relative',
+    'text-base leading-none rounded-[--radius] flex items-center h-8 pe-2 ps-8 relative',
     'select-none disabled:opacity-50 disabled:pointer-events-none',
     'data-highlighted:outline-none data-highlighted:bg-[--subtle]',
     'data-[disabled=true]:opacity-50 data-[disabled=true]:pointer-events-none',
   ]),
   checkIcon: cva([
     'UI-Select__checkIcon',
-    'absolute left-2 w-4 inline-flex items-center justify-center',
+    'absolute start-2 w-4 inline-flex items-center justify-center',
   ]),
 });
 
@@ -223,7 +224,7 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
                 SelectAnatomy.root(),
                 className
               )}
-              aria-label={basicFieldProps.name || 'Select'}
+              aria-label={basicFieldProps.name || uiText.select}
               {...rest}
             >
               <SelectPrimitive.Value placeholder={placeholder} />

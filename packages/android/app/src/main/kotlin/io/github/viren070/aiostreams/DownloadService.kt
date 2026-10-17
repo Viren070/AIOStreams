@@ -16,6 +16,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import io.github.viren070.aiostreams.downloads.Running
+import java.text.NumberFormat
 
 /** Keeps downloads going out of sight before Android 14, with their progress in a notification. */
 class DownloadService : Service() {
@@ -72,7 +73,8 @@ class DownloadService : Service() {
 
         fun notification(context: Context, running: List<Running>): Notification {
             NotificationManagerCompat.from(context).createNotificationChannel(
-                NotificationChannelCompat.Builder(CHANNEL, NotificationManagerCompat.IMPORTANCE_LOW).setName("Downloads").build(),
+                NotificationChannelCompat.Builder(CHANNEL, NotificationManagerCompat.IMPORTANCE_LOW)
+                    .setName(context.getString(R.string.channel_downloads)).build(),
             )
             val total = running.sumOf { it.total ?: 0 }
             val known = running.all { it.total != null } && total > 0
@@ -82,8 +84,11 @@ class DownloadService : Service() {
             )
             return NotificationCompat.Builder(context, CHANNEL)
                 .setSmallIcon(android.R.drawable.stat_sys_download)
-                .setContentTitle(running.singleOrNull()?.title ?: "Downloading ${running.size} items")
-                .setContentText(if (known) "$share%" else null)
+                .setContentTitle(
+                    running.singleOrNull()?.title
+                        ?: context.resources.getQuantityString(R.plurals.downloading_items, running.size, running.size),
+                )
+                .setContentText(if (known) NumberFormat.getPercentInstance().format(share / 100.0) else null)
                 .setProgress(100, share, !known)
                 .setContentIntent(open)
                 .setOngoing(true)

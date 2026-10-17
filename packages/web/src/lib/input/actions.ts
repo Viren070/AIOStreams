@@ -1,20 +1,23 @@
+import { i18n, type MessageDescriptor } from '@lingui/core';
+import { msg, t } from '@lingui/core/macro';
 import type { Host } from '../hosts';
 import { browserFeatures, type PlayerFeature } from '../playback/controller';
 import { settings, useSetting } from '../settings';
 
 export type ActionGroup = 'general' | 'navigation' | 'player' | 'sync';
 
-export const GROUP_LABELS: Record<ActionGroup, string> = {
-  general: 'General',
-  navigation: 'Moving around',
-  player: 'Player',
-  sync: 'Sync by ear',
-};
+export const groupLabel = (group: ActionGroup) =>
+  ({
+    general: t`General`,
+    navigation: t`Moving around`,
+    player: t`Player`,
+    sync: t`Sync by ear`,
+  })[group];
 
 interface Action {
-  label: string;
+  label: MessageDescriptor;
   /** A line on how it works, where the label can't say. */
-  help?: string;
+  help?: MessageDescriptor;
   group: ActionGroup;
   keys: readonly string[];
   /** Runs again while its key is held. */
@@ -22,7 +25,7 @@ interface Action {
   /** Its keys are what it does, so they can only be turned off together. */
   fixed?: boolean;
   /** Shown in place of a long list of keys. */
-  summary?: string;
+  summary?: MessageDescriptor;
   needs?: PlayerFeature;
 }
 
@@ -31,196 +34,200 @@ const DIGITS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 /** Ids are saved with changed keys, so they never change. */
 export const ACTIONS = {
   back: {
-    label: 'Back',
+    label: msg`Back`,
     group: 'general',
     keys: ['Escape', 'Back', 'GamepadB'],
   },
-  help: { label: 'Keyboard shortcuts', group: 'general', keys: ['?'] },
+  help: { label: msg`Keyboard shortcuts`, group: 'general', keys: ['?'] },
 
   'nav.up': {
-    label: 'Up',
+    label: msg`Up`,
     group: 'navigation',
     keys: ['ArrowUp'],
     repeat: true,
   },
   'nav.down': {
-    label: 'Down',
+    label: msg`Down`,
     group: 'navigation',
     keys: ['ArrowDown'],
     repeat: true,
   },
   'nav.left': {
-    label: 'Left',
+    label: msg`Left`,
     group: 'navigation',
     keys: ['ArrowLeft'],
     repeat: true,
   },
   'nav.right': {
-    label: 'Right',
+    label: msg`Right`,
     group: 'navigation',
     keys: ['ArrowRight'],
     repeat: true,
   },
-  'nav.select': { label: 'Select', group: 'navigation', keys: ['GamepadA'] },
+  'nav.select': { label: msg`Select`, group: 'navigation', keys: ['GamepadA'] },
   'nav.menu': {
-    label: 'Options',
-    help: 'Opens the menu of what is selected, as a right click does.',
+    label: msg`Options`,
+    help: msg`Opens the menu of what is selected, as a right click does.`,
     group: 'navigation',
     keys: ['ContextMenu', 'GamepadY', 'Hold+Enter', 'Hold+GamepadA'],
   },
   search: {
-    label: 'Search',
+    label: msg`Search`,
     group: 'navigation',
     keys: ['/', 'BrowserSearch'],
   },
-  home: { label: 'Home', group: 'navigation', keys: ['H', 'BrowserHome'] },
+  home: { label: msg`Home`, group: 'navigation', keys: ['H', 'BrowserHome'] },
 
   'player.controls': {
-    label: 'Show the controls',
+    label: msg`Show the controls`,
     group: 'player',
     keys: ['Enter', 'GamepadA'],
   },
   'player.playPause': {
-    label: 'Play or pause',
+    label: msg`Play or pause`,
     group: 'player',
     keys: ['Space', 'K', 'MediaPlayPause', 'GamepadX'],
   },
-  'player.play': { label: 'Play', group: 'player', keys: ['MediaPlay'] },
-  'player.pause': { label: 'Pause', group: 'player', keys: ['MediaPause'] },
-  'player.stop': { label: 'Stop', group: 'player', keys: ['MediaStop'] },
+  'player.play': { label: msg`Play`, group: 'player', keys: ['MediaPlay'] },
+  'player.pause': { label: msg`Pause`, group: 'player', keys: ['MediaPause'] },
+  'player.stop': { label: msg`Stop`, group: 'player', keys: ['MediaStop'] },
   'player.skipBack': {
-    label: 'Skip back',
+    label: msg`Skip back`,
     group: 'player',
     keys: ['ArrowLeft', 'J', 'MediaRewind', 'GamepadLB'],
     repeat: true,
   },
   'player.skipForward': {
-    label: 'Skip forward',
+    label: msg`Skip forward`,
     group: 'player',
     keys: ['ArrowRight', 'L', 'MediaFastForward', 'GamepadRB'],
     repeat: true,
   },
   'player.jump': {
-    label: 'Jump through the video',
-    help: '1 jumps a tenth of the way in, 5 halfway and 0 back to the start.',
+    label: msg`Jump through the video`,
+    help: msg`1 jumps a tenth of the way in, 5 halfway and 0 back to the start.`,
     group: 'player',
     keys: DIGITS,
     fixed: true,
-    summary: '0 to 9',
+    summary: msg`0 to 9`,
   },
   'player.previousChapter': {
-    label: 'Previous chapter',
+    label: msg`Previous chapter`,
     group: 'player',
     needs: 'chapters',
     keys: ['PageDown'],
   },
   'player.nextChapter': {
-    label: 'Next chapter',
+    label: msg`Next chapter`,
     group: 'player',
     needs: 'chapters',
     keys: ['PageUp'],
   },
   'player.skipSegment': {
-    label: 'Skip the intro or credits',
+    label: msg`Skip the intro or credits`,
     group: 'player',
     keys: ['S'],
   },
   'player.previous': {
-    label: 'Previous episode',
+    label: msg`Previous episode`,
     group: 'player',
     keys: ['Shift+P', 'MediaTrackPrevious'],
   },
   'player.next': {
-    label: 'Next episode',
+    label: msg`Next episode`,
     group: 'player',
     keys: ['Shift+N', 'MediaTrackNext'],
   },
   'player.volumeUp': {
-    label: 'Volume up',
+    label: msg`Volume up`,
     group: 'player',
     keys: ['ArrowUp', 'WheelUp'],
     repeat: true,
   },
   'player.volumeDown': {
-    label: 'Volume down',
+    label: msg`Volume down`,
     group: 'player',
     keys: ['ArrowDown', 'WheelDown'],
     repeat: true,
   },
-  'player.mute': { label: 'Mute', group: 'player', keys: ['M'] },
+  'player.mute': { label: msg`Mute`, group: 'player', keys: ['M'] },
   'player.audio': {
-    label: 'Next audio track',
+    label: msg`Next audio track`,
     group: 'player',
     keys: ['A'],
     needs: 'audio',
   },
   'player.subtitles': {
-    label: 'Subtitles on or off',
+    label: msg`Subtitles on or off`,
     group: 'player',
     keys: ['C'],
   },
   'player.nextSubtitles': {
-    label: 'Next subtitles',
+    label: msg`Next subtitles`,
     group: 'player',
     keys: ['Shift+C'],
   },
   'player.subtitlesEarlier': {
-    label: 'Subtitles earlier',
+    label: msg`Subtitles earlier`,
     group: 'player',
     keys: ['Z'],
     repeat: true,
   },
   'player.subtitlesLater': {
-    label: 'Subtitles later',
+    label: msg`Subtitles later`,
     group: 'player',
     keys: ['X'],
     repeat: true,
   },
   'player.subtitlesSmaller': {
-    label: 'Smaller subtitles',
+    label: msg`Smaller subtitles`,
     group: 'player',
     keys: ['-'],
   },
   'player.subtitlesBigger': {
-    label: 'Bigger subtitles',
+    label: msg`Bigger subtitles`,
     group: 'player',
     keys: ['=', 'Plus'],
   },
   'player.subtitlesLower': {
-    label: 'Lower subtitles',
+    label: msg`Lower subtitles`,
     group: 'player',
     keys: ['Shift+R'],
     repeat: true,
   },
   'player.subtitlesHigher': {
-    label: 'Raise subtitles',
+    label: msg`Raise subtitles`,
     group: 'player',
     keys: ['R'],
     repeat: true,
   },
-  'player.slower': { label: 'Slower', group: 'player', keys: ['<', '['] },
-  'player.faster': { label: 'Faster', group: 'player', keys: ['>', ']'] },
+  'player.slower': { label: msg`Slower`, group: 'player', keys: ['<', '['] },
+  'player.faster': { label: msg`Faster`, group: 'player', keys: ['>', ']'] },
   'player.normalSpeed': {
-    label: 'Normal speed',
+    label: msg`Normal speed`,
     group: 'player',
     keys: ['Backspace'],
   },
   'player.speedUp': {
-    label: 'Speed up while held',
-    help: 'Plays faster for as long as the key is held, at the speed set in Playback settings.',
+    label: msg`Speed up while held`,
+    help: msg`Plays faster for as long as the key is held, at the speed set in Playback settings.`,
     group: 'player',
     keys: ['Hold+Space', 'Hold+Enter', 'Hold+GamepadX'],
   },
-  'player.fullscreen': { label: 'Full screen', group: 'player', keys: ['F'] },
+  'player.fullscreen': {
+    label: msg`Full screen`,
+    group: 'player',
+    keys: ['F'],
+  },
   'player.stats': {
-    label: 'Statistics',
+    label: msg`Statistics`,
     group: 'player',
     keys: ['I'],
     needs: 'stats',
   },
 
-  'sync.heard': { label: 'Heard the line', group: 'sync', keys: ['H'] },
-  'sync.saw': { label: 'Saw its subtitle', group: 'sync', keys: ['S'] },
+  'sync.heard': { label: msg`Heard the line`, group: 'sync', keys: ['H'] },
+  'sync.saw': { label: msg`Saw its subtitle`, group: 'sync', keys: ['S'] },
 } satisfies Record<string, Action>;
 
 export type ActionId = keyof typeof ACTIONS;
@@ -228,6 +235,16 @@ export type ActionId = keyof typeof ACTIONS;
 export const ACTION_IDS = Object.keys(ACTIONS) as ActionId[];
 
 export const action = (id: ActionId): Action => ACTIONS[id];
+
+/** What a list of shortcuts shows for one, in the app's language. */
+export function actionText(id: ActionId) {
+  const { label, help, summary } = action(id);
+  return {
+    label: i18n._(label),
+    help: help && i18n._(help),
+    summary: summary && i18n._(summary),
+  };
+}
 
 type Overrides = Record<string, string[]>;
 

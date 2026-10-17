@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import { parseCues, type SubtitleCue } from '../../subtitles/cues';
 import { ownTrackLabel } from '../../playback/controller';
 import type {
@@ -48,10 +49,10 @@ function tracksOf(av: AvPlay, type: 'AUDIO' | 'TEXT'): AvTrack[] {
 function errorMessage(error: unknown): string {
   const code = String((error as { name?: string } | null)?.name ?? error);
   if (/CONNECTION|NETWORK|INVALID_URI|TIMEOUT/i.test(code))
-    return 'the TV could not load the stream';
+    return t`the TV could not load the stream`;
   if (/NOT_SUPPORTED|UNSUPPORTED/i.test(code))
-    return 'the TV cannot play this format';
-  return `the TV's player failed (${code})`;
+    return t`the TV cannot play this format`;
+  return t`the TV's player failed (${code})`;
 }
 
 const plain = (text: string) =>

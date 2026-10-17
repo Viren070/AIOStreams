@@ -115,13 +115,13 @@ export function DataGridFilter<T extends Record<string, any>>(
           onValueChange={(v) => handleUpdate(v.trim().toLowerCase())}
           size="sm"
           fieldClass="w-fit"
-          className="sm:w-auto pr-8 md:max-w-sm"
+          className="sm:w-auto pe-8 md:max-w-sm"
         />
       )}
       {/*Boolean*/}
       {filterParams.type === 'boolean' && (
         <DropdownMenu
-          className="right-[inherit] left"
+          className="end-[inherit] left"
           trigger={
             <DataGridActiveFilter
               options={filterParams}
@@ -146,7 +146,7 @@ export function DataGridFilter<T extends Record<string, any>>(
       {/*Checkbox*/}
       {filterParams.type === 'checkbox' && !!options.length && (
         <DropdownMenu
-          className="right-[inherit] left"
+          className="end-[inherit] left"
           trigger={
             <DataGridActiveFilter
               options={filterParams}
@@ -174,7 +174,7 @@ export function DataGridFilter<T extends Record<string, any>>(
       {/*Radio*/}
       {filterParams.type === 'radio' && !!options.length && (
         <DropdownMenu
-          className="right-[inherit] left"
+          className="end-[inherit] left"
           trigger={
             <DataGridActiveFilter
               options={filterParams}

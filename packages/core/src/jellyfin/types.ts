@@ -54,6 +54,14 @@ export interface AiostreamsSourceExtension {
   indexer?: string;
   mediaInfoQuality?: string;
   filename?: string;
+  folderName?: string;
+  editions?: string[];
+  /** The expressions and regexes it matched, named as the formatter names them. */
+  seMatched?: string;
+  rseMatched?: string[];
+  regexMatched?: string;
+  rankedRegexMatched?: string[];
+  seadex?: 'best' | 'alt';
   externalUrl?: string;
   /** A YouTube video, which the client opens itself. */
   ytId?: string;

@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import { currentHost } from '../hosts';
 import { fullTitle, ticksToMs } from '../format';
 import { navigate, to } from '../paths';
@@ -92,7 +93,7 @@ export function usePlay() {
     }
   ) => {
     const { source } = opts;
-    if (!source.Id) throw new Error('No playable version was found');
+    if (!source.Id) throw new Error(t`No playable version was found`);
     const startMs =
       opts.startMs ?? ticksToMs(item.UserData?.PlaybackPositionTicks);
     if (party.state()?.status === 'live')

@@ -1,4 +1,5 @@
 import { drift, glideBy, glideTo, headedTo } from './glide';
+import { pageRtl } from '../direction';
 
 export type Direction = 'up' | 'down' | 'left' | 'right';
 
@@ -304,6 +305,21 @@ function along(
   return null;
 }
 
+/** Focus's nearest box that scrolls up and down and can still go `dir`. */
+function scrollerToward(from: HTMLElement, dir: Direction): Element | null {
+  for (
+    let box = from.parentElement;
+    box && box !== document.body;
+    box = box.parentElement
+  ) {
+    if (!/auto|scroll/.test(getComputedStyle(box).overflowY)) continue;
+    const [, top] = headedTo(box);
+    if (dir === 'up' ? top > 0 : top + box.clientHeight < box.scrollHeight - 1)
+      return box;
+  }
+  return null;
+}
+
 function nearest(
   root: Element,
   from: HTMLElement,
@@ -328,7 +344,18 @@ function nearest(
     if (way) scored.push({ ...way, el, rect: to });
   }
   scored.sort((a, b) => a.score - b.score);
-  const found = pick(scored, from, rect, dir, sideways);
+  // A box that can still scroll that way keeps focus, as what it scrolled past lies over what's beyond its edge.
+  const own = sideways ? null : scrollerToward(from, dir);
+  const found =
+    (own &&
+      pick(
+        scored.filter((way) => own.contains(way.el)),
+        from,
+        rect,
+        dir,
+        sideways
+      )) ||
+    pick(scored, from, rect, dir, sideways);
   // Something only out of sight or far off that way.
   return found || everything || sideways
     ? found
@@ -491,7 +518,7 @@ const lastIn = new WeakMap<Element, HTMLElement>();
 
 export function remember(el: Element): void {
   if (!(el instanceof HTMLElement)) return;
-  for (let group = el.closest(GROUP); group; ) {
+  for (let group = el.closest(GROUP); group;) {
     lastIn.set(group, el);
     group = group.parentElement?.closest(GROUP) ?? null;
   }
@@ -571,6 +598,40 @@ function shortfall(
   return 0;
 }
 
+/** Whether `el` is the first, or last, that focus reaches in `box`. */
+function atEdge(box: Element, el: HTMLElement, last: boolean): boolean {
+  const all = box.querySelectorAll<HTMLElement>(FOCUSABLE);
+  const step = last ? -1 : 1;
+  for (let i = last ? all.length - 1 : 0; i >= 0 && i < all.length; i += step)
+    if (!ruledOut(all[i]) && all[i].getClientRects().length)
+      return all[i] === el;
+  return false;
+}
+
+/** To its start or end for its first or last focusable, so what lies past that shows too. */
+function toEdge(
+  box: Element,
+  el: HTMLElement,
+  rect: DOMRect,
+  view: DOMRect,
+  top: number
+): number | null {
+  const end = box.scrollHeight - box.clientHeight;
+  if (
+    top > 0 &&
+    rect.bottom + top <= view.bottom - 24 &&
+    atEdge(box, el, false)
+  )
+    return -top;
+  if (
+    top < end &&
+    rect.top - (end - top) >= view.top + 24 &&
+    atEdge(box, el, true)
+  )
+    return end - top;
+  return null;
+}
+
 function shownBox(el: HTMLElement): Element {
   let box: Element = el;
   for (
@@ -612,12 +673,13 @@ function reveal(el: HTMLElement): void {
       ? 0
       : box.hasAttribute('data-nav-snap')
         ? Math.round(rect.top - view.top - 24)
-        : shortfall(
+        : (toEdge(box, el, rect, view, top) ??
+          shortfall(
             { start: view.top, end: view.bottom },
             rect.top,
             rect.bottom,
             24
-          );
+          ));
     const dx = scrollsX
       ? shortfall(
           { start: view.left, end: view.right },
@@ -686,6 +748,13 @@ let lastMove: { from: HTMLElement; to: HTMLElement; dir: Direction } | null =
  */
 const cameFrom = new WeakMap<Element, HTMLElement>();
 
+/** A side a `data-nav-*` mark names; `start` and `end` follow the page's direction. */
+export function navSide(value: string | undefined): Direction | undefined {
+  if (value === 'start') return pageRtl() ? 'right' : 'left';
+  if (value === 'end') return pageRtl() ? 'left' : 'right';
+  return value as Direction | undefined;
+}
+
 /** Moves focus to the nearest thing that way; nothing focused starts at the first. */
 export function move(dir: Direction): boolean {
   const root = scope();
@@ -702,7 +771,7 @@ export function move(dir: Direction): boolean {
     return !!start;
   }
   const exit = from.closest<HTMLElement>('[data-nav-exit]');
-  const out = exit?.dataset.navExit === dir;
+  const out = navSide(exit?.dataset.navExit) === dir;
   const came = out ? cameFrom.get(exit!) : undefined;
   if (came?.isConnected && canFocus(came)) {
     moveTo(came, dir);
@@ -754,10 +823,10 @@ export function moveTo(to: HTMLElement, dir: Direction): void {
     return focusOn(to);
   }
   const box = to.closest<HTMLElement>('[data-nav-exit]');
-  const exit = box && !box.contains(from) && box.dataset.navExit;
+  const exit = box && !box.contains(from) && navSide(box.dataset.navExit);
   if (exit) cameFrom.set(box, from);
   // Into such a box, only its exit leads back.
-  lastMove = { from, to, dir: exit ? OPPOSITE[exit as Direction] : dir };
+  lastMove = { from, to, dir: exit ? OPPOSITE[exit] : dir };
   focusOn(to);
 }
 

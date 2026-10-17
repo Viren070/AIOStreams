@@ -1,8 +1,11 @@
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { BiSolidStar, BiSolidStarHalf, BiStar } from 'react-icons/bi';
 import { Button, IconButton } from '@aiostreams/ui/button';
 import { Popover } from '@aiostreams/ui/popover';
 import { Tooltip } from '@aiostreams/ui/tooltip';
+import { pageRtl } from '../lib/direction';
 import { useSetRating } from '../lib/queries';
 import type { BaseItemDto } from '../lib/types';
 
@@ -15,14 +18,15 @@ function formatRating(value: number): string {
 
 function Star({ fill }: { fill: number }) {
   if (fill >= 1) return <BiSolidStar className="text-brand-500" />;
-  if (fill >= STEP) return <BiSolidStarHalf className="text-brand-500" />;
+  if (fill >= STEP)
+    return <BiSolidStarHalf className="text-brand-500 rtl:-scale-x-100" />;
   return <BiStar className="text-white/30" />;
 }
 
 /** Ten stars in half steps, on the 0 to 10 scale Jellyfin keeps. */
 export const RatingButton = React.memo(function RatingButton({
   item,
-  label = 'Rate',
+  label = t`Rate`,
   inline,
 }: {
   item: BaseItemDto;
@@ -42,13 +46,18 @@ export const RatingButton = React.memo(function RatingButton({
   };
   const valueAt = (e: React.PointerEvent | React.MouseEvent, star: number) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    return star + (e.clientX - rect.left < rect.width / 2 ? STEP : 1);
+    const into = pageRtl() ? rect.right - e.clientX : e.clientX - rect.left;
+    return star + (into < rect.width / 2 ? STEP : 1);
   };
   const onKey = (e: React.KeyboardEvent) => {
+    // The stars fill from the right, right to left.
+    const [more, less] = pageRtl()
+      ? ['ArrowLeft', 'ArrowRight']
+      : ['ArrowRight', 'ArrowLeft'];
     const step =
-      e.key === 'ArrowRight' || e.key === 'ArrowUp'
+      e.key === more || e.key === 'ArrowUp'
         ? STEP
-        : e.key === 'ArrowLeft' || e.key === 'ArrowDown'
+        : e.key === less || e.key === 'ArrowDown'
           ? -STEP
           : 0;
     if (step) {
@@ -114,12 +123,12 @@ export const RatingButton = React.memo(function RatingButton({
         <p className="text-sm font-semibold">
           {draft != null || rating != null
             ? `${formatRating(shown)} / 10`
-            : 'Your rating'}
+            : t`Your rating`}
         </p>
         <div
           role="slider"
           tabIndex={0}
-          aria-label="Your rating"
+          aria-label={t`Your rating`}
           aria-valuemin={0}
           aria-valuemax={STARS}
           aria-valuenow={shown}
@@ -148,7 +157,7 @@ export const RatingButton = React.memo(function RatingButton({
             className="w-full rounded-full"
             onClick={() => choose(null)}
           >
-            Clear rating
+            <Trans>Clear rating</Trans>
           </Button>
         )}
       </div>
@@ -158,7 +167,7 @@ export const RatingButton = React.memo(function RatingButton({
   return (
     // Popover hands a trigger's props to its content, so the tooltip gets a span.
     <Tooltip trigger={<span className="inline-flex">{picker}</span>}>
-      {rating != null ? 'Your rating' : label}
+      {rating != null ? t`Your rating` : label}
     </Tooltip>
   );
 });

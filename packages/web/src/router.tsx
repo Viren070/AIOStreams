@@ -1,3 +1,5 @@
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import {
   createHashHistory,
@@ -246,16 +248,16 @@ const routeTree = rootRoute.addChildren([
 function NotFoundPage(): React.ReactElement {
   return (
     <PageMessage>
-      <LuffyError title="There is nothing here" className="mt-0">
+      <LuffyError title={t`There is nothing here`} className="mt-0">
         <p className="text-sm text-[--muted]">
-          The link may be old, or the page moved.
+          <Trans>The link may be old, or the page moved.</Trans>
         </p>
         <Button
           intent="white"
           className="mt-4 rounded-full"
           onClick={() => navigate(to.home, { replace: true })}
         >
-          Go home
+          <Trans>Go home</Trans>
         </Button>
       </LuffyError>
     </PageMessage>

@@ -1,3 +1,5 @@
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { toast } from 'sonner';
 import { BiArrowBack, BiCopy, BiLayer, BiRefresh } from 'react-icons/bi';
@@ -192,9 +194,12 @@ export function PlayerPage({
       );
     }
     if (youTubeId && !youTube.data)
-      return <Failure itemId={itemId} message="This video didn't load." />;
+      return <Failure itemId={itemId} message={t`This video didn't load.`} />;
     return (
-      <Failure itemId={itemId} message="This version is no longer available." />
+      <Failure
+        itemId={itemId}
+        message={t`This version is no longer available.`}
+      />
     );
   }
   return (
@@ -360,11 +365,11 @@ function Failure({
           <Button
             intent="gray-outline"
             className="rounded-full"
-            leftIcon={<BiArrowBack />}
+            leftIcon={<BiArrowBack className="rtl:-scale-x-100" />}
             autoFocus={!onVersions && !retry}
             onClick={() => goBack(to.item(itemId))}
           >
-            Back
+            <Trans>Back</Trans>
           </Button>
           {retry && (
             <Button
@@ -385,7 +390,7 @@ function Failure({
               autoFocus={!retry}
               onClick={onVersions}
             >
-              Other versions
+              <Trans>Other versions</Trans>
             </Button>
           )}
           {link && (
@@ -395,12 +400,12 @@ function Failure({
               leftIcon={<BiCopy />}
               onClick={() =>
                 copyToClipboard(link, {
-                  onSuccess: () => toast.success('Stream link copied'),
-                  onError: () => toast.error('Could not copy the link'),
+                  onSuccess: () => toast.success(t`Stream link copied`),
+                  onError: () => toast.error(t`Could not copy the link`),
                 })
               }
             >
-              Copy link
+              <Trans>Copy link</Trans>
             </Button>
           )}
         </div>
@@ -617,6 +622,8 @@ function Player({
     onPrevious: next.previous ? next.playPrevious : undefined,
   });
   useKeepAwake(player, !hostPlayer);
+  const launchedName = launched?.name ?? '';
+  const failure = player.state.error ?? '';
 
   if (player.state.pictureInPicture)
     return <div data-page="player" className="fixed inset-0" />;
@@ -645,7 +652,7 @@ function Player({
       {player.stats?.text && (
         <pre
           data-ui="player-stats"
-          className="pointer-events-none fixed left-[calc(1rem+env(safe-area-inset-left))] top-[calc(4.5rem+env(safe-area-inset-top))] rounded-lg bg-black/60 px-3 py-2 font-mono text-xs leading-relaxed text-white/90"
+          className="pointer-events-none fixed start-[calc(1rem+env(safe-area-inset-left))] top-[calc(4.5rem+env(safe-area-inset-top))] rounded-lg bg-black/60 px-3 py-2 font-mono text-xs leading-relaxed text-white/90"
         >
           {player.stats.text}
         </pre>
@@ -655,7 +662,7 @@ function Player({
           data-ui="player-external"
           className="pointer-events-none fixed inset-x-0 top-1/4 text-center text-lg font-medium text-white/80"
         >
-          Playing in {launched.name}
+          <Trans>Playing in {launchedName}</Trans>
         </p>
       )}
       {player.state.error ? (
@@ -663,7 +670,7 @@ function Player({
           itemId={item.Id!}
           item={item}
           source={source}
-          message={`Playback failed: ${player.state.error}`}
+          message={t`Playback failed: ${failure}`}
           onVersions={switchVersion}
           retry={player.retry}
         />

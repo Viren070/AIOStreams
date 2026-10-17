@@ -1,0 +1,99 @@
+---
+title: Translating
+description: Translate the AIOStreams apps on Weblate, and keep new text translatable when you change them.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+The web app, and the desktop, Android and TV apps built from it, are translated on [Weblate](https://hosted.weblate.org/projects/aiostreams/). Weblate is open source, and anyone can sign in and suggest or make translations. It commits them to this repository, so they ship with the next nightly and release.
+
+---
+
+## Translating on Weblate
+
+Open the project, pick your language, or start a new one, and translate string by string. There are two components:
+
+- **Web app**: every page, menu, setting and player control. This is almost all of the text.
+- **Android**: the few things the Android app says outside the web app, such as its download and update notifications.
+
+The source text is British English ("colour", "favourites").
+
+### Placeholders and formatting
+
+- **Names in braces**, such as `{name}` or `{relay}`, are filled in by the app. Keep them exactly as written, and move them to wherever your sentence needs them.
+- **Numbered tags**, such as `<0>Hold</0>`, wrap words in formatting or a link. Keep each pair around the matching words.
+- **Plurals** are written in ICU MessageFormat:
+
+  ```text
+  {count, plural, one {# episode} other {# episodes}}
+  ```
+
+  `#` is the number. Write a case for each plural form your language has (`zero`, `one`, `two`, `few`, `many`, `other`), and always keep `other`. Polish, for example:
+
+  ```text
+  {count, plural, one {# odcinek} few {# odcinki} many {# odcinków} other {# odcinka}}
+  ```
+
+- **Android strings** use `%1$s` and `%d` placeholders instead. Keep them as they are.
+- Some strings carry a note explaining where they appear. Weblate shows it beside the source.
+
+<Callout type="info">
+  Right-to-left languages, such as Arabic and Hebrew, need nothing extra. The
+  apps mirror their layout for them.
+</Callout>
+
+### Seeing your language in the app
+
+Choose it under **Settings → Interface → Language**. **Automatic** follows the device's language. The Android app's notifications always follow the device's language.
+
+---
+
+## Making text translatable
+
+The web app uses [Lingui](https://lingui.dev). Any text a person reads goes through it:
+
+- In JSX, wrap text in `<Trans>` from `@lingui/react/macro`:
+
+  ```tsx
+  <Button onClick={onRefresh}>
+    <Trans>Refresh</Trans>
+  </Button>
+  ```
+
+- Elsewhere, use `` t`…` `` and `plural()` from `@lingui/core/macro`, called where the text is used so they read the current language. A table of labels at module level becomes a function or getters.
+
+  ```ts
+  const name = target?.name ?? '';
+  toast(t`Removed ${name}`);
+  toast(plural(count, { one: 'Download added', other: '# downloads added' }));
+  ```
+
+- Put values in plain variables first, as `name` above, so translators see `{name}` and not `{0}`.
+- Write whole sentences. Don't join translated pieces, or lowercase a translated label to use it mid-sentence.
+- To leave a note for translators, pass `t({ comment: 'Where it appears', message: '…' })`.
+- Format dates, numbers and lists with `Intl` and `formatLocale()` from `lib/i18n`.
+- Use logical CSS (`ms-`, `pe-`, `start-`, `text-start`) so layouts mirror for right-to-left languages, and an `rtl:` variant where something must point the other way.
+
+`pnpm -F @aiostreams/web lint` reports text that skips Lingui. Identifiers, CSS and product names can be exempted with a reason:
+
+```ts
+// eslint-disable-next-line lingui/no-unlocalized-strings -- Jellyfin's item type
+return 'Movie';
+```
+
+### Updating the catalogs
+
+After changing text, run:
+
+```bash
+pnpm -F @aiostreams/web i18n:extract
+```
+
+This updates the catalogs in `packages/web/src/locales`, which Weblate translates, and `messages.pot`, the template for new languages. Commit them with your change: CI fails when they are behind the code.
+
+### Test languages
+
+Development builds (`pnpm -F @aiostreams/web dev`) list two test languages under **Language**:
+
+- **Pseudo (accented)** shows every message accented, longer and in brackets, so text that skipped Lingui stands out and tight layouts overflow.
+- **Pseudo (right to left)** lays the app out right to left.

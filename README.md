@@ -234,6 +234,16 @@ For full setup and configuration instructions, see the **[documentation](https:/
 
 ---
 
+## 🌍 Translations
+
+The AIOStreams apps are translated on **[Hosted Weblate](https://hosted.weblate.org/engage/aiostreams/)**. Anyone can translate into their language there, no coding needed. See the **[translating guide](https://docs.aiostreams.viren070.me/guides/translating)** for how it works.
+
+<a href="https://hosted.weblate.org/engage/aiostreams/">
+  <img src="https://hosted.weblate.org/widget/aiostreams/svg-badge.svg" alt="Translation status">
+</a>
+
+---
+
 ## ❤️ Support the Project
 
 AIOStreams is a passion project developed and maintained for free. If you find it useful, please consider:

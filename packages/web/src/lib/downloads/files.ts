@@ -1,3 +1,4 @@
+/* eslint-disable lingui/no-unlocalized-strings -- folder names media players read */
 import type { JellyfinClient } from '../client';
 import { backdropUrl, logoUrl, posterUrl } from '../images';
 import { requiredHeaders } from '../playback/stream';

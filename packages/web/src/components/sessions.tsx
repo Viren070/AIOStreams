@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import { Badge } from '@aiostreams/ui/badge';
 import { useSession } from '../lib/session';
 import { landscapeUrls } from '../lib/images';
@@ -12,7 +13,7 @@ export function SessionsRow({ sessions }: { sessions: SessionInfoDto[] }) {
   const playing = sessions.filter((s) => s.NowPlayingItem);
   if (!playing.length) return null;
   return (
-    <MediaRow id="now-playing" title="Now playing" shape="wide">
+    <MediaRow id="now-playing" title={t`Now playing`} shape="wide">
       {playing.map((s) => (
         <SessionCard key={s.Id} session={s} />
       ))}
@@ -40,7 +41,7 @@ function SessionCard({ session }: { session: SessionInfoDto }) {
       progress={runtime ? (position / runtime) * 100 : null}
       badge={
         <Badge intent={paused ? 'gray-solid' : 'primary-solid'} size="sm">
-          {paused ? 'Paused' : 'Playing'}
+          {paused ? t`Paused` : t`Playing`}
         </Badge>
       }
     />

@@ -1,6 +1,7 @@
 export {
   ACTION_IDS,
-  GROUP_LABELS,
+  actionText,
+  groupLabel,
   action,
   clashWith,
   groupActions,
@@ -31,6 +32,7 @@ export {
   keyboardFocus,
   move,
   moveTo,
+  navSide,
   openMenu,
   scrollStep,
   type Direction,

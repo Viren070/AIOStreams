@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import React from 'react';
 import type { JellyfinClient } from '../client';
 import { clock } from '../format';
@@ -166,9 +167,15 @@ export function usePlayer(
         const at = playhead.positionMs;
         if (live.current.durationMs - at <= EARLY_END_MS)
           return latest.current.onEnded();
-        patch({ error: 'the stream ended early' });
+        patch({
+          error: t({
+            comment: 'Follows "Playback failed:"',
+            message: 'the stream ended early',
+          }),
+        });
+        const resumeAt = clock(at);
         return setRetry({
-          label: `Resume from ${clock(at)}`,
+          label: t`Resume from ${resumeAt}`,
           run: () => {
             restart();
             engine.load(latestFile.current(at));

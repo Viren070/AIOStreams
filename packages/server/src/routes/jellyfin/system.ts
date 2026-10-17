@@ -68,6 +68,8 @@ export async function publicInfo(req: Request) {
       /** A user's own sign-in address, which signs in that user alone. */
       personal: !!req.jfMount?.persona,
       features: FEATURES,
+      // Not Branding's CustomCss, which stock clients apply too.
+      css: appConfig.branding.appCustomCss || null,
       parties: {
         relay: relayMode(),
         defaultRelay:

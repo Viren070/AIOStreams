@@ -2,6 +2,7 @@ import { Button, ButtonProps } from '../button';
 import { Modal } from '../modal';
 import { useDisclosure, UseDisclosureReturn } from '../hooks/disclosure';
 import React from 'react';
+import { uiText } from '../core/text';
 
 type ConfirmationDialogHookProps = {
   title: string;
@@ -27,8 +28,8 @@ export const ConfirmationDialog: React.FC<
     close,
     onConfirm,
     title,
-    description = 'Are you sure you want to continue?',
-    actionText = 'Confirm',
+    description = uiText.areYouSure,
+    actionText = uiText.confirm,
     actionIntent = 'alert-subtle',
   } = props;
 
@@ -53,7 +54,7 @@ export const ConfirmationDialog: React.FC<
               {actionText}
             </Button>
             <Button intent="white" onClick={close}>
-              Cancel
+              {uiText.cancel}
             </Button>
           </div>
         </div>

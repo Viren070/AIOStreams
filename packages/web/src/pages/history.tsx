@@ -1,4 +1,6 @@
 import React from 'react';
+import { plural, t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import { toast } from 'sonner';
 import {
   BiCheck,
@@ -20,6 +22,7 @@ import {
   useConfirmationDialog,
 } from '@aiostreams/ui/shared/confirmation-dialog';
 import { cn } from '@aiostreams/ui/core/styling';
+import { formatLocale } from '../lib/i18n';
 import { useSession } from '../lib/session';
 import { useFeature } from '../lib/server-info';
 import {
@@ -89,7 +92,7 @@ export function HistoryPage() {
     <PageBody>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 data-ui="page-title" className="text-3xl font-bold">
-          Activity
+          <Trans>Activity</Trans>
         </h1>
         {full && (
           <div className="flex items-center gap-2">
@@ -115,8 +118,8 @@ export function HistoryPage() {
         <PillTabs
           name="source"
           options={[
-            { value: false, label: 'Everything' },
-            { value: true, label: 'Played here' },
+            { value: false, label: t`Everything` },
+            { value: true, label: t`Played here` },
           ]}
           value={localOnly}
           onChange={setLocalOnly}
@@ -131,7 +134,7 @@ export function HistoryPage() {
             intent={view === 'days' ? 'white' : 'gray-basic'}
             className="rounded-full"
             icon={<BiGridAlt />}
-            aria-label="Group by day"
+            aria-label={t`Group by day`}
             onClick={() => setView('days')}
           />
           <IconButton
@@ -139,14 +142,14 @@ export function HistoryPage() {
             intent={view === 'table' ? 'white' : 'gray-basic'}
             className="rounded-full"
             icon={<BiListUl />}
-            aria-label="Table"
+            aria-label={t`Table`}
             onClick={() => setView('table')}
           />
         </div>
       </div>
 
       {history.isError ? (
-        <LuffyError title="Could not load the history" />
+        <LuffyError title={t`Could not load the history`} />
       ) : history.isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 4 }, (_, i) => (
@@ -155,10 +158,12 @@ export function HistoryPage() {
         </div>
       ) : unlisted ? (
         <p className="text-[--muted]">
-          This server can&apos;t list what you&apos;ve watched.
+          <Trans>This server can&apos;t list what you&apos;ve watched.</Trans>
         </p>
       ) : !entries.length ? (
-        <p className="text-[--muted]">Nothing watched yet.</p>
+        <p className="text-[--muted]">
+          <Trans>Nothing watched yet.</Trans>
+        </p>
       ) : view === 'days' ? (
         <Days entries={entries} names={userId ? null : names} />
       ) : (
@@ -170,23 +175,40 @@ export function HistoryPage() {
   );
 }
 
-function count(n: number, one: string, many: string): string {
-  return `${n.toLocaleString()} ${n === 1 ? one : many}`;
+function watchedLine(movieCount: number, episodeCount: number) {
+  if (movieCount && episodeCount) {
+    const movies = plural(movieCount, { one: '# movie', other: '# movies' });
+    const episodes = plural(episodeCount, {
+      one: '# episode',
+      other: '# episodes',
+    });
+    return t`${movies} and ${episodes} watched`;
+  }
+  // Whole messages, as some languages make "watched" agree with the count.
+  if (movieCount)
+    return plural(movieCount, {
+      one: '# movie watched',
+      other: '# movies watched',
+    });
+  if (episodeCount)
+    return plural(episodeCount, {
+      one: '# episode watched',
+      other: '# episodes watched',
+    });
+  return null;
 }
 
 function OwnTotals() {
-  const t = useOwnTotals(true);
-  const watched = [
-    t.movies ? count(t.movies, 'movie', 'movies') : null,
-    t.episodes ? count(t.episodes, 'episode', 'episodes') : null,
-  ].filter(Boolean);
-  const more = [
-    t.inProgress ? `${t.inProgress.toLocaleString()} in progress` : null,
-    t.favorites ? count(t.favorites, 'favourite', 'favourites') : null,
-  ].filter(Boolean);
+  const totals = useOwnTotals(true);
+  const { inProgress, favorites } = totals;
   const parts = [
-    watched.length ? `${watched.join(' and ')} watched` : null,
-    ...more,
+    watchedLine(totals.movies ?? 0, totals.episodes ?? 0),
+    inProgress
+      ? plural(inProgress, { one: '# in progress', other: '# in progress' })
+      : null,
+    favorites
+      ? plural(favorites, { one: '# favourite', other: '# favourites' })
+      : null,
   ].filter(Boolean);
   if (!parts.length) return null;
   return <p className="text-sm text-[--muted]">{parts.join(' · ')}</p>;
@@ -218,7 +240,7 @@ function UserChips({
         className="rounded-full"
         onClick={() => onSelect(null)}
       >
-        Everyone
+        <Trans>Everyone</Trans>
       </Button>
       {owners.map((owner) => {
         const shared = sharing(owner);
@@ -239,9 +261,9 @@ function UserChips({
           >
             {owner.user.Name}
             {shared.length > 0 && (
-              <span className="ml-1 text-[--muted]">+ {shared.join(', ')}</span>
+              <span className="ms-1 text-[--muted]">+ {shared.join(', ')}</span>
             )}
-            <span className="ml-2 tabular-nums text-[--muted]">
+            <span className="ms-2 tabular-nums text-[--muted]">
               {owner.counts?.played ?? 0}
             </span>
           </Button>
@@ -304,16 +326,16 @@ function Days({
         <section key={day.key} data-ui="history-day" className="space-y-3">
           <div className="flex flex-wrap items-baseline gap-x-3">
             <h2 data-ui="section-title" className="text-lg font-semibold">
-              {day.date?.toLocaleDateString(undefined, {
+              {day.date?.toLocaleDateString(formatLocale(), {
                 weekday: 'long',
                 day: 'numeric',
                 month: 'long',
                 year: 'numeric',
-              }) ?? 'Date not known'}
+              }) ?? t`Date not known`}
             </h2>
             {day.runtimeMs > 0 && (
               <span className="text-sm text-[--muted]">
-                {duration(day.runtimeMs)} watched
+                <Watched ms={day.runtimeMs} />
               </span>
             )}
           </div>
@@ -329,6 +351,11 @@ function Days({
       ))}
     </div>
   );
+}
+
+function Watched({ ms }: { ms: number }) {
+  const time = duration(ms);
+  return <Trans>{time} watched</Trans>;
 }
 
 function DayTile({
@@ -347,7 +374,8 @@ function DayTile({
       (a.item.ParentIndexNumber ?? 0) - (b.item.ParentIndexNumber ?? 0) ||
       (a.item.IndexNumber ?? 0) - (b.item.IndexNumber ?? 0)
   );
-  const many = sorted.length > 1;
+  const episodeCount = sorted.length;
+  const many = episodeCount > 1;
   const titleHref = href(
     to.item(tile.show && item.SeriesId ? item.SeriesId : item.Id!)
   );
@@ -388,7 +416,10 @@ function DayTile({
           {tile.show && many && (
             <p className="text-sm">
               <span className="font-medium text-brand-300">
-                {sorted.length} episodes
+                {plural(episodeCount, {
+                  one: '# episode',
+                  other: '# episodes',
+                })}
               </span>{' '}
               <span className="text-[--muted]">{range}</span>
             </p>
@@ -401,7 +432,7 @@ function DayTile({
               size="xs"
               intent="gray-basic"
               icon={open ? <BiChevronUp /> : <BiChevronDown />}
-              aria-label={open ? 'Hide episodes' : 'Show episodes'}
+              aria-label={open ? t`Hide episodes` : t`Show episodes`}
               onClick={() => setOpen((v) => !v)}
             />
           ) : (
@@ -473,11 +504,12 @@ function EntryLine({
 }
 
 function Status({ entry }: { entry: HistoryEntry }) {
+  const { playCount } = entry;
   if (entry.played) {
     return (
       <span className="flex items-center gap-0.5 text-green-300">
         <BiCheck />
-        {entry.playCount > 1 ? `Watched ×${entry.playCount}` : 'Watched'}
+        {entry.playCount > 1 ? t`Watched ×${playCount}` : t`Watched`}
       </span>
     );
   }
@@ -519,7 +551,7 @@ function EntryMenu({ entries }: { entries: HistoryEntry[] }) {
         userId: e.userId,
       });
     }
-    toast.success('Marked unwatched');
+    toast.success(t`Marked unwatched`);
   };
 
   const remove = () =>
@@ -528,7 +560,7 @@ function EntryMenu({ entries }: { entries: HistoryEntry[] }) {
         userId: entries[0].userId,
         itemKeys: entries.map((e) => e.itemKey),
       },
-      { onSuccess: () => toast.success('Removed from history') }
+      { onSuccess: () => toast.success(t`Removed from history`) }
     );
 
   return (
@@ -540,23 +572,23 @@ function EntryMenu({ entries }: { entries: HistoryEntry[] }) {
           size="xs"
           intent="gray-basic"
           icon={<BiDotsVerticalRounded />}
-          aria-label="Actions"
+          aria-label={t`Actions`}
         />
       }
     >
       {entries.length === 1 && (
         <DropdownMenuItem onClick={() => navigate(itemPath(entries[0].item))}>
-          Open
+          <Trans>Open</Trans>
         </DropdownMenuItem>
       )}
       {watched.length > 0 && (
         <DropdownMenuItem onClick={() => void unmark()}>
-          Mark unwatched
+          <Trans>Mark unwatched</Trans>
         </DropdownMenuItem>
       )}
       {full && (
         <DropdownMenuItem onClick={remove} className="text-red-300">
-          Remove from history
+          <Trans>Remove from history</Trans>
         </DropdownMenuItem>
       )}
     </DropdownMenu>
@@ -565,17 +597,22 @@ function EntryMenu({ entries }: { entries: HistoryEntry[] }) {
 
 function ResetButton({ owner }: { owner: WebUser }) {
   const clear = useClearHistory();
+  const name = owner.user.Name ?? '';
   const confirm = useConfirmationDialog({
-    title: `Reset ${owner.user.Name}'s history`,
-    description:
-      'Watched marks and resume points are removed from this server. Favourites stay. Titles a tracker still lists come back when it next syncs.',
-    actionText: 'Reset history',
+    title: t`Reset ${name}'s history`,
+    description: t`Watched marks and resume points are removed from this server. Favourites stay. Titles a tracker still lists come back when it next syncs.`,
+    actionText: t`Reset history`,
     onConfirm: () =>
       clear.mutate(
         { userId: owner.user.Id! },
         {
-          onSuccess: (r) =>
-            toast.success(`Removed ${r.cleared} titles from the history`),
+          onSuccess: ({ cleared }) =>
+            toast.success(
+              plural(cleared, {
+                one: 'Removed # title from the history',
+                other: 'Removed # titles from the history',
+              })
+            ),
         }
       ),
   });
@@ -588,7 +625,7 @@ function ResetButton({ owner }: { owner: WebUser }) {
         loading={clear.isPending}
         onClick={confirm.open}
       >
-        Reset
+        <Trans>Reset</Trans>
       </Button>
       <ConfirmationDialog {...confirm} />
     </>
@@ -630,7 +667,7 @@ function ExportButton() {
       leftIcon={<BiDownload />}
       onClick={run}
     >
-      Export
+      <Trans>Export</Trans>
     </Button>
   );
 }
@@ -648,6 +685,7 @@ function HistoryTable({
   const full = useFeature('history');
   const clear = useClearHistory();
   const [picked, setPicked] = React.useState<Set<string>>(new Set());
+  const selected = picked.size;
   const keyOf = (e: HistoryEntry) => `${e.userId}|${e.itemKey}`;
   const toggle = (e: HistoryEntry) =>
     setPicked((prev) => {
@@ -668,7 +706,12 @@ function HistoryTable({
       removed += (await clear.mutateAsync({ userId, itemKeys })).cleared;
     }
     setPicked(new Set());
-    toast.success(`Removed ${removed} from the history`);
+    toast.success(
+      plural(removed, {
+        one: 'Removed # from the history',
+        other: 'Removed # from the history',
+      })
+    );
   };
 
   return (
@@ -678,7 +721,9 @@ function HistoryTable({
           data-sticky
           className="sticky top-[calc(0.5rem+env(safe-area-inset-top))] z-[5] flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-gray-950/95 p-3 backdrop-blur"
         >
-          <span className="text-sm">{picked.size} selected</span>
+          <span className="text-sm">
+            {plural(selected, { one: '# selected', other: '# selected' })}
+          </span>
           <div className="flex gap-2">
             <Button
               size="sm"
@@ -686,7 +731,7 @@ function HistoryTable({
               className="rounded-full"
               onClick={() => setPicked(new Set())}
             >
-              Clear selection
+              <Trans>Clear selection</Trans>
             </Button>
             <Button
               size="sm"
@@ -695,7 +740,7 @@ function HistoryTable({
               loading={clear.isPending}
               onClick={() => void removePicked()}
             >
-              Remove from history
+              <Trans>Remove from history</Trans>
             </Button>
           </div>
         </div>
@@ -705,7 +750,7 @@ function HistoryTable({
         className="overflow-x-auto rounded-xl border border-white/5"
       >
         <table className="w-full text-sm">
-          <thead className="bg-gray-900/60 text-left text-xs uppercase text-[--muted]">
+          <thead className="bg-gray-900/60 text-start text-xs uppercase text-[--muted]">
             <tr>
               {full && (
                 <th className="w-10 p-3">
@@ -716,15 +761,29 @@ function HistoryTable({
                         allPicked ? new Set() : new Set(entries.map(keyOf))
                       )
                     }
-                    aria-label="Select all"
+                    aria-label={t`Select all`}
                   />
                 </th>
               )}
-              <th className="p-3">Title</th>
-              {names && <th className="hidden p-3 sm:table-cell">User</th>}
-              <th className="p-3">Status</th>
-              <th className="hidden p-3 md:table-cell">When</th>
-              {full && <th className="hidden p-3 md:table-cell">Source</th>}
+              <th className="p-3">
+                <Trans>Title</Trans>
+              </th>
+              {names && (
+                <th className="hidden p-3 sm:table-cell">
+                  <Trans>User</Trans>
+                </th>
+              )}
+              <th className="p-3">
+                <Trans>Status</Trans>
+              </th>
+              <th className="hidden p-3 md:table-cell">
+                <Trans>When</Trans>
+              </th>
+              {full && (
+                <th className="hidden p-3 md:table-cell">
+                  <Trans>Source</Trans>
+                </th>
+              )}
               <th className="w-10 p-3" />
             </tr>
           </thead>
@@ -744,7 +803,7 @@ function HistoryTable({
                       <Checkbox
                         value={picked.has(keyOf(entry))}
                         onValueChange={() => toggle(entry)}
-                        aria-label="Select"
+                        aria-label={t`Select`}
                       />
                     </td>
                   )}
@@ -793,7 +852,7 @@ function HistoryTable({
                   </td>
                   <td className="hidden whitespace-nowrap p-3 text-xs text-[--muted] md:table-cell">
                     {at(entry)
-                      ? new Date(at(entry)!).toLocaleString(undefined, {
+                      ? new Date(at(entry)!).toLocaleString(formatLocale(), {
                           dateStyle: 'medium',
                           timeStyle: 'short',
                         })
@@ -802,7 +861,7 @@ function HistoryTable({
                   {full && (
                     <td className="hidden p-3 text-xs text-[--muted] md:table-cell">
                       {entry.tracker ??
-                        (entry.origin === 'local' ? 'Here' : '')}
+                        (entry.origin === 'local' ? t`Here` : '')}
                     </td>
                   )}
                   <td className="p-3">

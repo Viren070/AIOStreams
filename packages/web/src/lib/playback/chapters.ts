@@ -32,6 +32,7 @@ export function chapterAt(chapters: Chapter[], ms: number): number {
 // A whole title, or the words before its first punctuation mark, once
 // lowercased and stripped of numbers, so "OP 2" and "OP - Song" match but
 // "The Opening of the Gates" and "Opening Night" do not.
+/* eslint-disable lingui/no-unlocalized-strings -- Jellyfin's segment kinds */
 const KINDS: [Kind, RegExp][] = [
   [
     'Intro' as Kind,
@@ -47,6 +48,7 @@ const KINDS: [Kind, RegExp][] = [
     /^(preview|next episode preview|next episode|next time)$/,
   ],
 ];
+/* eslint-enable lingui/no-unlocalized-strings */
 
 /** Names the cold open before the opening in some releases, so it counts only when nothing names the opening. */
 const LOOSE_INTRO = /^(intro|introduction)$/;
@@ -118,10 +120,12 @@ export function guessedSegments(
     const endMs = chapters[i + 1]?.startMs ?? durationMs;
     const lengthMs = endMs - chapter.startMs;
     if (lengthMs < SONG_MIN_MS || lengthMs > SONG_MAX_MS) return [];
+    /* eslint-disable lingui/no-unlocalized-strings -- Jellyfin's segment kinds */
     if (endMs <= durationMs / 3)
       return [segment('Intro' as Kind, chapter.startMs, endMs)];
     if (chapter.startMs >= (durationMs * 2) / 3)
       return [segment('Outro' as Kind, chapter.startMs, endMs)];
+    /* eslint-enable lingui/no-unlocalized-strings */
     return [];
   });
 }

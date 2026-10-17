@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import { storage } from '../storage';
 import type { JellyfinClient } from '../client';
 import type { Chapter } from './chapters';
@@ -158,7 +159,9 @@ export function initialState(source: SourceInfo): PlayerState {
 }
 
 export function trackLabel(stream: MediaStream, n: number): string {
-  return stream.DisplayTitle || stream.Title || stream.Language || `Track ${n}`;
+  return (
+    stream.DisplayTitle || stream.Title || stream.Language || t`Track ${n}`
+  );
 }
 
 /** A track as the player itself lists it. */
@@ -168,7 +171,7 @@ export function ownTrackLabel(
   n: number
 ): string {
   return (
-    [title, lang?.toUpperCase()].filter(Boolean).join(' · ') || `Track ${n}`
+    [title, lang?.toUpperCase()].filter(Boolean).join(' · ') || t`Track ${n}`
   );
 }
 

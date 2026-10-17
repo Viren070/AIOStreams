@@ -12,6 +12,7 @@ import {
   normaliseLangCode,
   normaliseLanguage,
 } from '../utils/languages.js';
+import { countryName } from '../utils/countries.js';
 
 export interface EnrichedPerson {
   name: string;
@@ -426,6 +427,12 @@ export function readEnrichment(input: MetaPreview | Meta): Enrichment {
   const extras = isObject(meta.app_extras) ? meta.app_extras : {};
   const stability = isObject(meta._stability) ? meta._stability : {};
   const country = str(meta.country);
+  // Whole first, as ISO names hold commas ("Korea, Republic of").
+  const countries = meta.countries?.length
+    ? meta.countries
+    : country && countryName(country)
+      ? [country]
+      : country?.split(',');
 
   return {
     providerIds: providerIdsFrom(meta),
@@ -443,9 +450,7 @@ export function readEnrichment(input: MetaPreview | Meta): Enrichment {
       str(meta.certificationLocal) ?? str(extras.certificationLocal),
     criticRating: criticRatingFrom(meta, extras),
     studios: strings([...(meta.studios ?? []), ...(meta.networks ?? [])]),
-    countries: meta.countries?.length
-      ? strings(meta.countries)
-      : strings(country?.split(',')),
+    countries: strings(strings(countries).map((c) => countryName(c) ?? c)),
     tags: strings(meta.tags),
     trailers: trailersFrom(meta),
     status: statusFrom(meta),

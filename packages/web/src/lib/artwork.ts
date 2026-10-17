@@ -41,9 +41,7 @@ export interface ShrinkReply {
 }
 
 export type Shrunk =
-  | { src: string }
-  | { bitmap: ImageBitmap }
-  | { plain: true };
+  { src: string } | { bitmap: ImageBitmap } | { plain: true };
 
 export interface Drawn {
   src: string;
@@ -64,18 +62,20 @@ interface Kept extends Drawn {
   maker: Worker;
 }
 
-/** Artwork by image, oldest first, so a card drawn again shows it at once. */
-const drawn = new Map<string, Kept>();
+/** Artwork by address, oldest first, so a card drawn again shows it at once. */
+const drawn = new Map<string, Kept & { key: string }>();
+/** Each image's newest address. */
+const newest = new Map<string, string>();
 let drawnBytes = 0;
 /** Some hundreds of posters at the sizes servers send for a card. */
 const DRAWN_BUDGET = 24_000_000;
 
 export function drawnArtwork(url: string): Drawn | undefined {
-  const key = artworkKey(url);
-  const entry = drawn.get(key);
+  const src = newest.get(artworkKey(url));
+  const entry = src ? drawn.get(src) : undefined;
   if (entry) {
-    drawn.delete(key);
-    drawn.set(key, entry);
+    drawn.delete(entry.src);
+    drawn.set(entry.src, entry);
   }
   return entry;
 }
@@ -122,18 +122,16 @@ export function onDrawn(
 
 function keep(url: string, entry: Kept) {
   const key = artworkKey(url);
-  const was = drawn.get(key);
-  if (was) {
-    drawnBytes -= was.bytes;
-    if (was.src !== entry.src) drop(was);
-  }
-  drawn.delete(key);
-  drawn.set(key, entry);
+  // An older copy ages out with the rest, as a card may be decoding it before
+  // it holds it.
+  newest.set(key, entry.src);
+  drawn.set(entry.src, { ...entry, key });
   drawnBytes += entry.bytes;
   for (const [oldest, old] of drawn) {
     if (drawnBytes <= DRAWN_BUDGET) break;
     drawn.delete(oldest);
     drawnBytes -= old.bytes;
+    if (newest.get(old.key) === oldest) newest.delete(old.key);
     drop(old);
   }
   for (const onCopy of waiting.get(key) ?? []) onCopy(entry.src);
@@ -315,6 +313,7 @@ function start(): Slot | null {
       ...[...running.values()].map((r) => r.job),
       ...queue.splice(0),
     ])
+      // eslint-disable-next-line lingui/no-unlocalized-strings -- only logged
       settle(job, { id: job.id, error: 'worker failed' });
     running.clear();
     for (const { blob, resolve } of addressing.values())
@@ -354,6 +353,7 @@ function pump() {
     if (!slot) {
       if (broken) {
         queue.splice(at, 1);
+        // eslint-disable-next-line lingui/no-unlocalized-strings -- only logged
         settle(job, { id: job.id, error: 'no worker' });
       } else return;
       continue;

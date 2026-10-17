@@ -1,13 +1,16 @@
 import React from 'react';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import { toast } from 'sonner';
 import { LuPlus, LuUndo2, LuX } from 'react-icons/lu';
 import { Button, IconButton } from '@aiostreams/ui/button';
 import { currentHost } from '../lib/hosts';
 import {
-  GROUP_LABELS,
   action,
+  actionText,
   clashWith,
   groupActions,
+  groupLabel,
   inputLabels,
   keysOf,
   record,
@@ -19,23 +22,31 @@ import { settings, useSetting } from '../lib/settings';
 import { KeyCaps } from './key-caps';
 import { SettingsCard, SettingsRow } from './settings-card';
 
-const GROUPS: { group: ActionGroup; description: string }[] = [
+const groups = (): {
+  group: ActionGroup;
+  name: string;
+  description: string;
+}[] => [
   {
     group: 'general',
-    description:
-      'Kept on this device. Select + and press a key to add it; a remote, a gamepad or the scroll wheel works too.',
+    name: 'general',
+    description: t`Kept on this device. Select + and press a key to add it; a remote, a gamepad or the scroll wheel works too.`,
   },
   {
     group: 'navigation',
-    description:
-      "Moves between what's on screen, and to Search and Home. A gamepad's d-pad and left stick move too.",
+    name: 'moving-around',
+    description: t`Moves between what's on screen, and to Search and Home. A gamepad's d-pad and left stick move too.`,
   },
   {
     group: 'player',
-    description:
-      'Once one of the controls is selected, the arrow keys move between the controls instead.',
+    name: 'player',
+    description: t`Once one of the controls is selected, the arrow keys move between the controls instead.`,
   },
-  { group: 'sync', description: 'While syncing subtitles by ear.' },
+  {
+    group: 'sync',
+    name: 'sync-by-ear',
+    description: t`While syncing subtitles by ear.`,
+  },
 ];
 
 function ShortcutRow({
@@ -51,7 +62,8 @@ function ShortcutRow({
   recording: boolean;
   onRecord(on: boolean): void;
 }) {
-  const { label, help, fixed, summary } = action(id);
+  const { fixed } = action(id);
+  const { label, help, summary } = actionText(id);
   const chips = summary
     ? keys.length
       ? [{ input: summary, rest: [] }]
@@ -63,19 +75,22 @@ function ShortcutRow({
         data-ui="shortcut-keys"
         className="flex flex-wrap items-center gap-2 sm:justify-end"
       >
-        {chips.map(({ input, rest }) => (
-          <span key={input} className="inline-flex items-center gap-0.5">
-            <KeyCaps input={input} />
-            <button
-              type="button"
-              aria-label={`Remove ${inputLabels(input).join(' ')}`}
-              onClick={() => setKeys(id, rest)}
-              className="flex size-5 items-center justify-center rounded-full text-[--muted] transition-colors hover:bg-white/10 hover:text-white"
-            >
-              <LuX className="size-3" />
-            </button>
-          </span>
-        ))}
+        {chips.map(({ input, rest }) => {
+          const key = inputLabels(input).join(' ');
+          return (
+            <span key={input} className="inline-flex items-center gap-0.5">
+              <KeyCaps input={input} />
+              <button
+                type="button"
+                aria-label={t`Remove ${key}`}
+                onClick={() => setKeys(id, rest)}
+                className="flex size-5 items-center justify-center rounded-full text-[--muted] transition-colors hover:bg-white/10 hover:text-white"
+              >
+                <LuX className="size-3" />
+              </button>
+            </span>
+          );
+        })}
         {!fixed &&
           (recording ? (
             <Button
@@ -87,7 +102,7 @@ function ShortcutRow({
               onClick={() => onRecord(false)}
               onBlur={() => onRecord(false)}
             >
-              Press a key
+              <Trans>Press a key</Trans>
             </Button>
           ) : (
             <IconButton
@@ -95,7 +110,7 @@ function ShortcutRow({
               intent="gray-subtle"
               className="size-7 rounded-full"
               icon={<LuPlus />}
-              aria-label={`Add a key for ${label}`}
+              aria-label={t`Add a key for ${label}`}
               onClick={() => onRecord(true)}
             />
           ))}
@@ -104,8 +119,8 @@ function ShortcutRow({
             size="sm"
             intent="gray-basic"
             className="size-7 rounded-full"
-            icon={<LuUndo2 />}
-            aria-label={`Reset ${label}`}
+            icon={<LuUndo2 className="rtl:-scale-x-100" />}
+            aria-label={t`Reset ${label}`}
             onClick={() => setKeys(id, [...action(id).keys])}
           />
         )}
@@ -126,9 +141,9 @@ export function ShortcutSettings() {
       if (input === 'Escape') return;
       const clash = clashWith(recording, input);
       if (clash) {
-        toast.error(
-          `${inputLabels(input).join(' ')} is taken by ${action(clash).label}`
-        );
+        const key = inputLabels(input).join(' ');
+        const taken = actionText(clash).label;
+        toast.error(t`${key} is taken by ${taken}`);
         return;
       }
       const keys = keysOf(recording);
@@ -139,13 +154,14 @@ export function ShortcutSettings() {
   const host = currentHost();
   return (
     <>
-      {GROUPS.map(({ group, description }) => {
+      {groups().map(({ group, name, description }) => {
         const ids = groupActions(group, host);
         return (
           ids.length > 0 && (
             <SettingsCard
               key={group}
-              title={GROUP_LABELS[group]}
+              name={name}
+              title={groupLabel(group)}
               description={description}
             >
               {ids.map((id) => (
@@ -168,8 +184,8 @@ export function ShortcutSettings() {
       })}
       <SettingsCard>
         <SettingsRow
-          label="Reset all shortcuts"
-          help="Puts every key back the way it came."
+          label={t`Reset all shortcuts`}
+          help={t`Puts every key back the way it came.`}
         >
           <Button
             intent="gray-outline"
@@ -179,7 +195,7 @@ export function ShortcutSettings() {
             disabled={!Object.keys(overrides).length}
             onClick={() => setOverrides({})}
           >
-            Reset all
+            <Trans>Reset all</Trans>
           </Button>
         </SettingsRow>
       </SettingsCard>

@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { currentHost } from '../hosts';
 import type { BaseItemDto } from '../types';
@@ -8,8 +9,8 @@ export interface Trailer {
 }
 
 export const trailersOf = (item: BaseItemDto): Trailer[] =>
-  (item.RemoteTrailers ?? []).flatMap((t) =>
-    t.Url ? [{ name: t.Name || 'Trailer', url: t.Url }] : []
+  (item.RemoteTrailers ?? []).flatMap((trailer) =>
+    trailer.Url ? [{ name: trailer.Name || t`Trailer`, url: trailer.Url }] : []
   );
 
 export function youTubeId(url: string): string | null {

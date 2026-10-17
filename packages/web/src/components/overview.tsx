@@ -1,3 +1,4 @@
+import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { Modal } from '@aiostreams/ui/modal';
 import { Popover } from '@aiostreams/ui/popover';
@@ -81,7 +82,7 @@ export function OverviewInfo({
       title={title}
       description={line}
       contentClass="overflow-hidden"
-      headerClass="relative z-[1] pt-12 text-left"
+      headerClass="relative z-[1] pt-12 text-start"
       closeClass="z-[2]"
     >
       <Banner image={image} />
@@ -114,7 +115,7 @@ export const Overview = React.memo(function Overview({
       <p
         ref={ref}
         className={cn(
-          'min-w-0 select-text overflow-hidden whitespace-pre-line before:float-right before:h-[calc(100%-1lh)]',
+          'min-w-0 select-text overflow-hidden whitespace-pre-line before:float-right rtl:before:float-left before:h-[calc(100%-1lh)]',
           clampClass
         )}
       >
@@ -126,9 +127,9 @@ export const Overview = React.memo(function Overview({
                 type="button"
                 data-ui="overview-more"
                 data-focus="own"
-                className="relative z-[1] clear-both float-right pl-5 font-medium text-[--muted] transition-[color,box-shadow] hover:text-white focus-visible:text-white focus-visible:underline [[data-tv]_&]:ml-5 [[data-tv]_&]:rounded-full [[data-tv]_&]:px-2 [[data-tv]_&]:focus-visible:shadow-[inset_0_0_0_999px_rgb(255_255_255/0.2)] [[data-tv]_&]:focus-visible:no-underline"
+                className="relative z-[1] clear-both float-right rtl:float-left ps-5 font-medium text-[--muted] transition-[color,box-shadow] hover:text-white focus-visible:text-white focus-visible:underline [[data-tv]_&]:ms-5 [[data-tv]_&]:rounded-full [[data-tv]_&]:px-2 [[data-tv]_&]:focus-visible:shadow-[inset_0_0_0_999px_rgb(255_255_255/0.2)] [[data-tv]_&]:focus-visible:no-underline"
               >
-                More
+                <Trans>More</Trans>
               </button>
             }
           />

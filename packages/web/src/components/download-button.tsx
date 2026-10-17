@@ -1,3 +1,5 @@
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { BiDownload, BiErrorCircle, BiSolidDownload } from 'react-icons/bi';
 import { DropdownMenu, DropdownMenuItem } from '@aiostreams/ui/dropdown-menu';
@@ -56,22 +58,22 @@ export function percentOf(download: Download): number | null {
 }
 
 function describe(download: Download | undefined): string {
-  if (!download) return 'Download';
+  if (!download) return t`Download`;
   switch (download.state) {
     case 'done':
-      return 'Downloaded';
+      return t`Downloaded`;
     case 'sent':
-      return "In the app's downloads";
+      return t`In the app's downloads`;
     case 'failed':
     case 'needs-version':
-      return 'Download needs attention';
+      return t`Download needs attention`;
     case 'finding':
-      return 'Finding a version to download';
+      return t`Finding a version to download`;
     case 'paused':
-      return 'Download paused';
+      return t`Download paused`;
     default: {
       const percent = percentOf(download);
-      return percent == null ? 'Downloading' : `Downloading, ${percent}%`;
+      return percent == null ? t`Downloading` : t`Downloading, ${percent}%`;
     }
   }
 }
@@ -136,14 +138,15 @@ export function ShowDownloadMenu({
 }) {
   const picker = useVersionPicker();
   const episodes = useEpisodesToDownload();
+  const seasonName = season?.Name;
   if (!downloadsHost()) return null;
   const run = (opts: { seasonId?: string; unwatched?: boolean }) =>
     void episodes(series.Id!, opts).then(
       (items) =>
         items.length
           ? picker.download(items)
-          : toast('No episodes to download there'),
-      () => toast.error('Could not list the episodes')
+          : toast(t`No episodes to download there`),
+      () => toast.error(t`Could not list the episodes`)
     );
   return (
     <DropdownMenu
@@ -155,27 +158,29 @@ export function ShowDownloadMenu({
           intent="gray-subtle"
           className={cn('rounded-full', className)}
           icon={<BiDownload />}
-          aria-label="Download"
+          aria-label={t`Download`}
         />
       }
     >
       {season && (
         <>
           <DropdownMenuItem onClick={() => run({ seasonId: season.Id! })}>
-            {season.Name ?? 'This season'}
+            {season.Name ?? t`This season`}
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => run({ seasonId: season.Id!, unwatched: true })}
           >
-            Unwatched in {season.Name ?? 'this season'}
+            {seasonName
+              ? t`Unwatched in ${seasonName}`
+              : t`Unwatched in this season`}
           </DropdownMenuItem>
         </>
       )}
       <DropdownMenuItem onClick={() => run({})}>
-        The whole show
+        <Trans>The whole show</Trans>
       </DropdownMenuItem>
       <DropdownMenuItem onClick={() => run({ unwatched: true })}>
-        Everything unwatched
+        <Trans>Everything unwatched</Trans>
       </DropdownMenuItem>
     </DropdownMenu>
   );

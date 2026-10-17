@@ -72,7 +72,7 @@ function ChartTooltip(props: any) {
             style={{ background: p.color || p.fill }}
           />
           <span className="text-[--muted]">{p.name}</span>
-          <span className="ml-auto font-medium text-[--foreground]">
+          <span className="ms-auto font-medium text-[--foreground]">
             {valueFormatter ? valueFormatter(p.value) : p.value}
           </span>
         </div>

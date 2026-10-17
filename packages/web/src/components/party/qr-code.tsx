@@ -14,6 +14,7 @@ export function QrCode({
     let d = '';
     data.forEach((row, y) =>
       row.forEach((dark, x) => {
+        // eslint-disable-next-line lingui/no-unlocalized-strings -- SVG path data
         if (dark) d += `M${x} ${y}h1v1h-1z`;
       })
     );

@@ -1,3 +1,5 @@
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { LuChevronLeft, LuChevronRight } from 'react-icons/lu';
 import { Button, IconButton } from '@aiostreams/ui/button';
@@ -5,6 +7,7 @@ import { Modal } from '@aiostreams/ui/modal';
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import { cn } from '@aiostreams/ui/core/styling';
+import { formatLocale } from '../lib/i18n';
 import { useSession } from '../lib/session';
 import { useCalendar } from '../lib/queries';
 import {
@@ -40,7 +43,7 @@ function parseMonth(month: string | undefined): Date {
 /** The locale's first day of the week, as `Date.getDay` numbers it; Monday where unknown. */
 function weekStart(): number {
   try {
-    const locale = new Intl.Locale(navigator.language) as Intl.Locale & {
+    const locale = new Intl.Locale(formatLocale()) as Intl.Locale & {
       getWeekInfo?(): { firstDay: number };
       weekInfo?: { firstDay: number };
     };
@@ -66,7 +69,7 @@ function gridDays(first: Date, startDay: number): Date[] {
 }
 
 function longDay(d: Date): string {
-  return d.toLocaleDateString(undefined, {
+  return d.toLocaleDateString(formatLocale(), {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -243,7 +246,7 @@ function MonthGrid({
             key={d.getDay()}
             className="py-1 text-center text-xs font-semibold uppercase tracking-wide text-[--muted]"
           >
-            {d.toLocaleDateString(undefined, { weekday: 'short' })}
+            {d.toLocaleDateString(formatLocale(), { weekday: 'short' })}
           </div>
         ))}
       </div>
@@ -333,7 +336,7 @@ export function CalendarPage({ month }: { month?: string }) {
           className="flex flex-wrap items-center gap-x-4 gap-y-2"
         >
           <h1 data-ui="page-title" className="text-3xl font-bold">
-            Calendar
+            <Trans>Calendar</Trans>
           </h1>
           <div data-ui="calendar-nav" className="flex items-center gap-1">
             <IconButton
@@ -341,8 +344,8 @@ export function CalendarPage({ month }: { month?: string }) {
               size="sm"
               intent="gray-subtle"
               className="rounded-full"
-              icon={<LuChevronLeft />}
-              aria-label="Previous month"
+              icon={<LuChevronLeft className="rtl:-scale-x-100" />}
+              aria-label={t`Previous month`}
               onClick={() => go(-1)}
             />
             <IconButton
@@ -350,15 +353,15 @@ export function CalendarPage({ month }: { month?: string }) {
               size="sm"
               intent="gray-subtle"
               className="rounded-full"
-              icon={<LuChevronRight />}
-              aria-label="Next month"
+              icon={<LuChevronRight className="rtl:-scale-x-100" />}
+              aria-label={t`Next month`}
               onClick={() => go(1)}
             />
             <span
               data-ui="calendar-month"
-              className="ml-2 text-lg font-semibold"
+              className="ms-2 text-lg font-semibold"
             >
-              {first.toLocaleDateString(undefined, {
+              {first.toLocaleDateString(formatLocale(), {
                 month: 'long',
                 year: 'numeric',
               })}
@@ -372,13 +375,13 @@ export function CalendarPage({ month }: { month?: string }) {
               className="rounded-full"
               onClick={() => navigate(to.calendar(), { replace: true })}
             >
-              Today
+              <Trans>Today</Trans>
             </Button>
           )}
         </div>
 
         {calendar.isError ? (
-          <LuffyError title="Could not load the calendar" />
+          <LuffyError title={t`Could not load the calendar`} />
         ) : calendar.isLoading ? (
           <Skeleton className="h-[40rem] w-full rounded-xl" />
         ) : (
@@ -396,7 +399,9 @@ export function CalendarPage({ month }: { month?: string }) {
             </div>
             {!inMonth && (
               <p className="text-[--muted]">
-                Nothing airs this month from your shows or watchlist.
+                <Trans>
+                  Nothing airs this month from your shows or watchlist.
+                </Trans>
               </p>
             )}
           </>

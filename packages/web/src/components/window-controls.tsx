@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import React from 'react';
 import {
   VscChromeClose,
@@ -99,7 +100,7 @@ export function WindowControls() {
         <button
           type="button"
           data-name="minimise"
-          aria-label="Minimise"
+          aria-label={t`Minimise`}
           tabIndex={-1}
           className={cn(button, 'hover:bg-white/5 active:bg-white/10')}
           onClick={() => shell.send({ type: 'minimize' })}
@@ -110,7 +111,7 @@ export function WindowControls() {
           <button
             type="button"
             data-name="fullscreen"
-            aria-label="Exit full screen"
+            aria-label={t`Exit full screen`}
             title="Exit full screen"
             tabIndex={-1}
             className={cn(button, 'hover:bg-white/5 active:bg-white/10')}
@@ -122,7 +123,7 @@ export function WindowControls() {
           <button
             type="button"
             data-name="maximise"
-            aria-label={maximized ? 'Restore' : 'Maximise'}
+            aria-label={maximized ? t`Restore` : t`Maximise`}
             tabIndex={-1}
             className={cn(button, 'hover:bg-white/5 active:bg-white/10')}
             onClick={() => shell.send({ type: 'window-maximize' })}
@@ -133,7 +134,7 @@ export function WindowControls() {
         <button
           type="button"
           data-name="close"
-          aria-label="Close"
+          aria-label={t`Close`}
           tabIndex={-1}
           className={cn(button, 'hover:bg-red-500 active:bg-red-600')}
           onClick={() => shell.send({ type: 'close' })}

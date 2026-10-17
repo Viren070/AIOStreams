@@ -1,24 +1,23 @@
 import React from 'react';
+import { t } from '@lingui/core/macro';
 import { LuArrowDown, LuArrowUp, LuX } from 'react-icons/lu';
 import { Select } from '@aiostreams/ui/select';
 import { IconButton } from '@aiostreams/ui/button';
 import { BasicField } from '@aiostreams/ui/basic-field';
 import { cn } from '@aiostreams/ui/core/styling';
-import { LANGUAGES } from '../../lib/languages';
+import { LANGUAGES, languageName } from '../../lib/languages';
 import { focusOn } from '../../lib/input';
 
-export const ON_DEVICE = 'Kept on this device.';
-export const ON_ACCOUNT =
-  'Saved to your account, so your other devices and Jellyfin apps use it too.';
-export const FOLLOWS_YOU =
-  'Saved to your account, so it follows you to every device.';
+export const onDevice = () => t`Kept on this device.`;
+export const onAccount = () =>
+  t`Saved to your account, so your other devices and Jellyfin apps use it too.`;
+export const followsYou = () =>
+  t`Saved to your account, so it follows you to every device.`;
 
 export const DOCS_URL = 'https://docs.aiostreams.viren070.me';
 
-export const LANGUAGE_OPTIONS = LANGUAGES.map((l) => ({
-  value: l.code,
-  label: l.name,
-}));
+export const languageOptions = () =>
+  LANGUAGES.map((l) => ({ value: l.code, label: languageName(l) }));
 
 /** Languages in order, each movable, with a picker for another. */
 export function LanguageList({
@@ -88,37 +87,36 @@ export function LanguageList({
     <BasicField label={label} help={help}>
       {value.length > 0 && (
         <ol ref={list} data-ui="language-list" className="space-y-1">
-          {value.map((code, i) => (
-            <li
-              key={code}
-              className="flex items-center gap-2 rounded-xl bg-[--subtle] py-1 pl-3 pr-1"
-            >
-              <span className="w-4 text-sm tabular-nums text-[--muted]">
-                {i + 1}
-              </span>
-              <span className="min-w-0 flex-1 truncate text-sm">
-                {nameOf(code)}
-              </span>
-              {button(
-                'up',
-                `Move ${nameOf(code)} up`,
-                <LuArrowUp />,
-                () => move(i, i - 1),
-                i === 0
-              )}
-              {button(
-                'down',
-                `Move ${nameOf(code)} down`,
-                <LuArrowDown />,
-                () => move(i, i + 1),
-                i === value.length - 1
-              )}
-              {!fixed &&
-                button('remove', `Remove ${nameOf(code)}`, <LuX />, () =>
-                  remove(i)
+          {value.map((code, i) => {
+            const name = nameOf(code);
+            return (
+              <li
+                key={code}
+                className="flex items-center gap-2 rounded-xl bg-[--subtle] py-1 ps-3 pe-1"
+              >
+                <span className="w-4 text-sm tabular-nums text-[--muted]">
+                  {i + 1}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-sm">{name}</span>
+                {button(
+                  'up',
+                  t`Move ${name} up`,
+                  <LuArrowUp />,
+                  () => move(i, i - 1),
+                  i === 0
                 )}
-            </li>
-          ))}
+                {button(
+                  'down',
+                  t`Move ${name} down`,
+                  <LuArrowDown />,
+                  () => move(i, i + 1),
+                  i === value.length - 1
+                )}
+                {!fixed &&
+                  button('remove', t`Remove ${name}`, <LuX />, () => remove(i))}
+              </li>
+            );
+          })}
         </ol>
       )}
       {!fixed && (max === undefined || value.length < max) && (
@@ -126,7 +124,9 @@ export function LanguageList({
           ref={add}
           // Required leaves the placeholder out of the list it opens.
           required
-          placeholder={value.length ? 'Add another language' : 'Add a language'}
+          placeholder={
+            value.length ? t`Add another language` : t`Add a language`
+          }
           options={options.filter((o) => !value.includes(o.value))}
           value=""
           onValueChange={(v) => v && onChange([...value, v])}

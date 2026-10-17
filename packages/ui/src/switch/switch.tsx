@@ -59,13 +59,14 @@ export const SwitchAnatomy = defineStyleAnatomy({
       'UI-Switch__thumb',
       'pointer-events-none block rounded-full data-[state=checked]:bg-white shadow-lg ring-0 transition-transform',
       'data-[state=unchecked]:translate-x-[0.15rem] data-[state=unchecked]:bg-white/50',
+      'rtl:data-[state=unchecked]:-translate-x-[0.15rem]',
     ],
     {
       variants: {
         size: {
-          sm: 'h-3 w-3 data-[state=checked]:translate-x-[1.05rem]',
-          md: 'h-4 w-4 data-[state=checked]:translate-x-[1.05rem]',
-          lg: 'h-5 w-5 data-[state=checked]:translate-x-[1.9rem]',
+          sm: 'h-3 w-3 data-[state=checked]:translate-x-[1.05rem] rtl:data-[state=checked]:-translate-x-[1.05rem]',
+          md: 'h-4 w-4 data-[state=checked]:translate-x-[1.05rem] rtl:data-[state=checked]:-translate-x-[1.05rem]',
+          lg: 'h-5 w-5 data-[state=checked]:translate-x-[1.9rem] rtl:data-[state=checked]:-translate-x-[1.9rem]',
         },
       },
       defaultVariants: {
@@ -159,14 +160,17 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
       isFirst.current = false;
     }, [controlledValue]);
 
+    const row = side === 'right';
     return (
       <BasicField
         {...basicFieldProps}
         id={basicFieldProps.id}
+        // A remote moves to and shows the whole row.
+        data-nav-box={row || undefined}
         fieldClass={cn(
           'w-fit',
-          side === 'right' &&
-            'w-full group/switch hover:bg-white/5 rounded-[--radius] p-2 w-[calc(100%_+_1rem)] -ml-2'
+          row &&
+            'relative w-full group/switch hover:bg-white/5 rounded-[--radius] p-2 w-[calc(100%_+_1rem)] -ms-2'
         )}
         fieldHelpTextClass={cn('')}
       >
@@ -174,7 +178,14 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
           <SwitchPrimitive.Root
             ref={mergeRefs([buttonRef, ref])}
             id={basicFieldProps.id}
-            className={cn(SwitchAnatomy.root({ size }), className)}
+            data-nav-card={row || undefined}
+            data-focus={row ? 'own' : undefined}
+            className={cn(
+              SwitchAnatomy.root({ size }),
+              row &&
+                "focus-visible:ring-0 focus-visible:ring-offset-0 after:pointer-events-none after:absolute after:inset-0 after:rounded-[--radius] after:content-[''] focus-visible:after:bg-white/5 focus-visible:after:ring-2 focus-visible:after:ring-[--ring]",
+              className
+            )}
             disabled={basicFieldProps.disabled || basicFieldProps.readonly}
             data-disabled={basicFieldProps.disabled}
             data-readonly={basicFieldProps.readonly}

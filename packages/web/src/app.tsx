@@ -2,8 +2,11 @@ import React from 'react';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import { RouterProvider } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
+import { t } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@aiostreams/ui/toaster';
+import { DirectionProvider } from '@aiostreams/ui/core/direction';
 import { LoadingOverlay } from '@aiostreams/ui/loading-spinner';
 import { pickerAccount, SessionProvider, useSessionPhase } from './lib/session';
 import { webRouter } from './router';
@@ -25,6 +28,7 @@ import {
 } from './lib/servers';
 import { ServersPage } from './pages/servers';
 import { currentHost } from './lib/hosts';
+import { isRtl } from './lib/i18n';
 import { ShellSetup, shellHost, useShellLinks } from './lib/hosts/shell';
 import { parseAppLink } from './lib/app-links';
 import { party } from './lib/party/party';
@@ -33,7 +37,7 @@ import {
   ConfirmationDialog,
   useConfirmationDialog,
 } from '@aiostreams/ui/shared/confirmation-dialog';
-import { ThemeStyles } from './components/theme-styles';
+import { ServerStyles, ThemeStyles } from './components/theme-styles';
 import { WindowControls } from './components/window-controls';
 import { InputSetup } from './components/input-setup';
 
@@ -50,22 +54,30 @@ export default function JellyfinWebApp() {
   }, []);
   useStableScrollbar();
   useNoFileDrops();
+  const { i18n } = useLingui();
+  const rtl = isRtl(i18n.locale);
   return (
-    <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark">
-      <MotionConfig reducedMotion="user">
-        <Toaster
-          swipeDirections={['top', 'right']}
-          offset={{ top: 'calc(24px + env(safe-area-inset-top))' }}
-          mobileOffset={{ top: 'calc(16px + env(safe-area-inset-top))' }}
-        />
-        <PageBackground />
-        <ThemeStyles />
-        <InputSetup router={webRouter} />
-        {shellHost() && <ShellSetup />}
-        {currentHost().name === 'desktop' && <WindowControls />}
-        {__STANDALONE__ ? <Standalone /> : <Served />}
-      </MotionConfig>
-    </ThemeProvider>
+    <DirectionProvider dir={rtl ? 'rtl' : 'ltr'}>
+      <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark">
+        <MotionConfig reducedMotion="user">
+          <Toaster
+            // It reads its props once.
+            key={rtl ? 'rtl' : 'ltr'}
+            dir={rtl ? 'rtl' : 'ltr'}
+            swipeDirections={['top', rtl ? 'left' : 'right']}
+            containerAriaLabel={t`Notifications`}
+            offset={{ top: 'calc(24px + env(safe-area-inset-top))' }}
+            mobileOffset={{ top: 'calc(16px + env(safe-area-inset-top))' }}
+          />
+          <PageBackground />
+          <ThemeStyles />
+          <InputSetup router={webRouter} />
+          {shellHost() && <ShellSetup />}
+          {currentHost().name === 'desktop' && <WindowControls />}
+          {__STANDALONE__ ? <Standalone /> : <Served />}
+        </MotionConfig>
+      </ThemeProvider>
+    </DirectionProvider>
   );
 }
 
@@ -124,12 +136,16 @@ function Standalone() {
     setBase(null);
   }, [queryClient]);
 
+  const from = base ? serverAddress(base) : '';
+  const adding = asking ? serverAddress(asking) : '';
   const confirmLeave = useConfirmationDialog({
-    title: 'Add a server',
-    description: asking
-      ? `Leave ${base ? serverAddress(base) : 'this server'} to add ${serverAddress(asking)}?`
-      : undefined,
-    actionText: 'Continue',
+    title: t`Add a server`,
+    description: !asking
+      ? undefined
+      : base
+        ? t`Leave ${from} to add ${adding}?`
+        : t`Leave this server to add ${adding}?`,
+    actionText: t`Continue`,
     onConfirm: () => {
       setLinked(asking);
       leave();
@@ -138,7 +154,7 @@ function Standalone() {
   const openConfirm = confirmLeave.open;
   useShellLinks((raw) => {
     const link = parseAppLink(raw);
-    if (!link) return void toast.error('The app cannot open that link');
+    if (!link) return void toast.error(t`The app cannot open that link`);
     if (link.kind === 'route') return navigate(link.path);
     if (link.kind === 'party') return party.hold(link.invite);
     if (!base) return setLinked(link.address);
@@ -184,6 +200,8 @@ function Session({
   React.useEffect(() => currentHost().start?.({ base }), [base]);
 
   const ready = phase.kind === 'ready' ? phase : null;
+  // Built anew in another language, as some text is written outside React.
+  const { i18n } = useLingui();
   const anonymous = React.useMemo(() => new JellyfinClient(base), [base]);
   const infoQuery = useServerInfoQuery(
     phase.kind === 'ready' || phase.kind === 'picking'
@@ -266,9 +284,10 @@ function Session({
 
   return (
     <ServerInfoProvider value={info}>
+      <ServerStyles />
       <AnimatePresence mode="wait">
         <motion.div
-          key={ready ? `ready-${ready.user.Id}` : phase.kind}
+          key={`${ready ? `ready-${ready.user.Id}` : phase.kind}-${i18n.locale}`}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}

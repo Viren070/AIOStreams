@@ -12,6 +12,7 @@ import { Skeleton } from '@aiostreams/ui/skeleton';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
 import { currentHost } from '../lib/hosts';
+import { scrolled, scrollToStart, startOf } from '../lib/direction';
 import {
   settings,
   useSetting,
@@ -43,6 +44,7 @@ export type RowShape = keyof typeof ITEM_WIDTH;
 
 /** A poster caption's height, which a `--row-card-h` cap leaves room for. */
 const posterText = (lines: PosterLine[]) =>
+  // eslint-disable-next-line lingui/no-unlocalized-strings -- CSS
   `calc(${lines.length ? '0.5rem' : '0rem'}${lines.includes('title') ? ' + 1.25rem' : ''}${lines.includes('year') ? ' + 1rem' : ''})`;
 
 const reducedMotion =
@@ -249,7 +251,10 @@ function NativeRow({
     const card = content.current?.children[start];
     if (saved !== undefined) el.scrollLeft = saved;
     else if (start && card instanceof HTMLElement && content.current)
-      el.scrollLeft = content.current.offsetLeft + card.offsetLeft;
+      scrollToStart(
+        el,
+        startOf(content.current, el) + startOf(card, content.current)
+      );
     // Once, as the carousel reads its start once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -264,9 +269,9 @@ function NativeRow({
           : null;
       if (!(card instanceof HTMLElement) || card.parentElement !== row) return;
       // Layout's own offsets, which a glide under way leaves alone.
-      const left = row.offsetLeft + card.offsetLeft;
+      const left = startOf(row, el) + startOf(card, row);
       const right = left + card.offsetWidth;
-      const from = el.scrollLeft;
+      const from = scrolled(el);
       const to =
         left < from
           ? left
@@ -274,8 +279,9 @@ function NativeRow({
             ? Math.min(right + ROOM - el.clientWidth, left)
             : from;
       if (to === from) return;
-      el.scrollLeft = to;
-      if (layer.current) easeLayers(layer.current, 'X', el.scrollLeft - from);
+      const was = el.scrollLeft;
+      scrollToStart(el, to);
+      if (layer.current) easeLayers(layer.current, 'X', el.scrollLeft - was);
     };
     el.addEventListener('focusin', follow);
     return () => el.removeEventListener('focusin', follow);
@@ -286,7 +292,7 @@ function NativeRow({
     const check = () => {
       if (restoreKey) savedScroll.set(restoreKey, el.scrollLeft);
       const range = el.scrollWidth - el.clientWidth;
-      if (onEnd && (range <= 1 || el.scrollLeft / range > 0.7)) onEnd();
+      if (onEnd && (range <= 1 || scrolled(el) / range > 0.7)) onEnd();
       const row = content.current;
       const [first, second] = row?.children ?? [];
       if (
@@ -297,8 +303,8 @@ function NativeRow({
       )
         return;
       // The cards are all one width.
-      const pitch = second.offsetLeft - first.offsetLeft;
-      const from = el.scrollLeft - row.offsetLeft - first.offsetLeft;
+      const pitch = startOf(second, row) - startOf(first, row);
+      const from = scrolled(el) - startOf(row, el) - startOf(first, row);
       if (pitch > 0)
         onView(
           Math.floor(from / pitch),
@@ -320,7 +326,7 @@ function NativeRow({
       data-nav-self-scroll
       className={cn(
         CarouselAnatomy.content(),
-        'relative -mr-4 overflow-x-auto overflow-y-hidden [scrollbar-width:none] lg:-mr-10 [&::-webkit-scrollbar]:hidden'
+        'relative -me-4 overflow-x-auto overflow-y-hidden [scrollbar-width:none] lg:-me-10 [&::-webkit-scrollbar]:hidden'
       )}
     >
       {Array.from({ length: GLIDE_LAYERS }).reduceRight<React.ReactNode>(
@@ -421,7 +427,7 @@ export function MediaRow({
     ...(!loading && loadingMore ? skeletons(4) : []),
   ];
   const head = (
-    <div className="-mr-4 flex items-center justify-between gap-3 pr-4 lg:-mr-10">
+    <div className="-me-4 flex items-center justify-between gap-3 pe-4 lg:-me-10">
       {title ? (
         <h2
           data-ui="media-row-title"
@@ -479,8 +485,8 @@ export function MediaRow({
           {head}
           {/* Embla counts the last card's margin as the row's end gap. */}
           <CarouselContent
-            contentClass="-mr-4 lg:-mr-10"
-            className="mt-3 [&>*:last-child]:mr-4"
+            contentClass="-me-4 lg:-me-10"
+            className="mt-3 [&>*:last-child]:me-4"
           >
             {cards}
           </CarouselContent>
@@ -522,6 +528,7 @@ export function CardGrid({
     grid,
     React.Children.count(children),
     React.useContext(ScrollRoot),
+    // eslint-disable-next-line lingui/no-unlocalized-strings -- a root margin
     '50% 0px'
   );
   return (

@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import React from 'react';
 import { BiCheck, BiInfoCircle, BiPlay, BiSolidStar } from 'react-icons/bi';
 import { Badge } from '@aiostreams/ui/badge';
@@ -15,6 +16,8 @@ import {
   progressOf,
   shortDate,
   ticksToMs,
+  markLabel,
+  unavailableKind,
   unavailableLabel,
   untilLabel,
 } from '../lib/format';
@@ -37,14 +40,16 @@ function episodeNumber(episode: BaseItemDto): string | null {
 export function seasonEpisodeTitle(episode: BaseItemDto): string {
   const number = episodeNumber(episode);
   if (number == null) return episode.Name ?? '';
-  return episode.Name ? `${number}. ${episode.Name}` : `Episode ${number}`;
+  return episode.Name ? `${number}. ${episode.Name}` : t`Episode ${number}`;
 }
 
 /** When an episode aired and how long it runs, or when it will air. */
 export function episodeLine(episode: BaseItemDto): string {
   const date = episode.PremiereDate;
-  if (unavailableLabel(episode) === 'Unaired' && date) {
-    return `Airs ${dayLabel(date)} · ${untilLabel(date)}`;
+  if (unavailableKind(episode) === 'unaired' && date) {
+    const day = dayLabel(date);
+    const until = untilLabel(date);
+    return t`Airs ${day} · ${until}`;
   }
   const runtime = ticksToMs(episode.RunTimeTicks);
   return [date && shortDate(date), runtime && duration(runtime)]
@@ -58,7 +63,7 @@ export function upToIndex(episodes: BaseItemDto[]): number {
   );
   if (resume >= 0) return resume;
   const next = episodes.findIndex(
-    (e) => !e.UserData?.Played && !unavailableLabel(e)
+    (e) => !e.UserData?.Played && !unavailableKind(e)
   );
   return Math.max(0, next);
 }
@@ -101,7 +106,7 @@ function usePlay(
   episode: BaseItemDto
 ): ((opts?: { held?: boolean }) => void) | undefined {
   const picker = useVersionPicker();
-  if (unavailableLabel(episode)) return undefined;
+  if (unavailableKind(episode)) return undefined;
   return (opts) =>
     picker.play(episode, {
       startMs: ticksToMs(episode.UserData?.PlaybackPositionTicks),
@@ -128,7 +133,7 @@ export function EpisodeThumb({
   const unavailable = unavailableLabel(episode);
   const labels = [
     ...(unavailable ? [unavailable] : []),
-    ...episodeMarks(episode),
+    ...episodeMarks(episode).map(markLabel),
   ];
   const progress = progressOf(episode);
   return (
@@ -160,7 +165,7 @@ export function EpisodeThumb({
       {labels.length > 0 && (
         <div
           data-ui="episode-status"
-          className="absolute left-1.5 top-1.5 flex gap-1"
+          className="absolute start-1.5 top-1.5 flex gap-1"
         >
           {labels.map((label) => (
             <Badge key={label} size="sm" intent="gray-solid">
@@ -180,13 +185,14 @@ function Kicker({ episode }: { episode: BaseItemDto }) {
   const number = episodeNumber(episode);
   const date = episode.PremiereDate;
   const runtime = ticksToMs(episode.RunTimeTicks);
+  const until = date ? untilLabel(date) : '';
   const when =
-    unavailableLabel(episode) === 'Unaired' && date
-      ? `Airs ${untilLabel(date)}`
+    unavailableKind(episode) === 'unaired' && date
+      ? t`Airs ${until}`
       : runtime
         ? duration(runtime)
         : null;
-  const text = [number != null ? `Episode ${number}` : null, when]
+  const text = [number != null ? t`Episode ${number}` : null, when]
     .filter(Boolean)
     .join(' · ');
   const rating = episode.CommunityRating;
@@ -257,7 +263,7 @@ function Head({
                   intent="gray-subtle"
                   className="size-8 rounded-full"
                   icon={<BiInfoCircle />}
-                  aria-label="Episode details"
+                  aria-label={t`Episode details`}
                 />
               }
             />
@@ -272,7 +278,7 @@ function Head({
                 intent={played ? 'primary' : 'gray-subtle'}
                 className="size-8 rounded-full"
                 icon={<BiCheck />}
-                aria-label={played ? 'Mark unwatched' : 'Mark watched'}
+                aria-label={played ? t`Mark unwatched` : t`Mark watched`}
                 aria-pressed={played}
                 loading={setPlayed.isPending}
                 onClick={() =>
@@ -293,7 +299,7 @@ function Head({
           data-focus="own"
           data-nav-card
           className={cn(
-            "mt-0.5 text-left text-sm font-semibold after:absolute after:inset-0 after:rounded-xl after:content-[''] sm:text-base",
+            "mt-0.5 text-start text-sm font-semibold after:absolute after:inset-0 after:rounded-xl after:content-[''] sm:text-base",
             thumbRing &&
               "before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:z-[1] before:aspect-video before:rounded-xl before:content-[''] focus-visible:before:ring-2 focus-visible:before:ring-inset focus-visible:before:ring-[--ring] [[data-tv]_&]:focus-visible:before:ring-[3px]"
           )}
@@ -340,7 +346,7 @@ function episodeState(episode: BaseItemDto) {
   return {
     'data-watched': episode.UserData?.Played || undefined,
     'data-in-progress': (progressOf(episode) ?? 0) > 0 || undefined,
-    'data-unavailable': unavailableLabel(episode)?.toLowerCase(),
+    'data-unavailable': unavailableKind(episode) ?? undefined,
   };
 }
 

@@ -1,3 +1,5 @@
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'motion/react';
@@ -85,15 +87,17 @@ function AddServer({
     >
       <div className="space-y-1 text-center">
         <h1 data-ui="page-title" className="text-xl font-semibold">
-          Add a server
+          <Trans>Add a server</Trans>
         </h1>
         <p className="text-sm text-[--muted]">
-          The address of the AIOStreams instance where you set up your addon.
-          Other Jellyfin servers work too.
+          <Trans>
+            The address of the AIOStreams instance where you set up your addon.
+            Other Jellyfin servers work too.
+          </Trans>
         </p>
       </div>
       <TextInput
-        label="Server address"
+        label={t`Server address`}
         placeholder="https://aiostreams.example.com"
         value={address}
         onValueChange={setAddress}
@@ -109,9 +113,9 @@ function AddServer({
         className="w-full rounded-full"
         loading={busy}
       >
-        Connect
+        <Trans>Connect</Trans>
       </Button>
-      <LinkRow links={[!!onBack && { label: 'Back', onClick: onBack }]} />
+      <LinkRow links={[!!onBack && { label: t`Back`, onClick: onBack }]} />
     </form>
   );
 }
@@ -161,12 +165,16 @@ function StatusLine({
         </>
       );
     case 'signed-out':
-      return <span className="text-[--muted]">Signed out</span>;
+      return (
+        <span className="text-[--muted]">
+          <Trans>Signed out</Trans>
+        </span>
+      );
     case 'unreachable':
       return (
         <span className="flex items-center gap-2 text-red-300">
           <span className="size-1.5 rounded-full bg-red-400" />
-          Can’t reach
+          <Trans>Can’t reach</Trans>
         </span>
       );
     default:
@@ -230,9 +238,9 @@ function ServerCard({
   const status = check.data?.status;
   const actions = [
     ...(status?.kind === 'signed-in'
-      ? [{ label: 'Sign out', run: onSignOut, className: undefined }]
+      ? [{ label: t`Sign out`, run: onSignOut, className: undefined }]
       : []),
-    { label: 'Remove', run: onForget, className: 'text-red-300' },
+    { label: t`Remove`, run: onForget, className: 'text-red-300' },
   ];
   // The whole address, which the card cuts short when it is long.
   const address = serverAddress(server.base);
@@ -240,7 +248,7 @@ function ServerCard({
     <button
       type="button"
       onClick={onChoose}
-      className="group/server flex h-full w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-gray-950/80 text-left shadow-xl transition-colors hover:border-white/25 focus-visible:border-white/25"
+      className="group/server flex h-full w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-gray-950/80 text-start shadow-xl transition-colors hover:border-white/25 focus-visible:border-white/25"
     >
       <Banner name={name} logo={logo} />
       <span className="flex w-full flex-1 flex-col gap-3 p-4">
@@ -293,9 +301,9 @@ function ServerCard({
               <IconButton
                 size="sm"
                 intent="gray-subtle"
-                className="absolute right-2 top-2 rounded-full"
+                className="absolute end-2 top-2 rounded-full"
                 icon={<BiDotsVerticalRounded />}
-                aria-label={`Options for ${name}`}
+                aria-label={t`Options for ${name}`}
               />
             }
           >
@@ -335,7 +343,7 @@ function ServerList({
   return (
     <div className="space-y-8">
       <h1 data-ui="page-title" className="text-center text-2xl font-semibold">
-        Choose a server
+        <Trans>Choose a server</Trans>
       </h1>
       <motion.ul
         data-ui="servers"
@@ -366,7 +374,7 @@ function ServerList({
             <span className="flex size-12 items-center justify-center rounded-full bg-white/5 text-2xl">
               <BiPlus />
             </span>
-            Add a server
+            <Trans>Add a server</Trans>
           </button>
         </motion.li>
       </motion.ul>
@@ -390,10 +398,11 @@ export function ServersPage({
   }, []);
 
   const [target, setTarget] = React.useState<SavedServer | null>(null);
+  const targetName = target?.name ?? '';
   const confirmSignOut = useConfirmationDialog({
-    title: 'Sign out',
-    description: target ? `Sign out of ${target.name}?` : undefined,
-    actionText: 'Sign out',
+    title: t`Sign out`,
+    description: target ? t`Sign out of ${targetName}?` : undefined,
+    actionText: t`Sign out`,
     onConfirm: () => {
       if (!target) return;
       endSession(target.base, readCredentials(target.base)?.token ?? null);
@@ -403,11 +412,11 @@ export function ServersPage({
     },
   });
   const confirmForget = useConfirmationDialog({
-    title: 'Remove server',
+    title: t`Remove server`,
     description: target
-      ? `Remove ${target.name} from this device? You will need to add it and sign in again.`
+      ? t`Remove ${targetName} from this device? You will need to add it and sign in again.`
       : undefined,
-    actionText: 'Remove',
+    actionText: t`Remove`,
     actionIntent: 'alert-subtle',
     onConfirm: () => {
       if (!target) return;

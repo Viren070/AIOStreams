@@ -1,3 +1,5 @@
+import { plural, t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { Button } from '@aiostreams/ui/button';
 import { Combobox } from '@aiostreams/ui/combobox';
@@ -25,16 +27,44 @@ import { PageMessage } from '../components/layout';
 import type { BaseItemDto } from '../lib/types';
 
 const FILTERS: { value: ItemFilter | undefined; label: string }[] = [
-  { value: undefined, label: 'All' },
-  { value: 'unplayed', label: 'Unwatched' },
+  {
+    value: undefined,
+    get label() {
+      return t`All`;
+    },
+  },
+  {
+    value: 'unplayed',
+    get label() {
+      return t`Unwatched`;
+    },
+  },
 ];
 
 export type Kind = 'Movie' | 'Series' | 'BoxSet';
 
 const KINDS: { kind: Kind; label: string; collectionType: string }[] = [
-  { kind: 'Movie', label: 'Movies', collectionType: 'movies' },
-  { kind: 'Series', label: 'Shows', collectionType: 'tvshows' },
-  { kind: 'BoxSet', label: 'Collections', collectionType: 'boxsets' },
+  {
+    kind: 'Movie',
+    collectionType: 'movies',
+    get label() {
+      return t`Movies`;
+    },
+  },
+  {
+    kind: 'Series',
+    collectionType: 'tvshows',
+    get label() {
+      return t`Shows`;
+    },
+  },
+  {
+    kind: 'BoxSet',
+    collectionType: 'boxsets',
+    get label() {
+      return t`Collections`;
+    },
+  },
 ];
 
 const PILL_LIMIT = 12;
@@ -67,13 +97,15 @@ function GenreFilter({
     return (
       <Combobox
         data-ui="genre-picker"
-        aria-label="Filter"
-        placeholder="Search"
-        emptyMessage="Nothing matches."
+        aria-label={t`Filter`}
+        placeholder={t`Search`}
+        emptyMessage={t`Nothing matches.`}
         keepOpenOnSelect={false}
         className="w-full rounded-full sm:w-56"
         options={[
-          ...(withAll ? [{ value: ALL, label: 'All', textValue: 'All' }] : []),
+          ...(withAll
+            ? [{ value: ALL, label: t`All`, textValue: t`All` }]
+            : []),
           ...genres.map((g) => ({
             value: g.Name ?? '',
             label: g.Name ?? '',
@@ -103,7 +135,7 @@ function GenreFilter({
             className="flex-none rounded-full"
             onClick={() => onChange(genre.Name ?? null)}
           >
-            {genre.Name ?? 'All'}
+            {genre.Name ?? t`All`}
           </Button>
         )
       )}
@@ -125,9 +157,9 @@ function CatalogPicker({
   return (
     <Combobox
       data-ui="catalog-picker"
-      aria-label="Catalog"
-      placeholder="Search"
-      emptyMessage="Nothing matches."
+      aria-label={t`Catalog`}
+      placeholder={t`Search`}
+      emptyMessage={t`Nothing matches.`}
       keepOpenOnSelect={false}
       className="w-full rounded-full sm:w-64"
       options={views.map((v) => ({
@@ -251,13 +283,13 @@ export function DiscoverPage({
   );
 
   return (
-    <div className="space-y-6 px-4 pb-16 pt-6 lg:pl-0 lg:pr-10 lg:pt-10">
+    <div className="space-y-6 px-4 pb-16 pt-6 lg:ps-0 lg:pe-10 lg:pt-10">
       <div
         data-ui="page-header"
         className="flex flex-wrap items-baseline gap-x-3 gap-y-1"
       >
         <h1 data-ui="page-title" className="text-3xl font-bold">
-          {view?.Name ?? 'Discover'}
+          {view?.Name ?? t`Discover`}
         </h1>
         {label && (
           <span data-ui="discover-label" className="text-[--muted]">
@@ -266,7 +298,7 @@ export function DiscoverPage({
         )}
         {total != null && !filter && (
           <span data-ui="discover-count" className="text-sm text-[--muted]">
-            {total} titles
+            {plural(total, { one: '# title', other: '# titles' })}
           </span>
         )}
       </div>
@@ -312,7 +344,7 @@ export function DiscoverPage({
       </div>
 
       {pages.isError ? (
-        <LuffyError title="Could not load this catalog" />
+        <LuffyError title={t`Could not load this catalog`} />
       ) : (
         <>
           <div data-nav-start>
@@ -323,7 +355,9 @@ export function DiscoverPage({
             />
           </div>
           {!pages.isLoading && !items.length && (
-            <p className="text-[--muted]">Nothing here.</p>
+            <p className="text-[--muted]">
+              <Trans>Nothing here.</Trans>
+            </p>
           )}
         </>
       )}
@@ -348,7 +382,7 @@ export function DiscoverIndex({ lastViewId }: { lastViewId: string | null }) {
   if (views.isError) {
     return (
       <PageMessage>
-        <LuffyError title="Could not load your catalogs" className="mt-0" />
+        <LuffyError title={t`Could not load your catalogs`} className="mt-0" />
       </PageMessage>
     );
   }
@@ -360,7 +394,7 @@ export function DiscoverIndex({ lastViewId }: { lastViewId: string | null }) {
     );
   }
   return (
-    <div className="space-y-4 px-4 pb-16 pt-6 lg:pl-0 lg:pr-10 lg:pt-10">
+    <div className="space-y-4 px-4 pb-16 pt-6 lg:ps-0 lg:pe-10 lg:pt-10">
       <Skeleton className="h-10 w-64" />
       <Skeleton className="h-64 w-full rounded-xl" />
     </div>

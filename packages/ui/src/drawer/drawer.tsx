@@ -6,6 +6,7 @@ import { CloseButton } from '../button';
 import { cn, ComponentAnatomy, defineStyleAnatomy } from '../core/styling';
 import { keepsModalOpen } from '../core/utils';
 import { useState } from 'react';
+import { uiText } from '../core/text';
 
 function useDrawerBodyBehavior(id: string, open: boolean | undefined) {
   const [openDrawers, setOpenDrawers] = useState<string[]>([]);
@@ -59,9 +60,9 @@ export const DrawerAnatomy = defineStyleAnatomy({
           top: 'w-full lg:w-[calc(100%_-_20px)] inset-x-0 top-0 border data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top',
           bottom:
             'w-full lg:w-[calc(100%_-_20px)] inset-x-0 bottom-0 border data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom',
-          left: 'inset-y-0 left-0 h-full lg:h-[calc(100%_-_20px)] border data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left',
+          left: 'inset-y-0 start-0 h-full lg:h-[calc(100%_-_20px)] border data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left rtl:data-[state=closed]:slide-out-to-right rtl:data-[state=open]:slide-in-from-right',
           right:
-            'inset-y-0 right-0 h-full lg:h-[calc(100%_-_20px)] border data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right',
+            'inset-y-0 end-0 h-full lg:h-[calc(100%_-_20px)] border data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right rtl:data-[state=closed]:slide-out-to-left rtl:data-[state=open]:slide-in-from-left',
         },
         size: { sm: null, md: null, lg: null, xl: null, full: null },
       },
@@ -84,14 +85,14 @@ export const DrawerAnatomy = defineStyleAnatomy({
       ],
     }
   ),
-  close: cva(['UI-Drawer__close', 'absolute right-4 top-4']),
+  close: cva(['UI-Drawer__close', 'absolute end-4 top-4']),
   header: cva([
     'UI-Drawer__header',
-    'flex flex-col space-y-1.5 text-center sm:text-left',
+    'flex flex-col space-y-1.5 text-center sm:text-start',
   ]),
   footer: cva([
     'UI-Drawer__footer',
-    'flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2',
+    'flex flex-col-reverse sm:flex-row sm:justify-end sm:gap-x-2',
   ]),
   title: cva([
     'UI-Drawer__title',
@@ -210,28 +211,16 @@ export function Drawer(props: DrawerProps) {
         />
 
         <DialogPrimitive.Content
+          data-side={mangaReader ? undefined : side}
           {...data}
           className={cn(
             DrawerAnatomy.content({
               size,
               side: mangaReader ? 'mangaReader' : side,
             }),
-            // process.env.NEXT_PUBLIC_PLATFORM === "desktop" && "pt-12",
             !mangaReader && 'lg:m-[10px] rounded-[--radius]',
             contentClass
           )}
-          style={{
-            marginTop:
-              process.env.NEXT_PUBLIC_PLATFORM === 'desktop' && !mangaReader
-                ? '30px'
-                : undefined,
-            height:
-              process.env.NEXT_PUBLIC_PLATFORM === 'desktop' &&
-              !mangaReader &&
-              (side === 'left' || side === 'right')
-                ? 'calc(100dvh - 50px)'
-                : undefined,
-          }}
           onOpenAutoFocus={onOpenAutoFocus}
           onCloseAutoFocus={onCloseAutoFocus}
           onEscapeKeyDown={onEscapeKeyDown}
@@ -244,7 +233,7 @@ export function Drawer(props: DrawerProps) {
         >
           {!title && !description ? (
             <VisuallyHidden>
-              <DialogPrimitive.Title>Drawer</DialogPrimitive.Title>
+              <DialogPrimitive.Title>{uiText.drawer}</DialogPrimitive.Title>
             </VisuallyHidden>
           ) : (
             <div className={cn(DrawerAnatomy.header(), headerClass)}>
@@ -279,7 +268,7 @@ export function Drawer(props: DrawerProps) {
             <DialogPrimitive.Close
               className={cn(
                 DrawerAnatomy.close(),
-                // process.env.NEXT_PUBLIC_PLATFORM === "desktop" && "!top-10 !right-4",
+                // process.env.NEXT_PUBLIC_PLATFORM === "desktop" && "!top-10 !end-4",
                 closeClass
               )}
               asChild

@@ -164,6 +164,11 @@ function fileExtension(pf: ParsedFile | undefined) {
   };
 }
 
+const names = (list: (string | undefined)[] | undefined) => {
+  const found = list?.filter((name): name is string => !!name);
+  return found?.length ? found : undefined;
+};
+
 export function extensionFor(
   stream: ParsedStream,
   formatted: { name: string; description: string },
@@ -182,6 +187,17 @@ export function extensionFor(
     age: stream.age,
     indexer: stream.indexer,
     filename: stream.filename,
+    folderName: stream.folderName,
+    editions: names(stream.parsedFile?.editions),
+    seMatched: stream.streamExpressionMatched?.name,
+    rseMatched: names(stream.rankedStreamExpressionsMatched),
+    regexMatched: stream.regexMatched?.name,
+    rankedRegexMatched: names(stream.rankedRegexesMatched),
+    seadex: stream.seadex?.isBest
+      ? 'best'
+      : stream.seadex?.isSeadex
+        ? 'alt'
+        : undefined,
     ytId: stream.url ? undefined : stream.ytId,
     type: stream.type,
     bingeGroup,
@@ -491,12 +507,10 @@ function audioStreams(pf: ParsedFile | undefined): JellyfinMediaStream[] {
   }
   const languages = (pf?.languages ?? []).filter((l) => l && l !== 'Unknown');
   const audioTag = (pf?.audioTags ?? []).find((t) => t !== 'Unknown') as
-    | AudioTag
-    | undefined;
+    AudioTag | undefined;
   const codec = audioTag ? AUDIO_CODEC[audioTag] : undefined;
   const channelTag = (pf?.audioChannels ?? []).find((c) => c !== 'Unknown') as
-    | AudioChannels
-    | undefined;
+    AudioChannels | undefined;
   const channels = channelTag ? CHANNEL_COUNT[channelTag] : undefined;
   const layout = channelTag ? CHANNEL_LAYOUT[channelTag] : undefined;
   return [

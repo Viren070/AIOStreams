@@ -1,3 +1,5 @@
+import { plural, t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import {
   BiDotsVerticalRounded,
@@ -42,24 +44,24 @@ function sizeOf(downloads: Download[]): number {
 
 function status(download: Download, speed: number | undefined): string {
   const { bytes, total } = download;
-  const of = total
-    ? `${formatBytes(bytes)} of ${formatBytes(total)}`
-    : formatBytes(bytes);
+  const got = formatBytes(bytes);
+  const size = total ? formatBytes(total) : '';
+  const of = total ? t`${got} of ${size}` : got;
   switch (download.state) {
     case 'finding':
-      return 'Finding a version…';
+      return t`Finding a version…`;
     case 'needs-version':
-      return 'No version was found to match. Pick one.';
+      return t`No version was found to match. Pick one.`;
     case 'queued':
-      return bytes ? `Waiting · ${of}` : 'Waiting';
+      return bytes ? t`Waiting · ${of}` : t`Waiting`;
     case 'paused':
-      return `Paused · ${of}`;
+      return t`Paused · ${of}`;
     case 'failed':
-      return download.error ?? 'Failed';
+      return download.error ?? t`Failed`;
     case 'done':
       return formatBytes(total ?? bytes);
     case 'sent':
-      return "In the app's downloads";
+      return t`In the app's downloads`;
     case 'downloading':
       return speed ? `${of} · ${formatSpeed(speed)}` : of;
   }
@@ -67,9 +69,9 @@ function status(download: Download, speed: number | undefined): string {
 
 function timeLeft(download: Download, speed: number | undefined): string {
   const { bytes, total } = download;
-  return speed && total
-    ? `${duration(((total - bytes) / speed) * 1000)} left`
-    : '';
+  if (!speed || !total) return '';
+  const left = duration(((total - bytes) / speed) * 1000);
+  return t`${left} left`;
 }
 
 function DownloadRow({
@@ -100,35 +102,35 @@ function DownloadRow({
   if (state === 'downloading' || state === 'queued')
     actions.push({
       name: 'pause',
-      label: 'Pause',
+      label: t`Pause`,
       icon: <BiPause />,
       run: () => pauseDownload(download),
     });
   if (state === 'paused')
     actions.push({
       name: 'resume',
-      label: 'Resume',
+      label: t`Resume`,
       icon: <BiPlay />,
       run: () => resumeDownload(download),
     });
   if (state === 'failed')
     actions.push({
       name: 'retry',
-      label: 'Try again',
+      label: t`Try again`,
       icon: <BiRefresh />,
       run: () => retryDownload(download),
     });
   if (state === 'failed' || state === 'needs-version')
     actions.push({
       name: 'pick',
-      label: 'Pick a version',
+      label: t`Pick a version`,
       icon: <BiListUl />,
       run: pick,
     });
   if (state === 'done' && host?.folder)
     actions.push({
       name: 'folder',
-      label: 'Show in folder',
+      label: t`Show in folder`,
       icon: <BiFolderOpen />,
       run: () => host.folder?.open(download.id),
     });
@@ -137,7 +139,7 @@ function DownloadRow({
     <div
       data-ui="download"
       data-state={state}
-      className="flex items-start gap-3 rounded-xl border border-white/5 bg-white/[0.03] p-2 sm:items-center sm:pr-3"
+      className="flex items-start gap-3 rounded-xl border border-white/5 bg-white/[0.03] p-2 sm:items-center sm:pe-3"
     >
       <button
         type="button"
@@ -237,7 +239,7 @@ function DownloadRow({
               intent="gray-basic"
               className="rounded-full"
               icon={<BiDotsVerticalRounded />}
-              aria-label="More"
+              aria-label={t`More`}
             />
           }
         >
@@ -256,14 +258,14 @@ function DownloadRow({
               data-name="delete"
               onClick={() => removeDownloads([download], true)}
             >
-              <BiTrash /> Delete
+              <BiTrash /> <Trans>Delete</Trans>
             </DropdownMenuItem>
           ) : (
             <DropdownMenuItem
               data-name="cancel"
               onClick={() => removeDownloads([download], true)}
             >
-              <BiX /> Cancel
+              <BiX /> <Trans>Cancel</Trans>
             </DropdownMenuItem>
           )}
           {(state === 'done' || state === 'sent') && (
@@ -271,7 +273,7 @@ function DownloadRow({
               data-name="forget"
               onClick={() => removeDownloads([download], false)}
             >
-              <BiX /> Remove from the list, keep the file
+              <BiX /> <Trans>Remove from the list, keep the file</Trans>
             </DropdownMenuItem>
           )}
         </DropdownMenu>
@@ -294,7 +296,7 @@ function Section({
   return (
     <section data-ui="downloads-section" data-name={name} className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="mr-auto text-xl font-semibold">{title}</h2>
+        <h2 className="me-auto text-xl font-semibold">{title}</h2>
         {actions}
       </div>
       <div className="space-y-2">{children}</div>
@@ -321,6 +323,7 @@ function Downloaded({ downloads }: { downloads: Download[] }) {
       {[...shows.values()].map((episodes) => {
         const sorted = [...episodes].sort(order);
         const first = sorted[0].item;
+        const episodeCount = sorted.length;
         return (
           <div
             key={first.SeriesId ?? first.Id}
@@ -328,12 +331,13 @@ function Downloaded({ downloads }: { downloads: Download[] }) {
             className="space-y-2"
           >
             <div className="flex items-center gap-2">
-              <div className="mr-auto min-w-0">
+              <div className="me-auto min-w-0">
                 <p className="truncate font-semibold">{itemTitle(first)}</p>
                 <p className="text-sm text-[--muted]">
-                  {sorted.length === 1
-                    ? '1 episode'
-                    : `${sorted.length} episodes`}{' '}
+                  {plural(episodeCount, {
+                    one: '# episode',
+                    other: '# episodes',
+                  })}{' '}
                   · {formatBytes(sizeOf(sorted))}
                 </p>
               </div>
@@ -346,7 +350,7 @@ function Downloaded({ downloads }: { downloads: Download[] }) {
                 leftIcon={<BiTrash />}
                 onClick={() => removeDownloads(sorted, true)}
               >
-                Delete all
+                <Trans>Delete all</Trans>
               </Button>
             </div>
             {sorted.map((d) => (
@@ -378,23 +382,28 @@ export function DownloadsPage() {
     (d) => d.state === 'downloading' || d.state === 'queued'
   );
   const paused = running.filter((d) => d.state === 'paused');
+  const downloaded = formatBytes(sizeOf(done));
 
   return (
     <PageBody>
       <div className="space-y-8">
         <div className="space-y-2">
           <h1 data-ui="page-title" className="text-3xl font-bold">
-            Downloads
+            <Trans>Downloads</Trans>
           </h1>
           <div className="flex flex-wrap items-center gap-2">
             <div
               data-ui="downloads-summary"
-              className="mr-auto min-w-0 text-sm text-[--muted]"
+              className="me-auto min-w-0 text-sm text-[--muted]"
             >
-              {done.length > 0 && <p>{formatBytes(sizeOf(done))} downloaded</p>}
+              {done.length > 0 && (
+                <p>
+                  <Trans>{downloaded} downloaded</Trans>
+                </p>
+              )}
               {folder && (
                 <p className="truncate" title={folder}>
-                  Saved to {folder}
+                  <Trans>Saved to {folder}</Trans>
                 </p>
               )}
             </div>
@@ -408,7 +417,7 @@ export function DownloadsPage() {
                 leftIcon={<BiFolderOpen />}
                 onClick={() => host.handsOff?.open()}
               >
-                Open the app's downloads
+                <Trans>Open the app's downloads</Trans>
               </Button>
             )}
             {host?.folder && (
@@ -422,7 +431,7 @@ export function DownloadsPage() {
                   leftIcon={<BiFolderOpen />}
                   onClick={() => host.folder?.open()}
                 >
-                  Open folder
+                  <Trans>Open folder</Trans>
                 </Button>
                 <Button
                   data-ui="downloads-action"
@@ -432,7 +441,7 @@ export function DownloadsPage() {
                   className="rounded-full"
                   onClick={() => host.folder?.choose()}
                 >
-                  Change folder
+                  <Trans>Change folder</Trans>
                 </Button>
               </>
             )}
@@ -441,15 +450,17 @@ export function DownloadsPage() {
 
         {!mine.length && (
           <p className="text-[--muted]">
-            Nothing downloaded yet. Download a movie or episode from its page,
-            or a whole season from the show's.
+            <Trans>
+              Nothing downloaded yet. Download a movie or episode from its page,
+              or a whole season from the show's.
+            </Trans>
           </p>
         )}
 
         {running.length > 0 && (
           <Section
             name="running"
-            title="Downloading"
+            title={t`Downloading`}
             actions={
               pausable.length > 0 ? (
                 <Button
@@ -461,7 +472,7 @@ export function DownloadsPage() {
                   leftIcon={<BiPause />}
                   onClick={() => pausable.forEach(pauseDownload)}
                 >
-                  Pause all
+                  <Trans>Pause all</Trans>
                 </Button>
               ) : paused.length > 0 ? (
                 <Button
@@ -473,7 +484,7 @@ export function DownloadsPage() {
                   leftIcon={<BiPlay />}
                   onClick={() => paused.forEach(resumeDownload)}
                 >
-                  Resume all
+                  <Trans>Resume all</Trans>
                 </Button>
               ) : null
             }
@@ -485,7 +496,7 @@ export function DownloadsPage() {
         )}
 
         {attention.length > 0 && (
-          <Section name="attention" title="Needs attention">
+          <Section name="attention" title={t`Needs attention`}>
             {attention.map((d) => (
               <DownloadRow key={d.id} download={d} />
             ))}
@@ -493,7 +504,7 @@ export function DownloadsPage() {
         )}
 
         {sent.length > 0 && (
-          <Section name="sent" title="In the app's downloads">
+          <Section name="sent" title={t`In the app's downloads`}>
             {sent.map((d) => (
               <DownloadRow key={d.id} download={d} />
             ))}
@@ -501,7 +512,7 @@ export function DownloadsPage() {
         )}
 
         {done.length > 0 && (
-          <Section name="done" title="Downloaded">
+          <Section name="done" title={t`Downloaded`}>
             <Downloaded downloads={done} />
           </Section>
         )}

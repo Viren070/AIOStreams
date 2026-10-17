@@ -1,3 +1,5 @@
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import { Alert } from '@aiostreams/ui/alert';
 import { Button } from '@aiostreams/ui/button';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
@@ -16,11 +18,11 @@ export function NoCatalogs() {
   const button = 'rounded-full';
 
   return (
-    <LuffyError title="No catalogs yet" className="mt-0">
+    <LuffyError title={t`No catalogs yet`} className="mt-0">
       <p className="text-sm text-[--muted]">
         {configure
-          ? 'Add catalogs to your configuration, then refresh.'
-          : 'This server shares no movie or show catalogs with this account.'}
+          ? t`Add catalogs to your configuration, then refresh.`
+          : t`This server shares no movie or show catalogs with this account.`}
       </p>
       <div className="mt-4 flex flex-wrap justify-center gap-2">
         {configure && (
@@ -29,7 +31,7 @@ export function NoCatalogs() {
             className={button}
             onClick={() => window.open(configure, '_blank')}
           >
-            Configure
+            <Trans>Configure</Trans>
           </Button>
         )}
         <Button
@@ -38,11 +40,11 @@ export function NoCatalogs() {
           loading={views.isFetching}
           onClick={() => void views.refetch()}
         >
-          Refresh
+          <Trans>Refresh</Trans>
         </Button>
         {several && (
           <Button intent="gray-subtle" className={button} onClick={switchUser}>
-            Switch user
+            <Trans>Switch user</Trans>
           </Button>
         )}
         {changeServer && (
@@ -51,7 +53,7 @@ export function NoCatalogs() {
             className={button}
             onClick={changeServer}
           >
-            Change server
+            <Trans>Change server</Trans>
           </Button>
         )}
       </div>
@@ -59,8 +61,8 @@ export function NoCatalogs() {
         <Alert
           data-ui="no-catalogs-tip"
           intent="info-basic"
-          className="mx-auto mt-6 max-w-md text-left"
-          description="Install catalog addons from Addons → Marketplace. For one that isn't listed, use the Custom addon there."
+          className="mx-auto mt-6 max-w-md text-start"
+          description={t`Install catalog addons from Addons → Marketplace. For one that isn't listed, use the Custom addon there.`}
         />
       )}
     </LuffyError>

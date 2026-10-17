@@ -1,10 +1,12 @@
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { LuLoaderCircle } from 'react-icons/lu';
 import { Drawer } from '@aiostreams/ui/drawer';
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import { cn } from '@aiostreams/ui/core/styling';
 import { focusOn, keyboardFocus, useRestoreFocus } from '../../lib/input';
-import { unavailableLabel } from '../../lib/format';
+import { unavailableKind } from '../../lib/format';
 import { useEpisodes, useSeasons } from '../../lib/queries';
 import type { BaseItemDto } from '../../lib/types';
 import { EpisodeThumb, episodeLine, seasonEpisodeTitle } from '../episodes';
@@ -59,20 +61,20 @@ export function EpisodesSheet({
         setPicked(undefined);
       }}
       onCloseAutoFocus={restoreFocus}
-      title="Episodes"
+      title={t`Episodes`}
       headerClass="sr-only"
       side="right"
       size="md"
       contentClass="flex flex-col gap-0 overflow-hidden p-0"
-      closeClass="right-2 top-[calc(0.75rem+env(safe-area-inset-top))]"
+      closeClass="end-2 top-[calc(0.75rem+env(safe-area-inset-top))]"
     >
       <div
         data-ui="player-episodes-header"
         className="space-y-3 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))]"
       >
-        <div className="min-w-0 px-4 pr-12">
+        <div className="min-w-0 px-4 pe-12">
           <p className="text-xs font-semibold uppercase tracking-wider text-[--muted]">
-            Episodes
+            <Trans>Episodes</Trans>
           </p>
           <p className="truncate font-semibold">{item.SeriesName}</p>
         </div>
@@ -111,7 +113,7 @@ export function EpisodesSheet({
         >
           {episodes.isError && !items.length && (
             <p className="py-6 text-center text-sm text-[--muted]">
-              Could not load the episodes.
+              <Trans>Could not load the episodes.</Trans>
             </p>
           )}
           {items.map((episode) => (
@@ -142,7 +144,7 @@ function EpisodeRow({
   loading: boolean;
   onPick(): void;
 }) {
-  const unavailable = !!unavailableLabel(episode);
+  const unavailable = !!unavailableKind(episode);
   return (
     <button
       type="button"
@@ -153,7 +155,7 @@ function EpisodeRow({
       disabled={unavailable}
       onClick={onPick}
       className={cn(
-        'group/episode flex w-full items-start gap-3 rounded-xl p-2 text-left outline-none transition-colors hover:bg-white/5 focus-visible:bg-white/10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[--ring] disabled:pointer-events-none [[data-tv]_&]:focus-visible:ring-[3px]',
+        'group/episode flex w-full items-start gap-3 rounded-xl p-2 text-start outline-none transition-colors hover:bg-white/5 focus-visible:bg-white/10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[--ring] disabled:pointer-events-none [[data-tv]_&]:focus-visible:ring-[3px]',
         current && 'bg-white/10'
       )}
     >
@@ -170,7 +172,9 @@ function EpisodeRow({
         </p>
         <p className="mt-1 truncate text-xs text-[--muted]">
           {current ? (
-            <span className="font-medium text-white">Playing</span>
+            <span className="font-medium text-white">
+              <Trans>Playing</Trans>
+            </span>
           ) : (
             episodeLine(episode)
           )}

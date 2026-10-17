@@ -14,7 +14,7 @@ export const BasicFieldAnatomy = defineStyleAnatomy({
     'text-base w-fit font-semibold self-start',
     'data-[error=true]:text-red-500',
   ]),
-  fieldAsterisk: cva('UI-BasicField__fieldAsterisk ml-1 text-red-500 text-sm'),
+  fieldAsterisk: cva('UI-BasicField__fieldAsterisk ms-1 text-red-500 text-sm'),
   fieldDetails: cva('UI-BasicField__fieldDetails'),
   field: cva('UI-BasicField__field relative w-full space-y-1'),
   fieldHelpText: cva('UI-BasicField__fieldHelpText text-sm text-[--muted]'),

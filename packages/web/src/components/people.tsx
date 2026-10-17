@@ -1,3 +1,5 @@
+import { t } from '@lingui/core/macro';
+import { formatLocale } from '../lib/i18n';
 import { useSession } from '../lib/session';
 import { personImageUrl } from '../lib/images';
 import { href, to } from '../lib/paths';
@@ -77,7 +79,26 @@ export function PersonCard({
   );
 }
 
+// eslint-disable-next-line lingui/no-unlocalized-strings -- Jellyfin's person kinds
 const CAST = new Set(['Actor', 'GuestStar']);
+
+/** A crew job by the kinds AIOStreams sends; any other shows as the server names it. */
+function jobLabel(kind: string): string {
+  switch (kind) {
+    case 'Director':
+      return t`Director`;
+    case 'Writer':
+      return t`Writer`;
+    case 'Producer':
+      return t`Producer`;
+    case 'Composer':
+      return t`Composer`;
+    case 'Creator':
+      return t`Creator`;
+    default:
+      return kind;
+  }
+}
 
 /** The cast with their characters, then the crew with every job they held. */
 export function CastAndCrew({
@@ -101,7 +122,7 @@ export function CastAndCrew({
       {cast.length > 0 && (
         <MediaRow
           id="cast"
-          title="Cast"
+          title={t`Cast`}
           shape="square"
           itemClass={PERSON_WIDTH}
         >
@@ -117,7 +138,7 @@ export function CastAndCrew({
       {crew.size > 0 && (
         <MediaRow
           id="crew"
-          title="Crew"
+          title={t`Crew`}
           shape="square"
           itemClass={PERSON_WIDTH}
         >
@@ -125,7 +146,10 @@ export function CastAndCrew({
             <PersonCard
               key={person.Id ?? person.Name}
               person={person}
-              detail={jobs.join(', ')}
+              detail={new Intl.ListFormat(formatLocale(), {
+                style: 'narrow',
+                type: 'unit',
+              }).format(jobs.map(jobLabel))}
             />
           ))}
         </MediaRow>

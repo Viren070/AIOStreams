@@ -13,9 +13,24 @@ import { MixedGrid } from '../components/mixed-grid';
 import { ScrollablePillTabs } from '../components/scrollable-pill-tabs';
 
 const KINDS = [
-  { value: 'Movie,Series', label: 'All' },
-  { value: 'Movie', label: 'Movies' },
-  { value: 'Series', label: 'Shows' },
+  {
+    value: 'Movie,Series',
+    get label() {
+      return t`All`;
+    },
+  },
+  {
+    value: 'Movie',
+    get label() {
+      return t`Movies`;
+    },
+  },
+  {
+    value: 'Series',
+    get label() {
+      return t`Shows`;
+    },
+  },
 ];
 
 type View =
@@ -111,7 +126,7 @@ export function FavouritesPage({ kind }: { kind?: string }) {
     <PageBody>
       <div className="space-y-6">
         <h1 data-ui="page-title" className="text-3xl font-bold">
-          Favourites
+          <Trans>Favourites</Trans>
         </h1>
         <div className="flex flex-wrap items-center gap-3">
           <PillTabs
@@ -135,7 +150,7 @@ export function FavouritesPage({ kind }: { kind?: string }) {
           />
         </div>
         {pages.isError ? (
-          <LuffyError title="Could not load your favourites" />
+          <LuffyError title={t`Could not load your favourites`} />
         ) : (
           <>
             <div data-nav-start>
@@ -147,7 +162,7 @@ export function FavouritesPage({ kind }: { kind?: string }) {
             </div>
             {!pages.isLoading && !items.length && (
               <p className="text-[--muted]">
-                Nothing marked as a favourite yet.
+                <Trans>Nothing marked as a favourite yet.</Trans>
               </p>
             )}
             {!pages.isLoading && !!items.length && !visibleItems.length && (

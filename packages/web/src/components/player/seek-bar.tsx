@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import React from 'react';
 import { cn } from '@aiostreams/ui/core/styling';
 import { clock } from '../../lib/format';
@@ -53,13 +54,15 @@ export function SeekBar({
     <div
       ref={bar}
       role="slider"
-      aria-label="Seek"
+      aria-label={t`Seek`}
       aria-valuemin={0}
       aria-valuemax={Math.round(durationMs / 1000)}
       aria-valuenow={Math.round(shown / 1000)}
       aria-valuetext={clock(shown)}
       tabIndex={0}
       data-ui="seek-bar"
+      // A timeline runs left to right in every language.
+      dir="ltr"
       data-focus="own"
       // The space above it takes presses too, so a finger finds it.
       className="group/seek relative flex h-5 cursor-pointer touch-none items-center rounded-full outline-none before:absolute before:inset-x-0 before:-top-6 before:bottom-0 before:content-['']"

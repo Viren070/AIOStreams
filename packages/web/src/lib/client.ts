@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import { storage } from './storage';
 import { currentHost } from './hosts';
 import { reached, unreachable } from './connection';
@@ -19,6 +20,7 @@ export function apiBase(): string {
   return origin + (mount && mount !== pathname ? mount : '/jellyfin');
 }
 
+/* eslint-disable lingui/no-unlocalized-strings -- names the server lists devices by */
 function clientName(): string {
   if (!shell) return 'AIOStreams Web';
   if (shell.platform !== 'android') return 'AIOStreams Desktop';
@@ -64,6 +66,7 @@ function deviceName(): string {
             : '';
   return os ? `${browser} on ${os}` : browser;
 }
+/* eslint-enable lingui/no-unlocalized-strings */
 
 export class JellyfinError extends Error {
   constructor(
@@ -79,9 +82,11 @@ export class JellyfinError extends Error {
 /** No answer from the server itself: offline, or a proxy in front of it says it is down. */
 export class ConnectionError extends Error {
   constructor() {
-    super("Can't reach the server");
+    super(t`Can't reach the server`);
   }
 }
+
+const requestFailed = (status: number) => t`Request failed (${status})`;
 
 const GATEWAY_DOWN = new Set([502, 504, 520, 521, 522, 523, 524, 530]);
 
@@ -154,7 +159,7 @@ export class JellyfinClient {
       const retryAfter = Number(res.headers.get('Retry-After') ?? NaN);
       throw new JellyfinError(
         res.status,
-        message || `Request failed (${res.status})`,
+        message || requestFailed(res.status),
         Number.isFinite(retryAfter) ? retryAfter * 1000 : undefined
       );
     }
