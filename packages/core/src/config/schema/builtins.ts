@@ -336,6 +336,28 @@ export const builtinsSchema = {
       requiresRestart: false,
       secret: false,
     },
+    yearlessMovieFallback: {
+      enabled: {
+        schema: z.boolean(),
+        default: false,
+        label: 'Yearless movie fallback',
+        description:
+          'Retry movie title searches without the year when the initial searches return too few results. May increase API usage and return broader results.',
+        env: 'BUILTIN_SCRAPE_YEARLESS_MOVIE_FALLBACK_ENABLED',
+        requiresRestart: false,
+        secret: false,
+      },
+      resultThreshold: {
+        schema: positiveInt,
+        default: 3,
+        label: 'Yearless fallback result threshold',
+        description:
+          'Minimum unique results needed to skip the yearless fallback, counted per addon (per indexer in Prowlarr) before stream filtering.',
+        env: 'BUILTIN_SCRAPE_YEARLESS_MOVIE_FALLBACK_RESULT_THRESHOLD',
+        requiresRestart: false,
+        secret: false,
+      },
+    },
     dateBased: {
       enabled: {
         schema: z.boolean(),
