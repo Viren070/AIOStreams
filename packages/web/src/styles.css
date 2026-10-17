@@ -134,9 +134,19 @@ html.dark {
 html[data-pointer-focus] :focus-visible:not(input):not(textarea),
 html[data-pointer-focus] :focus-visible:not(input):not(textarea)::before,
 html[data-pointer-focus] :focus-visible:not(input):not(textarea)::after,
-html[data-pointer-focus] :focus-visible [data-ui='focus-ring'] {
+html[data-pointer-focus] :focus-visible [data-focus-frame] {
   outline: none !important;
   --tw-ring-color: transparent !important;
+}
+/* A card's ring goes round its picture, outside it, so nothing of the
+   picture is hidden; rows leave room for it. */
+[data-focus='own']:focus-visible [data-focus-frame] {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+/* Seen from across a room. */
+[data-tv] [data-focus='own']:focus-visible [data-focus-frame] {
+  outline-width: 3px;
 }
 /* Rows, the hero and scrolling menus clip anything past their edges. */
 .UI-Carousel__content :focus-visible:not([data-focus='own']):not(input),

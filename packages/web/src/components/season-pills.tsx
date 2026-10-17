@@ -89,7 +89,8 @@ function TvPills({
     <div
       ref={track}
       data-ui="season-pills"
-      className="relative flex gap-2 overflow-x-auto"
+      // Room for a focused pill's ring, which the scroller would clip.
+      className="relative -m-1 flex gap-2 overflow-x-auto p-1"
     >
       {children}
     </div>

@@ -326,7 +326,8 @@ function NativeRow({
       data-nav-self-scroll
       className={cn(
         CarouselAnatomy.content(),
-        'relative -me-4 overflow-x-auto overflow-y-hidden [scrollbar-width:none] lg:-me-10 [&::-webkit-scrollbar]:hidden'
+        // Room for a focused card's ring, which the scroller clips; the row pads its start.
+        'relative -mb-1.5 -me-4 -ms-1.5 overflow-x-auto overflow-y-hidden pb-1.5 [scrollbar-width:none] lg:-me-10 [&::-webkit-scrollbar]:hidden'
       )}
     >
       {Array.from({ length: GLIDE_LAYERS }).reduceRight<React.ReactNode>(
@@ -346,7 +347,7 @@ function NativeRow({
           className={cn(
             CarouselAnatomy.innerContent({ gap: 'md' }),
             // A scroller leaves the last card's margin out of its end.
-            "relative mt-3 after:shrink-0 after:basis-4 after:content-['']"
+            "relative mt-3 ps-1.5 after:shrink-0 after:basis-4 after:content-['']"
           )}
         >
           <RowScroller.Provider value={ref}>{children}</RowScroller.Provider>

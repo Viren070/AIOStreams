@@ -834,8 +834,9 @@ export function FollowHero({
           data-nav-snap
           data-scroll-restoration-id="home-rows"
           // What a card may take of the rows' height, past the room above a
-          // revealed row and its header.
-          className="min-h-0 flex-1 overflow-y-auto [--row-card-h:calc(100dvh-var(--hero-h)-4.25rem)] [mask-image:linear-gradient(to_bottom,transparent,black_2rem)]"
+          // revealed row and its header. It clips sideways too, so it pads
+          // room for a card's focus ring.
+          className="-ms-1.5 min-h-0 flex-1 overflow-y-auto ps-1.5 [--row-card-h:calc(100dvh-var(--hero-h)-4.25rem)] [mask-image:linear-gradient(to_bottom,transparent,black_2rem)]"
         >
           <ScrollRoot.Provider value={scroller}>
             <GlideLayers>{children}</GlideLayers>

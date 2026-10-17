@@ -321,22 +321,6 @@ export function ProgressBar({ percent }: { percent: number }) {
   );
 }
 
-/** Laid over the artwork, which would cover a ring drawn on its frame. */
-export function FocusRing({ className }: { className: string }) {
-  return (
-    <span
-      aria-hidden
-      data-ui="focus-ring"
-      className={cn(
-        'pointer-events-none absolute inset-0 z-[1] rounded-[inherit] opacity-0 ring-2 ring-inset ring-[--ring]',
-        // Seen from across a room.
-        '[[data-tv]_&]:ring-[3px]',
-        className
-      )}
-    />
-  );
-}
-
 /** Points out the item a page opened on with a ring that blinks, then fades. */
 export function OpenedPulse() {
   return (
@@ -433,6 +417,7 @@ export function PosterCard(props: PosterCardProps) {
     >
       <div
         data-ui="poster-card-image"
+        data-focus-frame
         className={cn(
           'relative w-full overflow-hidden rounded-lg bg-gray-900 ring-1 ring-white/5',
           SHAPE_CLASS[shape]
@@ -448,7 +433,6 @@ export function PosterCard(props: PosterCardProps) {
           data-ui="poster-card-shade"
           className="absolute inset-0 bg-black/20 opacity-0 transition-opacity [transition-duration:250ms] group-hover/poster:opacity-100 group-focus-visible/poster:opacity-100"
         />
-        <FocusRing className="group-focus-visible/poster:opacity-100" />
         {watched && <WatchedMark />}
         {!watched && !!unwatched && (
           <span
@@ -525,6 +509,7 @@ export function WideCard(props: WideCardProps) {
     <>
       <div
         data-ui="wide-card-image"
+        data-focus-frame
         className={cn(
           'relative aspect-video w-full overflow-hidden rounded-xl bg-gray-900 ring-1 ring-white/5',
           highlighted && 'ring-2 ring-brand-400'
@@ -556,7 +541,6 @@ export function WideCard(props: WideCardProps) {
         )}
         {watched && <WatchedMark />}
         {progress != null && progress > 0 && <ProgressBar percent={progress} />}
-        <FocusRing className="group-focus-visible/wide-link:opacity-100" />
       </div>
       <div
         data-ui="wide-card-text"

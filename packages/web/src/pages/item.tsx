@@ -66,7 +66,7 @@ import { useInView, useNear } from '../lib/use-in-view';
 import { MediaRow } from '../components/media-row';
 import { PageMessage } from '../components/layout';
 import { MixedGrid } from '../components/mixed-grid';
-import { FocusRing, PosterCard } from '../components/cards';
+import { PosterCard } from '../components/cards';
 import { Overview } from '../components/overview';
 import {
   EpisodeCard,
@@ -864,7 +864,10 @@ const SeasonPosters = React.memo(function SeasonPosters({
               onClick={() => onSelect(s.Id!)}
               className="group/season w-full space-y-2 text-start"
             >
-              <div className="relative aspect-[2/3] overflow-hidden rounded-lg bg-gray-900">
+              <div
+                data-focus-frame
+                className="relative aspect-[2/3] overflow-hidden rounded-lg bg-gray-900"
+              >
                 {poster && (
                   <CachedImage
                     src={poster}
@@ -877,7 +880,6 @@ const SeasonPosters = React.memo(function SeasonPosters({
                     )}
                   />
                 )}
-                <FocusRing className="group-focus-visible/season:opacity-100" />
                 {/* Drawn inside, since the row clips anything outside it. */}
                 <span
                   className={cn(
