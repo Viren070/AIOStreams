@@ -28,3 +28,4 @@ export { watchStateSchema } from './watch-state.js';
 export { remuxdbSchema } from './remuxdb.js';
 export { mediaInfoSchema } from './media-info.js';
 export { partySchema } from './party.js';
+export { appReportsSchema } from './app-reports.js';

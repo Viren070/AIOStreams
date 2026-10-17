@@ -78,6 +78,15 @@ export {
   type JellyfinAddressTarget,
 } from './repositories/jellyfin-addresses.js';
 export {
+  AppReportRepository,
+  normaliseReportCode,
+  formatReportCode,
+  type AppReport,
+  type AppReportInput,
+  type AppReportKind,
+  type AppReportListing,
+} from './repositories/app-reports.js';
+export {
   CommunityRepository,
   type CommunityItemInsert,
   type CommunityLiveUpdate,

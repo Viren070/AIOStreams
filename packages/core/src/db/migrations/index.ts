@@ -44,6 +44,7 @@ import { mediaInfo } from './0043_media_info.js';
 import { mediaInfoProbes } from './0044_media_info_probes.js';
 import { mediaInfoSources } from './0045_media_info_sources.js';
 import { jellyfinUserAddresses } from './0046_jellyfin_user_addresses.js';
+import { appReports } from './0047_app_reports.js';
 import type { Migration } from './types.js';
 
 export const MIGRATIONS: readonly Migration[] = [
@@ -93,6 +94,7 @@ export const MIGRATIONS: readonly Migration[] = [
   mediaInfoProbes,
   mediaInfoSources,
   jellyfinUserAddresses,
+  appReports,
 ];
 
 export type { Migration } from './types.js';

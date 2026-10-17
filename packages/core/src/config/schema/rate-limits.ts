@@ -106,6 +106,12 @@ export const rateLimitsSchema = {
     envPrefix: 'ANIME_API',
     label: 'anime API',
   }),
+  appReports: rateLimit({
+    windowDefault: 3600,
+    maxDefault: 10,
+    envPrefix: 'APP_REPORTS',
+    label: 'app reports',
+  }),
   stremioStream: rateLimit({
     windowDefault: 15,
     maxDefault: 10,
