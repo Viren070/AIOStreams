@@ -8,6 +8,7 @@ import { directUrl } from './stream';
 import { subtitleUrl, textSubtitles } from '../subtitles/tracks';
 import { useSession } from '../session';
 import { storedMap } from '../storage';
+import { unsupportedOnTv } from './support';
 import { subtitleLanguages, usePlaybackPrefs } from '../user-config';
 import { useEpisodesAfter } from '../queries';
 import { sameLanguage } from '../languages';
@@ -21,13 +22,23 @@ export const lastVersions = storedMap<string>(
   500
 );
 
-/** Versions that can play; notices from addons carry text only. */
+/**
+ * Versions that can play; notices from addons carry text only. Those a TV
+ * can't decode go last, so whatever takes the first takes one it plays.
+ */
 export function playableSources(
   info: PlaybackInfoResponse | undefined
 ): SourceInfo[] {
-  return (info?.MediaSources ?? []).filter(
+  const sources = (info?.MediaSources ?? []).filter(
     (s) => s.Type !== 'Placeholder'
   ) as SourceInfo[];
+  const unplayable = new Set(sources.filter((s) => unsupportedOnTv(s)));
+  return unplayable.size
+    ? [
+        ...sources.filter((s) => !unplayable.has(s)),
+        ...sources.filter((s) => unplayable.has(s)),
+      ]
+    : sources;
 }
 
 export function noticeSources(
@@ -90,6 +101,8 @@ export function usePlay() {
       startMs?: number;
       replace?: boolean;
       onExternal?: () => void;
+      /** Whether to still play, once what it waits on has come. */
+      current?: () => boolean;
     }
   ) => {
     const { source } = opts;
@@ -105,6 +118,7 @@ export function usePlay() {
         prefs.EnableNextEpisodeAutoPlay !== false
           ? await episodesAfter(item).catch(() => [])
           : [];
+      if (opts.current?.() === false) return;
       play(
         item,
         source,

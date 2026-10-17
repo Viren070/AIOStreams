@@ -14,7 +14,8 @@ import {
   useRefreshAll,
   useSegments,
 } from '../lib/queries';
-import { lastVersions, playableSources } from '../lib/playback/play';
+import { lastVersions, playableSources, usePlay } from '../lib/playback/play';
+import { unsupportedOnTv } from '../lib/playback/support';
 import { chosenPlayer } from '../lib/playback/player-choice';
 import {
   directUrl,
@@ -87,6 +88,8 @@ interface PlayerProps {
   local?: Download;
   /** A YouTube version's stream. */
   youTube?: string;
+  /** The version list it started from, which a failed start moves along. */
+  versions: SourceInfo[];
 }
 
 /**
@@ -100,9 +103,13 @@ export function usePlayerPage() {
     html.style.overflowY = 'hidden';
     html.style.scrollbarGutter = 'auto';
     html.classList.add('playing');
+    // Samsung's player is drawn beneath the page (see index.html).
+    const seeThrough = !!window.tizen;
+    if (seeThrough) html.classList.add('see-through');
     return () => {
       [html.style.overflowY, html.style.scrollbarGutter] = previous;
       html.classList.remove('playing');
+      if (seeThrough) html.classList.remove('see-through');
     };
   }, []);
 }
@@ -175,6 +182,7 @@ export function PlayerPage({
       launched: player.kind === 'launched' ? player : undefined,
       local,
       youTube: youTube.data ?? undefined,
+      versions: sources,
     });
   }
 
@@ -247,6 +255,82 @@ function useSwitchVersion(
     });
 }
 
+/** Versions tried for each item since one last started, so failing over never comes back round. */
+const triedVersions = new Map<string, { at: number; keys: Set<string> }>();
+/** How long a run of failed versions is remembered, so a later try starts afresh. */
+const TRIED_MS = 10 * 60_000;
+// The server's own id holds when a fresh list numbers versions anew.
+const versionKey = (s: SourceInfo) => s.aiostreams?.id ?? s.Id ?? '';
+
+/**
+ * A version that fails before it starts hands over to the next in `versions`,
+ * the list the player started from, which lists those a TV can decode first
+ * (`settings.playback.failover`). The next version's page asks the server for
+ * that one, which answers from the list it keeps rather than searching anew.
+ * Not in a party, whose version everyone shares, nor for a download.
+ */
+function useFailover(
+  item: BaseItemDto,
+  source: SourceInfo,
+  versions: SourceInfo[],
+  player: PlayerController,
+  startMs: number,
+  off: boolean
+) {
+  const [on] = useSetting(settings.playback.failover);
+  const play = usePlay();
+  const { started } = player.state;
+  const failed = !!player.state.error && !started;
+  // Read when it fails, so renders in between don't run the effect again.
+  const latest = React.useRef({ item, source, versions, startMs, play });
+  latest.current = { item, source, versions, startMs, play };
+  // Once per player: each version plays on a page of its own.
+  const done = React.useRef(false);
+  React.useEffect(() => {
+    if (started) triedVersions.delete(item.Id!);
+  }, [started, item.Id]);
+  React.useEffect(() => {
+    if (!failed) {
+      // A retry that fails again fails over then.
+      done.current = false;
+      return;
+    }
+    if (!on || off || done.current) return;
+    done.current = true;
+    const { item, source, versions, startMs, play } = latest.current;
+    const run = triedVersions.get(item.Id!);
+    const tried =
+      run && Date.now() - run.at < TRIED_MS ? run.keys : new Set<string>();
+    triedVersions.set(item.Id!, {
+      at: Date.now(),
+      keys: tried.add(versionKey(source)),
+    });
+    // In the list's order: the failed version comes first, as the server lists
+    // the one asked for first, and those a TV can't decode come last.
+    const untried = versions.filter(
+      (s) => s !== source && !tried.has(versionKey(s))
+    );
+    const to = untried.find((s) => !unsupportedOnTv(s)) ?? untried[0];
+    if (!to) {
+      // Out of versions: the next try starts afresh.
+      triedVersions.delete(item.Id!);
+      return;
+    }
+    toast.info(t`This version didn't play, so the next one is starting.`);
+    // A host's own player waits on the episodes after it, so leaving can come first.
+    let current = true;
+    void play(item, {
+      source: to,
+      startMs,
+      replace: true,
+      current: () => current,
+    });
+    return () => {
+      current = false;
+    };
+  }, [on, off, failed]);
+}
+
 /** Reports the playback the way a Jellyfin client does once it starts. */
 function useReporting(
   player: PlayerController,
@@ -285,7 +369,7 @@ function useReporting(
     );
     current.start();
     reporter.current = current;
-    const onHide = () => void current.stop();
+    const onHide = () => void current.stop(true);
     window.addEventListener('pagehide', onHide);
     return () => {
       window.removeEventListener('pagehide', onHide);
@@ -507,6 +591,7 @@ function Player({
   launched,
   local,
   youTube,
+  versions,
 }: PlayerProps) {
   const { client } = useSession();
   const video = React.useRef<HTMLVideoElement>(null);
@@ -565,6 +650,7 @@ function Player({
   });
   const player = usePartyPlayer(own, playlistItemId);
   close.current = player.close;
+  useFailover(item, source, versions, player, startMs, !!local || inParty);
   const segments = useShownSegments(
     item,
     useSegments(item.Id!).data?.Items,

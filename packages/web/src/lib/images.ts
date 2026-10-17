@@ -8,10 +8,36 @@ const STEPS = [
   120, 160, 240, 320, 400, 480, 640, 800, 960, 1280, 1600, 1920, 2560, 3840,
 ];
 
-/** In device pixels, rounded up to a step so the same URLs come back. */
+/**
+ * Screen pixels per CSS pixel. A TV lays the page out at 1280 wide (see tv.ts)
+ * and scales it to its screen, which `devicePixelRatio` may leave out.
+ */
+export function pixelRatio(): number {
+  return (tvRatio ??= tvScale());
+}
+
+// Read once and again on resize: reading innerWidth lays the page out, which
+// a TV pays dearly for on every card.
+let tvRatio: number | null = null;
+addEventListener('resize', () => (tvRatio = null));
+
+function tvScale(): number {
+  const ratio = window.devicePixelRatio || 1;
+  return document.documentElement.hasAttribute('data-tv')
+    ? Math.max(ratio, screen.width / innerWidth)
+    : ratio;
+}
+
+/**
+ * In device pixels, rounded up to a step so the same URLs come back; never
+ * wider than the screen, as a TV decoding 4K backdrops stutters.
+ */
 function deviceWidth(css: number): number {
-  const px = css * (window.devicePixelRatio || 1);
-  return STEPS.find((step) => step >= px) ?? Math.ceil(px);
+  const screenPx = Math.ceil(screen.width * (window.devicePixelRatio || 1));
+  const px = Math.min(css * pixelRatio(), screenPx || Infinity);
+  const step = STEPS.find((s) => s >= px) ?? Math.ceil(px);
+  // A step can round past the screen, as 1366 does to 1600.
+  return screenPx ? Math.min(step, screenPx) : step;
 }
 
 function image(

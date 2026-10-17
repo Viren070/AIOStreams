@@ -61,12 +61,21 @@ const POINTER_FOCUS = 'data-pointer-focus';
 export const markPointerFocus = (pointer: boolean) =>
   document.documentElement.toggleAttribute(POINTER_FOCUS, pointer);
 
+/** `:focus-visible`, or `:focus` where the engine lacks it (Chromium 69, 2020 Samsung TVs). */
+export function focusVisible(el: Element): boolean {
+  try {
+    return el.matches(':focus-visible');
+  } catch {
+    return el.matches(':focus');
+  }
+}
+
 /** What the keyboard, a remote or a gamepad is on, rather than a pointer. */
 export function keyboardFocus(): HTMLElement | null {
   const el = document.activeElement;
   return el instanceof HTMLElement &&
     el !== document.body &&
-    el.matches(':focus-visible') &&
+    focusVisible(el) &&
     !document.documentElement.hasAttribute(POINTER_FOCUS)
     ? el
     : null;
@@ -119,12 +128,35 @@ const ruledOut = (el: HTMLElement) =>
   ) ||
   !!el.closest('[inert], [aria-hidden=true], [data-tv] [data-nav-tv=skip]');
 
-/** A focusable standing for its whole card (`data-nav-card`) is measured as its `data-nav-box`. */
+/**
+ * A focusable standing for its whole card (`data-nav-card`) is measured as its
+ * `data-nav-box`; one in a box clipped to its first `data-nav-clip` rem, as the
+ * shut TV rail, as only that much while focus is outside it.
+ */
 const rectOf = (el: HTMLElement) => {
   const box = el.hasAttribute('data-nav-card')
     ? (el.closest('[data-nav-box]') ?? el)
     : el;
-  return settled(box, box.getBoundingClientRect());
+  let r = box.getBoundingClientRect();
+  const clip = el.closest<HTMLElement>('[data-nav-clip]');
+  if (clip && !clip.contains(document.activeElement)) {
+    const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    const shown = Number(clip.dataset.navClip) * rem;
+    const c = clip.getBoundingClientRect();
+    // The shut rail shows its start edge, the right one under dir=rtl.
+    const [from, to] =
+      getComputedStyle(clip).direction === 'rtl'
+        ? [c.right - shown, c.right]
+        : [c.left, c.left + shown];
+    const left = Math.max(r.left, from);
+    r = new DOMRect(
+      left,
+      r.y,
+      Math.max(0, Math.min(r.right, to) - left),
+      r.height
+    );
+  }
+  return settled(box, r);
 };
 
 const shifted = (r: DOMRect, x: number, y: number) =>

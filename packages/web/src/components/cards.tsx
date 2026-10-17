@@ -12,6 +12,8 @@ import {
   shrinkArtwork,
 } from '../lib/artwork';
 import { settings, useSetting } from '../lib/settings';
+import { pixelRatio } from '../lib/images';
+import { focusVisible } from '../lib/input/focus';
 import { CachedImage } from './cached-image';
 import { Anchor } from './anchor';
 
@@ -27,12 +29,15 @@ interface Box {
 }
 
 function deviceSize(entry: ResizeObserverEntry) {
-  const box = entry.devicePixelContentBoxSize?.[0];
+  const ratio = pixelRatio();
+  // The device box knows only devicePixelRatio, not a TV's scaling.
+  const box =
+    ratio === devicePixelRatio && entry.devicePixelContentBoxSize?.[0];
   return box
     ? { width: box.inlineSize, height: box.blockSize }
     : {
-        width: Math.round(entry.contentRect.width * devicePixelRatio),
-        height: Math.round(entry.contentRect.height * devicePixelRatio),
+        width: Math.round(entry.contentRect.width * ratio),
+        height: Math.round(entry.contentRect.height * ratio),
       };
 }
 
@@ -427,7 +432,7 @@ export function PosterCard(props: PosterCardProps) {
         onPointerEnter: () => setActive(true),
         onPointerLeave: () => setActive(false),
         onFocus: (e: React.FocusEvent<HTMLAnchorElement>) =>
-          setActive(e.currentTarget.matches(':focus-visible')),
+          setActive(focusVisible(e.currentTarget)),
         onBlur: () => setActive(false),
       })}
     >

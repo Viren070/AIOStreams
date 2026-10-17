@@ -23,6 +23,13 @@ html.see-through body {
   background: transparent !important;
 }
 
+/* A 2020 Samsung TV lets its video plane tint a page whose body is
+   transparent, even under an opaque html; the player clears it (see-through). */
+html[data-host='tizen'] body,
+html[data-host='tizen'] #root {
+  background-color: var(--background, #070707);
+}
+
 /* Important so custom CSS can't cover the video beneath the page. */
 html.playing .page-background {
   display: none !important;
@@ -144,6 +151,25 @@ html[data-pointer-focus] :focus-visible [data-ui='focus-ring'] {
 [role^='menuitem']:focus-visible:not([data-focus='own']),
 [role='option']:focus-visible:not([data-focus='own']) {
   outline-offset: -2px;
+}
+
+/* Chromium 69 (2020 Samsung TVs) draws outlines square; a shadow follows the
+   corners. The class is boot.js's, on engines without :focus-visible. */
+html.no-focus-visible :focus:not([data-focus='own']):not(input):not(textarea) {
+  outline: none !important;
+  box-shadow:
+    0 0 0 2px var(--background, #070707),
+    0 0 0 4px var(--ring) !important;
+}
+html.no-focus-visible
+  .UI-Carousel__content
+  :focus:not([data-focus='own']):not(input),
+html.no-focus-visible
+  [data-ui='hero']
+  :focus:not([data-focus='own']):not(input),
+html.no-focus-visible [role^='menuitem']:focus:not([data-focus='own']),
+html.no-focus-visible [role='option']:focus:not([data-focus='own']) {
+  box-shadow: inset 0 0 0 2px var(--ring) !important;
 }
 
 [data-ui='player-controls'] {

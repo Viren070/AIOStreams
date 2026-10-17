@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { defineConfig, loadEnv, type RsbuildConfig } from '@rsbuild/core';
 import { pluginReact } from '@rsbuild/plugin-react';
+import { legacyCss } from './legacy-css';
 
 const { parsed } = loadEnv({ prefixes: ['PUBLIC_'] });
 
@@ -69,6 +70,8 @@ export default defineConfig(({ envMode }) => {
     define,
     // Dependencies too, which are otherwise shipped as published: older browsers can't parse some of their syntax.
     include: [/[\\/]node_modules[\\/]/],
+    // Polyfills injected into core-js itself break it.
+    exclude: [/[\\/]core-js[\\/]/],
   };
   // Lingui's macros compile at build time, and each catalog loads compiled.
   const tools: RsbuildConfig['tools'] = {
@@ -81,7 +84,6 @@ export default defineConfig(({ envMode }) => {
     return {
       plugins: [pluginReact()],
       source,
-      tools,
       html: {
         template: './index.html',
         templateParameters: { root: './', icons: false },
@@ -90,7 +92,20 @@ export default defineConfig(({ envMode }) => {
         distPath: { root: 'dist-standalone' },
         // Relative, since the TV apps load it from their package's files.
         assetPrefix: 'auto',
+        // 2020 Samsung TVs (Tizen 5.5) run Chromium 69.
+        overrideBrowserslist: ['chrome >= 69', 'safari >= 15.4'],
+        polyfill: 'usage',
         copy: BUNDLED_ICONS,
+      },
+      tools: {
+        ...tools,
+        postcss: (_, { addPlugins }) => addPlugins(legacyCss()),
+        swc: {
+          ...tools.swc,
+          // core-js swaps JSON.parse for a slow script parser on engines whose
+          // revivers lack the source text, which nothing here reads.
+          env: { exclude: ['es.json.parse', 'esnext.json.parse'] },
+        },
       },
       server: { port: devServerPort + 1 },
     };
