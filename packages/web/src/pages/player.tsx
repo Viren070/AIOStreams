@@ -52,6 +52,7 @@ import { usePlaybackPrefs, type PlaybackPrefs } from '../lib/user-config';
 import { backdropUrl } from '../lib/images';
 import { fullTitle } from '../lib/format';
 import { goBack, navigate, to, versionsPath } from '../lib/paths';
+import { noteLastPlayed } from '../lib/last-played';
 import { PlayerControls } from '../components/player/controls';
 import {
   countPlayedOn,
@@ -158,6 +159,9 @@ export function PlayerPage({
     lastVersions.set(itemId, undefined);
     navigate(versionsPath(item.data), { replace: true });
   }, [missing, item.data, itemId]);
+  React.useEffect(() => {
+    if (playing) noteLastPlayed(playing.item, playing.source);
+  }, [playing]);
   if (
     !playing &&
     item.data &&

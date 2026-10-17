@@ -150,6 +150,27 @@ export function requestDiagnostics(server: string | null): Promise<string> {
   ).then((m) => m.text);
 }
 
+export interface CrashReport {
+  at: number;
+  /** What fits on a screen, for a photo. */
+  summary: string;
+  details: string;
+}
+
+/** How the Android app's last run ended, if it crashed or was closed while in use and nobody has seen it yet. */
+export function requestCrashReport(): Promise<CrashReport | null> {
+  if (appBridge()?.platform !== 'android') return Promise.resolve(null);
+  return ask({ type: 'crash-report' }, 'crash-report', {
+    timeoutMs: 15000,
+  }).then(({ at, summary, details }) =>
+    at && summary ? { at, summary, details: details ?? summary } : null
+  );
+}
+
+export function crashReportSeen(at: number): void {
+  appBridge()?.send({ type: 'crash-seen', at });
+}
+
 /** The AIOStreams apps. */
 export function shellHost(): Host | null {
   const bridge = appBridge();

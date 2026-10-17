@@ -15,7 +15,8 @@ export type Feature =
   | 'versions'
   | 'genreRequired'
   | 'fillers'
-  | 'parties';
+  | 'parties'
+  | 'reports';
 
 /** What a server's public info says about it. */
 export interface ServerInfo extends Branding {
@@ -32,6 +33,8 @@ export interface ServerInfo extends Branding {
   css: string | null;
   /** Who its party relay admits besides its users, and the relay it suggests for the rest. */
   parties: { relay: PartyRelayMode; defaultRelay: string | null } | null;
+  /** Whether the server keeps reports from the apps, and can pass them on to the developer. */
+  reports: { forward: boolean } | null;
 }
 
 export const NO_SERVER_INFO: ServerInfo = {
@@ -44,6 +47,7 @@ export const NO_SERVER_INFO: ServerInfo = {
   version: null,
   css: null,
   parties: null,
+  reports: null,
 };
 
 interface PublicSystemInfo {
@@ -56,6 +60,7 @@ interface PublicSystemInfo {
     features?: ServerInfo['features'];
     css?: string | null;
     parties?: ServerInfo['parties'];
+    reports?: ServerInfo['reports'];
     version?: { tag?: string; channel?: string; commit?: string };
   };
 }
@@ -102,6 +107,7 @@ export function useServerInfoQuery(client: JellyfinClient) {
         version: buildVersion(data.aiostreams?.version),
         css: data.aiostreams?.css || null,
         parties: data.aiostreams?.parties ?? null,
+        reports: data.aiostreams?.reports ?? null,
       };
     },
     staleTime: 5 * 60_000,

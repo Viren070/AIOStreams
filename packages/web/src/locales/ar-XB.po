@@ -454,6 +454,10 @@ msgstr ""
 msgid "Already downloaded or on the way"
 msgstr ""
 
+#: src/components/send-report.tsx
+msgid "Also send to the developer"
+msgstr ""
+
 #: src/pages/settings/account.tsx
 msgid "Also when you come back to it after half an hour. Whoever was watching carries on without their PIN."
 msgstr ""
@@ -732,6 +736,7 @@ msgstr ""
 msgid "Can’t reach the server"
 msgstr ""
 
+#: src/components/send-report.tsx
 #: src/components/version-settings.tsx
 #: src/lib/i18n.ts
 #: src/pages/downloads.tsx
@@ -834,6 +839,7 @@ msgstr ""
 msgid "Clear selection"
 msgstr ""
 
+#: src/components/crash-report.tsx
 #: src/components/window-controls.tsx
 msgid "Close"
 msgstr ""
@@ -874,6 +880,10 @@ msgstr ""
 
 #: src/pages/settings/account.tsx
 msgid "Configuration"
+msgstr ""
+
+#: src/components/send-report.tsx
+msgid "Configuration ids are left out of their copy too."
 msgstr ""
 
 #: src/pages/sign-in.tsx
@@ -919,6 +929,7 @@ msgstr ""
 msgid "Copied as JSON"
 msgstr ""
 
+#: src/components/crash-report.tsx
 #: src/pages/settings/apps.tsx
 msgid "Copy"
 msgstr ""
@@ -950,6 +961,10 @@ msgstr ""
 
 #: src/pages/settings/apps.tsx
 msgid "Could not connect: {message}"
+msgstr ""
+
+#: src/components/crash-report.tsx
+msgid "Could not copy it"
 msgstr ""
 
 #: src/components/party/party-sheet.tsx
@@ -1184,10 +1199,6 @@ msgid "Device"
 msgstr ""
 
 #: src/pages/settings/apps.tsx
-msgid "Diagnostics"
-msgstr ""
-
-#: src/pages/settings/apps.tsx
 msgid "Diagnostics copied"
 msgstr ""
 
@@ -1266,6 +1277,7 @@ msgid "Donate to Me"
 msgstr ""
 
 #: src/components/player/subtitle-sync.tsx
+#: src/components/send-report.tsx
 #: src/components/version-settings.tsx
 msgid "Done"
 msgstr ""
@@ -1582,6 +1594,10 @@ msgstr ""
 msgid "General"
 msgstr ""
 
+#: src/components/send-report.tsx
+msgid "Give this code to whoever looks into it."
+msgstr ""
+
 #: src/router.tsx
 msgid "Go home"
 msgstr ""
@@ -1777,6 +1793,14 @@ msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "Invite link copied"
+msgstr ""
+
+#: src/components/send-report.tsx
+msgid "It carries this device's details and the app's recent log. Passwords and tokens are left out."
+msgstr ""
+
+#: src/components/send-report.tsx
+msgid "It didn't reach the developer, only this server: {forwardError}"
 msgstr ""
 
 #: src/pages/settings/theme.tsx
@@ -2500,6 +2524,10 @@ msgstr ""
 msgid "Opens versions in {target}. It can't tell this app where you stopped, so you mark what you watched yourself."
 msgstr ""
 
+#: src/components/send-report.tsx
+msgid "Optional."
+msgstr ""
+
 #: src/components/version-settings.tsx
 msgid "Optional. An image address, shown in place of the label."
 msgstr ""
@@ -3065,6 +3093,14 @@ msgstr ""
 msgid "Removed from history"
 msgstr ""
 
+#: src/pages/settings/apps.tsx
+msgid "Report a problem"
+msgstr ""
+
+#: src/components/crash-report.tsx
+msgid "Report copied"
+msgstr ""
+
 #: src/lib/client.ts
 msgid "Request failed ({status})"
 msgstr ""
@@ -3187,6 +3223,10 @@ msgstr ""
 msgid "Save home and libraries"
 msgstr ""
 
+#: src/components/crash-report.tsx
+msgid "Save report"
+msgstr ""
+
 #: src/pages/settings/cache.tsx
 msgid "Save searches"
 msgstr ""
@@ -3283,7 +3323,17 @@ msgid "Select all"
 msgstr ""
 
 #: src/components/party/party-sheet.tsx
+#: src/components/send-report.tsx
 msgid "Send"
+msgstr ""
+
+#: src/components/send-report.tsx
+msgid "Send a report"
+msgstr ""
+
+#: src/components/crash-report.tsx
+#: src/pages/settings/apps.tsx
+msgid "Send report"
 msgstr ""
 
 #: src/components/party/party-sheet.tsx
@@ -3304,6 +3354,10 @@ msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "Sends once the party is back"
+msgstr ""
+
+#: src/pages/settings/apps.tsx
+msgid "Sends this device's details and the app's recent log to the server, with a code to give whoever looks into it."
 msgstr ""
 
 #: src/pages/settings/subtitles.tsx
@@ -3894,6 +3948,10 @@ msgstr ""
 msgid "The app cannot open that link"
 msgstr ""
 
+#: src/components/crash-report.tsx
+msgid "The app closed unexpectedly"
+msgstr ""
+
 #: src/lib/hosts/shell/bridge.ts
 msgid "The app did not answer"
 msgstr ""
@@ -4063,6 +4121,10 @@ msgstr ""
 
 #: src/pages/settings/subtitles.tsx
 msgid "This is how subtitles will look."
+msgstr ""
+
+#: src/components/crash-report.tsx
+msgid "This is what the device recorded about it. Sending or saving the report helps get it fixed."
 msgstr ""
 
 #: src/lib/queries.ts
@@ -4514,6 +4576,10 @@ msgstr ""
 
 #: src/pages/settings/about.tsx
 msgid "Web app"
+msgstr ""
+
+#: src/components/send-report.tsx
+msgid "What happened"
 msgstr ""
 
 #: src/components/party/party-sheet.tsx

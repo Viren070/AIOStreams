@@ -40,6 +40,7 @@ import {
 import { ServerStyles, ThemeStyles } from './components/theme-styles';
 import { WindowControls } from './components/window-controls';
 import { InputSetup } from './components/input-setup';
+import { CrashReportDialog } from './components/crash-report';
 
 /** The web app served at the Jellyfin API's `/web`. */
 export default function JellyfinWebApp() {
@@ -277,6 +278,8 @@ function Session({
           changeServer={changeServer}
         >
           <RouterProvider router={webRouter} />
+          {/* Inside a session, which its report is sent through. */}
+          {shellHost() && <CrashReportDialog />}
         </SessionProvider>
       );
       break;

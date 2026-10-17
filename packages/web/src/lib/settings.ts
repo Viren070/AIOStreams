@@ -69,6 +69,21 @@ export function onSettingsChange(listener: () => void): () => void {
   return subscribe(listener);
 }
 
+/** Every setting's value by its path in `settings`, this device's and the user's, for a report. */
+export function settingsSnapshot(): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  const walk = (node: object, path: string) => {
+    for (const [key, value] of Object.entries(node)) {
+      if (!value || typeof value !== 'object') continue;
+      if ('read' in value && typeof value.read === 'function')
+        out[path + key] = (value as Setting<unknown>).read();
+      else walk(value, `${path}${key}.`);
+    }
+  };
+  walk(settings, '');
+  return out;
+}
+
 /** An older key of a setting, with a reader where the value's shape changed. */
 type Was<T> = string | { key: string; read: (old: unknown) => T | undefined };
 
