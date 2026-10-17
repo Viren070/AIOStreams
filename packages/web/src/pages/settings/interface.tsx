@@ -155,7 +155,7 @@ function NavigationCard() {
   );
 }
 
-/** The app's own language; test languages are listed in development only. */
+/** The app's own language, each user's; test languages are listed in development only. */
 function LanguageCard() {
   const [language, setLanguage] = useSetting(settings.interface.language);
   const listed = LOCALES.filter(
@@ -165,7 +165,11 @@ function LanguageCard() {
     .sort((a, b) => a.label.localeCompare(b.label));
   const system = localeName(systemLocale());
   return (
-    <SettingsCard name="language" title={t`Language`} description={onDevice()}>
+    <SettingsCard
+      name="language"
+      title={t`Language`}
+      description={followsYou()}
+    >
       <Select
         label={t`App language`}
         help={t`Titles, synopses and stream names stay in the language your addons send.`}

@@ -3,7 +3,8 @@ import { t } from '@lingui/core/macro';
 import { setFormatLocale } from '@aiostreams/ui/core/format';
 import { setUiText, type uiText } from '@aiostreams/ui/core/text';
 import { messages as sourceMessages } from '../locales/en-GB.po';
-import { onSettingsChange, settings } from './settings';
+import { onSettingsChange, settings, signedIn } from './settings';
+import { storage } from './storage';
 
 /** The language the app is written in. */
 export const SOURCE_LOCALE = 'en-GB';
@@ -161,13 +162,30 @@ export async function activate(requested: string): Promise<void> {
   html.dir = isRtl(locale) ? 'rtl' : 'ltr';
 }
 
+const LAST_LANGUAGE = 'aiostreams-web-last-language';
+
+/**
+ * The signed-in user's choice, or with nobody signed in the one this device
+ * last showed, so the next start opens in it before the user's settings load.
+ */
+function choice(): string {
+  const last = storage.get<string>(LAST_LANGUAGE) ?? 'auto';
+  if (!signedIn()) return last;
+  const mine = settings.interface.language.read();
+  if (mine !== last) {
+    if (mine === 'auto') storage.remove(LAST_LANGUAGE);
+    else storage.set(LAST_LANGUAGE, mine);
+  }
+  return mine;
+}
+
 /** Activates the chosen language, and follows changes to it or to the system's. */
 export async function startI18n(): Promise<void> {
   const follow = () => {
-    const next = chosenLocale(settings.interface.language.read());
+    const next = chosenLocale(choice());
     if (next !== i18n.locale) void activate(next);
   };
-  await activate(chosenLocale(settings.interface.language.read()));
+  await activate(chosenLocale(choice()));
   onSettingsChange(follow);
   window.addEventListener('languagechange', follow);
 }

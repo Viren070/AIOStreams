@@ -197,6 +197,11 @@ export function syncPreferences(
   };
 }
 
+/** Whether a user's settings apply, rather than the defaults of nobody signed in. */
+export function signedIn(): boolean {
+  return session !== null;
+}
+
 let pushTimer: ReturnType<typeof setTimeout> | undefined;
 
 function update(key: string, value: string | undefined) {
@@ -593,7 +598,12 @@ const discord = record(DISCORD_EVENTS, (event) =>
 export const settings = {
   interface: {
     /** A catalog's locale, or `auto` for the system's language. */
-    language: device<string>('aiostreams-web-interface-language', 'auto'),
+    language: synced<string>(
+      'language',
+      (raw) => raw ?? 'auto',
+      (value) => (value === 'auto' ? undefined : value),
+      ['aiostreams-web-interface-language']
+    ),
     featured: synced<Featured>(
       'featured',
       parseFeatured,
