@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.6.0](https://github.com/Viren070/AIOStreams/compare/android-v0.5.0...android-v0.6.0) (2026-10-17)
+
+
+### Features
+
+* **android:** move the app's own words into string resources ([9904f5b](https://github.com/Viren070/AIOStreams/commit/9904f5b566c446fdaf578cd727acb1e976693d7a))
+* **android:** record how the last run ended ([54ef5e0](https://github.com/Viren070/AIOStreams/commit/54ef5e0d44a8031aaeb6835a3e85ed59ce5ad70c))
+* **android:** report web fields to the keyboard as native fields on TV ([045c536](https://github.com/Viren070/AIOStreams/commit/045c536a550295c668d3523b86f58df9d2102f75))
+* **android:** send a download file's headers with every request ([42a5ffa](https://github.com/Viren070/AIOStreams/commit/42a5ffa37c73ebcafced07d7c5fcf7681795aab1))
+* **android:** send a loadfile's headers from both engines ([307e63f](https://github.com/Viren070/AIOStreams/commit/307e63f204a91ad67ec8e6e8e71d86e0aa0904f8))
+* **android:** set the subtitle font and shadow from player-style ([7e59389](https://github.com/Viren070/AIOStreams/commit/7e59389c2ba2fd0c0765760683fca813f881eb58))
+
+
+### Bug Fixes
+
+* **android:** decode DTS with FFmpeg rather than the device's decoders ([59a0a02](https://github.com/Viren070/AIOStreams/commit/59a0a02a0ac299200a90b7133e5351bc0d0eb699))
+* **android:** report a new ExoPlayer as paused ([604c661](https://github.com/Viren070/AIOStreams/commit/604c6612ec2235174872fe758a02c6abb6144761))
+* **android:** report mpv's track picks before the loaded event ([40f96ce](https://github.com/Viren070/AIOStreams/commit/40f96cef74414bde41ca4265ccb7d6be6d2b5015))
+* **android:** trust the ISRG roots on devices whose store predates them ([#1526](https://github.com/Viren070/AIOStreams/issues/1526)) ([79bdff7](https://github.com/Viren070/AIOStreams/commit/79bdff793b3eaefed648078331212761dc1ae548))
+* **android:** unset WebVTT's automatic line so cues follow the bottom padding ([aa73a5e](https://github.com/Viren070/AIOStreams/commit/aa73a5e6f81bc460ccb9fea89a2358bd08be8f8d))
+
 ## [0.5.0](https://github.com/Viren070/AIOStreams/compare/android-v0.4.1...android-v0.5.0) (2026-10-14)
 
 
