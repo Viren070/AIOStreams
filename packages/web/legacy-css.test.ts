@@ -47,7 +47,7 @@ test('adds fallbacks without touching the original rules', async () => {
   );
   assert.match(
     css,
-    /@media \(min-width:640px\)\{.*\.no-flex-gap \.sm\\:flex-row\.sm\\:flex-row\.gap-2>:not\(:last-child\)\{margin-right:\s*\.5rem;\s*margin-bottom:\s*0\}/
+    /@media \(min-width:640px\)\{.*\.no-flex-gap \.sm\\:flex-row\.sm\\:flex-row\.gap-2>:not\(:last-child\)\{margin-inline-end:\s*\.5rem;\s*margin-bottom:\s*0\}/
   );
   // A vertical-only gap leaves the horizontal margin to the gap-x class.
   assert.doesNotMatch(css, /\.gap-y-1:not\(\.flex-col\)/);
@@ -57,7 +57,7 @@ test('adds fallbacks without touching the original rules', async () => {
   );
   assert.match(
     css,
-    /\.flex\.gap-x-3:not\(\.flex-col\)>:not\(:last-child\)[^{]*\{margin-right:\s*\.75rem\}/
+    /\.flex\.gap-x-3:not\(\.flex-col\)>:not\(:last-child\)[^{]*\{margin-inline-end:\s*\.75rem\}/
   );
   assert.match(
     css,

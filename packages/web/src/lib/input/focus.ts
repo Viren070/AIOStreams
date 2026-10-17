@@ -141,12 +141,18 @@ const rectOf = (el: HTMLElement) => {
   const clip = el.closest<HTMLElement>('[data-nav-clip]');
   if (clip && !clip.contains(document.activeElement)) {
     const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
-    const right =
-      clip.getBoundingClientRect().left + Number(clip.dataset.navClip) * rem;
+    const shown = Number(clip.dataset.navClip) * rem;
+    const c = clip.getBoundingClientRect();
+    // The shut rail shows its start edge, the right one under dir=rtl.
+    const [from, to] =
+      getComputedStyle(clip).direction === 'rtl'
+        ? [c.right - shown, c.right]
+        : [c.left, c.left + shown];
+    const left = Math.max(r.left, from);
     r = new DOMRect(
-      r.x,
+      left,
       r.y,
-      Math.max(0, Math.min(r.right, right) - r.x),
+      Math.max(0, Math.min(r.right, to) - left),
       r.height
     );
   }

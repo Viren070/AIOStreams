@@ -1,4 +1,4 @@
-import { t } from '@lingui/core/macro';
+import { plural, t } from '@lingui/core/macro';
 import { formatLocale } from './i18n';
 import type { BaseItemDto } from './types';
 
@@ -230,11 +230,18 @@ export function untilLabel(iso: string): string {
       : [Math.round(days / 7), 'week' as const];
   // Chromium 69 (2020 Samsung TVs) has no RelativeTimeFormat.
   if (!Intl.RelativeTimeFormat) {
-    if (unit === 'day' && count === 0) return 'today';
-    if (unit === 'day' && count === 1) return 'tomorrow';
-    if (unit === 'day' && count === -1) return 'yesterday';
-    const units = `${Math.abs(count)} ${unit}${Math.abs(count) === 1 ? '' : 's'}`;
-    return count < 0 ? `${units} ago` : `in ${units}`;
+    const n = Math.abs(count);
+    if (unit === 'day') {
+      if (count === 0) return t`today`;
+      if (count === 1) return t`tomorrow`;
+      if (count === -1) return t`yesterday`;
+      return count < 0
+        ? plural(n, { one: '# day ago', other: '# days ago' })
+        : plural(n, { one: 'in # day', other: 'in # days' });
+    }
+    return count < 0
+      ? plural(n, { one: '# week ago', other: '# weeks ago' })
+      : plural(n, { one: 'in # week', other: 'in # weeks' });
   }
   return UNTIL().format(count, unit);
 }
