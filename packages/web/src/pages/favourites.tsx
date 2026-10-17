@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
+import React from 'react';
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import { useSession } from '../lib/session';
