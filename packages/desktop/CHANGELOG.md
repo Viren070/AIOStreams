@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.16.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.15.0...desktop-v0.16.0) (2026-10-17)
+
+
+### Features
+
+* **desktop:** send a download file's headers with every request ([9149c28](https://github.com/Viren070/AIOStreams/commit/9149c289fb4da9471a62f4ac823ee4e013c40f90))
+* **desktop:** send a loadfile's headers as http-header-fields ([c1f365c](https://github.com/Viren070/AIOStreams/commit/c1f365c07bd0c01eb479862f4e90a37afa566d72))
+* **desktop:** set the subtitle font and shadow from player-style ([3bc1913](https://github.com/Viren070/AIOStreams/commit/3bc19136d2edb4bf36440f2ed3e03fc5b55b897f))
+
+
+### Bug Fixes
+
+* **desktop:** report mpv's track picks before the file-loaded event ([a9de4ce](https://github.com/Viren070/AIOStreams/commit/a9de4ce2d00d529c01b654add95f9b746290ac7f)), closes [#1544](https://github.com/Viren070/AIOStreams/issues/1544)
+* **desktop:** turn off WebKitGTK's Skia compositing and partial redraws on Linux ([#1534](https://github.com/Viren070/AIOStreams/issues/1534)) ([c8d6f8b](https://github.com/Viren070/AIOStreams/commit/c8d6f8b2743b5ad42383753ea9a48ce6d22e5790))
+
 ## [0.15.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.14.1...desktop-v0.15.0) (2026-10-14)
 
 
