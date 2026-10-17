@@ -130,6 +130,8 @@ export interface UsenetIndexerStatRow {
   avgGrabMs: number | null;
   avgImportMs: number | null;
   lastError?: { status?: number; message: string; atMs: number };
+  /** Recorded spellings folded into this row; absent when nothing was merged. */
+  mergedFrom?: string[];
 }
 
 export interface UsenetStatsOverview {
