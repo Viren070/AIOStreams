@@ -261,6 +261,13 @@ pub fn run(app: App) {
     // The window's app id and class, which desktops match to its entry and icon.
     glib::set_prgname(Some("io.github.viren070.aiostreams"));
     glib::set_application_name("AIOStreams");
+    // From 4.16 GTK draws with Vulkan, which stutters mpv's OpenGL frames in fullscreen.
+    let minor = gtk4::minor_version();
+    if minor >= 16 && std::env::var_os("GSK_RENDERER").is_none() {
+        let gl = if minor >= 18 { "opengl" } else { "ngl" };
+        // SAFETY: on the main thread, before any other thread starts.
+        unsafe { std::env::set_var("GSK_RENDERER", gl) };
+    }
     gtk4::init().unwrap_or_else(|e| platform::fatal(&format!("could not start GTK: {e}")));
     // libmpv refuses to start unless LC_NUMERIC is C, which GTK's init replaced.
     // SAFETY: on the main thread, before any other thread starts.
