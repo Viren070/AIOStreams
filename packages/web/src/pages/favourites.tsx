@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import { useSession } from '../lib/session';
@@ -89,7 +89,6 @@ export function FavouritesPage({ kind }: { kind?: string }) {
     recursive: true,
   });
   const items = pages.data?.pages.flatMap((p) => p.Items ?? []) ?? [];
-  console.log(items)
 
   // Sorting/filtering happens here, so every page has to be loaded or the
   // order would shift as more pages arrive. Replaces the scroll sentinel.
@@ -136,11 +135,13 @@ export function FavouritesPage({ kind }: { kind?: string }) {
           <LuffyError title="Could not load your favourites" />
         ) : (
           <>
-            <MixedGrid
-              items={visibleItems}
-              client={client}
-              loading={pages.isLoading}
-            />
+            <div data-nav-start>
+              <MixedGrid
+                items={visibleItems}
+                client={client}
+                loading={pages.isLoading}
+              />
+            </div>
             {!pages.isLoading && !items.length && (
               <p className="text-[--muted]">
                 Nothing marked as a favourite yet.
