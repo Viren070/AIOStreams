@@ -142,8 +142,24 @@ msgstr ""
 msgid "{movies} and {episodes} watched"
 msgstr ""
 
+#: src/lib/format.ts
+msgid "{n, plural, one {# day ago} other {# days ago}}"
+msgstr ""
+
+#: src/lib/format.ts
+msgid "{n, plural, one {# week ago} other {# weeks ago}}"
+msgstr ""
+
 #: src/pages/settings/playback.tsx
 msgid "{n, plural, one {After # episode} other {After # episodes}}"
+msgstr ""
+
+#: src/lib/format.ts
+msgid "{n, plural, one {in # day} other {in # days}}"
+msgstr ""
+
+#: src/lib/format.ts
+msgid "{n, plural, one {in # week} other {in # weeks}}"
 msgstr ""
 
 #: src/components/party/party-host.tsx
@@ -4468,8 +4484,16 @@ msgstr ""
 msgid "Titles, synopses and stream names stay in the language your addons send."
 msgstr ""
 
+#: src/lib/format.ts
+msgid "today"
+msgstr ""
+
 #: src/pages/calendar.tsx
 msgid "Today"
+msgstr ""
+
+#: src/lib/format.ts
+msgid "tomorrow"
 msgstr ""
 
 #: src/lib/hosts/shell/player.ts
@@ -5012,6 +5036,10 @@ msgstr ""
 
 #: src/lib/i18n.ts
 msgid "Yellow"
+msgstr ""
+
+#: src/lib/format.ts
+msgid "yesterday"
 msgstr ""
 
 #: src/components/layout.tsx

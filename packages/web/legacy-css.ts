@@ -109,7 +109,8 @@ export function legacyCss(): Plugin {
         const right = decl.prop !== 'row-gap';
         const bottom = decl.prop !== 'column-gap';
         const margins = (r?: string, b?: string) => ({
-          ...(right && r !== undefined && { 'margin-right': r }),
+          // Logical, so a right-to-left row spaces its own end; Chromium 69 has it.
+          ...(right && r !== undefined && { 'margin-inline-end': r }),
           ...(bottom && b !== undefined && { 'margin-bottom': b }),
         });
         const sel = rule.selector;
