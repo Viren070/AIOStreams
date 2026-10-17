@@ -326,6 +326,13 @@ neither the environment variable nor a stored value is present.
 | `ANIME_API_RATE_LIMIT_WINDOW`       | Anime API › Window       | number | `60`    | Sliding-window length (seconds) for the anime API rate limiter. _(restart required)_           |
 | `ANIME_API_RATE_LIMIT_MAX_REQUESTS` | Anime API › Max Requests | number | `120`   | Maximum requests per IP within the window for the anime API rate limiter. _(restart required)_ |
 
+#### App Reports
+
+| Environment Variable                  | UI Setting                 | Type   | Default | Description                                                                                      |
+| ------------------------------------- | -------------------------- | ------ | ------- | ------------------------------------------------------------------------------------------------ |
+| `APP_REPORTS_RATE_LIMIT_WINDOW`       | App Reports › Window       | number | `3600`  | Sliding-window length (seconds) for the app reports rate limiter. _(restart required)_           |
+| `APP_REPORTS_RATE_LIMIT_MAX_REQUESTS` | App Reports › Max Requests | number | `10`    | Maximum requests per IP within the window for the app reports rate limiter. _(restart required)_ |
+
 #### Stremio Stream
 
 | Environment Variable                     | UI Setting                    | Type   | Default | Description                                                                                         |
@@ -1319,6 +1326,15 @@ neither the environment variable nor a stored value is present.
 | `USER_ANALYTICS_ENABLED`         | User Analytics Enabled | boolean | `false` | When enabled, the configure-page "Stats" tab is available to every authenticated user. Adds one event per addon per stream request.             |
 | `ANALYTICS_EVENT_RETENTION_DAYS` | Event Retention Days   | number  | `7`     | How many days of raw per-request analytics events to keep before the rollup task prunes them. The per-user Stats tab is limited to this window. |
 | `ANALYTICS_DAILY_RETENTION_DAYS` | Daily Retention Days   | number  | `90`    | How many days of aggregated daily analytics to keep.                                                                                            |
+
+### App Reports
+
+| Environment Variable     | UI Setting | Type     | Default                          | Description                                                                                                                                                                                                                                                                                   |
+| ------------------------ | ---------- | -------- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `APP_REPORTS`            | Accept     | enum     | `users`                          | Which reports this server keeps, for its admins to read in the dashboard. **off**: none, and the apps offer no way to send one here. **users**: those its own users send from the apps. **public**: those too, and any another server passes on, for a developer's server.                    |
+| `APP_REPORTS_FORWARD_TO` | Forward To | string   | `https://aiostreams.viren070.me` | Where a report goes when its sender also sends it to the developer: the address of an AIOStreams server that keeps reports from everyone. Passwords, tokens and configuration ids are taken out first. Leave it empty to offer no such choice; the developer's own server offers none either. |
+| `APP_REPORTS_MAX`        | Max        | number   | `1000`                           | How many reports are kept at most; each new one past it deletes the oldest.                                                                                                                                                                                                                   |
+| `APP_REPORTS_RETENTION`  | Retention  | duration | `604800`                         | How long reports are kept before they are deleted.                                                                                                                                                                                                                                            |
 
 ### Arr
 

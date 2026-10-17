@@ -32,10 +32,12 @@ Standard Jellyfin clients ignore all of these, so offering them never breaks one
       "versions": 1,
       "genreRequired": 1,
       "fillers": 1,
-      "parties": 1
+      "parties": 1,
+      "reports": 1
     },
     "css": null,
-    "parties": { "relay": "off", "defaultRelay": null }
+    "parties": { "relay": "off", "defaultRelay": null },
+    "reports": { "forward": true }
   }
 }
 ```
@@ -50,6 +52,7 @@ Standard Jellyfin clients ignore all of these, so offering them never breaks one
 | `version`      | object of strings      | Shows the build in About and diagnostics: `commit` on nightly or dev, else `tag`      |
 | `css`          | text or `null`         | Applies it on every screen, before the user's own custom CSS, unless they turn it off |
 | `parties`      | object                 | Who the server's [party relay](#watch-parties) admits, and the relay it suggests      |
+| `reports`      | object or `null`       | Whether the server keeps [reports](#reports), and passes them on to the developer     |
 
 The server list reads `ServerName` and `logo` before signing in, so a server that hosts several
 accounts at their own addresses should answer with the one the address names.
@@ -70,6 +73,7 @@ value is that feature's version.
 | `genreRequired`   | [A library that needs a genre picked says so](#libraries)                                 |
 | `fillers`         | [A filler or recap episode says so](#episodes)                                            |
 | `parties`         | [SyncPlay, and a watch party relay](#watch-parties) on the server's origin                |
+| `reports`         | [`POST /AIOStreams/Reports`](#reports), while `aiostreams.reports` isn't `null`           |
 
 Every `/AIOStreams/*` endpoint takes the same authorization as the rest of the API. AIOStreams
 refuses them to API keys, which belong to other tools.
@@ -277,6 +281,32 @@ are the party's id on the relay, in base64url, and the other 32 an AES-GCM key. 
 reactions and what plays travel sealed with that key, as base64url of a 12-byte nonce followed by the
 ciphertext of their JSON, so a relay keeps only timing. The messages themselves are typed in
 `packages/core/src/sync/protocol.ts`.
+
+## Reports
+
+With `reports`, `POST /AIOStreams/Reports` keeps a report for the server's admins, who read it in the
+dashboard under **Reports**:
+
+```json
+{
+  "kind": "crash",
+  "platform": "android",
+  "appVersion": "0.5.1",
+  "device": "Sony BRAVIA",
+  "note": "It closed as the film started",
+  "summary": "Native crash: SIGSEGV …",
+  "details": "…the whole report and the recent log…",
+  "forward": true
+}
+```
+
+`kind` is `crash` or `report`, `summary` a few lines a list shows the first of, and `details` the
+rest, kept to 192 KB by cutting the middle. The answer is the code to read the report by:
+`{ "code": "ABC-DEFG", "forwarded": "HJK-MNPQ", "forwardError": null }`. With `forward`, and
+`aiostreams.reports.forward` true, the server also passes it on to the developer's server
+(`APP_REPORTS_FORWARD_TO`) and gives its code as `forwarded`, or why it couldn't as `forwardError`.
+Passwords, tokens and keys are taken out of what is kept, and configuration ids out of what is passed
+on. A server whose `APP_REPORTS` is `public` takes passed-on reports at `POST /api/v1/reports`.
 
 ## What stays with AIOStreams
 
