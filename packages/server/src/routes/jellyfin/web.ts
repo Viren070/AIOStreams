@@ -228,11 +228,11 @@ router.get(
   })
 );
 
-/** Who the caller may switch to: the account everyone, as it keeps them. */
+/** Who the caller may switch to; a separate user is reached only by its own sign-in. */
 function switchable(ctx: JellyfinRequestContext): WebUser[] {
-  const users = usersOf(ctx);
-  if (!ctx.persona) return users;
-  return users.filter((u) => listedFor(ctx.userData, ctx.persona, u.persona));
+  return usersOf(ctx).filter((u) =>
+    listedFor(ctx.userData, ctx.persona, u.persona)
+  );
 }
 
 router.get(
