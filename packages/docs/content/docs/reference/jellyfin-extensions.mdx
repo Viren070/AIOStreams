@@ -162,8 +162,8 @@ episode.
 ```
 
 `user` is a standard `UserDto`. `needs` says what switching to that user asks for: `null` for
-nothing, `"pin"`, `"password"` or `"password-pin"`. A hidden user is listed only to the account and
-to itself, and a hidden user's own list holds only itself.
+nothing, `"pin"`, `"password"` or `"password-pin"`. A hidden user is listed only to itself, and its
+own list holds only itself.
 
 `POST /AIOStreams/Token` with `{ "UserId": "…", "Pw": "…" }` switches: `Pw` is what `needs` asked
 for, with a password and PIN written as `password/PIN`. It answers like
