@@ -26,6 +26,7 @@ import {
   UsenetStatsPage,
   UsenetProvidersPage,
   MediaInfoPage,
+  ReportsPage,
   CommunityLayout,
   CommunityPendingPage,
   CommunityPublishedPage,
@@ -349,6 +350,12 @@ const dashboardMediaInfoRoute = createRoute({
   component: MediaInfoPage,
 });
 
+const dashboardReportsRoute = createRoute({
+  getParentRoute: () => dashboardRoute,
+  path: 'reports',
+  component: ReportsPage,
+});
+
 const dashboardUsenetStatsRoute = createRoute({
   getParentRoute: () => dashboardUsenetRoute,
   path: 'stats',
@@ -401,6 +408,7 @@ const routeTree = rootRoute.addChildren([
       dashboardUsenetProvidersRoute,
     ]),
     dashboardMediaInfoRoute,
+    dashboardReportsRoute,
     dashboardCommunityRoute.addChildren([
       dashboardCommunityIndexRoute,
       dashboardCommunityPendingRoute,

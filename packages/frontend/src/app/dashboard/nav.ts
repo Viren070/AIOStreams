@@ -13,6 +13,7 @@ import {
   BiCog,
   BiShareAlt,
   BiScan,
+  BiBug,
 } from 'react-icons/bi';
 import { SECTIONS } from '@/app/dashboard/usenet/sections';
 import { BLOCKLIST_SECTIONS } from '@/app/dashboard/blocklist/sections';
@@ -85,6 +86,12 @@ export const NAV: DashboardNavItem[] = [
     href: '/dashboard/media-info',
     icon: BiScan,
     desc: 'Probed tracks & sources',
+  },
+  {
+    label: 'Reports',
+    href: '/dashboard/reports',
+    icon: BiBug,
+    desc: 'Crashes & problems from the apps',
   },
   {
     label: 'Blocklists',
