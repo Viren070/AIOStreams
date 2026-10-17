@@ -4419,9 +4419,17 @@ msgstr "This trailer didn't play: {failure}"
 msgid "This trailer is gone."
 msgstr "This trailer is gone."
 
+#: src/components/version-picker.tsx
+msgid "This TV can't play {unsupported}"
+msgstr "This TV can't play {unsupported}"
+
 #: src/pages/sign-in.tsx
 msgid "This user has a PIN."
 msgstr "This user has a PIN."
+
+#: src/pages/player.tsx
+msgid "This version didn't play, so the next one is starting."
+msgstr "This version didn't play, so the next one is starting."
 
 #: src/pages/player.tsx
 msgid "This version is no longer available."
@@ -4520,6 +4528,10 @@ msgstr "Try again"
 #: src/lib/party/party.ts
 msgid "Try starting the party again."
 msgstr "Try starting the party again."
+
+#: src/pages/settings/playback.tsx
+msgid "Try the next version if one fails"
+msgstr "Try the next version if one fails"
 
 #: src/components/version-settings.tsx
 msgid "Try them"
@@ -4894,6 +4906,10 @@ msgstr "Wheel up"
 #: src/pages/history.tsx
 msgid "When"
 msgstr "When"
+
+#: src/pages/settings/playback.tsx
+msgid "When a version doesn't start, the next one in the list plays instead, from the same point."
+msgstr "When a version doesn't start, the next one in the list plays instead, from the same point."
 
 #: src/pages/settings/audio.tsx
 msgid "When a version has more than one kind of audio track, the first of these it has plays."

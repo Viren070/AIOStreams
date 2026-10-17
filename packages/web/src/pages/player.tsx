@@ -333,7 +333,7 @@ function useFailover(
       triedVersions.delete(item.Id!);
       return;
     }
-    toast.info("This version didn't play, so the next one is starting.");
+    toast.info(t`This version didn't play, so the next one is starting.`);
     // A host's own player waits on the episodes after it, so leaving can come first.
     let current = true;
     void play(item, {

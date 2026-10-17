@@ -1,3 +1,4 @@
+/* eslint-disable lingui/no-unlocalized-strings -- codec names and strings */
 import { currentHost } from '../hosts';
 import type { SourceInfo } from '../types';
 
