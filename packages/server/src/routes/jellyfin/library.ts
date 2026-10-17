@@ -33,6 +33,7 @@ import {
   seriesKeyOf,
   seriesKeyOfMatch,
   showsAiringBetween,
+  similarPreviews,
   supportsExtra,
   type ContentKind,
   stripInternal,
@@ -1316,9 +1317,14 @@ router.get(
       send(req, res, [], 0, 0);
       return;
     }
-    const meta = await getMeta(ctx, desc.t, desc.i);
     const engine = await ctx.engine();
-    // TMDB's picks when it knows the title; else the top of its first genre.
+    const similar = await similarPreviews(engine, desc.t, desc.i, limit);
+    if (similar) {
+      const items = await itemsFromPreviews(ctx, similar);
+      send(req, res, items, items.length, 0);
+      return;
+    }
+    const meta = await getMeta(ctx, desc.t, desc.i);
     const recommended = await recommendedPreviews(
       engine,
       ctx.userData,
