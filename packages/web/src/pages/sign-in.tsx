@@ -543,7 +543,6 @@ export function SignInScreen({
         users={users.map((u) => ({
           user: u,
           avatar: publicAvatar(client, u),
-          hidden: false,
           needs: null,
         }))}
         onPick={async (id) => {
@@ -785,7 +784,6 @@ export function UserPicker({
                       <span
                         className={cn(
                           'flex w-full flex-col items-center gap-3 transition-opacity',
-                          u.hidden && 'opacity-60',
                           busy && busy !== u.user.Id && 'opacity-40'
                         )}
                       >

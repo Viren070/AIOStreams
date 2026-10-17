@@ -263,7 +263,6 @@ export function useSessionPhase(base: string) {
                 {
                   user: auth.User,
                   avatar: auth.avatar,
-                  hidden: false,
                   needs: 'pin',
                 },
               ],

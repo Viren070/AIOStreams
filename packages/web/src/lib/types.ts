@@ -57,7 +57,6 @@ export interface Branding {
 export interface PickableUser {
   user: UserDto;
   avatar: string | null;
-  hidden: boolean;
   /** `password-pin` is sent as `<password>/<pin>`. */
   needs: 'pin' | 'password' | 'password-pin' | null;
 }
