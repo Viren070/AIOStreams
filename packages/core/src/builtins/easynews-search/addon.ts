@@ -201,8 +201,8 @@ export class EasynewsSearchAddon extends BaseDebridAddon<EasynewsSearchAddonConf
       const audioTag = easynewsAudioTag(item.acodec, item.title);
       const parsedMediaInfo = normaliseParsedMediaInfo({
         mediaInfoQuality: 'indexer',
-        languages: item.audioLangs,
-        subtitles: item.subLangs,
+        languages: item.audioLangs?.length ? item.audioLangs : undefined,
+        subtitles: item.subLangs?.length ? item.subLangs : undefined,
         audioTags: audioTag ? [audioTag] : undefined,
         encode: easynewsEncode(item.vcodec),
         resolution: normaliseResolution(item.xres, item.yres),
