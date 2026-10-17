@@ -724,6 +724,7 @@ function Versions({
                   },
                 ]),
           ];
+          const unsupported = unsupportedOnTv(source);
           return (
             <div
               key={source.Id}
@@ -770,12 +771,12 @@ function Versions({
                       <Trans>Playing</Trans>
                     </span>
                   )}
-                  {unsupportedOnTv(source) && (
+                  {unsupported && (
                     <span
                       data-ui="version-unsupported"
                       className="mb-1 inline-block rounded-full bg-red-500/20 px-2 py-0.5 text-xs font-semibold text-red-300"
                     >
-                      This TV can't play {unsupportedOnTv(source)}
+                      <Trans>This TV can't play {unsupported}</Trans>
                     </span>
                   )}
                   <span
