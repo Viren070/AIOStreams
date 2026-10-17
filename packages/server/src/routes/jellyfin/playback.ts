@@ -263,6 +263,7 @@ async function playbackInfo(req: Request, res: Response) {
     firstId: requested ?? loc.itemId,
     tracks: await trackPreferences(loc.ctx),
     requestedMsid: requested,
+    onlyRequested: true,
     support,
     profile,
     hasSegments: hasSegments(loc.ctx, memo),

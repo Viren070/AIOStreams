@@ -752,6 +752,7 @@ export function mediaSourcesFrom(
     firstId: string;
     tracks: TrackPreferences;
     requestedMsid?: string;
+    onlyRequested?: boolean;
     support?: PlaySupport;
     profile?: DeviceProfile;
     hasSegments?: boolean;
@@ -773,7 +774,8 @@ export function mediaSourcesFrom(
   );
   if (opts.requestedMsid) {
     const idx = ordered.findIndex((s) => s.msid === opts.requestedMsid);
-    if (idx > 0)
+    if (idx >= 0 && opts.onlyRequested) ordered = [ordered[idx]];
+    else if (idx > 0)
       ordered = [
         ordered[idx],
         ...ordered.slice(0, idx),
