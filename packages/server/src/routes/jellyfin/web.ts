@@ -2,6 +2,8 @@ import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import {
   accountScope,
+  appReportBodySchema,
+  AppReportsDisabledError,
   config as appConfig,
   createLogger,
   getWatchStateProvider,
@@ -9,6 +11,7 @@ import {
   PlaybackHandoffRepository,
   personaUserId,
   readToken,
+  submitAppReport,
   UserRepository,
   WatchSessionRepository,
   WatchStateRepository,
@@ -37,7 +40,10 @@ import {
   sessionFromRow,
   userDto,
 } from './users.js';
-import { jellyfinLoginRateLimiter } from '../../middlewares/ratelimit.js';
+import {
+  appReportsRateLimiter,
+  jellyfinLoginRateLimiter,
+} from '../../middlewares/ratelimit.js';
 
 /* The server's own web app; an API key is another tool's credential and may not use it. */
 
@@ -438,6 +444,37 @@ router.get(
         'watch history export failed'
       );
       res.destroy();
+    }
+  })
+);
+
+/** A report from the apps, kept for this server's admins and passed on to the developer when asked. */
+router.post(
+  '/AIOStreams/Reports',
+  web(async (req, res, ctx) => {
+    const body = bodyOf(req);
+    const parsed = appReportBodySchema.safeParse(body);
+    if (!parsed.success) {
+      res
+        .status(400)
+        .json({ Message: 'A report needs a platform and a summary' });
+      return;
+    }
+    if (!(await appReportsRateLimiter.tryConsume(req))) {
+      res.status(429).json({ Message: 'Too many reports' });
+      return;
+    }
+    try {
+      res.json(
+        await submitAppReport(
+          parsed.data,
+          { uuid: ctx.uuid, persona: ctx.persona?.id ?? null },
+          body.forward === true
+        )
+      );
+    } catch (error) {
+      if (!(error instanceof AppReportsDisabledError)) throw error;
+      res.status(404).json({ Message: 'This server keeps no reports' });
     }
   })
 );

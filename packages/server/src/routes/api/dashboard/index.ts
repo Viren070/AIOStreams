@@ -33,6 +33,7 @@ import streamsDashboard from './streams.js';
 import communityDashboard from './community.js';
 import sharesDashboard from './shares.js';
 import mediaInfoDashboard from './media-info.js';
+import reportsDashboard from './reports.js';
 
 const router: Router = Router();
 const logger = createLogger('dashboard');
@@ -60,6 +61,9 @@ router.use('/community', communityDashboard);
 
 // Probed files, the attempt log and the live probe queue.
 router.use('/media-info', mediaInfoDashboard);
+
+// Reports the apps sent.
+router.use('/reports', reportsDashboard);
 
 function csv(v: unknown): string[] | undefined {
   if (typeof v !== 'string' || !v.trim()) return undefined;

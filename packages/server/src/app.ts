@@ -21,6 +21,7 @@ import {
   jellyfinApi,
   mediaInfoApi,
   communityApi,
+  reportsApi,
 } from './routes/api/index.js';
 import {
   configure,
@@ -69,6 +70,7 @@ import {
   staticRateLimiter,
   linkedAccountsRateLimiter,
   communityApiRateLimiter,
+  appReportsRateLimiter,
   syncApiRateLimiter,
   mediaInfoApiRateLimiter,
   internalMiddleware,
@@ -149,6 +151,7 @@ apiRouter.use('/sync', syncApiRateLimiter, syncApi);
 apiRouter.use('/media-info', mediaInfoApiRateLimiter, mediaInfoApi);
 apiRouter.use('/linked-accounts', linkedAccountsRateLimiter, linkedAccountsApi);
 apiRouter.use('/community', communityApiRateLimiter, communityApi);
+apiRouter.use('/reports', appReportsRateLimiter, reportsApi);
 apiRouter.use('/auth', authApi);
 apiRouter.use('/dashboard', dashboardApi);
 apiRouter.use('/usenet', usenetApi);

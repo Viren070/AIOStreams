@@ -43,6 +43,7 @@ import {
   startAnalytics,
   stopAnalytics,
   ConfigSessionRepository,
+  AppReportRepository,
   TaskManager,
   instanceId,
   flushWatchState,
@@ -115,6 +116,26 @@ function registerConfigSessionTask() {
     run: async () => {
       const n = await ConfigSessionRepository.prune();
       return { ok: true, message: `pruned ${n} sessions` };
+    },
+  });
+}
+
+function registerAppReportTask() {
+  TaskManager.register({
+    id: 'prune-app-reports',
+    label: 'Prune app reports',
+    description: 'Deletes reports from the apps older than their retention.',
+    category: 'users',
+    kind: 'scheduled',
+    intervalMs: 6 * 60 * 60 * 1000,
+    enabled: true,
+    destructive: false,
+    multiReplica: 'single',
+    run: async () => {
+      const n = await AppReportRepository.prune(
+        appConfig.appReports.retention * 1000
+      );
+      return { ok: true, message: `pruned ${n} reports` };
     },
   });
 }
@@ -411,6 +432,7 @@ async function start() {
     await initialiseProwlarr();
     registerPruneTask();
     registerConfigSessionTask();
+    registerAppReportTask();
     registerCacheTasks();
     registerUsenetTasks();
     registerStreamTasks();

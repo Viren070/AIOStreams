@@ -201,6 +201,11 @@ const animeApiRateLimiter = lazyLimiter(
   'anime-api'
 );
 
+const appReportsRateLimiter = lazyLimiter(
+  () => appConfig.rateLimits.appReports,
+  'app-reports'
+);
+
 const stremioStreamRateLimiter = lazyLimiter(
   () => appConfig.rateLimits.stremioStream,
   'stremio-stream'
@@ -290,6 +295,7 @@ export {
   formatApiRateLimiter,
   catalogApiRateLimiter,
   animeApiRateLimiter,
+  appReportsRateLimiter,
   stremioStreamRateLimiter,
   stremioCatalogRateLimiter,
   stremioManifestRateLimiter,

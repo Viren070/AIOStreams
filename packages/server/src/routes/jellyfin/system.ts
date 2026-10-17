@@ -1,5 +1,6 @@
 import { Router, type Request } from 'express';
 import {
+  appReportsForward,
   config as appConfig,
   isConfigUuid,
   isEncrypted,
@@ -31,6 +32,8 @@ export function serverName(): string {
 const FEATURES = {
   /** Sign-in with a configuration's UUID or alias. */
   configSignIn: 1,
+  /** `POST /AIOStreams/Reports`, while `aiostreams.reports` says the server keeps them. */
+  reports: 1,
   /** `/AIOStreams/Users` and `/AIOStreams/Token`. */
   users: 1,
   /** `/AIOStreams/History`, its `Clear` and `Export`, and `/AIOStreams/Activity`. */
@@ -70,6 +73,10 @@ export async function publicInfo(req: Request) {
       features: FEATURES,
       // Not Branding's CustomCss, which stock clients apply too.
       css: appConfig.branding.appCustomCss || null,
+      reports:
+        appConfig.appReports.accept === 'off'
+          ? null
+          : { forward: appReportsForward() },
       parties: {
         relay: relayMode(),
         defaultRelay:
