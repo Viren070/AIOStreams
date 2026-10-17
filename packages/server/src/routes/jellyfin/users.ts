@@ -43,6 +43,7 @@ import {
   type JellyfinRequestContext,
 } from './context.js';
 import { summaryItem } from './items.js';
+import { watchHistorySync } from './handoff.js';
 import { serverName } from './system.js';
 
 const logger = createLogger('jellyfin');
@@ -640,13 +641,19 @@ router.post(
 
 router.get(
   '/Users/Me',
-  jf(async (_req, res, ctx) => {
+  jf(async (req, res, ctx) => {
     if (ctx.apiKey) {
       res.status(400).json({ Message: 'API keys have no user' });
       return;
     }
+    // Resolving addons can require network work; ordinary identity reads stay cheap.
+    const sync =
+      req.query.IncludeWatchHistorySync === 'true'
+        ? await watchHistorySync(ctx)
+        : undefined;
     res.json({
       ...userDto(ctx.uuid, ctx.userData, ctx.persona),
+      ...(sync === undefined ? {} : { WatchHistorySync: sync }),
       Configuration: await storedUserConfiguration(ctx.watch),
     });
   })

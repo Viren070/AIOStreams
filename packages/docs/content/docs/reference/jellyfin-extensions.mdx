@@ -74,6 +74,41 @@ value is that feature's version.
 Every `/AIOStreams/*` endpoint takes the same authorization as the rest of the API. AIOStreams
 refuses them to API keys, which belong to other tools.
 
+## Current user's tracking services
+
+`GET /Users/Me?IncludeWatchHistorySync=true` requests an optional
+`WatchHistorySync` object:
+
+```json
+{
+  "WatchHistorySync": { "services": ["Trakt", "Custom tracker"] }
+}
+```
+
+`services` contains display names of configured watch-state addons with an enabled
+push or pull direction for that user's history. It follows the same primary,
+shared-history, own-history, tracker selection, and viewer isolation rules as
+playback. Private addresses refused by the instance are excluded. The names are
+presentation labels, not provider identifiers or evidence of a successful sync.
+No credentials, addon addresses, other personas, list counts, or history-completeness
+claims are included.
+
+An empty array means resolution succeeded with no eligible services. An absent
+field means unknown or unavailable, including a failed selected addon load; clients
+must not interpret absence as an empty array. Labels are limited to 80 characters
+and to letters, marks, numbers, spaces, and basic name punctuation. Unsupported
+labels (including URLs and labels with control characters) make the extension
+unavailable.
+The extension is not included in authentication responses, public user pickers,
+user directories, or server-wide information. API keys have no `/Users/Me` user.
+Ordinary `/Users/Me` reads omit the extension and do not resolve addons. Clients
+request it explicitly when they need to display tracking services.
+
+Resolving this extension initializes the relevant addon engines, using their
+existing manifest caches and timeouts. A cold request with
+`IncludeWatchHistorySync=true` may therefore perform addon network work. There is no overall resolution deadline; authentication
+responses and ordinary user reads deliberately do not perform this additional work.
+
 ## Versions
 
 A title's versions are its `MediaSources`. With the `versions` feature, each carries an `aiostreams`
