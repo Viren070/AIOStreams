@@ -56,3 +56,18 @@ internal class MediaCaps(val hdrTypes: Set<Int>, val dolbyVisionProfiles: Set<In
         )
     }
 }
+
+/** What the display shows and which Dolby Vision profiles a decoder takes, for a report. */
+fun mediaCapsLine(context: Context): String {
+    val caps = MediaCaps.read(context)
+    val hdr = caps.hdrTypes.sorted().map { HDR_NAMES[it] ?: "type $it" }.ifEmpty { listOf("none") }
+    val dv = caps.dolbyVisionProfiles.sorted().ifEmpty { null }?.joinToString(", ") ?: "none"
+    return "Display: ${hdr.joinToString(", ")}; DV decoder profiles: $dv"
+}
+
+private val HDR_NAMES = mapOf(
+    Display.HdrCapabilities.HDR_TYPE_DOLBY_VISION to "Dolby Vision",
+    Display.HdrCapabilities.HDR_TYPE_HDR10 to "HDR10",
+    Display.HdrCapabilities.HDR_TYPE_HLG to "HLG",
+    Display.HdrCapabilities.HDR_TYPE_HDR10_PLUS to "HDR10+",
+)

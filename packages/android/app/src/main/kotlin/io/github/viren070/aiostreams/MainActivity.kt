@@ -53,6 +53,7 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
@@ -269,6 +270,20 @@ class MainActivity : ComponentActivity() {
                     }
                 }.start()
             }
+            "crash-report" -> Thread {
+                val report = runCatching { Crashes.last(this) }.getOrNull()
+                runOnUiThread {
+                    bridge.send(buildJsonObject {
+                        put("type", "crash-report")
+                        if (report != null) {
+                            put("at", report.at)
+                            put("summary", report.summary)
+                            put("details", report.details)
+                        }
+                    })
+                }
+            }.start()
+            "crash-seen" -> message["at"]?.jsonPrimitive?.longOrNull?.let { Crashes.seen(this, it) }
         }
     }
 
