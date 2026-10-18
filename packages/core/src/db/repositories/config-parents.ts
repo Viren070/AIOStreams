@@ -26,18 +26,24 @@ export function descendantsCte(
 const MAX_KNOWN = 10_000;
 
 export class ConfigParentRepository {
-  /** Child to parent pairs this process has already written. */
-  private static readonly known = new Map<string, string>();
+  /** Configurations this process has already made sure are indexed. */
+  private static readonly known = new Set<string>();
 
   /**
    * Indexes a configuration saved before this index existed. Called on reads,
-   * so it writes at most once per configuration and process.
+   * so it writes at most once per configuration and process, and only adds a
+   * missing row: the read may be older than a save that just changed the
+   * parent, and saves keep existing rows right themselves.
    */
   static async ensure(childUuid: string, parentUuid: string): Promise<void> {
-    if (this.known.get(childUuid) === parentUuid) return;
-    await getDb().tx((tx) => this.set(tx, childUuid, parentUuid));
+    if (this.known.has(childUuid)) return;
+    await getDb().exec(
+      sql`INSERT INTO config_parents (child_uuid, parent_uuid)
+          VALUES (${childUuid}, ${parentUuid})
+          ON CONFLICT(child_uuid) DO NOTHING`
+    );
     if (this.known.size >= MAX_KNOWN) this.known.clear();
-    this.known.set(childUuid, parentUuid);
+    this.known.add(childUuid);
   }
 
   /**

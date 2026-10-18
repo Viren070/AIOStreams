@@ -87,9 +87,14 @@ describe('ConfigParentRepository', () => {
   it('indexes a configuration that was saved before the index existed', async () => {
     await ConfigParentRepository.ensure('a', 'p');
     assert.deepEqual(await ConfigParentRepository.descendants('p', 5), ['a']);
-    await ConfigParentRepository.ensure('a', 'd');
+  });
+
+  it('never overwrites a parent a save recorded', async () => {
+    // A read that started before the save still carries the old parent.
+    await link('b', 'd');
+    await ConfigParentRepository.ensure('b', 'p');
     assert.deepEqual(await ConfigParentRepository.descendants('p', 5), []);
-    assert.deepEqual(await ConfigParentRepository.descendants('d', 5), ['a']);
+    assert.deepEqual(await ConfigParentRepository.descendants('d', 5), ['b']);
   });
 
   it('drops the row when the child is deleted', async () => {
