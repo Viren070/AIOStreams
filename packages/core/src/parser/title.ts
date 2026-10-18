@@ -1,5 +1,70 @@
-import { parseTorrentTitle, ParsedResult } from '@viren070/parse-torrent-title';
+import {
+  parseTorrentTitle,
+  Parser,
+  handlers,
+  type ParsedResult,
+} from '@viren070/parse-torrent-title';
 import { DEFAULT_REPOST_SUFFIXES } from '../utils/constants.js';
+
+const explicitEpisode =
+  /(?<![\p{L}\p{N}])(?:S\d{1,2}[ ._-]*E\d{1,4}|E\d{1,4}|\d{1,2}x\d{1,4})(?![\p{L}\p{N}])/iu;
+let seriesTitleParser: Parser | undefined;
+
+/** Keep an embedded SD title component when real title words precede an episode. */
+function preserveEmbeddedSdTitle(
+  name: string,
+  parsed: ParsedResult
+): ParsedResult {
+  if (parsed.quality !== 'SDTV' || parsed.episodes?.length !== 1) return parsed;
+  const sd = /(?<![\p{L}\p{N}])SD(?=[ ._-])/iu.exec(name);
+  const episode = sd && explicitEpisode.exec(name);
+  if (!sd || !episode || sd.index >= episode.index) return parsed;
+
+  // Parse the intervening words normally: audio/language/edition/source tags
+  // do not turn a genuine SD release into a longer series title.
+  const tail = parseTorrentTitle(
+    `${name.slice(sd.index + sd[0].length, episode.index)}${episode[0]}`
+  ).title;
+  if ((tail?.match(/\p{L}+/gu)?.length ?? 0) < 2) return parsed;
+
+  seriesTitleParser ??= new Parser().addHandlers(
+    handlers.map((handler) =>
+      handler.field === 'quality' && handler.pattern?.test('SD')
+        ? {
+            ...handler,
+            // Only bare SD before an episode can belong to the title. Keep
+            // SDTV (including SD-TV/SD TV), later SD quality tags, and all
+            // other default handlers.
+            pattern: new RegExp(
+              `(?!SD\\b[ ._-](?!TV\\b)[\\s\\S]*${explicitEpisode.source})${handler.pattern.source}`,
+              `${handler.pattern.flags.replace('u', '')}u`
+            ),
+          }
+        : handler
+    )
+  );
+  const recovered = seriesTitleParser.parse(name);
+  if (!recovered.title || !/\bSD\b/i.test(recovered.title)) return parsed;
+  // A real quality tag can precede language/audio labels. Restoring a title
+  // must never absorb those labels or change any other parsed release facts.
+  for (const key of new Set([
+    ...Object.keys(parsed),
+    ...Object.keys(recovered),
+  ])) {
+    if (key === 'title' || key === 'quality') continue;
+    const before = parsed[key as keyof ParsedResult];
+    const after = recovered[key as keyof ParsedResult];
+    if (
+      Array.isArray(before)
+        ? !Array.isArray(after) ||
+          before.length !== after.length ||
+          before.some((value, index) => value !== after[index])
+        : before !== after
+    )
+      return parsed;
+  }
+  return recovered;
+}
 
 // Sized to cover the working set of a busy request without retaining much:
 // entries are small objects and the hit rate comes from repetition, not volume.
@@ -60,7 +125,7 @@ export function parseTorrentTitleCached(title: string): ParsedResult {
     return cached;
   }
 
-  const parsed = parseTorrentTitle(name);
+  const parsed = preserveEmbeddedSdTitle(name, parseTorrentTitle(name));
 
   if (cache.size >= MAX_ENTRIES) {
     const oldest = cache.keys().next().value;

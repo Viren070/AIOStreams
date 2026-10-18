@@ -72,6 +72,11 @@ const TORZNAB_PROFILE: NabScanProfile = {
     ['seeders', 'number'],
     ['downloadvolumefactor', 'number'],
     ['size', 'number'],
+    ['imdb', 'string'],
+    ['imdbid', 'string'],
+    ['tvdbid', 'string'],
+    ['category', 'string'],
+    ['audio_tracks', 'string'],
   ]),
 };
 
@@ -89,6 +94,11 @@ const NEWZNAB_PROFILE: NabScanProfile = {
     ['hydraIndexerName', 'string'],
     ['poster', 'string'],
     ['size', 'number'],
+    ['imdb', 'string'],
+    ['imdbid', 'string'],
+    ['tvdbid', 'string'],
+    ['category', 'string'],
+    ['audio_tracks', 'string'],
   ]),
 };
 
@@ -270,8 +280,8 @@ export class BaseNabApi<N extends NabNamespace> {
     }
     this.profile = namespace === 'torznab' ? TORZNAB_PROFILE : NEWZNAB_PROFILE;
     this.capabilitiesCache = Cache.getInstance(`${namespace}:api:caps`);
-    // v3: the cached item shape is now the scanner's projection.
-    this.searchCache = Cache.getInstance(`${namespace}:api:search:v3`);
+    // v5 retains item IDs, categories and audio roles for identity evidence.
+    this.searchCache = Cache.getInstance(`${namespace}:api:search:v5`);
     this.userAgent =
       appConfig.builtins.nab.userAgent ?? appConfig.http.defaultUserAgent;
     this.httpProxy =
@@ -296,7 +306,7 @@ export class BaseNabApi<N extends NabNamespace> {
     return searchWithBackgroundRefresh({
       searchCache: this.searchCache as Cache<string, SearchResponse<N>>,
       searchCacheKey: cacheKey,
-      bgCacheKey: `nab:${cacheKey}`,
+      bgCacheKey: `nab:v5:${cacheKey}`,
       cacheTTL: appConfig.builtins.nab.searchCacheTtl,
       fetchFn: () => this.request(searchFunction, 'search', params),
       isEmptyResult: (result) => result.results.length === 0,
