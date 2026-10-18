@@ -211,13 +211,17 @@ export class UserRepository {
     try {
       let config = await this.loadRawUser(uuid, password);
 
-      if (config.parentConfig?.uuid) {
+      // Only parent change pushes read the index, so skip the write without them.
+      if (config.parentConfig?.uuid && appConfig.linkedAccounts.enabled) {
         ConfigParentRepository.ensure(uuid, config.parentConfig.uuid).catch(
           (e) =>
             logger.warn(
               `Could not index the parent config of user ${uuid}: ${e instanceof Error ? e.message : String(e)}`
             )
         );
+      }
+
+      if (config.parentConfig?.uuid) {
         try {
           const parent = await this.loadRawUser(
             config.parentConfig.uuid,
