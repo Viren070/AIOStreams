@@ -85,9 +85,12 @@ function registerMediaKeys(): () => void {
 
 let host: Host | undefined;
 
-/** Samsung's TVs, running the packaged app. */
+/**
+ * Samsung's TVs, running the packaged app. Its agent says Tizen even where
+ * the page doesn't see `window.tizen` from the start.
+ */
 export function tizenHost(): Host | null {
-  if (!window.tizen) return null;
+  if (!window.tizen && !/\bTizen\b/.test(navigator.userAgent)) return null;
   host ??= {
     name: 'tizen',
     tv: true,

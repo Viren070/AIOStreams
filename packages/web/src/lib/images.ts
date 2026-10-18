@@ -8,9 +8,19 @@ const STEPS = [
   120, 160, 240, 320, 400, 480, 640, 800, 960, 1280, 1600, 1920, 2560, 3840,
 ];
 
+/**
+ * Device pixels per CSS pixel. A TV lays the page out 1280 wide and scales it
+ * up to its screen, which `devicePixelRatio` leaves out.
+ */
+export function pixelRatio(): number {
+  const dpr = window.devicePixelRatio || 1;
+  if (!document.documentElement.hasAttribute('data-tv')) return dpr;
+  return Math.min(2, Math.max(dpr, (screen.width * dpr) / window.innerWidth));
+}
+
 /** In device pixels, rounded up to a step so the same URLs come back. */
 function deviceWidth(css: number): number {
-  const px = css * (window.devicePixelRatio || 1);
+  const px = css * pixelRatio();
   return STEPS.find((step) => step >= px) ?? Math.ceil(px);
 }
 

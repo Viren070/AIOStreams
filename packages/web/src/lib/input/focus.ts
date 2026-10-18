@@ -584,14 +584,22 @@ export function startOf(root: ParentNode = document): HTMLElement | null {
   return el && canFocus(el) ? el : null;
 }
 
-/** The page's start, else the first thing on screen, in its main content where it has one. */
+/**
+ * The page's start, else the first thing on screen, in its main content where
+ * it has one. A row's own button, as Activity beside Continue watching, comes
+ * before its cards but isn't where to start.
+ */
 function first(root: Element): HTMLElement | null {
   const start = startOf(root);
   if (start) return start;
   const area = root.querySelector('main') ?? root;
   const all = (el: Element) => [...el.querySelectorAll<HTMLElement>(FOCUSABLE)];
+  const shown = (el: HTMLElement) => onScreen(el) && canFocus(el);
   return (
-    all(area).find((el) => onScreen(el) && canFocus(el)) ??
+    all(area).find(
+      (el) => !el.closest('[data-ui=media-row-action]') && shown(el)
+    ) ??
+    all(area).find(shown) ??
     all(root).find((el) => canFocus(el)) ??
     null
   );
