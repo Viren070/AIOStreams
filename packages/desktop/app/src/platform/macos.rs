@@ -427,13 +427,15 @@ impl VideoLayer {
                 } else {
                     "auto".into()
                 };
+                // Async: this thread is mpv's render thread, where only the
+                // render-safe async setters may block-free run.
                 for (name, value) in [
                     ("target-prim", state.primaries.as_str()),
                     ("target-trc", "pq"),
                     ("target-peak", peak.as_str()),
                     ("icc-profile", ""),
                 ] {
-                    if let Err(e) = mpv.set_property(name, value) {
+                    if let Err(e) = mpv.set_property_async(name, value) {
                         log::warn!("mpv {name}={value}: {e}");
                     }
                 }
@@ -461,7 +463,7 @@ impl VideoLayer {
                     ("target-peak", "auto"),
                     ("icc-profile", ""),
                 ] {
-                    if let Err(e) = mpv.set_property(name, value) {
+                    if let Err(e) = mpv.set_property_async(name, value) {
                         log::warn!("mpv {name}={value}: {e}");
                     }
                 }
