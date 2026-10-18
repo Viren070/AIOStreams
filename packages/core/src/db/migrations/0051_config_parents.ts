@@ -8,7 +8,7 @@ import type { Migration } from './types.js';
  */
 const ddl = `
       CREATE TABLE IF NOT EXISTS config_parents (
-        child_uuid  TEXT PRIMARY KEY REFERENCES users(uuid) ON DELETE CASCADE,
+        child_uuid  TEXT PRIMARY KEY NOT NULL REFERENCES users(uuid) ON DELETE CASCADE,
         parent_uuid TEXT NOT NULL
       );
 
