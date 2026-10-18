@@ -7,7 +7,11 @@ import { createLogger } from '../logging/logger.js';
 import type { WatchStateRow } from '../db/repositories/watch-state.js';
 import { matchedEpisodeOf, seriesIdOf } from '../watch-state/types.js';
 import { firstWriteOf } from './write-once.js';
-import type { ContentDescriptor, JellyfinDescriptor } from './types.js';
+import type {
+  ContentDescriptor,
+  JellyfinDescriptor,
+  PersonDescriptor,
+} from './types.js';
 
 const logger = createLogger('jellyfin');
 
@@ -74,10 +78,11 @@ const idCache = Cache.getInstance<string, JellyfinDescriptor>(
   100_000
 );
 const ID_CACHE_TTL = 30 * 24 * 3600;
-const personCache = Cache.getInstance<string, string>(
-  'jellyfin-persons',
-  50_000
-);
+/* Older entries are bare names. */
+const personCache = Cache.getInstance<
+  string,
+  Omit<PersonDescriptor, 'k'> | string
+>('jellyfin-persons', 50_000);
 const PERSON_TTL = 30 * 24 * 3600;
 
 export function hyphenless(id: string): string {
@@ -252,7 +257,7 @@ export function canonicalDescriptor(d: JellyfinDescriptor): string {
     case 'episode':
       return `episode|${d.t}|${d.i}|${d.s}|${d.e}|${d.v}`;
     case 'person':
-      return `person|${d.n}`;
+      return d.i ? `person|${d.n}|${d.i}` : `person|${d.n}`;
     case 'source':
       return `source|${d.h}`;
   }
@@ -311,10 +316,11 @@ export function genreId(
   return marked(MARK_GENRE, `genre|${type}|${catalogId}|${genre}`);
 }
 
-export function personId(name: string): string {
-  const id = marked(MARK_PERSON, `person|${name}`);
+export function personId(d: PersonDescriptor): string {
+  const id = marked(MARK_PERSON, canonicalDescriptor(d));
   if (firstWriteOf(id)) {
-    void personCache.set(id, name, PERSON_TTL).catch(() => undefined);
+    const ref = { n: d.n, i: d.i };
+    void personCache.set(id, ref, PERSON_TTL).catch(() => undefined);
   }
   return id;
 }
@@ -339,7 +345,7 @@ export function encodeItemId(d: JellyfinDescriptor): string {
     case 'genre':
       return genreId(d.t, d.c, d.g);
     case 'person':
-      return personId(d.n);
+      return personId(d);
     case 'source':
       return d.h;
     default: {
@@ -409,10 +415,15 @@ export async function decodeItemId(
       return null;
     }
     case MARK_PERSON: {
-      const name = await personCache.get(hex).catch(() => undefined);
-      return name
-        ? { kind: 'descriptor', descriptor: { k: 'person', n: name } }
-        : null;
+      const ref = await personCache.get(hex).catch(() => undefined);
+      if (!ref) return null;
+      return {
+        kind: 'descriptor',
+        descriptor:
+          typeof ref === 'string'
+            ? { k: 'person', n: ref }
+            : { k: 'person', ...ref },
+      };
     }
     case MARK_SOURCE:
       return { kind: 'source', msid: hex };

@@ -450,9 +450,9 @@ export async function itemFromDescriptor(
     case 'genre':
       return buildGenre(ctx.build, d.t, d.c, d.g);
     case 'person': {
-      const item = buildPerson(ctx.build, d.n);
-      const found = await findPerson(ctx.userData, d.n);
-      const person = found ? withPersonDetails(item, found.person) : item;
+      const item = buildPerson(ctx.build, d);
+      const found = await findPerson(await ctx.engine(), ctx.userData, d);
+      const person = found ? withPersonDetails(item, found) : item;
       if ((person.ImageTags as Record<string, string> | undefined)?.Primary)
         return person;
       // Without TMDB, the photo is the one a cast list already showed.

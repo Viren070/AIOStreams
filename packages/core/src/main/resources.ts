@@ -1077,7 +1077,8 @@ export async function getMeta(
         { addon: candidate.addon.name, instanceId: candidate.instanceId },
         'successfully got meta from addon'
       );
-      if (ctx.userData.usePosterServiceForMeta) {
+      // Poster services know titles, not people.
+      if (ctx.userData.usePosterServiceForMeta && type !== 'person') {
         await applyPosterModifications(ctx, [meta], type, true);
       } else {
         meta.links = convertDiscoverDeepLinks(ctx, meta.links);
