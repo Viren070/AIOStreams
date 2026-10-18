@@ -19,14 +19,14 @@ export interface ParentPushDeps {
   enabled(): boolean;
   delayMs(): number;
   maxLinks(): number;
-  /** Pause between two links' pushes. */
+  /** Pause after each manifest a push fetched, before the next link. */
   spacingMs(): number;
   sleep(ms: number): Promise<void>;
   targets(
     parentUuid: string,
     maxDepth: number,
     limit: number
-  ): Promise<Array<{ uuid: string; id: string }>>;
+  ): Promise<Array<{ uuid: string; id: string; urls: number }>>;
   pushIfChanged(uuid: string, id: string): Promise<PushResult | null>;
 }
 
@@ -96,7 +96,7 @@ export class ParentChangePusher {
 
   private async run(parentUuid: string): Promise<void> {
     const max = this.deps.maxLinks();
-    let targets: Array<{ uuid: string; id: string }>;
+    let targets: Array<{ uuid: string; id: string; urls: number }>;
     try {
       // One more than allowed, to tell a full run from a capped one.
       targets = await this.deps.targets(parentUuid, MAX_PARENT_DEPTH, max + 1);
@@ -111,13 +111,16 @@ export class ParentChangePusher {
     if (targets.length > max) {
       logger.warn(
         { parent: parentUuid, max },
-        'too many links to push after a parent change; pushing the least recently pushed ones'
+        'too many links to push after a parent change; pushing the nearest, least recently checked ones'
       );
       targets = targets.slice(0, max);
     }
 
     for (const [index, { uuid, id }] of targets.entries()) {
-      if (index > 0) await this.deps.sleep(this.deps.spacingMs());
+      if (index > 0) {
+        const previous = Math.max(1, targets[index - 1].urls);
+        await this.deps.sleep(this.deps.spacingMs() * previous);
+      }
       if (!this.deps.enabled()) return;
       try {
         const result = await this.deps.pushIfChanged(uuid, id);

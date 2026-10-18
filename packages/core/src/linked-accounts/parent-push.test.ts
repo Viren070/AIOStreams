@@ -5,7 +5,8 @@ import '../index.js';
 import { ParentChangePusher, type ParentPushDeps } from './parent-push.js';
 
 const DELAY = 30_000;
-const SPACED = ['a/a1', 'sleep 2000', 'b/b1', 'sleep 2000', 'b/b2'];
+// a1 fetches three manifests, so the pause after it is three times as long.
+const SPACED = ['a/a1', 'sleep 6000', 'b/b1', 'sleep 2000', 'b/b2'];
 
 function setup(overrides: Partial<ParentPushDeps> = {}) {
   const pushed: string[] = [];
@@ -21,7 +22,13 @@ function setup(overrides: Partial<ParentPushDeps> = {}) {
     },
     targets: async (parent, _depth, limit) =>
       (tree[parent] ?? [])
-        .flatMap((uuid) => (links[uuid] ?? []).map((id) => ({ uuid, id })))
+        .flatMap((uuid) =>
+          (links[uuid] ?? []).map((id) => ({
+            uuid,
+            id,
+            urls: id === 'a1' ? 3 : 1,
+          }))
+        )
         .slice(0, limit),
     pushIfChanged: async (uuid, id) => {
       pushed.push(`${uuid}/${id}`);
@@ -72,7 +79,7 @@ describe('ParentChangePusher', () => {
     const { pusher, pushed } = setup({ maxLinks: () => 2 });
     pusher.saved('p');
     await elapse(pusher, DELAY);
-    assert.deepEqual(pushed, ['a/a1', 'sleep 2000', 'b/b1']);
+    assert.deepEqual(pushed, ['a/a1', 'sleep 6000', 'b/b1']);
   });
 
   it('carries on past a link that fails', async () => {

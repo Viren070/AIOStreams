@@ -168,6 +168,7 @@ export class LinkedAccountService {
     assertEnabled();
     const account = await LinkedAccountRepository.resolve(uuid, id);
     if (!account) notFound();
+    await LinkedAccountRepository.markChecked(uuid, id);
 
     // Re-validated on every push: a password change rotates the encrypted
     // password in the URL, and an alias can be reassigned.

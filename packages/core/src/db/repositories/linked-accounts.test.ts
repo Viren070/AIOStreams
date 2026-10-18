@@ -70,22 +70,50 @@ describe('LinkedAccountRepository', () => {
     );
   });
 
-  it('lists the least recently pushed links first, up to the limit', async () => {
+  it('lists the least recently checked links first, up to the limit', async () => {
     await addUser('p');
     await addUser('a', 'p');
     const first = await addLink('a', true);
     const second = await addLink('a', true);
     const third = await addLink('a', true);
-    await LinkedAccountRepository.recordPush('a', first, {
-      status: 'ok',
-      manifestHash: 'h',
-    });
+    await LinkedAccountRepository.markChecked('a', first);
 
     const found = await LinkedAccountRepository.listForParentChange('p', 5, 2);
     assert.deepEqual(
       found.map((link) => link.id).sort(),
       [second, third].sort()
     );
+  });
+
+  it('lists direct children before deeper descendants', async () => {
+    await addUser('p');
+    await addUser('a', 'p');
+    await addUser('b', 'a');
+    const grandchild = await addLink('b', true);
+    const child = await addLink('a', true);
+    await LinkedAccountRepository.markChecked('a', child);
+
+    const found = await LinkedAccountRepository.listForParentChange('p', 5, 1);
+    assert.deepEqual(
+      found.map((link) => link.id),
+      [child]
+    );
+    assert.notEqual(grandchild, child);
+  });
+
+  it('counts the manifests a push of the link fetches', async () => {
+    await addUser('p');
+    await addUser('a', 'p');
+    const id = await addLink('a', true);
+    await LinkedAccountRepository.update('a', id, {
+      config: { manifestUrls: ['u1', 'u2'] },
+    });
+    const [found] = await LinkedAccountRepository.listForParentChange(
+      'p',
+      5,
+      1
+    );
+    assert.equal(found.urls, 2);
   });
 
   it('reports the flag, off for a new link', async () => {
