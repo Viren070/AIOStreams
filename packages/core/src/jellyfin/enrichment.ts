@@ -19,6 +19,7 @@ export interface EnrichedPerson {
   type: (typeof PERSON_TYPES)[keyof typeof PERSON_TYPES];
   role?: string;
   photo?: string;
+  id?: string;
 }
 
 export interface SeasonDetails {
@@ -167,7 +168,7 @@ const ID_FALLBACKS: [string, string][] = [
   ['anidb_id', 'anidb'],
 ];
 
-function providerIdsFrom(source: AnyObject): Record<string, string> {
+export function providerIdsFrom(source: AnyObject): Record<string, string> {
   const out: Record<string, string> = {};
   const declared = isObject(source.ids) ? Object.entries(source.ids) : [];
   const fallbacks = ID_FALLBACKS.map(([field, key]) => [key, source[field]]);
@@ -175,7 +176,7 @@ function providerIdsFrom(source: AnyObject): Record<string, string> {
     const jf = PROVIDER_KEYS[key as string];
     const v = str(raw);
     if (!jf || !v || out[jf]) continue;
-    out[jf] = key === 'imdb' && !v.startsWith('tt') ? `tt${v}` : v;
+    out[jf] = key === 'imdb' && /^\d+$/.test(v) ? `tt${v}` : v;
   }
   return out;
 }
@@ -217,6 +218,7 @@ function detailed(
         type,
         role: role && role !== name ? role : undefined,
         photo: str(entry.photo),
+        id: str(entry.id),
       },
     ];
   });

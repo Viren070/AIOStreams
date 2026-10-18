@@ -1,13 +1,15 @@
-import type { UserData } from '../db/schemas.js';
+import type { MetaPreview, ParsedMeta, UserData } from '../db/schemas.js';
+import type { AIOStreams } from '../main/index.js';
 import { createLogger } from '../logging/logger.js';
 import type {
   TMDBMetadata,
   TMDBPerson,
   TMDBPersonCredit,
 } from '../metadata/tmdb.js';
+import { providerIdsFrom, toIso } from './enrichment.js';
 import { imageTagsFor, rememberImages } from './images.js';
-import { isoDate, TMDB_IMAGES, tmdbFor } from './tmdb-titles.js';
-import type { JellyfinItem } from './types.js';
+import { isoDate, TMDB_IMAGES, titlePreviews, tmdbFor } from './tmdb-titles.js';
+import type { JellyfinItem, PersonDescriptor } from './types.js';
 
 const logger = createLogger('jellyfin');
 
@@ -23,113 +25,194 @@ const HONORARY_JOBS = new Set([
 
 export type FilmographyKind = 'movie' | 'series';
 
-export interface FoundPerson {
-  tmdb: TMDBMetadata;
-  person: TMDBPerson;
+export type FoundPerson =
+  { meta: ParsedMeta } | { tmdb: TMDBMetadata; person: TMDBPerson };
+
+interface PersonDetails {
+  overview?: string;
+  born?: string;
+  died?: string;
+  birthPlace?: string;
+  photo?: string;
+  providerIds: Record<string, string>;
 }
 
-/** The TMDB person a name means, when a key is set and anyone matches. */
+export interface FilmographyQuery {
+  kinds?: FilmographyKind[];
+  sortBy: string[];
+  descending?: boolean;
+  startIndex: number;
+  limit: number;
+}
+
 export async function findPerson(
+  engine: AIOStreams,
   userData: UserData,
-  name: string
+  d: PersonDescriptor
 ): Promise<FoundPerson | null> {
+  if (d.i && engine.canGetMeta('person', d.i)) {
+    const meta = (await engine.getMeta('person', d.i).catch(() => null))?.data;
+    if (meta) return { meta };
+  }
   const tmdb = tmdbFor(userData);
   if (!tmdb) return null;
   try {
-    const id = await tmdb.findPersonId(name);
+    const id =
+      Number(d.i?.match(/^tmdb:(\d+)$/)?.[1]) || (await tmdb.findPersonId(d.n));
     const person = id ? await tmdb.getPerson(id) : undefined;
     return person ? { tmdb, person } : null;
   } catch (error) {
     logger.debug(
-      { name, err: error instanceof Error ? error.message : String(error) },
+      {
+        name: d.n,
+        err: error instanceof Error ? error.message : String(error),
+      },
       'person lookup failed'
     );
     return null;
   }
 }
 
-export function withPersonDetails(
-  item: JellyfinItem,
-  person: TMDBPerson
-): JellyfinItem {
-  const out: JellyfinItem = {
-    ...item,
-    Overview: person.biography ?? item.Overview,
-    PremiereDate: isoDate(person.birthday),
-    EndDate: isoDate(person.deathday),
-    ProductionLocations: person.placeOfBirth ? [person.placeOfBirth] : [],
-    ProviderIds: {
+function detailsOf(found: FoundPerson): PersonDetails {
+  if ('meta' in found) {
+    const { meta } = found;
+    return {
+      overview: meta.description ?? undefined,
+      born: toIso(meta.birthday),
+      died: toIso(meta.deathday),
+      birthPlace: meta.birthPlace ?? undefined,
+      photo: meta.poster ?? undefined,
+      providerIds: providerIdsFrom(meta),
+    };
+  }
+  const { person } = found;
+  return {
+    overview: person.biography,
+    born: isoDate(person.birthday),
+    died: isoDate(person.deathday),
+    birthPlace: person.placeOfBirth,
+    photo: person.profilePath
+      ? `${TMDB_IMAGES}w500${person.profilePath}`
+      : undefined,
+    providerIds: {
       Tmdb: String(person.tmdbId),
       ...(person.imdbId && { Imdb: person.imdbId }),
     },
+  };
+}
+
+export function withPersonDetails(
+  item: JellyfinItem,
+  found: FoundPerson
+): JellyfinItem {
+  const details = detailsOf(found);
+  const ids = details.providerIds;
+  const out: JellyfinItem = {
+    ...item,
+    Overview: details.overview ?? item.Overview,
+    PremiereDate: details.born,
+    EndDate: details.died,
+    ProductionLocations: details.birthPlace ? [details.birthPlace] : [],
+    ProviderIds: ids,
     ExternalUrls: [
-      ...(person.imdbId
+      ...(ids.Imdb
+        ? [{ Name: 'IMDb', Url: `https://www.imdb.com/name/${ids.Imdb}` }]
+        : []),
+      ...(ids.Tmdb
         ? [
             {
-              Name: 'IMDb',
-              Url: `https://www.imdb.com/name/${person.imdbId}`,
+              Name: 'TMDB',
+              Url: `https://www.themoviedb.org/person/${ids.Tmdb}`,
             },
           ]
         : []),
-      {
-        Name: 'TMDB',
-        Url: `https://www.themoviedb.org/person/${person.tmdbId}`,
-      },
     ],
   };
   const tags = item.ImageTags as Record<string, string> | undefined;
-  if (person.profilePath && !tags?.Primary) {
-    const photo = `${TMDB_IMAGES}w500${person.profilePath}`;
-    rememberImages(item.Id, { Primary: photo });
-    out.ImageTags = imageTagsFor({ Primary: photo }).ImageTags;
+  if (details.photo && !tags?.Primary) {
+    rememberImages(item.Id, { Primary: details.photo });
+    out.ImageTags = imageTagsFor({ Primary: details.photo }).ImageTags;
     out.PrimaryImageAspectRatio = 0.6666;
   }
   return out;
 }
 
-function kindOf(credit: TMDBPersonCredit): FilmographyKind {
-  return credit.mediaType === 'movie' ? 'movie' : 'series';
+function kindOf(type: string): FilmographyKind {
+  return type === 'movie' ? 'movie' : 'series';
 }
 
 /** What a person worked on, without guest spots and honorary credits. */
-export function filmographyCredits(
+function tmdbCredits(
   person: TMDBPerson,
   kinds?: FilmographyKind[]
 ): TMDBPersonCredit[] {
-  return person.credits.filter((credit) => {
-    if (kinds && !kinds.includes(kindOf(credit))) return false;
-    if (credit.genreIds.some((g) => TALK_AND_NEWS.has(g))) return false;
-    return (
-      !credit.roles.length || credit.roles.some((r) => !HONORARY_JOBS.has(r))
-    );
-  });
+  return person.credits
+    .filter((credit) => {
+      if (kinds && !kinds.includes(kindOf(credit.mediaType))) return false;
+      if (credit.genreIds.some((g) => TALK_AND_NEWS.has(g))) return false;
+      return (
+        !credit.roles.length || credit.roles.some((r) => !HONORARY_JOBS.has(r))
+      );
+    })
+    .sort((a, b) => b.popularity - a.popularity);
 }
 
-/**
- * Jellyfin's sort keys a credit can answer; anything else keeps TMDB's order.
- */
-export function sortCredits(
-  credits: TMDBPersonCredit[],
-  sortBy: string[],
-  descending: boolean | undefined
-): TMDBPersonCredit[] {
-  const key = sortBy[0]?.toLowerCase();
-  const byName = (a: TMDBPersonCredit, b: TMDBPersonCredit) =>
-    a.title.localeCompare(b.title);
+/** Jellyfin's sort keys a credit can answer; anything else keeps the given order. */
+function sortCredits<T>(
+  credits: T[],
+  fields: (credit: T) => { date?: string; name: string },
+  q: FilmographyQuery
+): T[] {
+  const key = q.sortBy[0]?.toLowerCase();
   if (!key || key === 'premieredate' || key === 'productionyear') {
     // Announced titles without a date go last either way.
     const dated = credits
-      .filter((c) => c.date)
-      .sort((a, b) => a.date!.localeCompare(b.date!));
-    if (descending ?? true) dated.reverse();
-    return [...dated, ...credits.filter((c) => !c.date)];
+      .filter((c) => fields(c).date)
+      .sort((a, b) => fields(a).date!.localeCompare(fields(b).date!));
+    if (q.descending ?? true) dated.reverse();
+    return [...dated, ...credits.filter((c) => !fields(c).date)];
   }
-  const out = [...credits];
   if (key === 'sortname' || key === 'name') {
-    out.sort(byName);
-    if (descending) out.reverse();
-  } else {
-    out.sort((a, b) => b.popularity - a.popularity);
+    const out = [...credits].sort((a, b) =>
+      fields(a).name.localeCompare(fields(b).name)
+    );
+    return q.descending ? out.reverse() : out;
   }
-  return out;
+  return credits;
+}
+
+export async function filmographyPage(
+  engine: AIOStreams,
+  found: FoundPerson,
+  q: FilmographyQuery
+): Promise<{ previews: MetaPreview[]; total: number }> {
+  const end = q.startIndex + q.limit;
+  if ('meta' in found) {
+    const credits = (found.meta.credits ?? []) as MetaPreview[];
+    const sorted = sortCredits(
+      q.kinds
+        ? credits.filter((c) => q.kinds!.includes(kindOf(c.type)))
+        : credits,
+      (c) => ({
+        date:
+          toIso(c.released) ?? String(c.releaseInfo ?? '').match(/\d{4}/)?.[0],
+        name: String(c.name ?? ''),
+      }),
+      q
+    );
+    return { previews: sorted.slice(q.startIndex, end), total: sorted.length };
+  }
+  const sorted = sortCredits(
+    tmdbCredits(found.person, q.kinds),
+    (c) => ({ date: c.date, name: c.title }),
+    q
+  );
+  return {
+    previews: await titlePreviews(
+      engine,
+      found.tmdb,
+      sorted.slice(q.startIndex, end)
+    ),
+    total: sorted.length,
+  };
 }

@@ -5,11 +5,9 @@ import {
   catalogHasCollections,
   encodeImageTag,
   suggestTitles,
-  filmographyCredits,
+  filmographyPage,
   findPerson,
   recommendedPreviews,
-  sortCredits,
-  titlePreviews,
   type FilmographyKind,
   Cache,
   collectionMembers,
@@ -552,32 +550,33 @@ async function handleItems(
     return;
   }
   if (pd?.k === 'person' || personIds.length) {
-    let name: string | null = pd?.k === 'person' ? pd.n : null;
-    if (!name && personIds.length) {
+    let person = pd?.k === 'person' ? pd : null;
+    if (!person && personIds.length) {
       const p = await decodeForRequest(ctx, personIds[0]);
       if (p?.kind === 'descriptor' && p.descriptor.k === 'person')
-        name = p.descriptor.n;
+        person = p.descriptor;
     }
-    const found = name ? await findPerson(ctx.userData, name) : null;
+    const found = person
+      ? await findPerson(engine, ctx.userData, person)
+      : null;
     if (found) {
-      const kinds = types
-        ? (['movie', 'series'] as FilmographyKind[]).filter((k) => types.has(k))
-        : undefined;
-      const credits = sortCredits(
-        filmographyCredits(found.person, kinds),
-        qlist(req, 'SortBy'),
-        sortDescending(req)
-      );
-      const previews = await titlePreviews(
-        engine,
-        found.tmdb,
-        credits.slice(startIndex, startIndex + limit)
-      );
-      const items = await itemsFromPreviews(ctx, previews);
-      send(req, res, excludeTypes(req, items), credits.length, startIndex);
+      const page = await filmographyPage(engine, found, {
+        kinds: types
+          ? (['movie', 'series'] as FilmographyKind[]).filter((k) =>
+              types.has(k)
+            )
+          : undefined,
+        sortBy: qlist(req, 'SortBy'),
+        descending: sortDescending(req),
+        startIndex,
+        limit,
+      });
+      const items = await itemsFromPreviews(ctx, page.previews);
+      send(req, res, excludeTypes(req, items), page.total, startIndex);
       return;
     }
     // Without TMDB, a search for the name finds what it can.
+    const name = person?.n;
     const previews = name ? await searchCatalogs(engine, name, limit) : [];
     const items = filterByType(await itemsFromPreviews(ctx, previews), types);
     send(req, res, items, items.length, 0);
