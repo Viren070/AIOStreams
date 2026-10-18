@@ -83,6 +83,12 @@ export class ExtrasParser {
     return key in this.extras && this.extras[key] !== undefined;
   }
 
+  public names(): string[] {
+    return Object.entries(this.extras)
+      .filter(([_, value]) => value !== undefined)
+      .map(([key]) => key);
+  }
+
   public toString(): string {
     return Object.entries(this.extras)
       .filter(([_, value]) => value !== undefined)
