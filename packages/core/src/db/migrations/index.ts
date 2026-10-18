@@ -46,6 +46,7 @@ import { mediaInfoSources } from './0045_media_info_sources.js';
 import { jellyfinUserAddresses } from './0046_jellyfin_user_addresses.js';
 import { appReports } from './0047_app_reports.js';
 import { configParents } from './0048_config_parents.js';
+import { linkedAccountParentPush } from './0049_linked_account_parent_push.js';
 import type { Migration } from './types.js';
 
 export const MIGRATIONS: readonly Migration[] = [
@@ -97,6 +98,7 @@ export const MIGRATIONS: readonly Migration[] = [
   jellyfinUserAddresses,
   appReports,
   configParents,
+  linkedAccountParentPush,
 ];
 
 export type { Migration } from './types.js';

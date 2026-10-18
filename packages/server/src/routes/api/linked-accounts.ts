@@ -26,6 +26,7 @@ const LinkSchema = z.object({
 const UpdateSchema = z.object({
   label: z.string().max(64).optional(),
   autoPush: z.boolean().optional(),
+  pushOnParentChange: z.boolean().optional(),
   manifestUrls: ManifestUrls.optional(),
 });
 

@@ -19,7 +19,7 @@ import type {
 const logger = createLogger('linked-accounts');
 
 const COLUMNS =
-  'id, uuid, platform, label, identity, config, auto_push, last_synced_at, last_status, last_error, last_pushed_manifest_hash, created_at, updated_at';
+  'id, uuid, platform, label, identity, config, auto_push, push_on_parent_change, last_synced_at, last_status, last_error, last_pushed_manifest_hash, created_at, updated_at';
 
 interface LinkedAccountRow {
   id: string;
@@ -30,6 +30,7 @@ interface LinkedAccountRow {
   credentials?: string;
   config: string;
   auto_push: number | string;
+  push_on_parent_change: number | string;
   last_synced_at: number | string | null;
   last_status: string | null;
   last_error: string | null;
@@ -63,6 +64,7 @@ function toAccount(row: LinkedAccountRow): LinkedAccount {
     identity: row.identity,
     config: parseConfig(row.config),
     autoPush: Number(row.auto_push) === 1,
+    pushOnParentChange: Number(row.push_on_parent_change) === 1,
     lastSyncedAt:
       row.last_synced_at == null ? undefined : Number(row.last_synced_at),
     lastStatus: (row.last_status as LinkedAccountStatus) ?? undefined,
@@ -159,6 +161,7 @@ export class LinkedAccountRepository {
     patch: {
       label?: string;
       autoPush?: boolean;
+      pushOnParentChange?: boolean;
       config?: LinkedAccountConfig;
       credentials?: Record<string, string>;
     }
@@ -167,6 +170,11 @@ export class LinkedAccountRepository {
     if (patch.label !== undefined) sets.push(sql`label = ${patch.label}`);
     if (patch.autoPush !== undefined) {
       sets.push(sql`auto_push = ${patch.autoPush ? 1 : 0}`);
+    }
+    if (patch.pushOnParentChange !== undefined) {
+      sets.push(
+        sql`push_on_parent_change = ${patch.pushOnParentChange ? 1 : 0}`
+      );
     }
     if (patch.config !== undefined) {
       sets.push(sql`config = ${JSON.stringify(patch.config)}`);
