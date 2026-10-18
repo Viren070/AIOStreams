@@ -47,7 +47,8 @@ Both Tizen packages resolve YouTube trailers themselves (`web/src/lib/hosts/tize
 the desktop and Android apps' clients). AVPlay plays only an HLS playlist's first size, YouTube's
 smallest, so the separate H.264 sizes up to 1080p and the AAC audio go as a DASH manifest in a
 `data:` address, which the page's own video plays through Shaka Player (`web/src/lib/playback/dash.ts`),
-loaded only then.
+loaded only then. In the home's "opens the selected card" hero mode, an opened card plays its first
+trailer, with sound, 2.5 s after it opens, held to 720p.
 
 ## Releases
 

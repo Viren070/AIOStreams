@@ -21,7 +21,7 @@ export type PosterLine = 'title' | 'year';
 export const EPISODE_LAYOUTS = ['auto', 'row', 'list'] as const;
 export type EpisodeLayout = (typeof EPISODE_LAYOUTS)[number];
 
-export const HERO_MODES = ['rotate', 'follow', 'corner'] as const;
+export const HERO_MODES = ['rotate', 'follow', 'corner', 'open'] as const;
 export type HeroMode = (typeof HERO_MODES)[number];
 
 export const TOUCH_NAVIGATIONS = ['rail', 'bar'] as const;

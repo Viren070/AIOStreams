@@ -264,6 +264,15 @@ export function InterfaceSection() {
               value: 'corner',
               label: t`Follows the selected card, in the corner`,
             },
+            // A remote's focus opens the cards; elsewhere it rotates.
+            ...(currentHost().tv
+              ? [
+                  {
+                    value: 'open',
+                    label: t`Opens the selected card out, with its details`,
+                  },
+                ]
+              : []),
           ]}
           value={heroMode}
           onValueChange={(value) => setHeroMode(value as HeroMode)}
