@@ -73,6 +73,7 @@ export {
   type IssuedConfigSession,
 } from './repositories/config-sessions.js';
 export { LinkedAccountRepository } from './repositories/linked-accounts.js';
+export { ConfigParentRepository } from './repositories/config-parents.js';
 export {
   JellyfinAddressRepository,
   type JellyfinAddressTarget,
