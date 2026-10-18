@@ -60,7 +60,8 @@ export function parseInvite(
   relay?: string | null
 ): Invite | null {
   const trimmed = text.trim();
-  const app = /^aiostreams:\/\/party\?(.*)$/i.exec(trimmed);
+  // Windows opens the app with `party/?`.
+  const app = /^aiostreams:\/\/party\/?\?(.*)$/i.exec(trimmed);
   if (app) {
     const params = new URLSearchParams(app[1]);
     const from = relayBase(params.get('relay') ?? '');
