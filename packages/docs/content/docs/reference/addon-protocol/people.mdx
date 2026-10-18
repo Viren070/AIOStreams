@@ -1,6 +1,6 @@
 ---
 title: People
-description: Person metas, which give Jellyfin clients a person's page and filmography.
+description: Person metas and person search catalogs, which give Jellyfin clients a person's page, their filmography and people search.
 ---
 
 A person in a meta's [`people`](/reference/addon-protocol/metadata#people) can carry an `id`:
@@ -72,3 +72,26 @@ back to the year in `releaseInfo`. Any other order they ask for keeps yours, so 
 first. A title is listed once, however many roles the person had in it.
 
 Leave out what isn't the person's work: talk shows they visited, thanks and archive footage.
+
+## Search
+
+A `person` catalog with a required `search` extra answers a Jellyfin client's people search:
+
+```json
+{ "type": "person", "id": "people", "name": "People", "extra": [{ "name": "search", "isRequired": true }] }
+```
+
+```http
+GET {addonBase}/catalog/person/people/search=bryan%20cranston.json
+```
+
+```json
+{ "metas": [{ "id": "tmdb:17419", "type": "person", "name": "Bryan Cranston", "poster": "https://…/portrait.jpg" }] }
+```
+
+Each entry opens like a cast entry with that `id`. Every `person` catalog is asked and their results
+are interleaved. Without one, results come from TMDB when a TMDB key is set up. A search for titles
+never asks them.
+
+Stremio lists a `person` catalog among its search results too, and opens a person to a page with
+no streams.
