@@ -81,18 +81,28 @@ export type EngineEvent =
   | { type: 'subtitle-text'; text: string }
   | { type: 'stats-text'; text: string | undefined };
 
+/** A stretch the page offers to skip; `auto` when it skips it unasked. */
+export interface PlannedSkip {
+  startMs: number;
+  endMs: number;
+  auto: boolean;
+}
+
 /** A player the page drives; the shared player hook does the rest. */
 export interface PlayerEngine {
   load(file: EngineFile): void;
   close(): void;
   setPaused(paused: boolean): void;
-  seek(ms: number): void;
+  /** May land on a keyframe up to `snapMs` away. */
+  seek(ms: number, snapMs?: number): void;
   setVolume(volume: number, muted: boolean): void;
   setRate?(rate: number): void;
   setAudio(id: string): void;
   /** One of its own tracks, or a server subtitle. */
   setSubtitle(id: string | null): void;
   setSubtitleDelay?(ms: number): void;
+  /** Stretches the page skips, which a player fetching ahead can leave out, or offers to, which it can fetch past early. */
+  skipAhead?(skips: PlannedSkip[]): void;
   setStyle?(style: EngineStyle): void;
   toggleFullscreen?(): void;
   /** Lines of one of its own subtitles; server ones are read from their address. */

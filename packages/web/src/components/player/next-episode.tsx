@@ -48,6 +48,10 @@ const OPEN_LEAD_MS = 30_000;
  * When the prompt shows: at the credits when they end the video, else `lead`
  * seconds before the end.
  */
+/** A segment ending in the episode's last stretch, whose credits the next episode's card can take over. */
+export const endsEpisode = (durationMs: number, endMs: number) =>
+  endMs >= durationMs * 0.9 && durationMs - endMs <= CREDITS_TAIL_MS;
+
 function promptAt(
   durationMs: number,
   outro: MediaSegmentDto | undefined,
@@ -58,8 +62,7 @@ function promptAt(
   if (prompt === 'credits' && outro) {
     const start = ticksToMs(outro.StartTicks);
     const end = ticksToMs(outro.EndTicks);
-    if (end >= durationMs * 0.9 && durationMs - end <= CREDITS_TAIL_MS)
-      return start;
+    if (endsEpisode(durationMs, end)) return start;
   }
   return durationMs - lead * 1000;
 }

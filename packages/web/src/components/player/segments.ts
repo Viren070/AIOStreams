@@ -4,11 +4,16 @@ import { ticksToMs } from '../../lib/format';
 import { settings, useSetting, type SegmentType } from '../../lib/settings';
 import { useLatest } from '../../lib/use-latest';
 import type { PlayerController } from '../../lib/playback/controller';
+import type { PlannedSkip } from '../../lib/playback/engine';
 import type { MediaSegmentDto } from '../../lib/types';
 import { usePlayhead } from '../../lib/playback/playhead';
+import { endsEpisode } from './next-episode';
 
 /** How long the skip button stays once its segment starts, with the controls hidden. */
 const SKIP_BUTTON_MS = 8000;
+
+/** Segment ends are scene cuts, where encoders put keyframes. */
+const SKIP_SNAP_MS = 1000;
 
 export interface Segment {
   type: string;
@@ -50,7 +55,11 @@ const skippedNotice = (s: Segment) =>
     }) as Record<string, string>
   )[s.type] ?? t`Skipped segment`;
 
-/** `fresh` is set for the first few seconds of the offered segment. */
+/**
+ * `fresh` is set for the first few seconds of the offered segment. The player
+ * is told which segments it will skip and which it may, so it leaves out the
+ * first and fetches past the others early.
+ */
 export function useSegmentSkip({
   items,
   player,
@@ -95,7 +104,7 @@ export function useSegmentSkip({
     if (!autoSkip || !started) return;
     skipped.current.add(segmentId(autoSkip));
     if (offeringNext) return;
-    latest.current.seek(autoSkip.endMs);
+    latest.current.seek(autoSkip.endMs, SKIP_SNAP_MS);
     notice(skippedNotice(autoSkip));
   }, [autoSkip, started, offeringNext, notice, latest]);
 
@@ -108,11 +117,29 @@ export function useSegmentSkip({
     return () => clearTimeout(timer);
   }, [offeredId]);
 
+  const { loaded, durationMs } = player.state;
+  const planned: PlannedSkip[] = segments
+    .filter((s) => actionOf(s) !== 'none' && !endsEpisode(durationMs, s.endMs))
+    .map((s) => ({
+      startMs: s.startMs,
+      endMs: s.endMs,
+      auto: actionOf(s) === 'skip',
+    }));
+  const latestPlanned = useLatest(planned);
+  const plannedKey = planned
+    .map((s) => `${s.startMs}-${s.endMs}-${s.auto}`)
+    .join('|');
+  React.useEffect(() => {
+    if (loaded) latest.current.skipAhead?.(latestPlanned.current);
+  }, [plannedKey, loaded, latest, latestPlanned]);
+
   const segment = offeringNext ? undefined : offered;
   return {
     segments,
     segment,
     fresh,
-    skip: segment ? () => latest.current.seek(segment.endMs) : undefined,
+    skip: segment
+      ? () => latest.current.seek(segment.endMs, SKIP_SNAP_MS)
+      : undefined,
   };
 }

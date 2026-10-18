@@ -5,6 +5,7 @@ import type { Chapter } from './chapters';
 import type { SubtitleStyle } from '../settings';
 import type { SubtitleLine } from '../subtitles/cues';
 import type { Playhead } from './playhead';
+import type { PlannedSkip } from './engine';
 import type { PlaybackPrefs } from '../user-config';
 import type { BaseItemDto, MediaStream, SourceInfo } from '../types';
 
@@ -52,7 +53,7 @@ export interface PlayerController {
   subtitleTracks: Track[];
   togglePlay(): void;
   setPaused(paused: boolean): void;
-  seek(ms: number): void;
+  seek(ms: number, snapMs?: number): void;
   setVolume(volume: number): void;
   toggleMute(): void;
   /** Missing where the player plays at one speed. */
@@ -61,6 +62,7 @@ export interface PlayerController {
   setSubtitle(id: string | null): void;
   /** Missing where the player cannot shift subtitles. */
   setSubtitleDelay?: (ms: number) => void;
+  skipAhead?: (skips: PlannedSkip[]) => void;
   /** Keeps the subtitles above this share of the height, which the controls cover; 0 when they hide. */
   liftSubtitles?: (share: number) => void;
   /** The shown subtitle's lines, or null when the player cannot read them. */

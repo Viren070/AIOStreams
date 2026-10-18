@@ -239,8 +239,8 @@ export function usePlayer(
     subtitleText,
     togglePlay: () => engine.setPaused(!live.current.paused),
     setPaused: (paused) => engine.setPaused(paused),
-    seek: (ms) => {
-      engine.seek(ms);
+    seek: (ms, snapMs) => {
+      engine.seek(ms, snapMs);
       playhead.set({ positionMs: ms });
     },
     setVolume: (volume) => setVolume(volume),
@@ -259,6 +259,7 @@ export function usePlayer(
         saveSubtitleDelay(source.Id, delay);
         patch({ subtitleDelayMs: delay });
       }),
+    skipAhead: engine.skipAhead && ((skips) => engine.skipAhead!(skips)),
     liftSubtitles: engine.setStyle && setLift,
     canReadSubtitle: (id) =>
       servers.some((s) => s.id === id) || !!engine.ownLines,

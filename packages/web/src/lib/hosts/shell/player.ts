@@ -434,7 +434,7 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
       );
     },
     setPaused: (paused) => send('player-set', { paused }),
-    seek: (positionMs) => send('player-seek', { positionMs }),
+    seek: (positionMs, snapMs) => send('player-seek', { positionMs, snapMs }),
     setVolume: (volume, muted) => send('player-set', { volume, muted }),
     setRate: (speed) => send('player-set', { speed }),
     setAudio: (audio) => send('player-set', { audio }),
@@ -452,6 +452,9 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
     },
     setSubtitleDelay: (subtitleDelayMs) =>
       send('player-set', { subtitleDelayMs }),
+    skipAhead: external
+      ? undefined
+      : (skips) => send('player-skips', { segments: skips }),
     // The user's own player keeps its own look.
     setStyle({ subtitleStyle, fit, lift }) {
       if (external || !subtitleStyle) return;
