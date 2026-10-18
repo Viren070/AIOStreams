@@ -22,7 +22,24 @@ export function descendantsCte(
     )`;
 }
 
+/** Bounds `ensure`'s memory; clearing only costs one extra write per config. */
+const MAX_KNOWN = 10_000;
+
 export class ConfigParentRepository {
+  /** Child to parent pairs this process has already written. */
+  private static readonly known = new Map<string, string>();
+
+  /**
+   * Indexes a configuration saved before this index existed. Called on reads,
+   * so it writes at most once per configuration and process.
+   */
+  static async ensure(childUuid: string, parentUuid: string): Promise<void> {
+    if (this.known.get(childUuid) === parentUuid) return;
+    await getDb().tx((tx) => this.set(tx, childUuid, parentUuid));
+    if (this.known.size >= MAX_KNOWN) this.known.clear();
+    this.known.set(childUuid, parentUuid);
+  }
+
   /**
    * Records the parent a configuration inherits from, or clears it. Takes the
    * save's transaction so the index never disagrees with the stored config.

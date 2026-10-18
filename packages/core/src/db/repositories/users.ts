@@ -212,6 +212,12 @@ export class UserRepository {
       let config = await this.loadRawUser(uuid, password);
 
       if (config.parentConfig?.uuid) {
+        ConfigParentRepository.ensure(uuid, config.parentConfig.uuid).catch(
+          (e) =>
+            logger.warn(
+              `Could not index the parent config of user ${uuid}: ${e instanceof Error ? e.message : String(e)}`
+            )
+        );
         try {
           const parent = await this.loadRawUser(
             config.parentConfig.uuid,
