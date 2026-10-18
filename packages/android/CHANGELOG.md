@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.7.0](https://github.com/Viren070/AIOStreams/compare/android-v0.6.0...android-v0.7.0) (2026-10-18)
+
+
+### Features
+
+* **web:** add a people row to search ([ae832fc](https://github.com/Viren070/AIOStreams/commit/ae832fc21c052a451b51f7af94f9ec3b895f70b3))
+
+
+### Bug Fixes
+
+* **android:** always report the exit reason with Android's description ([e65aeb0](https://github.com/Viren070/AIOStreams/commit/e65aeb0f27b284dfc5d3a7398e82400cf859dccd))
+* **android:** share the stream cache's connection closer instead of shutting it down ([411b7f0](https://github.com/Viren070/AIOStreams/commit/411b7f03b1e4988f968002c0866644aac494b5e5))
+* **web:** accept a slash after the host in party app links ([ae832fc](https://github.com/Viren070/AIOStreams/commit/ae832fc21c052a451b51f7af94f9ec3b895f70b3))
+* **web:** pick the following hero's card on pointer moves, not enters ([ae832fc](https://github.com/Viren070/AIOStreams/commit/ae832fc21c052a451b51f7af94f9ec3b895f70b3))
+
 ## [0.6.0](https://github.com/Viren070/AIOStreams/compare/android-v0.5.0...android-v0.6.0) (2026-10-18)
 
 
