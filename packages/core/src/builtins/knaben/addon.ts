@@ -75,34 +75,43 @@ export class KnabenAddon extends BaseDebridAddon<KnabenAddonConfig> {
 
     logger.info(`Performing knaben search`, { queries, categories });
 
-    const searchPromises = queries.map((q) =>
-      queryLimit(async () => {
-        const start = Date.now();
-        const { hits } = await this.api.search({
-          query: q,
-          categories,
-          size: 300,
-          hideUnsafe: false,
-        });
-        logger.info(
-          `Knaben search for ${q} took ${getTimeTakenSincePoint(start)}`,
-          {
-            results: hits.length,
-          }
-        );
-        return hits;
-      })
-    );
+    const search = (searchCategories: number[]) =>
+      Promise.all(
+        queries.map((q) =>
+          queryLimit(async () => {
+            const start = Date.now();
+            const { hits } = await this.api.search({
+              query: q,
+              categories: searchCategories,
+              size: 300,
+              hideUnsafe: false,
+            });
+            logger.info(
+              `Knaben search for ${q} took ${getTimeTakenSincePoint(start)}`,
+              {
+                results: hits.length,
+              }
+            );
+            return hits;
+          })
+        )
+      ).then((results) => results.flat());
 
-    const allResults = await Promise.all(searchPromises);
-    const hits = allResults
-      .flat()
-      .filter(
-        (hit) =>
-          !BLACKLISTED_CATEGORIES.some((category) =>
-            hit.categoryId.includes(category)
-          )
-      );
+    let allResults = await search(categories);
+    // Knaben files some movies under TV (wrestling PPVs, for one), so look
+    // there when a movie search finds nothing.
+    if (allResults.length === 0 && !categories.includes(KnabenCategory.TV)) {
+      logger.info(`No knaben results, retrying in the TV category`, {
+        queries,
+      });
+      allResults = await search([KnabenCategory.TV]);
+    }
+    const hits = allResults.filter(
+      (hit) =>
+        !BLACKLISTED_CATEGORIES.some((category) =>
+          hit.categoryId.includes(category)
+        )
+    );
 
     const seenTorrents = new Set<string>();
     const torrents: UnprocessedTorrent[] = [];
