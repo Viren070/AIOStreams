@@ -1,5 +1,5 @@
 export { initDb, getDb, closeDb } from './db.js';
-export { UserRepository } from './repositories/users.js';
+export { UserRepository, userConfigBus } from './repositories/users.js';
 export {
   AdminUsersRepository,
   type AdminUserListItem,

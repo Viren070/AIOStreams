@@ -1,4 +1,5 @@
-﻿import { UserData, isPersonaLockHash } from '../schemas.js';
+﻿import { EventEmitter } from 'node:events';
+import { UserData, isPersonaLockHash } from '../schemas.js';
 import { getDb } from '../db.js';
 import { sql } from '../sql.js';
 import { config as appConfig } from '../../config/index.js';
@@ -75,6 +76,13 @@ export function isTrustedUuid(uuid: string): boolean {
   }
   return trustedUuidPatterns.some((pattern) => pattern.test(uuid));
 }
+
+/**
+ * Emits `saved` with the UUID after a configuration's update has committed.
+ * Single-process, like usenetLibraryBus: a listener hears only the saves made
+ * by this process.
+ */
+export const userConfigBus: EventEmitter = new EventEmitter();
 
 export class UserRepository {
   static async createUser(
@@ -457,6 +465,7 @@ export class UserRepository {
       logger.error(`Failed to update user ${uuid}: ${msg}`);
       throw dbError(error);
     }
+    userConfigBus.emit('saved', uuid);
   }
 
   static async getUserCount(): Promise<number> {
