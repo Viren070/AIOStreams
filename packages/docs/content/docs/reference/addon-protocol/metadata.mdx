@@ -99,6 +99,21 @@ These go on a catalog in your manifest's `catalogs`, which is a library in Jelly
 { "type": "movie", "id": "netflix", "name": "Netflix", "poster": "https://…", "background": "https://…" }
 ```
 
+### Similar titles
+
+A catalog with a `similar` extra fills a title's **More like this** row. It is asked with
+`similar=` set to the title's URL-encoded id (`tt...`, `tmdb:...`, `kitsu:...` or a custom id) and
+its previews are shown as returned, after the profile's catalog modifiers. The first enabled
+catalog of the title's type that requires no other extra is used; merged catalogs are skipped.
+Return `{ "metas": [] }` for ids you do not know, and leave the title itself out. When it lists
+nothing or fails, the row falls back to TMDB's recommendations without trying another catalog.
+Reorder or disable catalogs to pick the source. Make the extra required so the catalog is not
+listed as a library; its id and name are up to you.
+
+```json
+{ "type": "movie", "id": "related", "name": "Related", "extra": [{ "name": "similar", "isRequired": true }] }
+```
+
 ## Ids
 
 `ids` is keyed by provider, with the same keys as [watch state](/reference/addon-protocol/watch-state)

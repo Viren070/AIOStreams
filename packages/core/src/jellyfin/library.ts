@@ -805,3 +805,45 @@ export async function searchCatalogs(
   }
   return out;
 }
+
+/**
+ * What the first standalone catalog of this type that needs only the
+ * `similar` extra lists alongside a title, or null for the caller to fall back.
+ */
+export async function similarPreviews(
+  engine: AIOStreams,
+  type: string,
+  id: string,
+  limit: number
+): Promise<MetaPreview[] | null> {
+  const catalog = engine
+    .getCatalogs()
+    .find(
+      (c) =>
+        c.type === type &&
+        !c.id.startsWith('aiostreams.merged.') &&
+        supportsExtra(c, 'similar') &&
+        c.extra?.every((e) => !e.isRequired || e.name === 'similar')
+    );
+  if (!catalog) return null;
+  try {
+    const res = await engine.getCatalog(
+      catalog.type,
+      catalog.id,
+      `similar=${encodeURIComponent(id)}`
+    );
+    const items = (res.data ?? [])
+      .filter((p) => p.type !== type || p.id !== id)
+      .slice(0, limit);
+    return items.length ? items : null;
+  } catch (error) {
+    logger.debug(
+      {
+        catalog: catalogKey(catalog),
+        err: error instanceof Error ? error.message : String(error),
+      },
+      'similar catalog failed'
+    );
+    return null;
+  }
+}
