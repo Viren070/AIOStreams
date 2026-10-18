@@ -62,6 +62,7 @@ import {
   pruneMediaInfoProbes,
   recoverStreamSessions,
   streamRegistry,
+  startParentChangePushes,
 } from '@aiostreams/core';
 
 const logger = createLogger('server');
@@ -438,6 +439,7 @@ async function start() {
     registerStreamTasks();
     registerReleaseBlocklistTasks();
     registerJellyfinTasks();
+    startParentChangePushes();
     // Otherwise sessions from the last run stay active forever.
     await recoverStreamSessions().catch((error) =>
       logger.warn('Failed to recover orphaned stream sessions:', error)

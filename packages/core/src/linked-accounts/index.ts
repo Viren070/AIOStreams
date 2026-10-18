@@ -7,3 +7,8 @@ export {
   type OwnManifestUrl,
 } from './manifest-urls.js';
 export { LinkedAccountService } from './service.js';
+export {
+  ParentChangePusher,
+  startParentChangePushes,
+  type ParentPushDeps,
+} from './parent-push.js';
