@@ -63,7 +63,7 @@ internal class MatroskaReader(
                 transcoder.seekMap(ReadBack(seekMap))
             }
         }
-        matroska.init(Subtitles(FrameRates(seeking, matroska::frameDurationNs), sink))
+        matroska.init(Subtitles(FrameRates(SampleDependencies(seeking), matroska::frameDurationNs), sink))
     }
 
     override fun read(input: ExtractorInput, seekPosition: PositionHolder) = matroska.read(Skips(input), seekPosition)

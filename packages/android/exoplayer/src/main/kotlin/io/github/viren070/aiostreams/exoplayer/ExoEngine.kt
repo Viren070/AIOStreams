@@ -213,10 +213,7 @@ class ExoEngine(private val context: Context) :
                 val decoders = MediaCodecSelector { mime, secure, tunneling ->
                     if (mime in DTS) emptyList() else mediaCodecSelector.getDecoderInfos(mime, secure, tunneling)
                 }
-                super.buildAudioRenderers(
-                    context, extensionRendererMode, decoders, enableDecoderFallback,
-                    audioSink, eventHandler, eventListener, out,
-                )
+                out += SeekAudioRenderer(context, codecAdapterFactory, decoders, enableDecoderFallback, eventHandler, eventListener, audioSink)
                 out += FfmpegAudioRenderer(eventHandler, eventListener, audioSink)
             }
         }
