@@ -23,7 +23,9 @@ import java.io.InterruptedIOException
 import java.nio.ByteBuffer
 import java.util.TreeMap
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.Executors
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 import kotlin.math.abs
@@ -64,9 +66,6 @@ internal class StreamCache(
     var onMemoryShort: (() -> Unit)? = null
 
     val factory = DataSource.Factory { CachedDataSource() }
-
-    // Closing a connection with bytes left drains it for a while first, which a fetch shouldn't wait for.
-    private val closer = Executors.newSingleThreadExecutor { Thread(it, "stream-cache-close").apply { isDaemon = true } }
 
     init {
         this.context.registerComponentCallbacks(this)
@@ -116,7 +115,6 @@ internal class StreamCache(
 
     fun release() {
         play(null)
-        closer.shutdown()
         context.unregisterComponentCallbacks(this)
     }
 
@@ -821,6 +819,12 @@ internal class StreamCache(
         const val SPARE_MARGIN_US = 4_000_000L
         const val RELEASE_US = 1_000_000L
         const val HELD_POLL_NS = 100_000_000L
+
+        // Closing a connection with bytes left drains it for a while first, which a fetch shouldn't wait for.
+        // Never shut down, as a fetch thread can retire its connection after a release.
+        val closer = ThreadPoolExecutor(0, 1, 10, TimeUnit.SECONDS, LinkedBlockingQueue()) {
+            Thread(it, "stream-cache-close").apply { isDaemon = true }
+        }
 
         fun DataSource.closeQuietly() {
             runCatching { close() }
