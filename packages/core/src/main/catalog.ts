@@ -449,8 +449,11 @@ export async function getMergedCatalog(
 
   const parsedExtras = new ExtrasParser(extras);
   const requestedSkip = parsedExtras.skip || 0;
-  const isSearchRequest = !!parsedExtras.search;
   const requestedGenre = parsedExtras.genre;
+  // A source asked for an extra it doesn't declare ignores it and lists its usual items.
+  const mustDeclare = parsedExtras
+    .names()
+    .filter((name) => name !== 'skip' && name !== 'genre');
 
   const extrasForCacheKey = new ExtrasParser(extras);
   extrasForCacheKey.skip = undefined;
@@ -514,10 +517,13 @@ export async function getMergedCatalog(
         catalogType
       );
 
-      if (isSearchRequest && !catalogExtras?.some((e) => e.name === 'search')) {
+      const unsupported = mustDeclare.find(
+        (name) => !catalogExtras?.some((e) => e.name === name)
+      );
+      if (unsupported) {
         logger.debug(
-          { encodedCatalogId, catalog: mergedCatalog.name },
-          'skipping merged catalog source: no search support'
+          { encodedCatalogId, catalog: mergedCatalog.name, extra: unsupported },
+          'skipping merged catalog source: extra not supported'
         );
         return {
           encodedCatalogId,
