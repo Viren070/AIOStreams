@@ -17,12 +17,16 @@ interface Engine {
 
     fun change(change: Change)
 
-    fun seek(positionMs: Double)
+    /** A keyframe up to [snapMs] away may stand in for [positionMs]. */
+    fun seek(positionMs: Double, snapMs: Double = 0.0)
 
     /** Adds a subtitle file, from the server or this device, and shows it. */
     fun addSubtitle(url: String, title: String?, language: String?)
 
     fun setStyle(style: Style)
+
+    /** Stretches the page skips or offers to, which an engine fetching ahead can leave out or fetch past early. */
+    fun setSkips(skips: List<Skip>) {}
 
     /** [PlayerSettings.passthrough] is already the formats the output takes. */
     fun setSettings(settings: PlayerSettings)

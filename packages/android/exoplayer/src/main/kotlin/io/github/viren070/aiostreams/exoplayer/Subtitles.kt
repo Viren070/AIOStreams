@@ -22,6 +22,9 @@ internal interface AssSink {
     fun header(track: String, header: ByteArray)
 
     fun line(track: String, startMs: Long, durationMs: Long, line: ByteArray)
+
+    /** Fonts came after lines may have been drawn with others. */
+    fun fontsLoaded()
 }
 
 /** Where a file's other subtitles go, unparsed, as they are read. */

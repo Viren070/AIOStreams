@@ -96,6 +96,8 @@ data class PlayerSettings(
     /** Only those of [passthrough] the audio output decodes itself. */
     val passthroughAuto: Boolean = false,
     val audioDelayMs: Double = 0.0,
+    /** Megabytes of the stream to hold, 0 to size it from the device's memory. */
+    val cacheMb: Int = 0,
 )
 
 data class PlayerState(
@@ -155,6 +157,9 @@ data class PlayerTrack(
 )
 
 data class PlayerChapter(val title: String?, val startMs: Double)
+
+/** A stretch the page offers to skip, or skips itself when [auto]. */
+data class Skip(val startMs: Double, val endMs: Double, val auto: Boolean)
 
 object PlayerProtocol {
     private val modes = mapOf(
@@ -218,12 +223,20 @@ object PlayerProtocol {
         )
     }
 
+    fun skips(message: JsonObject) = (message["segments"] as? JsonArray).orEmpty().mapNotNull { segment ->
+        val range = segment as? JsonObject ?: return@mapNotNull null
+        val start = range.number("startMs") ?: return@mapNotNull null
+        val end = range.number("endMs") ?: return@mapNotNull null
+        Skip(start, end, range.flag("auto") == true).takeIf { end > start }
+    }
+
     fun settings(message: JsonObject) = PlayerSettings(
         hardwareDecoding = message.flag("hardwareDecoding") != false,
         audioChannels = message.text("audioChannels") ?: "auto",
         passthrough = (message["passthrough"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }.orEmpty(),
         passthroughAuto = message.flag("passthroughAuto") == true,
         audioDelayMs = message.number("audioDelayMs") ?: 0.0,
+        cacheMb = message.number("cacheMb")?.toInt() ?: 0,
     )
 
     fun state(state: PlayerState) = buildJsonObject {

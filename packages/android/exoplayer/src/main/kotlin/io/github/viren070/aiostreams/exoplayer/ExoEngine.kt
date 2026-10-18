@@ -21,6 +21,7 @@ import androidx.media3.common.ParserException
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
+import androidx.media3.common.Timeline
 import androidx.media3.common.Tracks
 import androidx.media3.common.VideoSize
 import androidx.media3.common.text.Cue
@@ -46,6 +47,7 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.UnrecognizedInputFormatException
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.video.VideoFrameMetadataListener
+import androidx.media3.extractor.SeekMap
 import androidx.media3.extractor.metadata.Chapter
 import io.github.viren070.aiostreams.mpv.MpvEngine
 import io.github.viren070.aiostreams.playback.Change
@@ -57,6 +59,7 @@ import io.github.viren070.aiostreams.playback.PlayerChapter
 import io.github.viren070.aiostreams.playback.PlayerSettings
 import io.github.viren070.aiostreams.playback.PlayerState
 import io.github.viren070.aiostreams.playback.PlayerTrack
+import io.github.viren070.aiostreams.playback.Skip
 import io.github.viren070.aiostreams.playback.Sound
 import io.github.viren070.aiostreams.playback.Style
 import java.util.concurrent.ConcurrentHashMap
@@ -82,7 +85,9 @@ class ExoEngine(private val context: Context) :
     private val main = Handler(Looper.getMainLooper())
     private val loader = Executors.newSingleThreadExecutor { Thread(it, "exo-loader") }
     private val http = DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true)
-    private val data = DefaultDataSource.Factory(context, http)
+    private val link = DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true).setReadTimeoutMs(0)
+    private val cache = StreamCache(context, http, link)
+    private val data = DefaultDataSource.Factory(context, cache.factory)
     private val ass = AssSurface(context) { MpvEngine.fallbackFont(context) }
     private val player: ExoPlayer
     private val tracks = ExoTracks()
@@ -109,6 +114,12 @@ class ExoEngine(private val context: Context) :
     private var volume = 100.0
     private var muted = false
     private val externals = mutableListOf<ExternalSubtitle>()
+    private var skips: List<Skip> = emptyList()
+    private var seekMap: SeekMap? = null
+    private var fonts: AttachedFonts? = null
+
+    @Volatile
+    private var shown = false
     private val texts = TextTracks()
     private var shownCues: List<Cue> = emptyList()
 
@@ -157,6 +168,19 @@ class ExoEngine(private val context: Context) :
             sink = { SubtitleSink(ass.sink(), texts.sink()) },
             route = { dolbyVisionRoute(it, caps, useDolbyVision) },
             onRoute = { codecs, route -> dolbyVision = codecs to route },
+            onSeekMap = { map ->
+                main.post {
+                    seekMap = map
+                    updateSkips()
+                }
+            },
+            events = object : MatroskaEvents {
+                override fun skipping(uri: Uri, position: Long, length: Long) = cache.skipping(uri, position, length)
+
+                override fun attachments(uri: Uri, position: Long, length: Long?) {
+                    main.post { loadFonts(uri, position, length) }
+                }
+            },
         )
         val sources = DefaultMediaSourceFactory(data, extractors)
         val renderers = object : DefaultRenderersFactory(context) {
@@ -202,6 +226,7 @@ class ExoEngine(private val context: Context) :
             // The app keeps audio focus and pauses for noise itself.
             .setAudioAttributes(audio, false)
             .setHandleAudioBecomingNoisy(false)
+            .setLoadControl(BufferControl(cache))
             .build()
         player.addListener(this)
         player.addAnalyticsListener(this)
@@ -241,6 +266,8 @@ class ExoEngine(private val context: Context) :
         url = null
         player.stop()
         player.clearMediaItems()
+        cache.play(null)
+        closeFonts()
         clearExternals()
         listener?.onEnded("stop", null, null)
         state(PlayerState(idle = true))
@@ -267,10 +294,18 @@ class ExoEngine(private val context: Context) :
         }
     }
 
-    override fun seek(positionMs: Double) = post { seekTo(positionMs.toLong(), SeekParameters.EXACT) }
+    override fun seek(positionMs: Double, snapMs: Double) = post {
+        val snapUs = (snapMs * 1000).toLong()
+        seekTo(positionMs.toLong(), if (snapUs > 0) SeekParameters(snapUs, snapUs) else SeekParameters.EXACT)
+    }
 
     override fun addSubtitle(url: String, title: String?, language: String?) = post {
         addSubtitle(url, "select", title, language)
+    }
+
+    override fun setSkips(skips: List<Skip>) = post {
+        this.skips = skips
+        updateSkips()
     }
 
     override fun setStyle(style: Style) = post {
@@ -287,6 +322,7 @@ class ExoEngine(private val context: Context) :
         updateEncoding()
         output.delayUs = (settings.audioDelayMs * 1000).toLong()
         levels.maxChannels = CHANNELS[settings.audioChannels] ?: 0
+        cache.limitMb = settings.cacheMb
     }
 
     override fun property(name: String): String? = if (name == "hwdec-current") decoders["video"] else null
@@ -336,12 +372,15 @@ class ExoEngine(private val context: Context) :
                 put("droppedToKeyframe", counters.droppedToKeyframeCount)
             }
             for ((key, value) in ass.stats()) put(key, value)
+            for ((key, value) in cache.stats()) put(key, value)
         }
     }
 
     override fun release() {
         main.post {
             player.release()
+            cache.release()
+            closeFonts()
             ass.release()
             loader.shutdown()
         }
@@ -350,7 +389,9 @@ class ExoEngine(private val context: Context) :
     private fun open(request: LoadRequest) {
         if (this.url != null) listener?.onEnded("stop", null, null)
         http.setDefaultRequestProperties(request.headers)
+        link.setDefaultRequestProperties(request.headers)
         url = request.url
+        cache.play(request.url)
         options = TrackOptions(request)
         caps = MediaCaps.read(context)
         dolbyVision = null
@@ -359,6 +400,10 @@ class ExoEngine(private val context: Context) :
         chosen = false
         restarting = true
         clearExternals()
+        closeFonts()
+        shown = false
+        skips = emptyList()
+        seekMap = null
         ass.reset()
         texts.reset()
         readBack = if (options.none) null else Extractors.ANY_TRACK
@@ -385,6 +430,34 @@ class ExoEngine(private val context: Context) :
         restarting = true
         state(PlayerState(seeking = true))
         reportPosition()
+    }
+
+    /** Automatic skips are held from a little past their start, as the page skips once playback is in them. */
+    private fun updateSkips() {
+        val map = seekMap?.takeIf { it.isSeekable } ?: return cache.setSkips(emptyList(), emptyList())
+        fun at(ms: Double, after: Boolean) = map.getSeekPoints((ms * 1000).toLong()).let { if (after) it.second else it.first }.position
+        val (auto, offered) = skips.partition { it.auto }
+        cache.setSkips(
+            held = auto.map { at(it.startMs + SKIP_REACTION_MS, after = true) until at(it.endMs, after = false) }.filterNot { it.isEmpty() },
+            landings = offered.map { at(it.endMs, after = false) until at(it.endMs + LANDING_MS, after = true) }.filterNot { it.isEmpty() },
+        )
+    }
+
+    private fun loadFonts(uri: Uri, position: Long, length: Long?) {
+        if (fonts != null || uri.toString() != url) return
+        fonts = AttachedFonts(DefaultDataSource.Factory(context, http), uri, position, length, ass.sink(), ::fontsMayLoad)
+            .also { it.start() }
+    }
+
+    private fun closeFonts() {
+        fonts?.close()
+        fonts = null
+    }
+
+    private fun fontsMayLoad(bytes: Long) = bytes <= SMALL_FONTS_BYTES || shown && (!cache.caching || cache.canSpare(bytes))
+
+    override fun onRenderedFirstFrame() {
+        shown = true
     }
 
     /** Past full, the sound processor raises the sound further. */
@@ -600,6 +673,11 @@ class ExoEngine(private val context: Context) :
         reportPosition()
     }
 
+    // Before the first frame, so the start rule has the file's bitrate.
+    override fun onTimelineChanged(timeline: Timeline, reason: Int) {
+        player.duration.takeIf { it != C.TIME_UNSET }?.let { cache.setDurationUs(it * 1000) }
+    }
+
     override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
         state(PlayerState(paused = !playWhenReady))
         updatePolling()
@@ -723,6 +801,8 @@ class ExoEngine(private val context: Context) :
 
     private fun reportPosition() {
         if (url == null) return
+        val stalled = loaded && !seeking && player.playWhenReady && player.playbackState == Player.STATE_BUFFERING
+        cache.setPlayer(player.totalBufferedDuration * 1000, player.isPlaying && !seeking || stalled)
         state(
             PlayerState(
                 positionMs = player.currentPosition.toDouble(),
@@ -754,6 +834,9 @@ class ExoEngine(private val context: Context) :
         const val POLL_MS = 250L
         const val FRAMES_STOPPED_NS = 100_000_000L
         const val VOLUME_MAX = 130.0
+        const val SMALL_FONTS_BYTES = 8L shl 20
+        const val LANDING_MS = 10_000.0
+        const val SKIP_REACTION_MS = 2_000.0
 
         /** The layouts the page offers. */
         val CHANNELS = mapOf("stereo" to 2, "5.1" to 6, "7.1" to 8)

@@ -8,6 +8,7 @@ import android.util.Log
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.View
+import io.github.viren070.aiostreams.playback.CacheBudget
 import io.github.viren070.aiostreams.playback.Change
 import io.github.viren070.aiostreams.playback.Engine
 import io.github.viren070.aiostreams.playback.Fit
@@ -168,7 +169,8 @@ class MpvEngine(private val context: Context) : Engine {
         change.subtitleDelayMs?.let { set("sub-delay", seconds(it)) }
     }
 
-    override fun seek(positionMs: Double) = command("seek", seconds(positionMs), "absolute")
+    // mpv's keyframe seeks aren't bounded, so it seeks exactly.
+    override fun seek(positionMs: Double, snapMs: Double) = command("seek", seconds(positionMs), "absolute")
 
     override fun addSubtitle(url: String, title: String?, language: String?) =
         command("sub-add", url, "select", title.orEmpty(), language.orEmpty())
@@ -206,6 +208,12 @@ class MpvEngine(private val context: Context) : Engine {
         set("audio-channels", settings.audioChannels.takeIf { it in setOf("stereo", "5.1", "7.1") } ?: "auto-safe")
         set("audio-spdif", settings.passthrough.joinToString(","))
         set("audio-delay", seconds(settings.audioDelayMs))
+        // The user's mpv.conf may size it instead.
+        if (configFile(context).takeIf { it.exists() }?.readText()?.contains("demuxer-max-bytes") != true) {
+            val budget = CacheBudget.bytes(context, settings.cacheMb)
+            set("demuxer-max-bytes", (budget - budget / 4).toString())
+            set("demuxer-max-back-bytes", (budget / 4).toString())
+        }
     }
 
     override fun showStatsOverlay(page: String?) = calls.execute {

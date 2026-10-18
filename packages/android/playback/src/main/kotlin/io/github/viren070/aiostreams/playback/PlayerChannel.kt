@@ -102,7 +102,8 @@ class PlayerChannel(
                 engine.stop()
             }
             "player-set" -> PlayerProtocol.change(message).onSuccess(::change).onFailure(::reject)
-            "player-seek" -> message.number("positionMs")?.let(engine::seek)
+            "player-seek" -> message.number("positionMs")?.let { engine.seek(it, message.number("snapMs") ?: 0.0) }
+            "player-skips" -> engine.setSkips(PlayerProtocol.skips(message))
             "player-subtitle-add" -> {
                 val url = message.text("url").orEmpty()
                 if (PlayerProtocol.isWebUrl(url) || isLocal(url)) {

@@ -167,6 +167,14 @@ JNIEXPORT void JNICALL METHOD(nativeClearFonts)(JNIEnv *env, jclass clazz, jlong
     start_renderer(surface);
 }
 
+// libass keeps the font it picked for each name, so fonts added later need a new renderer.
+JNIEXPORT void JNICALL METHOD(nativeReloadFonts)(JNIEnv *env, jclass clazz, jlong handle) {
+    Surface *surface = (Surface *) handle;
+    surface->images = NULL;
+    libass.renderer_done(surface->renderer);
+    start_renderer(surface);
+}
+
 // A track of the file's, from its header; Matroska sends its lines one by one.
 JNIEXPORT jlong JNICALL METHOD(nativeNewTrack)(JNIEnv *env, jclass clazz, jlong handle, jbyteArray header) {
     ASS_Track *track = libass.new_track(((Surface *) handle)->library);

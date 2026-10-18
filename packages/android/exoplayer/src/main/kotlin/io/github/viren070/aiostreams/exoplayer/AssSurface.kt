@@ -119,6 +119,12 @@ internal class AssSurface(context: Context, font: () -> File) : SurfaceHolder.Ca
             override fun line(track: String, startMs: Long, durationMs: Long, line: ByteArray) = queue(opened) {
                 tracks[track]?.let { nativeAddLine(it, line, startMs, durationMs) }
             }
+
+            override fun fontsLoaded() = queue(opened) {
+                nativeReloadFonts(native)
+                applyLayout()
+                redraw()
+            }
         }
     }
 
@@ -311,6 +317,9 @@ internal class AssSurface(context: Context, font: () -> File) : SurfaceHolder.Ca
 
         @JvmStatic
         external fun nativeClearFonts(handle: Long)
+
+        @JvmStatic
+        external fun nativeReloadFonts(handle: Long)
 
         @JvmStatic
         external fun nativeNewTrack(handle: Long, header: ByteArray): Long

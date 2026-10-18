@@ -1,5 +1,6 @@
 package io.github.viren070.aiostreams.exoplayer
 
+import android.net.Uri
 import androidx.annotation.OptIn
 import androidx.media3.common.C
 import androidx.media3.common.DataReader
@@ -24,17 +25,29 @@ import java.io.EOFException
 import java.util.zip.DataFormatException
 import java.util.zip.Inflater
 
+/** Skips the cache serves without fetching. */
+private const val LARGE_SKIP = 1 shl 20
+
+internal interface MatroskaEvents {
+    fun skipping(uri: Uri, position: Long, length: Long)
+
+    /** Where the attachments are: their element, or their content and its length. */
+    fun attachments(uri: Uri, position: Long, length: Long?)
+}
+
 /**
- * Matroska, read by Media3, with its attached fonts and subtitles taken on the
- * way, before Media3 parses them and drops their timing. The player gets no
- * cues for them: the engine times them itself, so its delay applies to them.
+ * Matroska, read by Media3, with its subtitles taken on the way, before Media3
+ * parses them and drops their timing. The player gets no cues for them: the
+ * engine times them itself, so its delay applies to them.
  */
 @OptIn(UnstableApi::class)
 internal class MatroskaReader(
     private val sink: SubtitleSink,
     private val readBack: () -> String?,
+    private val uri: Uri?,
+    private val events: MatroskaEvents,
 ) : Extractor {
-    private val matroska = Matroska(sink.ass)
+    private val matroska = Matroska { position, length -> uri?.let { events.attachments(it, position, length) } }
     private var transcoder: SubtitleTranscodingExtractorOutput? = null
 
     @Volatile
@@ -53,7 +66,7 @@ internal class MatroskaReader(
         matroska.init(Subtitles(FrameRates(seeking, matroska::frameDurationNs), sink))
     }
 
-    override fun read(input: ExtractorInput, seekPosition: PositionHolder) = matroska.read(input, seekPosition)
+    override fun read(input: ExtractorInput, seekPosition: PositionHolder) = matroska.read(Skips(input), seekPosition)
 
     override fun seek(position: Long, timeUs: Long) {
         transcoder?.resetSubtitleParsers()
@@ -66,6 +79,23 @@ internal class MatroskaReader(
     override fun release() = matroska.release()
 
     override fun getUnderlyingImplementation(): Extractor = matroska
+
+    private inner class Skips(private val input: ExtractorInput) : ExtractorInput by input {
+        override fun skipFully(length: Int) {
+            skipping(length)
+            input.skipFully(length)
+        }
+
+        override fun skipFully(length: Int, allowEndOfInput: Boolean): Boolean {
+            skipping(length)
+            return input.skipFully(length, allowEndOfInput)
+        }
+
+        private fun skipping(length: Int) {
+            matroska.skipping(input.position, length.toLong())
+            if (length >= LARGE_SKIP) uri?.let { events.skipping(it, input.position, length.toLong()) }
+        }
+    }
 
     /** Media3's seek map, starting each seek early enough to read the subtitle lines already showing at its target. */
     private inner class ReadBack(private val map: SeekMap) : SeekMap by map {
@@ -80,17 +110,19 @@ internal class MatroskaReader(
 }
 
 /**
- * Matroska's extractor, which also reads the fonts the file carries for its
- * subtitles and where its index puts their lines, and inflates the
+ * Matroska's extractor, which also reads where its index puts the subtitle
+ * lines, skips the attachments for [attachments] to read, and inflates the
  * zlib-compressed tracks Media3 rejects.
  */
 @OptIn(UnstableApi::class)
-private class Matroska(private val sink: AssSink) :
+private class Matroska(private val attachments: (position: Long, length: Long?) -> Unit) :
     MatroskaExtractor(SubtitleParser.Factory.UNSUPPORTED, FLAG_EMIT_RAW_SUBTITLE_DATA) {
     val index = SubtitleIndex()
-    private var name: String? = null
-    private var mime: String? = null
     private var segment = 0L
+    private var seekId = 0L
+    private var seekPosition = -1L
+    private var attachmentsFound = false
+    private var attachmentsNext = false
     private var timecodeScale = 1_000_000L
     private var cueTime = -1L
     private var cueTrack = -1L
@@ -136,23 +168,30 @@ private class Matroska(private val sink: AssSink) :
     }
 
     override fun getElementType(id: Int) = when (id) {
-        ATTACHMENTS, ATTACHED_FILE -> EbmlProcessor.ELEMENT_TYPE_MASTER
-        FILE_NAME, FILE_MIME_TYPE -> EbmlProcessor.ELEMENT_TYPE_STRING
-        FILE_DATA -> EbmlProcessor.ELEMENT_TYPE_BINARY
+        ATTACHMENTS -> EbmlProcessor.ELEMENT_TYPE_UNKNOWN.also { attachmentsNext = true }
         CUE_DURATION -> EbmlProcessor.ELEMENT_TYPE_UNSIGNED_INT
         else -> super.getElementType(id)
+    }
+
+    /** Reports the attachments' content as the reader skips it. */
+    fun skipping(position: Long, length: Long) {
+        if (!attachmentsNext) return
+        attachmentsNext = false
+        if (!attachmentsFound) {
+            attachmentsFound = true
+            attachments(position, length)
+        }
     }
 
     override fun isLevel1Element(id: Int) = id == ATTACHMENTS || super.isLevel1Element(id)
 
     override fun startMasterElement(id: Int, contentPosition: Long, contentSize: Long) {
         when (id) {
-            ATTACHED_FILE -> {
-                name = null
-                mime = null
-                return
-            }
             SEGMENT -> segment = contentPosition
+            SEEK -> {
+                seekId = 0
+                seekPosition = -1
+            }
             TRACK_ENTRY -> {
                 entryNumber = -1
                 entryZlib = false
@@ -178,6 +217,10 @@ private class Matroska(private val sink: AssSink) :
             }
             // Before Media3 sends the seek map that reads it.
             CUES -> index.finish()
+            SEEK -> if (seekId == ATTACHMENTS.toLong() && seekPosition >= 0 && !attachmentsFound) {
+                attachmentsFound = true
+                attachments(segment + seekPosition, null)
+            }
             CONTENT_COMPRESSION -> if (algorithm == ZLIB) entryZlib = true
             TRACK_ENTRY -> if (entryNumber >= 0) {
                 if (entryZlib) zlibTracks += entryNumber
@@ -201,20 +244,17 @@ private class Matroska(private val sink: AssSink) :
             CUE_TRACK -> cueTrack = value
             CUE_CLUSTER_POSITION -> cuePosition = value
             CUE_DURATION -> return run { cueDuration = value }
+            SEEK_POSITION -> seekPosition = value
         }
         super.integerElement(id, value)
     }
 
-    override fun stringElement(id: Int, value: String) {
-        when (id) {
-            FILE_NAME -> name = value
-            FILE_MIME_TYPE -> mime = value
-            else -> super.stringElement(id, value)
-        }
-    }
-
     override fun binaryElement(id: Int, contentSize: Int, input: ExtractorInput) {
-        if (id == FILE_DATA) return font(contentSize, input)
+        if (id == SEEK_ID && contentSize in 1..4) {
+            input.peekFully(varint, 0, contentSize)
+            input.resetPeekPosition()
+            seekId = (0 until contentSize).fold(0L) { value, i -> (value shl 8) or (varint[i].toLong() and 0xFF) }
+        }
         // zlib takes no settings; Media3 would take them as stripped header bytes.
         if (id == CONTENT_COMPRESSION_SETTINGS && entryZlib) return input.skipFully(contentSize)
         if (id != SIMPLE_BLOCK && id != BLOCK) return super.binaryElement(id, contentSize, input)
@@ -285,12 +325,6 @@ private class Matroska(private val sink: AssSink) :
         }
     }
 
-    private fun font(size: Int, input: ExtractorInput) {
-        val name = name
-        if (name == null || !isFont(name, mime)) return input.skipFully(size)
-        sink.font(name, ByteArray(size).also { input.readFully(it, 0, size) })
-    }
-
     /** The track number the block about to be read starts with. */
     private fun trackOf(input: ExtractorInput): Long? {
         input.peekFully(varint, 0, 1)
@@ -335,14 +369,9 @@ private class Matroska(private val sink: AssSink) :
         const val CUE_CLUSTER_POSITION = 0xF1
         const val CUE_DURATION = 0xB2
         const val ATTACHMENTS = 0x1941A469
-        const val ATTACHED_FILE = 0x61A7
-        const val FILE_NAME = 0x466E
-        const val FILE_MIME_TYPE = 0x4660
-        const val FILE_DATA = 0x465C
-
-        fun isFont(name: String, mime: String?) =
-            mime?.let { "font" in it || "truetype" in it || "opentype" in it } == true ||
-                name.substringAfterLast('.').lowercase() in setOf("ttf", "otf", "ttc", "woff", "woff2")
+        const val SEEK = 0x4DBB
+        const val SEEK_ID = 0x53AB
+        const val SEEK_POSITION = 0x53AC
     }
 }
 
