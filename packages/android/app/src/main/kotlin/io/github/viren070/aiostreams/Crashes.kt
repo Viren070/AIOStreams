@@ -109,11 +109,23 @@ object Crashes {
                 trace?.let { summary += mainThread(it) }
                 trace?.let { details += it }
             }
-            ApplicationExitInfo.REASON_LOW_MEMORY -> summary += "Closed by Android to free memory"
-            else -> summary += "Closed by Android: ${exit.description ?: "reason ${exit.reason}"}"
+            ApplicationExitInfo.REASON_LOW_MEMORY -> summary += "Closed by Android to free memory" + described(exit)
+            else -> {
+                val why = when (exit.reason) {
+                    ApplicationExitInfo.REASON_SIGNALED -> "signal ${exit.status}"
+                    ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE -> "excessive resource use"
+                    ApplicationExitInfo.REASON_INITIALIZATION_FAILURE -> "failed to start"
+                    else -> "reason ${exit.reason}"
+                }
+                summary += "Closed by Android: $why" + described(exit)
+            }
         }
         return assemble(context, exit.timestamp, uptimeS, exit.rss, summary, details, log ?: logOf(exit.pid))
     }
+
+    /** Android's note on why it ended the app, such as "oom", when it left one. */
+    @RequiresApi(Build.VERSION_CODES.R)
+    private fun described(exit: ApplicationExitInfo) = exit.description?.takeIf { it.isNotBlank() }?.let { " ($it)" }.orEmpty()
 
     private fun report(context: Context, java: JavaCrash): CrashReport {
         val summary = mutableListOf<String>()
