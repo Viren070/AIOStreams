@@ -100,7 +100,11 @@ export class KnabenAddon extends BaseDebridAddon<KnabenAddonConfig> {
     let allResults = await search(categories);
     // Knaben files some movies under TV (wrestling PPVs, for one), so look
     // there when a movie search finds nothing.
-    if (allResults.length === 0 && !categories.includes(KnabenCategory.TV)) {
+    if (
+      parsedId.mediaType === 'movie' &&
+      allResults.length === 0 &&
+      !categories.includes(KnabenCategory.TV)
+    ) {
       logger.info(`No knaben results, retrying in the TV category`, {
         queries,
       });
