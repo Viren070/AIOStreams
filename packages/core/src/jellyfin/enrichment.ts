@@ -212,13 +212,17 @@ function detailed(
     const type = name ? typeOf(entry) : undefined;
     if (!name || !type) return [];
     const role = str(entry.character);
+    const tmdb = str(entry.tmdbId);
+    const tvdb = str(entry.tvdbId);
     return [
       {
         name,
         type,
         role: role && role !== name ? role : undefined,
         photo: str(entry.photo),
-        id: str(entry.id),
+        id:
+          str(entry.id) ??
+          (tmdb ? `tmdb:${tmdb}` : tvdb ? `tvdb:${tvdb}` : undefined),
       },
     ];
   });
