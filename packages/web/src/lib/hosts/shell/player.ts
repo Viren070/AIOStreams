@@ -154,6 +154,15 @@ function exoStatsText(
   const buffered = num('bufferedMs');
   if (buffered !== undefined)
     lines.push(`Buffered   ${(buffered / 1000).toFixed(1)} s`);
+  const ahead = num('cacheAhead');
+  if (ahead !== undefined) {
+    const aheadMs = num('cacheAheadMs');
+    const speed = num('linkSpeed') ?? 0;
+    const ratio = num('linkRatio');
+    lines.push(
+      `Cache      ${aheadMs !== undefined ? `${Math.round(aheadMs / 1000)} s` : formatBytes(ahead)} ahead · ${formatBytes(num('cacheBytes'))} of ${formatBytes(num('cacheBudget'))}${speed > 0 ? ` · link ${formatBytes(speed)}/s${ratio ? ` (${ratio.toFixed(1)}× the file)` : ''}` : ''}`
+    );
+  }
   const shown = num('renderedFrames');
   if (shown !== undefined)
     lines.push(
@@ -571,6 +580,7 @@ export function playerSettings() {
       ? {
           frameRate: video.frameRate.read(),
           tunneling: video.tunneling.read(),
+          cacheMb: Number(settings.player.cacheSize.read()) || 0,
         }
       : { audioDevice: audio.device.read() }),
   };

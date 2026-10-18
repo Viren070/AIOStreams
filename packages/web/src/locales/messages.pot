@@ -714,6 +714,10 @@ msgstr ""
 msgid "Cache"
 msgstr ""
 
+#: src/pages/settings/playback.tsx
+msgid "Cache size"
+msgstr ""
+
 #: src/components/layout.tsx
 #: src/pages/calendar.tsx
 #: src/pages/home.tsx
@@ -1710,6 +1714,10 @@ msgstr ""
 
 #: src/pages/settings/interface.tsx
 msgid "How large cards are in a grid."
+msgstr ""
+
+#: src/pages/settings/playback.tsx
+msgid "How much of the video the player holds in memory: ahead, to ride out a slow connection, and behind, to seek back at once. Automatic sizes it from this device's memory."
 msgstr ""
 
 #: src/pages/settings/playback.tsx

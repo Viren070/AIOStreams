@@ -5,6 +5,7 @@ import { Select } from '@aiostreams/ui/select';
 import { Switch } from '@aiostreams/ui/switch';
 import { TextInput } from '@aiostreams/ui/text-input';
 import { Button } from '@aiostreams/ui/button';
+import { formatBytes } from '@aiostreams/ui/core/format';
 import { currentHost } from '../../lib/hosts';
 import {
   shellHost,
@@ -29,6 +30,8 @@ import {
   VOLUME_STEPS,
   SEGMENT_ACTIONS,
   SEGMENT_TYPES,
+  CACHE_SIZES,
+  type CacheSize,
   type PlayerEngine,
   type NextPrompt,
   type SegmentAction,
@@ -392,6 +395,12 @@ const engineHelp = (engine: PlayerEngine) =>
     exoplayer: t`Android's own player, which uses less battery: the screen shows the video as the device decodes it, at the video's frame rate. Plays video the device can decode. Styled subtitles look as they do in mpv.`,
   })[engine];
 
+const cacheOptions = () =>
+  CACHE_SIZES.map((size) => ({
+    value: size,
+    label: size === 'auto' ? t`Automatic` : formatBytes(Number(size) * 1e6),
+  }));
+
 // What the player link takes, written the same in every language.
 const LINK_TOKENS = {
   url: '{url}',
@@ -409,6 +418,7 @@ function PlayerCard() {
   const [player, setPlayer] = useSetting(settings.player.choice);
   const [link, setLink] = useSetting(settings.player.link);
   const [engine, setEngine] = useSetting(settings.player.engine);
+  const [cacheSize, setCacheSize] = useSetting(settings.player.cacheSize);
   const found = useExternalPlayers();
   const launched = LAUNCHED_PLAYERS.find((p) => p.id === player);
   const preset = linkPreset(player);
@@ -473,13 +483,22 @@ function PlayerCard() {
         !launched &&
         !preset &&
         player !== CUSTOM_LINK && (
-          <Select
-            label={t`Engine`}
-            help={engineHelp(engine)}
-            options={engineOptions()}
-            value={engine}
-            onValueChange={(v) => setEngine(v as PlayerEngine)}
-          />
+          <>
+            <Select
+              label={t`Engine`}
+              help={engineHelp(engine)}
+              options={engineOptions()}
+              value={engine}
+              onValueChange={(v) => setEngine(v as PlayerEngine)}
+            />
+            <Select
+              label={t`Cache size`}
+              help={t`How much of the video the player holds in memory: ahead, to ride out a slow connection, and behind, to seek back at once. Automatic sizes it from this device's memory.`}
+              options={cacheOptions()}
+              value={cacheSize}
+              onValueChange={(v) => setCacheSize(v as CacheSize)}
+            />
+          </>
         )}
       {launched && (
         <SettingsRow

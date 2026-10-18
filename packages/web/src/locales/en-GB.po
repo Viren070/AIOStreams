@@ -715,6 +715,10 @@ msgstr "Buttons, progress bars and highlights."
 msgid "Cache"
 msgstr "Cache"
 
+#: src/pages/settings/playback.tsx
+msgid "Cache size"
+msgstr "Cache size"
+
 #: src/components/layout.tsx
 #: src/pages/calendar.tsx
 #: src/pages/home.tsx
@@ -1712,6 +1716,10 @@ msgstr "How fast playback runs while you press and hold the video, or hold Space
 #: src/pages/settings/interface.tsx
 msgid "How large cards are in a grid."
 msgstr "How large cards are in a grid."
+
+#: src/pages/settings/playback.tsx
+msgid "How much of the video the player holds in memory: ahead, to ride out a slow connection, and behind, to seek back at once. Automatic sizes it from this device's memory."
+msgstr "How much of the video the player holds in memory: ahead, to ride out a slow connection, and behind, to seek back at once. Automatic sizes it from this device's memory."
 
 #: src/pages/settings/playback.tsx
 msgid "How much the volume keys and the scroll wheel change the volume."

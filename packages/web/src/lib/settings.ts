@@ -483,6 +483,9 @@ export type AudioChannels = (typeof AUDIO_CHANNELS)[number];
 /** What plays versions inside the Android app. */
 export const PLAYER_ENGINES = ['auto', 'mpv', 'exoplayer'] as const;
 export type PlayerEngine = (typeof PLAYER_ENGINES)[number];
+/** Megabytes, or `auto` to size it from the device's memory. */
+export const CACHE_SIZES = ['auto', '128', '256', '512', '1000'] as const;
+export type CacheSize = (typeof CACHE_SIZES)[number];
 
 /** `auto` asks the output what it decodes, which only the Android app can. */
 export const PASSTHROUGH = ['off', 'auto', 'always'] as const;
@@ -805,6 +808,11 @@ export const settings = {
       'auto',
       PLAYER_ENGINES,
       ['aiostreams-android-engine']
+    ),
+    cacheSize: device<CacheSize>(
+      'aiostreams-web-player-cache-size',
+      'auto',
+      CACHE_SIZES
     ),
   },
   video: {
