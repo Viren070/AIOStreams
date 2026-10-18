@@ -22,7 +22,7 @@ export function descendantsCte(
     )`;
 }
 
-/** Bounds `ensure`'s memory; clearing only costs one extra write per config. */
+/** Bounds `ensure`'s memory; a forgotten config only costs one extra write. */
 const MAX_KNOWN = 10_000;
 
 export class ConfigParentRepository {
@@ -42,7 +42,10 @@ export class ConfigParentRepository {
           VALUES (${childUuid}, ${parentUuid})
           ON CONFLICT(child_uuid) DO NOTHING`
     );
-    if (this.known.size >= MAX_KNOWN) this.known.clear();
+    if (this.known.size >= MAX_KNOWN) {
+      // Sets iterate in insertion order, so this forgets the oldest entry.
+      this.known.delete(this.known.values().next().value!);
+    }
     this.known.add(childUuid);
   }
 
