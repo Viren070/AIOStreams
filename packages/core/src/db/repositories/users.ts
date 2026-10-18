@@ -1,4 +1,5 @@
-﻿import { UserData, isPersonaLockHash } from '../schemas.js';
+﻿import { EventEmitter } from 'node:events';
+import { UserData, isPersonaLockHash } from '../schemas.js';
 import { getDb } from '../db.js';
 import { sql } from '../sql.js';
 import { config as appConfig } from '../../config/index.js';
@@ -19,6 +20,7 @@ import {
   mergeConfigs,
   assertConfigAccessKey,
 } from '../../utils/index.js';
+import { ConfigParentRepository } from './config-parents.js';
 import { ConfigProfileRepository } from './config-profiles.js';
 import { ConfigSessionRepository } from './config-sessions.js';
 import { JellyfinAddressRepository } from './jellyfin-addresses.js';
@@ -74,6 +76,13 @@ export function isTrustedUuid(uuid: string): boolean {
   }
   return trustedUuidPatterns.some((pattern) => pattern.test(uuid));
 }
+
+/**
+ * Emits `saved` with the UUID after a configuration's update has committed.
+ * Single-process, like usenetLibraryBus: a listener hears only the saves made
+ * by this process.
+ */
+export const userConfigBus: EventEmitter = new EventEmitter();
 
 export class UserRepository {
   static async createUser(
@@ -150,6 +159,7 @@ export class UserRepository {
           sql`INSERT INTO users (uuid, password_hash, config, config_salt)
               VALUES (${uuid}, ${hashedPassword}, ${encryptedConfig}, ${configSalt})`
         );
+        await ConfigParentRepository.set(tx, uuid, config.parentConfig?.uuid);
         await JellyfinAddressRepository.syncForUuid(
           tx,
           uuid,
@@ -200,6 +210,16 @@ export class UserRepository {
   ): Promise<UserData | null> {
     try {
       let config = await this.loadRawUser(uuid, password);
+
+      // Only parent change pushes read the index, so skip the write without them.
+      if (config.parentConfig?.uuid && appConfig.linkedAccounts.enabled) {
+        ConfigParentRepository.ensure(uuid, config.parentConfig.uuid).catch(
+          (e) =>
+            logger.warn(
+              `Could not index the parent config of user ${uuid}: ${e instanceof Error ? e.message : String(e)}`
+            )
+        );
+      }
 
       if (config.parentConfig?.uuid) {
         try {
@@ -441,6 +461,7 @@ export class UserRepository {
         await tx.exec(
           sql`UPDATE users SET config = ${encryptedConfig}, updated_at = CURRENT_TIMESTAMP WHERE uuid = ${uuid}`
         );
+        await ConfigParentRepository.set(tx, uuid, config.parentConfig?.uuid);
         await JellyfinAddressRepository.syncForUuid(
           tx,
           uuid,
@@ -454,6 +475,7 @@ export class UserRepository {
       logger.error(`Failed to update user ${uuid}: ${msg}`);
       throw dbError(error);
     }
+    userConfigBus.emit('saved', uuid);
   }
 
   static async getUserCount(): Promise<number> {
