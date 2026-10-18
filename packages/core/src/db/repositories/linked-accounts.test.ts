@@ -1,4 +1,4 @@
-import { after, before, describe, it } from 'node:test';
+import { after, before, beforeEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -7,16 +7,20 @@ import path from 'node:path';
 import '../../index.js';
 import { closeDb, getDb, initDb } from '../db.js';
 import { sql } from '../sql.js';
+import { ConfigParentRepository } from './config-parents.js';
 import { LinkedAccountRepository } from './linked-accounts.js';
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'linked-accounts-'));
 
-async function addLink(uuid: string, pushOnParentChange: boolean) {
+async function addUser(uuid: string, parent?: string) {
   await getDb().exec(
     sql`INSERT INTO users (uuid, password_hash, config, config_salt)
-        VALUES (${uuid}, 'hash', 'config', 'salt')
-        ON CONFLICT(uuid) DO NOTHING`
+        VALUES (${uuid}, 'hash', 'config', 'salt')`
   );
+  await getDb().tx((tx) => ConfigParentRepository.set(tx, uuid, parent));
+}
+
+async function addLink(uuid: string, pushOnParentChange: boolean) {
   const link = await LinkedAccountRepository.create({
     uuid,
     platform: 'aiomanager',
@@ -33,7 +37,7 @@ async function addLink(uuid: string, pushOnParentChange: boolean) {
   return link.id;
 }
 
-describe('LinkedAccountRepository.listPushOnParentChange', () => {
+describe('LinkedAccountRepository', () => {
   before(async () => {
     await initDb(`sqlite://${path.join(dir, 'test.db')}`);
   });
@@ -43,27 +47,49 @@ describe('LinkedAccountRepository.listPushOnParentChange', () => {
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
-  it('lists only the opted-in links of the given configurations', async () => {
+  beforeEach(async () => {
+    await getDb().exec(sql`DELETE FROM users`);
+  });
+
+  it('lists the opted-in links of descendants only', async () => {
+    await addUser('p');
+    await addUser('a', 'p');
+    await addUser('b', 'a');
+    await addUser('c');
+    await addLink('p', true);
     const a1 = await addLink('a', true);
     await addLink('a', false);
     const b1 = await addLink('b', true);
     await addLink('c', true);
 
-    const found = await LinkedAccountRepository.listPushOnParentChange([
-      'a',
-      'b',
-    ]);
-    assert.deepEqual(found, [
-      { uuid: 'a', id: a1 },
-      { uuid: 'b', id: b1 },
-    ]);
+    const found = await LinkedAccountRepository.listForParentChange('p', 5, 10);
+    assert.deepEqual(found.map((link) => link.id).sort(), [a1, b1].sort());
     assert.deepEqual(
-      await LinkedAccountRepository.listPushOnParentChange([]),
+      await LinkedAccountRepository.listForParentChange('c', 5, 10),
       []
     );
   });
 
+  it('lists the least recently pushed links first, up to the limit', async () => {
+    await addUser('p');
+    await addUser('a', 'p');
+    const first = await addLink('a', true);
+    const second = await addLink('a', true);
+    const third = await addLink('a', true);
+    await LinkedAccountRepository.recordPush('a', first, {
+      status: 'ok',
+      manifestHash: 'h',
+    });
+
+    const found = await LinkedAccountRepository.listForParentChange('p', 5, 2);
+    assert.deepEqual(
+      found.map((link) => link.id).sort(),
+      [second, third].sort()
+    );
+  });
+
   it('reports the flag, off for a new link', async () => {
+    await addUser('d');
     const id = await addLink('d', false);
     assert.equal(
       (await LinkedAccountRepository.get('d', id))?.pushOnParentChange,
