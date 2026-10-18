@@ -1,0 +1,64 @@
+---
+title: Similar Titles
+description: The similar catalog extra, which lists titles like a given one for a Jellyfin client's More Like This.
+---
+
+A catalog that declares the `similar` extra lists titles like the one it is given. Jellyfin clients
+show them as **More Like This**. Any addon can serve one, whoever serves the title itself.
+
+Without one, AIOStreams uses TMDB's recommendations when a TMDB key is set up, else the top of the
+title's first genre.
+
+## Declaring it
+
+```json
+"catalogs": [
+  {
+    "type": "movie",
+    "id": "similar",
+    "name": "More Like This",
+    "extra": [{ "name": "similar", "isRequired": true }],
+    "idPrefixes": ["tt", "tmdb:"]
+  }
+]
+```
+
+| Field        | Meaning                                                                                                                                       |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `type`       | The type of the titles it is asked about. Declare one catalog per type.                                                                       |
+| `extra`      | `similar`, required. A required extra with no `options` keeps the catalog out of Stremio's board and Discover, and out of Jellyfin libraries. |
+| `idPrefixes` | The ids you understand. Omit it to be sent the title's id as AIOStreams serves it.                                                            |
+
+## Requests
+
+```http
+GET {addonBase}/catalog/movie/similar/similar=tt0903747.json
+```
+
+```json
+{ "metas": [{ "id": "tt1475582", "type": "series", "name": "Sherlock", "poster": "https://…" }] }
+```
+
+Answer with catalog entries, best first; the first page is all that is read. Use ids this
+configuration can open, as for [collection](/reference/addon-protocol/collections) items.
+
+With `idPrefixes`, the id sent is the first of the title's known ids that matches one, in your
+order: its own, its meta's [`ids`](/reference/addon-protocol/metadata#ids), and AIOStreams' id
+mappings. A title with none that match is not sent to you.
+
+The catalogs asked are those of the title's type that require no other extra, in the
+configuration's addon order, until one answers with titles. An empty list passes the title on to
+the next, and then to the fallback.
+
+## Stremio
+
+Stremio never asks for a `similar` catalog by itself, but it opens one from a link. A meta link
+like this shows the same list in Stremio:
+
+```json
+{
+  "name": "More Like This",
+  "category": "Similar",
+  "url": "stremio:///discover/https%3A%2F%2Fexample.com%2Fmanifest.json/movie/similar?similar=tt0903747"
+}
+```

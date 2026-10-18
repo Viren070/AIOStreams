@@ -1,0 +1,74 @@
+---
+title: People
+description: Person metas, which give Jellyfin clients a person's page and filmography.
+---
+
+A person in a meta's [`people`](/reference/addon-protocol/metadata#people) can carry an `id`:
+
+```json
+{ "name": "Bryan Cranston", "role": "actor", "character": "Walter White", "id": "tmdb:17419" }
+```
+
+AIOStreams opens it as a meta of type `person`, from whichever addon serves that id, and Jellyfin
+clients show it as the person's page: their biography, photo and filmography.
+
+Without an addon serving the person, the page comes from TMDB when a TMDB key is set up. A
+`tmdb:` id is worth giving even if you serve no person metas: the TMDB page is then that person's,
+not whoever is best known by the same name.
+
+## Declaring them
+
+Add `person` to the types your `meta` resource serves, with the prefixes of the ids you give
+people:
+
+```json
+"resources": [
+  "catalog",
+  { "name": "meta", "types": ["movie", "series", "person"], "idPrefixes": ["tt", "tmdb:"] }
+]
+```
+
+```http
+GET {addonBase}/meta/person/tmdb:17419.json
+```
+
+```json
+{
+  "meta": {
+    "id": "tmdb:17419",
+    "type": "person",
+    "name": "Bryan Cranston",
+    "description": "Bryan Lee Cranston is an American actor…",
+    "poster": "https://…/portrait.jpg",
+    "birthday": "1956-03-07",
+    "birthPlace": "Hollywood, California, USA",
+    "ids": { "tmdb": "17419", "imdb": "nm0186505" },
+    "credits": [
+      { "id": "tt0903747", "type": "series", "name": "Breaking Bad", "poster": "https://…", "released": "2008-01-20" },
+      { "id": "tt3203606", "type": "movie", "name": "Trumbo", "poster": "https://…", "released": "2015-11-06" }
+    ]
+  }
+}
+```
+
+| Field         | Meaning                                                 |
+| ------------- | ------------------------------------------------------- |
+| `name`        | Required.                                               |
+| `description` | The biography.                                          |
+| `poster`      | A portrait.                                             |
+| `birthday`    | A date, `YYYY-MM-DD`.                                   |
+| `deathday`    | As above.                                               |
+| `birthPlace`  | A string.                                               |
+| `ids`         | [Provider ids](/reference/addon-protocol/metadata#ids). |
+| `credits`     | The person's [filmography](#credits).                   |
+
+### Credits
+
+Catalog entries as a catalog would return them, every one in a single list. `id` and `type` are
+required, and a credit is the same title it is anywhere else.
+
+Clients list a person's movies and shows apart, by `type`, and sort them by `released`, falling
+back to the year in `releaseInfo`. Any other order they ask for keeps yours, so put the best known
+first. A title is listed once, however many roles the person had in it.
+
+Leave out what isn't the person's work: talk shows they visited, thanks and archive footage.
