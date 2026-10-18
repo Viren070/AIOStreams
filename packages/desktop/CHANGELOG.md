@@ -1,5 +1,66 @@
 # Changelog
 
+## [0.16.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.15.0...desktop-v0.16.0) (2026-10-18)
+
+
+### Features
+
+* **desktop:** send a download file's headers with every request ([9149c28](https://github.com/Viren070/AIOStreams/commit/9149c289fb4da9471a62f4ac823ee4e013c40f90))
+* **desktop:** send a loadfile's headers as http-header-fields ([c1f365c](https://github.com/Viren070/AIOStreams/commit/c1f365c07bd0c01eb479862f4e90a37afa566d72))
+* **desktop:** set the subtitle font and shadow from player-style ([3bc1913](https://github.com/Viren070/AIOStreams/commit/3bc19136d2edb4bf36440f2ed3e03fc5b55b897f))
+* **ui:** add a replaceable table of the kit's own words ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **ui:** add swatches and an optional picker to the colour input ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **ui:** mark a drawer's side ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **ui:** ring the whole row of a right-side switch when focused ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **ui:** support right-to-left layouts ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **ui:** write sizes in a chosen locale ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** add a cache size setting ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** add quick filters and badges to the version list ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** add subtitle font and shadow settings ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** add translations with Lingui and a language setting ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** add watch parties ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** apply the server's CSS under the user's own ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** cover the player until its first frame ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** keep a user with a PIN unlocked until they switch away ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** keep the app language per user ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** keep the subtitle look on the user's account ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** offer colour swatches, without the picker on TVs ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** open the user switcher from the avatar ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** pass a version's required headers to app downloads ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** play a card's animatedPoster while it is hovered or focused ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** play trailers with the user's track preferences ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** play versions that need headers or YouTube in the app's player ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** send a report from troubleshooting or after a crash ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** send the party offset when it changes ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** send the player the segments it skips ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** show home's Activity and Calendar buttons only with the bottom bar ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** suggest aiostreams.viren070.me's relay to servers without party info ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** support right-to-left layouts ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** wrap every message in Lingui ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+
+
+### Bug Fixes
+
+* **desktop:** default GSK_RENDERER to OpenGL on Linux ([d9f7856](https://github.com/Viren070/AIOStreams/commit/d9f7856680769708dbef4dfa9c8d655ea6484424))
+* **desktop:** report mpv's track picks before the file-loaded event ([a9de4ce](https://github.com/Viren070/AIOStreams/commit/a9de4ce2d00d529c01b654add95f9b746290ac7f)), closes [#1544](https://github.com/Viren070/AIOStreams/issues/1544)
+* **desktop:** turn off WebKitGTK's Skia compositing and partial redraws on Linux ([#1534](https://github.com/Viren070/AIOStreams/issues/1534)) ([c8d6f8b](https://github.com/Viren070/AIOStreams/commit/c8d6f8b2743b5ad42383753ea9a48ce6d22e5790))
+* **web:** draw card focus rings outside the picture ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** fill landscape cards from landscapePoster before the poster ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** keep a replaced artwork copy until it ages out ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** match track languages by the addon's language names ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** move focus through a scrolled box before leaving it ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** name the badge summary's plural counts ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** offer version fields only on servers that send them ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** open drawers below the desktop app's window buttons ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** play a version's own address rather than the stream route ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** return focus to a card after a dialog its menu opened ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** start Favourites on its first poster ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** start on Home after switching users or signing out ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** stop rejoining the last party when the app opens ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** tie the item backdrop's fade to the image that loaded ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** treat a dialog holding focus itself as nothing focused for key moves ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+* **web:** write single watched counts as whole plural messages ([b9ce99e](https://github.com/Viren070/AIOStreams/commit/b9ce99e032ee9e8f17b853290ff30cb1c11434e6))
+
 ## [0.15.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.14.1...desktop-v0.15.0) (2026-10-14)
 
 
