@@ -2133,7 +2133,7 @@ msgid "Movies"
 msgstr ""
 
 #: src/pages/search.tsx
-msgid "Movies and shows"
+msgid "Movies, shows and people"
 msgstr ""
 
 #: src/lib/input/actions.ts
@@ -2694,6 +2694,10 @@ msgstr ""
 
 #: src/pages/settings/playback.tsx
 msgid "Pauses and asks before the next episode once this many have played in a row without a key, click or button press."
+msgstr ""
+
+#: src/pages/search.tsx
+msgid "People"
 msgstr ""
 
 #: src/components/party/party-sheet.tsx
