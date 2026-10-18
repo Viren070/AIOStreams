@@ -1405,10 +1405,12 @@ neither the environment variable nor a stored value is present.
 
 ### Linked Accounts
 
-| Environment Variable           | UI Setting   | Type    | Default | Description                                                                                                                                                                                                                         |
-| ------------------------------ | ------------ | ------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `LINKED_ACCOUNTS_ENABLED`      | Enabled      | boolean | `true`  | Let users link a Stremio account or an AIOManager instance and push their addon to it when their configuration changes. Turning this off hides the feature and rejects every request to it; existing links are kept but never used. |
-| `LINKED_ACCOUNTS_MAX_PER_USER` | Max Per User | number  | `10`    | How many accounts a single configuration may link. Links already over the limit are kept, but no new ones can be added until some are removed.                                                                                      |
+| Environment Variable                    | UI Setting            | Type     | Default | Description                                                                                                                                                                                                                         |
+| --------------------------------------- | --------------------- | -------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LINKED_ACCOUNTS_ENABLED`               | Enabled               | boolean  | `true`  | Let users link a Stremio account or an AIOManager instance and push their addon to it when their configuration changes. Turning this off hides the feature and rejects every request to it; existing links are kept but never used. |
+| `LINKED_ACCOUNTS_MAX_PER_USER`          | Max Per User          | number   | `10`    | How many accounts a single configuration may link. Links already over the limit are kept, but no new ones can be added until some are removed.                                                                                      |
+| `LINKED_ACCOUNTS_PARENT_PUSH_DELAY`     | Parent Push Delay     | duration | `30`    | How long to wait after a configuration is saved before pushing the configurations that inherit from it, for links that opted in (accepts e.g. "30s", "2m"). Saves within the wait are pushed once.                                  |
+| `LINKED_ACCOUNTS_PARENT_PUSH_MAX_LINKS` | Parent Push Max Links | number   | `100`   | How many links of inheriting configurations one save may push. Links past the limit are skipped and logged, so one widely inherited configuration cannot start a large burst of pushes.                                             |
 
 ### Media Info
 
