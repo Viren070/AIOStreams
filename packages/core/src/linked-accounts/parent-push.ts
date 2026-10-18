@@ -1,5 +1,4 @@
 import { config as appConfig } from '../config/index.js';
-import { ConfigParentRepository } from '../db/repositories/config-parents.js';
 import { LinkedAccountRepository } from '../db/repositories/linked-accounts.js';
 import { userConfigBus } from '../db/repositories/users.js';
 import { createLogger } from '../logging/logger.js';
@@ -15,8 +14,11 @@ export interface ParentPushDeps {
   enabled(): boolean;
   delayMs(): number;
   maxLinks(): number;
-  descendants(parentUuid: string, maxDepth: number): Promise<string[]>;
-  targets(uuids: string[]): Promise<Array<{ uuid: string; id: string }>>;
+  targets(
+    parentUuid: string,
+    maxDepth: number,
+    limit: number
+  ): Promise<Array<{ uuid: string; id: string }>>;
   pushIfChanged(uuid: string, id: string): Promise<PushResult | null>;
 }
 
@@ -24,8 +26,8 @@ const defaultDeps: ParentPushDeps = {
   enabled: () => appConfig.linkedAccounts.enabled,
   delayMs: () => appConfig.linkedAccounts.parentPushDelay * 1000,
   maxLinks: () => appConfig.linkedAccounts.parentPushMaxLinks,
-  descendants: (uuid, depth) => ConfigParentRepository.descendants(uuid, depth),
-  targets: (uuids) => LinkedAccountRepository.listPushOnParentChange(uuids),
+  targets: (uuid, depth, limit) =>
+    LinkedAccountRepository.listForParentChange(uuid, depth, limit),
   pushIfChanged: (uuid, id) => LinkedAccountService.pushIfChanged(uuid, id),
 };
 
@@ -73,14 +75,11 @@ export class ParentChangePusher {
   }
 
   private async run(parentUuid: string): Promise<void> {
+    const max = this.deps.maxLinks();
     let targets: Array<{ uuid: string; id: string }>;
     try {
-      const children = await this.deps.descendants(
-        parentUuid,
-        MAX_PARENT_DEPTH
-      );
-      if (children.length === 0) return;
-      targets = await this.deps.targets(children);
+      // One more than allowed, to tell a full run from a capped one.
+      targets = await this.deps.targets(parentUuid, MAX_PARENT_DEPTH, max + 1);
     } catch (error) {
       logger.warn(
         { parent: parentUuid, error: String(error) },
@@ -89,11 +88,10 @@ export class ParentChangePusher {
       return;
     }
 
-    const max = this.deps.maxLinks();
     if (targets.length > max) {
       logger.warn(
-        { parent: parentUuid, links: targets.length, max },
-        'too many links to push after a parent change; pushing only the first ones'
+        { parent: parentUuid, max },
+        'too many links to push after a parent change; pushing the least recently pushed ones'
       );
       targets = targets.slice(0, max);
     }

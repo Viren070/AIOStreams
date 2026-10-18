@@ -14,9 +14,10 @@ function setup(overrides: Partial<ParentPushDeps> = {}) {
     enabled: () => true,
     delayMs: () => DELAY,
     maxLinks: () => 100,
-    descendants: async (uuid) => tree[uuid] ?? [],
-    targets: async (uuids) =>
-      uuids.flatMap((uuid) => (links[uuid] ?? []).map((id) => ({ uuid, id }))),
+    targets: async (parent, _depth, limit) =>
+      (tree[parent] ?? [])
+        .flatMap((uuid) => (links[uuid] ?? []).map((id) => ({ uuid, id })))
+        .slice(0, limit),
     pushIfChanged: async (uuid, id) => {
       pushed.push(`${uuid}/${id}`);
       return { outcomes: [] };
@@ -56,17 +57,10 @@ describe('ParentChangePusher', () => {
   });
 
   it('does nothing for a configuration nobody inherits from', async () => {
-    let looked = false;
-    const { pusher, pushed } = setup({
-      targets: async () => {
-        looked = true;
-        return [];
-      },
-    });
+    const { pusher, pushed } = setup();
     pusher.saved('q');
     await elapse(pusher, DELAY);
     assert.deepEqual(pushed, []);
-    assert.equal(looked, false);
   });
 
   it('pushes at most maxLinks links', async () => {
