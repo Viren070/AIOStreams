@@ -37,7 +37,7 @@ internal class BufferControl(private val cache: StreamCache) : LoadControl {
         parameters: LoadControl.Parameters,
         trackGroups: TrackGroupArray,
         trackSelections: Array<out ExoTrackSelection?>,
-    ) = allocator.setTargetBufferSize(heapBytes)
+    ) = allocator.setTargetBufferSize(targetBytes())
 
     override fun onStopped(playerId: PlayerId) = allocator.reset()
 
@@ -48,14 +48,19 @@ internal class BufferControl(private val cache: StreamCache) : LoadControl {
     override fun retainBackBufferFromKeyframe(playerId: PlayerId) = false
 
     override fun shouldContinueLoading(parameters: LoadControl.Parameters) =
-        allocator.totalBytesAllocated < heapBytes && parameters.bufferedDurationUs < MAX_BUFFER_US
+        allocator.totalBytesAllocated < targetBytes() && parameters.bufferedDurationUs < targetUs()
+
+    /** With the cache reading ahead, the player's own buffer only feeds the decoders. */
+    private fun targetBytes() = if (cache.caching) min(heapBytes, CACHED_BYTES) else heapBytes
+
+    private fun targetUs() = if (cache.caching) CACHED_US else MAX_BUFFER_US
 
     override fun shouldStartPlayback(parameters: LoadControl.Parameters): Boolean {
         if (parameters.rebuffering && !stalled) {
             stalled = true
             stalls++
         }
-        val start = allocator.totalBytesAllocated >= heapBytes || run {
+        val start = allocator.totalBytesAllocated >= targetBytes() || run {
             val buffered = Util.getPlayoutDurationForMediaDuration(parameters.bufferedDurationUs, parameters.playbackSpeed)
             val ahead = Util.getPlayoutDurationForMediaDuration(cache.aheadUs(), parameters.playbackSpeed)
             buffered >= MIN_START_US && buffered + ahead >= requiredUs(parameters.rebuffering)
@@ -76,6 +81,8 @@ internal class BufferControl(private val cache: StreamCache) : LoadControl {
         const val MIN_HEAP_BYTES = 16L shl 20
         const val MAX_HEAP_BYTES = 64L shl 20
         const val MAX_BUFFER_US = 50_000_000L
+        const val CACHED_BYTES = 32 shl 20
+        const val CACHED_US = 20_000_000L
         const val MIN_START_US = 500_000L
         const val START_US = 1_000_000L
         const val REBUFFER_US = 2_000_000L
