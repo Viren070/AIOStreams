@@ -1,5 +1,79 @@
 # Changelog
 
+## [0.6.0](https://github.com/Viren070/AIOStreams/compare/android-v0.5.0...android-v0.6.0) (2026-10-18)
+
+
+### Features
+
+* **android:** cache the playing stream in native memory for ExoPlayer ([ae6fa0e](https://github.com/Viren070/AIOStreams/commit/ae6fa0ef6b9f22abdcaeb0b425d30686488a12ce))
+* **android:** move the app's own words into string resources ([9904f5b](https://github.com/Viren070/AIOStreams/commit/9904f5b566c446fdaf578cd727acb1e976693d7a))
+* **android:** record how the last run ended ([54ef5e0](https://github.com/Viren070/AIOStreams/commit/54ef5e0d44a8031aaeb6835a3e85ed59ce5ad70c))
+* **android:** report web fields to the keyboard as native fields on TV ([045c536](https://github.com/Viren070/AIOStreams/commit/045c536a550295c668d3523b86f58df9d2102f75))
+* **android:** send a download file's headers with every request ([42a5ffa](https://github.com/Viren070/AIOStreams/commit/42a5ffa37c73ebcafced07d7c5fcf7681795aab1))
+* **android:** send a loadfile's headers from both engines ([307e63f](https://github.com/Viren070/AIOStreams/commit/307e63f204a91ad67ec8e6e8e71d86e0aa0904f8))
+* **android:** set the subtitle font and shadow from player-style ([7e59389](https://github.com/Viren070/AIOStreams/commit/7e59389c2ba2fd0c0765760683fca813f881eb58))
+* **android:** skip unreferenced frames and early Opus and Vorbis audio on seeks ([8fc59bd](https://github.com/Viren070/AIOStreams/commit/8fc59bdaaad30b11c072d26a307f480894661b1d))
+* **ui:** add a replaceable table of the kit's own words ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **ui:** add swatches and an optional picker to the colour input ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **ui:** mark a drawer's side ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **ui:** ring the whole row of a right-side switch when focused ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **ui:** support right-to-left layouts ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **ui:** write sizes in a chosen locale ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** add a cache size setting ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** add quick filters and badges to the version list ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** add subtitle font and shadow settings ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** add translations with Lingui and a language setting ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** add watch parties ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** apply the server's CSS under the user's own ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** cover the player until its first frame ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** keep a user with a PIN unlocked until they switch away ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** keep the app language per user ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** keep the subtitle look on the user's account ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** offer colour swatches, without the picker on TVs ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** open the user switcher from the avatar ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** pass a version's required headers to app downloads ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** play a card's animatedPoster while it is hovered or focused ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** play trailers with the user's track preferences ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** play versions that need headers or YouTube in the app's player ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** send a report from troubleshooting or after a crash ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** send the party offset when it changes ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** send the player the segments it skips ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** show home's Activity and Calendar buttons only with the bottom bar ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** suggest aiostreams.viren070.me's relay to servers without party info ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** support right-to-left layouts ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** wrap every message in Lingui ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+
+
+### Bug Fixes
+
+* **android:** decode DTS with FFmpeg rather than the device's decoders ([59a0a02](https://github.com/Viren070/AIOStreams/commit/59a0a02a0ac299200a90b7133e5351bc0d0eb699))
+* **android:** report a new ExoPlayer as paused ([604c661](https://github.com/Viren070/AIOStreams/commit/604c6612ec2235174872fe758a02c6abb6144761))
+* **android:** report mpv's track picks before the loaded event ([40f96ce](https://github.com/Viren070/AIOStreams/commit/40f96cef74414bde41ca4265ccb7d6be6d2b5015))
+* **android:** trust the ISRG roots on devices whose store predates them ([#1526](https://github.com/Viren070/AIOStreams/issues/1526)) ([79bdff7](https://github.com/Viren070/AIOStreams/commit/79bdff793b3eaefed648078331212761dc1ae548))
+* **android:** unset WebVTT's automatic line so cues follow the bottom padding ([aa73a5e](https://github.com/Viren070/AIOStreams/commit/aa73a5e6f81bc460ccb9fea89a2358bd08be8f8d))
+* **web:** draw card focus rings outside the picture ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** fill landscape cards from landscapePoster before the poster ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** keep a replaced artwork copy until it ages out ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** match track languages by the addon's language names ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** move focus through a scrolled box before leaving it ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** name the badge summary's plural counts ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** offer version fields only on servers that send them ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** open drawers below the desktop app's window buttons ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** play a version's own address rather than the stream route ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** return focus to a card after a dialog its menu opened ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** start Favourites on its first poster ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** start on Home after switching users or signing out ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** stop rejoining the last party when the app opens ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** tie the item backdrop's fade to the image that loaded ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** treat a dialog holding focus itself as nothing focused for key moves ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+* **web:** write single watched counts as whole plural messages ([58a189c](https://github.com/Viren070/AIOStreams/commit/58a189c237109cbb6dd77eac788b6eb0d544a1fa))
+
+
+### Performance Improvements
+
+* **android:** cut subtitle memory during playback ([6c3b60a](https://github.com/Viren070/AIOStreams/commit/6c3b60a04b47fb76b291a8832344142600dee3fa))
+* **android:** shrink Media3's buffer while the stream cache reads ahead ([dd31172](https://github.com/Viren070/AIOStreams/commit/dd31172d88abee0d4f4e17927eb8328bd68cd921))
+
 ## [0.5.0](https://github.com/Viren070/AIOStreams/compare/android-v0.4.1...android-v0.5.0) (2026-10-14)
 
 
