@@ -14,6 +14,9 @@ export interface ParentPushDeps {
   enabled(): boolean;
   delayMs(): number;
   maxLinks(): number;
+  /** Pause between two links' pushes. */
+  spacingMs(): number;
+  sleep(ms: number): Promise<void>;
   targets(
     parentUuid: string,
     maxDepth: number,
@@ -26,6 +29,18 @@ const defaultDeps: ParentPushDeps = {
   enabled: () => appConfig.linkedAccounts.enabled,
   delayMs: () => appConfig.linkedAccounts.parentPushDelay * 1000,
   maxLinks: () => appConfig.linkedAccounts.parentPushMaxLinks,
+  // A push fetches the manifest from this instance's own URL, and the platform
+  // then fetches it again, often from the same address. Both count against the
+  // manifest rate limit, which knows no exception for the server itself.
+  spacingMs: () => {
+    const { disabled, stremioManifest } = appConfig.rateLimits;
+    if (disabled) return 0;
+    return (
+      2 *
+      Math.ceil((stremioManifest.window * 1000) / stremioManifest.maxRequests)
+    );
+  },
+  sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
   targets: (uuid, depth, limit) =>
     LinkedAccountRepository.listForParentChange(uuid, depth, limit),
   pushIfChanged: (uuid, id) => LinkedAccountService.pushIfChanged(uuid, id),
@@ -96,7 +111,8 @@ export class ParentChangePusher {
       targets = targets.slice(0, max);
     }
 
-    for (const { uuid, id } of targets) {
+    for (const [index, { uuid, id }] of targets.entries()) {
+      if (index > 0) await this.deps.sleep(this.deps.spacingMs());
       if (!this.deps.enabled()) return;
       try {
         const result = await this.deps.pushIfChanged(uuid, id);

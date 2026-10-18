@@ -5,6 +5,7 @@ import '../index.js';
 import { ParentChangePusher, type ParentPushDeps } from './parent-push.js';
 
 const DELAY = 30_000;
+const SPACED = ['a/a1', 'sleep 2000', 'b/b1', 'sleep 2000', 'b/b2'];
 
 function setup(overrides: Partial<ParentPushDeps> = {}) {
   const pushed: string[] = [];
@@ -14,6 +15,10 @@ function setup(overrides: Partial<ParentPushDeps> = {}) {
     enabled: () => true,
     delayMs: () => DELAY,
     maxLinks: () => 100,
+    spacingMs: () => 2000,
+    sleep: async (ms) => {
+      pushed.push(`sleep ${ms}`);
+    },
     targets: async (parent, _depth, limit) =>
       (tree[parent] ?? [])
         .flatMap((uuid) => (links[uuid] ?? []).map((id) => ({ uuid, id })))
@@ -42,7 +47,7 @@ describe('ParentChangePusher', () => {
     await elapse(pusher, DELAY - 1);
     assert.deepEqual(pushed, []);
     await elapse(pusher, 1);
-    assert.deepEqual(pushed, ['a/a1', 'b/b1', 'b/b2']);
+    assert.deepEqual(pushed, SPACED);
   });
 
   it('handles saves within the delay once, timed from the last one', async () => {
@@ -53,7 +58,7 @@ describe('ParentChangePusher', () => {
     await elapse(pusher, DELAY - 1);
     assert.deepEqual(pushed, []);
     await elapse(pusher, 1);
-    assert.deepEqual(pushed, ['a/a1', 'b/b1', 'b/b2']);
+    assert.deepEqual(pushed, SPACED);
   });
 
   it('does nothing for a configuration nobody inherits from', async () => {
@@ -67,7 +72,7 @@ describe('ParentChangePusher', () => {
     const { pusher, pushed } = setup({ maxLinks: () => 2 });
     pusher.saved('p');
     await elapse(pusher, DELAY);
-    assert.deepEqual(pushed, ['a/a1', 'b/b1']);
+    assert.deepEqual(pushed, ['a/a1', 'sleep 2000', 'b/b1']);
   });
 
   it('carries on past a link that fails', async () => {
@@ -104,7 +109,7 @@ describe('ParentChangePusher', () => {
     assert.deepEqual(pushed, []);
     pusher.saved('p');
     await elapse(pusher, DELAY);
-    assert.deepEqual(pushed, ['a/a1', 'b/b1', 'b/b2']);
+    assert.deepEqual(pushed, SPACED);
   });
 
   it('drops pending work when stopped', async () => {
