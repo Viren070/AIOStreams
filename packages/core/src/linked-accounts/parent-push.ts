@@ -8,10 +8,10 @@ import type { PushResult } from './types.js';
 const logger = createLogger('linked-accounts');
 
 /**
- * How far below the saved configuration to look. Deep enough for chains of
- * parents (nested inheritance, MAX_PARENT_CONFIG_DEPTH when merged); where a
- * configuration only inherits from its direct parent, the deeper ones simply
- * build an unchanged manifest and are not pushed.
+ * How far below the saved configuration to look. A configuration's manifest
+ * depends only on its direct parent today, so deeper descendants build an
+ * unchanged manifest and are not pushed; the extra depth is there for chains
+ * of inheritance, should parents' own parents ever be merged.
  */
 const MAX_PARENT_DEPTH = 5;
 
