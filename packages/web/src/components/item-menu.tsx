@@ -189,7 +189,10 @@ export function ItemMenu({
           700
         );
       }}
-      onPointerMove={endPress}
+      onPointerMove={(e) => {
+        heroTarget?.onPointerMove(e);
+        endPress(e);
+      }}
       onPointerUp={endPress}
       onPointerCancel={endPress}
     >

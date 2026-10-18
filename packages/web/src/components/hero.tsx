@@ -666,8 +666,8 @@ export function Hero({
 }
 
 interface Follow {
-  /** The pointer or focus came to rest on a card. */
-  rest(item: BaseItemDto): void;
+  focus(item: BaseItemDto): void;
+  point(item: BaseItemDto): void;
   leave(): void;
 }
 
@@ -678,11 +678,12 @@ export function useHeroTarget(item: BaseItemDto) {
   const follow = React.useContext(FollowContext);
   if (!follow) return undefined;
   return {
-    onPointerEnter: (e: React.PointerEvent) => {
-      if (e.pointerType === 'mouse') follow.rest(item);
+    // Not on enter, which rows scrolling under a still pointer also send.
+    onPointerMove: (e: React.PointerEvent) => {
+      if (e.pointerType === 'mouse') follow.point(item);
     },
     onPointerLeave: follow.leave,
-    onFocus: () => follow.rest(item),
+    onFocus: () => follow.focus(item),
   };
 }
 
@@ -765,16 +766,28 @@ export function FollowHero({
   }, [picked, userKey]);
   const [scroller, setScroller] = React.useState<HTMLDivElement | null>(null);
   const timer = React.useRef<ReturnType<typeof setTimeout>>(undefined);
-  const follow = React.useMemo<Follow>(
-    () => ({
-      rest: (item) => {
-        clearTimeout(timer.current);
-        timer.current = setTimeout(() => setPicked(item), FOLLOW_DELAY_MS);
+  const follow = React.useMemo<Follow>(() => {
+    let pointed: BaseItemDto | undefined;
+    let pointerPick = false;
+    const pick = (item: BaseItemDto, byPointer: boolean) => {
+      pointerPick = byPointer;
+      clearTimeout(timer.current);
+      timer.current = setTimeout(() => setPicked(item), FOLLOW_DELAY_MS);
+    };
+    return {
+      focus: (item) => pick(item, false),
+      point: (item) => {
+        if (item === pointed) return;
+        pointed = item;
+        pick(item, true);
       },
-      leave: () => clearTimeout(timer.current),
-    }),
-    []
-  );
+      // Only the pointer's own pick: rows scrolling away from it leave cards too.
+      leave: () => {
+        pointed = undefined;
+        if (pointerPick) clearTimeout(timer.current);
+      },
+    };
+  }, []);
   React.useEffect(() => () => clearTimeout(timer.current), []);
   // A TV's top bar steps aside while focus is in the rows, showing more of the
   // hero; Back still reaches it.
