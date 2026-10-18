@@ -29,6 +29,7 @@ const setLogLevel = () =>
 setLogLevel();
 
 const SUBTITLE_TYPES = ['srt', 'vtt', 'ass', 'ssa'];
+const EMBEDDED = 'embedded:';
 const FIT: Record<VideoFit, 'contain' | 'cover' | 'fill'> = {
   fit: 'contain',
   crop: 'cover',
@@ -44,6 +45,35 @@ const RECOVERIES = 2;
 /** Playing this long after a reopen means the stream is well again. */
 const RECOVERED_MS = 30_000;
 const STATS_MS = 1_000;
+
+type Assessment = Awaited<ReturnType<typeof MoviPlayer.assessPlayback>>;
+
+const yesNo = (value: boolean) => (value ? 'yes' : 'no');
+
+/* eslint-disable lingui/no-unlocalized-strings -- a technical readout, as movi's own stats are */
+/** Movi's verdict on whether this device plays the file smoothly, and why. */
+function assessmentText(a: Assessment | null): string {
+  if (!a) return 'Checking…';
+  const lines = [
+    `Playable: ${yesNo(a.playable)}`,
+    `Smooth at ${a.rate}×: ${yesNo(a.smooth)}`,
+    `Power efficient: ${yesNo(a.powerEfficient)}`,
+  ];
+  const { video, audio } = a;
+  if (video)
+    lines.push(
+      `Video: ${video.codec} ${video.width}×${video.height} @ ${video.fps} fps`,
+      `Video decoder: ${video.decoder} (load ${video.load.toFixed(2)})`
+    );
+  if (audio)
+    lines.push(
+      `Audio: ${audio.codec} ${audio.channels} ch ${audio.sampleRate} Hz`,
+      `Audio decoder: ${audio.decoder}`
+    );
+  if (a.reasons.length) lines.push('Why:', ...a.reasons.map((r) => `  ${r}`));
+  return lines.join('\n');
+}
+/* eslint-enable lingui/no-unlocalized-strings */
 /** Longer than the debrid hop takes to pick and resolve a release. */
 const RESOLVE_MS = 45_000;
 
@@ -113,6 +143,12 @@ function serverStream(
   return differ ? undefined : stream;
 }
 
+const embeddedLabel = (label: string) =>
+  t({
+    comment: 'A subtitle track inside the video file',
+    message: `Embedded: ${label}`,
+  });
+
 const failedToStart = () =>
   t({
     comment: 'Follows "Playback failed:"',
@@ -135,7 +171,7 @@ const failedToLoad = () =>
 /**
  * Movi's FFmpeg and WebCodecs player, drawing on a canvas put in place of the
  * page's `<video>`, so files a browser can't open play with all their tracks.
- * The file's own subtitles aren't offered: the page draws the server's and
+ * Movi draws the file's own subtitles; the page draws the server's and
  * dropped files.
  */
 export function moviEngine(
@@ -149,6 +185,7 @@ export function moviEngine(
     let abort = new AbortController();
     let surface: {
       canvas: HTMLCanvasElement;
+      overlay: HTMLDivElement;
       observer: ResizeObserver;
       size: string;
     } | null = null;
@@ -169,6 +206,7 @@ export function moviEngine(
     let softwareTried = false;
     let statsTimer = 0;
     let openedAt = 0;
+    let assessment: Assessment | null = null;
     // Movi passes through a pause on its way to the first frame, which isn't the user's.
     let starting = false;
     // Loaded and at its start, so pauses and seeks go to the player rather than wait for open().
@@ -207,6 +245,23 @@ export function moviEngine(
             default: stream?.IsDefault ?? undefined,
           };
         }),
+        ...p.getSubtitleTracks().map((track, i) => {
+          const stream = serverStream(ofType(from.source, 'Subtitle'), track);
+          return {
+            id: `${EMBEDDED}${track.id}`,
+            type: 'subtitle' as const,
+            label: embeddedLabel(
+              stream
+                ? trackLabel(stream, i + 1)
+                : ownTrackLabel(ownTitle(track), track.language, i + 1)
+            ),
+            lang: stream?.Language ?? track.language ?? undefined,
+            title: stream?.Title ?? ownTitle(track),
+            forced: stream?.IsForced ?? undefined,
+            hearingImpaired: stream?.IsHearingImpaired ?? undefined,
+            default: stream?.IsDefault ?? undefined,
+          };
+        }),
         ...files.map(({ id, label }) => ({
           id,
           type: 'subtitle' as const,
@@ -224,11 +279,33 @@ export function moviEngine(
       set({ audio: id });
     };
 
+    // One of the file's own is movi's to draw; any other is drawn by the page.
+    const selectEmbedded = (p: MoviPlayer) => {
+      const embedded = subtitle?.startsWith(EMBEDDED);
+      return p.selectSubtitleTrack(
+        embedded ? Number(subtitle!.slice(EMBEDDED.length)) : null
+      );
+    };
+
     const setSubtitle = (id: string | null) => {
       subtitle = id;
       drawText();
       set({ subtitle: id });
+      const p = player;
+      const selected = p && selectEmbedded(p);
       if (!id) return moviDebug('subtitle', { id });
+      if (id.startsWith(EMBEDDED)) {
+        moviDebug('subtitle', { id, path: 'embedded' });
+        // Movi reads only the tracks it plays, ahead of the picture, so a
+        // track picked once playing has nothing until that read-ahead runs
+        // out; seeking where it is reads it again.
+        if (p && selected && ready)
+          void selected.then(() => {
+            if (p === player && subtitle === id)
+              void p.seek(p.getCurrentTime());
+          });
+        return;
+      }
       const server = file?.subtitles.find((s) => s.id === id);
       moviDebug('subtitle', { id, path: server ? 'server' : 'file' });
       if (!server || cues.has(id)) return;
@@ -247,7 +324,19 @@ export function moviEngine(
         });
     };
 
-    const statsText = () => {
+    // From the open file's tracks, so movi answers without reading anything more.
+    const assess = (p: MoviPlayer) => {
+      void MoviPlayer.assessPlayback(p.getMediaInfo()?.tracks ?? [], {
+        rate,
+      }).then((result) => {
+        if (p !== player) return;
+        assessment = result;
+        moviDebug('assessment', result);
+      });
+    };
+
+    const statsText = (page: string) => {
+      if (page === 'assessment') return assessmentText(assessment);
       const stats = player?.getStats() ?? {};
       return Object.entries(stats)
         .map(([key, value]) => `${key}: ${String(value)}`)
@@ -277,8 +366,12 @@ export function moviEngine(
       const canvas = document.createElement('canvas');
       canvas.dataset.ui = 'video-canvas';
       canvas.style.cssText = 'display:block;width:100%;height:100%';
+      // Movi places the file's subtitles over the picture inside it.
+      const overlay = document.createElement('div');
+      overlay.dataset.ui = 'player-subtitle-embedded';
+      overlay.style.cssText = 'position:absolute;pointer-events:none';
       el.hidden = true;
-      el.after(canvas);
+      el.after(canvas, overlay);
       const observer = new ResizeObserver(() => {
         const { clientWidth: w, clientHeight: h } = canvas;
         const size = `${w}x${h}`;
@@ -287,13 +380,14 @@ export function moviEngine(
         player?.resizeCanvas(w, h);
       });
       observer.observe(canvas);
-      return (surface = { canvas, observer, size: '' });
+      return (surface = { canvas, overlay, observer, size: '' });
     };
 
     const unmount = () => {
       if (!surface) return;
       surface.observer.disconnect();
       surface.canvas.remove();
+      surface.overlay.remove();
       surface = null;
       if (video.current) video.current.hidden = false;
     };
@@ -365,7 +459,7 @@ export function moviEngine(
       if (!el) return;
       if (typeof WebAssembly === 'undefined' || !window.AudioContext)
         return fail(failedToStart());
-      const { canvas } = mount(el);
+      const { canvas, overlay } = mount(el);
       set({ waiting: true });
       pointAtWasm();
       const url = await finalUrl(next.url, next.headers, abort.signal);
@@ -441,6 +535,7 @@ export function moviEngine(
       });
       p.on('error', (error) => onError(error, gen));
 
+      p.setSubtitleOverlay(overlay);
       p.setFitMode(FIT[fit]);
       p.setPlaybackRate(rate);
       if (next.volume) {
@@ -464,6 +559,8 @@ export function moviEngine(
 
       const durationMs = p.getDuration() * 1000;
       const info = p.getMediaInfo();
+      assessment = null;
+      assess(p);
       moviDebug('opened', {
         durationMs,
         video: p.getVideoTracks().map((v) => ({
@@ -509,6 +606,7 @@ export function moviEngine(
         // The same file again: the picks it had still stand, and choosing
         // again would undo the user's.
         if (audio) p.selectAudioTrack(Number(audio));
+        selectEmbedded(p);
         set({ loaded: true });
       } else {
         const active = p.trackManager.getActiveAudioTrack();
@@ -584,6 +682,8 @@ export function moviEngine(
         rate = next;
         player?.setPlaybackRate(next);
         set({ rate: next });
+        // Decode work scales with the speed.
+        if (player) assess(player);
       },
       setAudio,
       setSubtitle,
@@ -620,16 +720,21 @@ export function moviEngine(
         },
       },
       stats: {
-        pages: [{ id: 'movi', label: t`Playback` }],
+        pages: [
+          { id: 'movi', label: t`Playback` },
+          { id: 'assessment', label: t`Smoothness check` },
+        ],
         show(page) {
           clearInterval(statsTimer);
           statsTimer = 0;
           if (!page) return emit({ type: 'stats-text', text: undefined });
-          const tick = () => emit({ type: 'stats-text', text: statsText() });
+          const tick = () =>
+            emit({ type: 'stats-text', text: statsText(page) });
           tick();
           statsTimer = window.setInterval(tick, STATS_MS);
         },
       },
+      ownSubtitles: true,
       fits: true,
     };
   };
