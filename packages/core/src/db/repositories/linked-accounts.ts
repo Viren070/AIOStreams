@@ -1,6 +1,6 @@
 import { getDb } from '../db.js';
 import type { DbDriver } from '../driver/types.js';
-import { raw, sql } from '../sql.js';
+import { join, raw, sql } from '../sql.js';
 import {
   decryptString,
   encryptString,
@@ -113,6 +113,26 @@ export class LinkedAccountRepository {
       );
     }
     return { ...toAccount(row), credentials: JSON.parse(decrypted.data) };
+  }
+
+  /** Links of these configurations that opted into pushes on a parent change. */
+  static async listPushOnParentChange(
+    uuids: readonly string[]
+  ): Promise<Array<{ uuid: string; id: string }>> {
+    const found: Array<{ uuid: string; id: string }> = [];
+    // Chunked to stay under the parameter limits of both backends.
+    const CHUNK = 200;
+    for (let i = 0; i < uuids.length; i += CHUNK) {
+      const list = join(uuids.slice(i, i + CHUNK).map((u) => sql`${u}`));
+      found.push(
+        ...(await getDb().query<{ uuid: string; id: string }>(
+          sql`SELECT uuid, id FROM linked_accounts
+               WHERE push_on_parent_change = 1 AND uuid IN (${list})
+               ORDER BY uuid, created_at`
+        ))
+      );
+    }
+    return found;
   }
 
   static async countForUser(uuid: string): Promise<number> {
