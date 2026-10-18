@@ -29,8 +29,19 @@ import { MixedGrid } from '../components/mixed-grid';
 import { MediaRow } from '../components/media-row';
 import { PosterCard } from '../components/cards';
 import { ItemMenu } from '../components/item-menu';
+import { PeopleRow } from '../components/people';
 
 const SUGGESTIONS = 5;
+
+function nameWords(text: string): string[] {
+  return (
+    text
+      .normalize('NFD')
+      .replace(/\p{M}/gu, '')
+      .toLowerCase()
+      .match(/[\p{L}\p{N}]+/gu) ?? []
+  );
+}
 
 export function SearchPage({ initialTerm }: { initialTerm: string }) {
   const { client, user } = useSession();
@@ -45,6 +56,7 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
   const mixed = useSearch(query, 'Movie,Series', combine);
   const movies = useSearch(query, 'Movie', !combine);
   const shows = useSearch(query, 'Series', !combine);
+  const people = useSearch(query, 'Person');
   const suggesting = typed !== chosen;
   const suggestions = useSearchSuggestions(
     useDebounce(typed, 200),
@@ -80,10 +92,36 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
   const showItems = shows.isPlaceholderData ? [] : (shows.data?.Items ?? []);
   const moviesLoading = movies.isLoading || movies.isPlaceholderData;
   const showsLoading = shows.isLoading || shows.isPlaceholderData;
-  const loading = combine ? mixed.isLoading : moviesLoading || showsLoading;
+  // Only people the term names; a search also matches aliases and near spellings.
+  const queryWords = nameWords(query);
+  const named = (people.isPlaceholderData ? [] : (people.data?.Items ?? []))
+    .map((person) => ({ person, words: nameWords(person.Name ?? '') }))
+    .filter(({ words }) =>
+      queryWords.every((q) => words.some((w) => w.startsWith(q)))
+    );
+  const peopleFirst = named.some(
+    ({ words }) => words.join(' ') === queryWords.join(' ')
+  );
+  const peopleRow = (
+    <PeopleRow
+      id="search:people"
+      title={t`People`}
+      people={named.map(({ person }) => ({
+        person: {
+          Id: person.Id,
+          Name: person.Name,
+          PrimaryImageTag: person.ImageTags?.Primary,
+        },
+      }))}
+    />
+  );
+  const loading =
+    (combine ? mixed.isLoading : moviesLoading || showsLoading) ||
+    people.isLoading ||
+    people.isPlaceholderData;
   const found = combine
-    ? !!mixed.data?.Items?.length
-    : !!movieItems.length || !!showItems.length;
+    ? !!mixed.data?.Items?.length || !!named.length
+    : !!movieItems.length || !!showItems.length || !!named.length;
 
   return (
     <PageBody>
@@ -102,7 +140,9 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
           onKeyDown={(e) => {
             if (e.key === 'Enter') choose(term);
           }}
-          placeholder={voice?.hearing ? t`Listening…` : t`Movies and shows`}
+          placeholder={
+            voice?.hearing ? t`Listening…` : t`Movies, shows and people`
+          }
           leftIcon={<BiSearch className="text-xl" />}
           data-ui="search-input"
           fieldClass="flex-1"
@@ -181,10 +221,12 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
       {searching && (
         <div
           data-ui="search-results"
+          className="space-y-8"
           onClickCapture={(e) => {
             if ((e.target as HTMLElement).closest('a')) history.add(query);
           }}
         >
+          {peopleFirst && peopleRow}
           {combine ? (
             <MixedGrid
               items={mixed.data?.Items ?? []}
@@ -192,7 +234,7 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
               loading={mixed.isLoading}
             />
           ) : (
-            <div className="space-y-8">
+            <>
               <ResultRow
                 id="search:movies"
                 title={t`Movies`}
@@ -207,8 +249,9 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
                 loading={showsLoading}
                 client={client}
               />
-            </div>
+            </>
           )}
+          {!peopleFirst && peopleRow}
         </div>
       )}
       {searching && !loading && !found && (

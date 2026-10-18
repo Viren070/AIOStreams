@@ -78,6 +78,28 @@ export function PersonCard({
   );
 }
 
+export function PeopleRow({
+  id,
+  title,
+  people,
+}: {
+  id: string;
+  title: string;
+  people: { person: BaseItemPerson; detail?: string | null }[];
+}) {
+  return (
+    <MediaRow id={id} title={title} shape="square" itemClass={PERSON_WIDTH}>
+      {people.map(({ person, detail }) => (
+        <PersonCard
+          key={person.Id ?? person.Name}
+          person={person}
+          detail={detail}
+        />
+      ))}
+    </MediaRow>
+  );
+}
+
 // eslint-disable-next-line lingui/no-unlocalized-strings -- Jellyfin's person kinds
 const CAST = new Set(['Actor', 'GuestStar']);
 
@@ -116,43 +138,27 @@ export function CastAndCrew({
     if (job && !entry.jobs.includes(job)) entry.jobs.push(job);
     crew.set(key, entry);
   }
+  const list = new Intl.ListFormat(formatLocale(), {
+    style: 'narrow',
+    type: 'unit',
+  });
   return (
     <>
-      {cast.length > 0 && (
-        <MediaRow
-          id="cast"
-          title={t`Cast`}
-          shape="square"
-          itemClass={PERSON_WIDTH}
-        >
-          {cast.slice(0, 40).map((person) => (
-            <PersonCard
-              key={person.Id ?? person.Name}
-              person={person}
-              detail={person.Role}
-            />
-          ))}
-        </MediaRow>
-      )}
-      {crew.size > 0 && (
-        <MediaRow
-          id="crew"
-          title={t`Crew`}
-          shape="square"
-          itemClass={PERSON_WIDTH}
-        >
-          {[...crew.values()].map(({ person, jobs }) => (
-            <PersonCard
-              key={person.Id ?? person.Name}
-              person={person}
-              detail={new Intl.ListFormat(formatLocale(), {
-                style: 'narrow',
-                type: 'unit',
-              }).format(jobs.map(jobLabel))}
-            />
-          ))}
-        </MediaRow>
-      )}
+      <PeopleRow
+        id="cast"
+        title={t`Cast`}
+        people={cast
+          .slice(0, 40)
+          .map((person) => ({ person, detail: person.Role }))}
+      />
+      <PeopleRow
+        id="crew"
+        title={t`Crew`}
+        people={[...crew.values()].map(({ person, jobs }) => ({
+          person,
+          detail: list.format(jobs.map(jobLabel)),
+        }))}
+      />
     </>
   );
 }
