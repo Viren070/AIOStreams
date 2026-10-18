@@ -2,12 +2,14 @@ import { Router, type Request, type Response } from 'express';
 import {
   buildContentItem,
   buildGenre,
+  buildPerson,
   catalogHasCollections,
   encodeImageTag,
   suggestTitles,
   filmographyPage,
   findPerson,
   recommendedPreviews,
+  searchPeople,
   similarPreviews,
   type FilmographyKind,
   Cache,
@@ -713,14 +715,22 @@ async function handleItems(
   }
 
   if (searchTerm) {
-    const previews = await searchCatalogs(
-      engine,
-      searchTerm,
-      startIndex + limit,
-      searchKindsFor(types),
-      ctx.userData
-    );
-    const items = filterByType(await itemsFromPreviews(ctx, previews), types);
+    const [previews, people] = await Promise.all([
+      searchCatalogs(
+        engine,
+        searchTerm,
+        startIndex + limit,
+        searchKindsFor(types),
+        ctx.userData
+      ),
+      types?.has('person')
+        ? personResults(ctx, searchTerm, startIndex + limit)
+        : [],
+    ]);
+    const items = [
+      ...filterByType(await itemsFromPreviews(ctx, previews), types),
+      ...people,
+    ];
     send(
       req,
       res,
@@ -1501,6 +1511,30 @@ router.get(
   })
 );
 
+async function personResults(
+  ctx: JellyfinRequestContext,
+  term: string,
+  limit: number
+): Promise<JellyfinItem[]> {
+  const people = await searchPeople(
+    await ctx.engine(),
+    ctx.userData,
+    term,
+    limit
+  );
+  return people.flatMap((p) =>
+    p.name
+      ? [
+          buildPerson(
+            ctx.build,
+            { k: 'person', n: p.name, i: p.id },
+            p.poster ?? undefined
+          ),
+        ]
+      : []
+  );
+}
+
 async function hintItems(
   ctx: JellyfinRequestContext,
   term: string,
@@ -1546,7 +1580,12 @@ router.get(
       res.json({ SearchHints: [], TotalRecordCount: 0 });
       return;
     }
-    const items = filterByType(await hintItems(ctx, term, limit, types), types);
+    const wantsPeople = types?.has('person') || qb(req, 'IncludePeople');
+    const [titles, people] = await Promise.all([
+      hintItems(ctx, term, limit, types),
+      wantsPeople ? personResults(ctx, term, limit) : [],
+    ]);
+    const items = [...filterByType(titles, types), ...people];
     res.json({
       SearchHints: items.map((i) => ({
         ItemId: i.Id,
@@ -1564,6 +1603,16 @@ router.get(
       })),
       TotalRecordCount: items.length,
     });
+  })
+);
+
+router.get(
+  '/Persons',
+  jf(async (req, res, ctx) => {
+    const term = qs(req, 'SearchTerm')?.trim();
+    const limit = Math.min(Math.max(1, qi(req, 'Limit', 20)), 50);
+    const people = term ? await personResults(ctx, term, limit) : [];
+    send(req, res, people, people.length, 0);
   })
 );
 

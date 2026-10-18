@@ -377,12 +377,17 @@ function personDescriptorOf(p: EnrichedPerson): PersonDescriptor {
 
 export function buildPerson(
   ctx: ItemBuildContext,
-  d: PersonDescriptor
+  d: PersonDescriptor,
+  photo?: string
 ): JellyfinItem {
-  return {
-    ...baseItem(ctx, personId(d), d.n, 'Person', false),
-    _aio: { descriptor: d },
-  };
+  const id = personId(d);
+  const item = baseItem(ctx, id, d.n, 'Person', false);
+  if (photo) {
+    item.ImageTags = imageTagsFor({ Primary: photo }).ImageTags;
+    rememberImages(id, { Primary: photo });
+    item.PrimaryImageAspectRatio = 0.6666;
+  }
+  return { ...item, _aio: { descriptor: d } };
 }
 
 export interface ContentBuildOptions {
