@@ -166,6 +166,16 @@ export class AIOStreams {
     return resolvePlaybackSinks(this.ctx);
   }
 
+  /** Whether a selected preset or its manifest failed during initialization. */
+  public hasAddonInitialisationErrors(presets?: readonly string[]): boolean {
+    this.checkInitialised();
+    return this.ctx.addonInitialisationErrors.some(
+      ({ addon }) =>
+        presets === undefined ||
+        presets.includes('preset' in addon ? addon.preset.id : addon.instanceId)
+    );
+  }
+
   /** Addons whose manifest failed to load. */
   public getFailedAddons(): Addon[] {
     return this.ctx.addonInitialisationErrors.flatMap(({ addon }) =>
