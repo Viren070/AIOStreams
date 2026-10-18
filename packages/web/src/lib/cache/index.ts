@@ -26,6 +26,8 @@ declare module '@tanstack/react-query' {
     queryMeta: {
       /** Saved on the device under this category; unsaved without it. */
       cache?: CacheCategory;
+      /** Whether a saved copy is worth showing; one that isn't is passed over. */
+      usable?: (data: unknown) => boolean;
     };
   }
 }
@@ -123,10 +125,12 @@ export async function persister(
       ? Promise.resolve(queryFn(context))
       : null;
   asked?.catch(() => undefined);
-  const saved =
+  const read =
     shown.data === undefined
       ? await readQuery(query.queryHash).catch(() => null)
       : null;
+  const usable = query.meta?.usable;
+  const saved = read && (!usable || usable(read.data)) ? read : null;
   if (saved && recent(saved)) {
     stampLater(query, saved.savedAt);
     // A timer after the stamp's, and only over the saved copy, not anything newer.
