@@ -23,7 +23,6 @@ const LIST_ROUTES = [
   '/Artists',
   '/Artists/AlbumArtists',
   '/Years',
-  '/Persons',
   '/Trailers',
   '/MusicGenres',
   '/LiveTv/Programs',

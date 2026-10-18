@@ -749,7 +749,7 @@ export async function searchCatalogs(
   const wanted = kinds ? new Set(kinds) : null;
   if (wanted && !wanted.size) return [];
   const searchable = ((engine.getCatalogs() ?? []) as Catalog[]).filter(
-    isSearchable
+    (c) => isSearchable(c) && c.type !== 'person'
   );
   const evidence = userData
     ? await Promise.all(searchable.map((c) => cachedEvidence(userData, c)))
@@ -767,6 +767,37 @@ export async function searchCatalogs(
           types.some((t) => wanted.has(sniffedKind(t, evidence[i]!.leaves)))
         );
       });
+  return searchEach(
+    engine,
+    catalogs,
+    term,
+    limit,
+    (i) => !wanted || wanted.has(entryKind(i, leafEvidence))
+  );
+}
+
+export function searchPersonCatalogs(
+  engine: AIOStreams,
+  term: string,
+  limit: number
+): Promise<MetaPreview[]> {
+  return searchEach(
+    engine,
+    ((engine.getCatalogs() ?? []) as Catalog[]).filter(
+      (c) => isSearchable(c) && c.type === 'person'
+    ),
+    term,
+    limit
+  );
+}
+
+async function searchEach(
+  engine: AIOStreams,
+  catalogs: Catalog[],
+  term: string,
+  limit: number,
+  keep: (item: MetaPreview) => boolean = () => true
+): Promise<MetaPreview[]> {
   if (!catalogs.length) return [];
   /*
    * One page per catalog, not a walk to `limit`: this already fans out across
@@ -787,11 +818,7 @@ export async function searchCatalogs(
     )
   );
   const lists = results.map((r) =>
-    r.status === 'fulfilled'
-      ? r.value.items.filter(
-          (i) => !wanted || wanted.has(entryKind(i, leafEvidence))
-        )
-      : []
+    r.status === 'fulfilled' ? r.value.items.filter(keep) : []
   );
   const seen = new Set<string>();
   const out: MetaPreview[] = [];

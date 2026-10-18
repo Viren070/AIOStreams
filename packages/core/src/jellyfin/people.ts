@@ -8,6 +8,7 @@ import type {
 } from '../metadata/tmdb.js';
 import { providerIdsFrom, toIso } from './enrichment.js';
 import { imageTagsFor, rememberImages } from './images.js';
+import { searchPersonCatalogs } from './library.js';
 import { isoDate, TMDB_IMAGES, titlePreviews, tmdbFor } from './tmdb-titles.js';
 import type { JellyfinItem, PersonDescriptor } from './types.js';
 
@@ -71,6 +72,31 @@ export async function findPerson(
     );
     return null;
   }
+}
+
+export async function searchPeople(
+  engine: AIOStreams,
+  userData: UserData,
+  term: string,
+  limit: number
+): Promise<MetaPreview[]> {
+  const found = await searchPersonCatalogs(engine, term, limit);
+  if (found.length) return found;
+  const tmdb = tmdbFor(userData);
+  if (!tmdb) return [];
+  const results = await tmdb.searchPeople(term).catch((error) => {
+    logger.debug(
+      { err: error instanceof Error ? error.message : String(error) },
+      'person search failed'
+    );
+    return [];
+  });
+  return results.slice(0, limit).map((r) => ({
+    id: `tmdb:${r.tmdbId}`,
+    type: 'person',
+    name: r.name,
+    poster: r.profilePath ? `${TMDB_IMAGES}w500${r.profilePath}` : undefined,
+  }));
 }
 
 function detailsOf(found: FoundPerson): PersonDetails {

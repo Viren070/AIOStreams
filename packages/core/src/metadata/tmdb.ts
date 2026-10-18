@@ -183,6 +183,7 @@ const PersonSearchResultsSchema = z.object({
       id: z.number(),
       name: z.string(),
       popularity: z.number().optional(),
+      profile_path: z.string().nullish(),
     })
   ),
 });
@@ -264,6 +265,13 @@ export interface TMDBPersonCredit extends TMDBTitle {
   roles: string[];
 }
 
+export interface TMDBPersonResult {
+  tmdbId: number;
+  name: string;
+  profilePath?: string;
+  popularity: number;
+}
+
 export interface TMDBPerson {
   tmdbId: number;
   name: string;
@@ -311,8 +319,8 @@ export class TMDBMetadata {
     Cache.getInstance<string, EpisodeDetails>('tmdb_episode_v2');
   private static readonly searchCache: Cache<string, TMDBSeriesSearchResult[]> =
     Cache.getInstance<string, TMDBSeriesSearchResult[]>('tmdb_search');
-  private static readonly personIdCache: Cache<string, number> =
-    Cache.getInstance<string, number>('tmdb_person_id');
+  private static readonly personSearchCache: Cache<string, TMDBPersonResult[]> =
+    Cache.getInstance<string, TMDBPersonResult[]>('tmdb_person_search');
   private static readonly personCache: Cache<string, TMDBPerson> =
     Cache.getInstance<string, TMDBPerson>('tmdb_person');
   private static readonly recommendationCache: Cache<string, TMDBTitle[]> =
@@ -799,23 +807,34 @@ export class TMDBMetadata {
     return response.json();
   }
 
+  /** People a name or part of one matches, most popular first. */
+  public async searchPeople(name: string): Promise<TMDBPersonResult[]> {
+    const key = name.trim().toLowerCase();
+    const cached = await TMDBMetadata.personSearchCache.get(key);
+    if (cached) return cached;
+    const json = await this.getJson('/search/person', { query: name });
+    const results = (json ? PersonSearchResultsSchema.parse(json).results : [])
+      .map((r) => ({
+        tmdbId: r.id,
+        name: r.name,
+        profilePath: r.profile_path ?? undefined,
+        popularity: r.popularity ?? 0,
+      }))
+      .sort((a, b) => b.popularity - a.popularity);
+    await TMDBMetadata.personSearchCache.set(key, results, SEARCH_CACHE_TTL);
+    return results;
+  }
+
   /**
    * The person a name most likely means: an exact match before a partial one,
    * then the most popular.
    */
   public async findPersonId(name: string): Promise<number | undefined> {
     const key = name.trim().toLowerCase();
-    const cached = await TMDBMetadata.personIdCache.get(key);
-    if (cached !== undefined) return cached || undefined;
-    const json = await this.getJson('/search/person', { query: name });
-    const results = json ? PersonSearchResultsSchema.parse(json).results : [];
-    const exact = results.filter((r) => r.name.trim().toLowerCase() === key);
-    const best = (exact.length ? exact : results).sort(
-      (a, b) => (b.popularity ?? 0) - (a.popularity ?? 0)
-    )[0];
-    // 0 remembers that nobody matched, so the search is not repeated.
-    await TMDBMetadata.personIdCache.set(key, best?.id ?? 0, SEARCH_CACHE_TTL);
-    return best?.id;
+    const results = await this.searchPeople(name);
+    return (
+      results.find((r) => r.name.trim().toLowerCase() === key) ?? results[0]
+    )?.tmdbId;
   }
 
   /** A person's details and every credit, cast and crew merged per title. */
