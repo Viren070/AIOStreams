@@ -108,19 +108,24 @@ export function PlayerControls({
     toMs: number;
   } | null>(null);
   const scrubbing = React.useRef(scrub);
-  // A player in its own window is watched there.
+  // Until the first frame only Back works; a player in its own window is watched there.
+  const ready = state.started || !!player.external;
   const visible =
     !!player.external ||
-    (!locked &&
+    (ready &&
+      !locked &&
       !hidden &&
       (!idle ||
         state.paused ||
         menus > 0 ||
-        !state.started ||
         picking !== null ||
         byEar ||
         episodes ||
         scrub !== null));
+  // The video appears without the controls, unless it opens paused.
+  React.useEffect(() => {
+    if (ready && !latest.current.state.paused) hide();
+  }, [ready, latest, hide]);
   useWindowButtons(visible);
   useFocusInside(root, visible, wake);
   useLiftSubtitles(player, bottomBar, visible);
@@ -221,6 +226,7 @@ export function PlayerControls({
   usePlayerKeys({
     player,
     root,
+    ready,
     visible,
     wake,
     hide,
@@ -314,6 +320,25 @@ export function PlayerControls({
       atMs={shownAt}
     />
   );
+
+  if (!ready)
+    return (
+      <div
+        data-ui="player-controls"
+        data-loading
+        className="fixed inset-0 z-10 select-none"
+        onContextMenu={(e) => e.preventDefault()}
+      >
+        {!tv && (
+          // Late, so a quick start never flashes it.
+          <div className="absolute start-[max(0.75rem,env(safe-area-inset-left))] top-[calc(0.75rem+env(safe-area-inset-top))] [animation:fade-in_300ms_ease-out_1.5s_both] sm:start-[max(1.25rem,env(safe-area-inset-left))] sm:top-[calc(1.25rem+env(safe-area-inset-top))]">
+            <ControlButton name="exit" label={t`Back`} onClick={onBack}>
+              <LuArrowLeft className="rtl:-scale-x-100" />
+            </ControlButton>
+          </div>
+        )}
+      </div>
+    );
 
   return (
     <div

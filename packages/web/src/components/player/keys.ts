@@ -36,6 +36,8 @@ interface PlayerKeys {
   player: PlayerController;
   /** The controls, which Back leaves before it leaves the player. */
   root: React.RefObject<HTMLElement | null>;
+  /** False until the first frame. */
+  ready: boolean;
   /** Whether the controls show, which Back hides first on a TV. */
   visible: boolean;
   wake(): void;
@@ -227,6 +229,7 @@ export function usePlayerKeys(keys: PlayerKeys): void {
 
     const stops = Object.entries(actions).map(([id, run]) =>
       onAction(id as ActionId, (input) => {
+        if (!k().ready) return id === 'player.stop' ? k().onBack() : undefined;
         // A control with keyboard focus moves on to the next with the arrows.
         if (keyboardFocus() && movesFocus(input)) return false;
         if (run(input) === false) return false;
@@ -236,7 +239,7 @@ export function usePlayerKeys(keys: PlayerKeys): void {
     // A focused control keeps its key.
     stops.push(
       onAction('player.speedUp', () =>
-        keyboardFocus() ? false : k().speedUp()
+        keyboardFocus() || !k().ready ? false : k().speedUp()
       )
     );
     stops.push(

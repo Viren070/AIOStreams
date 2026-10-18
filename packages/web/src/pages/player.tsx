@@ -4,7 +4,6 @@ import React from 'react';
 import { toast } from 'sonner';
 import { BiArrowBack, BiCopy, BiLayer, BiRefresh } from 'react-icons/bi';
 import { Button } from '@aiostreams/ui/button';
-import { LoadingSpinner } from '@aiostreams/ui/loading-spinner';
 import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '../lib/session';
@@ -49,7 +48,6 @@ import {
   subtitleScale,
 } from '../lib/subtitles/style';
 import { usePlaybackPrefs, type PlaybackPrefs } from '../lib/user-config';
-import { backdropUrl } from '../lib/images';
 import { fullTitle } from '../lib/format';
 import { goBack, navigate, to, versionsPath } from '../lib/paths';
 import { noteLastPlayed } from '../lib/last-played';
@@ -70,7 +68,7 @@ import type {
   SourceInfo,
 } from '../lib/types';
 import { useDownloadOf, type Download } from '../lib/downloads';
-import { CachedImage } from '../components/cached-image';
+import { Cover } from '../components/player/cover';
 import { party, useParty } from '../lib/party/party';
 import { leavePartyPlayback, usePartyBinding } from '../lib/party/follow';
 import { usePlayForParty } from '../lib/party/actions';
@@ -88,6 +86,8 @@ interface PlayerProps {
   local?: Download;
   /** A YouTube version's stream. */
   youTube?: string;
+  /** Whether the cover still hides the player, until its first frame. */
+  onCovered(covered: boolean): void;
 }
 
 /**
@@ -147,8 +147,9 @@ export function PlayerPage({
   // Pinned once found: a refreshed version list must not restart playback.
   const [playing, setPlaying] = React.useState<Omit<
     PlayerProps,
-    'startMs'
+    'startMs' | 'onCovered'
   > | null>(null);
+  const [covered, setCovered] = React.useState(true);
   const sources = local ? [local.source!] : playableSources(info.data);
   const source = sourceId ? sources.find((s) => s.Id === sourceId) : sources[0];
   const missing = !playing && !!item.data && !!info.data && !source;
@@ -182,34 +183,31 @@ export function PlayerPage({
     });
   }
 
-  if (!playing) {
-    if (
-      (!item.data && item.isLoading) ||
-      info.isLoading ||
-      playback.isLoading ||
-      picks.isLoading ||
-      youTube.isLoading ||
-      missing
-    ) {
-      return (
-        <Cover item={item.data}>
-          <LoadingSpinner />
-        </Cover>
-      );
-    }
-    if (youTubeId && !youTube.data)
-      return <Failure itemId={itemId} message={t`This video didn't load.`} />;
-    return (
-      <Failure
-        itemId={itemId}
-        message={t`This version is no longer available.`}
-      />
-    );
-  }
+  const loading =
+    (!item.data && item.isLoading) ||
+    info.isLoading ||
+    playback.isLoading ||
+    picks.isLoading ||
+    youTube.isLoading ||
+    missing;
   return (
-    <VersionPickerProvider>
-      <Player {...playing} startMs={startMs} />
-    </VersionPickerProvider>
+    <>
+      <Cover item={item.data} hidden={!!playing && !covered} />
+      {playing ? (
+        <VersionPickerProvider>
+          <Player {...playing} startMs={startMs} onCovered={setCovered} />
+        </VersionPickerProvider>
+      ) : loading ? null : (
+        <Failure
+          itemId={itemId}
+          message={
+            youTubeId && !youTube.data
+              ? t`This video didn't load.`
+              : t`This version is no longer available.`
+          }
+        />
+      )}
+    </>
   );
 }
 
@@ -302,38 +300,6 @@ function useReporting(
   React.useEffect(() => {
     reporter.current?.progress(paused ? 'Pause' : 'Unpause');
   }, [paused]);
-}
-
-export function Cover({
-  item,
-  hidden,
-  children,
-}: {
-  item?: BaseItemDto;
-  hidden?: boolean;
-  children?: React.ReactNode;
-}) {
-  const { client } = useSession();
-  const backdrop = item ? backdropUrl(client, item, { maxWidth: 1920 }) : null;
-  return (
-    <div
-      data-ui="player-cover"
-      className={cn(
-        'fixed inset-0 flex items-center justify-center bg-black transition-opacity duration-500',
-        hidden && 'pointer-events-none opacity-0'
-      )}
-    >
-      {backdrop && (
-        <CachedImage
-          data-ui="player-cover-image"
-          src={backdrop}
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover opacity-25"
-        />
-      )}
-      <div className="relative">{children}</div>
-    </div>
-  );
 }
 
 function Failure({
@@ -499,8 +465,9 @@ function useShownSegments(
 
 /**
  * The host's player beneath the page, which stays transparent from the first
- * paint, or the page's own video. A cover hides the wait for the first frame;
- * a player in its own window keeps it behind the controls that drive it.
+ * paint, or the page's own video. The page's cover hides the wait for the
+ * first frame; a player in its own window keeps it behind the controls that
+ * drive it.
  */
 function Player({
   item,
@@ -511,6 +478,7 @@ function Player({
   launched,
   local,
   youTube,
+  onCovered,
 }: PlayerProps) {
   const { client } = useSession();
   const video = React.useRef<HTMLVideoElement>(null);
@@ -628,23 +596,25 @@ function Player({
   useKeepAwake(player, !hostPlayer);
   const launchedName = launched?.name ?? '';
   const failure = player.state.error ?? '';
+  const covered =
+    !player.state.pictureInPicture && (!player.state.started || !!launched);
+  React.useLayoutEffect(() => onCovered(covered), [covered, onCovered]);
 
   if (player.state.pictureInPicture)
     return <div data-page="player" className="fixed inset-0" />;
   return (
-    <div
-      data-page="player"
-      className={cn('fixed inset-0', !hostPlayer && 'bg-black')}
-    >
-      {hostPlayer ? (
-        <Cover item={item} hidden={player.state.started && !launched} />
-      ) : (
+    <div data-page="player" className="fixed inset-0">
+      {!hostPlayer && (
         <>
           <style>{cueCss(subtitleStyle)}</style>
           <video
             ref={video}
             data-ui="video"
-            className={cn('h-full w-full', OBJECT_FIT[fit])}
+            className={cn(
+              'h-full w-full bg-black transition-opacity duration-700 ease-out',
+              OBJECT_FIT[fit],
+              !player.state.started && 'opacity-0'
+            )}
             autoPlay
             playsInline
           />

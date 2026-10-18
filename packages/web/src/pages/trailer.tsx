@@ -4,7 +4,6 @@ import React from 'react';
 import { BiArrowBack, BiLinkExternal } from 'react-icons/bi';
 import { LuArrowLeft, LuSkipBack, LuSkipForward } from 'react-icons/lu';
 import { Button, IconButton } from '@aiostreams/ui/button';
-import { LoadingSpinner } from '@aiostreams/ui/loading-spinner';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '../lib/session';
 import { useItem } from '../lib/queries';
@@ -25,7 +24,8 @@ import {
 import type { PlayerController } from '../lib/playback/controller';
 import type { BaseItemDto, SourceInfo } from '../lib/types';
 import { PlayerControls } from '../components/player/controls';
-import { Cover, OBJECT_FIT, usePlayerPage } from './player';
+import { Cover } from '../components/player/cover';
+import { OBJECT_FIT, usePlayerPage } from './player';
 
 interface TrailerProps {
   item: BaseItemDto;
@@ -60,11 +60,7 @@ export function TrailerPage({
       return (
         <TrailerFailure message={t`This trailer didn't load.`} onBack={back} />
       );
-    return (
-      <Cover item={item.data}>
-        <LoadingSpinner />
-      </Cover>
-    );
+    return <Cover item={item.data} />;
   }
   if (!trailer || !playback.data)
     return <TrailerFailure message={t`This trailer is gone.`} onBack={back} />;

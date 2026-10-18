@@ -228,6 +228,30 @@ html[data-pointer-focus] :focus-visible [data-focus-frame] {
   }
 }
 
+@keyframes player-cover-drift {
+  from {
+    transform: scale(1.12);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes player-cover-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
 /* A party member's reaction rises over the video and fades. */
 @keyframes party-rise {
   from {
