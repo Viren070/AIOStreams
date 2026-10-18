@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.17.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.16.0...desktop-v0.17.0) (2026-10-18)
+
+
+### Features
+
+* **web:** add a people row to search ([c685a11](https://github.com/Viren070/AIOStreams/commit/c685a1105e798c14220a579b9a59ac9119f70eef))
+
+
+### Bug Fixes
+
+* **web:** accept a slash after the host in party app links ([c685a11](https://github.com/Viren070/AIOStreams/commit/c685a1105e798c14220a579b9a59ac9119f70eef))
+* **web:** pick the following hero's card on pointer moves, not enters ([c685a11](https://github.com/Viren070/AIOStreams/commit/c685a1105e798c14220a579b9a59ac9119f70eef))
+
 ## [0.16.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.15.0...desktop-v0.16.0) (2026-10-18)
 
 
