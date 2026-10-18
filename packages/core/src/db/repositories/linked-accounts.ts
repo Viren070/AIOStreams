@@ -118,22 +118,41 @@ export class LinkedAccountRepository {
 
   /**
    * Opted-in links of every configuration that inherits from `parentUuid`,
-   * least recently pushed first, so a capped run reaches different links each
-   * time instead of always the same ones.
+   * nearest descendants first, then least recently checked, so a capped run
+   * reaches different links each time instead of always the same ones.
+   * `urls` is how many manifests a push of the link fetches.
    */
   static async listForParentChange(
     parentUuid: string,
     maxDepth: number,
     limit: number
-  ): Promise<Array<{ uuid: string; id: string }>> {
-    return getDb().query<{ uuid: string; id: string }>(
+  ): Promise<Array<{ uuid: string; id: string; urls: number }>> {
+    const rows = await getDb().query<{
+      uuid: string;
+      id: string;
+      config: string;
+    }>(
       sql`WITH RECURSIVE ${descendantsCte(parentUuid, maxDepth)}
-          SELECT l.uuid, l.id FROM linked_accounts l
+          SELECT l.uuid, l.id, l.config FROM linked_accounts l
+            JOIN (SELECT uuid, MIN(depth) AS depth FROM descendants
+                   GROUP BY uuid) d ON d.uuid = l.uuid
            WHERE l.push_on_parent_change = 1
              AND l.uuid <> ${parentUuid}
-             AND l.uuid IN (SELECT uuid FROM descendants)
-           ORDER BY COALESCE(l.last_synced_at, 0), l.created_at, l.id
+           ORDER BY d.depth, COALESCE(l.last_checked_at, 0), l.created_at, l.id
            LIMIT ${limit}`
+    );
+    return rows.map((row) => ({
+      uuid: row.uuid,
+      id: row.id,
+      urls: parseConfig(row.config).manifestUrls.length,
+    }));
+  }
+
+  /** Stamps a push attempt, whatever its outcome. */
+  static async markChecked(uuid: string, id: string): Promise<void> {
+    await getDb().exec(
+      sql`UPDATE linked_accounts SET last_checked_at = ${Date.now()}
+           WHERE uuid = ${uuid} AND id = ${id}`
     );
   }
 
