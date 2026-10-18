@@ -89,7 +89,12 @@ export class LinkedAccountService {
   static async update(
     uuid: string,
     id: string,
-    patch: { label?: string; autoPush?: boolean; manifestUrls?: string[] }
+    patch: {
+      label?: string;
+      autoPush?: boolean;
+      pushOnParentChange?: boolean;
+      manifestUrls?: string[];
+    }
   ): Promise<LinkedAccount> {
     assertEnabled();
     const existing = await LinkedAccountRepository.get(uuid, id);
@@ -110,6 +115,7 @@ export class LinkedAccountService {
     const updated = await LinkedAccountRepository.update(uuid, id, {
       label: patch.label?.trim().slice(0, 64) || undefined,
       autoPush: patch.autoPush,
+      pushOnParentChange: patch.pushOnParentChange,
       config,
     });
     if (!updated) notFound();

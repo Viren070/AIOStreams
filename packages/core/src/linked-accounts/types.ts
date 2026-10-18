@@ -22,6 +22,8 @@ export interface LinkedAccount {
   identity: string | null;
   config: LinkedAccountConfig;
   autoPush: boolean;
+  /** Pushed by the server when a configuration this one inherits from is saved. */
+  pushOnParentChange: boolean;
   lastSyncedAt?: number;
   lastStatus?: LinkedAccountStatus;
   lastError?: string;
