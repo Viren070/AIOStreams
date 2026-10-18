@@ -92,7 +92,16 @@ internal class AssSurface(context: Context, font: () -> File) : SurfaceHolder.Ca
     // Touched on the worker only.
     private var native = 0L
     private val tracks = HashMap<String, Long>()
+    private val scripts = HashSet<String>()
     private var shown: String? = null
+
+    /** Each file track's latest lines, which libass gets once the track shows; it holds only the shown one's. */
+    private val recent = HashMap<String, ArrayDeque<Line>>()
+
+    /** The file's fonts, those libass has, and the names each track's styles and lines ask for. */
+    private var fonts: List<FontFile> = emptyList()
+    private val given = HashSet<File>()
+    private val wanted = HashMap<String, MutableSet<String>>()
     private var surface: Surface? = null
     private var width = 0
     private var height = 0
@@ -110,20 +119,23 @@ internal class AssSurface(context: Context, font: () -> File) : SurfaceHolder.Ca
     fun sink(): AssSink {
         val opened = file
         return object : AssSink {
-            override fun font(name: String, data: ByteArray) = queue(opened) { nativeAddFont(native, name, data) }
+            override fun fonts(fonts: List<FontFile>) = queue(opened) {
+                this@AssSurface.fonts = fonts
+                giveFonts()
+            }
 
             override fun header(track: String, header: ByteArray) = queue(opened) {
                 tracks.getOrPut(track) { nativeNewTrack(native, header) }
+                wanted.getOrPut(track) { HashSet() } += styleFonts(header)
+                if (track == shown) giveFonts()
             }
 
             override fun line(track: String, startMs: Long, durationMs: Long, line: ByteArray) = queue(opened) {
-                tracks[track]?.let { nativeAddLine(it, line, startMs, durationMs) }
-            }
-
-            override fun fontsLoaded() = queue(opened) {
-                nativeReloadFonts(native)
-                applyLayout()
-                redraw()
+                val lines = recent.getOrPut(track) { ArrayDeque() }
+                lines += Line(startMs, durationMs, line)
+                while (lines.isNotEmpty() && lines.first().endMs < timeUs / 1000 - KEPT_MS) lines.removeFirst()
+                if (track == shown) tracks[track]?.let { nativeAddLine(it, line, startMs, durationMs) }
+                if (overrideFonts(line, wanted.getOrPut(track) { HashSet() }) && track == shown) giveFonts()
             }
         }
     }
@@ -134,6 +146,10 @@ internal class AssSurface(context: Context, font: () -> File) : SurfaceHolder.Ca
         queue {
             freeTracks()
             nativeClearFonts(native)
+            recent.clear()
+            fonts = emptyList()
+            given.clear()
+            wanted.clear()
             applyLayout()
             shown = null
             redraw()
@@ -144,19 +160,29 @@ internal class AssSurface(context: Context, font: () -> File) : SurfaceHolder.Ca
     fun addScript(key: String, script: ByteArray) = queue {
         tracks.remove(key)?.let(::nativeFreeTrack)
         tracks[key] = nativeReadScript(native, script)
+        scripts += key
     }
 
     fun removeScript(key: String) = queue {
         if (shown == key) shown = null
         tracks.remove(key)?.let(::nativeFreeTrack)
+        scripts -= key
         redraw()
     }
 
     /** Shows the file's track or the script with `key`, or nothing. */
     fun select(key: String?) = queue {
+        if (key != shown) {
+            shown?.takeIf { it !in scripts }?.let(tracks::get)?.let(::nativeFlushTrack)
+            tracks[key]?.let { track -> recent[key]?.forEach { nativeAddLine(track, it.bytes, it.startMs, it.durationMs) } }
+        }
         shown = key
+        giveFonts()
         redraw()
     }
+
+    /** Megabytes of drawn subtitles libass keeps, 0 for its own limit. */
+    fun setCacheLimit(mb: Int) = queue { nativeSetCacheLimit(native, mb) }
 
     /** Draws what shows at `timeUs` of the script, for the frame the screen shows at `atNanos`. */
     fun render(timeUs: Long, atNanos: Long) {
@@ -229,6 +255,21 @@ internal class AssSurface(context: Context, font: () -> File) : SurfaceHolder.Ca
     private fun freeTracks() {
         tracks.values.forEach(::nativeFreeTrack)
         tracks.clear()
+        scripts.clear()
+    }
+
+    /** Hands libass the fonts the shown track asks for. */
+    private fun giveFonts() {
+        val names = shown?.let(wanted::get) ?: return
+        val giving = fonts.filter { font -> font.file !in given && font.names?.any(names::contains) != false }
+        if (giving.isEmpty()) return
+        for (font in giving) {
+            runCatching { nativeAddFont(native, font.file.name, font.file.readBytes()) }
+                .onFailure { Log.w(TAG, "couldn't read ${font.file.name}", it) }
+            given += font.file
+        }
+        nativeReloadFonts(native)
+        applyLayout()
     }
 
     private fun apply() {
@@ -309,6 +350,9 @@ internal class AssSurface(context: Context, font: () -> File) : SurfaceHolder.Ca
         const val MAX_PIXELS = 1920 * 1080
         const val REFRESH_NANOS = 8_000_000L
 
+        /** Lines a track keeps from before the playhead, for one it shows later; signs can stay up a while. */
+        const val KEPT_MS = 30_000L
+
         @JvmStatic
         external fun nativeCreate(font: String): Long
 
@@ -332,6 +376,12 @@ internal class AssSurface(context: Context, font: () -> File) : SurfaceHolder.Ca
 
         @JvmStatic
         external fun nativeFreeTrack(track: Long)
+
+        @JvmStatic
+        external fun nativeFlushTrack(track: Long)
+
+        @JvmStatic
+        external fun nativeSetCacheLimit(handle: Long, mb: Int)
 
         @JvmStatic
         external fun nativeSetWindow(handle: Long, surface: Surface?, width: Int, height: Int)
@@ -361,6 +411,46 @@ internal class AssSurface(context: Context, font: () -> File) : SurfaceHolder.Ca
         external fun nativeRelease(handle: Long)
     }
 }
+
+private class Line(val startMs: Long, val durationMs: Long, val bytes: ByteArray) {
+    val endMs get() = startMs + durationMs
+}
+
+private fun styleFonts(header: ByteArray): Set<String> {
+    val names = HashSet<String>()
+    var styles = false
+    var column = 1
+    for (raw in String(header, Charsets.UTF_8).lineSequence()) {
+        val line = raw.trim()
+        when {
+            line.startsWith("[") -> styles = line.contains("Styles", ignoreCase = true)
+            !styles -> {}
+            line.startsWith("Format:") -> column = line.substringAfter(':').split(',').indexOfFirst { it.trim().equals("Fontname", ignoreCase = true) }.coerceAtLeast(0)
+            line.startsWith("Style:") -> line.substringAfter(':').split(',').getOrNull(column)?.let(::fontKey)?.takeIf { it.isNotEmpty() }?.let(names::add)
+        }
+    }
+    return names
+}
+
+/** Adds the fonts a line's `\fn` tags name; true when one was new. */
+private fun overrideFonts(line: ByteArray, names: MutableSet<String>): Boolean {
+    var added = false
+    var i = 0
+    while (i + 3 <= line.size) {
+        if (line[i] != BACKSLASH || line[i + 1] != 'f'.code.toByte() || line[i + 2] != 'n'.code.toByte()) {
+            i++
+            continue
+        }
+        var end = i + 3
+        while (end < line.size && line[end] != BACKSLASH && line[end] != '}'.code.toByte()) end++
+        val name = fontKey(String(line, i + 3, end - i - 3, Charsets.UTF_8))
+        if (name.isNotEmpty() && names.add(name)) added = true
+        i = end
+    }
+    return added
+}
+
+private const val BACKSLASH = '\\'.code.toByte()
 
 /** How long renders took, kept for the last few thousand. */
 internal class Timings {

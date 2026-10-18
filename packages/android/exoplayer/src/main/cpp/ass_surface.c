@@ -18,7 +18,7 @@
     X(renderer_init) X(renderer_done) X(set_fonts) X(set_frame_size) X(set_storage_size) X(set_margins) \
     X(set_use_margins) X(set_font_scale) X(set_line_position) X(new_track) X(free_track) \
     X(process_codec_private) X(process_chunk) X(read_memory) X(render_frame) \
-    X(set_selective_style_override_enabled) X(set_selective_style_override)
+    X(set_selective_style_override_enabled) X(set_selective_style_override) X(set_cache_limits) X(flush_events)
 
 static struct {
 #define MEMBER(name) __typeof__(ass_##name) *name;
@@ -49,6 +49,7 @@ typedef struct {
     char *font;
     int width;
     int height;
+    int cache_mb;
 } Surface;
 
 static void message(int level, const char *format, va_list args, void *data) {
@@ -130,6 +131,7 @@ static void include(ARect *rect, int left, int top, int right, int bottom) {
 
 static void start_renderer(Surface *surface) {
     surface->renderer = libass.renderer_init(surface->library);
+    if (surface->cache_mb) libass.set_cache_limits(surface->renderer, 0, surface->cache_mb);
     libass.set_fonts(surface->renderer, surface->font, "sans-serif", ASS_FONTPROVIDER_AUTODETECT, NULL, 1);
     if (surface->width) libass.set_frame_size(surface->renderer, surface->width, surface->height);
 }
@@ -208,6 +210,16 @@ JNIEXPORT void JNICALL METHOD(nativeAddLine)(
 
 JNIEXPORT void JNICALL METHOD(nativeFreeTrack)(JNIEnv *env, jclass clazz, jlong track) {
     libass.free_track((ASS_Track *) track);
+}
+
+JNIEXPORT void JNICALL METHOD(nativeFlushTrack)(JNIEnv *env, jclass clazz, jlong track) {
+    libass.flush_events((ASS_Track *) track);
+}
+
+JNIEXPORT void JNICALL METHOD(nativeSetCacheLimit)(JNIEnv *env, jclass clazz, jlong handle, jint mb) {
+    Surface *surface = (Surface *) handle;
+    surface->cache_mb = mb;
+    libass.set_cache_limits(surface->renderer, 0, mb);
 }
 
 JNIEXPORT void JNICALL METHOD(nativeSetWindow)(

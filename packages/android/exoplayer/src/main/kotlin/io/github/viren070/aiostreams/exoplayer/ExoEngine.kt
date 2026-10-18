@@ -50,6 +50,7 @@ import androidx.media3.exoplayer.video.VideoFrameMetadataListener
 import androidx.media3.extractor.SeekMap
 import androidx.media3.extractor.metadata.Chapter
 import io.github.viren070.aiostreams.mpv.MpvEngine
+import io.github.viren070.aiostreams.playback.CacheBudget
 import io.github.viren070.aiostreams.playback.Change
 import io.github.viren070.aiostreams.playback.Engine
 import io.github.viren070.aiostreams.playback.Fit
@@ -62,6 +63,7 @@ import io.github.viren070.aiostreams.playback.PlayerTrack
 import io.github.viren070.aiostreams.playback.Skip
 import io.github.viren070.aiostreams.playback.Sound
 import io.github.viren070.aiostreams.playback.Style
+import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -89,6 +91,7 @@ class ExoEngine(private val context: Context) :
     private val cache = StreamCache(context, http, link)
     private val data = DefaultDataSource.Factory(context, cache.factory)
     private val ass = AssSurface(context) { MpvEngine.fallbackFont(context) }
+    private val fontsDir = File(context.cacheDir, "attached-fonts")
     private val player: ExoPlayer
     private val tracks = ExoTracks()
     private val levels = SoundLevels()
@@ -163,6 +166,9 @@ class ExoEngine(private val context: Context) :
     private var ac3Encode = false
 
     init {
+        fontsDir.deleteRecursively()
+        if (CacheBudget.small(context)) ass.setCacheLimit(SMALL_ASS_CACHE_MB)
+        cache.onMemoryShort = { ass.setCacheLimit(SHORT_ASS_CACHE_MB) }
         val extractors = Extractors(
             readBack = { readBack },
             sink = { SubtitleSink(ass.sink(), texts.sink()) },
@@ -442,13 +448,15 @@ class ExoEngine(private val context: Context) :
 
     private fun loadFonts(uri: Uri, position: Long, length: Long?) {
         if (fonts != null || uri.toString() != url) return
-        fonts = AttachedFonts(DefaultDataSource.Factory(context, http), uri, position, length, ass.sink(), ::fontsMayLoad)
+        val dir = File(fontsDir, System.nanoTime().toString())
+        fonts = AttachedFonts(DefaultDataSource.Factory(context, http), uri, position, length, ass.sink(), dir, ::fontsMayLoad)
             .also { it.start() }
     }
 
     private fun closeFonts() {
         fonts?.close()
         fonts = null
+        fontsDir.deleteRecursively()
     }
 
     private fun fontsMayLoad(bytes: Long) = bytes <= SMALL_FONTS_BYTES || shown && (!cache.caching || cache.canSpare(bytes))
@@ -800,6 +808,7 @@ class ExoEngine(private val context: Context) :
         if (url == null) return
         val stalled = loaded && !seeking && player.playWhenReady && player.playbackState == Player.STATE_BUFFERING
         cache.setPlayer(player.totalBufferedDuration * 1000, player.isPlaying && !seeking || stalled)
+        texts.trimHidden(text, player.currentPosition * 1000)
         state(
             PlayerState(
                 positionMs = player.currentPosition.toDouble(),
@@ -834,6 +843,8 @@ class ExoEngine(private val context: Context) :
         const val SMALL_FONTS_BYTES = 8L shl 20
         const val LANDING_MS = 10_000.0
         const val SKIP_REACTION_MS = 2_000.0
+        const val SMALL_ASS_CACHE_MB = 32
+        const val SHORT_ASS_CACHE_MB = 8
 
         /** The layouts the page offers. */
         val CHANNELS = mapOf("stereo" to 2, "5.1" to 6, "7.1" to 8)

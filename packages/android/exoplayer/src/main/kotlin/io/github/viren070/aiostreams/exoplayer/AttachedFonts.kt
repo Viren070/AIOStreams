@@ -8,13 +8,15 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
 import java.io.EOFException
+import java.io.File
 import java.io.IOException
 import java.io.InterruptedIOException
 
 /**
  * A Matroska file's attached fonts, read on a connection of their own, so the
- * picture doesn't wait behind them: the extractor skips them. Styled subtitles
- * use the fallback font until they're in.
+ * picture doesn't wait behind them: the extractor skips them. They're kept in
+ * [dir], for libass to take only those the shown subtitles use. Styled
+ * subtitles use the fallback font until they're in.
  */
 @OptIn(UnstableApi::class)
 internal class AttachedFonts(
@@ -24,6 +26,7 @@ internal class AttachedFonts(
     private val position: Long,
     private val length: Long?,
     private val sink: AssSink,
+    private val dir: File,
     /** Whether fonts this many bytes in all may be read now, rather than leave the link to playback. */
     private val mayLoad: (Long) -> Boolean,
 ) {
@@ -46,16 +49,17 @@ internal class AttachedFonts(
                 if (closed) return
                 Thread.sleep(WAIT_MS)
             }
-            val added = read(content) { input ->
-                var added = 0
+            dir.mkdirs()
+            val fonts = read(content) { input ->
+                val fonts = mutableListOf<FontFile>()
                 while (input.at <= content.last) {
                     val id = input.id()
                     val size = input.size()
-                    if (id == ATTACHED_FILE) added += file(input, input.at + size) else input.skip(size)
+                    if (id == ATTACHED_FILE) file(input, input.at + size, fonts.size)?.let(fonts::add) else input.skip(size)
                 }
-                added
+                fonts
             }
-            if (added > 0 && !closed) sink.fontsLoaded()
+            if (fonts.isNotEmpty() && !closed) sink.fonts(fonts)
         } catch (e: InterruptedException) {
             Thread.currentThread().interrupt()
         } catch (e: Exception) {
@@ -80,8 +84,8 @@ internal class AttachedFonts(
         }
     }
 
-    /** Hands the attachment to libass if it's a font; 1 when it was. */
-    private fun file(input: Input, end: Long): Int {
+    /** Saves the attachment if it's a font. */
+    private fun file(input: Input, end: Long, index: Int): FontFile? {
         var name: String? = null
         var mime: String? = null
         var bytes: ByteArray? = null
@@ -95,9 +99,10 @@ internal class AttachedFonts(
                 else -> input.skip(size)
             }
         }
-        val font = bytes?.takeIf { name != null && isFont(name, mime) } ?: return 0
-        sink.font(name!!, font)
-        return 1
+        val font = bytes?.takeIf { name != null && isFont(name, mime) } ?: return null
+        val file = File(dir, "$index-" + name!!.replace(UNSAFE, "_"))
+        file.writeBytes(font)
+        return FontFile(file, fontNames(font))
     }
 
     /** EBML read in order off the connection, until closed. */
@@ -166,6 +171,7 @@ internal class AttachedFonts(
     companion object {
         private const val TAG = "attached-fonts"
         private const val WAIT_MS = 250L
+        private val UNSAFE = Regex("[^A-Za-z0-9._-]")
 
         /** An element's id and size. */
         private const val HEADER_BYTES = 12L

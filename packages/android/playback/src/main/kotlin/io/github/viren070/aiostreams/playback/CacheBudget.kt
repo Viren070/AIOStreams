@@ -16,8 +16,14 @@ object CacheBudget {
         val memory = ActivityManager.MemoryInfo().also(activities::getMemoryInfo)
         val spare = (memory.availMem - memory.threshold).coerceAtLeast(0)
         var bytes = min(memory.totalMem / 8, spare / 4)
-        if (activities.isLowRamDevice || memory.totalMem < SMALL_DEVICE_BYTES) bytes = min(bytes, SMALL_MAX_BYTES)
+        if (small(context)) bytes = min(bytes, SMALL_MAX_BYTES)
         return bytes.coerceIn(MIN_BYTES, MAX_BYTES)
+    }
+
+    fun small(context: Context): Boolean {
+        val activities = context.getSystemService(ActivityManager::class.java)
+        val memory = ActivityManager.MemoryInfo().also(activities::getMemoryInfo)
+        return activities.isLowRamDevice || memory.totalMem < SMALL_DEVICE_BYTES
     }
 
     private const val MIN_BYTES = 32L shl 20

@@ -14,17 +14,18 @@ import androidx.media3.extractor.text.CuesWithTiming
 import androidx.media3.extractor.text.DefaultSubtitleParserFactory
 import androidx.media3.extractor.text.SubtitleParser
 import java.io.EOFException
+import java.io.File
+
+/** A font the file carries, on disk, and the names it answers to, null where it couldn't be read. */
+internal class FontFile(val file: File, val names: Set<String>?)
 
 /** Where a file's ASS goes as it is read: its fonts, each track's header, and the lines. */
 internal interface AssSink {
-    fun font(name: String, data: ByteArray)
+    fun fonts(fonts: List<FontFile>)
 
     fun header(track: String, header: ByteArray)
 
     fun line(track: String, startMs: Long, durationMs: Long, line: ByteArray)
-
-    /** Fonts came after lines may have been drawn with others. */
-    fun fontsLoaded()
 }
 
 /** Where a file's other subtitles go, unparsed, as they are read. */

@@ -132,6 +132,12 @@ internal class TextTimeline(private val replace: Boolean, private val parser: Sa
     }
 
     @Synchronized
+    fun trim(beforeUs: Long) {
+        samples.headMap(samples.floorKey(beforeUs) ?: beforeUs).clear()
+        lines.headMap(if (replace) lines.floorKey(beforeUs) ?: beforeUs else beforeUs - longestUs).clear()
+    }
+
+    @Synchronized
     fun cuesAt(timeUs: Long): List<Cue> {
         if (replace) samples.floorKey(timeUs)?.let { samples.headMap(it).clear() }
         while (true) {
@@ -167,6 +173,15 @@ internal class TextTracks {
     fun reset() {
         file++
         timelines.clear()
+    }
+
+    /** Hidden tracks keep only lines that could show at once if picked. */
+    fun trimHidden(shown: TextTimeline?, timeUs: Long) {
+        for (timeline in timelines.values) if (timeline !== shown) timeline.trim(timeUs - HIDDEN_KEPT_US)
+    }
+
+    private companion object {
+        const val HIDDEN_KEPT_US = 30_000_000L
     }
 
     /** The reader's way in for the file opening now. */

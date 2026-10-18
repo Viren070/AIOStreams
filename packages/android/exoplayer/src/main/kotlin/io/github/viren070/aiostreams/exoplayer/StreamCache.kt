@@ -59,6 +59,10 @@ internal class StreamCache(
     @Volatile
     var limitMb = 0
 
+    /** Memory stays short with the cache already at its least. */
+    @Volatile
+    var onMemoryShort: (() -> Unit)? = null
+
     val factory = DataSource.Factory { CachedDataSource() }
 
     // Closing a connection with bytes left drains it for a while first, which a fetch shouldn't wait for.
@@ -336,11 +340,13 @@ internal class StreamCache(
             changed.signalAll()
         }
 
-        fun shrink() = lock.withLock {
-            if (budget <= MIN_BYTES) return@withLock
+        /** False once the cache is at its least already. */
+        fun shrink(): Boolean = lock.withLock {
+            if (budget <= MIN_BYTES) return false
             budget = (budget / 2).coerceAtLeast(MIN_BYTES) / BLOCK * BLOCK
             while (blocks.count * BLOCK > budget && evict(-1)) Unit
             Log.i(TAG, "memory is short, holding ${budget shr 20} MB at most")
+            true
         }
 
         fun aheadUs(): Long = lock.withLock {
@@ -610,7 +616,7 @@ internal class StreamCache(
             while (!closed) {
                 SystemClock.sleep(WATCH_MS)
                 fetchLanding()
-                if (++ticks % MEMORY_TICKS == 0 && memoryShort()) shrink()
+                if (++ticks % MEMORY_TICKS == 0 && memoryShort() && !shrink()) onMemoryShort?.invoke()
                 val now = SystemClock.elapsedRealtimeNanos()
                 for ((source, since) in waiting) {
                     if (now - since < STALL_NS || waiting.remove(source) == null) continue
