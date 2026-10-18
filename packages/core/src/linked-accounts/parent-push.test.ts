@@ -97,6 +97,22 @@ describe('ParentChangePusher', () => {
     assert.deepEqual(pushed, []);
   });
 
+  it('keeps working after a run fails unexpectedly', async () => {
+    let calls = 0;
+    const { pusher, pushed } = setup({
+      maxLinks: () => {
+        if (calls++ === 0) throw new Error('config unavailable');
+        return 100;
+      },
+    });
+    pusher.saved('p');
+    await elapse(pusher, DELAY);
+    assert.deepEqual(pushed, []);
+    pusher.saved('p');
+    await elapse(pusher, DELAY);
+    assert.deepEqual(pushed, ['a/a1', 'b/b1', 'b/b2']);
+  });
+
   it('drops pending work when stopped', async () => {
     const { pusher, pushed } = setup();
     pusher.saved('p');

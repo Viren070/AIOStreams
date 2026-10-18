@@ -47,7 +47,16 @@ export class ParentChangePusher {
     clearTimeout(this.timers.get(parentUuid));
     const timer = setTimeout(() => {
       this.timers.delete(parentUuid);
-      this.queue = this.queue.then(() => this.run(parentUuid));
+      // Caught so one failure cannot leave the chain rejected, which would
+      // skip every later run.
+      this.queue = this.queue
+        .then(() => this.run(parentUuid))
+        .catch((error) =>
+          logger.error(
+            { parent: parentUuid, error: String(error) },
+            'push after a parent change failed'
+          )
+        );
     }, this.deps.delayMs());
     timer.unref?.();
     this.timers.set(parentUuid, timer);
@@ -112,7 +121,18 @@ let started: ParentChangePusher | null = null;
 export function startParentChangePushes(): ParentChangePusher {
   if (started) return started;
   const pusher = new ParentChangePusher();
-  userConfigBus.on('saved', (uuid: string) => pusher.saved(uuid));
+  userConfigBus.on('saved', (uuid: string) => {
+    // Listeners run inside the save; a throw here would fail a save that
+    // already committed.
+    try {
+      pusher.saved(uuid);
+    } catch (error) {
+      logger.error(
+        { parent: uuid, error: String(error) },
+        'could not schedule a push after a parent change'
+      );
+    }
+  });
   started = pusher;
   return pusher;
 }
