@@ -3,7 +3,9 @@
   "pages": [
     "index",
     "metadata",
+    "people",
     "collections",
+    "similar",
     "streams",
     "subtitles",
     "watch-state"
