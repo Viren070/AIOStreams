@@ -6,6 +6,7 @@ import { IdParser } from '../utils/id-parser.js';
 import { createLogger } from '../logging/logger.js';
 import type { WatchStateRow } from '../db/repositories/watch-state.js';
 import { matchedEpisodeOf, seriesIdOf } from '../watch-state/types.js';
+import { matchKeyFor } from '../watch-state/canonical.js';
 import { firstWriteOf } from './write-once.js';
 import type {
   ContentDescriptor,
@@ -211,7 +212,37 @@ export function sharedEpisodeId(d: ContentDescriptor): string | undefined {
   );
 }
 
-function unpack(buf: Buffer): ContentDescriptor | null {
+/** Other servers pack an episode numbered within its entry with no season. */
+async function entryEpisode(
+  type: string,
+  baseId: string,
+  episode: number
+): Promise<ContentDescriptor> {
+  const videoId = `${baseId}:${episode}`;
+  const matchKey = await matchKeyFor({
+    kind: 'episode',
+    type,
+    baseId,
+    episode,
+    videoId,
+  });
+  const at = watchRowEpisode({
+    mediaType: type,
+    season: null,
+    episode,
+    matchKey,
+  })!;
+  return {
+    k: 'episode',
+    t: type,
+    i: baseId,
+    s: at.season,
+    e: at.episode,
+    v: videoId,
+  };
+}
+
+async function unpack(buf: Buffer): Promise<ContentDescriptor | null> {
   const kind = KIND_BY_CODE[buf[1] >> 4];
   const idType = ID_TYPE_BY_CODE[buf[1] & 0x0f];
   const mediaType = MEDIA_TYPE_BY_CODE[buf[2]];
@@ -228,6 +259,7 @@ function unpack(buf: Buffer): ContentDescriptor | null {
     case 'season':
       return { k: 'season', t: mediaType, i: baseId, s: season };
     case 'episode': {
+      if (season === NONE16) return entryEpisode(mediaType, baseId, episode);
       const parsed = IdParser.parse(baseId, mediaType);
       if (!parsed) return null;
       return {
@@ -386,7 +418,7 @@ export async function decodeItemId(
   const buf = Buffer.from(hex, 'hex');
   switch (buf[0]) {
     case MARK_PACKED: {
-      const d = unpack(buf);
+      const d = await unpack(buf);
       return d ? { kind: 'descriptor', descriptor: d } : null;
     }
     case MARK_VIEW: {
