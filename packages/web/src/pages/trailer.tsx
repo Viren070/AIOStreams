@@ -11,6 +11,7 @@ import { currentHost } from '../lib/hosts';
 import { usePlayerFullscreen } from '../lib/playback/fullscreen';
 import { usePlayer } from '../lib/playback/use-player';
 import { videoEngine } from '../lib/playback/video';
+import { isDash } from '../lib/playback/dash';
 import { useAction } from '../lib/input';
 import { settings, useSetting } from '../lib/settings';
 import { usePlaybackPrefs, type PlaybackPrefs } from '../lib/user-config';
@@ -128,7 +129,10 @@ function PlayedTrailer({
 }: TrailerProps & { url: string; prefs: PlaybackPrefs }) {
   const { client } = useSession();
   const video = React.useRef<HTMLVideoElement>(null);
-  const [hostPlayer] = React.useState(() => currentHost().player);
+  // A DASH manifest plays in the page's own video, through Shaka (dash.ts).
+  const [hostPlayer] = React.useState(() =>
+    isDash(url) ? undefined : currentHost().player
+  );
   const [fit] = useSetting(settings.video.fit);
   const [subtitleStyle] = useSetting(settings.subtitle.style);
   const source = React.useMemo(() => sourceOf(url), [url]);

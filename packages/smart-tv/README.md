@@ -41,6 +41,14 @@ Known gaps: `:where()` rules gain specificity (they are resets), wrapping flex r
 every item rather than between them, Sonner's toasts keep their own `gap` and `inset`, and what Tizen
 7 misses too (`:has()`, `dvh`) stays missing.
 
+### Trailers on Samsung TVs
+
+Both Tizen packages resolve YouTube trailers themselves (`web/src/lib/hosts/tizen/youtube.ts`, with
+the desktop and Android apps' clients). AVPlay plays only an HLS playlist's first size, YouTube's
+smallest, so the separate H.264 sizes up to 1080p and the AAC audio go as a DASH manifest in a
+`data:` address, which the page's own video plays through Shaka Player (`web/src/lib/playback/dash.ts`),
+loaded only then.
+
 ## Releases
 
 release-please releases this package on its own (`smart-tv-v*` tags, `chore(smart-tv): release` pull

@@ -4061,6 +4061,14 @@ msgstr "the stream ended early"
 msgid "The title, the episode and the time left."
 msgstr "The title, the episode and the time left."
 
+#: src/lib/playback/dash.ts
+msgid "The trailer didn't load (error {code})"
+msgstr "The trailer didn't load (error {code})"
+
+#: src/lib/playback/dash.ts
+msgid "The trailer stopped (error {code})"
+msgstr "The trailer stopped (error {code})"
+
 #: src/lib/hosts/tizen/player.ts
 msgid "the TV cannot play this format"
 msgstr "the TV cannot play this format"

@@ -706,6 +706,9 @@ importers:
       react-icons:
         specifier: ^5.7.0
         version: 5.7.0(react@19.3.0)
+      shaka-player:
+        specifier: ^5.3.0
+        version: 5.3.0
       sonner:
         specifier: 2.0.5
         version: 2.0.5(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -7203,6 +7206,10 @@ packages:
     resolution: {integrity: sha512-8LzC5+bvI45BjpfXU8V5fdU2mfeKiQe1D1gIMn7XUlF3OTUrpdJpPPH4EMAnF0DsHHdSZqCdSss5qCmJKuiO3w==}
     engines: {node: '>= 0.10'}
     hasBin: true
+
+  shaka-player@5.3.0:
+    resolution: {integrity: sha512-bZ5MiKQcs+CBtAHFGUqHW4Q+2U3oXGVmXY+gdrSOoVmHzcilvNp+jEsqhd3/4cGhL4j4+Z66Jisq42U4jOfY1g==}
+    engines: {node: '>=18'}
 
   sharp@0.35.5:
     resolution: {integrity: sha512-Ywn4OnzGukp7CDMrp08RQ50YKmuwG47brZgIVPTvBaaAfQlRlygrRqSrxdCiL9M+LlzLBiJ68IR1QqvzHyjC7g==}
@@ -15198,6 +15205,8 @@ snapshots:
       inherits: 2.0.4
       safe-buffer: 5.2.1
       to-buffer: 1.2.2
+
+  shaka-player@5.3.0: {}
 
   sharp@0.35.5(@types/node@25.9.9):
     dependencies:

@@ -1,4 +1,5 @@
 import { t } from '@lingui/core/macro';
+import { adaptiveInfo } from './youtube';
 import { parseCues, type SubtitleCue } from '../../subtitles/cues';
 import { ownTrackLabel } from '../../playback/controller';
 import type {
@@ -165,6 +166,7 @@ export const avPlayEngine: EngineFactory = (emit) => {
         'position:fixed;left:0;top:0;width:100%;height:100%';
       document.body.prepend(object);
 
+      const adaptive = adaptiveInfo(next.url);
       const onPrepared = () => {
         const audio = tracksOf(av, 'AUDIO');
         const text = tracksOf(av, 'TEXT');
@@ -215,6 +217,8 @@ export const avPlayEngine: EngineFactory = (emit) => {
             showText();
           },
         });
+        // See adaptiveInfo; set between open and prepare.
+        if (adaptive) av.setStreamingProperty('ADAPTIVE_INFO', adaptive);
         // AVPlay places its picture in a 1920x1080 space, whatever the screen.
         av.setDisplayRect(0, 0, 1920, 1080);
         av.setDisplayMethod('PLAYER_DISPLAY_MODE_LETTER_BOX');

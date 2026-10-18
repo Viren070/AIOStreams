@@ -1,5 +1,6 @@
 import type { Host } from '..';
 import { avPlayEngine } from './player';
+import { resolveYouTube } from './youtube';
 
 export interface AvPlayTrack {
   index: number;
@@ -25,6 +26,7 @@ export interface AvPlay {
   setListener(listener: object): void;
   setDisplayRect(x: number, y: number, width: number, height: number): void;
   setDisplayMethod(method: string): void;
+  setStreamingProperty(type: string, value: string): void;
   getTotalTrackInfo(): AvPlayTrack[];
   getCurrentStreamInfo(): AvPlayTrack[];
   setSelectTrack(type: 'AUDIO' | 'TEXT', index: number): void;
@@ -98,6 +100,7 @@ export function tizenHost(): Host | null {
     device: () => ({ name: 'Samsung TV' }),
     exit: () => window.tizen?.application.getCurrentApplication().exit(),
     start: registerMediaKeys,
+    resolveYouTube,
     ...(window.webapis?.avplay && {
       player: avPlayEngine,
       playerFeatures: ['audio'],
