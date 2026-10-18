@@ -25,7 +25,7 @@ import { currentHost } from '../lib/hosts';
 import { useFeature } from '../lib/server-info';
 import { usePlayerFullscreen } from '../lib/playback/fullscreen';
 import { usePlayer } from '../lib/playback/use-player';
-import { videoEngine } from '../lib/playback/video';
+import { moviEngine } from '../lib/playback/movi';
 import { useNowPlaying } from '../lib/playback/now-playing';
 import {
   useShowPicks,
@@ -544,7 +544,7 @@ function Player({
     },
     [local]
   );
-  const own = usePlayer(hostPlayer ?? videoEngine(video), {
+  const own = usePlayer(hostPlayer ?? moviEngine(video), {
     client,
     item,
     url: local?.local
