@@ -2,6 +2,8 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { defineConfig, loadEnv, type RsbuildConfig } from '@rsbuild/core';
 import { pluginReact } from '@rsbuild/plugin-react';
+import type { AcceptedPlugin } from 'postcss';
+import legacyCss from './legacy-css.js';
 
 const { parsed } = loadEnv({ prefixes: ['PUBLIC_'] });
 
@@ -35,6 +37,11 @@ function buildCommit(): string {
   return 'unknown';
 }
 
+/** Tizen 6.0's Chromium; Tizen 6.5 has 85. */
+const TIZEN6_BROWSERS = ['chrome >= 76'];
+
+type PostcssUtils = { addPlugins: (plugins: AcceptedPlugin[]) => void };
+
 const devServerPort = Number(parsed.PORT) || 21459;
 const backendBaseUrl =
   parsed.PUBLIC_BACKEND_BASE_URL || 'http://localhost:3001';
@@ -57,7 +64,12 @@ const BUNDLED_ICONS = [
  * instead of the copy each server hosts at `/web`.
  */
 export default defineConfig(({ envMode }) => {
-  const standalone = envMode === 'standalone';
+  // `--env-mode tizen6` is the standalone build for Tizen 6 TVs (Chromium 76
+  // on 6.0, 85 on 6.5): lowered syntax, polyfills and CSS fallbacks.
+  const tizen6 = envMode === 'tizen6';
+  const standalone = envMode === 'standalone' || tizen6;
+  // Read by autoprefixer in postcss.config.js as well as by Rsbuild.
+  if (tizen6) process.env.BROWSERSLIST = TIZEN6_BROWSERS.join(',');
   const define = {
     // Read by @aiostreams/ui components.
     'process.env.NEXT_PUBLIC_PLATFORM': JSON.stringify(''),
@@ -69,6 +81,8 @@ export default defineConfig(({ envMode }) => {
     define,
     // Dependencies too, which are otherwise shipped as published: older browsers can't parse some of their syntax.
     include: [/[\\/]node_modules[\\/]/],
+    // Polyfilling core-js with itself breaks it.
+    ...(tizen6 && { exclude: [/[\\/]node_modules[\\/]core-js[\\/]/] }),
   };
   // Lingui's macros compile at build time, and each catalog loads compiled.
   const tools: RsbuildConfig['tools'] = {
@@ -87,11 +101,33 @@ export default defineConfig(({ envMode }) => {
         templateParameters: { root: './', icons: false },
       },
       output: {
-        distPath: { root: 'dist-standalone' },
+        distPath: { root: tizen6 ? 'dist-tizen6' : 'dist-standalone' },
         // Relative, since the TV apps load it from their package's files.
         assetPrefix: 'auto',
         copy: BUNDLED_ICONS,
+        ...(tizen6 && {
+          overrideBrowserslist: TIZEN6_BROWSERS,
+          polyfill: 'usage' as const,
+        }),
       },
+      ...(tizen6 && {
+        tools: {
+          ...tools,
+          swc: {
+            ...tools.swc,
+            // Chromium 84 parses private methods, but SWC's tables leave them in.
+            env: {
+              include: [
+                'transform-private-methods',
+                'transform-class-properties',
+                'transform-private-property-in-object',
+              ],
+            },
+          },
+          postcss: (_: unknown, { addPlugins }: PostcssUtils) =>
+            addPlugins(legacyCss()),
+        },
+      }),
       server: { port: devServerPort + 1 },
     };
   }

@@ -155,6 +155,15 @@ html[data-pointer-focus] :focus-visible [data-focus-frame] {
 [role='option']:focus-visible:not([data-focus='own']) {
   outline-offset: -2px;
 }
+/* Older engines, Tizen 6's among them, drop a frame's rounded clip from what
+   animates inside it (the artwork's focus scale, a shade's fade) while it
+   runs, so those round their own corners as well. */
+[data-ui='artwork'],
+[data-ui='artwork-fallback'],
+[data-ui$='-shade'],
+[data-ui='wide-card-play'] {
+  border-radius: inherit;
+}
 
 [data-ui='player-controls'] {
   --control: 2.5rem;

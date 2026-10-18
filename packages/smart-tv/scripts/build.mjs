@@ -30,14 +30,26 @@ function run(command, args, options = {}) {
   if (status !== 0) process.exit(status ?? 1);
 }
 
-function stageApp(manifest, withVersion, scripts = []) {
+/**
+ * `web` is the web app's build, `dirs` the folders laid over it, `minimum` the
+ * oldest TV boot.js lets by without a warning, `scripts` what runs after it.
+ */
+function stageApp(
+  manifest,
+  withVersion,
+  { web = 'dist-standalone', dirs = [platform], minimum, scripts = [] } = {}
+) {
   const stage = join(out, platform);
   rmSync(stage, { recursive: true, force: true });
-  cpSync(join(root, '../web/dist-standalone'), stage, {
-    recursive: true,
-  });
-  cpSync(join(root, platform), stage, { recursive: true });
-  cpSync(join(root, 'boot.js'), join(stage, 'boot.js'));
+  cpSync(join(root, '../web', web), stage, { recursive: true });
+  for (const dir of dirs) cpSync(join(root, dir), stage, { recursive: true });
+  let boot = readFileSync(join(root, 'boot.js'), 'utf8');
+  if (minimum) {
+    const line = /var MIN = {[^}]*};/;
+    if (!line.test(boot)) throw new Error('boot.js has no MIN line');
+    boot = boot.replace(line, `var MIN = ${JSON.stringify(minimum)};`);
+  }
+  writeFileSync(join(stage, 'boot.js'), boot);
   const file = join(stage, manifest);
   writeFileSync(file, withVersion(readFileSync(file, 'utf8')));
   const index = join(stage, 'index.html');
@@ -51,12 +63,12 @@ function stageApp(manifest, withVersion, scripts = []) {
   return stage;
 }
 
-function sign(stage, profile) {
+function sign(stage, profile, dir = out) {
   // The CLI resolves relative paths against its own folder. On Windows it is a
   // batch file, so it runs in a shell, which needs the paths quoted.
   const shell = process.platform === 'win32';
   const path = (p) => (shell ? `"${p}"` : p);
-  const args = ['package', '-t', 'wgt', '-s', profile, '-o', path(out)];
+  const args = ['package', '-t', 'wgt', '-s', profile, '-o', path(dir)];
   run('tizen', [...args, '--', path(stage)], { shell });
 }
 
@@ -86,16 +98,30 @@ if (platform === 'webos') {
     out,
     '--no-minify',
   ]);
-} else if (platform === 'tizen') {
+} else if (platform === 'tizen' || platform === 'tizen6') {
+  // The Tizen 6 package is the same app, built for Chromium 76 (web's
+  // `build:tizen6`), with legacy.js filling in layout that engine lacks.
+  const tizen6 = platform === 'tizen6';
   const stage = stageApp(
     'config.xml',
     (text) => text.replace('<widget ', `<widget version="${version}" `),
-    ['$WEBAPIS/webapis/webapis.js']
+    tizen6
+      ? {
+          web: 'dist-tizen6',
+          dirs: ['tizen', 'tizen6'],
+          minimum: { chrome: 76, tizen: 6, year: 2021 },
+          scripts: ['legacy.js', '$WEBAPIS/webapis/webapis.js'],
+        }
+      : { scripts: ['$WEBAPIS/webapis/webapis.js'] }
   );
   const profile = process.env.TIZEN_PROFILE;
-  if (profile) sign(stage, profile);
-  else writeUnsigned(stage, join(out, 'AIOStreams.wgt'));
+  if (profile) sign(stage, profile, tizen6 ? join(out, 'tizen6-signed') : out);
+  else
+    writeUnsigned(
+      stage,
+      join(out, tizen6 ? 'AIOStreams-tizen6.wgt' : 'AIOStreams.wgt')
+    );
 } else {
-  console.error('Usage: node scripts/build.mjs <webos|tizen>');
+  console.error('Usage: node scripts/build.mjs <webos|tizen|tizen6>');
   process.exit(1);
 }

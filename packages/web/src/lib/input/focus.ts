@@ -61,12 +61,25 @@ const POINTER_FOCUS = 'data-pointer-focus';
 export const markPointerFocus = (pointer: boolean) =>
   document.documentElement.toggleAttribute(POINTER_FOCUS, pointer);
 
+/**
+ * Whether the browser would ring `el`'s focus. Chromium before 86 (Tizen 6)
+ * can't parse `:focus-visible`, so there all focus counts and
+ * `data-pointer-focus` alone tells a pointer's apart.
+ */
+function focusVisible(el: Element): boolean {
+  try {
+    return el.matches(':focus-visible');
+  } catch {
+    return el.matches(':focus');
+  }
+}
+
 /** What the keyboard, a remote or a gamepad is on, rather than a pointer. */
 export function keyboardFocus(): HTMLElement | null {
   const el = document.activeElement;
   return el instanceof HTMLElement &&
     el !== document.body &&
-    el.matches(':focus-visible') &&
+    focusVisible(el) &&
     !document.documentElement.hasAttribute(POINTER_FOCUS)
     ? el
     : null;
