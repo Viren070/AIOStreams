@@ -19,6 +19,7 @@ import {
   mergeConfigs,
   assertConfigAccessKey,
 } from '../../utils/index.js';
+import { ConfigParentRepository } from './config-parents.js';
 import { ConfigProfileRepository } from './config-profiles.js';
 import { ConfigSessionRepository } from './config-sessions.js';
 import { JellyfinAddressRepository } from './jellyfin-addresses.js';
@@ -150,6 +151,7 @@ export class UserRepository {
           sql`INSERT INTO users (uuid, password_hash, config, config_salt)
               VALUES (${uuid}, ${hashedPassword}, ${encryptedConfig}, ${configSalt})`
         );
+        await ConfigParentRepository.set(tx, uuid, config.parentConfig?.uuid);
         await JellyfinAddressRepository.syncForUuid(
           tx,
           uuid,
@@ -441,6 +443,7 @@ export class UserRepository {
         await tx.exec(
           sql`UPDATE users SET config = ${encryptedConfig}, updated_at = CURRENT_TIMESTAMP WHERE uuid = ${uuid}`
         );
+        await ConfigParentRepository.set(tx, uuid, config.parentConfig?.uuid);
         await JellyfinAddressRepository.syncForUuid(
           tx,
           uuid,
