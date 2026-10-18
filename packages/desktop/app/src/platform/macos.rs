@@ -10,7 +10,7 @@ use std::time::{Duration, Instant};
 
 use aiostreams_desktop_core::mpv::Mpv;
 use aiostreams_desktop_core::render::RenderContext;
-use dispatch2::DispatchQueue;
+use dispatch2::{DispatchQueue, DispatchTime};
 use muda::accelerator::Accelerator;
 use muda::{Menu, MenuEvent, MenuItem, PredefinedMenuItem, Submenu};
 use objc2::rc::Retained;
@@ -438,6 +438,19 @@ impl VideoLayer {
                     }
                 }
                 log::info!("hdr on primaries={} peak={peak}", state.primaries);
+                // Some displays report their headroom only once EDR content is
+                // on screen, so the first enable can set a peak of 100; check
+                // again shortly after. The unchanged-mode guard stops this.
+                let Ok(when) = DispatchTime::try_from(Duration::from_millis(200)) else {
+                    return;
+                };
+                let _ = DispatchQueue::main().after(when, || {
+                    LAYER.with(|l| {
+                        if let Some(layer) = l.borrow().as_ref() {
+                            layer.apply_hdr();
+                        }
+                    })
+                });
             }
             None => {
                 self.setWantsExtendedDynamicRangeContent(false);
