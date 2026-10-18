@@ -381,6 +381,10 @@ pub fn start_player(
         {
             awake.update(state);
         }
+        // The platform's HDR mode follows the playing video's colour.
+        if let Outbound::PlayerPlaying { gamma, primaries } = &message {
+            platform::update_hdr(gamma.clone(), primaries.clone());
+        }
         now_playing::observe(&message);
         emit(message)
     };

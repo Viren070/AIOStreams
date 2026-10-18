@@ -262,6 +262,7 @@ impl VideoSurface {
                     std::ptr::null_mut(),
                     display,
                     true, // advanced control
+                    8,    // a GtkGLArea's default framebuffer is 8 bits a channel
                 ) {
                     Ok(mut ctx) => {
                         ctx.on_update(|| {
@@ -311,6 +312,10 @@ pub fn clear_video() {
 pub fn mpv_options(_video: &VideoSurface) -> Vec<(&'static str, String)> {
     vec![("vo", "libmpv".into()), ("hwdec", "auto-safe".into())]
 }
+
+/// HDR passes through GTK and the compositor, not the app, so the playing
+/// video's colour is unused here.
+pub fn update_hdr(_gamma: Option<String>, _primaries: Option<String>) {}
 
 const INHIBIT_IDLE: u32 = 8;
 

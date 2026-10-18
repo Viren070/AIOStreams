@@ -333,6 +333,8 @@ pub fn run(app: App) {
                     maximized = now;
                     emit(Outbound::WindowState { maximized: now });
                 }
+                #[cfg(target_os = "macos")]
+                video.refresh_hdr();
                 let at = Instant::now() + SETTLE;
                 save_at = Some(at);
                 *flow = ControlFlow::WaitUntil(at);
@@ -341,6 +343,9 @@ pub fn run(app: App) {
                 event: WindowEvent::Moved(_),
                 ..
             } => {
+                // Another screen may take over the window, with its own EDR headroom.
+                #[cfg(target_os = "macos")]
+                video.refresh_hdr();
                 let at = Instant::now() + SETTLE;
                 save_at = Some(at);
                 *flow = ControlFlow::WaitUntil(at);

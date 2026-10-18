@@ -283,6 +283,12 @@ pub enum Outbound {
         #[serde(skip_serializing_if = "is_false")]
         external: bool,
     },
+    /// The playing video's transfer function and primaries, once per file:
+    /// `pq`/`bt.2020` is HDR. The macOS app switches its layer's EDR mode on it.
+    PlayerPlaying {
+        gamma: Option<String>,
+        primaries: Option<String>,
+    },
     PlayerEnded {
         reason: &'static str,
         error: Option<String>,

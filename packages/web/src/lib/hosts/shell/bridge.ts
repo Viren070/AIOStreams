@@ -62,6 +62,12 @@ export type ShellMessage =
       name: 'start' | 'loaded' | 'restart';
       external?: boolean;
     }
+  /** The playing video's transfer and primaries, once per file: `pq`/`bt.2020` is HDR. */
+  | {
+      type: 'player-playing';
+      gamma: string | null;
+      primaries: string | null;
+    }
   | {
       type: 'player-ended';
       reason: string;

@@ -317,6 +317,10 @@ pub fn mpv_options(video: &VideoSurface) -> Vec<(&'static str, String)> {
 /// mpv keeps the display on itself, as the video is its own window.
 pub fn keep_awake(_on: bool) {}
 
+/// HDR is mpv's own on Windows: it draws into its child window and passes the
+/// display's colorspace through itself, so the playing video's colour is unused here.
+pub fn update_hdr(_gamma: Option<String>, _primaries: Option<String>) {}
+
 pub fn open_external(url: &str) {
     let (op, file) = (wide("open"), wide(url));
     unsafe {

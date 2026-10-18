@@ -18,10 +18,11 @@ use objc2::{
     AllocAnyThread, DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send,
 };
 use objc2_app_kit::{
-    NSAutoresizingMaskOptions, NSModalResponseOK, NSOpenPanel, NSView, NSWindow, NSWindowButton,
-    NSWindowOrderingMode,
+    NSAutoresizingMaskOptions, NSModalResponseOK, NSOpenPanel, NSScreen, NSView, NSWindow,
+    NSWindowButton, NSWindowOrderingMode,
 };
 use objc2_core_foundation::{CFString, CFTimeInterval};
+use objc2_core_graphics::CGColorSpace;
 use objc2_core_video::CVTimeStamp;
 use objc2_foundation::{NSObject, NSString};
 use objc2_open_gl::{
@@ -29,7 +30,9 @@ use objc2_open_gl::{
     CGLLockContext, CGLOpenGLProfile, CGLPixelFormatAttribute, CGLPixelFormatObj, CGLRetainContext,
     CGLRetainPixelFormat, CGLSetCurrentContext, CGLSetParameter, CGLUnlockContext,
 };
-use objc2_quartz_core::{CAAutoresizingMask, CALayer, CAOpenGLLayer, CATransaction};
+use objc2_quartz_core::{
+    CAAutoresizingMask, CALayer, CAOpenGLLayer, CATransaction, kCAContentsFormatRGBA16Float,
+};
 use tao::platform::macos::WindowExtMacOS;
 use tao::window::{Icon, Window};
 
@@ -77,51 +80,77 @@ fn frame_target() -> (c_int, c_int, c_int) {
     }
 }
 
-/// A 3.2 core profile, on the discrete GPU only when the system switches to it.
-fn pixel_format() -> Option<CGLPixelFormatObj> {
+/// A 3.2 core profile, 16 float bits a channel where it can, on the discrete
+/// GPU only when the system switches to it. HDR needs the float format: an
+/// 8-bit drawable clips the extended range.
+fn pixel_format() -> Option<(CGLPixelFormatObj, c_int)> {
     let a = |v: CGLPixelFormatAttribute| v;
     let core = CGLPixelFormatAttribute(CGLOpenGLProfile::CGLOGLPVersion_3_2_Core.0);
-    let attempts: [&[CGLPixelFormatAttribute]; 2] = [
-        &[
-            a(CGLPixelFormatAttribute::CGLPFAOpenGLProfile),
-            core,
-            a(CGLPixelFormatAttribute::CGLPFAAccelerated),
-            a(CGLPixelFormatAttribute::CGLPFADoubleBuffer),
-            a(CGLPixelFormatAttribute::CGLPFAAllowOfflineRenderers),
-            a(CGLPixelFormatAttribute::CGLPFASupportsAutomaticGraphicsSwitching),
-            CGLPixelFormatAttribute(0),
-        ],
-        &[
-            a(CGLPixelFormatAttribute::CGLPFAOpenGLProfile),
-            core,
-            a(CGLPixelFormatAttribute::CGLPFADoubleBuffer),
-            CGLPixelFormatAttribute(0),
-        ],
+    let base = [
+        a(CGLPixelFormatAttribute::CGLPFAOpenGLProfile),
+        core,
+        a(CGLPixelFormatAttribute::CGLPFAAccelerated),
+        a(CGLPixelFormatAttribute::CGLPFADoubleBuffer),
+        a(CGLPixelFormatAttribute::CGLPFAAllowOfflineRenderers),
+        a(CGLPixelFormatAttribute::CGLPFASupportsAutomaticGraphicsSwitching),
     ];
-    attempts.iter().find_map(|attribs| {
+    let float = [
+        a(CGLPixelFormatAttribute::CGLPFAColorSize),
+        CGLPixelFormatAttribute(64),
+        a(CGLPixelFormatAttribute::CGLPFAColorFloat),
+    ];
+    let attempts: [(Vec<CGLPixelFormatAttribute>, c_int); 3] = [
+        ([&base[..], &float[..]].concat(), 16),
+        (base.to_vec(), 8),
+        (
+            vec![
+                a(CGLPixelFormatAttribute::CGLPFAOpenGLProfile),
+                core,
+                a(CGLPixelFormatAttribute::CGLPFADoubleBuffer),
+            ],
+            8,
+        ),
+    ];
+    attempts.into_iter().find_map(|(mut attribs, depth)| {
+        attribs.push(CGLPixelFormatAttribute(0));
         let mut format: CGLPixelFormatObj = ptr::null_mut();
         let mut count = 0;
         // SAFETY: a zero-terminated list, and out-pointers to locals.
         let error = unsafe {
             CGLChoosePixelFormat(
-                NonNull::new_unchecked(attribs.as_ptr().cast_mut()),
+                NonNull::new_unchecked(attribs.as_mut_ptr()),
                 NonNull::from(&mut format),
                 NonNull::from(&mut count),
             )
         };
-        (error == CGLError::NoError && !format.is_null()).then_some(format)
+        (error == CGLError::NoError && !format.is_null()).then_some((format, depth))
     })
 }
 
 pub struct LayerIvars {
     format: CGLPixelFormatObj,
     context: CGLContextObj,
+    /// The framebuffer's bits a channel: 16 float where the pixel format allows, else 8.
+    depth: c_int,
     render: RefCell<Option<RenderContext>>,
     mpv: RefCell<Option<Arc<Mpv>>>,
     started: Cell<bool>,
     drawn: Cell<bool>,
     skipped: Cell<u32>,
     held: Cell<Held>,
+    /// The playing video's gamma and primaries, kept to re-evaluate on a screen move.
+    video_colour: RefCell<Option<(String, String)>>,
+    /// The EDR mode applied, so an unchanged one is not re-applied and SDR reverts it once.
+    hdr: RefCell<Option<HdrState>>,
+}
+
+/// An EDR mode the layer is in: the PQ color space by name, the video's
+/// primaries for mpv's `target-prim`, and the display's peak in nits.
+#[derive(Clone, PartialEq, Eq)]
+struct HdrState {
+    space: &'static str,
+    primaries: String,
+    peak: u32,
 }
 
 /// How long video draws held the main thread, over a window of time.
@@ -226,11 +255,12 @@ define_class!(
 
 thread_local! {
     static LAYER: RefCell<Option<Retained<VideoLayer>>> = const { RefCell::new(None) };
+    static VIEW: RefCell<Option<Retained<NSView>>> = const { RefCell::new(None) };
 }
 
 impl VideoLayer {
     fn create() -> Result<Retained<Self>, String> {
-        let format = pixel_format().ok_or("no OpenGL pixel format")?;
+        let (format, depth) = pixel_format().ok_or("no OpenGL pixel format")?;
         let mut context: CGLContextObj = ptr::null_mut();
         // SAFETY: a format CGL just chose, and an out-pointer to a local.
         let error =
@@ -250,15 +280,23 @@ impl VideoLayer {
         let this = Self::alloc().set_ivars(LayerIvars {
             format,
             context,
+            depth,
             render: RefCell::default(),
             mpv: RefCell::default(),
             started: Cell::new(false),
             drawn: Cell::new(false),
             skipped: Cell::new(0),
             held: Cell::new(Held::new()),
+            video_colour: RefCell::new(None),
+            hdr: RefCell::new(None),
         });
         // SAFETY: NSObject's init, on a freshly allocated instance.
-        Ok(unsafe { msg_send![super(this), init] })
+        let layer: Retained<Self> = unsafe { msg_send![super(this), init] };
+        if depth == 16 {
+            // SAFETY: the static is a valid, constant string.
+            layer.setContentsFormat(unsafe { kCAContentsFormatRGBA16Float });
+        }
+        Ok(layer)
     }
 
     fn start(&self) {
@@ -271,7 +309,14 @@ impl VideoLayer {
         }
         let _lock = ContextLock::new(ivars.context);
         // Advanced control: mpv waits on the main thread, where nothing may block on mpv.
-        match RenderContext::new(mpv, get_proc_address, ptr::null_mut(), None, true) {
+        match RenderContext::new(
+            mpv,
+            get_proc_address,
+            ptr::null_mut(),
+            None,
+            true,
+            ivars.depth,
+        ) {
             Ok(mut render) => {
                 render.on_update(|| {
                     DispatchQueue::main().exec_async(|| {
@@ -323,6 +368,114 @@ impl VideoLayer {
         let _lock = ContextLock::new(ivars.context);
         ivars.render.borrow_mut().take();
     }
+
+    /// Stores the playing video's colour and applies the EDR mode it means.
+    fn update_hdr(&self, gamma: Option<String>, primaries: Option<String>) {
+        *self.ivars().video_colour.borrow_mut() = gamma.zip(primaries);
+        self.apply_hdr();
+    }
+
+    /// Puts the layer and mpv into EDR for the stored video, or back for SDR,
+    /// as IINA does: HDR is PQ or HLG over bt.2020 or P3, and a display whose
+    /// headroom is past SDR gets mpv's PQ output over the layer's PQ space.
+    fn apply_hdr(&self) {
+        let ivars = self.ivars();
+        let want: Option<HdrState> =
+            ivars
+                .video_colour
+                .borrow()
+                .as_ref()
+                .and_then(|(gamma, primaries)| {
+                    if !matches!(gamma.as_str(), "pq" | "hlg") {
+                        return None;
+                    }
+                    let space = pq_colorspace(primaries)?;
+                    let screen = hdr_screen()?;
+                    if screen.maximumPotentialExtendedDynamicRangeColorComponentValue() <= 1.0 {
+                        return None;
+                    }
+                    // The headroom at the current brightness, at 100 nits a step.
+                    let peak = (screen.maximumExtendedDynamicRangeColorComponentValue() * 100.0)
+                        .round()
+                        .max(0.0) as u32;
+                    Some(HdrState {
+                        space,
+                        primaries: primaries.clone(),
+                        peak,
+                    })
+                });
+        let Some(mpv) = ivars.mpv.borrow().clone() else {
+            return;
+        };
+        let had = ivars.hdr.replace(want.clone());
+        if had == want {
+            return;
+        }
+        match want {
+            Some(state) => {
+                let name = CFString::from_static_str(state.space);
+                let Some(space) = CGColorSpace::with_name(Some(&name)) else {
+                    log::warn!("no color space {}; HDR stays off", state.space);
+                    ivars.hdr.replace(None);
+                    return;
+                };
+                self.setWantsExtendedDynamicRangeContent(true);
+                self.setColorspace(Some(&space));
+                // PQ out over the display's range; an ICC profile would manage it back to SDR.
+                let peak = if state.peak > 0 {
+                    state.peak.to_string()
+                } else {
+                    "auto".into()
+                };
+                for (name, value) in [
+                    ("target-prim", state.primaries.as_str()),
+                    ("target-trc", "pq"),
+                    ("target-peak", peak.as_str()),
+                    ("icc-profile", ""),
+                ] {
+                    if let Err(e) = mpv.set_property(name, value) {
+                        log::warn!("mpv {name}={value}: {e}");
+                    }
+                }
+                log::info!("hdr on primaries={} peak={peak}", state.primaries);
+            }
+            None => {
+                self.setWantsExtendedDynamicRangeContent(false);
+                self.setColorspace(None);
+                for (name, value) in [
+                    ("target-prim", "auto"),
+                    ("target-trc", "auto"),
+                    ("target-peak", "auto"),
+                    ("icc-profile", ""),
+                ] {
+                    if let Err(e) = mpv.set_property(name, value) {
+                        log::warn!("mpv {name}={value}: {e}");
+                    }
+                }
+                log::info!("hdr off");
+            }
+        }
+    }
+}
+
+/// The PQ color space Core Animation wants for the video's primaries.
+fn pq_colorspace(primaries: &str) -> Option<&'static str> {
+    Some(match primaries {
+        "bt.2020" => "kCGColorSpaceITUR_2100_PQ",
+        "display-p3" => "kCGColorSpaceDisplayP3_PQ",
+        _ => return None,
+    })
+}
+
+/// The screen the video is on; the main screen when the window has none yet.
+fn hdr_screen() -> Option<Retained<NSScreen>> {
+    let screen = VIEW.with(|v| {
+        v.borrow()
+            .as_ref()
+            .and_then(|view| view.window())
+            .and_then(|window| window.screen())
+    });
+    screen.or_else(|| MainThreadMarker::new().and_then(NSScreen::mainScreen))
 }
 
 /// Holds the OpenGL context locked and current, as mpv's render calls need.
@@ -375,6 +528,7 @@ impl VideoSurface {
         view.setWantsLayer(true);
         content.addSubview_positioned_relativeTo(&view, NSWindowOrderingMode::Below, None);
         LAYER.with(|l| *l.borrow_mut() = Some(layer.clone()));
+        VIEW.with(|v| *v.borrow_mut() = Some(view.clone()));
         Ok(Self { view, layer })
     }
 
@@ -387,6 +541,7 @@ impl VideoSurface {
     pub fn shutdown(&self) {
         self.layer.stop();
         LAYER.with(|l| l.borrow_mut().take());
+        VIEW.with(|v| v.borrow_mut().take());
     }
 
     pub fn resize(&self, width: u32, _height: u32) {
@@ -398,6 +553,24 @@ impl VideoSurface {
         }
         self.layer.setNeedsDisplay();
     }
+
+    /// A move to another screen, or a brightness change, can change the EDR
+    /// mode the playing video wants.
+    pub fn refresh_hdr(&self) {
+        self.layer.apply_hdr();
+    }
+}
+
+/// The playing video's gamma and primaries, once per file, for the layer's EDR
+/// mode; from any thread.
+pub fn update_hdr(gamma: Option<String>, primaries: Option<String>) {
+    DispatchQueue::main().exec_async(move || {
+        LAYER.with(|l| {
+            if let Some(layer) = l.borrow().as_ref() {
+                layer.update_hdr(gamma, primaries);
+            }
+        })
+    });
 }
 
 /// The bundle's own icon shows in the Dock.

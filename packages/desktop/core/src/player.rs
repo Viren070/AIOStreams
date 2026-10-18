@@ -650,6 +650,14 @@ fn clock(seconds: f64) -> String {
     format!("{}:{:02}:{:02}", s / 3600, s / 60 % 60, s % 60)
 }
 
+/// The video's transfer and primaries, once per file, for the platform's HDR mode.
+fn playing(mpv: &Mpv) -> Outbound {
+    Outbound::PlayerPlaying {
+        gamma: text(mpv, "video-params/gamma"),
+        primaries: text(mpv, "video-params/primaries"),
+    }
+}
+
 /// What is playing, once per file: enough to tell a codec or decoder problem apart.
 fn log_playing(mpv: &Mpv) {
     let get = |name: &str| text(mpv, name).unwrap_or_else(|| "none".into());
@@ -909,6 +917,7 @@ fn pump(
                     if !reported {
                         reported = true;
                         log_playing(mpv);
+                        emit(playing(mpv));
                     }
                     emit(playback::event("playback-restart", false).unwrap())
                 }
