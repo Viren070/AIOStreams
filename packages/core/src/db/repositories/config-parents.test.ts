@@ -84,6 +84,14 @@ describe('ConfigParentRepository', () => {
     ]);
   });
 
+  it('indexes a configuration that was saved before the index existed', async () => {
+    await ConfigParentRepository.ensure('a', 'p');
+    assert.deepEqual(await ConfigParentRepository.descendants('p', 5), ['a']);
+    await ConfigParentRepository.ensure('a', 'd');
+    assert.deepEqual(await ConfigParentRepository.descendants('p', 5), []);
+    assert.deepEqual(await ConfigParentRepository.descendants('d', 5), ['a']);
+  });
+
   it('drops the row when the child is deleted', async () => {
     await link('a', 'p');
     await getDb().exec(sql`DELETE FROM users WHERE uuid = 'a'`);
