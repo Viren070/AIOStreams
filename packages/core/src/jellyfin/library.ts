@@ -61,6 +61,7 @@ export interface CatalogPageOptions {
   limit: number;
   genre?: string;
   search?: string;
+  similar?: string;
   /** Walk to the end (or the cap) so the total is exact. */
   exactTotal?: boolean;
   /** Take whatever the first page holds instead of walking towards `limit`. */
@@ -169,12 +170,14 @@ export interface CatalogPage {
 
 function buildExtras(
   c: Catalog,
-  opts: { genre?: string; search?: string; skip?: number }
+  opts: { genre?: string; search?: string; similar?: string; skip?: number }
 ): string | undefined {
   const parts: string[] = [];
   if (opts.search) parts.push(`search=${encodeURIComponent(opts.search)}`);
+  if (opts.similar) parts.push(`similar=${encodeURIComponent(opts.similar)}`);
   const genre =
-    opts.genre ?? (opts.search ? undefined : requiredGenreDefault(c));
+    opts.genre ??
+    (opts.search || opts.similar ? undefined : requiredGenreDefault(c));
   if (genre) parts.push(`genre=${encodeURIComponent(genre)}`);
   if (opts.skip) parts.push(`skip=${opts.skip}`);
   return parts.length ? parts.join('&') : undefined;
@@ -193,6 +196,8 @@ export async function getCatalogPage(
   if (opts.search && !isSearchable(catalog))
     return { items: [], total: 0, hasMore: false, keys: [] };
   if (opts.genre && !supportsExtra(catalog, 'genre'))
+    return { items: [], total: 0, hasMore: false, keys: [] };
+  if (opts.similar && !supportsExtra(catalog, 'similar'))
     return { items: [], total: 0, hasMore: false, keys: [] };
 
   const cap = appConfig.jellyfin.maxCatalogItems || Infinity;
@@ -236,6 +241,7 @@ export async function getCatalogPage(
     const extras = buildExtras(catalog, {
       genre: opts.genre,
       search: opts.search,
+      similar: opts.similar,
       skip: pageSkip,
     });
     const res = await limitedCatalog(engine.getUserData().uuid ?? '', () =>

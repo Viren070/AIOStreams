@@ -8,6 +8,7 @@ import {
   filmographyPage,
   findPerson,
   recommendedPreviews,
+  similarPreviews,
   type FilmographyKind,
   Cache,
   collectionMembers,
@@ -1317,14 +1318,17 @@ router.get(
     }
     const meta = await getMeta(ctx, desc.t, desc.i);
     const engine = await ctx.engine();
-    // TMDB's picks when it knows the title; else the top of its first genre.
-    const recommended = await recommendedPreviews(
-      engine,
-      ctx.userData,
-      meta ?? { id: desc.i, type: desc.t },
-      desc.k === 'movie' ? 'movie' : 'series',
-      limit
-    );
+    const title = meta ?? { id: desc.i, type: desc.t };
+    // A similar catalog's picks, then TMDB's, then the top of its first genre.
+    const recommended =
+      (await similarPreviews(engine, desc.t, desc.i, meta, limit)) ??
+      (await recommendedPreviews(
+        engine,
+        ctx.userData,
+        title,
+        desc.k === 'movie' ? 'movie' : 'series',
+        limit
+      ));
     if (recommended) {
       const items = await itemsFromPreviews(ctx, recommended);
       send(req, res, items, items.length, 0);
