@@ -8,13 +8,11 @@ Rust shared by the desktop and Android apps. A Cargo workspace outside the pnpm 
 | `aiostreams-thumbs` | `thumbs/` | Seek-bar thumbnails: one keyframe decoded with libavcodec, multi-slice HEVC decoded as parallel strips, scaled and tone mapped to a JPEG. Bench binary `thumbs-bench` (feature `bench`). |
 | `aiostreams-native-android` | `android/` | The Android app's one native library, `libaiostreams_native.so`: every feature's JNI exports. |
 
-`default-members` are `container` and `android`, so a plain `cargo build` needs no FFmpeg.
-
 ## Linking
 
 - Desktop: path dependencies from `packages/desktop`, e.g. `aiostreams-container = { path = "../../native/container" }`.
 - Android: `cargo ndk --platform 24 -t arm64-v8a -t armeabi-v7a -t x86_64 -o <jniLibs dir> build --release -p aiostreams-native-android`, with the Rust targets `aarch64-linux-android`, `armv7-linux-androideabi` and `x86_64-linux-android` installed.
-- `thumbs` needs `FFMPEG_DIR`, an FFmpeg prefix with `include/` and `lib/` (desktop: an FFmpeg build of the app's own; Android: the libmpv AAR's FFmpeg and its headers). Android enables it with `--features thumbs`.
+- `thumbs` loads libavcodec and libavutil at runtime, from the folders given to `library_dirs` and then the system's search path, so building it needs no FFmpeg. Android enables it with `--features thumbs`.
 
 ## JNI
 
@@ -24,7 +22,9 @@ Kotlin package `io.github.viren070.aiostreams.natives`, one `object` per feature
 
 ## Bench
 
-    FFMPEG_DIR=<prefix> cargo run --release -p aiostreams-thumbs --features bench --bin thumbs-bench -- <command>
+    cargo run --release -p aiostreams-thumbs --features bench --bin thumbs-bench -- <command>
+
+with FFmpeg's libraries on the library search path.
 
 - `fetch <url|file> --out <dir> [--n 12]` saves evenly spread keyframes as decoder packets.
 - `decode <dir> [--split N] [--threads N] [--idle] [--sheet out.jpg]` times decoding them.

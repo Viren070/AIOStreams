@@ -6,6 +6,7 @@ pub mod priority;
 pub mod scale;
 mod session;
 
+pub use decode::{ffmpeg_version, library_dirs};
 pub use session::Session;
 
 use std::collections::VecDeque;
