@@ -83,6 +83,12 @@ export type EngineEvent =
   | { type: 'subtitle-text'; text: string }
   | { type: 'stats-text'; text: string | undefined };
 
+/** A picture of the keyframe at `positionMs`, for the seek bar. */
+export interface Thumbnail {
+  positionMs: number;
+  src: string;
+}
+
 /** A stretch the page offers to skip; `auto` when it skips it unasked. */
 export interface PlannedSkip {
   startMs: number;
@@ -111,6 +117,16 @@ export interface PlayerEngine {
   ownLines?(id: string): Promise<SubtitleCue[]> | null;
   /** Reports when the lines of one of the file's own subtitles show, as it reads them, until stopped. */
   watchLines?(id: string, onLines: (lines: Span[]) => void): () => void;
+  /** Pictures of the keyframes at or before positions asked for, newest asked first; null once the file has none. `prepare` reads the file's index ahead of the first. */
+  thumbnails?(
+    file: { url: string; headers?: Record<string, string> },
+    onThumbnail: (thumbnail: Thumbnail | null) => void
+  ): {
+    /** `showingMs` is the keyframe of the picture on screen, which isn't sent again. */
+    want(ms: number, showingMs?: number): void;
+    prepare(): void;
+    stop(): void;
+  };
   subtitleFiles?: { types: readonly string[]; add(file: File): Promise<void> };
   stats?: { pages: Track[]; show(page: string | null): void };
   /** Picks tracks from the user's settings as the file opens. */

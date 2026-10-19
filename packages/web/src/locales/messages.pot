@@ -3331,6 +3331,10 @@ msgstr ""
 msgid "Seek"
 msgstr ""
 
+#: src/pages/settings/playback.tsx
+msgid "Seek bar previews"
+msgstr ""
+
 #: src/lib/i18n.ts
 #: src/lib/input/actions.ts
 #: src/pages/history.tsx
@@ -3476,6 +3480,10 @@ msgstr ""
 #: src/pages/favourites.tsx
 #: src/pages/search.tsx
 msgid "Shows"
+msgstr ""
+
+#: src/pages/settings/playback.tsx
+msgid "Shows a picture of the video where you point, drag or skip to on the seek bar. Each one reads a little of the file, so turn them off to save data."
 msgstr ""
 
 #: src/pages/settings/interface.tsx

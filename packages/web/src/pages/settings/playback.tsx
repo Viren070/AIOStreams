@@ -96,6 +96,7 @@ export function PlaybackSection() {
   const [seekStep, setSeekStep] = useSetting(settings.controls.seekStep);
   const [volumeStep, setVolumeStep] = useSetting(settings.controls.volumeStep);
   const [holdRate, setHoldRate] = useSetting(settings.controls.holdRate);
+  const [thumbnails, setThumbnails] = useSetting(settings.controls.thumbnails);
   const [autoPlay, setAutoPlay] = useSetting(settings.playback.autoPlayFirst);
   const [nextPrompt, setNextPrompt] = useSetting(settings.next.prompt);
   const [nextLead, setNextLead] = useSetting(settings.next.lead);
@@ -334,6 +335,15 @@ export function PlaybackSection() {
           value={String(holdRate)}
           onValueChange={(v) => setHoldRate(Number(v))}
         />
+        {shell && (
+          <Switch
+            side="right"
+            label={t`Seek bar previews`}
+            help={t`Shows a picture of the video where you point, drag or skip to on the seek bar. Each one reads a little of the file, so turn them off to save data.`}
+            value={thumbnails}
+            onValueChange={setThumbnails}
+          />
+        )}
       </SettingsCard>
       {shell && (
         <SettingsCard name="video" title={t`Video`} description={onDevice()}>

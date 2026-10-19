@@ -36,6 +36,7 @@ import type {
   ServerSubtitle,
 } from './engine';
 import { usePlayheadWriter } from './playhead';
+import { thumbnailFeed } from './thumbnails';
 import { chooseTracks } from './track-picks';
 
 /** How long the player says it is syncing; an answer after that still shows. */
@@ -43,6 +44,9 @@ const ASKED_WAIT_MS = 10_000;
 
 /** An end of file this far before the duration is a stream that gave out, not the end. */
 const EARLY_END_MS = 30_000;
+
+/** Late enough after the start that reading the file's index for thumbnails doesn't slow it. */
+const THUMBNAIL_INDEX_MS = 5_000;
 
 function serverSubtitles(
   client: JellyfinClient,
@@ -114,6 +118,8 @@ export function usePlayer(
   const [tracks, setTracks] = React.useState<EngineTrack[]>([]);
   const [chapters, setChapters] = React.useState<Chapter[]>();
   const [subtitleText, setSubtitleText] = React.useState<string>();
+  const [thumbnails, setThumbnails] =
+    React.useState<ReturnType<typeof thumbnailFeed>>();
   const [statsPage, setStatsPage] = React.useState<string | null>(null);
   const [statsText, setStatsText] = React.useState<string>();
   const [retry, setRetry] = React.useState<PlayerController['retry']>();
@@ -261,6 +267,25 @@ export function usePlayer(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url, startMs]);
 
+  const [thumbnailsOn] = useSetting(settings.controls.thumbnails);
+  React.useEffect(() => {
+    if (!engine.thumbnails || !thumbnailsOn) return;
+    const feed = thumbnailFeed((onThumbnail) =>
+      engine.thumbnails!({ url, headers: latest.current.headers }, onThumbnail)
+    );
+    setThumbnails(feed);
+    return () => {
+      feed.stop();
+      setThumbnails(undefined);
+    };
+  }, [engine, latest, url, thumbnailsOn]);
+
+  React.useEffect(() => {
+    if (!thumbnails || !state.started) return;
+    const timer = setTimeout(() => thumbnails.prepare(), THUMBNAIL_INDEX_MS);
+    return () => clearTimeout(timer);
+  }, [thumbnails, state.started]);
+
   const shown = shownSubtitle(tracks, state.subtitle);
   const shownServer = servers.find((s) => s.id === shown);
   const shownTrack = tracks.find((t) => t.id === shown);
@@ -369,6 +394,7 @@ export function usePlayer(
       ...subtitleTracks.filter((t) => t.external && !t.server).map(asTrack),
     ],
     subtitleText,
+    thumbnails,
     togglePlay: () => engine.setPaused(!live.current.paused),
     setPaused: (paused) => engine.setPaused(paused),
     seek: (ms, snapMs) => {

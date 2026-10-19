@@ -796,6 +796,7 @@ export const settings = {
     shortcuts: deviceLists('aiostreams-web-controls-shortcuts', [
       'aiostreams-web-shortcuts',
     ]),
+    thumbnails: device<boolean>('aiostreams-web-controls-thumbnails', true),
   },
   player: {
     /** `app`, a player's id, or `custom` for `link`. */

@@ -496,6 +496,25 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
             send('player-subtitle-lines', { track: null });
           };
         },
+    thumbnails: external
+      ? undefined
+      : ({ url, headers }, onThumbnail) => ({
+          want: (positionMs, showingMs) =>
+            shell.send({
+              type: 'player-thumbnail',
+              url,
+              headers,
+              positionMs,
+              showingMs,
+            }),
+          prepare: () => shell.send({ type: 'player-thumbnail', url, headers }),
+          stop: shell.subscribe((m) => {
+            if (m.type !== 'player-thumbnail' || m.url !== url) return;
+            onThumbnail(
+              m.src ? { positionMs: m.positionMs ?? 0, src: m.src } : null
+            );
+          }),
+        }),
     subtitleFiles: {
       types: SUBTITLE_TYPES,
       add: async (picked) => {

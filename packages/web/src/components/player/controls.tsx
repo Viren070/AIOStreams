@@ -542,6 +542,7 @@ export function PlayerControls({
           chapters={player.chapters ?? []}
           previewMs={shownAt}
           handle={touch}
+          thumbnails={player.thumbnails}
           onSeek={player.seek}
           onStep={(direction) => seekBy(direction * seekStep * 1000)}
           onTogglePlay={togglePlay}

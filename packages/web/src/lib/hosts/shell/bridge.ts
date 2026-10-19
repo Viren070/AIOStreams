@@ -42,6 +42,13 @@ export type ShellMessage =
   | { type: 'player-tracks'; tracks: AppTrack[]; external?: boolean }
   /** When lines of the file's subtitle asked for with `player-subtitle-lines` show. */
   | { type: 'player-subtitle-lines'; track: string; lines: Span[] }
+  /** Where the app serves the JPEG of a keyframe asked for with `player-thumbnail`; without `src` the file has none. */
+  | {
+      type: 'player-thumbnail';
+      url: string;
+      positionMs?: number;
+      src: string | null;
+    }
   | {
       type: 'player-chapters';
       chapters: { title?: string; startMs: number }[];

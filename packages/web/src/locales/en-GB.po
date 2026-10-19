@@ -3332,6 +3332,10 @@ msgstr "See the download"
 msgid "Seek"
 msgstr "Seek"
 
+#: src/pages/settings/playback.tsx
+msgid "Seek bar previews"
+msgstr "Seek bar previews"
+
 #: src/lib/i18n.ts
 #: src/lib/input/actions.ts
 #: src/pages/history.tsx
@@ -3478,6 +3482,10 @@ msgstr "Shown"
 #: src/pages/search.tsx
 msgid "Shows"
 msgstr "Shows"
+
+#: src/pages/settings/playback.tsx
+msgid "Shows a picture of the video where you point, drag or skip to on the seek bar. Each one reads a little of the file, so turn them off to save data."
+msgstr "Shows a picture of the video where you point, drag or skip to on the seek bar. Each one reads a little of the file, so turn them off to save data."
 
 #: src/pages/settings/interface.tsx
 msgid "Shows next episodes in the continue watching row, after what you are partway through."

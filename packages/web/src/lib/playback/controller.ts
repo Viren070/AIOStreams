@@ -5,6 +5,7 @@ import type { Chapter } from './chapters';
 import type { SubtitleStyle } from '../settings';
 import type { SubtitleLine } from '../subtitles/cues';
 import type { Playhead } from './playhead';
+import type { ThumbnailFeed } from './thumbnails';
 import type { PlannedSkip } from './engine';
 import type { PlaybackPrefs } from '../user-config';
 import type { BaseItemDto, MediaStream, SourceInfo } from '../types';
@@ -85,6 +86,8 @@ export interface PlayerController {
   };
   /** The subtitle the page draws, for a player that draws none itself. */
   subtitleText?: string;
+  /** Missing where the player has no pictures for the seek bar. */
+  thumbnails?: ThumbnailFeed;
   /** Missing where the page always fills the screen. */
   toggleFullscreen?: () => void;
   /** The file's chapters, where the player reads them. */
