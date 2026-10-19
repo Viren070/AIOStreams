@@ -7,18 +7,18 @@ pub enum Transfer {
     Hlg,
 }
 
+const GRID: usize = 33;
+
+/// Source Y'CbCr (Y' 0..1, chroma -0.5..0.5) to the JPEG's full-range BT.601 YCbCr.
 pub struct Color {
     kr: f32,
     kb: f32,
-    full: bool,
+    pub full: bool,
     transfer: Transfer,
     bt2020: bool,
-    lin: Vec<f32>,
-    enc: Vec<u8>,
+    sdr: [[f32; 3]; 3],
+    lut: Vec<[u8; 3]>,
 }
-
-const LIN_SIZE: usize = 4096;
-const ENC_SIZE: usize = 4096;
 
 fn pq_eotf(e: f32) -> f32 {
     let (m1, m2) = (2610.0 / 16384.0, 2523.0 / 4096.0 * 128.0);
@@ -39,6 +39,29 @@ fn hlg_inverse_oetf(e: f32) -> f32 {
     } else {
         (((e - c) / a).exp() + b) / 12.0
     }
+}
+
+fn srgb(l: f32) -> f32 {
+    let l = l.clamp(0.0, 1.0);
+    if l <= 0.003_130_8 {
+        12.92 * l
+    } else {
+        1.055 * l.powf(1.0 / 2.4) - 0.055
+    }
+}
+
+/// R'G'B' (0..1) to JPEG YCbCr (0..255).
+fn jpeg_ycbcr([r, g, b]: [f32; 3]) -> [f32; 3] {
+    [
+        255.0 * (0.299 * r + 0.587 * g + 0.114 * b),
+        128.0 + 255.0 * (-0.168_736 * r - 0.331_264 * g + 0.5 * b),
+        128.0 + 255.0 * (0.5 * r - 0.418_688 * g - 0.081_312 * b),
+    ]
+}
+
+/// Rounded; `as` saturates out-of-range values.
+fn byte(v: f32) -> u8 {
+    (v + 0.5) as u8
 }
 
 impl Color {
@@ -63,29 +86,30 @@ impl Color {
             full: range == 2,
             transfer,
             bt2020: primaries == 9 || matrix == 9,
-            lin: Vec::new(),
-            enc: Vec::new(),
+            sdr: [[0.0; 3]; 3],
+            lut: Vec::new(),
         };
+        // Both steps are linear for SDR, so one matrix does them; columns are the unit samples.
+        for (i, unit) in [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
+            .into_iter()
+            .enumerate()
+        {
+            let out = jpeg_ycbcr(c.rgb(unit));
+            for (row, v) in out.into_iter().enumerate() {
+                c.sdr[row][i] = v - if row == 0 { 0.0 } else { 128.0 };
+            }
+        }
         if transfer != Transfer::Sdr {
-            // Signal to display light in units of SDR white (100 nits).
-            c.lin = (0..LIN_SIZE)
+            let step = 1.0 / (GRID - 1) as f32;
+            c.lut = (0..GRID * GRID * GRID)
                 .map(|i| {
-                    let e = i as f32 / (LIN_SIZE - 1) as f32;
-                    match transfer {
-                        Transfer::Pq => pq_eotf(e) / 100.0,
-                        _ => hlg_inverse_oetf(e) * 1000.0 / 100.0,
-                    }
-                })
-                .collect();
-            c.enc = (0..ENC_SIZE)
-                .map(|i| {
-                    let l = i as f32 / (ENC_SIZE - 1) as f32;
-                    let v = if l <= 0.0031308 {
-                        12.92 * l
-                    } else {
-                        1.055 * l.powf(1.0 / 2.4) - 0.055
-                    };
-                    (v * 255.0 + 0.5) as u8
+                    let (y, cb, cr) = (i / (GRID * GRID), i / GRID % GRID, i % GRID);
+                    let display = c.tone_map(c.rgb([
+                        y as f32 * step,
+                        cb as f32 * step - 0.5,
+                        cr as f32 * step - 0.5,
+                    ]));
+                    jpeg_ycbcr(display.map(srgb)).map(byte)
                 })
                 .collect();
         }
@@ -96,27 +120,27 @@ impl Color {
         self.transfer
     }
 
-    #[inline]
-    fn rgb(&self, y: f32, cb: f32, cr: f32, out: &mut [u8]) {
+    fn rgb(&self, [y, cb, cr]: [f32; 3]) -> [f32; 3] {
         let (kr, kb) = (self.kr, self.kb);
         let r = y + 2.0 * (1.0 - kr) * cr;
         let b = y + 2.0 * (1.0 - kb) * cb;
-        let g = (y - kr * r - kb * b) / (1.0 - kr - kb);
-        if self.transfer == Transfer::Sdr {
-            out[0] = (r.clamp(0.0, 1.0) * 255.0 + 0.5) as u8;
-            out[1] = (g.clamp(0.0, 1.0) * 255.0 + 0.5) as u8;
-            out[2] = (b.clamp(0.0, 1.0) * 255.0 + 0.5) as u8;
-            return;
-        }
-        let lin = |v: f32| self.lin[((v.clamp(0.0, 1.0) * (LIN_SIZE - 1) as f32) + 0.5) as usize];
-        let (mut r, mut g, mut b) = (lin(r), lin(g), lin(b));
+        [r, (y - kr * r - kb * b) / (1.0 - kr - kb), b]
+    }
+
+    /// HDR R'G'B' to linear SDR light.
+    fn tone_map(&self, rgb: [f32; 3]) -> [f32; 3] {
+        // Display light in units of SDR white (100 nits).
+        let [mut r, mut g, mut b] = rgb.map(|v| {
+            let e = v.clamp(0.0, 1.0);
+            match self.transfer {
+                Transfer::Pq => pq_eotf(e) / 100.0,
+                _ => hlg_inverse_oetf(e) * 10.0,
+            }
+        });
         if self.transfer == Transfer::Hlg {
             // HLG system gamma 1.2 at 1000 nits.
-            let ys = (0.2627 * r + 0.678 * g + 0.0593 * b).max(1e-6) * 100.0 / 1000.0;
-            let f = ys.powf(0.2);
-            r *= f;
-            g *= f;
-            b *= f;
+            let f = ((0.2627 * r + 0.678 * g + 0.0593 * b).max(1e-6) / 10.0).powf(0.2);
+            (r, g, b) = (r * f, g * f, b * f);
         }
         if self.bt2020 {
             (r, g, b) = (
@@ -128,16 +152,83 @@ impl Color {
         // Extended Reinhard on the brightest channel, 1000-nit peak.
         let m = r.max(g).max(b);
         if m > 0.0 {
-            const PEAK2: f32 = 10.0 * 10.0;
-            let s = (1.0 + m / PEAK2) / (1.0 + m);
-            r *= s;
-            g *= s;
-            b *= s;
+            let s = (1.0 + m / 100.0) / (1.0 + m);
+            (r, g, b) = (r * s, g * s, b * s);
         }
-        let enc = |v: f32| self.enc[((v.clamp(0.0, 1.0) * (ENC_SIZE - 1) as f32) + 0.5) as usize];
-        out[0] = enc(r);
-        out[1] = enc(g);
-        out[2] = enc(b);
+        [r, g, b]
+    }
+
+    fn convert(&self, y: f32, cb: f32, cr: f32, out: &mut [u8; 3]) {
+        if self.lut.is_empty() {
+            self.matrix(y, cb, cr, out)
+        } else {
+            self.table(y, cb, cr, out)
+        }
+    }
+
+    #[inline(always)]
+    fn matrix(&self, y: f32, cb: f32, cr: f32, out: &mut [u8; 3]) {
+        let m = &self.sdr;
+        out[0] = byte(m[0][0] * y + m[0][1] * cb + m[0][2] * cr);
+        out[1] = byte(128.0 + m[1][0] * y + m[1][1] * cb + m[1][2] * cr);
+        out[2] = byte(128.0 + m[2][0] * y + m[2][1] * cb + m[2][2] * cr);
+    }
+
+    #[inline(always)]
+    fn table(&self, y: f32, cb: f32, cr: f32, out: &mut [u8; 3]) {
+        let s = (GRID - 1) as f32;
+        let at = |v: f32| {
+            let f = v.clamp(0.0, 1.0) * s;
+            let i = (f as usize).min(GRID - 2);
+            (i, f - i as f32)
+        };
+        let ((iy, fy), (ib, fb), (ir, fr)) = (at(y), at(cb + 0.5), at(cr + 0.5));
+        let base = (iy * GRID + ib) * GRID + ir;
+        let corner =
+            |dy: usize, db: usize, dr: usize| &self.lut[base + (dy * GRID + db) * GRID + dr];
+        let (c000, c001, c010, c011) = (
+            corner(0, 0, 0),
+            corner(0, 0, 1),
+            corner(0, 1, 0),
+            corner(0, 1, 1),
+        );
+        let (c100, c101, c110, c111) = (
+            corner(1, 0, 0),
+            corner(1, 0, 1),
+            corner(1, 1, 0),
+            corner(1, 1, 1),
+        );
+        let lerp = |a: f32, b: f32, t: f32| a + (b - a) * t;
+        for k in 0..3 {
+            let (v00, v01) = (c000[k] as f32, c001[k] as f32);
+            let (v10, v11) = (c010[k] as f32, c011[k] as f32);
+            let (w00, w01) = (c100[k] as f32, c101[k] as f32);
+            let (w10, w11) = (c110[k] as f32, c111[k] as f32);
+            let near = lerp(lerp(v00, v01, fr), lerp(v10, v11, fr), fb);
+            let far = lerp(lerp(w00, w01, fr), lerp(w10, w11, fr), fb);
+            out[k] = byte(lerp(near, far, fy));
+        }
+    }
+
+    /// The JPEG YCbCr of a source sample without the lookup table, for checking it.
+    pub fn exact(&self, y: f32, cb: f32, cr: f32) -> [u8; 3] {
+        let rgb = self.rgb([y, cb, cr]);
+        if self.transfer == Transfer::Sdr {
+            return jpeg_ycbcr(rgb.map(|v| v.clamp(0.0, 1.0))).map(byte);
+        }
+        jpeg_ycbcr(self.tone_map(rgb).map(srgb)).map(byte)
+    }
+
+    pub fn in_gamut(&self, y: f32, cb: f32, cr: f32) -> bool {
+        self.rgb([y, cb, cr])
+            .iter()
+            .all(|v| (0.0..=1.0).contains(v))
+    }
+
+    pub fn fast(&self, y: f32, cb: f32, cr: f32) -> [u8; 3] {
+        let mut out = [0u8; 3];
+        self.convert(y, cb, cr, &mut out);
+        out
     }
 }
 
@@ -280,42 +371,60 @@ impl Accum {
         Ok(())
     }
 
-    pub fn rgb(&self, color: &Color) -> Vec<u8> {
-        let scale = (1u32 << (self.bits - 8)) as f32;
-        let (yo, ys, cs, co) = if color.full {
-            (
-                0.0,
-                1.0 / (255.0 * scale),
-                1.0 / (255.0 * scale),
-                128.0 * scale,
-            )
+    /// The thumbnail as interleaved JPEG YCbCr.
+    pub fn ycbcr(&self, color: &Color) -> Vec<u8> {
+        if color.lut.is_empty() {
+            self.convert(color, Color::matrix)
         } else {
-            (
-                16.0 * scale,
-                1.0 / (219.0 * scale),
-                1.0 / (224.0 * scale),
-                128.0 * scale,
-            )
+            self.convert(color, Color::table)
+        }
+    }
+
+    /// As [`Accum::ycbcr`] without the lookup table, for checking it.
+    pub fn ycbcr_exact(&self, color: &Color) -> Vec<u8> {
+        self.convert(color, |c, y, u, v, px| {
+            px.copy_from_slice(&c.exact(y, u, v))
+        })
+    }
+
+    fn convert(&self, color: &Color, one: impl Fn(&Color, f32, f32, f32, &mut [u8; 3])) -> Vec<u8> {
+        let scale = (1u32 << (self.bits - 8)) as f32;
+        let (y0, y1, c1) = if color.full {
+            (0.0, 255.0, 255.0)
+        } else {
+            (16.0, 219.0, 224.0)
         };
-        let mean = |p: &Plane, i: usize| p.sums[i] as f32 / (p.n * p.n) as f32;
+        let affine = |p: &Plane, offset: f32, span: f32| {
+            let a = 1.0 / ((p.n * p.n) as f32 * span * scale);
+            (a, -offset / span)
+        };
         let [py, pu, pv] = &self.planes;
-        let mut rgb = vec![0u8; self.ow * self.oh * 3];
-        for i in 0..self.ow * self.oh {
-            color.rgb(
-                (mean(py, i) - yo) * ys,
-                (mean(pu, i) - co) * cs,
-                (mean(pv, i) - co) * cs,
-                &mut rgb[i * 3..i * 3 + 3],
+        let (ya, yb) = affine(py, y0, y1);
+        let (ua, ub) = affine(pu, 128.0, c1);
+        let (va, vb) = affine(pv, 128.0, c1);
+        let mut out = vec![0u8; self.ow * self.oh * 3];
+        for (px, ((&y, &u), &v)) in out
+            .as_chunks_mut::<3>()
+            .0
+            .iter_mut()
+            .zip(py.sums.iter().zip(&pu.sums).zip(&pv.sums))
+        {
+            one(
+                color,
+                y as f32 * ya + yb,
+                u as f32 * ua + ub,
+                v as f32 * va + vb,
+                px,
             );
         }
-        rgb
+        out
     }
 }
 
-pub fn jpeg(rgb: &[u8], w: usize, h: usize, quality: u8) -> Vec<u8> {
+pub fn jpeg(ycbcr: &[u8], w: usize, h: usize, quality: u8) -> Vec<u8> {
     let mut out = Vec::with_capacity(16 * 1024);
     jpeg_encoder::Encoder::new(&mut out, quality)
-        .encode(rgb, w as u16, h as u16, jpeg_encoder::ColorType::Rgb)
+        .encode(ycbcr, w as u16, h as u16, jpeg_encoder::ColorType::Ycbcr)
         .expect("jpeg");
     out
 }

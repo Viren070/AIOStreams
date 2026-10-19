@@ -150,9 +150,9 @@ fn decode(a: &Args) -> Res<()> {
     let (rss0, _) = metrics::rss_mb();
     let mut dec = decode::Decoder::open(kind.decoder(), &options)?;
     let strips = (split > 0).then(|| pool::Pool::new(split, kind.decoder(), a.has("idle")));
-    let [m, r, t, p] = meta.colour.map(|c| c as i32);
-    let color = scale::Color::new(m, r, t, p, meta.display_height as i32);
+    let mut color: Option<scale::Color> = None;
     let (mut walls, mut cpus, mut sheet) = (Vec::new(), Vec::new(), Vec::new());
+    let (mut rgbs, mut jpegs) = (Vec::new(), Vec::new());
     let repeat = a.num("repeat", 3.0) as usize;
     for round in 0..repeat {
         for p in &packets {
@@ -167,11 +167,34 @@ fn decode(a: &Args) -> Res<()> {
                     scale::Accum::whole(f, ow, oh, samples)?
                 }
             };
-            let rgb = acc.rgb(&color);
+            let color = color.get_or_insert_with(|| {
+                let [m, r, t, p] = aiostreams_thumbs::color_codes(acc.signalled, meta.colour);
+                scale::Color::new(m, r, t, p, meta.display_height as i32)
+            });
+            if a.has("compare") && round == 0 {
+                let (fast, exact) = (acc.ycbcr(color), acc.ycbcr_exact(color));
+                let mut d: Vec<i32> = fast
+                    .iter()
+                    .zip(&exact)
+                    .map(|(f, e)| (*f as i32 - *e as i32).abs())
+                    .collect();
+                d.sort();
+                eprintln!(
+                    "lut vs exact: mean {:.3}, p99.9 {}, max {}",
+                    d.iter().sum::<i32>() as f64 / d.len() as f64,
+                    d[(d.len() - 1) * 999 / 1000],
+                    d[d.len() - 1]
+                );
+            }
+            let t1 = Instant::now();
+            let rgb = acc.ycbcr(color);
+            let t2 = Instant::now();
             let jpeg = scale::jpeg(&rgb, ow, oh, 75);
             if round > 0 || repeat == 1 {
                 walls.push(t0.elapsed().as_secs_f64() * 1e3);
                 cpus.push(metrics::cpu_ms() - c0);
+                rgbs.push((t2 - t1).as_secs_f64() * 1e3);
+                jpegs.push(t2.elapsed().as_secs_f64() * 1e3);
             }
             if round == 0 {
                 sheet.push(rgb);
@@ -197,8 +220,62 @@ fn decode(a: &Args) -> Res<()> {
     }
     println!(
         "{}",
-        serde_json::json!({ "wall_med": median(walls), "cpu_med": median(cpus), "rss_before": rss0, "rss_after": rss1, "rss_peak": peak, "split": split })
+        serde_json::json!({ "wall_med": median(walls), "cpu_med": median(cpus), "rgb_med": median(rgbs), "jpeg_med": median(jpegs), "rss_before": rss0, "rss_after": rss1, "rss_peak": peak, "split": split })
     );
+    Ok(())
+}
+
+fn lut() -> Res<()> {
+    for (name, codes) in [
+        ("pq bt2020", [9, 1, 16, 9]),
+        ("hlg bt2020", [9, 1, 18, 9]),
+        ("sdr bt709", [1, 1, 1, 1]),
+    ] {
+        let [m, r, t, p] = codes;
+        let t0 = Instant::now();
+        let color = scale::Color::new(m, r, t, p, 2160);
+        let build = t0.elapsed().as_secs_f64() * 1e3;
+        let (mut worst, mut total, mut count) = (0i32, 0i64, 0i64);
+        let (mut errors, mut at) = (Vec::new(), (0.0, 0.0, 0.0, [0u8; 3], [0u8; 3]));
+        let steps = 97;
+        for iy in 0..steps {
+            for ib in 0..steps {
+                for ir in 0..steps {
+                    let (y, cb, cr) = (
+                        iy as f32 / (steps - 1) as f32,
+                        ib as f32 / (steps - 1) as f32 - 0.5,
+                        ir as f32 / (steps - 1) as f32 - 0.5,
+                    );
+                    if !color.in_gamut(y, cb, cr) {
+                        continue;
+                    }
+                    let (e, f) = (color.exact(y, cb, cr), color.fast(y, cb, cr));
+                    let d = (0..3)
+                        .map(|k| (e[k] as i32 - f[k] as i32).abs())
+                        .max()
+                        .unwrap();
+                    errors.push(d);
+                    if d > worst {
+                        at = (y, cb, cr, e, f);
+                    }
+                    for k in 0..3 {
+                        let d = (e[k] as i32 - f[k] as i32).abs();
+                        worst = worst.max(d);
+                        total += d as i64;
+                        count += 1;
+                    }
+                }
+            }
+        }
+        errors.sort();
+        let pct = |p: f64| errors[((errors.len() - 1) as f64 * p) as usize];
+        println!(
+            "{name}: built in {build:.1} ms, mean error {:.3}, p99 {}, p99.9 {}, max {worst} at {at:?}",
+            total as f64 / count as f64,
+            pct(0.99),
+            pct(0.999)
+        );
+    }
     Ok(())
 }
 
@@ -288,6 +365,7 @@ fn main() {
         Some("fetch") => fetch(&a),
         Some("decode") => decode(&a),
         Some("verify") => verify(&a),
+        Some("lut") => lut(),
         Some("scrub") => scrub::run(&a.pos, a.num("steps", 20.0) as usize, a.num("interval", 200.0) as u64, a.num("workers", 2.0) as usize),
         _ => Err("thumbs-bench fetch <url|file> --out dir [--n 12] | decode <dir> [--threads 1] [--split N] [--idle] [--samples 2] [--repeat 3] [--sheet f.jpg --cols 4] | verify <dir> [--skiplf 0] | scrub <url> [--steps 20] [--interval 200] [--workers 2]".into()),
     };

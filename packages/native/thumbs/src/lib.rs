@@ -69,14 +69,25 @@ pub struct Thumbnailer {
     guess: u64,
     decoder: Option<decode::Decoder>,
     strips: Option<pool::Pool>,
+    color: Option<([i32; 4], scale::Color)>,
 }
 
-fn known(code: i32, fallback: u64) -> i32 {
-    if code != 0 && code != 2 {
-        code
-    } else {
-        fallback as i32
-    }
+/// Matrix, range, transfer and primaries: what the bitstream signals, else what the container says.
+pub fn color_codes(signalled: Option<[i32; 4]>, container: [u64; 4]) -> [i32; 4] {
+    let [m, r, t, p] = signalled.unwrap_or([2, 0, 2, 2]);
+    let known = |code: i32, fallback: u64| {
+        if code != 0 && code != 2 {
+            code
+        } else {
+            fallback as i32
+        }
+    };
+    [
+        known(m, container[0]),
+        if r != 0 { r } else { container[1] as i32 },
+        known(t, container[2]),
+        known(p, container[3]),
+    ]
 }
 
 impl Thumbnailer {
@@ -107,6 +118,7 @@ impl Thumbnailer {
             guess,
             decoder: None,
             strips: None,
+            color: None,
         })
     }
 
@@ -154,15 +166,16 @@ impl Thumbnailer {
             }
         };
         let video = self.keyframes.track.video.as_ref().unwrap();
-        let [m, r, t, p] = acc.signalled.unwrap_or([2, 0, 2, 2]);
-        let color = scale::Color::new(
-            known(m, video.matrix),
-            if r != 0 { r } else { video.range as i32 },
-            known(t, video.transfer),
-            known(p, video.primaries),
-            video.height as i32,
+        let codes = color_codes(
+            acc.signalled,
+            [video.matrix, video.range, video.transfer, video.primaries],
         );
-        let jpeg = scale::jpeg(&acc.rgb(&color), w, h, self.settings.quality);
+        if self.color.as_ref().is_none_or(|(c, _)| *c != codes) {
+            let [m, r, t, p] = codes;
+            self.color = Some((codes, scale::Color::new(m, r, t, p, video.height as i32)));
+        }
+        let color = &self.color.as_ref().unwrap().1;
+        let jpeg = scale::jpeg(&acc.ycbcr(color), w, h, self.settings.quality);
         Ok(Thumbnail {
             time_ms: self.keyframes.entries[index].time_ms,
             width: w,
