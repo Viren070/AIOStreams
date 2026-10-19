@@ -7,6 +7,8 @@ on:
     paths: &android
       - 'packages/android/**'
       - '!packages/android/**/*.md'
+      - 'packages/native/**'
+      - '!packages/native/**/*.md'
       - '!packages/android/web-app.lock'
       - '.github/workflows/android-*.yml'
   push:
@@ -37,6 +39,15 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: gradle/actions/setup-gradle@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-ndk
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/native
       - name: Install the SDK platform, NDK and CMake
         run: |
           sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"

@@ -8,6 +8,8 @@ on:
       - '!packages/android/web-app.lock'
       - '!packages/android/README.md'
       - '!packages/android/CHANGELOG.md'
+      - 'packages/native/**'
+      - '!packages/native/**/*.md'
       - 'packages/web/**'
       - 'packages/ui/**'
   workflow_dispatch:
