@@ -1,4 +1,5 @@
 use crate::decode::Frame;
+use crate::dovi::{Matrices, Reshape};
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Transfer {
@@ -18,9 +19,12 @@ pub struct Color {
     bt2020: bool,
     sdr: [[f32; 3]; 3],
     lut: Vec<[u8; 3]>,
+    /// Dolby Vision profile 5, whose samples are reshaped IPT rather than Y'CbCr.
+    dovi: Option<Matrices>,
 }
 
-fn pq_eotf(e: f32) -> f32 {
+/// In nits.
+pub(crate) fn pq_eotf(e: f32) -> f32 {
     let (m1, m2) = (2610.0 / 16384.0, 2523.0 / 4096.0 * 128.0);
     let (c1, c2, c3) = (
         3424.0 / 4096.0,
@@ -88,6 +92,7 @@ impl Color {
             bt2020: primaries == 9 || matrix == 9,
             sdr: [[0.0; 3]; 3],
             lut: Vec::new(),
+            dovi: None,
         };
         // Both steps are linear for SDR, so one matrix does them; columns are the unit samples.
         for (i, unit) in [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
@@ -100,20 +105,33 @@ impl Color {
             }
         }
         if transfer != Transfer::Sdr {
-            let step = 1.0 / (GRID - 1) as f32;
-            c.lut = (0..GRID * GRID * GRID)
-                .map(|i| {
-                    let (y, cb, cr) = (i / (GRID * GRID), i / GRID % GRID, i % GRID);
-                    let display = c.tone_map(c.rgb([
-                        y as f32 * step,
-                        cb as f32 * step - 0.5,
-                        cr as f32 * step - 0.5,
-                    ]));
-                    jpeg_ycbcr(display.map(srgb)).map(byte)
-                })
-                .collect();
+            c.build_lut();
         }
         c
+    }
+
+    /// For Dolby Vision profile 5, whose frames' reshaping [`Accum::ycbcr`] is given.
+    pub fn dovi(matrices: Matrices) -> Color {
+        let mut c = Color::new(9, 2, 16, 9, 2160);
+        c.dovi = Some(matrices);
+        c.build_lut();
+        c
+    }
+
+    /// Indexed by Y'CbCr, or by IPT with P and T centred like chroma.
+    fn build_lut(&mut self) {
+        let step = 1.0 / (GRID - 1) as f32;
+        self.lut = (0..GRID * GRID * GRID)
+            .map(|i| {
+                let (y, cb, cr) = (i / (GRID * GRID), i / GRID % GRID, i % GRID);
+                let sample = [
+                    y as f32 * step,
+                    cb as f32 * step - 0.5,
+                    cr as f32 * step - 0.5,
+                ];
+                jpeg_ycbcr(self.hdr(sample).map(srgb)).map(byte)
+            })
+            .collect();
     }
 
     pub fn transfer(&self) -> Transfer {
@@ -127,9 +145,19 @@ impl Color {
         [r, (y - kr * r - kb * b) / (1.0 - kr - kb), b]
     }
 
-    /// HDR R'G'B' to linear SDR light.
-    fn tone_map(&self, rgb: [f32; 3]) -> [f32; 3] {
-        // Display light in units of SDR white (100 nits).
+    /// An HDR sample to linear SDR light.
+    fn hdr(&self, sample: [f32; 3]) -> [f32; 3] {
+        let light = match self.dovi {
+            Some(m) => m
+                .light([sample[0], sample[1] + 0.5, sample[2] + 0.5])
+                .map(|v| v.max(0.0) / 100.0),
+            None => self.light(self.rgb(sample)),
+        };
+        self.tone_map(light)
+    }
+
+    /// HDR R'G'B' to display light in units of SDR white (100 nits).
+    fn light(&self, rgb: [f32; 3]) -> [f32; 3] {
         let [mut r, mut g, mut b] = rgb.map(|v| {
             let e = v.clamp(0.0, 1.0);
             match self.transfer {
@@ -142,6 +170,11 @@ impl Color {
             let f = ((0.2627 * r + 0.678 * g + 0.0593 * b).max(1e-6) / 10.0).powf(0.2);
             (r, g, b) = (r * f, g * f, b * f);
         }
+        [r, g, b]
+    }
+
+    /// Display light to linear SDR light.
+    fn tone_map(&self, [mut r, mut g, mut b]: [f32; 3]) -> [f32; 3] {
         if self.bt2020 {
             (r, g, b) = (
                 1.6605 * r - 0.5876 * g - 0.0728 * b,
@@ -212,11 +245,11 @@ impl Color {
 
     /// The JPEG YCbCr of a source sample without the lookup table, for checking it.
     pub fn exact(&self, y: f32, cb: f32, cr: f32) -> [u8; 3] {
-        let rgb = self.rgb([y, cb, cr]);
         if self.transfer == Transfer::Sdr {
+            let rgb = self.rgb([y, cb, cr]);
             return jpeg_ycbcr(rgb.map(|v| v.clamp(0.0, 1.0))).map(byte);
         }
-        jpeg_ycbcr(self.tone_map(rgb).map(srgb)).map(byte)
+        jpeg_ycbcr(self.hdr([y, cb, cr]).map(srgb)).map(byte)
     }
 
     pub fn in_gamut(&self, y: f32, cb: f32, cr: f32) -> bool {
@@ -371,23 +404,31 @@ impl Accum {
         Ok(())
     }
 
-    /// The thumbnail as interleaved JPEG YCbCr.
-    pub fn ycbcr(&self, color: &Color) -> Vec<u8> {
+    /// The thumbnail as interleaved JPEG YCbCr; Dolby Vision profile 5 needs its frame's reshaping.
+    pub fn ycbcr(&self, color: &Color, reshape: Option<&Reshape>) -> Vec<u8> {
         if color.lut.is_empty() {
-            self.convert(color, Color::matrix)
+            self.convert(color, reshape, Color::matrix)
         } else {
-            self.convert(color, Color::table)
+            self.convert(color, reshape, Color::table)
         }
     }
 
     /// As [`Accum::ycbcr`] without the lookup table, for checking it.
-    pub fn ycbcr_exact(&self, color: &Color) -> Vec<u8> {
-        self.convert(color, |c, y, u, v, px| {
+    pub fn ycbcr_exact(&self, color: &Color, reshape: Option<&Reshape>) -> Vec<u8> {
+        self.convert(color, reshape, |c, y, u, v, px| {
             px.copy_from_slice(&c.exact(y, u, v))
         })
     }
 
-    fn convert(&self, color: &Color, one: impl Fn(&Color, f32, f32, f32, &mut [u8; 3])) -> Vec<u8> {
+    fn convert(
+        &self,
+        color: &Color,
+        reshape: Option<&Reshape>,
+        one: impl Fn(&Color, f32, f32, f32, &mut [u8; 3]),
+    ) -> Vec<u8> {
+        if let Some(r) = reshape {
+            return self.convert_reshaped(color, r, one);
+        }
         let scale = (1u32 << (self.bits - 8)) as f32;
         let (y0, y1, c1) = if color.full {
             (0.0, 255.0, 255.0)
@@ -416,6 +457,29 @@ impl Accum {
                 v as f32 * va + vb,
                 px,
             );
+        }
+        out
+    }
+
+    /// Reshaped after scaling, which is close enough at this size.
+    fn convert_reshaped(
+        &self,
+        color: &Color,
+        reshape: &Reshape,
+        one: impl Fn(&Color, f32, f32, f32, &mut [u8; 3]),
+    ) -> Vec<u8> {
+        let max = ((1u32 << self.bits) - 1) as f32;
+        let [py, pu, pv] = &self.planes;
+        let [ya, ua, va] = [py, pu, pv].map(|p| 1.0 / ((p.n * p.n) as f32 * max));
+        let mut out = vec![0u8; self.ow * self.oh * 3];
+        for (px, ((&y, &u), &v)) in out
+            .as_chunks_mut::<3>()
+            .0
+            .iter_mut()
+            .zip(py.sums.iter().zip(&pu.sums).zip(&pv.sums))
+        {
+            let [i, p, t] = reshape.apply([y as f32 * ya, u as f32 * ua, v as f32 * va]);
+            one(color, i, p - 0.5, t - 0.5, px);
         }
         out
     }

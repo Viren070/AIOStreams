@@ -445,7 +445,7 @@ pub struct Split {
     pub area: crate::scale::Area,
 }
 
-fn nal_units(packet: &[u8]) -> Vec<&[u8]> {
+pub(crate) fn nal_units(packet: &[u8]) -> Vec<&[u8]> {
     let mut units = Vec::new();
     let mut i = 0;
     let mut start = None;

@@ -1,3 +1,4 @@
+mod dovi_check;
 mod metrics;
 mod scrub;
 
@@ -6,7 +7,7 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use aiostreams_container::{Options, RangeReader};
-use aiostreams_thumbs::{codec, decode, hevc, pool, scale};
+use aiostreams_thumbs::{codec, decode, dovi, hevc, pool, scale};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
@@ -15,6 +16,8 @@ struct Meta {
     display_width: u64,
     display_height: u64,
     colour: [u64; 4],
+    #[serde(default)]
+    dovi: Option<u8>,
     keyframes: Vec<Kf>,
 }
 
@@ -56,7 +59,7 @@ impl Args {
     }
 }
 
-type Res<T> = Result<T, String>;
+pub(crate) type Res<T> = Result<T, String>;
 
 fn median(mut v: Vec<f64>) -> f64 {
     v.sort_by(|a, b| a.partial_cmp(b).unwrap());
@@ -64,7 +67,7 @@ fn median(mut v: Vec<f64>) -> f64 {
         .map_or(0.0, |m| (m * 10.0).round() / 10.0)
 }
 
-fn load(dir: &Path) -> Res<(Meta, Vec<Vec<u8>>)> {
+pub(crate) fn load(dir: &Path) -> Res<(Meta, Vec<Vec<u8>>)> {
     let meta: Meta =
         serde_json::from_slice(&std::fs::read(dir.join("meta.json")).map_err(|e| e.to_string())?)
             .map_err(|e| e.to_string())?;
@@ -121,6 +124,7 @@ fn fetch(a: &Args) -> Res<()> {
         display_width: v.display_width,
         display_height: v.display_height,
         colour: [v.matrix, v.range, v.transfer, v.primaries],
+        dovi: v.dovi_profile,
         keyframes: kfs,
     };
     std::fs::write(
@@ -151,6 +155,7 @@ fn decode(a: &Args) -> Res<()> {
     let mut dec = decode::Decoder::open(kind.decoder(), &options)?;
     let strips = (split > 0).then(|| pool::Pool::new(split, kind.decoder(), a.has("idle")));
     let mut color: Option<scale::Color> = None;
+    let mut rpu: Option<dovi::Rpu> = None;
     let (mut walls, mut cpus, mut sheet) = (Vec::new(), Vec::new(), Vec::new());
     let (mut rgbs, mut jpegs) = (Vec::new(), Vec::new());
     let repeat = a.num("repeat", 3.0) as usize;
@@ -167,12 +172,21 @@ fn decode(a: &Args) -> Res<()> {
                     scale::Accum::whole(f, ow, oh, samples)?
                 }
             };
-            let color = color.get_or_insert_with(|| {
-                let [m, r, t, p] = aiostreams_thumbs::color_codes(acc.signalled, meta.colour);
-                scale::Color::new(m, r, t, p, meta.display_height as i32)
+            if meta.dovi == Some(5)
+                && let Some(found) = dovi::Rpu::find(p, rpu.as_ref())
+            {
+                rpu = Some(found);
+            }
+            let color = color.get_or_insert_with(|| match &rpu {
+                Some(r) => scale::Color::dovi(r.matrices),
+                None => {
+                    let [m, r, t, p] = aiostreams_thumbs::color_codes(acc.signalled, meta.colour);
+                    scale::Color::new(m, r, t, p, meta.display_height as i32)
+                }
             });
+            let reshape = rpu.as_ref().map(|r| &*r.reshape);
             if a.has("compare") && round == 0 {
-                let (fast, exact) = (acc.ycbcr(color), acc.ycbcr_exact(color));
+                let (fast, exact) = (acc.ycbcr(color, reshape), acc.ycbcr_exact(color, reshape));
                 let mut d: Vec<i32> = fast
                     .iter()
                     .zip(&exact)
@@ -187,7 +201,7 @@ fn decode(a: &Args) -> Res<()> {
                 );
             }
             let t1 = Instant::now();
-            let rgb = acc.ycbcr(color);
+            let rgb = acc.ycbcr(color, reshape);
             let t2 = Instant::now();
             let jpeg = scale::jpeg(&rgb, ow, oh, 75);
             if round > 0 || repeat == 1 {
@@ -409,8 +423,17 @@ fn main() {
         Some("lut") => lut(),
         Some("sizes") => sizes(&a),
         Some("reads") => reads(&a),
+        Some("dovi-check") => match (a.pos.get(1), a.pos.get(2), a.pos.get(3)) {
+            (Some(dir), Some(kf), Some(raw)) => dovi_check::run(
+                Path::new(dir),
+                kf.parse().unwrap_or(0),
+                Path::new(raw),
+                a.opts.get("out"),
+            ),
+            _ => Err("dovi-check <dir> <keyframe> <gbrp16le raw> [--out pair.jpg]".into()),
+        },
         Some("scrub") => scrub::run(&a.pos, a.num("steps", 20.0) as usize, a.num("interval", 200.0) as u64, a.num("workers", 2.0) as usize),
-        _ => Err("thumbs-bench fetch <url|file> --out dir [--n 12] | decode <dir> [--threads 1] [--split N] [--idle] [--samples 2] [--repeat 3] [--sheet f.jpg --cols 4] | verify <dir> [--skiplf 0] | scrub <url> [--steps 20] [--interval 200] [--workers 2]".into()),
+        _ => Err("thumbs-bench fetch <url|file> --out dir [--n 12] | decode <dir> [--threads 1] [--split N] [--idle] [--samples 2] [--repeat 3] [--sheet f.jpg --cols 4] | verify <dir> [--skiplf 0] | dovi-check <dir> <keyframe> <gbrp16le raw> [--out pair.jpg] | scrub <url> [--steps 20] [--interval 200] [--workers 2]".into()),
     };
     if let Err(e) = r {
         eprintln!("error: {e}");

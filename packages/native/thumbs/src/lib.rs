@@ -1,5 +1,6 @@
 pub mod codec;
 pub mod decode;
+pub mod dovi;
 pub mod hevc;
 mod lazy;
 pub mod pool;
@@ -198,6 +199,12 @@ impl Source {
     }
 }
 
+#[derive(Clone, Copy, PartialEq)]
+enum ColorKey {
+    Codes([i32; 4]),
+    Dovi(dovi::Matrices),
+}
+
 /// Decodes packets into JPEG thumbnails, keeping its decoders until released.
 pub struct Renderer {
     kind: codec::Kind,
@@ -206,7 +213,9 @@ pub struct Renderer {
     height: usize,
     decoder: Option<decode::Decoder>,
     strips: Option<pool::Pool>,
-    color: Option<([i32; 4], scale::Color)>,
+    color: Option<(ColorKey, scale::Color)>,
+    /// The last Dolby Vision profile 5 RPU, for frames that refer back to it.
+    dovi: Option<dovi::Rpu>,
 }
 
 impl Renderer {
@@ -223,12 +232,19 @@ impl Renderer {
             decoder: None,
             strips: None,
             color: None,
+            dovi: None,
         }
     }
 
     /// The JPEG of one keyframe packet, `width` x `height`.
     pub fn render(&mut self, packet: &[u8]) -> Result<Vec<u8>> {
         let (w, h, s) = (self.settings.width, self.height, self.settings.samples);
+        if self.kind == codec::Kind::Hevc
+            && self.video.dovi_profile == Some(5)
+            && let Some(rpu) = dovi::Rpu::find(packet, self.dovi.as_ref())
+        {
+            self.dovi = Some(rpu);
+        }
         let acc = match (self.kind == codec::Kind::Hevc && self.settings.workers > 1)
             .then(|| hevc::split(packet))
             .flatten()
@@ -262,13 +278,28 @@ impl Renderer {
             }
         };
         let v = &self.video;
-        let codes = color_codes(acc.signalled, [v.matrix, v.range, v.transfer, v.primaries]);
-        if self.color.as_ref().is_none_or(|(c, _)| *c != codes) {
-            let [m, r, t, p] = codes;
-            self.color = Some((codes, scale::Color::new(m, r, t, p, v.height as i32)));
+        let key = match &self.dovi {
+            Some(rpu) => ColorKey::Dovi(rpu.matrices),
+            None => ColorKey::Codes(color_codes(
+                acc.signalled,
+                [v.matrix, v.range, v.transfer, v.primaries],
+            )),
+        };
+        if self.color.as_ref().is_none_or(|(k, _)| *k != key) {
+            let color = match key {
+                ColorKey::Dovi(m) => scale::Color::dovi(m),
+                ColorKey::Codes([m, r, t, p]) => scale::Color::new(m, r, t, p, v.height as i32),
+            };
+            self.color = Some((key, color));
         }
         let color = &self.color.as_ref().unwrap().1;
-        Ok(scale::jpeg(&acc.ycbcr(color), w, h, self.settings.quality))
+        let reshape = self.dovi.as_ref().map(|r| &*r.reshape);
+        Ok(scale::jpeg(
+            &acc.ycbcr(color, reshape),
+            w,
+            h,
+            self.settings.quality,
+        ))
     }
 
     pub fn width(&self) -> usize {
