@@ -8,6 +8,7 @@ mod session;
 
 pub use session::Session;
 
+use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -95,6 +96,7 @@ pub struct Source {
     kind: codec::Kind,
     config: codec::Config,
     guess: u64,
+    sizes: VecDeque<u64>,
 }
 
 impl Source {
@@ -116,6 +118,7 @@ impl Source {
             kind,
             config,
             guess,
+            sizes: VecDeque::new(),
         })
     }
 
@@ -125,8 +128,28 @@ impl Source {
 
     pub fn packet(&mut self, index: usize) -> Result<Vec<u8>> {
         let frame = self.keyframes.frame(&mut self.reader, index, self.guess)?;
-        self.guess = self.guess.max(frame.len() as u64 * 5 / 4);
+        self.learn(frame.len() as u64);
         self.config.packet(&frame).map_err(Error::Decode)
+    }
+
+    /// Sizes the next read from recent keyframes: rarely a second request, little read in vain.
+    fn learn(&mut self, size: u64) {
+        if self.sizes.len() == 32 {
+            self.sizes.pop_front();
+        }
+        self.sizes.push_back(size);
+        if self.sizes.len() < 4 {
+            self.guess = self.guess.max(size * 5 / 4);
+            return;
+        }
+        let mut sorted: Vec<u64> = self.sizes.iter().copied().collect();
+        sorted.sort_unstable();
+        self.guess = sorted[sorted.len() * 3 / 4] * 7 / 5;
+    }
+
+    /// Requests made and bytes read so far.
+    pub fn reads(&self) -> (u32, u64) {
+        (self.reader.requests, self.reader.bytes)
     }
 
     pub fn renderer(&self, settings: Settings) -> Renderer {

@@ -279,6 +279,47 @@ fn lut() -> Res<()> {
     Ok(())
 }
 
+fn sizes(a: &Args) -> Res<()> {
+    let mut r = RangeReader::new(a.pos.get(1).ok_or("url")?, Options::default())
+        .map_err(|e| e.to_string())?;
+    let k = aiostreams_container::keyframes(&mut r).map_err(|e| e.to_string())?;
+    let byterate = r.size.unwrap_or(0) / (k.duration_ms / 1000).max(1);
+    let n = a.num("n", 60.0) as u64;
+    let mut out = Vec::new();
+    for i in 0..n {
+        let index = k.at(k.duration_ms * (2 + i * 96 / (n - 1)) / 100);
+        let frame = k.frame(&mut r, index, 4 << 20).map_err(|e| e.to_string())?;
+        out.push(serde_json::json!({ "size": frame.len(), "relative": k.entries[index].relative }));
+    }
+    println!(
+        "{}",
+        serde_json::json!({ "byterate": byterate, "frames": out })
+    );
+    Ok(())
+}
+
+fn reads(a: &Args) -> Res<()> {
+    let mut source =
+        aiostreams_thumbs::Source::open(a.pos.get(1).ok_or("url")?, Options::default())
+            .map_err(|e| e.to_string())?;
+    let (q0, b0) = source.reads();
+    let k = source.keyframes().clone();
+    let n = a.num("n", 60.0) as u64;
+    let (mut needed, t) = (0u64, Instant::now());
+    for i in 0..n {
+        let index = k.at(k.duration_ms * (2 + i * 96 / (n - 1)) / 100);
+        needed += source.packet(index).map_err(|e| e.to_string())?.len() as u64;
+    }
+    let (q, b) = source.reads();
+    println!(
+        "{{\"requests_per_frame\":{:.2},\"read_per_needed\":{:.2},\"ms_per_frame\":{:.0}}}",
+        (q - q0) as f64 / n as f64,
+        (b - b0) as f64 / needed as f64,
+        t.elapsed().as_secs_f64() * 1e3 / n as f64
+    );
+    Ok(())
+}
+
 fn verify(a: &Args) -> Res<()> {
     let (meta, packets) = load(&PathBuf::from(a.pos.get(1).ok_or("dir")?))?;
     let kind = codec::Kind::from_codec_id(&meta.codec).ok_or("codec")?;
@@ -366,6 +407,8 @@ fn main() {
         Some("decode") => decode(&a),
         Some("verify") => verify(&a),
         Some("lut") => lut(),
+        Some("sizes") => sizes(&a),
+        Some("reads") => reads(&a),
         Some("scrub") => scrub::run(&a.pos, a.num("steps", 20.0) as usize, a.num("interval", 200.0) as u64, a.num("workers", 2.0) as usize),
         _ => Err("thumbs-bench fetch <url|file> --out dir [--n 12] | decode <dir> [--threads 1] [--split N] [--idle] [--samples 2] [--repeat 3] [--sheet f.jpg --cols 4] | verify <dir> [--skiplf 0] | scrub <url> [--steps 20] [--interval 200] [--workers 2]".into()),
     };
