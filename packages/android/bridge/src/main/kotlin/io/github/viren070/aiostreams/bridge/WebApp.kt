@@ -14,6 +14,7 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewClientCompat
+import java.io.ByteArrayInputStream
 
 /**
  * The bundled web app, served from the APK's `assets/web` at a secure origin,
@@ -26,13 +27,15 @@ class WebApp(private val devUrl: String?) {
 
     /**
      * `chooseFiles` shows the system's picker for a file input and `openIntent`
-     * an `intent:` link, which a WebView can't do on its own.
+     * an `intent:` link, which a WebView can't do on its own. `thumbnail` is the
+     * JPEG the app serves at a path, called off the main thread.
      */
     @SuppressLint("SetJavaScriptEnabled")
     fun configure(
         webView: WebView,
         chooseFiles: (multiple: Boolean, picked: ValueCallback<Array<Uri>>) -> Unit,
         openIntent: (link: String) -> Unit,
+        thumbnail: (path: String) -> ByteArray?,
     ) {
         val assets = WebViewAssetLoader.AssetsPathHandler(webView.context)
         val loader = WebViewAssetLoader.Builder()
@@ -72,7 +75,9 @@ class WebApp(private val devUrl: String?) {
             override fun shouldInterceptRequest(
                 view: WebView,
                 request: WebResourceRequest,
-            ): WebResourceResponse? = loader.shouldInterceptRequest(request.url)
+            ): WebResourceResponse? =
+                request.url.path?.let(thumbnail)?.let { WebResourceResponse("image/jpeg", null, ByteArrayInputStream(it)) }
+                    ?: loader.shouldInterceptRequest(request.url)
 
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 if (originOf(request.url.toString()) in origins) return false

@@ -7,6 +7,7 @@ import android.os.SystemClock
 import android.util.Base64
 import android.util.Log
 import io.github.viren070.aiostreams.natives.SubtitleTimeline
+import io.github.viren070.aiostreams.natives.Thumbnails
 import java.io.File
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
@@ -62,6 +63,16 @@ class PlayerChannel(
     private var indexing: String? = null
     private val reader = Executors.newSingleThreadExecutor { Thread(it, "subtitle-index") }
 
+    /** The file seek-bar thumbnails come from and its handle, used only on [thumbnailer]. */
+    private var thumbnails: Pair<String, Long>? = null
+    private var thumbnailFiles = 0
+    private val thumbnailer = Executors.newSingleThreadExecutor { Thread(it, "thumbnails") }
+
+    private val thumbnailImages = object : LinkedHashMap<String, ByteArray>() {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, ByteArray>) =
+            size > KEPT_THUMBNAILS
+    }
+
     /** The file playing, which a new engine loads again. */
     private var loaded: LoadRequest? = null
 
@@ -113,6 +124,7 @@ class PlayerChannel(
             "player-stop" -> {
                 loaded = null
                 engine.stop()
+                thumbnailer.execute(::closeThumbnails)
             }
             "player-set" -> PlayerProtocol.change(message).onSuccess(::change).onFailure(::reject)
             "player-seek" -> message.number("positionMs")?.let { engine.seek(it, message.number("snapMs") ?: 0.0) }
@@ -139,6 +151,7 @@ class PlayerChannel(
                     it.id?.let(::sendIndexed)
                 }
                 .onFailure(::reject)
+            "player-thumbnail" -> thumbnail(message)
             "player-sync" -> {
                 send(PlayerProtocol.state(state))
                 send(PlayerProtocol.tracks(tracks))
@@ -268,6 +281,52 @@ class PlayerChannel(
         if (!lines.isNullOrEmpty()) send(PlayerProtocol.subtitleLines(track, lines))
     }
 
+    private fun thumbnail(message: JsonObject) {
+        val url = message.text("url").orEmpty()
+        val position = message.number("positionMs")?.toLong()
+        val showing = message.number("showingMs")?.toLong() ?: -1
+        if (!PlayerProtocol.isWebUrl(url) && !isLocal(url)) {
+            return reject(IllegalArgumentException("only http(s) files and downloads have thumbnails"))
+        }
+        val headers = (message["headers"] as? JsonObject).orEmpty()
+            .flatMap { (name, value) -> listOf(name, (value as? JsonPrimitive)?.contentOrNull.orEmpty()) }
+            .toTypedArray()
+        thumbnailer.execute {
+            val handle = thumbnails?.takeIf { it.first == url }?.second ?: runCatching {
+                closeThumbnails()
+                val file = ++thumbnailFiles
+                Thumbnails.open(url, headers, trustedRoots()) { at, jpeg, error ->
+                    val src = jpeg?.let {
+                        "/thumbnail/$file-$at.jpg".also { path ->
+                            synchronized(thumbnailImages) { thumbnailImages[path] = it }
+                        }
+                    }
+                    main.post { sendThumbnail(url, at, src, error) }
+                }
+            }.onFailure { main.post { sendThumbnail(url, -1, null, it.toString()) } }
+                .getOrNull()?.also { thumbnails = url to it }
+            handle?.let { if (position == null) Thumbnails.prepare(it) else Thumbnails.want(it, position, showing) }
+        }
+    }
+
+    private fun closeThumbnails() {
+        thumbnails?.let { Thumbnails.close(it.second) }
+        thumbnails = null
+    }
+
+    private fun sendThumbnail(url: String, positionMs: Long, src: String?, error: String?) {
+        if (error != null) Log.i(TAG, "no thumbnails: $error")
+        send(buildJsonObject {
+            put("type", "player-thumbnail")
+            put("url", url)
+            if (src != null) put("positionMs", positionMs)
+            put("src", src)
+        })
+    }
+
+    /** The JPEG at a thumbnail path the page was sent, from the web view's loader threads. */
+    fun thumbnail(path: String): ByteArray? = synchronized(thumbnailImages) { thumbnailImages[path] }
+
     /** The page never names a path for the engine to open, so the file is written here first. */
     private fun addSubtitle(message: JsonObject) {
         val name = message.text("name") ?: error("subtitle file without a name")
@@ -293,6 +352,7 @@ class PlayerChannel(
         const val TAG = "player"
         const val THROTTLE_MS = 250L
         const val MAX_SUBTITLE_BYTES = 10 shl 20
+        const val KEPT_THUMBNAILS = 256
         val SUBTITLE_TYPES = setOf("srt", "vtt", "ass", "ssa", "sub", "sup")
 
         val next = AtomicInteger()

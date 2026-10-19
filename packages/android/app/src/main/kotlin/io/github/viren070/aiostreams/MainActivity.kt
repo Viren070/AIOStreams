@@ -124,7 +124,9 @@ class MainActivity : ComponentActivity() {
         })
 
         val app = WebApp(BuildConfig.WEB_URL.ifEmpty { null })
-        app.configure(web, ::chooseFiles, players::open)
+        app.configure(web, ::chooseFiles, players::open) { path ->
+            if (::player.isInitialized) player.thumbnail(path) else null
+        }
         val queue = Downloads.queue(this)
         queue.send = { message -> runOnUiThread { bridge.send(message) } }
         downloads = DownloadChannel(queue, onAdd = { askForNotifications() })
