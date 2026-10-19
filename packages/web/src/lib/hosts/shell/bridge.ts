@@ -1,6 +1,7 @@
 import { t } from '@lingui/core/macro';
 import React from 'react';
 import type { HostEvent } from '../../downloads/types';
+import type { Span } from '../../subtitles/align';
 
 /** A track as the app's player lists it; `url` is where an added one came from. */
 export interface AppTrack {
@@ -39,6 +40,8 @@ export type ShellMessage =
       external?: boolean;
     }
   | { type: 'player-tracks'; tracks: AppTrack[]; external?: boolean }
+  /** When lines of the file's subtitle asked for with `player-subtitle-lines` show. */
+  | { type: 'player-subtitle-lines'; track: string; lines: Span[] }
   | {
       type: 'player-chapters';
       chapters: { title?: string; startMs: number }[];

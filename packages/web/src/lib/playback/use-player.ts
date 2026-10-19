@@ -4,11 +4,14 @@ import type { JellyfinClient } from '../client';
 import { clock } from '../format';
 import { settings, useSetting } from '../settings';
 import { storage } from '../storage';
-import { parseSubtitleLines } from '../subtitles/cues';
+import type { Span } from '../subtitles/align';
+import { referenceTrack, SubtitleSync } from '../subtitles/auto-sync';
+import { parseSubtitle, plainLines, type SubtitleCue } from '../subtitles/cues';
 import {
   clampDelay,
   savedSubtitleDelay,
   saveSubtitleDelay,
+  SUBTITLE_DELAY_LIMIT_MS,
 } from '../subtitles/delay';
 import { subtitleUrl, textSubtitles } from '../subtitles/tracks';
 import type { MediaStream, SourceInfo } from '../types';
@@ -22,6 +25,7 @@ import {
   type PlayerController,
   type PlayerOptions,
   type PlayerState,
+  type SyncOutcome,
   type Track,
 } from './controller';
 import type {
@@ -33,6 +37,9 @@ import type {
 } from './engine';
 import { usePlayheadWriter } from './playhead';
 import { chooseTracks } from './track-picks';
+
+/** How long the player says it is syncing; an answer after that still shows. */
+const ASKED_WAIT_MS = 10_000;
 
 /** An end of file this far before the duration is a stream that gave out, not the end. */
 const EARLY_END_MS = 30_000;
@@ -67,6 +74,21 @@ const asTrack = ({ id, label, lang }: Track): Track => ({ id, label, lang });
 const shownSubtitle = (tracks: EngineTrack[], id: string | null) =>
   tracks.find((t) => t.type === 'subtitle' && t.id === id)?.server ?? id;
 
+/** Lines of the file's own subtitle heard so far, which every sync starts from, and the syncs taking new ones. */
+interface Heard {
+  track: string;
+  lines: Span[];
+  takers: Set<(lines: Span[]) => void>;
+}
+
+/** What a subtitle's delay is kept under: an added file by its name, as its id is just the next free one. */
+function delayKey(tracks: EngineTrack[], id: string): string {
+  const track = tracks.find((t) => t.id === id);
+  return track?.external && !track.server && track.title
+    ? `file:${track.title}`
+    : id;
+}
+
 /** One set of controls over an engine, with what every player shares. */
 export function usePlayer(
   create: EngineFactory,
@@ -80,14 +102,14 @@ export function usePlayer(
   );
   const [state, setState] = React.useState<PlayerState>(() => ({
     ...initialState(source),
-    subtitleDelayMs: savedSubtitleDelay(source.Id),
+    subtitleDelayMs: savedSubtitleDelay(source.Id, null)?.ms ?? 0,
   }));
   // Engines report several things in one go, before the page draws again.
   const live = React.useRef({ ...state, tracks: [] as EngineTrack[] });
-  const patch = (next: Partial<PlayerState>) => {
+  const patch = React.useCallback((next: Partial<PlayerState>) => {
     live.current = { ...live.current, ...next };
     setState((s) => ({ ...s, ...next }));
-  };
+  }, []);
   const playhead = usePlayheadWriter(startMs);
   const [tracks, setTracks] = React.useState<EngineTrack[]>([]);
   const [chapters, setChapters] = React.useState<Chapter[]>();
@@ -103,6 +125,22 @@ export function usePlayer(
     [client, source, engine, opts.subtitleUrl]
   );
   const latestServers = useLatest(servers);
+  const heard = React.useRef<Heard | null>(null);
+  const asking = React.useRef(false);
+  const [syncRuns, setSyncRuns] = React.useState(0);
+  const [syncWaiting, setSyncWaiting] = React.useState(false);
+  const [syncOutcome, setSyncOutcome] = React.useState<SyncOutcome | null>(
+    null
+  );
+
+  const readSubtitle = (id: string): Promise<SubtitleCue[]> | null => {
+    const server = servers.find((s) => s.id === id);
+    if (!server) return engine.ownLines?.(id) ?? null;
+    return fetch(server.url).then(async (res) =>
+      res.ok ? parseSubtitle(await res.text()) : []
+    );
+  };
+  const latestRead = useLatest(readSubtitle);
 
   const fileFor = (from: number): EngineFile => ({
     url,
@@ -224,6 +262,100 @@ export function usePlayer(
   }, [url, startMs]);
 
   const shown = shownSubtitle(tracks, state.subtitle);
+  const shownServer = servers.find((s) => s.id === shown);
+  const shownTrack = tracks.find((t) => t.id === shown);
+  const reference =
+    engine.watchLines && (shownServer || shownTrack?.external)
+      ? referenceTrack(tracks, shownServer?.lang ?? shownTrack?.lang)?.id
+      : undefined;
+
+  React.useEffect(() => {
+    if (!shown || !engine.setSubtitleDelay) return;
+    const ms = savedSubtitleDelay(source.Id, delayKey(tracks, shown))?.ms ?? 0;
+    if (ms === live.current.subtitleDelayMs) return;
+    engine.setSubtitleDelay(ms);
+    patch({ subtitleDelayMs: ms });
+  }, [engine, patch, shown, source.Id, tracks]);
+
+  // One watch while added subtitles show, however often they change or a sync is asked for.
+  React.useEffect(() => {
+    if (!reference || !engine.watchLines) return;
+    const history: Heard = { track: reference, lines: [], takers: new Set() };
+    heard.current = history;
+    const stop = engine.watchLines(reference, (lines) => {
+      history.lines.push(...lines);
+      for (const take of history.takers) take(lines);
+    });
+    return () => {
+      stop();
+      if (heard.current === history) heard.current = null;
+    };
+  }, [engine, reference, source.Id]);
+
+  // Lines an added subtitle up with the file's own, unless the user set its delay by hand.
+  React.useEffect(() => {
+    const { setSubtitleDelay } = engine;
+    const history = heard.current;
+    if (!shown || !history || history.track !== reference || !setSubtitleDelay)
+      return;
+    const key = delayKey(live.current.tracks, shown);
+    const asked = asking.current;
+    asking.current = false;
+    // Asked, a delay set by hand no longer holds.
+    if (asked)
+      saveSubtitleDelay(source.Id, key, {
+        ms: live.current.subtitleDelayMs,
+      });
+    else if (savedSubtitleDelay(source.Id, key)?.fixed) return;
+    let stopped = false;
+    let stop = () => {};
+    let first = true;
+    const report = (outcome: SyncOutcome) => {
+      setSyncWaiting(false);
+      setSyncOutcome(outcome);
+    };
+    const take = (sync: SubtitleSync, lines: Span[]) => {
+      const result = sync.add(lines);
+      if (sync.done) stop();
+      if (!result) return;
+      if ('failed' in result) return report({ asked, failed: result.failed });
+      if (savedSubtitleDelay(source.Id, key)?.fixed) return stop();
+      const ms = clampDelay(result.delayMs);
+      const movedMs = ms - live.current.subtitleDelayMs;
+      saveSubtitleDelay(source.Id, key, { ms });
+      setSubtitleDelay(ms);
+      patch({ subtitleDelayMs: ms });
+      report({ asked, delayMs: ms, movedMs, first });
+      first = false;
+    };
+    setSyncWaiting(asked);
+    const waited = setTimeout(() => setSyncWaiting(false), ASKED_WAIT_MS);
+    latestRead.current(shown)?.then(
+      (cues) => {
+        if (stopped) return;
+        if (!cues.length) return report({ asked, failed: 'unmatched' });
+        const sync = new SubtitleSync(
+          cues,
+          SUBTITLE_DELAY_LIMIT_MS,
+          () => playhead.positionMs,
+          asked
+        );
+        const taker = (lines: Span[]) => take(sync, lines);
+        taker(history.lines);
+        if (sync.done) return;
+        history.takers.add(taker);
+        stop = () => history.takers.delete(taker);
+      },
+      () => !stopped && report({ asked, failed: 'unmatched' })
+    );
+    return () => {
+      stopped = true;
+      stop();
+      clearTimeout(waited);
+      setSyncWaiting(false);
+    };
+  }, [engine, latestRead, patch, reference, shown, source.Id, syncRuns]);
+
   const subtitleTracks = tracks.filter((t) => t.type === 'subtitle');
   const { stats } = engine;
   return {
@@ -256,21 +388,31 @@ export function usePlayer(
       ((ms) => {
         const delay = clampDelay(ms);
         engine.setSubtitleDelay!(delay);
-        saveSubtitleDelay(source.Id, delay);
+        if (shown)
+          saveSubtitleDelay(source.Id, delayKey(tracks, shown), {
+            ms: delay,
+            fixed: true,
+          });
         patch({ subtitleDelayMs: delay });
       }),
     skipAhead: engine.skipAhead && ((skips) => engine.skipAhead!(skips)),
     liftSubtitles: engine.setStyle && setLift,
     canReadSubtitle: (id) =>
-      servers.some((s) => s.id === id) || !!engine.ownLines,
+      servers.some((s) => s.id === id) || !!engine.ownLines?.(id),
     subtitleLines: async () => {
-      const server = servers.find((s) => s.id === shown);
-      if (server) {
-        const res = await fetch(server.url);
-        return res.ok ? parseSubtitleLines(await res.text()) : null;
-      }
-      return shown ? ((await engine.ownLines?.(shown)) ?? null) : null;
+      const cues = shown ? await readSubtitle(shown) : null;
+      return cues ? plainLines(cues) : null;
     },
+    autoSync: reference
+      ? {
+          run: () => {
+            asking.current = true;
+            setSyncRuns((n) => n + 1);
+          },
+          waiting: syncWaiting,
+          outcome: syncOutcome,
+        }
+      : undefined,
     subtitleFiles: engine.subtitleFiles,
     toggleFullscreen:
       engine.toggleFullscreen && (() => engine.toggleFullscreen!()),

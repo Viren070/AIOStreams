@@ -264,6 +264,10 @@ msgstr "+{db} dB"
 msgid "+{seconds}s"
 msgstr "+{seconds}s"
 
+#: src/lib/subtitles/delay.ts
+msgid "+{time}"
+msgstr "+{time}"
+
 #: src/lib/playback/sound.ts
 msgid "−{amount} ms"
 msgstr "−{amount} ms"
@@ -271,6 +275,10 @@ msgstr "−{amount} ms"
 #: src/lib/subtitles/delay.ts
 msgid "−{seconds}s"
 msgstr "−{seconds}s"
+
+#: src/lib/subtitles/delay.ts
+msgid "−{time}"
+msgstr "−{time}"
 
 #: src/lib/input/actions.ts
 msgid "0 to 9"
@@ -3796,6 +3804,10 @@ msgstr "Subtitles on or off"
 msgid "Subtitles set to {amount}. Another line refines it."
 msgstr "Subtitles set to {amount}. Another line refines it."
 
+#: src/lib/subtitles/delay.ts
+msgid "Subtitles synced: {amount}"
+msgstr "Subtitles synced: {amount}"
+
 #: src/pages/settings/subtitles.tsx
 msgid "Subtitles the version marks as default or forced, in your language when it has them."
 msgstr "Subtitles the version marks as default or forced, in your language when it has them."
@@ -3834,6 +3846,10 @@ msgstr "Switches the TV to a refresh rate that suits each video, so motion plays
 msgid "Sync"
 msgstr "Sync"
 
+#: src/components/player/options.tsx
+msgid "Sync automatically"
+msgstr "Sync automatically"
+
 #: src/components/player/subtitle-sync.tsx
 #: src/lib/input/actions.ts
 msgid "Sync by ear"
@@ -3850,6 +3866,10 @@ msgstr "Sync to a line"
 #: src/components/player/options.tsx
 msgid "Sync to a line…"
 msgstr "Sync to a line…"
+
+#: src/components/player/controls.tsx
+msgid "Syncing subtitles…"
+msgstr "Syncing subtitles…"
 
 #: src/pages/settings/interface.tsx
 msgid "System ({system})"
@@ -4097,6 +4117,14 @@ msgstr "There is nothing here"
 #: src/components/version-settings.tsx
 msgid "These come before the packs' badges. Badges that share a group are alternatives: only the first that matches shows."
 msgstr "These come before the packs' badges. Badges that share a group are alternatives: only the first that matches shows."
+
+#: src/lib/subtitles/delay.ts
+msgid "These subtitles don't match the video's own"
+msgstr "These subtitles don't match the video's own"
+
+#: src/lib/subtitles/delay.ts
+msgid "These subtitles run at a different speed to the video"
+msgstr "These subtitles run at a different speed to the video"
 
 #: src/components/player/subtitle-sync.tsx
 msgid "These subtitles' lines could not be read."

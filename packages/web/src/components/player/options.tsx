@@ -24,6 +24,7 @@ import {
   LuStretchHorizontal,
   LuUndo2,
   LuUsers,
+  LuWandSparkles,
 } from 'react-icons/lu';
 import {
   DropdownMenu,
@@ -356,11 +357,13 @@ function SoundControls() {
 function SubtitleSync({
   delayMs,
   onChange,
+  onSyncAuto,
   onSyncByEar,
   onSyncToLine,
 }: {
   delayMs: number;
   onChange(ms: number): void;
+  onSyncAuto?: () => void;
   onSyncByEar(): void;
   onSyncToLine?: () => void;
 }) {
@@ -380,6 +383,12 @@ function SubtitleSync({
           onClick: () => onChange(delayMs + SUBTITLE_DELAY_STEP_MS),
         }}
       />
+      {onSyncAuto && (
+        <DropdownMenuItem onClick={onSyncAuto}>
+          <LuWandSparkles className="flex-none" />
+          <Trans>Sync automatically</Trans>
+        </DropdownMenuItem>
+      )}
       <DropdownMenuItem onClick={onSyncByEar}>
         <LuEar className="flex-none" />
         <Trans>Sync by ear…</Trans>
@@ -500,6 +509,7 @@ export function OptionButtons({
                   <SubtitleSync
                     delayMs={state.subtitleDelayMs}
                     onChange={player.setSubtitleDelay}
+                    onSyncAuto={player.autoSync?.run}
                     onSyncByEar={onSyncByEar}
                     onSyncToLine={
                       player.subtitleLines &&

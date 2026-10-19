@@ -263,12 +263,20 @@ msgstr ""
 msgid "+{seconds}s"
 msgstr ""
 
+#: src/lib/subtitles/delay.ts
+msgid "+{time}"
+msgstr ""
+
 #: src/lib/playback/sound.ts
 msgid "−{amount} ms"
 msgstr ""
 
 #: src/lib/subtitles/delay.ts
 msgid "−{seconds}s"
+msgstr ""
+
+#: src/lib/subtitles/delay.ts
+msgid "−{time}"
 msgstr ""
 
 #: src/lib/input/actions.ts
@@ -3795,6 +3803,10 @@ msgstr ""
 msgid "Subtitles set to {amount}. Another line refines it."
 msgstr ""
 
+#: src/lib/subtitles/delay.ts
+msgid "Subtitles synced: {amount}"
+msgstr ""
+
 #: src/pages/settings/subtitles.tsx
 msgid "Subtitles the version marks as default or forced, in your language when it has them."
 msgstr ""
@@ -3833,6 +3845,10 @@ msgstr ""
 msgid "Sync"
 msgstr ""
 
+#: src/components/player/options.tsx
+msgid "Sync automatically"
+msgstr ""
+
 #: src/components/player/subtitle-sync.tsx
 #: src/lib/input/actions.ts
 msgid "Sync by ear"
@@ -3848,6 +3864,10 @@ msgstr ""
 
 #: src/components/player/options.tsx
 msgid "Sync to a line…"
+msgstr ""
+
+#: src/components/player/controls.tsx
+msgid "Syncing subtitles…"
 msgstr ""
 
 #: src/pages/settings/interface.tsx
@@ -4095,6 +4115,14 @@ msgstr ""
 
 #: src/components/version-settings.tsx
 msgid "These come before the packs' badges. Badges that share a group are alternatives: only the first that matches shows."
+msgstr ""
+
+#: src/lib/subtitles/delay.ts
+msgid "These subtitles don't match the video's own"
+msgstr ""
+
+#: src/lib/subtitles/delay.ts
+msgid "These subtitles run at a different speed to the video"
 msgstr ""
 
 #: src/components/player/subtitle-sync.tsx

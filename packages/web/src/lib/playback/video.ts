@@ -254,13 +254,16 @@ export function videoEngine(
       },
       toggleFullscreen: toggleDocumentFullscreen,
       // Cues carry the shift already applied, so it comes off again.
-      ownLines: async (id) => {
+      ownLines(id) {
         const cues = files.find((f) => f.id === id)?.track.cues;
         if (!cues?.length) return null;
-        return Array.from(cues).map((cue) => ({
-          startMs: cue.startTime * 1000 - delayMs,
-          text: (cue as VTTCue).text.replace(/<[^>]*>/g, ''),
-        }));
+        return Promise.resolve().then(() =>
+          Array.from(cues, (cue) => ({
+            startMs: cue.startTime * 1000 - delayMs,
+            endMs: cue.endTime * 1000 - delayMs,
+            text: (cue as VTTCue).text,
+          }))
+        );
       },
       subtitleFiles: {
         types: SUBTITLE_TYPES,

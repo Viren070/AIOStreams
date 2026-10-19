@@ -1,5 +1,6 @@
 import type { SubtitleStyle, VideoFit } from '../settings';
-import type { SubtitleLine } from '../subtitles/cues';
+import type { Span } from '../subtitles/align';
+import type { SubtitleCue } from '../subtitles/cues';
 import type { BaseItemDto, MediaStream, SourceInfo } from '../types';
 import type { PlaybackPrefs } from '../user-config';
 import type { Chapter } from './chapters';
@@ -14,6 +15,7 @@ export interface ServerSubtitle extends Track {
 export interface EngineTrack extends Track {
   type: 'audio' | 'subtitle';
   title?: string;
+  codec?: string;
   forced?: boolean;
   hearingImpaired?: boolean;
   visualImpaired?: boolean;
@@ -105,8 +107,10 @@ export interface PlayerEngine {
   skipAhead?(skips: PlannedSkip[]): void;
   setStyle?(style: EngineStyle): void;
   toggleFullscreen?(): void;
-  /** Lines of one of its own subtitles; server ones are read from their address. */
-  ownLines?(id: string): Promise<SubtitleLine[] | null> | null;
+  /** Cues of one of its own subtitles, null for one it can't read; server ones are read from their address. */
+  ownLines?(id: string): Promise<SubtitleCue[]> | null;
+  /** Reports when the lines of one of the file's own subtitles show, as it reads them, until stopped. */
+  watchLines?(id: string, onLines: (lines: Span[]) => void): () => void;
   subtitleFiles?: { types: readonly string[]; add(file: File): Promise<void> };
   stats?: { pages: Track[]; show(page: string | null): void };
   /** Picks tracks from the user's settings as the file opens. */

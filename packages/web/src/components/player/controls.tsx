@@ -20,12 +20,13 @@ import { currentHost } from '../../lib/hosts';
 import { appBridge } from '../../lib/hosts/shell/bridge';
 import type { PlayerController } from '../../lib/playback/controller';
 import { settings, useSetting } from '../../lib/settings';
-import { delayNotice } from '../../lib/subtitles/delay';
+import { delayNotice, syncNotice } from '../../lib/subtitles/delay';
 import { useLatest } from '../../lib/use-latest';
 import type { BaseItemDto, MediaSegmentDto } from '../../lib/types';
 import { ControlButton, MiddleButton, PlayerAction } from './buttons';
 import { EpisodesSheet } from './episodes';
 import {
+  Notice,
   ScrubReadout,
   SpeedPill,
   useNotice,
@@ -133,6 +134,11 @@ export function PlayerControls({
   const [flash, showFlash] = useToggleFlash();
   const [seekFlash, showSeekFlash] = useSeekFlash();
   const [notice, showNotice] = useNotice();
+  const syncOutcome = player.autoSync?.outcome;
+  React.useEffect(() => {
+    const text = syncOutcome && syncNotice(syncOutcome);
+    if (text) showNotice(text, 'failed' in syncOutcome ? 4000 : 2000);
+  }, [syncOutcome, showNotice]);
   const togglePlay = () => {
     showFlash(latest.current.state.paused);
     latest.current.togglePlay();
@@ -431,7 +437,8 @@ export function PlayerControls({
 
       {!touch && <div className="contents max-lg:hidden">{flash}</div>}
       {seekFlash}
-      {notice}
+      {notice ||
+        (player.autoSync?.waiting && <Notice text={t`Syncing subtitles…`} />)}
       {scrub && (
         <ScrubReadout
           fromMs={scrub.fromMs}

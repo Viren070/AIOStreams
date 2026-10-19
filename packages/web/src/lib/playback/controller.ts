@@ -45,6 +45,12 @@ export type PlayerFeature = 'audio' | 'chapters' | 'stats' | 'headers';
 export const browserFeatures: readonly PlayerFeature[] =
   'audioTracks' in HTMLMediaElement.prototype ? ['audio'] : [];
 
+/** What lining an added subtitle up with the file's own found; `asked` when the user asked for it. */
+export type SyncOutcome = { asked: boolean } & (
+  | { delayMs: number; movedMs: number; first: boolean }
+  | { failed: 'unmatched' | 'speed' }
+);
+
 /** One set of controls over whichever player the page runs in. */
 export interface PlayerController {
   state: PlayerState;
@@ -69,6 +75,14 @@ export interface PlayerController {
   subtitleLines?: () => Promise<SubtitleLine[] | null>;
   /** Whether `subtitleLines` can read this subtitle; every one when missing. */
   canReadSubtitle?: (id: string) => boolean;
+  /** Lines the shown subtitle up with the file's own, for an added one the player can. */
+  autoSync?: {
+    run(): void;
+    /** A run the user asked for waits on the file's lines. */
+    waiting: boolean;
+    /** A new object each time a run finds something. */
+    outcome: SyncOutcome | null;
+  };
   /** The subtitle the page draws, for a player that draws none itself. */
   subtitleText?: string;
   /** Missing where the page always fills the screen. */

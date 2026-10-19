@@ -4,26 +4,32 @@ import { PiPauseDuotone, PiPlayDuotone } from 'react-icons/pi';
 import { LuFastForward, LuRotateCcw, LuRotateCw } from 'react-icons/lu';
 import { clock } from '../../lib/format';
 
-export function useNotice(): [React.ReactNode, (text: string) => void] {
-  const [text, setText] = React.useState<string | null>(null);
-  const timer = React.useRef<ReturnType<typeof setTimeout>>(undefined);
-  React.useEffect(() => () => clearTimeout(timer.current), []);
-  const show = React.useCallback((next: string) => {
-    clearTimeout(timer.current);
-    setText(next);
-    timer.current = setTimeout(() => setText(null), 1200);
-  }, []);
-  const node = text && (
+export function Notice({ text }: { text: string }) {
+  return (
     <div
       data-ui="player-notice"
-      className="pointer-events-none absolute inset-x-0 top-20 flex justify-center"
+      className="pointer-events-none absolute inset-x-0 top-20 flex justify-center px-4"
     >
-      <span className="rounded-full bg-black/70 px-4 py-1.5 text-sm font-medium tabular-nums">
+      <span className="rounded-full bg-black/70 px-4 py-1.5 text-center text-sm font-medium tabular-nums">
         {text}
       </span>
     </div>
   );
-  return [node, show];
+}
+
+export function useNotice(): [
+  React.ReactNode,
+  (text: string, ms?: number) => void,
+] {
+  const [text, setText] = React.useState<string | null>(null);
+  const timer = React.useRef<ReturnType<typeof setTimeout>>(undefined);
+  React.useEffect(() => () => clearTimeout(timer.current), []);
+  const show = React.useCallback((next: string, ms = 1200) => {
+    clearTimeout(timer.current);
+    setText(next);
+    timer.current = setTimeout(() => setText(null), ms);
+  }, []);
+  return [text && <Notice text={text} />, show];
 }
 
 export function useToggleFlash(): [React.ReactNode, (paused: boolean) => void] {

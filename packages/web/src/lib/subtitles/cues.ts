@@ -71,9 +71,16 @@ export function parseAssCues(body: string): SubtitleCue[] {
   return cues.sort((a, b) => a.startMs - b.startMs);
 }
 
-/** The lines of a WebVTT or SRT file, tags stripped. */
-export function parseSubtitleLines(body: string): SubtitleLine[] {
-  return parseCues(body).flatMap(({ startMs, text }) => {
+/** The cues of a WebVTT, SRT, ASS or SSA file. */
+export function parseSubtitle(body: string): SubtitleCue[] {
+  return /^﻿?\s*\[Script Info\]/i.test(body)
+    ? parseAssCues(body)
+    : parseCues(body);
+}
+
+/** Cues as one line of text each, tags stripped. */
+export function plainLines(cues: SubtitleCue[]): SubtitleLine[] {
+  return cues.flatMap(({ startMs, text }) => {
     const plain = text.replace(/\n/g, ' ').replace(TAGS, '').trim();
     return plain ? [{ startMs, text: plain }] : [];
   });

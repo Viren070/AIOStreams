@@ -1,7 +1,12 @@
 import { t } from '@lingui/core/macro';
 import { formatBytes } from '@aiostreams/ui/core/format';
 import { fullTitle } from '../../format';
-import { base64, checkSubtitleFile } from '../../subtitles/files';
+import type { SubtitleCue } from '../../subtitles/cues';
+import {
+  base64,
+  checkSubtitleFile,
+  readSubtitleCues,
+} from '../../subtitles/files';
 import { settings, type SubtitleStyle } from '../../settings';
 import { subtitleLanguages } from '../../user-config';
 import {
@@ -186,6 +191,8 @@ let linger: ReturnType<typeof setTimeout> | undefined;
 let advanced: { itemId: string; sourceId: string } | null = null;
 
 const SUBTITLE_TYPES = ['srt', 'vtt', 'ass', 'ssa', 'sub', 'sup'];
+/** The apps list an added file under its name, cut to this length. */
+const NAME_LENGTH = 200;
 
 const SUBTITLE_MODES = {
   Default: 'default',
@@ -220,6 +227,8 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
 
   let file: EngineFile | null = null;
   let tracks: AppTrack[] = [];
+  /** Files the user added, by the name the player lists them under. */
+  const added = new Map<string, SubtitleCue[]>();
   let queued: QueuedEpisode | null = null;
   let moved = false;
   // Offered once per file.
@@ -250,6 +259,7 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
       label: ownTrackLabel(t.title, t.language, Number(t.id)),
       lang: t.language,
       title: t.title,
+      codec: t.codec,
       forced: t.forced,
       hearingImpaired: t.hearingImpaired,
       visualImpaired: t.visualImpaired,
@@ -291,6 +301,7 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
       unsubscribe();
       file = next;
       tracks = [];
+      added.clear();
       moved = false;
       retried = false;
       let buffering = false;
@@ -467,12 +478,35 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
     toggleFullscreen: external
       ? () => send('player-set', { fullscreen: !fullscreen })
       : () => shell.send({ type: 'fullscreen' }),
+    ownLines(id) {
+      const track = tracks.find((t) => t.id === id && t.external);
+      const cues = track?.title && added.get(track.title);
+      return cues ? Promise.resolve(cues) : null;
+    },
+    watchLines: external
+      ? undefined
+      : (id, onLines) => {
+          send('player-subtitle-lines', { track: id });
+          const stop = shell.subscribe((m) => {
+            if (m.type === 'player-subtitle-lines' && m.track === id)
+              onLines(m.lines);
+          });
+          return () => {
+            stop();
+            send('player-subtitle-lines', { track: null });
+          };
+        },
     subtitleFiles: {
       types: SUBTITLE_TYPES,
-      add: async (added) => {
-        checkSubtitleFile(added, SUBTITLE_TYPES);
-        const data = await base64(added);
-        send('subtitle-file', { name: added.name, data });
+      add: async (picked) => {
+        checkSubtitleFile(picked, SUBTITLE_TYPES);
+        const data = await base64(picked);
+        // A file only the player can read just isn't synced.
+        await readSubtitleCues(picked).then(
+          (cues) => added.set(picked.name.slice(0, NAME_LENGTH), cues),
+          () => {}
+        );
+        send('subtitle-file', { name: picked.name, data });
       },
     },
     get stats() {
