@@ -89,10 +89,12 @@ let host: Host | undefined;
 
 /**
  * Samsung's TVs, running the packaged app. Its agent says Tizen even where
- * the page doesn't see `window.tizen` from the start.
+ * the page doesn't see `window.tizen` from the start; only the packaged
+ * (standalone) build goes by that, as the TV's own browser says so too.
  */
 export function tizenHost(): Host | null {
-  if (!window.tizen && !/\bTizen\b/.test(navigator.userAgent)) return null;
+  const packaged = __STANDALONE__ && /\bTizen\b/.test(navigator.userAgent);
+  if (!window.tizen && !packaged) return null;
   host ??= {
     name: 'tizen',
     tv: true,

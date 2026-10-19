@@ -274,7 +274,8 @@ export function InterfaceSection() {
                 ]
               : []),
           ]}
-          value={heroMode}
+          // Chosen on a TV, opening cards rotate elsewhere: shown as such here.
+          value={heroMode === 'open' && !currentHost().tv ? 'rotate' : heroMode}
           onValueChange={(value) => setHeroMode(value as HeroMode)}
         />
         <Switch

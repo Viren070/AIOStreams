@@ -86,17 +86,26 @@ export function dashManifest(
 /**
  * Plays the manifest at `url` in `video`, Shaka fetched only then. It starts
  * on the largest size the connection is assumed to carry, as a trailer ends
- * before a cautious start climbs. Resolves to its teardown.
+ * before a cautious start climbs. Resolves to its teardown; a failure to set
+ * Shaka up (its chunk not loading, no MSE) goes to `onError` like any other.
  */
 export async function playDash(
   video: HTMLVideoElement,
   url: string,
   onError: (message: string) => void
 ): Promise<() => void> {
-  const { default: shaka } = await import('shaka-player');
-  shaka.polyfill.installAll();
-  const player = new shaka.Player();
-  await player.attach(video);
+  let shaka: (typeof import('shaka-player'))['default'];
+  let player: InstanceType<(typeof shaka)['Player']>;
+  try {
+    shaka = (await import('shaka-player')).default;
+    shaka.polyfill.installAll();
+    player = new shaka.Player();
+    await player.attach(video);
+  } catch (error) {
+    const code = (error as { code?: number }).code ?? String(error);
+    onError(t`The trailer didn't load (error ${code})`);
+    return () => {};
+  }
   player.configure({
     abr: { defaultBandwidthEstimate: 20_000_000 },
     streaming: { bufferingGoal: 30, rebufferingGoal: 2 },
