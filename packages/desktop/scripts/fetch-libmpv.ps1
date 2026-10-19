@@ -1,4 +1,4 @@
-# Downloads the libmpv and Vulkan loader that libmpv.pin names into vendor/<arch>/, where
+# Downloads the libmpv, Vulkan loader and FFmpeg that libmpv.pin names into vendor/<arch>/, where
 # debug builds and packaging look for them. -Tag fetches another shinchiro release, unchecked.
 param(
   [ValidateSet('x86_64', 'aarch64')]
@@ -57,4 +57,9 @@ if ($Arch -eq 'x86_64') {
 }
 Expand-Download $url "$folder.zip" $pin["vulkan_$Arch"] (Join-Path $vendor 'vulkan') $dll, "$folder/VulkanRT-License.txt"
 
-Write-Host "libmpv-2.dll ($Tag) and vulkan-1.dll ($vulkan) for $Arch are in $vendor"
+$ffmpeg = $pin['ffmpeg']
+$zip = "ffmpeg-windows-$Arch.zip"
+$url = "https://github.com/Viren070/aiostreams-libs/releases/download/$ffmpeg/$zip"
+Expand-Download $url $zip $pin["ffmpeg_$Arch"] $vendor 'avcodec-*.dll', 'avutil-*.dll', 'FFmpeg-COPYING.LGPLv2.1', 'dav1d-COPYING'
+
+Write-Host "libmpv-2.dll ($Tag), vulkan-1.dll ($vulkan) and FFmpeg ($ffmpeg) for $Arch are in $vendor"

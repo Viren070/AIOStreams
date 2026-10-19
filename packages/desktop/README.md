@@ -71,7 +71,7 @@ the executable: the page in a `web` folder, and libmpv beside it.
 Needs Rust (MSVC toolchain), the WebView2 runtime (part of Windows 10 and 11) and 7-Zip on `PATH`.
 
 ```powershell
-./scripts/fetch-libmpv.ps1   # libmpv-2.dll and vulkan/ into vendor/x86_64 (-Arch aarch64 for ARM)
+./scripts/fetch-libmpv.ps1   # libmpv-2.dll, vulkan/ and FFmpeg into vendor/x86_64 (-Arch aarch64 for ARM)
 cargo run
 ```
 
@@ -82,6 +82,11 @@ libmpv links the Vulkan loader, `vulkan-1.dll`, which GPU drivers install, so ol
 have one. The pin also names a [LunarG Vulkan Runtime](https://vulkan.lunarg.com/sdk/home) release,
 whose `vulkan-1.dll` ships in a `vulkan` folder beside libmpv. The app loads it only when Windows has
 none, so a driver's own loader always wins.
+
+The seek bar's thumbnails decode keyframes with FFmpeg, which this libmpv keeps to itself. The pin
+names an [aiostreams-libs](https://github.com/Viren070/aiostreams-libs) release too, whose
+decoder-only `avcodec` and `avutil` DLLs ship beside libmpv. Without them the app plays as before,
+with no thumbnails.
 
 ### Linux
 

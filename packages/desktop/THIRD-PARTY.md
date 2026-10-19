@@ -13,6 +13,13 @@ AIOStreams Desktop is licensed under the AGPL-3.0. It ships with:
     is under its own project's licence (GPL, LGPL or permissive). Source:
     [mpv-player/mpv](https://github.com/mpv-player/mpv), [FFmpeg](https://ffmpeg.org) and each
     library's own project.
+- **FFmpeg** on Windows, which makes the seek bar's thumbnails: `avcodec-*.dll` and `avutil-*.dll`,
+  licensed under the LGPL-2.1-or-later, with [dav1d](https://code.videolan.org/videolan/dav1d)
+  (BSD-2-Clause) built in. Their licence texts are beside them in `FFmpeg-COPYING.LGPLv2.1` and
+  `dav1d-COPYING`. They are built from pinned sources and patches by
+  [Viren070/aiostreams-libs](https://github.com/Viren070/aiostreams-libs), whose release is in
+  `libmpv.pin` in the AIOStreams repository. Source: [FFmpeg](https://ffmpeg.org), dav1d and that
+  repository's build script and patches.
 - **The Vulkan loader** on Windows: `vulkan/vulkan-1.dll`, from the
   [LunarG Vulkan Runtime](https://vulkan.lunarg.com/sdk/home), whose version is in `libmpv.pin` in
   the AIOStreams repository. Licensed under the Apache-2.0; its licence text is beside it in
