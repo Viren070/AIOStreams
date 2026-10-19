@@ -73,6 +73,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var controller: ListenableFuture<MediaController>
     private val screen = PlayerWindow(this)
     private val levels by lazy { Levels(this) }
+    private val trustedRoots by lazy { MpvEngine.trustedRoots(this).toByteArray() }
     /** Run once the notification question is answered, either way. */
     private var afterNotifications: (() -> Unit)? = null
     private val notifications = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
@@ -147,6 +148,7 @@ class MainActivity : ComponentActivity() {
             frameRate = frameRates::match,
             showVideo = playback::showVideo,
             passthrough = passthrough::supported,
+            trustedRoots = { trustedRoots },
         )
         gamepads = hasGamepad()
         getSystemService(InputManager::class.java).registerInputDeviceListener(controllers, null)

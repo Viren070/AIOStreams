@@ -7,6 +7,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":natives"))
     api(libs.androidx.media3.common)
     api(libs.kotlinx.serialization.json)
 }

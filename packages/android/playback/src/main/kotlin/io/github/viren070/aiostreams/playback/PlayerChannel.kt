@@ -6,8 +6,12 @@ import android.os.Process
 import android.os.SystemClock
 import android.util.Base64
 import android.util.Log
+import io.github.viren070.aiostreams.natives.SubtitleTimeline
 import java.io.File
+import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
@@ -37,6 +41,8 @@ class PlayerChannel(
     private val showVideo: (Boolean) -> Unit = {},
     /** Those of the formats the audio output decodes itself. */
     private val passthrough: (List<String>) -> List<String> = { emptyList() },
+    /** The device's trusted roots as PEM, for reading a file's index outside the players. */
+    private val trustedRoots: () -> ByteArray? = { null },
 ) : Engine.Listener {
     private val main = Handler(Looper.getMainLooper())
     private var state = PlayerState()
@@ -50,6 +56,11 @@ class PlayerChannel(
     private var style: Style? = null
     private var settings: PlayerSettings? = null
     private var reference: String? = null
+
+    /** A file's subtitle lines from its index, null where it has none, and the file being read. */
+    private var indexed: Pair<String, List<List<SubtitleLine>>?>? = null
+    private var indexing: String? = null
+    private val reader = Executors.newSingleThreadExecutor { Thread(it, "subtitle-index") }
 
     /** The file playing, which a new engine loads again. */
     private var loaded: LoadRequest? = null
@@ -125,6 +136,7 @@ class PlayerChannel(
                 .onSuccess {
                     reference = it.id
                     engine.watchSubtitleLines(it.id)
+                    it.id?.let(::sendIndexed)
                 }
                 .onFailure(::reject)
             "player-sync" -> {
@@ -229,6 +241,33 @@ class PlayerChannel(
         send(PlayerProtocol.state(position))
     }
 
+    /** All of a track's lines at once from the file's index, which the engine's own reading then tops up. */
+    private fun sendIndexed(track: String) {
+        val load = loaded ?: return
+        indexed?.takeIf { it.first == load.url }?.let { return sendLines(track, it.second) }
+        if (indexing == load.url) return
+        indexing = load.url
+        reader.execute {
+            val headers = load.headers.flatMap { listOf(it.key, it.value) }.toTypedArray()
+            val lines = runCatching { indexLines(SubtitleTimeline.read(load.url, headers, trustedRoots())) }
+                .onFailure { Log.w(TAG, "couldn't read the subtitle index", it) }
+                .getOrNull()
+            main.post {
+                if (indexing == load.url) indexing = null
+                if (loaded?.url != load.url) return@post
+                indexed = load.url to lines
+                reference?.let { sendLines(it, lines) }
+            }
+        }
+    }
+
+    /** The index lists the file's own subtitles in the engine's order. */
+    private fun sendLines(track: String, indexed: List<List<SubtitleLine>>?) {
+        val own = tracks.filter { it.type == "subtitle" && !it.external }
+        val lines = indexed?.takeIf { it.size == own.size }?.getOrNull(own.indexOfFirst { it.id == track })
+        if (!lines.isNullOrEmpty()) send(PlayerProtocol.subtitleLines(track, lines))
+    }
+
     /** The page never names a path for the engine to open, so the file is written here first. */
     private fun addSubtitle(message: JsonObject) {
         val name = message.text("name") ?: error("subtitle file without a name")
@@ -261,6 +300,17 @@ class PlayerChannel(
         fun JsonObject.text(name: String) = (this[name] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
 
         fun JsonObject.number(name: String) = (this[name] as? JsonPrimitive)?.doubleOrNull
+
+        /** Each subtitle track's lines from [SubtitleTimeline.read], null when the file has no index. */
+        fun indexLines(json: String): List<List<SubtitleLine>>? {
+            val tracks = (Json.parseToJsonElement(json) as? JsonObject)?.get("tracks") as? JsonArray ?: return null
+            return tracks.map { track ->
+                ((track as? JsonObject)?.get("lines") as? JsonArray).orEmpty().mapNotNull { line ->
+                    val (start, end) = (line as? JsonArray)?.map { (it as? JsonPrimitive)?.doubleOrNull } ?: return@mapNotNull null
+                    if (start != null && end != null) SubtitleLine(start, end) else null
+                }
+            }
+        }
 
         fun itemOf(item: JsonObject): NowPlayingItem? {
             fun text(name: String) = (item[name] as? JsonPrimitive)?.takeIf { it.isString }?.content
