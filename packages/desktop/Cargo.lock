@@ -62,12 +62,24 @@ name = "aiostreams-desktop-core"
 version = "0.17.0"
 dependencies = [
  "aiostreams-container",
+ "aiostreams-thumbs",
  "libloading",
  "log",
  "serde",
  "serde_json",
  "ureq",
  "url",
+]
+
+[[package]]
+name = "aiostreams-thumbs"
+version = "0.1.0"
+dependencies = [
+ "aiostreams-container",
+ "jpeg-encoder",
+ "libc",
+ "libloading",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -1565,6 +1577,12 @@ dependencies = [
  "quote",
  "syn 2.0.119",
 ]
+
+[[package]]
+name = "jpeg-encoder"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b454d911ac55068f53495488d8ccd0646eaa540c033a28ee15b07838afafb01f"
 
 [[package]]
 name = "js-sys"

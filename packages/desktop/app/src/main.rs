@@ -19,7 +19,7 @@ use aiostreams_desktop_core::downloads::{self, Downloads};
 use aiostreams_desktop_core::external::{self, External};
 use aiostreams_desktop_core::playback::PlayerState;
 use aiostreams_desktop_core::player::Player;
-use aiostreams_desktop_core::{discord, now_playing};
+use aiostreams_desktop_core::{discord, now_playing, thumbnails};
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
 use updates::{Command, Updater};
@@ -149,8 +149,15 @@ pub struct Served {
     pub body: Vec<u8>,
 }
 
-/// Serves the web app's files; a path without an extension is one of its routes.
+/// Serves the web app's files and thumbnails; a path without an extension is one of its routes.
 pub fn serve(root: Option<&Path>, path: &str) -> Served {
+    if let Some(body) = thumbnails::image(path) {
+        return Served {
+            status: 200,
+            content_type: "image/jpeg",
+            body,
+        };
+    }
     let not_found = Served {
         status: 404,
         content_type: "text/plain",
@@ -551,6 +558,20 @@ pub fn handle(
         Inbound::PlayerSubtitleLines { track } => {
             if let Some(Err(e)) = player.as_ref().map(|p| p.subtitle_lines(track.as_deref())) {
                 fail(format!("player-subtitle-lines: {e}"));
+            }
+        }
+        Inbound::PlayerThumbnail {
+            url,
+            headers,
+            position_ms,
+            showing_ms,
+        } => {
+            let local = |path: &str| downloads.is_local(path);
+            let done = player
+                .as_ref()
+                .map(|p| p.thumbnail(&url, &headers, position_ms, showing_ms, &local));
+            if let Some(Err(e)) = done {
+                fail(format!("player-thumbnail: {e}"));
             }
         }
         Inbound::PlayerSync { external: true } => external.sync(),

@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, mpsc};
@@ -15,6 +15,7 @@ use crate::playback::{
     Style, SubtitleLine, THROTTLE_MS, THROTTLED,
 };
 use crate::sound::{self, Filters, Sound};
+use crate::thumbnails::Previews;
 
 pub type Emit = Arc<dyn Fn(Outbound) + Send + Sync>;
 
@@ -185,6 +186,7 @@ pub struct Player {
     reference: Arc<Mutex<Reference>>,
     /// The stats overlay's page, while it shows.
     stats: Mutex<Option<String>>,
+    previews: Previews,
     ac3_encoder: bool,
     own_font: String,
     emit: Emit,
@@ -216,6 +218,9 @@ impl Player {
             versions.0.as_deref().unwrap_or_default(),
             versions.1.as_deref().unwrap_or_default()
         );
+        if let Some(dir) = library.parent() {
+            aiostreams_thumbs::library_dirs(vec![dir.to_path_buf()]);
+        }
         let quit = Arc::new(AtomicBool::new(false));
         let dolby_vision = Arc::new(AtomicBool::new(true));
         let ac3_encoder = sound::encodes_ac3(&mpv);
@@ -263,6 +268,7 @@ impl Player {
             subtitles,
             reference,
             stats: Mutex::default(),
+            previews: Previews::new(emit.clone()),
             ac3_encoder,
             own_font,
             emit,
@@ -506,6 +512,20 @@ impl Player {
 
     pub fn stop(&self) {
         self.send(Request::Command(vec!["stop".into()]));
+        self.previews.clear();
+    }
+
+    pub fn thumbnail(
+        &self,
+        url: &str,
+        headers: &BTreeMap<String, String>,
+        position_ms: Option<f64>,
+        showing_ms: Option<f64>,
+        local: &dyn Fn(&str) -> bool,
+    ) -> Result<(), String> {
+        playback::check_url(url, local)?;
+        self.previews.want(url, headers, position_ms, showing_ms);
+        Ok(())
     }
 }
 

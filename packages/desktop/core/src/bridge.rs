@@ -68,6 +68,16 @@ pub enum Inbound {
     PlayerSubtitleLines {
         track: Option<String>,
     },
+    /// Answered with `player-thumbnail`s for the keyframe at or before the position, newest asked
+    /// first, except the one at `showing_ms` the page has; without a position, reads the file's
+    /// index ahead of the first.
+    PlayerThumbnail {
+        url: String,
+        #[serde(default)]
+        headers: BTreeMap<String, String>,
+        position_ms: Option<f64>,
+        showing_ms: Option<f64>,
+    },
     /// Reports the player's whole state again.
     PlayerSync {
         #[serde(default)]
@@ -252,6 +262,14 @@ pub enum Outbound {
     PlayerSubtitleLines {
         track: String,
         lines: Vec<SubtitleLine>,
+    },
+    /// Where the page loads the JPEG of the keyframe at `position_ms`; without a `src` the file
+    /// has no thumbnails.
+    PlayerThumbnail {
+        url: String,
+        #[serde(rename = "positionMs", skip_serializing_if = "Option::is_none")]
+        position_ms: Option<u64>,
+        src: Option<String>,
     },
     /// `start`, `loaded` or `restart`.
     PlayerEvent {

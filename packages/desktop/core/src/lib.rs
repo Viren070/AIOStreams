@@ -8,4 +8,5 @@ pub mod playback;
 pub mod player;
 pub mod render;
 pub mod sound;
+pub mod thumbnails;
 pub mod youtube;
