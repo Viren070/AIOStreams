@@ -8,6 +8,7 @@ on:
       - 'packages/desktop/core/**'
       - 'packages/desktop/about.*'
       - 'packages/native/container/**'
+      - 'packages/native/thumbs/**'
       - '.github/workflows/desktop-check.yml'
   push:
     branches: [main]
