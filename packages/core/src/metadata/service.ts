@@ -204,12 +204,12 @@ export class MetadataService {
                     id.episode &&
                     !hasEpisode
                   ) {
-                    return (
-                      (await imdbMetadata.getCinemetaData(ownId, type, {
+                    return imdbMetadata
+                      .getCinemetaData(ownId, type, {
                         season: id.season,
                         episode: id.episode,
-                      })) ?? meta
-                    );
+                      })
+                      .catch(() => meta);
                   }
                   return meta;
                 })()

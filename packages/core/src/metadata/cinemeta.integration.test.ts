@@ -162,6 +162,82 @@ describe('Cinemeta HTTP and persistent SQL cache', () => {
       ['Own series', 'Suggestion']
     );
   });
+  it('retains hinted metadata when the own IMDb lookup fails or is in retry backoff', async (t) => {
+    t.after(() => mock.restoreAll());
+    const hint = 'tt9911020';
+    const own = 'tt9911021';
+    const meta = {
+      id: hint,
+      type: 'series',
+      name: 'Hinted series',
+      genres: ['Drama'],
+      releaseInfo: '2010–2012',
+      videos: [
+        { id: `${hint}:1:1`, season: 1, episode: 1, released: '2011-01-01' },
+      ],
+    };
+    let ownRequests = 0;
+    agent
+      .get('https://v3-cinemeta.strem.io')
+      .intercept({ path: `/meta/series/${hint}.json` })
+      .reply(200, { meta });
+    agent
+      .get('https://v3-cinemeta.strem.io')
+      .intercept({ path: `/meta/series/${own}.json` })
+      .reply(() => {
+        ownRequests++;
+        return { statusCode: 504, data: 'gateway timeout' };
+      });
+    mock.method(
+      AnimeDatabase.getInstance(),
+      'getEntryById',
+      async () => ({ mappings: { imdbId: own } }) as any
+    );
+    mock.method(IMDBMetadata.prototype, 'getImdbSuggestionData', async () => ({
+      title: 'Suggestion',
+      year: 2009,
+    }));
+    mock.method(SkyhookMetadata.prototype, 'search', async () => []);
+    const lookup = mock.method(IMDBMetadata.prototype, 'getCinemetaData');
+
+    // Distinct episode requests avoid reusing the metadata service lock result;
+    // the second own-ID lookup must reject from persisted backoff, without HTTP.
+    for (const [episode, error] of [
+      ['2', /HTTP 504/],
+      ['3', /retry backoff/],
+    ] as const) {
+      await t.test(`own IMDb rejection: ${error.source}`, async () => {
+        const result = await new MetadataService({}).getMetadata(
+          IdParser.parse(`${hint}:1:${episode}`, 'series')!,
+          'series'
+        );
+        assert.deepEqual(
+          lookup.mock.calls.slice(-2).map((call) => call.arguments),
+          [
+            [hint, 'series', { season: '1', episode }],
+            [own, 'series', { season: '1', episode }],
+          ]
+        );
+        await assert.rejects(lookup.mock.calls.at(-1)!.result, error);
+        assert.equal(ownRequests, 1);
+        assert.equal(result.title, 'Hinted series');
+        assert.equal(result.year, 2010);
+        assert.equal(result.yearEnd, 2012);
+        assert.deepEqual(result.genres, ['Drama']);
+        assert.deepEqual(result.seasons, [
+          { season_number: 1, episode_count: 1 },
+        ]);
+        assert.deepEqual(
+          result.titles?.map((title) => title.title),
+          ['Hinted series', 'Suggestion']
+        );
+        assert.equal(result.resolvedSeasonFirstEpisode, 1);
+        assert.equal(result.episodeReleased, undefined);
+        assert.equal(result.episodeAirDates, undefined);
+        assert.equal(result.episodeTitles, undefined);
+      });
+    }
+  });
   it('deduplicates HTTP across episodes and survives closing/reopening the database', async () => {
     const id = 'tt9911001';
     let requests = 0;

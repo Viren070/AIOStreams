@@ -20,6 +20,7 @@ const fixture = (extra: Partial<Meta> = {}): Meta => ({
   ...extra,
 });
 const episode = { season: '1', episode: '1' };
+/** Creates a promise with exposed controls for testing in-flight cache loads. */
 function deferred<T>() {
   let resolve!: (v: T) => void;
   let reject!: (e: Error) => void;
@@ -29,6 +30,7 @@ function deferred<T>() {
   });
   return { promise, resolve, reject };
 }
+/** Creates an inspectable in-memory store that clones values like SQL storage. */
 function store() {
   const values = new Map<string, CinemetaEntry>();
   const backend: CinemetaStore = {
