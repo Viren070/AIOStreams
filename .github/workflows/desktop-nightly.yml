@@ -9,6 +9,7 @@ on:
       - '!packages/desktop/README.md'
       - '!packages/desktop/CHANGELOG.md'
       - '!packages/desktop/linux/screenshots/**'
+      - 'packages/native/container/**'
       - 'packages/web/**'
       - 'packages/ui/**'
   workflow_dispatch:
