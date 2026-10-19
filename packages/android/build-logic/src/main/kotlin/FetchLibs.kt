@@ -13,8 +13,8 @@ import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 
-/** Downloads the libmpv AAR `libmpv.pin` names, checks its SHA-256, and unpacks what the module builds with. */
-abstract class FetchLibmpv : DefaultTask() {
+/** Downloads the libmpv AAR `libs.pin` names, checks its SHA-256, and unpacks what the module builds with. */
+abstract class FetchLibs : DefaultTask() {
     @get:InputFile
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val pin: RegularFileProperty

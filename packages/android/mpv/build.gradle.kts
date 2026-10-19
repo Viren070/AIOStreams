@@ -9,15 +9,15 @@ android {
     }
 }
 
-val libmpv = tasks.register<FetchLibmpv>("fetchLibmpv") {
-    pin = rootProject.layout.projectDirectory.file("libmpv.pin")
+val libmpv = tasks.register<FetchLibs>("fetchLibs") {
+    pin = rootProject.layout.projectDirectory.file("libs.pin")
     classes = layout.buildDirectory.file("libmpv/classes.jar")
 }
 
 androidComponents {
     onVariants { variant ->
-        variant.sources.jniLibs?.addGeneratedSourceDirectory(libmpv, FetchLibmpv::jniLibs)
-        variant.sources.assets?.addGeneratedSourceDirectory(libmpv, FetchLibmpv::assets)
+        variant.sources.jniLibs?.addGeneratedSourceDirectory(libmpv, FetchLibs::jniLibs)
+        variant.sources.assets?.addGeneratedSourceDirectory(libmpv, FetchLibs::assets)
     }
 }
 

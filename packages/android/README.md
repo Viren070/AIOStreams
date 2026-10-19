@@ -25,7 +25,7 @@ adb install -r app/build/outputs/apk/debug/app-arm64-v8a-debug.apk
 Each build is an APK per processor (`arm64-v8a`, `armeabi-v7a`, `x86_64`). Debug builds install as
 `io.github.viren070.aiostreams.debug`, named "AIOStreams Debug", beside a released copy.
 
-libmpv comes from `libmpv.pin`: a release of [Viren070/mpv-android](https://github.com/Viren070/mpv-android),
+libmpv comes from `libs.pin`: a release of [Viren070/aiostreams-libs](https://github.com/Viren070/aiostreams-libs),
 which pins every source it builds, and the AAR's SHA-256. The `mpv` module downloads it and refuses one
 that hashes differently, so a new libmpv is a tag there, then its URL and hash here.
 
