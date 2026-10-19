@@ -109,10 +109,41 @@ jobs:
           RELEASE: ${{ inputs.release }}
         run: gh release upload "$RELEASE" "packages/smart-tv/out/$WGT" --clobber
 
+  # 2021 and 2022 Samsung TVs (Tizen 6), whose older engine needs the page built
+  # for it (`build:tizen6`), so this one builds its own.
+  tizen6:
+    needs: web
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      WGT: aiostreams-tizen6-${{ needs.web.outputs.version }}.wgt
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter "@aiostreams/web..." --filter @aiostreams/smart-tv
+      - working-directory: packages/smart-tv
+        run: |
+          pnpm build:tizen6
+          mv out/AIOStreams-tizen6.wgt "out/$WGT"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.WGT }}
+          path: packages/smart-tv/out/${{ env.WGT }}
+          compression-level: 0
+      - if: inputs.release != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE: ${{ inputs.release }}
+        run: gh release upload "$RELEASE" "packages/smart-tv/out/$WGT" --clobber
+
   # A release also refreshes the rolling `smart-tv` release, the newest packages under
   # names that stay the same, and the Homebrew Channel repository on `smart-tv-feed`.
   feed:
-    needs: [web, webos, tizen]
+    needs: [web, webos, tizen, tizen6]
     if: inputs.release != ''
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -137,6 +168,7 @@ jobs:
           raw="https://raw.githubusercontent.com/${{ github.repository }}"
           cp "feed/aiostreams-webos-$VERSION.ipk" feed/aiostreams-webos.ipk
           cp "feed/aiostreams-tizen-$VERSION.wgt" feed/aiostreams-tizen.wgt
+          cp "feed/aiostreams-tizen6-$VERSION.wgt" feed/aiostreams-tizen6.wgt
           # The repository points at this release's own copy, which never changes under its hash.
           jq -n \
             --slurpfile app packages/smart-tv/webos/appinfo.json \
@@ -167,4 +199,4 @@ jobs:
           else
             gh release create smart-tv --latest=false --title "TV apps" --notes-file notes.md
           fi
-          gh release upload smart-tv feed/aiostreams-webos.ipk feed/aiostreams-tizen.wgt --clobber
+          gh release upload smart-tv feed/aiostreams-webos.ipk feed/aiostreams-tizen.wgt feed/aiostreams-tizen6.wgt --clobber

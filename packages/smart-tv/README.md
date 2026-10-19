@@ -53,15 +53,16 @@ trailer, with sound, 2.5 s after it opens, held to 720p.
 ## Releases
 
 release-please releases this package on its own (`smart-tv-v*` tags, `chore(smart-tv): release` pull
-requests), and the TV Release workflow attaches `aiostreams-webos-<version>.ipk` and
-`aiostreams-tizen-<version>.wgt` to each release. Like the desktop app, page changes reach the
-changelog through the `chore(smart-tv): update the web app` pull request that moves `web-app.lock`
-forward. The TV Check workflow builds both packages when anything here changes; run it by hand to
-get them as artifacts of the run.
+requests), and the TV Release workflow attaches `aiostreams-webos-<version>.ipk`,
+`aiostreams-tizen-<version>.wgt` and `aiostreams-tizen6-<version>.wgt` to each release. Like the
+desktop app, page changes reach the changelog through the `chore(smart-tv): update the web app` pull
+request that moves `web-app.lock` forward. The TV Check workflow builds the packages when anything
+here changes; run it by hand to get them as artifacts of the run.
 
 Each release also refreshes the rolling `smart-tv` release, which holds the newest packages as
-`aiostreams-webos.ipk` and `aiostreams-tizen.wgt` (its notes come from `feed-release.md`), and the
-`smart-tv-feed` branch, whose one file is the Homebrew Channel repository for the webOS package.
+`aiostreams-webos.ipk`, `aiostreams-tizen.wgt` and `aiostreams-tizen6.wgt` (its notes come from
+`feed-release.md`), and the `smart-tv-feed` branch, whose one file is the Homebrew Channel
+repository for the webOS package.
 
 ## Install
 
