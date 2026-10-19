@@ -31,6 +31,9 @@ interface Engine {
     /** [PlayerSettings.passthrough] is already the formats the output takes. */
     fun setSettings(settings: PlayerSettings)
 
+    /** Reports the lines of one of the file's own subtitles as it reads them, or stops with null. */
+    fun watchSubtitleLines(track: String?) {}
+
     /** mpv's own stats overlay, on one of its pages or off. */
     fun showStatsOverlay(page: String?) {}
 
@@ -65,6 +68,8 @@ interface Engine {
 
         /** The engine can't play the file, which another engine might. */
         fun onUnplayable(error: String)
+
+        fun onSubtitleLines(track: String, lines: List<SubtitleLine>)
 
         /** The picture's display size and the stream's frame rate, each once known. */
         fun onVideo(width: Int? = null, height: Int? = null, frameRate: Double? = null)

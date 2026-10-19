@@ -21,6 +21,7 @@ import io.github.viren070.aiostreams.playback.PlayerTrack
 import io.github.viren070.aiostreams.playback.Sound
 import io.github.viren070.aiostreams.playback.Style
 import io.github.viren070.aiostreams.playback.SubtitleFont
+import io.github.viren070.aiostreams.playback.SubtitleLine
 import io.github.viren070.aiostreams.playback.SubtitleMode
 import `is`.xyz.mpv.MPV
 import `is`.xyz.mpv.MPVNode
@@ -29,6 +30,7 @@ import java.security.KeyStore
 import java.util.Locale
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -48,7 +50,7 @@ import kotlinx.serialization.json.put
 class MpvEngine(private val context: Context) : Engine {
     private lateinit var mpv: MPV
     // The page's calls wait on mpv, never the main thread.
-    private val calls = Executors.newSingleThreadExecutor { Thread(it, "mpv-calls") }
+    private val calls = Executors.newSingleThreadScheduledExecutor { Thread(it, "mpv-calls") }
     private var listener: Engine.Listener? = null
 
     @Volatile
@@ -74,6 +76,12 @@ class MpvEngine(private val context: Context) : Engine {
     @Volatile
     private var pictures = emptySet<String>()
     private var picture = false
+
+    /** The file's own subtitle whose lines go to the page. */
+    @Volatile
+    private var reference: String? = null
+    private val sent = HashSet<SubtitleLine>()
+    private var readingAhead: ScheduledFuture<*>? = null
 
     private val tv = context.getSystemService(UiModeManager::class.java).currentModeType ==
         Configuration.UI_MODE_TYPE_TELEVISION
@@ -118,6 +126,7 @@ class MpvEngine(private val context: Context) : Engine {
         mpv.addLogObserver(logs)
         for (name in OBSERVED) mpv.observeProperty(name, formatOf(name))
         mpv.observeProperty(AUDIO_PARAMS, MPV.mpvFormat.MPV_FORMAT_NODE)
+        mpv.observeProperty(REFERENCE_LINES, MPV.mpvFormat.MPV_FORMAT_STRING)
         calls.execute { filters = SoundFilters(mpv) }
     }
 
@@ -216,6 +225,26 @@ class MpvEngine(private val context: Context) : Engine {
         }
     }
 
+    // Through the secondary subtitle, which the page never shows.
+    override fun watchSubtitleLines(track: String?) = calls.execute {
+        reference = track
+        synchronized(sent) { sent.clear() }
+        readingAhead?.cancel(false)
+        readingAhead = null
+        if (track != null) {
+            set("secondary-sub-visibility", "no")
+            set("secondary-sid", track)
+            // Once mpv has decoded the newly picked track's lines, then as it reads on.
+            readingAhead = calls.scheduleWithFixedDelay(
+                { runCatching(::readAhead).onFailure { Log.w(TAG, "reading ahead failed", it) } },
+                1, READ_AHEAD_EVERY_S, TimeUnit.SECONDS,
+            )
+        } else {
+            set("secondary-sid", "no")
+            set("secondary-sub-visibility", "yes")
+        }
+    }
+
     override fun showStatsOverlay(page: String?) = calls.execute {
         if (page != null && page !in STATS_PAGES) return@execute
         if (statsPage != null) mpv.command("script-binding", "stats/display-stats-toggle")
@@ -293,7 +322,8 @@ class MpvEngine(private val context: Context) : Engine {
 
         override fun eventProperty(property: String, value: Boolean) = report(property, JsonPrimitive(value))
 
-        override fun eventProperty(property: String, value: String) = report(property, JsonPrimitive(value))
+        override fun eventProperty(property: String, value: String) =
+            if (property == REFERENCE_LINES) reportLines(subtitleLines(value)) else report(property, JsonPrimitive(value))
 
         override fun eventProperty(property: String, value: Double) = report(property, JsonPrimitive(value))
 
@@ -308,6 +338,7 @@ class MpvEngine(private val context: Context) : Engine {
             when (eventId) {
                 MPV.mpvEvent.MPV_EVENT_START_FILE -> {
                     cause = null
+                    synchronized(sent) { sent.clear() }
                     updateFilters { startFile() }
                     listener.onEvent("start")
                 }
@@ -355,6 +386,27 @@ class MpvEngine(private val context: Context) : Engine {
             if (level <= LOG_ERROR) updateFilters { refused(prefix, line) }
             if (level <= LOG_WARN) Log.println(if (level <= LOG_ERROR) Log.ERROR else Log.WARN, TAG, "[$prefix] $line")
         }
+    }
+
+    private fun reportLines(lines: List<SubtitleLine>) {
+        val track = reference ?: return
+        val fresh = lines.filter { synchronized(sent) { sent.add(it) } }
+        if (fresh.isNotEmpty()) listener?.onSubtitleLines(track, fresh)
+    }
+
+    /** The reference's events from the playing one to the end of what mpv has read. */
+    private fun readAhead() {
+        val lines = mutableListOf<SubtitleLine>()
+        var last = mpv.getPropertyString("secondary-sub-delay")
+        for (step in 0 until READ_AHEAD_STEPS) {
+            if (runCatching { mpv.command(*NEXT_REFERENCE_LINE) }.isFailure) break
+            val now = mpv.getPropertyString("secondary-sub-delay")
+            if (now == last) break
+            last = now
+            mpv.getPropertyString(REFERENCE_LINES)?.let { lines += subtitleLines(it) }
+        }
+        set("secondary-sub-delay", "0")
+        reportLines(lines)
     }
 
     /** An observed property's change, in the page's terms. */
@@ -462,6 +514,28 @@ class MpvEngine(private val context: Context) : Engine {
 
         /** Observed for the sound filters rather than the page. */
         private const val AUDIO_PARAMS = "audio-params"
+
+        /** The secondary subtitle's events, which mpv reports whether it shows them or not. */
+        private const val REFERENCE_LINES = "secondary-sub-text/ass-full"
+
+        /** Steps the secondary subtitle on to its next event, reaching lines mpv has read but not yet played. */
+        private val NEXT_REFERENCE_LINE = arrayOf("no-osd", "sub-step", "1", "secondary")
+        private const val READ_AHEAD_EVERY_S = 15L
+        private const val READ_AHEAD_STEPS = 500
+
+        /** The times of [REFERENCE_LINES]' `Dialogue: layer,start,end,...` events. */
+        private fun subtitleLines(events: String) = events.lineSequence().mapNotNull { event ->
+            val fields = event.takeIf { it.startsWith("Dialogue: ") }?.split(',', limit = 4) ?: return@mapNotNull null
+            val start = assTime(fields.getOrNull(1)) ?: return@mapNotNull null
+            val end = assTime(fields.getOrNull(2)) ?: return@mapNotNull null
+            SubtitleLine(start, end).takeIf { end > start }
+        }.toList()
+
+        private fun assTime(time: String?): Double? {
+            val parts = time?.split(':')?.takeIf { it.size == 3 } ?: return null
+            val (hours, minutes, seconds) = parts.map { it.toDoubleOrNull() ?: return null }
+            return Math.round(((hours * 60 + minutes) * 60 + seconds) * 1000).toDouble()
+        }
 
         /** The user's own options, which mpv reads at start and on [reloadConfig]. */
         fun configFile(context: Context) = File(File(context.filesDir, "mpv"), "mpv.conf")

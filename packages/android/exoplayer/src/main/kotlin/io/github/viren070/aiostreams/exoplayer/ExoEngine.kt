@@ -123,7 +123,10 @@ class ExoEngine(private val context: Context) :
 
     @Volatile
     private var shown = false
-    private val texts = TextTracks()
+    private val texts = TextTracks { delayUs }
+    private val subtitleLines = SubtitleLines()
+    /** The file's own subtitle whose lines the page asked for. */
+    private var reference: Int? = null
     private var shownCues: List<Cue> = emptyList()
 
     // Read on the playback thread too.
@@ -171,7 +174,7 @@ class ExoEngine(private val context: Context) :
         cache.onMemoryShort = { ass.setCacheLimit(SHORT_ASS_CACHE_MB) }
         val extractors = Extractors(
             readBack = { readBack },
-            sink = { SubtitleSink(ass.sink(), texts.sink()) },
+            sink = { subtitleLines.sink(SubtitleSink(ass.sink(), texts.sink())) },
             route = { dolbyVisionRoute(it, caps, useDolbyVision) },
             onRoute = { codecs, route -> dolbyVision = codecs to route },
             onSeekMap = { map ->
@@ -306,6 +309,12 @@ class ExoEngine(private val context: Context) :
         addSubtitle(url, "select", title, language)
     }
 
+    override fun watchSubtitleLines(track: String?) = post {
+        reference = track?.toIntOrNull()
+        subtitleLines.watch(referenceKey())
+        sendLines()
+    }
+
     override fun setSkips(skips: List<Skip>) = post {
         this.skips = skips
         updateSkips()
@@ -409,6 +418,7 @@ class ExoEngine(private val context: Context) :
         seekMap = null
         ass.reset()
         texts.reset()
+        subtitleLines.reset()
         readBack = if (options.none) null else Extractors.ANY_TRACK
         listener?.onEvent("start")
         state(PlayerState(idle = false))
@@ -724,6 +734,7 @@ class ExoEngine(private val context: Context) :
         reportTracks()
         reportChapters()
         showSubtitles()
+        subtitleLines.watch(referenceKey())
     }
 
     private fun reportTracks() {
@@ -809,12 +820,22 @@ class ExoEngine(private val context: Context) :
         val stalled = loaded && !seeking && player.playWhenReady && player.playbackState == Player.STATE_BUFFERING
         cache.setPlayer(player.totalBufferedDuration * 1000, player.isPlaying && !seeking || stalled)
         texts.trimHidden(text, player.currentPosition * 1000)
+        sendLines()
         state(
             PlayerState(
                 positionMs = player.currentPosition.toDouble(),
                 bufferedMs = player.bufferedPosition.toDouble(),
             ),
         )
+    }
+
+    /** The reader's name for [reference]. */
+    private fun referenceKey() = reference?.let { tracks.format("sub", it) }?.id?.substringAfter(':')
+
+    private fun sendLines() {
+        val track = reference ?: return
+        val read = subtitleLines.take()
+        if (read.isNotEmpty()) listener?.onSubtitleLines(track.toString(), read)
     }
 
     private fun state(update: PlayerState) {

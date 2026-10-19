@@ -64,6 +64,8 @@ internal class ExoTracks {
 
     fun format(type: String): Format? = entries.firstOrNull { it.type == type && it.selected }?.format
 
+    fun format(type: String, id: Int): Format? = entries.find { it.type == type && it.id == id }?.format
+
     fun list(): List<PlayerTrack> = entries.filter { it.type != "video" }.map { entry ->
         val format = entry.format
         PlayerTrack(

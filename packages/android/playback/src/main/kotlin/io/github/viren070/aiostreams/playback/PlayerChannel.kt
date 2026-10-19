@@ -49,6 +49,7 @@ class PlayerChannel(
     private var settled = Change()
     private var style: Style? = null
     private var settings: PlayerSettings? = null
+    private var reference: String? = null
 
     /** The file playing, which a new engine loads again. */
     private var loaded: LoadRequest? = null
@@ -68,6 +69,7 @@ class PlayerChannel(
         settings?.let { next.setSettings(applied(it)) }
         style?.let(next::setStyle)
         next.change(settled)
+        reference?.let(next::watchSubtitleLines)
         if (reload) loaded?.let { load ->
             next.load(load.copy(startMs = at?.takeIf { it > 0 } ?: load.startMs, append = false))
         }
@@ -119,6 +121,12 @@ class PlayerChannel(
                 }
                 .onFailure(::reject)
             "player-stats-overlay" -> engine.showStatsOverlay(message.text("page"))
+            "player-subtitle-lines" -> PlayerProtocol.reference(message)
+                .onSuccess {
+                    reference = it.id
+                    engine.watchSubtitleLines(it.id)
+                }
+                .onFailure(::reject)
             "player-sync" -> {
                 send(PlayerProtocol.state(state))
                 send(PlayerProtocol.tracks(tracks))
@@ -188,6 +196,10 @@ class PlayerChannel(
 
     override fun onEnded(reason: String, error: String?, cause: String?) {
         main.post { send(PlayerProtocol.ended(reason, error, cause)) }
+    }
+
+    override fun onSubtitleLines(track: String, lines: List<SubtitleLine>) {
+        main.post { send(PlayerProtocol.subtitleLines(track, lines)) }
     }
 
     override fun onVideo(width: Int?, height: Int?, frameRate: Double?) {

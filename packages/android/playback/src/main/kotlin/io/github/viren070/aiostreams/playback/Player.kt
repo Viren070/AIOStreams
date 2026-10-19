@@ -158,6 +158,8 @@ data class PlayerTrack(
 
 data class PlayerChapter(val title: String?, val startMs: Double)
 
+data class SubtitleLine(val startMs: Double, val endMs: Double)
+
 /** A stretch the page offers to skip, or skips itself when [auto]. */
 data class Skip(val startMs: Double, val endMs: Double, val auto: Boolean)
 
@@ -223,6 +225,9 @@ object PlayerProtocol {
         )
     }
 
+    /** The file's own subtitle whose lines the page asks for, or none. */
+    fun reference(message: JsonObject) = runCatching { pick(message, "track") ?: Pick(null) }
+
     fun skips(message: JsonObject) = (message["segments"] as? JsonArray).orEmpty().mapNotNull { segment ->
         val range = segment as? JsonObject ?: return@mapNotNull null
         val start = range.number("startMs") ?: return@mapNotNull null
@@ -281,6 +286,17 @@ object PlayerProtocol {
             for (chapter in chapters) add(buildJsonObject {
                 chapter.title?.let { put("title", it) }
                 put("startMs", chapter.startMs)
+            })
+        })
+    }
+
+    fun subtitleLines(track: String, lines: List<SubtitleLine>) = buildJsonObject {
+        put("type", "player-subtitle-lines")
+        put("track", track)
+        put("lines", buildJsonArray {
+            for (line in lines) add(buildJsonObject {
+                put("startMs", line.startMs)
+                put("endMs", line.endMs)
             })
         })
     }

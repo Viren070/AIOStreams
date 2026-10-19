@@ -106,7 +106,12 @@ internal fun unplaced(cue: Cue): Cue =
 
 /** A text subtitle's lines, which the engine shows on the video's frames so its delay applies. */
 @OptIn(UnstableApi::class)
-internal class TextTimeline(private val replace: Boolean, private val parser: SampleParser? = null) {
+internal class TextTimeline(
+    private val replace: Boolean,
+    private val parser: SampleParser? = null,
+    /** How late the engine shows lines, which keeps that much older ones. */
+    private val delayUs: () -> Long = { 0 },
+) {
     private val lines = TreeMap<Long, MutableList<CuesWithTiming>>()
     private var longestUs = 0L
 
@@ -126,7 +131,7 @@ internal class TextTimeline(private val replace: Boolean, private val parser: Sa
     fun sample(timeUs: Long, data: ByteArray) {
         val starting = samples.getOrPut(timeUs) { mutableListOf() }
         if (starting.none { it.contentEquals(data) }) starting += data
-        val from = timeUs - KEPT_US
+        val from = timeUs - KEPT_US - delayUs().coerceAtLeast(0)
         samples.headMap(samples.floorKey(from) ?: from).clear()
         lines.headMap(if (replace) lines.floorKey(from) ?: from else from - longestUs).clear()
     }
@@ -155,13 +160,13 @@ internal class TextTimeline(private val replace: Boolean, private val parser: Sa
     }
 
     private companion object {
-        /* Media3 reads up to 50 s ahead of the frames, and a delay shows lines up to a minute old. */
+        /* Media3 reads up to 50 s ahead of the frames, and a delay of up to a minute shows at once. */
         const val KEPT_US = 120_000_000L
     }
 }
 
 /** The file's text subtitles, as its reader takes them. */
-internal class TextTracks {
+internal class TextTracks(private val delayUs: () -> Long) {
     private val timelines = ConcurrentHashMap<String, TextTimeline>()
 
     /** Counts files, so a file's reader can't reach the next one's tracks. */
@@ -189,7 +194,7 @@ internal class TextTracks {
         val opened = file
         return object : TextSink {
             override fun track(track: String, parser: SampleParser) {
-                if (opened == file) timelines.putIfAbsent(track, TextTimeline(parser.replace, parser))
+                if (opened == file) timelines.putIfAbsent(track, TextTimeline(parser.replace, parser, delayUs))
             }
 
             override fun sample(track: String, timeUs: Long, data: ByteArray) {
