@@ -23,6 +23,13 @@ const metadataBuiltins = new Set([
   'torbox-search',
 ]);
 
+/**
+ * Match manifests against INTERNAL_URL's origin and base path plus /builtins/.
+ *
+ * @returns The [addon, encoded config, manifest.json] path segments for an exact
+ * three-segment route, or undefined for external origins or nonmatching paths.
+ * @throws {TypeError} If either URL cannot be parsed.
+ */
 function localBuiltinParts(manifestUrl: string): string[] | undefined {
   const url = new URL(manifestUrl);
   const internal = new URL(appConfig.bootstrap.internalUrl);
@@ -38,6 +45,22 @@ export function startsSearchBeforeMetadata(manifestUrl: string): boolean {
   return localBuiltinParts(manifestUrl)?.[0] === 'torbox-search';
 }
 
+/**
+ * Prepare shared metadata for supported local built-in streams using the route's
+ * credentials, enriching parsed IDs with anime data when needed. Skip external or
+ * unsupported routes, unparseable IDs (including direct Library item IDs), and
+ * configuration decode/shape or metadata credential validation failures. The route
+ * reports configuration errors.
+ *
+ * Anime lookup and metadata preparation share the maxTimeout waiting budget,
+ * separate from the addon's execution timeout. Failures and timeout reject.
+ * Timeout does not cancel underlying work; any lease acquired after expiry is
+ * released here.
+ *
+ * @returns Undefined when skipped, otherwise an idempotent metadata lease release
+ * callback owned by the caller. Retain the lease through the internal HTTP hop
+ * until resource work settles, including intentional background work, then release.
+ */
 export async function prepareBuiltinStream(
   manifestUrl: string,
   type: string,
