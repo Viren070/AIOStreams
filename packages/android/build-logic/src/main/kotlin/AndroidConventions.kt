@@ -4,6 +4,9 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.VersionCatalogsExtension
 import org.gradle.kotlin.dsl.getByType
 
+/** The processors the app ships an APK for. */
+val shippedAbis = listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+
 /** The SDK levels, NDK and Java version every module builds with. */
 internal fun CommonExtension.configureAndroid(project: Project) {
     compileSdk {

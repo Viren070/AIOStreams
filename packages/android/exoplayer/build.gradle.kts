@@ -6,8 +6,7 @@ android {
     namespace = "io.github.viren070.aiostreams.exoplayer"
 
     defaultConfig {
-        // The processors the app ships.
-        ndk.abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+        ndk.abiFilters += shippedAbis
     }
 
     externalNativeBuild {
