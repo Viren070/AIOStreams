@@ -147,7 +147,7 @@ class PlayerChannel(
             "player-subtitle-lines" -> PlayerProtocol.reference(message)
                 .onSuccess {
                     reference = it.id
-                    engine.watchSubtitleLines(it.id)
+                    engine.watchSubtitleLines(it.id?.takeIf(::readable))
                     it.id?.let(::sendIndexed)
                 }
                 .onFailure(::reject)
@@ -254,6 +254,9 @@ class PlayerChannel(
         send(PlayerProtocol.state(position))
     }
 
+    /** Neither engine reads lines from subtitles drawn as pictures, so only the index has theirs. */
+    private fun readable(track: String) = tracks.none { it.id == track && it.codec in PICTURE_CODECS }
+
     /** All of a track's lines at once from the file's index, which the engine's own reading then tops up. */
     private fun sendIndexed(track: String) {
         val load = loaded ?: return
@@ -354,6 +357,7 @@ class PlayerChannel(
         const val MAX_SUBTITLE_BYTES = 10 shl 20
         const val KEPT_THUMBNAILS = 256
         val SUBTITLE_TYPES = setOf("srt", "vtt", "ass", "ssa", "sub", "sup")
+        val PICTURE_CODECS = setOf("hdmv_pgs_subtitle", "dvd_subtitle", "dvb_subtitle")
 
         val next = AtomicInteger()
 

@@ -151,6 +151,7 @@ internal class ExoTracks {
             MimeTypes.TEXT_SSA -> "ass"
             MimeTypes.APPLICATION_SUBRIP -> "subrip"
             MimeTypes.TEXT_VTT -> "webvtt"
+            MimeTypes.APPLICATION_TX3G -> "mov_text"
             MimeTypes.APPLICATION_PGS -> "hdmv_pgs_subtitle"
             MimeTypes.APPLICATION_VOBSUB -> "dvd_subtitle"
             MimeTypes.APPLICATION_DVBSUBS -> "dvb_subtitle"
