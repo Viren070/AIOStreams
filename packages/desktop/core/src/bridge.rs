@@ -7,7 +7,7 @@ use serde_json::Value;
 
 use crate::discord::Presence;
 use crate::now_playing::{self, MediaKey};
-use crate::playback::{Change, Chapter, Load, PlayerState, Settings, Style, Track};
+use crate::playback::{Change, Chapter, Load, PlayerState, Settings, Style, SubtitleLine, Track};
 
 /// Bumped when a message changes shape, so pages can tell shells apart.
 pub const PROTOCOL_VERSION: u32 = 2;
@@ -63,6 +63,10 @@ pub enum Inbound {
         page: Option<String>,
         #[serde(default)]
         external: bool,
+    },
+    /// Reports the lines of one of the file's own subtitles as mpv reads them, or stops with `None`.
+    PlayerSubtitleLines {
+        track: Option<String>,
     },
     /// Reports the player's whole state again.
     PlayerSync {
@@ -244,6 +248,10 @@ pub enum Outbound {
         chapters: Vec<Chapter>,
         #[serde(skip_serializing_if = "is_false")]
         external: bool,
+    },
+    PlayerSubtitleLines {
+        track: String,
+        lines: Vec<SubtitleLine>,
     },
     /// `start`, `loaded` or `restart`.
     PlayerEvent {

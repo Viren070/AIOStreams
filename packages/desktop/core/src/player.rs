@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, mpsc};
@@ -10,8 +10,8 @@ use serde_json::Value;
 use crate::bridge::Outbound;
 use crate::mpv::{Event, Kind, Mpv};
 use crate::playback::{
-    self, Change, IMAGE_SUBTITLE_CODECS, Load, Loadfile, OBSERVED, Settings, Style, THROTTLE_MS,
-    THROTTLED,
+    self, Change, IMAGE_SUBTITLE_CODECS, Load, Loadfile, OBSERVED, REFERENCE_LINES, Settings,
+    Style, SubtitleLine, THROTTLE_MS, THROTTLED,
 };
 use crate::sound::{self, Filters, Sound};
 
@@ -31,6 +31,9 @@ const LOGGED_PROPS: &[&str] = &[
 
 /// Observed for the sound filters, past the ids of the page's properties.
 const AUDIO_PARAMS: u64 = 1000;
+const SUBTITLE_LINES: u64 = 1001;
+const READ_AHEAD_EVERY: Duration = Duration::from_secs(15);
+const READ_AHEAD_STEPS: usize = 500;
 
 enum Request {
     Command(Vec<String>),
@@ -72,6 +75,49 @@ impl SubtitleScale {
     }
 }
 
+/// The file's own subtitle whose lines go to the page.
+#[derive(Default)]
+struct Reference {
+    track: Option<String>,
+    sent: HashSet<(i64, i64)>,
+    read_ahead_at: Option<Instant>,
+}
+
+impl Reference {
+    fn report(&mut self, lines: Vec<SubtitleLine>) -> Option<Outbound> {
+        let track = self.track.clone()?;
+        let lines: Vec<_> = lines
+            .into_iter()
+            .filter(|l| self.sent.insert((l.start_ms as i64, l.end_ms as i64)))
+            .collect();
+        (!lines.is_empty()).then_some(Outbound::PlayerSubtitleLines { track, lines })
+    }
+}
+
+/// The reference's events from the playing one to the end of what mpv has read.
+fn read_ahead(mpv: &Mpv) -> Vec<SubtitleLine> {
+    let delay = || mpv.get_property("secondary-sub-delay", Kind::Double);
+    let mut lines = Vec::new();
+    let mut last = delay();
+    for _ in 0..READ_AHEAD_STEPS {
+        if mpv.command(playback::NEXT_REFERENCE_LINE).is_err() {
+            break;
+        }
+        let now = delay();
+        if now == last {
+            break;
+        }
+        last = now;
+        if let Some(Value::String(events)) = mpv.get_property(REFERENCE_LINES, Kind::String) {
+            lines.extend(playback::subtitle_lines(&events));
+        }
+    }
+    if let Err(e) = mpv.set_property("secondary-sub-delay", "0") {
+        log::warn!("mpv secondary-sub-delay=0: {e}");
+    }
+    lines
+}
+
 /// Makes the page's mpv calls on a thread of its own: the caller may be the render thread mpv waits on.
 pub struct Player {
     mpv: Arc<Mpv>,
@@ -86,6 +132,7 @@ pub struct Player {
     /// Settings the event thread hasn't applied yet.
     sound: Arc<Mutex<Option<Sound>>>,
     subtitles: Arc<Mutex<SubtitleScale>>,
+    reference: Arc<Mutex<Reference>>,
     /// The stats overlay's page, while it shows.
     stats: Mutex<Option<String>>,
     ac3_encoder: bool,
@@ -112,6 +159,7 @@ impl Player {
             mpv.observe(name, *kind, id as u64)?;
         }
         mpv.observe("audio-params", Kind::Json, AUDIO_PARAMS)?;
+        mpv.observe(REFERENCE_LINES, Kind::String, SUBTITLE_LINES)?;
         let versions = (text(&mpv, "mpv-version"), text(&mpv, "ffmpeg-version"));
         log::info!(
             "mpv started version=\"{}\" ffmpeg={}",
@@ -124,13 +172,24 @@ impl Player {
         let own_font = text(&mpv, "sub-font").unwrap_or_default();
         let sound = Arc::new(Mutex::new(None));
         let subtitles = Arc::new(Mutex::new(SubtitleScale::default()));
+        let reference = Arc::new(Mutex::new(Reference::default()));
         let events = std::thread::Builder::new()
             .name("mpv-events".into())
             .spawn({
                 let (mpv, emit, quit) = (mpv.clone(), emit.clone(), quit.clone());
                 let (dolby_vision, sound) = (dolby_vision.clone(), sound.clone());
-                let subtitles = subtitles.clone();
-                move || pump(&mpv, &emit, &quit, &dolby_vision, &sound, &subtitles)
+                let (subtitles, reference) = (subtitles.clone(), reference.clone());
+                move || {
+                    pump(
+                        &mpv,
+                        &emit,
+                        &quit,
+                        &dolby_vision,
+                        &sound,
+                        &subtitles,
+                        &reference,
+                    )
+                }
             })
             .map_err(|e| e.to_string())?;
         let (requests, inbox) = mpsc::channel();
@@ -152,6 +211,7 @@ impl Player {
             dolby_vision,
             sound,
             subtitles,
+            reference,
             stats: Mutex::default(),
             ac3_encoder,
             own_font,
@@ -251,6 +311,20 @@ impl Player {
         });
         if let Some(scale) = scale {
             self.set("sub-scale", scale);
+        }
+        Ok(())
+    }
+
+    pub fn subtitle_lines(&self, track: Option<&str>) -> Result<(), String> {
+        let props = playback::reference(track)?;
+        if let Ok(mut reference) = self.reference.lock() {
+            reference.track = track.map(String::from);
+            reference.sent.clear();
+            // Once mpv has decoded the newly picked track's lines.
+            reference.read_ahead_at = track.map(|_| Instant::now() + Duration::from_secs(1));
+        }
+        for (name, value) in props {
+            self.set(name, value);
         }
         Ok(())
     }
@@ -578,6 +652,7 @@ fn pump(
     dolby_vision: &AtomicBool,
     pending: &Mutex<Option<Sound>>,
     subtitles: &Mutex<SubtitleScale>,
+    reference: &Mutex<Reference>,
 ) {
     let report = |name: &str, data: &Value| {
         if let Some(message) = playback::report(name, data, false) {
@@ -624,6 +699,9 @@ fn pump(
                 Event::StartFile => {
                     reported = false;
                     cause = None;
+                    if let Ok(mut reference) = reference.lock() {
+                        reference.sent.clear();
+                    }
                     filters.start_file();
                     filters.apply(mpv, sound);
                     emit(playback::event("start-file", false).unwrap())
@@ -668,6 +746,20 @@ fn pump(
                     filters.decoded(&value);
                     filters.apply(mpv, sound);
                 }
+                Event::Property {
+                    id: SUBTITLE_LINES,
+                    value,
+                    ..
+                } => {
+                    let lines = value.as_str().map(playback::subtitle_lines);
+                    let message = reference
+                        .lock()
+                        .ok()
+                        .and_then(|mut r| r.report(lines.unwrap_or_default()));
+                    if let Some(message) = message {
+                        emit(message);
+                    }
+                }
                 Event::Property { name, value, .. } => {
                     follow_subtitle(mpv, subtitles, &name, &value);
                     if let Some((name, data)) = throttle.pass(name, value) {
@@ -678,6 +770,19 @@ fn pump(
         }
         for (name, data) in throttle.due() {
             report(&name, &data);
+        }
+        let reading = reference
+            .lock()
+            .is_ok_and(|r| r.read_ahead_at.is_some_and(|at| at <= Instant::now()));
+        if reading {
+            let lines = read_ahead(mpv);
+            let message = reference.lock().ok().and_then(|mut r| {
+                r.read_ahead_at = r.track.as_ref().map(|_| Instant::now() + READ_AHEAD_EVERY);
+                r.report(lines)
+            });
+            if let Some(message) = message {
+                emit(message);
+            }
         }
     }
 }

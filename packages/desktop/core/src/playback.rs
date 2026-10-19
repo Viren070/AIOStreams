@@ -251,6 +251,13 @@ pub struct Track {
     pub url: Option<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SubtitleLine {
+    pub start_ms: f64,
+    pub end_ms: f64,
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Chapter {
@@ -431,6 +438,48 @@ pub fn change(change: &Change) -> Result<Vec<(&'static str, String)>, String> {
         props.push(("fullscreen", flag(fullscreen)));
     }
     Ok(props)
+}
+
+/// The secondary subtitle's events, which mpv reports whether it shows them or not.
+pub const REFERENCE_LINES: &str = "secondary-sub-text/ass-full";
+
+/// Steps the secondary subtitle on to its next event, reaching lines mpv has read but not yet played.
+pub const NEXT_REFERENCE_LINE: &[&str] = &["no-osd", "sub-step", "1", "secondary"];
+
+/// Reads a file's own subtitle through the hidden secondary subtitle, which the page never shows.
+pub fn reference(track: Option<&str>) -> Result<Vec<(&'static str, String)>, String> {
+    let id = track_id(&track.map(String::from))?;
+    Ok(if track.is_some() {
+        vec![
+            ("secondary-sub-visibility", flag(false)),
+            ("secondary-sid", id),
+        ]
+    } else {
+        vec![
+            ("secondary-sid", id),
+            ("secondary-sub-visibility", flag(true)),
+        ]
+    })
+}
+
+/// The times of [`REFERENCE_LINES`]' `Dialogue: layer,start,end,...` events.
+pub fn subtitle_lines(events: &str) -> Vec<SubtitleLine> {
+    let ms = |time: &str| -> Option<f64> {
+        let mut parts = time.splitn(3, ':');
+        let hours: f64 = parts.next()?.parse().ok()?;
+        let minutes: f64 = parts.next()?.parse().ok()?;
+        let seconds: f64 = parts.next()?.parse().ok()?;
+        Some(((hours * 60.0 + minutes) * 60.0 + seconds) * 1000.0)
+    };
+    events
+        .lines()
+        .filter_map(|event| {
+            let mut fields = event.strip_prefix("Dialogue: ")?.splitn(4, ',').skip(1);
+            let start_ms = ms(fields.next()?)?.round();
+            let end_ms = ms(fields.next()?)?.round();
+            (end_ms > start_ms).then_some(SubtitleLine { start_ms, end_ms })
+        })
+        .collect()
 }
 
 /// Everything but `sub-scale`, which waits on whether the subtitle is a picture.

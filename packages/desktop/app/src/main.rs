@@ -548,6 +548,11 @@ pub fn handle(
                 fail(format!("player-stats-overlay: {e}"));
             }
         }
+        Inbound::PlayerSubtitleLines { track } => {
+            if let Some(Err(e)) = player.as_ref().map(|p| p.subtitle_lines(track.as_deref())) {
+                fail(format!("player-subtitle-lines: {e}"));
+            }
+        }
         Inbound::PlayerSync { external: true } => external.sync(),
         Inbound::PlayerSync { external: false } => send(UserEvent::Sync),
         Inbound::PlayerKey { key } => {
