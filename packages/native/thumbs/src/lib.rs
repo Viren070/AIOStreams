@@ -1,12 +1,14 @@
 pub mod codec;
 pub mod decode;
 pub mod hevc;
+mod lazy;
 pub mod pool;
 pub mod priority;
 pub mod scale;
 mod session;
 
 pub use decode::{ffmpeg_version, library_dirs};
+pub use lazy::{Event, Thumbnails};
 pub use session::Session;
 
 use std::collections::VecDeque;
@@ -37,6 +39,13 @@ impl std::fmt::Display for Error {
 }
 
 impl std::error::Error for Error {}
+
+impl Error {
+    /// A request that failed and may work later, rather than a file without thumbnails.
+    pub fn is_transient(&self) -> bool {
+        matches!(self, Error::Container(aiostreams_container::Error::Http(_)))
+    }
+}
 
 pub type Result<T> = std::result::Result<T, Error>;
 
