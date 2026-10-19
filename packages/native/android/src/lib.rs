@@ -2,3 +2,4 @@
 
 pub mod http;
 mod subtitles;
+mod thumbnails;

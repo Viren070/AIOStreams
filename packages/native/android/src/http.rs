@@ -8,10 +8,21 @@ pub fn reader(
     url: &JString,
     headers: &JObjectArray,
     ca_pem: &JByteArray,
-    mut options: Options,
+    options: Options,
 ) -> Result<RangeReader, String> {
+    let url: String = env.get_string(url).map_err(|e| e.to_string())?.into();
+    let options = self::options(env, headers, ca_pem, options)?;
+    RangeReader::new(&url, options).map_err(|e| e.to_string())
+}
+
+/// [`reader`]'s options, for a reader opened later.
+pub fn options(
+    env: &mut JNIEnv,
+    headers: &JObjectArray,
+    ca_pem: &JByteArray,
+    mut options: Options,
+) -> Result<Options, String> {
     let e = |e: jni::errors::Error| e.to_string();
-    let url: String = env.get_string(url).map_err(e)?.into();
     if !headers.is_null() {
         let n = env.get_array_length(headers).map_err(e)?;
         for i in (0..n - n % 2).step_by(2) {
@@ -25,5 +36,5 @@ pub fn reader(
     if !ca_pem.is_null() {
         options.ca_pem = Some(env.convert_byte_array(ca_pem).map_err(e)?);
     }
-    RangeReader::new(&url, options).map_err(|e| e.to_string())
+    Ok(options)
 }

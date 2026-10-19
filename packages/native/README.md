@@ -12,7 +12,7 @@ Rust shared by the desktop and Android apps. A Cargo workspace outside the pnpm 
 
 - Desktop: path dependencies from `packages/desktop`, e.g. `aiostreams-container = { path = "../../native/container" }`.
 - Android: `cargo ndk --platform 24 -t arm64-v8a -t armeabi-v7a -t x86_64 -o <jniLibs dir> build --release -p aiostreams-native-android`, with the Rust targets `aarch64-linux-android`, `armv7-linux-androideabi` and `x86_64-linux-android` installed.
-- `thumbs` loads libavcodec and libavutil at runtime, from the folders given to `library_dirs` and then the system's search path, so building it needs no FFmpeg. Android enables it with `--features thumbs`.
+- `thumbs` loads libavcodec and libavutil at runtime, from the folders given to `library_dirs` and then the system's search path, so building it needs no FFmpeg.
 
 ## JNI
 

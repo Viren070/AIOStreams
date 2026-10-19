@@ -10,11 +10,8 @@ publish.workspace = true
 name = "aiostreams_native"
 crate-type = ["cdylib"]
 
-[features]
-thumbs = ["dep:aiostreams-thumbs"]
-
 [dependencies]
 aiostreams-container.workspace = true
-aiostreams-thumbs = { workspace = true, optional = true }
+aiostreams-thumbs.workspace = true
 jni.workspace = true
 serde_json.workspace = true
