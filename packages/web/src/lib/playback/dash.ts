@@ -95,13 +95,15 @@ export async function playDash(
   onError: (message: string) => void
 ): Promise<() => void> {
   let shaka: (typeof import('shaka-player'))['default'];
-  let player: InstanceType<(typeof shaka)['Player']>;
+  let player: InstanceType<(typeof shaka)['Player']> | undefined;
   try {
     shaka = (await import('shaka-player')).default;
     shaka.polyfill.installAll();
     player = new shaka.Player();
     await player.attach(video);
   } catch (error) {
+    // Made but not attached, it still holds what it set up.
+    void player?.destroy();
     const code = (error as { code?: number }).code ?? String(error);
     onError(t`The trailer didn't load (error ${code})`);
     return () => {};

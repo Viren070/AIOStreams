@@ -119,6 +119,9 @@ jobs:
       WGT: aiostreams-tizen6-${{ needs.web.outputs.version }}.wgt
     steps:
       - uses: actions/checkout@v7
+        with:
+          # pnpm install runs dependency code; the release upload has its own token.
+          persist-credentials: false
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
