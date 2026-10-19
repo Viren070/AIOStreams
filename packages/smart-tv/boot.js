@@ -1,10 +1,17 @@
 // Runs before the app, in syntax any TV runs: says when the TV is too old for
 // the app, and shows what stopped the app starting, as a TV has no console.
 (function () {
+  // The oldest TVs the package is built for. scripts/build.mjs lowers them
+  // for the Tizen 6 package.
+  var MIN = { chrome: 94, tizen: 7, year: 2023 };
   var agent = navigator.userAgent;
   var chrome = /Chrome\/(\d+)/.exec(agent);
   var tizen = /Tizen (\d+)/.exec(agent);
-  var old = chrome ? +chrome[1] < 94 : tizen ? +tizen[1] < 7 : false;
+  var old = chrome
+    ? +chrome[1] < MIN.chrome
+    : tizen
+      ? +tizen[1] < MIN.tizen
+      : false;
   var BACK = [8, 27, 461, 10009];
   var overlay = null;
   var failure = null;
@@ -137,7 +144,9 @@
     document.addEventListener('DOMContentLoaded', function () {
       show(
         'This TV is too old for this app',
-        'The app needs a TV from 2023 or newer. It may still work here, with problems.',
+        'The app needs a TV from ' +
+          MIN.year +
+          ' or newer. It may still work here, with problems.',
         [
           [
             'Try anyway',

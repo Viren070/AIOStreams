@@ -1,6 +1,7 @@
 node_modules/
 dist/
 dist-standalone/
+dist-tizen6/
 *.tsbuildinfo
 out/
 .next/

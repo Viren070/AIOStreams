@@ -11,6 +11,7 @@ import {
   onDrawn,
   shrinkArtwork,
 } from '../lib/artwork';
+import { pixelRatio } from '../lib/images';
 import { settings, useSetting } from '../lib/settings';
 import { CachedImage } from './cached-image';
 import { Anchor } from './anchor';
@@ -26,13 +27,15 @@ interface Box {
   device: { width: number; height: number };
 }
 
+/** A TV's box leaves out the scale up to its screen, as `pixelRatio` doesn't. */
 function deviceSize(entry: ResizeObserverEntry) {
   const box = entry.devicePixelContentBoxSize?.[0];
-  return box
+  const tv = document.documentElement.hasAttribute('data-tv');
+  return box && !tv
     ? { width: box.inlineSize, height: box.blockSize }
     : {
-        width: Math.round(entry.contentRect.width * devicePixelRatio),
-        height: Math.round(entry.contentRect.height * devicePixelRatio),
+        width: Math.round(entry.contentRect.width * pixelRatio()),
+        height: Math.round(entry.contentRect.height * pixelRatio()),
       };
 }
 

@@ -294,7 +294,7 @@ function NativeRow({
       const range = el.scrollWidth - el.clientWidth;
       if (onEnd && (range <= 1 || scrolled(el) / range > 0.7)) onEnd();
       const row = content.current;
-      const [first, second] = row?.children ?? [];
+      const [first, second, third] = row?.children ?? [];
       if (
         !onView ||
         !row ||
@@ -302,8 +302,15 @@ function NativeRow({
         !(second instanceof HTMLElement)
       )
         return;
-      // The cards are all one width.
-      const pitch = startOf(second, row) - startOf(first, row);
+      // The cards are all one width, save one opened by focus (open-card.tsx),
+      // which can't be both of the first two: the narrower step is theirs.
+      const pitch =
+        third instanceof HTMLElement
+          ? Math.min(
+              startOf(second, row) - startOf(first, row),
+              startOf(third, row) - startOf(second, row)
+            )
+          : startOf(second, row) - startOf(first, row);
       const from = scrolled(el) - startOf(row, el) - startOf(first, row);
       if (pitch > 0)
         onView(
@@ -371,6 +378,7 @@ export function MediaRow({
   startIndex,
   action,
   rowRef,
+  screen,
   children,
 }: {
   id?: string;
@@ -389,6 +397,12 @@ export function MediaRow({
   startIndex?: number;
   action?: React.ReactNode;
   rowRef?: React.Ref<HTMLElement>;
+  /**
+   * Fills the screen's height, its cards in the middle, and is centred as
+   * focus comes in, so the rows beside it are out of sight (a TV's opening
+   * cards).
+   */
+  screen?: boolean;
   children?: React.ReactNode;
 }) {
   const restoreKey = useEntryKey(id);
@@ -461,6 +475,8 @@ export function MediaRow({
       data-shape={shape}
       data-nav-group
       data-nav-box
+      data-nav-center={screen || undefined}
+      className={cn(screen && 'flex min-h-screen flex-col justify-center')}
       style={{ '--poster-text': posterText(lines) } as React.CSSProperties}
     >
       {native ? (

@@ -89,7 +89,17 @@ export function noteInput(): void {
   inputs++;
 }
 
-const onPointer = () => {
+/** When a key last went down, by the events' clock. */
+let keyAt = -Infinity;
+
+/**
+ * Within this long of a key, a press is the TV's own: Tizen 6 sends one for
+ * Select, which mustn't hide the focus mark.
+ */
+const KEY_POINTER_MS = 500;
+
+const onPointer = (e: PointerEvent) => {
+  if (e.timeStamp - keyAt < KEY_POINTER_MS) return;
   inputs++;
   keys = false;
   markPointerFocus(true);
@@ -275,6 +285,7 @@ function onKey(e: KeyboardEvent, early: boolean): void {
   const input = keyInput(e);
   if (!input) return;
   keys = true;
+  keyAt = e.timeStamp;
   if (early) {
     inputs++;
     const at = down.get(e.key);

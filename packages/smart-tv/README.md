@@ -14,29 +14,55 @@ stopped the app starting, as a TV has no console.
 ## Build
 
 ```sh
-pnpm -F @aiostreams/smart-tv build:webos   # out/io.github.viren070.aiostreams_<version>_all.ipk
-pnpm -F @aiostreams/smart-tv build:tizen   # out/AIOStreams.wgt
+pnpm -F @aiostreams/smart-tv build:webos    # out/io.github.viren070.aiostreams_<version>_all.ipk
+pnpm -F @aiostreams/smart-tv build:tizen    # out/AIOStreams.wgt
+pnpm -F @aiostreams/smart-tv build:tizen6   # out/AIOStreams-tizen6.wgt
 ```
 
-Both build the web app first. The version comes from `package.json` and is written into the
+Each builds the web app first. The version comes from `package.json` and is written into the
 manifest (`webos/appinfo.json`, `tizen/config.xml`), which carries none itself.
 
 The `.wgt` is unsigned. A Samsung TV only installs a package signed for that TV, so whatever
 installs it signs it first (below). With `TIZEN_PROFILE` set to a Tizen Studio security profile,
 the build signs it with that profile instead, through Tizen Studio's `tizen` command.
 
+### Tizen 6
+
+`build:tizen6` packages the same app for 2021 and 2022 Samsung TVs (Tizen 6.0, Chromium 76; Tizen
+6.5, Chromium 85), under the same app ID. The web app's `build:tizen6` (`--env-mode tizen6`) lowers
+its syntax to Chromium 76, adds core-js polyfills where the code uses newer built-ins, and runs
+`web/legacy-css.js` over the CSS: `:is()`/`:where()` written out, `:focus-visible` as `:focus`,
+`inset` as its four sides, `overflow: clip` as `hidden`, and the first argument of `min()`/`max()`
+ahead of them. `tizen6/legacy.js` runs after `boot.js` and fills in at run time what needs layout:
+margins in place of flex `gap` (Chromium 84), and heights for elements with an `aspect-*` class
+(Chromium 88). `boot.js` warns only below Tizen 6 there.
+
+Known gaps: `:where()` rules gain specificity (they are resets), wrapping flex rows get the gap after
+every item rather than between them, Sonner's toasts keep their own `gap` and `inset`, and what Tizen
+7 misses too (`:has()`, `dvh`) stays missing.
+
+### Trailers on Samsung TVs
+
+Both Tizen packages resolve YouTube trailers themselves (`web/src/lib/hosts/tizen/youtube.ts`, with
+the desktop and Android apps' clients). AVPlay plays only an HLS playlist's first size, YouTube's
+smallest, so the separate H.264 sizes up to 1080p and the AAC audio go as a DASH manifest in a
+`data:` address, which the page's own video plays through Shaka Player (`web/src/lib/playback/dash.ts`),
+loaded only then. In the home's "opens the selected card" hero mode, an opened card plays its first
+trailer, with sound, 2.5 s after it opens, held to 720p.
+
 ## Releases
 
 release-please releases this package on its own (`smart-tv-v*` tags, `chore(smart-tv): release` pull
-requests), and the TV Release workflow attaches `aiostreams-webos-<version>.ipk` and
-`aiostreams-tizen-<version>.wgt` to each release. Like the desktop app, page changes reach the
-changelog through the `chore(smart-tv): update the web app` pull request that moves `web-app.lock`
-forward. The TV Check workflow builds both packages when anything here changes; run it by hand to
-get them as artifacts of the run.
+requests), and the TV Release workflow attaches `aiostreams-webos-<version>.ipk`,
+`aiostreams-tizen-<version>.wgt` and `aiostreams-tizen6-<version>.wgt` to each release. Like the
+desktop app, page changes reach the changelog through the `chore(smart-tv): update the web app` pull
+request that moves `web-app.lock` forward. The TV Check workflow builds the packages when anything
+here changes; run it by hand to get them as artifacts of the run.
 
 Each release also refreshes the rolling `smart-tv` release, which holds the newest packages as
-`aiostreams-webos.ipk` and `aiostreams-tizen.wgt` (its notes come from `feed-release.md`), and the
-`smart-tv-feed` branch, whose one file is the Homebrew Channel repository for the webOS package.
+`aiostreams-webos.ipk`, `aiostreams-tizen.wgt` and `aiostreams-tizen6.wgt` (its notes come from
+`feed-release.md`), and the `smart-tv-feed` branch, whose one file is the Homebrew Channel
+repository for the webOS package.
 
 ## Install
 
@@ -71,5 +97,5 @@ that lists that TV's device ID (DUID), so releases ship it unsigned.
 
 ```sh
 sdb connect <tv-ip>
-tizen install -n out/AIOStreams.wgt -t <device-name>   # name from `sdb devices`
+tizen install -n out/AIOStreams.wgt -t <device-name>   # name from `sdb devices`; AIOStreams-tizen6.wgt on Tizen 6
 ```

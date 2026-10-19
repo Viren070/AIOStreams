@@ -1,5 +1,6 @@
 import type { Host } from '..';
 import { avPlayEngine } from './player';
+import { resolveYouTube } from './youtube';
 
 export interface AvPlayTrack {
   index: number;
@@ -25,6 +26,7 @@ export interface AvPlay {
   setListener(listener: object): void;
   setDisplayRect(x: number, y: number, width: number, height: number): void;
   setDisplayMethod(method: string): void;
+  setStreamingProperty(type: string, value: string): void;
   getTotalTrackInfo(): AvPlayTrack[];
   getCurrentStreamInfo(): AvPlayTrack[];
   setSelectTrack(type: 'AUDIO' | 'TEXT', index: number): void;
@@ -85,9 +87,14 @@ function registerMediaKeys(): () => void {
 
 let host: Host | undefined;
 
-/** Samsung's TVs, running the packaged app. */
+/**
+ * Samsung's TVs, running the packaged app. Its agent says Tizen even where
+ * the page doesn't see `window.tizen` from the start; only the packaged
+ * (standalone) build goes by that, as the TV's own browser says so too.
+ */
 export function tizenHost(): Host | null {
-  if (!window.tizen) return null;
+  const packaged = __STANDALONE__ && /\bTizen\b/.test(navigator.userAgent);
+  if (!window.tizen && !packaged) return null;
   host ??= {
     name: 'tizen',
     tv: true,
@@ -95,6 +102,7 @@ export function tizenHost(): Host | null {
     device: () => ({ name: 'Samsung TV' }),
     exit: () => window.tizen?.application.getCurrentApplication().exit(),
     start: registerMediaKeys,
+    resolveYouTube,
     ...(window.webapis?.avplay && {
       player: avPlayEngine,
       playerFeatures: ['audio'],

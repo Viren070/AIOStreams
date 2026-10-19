@@ -382,6 +382,29 @@ export async function requestItem(
   return item;
 }
 
+/**
+ * A title the server built without its metadata: where its addons fail (a
+ * timeout, a rate limit) it answers with the id for a name and no overview.
+ */
+export function isStubItem(item: BaseItemDto | undefined): boolean {
+  if (!item || item.Overview) return false;
+  const name = item.Name ?? '';
+  return (
+    !name ||
+    name === item.ProviderIds?.Imdb ||
+    /^tt\d{5,}$/.test(name) ||
+    /^[a-z]+[:_]\d+$/i.test(name)
+  );
+}
+
+/** Thrown for such a title, so it is asked for again and never saved. */
+class StubItemError extends Error {
+  constructor(readonly item: BaseItemDto) {
+    // eslint-disable-next-line lingui/no-unlocalized-strings -- never shown: the pages get the title
+    super('This title came without its details');
+  }
+}
+
 /** The lists a query's answer holds: a page of items, pages of them, or items. */
 function listsIn(data: unknown): unknown[][] {
   if (Array.isArray(data)) return [data];
@@ -416,20 +439,47 @@ export function useItem(itemId: string, opts: { page?: boolean } = {}) {
   const { client, user } = useSession();
   const queryClient = useQueryClient();
   const listed = React.useMemo(
-    () =>
-      opts.page
-        ? listedItem(queryClient.getQueryCache(), client.base, user.Id, itemId)
-        : undefined,
-    [opts.page, queryClient, client.base, user.Id, itemId]
+    () => listedItem(queryClient.getQueryCache(), client.base, user.Id, itemId),
+    [queryClient, client.base, user.Id, itemId]
   );
   const options = queryOptions({
     queryKey: [...useKey(), 'item', itemId],
-    meta: { cache: 'titles' },
-    queryFn: () => requestItem(client, user.Id!, itemId),
+    meta: {
+      cache: 'titles',
+      usable: (data) => !isStubItem(data as BaseItemDto),
+    },
+    queryFn: async () => {
+      const item = await requestItem(client, user.Id!, itemId);
+      if (isStubItem(item)) throw new StubItemError(item);
+      return item;
+    },
+    // A server's addons failing is often for a moment.
+    retry: (count, error) => error instanceof StubItemError && count < 2,
+    retryDelay: (count) => 3000 * (count + 1),
   });
   if (opts.page && itemId && !queryClient.getQueryState(options.queryKey))
     void queryClient.prefetchQuery(options);
-  return useQuery({ ...options, placeholderData: listed, enabled: !!itemId });
+  const query = useQuery({
+    ...options,
+    placeholderData: opts.page ? listed : undefined,
+    enabled: !!itemId,
+  });
+  // A later ask without its details leaves what an earlier one brought; with
+  // none before, it shows as the server gave it, with the name the row knew
+  // rather than its id.
+  if (query.error instanceof StubItemError) {
+    const stub = query.error.item;
+    // Not a failure to the pages, which would show none of it.
+    return {
+      ...query,
+      data:
+        query.data ?? (listed?.Name ? { ...stub, Name: listed.Name } : stub),
+      error: null,
+      isError: false,
+      status: 'success',
+    } as typeof query;
+  }
+  return query;
 }
 
 function useShowOptions() {

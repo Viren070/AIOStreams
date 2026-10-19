@@ -9,6 +9,7 @@ import type {
   EngineState,
   EngineTrack,
 } from './engine';
+import { isDash, playDash } from './dash';
 import { isFullscreen, toggleDocumentFullscreen } from './fullscreen';
 
 const SUBTITLE_TYPES = ['srt', 'vtt', 'ass', 'ssa'];
@@ -206,7 +207,25 @@ export function videoEngine(
         onFullscreen();
         el.autoplay = !next.paused;
         if (next.paused) set({ paused: true });
-        el.src = next.url;
+        if (!isDash(next.url)) {
+          el.src = next.url;
+          return;
+        }
+        // A DASH manifest (dash.ts) plays through Shaka, gone with the file.
+        let gone = false;
+        let stop = () => {};
+        void playDash(el, next.url, (error) =>
+          emit({ type: 'failed', error })
+        ).then((teardown) => {
+          if (gone) teardown();
+          else stop = teardown;
+        });
+        const listening = detach;
+        detach = () => {
+          listening();
+          gone = true;
+          stop();
+        };
       },
       // Browsers keep a closed player in their media controls until its video drops the stream.
       close() {

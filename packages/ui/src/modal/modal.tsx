@@ -222,10 +222,16 @@ Modal.displayName = 'Modal';
 // `disableOutsidePointerEvents` (Select, DropdownMenu, ContextMenu, Popover).
 // Tooltip is excluded — it has no dismissable layer and matching it would
 // swallow legitimate modal-overlay taps when a tooltip happens to be visible.
-const INNER_LAYER_SELECTOR =
-  '[role="listbox"][data-state="open"],' +
-  '[role="menu"][data-state="open"],' +
-  '[data-radix-popper-content-wrapper]:not(:has([role="tooltip"]))';
+// Written out rather than as `:not(:has(...))`, which Chromium before 105
+// (the TVs' web engines) can't parse.
+const innerLayerOpen = () =>
+  !!document.querySelector(
+    '[role="listbox"][data-state="open"], [role="menu"][data-state="open"]'
+  ) ||
+  Array.prototype.some.call(
+    document.querySelectorAll('[data-radix-popper-content-wrapper]'),
+    (wrapper: Element) => !wrapper.querySelector('[role="tooltip"]')
+  );
 
 // Read only on an outside press, so a match is another dialog.
 const DIALOG_SELECTOR = '[role="dialog"], [role="alertdialog"]';
@@ -238,7 +244,7 @@ function InnerLayerSnapshotter({
   React.useEffect(() => {
     const handler = (e: PointerEvent) => {
       targetRef.current =
-        !!document.querySelector(INNER_LAYER_SELECTOR) ||
+        innerLayerOpen() ||
         (e.target instanceof Element && !!e.target.closest(DIALOG_SELECTOR));
     };
     document.addEventListener('pointerdown', handler, true);

@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "build:webos": "pnpm -F @aiostreams/web build:standalone && node scripts/build.mjs webos",
-    "build:tizen": "pnpm -F @aiostreams/web build:standalone && node scripts/build.mjs tizen"
+    "build:tizen": "pnpm -F @aiostreams/web build:standalone && node scripts/build.mjs tizen",
+    "build:tizen6": "pnpm -F @aiostreams/web build:tizen6 && node scripts/build.mjs tizen6"
   },
   "devDependencies": {
     "@webos-tools/cli": "^3.2.6",

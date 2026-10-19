@@ -18,7 +18,13 @@ import {
 import { useInView } from '../lib/use-in-view';
 import { libraryLabel } from '../lib/format';
 import { navigate, to } from '../lib/paths';
-import { lastCatalog, rememberCatalog } from '../lib/settings';
+import {
+  lastCatalog,
+  rememberCatalog,
+  settings,
+  useSetting,
+} from '../lib/settings';
+import { currentHost } from '../lib/hosts';
 import { useFeature } from '../lib/server-info';
 import { PillTabs } from '../components/pill-tabs';
 import { MixedGrid } from '../components/mixed-grid';
@@ -189,6 +195,9 @@ export function DiscoverPage({
   const all = views.data?.Items ?? [];
   const view = all.find((v) => v.Id === viewId);
   const [filter, setFilter] = React.useState<ItemFilter | undefined>();
+  // As the home's rows: a TV's posters open out where the hero opens cards.
+  const [heroMode] = useSetting(settings.interface.heroMode);
+  const opens = heroMode === 'open' && !!currentHost().tv;
 
   const current: Kind = (KINDS.find((k) => k.kind === kind)?.kind ??
     kindOf(view) ??
@@ -352,6 +361,7 @@ export function DiscoverPage({
               items={items}
               client={client}
               loading={pages.isLoading}
+              opens={opens}
             />
           </div>
           {!pages.isLoading && !items.length && (

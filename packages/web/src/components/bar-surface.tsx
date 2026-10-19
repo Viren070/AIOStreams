@@ -113,7 +113,8 @@ export function BarSurface({
     };
     let waiting = false;
     const settle = () => {
-      const running = el.getAnimations();
+      // Chromium 84; before it, the bar measures without waiting.
+      const running = el.getAnimations?.() ?? [];
       if (!running.length) {
         setMoving(false);
         return measure();

@@ -155,6 +155,74 @@ html[data-pointer-focus] :focus-visible [data-focus-frame] {
 [role='option']:focus-visible:not([data-focus='own']) {
   outline-offset: -2px;
 }
+/* A TV marks focus in white, which reads from across a room: buttons, menu
+   entries and tabs fill with it, everything else, fields too, gets a white
+   ring. */
+html.dark[data-tv] {
+  --ring: #fff;
+}
+html[data-tv]:not([data-pointer-focus])
+  button:focus-visible:not([data-focus='own']),
+html[data-tv]:not([data-pointer-focus])
+  [role^='menuitem']:focus-visible:not([data-focus='own']),
+html[data-tv]:not([data-pointer-focus])
+  [role='option']:focus-visible:not([data-focus='own']),
+html[data-tv]:not([data-pointer-focus])
+  [role='tab']:focus-visible:not([data-focus='own']) {
+  background-color: #fff !important;
+  color: #000 !important;
+}
+/* Its text and icons follow, but not a badge on its own colour. */
+html[data-tv]:not([data-pointer-focus])
+  button:focus-visible:not([data-focus='own'])
+  :not([class*='bg-']),
+html[data-tv]:not([data-pointer-focus])
+  [role^='menuitem']:focus-visible:not([data-focus='own'])
+  :not([class*='bg-']),
+html[data-tv]:not([data-pointer-focus])
+  [role='option']:focus-visible:not([data-focus='own'])
+  :not([class*='bg-']),
+html[data-tv]:not([data-pointer-focus])
+  [role='tab']:focus-visible:not([data-focus='own'])
+  :not([class*='bg-']) {
+  color: inherit !important;
+}
+[data-tv] input:focus-visible,
+[data-tv] textarea:focus-visible {
+  --tw-ring-color: #fff !important;
+  outline: 2px solid #fff !important;
+  outline-offset: 2px;
+}
+/* A picker's field fills white and rings itself: no outline round it too,
+   which an older engine (Tizen 6's) draws square past its rounded edge. */
+html[data-tv] [role='combobox']:focus-visible {
+  outline: none !important;
+}
+/* Pills mark focus by the white fill alone, so the chosen one, white too,
+   dims while focus is among them: one white pill, the focused one. */
+html[data-tv] [data-ui='pill-tab']:focus-visible,
+html[data-tv] [data-ui='genre-pill']:focus-visible {
+  outline: none !important;
+}
+html[data-tv]:not([data-pointer-focus])
+  [data-ui='pill-tabs']:focus-within
+  [data-ui='pill-tab'][data-selected]:not(:focus-visible),
+html[data-tv]:not([data-pointer-focus])
+  [data-ui='genre-pills']:focus-within
+  [data-ui='genre-pill'][data-selected]:not(:focus-visible) {
+  background-color: rgb(255 255 255 / 0.2) !important;
+  color: #fff !important;
+}
+
+/* Older engines, Tizen 6's among them, drop a frame's rounded clip from what
+   animates inside it (the artwork's focus scale, a shade's fade) while it
+   runs, so those round their own corners as well. */
+[data-ui='artwork'],
+[data-ui='artwork-fallback'],
+[data-ui$='-shade'],
+[data-ui='wide-card-play'] {
+  border-radius: inherit;
+}
 
 [data-ui='player-controls'] {
   --control: 2.5rem;
