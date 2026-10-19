@@ -5,8 +5,10 @@ import { subtitleType } from './tracks';
 
 /** The formats players hand over line by line, rather than as pictures. */
 const TEXT_CODECS = new Set(['subrip', 'ass', 'ssa', 'webvtt', 'mov_text']);
+/** Pictures, whose lines only the file's index gives. */
+const PICTURE_CODECS = new Set(['hdmv_pgs_subtitle']);
 
-/** The file's own subtitle an added one is matched against: a full one, in its language where there is one. */
+/** The file's own subtitle an added one is matched against: a full one, in its language where there is one, and text over pictures. */
 export function referenceTrack(
   tracks: EngineTrack[],
   lang: string | undefined
@@ -15,14 +17,16 @@ export function referenceTrack(
   let bestRank = Infinity;
   for (const track of tracks) {
     const type = subtitleType(track);
+    const text = TEXT_CODECS.has(track.codec ?? '');
     if (
       track.type !== 'subtitle' ||
       track.external ||
-      !TEXT_CODECS.has(track.codec ?? '') ||
+      (!text && !PICTURE_CODECS.has(track.codec ?? '')) ||
       (type !== 'normal' && type !== 'sdh')
     )
       continue;
     const rank =
+      (text ? 0 : 4) +
       (lang && track.lang && sameLanguage(lang, track.lang) ? 0 : 2) +
       (type === 'normal' ? 0 : 1);
     if (rank < bestRank) [best, bestRank] = [track, rank];
