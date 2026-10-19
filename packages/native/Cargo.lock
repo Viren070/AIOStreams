@@ -22,6 +22,7 @@ dependencies = [
  "aiostreams-container",
  "aiostreams-thumbs",
  "jni",
+ "serde_json",
 ]
 
 [[package]]

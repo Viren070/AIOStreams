@@ -17,3 +17,4 @@ thumbs = ["dep:aiostreams-thumbs"]
 aiostreams-container.workspace = true
 aiostreams-thumbs = { workspace = true, optional = true }
 jni.workspace = true
+serde_json.workspace = true
