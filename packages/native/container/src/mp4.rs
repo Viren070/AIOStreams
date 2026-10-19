@@ -3,15 +3,15 @@ use crate::http::RangeReader;
 use crate::keyframes::{Container, Keyframe, Keyframes};
 use crate::track::{Track, TrackKind, Video};
 
-fn u16be(b: &[u8], i: usize) -> Option<u64> {
+pub(crate) fn u16be(b: &[u8], i: usize) -> Option<u64> {
     Some(u16::from_be_bytes(b.get(i..i + 2)?.try_into().ok()?) as u64)
 }
 
-fn u32be(b: &[u8], i: usize) -> Option<u64> {
+pub(crate) fn u32be(b: &[u8], i: usize) -> Option<u64> {
     Some(u32::from_be_bytes(b.get(i..i + 4)?.try_into().ok()?) as u64)
 }
 
-fn u64be(b: &[u8], i: usize) -> Option<u64> {
+pub(crate) fn u64be(b: &[u8], i: usize) -> Option<u64> {
     Some(u64::from_be_bytes(b.get(i..i + 8)?.try_into().ok()?))
 }
 
@@ -40,7 +40,7 @@ pub fn child<'a>(b: &'a [u8], kind: &[u8; 4]) -> Option<&'a [u8]> {
     boxes(b).find(|(k, _)| k == kind).map(|(_, v)| v)
 }
 
-fn path<'a>(b: &'a [u8], kinds: &[&[u8; 4]]) -> Option<&'a [u8]> {
+pub(crate) fn path<'a>(b: &'a [u8], kinds: &[&[u8; 4]]) -> Option<&'a [u8]> {
     kinds.iter().try_fold(b, |b, k| child(b, k))
 }
 
