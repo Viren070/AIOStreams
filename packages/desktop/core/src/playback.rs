@@ -462,14 +462,27 @@ pub fn reference(track: Option<&str>) -> Result<Vec<(&'static str, String)>, Str
     })
 }
 
-/// mpv's ids for the file's own subtitles, in file order.
-pub fn own_subtitles(track_list: &Value) -> Vec<String> {
+const PICTURE_CODECS: &[&str] = &["hdmv_pgs_subtitle", "dvd_subtitle", "dvb_subtitle"];
+
+/// One of the file's own subtitles, by mpv's id.
+pub struct OwnSubtitle {
+    pub id: String,
+    pub picture: bool,
+}
+
+/// The file's own subtitles, in file order.
+pub fn own_subtitles(track_list: &Value) -> Vec<OwnSubtitle> {
     track_list
         .as_array()
         .into_iter()
         .flatten()
         .filter(|t| t["type"] == "sub" && t["external"] != true)
-        .filter_map(|t| t["id"].as_u64().map(|id| id.to_string()))
+        .filter_map(|t| {
+            Some(OwnSubtitle {
+                id: t["id"].as_u64()?.to_string(),
+                picture: PICTURE_CODECS.contains(&t["codec"].as_str().unwrap_or("")),
+            })
+        })
         .collect()
 }
 

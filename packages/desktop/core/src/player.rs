@@ -83,7 +83,7 @@ struct Reference {
     track: Option<String>,
     sent: HashSet<(i64, i64)>,
     read_ahead_at: Option<Instant>,
-    own: Vec<String>,
+    own: Vec<playback::OwnSubtitle>,
     file: Option<Indexed>,
 }
 
@@ -103,7 +103,7 @@ impl Reference {
         if all.len() != self.own.len() {
             return None;
         }
-        all.get(self.own.iter().position(|id| id == track)?)
+        all.get(self.own.iter().position(|s| s.id == *track)?)
             .cloned()
     }
 
@@ -382,12 +382,19 @@ impl Player {
     }
 
     pub fn subtitle_lines(&self, track: Option<&str>) -> Result<(), String> {
-        let props = playback::reference(track)?;
+        // mpv has no secondary picture subtitles, so their lines come from the index alone.
+        let picture = track.is_some_and(|t| {
+            self.reference
+                .lock()
+                .is_ok_and(|r| r.own.iter().any(|s| s.picture && s.id == t))
+        });
+        let watched = track.filter(|_| !picture);
+        let props = playback::reference(watched)?;
         if let Ok(mut reference) = self.reference.lock() {
             reference.track = track.map(String::from);
             reference.sent.clear();
             // Once mpv has decoded the newly picked track's lines.
-            reference.read_ahead_at = track.map(|_| Instant::now() + Duration::from_secs(1));
+            reference.read_ahead_at = watched.map(|_| Instant::now() + Duration::from_secs(1));
         }
         for (name, value) in props {
             self.set(name, value);
