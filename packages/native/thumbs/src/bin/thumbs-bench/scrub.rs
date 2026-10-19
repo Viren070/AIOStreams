@@ -1,76 +1,70 @@
-use std::sync::{Arc, Condvar, Mutex};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use aiostreams_container::Options;
-use aiostreams_thumbs::{Settings, Thumbnailer, priority};
+use aiostreams_thumbs::{Session, Settings};
 
-/// The newest wanted position and when it was asked for, and whether the run is over.
-type Wanted = (Mutex<(Option<(u64, Instant)>, bool)>, Condvar);
-
-/// A held seek key: the wanted position moves every `interval_ms`; one thread makes the newest thumbnail.
+/// A held seek key: a new position every `interval_ms`, thumbnails made by a [`Session`].
 pub fn run(pos: &[String], steps: usize, interval_ms: u64, workers: usize) -> Result<(), String> {
     let url = pos.get(1).ok_or("url")?;
-    let t0 = Instant::now();
-    let mut thumbs = Thumbnailer::open(
-        url,
-        Options::default(),
-        Settings {
-            workers,
-            ..Settings::default()
-        },
-    )
-    .map_err(|e| e.to_string())?;
-    let open_ms = t0.elapsed().as_secs_f64() * 1e3;
-    let duration = thumbs.keyframes().duration_ms;
-    let wanted: Arc<Wanted> = Arc::default();
+    let asked: Arc<Mutex<HashMap<u64, Instant>>> = Arc::default();
     let shown: Arc<Mutex<Vec<(u64, f64)>>> = Arc::default();
-    let worker = {
-        let (wanted, shown) = (wanted.clone(), shown.clone());
-        std::thread::spawn(move || {
-            priority::background();
-            loop {
-                let (ms, asked) = {
-                    let (m, cv) = &*wanted;
-                    let mut s = m.lock().unwrap();
-                    loop {
-                        if let Some(w) = s.0.take() {
-                            break w;
-                        }
-                        if s.1 {
-                            return;
-                        }
-                        s = cv.wait(s).unwrap();
-                    }
-                };
-                if thumbs.get(ms).is_ok() {
+    let t0 = Instant::now();
+    let session = {
+        let (asked, shown) = (asked.clone(), shown.clone());
+        Session::open(
+            url,
+            Options::default(),
+            Settings {
+                workers,
+                ..Settings::default()
+            },
+            move |t| {
+                if let Some(at) = asked.lock().unwrap().get(&t.time_ms) {
                     shown
                         .lock()
                         .unwrap()
-                        .push((ms, asked.elapsed().as_secs_f64() * 1e3));
+                        .push((t.time_ms, at.elapsed().as_secs_f64() * 1e3));
                 }
-            }
-        })
+            },
+        )
+        .map_err(|e| e.to_string())?
     };
-    let start = Instant::now();
+    let open_ms = t0.elapsed().as_secs_f64() * 1e3;
+    let k = session.keyframes();
     let mut last = 0;
     for i in 0..steps {
-        last = duration / 10 + duration / 2 * i as u64 / (steps.max(2) - 1) as u64;
-        let (m, cv) = &*wanted;
-        m.lock().unwrap().0 = Some((last, Instant::now()));
-        cv.notify_all();
+        let ms = k.duration_ms / 10 + k.duration_ms / 2 * i as u64 / (steps.max(2) - 1) as u64;
+        last = k.entries[k.at(ms)].time_ms;
+        asked
+            .lock()
+            .unwrap()
+            .entry(last)
+            .or_insert_with(Instant::now);
+        session.want(ms);
         std::thread::sleep(Duration::from_millis(interval_ms));
     }
     let deadline = Instant::now() + Duration::from_secs(20);
     while Instant::now() < deadline && !shown.lock().unwrap().iter().any(|s| s.0 == last) {
         std::thread::sleep(Duration::from_millis(5));
     }
-    let settled = start.elapsed().as_secs_f64() * 1e3 - (steps - 1) as f64 * interval_ms as f64;
-    {
-        let (m, cv) = &*wanted;
-        m.lock().unwrap().1 = true;
-        cv.notify_all();
-    }
-    worker.join().ok();
+    let settled = asked.lock().unwrap()[&last].elapsed().as_secs_f64() * 1e3;
+    let t = Instant::now();
+    let cached = (0..steps)
+        .filter(|&i| {
+            session
+                .want(k.duration_ms / 10 + k.duration_ms / 2 * i as u64 / (steps.max(2) - 1) as u64)
+                .is_some()
+        })
+        .count();
+    let cached_us = t.elapsed().as_secs_f64() * 1e6 / steps as f64;
+    let rss_busy = crate::metrics::rss_mb().0;
+    std::thread::sleep(Duration::from_secs(12));
+    let rss_idle = crate::metrics::rss_mb().0;
+    eprintln!(
+        "cached {cached}/{steps} at {cached_us:.1} us each; rss {rss_busy:.0} MB busy, {rss_idle:.0} MB after 12 s idle"
+    );
     let shown = shown.lock().unwrap();
     let mut latency: Vec<f64> = shown.iter().map(|s| s.1).collect();
     latency.sort_by(|a, b| a.partial_cmp(b).unwrap());

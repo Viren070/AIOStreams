@@ -4,8 +4,14 @@ pub mod hevc;
 pub mod pool;
 pub mod priority;
 pub mod scale;
+mod session;
 
-use aiostreams_container::{Keyframes, Options, RangeReader};
+pub use session::Session;
+
+use std::sync::Arc;
+use std::time::Duration;
+
+use aiostreams_container::{Keyframes, Options, RangeReader, Video};
 
 #[derive(Debug)]
 pub enum Error {
@@ -38,6 +44,10 @@ pub struct Settings {
     pub workers: usize,
     pub samples: usize,
     pub quality: u8,
+    /// How long a [`Session`] keeps its decoders after the last thumbnail.
+    pub keep_decoders: Duration,
+    /// Thumbnails a [`Session`] keeps for keyframes asked for again.
+    pub cache: usize,
 }
 
 impl Default for Settings {
@@ -47,6 +57,8 @@ impl Default for Settings {
             workers: 2,
             samples: 2,
             quality: 75,
+            keep_decoders: Duration::from_secs(10),
+            cache: 256,
         }
     }
 }
@@ -56,20 +68,6 @@ pub struct Thumbnail {
     pub width: usize,
     pub height: usize,
     pub jpeg: Vec<u8>,
-}
-
-/// Thumbnails of one file, a keyframe each. Blocking; call `priority::background` on its thread.
-pub struct Thumbnailer {
-    reader: RangeReader,
-    keyframes: Keyframes,
-    kind: codec::Kind,
-    config: codec::Config,
-    settings: Settings,
-    height: usize,
-    guess: u64,
-    decoder: Option<decode::Decoder>,
-    strips: Option<pool::Pool>,
-    color: Option<([i32; 4], scale::Color)>,
 }
 
 /// Matrix, range, transfer and primaries: what the bitstream signals, else what the container says.
@@ -90,51 +88,89 @@ pub fn color_codes(signalled: Option<[i32; 4]>, container: [u64; 4]) -> [i32; 4]
     ]
 }
 
-impl Thumbnailer {
-    pub fn open(url: &str, options: Options, settings: Settings) -> Result<Thumbnailer> {
+/// The keyframes of one file as decoder packets.
+pub struct Source {
+    reader: RangeReader,
+    keyframes: Arc<Keyframes>,
+    kind: codec::Kind,
+    config: codec::Config,
+    guess: u64,
+}
+
+impl Source {
+    pub fn open(url: &str, options: Options) -> Result<Source> {
         let mut reader = RangeReader::new(url, options)?;
         let keyframes = aiostreams_container::keyframes(&mut reader)?;
         let track = &keyframes.track;
         let kind = codec::Kind::from_codec_id(&track.codec)
             .ok_or_else(|| Error::Decode(format!("codec {}", track.codec)))?;
         let config = codec::Config::new(kind, &track.private).map_err(Error::Decode)?;
-        let video = track
-            .video
-            .as_ref()
-            .ok_or_else(|| Error::Decode("no video dimensions".into()))?;
+        if track.video.is_none() {
+            return Err(Error::Decode("no video dimensions".into()));
+        }
+        let byterate = reader.size.unwrap_or(0) / (keyframes.duration_ms / 1000).max(1);
+        let guess = (byterate / 12).clamp(96 * 1024, 2 << 20);
+        Ok(Source {
+            reader,
+            keyframes: Arc::new(keyframes),
+            kind,
+            config,
+            guess,
+        })
+    }
+
+    pub fn keyframes(&self) -> &Arc<Keyframes> {
+        &self.keyframes
+    }
+
+    pub fn packet(&mut self, index: usize) -> Result<Vec<u8>> {
+        let frame = self.keyframes.frame(&mut self.reader, index, self.guess)?;
+        self.guess = self.guess.max(frame.len() as u64 * 5 / 4);
+        self.config.packet(&frame).map_err(Error::Decode)
+    }
+
+    pub fn renderer(&self, settings: Settings) -> Renderer {
+        Renderer::new(
+            self.kind,
+            self.keyframes.track.video.clone().unwrap(),
+            settings,
+        )
+    }
+}
+
+/// Decodes packets into JPEG thumbnails, keeping its decoders until released.
+pub struct Renderer {
+    kind: codec::Kind,
+    video: Video,
+    settings: Settings,
+    height: usize,
+    decoder: Option<decode::Decoder>,
+    strips: Option<pool::Pool>,
+    color: Option<([i32; 4], scale::Color)>,
+}
+
+impl Renderer {
+    pub fn new(kind: codec::Kind, video: Video, settings: Settings) -> Renderer {
         let height = ((settings.width as u64 * video.display_height / video.display_width.max(1))
             as usize)
             .div_ceil(2)
             * 2;
-        let byterate = reader.size.unwrap_or(0) / (keyframes.duration_ms / 1000).max(1);
-        let guess = (byterate / 12).clamp(96 * 1024, 2 << 20);
-        Ok(Thumbnailer {
-            reader,
-            keyframes,
+        Renderer {
             kind,
-            config,
+            video,
             settings,
             height,
-            guess,
             decoder: None,
             strips: None,
             color: None,
-        })
+        }
     }
 
-    pub fn keyframes(&self) -> &Keyframes {
-        &self.keyframes
-    }
-
-    /// The thumbnail of the keyframe at or before `ms`.
-    pub fn get(&mut self, ms: u64) -> Result<Thumbnail> {
-        let index = self.keyframes.at(ms);
-        let frame = self.keyframes.frame(&mut self.reader, index, self.guess)?;
-        self.guess = self.guess.max(frame.len() as u64 * 5 / 4);
-        let packet = self.config.packet(&frame).map_err(Error::Decode)?;
+    /// The JPEG of one keyframe packet, `width` x `height`.
+    pub fn render(&mut self, packet: &[u8]) -> Result<Vec<u8>> {
         let (w, h, s) = (self.settings.width, self.height, self.settings.samples);
         let acc = match (self.kind == codec::Kind::Hevc && self.settings.workers > 1)
-            .then(|| hevc::split(&packet))
+            .then(|| hevc::split(packet))
             .flatten()
         {
             Some(split) => {
@@ -160,33 +196,67 @@ impl Thumbnailer {
                     .decoder
                     .as_mut()
                     .unwrap()
-                    .decode(&packet)
+                    .decode(packet)
                     .map_err(Error::Decode)?;
                 scale::Accum::whole(f, w, h, s).map_err(Error::Decode)?
             }
         };
-        let video = self.keyframes.track.video.as_ref().unwrap();
-        let codes = color_codes(
-            acc.signalled,
-            [video.matrix, video.range, video.transfer, video.primaries],
-        );
+        let v = &self.video;
+        let codes = color_codes(acc.signalled, [v.matrix, v.range, v.transfer, v.primaries]);
         if self.color.as_ref().is_none_or(|(c, _)| *c != codes) {
             let [m, r, t, p] = codes;
-            self.color = Some((codes, scale::Color::new(m, r, t, p, video.height as i32)));
+            self.color = Some((codes, scale::Color::new(m, r, t, p, v.height as i32)));
         }
         let color = &self.color.as_ref().unwrap().1;
-        let jpeg = scale::jpeg(&acc.ycbcr(color), w, h, self.settings.quality);
-        Ok(Thumbnail {
-            time_ms: self.keyframes.entries[index].time_ms,
-            width: w,
-            height: h,
-            jpeg,
-        })
+        Ok(scale::jpeg(&acc.ycbcr(color), w, h, self.settings.quality))
+    }
+
+    pub fn width(&self) -> usize {
+        self.settings.width
+    }
+
+    pub fn height(&self) -> usize {
+        self.height
     }
 
     /// Frees the decoders until the next thumbnail.
     pub fn release(&mut self) {
         self.decoder = None;
         self.strips = None;
+    }
+}
+
+/// Fetches and renders one keyframe at a time on the caller's thread.
+pub struct Thumbnailer {
+    source: Source,
+    renderer: Renderer,
+}
+
+impl Thumbnailer {
+    pub fn open(url: &str, options: Options, settings: Settings) -> Result<Thumbnailer> {
+        let source = Source::open(url, options)?;
+        let renderer = source.renderer(settings);
+        Ok(Thumbnailer { source, renderer })
+    }
+
+    pub fn keyframes(&self) -> &Keyframes {
+        self.source.keyframes()
+    }
+
+    /// The thumbnail of the keyframe at or before `ms`.
+    pub fn get(&mut self, ms: u64) -> Result<Thumbnail> {
+        let index = self.source.keyframes().at(ms);
+        let packet = self.source.packet(index)?;
+        let jpeg = self.renderer.render(&packet)?;
+        Ok(Thumbnail {
+            time_ms: self.source.keyframes().entries[index].time_ms,
+            width: self.renderer.width(),
+            height: self.renderer.height(),
+            jpeg,
+        })
+    }
+
+    pub fn release(&mut self) {
+        self.renderer.release();
     }
 }
