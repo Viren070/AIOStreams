@@ -48,7 +48,7 @@ export const browserFeatures: readonly PlayerFeature[] =
 
 /** What lining an added subtitle up with the file's own found; `asked` when the user asked for it. */
 export type SyncOutcome = { asked: boolean } & (
-  | { delayMs: number; movedMs: number; first: boolean }
+  | { delayMs: number; movedMs: number; first: boolean; retimed: boolean }
   | { failed: 'unmatched' | 'speed' }
 );
 

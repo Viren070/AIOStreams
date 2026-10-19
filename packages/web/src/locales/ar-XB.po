@@ -3808,6 +3808,14 @@ msgstr ""
 msgid "Subtitles on or off"
 msgstr ""
 
+#: src/lib/subtitles/delay.ts
+msgid "Subtitles retimed and synced: {amount}"
+msgstr ""
+
+#: src/lib/subtitles/delay.ts
+msgid "Subtitles retimed to the video's speed"
+msgstr ""
+
 #: src/components/player/subtitle-sync.tsx
 msgid "Subtitles set to {amount}. Another line refines it."
 msgstr ""

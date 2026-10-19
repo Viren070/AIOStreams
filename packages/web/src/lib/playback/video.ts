@@ -1,6 +1,6 @@
 import { t } from '@lingui/core/macro';
 import type React from 'react';
-import { checkSubtitleFile, readSubtitleCues } from '../subtitles/files';
+import { checkSubtitleFile, readSubtitleFile } from '../subtitles/files';
 import { subtitleLine } from '../subtitles/style';
 import { ownTrackLabel } from './controller';
 import type {
@@ -34,6 +34,7 @@ interface FileTrack {
   id: string;
   label: string;
   track: TextTrack;
+  text: string;
 }
 
 /**
@@ -253,23 +254,12 @@ export function videoEngine(
         placeCues();
       },
       toggleFullscreen: toggleDocumentFullscreen,
-      // Cues carry the shift already applied, so it comes off again.
-      ownLines(id) {
-        const cues = files.find((f) => f.id === id)?.track.cues;
-        if (!cues?.length) return null;
-        return Promise.resolve().then(() =>
-          Array.from(cues, (cue) => ({
-            startMs: cue.startTime * 1000 - delayMs,
-            endMs: cue.endTime * 1000 - delayMs,
-            text: (cue as VTTCue).text,
-          }))
-        );
-      },
+      ownText: (id) => files.find((f) => f.id === id)?.text ?? null,
       subtitleFiles: {
         types: SUBTITLE_TYPES,
         add: async (added) => {
           checkSubtitleFile(added, SUBTITLE_TYPES);
-          const cues = await readSubtitleCues(added);
+          const { text, cues } = await readSubtitleFile(added);
           const el = video.current;
           if (!el) return;
           const track = el.addTextTrack('subtitles', added.name);
@@ -279,7 +269,7 @@ export function videoEngine(
               new VTTCue(cue.startMs / 1000, cue.endMs / 1000, cue.text)
             );
           const id = `file:${files.length}`;
-          files = [...files, { id, label: added.name, track }];
+          files = [...files, { id, label: added.name, track, text }];
           listTracks();
           placeCues();
           setSubtitle(id);

@@ -1,6 +1,6 @@
 import { t } from '@lingui/core/macro';
 import { formatLocale } from '../i18n';
-import { parseAssCues, parseCues, type SubtitleCue } from './cues';
+import { parseSubtitle, type SubtitleCue } from './cues';
 
 const MAX_BYTES = 10 * 1024 * 1024;
 
@@ -68,13 +68,13 @@ async function readText(file: File): Promise<string> {
   }
 }
 
-export async function readSubtitleCues(file: File): Promise<SubtitleCue[]> {
+export async function readSubtitleFile(
+  file: File
+): Promise<{ text: string; cues: SubtitleCue[] }> {
   const text = await readText(file);
-  const cues = ['ass', 'ssa'].includes(extension(file.name))
-    ? parseAssCues(text)
-    : parseCues(text);
+  const cues = parseSubtitle(text);
   if (!cues.length) throw new Error(t`No subtitles were found in that file`);
-  return cues;
+  return { text, cues };
 }
 
 export function base64(file: File): Promise<string> {

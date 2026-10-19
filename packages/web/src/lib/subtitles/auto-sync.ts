@@ -30,9 +30,9 @@ export function referenceTrack(
   return best;
 }
 
-/** A delay to show the subtitle with, or why there is none. */
+/** A delay to show the subtitle with, a ratio to stretch its times by, or why neither. */
 export type SyncResult =
-  { delayMs: number } | { failed: 'unmatched' | 'speed' };
+  { delayMs: number } | { ratio: number } | { failed: 'unmatched' };
 
 const MIN_LINES = 30;
 const MIN_SPAN_MS = 60_000;
@@ -107,7 +107,7 @@ export class SubtitleSync {
     if (found.ratio !== 1) {
       if (this.applied !== null) return null;
       this.done = true;
-      return { failed: 'speed' };
+      return { ratio: found.ratio };
     }
     if (
       this.applied !== null &&

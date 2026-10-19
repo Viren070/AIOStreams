@@ -6,7 +6,12 @@ import { settings, useSetting } from '../settings';
 import { storage } from '../storage';
 import type { Span } from '../subtitles/align';
 import { referenceTrack, SubtitleSync } from '../subtitles/auto-sync';
-import { parseSubtitle, plainLines, type SubtitleCue } from '../subtitles/cues';
+import {
+  parseSubtitle,
+  plainLines,
+  retimeSubtitle,
+  subtitleExtension,
+} from '../subtitles/cues';
 import {
   clampDelay,
   savedSubtitleDelay,
@@ -74,9 +79,37 @@ function serverSubtitles(
 
 const asTrack = ({ id, label, lang }: Track): Track => ({ id, label, lang });
 
-/** The subtitle as the page names it: a server subtitle by its own id once loaded. */
-const shownSubtitle = (tracks: EngineTrack[], id: string | null) =>
-  tracks.find((t) => t.type === 'subtitle' && t.id === id)?.server ?? id;
+/** A subtitle's copy stretched to the video's frame rate, which shows in its place. */
+interface Retimed {
+  name: string;
+  text: string;
+}
+
+/** The subtitle as the page names it: a server subtitle by its own id once loaded, a copy as the one it was made from. */
+function shownSubtitle(
+  tracks: EngineTrack[],
+  id: string | null,
+  retimed: Record<string, Retimed>
+): string | null {
+  const track = tracks.find((t) => t.type === 'subtitle' && t.id === id);
+  const original =
+    track?.external &&
+    Object.keys(retimed).find((from) => retimed[from].name === track.title);
+  return original || (track?.server ?? id);
+}
+
+function copyOf(
+  tracks: EngineTrack[],
+  retimed: Record<string, Retimed>,
+  id: string | null
+): EngineTrack | undefined {
+  const copy = id ? retimed[id] : undefined;
+  return copy
+    ? tracks.find(
+        (t) => t.type === 'subtitle' && t.external && t.title === copy.name
+      )
+    : undefined;
+}
 
 /** Lines of the file's own subtitle heard so far, which every sync starts from, and the syncs taking new ones. */
 interface Heard {
@@ -138,13 +171,16 @@ export function usePlayer(
   const [syncOutcome, setSyncOutcome] = React.useState<SyncOutcome | null>(
     null
   );
+  const [retimed, setRetimed] = React.useState<Record<string, Retimed>>({});
 
-  const readSubtitle = (id: string): Promise<SubtitleCue[]> | null => {
+  const readSubtitle = (id: string): Promise<string> | null => {
+    if (copyOf(tracks, retimed, id)) return Promise.resolve(retimed[id].text);
     const server = servers.find((s) => s.id === id);
-    if (!server) return engine.ownLines?.(id) ?? null;
-    return fetch(server.url).then(async (res) =>
-      res.ok ? parseSubtitle(await res.text()) : []
-    );
+    if (!server) {
+      const text = engine.ownText?.(id);
+      return text ? Promise.resolve(text) : null;
+    }
+    return fetch(server.url).then((res) => (res.ok ? res.text() : ''));
   };
   const latestRead = useLatest(readSubtitle);
 
@@ -167,7 +203,7 @@ export function usePlayer(
     patch({ audio: id });
   };
   const setSubtitle = (id: string | null) => {
-    engine.setSubtitle(id);
+    engine.setSubtitle(copyOf(live.current.tracks, retimed, id)?.id ?? id);
     patch({ subtitle: id });
   };
   const setVolume = (volume: number, muted = volume === 0) => {
@@ -194,7 +230,7 @@ export function usePlayer(
       case 'loaded': {
         patch({ loaded: true });
         const { tracks, audio, subtitle } = live.current;
-        const shown = shownSubtitle(tracks, subtitle);
+        const shown = shownSubtitle(tracks, subtitle, retimed);
         const picks = chooseTracks(
           tracks,
           latestServers.current,
@@ -259,6 +295,7 @@ export function usePlayer(
     setRetry(undefined);
     setStatsPage(null);
     setStatsText(undefined);
+    setRetimed({});
     const file = latestFile.current(startMs);
     if (file.volume) patch(file.volume);
     engine.load(file);
@@ -286,7 +323,8 @@ export function usePlayer(
     return () => clearTimeout(timer);
   }, [thumbnails, state.started]);
 
-  const shown = shownSubtitle(tracks, state.subtitle);
+  const shown = shownSubtitle(tracks, state.subtitle, retimed);
+  const copy = copyOf(tracks, retimed, shown)?.id;
   const shownServer = servers.find((s) => s.id === shown);
   const shownTrack = tracks.find((t) => t.id === shown);
   const reference =
@@ -317,7 +355,7 @@ export function usePlayer(
     };
   }, [engine, reference, source.Id]);
 
-  // Lines an added subtitle up with the file's own, unless the user set its delay by hand.
+  // Lines an added subtitle up with the file's own, retiming one made for another frame rate; a delay set by hand holds.
   React.useEffect(() => {
     const { setSubtitleDelay } = engine;
     const history = heard.current;
@@ -331,7 +369,6 @@ export function usePlayer(
       saveSubtitleDelay(source.Id, key, {
         ms: live.current.subtitleDelayMs,
       });
-    else if (savedSubtitleDelay(source.Id, key)?.fixed) return;
     let stopped = false;
     let stop = () => {};
     let first = true;
@@ -339,25 +376,48 @@ export function usePlayer(
       setSyncWaiting(false);
       setSyncOutcome(outcome);
     };
-    const take = (sync: SubtitleSync, lines: Span[]) => {
+    const retime = (text: string, ratio: number) => {
+      const add = engine.subtitleFiles?.add;
+      if (copy || !add) return report({ asked, failed: 'speed' });
+      const body = retimeSubtitle(text, ratio);
+      const name = `retimed-${shown.replace(/\W/g, '-')}.${subtitleExtension(body)}`;
+      setRetimed((all) => ({ ...all, [shown]: { name, text: body } }));
+      add(new File([body], name)).catch(() =>
+        report({ asked, failed: 'speed' })
+      );
+    };
+    const take = (sync: SubtitleSync, text: string, lines: Span[]) => {
       const result = sync.add(lines);
       if (sync.done) stop();
       if (!result) return;
+      if ('ratio' in result) return retime(text, result.ratio);
       if ('failed' in result) return report({ asked, failed: result.failed });
-      if (savedSubtitleDelay(source.Id, key)?.fixed) return stop();
+      if (savedSubtitleDelay(source.Id, key)?.fixed) {
+        stop();
+        if (copy && first)
+          report({
+            asked,
+            delayMs: live.current.subtitleDelayMs,
+            movedMs: 0,
+            first,
+            retimed: true,
+          });
+        return;
+      }
       const ms = clampDelay(result.delayMs);
       const movedMs = ms - live.current.subtitleDelayMs;
       saveSubtitleDelay(source.Id, key, { ms });
       setSubtitleDelay(ms);
       patch({ subtitleDelayMs: ms });
-      report({ asked, delayMs: ms, movedMs, first });
+      report({ asked, delayMs: ms, movedMs, first, retimed: !!copy && !asked });
       first = false;
     };
     setSyncWaiting(asked);
     const waited = setTimeout(() => setSyncWaiting(false), ASKED_WAIT_MS);
     latestRead.current(shown)?.then(
-      (cues) => {
+      (text) => {
         if (stopped) return;
+        const cues = parseSubtitle(text);
         if (!cues.length) return report({ asked, failed: 'unmatched' });
         const sync = new SubtitleSync(
           cues,
@@ -365,7 +425,7 @@ export function usePlayer(
           () => playhead.positionMs,
           asked
         );
-        const taker = (lines: Span[]) => take(sync, lines);
+        const taker = (lines: Span[]) => take(sync, text, lines);
         taker(history.lines);
         if (sync.done) return;
         history.takers.add(taker);
@@ -379,7 +439,7 @@ export function usePlayer(
       clearTimeout(waited);
       setSyncWaiting(false);
     };
-  }, [engine, latestRead, patch, reference, shown, source.Id, syncRuns]);
+  }, [engine, latestRead, patch, reference, shown, copy, source.Id, syncRuns]);
 
   const subtitleTracks = tracks.filter((t) => t.type === 'subtitle');
   const { stats } = engine;
@@ -391,7 +451,14 @@ export function usePlayer(
     subtitleTracks: [
       ...subtitleTracks.filter((t) => !t.external).map(asTrack),
       ...servers.map(asTrack),
-      ...subtitleTracks.filter((t) => t.external && !t.server).map(asTrack),
+      ...subtitleTracks
+        .filter(
+          (t) =>
+            t.external &&
+            !t.server &&
+            !Object.values(retimed).some((c) => c.name === t.title)
+        )
+        .map(asTrack),
     ],
     subtitleText,
     thumbnails,
@@ -424,10 +491,10 @@ export function usePlayer(
     skipAhead: engine.skipAhead && ((skips) => engine.skipAhead!(skips)),
     liftSubtitles: engine.setStyle && setLift,
     canReadSubtitle: (id) =>
-      servers.some((s) => s.id === id) || !!engine.ownLines?.(id),
+      servers.some((s) => s.id === id) || !!engine.ownText?.(id),
     subtitleLines: async () => {
-      const cues = shown ? await readSubtitle(shown) : null;
-      return cues ? plainLines(cues) : null;
+      const text = shown ? await readSubtitle(shown) : null;
+      return text === null ? null : plainLines(parseSubtitle(text));
     },
     autoSync: reference
       ? {

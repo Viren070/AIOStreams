@@ -1,11 +1,10 @@
 import { t } from '@lingui/core/macro';
 import { formatBytes } from '@aiostreams/ui/core/format';
 import { fullTitle } from '../../format';
-import type { SubtitleCue } from '../../subtitles/cues';
 import {
   base64,
   checkSubtitleFile,
-  readSubtitleCues,
+  readSubtitleFile,
 } from '../../subtitles/files';
 import { settings, type SubtitleStyle } from '../../settings';
 import { subtitleLanguages } from '../../user-config';
@@ -228,7 +227,7 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
   let file: EngineFile | null = null;
   let tracks: AppTrack[] = [];
   /** Files the user added, by the name the player lists them under. */
-  const added = new Map<string, SubtitleCue[]>();
+  const added = new Map<string, string>();
   let queued: QueuedEpisode | null = null;
   let moved = false;
   // Offered once per file.
@@ -478,10 +477,9 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
     toggleFullscreen: external
       ? () => send('player-set', { fullscreen: !fullscreen })
       : () => shell.send({ type: 'fullscreen' }),
-    ownLines(id) {
+    ownText(id) {
       const track = tracks.find((t) => t.id === id && t.external);
-      const cues = track?.title && added.get(track.title);
-      return cues ? Promise.resolve(cues) : null;
+      return (track?.title && added.get(track.title)) || null;
     },
     watchLines: external
       ? undefined
@@ -521,8 +519,8 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
         checkSubtitleFile(picked, SUBTITLE_TYPES);
         const data = await base64(picked);
         // A file only the player can read just isn't synced.
-        await readSubtitleCues(picked).then(
-          (cues) => added.set(picked.name.slice(0, NAME_LENGTH), cues),
+        await readSubtitleFile(picked).then(
+          ({ text }) => added.set(picked.name.slice(0, NAME_LENGTH), text),
           () => {}
         );
         send('subtitle-file', { name: picked.name, data });

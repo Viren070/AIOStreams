@@ -73,9 +73,13 @@ export function syncNotice(outcome: SyncOutcome): string | null {
       : null;
   }
   const moved = Math.abs(outcome.movedMs);
+  const amount = delayAmount(outcome.delayMs);
+  if (outcome.retimed && outcome.first)
+    return moved && outcome.delayMs
+      ? t`Subtitles retimed and synced: ${amount}`
+      : t`Subtitles retimed to the video's speed`;
   if (!outcome.asked && moved < (outcome.first ? 200 : 1000)) return null;
   if (!outcome.delayMs) return t`Subtitles in sync`;
-  const amount = delayAmount(outcome.delayMs);
   return t`Subtitles synced: ${amount}`;
 }
 

@@ -1,6 +1,5 @@
 import type { SubtitleStyle, VideoFit } from '../settings';
 import type { Span } from '../subtitles/align';
-import type { SubtitleCue } from '../subtitles/cues';
 import type { BaseItemDto, MediaStream, SourceInfo } from '../types';
 import type { PlaybackPrefs } from '../user-config';
 import type { Chapter } from './chapters';
@@ -113,8 +112,8 @@ export interface PlayerEngine {
   skipAhead?(skips: PlannedSkip[]): void;
   setStyle?(style: EngineStyle): void;
   toggleFullscreen?(): void;
-  /** Cues of one of its own subtitles, null for one it can't read; server ones are read from their address. */
-  ownLines?(id: string): Promise<SubtitleCue[]> | null;
+  /** The text of a subtitle file it was given, null for one it can't read; server ones are read from their address. */
+  ownText?(id: string): string | null;
   /** Reports when the lines of one of the file's own subtitles show, as it reads them, until stopped. */
   watchLines?(id: string, onLines: (lines: Span[]) => void): () => void;
   /** Pictures of the keyframes at or before positions asked for, newest asked first; null once the file has none. `prepare` reads the file's index ahead of the first. */
