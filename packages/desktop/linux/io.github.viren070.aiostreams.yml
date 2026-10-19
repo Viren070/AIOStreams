@@ -134,22 +134,23 @@ modules:
       env:
         CARGO_HOME: /run/build/aiostreams-desktop/cargo
     build-commands:
-      - cargo --offline fetch --manifest-path Cargo.toml
+      - cargo --offline fetch --manifest-path desktop/Cargo.toml
       # With --ccache, compiled crates stay in the builder's cache for the next build.
       - target=${CCACHE_DIR:+$CCACHE_DIR/cargo-}target;
-        cargo --offline build --release -p aiostreams-desktop --target-dir "$target" &&
+        cargo --offline build --release --manifest-path desktop/Cargo.toml -p aiostreams-desktop --target-dir "$target" &&
         install -Dm755 "$target/release/aiostreams-desktop" -t /app/lib/aiostreams-desktop
       - cp -r web /app/lib/aiostreams-desktop/web
       - mkdir -p /app/bin /app/lib/codecs-extra /app/lib/intel-vaapi-driver
       - ln -s ../lib/aiostreams-desktop/aiostreams-desktop /app/bin/aiostreams-desktop
-      - install -Dm644 linux/io.github.viren070.aiostreams.desktop -t /app/share/applications
-      - python3 linux/metainfo-releases.py linux/io.github.viren070.aiostreams.metainfo.xml CHANGELOG.md Cargo.toml
-      - install -Dm644 linux/io.github.viren070.aiostreams.metainfo.xml -t /app/share/metainfo
-      - install -Dm644 app/icons/aiostreams.png /app/share/icons/hicolor/512x512/apps/io.github.viren070.aiostreams.png
-      - install -Dm644 LICENSE THIRD-PARTY.md -t /app/share/licenses/io.github.viren070.aiostreams
+      - install -Dm644 desktop/linux/io.github.viren070.aiostreams.desktop -t /app/share/applications
+      - python3 desktop/linux/metainfo-releases.py desktop/linux/io.github.viren070.aiostreams.metainfo.xml desktop/CHANGELOG.md desktop/Cargo.toml
+      - install -Dm644 desktop/linux/io.github.viren070.aiostreams.metainfo.xml -t /app/share/metainfo
+      - install -Dm644 desktop/app/icons/aiostreams.png /app/share/icons/hicolor/512x512/apps/io.github.viren070.aiostreams.png
+      - install -Dm644 LICENSE desktop/THIRD-PARTY.md -t /app/share/licenses/io.github.viren070.aiostreams
     sources:
       - type: dir
         path: ..
+        dest: desktop
         skip:
           - target
           - vendor
@@ -157,6 +158,12 @@ modules:
           - linux/repo
           - linux/.flatpak-builder
           - linux/screenshots
+      # Where the desktop crates' path dependencies point.
+      - type: dir
+        path: ../../native
+        dest: native
+        skip:
+          - target
       - type: dir
         path: ../../web/dist-standalone
         dest: web
