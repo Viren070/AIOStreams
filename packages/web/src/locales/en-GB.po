@@ -1276,6 +1276,10 @@ msgstr "Docked keeps it in a column of its own. Floating hovers it over the page
 msgid "Documentation"
 msgstr "Documentation"
 
+#: src/components/player/options.tsx
+msgid "Doesn't match the video's own subtitles"
+msgstr "Doesn't match the video's own subtitles"
+
 #: src/pages/settings/playback.tsx
 msgid "Dolby Vision"
 msgstr "Dolby Vision"
@@ -3189,6 +3193,10 @@ msgstr "Resume all"
 msgid "Resume from {resumeAt}"
 msgstr "Resume from {resumeAt}"
 
+#: src/components/player/options.tsx
+msgid "Retimed and synced automatically"
+msgstr "Retimed and synced automatically"
+
 #: src/lib/i18n.ts
 msgid "Retry"
 msgstr "Retry"
@@ -3212,6 +3220,10 @@ msgstr "Row"
 #: src/pages/settings/cache.tsx
 msgid "Rows, catalogs and the calendar."
 msgstr "Rows, catalogs and the calendar."
+
+#: src/components/player/options.tsx
+msgid "Runs at a different speed to the video"
+msgstr "Runs at a different speed to the video"
 
 #. A season and episode number, as in S01E04
 #: src/lib/format.ts
@@ -3400,6 +3412,10 @@ msgstr "Server address"
 #: src/lib/hosts/shell/player.ts
 msgid "server error"
 msgstr "server error"
+
+#: src/components/player/options.tsx
+msgid "Set by hand"
+msgstr "Set by hand"
 
 #: src/components/layout.tsx
 #: src/pages/settings/index.tsx
@@ -3859,10 +3875,6 @@ msgid "Switches the TV to a refresh rate that suits each video, so motion plays 
 msgstr "Switches the TV to a refresh rate that suits each video, so motion plays smoothly, and back when you stop. The screen goes blank for a moment as it switches."
 
 #: src/components/player/options.tsx
-msgid "Sync"
-msgstr "Sync"
-
-#: src/components/player/options.tsx
 msgid "Sync automatically"
 msgstr "Sync automatically"
 
@@ -3882,6 +3894,10 @@ msgstr "Sync to a line"
 #: src/components/player/options.tsx
 msgid "Sync to a line…"
 msgstr "Sync to a line…"
+
+#: src/components/player/options.tsx
+msgid "Synced automatically"
+msgstr "Synced automatically"
 
 #: src/components/player/controls.tsx
 msgid "Syncing subtitles…"
@@ -4246,6 +4262,10 @@ msgstr "Those were too far apart to be one line. Try another line."
 #: src/pages/settings/cache.tsx
 msgid "Three days"
 msgstr "Three days"
+
+#: src/components/player/options.tsx
+msgid "Timing"
+msgstr "Timing"
 
 #: src/pages/history.tsx
 #: src/pages/settings/interface.tsx

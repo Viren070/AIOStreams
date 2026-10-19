@@ -1275,6 +1275,10 @@ msgstr ""
 msgid "Documentation"
 msgstr ""
 
+#: src/components/player/options.tsx
+msgid "Doesn't match the video's own subtitles"
+msgstr ""
+
 #: src/pages/settings/playback.tsx
 msgid "Dolby Vision"
 msgstr ""
@@ -3188,6 +3192,10 @@ msgstr ""
 msgid "Resume from {resumeAt}"
 msgstr ""
 
+#: src/components/player/options.tsx
+msgid "Retimed and synced automatically"
+msgstr ""
+
 #: src/lib/i18n.ts
 msgid "Retry"
 msgstr ""
@@ -3210,6 +3218,10 @@ msgstr ""
 
 #: src/pages/settings/cache.tsx
 msgid "Rows, catalogs and the calendar."
+msgstr ""
+
+#: src/components/player/options.tsx
+msgid "Runs at a different speed to the video"
 msgstr ""
 
 #. A season and episode number, as in S01E04
@@ -3398,6 +3410,10 @@ msgstr ""
 
 #: src/lib/hosts/shell/player.ts
 msgid "server error"
+msgstr ""
+
+#: src/components/player/options.tsx
+msgid "Set by hand"
 msgstr ""
 
 #: src/components/layout.tsx
@@ -3858,10 +3874,6 @@ msgid "Switches the TV to a refresh rate that suits each video, so motion plays 
 msgstr ""
 
 #: src/components/player/options.tsx
-msgid "Sync"
-msgstr ""
-
-#: src/components/player/options.tsx
 msgid "Sync automatically"
 msgstr ""
 
@@ -3880,6 +3892,10 @@ msgstr ""
 
 #: src/components/player/options.tsx
 msgid "Sync to a line…"
+msgstr ""
+
+#: src/components/player/options.tsx
+msgid "Synced automatically"
 msgstr ""
 
 #: src/components/player/controls.tsx
@@ -4244,6 +4260,10 @@ msgstr ""
 
 #: src/pages/settings/cache.tsx
 msgid "Three days"
+msgstr ""
+
+#: src/components/player/options.tsx
+msgid "Timing"
 msgstr ""
 
 #: src/pages/history.tsx

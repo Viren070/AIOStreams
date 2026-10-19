@@ -8,6 +8,8 @@ import {
   LuCaptionsOff,
   LuCheck,
   LuChevronDown,
+  LuChevronLeft,
+  LuChevronRight,
   LuCrop,
   LuEar,
   LuFilePlus,
@@ -21,7 +23,10 @@ import {
   LuMinus,
   LuPlus,
   LuRatio,
+  LuSlidersHorizontal,
   LuStretchHorizontal,
+  LuTimer,
+  LuType,
   LuUndo2,
   LuUsers,
   LuWandSparkles,
@@ -64,6 +69,15 @@ import { useParty } from '../../lib/party/party';
 import { RATES, rateLabel } from './keys';
 import { usePlayhead } from '../../lib/playback/playhead';
 
+/** Opens in the menu's place from a row under its list. */
+interface MenuPage {
+  name: string;
+  label: string;
+  icon: React.ReactNode;
+  value?: string;
+  content: React.ReactNode;
+}
+
 function Menu({
   name,
   label,
@@ -73,7 +87,7 @@ function Menu({
   onSelect,
   onOpenChange,
   action,
-  footer,
+  pages = [],
   more,
 }: {
   name: string;
@@ -84,15 +98,24 @@ function Menu({
   onSelect(id: string | null): void;
   onOpenChange(open: boolean): void;
   action?: { name: string; label: string; icon: React.ReactNode; run(): void };
-  footer?: React.ReactNode;
+  pages?: MenuPage[];
   /** Listed after a press on `label`, which stands in for them until the menu closes. */
   more?: { label: string; options: Track[] };
 }) {
   const [expanded, setExpanded] = React.useState(false);
+  const [pageName, setPageName] = React.useState<string | null>(null);
   const firstMore = React.useRef<HTMLDivElement>(null);
+  const back = React.useRef<HTMLDivElement>(null);
+  const rows = React.useRef(new Map<string, HTMLDivElement>());
+  const left = React.useRef<string | null>(null);
   React.useEffect(() => {
     if (expanded) firstMore.current?.focus();
   }, [expanded]);
+  React.useEffect(() => {
+    if (pageName) back.current?.focus();
+    else if (left.current) rows.current.get(left.current)?.focus();
+  }, [pageName]);
+  const page = pages.find((p) => p.name === pageName);
   const item = (option: Track, ref?: React.Ref<HTMLDivElement>) => (
     <DropdownMenuItem
       key={option.id}
@@ -118,8 +141,17 @@ function Menu({
       align="end"
       sideOffset={8}
       onOpenChange={(open) => {
-        if (!open) setExpanded(false);
+        if (!open) {
+          setExpanded(false);
+          setPageName(null);
+          left.current = null;
+        }
         onOpenChange(open);
+      }}
+      onEscapeKeyDown={(e) => {
+        if (!page) return;
+        e.preventDefault();
+        setPageName(null);
       }}
       className="flex max-h-[60vh] min-w-[12rem] max-w-[min(22rem,90vw)] flex-col bg-gray-950/95"
       trigger={
@@ -128,50 +160,101 @@ function Menu({
         </ControlButton>
       }
     >
-      <DropdownMenuLabel>{label}</DropdownMenuLabel>
-      {/* The list scrolls under a pinned footer; a short screen scrolls both together. */}
-      <div className="-mx-2 flex min-h-0 flex-col overflow-x-hidden px-2 [@media(max-height:640px)]:overflow-y-auto">
-        <div className="min-h-0 overflow-y-auto [@media(max-height:640px)]:shrink-0 [@media(max-height:640px)]:overflow-y-visible">
-          {options.map((option) => item(option))}
-          {more &&
-            more.options.length > 0 &&
-            (expanded ? (
-              more.options.map((option, i) =>
-                item(option, i === 0 ? firstMore : undefined)
-              )
-            ) : (
-              <DropdownMenuItem
-                data-ui="player-menu-action"
-                data-name="more"
-                onSelect={(e) => {
-                  e.preventDefault();
-                  setExpanded(true);
-                }}
-              >
-                <LuChevronDown className="flex-none" />
-                {more.label}
-              </DropdownMenuItem>
-            ))}
-          {action && (
-            <DropdownMenuItem
-              data-ui="player-menu-action"
-              data-name={action.name}
-              onClick={action.run}
-            >
-              {action.icon}
-              {action.label}
-            </DropdownMenuItem>
-          )}
-        </div>
-        {footer && (
-          <div
-            data-ui="player-menu-footer"
-            className="-mx-2 mt-1 shrink-0 border-t px-2"
+      {page ? (
+        <>
+          <DropdownMenuItem
+            ref={back}
+            data-ui="player-menu-action"
+            data-name="back"
+            className="font-semibold"
+            onSelect={(e) => {
+              e.preventDefault();
+              setPageName(null);
+            }}
           >
-            {footer}
+            <LuChevronLeft className="flex-none rtl:-scale-x-100" />
+            {page.label}
+          </DropdownMenuItem>
+          <div
+            data-ui="player-menu-page"
+            data-name={page.name}
+            className="-mx-2 min-h-0 overflow-y-auto px-2"
+          >
+            {page.content}
           </div>
-        )}
-      </div>
+        </>
+      ) : (
+        <>
+          <DropdownMenuLabel>{label}</DropdownMenuLabel>
+          {/* The list scrolls above the pinned page rows; a short screen scrolls both together. */}
+          <div className="-mx-2 flex min-h-0 flex-col overflow-x-hidden px-2 [@media(max-height:640px)]:overflow-y-auto">
+            <div className="min-h-0 overflow-y-auto [@media(max-height:640px)]:shrink-0 [@media(max-height:640px)]:overflow-y-visible">
+              {options.map((option) => item(option))}
+              {more &&
+                more.options.length > 0 &&
+                (expanded ? (
+                  more.options.map((option, i) =>
+                    item(option, i === 0 ? firstMore : undefined)
+                  )
+                ) : (
+                  <DropdownMenuItem
+                    data-ui="player-menu-action"
+                    data-name="more"
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      setExpanded(true);
+                    }}
+                  >
+                    <LuChevronDown className="flex-none" />
+                    {more.label}
+                  </DropdownMenuItem>
+                ))}
+              {action && (
+                <DropdownMenuItem
+                  data-ui="player-menu-action"
+                  data-name={action.name}
+                  onClick={action.run}
+                >
+                  {action.icon}
+                  {action.label}
+                </DropdownMenuItem>
+              )}
+            </div>
+            {pages.length > 0 && (
+              <div
+                data-ui="player-menu-footer"
+                className="-mx-2 mt-1 shrink-0 border-t px-2 pt-1"
+              >
+                {pages.map((p) => (
+                  <DropdownMenuItem
+                    key={p.name}
+                    ref={(el) => {
+                      if (el) rows.current.set(p.name, el);
+                      else rows.current.delete(p.name);
+                    }}
+                    data-ui="player-menu-action"
+                    data-name={p.name}
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      left.current = p.name;
+                      setPageName(p.name);
+                    }}
+                  >
+                    {p.icon}
+                    <span className="flex-1">{p.label}</span>
+                    {p.value && (
+                      <span className="ms-3 tabular-nums text-[--muted]">
+                        {p.value}
+                      </span>
+                    )}
+                    <LuChevronRight className="!me-0 ms-1 flex-none rtl:-scale-x-100" />
+                  </DropdownMenuItem>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </DropdownMenu>
   );
 }
@@ -257,9 +340,6 @@ function SubtitleStyleSteppers() {
   const at = SUBTITLE_SIZES.indexOf(size);
   return (
     <>
-      <DropdownMenuLabel className="pt-3">
-        <Trans>Style</Trans>
-      </DropdownMenuLabel>
       <Stepper
         label={t`Size`}
         value={subtitleSizeLabel(size)}
@@ -301,9 +381,6 @@ function SoundControls() {
   const at = DIALOGUE_BOOSTS.indexOf(boost);
   return (
     <>
-      <DropdownMenuLabel className="pt-3">
-        <Trans>Sound</Trans>
-      </DropdownMenuLabel>
       <Stepper
         label={t`Dialogue`}
         value={dialogueLabel(boost)}
@@ -354,24 +431,31 @@ function SoundControls() {
   );
 }
 
-function SubtitleSync({
+function SubtitleTiming({
   delayMs,
   onChange,
-  onSyncAuto,
+  autoSync,
   onSyncByEar,
   onSyncToLine,
 }: {
   delayMs: number;
   onChange(ms: number): void;
-  onSyncAuto?: () => void;
+  autoSync?: PlayerController['autoSync'];
   onSyncByEar(): void;
   onSyncToLine?: () => void;
 }) {
+  const status = autoSync?.status;
+  const said =
+    status &&
+    {
+      hand: t`Set by hand`,
+      synced: t`Synced automatically`,
+      retimed: t`Retimed and synced automatically`,
+      unmatched: t`Doesn't match the video's own subtitles`,
+      speed: t`Runs at a different speed to the video`,
+    }[status];
   return (
     <>
-      <DropdownMenuLabel className="pt-3">
-        <Trans>Sync</Trans>
-      </DropdownMenuLabel>
       <Stepper
         value={delayLabel(delayMs)}
         less={{
@@ -383,8 +467,16 @@ function SubtitleSync({
           onClick: () => onChange(delayMs + SUBTITLE_DELAY_STEP_MS),
         }}
       />
-      {onSyncAuto && (
-        <DropdownMenuItem onClick={onSyncAuto}>
+      {said && (
+        <p
+          data-ui="player-sync-status"
+          className="px-2 pb-2 text-center text-xs text-[--muted]"
+        >
+          {said}
+        </p>
+      )}
+      {status === 'hand' && (
+        <DropdownMenuItem onClick={autoSync?.run}>
           <LuWandSparkles className="flex-none" />
           <Trans>Sync automatically</Trans>
         </DropdownMenuItem>
@@ -399,7 +491,7 @@ function SubtitleSync({
           <Trans>Sync to a line…</Trans>
         </DropdownMenuItem>
       )}
-      {delayMs !== 0 && (
+      {!autoSync && delayMs !== 0 && (
         <DropdownMenuItem onSelect={keepOpen} onClick={() => onChange(0)}>
           <LuUndo2 className="flex-none rtl:-scale-x-100" />
           <Trans>Reset</Trans>
@@ -432,6 +524,7 @@ export function OptionButtons({
 }) {
   const { state } = player;
   const { prefs } = usePlaybackPrefs();
+  const [subtitleSize] = useSetting(settings.subtitle.size);
   const subtitles =
     prefs.ListPreferredSubtitlesOnly === false
       ? { shown: player.subtitleTracks, hidden: [] }
@@ -502,26 +595,47 @@ export function OptionButtons({
               run: onAddFile,
             }
           }
-          footer={
-            state.subtitle && (
-              <>
-                {player.setSubtitleDelay && (
-                  <SubtitleSync
-                    delayMs={state.subtitleDelayMs}
-                    onChange={player.setSubtitleDelay}
-                    onSyncAuto={player.autoSync?.run}
-                    onSyncByEar={onSyncByEar}
-                    onSyncToLine={
-                      player.subtitleLines &&
-                      (player.canReadSubtitle?.(state.subtitle) ?? true)
-                        ? onSyncToLine
-                        : undefined
-                    }
-                  />
-                )}
-                {!player.external && <SubtitleStyleSteppers />}
-              </>
-            )
+          pages={
+            state.subtitle
+              ? [
+                  ...(player.setSubtitleDelay
+                    ? [
+                        {
+                          name: 'timing',
+                          label: t`Timing`,
+                          icon: <LuTimer className="flex-none" />,
+                          value: delayLabel(state.subtitleDelayMs),
+                          content: (
+                            <SubtitleTiming
+                              delayMs={state.subtitleDelayMs}
+                              onChange={player.setSubtitleDelay}
+                              autoSync={player.autoSync}
+                              onSyncByEar={onSyncByEar}
+                              onSyncToLine={
+                                player.subtitleLines &&
+                                (player.canReadSubtitle?.(state.subtitle) ??
+                                  true)
+                                  ? onSyncToLine
+                                  : undefined
+                              }
+                            />
+                          ),
+                        },
+                      ]
+                    : []),
+                  ...(player.external
+                    ? []
+                    : [
+                        {
+                          name: 'style',
+                          label: t`Style`,
+                          icon: <LuType className="flex-none" />,
+                          value: subtitleSizeLabel(subtitleSize),
+                          content: <SubtitleStyleSteppers />,
+                        },
+                      ]),
+                ]
+              : []
           }
         />
       )}
@@ -554,7 +668,18 @@ export function OptionButtons({
           value={state.audio}
           onSelect={(id) => id && player.setAudio(id)}
           onOpenChange={onMenu}
-          footer={player.sound && <SoundControls />}
+          pages={
+            player.sound
+              ? [
+                  {
+                    name: 'sound',
+                    label: t`Sound`,
+                    icon: <LuSlidersHorizontal className="flex-none" />,
+                    content: <SoundControls />,
+                  },
+                ]
+              : []
+          }
         />
       )}
       {player.setRate && (

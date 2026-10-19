@@ -31,6 +31,7 @@ import {
   type PlayerOptions,
   type PlayerState,
   type SyncOutcome,
+  type SyncStatus,
   type Track,
 } from './controller';
 import type {
@@ -168,9 +169,10 @@ export function usePlayer(
   const asking = React.useRef(false);
   const [syncRuns, setSyncRuns] = React.useState(0);
   const [syncWaiting, setSyncWaiting] = React.useState(false);
-  const [syncOutcome, setSyncOutcome] = React.useState<SyncOutcome | null>(
-    null
-  );
+  const [syncOutcome, setSyncOutcome] = React.useState<{
+    subtitle: string;
+    outcome: SyncOutcome;
+  } | null>(null);
   const [retimed, setRetimed] = React.useState<Record<string, Retimed>>({});
 
   const readSubtitle = (id: string): Promise<string> | null => {
@@ -374,7 +376,7 @@ export function usePlayer(
     let first = true;
     const report = (outcome: SyncOutcome) => {
       setSyncWaiting(false);
-      setSyncOutcome(outcome);
+      setSyncOutcome({ subtitle: shown, outcome });
     };
     const retime = (text: string, ratio: number) => {
       const add = engine.subtitleFiles?.add;
@@ -441,6 +443,17 @@ export function usePlayer(
     };
   }, [engine, latestRead, patch, reference, shown, copy, source.Id, syncRuns]);
 
+  const lastSync = syncOutcome?.subtitle === shown ? syncOutcome.outcome : null;
+  const syncStatus: SyncStatus | undefined =
+    shown && savedSubtitleDelay(source.Id, delayKey(tracks, shown))?.fixed
+      ? 'hand'
+      : !lastSync
+        ? undefined
+        : 'failed' in lastSync
+          ? lastSync.failed
+          : copy
+            ? 'retimed'
+            : 'synced';
   const subtitleTracks = tracks.filter((t) => t.type === 'subtitle');
   const { stats } = engine;
   return {
@@ -503,7 +516,8 @@ export function usePlayer(
             setSyncRuns((n) => n + 1);
           },
           waiting: syncWaiting,
-          outcome: syncOutcome,
+          outcome: syncOutcome?.outcome ?? null,
+          status: syncStatus,
         }
       : undefined,
     subtitleFiles: engine.subtitleFiles,

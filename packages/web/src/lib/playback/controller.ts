@@ -52,6 +52,8 @@ export type SyncOutcome = { asked: boolean } & (
   | { failed: 'unmatched' | 'speed' }
 );
 
+export type SyncStatus = 'hand' | 'synced' | 'retimed' | 'unmatched' | 'speed';
+
 /** One set of controls over whichever player the page runs in. */
 export interface PlayerController {
   state: PlayerState;
@@ -83,6 +85,8 @@ export interface PlayerController {
     waiting: boolean;
     /** A new object each time a run finds something. */
     outcome: SyncOutcome | null;
+    /** How the shown subtitle's delay was set, once known. */
+    status?: SyncStatus;
   };
   /** The subtitle the page draws, for a player that draws none itself. */
   subtitleText?: string;
