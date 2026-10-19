@@ -42,7 +42,7 @@ pub fn run(pos: &[String], steps: usize, interval_ms: u64, workers: usize) -> Re
             .unwrap()
             .entry(last)
             .or_insert_with(Instant::now);
-        session.want(ms);
+        session.want(ms, None);
         std::thread::sleep(Duration::from_millis(interval_ms));
     }
     let deadline = Instant::now() + Duration::from_secs(20);
@@ -54,7 +54,10 @@ pub fn run(pos: &[String], steps: usize, interval_ms: u64, workers: usize) -> Re
     let cached = (0..steps)
         .filter(|&i| {
             session
-                .want(k.duration_ms / 10 + k.duration_ms / 2 * i as u64 / (steps.max(2) - 1) as u64)
+                .want(
+                    k.duration_ms / 10 + k.duration_ms / 2 * i as u64 / (steps.max(2) - 1) as u64,
+                    None,
+                )
                 .is_some()
         })
         .count();

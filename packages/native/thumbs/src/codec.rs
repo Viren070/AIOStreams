@@ -32,6 +32,7 @@ impl Kind {
 }
 
 /// Turns container frames into packets that carry their parameter sets in band.
+#[derive(Clone)]
 pub struct Config {
     nal_len: usize,
     prefix: Vec<u8>,

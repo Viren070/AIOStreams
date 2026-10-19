@@ -24,7 +24,7 @@ impl Pool {
         let workers = (0..n)
             .map(|_| {
                 let rx: Arc<Mutex<Receiver<Job>>> = rx.clone();
-                std::thread::spawn(move || {
+                crate::spawn("thumbs-strip", move || {
                     if idle {
                         priority::background();
                     }

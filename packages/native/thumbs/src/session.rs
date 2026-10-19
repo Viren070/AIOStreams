@@ -1,4 +1,4 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::{Arc, Condvar, Mutex};
 
 use aiostreams_container::{Keyframes, Options};
@@ -6,9 +6,17 @@ use aiostreams_container::{Keyframes, Options};
 use crate::{Result, Settings, Source, Thumbnail, priority};
 
 struct State {
-    wanted: Option<usize>,
-    /// The newest packet fetched and not yet rendered.
-    fetched: Option<(usize, Vec<u8>)>,
+    /// Requests so far; the wanted keyframe carries the count at its request.
+    asked: u64,
+    wanted: Option<(usize, u64)>,
+    /// Keyframes being fetched or rendered.
+    busy: HashSet<usize>,
+    /// Keyframes that failed since the pointer last moved to another.
+    failed: HashSet<usize>,
+    /// Packets fetched and not yet rendered, with the request each answers.
+    fetched: Vec<(u64, usize, Vec<u8>)>,
+    /// The request the last thumbnail passed on answered.
+    shown: u64,
     cache: HashMap<usize, Arc<Thumbnail>>,
     order: VecDeque<usize>,
     closed: bool,
@@ -19,8 +27,8 @@ struct Shared {
     wake: Condvar,
 }
 
-/// Thumbnails for a seek bar: the newest position asked for wins, and the next keyframe is
-/// fetched while the previous one renders.
+/// Thumbnails for a seek bar: the newest position asked for wins, several keyframes are fetched
+/// at once, and only the newest fetched renders.
 pub struct Session {
     shared: Arc<Shared>,
     keyframes: Arc<Keyframes>,
@@ -34,67 +42,100 @@ impl Session {
         settings: Settings,
         ready: impl Fn(Arc<Thumbnail>) + Send + 'static,
     ) -> Result<Session> {
-        let mut source = Source::open(url, options)?;
+        let source = Source::open(url, options)?;
         let keyframes = source.keyframes().clone();
         let (keep, capacity) = (settings.keep_decoders, settings.cache);
-        let mut renderer = source.renderer(settings);
+        let mut renderer = source.renderer(settings.clone());
         let shared = Arc::new(Shared {
             state: Mutex::new(State {
+                asked: 0,
                 wanted: None,
-                fetched: None,
+                busy: HashSet::new(),
+                failed: HashSet::new(),
+                fetched: Vec::new(),
+                shown: 0,
                 cache: HashMap::new(),
                 order: VecDeque::new(),
                 closed: false,
             }),
             wake: Condvar::new(),
         });
-        {
+        let mut sources: Vec<Source> = (1..settings.fetches).map(|_| source.fork()).collect();
+        sources.push(source);
+        for mut source in sources {
             let shared = shared.clone();
-            std::thread::spawn(move || {
-                let mut last = None;
+            crate::spawn("thumbs-fetch", move || {
                 loop {
-                    let index = {
+                    let (index, asked) = {
                         let mut s = shared.state.lock().unwrap();
                         loop {
                             if s.closed {
                                 return;
                             }
                             match s.wanted {
-                                Some(i) if Some(i) != last && !s.cache.contains_key(&i) => break i,
+                                Some((i, asked))
+                                    if !s.cache.contains_key(&i)
+                                        && !s.busy.contains(&i)
+                                        && !s.failed.contains(&i) =>
+                                {
+                                    s.busy.insert(i);
+                                    break (i, asked);
+                                }
                                 _ => s = shared.wake.wait(s).unwrap(),
                             }
                         }
                     };
-                    last = Some(index);
-                    if let Ok(packet) = source.packet(index) {
-                        shared.state.lock().unwrap().fetched = Some((index, packet));
-                        shared.wake.notify_all();
+                    let packet = source.packet(index);
+                    let mut s = shared.state.lock().unwrap();
+                    match packet {
+                        Ok(packet) => s.fetched.push((asked, index, packet)),
+                        Err(_) => {
+                            s.busy.remove(&index);
+                            s.failed.insert(index);
+                        }
                     }
+                    drop(s);
+                    shared.wake.notify_all();
                 }
             });
         }
         {
             let (shared, keyframes) = (shared.clone(), keyframes.clone());
-            std::thread::spawn(move || {
+            crate::spawn("thumbs-render", move || {
                 priority::background();
                 loop {
-                    let (index, packet) = {
+                    let (asked, index, packet) = {
                         let mut s = shared.state.lock().unwrap();
                         loop {
                             if s.closed {
                                 return;
                             }
-                            if let Some(f) = s.fetched.take() {
-                                break f;
+                            // The wanted keyframe first, even when an older request fetched it.
+                            let wanted = s.wanted.map(|w| w.0);
+                            let pick = (0..s.fetched.len())
+                                .find(|&k| Some(s.fetched[k].1) == wanted)
+                                .or_else(|| (0..s.fetched.len()).max_by_key(|&k| s.fetched[k].0));
+                            if let Some(k) = pick {
+                                let next = s.fetched.swap_remove(k);
+                                // Rendering them would only fill the cache, which costs a slow
+                                // device more than fetching again.
+                                for (_, stale, _) in std::mem::take(&mut s.fetched) {
+                                    s.busy.remove(&stale);
+                                }
+                                break next;
                             }
                             let (next, idle) = shared.wake.wait_timeout(s, keep).unwrap();
                             s = next;
-                            if idle.timed_out() && s.fetched.is_none() {
+                            if idle.timed_out() && s.fetched.is_empty() {
                                 renderer.release();
                             }
                         }
                     };
-                    let Ok(jpeg) = renderer.render(&packet) else {
+                    let jpeg = renderer.render(&packet);
+                    let mut s = shared.state.lock().unwrap();
+                    s.busy.remove(&index);
+                    let Ok(jpeg) = jpeg else {
+                        s.failed.insert(index);
                         continue;
                     };
                     let thumbnail = Arc::new(Thumbnail {
@@ -103,18 +144,22 @@ impl Session {
                         height: renderer.height(),
                         jpeg,
                     });
-                    {
-                        let mut s = shared.state.lock().unwrap();
-                        if s.cache.insert(index, thumbnail.clone()).is_none() {
-                            s.order.push_back(index);
-                            while s.order.len() > capacity {
-                                let old = s.order.pop_front().unwrap();
-                                s.cache.remove(&old);
-                            }
+                    if s.cache.insert(index, thumbnail.clone()).is_none() {
+                        s.order.push_back(index);
+                        while s.order.len() > capacity {
+                            let old = s.order.pop_front().unwrap();
+                            s.cache.remove(&old);
                         }
                     }
+                    let show = asked > s.shown || s.wanted.is_some_and(|w| w.0 == index);
+                    if show {
+                        s.shown = s.shown.max(asked);
+                    }
+                    drop(s);
                     shared.wake.notify_all();
-                    ready(thumbnail);
+                    if show {
+                        ready(thumbnail);
+                    }
                 }
             });
         }
@@ -125,14 +170,22 @@ impl Session {
         &self.keyframes
     }
 
-    /// The thumbnail for `ms` if it was made before; otherwise it is made and passed to `ready`.
-    pub fn want(&self, ms: u64) -> Option<Arc<Thumbnail>> {
+    /// The thumbnail for `ms` if it was made before and isn't `showing`, the keyframe time of the
+    /// one on screen; otherwise it is made and passed to `ready`.
+    pub fn want(&self, ms: u64, showing: Option<u64>) -> Option<Arc<Thumbnail>> {
         let index = self.keyframes.at(ms);
         let mut s = self.shared.state.lock().unwrap();
-        if let Some(t) = s.cache.get(&index) {
-            return Some(t.clone());
+        s.asked += 1;
+        let asked = s.asked;
+        if s.wanted.is_none_or(|w| w.0 != index) {
+            s.failed.clear();
         }
-        s.wanted = Some(index);
+        s.wanted = Some((index, asked));
+        if let Some(t) = s.cache.get(&index).cloned() {
+            s.shown = asked;
+            return (Some(t.time_ms) != showing).then_some(t);
+        }
+        drop(s);
         self.shared.wake.notify_all();
         None
     }

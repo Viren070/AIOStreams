@@ -40,6 +40,18 @@ impl std::error::Error for Error {}
 
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// A named thread, so profiles tell the stages apart.
+fn spawn<T: Send + 'static>(
+    name: &str,
+    f: impl FnOnce() -> T + Send + 'static,
+) -> std::thread::JoinHandle<T> {
+    std::thread::Builder::new()
+        .name(name.into())
+        .spawn(f)
+        .expect("spawning a thread")
+}
+
+#[derive(Clone)]
 pub struct Settings {
     pub width: usize,
     /// Decoders for the strips of a split picture, and slice threads otherwise.
@@ -50,6 +62,8 @@ pub struct Settings {
     pub keep_decoders: Duration,
     /// Thumbnails a [`Session`] keeps for keyframes asked for again.
     pub cache: usize,
+    /// Keyframes a [`Session`] fetches at once, so a link slow to answer keeps up with the pointer.
+    pub fetches: usize,
 }
 
 impl Default for Settings {
@@ -61,6 +75,7 @@ impl Default for Settings {
             quality: 75,
             keep_decoders: Duration::from_secs(10),
             cache: 256,
+            fetches: 3,
         }
     }
 }
@@ -125,6 +140,18 @@ impl Source {
 
     pub fn keyframes(&self) -> &Arc<Keyframes> {
         &self.keyframes
+    }
+
+    /// Another source of the same keyframes, for fetching several at once.
+    pub fn fork(&self) -> Source {
+        Source {
+            reader: self.reader.fork(),
+            keyframes: self.keyframes.clone(),
+            kind: self.kind,
+            config: self.config.clone(),
+            guess: self.guess,
+            sizes: self.sizes.clone(),
+        }
     }
 
     pub fn packet(&mut self, index: usize) -> Result<Vec<u8>> {

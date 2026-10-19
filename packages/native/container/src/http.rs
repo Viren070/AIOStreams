@@ -75,6 +75,21 @@ impl RangeReader {
         })
     }
 
+    /// Another reader of the same file, on this one's connections.
+    pub fn fork(&self) -> RangeReader {
+        RangeReader {
+            agent: self.agent.clone(),
+            url: self.url.clone(),
+            origin: self.origin.clone(),
+            options: self.options.clone(),
+            last: None,
+            size: self.size,
+            requests: 0,
+            bytes: 0,
+            waited: Duration::ZERO,
+        }
+    }
+
     /// Up to `len` bytes from `start`; fewer only at the end of the file.
     pub fn read(&mut self, start: u64, len: u64) -> Result<Vec<u8>> {
         let mut len = len;
