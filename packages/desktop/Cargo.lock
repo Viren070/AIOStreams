@@ -18,6 +18,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "aiostreams-container"
+version = "0.1.0"
+dependencies = [
+ "ureq",
+]
+
+[[package]]
 name = "aiostreams-desktop"
 version = "0.17.0"
 dependencies = [
@@ -54,6 +61,7 @@ dependencies = [
 name = "aiostreams-desktop-core"
 version = "0.17.0"
 dependencies = [
+ "aiostreams-container",
  "libloading",
  "log",
  "serde",

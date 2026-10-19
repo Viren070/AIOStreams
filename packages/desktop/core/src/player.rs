@@ -5,6 +5,7 @@ use std::sync::{Arc, Mutex, mpsc};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
+use aiostreams_container::{RangeReader, subtitle_timelines};
 use serde_json::Value;
 
 use crate::bridge::Outbound;
@@ -81,9 +82,30 @@ struct Reference {
     track: Option<String>,
     sent: HashSet<(i64, i64)>,
     read_ahead_at: Option<Instant>,
+    own: Vec<String>,
+    file: Option<Indexed>,
+}
+
+/// The playing file, and each of its subtitles' lines once read from its index.
+struct Indexed {
+    url: String,
+    headers: Vec<(String, String)>,
+    lines: Option<Vec<Vec<SubtitleLine>>>,
+    reading: bool,
 }
 
 impl Reference {
+    /// The index lists the file's own subtitles in mpv's order.
+    fn indexed(&self) -> Option<Vec<SubtitleLine>> {
+        let all = self.file.as_ref()?.lines.as_ref()?;
+        let track = self.track.as_ref()?;
+        if all.len() != self.own.len() {
+            return None;
+        }
+        all.get(self.own.iter().position(|id| id == track)?)
+            .cloned()
+    }
+
     fn report(&mut self, lines: Vec<SubtitleLine>) -> Option<Outbound> {
         let track = self.track.clone()?;
         let lines: Vec<_> = lines
@@ -91,6 +113,34 @@ impl Reference {
             .filter(|l| self.sent.insert((l.start_ms as i64, l.end_ms as i64)))
             .collect();
         (!lines.is_empty()).then_some(Outbound::PlayerSubtitleLines { track, lines })
+    }
+}
+
+/// Each subtitle track's lines from the file's index; none where it has no index.
+fn index_lines(url: &str, headers: Vec<(String, String)>) -> Vec<Vec<SubtitleLine>> {
+    let mut options = aiostreams_container::index_options();
+    options.headers = headers;
+    let read = RangeReader::new(url, options).and_then(|mut r| subtitle_timelines(&mut r));
+    match read {
+        Ok(tracks) => {
+            log::info!("subtitle index tracks={}", tracks.len());
+            tracks
+                .into_iter()
+                .map(|t| {
+                    t.lines
+                        .into_iter()
+                        .map(|(start, end)| SubtitleLine {
+                            start_ms: start as f64,
+                            end_ms: end as f64,
+                        })
+                        .collect()
+                })
+                .collect()
+        }
+        Err(e) => {
+            log::info!("subtitle index unavailable: {e}");
+            Vec::new()
+        }
     }
 }
 
@@ -261,6 +311,16 @@ impl Player {
     pub fn load(&self, load: &Load, local: &dyn Fn(&str) -> bool) -> Result<(), String> {
         let file = Loadfile::new(load, local)?;
         log::info!("load url={} options={}", file.url, file.options.join(","));
+        if !load.append
+            && let Ok(mut reference) = self.reference.lock()
+        {
+            reference.file = Some(Indexed {
+                url: load.url.clone(),
+                headers: load.headers.clone().into_iter().collect(),
+                lines: None,
+                reading: false,
+            });
+        }
         for command in file.commands() {
             self.send(Request::Command(command));
         }
@@ -326,7 +386,52 @@ impl Player {
         for (name, value) in props {
             self.set(name, value);
         }
+        if track.is_some() {
+            self.read_index();
+        }
         Ok(())
+    }
+
+    /// All of the reference's lines at once from the file's index, which mpv's reading then tops up.
+    fn read_index(&self) {
+        let Ok(mut reference) = self.reference.lock() else {
+            return;
+        };
+        if let Some(lines) = reference.indexed() {
+            if let Some(message) = reference.report(lines) {
+                (self.emit)(message);
+            }
+            return;
+        }
+        let Some(file) = reference
+            .file
+            .as_mut()
+            .filter(|f| f.lines.is_none() && !f.reading)
+        else {
+            return;
+        };
+        file.reading = true;
+        let (url, headers) = (file.url.clone(), file.headers.clone());
+        let (reference, emit) = (self.reference.clone(), self.emit.clone());
+        let spawned = std::thread::Builder::new()
+            .name("subtitle-index".into())
+            .spawn(move || {
+                let lines = index_lines(&url, headers);
+                let Ok(mut reference) = reference.lock() else {
+                    return;
+                };
+                let Some(file) = reference.file.as_mut().filter(|f| f.url == url) else {
+                    return;
+                };
+                file.lines = Some(lines);
+                file.reading = false;
+                if let Some(message) = reference.indexed().and_then(|l| reference.report(l)) {
+                    emit(message);
+                }
+            });
+        if let Err(e) = spawned {
+            log::warn!("subtitle-index: {e}");
+        }
     }
 
     pub fn stats_overlay(&self, page: Option<&str>) -> Result<(), String> {
@@ -762,6 +867,11 @@ fn pump(
                 }
                 Event::Property { name, value, .. } => {
                     follow_subtitle(mpv, subtitles, &name, &value);
+                    if name == "track-list"
+                        && let Ok(mut reference) = reference.lock()
+                    {
+                        reference.own = playback::own_subtitles(&value);
+                    }
                     if let Some((name, data)) = throttle.pass(name, value) {
                         report(&name, &data);
                     }

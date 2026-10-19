@@ -462,6 +462,17 @@ pub fn reference(track: Option<&str>) -> Result<Vec<(&'static str, String)>, Str
     })
 }
 
+/// mpv's ids for the file's own subtitles, in file order.
+pub fn own_subtitles(track_list: &Value) -> Vec<String> {
+    track_list
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|t| t["type"] == "sub" && t["external"] != true)
+        .filter_map(|t| t["id"].as_u64().map(|id| id.to_string()))
+        .collect()
+}
+
 /// The times of [`REFERENCE_LINES`]' `Dialogue: layer,start,end,...` events.
 pub fn subtitle_lines(events: &str) -> Vec<SubtitleLine> {
     let ms = |time: &str| -> Option<f64> {
