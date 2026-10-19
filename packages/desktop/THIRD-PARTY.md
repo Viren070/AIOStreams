@@ -5,11 +5,11 @@ AIOStreams Desktop is licensed under the AGPL-3.0. It ships with:
 - **libmpv**, from [mpv](https://mpv.io), licensed under the GPL-2.0-or-later.
   - Windows: `libmpv-2.dll`, built by
     [shinchiro/mpv-winbuild-cmake](https://github.com/shinchiro/mpv-winbuild-cmake), whose tag
-    is in `libmpv.pin` in the AIOStreams repository. Source:
+    is in `libs.pin` in the AIOStreams repository. Source:
     [mpv-player/mpv](https://github.com/mpv-player/mpv) and the build scripts in that repository.
   - macOS: `libmpv.2.dylib` and the libraries it uses, such as FFmpeg, libass, libplacebo and
     Rubber Band, in `Contents/Frameworks`. They are the builds [IINA](https://iina.io) publishes
-    for its releases, and the release is in `libmpv-macos.pin` in the AIOStreams repository. Each
+    for its releases, and the release is in `libs-macos.pin` in the AIOStreams repository. Each
     is under its own project's licence (GPL, LGPL or permissive). Source:
     [mpv-player/mpv](https://github.com/mpv-player/mpv), [FFmpeg](https://ffmpeg.org) and each
     library's own project.
@@ -18,10 +18,10 @@ AIOStreams Desktop is licensed under the AGPL-3.0. It ships with:
   (BSD-2-Clause) built in. Their licence texts are beside them in `FFmpeg-COPYING.LGPLv2.1` and
   `dav1d-COPYING`. They are built from pinned sources and patches by
   [Viren070/aiostreams-libs](https://github.com/Viren070/aiostreams-libs), whose release is in
-  `libmpv.pin` in the AIOStreams repository. Source: [FFmpeg](https://ffmpeg.org), dav1d and that
+  `libs.pin` in the AIOStreams repository. Source: [FFmpeg](https://ffmpeg.org), dav1d and that
   repository's build script and patches.
 - **The Vulkan loader** on Windows: `vulkan/vulkan-1.dll`, from the
-  [LunarG Vulkan Runtime](https://vulkan.lunarg.com/sdk/home), whose version is in `libmpv.pin` in
+  [LunarG Vulkan Runtime](https://vulkan.lunarg.com/sdk/home), whose version is in `libs.pin` in
   the AIOStreams repository. Licensed under the Apache-2.0; its licence text is beside it in
   `vulkan/VulkanRT-License.txt`. Source:
   [KhronosGroup/Vulkan-Loader](https://github.com/KhronosGroup/Vulkan-Loader).

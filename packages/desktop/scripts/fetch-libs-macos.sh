@@ -1,15 +1,15 @@
 #!/bin/bash
-# Downloads the libraries libmpv-macos.pin names into vendor/macos-<arch>/, where
+# Downloads the libraries libs-macos.pin names into vendor/macos-<arch>/, where
 # debug builds and packaging look for them:
-#   ./scripts/fetch-libmpv-macos.sh [arm64|x86_64]
+#   ./scripts/fetch-libs-macos.sh [arm64|x86_64]
 set -euo pipefail
 
 arch=${1:-$(uname -m)}
 desktop=$(cd "$(dirname "$0")/.." && pwd)
-pin() { sed -n "s/^$1=//p" "$desktop/libmpv-macos.pin"; }
+pin() { sed -n "s/^$1=//p" "$desktop/libs-macos.pin"; }
 version=$(pin version)
 expected=$(pin "$arch")
-[ -n "$expected" ] || { echo "libmpv-macos.pin has no $arch" >&2 && exit 1; }
+[ -n "$expected" ] || { echo "libs-macos.pin has no $arch" >&2 && exit 1; }
 
 base="https://iina.io/dylibs/$version/$arch"
 vendor="$desktop/vendor/macos-$arch"

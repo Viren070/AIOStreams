@@ -22,7 +22,7 @@ fi
 # libmpv and the libraries it loads, which find each other through the app's run path.
 arch=$(uname -m)
 if [ ! -f "$desktop/vendor/macos-$arch/libmpv.2.dylib" ]; then
-  "$desktop/scripts/fetch-libmpv-macos.sh" "$arch"
+  "$desktop/scripts/fetch-libs-macos.sh" "$arch"
 fi
 cp "$desktop/vendor/macos-$arch/"*.dylib "$app/Contents/Frameworks/"
 rpaths() { otool -l "$1" | awk '$2 == "LC_RPATH" { getline; getline; print $2 }'; }

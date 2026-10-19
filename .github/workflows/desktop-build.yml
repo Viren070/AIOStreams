@@ -172,7 +172,7 @@ jobs:
           workspaces: packages/desktop
 
       - name: Fetch libmpv
-        run: ./packages/desktop/scripts/fetch-libmpv.ps1 -Arch ${{ matrix.mpv }}
+        run: ./packages/desktop/scripts/fetch-libs.ps1 -Arch ${{ matrix.mpv }}
 
       - name: Build the app
         working-directory: packages/desktop
@@ -274,7 +274,7 @@ jobs:
           workspaces: packages/desktop
 
       - name: Fetch libmpv
-        run: ./packages/desktop/scripts/fetch-libmpv-macos.sh
+        run: ./packages/desktop/scripts/fetch-libs-macos.sh
 
       - name: Build the app
         working-directory: packages/desktop

@@ -71,11 +71,11 @@ the executable: the page in a `web` folder, and libmpv beside it.
 Needs Rust (MSVC toolchain), the WebView2 runtime (part of Windows 10 and 11) and 7-Zip on `PATH`.
 
 ```powershell
-./scripts/fetch-libmpv.ps1   # libmpv-2.dll, vulkan/ and FFmpeg into vendor/x86_64 (-Arch aarch64 for ARM)
+./scripts/fetch-libs.ps1   # libmpv-2.dll, vulkan/ and FFmpeg into vendor/x86_64 (-Arch aarch64 for ARM)
 cargo run
 ```
 
-`libmpv.pin` names the libmpv build the app ships and each archive's checksum, and the script checks
+`libs.pin` names the libmpv build the app ships and each archive's checksum, and the script checks
 them. shinchiro keeps about four months of builds, so bump the pin when its tag disappears.
 
 libmpv links the Vulkan loader, `vulkan-1.dll`, which GPU drivers install, so older machines may not
@@ -112,12 +112,12 @@ on a Windows drive. Install the bundle it prints with `flatpak install --user`.
 Needs Rust and the Xcode command line tools.
 
 ```sh
-./scripts/fetch-libmpv-macos.sh   # into vendor/macos-<arch>
+./scripts/fetch-libs-macos.sh   # into vendor/macos-<arch>
 cargo run
 ```
 
 The app ships the libmpv that IINA builds and publishes for its releases: mpv with FFmpeg and its
-libraries, built for macOS 11 and ready to sit in an app bundle. `libmpv-macos.pin` names the IINA
+libraries, built for macOS 11 and ready to sit in an app bundle. `libs-macos.pin` names the IINA
 release and a checksum of each architecture's libraries, and the script checks it. A debug build
 also finds Homebrew's or MacPorts' libmpv. `scripts/make-app-macos.sh` assembles `AIOStreams.app`
 from a release build.

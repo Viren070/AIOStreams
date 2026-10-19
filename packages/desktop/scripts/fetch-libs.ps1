@@ -1,4 +1,4 @@
-# Downloads the libmpv, Vulkan loader and FFmpeg that libmpv.pin names into vendor/<arch>/, where
+# Downloads the libmpv, Vulkan loader and FFmpeg that libs.pin names into vendor/<arch>/, where
 # debug builds and packaging look for them. -Tag fetches another shinchiro release, unchecked.
 param(
   [ValidateSet('x86_64', 'aarch64')]
@@ -9,7 +9,7 @@ $ErrorActionPreference = 'Stop'
 
 $root = Split-Path -Parent $PSScriptRoot
 $pin = @{}
-Get-Content (Join-Path $root 'libmpv.pin') |
+Get-Content (Join-Path $root 'libs.pin') |
   Where-Object { $_ -match '^(\w+)=(\S+)$' } |
   ForEach-Object { $pin[$Matches[1]] = $Matches[2] }
 $pinned = -not $Tag
@@ -37,7 +37,7 @@ $api = "https://api.github.com/repos/shinchiro/mpv-winbuild-cmake/releases/tags/
 try {
   $release = Invoke-RestMethod $api -Headers $headers
 } catch {
-  throw "libmpv release $Tag was not found at shinchiro/mpv-winbuild-cmake; bump libmpv.pin. ($_)"
+  throw "libmpv release $Tag was not found at shinchiro/mpv-winbuild-cmake; bump libs.pin. ($_)"
 }
 $asset = $release.assets | Where-Object { $_.name -match "^mpv-dev-$Arch-\d" } | Select-Object -First 1
 if (-not $asset) { throw "No mpv-dev-$Arch archive in release $Tag" }
