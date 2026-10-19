@@ -155,7 +155,9 @@ export function PlayerPage({
   const [covered, setCovered] = React.useState(true);
   const sources = local ? [local.source!] : playableSources(info.data);
   const source = sourceId ? sources.find((s) => s.Id === sourceId) : sources[0];
-  const missing = !playing && !!item.data && !!info.data && !source;
+  // A failed lookup lists the versions too, where the error shows and can be retried.
+  const missing =
+    !playing && !!item.data && !source && (!!info.data || info.isError);
   const youTubeId = playing ? undefined : source?.aiostreams?.ytId;
   const youTube = useYouTubeStream(youTubeId);
   React.useEffect(() => {

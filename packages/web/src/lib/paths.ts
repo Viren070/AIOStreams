@@ -30,8 +30,14 @@ export const to = {
   },
   item: (itemId: string) => `/item/${itemId}`,
   person: (personId: string) => `/person/${personId}`,
-  play: (itemId: string, sourceId: string, startMs = 0) =>
-    `/play/${itemId}?source=${sourceId}${startMs ? `&start=${Math.round(startMs)}` : ''}`,
+  /** Without a version, the player page takes the first one it finds. */
+  play: (itemId: string, sourceId?: string, startMs = 0) => {
+    const params = new URLSearchParams();
+    if (sourceId) params.set('source', sourceId);
+    if (startMs) params.set('start', String(Math.round(startMs)));
+    const query = params.toString();
+    return `/play/${itemId}${query ? `?${query}` : ''}`;
+  },
   trailer: (itemId: string, index = 0) =>
     `/play/trailer/${itemId}${index ? `?trailer=${index}` : ''}`,
 };
