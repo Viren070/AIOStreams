@@ -162,9 +162,10 @@ export function PlayerPage({
   const youTube = useYouTubeStream(youTubeId);
   React.useEffect(() => {
     if (!missing || !item.data) return;
-    lastVersions.set(itemId, undefined);
+    // Only a lookup that came back proves the remembered version is gone.
+    if (info.data) lastVersions.set(itemId, undefined);
     navigate(versionsPath(item.data), { replace: true });
-  }, [missing, item.data, itemId]);
+  }, [missing, info.data, item.data, itemId]);
   React.useEffect(() => {
     if (playing) noteLastPlayed(playing.item, playing.source);
   }, [playing]);
