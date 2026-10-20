@@ -1,6 +1,7 @@
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import React from 'react';
+import { useElementScrollRestoration, useRouter } from '@tanstack/react-router';
 import { LuChevronLeft, LuChevronRight } from 'react-icons/lu';
 import { Button, IconButton } from '@aiostreams/ui/button';
 import { Modal } from '@aiostreams/ui/modal';
@@ -266,36 +267,81 @@ function MonthGrid({
   );
 }
 
+const START =
+  'scroll-mt-[calc(var(--top-bar,0px)+env(safe-area-inset-top)+1rem)]';
+
 function Agenda({
   days,
   month,
   byDay,
+  current,
 }: {
   days: Date[];
   month: number;
   byDay: Map<string, BaseItemDto[]>;
+  current: boolean;
 }) {
   const today = dayKey(new Date());
   const shown = days.filter(
     (d) => d.getMonth() === month && byDay.has(dayKey(d))
   );
+  const upcoming = shown.findIndex((d) => dayKey(d) >= today);
+  const at = upcoming === -1 ? shown.length : upcoming;
+  const airsToday = at < shown.length && dayKey(shown[at]) === today;
+  const start = React.useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const saved = useElementScrollRestoration({ getElement: () => window });
+  // A new visit opens at today; going back keeps the place left.
+  React.useEffect(() => {
+    if (!current || at === 0 || saved) return;
+    const go = () => start.current?.scrollIntoView({ block: 'start' });
+    if (router.state.status !== 'pending') return go();
+    // The router scrolls to the top once the page it is rendering shows.
+    const stop = router.subscribe('onRendered', () => {
+      stop();
+      go();
+    });
+    return stop;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const line = current && shown.length > 0 && !airsToday && (
+    <div
+      ref={start}
+      data-ui="calendar-today-line"
+      className={cn('flex items-center gap-2', START)}
+    >
+      <span className="rounded-full bg-brand-500 px-2.5 py-0.5 text-xs font-semibold text-white">
+        <Trans>Today</Trans>
+      </span>
+      <span className="h-px flex-1 bg-brand-500" />
+    </div>
+  );
   return (
     <div data-ui="calendar-agenda" className="space-y-5">
-      {shown.map((d) => (
-        <section key={dayKey(d)} className="space-y-2">
-          <h2
-            className={cn(
-              'text-sm font-semibold',
-              dayKey(d) === today ? 'text-white' : 'text-[--muted]'
-            )}
+      {shown.map((d, i) => (
+        <React.Fragment key={dayKey(d)}>
+          {i === at && line}
+          <section
+            ref={i === at && airsToday ? start : undefined}
+            data-today={dayKey(d) === today || undefined}
+            className={cn('space-y-2', START)}
           >
-            {longDay(d)}
-          </h2>
-          {byDay.get(dayKey(d))!.map((item) => (
-            <EpisodeRow key={item.Id} item={item} />
-          ))}
-        </section>
+            <h2
+              className={cn(
+                'text-sm font-semibold',
+                dayKey(d) === today ? 'text-white' : 'text-[--muted]'
+              )}
+            >
+              {longDay(d)}
+            </h2>
+            {byDay.get(dayKey(d))!.map((item) => (
+              <EpisodeRow key={item.Id} item={item} />
+            ))}
+          </section>
+        </React.Fragment>
       ))}
+      {at === shown.length && line}
     </div>
   );
 }
@@ -320,6 +366,7 @@ export function CalendarPage({ month }: { month?: string }) {
   const inMonth = days.some(
     (d) => d.getMonth() === first.getMonth() && byDay.has(dayKey(d))
   );
+  const current = monthKey(first) === monthKey(new Date());
   const go = (offset: number) =>
     navigate(
       to.calendar(
@@ -367,7 +414,7 @@ export function CalendarPage({ month }: { month?: string }) {
               })}
             </span>
           </div>
-          {monthKey(first) !== monthKey(new Date()) && (
+          {!current && (
             <Button
               data-ui="calendar-today"
               size="sm"
@@ -395,7 +442,13 @@ export function CalendarPage({ month }: { month?: string }) {
               />
             </div>
             <div className="md:hidden">
-              <Agenda days={days} month={first.getMonth()} byDay={byDay} />
+              <Agenda
+                key={monthKey(first)}
+                days={days}
+                month={first.getMonth()}
+                byDay={byDay}
+                current={current}
+              />
             </div>
             {!inMonth && (
               <p className="text-[--muted]">
