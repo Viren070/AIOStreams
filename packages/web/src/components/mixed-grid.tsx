@@ -44,7 +44,9 @@ export function MixedGrid({
               animated={animatedPosterOf(child)}
               title={child.Name ?? ''}
               subtitle={itemSubtitle(child)}
+              itemType={child.Type}
               watched={child.UserData?.Played}
+              favourite={child.UserData?.IsFavorite}
               unwatched={child.UserData?.UnplayedItemCount ?? undefined}
               progress={progressOf(child)}
             />

@@ -1016,7 +1016,9 @@ function SubCollections({ parent }: { parent: BaseItemDto }) {
             animated={animatedPosterOf(item)}
             title={item.Name ?? ''}
             subtitle={itemSubtitle(item)}
+            itemType={item.Type}
             watched={item.UserData?.Played}
+            favourite={item.UserData?.IsFavorite}
           />
         </ItemMenu>
       ))}
@@ -1161,7 +1163,9 @@ function Similar({ itemId }: { itemId: string }) {
                 animated={animatedPosterOf(item)}
                 title={item.Name ?? ''}
                 subtitle={itemSubtitle(item)}
+                itemType={item.Type}
                 watched={item.UserData?.Played}
+                favourite={item.UserData?.IsFavorite}
               />
             </ItemMenu>
           ))}

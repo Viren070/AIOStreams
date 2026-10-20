@@ -395,7 +395,9 @@ function LibraryRow({ view, first }: { view: BaseItemDto; first: boolean }) {
               animated={animatedPosterOf(item)}
               title={item.Name ?? ''}
               subtitle={itemSubtitle(item)}
+              itemType={item.Type}
               watched={item.UserData?.Played}
+              favourite={item.UserData?.IsFavorite}
               unwatched={item.UserData?.UnplayedItemCount ?? undefined}
               progress={progressOf(item)}
             />

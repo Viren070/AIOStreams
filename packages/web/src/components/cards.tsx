@@ -360,7 +360,9 @@ export interface PosterCardProps {
   image: ArtworkSource;
   title: string;
   subtitle?: string;
+  itemType?: string;
   watched?: boolean;
+  favourite?: boolean;
   /** Episodes left to watch, for a show. */
   unwatched?: number;
   progress?: number | null;
@@ -388,7 +390,8 @@ function AnimatedPoster({ src }: { src: string }) {
 }
 
 export function PosterCard(props: PosterCardProps) {
-  const { href, image, title, subtitle, watched, unwatched, progress } = props;
+  const { href, image, title, subtitle, itemType, watched } = props;
+  const { favourite, unwatched, progress } = props;
   const shape = props.shape ?? 'poster';
   // Mounted only while active, so a row of them decodes nothing at rest.
   const [active, setActive] = React.useState(false);
@@ -401,7 +404,9 @@ export function PosterCard(props: PosterCardProps) {
     <Anchor
       data-ui="poster-card"
       data-shape={shape}
+      data-type={itemType}
       data-watched={watched || undefined}
+      data-favourite={favourite || undefined}
       data-in-progress={(!!progress && progress > 0) || undefined}
       href={href}
       title={showTitle ? undefined : title}
