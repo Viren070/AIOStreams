@@ -76,12 +76,14 @@ interface Home {
   hidden: boolean;
   code: string;
   host: string;
+  avatar?: string;
 }
 
 interface Seat {
   id: string;
   key: string;
   name: string;
+  avatar?: string;
   /** Its address, keyed, for bans. */
   address: string;
   /** The replica holding its connection; null while it is away. */
@@ -134,7 +136,7 @@ interface Conn {
   queue?: Promise<void>;
 }
 
-type MemberStatus = Omit<PartyMemberInfo, 'name'>;
+type MemberStatus = Omit<PartyMemberInfo, 'name' | 'avatar'>;
 
 const key = () => randomBytes(16).toString('base64url');
 const randomId = () => randomBytes(9).toString('base64url');
@@ -316,6 +318,7 @@ function members(party: Party): PartyMemberInfo[] {
   return [...party.seats.values()].map((seat) => ({
     ...statusOf(party, seat),
     name: seat.name,
+    avatar: seat.avatar,
   }));
 }
 
@@ -479,6 +482,7 @@ function preview(party: Party): PartyPreview {
   return {
     members: [...party.seats.values()].map((seat) => ({
       name: seat.name,
+      avatar: seat.avatar,
       host: seat.id === party.host,
       away: seat.at === null,
     })),
@@ -498,11 +502,16 @@ const groupMember = (id: string) => ({
   ignoreWait: false,
 });
 
-function newSeat(conn: Conn, id: string, name: string): Seat {
+function newSeat(
+  conn: Conn,
+  id: string,
+  { name, avatar }: { name: string; avatar?: string }
+): Seat {
   return {
     id,
     key: key(),
     name,
+    avatar,
     address: keyedAddress(conn.address),
     at: store.replica,
     conn: conn.id,
@@ -602,6 +611,9 @@ function homeOf(user: TokenUser | null, code: string | undefined): Home | null {
     hidden: !!user.persona?.hidden,
     code,
     host: user.persona?.name ?? accountName(user.userData),
+    avatar: user.persona
+      ? user.persona.avatar
+      : user.userData.jellyfin?.primary?.avatar,
   };
 }
 
@@ -624,7 +636,7 @@ async function create(
   const user = await userOf(m.token);
   if (relayMode() !== 'public' && !user) return refuse(conn, 'denied');
   if (!addresses.create(conn.address)) return refuse(conn, 'rate');
-  const seat = newSeat(conn, randomId(), m.name);
+  const seat = newSeat(conn, randomId(), m);
   seatHere(conn, m.party, seat.id);
   const created = await settled(conn, () =>
     parties.create(
@@ -689,6 +701,7 @@ async function join(
               seat.awayUntil = undefined;
               seat.offsetMs = undefined;
               seat.name = m.name;
+              seat.avatar = m.avatar;
               party.group.rejoin(seat.id);
               return 'ok' as const;
             },
@@ -702,7 +715,7 @@ async function join(
           party,
           tx,
           () => {
-            const seat = newSeat(conn, seatId, m.name);
+            const seat = newSeat(conn, seatId, m);
             party.seats.set(seat.id, seat);
             if (m.t === 'resume' && m.host) claimHost(party, tx, seat, m.host);
             party.group.join(groupMember(seat.id));
@@ -790,7 +803,7 @@ async function resume(
   if (!expiresAt) return refuse(conn, 'not-found');
   if (relayMode() === 'off' && !(await userOf(m.token)))
     return refuse(conn, 'denied');
-  const seat = newSeat(conn, randomId(), m.name);
+  const seat = newSeat(conn, randomId(), m);
   seatHere(conn, m.party, seat.id);
   const created = await settled(conn, () =>
     parties.create(
@@ -1099,6 +1112,7 @@ export async function listedParties(user: TokenUser): Promise<PartyListing[]> {
       party: party.id,
       code: home.code,
       host: home.host,
+      avatar: home.avatar,
       members: party.seats.size,
       since: party.expiresAt - LIFETIME_MS,
     });

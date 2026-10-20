@@ -168,7 +168,15 @@ function hostClaim(v: unknown): { ticket: string; lock: PartyLock } | null {
 function hello(v: Json) {
   if (!isInt(v.v, 1e6) || !isKey(v.party)) return null;
   if (!isSealed(v.name, PARTY_LIMITS.name)) return null;
-  return { v: v.v, party: v.party, name: v.name, token: token(v.token) };
+  if (v.avatar !== undefined && !isSealed(v.avatar, PARTY_LIMITS.avatar))
+    return null;
+  return {
+    v: v.v,
+    party: v.party,
+    name: v.name,
+    avatar: v.avatar,
+    token: token(v.token),
+  };
 }
 
 export function parseMessage(text: string): PartyClientMessage | null {
