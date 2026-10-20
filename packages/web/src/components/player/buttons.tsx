@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button, type ButtonProps } from '@aiostreams/ui/button';
 import { cn } from '@aiostreams/ui/core/styling';
+import { Tooltip } from '@aiostreams/ui/tooltip';
 import { currentHost } from '../../lib/hosts';
 
 const FOCUS_FILL =
@@ -12,27 +13,40 @@ type IconButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   label: string;
 };
 
+/** Whether the controls show; a tooltip left open over a resting pointer goes with them. */
+export const ControlsShown = React.createContext(true);
+
 export function ControlButton({
   name,
   label,
   className,
   ...props
 }: IconButtonProps) {
+  const shown = React.useContext(ControlsShown);
+  const [open, setOpen] = React.useState(false);
+  if (open && !shown) setOpen(false);
   return (
-    <button
-      type="button"
-      data-ui="player-button"
-      data-name={name}
-      data-focus="own"
-      aria-label={label}
-      title={label}
-      className={cn(
-        'flex size-[var(--control)] flex-none items-center justify-center rounded-full text-[length:var(--icon)] text-white/85 transition hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-40',
-        FOCUS_FILL,
-        className
-      )}
-      {...props}
-    />
+    <Tooltip
+      open={open}
+      onOpenChange={setOpen}
+      trigger={
+        <button
+          type="button"
+          data-ui="player-button"
+          data-name={name}
+          data-focus="own"
+          aria-label={label}
+          className={cn(
+            'flex size-[var(--control)] flex-none items-center justify-center rounded-full text-[length:var(--icon)] text-white/85 transition hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-40',
+            FOCUS_FILL,
+            className
+          )}
+          {...props}
+        />
+      }
+    >
+      {label}
+    </Tooltip>
   );
 }
 

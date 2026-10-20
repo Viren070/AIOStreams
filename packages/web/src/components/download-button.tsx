@@ -148,7 +148,7 @@ export function ShowDownloadMenu({
           : toast(t`No episodes to download there`),
       () => toast.error(t`Could not list the episodes`)
     );
-  return (
+  const menu = (
     <DropdownMenu
       data-ui="download-menu"
       trigger={
@@ -183,5 +183,10 @@ export function ShowDownloadMenu({
         <Trans>Everything unwatched</Trans>
       </DropdownMenuItem>
     </DropdownMenu>
+  );
+  return (
+    <Tooltip trigger={<span className="inline-flex">{menu}</span>}>
+      <Trans>Download</Trans>
+    </Tooltip>
   );
 }

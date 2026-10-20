@@ -23,7 +23,12 @@ import { settings, useSetting } from '../../lib/settings';
 import { delayNotice, syncNotice } from '../../lib/subtitles/delay';
 import { useLatest } from '../../lib/use-latest';
 import type { BaseItemDto, MediaSegmentDto } from '../../lib/types';
-import { ControlButton, MiddleButton, PlayerAction } from './buttons';
+import {
+  ControlButton,
+  ControlsShown,
+  MiddleButton,
+  PlayerAction,
+} from './buttons';
 import { EpisodesSheet } from './episodes';
 import {
   Notice,
@@ -346,7 +351,7 @@ export function PlayerControls({
       </div>
     );
 
-  return (
+  const controls = (
     <div
       ref={root}
       data-ui="player-controls"
@@ -601,6 +606,9 @@ export function PlayerControls({
         />
       )}
     </div>
+  );
+  return (
+    <ControlsShown.Provider value={visible}>{controls}</ControlsShown.Provider>
   );
 }
 

@@ -264,6 +264,7 @@ function Head({
                   className="size-8 rounded-full"
                   icon={<BiInfoCircle />}
                   aria-label={t`Episode details`}
+                  title={t`Episode details`}
                 />
               }
             />
@@ -279,6 +280,7 @@ function Head({
                 className="size-8 rounded-full"
                 icon={<BiCheck />}
                 aria-label={played ? t`Mark unwatched` : t`Mark watched`}
+                title={played ? t`Mark unwatched` : t`Mark watched`}
                 aria-pressed={played}
                 loading={setPlayed.isPending}
                 onClick={() =>
