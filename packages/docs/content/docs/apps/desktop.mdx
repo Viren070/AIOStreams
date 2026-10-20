@@ -120,7 +120,8 @@ The player works as it does in the web app, with a few extras that need mpv:
 
 - **Subtitles inside the file** play with their own styling.
 - **Stats.** Press `i` for what is playing: the format, resolution, decoder and dropped frames.
-- **HDR on Windows.** Turn on **Use HDR** in Windows' display settings and HDR video plays in HDR. Dolby Vision is converted to HDR10, as on any computer, or turn off **Dolby Vision** under **Settings → Playback → Video** to play the HDR10 picture most of these videos also carry. On a Mac or Linux, HDR video is shown in SDR for now.
+- **HDR on Windows.** Turn on **Use HDR** in Windows' display settings and HDR video plays in HDR. Dolby Vision is converted to HDR10, as on any computer, or turn off **Dolby Vision** under **Settings → Playback → Video** to play the HDR10 picture most of these videos also carry.
+- **HDR on a Mac.** On a screen that shows HDR, such as a MacBook Pro's, HDR video plays in HDR and fits the screen's brightness as you change it. **Video output** (see [Settings](#settings)) picks what draws it. On Linux, HDR video is shown in SDR for now.
 
 Subtitles from your subtitle addons, or a file you add, line up with the subtitles inside the video by themselves, whatever their language, within a moment of showing. Subtitles made for a version at another frame rate are stretched to fit first.
 
@@ -180,6 +181,10 @@ The app adds a **Desktop app** section to the settings. These stay on the comput
 - **Updates**: whether to follow releases or nightly builds, and whether an update is waiting. Windows and Mac only.
 - **Hardware decoding**: turn it off if video shows artefacts or stays black.
 - **Audio**: how many channels your speakers take, and whether to pass Dolby and DTS audio through to a receiver that decodes them.
+- **Video output**, on a Mac with macOS 14 or later, from the next start:
+  - **mpv** (the default) draws the video itself, with your `mpv.conf` and shaders, as on Windows.
+  - **System** has macOS draw it, which uses less power and shows Dolby Vision as the screen supports it. Shaders and mpv's own picture options don't apply.
+  - **Compatibility** is the older way mpv draws, for a Mac where the others fail. Dolby Vision videos without an HDR10 picture underneath show the wrong colours. Older macOS versions always use it.
 - **mpv configuration**: opens the folder for your own `mpv.conf`, `input.conf`, scripts and shaders.
 - **Logs** and **Report a problem**: open the log folder, or send the app's versions and recent log to your server, and to the developer if you choose, with a code to give whoever looks into it. **Copy** puts the same on the clipboard.
 
