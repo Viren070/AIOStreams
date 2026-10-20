@@ -22,7 +22,7 @@ import type {
 } from './engine';
 import { isFullscreen, toggleDocumentFullscreen } from './fullscreen';
 import { moviDebug, moviDebugging } from './movi-debug';
-import { linesOf, textAt } from './movi-subtitles';
+import { embeddedCss, linesOf, textAt } from './movi-subtitles';
 
 const setLogLevel = () =>
   Logger.setLevel(moviDebugging ? LogLevel.INFO : LogLevel.WARN);
@@ -186,10 +186,12 @@ export function moviEngine(
     let surface: {
       canvas: HTMLCanvasElement;
       overlay: HTMLDivElement;
+      sheet: HTMLStyleElement;
       observer: ResizeObserver;
       size: string;
     } | null = null;
     let fit: VideoFit = 'fit';
+    let subtitleCss = '';
     let delayMs = 0;
     let paused = false;
     let positionMs = 0;
@@ -370,8 +372,11 @@ export function moviEngine(
       const overlay = document.createElement('div');
       overlay.dataset.ui = 'player-subtitle-embedded';
       overlay.style.cssText = 'position:absolute;pointer-events:none';
+      // Beside the overlay, whose contents movi replaces.
+      const sheet = document.createElement('style');
+      sheet.textContent = subtitleCss;
       el.hidden = true;
-      el.after(canvas, overlay);
+      el.after(canvas, overlay, sheet);
       const observer = new ResizeObserver(() => {
         const { clientWidth: w, clientHeight: h } = canvas;
         const size = `${w}x${h}`;
@@ -380,7 +385,7 @@ export function moviEngine(
         player?.resizeCanvas(w, h);
       });
       observer.observe(canvas);
-      return (surface = { canvas, overlay, observer, size: '' });
+      return (surface = { canvas, overlay, sheet, observer, size: '' });
     };
 
     const unmount = () => {
@@ -388,6 +393,7 @@ export function moviEngine(
       surface.observer.disconnect();
       surface.canvas.remove();
       surface.overlay.remove();
+      surface.sheet.remove();
       surface = null;
       if (video.current) video.current.hidden = false;
     };
@@ -692,9 +698,11 @@ export function moviEngine(
         moviDebug('subtitle-delay', { ms });
         drawText();
       },
-      setStyle(style) {
-        fit = style.fit;
+      setStyle({ subtitleStyle, fit: nextFit, lift }) {
+        fit = nextFit;
         player?.setFitMode(FIT[fit]);
+        subtitleCss = subtitleStyle ? embeddedCss(subtitleStyle, lift) : '';
+        if (surface) surface.sheet.textContent = subtitleCss;
       },
       toggleFullscreen: toggleDocumentFullscreen,
       // All of an added file.
