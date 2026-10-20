@@ -374,16 +374,19 @@ pub fn run(app: App) {
                 .and_then(|a| a.request())
                 .and_then(|r| r.uri());
             let Some(uri) = uri else { return false };
-            let leave = match kind {
-                PolicyDecisionType::NavigationAction => !allowed_navigation(&uri, &app_origin),
+            let ours = allowed_navigation(&uri, &app_origin);
+            let ignore = match kind {
+                PolicyDecisionType::NavigationAction => !ours,
                 PolicyDecisionType::NewWindowAction => true,
                 _ => false,
             };
-            if leave {
-                platform::open_external(&uri);
+            if ignore {
+                if !ours {
+                    platform::open_external(&uri);
+                }
                 decision.ignore();
             }
-            leave
+            ignore
         }
     });
     webview.connect_load_changed({

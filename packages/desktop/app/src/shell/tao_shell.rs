@@ -257,9 +257,14 @@ pub fn run(app: App) {
                 allowed
             }
         })
-        .with_new_window_req_handler(|url, _| {
-            platform::open_external(&url);
-            NewWindowResponse::Deny
+        .with_new_window_req_handler({
+            let app_origin = app_origin.clone();
+            move |url, _| {
+                if !allowed_navigation(&url, &app_origin) {
+                    platform::open_external(&url);
+                }
+                NewWindowResponse::Deny
+            }
         })
         .with_on_page_load_handler({
             let (player, external, inbox) = (player.clone(), external.clone(), inbox.clone());
