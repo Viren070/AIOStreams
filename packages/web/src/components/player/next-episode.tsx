@@ -11,6 +11,7 @@ import { episodeCode, itemSubtitle, ticksToMs } from '../../lib/format';
 import { navigate, to, versionsPath } from '../../lib/paths';
 import { playableSources } from '../../lib/playback/play';
 import { playerUrl, requiredHeaders } from '../../lib/playback/stream';
+import { useFindDownloaded } from '../../lib/downloads';
 import {
   focusOn,
   inputCount,
@@ -140,6 +141,7 @@ export function useNextEpisodePrompt({
   const { client } = useSession();
   const queryClient = useQueryClient();
   const infoOptions = usePlaybackInfoOptions();
+  const downloaded = useFindDownloaded();
   const adjacent = useAdjacentEpisodes(item).data;
   const next = adjacent?.next ?? null;
   const previous = adjacent?.previous ?? null;
@@ -191,6 +193,15 @@ export function useNextEpisodePrompt({
       }
       if (wanted.current === key) return true;
       wanted.current = key;
+      // A downloaded episode plays its own file, as Play does.
+      const local = downloaded(episode);
+      if (local) {
+        leaving.current = true;
+        navigate(to.play(episode.Id!, local.source!.Id!, resumeMs(episode)), {
+          replace: true,
+        });
+        return true;
+      }
       setLoading(key);
       const code = episodeCode(episode.ParentIndexNumber, episode.IndexNumber);
       const name = code || episode.Name || '';
@@ -220,7 +231,7 @@ export function useNextEpisodePrompt({
         }
       }
     },
-    [queryClient, infoOptions, source, fallbackFirst, group]
+    [queryClient, infoOptions, source, fallbackFirst, group, downloaded]
   );
   React.useEffect(() => dismissNotice, []);
   const playNext = React.useCallback(
@@ -267,10 +278,11 @@ export function useNextEpisodePrompt({
     pastList;
   const openDue = listDue && autoplay && !asksFirst(stillWatching) && pastOpen;
   React.useEffect(() => {
-    if (listDue && next) void queryClient.prefetchQuery(infoOptions(next.Id!));
-  }, [listDue, next, queryClient, infoOptions]);
+    if (listDue && next && !downloaded(next))
+      void queryClient.prefetchQuery(infoOptions(next.Id!));
+  }, [listDue, next, queryClient, infoOptions, downloaded]);
   React.useEffect(() => {
-    if (!openDue || !next) return;
+    if (!openDue || !next || downloaded(next)) return;
     let current = true;
     queryClient
       .fetchQuery(infoOptions(next.Id!))
@@ -283,7 +295,15 @@ export function useNextEpisodePrompt({
     return () => {
       current = false;
     };
-  }, [openDue, next, queryClient, infoOptions, source, fallbackFirst]);
+  }, [
+    openDue,
+    next,
+    queryClient,
+    infoOptions,
+    source,
+    fallbackFirst,
+    downloaded,
+  ]);
 
   // A player with a playlist of its own gets the next episode once this one plays.
   const queueNext = useLatest(player.queueNext);
@@ -294,6 +314,16 @@ export function useNextEpisodePrompt({
     !asksFirst(stillWatching);
   React.useEffect(() => {
     if (!canQueue || !next) return;
+    const local = downloaded(next);
+    if (local) {
+      queueNext.current?.({
+        itemId: next.Id!,
+        source: local.source!,
+        startMs: resumeMs(next),
+        url: local.local!.video,
+      });
+      return;
+    }
     let current = true;
     queryClient
       .fetchQuery(infoOptions(next.Id!))
@@ -323,6 +353,7 @@ export function useNextEpisodePrompt({
     fallbackFirst,
     client,
     queueNext,
+    downloaded,
   ]);
 
   const [leftMs, setLeftMs] = React.useState(countdown * 1000);
