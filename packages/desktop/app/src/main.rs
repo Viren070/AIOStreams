@@ -17,7 +17,7 @@ use std::sync::{Arc, Mutex};
 use aiostreams_desktop_core::bridge::{Inbound, Outbound, PROTOCOL_VERSION, origin};
 use aiostreams_desktop_core::downloads::{self, Downloads};
 use aiostreams_desktop_core::external::{self, External};
-use aiostreams_desktop_core::playback::PlayerState;
+use aiostreams_desktop_core::playback::{self, PlayerState};
 use aiostreams_desktop_core::player::Player;
 use aiostreams_desktop_core::{discord, now_playing, thumbnails};
 use base64::Engine;
@@ -388,7 +388,10 @@ pub fn start_player(
         now_playing::observe(&message);
         emit(message)
     };
-    Player::start(library, &defaults, &required, Arc::new(emit))
+    let sized = std::fs::read_to_string(mpv_dir.join("mpv.conf"))
+        .is_ok_and(|c| c.contains("demuxer-max-bytes"));
+    let auto_cache = (!sized).then(|| playback::auto_cache(platform::total_memory()));
+    Player::start(library, &defaults, &required, auto_cache, Arc::new(emit))
         .unwrap_or_else(|e| platform::fatal(&format!("mpv failed to start: {e}")))
 }
 

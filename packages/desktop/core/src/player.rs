@@ -29,6 +29,7 @@ const LOGGED_PROPS: &[&str] = &[
     "audio-spdif",
     "audio-device",
     "audio-delay",
+    "demuxer-max-bytes",
 ];
 
 /// Observed for the sound filters, past the ids of the page's properties.
@@ -212,6 +213,8 @@ pub struct Player {
     ac3_encoder: bool,
     own_font: String,
     styled: Mutex<HashMap<&'static str, String>>,
+    /// None when the user's mpv.conf sizes the cache.
+    auto_cache: Option<u64>,
     emit: Emit,
 }
 
@@ -221,6 +224,7 @@ impl Player {
         library: &Path,
         defaults: &[(&str, &str)],
         required: &[(&str, &str)],
+        auto_cache: Option<u64>,
         emit: Emit,
     ) -> Result<Self, String> {
         let mpv = Arc::new(Mpv::new(library, defaults)?);
@@ -297,6 +301,7 @@ impl Player {
             ac3_encoder,
             own_font,
             styled: Mutex::default(),
+            auto_cache,
             emit,
         })
     }
@@ -526,6 +531,11 @@ impl Player {
     pub fn settings(&self, settings: &Settings) {
         for (name, value) in playback::settings(settings, "auto-safe") {
             self.set(name, value);
+        }
+        if let Some(auto) = self.auto_cache {
+            for (name, value) in playback::cache(settings.cache_mb, auto) {
+                self.set(name, value);
+            }
         }
         self.set_dolby_vision(settings.dolby_vision);
         self.set_sound(settings.sound);

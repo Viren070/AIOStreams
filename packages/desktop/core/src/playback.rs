@@ -188,6 +188,9 @@ pub struct Settings {
     pub audio_device: Option<String>,
     #[serde(default = "yes")]
     pub dolby_vision: bool,
+    /// Zero sizes the cache from the computer's memory.
+    #[serde(default)]
+    pub cache_mb: u64,
     #[serde(flatten)]
     pub sound: Sound,
 }
@@ -584,6 +587,27 @@ pub fn settings(settings: &Settings, hwdec: &str) -> Vec<(&'static str, String)>
     }
     props
 }
+
+pub fn auto_cache(memory: Option<u64>) -> u64 {
+    memory
+        .map_or(CACHE_MIN, |m| m / 16)
+        .clamp(CACHE_MIN, CACHE_MAX)
+}
+
+pub fn cache(cache_mb: u64, auto: u64) -> [(&'static str, String); 2] {
+    let bytes = if cache_mb > 0 {
+        cache_mb * 1_000_000
+    } else {
+        auto
+    };
+    [
+        ("demuxer-max-bytes", (bytes - bytes / 4).to_string()),
+        ("demuxer-max-back-bytes", (bytes / 4).to_string()),
+    ]
+}
+
+const CACHE_MIN: u64 = 256 << 20;
+const CACHE_MAX: u64 = 1 << 30;
 
 /// The stats overlay's bindings that move it from `shown` to `page`; a page toggle hides it when shown.
 pub fn stats_overlay(shown: Option<&str>, page: Option<&str>) -> Result<Vec<Vec<String>>, String> {

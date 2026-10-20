@@ -18,7 +18,9 @@ use windows_sys::Win32::System::Registry::{
     HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, REG_SZ, RRF_RT_REG_DWORD, RRF_RT_REG_SZ, RegDeleteTreeW,
     RegGetValueW, RegSetKeyValueW,
 };
-use windows_sys::Win32::System::SystemInformation::GetLocalTime;
+use windows_sys::Win32::System::SystemInformation::{
+    GetLocalTime, GlobalMemoryStatusEx, MEMORYSTATUSEX,
+};
 use windows_sys::Win32::System::Threading::CreateMutexW;
 use windows_sys::Win32::UI::Controls::Dialogs::{
     GetOpenFileNameW, OFN_FILEMUSTEXIST, OFN_NOCHANGEDIR, OFN_PATHMUSTEXIST, OPENFILENAMEW,
@@ -397,6 +399,15 @@ pub fn fatal(message: &str) -> ! {
 /// The computer's name, which Jellyfin apps give as their device.
 pub fn device_name() -> String {
     std::env::var("COMPUTERNAME").unwrap_or_else(|_| "Windows".into())
+}
+
+pub fn total_memory() -> Option<u64> {
+    // SAFETY: MEMORYSTATUSEX is plain data, which the call fills.
+    unsafe {
+        let mut status: MEMORYSTATUSEX = std::mem::zeroed();
+        status.dwLength = size_of::<MEMORYSTATUSEX>() as u32;
+        (GlobalMemoryStatusEx(&mut status) != 0).then_some(status.ullTotalPhys)
+    }
 }
 
 /// `("2026-09-24", "21:03:04.123")`.
