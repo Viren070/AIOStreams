@@ -9,20 +9,22 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use aiostreams_desktop_core::mpv::Mpv;
+use aiostreams_desktop_core::playback::Fit;
 use aiostreams_desktop_core::render::RenderContext;
-use dispatch2::{DispatchQueue, DispatchTime};
+use dispatch2::DispatchQueue;
 use muda::accelerator::Accelerator;
 use muda::{Menu, MenuEvent, MenuItem, PredefinedMenuItem, Submenu};
 use objc2::rc::Retained;
+use objc2::runtime::AnyClass;
 use objc2::{
-    AllocAnyThread, DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send,
+    AllocAnyThread, DefinedClass, MainThreadMarker, MainThreadOnly, Message, define_class, msg_send,
 };
 use objc2_app_kit::{
-    NSAutoresizingMaskOptions, NSModalResponseOK, NSOpenPanel, NSScreen, NSView, NSWindow,
-    NSWindowButton, NSWindowOrderingMode,
+    NSAutoresizingMaskOptions, NSModalResponseOK, NSOpenPanel, NSView, NSWindow, NSWindowButton,
+    NSWindowOrderingMode,
 };
-use objc2_core_foundation::{CFString, CFTimeInterval};
-use objc2_core_graphics::CGColorSpace;
+use objc2_core_foundation::{CFString, CFTimeInterval, CGSize};
+use objc2_core_graphics::CGColor;
 use objc2_core_video::CVTimeStamp;
 use objc2_foundation::{NSObject, NSString};
 use objc2_open_gl::{
@@ -31,10 +33,15 @@ use objc2_open_gl::{
     CGLRetainPixelFormat, CGLSetCurrentContext, CGLSetParameter, CGLUnlockContext,
 };
 use objc2_quartz_core::{
-    CAAutoresizingMask, CALayer, CAOpenGLLayer, CATransaction, kCAContentsFormatRGBA16Float,
+    CAAutoresizingMask, CALayer, CAMetalLayer, CAOpenGLLayer, CATransaction,
+    kCAContentsFormatRGBA16Float,
 };
 use tao::platform::macos::WindowExtMacOS;
 use tao::window::{Icon, Window};
+
+mod video;
+
+use video::Output;
 
 /// Custom protocols are served from `<scheme>://localhost` on macOS.
 pub const APP_URL: &str = "aiostreams://localhost/";
@@ -138,19 +145,6 @@ pub struct LayerIvars {
     drawn: Cell<bool>,
     skipped: Cell<u32>,
     held: Cell<Held>,
-    /// The playing video's gamma and primaries, kept to re-evaluate on a screen move.
-    video_colour: RefCell<Option<(String, String)>>,
-    /// The EDR mode applied, so an unchanged one is not re-applied and SDR reverts it once.
-    hdr: RefCell<Option<HdrState>>,
-}
-
-/// An EDR mode the layer is in: the PQ color space by name, the video's
-/// primaries for mpv's `target-prim`, and the display's peak in nits.
-#[derive(Clone, PartialEq, Eq)]
-struct HdrState {
-    space: &'static str,
-    primaries: String,
-    peak: u32,
 }
 
 /// How long video draws held the main thread, over a window of time.
@@ -253,9 +247,69 @@ define_class!(
     }
 );
 
+define_class!(
+    /// mpv's swapchain over MoltenVK presents into this.
+    #[unsafe(super(CAMetalLayer, CALayer, NSObject))]
+    #[name = "AIOStreamsMetalLayer"]
+    pub struct MetalLayer;
+
+    impl MetalLayer {
+        /// MoltenVK shrinks the drawable to 1x1 to finish a presentation, which mpv would size to.
+        #[unsafe(method(setDrawableSize:))]
+        fn set_drawable_size(&self, size: CGSize) {
+            if size.width > 1.0 && size.height > 1.0 {
+                // SAFETY: the superclass's setter, with the same argument.
+                let _: () = unsafe { msg_send![super(self), setDrawableSize: size] };
+            }
+        }
+
+        /// MoltenVK sets this from mpv's thread, and EDR only turns on when set from the main one.
+        #[unsafe(method(setWantsExtendedDynamicRangeContent:))]
+        fn set_wants_edr(&self, on: bool) {
+            if MainThreadMarker::new().is_some() {
+                // SAFETY: the superclass's setter, with the same argument.
+                let _: () =
+                    unsafe { msg_send![super(self), setWantsExtendedDynamicRangeContent: on] };
+                return;
+            }
+            let layer = SendLayer(self.retain());
+            DispatchQueue::main().exec_async(move || {
+                let layer = layer;
+                layer.0.setWantsExtendedDynamicRangeContent(on);
+            });
+        }
+    }
+);
+
+struct SendLayer(Retained<MetalLayer>);
+
+// SAFETY: Core Animation layers may be used from any thread.
+unsafe impl Send for SendLayer {}
+
+impl MetalLayer {
+    fn create() -> Retained<Self> {
+        let this = Self::alloc().set_ivars(());
+        // SAFETY: NSObject's init, on a freshly allocated instance.
+        unsafe { msg_send![super(this), init] }
+    }
+}
+
+/// vo_avfoundation's display layer, from AVFoundation, which only this path loads.
+fn sample_buffer_layer() -> Result<Retained<CALayer>, String> {
+    // SAFETY: a system framework, opened by its path.
+    unsafe {
+        libc::dlopen(
+            c"/System/Library/Frameworks/AVFoundation.framework/AVFoundation".as_ptr(),
+            libc::RTLD_LAZY,
+        )
+    };
+    let class = AnyClass::get(c"AVSampleBufferDisplayLayer").ok_or("no AVFoundation")?;
+    // SAFETY: a CALayer subclass, with its plain initializer.
+    Ok(unsafe { msg_send![class, new] })
+}
+
 thread_local! {
     static LAYER: RefCell<Option<Retained<VideoLayer>>> = const { RefCell::new(None) };
-    static VIEW: RefCell<Option<Retained<NSView>>> = const { RefCell::new(None) };
 }
 
 impl VideoLayer {
@@ -287,8 +341,6 @@ impl VideoLayer {
             drawn: Cell::new(false),
             skipped: Cell::new(0),
             held: Cell::new(Held::new()),
-            video_colour: RefCell::new(None),
-            hdr: RefCell::new(None),
         });
         // SAFETY: NSObject's init, on a freshly allocated instance.
         let layer: Retained<Self> = unsafe { msg_send![super(this), init] };
@@ -368,129 +420,6 @@ impl VideoLayer {
         let _lock = ContextLock::new(ivars.context);
         ivars.render.borrow_mut().take();
     }
-
-    /// Stores the playing video's colour and applies the EDR mode it means.
-    fn update_hdr(&self, gamma: Option<String>, primaries: Option<String>) {
-        *self.ivars().video_colour.borrow_mut() = gamma.zip(primaries);
-        self.apply_hdr();
-    }
-
-    /// Puts the layer and mpv into EDR for the stored video, or back for SDR,
-    /// as IINA does: HDR is PQ or HLG over bt.2020 or P3, and a display whose
-    /// headroom is past SDR gets mpv's PQ output over the layer's PQ space.
-    fn apply_hdr(&self) {
-        let ivars = self.ivars();
-        let want: Option<HdrState> =
-            ivars
-                .video_colour
-                .borrow()
-                .as_ref()
-                .and_then(|(gamma, primaries)| {
-                    if !matches!(gamma.as_str(), "pq" | "hlg") {
-                        return None;
-                    }
-                    let space = pq_colorspace(primaries)?;
-                    let screen = hdr_screen()?;
-                    if screen.maximumPotentialExtendedDynamicRangeColorComponentValue() <= 1.0 {
-                        return None;
-                    }
-                    // The headroom at the current brightness, at 100 nits a step.
-                    let peak = (screen.maximumExtendedDynamicRangeColorComponentValue() * 100.0)
-                        .round()
-                        .max(0.0) as u32;
-                    Some(HdrState {
-                        space,
-                        primaries: primaries.clone(),
-                        peak,
-                    })
-                });
-        let Some(mpv) = ivars.mpv.borrow().clone() else {
-            return;
-        };
-        let had = ivars.hdr.replace(want.clone());
-        if had == want {
-            return;
-        }
-        match want {
-            Some(state) => {
-                let name = CFString::from_static_str(state.space);
-                let Some(space) = CGColorSpace::with_name(Some(&name)) else {
-                    log::warn!("no color space {}; HDR stays off", state.space);
-                    ivars.hdr.replace(None);
-                    return;
-                };
-                self.setWantsExtendedDynamicRangeContent(true);
-                self.setColorspace(Some(&space));
-                // PQ out over the display's range; an ICC profile would manage it back to SDR.
-                let peak = if state.peak > 0 {
-                    state.peak.to_string()
-                } else {
-                    "auto".into()
-                };
-                // Async: this thread is mpv's render thread, where only the
-                // render-safe async setters may block-free run.
-                for (name, value) in [
-                    ("target-prim", state.primaries.as_str()),
-                    ("target-trc", "pq"),
-                    ("target-peak", peak.as_str()),
-                    ("icc-profile", ""),
-                ] {
-                    if let Err(e) = mpv.set_property_async(name, value) {
-                        log::warn!("mpv {name}={value}: {e}");
-                    }
-                }
-                log::info!("hdr on primaries={} peak={peak}", state.primaries);
-                // Some displays report their headroom only once EDR content is
-                // on screen, so the first enable can set a peak of 100; check
-                // again shortly after. The unchanged-mode guard stops this.
-                let Ok(when) = DispatchTime::try_from(Duration::from_millis(200)) else {
-                    return;
-                };
-                let _ = DispatchQueue::main().after(when, || {
-                    LAYER.with(|l| {
-                        if let Some(layer) = l.borrow().as_ref() {
-                            layer.apply_hdr();
-                        }
-                    })
-                });
-            }
-            None => {
-                self.setWantsExtendedDynamicRangeContent(false);
-                self.setColorspace(None);
-                for (name, value) in [
-                    ("target-prim", "auto"),
-                    ("target-trc", "auto"),
-                    ("target-peak", "auto"),
-                    ("icc-profile", ""),
-                ] {
-                    if let Err(e) = mpv.set_property_async(name, value) {
-                        log::warn!("mpv {name}={value}: {e}");
-                    }
-                }
-                log::info!("hdr off");
-            }
-        }
-    }
-}
-
-/// The PQ color space Core Animation wants for the video's primaries.
-fn pq_colorspace(primaries: &str) -> Option<&'static str> {
-    Some(match primaries {
-        "bt.2020" => "kCGColorSpaceITUR_2100_PQ",
-        "display-p3" => "kCGColorSpaceDisplayP3_PQ",
-        _ => return None,
-    })
-}
-
-/// The screen the video is on; the main screen when the window has none yet.
-fn hdr_screen() -> Option<Retained<NSScreen>> {
-    let screen = VIEW.with(|v| {
-        v.borrow()
-            .as_ref()
-            .and_then(|view| view.window())
-            .and_then(|window| window.screen())
-    });
-    screen.or_else(|| MainThreadMarker::new().and_then(NSScreen::mainScreen))
 }
 
 /// Holds the OpenGL context locked and current, as mpv's render calls need.
@@ -514,10 +443,19 @@ impl Drop for ContextLock {
     }
 }
 
-/// A view under the web view whose layer mpv's render API draws into.
+enum Drawn {
+    /// Through the render API.
+    OpenGl(Retained<VideoLayer>),
+    Metal(Retained<MetalLayer>),
+    /// mpv adds its subtitle layer beside this one.
+    SampleBuffer(Retained<CALayer>),
+}
+
+/// A view under the web view, holding the video's layer.
 pub struct VideoSurface {
     view: Retained<NSView>,
-    layer: Retained<VideoLayer>,
+    root: Retained<CALayer>,
+    drawn: Drawn,
 }
 
 impl VideoSurface {
@@ -531,61 +469,115 @@ impl VideoSurface {
             NSAutoresizingMaskOptions::ViewWidthSizable
                 | NSAutoresizingMaskOptions::ViewHeightSizable,
         );
-        let layer = VideoLayer::create()?;
-        layer.setAsynchronous(false);
-        layer.setNeedsDisplayOnBoundsChange(true);
-        layer.setAutoresizingMask(
-            CAAutoresizingMask::LayerWidthSizable | CAAutoresizingMask::LayerHeightSizable,
-        );
-        layer.setContentsScale(window.scale_factor());
+        let sizable =
+            CAAutoresizingMask::LayerWidthSizable | CAAutoresizingMask::LayerHeightSizable;
+        let (root, drawn) = match video::running() {
+            Output::Compatibility => {
+                let layer = VideoLayer::create()?;
+                layer.setAsynchronous(false);
+                layer.setNeedsDisplayOnBoundsChange(true);
+                LAYER.with(|l| *l.borrow_mut() = Some(layer.clone()));
+                let root = Retained::into_super(Retained::into_super(layer.clone()));
+                (root, Drawn::OpenGl(layer))
+            }
+            Output::Mpv => {
+                let layer = MetalLayer::create();
+                let root = Retained::into_super(Retained::into_super(layer.clone()));
+                (root, Drawn::Metal(layer))
+            }
+            Output::System => {
+                let display = sample_buffer_layer()?;
+                display.setAutoresizingMask(sizable);
+                let root = CALayer::layer();
+                root.setBackgroundColor(Some(&CGColor::new_srgb(0.0, 0.0, 0.0, 1.0)));
+                root.addSublayer(&display);
+                (root, Drawn::SampleBuffer(display))
+            }
+        };
+        root.setAutoresizingMask(sizable);
+        root.setContentsScale(window.scale_factor());
         // A layer-hosting view: the layer is set before the view asks for one.
-        view.setLayer(Some(&layer));
+        view.setLayer(Some(&root));
         view.setWantsLayer(true);
         content.addSubview_positioned_relativeTo(&view, NSWindowOrderingMode::Below, None);
-        LAYER.with(|l| *l.borrow_mut() = Some(layer.clone()));
-        VIEW.with(|v| *v.borrow_mut() = Some(view.clone()));
-        Ok(Self { view, layer })
+        Ok(Self { view, root, drawn })
     }
 
     pub fn attach(&self, mpv: Arc<Mpv>) {
-        *self.layer.ivars().mpv.borrow_mut() = Some(mpv);
-        self.layer.start();
+        let edr = match &self.drawn {
+            Drawn::OpenGl(layer) => {
+                *layer.ivars().mpv.borrow_mut() = Some(mpv.clone());
+                layer.start();
+                self.root.clone()
+            }
+            Drawn::Metal(_) => self.root.clone(),
+            Drawn::SampleBuffer(display) => display.clone(),
+        };
+        video::attach(edr, self.view.clone(), mpv);
     }
 
     /// The render context goes before mpv, with its OpenGL context current.
     pub fn shutdown(&self) {
-        self.layer.stop();
+        if let Drawn::OpenGl(layer) = &self.drawn {
+            layer.stop();
+        }
         LAYER.with(|l| l.borrow_mut().take());
-        VIEW.with(|v| v.borrow_mut().take());
     }
 
     pub fn resize(&self, width: u32, _height: u32) {
         let bounds = self.view.bounds();
-        self.layer.setFrame(bounds);
+        self.root.setFrame(bounds);
         if bounds.size.width > 0.0 {
-            self.layer
+            self.root
                 .setContentsScale(f64::from(width) / bounds.size.width);
         }
-        self.layer.setNeedsDisplay();
+        match &self.drawn {
+            Drawn::OpenGl(layer) => layer.setNeedsDisplay(),
+            Drawn::Metal(layer) => {
+                let scale = self.root.contentsScale();
+                layer.setDrawableSize(CGSize::new(
+                    bounds.size.width * scale,
+                    bounds.size.height * scale,
+                ));
+            }
+            Drawn::SampleBuffer(display) => {
+                CATransaction::begin();
+                CATransaction::setDisableActions(true);
+                display.setFrame(self.root.bounds());
+                CATransaction::commit();
+            }
+        }
     }
 
-    /// A move to another screen, or a brightness change, can change the EDR
-    /// mode the playing video wants.
     pub fn refresh_hdr(&self) {
-        self.layer.apply_hdr();
+        video::refresh();
     }
 }
 
-/// The playing video's gamma and primaries, once per file, for the layer's EDR
-/// mode; from any thread.
+/// From any thread.
 pub fn update_hdr(gamma: Option<String>, primaries: Option<String>) {
-    DispatchQueue::main().exec_async(move || {
-        LAYER.with(|l| {
-            if let Some(layer) = l.borrow().as_ref() {
-                layer.update_hdr(gamma, primaries);
-            }
-        })
-    });
+    video::update(gamma, primaries);
+}
+
+pub fn load_video_output(data_dir: &Path) {
+    video::load(data_dir);
+}
+
+pub fn video_outputs() -> (Vec<&'static str>, &'static str, &'static str) {
+    video::state()
+}
+
+pub fn choose_video_output(output: &str) {
+    video::choose(output);
+}
+
+pub fn fit_video(fit: Fit) -> Fit {
+    video::fit(fit)
+}
+
+pub fn relaunch() -> bool {
+    video::relaunch();
+    true
 }
 
 /// The bundle's own icon shows in the Dock.
@@ -674,15 +666,42 @@ pub fn install_menu(on_quit: impl Fn() + Send + Sync + 'static) -> Option<Menu> 
 
 const QUIT: &str = "quit";
 
-pub fn mpv_options(_video: &VideoSurface) -> Vec<(&'static str, String)> {
-    vec![
-        ("vo", "libmpv".into()),
-        ("hwdec", "auto-safe".into()),
-        // Frames arrive when due, so drawing one barely waits on the main thread.
-        ("video-timing-offset", "0".into()),
-        // Needs OpenGL 4.4, which macOS lacks, and each try waits on the main thread.
-        ("vd-lavc-dr", "no".into()),
-    ]
+pub fn mpv_options(video: &VideoSurface) -> Vec<(&'static str, String)> {
+    match &video.drawn {
+        Drawn::OpenGl(_) => vec![
+            ("vo", "libmpv".into()),
+            ("hwdec", "auto-safe".into()),
+            // Frames arrive when due, so drawing one barely waits on the main thread.
+            ("video-timing-offset", "0".into()),
+            // Needs OpenGL 4.4, which macOS lacks, and each try waits on the main thread.
+            ("vd-lavc-dr", "no".into()),
+        ],
+        Drawn::Metal(layer) => vec![
+            ("vo", "gpu-next".into()),
+            ("gpu-api", "vulkan".into()),
+            ("gpu-context", "moltenvk".into()),
+            ("wid", wid(layer)),
+            ("hwdec", "auto-safe".into()),
+            // Only read when mpv starts.
+            ("target-colorspace-hint", "yes".into()),
+            ("sub-hdr-peak", video::REFERENCE_WHITE.to_string()),
+            ("image-subs-hdr-peak", video::REFERENCE_WHITE.to_string()),
+        ],
+        Drawn::SampleBuffer(display) => vec![
+            ("vo", "avfoundation".into()),
+            ("wid", wid(display)),
+            // Composited subtitles would take the video through SDR.
+            ("avfoundation-composite-osd", "no".into()),
+            ("hwdec", "videotoolbox".into()),
+            ("hwdec-codecs", "all".into()),
+            ("hwdec-software-fallback", "yes".into()),
+        ],
+    }
+}
+
+/// The layer's address, which mpv draws to; the surface keeps the layer alive.
+fn wid(layer: &CALayer) -> String {
+    (std::ptr::from_ref(layer) as usize).to_string()
 }
 
 #[link(name = "IOKit", kind = "framework")]
@@ -829,6 +848,9 @@ pub fn libmpv_candidates() -> Vec<PathBuf> {
     let mut paths = Vec::new();
     if let Ok(p) = std::env::var("AIOSTREAMS_LIBMPV") {
         paths.push(PathBuf::from(p));
+    }
+    if video::running() != Output::Compatibility {
+        paths.extend(video::mpvkit_library());
     }
     if let Some(dir) = std::env::current_exe()
         .ok()

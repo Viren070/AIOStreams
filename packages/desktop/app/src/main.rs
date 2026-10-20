@@ -381,9 +381,9 @@ pub fn start_player(
         {
             awake.update(state);
         }
-        // The platform's HDR mode follows the playing video's colour.
-        if let Outbound::PlayerPlaying { gamma, primaries } = &message {
-            platform::update_hdr(gamma.clone(), primaries.clone());
+        if let Outbound::VideoColour { gamma, primaries } = message {
+            platform::update_hdr(gamma, primaries);
+            return;
         }
         now_playing::observe(&message);
         emit(message)
@@ -541,7 +541,8 @@ pub fn handle(
                 fail(format!("player-subtitle-add: {e}"));
             }
         }
-        Inbound::PlayerStyle(style) => {
+        Inbound::PlayerStyle(mut style) => {
+            style.fit = platform::fit_video(style.fit);
             if let Some(Err(e)) = player.as_ref().map(|p| p.style(&style)) {
                 fail(format!("player-style: {e}"));
             }
@@ -652,6 +653,22 @@ pub fn handle(
                 ffmpeg,
                 ac3_encoder: player.as_ref().is_some_and(Player::ac3_encoder),
             });
+        }
+        Inbound::VideoOutput { output } => {
+            if let Some(output) = output {
+                platform::choose_video_output(&output);
+            }
+            let (outputs, running, chosen) = platform::video_outputs();
+            emit(Outbound::VideoOutput {
+                outputs,
+                running,
+                chosen,
+            });
+        }
+        Inbound::Restart => {
+            if platform::relaunch() {
+                send(UserEvent::Close);
+            }
         }
         Inbound::OpenMpvConfig => platform::open_external(&paths.mpv.to_string_lossy()),
         Inbound::OpenLogs => platform::open_external(&paths.logs.to_string_lossy()),

@@ -313,10 +313,6 @@ pub fn mpv_options(_video: &VideoSurface) -> Vec<(&'static str, String)> {
     vec![("vo", "libmpv".into()), ("hwdec", "auto-safe".into())]
 }
 
-/// HDR passes through GTK and the compositor, not the app, so the playing
-/// video's colour is unused here.
-pub fn update_hdr(_gamma: Option<String>, _primaries: Option<String>) {}
-
 const INHIBIT_IDLE: u32 = 8;
 
 /// The portal's handle for the running inhibition, which closing ends.
