@@ -387,7 +387,8 @@ function pick(
     if (!canFocus(way.el, way.rect)) continue;
     const bar = barOf(way.el);
     if (bar === home) {
-      if (way.inLine) return way.el;
+      if (way.inLine)
+        return (!sideways && rowBefore(scored, way, rect, dir, home)) || way.el;
       if (sideways) beside ||= way.off <= rect.height;
       else if (!other) return inNearestRow(scored, way, home);
     } else if (inView(way.el)) {
@@ -429,6 +430,43 @@ function inNearestRow(
         ? group.contains(way.el)
         : way.rect.top < row.bottom && way.rect.bottom > row.top) && valid(way)
   )!.el;
+}
+
+/**
+ * The best of the nearest `data-nav-group` whose box lies across the way before
+ * `to`, as a short row's cards may all sit to one side of focus.
+ */
+function rowBefore(
+  ways: Candidate[],
+  to: Candidate,
+  rect: DOMRect,
+  dir: Direction,
+  home: Element | null
+): HTMLElement | null {
+  const seen = new Set<Element>();
+  let row: { group: Element; gap: number } | null = null;
+  for (const way of ways) {
+    if (way.gap >= to.gap) continue;
+    const group = way.el.closest(GROUP);
+    if (!group || seen.has(group) || group.contains(to.el)) continue;
+    seen.add(group);
+    const box = settled(group, group.getBoundingClientRect());
+    const across = distance(rect, box, dir);
+    if (!across?.inLine || across.gap < 0) continue;
+    const past = distance(box, to.rect, dir);
+    if (!past || past.gap < 0) continue;
+    if (!row || across.gap < row.gap) row = { group, gap: across.gap };
+  }
+  if (!row) return null;
+  const { group } = row;
+  return (
+    ways.find(
+      (way) =>
+        group.contains(way.el) &&
+        barOf(way.el) === home &&
+        canFocus(way.el, way.rect)
+    )?.el ?? null
+  );
 }
 
 /**
