@@ -9,6 +9,9 @@ import type { Segment } from './segments';
 
 const still = () => () => {};
 
+/** How long a skip's picture stays once the skip lands, or once a late picture arrives. */
+const SKIP_PICTURE_MS = 2000;
+
 export const arrowDirection = (key: string) =>
   key === 'ArrowRight' ? 1 : key === 'ArrowLeft' ? -1 : 0;
 
@@ -54,13 +57,21 @@ export function SeekBar({
   const percent = (ms: number) =>
     durationMs ? `${Math.min(100, (ms / durationMs) * 100)}%` : '0%';
   const shown = drag ?? previewMs ?? positionMs;
-  const peekMs = durationMs > 0 ? (drag ?? hover ?? previewMs) : null;
+  // A skip lands about when its picture does, so the picture outlasts it.
+  const [held, setHeld] = React.useState<number | null>(null);
+  if (previewMs !== null && previewMs !== held) setHeld(previewMs);
+  const peekMs = durationMs > 0 ? (drag ?? hover ?? previewMs ?? held) : null;
   React.useEffect(() => thumbnails?.want(peekMs), [thumbnails, peekMs]);
   React.useEffect(() => () => thumbnails?.want(null), [thumbnails]);
   const picture = React.useSyncExternalStore(
     thumbnails?.subscribe ?? still,
     () => thumbnails?.current() ?? null
   );
+  React.useEffect(() => {
+    if (previewMs !== null || held === null) return;
+    const timer = setTimeout(() => setHeld(null), SKIP_PICTURE_MS);
+    return () => clearTimeout(timer);
+  }, [previewMs, held, picture]);
 
   return (
     <div
