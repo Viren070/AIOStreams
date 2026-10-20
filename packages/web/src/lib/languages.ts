@@ -79,6 +79,14 @@ export function languageCode(tag: string): string {
   );
 }
 
+/** The name of the language a track's tag names, when it's one the app knows. */
+export function tagLanguageName(tag: string | null | undefined) {
+  if (!tag || tag === 'und') return undefined;
+  const language = languageOf(tag);
+  const known = LANGUAGES.find((l) => languageOf(l.code) === language);
+  return known ? languageName(known) : undefined;
+}
+
 export function sameLanguage(
   code: string | null | undefined,
   tag: string | null | undefined

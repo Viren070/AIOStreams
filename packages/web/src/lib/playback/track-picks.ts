@@ -1,3 +1,4 @@
+import { isEmbedded } from '../hosts/webos-media';
 import { firstInLanguages, languageCode, sameLanguage } from '../languages';
 import {
   bestOfTypes,
@@ -140,6 +141,26 @@ export function chooseTracks(
         subtitleId = bestOfTypes(offered, serverFacts, prefs)!.id;
       break;
     }
+  }
+
+  // On LG, the file's own subtitle beats a server one of its language and kind.
+  const server = servers.find((s) => s.id === subtitleId);
+  if (server) {
+    const embedded = subtitles.filter((t) => isEmbedded(t.id));
+    /** A language the file doesn't name. */
+    const unknown = (lang?: string) => !lang || lang === 'und';
+    /** The same kind too, so a forced or SDH pick doesn't become the full track. */
+    const same = (t: EngineTrack) =>
+      !!t.forced === !!server.stream.IsForced &&
+      !!t.hearingImpaired === !!server.stream.IsHearingImpaired;
+    const own = embedded.find(
+      (t) =>
+        same(t) &&
+        (unknown(server.lang)
+          ? unknown(t.lang)
+          : sameLanguage(server.lang, t.lang))
+    );
+    if (own) subtitleId = own.id;
   }
   return { audio: audioId, subtitle: subtitleId };
 }
