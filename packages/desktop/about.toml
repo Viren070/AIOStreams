@@ -13,6 +13,7 @@ accepted = [
     "Unlicense",
     "CC0-1.0",
     "MIT-0",
+    "IJG",
 ]
 # Every packaged target; a build's own page passes --target.
 targets = [
