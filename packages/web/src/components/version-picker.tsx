@@ -46,8 +46,9 @@ import {
 import { chosenPlayer } from '../lib/playback/player-choice';
 import { party } from '../lib/party/party';
 import {
+  isNotice,
   lastVersions,
-  noticeSources,
+  placedNotices,
   playableSources,
   usePlay,
 } from '../lib/playback/play';
@@ -360,7 +361,10 @@ function Versions({
   const chosen = quick.find((q) => q.name === quickName);
   const typed = React.useMemo(() => compileQuery(filter), [filter]);
   const filtered = !!filter.trim() || !!chosen;
-  const notices = noticeSources(info.data);
+  const notices = React.useMemo(
+    () => placedNotices(info.data, sources),
+    [info.data, sources]
+  );
   const shown = sources.filter((s) => {
     const text = texts.get(s)!;
     return (!chosen || !!chosen.test?.(text)) && !!typed?.(text);
@@ -369,6 +373,13 @@ function Versions({
   const [paged, setPaged] = React.useState({ key: pageKey, limit: PAGE });
   const limit = paged.key === pageKey ? paged.limit : PAGE;
   const partial = limit < shown.length;
+  const page = shown.slice(0, limit);
+  const rows = filtered
+    ? page
+    : [
+        ...(notices.get(null) ?? []),
+        ...page.flatMap((s) => [s, ...(notices.get(s) ?? [])]),
+      ];
   const more = React.useRef<HTMLDivElement>(null);
   const art =
     backdropUrl(client, item, { maxWidth: 896 }) ??
@@ -704,7 +715,9 @@ function Versions({
           </p>
         )}
 
-        {shown.slice(0, limit).map((source) => {
+        {rows.map((source) => {
+          if (isNotice(source))
+            return <Notice key={source.Id} notice={source} />;
           const link = directUrl(client, item.Id!, source);
           const actions = [
             ...(!download && downloadable(source)
@@ -883,9 +896,6 @@ function Versions({
         })}
 
         {partial && <div ref={more} aria-hidden className="h-px" />}
-        {!filtered &&
-          !partial &&
-          notices.map((notice) => <Notice key={notice.Id} notice={notice} />)}
       </div>
     </>
   );

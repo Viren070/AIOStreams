@@ -21,21 +21,34 @@ export const lastVersions = storedMap<string>(
   500
 );
 
-/** Versions that can play; notices from addons carry text only. */
+/** Notices from addons carry text only. */
+export function isNotice(source: SourceInfo): boolean {
+  return source.Type === 'Placeholder';
+}
+
 export function playableSources(
   info: PlaybackInfoResponse | undefined
 ): SourceInfo[] {
-  return (info?.MediaSources ?? []).filter(
-    (s) => s.Type !== 'Placeholder'
-  ) as SourceInfo[];
+  return ((info?.MediaSources ?? []) as SourceInfo[]).filter(
+    (s) => !isNotice(s)
+  );
 }
 
-export function noticeSources(
-  info: PlaybackInfoResponse | undefined
-): SourceInfo[] {
-  return (info?.MediaSources ?? []).filter(
-    (s) => s.Type === 'Placeholder'
-  ) as SourceInfo[];
+/** Notices by the version each came after, `null` for those before them all. */
+export function placedNotices(
+  info: PlaybackInfoResponse | undefined,
+  versions: SourceInfo[]
+): Map<SourceInfo | null, SourceInfo[]> {
+  const placed = new Map<SourceInfo | null, SourceInfo[]>();
+  for (const notice of (info?.MediaSources ?? []) as SourceInfo[]) {
+    if (!isNotice(notice)) continue;
+    const at = notice.aiostreams?.index ?? Infinity;
+    const after =
+      versions.filter((v) => (v.aiostreams?.index ?? -Infinity) < at).pop() ??
+      null;
+    placed.set(after, [...(placed.get(after) ?? []), notice]);
+  }
+  return placed;
 }
 
 /** Enough to offer, few enough to keep the link short. */
