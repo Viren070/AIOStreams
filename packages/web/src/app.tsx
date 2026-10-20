@@ -23,9 +23,12 @@ import {
   currentServer,
   enterServer,
   leaveServer,
+  sameServer,
+  savedServers,
   serverAddress,
   type SavedServer,
 } from './lib/servers';
+import { holdRemote, sendRemote } from './lib/remote/commands';
 import { ServersPage } from './pages/servers';
 import { currentHost } from './lib/hosts';
 import { isRtl } from './lib/i18n';
@@ -153,11 +156,41 @@ function Standalone() {
     },
   });
   const openConfirm = confirmLeave.open;
+  const [switching, setSwitching] = React.useState<SavedServer | null>(null);
+  const target = switching ? serverAddress(switching.base) : '';
+  const confirmSwitch = useConfirmationDialog({
+    title: t`Switch server`,
+    description: switching
+      ? t`Leave ${from} to open this on ${target}?`
+      : undefined,
+    actionText: t`Continue`,
+    onConfirm: () => {
+      if (!switching) return;
+      leave();
+      choose(switching);
+    },
+  });
+  const openSwitch = confirmSwitch.open;
   useShellLinks((raw) => {
     const link = parseAppLink(raw);
     if (!link) return void toast.error(t`The app cannot open that link`);
     if (link.kind === 'route') return navigate(link.path);
     if (link.kind === 'party') return party.hold(link.invite);
+    if (link.kind === 'remote') {
+      const { command, server } = link;
+      if (!server || (base && sameServer(server, base)))
+        return sendRemote(command);
+      holdRemote(command, server);
+      const saved = savedServers().find((s) => sameServer(s.base, server));
+      if (saved && !base) return choose(saved);
+      if (saved) {
+        setSwitching(saved);
+        return openSwitch();
+      }
+      if (!base) return setLinked(server);
+      setAsking(server);
+      return openConfirm();
+    }
     if (!base) return setLinked(link.address);
     setAsking(link.address);
     openConfirm();
@@ -183,6 +216,7 @@ function Standalone() {
         </motion.div>
       </AnimatePresence>
       <ConfirmationDialog {...confirmLeave} />
+      <ConfirmationDialog {...confirmSwitch} />
     </>
   );
 }

@@ -1936,6 +1936,10 @@ msgstr "Later"
 msgid "Leave {from} to add {adding}?"
 msgstr "Leave {from} to add {adding}?"
 
+#: src/app.tsx
+msgid "Leave {from} to open this on {target}?"
+msgstr "Leave {from} to open this on {target}?"
+
 #: src/components/party/party-sheet.tsx
 msgid "Leave the party"
 msgstr "Leave the party"
@@ -3883,6 +3887,10 @@ msgstr "Support AIOStreams"
 #: src/pages/settings/account.tsx
 msgid "Switch"
 msgstr "Switch"
+
+#: src/app.tsx
+msgid "Switch server"
+msgstr "Switch server"
 
 #: src/components/layout.tsx
 #: src/components/no-catalogs.tsx

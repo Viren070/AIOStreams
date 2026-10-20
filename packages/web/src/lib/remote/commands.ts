@@ -6,7 +6,7 @@ import { settings } from '../settings';
 import { useLatest } from '../use-latest';
 
 export type RemoteCommand =
-  | { kind: 'show'; itemId: string }
+  | { kind: 'show'; itemId: string; seasonId?: string }
   | {
       kind: 'play';
       itemId: string;
@@ -20,7 +20,11 @@ export type RemoteCommand =
 
 type Handler = (command: RemoteCommand) => boolean;
 
-const plainId = (id: unknown) => String(id).replace(/-/g, '').toLowerCase();
+/** A Jellyfin id without dashes, or null for anything else, as ids go into routes and paths. */
+export function plainId(id: unknown): string | null {
+  const plain = String(id).replace(/-/g, '').toLowerCase();
+  return /^[0-9a-f]{32}$/.test(plain) ? plain : null;
+}
 
 function integer(value: unknown): number | undefined {
   const n = typeof value === 'string' && value ? Number(value) : value;
@@ -70,10 +74,9 @@ export function commandOf(type: unknown, data: unknown): RemoteCommand | null {
     // Without a queue, only playing now is taken.
     if ((d.PlayCommand ?? 'PlayNow') !== 'PlayNow') return null;
     const ids = Array.isArray(d.ItemIds) ? d.ItemIds : [];
-    const picked = ids[integer(d.StartIndex) ?? 0] ?? ids[0];
-    if (!picked) return null;
-    const itemId = plainId(picked);
-    const sourceId = d.MediaSourceId ? plainId(d.MediaSourceId) : undefined;
+    const itemId = plainId(ids[integer(d.StartIndex) ?? 0] ?? ids[0]);
+    if (!itemId) return null;
+    const sourceId = plainId(d.MediaSourceId) ?? undefined;
     return {
       kind: 'play',
       itemId,
@@ -87,10 +90,10 @@ export function commandOf(type: unknown, data: unknown): RemoteCommand | null {
   if (type !== 'GeneralCommand') return null;
   const args = (d.Arguments ?? {}) as Record<string, unknown>;
   switch (d.Name) {
-    case 'DisplayContent':
-      return args.ItemId
-        ? { kind: 'show', itemId: plainId(args.ItemId) }
-        : null;
+    case 'DisplayContent': {
+      const itemId = plainId(args.ItemId);
+      return itemId ? { kind: 'show', itemId } : null;
+    }
     case 'SetAudioStreamIndex':
     case 'SetSubtitleStreamIndex': {
       const index = integer(args.Index);
@@ -110,9 +113,14 @@ let waiting: { command: RemoteCommand; server?: string } | null = null;
 let heldTracks: { itemId: string; audio?: number; subtitle?: number } | null =
   null;
 
-export function sendRemote(command: RemoteCommand, server?: string): void {
+export function sendRemote(command: RemoteCommand): void {
   for (let i = handlers.length - 1; i >= 0; i--)
     if (handlers[i](command)) return;
+  holdRemote(command);
+}
+
+/** Keeps a show or play until pages open on `server`, or on any when none is named. */
+export function holdRemote(command: RemoteCommand, server?: string): void {
   if (command.kind === 'show' || command.kind === 'play')
     waiting = { command, server };
 }

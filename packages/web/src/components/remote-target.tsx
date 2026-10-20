@@ -2,7 +2,7 @@ import React from 'react';
 import { t } from '@lingui/core/macro';
 import { toast } from 'sonner';
 import type { MediaKey } from '../lib/hosts/shell/bridge';
-import { itemPath, navigate } from '../lib/paths';
+import { itemPath, navigate, to } from '../lib/paths';
 import type { PlayerController } from '../lib/playback/controller';
 import { useFetchItem } from '../lib/queries';
 import {
@@ -25,7 +25,12 @@ export function useOpenRemote(opts: { replace?: boolean } = {}) {
     if (command.kind === 'play') holdTracks(command);
     fetchItem(command.itemId).then(
       (item) => {
-        if (command.kind === 'show') navigate(itemPath(item));
+        if (command.kind === 'show')
+          navigate(
+            command.seasonId && item.Type === 'Series'
+              ? `${to.item(item.Id!)}?season=${command.seasonId}`
+              : itemPath(item)
+          );
         else
           picker.play(item, {
             startMs: command.startMs,

@@ -1936,6 +1936,10 @@ msgstr ""
 msgid "Leave {from} to add {adding}?"
 msgstr ""
 
+#: src/app.tsx
+msgid "Leave {from} to open this on {target}?"
+msgstr ""
+
 #: src/components/party/party-sheet.tsx
 msgid "Leave the party"
 msgstr ""
@@ -3882,6 +3886,10 @@ msgstr ""
 
 #: src/pages/settings/account.tsx
 msgid "Switch"
+msgstr ""
+
+#: src/app.tsx
+msgid "Switch server"
 msgstr ""
 
 #: src/components/layout.tsx
