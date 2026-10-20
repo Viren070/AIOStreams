@@ -340,11 +340,16 @@ app.get('/configure', (req, res) => {
 /*
  * The Jellyfin API at the site root too, so a client needs only the host. It
  * signs in to the configuration aliased `default`, and `/` opens its web app.
+ * The SPA's own routes, other than `/`, still reach the SPA.
  */
 const AIOSTREAMS_PATHS =
-  /^\/(api|stremio|chilllink|seanime|builtins|blocklist|community|webdav|jellyfin|jellyfin-web|assets|static|login|oauth|splashscreen|dashboard)(\/|$)/i;
+  /^\/(api|stremio|chilllink|seanime|builtins|blocklist|community|webdav|party|jellyfin|jellyfin-web|assets|static)(\/|$)/i;
 app.use((req, res, next) => {
-  if (!appConfig.jellyfin.enabled || AIOSTREAMS_PATHS.test(req.path)) {
+  if (
+    !appConfig.jellyfin.enabled ||
+    AIOSTREAMS_PATHS.test(req.path) ||
+    (req.path !== '/' && isValidSpaRoute(req.path))
+  ) {
     next();
     return;
   }
