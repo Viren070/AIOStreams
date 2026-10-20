@@ -155,6 +155,8 @@ export interface CrashReport {
   /** What fits on a screen, for a photo. */
   summary: string;
   details: string;
+  /** Only the page restarted; the app stayed open. */
+  page?: boolean;
 }
 
 /** How the Android app's last run ended, if it crashed or was closed while in use and nobody has seen it yet. */
@@ -162,8 +164,8 @@ export function requestCrashReport(): Promise<CrashReport | null> {
   if (appBridge()?.platform !== 'android') return Promise.resolve(null);
   return ask({ type: 'crash-report' }, 'crash-report', {
     timeoutMs: 15000,
-  }).then(({ at, summary, details }) =>
-    at && summary ? { at, summary, details: details ?? summary } : null
+  }).then(({ at, summary, details, page }) =>
+    at && summary ? { at, summary, details: details ?? summary, page } : null
   );
 }
 

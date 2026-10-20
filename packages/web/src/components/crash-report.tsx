@@ -51,7 +51,11 @@ export function CrashReportDialog() {
       data-name="crash-report"
       open
       onOpenChange={(open) => !open && close()}
-      title={t`The app closed unexpectedly`}
+      title={
+        report.page
+          ? t`The page restarted unexpectedly`
+          : t`The app closed unexpectedly`
+      }
       description={t`This is what the device recorded about it. Sending or saving the report helps get it fixed.`}
       contentClass="max-w-3xl"
     >

@@ -109,7 +109,13 @@ export type ShellMessage =
     }
   | { type: 'diagnostics'; text: string }
   /** Empty when the last run ended normally or was already shown. */
-  | { type: 'crash-report'; at?: number; summary?: string; details?: string }
+  | {
+      type: 'crash-report';
+      at?: number;
+      summary?: string;
+      details?: string;
+      page?: boolean;
+    }
   | {
       type: 'update-state';
       state: 'checking' | 'downloading' | 'ready' | 'current' | 'error' | 'off';

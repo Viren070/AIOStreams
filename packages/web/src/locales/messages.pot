@@ -4087,6 +4087,10 @@ msgstr ""
 msgid "The movie or show whose page is open."
 msgstr ""
 
+#: src/components/crash-report.tsx
+msgid "The page restarted unexpectedly"
+msgstr ""
+
 #: src/lib/party/party.ts
 msgid "The party ended after a long time with nothing playing."
 msgstr ""
