@@ -36,6 +36,7 @@ import {
   useSeasons,
   openingSeason,
   useSetDropped,
+  offersFavourite,
   useSetFavorite,
   useShowAhead,
   useSetPlayed,
@@ -490,33 +491,35 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
             </div>
           )}
           <TrailerButton item={item} />
-          <Tooltip
-            trigger={
-              <IconButton
-                data-ui="item-action"
-                data-name="party"
-                intent="gray-subtle"
-                className="rounded-full"
-                icon={<BiGroup />}
-                aria-label={inParty ? t`Watch party` : t`Watch together`}
-                onClick={() =>
-                  openPartySheet(
-                    target && !inParty
-                      ? {
-                          play: {
-                            title: fullTitle(target),
-                            run: () =>
-                              picker.play(target, { startMs: resumeMs }),
-                          },
-                        }
-                      : {}
-                  )
-                }
-              />
-            }
-          >
-            {inParty ? t`Watch party` : t`Watch together`}
-          </Tooltip>
+          {item.Type !== 'BoxSet' && (
+            <Tooltip
+              trigger={
+                <IconButton
+                  data-ui="item-action"
+                  data-name="party"
+                  intent="gray-subtle"
+                  className="rounded-full"
+                  icon={<BiGroup />}
+                  aria-label={inParty ? t`Watch party` : t`Watch together`}
+                  onClick={() =>
+                    openPartySheet(
+                      target && !inParty
+                        ? {
+                            play: {
+                              title: fullTitle(target),
+                              run: () =>
+                                picker.play(target, { startMs: resumeMs }),
+                            },
+                          }
+                        : {}
+                    )
+                  }
+                />
+              }
+            >
+              {inParty ? t`Watch party` : t`Watch together`}
+            </Tooltip>
+          )}
           {target && !!devices.data?.length && (
             <Tooltip
               trigger={
@@ -607,23 +610,27 @@ const ItemToggles = React.memo(function ItemToggles({
           {played ? t`Mark unwatched` : t`Mark watched`}
         </Tooltip>
       )}
-      <Tooltip
-        trigger={
-          <IconButton
-            data-ui="item-action"
-            data-name="favourite"
-            data-active={favorite || undefined}
-            intent={favorite ? 'alert-subtle' : 'gray-subtle'}
-            className="rounded-full"
-            icon={favorite ? <BiSolidHeart /> : <BiHeart />}
-            aria-label={favorite ? t`Remove favourite` : t`Add favourite`}
-            loading={setFavorite.isPending}
-            onClick={() => setFavorite.mutate({ itemId, favorite: !favorite })}
-          />
-        }
-      >
-        {favorite ? t`Remove favourite` : t`Add favourite`}
-      </Tooltip>
+      {offersFavourite(type, favorite) && (
+        <Tooltip
+          trigger={
+            <IconButton
+              data-ui="item-action"
+              data-name="favourite"
+              data-active={favorite || undefined}
+              intent={favorite ? 'alert-subtle' : 'gray-subtle'}
+              className="rounded-full"
+              icon={favorite ? <BiSolidHeart /> : <BiHeart />}
+              aria-label={favorite ? t`Remove favourite` : t`Add favourite`}
+              loading={setFavorite.isPending}
+              onClick={() =>
+                setFavorite.mutate({ itemId, favorite: !favorite })
+              }
+            />
+          }
+        >
+          {favorite ? t`Remove favourite` : t`Add favourite`}
+        </Tooltip>
+      )}
       {canDrop && type === 'Series' && (
         <Tooltip
           trigger={

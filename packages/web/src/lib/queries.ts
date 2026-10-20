@@ -962,6 +962,13 @@ export function useSetPlayedUpTo() {
   });
 }
 
+/**
+ * Only movies and shows are listed as favourites, and kept on trackers'
+ * watchlists; anything else already one can still be taken off.
+ */
+export const offersFavourite = (type: BaseItemDto['Type'], favorite: boolean) =>
+  favorite || type === 'Movie' || type === 'Series';
+
 export function useSetFavorite() {
   const { client, user } = useSession();
   const refresh = useRefreshAll();

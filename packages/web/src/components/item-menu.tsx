@@ -25,6 +25,7 @@ import {
   ContextMenuTrigger,
 } from '@aiostreams/ui/context-menu';
 import {
+  offersFavourite,
   useClearResume,
   useRemoteDevices,
   useSetFavorite,
@@ -283,15 +284,17 @@ function ItemMenuContent({ item, onPage, onDetails }: MenuTarget) {
           )}
         </>
       )}
-      <ContextMenuItem
-        data-name="favourite"
-        onSelect={() =>
-          setFavorite.mutate({ itemId: item.Id!, favorite: !favorite })
-        }
-      >
-        {favorite ? <BiSolidHeart /> : <BiHeart />}
-        {favorite ? t`Remove favourite` : t`Add favourite`}
-      </ContextMenuItem>
+      {offersFavourite(item.Type, favorite) && (
+        <ContextMenuItem
+          data-name="favourite"
+          onSelect={() =>
+            setFavorite.mutate({ itemId: item.Id!, favorite: !favorite })
+          }
+        >
+          {favorite ? <BiSolidHeart /> : <BiHeart />}
+          {favorite ? t`Remove favourite` : t`Add favourite`}
+        </ContextMenuItem>
+      )}
     </ContextMenuContent>
   );
 }
