@@ -651,11 +651,11 @@ export function playerSettings() {
     dialogueBoost: audio.dialogueBoost.read(),
     nightMode: audio.nightMode.read(),
     ac3Encode: audio.ac3Encode.read(),
+    cacheMb: Number(settings.player.cacheSize.read()) || 0,
     ...(android
       ? {
           frameRate: video.frameRate.read(),
           tunneling: video.tunneling.read(),
-          cacheMb: Number(settings.player.cacheSize.read()) || 0,
         }
       : { audioDevice: audio.device.read() }),
   };

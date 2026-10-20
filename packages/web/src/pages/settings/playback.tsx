@@ -499,11 +499,9 @@ function PlayerCard() {
         value={player}
         onValueChange={setPlayer}
       />
-      {currentHost().name === 'android-app' &&
-        !launched &&
-        !preset &&
-        player !== CUSTOM_LINK && (
-          <>
+      {shellHost() && !launched && !preset && player !== CUSTOM_LINK && (
+        <>
+          {currentHost().name === 'android-app' && (
             <Select
               label={t`Engine`}
               help={engineHelp(engine)}
@@ -511,15 +509,16 @@ function PlayerCard() {
               value={engine}
               onValueChange={(v) => setEngine(v as PlayerEngine)}
             />
-            <Select
-              label={t`Cache size`}
-              help={t`How much of the video the player holds in memory: ahead, to ride out a slow connection, and behind, to seek back at once. Automatic sizes it from this device's memory.`}
-              options={cacheOptions()}
-              value={cacheSize}
-              onValueChange={(v) => setCacheSize(v as CacheSize)}
-            />
-          </>
-        )}
+          )}
+          <Select
+            label={t`Cache size`}
+            help={t`How much of the video the player holds in memory: ahead, to ride out a slow connection, and behind, to seek back at once. Automatic sizes it from this device's memory.`}
+            options={cacheOptions()}
+            value={cacheSize}
+            onValueChange={(v) => setCacheSize(v as CacheSize)}
+          />
+        </>
+      )}
       {launched && (
         <SettingsRow
           label={t`Your ${name}`}
