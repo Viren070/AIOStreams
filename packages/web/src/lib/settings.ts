@@ -771,6 +771,7 @@ export const settings = {
     /** What other members send shows over the video. */
     messages: syncedFlag('partyMessages', true),
     reactions: syncedFlag('partyReactions', true),
+    speedSync: syncedFlag('partySpeedSync', true),
   },
   controls: {
     seekStep: device<number>(

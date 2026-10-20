@@ -37,6 +37,7 @@ export type ShellMessage =
       audio?: string | null;
       subtitle?: string | null;
       fullscreen?: boolean;
+      passthrough?: boolean;
       external?: boolean;
     }
   | { type: 'player-tracks'; tracks: AppTrack[]; external?: boolean }

@@ -339,6 +339,9 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
               ...(m.audio !== undefined && { audio: m.audio }),
               ...(m.subtitle !== undefined && { subtitle: m.subtitle }),
               ...(m.fullscreen !== undefined && { fullscreen: m.fullscreen }),
+              ...(m.passthrough !== undefined && {
+                passthrough: m.passthrough,
+              }),
             });
             if (idle === undefined || !adopting) return;
             adopting = false;

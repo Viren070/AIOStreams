@@ -37,6 +37,8 @@ export interface PlayerState {
   error: string | null;
   /** The video plays in a small window of its own, with nothing over it. */
   pictureInPicture?: boolean;
+  /** The sound goes out undecoded, which a change of speed can't stretch. */
+  passthrough?: boolean;
 }
 
 /** What some players add to what a browser's video can do. */

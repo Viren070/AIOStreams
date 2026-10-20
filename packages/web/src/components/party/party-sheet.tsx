@@ -655,6 +655,7 @@ function PartyDetails({ state }: { state: PartyState }) {
   const host = !!state.members.find((m) => m.you)?.host;
   const [messages, setMessages] = useSetting(settings.party.messages);
   const [reactions, setReactions] = useSetting(settings.party.reactions);
+  const [speedSync, setSpeedSync] = useSetting(settings.party.speedSync);
   const watching = state.members.length;
   return (
     <>
@@ -701,6 +702,15 @@ function PartyDetails({ state }: { state: PartyState }) {
           label={t`Reactions`}
           value={reactions}
           onValueChange={setReactions}
+        />
+      </Section>
+      <Section name="sync" title={t`Keeping in step`}>
+        <Switch
+          side="right"
+          label={t`Change speed to catch up`}
+          help={t`Off, the video jumps instead.`}
+          value={speedSync}
+          onValueChange={setSpeedSync}
         />
       </Section>
       <Section name="leave">

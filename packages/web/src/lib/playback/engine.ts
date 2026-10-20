@@ -64,6 +64,7 @@ export type EngineState = Partial<
     | 'audio'
     | 'subtitle'
     | 'pictureInPicture'
+    | 'passthrough'
   >
 >;
 

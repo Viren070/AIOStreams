@@ -115,6 +115,9 @@ export function PlaybackSection() {
   const [partyReactions, setPartyReactions] = useSetting(
     settings.party.reactions
   );
+  const [partySpeedSync, setPartySpeedSync] = useSetting(
+    settings.party.speedSync
+  );
   const autoplay = prefs.EnableNextEpisodeAutoPlay !== false;
   const [hardwareDecoding, setHardwareDecoding] = useSetting(
     settings.video.hardwareDecoding
@@ -295,6 +298,13 @@ export function PlaybackSection() {
             label={t`Show reactions over the video`}
             value={partyReactions}
             onValueChange={setPartyReactions}
+          />
+          <Switch
+            side="right"
+            label={t`Keep in step by changing speed`}
+            help={t`Plays a little faster or slower to catch up with the party. Off, the video jumps instead.`}
+            value={partySpeedSync}
+            onValueChange={setPartySpeedSync}
           />
         </SettingsCard>
       )}

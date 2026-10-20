@@ -785,6 +785,10 @@ msgstr "Change server"
 msgid "Change shortcuts"
 msgstr "Change shortcuts"
 
+#: src/components/party/party-sheet.tsx
+msgid "Change speed to catch up"
+msgstr "Change speed to catch up"
+
 #: src/components/version-settings.tsx
 msgid "Change these on a phone, a computer or in a browser."
 msgstr "Change these on a phone, a computer or in a browser."
@@ -1859,6 +1863,14 @@ msgstr "just now"
 msgid "Keep"
 msgstr "Keep"
 
+#: src/pages/settings/playback.tsx
+msgid "Keep in step by changing speed"
+msgstr "Keep in step by changing speed"
+
+#: src/components/party/party-sheet.tsx
+msgid "Keeping in step"
+msgstr "Keeping in step"
+
 #: src/pages/settings/apps.tsx
 msgid "Keeps the sound going with the screen off, or when you leave the app."
 msgstr "Keeps the sound going with the screen off, or when you leave the app."
@@ -2434,6 +2446,10 @@ msgstr "Off"
 msgid "Off for this visit, since the address ends in <0>?safe</0>. Fix or clear it here, then open the app without it."
 msgstr "Off for this visit, since the address ends in <0>?safe</0>. Fix or clear it here, then open the app without it."
 
+#: src/components/party/party-sheet.tsx
+msgid "Off, the video jumps instead."
+msgstr "Off, the video jumps instead."
+
 #: src/pages/settings/cache.tsx
 msgid "Older ones wait for the server instead. Without a connection, everything saved is shown."
 msgstr "Older ones wait for the server instead. Without a connection, everything saved is shown."
@@ -2898,6 +2914,10 @@ msgstr "Playing on and the next and previous buttons pass over episodes marked a
 #: src/components/party/party-sheet.tsx
 msgid "Plays <0>{title}</0> for everyone who joins."
 msgstr "Plays <0>{title}</0> for everyone who joins."
+
+#: src/pages/settings/playback.tsx
+msgid "Plays a little faster or slower to catch up with the party. Off, the video jumps instead."
+msgstr "Plays a little faster or slower to catch up with the party. Off, the video jumps instead."
 
 #: src/pages/settings/playback.tsx
 msgid "Plays Dolby Vision where the screen shows it. Turn it off to play the HDR10 picture most of these videos also carry, if Dolby Vision looks dim or flickers. Videos with no HDR10 picture still play in Dolby Vision."

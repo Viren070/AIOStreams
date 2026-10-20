@@ -1,13 +1,16 @@
 import React from 'react';
 import type { GroupCommand } from '@aiostreams/core';
 import type { PlayerController, PlayerState } from '../playback/controller';
+import { settings } from '../settings';
 import { useLatest } from '../use-latest';
 import { party, positionAt, useParty, type Timeline } from './party';
 
 /*
  * Keeps one player on the party's timeline. Commands run at the moment they
- * name, on the relay's clock; between them, a small drift is taken up by
- * playing up to 5% faster or slower, and a larger one by a seek.
+ * name, on the relay's clock; between them, a drift is taken up by playing a
+ * little faster or slower until back in step, and a larger one by a seek.
+ * Each change of speed stretches the sound, so it changes seldom, and never
+ * for sound passed through undecoded.
  */
 
 /** After a seek, the position settles before drift is measured again. */
@@ -19,14 +22,14 @@ const TICK_MS = 250;
 const RESUME_MS = 5_000;
 /** Positions this close count as there. */
 const ACCURATE_MS = 250;
-/** Close enough to play at normal speed. */
-const IN_STEP_MS = 30;
-const MAX_NUDGE = 0.05;
-/** The drift a full nudge takes up in about a second. */
-const NUDGE_SPAN_MS = 1_000;
-/** At 5%, more than this would take several seconds to take up. */
+/** Off by more than this for a second, the player starts catching up. */
+const NUDGE_FROM_MS = 150;
+const NUDGE_AFTER_MS = 1_000;
+/** Back within this, it plays at normal speed again. */
+const IN_STEP_MS = 50;
+const NUDGE = 0.03;
 const SEEK_DRIFT_MS = 400;
-/** A player that plays at one speed seeks sooner. */
+/** Without changes of speed, a player seeks only this far off. */
 const SEEK_DRIFT_FIXED_MS = 1_000;
 /** Behind by less than this at a pause, a member plays on to it. */
 const CATCH_UP_MS = 3_000;
@@ -48,6 +51,7 @@ class Follower {
   private own: { paused: boolean; at: number } | null = null;
   private pauseAt: number | null = null;
   private lastResume = 0;
+  private offSince: number | null = null;
   private stopped = false;
 
   constructor(
@@ -109,6 +113,7 @@ class Follower {
 
   private seekTo(positionMs: number): void {
     const now = performance.now();
+    this.offSince = null;
     this.setRate(1);
     this.player().seek(Math.max(positionMs, 0));
     this.sample = { positionMs: Math.max(positionMs, 0), at: now };
@@ -251,6 +256,7 @@ class Follower {
       return;
     }
     if (!timeline.playing || state.paused || state.waiting) {
+      this.offSince = null;
       this.setRate(1);
       return;
     }
@@ -258,20 +264,25 @@ class Follower {
     const expected = this.expected(timeline);
     const drift = this.position() - expected;
     party.offset(-drift);
-    const limit = this.speed ? SEEK_DRIFT_MS : SEEK_DRIFT_FIXED_MS;
-    if (Math.abs(drift) > limit) {
+    const nudges =
+      !!this.speed && settings.party.speedSync.read() && !state.passthrough;
+    if (Math.abs(drift) > (nudges ? SEEK_DRIFT_MS : SEEK_DRIFT_FIXED_MS)) {
       if (now - this.lastSeekAt > SEEK_COOLDOWN_MS)
         this.seekTo(expected + this.seekLead);
       return;
     }
-    if (!this.speed) return;
-    const nudge = Math.max(
-      -MAX_NUDGE,
-      Math.min(MAX_NUDGE, drift / NUDGE_SPAN_MS)
-    );
-    const rate = Math.abs(drift) < IN_STEP_MS ? 1 : 1 - nudge;
-    if (rate === 1 || Math.abs(rate - this.rate) >= 0.01)
-      this.setRate(Math.round(rate * 1000) / 1000);
+    if (!nudges) return this.setRate(1);
+    // Ahead plays slower, behind faster, until in step or past it.
+    const way = drift > 0 ? 1 - NUDGE : 1 + NUDGE;
+    if (this.rate === 1) {
+      if (Math.abs(drift) <= NUDGE_FROM_MS) this.offSince = null;
+      else if ((this.offSince ??= now) <= now - NUDGE_AFTER_MS) {
+        this.offSince = null;
+        this.setRate(way);
+      }
+    } else if (Math.abs(drift) < IN_STEP_MS || this.rate !== way) {
+      this.setRate(1);
+    }
   }
 
   stop(): void {
