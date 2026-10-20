@@ -81,6 +81,7 @@ dependencies = [
  "jpeg-encoder",
  "libc",
  "libloading",
+ "log",
  "windows-sys 0.61.2",
 ]
 
