@@ -1,5 +1,8 @@
 import React from 'react';
+import { currentHost } from './hosts';
 import { useRefreshWatchState } from './queries';
+import { REMOTE_CAPABILITIES } from './remote/capabilities';
+import { commandOf, sendRemote, type RemoteCommand } from './remote/commands';
 import { useSession } from './session';
 import { useLatest } from './use-latest';
 
@@ -14,10 +17,21 @@ function socketUrl(base: string, token: string, deviceId: string): string {
   return url.toString();
 }
 
-/** Refreshes watch state when the server pushes a change made elsewhere. */
-export function useServerEvents(): void {
+/** Browser tabs share a device id, so only the one in view opens what is sent. */
+const ignored = (command: RemoteCommand) =>
+  currentHost().name === 'browser' &&
+  document.hidden &&
+  (command.kind === 'show' || command.kind === 'play');
+
+/**
+ * Refreshes watch state when the server pushes a change made elsewhere, once
+ * nothing plays, and hands on what other devices send.
+ */
+export function useServerEvents(playing: boolean): void {
   const { client } = useSession();
   const refresh = useLatest(useRefreshWatchState());
+  const isPlaying = useLatest(playing);
+  const held = React.useRef(false);
   React.useEffect(() => {
     const token = client.token;
     if (!token) return;
@@ -33,6 +47,10 @@ export function useServerEvents(): void {
       socket = ws;
       ws.onopen = () => {
         failures = 0;
+        // Servers keep what a device can do only while its socket is open.
+        void client
+          .post('/Sessions/Capabilities/Full', REMOTE_CAPABILITIES)
+          .catch(() => {});
       };
       ws.onmessage = (event) => {
         let message: { MessageType?: string; Data?: unknown };
@@ -50,8 +68,12 @@ export function useServerEvents(): void {
               ws.send(JSON.stringify({ MessageType: 'KeepAlive' }));
           }, seconds * 500);
         } else if (message.MessageType === 'UserDataChanged') {
+          if (isPlaying.current) return void (held.current = true);
           clearTimeout(settle);
           settle = setTimeout(() => void refresh.current(), SETTLE_MS);
+        } else {
+          const command = commandOf(message.MessageType, message.Data);
+          if (command && !ignored(command)) sendRemote(command);
         }
       };
       ws.onclose = () => {
@@ -69,5 +91,11 @@ export function useServerEvents(): void {
       clearInterval(keepAlive);
       socket?.close();
     };
-  }, [client, refresh]);
+  }, [client, refresh, isPlaying]);
+
+  React.useEffect(() => {
+    if (playing || !held.current) return;
+    held.current = false;
+    void refresh.current();
+  }, [playing, refresh]);
 }

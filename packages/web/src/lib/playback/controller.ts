@@ -14,6 +14,8 @@ export interface Track {
   id: string;
   label: string;
   lang?: string;
+  /** One of the file's own, rather than one loaded beside it. */
+  file?: boolean;
 }
 
 export interface PlayerState {

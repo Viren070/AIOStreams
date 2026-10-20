@@ -68,6 +68,7 @@ import { UserAvatar } from './user-avatar';
 import { BrandLogo } from './brand-logo';
 import { BarSurface } from './bar-surface';
 import { VersionPickerProvider } from './version-picker';
+import { RemoteTarget } from './remote-target';
 import { ItemMenuHost } from './item-menu';
 import { HomePage } from '../pages/home';
 import { PageShown } from '../lib/page-shown';
@@ -466,6 +467,7 @@ export function WebLayout() {
   const playing = useChildMatches({
     select: (matches) => !!matches[0]?.pathname.startsWith('/play/'),
   });
+  useServerEvents(playing);
   // Home stays, hidden, while other pages and the player are open: going back
   // to its entry shows it again rather than building it anew. Any other visit
   // starts afresh.
@@ -686,6 +688,7 @@ export function WebLayout() {
                   />
                 )}
                 <VersionPickerProvider>
+                  <RemoteTarget />
                   <ItemMenuHost>
                     <GlideLayers name="page">
                       {kept && (
@@ -754,7 +757,6 @@ export function WebLayout() {
 /** What runs while pages are open, and stops while the player is. */
 function PagesWork({ pathname }: { pathname: string }) {
   useDiscordBrowsing(pathname);
-  useServerEvents();
   useDownloadRunner();
   usePendingStops();
   useAction('search', () => navigate(to.search()));

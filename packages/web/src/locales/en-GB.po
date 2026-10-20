@@ -4008,6 +4008,10 @@ msgstr "That relay is too busy for another party."
 msgid "That relay runs a different version of watch parties."
 msgstr "That relay runs a different version of watch parties."
 
+#: src/components/remote-target.tsx
+msgid "That title could not be opened"
+msgstr "That title could not be opened"
+
 #: src/pages/settings/apps.tsx
 msgid "That you are searching, not what for."
 msgstr "That you are searching, not what for."

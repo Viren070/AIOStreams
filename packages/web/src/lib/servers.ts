@@ -50,6 +50,19 @@ export function serverAddress(base: string): string {
   return base.replace(/^https?:\/\//, '');
 }
 
+/** Whether two addresses name one server, whatever their case or trailing slash. */
+export function sameServer(a: string, b: string): boolean {
+  const plain = (address: string) => {
+    try {
+      const url = new URL(address);
+      return `${url.protocol}//${url.host}${url.pathname.replace(/\/+$/, '')}`;
+    } catch {
+      return address;
+    }
+  };
+  return plain(a) === plain(b);
+}
+
 interface PublicInfo {
   Id?: string;
   ServerName?: string;

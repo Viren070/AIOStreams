@@ -36,17 +36,25 @@ export class PlaybackReporter {
       playSessionId?: string | null;
       userId?: string;
     },
-    private readonly position: () => { ms: number; paused: boolean }
+    private readonly position: () => {
+      ms: number;
+      paused: boolean;
+      /** Stream indexes in the version's list, where the player's tracks map to one. */
+      audio?: number;
+      subtitle?: number;
+    }
   ) {}
 
   private body(extra: Record<string, unknown> = {}) {
-    const { ms, paused } = this.position();
+    const { ms, paused, audio, subtitle } = this.position();
     return {
       ItemId: this.info.itemId,
       MediaSourceId: this.info.mediaSourceId,
       PlaySessionId: this.info.playSessionId ?? undefined,
       PositionTicks: Math.round(ms) * TICKS_PER_MS,
       IsPaused: paused,
+      AudioStreamIndex: audio,
+      SubtitleStreamIndex: subtitle,
       CanSeek: true,
       PlayMethod: 'DirectPlay',
       ...extra,
@@ -61,7 +69,14 @@ export class PlaybackReporter {
     );
   }
 
-  progress(event: 'TimeUpdate' | 'Pause' | 'Unpause'): void {
+  progress(
+    event:
+      | 'TimeUpdate'
+      | 'Pause'
+      | 'Unpause'
+      | 'AudioTrackChange'
+      | 'SubtitleTrackChange'
+  ): void {
     if (this.stopped) return;
     void this.client
       .post('/Sessions/Playing/Progress', this.body({ EventName: event }))

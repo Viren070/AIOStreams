@@ -74,6 +74,9 @@ import { leavePartyPlayback, usePartyBinding } from '../lib/party/follow';
 import { usePlayForParty } from '../lib/party/actions';
 import { usePartyPlayer } from '../lib/party/playback';
 import { PartyLayer } from '../components/party/party-layer';
+import { useRemotePlayer } from '../components/remote-target';
+import { indexForTrack } from '../lib/remote/tracks';
+import { useLatest } from '../lib/use-latest';
 import { openPartySheet } from '../components/party/party-sheet';
 
 interface PlayerProps {
@@ -261,6 +264,23 @@ function useReporting(
   const { client, user } = useSession();
   const state = React.useRef(player.state);
   state.current = player.state;
+  const tracks = useLatest(() => {
+    const streams = source.MediaStreams ?? [];
+    return {
+      audio: indexForTrack(
+        streams,
+        player.audioTracks,
+        'audio',
+        player.state.audio
+      ),
+      subtitle: indexForTrack(
+        streams,
+        player.subtitleTracks,
+        'subtitle',
+        player.state.subtitle
+      ),
+    };
+  });
   const reporter = React.useRef<PlaybackReporter | null>(null);
   const refreshAll = useRefreshAll();
   const refresh = React.useRef(refreshAll);
@@ -283,7 +303,11 @@ function useReporting(
         playSessionId,
         userId: user.Id,
       },
-      () => ({ ms: player.playhead.positionMs, paused: state.current.paused })
+      () => ({
+        ms: player.playhead.positionMs,
+        paused: state.current.paused,
+        ...tracks.current(),
+      })
     );
     current.start();
     reporter.current = current;
@@ -300,6 +324,14 @@ function useReporting(
   React.useEffect(() => {
     reporter.current?.progress(paused ? 'Pause' : 'Unpause');
   }, [paused]);
+
+  const { audio, subtitle } = player.state;
+  React.useEffect(() => {
+    reporter.current?.progress('AudioTrackChange');
+  }, [audio]);
+  React.useEffect(() => {
+    reporter.current?.progress('SubtitleTrackChange');
+  }, [subtitle]);
 }
 
 function Failure({
@@ -588,11 +620,12 @@ function Player({
     );
   const controls = useShowTrackPicks(player, item, source);
   useReporting(player, { item, source, playSessionId });
-  useNowPlaying(item, player, {
+  const act = useNowPlaying(item, player, {
     onStop: back,
     onNext: next.next ? next.playNext : undefined,
     onPrevious: next.previous ? next.playPrevious : undefined,
   });
+  useRemotePlayer(controls, item, source, act);
   useKeepAwake(player, !hostPlayer);
   const launchedName = launched?.name ?? '';
   const failure = player.state.error ?? '';

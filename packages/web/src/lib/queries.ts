@@ -412,6 +412,23 @@ function listedItem(
  * With `page`, for the title's page: a list already loaded that shows the item
  * stands in until it arrives, and it is asked for as the page starts to draw.
  */
+function useItemOptions() {
+  const { client, user } = useSession();
+  const key = useKey();
+  return (itemId: string) =>
+    queryOptions({
+      queryKey: [...key, 'item', itemId],
+      meta: { cache: 'titles' },
+      queryFn: () => requestItem(client, user.Id!, itemId),
+    });
+}
+
+export function useFetchItem() {
+  const queryClient = useQueryClient();
+  const options = useItemOptions();
+  return (itemId: string) => queryClient.fetchQuery(options(itemId));
+}
+
 export function useItem(itemId: string, opts: { page?: boolean } = {}) {
   const { client, user } = useSession();
   const queryClient = useQueryClient();
@@ -422,11 +439,7 @@ export function useItem(itemId: string, opts: { page?: boolean } = {}) {
         : undefined,
     [opts.page, queryClient, client.base, user.Id, itemId]
   );
-  const options = queryOptions({
-    queryKey: [...useKey(), 'item', itemId],
-    meta: { cache: 'titles' },
-    queryFn: () => requestItem(client, user.Id!, itemId),
-  });
+  const options = useItemOptions()(itemId);
   if (opts.page && itemId && !queryClient.getQueryState(options.queryKey))
     void queryClient.prefetchQuery(options);
   return useQuery({ ...options, placeholderData: listed, enabled: !!itemId });

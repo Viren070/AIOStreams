@@ -70,6 +70,7 @@ interface Request {
   startMs: number;
   /** From the player: the version playing, which a pick replaces. */
   playing?: string;
+  replace?: boolean;
   /** A pick downloads `items`, which start with `item`, or replaces `replace`'s version. */
   download?: { items: BaseItemDto[]; replace?: Download };
 }
@@ -77,8 +78,19 @@ interface Request {
 interface PickerValue {
   /** Lists the item's versions; nothing is resolved until this is called. */
   open(item: BaseItemDto, opts?: { startMs?: number; playing?: string }): void;
-  /** What Play does (see `useStraightPlay`); a hold does the other. */
-  play(item: BaseItemDto, opts?: { startMs?: number; held?: boolean }): void;
+  /**
+   * What Play does (see `useStraightPlay`); a hold does the other. A `version`
+   * plays straight, in place of the one remembered.
+   */
+  play(
+    item: BaseItemDto,
+    opts?: {
+      startMs?: number;
+      held?: boolean;
+      version?: string;
+      replace?: boolean;
+    }
+  ): void;
   /**
    * Downloads the items, the first one's pick deciding the rest, or with
    * `replace` gives that download another version.
@@ -159,9 +171,14 @@ export function VersionPickerProvider({
 
   const value = React.useMemo<PickerValue>(() => {
     // The version last played when resuming, else the first; the list when none plays.
-    const playStraight = async (item: BaseItemDto, startMs: number) => {
+    const playStraight = async (
+      item: BaseItemDto,
+      startMs: number,
+      opts: { version?: string; replace?: boolean } = {}
+    ) => {
       const { queryClient, infoOptions, playVersion } = latest.current;
-      const last = rememberedVersion(item, startMs);
+      const { replace } = opts;
+      const last = opts.version ?? rememberedVersion(item, startMs);
       // The player page finds the version itself, and lists them if it is gone.
       if (
         last &&
@@ -169,7 +186,7 @@ export function VersionPickerProvider({
         chosenPlayer().kind !== 'link' &&
         party.state()?.status !== 'live'
       ) {
-        navigate(to.play(item.Id!, last, startMs));
+        navigate(to.play(item.Id!, last, startMs), { replace });
         return;
       }
       const notice = toast.loading(t`Finding a version…`);
@@ -177,15 +194,16 @@ export function VersionPickerProvider({
         const info = await queryClient.fetchQuery(infoOptions(item.Id!));
         const sources = playableSources(info);
         const source = sources.find((s) => s.Id === last) ?? sources[0];
-        if (!source) setRequest({ item, startMs });
+        if (!source) setRequest({ item, startMs, replace });
         else
           await playVersion(item, {
             source,
             startMs,
+            replace,
             onExternal: () => setExternal(item),
           });
       } catch {
-        setRequest({ item, startMs });
+        setRequest({ item, startMs, replace });
       } finally {
         setTimeout(() => toast.dismiss(notice));
       }
@@ -199,15 +217,21 @@ export function VersionPickerProvider({
         }),
       play: (item, opts) => {
         const startMs = opts?.startMs ?? 0;
+        const version = opts?.version;
+        const replace = opts?.replace;
         // Holding still lists the versions.
         const local = !opts?.held && latest.current.downloaded(item);
-        if (local && chosenPlayer().kind !== 'link') {
-          navigate(to.play(item.Id!, local.source!.Id!, startMs));
+        if (
+          local &&
+          chosenPlayer().kind !== 'link' &&
+          (!version || version === local.source!.Id)
+        ) {
+          navigate(to.play(item.Id!, local.source!.Id!, startMs), { replace });
           return;
         }
-        if (latest.current.straight(item, startMs) !== !!opts?.held)
-          void playStraight(item, startMs);
-        else setRequest({ item, startMs });
+        if (version || latest.current.straight(item, startMs) !== !!opts?.held)
+          void playStraight(item, startMs, { version, replace });
+        else setRequest({ item, startMs, replace });
       },
       download: (items, opts) => {
         if (!items.length || !downloadsHost()) return;
@@ -448,7 +472,7 @@ function Versions({
     play(item, {
       source,
       startMs,
-      replace: !!request.playing,
+      replace: !!request.playing || !!request.replace,
       onExternal,
     }).catch((e: Error) => toast.error(e.message));
   };

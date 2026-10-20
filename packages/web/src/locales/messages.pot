@@ -4007,6 +4007,10 @@ msgstr ""
 msgid "That relay runs a different version of watch parties."
 msgstr ""
 
+#: src/components/remote-target.tsx
+msgid "That title could not be opened"
+msgstr ""
+
 #: src/pages/settings/apps.tsx
 msgid "That you are searching, not what for."
 msgstr ""

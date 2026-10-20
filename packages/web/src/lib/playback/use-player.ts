@@ -485,7 +485,9 @@ export function usePlayer(
     audioTracks: tracks.filter((t) => t.type === 'audio').map(asTrack),
     // The file's own, the server's, then any the user added.
     subtitleTracks: [
-      ...subtitleTracks.filter((t) => !t.external).map(asTrack),
+      ...subtitleTracks
+        .filter((t) => !t.external)
+        .map((t) => ({ ...asTrack(t), file: true })),
       ...servers.map(asTrack),
       ...subtitleTracks
         .filter(
