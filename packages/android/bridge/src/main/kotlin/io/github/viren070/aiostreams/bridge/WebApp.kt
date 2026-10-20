@@ -6,6 +6,7 @@ import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
 import android.os.Build
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -27,14 +28,17 @@ class WebApp(private val devUrl: String?) {
 
     /**
      * `chooseFiles` shows the system's picker for a file input and `openIntent`
-     * an `intent:` link, which a WebView can't do on its own. `thumbnail` is the
-     * JPEG the app serves at a path, called off the main thread.
+     * an `intent:` link, which a WebView can't do on its own. `rendererGone` hears
+     * that the page's renderer crashed or was ended, after which `webView` can't
+     * be used. `thumbnail` is the JPEG the app serves at a path, called off the
+     * main thread.
      */
     @SuppressLint("SetJavaScriptEnabled")
     fun configure(
         webView: WebView,
         chooseFiles: (multiple: Boolean, picked: ValueCallback<Array<Uri>>) -> Unit,
         openIntent: (link: String) -> Unit,
+        rendererGone: (crashed: Boolean) -> Unit,
         thumbnail: (path: String) -> ByteArray?,
     ) {
         val assets = WebViewAssetLoader.AssetsPathHandler(webView.context)
@@ -91,6 +95,12 @@ class WebApp(private val devUrl: String?) {
                     )
                 } catch (_: ActivityNotFoundException) {
                 }
+                return true
+            }
+
+            // Unhandled, the WebView ends the whole app with its renderer.
+            override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
+                rendererGone(detail.didCrash())
                 return true
             }
         }

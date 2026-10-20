@@ -60,6 +60,11 @@ class AppBridge(
         reply?.postMessage(message.toString())
     }
 
+    /** Stops sending to a page whose renderer is gone. */
+    fun close() {
+        reply = null
+    }
+
     private fun script(identity: AppIdentity): String = """
         (() => {
           if (window.top !== window || window.aiostreamsApp) return;

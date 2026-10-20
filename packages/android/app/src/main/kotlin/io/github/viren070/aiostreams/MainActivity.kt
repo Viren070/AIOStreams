@@ -19,6 +19,7 @@ import android.provider.Settings
 import android.util.Log
 import android.hardware.input.InputManager
 import android.view.InputDevice
+import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
@@ -101,6 +102,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var frameRates: FrameRateMatch
     /** False when onCreate only showed the outdated WebView message. */
     private val started get() = ::bridge.isInitialized
+    /** The page's renderer ended, leaving a web view that can't be used. */
+    private var pageGone = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -124,7 +127,7 @@ class MainActivity : ComponentActivity() {
         })
 
         val app = WebApp(BuildConfig.WEB_URL.ifEmpty { null })
-        app.configure(web, ::chooseFiles, players::open) { path ->
+        app.configure(web, ::chooseFiles, players::open, ::onRendererGone) { path ->
             if (::player.isInitialized) player.thumbnail(path) else null
         }
         val queue = Downloads.queue(this)
@@ -283,6 +286,7 @@ class MainActivity : ComponentActivity() {
                             put("at", report.at)
                             put("summary", report.summary)
                             put("details", report.details)
+                            if (report.page) put("page", true)
                         }
                     })
                 }
@@ -442,6 +446,24 @@ class MainActivity : ComponentActivity() {
 
     private fun deviceName(): String =
         Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME) ?: Build.MODEL
+
+    /**
+     * Starts the page again in a new activity, once it shows: Android ends a
+     * renderer behind other apps to free memory, and would end a new one too.
+     */
+    private fun onRendererGone(crashed: Boolean) {
+        val shown = lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
+        Crashes.rendererGone(this, crashed, shown)
+        pageGone = true
+        bridge.close()
+        (web.parent as? ViewGroup)?.removeView(web)
+        if (shown) recreate()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (pageGone) recreate()
+    }
 
     override fun onResume() {
         super.onResume()
