@@ -111,7 +111,9 @@ const GLIDE_MS = 300;
  * transition eases it on the compositor, where Embla's own easing would run
  * script on every frame for over a second.
  */
-function useFollowFocus(api: CarouselApi) {
+function useFollowFocus(api: CarouselApi, anchor?: () => boolean) {
+  const anchors = React.useRef(anchor);
+  anchors.current = anchor;
   React.useEffect(() => {
     if (!api) return;
     const viewport = api.rootNode();
@@ -138,7 +140,15 @@ function useFollowFocus(api: CarouselApi) {
       const sign = rtl() ? -1 : 1;
       const left = rect.left - view.left + sign * engine.target.get() - shown;
       const right = left + rect.width - view.width;
-      const shift = left < 0 ? left : right > 0 ? Math.min(right, left) : 0;
+      const first = api.slideNodes()[0];
+      const shift = anchors.current?.()
+        ? Math.abs(slide.offsetLeft - first.offsetLeft) +
+          sign * engine.target.get()
+        : left < 0
+          ? left
+          : right > 0
+            ? Math.min(right, left)
+            : 0;
       if (!shift) return;
       window.clearTimeout(settle);
       container.style.transition = `transform ${GLIDE_MS}ms ease-out`;
@@ -217,6 +227,8 @@ export type CarouselProps = React.HTMLAttributes<HTMLDivElement> & {
   plugins?: CarouselPlugins;
   gap?: CarouselGap;
   restoreKey?: string;
+  /** Whether a slide focused now goes where the first one starts, rather than just into view. */
+  anchor?: () => boolean;
 };
 
 export const Carousel = React.forwardRef<HTMLDivElement, CarouselProps>(
@@ -226,6 +238,7 @@ export const Carousel = React.forwardRef<HTMLDivElement, CarouselProps>(
       plugins,
       gap = 'md',
       restoreKey,
+      anchor,
       className,
       children,
       ...rest
@@ -244,7 +257,7 @@ export const Carousel = React.forwardRef<HTMLDivElement, CarouselProps>(
     const [canScrollNext, setCanScrollNext] = React.useState(false);
     useKeepPositionOnReInit(api);
     useRestorePosition(api, restoreKey);
-    useFollowFocus(api);
+    useFollowFocus(api, anchor);
     useMarkOutOfView(api);
 
     // Embla's own answer is about the selected snap, which a free drag can
