@@ -1,6 +1,6 @@
 import { t } from '@lingui/core/macro';
 import React from 'react';
-import { useEpisodesAfter } from '../queries';
+import { useEpisodesAfter, useOwnAvatar } from '../queries';
 import { useServerInfo } from '../server-info';
 import { useSession } from '../session';
 import type { BaseItemDto, SourceInfo } from '../types';
@@ -15,14 +15,16 @@ const DEFAULT_RELAY = 'https://aiostreams.viren070.me';
 
 export function usePartyIdentity(): PartyIdentity {
   const { client, user } = useSession();
+  const avatar = useOwnAvatar();
   return React.useMemo(
     () => ({
       name: user.Name || t`Someone`,
+      avatar,
       server: relayBase(client.base) ?? client.base,
       userId: user.Id!,
       token: client.token ?? undefined,
     }),
-    [client, user]
+    [client, user, avatar]
   );
 }
 

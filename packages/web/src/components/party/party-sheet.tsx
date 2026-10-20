@@ -366,7 +366,7 @@ function Household({ onJoin }: { onJoin(invite: PartyInvite): void }) {
             data-ui="party-listing"
             className="flex items-center gap-3 rounded-xl bg-white/5 p-3"
           >
-            <UserAvatar name={p.host} className="size-9" />
+            <UserAvatar name={p.host} src={p.avatar} className="size-9" />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold">
                 <Trans>{host}'s party</Trans>
@@ -534,14 +534,14 @@ function PreviewDetails({
   preview: PartyPreview;
   relay: string;
 }) {
-  const { host, others, playing } = preview;
+  const { host, hostAvatar, others, playing } = preview;
   const count = others.length + 1;
   const on = relayHost(relay);
   const names = nameList(others);
   return (
     <>
       <div className="flex items-center gap-3">
-        <UserAvatar name={host} className="size-10" />
+        <UserAvatar name={host} src={hostAvatar} className="size-10" />
         <div className="min-w-0">
           <p className="truncate font-semibold">
             <Trans>{host}'s party</Trans>
@@ -877,7 +877,7 @@ function Member({ member, host }: { member: PartyMember; host: boolean }) {
       data-ui="party-member"
       className="flex items-center gap-3 rounded-xl p-2"
     >
-      <UserAvatar name={member.name} className="size-9" />
+      <UserAvatar name={member.name} src={member.avatar} className="size-9" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold">
           {member.name}

@@ -46,7 +46,7 @@ import { Sidebar, type SidebarItem } from '@aiostreams/ui/shared/sidebar';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
 import { useSession } from '../lib/session';
-import { usePickableUsers } from '../lib/queries';
+import { useOwnAvatar, usePickableUsers } from '../lib/queries';
 import { navigate, to } from '../lib/paths';
 import { currentHost } from '../lib/hosts';
 import { pageRtl } from '../lib/direction';
@@ -100,8 +100,7 @@ function Logo() {
 /** The signed-in user's picture, in a sidebar item's icon slot. */
 function SidebarAvatar({ className }: { className?: string }) {
   const { user } = useSession();
-  const users = usePickableUsers();
-  const avatar = users.data?.find((u) => u.user.Id === user.Id)?.avatar ?? null;
+  const avatar = useOwnAvatar();
   return (
     <UserAvatar
       name={user.Name}

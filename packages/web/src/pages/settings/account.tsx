@@ -7,7 +7,7 @@ import {
   useConfirmationDialog,
 } from '@aiostreams/ui/shared/confirmation-dialog';
 import { useSession } from '../../lib/session';
-import { usePickableUsers } from '../../lib/queries';
+import { useOwnAvatar, usePickableUsers } from '../../lib/queries';
 import { configureUrl } from '../../lib/paths';
 import { serverAddress } from '../../lib/servers';
 import { settings, useSetting } from '../../lib/settings';
@@ -20,7 +20,7 @@ export function AccountSection() {
   const { client, user, switchUser, signOut, changeServer } = useSession();
   const info = useServerInfo();
   const users = usePickableUsers();
-  const avatar = users.data?.find((u) => u.user.Id === user.Id)?.avatar ?? null;
+  const avatar = useOwnAvatar();
   const several = (users.data?.length ?? 0) > 1;
   const [askWho, setAskWho] = useSetting(settings.account.askWho);
   const configure = configureUrl(client.base, info);

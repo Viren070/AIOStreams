@@ -668,6 +668,12 @@ export function usePickableUsers() {
   });
 }
 
+export function useOwnAvatar(): string | null {
+  const { user } = useSession();
+  const users = usePickableUsers();
+  return users.data?.find((u) => u.user.Id === user.Id)?.avatar ?? null;
+}
+
 export function useActivity(enabled = true) {
   const { client } = useSession();
   return useQuery({

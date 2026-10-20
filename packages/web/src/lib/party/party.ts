@@ -30,6 +30,7 @@ import { askRelay, RelayConnection } from './relay';
 export interface PartyMember {
   id: string;
   name: string;
+  avatar: string | null;
   host: boolean;
   away: boolean;
   buffering: boolean;
@@ -93,6 +94,7 @@ export type PartyEvent =
 
 export interface PartyPreview {
   host: string;
+  hostAvatar: string | null;
   /** Everyone else in it. */
   others: string[];
   full: boolean;
@@ -101,6 +103,7 @@ export interface PartyPreview {
 
 export interface PartyIdentity {
   name: string;
+  avatar: string | null;
   /** The media server the member is signed in to, and as whom. */
   server: string;
   userId: string;
@@ -109,6 +112,8 @@ export interface PartyIdentity {
 }
 
 const PROTOCOL: PartyProtocol = 1;
+/** The relay turns away a hello with a longer sealed avatar. */
+const MAX_AVATAR = 2048;
 const MAX_CHAT = 100;
 /** Messages held while the relay is away; the relay takes 5 at once. */
 export const PARTY_OUTBOX = 5;
@@ -117,6 +122,11 @@ const HELLO_MS = 15_000;
 /** Offsets the relay shows are rounded to this, and smaller ones not shown. */
 const OFFSET_STEP_MS = 500;
 const OFFSET_MIN_MS = 1_000;
+
+function avatarOf(key: Uint8Array, sealed: string | undefined): string | null {
+  const avatar = sealed && unseal<unknown>(key, sealed);
+  return typeof avatar === 'string' ? avatar : null;
+}
 
 export const refusal = (code: PartyErrorCode): string =>
   ({
@@ -263,7 +273,14 @@ class Session {
 
   private hello(): PartyClientMessage {
     const name = seal(this.keys.key, this.identity.name);
-    const base = { v: PROTOCOL, party: this.keys.id, name };
+    const avatar =
+      this.identity.avatar && seal(this.keys.key, this.identity.avatar);
+    const base = {
+      v: PROTOCOL,
+      party: this.keys.id,
+      name,
+      avatar: avatar && avatar.length <= MAX_AVATAR ? avatar : undefined,
+    };
     if (this.mode === 'create' && !this.welcomed) {
       const token = this.token;
       return {
@@ -300,6 +317,7 @@ class Session {
     return list.map((m) => ({
       id: m.id,
       name: this.nameOf(m.name),
+      avatar: avatarOf(this.keys.key, m.avatar),
       host: m.host,
       away: m.away,
       buffering: m.buffering,
@@ -698,6 +716,7 @@ export const party = {
     const host = members.find((m) => m.host);
     return {
       host: host ? name(host.name) : t`Someone`,
+      hostAvatar: avatarOf(key, host?.avatar),
       others: members.filter((m) => m !== host).map((m) => name(m.name)),
       full,
       playing: playing && {
