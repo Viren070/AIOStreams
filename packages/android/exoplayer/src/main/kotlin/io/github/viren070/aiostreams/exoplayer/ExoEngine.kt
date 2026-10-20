@@ -868,6 +868,7 @@ class ExoEngine(private val context: Context) :
         const val SKIP_REACTION_MS = 2_000.0
         const val SMALL_ASS_CACHE_MB = 32
         const val SHORT_ASS_CACHE_MB = 8
+        const val REASON_CHARS = 200
 
         /** The layouts the page offers. */
         val CHANNELS = mapOf("stereo" to 2, "5.1" to 6, "7.1" to 8)
@@ -909,9 +910,18 @@ class ExoEngine(private val context: Context) :
             undecodable(error)?.let { return it }
             val causes = generateSequence<Throwable>(error) { it.cause }.toList()
             if (causes.any { it is UnrecognizedInputFormatException }) return "ExoPlayer doesn't recognise this file's format"
+            val code = error.errorCodeName.removePrefix("ERROR_CODE_").lowercase().replace('_', ' ')
             val reason = causes.filterIsInstance<ParserException>().firstNotNullOfOrNull { reasonOf(it) }
-                ?: error.errorCodeName.removePrefix("ERROR_CODE_").lowercase().replace('_', ' ')
+                ?: listOfNotNull(code, unexpected(error, causes)).joinToString(": ")
             return "ExoPlayer can't play this file: $reason"
+        }
+
+        /** The words of an exception Media3 didn't expect, which its code says nothing of. */
+        fun unexpected(error: PlaybackException, causes: List<Throwable>): String? {
+            if (error.errorCode !in UNEXPECTED) return null
+            return causes.drop(1)
+                .firstNotNullOfOrNull { cause -> cause.message?.lineSequence()?.first()?.trim()?.takeIf { it.isNotEmpty() } }
+                ?.take(REASON_CHARS)
         }
 
         /** The parser's message, in plain words where it's a known one. */
@@ -960,5 +970,7 @@ class ExoEngine(private val context: Context) :
             PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES,
             PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED,
         )
+
+        val UNEXPECTED = setOf(PlaybackException.ERROR_CODE_UNSPECIFIED, PlaybackException.ERROR_CODE_FAILED_RUNTIME_CHECK)
     }
 }
