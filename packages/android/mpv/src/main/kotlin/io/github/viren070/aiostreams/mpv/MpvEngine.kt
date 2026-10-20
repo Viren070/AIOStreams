@@ -67,6 +67,7 @@ class MpvEngine(private val context: Context) : Engine {
     private var filters: SoundFilters? = null
     private var subtitleScale: Double? = null
     private var ownFont = ""
+    private val styled = HashMap<String, String>()
     private var statsPage: String? = null
 
     // The shown subtitle and the file's picture subtitles, which keep their own size.
@@ -184,24 +185,30 @@ class MpvEngine(private val context: Context) : Engine {
     override fun addSubtitle(url: String, title: String?, language: String?) =
         command("sub-add", url, "select", title.orEmpty(), language.orEmpty())
 
+    // Sets only what changed, so the user's mpv.conf profiles keep what they set since.
     override fun setStyle(style: Style) = calls.execute {
         val s = style.subtitles
-        set("keepaspect", flag(style.fit != Fit.STRETCH))
-        set("panscan", if (style.fit == Fit.CROP) "1" else "0")
-        set("sub-ass-force-margins", flag(style.fit == Fit.CROP))
-        set("sub-bold", flag(s.bold))
-        set("sub-color", s.color)
-        set("sub-outline-color", s.outlineColor)
-        set("sub-outline-size", s.outlineSize.toString())
-        set("sub-shadow-offset", s.shadowSize.toString())
-        set("sub-shadow-color", s.outlineColor)
-        set("sub-font", s.font?.family ?: ownFont)
-        set("sub-back-color", s.backColor)
-        set("sub-border-style", if (s.box) "background-box" else "outline-and-shadow")
-        set("sub-ass-override", if (s.forceStyle) "force" else "scale")
-        set("sub-pos", Math.round(s.position).toString())
-        subtitleScale = s.scale
-        set("sub-scale", if (picture) "1" else s.scale.toString())
+        fun put(name: String, value: String) {
+            if (styled.put(name, value) != value) set(name, value)
+        }
+        put("keepaspect", flag(style.fit != Fit.STRETCH))
+        put("panscan", if (style.fit == Fit.CROP) "1" else "0")
+        put("sub-ass-force-margins", flag(style.fit == Fit.CROP))
+        put("sub-bold", flag(s.bold))
+        put("sub-color", s.color)
+        put("sub-outline-color", s.outlineColor)
+        put("sub-outline-size", s.outlineSize.toString())
+        put("sub-shadow-offset", s.shadowSize.toString())
+        put("sub-shadow-color", s.outlineColor)
+        put("sub-font", s.font?.family ?: ownFont)
+        put("sub-back-color", s.backColor)
+        put("sub-border-style", if (s.box) "background-box" else "outline-and-shadow")
+        put("sub-ass-override", if (s.forceStyle) "force" else "scale")
+        put("sub-pos", Math.round(s.position).toString())
+        if (subtitleScale != s.scale) {
+            subtitleScale = s.scale
+            set("sub-scale", if (picture) "1" else s.scale.toString())
+        }
     }
 
     // TVs copy MediaCodec's frames back: some draw direct ones wrong, and they have no battery to save.
