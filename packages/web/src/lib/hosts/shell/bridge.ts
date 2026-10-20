@@ -42,6 +42,8 @@ export type ShellMessage =
   | { type: 'player-tracks'; tracks: AppTrack[]; external?: boolean }
   /** When lines of the file's subtitle asked for with `player-subtitle-lines` show. */
   | { type: 'player-subtitle-lines'; track: string; lines: Span[] }
+  /** Answers `player-subtitle-index`: each of the file's own subtitles' lines by track, or null without an index. */
+  | { type: 'player-subtitle-index'; tracks: Record<string, Span[]> | null }
   /** Where the app serves the JPEG of a keyframe asked for with `player-thumbnail`; without `src` the file has none. */
   | {
       type: 'player-thumbnail';

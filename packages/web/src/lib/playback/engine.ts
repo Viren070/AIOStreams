@@ -116,6 +116,8 @@ export interface PlayerEngine {
   ownText?(id: string): string | null;
   /** Reports when the lines of one of the file's own subtitles show, as it reads them, until stopped. */
   watchLines?(id: string, onLines: (lines: Span[]) => void): () => void;
+  /** Every one of the file's own subtitles' lines from its index, by track; null when it has none. */
+  subtitleIndex?(): Promise<Record<string, Span[]> | null>;
   /** Pictures of the keyframes at or before positions asked for, newest asked first; null once the file has none. `prepare` reads the file's index ahead of the first. */
   thumbnails?(
     file: { url: string; headers?: Record<string, string> },

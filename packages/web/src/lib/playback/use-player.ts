@@ -174,6 +174,10 @@ export function usePlayer(
     outcome: SyncOutcome;
   } | null>(null);
   const [retimed, setRetimed] = React.useState<Record<string, Retimed>>({});
+  const [subtitleIndex, setSubtitleIndex] = React.useState<{
+    url: string;
+    tracks: Record<string, Span[]> | null;
+  }>();
 
   const readSubtitle = (id: string): Promise<string> | null => {
     if (copyOf(tracks, retimed, id)) return Promise.resolve(retimed[id].text);
@@ -329,10 +333,29 @@ export function usePlayer(
   const copy = copyOf(tracks, retimed, shown)?.id;
   const shownServer = servers.find((s) => s.id === shown);
   const shownTrack = tracks.find((t) => t.id === shown);
-  const reference =
-    engine.watchLines && (shownServer || shownTrack?.external)
-      ? referenceTrack(tracks, shownServer?.lang ?? shownTrack?.lang)?.id
-      : undefined;
+  const syncing =
+    !!engine.watchLines && !!(shownServer || shownTrack?.external);
+  const index = subtitleIndex?.url === url ? subtitleIndex : undefined;
+  React.useEffect(() => {
+    if (!syncing || !engine.subtitleIndex || index) return;
+    let stale = false;
+    void engine
+      .subtitleIndex()
+      .then((tracks) => !stale && setSubtitleIndex({ url, tracks }));
+    return () => {
+      stale = true;
+    };
+  }, [engine, syncing, index, url]);
+  const lang = shownServer?.lang ?? shownTrack?.lang;
+  // An engine that reads the file's index is waited on, so a track its others don't back is never used.
+  const waiting = !!engine.subtitleIndex && !index;
+  const reference = React.useMemo(
+    () =>
+      syncing && !waiting
+        ? referenceTrack(tracks, lang, index?.tracks)?.id
+        : undefined,
+    [syncing, waiting, tracks, lang, index]
+  );
 
   React.useEffect(() => {
     if (!shown || !engine.setSubtitleDelay) return;

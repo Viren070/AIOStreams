@@ -16,6 +16,7 @@ import {
   subtitleScale,
 } from '../../subtitles/style';
 import { parseChapters } from '../../playback/chapters';
+import type { Span } from '../../subtitles/align';
 import {
   ownTrackLabel,
   type QueuedEpisode,
@@ -192,6 +193,7 @@ let advanced: { itemId: string; sourceId: string } | null = null;
 const SUBTITLE_TYPES = ['srt', 'vtt', 'ass', 'ssa', 'sub', 'sup'];
 /** The apps list an added file under its name, cut to this length. */
 const NAME_LENGTH = 200;
+const INDEX_WAIT_MS = 12_000;
 
 const SUBTITLE_MODES = {
   Default: 'default',
@@ -494,6 +496,22 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
             send('player-subtitle-lines', { track: null });
           };
         },
+    // The app gives up on the index well before this; an app that never answers has none to give.
+    subtitleIndex: external
+      ? undefined
+      : () =>
+          new Promise((resolve) => {
+            const done = (tracks: Record<string, Span[]> | null) => {
+              clearTimeout(timer);
+              stop();
+              resolve(tracks);
+            };
+            const timer = setTimeout(() => done(null), INDEX_WAIT_MS);
+            const stop = shell.subscribe((m) => {
+              if (m.type === 'player-subtitle-index') done(m.tracks);
+            });
+            send('player-subtitle-index');
+          }),
     thumbnails: external
       ? undefined
       : ({ url, headers }, onThumbnail) => ({
