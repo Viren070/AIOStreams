@@ -92,6 +92,13 @@ export function ownsKey(el: Element | null, input: string): boolean {
     el.readOnly
   )
     return false;
+  // Up and down leave a many-line field from its first and last line.
+  if (el instanceof HTMLTextAreaElement && VERTICAL.includes(input)) {
+    const { value, selectionStart, selectionEnd } = el;
+    return input === 'ArrowUp'
+      ? value.slice(0, selectionStart).includes('\n')
+      : value.slice(selectionEnd).includes('\n');
+  }
   if (
     el.matches(
       'textarea, select, [contenteditable=""], [contenteditable=true], [role=spinbutton]'
