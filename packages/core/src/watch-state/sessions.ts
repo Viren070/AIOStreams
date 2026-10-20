@@ -3,6 +3,7 @@ import { config as appConfig } from '../config/index.js';
 import { createLogger } from '../logging/logger.js';
 import {
   WatchSessionRepository,
+  type PlayingTracks,
   type WatchSessionRow,
 } from '../db/repositories/watch-sessions.js';
 import { PlaybackHandoffRepository } from '../db/repositories/playback-handoff.js';
@@ -48,10 +49,17 @@ export interface SessionContext {
 export async function openWatchSession(
   ctx: SessionContext,
   ref: ContentRef,
-  opts: { positionMs?: number; durationMs?: number; paused?: boolean } = {}
+  opts: {
+    positionMs?: number;
+    durationMs?: number;
+    paused?: boolean;
+  } & PlayingTracks = {}
 ): Promise<WatchSessionRow | null> {
   const identity = await watchIdentityFor(ref);
   return WatchSessionRepository.open(ctx.scope, ctx.sessionKey, {
+    mediaSourceId: opts.mediaSourceId,
+    audioStreamIndex: opts.audioStreamIndex,
+    subtitleStreamIndex: opts.subtitleStreamIndex,
     userPersona: ctx.user ?? null,
     itemKey: identity.itemKey,
     kind: identity.kind,
@@ -74,7 +82,11 @@ export async function openWatchSession(
 /** The returned transition is set only on a pause edge, not on every tick. */
 export async function checkInWatchSession(
   ctx: SessionContext,
-  patch: { positionMs?: number; durationMs?: number; paused?: boolean }
+  patch: {
+    positionMs?: number;
+    durationMs?: number;
+    paused?: boolean;
+  } & PlayingTracks
 ): Promise<{
   transition: 'pause' | 'start' | null;
   row: WatchSessionRow | null;

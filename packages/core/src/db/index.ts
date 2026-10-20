@@ -109,6 +109,7 @@ export {
 } from './repositories/watch-air-times.js';
 export {
   WatchSessionRepository,
+  type PlayingTracks,
   type WatchSessionRow,
   type WatchSessionUpsert,
 } from './repositories/watch-sessions.js';

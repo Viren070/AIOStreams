@@ -1,14 +1,21 @@
 import { getDb } from '../db.js';
-import { sql } from '../sql.js';
+import { join, sql } from '../sql.js';
 import type { WatchKind } from './watch-state.js';
 import type { WatchScope } from '../../watch-state/types.js';
+
+/** The version a client plays and its picked tracks. */
+export interface PlayingTracks {
+  mediaSourceId?: string | null;
+  audioStreamIndex?: number | null;
+  subtitleStreamIndex?: number | null;
+}
 
 /**
  * One open playback per client. Persisted rather than held in memory: the
  * process restarts under a running playback, and the sweep runs on one replica
  * which may not be the one that served the progress reports.
  */
-export interface WatchSessionRow {
+export interface WatchSessionRow extends Required<PlayingTracks> {
   uuid: string;
   persona: string;
   /** Who was signed in; a shared-history persona shares the account's scope. */
@@ -34,7 +41,7 @@ export interface WatchSessionRow {
   endedAt: number | null;
 }
 
-export interface WatchSessionUpsert {
+export interface WatchSessionUpsert extends PlayingTracks {
   userPersona?: string | null;
   itemKey: string;
   kind: WatchKind;
@@ -70,6 +77,9 @@ interface DbRow {
   client: string | null;
   device_name: string | null;
   app_version: string | null;
+  media_source_id: string | null;
+  audio_stream_index: number | string | null;
+  subtitle_stream_index: number | string | null;
   position_ms: number | string;
   duration_ms: number | string;
   paused: number | string;
@@ -101,6 +111,9 @@ function toRow(r: DbRow): WatchSessionRow {
     client: r.client,
     deviceName: r.device_name ?? null,
     appVersion: r.app_version ?? null,
+    mediaSourceId: r.media_source_id ?? null,
+    audioStreamIndex: optionalNumber(r.audio_stream_index ?? null),
+    subtitleStreamIndex: optionalNumber(r.subtitle_stream_index ?? null),
     positionMs: Number(r.position_ms),
     durationMs: Number(r.duration_ms),
     paused: Boolean(Number(r.paused)),
@@ -123,6 +136,20 @@ export class WatchSessionRepository {
     return row ? toRow(row) : null;
   }
 
+  static async getMany(
+    scope: WatchScope,
+    sessionKeys: string[]
+  ): Promise<WatchSessionRow[]> {
+    if (!sessionKeys.length) return [];
+    const keys = join(sessionKeys.map((key) => sql`${key}`));
+    const rows = await getDb().query<DbRow>(
+      sql`SELECT * FROM watch_sessions
+           WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+             AND session_key IN (${keys})`
+    );
+    return rows.map(toRow);
+  }
+
   /** Switching item under the same key is a new playback, so timings reset. */
   static async open(
     scope: WatchScope,
@@ -134,7 +161,8 @@ export class WatchSessionRepository {
       sql`INSERT INTO watch_sessions
             (uuid, persona, session_key, user_persona, item_key, kind,
              media_type, base_id, season, episode, video_id, play_session_id,
-             device_id, client, device_name, app_version, position_ms,
+             device_id, client, device_name, app_version, media_source_id,
+             audio_stream_index, subtitle_stream_index, position_ms,
              duration_ms, paused, started_at, last_checkin_at, ended_at)
           VALUES (${scope.uuid}, ${scope.persona}, ${sessionKey},
                   ${input.userPersona ?? null},
@@ -143,7 +171,9 @@ export class WatchSessionRepository {
                   ${input.episode ?? null}, ${input.videoId ?? null},
                   ${input.playSessionId ?? null}, ${input.deviceId ?? null},
                   ${input.client ?? null}, ${input.deviceName ?? null},
-                  ${input.appVersion ?? null}, ${input.positionMs ?? 0},
+                  ${input.appVersion ?? null}, ${input.mediaSourceId ?? null},
+                  ${input.audioStreamIndex ?? null},
+                  ${input.subtitleStreamIndex ?? null}, ${input.positionMs ?? 0},
                   ${input.durationMs ?? 0}, ${input.paused ? 1 : 0},
                   ${now}, ${now}, NULL)
           ON CONFLICT(uuid, persona, session_key) DO UPDATE SET
@@ -160,6 +190,9 @@ export class WatchSessionRepository {
             client = COALESCE(excluded.client, watch_sessions.client),
             device_name = COALESCE(excluded.device_name, watch_sessions.device_name),
             app_version = COALESCE(excluded.app_version, watch_sessions.app_version),
+            media_source_id = excluded.media_source_id,
+            audio_stream_index = excluded.audio_stream_index,
+            subtitle_stream_index = excluded.subtitle_stream_index,
             position_ms = excluded.position_ms,
             duration_ms = CASE WHEN excluded.duration_ms > 0
                                THEN excluded.duration_ms ELSE watch_sessions.duration_ms END,
@@ -179,7 +212,11 @@ export class WatchSessionRepository {
     scope: WatchScope,
     sessionKey: string,
     at: number,
-    patch: { positionMs?: number; durationMs?: number; paused?: boolean }
+    patch: {
+      positionMs?: number;
+      durationMs?: number;
+      paused?: boolean;
+    } & PlayingTracks
   ): Promise<void> {
     const pos = patch.positionMs ?? null;
     const dur =
@@ -190,7 +227,10 @@ export class WatchSessionRepository {
             last_checkin_at = ${at},
             position_ms = COALESCE(${pos}, position_ms),
             duration_ms = COALESCE(${dur}, duration_ms),
-            paused = COALESCE(${paused}, paused)
+            paused = COALESCE(${paused}, paused),
+            media_source_id = COALESCE(${patch.mediaSourceId ?? null}, media_source_id),
+            audio_stream_index = COALESCE(${patch.audioStreamIndex ?? null}, audio_stream_index),
+            subtitle_stream_index = COALESCE(${patch.subtitleStreamIndex ?? null}, subtitle_stream_index)
           WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
             AND session_key = ${sessionKey} AND ended_at IS NULL`
     );
