@@ -441,6 +441,9 @@ export abstract class UsenetStreamService implements UsenetDebridService {
   protected static libraryCache = Cache.getInstance<string, DebridDownload[]>(
     'usenet-stream:library'
   );
+  protected static libraryItemCache = Cache.getInstance<string, {files: DebridFile[]}>(
+    'usenet-stream:library-item'
+  );
   protected static categoriesCache = Cache.getInstance<string, string[]>(
     'usenet-stream:categories'
   );
@@ -654,9 +657,8 @@ export abstract class UsenetStreamService implements UsenetDebridService {
     });
   }
 
-  private async listWebdavFolders(path: string): Promise<FileStat[]> {
+  private async listWebdavFolderEntries(path: string): Promise<FileStat[]> {
     let contents: FileStat[];
-    const start = Date.now();
     try {
       contents = (await this.webdavClient.getDirectoryContents(
         path
@@ -677,18 +679,39 @@ export abstract class UsenetStreamService implements UsenetDebridService {
         }
       );
     }
+    return contents;
+  }
+
+  private async listWebdavFolders(path: string): Promise<FileStat[]> {
+    const start = Date.now();
+    let contents = await this.listWebdavFolderEntries(path);
     const directories = contents.filter((item) => item.type === 'directory');
-    this.serviceLogger.debug(`Listed WebDAV folders at ${path}`, {
-      count: directories.length,
+    this.serviceLogger.debug(`Listed WebDAV folder entries at ${path}`, {
+      count: contents.length,
       timeTaken: getTimeTakenSincePoint(start),
     });
     return directories;
+  }
+
+  private async listWebdavFiles(path: string): Promise<FileStat[]> {
+    const start = Date.now();
+    let contents = await this.listWebdavFolderEntries(path);
+    const files = contents.filter((item) => item.type === 'file');
+    this.serviceLogger.debug(`Listed WebDAV file entries at ${path}`, {
+      count: contents.length,
+      timeTaken: getTimeTakenSincePoint(start),
+    });
+    return files;
   }
 
   // Token hashed: library keys reach distributed-lock log lines and file
   // lock paths.
   private getLibraryCacheKey(): string {
     return `${this.serviceName}:${getSimpleTextHash(this.config.token)}`;
+  }
+
+  private getLibraryItemCacheKey(name: string): string {
+    return `${this.serviceName}:${getSimpleTextHash(this.config.token)}:${getSimpleTextHash(name)}`;
   }
 
   /**
@@ -926,27 +949,136 @@ export abstract class UsenetStreamService implements UsenetDebridService {
         });
       }
     }
-    let libraryNzbs: DebridDownload[] = [];
+
+    let libraryNzbs = new Map<string, DebridDownload>();
 
     try {
-      libraryNzbs = checkOwned ? await this.listNzbs() : [];
+      const libraryNzbsArray = checkOwned ? await this.listNzbs() : [];
+      for (const libraryNzb of libraryNzbsArray) {
+        if (libraryNzb.hash != null) {
+          libraryNzbs.set(libraryNzb.hash, libraryNzb);
+        }
+        if (libraryNzb.name != null) {
+          libraryNzbs.set(libraryNzb.name, libraryNzb);
+        }
+      }
     } catch (error) {
       this.serviceLogger.warn(`Failed to list library NZBs for checkNzbs`, {
         error: (error as Error).message,
       });
     }
 
+    let allNames = [];
+    for (const { hash, name } of nzbs) {
+      if (hash != null) {
+        allNames.push(hash);
+      }
+      if (name != null) {
+        allNames.push(name);
+      }
+    }
+
+    // fetch file lists for requested nzbs that are in library
+    const webDavContentPrefix = this.getContentPathPrefix()
+    let fileFetchPromises: Promise<{name: string, files: FileStat[]}>[] = [];
+    for (const name of allNames) {
+      const libraryItem = libraryNzbs.get(name);
+      if (!libraryItem) {
+        continue;
+      }
+
+      const id = libraryItem?.id;
+      if (id == null) {
+        continue;
+      }
+
+      if ((libraryItem?.files?.length ?? 0) > 0) {
+        continue;
+      }
+
+      const itemCacheKey = this.getLibraryItemCacheKey(name);
+      const cached = await UsenetStreamService.libraryItemCache.get(itemCacheKey);
+      if (cached) {
+        const remainingTTL =
+          await UsenetStreamService.libraryItemCache.getTTL(itemCacheKey);
+        if (remainingTTL !== null && remainingTTL > 0) {
+          const age = appConfig.builtins.debrid.libraryCacheTtl - remainingTTL;
+          if (age <= appConfig.builtins.debrid.libraryStaleThreshold) {
+            libraryItem.files = cached.files;
+            continue;
+          }
+        }
+      }
+
+      fileFetchPromises.push(
+        (async () => {
+          try {
+            const files = await this.listWebdavFiles(`${webDavContentPrefix}/${id}`);
+            return { name, files };
+          } catch (error) {
+            this.serviceLogger.warn(
+              {
+                err: error instanceof Error ? error.message : String(error),
+              },
+              `Failed to fetch file list for ${name}`
+            );
+            throw error;
+          }
+        })()
+      );
+    }
+
+    // populate file lists to library data and cache them
+    const fileFetchResults = await Promise.allSettled(fileFetchPromises);
+    for (const fileFetchResult of fileFetchResults) {
+      if (fileFetchResult.status !== 'fulfilled') {
+        continue;
+      }
+
+      const {name, files} = fileFetchResult.value;
+      if (files.length == 0) {
+        continue;
+      }
+
+      const debridFiles: DebridFile[] = files.map((file, index) => ({
+        index,
+        size: file.size,
+        name: file.basename,
+        path: file.filename,
+      }));
+
+      const itemCacheKey = this.getLibraryItemCacheKey(name);
+      await UsenetStreamService.libraryItemCache.set(
+        itemCacheKey,
+        { files: debridFiles },
+        appConfig.builtins.debrid.libraryCacheTtl,
+        true
+      );
+
+      // fetches happen based on library items, so it has to exist
+      const libraryItem = libraryNzbs.get(name)!!;
+      libraryItem.files = debridFiles;
+    }
+
     // All NZBs are "cached" since it's streaming-based
     return nzbs.map(({ hash: h, name: n }, index) => {
-      const libraryNzb = libraryNzbs.find(
-        (nzb) => nzb.name === n || nzb.name === h
-      );
+      let libraryNzb: DebridDownload | undefined = undefined;
+      if (libraryNzb == null && h != null) {
+        libraryNzb = libraryNzbs.get(h);
+      }
+      if (libraryNzb == null && n != null) {
+        libraryNzb = libraryNzbs.get(n);
+      }
       return {
         id: index,
         status: libraryNzb?.status === 'failed' ? 'failed' : 'cached',
         library: !!libraryNzb,
         hash: h,
         name: n,
+        files: libraryNzb?.files,
+        addedAt: libraryNzb?.addedAt,
+        private: libraryNzb?.private,
+        size: libraryNzb?.size,
       };
     });
   }
