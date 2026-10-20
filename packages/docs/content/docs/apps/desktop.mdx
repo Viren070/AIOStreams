@@ -188,6 +188,8 @@ The app adds a **Desktop app** section to the settings. These stay on the comput
 - **mpv configuration**: opens the folder for your own `mpv.conf`, `input.conf`, scripts and shaders.
 - **Logs** and **Report a problem**: open the log folder, or send the app's versions and recent log to your server, and to the developer if you choose, with a code to give whoever looks into it. **Copy** puts the same on the clipboard.
 
+**Cache size**, under **Settings → Playback → Player**, sets how much of the video the player holds in memory: ahead, to ride out a slow connection, and behind, so seeking back is instant. **Automatic** sizes it from the computer's memory. A `demuxer-max-bytes` line in your `mpv.conf` takes its place.
+
 ## Updates
 
 The app checks for updates when it starts and every six hours, downloads them in the background, and applies them the next time it starts, or straight away if you ask. The portable copy updates itself too.
