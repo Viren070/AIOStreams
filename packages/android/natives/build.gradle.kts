@@ -4,6 +4,9 @@ plugins {
 
 android {
     namespace = "io.github.viren070.aiostreams.natives"
+    defaultConfig {
+        consumerProguardFiles("consumer-rules.pro")
+    }
 }
 
 val native = rootProject.layout.projectDirectory.dir("../native")
