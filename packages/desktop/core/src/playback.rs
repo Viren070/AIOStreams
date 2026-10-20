@@ -227,6 +227,8 @@ pub struct PlayerState {
     pub subtitle: Option<Option<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fullscreen: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub passthrough: Option<bool>,
 }
 
 #[derive(Debug, Serialize)]
@@ -670,6 +672,10 @@ pub fn report(name: &str, value: &Value, external: bool) -> Option<Outbound> {
         "sid" => state.subtitle = Some(track(value)),
         // The app's own window follows the page's full screen.
         "fullscreen" if external => state.fullscreen = on,
+        "audio-params" => {
+            let format = value.get("format").and_then(Value::as_str);
+            state.passthrough = Some(format.is_some_and(|f| f.starts_with("spdif")));
+        }
         "track-list" => {
             return Some(Outbound::PlayerTracks {
                 tracks: tracks(value),

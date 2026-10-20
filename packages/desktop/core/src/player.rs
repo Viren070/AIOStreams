@@ -928,6 +928,7 @@ fn pump(
                 } => {
                     filters.decoded(&value);
                     filters.apply(mpv, sound);
+                    report("audio-params", &value);
                 }
                 Event::Property {
                     id: SUBTITLE_LINES,
