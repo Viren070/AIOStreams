@@ -136,6 +136,7 @@ export function useVersionPicker(): PickerValue {
   return value;
 }
 
+/** Lets any page start playback, asking for a version when the choice isn't clear. */
 export function VersionPickerProvider({
   children,
 }: {
