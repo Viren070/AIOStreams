@@ -3,6 +3,7 @@ import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import {
   BiCalendarAlt,
+  BiCast,
   BiCheck,
   BiChevronRight,
   BiDislike,
@@ -39,6 +40,7 @@ import {
   useShowAhead,
   useSetPlayed,
   useSimilar,
+  useRemoteDevices,
 } from '../lib/queries';
 import {
   backdropUrls,
@@ -88,6 +90,7 @@ import { useExternalReturn } from '../lib/playback/external-return';
 import { CachedImage } from '../components/cached-image';
 import { TrailerButton } from '../components/trailers';
 import { openPartySheet } from '../components/party/party-sheet';
+import { openRemote } from '../components/remote-sheet';
 import { useParty } from '../lib/party/party';
 import {
   DownloadButton,
@@ -364,6 +367,7 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
       : undefined
   );
   const inParty = !!useParty();
+  const devices = useRemoteDevices();
   const holdRestart = useHold(
     target ? () => picker.play(target, { startMs: 0, held: true }) : undefined
   );
@@ -513,6 +517,25 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
           >
             {inParty ? t`Watch party` : t`Watch together`}
           </Tooltip>
+          {target && !!devices.data?.length && (
+            <Tooltip
+              trigger={
+                <IconButton
+                  data-ui="item-action"
+                  data-name="play-on"
+                  intent="gray-subtle"
+                  className="rounded-full"
+                  icon={<BiCast />}
+                  aria-label={t`Play on another device`}
+                  onClick={() =>
+                    openRemote({ play: { item: target, startMs: resumeMs } })
+                  }
+                />
+              }
+            >
+              <Trans>Play on another device</Trans>
+            </Tooltip>
+          )}
           <ItemToggles
             itemId={item.Id!}
             type={item.Type}

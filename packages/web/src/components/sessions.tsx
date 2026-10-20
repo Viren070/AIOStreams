@@ -6,6 +6,7 @@ import { clock, itemTitle, ticksToMs } from '../lib/format';
 import { href, itemPath } from '../lib/paths';
 import { MediaRow } from './media-row';
 import { WideCard } from './cards';
+import { openRemote } from './remote-sheet';
 import type { SessionInfoDto } from '../lib/types';
 
 /** What is playing right now; only the configuration's own user is sent any. */
@@ -23,13 +24,17 @@ export function SessionsRow({ sessions }: { sessions: SessionInfoDto[] }) {
 
 function SessionCard({ session }: { session: SessionInfoDto }) {
   const { client } = useSession();
+  const remote =
+    session.SupportsRemoteControl &&
+    session.DeviceId?.toLowerCase() !== client.deviceId.toLowerCase();
   const item = session.NowPlayingItem!;
   const position = ticksToMs(session.PlayState?.PositionTicks);
   const runtime = ticksToMs(item.RunTimeTicks);
   const paused = session.PlayState?.IsPaused;
   return (
     <WideCard
-      href={href(itemPath(item))}
+      href={remote ? undefined : href(itemPath(item))}
+      onClick={remote ? () => openRemote({ device: session.Id! }) : undefined}
       image={(width) => landscapeUrls(client, item, { maxWidth: width })}
       title={itemTitle(item)}
       subtitle={[session.UserName, session.DeviceName || session.Client]

@@ -3,6 +3,7 @@ import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { flushSync } from 'react-dom';
 import {
+  BiCast,
   BiCheck,
   BiCheckDouble,
   BiDownload,
@@ -25,10 +26,12 @@ import {
 } from '@aiostreams/ui/context-menu';
 import {
   useClearResume,
+  useRemoteDevices,
   useSetFavorite,
   useSetPlayed,
   useSetPlayedUpTo,
 } from '../lib/queries';
+import { openRemote } from './remote-sheet';
 import { toast } from 'sonner';
 import { itemTitle, ticksToMs } from '../lib/format';
 import { itemPath, navigate, to } from '../lib/paths';
@@ -45,6 +48,7 @@ function PlayEntries({ item }: { item: BaseItemDto }) {
   const picker = useVersionPicker();
   const resumeMs = ticksToMs(item.UserData?.PlaybackPositionTicks);
   const straight = useStraightPlay()(item, resumeMs);
+  const devices = useRemoteDevices();
   return (
     <>
       <ContextMenuItem
@@ -60,6 +64,14 @@ function PlayEntries({ item }: { item: BaseItemDto }) {
         {straight ? <BiListUl /> : <BiSkipNext />}
         {straight ? t`Choose a version` : t`Play straight away`}
       </ContextMenuItem>
+      {!!devices.data?.length && (
+        <ContextMenuItem
+          data-name="play-on"
+          onSelect={() => openRemote({ play: { item, startMs: resumeMs } })}
+        >
+          <BiCast /> <Trans>Play on another device</Trans>
+        </ContextMenuItem>
+      )}
     </>
   );
 }

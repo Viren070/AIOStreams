@@ -729,6 +729,32 @@ export function useOwnSessions(enabled: boolean) {
   });
 }
 
+export function useRemoteDevices(
+  opts: { pollMs?: number; enabled?: boolean } = {}
+) {
+  const { client, user } = useSession();
+  return useQuery({
+    queryKey: [...useKey(), REMOTE_DEVICES],
+    queryFn: async () => {
+      const own = client.deviceId.toLowerCase();
+      const sessions = await client.get<SessionInfoDto[]>('/Sessions', {
+        ControllableByUserId: user.Id,
+      });
+      return sessions.filter(
+        (s) =>
+          s.SupportsRemoteControl &&
+          s.DeviceId?.toLowerCase() !== own &&
+          s.PlayableMediaTypes?.some((type) => type === 'Video')
+      );
+    },
+    staleTime: 30_000,
+    refetchInterval: opts.pollMs ?? false,
+    enabled: opts.enabled ?? true,
+  });
+}
+
+export const REMOTE_DEVICES = 'remote-devices';
+
 function playedEntry(userId: string, item: BaseItemDto): HistoryEntry {
   const at = Date.parse(item.UserData?.LastPlayedDate ?? '') || 0;
   return {

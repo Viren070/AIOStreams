@@ -564,6 +564,7 @@ msgid "At 0% there is no background."
 msgstr "At 0% there is no background."
 
 #: src/components/player/options.tsx
+#: src/components/remote-sheet.tsx
 #: src/pages/settings/index.tsx
 msgid "Audio"
 msgstr "Audio"
@@ -1482,6 +1483,7 @@ msgstr "Fade"
 msgid "Failed"
 msgstr "Failed"
 
+#: src/components/remote-sheet.tsx
 #: src/lib/input/keys.ts
 msgid "Fast forward"
 msgstr "Fast forward"
@@ -2213,6 +2215,7 @@ msgstr "Never"
 msgid "New code"
 msgstr "New code"
 
+#: src/components/remote-sheet.tsx
 #: src/lib/i18n.ts
 msgid "Next"
 msgstr "Next"
@@ -2294,6 +2297,10 @@ msgstr "No line matches."
 #: src/components/party/party-sheet.tsx
 msgid "No messages yet. Say hello."
 msgstr "No messages yet. Say hello."
+
+#: src/components/remote-sheet.tsx
+msgid "No other device is ready. Open the app on another device signed in here, and it shows up."
+msgstr "No other device is ready. Open the app on another device signed in here, and it shows up."
 
 #: src/lib/party/party.ts
 msgid "No party has that code on {relay}."
@@ -2388,6 +2395,10 @@ msgstr "Nothing found."
 msgid "Nothing here."
 msgstr "Nothing here."
 
+#: src/components/remote-sheet.tsx
+msgid "Nothing is playing there."
+msgstr "Nothing is playing there."
+
 #: src/pages/favourites.tsx
 msgid "Nothing marked as a favourite yet."
 msgstr "Nothing marked as a favourite yet."
@@ -2440,6 +2451,7 @@ msgid "Ocean"
 msgstr "Ocean"
 
 #: src/components/player/options.tsx
+#: src/components/remote-sheet.tsx
 #: src/lib/playback/sound.ts
 #: src/pages/settings/audio.tsx
 #: src/pages/settings/subtitles.tsx
@@ -2604,6 +2616,10 @@ msgstr "Original language"
 msgid "Other app"
 msgstr "Other app"
 
+#: src/components/remote-sheet.tsx
+msgid "Other devices"
+msgstr "Other devices"
+
 #: src/pages/sign-in.tsx
 msgid "Other user"
 msgstr "Other user"
@@ -2698,6 +2714,7 @@ msgid "Pattern"
 msgstr "Pattern"
 
 #: src/components/player/controls.tsx
+#: src/components/remote-sheet.tsx
 #: src/lib/input/actions.ts
 #: src/lib/input/keys.ts
 #: src/pages/downloads.tsx
@@ -2791,6 +2808,7 @@ msgstr "Pink"
 #: src/components/hero.tsx
 #: src/components/item-menu.tsx
 #: src/components/player/controls.tsx
+#: src/components/remote-sheet.tsx
 #: src/lib/input/actions.ts
 #: src/lib/input/keys.ts
 #: src/pages/item.tsx
@@ -2824,6 +2842,12 @@ msgstr "Play lists the versions to choose from, but resuming goes back to the ve
 #: src/components/player/next-episode.tsx
 msgid "Play now"
 msgstr "Play now"
+
+#: src/components/item-menu.tsx
+#: src/components/remote-sheet.tsx
+#: src/pages/item.tsx
+msgid "Play on another device"
+msgstr "Play on another device"
 
 #: src/lib/input/actions.ts
 msgid "Play or pause"
@@ -2911,6 +2935,10 @@ msgstr "Playing in {launchedName}"
 msgid "Playing in your player"
 msgstr "Playing in your player"
 
+#: src/components/remote-sheet.tsx
+msgid "Playing on {name}"
+msgstr "Playing on {name}"
+
 #: src/pages/settings/playback.tsx
 msgid "Playing on and the next and previous buttons pass over episodes marked as filler. You can still play one yourself."
 msgstr "Playing on and the next and previous buttons pass over episodes marked as filler. You can still play one yourself."
@@ -2934,6 +2962,10 @@ msgstr "Plays faster for as long as the key is held, at the speed set in Playbac
 #: src/pages/settings/about.tsx
 msgid "Plays the video."
 msgstr "Plays the video."
+
+#: src/components/remote-sheet.tsx
+msgid "Position"
+msgstr "Position"
 
 #: src/pages/settings/interface.tsx
 msgid "Poster size"
@@ -2960,6 +2992,7 @@ msgstr "Preview"
 msgid "Previews"
 msgstr "Previews"
 
+#: src/components/remote-sheet.tsx
 #: src/lib/i18n.ts
 msgid "Previous"
 msgstr "Previous"
@@ -3225,6 +3258,7 @@ msgstr "Retimed and synced automatically"
 msgid "Retry"
 msgstr "Retry"
 
+#: src/components/remote-sheet.tsx
 #: src/lib/input/keys.ts
 msgid "Rewind"
 msgstr "Rewind"
@@ -3745,6 +3779,10 @@ msgstr "Stable"
 msgid "Start a party"
 msgstr "Start a party"
 
+#: src/components/remote-sheet.tsx
+msgid "Starting…"
+msgstr "Starting…"
+
 #: src/pages/settings/subtitles.tsx
 msgid "Starts without subtitles."
 msgstr "Starts without subtitles."
@@ -3763,6 +3801,7 @@ msgstr "Status"
 msgid "Stereo"
 msgstr "Stereo"
 
+#: src/components/remote-sheet.tsx
 #: src/lib/input/actions.ts
 #: src/lib/input/keys.ts
 msgid "Stop"
@@ -3815,6 +3854,7 @@ msgid "Subtitle types"
 msgstr "Subtitle types"
 
 #: src/components/player/options.tsx
+#: src/components/remote-sheet.tsx
 #: src/pages/settings/index.tsx
 #: src/pages/settings/subtitles.tsx
 msgid "Subtitles"
@@ -4099,6 +4139,10 @@ msgstr "the link returned something other than a video"
 #: src/pages/settings/apps.tsx
 msgid "The movie or show whose page is open."
 msgstr "The movie or show whose page is open."
+
+#: src/components/remote-sheet.tsx
+msgid "The other device could not be reached"
+msgstr "The other device could not be reached"
 
 #: src/components/crash-report.tsx
 msgid "The page restarted unexpectedly"

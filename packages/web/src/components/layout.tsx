@@ -69,6 +69,7 @@ import { BrandLogo } from './brand-logo';
 import { BarSurface } from './bar-surface';
 import { VersionPickerProvider } from './version-picker';
 import { RemoteTarget } from './remote-target';
+import { RemoteSheet } from './remote-sheet';
 import { ItemMenuHost } from './item-menu';
 import { HomePage } from '../pages/home';
 import { PageShown } from '../lib/page-shown';
@@ -750,6 +751,7 @@ export function WebLayout() {
       </div>
       {playing && <Outlet />}
       <PartyHost />
+      <RemoteSheet />
     </>
   );
 }
