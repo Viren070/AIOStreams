@@ -114,13 +114,14 @@ data class PlayerState(
     val speed: Double? = null,
     val audio: Pick? = null,
     val subtitle: Pick? = null,
+    val passthrough: Boolean? = null,
 ) {
     /** `next` over this, as a later report wins. */
     fun then(next: PlayerState) = PlayerState(
         next.positionMs ?: positionMs, next.durationMs ?: durationMs, next.bufferedMs ?: bufferedMs,
         next.paused ?: paused, next.buffering ?: buffering, next.seeking ?: seeking, next.idle ?: idle,
         next.volume ?: volume, next.maxVolume ?: maxVolume, next.muted ?: muted, next.speed ?: speed,
-        next.audio ?: audio, next.subtitle ?: subtitle,
+        next.audio ?: audio, next.subtitle ?: subtitle, next.passthrough ?: passthrough,
     )
 
     fun changesFrom(previous: PlayerState) = PlayerState(
@@ -137,6 +138,7 @@ data class PlayerState(
         speed = speed.takeIf { it != previous.speed },
         audio = audio.takeIf { it != previous.audio },
         subtitle = subtitle.takeIf { it != previous.subtitle },
+        passthrough = passthrough.takeIf { it != previous.passthrough },
     )
 }
 
@@ -259,6 +261,7 @@ object PlayerProtocol {
         state.speed?.let { put("speed", it) }
         state.audio?.let { put("audio", it.id) }
         state.subtitle?.let { put("subtitle", it.id) }
+        state.passthrough?.let { put("passthrough", it) }
     }
 
     fun tracks(tracks: List<PlayerTrack>) = buildJsonObject {

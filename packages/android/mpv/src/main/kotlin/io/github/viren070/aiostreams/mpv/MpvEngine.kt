@@ -277,6 +277,12 @@ class MpvEngine(private val context: Context) : Engine {
         calls.execute { filters?.apply(sound) }
     }
 
+    private fun audioParams(params: MPVNode?) {
+        updateFilters { decoded(params) }
+        val format = params?.get("format")?.asString()
+        listener?.onState(PlayerState(passthrough = format?.startsWith("spdif") == true))
+    }
+
     private fun updateFilters(change: SoundFilters.() -> Unit) = calls.execute {
         filters?.run {
             change()
@@ -323,7 +329,7 @@ class MpvEngine(private val context: Context) : Engine {
 
     private val observer = object : MPV.EventObserver {
         override fun eventProperty(property: String) =
-            if (property == AUDIO_PARAMS) updateFilters { decoded(null) } else report(property, JsonNull)
+            if (property == AUDIO_PARAMS) audioParams(null) else report(property, JsonNull)
 
         override fun eventProperty(property: String, value: Long) = report(property, JsonPrimitive(value))
 
@@ -335,7 +341,7 @@ class MpvEngine(private val context: Context) : Engine {
         override fun eventProperty(property: String, value: Double) = report(property, JsonPrimitive(value))
 
         override fun eventProperty(property: String, value: MPVNode) = if (property == AUDIO_PARAMS) {
-            updateFilters { decoded(value) }
+            audioParams(value)
         } else {
             report(property, runCatching { Json.parseToJsonElement(value.toJson()) }.getOrDefault(JsonNull))
         }

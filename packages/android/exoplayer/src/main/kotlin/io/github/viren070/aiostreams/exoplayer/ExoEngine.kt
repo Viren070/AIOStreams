@@ -27,6 +27,7 @@ import androidx.media3.common.VideoSize
 import androidx.media3.common.text.Cue
 import androidx.media3.common.text.CueGroup
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.common.util.Util
 import androidx.media3.datasource.DataSourceUtil
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.DefaultDataSource
@@ -800,6 +801,7 @@ class ExoEngine(private val context: Context) :
         audioTrackConfig: AudioSink.AudioTrackConfig,
     ) {
         audioTrack = audioTrackConfig
+        state(PlayerState(passthrough = !Util.isEncodingLinearPcm(audioTrackConfig.encoding)))
     }
 
     private val poll = object : Runnable {
