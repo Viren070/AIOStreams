@@ -45,7 +45,7 @@ import { SyncByEar, SyncToLine } from './subtitle-sync';
 import { Volume } from './volume';
 import { usePlayhead, type Playhead } from '../../lib/playback/playhead';
 
-const IDLE_MS = 2000;
+const IDLE_MS = 5000;
 
 interface Transport {
   name: string;
