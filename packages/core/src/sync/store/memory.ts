@@ -1,5 +1,5 @@
 import { createLogger } from '../../logging/logger.js';
-import { replicaId } from './helpers.js';
+import { diff, indexOf, NO_INDEX, replicaId, type Index } from './helpers.js';
 import {
   SharedTx,
   type CreateResult,
@@ -13,13 +13,16 @@ const logger = createLogger('party');
 
 const LAPSE_MS = 1_000;
 
-/** Live objects changed in place; tags and refs are found by going through them. */
+/** Live objects changed in place; tags and refs are indexed as each change commits. */
 class MemoryRecords<L> implements SharedRecords<L> {
   readonly live = new Map<string, L>();
   readonly due = new Map<string, number>();
   /** Records changed this turn, with what `settle` compares them to. */
   readonly turn = new Map<string, unknown>();
   private readonly logs = new Map<string, string[]>();
+  private readonly indexed = new Map<string, Index>();
+  private readonly byTag = new Map<string, Set<string>>();
+  private readonly byRef = new Map<string, string>();
 
   constructor(
     readonly kind: SharedKind<L>,
@@ -66,12 +69,42 @@ class MemoryRecords<L> implements SharedRecords<L> {
       if (live === undefined) continue;
       const tx = new SharedTx();
       this.kind.settle!(live, tx, before);
+      this.reindex(id, live);
       this.kind.receive(id, tx.messages);
     }
     this.turn.clear();
   }
 
+  private reindex(id: string, live: L | null): void {
+    const before = this.indexed.get(id) ?? NO_INDEX;
+    const after = live ? indexOf(this.kind, live) : NO_INDEX;
+    diff(
+      before.tags,
+      after.tags,
+      (tag) => {
+        let ids = this.byTag.get(tag);
+        if (!ids) this.byTag.set(tag, (ids = new Set()));
+        ids.add(id);
+      },
+      (tag) => {
+        const ids = this.byTag.get(tag);
+        if (ids?.delete(id) && !ids.size) this.byTag.delete(tag);
+      }
+    );
+    diff(
+      before.refs,
+      after.refs,
+      (ref) => this.byRef.set(ref, id),
+      (ref) => {
+        if (this.byRef.get(ref) === id) this.byRef.delete(ref);
+      }
+    );
+    if (live) this.indexed.set(id, after);
+    else this.indexed.delete(id);
+  }
+
   private commit(id: string, live: L, tx: SharedTx): void {
+    this.reindex(id, tx.dropped ? null : live);
     if (tx.dropped) {
       this.live.delete(id);
       this.due.delete(id);
@@ -107,16 +140,11 @@ class MemoryRecords<L> implements SharedRecords<L> {
   }
 
   tagged(tag: string): string[] {
-    const out: string[] = [];
-    for (const [id, live] of this.live)
-      if (this.kind.tags(live).includes(tag)) out.push(id);
-    return out;
+    return [...(this.byTag.get(tag) ?? [])];
   }
 
   find(ref: string): string | undefined {
-    for (const [id, live] of this.live)
-      if (this.kind.refs?.(live).includes(ref)) return id;
-    return undefined;
+    return this.byRef.get(ref);
   }
 
   hold(): void {}
