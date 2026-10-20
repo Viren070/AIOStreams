@@ -15,6 +15,7 @@ stopped the app starting, as a TV has no console.
 
 ```sh
 pnpm -F @aiostreams/smart-tv build:webos   # out/io.github.viren070.aiostreams_<version>_all.ipk
+pnpm -F @aiostreams/smart-tv build:webos:1080p   # the same at 1920x1080, in out/1080p
 pnpm -F @aiostreams/smart-tv build:tizen   # out/AIOStreams.wgt
 ```
 
