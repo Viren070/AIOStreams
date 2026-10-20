@@ -122,6 +122,8 @@ impl Thumbnails {
                 };
                 match opened {
                     Ok(session) => {
+                        let keyframes = session.keyframes().entries.len();
+                        log::info!(target: "thumbnails", "opened the file: {keyframes} keyframes");
                         let cached = wanted.and_then(|ms| session.want(ms, None));
                         *stage = Stage::Open(session);
                         drop(stage);
@@ -131,6 +133,12 @@ impl Thumbnails {
                     }
                     Err(e) if e.is_transient() => {
                         *stage = Stage::Idle(again, Some(Instant::now() + RETRY));
+                        drop(stage);
+                        log::warn!(
+                            target: "thumbnails",
+                            "opening the file failed, trying again in {} s: {e}",
+                            RETRY.as_secs()
+                        );
                     }
                     Err(e) => {
                         *stage = Stage::Failed;

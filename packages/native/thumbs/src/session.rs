@@ -13,6 +13,8 @@ struct State {
     busy: HashSet<usize>,
     /// Keyframes that failed since the pointer last moved to another.
     failed: HashSet<usize>,
+    /// Whether the last fetch or render failed, so a run of failures is logged once.
+    failing: bool,
     /// Packets fetched and not yet rendered, with the request each answers.
     fetched: Vec<(u64, usize, Vec<u8>)>,
     /// The request the last thumbnail passed on answered.
@@ -52,6 +54,7 @@ impl Session {
                 wanted: None,
                 busy: HashSet::new(),
                 failed: HashSet::new(),
+                failing: false,
                 fetched: Vec::new(),
                 shown: 0,
                 cache: HashMap::new(),
@@ -89,9 +92,13 @@ impl Session {
                     let mut s = shared.state.lock().unwrap();
                     match packet {
                         Ok(packet) => s.fetched.push((asked, index, packet)),
-                        Err(_) => {
+                        Err(e) => {
                             s.busy.remove(&index);
                             s.failed.insert(index);
+                            if !std::mem::replace(&mut s.failing, true) {
+                                let ms = source.keyframes().entries[index].time_ms;
+                                log::warn!(target: "thumbnails", "reading the keyframe at {ms} ms failed: {e}");
+                            }
                         }
                     }
                     drop(s);
@@ -134,10 +141,18 @@ impl Session {
                     let jpeg = renderer.render(&packet);
                     let mut s = shared.state.lock().unwrap();
                     s.busy.remove(&index);
-                    let Ok(jpeg) = jpeg else {
-                        s.failed.insert(index);
-                        continue;
+                    let jpeg = match jpeg {
+                        Ok(jpeg) => jpeg,
+                        Err(e) => {
+                            s.failed.insert(index);
+                            if !std::mem::replace(&mut s.failing, true) {
+                                let ms = keyframes.entries[index].time_ms;
+                                log::warn!(target: "thumbnails", "decoding the keyframe at {ms} ms failed: {e}");
+                            }
+                            continue;
+                        }
                     };
+                    s.failing = false;
                     let thumbnail = Arc::new(Thumbnail {
                         time_ms: keyframes.entries[index].time_ms,
                         width: renderer.width(),

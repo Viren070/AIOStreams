@@ -18,6 +18,7 @@ aiostreams-container.workspace = true
 dolby_vision.workspace = true
 jpeg-encoder.workspace = true
 libloading.workspace = true
+log.workspace = true
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 

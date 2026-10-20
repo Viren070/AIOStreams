@@ -22,6 +22,7 @@ dependencies = [
  "aiostreams-container",
  "aiostreams-thumbs",
  "jni",
+ "log",
  "serde_json",
 ]
 
@@ -34,6 +35,7 @@ dependencies = [
  "jpeg-encoder",
  "libc",
  "libloading",
+ "log",
  "serde",
  "serde_json",
  "windows-sys 0.61.2",
