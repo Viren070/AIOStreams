@@ -13,6 +13,12 @@ AIOStreams Desktop is licensed under the AGPL-3.0. It ships with:
     is under its own project's licence (GPL, LGPL or permissive). Source:
     [mpv-player/mpv](https://github.com/mpv-player/mpv), [FFmpeg](https://ffmpeg.org) and each
     library's own project.
+  - macOS: `libmpv-mpvkit.dylib` in `Contents/Frameworks`, for the video outputs that draw with
+    Metal or AVFoundation: mpv with its MoltenVK and AVFoundation patches, linked with FFmpeg,
+    libass, libplacebo, MoltenVK, dav1d and the other libraries it uses into one library. They are
+    the builds [edde746/MPVKit](https://github.com/edde746/MPVKit) publishes, licensed under the
+    GPL-3.0-only, and each archive is in `mpvkit-macos.pin` in the AIOStreams repository. Source:
+    that repository's build scripts and patches, and each library's own project.
 - **FFmpeg** on Windows, which makes the seek bar's thumbnails: `avcodec-*.dll` and `avutil-*.dll`,
   licensed under the LGPL-2.1-or-later, with [dav1d](https://code.videolan.org/videolan/dav1d)
   (BSD-2-Clause) built in. Their licence texts are beside them in `FFmpeg-COPYING.LGPLv2.1` and

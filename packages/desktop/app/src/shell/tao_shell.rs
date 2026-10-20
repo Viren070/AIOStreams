@@ -133,6 +133,8 @@ pub fn run(app: App) {
         }
     });
     #[cfg(target_os = "macos")]
+    platform::load_video_output(&data_dir);
+    #[cfg(target_os = "macos")]
     let _menu = platform::install_menu({
         let proxy = proxy.clone();
         move || {
@@ -333,6 +335,8 @@ pub fn run(app: App) {
                     maximized = now;
                     emit(Outbound::WindowState { maximized: now });
                 }
+                #[cfg(target_os = "macos")]
+                video.refresh_hdr();
                 let at = Instant::now() + SETTLE;
                 save_at = Some(at);
                 *flow = ControlFlow::WaitUntil(at);
@@ -341,6 +345,9 @@ pub fn run(app: App) {
                 event: WindowEvent::Moved(_),
                 ..
             } => {
+                // Another screen may take over the window, with its own EDR headroom.
+                #[cfg(target_os = "macos")]
+                video.refresh_hdr();
                 let at = Instant::now() + SETTLE;
                 save_at = Some(at);
                 *flow = ControlFlow::WaitUntil(at);
@@ -361,7 +368,12 @@ pub fn run(app: App) {
                 record(&window, &mut placement);
                 placement::save(&data_dir, &placement);
                 video.shutdown();
-                player.borrow_mut().take();
+                let player = player.borrow_mut().take();
+                // mpv's AVFoundation output tears down on the main thread, which must not wait for it.
+                #[cfg(target_os = "macos")]
+                std::thread::spawn(move || drop(player));
+                #[cfg(not(target_os = "macos"))]
+                drop(player);
                 external.close();
                 *flow = ControlFlow::Exit;
             }

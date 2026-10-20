@@ -891,6 +891,10 @@ msgstr "Combine movie and show results"
 msgid "Commentary"
 msgstr "Commentary"
 
+#: src/pages/settings/apps.tsx
+msgid "Compatibility"
+msgstr "Compatibility"
+
 #: src/components/people.tsx
 msgid "Composer"
 msgstr "Composer"
@@ -2027,6 +2031,10 @@ msgstr "Lost the connection to {relay}. Reconnecting… Your player carries on, 
 msgid "Lower subtitles"
 msgstr "Lower subtitles"
 
+#: src/pages/settings/apps.tsx
+msgid "macOS draws the video, using less power, and shows Dolby Vision itself. Shaders and mpv's picture options do not apply."
+msgstr "macOS draws the video, using less power, and shows Dolby Vision itself. Shaders and mpv's picture options do not apply."
+
 #: src/lib/i18n.ts
 msgid "Magenta"
 msgstr "Magenta"
@@ -2173,6 +2181,10 @@ msgstr "Moving around"
 #: src/pages/settings/apps.tsx
 msgid "mpv configuration"
 msgstr "mpv configuration"
+
+#: src/pages/settings/apps.tsx
+msgid "mpv draws the video, with your mpv.conf and shaders."
+msgstr "mpv draws the video, with your mpv.conf and shaders."
 
 #: src/pages/settings/playback.tsx
 msgid "mpv inside this window, with this app's controls and playback settings. Your own mpv.conf, scripts and shaders work here too: put them in its mpv folder under Desktop app."
@@ -3219,9 +3231,17 @@ msgstr "Reset history"
 msgid "Reset theme"
 msgstr "Reset theme"
 
+#: src/pages/settings/apps.tsx
+msgid "Restart"
+msgstr "Restart"
+
 #: src/lib/hosts/shell/index.ts
 msgid "Restart now"
 msgstr "Restart now"
+
+#: src/pages/settings/apps.tsx
+msgid "Restart to switch"
+msgstr "Restart to switch"
 
 #: src/components/window-controls.tsx
 msgid "Restore"
@@ -3971,6 +3991,10 @@ msgstr "Synced automatically"
 msgid "Syncing subtitles…"
 msgstr "Syncing subtitles…"
 
+#: src/pages/settings/apps.tsx
+msgid "System"
+msgstr "System"
+
 #: src/pages/settings/interface.tsx
 msgid "System ({system})"
 msgstr "System ({system})"
@@ -4140,6 +4164,10 @@ msgstr "the link returned something other than a video"
 msgid "The movie or show whose page is open."
 msgstr "The movie or show whose page is open."
 
+#: src/pages/settings/apps.tsx
+msgid "The older way mpv draws, for Macs where the others fail. Some Dolby Vision videos show the wrong colours."
+msgstr "The older way mpv draws, for Macs where the others fail. Some Dolby Vision videos show the wrong colours."
+
 #: src/components/remote-sheet.tsx
 msgid "The other device could not be reached"
 msgstr "The other device could not be reached"
@@ -4208,6 +4236,10 @@ msgstr "the TV's player failed ({code})"
 #: src/lib/playback/player-choice.ts
 msgid "the video app Android picks"
 msgstr "the video app Android picks"
+
+#: src/pages/settings/apps.tsx
+msgid "The video output changes when the app opens again."
+msgstr "The video output changes when the app opens again."
 
 #: src/components/download-button.tsx
 msgid "The whole show"
@@ -4621,6 +4653,10 @@ msgstr "Versions play in this browser. Choose another player to open them in it 
 #: src/pages/settings/playback.tsx
 msgid "Video"
 msgstr "Video"
+
+#: src/pages/settings/apps.tsx
+msgid "Video output"
+msgstr "Video output"
 
 #: src/pages/settings/about.tsx
 msgid "Visit"

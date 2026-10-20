@@ -891,6 +891,10 @@ msgstr ""
 msgid "Commentary"
 msgstr ""
 
+#: src/pages/settings/apps.tsx
+msgid "Compatibility"
+msgstr ""
+
 #: src/components/people.tsx
 msgid "Composer"
 msgstr ""
@@ -2027,6 +2031,10 @@ msgstr ""
 msgid "Lower subtitles"
 msgstr ""
 
+#: src/pages/settings/apps.tsx
+msgid "macOS draws the video, using less power, and shows Dolby Vision itself. Shaders and mpv's picture options do not apply."
+msgstr ""
+
 #: src/lib/i18n.ts
 msgid "Magenta"
 msgstr ""
@@ -2172,6 +2180,10 @@ msgstr ""
 
 #: src/pages/settings/apps.tsx
 msgid "mpv configuration"
+msgstr ""
+
+#: src/pages/settings/apps.tsx
+msgid "mpv draws the video, with your mpv.conf and shaders."
 msgstr ""
 
 #: src/pages/settings/playback.tsx
@@ -3219,8 +3231,16 @@ msgstr ""
 msgid "Reset theme"
 msgstr ""
 
+#: src/pages/settings/apps.tsx
+msgid "Restart"
+msgstr ""
+
 #: src/lib/hosts/shell/index.ts
 msgid "Restart now"
+msgstr ""
+
+#: src/pages/settings/apps.tsx
+msgid "Restart to switch"
 msgstr ""
 
 #: src/components/window-controls.tsx
@@ -3971,6 +3991,10 @@ msgstr ""
 msgid "Syncing subtitles…"
 msgstr ""
 
+#: src/pages/settings/apps.tsx
+msgid "System"
+msgstr ""
+
 #: src/pages/settings/interface.tsx
 msgid "System ({system})"
 msgstr ""
@@ -4140,6 +4164,10 @@ msgstr ""
 msgid "The movie or show whose page is open."
 msgstr ""
 
+#: src/pages/settings/apps.tsx
+msgid "The older way mpv draws, for Macs where the others fail. Some Dolby Vision videos show the wrong colours."
+msgstr ""
+
 #: src/components/remote-sheet.tsx
 msgid "The other device could not be reached"
 msgstr ""
@@ -4207,6 +4235,10 @@ msgstr ""
 
 #: src/lib/playback/player-choice.ts
 msgid "the video app Android picks"
+msgstr ""
+
+#: src/pages/settings/apps.tsx
+msgid "The video output changes when the app opens again."
 msgstr ""
 
 #: src/components/download-button.tsx
@@ -4620,6 +4652,10 @@ msgstr ""
 
 #: src/pages/settings/playback.tsx
 msgid "Video"
+msgstr ""
+
+#: src/pages/settings/apps.tsx
+msgid "Video output"
 msgstr ""
 
 #: src/pages/settings/about.tsx

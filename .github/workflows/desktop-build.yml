@@ -267,6 +267,13 @@ jobs:
           name: licences
           path: packages/desktop/licences
 
+      # MPVKit's libmpv carries Swift built by Xcode 26, whose runtime libraries the link needs.
+      - name: Use Xcode 26
+        run: |
+          xcode=$(ls -d /Applications/Xcode_26*.app | grep -iv beta | sort -V | tail -1)
+          sudo xcode-select -s "$xcode"
+          xcodebuild -version
+
       - uses: dtolnay/rust-toolchain@stable
 
       - uses: Swatinem/rust-cache@v2
@@ -288,18 +295,29 @@ jobs:
       - name: Assemble the app bundle
         run: ./packages/desktop/scripts/make-app-macos.sh "$VERSION" stage
 
-      # Opens the app for a few seconds on the runner's own display and reads its log.
+      # Opens the app for a few seconds on each video output, on the runner's own display,
+      # and reads its log. A rejected mpv option means the output's libmpv lacks it.
       - name: Smoke test
         run: |
-          stage/AIOStreams.app/Contents/MacOS/aiostreams-desktop &
-          pid=$!
-          sleep 20
-          kill "$pid" 2>/dev/null || true
-          log=$(ls -t "$HOME/Library/Application Support/AIOStreams Desktop/logs/"*.log | head -1)
-          cat "$log"
-          grep -q "mpv started" "$log"
-          grep -q "mpv render context ready" "$log"
-          ! grep -q "panicked" "$log"
+          logs="$HOME/Library/Application Support/AIOStreams Desktop/logs"
+          for output in mpv system compatibility; do
+            rm -rf "$logs"
+            AIOSTREAMS_VIDEO_OUTPUT=$output stage/AIOStreams.app/Contents/MacOS/aiostreams-desktop &
+            pid=$!
+            sleep 20
+            kill "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            log=$(ls -t "$logs"/*.log | head -1)
+            echo "::group::$output"; cat "$log"; echo "::endgroup::"
+            expect=("video output=$output" "mpv started")
+            [ "$output" = compatibility ] && expect+=("mpv render context ready")
+            for line in "${expect[@]}"; do
+              grep -q "$line" "$log" || { echo "$output: no '$line'" && exit 1; }
+            done
+            for line in "mpv option" "panicked"; do
+              if grep -q "$line" "$log"; then echo "$output: '$line'" && exit 1; fi
+            done
+          done
 
       - name: Pack
         run: |

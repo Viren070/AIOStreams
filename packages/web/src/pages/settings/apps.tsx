@@ -25,11 +25,13 @@ import {
 import {
   checkDiscord,
   openMpvConfig,
+  restartApp,
   useDiscordStatus,
+  useVideoOutput,
   type DiscordStatus,
 } from '../../lib/hosts/shell/desktop';
 import { readMpvConfig, saveMpvConfig } from '../../lib/hosts/shell/android';
-import { appBridge } from '../../lib/hosts/shell/bridge';
+import { appBridge, type VideoOutput } from '../../lib/hosts/shell/bridge';
 import {
   settings,
   useSetting,
@@ -182,12 +184,62 @@ export function AppSection() {
   );
 }
 
+const videoOutputs = (output: VideoOutput): { label: string; help: string } =>
+  ({
+    mpv: {
+      label: 'mpv',
+      help: t`mpv draws the video, with your mpv.conf and shaders.`,
+    },
+    system: {
+      label: t`System`,
+      help: t`macOS draws the video, using less power, and shows Dolby Vision itself. Shaders and mpv's picture options do not apply.`,
+    },
+    compatibility: {
+      label: t`Compatibility`,
+      help: t`The older way mpv draws, for Macs where the others fail. Some Dolby Vision videos show the wrong colours.`,
+    },
+  })[output];
+
+function VideoOutputRows() {
+  const [state, choose] = useVideoOutput();
+  if (!state?.outputs.length) return null;
+  return (
+    <>
+      <Select
+        label={t`Video output`}
+        help={videoOutputs(state.chosen).help}
+        options={state.outputs.map((value) => ({
+          value,
+          label: videoOutputs(value).label,
+        }))}
+        value={state.chosen}
+        onValueChange={(v) => choose(v as VideoOutput)}
+      />
+      {state.chosen !== state.running && (
+        <SettingsRow
+          label={t`Restart to switch`}
+          help={t`The video output changes when the app opens again.`}
+        >
+          <Button
+            intent="white"
+            className="w-full rounded-full sm:w-auto"
+            onClick={restartApp}
+          >
+            <Trans>Restart</Trans>
+          </Button>
+        </SettingsRow>
+      )}
+    </>
+  );
+}
+
 export function DesktopSection() {
   return (
     <>
       <UpdatesCard />
       <DiscordCard />
       <SettingsCard name="mpv" title="mpv">
+        <VideoOutputRows />
         <SettingsRow
           label={t`mpv configuration`}
           help={t`mpv.conf, input.conf, scripts and shaders in this folder apply to the built-in mpv.`}

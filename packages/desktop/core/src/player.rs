@@ -34,6 +34,9 @@ const LOGGED_PROPS: &[&str] = &[
 /// Observed for the sound filters, past the ids of the page's properties.
 const AUDIO_PARAMS: u64 = 1000;
 const SUBTITLE_LINES: u64 = 1001;
+/// Observed for the app's HDR output.
+const VIDEO_GAMMA: u64 = 1002;
+const VIDEO_PRIMARIES: u64 = 1003;
 const READ_AHEAD_EVERY: Duration = Duration::from_secs(15);
 const READ_AHEAD_STEPS: usize = 500;
 
@@ -232,6 +235,8 @@ impl Player {
         }
         mpv.observe("audio-params", Kind::Json, AUDIO_PARAMS)?;
         mpv.observe(REFERENCE_LINES, Kind::String, SUBTITLE_LINES)?;
+        mpv.observe("video-params/gamma", Kind::String, VIDEO_GAMMA)?;
+        mpv.observe("video-params/primaries", Kind::String, VIDEO_PRIMARIES)?;
         let versions = (text(&mpv, "mpv-version"), text(&mpv, "ffmpeg-version"));
         log::info!(
             "mpv started version=\"{}\" ffmpeg={}",
@@ -857,6 +862,7 @@ fn pump(
     let mut stripping = false;
     let mut sound = Sound::default();
     let mut filters = Filters::default();
+    let mut colour = (None, None);
 
     while !quit.load(Ordering::SeqCst) {
         if let Some(next) = pending.lock().ok().and_then(|mut p| p.take()) {
@@ -942,6 +948,20 @@ fn pump(
                         .and_then(|mut r| r.report(lines.unwrap_or_default()));
                     if let Some(message) = message {
                         emit(message);
+                    }
+                }
+                Event::Property {
+                    id: VIDEO_GAMMA | VIDEO_PRIMARIES,
+                    ..
+                } => {
+                    let now = (
+                        text(mpv, "video-params/gamma"),
+                        text(mpv, "video-params/primaries"),
+                    );
+                    if now != colour {
+                        colour = now.clone();
+                        let (gamma, primaries) = now;
+                        emit(Outbound::VideoColour { gamma, primaries });
                     }
                 }
                 Event::Property { name, value, .. } => {

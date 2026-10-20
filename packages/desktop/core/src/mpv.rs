@@ -57,6 +57,8 @@ struct Api {
     set_option_string: unsafe extern "C" fn(Handle, *const c_char, *const c_char) -> c_int,
     command: unsafe extern "C" fn(Handle, *mut *const c_char) -> c_int,
     set_property_string: unsafe extern "C" fn(Handle, *const c_char, *const c_char) -> c_int,
+    set_property_async:
+        unsafe extern "C" fn(Handle, u64, *const c_char, c_int, *mut c_void) -> c_int,
     get_property: unsafe extern "C" fn(Handle, *const c_char, c_int, *mut c_void) -> c_int,
     observe_property: unsafe extern "C" fn(Handle, u64, *const c_char, c_int) -> c_int,
     request_log_messages: unsafe extern "C" fn(Handle, *const c_char) -> c_int,
@@ -91,6 +93,7 @@ impl Api {
             set_option_string: sym!("mpv_set_option_string"),
             command: sym!("mpv_command"),
             set_property_string: sym!("mpv_set_property_string"),
+            set_property_async: sym!("mpv_set_property_async"),
             get_property: sym!("mpv_get_property"),
             observe_property: sym!("mpv_observe_property"),
             request_log_messages: sym!("mpv_request_log_messages"),
@@ -230,6 +233,24 @@ impl Mpv {
         let (n, v) = (cstring(name)?, cstring(value)?);
         // SAFETY: valid handle and strings.
         self.check(unsafe { (self.api.set_property_string)(self.handle, n.as_ptr(), v.as_ptr()) })
+    }
+
+    /// Queues the change and returns: unlike `set_property`, which holds the
+    /// core's dispatch lock while it writes, mpv marks this safe to call from
+    /// a render API thread. The reply event is ignored.
+    pub fn set_property_async(&self, name: &str, value: &str) -> Result<(), String> {
+        let (n, v) = (cstring(name)?, cstring(value)?);
+        let mut data: *const c_char = v.as_ptr();
+        // SAFETY: valid handle and strings; STRING reads a char *, which mpv copies.
+        self.check(unsafe {
+            (self.api.set_property_async)(
+                self.handle,
+                0,
+                n.as_ptr(),
+                FORMAT_STRING,
+                (&raw mut data).cast(),
+            )
+        })
     }
 
     pub fn get_property(&self, name: &str, kind: Kind) -> Option<Value> {

@@ -1,6 +1,12 @@
 import React from 'react';
 import type { Host } from '..';
-import { appBridge, ask, bridgeStore, type ShellAnswer } from './bridge';
+import {
+  appBridge,
+  ask,
+  bridgeStore,
+  type ShellAnswer,
+  type VideoOutput,
+} from './bridge';
 import { shellDownloads } from './downloads';
 import { appEngine } from './player';
 import { resolveYouTube } from './youtube';
@@ -54,6 +60,27 @@ export function useAudioDevices(): AudioDevice[] | null {
 
 export function openMpvConfig(): void {
   appBridge()?.send({ type: 'open-mpv-config' });
+}
+
+export type VideoOutputState = ShellAnswer<'video-output'>;
+
+/** The outputs the app offers, and a choice that applies from its next start. */
+export function useVideoOutput(): [
+  VideoOutputState | null,
+  (output: VideoOutput) => void,
+] {
+  const [state, setState] = React.useState<VideoOutputState | null>(null);
+  const request = React.useCallback((output: VideoOutput | null) => {
+    ask({ type: 'video-output', output }, 'video-output', { timeoutMs: 5000 })
+      .then(setState)
+      .catch(() => undefined);
+  }, []);
+  React.useEffect(() => request(null), [request]);
+  return [state, request];
+}
+
+export function restartApp(): void {
+  appBridge()?.send({ type: 'restart' });
 }
 
 export const desktopHost: Host = {

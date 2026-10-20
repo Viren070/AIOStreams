@@ -12,6 +12,7 @@ const PARAM_API_TYPE: c_int = 1;
 const PARAM_OPENGL_INIT_PARAMS: c_int = 2;
 const PARAM_OPENGL_FBO: c_int = 3;
 const PARAM_FLIP_Y: c_int = 4;
+const PARAM_DEPTH: c_int = 5;
 const PARAM_X11_DISPLAY: c_int = 8;
 const PARAM_WL_DISPLAY: c_int = 9;
 const PARAM_ADVANCED_CONTROL: c_int = 10;
@@ -87,6 +88,7 @@ pub struct RenderContext {
     ctx: Context,
     on_update: Option<Box<OnUpdate>>,
     mpv: Arc<Mpv>,
+    depth: c_int,
 }
 
 unsafe extern "C" fn trampoline(data: *mut c_void) {
@@ -97,12 +99,14 @@ unsafe extern "C" fn trampoline(data: *mut c_void) {
 
 impl RenderContext {
     /// With `advanced`, mpv waits on this thread, so no blocking mpv call may run on it.
+    /// `depth` is the framebuffer's bits a channel, which mpv dithers down to.
     pub fn new(
         mpv: Arc<Mpv>,
         get_proc_address: GetProcAddress,
         get_proc_address_ctx: *mut c_void,
         display: Option<NativeDisplay>,
         advanced: bool,
+        depth: c_int,
     ) -> Result<Self, String> {
         // SAFETY: the types match mpv's render.h and client.h.
         let api = unsafe {
@@ -164,6 +168,7 @@ impl RenderContext {
             ctx,
             on_update: None,
             mpv,
+            depth,
         })
     }
 
@@ -253,6 +258,7 @@ impl RenderContext {
         };
         let mut flip: c_int = flip_y.into();
         let mut block: c_int = wait.into();
+        let mut depth: c_int = self.depth;
         let mut params = [
             Param {
                 kind: PARAM_OPENGL_FBO,
@@ -261,6 +267,10 @@ impl RenderContext {
             Param {
                 kind: PARAM_FLIP_Y,
                 data: (&raw mut flip).cast(),
+            },
+            Param {
+                kind: PARAM_DEPTH,
+                data: (&raw mut depth).cast(),
             },
             Param {
                 kind: PARAM_BLOCK_FOR_TARGET_TIME,

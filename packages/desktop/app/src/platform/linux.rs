@@ -262,6 +262,7 @@ impl VideoSurface {
                     std::ptr::null_mut(),
                     display,
                     true, // advanced control
+                    8,    // a GtkGLArea's default framebuffer is 8 bits a channel
                 ) {
                     Ok(mut ctx) => {
                         ctx.on_update(|| {

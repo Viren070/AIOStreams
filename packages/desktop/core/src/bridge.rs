@@ -135,6 +135,13 @@ pub enum Inbound {
         visible: bool,
     },
     AppInfo,
+    /// Picks the output that draws the video from the next start, then answers with a
+    /// `video-output`; `None` only asks.
+    VideoOutput {
+        output: Option<String>,
+    },
+    /// Quits and opens the app again.
+    Restart,
     OpenMpvConfig,
     OpenLogs,
     /// Versions, paths and the recent log, for a bug report; the page names its own build and the server's.
@@ -283,6 +290,11 @@ pub enum Outbound {
         #[serde(skip_serializing_if = "is_false")]
         external: bool,
     },
+    /// For the app's own HDR output; never sent to the page.
+    VideoColour {
+        gamma: Option<String>,
+        primaries: Option<String>,
+    },
     PlayerEnded {
         reason: &'static str,
         error: Option<String>,
@@ -315,6 +327,12 @@ pub enum Outbound {
         ffmpeg: Option<String>,
         #[serde(rename = "ac3Encoder")]
         ac3_encoder: bool,
+    },
+    /// `outputs` is empty where there is no choice.
+    VideoOutput {
+        outputs: Vec<&'static str>,
+        running: &'static str,
+        chosen: &'static str,
     },
     /// mpv's `audio-device-list`.
     AudioDevices {

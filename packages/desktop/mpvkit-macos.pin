@@ -1,0 +1,28 @@
+# The static libraries scripts/link-mpvkit-macos.sh links into the libmpv the Metal and
+# AVFoundation outputs draw with: edde746's fork of MPVKit at b9e88e80657e and what its
+# Package.swift names, with the checksums it gives. <name> <SHA-256 of the zip> <url>
+Libmpv 04c9ce36e19d98acba789a024ba3832dddfb1dc8e97fea83c4f2873603a87222 https://github.com/edde746/MPVKit/releases/download/binaries/Libmpv-f57a0483352e.xcframework.zip
+Libunibreak 001087c0e927ae00f604422b539898b81eb77230ea7700597b70393cd51e946c https://github.com/mpvkit/libass-build/releases/download/0.17.4/Libunibreak.xcframework.zip
+Libfreetype f2840aba1ce35e51c0595557eee82c908dac8e32108ecc0661301c06061e051c https://github.com/mpvkit/libass-build/releases/download/0.17.4/Libfreetype.xcframework.zip
+Libfribidi 4a55513792ef7a17893875f74cc84c56f3657e8768c07a7a96f563a11dc4b743 https://github.com/mpvkit/libass-build/releases/download/0.17.4/Libfribidi.xcframework.zip
+Libharfbuzz 91558d8497d9d97bc11eeef8b744d104315893bfee8f17483d8002e14565f84b https://github.com/mpvkit/libass-build/releases/download/0.17.4/Libharfbuzz.xcframework.zip
+Libass 1dfeaca2518dfb364d678635f60c5bc67a77fe3a4dbdca6712a4fe8be4b57f6e https://github.com/edde746/MPVKit/releases/download/binaries/Libass-f68b62c236eb.xcframework.zip
+Libbluray bc037d34e2b0b5ab7f202fb371f5fb298136cc66fdf406c2172185d06f53f18d https://github.com/mpvkit/libbluray-build/releases/download/1.4.0/Libbluray.xcframework.zip
+Libcrypto 593283be2a90f7fd66f6e6ed331b2f099cf403e0926fe3b4ac09a7062b793965 https://github.com/mpvkit/openssl-build/releases/download/3.3.5/Libcrypto.xcframework.zip
+Libssl ff5ffd43d015d7285fd37e4a3145b25cbd8d2842740bd629a711c299a20e226a https://github.com/mpvkit/openssl-build/releases/download/3.3.5/Libssl.xcframework.zip
+Libuavs3d 1e69250279be9334cd2f6849abdc884c8e4bb29212467b6f071fdc1ac2010b6b https://github.com/mpvkit/libuavs3d-build/releases/download/1.2.1-xcode/Libuavs3d.xcframework.zip
+Libdovi e693e239808350868e79c5448ef9f02e2716bc822dd8632a41a368a1eae5ca7d https://github.com/mpvkit/libdovi-build/releases/download/3.3.2/Libdovi.xcframework.zip
+MoltenVK 9bd1ca1e4563bacd25d6e55d37b10341d50b2601bc2684bc332188e79daa2b79 https://github.com/mpvkit/moltenvk-build/releases/download/1.4.1/MoltenVK.xcframework.zip
+Libshaderc_combined 758047b615708575b580eb960a2d083f760a29dc462d6eaa360416c946ce433b https://github.com/mpvkit/libshaderc-build/releases/download/2025.5.0/Libshaderc_combined.xcframework.zip
+lcms2 dc0dce0606f6ab6841a8ec5a6bd4448e2f3ef00661a050460f806c9393dc6982 https://github.com/mpvkit/lcms2-build/releases/download/2.17.0/lcms2.xcframework.zip
+Libplacebo 3b2bd57b82549566963effadf0891a141448d9f89c7d48fca0b8f823b854bac6 https://github.com/mpvkit/libplacebo-build/releases/download/7.351.0-2512/Libplacebo.xcframework.zip
+Libdav1d 7965ecf274af5448fa830bc1fec4e78257cf1d7509ed1cd95e32023b7bdff965 https://github.com/edde746/libdav1d-build/releases/download/1.5.3-neon/Libdav1d.xcframework.zip
+Libavcodec 1fa00780eca1b6492e6641785beec7c47a1765895cebf2becac9ede658a825b0 https://github.com/edde746/MPVKit/releases/download/binaries/Libavcodec-0fac40897804.xcframework.zip
+Libavdevice 7f4eb247a11c0f6e7f3e5f0699b5b163753cffd380e8b3f2baf7047ac6a8383d https://github.com/edde746/MPVKit/releases/download/binaries/Libavdevice-0fac40897804.xcframework.zip
+Libavformat 249ae0cbae1ae3082c8c7fd7a0fe922fd0a0ee69e9d93640b25ccfdeec1b2ea2 https://github.com/edde746/MPVKit/releases/download/binaries/Libavformat-0fac40897804.xcframework.zip
+Libavfilter aaf314edbb63e0245742246a175218cefafe42f44602c6b13c50a42585bce3e4 https://github.com/edde746/MPVKit/releases/download/binaries/Libavfilter-0fac40897804.xcframework.zip
+Libavutil d441ef215030df2d1fef075636756c4bad1878028366f753290d03f6c6ace443 https://github.com/edde746/MPVKit/releases/download/binaries/Libavutil-0fac40897804.xcframework.zip
+Libswresample ebcc9daf83af9e4b350feddae4a5653f4153d916bda30da0ff107d2222f7eeaf https://github.com/edde746/MPVKit/releases/download/binaries/Libswresample-0fac40897804.xcframework.zip
+Libswscale 0fc8b0a88d4dfdc27e86ee30d1beb0267ac28edc2f0e33f0a1cced461f8563a5 https://github.com/edde746/MPVKit/releases/download/binaries/Libswscale-0fac40897804.xcframework.zip
+Libuchardet 503202caa0dafb6996b2443f53408a713b49f6c2d4a26d7856fd6143513a50d7 https://github.com/mpvkit/libuchardet-build/releases/download/0.0.8-xcode/Libuchardet.xcframework.zip
+Libluajit 8e76f267ee100ff5f3bbde7641b2240566df722241cdf8e135be7ef3d29e237a https://github.com/mpvkit/libluajit-build/releases/download/2.1.0-xcode/Libluajit.xcframework.zip

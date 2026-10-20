@@ -31,3 +31,5 @@ if [ "$actual" != "$expected" ]; then
   exit 1
 fi
 echo "$(echo "$files" | wc -l | tr -d ' ') libraries in $vendor"
+
+"$desktop/scripts/link-mpvkit-macos.sh" "$arch"

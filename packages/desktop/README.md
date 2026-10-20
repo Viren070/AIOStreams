@@ -41,8 +41,12 @@ works, and AIOStreams servers get the extras. Switching servers happens in the p
     OpenGL through libmpv's render API into a `GtkGLArea`, and GTK composites the web view over it.
     mpv is given the Wayland or X11 display, which lets VA-API hand decoded frames to OpenGL without
     copying them through the CPU.
-  - macOS: mpv draws through the render API into a `CAOpenGLLayer` under the web view. Apple has
-    deprecated OpenGL, but the render API has no Metal backend; VideoToolbox decodes.
+  - macOS: the user picks what draws into a layer under the web view, from the next start. By
+    default mpv's gpu-next draws with Vulkan through MoltenVK into a `CAMetalLayer`. The system
+    output hands VideoToolbox's frames to an `AVSampleBufferDisplayLayer`, and macOS shows them,
+    HDR and Dolby Vision included. Compatibility draws through the render API with OpenGL into a
+    `CAOpenGLLayer`, and is all there is below macOS 14. HDR switches the layer into EDR, and the
+    mpv outputs tone map to the display's headroom.
 - **The bridge** carries the page's mpv commands and property changes to the app, and sends back the
   properties the page watches: position, tracks, pause and the rest. See [Bridge](#bridge).
 - **[Velopack](https://velopack.io)** installs and updates the Windows and macOS apps, Linux ships
@@ -109,18 +113,24 @@ on a Windows drive. Install the bundle it prints with `flatpak install --user`.
 
 ### macOS
 
-Needs Rust and the Xcode command line tools.
+Needs Rust and Xcode 26 or later.
 
 ```sh
 ./scripts/fetch-libs-macos.sh   # into vendor/macos-<arch>
 cargo run
 ```
 
-The app ships the libmpv that IINA builds and publishes for its releases: mpv with FFmpeg and its
-libraries, built for macOS 11 and ready to sit in an app bundle. `libs-macos.pin` names the IINA
-release and a checksum of each architecture's libraries, and the script checks it. A debug build
-also finds Homebrew's or MacPorts' libmpv. `scripts/make-app-macos.sh` assembles `AIOStreams.app`
-from a release build.
+The app ships two libmpv builds. The compatibility output and the seek bar's thumbnails use the
+one IINA builds and publishes for its releases: mpv with FFmpeg and its libraries, built for macOS
+11 and ready to sit in an app bundle. `libs-macos.pin` names the IINA release and a checksum of
+each architecture's libraries, and the script checks it. A debug build also finds Homebrew's or
+MacPorts' libmpv.
+
+The other outputs need mpv's MoltenVK and AVFoundation outputs, which upstream mpv lacks. The
+script links them into `libmpv-mpvkit.dylib` from the static libraries of
+[edde746's MPVKit](https://github.com/edde746/MPVKit), whose Swift needs Xcode 26;
+`mpvkit-macos.pin` names each archive and its checksum. `scripts/make-app-macos.sh` assembles
+`AIOStreams.app` from a release build.
 `scripts/check-macos.sh` lints the macOS code for both architectures from Linux, without a Mac.
 
 ### Flags
@@ -132,7 +142,8 @@ from a release build.
 | `--devtools`                  | Allows DevTools in a release build                                              |
 | `--remote-debugging-port <n>` | Opens the web view's debugging port, for driving tests                          |
 
-`AIOSTREAMS_LIBMPV` and `AIOSTREAMS_WEB_DIR` point at libmpv and the standalone build too.
+`AIOSTREAMS_LIBMPV` and `AIOSTREAMS_WEB_DIR` point at libmpv and the standalone build too, and on
+macOS `AIOSTREAMS_VIDEO_OUTPUT` (`mpv`, `system` or `compatibility`) overrides the chosen output.
 
 ### Links
 
