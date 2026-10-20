@@ -466,8 +466,9 @@ function waitsFor(
 
 /**
  * Focus coming into a box from outside lands on what its `data-nav-enter`
- * selector names. From outside any group, a `data-nav-group` is entered where
- * focus last was there, else at the start of the row it lands in.
+ * selector names. From outside any group, or into a `data-nav-resume` row from
+ * anywhere, a `data-nav-group` is entered where focus last was there, else at
+ * the start of the row it lands in.
  */
 function entry(to: HTMLElement, from: HTMLElement): HTMLElement {
   const box = to.closest<HTMLElement>('[data-nav-enter]');
@@ -476,8 +477,9 @@ function entry(to: HTMLElement, from: HTMLElement): HTMLElement {
     if (named && canFocus(named)) return named;
   }
   const group = to.closest(GROUP);
+  if (!group || group.contains(from)) return to;
   // From another group, as from one row to the next, the one beside it.
-  if (!group || group.contains(from) || from.closest(GROUP)) return to;
+  if (from.closest(GROUP) && !to.closest('[data-nav-resume]')) return to;
   const last = lastIn.get(group);
   if (last && group.contains(last) && canFocus(last)) return last;
   const row = rectOf(to);

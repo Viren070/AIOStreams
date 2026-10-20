@@ -20,6 +20,7 @@ import {
   type PosterSize,
 } from '../lib/settings';
 import { RowScroller, ScrollRoot, watch } from '../lib/use-in-view';
+import { keyboardFocus } from '../lib/input';
 import { easeLayers, GLIDE_LAYERS } from '../lib/input/glide';
 
 /**
@@ -219,6 +220,9 @@ const savedScroll = new Map<string, number>();
 /** The room after a focused card in a TV row; a card's padding leaves the room before. */
 const ROOM = 16;
 
+/** Keys, a remote or a gamepad keep focus where a row's first card starts, until its end. */
+const anchored = () => !!keyboardFocus();
+
 /**
  * A TV's or touch screen's row: a plain scroller, as Embla's measuring and
  * scripted easing are too much for a TV's CPU and stutter a swipe. Focus jumps
@@ -272,8 +276,13 @@ function NativeRow({
       const left = startOf(row, el) + startOf(card, row);
       const right = left + card.offsetWidth;
       const from = scrolled(el);
-      const to =
-        left < from
+      const to = anchored()
+        ? Math.min(
+            startOf(card, row) -
+              startOf(row.firstElementChild as HTMLElement, row),
+            el.scrollWidth - el.clientWidth
+          )
+        : left < from
           ? left
           : right + ROOM > from + el.clientWidth
             ? Math.min(right + ROOM - el.clientWidth, left)
@@ -461,6 +470,7 @@ export function MediaRow({
       data-shape={shape}
       data-nav-group
       data-nav-box
+      data-nav-resume
       style={{ '--poster-text': posterText(lines) } as React.CSSProperties}
     >
       {native ? (
@@ -480,6 +490,7 @@ export function MediaRow({
         <Carousel
           opts={{ align: 'start', dragFree: true, startIndex: start }}
           restoreKey={restoreKey}
+          anchor={anchored}
         >
           {onEndReached && <EndWatcher onEnd={onEndReached} />}
           {onView && <ViewWatcher onView={onView} />}
