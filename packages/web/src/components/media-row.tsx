@@ -497,8 +497,8 @@ export function MediaRow({
           {head}
           {/* Embla counts the last card's margin as the row's end gap. */}
           <CarouselContent
-            contentClass="-me-4 lg:-me-10"
-            className="mt-3 [&>*:last-child]:me-4"
+            contentClass="-mb-1.5 -me-4 -ms-1.5 pb-1.5 lg:-me-10"
+            className="mt-3 ps-1.5 [&>*:last-child]:me-4"
           >
             {cards}
           </CarouselContent>
