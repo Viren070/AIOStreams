@@ -29,6 +29,7 @@ import {
   UsenetDebridService,
   DebridFailureCache,
   convertStatusCodeToError,
+  ResolvedLinkInfo,
 } from './base.js';
 import z, { ZodError } from 'zod';
 import { createClient, WebDAVClient, FileStat } from 'webdav';
@@ -435,7 +436,7 @@ function encodeWebdavPath(path: string): string {
 export abstract class UsenetStreamService implements UsenetDebridService {
   protected readonly webdavClient: WebDAVClient;
   protected readonly api: SABnzbdApi;
-  protected static resolveCache = Cache.getInstance<string, string>(
+  protected static resolveCache = Cache.getInstance<string, ResolvedLinkInfo>(
     'usenet-stream:link'
   );
   protected static libraryCache = Cache.getInstance<string, DebridDownload[]>(
@@ -955,7 +956,7 @@ export abstract class UsenetStreamService implements UsenetDebridService {
     playbackInfo: PlaybackInfo,
     filename: string,
     cacheAndPlay: boolean
-  ): Promise<string | undefined> {
+  ): Promise<ResolvedLinkInfo | undefined> {
     if (playbackInfo.type === 'torrent') {
       throw new Error('Unsupported operation');
     }
@@ -978,7 +979,8 @@ export abstract class UsenetStreamService implements UsenetDebridService {
     // Proxy the resolved WebDAV URL through the builtin proxy when the service
     // is configured with aiostreamsAuth.
     if (!result || !this.auth.aiostreamsAuth) return result;
-    return this.proxyResolvedUrl(result, filename);
+    result.url = await this.proxyResolvedUrl(result.url, filename);
+    return result;
   }
 
   /**
@@ -1031,7 +1033,7 @@ export abstract class UsenetStreamService implements UsenetDebridService {
   protected async _resolve(
     playbackInfo: PlaybackInfo & { type: 'usenet' },
     filename: string
-  ): Promise<string | undefined> {
+  ): Promise<ResolvedLinkInfo | undefined> {
     const { nzb, metadata, hash } = playbackInfo;
 
     const cacheKey = buildResolveKey(
@@ -1300,15 +1302,21 @@ export abstract class UsenetStreamService implements UsenetDebridService {
 
     this.serviceLogger.debug(`Generated playback link`, { playbackLink });
 
+    const resolvedFileInfo: ResolvedLinkInfo = {
+      url: playbackLink,
+      index: selectedFile.index,
+      name: selectedFile.name,
+    };
+
     // Cache the result
     await UsenetStreamService.resolveCache.set(
       cacheKey,
-      playbackLink,
+      resolvedFileInfo,
       appConfig.builtins.debrid.playbackLinkCacheTtl,
       true
     );
 
-    return playbackLink;
+    return resolvedFileInfo;
   }
 
   /**
@@ -1320,7 +1328,7 @@ export abstract class UsenetStreamService implements UsenetDebridService {
     playbackInfo: PlaybackInfo & { type: 'usenet' },
     filename: string,
     cacheKey: string
-  ): Promise<string | undefined> {
+  ): Promise<ResolvedLinkInfo | undefined> {
     const serviceItemId = playbackInfo.serviceItemId!;
     const contentPath = await this.resolveContentPath(serviceItemId);
 
@@ -1435,14 +1443,20 @@ export abstract class UsenetStreamService implements UsenetDebridService {
     const filePath = selectedFile.path || `${contentPath}/${selectedFile.name}`;
     const playbackLink = `${this.getPublicWebdavUrlWithAuth()}${encodeWebdavPath(filePath)}`;
 
+    const resolvedFileInfo: ResolvedLinkInfo = {
+      url: playbackLink,
+      index: selectedFile.index,
+      name: selectedFile.name,
+    };
+
     await UsenetStreamService.resolveCache.set(
       cacheKey,
-      playbackLink,
+      resolvedFileInfo,
       appConfig.builtins.debrid.playbackLinkCacheTtl,
       true
     );
 
-    return playbackLink;
+    return resolvedFileInfo;
   }
 
   protected getPublicWebdavUrlWithAuth(): string {
