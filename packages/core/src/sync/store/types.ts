@@ -38,6 +38,8 @@ export class SharedTx {
 
 export interface SharedKind<L> {
   readonly name: string;
+  /** Counts toward `create`'s cap on its own, apart from the other kinds. */
+  readonly ownCap?: boolean;
   save(live: L): unknown;
   /**
    * What weighs most and changes least, such as a queue's items, which is
@@ -81,7 +83,7 @@ export interface SharedRecords<L> {
   /** As this replica last heard it, without asking; read only. */
   peek(id: string): L | undefined;
   get(id: string): MaybePromise<L | undefined>;
-  /** Fails when the id is taken, or `cap` records of any kind exist. */
+  /** Fails when the id is taken, or the records counted with it reach `cap`. */
   create(
     id: string,
     make: (tx: SharedTx) => L,

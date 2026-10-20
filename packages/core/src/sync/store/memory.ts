@@ -36,7 +36,8 @@ class MemoryRecords<L> implements SharedRecords<L> {
 
   create(id: string, make: (tx: SharedTx) => L, cap: number): CreateResult {
     if (this.live.has(id)) return 'exists';
-    if (this.backend.count() >= cap) return 'busy';
+    const count = this.kind.ownCap ? this.live.size : this.backend.count();
+    if (cap > 0 && count >= cap) return 'busy';
     const tx = new SharedTx();
     const live = make(tx);
     this.live.set(id, live);
@@ -167,7 +168,8 @@ export class MemoryBackend implements SharedBackend {
 
   count(): number {
     let count = 0;
-    for (const records of this.kinds) count += records.live.size;
+    for (const records of this.kinds)
+      if (!records.kind.ownCap) count += records.live.size;
     return count;
   }
 

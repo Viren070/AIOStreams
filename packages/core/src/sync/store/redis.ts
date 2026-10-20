@@ -15,7 +15,7 @@ import {
 const logger = createLogger('party');
 
 const PREFIX = `${REDIS_PREFIX}party:`;
-/** Every record of every kind, which the cap counts. */
+/** Every record of the kinds that share the cap, which it counts. */
 const ALL = `${PREFIX}all`;
 const DUE = `${PREFIX}due`;
 const REPLICAS = `${PREFIX}replicas`;
@@ -290,12 +290,14 @@ class RedisRecords<L> implements SharedRecords<L> {
   private readonly waiting = new Map<string, Pending<L>[]>();
   private readonly busy = new Set<string>();
   private readonly refsKey: string;
+  private readonly allKey: string;
 
   constructor(
     readonly kind: SharedKind<L>,
     private readonly backend: RedisBackend
   ) {
     this.refsKey = `${PREFIX}${kind.name}:refs`;
+    this.allKey = kind.ownCap ? `${PREFIX}${kind.name}:all` : ALL;
   }
 
   private get client(): RedisClientType {
@@ -482,7 +484,7 @@ class RedisRecords<L> implements SharedRecords<L> {
     await this.client
       .multi()
       .zRem(DUE, member)
-      .sRem(ALL, member)
+      .sRem(this.allKey, member)
       .exec()
       .catch(() => undefined);
   }
@@ -523,7 +525,7 @@ class RedisRecords<L> implements SharedRecords<L> {
     const due = live ? this.kind.due(live) : null;
     const reply = (await commitScript.run(
       this.client,
-      [this.key(id), ALL, DUE],
+      [this.key(id), this.allKey, DUE],
       [
         this.member(id),
         String(was?.version ?? 0),
