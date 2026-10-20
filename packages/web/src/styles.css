@@ -22,6 +22,10 @@ html.see-through,
 html.see-through body {
   background: transparent !important;
 }
+/* An on-screen keyboard pans the page up past its end, where only the root paints. */
+html.see-through[data-host='android-app']:not(.playing) {
+  background-color: var(--background) !important;
+}
 
 /* Important so custom CSS can't cover the video beneath the page. */
 html.playing .page-background {
