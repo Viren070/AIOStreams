@@ -20,6 +20,7 @@ import quickConnectRouter from './quickconnect.js';
 import segmentsRouter from './segments.js';
 import stubsRouter from './stubs.js';
 import syncPlayRouter from './syncplay.js';
+import remoteRouter from './remote.js';
 import libraryRouter from './library.js';
 import playbackRouter from './playback.js';
 import subtitlesRouter from './subtitles.js';
@@ -206,6 +207,7 @@ export function createJellyfinRouter(): Router {
   router.use(webRouter);
   router.use(systemRouter);
   router.use(syncPlayRouter);
+  router.use(remoteRouter);
   router.use(usersRouter);
   router.use(quickConnectRouter);
   router.use(playbackRouter);

@@ -1,4 +1,3 @@
-import { createHash } from 'crypto';
 import { Router, type Request } from 'express';
 import {
   config as appConfig,
@@ -44,6 +43,8 @@ import {
 } from './context.js';
 import { summaryItem } from './items.js';
 import { serverName } from './system.js';
+import { sessionIdOf } from './session-sockets.js';
+import { controllableDevices, type RemoteDevice } from './remote.js';
 
 const logger = createLogger('jellyfin');
 const router: Router = Router({ mergeParams: true });
@@ -233,12 +234,6 @@ export function userDto(
   };
 }
 
-function sessionId(client: ClientInfo, userId: string): string {
-  return createHash('md5')
-    .update(`${client.name}${client.deviceId}${userId}`)
-    .digest('hex');
-}
-
 export function sessionInfo(
   uuid: string,
   userData: Faced,
@@ -259,13 +254,13 @@ export function sessionInfo(
     AdditionalUsers: [],
     Capabilities: {
       PlayableMediaTypes: ['Video'],
-      SupportedCommands: [],
+      SupportedCommands: [] as string[],
       SupportsMediaControl: false,
       SupportsPersistentIdentifier: false,
     },
     RemoteEndPoint: remoteIp ?? '',
     PlayableMediaTypes: ['Video'],
-    Id: sessionId(client, userId),
+    Id: sessionIdOf(client, userId),
     UserId: userId,
     UserName: persona?.name ?? accountName(userData),
     Client: client.name,
@@ -280,7 +275,7 @@ export function sessionInfo(
     NowPlayingQueue: [],
     HasCustomDeviceName: false,
     ServerId: instanceServerId(),
-    SupportedCommands: [],
+    SupportedCommands: [] as string[],
   };
 }
 
@@ -753,6 +748,70 @@ export async function sessionFromRow(
   };
 }
 
+function withRemote<S extends ReturnType<typeof sessionInfo>>(
+  session: S,
+  device: RemoteDevice
+): S {
+  return {
+    ...session,
+    Id: sessionIdOf(device.client, device.userId),
+    Capabilities: {
+      ...session.Capabilities,
+      PlayableMediaTypes: device.media,
+      SupportedCommands: device.commands,
+      SupportsMediaControl: device.mediaControl,
+    },
+    PlayableMediaTypes: device.media,
+    SupportedCommands: device.commands,
+    SupportsMediaControl: device.mediaControl,
+    SupportsRemoteControl: true,
+  };
+}
+
+async function deviceSession(
+  ctx: JellyfinRequestContext,
+  device: RemoteDevice
+) {
+  const user = device.persona
+    ? personaById(ctx.userData, device.persona)
+    : null;
+  if (device.persona && !user) return null;
+  const row = await WatchSessionRepository.get(
+    watchScopeOf(ctx.uuid, user),
+    sessionKeyFor(device.client)
+  );
+  return withRemote(
+    row && row.endedAt == null
+      ? await sessionFromRow(ctx, row, user, null)
+      : sessionInfo(ctx.uuid, ctx.userData, user, device.client, undefined),
+    device
+  );
+}
+
+const sameDevice = (
+  session: ReturnType<typeof sessionInfo>,
+  device: RemoteDevice
+) =>
+  session.Client === device.client.name &&
+  session.DeviceId.toLowerCase() === device.client.deviceId.toLowerCase();
+
+async function withDevices<S extends ReturnType<typeof sessionInfo>>(
+  ctx: JellyfinRequestContext,
+  sessions: S[],
+  devices: RemoteDevice[]
+) {
+  const listed = sessions.map((s) => {
+    const device = devices.find((d) => sameDevice(s, d));
+    return device ? withRemote(s, device) : s;
+  });
+  const idle = await Promise.all(
+    devices
+      .filter((d) => !sessions.some((s) => sameDevice(s, d)))
+      .map((d) => deviceSession(ctx, d))
+  );
+  return [...listed, ...idle.filter((s) => s !== null)];
+}
+
 /*
  * A non-administrator sees only their own sessions, so a user token gets the
  * clients of its history. An API key is the administrator and sees them all.
@@ -760,16 +819,22 @@ export async function sessionFromRow(
 router.get(
   '/Sessions',
   jf(async (req, res, ctx) => {
-    // lists only sessions that take remote control, and none here do.
-    if (qs(req, 'ControllableByUserId')) {
-      res.json([]);
-      return;
-    }
     const within = Number(qs(req, 'ActiveWithinSeconds'));
     const since = within > 0 ? Date.now() - within * 1000 : 0;
     const deviceId = qs(req, 'DeviceId')?.toLowerCase();
     const onDevice = (id: string | null) =>
       !deviceId || id?.toLowerCase() === deviceId;
+    const devices = (await controllableDevices(ctx)).filter((d) =>
+      onDevice(d.client.deviceId)
+    );
+
+    if (qs(req, 'ControllableByUserId')) {
+      const found = await Promise.all(
+        devices.map((d) => deviceSession(ctx, d))
+      );
+      res.json(found.filter((s) => s !== null));
+      return;
+    }
 
     if (ctx.apiKey) {
       const rows = await WatchSessionRepository.listForUuid(
@@ -784,7 +849,7 @@ router.get(
         if (userKey && !user) continue;
         sessions.push(sessionFromRow(ctx, row, user, null));
       }
-      res.json(await Promise.all(sessions));
+      res.json(await withDevices(ctx, await Promise.all(sessions), devices));
       return;
     }
 
@@ -820,16 +885,11 @@ router.get(
       ...(own ? [own] : []),
       ...others.map((r) => sessionFromRow(ctx, r, ctx.persona, null)),
     ]);
-    res.json(sessions);
+    res.json(await withDevices(ctx, sessions, devices));
   })
 );
 router.post(
-  [
-    '/Sessions/Capabilities',
-    '/Sessions/Capabilities/Full',
-    '/Sessions/Viewing',
-    '/Sessions/Logout',
-  ],
+  ['/Sessions/Viewing', '/Sessions/Logout'],
   jfOptional(async (_req, res) => {
     res.status(204).end();
   })

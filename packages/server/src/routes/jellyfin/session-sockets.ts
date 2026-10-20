@@ -1,10 +1,17 @@
-import { randomUUID } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import type { WebSocket } from 'ws';
-import { sharedBackend } from '@aiostreams/core';
+import { sharedBackend, type ClientInfo } from '@aiostreams/core';
 
 /** One signed-in client: a user on a device. */
 export function clientKey(userId: string, deviceId: string): string {
   return `${userId}|${deviceId.toLowerCase()}`;
+}
+
+/** The client's id in `/Sessions`, which commands to it name. */
+export function sessionIdOf(client: ClientInfo, userId: string): string {
+  return createHash('md5')
+    .update(`${client.name}${client.deviceId}${userId}`)
+    .digest('hex');
 }
 
 export function frame(MessageType: string, Data: unknown = null): string {
