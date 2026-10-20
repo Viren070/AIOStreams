@@ -7,6 +7,9 @@ import { isTextField } from './input/focus';
  */
 export function setupTv(): void {
   if (!currentHost().tv) return;
+  // A 1080p window is wider than the 1280 layout; rem sizes grow so it looks the same, only sharper.
+  const scale = window.innerWidth / 1280;
+  if (scale > 1.01) document.documentElement.style.fontSize = `${16 * scale}px`;
   document.documentElement.dataset.tv = '';
   document
     .querySelector('meta[name="viewport"]')
