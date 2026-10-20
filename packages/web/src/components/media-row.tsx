@@ -441,16 +441,14 @@ export function MediaRow({
       {title ? (
         <h2
           data-ui="media-row-title"
-          data-nav-tv="skip"
+          data-nav="skip"
           // Room inside the truncating box for a link's focus outline.
           className="-m-1 min-w-0 truncate p-1 text-lg font-semibold sm:text-xl"
         >
           {title}
         </h2>
       ) : (
-        <div data-nav-tv="skip" className="min-w-0">
-          {header}
-        </div>
+        <div className="min-w-0">{header}</div>
       )}
       <div className="flex flex-none items-center gap-2">
         {action && (

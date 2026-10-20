@@ -115,9 +115,8 @@ function scope(): Element {
 /** Out of reach by its markup alone, before anything is measured. */
 const ruledOut = (el: HTMLElement) =>
   el.matches(
-    ':disabled, input[type=hidden], [contenteditable=false], [role=tabpanel], [data-nav=skip], [tabindex="-1"]:not([role=tab]):not([role=radio])'
-  ) ||
-  !!el.closest('[inert], [aria-hidden=true], [data-tv] [data-nav-tv=skip]');
+    ':disabled, input[type=hidden], [contenteditable=false], [role=tabpanel], [tabindex="-1"]:not([role=tab]):not([role=radio])'
+  ) || !!el.closest('[inert], [aria-hidden=true], [data-nav=skip]');
 
 /** A focusable standing for its whole card (`data-nav-card`) is measured as its `data-nav-box`. */
 const rectOf = (el: HTMLElement) => {

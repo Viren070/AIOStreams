@@ -560,7 +560,7 @@ export function Hero({
     landing.current = step > 0 ? 'first' : 'last';
     setIndex((i) => (i + step + featured.length) % featured.length);
   };
-  const turning = !!currentHost().tv && focused && featured.length > 1;
+  const turning = focused && featured.length > 1;
   // Right to left, the next title lies to the left.
   const [right, left]: (1 | -1)[] = pageRtl() ? [-1, 1] : [1, -1];
   useAction('nav.right', () => turn(right), turning);
@@ -650,7 +650,7 @@ export function Hero({
               type="button"
               data-ui="hero-dot"
               data-current={i === index || undefined}
-              data-nav-tv="skip"
+              data-nav="skip"
               aria-label={dotLabel(f)}
               onClick={() => setIndex(i)}
               className={cn(
