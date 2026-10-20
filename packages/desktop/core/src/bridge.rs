@@ -68,6 +68,8 @@ pub enum Inbound {
     PlayerSubtitleLines {
         track: Option<String>,
     },
+    /// Answered with `player-subtitle-index` once the file's index has been read.
+    PlayerSubtitleIndex,
     /// Answered with `player-thumbnail`s for the keyframe at or before the position, newest asked
     /// first, except the one at `showing_ms` the page has; without a position, reads the file's
     /// index ahead of the first.
@@ -262,6 +264,10 @@ pub enum Outbound {
     PlayerSubtitleLines {
         track: String,
         lines: Vec<SubtitleLine>,
+    },
+    /// Each of the file's own subtitles' lines from its index by mpv id, or none without one.
+    PlayerSubtitleIndex {
+        tracks: Option<BTreeMap<String, Vec<SubtitleLine>>>,
     },
     /// Where the page loads the JPEG of the keyframe at `position_ms`; without a `src` the file
     /// has no thumbnails.

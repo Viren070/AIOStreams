@@ -85,6 +85,8 @@ struct Reference {
     read_ahead_at: Option<Instant>,
     own: Vec<playback::OwnSubtitle>,
     file: Option<Indexed>,
+    /// The page waits on the whole index.
+    index_asked: bool,
 }
 
 /// The playing file, and each of its subtitles' lines once read from its index.
@@ -105,6 +107,23 @@ impl Reference {
         }
         all.get(self.own.iter().position(|s| s.id == *track)?)
             .cloned()
+    }
+
+    /// Every one of the file's own subtitles' lines by mpv id, or none without an index.
+    fn index_message(&self) -> Outbound {
+        let tracks = self
+            .file
+            .as_ref()
+            .and_then(|f| f.lines.as_ref())
+            .filter(|all| !all.is_empty() && all.len() == self.own.len())
+            .map(|all| {
+                self.own
+                    .iter()
+                    .map(|s| s.id.clone())
+                    .zip(all.iter().cloned())
+                    .collect()
+            });
+        Outbound::PlayerSubtitleIndex { tracks }
     }
 
     fn report(&mut self, lines: Vec<SubtitleLine>) -> Option<Outbound> {
@@ -326,6 +345,7 @@ impl Player {
                 lines: None,
                 reading: false,
             });
+            reference.index_asked = false;
         }
         for command in file.commands() {
             self.send(Request::Command(command));
@@ -416,6 +436,23 @@ impl Player {
             }
             return;
         }
+        self.start_index(&mut reference);
+    }
+
+    /// Every one of the file's own subtitles' lines, sent once the index has been read.
+    pub fn subtitle_index(&self) {
+        let Ok(mut reference) = self.reference.lock() else {
+            return;
+        };
+        reference.index_asked = true;
+        match reference.file.as_ref() {
+            Some(file) if file.lines.is_none() => self.start_index(&mut reference),
+            _ => (self.emit)(reference.index_message()),
+        }
+    }
+
+    /// Reads the file's index once, on a thread of its own.
+    fn start_index(&self, reference: &mut Reference) {
         let Some(file) = reference
             .file
             .as_mut()
@@ -440,6 +477,9 @@ impl Player {
                 file.reading = false;
                 if let Some(message) = reference.indexed().and_then(|l| reference.report(l)) {
                     emit(message);
+                }
+                if reference.index_asked {
+                    emit(reference.index_message());
                 }
             });
         if let Err(e) = spawned {

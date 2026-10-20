@@ -560,6 +560,10 @@ pub fn handle(
                 fail(format!("player-subtitle-lines: {e}"));
             }
         }
+        Inbound::PlayerSubtitleIndex => match player.as_ref() {
+            Some(p) => p.subtitle_index(),
+            None => emit(Outbound::PlayerSubtitleIndex { tracks: None }),
+        },
         Inbound::PlayerThumbnail {
             url,
             headers,
