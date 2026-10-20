@@ -13,11 +13,13 @@ import {
   type ContentDescriptor,
   type ContentRef,
   type JellyfinItem,
+  type PlayingTracks,
   type SessionContext,
   type WatchEvent,
   type WatchSnapshot,
 } from '@aiostreams/core';
 import {
+  bodyField,
   bodyOf,
   jf,
   param,
@@ -162,6 +164,20 @@ function mediaSourceIdOf(req: Request): string | undefined {
     : undefined;
 }
 
+function streamIndexOf(req: Request, name: string): number | undefined {
+  const v = bodyField(req, name) ?? qs(req, name);
+  const n = typeof v === 'string' && v ? Number(v) : v;
+  return Number.isInteger(n) ? (n as number) : undefined;
+}
+
+function tracksOf(req: Request): PlayingTracks {
+  return {
+    mediaSourceId: mediaSourceIdOf(req),
+    audioStreamIndex: streamIndexOf(req, 'AudioStreamIndex'),
+    subtitleStreamIndex: streamIndexOf(req, 'SubtitleStreamIndex'),
+  };
+}
+
 async function record(
   ctx: JellyfinRequestContext,
   rawId: string,
@@ -171,18 +187,27 @@ async function record(
     paused?: boolean;
     playSessionId?: string;
     mediaSourceId?: string;
+    tracks?: PlayingTracks;
   } = {}
 ): Promise<void> {
   const d = await descriptorFor(ctx, rawId);
   if (!d || (d.k !== 'movie' && d.k !== 'episode')) return;
+  const { tracks } = opts;
   if (await playingLive(ctx, rawId, opts.mediaSourceId)) {
     // The session still tracks what is on; only the history is skipped.
     const session = sessionOf(ctx, opts.playSessionId);
     if (type === 'start')
-      await openWatchSession(session, contentRefOf(d), { positionMs });
+      await openWatchSession(session, contentRefOf(d), {
+        positionMs,
+        ...tracks,
+      });
     else if (type === 'stop') await closeWatchSession(session);
     else
-      await checkInWatchSession(session, { positionMs, paused: opts.paused });
+      await checkInWatchSession(session, {
+        positionMs,
+        paused: opts.paused,
+        ...tracks,
+      });
     return;
   }
   const ref = contentRefOf(d);
@@ -223,6 +248,7 @@ async function record(
       positionMs,
       durationMs,
       paused: false,
+      ...tracks,
     });
     await reportPlayback(ctx, 'start', ref, {
       row,
@@ -254,7 +280,7 @@ async function record(
     return;
   }
 
-  await progressed(ctx, session, ref, positionMs, opts.paused, row);
+  await progressed(ctx, session, ref, positionMs, opts.paused, row, tracks);
 }
 
 /** A tick keeps the session alive; only the pause edge is worth reporting. */
@@ -264,16 +290,18 @@ async function progressed(
   ref: ContentRef,
   positionMs: number | undefined,
   paused: boolean | undefined,
-  row: Awaited<ReturnType<ReturnType<typeof getWatchStateProvider>['record']>>
+  row: Awaited<ReturnType<ReturnType<typeof getWatchStateProvider>['record']>>,
+  tracks: PlayingTracks | undefined
 ): Promise<void> {
   const { transition, row: existing } = await checkInWatchSession(session, {
     positionMs,
     paused,
+    ...tracks,
   });
 
   // No row means no sweep could ever close it.
   if (!existing) {
-    await openWatchSession(session, ref, { positionMs, paused });
+    await openWatchSession(session, ref, { positionMs, paused, ...tracks });
     return;
   }
 
@@ -305,6 +333,7 @@ router.post(
         {
           playSessionId: playSessionIdOf(req),
           mediaSourceId: mediaSourceIdOf(req),
+          tracks: tracksOf(req),
         }
       );
     res.status(204).end();
@@ -328,6 +357,7 @@ router.post(
         {
           paused: body.IsPaused === true || qs(req, 'IsPaused') === 'true',
           playSessionId: playSessionIdOf(req),
+          tracks: tracksOf(req),
         }
       );
     }
