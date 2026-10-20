@@ -226,6 +226,7 @@ export function VersionPickerProvider({
   const open = !!request;
   // A sheet over the player, or where a short screen leaves a dialog no room.
   const short = useMediaQuery('(max-height: 500px)');
+  const touch = useMediaQuery('(pointer: coarse)') && !currentHost().tv;
   // Kept while it closes, so it leaves the way it came.
   const [sheet, setSheet] = React.useState(false);
   const wantSheet = !!request?.playing || short;
@@ -252,6 +253,7 @@ export function VersionPickerProvider({
           data-name="versions"
           open={open}
           onOpenChange={(open) => !open && setRequest(null)}
+          onOpenAutoFocus={touch ? focusSelf : undefined}
           onCloseAutoFocus={restoreFocus}
           title={item ? itemTitle(item) : t`Versions`}
           headerClass="sr-only"
@@ -268,6 +270,7 @@ export function VersionPickerProvider({
           data-name="versions"
           open={open}
           onOpenChange={(open) => !open && setRequest(null)}
+          onOpenAutoFocus={touch ? focusSelf : undefined}
           onCloseAutoFocus={restoreFocus}
           title={item ? itemTitle(item) : undefined}
           description={
@@ -288,6 +291,12 @@ export function VersionPickerProvider({
 }
 
 const FILTER_FROM = 8;
+
+/** Opens with no field focused, so a phone's keyboard stays down. */
+function focusSelf(e: Event) {
+  e.preventDefault();
+  (e.target as HTMLElement).focus();
+}
 
 /** Versions drawn at a time; more come as the list nears its end. */
 const PAGE = 40;
@@ -448,7 +457,11 @@ function Versions({
       })
     : t`Finding versions`;
   const others = download ? download.items.length - 1 : 0;
-  const filtering = sources.length >= FILTER_FROM && !currentHost().tv;
+  const phoneLandscape = useMediaQuery(
+    '(max-height: 500px) and (pointer: coarse)'
+  );
+  const filtering =
+    sources.length >= FILTER_FROM && !currentHost().tv && !phoneLandscape;
   const loadError = info.error?.message ?? '';
   const searchAgain = canRefresh && (
     <Tooltip
