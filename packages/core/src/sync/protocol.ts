@@ -23,6 +23,7 @@ export const PARTY_LIMITS = {
   /** Lengths of sealed fields. */
   ref: 2048,
   name: 256,
+  avatar: 2048,
   chat: 1400,
   reaction: 128,
   /** Chat messages a joining member is sent. */
@@ -44,6 +45,7 @@ export interface PartyListing {
   code: string;
   /** Who started it, by the name the server knows them by. */
   host: string;
+  avatar?: string;
   members: number;
   since: number;
 }
@@ -63,6 +65,7 @@ export type PartyClientMessage =
       v: number;
       party: string;
       name: string;
+      avatar?: string;
       /** Proves a user of the relay's own server. */
       token?: string;
       /** Lists the party for the starter's household, which may read it. */
@@ -73,6 +76,7 @@ export type PartyClientMessage =
       v: number;
       party: string;
       name: string;
+      avatar?: string;
       /** A seat held from before, which the member takes back. */
       seat?: string;
       token?: string;
@@ -82,6 +86,7 @@ export type PartyClientMessage =
       v: number;
       party: string;
       name: string;
+      avatar?: string;
       ticket: string;
       state: PartyResumeState;
       token?: string;
@@ -105,6 +110,7 @@ export type PartyClientMessage =
 export interface PartyMemberInfo {
   id: string;
   name: string;
+  avatar?: string;
   host: boolean;
   /** Connection lost; the seat is kept for a while. */
   away: boolean;
@@ -128,7 +134,7 @@ export interface PartyChat {
 
 /** What joining would show, less the chat. */
 export interface PartyPreview {
-  members: Pick<PartyMemberInfo, 'name' | 'host' | 'away'>[];
+  members: Pick<PartyMemberInfo, 'name' | 'avatar' | 'host' | 'away'>[];
   state: GroupStateType;
   /** Sealed as in the queue. */
   playing: { ref: string; positionMs: number } | null;
@@ -179,7 +185,7 @@ export type PartyServerMessage =
       left?: string;
     }
   /** Only the members whose status changed since the last list or status. */
-  | { t: 'status'; members: Omit<PartyMemberInfo, 'name'>[] }
+  | { t: 'status'; members: Omit<PartyMemberInfo, 'name' | 'avatar'>[] }
   | { t: 'chat'; message: PartyChat }
   | { t: 'react'; from: string; emoji: string }
   | { t: 'lock'; lock: PartyLock }
