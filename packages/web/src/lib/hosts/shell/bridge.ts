@@ -18,6 +18,9 @@ export interface AppTrack {
   url?: string;
 }
 
+/** What draws the video in the Mac app. */
+export type VideoOutput = 'mpv' | 'system' | 'compatibility';
+
 /** `external` marks what the player in its own window sends. */
 export type ShellMessage =
   | { type: 'youtube-resolved'; request: string; url: string | null }
@@ -61,12 +64,6 @@ export type ShellMessage =
       type: 'player-event';
       name: 'start' | 'loaded' | 'restart';
       external?: boolean;
-    }
-  /** The playing video's transfer and primaries, once per file: `pq`/`bt.2020` is HDR. */
-  | {
-      type: 'player-playing';
-      gamma: string | null;
-      primaries: string | null;
     }
   | {
       type: 'player-ended';
@@ -112,6 +109,13 @@ export type ShellMessage =
       player?: string;
       /** Whether the app can re-encode sound to Dolby Digital. */
       ac3Encoder?: boolean;
+    }
+  | {
+      type: 'video-output';
+      /** Empty where the app has no choice. */
+      outputs: VideoOutput[];
+      running: VideoOutput;
+      chosen: VideoOutput;
     }
   | { type: 'diagnostics'; text: string }
   /** Empty when the last run ended normally or was already shown. */
