@@ -15,6 +15,9 @@ export type AppLink =
 
 const LINK = /^aiostreams:\/\/([^/?#]+)(\/[^?#]*)?(?:\?([^#]*))?/i;
 
+export const playLink = (server: string, itemId: string, startMs: number) =>
+  `aiostreams://play/${itemId}?server=${encodeURIComponent(server)}${startMs > 0 ? `&start=${startMs}` : ''}`;
+
 function decode(value: string): string | null {
   try {
     return decodeURIComponent(value);

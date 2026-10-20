@@ -81,6 +81,9 @@ const listen: NonNullable<Host['listen']> = ({ hearing, signal }) =>
     bridge?.send({ type: 'voice-search' });
   });
 
+const watchNext: NonNullable<Host['watchNext']> = (items) =>
+  appBridge()?.send({ type: 'watch-next', items });
+
 /** Saves it and applies it to what plays next. */
 export const saveMpvConfig = (text: string) =>
   mpvConfig({ type: 'mpv-config-save', text });
@@ -104,6 +107,10 @@ export const androidHost: Host = {
   },
   saveFile: (name, type, text) =>
     appBridge()?.send({ type: 'save-file', name, mime: type, text }),
+  // Only a TV's home screen has the row.
+  get watchNext() {
+    return appBridge()?.tv ? watchNext : undefined;
+  },
   keyboardCompletions: (names) =>
     appBridge()?.send({ type: 'keyboard-completions', items: names }),
   fullscreen: {

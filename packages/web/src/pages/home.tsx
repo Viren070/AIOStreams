@@ -11,6 +11,7 @@ import {
   useItemPages,
   libraryTypes,
   needsGenre,
+  mergeRows,
   useLibraryHeads,
   useNextUp,
   useResume,
@@ -80,19 +81,6 @@ function interleave(lists: BaseItemDto[][], max: number): BaseItemDto[] {
     }
   }
   return out;
-}
-
-function mergeRows(
-  resume: BaseItemDto[] | null | undefined,
-  nextUp: BaseItemDto[] | null | undefined
-): BaseItemDto[] {
-  const seen = new Set<string>();
-  return [...(resume ?? []), ...(nextUp ?? [])].filter((item) => {
-    const keys = [item.Id, item.SeriesId].filter((k): k is string => !!k);
-    if (keys.some((k) => seen.has(k))) return false;
-    keys.forEach((k) => seen.add(k));
-    return true;
-  });
 }
 
 export function HomePage() {

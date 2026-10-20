@@ -21,6 +21,24 @@ export interface NowPlaying {
   paused: boolean;
 }
 
+/** A title on the system's own row of what to watch next. */
+export interface WatchNextItem {
+  id: string;
+  kind: 'movie' | 'episode';
+  /** The show's, for an episode. */
+  title: string;
+  episodeTitle?: string;
+  season?: number;
+  episode?: number;
+  description?: string;
+  /** Landscape, which the row shows. */
+  image?: string;
+  positionMs: number;
+  durationMs?: number;
+  playedAt?: number;
+  link: string;
+}
+
 /** A sound level from 0 to 1, and the words so far. */
 export interface Hearing {
   level: number;
@@ -87,6 +105,8 @@ export interface Host {
   }): Promise<string | null>;
   /** Saves a file the page made, for a web view that drops download links. */
   saveFile?(name: string, type: string, text: string): void;
+  /** Replaces what the system's row of what to watch next shows from this app. */
+  watchNext?(items: WatchNextItem[]): void;
 }
 
 const browserHost: Host = { name: 'browser' };

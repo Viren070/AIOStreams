@@ -108,6 +108,19 @@ export function useNextUp() {
   });
 }
 
+export function mergeRows(
+  resume: BaseItemDto[] | null | undefined,
+  nextUp: BaseItemDto[] | null | undefined
+): BaseItemDto[] {
+  const seen = new Set<string>();
+  return [...(resume ?? []), ...(nextUp ?? [])].filter((item) => {
+    const keys = [item.Id, item.SeriesId].filter((k): k is string => !!k);
+    if (keys.some((k) => seen.has(k))) return false;
+    keys.forEach((k) => seen.add(k));
+    return true;
+  });
+}
+
 export type ItemFilter = 'unplayed' | 'played' | 'favorite';
 
 const FILTERS: Record<ItemFilter, string> = {

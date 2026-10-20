@@ -2,6 +2,7 @@ import React from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { configSessionToken, hasConfigSessionCookie } from './config-session';
 import { JellyfinClient, JellyfinError } from './client';
+import { currentHost } from './hosts';
 import {
   clearCredentials,
   readCredentials,
@@ -75,6 +76,7 @@ export function endSession(base: string, token: string | null): void {
   clearCredentials(base);
   storage.remove(lastUserKey(base));
   storage.remove(leftKey(base));
+  currentHost().watchNext?.([]);
 }
 
 /** The configuration page's hand-off, which asks first when the account has a PIN. */
