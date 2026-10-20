@@ -87,11 +87,17 @@ export function Cover({
           )
         )}
         {detail && (
-          <p className="max-w-xl truncate text-center text-sm text-gray-300 sm:text-base">
+          <p
+            data-ui="player-cover-detail"
+            className="max-w-xl truncate text-center text-sm text-gray-300 sm:text-base"
+          >
             {detail}
           </p>
         )}
-        <div className="relative mt-4 h-0.5 w-40 overflow-hidden rounded-full bg-white/15">
+        <div
+          data-ui="player-cover-bar"
+          className="relative mt-4 h-0.5 w-40 overflow-hidden rounded-full bg-white/15"
+        >
           <div className="absolute inset-y-0 w-1/3 rounded-full bg-white/80 [animation:player-cover-sweep_1.4s_ease-in-out_infinite]" />
         </div>
       </div>

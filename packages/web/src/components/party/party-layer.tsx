@@ -124,6 +124,7 @@ export function PartyLayer() {
         {bubbles.map((b) => (
           <p
             key={b.key}
+            data-ui="party-bubble"
             className="rounded-2xl bg-black/70 px-3 py-2 text-sm duration-300 animate-in fade-in-0 slide-in-from-bottom-2 [overflow-wrap:anywhere]"
           >
             <span className="font-semibold">{b.name}</span> {b.text}
@@ -137,6 +138,7 @@ export function PartyLayer() {
         {reactions.map((r, i) => (
           <span
             key={r.key}
+            data-ui="party-reaction-sent"
             className={cn(
               'absolute bottom-0 flex flex-col items-center [animation:party-rise_3s_ease-out_forwards]',
               i % 2 ? 'end-2' : 'end-10'

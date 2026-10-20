@@ -875,6 +875,10 @@ function Member({ member, host }: { member: PartyMember; host: boolean }) {
   return (
     <li
       data-ui="party-member"
+      data-you={member.you || undefined}
+      data-host={member.host || undefined}
+      data-away={member.away || undefined}
+      data-buffering={member.buffering || undefined}
       className="flex items-center gap-3 rounded-xl p-2"
     >
       <UserAvatar name={member.name} src={member.avatar} className="size-9" />
@@ -1031,6 +1035,7 @@ function ChatMessages({ chat, live }: { chat: PartyMessage[]; live: boolean }) {
         key={m.key}
         data-ui="party-message"
         data-status={m.status}
+        data-you={m.you || undefined}
         className={cn(
           'flex flex-col',
           m.you ? 'items-end' : 'items-start',

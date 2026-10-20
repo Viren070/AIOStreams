@@ -470,6 +470,7 @@ function SubtitleTiming({
       {said && (
         <p
           data-ui="player-sync-status"
+          data-status={status}
           className="px-2 pb-2 text-center text-xs text-[--muted]"
         >
           {said}
