@@ -96,7 +96,7 @@ function HeroSkeleton() {
       aria-hidden
       data-ui="hero"
       data-loading
-      className="relative -mt-[var(--top-bar,0px)] h-[26rem] w-full overflow-hidden sm:h-[30rem] lg:-ms-[var(--side-bar,0px)] lg:h-[calc(max(36rem,53vh)+var(--top-bar,0px))] lg:w-[calc(100%+var(--side-bar,0px))]"
+      className="relative -mt-[var(--top-bar,0px)] h-[26rem] w-full overflow-hidden sm:h-[30rem] lg:-ms-[var(--side-bar,0px)] lg:h-[calc(max(36rem,53vh)+var(--top-bar,0px))] [[data-tv]_&]:lg:h-[calc(55vh+var(--top-bar,0px))] lg:w-[calc(100%+var(--side-bar,0px))]"
     >
       <div className="absolute inset-0 animate-pulse bg-[--subtle]" />
       <Shade />
@@ -596,7 +596,7 @@ export function Hero({
       ref={section}
       data-ui="hero"
       data-nav-top
-      className="relative -mt-[var(--top-bar,0px)] h-[26rem] w-full touch-pan-y touch-pinch-zoom overflow-hidden sm:h-[30rem] lg:-ms-[var(--side-bar,0px)] lg:h-[calc(max(36rem,53vh)+var(--top-bar,0px))] lg:w-[calc(100%+var(--side-bar,0px))]"
+      className="relative -mt-[var(--top-bar,0px)] h-[26rem] w-full touch-pan-y touch-pinch-zoom overflow-hidden sm:h-[30rem] lg:-ms-[var(--side-bar,0px)] lg:h-[calc(max(36rem,53vh)+var(--top-bar,0px))] [[data-tv]_&]:lg:h-[calc(55vh+var(--top-bar,0px))] lg:w-[calc(100%+var(--side-bar,0px))]"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setFocused(true)}
