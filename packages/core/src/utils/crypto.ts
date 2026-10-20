@@ -75,6 +75,8 @@ type ErrorResponse = {
 export type Response = SuccessResponse | ErrorResponse;
 
 export function isEncrypted(data: string): boolean {
+  // Base64 of a JSON object; anything else skips the parse and its throw.
+  if (typeof data !== 'string' || !data.startsWith('eyJ')) return false;
   try {
     // parse the data as json
     const json = JSON.parse(fromUrlSafeBase64(data));
