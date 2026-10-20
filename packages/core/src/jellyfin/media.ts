@@ -172,7 +172,7 @@ const names = (list: (string | undefined)[] | undefined) => {
 export function extensionFor(
   stream: ParsedStream,
   formatted: { name: string; description: string },
-  bingeGroup?: string
+  extra: Pick<AiostreamsSourceExtension, 'bingeGroup' | 'index'> = {}
 ): AiostreamsSourceExtension {
   return {
     name: formatted.name,
@@ -200,7 +200,7 @@ export function extensionFor(
         : undefined,
     ytId: stream.url ? undefined : stream.ytId,
     type: stream.type,
-    bingeGroup,
+    ...extra,
   };
 }
 
@@ -324,7 +324,7 @@ export function sourceRecordFrom(
   formatted: { name: string; description: string },
   label: string,
   addonSubtitles: SubtitleTrack[],
-  bingeGroup?: string
+  extra: Pick<AiostreamsSourceExtension, 'bingeGroup' | 'index'> = {}
 ): MediaSourceRecord {
   return {
     msid: mediaSourceId(uuid, identity),
@@ -344,7 +344,7 @@ export function sourceRecordFrom(
     mediaInfo: mediaInfoIdentity(stream),
     videoHash: stream.videoHash,
     live: stream.type === 'live',
-    extension: extensionFor(stream, formatted, bingeGroup),
+    extension: extensionFor(stream, formatted, extra),
   };
 }
 
@@ -354,7 +354,7 @@ export function noticeRecordFrom(
   label: string,
   extension: Pick<
     AiostreamsSourceExtension,
-    'name' | 'description' | 'addon' | 'type' | 'externalUrl'
+    'name' | 'description' | 'addon' | 'type' | 'externalUrl' | 'index'
   >
 ): MediaSourceRecord {
   return {

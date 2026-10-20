@@ -72,6 +72,8 @@ export interface AiostreamsSourceExtension {
   bingeGroup?: string;
   /** The version's own id, as the first version's `Id` is the item's. Set when sent. */
   id?: string;
+  /** Its place in the stream list, as notices are sent last. */
+  index?: number;
 }
 
 export interface MediaSourceRecord {
