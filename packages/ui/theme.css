@@ -12,30 +12,30 @@ body {
 
 @layer base {
   :root {
-    --color-brand-50: 242 240 255;
-    --color-brand-100: 238 235 255;
-    --color-brand-200: 212 208 255;
-    --color-brand-300: 199 194 255;
-    --color-brand-400: 159 146 255;
-    --color-brand-500: 97 82 223;
-    --color-brand-600: 82 67 203;
-    --color-brand-700: 63 46 178;
-    --color-brand-800: 49 40 135;
-    --color-brand-900: 35 28 107;
-    --color-brand-950: 26 20 79;
-    --color-brand-default: 97 82 223;
+    --color-brand-50: 251 242 232;
+    --color-brand-100: 244 222 199;
+    --color-brand-200: 233 195 155;
+    --color-brand-300: 220 170 112;
+    --color-brand-400: 205 145 69;
+    --color-brand-500: 193 126 33;
+    --color-brand-600: 162 106 31;
+    --color-brand-700: 132 87 28;
+    --color-brand-800: 103 69 25;
+    --color-brand-900: 75 51 21;
+    --color-brand-950: 49 34 17;
+    --color-brand-default: 193 126 33;
 
-    --color-gray-50: 230 230 230;
-    --color-gray-100: 225 225 225;
-    --color-gray-200: 209 209 209;
-    --color-gray-300: 202 202 202;
-    --color-gray-400: 143 143 143;
-    --color-gray-500: 90 90 90;
-    --color-gray-600: 72 72 72;
-    --color-gray-700: 54 54 54;
-    --color-gray-800: 28 28 28;
-    --color-gray-900: 16 16 16;
-    --color-gray-950: 11 11 11;
+    --color-gray-50: 205 206 205;
+    --color-gray-100: 196 197 196;
+    --color-gray-200: 183 184 183;
+    --color-gray-300: 162 162 160;
+    --color-gray-400: 134 133 130;
+    --color-gray-500: 103 101 97;
+    --color-gray-600: 73 70 66;
+    --color-gray-700: 49 45 41;
+    --color-gray-800: 25 22 16;
+    --color-gray-900: 23 19 11;
+    --color-gray-950: 21 17 8;
     --color-gray-default: 105 105 105;
 
     --radius: 0.5rem;
@@ -84,7 +84,7 @@ body {
   .dark,
   [data-mode='dark'] {
     --foreground: theme('colors.gray.200');
-    --background: #070707;
+    --background: #140f06;
 
     --slate: theme('colors.slate.300');
     --gray: theme('colors.gray.300');

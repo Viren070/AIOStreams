@@ -389,9 +389,8 @@ router.get(
       : null;
     // Without a configuration to list for, an empty list is what makes a
     // client show the manual form that takes a uuid or alias.
-    // The root lists no one: its sign-in is a user's name and PIN.
     res.json(
-      mount && userData && !mount.root
+      mount && userData
         ? pickerListed(mount, userData).map((p) =>
             userDto(mount.uuid, userData, p)
           )

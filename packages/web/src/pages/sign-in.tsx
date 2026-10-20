@@ -104,7 +104,7 @@ export function Screen({
     <div
       data-page="sign-in"
       data-name={name}
-      className="relative flex min-h-screen items-center justify-center bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.18),transparent_60%)] px-4 pb-[max(3rem,env(safe-area-inset-bottom))] pt-[max(3rem,env(safe-area-inset-top))]"
+      className="relative flex min-h-screen items-center justify-center bg-[radial-gradient(ellipse_at_top,rgb(var(--color-brand-500)_/_0.18),transparent_60%)] px-4 pb-[max(3rem,env(safe-area-inset-bottom))] pt-[max(3rem,env(safe-area-inset-top))]"
     >
       <div className={cn('w-full max-w-3xl space-y-8', className)}>
         <motion.div
@@ -201,7 +201,8 @@ export function SignInPage({
 }) {
   const info = useServerInfo();
   const configSignIn = !!info.features.configSignIn;
-  const copy = signInCopy(configSignIn, info.pinSignIn, !!user, info.personal);
+  // Always the user name and PIN copy; the other sign-ins still work, unmentioned.
+  const copy = signInCopy(configSignIn, true, !!user, true);
   const [username, setUsername] = React.useState(user?.Name ?? defaultUsername);
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState<string | null>(null);

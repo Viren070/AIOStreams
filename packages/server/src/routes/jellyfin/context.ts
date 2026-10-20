@@ -655,8 +655,20 @@ async function buildContext(
   };
 }
 
-/** The configuration the site root signs in to: the one aliased `default`. */
-const ROOT_ALIAS = 'default';
+/**
+ * The configuration the site root signs in to, from a local-only
+ * `JELLYFIN_ROOT_CONFIGURATION=uuid:encryptedPassword`, the same pair as an
+ * ALIASED_CONFIGURATIONS entry.
+ */
+function resolveRootMount(): {
+  uuid: string;
+  encryptedPassword: string;
+} | null {
+  const value = process.env.JELLYFIN_ROOT_CONFIGURATION?.trim();
+  const at = value?.indexOf(':') ?? -1;
+  if (!value || at <= 0 || at === value.length - 1) return null;
+  return { uuid: value.slice(0, at), encryptedPassword: value.slice(at + 1) };
+}
 
 export const jellyfinContext: RequestHandler = async (req, res, next) => {
   try {
@@ -699,9 +711,9 @@ export const jellyfinContext: RequestHandler = async (req, res, next) => {
       }
       req.jfMount = target;
     } else if (req.baseUrl === '') {
-      // Without that alias the root is the bare `/jellyfin` address.
-      const target = await resolvePickerAlias(ROOT_ALIAS);
-      if (target) req.jfMount = { ...target, root: true };
+      // Without one the root is the bare `/jellyfin` address.
+      const target = resolveRootMount();
+      if (target) req.jfMount = target;
     }
     if (
       payload &&

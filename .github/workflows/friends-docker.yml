@@ -1,6 +1,8 @@
 name: Friends Docker Image
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       ref:

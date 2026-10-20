@@ -3,8 +3,8 @@ import mixPlugin from 'colord/plugins/mix';
 
 extend([mixPlugin]);
 
-export const DEFAULT_BACKGROUND = '#070707';
-export const DEFAULT_ACCENT = '#6152df';
+export const DEFAULT_BACKGROUND = '#140f06';
+export const DEFAULT_ACCENT = '#c17e21';
 
 export interface ThemePreset {
   name: string;

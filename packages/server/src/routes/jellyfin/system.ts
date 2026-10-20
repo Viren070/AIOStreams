@@ -166,17 +166,9 @@ router.get(
   })
 );
 
-/** What a sign-in form under this address asks for. */
-function loginDisclaimer(req: Request): string {
-  // The site root takes a user's name and PIN.
-  if (req.jfMount?.root)
-    return 'Sign in with your name and PIN. On a TV, pick Quick Connect and approve the code in the app on your phone.';
-  return `Sign in with your ${serverName()} configuration UUID or alias and its password, or approve a Quick Connect code from the configuration page.`;
-}
-
 router.get('/Branding/Configuration', (req, res) => {
   res.json({
-    LoginDisclaimer: loginDisclaimer(req),
+    LoginDisclaimer: `Sign in with your name and PIN. On a TV, pick Quick Connect and approve the code in the app on your phone.`,
     CustomCss: '',
     SplashscreenEnabled: false,
   });
@@ -314,7 +306,7 @@ export async function webAppName(req: Request): Promise<string> {
   return (await configOf(req))?.addonName || serverName();
 }
 
-const WEB_APP_COLOUR = '#070707';
+const WEB_APP_COLOUR = '#140f06';
 const WEB_APP_ICONS = [192, 512].flatMap((size) =>
   ['any', 'maskable'].map((purpose) => ({
     src: `/web-app-manifest-${size}x${size}.png`,
