@@ -170,7 +170,7 @@ export function VersionPickerProvider({
   };
 
   const value = React.useMemo<PickerValue>(() => {
-    // The version last played when resuming, else the first; the list when none plays.
+    /** The version last played when resuming, else the first; the list when none plays. */
     const playStraight = async (
       item: BaseItemDto,
       startMs: number,

@@ -117,6 +117,7 @@ export const OBJECT_FIT: Record<VideoFit, string> = {
   stretch: 'object-fill',
 };
 
+/** Plays an item, or lists its versions when none can play. */
 export function PlayerPage({
   itemId,
   sourceId,
