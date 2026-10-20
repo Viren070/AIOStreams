@@ -19,6 +19,7 @@ const SEEK_COOLDOWN_MS = 2_000;
 /** A shorter stall costs only this member, who catches up after it. */
 const BUFFER_AFTER_MS = 3_000;
 const TICK_MS = 250;
+const REPORTS_MS = 2_000;
 const RESUME_MS = 5_000;
 /** Positions this close count as there. */
 const ACCURATE_MS = 250;
@@ -37,8 +38,14 @@ const DEFAULT_LEAD_MS = 250;
 /** How long a pause or play this side made stays its own, not the user's. */
 const OWN_CHANGE_MS = 1_500;
 
+interface Report {
+  positionMs: number;
+  at: number;
+}
+
 class Follower {
-  private sample = { positionMs: 0, at: performance.now() };
+  private sample: Report = { positionMs: 0, at: performance.now() };
+  private reports: Report[] = [];
   private rate = 1;
   private settleUntil = 0;
   private lastSeekAt = -Infinity;
@@ -60,10 +67,7 @@ class Follower {
     readonly playlistItemId: string
   ) {
     this.own = { paused: true, at: performance.now() };
-    this.sample = {
-      positionMs: player().playhead.positionMs,
-      at: performance.now(),
-    };
+    this.restart(player().playhead.positionMs);
   }
 
   private get timeline(): Timeline | null {
@@ -71,7 +75,7 @@ class Follower {
     return timeline?.playlistItemId === this.playlistItemId ? timeline : null;
   }
 
-  /** Where the player is now, carried on from its last report. */
+  /** Where the player is now, carried on from its timeliest report. */
   position(): number {
     const { state } = this.player();
     if (state.paused || state.waiting) return this.sample.positionMs;
@@ -86,7 +90,21 @@ class Follower {
   }
 
   onPosition(positionMs: number): void {
-    this.sample = { positionMs, at: performance.now() };
+    const at = performance.now();
+    const { state } = this.player();
+    if (state.paused || state.waiting) return this.restart(positionMs, at);
+    // Reports only ever arrive late, so the one furthest on came soonest.
+    const on = (r: Report) => r.positionMs - r.at * this.rate;
+    this.reports = [
+      ...this.reports.filter((r) => at - r.at < REPORTS_MS),
+      { positionMs, at },
+    ];
+    this.sample = this.reports.reduce((a, b) => (on(b) > on(a) ? b : a));
+  }
+
+  private restart(positionMs: number, at = performance.now()): void {
+    this.sample = { positionMs, at };
+    this.reports = [this.sample];
   }
 
   private after(ms: number, run: () => void): void {
@@ -106,7 +124,7 @@ class Follower {
 
   private setRate(rate: number): void {
     if (!this.speed || rate === this.rate) return;
-    this.sample = { positionMs: this.position(), at: performance.now() };
+    this.restart(this.position());
     this.rate = rate;
     this.speed(rate);
   }
@@ -116,7 +134,7 @@ class Follower {
     this.offSince = null;
     this.setRate(1);
     this.player().seek(Math.max(positionMs, 0));
-    this.sample = { positionMs: Math.max(positionMs, 0), at: now };
+    this.restart(Math.max(positionMs, 0), now);
     this.settleUntil = now + SETTLE_MS;
     this.lastSeekAt = now;
     this.seekStartedAt = now;
@@ -200,7 +218,7 @@ class Follower {
       previous &&
       (state.paused !== previous.paused || state.waiting !== previous.waiting)
     )
-      this.sample = { positionMs: this.player().playhead.positionMs, at: now };
+      this.restart(this.player().playhead.positionMs, now);
     if (this.seekStartedAt !== null && previous?.waiting && !state.waiting) {
       const took = now - this.seekStartedAt;
       if (took < 3_000)
