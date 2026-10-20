@@ -21,6 +21,7 @@ import {
   type PlaybackTarget,
   maskSensitiveInfo,
   onPlay,
+  ResolvedLinkInfo,
 } from '@aiostreams/core';
 import { ZodError } from 'zod';
 import {
@@ -139,16 +140,16 @@ router.get(
       // Served URL -> what it resolved from, for the media info probe.
       const resolvedFrom = new Map<
         string,
-        { target: PlaybackTarget; url: string }
+        { target: PlaybackTarget; resolvedInfo: ResolvedLinkInfo }
       >();
       const resolveOwned = async (
         target: PlaybackTarget,
         proxied: boolean | undefined,
         signal?: AbortSignal
       ): Promise<string | undefined> => {
-        const url = await resolvePlaybackTarget(target, { clientIp }, signal);
-        const served = await maybeProxy(url, proxied);
-        if (url && served) resolvedFrom.set(served, { target, url });
+        const resolvedInfo = await resolvePlaybackTarget(target, { clientIp }, signal);
+        const served = await maybeProxy(resolvedInfo?.url, proxied);
+        if (resolvedInfo && served) resolvedFrom.set(served, { target, resolvedInfo });
         return served;
       };
 
@@ -289,7 +290,7 @@ router.get(
         void onPlay({
           path: playPath,
           target: played.target,
-          resolvedUrl: played.url,
+          resolvedInfo: played.resolvedInfo,
           viaProxy:
             arrivedViaOurProxy ||
             result.url.includes(constants.BUILTIN_PROXY_PATH_PREFIX),
