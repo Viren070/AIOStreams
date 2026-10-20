@@ -74,6 +74,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var controller: ListenableFuture<MediaController>
     private val screen = PlayerWindow(this)
     private val levels by lazy { Levels(this) }
+    private val watchNext by lazy { WatchNext(this) }
     private val trustedRoots by lazy { MpvEngine.trustedRoots(this).toByteArray() }
     /** Run once the notification question is answered, either way. */
     private var afterNotifications: (() -> Unit)? = null
@@ -250,6 +251,7 @@ class MainActivity : ComponentActivity() {
             "keyboard-completions" -> web.showCompletions(
                 (message["items"] as? JsonArray)?.mapNotNull { it.jsonPrimitive.contentOrNull }.orEmpty(),
             )
+            "watch-next" -> watchNext.publish((message["items"] as? JsonArray)?.filterIsInstance<JsonObject>().orEmpty())
             "voice-search" -> voice.listen()
             "voice-cancel" -> voice.cancel()
             "save-file" -> saveFile(
