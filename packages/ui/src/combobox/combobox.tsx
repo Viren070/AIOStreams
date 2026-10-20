@@ -338,8 +338,11 @@ export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
               try {
                 keyed = !!button?.matches(':focus-visible');
               } catch {
-                // Chromium 69 (2020 Samsung TVs) has no :focus-visible.
-                keyed = !!button?.matches(':focus');
+                // Chromium 69 (2020 Samsung TVs) has no :focus-visible; the
+                // web app marks focus a pointer gave on <html>.
+                keyed =
+                  !!button?.matches(':focus') &&
+                  !document.documentElement.hasAttribute('data-pointer-focus');
               }
               if (!keyed) e.preventDefault();
             }}

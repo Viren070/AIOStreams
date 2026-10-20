@@ -33,7 +33,8 @@ test('adds fallbacks without touching the original rules', async () => {
       '.aspect-\\[2\\/3\\]{aspect-ratio:2/3}' +
       '.before\\:aspect-video:before{aspect-ratio:16/9}' +
       'html[data-x] :focus-visible{outline:0}.ring:focus-visible{outline:1px}' +
-      'html:not([data-p]) .\\[html_\\&\\:focus-visible\\]\\:x:focus-visible{color:red}',
+      'html:not([data-p]) .\\[html_\\&\\:focus-visible\\]\\:x:focus-visible{color:red}' +
+      '[data-tv] .tv:focus-visible{color:blue}',
     { from: undefined }
   );
   assert.match(css, /\.gap-2\{gap:\.5rem\}/);
@@ -76,6 +77,8 @@ test('adds fallbacks without touching the original rules', async () => {
   );
   assert.match(css, /html\.no-focus-visible\[data-x\] :focus\{/);
   assert.match(css, /\.no-focus-visible \.ring:focus\{/);
+  // `[data-tv]` is on <html>, beside the class.
+  assert.match(css, /\[data-tv\]\.no-focus-visible \.tv:focus\{/);
   // The class name keeps its escaped `\:focus-visible`; only the pseudo-class changes.
   assert.match(
     css,

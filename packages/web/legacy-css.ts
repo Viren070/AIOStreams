@@ -160,10 +160,15 @@ export function legacyCss(): Plugin {
   };
 }
 
-/** `selector` limited to pages whose `<html>` has `className`. */
+/**
+ * `selector` limited to pages whose `<html>` has `className`. A selector that
+ * starts on `<html>` itself, as the TV's `[data-tv]` and the dark theme's
+ * `.dark` do, takes the class there.
+ */
 function under(className: string, selector: string): string {
-  return /^html(?![\w-])/.test(selector)
-    ? selector.replace('html', `html.${className}`)
+  const root = /^(html(?![\w-])|\[data-tv\]|\.dark(?![\w-]))/.exec(selector);
+  return root
+    ? `${root[0]}.${className}${selector.slice(root[0].length)}`
     : `.${className} ${selector}`;
 }
 

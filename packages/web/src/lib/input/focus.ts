@@ -66,7 +66,10 @@ export function focusVisible(el: Element): boolean {
   try {
     return el.matches(':focus-visible');
   } catch {
-    return el.matches(':focus');
+    return (
+      el.matches(':focus') &&
+      !document.documentElement.hasAttribute(POINTER_FOCUS)
+    );
   }
 }
 
