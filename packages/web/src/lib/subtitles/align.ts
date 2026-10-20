@@ -62,21 +62,48 @@ function edges(lines: Span[], ratio = 1) {
   return { starts: times((l) => l.startMs), ends: times((l) => l.endMs) };
 }
 
-const longest = (spans: Span[]) =>
-  spans.reduce((most, s) => Math.max(most, s.endMs - s.startMs), 0);
+/**
+ * A curve over the delays from -limit to +limit, summed from its changes of
+ * slope. Changes before it only set where it starts, so it keeps no more than
+ * its own delays. Cleared and reused, as one over ±10 min is a megabyte.
+ */
+class Curve {
+  readonly values: Float64Array;
+  private slope = 0;
+  private value = 0;
 
-/** The curve over delays from -limit to +limit, summed from its changes of slope. */
-function curveOf(kinks: Float64Array, fromMs: number, limitMs: number) {
-  const start = Math.round((-limitMs - fromMs) / STEP_MS);
-  const curve = new Float64Array(Math.round((2 * limitMs) / STEP_MS) + 1);
-  let slope = 0;
-  let value = 0;
-  for (let i = 0; i < start + curve.length; i++) {
-    if (i >= start) curve[i - start] = value;
-    slope += kinks[i];
-    value += slope * STEP_MS;
+  constructor(readonly limitMs: number) {
+    this.values = new Float64Array(Math.round((2 * limitMs) / STEP_MS) + 1);
   }
-  return curve;
+
+  clear() {
+    this.values.fill(0);
+    this.slope = 0;
+    this.value = 0;
+  }
+
+  add(delayMs: number, change: number) {
+    const i = Math.round((delayMs + this.limitMs) / STEP_MS);
+    if (i >= this.values.length) return;
+    if (i >= 0) this.values[i] += change;
+    else {
+      this.slope += change;
+      this.value -= change * i * STEP_MS;
+    }
+  }
+
+  sum(): Float64Array {
+    const values = this.values;
+    let slope = this.slope;
+    let value = this.value;
+    for (let i = 0; i < values.length; i++) {
+      const change = values[i];
+      values[i] = value;
+      slope += change;
+      value += slope * STEP_MS;
+    }
+    return values;
+  }
 }
 
 /**
@@ -84,11 +111,9 @@ function curveOf(kinks: Float64Array, fromMs: number, limitMs: number) {
  * `fixed`. A pair of spans overlaps over a trapezoid of delays, added through
  * its four changes of slope, so the whole curve costs one pass.
  */
-function overlaps(fixed: Span[], target: Span[], limitMs: number) {
-  const margin = longest(fixed) + longest(target);
-  const from = -limitMs - Math.ceil(margin / STEP_MS) * STEP_MS;
-  const at = (delayMs: number) => Math.round((delayMs - from) / STEP_MS);
-  const kinks = new Float64Array(at(-from) + 2);
+function overlaps(fixed: Span[], target: Span[], curve: Curve) {
+  curve.clear();
+  const { limitMs } = curve;
   let lo = 0;
   let hi = 0;
   for (const t of target) {
@@ -99,20 +124,19 @@ function overlaps(fixed: Span[], target: Span[], limitMs: number) {
       const first = f.startMs - t.endMs;
       const last = f.endMs - t.startMs;
       const full = Math.min(f.endMs - f.startMs, t.endMs - t.startMs);
-      kinks[at(first)] += 1;
-      kinks[at(first + full)] -= 1;
-      kinks[at(last - full)] -= 1;
-      kinks[at(last)] += 1;
+      curve.add(first, 1);
+      curve.add(first + full, -1);
+      curve.add(last - full, -1);
+      curve.add(last, 1);
     }
   }
-  return curveOf(kinks, from, limitMs);
+  return curve.sum();
 }
 
 /** How many of `target`'s times each delay brings near one of `fixed`'s, nearer counting more. */
-function meetings(fixed: number[], target: number[], limitMs: number) {
-  const from = -limitMs - 2 * EDGE_MS;
-  const at = (delayMs: number) => Math.round((delayMs - from) / STEP_MS);
-  const kinks = new Float64Array(at(limitMs + 2 * EDGE_MS) + 2);
+function meetings(fixed: number[], target: number[], curve: Curve) {
+  curve.clear();
+  const { limitMs } = curve;
   let lo = 0;
   let hi = 0;
   for (const t of target) {
@@ -120,12 +144,12 @@ function meetings(fixed: number[], target: number[], limitMs: number) {
     while (hi < fixed.length && fixed[hi] - t <= limitMs + EDGE_MS) hi++;
     for (let i = lo; i < hi; i++) {
       const delay = fixed[i] - t;
-      kinks[at(delay - EDGE_MS)] += 1 / EDGE_MS;
-      kinks[at(delay)] -= 2 / EDGE_MS;
-      kinks[at(delay + EDGE_MS)] += 1 / EDGE_MS;
+      curve.add(delay - EDGE_MS, 1 / EDGE_MS);
+      curve.add(delay, -2 / EDGE_MS);
+      curve.add(delay + EDGE_MS, 1 / EDGE_MS);
     }
   }
-  return curveOf(kinks, from, limitMs);
+  return curve.sum();
 }
 
 /** A curve's best delay and value, and its lead over the best delay clear of it. */
@@ -162,14 +186,13 @@ interface Match {
   lead: number;
 }
 
-function match(heard: Span[], read: Span[], target: Span[], limitMs: number) {
-  const both = overlaps(heard, target, limitMs);
-  const shown = overlaps(read, target, limitMs);
+function match(heard: Span[], read: Span[], target: Span[], [a, b]: Curve[]) {
+  const both = overlaps(heard, target, a);
+  const shown = overlaps(read, target, b);
   const spoken = heard.reduce((sum, s) => sum + s.endMs - s.startMs, 0);
-  const best = peak(
-    both.map((b, i) => b / (spoken + shown[i] - b || 1)),
-    limitMs
-  );
+  for (let i = 0; i < both.length; i++)
+    both[i] /= spoken + shown[i] - both[i] || 1;
+  const best = peak(both, a.limitMs);
   return { delayMs: best.delayMs, match: best.value, lead: best.lead };
 }
 
@@ -182,18 +205,16 @@ function edgesAgree(
   target: Span[],
   found: Match,
   [fromMs, toMs]: [number, number],
-  limitMs: number
+  [a, b]: Curve[]
 ): boolean {
   const fixed = edges(reference);
   const moved = edges(target, found.ratio);
   const inside = (times: number[]) =>
     times.filter((t) => t > fromMs && t < toMs);
-  const starts = meetings(fixed.starts, inside(moved.starts), limitMs);
-  const ends = meetings(fixed.ends, inside(moved.ends), limitMs);
-  const best = peak(
-    starts.map((s, i) => s + ends[i]),
-    limitMs
-  );
+  const starts = meetings(fixed.starts, inside(moved.starts), a);
+  const ends = meetings(fixed.ends, inside(moved.ends), b);
+  for (let i = 0; i < starts.length; i++) starts[i] += ends[i];
+  const best = peak(starts, a.limitMs);
   return (
     best.lead >= MIN_EDGE_LEAD &&
     Math.abs(best.delayMs - found.delayMs) <= AGREE_MS
@@ -218,20 +239,21 @@ export function alignSubtitles(
     heard[0].startMs - limitMs,
     heard[heard.length - 1].endMs + limitMs,
   ];
+  const curves = [new Curve(limitMs), new Curve(limitMs)];
   let found: Match | null = null;
   for (const ratio of RATIOS) {
     const lines = speech(target, ratio).filter(
       (s) => s.endMs > range[0] && s.startMs < range[1]
     );
     if (!lines.length) continue;
-    const m = { ...match(heard, read, lines, limitMs), ratio };
+    const m = { ...match(heard, read, lines, curves), ratio };
     if (!found || m.match > found.match) found = m;
   }
   if (!found) return null;
   const confident =
     found.match >= MIN_MATCH &&
     (found.lead >= MIN_LEAD ||
-      edgesAgree(reference, target, found, range, limitMs));
+      edgesAgree(reference, target, found, range, curves));
   return {
     delayMs: Math.round(found.delayMs),
     ratio: found.ratio,
