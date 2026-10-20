@@ -58,9 +58,10 @@ class PlayerChannel(
     private var settings: PlayerSettings? = null
     private var reference: String? = null
 
-    /** A file's subtitle lines from its index, null where it has none, and the file being read. */
+    /** A file's subtitle lines from its index, null where it has none, the file being read, and who waits on it. */
     private var indexed: Pair<String, List<List<SubtitleLine>>?>? = null
     private var indexing: String? = null
+    private val waiting = mutableListOf<Pair<String, (List<List<SubtitleLine>>?) -> Unit>>()
     private val reader = Executors.newSingleThreadExecutor { Thread(it, "subtitle-index") }
 
     /** The file seek-bar thumbnails come from and its handle, used only on [thumbnailer]. */
@@ -148,9 +149,10 @@ class PlayerChannel(
                 .onSuccess {
                     reference = it.id
                     engine.watchSubtitleLines(it.id?.takeIf(::readable))
-                    it.id?.let(::sendIndexed)
+                    if (it.id != null) withIndex { lines -> reference?.let { track -> sendLines(track, lines) } }
                 }
                 .onFailure(::reject)
+            "player-subtitle-index" -> withIndex { lines -> send(PlayerProtocol.subtitleIndex(ownSubtitles().map { it.id }, lines)) }
             "player-thumbnail" -> thumbnail(message)
             "player-sync" -> {
                 send(PlayerProtocol.state(state))
@@ -257,10 +259,11 @@ class PlayerChannel(
     /** Neither engine reads lines from subtitles drawn as pictures, so only the index has theirs. */
     private fun readable(track: String) = tracks.none { it.id == track && it.codec in PICTURE_CODECS }
 
-    /** All of a track's lines at once from the file's index, which the engine's own reading then tops up. */
-    private fun sendIndexed(track: String) {
-        val load = loaded ?: return
-        indexed?.takeIf { it.first == load.url }?.let { return sendLines(track, it.second) }
+    /** Hands `then` every own subtitle's lines from the file's index, read once a file; null without one. */
+    private fun withIndex(then: (List<List<SubtitleLine>>?) -> Unit) {
+        val load = loaded ?: return then(null)
+        indexed?.takeIf { it.first == load.url }?.let { return then(it.second) }
+        waiting += load.url to then
         if (indexing == load.url) return
         indexing = load.url
         reader.execute {
@@ -270,16 +273,20 @@ class PlayerChannel(
                 .getOrNull()
             main.post {
                 if (indexing == load.url) indexing = null
+                val ready = waiting.filter { it.first == load.url }
+                waiting.removeAll(ready)
                 if (loaded?.url != load.url) return@post
                 indexed = load.url to lines
-                reference?.let { sendLines(it, lines) }
+                for ((_, call) in ready) call(lines)
             }
         }
     }
 
+    private fun ownSubtitles() = tracks.filter { it.type == "subtitle" && !it.external }
+
     /** The index lists the file's own subtitles in the engine's order. */
     private fun sendLines(track: String, indexed: List<List<SubtitleLine>>?) {
-        val own = tracks.filter { it.type == "subtitle" && !it.external }
+        val own = ownSubtitles()
         val lines = indexed?.takeIf { it.size == own.size }?.getOrNull(own.indexOfFirst { it.id == track })
         if (!lines.isNullOrEmpty()) send(PlayerProtocol.subtitleLines(track, lines))
     }

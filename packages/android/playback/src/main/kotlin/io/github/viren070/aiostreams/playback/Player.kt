@@ -293,11 +293,20 @@ object PlayerProtocol {
     fun subtitleLines(track: String, lines: List<SubtitleLine>) = buildJsonObject {
         put("type", "player-subtitle-lines")
         put("track", track)
-        put("lines", buildJsonArray {
-            for (line in lines) add(buildJsonObject {
-                put("startMs", line.startMs)
-                put("endMs", line.endMs)
-            })
+        put("lines", linesJson(lines))
+    }
+
+    /** Each of `own`'s lines by track id, in the order the index lists them; null without an index. */
+    fun subtitleIndex(own: List<String>, lines: List<List<SubtitleLine>>?) = buildJsonObject {
+        put("type", "player-subtitle-index")
+        if (lines.isNullOrEmpty() || lines.size != own.size) put("tracks", JsonNull)
+        else put("tracks", buildJsonObject { for ((id, track) in own.zip(lines)) put(id, linesJson(track)) })
+    }
+
+    private fun linesJson(lines: List<SubtitleLine>) = buildJsonArray {
+        for (line in lines) add(buildJsonObject {
+            put("startMs", line.startMs)
+            put("endMs", line.endMs)
         })
     }
 
