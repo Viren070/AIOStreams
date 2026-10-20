@@ -859,15 +859,23 @@ const sameDevice = (
   session.Client === device.client.name &&
   session.DeviceId.toLowerCase() === device.client.deviceId.toLowerCase();
 
+/** The sessions on devices that take remote control, with what they take. */
+export function withControls<S extends ReturnType<typeof sessionInfo>>(
+  sessions: S[],
+  devices: RemoteDevice[]
+): S[] {
+  return sessions.map((s) => {
+    const device = devices.find((d) => sameDevice(s, d));
+    return device ? withRemote(s, device) : s;
+  });
+}
+
 async function withDevices<S extends ReturnType<typeof sessionInfo>>(
   ctx: JellyfinRequestContext,
   sessions: S[],
   devices: RemoteDevice[]
 ) {
-  const listed = sessions.map((s) => {
-    const device = devices.find((d) => sameDevice(s, d));
-    return device ? withRemote(s, device) : s;
-  });
+  const listed = withControls(sessions, devices);
   const idle = await deviceSessions(
     ctx,
     devices.filter((d) => !sessions.some((s) => sameDevice(s, d)))

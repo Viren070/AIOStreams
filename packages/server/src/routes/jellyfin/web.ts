@@ -39,7 +39,9 @@ import {
   listedFor,
   sessionFromRow,
   userDto,
+  withControls,
 } from './users.js';
+import { controllableDevices } from './remote.js';
 import {
   appReportsRateLimiter,
   jellyfinLoginRateLimiter,
@@ -209,6 +211,10 @@ router.get(
           return key && !user ? null : sessionFromRow(ctx, row, user, null);
         })
     );
+    const playing = sessions.filter((s) => s !== null);
+    const live = playing.length
+      ? withControls(playing, await controllableDevices(ctx))
+      : playing;
     const byScope = new Map(counts.map((c) => [c.persona, c]));
     const none = {
       played: 0,
@@ -229,7 +235,7 @@ router.get(
         historyOf: personaUserId(ctx.uuid, u.scope.persona),
         counts: ownsScope(u) ? (byScope.get(u.scope.persona) ?? none) : null,
       })),
-      sessions: sessions.filter(Boolean),
+      sessions: live,
     });
   })
 );
