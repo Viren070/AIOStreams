@@ -208,6 +208,7 @@ pub struct Player {
     previews: Previews,
     ac3_encoder: bool,
     own_font: String,
+    styled: Mutex<HashMap<&'static str, String>>,
     emit: Emit,
 }
 
@@ -290,6 +291,7 @@ impl Player {
             previews: Previews::new(emit.clone()),
             ac3_encoder,
             own_font,
+            styled: Mutex::default(),
             emit,
         })
     }
@@ -387,11 +389,20 @@ impl Player {
         Ok(())
     }
 
+    /// Sets only what changed, so the user's mpv.conf profiles keep what they set since.
     pub fn style(&self, style: &Style) -> Result<(), String> {
         for (name, value) in playback::style(style, &self.own_font)? {
-            self.set(name, value);
+            let changed = self.styled.lock().map_or(true, |mut styled| {
+                styled.insert(name, value.clone()).as_ref() != Some(&value)
+            });
+            if changed {
+                self.set(name, value);
+            }
         }
         let scale = self.subtitles.lock().ok().and_then(|mut s| {
+            if s.scale == Some(style.subtitles.scale) {
+                return None;
+            }
             s.scale = Some(style.subtitles.scale);
             s.value()
         });
