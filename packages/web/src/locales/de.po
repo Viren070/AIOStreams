@@ -6,10 +6,10 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Weblate 2026.11.dev0\n"
 "Language: de\n"
-"Last-Translator: Florian Otto <solilord@users.noreply.hosted.weblate.org>\n"
+"Last-Translator: hamburgercowgoldfish <242998989+hamburgercowgoldfish@users.noreply.github.com>\n"
 "Language-Team: German <https://hosted.weblate.org/projects/aiostreams/web-app/de/>\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"PO-Revision-Date: 2026-10-21 14:58+0000\n"
+"PO-Revision-Date: 2026-10-22 14:34+0000\n"
 
 #: src/components/party/party-sheet.tsx
 msgid "(you)"
@@ -877,7 +877,7 @@ msgstr "Code oder Einladungslink"
 #: src/pages/discover.tsx
 #: src/pages/item.tsx
 msgid "Collections"
-msgstr "Kollektionen"
+msgstr "Sammlungen"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Colour"
@@ -1799,7 +1799,7 @@ msgstr "In den Downloads der App"
 
 #: src/pages/item.tsx
 msgid "In this collection"
-msgstr "In dieser Kollektion"
+msgstr "In dieser Sammlung"
 
 #: src/lib/hosts/shell/index.ts
 msgid "Install"
@@ -3310,7 +3310,7 @@ msgstr "Läuft mit einer anderen Geschwindigkeit als das Video"
 #. A season and episode number, as in S01E04
 #: src/lib/format.ts
 msgid "S{s}E{e}"
-msgstr "S{s}F{e}"
+msgstr "S{s}E{e}"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Sans serif"
