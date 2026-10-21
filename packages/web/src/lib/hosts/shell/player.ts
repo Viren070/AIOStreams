@@ -162,10 +162,11 @@ function exoStatsText(
   const ahead = num('cacheAhead');
   if (ahead !== undefined) {
     const aheadMs = num('cacheAheadMs');
+    const behindMs = num('cacheBehindMs');
     const speed = num('linkSpeed') ?? 0;
     const ratio = num('linkRatio');
     lines.push(
-      `Cache      ${aheadMs !== undefined ? `${Math.round(aheadMs / 1000)} s` : formatBytes(ahead)} ahead · ${formatBytes(num('cacheBytes'))} of ${formatBytes(num('cacheBudget'))}${speed > 0 ? ` · link ${formatBytes(speed)}/s${ratio ? ` (${ratio.toFixed(1)}× the file)` : ''}` : ''}`
+      `Cache      ${behindMs !== undefined ? `${Math.round(behindMs / 1000)} s behind · ` : ''}${aheadMs !== undefined ? `${Math.round(aheadMs / 1000)} s` : formatBytes(ahead)} ahead · ${formatBytes(num('cacheBytes'))} of ${formatBytes(num('cacheBudget'))}${speed > 0 ? ` · link ${formatBytes(speed)}/s${ratio ? ` (${ratio.toFixed(1)}× the file)` : ''}` : ''}`
     );
   }
   const shown = num('renderedFrames');
