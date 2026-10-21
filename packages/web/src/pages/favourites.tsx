@@ -1,6 +1,8 @@
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import React from 'react';
+import { BiShuffle } from 'react-icons/bi';
+import { Button } from '@aiostreams/ui/button';
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import { useSession } from '../lib/session';
@@ -10,6 +12,7 @@ import { navigate, to } from '../lib/paths';
 import { PageBody } from '../components/layout';
 import { PillTabs } from '../components/pill-tabs';
 import { MixedGrid } from '../components/mixed-grid';
+import { openRandom } from '../components/random-pick';
 
 const KINDS = [
   {
@@ -56,19 +59,33 @@ export function FavouritesPage({ kind }: { kind?: string }) {
         <h1 data-ui="page-title" className="text-3xl font-bold">
           <Trans>Favourites</Trans>
         </h1>
-        <PillTabs
-          name="kind"
-          options={KINDS}
-          value={types}
-          onChange={(next) =>
-            navigate(
-              to.favourites(next === KINDS[0].value ? undefined : next),
-              {
-                replace: true,
-              }
-            )
-          }
-        />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <PillTabs
+            name="kind"
+            options={KINDS}
+            value={types}
+            onChange={(next) =>
+              navigate(
+                to.favourites(next === KINDS[0].value ? undefined : next),
+                {
+                  replace: true,
+                }
+              )
+            }
+          />
+          {!!items.length && (
+            <Button
+              data-ui="random-pick"
+              size="sm"
+              intent="gray-subtle"
+              className="rounded-full"
+              leftIcon={<BiShuffle />}
+              onClick={() => openRandom({ kind: 'favourite', types })}
+            >
+              <Trans>Random pick</Trans>
+            </Button>
+          )}
+        </div>
         {pages.isError ? (
           <LuffyError title={t`Could not load your favourites`} />
         ) : (

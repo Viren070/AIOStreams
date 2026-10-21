@@ -71,6 +71,7 @@ import { VersionPickerProvider } from './version-picker';
 import { RemoteTarget } from './remote-target';
 import { RemoteSheet } from './remote-sheet';
 import { WatchNextSync } from './watch-next';
+import { RandomPick } from './random-pick';
 import { ItemMenuHost } from './item-menu';
 import { HomePage } from '../pages/home';
 import { PageShown } from '../lib/page-shown';
@@ -691,6 +692,7 @@ export function WebLayout() {
                 )}
                 <VersionPickerProvider>
                   <RemoteTarget />
+                  <RandomPick />
                   {currentHost().watchNext && <WatchNextSync />}
                   <ItemMenuHost>
                     <GlideLayers name="page">

@@ -11,6 +11,7 @@ import {
   BiHeart,
   BiPlay,
   BiRevision,
+  BiShuffle,
   BiSolidDislike,
   BiSolidHeart,
   BiSolidStar,
@@ -32,7 +33,7 @@ import {
   useItem,
   useItemPages,
   useNextUpFor,
-  useNextUpLater,
+  useFetchNextUp,
   useSeasons,
   openingSeason,
   useSetDropped,
@@ -92,6 +93,7 @@ import { CachedImage } from '../components/cached-image';
 import { TrailerButton } from '../components/trailers';
 import { openPartySheet } from '../components/party/party-sheet';
 import { openRemote } from '../components/remote-sheet';
+import { openRandom } from '../components/random-pick';
 import { useParty } from '../lib/party/party';
 import {
   DownloadButton,
@@ -331,7 +333,7 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
   const { client } = useSession();
   const picker = useVersionPicker();
   const nextUp = useNextUpFor(item.Id!, item.Type === 'Series');
-  const nextUpLater = useNextUpLater(item.Id!);
+  const fetchNextUp = useFetchNextUp();
   // Play holds its place, and focus, while a show's next episode is on its way.
   const nextUpPending = item.Type === 'Series' && nextUp.isPending;
   const logo = logoUrl(client, item, { maxWidth: 416 });
@@ -456,7 +458,7 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
                 onClick={() =>
                   target
                     ? picker.play(target, { startMs: resumeMs })
-                    : void nextUpLater().then(
+                    : void fetchNextUp(item.Id!).then(
                         (episode) =>
                           episode &&
                           picker.play(episode, {
@@ -491,6 +493,23 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
             </div>
           )}
           <TrailerButton item={item} />
+          {item.Type === 'Series' && (
+            <Tooltip
+              trigger={
+                <IconButton
+                  data-ui="item-action"
+                  data-name="random"
+                  intent="gray-subtle"
+                  className="rounded-full"
+                  icon={<BiShuffle />}
+                  aria-label={t`Random episode`}
+                  onClick={() => openRandom({ kind: 'episode', series: item })}
+                />
+              }
+            >
+              <Trans>Random episode</Trans>
+            </Tooltip>
+          )}
           {item.Type !== 'BoxSet' && (
             <Tooltip
               trigger={

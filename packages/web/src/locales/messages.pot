@@ -1062,6 +1062,10 @@ msgstr ""
 msgid "Could not load your favourites"
 msgstr ""
 
+#: src/components/random-pick.tsx
+msgid "Could not pick one."
+msgstr ""
+
 #: src/lib/subtitles/files.ts
 msgid "Could not read that file"
 msgstr ""
@@ -2162,6 +2166,7 @@ msgid "Moves between what's on screen, and to Search and Home. A gamepad's d-pad
 msgstr ""
 
 #: src/components/kind-tabs.tsx
+#: src/components/random-pick.tsx
 #: src/lib/format.ts
 #: src/pages/discover.tsx
 #: src/pages/favourites.tsx
@@ -2410,6 +2415,7 @@ msgstr ""
 msgid "Nothing is playing there."
 msgstr ""
 
+#: src/components/random-pick.tsx
 #: src/pages/favourites.tsx
 msgid "Nothing marked as a favourite yet."
 msgstr ""
@@ -2547,6 +2553,7 @@ msgstr ""
 
 #: src/components/hero.tsx
 #: src/components/item-menu.tsx
+#: src/components/random-pick.tsx
 #: src/pages/history.tsx
 #: src/pages/settings/account.tsx
 #: src/pages/settings/apps.tsx
@@ -2772,6 +2779,10 @@ msgstr ""
 msgid "Pick a version"
 msgstr ""
 
+#: src/components/random-pick.tsx
+msgid "Pick again"
+msgstr ""
+
 #: src/components/version-settings.tsx
 msgid "Pick fields to search only those parts of a version."
 msgstr ""
@@ -2819,6 +2830,7 @@ msgstr ""
 #: src/components/hero.tsx
 #: src/components/item-menu.tsx
 #: src/components/player/controls.tsx
+#: src/components/random-pick.tsx
 #: src/components/remote-sheet.tsx
 #: src/lib/input/actions.ts
 #: src/lib/input/keys.ts
@@ -3072,6 +3084,20 @@ msgstr ""
 msgid "Raises the centre channel, where surround sound puts dialogue. Not for sound passed through."
 msgstr ""
 
+#: src/components/item-menu.tsx
+#: src/components/random-pick.tsx
+#: src/pages/item.tsx
+msgid "Random episode"
+msgstr ""
+
+#: src/components/random-pick.tsx
+msgid "Random favourite"
+msgstr ""
+
+#: src/pages/favourites.tsx
+msgid "Random pick"
+msgstr ""
+
 #: src/components/rating.tsx
 msgid "Rate"
 msgstr ""
@@ -3251,6 +3277,7 @@ msgid "Results of what you searched for."
 msgstr ""
 
 #: src/components/item-menu.tsx
+#: src/components/random-pick.tsx
 #: src/pages/downloads.tsx
 msgid "Resume"
 msgstr ""
@@ -3569,6 +3596,7 @@ msgid "Shown"
 msgstr ""
 
 #: src/components/kind-tabs.tsx
+#: src/components/random-pick.tsx
 #: src/lib/format.ts
 #: src/pages/discover.tsx
 #: src/pages/favourites.tsx
@@ -4334,6 +4362,10 @@ msgstr ""
 msgid "This server styles the app for everyone. Your own CSS applies on top of it."
 msgstr ""
 
+#: src/components/random-pick.tsx
+msgid "This show has no episodes to pick from yet."
+msgstr ""
+
 #: src/pages/trailer.tsx
 msgid "This trailer can't play in the app."
 msgstr ""
@@ -4441,6 +4473,7 @@ msgid "Troubleshooting"
 msgstr ""
 
 #: src/components/party/party-sheet.tsx
+#: src/components/random-pick.tsx
 #: src/components/version-picker.tsx
 #: src/pages/downloads.tsx
 #: src/pages/sign-in.tsx

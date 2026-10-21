@@ -12,6 +12,7 @@ import {
   BiListUl,
   BiPlay,
   BiReset,
+  BiShuffle,
   BiSkipNext,
   BiSolidHeart,
   BiTv,
@@ -33,6 +34,7 @@ import {
   useSetPlayedUpTo,
 } from '../lib/queries';
 import { openRemote } from './remote-sheet';
+import { openRandom } from './random-pick';
 import { toast } from 'sonner';
 import { itemTitle, ticksToMs } from '../lib/format';
 import { itemPath, navigate, to } from '../lib/paths';
@@ -236,6 +238,14 @@ function ItemMenuContent({ item, onPage, onDetails }: MenuTarget) {
       {onDetails && (
         <ContextMenuItem data-name="details" onSelect={onDetails}>
           <BiInfoCircle /> <Trans>Details</Trans>
+        </ContextMenuItem>
+      )}
+      {item.Type === 'Series' && (
+        <ContextMenuItem
+          data-name="random-episode"
+          onSelect={() => openRandom({ kind: 'episode', series: item })}
+        >
+          <BiShuffle /> <Trans>Random episode</Trans>
         </ContextMenuItem>
       )}
       <DownloadEntry item={item} playable={playable} />

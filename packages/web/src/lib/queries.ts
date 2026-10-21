@@ -512,10 +512,11 @@ export function useNextUpFor(seriesId: string, enabled: boolean) {
 }
 
 /** Waits for the episode a show continues with, sharing a request already on its way. */
-export function useNextUpLater(seriesId: string) {
+export function useFetchNextUp() {
   const queryClient = useQueryClient();
-  const nextUp = useShowOptions().nextUp(seriesId);
-  return () => queryClient.fetchQuery(nextUp).then((res) => res.Items?.[0]);
+  const show = useShowOptions();
+  return (seriesId: string) =>
+    queryClient.fetchQuery(show.nextUp(seriesId)).then((res) => res.Items?.[0]);
 }
 
 /** The season a show's page opens on: the first with something left, skipping specials. */
