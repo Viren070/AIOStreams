@@ -57,7 +57,6 @@ import {
 } from '../../lib/party/party';
 import { UserAvatar } from '../user-avatar';
 import { QrCode } from './qr-code';
-import { PARTY_REACTIONS } from './reactions';
 
 interface Opening {
   /** What starting a party plays for it, once it has started. */
@@ -923,13 +922,14 @@ function Member({ member, host }: { member: PartyMember; host: boolean }) {
 }
 
 function Reactions({ live, compact }: { live: boolean; compact: boolean }) {
+  const [reactions] = useSetting(settings.party.reactionSet);
   return (
     <div
       className={cn('flex flex-wrap justify-center gap-2', compact && 'mb-2')}
     >
-      {PARTY_REACTIONS.map((emoji) => (
+      {reactions.map((emoji, i) => (
         <button
-          key={emoji}
+          key={i}
           type="button"
           data-ui="party-reaction"
           aria-label={t`React with ${emoji}`}

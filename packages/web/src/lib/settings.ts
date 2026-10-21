@@ -302,6 +302,31 @@ function syncedNumber(
   );
 }
 
+/** A fixed-length list of short strings, kept as JSON. */
+function syncedList(
+  key: string,
+  fallback: readonly string[]
+): Setting<readonly string[]> {
+  const same = (list: readonly string[]) =>
+    JSON.stringify(list) === JSON.stringify(fallback);
+  return synced<readonly string[]>(
+    key,
+    (raw) => {
+      try {
+        const list: unknown = raw && JSON.parse(raw);
+        if (
+          Array.isArray(list) &&
+          list.length === fallback.length &&
+          list.every((v) => typeof v === 'string' && v && v.length <= 32)
+        )
+          return list as string[];
+      } catch {}
+      return fallback;
+    },
+    (value) => (same(value) ? undefined : JSON.stringify(value))
+  );
+}
+
 const syncedText = (key: string) =>
   synced<string | undefined>(
     key,
@@ -484,6 +509,8 @@ export type AudioChannels = (typeof AUDIO_CHANNELS)[number];
 export const PLAYER_ENGINES = ['auto', 'mpv', 'exoplayer'] as const;
 export type PlayerEngine = (typeof PLAYER_ENGINES)[number];
 /** Megabytes, or `auto` to size it from the device's memory. */
+export const PARTY_REACTIONS = ['👍', '😂', '😮', '😢', '❤️', '🔥'] as const;
+
 export const CACHE_SIZES = ['auto', '128', '256', '512', '1000'] as const;
 export type CacheSize = (typeof CACHE_SIZES)[number];
 
@@ -771,6 +798,8 @@ export const settings = {
     /** What other members send shows over the video. */
     messages: syncedFlag('partyMessages', true),
     reactions: syncedFlag('partyReactions', true),
+    /** The ones this user sends. */
+    reactionSet: syncedList('partyReactionSet', PARTY_REACTIONS),
     speedSync: syncedFlag('partySpeedSync', true),
   },
   controls: {

@@ -776,6 +776,10 @@ msgstr "Change"
 msgid "Change folder"
 msgstr "Change folder"
 
+#: src/components/party/reaction-setting.tsx
+msgid "Change reactions"
+msgstr "Change reactions"
+
 #: src/components/no-catalogs.tsx
 #: src/pages/settings/account.tsx
 #: src/pages/sign-in.tsx
@@ -1305,6 +1309,7 @@ msgstr "Donate"
 msgid "Donate to Me"
 msgstr "Donate to Me"
 
+#: src/components/party/reaction-setting.tsx
 #: src/components/player/subtitle-sync.tsx
 #: src/components/send-report.tsx
 #: src/components/version-settings.tsx
@@ -2631,6 +2636,10 @@ msgstr "Options for the built-in mpv, one per line, as mpv's manual lists them."
 msgid "Options the app keeps for itself."
 msgstr "Options the app keeps for itself."
 
+#: src/components/party/reaction-setting.tsx
+msgid "Or type one"
+msgstr "Or type one"
+
 #: src/pages/settings/audio.tsx
 msgid "Original language"
 msgstr "Original language"
@@ -2779,6 +2788,10 @@ msgstr "People and invite"
 #: src/lib/i18n.ts
 msgid "Pick a colour"
 msgstr "Pick a colour"
+
+#: src/components/party/reaction-setting.tsx
+msgid "Pick a slot, then what goes in it."
+msgstr "Pick a slot, then what goes in it."
 
 #: src/pages/downloads.tsx
 msgid "Pick a version"
@@ -3120,6 +3133,7 @@ msgid "React with {emoji}"
 msgstr "React with {emoji}"
 
 #: src/components/party/party-sheet.tsx
+#: src/components/party/reaction-setting.tsx
 msgid "Reactions"
 msgstr "Reactions"
 
@@ -3232,6 +3246,7 @@ msgstr "Report copied"
 msgid "Request failed ({status})"
 msgstr "Request failed ({status})"
 
+#: src/components/party/reaction-setting.tsx
 #: src/components/player/options.tsx
 #: src/pages/history.tsx
 msgid "Reset"
@@ -3766,6 +3781,10 @@ msgstr "Skipped segment"
 #: src/pages/settings/playback.tsx
 msgid "Skipping"
 msgstr "Skipping"
+
+#: src/components/party/reaction-setting.tsx
+msgid "Slot {n}: {emoji}"
+msgstr "Slot {n}: {emoji}"
 
 #: src/lib/input/actions.ts
 msgid "Slower"
@@ -4846,6 +4865,10 @@ msgstr "What the people you watch with say shows for a few seconds. It always st
 #: src/pages/settings/cache.tsx
 msgid "What to save"
 msgstr "What to save"
+
+#: src/components/party/reaction-setting.tsx
+msgid "What you can send from a party's chat."
+msgstr "What you can send from a party's chat."
 
 #: src/pages/settings/apps.tsx
 msgid "What your Discord profile shows. Kept on this device."

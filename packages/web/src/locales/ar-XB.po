@@ -776,6 +776,10 @@ msgstr ""
 msgid "Change folder"
 msgstr ""
 
+#: src/components/party/reaction-setting.tsx
+msgid "Change reactions"
+msgstr ""
+
 #: src/components/no-catalogs.tsx
 #: src/pages/settings/account.tsx
 #: src/pages/sign-in.tsx
@@ -1305,6 +1309,7 @@ msgstr ""
 msgid "Donate to Me"
 msgstr ""
 
+#: src/components/party/reaction-setting.tsx
 #: src/components/player/subtitle-sync.tsx
 #: src/components/send-report.tsx
 #: src/components/version-settings.tsx
@@ -2631,6 +2636,10 @@ msgstr ""
 msgid "Options the app keeps for itself."
 msgstr ""
 
+#: src/components/party/reaction-setting.tsx
+msgid "Or type one"
+msgstr ""
+
 #: src/pages/settings/audio.tsx
 msgid "Original language"
 msgstr ""
@@ -2778,6 +2787,10 @@ msgstr ""
 
 #: src/lib/i18n.ts
 msgid "Pick a colour"
+msgstr ""
+
+#: src/components/party/reaction-setting.tsx
+msgid "Pick a slot, then what goes in it."
 msgstr ""
 
 #: src/pages/downloads.tsx
@@ -3120,6 +3133,7 @@ msgid "React with {emoji}"
 msgstr ""
 
 #: src/components/party/party-sheet.tsx
+#: src/components/party/reaction-setting.tsx
 msgid "Reactions"
 msgstr ""
 
@@ -3232,6 +3246,7 @@ msgstr ""
 msgid "Request failed ({status})"
 msgstr ""
 
+#: src/components/party/reaction-setting.tsx
 #: src/components/player/options.tsx
 #: src/pages/history.tsx
 msgid "Reset"
@@ -3765,6 +3780,10 @@ msgstr ""
 
 #: src/pages/settings/playback.tsx
 msgid "Skipping"
+msgstr ""
+
+#: src/components/party/reaction-setting.tsx
+msgid "Slot {n}: {emoji}"
 msgstr ""
 
 #: src/lib/input/actions.ts
@@ -4845,6 +4864,10 @@ msgstr ""
 
 #: src/pages/settings/cache.tsx
 msgid "What to save"
+msgstr ""
+
+#: src/components/party/reaction-setting.tsx
+msgid "What you can send from a party's chat."
 msgstr ""
 
 #: src/pages/settings/apps.tsx

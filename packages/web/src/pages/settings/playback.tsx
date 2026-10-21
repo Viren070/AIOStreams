@@ -41,6 +41,7 @@ import { useFeature } from '../../lib/server-info';
 import { SettingsCard, SettingsRow } from '../../components/settings-card';
 import { BadgesRow, QuickFiltersRow } from '../../components/version-settings';
 import { onDevice, followsYou } from './common';
+import { ReactionSetting } from '../../components/party/reaction-setting';
 
 const nextPromptHelp = (prompt: NextPrompt) =>
   ({
@@ -299,6 +300,7 @@ export function PlaybackSection() {
             value={partyReactions}
             onValueChange={setPartyReactions}
           />
+          <ReactionSetting />
           <Switch
             side="right"
             label={t`Keep in step by changing speed`}
