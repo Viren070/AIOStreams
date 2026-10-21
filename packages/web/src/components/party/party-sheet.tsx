@@ -119,6 +119,7 @@ export function PartySheet() {
       side="right"
       // Narrow, so a phone on its side keeps most of the video in view.
       size="sm"
+      overlayClass="bg-black/40"
       contentClass="flex flex-col gap-0 overflow-hidden p-0"
       headerClass={cn(GUTTER, 'pb-3 pt-[calc(1rem+env(safe-area-inset-top))]')}
       closeClass="end-[max(0.5rem,env(safe-area-inset-right))] top-[calc(0.75rem+env(safe-area-inset-top))]"

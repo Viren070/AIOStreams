@@ -1,6 +1,7 @@
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '@aiostreams/ui/core/styling';
 import { formatLocale } from '../../lib/i18n';
 import {
@@ -9,6 +10,7 @@ import {
   type PartyAction,
 } from '../../lib/party/party';
 import { settings, useSetting } from '../../lib/settings';
+import { usePartySheetOpen } from './party-sheet';
 
 const BUBBLE_MS = 8_000;
 const REACTION_MS = 3_000;
@@ -74,6 +76,7 @@ export function PartyLayer() {
   const [actions, addAction] = useFleeting<PartyAction>(ACTION_MS, 1);
   const [showMessages] = useSetting(settings.party.messages);
   const [showReactions] = useSetting(settings.party.reactions);
+  const sheetOpen = usePartySheetOpen();
   usePartyEvent((event) => {
     if (event.type === 'chat' && !event.message.you && showMessages)
       addBubble(event.message.name, event.message.text);
@@ -94,63 +97,72 @@ export function PartyLayer() {
         : null;
 
   return (
-    <div
-      data-ui="party-layer"
-      className="pointer-events-none fixed inset-0 z-[15]"
-    >
-      <div className="absolute inset-x-4 top-[calc(5rem+env(safe-area-inset-top))] flex flex-col items-center gap-2">
-        {status && (
-          <p
-            data-ui="party-status"
-            className="max-w-full truncate rounded-full bg-black/70 px-4 py-1.5 text-sm font-medium"
-          >
-            {status}
-          </p>
-        )}
-        {actions.map((a) => (
-          <p
-            key={a.key}
-            data-ui="party-action"
-            className="max-w-full truncate rounded-full bg-black/70 px-4 py-1.5 text-sm duration-300 animate-in fade-in-0"
-          >
-            <ActionLine name={a.name} action={a.text} />
-          </p>
-        ))}
-      </div>
+    <>
       <div
-        data-ui="party-bubbles"
-        className="absolute bottom-[calc(7rem+env(safe-area-inset-bottom))] start-[max(1rem,env(safe-area-inset-left))] flex max-w-[min(24rem,70vw)] flex-col items-start gap-2"
+        data-ui="party-layer"
+        className="pointer-events-none fixed inset-0 z-[15]"
       >
-        {bubbles.map((b) => (
-          <p
-            key={b.key}
-            data-ui="party-bubble"
-            className="rounded-2xl bg-black/70 px-3 py-2 text-sm duration-300 animate-in fade-in-0 slide-in-from-bottom-2 [overflow-wrap:anywhere]"
-          >
-            <span className="font-semibold">{b.name}</span> {b.text}
-          </p>
-        ))}
+        <div className="absolute inset-x-4 top-[calc(5rem+env(safe-area-inset-top))] flex flex-col items-center gap-2">
+          {status && (
+            <p
+              data-ui="party-status"
+              className="max-w-full truncate rounded-full bg-black/70 px-4 py-1.5 text-sm font-medium"
+            >
+              {status}
+            </p>
+          )}
+          {actions.map((a) => (
+            <p
+              key={a.key}
+              data-ui="party-action"
+              className="max-w-full truncate rounded-full bg-black/70 px-4 py-1.5 text-sm duration-300 animate-in fade-in-0"
+            >
+              <ActionLine name={a.name} action={a.text} />
+            </p>
+          ))}
+        </div>
+        <div
+          data-ui="party-bubbles"
+          className="absolute bottom-[calc(7rem+env(safe-area-inset-bottom))] start-[max(1rem,env(safe-area-inset-left))] flex max-w-[min(24rem,70vw)] flex-col items-start gap-2"
+        >
+          {bubbles.map((b) => (
+            <p
+              key={b.key}
+              data-ui="party-bubble"
+              className="rounded-2xl bg-black/70 px-3 py-2 text-sm duration-300 animate-in fade-in-0 slide-in-from-bottom-2 [overflow-wrap:anywhere]"
+            >
+              <span className="font-semibold">{b.name}</span> {b.text}
+            </p>
+          ))}
+        </div>
       </div>
-      <div
-        data-ui="party-reactions"
-        className="absolute bottom-[calc(7rem+env(safe-area-inset-bottom))] end-[max(1.5rem,env(safe-area-inset-right))] h-64 w-24"
-      >
-        {reactions.map((r, i) => (
-          <span
-            key={r.key}
-            data-ui="party-reaction-sent"
-            className={cn(
-              'absolute bottom-0 flex flex-col items-center [animation:party-rise_3s_ease-out_forwards]',
-              i % 2 ? 'end-2' : 'end-10'
-            )}
-          >
-            <span className="text-4xl">{r.text}</span>
-            <span className="rounded-full bg-black/60 px-2 text-xs">
-              {r.name}
+      {createPortal(
+        <div
+          data-ui="party-reactions"
+          // Over the party sheet's backdrop while it is open, beside the sheet where there is room.
+          className={cn(
+            'pointer-events-none fixed bottom-[calc(7rem+env(safe-area-inset-bottom))] end-[max(1.5rem,env(safe-area-inset-right))] h-64 w-24',
+            sheetOpen ? 'z-[51] sm:ltr:end-[calc(24rem+1.5rem)]' : 'z-[15]'
+          )}
+        >
+          {reactions.map((r, i) => (
+            <span
+              key={r.key}
+              data-ui="party-reaction-sent"
+              className={cn(
+                'absolute bottom-0 flex flex-col items-center [animation:party-rise_3s_ease-out_forwards]',
+                i % 2 ? 'end-2' : 'end-10'
+              )}
+            >
+              <span className="text-4xl">{r.text}</span>
+              <span className="rounded-full bg-black/60 px-2 text-xs">
+                {r.name}
+              </span>
             </span>
-          </span>
-        ))}
-      </div>
-    </div>
+          ))}
+        </div>,
+        document.body
+      )}
+    </>
   );
 }
