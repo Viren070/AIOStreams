@@ -9,7 +9,7 @@ msgstr ""
 "Last-Translator: Krzysztof <krzysiek@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Polish <https://hosted.weblate.org/projects/aiostreams/web-app/pl/>\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
-"PO-Revision-Date: 2026-10-20 23:18+0000\n"
+"PO-Revision-Date: 2026-10-21 11:59+0000\n"
 
 #: src/components/party/party-sheet.tsx
 msgid "(you)"
@@ -270,7 +270,7 @@ msgstr "+{seconds} s"
 
 #: src/lib/subtitles/delay.ts
 msgid "+{time}"
-msgstr ""
+msgstr "+{time}"
 
 #: src/lib/playback/sound.ts
 msgid "−{amount} ms"
@@ -282,7 +282,7 @@ msgstr "−{seconds} s"
 
 #: src/lib/subtitles/delay.ts
 msgid "−{time}"
-msgstr ""
+msgstr "−{time}"
 
 #: src/lib/input/actions.ts
 msgid "0 to 9"
@@ -294,11 +294,11 @@ msgstr "1 przeskakuje o jedną dziesiątą, 5 do połowy, a 0 z powrotem na pocz
 
 #: src/pages/settings/audio.tsx
 msgid "5.1 surround"
-msgstr "5.1 surround"
+msgstr "Dźwięk przestrzenny 5.1"
 
 #: src/pages/settings/audio.tsx
 msgid "7.1 surround"
-msgstr "7.1 surround"
+msgstr "Dźwięk przestrzenny 7.1"
 
 #: src/components/version-settings.tsx
 msgid "A badge shows on each version whose text matches its pattern: the name and description your formatter writes, the file name, and the tags read from it."
@@ -468,7 +468,7 @@ msgstr "Już pobrane lub w trakcie"
 
 #: src/components/send-report.tsx
 msgid "Also send to the developer"
-msgstr ""
+msgstr "Wyślij także do dewelopera"
 
 #: src/pages/settings/account.tsx
 msgid "Also when you come back to it after half an hour. Whoever was watching carries on without their PIN."
@@ -490,7 +490,7 @@ msgstr "Zawsze pokazuj napisy w Twoim języku, jeśli wybrana wersja je posiada.
 
 #: src/pages/settings/audio.tsx
 msgid "An audio track you pick while watching a show sets the language for its other episodes. Picking the one your languages would play forgets it."
-msgstr ""
+msgstr "Ręcznie wybrana ścieżka audio obowiązuje również w kolejnych odcinkach. Przełączenie na język domyślny powoduje usunięcie tego wyboru."
 
 #: src/lib/hosts/jellyfin-android.ts
 #: src/pages/settings/about.tsx
@@ -730,7 +730,7 @@ msgstr "Pamięć podręczna"
 
 #: src/pages/settings/playback.tsx
 msgid "Cache size"
-msgstr ""
+msgstr "Rozmiar pamięci podręcznej"
 
 #: src/components/layout.tsx
 #: src/pages/calendar.tsx
@@ -747,7 +747,7 @@ msgstr "Brak połączenia"
 #: src/lib/client.ts
 #: src/pages/sign-in.tsx
 msgid "Can't reach the server"
-msgstr "Brak połączenia z serwerem"
+msgstr "Serwer nieosiągalny"
 
 #: src/pages/sign-in.tsx
 msgid "Can’t reach the server"
@@ -897,15 +897,15 @@ msgstr "Komentarz"
 
 #: src/pages/settings/apps.tsx
 msgid "Compatibility"
-msgstr ""
+msgstr "Kompatybilność"
 
 #: src/components/people.tsx
 msgid "Composer"
-msgstr ""
+msgstr "Kompozytor"
 
 #: src/pages/settings/account.tsx
 msgid "Configuration"
-msgstr ""
+msgstr "Konfiguracja"
 
 #: src/components/send-report.tsx
 msgid "Configuration ids are left out of their copy too."
@@ -917,64 +917,64 @@ msgstr ""
 
 #: src/components/no-catalogs.tsx
 msgid "Configure"
-msgstr ""
+msgstr "Konfiguruj"
 
 #: src/lib/i18n.ts
 msgid "Confirm"
-msgstr ""
+msgstr "Potwierdź"
 
 #: src/pages/servers.tsx
 msgid "Connect"
-msgstr ""
+msgstr "Połącz"
 
 #: src/pages/settings/apps.tsx
 msgid "Connected to Discord."
-msgstr ""
+msgstr "Połączono z Discord."
 
 #: src/components/party/party-sheet.tsx
 msgid "Connection lost"
-msgstr ""
+msgstr "Utracono połączenie"
 
 #: src/app.tsx
 #: src/pages/sign-in.tsx
 msgid "Continue"
-msgstr ""
+msgstr "Kontynuuj"
 
 #: src/components/player/next-episode.tsx
 #: src/pages/home.tsx
 #: src/pages/settings/interface.tsx
 msgid "Continue watching"
-msgstr ""
+msgstr "Kontynuuj oglądanie"
 
 #: src/pages/settings/playback.tsx
 msgid "Controls"
-msgstr ""
+msgstr "Sterowanie"
 
 #: src/components/version-settings.tsx
 msgid "Copied as JSON"
-msgstr ""
+msgstr "Skopiowano jako JSON"
 
 #: src/components/crash-report.tsx
 #: src/pages/settings/apps.tsx
 msgid "Copy"
-msgstr ""
+msgstr "Kopiuj"
 
 #: src/components/version-settings.tsx
 msgid "Copy as JSON"
-msgstr ""
+msgstr "Kopiuj jako JSON"
 
 #: src/components/party/party-sheet.tsx
 msgid "Copy code"
-msgstr ""
+msgstr "Kopiuj kod"
 
 #: src/components/party/party-sheet.tsx
 #: src/pages/player.tsx
 msgid "Copy link"
-msgstr ""
+msgstr "Kopiuj link"
 
 #: src/components/version-picker.tsx
 msgid "Copy stream link"
-msgstr ""
+msgstr "Kopiuj link streama"
 
 #: src/pages/settings/interface.tsx
 msgid "Corner button"
@@ -1089,11 +1089,11 @@ msgstr ""
 
 #: src/pages/settings/playback.tsx
 msgid "Countdown"
-msgstr ""
+msgstr "Odliczanie"
 
 #: src/pages/item.tsx
 msgid "Country"
-msgstr ""
+msgstr "Kraj"
 
 #: src/pages/settings/playback.tsx
 msgid "Counts down, then plays the next episode in the same kind of version. Off, the prompt waits for you."
@@ -1105,60 +1105,60 @@ msgstr ""
 
 #: src/components/people.tsx
 msgid "Creator"
-msgstr ""
+msgstr "Twórca"
 
 #: src/pages/settings/about.tsx
 #: src/pages/settings/playback.tsx
 msgid "Credits"
-msgstr ""
+msgstr "Napisy końcowe"
 
 #: src/pages/settings/playback.tsx
 msgid "Credits that end an episode are left to the next episode prompt when it shows."
-msgstr ""
+msgstr "Napisy końcowe odcinka są pomijane po wyświetleniu monitu o następnym odcinku."
 
 #: src/components/people.tsx
 msgid "Crew"
-msgstr ""
+msgstr "Zespół"
 
 #: src/pages/settings/theme.tsx
 msgid "Crimson"
-msgstr ""
+msgstr "Karmazynowy"
 
 #: src/components/player/options.tsx
 msgid "Crop"
-msgstr ""
+msgstr "Przycinanie"
 
 #: src/lib/input/keys.ts
 msgid "Ctrl"
-msgstr ""
+msgstr "Ctrl"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Cursive"
-msgstr ""
+msgstr "Kursywa"
 
 #: src/pages/settings/theme.tsx
 msgid "Custom CSS"
-msgstr ""
+msgstr "Własny CSS"
 
 #: src/pages/settings/theme.tsx
 msgid "Custom CSS applied"
-msgstr ""
+msgstr "Zastosowano własny CSS"
 
 #: src/pages/settings/theme.tsx
 msgid "Custom CSS undone"
-msgstr ""
+msgstr "Cofnięto własny CSS"
 
 #: src/lib/playback/player-choice.ts
 msgid "Custom link"
-msgstr ""
+msgstr "Niestandardowy link"
 
 #: src/lib/i18n.ts
 msgid "Cyan"
-msgstr ""
+msgstr "Cyjan"
 
 #: src/pages/history.tsx
 msgid "Date not known"
-msgstr ""
+msgstr "Data nieznana"
 
 #: src/pages/settings/playback.tsx
 msgid "Decodes nearly any video, in software where the device has no decoder for it. Takes your mpv.conf under Android app."
@@ -1174,7 +1174,7 @@ msgstr ""
 
 #: src/pages/settings/theme.tsx
 msgid "Deep purple"
-msgstr ""
+msgstr "Głęboki fiolet"
 
 #. No colour of its own
 #: src/components/version-settings.tsx
@@ -1182,23 +1182,23 @@ msgstr ""
 #: src/pages/settings/subtitles.tsx
 #: src/pages/settings/theme.tsx
 msgid "Default"
-msgstr ""
+msgstr "Domyślny"
 
 #: src/components/player/options.tsx
 msgid "Delay"
-msgstr ""
+msgstr "Opóźnienie"
 
 #: src/pages/settings/audio.tsx
 msgid "Delay: {delayLabel}"
-msgstr ""
+msgstr "Opóźnienie: {delayLabel}"
 
 #: src/pages/downloads.tsx
 msgid "Delete"
-msgstr ""
+msgstr "Usuń"
 
 #: src/pages/downloads.tsx
 msgid "Delete all"
-msgstr ""
+msgstr "Usuń wszystko"
 
 #: src/pages/settings/theme.tsx
 msgid "Desert"
@@ -1207,13 +1207,13 @@ msgstr ""
 #: src/pages/settings/about.tsx
 #: src/pages/settings/index.tsx
 msgid "Desktop app"
-msgstr ""
+msgstr "Aplikacja na komputery"
 
 #: src/components/item-menu.tsx
 #: src/components/version-picker.tsx
 #: src/pages/item.tsx
 msgid "Details"
-msgstr ""
+msgstr "Szczegóły"
 
 #: src/pages/settings/cache.tsx
 msgid "Details, seasons and episodes of what you open."
@@ -1221,43 +1221,43 @@ msgstr ""
 
 #: src/pages/settings/audio.tsx
 msgid "Device"
-msgstr ""
+msgstr "Urządzenie"
 
 #: src/pages/settings/apps.tsx
 msgid "Diagnostics copied"
-msgstr ""
+msgstr "Diagnostyka skopiowana"
 
 #: src/lib/i18n.ts
 msgid "Dialog"
-msgstr ""
+msgstr "Dialog"
 
 #: src/components/player/options.tsx
 msgid "Dialogue"
-msgstr ""
+msgstr "Dialog"
 
 #: src/pages/settings/audio.tsx
 msgid "Dialogue boost"
-msgstr ""
+msgstr "Wzmocnienie dialogów"
 
 #: src/pages/person.tsx
 msgid "Died {date}"
-msgstr ""
+msgstr "Zmarł {date}"
 
 #: src/pages/person.tsx
 msgid "Died {date} (aged {age})"
-msgstr ""
+msgstr "Zmarł {date} (w wieku {age})"
 
 #: src/components/people.tsx
 msgid "Director"
-msgstr ""
+msgstr "Reżyser"
 
 #: src/pages/settings/apps.tsx
 msgid "Discord"
-msgstr ""
+msgstr "Discord"
 
 #: src/pages/settings/apps.tsx
 msgid "Discord is not running on this computer."
-msgstr ""
+msgstr "Discord nie jest uruchomiony na tym komputerze."
 
 #: src/pages/settings/apps.tsx
 msgid "Discord refused the status: {message}"
@@ -1267,15 +1267,15 @@ msgstr ""
 #: src/pages/discover.tsx
 #: src/pages/settings/apps.tsx
 msgid "Discover"
-msgstr ""
+msgstr "Odkrywaj"
 
 #: src/components/layout.tsx
 msgid "Dismiss"
-msgstr ""
+msgstr "Odrzuć"
 
 #: src/pages/settings/playback.tsx
 msgid "Do nothing"
-msgstr ""
+msgstr "Nic nie rób"
 
 #: src/pages/settings/interface.tsx
 msgid "Docked"
@@ -1287,7 +1287,7 @@ msgstr ""
 
 #: src/pages/settings/about.tsx
 msgid "Documentation"
-msgstr ""
+msgstr "Dokumentacja"
 
 #: src/components/player/options.tsx
 msgid "Doesn't match the video's own subtitles"
@@ -1295,21 +1295,21 @@ msgstr ""
 
 #: src/pages/settings/playback.tsx
 msgid "Dolby Vision"
-msgstr ""
+msgstr "Dolby Vision"
 
 #: src/pages/settings/index.tsx
 msgid "Donate"
-msgstr ""
+msgstr "Wsparcie"
 
 #: src/lib/i18n.ts
 msgid "Donate to Me"
-msgstr ""
+msgstr "Wesprzyj mnie"
 
 #: src/components/player/subtitle-sync.tsx
 #: src/components/send-report.tsx
 #: src/components/version-settings.tsx
 msgid "Done"
-msgstr ""
+msgstr "Gotowe"
 
 #: src/lib/input/actions.ts
 msgid "Down"
@@ -1320,37 +1320,37 @@ msgstr ""
 #: src/components/version-picker.tsx
 #: src/pages/settings/about.tsx
 msgid "Download"
-msgstr ""
+msgstr "Pobierz"
 
 #: src/components/download-button.tsx
 msgid "Download needs attention"
-msgstr ""
+msgstr "Sprawdź pobieranie"
 
 #: src/components/download-button.tsx
 msgid "Download paused"
-msgstr ""
+msgstr "Pobieranie wstrzymane"
 
 #: src/components/item-menu.tsx
 msgid "Download the show"
-msgstr ""
+msgstr "Pobierz serial"
 
 #: src/components/download-button.tsx
 #: src/pages/downloads.tsx
 msgid "Downloaded"
-msgstr ""
+msgstr "Pobrane"
 
 #: src/components/download-button.tsx
 #: src/pages/downloads.tsx
 msgid "Downloading"
-msgstr ""
+msgstr "Pobieranie"
 
 #: src/lib/hosts/shell/index.ts
 msgid "Downloading version {version}…"
-msgstr ""
+msgstr "Pobieranie wersji {version}…"
 
 #: src/components/download-button.tsx
 msgid "Downloading, {percent}%"
-msgstr ""
+msgstr "Pobieranie, {percent}%"
 
 #: src/components/layout.tsx
 #: src/pages/downloads.tsx
