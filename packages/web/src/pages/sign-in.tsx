@@ -16,6 +16,7 @@ import {
   JellyfinError,
   type JellyfinClient,
 } from '../lib/client';
+import { useAction } from '../lib/input';
 import { configureUrl } from '../lib/paths';
 import { useServerInfo } from '../lib/server-info';
 import type { PickableUser, QuickConnectResult, UserDto } from '../lib/types';
@@ -625,6 +626,7 @@ function SecretPrompt({
   const [password, setPassword] = React.useState('');
   const [pin, setPin] = React.useState('');
   const [scope, shake] = useShake<HTMLDivElement>();
+  useAction('back', onBack);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -708,6 +710,8 @@ export function UserPicker({
   const [asking, setAsking] = React.useState<PickableUser | null>(
     users.length === 1 && users[0].needs ? users[0] : null
   );
+  // Back from a prompt returns focus to the user it was for.
+  const left = React.useRef<string | null>(null);
 
   const pick = async (userId: string, secret?: string) => {
     setBusy(userId);
@@ -742,6 +746,7 @@ export function UserPicker({
                   error={error}
                   onSubmit={(secret) => pick(asking.user.Id!, secret)}
                   onBack={() => {
+                    left.current = asking.user.Id!;
                     setAsking(null);
                     setError(null);
                   }}
@@ -767,6 +772,11 @@ export function UserPicker({
                   {users.map((u) => (
                     <motion.button
                       key={u.user.Id}
+                      ref={(el) => {
+                        if (!el || left.current !== u.user.Id) return;
+                        left.current = null;
+                        el.focus({ preventScroll: true });
+                      }}
                       type="button"
                       disabled={!!busy}
                       onClick={() => choose(u)}
