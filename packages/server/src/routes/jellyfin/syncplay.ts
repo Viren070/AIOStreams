@@ -284,7 +284,6 @@ function memberOf(ctx: JellyfinRequestContext) {
 
 function visibleTo(g: Group, ctx: JellyfinRequestContext): boolean {
   const { home } = g;
-  if (home.hidden || ctx.persona?.hidden) return home.userId === ctx.userId;
   return appConfig.party.scope === 'instance' || home.uuid === ctx.uuid;
 }
 

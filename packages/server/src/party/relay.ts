@@ -1103,10 +1103,7 @@ export async function listedParties(user: TokenUser): Promise<PartyListing[]> {
   for (const party of await Promise.all(homed.map((id) => parties.get(id)))) {
     const home = party?.home;
     if (!party || !home) continue;
-    const visible =
-      home.hidden || user.persona?.hidden
-        ? home.userId === user.userId
-        : instance || home.uuid === user.uuid;
+    const visible = instance || home.uuid === user.uuid;
     if (!visible || party.lock.joins) continue;
     out.push({
       party: party.id,
