@@ -140,16 +140,16 @@ router.get(
       // Served URL -> what it resolved from, for the media info probe.
       const resolvedFrom = new Map<
         string,
-        { target: PlaybackTarget; resolvedInfo: ResolvedLinkInfo }
+        { target: PlaybackTarget; resolvedLinkInfo: ResolvedLinkInfo }
       >();
       const resolveOwned = async (
         target: PlaybackTarget,
         proxied: boolean | undefined,
         signal?: AbortSignal
       ): Promise<string | undefined> => {
-        const resolvedInfo = await resolvePlaybackTarget(target, { clientIp }, signal);
-        const served = await maybeProxy(resolvedInfo?.url, proxied);
-        if (resolvedInfo && served) resolvedFrom.set(served, { target, resolvedInfo });
+        const resolvedLinkInfo = await resolvePlaybackTarget(target, { clientIp }, signal);
+        const served = await maybeProxy(resolvedLinkInfo?.url, proxied);
+        if (resolvedLinkInfo && served) resolvedFrom.set(served, { target, resolvedLinkInfo: resolvedLinkInfo });
         return served;
       };
 
@@ -290,7 +290,7 @@ router.get(
         void onPlay({
           path: playPath,
           target: played.target,
-          resolvedInfo: played.resolvedInfo,
+          resolvedLinkInfo: played.resolvedLinkInfo,
           viaProxy:
             arrivedViaOurProxy ||
             result.url.includes(constants.BUILTIN_PROXY_PATH_PREFIX),
