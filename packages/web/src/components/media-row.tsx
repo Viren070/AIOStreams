@@ -19,7 +19,7 @@ import {
   type PosterLine,
   type PosterSize,
 } from '../lib/settings';
-import { RowScroller, ScrollRoot, watch } from '../lib/use-in-view';
+import { onScreen, RowScroller, ScrollRoot, watch } from '../lib/use-in-view';
 import { keyboardFocus } from '../lib/input';
 import { easeLayers, GLIDE_LAYERS } from '../lib/input/glide';
 
@@ -54,16 +54,19 @@ const reducedMotion =
     : null;
 
 // Script animations, as CSS ones send each card's start and end through the
-// page's event handling.
+// page's event handling. Only cards on screen: an unseen start or end still
+// costs a frame.
 const CARD_IN = Array.from(
   { length: 20 },
-  (_, i) => (el: HTMLElement | null) =>
-    void el?.animate(
+  (_, i) => (el: HTMLElement | null) => {
+    if (!el || !onScreen(el)) return;
+    el.animate(
       reducedMotion?.matches
         ? { opacity: [0, 1] }
         : { opacity: [0, 1], transform: ['translateY(8px)', 'none'] },
       { duration: 300, delay: i * 25, easing: 'ease-out', fill: 'backwards' }
-    )
+    );
+  }
 );
 
 /** Cards fade in a little after one another, a page at a time. */

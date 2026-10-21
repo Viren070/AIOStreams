@@ -234,6 +234,13 @@ function measure(pool: Pool, screen: Screen, changes: Change[]) {
   }
 }
 
+export function onScreen(el: Element): boolean {
+  const r = el.getBoundingClientRect();
+  return (
+    r.bottom > 0 && r.right > 0 && r.top < innerHeight && r.left < innerWidth
+  );
+}
+
 /** Calls `onEntry` as the element comes near `root` (the screen when null) and leaves it. */
 export function watch(
   el: Element,
