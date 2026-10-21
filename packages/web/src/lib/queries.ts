@@ -394,13 +394,14 @@ const DETAIL_FIELDS = [
 export async function requestItem(
   client: JellyfinClient,
   userId: string,
-  itemId: string
+  itemId: string,
+  signal?: AbortSignal
 ): Promise<BaseItemDto> {
-  const { Items } = await client.get<BaseItemDtoQueryResult>('/Items', {
-    userId,
-    Ids: itemId,
-    Fields: DETAIL_FIELDS,
-  });
+  const { Items } = await client.get<BaseItemDtoQueryResult>(
+    '/Items',
+    { userId, Ids: itemId, Fields: DETAIL_FIELDS },
+    signal
+  );
   const item = Items?.[0];
   if (!item) throw new Error(t`This item was not found`);
   return item;
@@ -443,7 +444,8 @@ function useItemOptions() {
     queryOptions({
       queryKey: [...key, 'item', itemId],
       meta: { cache: 'titles' },
-      queryFn: () => requestItem(client, user.Id!, itemId),
+      // Dropped once nothing shows it, as the hero asks for each card it passes.
+      queryFn: ({ signal }) => requestItem(client, user.Id!, itemId, signal),
     });
 }
 

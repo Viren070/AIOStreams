@@ -98,6 +98,28 @@ function stampLater(query: Query, savedAt: number) {
   setTimeout(() => query.setState({ dataUpdatedAt: savedAt }));
 }
 
+/** Read lazily: TanStack cancels a query whose signal was read once nothing shows it. */
+function withSignal(
+  context: QueryFunctionContext<QueryKey>,
+  dropped: AbortController
+): QueryFunctionContext<QueryKey> {
+  return Object.defineProperties(
+    {},
+    {
+      ...Object.getOwnPropertyDescriptors(context),
+      signal: {
+        enumerable: true,
+        get: () => {
+          const own = context.signal;
+          if (own.aborted) dropped.abort();
+          else own.addEventListener('abort', () => dropped.abort());
+          return dropped.signal;
+        },
+      },
+    }
+  ) as QueryFunctionContext<QueryKey>;
+}
+
 /**
  * TanStack's per-query persister: a query's first load shows its saved copy
  * and fetches behind it, and an unreachable server leaves the saved copy, or
@@ -118,11 +140,23 @@ export async function persister(
       .then(schedulePrune)
       .catch(() => undefined);
   // Sent before the read, whose answer waits for the main thread to finish drawing.
+  // Behind a saved copy it outlives TanStack's own fetch, so it is dropped here
+  // once nothing shows the query.
+  const dropped = new AbortController();
+  const stop = context.client.getQueryCache().subscribe((event) => {
+    if (
+      event.type === 'observerRemoved' &&
+      event.query === query &&
+      !query.getObserversCount()
+    )
+      dropped.abort();
+  });
   const asked =
     shown.data === undefined && isReachable()
-      ? Promise.resolve(queryFn(context))
+      ? Promise.resolve(queryFn(withSignal(context, dropped)))
       : null;
-  asked?.catch(() => undefined);
+  if (asked) asked.then(stop, stop);
+  else stop();
   const saved =
     shown.data === undefined
       ? await readQuery(query.queryHash).catch(() => null)

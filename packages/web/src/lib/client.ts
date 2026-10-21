@@ -183,6 +183,7 @@ export class JellyfinClient {
       body?: unknown;
       keepalive?: boolean;
       purpose?: Purpose;
+      signal?: AbortSignal;
     } = {}
   ): Promise<T> {
     const headers: Record<string, string> = {
@@ -198,8 +199,11 @@ export class JellyfinClient {
         headers,
         body: init.body === undefined ? undefined : JSON.stringify(init.body),
         keepalive: init.keepalive,
+        signal: init.signal,
       });
-    } catch {
+    } catch (error) {
+      // Dropped by the app, which says nothing about the server.
+      if (init.signal?.aborted) throw error;
       unreachable();
       throw new ConnectionError();
     }
@@ -224,8 +228,8 @@ export class JellyfinClient {
     return (text ? JSON.parse(text) : undefined) as T;
   }
 
-  get<T>(path: string, query?: Query): Promise<T> {
-    return this.request<T>('GET', path, { query });
+  get<T>(path: string, query?: Query, signal?: AbortSignal): Promise<T> {
+    return this.request<T>('GET', path, { query, signal });
   }
 
   post<T>(

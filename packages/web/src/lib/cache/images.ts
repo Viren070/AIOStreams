@@ -14,7 +14,14 @@ import { readImage, writeImage } from './store';
 const MAX_URLS = 400;
 
 const urls = new Map<string, BlobAddress>();
-const lookups = new Map<string, Promise<string>>();
+
+interface Lookup {
+  url: Promise<string>;
+  users: number;
+  controller: AbortController;
+}
+
+const lookups = new Map<string, Lookup>();
 /** Images whose host refused to let the page read them, so they load plainly. */
 const unreadable = new Set<string>();
 
@@ -34,12 +41,13 @@ async function keep(src: string, blob: Blob): Promise<string> {
  * Fetched here, not by the `<img>`: the browser caches a fetch and an image
  * load apart, so saving after a load would download it twice.
  */
-async function fetchAndSave(src: string): Promise<string> {
+async function fetchAndSave(src: string, signal: AbortSignal): Promise<string> {
   if (unreadable.has(src) || refused(src)) return src;
   let res: Response;
   try {
-    res = await fetch(src, { headers: { Accept: imageAccept() } });
+    res = await fetch(src, { headers: { Accept: imageAccept() }, signal });
   } catch {
+    if (signal.aborted) return src;
     noteRead(src, false);
     if (isReachable()) unreadable.add(src);
     return src;
@@ -57,16 +65,24 @@ async function fetchAndSave(src: string): Promise<string> {
   return keep(src, blob);
 }
 
-function lookUp(src: string): Promise<string> {
-  let pending = lookups.get(src);
-  if (!pending) {
-    pending = (maybeSaved(src) ? readImage(src) : Promise.resolve(null))
-      .then((saved) => (saved ? keep(src, saved.blob) : fetchAndSave(src)))
+function lookUp(src: string): Lookup {
+  const found = lookups.get(src);
+  if (found) return found;
+  const controller = new AbortController();
+  const lookup: Lookup = {
+    url: (maybeSaved(src) ? readImage(src) : Promise.resolve(null))
+      .then((saved) =>
+        saved ? keep(src, saved.blob) : fetchAndSave(src, controller.signal)
+      )
       .catch(() => src)
-      .finally(() => lookups.delete(src));
-    lookups.set(src, pending);
-  }
-  return pending;
+      .finally(() => {
+        if (lookups.get(src) === lookup) lookups.delete(src);
+      }),
+    users: 0,
+    controller,
+  };
+  lookups.set(src, lookup);
+  return lookup;
 }
 
 function useArtworkSaved(): boolean {
@@ -89,11 +105,17 @@ export function useSavedSrc(
   React.useEffect(() => {
     if (!src || !on || known || !wanted) return;
     let live = true;
-    void lookUp(src).then((url) => {
+    const lookup = lookUp(src);
+    lookup.users++;
+    void lookup.url.then((url) => {
       if (live) setFound({ src, url });
     });
     return () => {
       live = false;
+      // Unwanted now, so it frees one of the server's few connections.
+      if (--lookup.users) return;
+      lookup.controller.abort();
+      if (lookups.get(src) === lookup) lookups.delete(src);
     };
   }, [src, on, known, wanted]);
   if (!src || !on) return src;
