@@ -270,24 +270,27 @@ export function PlayerControls({
       icon: loadingEpisode === 'previous' ? spinner : <LuSkipBack />,
       onClick: onPrevious,
     },
-    back: !touch && {
-      name: 'back',
-      label: plural(stepSeconds, {
-        one: 'Back # second',
-        other: 'Back # seconds',
-      }),
-      icon: <LuRotateCcw />,
-      onClick: () => seekBy(-seekStep * 1000),
-    },
-    forward: !touch && {
-      name: 'forward',
-      label: plural(stepSeconds, {
-        one: 'Forward # second',
-        other: 'Forward # seconds',
-      }),
-      icon: <LuRotateCw />,
-      onClick: () => seekBy(seekStep * 1000),
-    },
+    // A remote's arrows skip with the controls hidden, and the seek bar's with them up.
+    back: !touch &&
+      !tv && {
+        name: 'back',
+        label: plural(stepSeconds, {
+          one: 'Back # second',
+          other: 'Back # seconds',
+        }),
+        icon: <LuRotateCcw />,
+        onClick: () => seekBy(-seekStep * 1000),
+      },
+    forward: !touch &&
+      !tv && {
+        name: 'forward',
+        label: plural(stepSeconds, {
+          one: 'Forward # second',
+          other: 'Forward # seconds',
+        }),
+        icon: <LuRotateCw />,
+        onClick: () => seekBy(seekStep * 1000),
+      },
     next: !!stepping && {
       name: 'next',
       label: stepping === 'trailer' ? t`Next trailer` : t`Next episode`,
@@ -295,6 +298,8 @@ export function PlayerControls({
       onClick: onNext,
     },
   };
+  // Where the middle buttons don't show.
+  const inBar = tv ? 'flex' : !touch && 'lg:flex';
   const middleShown = cn(
     !touch && 'lg:hidden',
     scrub ? 'pointer-events-none opacity-0' : fade
@@ -552,7 +557,7 @@ export function PlayerControls({
           onTogglePlay={togglePlay}
         />
         <div className="flex items-center gap-1">
-          <div className={cn('hidden items-center gap-1', !touch && 'lg:flex')}>
+          <div className={cn('hidden items-center gap-1', inBar)}>
             <ControlButton
               name="play"
               label={state.paused ? t`Play` : t`Pause`}

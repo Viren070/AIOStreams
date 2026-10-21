@@ -570,37 +570,53 @@ export function OptionButtons({
   const hidden = subtitles.hidden.length;
   return (
     <div className="ms-auto flex items-center sm:gap-1">
-      {onParty && (
-        <ControlButton
-          name="party"
-          label={
-            unread
-              ? plural(unread, {
-                  one: 'Watch party, # new message',
-                  other: 'Watch party, # new messages',
-                })
-              : player.shared
-                ? t`Watch party`
-                : t`Watch together`
-          }
-          onClick={onParty}
-          className="relative"
-        >
-          <LuUsers />
-          {unread > 0 && (
-            <span
-              data-ui="party-unread"
-              className="absolute end-0.5 top-0.5 min-w-4 rounded-full bg-brand-500 px-1 text-[10px] font-semibold leading-4 text-white"
-            >
-              {unread > 9 ? '9+' : unread}
-            </span>
-          )}
-        </ControlButton>
-      )}
       {onEpisodes && (
         <ControlButton name="episodes" label={t`Episodes`} onClick={onEpisodes}>
           <LuGalleryVerticalEnd />
         </ControlButton>
+      )}
+      {chapters.length > 1 && (
+        <Menu
+          name="chapters"
+          label={t`Chapters`}
+          icon={<LuListOrdered />}
+          options={chapters.map((c, i) => {
+            const number = i + 1;
+            const title = c.title || t`Chapter ${number}`;
+            return { id: String(i), label: `${title} · ${clock(c.startMs)}` };
+          })}
+          value={String(chapter)}
+          onSelect={(id) => id && player.seek(chapters[Number(id)].startMs)}
+          onOpenChange={onMenu}
+        />
+      )}
+      {onVersions && (
+        <ControlButton name="versions" label={t`Versions`} onClick={onVersions}>
+          <LuLayers />
+        </ControlButton>
+      )}
+      {(player.audioTracks.length > 1 || player.sound) && (
+        <Menu
+          name="audio"
+          label={t`Audio`}
+          icon={<LuAudioLines />}
+          options={player.audioTracks}
+          value={state.audio}
+          onSelect={(id) => id && player.setAudio(id)}
+          onOpenChange={onMenu}
+          pages={
+            player.sound
+              ? [
+                  {
+                    name: 'sound',
+                    label: t`Sound`,
+                    icon: <LuSlidersHorizontal className="flex-none" />,
+                    content: <SoundControls />,
+                  },
+                ]
+              : []
+          }
+        />
       )}
       {(player.subtitleTracks.length > 0 || player.subtitleFiles) && (
         <Menu
@@ -667,49 +683,6 @@ export function OptionButtons({
           }
         />
       )}
-      {chapters.length > 1 && (
-        <Menu
-          name="chapters"
-          label={t`Chapters`}
-          icon={<LuListOrdered />}
-          options={chapters.map((c, i) => {
-            const number = i + 1;
-            const title = c.title || t`Chapter ${number}`;
-            return { id: String(i), label: `${title} · ${clock(c.startMs)}` };
-          })}
-          value={String(chapter)}
-          onSelect={(id) => id && player.seek(chapters[Number(id)].startMs)}
-          onOpenChange={onMenu}
-        />
-      )}
-      {onVersions && (
-        <ControlButton name="versions" label={t`Versions`} onClick={onVersions}>
-          <LuLayers />
-        </ControlButton>
-      )}
-      {(player.audioTracks.length > 1 || player.sound) && (
-        <Menu
-          name="audio"
-          label={t`Audio`}
-          icon={<LuAudioLines />}
-          options={player.audioTracks}
-          value={state.audio}
-          onSelect={(id) => id && player.setAudio(id)}
-          onOpenChange={onMenu}
-          pages={
-            player.sound
-              ? [
-                  {
-                    name: 'sound',
-                    label: t`Sound`,
-                    icon: <LuSlidersHorizontal className="flex-none" />,
-                    content: <SoundControls />,
-                  },
-                ]
-              : []
-          }
-        />
-      )}
       {player.setRate && (
         <Menu
           name="speed"
@@ -725,6 +698,33 @@ export function OptionButtons({
         />
       )}
       {player.fit && <FitButton notice={notice} />}
+      {onParty && (
+        <ControlButton
+          name="party"
+          label={
+            unread
+              ? plural(unread, {
+                  one: 'Watch party, # new message',
+                  other: 'Watch party, # new messages',
+                })
+              : player.shared
+                ? t`Watch party`
+                : t`Watch together`
+          }
+          onClick={onParty}
+          className="relative"
+        >
+          <LuUsers />
+          {unread > 0 && (
+            <span
+              data-ui="party-unread"
+              className="absolute end-0.5 top-0.5 min-w-4 rounded-full bg-brand-500 px-1 text-[10px] font-semibold leading-4 text-white"
+            >
+              {unread > 9 ? '9+' : unread}
+            </span>
+          )}
+        </ControlButton>
+      )}
       {player.stats && (
         <Menu
           name="statistics"
