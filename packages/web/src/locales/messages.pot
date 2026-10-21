@@ -1390,6 +1390,10 @@ msgstr ""
 msgid "Edit"
 msgstr ""
 
+#: src/components/player/controls.tsx
+msgid "Ends at {endsAt}"
+msgstr ""
+
 #: src/pages/settings/playback.tsx
 msgid "Engine"
 msgstr ""
@@ -3585,6 +3589,14 @@ msgstr ""
 
 #: src/pages/settings/playback.tsx
 msgid "Show the prompt"
+msgstr ""
+
+#: src/components/player/controls.tsx
+msgid "Show time left"
+msgstr ""
+
+#: src/components/player/controls.tsx
+msgid "Show time played"
 msgstr ""
 
 #: src/components/layout.tsx

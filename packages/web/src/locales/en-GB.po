@@ -1391,6 +1391,10 @@ msgstr "Each filter shows as a pill above the version list. Its search is words 
 msgid "Edit"
 msgstr "Edit"
 
+#: src/components/player/controls.tsx
+msgid "Ends at {endsAt}"
+msgstr "Ends at {endsAt}"
+
 #: src/pages/settings/playback.tsx
 msgid "Engine"
 msgstr "Engine"
@@ -3587,6 +3591,14 @@ msgstr "Show the controls"
 #: src/pages/settings/playback.tsx
 msgid "Show the prompt"
 msgstr "Show the prompt"
+
+#: src/components/player/controls.tsx
+msgid "Show time left"
+msgstr "Show time left"
+
+#: src/components/player/controls.tsx
+msgid "Show time played"
+msgstr "Show time played"
 
 #: src/components/layout.tsx
 msgid "Showing saved pages"

@@ -798,6 +798,7 @@ export const settings = {
       'aiostreams-web-shortcuts',
     ]),
     thumbnails: device<boolean>('aiostreams-web-controls-thumbnails', true),
+    timeLeft: device<boolean>('aiostreams-web-controls-time-left', false),
   },
   player: {
     /** `app`, a player's id, or `custom` for `link`. */

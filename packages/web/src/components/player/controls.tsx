@@ -17,6 +17,7 @@ import { LoadingSpinner } from '@aiostreams/ui/loading-spinner';
 import { cn } from '@aiostreams/ui/core/styling';
 import { clock, itemSubtitle, itemTitle } from '../../lib/format';
 import { currentHost } from '../../lib/hosts';
+import { formatLocale } from '../../lib/i18n';
 import { appBridge } from '../../lib/hosts/shell/bridge';
 import type { PlayerController } from '../../lib/playback/controller';
 import { settings, useSetting } from '../../lib/settings';
@@ -323,14 +324,7 @@ export function PlayerControls({
       </ControlButton>
     );
   const shownAt = scrub?.toMs ?? seekingTo;
-  const time = (
-    <PlayerTime
-      playhead={player.playhead}
-      durationMs={state.durationMs}
-      live={visible}
-      atMs={shownAt}
-    />
-  );
+  const timeProps = { playhead: player.playhead, live: visible, atMs: shownAt };
 
   if (!ready)
     return (
@@ -533,12 +527,17 @@ export function PlayerControls({
           barFade
         )}
       >
-        <p
-          data-ui="player-time"
-          className="px-0.5 text-xs tabular-nums text-gray-200 sm:hidden"
+        <div
+          data-ui="player-info"
+          className="flex items-center justify-between gap-3 px-0.5 pb-1"
         >
-          {time}
-        </p>
+          <PlayerTime {...timeProps} durationMs={state.durationMs} />
+          <EndsAt
+            {...timeProps}
+            durationMs={state.durationMs}
+            rate={state.rate}
+          />
+        </div>
         <SeekBar
           playhead={player.playhead}
           live={visible}
@@ -567,12 +566,6 @@ export function PlayerControls({
             {barButton(buttons.next)}
           </div>
           {!touch && !tv && <Volume player={player} />}
-          <span
-            data-ui="player-time"
-            className="ms-2 hidden whitespace-nowrap text-[length:var(--time)] tabular-nums text-gray-200 sm:inline"
-          >
-            {time}
-          </span>
           <OptionButtons
             player={player}
             onMenu={onMenu}
@@ -674,29 +667,79 @@ function useLiftSubtitles(
   React.useEffect(() => () => latest.current.liftSubtitles?.(0), [latest]);
 }
 
-function PlayerTime({
-  playhead,
-  durationMs,
-  live,
-  atMs,
-}: {
+const TIME = 'text-xs tabular-nums sm:text-[length:var(--time)]';
+
+const SOFT_FOCUS =
+  '[html:not([data-pointer-focus])_&:focus-visible]:bg-white/20 [html:not([data-pointer-focus])_&:focus-visible]:text-white';
+
+interface TimeProps {
   playhead: Playhead;
-  durationMs: number;
   live: boolean;
   /** Shown in place of the playhead, as a seek is under way. */
   atMs: number | null;
-}) {
+}
+
+function usePlayedMs({ playhead, live, atMs }: TimeProps): number {
   const seconds = usePlayhead(
     playhead,
     (h) => Math.floor(h.positionMs / 1000),
     live
   );
+  return atMs ?? seconds * 1000;
+}
+
+function PlayerTime({
+  durationMs,
+  ...props
+}: TimeProps & { durationMs: number }) {
+  const at = usePlayedMs(props);
+  const [left, setLeft] = useSetting(settings.controls.timeLeft);
+  const showLeft = left && durationMs > 0;
   return (
-    <>
-      {clock(atMs ?? seconds * 1000)}
+    <button
+      type="button"
+      data-ui="player-time"
+      data-focus="own"
+      dir="ltr"
+      title={showLeft ? t`Show time played` : t`Show time left`}
+      className={cn(
+        TIME,
+        '-mx-1.5 rounded-md px-1.5 py-0.5 text-gray-200 transition-colors hover:text-white',
+        SOFT_FOCUS
+      )}
+      onClick={() => setLeft(!left)}
+    >
+      {showLeft ? `-${clock(durationMs - at)}` : clock(at)}
       {durationMs > 0 && (
         <span className="text-gray-400"> / {clock(durationMs)}</span>
       )}
-    </>
+    </button>
+  );
+}
+
+function EndsAt({
+  durationMs,
+  rate,
+  ...props
+}: TimeProps & { durationMs: number; rate: number }) {
+  const at = usePlayedMs(props);
+  // The end moves on while paused.
+  const [, tick] = React.useReducer((n: number) => n + 1, 0);
+  React.useEffect(() => {
+    if (!props.live) return;
+    const timer = window.setInterval(tick, 30_000);
+    return () => window.clearInterval(timer);
+  }, [props.live]);
+  if (durationMs <= 0) return null;
+  const endsAt = new Date(
+    Date.now() + Math.max(0, durationMs - at) / (rate || 1)
+  ).toLocaleTimeString(formatLocale(), { hour: 'numeric', minute: '2-digit' });
+  return (
+    <p
+      data-ui="player-ends"
+      className={cn(TIME, 'whitespace-nowrap text-gray-400')}
+    >
+      {t`Ends at ${endsAt}`}
+    </p>
   );
 }
