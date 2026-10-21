@@ -14,7 +14,7 @@ use crate::sound::Sound;
 pub const OBSERVED: &[(&str, Kind)] = &[
     ("time-pos", Kind::Double),
     ("duration", Kind::Double),
-    ("demuxer-cache-time", Kind::Double),
+    ("demuxer-cache-state", Kind::Json),
     ("pause", Kind::Flag),
     ("paused-for-cache", Kind::Flag),
     ("seeking", Kind::Flag),
@@ -30,7 +30,7 @@ pub const OBSERVED: &[(&str, Kind)] = &[
     ("fullscreen", Kind::Flag),
 ];
 
-pub const THROTTLED: &[&str] = &["time-pos", "demuxer-cache-time"];
+pub const THROTTLED: &[&str] = &["time-pos", "demuxer-cache-state"];
 pub const THROTTLE_MS: u64 = 250;
 
 const STATS_PAGES: &[&str] = &["1", "2", "3", "5"];
@@ -207,7 +207,7 @@ pub struct PlayerState {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub duration_ms: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub buffered_ms: Option<f64>,
+    pub buffered: Option<Vec<TimeRange>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub paused: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -232,6 +232,13 @@ pub struct PlayerState {
     pub fullscreen: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub passthrough: Option<bool>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TimeRange {
+    pub start_ms: f64,
+    pub end_ms: f64,
 }
 
 #[derive(Debug, Serialize)]
@@ -675,6 +682,27 @@ fn track(value: &Value) -> Option<String> {
         .map(String::from)
 }
 
+/// The cache's seekable ranges, or where it reads to where it ends when it can't seek in itself.
+fn cache_ranges(state: &Value) -> Vec<TimeRange> {
+    let range = |start: &Value, end: &Value| {
+        Some(TimeRange {
+            start_ms: start.as_f64()? * 1000.0,
+            end_ms: end.as_f64()? * 1000.0,
+        })
+    };
+    let mut ranges: Vec<TimeRange> = state["seekable-ranges"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|r| range(&r["start"], &r["end"]))
+        .collect();
+    if ranges.is_empty() {
+        ranges.extend(range(&state["reader-pts"], &state["cache-end"]));
+    }
+    ranges.sort_by(|a, b| a.start_ms.total_cmp(&b.start_ms));
+    ranges
+}
+
 /// The page's view of an observed property's change.
 pub fn report(name: &str, value: &Value, external: bool) -> Option<Outbound> {
     let num = value.as_f64();
@@ -683,7 +711,7 @@ pub fn report(name: &str, value: &Value, external: bool) -> Option<Outbound> {
     match name {
         "time-pos" => state.position_ms = Some(num? * 1000.0),
         "duration" => state.duration_ms = Some(num? * 1000.0),
-        "demuxer-cache-time" => state.buffered_ms = Some(num? * 1000.0),
+        "demuxer-cache-state" => state.buffered = Some(cache_ranges(value)),
         "pause" => state.paused = on,
         "paused-for-cache" => state.buffering = on,
         "seeking" => state.seeking = on,
