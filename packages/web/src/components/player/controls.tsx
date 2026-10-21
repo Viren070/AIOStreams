@@ -152,7 +152,9 @@ export function PlayerControls({
 
   const [seekStep] = useSetting(settings.controls.seekStep);
   const [burstSeek, seekingTo] = useBurstSeek(player);
-  const seekBy = (deltaMs: number) => {
+  const [tapSeek, setTapSeek] = React.useState(false);
+  const seekBy = (deltaMs: number, tapped = false) => {
+    setTapSeek(tapped);
     burstSeek(deltaMs);
     showSeekFlash(deltaMs);
   };
@@ -198,7 +200,7 @@ export function PlayerControls({
   const shown = useLatest(visible);
   const gestures = usePlayerGestures({
     player,
-    seekBy,
+    seekBy: (deltaMs) => seekBy(deltaMs, true),
     seekStepMs: seekStep * 1000,
     notice: showNotice,
     onTap: () => (shown.current ? hide() : wake()),
@@ -550,6 +552,7 @@ export function PlayerControls({
           segments={segments}
           chapters={player.chapters ?? []}
           previewMs={shownAt}
+          previewPicture={!!scrub || !tapSeek}
           handle={touch}
           thumbnails={player.thumbnails}
           onSeek={player.seek}
