@@ -111,6 +111,11 @@ internal class StreamCache(
     /** How many times faster than the file plays the link delivers it, NaN until known. */
     fun ratio(): Double = stream?.ratio() ?: Double.NaN
 
+    fun held(): Held? = stream?.held()
+
+    /** [length] is [C.LENGTH_UNSET] until the link answers. */
+    class Held(val runs: List<LongRange>, val length: Long)
+
     fun stats(): Map<String, Number> = stream?.stats().orEmpty()
 
     fun release() {
@@ -223,6 +228,18 @@ internal class StreamCache(
                 p += block.end - inner
                 if (block.end < BLOCK) return p
             }
+        }
+
+        fun runs(): List<LongRange> {
+            val runs = mutableListOf<LongRange>()
+            for ((index, block) in blocks) {
+                if (block.end <= block.start) continue
+                val start = index * BLOCK + block.start
+                val end = index * BLOCK + block.end - 1
+                val last = runs.lastOrNull()
+                if (last != null && start == last.last + 1) runs[runs.lastIndex] = last.first..end else runs += start..end
+            }
+            return runs
         }
 
         /**
@@ -353,6 +370,8 @@ internal class StreamCache(
         }
 
         fun ratio(): Double = lock.withLock { ratioLocked() }
+
+        fun held(): Held = lock.withLock { Held(blocks.runs(), length) }
 
         /** Twice the link's time for the bytes, as its speed may drop meanwhile, and a margin. */
         fun canSpare(bytes: Long): Boolean = lock.withLock {

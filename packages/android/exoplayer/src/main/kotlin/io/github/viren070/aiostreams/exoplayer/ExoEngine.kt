@@ -64,6 +64,7 @@ import io.github.viren070.aiostreams.playback.PlayerTrack
 import io.github.viren070.aiostreams.playback.Skip
 import io.github.viren070.aiostreams.playback.Sound
 import io.github.viren070.aiostreams.playback.Style
+import io.github.viren070.aiostreams.playback.TimeRange
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
@@ -391,6 +392,7 @@ class ExoEngine(private val context: Context) :
 
     override fun release() {
         main.post {
+            main.removeCallbacks(poll)
             player.release()
             cache.release()
             closeFonts()
@@ -434,6 +436,7 @@ class ExoEngine(private val context: Context) :
             .build()
         player.setMediaItem(MediaItem.fromUri(request.url), request.startMs.toLong())
         player.prepare()
+        updatePolling()
     }
 
     private fun seekTo(ms: Long, parameters: SeekParameters) {
@@ -443,7 +446,7 @@ class ExoEngine(private val context: Context) :
         seeking = true
         restarting = true
         state(PlayerState(seeking = true))
-        reportPosition()
+        updatePolling()
     }
 
     /** Automatic skips are held from a little past their start, as the page skips once playback is in them. */
@@ -804,31 +807,81 @@ class ExoEngine(private val context: Context) :
         state(PlayerState(passthrough = !Util.isEncodingLinearPcm(audioTrackConfig.encoding)))
     }
 
+    /** Paused or waiting, polls go on while the cache fills, until nothing changes. */
     private val poll = object : Runnable {
         override fun run() {
-            reportPosition()
-            main.postDelayed(this, POLL_MS)
+            val grew = reportPosition()
+            idlePolls = if (player.isPlaying || grew) 0 else idlePolls + 1
+            if (url != null && idlePolls < IDLE_POLLS) main.postDelayed(this, pollMs())
         }
     }
 
+    private var idlePolls = 0
+
+    private fun pollMs() = if (player.isPlaying) POLL_MS else IDLE_POLL_MS
+
     private fun updatePolling() {
         main.removeCallbacks(poll)
-        if (player.isPlaying) main.postDelayed(poll, POLL_MS)
+        idlePolls = 0
+        if (url != null) main.postDelayed(poll, pollMs())
         reportPosition()
     }
 
-    private fun reportPosition() {
-        if (url == null) return
+    /** True when what's buffered changed. */
+    private fun reportPosition(): Boolean {
+        if (url == null) return false
         val stalled = loaded && !seeking && player.playWhenReady && player.playbackState == Player.STATE_BUFFERING
         cache.setPlayer(player.totalBufferedDuration * 1000, player.isPlaying && !seeking || stalled)
         texts.trimHidden(text, player.currentPosition * 1000)
         sendLines()
-        state(
-            PlayerState(
-                positionMs = player.currentPosition.toDouble(),
-                bufferedMs = player.bufferedPosition.toDouble(),
-            ),
-        )
+        val buffered = buffered()
+        val grew = buffered != reported.buffered
+        state(PlayerState(positionMs = player.currentPosition.toDouble(), buffered = buffered))
+        return grew
+    }
+
+    private fun buffered(): List<TimeRange> {
+        val spans = mutableListOf(player.currentPosition * 1000 to player.bufferedPosition * 1000)
+        val map = seekMap?.takeIf { it.isSeekable }
+        val held = cache.held()
+        val durationUs = map?.durationUs?.takeIf { it > 0 }
+        if (map != null && held != null && durationUs != null) {
+            // Runs past the last seek point hold the index and other data after the media.
+            val last = map.getSeekPoints(durationUs).first.position
+            for (run in held.runs) {
+                if (run.first < last) spans += timeAt(map, run.first, durationUs, held.length) to timeAt(map, run.last + 1, durationUs, held.length)
+            }
+        }
+        val ranges = mutableListOf<TimeRange>()
+        for ((startUs, endUs) in spans.filter { it.second > it.first }.sortedBy { it.first }) {
+            val start = (startUs / 1000).toDouble()
+            val end = (endUs / 1000).toDouble()
+            val previous = ranges.lastOrNull()
+            if (previous != null && start <= previous.endMs) ranges[ranges.lastIndex] = previous.copy(endMs = max(previous.endMs, end))
+            else ranges += TimeRange(start, end)
+        }
+        return ranges
+    }
+
+    private fun timeAt(map: SeekMap, position: Long, durationUs: Long, length: Long): Long {
+        if (length > 0 && position >= length) return durationUs
+        var low = 0L
+        var high = durationUs
+        while (high - low > SEARCH_US) {
+            val mid = (low + high) ushr 1
+            if (map.getSeekPoints(mid).first.position <= position) low = mid else high = mid
+        }
+        val before = map.getSeekPoints(low).first
+        if (position <= before.position) return before.timeUs
+        val next = map.getSeekPoints(before.timeUs + 1)
+        val (afterUs, afterPosition) = when {
+            next.second != next.first -> next.second.timeUs to next.second.position
+            length > 0 -> durationUs to length
+            else -> return before.timeUs
+        }
+        if (afterPosition <= before.position) return before.timeUs
+        val fraction = (position - before.position).toDouble() / (afterPosition - before.position)
+        return before.timeUs + (fraction * (afterUs - before.timeUs)).toLong()
     }
 
     /** The reader's name for [reference]. */
@@ -861,6 +914,9 @@ class ExoEngine(private val context: Context) :
     private companion object {
         const val TAG = "exo"
         const val POLL_MS = 250L
+        const val IDLE_POLL_MS = 1000L
+        const val IDLE_POLLS = 10
+        const val SEARCH_US = 1000L
         const val FRAMES_STOPPED_NS = 100_000_000L
         const val VOLUME_MAX = 130.0
         const val SMALL_FONTS_BYTES = 8L shl 20

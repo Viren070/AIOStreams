@@ -100,10 +100,12 @@ data class PlayerSettings(
     val cacheMb: Int = 0,
 )
 
+data class TimeRange(val startMs: Double, val endMs: Double)
+
 data class PlayerState(
     val positionMs: Double? = null,
     val durationMs: Double? = null,
-    val bufferedMs: Double? = null,
+    val buffered: List<TimeRange>? = null,
     val paused: Boolean? = null,
     val buffering: Boolean? = null,
     val seeking: Boolean? = null,
@@ -118,7 +120,7 @@ data class PlayerState(
 ) {
     /** `next` over this, as a later report wins. */
     fun then(next: PlayerState) = PlayerState(
-        next.positionMs ?: positionMs, next.durationMs ?: durationMs, next.bufferedMs ?: bufferedMs,
+        next.positionMs ?: positionMs, next.durationMs ?: durationMs, next.buffered ?: buffered,
         next.paused ?: paused, next.buffering ?: buffering, next.seeking ?: seeking, next.idle ?: idle,
         next.volume ?: volume, next.maxVolume ?: maxVolume, next.muted ?: muted, next.speed ?: speed,
         next.audio ?: audio, next.subtitle ?: subtitle, next.passthrough ?: passthrough,
@@ -127,7 +129,7 @@ data class PlayerState(
     fun changesFrom(previous: PlayerState) = PlayerState(
         positionMs = positionMs.takeIf { it != previous.positionMs },
         durationMs = durationMs.takeIf { it != previous.durationMs },
-        bufferedMs = bufferedMs.takeIf { it != previous.bufferedMs },
+        buffered =buffered.takeIf { it != previous.buffered },
         paused = paused.takeIf { it != previous.paused },
         buffering = buffering.takeIf { it != previous.buffering },
         seeking = seeking.takeIf { it != previous.seeking },
@@ -250,7 +252,14 @@ object PlayerProtocol {
         put("type", "player-state")
         state.positionMs?.let { put("positionMs", it) }
         state.durationMs?.let { put("durationMs", it) }
-        state.bufferedMs?.let { put("bufferedMs", it) }
+        state.buffered?.let { ranges ->
+            put("buffered", buildJsonArray {
+                for (range in ranges) add(buildJsonObject {
+                    put("startMs", range.startMs)
+                    put("endMs", range.endMs)
+                })
+            })
+        }
         state.paused?.let { put("paused", it) }
         state.buffering?.let { put("buffering", it) }
         state.seeking?.let { put("seeking", it) }

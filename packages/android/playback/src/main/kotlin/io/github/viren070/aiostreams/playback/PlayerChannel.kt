@@ -240,10 +240,10 @@ class PlayerChannel(
     private fun receive(update: PlayerState) {
         state = state.then(update)
         session.onState(update)
-        val rest = update.copy(positionMs = null, bufferedMs = null)
+        val rest = update.copy(positionMs = null, buffered = null)
         if (rest != PlayerState()) send(PlayerProtocol.state(rest))
-        if (update.positionMs == null && update.bufferedMs == null) return
-        val position = (heldPosition ?: PlayerState()).then(PlayerState(positionMs = update.positionMs, bufferedMs = update.bufferedMs))
+        if (update.positionMs == null && update.buffered == null) return
+        val position = (heldPosition ?: PlayerState()).then(PlayerState(positionMs = update.positionMs, buffered = update.buffered))
         val wait = THROTTLE_MS - (SystemClock.uptimeMillis() - positionSentAt)
         if (wait <= 0) return sendPosition(position)
         if (heldPosition == null) main.postDelayed({ heldPosition?.let(::sendPosition) }, wait)

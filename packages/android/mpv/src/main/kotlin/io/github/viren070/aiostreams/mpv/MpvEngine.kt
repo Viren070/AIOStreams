@@ -23,6 +23,7 @@ import io.github.viren070.aiostreams.playback.Style
 import io.github.viren070.aiostreams.playback.SubtitleFont
 import io.github.viren070.aiostreams.playback.SubtitleLine
 import io.github.viren070.aiostreams.playback.SubtitleMode
+import io.github.viren070.aiostreams.playback.TimeRange
 import `is`.xyz.mpv.MPV
 import `is`.xyz.mpv.MPVNode
 import java.io.File
@@ -431,7 +432,7 @@ class MpvEngine(private val context: Context) : Engine {
         val state = when (name) {
             "time-pos" -> PlayerState(positionMs = (number ?: return) * 1000)
             "duration" -> PlayerState(durationMs = (number ?: return) * 1000)
-            "demuxer-cache-time" -> PlayerState(bufferedMs = (number ?: return) * 1000)
+            "demuxer-cache-state" -> PlayerState(buffered = cacheRanges(value as? JsonObject ?: return))
             "pause" -> PlayerState(paused = on)
             "paused-for-cache" -> PlayerState(buffering = on)
             "seeking" -> PlayerState(seeking = on)
@@ -473,7 +474,7 @@ class MpvEngine(private val context: Context) : Engine {
 
     companion object {
         private val OBSERVED = listOf(
-            "time-pos", "duration", "demuxer-cache-time", "pause", "paused-for-cache", "seeking",
+            "time-pos", "duration", "demuxer-cache-state", "pause", "paused-for-cache", "seeking",
             "idle-active", "volume", "volume-max", "mute", "speed", "aid", "sid",
             "track-list", "chapter-list", "video-params", "container-fps",
         )
@@ -499,6 +500,17 @@ class MpvEngine(private val context: Context) : Engine {
         private fun trackId(value: JsonPrimitive?) = value?.contentOrNull?.takeIf { it.isNotEmpty() && it.all(Char::isDigit) }
 
         private fun JsonObject.text(name: String) = (this[name] as? JsonPrimitive)?.contentOrNull
+
+        private fun JsonObject.number(name: String) = (this[name] as? JsonPrimitive)?.doubleOrNull
+
+        /** The cache's seekable ranges, or where it reads to where it ends when it can't seek in itself. */
+        private fun cacheRanges(state: JsonObject): List<TimeRange> {
+            fun range(start: Double?, end: Double?) = if (start != null && end != null) TimeRange(start * 1000, end * 1000) else null
+            val ranges = (state["seekable-ranges"] as? JsonArray).orEmpty().filterIsInstance<JsonObject>()
+                .mapNotNull { range(it.number("start"), it.number("end")) }
+            return ranges.ifEmpty { listOfNotNull(range(state.number("reader-pts"), state.number("cache-end"))) }
+                .sortedBy { it.startMs }
+        }
 
         private fun trackOf(track: JsonObject): PlayerTrack? {
             val type = when (track.text("type")) {
@@ -592,7 +604,7 @@ class MpvEngine(private val context: Context) : Engine {
         private fun formatOf(name: String): Int = when (name) {
             "pause", "paused-for-cache", "seeking", "idle-active", "mute" -> MPV.mpvFormat.MPV_FORMAT_FLAG
             "aid", "sid" -> MPV.mpvFormat.MPV_FORMAT_STRING
-            "track-list", "chapter-list", "video-params" -> MPV.mpvFormat.MPV_FORMAT_NODE
+            "track-list", "chapter-list", "video-params", "demuxer-cache-state" -> MPV.mpvFormat.MPV_FORMAT_NODE
             else -> MPV.mpvFormat.MPV_FORMAT_DOUBLE
         }
     }

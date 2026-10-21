@@ -66,7 +66,7 @@ class SessionPlayer(private val send: (JsonObject) -> Unit) : SimpleBasePlayer(L
         state.durationMs?.let { durationMs = it.toLong() }
         state.positionMs?.let { positionMs = it.toLong() }
         // Otherwise the session extrapolates; a seek's position can arrive either side of its event.
-        if (state.copy(positionMs = null, bufferedMs = null) != PlayerState() || seeked) invalidateState()
+        if (state.copy(positionMs = null, buffered = null) != PlayerState() || seeked) invalidateState()
     }
 
     fun onVideoSize(width: Int, height: Int) {
