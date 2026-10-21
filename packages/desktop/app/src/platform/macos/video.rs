@@ -203,6 +203,8 @@ struct State {
     view: Option<Retained<NSView>>,
     video: Option<Video>,
     applied: Option<Applied>,
+    /// The user's ICC profile, read before HDR clears it, to put back when HDR ends.
+    icc_profile: Option<String>,
     off_pending: u32,
     refresh_pending: bool,
     observer: Option<Retained<ProtocolObject<dyn NSObjectProtocol>>>,
@@ -332,6 +334,13 @@ impl State {
         if new_video && !retag {
             self.switch_off();
         }
+        // The profile is cleared below for HDR; keep the user's for when it ends.
+        if new_video && self.icc_profile.is_none() {
+            self.icc_profile = mpv
+                .get_property("icc-profile", aiostreams_desktop_core::mpv::Kind::String)
+                .and_then(|v| v.as_str().map(str::to_owned))
+                .filter(|p| !p.is_empty());
+        }
         if new_video || retag {
             match output {
                 Output::Compatibility => {
@@ -399,6 +408,9 @@ impl State {
                 for name in ["target-prim", "target-trc", "target-peak"] {
                     set(mpv, name, "auto");
                 }
+                if let Some(profile) = self.icc_profile.take() {
+                    set(mpv, "icc-profile", &profile);
+                }
             }
             Output::Mpv => {
                 layer.setWantsExtendedDynamicRangeContent(false);
@@ -406,6 +418,9 @@ impl State {
                 let _: () = unsafe { msg_send![layer, setColorspace: None::<&CGColorSpace>] };
                 for name in ["target-prim", "target-trc", "target-peak"] {
                     set(mpv, name, "auto");
+                }
+                if let Some(profile) = self.icc_profile.take() {
+                    set(mpv, "icc-profile", &profile);
                 }
             }
             Output::System => set_dynamic_range(layer, false),
