@@ -11,7 +11,7 @@ import type { VideoFit } from '../settings';
 import { clock } from '../format';
 import { sameLanguage } from '../languages';
 import { parseCues, type SubtitleCue } from '../subtitles/cues';
-import { checkSubtitleFile, readSubtitleCues } from '../subtitles/files';
+import { checkSubtitleFile, readSubtitleFile } from '../subtitles/files';
 import type { MediaStream } from '../types';
 import { ofType, ownTrackLabel, trackLabel } from './controller';
 import type {
@@ -22,7 +22,7 @@ import type {
 } from './engine';
 import { isFullscreen, toggleDocumentFullscreen } from './fullscreen';
 import { moviDebug, moviDebugging } from './movi-debug';
-import { embeddedCss, linesOf, textAt } from './movi-subtitles';
+import { embeddedCss, textAt } from './movi-subtitles';
 
 const setLogLevel = () =>
   Logger.setLevel(moviDebugging ? LogLevel.INFO : LogLevel.WARN);
@@ -143,30 +143,20 @@ function serverStream(
   return differ ? undefined : stream;
 }
 
-const embeddedLabel = (label: string) =>
-  t({
-    comment: 'A subtitle track inside the video file',
-    message: `Embedded: ${label}`,
-  });
+/* eslint-disable lingui/no-unlocalized-strings -- the fork's own messages, left untranslated */
+const embeddedLabel = (label: string) => `Embedded: ${label}`;
 
 const failedToStart = () =>
-  t({
-    comment: 'Follows "Playback failed:"',
-    message:
-      "this browser can't run the player. Try another browser, an external player or the desktop app.",
-  });
+  "this browser can't run the player. Try another browser, an external player or the desktop app.";
 
-const failedToDecode = () =>
-  t({
-    comment: 'Follows "Playback failed:"',
-    message: "this browser couldn't decode this version",
-  });
+const failedToDecode = () => "this browser couldn't decode this version";
 
-const failedToLoad = () =>
-  t({
-    comment: 'Follows "Playback failed:"',
-    message: 'the stream stopped loading',
-  });
+const failedToLoad = () => 'the stream stopped loading';
+
+const TRY_SOFTWARE = 'Try software decoding';
+
+const SMOOTHNESS_CHECK = 'Smoothness check';
+/* eslint-enable lingui/no-unlocalized-strings */
 
 /**
  * Movi's FFmpeg and WebCodecs player, drawing on a canvas put in place of the
@@ -201,7 +191,7 @@ export function moviEngine(
     let tracks: AudioTrack[] = [];
     // Subtitles' cues, by the page's id.
     const cues = new Map<string, SubtitleCue[]>();
-    let files: { id: string; label: string }[] = [];
+    let files: { id: string; label: string; text: string }[] = [];
     let shownText = '';
     let recoveries = 0;
     let recoveredAt = -1;
@@ -440,7 +430,7 @@ export function moviEngine(
       }
       if (softwareTried) return fail(failedToDecode());
       fail(failedToDecode(), {
-        label: t`Try software decoding`,
+        label: TRY_SOFTWARE,
         run: () => {
           softwareTried = true;
           moviDebug('retry', { software: true, positionMs: at });
@@ -705,19 +695,15 @@ export function moviEngine(
         if (surface) surface.sheet.textContent = subtitleCss;
       },
       toggleFullscreen: toggleDocumentFullscreen,
-      // All of an added file.
-      ownLines: async (id) => {
-        const list = cues.get(id);
-        return list?.length ? linesOf(list) : null;
-      },
+      ownText: (id) => files.find((f) => f.id === id)?.text ?? null,
       subtitleFiles: {
         types: SUBTITLE_TYPES,
         add: async (added) => {
           checkSubtitleFile(added, SUBTITLE_TYPES);
-          const read = await readSubtitleCues(added);
+          const { text, cues: read } = await readSubtitleFile(added);
           const id = `file:${files.length}`;
           cues.set(id, read);
-          files = [...files, { id, label: added.name }];
+          files = [...files, { id, label: added.name, text }];
           moviDebug('subtitle-file', {
             id,
             name: added.name,
@@ -730,7 +716,7 @@ export function moviEngine(
       stats: {
         pages: [
           { id: 'movi', label: t`Playback` },
-          { id: 'assessment', label: t`Smoothness check` },
+          { id: 'assessment', label: SMOOTHNESS_CHECK },
         ],
         show(page) {
           clearInterval(statsTimer);

@@ -1,5 +1,5 @@
 import type { SubtitleStyle } from '../settings';
-import type { SubtitleCue, SubtitleLine } from '../subtitles/cues';
+import type { SubtitleCue } from '../subtitles/cues';
 import { subtitleCss, subtitleLine, subtitleScale } from '../subtitles/style';
 
 const TAGS = /<[^>]*>|\{[^}]*\}/g;
@@ -19,12 +19,6 @@ export function textAt(cues: readonly SubtitleCue[], ms: number): string {
   }
   return text;
 }
-
-export const linesOf = (cues: readonly SubtitleCue[]): SubtitleLine[] =>
-  cues.flatMap(({ startMs, text }) => {
-    const line = plainText(text).replace(/\n/g, ' ');
-    return line ? [{ startMs, text: line }] : [];
-  });
 
 const OVERLAY = '[data-ui="player-subtitle-embedded"]';
 
