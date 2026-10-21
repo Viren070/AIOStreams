@@ -173,17 +173,46 @@ export async function readQuery(id: string): Promise<SavedQuery | null> {
   return { savedAt: body.savedAt, data: JSON.parse(body.json) };
 }
 
+type QueryEntry = Pick<Entry, 'id' | 'category' | 'scope'>;
+
+/**
+ * How long a query's answer stays unchanged before it is saved: a row that
+ * pages along would otherwise write all its pages again for each new one.
+ */
+const QUERY_QUIET_MS = 10_000;
+
+const unsaved = new Map<
+  string,
+  {
+    entry: QueryEntry;
+    timer: ReturnType<typeof setTimeout>;
+    done: () => void;
+  }
+>();
+
+/** Resolves with the bytes it saved, none when a newer answer replaced it first. */
 export function writeQuery(
-  entry: { id: string; category: CacheCategory; scope: string },
+  entry: QueryEntry,
   savedAt: number,
   data: unknown
 ): Promise<number> {
-  const json = JSON.stringify(data);
-  // UTF-16, as the engine keeps it.
-  return write(
-    { ...entry, size: json.length * 2 },
-    { id: entry.id, savedAt, json }
-  );
+  const older = unsaved.get(entry.id);
+  if (older) {
+    clearTimeout(older.timer);
+    older.done();
+  }
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      unsaved.delete(entry.id);
+      const json = JSON.stringify(data);
+      // UTF-16, as the engine keeps it.
+      write(
+        { ...entry, size: json.length * 2 },
+        { id: entry.id, savedAt, json }
+      ).then(resolve, reject);
+    }, QUERY_QUIET_MS);
+    unsaved.set(entry.id, { entry, timer, done: () => resolve(0) });
+  });
 }
 
 /** Every saved image's address, so a miss never waits on a read. */
@@ -220,12 +249,18 @@ export function writeImage(
 }
 
 /** Queued writes would otherwise land after a removal and bring things back. */
-function dropQueued(match: (entry: Entry) => boolean) {
+function dropQueued(match: (entry: QueryEntry) => boolean) {
   batch = batch.filter((w) => {
     if (!match(w.entry)) return true;
     w.done();
     return false;
   });
+  for (const [id, waiting] of unsaved) {
+    if (!match(waiting.entry)) continue;
+    clearTimeout(waiting.timer);
+    unsaved.delete(id);
+    waiting.done();
+  }
 }
 
 async function remove(
