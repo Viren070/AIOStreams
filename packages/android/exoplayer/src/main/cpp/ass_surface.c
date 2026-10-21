@@ -78,28 +78,49 @@ static void blend_row(const uint8_t *src, uint32_t *dst, int x, int width,
 
 static inline uint8x8_t div255x8(uint16x8_t x) { return vraddhn_u16(x, vrshrq_n_u16(x, 8)); }
 
-// Eight pixels at a time, the same sums as blend_row.
+// Eight pixels of mask, the same sums as blend_row.
+static inline void blend8(uint8x8_t mask, uint32_t *dst, uint8x8_t vr, uint8x8_t vg, uint8x8_t vb, uint8x8_t vo) {
+    uint8x8_t k = div255x8(vmull_u8(mask, vo));
+#if defined(__aarch64__)
+    if (!vmaxv_u8(k)) return;
+#endif
+    uint8x8_t keep = vmvn_u8(k);
+    uint8x8x4_t d = vld4_u8((uint8_t *) dst);
+    d.val[0] = div255x8(vmlal_u8(vmull_u8(vr, k), d.val[0], keep));
+    d.val[1] = div255x8(vmlal_u8(vmull_u8(vg, k), d.val[1], keep));
+    d.val[2] = div255x8(vmlal_u8(vmull_u8(vb, k), d.val[2], keep));
+    d.val[3] = vadd_u8(k, div255x8(vmull_u8(d.val[3], keep)));
+    vst4_u8((uint8_t *) dst, d);
+}
+
 static void blend(const ASS_Image *image, uint32_t *bits, int stride) {
     uint32_t r = image->color >> 24, g = (image->color >> 16) & 0xff, b = (image->color >> 8) & 0xff;
     uint32_t opacity = 255 - (image->color & 0xff);
     uint8x8_t vr = vdup_n_u8(r), vg = vdup_n_u8(g), vb = vdup_n_u8(b), vo = vdup_n_u8(opacity);
+#if defined(__aarch64__)
+    uint32x4_t solid = vdupq_n_u32(r | g << 8 | b << 16 | 0xffu << 24);
+#endif
     for (int y = 0; y < image->h; y++) {
         const uint8_t *src = image->bitmap + y * image->stride;
         uint32_t *dst = bits + (image->dst_y + y) * stride + image->dst_x;
         int x = 0;
-        for (; x + 8 <= image->w; x += 8) {
-            uint8x8_t k = div255x8(vmull_u8(vld1_u8(src + x), vo));
 #if defined(__aarch64__)
-            if (!vmaxv_u8(k)) continue;
-#endif
-            uint8x8_t keep = vmvn_u8(k);
-            uint8x8x4_t d = vld4_u8((uint8_t *) (dst + x));
-            d.val[0] = div255x8(vmlal_u8(vmull_u8(vr, k), d.val[0], keep));
-            d.val[1] = div255x8(vmlal_u8(vmull_u8(vg, k), d.val[1], keep));
-            d.val[2] = div255x8(vmlal_u8(vmull_u8(vb, k), d.val[2], keep));
-            d.val[3] = vadd_u8(k, div255x8(vmull_u8(d.val[3], keep)));
-            vst4_u8((uint8_t *) (dst + x), d);
+        // Most of a mask is empty, and full coverage by an opaque colour is just the colour.
+        for (; x + 16 <= image->w; x += 16) {
+            uint8x16_t mask = vld1q_u8(src + x);
+            if (!vmaxvq_u8(mask)) continue;
+            if (opacity == 255 && vminvq_u8(mask) == 255) {
+                vst1q_u32(dst + x, solid);
+                vst1q_u32(dst + x + 4, solid);
+                vst1q_u32(dst + x + 8, solid);
+                vst1q_u32(dst + x + 12, solid);
+                continue;
+            }
+            blend8(vget_low_u8(mask), dst + x, vr, vg, vb, vo);
+            blend8(vget_high_u8(mask), dst + x + 8, vr, vg, vb, vo);
         }
+#endif
+        for (; x + 8 <= image->w; x += 8) blend8(vld1_u8(src + x), dst + x, vr, vg, vb, vo);
         blend_row(src, dst, x, image->w, r, g, b, opacity);
     }
 }
