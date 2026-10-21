@@ -498,6 +498,11 @@ export function moviEngine(
         )
           set({ waiting: true });
       });
+      // Movi knows only where its buffer ends, so it is one range from here.
+      const buffered = () => {
+        const endMs = p.getBufferedTime() * 1000;
+        return endMs > positionMs ? [{ startMs: positionMs, endMs }] : [];
+      };
       p.on('timeUpdate', (seconds) => {
         // Before open() seeks, the time is the file's start, not the user's.
         if (gen !== generation || !ready) return;
@@ -505,15 +510,11 @@ export function moviEngine(
         drawText();
         if (recoveries && positionMs - recoveredAt > RECOVERED_MS)
           recoveries = 0;
-        emit({
-          type: 'position',
-          positionMs,
-          bufferedMs: p.getBufferedTime() * 1000,
-        });
+        emit({ type: 'position', positionMs, buffered: buffered() });
       });
       p.on('bufferUpdate', () => {
         if (gen === generation)
-          emit({ type: 'position', bufferedMs: p.getBufferedTime() * 1000 });
+          emit({ type: 'position', buffered: buffered() });
       });
       p.on('durationChange', (seconds) => {
         if (gen === generation) set({ durationMs: seconds * 1000 });
