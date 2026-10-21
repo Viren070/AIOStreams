@@ -44,7 +44,7 @@ export function SeekBar({
   onTogglePlay(): void;
 }) {
   const positionMs = usePlayhead(playhead, (h) => h.positionMs, live);
-  const bufferedMs = usePlayhead(playhead, (h) => h.bufferedMs, live);
+  const buffered = usePlayhead(playhead, (h) => h.buffered, live);
   const bar = React.useRef<HTMLDivElement>(null);
   const [hover, setHover] = React.useState<number | null>(null);
   const [drag, setDrag] = React.useState<number | null>(null);
@@ -116,11 +116,17 @@ export function SeekBar({
         data-ui="seek-bar-track"
         className="relative h-1 w-full overflow-hidden rounded-full bg-white/20 transition-[height] group-hover/seek:h-1.5 group-focus-visible/seek:h-1.5"
       >
-        <div
-          data-ui="seek-bar-buffered"
-          className="absolute inset-y-0 left-0 bg-white/30"
-          style={{ width: percent(bufferedMs) }}
-        />
+        {buffered.map((r) => (
+          <div
+            key={r.startMs}
+            data-ui="seek-bar-buffered"
+            className="absolute inset-y-0 bg-white/30"
+            style={{
+              left: percent(r.startMs),
+              width: percent(r.endMs - r.startMs),
+            }}
+          />
+        ))}
         {segments.map((s) => (
           <div
             key={`${s.type}-${s.startMs}`}

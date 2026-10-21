@@ -320,9 +320,9 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
         if (fromPlayer(m) && (moved || toLaunched !== external)) return;
         switch (m.type) {
           case 'player-state': {
-            const { positionMs, bufferedMs, idle } = m;
-            if (positionMs !== undefined || bufferedMs !== undefined)
-              emit({ type: 'position', positionMs, bufferedMs });
+            const { positionMs, buffered, idle } = m;
+            if (positionMs !== undefined || buffered !== undefined)
+              emit({ type: 'position', positionMs, buffered });
             if (m.buffering !== undefined) buffering = m.buffering;
             if (m.fullscreen !== undefined) fullscreen = m.fullscreen;
             if (m.seeking !== undefined) seeking = m.seeking;

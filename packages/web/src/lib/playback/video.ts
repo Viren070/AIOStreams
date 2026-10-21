@@ -143,13 +143,11 @@ export function videoEngine(
           el.volume = Math.min(1, next.volume.volume);
           el.muted = next.volume.muted;
         }
-        const bufferedEnd = () => {
-          for (let i = el.buffered.length - 1; i >= 0; i--) {
-            if (el.buffered.start(i) <= el.currentTime)
-              return el.buffered.end(i) * 1000;
-          }
-          return 0;
-        };
+        const buffered = () =>
+          Array.from({ length: el.buffered.length }, (_, i) => ({
+            startMs: el.buffered.start(i) * 1000,
+            endMs: el.buffered.end(i) * 1000,
+          }));
         const handlers: Record<string, () => void> = {
           loadedmetadata: () => {
             if (next.startMs) el.currentTime = next.startMs / 1000;
@@ -167,9 +165,9 @@ export function videoEngine(
             emit({
               type: 'position',
               positionMs: el.currentTime * 1000,
-              bufferedMs: bufferedEnd(),
+              buffered: buffered(),
             }),
-          progress: () => emit({ type: 'position', bufferedMs: bufferedEnd() }),
+          progress: () => emit({ type: 'position', buffered: buffered() }),
           volumechange: () => set({ volume: el.volume, muted: el.muted }),
           ratechange: () => set({ rate: el.playbackRate }),
           ended: () => emit({ type: 'ended' }),

@@ -4,6 +4,7 @@ import type { BaseItemDto, MediaStream, SourceInfo } from '../types';
 import type { PlaybackPrefs } from '../user-config';
 import type { Chapter } from './chapters';
 import type { PlayerState, QueuedEpisode, Track } from './controller';
+import type { TimeRange } from './playhead';
 
 /** One of the server's external subtitles, which an engine loads once picked. */
 export interface ServerSubtitle extends Track {
@@ -70,7 +71,7 @@ export type EngineState = Partial<
 
 export type EngineEvent =
   | { type: 'state'; state: EngineState }
-  | { type: 'position'; positionMs?: number; bufferedMs?: number }
+  | { type: 'position'; positionMs?: number; buffered?: readonly TimeRange[] }
   | { type: 'tracks'; tracks: EngineTrack[] }
   | { type: 'chapters'; chapters: Chapter[] }
   /** The file's tracks are listed, so the user's picks can apply. */

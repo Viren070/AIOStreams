@@ -1,6 +1,7 @@
 import { t } from '@lingui/core/macro';
 import React from 'react';
 import type { HostEvent } from '../../downloads/types';
+import type { TimeRange } from '../../playback/playhead';
 import type { Span } from '../../subtitles/align';
 
 /** A track as the app's player lists it; `url` is where an added one came from. */
@@ -28,7 +29,7 @@ export type ShellMessage =
       type: 'player-state';
       positionMs?: number;
       durationMs?: number;
-      bufferedMs?: number;
+      buffered?: TimeRange[];
       paused?: boolean;
       buffering?: boolean;
       seeking?: boolean;
