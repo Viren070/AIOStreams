@@ -98,6 +98,7 @@ export const FIELD_REGISTRY: Readonly<Record<string, readonly string[]>> = {
     'rseMatched',
     'preloading',
     'idMatched',
+    'warnings',
   ],
   metadata: [
     'queryType',
