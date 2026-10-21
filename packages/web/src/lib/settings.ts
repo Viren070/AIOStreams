@@ -156,10 +156,12 @@ function publish(next: Synced) {
   announce();
 }
 
+let saving: Promise<unknown> = Promise.resolve();
+
 function push(prefs: Synced, target = session) {
   if (!target) return;
   const { client, userId } = target;
-  void client
+  saving = client
     .post(
       `/DisplayPreferences/${PREFS_ID}`,
       {
@@ -190,10 +192,14 @@ export function syncPreferences(
   );
   current = { ...older, ...(storage.get<Synced>(cacheKey(userId)) ?? {}) };
   announce();
-  void client
-    .get<{
-      CustomPrefs?: Record<string, string | null>;
-    }>(`/DisplayPreferences/${PREFS_ID}`, { client: PREFS_ID, userId })
+  // Else a change still saving reads back as its old value.
+  flushPush();
+  void saving
+    .then(() =>
+      client.get<{
+        CustomPrefs?: Record<string, string | null>;
+      }>(`/DisplayPreferences/${PREFS_ID}`, { client: PREFS_ID, userId })
+    )
     .then((remote) => {
       if (mine !== generation) return;
       if (remote.CustomPrefs?.[SAVED_MARK]) {
@@ -218,6 +224,13 @@ export function signedIn(): boolean {
 }
 
 let pushTimer: ReturnType<typeof setTimeout> | undefined;
+let pendingPush: (() => void) | undefined;
+
+function flushPush() {
+  clearTimeout(pushTimer);
+  pendingPush?.();
+  pendingPush = undefined;
+}
 
 function update(key: string, value: string | undefined) {
   const was = moved.get(key)?.was;
@@ -229,7 +242,8 @@ function update(key: string, value: string | undefined) {
   // A dragged colour or typed CSS saves once it settles.
   clearTimeout(pushTimer);
   const target = session;
-  pushTimer = setTimeout(() => push(next, target), 500);
+  pendingPush = () => push(next, target);
+  pushTimer = setTimeout(flushPush, 500);
 }
 
 /** A setting that follows the user; `format` returns undefined for the default. */
