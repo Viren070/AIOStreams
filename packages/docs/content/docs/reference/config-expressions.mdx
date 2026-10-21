@@ -139,6 +139,22 @@ Selecting a conditional variant applies it to every request, not only those its 
 
 Finding the right `userAgent` is guesswork, so the Variants tab lists the last five that actually reached your configuration. Only stream, catalogue, meta, subtitle and Jellyfin requests are counted.
 
+### The apps' own headers
+
+The AIOStreams apps, on the web, the desktop, Android and TVs, send these with their Jellyfin requests to a server new enough to accept them. A header with nothing to report is left out.
+
+| Header                  | Values                                                                                                                                                   |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `X-AIOStreams-Client`   | `AIOStreams Web`, `AIOStreams Desktop`, `AIOStreams Android`, `AIOStreams Android TV`, `AIOStreams webOS` or `AIOStreams Tizen`                          |
+| `X-AIOStreams-Device`   | The device's name, e.g. `Pixel 7`, or in a browser the browser and system, as `Chrome on Windows`. Characters outside plain ASCII arrive percent-encoded |
+| `X-AIOStreams-Platform` | `android`, `ios`, `windows`, `macos`, `linux`, `webos` or `tizen`                                                                                        |
+| `X-AIOStreams-Network`  | `cellular`, `wifi`, `ethernet`, `bluetooth`, `wimax`, `mixed`, `other` or `none`. Only Android reports one                                               |
+| `X-AIOStreams-Purpose`  | `download` while finding a version to download, including the list the Download button opens                                                             |
+
+```
+header('x-aiostreams-client') == 'AIOStreams Android' and header('x-aiostreams-network') == 'cellular'
+```
+
 ### Health checks
 
 A health check is a URL this instance calls to decide whether something is up. Define them in **Miscellaneous → Health Checks**, then read one as `health('id')`:
