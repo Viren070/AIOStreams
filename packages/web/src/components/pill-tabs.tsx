@@ -1,5 +1,6 @@
 import { Button } from '@aiostreams/ui/button';
 import { cn } from '@aiostreams/ui/core/styling';
+import { tab, tabList } from '../lib/input';
 
 /** A row of pills picking one option; `name` tells rows apart for custom CSS. */
 export function PillTabs<T>({
@@ -19,6 +20,7 @@ export function PillTabs<T>({
     <div
       data-ui="pill-tabs"
       data-name={name}
+      {...tabList}
       className={cn(
         'flex w-fit max-w-full flex-none gap-1 overflow-x-auto rounded-full bg-gray-900 p-1 [scrollbar-width:none]',
         className
@@ -34,6 +36,7 @@ export function PillTabs<T>({
             size="xs"
             intent={selected ? 'white' : 'gray-basic'}
             className="rounded-full"
+            {...tab(selected, () => onChange(option.value))}
             onClick={() => onChange(option.value)}
           >
             {option.label}

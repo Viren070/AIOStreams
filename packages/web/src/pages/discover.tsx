@@ -20,6 +20,7 @@ import { libraryLabel } from '../lib/format';
 import { navigate, to } from '../lib/paths';
 import { lastCatalog, rememberCatalog } from '../lib/settings';
 import { useFeature } from '../lib/server-info';
+import { tab, tabList } from '../lib/input';
 import { PillTabs } from '../components/pill-tabs';
 import { MixedGrid } from '../components/mixed-grid';
 import { NoCatalogs } from '../components/no-catalogs';
@@ -122,6 +123,7 @@ function GenreFilter({
   return (
     <div
       data-ui="genre-pills"
+      {...tabList}
       className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-hide lg:mx-0 lg:flex-wrap lg:px-0"
     >
       {[...(withAll ? [{ Id: 'all', Name: null }] : []), ...genres].map(
@@ -133,6 +135,7 @@ function GenreFilter({
             size="sm"
             intent={value === genre.Name ? 'white' : 'gray-subtle'}
             className="flex-none rounded-full"
+            {...tab(value === genre.Name, () => onChange(genre.Name ?? null))}
             onClick={() => onChange(genre.Name ?? null)}
           >
             {genre.Name ?? t`All`}

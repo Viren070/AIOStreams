@@ -12,6 +12,7 @@ import {
 import { cn } from '@aiostreams/ui/core/styling';
 import { currentHost } from '../lib/hosts';
 import { scrolled, scrollToStart, startOf } from '../lib/direction';
+import { tab, tabList } from '../lib/input';
 import type { BaseItemDto } from '../lib/types';
 import { ItemMenu } from './item-menu';
 
@@ -34,6 +35,7 @@ export function SeasonPills({
         className="rounded-full"
         rightIcon={s.UserData?.Played ? <BiCheck /> : undefined}
         iconSpacing="0.25rem"
+        {...tab(s.Id === selected, () => onSelect(s.Id!))}
         onClick={() => onSelect(s.Id!)}
       >
         {s.Name}
@@ -89,6 +91,7 @@ function TvPills({
     <div
       ref={track}
       data-ui="season-pills"
+      {...tabList}
       // Room for a focused pill's ring, which the scroller would clip.
       className="relative -m-1 flex gap-2 overflow-x-auto p-1"
     >
@@ -127,6 +130,7 @@ function PillTrack({ children }: { children: React.ReactNode }) {
   const { canScrollPrev, canScrollNext } = useCarousel();
   return (
     <CarouselContent
+      {...tabList}
       contentClass={cn(
         'min-w-0 flex-1',
         canScrollPrev && canScrollNext
