@@ -3011,6 +3011,10 @@ msgstr "Presets"
 msgid "Press a key"
 msgstr "Press a key"
 
+#: src/lib/hosts/shell/android.ts
+msgid "Press Back again to leave"
+msgstr "Press Back again to leave"
+
 #: src/components/version-settings.tsx
 #: src/pages/settings/subtitles.tsx
 msgid "Preview"

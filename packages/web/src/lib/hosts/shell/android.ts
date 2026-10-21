@@ -1,4 +1,5 @@
 import { t } from '@lingui/core/macro';
+import { toast } from 'sonner';
 import type { Host } from '..';
 import { runAction } from '../../input';
 import { onSettingsChange, settings, type PlayerEngine } from '../../settings';
@@ -8,6 +9,8 @@ import { appEngine, setEngine } from './player';
 import { resolveYouTube } from './youtube';
 
 let fullscreen = false;
+let leaveAsked = 0;
+const LEAVE_MS = 2000;
 
 /**
  * Follows the app's full screen, which hides the system bars and turns to
@@ -117,10 +120,16 @@ export const androidHost: Host = {
     active: () => fullscreen,
     set: (on) => appBridge()?.send({ type: 'fullscreen', value: on }),
   },
-  // Back ends at Home, as in other Android apps, rather than walking the history before it.
+  // Back ends at Home, as in other Android apps, rather than walking the history before it; a second press leaves.
   back: () => {
     if ((location.hash.slice(1).split('?')[0] || '/') !== '/') return false;
-    appBridge()?.send({ type: 'exit' });
+    if (Date.now() - leaveAsked < LEAVE_MS) {
+      leaveAsked = 0;
+      appBridge()?.send({ type: 'exit' });
+    } else {
+      leaveAsked = Date.now();
+      toast(t`Press Back again to leave`, { duration: LEAVE_MS });
+    }
     return true;
   },
   exit: () => appBridge()?.send({ type: 'exit' }),
