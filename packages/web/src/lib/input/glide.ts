@@ -117,10 +117,14 @@ function drawnShift(outer: HTMLElement): [number, number] {
   return shift;
 }
 
-const layerOf = (box: Element) =>
-  box === document.documentElement
-    ? document.querySelector<HTMLElement>('[data-glide-layer=page]')
-    : box.querySelector<HTMLElement>(':scope > [data-glide-layer]');
+function layerOf(box: Element): HTMLElement | null {
+  if (box === document.documentElement)
+    return document.querySelector<HTMLElement>('[data-glide-layer=page]');
+  for (const child of box.children)
+    if (child instanceof HTMLElement && child.hasAttribute('data-glide-layer'))
+      return child;
+  return null;
+}
 
 /** How far a scroller's content is still drawn from its scroll position by jumps under way. */
 export function glideOffset(box: Element): number {
