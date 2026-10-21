@@ -134,6 +134,11 @@ html.dark {
 [data-focus='own']:focus-visible {
   outline: none;
 }
+/* TV web views can focus the page's roots; :not(#root) outranks the ring above. */
+#root:focus-visible,
+body:focus-visible:not(#root) {
+  outline: none !important;
+}
 /* Focus that came from a pointer (markPointerFocus). */
 html[data-pointer-focus] :focus-visible:not(input):not(textarea),
 html[data-pointer-focus] :focus-visible:not(input):not(textarea)::before,
