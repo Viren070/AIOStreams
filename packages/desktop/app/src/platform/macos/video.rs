@@ -4,7 +4,7 @@ use std::cell::RefCell;
 use std::ffi::CStr;
 use std::path::{Path, PathBuf};
 use std::ptr::NonNull;
-use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
@@ -56,6 +56,9 @@ pub const REFERENCE_WHITE: f64 = 203.0;
 static CHOSEN: AtomicU8 = AtomicU8::new(0);
 static RUNNING: AtomicU8 = AtomicU8::new(0);
 static FILE: OnceLock<PathBuf> = OnceLock::new();
+/// The Metal output's swapchain clears the layer's colours when it is recreated,
+/// so the tag has to go on again.
+static RETAG: AtomicBool = AtomicBool::new(false);
 
 fn get(cell: &AtomicU8) -> Output {
     Output::ALL[usize::from(cell.load(Ordering::Relaxed))]
@@ -259,6 +262,14 @@ pub fn update(gamma: Option<String>, primaries: Option<String>) {
     });
 }
 
+/// MoltenVK recreates the swapchain with a fresh layer state, from any thread.
+pub fn retag() {
+    DispatchQueue::main().exec_async(|| {
+        RETAG.store(true, Ordering::Relaxed);
+        refresh();
+    });
+}
+
 /// The display's headroom moves with its brightness and with the screen the window is on.
 pub fn refresh() {
     let queued = STATE.with_borrow_mut(|s| std::mem::replace(&mut s.refresh_pending, true));
@@ -309,14 +320,19 @@ impl State {
             }
         });
         let want = Applied { video, target_peak };
-        if self.applied.as_ref() == Some(&want) {
+        let retag = RETAG.swap(false, Ordering::Relaxed);
+        if !retag && self.applied.as_ref() == Some(&want) {
             return;
         }
         let (Some(layer), Some(mpv)) = (self.layer.clone(), self.mpv.clone()) else {
             return;
         };
-        if self.applied.as_ref().is_none_or(|a| a.video != want.video) {
+        // A recreation cleared the layer already; a new video starts from off.
+        let new_video = self.applied.as_ref().is_none_or(|a| a.video != want.video);
+        if new_video && !retag {
             self.switch_off();
+        }
+        if new_video || retag {
             match output {
                 Output::Compatibility => {
                     let name = CFString::from_static_str(want.video.space);
@@ -334,7 +350,25 @@ impl State {
                         set(&mpv, name, value);
                     }
                 }
-                Output::Mpv => layer.setWantsExtendedDynamicRangeContent(true),
+                Output::Mpv => {
+                    // The moltenvk context reports no target colorspace, so with
+                    // target-colorspace-hint mpv renders to the video's own range,
+                    // not the display's. Like the compatibility output, mpv renders
+                    // PQ at the display's peak and the layer is tagged for it.
+                    let name = CFString::from_static_str(want.video.space);
+                    let space = CGColorSpace::with_name(Some(&name));
+                    layer.setWantsExtendedDynamicRangeContent(true);
+                    // SAFETY: CAMetalLayer takes CALayer's colorspace, which the
+                    // bindings lack; set here on the main thread, like the EDR flag.
+                    let _: () = unsafe { msg_send![&*layer, setColorspace: space.as_deref()] };
+                    for (name, value) in [
+                        ("target-prim", want.video.primaries.as_str()),
+                        ("target-trc", "pq"),
+                        ("icc-profile", ""),
+                    ] {
+                        set(&mpv, name, value);
+                    }
+                }
                 Output::System => set_dynamic_range(&layer, true),
             }
         }
@@ -368,7 +402,11 @@ impl State {
             }
             Output::Mpv => {
                 layer.setWantsExtendedDynamicRangeContent(false);
-                set(mpv, "target-peak", "auto");
+                // SAFETY: same setter as switch_on.
+                let _: () = unsafe { msg_send![layer, setColorspace: None::<&CGColorSpace>] };
+                for name in ["target-prim", "target-trc", "target-peak"] {
+                    set(mpv, name, "auto");
+                }
             }
             Output::System => set_dynamic_range(layer, false),
         }
