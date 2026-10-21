@@ -1,7 +1,7 @@
 ---
 title: Watch together, seek previews and subtitle sync
 description: Watch in sync with friends on any server, previews on the seek bar, subtitles that line themselves up, remote control, and HDR on a Mac.
-date: 2026-10-20
+date: 2026-10-21
 version: 2.37.0
 ---
 
@@ -23,7 +23,8 @@ Any app can **play a title on another device**, or take over whatever another de
 playing, and become its remote, whether that device has an AIOStreams app or a Jellyfin app open.
 
 In every app, **quick filters** and **badges** make a long list of versions easy to scan,
-**people** turn up in search, and **pressing play** opens on the title's
+**people** turn up in search, **Random pick** chooses from your favourites or a show's
+episodes, and **pressing play** opens on the title's
 logo and fades into the video. The desktop and Android apps gain **sound settings** such as
 dialogue boost and night mode, the desktop app plays **HDR and Dolby Vision on a Mac**, and when
 something goes wrong, **Report a problem** sends the app's log with a code to quote.
@@ -244,6 +245,23 @@ episode's name for a show. As the first frame arrives, it fades away into the vi
 The controls wait until there is something to control, so they no longer sit over a black screen
 while a stream loads. This replaces the old spinner, and trailers open the same way.
 
+### Random pick
+
+Can't decide? **Random pick** on **Favourites** picks one of your favourites, from all of them, the
+movies or the shows, and the shuffle button on a show's page, also in its menu, picks one of its
+episodes. The artwork spins through your list and slows to a stop, then **Play** starts it, or a
+show's next episode, **Open** goes to its page, and **Pick again** spins once more.
+
+<video
+  src="/changelog/v2.37/random-pick.mp4"
+  aria-label="Favourites in the desktop app: Random pick spins through the posters and lands on Spider-Man: Across the Spider-Verse with its summary, then Pick again lands on Mad Max: Fury Road"
+  autoPlay
+  muted
+  loop
+  playsInline
+  style={{ width: '100%', borderRadius: '0.5rem' }}
+/>
+
 ### Sound
 
 The desktop and Android apps have new sound settings, under **Settings → Audio** and in the
@@ -311,6 +329,11 @@ send what Android recorded about it the next time it opens.
 - **Less memory** for styled subtitles.
 - **On Android TV**, the keyboard floats over the app as a compact panel instead of covering the
   screen.
+- **On the TV's home screen.** On Android TV and Google TV, the home screen's **Continue
+  watching** or **Play Next** row lists what you're partway through and your shows' next episodes,
+  and selecting one plays it in the app.
+- **A second Back to leave.** Back on Home asks for another press before the app closes, so one
+  press too many doesn't close it.
 
 ### Smaller things
 
@@ -323,7 +346,15 @@ send what Android recorded about it the next time it opens.
   over or move to its card.
 - **Trailers** play in your audio and subtitle languages.
 - **Rows with a remote or keyboard.** Moving along a row keeps the card you're on where the row
-  starts, as TV apps do, and coming back to a row returns to the card you left.
+  starts, as TV apps do, and coming back to a row returns to the card you left. Tabs, such as a
+  show's seasons, switch as you move onto them.
+- **Time left and when it ends.** The player's time sits above the seek bar, beside the time the
+  title ends at the speed it's playing. Select the time to show what's left instead.
+- **Continue watching** puts what you watched most recently first, whether it's a title you're
+  partway through or a show's next episode.
+- **Cache size in the desktop app.** **Cache size** under **Settings → Playback → Player** now sets
+  how much the desktop app's player holds in memory too. **Automatic** sizes it from the
+  computer's memory, and a `demuxer-max-bytes` line in your `mpv.conf` takes its place.
 - **Player tooltips.** The player's buttons say what they do when you point at them or move to
   them with a remote.
 - **The calendar's agenda** opens at today.

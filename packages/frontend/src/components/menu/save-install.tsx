@@ -732,10 +732,7 @@ function AppBlock({
             </AppFact>
             <AppFact icon={<Monitor className="h-4 w-4" />}>
               The apps play what a browser can&apos;t, and on computers and
-              phones download to watch offline.{' '}
-              <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-300">
-                Alpha
-              </span>
+              phones download to watch offline.
             </AppFact>
           </ul>
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
