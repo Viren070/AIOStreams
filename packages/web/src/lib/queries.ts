@@ -108,17 +108,28 @@ export function useNextUp() {
   });
 }
 
+/** When a title was last watched; for a next episode, when its show was. */
+export function watchedAt(item: BaseItemDto): number {
+  const show = (item as { aiostreams?: { showWatchedAt?: unknown } }).aiostreams
+    ?.showWatchedAt;
+  const at = typeof show === 'string' ? show : item.UserData?.LastPlayedDate;
+  return (at && Date.parse(at)) || 0;
+}
+
+/** Most recently watched first; next episodes without times stay after resume points. */
 export function mergeRows(
   resume: BaseItemDto[] | null | undefined,
   nextUp: BaseItemDto[] | null | undefined
 ): BaseItemDto[] {
   const seen = new Set<string>();
-  return [...(resume ?? []), ...(nextUp ?? [])].filter((item) => {
-    const keys = [item.Id, item.SeriesId].filter((k): k is string => !!k);
-    if (keys.some((k) => seen.has(k))) return false;
-    keys.forEach((k) => seen.add(k));
-    return true;
-  });
+  return [...(resume ?? []), ...(nextUp ?? [])]
+    .filter((item) => {
+      const keys = [item.Id, item.SeriesId].filter((k): k is string => !!k);
+      if (keys.some((k) => seen.has(k))) return false;
+      keys.forEach((k) => seen.add(k));
+      return true;
+    })
+    .sort((a, b) => watchedAt(b) - watchedAt(a));
 }
 
 export type ItemFilter = 'unplayed' | 'played' | 'favorite';

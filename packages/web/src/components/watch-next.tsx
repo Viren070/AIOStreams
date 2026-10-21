@@ -3,7 +3,7 @@ import { playLink } from '../lib/app-links';
 import { itemTitle, ticksToMs } from '../lib/format';
 import { currentHost, type WatchNextItem } from '../lib/hosts';
 import { landscapeUrl } from '../lib/images';
-import { mergeRows, useNextUp, useResume } from '../lib/queries';
+import { mergeRows, useNextUp, useResume, watchedAt } from '../lib/queries';
 import { useSession } from '../lib/session';
 
 const MAX_ITEMS = 10;
@@ -21,7 +21,7 @@ export function WatchNextSync() {
       .map((item): WatchNextItem => {
         const episode = item.Type === 'Episode';
         const positionMs = ticksToMs(item.UserData?.PlaybackPositionTicks);
-        const playedAt = Date.parse(item.UserData?.LastPlayedDate ?? '');
+        const playedAt = watchedAt(item);
         return {
           id: item.Id!,
           kind: episode ? 'episode' : 'movie',
