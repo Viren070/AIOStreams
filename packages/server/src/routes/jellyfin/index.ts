@@ -45,7 +45,7 @@ export const jellyfinCors: express.RequestHandler = (req, res, next) => {
   );
   res.setHeader(
     'Access-Control-Allow-Headers',
-    'Content-Type, Authorization, X-Emby-Authorization, X-Emby-Token, X-MediaBrowser-Token, Range'
+    'Content-Type, Authorization, X-Emby-Authorization, X-Emby-Token, X-MediaBrowser-Token, Range, X-AIOStreams-Client, X-AIOStreams-Device, X-AIOStreams-Platform, X-AIOStreams-Network, X-AIOStreams-Purpose'
   );
   res.setHeader(
     'Access-Control-Expose-Headers',

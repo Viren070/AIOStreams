@@ -52,6 +52,8 @@ const FEATURES = {
   fillers: 1,
   /** SyncPlay, and a watch party relay at `/party/v1`; `aiostreams.parties` says who it admits. */
   parties: 1,
+  /** CORS lets the `X-AIOStreams-*` headers through. */
+  clientHints: 1,
 } as const;
 
 export async function publicInfo(req: Request) {
