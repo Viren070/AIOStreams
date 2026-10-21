@@ -295,6 +295,30 @@ interface Step {
   onClick?: () => void;
 }
 
+const enabled = (el: Element) => !el.hasAttribute('data-disabled');
+
+/** In a menu, left and right move along a row of items, and up and down step over the rest of it. */
+function rowKeys(e: React.KeyboardEvent<HTMLDivElement>) {
+  const row = e.currentTarget;
+  const own = [...row.querySelectorAll('[role=menuitem]')].filter(enabled);
+  const at = own.indexOf(e.target as Element);
+  const menu = row.closest('[role=menu]');
+  if (at < 0 || !menu) return;
+  let to: Element | undefined;
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+    const rtl = getComputedStyle(row).direction === 'rtl';
+    to = own[at + ((e.key === 'ArrowRight') !== rtl ? 1 : -1)];
+  } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    const all = [...menu.querySelectorAll('[role=menuitem]')].filter(enabled);
+    const down = e.key === 'ArrowDown';
+    to = all[all.indexOf(down ? own.at(-1)! : own[0]) + (down ? 1 : -1)];
+  }
+  if (!(to instanceof HTMLElement)) return;
+  e.preventDefault();
+  e.stopPropagation();
+  to.focus();
+}
+
 function Stepper({
   label,
   value,
@@ -318,7 +342,10 @@ function Stepper({
     </DropdownMenuItem>
   );
   return (
-    <div className="flex items-center gap-1 px-1 pb-1">
+    <div
+      className="flex items-center gap-1 px-1 pb-1"
+      onKeyDownCapture={rowKeys}
+    >
       {label && <span className="flex-1 px-1 text-sm">{label}</span>}
       {button(less, <LuMinus />)}
       <span
