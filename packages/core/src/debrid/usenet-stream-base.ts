@@ -1302,7 +1302,7 @@ export abstract class UsenetStreamService implements UsenetDebridService {
 
     this.serviceLogger.debug(`Generated playback link`, { playbackLink });
 
-    const resolvedFileInfo: ResolvedLinkInfo = {
+    const resolvedLinkInfo: ResolvedLinkInfo = {
       url: playbackLink,
       index: selectedFile.index,
       name: selectedFile.name,
@@ -1311,12 +1311,12 @@ export abstract class UsenetStreamService implements UsenetDebridService {
     // Cache the result
     await UsenetStreamService.resolveCache.set(
       cacheKey,
-      resolvedFileInfo,
+      resolvedLinkInfo,
       appConfig.builtins.debrid.playbackLinkCacheTtl,
       true
     );
 
-    return resolvedFileInfo;
+    return resolvedLinkInfo;
   }
 
   /**
@@ -1443,7 +1443,7 @@ export abstract class UsenetStreamService implements UsenetDebridService {
     const filePath = selectedFile.path || `${contentPath}/${selectedFile.name}`;
     const playbackLink = `${this.getPublicWebdavUrlWithAuth()}${encodeWebdavPath(filePath)}`;
 
-    const resolvedFileInfo: ResolvedLinkInfo = {
+    const resolvedLinkInfo: ResolvedLinkInfo = {
       url: playbackLink,
       index: selectedFile.index,
       name: selectedFile.name,
@@ -1451,12 +1451,12 @@ export abstract class UsenetStreamService implements UsenetDebridService {
 
     await UsenetStreamService.resolveCache.set(
       cacheKey,
-      resolvedFileInfo,
+      resolvedLinkInfo,
       appConfig.builtins.debrid.playbackLinkCacheTtl,
       true
     );
 
-    return resolvedFileInfo;
+    return resolvedLinkInfo;
   }
 
   protected getPublicWebdavUrlWithAuth(): string {
