@@ -20,6 +20,7 @@ import {
 } from '../../lib/settings';
 import { useServerInfo } from '../../lib/server-info';
 import { currentHost } from '../../lib/hosts';
+import { focusOn, keyboardFocus } from '../../lib/input';
 import { SettingsCard } from '../../components/settings-card';
 import { Anchor } from '../../components/anchor';
 import { followsYou, DOCS_URL } from './common';
@@ -65,10 +66,25 @@ export function ThemeSection() {
     const previous = pending.current?.previous ?? css;
     if (pending.current) toast.dismiss(pending.current.id);
     setCss(draft);
+    // Arrows can't reach a toast, so applying from keys focuses Keep.
+    const byKeys = !!keyboardFocus();
     const id = toast(t`Custom CSS applied`, {
       description: t`It will be undone unless you keep it.`,
       duration: KEEP_CSS_MS,
-      action: { label: t`Keep`, onClick: () => undefined },
+      // sonner styles its buttons by data-button.
+      action: (
+        <button
+          type="button"
+          data-button
+          data-action
+          ref={(el) => {
+            if (el && byKeys) focusOn(el);
+          }}
+          onClick={() => toast.dismiss(id)}
+        >
+          {t`Keep`}
+        </button>
+      ),
       onDismiss: () => {
         if (pending.current?.id === id) pending.current = undefined;
       },
