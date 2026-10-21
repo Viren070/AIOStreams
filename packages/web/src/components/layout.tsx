@@ -981,8 +981,11 @@ function TvRail({
     open || !floating
       ? undefined
       : 'opacity-0 transition-opacity group-focus-within/rail:opacity-100';
-  // Shut, the clear panel is clipped to its icons; its buttons keep pointer events, which focus moves need.
-  const reach = !open && !floating && 'pointer-events-auto';
+  // Shut, the clear panel is clipped to its icons; its buttons keep pointer events and the icons' width, which focus moves need.
+  const reach =
+    !open &&
+    !floating &&
+    'pointer-events-auto w-14 group-focus-within/rail:w-full';
   const entry = (item: SidebarItem) => {
     const Icon = item.iconType;
     return (
