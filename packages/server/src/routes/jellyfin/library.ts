@@ -891,6 +891,22 @@ router.get(
   })
 );
 
+/** When the show was last watched, which Next Up orders by, beside the episode's own UserData. */
+function withShowWatchedAt(
+  item: JellyfinItem,
+  row?: WatchStateRow
+): JellyfinItem {
+  if (!row?.sortAt) return item;
+  const extension = item.aiostreams as Record<string, unknown> | undefined;
+  return {
+    ...item,
+    aiostreams: {
+      ...extension,
+      showWatchedAt: new Date(row.sortAt).toISOString(),
+    },
+  };
+}
+
 /** How many of the most recently watched shows Next Up looks through. */
 const NEXT_UP_SHOWS = 200;
 
@@ -927,7 +943,7 @@ router.get(
         const next = await nextUpForSeries(ctx, d.descriptor, last, {
           includeResumable,
         });
-        if (next) items.push(next);
+        if (next) items.push(withShowWatchedAt(next, last));
       }
     } else {
       const recent = provider.recentSeries(ctx.watch, limit * 4);
@@ -941,7 +957,8 @@ router.get(
         // A part-played anchor can still come back to resume.
         if (row.played && (await caughtUpOn(ctx, d).catch(() => false)))
           return null;
-        return nextUpForSeries(ctx, d, row, { includeResumable }).catch(
+        return nextUpForSeries(ctx, d, row, { includeResumable }).then(
+          (item) => item && withShowWatchedAt(item, row),
           () => null
         );
       };
