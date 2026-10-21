@@ -1,7 +1,7 @@
 import React from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { PartyRelayMode } from '@aiostreams/core';
-import type { JellyfinClient } from './client';
+import { allowHints, type JellyfinClient } from './client';
 import type { Branding } from './types';
 
 /** The extensions a server can offer; the server lists them in `system.ts`. */
@@ -16,7 +16,8 @@ export type Feature =
   | 'genreRequired'
   | 'fillers'
   | 'parties'
-  | 'reports';
+  | 'reports'
+  | 'clientHints';
 
 /** What a server's public info says about it. */
 export interface ServerInfo extends Branding {
@@ -92,7 +93,7 @@ export function useFeature(feature: Feature): boolean {
  * configuration it signed in to can rename the server.
  */
 export function useServerInfoQuery(client: JellyfinClient) {
-  return useQuery({
+  const query = useQuery({
     queryKey: ['jf-server-info', client.base, client.token],
     meta: { cache: 'account' },
     queryFn: async (): Promise<ServerInfo> => {
@@ -114,4 +115,7 @@ export function useServerInfoQuery(client: JellyfinClient) {
     // A new token asks again; the screen fading out meanwhile must not change.
     placeholderData: keepPreviousData,
   });
+  // While rendering, so the screens below have it for their first requests.
+  allowHints(client.base, !!query.data?.features.clientHints);
+  return query;
 }

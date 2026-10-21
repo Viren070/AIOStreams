@@ -22,7 +22,12 @@ export function apiBase(): string {
 
 /* eslint-disable lingui/no-unlocalized-strings -- names the server lists devices by */
 function clientName(): string {
-  if (!shell) return 'AIOStreams Web';
+  if (!shell) {
+    const host = currentHost().name;
+    if (host === 'webos') return 'AIOStreams webOS';
+    if (host === 'tizen') return 'AIOStreams Tizen';
+    return 'AIOStreams Web';
+  }
   if (shell.platform !== 'android') return 'AIOStreams Desktop';
   return shell.tv ? 'AIOStreams Android TV' : 'AIOStreams Android';
 }
@@ -40,6 +45,14 @@ function deviceId(): string {
   return id;
 }
 
+const SYSTEM_NAMES: Record<string, string> = {
+  windows: 'Windows',
+  android: 'Android',
+  ios: 'iOS',
+  macos: 'macOS',
+  linux: 'Linux',
+};
+
 function deviceName(): string {
   const app = currentHost().device?.()?.name;
   if (app) return app;
@@ -53,20 +66,25 @@ function deviceName(): string {
         : /Safari\//.test(ua)
           ? 'Safari'
           : 'Browser';
-  const os = /Windows/.test(ua)
-    ? 'Windows'
-    : /Android/.test(ua)
-      ? 'Android'
-      : /iPhone|iPad/.test(ua)
-        ? 'iOS'
-        : /Mac OS X/.test(ua)
-          ? 'macOS'
-          : /Linux/.test(ua)
-            ? 'Linux'
-            : '';
+  const os = SYSTEM_NAMES[browserSystem() ?? ''];
   return os ? `${browser} on ${os}` : browser;
 }
 /* eslint-enable lingui/no-unlocalized-strings */
+
+function browserSystem(): string | undefined {
+  const ua = navigator.userAgent;
+  if (/Android/.test(ua)) return 'android';
+  // iPadOS asks for pages as a Mac does.
+  if (
+    /iPhone|iPad/.test(ua) ||
+    (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
+  )
+    return 'ios';
+  if (/Windows/.test(ua)) return 'windows';
+  if (/Mac OS X/.test(ua)) return 'macos';
+  if (/Linux/.test(ua)) return 'linux';
+  return undefined;
+}
 
 export class JellyfinError extends Error {
   constructor(
@@ -87,6 +105,38 @@ export class ConnectionError extends Error {
 }
 
 const requestFailed = (status: number) => t`Request failed (${status})`;
+
+export type Purpose = 'download';
+
+/** Servers whose CORS takes the hint headers; an older one refuses every request carrying them. */
+const hinted = new Set<string>();
+
+export function allowHints(base: string, allowed: boolean): void {
+  if (allowed) hinted.add(base);
+  else hinted.delete(base);
+}
+
+/** The headers variant conditions read, with the values the docs list. */
+function hints(device: string, purpose?: Purpose): Record<string, string> {
+  const host = currentHost();
+  const headers: Record<string, string> = {
+    'X-AIOStreams-Client': CLIENT_NAME,
+    // A header carries only Latin-1, which fetch enforces by throwing.
+    'X-AIOStreams-Device': device.replace(/[^\x20-\x7e]/gu, encodeURIComponent),
+  };
+  const system =
+    shell?.platform ??
+    (host.name === 'webos' || host.name === 'tizen'
+      ? host.name
+      : browserSystem());
+  if (system) headers['X-AIOStreams-Platform'] = system;
+  const network = (navigator as { connection?: { type?: string } }).connection
+    ?.type;
+  if (network && network !== 'unknown')
+    headers['X-AIOStreams-Network'] = network;
+  if (purpose) headers['X-AIOStreams-Purpose'] = purpose;
+  return headers;
+}
 
 const GATEWAY_DOWN = new Set([502, 504, 520, 521, 522, 523, 524, 530]);
 
@@ -128,12 +178,19 @@ export class JellyfinClient {
   async request<T>(
     method: 'GET' | 'POST' | 'DELETE',
     path: string,
-    init: { query?: Query; body?: unknown; keepalive?: boolean } = {}
+    init: {
+      query?: Query;
+      body?: unknown;
+      keepalive?: boolean;
+      purpose?: Purpose;
+    } = {}
   ): Promise<T> {
     const headers: Record<string, string> = {
       Authorization: this.authorization,
     };
     if (init.body !== undefined) headers['Content-Type'] = 'application/json';
+    if (hinted.has(this.base))
+      Object.assign(headers, hints(this.deviceName, init.purpose));
     let res: Response;
     try {
       res = await fetch(this.url(path, init.query), {
@@ -171,8 +228,13 @@ export class JellyfinClient {
     return this.request<T>('GET', path, { query });
   }
 
-  post<T>(path: string, body?: unknown, query?: Query): Promise<T> {
-    return this.request<T>('POST', path, { body, query });
+  post<T>(
+    path: string,
+    body?: unknown,
+    query?: Query,
+    purpose?: Purpose
+  ): Promise<T> {
+    return this.request<T>('POST', path, { body, query, purpose });
   }
 
   delete<T>(path: string, query?: Query): Promise<T> {

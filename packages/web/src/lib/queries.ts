@@ -10,7 +10,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import type { JellyfinClient } from './client';
+import type { JellyfinClient, Purpose } from './client';
 import { useSession } from './session';
 import { useFeature } from './server-info';
 import { settings, useSetting } from './settings';
@@ -605,6 +605,7 @@ export async function requestPlaybackInfo(
     kept?: boolean;
     /** What the versions may need; the chosen player's by default. */
     support?: { headers: boolean; youtube: boolean };
+    purpose?: Purpose;
   } = {}
 ): Promise<PlaybackInfoResponse> {
   const support = opts.support ?? playerSupport();
@@ -620,7 +621,8 @@ export async function requestPlaybackInfo(
       ...(support.headers && { EnableRequiredHttpHeaders: true }),
       ...(support.youtube && { EnableYouTube: true }),
     },
-    { userId }
+    { userId },
+    opts.purpose
   );
   return { ...info, MediaSources: info.MediaSources?.map(withOwnId) };
 }
@@ -629,17 +631,28 @@ function usePlaybackInfoRequest() {
   const { client, user } = useSession();
   return (
     itemId: string,
-    opts: { refresh?: boolean; sourceId?: string; kept?: boolean } = {}
+    opts: {
+      refresh?: boolean;
+      sourceId?: string;
+      kept?: boolean;
+      purpose?: Purpose;
+    } = {}
   ) => requestPlaybackInfo(client, user.Id!, itemId, opts);
 }
 
 export function usePlaybackInfoOptions() {
   const request = usePlaybackInfoRequest();
   const key = useKey();
-  return (itemId: string, sourceId?: string) =>
+  return (itemId: string, sourceId?: string, purpose?: Purpose) =>
     queryOptions({
-      queryKey: [...key, 'playback-info', itemId, sourceId ?? null],
-      queryFn: () => request(itemId, { sourceId }),
+      queryKey: [
+        ...key,
+        'playback-info',
+        itemId,
+        sourceId ?? null,
+        ...(purpose ? [purpose] : []),
+      ],
+      queryFn: () => request(itemId, { sourceId, purpose }),
       staleTime: 10 * 60_000,
     });
 }
@@ -656,12 +669,13 @@ export function usePlaybackInfo(
     kept?: boolean;
     sourceId?: string;
     enabled?: boolean;
+    purpose?: Purpose;
   } = {}
 ) {
   const options = usePlaybackInfoOptions();
   const request = usePlaybackInfoRequest();
   return useQuery({
-    ...options(itemId, opts.sourceId),
+    ...options(itemId, opts.sourceId, opts.purpose),
     ...(opts.kept && {
       queryFn: () => request(itemId, { kept: true }),
       staleTime: Infinity,
@@ -671,14 +685,17 @@ export function usePlaybackInfo(
   });
 }
 
-export function useRefreshPlaybackInfo(itemId: string) {
+export function useRefreshPlaybackInfo(itemId: string, purpose?: Purpose) {
   const queryClient = useQueryClient();
   const request = usePlaybackInfoRequest();
   const options = usePlaybackInfoOptions();
   return useMutation({
-    mutationFn: () => request(itemId, { refresh: true }),
+    mutationFn: () => request(itemId, { refresh: true, purpose }),
     onSuccess: (data) =>
-      queryClient.setQueryData(options(itemId).queryKey, data),
+      queryClient.setQueryData(
+        options(itemId, undefined, purpose).queryKey,
+        data
+      ),
   });
 }
 

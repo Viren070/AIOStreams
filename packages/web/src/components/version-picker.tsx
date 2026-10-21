@@ -346,11 +346,12 @@ function Versions({
 }) {
   const { client } = useSession();
   const { item } = request;
+  const purpose = request.download ? 'download' : undefined;
   const info = usePlaybackInfo(
     item.Id!,
-    request.playing ? { kept: true } : { listing: true }
+    request.playing ? { kept: true } : { listing: true, purpose }
   );
-  const refresh = useRefreshPlaybackInfo(item.Id!);
+  const refresh = useRefreshPlaybackInfo(item.Id!, purpose);
   const refreshing = info.isFetching || refresh.isPending;
   const canRefresh = useFeature('refreshVersions');
   const play = usePlay();
