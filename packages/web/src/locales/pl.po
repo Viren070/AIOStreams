@@ -9,7 +9,7 @@ msgstr ""
 "Last-Translator: Krzysztof <krzysiek@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Polish <https://hosted.weblate.org/projects/aiostreams/web-app/pl/>\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
-"PO-Revision-Date: 2026-10-21 11:59+0000\n"
+"PO-Revision-Date: 2026-10-21 14:58+0000\n"
 
 #: src/components/party/party-sheet.tsx
 msgid "(you)"
@@ -792,7 +792,7 @@ msgstr "Zmień skróty"
 
 #: src/components/party/party-sheet.tsx
 msgid "Change speed to catch up"
-msgstr ""
+msgstr "Przyspiesz, aby nadgonić"
 
 #: src/components/version-settings.tsx
 msgid "Change these on a phone, a computer or in a browser."
@@ -909,11 +909,11 @@ msgstr "Konfiguracja"
 
 #: src/components/send-report.tsx
 msgid "Configuration ids are left out of their copy too."
-msgstr ""
+msgstr "Identyfikatory konfiguracji również są pomijane w ich kopii."
 
 #: src/pages/sign-in.tsx
 msgid "Configuration password"
-msgstr ""
+msgstr "Hasło konfiguracji"
 
 #: src/components/no-catalogs.tsx
 msgid "Configure"
@@ -978,41 +978,41 @@ msgstr "Kopiuj link streama"
 
 #: src/pages/settings/interface.tsx
 msgid "Corner button"
-msgstr ""
+msgstr "Przycisk w rogu"
 
 #: src/lib/hosts/shell/index.ts
 msgid "Could not check: {error}"
-msgstr ""
+msgstr "Nie można sprawdzić: {error}"
 
 #: src/pages/settings/apps.tsx
 msgid "Could not connect: {message}"
-msgstr ""
+msgstr "Nie udało się połączyć: {message}"
 
 #: src/components/crash-report.tsx
 msgid "Could not copy it"
-msgstr ""
+msgstr "Nie udało się skopiować"
 
 #: src/components/party/party-sheet.tsx
 msgid "Could not copy the code"
-msgstr ""
+msgstr "Nie udało się skopiować kodu"
 
 #: src/components/party/party-sheet.tsx
 msgid "Could not copy the invite link"
-msgstr ""
+msgstr "Nie udało się skopiować linku z zaproszeniem"
 
 #: src/components/version-picker.tsx
 #: src/pages/player.tsx
 msgid "Could not copy the link"
-msgstr ""
+msgstr "Nie udało się skopiować linku"
 
 #: src/components/version-settings.tsx
 #: src/pages/settings/apps.tsx
 msgid "Could not copy them"
-msgstr ""
+msgstr "Nie udało się ich skopiować"
 
 #: src/components/player/next-episode.tsx
 msgid "Could not find versions of that episode"
-msgstr ""
+msgstr "Nie udało się znaleźć wersji tego odcinka"
 
 #: src/lib/downloads/index.ts
 msgid "Could not find versions: {message}"
