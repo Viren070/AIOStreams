@@ -387,6 +387,11 @@ class ExoEngine(private val context: Context) :
             }
             for ((key, value) in ass.stats()) put(key, value)
             for ((key, value) in cache.stats()) put(key, value)
+            if (cache.caching && seekMap?.isSeekable == true) {
+                val position = player.currentPosition.toDouble()
+                val held = reported.buffered?.find { position >= it.startMs && position <= it.endMs }
+                put("cacheBehindMs", held?.let { position - it.startMs } ?: 0.0)
+            }
         }
     }
 
