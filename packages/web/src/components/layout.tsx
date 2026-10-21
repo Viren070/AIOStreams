@@ -1011,7 +1011,7 @@ function TvRail({
   );
   const divider = <div className="mx-3 my-1 h-px flex-none bg-white/10" />;
   const shade = !open && (
-    <div className="pointer-events-none fixed inset-y-0 start-0 -z-10 w-[36rem] bg-gradient-to-r from-black via-black/85 to-transparent rtl:bg-gradient-to-l opacity-0 transition-opacity duration-200 group-focus-within/rail:opacity-100" />
+    <div className="pointer-events-none fixed inset-y-0 start-0 -z-10 w-[36rem] bg-gradient-to-r from-black via-black/85 to-transparent rtl:bg-gradient-to-l opacity-0 transition-opacity duration-200 will-change-[opacity] group-focus-within/rail:opacity-100" />
   );
   if (floating) {
     return (
@@ -1076,7 +1076,7 @@ function TvRail({
         // The open panel fades in over these, as a changing width lays the page out every frame.
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-y-0 start-0 flex w-20 flex-col gap-1 px-3 py-8 transition-opacity duration-200 group-focus-within/rail:opacity-0"
+          className="pointer-events-none absolute inset-y-0 start-0 flex w-20 flex-col gap-1 px-3 py-8 transition-opacity duration-200 will-change-[opacity] group-focus-within/rail:opacity-0"
         >
           {logo}
           {glyph({ id: 'account' }, <YouIcon />)}
@@ -1093,7 +1093,7 @@ function TvRail({
         className={cn(
           'flex h-full flex-col gap-1 px-3 py-8',
           !open &&
-            'opacity-0 transition-opacity duration-200 [clip-path:inset(0_calc(100%-5rem)_0_0)] group-focus-within/rail:opacity-100 group-focus-within/rail:[clip-path:none]'
+            'opacity-0 transition-opacity duration-200 will-change-[opacity] [clip-path:inset(0_calc(100%-5rem)_0_0)] group-focus-within/rail:opacity-100 group-focus-within/rail:[clip-path:none]'
         )}
       >
         {logo}
