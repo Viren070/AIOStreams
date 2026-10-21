@@ -617,13 +617,16 @@ export function startOf(root: ParentNode = document): HTMLElement | null {
   return el && canFocus(el) ? el : null;
 }
 
-/** The page's start, else the first thing on screen, in its main content where it has one. */
+/** The page's start, else the first thing on screen in its main content, before any navigation there. */
 function first(root: Element): HTMLElement | null {
   const start = startOf(root);
   if (start) return start;
   const area = root.querySelector('main') ?? root;
   const all = (el: Element) => [...el.querySelectorAll<HTMLElement>(FOCUSABLE)];
   return (
+    all(area).find(
+      (el) => onScreen(el) && canFocus(el) && !el.closest('nav')
+    ) ??
     all(area).find((el) => onScreen(el) && canFocus(el)) ??
     all(root).find((el) => canFocus(el)) ??
     null
