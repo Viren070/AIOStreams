@@ -145,6 +145,10 @@ With `fillers`, a filler episode carries `"aiostreams": { "filler": true }` and 
 it plays on to the next episode, unless the user turns that off. Without the feature, those settings
 are hidden.
 
+An episode from `/Shows/NextUp` carries `"aiostreams": { "showWatchedAt": "…" }`: when its show was
+last watched, which Next Up is ordered by, while its own `UserData` stays the episode's. The web app
+merges Next Up into Continue watching by it, beside each resume point's `LastPlayedDate`.
+
 An episode whose `Id` only its own server resolves, because its series is known by one id and its
 episodes by another (an anime listed by its MyAnimeList id, with IMDb episode ids), carries
 `"aiostreams": { "sharedId": "…" }`: the same episode's id under its own episode id, which any
