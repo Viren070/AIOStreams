@@ -33,9 +33,10 @@
   // Stand-ins for what Chromium 69 (2020 Samsung TVs) lacks, which the app
   // calls unguarded: lists join with commas, and names fall back to the code.
   if (window.Intl && !Intl.ListFormat)
-    Intl.ListFormat = function () {
+    Intl.ListFormat = function (locale, options) {
+      var unit = !!options && options.type === 'unit';
       this.format = function (list) {
-        return Array.prototype.slice.call(list).join(', ');
+        return Array.prototype.slice.call(list).join(unit ? ' ' : ', ');
       };
     };
   if (window.Intl && !Intl.DisplayNames)

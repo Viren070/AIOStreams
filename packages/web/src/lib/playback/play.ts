@@ -56,7 +56,7 @@ export function placedNotices(
     const index = (v: SourceInfo) => v.aiostreams?.index ?? -Infinity;
     const after = versions.reduce<SourceInfo | null>(
       (best, v) =>
-        index(v) < at && (!best || index(v) > index(best)) ? v : best,
+        index(v) < at && (!best || index(v) >= index(best)) ? v : best,
       null
     );
     placed.set(after, [...(placed.get(after) ?? []), notice]);
