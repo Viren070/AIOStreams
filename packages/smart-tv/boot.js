@@ -44,6 +44,15 @@
         return undefined;
       };
     };
+  // Code points, which split an emoji joined from several.
+  if (window.Intl && !Intl.Segmenter)
+    Intl.Segmenter = function () {
+      this.segment = function (text) {
+        return Array.from(String(text), function (segment) {
+          return { segment: segment };
+        });
+      };
+    };
   var BACK = [8, 27, 461, 10009];
   var overlay = null;
   var failure = null;
