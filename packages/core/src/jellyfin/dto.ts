@@ -16,6 +16,7 @@ import {
   encodeItemId,
   genreId,
   personId,
+  PLAYLISTS_FOLDER_ID,
   resolveMarkerId,
   sharedEpisodeId,
   studioId,
@@ -355,6 +356,49 @@ export function buildView(
     PrimaryImageAspectRatio: 1.7777,
     ...(requiresGenre(catalog) && { aiostreams: { genreRequired: true } }),
     _aio: { descriptor: { k: 'view', t: catalog.type, c: catalog.id } },
+  };
+}
+
+export function buildPlaylistsFolder(ctx: ItemBuildContext): JellyfinItem {
+  return {
+    ...baseItem(
+      ctx,
+      PLAYLISTS_FOLDER_ID,
+      'Playlists',
+      'ManualPlaylistsFolder',
+      true
+    ),
+    CollectionType: 'playlists',
+    DisplayPreferencesId: PLAYLISTS_FOLDER_ID,
+    Path: '/aiostreams/playlists',
+  };
+}
+
+export function buildPlaylist(
+  ctx: ItemBuildContext,
+  playlist: {
+    id: string;
+    name: string;
+    count: number;
+    createdAt: number;
+    updatedAt: number;
+  },
+  images: ItemImages = {}
+): JellyfinItem {
+  rememberImages(playlist.id, images);
+  return {
+    ...baseItem(ctx, playlist.id, playlist.name, 'Playlist', true),
+    ...imageTagsFor(images),
+    MediaType: 'Video',
+    CanDelete: true,
+    DateCreated: new Date(playlist.createdAt).toISOString(),
+    DateLastMediaAdded: new Date(playlist.updatedAt).toISOString(),
+    ChildCount: playlist.count,
+    RecursiveItemCount: playlist.count,
+    ParentId: PLAYLISTS_FOLDER_ID,
+    DisplayPreferencesId: playlist.id,
+    Path: `/aiostreams/playlists/${playlist.id}`,
+    PrimaryImageAspectRatio: 0.6666,
   };
 }
 

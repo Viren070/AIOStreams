@@ -1,4 +1,4 @@
-import { createHash } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 import type { Manifest } from '../db/schemas.js';
 import { JellyfinRepository } from '../db/repositories/jellyfin.js';
 import { Cache } from '../utils/cache.js';
@@ -20,10 +20,11 @@ const logger = createLogger('jellyfin');
  * 16-byte ids, rendered as 32 lowercase hex. Byte 0 says what follows:
  *   a1 packed content (kind, id type, media type, numeric id, season, episode)
  *   a2 view    a3 genre    a5 person    a6 media source    a7 studio
- *   b2 hashed content
+ *   a8 playlist    b2 hashed content
  * Packed ids need no storage. Views and genres are found by scanning the
  * config's catalogs, persons live in a cache, media sources in the playback
- * memo, and hashed content in a small durable table.
+ * memo, playlists in their own table, and hashed content in a small durable
+ * table.
  */
 const MARK_PACKED = 0xa1;
 const MARK_VIEW = 0xa2;
@@ -32,6 +33,7 @@ const MARK_PERSON = 0xa5;
 const MARK_SOURCE = 0xa6;
 /* Never decoded: a studio has nothing to browse. */
 const MARK_STUDIO = 0xa7;
+const MARK_PLAYLIST = 0xa8;
 const MARK_HASHED = 0xb2;
 
 const KIND_CODES: Record<ContentDescriptor['k'], number> = {
@@ -365,6 +367,14 @@ export function mediaSourceId(uuid: string, identity: string): string {
   return marked(MARK_SOURCE, `source|${uuid}|${identity}`);
 }
 
+export function newPlaylistId(): string {
+  const buf = randomBytes(16);
+  buf[0] = MARK_PLAYLIST;
+  return buf.toString('hex');
+}
+
+export const PLAYLISTS_FOLDER_ID = marked(MARK_PLAYLIST, 'playlists');
+
 /** The id of the "Load versions" source, derived so nothing has to store it. */
 export function resolveMarkerId(uuid: string, itemId: string): string {
   return mediaSourceId(uuid, `resolve|${itemId}`);
@@ -396,7 +406,9 @@ export interface DecodeScope {
 
 export type DecodedId =
   | { kind: 'descriptor'; descriptor: JellyfinDescriptor }
-  | { kind: 'source'; msid: string };
+  | { kind: 'source'; msid: string }
+  | { kind: 'playlist'; id: string }
+  | { kind: 'playlists' };
 
 /**
  * Whether decoding this id needs the catalog list, which only view and genre
@@ -459,6 +471,10 @@ export async function decodeItemId(
     }
     case MARK_SOURCE:
       return { kind: 'source', msid: hex };
+    case MARK_PLAYLIST:
+      return hex === PLAYLISTS_FOLDER_ID
+        ? { kind: 'playlists' }
+        : { kind: 'playlist', id: hex };
     case MARK_HASHED: {
       const cached = await idCache.get(hex).catch(() => undefined);
       if (cached) return { kind: 'descriptor', descriptor: cached };

@@ -78,6 +78,12 @@ export {
   type JellyfinAddressTarget,
 } from './repositories/jellyfin-addresses.js';
 export {
+  JellyfinPlaylistRepository,
+  PLAYLIST_LIMITS,
+  type JellyfinPlaylist,
+  type PlaylistOwner,
+} from './repositories/jellyfin-playlists.js';
+export {
   AppReportRepository,
   normaliseReportCode,
   formatReportCode,
