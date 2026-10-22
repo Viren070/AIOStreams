@@ -528,7 +528,7 @@ class MoviEngine implements PlayerEngine {
     };
     this.session = s;
     const el = this.video.current;
-    if (!el) return;
+    if (!el) return this.fail(failedToStart());
     if (typeof WebAssembly === 'undefined' || !window.AudioContext)
       return this.fail(failedToStart());
     const surface = this.mount(el);
