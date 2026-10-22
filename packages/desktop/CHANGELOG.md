@@ -1,5 +1,53 @@
 # Changelog
 
+## [0.19.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.18.0...desktop-v0.19.0) (2026-10-22)
+
+
+### Features
+
+* **desktop:** send mpv's seekable cache ranges as buffered ([72b627d](https://github.com/Viren070/AIOStreams/commit/72b627d2601c51dd9ad5294dea426a6f65c44352))
+* **desktop:** size mpv's cache from the cache size setting ([78243fa](https://github.com/Viren070/AIOStreams/commit/78243fa627389de48af52517124e51c65e050688))
+* **web:** add a random pick for a show's episodes and your favourites ([6943c04](https://github.com/Viren070/AIOStreams/commit/6943c04a6326d5a4fa5c64f8c2bae98043683f19))
+* **web:** add a setting for the reactions sent in a party ([6943c04](https://github.com/Viren070/AIOStreams/commit/6943c04a6326d5a4fa5c64f8c2bae98043683f19))
+* **web:** add a time-left toggle and an end time above the player's seek bar ([6943c04](https://github.com/Viren070/AIOStreams/commit/6943c04a6326d5a4fa5c64f8c2bae98043683f19))
+* **web:** allow a negative subtitle height ([6943c04](https://github.com/Viren070/AIOStreams/commit/6943c04a6326d5a4fa5c64f8c2bae98043683f19))
+* **web:** ask for a second Back before leaving the Android app from Home ([6943c04](https://github.com/Viren070/AIOStreams/commit/6943c04a6326d5a4fa5c64f8c2bae98043683f19))
+* **web:** draw each buffered range on the seek bar ([6943c04](https://github.com/Viren070/AIOStreams/commit/6943c04a6326d5a4fa5c64f8c2bae98043683f19))
+* **web:** leave the thumbnail out of double-tap seek previews ([6943c04](https://github.com/Viren070/AIOStreams/commit/6943c04a6326d5a4fa5c64f8c2bae98043683f19))
+* **web:** put the profile first in the TV rail and corner menu ([6943c04](https://github.com/Viren070/AIOStreams/commit/6943c04a6326d5a4fa5c64f8c2bae98043683f19))
+* **web:** reorder the player's option buttons by purpose ([6943c04](https://github.com/Viren070/AIOStreams/commit/6943c04a6326d5a4fa5c64f8c2bae98043683f19))
+* **web:** select tabs as a remote or keyboard moves onto them ([6943c04](https://github.com/Viren070/AIOStreams/commit/6943c04a6326d5a4fa5c64f8c2bae98043683f19))
+* **web:** send continue watching to the Android TV app's Watch Next row ([6943c04](https://github.com/Viren070/AIOStreams/commit/6943c04a6326d5a4fa5c64f8c2bae98043683f19))
+* **web:** send X-AIOStreams-* headers to servers listing clientHints ([6943c04](https://github.com/Viren070/AIOStreams/commit/6943c04a6326d5a4fa5c64f8c2bae98043683f19))
+* **web:** show cover immediately on auto play first ([6943c04](https://github.com/Viren070/AIOStreams/commit/6943c04a6326d5a4fa5c64f8c2bae98043683f19))
+* **web:** show party reactions beside the open party sheet ([6943c04](https://github.com/Viren070/AIOStreams/commit/6943c04a6326d5a4fa5c64f8c2bae98043683f19))
+* **web:** show the cache size setting in the desktop app ([6943c04](https://github.com/Viren070/AIOStreams/commit/6943c04a6326d5a4fa5c64f8c2bae98043683f19))
+* **web:** show the cache's time behind in Exo stats ([6943c04](https://github.com/Viren070/AIOStreams/commit/6943c04a6326d5a4fa5c64f8c2bae98043683f19))
+* **web:** sort the merged Continue watching row by watch time ([6943c04](https://github.com/Viren070/AIOStreams/commit/6943c04a6326d5a4fa5c64f8c2bae98043683f19))
+
+
+### Bug Fixes
+
+* **web:** abort item and image fetches nothing waits on ([6943c04](https://github.com/Viren070/AIOStreams/commit/6943c04a6326d5a4fa5c64f8c2bae98043683f19))
+* **web:** dont gate party settings on party feature ([6943c04](https://github.com/Viren070/AIOStreams/commit/6943c04a6326d5a4fa5c64f8c2bae98043683f19))
+* **web:** drop the focus ring from body and #root ([6943c04](https://github.com/Viren070/AIOStreams/commit/6943c04a6326d5a4fa5c64f8c2bae98043683f19))
+* **web:** focus the custom CSS toast's Keep when applied from keys ([6943c04](https://github.com/Viren070/AIOStreams/commit/6943c04a6326d5a4fa5c64f8c2bae98043683f19))
+* **web:** keep the TV rail's fading layers composited with will-change ([6943c04](https://github.com/Viren070/AIOStreams/commit/6943c04a6326d5a4fa5c64f8c2bae98043683f19))
+* **web:** move along the player menu's stepper rows with left and right ([6943c04](https://github.com/Viren070/AIOStreams/commit/6943c04a6326d5a4fa5c64f8c2bae98043683f19))
+* **web:** paint the page's scrollbar in the page colour ([6943c04](https://github.com/Viren070/AIOStreams/commit/6943c04a6326d5a4fa5c64f8c2bae98043683f19))
+* **web:** send a pending settings save before reading them back ([6943c04](https://github.com/Viren070/AIOStreams/commit/6943c04a6326d5a4fa5c64f8c2bae98043683f19))
+* **web:** send a segment already skipped as offered ([6943c04](https://github.com/Viren070/AIOStreams/commit/6943c04a6326d5a4fa5c64f8c2bae98043683f19))
+* **web:** size the shut TV rail's buttons to its icons ([6943c04](https://github.com/Viren070/AIOStreams/commit/6943c04a6326d5a4fa5c64f8c2bae98043683f19))
+* **web:** skip the navigation when a key press starts focus on a page ([6943c04](https://github.com/Viren070/AIOStreams/commit/6943c04a6326d5a4fa5c64f8c2bae98043683f19))
+* **web:** take Back in the profile PIN prompt ([6943c04](https://github.com/Viren070/AIOStreams/commit/6943c04a6326d5a4fa5c64f8c2bae98043683f19))
+
+
+### Performance Improvements
+
+* **web:** fade cards and artwork in only when on screen ([6943c04](https://github.com/Viren070/AIOStreams/commit/6943c04a6326d5a4fa5c64f8c2bae98043683f19))
+* **web:** find glide layers among a box's children ([6943c04](https://github.com/Viren070/AIOStreams/commit/6943c04a6326d5a4fa5c64f8c2bae98043683f19))
+* **web:** save a query's answer once it stops changing ([6943c04](https://github.com/Viren070/AIOStreams/commit/6943c04a6326d5a4fa5c64f8c2bae98043683f19))
+
 ## [0.18.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.17.0...desktop-v0.18.0) (2026-10-20)
 
 
