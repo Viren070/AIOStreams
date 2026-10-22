@@ -1490,6 +1490,7 @@ msgid "Finding a version to download"
 msgstr "Suche Version zum Herunterladen"
 
 #: src/components/version-picker.tsx src/pages/downloads.tsx
+#: src/pages/player.tsx
 msgid "Finding a version…"
 msgstr "Suche Version…"
 
@@ -1680,7 +1681,8 @@ msgid "Host"
 msgstr "Gastgeber"
 
 #: src/pages/settings/subtitles.tsx
-msgid "How far subtitles sit above their usual place near the bottom."
+#, fuzzy
+msgid "How far subtitles sit above their usual place near the bottom, or below it down to the edge."
 msgstr "Vertikaler Abstand der Untertitel zum unteren Bildschirmrand."
 
 #: src/pages/settings/playback.tsx
