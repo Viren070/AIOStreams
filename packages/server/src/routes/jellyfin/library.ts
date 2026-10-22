@@ -69,6 +69,7 @@ import {
   nextUpForSeries,
   rememberListMarkers,
   seasonsForSeries,
+  userViews,
   viewItems,
 } from './items.js';
 import { metahubPoster } from './images.js';
@@ -386,7 +387,7 @@ async function itemsFromRows(
 router.get(
   ['/UserViews', '/Users/:userId/Views'],
   jf(async (req, res, ctx) => {
-    const items = await viewItems(ctx);
+    const items = await userViews(ctx);
     send(req, res, items, items.length);
   })
 );
@@ -742,7 +743,7 @@ async function handleItems(
   }
 
   if (!parentId && !recursive) {
-    const views = await viewItems(ctx);
+    const views = await userViews(ctx);
     send(req, res, views, views.length);
     return;
   }

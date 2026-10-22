@@ -26,6 +26,7 @@ import playbackRouter from './playback.js';
 import subtitlesRouter from './subtitles.js';
 import imagesRouter from './images.js';
 import playstateRouter from './playstate.js';
+import playlistsRouter from './playlists.js';
 import webRouter from './web.js';
 import { jellyfinWebRoot } from '../../app.js';
 
@@ -214,6 +215,7 @@ export function createJellyfinRouter(): Router {
   router.use(subtitlesRouter);
   router.use(imagesRouter);
   router.use(playstateRouter);
+  router.use(playlistsRouter);
   router.use(libraryRouter);
   router.use(segmentsRouter);
   router.use(stubsRouter);

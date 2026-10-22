@@ -6,6 +6,11 @@ import {
   buildGenre,
   buildMediaSource,
   buildPerson,
+  buildPlaylist,
+  buildPlaylistsFolder,
+  JellyfinPlaylistRepository,
+  type JellyfinPlaylist,
+  type PlaylistOwner,
   findPerson,
   imageTagsFor,
   recallImages,
@@ -264,6 +269,45 @@ export async function viewItems(
   return views.map((v) => buildView(ctx.build, v.catalog, v.collectionType));
 }
 
+/** The libraries and, as in Jellyfin once the user has a playlist, their folder. */
+export async function userViews(
+  ctx: JellyfinRequestContext
+): Promise<JellyfinItem[]> {
+  const [views, playlists] = await Promise.all([
+    viewItems(ctx),
+    JellyfinPlaylistRepository.any(playlistOwner(ctx)),
+  ]);
+  return playlists ? [...views, buildPlaylistsFolder(ctx.build)] : views;
+}
+
+export function playlistOwner(ctx: JellyfinRequestContext): PlaylistOwner {
+  return { uuid: ctx.uuid, persona: ctx.persona?.id ?? '' };
+}
+
+/** A playlist, pictured by its first title, or that episode's show. */
+export async function playlistItem(
+  ctx: JellyfinRequestContext,
+  playlist: JellyfinPlaylist
+): Promise<JellyfinItem> {
+  const first = playlist.items[0]
+    ? await decodeForRequest(ctx, playlist.items[0])
+    : null;
+  const built =
+    first?.kind === 'descriptor'
+      ? await itemFromDescriptor(ctx, first.descriptor, { bare: true }).catch(
+          () => null
+        )
+      : null;
+  const pictured =
+    built?.Type === 'Episode' ? (built.SeriesId as string) : built?.Id;
+  const images = pictured ? ((await recallImages(pictured)) ?? {}) : {};
+  return buildPlaylist(
+    ctx.build,
+    { ...playlist, count: playlist.items.length },
+    images
+  );
+}
+
 function episodeRef(
   meta: ParsedMeta,
   group: SeasonGroup,
@@ -433,7 +477,11 @@ function findVideo(
 export async function itemFromDescriptor(
   ctx: JellyfinRequestContext,
   d: JellyfinDescriptor,
-  opts: { playstate?: WatchStateRow } = {}
+  opts: {
+    playstate?: WatchStateRow;
+    /** Without user data, which a list attaches for all its items at once. */
+    bare?: boolean;
+  } = {}
 ): Promise<JellyfinItem | null> {
   switch (d.k) {
     case 'view': {
@@ -475,7 +523,9 @@ export async function itemFromDescriptor(
         { ...meta, type: d.t },
         { boxset: true, childCount: knownMemberCount(meta) }
       );
-      return attachUserData(ctx, [item]).then(([built]) => built);
+      return opts.bare
+        ? item
+        : attachUserData(ctx, [item]).then(([built]) => built);
     }
     case 'movie':
     case 'series': {
@@ -508,7 +558,7 @@ export async function itemFromDescriptor(
       });
       if (asBoxset) item.Id = encodeItemId(d);
       // A show is played by its episodes, which its own row does not hold.
-      if (!opts.playstate || d.k === 'series')
+      if (!opts.bare && (!opts.playstate || d.k === 'series'))
         await attachUserData(ctx, [item]);
       return item;
     }
@@ -538,7 +588,11 @@ export async function itemFromDescriptor(
       };
       const row =
         opts.playstate ??
-        (await watchRowsFor(ctx.watch, [contentRefOf(d)])).get(itemKeyOf(d));
+        (opts.bare
+          ? undefined
+          : (await watchRowsFor(ctx.watch, [contentRefOf(d)])).get(
+              itemKeyOf(d)
+            ));
       return buildEpisode(ctx.build, meta, seriesItem, group, video, row);
     }
   }
@@ -925,6 +979,14 @@ export async function itemForId(
 ): Promise<JellyfinItem | null> {
   const decoded = await decodeForRequest(ctx, raw);
   if (!decoded) return null;
+  if (decoded.kind === 'playlists') return buildPlaylistsFolder(ctx.build);
+  if (decoded.kind === 'playlist') {
+    const playlist = await JellyfinPlaylistRepository.get(
+      playlistOwner(ctx),
+      decoded.id
+    );
+    return playlist ? playlistItem(ctx, playlist) : null;
+  }
   if (decoded.kind === 'source') {
     const pointer = await resolveByMediaSource(decoded.msid);
     if (!pointer || pointer.uuid !== ctx.uuid) return null;
