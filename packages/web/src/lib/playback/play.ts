@@ -52,9 +52,13 @@ export function placedNotices(
   for (const notice of (info?.MediaSources ?? []) as SourceInfo[]) {
     if (!isNotice(notice)) continue;
     const at = notice.aiostreams?.index ?? Infinity;
-    const after =
-      versions.filter((v) => (v.aiostreams?.index ?? -Infinity) < at).pop() ??
-      null;
+    // By the server's order, as a TV lists versions it can't decode last.
+    const index = (v: SourceInfo) => v.aiostreams?.index ?? -Infinity;
+    const after = versions.reduce<SourceInfo | null>(
+      (best, v) =>
+        index(v) < at && (!best || index(v) > index(best)) ? v : best,
+      null
+    );
     placed.set(after, [...(placed.get(after) ?? []), notice]);
   }
   return placed;
