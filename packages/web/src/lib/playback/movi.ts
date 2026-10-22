@@ -322,7 +322,10 @@ class MoviEngine implements PlayerEngine {
     const s = this.session;
     const ready = s?.phase === 'ready';
     moviDebug('seek', { ms: Math.round(ms), ready });
-    if (ready) void s.player?.seek(ms / 1000);
+    if (!ready) return;
+    void s.player?.seek(ms / 1000);
+    // A seek while paused brings no time update to move the cue.
+    this.drawText(ms);
   }
 
   setVolume(volume: number, muted: boolean): void {
@@ -756,11 +759,12 @@ class MoviEngine implements PlayerEngine {
   }
 
   // Movi reports the time every frame it plays, as a <video> times its cues.
-  private drawText(): void {
+  private drawText(
+    positionMs = (this.session?.player?.getCurrentTime() ?? 0) * 1000
+  ): void {
     const { subtitle } = this.intent;
     const list = subtitle ? this.subs.cues.get(subtitle) : undefined;
-    const at =
-      (this.session?.player?.getCurrentTime() ?? 0) * 1000 - this.subs.delayMs;
+    const at = positionMs - this.subs.delayMs;
     this.showText(list ? textAt(list, at) : '');
   }
 
