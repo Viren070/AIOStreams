@@ -1,4 +1,4 @@
 # The libmpv AAR the app ships: a release of github.com/Viren070/aiostreams-libs, which pins
 # every source it builds, and the AAR's SHA-256.
-url=https://github.com/Viren070/aiostreams-libs/releases/download/20261019-9439555/mpv-android-lib-20261019-9439555.aar
-sha256=59a737952a40b6d92981836565b2e4e015f63ebecbc04a7ee29f0464c2f75bdf
+url=https://github.com/Viren070/aiostreams-libs/releases/download/20261022-15de479/mpv-android-lib-20261022-15de479.aar
+sha256=fbc1a0ffd8709c4dbd3d09594ecc32f493167be4603810e799dc393adea1bb00
