@@ -107,6 +107,11 @@ html body[data-scroll-locked] {
 ::-webkit-scrollbar-thumb:hover {
   background-color: rgb(128 128 128 / 0.6);
 }
+/* The page's scrollbar takes its style from the body and lies beyond the
+   backdrop, so a see-through page would show the video surface there. */
+body::-webkit-scrollbar {
+  background-color: var(--background);
+}
 @supports not selector(::-webkit-scrollbar) {
   html {
     scrollbar-width: thin;
