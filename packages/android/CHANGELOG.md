@@ -1,5 +1,58 @@
 # Changelog
 
+## [0.9.0](https://github.com/Viren070/AIOStreams/compare/android-v0.8.0...android-v0.9.0) (2026-10-22)
+
+
+### Features
+
+* **android:** add a watch-next message that fills the TV's Watch Next row ([2cc0a3e](https://github.com/Viren070/AIOStreams/commit/2cc0a3edfc36e288aa0accb2e736681c30ea261d))
+* **android:** add cacheBehindMs to Exo stats ([ca0af6e](https://github.com/Viren070/AIOStreams/commit/ca0af6e1c15cb75f79466cb737103cdf26fd7584))
+* **android:** report buffered time ranges in player-state ([a5879cf](https://github.com/Viren070/AIOStreams/commit/a5879cf75bd6385aafabdd9fa19ef8171dfbf334))
+* **web:** add a random pick for a show's episodes and your favourites ([136876d](https://github.com/Viren070/AIOStreams/commit/136876dfdcd963f8780d8374a57f53a35401e97c))
+* **web:** add a setting for the reactions sent in a party ([136876d](https://github.com/Viren070/AIOStreams/commit/136876dfdcd963f8780d8374a57f53a35401e97c))
+* **web:** add a time-left toggle and an end time above the player's seek bar ([136876d](https://github.com/Viren070/AIOStreams/commit/136876dfdcd963f8780d8374a57f53a35401e97c))
+* **web:** allow a negative subtitle height ([136876d](https://github.com/Viren070/AIOStreams/commit/136876dfdcd963f8780d8374a57f53a35401e97c))
+* **web:** ask for a second Back before leaving the Android app from Home ([136876d](https://github.com/Viren070/AIOStreams/commit/136876dfdcd963f8780d8374a57f53a35401e97c))
+* **web:** draw each buffered range on the seek bar ([136876d](https://github.com/Viren070/AIOStreams/commit/136876dfdcd963f8780d8374a57f53a35401e97c))
+* **web:** leave the thumbnail out of double-tap seek previews ([136876d](https://github.com/Viren070/AIOStreams/commit/136876dfdcd963f8780d8374a57f53a35401e97c))
+* **web:** put the profile first in the TV rail and corner menu ([136876d](https://github.com/Viren070/AIOStreams/commit/136876dfdcd963f8780d8374a57f53a35401e97c))
+* **web:** reorder the player's option buttons by purpose ([136876d](https://github.com/Viren070/AIOStreams/commit/136876dfdcd963f8780d8374a57f53a35401e97c))
+* **web:** select tabs as a remote or keyboard moves onto them ([136876d](https://github.com/Viren070/AIOStreams/commit/136876dfdcd963f8780d8374a57f53a35401e97c))
+* **web:** send continue watching to the Android TV app's Watch Next row ([136876d](https://github.com/Viren070/AIOStreams/commit/136876dfdcd963f8780d8374a57f53a35401e97c))
+* **web:** send X-AIOStreams-* headers to servers listing clientHints ([136876d](https://github.com/Viren070/AIOStreams/commit/136876dfdcd963f8780d8374a57f53a35401e97c))
+* **web:** show cover immediately on auto play first ([136876d](https://github.com/Viren070/AIOStreams/commit/136876dfdcd963f8780d8374a57f53a35401e97c))
+* **web:** show party reactions beside the open party sheet ([136876d](https://github.com/Viren070/AIOStreams/commit/136876dfdcd963f8780d8374a57f53a35401e97c))
+* **web:** show the cache size setting in the desktop app ([136876d](https://github.com/Viren070/AIOStreams/commit/136876dfdcd963f8780d8374a57f53a35401e97c))
+* **web:** show the cache's time behind in Exo stats ([136876d](https://github.com/Viren070/AIOStreams/commit/136876dfdcd963f8780d8374a57f53a35401e97c))
+* **web:** sort the merged Continue watching row by watch time ([136876d](https://github.com/Viren070/AIOStreams/commit/136876dfdcd963f8780d8374a57f53a35401e97c))
+
+
+### Bug Fixes
+
+* **android:** evict past the next landing when the stream cache is full ([7af178c](https://github.com/Viren070/AIOStreams/commit/7af178c473c2ba5b3f05315144ae494435966e26))
+* **android:** pad ExoPlayer text subtitles by mpv's bottom margin ([d0bda72](https://github.com/Viren070/AIOStreams/commit/d0bda7269f58f8e4f54c7ef60e3fb4a109f7bbef))
+* **web:** abort item and image fetches nothing waits on ([136876d](https://github.com/Viren070/AIOStreams/commit/136876dfdcd963f8780d8374a57f53a35401e97c))
+* **web:** dont gate party settings on party feature ([136876d](https://github.com/Viren070/AIOStreams/commit/136876dfdcd963f8780d8374a57f53a35401e97c))
+* **web:** drop the focus ring from body and #root ([136876d](https://github.com/Viren070/AIOStreams/commit/136876dfdcd963f8780d8374a57f53a35401e97c))
+* **web:** focus the custom CSS toast's Keep when applied from keys ([136876d](https://github.com/Viren070/AIOStreams/commit/136876dfdcd963f8780d8374a57f53a35401e97c))
+* **web:** keep the TV rail's fading layers composited with will-change ([136876d](https://github.com/Viren070/AIOStreams/commit/136876dfdcd963f8780d8374a57f53a35401e97c))
+* **web:** move along the player menu's stepper rows with left and right ([136876d](https://github.com/Viren070/AIOStreams/commit/136876dfdcd963f8780d8374a57f53a35401e97c))
+* **web:** paint the page's scrollbar in the page colour ([136876d](https://github.com/Viren070/AIOStreams/commit/136876dfdcd963f8780d8374a57f53a35401e97c))
+* **web:** send a pending settings save before reading them back ([136876d](https://github.com/Viren070/AIOStreams/commit/136876dfdcd963f8780d8374a57f53a35401e97c))
+* **web:** send a segment already skipped as offered ([136876d](https://github.com/Viren070/AIOStreams/commit/136876dfdcd963f8780d8374a57f53a35401e97c))
+* **web:** size the shut TV rail's buttons to its icons ([136876d](https://github.com/Viren070/AIOStreams/commit/136876dfdcd963f8780d8374a57f53a35401e97c))
+* **web:** skip the navigation when a key press starts focus on a page ([136876d](https://github.com/Viren070/AIOStreams/commit/136876dfdcd963f8780d8374a57f53a35401e97c))
+* **web:** take Back in the profile PIN prompt ([136876d](https://github.com/Viren070/AIOStreams/commit/136876dfdcd963f8780d8374a57f53a35401e97c))
+
+
+### Performance Improvements
+
+* **android:** skip empty and fill opaque blocks when blending subtitles ([413f9e5](https://github.com/Viren070/AIOStreams/commit/413f9e5b82cd532be88313e869be541a157df61c))
+* **android:** update libmpv for the libass patches ([454e8b4](https://github.com/Viren070/AIOStreams/commit/454e8b43c82ccbd2564e6a2dd6aed20d1d893c45))
+* **web:** fade cards and artwork in only when on screen ([136876d](https://github.com/Viren070/AIOStreams/commit/136876dfdcd963f8780d8374a57f53a35401e97c))
+* **web:** find glide layers among a box's children ([136876d](https://github.com/Viren070/AIOStreams/commit/136876dfdcd963f8780d8374a57f53a35401e97c))
+* **web:** save a query's answer once it stops changing ([136876d](https://github.com/Viren070/AIOStreams/commit/136876dfdcd963f8780d8374a57f53a35401e97c))
+
 ## [0.8.0](https://github.com/Viren070/AIOStreams/compare/android-v0.7.0...android-v0.8.0) (2026-10-20)
 
 
