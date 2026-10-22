@@ -171,6 +171,8 @@ interface Intent {
   paused: boolean;
   audio: string | null;
   subtitle: string | null;
+  /** Null when the page keeps none, as `file.volume` is. */
+  volume: { volume: number; muted: boolean } | null;
 }
 
 /** Subtitles the page draws, which Movi doesn't know. */
@@ -244,6 +246,7 @@ class MoviEngine implements PlayerEngine {
     paused: false,
     audio: null,
     subtitle: null,
+    volume: null,
   };
   private subs: PageSubtitles = {
     delayMs: 0,
@@ -273,6 +276,7 @@ class MoviEngine implements PlayerEngine {
       paused: !!file.paused,
       audio: null,
       subtitle: null,
+      volume: file.volume,
     };
     // The text on screen is the previous file's until stop() clears it.
     this.subs = {
@@ -319,6 +323,7 @@ class MoviEngine implements PlayerEngine {
   }
 
   setVolume(volume: number, muted: boolean): void {
+    this.intent.volume = { volume, muted };
     const p = this.session?.player;
     p?.setVolume(Math.min(1, volume));
     p?.setMuted(muted);
@@ -597,7 +602,7 @@ class MoviEngine implements PlayerEngine {
     p.setSubtitleOverlay(overlay);
     p.setFitMode(FIT[this.fit]);
     p.setPlaybackRate(this.rate);
-    const volume = this.file?.volume;
+    const { volume } = this.intent;
     if (volume) {
       p.setVolume(Math.min(1, volume.volume));
       p.setMuted(volume.muted);
