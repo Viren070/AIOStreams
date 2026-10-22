@@ -49,6 +49,7 @@ const RECOVERIES = 2;
 /** Playing this long after a reopen means the stream is well again. */
 const RECOVERED_MS = 30_000;
 const STATS_MS = 1_000;
+const BUFFER_MS = 1_000;
 
 type Assessment = Awaited<ReturnType<typeof MoviPlayer.assessPlayback>>;
 
@@ -199,6 +200,8 @@ interface Session {
   phase: 'resolving' | 'loading' | 'ready';
   /** Movi passes through a pause on its way to the first frame, which isn't the user's. */
   swallowPause: boolean;
+  /** Movi reports time only while playing, so a paused bar is refreshed on this. */
+  bufferTimer: number;
   openedAt: number;
   assessment: Assessment | null;
 }
@@ -432,8 +435,6 @@ class MoviEngine implements PlayerEngine {
   private bind(p: MoviPlayer): void {
     p.on('stateChange', this.onStateChange);
     p.on('timeUpdate', this.onTimeUpdate);
-    // Movi never emits this.
-    p.on('bufferUpdate', this.onBufferUpdate);
     p.on('durationChange', this.onDurationChange);
     p.on('tracksChange', this.onTracksChange);
     p.on('ended', this.onEnded);
@@ -473,10 +474,6 @@ class MoviEngine implements PlayerEngine {
       positionMs,
       buffered: this.buffered(positionMs),
     });
-  };
-
-  private onBufferUpdate = (): void => {
-    this.emit({ type: 'position', buffered: this.buffered() });
   };
 
   private onDurationChange = (seconds: number): void => {
@@ -521,6 +518,7 @@ class MoviEngine implements PlayerEngine {
       abort: new AbortController(),
       phase: 'resolving',
       swallowPause: !this.intent.paused,
+      bufferTimer: 0,
       openedAt: 0,
       assessment: null,
     };
@@ -573,6 +571,7 @@ class MoviEngine implements PlayerEngine {
   private stop(): void {
     const s = this.session;
     s?.abort.abort();
+    clearInterval(s?.bufferTimer);
     this.showText('');
     const p = s?.player;
     if (s && p) {
@@ -660,6 +659,10 @@ class MoviEngine implements PlayerEngine {
       if (!this.live(s)) return;
     }
     s.swallowPause = !this.intent.paused;
+    s.bufferTimer = window.setInterval(() => {
+      if (p.getState() === 'paused')
+        this.emit({ type: 'position', buffered: this.buffered() });
+    }, BUFFER_MS);
     if (this.intent.paused) return this.set({ paused: true, waiting: false });
     try {
       await p.play();
