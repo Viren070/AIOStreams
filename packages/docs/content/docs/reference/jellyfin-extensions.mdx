@@ -33,7 +33,8 @@ Standard Jellyfin clients ignore all of these, so offering them never breaks one
       "genreRequired": 1,
       "fillers": 1,
       "parties": 1,
-      "reports": 1
+      "reports": 1,
+      "playlists": 1
     },
     "css": null,
     "parties": { "relay": "off", "defaultRelay": null },
@@ -74,6 +75,7 @@ value is that feature's version.
 | `fillers`         | [A filler or recap episode says so](#episodes)                                            |
 | `parties`         | [SyncPlay, and a watch party relay](#watch-parties) on the server's origin                |
 | `reports`         | [`POST /AIOStreams/Reports`](#reports), while `aiostreams.reports` isn't `null`           |
+| `playlists`       | [Jellyfin's `/Playlists` API](#playlists)                                                 |
 
 Every `/AIOStreams/*` endpoint takes the same authorization as the rest of the API. AIOStreams
 refuses them to API keys, which belong to other tools.
@@ -287,6 +289,20 @@ reactions and what plays travel sealed with that key, as base64url of a 12-byte 
 ciphertext of their JSON, so a relay keeps only timing. The messages themselves are typed in
 `packages/core/src/sync/protocol.ts`.
 
+## Playlists
+
+The web app keeps playlists with Jellyfin's standard `/Playlists` API, and lists them with
+`/Items?IncludeItemTypes=Playlist&Recursive=true`. Stock Jellyfin has it, so the app offers
+playlists on a server that sends no `aiostreams` object; one that does lists `playlists` in its
+features for the app to offer them.
+
+Before adding, the app reads the playlist's `ItemIds` and leaves out what is already there, as
+Jellyfin keeps a title twice. It removes and moves entries by their `PlaylistItemId`.
+
+A title played from a playlist carries the playlist's id, so it plays on to the playlist's next
+title rather than its next episode, as do the player's previous and next buttons. The app hands
+the rest of the playlist to a player with a queue of its own, and to a watch party.
+
 ## Remote control and links
 
 Nothing here is an extension: the web app takes Jellyfin's standard remote control. Each time its
@@ -301,8 +317,9 @@ socket it acts on:
 | `Playstate`                                                         | Pause, unpause, play/pause, stop, seek, next, previous, and rewind and fast forward by the device's skip length             |
 | `GeneralCommand` `SetAudioStreamIndex` and `SetSubtitleStreamIndex` | Picks the track at that index in the playing version's `MediaStreams`; `-1` turns subtitles off                             |
 
-Its progress reports carry `AudioStreamIndex` and `SubtitleStreamIndex` in the same terms. Other
-play commands, which queue, are ignored.
+Its progress reports carry `AudioStreamIndex` and `SubtitleStreamIndex` in the same terms. `Play`
+with `PlayNext` or `PlayLast`, while it plays a title from a [playlist](#playlists), adds the titles
+to that playlist, after the one playing or at the end; otherwise they are ignored.
 
 The desktop and Android apps also open links, so a page elsewhere can open a title in them:
 
