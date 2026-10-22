@@ -123,7 +123,7 @@ export function useSegmentSkip({
     .map((s) => ({
       startMs: s.startMs,
       endMs: s.endMs,
-      auto: actionOf(s) === 'skip',
+      auto: actionOf(s) === 'skip' && !skipped.current.has(segmentId(s)),
     }));
   const latestPlanned = useLatest(planned);
   const plannedKey = planned
