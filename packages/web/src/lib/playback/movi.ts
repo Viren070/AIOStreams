@@ -379,6 +379,7 @@ class MoviEngine implements PlayerEngine {
 
   setSubtitleDelay(ms: number): void {
     this.subs.delayMs = ms;
+    this.session?.player?.setSubtitleDelay(ms / 1000);
     moviDebug('subtitle-delay', { ms });
     this.drawText();
   }
@@ -613,6 +614,7 @@ class MoviEngine implements PlayerEngine {
     p.setSubtitleOverlay(overlay);
     p.setFitMode(FIT[this.fit]);
     p.setPlaybackRate(this.rate);
+    p.setSubtitleDelay(this.subs.delayMs / 1000);
     const { volume } = this.intent;
     if (volume) {
       p.setVolume(Math.min(1, volume.volume));
