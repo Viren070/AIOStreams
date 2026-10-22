@@ -3,8 +3,57 @@
 (function () {
   var agent = navigator.userAgent;
   var chrome = /Chrome\/(\d+)/.exec(agent);
-  var tizen = /Tizen (\d+)/.exec(agent);
-  var old = chrome ? +chrome[1] < 94 : tizen ? +tizen[1] < 7 : false;
+  // Samsung's 2020 engine (Tizen 5.5, Chromium 69) names no Chrome version.
+  var tizen = /Tizen (\d+(?:\.\d+)?)/.exec(agent);
+  var samsung = !!window.tizen;
+  var old = chrome
+    ? +chrome[1] < (samsung ? 69 : 94)
+    : tizen
+      ? +tizen[1] < 5.5
+      : false;
+  var html = document.documentElement;
+
+  // The page's CSS has stand-ins for these, kept for engines that lack them.
+  try {
+    document.querySelector(':focus-visible');
+  } catch (e) {
+    html.className += ' no-focus-visible';
+  }
+  if (!(window.CSS && CSS.supports('aspect-ratio', '1')))
+    html.className += ' no-aspect-ratio';
+  var probe = document.createElement('div');
+  probe.style.cssText =
+    'display:flex;flex-direction:column;row-gap:1px;position:absolute';
+  probe.appendChild(document.createElement('div'));
+  probe.appendChild(document.createElement('div'));
+  html.appendChild(probe);
+  if (probe.scrollHeight !== 1) html.className += ' no-flex-gap';
+  html.removeChild(probe);
+
+  // Stand-ins for what Chromium 69 (2020 Samsung TVs) lacks, which the app
+  // calls unguarded: lists join with commas, and names fall back to the code.
+  if (window.Intl && !Intl.ListFormat)
+    Intl.ListFormat = function (locale, options) {
+      var unit = !!options && options.type === 'unit';
+      this.format = function (list) {
+        return Array.prototype.slice.call(list).join(unit ? ' ' : ', ');
+      };
+    };
+  if (window.Intl && !Intl.DisplayNames)
+    Intl.DisplayNames = function () {
+      this.of = function () {
+        return undefined;
+      };
+    };
+  // Code points, which split an emoji joined from several.
+  if (window.Intl && !Intl.Segmenter)
+    Intl.Segmenter = function () {
+      this.segment = function (text) {
+        return Array.from(String(text), function (segment) {
+          return { segment: segment };
+        });
+      };
+    };
   var BACK = [8, 27, 461, 10009];
   var overlay = null;
   var failure = null;
@@ -137,7 +186,9 @@
     document.addEventListener('DOMContentLoaded', function () {
       show(
         'This TV is too old for this app',
-        'The app needs a TV from 2023 or newer. It may still work here, with problems.',
+        'The app needs a TV from ' +
+          (samsung ? '2020' : '2023') +
+          ' or newer. It may still work here, with problems.',
         [
           [
             'Try anyway',

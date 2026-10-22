@@ -353,7 +353,8 @@ function LibraryRow({ view, first }: { view: BaseItemDto; first: boolean }) {
           href={href(to.discover(view.Id!))}
           className="group/title inline-flex items-baseline gap-2"
         >
-          {view.Name}
+          {/* An element, so engines without flex gap can space it. */}
+          <span>{view.Name}</span>
           {label && (
             <span className="text-sm font-normal text-[--muted]">{label}</span>
           )}

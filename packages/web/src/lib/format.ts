@@ -1,4 +1,4 @@
-import { t } from '@lingui/core/macro';
+import { plural, t } from '@lingui/core/macro';
 import { formatLocale } from './i18n';
 import type { BaseItemDto } from './types';
 
@@ -149,13 +149,46 @@ export function episodeMarks(item: BaseItemDto): EpisodeMark[] {
 export const markLabel = (mark: EpisodeMark) =>
   mark === 'filler' ? t`Filler` : t`Recap`;
 
+/**
+ * Made on first use and kept until the language changes: building a formatter
+ * costs about 10 ms on a 2020 Samsung TV, which a list of episodes would pay
+ * for each one.
+ */
+function perLocale<T>(make: (locale: string) => T): () => T {
+  let locale: string | undefined;
+  let made: T | undefined;
+  return () => {
+    if (locale !== formatLocale()) made = make((locale = formatLocale()));
+    return made!;
+  };
+}
+const SHORT_DATE = perLocale(
+  (locale) =>
+    new Intl.DateTimeFormat(locale, {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    })
+);
+const AIR_TIME = perLocale(
+  (locale) =>
+    new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' })
+);
+const DAY_LABEL = perLocale(
+  (locale) =>
+    new Intl.DateTimeFormat(locale, {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    })
+);
+const UNTIL = perLocale(
+  (locale) => new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
+);
+
 /** `20 Jan 2008` */
 export function shortDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(formatLocale(), {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
+  return SHORT_DATE().format(new Date(iso));
 }
 
 /**
@@ -176,19 +209,12 @@ export function airDay(iso: string): Date {
 
 export function airTime(iso: string): string | null {
   if (dateOnly(iso)) return null;
-  return new Date(iso).toLocaleTimeString(formatLocale(), {
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+  return AIR_TIME().format(new Date(iso));
 }
 
 /** `Sun, 28 Sep` */
 export function dayLabel(iso: string): string {
-  return airDay(iso).toLocaleDateString(formatLocale(), {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-  });
+  return DAY_LABEL().format(airDay(iso));
 }
 
 /** `today`, `tomorrow`, `in 6 days` or `in 3 weeks`, counted in calendar days. */
@@ -198,12 +224,26 @@ export function untilLabel(iso: string): string {
   const days = Math.round(
     (midnight(airDay(iso)) - midnight(new Date())) / DAY_MS
   );
-  const format = new Intl.RelativeTimeFormat(formatLocale(), {
-    numeric: 'auto',
-  });
-  return days < 14
-    ? format.format(days, 'day')
-    : format.format(Math.round(days / 7), 'week');
+  const [count, unit] =
+    days < 14
+      ? [days, 'day' as const]
+      : [Math.round(days / 7), 'week' as const];
+  // Chromium 69 (2020 Samsung TVs) has no RelativeTimeFormat.
+  if (!Intl.RelativeTimeFormat) {
+    const n = Math.abs(count);
+    if (unit === 'day') {
+      if (count === 0) return t`today`;
+      if (count === 1) return t`tomorrow`;
+      if (count === -1) return t`yesterday`;
+      return count < 0
+        ? plural(n, { one: '# day ago', other: '# days ago' })
+        : plural(n, { one: 'in # day', other: 'in # days' });
+    }
+    return count < 0
+      ? plural(n, { one: '# week ago', other: '# weeks ago' })
+      : plural(n, { one: 'in # week', other: 'in # weeks' });
+  }
+  return UNTIL().format(count, unit);
 }
 
 /** Whole years from one date to another, or to today. */

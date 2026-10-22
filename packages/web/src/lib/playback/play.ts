@@ -8,6 +8,7 @@ import { directUrl } from './stream';
 import { subtitleUrl, textSubtitles } from '../subtitles/tracks';
 import { useSession } from '../session';
 import { storedMap } from '../storage';
+import { unsupportedOnTv } from './support';
 import { subtitleLanguages, usePlaybackPrefs } from '../user-config';
 import { useEpisodesAfter } from '../queries';
 import { sameLanguage } from '../languages';
@@ -26,12 +27,20 @@ export function isNotice(source: SourceInfo): boolean {
   return source.Type === 'Placeholder';
 }
 
+/** Versions that can play. Those a TV can't decode go last, so whatever takes the first takes one it plays. */
 export function playableSources(
   info: PlaybackInfoResponse | undefined
 ): SourceInfo[] {
-  return ((info?.MediaSources ?? []) as SourceInfo[]).filter(
+  const sources = ((info?.MediaSources ?? []) as SourceInfo[]).filter(
     (s) => !isNotice(s)
   );
+  const unplayable = new Set(sources.filter((s) => unsupportedOnTv(s)));
+  return unplayable.size
+    ? [
+        ...sources.filter((s) => !unplayable.has(s)),
+        ...sources.filter((s) => unplayable.has(s)),
+      ]
+    : sources;
 }
 
 /** Notices by the version each came after, `null` for those before them all. */
@@ -43,9 +52,13 @@ export function placedNotices(
   for (const notice of (info?.MediaSources ?? []) as SourceInfo[]) {
     if (!isNotice(notice)) continue;
     const at = notice.aiostreams?.index ?? Infinity;
-    const after =
-      versions.filter((v) => (v.aiostreams?.index ?? -Infinity) < at).pop() ??
-      null;
+    // By the server's order, as a TV lists versions it can't decode last.
+    const index = (v: SourceInfo) => v.aiostreams?.index ?? -Infinity;
+    const after = versions.reduce<SourceInfo | null>(
+      (best, v) =>
+        index(v) < at && (!best || index(v) >= index(best)) ? v : best,
+      null
+    );
     placed.set(after, [...(placed.get(after) ?? []), notice]);
   }
   return placed;
@@ -103,6 +116,8 @@ export function usePlay() {
       startMs?: number;
       replace?: boolean;
       onExternal?: () => void;
+      /** Whether to still play, once what it waits on has come. */
+      current?: () => boolean;
     }
   ) => {
     const { source } = opts;
@@ -118,6 +133,7 @@ export function usePlay() {
         prefs.EnableNextEpisodeAutoPlay !== false
           ? await episodesAfter(item).catch(() => [])
           : [];
+      if (opts.current?.() === false) return;
       play(
         item,
         source,
