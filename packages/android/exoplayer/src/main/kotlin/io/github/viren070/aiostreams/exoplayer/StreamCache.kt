@@ -156,6 +156,8 @@ internal class StreamCache(
         return if (metered) METERED_AHEAD_BYTES else Long.MAX_VALUE
     }
 
+    private fun runningDry() = playerPlaying && playerBufferedUs < RELEASE_US
+
     /** Bytes a second the link delivers while it's read without pause, averaged over the last few seconds. */
     private class LinkMeter {
         var speed = 0.0
@@ -201,7 +203,8 @@ internal class StreamCache(
 
         val count get() = blocks.size
         val first: Long? get() = blocks.firstEntry()?.key
-        val last: Long? get() = blocks.lastEntry()?.key
+
+        fun lastAfter(index: Long, pick: (Long) -> Boolean): Long? = blocks.tailMap(index, false).descendingKeySet().firstOrNull(pick)
 
         /** Copies what's held from [position] in its block, 0 when nothing is. */
         fun read(position: Long, target: ByteArray, offset: Int, count: Int): Int {
@@ -317,6 +320,9 @@ internal class StreamCache(
         private var side: LongRange? = null
         private var indexChecked = false
 
+        /** Opens at bytes not held, which a landing's fetch gives the link up for. */
+        private var misses = 0
+
         private val meter = LinkMeter()
         private var connectNs = 0.0
 
@@ -396,6 +402,7 @@ internal class StreamCache(
             moveReader(position)
             // A seek into a held skip watches it.
             skips.firstOrNull { position in it }?.let(::release)
+            if (side?.let { position in it } != true && blocks.end(position) { null } == position) misses++
             // Media3 opens again to retry what failed.
             failure = null
             changed.signalAll()
@@ -419,7 +426,7 @@ internal class StreamCache(
                 failure?.let { throw it }
                 // The page seeks past a held skip as playback reaches it.
                 val skip = skips.firstOrNull { position in it }
-                if (skip != null && !(playerPlaying && playerBufferedUs < RELEASE_US)) {
+                if (skip != null && !runningDry()) {
                     awaitReader(HELD_POLL_NS)
                     n = blocks.read(position, target, offset, count)
                     continue
@@ -484,7 +491,8 @@ internal class StreamCache(
                         continue
                     }
                     lock.withLock {
-                        meter.add(n)
+                        // A side connection's share of the link isn't the link slowing.
+                        if (side == null) meter.add(n) else meter.pause()
                         write(at, scratch, n)
                     }
                     at += n
@@ -564,7 +572,7 @@ internal class StreamCache(
 
         private fun prefetch(range: LongRange) {
             if (lock.withLock { blocks.end(range.first) { null } > range.first }) return
-            fetchSide(range, "stream-cache-index")
+            fetchSide(range, "stream-cache-index", yields = false)
         }
 
         /** Fetches the next landing ahead of the reader once the link can spare it. */
@@ -576,7 +584,7 @@ internal class StreamCache(
                 if (from > landing.last || !canSpare(landing.last + 1 - from)) return
                 from..landing.last
             }
-            fetchSide(range, "stream-cache-landing")
+            fetchSide(range, "stream-cache-landing", yields = true)
         }
 
         /** Bytes held of the next landing beyond what the reader reads on to. */
@@ -586,15 +594,17 @@ internal class StreamCache(
             return min(blocks.end(landing.first) { null }, landing.last + 1) - landing.first
         }
 
-        private fun fetchSide(range: LongRange, name: String) {
-            lock.withLock {
+        /** [yields] stops it once the player runs dry or opens what isn't held. */
+        private fun fetchSide(range: LongRange, name: String, yields: Boolean) {
+            val missed = lock.withLock {
                 if (side != null) return
                 side = range
+                misses
             }
-            Thread({ readSide(range) }, name).apply { isDaemon = true }.start()
+            Thread({ readSide(range, yields, missed) }, name).apply { isDaemon = true }.start()
         }
 
-        private fun readSide(range: LongRange) {
+        private fun readSide(range: LongRange, yields: Boolean, missed: Int) {
             val scratch = ByteArray(CHUNK)
             var source: DataSource? = null
             try {
@@ -603,7 +613,11 @@ internal class StreamCache(
                 while (at <= range.last && !closed) {
                     val n = watched(source) { source.read(scratch, 0, min(CHUNK.toLong(), range.last + 1 - at).toInt()) }
                     if (n == C.RESULT_END_OF_INPUT) break
-                    lock.withLock { write(at, scratch, n) }
+                    val stop = lock.withLock {
+                        write(at, scratch, n)
+                        yields && (misses != missed || runningDry())
+                    }
+                    if (stop) break
                     at += n
                 }
             } catch (e: Exception) {
@@ -725,20 +739,19 @@ internal class StreamCache(
             return true
         }
 
-        /** Frees the block least likely to be read: played ones past what's kept, other runs, then the far ends, but not the next landing. */
+        /** Frees the block least likely to be read: played ones past what's kept, other runs but the next landing, the rest played, then the far end. */
         private fun evict(writing: Long): Boolean {
             val first = blocks.first ?: return false
-            val last = blocks.last ?: return false
             val reading = readAt / BLOCK
             val runEnd = (aheadEnd() - 1) / BLOCK
             val keepBehind = budget / 4 / BLOCK
             val landing = landings.firstOrNull { it.first > readAt }?.let { it.first / BLOCK..it.last / BLOCK } ?: LongRange.EMPTY
-            val victim = listOf(
-                first.takeIf { it < reading - keepBehind },
-                last.takeIf { it > runEnd },
-                first.takeIf { it < reading },
-                last,
-            ).firstOrNull { it != null && it != writing && it != reading && it !in landing } ?: return false
+            val spare = { index: Long -> index != writing && index != reading }
+            val victim = first.takeIf { it < reading - keepBehind }
+                ?: blocks.lastAfter(runEnd) { spare(it) && it !in landing }
+                ?: first.takeIf { it < reading }
+                ?: blocks.lastAfter(reading, spare)
+                ?: return false
             blocks.drop(victim)
             if (victim in reading..runEnd) runHint = -1
             return true
