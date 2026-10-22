@@ -73,7 +73,7 @@ internal class SubtitleStyle {
         view.setApplyEmbeddedStyles(override != AssStyle.FORCE)
         view.setApplyEmbeddedFontSizes(override != AssStyle.FORCE)
         view.setFractionalTextSize(SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * scale.toFloat())
-        view.setBottomPaddingFraction(SubtitleView.DEFAULT_BOTTOM_PADDING_FRACTION + (100 - position.toFloat()) / 100)
+        view.setBottomPaddingFraction(BOTTOM_PADDING + (100 - position.toFloat()) / 100)
     }
 
     fun assStyle() = AssStyle(
@@ -87,6 +87,9 @@ internal class SubtitleStyle {
     )
 
     private companion object {
+        /** mpv's `sub-margin-y`, as a share of the screen. */
+        const val BOTTOM_PADDING = 0.03f
+
         /** mpv writes `#AARRGGBB`, as Android reads it. */
         fun colorOf(value: String) = runCatching { Color.parseColor(value) }.getOrNull()
 
