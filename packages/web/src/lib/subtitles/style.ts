@@ -2,6 +2,7 @@ import { t } from '@lingui/core/macro';
 import {
   settings,
   SUBTITLE_POSITION_MAX,
+  SUBTITLE_POSITION_MIN,
   SUBTITLE_SIZES,
   type SubtitleFont,
   type SubtitleOutline,
@@ -40,7 +41,7 @@ export function stepSubtitleHeight(sign: number): number | null {
   const height = settings.subtitle.position.read();
   const next = Math.min(
     SUBTITLE_POSITION_MAX,
-    Math.max(0, height + sign * HEIGHT_STEP)
+    Math.max(SUBTITLE_POSITION_MIN, height + sign * HEIGHT_STEP)
   );
   if (next === height) return null;
   settings.subtitle.position.write(next);
@@ -80,8 +81,10 @@ export const MPV_SHADOW = 3;
 export const subtitleScale = (style: SubtitleStyle) => SCALE[style.size];
 
 /** How high subtitles sit, in percent: the chosen height, or above what covers the bottom. */
-export const subtitleHeight = (style?: SubtitleStyle, lift = 0) =>
-  Math.max(style?.position ?? 0, Math.round(lift * 100));
+export function subtitleHeight(style?: SubtitleStyle, lift = 0): number {
+  const height = style?.position ?? 0;
+  return lift ? Math.max(height, Math.round(lift * 100)) : height;
+}
 
 /** Percent from the top where an unplaced subtitle's bottom sits, as mpv places it. */
 export const subtitleLine = (style?: SubtitleStyle, lift = 0) =>

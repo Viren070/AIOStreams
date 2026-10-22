@@ -494,6 +494,8 @@ export const SUBTITLE_FONTS = [
 export type SubtitleFont = (typeof SUBTITLE_FONTS)[number];
 export const SUBTITLE_OUTLINES = ['none', 'thin', 'normal', 'thick'] as const;
 export type SubtitleOutline = (typeof SUBTITLE_OUTLINES)[number];
+/** Where mpv's usual line, 3% up, meets the bottom edge. */
+export const SUBTITLE_POSITION_MIN = -3;
 export const SUBTITLE_POSITION_MAX = 30;
 
 export interface SubtitleStyle {
@@ -616,7 +618,7 @@ const subtitleLook = {
   position: syncedNumber(
     'subtitlePosition',
     0,
-    (v) => v >= 0 && v <= SUBTITLE_POSITION_MAX,
+    (v) => v >= SUBTITLE_POSITION_MIN && v <= SUBTITLE_POSITION_MAX,
     ['aiostreams-web-subtitle-position']
   ),
 };

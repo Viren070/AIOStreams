@@ -18,6 +18,7 @@ import {
   settings,
   useSetting,
   SUBTITLE_POSITION_MAX,
+  SUBTITLE_POSITION_MIN,
   SUBTITLE_SIZES,
   type SubtitleFont,
   type SubtitleOutline,
@@ -193,8 +194,8 @@ export function SubtitlesSection() {
         />
         <Slider
           label={t`Height: ${position}%`}
-          help={t`How far subtitles sit above their usual place near the bottom.`}
-          min={0}
+          help={t`How far subtitles sit above their usual place near the bottom, or below it down to the edge.`}
+          min={SUBTITLE_POSITION_MIN}
           max={SUBTITLE_POSITION_MAX}
           step={1}
           value={[position]}

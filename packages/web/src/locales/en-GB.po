@@ -1738,8 +1738,8 @@ msgid "Host"
 msgstr "Host"
 
 #: src/pages/settings/subtitles.tsx
-msgid "How far subtitles sit above their usual place near the bottom."
-msgstr "How far subtitles sit above their usual place near the bottom."
+msgid "How far subtitles sit above their usual place near the bottom, or below it down to the edge."
+msgstr "How far subtitles sit above their usual place near the bottom, or below it down to the edge."
 
 #: src/pages/settings/playback.tsx
 msgid "How far the skip buttons, double taps and the arrow keys jump."

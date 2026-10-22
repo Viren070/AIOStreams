@@ -47,6 +47,7 @@ import {
   AUDIO_DELAY_LIMIT_MS,
   DIALOGUE_BOOSTS,
   SUBTITLE_POSITION_MAX,
+  SUBTITLE_POSITION_MIN,
   SUBTITLE_SIZES,
   VIDEO_FITS,
   type VideoFit,
@@ -387,7 +388,10 @@ function SubtitleStyleSteppers() {
         value={t`${height}%`}
         less={{
           label: t`Lower subtitles`,
-          onClick: height > 0 ? () => stepSubtitleHeight(-1) : undefined,
+          onClick:
+            height > SUBTITLE_POSITION_MIN
+              ? () => stepSubtitleHeight(-1)
+              : undefined,
         }}
         more={{
           label: t`Raise subtitles`,

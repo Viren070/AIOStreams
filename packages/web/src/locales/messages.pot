@@ -1737,7 +1737,7 @@ msgid "Host"
 msgstr ""
 
 #: src/pages/settings/subtitles.tsx
-msgid "How far subtitles sit above their usual place near the bottom."
+msgid "How far subtitles sit above their usual place near the bottom, or below it down to the edge."
 msgstr ""
 
 #: src/pages/settings/playback.tsx
