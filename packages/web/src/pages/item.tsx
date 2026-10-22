@@ -9,6 +9,7 @@ import {
   BiDislike,
   BiGroup,
   BiHeart,
+  BiListPlus,
   BiPlay,
   BiRevision,
   BiShuffle,
@@ -85,6 +86,8 @@ import { ExternalLinks } from '../components/external-links';
 import { CastAndCrew } from '../components/people';
 import { KINDS, KindTabs } from '../components/kind-tabs';
 import { PickOnArrival, useVersionPicker } from '../components/version-picker';
+import { openAddToPlaylist } from '../components/playlists';
+import { playable, usePlaylistsOffered } from '../lib/playlists';
 import { BackdropFrame } from '../components/hero';
 import type { BaseItemDto } from '../lib/types';
 import { useHold } from '../lib/use-hold';
@@ -106,12 +109,15 @@ export function ItemPage({
   seasonId,
   episodeId,
   pickId,
+  playlistId,
 }: {
   itemId: string;
   seasonId?: string;
   episodeId?: string;
   /** Opens this item's version list as the page arrives. */
   pickId?: string;
+  /** The playlist a version picked from that list plays on through. */
+  playlistId?: string;
 }) {
   const { client } = useSession();
   const item = useItem(itemId, { page: true });
@@ -142,7 +148,7 @@ export function ItemPage({
       data-favourite={data?.UserData?.IsFavorite || undefined}
       className="relative"
     >
-      {pickId && <PickOnArrival itemId={pickId} />}
+      {pickId && <PickOnArrival itemId={pickId} playlist={playlistId} />}
       <Backdrop
         images={data ? backdropUrls(client, data, { maxWidth: 1920 }) : []}
         poster={data ? posterUrl(client, data, { maxWidth: 160 }) : null}
@@ -372,6 +378,7 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
   );
   const inParty = !!useParty();
   const devices = useRemoteDevices();
+  const playlists = usePlaylistsOffered();
   const holdRestart = useHold(
     target ? () => picker.play(target, { startMs: 0, held: true }) : undefined
   );
@@ -557,6 +564,23 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
               }
             >
               <Trans>Play on another device</Trans>
+            </Tooltip>
+          )}
+          {playlists && item.Type === 'Movie' && playable(item) && (
+            <Tooltip
+              trigger={
+                <IconButton
+                  data-ui="item-action"
+                  data-name="add-to-playlist"
+                  intent="gray-subtle"
+                  className="rounded-full"
+                  icon={<BiListPlus />}
+                  aria-label={t`Add to playlist`}
+                  onClick={() => openAddToPlaylist([item])}
+                />
+              }
+            >
+              <Trans>Add to playlist</Trans>
             </Tooltip>
           )}
           <ItemToggles

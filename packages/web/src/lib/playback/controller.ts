@@ -116,8 +116,8 @@ export interface PlayerController {
   external?: string;
   /** Closes a player in its own window. */
   close?: () => void;
-  /** Puts the next episode after this one in the player's own playlist. */
-  queueNext?: (episode: QueuedEpisode) => void;
+  /** Puts what plays next after this in the player's own playlist, in place of what it held. */
+  queueNext?: (next: QueuedItem) => void;
   /** Whether the app's sound settings apply, which they do to its own player. */
   sound?: boolean;
   /** Whether the picture follows the page's fit setting. */
@@ -128,12 +128,14 @@ export interface PlayerController {
   shared?: boolean;
 }
 
-export interface QueuedEpisode {
+export interface QueuedItem {
   itemId: string;
   source: SourceInfo;
   startMs: number;
   url: string;
   headers?: Record<string, string>;
+  /** The playlist it plays on through. */
+  playlist?: string;
 }
 
 export interface PlayerOptions {
@@ -152,8 +154,8 @@ export interface PlayerOptions {
   launched?: { id: string; name: string };
   /** The user closed that window. */
   onClosed?: () => void;
-  /** That player moved on to the episode it was given with `queueNext`. */
-  onAdvance?: (episode: QueuedEpisode) => void;
+  /** That player moved on to what it was given with `queueNext`. */
+  onAdvance?: (next: QueuedItem) => void;
   startPaused?: boolean;
 }
 

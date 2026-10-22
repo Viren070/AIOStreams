@@ -538,6 +538,7 @@ export function OptionButtons({
   onMenu,
   onVersions,
   onEpisodes,
+  onPlaylist,
   onAddFile,
   onSyncByEar,
   onSyncToLine,
@@ -549,6 +550,7 @@ export function OptionButtons({
   onParty?: () => void;
   onVersions?: () => void;
   onEpisodes?: () => void;
+  onPlaylist?: () => void;
   onAddFile(): void;
   onSyncByEar(): void;
   onSyncToLine(): void;
@@ -574,6 +576,11 @@ export function OptionButtons({
   const hidden = subtitles.hidden.length;
   return (
     <div className="ms-auto flex items-center sm:gap-1">
+      {onPlaylist && (
+        <ControlButton name="playlist" label={t`Playlist`} onClick={onPlaylist}>
+          <LuListVideo />
+        </ControlButton>
+      )}
       {onEpisodes && (
         <ControlButton name="episodes" label={t`Episodes`} onClick={onEpisodes}>
           <LuGalleryVerticalEnd />

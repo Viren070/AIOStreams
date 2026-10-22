@@ -9,6 +9,7 @@ import {
   BiDownload,
   BiHeart,
   BiInfoCircle,
+  BiListPlus,
   BiListUl,
   BiPlay,
   BiReset,
@@ -45,6 +46,8 @@ import {
 } from '../lib/downloads';
 import { useStraightPlay, useVersionPicker } from './version-picker';
 import { useHeroTarget } from './hero';
+import { openAddToPlaylist } from './playlists';
+import { playable as canPlay, usePlaylistsOffered } from '../lib/playlists';
 import type { BaseItemDto } from '../lib/types';
 
 function PlayEntries({ item }: { item: BaseItemDto }) {
@@ -221,10 +224,8 @@ function ItemMenuContent({ item, onPage, onDetails }: MenuTarget) {
   const setPlayedUpTo = useSetPlayedUpTo();
   const clearResume = useClearResume();
   const setFavorite = useSetFavorite();
-  // Jellyfin cannot play a virtual item, such as an episode not yet aired.
-  const playable =
-    (item.Type === 'Movie' || item.Type === 'Episode') &&
-    item.LocationType !== 'Virtual';
+  const playlists = usePlaylistsOffered();
+  const playable = canPlay(item);
   const played = !!item.UserData?.Played;
   const favorite = !!item.UserData?.IsFavorite;
   const resumeMs = ticksToMs(item.UserData?.PlaybackPositionTicks);
@@ -235,6 +236,14 @@ function ItemMenuContent({ item, onPage, onDetails }: MenuTarget) {
         {onPage ? item.Name : itemTitle(item)}
       </ContextMenuLabel>
       {playable && <PlayEntries item={item} />}
+      {playable && playlists && (
+        <ContextMenuItem
+          data-name="add-to-playlist"
+          onSelect={() => openAddToPlaylist([item])}
+        >
+          <BiListPlus /> <Trans>Add to playlist</Trans>
+        </ContextMenuItem>
+      )}
       {onDetails && (
         <ContextMenuItem data-name="details" onSelect={onDetails}>
           <BiInfoCircle /> <Trans>Details</Trans>

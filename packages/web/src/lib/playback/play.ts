@@ -9,7 +9,7 @@ import { subtitleUrl, textSubtitles } from '../subtitles/tracks';
 import { useSession } from '../session';
 import { storedMap } from '../storage';
 import { subtitleLanguages, usePlaybackPrefs } from '../user-config';
-import { useEpisodesAfter } from '../queries';
+import { useFollowing } from '../playlists';
 import { sameLanguage } from '../languages';
 import { party } from '../party/party';
 import { usePlayForParty } from '../party/actions';
@@ -90,10 +90,13 @@ function useOpenLink() {
   };
 }
 
-/** Plays an item on the player chosen for this device, or for the party it is in. */
+/**
+ * Plays an item on the player chosen for this device, or for the party it is
+ * in, playing on through `playlist` where the player can.
+ */
 export function usePlay() {
   const openLink = useOpenLink();
-  const episodesAfter = useEpisodesAfter();
+  const following = useFollowing();
   const playForParty = usePlayForParty();
   const { prefs } = usePlaybackPrefs();
   return async (
@@ -102,21 +105,22 @@ export function usePlay() {
       source: SourceInfo;
       startMs?: number;
       replace?: boolean;
+      playlist?: string;
       onExternal?: () => void;
     }
   ) => {
-    const { source } = opts;
+    const { source, playlist } = opts;
     if (!source.Id) throw new Error(t`No playable version was found`);
     const startMs =
       opts.startMs ?? ticksToMs(item.UserData?.PlaybackPositionTicks);
     if (party.state()?.status === 'live')
-      return playForParty(item, source, startMs);
+      return playForParty(item, source, startMs, playlist);
 
     const { play } = currentHost();
     if (play) {
       const next =
         prefs.EnableNextEpisodeAutoPlay !== false
-          ? await episodesAfter(item).catch(() => [])
+          ? await following(item, playlist).catch(() => [])
           : [];
       play(
         item,
@@ -132,6 +136,8 @@ export function usePlay() {
         opts.onExternal?.();
       return;
     }
-    navigate(to.play(item.Id!, source.Id, startMs), { replace: opts.replace });
+    navigate(to.play(item.Id!, source.Id, startMs, playlist), {
+      replace: opts.replace,
+    });
   };
 }

@@ -5,9 +5,16 @@ import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSession } from '../../lib/session';
 import { currentHost } from '../../lib/hosts';
-import { useAdjacentEpisodes, usePlaybackInfoOptions } from '../../lib/queries';
+import { usePlaybackInfoOptions } from '../../lib/queries';
+import { usePlaylistName, useUpNext } from '../../lib/playlists';
 import { landscapeUrl } from '../../lib/images';
-import { episodeCode, itemSubtitle, ticksToMs } from '../../lib/format';
+import {
+  episodeCode,
+  fullTitle,
+  itemSubtitle,
+  itemTitle,
+  ticksToMs,
+} from '../../lib/format';
 import { navigate, to, versionsPath } from '../../lib/paths';
 import { playableSources } from '../../lib/playback/play';
 import { playerUrl, requiredHeaders } from '../../lib/playback/stream';
@@ -69,7 +76,7 @@ function promptAt(
 }
 
 /**
- * The version of another episode that carries on from this one: the one in
+ * The version of what plays next that carries on from this one: the one in
  * the same binge group, else the only or first one when allowed.
  */
 function carryOn(
@@ -92,40 +99,42 @@ function resumeMs(item: BaseItemDto): number {
     : ticksToMs(item.UserData?.PlaybackPositionTicks);
 }
 
-/** Episodes the player moved on to by itself since the last input it saw. */
-const unattended = { episodes: 0, inputs: -1 };
+/** Titles the player moved on to by itself since the last input it saw. */
+const unattended = { titles: 0, inputs: -1 };
 
-function unattendedEpisodes(): number {
+function unattendedTitles(): number {
   const inputs = inputCount();
   if (inputs !== unattended.inputs) {
-    unattended.episodes = 0;
+    unattended.titles = 0;
     unattended.inputs = inputs;
   }
-  return unattended.episodes;
+  return unattended.titles;
 }
 
 export function countPlayedOn(): void {
-  unattendedEpisodes();
-  unattended.episodes++;
+  unattendedTitles();
+  unattended.titles++;
 }
 
-/** Whether playing on now would make `limit` episodes in a row with nobody there. */
+/** Whether playing on now would make `limit` titles in a row with nobody there. */
 function asksFirst(limit: number): boolean {
-  return limit > 0 && unattendedEpisodes() + 1 >= limit;
+  return limit > 0 && unattendedTitles() + 1 >= limit;
 }
 
 /**
- * Offers the next episode near the end, counting down to it when the user
- * lets episodes play on, and asks whether anyone is still watching after a
- * run of them. `playOn` serves the end of the file.
+ * Offers what plays next near the end: the next episode, or the next title
+ * of the playlist it plays from. It counts down to it when the user lets
+ * titles play on, and asks whether anyone is still watching after a run of
+ * them. `playOn` serves the end of the file.
  */
-export function useNextEpisodePrompt({
+export function useUpNextPrompt({
   item,
   source,
   player,
   segments,
   onBack,
   group,
+  playlist,
 }: {
   item: BaseItemDto;
   source: SourceInfo;
@@ -134,17 +143,23 @@ export function useNextEpisodePrompt({
   onBack: () => void;
   /** Moves a watch party on instead, for everyone. */
   group?: {
-    step(direction: 'next' | 'previous', episode: BaseItemDto): void;
-    play(episode: BaseItemDto): void;
+    step(
+      direction: 'next' | 'previous',
+      target: BaseItemDto,
+      playlist?: string
+    ): void;
+    play(target: BaseItemDto, playlist?: string): void;
   };
+  /** The playlist it was started from. */
+  playlist?: string;
 }) {
   const { client } = useSession();
   const queryClient = useQueryClient();
   const infoOptions = usePlaybackInfoOptions();
   const downloaded = useFindDownloaded();
-  const adjacent = useAdjacentEpisodes(item).data;
-  const next = adjacent?.next ?? null;
-  const previous = adjacent?.previous ?? null;
+  const upNext = useUpNext(item, playlist);
+  const { next, previous } = upNext;
+  const playlistName = usePlaylistName(upNext.playlist);
   const [prompt] = useSetting(settings.next.prompt);
   const [lead] = useSetting(settings.next.lead);
   const [countdown] = useSetting(settings.next.countdown);
@@ -181,47 +196,51 @@ export function useNextEpisodePrompt({
   const leaving = React.useRef(false);
   // The latest press wins; a lookup it overtook is dropped when it lands.
   const wanted = React.useRef<string | null>(null);
-  /** `previous`, `next`, or the id of an episode picked from the list. */
+  /** `previous`, `next`, or the id of a title picked from a list. */
   const [loading, setLoading] = React.useState<string | null>(null);
   const playOne = React.useCallback(
-    async (key: string, episode: BaseItemDto | null) => {
-      if (!episode || leaving.current) return false;
+    async (key: string, target: BaseItemDto | null, playlist?: string) => {
+      if (!target || leaving.current) return false;
       if (group) {
-        if (key === 'next' || key === 'previous') group.step(key, episode);
-        else group.play(episode);
+        if (key === 'next' || key === 'previous')
+          group.step(key, target, playlist);
+        else group.play(target, playlist);
         return true;
       }
       if (wanted.current === key) return true;
       wanted.current = key;
-      // A downloaded episode plays its own file, as Play does.
-      const local = downloaded(episode);
-      if (local) {
-        leaving.current = true;
-        navigate(to.play(episode.Id!, local.source!.Id!, resumeMs(episode)), {
+      const go = (sourceId: string) =>
+        navigate(to.play(target.Id!, sourceId, resumeMs(target), playlist), {
           replace: true,
         });
+      // A downloaded title plays its own file, as Play does.
+      const local = downloaded(target);
+      if (local) {
+        leaving.current = true;
+        go(local.source!.Id!);
         return true;
       }
       setLoading(key);
-      const code = episodeCode(episode.ParentIndexNumber, episode.IndexNumber);
-      const name = code || episode.Name || '';
+      const code = episodeCode(target.ParentIndexNumber, target.IndexNumber);
+      const name = code || target.Name || '';
       toast.loading(t`Finding versions of ${name}…`, {
         id: NOTICE,
       });
       try {
-        const info = await queryClient.fetchQuery(infoOptions(episode.Id!));
+        const info = await queryClient.fetchQuery(infoOptions(target.Id!));
         if (wanted.current !== key) return true;
         leaving.current = true;
-        const target = carryOn(playableSources(info), source, fallbackFirst);
-        if (target)
-          navigate(to.play(episode.Id!, target.Id!, resumeMs(episode)), {
-            replace: true,
-          });
-        else navigate(versionsPath(episode), { replace: true });
+        const version = carryOn(playableSources(info), source, fallbackFirst);
+        if (version) go(version.Id!);
+        else navigate(versionsPath(target, playlist), { replace: true });
         return true;
       } catch {
         if (wanted.current !== key) return true;
-        toast.error(t`Could not find versions of that episode`);
+        toast.error(
+          playlist
+            ? t`Could not find versions of that title`
+            : t`Could not find versions of that episode`
+        );
         return false;
       } finally {
         if (wanted.current === key) {
@@ -235,15 +254,21 @@ export function useNextEpisodePrompt({
   );
   React.useEffect(() => dismissNotice, []);
   const playNext = React.useCallback(
-    () => playOne('next', next),
-    [playOne, next]
+    () => playOne('next', next, upNext.playlist),
+    [playOne, next, upNext.playlist]
   );
   const playPrevious = React.useCallback(
-    () => playOne('previous', previous),
-    [playOne, previous]
+    () => playOne('previous', previous, upNext.playlist),
+    [playOne, previous, upNext.playlist]
   );
+  // An episode picked from the show's list leaves the playlist.
   const playEpisode = React.useCallback(
     (episode: BaseItemDto) => void playOne(episode.Id!, episode),
+    [playOne]
+  );
+  const playEntry = React.useCallback(
+    (entry: BaseItemDto, playlist: string) =>
+      void playOne(entry.Id!, entry, playlist),
     [playOne]
   );
 
@@ -305,7 +330,7 @@ export function useNextEpisodePrompt({
     downloaded,
   ]);
 
-  // A player with a playlist of its own gets the next episode once this one plays.
+  // A player with a playlist of its own gets what plays next once this plays.
   const queueNext = useLatest(player.queueNext);
   const canQueue =
     !!player.queueNext &&
@@ -321,6 +346,7 @@ export function useNextEpisodePrompt({
         source: local.source!,
         startMs: resumeMs(next),
         url: local.local!.video,
+        playlist: upNext.playlist,
       });
       return;
     }
@@ -338,6 +364,7 @@ export function useNextEpisodePrompt({
           startMs: resumeMs(next),
           url,
           headers: requiredHeaders(target),
+          playlist: upNext.playlist,
         });
       })
       .catch(() => {});
@@ -354,6 +381,7 @@ export function useNextEpisodePrompt({
     client,
     queueNext,
     downloaded,
+    upNext.playlist,
   ]);
 
   const [leftMs, setLeftMs] = React.useState(countdown * 1000);
@@ -400,10 +428,16 @@ export function useNextEpisodePrompt({
   );
 
   const image = next ? landscapeUrl(client, next, { maxWidth: 320 }) : null;
+  const heading = !upNext.playlist
+    ? t`Next episode`
+    : playlistName
+      ? t`Next in ${playlistName}`
+      : t`Up next`;
   const element =
     asking && next ? (
       <StillWatching
         next={next}
+        title={upNext.playlist ? fullTitle(next) : itemSubtitle(next)}
         loading={loading === 'next'}
         onContinue={() => void playNext()}
         onBack={onBack}
@@ -412,6 +446,7 @@ export function useNextEpisodePrompt({
       <div
         ref={card}
         data-ui="next-episode-card"
+        data-playlist={upNext.playlist ? '' : undefined}
         className="fixed bottom-[calc(2rem+env(safe-area-inset-bottom))] end-4 z-20 transition-[bottom] peer-data-[visible]:bottom-24 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-white/10 bg-gray-950 shadow-2xl duration-300 animate-in fade-in-0 slide-in-from-right-4 rtl:slide-in-from-left-4"
       >
         {image && (
@@ -424,10 +459,21 @@ export function useNextEpisodePrompt({
         )}
         <div className="space-y-3 p-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-[--muted]">
-              <Trans>Next episode</Trans>
+            <p className="truncate text-xs font-semibold uppercase tracking-wider text-[--muted]">
+              {heading}
             </p>
-            <p className="line-clamp-2 font-semibold">{itemSubtitle(next)}</p>
+            {upNext.playlist ? (
+              <>
+                <p className="line-clamp-2 font-semibold">{itemTitle(next)}</p>
+                {next.Type === 'Episode' && (
+                  <p className="line-clamp-1 text-sm text-gray-300">
+                    {itemSubtitle(next)}
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="line-clamp-2 font-semibold">{itemSubtitle(next)}</p>
+            )}
           </div>
           <div className="flex gap-2">
             <PlayerAction
@@ -466,29 +512,33 @@ export function useNextEpisodePrompt({
     asking,
     next,
     previous,
+    /** The playlist it plays on through. */
+    playlist: upNext.playlist,
     autoplay,
     playNext,
     playOn,
     playPrevious,
     playEpisode,
+    playEntry,
     loading,
   };
 }
 
 function StillWatching({
   next,
+  title: upNext,
   loading,
   onContinue,
   onBack,
 }: {
   next: BaseItemDto;
+  title: string;
   loading: boolean;
   onContinue: () => void;
   onBack: () => void;
 }) {
   const { client } = useSession();
   const image = landscapeUrl(client, next, { maxWidth: 480 });
-  const upNext = itemSubtitle(next);
   useAction('back', onBack);
   return (
     <div

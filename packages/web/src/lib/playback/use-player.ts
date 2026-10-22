@@ -282,7 +282,7 @@ export function usePlayer(
         );
       }
       case 'advanced':
-        return latest.current.onAdvance?.(event.episode);
+        return latest.current.onAdvance?.(event.next);
       case 'closed':
         return latest.current.onClosed?.();
       case 'subtitle-text':
@@ -560,7 +560,7 @@ export function usePlayer(
     },
     external: engine.external,
     close: engine.closeWindow && (() => engine.closeWindow!()),
-    queueNext: engine.queueNext && ((episode) => engine.queueNext!(episode)),
+    queueNext: engine.queueNext && ((next) => engine.queueNext!(next)),
     sound: engine.sound,
     fit: engine.fits,
     retry,

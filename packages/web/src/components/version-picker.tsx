@@ -79,11 +79,16 @@ interface Request {
   replace?: boolean;
   /** A pick downloads `items`, which start with `item`, or replaces `replace`'s version. */
   download?: { items: BaseItemDto[]; replace?: Download };
+  /** The playlist a pick plays on through. */
+  playlist?: string;
 }
 
 interface PickerValue {
   /** Lists the item's versions; nothing is resolved until this is called. */
-  open(item: BaseItemDto, opts?: { startMs?: number; playing?: string }): void;
+  open(
+    item: BaseItemDto,
+    opts?: { startMs?: number; playing?: string; playlist?: string }
+  ): void;
   /**
    * What Play does (see `useStraightPlay`); a hold does the other. A `version`
    * plays straight, in place of the one remembered.
@@ -95,6 +100,7 @@ interface PickerValue {
       held?: boolean;
       version?: string;
       replace?: boolean;
+      playlist?: string;
     }
   ): void;
   /**
@@ -121,7 +127,13 @@ export function useStraightPlay(): (
 }
 
 /** Opens the picker once, then drops `pick` from the address. */
-export function PickOnArrival({ itemId }: { itemId: string }) {
+export function PickOnArrival({
+  itemId,
+  playlist,
+}: {
+  itemId: string;
+  playlist?: string;
+}) {
   const item = useItem(itemId);
   const picker = useVersionPicker();
   const opened = React.useRef(false);
@@ -130,9 +142,10 @@ export function PickOnArrival({ itemId }: { itemId: string }) {
     opened.current = true;
     picker.open(item.data, {
       startMs: ticksToMs(item.data.UserData?.PlaybackPositionTicks),
+      playlist,
     });
     navigate(itemPath(item.data), { replace: true });
-  }, [item.data, picker]);
+  }, [item.data, picker, playlist]);
   return null;
 }
 
@@ -180,10 +193,10 @@ export function VersionPickerProvider({
     const playStraight = async (
       item: BaseItemDto,
       startMs: number,
-      opts: { version?: string; replace?: boolean } = {}
+      opts: { version?: string; replace?: boolean; playlist?: string } = {}
     ) => {
       const { queryClient, infoOptions, playVersion } = latest.current;
-      const { replace } = opts;
+      const { replace, playlist } = opts;
       const last = opts.version ?? rememberedVersion(item, startMs);
       // The player page finds the version itself, and lists them if it is gone.
       if (
@@ -191,7 +204,9 @@ export function VersionPickerProvider({
         chosenPlayer().kind !== 'link' &&
         party.state()?.status !== 'live'
       ) {
-        navigate(to.play(item.Id!, last ?? '', startMs), { replace });
+        navigate(to.play(item.Id!, last ?? '', startMs, playlist), {
+          replace,
+        });
         return;
       }
       const notice = toast.loading(t`Finding a version…`);
@@ -199,16 +214,17 @@ export function VersionPickerProvider({
         const info = await queryClient.fetchQuery(infoOptions(item.Id!));
         const sources = playableSources(info);
         const source = sources.find((s) => s.Id === last) ?? sources[0];
-        if (!source) setRequest({ item, startMs, replace });
+        if (!source) setRequest({ item, startMs, replace, playlist });
         else
           await playVersion(item, {
             source,
             startMs,
             replace,
+            playlist,
             onExternal: () => setExternal(item),
           });
       } catch {
-        setRequest({ item, startMs, replace });
+        setRequest({ item, startMs, replace, playlist });
       } finally {
         setTimeout(() => toast.dismiss(notice));
       }
@@ -219,11 +235,13 @@ export function VersionPickerProvider({
           item,
           startMs: opts?.startMs ?? 0,
           playing: opts?.playing,
+          playlist: opts?.playlist,
         }),
       play: (item, opts) => {
         const startMs = opts?.startMs ?? 0;
         const version = opts?.version;
         const replace = opts?.replace;
+        const playlist = opts?.playlist;
         // Holding still lists the versions.
         const local = !opts?.held && latest.current.downloaded(item);
         if (
@@ -231,12 +249,14 @@ export function VersionPickerProvider({
           chosenPlayer().kind !== 'link' &&
           (!version || version === local.source!.Id)
         ) {
-          navigate(to.play(item.Id!, local.source!.Id!, startMs), { replace });
+          navigate(to.play(item.Id!, local.source!.Id!, startMs, playlist), {
+            replace,
+          });
           return;
         }
         if (version || latest.current.straight(item, startMs) !== !!opts?.held)
-          void playStraight(item, startMs, { version, replace });
-        else setRequest({ item, startMs, replace });
+          void playStraight(item, startMs, { version, replace, playlist });
+        else setRequest({ item, startMs, replace, playlist });
       },
       download: (items, opts) => {
         if (!items.length || !downloadsHost()) return;
@@ -479,6 +499,7 @@ function Versions({
       source,
       startMs,
       replace: !!request.playing || !!request.replace,
+      playlist: request.playlist,
       onExternal,
     }).catch((e: Error) => toast.error(e.message));
   };

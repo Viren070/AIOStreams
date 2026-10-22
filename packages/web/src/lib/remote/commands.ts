@@ -15,6 +15,8 @@ export type RemoteCommand =
       audio?: number;
       subtitle?: number;
     }
+  /** Adds to what plays next: right after what plays now, or at the end. */
+  | { kind: 'queue'; itemIds: string[]; soon: boolean }
   | { kind: 'key'; key: MediaKey }
   | { kind: 'track'; type: 'audio' | 'subtitle'; index: number };
 
@@ -71,9 +73,15 @@ export function commandOf(type: unknown, data: unknown): RemoteCommand | null {
     return key && { kind: 'key', key };
   }
   if (type === 'Play') {
-    // Without a queue, only playing now is taken.
-    if ((d.PlayCommand ?? 'PlayNow') !== 'PlayNow') return null;
     const ids = Array.isArray(d.ItemIds) ? d.ItemIds : [];
+    const play = d.PlayCommand ?? 'PlayNow';
+    if (play === 'PlayNext' || play === 'PlayLast') {
+      const itemIds = ids.map(plainId).filter((id): id is string => !!id);
+      return itemIds.length
+        ? { kind: 'queue', itemIds, soon: play === 'PlayNext' }
+        : null;
+    }
+    if (play !== 'PlayNow') return null;
     const itemId = plainId(ids[integer(d.StartIndex) ?? 0] ?? ids[0]);
     if (!itemId) return null;
     const sourceId = plainId(d.MediaSourceId) ?? undefined;

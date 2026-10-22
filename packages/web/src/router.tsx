@@ -157,13 +157,14 @@ const itemRoute = createRoute({
     season: search.season == null ? undefined : String(search.season),
     episode: search.episode == null ? undefined : String(search.episode),
     pick: search.pick == null ? undefined : String(search.pick),
+    playlist: search.playlist == null ? undefined : String(search.playlist),
   }),
   component: ItemRouteView,
 });
 
 function ItemRouteView(): React.ReactElement {
   const { itemId } = itemRoute.useParams();
-  const { season, episode, pick } = itemRoute.useSearch();
+  const { season, episode, pick, playlist } = itemRoute.useSearch();
   return (
     <ItemPage
       key={itemId}
@@ -171,6 +172,7 @@ function ItemRouteView(): React.ReactElement {
       seasonId={season}
       episodeId={episode}
       pickId={pick}
+      playlistId={playlist}
     />
   );
 }
@@ -192,6 +194,7 @@ const playRoute = createRoute({
   validateSearch: (search: Record<string, unknown>) => ({
     source: search.source == null ? '' : String(search.source),
     start: Number(search.start) || 0,
+    playlist: search.playlist == null ? undefined : String(search.playlist),
   }),
   component: PlayRouteView,
 });
@@ -215,13 +218,14 @@ function TrailerRouteView(): React.ReactElement {
 
 function PlayRouteView(): React.ReactElement {
   const { itemId } = playRoute.useParams();
-  const { source, start } = playRoute.useSearch();
+  const { source, start, playlist } = playRoute.useSearch();
   return (
     <PlayerPage
       key={`${itemId}|${source}`}
       itemId={itemId}
       sourceId={source}
       startMs={start}
+      playlist={playlist}
     />
   );
 }

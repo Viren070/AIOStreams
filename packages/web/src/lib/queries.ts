@@ -1089,7 +1089,7 @@ function isSkipped(
  * skips. A server that ignores `AdjacentTo` sends the whole show, so the
  * neighbours are found by position.
  */
-export function useAdjacentEpisodes(item: BaseItemDto) {
+export function useAdjacentEpisodes(item: BaseItemDto, enabled = true) {
   const { client, user } = useSession();
   const seriesId = item.Type === 'Episode' ? item.SeriesId : undefined;
   const skip = useSkippedMarks();
@@ -1124,7 +1124,7 @@ export function useAdjacentEpisodes(item: BaseItemDto) {
       };
       return { previous: along(-1), next: along(1) };
     },
-    enabled: !!seriesId,
+    enabled: enabled && !!seriesId,
     staleTime: 10 * 60_000,
   });
 }

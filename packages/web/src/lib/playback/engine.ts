@@ -3,7 +3,7 @@ import type { Span } from '../subtitles/align';
 import type { BaseItemDto, MediaStream, SourceInfo } from '../types';
 import type { PlaybackPrefs } from '../user-config';
 import type { Chapter } from './chapters';
-import type { PlayerState, QueuedEpisode, Track } from './controller';
+import type { PlayerState, QueuedItem, Track } from './controller';
 import type { TimeRange } from './playhead';
 
 /** One of the server's external subtitles, which an engine loads once picked. */
@@ -78,7 +78,7 @@ export type EngineEvent =
   | { type: 'loaded' }
   | { type: 'ended' }
   | { type: 'failed'; error: string; retry?: { label: string; run(): void } }
-  | { type: 'advanced'; episode: QueuedEpisode }
+  | { type: 'advanced'; next: QueuedItem }
   /** The user closed the player's own window. */
   | { type: 'closed' }
   | { type: 'subtitle-text'; text: string }
@@ -145,7 +145,7 @@ export interface PlayerEngine {
   /** The player in its own window it drives. */
   external?: string;
   closeWindow?(): void;
-  queueNext?(episode: QueuedEpisode): void;
+  queueNext?(next: QueuedItem): void;
 }
 
 export type EngineFactory = (

@@ -57,13 +57,15 @@ export function RemoteTarget() {
 
 /**
  * Takes everything sent while this player is up. A new title takes its
- * place; showing one never interrupts it.
+ * place; showing one never interrupts it. `queue` adds to what plays next,
+ * where it can.
  */
 export function useRemotePlayer(
   player: PlayerController,
   item: BaseItemDto,
   source: SourceInfo,
-  act: (key: MediaKey) => void
+  act: (key: MediaKey) => void,
+  queue?: (itemIds: string[], soon: boolean) => void
 ) {
   const open = useOpenRemote({ replace: true });
   const setTrack = useLatest((kind: TrackKind, index: number) => {
@@ -78,6 +80,7 @@ export function useRemotePlayer(
     else if (command.kind === 'track')
       setTrack.current(command.type, command.index);
     else if (command.kind === 'play') open(command);
+    else if (command.kind === 'queue') queue?.(command.itemIds, command.soon);
     return true;
   });
   const { loaded } = player.state;

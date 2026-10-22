@@ -35,6 +35,10 @@ msgstr ""
 msgid "{count, plural, one {# second} other {# seconds}}"
 msgstr ""
 
+#: src/components/playlists.tsx
+msgid "{count, plural, one {# title} other {# titles}}"
+msgstr ""
+
 #: src/components/party/party-sheet.tsx
 msgid "{count, plural, one {# watching · on {on}} other {# watching · on {on}}}"
 msgstr ""
@@ -411,8 +415,27 @@ msgstr ""
 msgid "Add favourite"
 msgstr ""
 
+#: src/components/playlists.tsx
+msgid "Add from Continue watching"
+msgstr ""
+
+#: src/components/item-menu.tsx
+#: src/components/playlists.tsx
+#: src/pages/item.tsx
+msgid "Add to playlist"
+msgstr ""
+
+#: src/components/playlists.tsx
+msgid "Add to this playlist"
+msgstr ""
+
 #: src/components/player/controls.tsx
 msgid "Added {name}"
+msgstr ""
+
+#: src/components/playlists.tsx
+#: src/pages/player.tsx
+msgid "Added to {name}"
 msgstr ""
 
 #: src/pages/settings/account.tsx
@@ -458,8 +481,16 @@ msgstr ""
 msgid "All fields"
 msgstr ""
 
+#: src/components/playlists.tsx
+msgid "All playlists"
+msgstr ""
+
 #: src/lib/downloads/index.ts
 msgid "Already downloaded or on the way"
+msgstr ""
+
+#: src/components/playlists.tsx
+msgid "Already in {name}"
 msgstr ""
 
 #: src/components/send-report.tsx
@@ -749,6 +780,7 @@ msgstr ""
 msgid "Can’t reach the server"
 msgstr ""
 
+#: src/components/playlists.tsx
 #: src/components/send-report.tsx
 #: src/components/version-settings.tsx
 #: src/lib/i18n.ts
@@ -980,6 +1012,11 @@ msgstr ""
 msgid "Corner button"
 msgstr ""
 
+#: src/components/playlists.tsx
+#: src/pages/player.tsx
+msgid "Could not add to {name}"
+msgstr ""
+
 #: src/lib/hosts/shell/index.ts
 msgid "Could not check: {error}"
 msgstr ""
@@ -1014,6 +1051,10 @@ msgstr ""
 msgid "Could not find versions of that episode"
 msgstr ""
 
+#: src/components/player/next-episode.tsx
+msgid "Could not find versions of that title"
+msgstr ""
+
 #: src/lib/downloads/index.ts
 msgid "Could not find versions: {message}"
 msgstr ""
@@ -1039,6 +1080,10 @@ msgstr ""
 msgid "Could not load the history"
 msgstr ""
 
+#: src/components/playlists.tsx
+msgid "Could not load the playlists."
+msgstr ""
+
 #: src/components/version-picker.tsx
 msgid "Could not load the versions: {loadError}"
 msgstr ""
@@ -1053,6 +1098,10 @@ msgstr ""
 
 #: src/pages/person.tsx
 msgid "Could not load this person"
+msgstr ""
+
+#: src/components/playlists.tsx
+msgid "Could not load this playlist."
 msgstr ""
 
 #: src/pages/item.tsx
@@ -1105,6 +1154,10 @@ msgstr ""
 
 #: src/pages/settings/playback.tsx
 msgid "Counts down, then plays the next episode. Off, the prompt waits for you."
+msgstr ""
+
+#: src/components/playlists.tsx
+msgid "Create"
 msgstr ""
 
 #: src/components/people.tsx
@@ -1196,12 +1249,21 @@ msgstr ""
 msgid "Delay: {delayLabel}"
 msgstr ""
 
+#: src/components/playlists.tsx
 #: src/pages/downloads.tsx
 msgid "Delete"
 msgstr ""
 
+#: src/components/playlists.tsx
+msgid "Delete {name}"
+msgstr ""
+
 #: src/pages/downloads.tsx
 msgid "Delete all"
+msgstr ""
+
+#: src/components/playlists.tsx
+msgid "Delete playlist"
 msgstr ""
 
 #: src/pages/settings/theme.tsx
@@ -1311,6 +1373,7 @@ msgstr ""
 
 #: src/components/party/reaction-setting.tsx
 #: src/components/player/subtitle-sync.tsx
+#: src/components/playlists.tsx
 #: src/components/send-report.tsx
 #: src/components/version-settings.tsx
 msgid "Done"
@@ -2131,6 +2194,7 @@ msgid "Monospace"
 msgstr ""
 
 #: src/components/overview.tsx
+#: src/components/playlists.tsx
 #: src/components/version-picker.tsx
 #: src/pages/downloads.tsx
 msgid "More"
@@ -2164,10 +2228,12 @@ msgstr ""
 msgid "Move {name} up"
 msgstr ""
 
+#: src/components/playlists.tsx
 #: src/components/version-settings.tsx
 msgid "Move down"
 msgstr ""
 
+#: src/components/playlists.tsx
 #: src/components/version-settings.tsx
 msgid "Move up"
 msgstr ""
@@ -2218,6 +2284,7 @@ msgstr ""
 msgid "Mute key"
 msgstr ""
 
+#: src/components/playlists.tsx
 #: src/components/version-settings.tsx
 msgid "Name"
 msgstr ""
@@ -2242,6 +2309,11 @@ msgstr ""
 msgid "New code"
 msgstr ""
 
+#: src/components/playlists.tsx
+msgid "New playlist"
+msgstr ""
+
+#: src/components/player/controls.tsx
 #: src/components/remote-sheet.tsx
 #: src/lib/i18n.ts
 msgid "Next"
@@ -2264,6 +2336,10 @@ msgstr ""
 
 #: src/pages/settings/index.tsx
 msgid "Next episode, controls and players"
+msgstr ""
+
+#: src/components/player/next-episode.tsx
+msgid "Next in {playlistName}"
 msgstr ""
 
 #: src/pages/calendar.tsx
@@ -2335,6 +2411,10 @@ msgstr ""
 
 #: src/lib/playback/play.ts
 msgid "No playable version was found"
+msgstr ""
+
+#: src/components/playlists.tsx
+msgid "No playlists yet. Make one here, or add a title to one from its menu."
 msgstr ""
 
 #: src/lib/servers.ts
@@ -2415,6 +2495,10 @@ msgstr ""
 
 #: src/pages/person.tsx
 msgid "Nothing found."
+msgstr ""
+
+#: src/components/playlists.tsx
+msgid "Nothing here yet. Add titles from their menu, or from the suggestions below."
 msgstr ""
 
 #: src/pages/discover.tsx
@@ -2587,6 +2671,10 @@ msgstr ""
 
 #: src/lib/i18n.ts
 msgid "Open main menu"
+msgstr ""
+
+#: src/components/playlists.tsx
+msgid "Open playlist"
 msgstr ""
 
 #: src/pages/downloads.tsx
@@ -2849,6 +2937,7 @@ msgstr ""
 #: src/components/hero.tsx
 #: src/components/item-menu.tsx
 #: src/components/player/controls.tsx
+#: src/components/playlists.tsx
 #: src/components/random-pick.tsx
 #: src/components/remote-sheet.tsx
 #: src/lib/input/actions.ts
@@ -2964,6 +3053,7 @@ msgstr ""
 
 #: src/components/party/party-sheet.tsx
 #: src/components/player/episodes.tsx
+#: src/components/playlists.tsx
 #: src/components/sessions.tsx
 #: src/components/version-picker.tsx
 msgid "Playing"
@@ -2983,6 +3073,16 @@ msgstr ""
 
 #: src/pages/settings/playback.tsx
 msgid "Playing on and the next and previous buttons pass over episodes marked as filler. You can still play one yourself."
+msgstr ""
+
+#: src/components/player/options.tsx
+#: src/components/playlists.tsx
+msgid "Playlist"
+msgstr ""
+
+#: src/components/layout.tsx
+#: src/components/playlists.tsx
+msgid "Playlists"
 msgstr ""
 
 #: src/components/party/party-sheet.tsx
@@ -3038,6 +3138,7 @@ msgstr ""
 msgid "Previews"
 msgstr ""
 
+#: src/components/player/controls.tsx
 #: src/components/remote-sheet.tsx
 #: src/lib/i18n.ts
 msgid "Previous"
@@ -3223,6 +3324,10 @@ msgstr ""
 msgid "Remove from history"
 msgstr ""
 
+#: src/components/playlists.tsx
+msgid "Remove from playlist"
+msgstr ""
+
 #: src/pages/downloads.tsx
 msgid "Remove from the list, keep the file"
 msgstr ""
@@ -3233,6 +3338,10 @@ msgstr ""
 
 #: src/pages/history.tsx
 msgid "Removed from history"
+msgstr ""
+
+#: src/components/playlists.tsx
+msgid "Rename"
 msgstr ""
 
 #: src/pages/settings/apps.tsx
@@ -3363,6 +3472,7 @@ msgstr ""
 msgid "Sans serif"
 msgstr ""
 
+#: src/components/playlists.tsx
 #: src/components/version-settings.tsx
 #: src/pages/settings/apps.tsx
 msgid "Save"
@@ -4264,6 +4374,10 @@ msgstr ""
 msgid "The player's subtitle menu lists subtitles in your languages, ones without a language and the one on. The rest wait under More languages."
 msgstr ""
 
+#: src/components/playlists.tsx
+msgid "The playlist goes; the titles in it stay."
+msgstr ""
+
 #: src/lib/party/party.ts
 msgid "The relay could not read that."
 msgstr ""
@@ -4587,6 +4701,10 @@ msgstr ""
 
 #: src/lib/input/actions.ts
 msgid "Up"
+msgstr ""
+
+#: src/components/player/next-episode.tsx
+msgid "Up next"
 msgstr ""
 
 #: src/components/player/next-episode.tsx

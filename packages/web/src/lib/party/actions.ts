@@ -1,6 +1,8 @@
 import { t } from '@lingui/core/macro';
 import React from 'react';
-import { useEpisodesAfter, useOwnAvatar } from '../queries';
+import { useOwnAvatar } from '../queries';
+import { useFollowing } from '../playlists';
+import { useLatest } from '../use-latest';
 import { useServerInfo } from '../server-info';
 import { useSession } from '../session';
 import type { BaseItemDto, SourceInfo } from '../types';
@@ -8,8 +10,8 @@ import { relayBase, type Invite } from './invite';
 import { partyItem } from './items';
 import { party, type PartyIdentity } from './party';
 
-/** Episodes queued after the one a party starts, so it plays on by itself. */
-const QUEUED_EPISODES = 10;
+/** What's queued after the title a party starts, so it plays on by itself. */
+const QUEUED_AFTER = 10;
 
 const DEFAULT_RELAY = 'https://aiostreams.viren070.me';
 
@@ -57,22 +59,27 @@ export function usePartyRelays(): RelayChoice[] {
   }, [info, client.base]);
 }
 
-/** Starts the item for everyone in the party. */
+/** Starts the item for everyone in the party, with what follows it here. */
 export function usePlayForParty() {
-  const episodesAfter = useEpisodesAfter();
+  const following = useLatest(useFollowing());
   return React.useCallback(
-    async (item: BaseItemDto, source: SourceInfo | null, startMs = 0) => {
-      const following = await episodesAfter(item).catch(() => []);
+    async (
+      item: BaseItemDto,
+      source: SourceInfo | null,
+      startMs = 0,
+      playlist?: string
+    ) => {
+      const after = await following.current(item, playlist).catch(() => []);
       const items = [
         partyItem(item, source),
-        ...following.slice(0, QUEUED_EPISODES).map((e) => partyItem(e)),
+        ...after.slice(0, QUEUED_AFTER).map((e) => partyItem(e)),
       ]
         .map((i) => party.entry(i))
         .filter((e): e is NonNullable<typeof e> => !!e);
       if (items.length)
         party.request({ type: 'Play', items, index: 0, startMs });
     },
-    [episodesAfter]
+    [following]
   );
 }
 

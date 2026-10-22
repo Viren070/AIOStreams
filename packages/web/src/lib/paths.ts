@@ -30,8 +30,9 @@ export const to = {
   },
   item: (itemId: string) => `/item/${itemId}`,
   person: (personId: string) => `/person/${personId}`,
-  play: (itemId: string, sourceId: string, startMs = 0) =>
-    `/play/${itemId}?source=${sourceId}${startMs ? `&start=${Math.round(startMs)}` : ''}`,
+  /** With `playlist`, it plays on through that playlist. */
+  play: (itemId: string, sourceId: string, startMs = 0, playlist?: string) =>
+    `/play/${itemId}?source=${sourceId}${startMs ? `&start=${Math.round(startMs)}` : ''}${playlist ? `&playlist=${playlist}` : ''}`,
   trailer: (itemId: string, index = 0) =>
     `/play/trailer/${itemId}${index ? `?trailer=${index}` : ''}`,
 };
@@ -51,10 +52,11 @@ export function itemPath(
 
 /** The item's page, opening on its version list. */
 export function versionsPath(
-  item: Pick<BaseItemDto, 'Id' | 'Type' | 'SeriesId' | 'SeasonId'>
+  item: Pick<BaseItemDto, 'Id' | 'Type' | 'SeriesId' | 'SeasonId'>,
+  playlist?: string
 ): string {
   const path = itemPath(item);
-  return `${path}${path.includes('?') ? '&' : '?'}pick=${item.Id}`;
+  return `${path}${path.includes('?') ? '&' : '?'}pick=${item.Id}${playlist ? `&playlist=${playlist}` : ''}`;
 }
 
 export const href = (path: string) => `#${path}`;
