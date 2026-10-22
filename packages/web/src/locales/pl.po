@@ -9,7 +9,7 @@ msgstr ""
 "Last-Translator: Krzysztof <krzysiek@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Polish <https://hosted.weblate.org/projects/aiostreams/web-app/pl/>\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
-"PO-Revision-Date: 2026-10-21 18:28+0000\n"
+"PO-Revision-Date: 2026-10-22 14:34+0000\n"
 
 #: src/components/party/party-sheet.tsx
 msgid "(you)"
@@ -1356,7 +1356,7 @@ msgstr "Pobieranie, {percent}%"
 #: src/pages/downloads.tsx
 #: src/pages/settings/index.tsx
 msgid "Downloads"
-msgstr "Pobrane"
+msgstr "Pobieranie"
 
 #: src/pages/settings/downloads.tsx
 msgid "Downloads at once"
@@ -1452,11 +1452,11 @@ msgstr "Wyrównuje głośne i ciche sceny, ułatwiając słuchanie przy niskiej 
 
 #: src/pages/item.tsx
 msgid "Every {list}"
-msgstr "Każda {list}"
+msgstr "Każdy {list}"
 
 #: src/pages/item.tsx
 msgid "Every {list} at {time}"
-msgstr "Każda {list} na {time}"
+msgstr "Każdy {list} o {time}"
 
 #: src/pages/history.tsx
 msgid "Everyone"
@@ -3367,7 +3367,7 @@ msgstr "Zapisano w {folder}"
 
 #: src/pages/settings/common.tsx
 msgid "Saved to your account, so it follows you to every device."
-msgstr "Zapisane na Twoim koncie, więc podąża za Tobą na każde urządzenie."
+msgstr "Zapisane na Twoim koncie, dzięki czemu synchronizują się ze wszystkimi urządzeniami, na których jesteś zalogowany."
 
 #: src/pages/settings/common.tsx
 msgid "Saved to your account, so your other devices and Jellyfin apps use it too."
