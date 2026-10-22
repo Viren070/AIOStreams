@@ -187,12 +187,11 @@ export function VersionPickerProvider({
       const last = opts.version ?? rememberedVersion(item, startMs);
       // The player page finds the version itself, and lists them if it is gone.
       if (
-        last &&
         !currentHost().play &&
         chosenPlayer().kind !== 'link' &&
         party.state()?.status !== 'live'
       ) {
-        navigate(to.play(item.Id!, last, startMs), { replace });
+        navigate(to.play(item.Id!, last ?? '', startMs), { replace });
         return;
       }
       const notice = toast.loading(t`Finding a version…`);

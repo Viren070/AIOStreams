@@ -14,9 +14,11 @@ import type { BaseItemDto } from '../../lib/types';
 export function Cover({
   item,
   hidden = false,
+  status,
 }: {
   item?: BaseItemDto;
   hidden?: boolean;
+  status?: string;
 }) {
   const { client } = useSession();
   const [gone, setGone] = React.useState(false);
@@ -94,11 +96,20 @@ export function Cover({
             {detail}
           </p>
         )}
-        <div
-          data-ui="player-cover-bar"
-          className="relative mt-4 h-0.5 w-40 overflow-hidden rounded-full bg-white/15"
-        >
-          <div className="absolute inset-y-0 w-1/3 rounded-full bg-white/80 [animation:player-cover-sweep_1.4s_ease-in-out_infinite]" />
+        <div className="relative mt-4">
+          <div
+            data-ui="player-cover-bar"
+            className="relative h-0.5 w-40 overflow-hidden rounded-full bg-white/15"
+          >
+            <div className="absolute inset-y-0 w-1/3 rounded-full bg-white/80 [animation:player-cover-sweep_1.4s_ease-in-out_infinite]" />
+          </div>
+          <p
+            data-ui="player-cover-status"
+            role="status"
+            className="absolute left-1/2 top-full mt-4 w-max max-w-[80vw] -translate-x-1/2 text-center text-sm text-gray-300 sm:text-base"
+          >
+            {status}
+          </p>
         </div>
       </div>
     </div>

@@ -137,9 +137,11 @@ export function PlayerPage({
       : undefined;
   const fetched = useItem(itemId);
   const item = { ...fetched, data: fetched.data ?? local?.item };
+  const listed = usePlaybackInfo(itemId, { enabled: !local && !sourceId });
+  const named = sourceId || playableSources(listed.data)[0]?.Id || undefined;
   const info = usePlaybackInfo(itemId, {
-    sourceId: sourceId || undefined,
-    enabled: !local,
+    sourceId: named,
+    enabled: !local && !!named,
   });
   const playback = usePlaybackPrefs();
   const picks = useShowPicks();
@@ -154,8 +156,11 @@ export function PlayerPage({
   > | null>(null);
   const [covered, setCovered] = React.useState(true);
   const sources = local ? [local.source!] : playableSources(info.data);
-  const source = sourceId ? sources.find((s) => s.Id === sourceId) : sources[0];
-  const missing = !playing && !!item.data && !!info.data && !source;
+  const source = named ? sources.find((s) => s.Id === named) : sources[0];
+  const missing =
+    !playing &&
+    !!item.data &&
+    (info.data ? !source : !sourceId && !!listed.error);
   const youTubeId = playing ? undefined : source?.aiostreams?.ytId;
   const youTube = useYouTubeStream(youTubeId);
   React.useEffect(() => {
@@ -188,6 +193,7 @@ export function PlayerPage({
 
   const loading =
     (!item.data && item.isLoading) ||
+    listed.isLoading ||
     info.isLoading ||
     playback.isLoading ||
     picks.isLoading ||
@@ -195,7 +201,13 @@ export function PlayerPage({
     missing;
   return (
     <>
-      <Cover item={item.data} hidden={!!playing && !covered} />
+      <Cover
+        item={item.data}
+        hidden={!!playing && !covered}
+        status={
+          !sourceId && !playing && loading ? t`Finding a version…` : undefined
+        }
+      />
       {playing ? (
         <VersionPickerProvider>
           <Player {...playing} startMs={startMs} onCovered={setCovered} />

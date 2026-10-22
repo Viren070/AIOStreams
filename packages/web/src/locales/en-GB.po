@@ -1545,6 +1545,7 @@ msgstr "Finding a version to download"
 
 #: src/components/version-picker.tsx
 #: src/pages/downloads.tsx
+#: src/pages/player.tsx
 msgid "Finding a version…"
 msgstr "Finding a version…"
 
