@@ -495,10 +495,19 @@ class MoviEngine implements PlayerEngine {
     this.emit({ type: 'ended' });
   };
 
-  /** Only a ready session acts: while loading, the rejection of load() reports the same error. */
+  /**
+   * Only a ready session acts: while loading, the rejection of load() reports
+   * the same error. Movi also reports errors it recovers from (the audio
+   * decoder, the software video decoder), after which its state isn't `error`.
+   */
   private onError = (error: Error): void => {
-    if (this.session!.phase !== 'ready')
-      return moviDebug('error-ignored', { message: error?.message });
+    const s = this.session!;
+    if (s.phase !== 'ready' || s.player?.getState() !== 'error')
+      return moviDebug('error-ignored', {
+        message: error?.message,
+        phase: s.phase,
+        state: s.player?.getState(),
+      });
     this.handleFailure(error);
   };
 
