@@ -31,7 +31,9 @@ function formatOf(raw: string): SubtitleFormat {
   return 'vtt';
 }
 
-async function fetchSubtitle(url: string): Promise<string | null> {
+async function fetchSubtitle(
+  url: string
+): Promise<{ raw: string; cacheable: boolean } | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
@@ -41,7 +43,12 @@ async function fetchSubtitle(url: string): Promise<string | null> {
     });
     if (!res.ok) return null;
 
-    return (await readBodyCapped(res, MAX_BYTES)).toString('utf8');
+    return {
+      raw: (await readBodyCapped(res, MAX_BYTES)).toString('utf8'),
+      cacheable: !/\bno-(?:store|cache)\b/i.test(
+        res.headers.get('cache-control') ?? ''
+      ),
+    };
   } catch (error) {
     logger.debug(
       { url, err: error instanceof Error ? error.message : String(error) },
@@ -79,19 +86,31 @@ async function subtitleHandler(req: Request, res: Response) {
   const to = formatOf(param(req, 'format'));
   const key = `${track.url}|${to}`;
   let converted = await bodyCache.get(key).catch(() => undefined);
+  let cacheable = true;
   if (!converted) {
-    const raw = await fetchSubtitle(track.url);
-    if (raw === null) {
+    const fetched = await fetchSubtitle(track.url);
+    if (!fetched) {
       res.status(502).end();
       return;
     }
-    converted = convertSubtitle(raw, subtitleExtensionOf(track.url), to);
-    if (Buffer.byteLength(converted.body, 'utf8') <= MAX_CACHED_BYTES) {
+    converted = convertSubtitle(
+      fetched.raw,
+      subtitleExtensionOf(track.url),
+      to
+    );
+    cacheable = fetched.cacheable;
+    if (
+      cacheable &&
+      Buffer.byteLength(converted.body, 'utf8') <= MAX_CACHED_BYTES
+    ) {
       void bodyCache.set(key, converted, BODY_TTL).catch(() => undefined);
     }
   }
   res.setHeader('Content-Type', converted.contentType);
-  res.setHeader('Cache-Control', 'public, max-age=3600');
+  res.setHeader(
+    'Cache-Control',
+    cacheable ? 'public, max-age=3600' : 'no-store'
+  );
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.send(converted.body);
 }
