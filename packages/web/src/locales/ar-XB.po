@@ -516,7 +516,7 @@ msgid "Always shows subtitles, in your language when the version has them."
 msgstr ""
 
 #: src/pages/settings/audio.tsx
-msgid "An audio track you pick while watching a show sets the language for its other episodes. Picking the one your languages would play forgets it."
+msgid "An audio track you pick while watching a show sets the language for its other episodes. Picking what the settings above would play forgets it."
 msgstr ""
 
 #: src/lib/hosts/jellyfin-android.ts

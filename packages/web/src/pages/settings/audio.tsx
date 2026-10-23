@@ -99,7 +99,7 @@ export function AudioSection() {
         <Switch
           side="right"
           label={t`Remember picks per show`}
-          help={t`An audio track you pick while watching a show sets the language for its other episodes. Picking the one your languages would play forgets it.`}
+          help={t`An audio track you pick while watching a show sets the language for its other episodes. Picking what the settings above would play forgets it.`}
           value={prefs.RememberAudioSelections !== false}
           onValueChange={(v) => update({ RememberAudioSelections: v })}
         />
