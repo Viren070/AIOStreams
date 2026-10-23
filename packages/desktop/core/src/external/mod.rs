@@ -236,10 +236,14 @@ impl External {
         url: &str,
         title: &str,
         language: &str,
+        replace: Option<u64>,
         local: &dyn Fn(&str) -> bool,
     ) -> Result<(), String> {
         playback::check_url(url, local)?;
         self.with(|backend| {
+            if let Some(id) = replace {
+                backend.command(vec!["sub-remove".into(), id.to_string()]);
+            }
             backend.command(vec![
                 "sub-add".into(),
                 url.into(),

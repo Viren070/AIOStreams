@@ -530,15 +530,16 @@ pub fn handle(
             url,
             title,
             language,
+            replace,
             external: to_external,
         } => {
             let local = |path: &str| downloads.is_local(path);
             let done = if to_external {
-                Some(external.add_subtitle_url(&url, &title, &language, &local))
+                Some(external.add_subtitle_url(&url, &title, &language, replace, &local))
             } else {
                 player
                     .as_ref()
-                    .map(|p| p.add_subtitle_url(&url, &title, &language, &local))
+                    .map(|p| p.add_subtitle_url(&url, &title, &language, replace, &local))
             };
             if let Some(Err(e)) = done {
                 fail(format!("player-subtitle-add: {e}"));
