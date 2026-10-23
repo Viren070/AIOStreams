@@ -9,7 +9,7 @@ msgstr ""
 "Last-Translator: Nathan Lowe <njlowe21@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Spanish <https://hosted.weblate.org/projects/aiostreams/web-app/es/>\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"PO-Revision-Date: 2026-10-23 19:56+0000\n"
+"PO-Revision-Date: 2026-10-23 20:09+0000\n"
 
 #: src/components/party/party-sheet.tsx
 msgid "(you)"
@@ -116,7 +116,7 @@ msgstr ""
 #. Hours and minutes, as in 1h 15m
 #: src/lib/format.ts
 msgid "{hours}h {rest}m"
-msgstr ""
+msgstr "{hours}h {rest}m"
 
 #: src/pages/history.tsx
 msgid "{inProgress, plural, one {# in progress} other {# in progress}}"
@@ -137,7 +137,7 @@ msgstr ""
 #. Minutes, as in 45m
 #: src/lib/format.ts
 msgid "{minutes}m"
-msgstr ""
+msgstr "{minutes}m"
 
 #: src/pages/history.tsx
 msgid "{movieCount, plural, one {# movie watched} other {# movies watched}}"
@@ -359,7 +359,7 @@ msgstr ""
 #: src/components/layout.tsx
 #: src/pages/settings/index.tsx
 msgid "Account"
-msgstr ""
+msgstr "Cuenta"
 
 #: src/pages/settings/cache.tsx
 msgid "Account and server"
@@ -602,7 +602,7 @@ msgstr ""
 #: src/components/remote-sheet.tsx
 #: src/pages/settings/index.tsx
 msgid "Audio"
-msgstr ""
+msgstr "Audio"
 
 #: src/pages/settings/audio.tsx
 msgid "Audio description, narrating what is on screen"
@@ -614,7 +614,7 @@ msgstr ""
 
 #: src/pages/settings/audio.tsx
 msgid "Audio types"
-msgstr ""
+msgstr "Tipos de audio"
 
 #: src/components/player/keys.ts
 msgid "Audio: {label}"
@@ -810,7 +810,7 @@ msgstr ""
 
 #: src/pages/downloads.tsx
 msgid "Change folder"
-msgstr ""
+msgstr "Cambiar carpeta"
 
 #: src/components/party/reaction-setting.tsx
 msgid "Change reactions"
@@ -957,7 +957,7 @@ msgstr ""
 
 #: src/lib/i18n.ts
 msgid "Confirm"
-msgstr ""
+msgstr "Confirmar"
 
 #: src/pages/servers.tsx
 msgid "Connect"
@@ -993,7 +993,7 @@ msgstr ""
 #: src/components/crash-report.tsx
 #: src/pages/settings/apps.tsx
 msgid "Copy"
-msgstr ""
+msgstr "Copiar"
 
 #: src/components/version-settings.tsx
 msgid "Copy as JSON"
@@ -1191,7 +1191,7 @@ msgstr ""
 
 #: src/components/player/options.tsx
 msgid "Crop"
-msgstr ""
+msgstr "Cortar"
 
 #: src/lib/input/keys.ts
 msgid "Ctrl"
@@ -1203,7 +1203,7 @@ msgstr ""
 
 #: src/pages/settings/theme.tsx
 msgid "Custom CSS"
-msgstr ""
+msgstr "CSS Custom"
 
 #: src/pages/settings/theme.tsx
 msgid "Custom CSS applied"
@@ -2187,7 +2187,7 @@ msgstr ""
 
 #: src/pages/settings/theme.tsx
 msgid "Midnight"
-msgstr ""
+msgstr "Medianoche"
 
 #: src/components/window-controls.tsx
 msgid "Minimise"
@@ -2552,7 +2552,7 @@ msgstr ""
 
 #: src/components/sessions.tsx
 msgid "Now playing"
-msgstr ""
+msgstr "Reproduciendo ahora"
 
 #: src/components/player/subtitle-sync.tsx
 msgid "Now tap Heard when that line is spoken."
@@ -2932,7 +2932,7 @@ msgstr ""
 
 #: src/pages/sign-in.tsx
 msgid "PIN"
-msgstr ""
+msgstr "PIN"
 
 #: src/pages/sign-in.tsx
 msgid "PIN or password"
@@ -2968,7 +2968,7 @@ msgstr ""
 
 #: src/pages/settings/apps.tsx
 msgid "Play in the background"
-msgstr ""
+msgstr "Reproducir en el fondo"
 
 #: src/pages/settings/playback.tsx
 msgid "Play it automatically"
@@ -3184,7 +3184,7 @@ msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "QR code"
-msgstr ""
+msgstr "Código QR"
 
 #: src/pages/sign-in.tsx
 msgid "Quick Connect"
@@ -3228,7 +3228,7 @@ msgstr ""
 
 #: src/pages/favourites.tsx
 msgid "Random pick"
-msgstr ""
+msgstr "Selección aleotoria"
 
 #: src/components/rating.tsx
 msgid "Rate"
@@ -3277,7 +3277,7 @@ msgstr ""
 
 #: src/lib/hosts/shell/player.ts
 msgid "refused"
-msgstr ""
+msgstr "rechazado"
 
 #: src/components/party/party-sheet.tsx
 msgid "Relay"
@@ -3322,7 +3322,7 @@ msgstr ""
 #: src/components/item-menu.tsx
 #: src/pages/item.tsx
 msgid "Remove favourite"
-msgstr ""
+msgstr "Eliminar favorito"
 
 #: src/components/item-menu.tsx
 msgid "Remove from continue watching"
@@ -3346,7 +3346,7 @@ msgstr ""
 
 #: src/pages/history.tsx
 msgid "Removed from history"
-msgstr ""
+msgstr "Eliminado de historia"
 
 #: src/components/playlists.tsx
 msgid "Rename"
@@ -3667,7 +3667,7 @@ msgstr ""
 #: src/components/layout.tsx
 #: src/pages/settings/index.tsx
 msgid "Settings"
-msgstr ""
+msgstr "Ajustes"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Shadow"
@@ -4020,7 +4020,7 @@ msgstr ""
 
 #: src/components/player/options.tsx
 msgid "Stretch"
-msgstr ""
+msgstr "Extender"
 
 #: src/pages/item.tsx
 msgid "Studios"
@@ -4120,11 +4120,11 @@ msgstr ""
 
 #: src/pages/settings/theme.tsx
 msgid "Sun"
-msgstr ""
+msgstr "Sol"
 
 #: src/lib/i18n.ts
 msgid "Support AIOStreams"
-msgstr ""
+msgstr "Apoyar a AIOStreams"
 
 #: src/pages/settings/account.tsx
 msgid "Switch"
@@ -4368,7 +4368,7 @@ msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "The party is full"
-msgstr ""
+msgstr "El grupo está lleno"
 
 #: src/components/party/party-sheet.tsx
 msgid "The party is watching <0>{title}</0>"
@@ -4709,7 +4709,7 @@ msgstr ""
 
 #: src/lib/input/actions.ts
 msgid "Up"
-msgstr ""
+msgstr "Arriba"
 
 #: src/components/player/next-episode.tsx
 msgid "Up next"
@@ -4737,7 +4737,7 @@ msgstr ""
 
 #: src/pages/settings/apps.tsx
 msgid "Updates"
-msgstr ""
+msgstr "Actualizaciones"
 
 #: src/pages/settings/index.tsx
 msgid "Updates, Discord, mpv and troubleshooting"
@@ -4761,7 +4761,7 @@ msgstr ""
 
 #: src/pages/settings/theme.tsx
 msgid "Use this server's CSS"
-msgstr ""
+msgstr "Utilizar CSS de este servidor"
 
 #: src/pages/sign-in.tsx
 msgid "Use your configuration’s UUID or alias and its password."
@@ -4959,7 +4959,7 @@ msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "Watching {name}, {at} in"
-msgstr ""
+msgstr "Viendo {name}, {at} en"
 
 #: src/pages/settings/about.tsx
 msgid "Web app"
