@@ -9,7 +9,7 @@ msgstr ""
 "Last-Translator: Nathan Lowe <njlowe21@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Spanish <https://hosted.weblate.org/projects/aiostreams/web-app/es/>\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"PO-Revision-Date: 2026-10-23 20:09+0000\n"
+"PO-Revision-Date: 2026-10-24 00:24+0000\n"
 
 #: src/components/party/party-sheet.tsx
 msgid "(you)"
@@ -874,7 +874,7 @@ msgstr ""
 
 #: src/components/item-menu.tsx
 msgid "Choose a version"
-msgstr ""
+msgstr "Seleccionar una versión"
 
 #: src/pages/settings/cache.tsx
 msgid "Clear"
@@ -1501,7 +1501,7 @@ msgstr ""
 
 #: src/components/episodes.tsx
 msgid "Episode {number}"
-msgstr ""
+msgstr "Capítulo {number}"
 
 #: src/components/episodes.tsx
 msgid "Episode details"
@@ -2000,7 +2000,7 @@ msgstr ""
 #: src/pages/settings/interface.tsx
 #: src/pages/settings/subtitles.tsx
 msgid "Language"
-msgstr ""
+msgstr "Idioma"
 
 #: src/pages/settings/index.tsx
 msgid "Language and how subtitles look"
@@ -3144,7 +3144,7 @@ msgstr ""
 
 #: src/pages/settings/playback.tsx
 msgid "Previews"
-msgstr ""
+msgstr "Previstas"
 
 #: src/components/player/controls.tsx
 #: src/components/remote-sheet.tsx
@@ -3621,7 +3621,7 @@ msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "Sending…"
-msgstr ""
+msgstr "Enviando…"
 
 #: src/pages/settings/audio.tsx
 msgid "Sends Dolby and DTS audio as it is even when your TV or receiver does not say it decodes them, as some do without saying so."
@@ -4442,7 +4442,7 @@ msgstr ""
 
 #: src/router.tsx
 msgid "There is nothing here"
-msgstr ""
+msgstr "No hay nada aquí"
 
 #: src/components/version-settings.tsx
 msgid "These come before the packs' badges. Badges that share a group are alternatives: only the first that matches shows."
@@ -4479,7 +4479,7 @@ msgstr ""
 
 #: src/pages/sign-in.tsx
 msgid "This code has expired."
-msgstr ""
+msgstr "Este código se caducó."
 
 #: src/lib/hosts/shell/index.ts
 msgid "This copy does not update itself."
@@ -5095,7 +5095,7 @@ msgstr ""
 
 #: src/pages/sign-in.tsx
 msgid "Who's watching?"
-msgstr ""
+msgstr "¿Quién está viendo?"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Width"
@@ -5123,11 +5123,11 @@ msgstr ""
 
 #: src/lib/i18n.ts
 msgid "Yellow"
-msgstr ""
+msgstr "Amarillo"
 
 #: src/components/layout.tsx
 msgid "You"
-msgstr ""
+msgstr "Tú"
 
 #: src/lib/party/party.ts
 msgid "You left the party."
@@ -5135,7 +5135,7 @@ msgstr ""
 
 #: src/pages/settings/playback.tsx
 msgid "Your {name}"
-msgstr ""
+msgstr "Tu {name}"
 
 #: src/components/version-settings.tsx
 msgid "Your badges"
@@ -5143,7 +5143,7 @@ msgstr ""
 
 #: src/lib/playback/player-choice.ts
 msgid "Your own {name}"
-msgstr ""
+msgstr "Tu propio {name}"
 
 #: src/lib/playback/player-choice.ts
 msgid "your player"
