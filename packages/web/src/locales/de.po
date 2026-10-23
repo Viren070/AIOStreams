@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-22 14:34+0000\n"
+"PO-Revision-Date: 2026-10-23 15:26+0000\n"
 "Last-Translator: hamburgercowgoldfish <242998989+hamburgercowgoldfish@users.noreply.github.com>\n"
 "Language-Team: German <https://hosted.weblate.org/projects/aiostreams/web-app/de/>\n"
 "Language: de\n"
@@ -752,9 +752,8 @@ msgid "Change folder"
 msgstr "Ordner wechseln"
 
 #: src/components/party/reaction-setting.tsx
-#, fuzzy
 msgid "Change reactions"
-msgstr "Tastenkürzel bearbeiten"
+msgstr "Reaktionen bearbeiten"
 
 #: src/components/no-catalogs.tsx src/pages/settings/account.tsx
 #: src/pages/sign-in.tsx
@@ -1031,9 +1030,8 @@ msgid "Could not load your favourites"
 msgstr "Favoriten konnten nicht geladen werden"
 
 #: src/components/random-pick.tsx
-#, fuzzy
 msgid "Could not pick one."
-msgstr "Beitritt fehlgeschlagen"
+msgstr "Konnte nicht ausgewählt werden."
 
 #: src/lib/subtitles/files.ts
 msgid "Could not read that file"
@@ -1349,7 +1347,7 @@ msgstr "Bearbeiten"
 
 #: src/components/player/controls.tsx
 msgid "Ends at {endsAt}"
-msgstr ""
+msgstr "Endet um {endsAt}"
 
 #: src/pages/settings/playback.tsx
 msgid "Engine"
@@ -1681,9 +1679,8 @@ msgid "Host"
 msgstr "Gastgeber"
 
 #: src/pages/settings/subtitles.tsx
-#, fuzzy
 msgid "How far subtitles sit above their usual place near the bottom, or below it down to the edge."
-msgstr "Vertikaler Abstand der Untertitel zum unteren Bildschirmrand."
+msgstr "Bestimmt den Abstand der Untertitel über ihrer Standardhöhe oder darunter bis zum Rand."
 
 #: src/pages/settings/playback.tsx
 msgid "How far the skip buttons, double taps and the arrow keys jump."
@@ -2548,7 +2545,7 @@ msgstr "Optionen, die die App selbst verwaltet."
 
 #: src/components/party/reaction-setting.tsx
 msgid "Or type one"
-msgstr ""
+msgstr "Oder manuell eingeben"
 
 #: src/pages/settings/audio.tsx
 msgid "Original language"
@@ -2698,16 +2695,15 @@ msgstr "Farbe auswählen"
 
 #: src/components/party/reaction-setting.tsx
 msgid "Pick a slot, then what goes in it."
-msgstr ""
+msgstr "Wähle einen Platz und lege fest, was dort hineinkommt."
 
 #: src/pages/downloads.tsx
 msgid "Pick a version"
 msgstr "Version auswählen"
 
 #: src/components/random-pick.tsx
-#, fuzzy
 msgid "Pick again"
-msgstr "Version auswählen"
+msgstr "Erneut auswählen"
 
 #: src/components/version-settings.tsx
 msgid "Pick fields to search only those parts of a version."
@@ -2925,7 +2921,7 @@ msgstr "Drücke eine Taste"
 
 #: src/lib/hosts/shell/android.ts
 msgid "Press Back again to leave"
-msgstr ""
+msgstr "Erneut \"Zurück\" drücken zum Beenden"
 
 #: src/components/version-settings.tsx src/pages/settings/subtitles.tsx
 msgid "Preview"
@@ -3001,18 +2997,16 @@ msgstr "Verstärkt den Center-Kanal, über den bei Surround-Ton die Dialoge ausg
 
 #: src/components/item-menu.tsx src/components/random-pick.tsx
 #: src/pages/item.tsx
-#, fuzzy
 msgid "Random episode"
-msgstr "Folgen ausblenden"
+msgstr "Zufällige Folge"
 
 #: src/components/random-pick.tsx
-#, fuzzy
 msgid "Random favourite"
-msgstr "Zu Favoriten hinzufügen"
+msgstr "Zufälliger Favorit"
 
 #: src/pages/favourites.tsx
 msgid "Random pick"
-msgstr ""
+msgstr "Zufällig auswählen"
 
 #: src/components/rating.tsx
 msgid "Rate"
@@ -3488,14 +3482,12 @@ msgid "Show the prompt"
 msgstr "Abfrage anzeigen"
 
 #: src/components/player/controls.tsx
-#, fuzzy
 msgid "Show time left"
-msgstr "Untertitel später anzeigen"
+msgstr "Restzeit anzeigen"
 
 #: src/components/player/controls.tsx
-#, fuzzy
 msgid "Show time played"
-msgstr "Untertitel später anzeigen"
+msgstr "Wiedergabezeit anzeigen"
 
 #: src/components/layout.tsx
 msgid "Showing saved pages"
@@ -3657,7 +3649,7 @@ msgstr "Überspringen"
 
 #: src/components/party/reaction-setting.tsx
 msgid "Slot {n}: {emoji}"
-msgstr ""
+msgstr "Slot {n}: {emoji}"
 
 #: src/lib/input/actions.ts
 msgid "Slower"
@@ -4258,7 +4250,7 @@ msgstr "Dieser Server gibt das Design der App für alle vor. Dein eigenes CSS wi
 
 #: src/components/random-pick.tsx
 msgid "This show has no episodes to pick from yet."
-msgstr ""
+msgstr "Für diese Serie stehen noch keine Episoden zur Auswahl."
 
 #: src/pages/trailer.tsx
 msgid "This trailer can't play in the app."
@@ -4715,7 +4707,7 @@ msgstr "Zu speichernde Inhalte"
 
 #: src/components/party/reaction-setting.tsx
 msgid "What you can send from a party's chat."
-msgstr ""
+msgstr "Was im Chat einer Watch-Party gesendet werden kann."
 
 #: src/pages/settings/apps.tsx
 msgid "What your Discord profile shows. Kept on this device."
