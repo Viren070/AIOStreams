@@ -141,6 +141,13 @@ export class ProwlarrPreset extends BuiltinAddonPreset {
             : undefined,
       },
       {
+        id: 'proxyAuth',
+        name: 'AIOStreams Proxy Auth',
+        description: `Provide a username:password pair from the \`AIOSTREAMS_AUTH\` environment variable to use for proxying the NZB. Only applies to usenet results.`,
+        type: 'password',
+        required: false,
+      },
+      {
         id: 'mediaTypes',
         name: 'Media Types',
         description:
@@ -303,6 +310,7 @@ export class ProwlarrPreset extends BuiltinAddonPreset {
       ...this.getBaseConfig(userData, services),
       url: prowlarrUrl,
       apiKey: prowlarrApiKey,
+      proxyAuth: options.proxyAuth,
       indexers: indexers || [],
       sources: options.sources || [],
       tags: typeof options.tags === 'string' ? options.tags.split(',') : [],
