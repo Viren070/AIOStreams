@@ -10,7 +10,7 @@ import type { Segment } from './segments';
 const still = () => () => {};
 
 /** How long a skip's picture stays once the skip lands, or once a late picture arrives. */
-const SKIP_PICTURE_MS = 2000;
+const SKIP_PICTURE_MS = 1000;
 
 export const arrowDirection = (key: string) =>
   key === 'ArrowRight' ? 1 : key === 'ArrowLeft' ? -1 : 0;
