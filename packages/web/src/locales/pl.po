@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-22 14:34+0000\n"
+"PO-Revision-Date: 2026-10-23 13:26+0000\n"
 "Last-Translator: Krzysztof <krzysiek@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Polish <https://hosted.weblate.org/projects/aiostreams/web-app/pl/>\n"
 "Language: pl\n"
@@ -333,11 +333,11 @@ msgstr "Określony czas przed końcem."
 
 #: src/pages/settings/audio.tsx
 msgid "A track the version marks as its default plays even when another is in one of your languages. Turn this off for your languages to always win."
-msgstr "Ścieżka oznaczona przez wersję jako domyślna odtwarza się nawet wtedy, gdy inna ścieżka jest w jednym z Twoich języków. Wyłącz to, aby Twoje języki zawsze miały pierwszeństwo."
+msgstr "Ścieżka oznaczona w danej wersji jako domyślna jest odtwarzana nawet wtedy, gdy dostępna jest inna w jednym z Twoich języków. Wyłącz tę opcję, aby Twoje języki zawsze miały pierwszeństwo."
 
 #: src/pages/settings/audio.tsx
 msgid "A version plays the first of these it has, otherwise its own default. Original language is the one the title was made in."
-msgstr "Odtwarzana jest ścieżka według tej kolejności, jeśli wybrana wersja ją posiada, a w przeciwnym razie domyślna ścieżka tej wersji. Język oryginalny to ten, w którym powstał tytuł."
+msgstr "Języki z listy są sprawdzane po kolei – odtwarzany jest pierwszy dostępny w danej wersji, a w przeciwnym razie jej ścieżka domyślna. Język oryginalny to ten, w którym powstał tytuł."
 
 #: src/pages/settings/cache.tsx
 msgid "A week"
@@ -562,7 +562,7 @@ msgstr "Audio"
 
 #: src/pages/settings/audio.tsx
 msgid "Audio description, narrating what is on screen"
-msgstr "Audiodeskrypcja, opisująca to, co dzieje się na ekranie"
+msgstr "Audiodeskrypcja (opisuje to, co dzieje się na ekranie)"
 
 #: src/pages/settings/audio.tsx
 msgid "Audio languages"
@@ -570,7 +570,7 @@ msgstr "Języki audio"
 
 #: src/pages/settings/audio.tsx
 msgid "Audio types"
-msgstr "Typy audio"
+msgstr "Rodzaje audio"
 
 #: src/components/player/keys.ts
 msgid "Audio: {label}"
@@ -752,9 +752,8 @@ msgid "Change folder"
 msgstr "Zmień folder"
 
 #: src/components/party/reaction-setting.tsx
-#, fuzzy
 msgid "Change reactions"
-msgstr "Zmień skróty"
+msgstr "Zmień reakcje"
 
 #: src/components/no-catalogs.tsx src/pages/settings/account.tsx
 #: src/pages/sign-in.tsx
@@ -863,7 +862,7 @@ msgstr "Połącz wyniki filmów i seriali"
 
 #: src/pages/settings/audio.tsx
 msgid "Commentary"
-msgstr "Komentarz"
+msgstr "Ścieżka z komentarzem"
 
 #: src/pages/settings/apps.tsx
 msgid "Compatibility"
@@ -1031,9 +1030,8 @@ msgid "Could not load your favourites"
 msgstr "Nie udało się wczytać Twoich ulubionych"
 
 #: src/components/random-pick.tsx
-#, fuzzy
 msgid "Could not pick one."
-msgstr "Nie udało się dołączyć"
+msgstr "Nie udało się nic wybrać."
 
 #: src/lib/subtitles/files.ts
 msgid "Could not read that file"
@@ -1349,7 +1347,7 @@ msgstr "Edytuj"
 
 #: src/components/player/controls.tsx
 msgid "Ends at {endsAt}"
-msgstr ""
+msgstr "Koniec o {endsAt}"
 
 #: src/pages/settings/playback.tsx
 msgid "Engine"
@@ -1681,9 +1679,8 @@ msgid "Host"
 msgstr "Gospodarz"
 
 #: src/pages/settings/subtitles.tsx
-#, fuzzy
 msgid "How far subtitles sit above their usual place near the bottom, or below it down to the edge."
-msgstr "Jak wysoko napisy znajdują się nad swoim zwykłym miejscem na dole."
+msgstr "Pozwala przesunąć napisy w górę względem dołu ekranu lub w dół aż do samej krawędzi."
 
 #: src/pages/settings/playback.tsx
 msgid "How far the skip buttons, double taps and the arrow keys jump."
@@ -1992,7 +1989,7 @@ msgstr "Magenta"
 
 #: src/pages/settings/audio.tsx
 msgid "Main"
-msgstr "Główna"
+msgstr "Ścieżka główna"
 
 #: src/components/version-picker.tsx
 msgid "Mark as watched"
@@ -2548,7 +2545,7 @@ msgstr "Opcje zachowywane wewnętrznie przez aplikację."
 
 #: src/components/party/reaction-setting.tsx
 msgid "Or type one"
-msgstr ""
+msgstr "Lub wpisz własne"
 
 #: src/pages/settings/audio.tsx
 msgid "Original language"
@@ -2698,16 +2695,15 @@ msgstr "Wybierz kolor"
 
 #: src/components/party/reaction-setting.tsx
 msgid "Pick a slot, then what goes in it."
-msgstr ""
+msgstr "Wybierz pole, a następnie to, co ma się w nim znaleźć."
 
 #: src/pages/downloads.tsx
 msgid "Pick a version"
 msgstr "Wybierz wersję"
 
 #: src/components/random-pick.tsx
-#, fuzzy
 msgid "Pick again"
-msgstr "Wybierz wersję"
+msgstr "Wybierz ponownie"
 
 #: src/components/version-settings.tsx
 msgid "Pick fields to search only those parts of a version."
@@ -2823,7 +2819,7 @@ msgstr "Odtwarzaj dźwięk później"
 
 #: src/pages/settings/audio.tsx
 msgid "Play the version's default track first"
-msgstr "Odtwórz najpierw domyślną ścieżkę danej wersji"
+msgstr "Odtwarzaj domyślną ścieżkę wersji w pierwszej kolejności"
 
 #: src/pages/settings/playback.tsx
 msgid "Play versions in"
@@ -2925,7 +2921,7 @@ msgstr "Naciśnij klawisz"
 
 #: src/lib/hosts/shell/android.ts
 msgid "Press Back again to leave"
-msgstr ""
+msgstr "Naciśnij Wstecz ponownie, aby wyjść"
 
 #: src/components/version-settings.tsx src/pages/settings/subtitles.tsx
 msgid "Preview"
@@ -3001,18 +2997,16 @@ msgstr "Wzmacnia kanał centralny, w którym dźwięk przestrzenny umieszcza dia
 
 #: src/components/item-menu.tsx src/components/random-pick.tsx
 #: src/pages/item.tsx
-#, fuzzy
 msgid "Random episode"
-msgstr "Ukryj odcinki"
+msgstr "Losowy odcinek"
 
 #: src/components/random-pick.tsx
-#, fuzzy
 msgid "Random favourite"
-msgstr "Dodaj do ulubionych"
+msgstr "Losowy ulubiony"
 
 #: src/pages/favourites.tsx
 msgid "Random pick"
-msgstr ""
+msgstr "Losowy wybór"
 
 #: src/components/rating.tsx
 msgid "Rate"
@@ -3488,14 +3482,12 @@ msgid "Show the prompt"
 msgstr "Pokaż zapytanie"
 
 #: src/components/player/controls.tsx
-#, fuzzy
 msgid "Show time left"
-msgstr "Pokazuj napisy później"
+msgstr "Pokazuj pozostały czas"
 
 #: src/components/player/controls.tsx
-#, fuzzy
 msgid "Show time played"
-msgstr "Pokazuj napisy później"
+msgstr "Pokazuj czas odtwarzania"
 
 #: src/components/layout.tsx
 msgid "Showing saved pages"
@@ -3657,7 +3649,7 @@ msgstr "Pomijanie"
 
 #: src/components/party/reaction-setting.tsx
 msgid "Slot {n}: {emoji}"
-msgstr ""
+msgstr "Pole {n}: {emoji}"
 
 #: src/lib/input/actions.ts
 msgid "Slower"
@@ -4258,7 +4250,7 @@ msgstr "Ten serwer narzuca styl aplikacji wszystkim użytkownikom. Twój własny
 
 #: src/components/random-pick.tsx
 msgid "This show has no episodes to pick from yet."
-msgstr ""
+msgstr "Ten serial nie ma jeszcze żadnych odcinków do wyboru."
 
 #: src/pages/trailer.tsx
 msgid "This trailer can't play in the app."
@@ -4715,7 +4707,7 @@ msgstr "Co zapisywać"
 
 #: src/components/party/reaction-setting.tsx
 msgid "What you can send from a party's chat."
-msgstr ""
+msgstr "Co możesz wysyłać na czacie wspólnego oglądania."
 
 #: src/pages/settings/apps.tsx
 msgid "What your Discord profile shows. Kept on this device."
@@ -4747,7 +4739,7 @@ msgstr "Gdy wersja zawiera więcej niż jeden rodzaj ścieżki dźwiękowej, odt
 
 #: src/pages/settings/subtitles.tsx
 msgid "When a version has more than one subtitle in your language, the first of these it has shows. Commentary comes last."
-msgstr "Gdy wersja ma więcej niż jedną ścieżkę napisów w Twoim języku, wyświetlana jest pierwsza pasująca z tej listy. Komentatorskie są brane pod uwagę na końcu."
+msgstr "Gdy wersja ma więcej niż jedną ścieżkę napisów w Twoim języku, wyświetlana jest pierwsza pasująca z tej listy. Napisy z komentarzem są brane pod uwagę na końcu."
 
 #: src/pages/settings/subtitles.tsx
 msgid "When the audio is not in my language"
