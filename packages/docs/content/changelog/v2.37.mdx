@@ -1,7 +1,7 @@
 ---
 title: Watch together, seek previews and subtitle sync
-description: Watch in sync with friends on any server, previews on the seek bar, subtitles that line themselves up, remote control, and HDR on a Mac.
-date: 2026-10-21
+description: Watch in sync with friends on any server, previews on the seek bar, subtitles that line themselves up, remote control, playlists, and HDR on a Mac.
+date: 2026-10-23
 version: 2.37.0
 ---
 
@@ -23,14 +23,14 @@ Any app can **play a title on another device**, or take over whatever another de
 playing, and become its remote, whether that device has an AIOStreams app or a Jellyfin app open.
 
 In every app, **quick filters** and **badges** make a long list of versions easy to scan,
-**people** turn up in search, **Random pick** chooses from your favourites or a show's
-episodes, and **pressing play** opens on the title's
+**people** turn up in search, **playlists** play on from one title to the next, **Random pick**
+chooses from your favourites or a show's episodes, and **pressing play** opens on the title's
 logo and fades into the video. The desktop and Android apps gain **sound settings** such as
 dialogue boost and night mode, the desktop app plays **HDR and Dolby Vision on a Mac**, and when
 something goes wrong, **Report a problem** sends the app's log with a code to quote.
 
-The apps can now be **translated**, and they need translators. If you speak another language,
-[you can help](#help-translate-the-apps).
+The apps can now be **translated**, and German and Polish are already done. If you speak another
+language, [you can help](#help-translate-the-apps).
 
 For self-hosters, an instance can relay parties for friends on other servers, keep the reports
 its users send, and style the app for everyone with CSS.
@@ -76,7 +76,7 @@ _Sintel_ is © Blender Foundation, shared under [CC BY 3.0](https://creativecomm
 - **Chat and reactions.** Messages show over the video for a few seconds and stay in the party's
   **Chat**, and reactions float up the side. On a TV, which has no keyboard, the reactions take
   the message box's place. Either can stay off the video under **Settings → Playback → Watch
-  parties**.
+  parties**, and **Reactions** there picks the ones you can send.
 - **The same release.** Each person's app picks the version closest to the one the party started
   with, the same file where they have it.
 - **Playing on.** A skip button skips the intro or credits for everyone, and the next episode
@@ -243,7 +243,9 @@ episode's name for a show. As the first frame arrives, it fades away into the vi
 />
 
 The controls wait until there is something to control, so they no longer sit over a black screen
-while a stream loads. This replaces the old spinner, and trailers open the same way.
+while a stream loads. This replaces the old spinner, and trailers open the same way. With
+**Auto-play the first version** on, the cover shows the moment you press play, while the app
+finds the versions.
 
 ### Random pick
 
@@ -261,6 +263,34 @@ show's next episode, **Open** goes to its page, and **Pick again** spins once mo
   playsInline
   style={{ width: '100%', borderRadius: '0.5rem' }}
 />
+
+### Playlists
+
+**Add to playlist**, in a title's menu or on a film's page, puts it in one of your playlists or a
+new one. **Playlists**, in the navigation, lists them: play one, reorder or remove its titles, or
+add what you're partway through. A title played from a playlist plays on to the playlist's next
+title rather than its next episode, and the player's **Playlist** button shows the rest.
+
+<Gallery
+  slides={[
+    {
+      src: '/changelog/v2.37/playlist-sheet.webp',
+      alt: "The Playlists sheet over Home in the desktop app, showing the Sci-fi night playlist: Play, 7 titles and 14h 49m, its seven films from Tears of Steel to Everything Everywhere All at Once, and Sintel under Add from Continue watching",
+      caption: 'A playlist, with what you could add from Continue watching',
+      width: 2288,
+      height: 1430,
+    },
+    {
+      src: '/changelog/v2.37/playlist-next.webp',
+      alt: "The last scene of Tears of Steel in the desktop app's player, with a card in the corner reading Next in Sci-fi night, Interstellar, with Play now and Hide",
+      caption: "At the end of a title, the playlist's next one",
+      width: 2288,
+      height: 1430,
+    },
+  ]}
+/>
+
+Playlists are kept on your server, so [Jellyfin apps](#the-media-server) share them too.
 
 ### Sound
 
@@ -338,8 +368,10 @@ send what Android recorded about it the next time it opens.
 ### Smaller things
 
 - **Subtitle fonts and shadows.** **Font** under **Settings → Subtitles** offers sans serif,
-  serif, monospace, typewriter, casual and cursive, and **Shadow** under **Outline and shadow**
-  adds a drop shadow.
+  serif, monospace, typewriter, casual and cursive, **Shadow** under **Outline and shadow** adds a
+  drop shadow, and **Height** can now put subtitles lower than usual, down to the screen's edge.
+- **The seek bar shows everything loaded**, each stretch of the video the player holds, behind you
+  as well as ahead.
 - **More versions play.** Versions that need request headers, and YouTube videos offered as
   versions, now play in the desktop and Android apps, and the ones with headers download too.
 - **Animated posters.** A title whose metadata has an animated poster plays it while you hover
@@ -352,6 +384,11 @@ send what Android recorded about it the next time it opens.
   title ends at the speed it's playing. Select the time to show what's left instead.
 - **Continue watching** puts what you watched most recently first, whether it's a title you're
   partway through or a show's next episode.
+- **Variants can tell the apps apart.** The apps say which app, device and platform they are,
+  the network on Android, and whether they are finding a version to download, in headers a
+  variant's condition reads with `header()`. A variant can, say, list smaller versions for the
+  Android app on mobile data. See
+  [the apps' own headers](/reference/config-expressions#the-apps-own-headers).
 - **Cache size in the desktop app.** **Cache size** under **Settings → Playback → Player** now sets
   how much the desktop app's player holds in memory too. **Automatic** sizes it from the
   computer's memory, and a `demuxer-max-bytes` line in your `mpv.conf` takes its place.
@@ -366,7 +403,9 @@ send what Android recorded about it the next time it opens.
 
 The AIOStreams apps can now be translated. Every page, menu, setting and player control is ready
 for other languages, and the apps lay themselves out right to left for languages such as Arabic
-and Hebrew. So far they are only in English, and that's where you come in.
+and Hebrew. German and Polish were translated in full before this release was out, thanks to
+Florian Otto and hamburgercowgoldfish for German and Krzysztof for Polish. Every other language
+is waiting for someone to start it, and that's where you come in.
 
 Translations are made on [Hosted Weblate](https://hosted.weblate.org/engage/aiostreams/), which
 is open source and needs no coding: sign in, pick your language or start a new one, and
@@ -393,6 +432,8 @@ For Jellyfin apps signed in to your configuration:
 - **Up to 500 libraries.** Every catalog can now be a library: the limit went from 20 to 500. A
   configuration's catalog requests to its addons queue up to 8 at a time, so an app that loads
   every library's latest row at once doesn't flood your addons.
+- **Playlists.** Each user's [playlists](#playlists) are kept on the server, so Jellyfin apps
+  share them with the AIOStreams app, and once a user has one, a **Playlists** library shows it.
 - **Default audio track.** The server picks the default audio track by your
   [audio types](#sound) as well as your languages.
 
@@ -513,7 +554,11 @@ use your instance as a relay is off.
 
 Thanks to everyone who contributed to this release: [@adityabakare](https://github.com/adityabakare),
 [@feruzabad](https://github.com/feruzabad), [@Sophanos](https://github.com/Sophanos),
-[@varthe](https://github.com/varthe) and [@webstreamr](https://github.com/webstreamr).
+[@varthe](https://github.com/varthe) and [@webstreamr](https://github.com/webstreamr), and to
+the translators who put the apps into German and Polish:
+[Solilord](https://hosted.weblate.org/user/Solilord/),
+[@hamburgercowgoldfish](https://github.com/hamburgercowgoldfish) and
+[Krzysiek](https://hosted.weblate.org/user/Krzysiek/).
 
 AIOStreams builds on others' work:
 
