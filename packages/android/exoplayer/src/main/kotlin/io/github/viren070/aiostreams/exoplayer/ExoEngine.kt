@@ -307,7 +307,8 @@ class ExoEngine(private val context: Context) :
         seekTo(positionMs.toLong(), if (snapUs > 0) SeekParameters(snapUs, snapUs) else SeekParameters.EXACT)
     }
 
-    override fun addSubtitle(url: String, title: String?, language: String?) = post {
+    override fun addSubtitle(url: String, title: String?, language: String?, replace: Int?) = post {
+        replace?.let(::removeSubtitle)
         addSubtitle(url, "select", title, language)
     }
 
@@ -518,7 +519,7 @@ class ExoEngine(private val context: Context) :
                 val bytes = read(url)
                 main.post {
                     if (this.url != file) return@post
-                    val id = tracks.count("sub") + externals.size + 1
+                    val id = maxOf(tracks.count("sub"), externals.maxOfOrNull { it.id } ?: 0) + 1
                     val added = ExternalSubtitle.parse(id, url, title, lang, bytes)
                     added.script?.let { ass.addScript(added.key, it) }
                     externals += added

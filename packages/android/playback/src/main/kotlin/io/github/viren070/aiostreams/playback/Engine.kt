@@ -20,8 +20,8 @@ interface Engine {
     /** A keyframe up to [snapMs] away may stand in for [positionMs]. */
     fun seek(positionMs: Double, snapMs: Double = 0.0)
 
-    /** Adds a subtitle file, from the server or this device, and shows it. */
-    fun addSubtitle(url: String, title: String?, language: String?)
+    /** Adds a subtitle file, from the server or this device, and shows it in place of track [replace]. */
+    fun addSubtitle(url: String, title: String?, language: String?, replace: Int? = null)
 
     fun setStyle(style: Style)
 

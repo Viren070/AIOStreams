@@ -133,7 +133,12 @@ class PlayerChannel(
             "player-subtitle-add" -> {
                 val url = message.text("url").orEmpty()
                 if (PlayerProtocol.isWebUrl(url) || isLocal(url)) {
-                    engine.addSubtitle(url, message.text("title"), message.text("language"))
+                    engine.addSubtitle(
+                        url,
+                        message.text("title"),
+                        message.text("language"),
+                        message.number("replace")?.toInt(),
+                    )
                 } else {
                     reject(IllegalArgumentException("only http(s) subtitles and downloads load"))
                 }

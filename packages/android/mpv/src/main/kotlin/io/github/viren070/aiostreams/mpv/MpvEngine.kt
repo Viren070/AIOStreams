@@ -183,8 +183,10 @@ class MpvEngine(private val context: Context) : Engine {
     // mpv's keyframe seeks aren't bounded, so it seeks exactly.
     override fun seek(positionMs: Double, snapMs: Double) = command("seek", seconds(positionMs), "absolute")
 
-    override fun addSubtitle(url: String, title: String?, language: String?) =
+    override fun addSubtitle(url: String, title: String?, language: String?, replace: Int?) {
+        replace?.let { command("sub-remove", it.toString()) }
         command("sub-add", url, "select", title.orEmpty(), language.orEmpty())
+    }
 
     // Sets only what changed, so the user's mpv.conf profiles keep what they set since.
     override fun setStyle(style: Style) = calls.execute {
