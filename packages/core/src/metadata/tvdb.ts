@@ -244,7 +244,13 @@ export class TVDBMetadata {
         if (engName && engName !== rawName) {
           return {
             title: engName,
-            titles: [{ title: rawName }, ...aliases],
+            titles: [
+              {
+                title: rawName,
+                language: iso6392ToIso6391(originalLanguage) || undefined,
+              },
+              ...aliases,
+            ],
           };
         }
       } catch {
