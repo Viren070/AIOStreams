@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-23 20:09+0000\n"
-"Last-Translator: mrbeast mrban <screenmax1234@users.noreply.hosted.weblate.org>\n"
+"PO-Revision-Date: 2026-10-24 00:24+0000\n"
+"Last-Translator: Nicola Bortoletto <translate@nicolabortoletto.com>\n"
 "Language-Team: Italian <https://hosted.weblate.org/projects/aiostreams/web-app/it/>\n"
 "Language: it\n"
 "MIME-Version: 1.0\n"
@@ -237,99 +237,99 @@ msgstr "{unread, plural, one {Watch party, # nuovo messaggio} other {Watch party
 #. Each {name} is written in the player link as it is here.
 #: src/pages/settings/playback.tsx
 msgid "{url} is the stream address, {encodedUrl} the same address URL-encoded, {scheme} its scheme, {filename} the file's name, {subtitles} each external subtitle (its parameter repeats per file), {title} the title with the episode, {position} the second to start at ({positionMs} in milliseconds), and {returnUrl} a link back here for a player that reports where it stopped. Values other than {url} are URL-encoded. After intent://, {url} goes without its scheme."
-msgstr ""
+msgstr "{url} è l’indirizzo dello streaming, {encodedUrl} lo stesso indirizzo codificato per URL, {scheme} il relativo schema, {filename} il nome del file, {subtitles} ciascun sottotitolo esterno (il parametro si ripete per ogni file), {title} il titolo con l’episodio, {position} il secondo da cui iniziare ({positionMs} in millisecondi) e {returnUrl} un link per tornare qui, utilizzato dai lettori che comunicano il punto in cui la riproduzione si è interrotta. Tutti i valori, tranne {url}, sono codificati per URL. Dopo intent://, {url} viene inserito senza il relativo schema."
 
 #: src/pages/settings/cache.tsx
 msgid "{used} used. Past this, what was used longest ago goes first."
-msgstr ""
+msgstr "{used} utilizzati. Superato questo limite, quelli utilizzati meno di recente vengono rimossi per primi."
 
 #: src/components/party/party-layer.tsx
 msgid "{who} jumped to {to}"
-msgstr ""
+msgstr "{who} è passato a {to}"
 
 #: src/components/party/party-layer.tsx
 msgid "{who} paused"
-msgstr ""
+msgstr "{who} ha messo in pausa"
 
 #: src/components/party/party-layer.tsx
 msgid "{who} resumed"
-msgstr ""
+msgstr "{who} ha ripreso la riproduzione"
 
 #: src/components/party/party-layer.tsx
 msgid "{who} started {title}"
-msgstr ""
+msgstr "{who} ha avviato {title}"
 
 #: src/lib/playback/sound.ts
 msgid "+{amount} ms"
-msgstr ""
+msgstr "+{amount} ms"
 
 #: src/lib/playback/sound.ts
 msgid "+{db} dB"
-msgstr ""
+msgstr "+{db} dB"
 
 #: src/lib/subtitles/delay.ts
 msgid "+{seconds}s"
-msgstr ""
+msgstr "+{seconds} s"
 
 #: src/lib/subtitles/delay.ts
 msgid "+{time}"
-msgstr ""
+msgstr "+{time}"
 
 #: src/lib/playback/sound.ts
 msgid "−{amount} ms"
-msgstr ""
+msgstr "−{amount} ms"
 
 #: src/lib/subtitles/delay.ts
 msgid "−{seconds}s"
-msgstr ""
+msgstr "−{seconds} s"
 
 #: src/lib/subtitles/delay.ts
 msgid "−{time}"
-msgstr ""
+msgstr "−{time}"
 
 #: src/lib/input/actions.ts
 msgid "0 to 9"
-msgstr ""
+msgstr "0 a 9"
 
 #: src/lib/input/actions.ts
 msgid "1 jumps a tenth of the way in, 5 halfway and 0 back to the start."
-msgstr ""
+msgstr "1 salta avanti di un decimo della durata, 5 a metà e 0 torna all’inizio."
 
 #: src/pages/settings/audio.tsx
 msgid "5.1 surround"
-msgstr ""
+msgstr "5.1 surround"
 
 #: src/pages/settings/audio.tsx
 msgid "7.1 surround"
-msgstr ""
+msgstr "7.1 surround"
 
 #: src/components/version-settings.tsx
 msgid "A badge shows on each version whose text matches its pattern: the name and description your formatter writes, the file name, and the tags read from it."
-msgstr ""
+msgstr "Un badge viene mostrato su ogni versione il cui testo corrisponde al modello: il nome e la descrizione generati dal formatter, il nome del file e i tag letti dal file."
 
 #: src/components/party/party-sheet.tsx
 msgid "A code is looked up on the relay picked above."
-msgstr ""
+msgstr "Il codice viene cercato sul relay selezionato sopra."
 
 #: src/pages/settings/cache.tsx
 msgid "A day"
-msgstr ""
+msgstr "Un giorno"
 
 #: src/pages/settings/cache.tsx
 msgid "A month"
-msgstr ""
+msgstr "Un mese"
 
 #: src/components/version-settings.tsx
 msgid "A regular expression. Case never matters."
-msgstr ""
+msgstr "Un'espressione regolare. Maiuscole e minuscole non fanno differenza."
 
 #: src/components/party/party-sheet.tsx
 msgid "A relay someone else runs, for people on other servers."
-msgstr ""
+msgstr "Un relay gestito da qualcun altro, per gli utenti di altri server."
 
 #: src/components/input-setup.tsx
 msgid "A remote's or gamepad's buttons work too."
-msgstr ""
+msgstr "Funzionano anche i pulsanti di un telecomando o di un gamepad."
 
 #: src/pages/settings/playback.tsx
 msgid "A set time before the end."
@@ -337,104 +337,104 @@ msgstr ""
 
 #: src/pages/settings/audio.tsx
 msgid "A track the version marks as its default plays even when another is in one of your languages. Turn this off for your languages to always win."
-msgstr ""
+msgstr "Una traccia contrassegnata dalla versione come predefinita viene riprodotta anche se è disponibile una nella tua lingua. Disattiva questa opzione per prediligere sempre la tua lingua."
 
 #: src/pages/settings/audio.tsx
 msgid "A version plays the first of these it has, otherwise its own default. Original language is the one the title was made in."
-msgstr ""
+msgstr "Una versione riproduce la prima lingua disponibile tra quelle indicate; se nessuna è disponibile, usa quella predefinita. La lingua originale è quella in cui è stato realizzato il titolo."
 
 #: src/pages/settings/cache.tsx
 msgid "A week"
-msgstr ""
+msgstr "Una settimana"
 
 #: src/pages/settings/index.tsx
 msgid "About"
-msgstr ""
+msgstr "Informazioni"
 
 #: src/pages/settings/theme.tsx
 msgid "Accent"
-msgstr ""
+msgstr "Accento"
 
 #: src/components/layout.tsx src/pages/settings/index.tsx
 msgid "Account"
-msgstr ""
+msgstr "Account"
 
 #: src/pages/settings/cache.tsx
 msgid "Account and server"
-msgstr ""
+msgstr "Account e server"
 
 #: src/pages/history.tsx
 msgid "Actions"
-msgstr ""
+msgstr "Azioni"
 
 #: src/components/layout.tsx src/pages/history.tsx src/pages/home.tsx
 #: src/pages/settings/apps.tsx src/pages/settings/cache.tsx
 msgid "Activity"
-msgstr ""
+msgstr "Attività"
 
 #: src/components/version-settings.tsx
 msgid "Add"
-msgstr ""
+msgstr "Aggiungi"
 
 #: src/components/version-settings.tsx
 msgid "Add a badge"
-msgstr ""
+msgstr "Aggiungi un badge"
 
 #: src/components/player/options.tsx
 msgid "Add a file…"
-msgstr ""
+msgstr "Aggiungi un file…"
 
 #: src/components/version-settings.tsx
 msgid "Add a filter"
-msgstr ""
+msgstr "Aggiungi un filtro"
 
 #: src/components/shortcut-settings.tsx
 msgid "Add a key for {label}"
-msgstr ""
+msgstr "Aggiungi una chiave per {label}"
 
 #: src/pages/settings/common.tsx
 msgid "Add a language"
-msgstr ""
+msgstr "Aggiungi una lingua"
 
 #: src/app.tsx src/pages/servers.tsx
 msgid "Add a server"
-msgstr ""
+msgstr "Aggiungi un server"
 
 #: src/pages/settings/common.tsx
 msgid "Add another language"
-msgstr ""
+msgstr "Aggiungi un'altra lingua"
 
 #: src/components/no-catalogs.tsx
 msgid "Add catalogs to your configuration, then refresh."
-msgstr ""
+msgstr "Aggiungi cataloghi alla tua configurazione, poi ricarica."
 
 #: src/components/item-menu.tsx src/pages/item.tsx
 msgid "Add favourite"
-msgstr ""
+msgstr "Aggiungi preferito"
 
 #: src/components/playlists.tsx
 msgid "Add from Continue watching"
-msgstr ""
+msgstr "Aggiungi da Continua a guardare"
 
 #: src/components/item-menu.tsx src/components/playlists.tsx src/pages/item.tsx
 msgid "Add to playlist"
-msgstr ""
+msgstr "Aggiungi a playlist"
 
 #: src/components/playlists.tsx
 msgid "Add to this playlist"
-msgstr ""
+msgstr "Aggiungi a questa playlist"
 
 #: src/components/player/controls.tsx
 msgid "Added {name}"
-msgstr ""
+msgstr "{name} aggiunto"
 
 #: src/components/playlists.tsx src/pages/player.tsx
 msgid "Added to {name}"
-msgstr ""
+msgstr "Aggiunto a {name}"
 
 #: src/pages/settings/account.tsx
 msgid "Addons, catalogs and users are set up on the configuration page."
-msgstr ""
+msgstr "Componenti aggiuntivi, cataloghi e utenti si configurano nella pagina delle impostazioni."
 
 #: src/pages/settings/about.tsx
 msgid "Address"
@@ -521,7 +521,7 @@ msgstr "Il player integrato di Android, che consuma meno batteria: lo schermo mo
 
 #: src/components/party/party-sheet.tsx
 msgid "Another relay"
-msgstr ""
+msgstr "Un altro relay"
 
 #: src/components/party/party-sheet.tsx
 msgid "Anyone with the invite can join, from any server."
@@ -601,7 +601,6 @@ msgid "Audio types"
 msgstr "Tipi di audio"
 
 #: src/components/player/keys.ts
-#, fuzzy
 msgid "Audio: {label}"
 msgstr "Audio: {label}"
 
