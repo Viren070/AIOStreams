@@ -178,7 +178,7 @@ function queueDebridProbe(input: {
   const file =
     fileInfo.index !== undefined && fileInfo.index >= 0
       ? input.filename
-      : input.resolvedLinkInfo.name;
+      : input.resolvedLinkInfo.filename;
   if (fileInfo.type === 'usenet') {
     return queueRemoteProbe({
       resolvedLinkInfo: input.resolvedLinkInfo,

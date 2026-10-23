@@ -1307,7 +1307,7 @@ export abstract class UsenetStreamService implements UsenetDebridService {
     const resolvedLinkInfo: ResolvedLinkInfo = {
       url: playbackLink,
       index: selectedFile.index,
-      name: selectedFile.name,
+      filename: selectedFile.name,
     };
 
     // Cache the result
@@ -1448,7 +1448,7 @@ export abstract class UsenetStreamService implements UsenetDebridService {
     const resolvedLinkInfo: ResolvedLinkInfo = {
       url: playbackLink,
       index: selectedFile.index,
-      name: selectedFile.name,
+      filename: selectedFile.name,
     };
 
     await UsenetStreamService.resolveCache.set(

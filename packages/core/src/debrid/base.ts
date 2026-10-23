@@ -248,7 +248,7 @@ const BaseFileInfoSchema = z.object({
 const ResolvedLinkInfoSchema = z.object({
   url: z.string(),
   index: z.number().optional(),
-  name: z.string().optional(),
+  filename: z.string().optional(),
 });
 
 const TorrentInfoSchema = BaseFileInfoSchema.extend({
