@@ -4,15 +4,16 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: @lingui/cli\n"
+"X-Generator: Weblate 2026.11.dev0\n"
 "Language: es\n"
-"Last-Translator: Automatically generated\n"
-"Language-Team: none\n"
+"Last-Translator: Nathan Lowe <njlowe21@users.noreply.hosted.weblate.org>\n"
+"Language-Team: Spanish <https://hosted.weblate.org/projects/aiostreams/web-app/es/>\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
+"PO-Revision-Date: 2026-10-23 19:56+0000\n"
 
 #: src/components/party/party-sheet.tsx
 msgid "(you)"
-msgstr ""
+msgstr "(tú)"
 
 #: src/pages/sign-in.tsx
 msgid "{address} did not answer. Check that it is running, then try again."
@@ -1340,7 +1341,7 @@ msgstr ""
 #: src/pages/discover.tsx
 #: src/pages/settings/apps.tsx
 msgid "Discover"
-msgstr ""
+msgstr "Descubrir"
 
 #: src/components/layout.tsx
 msgid "Dismiss"
@@ -2339,7 +2340,7 @@ msgstr ""
 #: src/lib/input/actions.ts
 #: src/pages/settings/playback.tsx
 msgid "Next episode"
-msgstr ""
+msgstr "Siguiente capítulo"
 
 #: src/pages/settings/index.tsx
 msgid "Next episode, controls and players"
@@ -3460,7 +3461,7 @@ msgstr ""
 
 #: src/pages/settings/interface.tsx
 msgid "Row"
-msgstr ""
+msgstr "Fila"
 
 #: src/pages/settings/cache.tsx
 msgid "Rows, catalogs and the calendar."
@@ -3962,7 +3963,7 @@ msgstr ""
 
 #: src/components/player/options.tsx
 msgid "Speed"
-msgstr ""
+msgstr "Velocidad"
 
 #: src/components/player/keys.ts
 msgid "Speed {shown}×"
@@ -4178,7 +4179,7 @@ msgstr ""
 
 #: src/pages/settings/interface.tsx
 msgid "System ({system})"
-msgstr ""
+msgstr "Sistema ({system})"
 
 #: src/pages/settings/audio.tsx
 msgid "System default"
