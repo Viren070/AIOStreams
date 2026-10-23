@@ -480,18 +480,34 @@ export interface LeafEvidence {
   guess?: (entry: { id: string; type: string }) => boolean;
 }
 
+function defaultsToEpisode(
+  entry: { type: string; videos?: unknown },
+  videoId: string
+): boolean {
+  const own = Array.isArray(entry.videos)
+    ? (
+        entry.videos as { id?: unknown; season?: unknown; episode?: unknown }[]
+      ).find((v) => v?.id === videoId)
+    : undefined;
+  if (own)
+    return typeof own.season === 'number' && typeof own.episode === 'number';
+  return !!IdParser.parse(videoId, entry.type)?.episode;
+}
+
 /**
  * Whether an entry plays on its own, the way Stremio decides it: the
- * `defaultVideoId` hint wins, then a meta with no videos is itself the video.
+ * `defaultVideoId` hint wins unless it is one of the entry's episodes, which
+ * opens the show on it, then a meta with no videos is itself the video.
  * A list only has previews, so the evidence answers that second question.
  */
 export function isLeafEntry(
-  entry: { id: string; type: string; collection?: unknown },
+  entry: { id: string; type: string; collection?: unknown; videos?: unknown },
   evidence?: LeafEvidence
 ): boolean {
   if (entry.collection) return false;
   if (entry.type === 'movie') return true;
-  if (defaultVideoIdOf(entry)) return true;
+  const video = defaultVideoIdOf(entry);
+  if (video) return !defaultsToEpisode(entry, video);
   if (evidence?.decided.has(entry.type)) return evidence.leaves.has(entry.type);
   return evidence?.guess?.(entry) ?? false;
 }
