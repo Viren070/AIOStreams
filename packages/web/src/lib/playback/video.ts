@@ -107,7 +107,20 @@ export function videoEngine(
       const on = audioTracks.findIndex((t) => t.enabled);
       set({ audio: on < 0 ? null : String(on) });
     };
+    const onTrackLoad = () => {
+      placeCues();
+      shiftCues();
+    };
     const setSubtitle = (id: string | null) => {
+      const at = file?.subtitles.findIndex((s) => s.id === id) ?? -1;
+      const shown = elements[at];
+      if (shown && shown.readyState >= HTMLTrackElement.LOADED) {
+        const fresh = shown.cloneNode() as HTMLTrackElement;
+        fresh.addEventListener('load', onTrackLoad);
+        shown.removeEventListener('load', onTrackLoad);
+        shown.replaceWith(fresh);
+        elements[at] = fresh;
+      }
       elements.forEach((e, i) => {
         e.track.mode = file?.subtitles[i]?.id === id ? 'showing' : 'disabled';
       });
@@ -190,10 +203,6 @@ export function videoEngine(
         const audioEvents = ['addtrack', 'removetrack', 'change'];
         for (const event of audioEvents)
           audio?.addEventListener(event, listTracks);
-        const onTrackLoad = () => {
-          placeCues();
-          shiftCues();
-        };
         for (const e of elements) e.addEventListener('load', onTrackLoad);
         const onFullscreen = () => set({ fullscreen: isFullscreen() });
         document.addEventListener('fullscreenchange', onFullscreen);

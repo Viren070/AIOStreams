@@ -457,14 +457,14 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
     setSubtitle(id) {
       const server = file?.subtitles.find((s) => s.id === id);
       if (!server) return send('player-set', { subtitle: id });
+      // Fetched again on each pick: an addon may still be writing it.
       const loaded = tracks.find((t) => t.url === server.url);
-      if (loaded) send('player-set', { subtitle: loaded.id });
-      else
-        send('player-subtitle-add', {
-          url: server.url,
-          title: server.label,
-          language: server.lang ?? '',
-        });
+      send('player-subtitle-add', {
+        url: server.url,
+        title: server.label,
+        language: server.lang ?? '',
+        ...(loaded && { replace: Number(loaded.id) }),
+      });
     },
     setSubtitleDelay: (subtitleDelayMs) =>
       send('player-set', { subtitleDelayMs }),
