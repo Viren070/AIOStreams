@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-23 15:26+0000\n"
-"Last-Translator: hamburgercowgoldfish <242998989+hamburgercowgoldfish@users.noreply.github.com>\n"
+"PO-Revision-Date: 2026-10-24 00:24+0000\n"
+"Last-Translator: Florian Otto <solilord@users.noreply.hosted.weblate.org>\n"
 "Language-Team: German <https://hosted.weblate.org/projects/aiostreams/web-app/de/>\n"
 "Language: de\n"
 "MIME-Version: 1.0\n"
@@ -420,20 +420,19 @@ msgstr "Aus Weiterschauen entfernen"
 
 #: src/components/item-menu.tsx src/components/playlists.tsx src/pages/item.tsx
 msgid "Add to playlist"
-msgstr ""
+msgstr "Zur Playlist hinzfügen"
 
 #: src/components/playlists.tsx
 msgid "Add to this playlist"
-msgstr ""
+msgstr "Zu dieser Playlist hinzufügen"
 
 #: src/components/player/controls.tsx
 msgid "Added {name}"
 msgstr "\"{name}\" hinzugefügt"
 
 #: src/components/playlists.tsx src/pages/player.tsx
-#, fuzzy
 msgid "Added to {name}"
-msgstr "\"{name}\" hinzugefügt"
+msgstr "Zu \"{name}\" hinzugefügt"
 
 #: src/pages/settings/account.tsx
 msgid "Addons, catalogs and users are set up on the configuration page."
@@ -477,18 +476,16 @@ msgid "All fields"
 msgstr "Alle Felder"
 
 #: src/components/playlists.tsx
-#, fuzzy
 msgid "All playlists"
-msgstr "Alle Folgen"
+msgstr "Alle Playlisten"
 
 #: src/lib/downloads/index.ts
 msgid "Already downloaded or on the way"
 msgstr "Bereits heruntergeladen oder in der Warteschlange"
 
 #: src/components/playlists.tsx
-#, fuzzy
 msgid "Already in {name}"
-msgstr "Wiedergabe auf {name}"
+msgstr "Bereits in {name}"
 
 #: src/components/send-report.tsx
 msgid "Also send to the developer"
@@ -512,7 +509,6 @@ msgid "Always shows subtitles, in your language when the version has them."
 msgstr "Untertitel immer anzeigen (in deiner bevorzugten Sprache, sofern in der Version vorhanden)."
 
 #: src/pages/settings/audio.tsx
-#, fuzzy
 msgid "An audio track you pick while watching a show sets the language for its other episodes. Picking what the settings above would play forgets it."
 msgstr "Manuell gewählte Tonspuren gelten auch für nachfolgende Episoden. Wechselst du die Spur wieder zu deiner Standardeinstellung, wird die Zuordnung verworfen."
 
@@ -1017,9 +1013,8 @@ msgid "Could not find versions of that episode"
 msgstr "Für diese Folge wurden keine Versionen gefunden"
 
 #: src/components/player/next-episode.tsx
-#, fuzzy
 msgid "Could not find versions of that title"
-msgstr "Für diese Folge wurden keine Versionen gefunden"
+msgstr "Für diesen Titel wurden keine Versionen gefunden"
 
 #: src/lib/downloads/index.ts
 msgid "Could not find versions: {message}"
@@ -1046,9 +1041,8 @@ msgid "Could not load the history"
 msgstr "Verlauf konnte nicht geladen werden"
 
 #: src/components/playlists.tsx
-#, fuzzy
 msgid "Could not load the playlists."
-msgstr "Folgen konnten nicht geladen werden."
+msgstr "Playlist konnte nicht geladen werden."
 
 #: src/components/version-picker.tsx
 msgid "Could not load the versions: {loadError}"
