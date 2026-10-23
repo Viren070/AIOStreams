@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.20.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.19.0...desktop-v0.20.0) (2026-10-23)
+
+
+### Features
+
+* **desktop:** add a player-unqueue message ([d500d8b](https://github.com/Viren070/AIOStreams/commit/d500d8b4ca1db18338d1c77536bec1cc217e8ec6))
+* **desktop:** replace a loaded server subtitle when it is added again ([fbdcb1f](https://github.com/Viren070/AIOStreams/commit/fbdcb1fc38c443274be2ed491135b19e67a1ab04))
+* **web:** add playlists ([1669db0](https://github.com/Viren070/AIOStreams/commit/1669db0006379561b550913d1651b0eb31a969b2))
+* **web:** clear the launched player's queue when nothing plays next ([1669db0](https://github.com/Viren070/AIOStreams/commit/1669db0006379561b550913d1651b0eb31a969b2))
+* **web:** connect to a config's server from its manifest URL ([1669db0](https://github.com/Viren070/AIOStreams/commit/1669db0006379561b550913d1651b0eb31a969b2))
+* **web:** fetch a server subtitle again each time it is picked ([1669db0](https://github.com/Viren070/AIOStreams/commit/1669db0006379561b550913d1651b0eb31a969b2))
+* **web:** offer the Android app's download folder choice ([1669db0](https://github.com/Viren070/AIOStreams/commit/1669db0006379561b550913d1651b0eb31a969b2))
+* **web:** show the seek-bar picture for arrow-key seeks only on TVs ([1669db0](https://github.com/Viren070/AIOStreams/commit/1669db0006379561b550913d1651b0eb31a969b2))
+* **web:** take a party's next titles from its queue ([1669db0](https://github.com/Viren070/AIOStreams/commit/1669db0006379561b550913d1651b0eb31a969b2))
+
+
+### Bug Fixes
+
+* **web:** close the open player menu when another opens ([1669db0](https://github.com/Viren070/AIOStreams/commit/1669db0006379561b550913d1651b0eb31a969b2))
+* **web:** give the About page's Credits title its own context ([1669db0](https://github.com/Viren070/AIOStreams/commit/1669db0006379561b550913d1651b0eb31a969b2))
+* **web:** hold a skip's seek-bar picture for a second ([1669db0](https://github.com/Viren070/AIOStreams/commit/1669db0006379561b550913d1651b0eb31a969b2))
+* **web:** memoise the playback info query helpers ([1669db0](https://github.com/Viren070/AIOStreams/commit/1669db0006379561b550913d1651b0eb31a969b2))
+* **web:** read buffered ranges from one snapshot ([1669db0](https://github.com/Viren070/AIOStreams/commit/1669db0006379561b550913d1651b0eb31a969b2))
+* **web:** remember the subtitle type picked for a show ([1669db0](https://github.com/Viren070/AIOStreams/commit/1669db0006379561b550913d1651b0eb31a969b2))
+* **web:** return nothing from the calendar agenda's scroll ([1669db0](https://github.com/Viren070/AIOStreams/commit/1669db0006379561b550913d1651b0eb31a969b2))
+* **web:** reword the audio help for remembering picks per show ([1669db0](https://github.com/Viren070/AIOStreams/commit/1669db0006379561b550913d1651b0eb31a969b2))
+
 ## [0.19.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.18.0...desktop-v0.19.0) (2026-10-22)
 
 
