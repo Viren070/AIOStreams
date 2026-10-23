@@ -143,11 +143,14 @@ export function videoEngine(
           el.volume = Math.min(1, next.volume.volume);
           el.muted = next.volume.muted;
         }
-        const buffered = () =>
-          Array.from({ length: el.buffered.length }, (_, i) => ({
-            startMs: el.buffered.start(i) * 1000,
-            endMs: el.buffered.end(i) * 1000,
+        // Each read is a new snapshot, whose ranges may have merged since the last.
+        const buffered = () => {
+          const ranges = el.buffered;
+          return Array.from({ length: ranges.length }, (_, i) => ({
+            startMs: ranges.start(i) * 1000,
+            endMs: ranges.end(i) * 1000,
           }));
+        };
         const handlers: Record<string, () => void> = {
           loadedmetadata: () => {
             if (next.startMs) el.currentTime = next.startMs / 1000;
