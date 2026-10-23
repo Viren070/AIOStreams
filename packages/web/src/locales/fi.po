@@ -4,19 +4,20 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: @lingui/cli\n"
+"X-Generator: Weblate 2026.11.dev0\n"
 "Language: fi\n"
-"Last-Translator: Automatically generated\n"
-"Language-Team: none\n"
+"Last-Translator: Max <merelymaki@users.noreply.hosted.weblate.org>\n"
+"Language-Team: Finnish <https://hosted.weblate.org/projects/aiostreams/web-app/fi/>\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
+"PO-Revision-Date: 2026-10-24 00:25+0000\n"
 
 #: src/components/party/party-sheet.tsx
 msgid "(you)"
-msgstr ""
+msgstr "(sinä)"
 
 #: src/pages/sign-in.tsx
 msgid "{address} did not answer. Check that it is running, then try again."
-msgstr ""
+msgstr "{address} ei vastannut. Tarkista, että se on käynnissä, ja yritä sitten uudelleen."
 
 #: src/components/version-settings.tsx
 msgid "{badgeCount, plural, one {# badge of your own} other {# badges of your own}}"
