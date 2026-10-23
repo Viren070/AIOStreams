@@ -294,7 +294,9 @@ function Agenda({
   // A new visit opens at today; going back keeps the place left.
   React.useEffect(() => {
     if (!current || at === 0 || saved) return;
-    const go = () => start.current?.scrollIntoView({ block: 'start' });
+    const go = () => {
+      start.current?.scrollIntoView({ block: 'start' });
+    };
     if (router.state.status !== 'pending') return go();
     // The router scrolls to the top once the page it is rendering shows.
     const stop = router.subscribe('onRendered', () => {
