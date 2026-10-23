@@ -1,8 +1,13 @@
 import { t } from '@lingui/core/macro';
 import type React from 'react';
+import {
+  embeddedSubtitles,
+  isEmbedded,
+  webosMedia,
+} from '../hosts/webos-media';
 import { checkSubtitleFile, readSubtitleFile } from '../subtitles/files';
 import { subtitleLine } from '../subtitles/style';
-import { ownTrackLabel } from './controller';
+import { ofType, ownTrackLabel } from './controller';
 import type {
   EngineFactory,
   EngineFile,
@@ -51,6 +56,7 @@ export function videoEngine(
     let delayMs = 0;
     let line = subtitleLine();
     let detach = () => {};
+    const native = webosMedia(() => listTracks());
     // A text track's cues load late, so each one remembers the shift it has.
     const shifted = new WeakMap<TextTrack, number>();
     // Browsers disagree on where a cue the file leaves unplaced goes.
@@ -85,9 +91,11 @@ export function videoEngine(
         }
       }
     };
+    /** Publishes the file's tracks, with the audio this TV can't decode marked. */
     const listTracks = () => {
       const audio = video.current && audioTracksOf(video.current);
       const audioTracks = audio ? listed(audio) : [];
+      const streams = file ? ofType(file.source, 'Audio') : [];
       const tracks: EngineTrack[] = [
         ...audioTracks.map((t, i) => ({
           id: String(i),
@@ -95,7 +103,10 @@ export function videoEngine(
           label: ownTrackLabel(t.label, t.language, i + 1),
           lang: t.language,
           title: t.label,
+          // Marked from the server's codec, as the TV can't say what it fails to decode.
+          unplayable: native ? !native.decodes(streams[i]?.Codec) : undefined,
         })),
+        ...(native && file ? embeddedSubtitles(file.source) : []),
         ...files.map(({ id, label }) => ({
           id,
           type: 'subtitle' as const,
@@ -126,6 +137,7 @@ export function videoEngine(
       });
       for (const f of files)
         f.track.mode = f.id === id ? 'showing' : 'disabled';
+      native?.selectSubtitle(isEmbedded(id) ? id : null);
       shiftCues();
       set({ subtitle: id });
     };
@@ -218,11 +230,13 @@ export function videoEngine(
         el.autoplay = !next.paused;
         if (next.paused) set({ paused: true });
         el.src = next.url;
+        native?.load(el);
       },
       // Browsers keep a closed player in their media controls until its video drops the stream.
       close() {
         detach();
         detach = () => {};
+        native?.close();
         removeElements();
         const el = video.current;
         if (!el) return;
@@ -252,6 +266,7 @@ export function videoEngine(
         const audio = video.current && audioTracksOf(video.current);
         if (!audio) return;
         listed(audio).forEach((t, i) => (t.enabled = String(i) === id));
+        native?.selectAudio(Number(id));
         set({ audio: id });
       },
       setSubtitle,
@@ -261,6 +276,7 @@ export function videoEngine(
       },
       setStyle({ subtitleStyle, lift }) {
         line = subtitleLine(subtitleStyle, lift);
+        native?.setStyle(subtitleStyle);
         placeCues();
       },
       toggleFullscreen: toggleDocumentFullscreen,

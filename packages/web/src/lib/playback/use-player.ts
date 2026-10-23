@@ -25,7 +25,7 @@ import type { Chapter } from './chapters';
 import {
   initialState,
   storedVolume,
-  trackLabel,
+  subtitleName,
   VOLUME_KEY,
   type PlayerController,
   type PlayerOptions,
@@ -54,6 +54,7 @@ const EARLY_END_MS = 30_000;
 /** Late enough after the start that reading the file's index for thumbnails doesn't slow it. */
 const THUMBNAIL_INDEX_MS = 5_000;
 
+/** The subtitles the server can send, which the page loads itself. */
 function serverSubtitles(
   client: JellyfinClient,
   source: SourceInfo,
@@ -69,7 +70,8 @@ function serverSubtitles(
             {
               id: `server:${stream.Index}`,
               url,
-              label: trackLabel(stream, i + 1),
+              label: subtitleName(stream, i + 1),
+              detail: t`External`,
               lang: stream.Language ?? undefined,
               stream,
             },
@@ -78,7 +80,12 @@ function serverSubtitles(
     });
 }
 
-const asTrack = ({ id, label, lang }: Track): Track => ({ id, label, lang });
+const asTrack = ({ id, label, lang, detail }: Track): Track => ({
+  id,
+  label,
+  lang,
+  detail,
+});
 
 /** A subtitle's copy stretched to the video's frame rate, which shows in its place. */
 interface Retimed {

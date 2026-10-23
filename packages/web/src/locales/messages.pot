@@ -1462,6 +1462,10 @@ msgstr ""
 msgid "Edit"
 msgstr ""
 
+#: src/lib/hosts/webos-media.ts
+msgid "Embedded"
+msgstr ""
+
 #: src/components/player/controls.tsx
 msgid "Ends at {endsAt}"
 msgstr ""
@@ -1556,6 +1560,10 @@ msgstr ""
 
 #: src/pages/history.tsx
 msgid "Export"
+msgstr ""
+
+#: src/lib/playback/use-player.ts
+msgid "External"
 msgstr ""
 
 #: src/pages/settings/interface.tsx
@@ -1661,6 +1669,10 @@ msgstr ""
 
 #: src/pages/settings/audio.tsx
 msgid "For a receiver on an optical or ARC link, which gets other surround formats as stereo otherwise."
+msgstr ""
+
+#: src/lib/playback/controller.ts
+msgid "Forced"
 msgstr ""
 
 #: src/pages/settings/subtitles.tsx
@@ -3543,6 +3555,10 @@ msgstr ""
 
 #: src/lib/input/actions.ts
 msgid "Saw its subtitle"
+msgstr ""
+
+#: src/lib/playback/controller.ts
+msgid "SDH"
 msgstr ""
 
 #: src/pages/settings/subtitles.tsx

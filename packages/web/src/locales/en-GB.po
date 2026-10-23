@@ -1463,6 +1463,10 @@ msgstr "Each filter shows as a pill above the version list. Its search is words 
 msgid "Edit"
 msgstr "Edit"
 
+#: src/lib/hosts/webos-media.ts
+msgid "Embedded"
+msgstr "Embedded"
+
 #: src/components/player/controls.tsx
 msgid "Ends at {endsAt}"
 msgstr "Ends at {endsAt}"
@@ -1558,6 +1562,10 @@ msgstr "ExoPlayer, which uses less battery, and mpv for a video this device has 
 #: src/pages/history.tsx
 msgid "Export"
 msgstr "Export"
+
+#: src/lib/playback/use-player.ts
+msgid "External"
+msgstr "External"
 
 #: src/pages/settings/interface.tsx
 msgid "Fade"
@@ -1663,6 +1671,10 @@ msgstr "Font"
 #: src/pages/settings/audio.tsx
 msgid "For a receiver on an optical or ARC link, which gets other surround formats as stereo otherwise."
 msgstr "For a receiver on an optical or ARC link, which gets other surround formats as stereo otherwise."
+
+#: src/lib/playback/controller.ts
+msgid "Forced"
+msgstr "Forced"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Forced, for foreign parts only"
@@ -3545,6 +3557,10 @@ msgstr "Saw"
 #: src/lib/input/actions.ts
 msgid "Saw its subtitle"
 msgstr "Saw its subtitle"
+
+#: src/lib/playback/controller.ts
+msgid "SDH"
+msgstr "SDH"
 
 #: src/pages/settings/subtitles.tsx
 msgid "SDH, with sounds described"

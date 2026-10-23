@@ -63,6 +63,7 @@ import {
   stepSubtitleSize,
   subtitleSizeLabel,
 } from '../../lib/subtitles/style';
+import { sameLanguage, tagLanguageName } from '../../lib/languages';
 import { splitByLanguage } from '../../lib/subtitles/tracks';
 import { subtitleLanguages, usePlaybackPrefs } from '../../lib/user-config';
 import { ControlButton } from './buttons';
@@ -80,6 +81,7 @@ interface MenuPage {
   content: React.ReactNode;
 }
 
+/** A popup list of tracks to pick from, with language folders where they're grouped. */
 function Menu({
   name,
   label,
@@ -92,6 +94,7 @@ function Menu({
   action,
   pages = [],
   more,
+  groupOf,
 }: {
   name: string;
   label: string;
@@ -105,9 +108,12 @@ function Menu({
   pages?: MenuPage[];
   /** Listed after a press on `label`, which stands in for them until the menu closes. */
   more?: { label: string; options: Track[] };
+  /** Folds options under a row per group, such as their language, once there are two. */
+  groupOf?(option: Track): string | undefined;
 }) {
   const [expanded, setExpanded] = React.useState(false);
   const [pageName, setPageName] = React.useState<string | null>(null);
+  const [openGroups, setOpenGroups] = React.useState<Set<string>>(new Set());
   const firstMore = React.useRef<HTMLDivElement>(null);
   const back = React.useRef<HTMLDivElement>(null);
   const rows = React.useRef(new Map<string, HTMLDivElement>());
@@ -115,6 +121,7 @@ function Menu({
   React.useEffect(() => {
     if (open) return;
     setExpanded(false);
+    setOpenGroups(new Set());
     setPageName(null);
     left.current = null;
   }, [open]);
@@ -140,9 +147,66 @@ function Menu({
           (value ?? '') === option.id ? 'opacity-100' : 'opacity-0'
         )}
       />
-      <span className="[overflow-wrap:anywhere]">{option.label}</span>
+      <span className="flex min-w-0 flex-col">
+        <span className="[overflow-wrap:anywhere]">{option.label}</span>
+        {option.detail && (
+          <span className="truncate text-xs text-[--muted]">
+            {option.detail}
+          </span>
+        )}
+      </span>
     </DropdownMenuItem>
   );
+  /** The rows for these tracks, with language folders where they're grouped. */
+  const list = (tracks: Track[], firstRef?: React.Ref<HTMLDivElement>) => {
+    const groups = new Map<string, Track[]>();
+    const loose: Track[] = [];
+    for (const option of tracks) {
+      const group = groupOf?.(option);
+      if (group) groups.set(group, [...(groups.get(group) ?? []), option]);
+      else loose.push(option);
+    }
+    if (groups.size < 2)
+      return tracks.map((option, i) =>
+        item(option, i === 0 ? firstRef : undefined)
+      );
+    // The group holding the current pick stays open.
+    const rows = [...groups].map(([group, members], n) => {
+      const open = openGroups.has(group) || members.some((m) => m.id === value);
+      return (
+        <React.Fragment key={`group:${group}`}>
+          <DropdownMenuItem
+            ref={n === 0 && !loose.length ? firstRef : undefined}
+            data-ui="player-menu-action"
+            data-name="group"
+            onSelect={(e) => {
+              e.preventDefault();
+              setOpenGroups((prev) => {
+                const next = new Set(prev);
+                if (next.has(group)) next.delete(group);
+                else next.add(group);
+                return next;
+              });
+            }}
+          >
+            {open ? (
+              <LuChevronDown className="flex-none" />
+            ) : (
+              <LuChevronRight className="flex-none" />
+            )}
+            <span className="[overflow-wrap:anywhere]">
+              {group} ({members.length})
+            </span>
+          </DropdownMenuItem>
+          {open && <div className="pl-4">{members.map((m) => item(m))}</div>}
+        </React.Fragment>
+      );
+    });
+    return [
+      ...loose.map((option, i) => item(option, i === 0 ? firstRef : undefined)),
+      ...rows,
+    ];
+  };
   return (
     <DropdownMenu
       data-ui="player-menu"
@@ -193,13 +257,11 @@ function Menu({
           {/* The list scrolls above the pinned page rows; a short screen scrolls both together. */}
           <div className="-mx-2 flex min-h-0 flex-col overflow-x-hidden px-2 [@media(max-height:640px)]:overflow-y-auto">
             <div className="min-h-0 overflow-y-auto [@media(max-height:640px)]:shrink-0 [@media(max-height:640px)]:overflow-y-visible">
-              {options.map((option) => item(option))}
+              {list(options)}
               {more &&
                 more.options.length > 0 &&
                 (expanded ? (
-                  more.options.map((option, i) =>
-                    item(option, i === 0 ? firstMore : undefined)
-                  )
+                  list(more.options, firstMore)
                 ) : (
                   <DropdownMenuItem
                     data-ui="player-menu-action"
@@ -536,6 +598,7 @@ function SubtitleTiming({
   );
 }
 
+/** The player's audio and subtitle buttons with their menus. */
 export function OptionButtons({
   player,
   onMenu,
@@ -562,14 +625,19 @@ export function OptionButtons({
   const { state } = player;
   const { prefs } = usePlaybackPrefs();
   const [subtitleSize] = useSetting(settings.subtitle.size);
+  const languages = subtitleLanguages(prefs);
+  /** Languages in the user's order first; a stable sort keeps each one's own order. */
+  const rank = (track: Track) => {
+    const at = languages.findIndex((l) => sameLanguage(l, track.lang));
+    return at < 0 ? languages.length : at;
+  };
+  const byPreference = [...player.subtitleTracks].sort(
+    (a, b) => rank(a) - rank(b)
+  );
   const subtitles =
     prefs.ListPreferredSubtitlesOnly === false
-      ? { shown: player.subtitleTracks, hidden: [] }
-      : splitByLanguage(
-          player.subtitleTracks,
-          subtitleLanguages(prefs),
-          state.subtitle
-        );
+      ? { shown: byPreference, hidden: [] }
+      : splitByLanguage(byPreference, languages, state.subtitle);
   const chapters = player.chapters ?? [];
   const chapter = usePlayhead(player.playhead, (h) =>
     chapterAt(chapters, h.positionMs)
@@ -658,6 +726,9 @@ export function OptionButtons({
             label: t`More languages (${hidden})`,
             options: subtitles.hidden,
           }}
+          groupOf={(option) =>
+            tagLanguageName(option.lang) ?? option.lang?.toUpperCase()
+          }
           value={state.subtitle}
           onSelect={player.setSubtitle}
           {...menuState('subtitles')}
