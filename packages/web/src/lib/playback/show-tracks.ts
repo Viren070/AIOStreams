@@ -8,12 +8,16 @@ import {
   usePlaybackPrefs,
 } from '../user-config';
 import type { PlaybackPrefs } from '../user-config';
+import { bestOfTypes, subtitleType, subtitleTypes } from '../subtitles/tracks';
 import type { PlayerController, Track } from './controller';
 import type { BaseItemDto, SourceInfo } from '../types';
 
 /** The user's display preferences under this id hold a pick per show. */
 const PREFS_ID = 'aiostreams-web-tracks';
-/** `audio|subtitle`: a language code each, `off` for no subtitles, or empty. */
+/**
+ * `audio|subtitle`: a language code each, `off` for no subtitles, or empty.
+ * A subtitle's type can follow its language, as in `eng:forced`.
+ */
 type Picks = Record<string, string>;
 const OFF = 'off';
 
@@ -86,12 +90,18 @@ export function withShowPick(
   if (subtitle && prefs.RememberSubtitleSelections !== false) {
     if (subtitle === OFF) out.SubtitleMode = 'None';
     else {
+      const [lang, type] = subtitle.split(':');
       out.SubtitleLanguages = [
-        subtitle,
-        ...subtitleLanguages(prefs).filter((l) => !sameLanguage(l, subtitle)),
+        lang,
+        ...subtitleLanguages(prefs).filter((l) => !sameLanguage(l, lang)),
       ];
-      out.SubtitleLanguagePreference = subtitle;
+      out.SubtitleLanguagePreference = lang;
       out.SubtitleMode = 'Always';
+      if (type)
+        out.SubtitleTypes = [
+          type,
+          ...subtitleTypes(prefs).filter((t) => t !== type),
+        ];
     }
   }
   return out;
@@ -172,15 +182,33 @@ export function useShowTrackPicks(
         });
         return;
       }
-      const lang = langOf(player.subtitleTracks.find((t) => t.id === id));
+      const track = player.subtitleTracks.find((t) => t.id === id);
+      const lang = langOf(track);
       if (!lang) return;
+      const typeOf = (t: Track | undefined) => subtitleType(t?.facts ?? {});
+      const type = typeOf(track);
       const first = firstInLanguages(
         subtitleLanguages(prefs),
         player.subtitleTracks,
         (t) => t.lang
       );
-      const usual = prefs.SubtitleMode === 'Always' && langOf(first) === lang;
-      save(showId, { subtitle: usual ? undefined : lang });
+      const shown =
+        langOf(first) === lang
+          ? bestOfTypes(
+              player.subtitleTracks.filter((t) => langOf(t) === lang),
+              (t) => t.facts ?? {},
+              prefs
+            )
+          : undefined;
+      const usual =
+        prefs.SubtitleMode === 'Always' && !!shown && typeOf(shown) === type;
+      save(showId, {
+        subtitle: usual
+          ? undefined
+          : type === 'commentary'
+            ? lang
+            : `${lang}:${type}`,
+      });
     },
   };
 }

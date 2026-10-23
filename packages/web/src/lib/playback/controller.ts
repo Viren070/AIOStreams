@@ -4,6 +4,7 @@ import type { JellyfinClient } from '../client';
 import type { Chapter } from './chapters';
 import type { SubtitleStyle } from '../settings';
 import type { SubtitleLine } from '../subtitles/cues';
+import type { SubtitleFacts } from '../subtitles/tracks';
 import type { Playhead } from './playhead';
 import type { ThumbnailFeed } from './thumbnails';
 import type { PlannedSkip } from './engine';
@@ -16,6 +17,8 @@ export interface Track {
   lang?: string;
   /** One of the file's own, rather than one loaded beside it. */
   file?: boolean;
+  /** A subtitle's title and flags, which its type is read from. */
+  facts?: SubtitleFacts;
 }
 
 export interface PlayerState {

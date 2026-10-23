@@ -43,7 +43,7 @@ import type {
 } from './engine';
 import { usePlayheadWriter } from './playhead';
 import { thumbnailFeed } from './thumbnails';
-import { chooseTracks } from './track-picks';
+import { chooseTracks, serverFacts, trackFacts } from './track-picks';
 
 /** How long the player says it is syncing; an answer after that still shows. */
 const ASKED_WAIT_MS = 10_000;
@@ -487,8 +487,8 @@ export function usePlayer(
     subtitleTracks: [
       ...subtitleTracks
         .filter((t) => !t.external)
-        .map((t) => ({ ...asTrack(t), file: true })),
-      ...servers.map(asTrack),
+        .map((t) => ({ ...asTrack(t), file: true, facts: trackFacts(t) })),
+      ...servers.map((s) => ({ ...asTrack(s), facts: serverFacts(s) })),
       ...subtitleTracks
         .filter(
           (t) =>
@@ -496,7 +496,7 @@ export function usePlayer(
             !t.server &&
             !Object.values(retimed).some((c) => c.name === t.title)
         )
-        .map(asTrack),
+        .map((t) => ({ ...asTrack(t), facts: trackFacts(t) })),
     ],
     subtitleText,
     thumbnails,

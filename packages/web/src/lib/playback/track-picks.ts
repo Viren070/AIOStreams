@@ -28,13 +28,13 @@ export function audioCodes(prefs: PlaybackPrefs, source: SourceInfo): string[] {
     .filter((l): l is string => !!l);
 }
 
-const trackFacts = (t: EngineTrack): SubtitleFacts => ({
+export const trackFacts = (t: EngineTrack): SubtitleFacts => ({
   title: t.title,
   forced: t.forced,
   hearingImpaired: t.hearingImpaired,
 });
 
-const serverFacts = (s: ServerSubtitle): SubtitleFacts => ({
+export const serverFacts = (s: ServerSubtitle): SubtitleFacts => ({
   title: s.stream.Title ?? s.stream.DisplayTitle,
   forced: s.stream.IsForced,
   hearingImpaired: s.stream.IsHearingImpaired,
