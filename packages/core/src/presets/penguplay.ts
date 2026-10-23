@@ -181,7 +181,15 @@ class PenguPlayStreamParser extends StreamParser {
         parsedFile.audioChannels,
         parsedSpecs.audioChannels
       );
-      parsedFile.mediaInfoQuality ??= 'addon';
+      if (
+        parsedSpecs.encode ||
+        parsedSpecs.resolution ||
+        parsedSpecs.visualTags?.length ||
+        parsedSpecs.audioTags?.length ||
+        parsedSpecs.audioChannels?.length
+      ) {
+        parsedFile.mediaInfoQuality ??= 'addon';
+      }
     }
 
     const track = /·\s*(sub|dub)\s*$/i.exec(parsedStream.indexer ?? '')?.[1];
