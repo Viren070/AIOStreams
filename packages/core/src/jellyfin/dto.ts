@@ -92,11 +92,18 @@ export function isUnairedEpisode(item: JellyfinItem): boolean {
   return !!(item as { _aio?: { unaired?: boolean } })._aio?.unaired;
 }
 
+export function airTimeOf(video: {
+  released?: string | null;
+  airsAfter?: number;
+}): number {
+  const at = video.released ? Date.parse(video.released) : NaN;
+  return Number.isFinite(at) ? at : (video.airsAfter ?? NaN);
+}
+
 export function isUnairedVideo(video: SeasonGroup['videos'][number]): boolean {
-  const premiere = toIso(video.released);
   return (
     (video as { available?: unknown }).available === false ||
-    (premiere ? new Date(premiere).getTime() > Date.now() : false)
+    airTimeOf(video) > Date.now()
   );
 }
 
@@ -128,11 +135,10 @@ export function defaultUserData(itemId: string): UserItemDataDto {
 
 /** Unaired episodes never count towards a played state, as in Jellyfin. */
 export function hasAired(
-  video: { released?: string | null },
+  video: { released?: string | null; airsAfter?: number },
   now: number
 ): boolean {
-  const at = video.released ? Date.parse(video.released) : NaN;
-  return !(at > now);
+  return !(airTimeOf(video) > now);
 }
 
 /** An empty count is not played: every episode is still to air. */
@@ -633,7 +639,10 @@ export function buildContentItem(
 export interface SeasonGroup {
   season: number;
   name: string;
-  videos: NonNullable<ParsedMeta['videos']>;
+  videos: (NonNullable<ParsedMeta['videos']>[number] & {
+    /** An undated episode airs no earlier than the episodes before it. */
+    airsAfter?: number;
+  })[];
 }
 
 /** Groups `videos[]` by season; unnumbered videos become episode 1..n of season 1. */
@@ -668,11 +677,21 @@ export function groupSeasons(
   });
   for (const g of groups.values())
     g.videos.sort((a, b) => (a.episode ?? 0) - (b.episode ?? 0));
-  return [...groups.values()].sort((a, b) => {
+  const sorted = [...groups.values()].sort((a, b) => {
     if (a.season === 0) return 1;
     if (b.season === 0) return -1;
     return a.season - b.season;
   });
+  let latest: number | undefined;
+  for (const g of sorted) {
+    if (g.season === 0) continue;
+    for (const v of g.videos) {
+      const at = v.released ? Date.parse(v.released) : NaN;
+      if (Number.isFinite(at)) latest = Math.max(latest ?? at, at);
+      else if (latest !== undefined) v.airsAfter = latest;
+    }
+  }
+  return sorted;
 }
 
 export function episodeDescriptor(

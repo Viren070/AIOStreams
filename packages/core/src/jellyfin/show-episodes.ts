@@ -2,7 +2,7 @@ import type { ParsedMeta } from '../db/schemas.js';
 import { Cache } from '../utils/cache.js';
 import { getSimpleTextHash } from '../utils/crypto.js';
 import type { ContentRef } from '../watch-state/types.js';
-import { groupSeasons } from './dto.js';
+import { airTimeOf, groupSeasons } from './dto.js';
 import { statusFrom } from './enrichment.js';
 import { firstWriteOf } from './write-once.js';
 
@@ -27,7 +27,7 @@ export function showEpisodesOf(meta: ParsedMeta): ShowEpisodes {
   for (const group of groupSeasons(meta)) {
     if (group.season === 0) continue;
     for (const v of group.videos) {
-      const airs = v.released ? Date.parse(v.released) : NaN;
+      const airs = airTimeOf(v);
       episodes.push([
         v.id,
         group.season,
