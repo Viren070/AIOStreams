@@ -7,6 +7,7 @@ import {
 import {
   NZB,
   UnprocessedTorrent,
+  BuiltinDebridServices,
   DebridDownload,
   getDebridService,
   isCountryWrong,
@@ -173,7 +174,7 @@ export async function matchNzbs(
  * Searches for matching torrents across all configured torrent-capable services.
  */
 export async function searchTorrents(
-  services: { id: BuiltinServiceId; credential: string }[],
+  services: BuiltinDebridServices,
   metadata: SearchMetadata,
   parsedId: ParsedId,
   clientIp?: string
@@ -184,7 +185,8 @@ export async function searchTorrents(
       const debridService = getDebridService(
         service.id,
         service.credential,
-        clientIp
+        clientIp,
+        service.disabledCapabilities
       );
       if (!isTorrentDebridService(debridService)) return [];
       const items = await debridService.listMagnets();
@@ -229,7 +231,7 @@ export async function searchTorrents(
  * Searches for matching NZBs across all configured NZB-capable services.
  */
 export async function searchNzbs(
-  services: { id: BuiltinServiceId; credential: string }[],
+  services: BuiltinDebridServices,
   metadata: SearchMetadata,
   parsedId: ParsedId,
   clientIp?: string
@@ -240,7 +242,8 @@ export async function searchNzbs(
       const debridService = getDebridService(
         service.id,
         service.credential,
-        clientIp
+        clientIp,
+        service.disabledCapabilities
       );
       if (!isUsenetDebridService(debridService) || !debridService.listNzbs)
         return [];
