@@ -18,8 +18,6 @@ import { Preset } from './preset.js';
 export const stremthruSpecialCases: Partial<
   Record<ServiceId, (credentials: any) => any>
 > = {
-  [constants.OFFCLOUD_SERVICE]: (credentials: any) =>
-    `${credentials.email}:${credentials.password}`,
   [constants.PIKPAK_SERVICE]: (credentials: any) =>
     `${credentials.email}:${credentials.password}`,
   [constants.STREMTHRU_NEWZ_SERVICE]: (credentials: any) => credentials,
