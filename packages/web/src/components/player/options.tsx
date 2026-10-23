@@ -69,6 +69,7 @@ import { ControlButton } from './buttons';
 import { useParty } from '../../lib/party/party';
 import { RATES, rateLabel } from './keys';
 import { usePlayhead } from '../../lib/playback/playhead';
+import { useLatest } from '../../lib/use-latest';
 
 /** Opens in the menu's place from a row under its list. */
 interface MenuPage {
@@ -86,6 +87,7 @@ function Menu({
   options,
   value,
   onSelect,
+  open,
   onOpenChange,
   action,
   pages = [],
@@ -97,6 +99,7 @@ function Menu({
   options: Track[];
   value: string | null;
   onSelect(id: string | null): void;
+  open: boolean;
   onOpenChange(open: boolean): void;
   action?: { name: string; label: string; icon: React.ReactNode; run(): void };
   pages?: MenuPage[];
@@ -109,6 +112,12 @@ function Menu({
   const back = React.useRef<HTMLDivElement>(null);
   const rows = React.useRef(new Map<string, HTMLDivElement>());
   const left = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (open) return;
+    setExpanded(false);
+    setPageName(null);
+    left.current = null;
+  }, [open]);
   React.useEffect(() => {
     if (expanded) firstMore.current?.focus();
   }, [expanded]);
@@ -141,14 +150,8 @@ function Menu({
       side="top"
       align="end"
       sideOffset={8}
-      onOpenChange={(open) => {
-        if (!open) {
-          setExpanded(false);
-          setPageName(null);
-          left.current = null;
-        }
-        onOpenChange(open);
-      }}
+      open={open}
+      onOpenChange={onOpenChange}
       onEscapeKeyDown={(e) => {
         if (!page) return;
         e.preventDefault();
@@ -574,6 +577,22 @@ export function OptionButtons({
   const tv = !!currentHost().tv;
   const unread = useParty()?.unread ?? 0;
   const hidden = subtitles.hidden.length;
+  // One at a time: a menu opened over another leaves the first open.
+  const [openMenu, setOpenMenu] = React.useState<string | null>(null);
+  const menuState = (name: string) => ({
+    open: openMenu === name,
+    onOpenChange: (open: boolean) =>
+      setOpenMenu((current) =>
+        open ? name : current === name ? null : current
+      ),
+  });
+  const reportMenu = useLatest(onMenu);
+  const anyOpen = openMenu !== null;
+  React.useEffect(() => {
+    if (!anyOpen) return;
+    reportMenu.current(true);
+    return () => reportMenu.current(false);
+  }, [anyOpen, reportMenu]);
   return (
     <div className="ms-auto flex items-center sm:gap-1">
       {onPlaylist && (
@@ -598,7 +617,7 @@ export function OptionButtons({
           })}
           value={String(chapter)}
           onSelect={(id) => id && player.seek(chapters[Number(id)].startMs)}
-          onOpenChange={onMenu}
+          {...menuState('chapters')}
         />
       )}
       {onVersions && (
@@ -614,7 +633,7 @@ export function OptionButtons({
           options={player.audioTracks}
           value={state.audio}
           onSelect={(id) => id && player.setAudio(id)}
-          onOpenChange={onMenu}
+          {...menuState('audio')}
           pages={
             player.sound
               ? [
@@ -641,7 +660,7 @@ export function OptionButtons({
           }}
           value={state.subtitle}
           onSelect={player.setSubtitle}
-          onOpenChange={onMenu}
+          {...menuState('subtitles')}
           action={
             player.subtitleFiles && {
               name: 'add-file',
@@ -705,7 +724,7 @@ export function OptionButtons({
           }))}
           value={String(state.rate)}
           onSelect={(id) => id && player.setRate?.(Number(id))}
-          onOpenChange={onMenu}
+          {...menuState('speed')}
         />
       )}
       {player.fit && <FitButton notice={notice} />}
@@ -744,7 +763,7 @@ export function OptionButtons({
           options={[{ id: '', label: t`Off` }, ...player.stats.pages]}
           value={player.stats.page}
           onSelect={player.stats.show}
-          onOpenChange={onMenu}
+          {...menuState('statistics')}
         />
       )}
       {player.toggleFullscreen && !tv && (
