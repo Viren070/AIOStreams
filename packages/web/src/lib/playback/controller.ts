@@ -120,7 +120,7 @@ export interface PlayerController {
   /** Closes a player in its own window. */
   close?: () => void;
   /** Puts what plays next after this in the player's own playlist, in place of what it held. */
-  queueNext?: (next: QueuedItem) => void;
+  queueNext?: (next: QueuedItem | null) => void;
   /** Whether the app's sound settings apply, which they do to its own player. */
   sound?: boolean;
   /** Whether the picture follows the page's fit setting. */

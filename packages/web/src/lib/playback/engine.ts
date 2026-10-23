@@ -145,7 +145,7 @@ export interface PlayerEngine {
   /** The player in its own window it drives. */
   external?: string;
   closeWindow?(): void;
-  queueNext?(next: QueuedItem): void;
+  queueNext?(next: QueuedItem | null): void;
 }
 
 export type EngineFactory = (

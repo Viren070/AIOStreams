@@ -344,13 +344,11 @@ export function useUpNextPrompt({
 
   // A player with a playlist of its own gets what plays next once this plays.
   const queueNext = useLatest(player.queueNext);
-  const canQueue =
-    !!player.queueNext &&
-    autoplay &&
-    player.state.started &&
-    !asksFirst(stillWatching);
+  const queues = !!player.queueNext && player.state.started;
+  const canQueue = queues && autoplay && !asksFirst(stillWatching);
   React.useEffect(() => {
-    if (!canQueue || !next) return;
+    if (!queues) return;
+    if (!canQueue || !next) return void queueNext.current?.(null);
     const local = downloaded(next);
     if (local) {
       queueNext.current?.({
@@ -384,6 +382,7 @@ export function useUpNextPrompt({
       current = false;
     };
   }, [
+    queues,
     canQueue,
     next,
     queryClient,

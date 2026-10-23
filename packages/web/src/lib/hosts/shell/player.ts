@@ -567,9 +567,10 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
       : undefined,
     queueNext: external
       ? (next) => {
-          if (moved) return;
+          if (moved || (!next && !queued)) return;
           queued = next;
-          load(next, true);
+          if (next) load(next, true);
+          else send('player-unqueue');
         }
       : undefined,
   };
