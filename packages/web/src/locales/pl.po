@@ -39,6 +39,11 @@ msgstr "{count, plural, one {# minuta} few {# minuty} many {# minut} other {# mi
 msgid "{count, plural, one {# second} other {# seconds}}"
 msgstr "{count, plural, one {# sekunda} few {# sekundy} many {# sekund} other {# sekundy}}"
 
+#: src/components/playlists.tsx
+#, fuzzy
+msgid "{count, plural, one {# title} other {# titles}}"
+msgstr "{total, plural, one {# tytuł} few {# tytuły} many {# tytułów} other {# tytułu}}"
+
 #: src/components/party/party-sheet.tsx
 msgid "{count, plural, one {# watching · on {on}} other {# watching · on {on}}}"
 msgstr "{count, plural, one {# oglądający · na {on}} few {# oglądających · na {on}} many {# oglądających · na {on}} other {# oglądającego · na {on}}}"
@@ -408,8 +413,26 @@ msgstr "Dodaj katalogi do swojej konfiguracji, następnie odśwież."
 msgid "Add favourite"
 msgstr "Dodaj do ulubionych"
 
+#: src/components/playlists.tsx
+#, fuzzy
+msgid "Add from Continue watching"
+msgstr "Usuń z „Kontynuuj oglądanie”"
+
+#: src/components/item-menu.tsx src/components/playlists.tsx src/pages/item.tsx
+msgid "Add to playlist"
+msgstr ""
+
+#: src/components/playlists.tsx
+msgid "Add to this playlist"
+msgstr ""
+
 #: src/components/player/controls.tsx
 msgid "Added {name}"
+msgstr "Dodano {name}"
+
+#: src/components/playlists.tsx src/pages/player.tsx
+#, fuzzy
+msgid "Added to {name}"
 msgstr "Dodano {name}"
 
 #: src/pages/settings/account.tsx
@@ -453,9 +476,19 @@ msgstr "Wszystkie odcinki"
 msgid "All fields"
 msgstr "Wszystkie pola"
 
+#: src/components/playlists.tsx
+#, fuzzy
+msgid "All playlists"
+msgstr "Wszystkie odcinki"
+
 #: src/lib/downloads/index.ts
 msgid "Already downloaded or on the way"
 msgstr "Już pobrane lub w trakcie"
+
+#: src/components/playlists.tsx
+#, fuzzy
+msgid "Already in {name}"
+msgstr "Odtwarzanie na {name}"
 
 #: src/components/send-report.tsx
 msgid "Also send to the developer"
@@ -479,7 +512,8 @@ msgid "Always shows subtitles, in your language when the version has them."
 msgstr "Zawsze pokazuj napisy w Twoim języku, jeśli wybrana wersja je posiada."
 
 #: src/pages/settings/audio.tsx
-msgid "An audio track you pick while watching a show sets the language for its other episodes. Picking the one your languages would play forgets it."
+#, fuzzy
+msgid "An audio track you pick while watching a show sets the language for its other episodes. Picking what the settings above would play forgets it."
 msgstr "Ręcznie wybrana ścieżka audio obowiązuje również w kolejnych odcinkach. Przełączenie na język domyślny powoduje usunięcie tego wyboru."
 
 #: src/lib/hosts/jellyfin-android.ts src/pages/settings/about.tsx
@@ -726,8 +760,8 @@ msgstr "Serwer nieosiągalny"
 msgid "Can’t reach the server"
 msgstr "Brak połączenia z serwerem"
 
-#: src/components/send-report.tsx src/components/version-settings.tsx
-#: src/lib/i18n.ts src/pages/downloads.tsx
+#: src/components/playlists.tsx src/components/send-report.tsx
+#: src/components/version-settings.tsx src/lib/i18n.ts src/pages/downloads.tsx
 msgid "Cancel"
 msgstr "Anuluj"
 
@@ -945,6 +979,11 @@ msgstr "Kopiuj link streama"
 msgid "Corner button"
 msgstr "Przycisk w rogu"
 
+#: src/components/playlists.tsx src/pages/player.tsx
+#, fuzzy
+msgid "Could not add to {name}"
+msgstr "Nie udało się odczytać tego pliku"
+
 #: src/lib/hosts/shell/index.ts
 msgid "Could not check: {error}"
 msgstr "Nie można sprawdzić: {error}"
@@ -977,6 +1016,11 @@ msgstr "Nie udało się ich skopiować"
 msgid "Could not find versions of that episode"
 msgstr "Nie udało się znaleźć wersji tego odcinka"
 
+#: src/components/player/next-episode.tsx
+#, fuzzy
+msgid "Could not find versions of that title"
+msgstr "Nie udało się znaleźć wersji tego odcinka"
+
 #: src/lib/downloads/index.ts
 msgid "Could not find versions: {message}"
 msgstr "Nie udało się znaleźć wersji: {message}"
@@ -1001,6 +1045,11 @@ msgstr "Nie udało się wczytać odcinków."
 msgid "Could not load the history"
 msgstr "Nie udało się wczytać historii"
 
+#: src/components/playlists.tsx
+#, fuzzy
+msgid "Could not load the playlists."
+msgstr "Nie udało się wczytać odcinków."
+
 #: src/components/version-picker.tsx
 msgid "Could not load the versions: {loadError}"
 msgstr "Nie udało się wczytać wersji: {loadError}"
@@ -1016,6 +1065,11 @@ msgstr "Nie udało się wczytać tego katalogu"
 #: src/pages/person.tsx
 msgid "Could not load this person"
 msgstr "Nie udało się wczytać danych tej osoby"
+
+#: src/components/playlists.tsx
+#, fuzzy
+msgid "Could not load this playlist."
+msgstr "Nie udało się wczytać tego tytułu"
 
 #: src/pages/item.tsx
 msgid "Could not load this title"
@@ -1069,11 +1123,22 @@ msgstr "Odlicza czas, a następnie odtwarza kolejny odcinek w podobnej wersji. P
 msgid "Counts down, then plays the next episode. Off, the prompt waits for you."
 msgstr "Odlicza czas, a następnie odtwarza kolejny odcinek. Po wyłączeniu, komunikat czeka na Twoją decyzję."
 
+#: src/components/playlists.tsx
+#, fuzzy
+msgid "Create"
+msgstr "Twórca"
+
 #: src/components/people.tsx
 msgid "Creator"
 msgstr "Twórca"
 
-#: src/pages/settings/about.tsx src/pages/settings/playback.tsx
+#: src/pages/settings/playback.tsx
+msgid "Credits"
+msgstr "Napisy końcowe"
+
+#: src/pages/settings/about.tsx
+#, fuzzy
+msgctxt "Projects the app is built on"
 msgid "Credits"
 msgstr "Napisy końcowe"
 
@@ -1155,12 +1220,22 @@ msgstr "Opóźnienie"
 msgid "Delay: {delayLabel}"
 msgstr "Opóźnienie: {delayLabel}"
 
-#: src/pages/downloads.tsx
+#: src/components/playlists.tsx src/pages/downloads.tsx
 msgid "Delete"
 msgstr "Usuń"
 
+#: src/components/playlists.tsx
+#, fuzzy
+msgid "Delete {name}"
+msgstr "Usuń wszystko"
+
 #: src/pages/downloads.tsx
 msgid "Delete all"
+msgstr "Usuń wszystko"
+
+#: src/components/playlists.tsx
+#, fuzzy
+msgid "Delete playlist"
 msgstr "Usuń wszystko"
 
 #: src/pages/settings/theme.tsx
@@ -1265,8 +1340,8 @@ msgid "Donate to Me"
 msgstr "Wesprzyj mnie"
 
 #: src/components/party/reaction-setting.tsx
-#: src/components/player/subtitle-sync.tsx src/components/send-report.tsx
-#: src/components/version-settings.tsx
+#: src/components/player/subtitle-sync.tsx src/components/playlists.tsx
+#: src/components/send-report.tsx src/components/version-settings.tsx
 msgid "Done"
 msgstr "Gotowe"
 
@@ -2060,8 +2135,8 @@ msgstr "Brakujące"
 msgid "Monospace"
 msgstr "Stała szerokość (Monospace)"
 
-#: src/components/overview.tsx src/components/version-picker.tsx
-#: src/pages/downloads.tsx
+#: src/components/overview.tsx src/components/playlists.tsx
+#: src/components/version-picker.tsx src/pages/downloads.tsx
 msgid "More"
 msgstr "Więcej"
 
@@ -2093,11 +2168,11 @@ msgstr "Przesuń {name} w dół"
 msgid "Move {name} up"
 msgstr "Przesuń {name} w górę"
 
-#: src/components/version-settings.tsx
+#: src/components/playlists.tsx src/components/version-settings.tsx
 msgid "Move down"
 msgstr "Przesuń w dół"
 
-#: src/components/version-settings.tsx
+#: src/components/playlists.tsx src/components/version-settings.tsx
 msgid "Move up"
 msgstr "Przesuń w górę"
 
@@ -2143,7 +2218,7 @@ msgstr "Wycisz"
 msgid "Mute key"
 msgstr "Klawisz wyciszenia"
 
-#: src/components/version-settings.tsx
+#: src/components/playlists.tsx src/components/version-settings.tsx
 msgid "Name"
 msgstr "Nazwa"
 
@@ -2167,7 +2242,13 @@ msgstr "Nigdy"
 msgid "New code"
 msgstr "Nowy kod"
 
-#: src/components/remote-sheet.tsx src/lib/i18n.ts
+#: src/components/playlists.tsx
+#, fuzzy
+msgid "New playlist"
+msgstr "Teraz odtwarzane"
+
+#: src/components/player/controls.tsx src/components/remote-sheet.tsx
+#: src/lib/i18n.ts
 msgid "Next"
 msgstr "Następny"
 
@@ -2187,6 +2268,10 @@ msgstr "Następny odcinek"
 #: src/pages/settings/index.tsx
 msgid "Next episode, controls and players"
 msgstr "Następny odcinek, sterowanie i odtwarzacze"
+
+#: src/components/player/next-episode.tsx
+msgid "Next in {playlistName}"
+msgstr ""
 
 #: src/pages/calendar.tsx
 msgid "Next month"
@@ -2255,6 +2340,10 @@ msgstr "Na {relay} nie ma wspólnego oglądania o tym kodzie."
 #: src/lib/playback/play.ts
 msgid "No playable version was found"
 msgstr "Nie znaleziono wersji możliwej do odtworzenia"
+
+#: src/components/playlists.tsx
+msgid "No playlists yet. Make one here, or add a title to one from its menu."
+msgstr ""
 
 #: src/lib/servers.ts
 msgid "No server answered at that address."
@@ -2332,6 +2421,10 @@ msgstr "Nic nie znaleziono dla \"{query}\"."
 #: src/pages/person.tsx
 msgid "Nothing found."
 msgstr "Nic nie znaleziono."
+
+#: src/components/playlists.tsx
+msgid "Nothing here yet. Add titles from their menu, or from the suggestions below."
+msgstr ""
 
 #: src/pages/discover.tsx src/pages/item.tsx
 msgid "Nothing here."
@@ -2494,6 +2587,11 @@ msgstr "Otwórz link"
 #: src/lib/i18n.ts
 msgid "Open main menu"
 msgstr "Otwórz menu główne"
+
+#: src/components/playlists.tsx
+#, fuzzy
+msgid "Open playlist"
+msgstr "Otwórz link"
 
 #: src/pages/downloads.tsx
 msgid "Open the app's downloads"
@@ -2750,9 +2848,9 @@ msgid "Pink"
 msgstr "Różowy"
 
 #: src/components/hero.tsx src/components/item-menu.tsx
-#: src/components/player/controls.tsx src/components/random-pick.tsx
-#: src/components/remote-sheet.tsx src/lib/input/actions.ts
-#: src/lib/input/keys.ts src/pages/item.tsx
+#: src/components/player/controls.tsx src/components/playlists.tsx
+#: src/components/random-pick.tsx src/components/remote-sheet.tsx
+#: src/lib/input/actions.ts src/lib/input/keys.ts src/pages/item.tsx
 msgid "Play"
 msgstr "Odtwórz"
 
@@ -2859,7 +2957,8 @@ msgid "Player link"
 msgstr "Link do odtwarzacza"
 
 #: src/components/party/party-sheet.tsx src/components/player/episodes.tsx
-#: src/components/sessions.tsx src/components/version-picker.tsx
+#: src/components/playlists.tsx src/components/sessions.tsx
+#: src/components/version-picker.tsx
 msgid "Playing"
 msgstr "Odtwarzanie"
 
@@ -2878,6 +2977,16 @@ msgstr "Odtwarzanie na {name}"
 #: src/pages/settings/playback.tsx
 msgid "Playing on and the next and previous buttons pass over episodes marked as filler. You can still play one yourself."
 msgstr "Automatyczne odtwarzanie oraz przyciski następnego i poprzedniego odcinka pomijają odcinki oznaczone jako zapychacze (fillery). Nadal możesz odtworzyć je ręcznie."
+
+#: src/components/player/options.tsx src/components/playlists.tsx
+#, fuzzy
+msgid "Playlist"
+msgstr "Odtwórz"
+
+#: src/components/layout.tsx src/components/playlists.tsx
+#, fuzzy
+msgid "Playlists"
+msgstr "Odtwarzanie"
 
 #: src/components/party/party-sheet.tsx
 msgid "Plays <0>{title}</0> for everyone who joins."
@@ -2931,7 +3040,8 @@ msgstr "Podgląd"
 msgid "Previews"
 msgstr "Zapowiedzi"
 
-#: src/components/remote-sheet.tsx src/lib/i18n.ts
+#: src/components/player/controls.tsx src/components/remote-sheet.tsx
+#: src/lib/i18n.ts
 msgid "Previous"
 msgstr "Poprzedni"
 
@@ -3106,6 +3216,11 @@ msgstr "Usuń z „Kontynuuj oglądanie”"
 msgid "Remove from history"
 msgstr "Usuń z historii"
 
+#: src/components/playlists.tsx
+#, fuzzy
+msgid "Remove from playlist"
+msgstr "Usuń z historii"
+
 #: src/pages/downloads.tsx
 msgid "Remove from the list, keep the file"
 msgstr "Usuń z listy, zachowaj plik"
@@ -3117,6 +3232,11 @@ msgstr "Usuń serwer"
 #: src/pages/history.tsx
 msgid "Removed from history"
 msgstr "Usunięto z historii"
+
+#: src/components/playlists.tsx
+#, fuzzy
+msgid "Rename"
+msgstr "Nazwa użytkownika"
 
 #: src/pages/settings/apps.tsx
 msgid "Report a problem"
@@ -3242,7 +3362,8 @@ msgstr "S{s}E{e}"
 msgid "Sans serif"
 msgstr "Bezszeryfowa (Sans serif)"
 
-#: src/components/version-settings.tsx src/pages/settings/apps.tsx
+#: src/components/playlists.tsx src/components/version-settings.tsx
+#: src/pages/settings/apps.tsx
 msgid "Save"
 msgstr "Zapisz"
 
@@ -4114,6 +4235,10 @@ msgstr "odtwarzacz nie mógł odtworzyć tej wersji"
 msgid "The player's subtitle menu lists subtitles in your languages, ones without a language and the one on. The rest wait under More languages."
 msgstr "Menu napisów w odtwarzaczu wyświetla napisy w Twoich językach, napisy bez określonego języka oraz aktualnie włączone. Pozostałe znajdują się w sekcji „Więcej języków”."
 
+#: src/components/playlists.tsx
+msgid "The playlist goes; the titles in it stay."
+msgstr ""
+
 #: src/lib/party/party.ts
 msgid "The relay could not read that."
 msgstr "Serwer pośredniczący nie mógł tego odczytać."
@@ -4433,6 +4558,10 @@ msgstr "Nieobejrzane w tym sezonie"
 #: src/lib/input/actions.ts
 msgid "Up"
 msgstr "W górę"
+
+#: src/components/player/next-episode.tsx
+msgid "Up next"
+msgstr ""
 
 #: src/components/player/next-episode.tsx
 msgid "Up next: {upNext}"
