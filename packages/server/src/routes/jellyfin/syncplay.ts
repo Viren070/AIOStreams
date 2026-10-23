@@ -22,6 +22,7 @@ import {
   type SavedGroup,
   type SharedMessage,
 } from '@aiostreams/core';
+import { withinQueue } from '../../party/limits.js';
 import {
   bodyField,
   jf,
@@ -547,7 +548,8 @@ router.post(
         if (!g.group.member(key)) return false;
         if (request.type === 'Ping' && !g.group.pingMoved(key, request.ping))
           return true;
-        changing(g, tx, () => g.group.handle(key, request));
+        const capped = withinQueue(request, g.group.queue.size, MAX_QUEUE);
+        changing(g, tx, () => g.group.handle(key, capped));
         return true;
       }));
     if (!handled) notice(key, 'NotInGroup');

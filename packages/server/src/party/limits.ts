@@ -1,3 +1,5 @@
+import type { GroupRequest } from '@aiostreams/core';
+
 /** A token bucket, refilled as it is read, so it needs no timer. */
 export class Bucket {
   private tokens: number;
@@ -90,3 +92,12 @@ export class AddressBook {
     }
   }
 }
+
+export const withinQueue = (
+  request: GroupRequest,
+  size: number,
+  max: number
+): GroupRequest =>
+  request.type === 'Queue'
+    ? { ...request, items: request.items.slice(0, Math.max(max - size, 0)) }
+    : request;

@@ -31,7 +31,7 @@ import {
 import { isTrustedIp } from '../middlewares/ip.js';
 import { userForToken, type TokenUser } from '../routes/jellyfin/context.js';
 import { accountName } from '../routes/jellyfin/users.js';
-import { AddressBook, Bucket } from './limits.js';
+import { AddressBook, Bucket, withinQueue } from './limits.js';
 import { parseMessage } from './messages.js';
 import { ticketExpiry, ticketFor } from './ticket.js';
 import { relayMode } from './mode.js';
@@ -865,7 +865,12 @@ function inParty(conn: Conn, m: PartyClientMessage): void {
         if (party.lock.control && seat.id !== party.host && by)
           return 'control';
         party.lastActivity = Date.now();
-        changing(party, tx, () => party.group.handle(seat.id, m.request), {
+        const request = withinQueue(
+          m.request,
+          party.group.queue.size,
+          PARTY_LIMITS.queue
+        );
+        changing(party, tx, () => party.group.handle(seat.id, request), {
           by,
         });
       });
