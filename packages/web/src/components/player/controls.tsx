@@ -157,9 +157,9 @@ export function PlayerControls({
 
   const [seekStep] = useSetting(settings.controls.seekStep);
   const [burstSeek, seekingTo] = useBurstSeek(player);
-  const [tapSeek, setTapSeek] = React.useState(false);
-  const seekBy = (deltaMs: number, tapped = false) => {
-    setTapSeek(tapped);
+  const [seekPicture, setSeekPicture] = React.useState(true);
+  const seekBy = (deltaMs: number, picture = true) => {
+    setSeekPicture(picture);
     burstSeek(deltaMs);
     showSeekFlash(deltaMs);
   };
@@ -205,7 +205,7 @@ export function PlayerControls({
   const shown = useLatest(visible);
   const gestures = usePlayerGestures({
     player,
-    seekBy: (deltaMs) => seekBy(deltaMs, true),
+    seekBy: (deltaMs) => seekBy(deltaMs, false),
     seekStepMs: seekStep * 1000,
     notice: showNotice,
     onTap: () => (shown.current ? hide() : wake()),
@@ -251,7 +251,7 @@ export function PlayerControls({
     hide,
     notice: showNotice,
     togglePlay,
-    seekBy,
+    seekBy: (deltaMs) => seekBy(deltaMs, tv),
     onBack,
     onPrevious,
     onNext,
@@ -562,11 +562,11 @@ export function PlayerControls({
           segments={segments}
           chapters={player.chapters ?? []}
           previewMs={shownAt}
-          previewPicture={!!scrub || !tapSeek}
+          previewPicture={!!scrub || seekPicture}
           handle={touch}
           thumbnails={player.thumbnails}
           onSeek={player.seek}
-          onStep={(direction) => seekBy(direction * seekStep * 1000)}
+          onStep={(direction) => seekBy(direction * seekStep * 1000, tv)}
           onTogglePlay={togglePlay}
         />
         <div className="flex items-center gap-1">
