@@ -37,13 +37,15 @@ export function DownloadsSection() {
           }
         >
           <div className="flex gap-2">
-            <Button
-              intent="gray-outline"
-              className={button}
-              onClick={() => host.folder?.open()}
-            >
-              <Trans>Open</Trans>
-            </Button>
+            {host.folder.open && (
+              <Button
+                intent="gray-outline"
+                className={button}
+                onClick={() => host.folder?.open?.()}
+              >
+                <Trans>Open</Trans>
+              </Button>
+            )}
             <Button
               intent="gray-outline"
               className={button}

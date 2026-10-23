@@ -12,6 +12,11 @@ let fullscreen = false;
 let leaveAsked = 0;
 const LEAVE_MS = 2000;
 
+const androidDownloads = {
+  ...shellDownloads,
+  folder: { choose: () => appBridge()?.send({ type: 'download-folder' }) },
+};
+
 /**
  * Follows the app's full screen, which hides the system bars and turns to
  * landscape, takes its Back, and tells it which player to play with.
@@ -102,7 +107,7 @@ export const androidHost: Host = {
   playerFeatures: ['audio', 'chapters', 'stats', 'headers'],
   // A TV has little storage and is always online.
   get downloads() {
-    return appBridge()?.tv ? undefined : shellDownloads;
+    return appBridge()?.tv ? undefined : androidDownloads;
   },
   // A phone's keyboard has a microphone of its own.
   get listen() {

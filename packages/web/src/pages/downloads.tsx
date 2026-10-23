@@ -127,12 +127,12 @@ function DownloadRow({
       icon: <BiListUl />,
       run: pick,
     });
-  if (state === 'done' && host?.folder)
+  if (state === 'done' && host?.folder?.open)
     actions.push({
       name: 'folder',
       label: t`Show in folder`,
       icon: <BiFolderOpen />,
-      run: () => host.folder?.open(download.id),
+      run: () => host.folder?.open?.(download.id),
     });
 
   return (
@@ -422,17 +422,19 @@ export function DownloadsPage() {
             )}
             {host?.folder && (
               <>
-                <Button
-                  data-ui="downloads-action"
-                  data-name="open-folder"
-                  size="sm"
-                  intent="gray-outline"
-                  className="rounded-full"
-                  leftIcon={<BiFolderOpen />}
-                  onClick={() => host.folder?.open()}
-                >
-                  <Trans>Open folder</Trans>
-                </Button>
+                {host.folder.open && (
+                  <Button
+                    data-ui="downloads-action"
+                    data-name="open-folder"
+                    size="sm"
+                    intent="gray-outline"
+                    className="rounded-full"
+                    leftIcon={<BiFolderOpen />}
+                    onClick={() => host.folder?.open?.()}
+                  >
+                    <Trans>Open folder</Trans>
+                  </Button>
+                )}
                 <Button
                   data-ui="downloads-action"
                   data-name="change-folder"

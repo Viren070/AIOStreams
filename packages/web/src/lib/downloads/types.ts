@@ -90,7 +90,7 @@ export interface DownloadsHost {
   configure(opts: { concurrent: number; wifiOnly: boolean }): void;
   subscribe(listener: (event: HostEvent) => void): () => void;
   /** Picks and shows the folder; the folder's own name comes in `state`. */
-  folder?: { choose(): void; open(id?: string): void };
+  folder?: { choose(): void; open?(id?: string): void };
   /** Takes downloads over entirely, with a screen of its own to show them. */
   handsOff?: { open(): void };
   /** Sends a file's `headers`. */
