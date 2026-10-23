@@ -1,18 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The app's own words outside the web app, in British English. Weblate adds the values-* copies. --><resources>
-    <string name="channel_downloads"></string>
+    <string name="channel_downloads">Download</string>
     <plurals name="downloading_items">
+        <item quantity="one">Download di %d elemento</item>
+        <item quantity="many">Download di %d elementi</item>
+        <item quantity="other">Download di %d elementi</item>
     </plurals>
-    <string name="channel_updates"></string>
-    <string name="updated_to"></string>
-    <string name="tap_to_open"></string>
-    <string name="update_no_build"></string>
-    <string name="update_damaged"></string>
-    <string name="update_install_failed"></string>
-    <string name="update_feed_answered"></string>
-    <string name="file_saved"></string>
-    <string name="file_not_saved"></string>
-    <string name="webview_version_unknown"></string>
-    <string name="webview_too_old"></string>
-    <string name="webview_update"></string>
+    <string name="channel_updates">Aggiornamenti</string>
+    <string name="updated_to">Aggiornata a %1$s</string>
+    <string name="tap_to_open">Tocca per aprire</string>
+    <string name="update_no_build">Nessuna build per il processore di questo dispositivo</string>
+    <string name="update_damaged">Il download è risultato danneggiato</string>
+    <string name="update_install_failed">Installazione non riuscita: %1$s</string>
+    <string name="update_feed_answered">Il feed ha risposto %1$d</string>
+    <string name="file_saved">%1$s salvato in Download</string>
+    <string name="file_not_saved">Impossibile salvare %1$s</string>
+    <string name="webview_version_unknown">sconosciuta</string>
+    <string name="webview_too_old">Il WebView di questo dispositivo è troppo vecchio per l\'app: versione %1$s, mentre l\'app richiede la %2$d o successiva.</string>
+    <string name="webview_update">Aggiorna Android System WebView o il sistema, poi riapri l\'app.</string>
 </resources>
