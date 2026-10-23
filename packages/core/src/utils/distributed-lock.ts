@@ -382,7 +382,9 @@ export class DistributedLock {
       } finally {
         setTimeout(() => {
           logger.debug(`Releasing memory lock for key: ${key}`);
-          this.memoryLocks.delete(key);
+          // An expired owner can finish after a replacement acquired this key.
+          // Its delayed cleanup must never remove the replacement's lock.
+          if (this.memoryLocks.get(key) === lock) this.memoryLocks.delete(key);
         }, 2000);
       }
 
