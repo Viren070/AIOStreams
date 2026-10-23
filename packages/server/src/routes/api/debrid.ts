@@ -149,7 +149,7 @@ router.get(
       ): Promise<string | undefined> => {
         const resolvedLinkInfo = await resolvePlaybackTarget(target, { clientIp }, signal);
         const served = await maybeProxy(resolvedLinkInfo?.url, proxied);
-        if (resolvedLinkInfo && served) resolvedFrom.set(served, { target, resolvedLinkInfo: resolvedLinkInfo });
+        if (resolvedLinkInfo && served) resolvedFrom.set(served, { target, resolvedLinkInfo });
         return served;
       };
 
