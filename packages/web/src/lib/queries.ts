@@ -35,7 +35,10 @@ const PAGE = 60;
 /** Every key starts here, so a user switch or sign-out drops them all. */
 function useKey() {
   const { client, user } = useSession();
-  return ['jf', client.base, user.Id] as const;
+  return React.useMemo(
+    () => ['jf', client.base, user.Id] as const,
+    [client.base, user.Id]
+  );
 }
 
 /** Libraries of movies and shows; music, books, photos and the like are left out. */
@@ -631,32 +634,38 @@ export async function requestPlaybackInfo(
 
 function usePlaybackInfoRequest() {
   const { client, user } = useSession();
-  return (
-    itemId: string,
-    opts: {
-      refresh?: boolean;
-      sourceId?: string;
-      kept?: boolean;
-      purpose?: Purpose;
-    } = {}
-  ) => requestPlaybackInfo(client, user.Id!, itemId, opts);
+  return React.useCallback(
+    (
+      itemId: string,
+      opts: {
+        refresh?: boolean;
+        sourceId?: string;
+        kept?: boolean;
+        purpose?: Purpose;
+      } = {}
+    ) => requestPlaybackInfo(client, user.Id!, itemId, opts),
+    [client, user.Id]
+  );
 }
 
 export function usePlaybackInfoOptions() {
   const request = usePlaybackInfoRequest();
   const key = useKey();
-  return (itemId: string, sourceId?: string, purpose?: Purpose) =>
-    queryOptions({
-      queryKey: [
-        ...key,
-        'playback-info',
-        itemId,
-        sourceId ?? null,
-        ...(purpose ? [purpose] : []),
-      ],
-      queryFn: () => request(itemId, { sourceId, purpose }),
-      staleTime: 10 * 60_000,
-    });
+  return React.useCallback(
+    (itemId: string, sourceId?: string, purpose?: Purpose) =>
+      queryOptions({
+        queryKey: [
+          ...key,
+          'playback-info',
+          itemId,
+          sourceId ?? null,
+          ...(purpose ? [purpose] : []),
+        ],
+        queryFn: () => request(itemId, { sourceId, purpose }),
+        staleTime: 10 * 60_000,
+      }),
+    [key, request]
+  );
 }
 
 /**
