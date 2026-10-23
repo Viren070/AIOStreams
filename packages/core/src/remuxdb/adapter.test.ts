@@ -226,8 +226,17 @@ describe('toWireMediaInfo', () => {
       title: undefined,
       ch_layout: '5.1',
       ch: 6,
+      default: true,
+      hearing_impaired: false,
     });
-    assert.deepEqual(wire.subtitle?.[0], { lang: 'fre', title: 'French' });
+    assert.deepEqual(wire.subtitle?.[0], {
+      codec: undefined,
+      lang: 'fre',
+      title: 'French',
+      default: true,
+      forced: false,
+      hearing_impaired: false,
+    });
   });
 
   test('converts duration from seconds to nanoseconds', () => {
