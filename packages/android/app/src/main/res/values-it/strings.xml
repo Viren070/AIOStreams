@@ -18,4 +18,6 @@
     <string name="webview_version_unknown">sconosciuta</string>
     <string name="webview_too_old">Il WebView di questo dispositivo è troppo vecchio per l\'app: versione %1$s, mentre l\'app richiede la %2$d o successiva.</string>
     <string name="webview_update">Aggiorna Android System WebView o il sistema, poi riapri l\'app.</string>
+    <string name="download_folder_title">Scegli dove vanno i download</string>
+    <string name="download_folder_free">%1$s · %2$s liberi</string>
 </resources>
