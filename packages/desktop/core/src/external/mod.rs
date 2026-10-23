@@ -211,6 +211,10 @@ impl External {
         self.with(|backend| backend.command(vec!["stop".into()]));
     }
 
+    pub fn unqueue(&self) {
+        self.with(|backend| backend.command(vec!["playlist-clear".into()]));
+    }
+
     pub fn change(&self, change: &Change) -> Result<(), String> {
         let props = playback::change(change)?;
         self.with(|backend| {

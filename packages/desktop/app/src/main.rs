@@ -504,6 +504,12 @@ pub fn handle(
                 p.stop();
             }
         }
+        Inbound::PlayerUnqueue { external: true } => external.unqueue(),
+        Inbound::PlayerUnqueue { external: false } => {
+            if let Some(p) = player.as_ref() {
+                p.unqueue();
+            }
+        }
         Inbound::PlayerSet {
             change,
             external: to_external,

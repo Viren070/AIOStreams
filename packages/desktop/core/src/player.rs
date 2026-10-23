@@ -592,6 +592,10 @@ impl Player {
         self.previews.clear();
     }
 
+    pub fn unqueue(&self) {
+        self.send(Request::Command(vec!["playlist-clear".into()]));
+    }
+
     pub fn thumbnail(
         &self,
         url: &str,

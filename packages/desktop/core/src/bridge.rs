@@ -37,6 +37,11 @@ pub enum Inbound {
         #[serde(default)]
         external: bool,
     },
+    /// Drops the files queued after the playing one.
+    PlayerUnqueue {
+        #[serde(default)]
+        external: bool,
+    },
     PlayerSet {
         #[serde(flatten)]
         change: Change,
