@@ -358,7 +358,7 @@ async function queuePrePlay(
       ? queueDebridProbe({
           resolvedLinkInfo: {
             ...resolved,
-            filename: owned.filename
+            filename: resolved.filename ?? owned.filename
           },
           fileInfo,
           path: 'jellyfin',
