@@ -84,7 +84,7 @@ export async function resolveRemuxDbMediaInfo(
       const match = matchEntry(versions, stream);
       if (!match) continue;
       matched++;
-      applyMediaInfo(stream, fromRemuxDbVersion(match));
+      applyMediaInfo(stream, fromRemuxDbVersion(match), 'remuxdb');
       queueRemuxDbMatch(stream, match);
     }
     logger.debug(`matched ${matched}/${eligible.length} eligible streams`);

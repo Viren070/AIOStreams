@@ -392,6 +392,18 @@ mediaInfoQuality(streams, 'probe', 'indexer')
 
 ---
 
+#### `mediaInfoSource()`
+
+Filter by which source a stream's probed media info came from. Streams whose media info did not come from a probe match `'unknown'`.
+
+**Accepted values:** `'local'` `'stremthru'` `'remuxdb'` `'remote'` `'stremthru-addon'` `'unknown'`
+
+```
+mediaInfoSource(streams, 'local', 'remuxdb')
+```
+
+---
+
 #### `type()`
 
 Filter by stream type.

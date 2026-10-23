@@ -958,6 +958,11 @@ export abstract class StreamExpressionEngine {
       );
     };
 
+    this.parser.functions.mediaInfoSource = parsedValueFilter(
+      'mediaInfoSource',
+      (stream) => stream.parsedFile?.mediaInfoSource
+    );
+
     this.parser.functions.seeders = function (
       streams: ParsedStream[],
       minSeeders?: number,
