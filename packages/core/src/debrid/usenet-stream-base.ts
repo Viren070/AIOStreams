@@ -979,8 +979,10 @@ export abstract class UsenetStreamService implements UsenetDebridService {
     // Proxy the resolved WebDAV URL through the builtin proxy when the service
     // is configured with aiostreamsAuth.
     if (!result || !this.auth.aiostreamsAuth) return result;
-    result.url = await this.proxyResolvedUrl(result.url, filename);
-    return result;
+    return {
+      ...result,
+      url: await this.proxyResolvedUrl(result.url, filename),
+    };
   }
 
   /**
