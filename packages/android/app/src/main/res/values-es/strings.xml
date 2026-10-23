@@ -9,15 +9,8 @@
     <string name="channel_updates">Actualizaciones</string>
     <string name="updated_to">Actualizado a %1$s</string>
     <string name="tap_to_open">Haz clic para abrir</string>
-    <string name="update_no_build"/>
-    <string name="update_damaged"/>
-    <string name="update_install_failed"/>
-    <string name="update_feed_answered"/>
-    <string name="download_folder_title"/>
     <string name="download_folder_free">%1$s · %2$s libre</string>
     <string name="file_saved">%1$s guardado en Descargas</string>
-    <string name="file_not_saved"/>
     <string name="webview_version_unknown">desconocido</string>
     <string name="webview_too_old">El WebView es demasiado antiguo para la app: versión %1$s , y la app requiere %2$d o más reciente.</string>
-    <string name="webview_update"/>
 </resources>
