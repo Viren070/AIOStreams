@@ -145,11 +145,12 @@ export async function checkServer(base: string): Promise<ServerCheck> {
 }
 
 /**
- * Takes a bare host, a Jellyfin base or the address the web app is opened at.
- * A bare host may be AIOStreams, whose API lives under `/jellyfin`.
+ * Takes a bare host, a Jellyfin base, the address the web app is opened at or
+ * an AIOStreams addon's manifest URL. A bare host may be AIOStreams, whose API
+ * lives under `/jellyfin`.
  */
 export async function findServer(input: string): Promise<SavedServer> {
-  const raw = input.trim();
+  const raw = input.trim().replace(/^stremio:\/\//i, 'https://');
   let url: URL;
   try {
     url = new URL(/^[a-z][a-z\d+.-]*:\/\//i.test(raw) ? raw : `http://${raw}`);
@@ -161,7 +162,11 @@ export async function findServer(input: string): Promise<SavedServer> {
   }
   const path = url.pathname
     .replace(/\/+$/, '')
-    .replace(/\/web(\/index\.html)?$/i, '');
+    .replace(/\/web(\/index\.html)?$/i, '')
+    .replace(
+      /\/stremio(\/[^/]+\/[^/]+)(?:\/v\/[^/]+)?\/manifest\.json$/i,
+      '/jellyfin$1'
+    );
   for (const candidate of path ? [path] : ['/jellyfin', '']) {
     const base = url.origin + candidate;
     const info = await publicInfo(base);
