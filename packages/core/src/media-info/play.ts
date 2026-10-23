@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { appConfig, constants, createLogger } from '../utils/index.js';
-import type { FileInfo, TitleMetadata } from '../debrid/base.js';
+import type { FileInfo, ResolvedLinkInfo, TitleMetadata } from '../debrid/base.js';
 import {
   featureFiles,
   metadataStore,
@@ -44,6 +44,8 @@ import { mediaInfoProber } from './probe.js';
 import { engineReader, httpReader } from './readers.js';
 import { isSharedKey } from './remote.js';
 import type { MediaInfoRecord } from './record.js';
+
+type DebridProbeLinkInfo = ResolvedLinkInfo & { filename: string };
 
 const logger = createLogger('media-info');
 
@@ -127,12 +129,10 @@ export async function queueEngineProbe(
 
 interface RemoteProbe {
   /** What to read: a debrid link or a proxy URL in front of one. */
-  url: string;
+  resolvedLinkInfo: ResolvedLinkInfo;
   headers?: Record<string, string>;
   releaseKeys: string[];
   kind: ProbeKind;
-  /** The file, when known before reading; else the response names it. */
-  file?: string;
   title?: string;
   /** Stands in for the file while it is unknown, so a replay is not re-read. */
   pendingName: string;
@@ -148,7 +148,7 @@ function queueRemoteProbe(probe: RemoteProbe): string | undefined {
   if (!releaseKey && !probe.waited) return undefined;
   return mediaInfoProber.queue({
     releaseKeys: probe.releaseKeys,
-    file: probe.file,
+    file: probe.resolvedLinkInfo.filename,
     releaseFiles: 0,
     title: probe.title,
     path: probe.path,
@@ -160,33 +160,27 @@ function queueRemoteProbe(probe: RemoteProbe): string | undefined {
         contribute({ source: probe.source, file, record, ...probe.ids });
       }
     },
-    open: (signal) => httpReader(probe.url, signal, probe.headers),
+    open: (signal) => httpReader(probe.resolvedLinkInfo.url, signal, probe.headers),
   });
 }
 
 /** A debrid file of ours: its keys come from the playback URL's file info. */
 function queueDebridProbe(input: {
-  url: string;
+  resolvedLinkInfo: DebridProbeLinkInfo;
   fileInfo: FileInfo;
-  filename: string;
   path: ProbePath;
   ids?: ContributionIds;
   waited?: boolean;
 }): string | undefined {
   const { fileInfo } = input;
-  // The playback URL only names the file when the listing picked one.
-  const file =
-    fileInfo.index !== undefined && fileInfo.index >= 0
-      ? input.filename
-      : undefined;
+  const fileName = input.resolvedLinkInfo.filename;
   if (fileInfo.type === 'usenet') {
     return queueRemoteProbe({
-      url: input.url,
+      resolvedLinkInfo: input.resolvedLinkInfo,
       releaseKeys: usenetKeys(fileInfo.releaseKey, fileInfo.nzb),
       kind: 'usenet',
-      file,
       title: fileInfo.title,
-      pendingName: input.filename,
+      pendingName: fileName,
       path: input.path,
       source: fileInfo.nzb
         ? { kind: 'nzb', nzbUrl: fileInfo.nzb, infoUrl: fileInfo.infoUrl }
@@ -197,12 +191,11 @@ function queueDebridProbe(input: {
   }
   const key = torrentKey(fileInfo.hash);
   return queueRemoteProbe({
-    url: input.url,
+    resolvedLinkInfo: input.resolvedLinkInfo,
     releaseKeys: key ? [key] : [],
     kind: 'torrent',
-    file,
     title: fileInfo.title,
-    pendingName: input.filename,
+    pendingName: fileName,
     path: input.path,
     source: key ? { kind: 'torrent', infoHash: fileInfo.hash } : undefined,
     ids: input.ids,
@@ -213,7 +206,7 @@ function queueDebridProbe(input: {
 export interface PlaybackPlay {
   path: ProbePath;
   target: PlaybackTarget;
-  resolvedUrl: string;
+  resolvedLinkInfo: ResolvedLinkInfo;
   viaProxy: boolean;
 }
 
@@ -224,7 +217,7 @@ export interface PlaybackPlay {
 export async function onPlay(play: PlaybackPlay): Promise<void> {
   if (!probesOn(play.path)) return;
   try {
-    const token = decodeUsenetStreamUrl(play.resolvedUrl);
+    const token = decodeUsenetStreamUrl(play.resolvedLinkInfo.url);
     if (token) {
       await queueEngineProbe(token, play.path);
       return;
@@ -240,9 +233,11 @@ export async function onPlay(play: PlaybackPlay): Promise<void> {
       .get(play.target.metadataId)
       .catch(() => undefined);
     queueDebridProbe({
-      url: play.resolvedUrl,
+      resolvedLinkInfo: {
+        ...play.resolvedLinkInfo,
+        filename: play.resolvedLinkInfo.filename ?? play.target.filename
+      },
       fileInfo,
-      filename: play.target.filename,
       path: play.path,
       ids: idsOf(metadata),
     });
@@ -274,10 +269,9 @@ export function onPreloadRedirect(
     ?.slice('btih:'.length);
   if (!identity || !infoHash) return;
   queueRemoteProbe({
-    url: location,
+    resolvedLinkInfo: { url: location, filename: identity.file },
     releaseKeys: identity.releaseKeys,
     kind: 'torrent',
-    file: identity.file,
     title: identity.title,
     pendingName: identity.filename ?? '',
     path,
@@ -312,11 +306,10 @@ export function onProxiedPlay(play: {
   if (proxiedPlays.size >= 1_000) proxiedPlays.clear();
   proxiedPlays.set(id, now + PROXIED_PLAY_MS);
   queueRemoteProbe({
-    url: play.url,
+    resolvedLinkInfo: { url: play.url, filename: play.mediaInfo.file },
     headers: play.headers,
     releaseKeys,
     kind: first.startsWith('btih:') ? 'torrent' : 'usenet',
-    file: play.mediaInfo.file,
     pendingName: play.mediaInfo.file ?? play.filename ?? '',
     path: play.path,
   });
@@ -346,7 +339,7 @@ async function queuePrePlay(
         resolvePlaybackTarget(owned, { clientIp }),
         remaining()
       );
-      const token = resolved ? decodeUsenetStreamUrl(resolved) : undefined;
+      const token = resolved ? decodeUsenetStreamUrl(resolved.url) : undefined;
       return token ? queueEngineProbe(token, 'jellyfin') : undefined;
     }
     // Our proxy reads from this server, so a link resolved here is the same IP.
@@ -363,9 +356,11 @@ async function queuePrePlay(
     );
     return resolved
       ? queueDebridProbe({
-          url: resolved,
+          resolvedLinkInfo: {
+            ...resolved,
+            filename: resolved.filename ?? owned.filename
+          },
           fileInfo,
-          filename: owned.filename,
           path: 'jellyfin',
           ids,
           waited: true,
@@ -380,10 +375,9 @@ async function queuePrePlay(
     ?.slice('btih:'.length);
   const remote = (url: string) =>
     queueRemoteProbe({
-      url,
+      resolvedLinkInfo: { url, filename: identity?.file },
       releaseKeys,
       kind: infoHash ? 'torrent' : 'usenet',
-      file: identity?.file,
       title: identity?.title,
       pendingName: identity ? (identity.filename ?? '') : md5(version.url),
       path: 'jellyfin',
