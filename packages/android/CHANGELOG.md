@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.10.0](https://github.com/Viren070/AIOStreams/compare/android-v0.9.0...android-v0.10.0) (2026-10-23)
+
+
+### Features
+
+* **android:** choose the storage downloads go to ([9ababea](https://github.com/Viren070/AIOStreams/commit/9ababea0f9c58fca25d4aab1c109605839d43b6d))
+* **android:** replace a loaded server subtitle when it is added again ([2db364d](https://github.com/Viren070/AIOStreams/commit/2db364dc343c3cb75c2b4d43902b32302a5dd43e))
+* **web:** add playlists ([13da70a](https://github.com/Viren070/AIOStreams/commit/13da70ae1fce77893f33d282c6e28538431be46b))
+* **web:** clear the launched player's queue when nothing plays next ([13da70a](https://github.com/Viren070/AIOStreams/commit/13da70ae1fce77893f33d282c6e28538431be46b))
+* **web:** connect to a config's server from its manifest URL ([13da70a](https://github.com/Viren070/AIOStreams/commit/13da70ae1fce77893f33d282c6e28538431be46b))
+* **web:** fetch a server subtitle again each time it is picked ([13da70a](https://github.com/Viren070/AIOStreams/commit/13da70ae1fce77893f33d282c6e28538431be46b))
+* **web:** offer the Android app's download folder choice ([13da70a](https://github.com/Viren070/AIOStreams/commit/13da70ae1fce77893f33d282c6e28538431be46b))
+* **web:** show the seek-bar picture for arrow-key seeks only on TVs ([13da70a](https://github.com/Viren070/AIOStreams/commit/13da70ae1fce77893f33d282c6e28538431be46b))
+* **web:** take a party's next titles from its queue ([13da70a](https://github.com/Viren070/AIOStreams/commit/13da70ae1fce77893f33d282c6e28538431be46b))
+
+
+### Bug Fixes
+
+* **web:** close the open player menu when another opens ([13da70a](https://github.com/Viren070/AIOStreams/commit/13da70ae1fce77893f33d282c6e28538431be46b))
+* **web:** give the About page's Credits title its own context ([13da70a](https://github.com/Viren070/AIOStreams/commit/13da70ae1fce77893f33d282c6e28538431be46b))
+* **web:** hold a skip's seek-bar picture for a second ([13da70a](https://github.com/Viren070/AIOStreams/commit/13da70ae1fce77893f33d282c6e28538431be46b))
+* **web:** memoise the playback info query helpers ([13da70a](https://github.com/Viren070/AIOStreams/commit/13da70ae1fce77893f33d282c6e28538431be46b))
+* **web:** read buffered ranges from one snapshot ([13da70a](https://github.com/Viren070/AIOStreams/commit/13da70ae1fce77893f33d282c6e28538431be46b))
+* **web:** remember the subtitle type picked for a show ([13da70a](https://github.com/Viren070/AIOStreams/commit/13da70ae1fce77893f33d282c6e28538431be46b))
+* **web:** return nothing from the calendar agenda's scroll ([13da70a](https://github.com/Viren070/AIOStreams/commit/13da70ae1fce77893f33d282c6e28538431be46b))
+* **web:** reword the audio help for remembering picks per show ([13da70a](https://github.com/Viren070/AIOStreams/commit/13da70ae1fce77893f33d282c6e28538431be46b))
+
 ## [0.9.0](https://github.com/Viren070/AIOStreams/compare/android-v0.8.0...android-v0.9.0) (2026-10-22)
 
 
