@@ -1,6 +1,7 @@
 package io.github.viren070.aiostreams
 
 import android.Manifest
+import android.app.AlertDialog
 import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.ContentValues
@@ -14,8 +15,10 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.os.storage.StorageManager
 import android.provider.MediaStore
 import android.provider.Settings
+import android.text.format.Formatter
 import android.util.Log
 import android.hardware.input.InputManager
 import android.view.InputDevice
@@ -254,6 +257,7 @@ class MainActivity : ComponentActivity() {
             "watch-next" -> watchNext.publish((message["items"] as? JsonArray)?.filterIsInstance<JsonObject>().orEmpty())
             "voice-search" -> voice.listen()
             "voice-cancel" -> voice.cancel()
+            "download-folder" -> runOnUiThread(::chooseDownloadFolder)
             "save-file" -> saveFile(
                 message["name"]?.jsonPrimitive?.contentOrNull ?: "aiostreams.txt",
                 message["mime"]?.jsonPrimitive?.contentOrNull ?: "text/plain",
@@ -334,6 +338,27 @@ class MainActivity : ComponentActivity() {
                 Toast.makeText(this, note, Toast.LENGTH_LONG).show()
             }
         }.start()
+    }
+
+    private fun chooseDownloadFolder() {
+        val folders = Downloads.folders(this)
+        if (folders.isEmpty()) return
+        val storage = getSystemService(StorageManager::class.java)
+        val labels = folders.map { folder ->
+            getString(
+                R.string.download_folder_free,
+                storage.getStorageVolume(folder)?.getDescription(this) ?: folder.path,
+                Formatter.formatShortFileSize(this, folder.usableSpace),
+            )
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.download_folder_title)
+            .setSingleChoiceItems(labels.toTypedArray(), folders.indexOf(Downloads.folder(this))) { dialog, which ->
+                Downloads.setFolder(this, folders[which])
+                dialog.dismiss()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun onPlayerChanged() {

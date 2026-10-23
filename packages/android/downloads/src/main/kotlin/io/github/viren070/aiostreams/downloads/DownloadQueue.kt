@@ -31,7 +31,7 @@ data class Workload(val running: List<Running>, val waiting: Int, val wifiOnly: 
  */
 class DownloadQueue(
     private val stateFile: File,
-    private val folder: File,
+    private var folder: File,
     userAgent: String,
     /** False while only a metered network is up. */
     private val unmetered: () -> Boolean,
@@ -123,6 +123,12 @@ class DownloadQueue(
     fun configure(concurrent: Int, wifiOnly: Boolean) = post {
         this.concurrent = concurrent.coerceIn(1, MAX_CONCURRENT)
         this.wifiOnly = wifiOnly
+        changed()
+    }
+
+    /** Where new downloads go. */
+    fun setFolder(folder: File) = post {
+        this.folder = folder
         changed()
     }
 

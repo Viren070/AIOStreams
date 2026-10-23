@@ -15,6 +15,9 @@
     <string name="update_install_failed">The install failed: %1$s</string>
     <string name="update_feed_answered">The feed answered %1$d</string>
 
+    <string name="download_folder_title">Choose where downloads go</string>
+    <string name="download_folder_free">%1$s · %2$s free</string>
+
     <string name="file_saved">Saved %1$s to Downloads</string>
     <string name="file_not_saved">Couldn\'t save %1$s</string>
 

@@ -20,14 +20,34 @@ object Downloads {
     fun queue(context: Context): DownloadQueue =
         queue ?: synchronized(this) { queue ?: create(context.applicationContext).also { queue = it } }
 
+    /** The app's own folder on each storage that is in, the device's own first. */
+    fun folders(context: Context): List<File> =
+        context.getExternalFilesDirs(Environment.DIRECTORY_MOVIES).filterNotNull()
+            .filter { Environment.getExternalStorageState(it) == Environment.MEDIA_MOUNTED }
+
+    /** Where new downloads go: the one picked while its storage is in. */
+    fun folder(context: Context): File {
+        val picked = prefs(context).getString(FOLDER, null)
+        val folders = folders(context)
+        return folders.find { it.path == picked } ?: folders.firstOrNull() ?: File(context.filesDir, "downloads")
+    }
+
+    fun setFolder(context: Context, folder: File) {
+        prefs(context).edit().putString(FOLDER, folder.path).apply()
+        queue(context).setFolder(folder)
+    }
+
+    private fun prefs(context: Context) = context.getSharedPreferences("downloads", Context.MODE_PRIVATE)
+
+    private const val FOLDER = "folder"
+
     private fun create(context: Context): DownloadQueue {
         val connectivity = context.getSystemService(ConnectivityManager::class.java)
         unmetered = !connectivity.isActiveNetworkMetered
-        // The app's own folder needs no permission and goes with the app.
-        val folder = context.getExternalFilesDir(Environment.DIRECTORY_MOVIES) ?: File(context.filesDir, "downloads")
         val queue = DownloadQueue(
             stateFile = File(context.filesDir, "downloads.json"),
-            folder = folder,
+            // The app's own folders need no permission and go with the app.
+            folder = folder(context),
             userAgent = "AIOStreams Android/${BuildConfig.VERSION_NAME}",
             unmetered = { unmetered },
         )
