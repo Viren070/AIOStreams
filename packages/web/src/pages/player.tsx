@@ -70,7 +70,11 @@ import type {
 import { useDownloadOf, type Download } from '../lib/downloads';
 import { Cover } from '../components/player/cover';
 import { party, useParty } from '../lib/party/party';
-import { leavePartyPlayback, usePartyBinding } from '../lib/party/follow';
+import {
+  leavePartyPlayback,
+  usePartyBinding,
+  usePartyNeighbours,
+} from '../lib/party/follow';
 import { usePlayForParty } from '../lib/party/actions';
 import { usePartyPlayer } from '../lib/party/playback';
 import { PartyLayer } from '../components/party/party-layer';
@@ -560,6 +564,7 @@ function Player({
   const [startPaused] = React.useState(() => !!playlistItemId);
   const inParty = !!useParty();
   const playForParty = usePlayForParty();
+  const queued = usePartyNeighbours(playlistItemId);
   const back = React.useCallback(() => {
     if (playlistItemId) leavePartyPlayback();
     ended.back();
@@ -616,26 +621,17 @@ function Player({
     () =>
       playlistItemId
         ? {
-            step: (
-              direction: 'next' | 'previous',
-              target: BaseItemDto,
-              playlist?: string
-            ) => {
-              const state = party.state();
-              const at =
-                (state?.playingIndex ?? 0) + (direction === 'next' ? 1 : -1);
-              if (state?.queue[at])
-                party.request({
-                  type: direction === 'next' ? 'NextItem' : 'PreviousItem',
-                  playlistItemId,
-                });
-              else void playForParty(target, null, 0, playlist);
-            },
+            queued,
+            step: (direction: 'next' | 'previous') =>
+              party.request({
+                type: direction === 'next' ? 'NextItem' : 'PreviousItem',
+                playlistItemId,
+              }),
             play: (target: BaseItemDto, playlist?: string) =>
               void playForParty(target, null, 0, playlist),
           }
         : undefined,
-    [playlistItemId, playForParty]
+    [playlistItemId, playForParty, queued]
   );
   const next = useUpNextPrompt({
     item,
@@ -745,7 +741,7 @@ function Player({
               onNext={next.next ? next.playNext : undefined}
               onEpisode={next.playEpisode}
               loadingEpisode={next.loading}
-              steps={next.playlist ? 'playlist' : undefined}
+              steps={next.listed ? 'playlist' : undefined}
               playlist={
                 next.playlist
                   ? { id: next.playlist, onPlay: next.playEntry }

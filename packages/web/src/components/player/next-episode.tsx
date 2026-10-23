@@ -6,7 +6,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useSession } from '../../lib/session';
 import { currentHost } from '../../lib/hosts';
 import { usePlaybackInfoOptions } from '../../lib/queries';
-import { usePlaylistName, useUpNext } from '../../lib/playlists';
+import { usePlaylistName, useUpNext, type UpNext } from '../../lib/playlists';
+import type { PartyNeighbours } from '../../lib/party/follow';
 import { landscapeUrl } from '../../lib/images';
 import {
   episodeCode,
@@ -121,6 +122,19 @@ function asksFirst(limit: number): boolean {
   return limit > 0 && unattendedTitles() + 1 >= limit;
 }
 
+/** In a party, what plays either side is its queue's, for everyone. */
+function partyUpNext(
+  item: BaseItemDto,
+  queued: PartyNeighbours | undefined
+): UpNext {
+  const next = queued?.next ?? null;
+  const previous = queued?.previous ?? null;
+  const step = next ?? previous;
+  const listed =
+    !!step && (step.Type !== 'Episode' || step.SeriesId !== item.SeriesId);
+  return { next, previous, listed };
+}
+
 /**
  * Offers what plays next near the end: the next episode, or the next title
  * of the playlist it plays from. It counts down to it when the user lets
@@ -143,11 +157,8 @@ export function useUpNextPrompt({
   onBack: () => void;
   /** Moves a watch party on instead, for everyone. */
   group?: {
-    step(
-      direction: 'next' | 'previous',
-      target: BaseItemDto,
-      playlist?: string
-    ): void;
+    queued: PartyNeighbours | undefined;
+    step(direction: 'next' | 'previous'): void;
     play(target: BaseItemDto, playlist?: string): void;
   };
   /** The playlist it was started from. */
@@ -157,8 +168,10 @@ export function useUpNextPrompt({
   const queryClient = useQueryClient();
   const infoOptions = usePlaybackInfoOptions();
   const downloaded = useFindDownloaded();
-  const upNext = useUpNext(item, playlist);
+  const own = useUpNext(item, playlist);
+  const upNext = group ? partyUpNext(item, group.queued) : own;
   const { next, previous } = upNext;
+  const listed = !!upNext.playlist || !!upNext.listed;
   const playlistName = usePlaylistName(upNext.playlist);
   const [prompt] = useSetting(settings.next.prompt);
   const [lead] = useSetting(settings.next.lead);
@@ -202,8 +215,7 @@ export function useUpNextPrompt({
     async (key: string, target: BaseItemDto | null, playlist?: string) => {
       if (!target || leaving.current) return false;
       if (group) {
-        if (key === 'next' || key === 'previous')
-          group.step(key, target, playlist);
+        if (key === 'next' || key === 'previous') group.step(key);
         else group.play(target, playlist);
         return true;
       }
@@ -428,7 +440,7 @@ export function useUpNextPrompt({
   );
 
   const image = next ? landscapeUrl(client, next, { maxWidth: 320 }) : null;
-  const heading = !upNext.playlist
+  const heading = !listed
     ? t`Next episode`
     : playlistName
       ? t`Next in ${playlistName}`
@@ -437,7 +449,7 @@ export function useUpNextPrompt({
     asking && next ? (
       <StillWatching
         next={next}
-        title={upNext.playlist ? fullTitle(next) : itemSubtitle(next)}
+        title={listed ? fullTitle(next) : itemSubtitle(next)}
         loading={loading === 'next'}
         onContinue={() => void playNext()}
         onBack={onBack}
@@ -446,7 +458,7 @@ export function useUpNextPrompt({
       <div
         ref={card}
         data-ui="next-episode-card"
-        data-playlist={upNext.playlist ? '' : undefined}
+        data-playlist={listed ? '' : undefined}
         className="fixed bottom-[calc(2rem+env(safe-area-inset-bottom))] end-4 z-20 transition-[bottom] peer-data-[visible]:bottom-24 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-white/10 bg-gray-950 shadow-2xl duration-300 animate-in fade-in-0 slide-in-from-right-4 rtl:slide-in-from-left-4"
       >
         {image && (
@@ -462,7 +474,7 @@ export function useUpNextPrompt({
             <p className="truncate text-xs font-semibold uppercase tracking-wider text-[--muted]">
               {heading}
             </p>
-            {upNext.playlist ? (
+            {listed ? (
               <>
                 <p className="line-clamp-2 font-semibold">{itemTitle(next)}</p>
                 {next.Type === 'Episode' && (
@@ -514,6 +526,8 @@ export function useUpNextPrompt({
     previous,
     /** The playlist it plays on through. */
     playlist: upNext.playlist,
+    /** Steps through a list rather than a show's episodes. */
+    listed,
     autoplay,
     playNext,
     playOn,

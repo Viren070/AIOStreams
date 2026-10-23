@@ -218,6 +218,8 @@ export interface UpNext {
   previous: BaseItemDto | null;
   /** The playlist they come from, when the item plays from one it is in. */
   playlist?: string;
+  /** From a party's queue rather than a playlist here. */
+  listed?: boolean;
 }
 
 /**

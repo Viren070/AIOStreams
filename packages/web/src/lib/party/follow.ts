@@ -1,7 +1,7 @@
 import { t } from '@lingui/core/macro';
 import React from 'react';
 import { toast } from 'sonner';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueries, useQueryClient } from '@tanstack/react-query';
 import type { JellyfinClient } from '../client';
 import { currentHost } from '../hosts';
 import { goBack, navigate, to } from '../paths';
@@ -250,4 +250,52 @@ export function rejoinPartyPlayback(): void {
   const entry = state?.queue[state.playingIndex];
   if (!entry || !followed.away.delete(entry.playlistItemId)) return;
   changed();
+}
+
+export interface PartyNeighbours {
+  next: BaseItemDto | null;
+  previous: BaseItemDto | null;
+}
+
+/**
+ * The party's titles either side of the one this player plays, as this
+ * member's server has them; undefined while they're looked up.
+ */
+export function usePartyNeighbours(
+  playlistItemId: string | null
+): PartyNeighbours | undefined {
+  const state = useParty();
+  const { client, user } = useSession();
+  const at =
+    state && playlistItemId
+      ? state.queue.findIndex((e) => e.playlistItemId === playlistItemId)
+      : -1;
+  const entries = at < 0 ? [] : [state!.queue[at - 1], state!.queue[at + 1]];
+  const [previous, next] = useQueries({
+    queries: [0, 1].map((i) => {
+      const entry = entries[i];
+      return {
+        queryKey: [
+          'jf',
+          client.base,
+          user.Id,
+          'party-entry',
+          entry?.playlistItemId ?? null,
+        ],
+        queryFn: () =>
+          entry?.item ? findItem(client, user.Id!, entry.item) : null,
+        enabled: !!entry,
+        staleTime: Infinity,
+      };
+    }),
+  });
+  const looking = entries.some((e, i) => e && [previous, next][i].isPending);
+  const found = at >= 0 && !looking;
+  return React.useMemo(
+    () =>
+      found
+        ? { previous: previous.data ?? null, next: next.data ?? null }
+        : undefined,
+    [found, previous.data, next.data]
+  );
 }

@@ -10,8 +10,8 @@ import { relayBase, type Invite } from './invite';
 import { partyItem } from './items';
 import { party, type PartyIdentity } from './party';
 
-/** What's queued after the title a party starts, so it plays on by itself. */
-const QUEUED_AFTER = 10;
+/** What's queued after the title a party starts: relays take 20 titles. */
+const QUEUED_AFTER = 19;
 
 const DEFAULT_RELAY = 'https://aiostreams.viren070.me';
 
