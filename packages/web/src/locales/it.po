@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-23 17:39+0000\n"
+"PO-Revision-Date: 2026-10-23 19:56+0000\n"
 "Last-Translator: Nicola Bortoletto <translate@nicolabortoletto.com>\n"
 "Language-Team: Italian <https://hosted.weblate.org/projects/aiostreams/web-app/it/>\n"
 "Language: it\n"
@@ -40,9 +40,8 @@ msgid "{count, plural, one {# second} other {# seconds}}"
 msgstr "{count, plural, one {# secondo} other {# secondi}}"
 
 #: src/components/playlists.tsx
-#, fuzzy
 msgid "{count, plural, one {# title} other {# titles}}"
-msgstr "{total, plural, one {# titolo} other {# titoli}}"
+msgstr "{count, plural, one {# titolo} other {# titoli}}"
 
 #: src/components/party/party-sheet.tsx
 msgid "{count, plural, one {# watching · on {on}} other {# watching · on {on}}}"
