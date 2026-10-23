@@ -104,7 +104,13 @@ export function AboutSection() {
           </SettingsRow>
         ))}
       </SettingsCard>
-      <SettingsCard name="credits" title={t`Credits`}>
+      <SettingsCard
+        name="credits"
+        title={t({
+          context: 'Projects the app is built on',
+          message: 'Credits',
+        })}
+      >
         {credits(shell).map((credit) => (
           <SettingsRow key={credit.name} label={credit.name} help={credit.help}>
             <Button

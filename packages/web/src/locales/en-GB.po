@@ -1164,8 +1164,12 @@ msgstr "Create"
 msgid "Creator"
 msgstr "Creator"
 
-#: src/pages/settings/about.tsx
 #: src/pages/settings/playback.tsx
+msgid "Credits"
+msgstr "Credits"
+
+#: src/pages/settings/about.tsx
+msgctxt "Projects the app is built on"
 msgid "Credits"
 msgstr "Credits"
 
