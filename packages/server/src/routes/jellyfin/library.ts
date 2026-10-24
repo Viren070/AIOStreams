@@ -1280,7 +1280,8 @@ router.get(
   (req, _res, next) =>
     RESERVED_ITEM_IDS.test(param(req, 'itemId')) ? next('route') : next(),
   jf(async (req, res, ctx) => {
-    const item = await itemForId(req, ctx, param(req, 'itemId'), {
+    const targetId = qs(req, 'mediaSourceId') || param(req, 'itemId');
+    const item = await itemForId(req, ctx, targetId, {
       resolve: wantsVersions(req),
     });
     if (!item) {
