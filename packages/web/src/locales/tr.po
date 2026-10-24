@@ -9,7 +9,7 @@ msgstr ""
 "Last-Translator: Tugay Özgen <toxiccloud@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Turkish <https://hosted.weblate.org/projects/aiostreams/web-app/tr/>\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"PO-Revision-Date: 2026-10-24 17:35+0000\n"
+"PO-Revision-Date: 2026-10-24 23:08+0000\n"
 
 #: src/components/party/party-sheet.tsx
 msgid "(you)"
@@ -412,47 +412,47 @@ msgstr "Başka bir dil ekle"
 
 #: src/components/no-catalogs.tsx
 msgid "Add catalogs to your configuration, then refresh."
-msgstr ""
+msgstr "Katalogları yapılandırmanıza ekleyin, sonra yenileyin."
 
 #: src/components/item-menu.tsx
 #: src/pages/item.tsx
 msgid "Add favourite"
-msgstr ""
+msgstr "Favori ekle"
 
 #: src/components/playlists.tsx
 msgid "Add from Continue watching"
-msgstr ""
+msgstr "İzlemeye devam et içinden ekle"
 
 #: src/components/item-menu.tsx
 #: src/components/playlists.tsx
 #: src/pages/item.tsx
 msgid "Add to playlist"
-msgstr ""
+msgstr "Oynatma listesine ekle"
 
 #: src/components/playlists.tsx
 msgid "Add to this playlist"
-msgstr ""
+msgstr "Bu oynatma listesine ekle"
 
 #: src/components/player/controls.tsx
 msgid "Added {name}"
-msgstr ""
+msgstr "{name} eklendi"
 
 #: src/components/playlists.tsx
 #: src/pages/player.tsx
 msgid "Added to {name}"
-msgstr ""
+msgstr "{name} öğesine eklendi"
 
 #: src/pages/settings/account.tsx
 msgid "Addons, catalogs and users are set up on the configuration page."
-msgstr ""
+msgstr "Eklentiler, kataloglar ve kullanıcılar yapılandırma sayfasında ayarlanır."
 
 #: src/pages/settings/about.tsx
 msgid "Address"
-msgstr ""
+msgstr "Adres"
 
 #: src/pages/settings/playback.tsx
 msgid "Ads"
-msgstr ""
+msgstr "Reklamlar"
 
 #: src/lib/i18n.ts
 msgid "AIOStreams is a solo project built and maintained by me in my free time. If you find it useful, please consider supporting my work. Your donation helps me keep the project alive and improve it for everyone!"
@@ -460,46 +460,46 @@ msgstr ""
 
 #: src/pages/item.tsx
 msgid "Airs"
-msgstr ""
+msgstr "Yayınlanıyor"
 
 #: src/components/episodes.tsx
 msgid "Airs {day} · {until}"
-msgstr ""
+msgstr "Yayınlanma: {day} · {until}"
 
 #: src/components/episodes.tsx
 msgid "Airs {until}"
-msgstr ""
+msgstr "Yayınlanmasına {until}"
 
 #: src/components/kind-tabs.tsx
 #: src/components/version-picker.tsx
 #: src/pages/discover.tsx
 #: src/pages/favourites.tsx
 msgid "All"
-msgstr ""
+msgstr "Hepsi"
 
 #: src/pages/item.tsx
 msgid "All episodes"
-msgstr ""
+msgstr "Tüm bölümler"
 
 #: src/components/version-settings.tsx
 msgid "All fields"
-msgstr ""
+msgstr "Tüm alanlar"
 
 #: src/components/playlists.tsx
 msgid "All playlists"
-msgstr ""
+msgstr "Tüm oynatma listeleri"
 
 #: src/lib/downloads/index.ts
 msgid "Already downloaded or on the way"
-msgstr ""
+msgstr "Zaten indirildi veya indiriliyor"
 
 #: src/components/playlists.tsx
 msgid "Already in {name}"
-msgstr ""
+msgstr "Zaten {name} içinde"
 
 #: src/components/send-report.tsx
 msgid "Also send to the developer"
-msgstr ""
+msgstr "Ayrıca geliştiriciye de gönder"
 
 #: src/pages/settings/account.tsx
 msgid "Also when you come back to it after half an hour. Whoever was watching carries on without their PIN."
@@ -507,17 +507,17 @@ msgstr ""
 
 #: src/lib/input/keys.ts
 msgid "Alt"
-msgstr ""
+msgstr "Alt"
 
 #: src/pages/settings/audio.tsx
 #: src/pages/settings/interface.tsx
 #: src/pages/settings/subtitles.tsx
 msgid "Always"
-msgstr ""
+msgstr "Her zaman"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Always shows subtitles, in your language when the version has them."
-msgstr ""
+msgstr "Sürümde mevcut olduğunda, altyazıları her zaman kendi dilinizde gösterir."
 
 #: src/pages/settings/audio.tsx
 msgid "An audio track you pick while watching a show sets the language for its other episodes. Picking what the settings above would play forgets it."
@@ -527,7 +527,7 @@ msgstr ""
 #: src/pages/settings/about.tsx
 #: src/pages/settings/index.tsx
 msgid "Android app"
-msgstr ""
+msgstr "Android uygulaması"
 
 #: src/pages/settings/playback.tsx
 msgid "Android's own player, which uses less battery: the screen shows the video as the device decodes it, at the video's frame rate. Plays video the device can decode. Styled subtitles look as they do in mpv."
@@ -535,7 +535,7 @@ msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "Another relay"
-msgstr ""
+msgstr "Başka ara sunucu"
 
 #: src/components/party/party-sheet.tsx
 msgid "Anyone with the invite can join, from any server."
@@ -544,15 +544,15 @@ msgstr ""
 #: src/lib/hosts/native-shell.ts
 #: src/pages/settings/index.tsx
 msgid "App"
-msgstr ""
+msgstr "Uygulama"
 
 #: src/pages/settings/interface.tsx
 msgid "App language"
-msgstr ""
+msgstr "Uygulama dili"
 
 #: src/pages/settings/apps.tsx
 msgid "App settings"
-msgstr ""
+msgstr "Uygulama ayarları"
 
 #: src/pages/settings/theme.tsx
 msgid "Applied on top of the theme. Parts of the app carry a <0>data-ui</0> attribute to style them by, such as <1>[data-ui=\"progress-bar\"]</1>. If it ever hides the page, add <2>?safe</2> to the address to turn it off. See the <3>guide</3> for every selector and examples."
@@ -560,43 +560,43 @@ msgstr ""
 
 #: src/pages/settings/theme.tsx
 msgid "Apply CSS"
-msgstr ""
+msgstr "CSS uygula"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Apply to styled subtitles too"
-msgstr ""
+msgstr "Stillendirilmiş altyazılara da uygula"
 
 #: src/pages/sign-in.tsx
 msgid "Approved. Signing in…"
-msgstr ""
+msgstr "Onaylandı. Giriş yapılıyor…"
 
 #: src/components/player/next-episode.tsx
 msgid "Are you still watching?"
-msgstr ""
+msgstr "Hâlâ izliyor musun?"
 
 #: src/lib/i18n.ts
 msgid "Are you sure you want to continue?"
-msgstr ""
+msgstr "Devam etmek istediğine emin misin?"
 
 #: src/pages/settings/cache.tsx
 msgid "Artwork"
-msgstr ""
+msgstr "Görsel"
 
 #: src/components/party/party-sheet.tsx
 msgid "As the host"
-msgstr ""
+msgstr "Sunucu sahibi olarak"
 
 #: src/pages/settings/playback.tsx
 msgid "Ask if you are still watching"
-msgstr ""
+msgstr "Hâlâ izleyip izlemediğinizi sor"
 
 #: src/pages/settings/account.tsx
 msgid "Ask when the app opens"
-msgstr ""
+msgstr "Uygulama açıldığı zaman sor"
 
 #: src/pages/settings/subtitles.tsx
 msgid "At 0% there is no background."
-msgstr ""
+msgstr "%0 olduğunda arka plan yok."
 
 #: src/components/player/options.tsx
 #: src/components/remote-sheet.tsx
