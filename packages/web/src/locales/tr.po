@@ -9,7 +9,7 @@ msgstr ""
 "Last-Translator: Tugay Özgen <toxiccloud@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Turkish <https://hosted.weblate.org/projects/aiostreams/web-app/tr/>\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"PO-Revision-Date: 2026-10-24 23:08+0000\n"
+"PO-Revision-Date: 2026-10-24 23:09+0000\n"
 
 #: src/components/party/party-sheet.tsx
 msgid "(you)"
@@ -614,11 +614,11 @@ msgstr "Ses dilleri"
 
 #: src/pages/settings/audio.tsx
 msgid "Audio types"
-msgstr ""
+msgstr "Ses türleri"
 
 #: src/components/player/keys.ts
 msgid "Audio: {label}"
-msgstr ""
+msgstr "Ses: {label}"
 
 #: src/pages/settings/playback.tsx
 msgid "Auto-play the first version"
