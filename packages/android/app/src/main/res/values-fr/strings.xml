@@ -2,12 +2,22 @@
 <!-- The app's own words outside the web app, in British English. Weblate adds the values-* copies. --><resources>
     <string name="channel_downloads">Téléchargements</string>
     <plurals name="downloading_items">
-        <item quantity="one">Téléchargement %d articles</item>
-        <item quantity="other">Téléchargement %d articles</item>
+        <item quantity="one">Téléchargement de %d élément</item>
+        <item quantity="many">Téléchargement de %d élément</item>
+        <item quantity="other">Téléchargement de %d éléments</item>
     </plurals>
     <string name="channel_updates">Mises à jour</string>
-    <string name="updated_to">Actualisé à %1$s</string>
-    <string name="tap_to_open">Appuyez sur pour ouvrir</string>
-    <string name="update_no_build">Pas de construction pour le processeur de cet appareil</string>
+    <string name="updated_to">Mis à jour vers %1$s</string>
+    <string name="tap_to_open">Appuyez pour ouvrir</string>
+    <string name="update_no_build">Aucune version pour le processeur de cet appareil</string>
     <string name="update_damaged">Le téléchargement a été endommagé</string>
+    <string name="update_install_failed">L\'installation a échoué: %1$s</string>
+    <string name="update_feed_answered">Le flux a répondu %1$d</string>
+    <string name="download_folder_title">Choisir l\'emplacement des téléchargements</string>
+    <string name="download_folder_free">%1$s · %2$s disponibles</string>
+    <string name="file_saved">%1$s enregistré dans les Téléchargements</string>
+    <string name="file_not_saved">Impossible d\'enregistrer %1$s</string>
+    <string name="webview_version_unknown">inconnu</string>
+    <string name="webview_too_old">La version de WebView de cet appareil est trop ancienne pour l\'application: version %1$s, et l\'application nécessite la version %2$d ou ultérieure.</string>
+    <string name="webview_update">Mettez à jour Android System WebView ou le système, puis rouvrez l\'application.</string>
 </resources>
