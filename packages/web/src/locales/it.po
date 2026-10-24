@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-24 12:22+0000\n"
+"PO-Revision-Date: 2026-10-24 15:40+0000\n"
 "Last-Translator: Nicola Bortoletto <translate@nicolabortoletto.com>\n"
 "Language-Team: Italian <https://hosted.weblate.org/projects/aiostreams/web-app/it/>\n"
 "Language: it\n"
@@ -156,11 +156,11 @@ msgstr "{n, plural, one {Dopo # episodio} other {Dopo # episodi}}"
 
 #: src/components/party/party-host.tsx
 msgid "{name} joined the party"
-msgstr "{name} si è unito al party"
+msgstr "{name} si è unito al watch party"
 
 #: src/components/party/party-host.tsx
 msgid "{name} left the party"
-msgstr "{name} ha lasciato il party"
+msgstr "{name} ha lasciato il watch party"
 
 #: src/components/version-picker.tsx
 msgid "{others, plural, one {Pick the version to download. The other episode gets the same release where it has it.} other {Pick the version to download. The other # episodes get the same release where they have it.}}"
@@ -434,7 +434,7 @@ msgstr "Aggiunto a {name}"
 
 #: src/pages/settings/account.tsx
 msgid "Addons, catalogs and users are set up on the configuration page."
-msgstr "Componenti aggiuntivi, cataloghi e utenti si configurano nella pagina delle impostazioni."
+msgstr "Addon, cataloghi e utenti si configurano nella pagina delle impostazioni."
 
 #: src/pages/settings/about.tsx
 msgid "Address"
@@ -1484,8 +1484,9 @@ msgid "Everything"
 msgstr "Tutto"
 
 #: src/components/download-button.tsx
+#, fuzzy
 msgid "Everything unwatched"
-msgstr ""
+msgstr "Tutto non guardato"
 
 #: src/components/player/options.tsx src/components/window-controls.tsx
 msgid "Exit full screen"
@@ -1628,7 +1629,7 @@ msgstr "Vetro satinato"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Full"
-msgstr ""
+msgstr "Completo"
 
 #: src/components/player/options.tsx src/lib/input/actions.ts
 msgid "Full screen"
@@ -1692,8 +1693,9 @@ msgid "Height: {position}%"
 msgstr "Altezza: {position}%"
 
 #: src/pages/settings/playback.tsx
+#, fuzzy
 msgid "Held speed"
-msgstr ""
+msgstr "Mantieni velocità"
 
 #: src/pages/history.tsx
 msgid "Here"
@@ -1722,48 +1724,48 @@ msgstr "Nascondi codice QR"
 #. Holding the next key down, as in Hold + Enter
 #: src/lib/input/keys.ts
 msgid "Hold"
-msgstr ""
+msgstr "Mantieni"
 
 #: src/components/layout.tsx src/lib/input/actions.ts
 #: src/pages/settings/apps.tsx
 msgid "Home"
-msgstr ""
+msgstr "Home"
 
 #: src/pages/settings/interface.tsx
 msgid "Home and grids"
-msgstr ""
+msgstr "Home e griglie"
 
 #: src/pages/settings/cache.tsx
 msgid "Home and libraries"
-msgstr ""
+msgstr "Home e librerie"
 
 #: src/components/party/party-sheet.tsx
 msgid "Host"
-msgstr ""
+msgstr "Host"
 
 #: src/pages/settings/subtitles.tsx
 msgid "How far subtitles sit above their usual place near the bottom, or below it down to the edge."
-msgstr ""
+msgstr "Distanza dei sottotitoli sopra la posizione abituale vicino al fondo, o sotto di essa fino al bordo."
 
 #: src/pages/settings/playback.tsx
 msgid "How far the skip buttons, double taps and the arrow keys jump."
-msgstr ""
+msgstr "Ampiezza dell'avanzamento per i pulsanti di skip, il doppio tocco e le frecce direzionali."
 
 #: src/pages/settings/playback.tsx
 msgid "How fast playback runs while you press and hold the video, or hold Space or Select."
-msgstr ""
+msgstr "Velocità di riproduzione quando tieni premuto il video, Space o Select."
 
 #: src/pages/settings/interface.tsx
 msgid "How large cards are in a grid."
-msgstr ""
+msgstr "Grandezza delle schede in una griglia."
 
 #: src/pages/settings/playback.tsx
 msgid "How much of the video the player holds in memory: ahead, to ride out a slow connection, and behind, to seek back at once. Automatic sizes it from this device's memory."
-msgstr ""
+msgstr "Quantità di video che il player mantiene in memoria: in avanti, per superare una connessione lenta, e all'indietro, per tornare subito dietro. La modalità automatica la calcola in base alla memoria del dispositivo."
 
 #: src/pages/settings/playback.tsx
 msgid "How much the volume keys and the scroll wheel change the volume."
-msgstr ""
+msgstr "Livello di variazione del volume tramite i tasti del volume e la rotella di scorrimento."
 
 #: src/pages/settings/interface.tsx
 msgid "How the tabs sit over the page: as floating pills, on a bar across the top, or on nothing but a fade down from the top edge."
@@ -1771,212 +1773,214 @@ msgstr "Come si dispongono le schede sopra la pagina: come pillole fluttuanti, s
 
 #: src/components/version-settings.tsx
 msgid "How these work"
-msgstr ""
+msgstr "Come funzionano"
 
 #: src/pages/settings/about.tsx
 msgid "How to use the app and what each setting does."
-msgstr ""
+msgstr "Come usare l'app e cosa fa ogni impostazione."
 
 #: src/lib/subtitles/style.ts
 msgid "Huge"
-msgstr ""
+msgstr "Molto grande"
 
 #: src/components/version-settings.tsx
 msgid "Image"
-msgstr ""
+msgstr "Immagine"
 
 #: src/components/version-settings.tsx
 msgid "Import"
-msgstr ""
+msgstr "Importa"
 
 #: src/lib/discord.ts
 msgid "In Activity"
-msgstr ""
+msgstr "In Attività"
 
 #: src/lib/discord.ts
 msgid "In Discover"
-msgstr ""
+msgstr "In Scopri"
 
 #: src/lib/discord.ts
 msgid "In Favourites"
-msgstr ""
+msgstr "In Preferiti"
 
 #: src/lib/playback/sound.ts src/lib/subtitles/delay.ts
 msgid "In sync"
-msgstr ""
+msgstr "In sincronizzazione"
 
 #: src/components/download-button.tsx src/pages/downloads.tsx
 msgid "In the app's downloads"
-msgstr ""
+msgstr "Nei download dell'app"
 
 #: src/pages/item.tsx
 msgid "In this collection"
-msgstr ""
+msgstr "In questa raccolta"
 
 #: src/lib/hosts/shell/index.ts
 msgid "Install"
-msgstr ""
+msgstr "Installa"
 
 #: src/components/no-catalogs.tsx
 msgid "Install catalog addons from Addons → Marketplace. For one that isn't listed, use the Custom addon there."
-msgstr ""
+msgstr "Installa gli addon dei cataloghi da Addon → Marketplace. Per quelli non inclusi nell'elenco, usa l'opzione Addon personalizzato in quella sezione."
 
 #: src/pages/settings/index.tsx
 msgid "Interface"
-msgstr ""
+msgstr "Interfaccia"
 
 #: src/pages/settings/playback.tsx
 msgid "Intros"
-msgstr ""
+msgstr "Sigle"
 
 #: src/components/party/party-sheet.tsx
 msgid "Invite"
-msgstr ""
+msgstr "Invita"
 
 #: src/components/party/party-sheet.tsx
 msgid "Invite code or link"
-msgstr ""
+msgstr "Codice di invito o link"
 
 #: src/components/party/party-sheet.tsx
 msgid "Invite link copied"
-msgstr ""
+msgstr "Link di invito copiato"
 
 #: src/components/send-report.tsx
 msgid "It carries this device's details and the app's recent log. Passwords and tokens are left out."
-msgstr ""
+msgstr "Contiene i dettagli di questo dispositivo e il log recente dell'app. Password e token sono esclusi."
 
 #: src/components/send-report.tsx
 msgid "It didn't reach the developer, only this server: {forwardError}"
-msgstr ""
+msgstr "Non ha raggiunto lo sviluppatore, ma solo questo server: {forwardError}"
 
 #: src/pages/settings/theme.tsx
 msgid "It will be undone unless you keep it."
-msgstr ""
+msgstr "Verrà annullato se non decidi di mantenerlo."
 
 #: src/pages/settings/about.tsx
 msgid "Jellyfin API"
-msgstr ""
+msgstr "API di Jellyfin"
 
 #: src/components/party/party-sheet.tsx
 msgid "Join"
-msgstr ""
+msgstr "Unisciti"
 
 #: src/components/party/party-sheet.tsx
 msgid "Join a party"
-msgstr ""
+msgstr "Unisciti ad un watch party"
 
 #: src/components/party/party-sheet.tsx
 msgid "Joining leaves the party you're in."
-msgstr ""
+msgstr "Se ti unisci, uscirai dal watch party in cui ti trovi."
 
 #: src/components/party/party-sheet.tsx
 msgid "Joining the party…"
-msgstr ""
+msgstr "Accesso al watch party…"
 
 #: src/lib/input/actions.ts
 msgid "Jump through the video"
-msgstr ""
+msgstr "Spostati all'interno del video"
 
 #: src/lib/format.ts
 msgid "just now"
-msgstr ""
+msgstr "adesso"
 
 #: src/pages/settings/theme.tsx
 msgid "Keep"
-msgstr ""
+msgstr "Mantieni"
 
 #: src/pages/settings/playback.tsx
 msgid "Keep in step by changing speed"
-msgstr ""
+msgstr "Rimani in pari modificando la velocità"
 
 #: src/components/party/party-sheet.tsx
+#, fuzzy
 msgid "Keeping in step"
-msgstr ""
+msgstr "In pari"
 
 #: src/pages/settings/apps.tsx
 msgid "Keeps the sound going with the screen off, or when you leave the app."
-msgstr ""
+msgstr "Mantiene il suono in riproduzione quando si spegne lo schermo, o quando esci dall'app."
 
 #: src/pages/settings/apps.tsx
 msgid "Keeps the sound going with the screen off, or when you leave without picture-in-picture."
-msgstr ""
+msgstr "Mantiene il suono in riproduzione quando si spegne lo schermo, o quando esci dall'app senza picture-in-picture."
 
 #: src/pages/settings/apps.tsx
 msgid "Keeps the video playing in a small window when you leave the app."
-msgstr ""
+msgstr "Mantiene il video in riproduzione in una piccola finestra quando esci dall'app."
 
 #: src/pages/settings/common.tsx
 msgid "Kept on this device."
-msgstr ""
+msgstr "Memorizzato su questo dispositivo."
 
 #: src/components/shortcut-settings.tsx
 msgid "Kept on this device. Select + and press a key to add it; a remote, a gamepad or the scroll wheel works too."
-msgstr ""
+msgstr "Memorizzato su questo dispositivo. Seleziona + e premi un tasto per aggiungerlo; puoi usare anche un telecomando, un gamepad o la rotella di scorrimento."
 
 #: src/components/input-setup.tsx src/lib/input/actions.ts
 msgid "Keyboard shortcuts"
-msgstr ""
+msgstr "Scorciatoie da tastiera"
 
 #: src/pages/settings/index.tsx
 msgid "Keys, remotes and gamepads"
-msgstr ""
+msgstr "Tasti, telecomandi e gamepad"
 
 #: src/components/version-settings.tsx
 msgid "Label"
-msgstr ""
+msgstr "Etichetta"
 
 #: src/pages/settings/audio.tsx src/pages/settings/index.tsx
 #: src/pages/settings/interface.tsx src/pages/settings/subtitles.tsx
 msgid "Language"
-msgstr ""
+msgstr "Lingua"
 
 #: src/pages/settings/index.tsx
 msgid "Language and how subtitles look"
-msgstr ""
+msgstr "Lingua e aspetto dei sottotitoli"
 
 #: src/pages/settings/index.tsx
 msgid "Language and output"
-msgstr ""
+msgstr "Lingua e output"
 
 #: src/pages/settings/index.tsx
 msgid "Language, home, grids and episodes"
-msgstr ""
+msgstr "Lingua, home, griglie ed episodi"
 
 #: src/lib/subtitles/style.ts src/pages/settings/interface.tsx
 msgid "Large"
-msgstr ""
+msgstr "Ampio"
 
 #: src/components/update-prompt.tsx
 msgid "Later"
-msgstr ""
+msgstr "Più tardi"
 
 #: src/app.tsx
 msgid "Leave {from} to add {adding}?"
-msgstr ""
+msgstr "Lasciare {from} per aggiungere {adding}?"
 
 #: src/app.tsx
 msgid "Leave {from} to open this on {target}?"
-msgstr ""
+msgstr "Lasciare {from} per aprire su {target}?"
 
 #: src/components/party/party-sheet.tsx
 msgid "Leave the party"
-msgstr ""
+msgstr "Lascia il watch party"
 
 #: src/app.tsx
 msgid "Leave this server to add {adding}?"
-msgstr ""
+msgstr "Lasciare questo server per aggiungere {adding}?"
 
 #: src/pages/settings/apps.tsx
 msgid "Leaving the app"
-msgstr ""
+msgstr "Uscita dall'app"
 
 #: src/lib/input/actions.ts
+#, fuzzy
 msgid "Left"
-msgstr ""
+msgstr "Sinistra"
 
 #: src/pages/settings/interface.tsx
 msgid "Left empty, posters stand alone. A poster without artwork still shows its title."
-msgstr ""
+msgstr "Se lasciato vuoto, verranno mostrate solo le locandine. Una locandina priva di copertina mostrerà comunque il suo titolo."
 
 #: src/components/player/options.tsx
 msgid "Less dialogue boost"
@@ -2032,7 +2036,7 @@ msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "Looking for the party…"
-msgstr ""
+msgstr "Ricerca del watch party…"
 
 #: src/components/party/party-sheet.tsx
 msgid "Lost the connection to {relay}. Reconnecting… Your player carries on, and gets back in step once it's back."
@@ -2130,7 +2134,7 @@ msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "More can be sent once the party is back."
-msgstr ""
+msgstr "Potrai inviarne altri quando il watch party tornerà attivo."
 
 #: src/components/player/options.tsx
 msgid "More dialogue boost"
@@ -2322,7 +2326,7 @@ msgstr ""
 
 #: src/lib/party/party.ts
 msgid "No party has that code on {relay}."
-msgstr ""
+msgstr "Nessun watch party ha quel codice su {relay}."
 
 #: src/lib/playback/play.ts
 msgid "No playable version was found"
@@ -2698,11 +2702,11 @@ msgstr ""
 
 #: src/pages/settings/cache.tsx
 msgid "Pages and artwork open straight away from this device, then refresh. Without a connection, whatever was saved can still be browsed."
-msgstr ""
+msgstr "Pagine e copertine si aprono istantaneamente da questo dispositivo, per poi aggiornarsi. In assenza di connessione, è comunque possibile sfogliare tutto ciò che è stato salvato."
 
 #: src/pages/settings/index.tsx
 msgid "Pages and artwork saved on this device"
-msgstr ""
+msgstr "Pagine e copertine salvate su questo dispositivo"
 
 #: src/pages/settings/theme.tsx
 msgid "Pages and panels take their shades from it. Dark colours read best."
@@ -2978,7 +2982,7 @@ msgstr ""
 
 #: src/pages/settings/playback.tsx
 msgid "Plays a little faster or slower to catch up with the party. Off, the video jumps instead."
-msgstr ""
+msgstr "Riproduce il video ad una velocità leggermente maggiore o minore per rimettersi in pari con il watch party. Se disattivata, il video effettuerà un salto."
 
 #: src/pages/settings/playback.tsx
 msgid "Plays Dolby Vision where the screen shows it. Turn it off to play the HDR10 picture most of these videos also carry, if Dolby Vision looks dim or flickers. Videos with no HDR10 picture still play in Dolby Vision."
@@ -3133,7 +3137,7 @@ msgstr ""
 
 #: src/components/party/party-layer.tsx
 msgid "Reconnecting to the party…"
-msgstr ""
+msgstr "Riconnessione al watch party…"
 
 #: src/components/layout.tsx
 msgid "Reconnecting…"
@@ -3359,7 +3363,7 @@ msgstr ""
 
 #: src/pages/settings/cache.tsx
 msgid "Save artwork"
-msgstr ""
+msgstr "Salva copertina"
 
 #: src/pages/settings/cache.tsx
 msgid "Save home and libraries"
@@ -3493,7 +3497,7 @@ msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "Sends once the party is back"
-msgstr ""
+msgstr "Invia non appena il watch party torna attivo"
 
 #: src/pages/settings/apps.tsx
 msgid "Sends this device's details and the app's recent log to the server, with a code to give whoever looks into it."
@@ -3824,7 +3828,7 @@ msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "Start a party"
-msgstr ""
+msgstr "Avvia un watch party"
 
 #: src/components/remote-sheet.tsx
 msgid "Starting…"
@@ -4071,15 +4075,15 @@ msgstr ""
 
 #: src/lib/party/party.ts
 msgid "That party has ended."
-msgstr ""
+msgstr "Il watch party è terminato."
 
 #: src/lib/party/party.ts
 msgid "That party is full."
-msgstr ""
+msgstr "Il watch party è al completo."
 
 #: src/lib/party/party.ts
 msgid "That party is not letting anyone new in."
-msgstr ""
+msgstr "Quel watch party non accetta nuovi partecipanti."
 
 #: src/components/version-picker.tsx
 msgid "That pattern is not a valid regular expression."
@@ -4091,7 +4095,7 @@ msgstr ""
 
 #: src/lib/party/party.ts
 msgid "That relay is too busy for another party."
-msgstr ""
+msgstr "Quel relay è troppo carico per ospitare un altro watch party."
 
 #: src/lib/party/party.ts
 msgid "That relay runs a different version of watch parties."
@@ -4115,7 +4119,7 @@ msgstr ""
 
 #: src/pages/servers.tsx
 msgid "The address of the AIOStreams instance where you set up your addon. Other Jellyfin servers work too."
-msgstr ""
+msgstr "L'indirizzo dell'istanza AIOStreams in cui hai configurato il tuo addon. Funzionano anche altri server Jellyfin."
 
 #: src/pages/settings/about.tsx
 msgid "The API this app speaks."
@@ -4155,7 +4159,7 @@ msgstr ""
 
 #: src/lib/party/party.ts
 msgid "The host removed you from the party."
-msgstr ""
+msgstr "L'host ti ha rimosso dal watch party."
 
 #: src/pages/settings/about.tsx
 msgid "The interface is built on its components."
@@ -4195,19 +4199,19 @@ msgstr ""
 
 #: src/lib/party/party.ts
 msgid "The party ended after a long time with nothing playing."
-msgstr ""
+msgstr "Il watch party è terminato dopo un lungo periodo di inattività."
 
 #: src/lib/party/party.ts
 msgid "The party ended."
-msgstr ""
+msgstr "Il watch party è terminato."
 
 #: src/components/party/party-sheet.tsx
 msgid "The party is full"
-msgstr ""
+msgstr "Il watch party è al completo."
 
 #: src/components/party/party-sheet.tsx
 msgid "The party is watching <0>{title}</0>"
-msgstr ""
+msgstr "Il watch party sta guardando <0>{title}</0>"
 
 #: src/lib/hosts/shell/player.ts
 msgid "the player could not play this version"
@@ -4321,7 +4325,7 @@ msgstr ""
 
 #: src/lib/party/follow.ts
 msgid "This device couldn't read what the party is playing."
-msgstr ""
+msgstr "Questo dispositivo non è riuscito a leggere il contenuto in riproduzione nel watch party."
 
 #: src/pages/settings/subtitles.tsx
 msgid "This is how subtitles will look."
@@ -4413,7 +4417,7 @@ msgstr ""
 
 #: src/pages/settings/interface.tsx
 msgid "Titles, synopses and stream names stay in the language your addons send."
-msgstr ""
+msgstr "Titoli, sinossi e nomi degli stream rimangono nella lingua in cui vengono inviati dai tuoi addon."
 
 #: src/pages/calendar.tsx
 msgid "Today"
@@ -4471,7 +4475,7 @@ msgstr ""
 
 #: src/lib/party/party.ts
 msgid "Try starting the party again."
-msgstr ""
+msgstr "Prova a riavviare il watch party."
 
 #: src/components/version-settings.tsx
 msgid "Try them"
@@ -4749,7 +4753,7 @@ msgstr ""
 #: src/components/layout.tsx src/components/party/party-sheet.tsx
 #: src/components/player/options.tsx src/pages/item.tsx
 msgid "Watch party"
-msgstr ""
+msgstr "Watch party"
 
 #: src/components/layout.tsx src/components/party/party-sheet.tsx
 #: src/components/player/options.tsx src/pages/item.tsx
@@ -4810,7 +4814,7 @@ msgstr ""
 
 #: src/pages/settings/playback.tsx
 msgid "What the people you watch with say shows for a few seconds. It always stays in the party's chat."
-msgstr ""
+msgstr "I messaggi delle persone con cui guardi il video rimangono visibili per pochi secondi, ma restano sempre salvati nella chat del watch party."
 
 #: src/pages/settings/cache.tsx
 msgid "What to save"
@@ -4818,7 +4822,7 @@ msgstr ""
 
 #: src/components/party/reaction-setting.tsx
 msgid "What you can send from a party's chat."
-msgstr ""
+msgstr "Contenuti che puoi inviare all'interno della chat di un watch party."
 
 #: src/pages/settings/apps.tsx
 msgid "What your Discord profile shows. Kept on this device."
@@ -4954,7 +4958,7 @@ msgstr ""
 
 #: src/lib/party/party.ts
 msgid "You left the party."
-msgstr ""
+msgstr "Hai lasciato il watch party."
 
 #: src/pages/settings/playback.tsx
 msgid "Your {name}"
@@ -4974,7 +4978,7 @@ msgstr ""
 
 #: src/lib/party/follow.ts
 msgid "Your player can't follow a watch party. Pick the app's player in settings to watch along."
-msgstr ""
+msgstr "Il tuo lettore non può seguire un watch party. Seleziona il lettore dell'app nelle impostazioni per guardare insieme."
 
 #: src/components/version-picker.tsx
 msgid "Your player does not report back, so mark it as watched once you finish."
@@ -4982,7 +4986,7 @@ msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "Your player plays in another app, which can't follow a party. Choose the app's own player in settings to watch along."
-msgstr ""
+msgstr "Il tuo lettore viene eseguito in un'altra app, che non può seguire i watch party. Seleziona il lettore interno nelle impostazioni per guardare insieme."
 
 #: src/components/rating.tsx
 msgid "Your rating"
