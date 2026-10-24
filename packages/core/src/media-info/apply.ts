@@ -38,7 +38,7 @@ export function applyMediaInfo(
     parseMediaInfo(toWireMediaInfo(record))
   );
   if (record.duration && !stream.duration) {
-    stream.duration = record.duration * 1000;
+    stream.duration = Math.round(record.duration * 1000);
   }
   if (record.bitrate && !stream.bitrate) {
     stream.bitrate = record.bitrate;
