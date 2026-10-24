@@ -9,7 +9,7 @@ msgstr ""
 "Last-Translator: Tugay Özgen <toxiccloud@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Turkish <https://hosted.weblate.org/projects/aiostreams/web-app/tr/>\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"PO-Revision-Date: 2026-10-24 12:22+0000\n"
+"PO-Revision-Date: 2026-10-24 17:35+0000\n"
 
 #: src/components/party/party-sheet.tsx
 msgid "(you)"
@@ -82,7 +82,7 @@ msgstr "{favorites, plural, one {# favori} other {# favori}}"
 
 #: src/pages/settings/downloads.tsx
 msgid "{folder}. New downloads go here; ones already saved stay where they are."
-msgstr "{folder} klasörü. Yeni indirmeler buraya kaydedilir; önceden kaydedilmiş olanlar olduğu yerde kalır."
+msgstr "Yeni indirilenler {folder} içine kaydedilir; önceden kaydedilenler yerinde kalacaktır."
 
 #: src/components/version-picker.tsx
 msgid "{found, plural, one {# version} other {# versions}}"
@@ -246,63 +246,63 @@ msgstr ""
 
 #: src/components/party/party-layer.tsx
 msgid "{who} jumped to {to}"
-msgstr ""
+msgstr "{who} {to} tarafına geçti"
 
 #: src/components/party/party-layer.tsx
 msgid "{who} paused"
-msgstr ""
+msgstr "{who} duraklattı"
 
 #: src/components/party/party-layer.tsx
 msgid "{who} resumed"
-msgstr ""
+msgstr "{who} kaldığı yerden devam ettirdi"
 
 #: src/components/party/party-layer.tsx
 msgid "{who} started {title}"
-msgstr ""
+msgstr "{who}, {title} başlığını başlattı"
 
 #: src/lib/playback/sound.ts
 msgid "+{amount} ms"
-msgstr ""
+msgstr "+{amount} ms"
 
 #: src/lib/playback/sound.ts
 msgid "+{db} dB"
-msgstr ""
+msgstr "+{db} dB"
 
 #: src/lib/subtitles/delay.ts
 msgid "+{seconds}s"
-msgstr ""
+msgstr "+{seconds}s"
 
 #: src/lib/subtitles/delay.ts
 msgid "+{time}"
-msgstr ""
+msgstr "+{time}"
 
 #: src/lib/playback/sound.ts
 msgid "−{amount} ms"
-msgstr ""
+msgstr "−{amount} ms"
 
 #: src/lib/subtitles/delay.ts
 msgid "−{seconds}s"
-msgstr ""
+msgstr "−{seconds}s"
 
 #: src/lib/subtitles/delay.ts
 msgid "−{time}"
-msgstr ""
+msgstr "−{time}"
 
 #: src/lib/input/actions.ts
 msgid "0 to 9"
-msgstr ""
+msgstr "0'dan 9'a"
 
 #: src/lib/input/actions.ts
 msgid "1 jumps a tenth of the way in, 5 halfway and 0 back to the start."
-msgstr ""
+msgstr "\"1\" yüzde on içine, \"5\" yarısına ve \"0\" başına atlıyor."
 
 #: src/pages/settings/audio.tsx
 msgid "5.1 surround"
-msgstr ""
+msgstr "5.1 Surround"
 
 #: src/pages/settings/audio.tsx
 msgid "7.1 surround"
-msgstr ""
+msgstr "7.1 Surround"
 
 #: src/components/version-settings.tsx
 msgid "A badge shows on each version whose text matches its pattern: the name and description your formatter writes, the file name, and the tags read from it."
@@ -310,31 +310,31 @@ msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "A code is looked up on the relay picked above."
-msgstr ""
+msgstr "Yukarıda seçilen ara sunucudan bir kod aranır."
 
 #: src/pages/settings/cache.tsx
 msgid "A day"
-msgstr ""
+msgstr "Bir gün"
 
 #: src/pages/settings/cache.tsx
 msgid "A month"
-msgstr ""
+msgstr "Bir ay"
 
 #: src/components/version-settings.tsx
 msgid "A regular expression. Case never matters."
-msgstr ""
+msgstr "Düzenli bir ifade. Büyük/küçük harf ayrımı yoktur."
 
 #: src/components/party/party-sheet.tsx
 msgid "A relay someone else runs, for people on other servers."
-msgstr ""
+msgstr "Başka sunuculardaki insanlar için, bir başkasının yönettiği ara sunucu."
 
 #: src/components/input-setup.tsx
 msgid "A remote's or gamepad's buttons work too."
-msgstr ""
+msgstr "Bir kumandanın yada oyun kolunun tuşları da işe yarar."
 
 #: src/pages/settings/playback.tsx
 msgid "A set time before the end."
-msgstr ""
+msgstr "Bitmeden önce ayarlanmış bir süre."
 
 #: src/pages/settings/audio.tsx
 msgid "A track the version marks as its default plays even when another is in one of your languages. Turn this off for your languages to always win."
@@ -346,28 +346,28 @@ msgstr ""
 
 #: src/pages/settings/cache.tsx
 msgid "A week"
-msgstr ""
+msgstr "Bir hafta"
 
 #: src/pages/settings/index.tsx
 msgid "About"
-msgstr ""
+msgstr "Hakkında"
 
 #: src/pages/settings/theme.tsx
 msgid "Accent"
-msgstr ""
+msgstr "Vurgu"
 
 #: src/components/layout.tsx
 #: src/pages/settings/index.tsx
 msgid "Account"
-msgstr ""
+msgstr "Hesap"
 
 #: src/pages/settings/cache.tsx
 msgid "Account and server"
-msgstr ""
+msgstr "Hesap ve sunucu"
 
 #: src/pages/history.tsx
 msgid "Actions"
-msgstr ""
+msgstr "Eylemler"
 
 #: src/components/layout.tsx
 #: src/pages/history.tsx
@@ -375,40 +375,40 @@ msgstr ""
 #: src/pages/settings/apps.tsx
 #: src/pages/settings/cache.tsx
 msgid "Activity"
-msgstr ""
+msgstr "Faaliyet"
 
 #: src/components/version-settings.tsx
 msgid "Add"
-msgstr ""
+msgstr "Ekle"
 
 #: src/components/version-settings.tsx
 msgid "Add a badge"
-msgstr ""
+msgstr "Bir rozet ekle"
 
 #: src/components/player/options.tsx
 msgid "Add a file…"
-msgstr ""
+msgstr "Bir dosya ekle…"
 
 #: src/components/version-settings.tsx
 msgid "Add a filter"
-msgstr ""
+msgstr "Bir filtre ekle"
 
 #: src/components/shortcut-settings.tsx
 msgid "Add a key for {label}"
-msgstr ""
+msgstr "{label} için bir tuş ekle"
 
 #: src/pages/settings/common.tsx
 msgid "Add a language"
-msgstr ""
+msgstr "Bir dil ekle"
 
 #: src/app.tsx
 #: src/pages/servers.tsx
 msgid "Add a server"
-msgstr ""
+msgstr "Bir sunucu ekle"
 
 #: src/pages/settings/common.tsx
 msgid "Add another language"
-msgstr ""
+msgstr "Başka bir dil ekle"
 
 #: src/components/no-catalogs.tsx
 msgid "Add catalogs to your configuration, then refresh."
