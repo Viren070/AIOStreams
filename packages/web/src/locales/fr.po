@@ -9,7 +9,7 @@ msgstr ""
 "Last-Translator: D4rk <dark56100@users.noreply.hosted.weblate.org>\n"
 "Language-Team: French <https://hosted.weblate.org/projects/aiostreams/web-app/fr/>\n"
 "Plural-Forms: nplurals=2; plural=n > 1;\n"
-"PO-Revision-Date: 2026-10-24 20:00+0000\n"
+"PO-Revision-Date: 2026-10-24 23:08+0000\n"
 
 #: src/components/party/party-sheet.tsx
 msgid "(you)"
@@ -2499,7 +2499,7 @@ msgstr "Rien n'a encore été téléchargé. Téléchargez un film ou un épisod
 
 #: src/pages/search.tsx
 msgid "Nothing found for “{query}”."
-msgstr "Rien trouvé pour « {query} »."
+msgstr "Rien trouvé pour « {query} »."
 
 #: src/pages/person.tsx
 msgid "Nothing found."
@@ -4942,7 +4942,7 @@ msgstr "Vu ×{playCount}"
 
 #: src/pages/history.tsx
 msgid "Watched marks and resume points are removed from this server. Favourites stay. Titles a tracker still lists come back when it next syncs."
-msgstr "Les mentions « Vu » et points de reprise sont supprimés de ce serveur. Les favoris sont conservés. Les titres toujours présents sur un service de suivi réapparaîtront à la prochaine synchronisation."
+msgstr "Les mentions « Vu » et points de reprise sont supprimés de ce serveur. Les favoris sont conservés. Les titres toujours présents sur un service de suivi réapparaîtront à la prochaine synchronisation."
 
 #: src/components/party/party-sheet.tsx
 #: src/pages/settings/index.tsx
