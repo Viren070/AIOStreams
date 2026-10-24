@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-24 00:24+0000\n"
+"PO-Revision-Date: 2026-10-24 12:22+0000\n"
 "Last-Translator: Nicola Bortoletto <translate@nicolabortoletto.com>\n"
 "Language-Team: Italian <https://hosted.weblate.org/projects/aiostreams/web-app/it/>\n"
 "Language: it\n"
@@ -333,7 +333,7 @@ msgstr "Funzionano anche i pulsanti di un telecomando o di un gamepad."
 
 #: src/pages/settings/playback.tsx
 msgid "A set time before the end."
-msgstr ""
+msgstr "Un tempo fisso prima della fine."
 
 #: src/pages/settings/audio.tsx
 msgid "A track the version marks as its default plays even when another is in one of your languages. Turn this off for your languages to always win."
@@ -541,7 +541,7 @@ msgstr "Impostazioni app"
 
 #: src/pages/settings/theme.tsx
 msgid "Applied on top of the theme. Parts of the app carry a <0>data-ui</0> attribute to style them by, such as <1>[data-ui=\"progress-bar\"]</1>. If it ever hides the page, add <2>?safe</2> to the address to turn it off. See the <3>guide</3> for every selector and examples."
-msgstr ""
+msgstr "Applicato sopra il tema. Alcune parti dell'app hanno un attributo <0>data-ui</0> che permette di personalizzarne lo stile, ad esempio <1>[data-ui=\"progress-bar\"]</1>. Se dovesse nascondere la pagina, aggiungi <2>?safe</2> all'indirizzo per disattivarlo. Consulta la <3>guida</3> per l'elenco completo dei selettori e alcuni esempi."
 
 #: src/pages/settings/theme.tsx
 msgid "Apply CSS"
@@ -711,11 +711,11 @@ msgstr "Ricerca del browser"
 
 #: src/lib/discord.ts
 msgid "Browsing"
-msgstr ""
+msgstr "Esplorazione"
 
 #: src/pages/settings/about.tsx
 msgid "Builds the mpv library this app ships with."
-msgstr ""
+msgstr "Compila la libreria mpv inclusa in questa app."
 
 #: src/lib/playback/player-choice.ts
 msgid "Built-in mpv"
@@ -1144,7 +1144,7 @@ msgstr "Cremisi"
 
 #: src/components/player/options.tsx
 msgid "Crop"
-msgstr "Ritaglia"
+msgstr "Riempi schermo"
 
 #: src/lib/input/keys.ts
 msgid "Ctrl"
@@ -1383,105 +1383,105 @@ msgstr "I download attendono una rete Wi-Fi o un'altra rete non a consumo, invec
 
 #: src/lib/i18n.ts
 msgid "Drawer"
-msgstr ""
+msgstr "Menu laterale"
 
 #: src/pages/item.tsx
 msgid "Drop show"
-msgstr ""
+msgstr "Abbandona serie"
 
 #: src/components/player/controls.tsx
 msgid "Drop to add subtitles"
-msgstr ""
+msgstr "Trascina qui per aggiungere sottotitoli"
 
 #. An episode number, as in E04
 #: src/lib/format.ts
 msgid "E{e}"
-msgstr ""
+msgstr "E{e}"
 
 #: src/components/version-settings.tsx
 msgid "Each filter shows as a pill above the version list. Its search is words that must all appear, or a regular expression between slashes, such as /2160p|4k/. Case never matters."
-msgstr ""
+msgstr "Ogni filtro compare come una pillola sopra l'elenco delle versioni. La ricerca usa parole che devono essere tutte presenti, oppure un'espressione regolare tra barre, come /2160p|4k/. Maiuscole e minuscole non fanno differenza."
 
 #: src/components/version-settings.tsx
 msgid "Edit"
-msgstr ""
+msgstr "Modifica"
 
 #: src/components/player/controls.tsx
 msgid "Ends at {endsAt}"
-msgstr ""
+msgstr "Termina alle {endsAt}"
 
 #: src/pages/settings/playback.tsx
 msgid "Engine"
-msgstr ""
+msgstr "Motore"
 
 #: src/lib/input/keys.ts
 msgid "Enter"
-msgstr ""
+msgstr "Invio"
 
 #: src/components/party/party-sheet.tsx
 msgid "Enter an invite link, or a code and its relay"
-msgstr ""
+msgstr "Inserisci un link di invito, o un codice e il suo relay"
 
 #: src/components/party/party-sheet.tsx
 msgid "Enter the address of a relay"
-msgstr ""
+msgstr "Inserisci l'indirizzo di un relay"
 
 #: src/pages/sign-in.tsx
 msgid "Enter this code under Quick Connect in an app already signed in to this server."
-msgstr ""
+msgstr "Inserisci questo codice in Connessione rapida, in un'app già connessa a questo server."
 
 #: src/pages/sign-in.tsx
 msgid "Enter this code under Quick Connect in an app already signed in, or approve it on the configuration page."
-msgstr ""
+msgstr "Inserisci questo codice in Connessione rapida, in un'app con l'accesso già effettuato, oppure approvalo nella pagina di configurazione."
 
 #: src/pages/sign-in.tsx
 msgid "Enter your password."
-msgstr ""
+msgstr "Inserisci la tua password."
 
 #: src/components/episodes.tsx
 msgid "Episode {number}"
-msgstr ""
+msgstr "Episodio {number}"
 
 #: src/components/episodes.tsx
 msgid "Episode details"
-msgstr ""
+msgstr "Dettagli dell'episodio"
 
 #: src/pages/settings/interface.tsx
 msgid "Episode layout"
-msgstr ""
+msgstr "Layout degli episodi"
 
 #: src/components/player/episodes.tsx src/components/player/options.tsx
 #: src/pages/item.tsx src/pages/settings/interface.tsx
 msgid "Episodes"
-msgstr ""
+msgstr "Episodi"
 
 #: src/pages/settings/playback.tsx
 msgid "Episodes end without offering the next one."
-msgstr ""
+msgstr "Gli episodi finiscono senza proporre il successivo."
 
 #: src/lib/input/keys.ts
 msgid "Esc"
-msgstr ""
+msgstr "Esc"
 
 #: src/pages/settings/audio.tsx
 msgid "Evens out loud and quiet scenes, for listening at a low volume. Not for sound passed through."
-msgstr ""
+msgstr "Uniforma il volume delle scene rumorose e di quelle silenziose, per ascoltare a basso volume. Non vale per l'audio inviato in passthrough."
 
 #: src/pages/item.tsx
 msgid "Every {list}"
-msgstr ""
+msgstr "Ogni {list}"
 
 #: src/pages/item.tsx
 msgid "Every {list} at {time}"
-msgstr ""
+msgstr "Ogni {list} alle {time}"
 
 #: src/pages/history.tsx
 msgid "Everyone"
-msgstr ""
+msgstr "Tutti"
 
 #: src/pages/history.tsx
 msgid "Everything"
-msgstr ""
+msgstr "Tutto"
 
 #: src/components/download-button.tsx
 msgid "Everything unwatched"
@@ -1489,141 +1489,142 @@ msgstr ""
 
 #: src/components/player/options.tsx src/components/window-controls.tsx
 msgid "Exit full screen"
-msgstr ""
+msgstr "Esci dalla modalità a schermo intero"
 
 #: src/pages/settings/playback.tsx
 msgid "ExoPlayer, which uses less battery, and mpv for a video this device has no decoder for."
-msgstr ""
+msgstr "ExoPlayer, che consuma meno batteria, e mpv per i video per cui questo dispositivo non ha un decoder."
 
 #: src/pages/history.tsx
 msgid "Export"
-msgstr ""
+msgstr "Esporta"
 
 #: src/pages/settings/interface.tsx
 msgid "Fade"
-msgstr ""
+msgstr "Dissolvenza"
 
 #: src/pages/downloads.tsx
 msgid "Failed"
-msgstr ""
+msgstr "Non riuscito"
 
 #: src/components/remote-sheet.tsx src/lib/input/keys.ts
 msgid "Fast forward"
-msgstr ""
+msgstr "Avanti veloce"
 
 #: src/lib/input/actions.ts
 msgid "Faster"
-msgstr ""
+msgstr "Più veloce"
 
 #: src/components/layout.tsx src/pages/favourites.tsx
 #: src/pages/settings/apps.tsx
 msgid "Favourites"
-msgstr ""
+msgstr "Preferiti"
 
 #: src/pages/settings/interface.tsx
 msgid "Featured on home"
-msgstr ""
+msgstr "In evidenza nella home"
 
 #: src/components/version-settings.tsx
 msgid "Fields"
-msgstr ""
+msgstr "Campi"
 
 #: src/lib/format.ts
 msgid "Filler"
-msgstr ""
+msgstr "Filler"
 
 #: src/pages/person.tsx
 msgid "Filmography"
-msgstr ""
+msgstr "Filmografia"
 
 #: src/pages/discover.tsx
 msgid "Filter"
-msgstr ""
+msgstr "Filtra"
 
 #: src/components/version-picker.tsx
 msgid "Filter versions"
-msgstr ""
+msgstr "Filtra versioni"
 
 #: src/components/download-button.tsx
 msgid "Finding a version to download"
-msgstr ""
+msgstr "Ricerca di una versione da scaricare"
 
 #: src/components/version-picker.tsx src/pages/downloads.tsx
 #: src/pages/player.tsx
 msgid "Finding a version…"
-msgstr ""
+msgstr "Ricerca di una versione…"
 
 #: src/components/version-picker.tsx
 msgid "Finding versions"
-msgstr ""
+msgstr "Ricerca di versioni"
 
 #: src/components/player/next-episode.tsx
 msgid "Finding versions of {name}…"
-msgstr ""
+msgstr "Ricerca di versioni di {name}…"
 
 #: src/pages/item.tsx
 msgid "First aired"
-msgstr ""
+msgstr "Prima messa in onda"
 
 #: src/components/player/options.tsx
 msgid "Fit"
-msgstr ""
+msgstr "Adatta"
 
 #: src/pages/settings/interface.tsx
 msgid "Floating"
-msgstr ""
+msgstr "Fluttuante"
 
 #: src/pages/settings/interface.tsx
 msgid "Floating pills"
-msgstr ""
+msgstr "Pillole fluttuanti"
 
 #: src/pages/settings/downloads.tsx
 msgid "Folder"
-msgstr ""
+msgstr "Cartella"
 
 #: src/pages/settings/interface.tsx
+#, fuzzy
 msgid "Following pins it above the rows and shows the card the pointer, keyboard or remote is on, starting with a featured title, behind the whole page or in its top corner. Touch screens and narrow windows keep it rotating."
-msgstr ""
+msgstr "Segui selezione lo fissa sopra le righe e mostra la scheda su cui si trovano il puntatore, la tastiera o il telecomando, partendo da un titolo in evidenza, dietro l'intera pagina o nell'angolo in alto. Gli schermi touch e le finestre strette lo mantengono a rotazione."
 
 #: src/pages/settings/interface.tsx
 msgid "Follows the selected card"
-msgstr ""
+msgstr "Segue la scheda selezionata"
 
 #: src/pages/settings/interface.tsx
 msgid "Follows the selected card, in the corner"
-msgstr ""
+msgstr "Segue la scheda selezionata, nell'angolo"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Font"
-msgstr ""
+msgstr "Font"
 
 #: src/pages/settings/audio.tsx
 msgid "For a receiver on an optical or ARC link, which gets other surround formats as stereo otherwise."
-msgstr ""
+msgstr "Per un ricevitore collegato tramite ottico o ARC, che altrimenti riceve gli altri formati surround come stereo."
 
 #: src/pages/settings/subtitles.tsx
 msgid "Forced, for foreign parts only"
-msgstr ""
+msgstr "Forzati, solo per le parti in lingua straniera"
 
 #: src/pages/settings/audio.tsx
 msgid "Formats"
-msgstr ""
+msgstr "Formati"
 
 #: src/components/layout.tsx
 msgid "Forward"
-msgstr ""
+msgstr "Avanti"
 
 #: src/lib/hosts/shell/player.ts
 msgid "Frame timings"
-msgstr ""
+msgstr "Tempi dei fotogrammi"
 
 #: src/components/version-picker.tsx
 msgid "From the start"
-msgstr ""
+msgstr "Dall'inizio"
 
 #: src/pages/settings/interface.tsx
 msgid "Frosted glass"
-msgstr ""
+msgstr "Vetro satinato"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Full"
@@ -1631,63 +1632,64 @@ msgstr ""
 
 #: src/components/player/options.tsx src/lib/input/actions.ts
 msgid "Full screen"
-msgstr ""
+msgstr "A schermo intero"
 
 #: src/lib/input/actions.ts
 msgid "General"
-msgstr ""
+msgstr "Generale"
 
 #: src/components/send-report.tsx
 msgid "Give this code to whoever looks into it."
-msgstr ""
+msgstr "Dai questo codice a chi si occuperà del problema."
 
 #: src/router.tsx
 msgid "Go home"
-msgstr ""
+msgstr "Vai alla home"
 
 #: src/components/item-menu.tsx
 msgid "Go to show"
-msgstr ""
+msgstr "Vai alla serie"
 
 #: src/lib/i18n.ts
 msgid "Green"
-msgstr ""
+msgstr "Verde"
 
 #: src/lib/i18n.ts
 msgid "Grey"
-msgstr ""
+msgstr "Grigio"
 
 #: src/components/version-settings.tsx
+#, fuzzy
 msgid "Group"
-msgstr ""
+msgstr "Raggruppa"
 
 #: src/pages/history.tsx
 msgid "Group by day"
-msgstr ""
+msgstr "Raggruppa per giorno"
 
 #: src/pages/settings/playback.tsx
 msgid "Hardware decoding"
-msgstr ""
+msgstr "Decodifica hardware"
 
 #: src/pages/sign-in.tsx
 msgid "Has a PIN"
-msgstr ""
+msgstr "Protetto da PIN"
 
 #: src/components/player/subtitle-sync.tsx
 msgid "Heard"
-msgstr ""
+msgstr "Ascoltato"
 
 #: src/lib/input/actions.ts
 msgid "Heard the line"
-msgstr ""
+msgstr "Ho sentito la battuta"
 
 #: src/components/player/options.tsx
 msgid "Height"
-msgstr ""
+msgstr "Altezza"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Height: {position}%"
-msgstr ""
+msgstr "Altezza: {position}%"
 
 #: src/pages/settings/playback.tsx
 msgid "Held speed"
@@ -1695,27 +1697,27 @@ msgstr ""
 
 #: src/pages/history.tsx
 msgid "Here"
-msgstr ""
+msgstr "Qui"
 
 #: src/pages/settings/interface.tsx
 msgid "Hero"
-msgstr ""
+msgstr "Banner in evidenza"
 
 #: src/pages/settings/interface.tsx
 msgid "Hidden"
-msgstr ""
+msgstr "Nascosto"
 
 #: src/components/player/next-episode.tsx
 msgid "Hide"
-msgstr ""
+msgstr "Nascondi"
 
 #: src/pages/history.tsx
 msgid "Hide episodes"
-msgstr ""
+msgstr "Nascondi episodi"
 
 #: src/components/party/party-sheet.tsx
 msgid "Hide QR code"
-msgstr ""
+msgstr "Nascondi codice QR"
 
 #. Holding the next key down, as in Hold + Enter
 #: src/lib/input/keys.ts
@@ -1765,7 +1767,7 @@ msgstr ""
 
 #: src/pages/settings/interface.tsx
 msgid "How the tabs sit over the page: as floating pills, on a bar across the top, or on nothing but a fade down from the top edge."
-msgstr ""
+msgstr "Come si dispongono le schede sopra la pagina: come pillole fluttuanti, su una barra in alto oppure su una semplice sfumatura che parte dal bordo superiore."
 
 #: src/components/version-settings.tsx
 msgid "How these work"
