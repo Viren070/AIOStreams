@@ -327,11 +327,11 @@ export class MediaInfoRepository {
    */
   static async upsert(written: MediaInfoRow[]): Promise<void> {
     if (written.length === 0) return;
-    const rows = [
-      ...new Map(
-        written.map((r) => [`${r.releaseKey}\0${r.file}\0${r.origin}`, r])
-      ).values(),
-    ];
+    const byKey = new Map(
+      written.map((r) => [`${r.releaseKey}\0${r.file}\0${r.origin}`, r])
+    );
+    // Key order locks rows alike on every replica and settles rank ties.
+    const rows = [...byKey.keys()].sort().map((k) => byKey.get(k)!);
     const now = Date.now();
     const texts = rows.map((r) => JSON.stringify(r.info));
     const best = new Map<string, number>();
