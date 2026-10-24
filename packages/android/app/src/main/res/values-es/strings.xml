@@ -13,4 +13,11 @@
     <string name="file_saved">%1$s guardado en Descargas</string>
     <string name="webview_version_unknown">desconocido</string>
     <string name="webview_too_old">El WebView es demasiado antiguo para la app: versión %1$s , y la app requiere %2$d o más reciente.</string>
+    <string name="update_no_build">No hay compilación para el procesador de este dispositivo</string>
+    <string name="update_damaged">La descarga estaba dañada</string>
+    <string name="update_install_failed">La instalación falló: %1$s</string>
+    <string name="update_feed_answered">El feed respondió %1$d</string>
+    <string name="download_folder_title">Elige dónde se guardan las descargas</string>
+    <string name="file_not_saved">No se pudo guardar %1$s</string>
+    <string name="webview_update">Actualiza Android System WebView, o el sistema, y luego vuelve a abrir la aplicación.</string>
 </resources>
