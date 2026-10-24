@@ -381,8 +381,8 @@ export class WatchStateRepository {
     patch: WatchStatePatch
   ): Promise<WatchStateRow> {
     const now = Date.now();
-    const pos = patch.positionMs ?? null;
-    const dur = patch.durationMs ?? null;
+    const pos = patch.positionMs == null ? null : Math.round(patch.positionMs);
+    const dur = patch.durationMs == null ? null : Math.round(patch.durationMs);
     const played = patch.played == null ? null : patch.played ? 1 : 0;
     const fav = patch.favorite == null ? null : patch.favorite ? 1 : 0;
     const setFav = fav == null ? 0 : 1;

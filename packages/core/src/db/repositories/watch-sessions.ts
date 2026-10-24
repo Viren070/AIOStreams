@@ -173,8 +173,9 @@ export class WatchSessionRepository {
                   ${input.client ?? null}, ${input.deviceName ?? null},
                   ${input.appVersion ?? null}, ${input.mediaSourceId ?? null},
                   ${input.audioStreamIndex ?? null},
-                  ${input.subtitleStreamIndex ?? null}, ${input.positionMs ?? 0},
-                  ${input.durationMs ?? 0}, ${input.paused ? 1 : 0},
+                  ${input.subtitleStreamIndex ?? null},
+                  ${Math.round(input.positionMs ?? 0)},
+                  ${Math.round(input.durationMs ?? 0)}, ${input.paused ? 1 : 0},
                   ${now}, ${now}, NULL)
           ON CONFLICT(uuid, persona, session_key) DO UPDATE SET
             user_persona = excluded.user_persona,
@@ -218,9 +219,11 @@ export class WatchSessionRepository {
       paused?: boolean;
     } & PlayingTracks
   ): Promise<void> {
-    const pos = patch.positionMs ?? null;
+    const pos = patch.positionMs == null ? null : Math.round(patch.positionMs);
     const dur =
-      patch.durationMs && patch.durationMs > 0 ? patch.durationMs : null;
+      patch.durationMs && patch.durationMs > 0
+        ? Math.round(patch.durationMs)
+        : null;
     const paused = patch.paused == null ? null : patch.paused ? 1 : 0;
     await getDb().exec(
       sql`UPDATE watch_sessions SET
