@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-24 15:40+0000\n"
+"PO-Revision-Date: 2026-10-24 23:08+0000\n"
 "Last-Translator: Nicola Bortoletto <translate@nicolabortoletto.com>\n"
 "Language-Team: Italian <https://hosted.weblate.org/projects/aiostreams/web-app/it/>\n"
 "Language: it\n"
@@ -2020,15 +2020,15 @@ msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "Loading"
-msgstr ""
+msgstr "Caricamento"
 
 #: src/components/version-settings.tsx
 msgid "Loading…"
-msgstr ""
+msgstr "Caricamento…"
 
 #: src/components/player/controls.tsx
 msgid "Lock screen"
-msgstr ""
+msgstr "Blocca schermo"
 
 #: src/pages/settings/apps.tsx
 msgid "Logs"
@@ -2109,28 +2109,28 @@ msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "Messages"
-msgstr ""
+msgstr "Messaggi"
 
 #: src/pages/settings/theme.tsx
 msgid "Midnight"
-msgstr ""
+msgstr "Mezzanotte"
 
 #: src/components/window-controls.tsx
 msgid "Minimise"
-msgstr ""
+msgstr "Minimizza"
 
 #: src/lib/format.ts
 msgid "Missing"
-msgstr ""
+msgstr "Mancante"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Monospace"
-msgstr ""
+msgstr "Monospaziato"
 
 #: src/components/overview.tsx src/components/playlists.tsx
 #: src/components/version-picker.tsx src/pages/downloads.tsx
 msgid "More"
-msgstr ""
+msgstr "Di più"
 
 #: src/components/party/party-sheet.tsx
 msgid "More can be sent once the party is back."
