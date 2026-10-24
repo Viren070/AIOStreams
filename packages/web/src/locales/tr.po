@@ -9,7 +9,7 @@ msgstr ""
 "Last-Translator: Tugay Özgen <toxiccloud@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Turkish <https://hosted.weblate.org/projects/aiostreams/web-app/tr/>\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"PO-Revision-Date: 2026-10-24 23:09+0000\n"
+"PO-Revision-Date: 2026-10-25 00:44+0000\n"
 
 #: src/components/party/party-sheet.tsx
 msgid "(you)"
@@ -596,7 +596,7 @@ msgstr "Uygulama açıldığı zaman sor"
 
 #: src/pages/settings/subtitles.tsx
 msgid "At 0% there is no background."
-msgstr "%0 olduğunda arka plan yok."
+msgstr "%0 olduğunda arkaplan yok."
 
 #: src/components/player/options.tsx
 #: src/components/remote-sheet.tsx
@@ -632,7 +632,7 @@ msgstr "Otomatik"
 
 #: src/pages/settings/interface.tsx
 msgid "Automatic lists episodes on narrow screens and puts them in a row on wide ones."
-msgstr ""
+msgstr "Otomatik, bölümleri dar ekranlarda listelerken geniş ekranlarda sıra halinde gösterir."
 
 #: src/components/layout.tsx
 #: src/components/party/party-sheet.tsx
@@ -644,34 +644,34 @@ msgstr ""
 #: src/pages/sign-in.tsx
 #: src/pages/trailer.tsx
 msgid "Back"
-msgstr ""
+msgstr "Geri"
 
 #: src/lib/input/keys.ts
 msgid "Back button"
-msgstr ""
+msgstr "Geri tuşu"
 
 #: src/components/version-settings.tsx
 #: src/pages/settings/interface.tsx
 #: src/pages/settings/subtitles.tsx
 #: src/pages/settings/theme.tsx
 msgid "Background"
-msgstr ""
+msgstr "Arkaplan"
 
 #: src/lib/input/keys.ts
 msgid "Backspace"
-msgstr ""
+msgstr "Silme tuşu"
 
 #: src/components/version-settings.tsx
 msgid "Badges"
-msgstr ""
+msgstr "Rozetler"
 
 #: src/pages/settings/interface.tsx
 msgid "Bar"
-msgstr ""
+msgstr "Çubuk"
 
 #: src/pages/settings/playback.tsx
 msgid "Before the end"
-msgstr ""
+msgstr "Sondan önce"
 
 #: src/pages/settings/audio.tsx
 msgid "Below zero plays the sound earlier, as for wireless headphones that lag behind the picture."
@@ -680,109 +680,109 @@ msgstr ""
 #: src/components/player/options.tsx
 #: src/lib/input/actions.ts
 msgid "Bigger subtitles"
-msgstr ""
+msgstr "Daha büyük altyazılar"
 
 #: src/lib/i18n.ts
 msgid "Black"
-msgstr ""
+msgstr "Siyah"
 
 #: src/lib/i18n.ts
 msgid "Blue"
-msgstr ""
+msgstr "Mavi"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Bold"
-msgstr ""
+msgstr "Kalın"
 
 #: src/components/version-settings.tsx
 msgid "Border"
-msgstr ""
+msgstr "Kenarlık"
 
 #: src/pages/person.tsx
 msgid "Born {date}"
-msgstr ""
+msgstr "{date} tarihinde doğdu"
 
 #: src/pages/person.tsx
 msgid "Born {date} (age {age})"
-msgstr ""
+msgstr "{date} tarihinde doğdu ({age} yaşında)"
 
 #: src/pages/person.tsx
 msgid "Born {date} (age {age}) in {place}"
-msgstr ""
+msgstr "{date} tarihinde {place} konumunda doğdu ({age} yaşında)"
 
 #: src/pages/person.tsx
 msgid "Born {date} in {place}"
-msgstr ""
+msgstr "{date} tarihinde {place} konumunda doğdu"
 
 #: src/pages/person.tsx
 msgid "Born in {place}"
-msgstr ""
+msgstr "{place} konumunda doğdu"
 
 #: src/pages/settings/interface.tsx
 msgid "Bottom bar"
-msgstr ""
+msgstr "Alt çubuk"
 
 #: src/components/player/gestures.ts
 msgid "Brightness {percent}%"
-msgstr ""
+msgstr "Parlaklık %{percent}"
 
 #: src/lib/input/keys.ts
 msgid "Browser Home"
-msgstr ""
+msgstr "Tarayıcı Ana Sayfası"
 
 #: src/lib/input/keys.ts
 msgid "Browser Search"
-msgstr ""
+msgstr "Tarayıcı Arama"
 
 #: src/lib/discord.ts
 msgid "Browsing"
-msgstr ""
+msgstr "Gezinme"
 
 #: src/pages/settings/about.tsx
 msgid "Builds the mpv library this app ships with."
-msgstr ""
+msgstr "Bu uygulama ile gelen mpv kütüphanesini derler."
 
 #: src/lib/playback/player-choice.ts
 msgid "Built-in mpv"
-msgstr ""
+msgstr "Yerleşik mpv"
 
 #: src/lib/playback/player-choice.ts
 msgid "Built-in player"
-msgstr ""
+msgstr "Yerleşik oynatıcı"
 
 #: src/pages/settings/theme.tsx
 msgid "Buttons, progress bars and highlights."
-msgstr ""
+msgstr "Düğmeler, ilerleme çubukları ve vurgular."
 
 #: src/lib/hosts/shell/player.ts
 #: src/pages/settings/index.tsx
 msgid "Cache"
-msgstr ""
+msgstr "Önbellek"
 
 #: src/pages/settings/playback.tsx
 msgid "Cache size"
-msgstr ""
+msgstr "Önbellek boyutu"
 
 #: src/components/layout.tsx
 #: src/pages/calendar.tsx
 #: src/pages/home.tsx
 #: src/pages/settings/apps.tsx
 msgid "Calendar"
-msgstr ""
+msgstr "Takvim"
 
 #: src/pages/servers.tsx
 msgid "Can’t reach"
-msgstr ""
+msgstr "Ulaşılamıyor"
 
 #: src/components/layout.tsx
 #: src/lib/client.ts
 #: src/pages/sign-in.tsx
 msgid "Can't reach the server"
-msgstr ""
+msgstr "Sunucuya ulaşılamıyor"
 
 #: src/pages/sign-in.tsx
 msgid "Can’t reach the server"
-msgstr ""
+msgstr "Sunucuya ulaşılamıyor"
 
 #: src/components/playlists.tsx
 #: src/components/send-report.tsx
@@ -790,27 +790,27 @@ msgstr ""
 #: src/lib/i18n.ts
 #: src/pages/downloads.tsx
 msgid "Cancel"
-msgstr ""
+msgstr "İptal et"
 
 #: src/components/people.tsx
 msgid "Cast"
-msgstr ""
+msgstr "Oyuncular"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Casual"
-msgstr ""
+msgstr "Normal"
 
 #: src/pages/discover.tsx
 msgid "Catalog"
-msgstr ""
+msgstr "Katalog"
 
 #: src/pages/settings/downloads.tsx
 msgid "Change"
-msgstr ""
+msgstr "Değiştir"
 
 #: src/pages/downloads.tsx
 msgid "Change folder"
-msgstr ""
+msgstr "Klasörü değiştir"
 
 #: src/components/party/reaction-setting.tsx
 msgid "Change reactions"
