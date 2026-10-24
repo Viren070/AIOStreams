@@ -1,20 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The app's own words outside the web app, in British English. Weblate adds the values-* copies. --><resources>
-    <string name="channel_downloads"></string>
+    <string name="channel_downloads">Téléchargements</string>
     <plurals name="downloading_items">
+        <item quantity="one">Téléchargement %d articles</item>
+        <item quantity="other">Téléchargement %d articles</item>
     </plurals>
-    <string name="channel_updates"></string>
-    <string name="updated_to"></string>
-    <string name="tap_to_open"></string>
-    <string name="update_no_build"></string>
-    <string name="update_damaged"></string>
-    <string name="update_install_failed"></string>
-    <string name="update_feed_answered"></string>
-    <string name="download_folder_title"></string>
-    <string name="download_folder_free"></string>
-    <string name="file_saved"></string>
-    <string name="file_not_saved"></string>
-    <string name="webview_version_unknown"></string>
-    <string name="webview_too_old"></string>
-    <string name="webview_update"></string>
+    <string name="channel_updates">Mises à jour</string>
+    <string name="updated_to">Actualisé à %1$s</string>
+    <string name="tap_to_open">Appuyez sur pour ouvrir</string>
+    <string name="update_no_build">Pas de construction pour le processeur de cet appareil</string>
+    <string name="update_damaged">Le téléchargement a été endommagé</string>
+    <string name="update_install_failed"/>
+    <string name="update_feed_answered"/>
+    <string name="download_folder_title"/>
+    <string name="download_folder_free"/>
+    <string name="file_saved"/>
+    <string name="file_not_saved"/>
+    <string name="webview_version_unknown"/>
+    <string name="webview_too_old"/>
+    <string name="webview_update"/>
 </resources>
