@@ -622,13 +622,13 @@ msgstr "Ses: {label}"
 
 #: src/pages/settings/playback.tsx
 msgid "Auto-play the first version"
-msgstr ""
+msgstr "İlk sürümü otomatik oynat"
 
 #: src/pages/settings/audio.tsx
 #: src/pages/settings/interface.tsx
 #: src/pages/settings/playback.tsx
 msgid "Automatic"
-msgstr ""
+msgstr "Otomatik"
 
 #: src/pages/settings/interface.tsx
 msgid "Automatic lists episodes on narrow screens and puts them in a row on wide ones."
