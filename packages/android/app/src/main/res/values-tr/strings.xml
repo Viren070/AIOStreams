@@ -13,7 +13,7 @@
     <string name="update_install_failed">Yükleme başarısız: %1$s</string>
     <string name="update_feed_answered">Akış %1$d yanıt verdi</string>
     <string name="download_folder_title">İndirilenlerin nereye kaydedileceğini seçin</string>
-    <string name="download_folder_free">%1$s/%2$s boş</string>
+    <string name="download_folder_free">%1$s / %2$s boş</string>
     <string name="file_saved">%1$s İndirilenlere kaydedildi</string>
     <string name="file_not_saved">%1$s Kaydedilemedi</string>
     <string name="webview_version_unknown">Bilinmiyor</string>
