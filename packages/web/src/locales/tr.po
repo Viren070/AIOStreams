@@ -606,11 +606,11 @@ msgstr "Ses"
 
 #: src/pages/settings/audio.tsx
 msgid "Audio description, narrating what is on screen"
-msgstr ""
+msgstr "Ekrandaki içerikleri anlatan sesli betimleme"
 
 #: src/pages/settings/audio.tsx
 msgid "Audio languages"
-msgstr ""
+msgstr "Ses dilleri"
 
 #: src/pages/settings/audio.tsx
 msgid "Audio types"
