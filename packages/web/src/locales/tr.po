@@ -4,235 +4,236 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: @lingui/cli\n"
+"X-Generator: Weblate 2026.11.dev0\n"
 "Language: tr\n"
-"Last-Translator: Automatically generated\n"
-"Language-Team: none\n"
+"Last-Translator: Tugay Özgen <toxiccloud@users.noreply.hosted.weblate.org>\n"
+"Language-Team: Turkish <https://hosted.weblate.org/projects/aiostreams/web-app/tr/>\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
+"PO-Revision-Date: 2026-10-24 12:22+0000\n"
 
 #: src/components/party/party-sheet.tsx
 msgid "(you)"
-msgstr ""
+msgstr "(siz)"
 
 #: src/pages/sign-in.tsx
 msgid "{address} did not answer. Check that it is running, then try again."
-msgstr ""
+msgstr "{address} cevap vermedi. Çalıştığından emin olun, sonra tekrar deneyin."
 
 #: src/components/version-settings.tsx
 msgid "{badgeCount, plural, one {# badge of your own} other {# badges of your own}}"
-msgstr ""
+msgstr "{badgeCount, plural, one {# size ait rozet} other {# size ait rozet}}"
 
 #: src/pages/history.tsx
 msgid "{cleared, plural, one {Removed # title from the history} other {Removed # titles from the history}}"
-msgstr ""
+msgstr "{cleared, plural, one {# başlık geçmişten kaldırıldı} other {# başlık geçmişten kaldırıldı}}"
 
 #: src/components/version-settings.tsx
 msgid "{count, plural, one {# badge} other {# badges}}"
-msgstr ""
+msgstr "{count, plural, one {# rozet} other {# rozet}}"
 
 #: src/pages/settings/playback.tsx
 msgid "{count, plural, one {# minute} other {# minutes}}"
-msgstr ""
+msgstr "{count, plural, one {# dakika} other {# dakika}}"
 
 #: src/pages/settings/playback.tsx
 msgid "{count, plural, one {# second} other {# seconds}}"
-msgstr ""
+msgstr "{count, plural, one {# saniye} other {# saniye}}"
 
 #: src/components/playlists.tsx
 msgid "{count, plural, one {# title} other {# titles}}"
-msgstr ""
+msgstr "{count, plural, one {# başlık} other {# başlık}}"
 
 #: src/components/party/party-sheet.tsx
 msgid "{count, plural, one {# watching · on {on}} other {# watching · on {on}}}"
-msgstr ""
+msgstr "{count, plural, one {# · {on} üzerinden izliyor} other {# · {on} üzerinden izliyor}}"
 
 #: src/components/version-settings.tsx
 msgid "{count, plural, one {Added # badge} other {Added # badges}}"
-msgstr ""
+msgstr "{count, plural, one {# rozet eklendi} other {# rozet eklendi}}"
 
 #: src/components/version-settings.tsx
 msgid "{count, plural, one {Added # quick filter} other {Added # quick filters}}"
-msgstr ""
+msgstr "{count, plural, one {# hızlı filtre eklendi} other {# hızlı filtre eklendi}}"
 
 #: src/lib/downloads/index.ts
 msgid "{count, plural, one {Download added} other {# downloads added}}"
-msgstr ""
+msgstr "{count, plural, one {İndirme eklendi} other {# indirme eklendi}}"
 
 #: src/components/trailers.tsx
 msgid "{count, plural, one {Trailer} other {Trailers}}"
-msgstr ""
+msgstr "{count, plural, one {Fragman} other {Fragmanlar}}"
 
 #: src/pages/downloads.tsx
 msgid "{downloaded} downloaded"
-msgstr ""
+msgstr "{downloaded} indirildi"
 
 #: src/pages/history.tsx
 msgid "{episodeCount, plural, one {# episode watched} other {# episodes watched}}"
-msgstr ""
+msgstr "{episodeCount, plural, one {# bölüm izlendi} other {# bölüm izlendi}}"
 
 #: src/pages/downloads.tsx
 #: src/pages/history.tsx
 msgid "{episodeCount, plural, one {# episode} other {# episodes}}"
-msgstr ""
+msgstr "{episodeCount, plural, one {# bölüm} other {# bölüm}}"
 
 #: src/pages/history.tsx
 msgid "{favorites, plural, one {# favourite} other {# favourites}}"
-msgstr ""
+msgstr "{favorites, plural, one {# favori} other {# favori}}"
 
 #: src/pages/settings/downloads.tsx
 msgid "{folder}. New downloads go here; ones already saved stay where they are."
-msgstr ""
+msgstr "{folder} klasörü. Yeni indirmeler buraya kaydedilir; önceden kaydedilmiş olanlar olduğu yerde kalır."
 
 #: src/components/version-picker.tsx
 msgid "{found, plural, one {# version} other {# versions}}"
-msgstr ""
+msgstr "{found, plural, one {# sürüm} other {# sürüm}}"
 
 #: src/components/version-picker.tsx
 msgid "{found, plural, one {Filter # version} other {Filter # versions}}"
-msgstr ""
+msgstr "{found, plural, one {# sürümü filtrele} other {# sürümü filtrele}}"
 
 #: src/pages/downloads.tsx
 msgid "{got} of {size}"
-msgstr ""
+msgstr "{got} / {size}"
 
 #: src/components/player/options.tsx
 msgid "{height}%"
-msgstr ""
+msgstr "%{height}"
 
 #: src/pages/settings/cache.tsx
 msgid "{help} {bytes}."
-msgstr ""
+msgstr "{help} {bytes}."
 
 #: src/components/party/party-sheet.tsx
 msgid "{host}'s party"
-msgstr ""
+msgstr "{host} kullanıcısının izleme etkinliği"
 
 #. Hours, as in 2h
 #: src/lib/format.ts
 msgid "{hours}h"
-msgstr ""
+msgstr "{hours}sa"
 
 #. Hours and minutes, as in 1h 15m
 #: src/lib/format.ts
 msgid "{hours}h {rest}m"
-msgstr ""
+msgstr "{hours}sa {rest}dk"
 
 #: src/pages/history.tsx
 msgid "{inProgress, plural, one {# in progress} other {# in progress}}"
-msgstr ""
+msgstr "{inProgress, plural, one {# devam ediyor} other {# devam ediyor}}"
 
 #: src/components/shortcut-settings.tsx
 msgid "{key} is taken by {taken}"
-msgstr ""
+msgstr "{key}, {taken} tarafından kullanılıyor"
 
 #: src/pages/downloads.tsx
 msgid "{left} left"
-msgstr ""
+msgstr "{left} ayrıldı"
 
 #: src/components/party/party-sheet.tsx
 msgid "{members, plural, one {# watching} other {# watching}}"
-msgstr ""
+msgstr "{members, plural, one {# izliyor} other {# izliyor}}"
 
 #. Minutes, as in 45m
 #: src/lib/format.ts
 msgid "{minutes}m"
-msgstr ""
+msgstr "{minutes}dk"
 
 #: src/pages/history.tsx
 msgid "{movieCount, plural, one {# movie watched} other {# movies watched}}"
-msgstr ""
+msgstr "{movieCount, plural, one {# film izlendi} other {# film izlendi}}"
 
 #: src/pages/history.tsx
 msgid "{movieCount, plural, one {# movie} other {# movies}}"
-msgstr ""
+msgstr "{movieCount, plural, one {# film} other {# film}}"
 
 #: src/pages/history.tsx
 msgid "{movies} and {episodes} watched"
-msgstr ""
+msgstr "{movies} ve {episodes} izlendi"
 
 #: src/pages/settings/playback.tsx
 msgid "{n, plural, one {After # episode} other {After # episodes}}"
-msgstr ""
+msgstr "{n, plural, one {# bölümden sonra} other {# bölümden sonra}}"
 
 #: src/components/party/party-host.tsx
 msgid "{name} joined the party"
-msgstr ""
+msgstr "{name} etkinliğe katıldı"
 
 #: src/components/party/party-host.tsx
 msgid "{name} left the party"
-msgstr ""
+msgstr "{name} etkinlikten ayrıldı"
 
 #: src/components/version-picker.tsx
 msgid "{others, plural, one {Pick the version to download. The other episode gets the same release where it has it.} other {Pick the version to download. The other # episodes get the same release where they have it.}}"
-msgstr ""
+msgstr "{others, plural, one {İndirilecek sürümü seçin. Diğer bölüm için de bulunabiliyorsa aynı sürüm kullanılır.} other {İndirilecek sürümü seçin. Diğer # bölüm için de bulunabiliyorsa aynı sürüm kullanılır.}}"
 
 #: src/components/version-settings.tsx
 msgid "{packCount, plural, one {# pack} other {# packs}}"
-msgstr ""
+msgstr "{packCount, plural, one {# paket} other {# paket}}"
 
 #: src/components/version-settings.tsx
 msgid "{packs} and {own}"
-msgstr ""
+msgstr "{packs} ve {own}"
 
 #: src/pages/settings/playback.tsx
 msgid "{r}×"
-msgstr ""
+msgstr "x{r}"
 
 #: src/lib/party/party.ts
 msgid "{relay} didn't answer."
-msgstr ""
+msgstr "{relay} yanıt vermedi."
 
 #: src/pages/history.tsx
 msgid "{removed, plural, one {Removed # from the history} other {Removed # from the history}}"
-msgstr ""
+msgstr "{removed, plural, one {# geçmişten kaldırıldı} other {# geçmişten kaldırıldı}}"
 
 #: src/components/party/party-sheet.tsx
 msgid "{rest, plural, one {# more} other {# more}}"
-msgstr ""
+msgstr "{rest, plural, one {# tane daha} other {# tane daha}}"
 
 #: src/pages/settings/playback.tsx
 msgid "{s}%"
-msgstr ""
+msgstr "%{s}"
 
 #: src/components/party/party-sheet.tsx
 msgid "{seconds}s ahead"
-msgstr ""
+msgstr "{seconds}s ileride"
 
 #: src/components/party/party-sheet.tsx
 msgid "{seconds}s behind"
-msgstr ""
+msgstr "{seconds}s geride"
 
 #: src/pages/history.tsx
 msgid "{selected, plural, one {# selected} other {# selected}}"
-msgstr ""
+msgstr "{selected, plural, one {# seçildi} other {# seçildi}}"
 
 #: src/components/player/keys.ts
 msgid "{shown}×"
-msgstr ""
+msgstr "x{shown}"
 
 #: src/components/player/controls.tsx
 msgid "{stepSeconds, plural, one {Back # second} other {Back # seconds}}"
-msgstr ""
+msgstr "{stepSeconds, plural, one {# saniye geri sar} other {# saniye geri sar}}"
 
 #: src/components/player/controls.tsx
 msgid "{stepSeconds, plural, one {Forward # second} other {Forward # seconds}}"
-msgstr ""
+msgstr "{stepSeconds, plural, one {# saniye ileri sar} other {# saniye ileri sar}}"
 
 #: src/pages/history.tsx
 msgid "{time} watched"
-msgstr ""
+msgstr "{time} izlendi"
 
 #: src/lib/party/follow.ts
 msgid "{title} isn't on your server."
-msgstr ""
+msgstr "{title} sunucunuzda bulunmuyor."
 
 #: src/pages/discover.tsx
 msgid "{total, plural, one {# title} other {# titles}}"
-msgstr ""
+msgstr "{total, plural, one {# başlık} other {# başlık}}"
 
 #: src/components/player/options.tsx
 msgid "{unread, plural, one {Watch party, # new message} other {Watch party, # new messages}}"
-msgstr ""
+msgstr "{unread, plural, one {İzleme etkinliği, # yeni mesaj} other {İzleme etkinliği, # yeni mesaj}}"
 
 #. Each {name} is written in the player link as it is here.
 #: src/pages/settings/playback.tsx
@@ -601,7 +602,7 @@ msgstr ""
 #: src/components/remote-sheet.tsx
 #: src/pages/settings/index.tsx
 msgid "Audio"
-msgstr ""
+msgstr "Ses"
 
 #: src/pages/settings/audio.tsx
 msgid "Audio description, narrating what is on screen"
@@ -956,7 +957,7 @@ msgstr ""
 
 #: src/lib/i18n.ts
 msgid "Confirm"
-msgstr ""
+msgstr "Onayla"
 
 #: src/pages/servers.tsx
 msgid "Connect"
@@ -1030,7 +1031,7 @@ msgstr ""
 
 #: src/components/crash-report.tsx
 msgid "Could not copy it"
-msgstr ""
+msgstr "Kopyalanamadı"
 
 #: src/components/party/party-sheet.tsx
 msgid "Could not copy the code"
@@ -1967,11 +1968,11 @@ msgstr ""
 
 #: src/pages/settings/apps.tsx
 msgid "Keeps the sound going with the screen off, or when you leave without picture-in-picture."
-msgstr ""
+msgstr "Ekran kapalıyken ya da resim içinde resim aktif olmadan uygulamadan ayrıldığınızda ses çalmaya devam eder."
 
 #: src/pages/settings/apps.tsx
 msgid "Keeps the video playing in a small window when you leave the app."
-msgstr ""
+msgstr "Uygulamadan çıkış yapıldığı zaman videoyu küçük pencerede oynatmaya devam eder."
 
 #: src/pages/settings/common.tsx
 msgid "Kept on this device."
@@ -2285,7 +2286,7 @@ msgstr ""
 #: src/components/player/volume.tsx
 #: src/lib/input/actions.ts
 msgid "Mute"
-msgstr ""
+msgstr "Sesi kapat"
 
 #: src/lib/input/keys.ts
 msgid "Mute key"
@@ -2294,11 +2295,11 @@ msgstr ""
 #: src/components/playlists.tsx
 #: src/components/version-settings.tsx
 msgid "Name"
-msgstr ""
+msgstr "İsim"
 
 #: src/pages/settings/interface.tsx
 msgid "Navigation"
-msgstr ""
+msgstr "Navigasyon"
 
 #: src/pages/sign-in.tsx
 msgid "Needed to switch to this user."
@@ -2310,25 +2311,25 @@ msgstr ""
 
 #: src/pages/settings/playback.tsx
 msgid "Never"
-msgstr ""
+msgstr "Asla"
 
 #: src/pages/sign-in.tsx
 msgid "New code"
-msgstr ""
+msgstr "Yeni kod"
 
 #: src/components/playlists.tsx
 msgid "New playlist"
-msgstr ""
+msgstr "Yeni oynatma listesi"
 
 #: src/components/player/controls.tsx
 #: src/components/remote-sheet.tsx
 #: src/lib/i18n.ts
 msgid "Next"
-msgstr ""
+msgstr "Sonraki"
 
 #: src/lib/input/actions.ts
 msgid "Next audio track"
-msgstr ""
+msgstr "Sonraki ses parçası"
 
 #: src/lib/input/actions.ts
 msgid "Next chapter"
@@ -2339,7 +2340,7 @@ msgstr ""
 #: src/lib/input/actions.ts
 #: src/pages/settings/playback.tsx
 msgid "Next episode"
-msgstr ""
+msgstr "Sonraki bölüm"
 
 #: src/pages/settings/index.tsx
 msgid "Next episode, controls and players"
@@ -2378,7 +2379,7 @@ msgstr ""
 
 #: src/pages/settings/apps.tsx
 msgid "Nightly"
-msgstr ""
+msgstr "En son sürüm (Nightly)"
 
 #: src/pages/settings/apps.tsx
 msgid "Nightly builds come from every change, ahead of releases, and can break."
@@ -3460,7 +3461,7 @@ msgstr ""
 
 #: src/pages/settings/interface.tsx
 msgid "Row"
-msgstr ""
+msgstr "Sıra"
 
 #: src/pages/settings/cache.tsx
 msgid "Rows, catalogs and the calendar."
@@ -3503,7 +3504,7 @@ msgstr ""
 
 #: src/components/crash-report.tsx
 msgid "Save report"
-msgstr ""
+msgstr "Raporu kaydet"
 
 #: src/pages/settings/cache.tsx
 msgid "Save searches"
@@ -3598,7 +3599,7 @@ msgstr ""
 #: src/lib/input/actions.ts
 #: src/pages/history.tsx
 msgid "Select"
-msgstr ""
+msgstr "Seç"
 
 #: src/pages/history.tsx
 msgid "Select all"
@@ -4019,7 +4020,7 @@ msgstr ""
 
 #: src/components/player/options.tsx
 msgid "Stretch"
-msgstr ""
+msgstr "Uzat"
 
 #: src/pages/item.tsx
 msgid "Studios"
@@ -4119,7 +4120,7 @@ msgstr ""
 
 #: src/pages/settings/theme.tsx
 msgid "Sun"
-msgstr ""
+msgstr "Güneş"
 
 #: src/lib/i18n.ts
 msgid "Support AIOStreams"
@@ -4235,7 +4236,7 @@ msgstr ""
 
 #: src/lib/party/party.ts
 msgid "That party has ended."
-msgstr ""
+msgstr "İzleme etkinliği bitti."
 
 #: src/lib/party/party.ts
 msgid "That party is full."
@@ -4387,7 +4388,7 @@ msgstr ""
 
 #: src/lib/party/party.ts
 msgid "The relay could not read that."
-msgstr ""
+msgstr "Ara sunucu bunu okuyamadı."
 
 #: src/pages/settings/downloads.tsx
 msgid "The rest wait their turn."
@@ -4478,7 +4479,7 @@ msgstr ""
 
 #: src/pages/sign-in.tsx
 msgid "This code has expired."
-msgstr ""
+msgstr "Bu kodun süresi doldu."
 
 #: src/lib/hosts/shell/index.ts
 msgid "This copy does not update itself."
@@ -4612,7 +4613,7 @@ msgstr ""
 
 #: src/lib/hosts/shell/player.ts
 msgid "Tracks"
-msgstr ""
+msgstr "Ses parçaları"
 
 #: src/lib/playback/trailers.ts
 msgid "Trailer"
@@ -4760,7 +4761,7 @@ msgstr ""
 
 #: src/pages/settings/theme.tsx
 msgid "Use this server's CSS"
-msgstr ""
+msgstr "Bu sunucunun CSS'ini kullan"
 
 #: src/pages/sign-in.tsx
 msgid "Use your configuration’s UUID or alias and its password."
@@ -4838,7 +4839,7 @@ msgstr ""
 
 #: src/pages/settings/playback.tsx
 msgid "Versions play in the app, with its controls and playback settings. Choose another player to open them in it instead."
-msgstr ""
+msgstr "Versiyonlar uygulama içinde kendi kontrolleri ve oynatma ayarları ile oynar. Bunun yerine onları açmak için başka bir oyuncu seçin."
 
 #: src/pages/settings/playback.tsx
 msgid "Versions play in this browser. Choose another player to open them in it instead."
@@ -5094,7 +5095,7 @@ msgstr ""
 
 #: src/pages/sign-in.tsx
 msgid "Who's watching?"
-msgstr ""
+msgstr "Kim izliyor?"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Width"
