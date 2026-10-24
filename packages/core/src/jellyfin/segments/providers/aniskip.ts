@@ -88,7 +88,10 @@ async function query(
       },
     }
   );
-  // 404 is its normal "nothing submitted", not a fault.
+  // 404 is its normal "nothing submitted", not a fault. A rate limit or a
+  // server error is thrown so it is not remembered as a miss.
+  if (response.status === 429 || response.status >= 500)
+    throw new Error(`AniSkip answered ${response.status}`);
   if (!response.ok) return [];
   const body = (await response.json()) as AniSkipResponse;
   if (!body?.found || !Array.isArray(body.results)) return [];
