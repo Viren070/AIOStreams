@@ -2,6 +2,7 @@ import { AnimeDatabase } from '../../anime-database/index.js';
 import type { AnimeEntry } from '../../anime-database/types.js';
 import { config as appConfig } from '../../config/index.js';
 import { IdMappingDataset } from '../../metadata/id-mappings.js';
+import { IMDBMetadata } from '../../metadata/imdb.js';
 import { Cache } from '../../utils/cache.js';
 import {
   DistributedLock,
@@ -12,6 +13,7 @@ import { IdParser, type IdType } from '../../utils/id-parser.js';
 import { createLogger } from '../../logging/logger.js';
 import type { ContentDescriptor } from '../types.js';
 import { SEGMENT_PROVIDER_REGISTRY } from './providers/index.js';
+import { entryEpisode, needsVideos, type ShowVideo } from './anime-episode.js';
 import type {
   ProviderContext,
   Segment,
@@ -46,7 +48,7 @@ const cache = Cache.getInstance<string, Segment[]>('jellyfin-segments', 40_000);
 const MIN_SEGMENT_MS = 1000;
 
 /** Bumped when a provider changes what it returns, so old answers retire. */
-const KEY_VERSION = 'v2';
+const KEY_VERSION = 'v3';
 
 function contextFor(
   id: SegmentProviderId,
@@ -150,21 +152,64 @@ function tmdbEpisodesOf(
   return out;
 }
 
+/** Cinemeta's episode list, which IMDb-numbered anime spanning several seasons is counted through. */
+async function showVideos(imdbId: string): Promise<ShowVideo[] | undefined> {
+  try {
+    const meta = await new IMDBMetadata().getCinemetaData(imdbId, 'series');
+    return (meta.videos ?? []).map((video) => ({
+      season: video.season,
+      episode: video.episode ?? (video as { number?: number }).number,
+    }));
+  } catch (error) {
+    logger.debug(
+      { err: error instanceof Error ? error.message : String(error) },
+      'segment episode list failed'
+    );
+    return undefined;
+  }
+}
+
+/** What `fillIds` could not settle, so a provider left without its ids is not taken to have nothing. */
+export interface Resolution {
+  /** A lookup the ids come from failed; ids it would have added may exist. */
+  idsFailed: boolean;
+  /** The episode list `animeEpisode` is counted through could not be fetched. */
+  animeEpisodeFailed: boolean;
+  /**
+   * Settles once `animeEpisode` is final. Only an entry counted through
+   * Cinemeta's episode list (over a megabyte for One Piece) waits on a
+   * request, and only providers that need the number wait for it.
+   */
+  animeEpisode: Promise<void>;
+}
+
 /** The anime database resolves per season, so a second cour keys as itself rather than as its first. */
-async function fillIds(
+export async function fillIds(
   lookup: SegmentLookup,
   providers: SegmentProviderId[]
-): Promise<void> {
+): Promise<Resolution> {
+  const resolution: Resolution = {
+    idsFailed: false,
+    animeEpisodeFailed: false,
+    animeEpisode: Promise.resolve(),
+  };
   const needed = new Set<SegmentIdKey>();
   for (const id of providers) {
     for (const key of SEGMENT_PROVIDER_REGISTRY[id].idKeys) needed.add(key);
   }
   const missing = () => [...needed].some((key) => !lookup.ids[key]);
   const stated = ID_TYPES.find(([key]) => lookup.ids[key]);
-  if (!stated) return;
+  if (!stated) return resolution;
+  const statedId = lookup.ids[stated[0]] as string;
   const animeStated = ANIME_KEYS.has(stated[0]);
   const wantsTmdbNumbering =
     needed.has('tmdb') && lookup.kind === 'episode' && stated[0] !== 'tmdb';
+  const wantsAnimeEpisode = needed.has('mal') && lookup.kind === 'episode';
+  // An anime id already numbers episodes within its own entry.
+  if (wantsAnimeEpisode && animeStated && lookup.episode)
+    lookup.animeEpisode = lookup.episode;
+  const animeEpisodeMissing = () =>
+    wantsAnimeEpisode && lookup.animeEpisode === undefined;
 
   const fromDataset = () => {
     const mediaType = lookup.kind === 'movie' ? 'movie' : 'series';
@@ -187,6 +232,7 @@ async function fillIds(
       if (mapped.tvdbId && !lookup.ids.tvdb)
         lookup.ids.tvdb = String(mapped.tvdbId);
     } catch (error) {
+      resolution.idsFailed = true;
       logger.debug(
         { err: error instanceof Error ? error.message : String(error) },
         'segment id mapping failed'
@@ -195,12 +241,13 @@ async function fillIds(
   };
 
   fromDataset();
-  if (!missing() && !wantsTmdbNumbering) return;
+  if (!missing() && !wantsTmdbNumbering && !animeEpisodeMissing())
+    return resolution;
 
   try {
     const entry = await AnimeDatabase.getInstance().getEntryById(
       stated[1],
-      lookup.ids[stated[0]] as string,
+      statedId,
       lookup.season,
       lookup.episode
     );
@@ -211,6 +258,30 @@ async function fillIds(
         if (value != null && value !== '') lookup.ids[key] = String(value);
       }
     }
+    if (entry && animeEpisodeMissing()) {
+      const count = (videos?: ShowVideo[]) => {
+        const inEntry = entryEpisode(
+          entry,
+          stated[0],
+          statedId,
+          lookup.season,
+          lookup.episode,
+          videos
+        );
+        if (inEntry !== null) lookup.animeEpisode = inEntry;
+      };
+      if (
+        needsVideos(entry, stated[0], statedId, lookup.season) &&
+        lookup.ids.imdb
+      ) {
+        resolution.animeEpisode = showVideos(lookup.ids.imdb).then((videos) => {
+          if (videos) count(videos);
+          else resolution.animeEpisodeFailed = true;
+        });
+      } else {
+        count();
+      }
+    }
     if (wantsTmdbNumbering) {
       lookup.tmdbEpisodes = entry
         ? tmdbEpisodesOf(entry, lookup, stated[0])
@@ -219,6 +290,7 @@ async function fillIds(
           : undefined;
     }
   } catch (error) {
+    resolution.idsFailed = true;
     logger.debug(
       { err: error instanceof Error ? error.message : String(error) },
       'segment id lookup failed'
@@ -226,6 +298,7 @@ async function fillIds(
     if (animeStated && wantsTmdbNumbering) lookup.tmdbEpisodes = [];
   }
   fromDataset();
+  return resolution;
 }
 
 export function lookupFor(
@@ -354,19 +427,25 @@ export async function segmentsFor(
 
   const uncached = providers.filter((id) => !results.has(id));
   if (uncached.length) {
-    await fillIds(lookup, uncached);
+    const resolution = await fillIds(lookup, uncached);
     const settings = appConfig.jellyfin.segments;
     const fetches = uncached.map(async (id) => {
       const provider = SEGMENT_PROVIDER_REGISTRY[id];
       const ctx = contextFor(id, credentials);
       const key = keys.get(id)!;
       try {
+        const needsEpisode = provider.idKeys.includes('mal');
+        if (needsEpisode) await resolution.animeEpisode;
         const { result } = await DistributedLock.getInstance().withLock(
           `jellyfin-segments:${key}`,
           async () => {
-            const segments = provider.supports(lookup, ctx)
-              ? await provider.fetch(lookup, ctx)
-              : [];
+            const supported = provider.supports(lookup, ctx);
+            // Ids a failed lookup left out are not a miss: nothing was asked.
+            const unresolved =
+              resolution.idsFailed ||
+              (needsEpisode && resolution.animeEpisodeFailed);
+            if (!supported && unresolved) return [];
+            const segments = supported ? await provider.fetch(lookup, ctx) : [];
             // Misses are cached so uncovered shows are not re-asked. Failures
             // are not: one configuration's bad key must not blank a provider
             // for the others.
