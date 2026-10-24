@@ -17,22 +17,29 @@ export class JellyfinRepository {
   static async rememberIds(
     entries: { id: string; payload: unknown }[]
   ): Promise<void> {
-    if (!entries.length) return;
+    const byId = new Map(entries.map((e) => [e.id, e]));
+    // Key order, so concurrent writers lock rows alike.
+    const wanted = [...byId.keys()].sort().map((id) => byId.get(id)!);
     const now = Date.now();
-    for (let i = 0; i < entries.length; i += CHUNK) {
-      const slice = entries.slice(i, i + CHUNK);
-      const values = join(
-        slice.map((e) => sql`(${e.id}, ${JSON.stringify(e.payload)}, ${now})`)
+    const stale = now - SEEN_REFRESH_MS;
+    for (let i = 0; i < wanted.length; i += CHUNK) {
+      const slice = wanted.slice(i, i + CHUNK);
+      // Filtered here: a seen_at condition can steer the planner onto that index.
+      const seen = new Map(
+        (
+          await getDb().query<{ id: string; seen_at: number | string }>(
+            sql`SELECT id, seen_at FROM jellyfin_id_map
+                 WHERE id IN (${join(slice.map((e) => sql`${e.id}`))})`
+          )
+        ).map((r) => [r.id, Number(r.seen_at)])
       );
+      const due = slice.filter((e) => (seen.get(e.id) ?? 0) < stale);
+      if (!due.length) continue;
       await getDb().exec(
         sql`INSERT INTO jellyfin_id_map (id, payload, seen_at)
-            VALUES ${values}
-            ON CONFLICT(id) DO NOTHING`
-      );
-      await getDb().exec(
-        sql`UPDATE jellyfin_id_map SET seen_at = ${now}
-            WHERE id IN (${join(slice.map((e) => sql`${e.id}`))})
-              AND seen_at < ${now - SEEN_REFRESH_MS}`
+            VALUES ${join(due.map((e) => sql`(${e.id}, ${JSON.stringify(e.payload)}, ${now})`))}
+            ON CONFLICT(id) DO UPDATE SET seen_at = excluded.seen_at
+            WHERE jellyfin_id_map.seen_at < ${stale}`
       );
     }
   }
