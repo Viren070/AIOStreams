@@ -10,13 +10,4 @@
     <string name="tap_to_open">Appuyez sur pour ouvrir</string>
     <string name="update_no_build">Pas de construction pour le processeur de cet appareil</string>
     <string name="update_damaged">Le téléchargement a été endommagé</string>
-    <string name="update_install_failed"/>
-    <string name="update_feed_answered"/>
-    <string name="download_folder_title"/>
-    <string name="download_folder_free"/>
-    <string name="file_saved"/>
-    <string name="file_not_saved"/>
-    <string name="webview_version_unknown"/>
-    <string name="webview_too_old"/>
-    <string name="webview_update"/>
 </resources>
