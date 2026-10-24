@@ -6,10 +6,10 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Weblate 2026.11.dev0\n"
 "Language: es\n"
-"Last-Translator: Nathan Lowe <njlowe21@users.noreply.hosted.weblate.org>\n"
+"Last-Translator: Sebastian Porta <spg76@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Spanish <https://hosted.weblate.org/projects/aiostreams/web-app/es/>\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"PO-Revision-Date: 2026-10-24 00:24+0000\n"
+"PO-Revision-Date: 2026-10-24 12:22+0000\n"
 
 #: src/components/party/party-sheet.tsx
 msgid "(you)"
@@ -17,31 +17,31 @@ msgstr "(tú)"
 
 #: src/pages/sign-in.tsx
 msgid "{address} did not answer. Check that it is running, then try again."
-msgstr ""
+msgstr "{address} no respondió. Comprueba que esté en funcionamiento y vuelve a intentarlo."
 
 #: src/components/version-settings.tsx
 msgid "{badgeCount, plural, one {# badge of your own} other {# badges of your own}}"
-msgstr ""
+msgstr "{badgeCount, plural, one {# insignia propia} other {# insignias propias}}"
 
 #: src/pages/history.tsx
 msgid "{cleared, plural, one {Removed # title from the history} other {Removed # titles from the history}}"
-msgstr ""
+msgstr "{cleared, plural, one {# título eliminado del historial} other {# títulos eliminados del historial}}"
 
 #: src/components/version-settings.tsx
 msgid "{count, plural, one {# badge} other {# badges}}"
-msgstr ""
+msgstr "{count, plural, one {# insignia} other {# insignias}}"
 
 #: src/pages/settings/playback.tsx
 msgid "{count, plural, one {# minute} other {# minutes}}"
-msgstr ""
+msgstr "{count, plural, one {# minuto} other {# minutos}}"
 
 #: src/pages/settings/playback.tsx
 msgid "{count, plural, one {# second} other {# seconds}}"
-msgstr ""
+msgstr "{count, plural, one {# segundo} other {# segundos}}"
 
 #: src/components/playlists.tsx
 msgid "{count, plural, one {# title} other {# titles}}"
-msgstr ""
+msgstr "{count, plural, one {# título} other {# títulos}}"
 
 #: src/components/party/party-sheet.tsx
 msgid "{count, plural, one {# watching · on {on}} other {# watching · on {on}}}"
@@ -49,44 +49,44 @@ msgstr ""
 
 #: src/components/version-settings.tsx
 msgid "{count, plural, one {Added # badge} other {Added # badges}}"
-msgstr ""
+msgstr "{count, plural, one {# Insignia agregada} other {# Insignias agregadas}}"
 
 #: src/components/version-settings.tsx
 msgid "{count, plural, one {Added # quick filter} other {Added # quick filters}}"
-msgstr ""
+msgstr "{count, plural, one {# Filtro rápido agregado} other {# Filtros rápidos agregados}}"
 
 #: src/lib/downloads/index.ts
 msgid "{count, plural, one {Download added} other {# downloads added}}"
-msgstr ""
+msgstr "{count, plural, one {Descarga agregada} other {# descargas agregadas}}"
 
 #: src/components/trailers.tsx
 msgid "{count, plural, one {Trailer} other {Trailers}}"
-msgstr ""
+msgstr "{count, plural, one {Trailer} other {Trailers}}"
 
 #: src/pages/downloads.tsx
 msgid "{downloaded} downloaded"
-msgstr ""
+msgstr "{downloaded} descargado"
 
 #: src/pages/history.tsx
 msgid "{episodeCount, plural, one {# episode watched} other {# episodes watched}}"
-msgstr ""
+msgstr "{episodeCount, plural, one {# episodio visto} other {# episodios vistos}}"
 
 #: src/pages/downloads.tsx
 #: src/pages/history.tsx
 msgid "{episodeCount, plural, one {# episode} other {# episodes}}"
-msgstr ""
+msgstr "{episodeCount, plural, one {# episodio} other {# episodios}}"
 
 #: src/pages/history.tsx
 msgid "{favorites, plural, one {# favourite} other {# favourites}}"
-msgstr ""
+msgstr "{favorites, plural, one {# favorito} other {# favoritos}}"
 
 #: src/pages/settings/downloads.tsx
 msgid "{folder}. New downloads go here; ones already saved stay where they are."
-msgstr ""
+msgstr "{folder}. Las nuevas descargas van aquí; las que ya están guardadas se quedan donde están."
 
 #: src/components/version-picker.tsx
 msgid "{found, plural, one {# version} other {# versions}}"
-msgstr ""
+msgstr "{found, plural, one {# versión} other {# versiones}}"
 
 #: src/components/version-picker.tsx
 msgid "{found, plural, one {Filter # version} other {Filter # versions}}"
@@ -106,17 +106,17 @@ msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "{host}'s party"
-msgstr ""
+msgstr "Fiesta de {host}"
 
 #. Hours, as in 2h
 #: src/lib/format.ts
 msgid "{hours}h"
-msgstr ""
+msgstr "{hours}h"
 
 #. Hours and minutes, as in 1h 15m
 #: src/lib/format.ts
 msgid "{hours}h {rest}m"
-msgstr "{hours}h {rest}m"
+msgstr "{hours}h {rest}min"
 
 #: src/pages/history.tsx
 msgid "{inProgress, plural, one {# in progress} other {# in progress}}"
@@ -137,7 +137,7 @@ msgstr ""
 #. Minutes, as in 45m
 #: src/lib/format.ts
 msgid "{minutes}m"
-msgstr "{minutes}m"
+msgstr "{minutes}min"
 
 #: src/pages/history.tsx
 msgid "{movieCount, plural, one {# movie watched} other {# movies watched}}"
