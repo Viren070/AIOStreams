@@ -9,7 +9,7 @@ msgstr ""
 "Last-Translator: Sebastian Porta <spg76@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Spanish <https://hosted.weblate.org/projects/aiostreams/web-app/es/>\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"PO-Revision-Date: 2026-10-24 12:22+0000\n"
+"PO-Revision-Date: 2026-10-24 15:40+0000\n"
 
 #: src/components/party/party-sheet.tsx
 msgid "(you)"
@@ -120,11 +120,11 @@ msgstr "{hours}h {rest}min"
 
 #: src/pages/history.tsx
 msgid "{inProgress, plural, one {# in progress} other {# in progress}}"
-msgstr ""
+msgstr "{inProgress, plural, one {# en progreso} other {# en progreso}}"
 
 #: src/components/shortcut-settings.tsx
 msgid "{key} is taken by {taken}"
-msgstr ""
+msgstr "{key} está tomada por {taken}"
 
 #: src/pages/downloads.tsx
 msgid "{left} left"
@@ -132,7 +132,7 @@ msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "{members, plural, one {# watching} other {# watching}}"
-msgstr ""
+msgstr "{members, plural, one {# mirando} other {# mirando}}"
 
 #. Minutes, as in 45m
 #: src/lib/format.ts
@@ -141,31 +141,31 @@ msgstr "{minutes}min"
 
 #: src/pages/history.tsx
 msgid "{movieCount, plural, one {# movie watched} other {# movies watched}}"
-msgstr ""
+msgstr "{movieCount, plural, one {# película vista} other {# películas vistas}}"
 
 #: src/pages/history.tsx
 msgid "{movieCount, plural, one {# movie} other {# movies}}"
-msgstr ""
+msgstr "{movieCount, plural, one {# película} other {# películas}}"
 
 #: src/pages/history.tsx
 msgid "{movies} and {episodes} watched"
-msgstr ""
+msgstr "{movies} y {episodes} vistos"
 
 #: src/pages/settings/playback.tsx
 msgid "{n, plural, one {After # episode} other {After # episodes}}"
-msgstr ""
+msgstr "{n, plural, one {After # episodio} other {After # episodios}}"
 
 #: src/components/party/party-host.tsx
 msgid "{name} joined the party"
-msgstr ""
+msgstr "{name} se unió al grupo"
 
 #: src/components/party/party-host.tsx
 msgid "{name} left the party"
-msgstr ""
+msgstr "{name} dejó el grupo"
 
 #: src/components/version-picker.tsx
 msgid "{others, plural, one {Pick the version to download. The other episode gets the same release where it has it.} other {Pick the version to download. The other # episodes get the same release where they have it.}}"
-msgstr ""
+msgstr "{others, plural, one {Elige la versión que deseas descargar. El otro episodio cuenta con la misma edición, allí donde esté disponible.} other {Elige la versión que deseas descargar. Los otros # episodios cuentan con la misma edición, allí donde estén disponibles.}}"
 
 #: src/components/version-settings.tsx
 msgid "{packCount, plural, one {# pack} other {# packs}}"
@@ -173,7 +173,7 @@ msgstr ""
 
 #: src/components/version-settings.tsx
 msgid "{packs} and {own}"
-msgstr ""
+msgstr "{packs} y {own}"
 
 #: src/pages/settings/playback.tsx
 msgid "{r}×"
@@ -181,15 +181,15 @@ msgstr ""
 
 #: src/lib/party/party.ts
 msgid "{relay} didn't answer."
-msgstr ""
+msgstr "{relay} no respondió."
 
 #: src/pages/history.tsx
 msgid "{removed, plural, one {Removed # from the history} other {Removed # from the history}}"
-msgstr ""
+msgstr "{removed, plural, one {# eliminado del historial} other {# eliminados del historial}}"
 
 #: src/components/party/party-sheet.tsx
 msgid "{rest, plural, one {# more} other {# more}}"
-msgstr ""
+msgstr "{rest, plural, one {# más} other {# más}}"
 
 #: src/pages/settings/playback.tsx
 msgid "{s}%"
@@ -205,7 +205,7 @@ msgstr ""
 
 #: src/pages/history.tsx
 msgid "{selected, plural, one {# selected} other {# selected}}"
-msgstr ""
+msgstr "{selected, plural, one {# seleccionado} other {# seleccionados}}"
 
 #: src/components/player/keys.ts
 msgid "{shown}×"
