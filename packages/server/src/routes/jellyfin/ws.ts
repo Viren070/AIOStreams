@@ -4,6 +4,7 @@ import { WebSocketServer, type WebSocket } from 'ws';
 import {
   config as appConfig,
   createLogger,
+  extractAuth,
   getWatchStateProvider,
   itemIdForWatchRow,
   userDataFromRow,
@@ -55,16 +56,21 @@ async function mountUuid(
   return decodeURIComponent(first);
 }
 
-async function authenticateUpgrade(url: string): Promise<SocketUser | null> {
+async function authenticateUpgrade(
+  req: IncomingMessage
+): Promise<SocketUser | null> {
+  const url = req.url ?? '';
   const m = SOCKET_PATH.exec(url);
   if (!m) return null;
   const query = new URLSearchParams(url.split('?')[1] ?? '');
-  const apiKey =
-    query.get('api_key') ??
-    query.get('ApiKey') ??
-    query.get('apikey') ??
-    query.get('token') ??
-    '';
+  const { token } = extractAuth({
+    header: (name) => {
+      const value = req.headers[name];
+      return Array.isArray(value) ? value[0] : value;
+    },
+    query: Object.fromEntries(query),
+  });
+  const apiKey = token ?? query.get('token') ?? '';
   // Nothing here pushes sessions; a tool polls /Sessions once its socket fails.
   const user = apiKey ? await userForToken(apiKey) : null;
   if (!user) return null;
@@ -160,7 +166,7 @@ export function attachJellyfinWebSocket(server: HttpServer): void {
       reject(socket, 404, 'Not Found');
       return;
     }
-    void authenticateUpgrade(url)
+    void authenticateUpgrade(req)
       .then((user) => {
         if (socket.destroyed) return;
         if (!user) {
