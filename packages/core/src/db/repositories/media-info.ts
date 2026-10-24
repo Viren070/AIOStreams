@@ -353,6 +353,8 @@ export class MediaInfoRepository {
             ${r.size}, ${packInfo(texts[at])}, ${r.version}, ${r.title ?? null},
             ${listed.has(at) ? 1 : 0}, ${now}, ${now})`;
       });
+      // A batch sees only its own keys, so it may hide a row but not list one
+      // again unless the record changed.
       await getDb().exec(
         sql`INSERT INTO media_info
               (release_key, file, origin, release_files, size, info, version,
@@ -364,13 +366,17 @@ export class MediaInfoRepository {
               info = excluded.info,
               version = excluded.version,
               title = COALESCE(excluded.title, media_info.title),
-              listed = excluded.listed,
+              listed = CASE
+                WHEN media_info.version < excluded.version
+                  OR media_info.info <> excluded.info THEN excluded.listed
+                WHEN excluded.listed = 0 THEN 0
+                ELSE media_info.listed END,
               updated_at = excluded.updated_at
             WHERE media_info.version <= excluded.version
               AND (media_info.version < excluded.version
                 OR media_info.info <> excluded.info
                 OR media_info.release_files <> excluded.release_files
-                OR media_info.listed <> excluded.listed
+                OR media_info.listed > excluded.listed
                 OR (media_info.title IS NULL AND excluded.title IS NOT NULL))`
       );
     }
