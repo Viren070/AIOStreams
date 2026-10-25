@@ -73,8 +73,13 @@ msgstr "{episodeCount, plural, one {已观看 # 集} other {已观看 # 集}}"
 
 #: src/pages/downloads.tsx
 #: src/pages/history.tsx
+#: src/pages/item.tsx
 msgid "{episodeCount, plural, one {# episode} other {# episodes}}"
 msgstr "{episodeCount, plural, one {# 集} other {# 集}}"
+
+#: src/pages/calendar.tsx
+msgid "{extra, plural, one {# more} other {# more}}"
+msgstr ""
 
 #: src/pages/history.tsx
 msgid "{favorites, plural, one {# favourite} other {# favourites}}"
@@ -126,7 +131,9 @@ msgstr "{inProgress, plural, one {进行中 # 项} other {进行中 # 项}}"
 msgid "{key} is taken by {taken}"
 msgstr "{key} 已被 {taken} 占用"
 
+#: src/components/card-preview.tsx
 #: src/pages/downloads.tsx
+#: src/pages/home.tsx
 msgid "{left} left"
 msgstr "剩余 {left}"
 
@@ -195,6 +202,11 @@ msgstr "{rest, plural, one {还有 # 项} other {还有 # 项}}"
 msgid "{s}%"
 msgstr "{s}%"
 
+#. Seconds shown after skipping in the player
+#: src/components/player/feedback.tsx
+msgid "{seconds}s"
+msgstr ""
+
 #: src/components/party/party-sheet.tsx
 msgid "{seconds}s ahead"
 msgstr "快进 {seconds} 秒"
@@ -230,6 +242,10 @@ msgstr "你的服务器上没有《{title}》。"
 #: src/pages/discover.tsx
 msgid "{total, plural, one {# title} other {# titles}}"
 msgstr "{total, plural, one {# 个内容} other {# 个内容}}"
+
+#: src/pages/item.tsx
+msgid "{unaired, plural, one {# unaired} other {# unaired}}"
+msgstr ""
 
 #: src/components/player/options.tsx
 msgid "{unread, plural, one {Watch party, # new message} other {Watch party, # new messages}}"
@@ -307,6 +323,10 @@ msgstr "7.1 环绕声"
 #: src/components/version-settings.tsx
 msgid "A badge shows on each version whose text matches its pattern: the name and description your formatter writes, the file name, and the tags read from it."
 msgstr "当某个版本的文本符合标签的匹配规则时，就会显示该标签。匹配内容包括格式化器生成的名称和描述、文件名，以及从文件中读取的标签。"
+
+#: src/pages/settings/interface.tsx
+msgid "A card you rest on grows into a bigger preview with its details, while the hero rotates."
+msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "A code is looked up on the relay picked above."
@@ -467,6 +487,7 @@ msgid "Airs {day} · {until}"
 msgstr "{day} 播出 · 至 {until}"
 
 #: src/components/episodes.tsx
+#: src/pages/item.tsx
 msgid "Airs {until}"
 msgstr "播出至 {until}"
 
@@ -792,6 +813,10 @@ msgstr "无法连接到服务器"
 msgid "Cancel"
 msgstr "取消"
 
+#: src/pages/settings/interface.tsx
+msgid "Cards"
+msgstr ""
+
 #: src/components/people.tsx
 msgid "Cast"
 msgstr "投放"
@@ -868,6 +893,10 @@ msgstr "正在检查…"
 msgid "Choose"
 msgstr "选择"
 
+#: src/lib/hosts/shell/index.ts
+msgid "Choose {name}"
+msgstr ""
+
 #: src/pages/servers.tsx
 msgid "Choose a server"
 msgstr "选择服务器"
@@ -875,6 +904,10 @@ msgstr "选择服务器"
 #: src/components/item-menu.tsx
 msgid "Choose a version"
 msgstr "选择版本"
+
+#: src/lib/hosts/shell/desktop.ts
+msgid "Choose where downloads go"
+msgstr ""
 
 #: src/pages/settings/cache.tsx
 msgid "Clear"
@@ -1500,6 +1533,7 @@ msgid "Enter your password."
 msgstr "请输入密码。"
 
 #: src/components/episodes.tsx
+#: src/components/player/pause-screen.tsx
 msgid "Episode {number}"
 msgstr "第 {number} 集"
 
@@ -3142,6 +3176,7 @@ msgstr "再次按返回键退出"
 msgid "Preview"
 msgstr "预览"
 
+#: src/pages/settings/interface.tsx
 #: src/pages/settings/playback.tsx
 msgid "Previews"
 msgstr "预览片段"
@@ -3237,6 +3272,10 @@ msgstr "评分"
 #: src/pages/item.tsx
 msgid "Rate season"
 msgstr "为整季评分"
+
+#: src/components/scores.tsx
+msgid "Rating"
+msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "React with {emoji}"
@@ -3459,6 +3498,10 @@ msgstr "向右"
 msgid "Rotates through featured titles"
 msgstr "轮播精选内容"
 
+#: src/components/scores.tsx
+msgid "Rotten Tomatoes audience"
+msgstr ""
+
 #: src/pages/settings/interface.tsx
 msgid "Row"
 msgstr "行"
@@ -3582,6 +3625,10 @@ msgstr "搜索"
 #: src/lib/discord.ts
 msgid "Searching"
 msgstr "正在搜索"
+
+#: src/components/player/pause-screen.tsx
+msgid "Season {season}"
+msgstr ""
 
 #: src/components/item-menu.tsx
 msgid "See the download"
@@ -3779,6 +3826,10 @@ msgstr "侧边栏"
 msgid "Side rail runs down the side of the screen; Top tabs sit along the top of each page."
 msgstr "侧边栏沿屏幕侧边排列；顶部标签页则显示在每个页面的顶部。"
 
+#: src/pages/settings/interface.tsx
+msgid "Sidebar"
+msgstr ""
+
 #: src/pages/sign-in.tsx
 msgid "Sign in"
 msgstr "登录"
@@ -3960,6 +4011,10 @@ msgstr "空格键"
 #: src/pages/settings/cache.tsx
 msgid "Space to use"
 msgstr "可用空间"
+
+#: src/components/player/pause-screen.tsx
+msgid "Specials"
+msgstr ""
 
 #: src/components/player/options.tsx
 msgid "Speed"
@@ -4188,6 +4243,10 @@ msgstr "系统默认"
 #: src/lib/input/keys.ts
 msgid "Tab"
 msgstr "Tab 键"
+
+#: src/pages/settings/interface.tsx
+msgid "Tab names"
+msgstr ""
 
 #: src/pages/history.tsx
 msgid "Table"
@@ -5057,9 +5116,17 @@ msgstr "了解应用的开发来源，以及如何报告问题。"
 msgid "Where the navigation goes when the screen is wide enough for a sidebar, such as a tablet held sideways."
 msgstr "当屏幕足够宽、可以显示侧边栏时（例如横屏平板），设置导航栏的位置。"
 
+#: src/pages/settings/interface.tsx
+msgid "Where the navigation goes when the window is wide enough for a sidebar."
+msgstr ""
+
 #: src/pages/settings/index.tsx
 msgid "Where they go and how many run at once"
 msgstr "设置保存位置及同时运行的数量"
+
+#: src/pages/settings/interface.tsx
+msgid "Whether the bar at the bottom, and tabs along the top, name each page."
+msgstr ""
 
 #: src/pages/settings/interface.tsx
 msgid "Whether the rail names each page only while you're in it, or all the time."
@@ -5068,6 +5135,10 @@ msgstr "设置侧栏是否仅在当前页面显示页面名称，还是始终显
 #: src/pages/settings/interface.tsx
 msgid "Whether the rail names each page under its icon."
 msgstr "设置是否在侧栏图标下方显示页面名称。"
+
+#: src/pages/settings/interface.tsx
+msgid "Whether the tabs name each page beside its icon."
+msgstr ""
 
 #: src/components/shortcut-settings.tsx
 msgid "While syncing subtitles by ear."

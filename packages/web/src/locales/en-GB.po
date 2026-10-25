@@ -69,8 +69,13 @@ msgstr "{episodeCount, plural, one {# episode watched} other {# episodes watched
 
 #: src/pages/downloads.tsx
 #: src/pages/history.tsx
+#: src/pages/item.tsx
 msgid "{episodeCount, plural, one {# episode} other {# episodes}}"
 msgstr "{episodeCount, plural, one {# episode} other {# episodes}}"
+
+#: src/pages/calendar.tsx
+msgid "{extra, plural, one {# more} other {# more}}"
+msgstr "{extra, plural, one {# more} other {# more}}"
 
 #: src/pages/history.tsx
 msgid "{favorites, plural, one {# favourite} other {# favourites}}"
@@ -124,6 +129,7 @@ msgstr "{key} is taken by {taken}"
 
 #: src/components/card-preview.tsx
 #: src/pages/downloads.tsx
+#: src/pages/home.tsx
 msgid "{left} left"
 msgstr "{left} left"
 
@@ -192,6 +198,11 @@ msgstr "{rest, plural, one {# more} other {# more}}"
 msgid "{s}%"
 msgstr "{s}%"
 
+#. Seconds shown after skipping in the player
+#: src/components/player/feedback.tsx
+msgid "{seconds}s"
+msgstr "{seconds}s"
+
 #: src/components/party/party-sheet.tsx
 msgid "{seconds}s ahead"
 msgstr "{seconds}s ahead"
@@ -227,6 +238,10 @@ msgstr "{title} isn't on your server."
 #: src/pages/discover.tsx
 msgid "{total, plural, one {# title} other {# titles}}"
 msgstr "{total, plural, one {# title} other {# titles}}"
+
+#: src/pages/item.tsx
+msgid "{unaired, plural, one {# unaired} other {# unaired}}"
+msgstr "{unaired, plural, one {# unaired} other {# unaired}}"
 
 #: src/components/player/options.tsx
 msgid "{unread, plural, one {Watch party, # new message} other {Watch party, # new messages}}"
@@ -468,6 +483,7 @@ msgid "Airs {day} · {until}"
 msgstr "Airs {day} · {until}"
 
 #: src/components/episodes.tsx
+#: src/pages/item.tsx
 msgid "Airs {until}"
 msgstr "Airs {until}"
 
@@ -873,6 +889,10 @@ msgstr "Checking…"
 msgid "Choose"
 msgstr "Choose"
 
+#: src/lib/hosts/shell/index.ts
+msgid "Choose {name}"
+msgstr "Choose {name}"
+
 #: src/pages/servers.tsx
 msgid "Choose a server"
 msgstr "Choose a server"
@@ -880,6 +900,10 @@ msgstr "Choose a server"
 #: src/components/item-menu.tsx
 msgid "Choose a version"
 msgstr "Choose a version"
+
+#: src/lib/hosts/shell/desktop.ts
+msgid "Choose where downloads go"
+msgstr "Choose where downloads go"
 
 #: src/pages/settings/cache.tsx
 msgid "Clear"

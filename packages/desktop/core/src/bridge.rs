@@ -10,7 +10,7 @@ use crate::now_playing::{self, MediaKey};
 use crate::playback::{Change, Chapter, Load, PlayerState, Settings, Style, SubtitleLine, Track};
 
 /// Bumped when a message changes shape, so pages can tell shells apart.
-pub const PROTOCOL_VERSION: u32 = 2;
+pub const PROTOCOL_VERSION: u32 = 3;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -115,6 +115,8 @@ pub enum Inbound {
     /// Lets the user pick where a player is installed.
     ExternalChoose {
         player: String,
+        /// The page's translated dialog title; older pages may omit it.
+        title: Option<String>,
     },
     /// Starts the player, or keeps the one already open, for the next `loadfile`.
     ExternalOpen {
@@ -194,7 +196,10 @@ pub enum Inbound {
     /// Asks for a `download-state` answer.
     DownloadList,
     /// Lets the user pick the folder new downloads go to.
-    DownloadFolder,
+    DownloadFolder {
+        /// The page's translated dialog title; older pages may omit it.
+        title: Option<String>,
+    },
     /// Shows the downloads folder, or one download's, in the file manager.
     DownloadOpen {
         id: Option<String>,
@@ -407,5 +412,41 @@ pub fn origin(url: &str) -> Option<String> {
         Some(origin.ascii_serialization())
     } else {
         Some(format!("{}://{}", url.scheme(), url.host_str()?))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Inbound;
+
+    #[test]
+    fn picker_commands_accept_older_pages_without_titles() {
+        assert!(matches!(
+            serde_json::from_str::<Inbound>(r#"{"type":"external-choose","player":"mpv"}"#)
+                .unwrap(),
+            Inbound::ExternalChoose { title: None, .. }
+        ));
+        assert!(matches!(
+            serde_json::from_str::<Inbound>(r#"{"type":"download-folder"}"#).unwrap(),
+            Inbound::DownloadFolder { title: None }
+        ));
+    }
+
+    #[test]
+    fn picker_commands_keep_translated_unicode_titles() {
+        let choose = serde_json::from_str::<Inbound>(
+            r#"{"type":"external-choose","player":"mpv","title":"mpv konumunu seç"}"#,
+        )
+        .unwrap();
+        assert!(
+            matches!(choose, Inbound::ExternalChoose { title: Some(title), .. } if title == "mpv konumunu seç")
+        );
+        let folder = serde_json::from_str::<Inbound>(
+            r#"{"type":"download-folder","title":"İndirmelerin kaydedileceği yeri seç"}"#,
+        )
+        .unwrap();
+        assert!(
+            matches!(folder, Inbound::DownloadFolder { title: Some(title) } if title == "İndirmelerin kaydedileceği yeri seç")
+        );
     }
 }

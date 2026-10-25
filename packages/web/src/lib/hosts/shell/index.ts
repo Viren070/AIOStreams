@@ -104,7 +104,12 @@ export function useExternalPlayers(): ExternalPlayers | null {
 }
 
 export function chooseExternalPlayer(id: string): void {
-  appBridge()?.send({ type: 'external-choose', player: id });
+  const name = id;
+  appBridge()?.send({
+    type: 'external-choose',
+    player: id,
+    title: t`Choose ${name}`,
+  });
 }
 
 export type ShellInfo = ShellAnswer<'app-info'>;

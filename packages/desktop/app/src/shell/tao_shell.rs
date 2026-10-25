@@ -418,16 +418,18 @@ pub fn run(app: App) {
                     emit(Outbound::Link { url: link });
                 }
             }
-            Event::UserEvent(UserEvent::ChoosePlayer(kind)) => {
-                let title = format!("Choose {}", kind.id());
+            Event::UserEvent(UserEvent::ChoosePlayer(kind, title)) => {
+                let title = title.unwrap_or_else(|| format!("Choose {}", kind.id()));
                 if let Some(path) = platform::choose_program(&window, &title) {
                     external.set_program(kind, path);
                 }
                 emit(external.players());
             }
-            Event::UserEvent(UserEvent::ChooseDownloadFolder) => {
-                if let Some(folder) = platform::choose_folder(&window, "Choose where downloads go")
-                {
+            Event::UserEvent(UserEvent::ChooseDownloadFolder(title)) => {
+                if let Some(folder) = platform::choose_folder(
+                    &window,
+                    title.as_deref().unwrap_or("Choose where downloads go"),
+                ) {
                     downloads.send(DownloadCommand::SetFolder(folder));
                 }
             }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { t } from '@lingui/core/macro';
+import { plural, t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import {
   BiCalendarAlt,
@@ -707,6 +707,7 @@ function NextAiring({ series }: { series: BaseItemDto }) {
     (e) => e.PremiereDate && Date.parse(e.PremiereDate) > Date.now()
   );
   if (!next?.PremiereDate) return null;
+  const until = untilLabel(next.PremiereDate);
   return (
     <p
       data-ui="item-next-airing"
@@ -716,7 +717,9 @@ function NextAiring({ series }: { series: BaseItemDto }) {
       <span className="font-semibold">
         {episodeCode(next.ParentIndexNumber, next.IndexNumber)}
       </span>
-      <span>airs {untilLabel(next.PremiereDate)}</span>
+      <span>
+        <Trans>Airs {until}</Trans>
+      </span>
       <span className="text-[--muted]">{dayLabel(next.PremiereDate)}</span>
     </p>
   );
@@ -1035,10 +1038,11 @@ function seasonSummary(
   const unaired = episodes.filter(
     (e) => unavailableKind(e) === 'unaired'
   ).length;
+  const episodeCount = episodes.length;
   return [
     year,
-    `${episodes.length} episode${episodes.length === 1 ? '' : 's'}`,
-    unaired ? `${unaired} unaired` : null,
+    plural(episodeCount, { one: '# episode', other: '# episodes' }),
+    unaired ? plural(unaired, { one: '# unaired', other: '# unaired' }) : null,
   ]
     .filter(Boolean)
     .join(' · ');

@@ -73,8 +73,13 @@ msgstr "{episodeCount, plural, one {# épisode regardé} other {# épisodes rega
 
 #: src/pages/downloads.tsx
 #: src/pages/history.tsx
+#: src/pages/item.tsx
 msgid "{episodeCount, plural, one {# episode} other {# episodes}}"
 msgstr "{episodeCount, plural, one {# épisode} other {# épisodes}}"
+
+#: src/pages/calendar.tsx
+msgid "{extra, plural, one {# more} other {# more}}"
+msgstr ""
 
 #: src/pages/history.tsx
 msgid "{favorites, plural, one {# favourite} other {# favourites}}"
@@ -126,7 +131,9 @@ msgstr "{inProgress, plural, one {# en cours} other {# en cours}}"
 msgid "{key} is taken by {taken}"
 msgstr "{key} est déjà utilisé par {taken}"
 
+#: src/components/card-preview.tsx
 #: src/pages/downloads.tsx
+#: src/pages/home.tsx
 msgid "{left} left"
 msgstr "{left} restants"
 
@@ -195,6 +202,11 @@ msgstr "{rest, plural, one {# de plus} other {# de plus}}"
 msgid "{s}%"
 msgstr "{s}%"
 
+#. Seconds shown after skipping in the player
+#: src/components/player/feedback.tsx
+msgid "{seconds}s"
+msgstr ""
+
 #: src/components/party/party-sheet.tsx
 msgid "{seconds}s ahead"
 msgstr "{seconds} s d'avance"
@@ -230,6 +242,10 @@ msgstr "{title} n'est pas sur votre serveur."
 #: src/pages/discover.tsx
 msgid "{total, plural, one {# title} other {# titles}}"
 msgstr "{total, plural, one {# titre} other {# titres}}"
+
+#: src/pages/item.tsx
+msgid "{unaired, plural, one {# unaired} other {# unaired}}"
+msgstr ""
 
 #: src/components/player/options.tsx
 msgid "{unread, plural, one {Watch party, # new message} other {Watch party, # new messages}}"
@@ -307,6 +323,10 @@ msgstr "Surround 7.1"
 #: src/components/version-settings.tsx
 msgid "A badge shows on each version whose text matches its pattern: the name and description your formatter writes, the file name, and the tags read from it."
 msgstr "Un badge s'affiche sur chaque version dont le texte correspond à son motif : le nom et la description générés par votre formateur, le nom du fichier et les étiquettes lues."
+
+#: src/pages/settings/interface.tsx
+msgid "A card you rest on grows into a bigger preview with its details, while the hero rotates."
+msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "A code is looked up on the relay picked above."
@@ -467,6 +487,7 @@ msgid "Airs {day} · {until}"
 msgstr "Diffusé {day} · {until}"
 
 #: src/components/episodes.tsx
+#: src/pages/item.tsx
 msgid "Airs {until}"
 msgstr "Diffusé {until}"
 
@@ -792,6 +813,10 @@ msgstr "Impossible de joindre le serveur"
 msgid "Cancel"
 msgstr "Annuler"
 
+#: src/pages/settings/interface.tsx
+msgid "Cards"
+msgstr ""
+
 #: src/components/people.tsx
 msgid "Cast"
 msgstr "Distribution"
@@ -868,6 +893,10 @@ msgstr "Vérification…"
 msgid "Choose"
 msgstr "Choisir"
 
+#: src/lib/hosts/shell/index.ts
+msgid "Choose {name}"
+msgstr ""
+
 #: src/pages/servers.tsx
 msgid "Choose a server"
 msgstr "Choisir un serveur"
@@ -875,6 +904,10 @@ msgstr "Choisir un serveur"
 #: src/components/item-menu.tsx
 msgid "Choose a version"
 msgstr "Choisir une version"
+
+#: src/lib/hosts/shell/desktop.ts
+msgid "Choose where downloads go"
+msgstr ""
 
 #: src/pages/settings/cache.tsx
 msgid "Clear"
@@ -1500,6 +1533,7 @@ msgid "Enter your password."
 msgstr "Entrez votre mot de passe."
 
 #: src/components/episodes.tsx
+#: src/components/player/pause-screen.tsx
 msgid "Episode {number}"
 msgstr "Épisode {number}"
 
@@ -3142,6 +3176,7 @@ msgstr "Appuyez à nouveau sur Retour pour quitter"
 msgid "Preview"
 msgstr "Aperçu"
 
+#: src/pages/settings/interface.tsx
 #: src/pages/settings/playback.tsx
 msgid "Previews"
 msgstr "Aperçus"
@@ -3237,6 +3272,10 @@ msgstr "Noter"
 #: src/pages/item.tsx
 msgid "Rate season"
 msgstr "Noter la saison"
+
+#: src/components/scores.tsx
+msgid "Rating"
+msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "React with {emoji}"
@@ -3459,6 +3498,10 @@ msgstr "Droite"
 msgid "Rotates through featured titles"
 msgstr "Fait défiler les titres à la une"
 
+#: src/components/scores.tsx
+msgid "Rotten Tomatoes audience"
+msgstr ""
+
 #: src/pages/settings/interface.tsx
 msgid "Row"
 msgstr "Ligne"
@@ -3582,6 +3625,10 @@ msgstr "Recherches"
 #: src/lib/discord.ts
 msgid "Searching"
 msgstr "Recherche en cours"
+
+#: src/components/player/pause-screen.tsx
+msgid "Season {season}"
+msgstr ""
 
 #: src/components/item-menu.tsx
 msgid "See the download"
@@ -3779,6 +3826,10 @@ msgstr "Barre latérale"
 msgid "Side rail runs down the side of the screen; Top tabs sit along the top of each page."
 msgstr "La barre latérale longe le côté de l'écran ; les onglets supérieurs s'affichent en haut de chaque page."
 
+#: src/pages/settings/interface.tsx
+msgid "Sidebar"
+msgstr ""
+
 #: src/pages/sign-in.tsx
 msgid "Sign in"
 msgstr "Se connecter"
@@ -3960,6 +4011,10 @@ msgstr "Espace"
 #: src/pages/settings/cache.tsx
 msgid "Space to use"
 msgstr "Espace à allouer"
+
+#: src/components/player/pause-screen.tsx
+msgid "Specials"
+msgstr ""
 
 #: src/components/player/options.tsx
 msgid "Speed"
@@ -4188,6 +4243,10 @@ msgstr "Système par défaut"
 #: src/lib/input/keys.ts
 msgid "Tab"
 msgstr "Tab"
+
+#: src/pages/settings/interface.tsx
+msgid "Tab names"
+msgstr ""
 
 #: src/pages/history.tsx
 msgid "Table"
@@ -5057,9 +5116,17 @@ msgstr "Où l'application est développée et où signaler un problème."
 msgid "Where the navigation goes when the screen is wide enough for a sidebar, such as a tablet held sideways."
 msgstr "Emplacement de la navigation lorsque l'écran est assez large pour une barre latérale, comme une tablette en mode paysage."
 
+#: src/pages/settings/interface.tsx
+msgid "Where the navigation goes when the window is wide enough for a sidebar."
+msgstr ""
+
 #: src/pages/settings/index.tsx
 msgid "Where they go and how many run at once"
 msgstr "Emplacement de stockage et nombre de téléchargements simultanés"
+
+#: src/pages/settings/interface.tsx
+msgid "Whether the bar at the bottom, and tabs along the top, name each page."
+msgstr ""
 
 #: src/pages/settings/interface.tsx
 msgid "Whether the rail names each page only while you're in it, or all the time."
@@ -5068,6 +5135,10 @@ msgstr "Indique si la barre latérale nomme chaque page uniquement lorsque vous 
 #: src/pages/settings/interface.tsx
 msgid "Whether the rail names each page under its icon."
 msgstr "Indique si la barre latérale affiche le nom de chaque page sous son icône."
+
+#: src/pages/settings/interface.tsx
+msgid "Whether the tabs name each page beside its icon."
+msgstr ""
 
 #: src/components/shortcut-settings.tsx
 msgid "While syncing subtitles by ear."

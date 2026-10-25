@@ -38,8 +38,8 @@ pub enum UserEvent {
     WindowButtons(bool),
     Link(String),
     LinksReady,
-    ChoosePlayer(external::Kind),
-    ChooseDownloadFolder,
+    ChoosePlayer(external::Kind, Option<String>),
+    ChooseDownloadFolder(Option<String>),
 }
 
 /// The window edges the page resizes from; the system handles the others.
@@ -632,8 +632,8 @@ pub fn handle(
             }
         }
         Inbound::ExternalPlayers => emit(external.players()),
-        Inbound::ExternalChoose { player } => match external::Kind::parse(&player) {
-            Some(kind) => send(UserEvent::ChoosePlayer(kind)),
+        Inbound::ExternalChoose { player, title } => match external::Kind::parse(&player) {
+            Some(kind) => send(UserEvent::ChoosePlayer(kind, title)),
             None => log::warn!("external-choose: unknown player {player}"),
         },
         Inbound::ExternalOpen { player, title } => match external::Kind::parse(&player) {
@@ -725,7 +725,7 @@ pub fn handle(
             downloads.send(downloads::Command::Remove { id, files })
         }
         Inbound::DownloadList => downloads.send(downloads::Command::List),
-        Inbound::DownloadFolder => send(UserEvent::ChooseDownloadFolder),
+        Inbound::DownloadFolder { title } => send(UserEvent::ChooseDownloadFolder(title)),
         Inbound::DownloadOpen { id } => {
             let folder = id
                 .and_then(|id| downloads.job_folder(&id))
