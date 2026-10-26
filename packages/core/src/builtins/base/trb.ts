@@ -159,7 +159,7 @@ export abstract class TrbBaseAddon<
         );
         continue;
       }
-      const downloadUrl = `https://itorrents.org/${hash.toUpperCase()}.torrent?title=${result.name}`;
+      const downloadUrl = `https://itorrents.org/${hash.toUpperCase()}.torrent?title=${encodeURIComponent(result.name)}`;
       if (seenTorrents.has(hash)) {
         continue;
       }
