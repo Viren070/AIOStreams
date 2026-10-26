@@ -152,8 +152,22 @@ function tmdbEpisodesOf(
   return out;
 }
 
-/** Cinemeta's episode list, which IMDb-numbered anime spanning several seasons is counted through. */
-async function showVideos(imdbId: string): Promise<ShowVideo[] | undefined> {
+const fetchingVideos = new Map<string, Promise<ShowVideo[] | undefined>>();
+
+/**
+ * Cinemeta's episode list, which IMDb-numbered anime spanning several seasons is
+ * counted through; episodes of one show looked up at once share the fetch.
+ */
+function showVideos(imdbId: string): Promise<ShowVideo[] | undefined> {
+  let pending = fetchingVideos.get(imdbId);
+  if (!pending) {
+    pending = fetchVideos(imdbId).finally(() => fetchingVideos.delete(imdbId));
+    fetchingVideos.set(imdbId, pending);
+  }
+  return pending;
+}
+
+async function fetchVideos(imdbId: string): Promise<ShowVideo[] | undefined> {
   try {
     const meta = await new IMDBMetadata().getCinemetaData(imdbId, 'series');
     return (meta.videos ?? []).map((video) => ({

@@ -68,6 +68,30 @@ describe('fillIds', () => {
     assert.equal(resolution.animeEpisodeFailed, false);
   });
 
+  test("lookups of one show at once share Cinemeta's list", async (t) => {
+    let fetched = 0;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    await stub(
+      t,
+      async () => onePiece,
+      async () => {
+        fetched++;
+        await gate;
+        return { videos: [{ season: 21, episode: 1 }] };
+      }
+    );
+    const first = await fillIds(s21e1(), ['aniskip']);
+    const second = await fillIds(s21e1(), ['aniskip']);
+    release();
+    await Promise.all([first.animeEpisode, second.animeEpisode]);
+    assert.equal(fetched, 1);
+    // A settled fetch is not held, so a failure can be retried.
+    const later = await fillIds(s21e1(), ['aniskip']);
+    await later.animeEpisode;
+    assert.equal(fetched, 2);
+  });
+
   test('a failed episode list is not a miss', async (t) => {
     await stub(
       t,
