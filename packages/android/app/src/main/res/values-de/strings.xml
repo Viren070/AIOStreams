@@ -17,4 +17,6 @@
     <string name="file_not_saved">%1$s konnte nicht gespeichert werden</string>
     <string name="update_no_build">Keine Version für den Prozessor dieses Geräts verfügbar</string>
     <string name="updated_to">Aktualisiert auf %1$s</string>
+    <string name="download_folder_title">Wähle aus, wohin Downloads gespeichert werden</string>
+    <string name="download_folder_free">%1$s · %2$s frei</string>
 </resources>

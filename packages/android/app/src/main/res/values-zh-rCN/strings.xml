@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The app's own words outside the web app, in British English. Weblate adds the values-* copies. --><resources>
+    <string name="channel_downloads">下载内容</string>
+    <plurals name="downloading_items">
+        <item quantity="other">正在下载 %d 内容</item>
+    </plurals>
+    <string name="channel_updates">更新</string>
+    <string name="updated_to">已更新至 %1$s</string>
+    <string name="tap_to_open">点击打开</string>
+    <string name="update_no_build">此设备的处理器架构没有可用的版本</string>
+    <string name="update_damaged">下载的文件已损坏</string>
+    <string name="update_install_failed">安装失败：%1$s</string>
+    <string name="update_feed_answered">信息回复了 %1$d</string>
+    <string name="download_folder_title">选择下载保存位置</string>
+    <string name="download_folder_free">%1$s · %2$s 可用空间</string>
+    <string name="file_saved">已将 %1$s 保存至下载目录</string>
+    <string name="file_not_saved">无法保存 %1$s</string>
+    <string name="webview_version_unknown">未知</string>
+    <string name="webview_too_old">此设备的 WebView 版本过旧，无法运行此应用：当前版本为 %1$s，应用需要 %2$d 或更高版本。</string>
+    <string name="webview_update">请更新 Android System WebView 或系统版本，然后重新打开应用。</string>
+</resources>

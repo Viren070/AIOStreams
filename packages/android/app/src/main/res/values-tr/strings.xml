@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The app's own words outside the web app, in British English. Weblate adds the values-* copies. --><resources>
+    <string name="channel_downloads">İndirilenler</string>
+    <plurals name="downloading_items">
+        <item quantity="one">%d Paket indiriliyor</item>
+        <item quantity="other">%d Paket indiriliyor</item>
+    </plurals>
+    <string name="channel_updates">Güncellemeler</string>
+    <string name="updated_to">%1$s sürümüne güncellendi</string>
+    <string name="tap_to_open">Açmak için dokunun</string>
+    <string name="update_no_build">Bu cihazın işlemcisine uygun derleme bulunamadı</string>
+    <string name="update_damaged">İndirilen dosya hasarlı</string>
+    <string name="update_install_failed">Yükleme başarısız: %1$s</string>
+    <string name="update_feed_answered">Akış yanıt verdi: %1$d</string>
+    <string name="download_folder_title">İndirilenlerin nereye kaydedileceğini seçin</string>
+    <string name="download_folder_free">%1$s / %2$s boş</string>
+    <string name="file_saved">%1$s indirilenlere kaydedildi</string>
+    <string name="file_not_saved">%1$s kaydedilemedi</string>
+    <string name="webview_version_unknown">Bilinmiyor</string>
+    <string name="webview_too_old">Bu cihazın WebView sürümü uygulama için çok eski: Sürüm %1$s, uygulamanın istediği %2$d veya sonrası.</string>
+    <string name="webview_update">Android System WebView veya sistem sürümünü güncelleyin, sonra uygulamayı tekrar açın.</string>
+</resources>

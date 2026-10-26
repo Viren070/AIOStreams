@@ -19,4 +19,6 @@
     <string name="file_not_saved">Nie można zapisać %1$s</string>
     <string name="update_no_build">Brak wersji dla procesora tego urządzenia</string>
     <string name="updated_to">Zaktualizowano do %1$s</string>
+    <string name="download_folder_title">Wybierz miejsce zapisu pobranych plików</string>
+    <string name="download_folder_free">%1$s · %2$s wolnego</string>
 </resources>
