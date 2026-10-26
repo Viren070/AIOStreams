@@ -85,6 +85,8 @@ export function stringifyLockResult(value: unknown): string {
 }
 
 export function parseLockResult<T>(json: string): T {
+  // The reviver only rebuilds flattened errors; skip it when none are present.
+  if (!json.includes('"__lockError"')) return JSON.parse(json);
   return JSON.parse(json, (_key, val) => {
     if (!val || typeof val !== 'object' || !val.__lockError) return val;
     const ctor = resolveErrorCtor(val.className);
