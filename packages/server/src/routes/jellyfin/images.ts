@@ -194,6 +194,10 @@ function sized(url: string, width: number): string {
 let liveRelays = 0;
 
 async function relay(req: Request, res: Response, url: string) {
+  if (!/^https?:\/\//i.test(url)) {
+    res.status(404).end();
+    return;
+  }
   if (liveRelays >= appConfig.jellyfin.imageRelayConcurrency) {
     // Better a redirect the client may not follow than an unbounded queue.
     res.redirect(302, url);
@@ -240,7 +244,13 @@ async function relay(req: Request, res: Response, url: string) {
       { url, err: error instanceof Error ? error.message : String(error) },
       'image relay failed'
     );
-    if (!res.headersSent) res.redirect(302, url);
+    if (!res.headersSent) {
+      if (/^https?:\/\//i.test(url)) {
+        res.redirect(302, url);
+      } else {
+        res.status(404).end();
+      }
+    }
   } finally {
     clearTimeout(timer);
     liveRelays--;
@@ -253,7 +263,7 @@ async function itemImage(req: Request, res: Response) {
     param(req, 'itemId'),
     param(req, 'type')
   ).catch(() => null);
-  if (!url) {
+  if (!url || !/^https?:\/\//i.test(url)) {
     res.status(404).end();
     return;
   }
