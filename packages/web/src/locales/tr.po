@@ -9,7 +9,7 @@ msgstr ""
 "Last-Translator: Tugay Özgen <toxiccloud@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Turkish <https://hosted.weblate.org/projects/aiostreams/web-app/tr/>\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"PO-Revision-Date: 2026-10-25 00:44+0000\n"
+"PO-Revision-Date: 2026-10-26 05:12+0000\n"
 
 #: src/components/party/party-sheet.tsx
 msgid "(you)"
@@ -132,7 +132,7 @@ msgstr "{left} ayrıldı"
 
 #: src/components/party/party-sheet.tsx
 msgid "{members, plural, one {# watching} other {# watching}}"
-msgstr "{members, plural, one {# izliyor} other {# izliyor}}"
+msgstr "{members, plural, one {# izleyici} other {# izleyici}}"
 
 #. Minutes, as in 45m
 #: src/lib/format.ts
@@ -205,7 +205,7 @@ msgstr "{seconds}s geride"
 
 #: src/pages/history.tsx
 msgid "{selected, plural, one {# selected} other {# selected}}"
-msgstr "{selected, plural, one {# seçildi} other {# seçildi}}"
+msgstr "{selected, plural, one {# tane seçildi} other {# tane seçildi}}"
 
 #: src/components/player/keys.ts
 msgid "{shown}×"
@@ -294,7 +294,7 @@ msgstr "0'dan 9'a"
 
 #: src/lib/input/actions.ts
 msgid "1 jumps a tenth of the way in, 5 halfway and 0 back to the start."
-msgstr "\"1\" yüzde on içine, \"5\" yarısına ve \"0\" başına atlıyor."
+msgstr "\"1\" yüzde onuna, \"5\" yarısına ve \"0\" başına atlıyor."
 
 #: src/pages/settings/audio.tsx
 msgid "5.1 surround"
@@ -468,7 +468,7 @@ msgstr "Yayınlanma: {day} · {until}"
 
 #: src/components/episodes.tsx
 msgid "Airs {until}"
-msgstr "Yayınlanmasına {until}"
+msgstr "Yayınlanıyor: {until}"
 
 #: src/components/kind-tabs.tsx
 #: src/components/version-picker.tsx
@@ -539,7 +539,7 @@ msgstr "Başka ara sunucu"
 
 #: src/components/party/party-sheet.tsx
 msgid "Anyone with the invite can join, from any server."
-msgstr ""
+msgstr "Davetiyesi olan herkes, herhangi bir sunucudan katılabilir."
 
 #: src/lib/hosts/native-shell.ts
 #: src/pages/settings/index.tsx
@@ -576,7 +576,7 @@ msgstr "Hâlâ izliyor musun?"
 
 #: src/lib/i18n.ts
 msgid "Are you sure you want to continue?"
-msgstr "Devam etmek istediğine emin misin?"
+msgstr "Devam etmek istediğinize emin misiniz?"
 
 #: src/pages/settings/cache.tsx
 msgid "Artwork"
@@ -584,11 +584,11 @@ msgstr "Görsel"
 
 #: src/components/party/party-sheet.tsx
 msgid "As the host"
-msgstr "Sunucu sahibi olarak"
+msgstr "Sunucu olarak"
 
 #: src/pages/settings/playback.tsx
 msgid "Ask if you are still watching"
-msgstr "Hâlâ izleyip izlemediğinizi sor"
+msgstr "Hâlâ izlenip izlenmediğini sor"
 
 #: src/pages/settings/account.tsx
 msgid "Ask when the app opens"
@@ -675,7 +675,7 @@ msgstr "Sondan önce"
 
 #: src/pages/settings/audio.tsx
 msgid "Below zero plays the sound earlier, as for wireless headphones that lag behind the picture."
-msgstr ""
+msgstr "Sıfırın altı, görüntüye göre geciken kablosuz kulaklıklar için sesi daha erken çalar."
 
 #: src/components/player/options.tsx
 #: src/lib/input/actions.ts
@@ -814,59 +814,59 @@ msgstr "Klasörü değiştir"
 
 #: src/components/party/reaction-setting.tsx
 msgid "Change reactions"
-msgstr ""
+msgstr "Tepkileri değiştir"
 
 #: src/components/no-catalogs.tsx
 #: src/pages/settings/account.tsx
 #: src/pages/sign-in.tsx
 msgid "Change server"
-msgstr ""
+msgstr "Sunucuyu değiştir"
 
 #: src/components/input-setup.tsx
 msgid "Change shortcuts"
-msgstr ""
+msgstr "Kısayolları değiştir"
 
 #: src/components/party/party-sheet.tsx
 msgid "Change speed to catch up"
-msgstr ""
+msgstr "Yetişmek için hızı değiştir"
 
 #: src/components/version-settings.tsx
 msgid "Change these on a phone, a computer or in a browser."
-msgstr ""
+msgstr "Bunları bir telefonda, bilgisayarda veya tarayıcıda değiştir."
 
 #: src/pages/settings/apps.tsx
 msgid "Channel"
-msgstr ""
+msgstr "Kanal"
 
 #: src/pages/settings/audio.tsx
 msgid "Channels"
-msgstr ""
+msgstr "Kanallar"
 
 #: src/components/player/keys.ts
 #: src/components/player/options.tsx
 msgid "Chapter {number}"
-msgstr ""
+msgstr "Bölüm {number}"
 
 #: src/components/player/options.tsx
 msgid "Chapters"
-msgstr ""
+msgstr "Bölümler"
 
 #: src/components/party/party-sheet.tsx
 msgid "Chat"
-msgstr ""
+msgstr "Sohbet"
 
 #: src/pages/settings/apps.tsx
 msgid "Check now"
-msgstr ""
+msgstr "Şimdi kontrol et"
 
 #: src/lib/hosts/shell/index.ts
 #: src/pages/settings/apps.tsx
 msgid "Checking…"
-msgstr ""
+msgstr "Kontrol ediliyor…"
 
 #: src/pages/settings/playback.tsx
 msgid "Choose"
-msgstr ""
+msgstr "Seç"
 
 #: src/pages/servers.tsx
 msgid "Choose a server"
@@ -878,7 +878,7 @@ msgstr ""
 
 #: src/pages/settings/cache.tsx
 msgid "Clear"
-msgstr ""
+msgstr "Temizle"
 
 #: src/pages/search.tsx
 msgid "Clear all"
@@ -899,7 +899,7 @@ msgstr ""
 #: src/components/crash-report.tsx
 #: src/components/window-controls.tsx
 msgid "Close"
-msgstr ""
+msgstr "Kapat"
 
 #: src/components/party/party-sheet.tsx
 msgid "Code copied"
@@ -913,7 +913,7 @@ msgstr ""
 #: src/pages/discover.tsx
 #: src/pages/item.tsx
 msgid "Collections"
-msgstr ""
+msgstr "Koleksiyonlar"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Colour"
@@ -941,7 +941,7 @@ msgstr ""
 
 #: src/pages/settings/account.tsx
 msgid "Configuration"
-msgstr ""
+msgstr "Yapılandırma"
 
 #: src/components/send-report.tsx
 msgid "Configuration ids are left out of their copy too."
@@ -1146,11 +1146,11 @@ msgstr ""
 
 #: src/pages/settings/playback.tsx
 msgid "Countdown"
-msgstr ""
+msgstr "Geri sayım"
 
 #: src/pages/item.tsx
 msgid "Country"
-msgstr ""
+msgstr "Ülke"
 
 #: src/pages/settings/playback.tsx
 msgid "Counts down, then plays the next episode in the same kind of version. Off, the prompt waits for you."
@@ -1162,20 +1162,20 @@ msgstr ""
 
 #: src/components/playlists.tsx
 msgid "Create"
-msgstr ""
+msgstr "Oluştur"
 
 #: src/components/people.tsx
 msgid "Creator"
-msgstr ""
+msgstr "Oluşturan"
 
 #: src/pages/settings/playback.tsx
 msgid "Credits"
-msgstr ""
+msgstr "Jenerik"
 
 #: src/pages/settings/about.tsx
 msgctxt "Projects the app is built on"
 msgid "Credits"
-msgstr ""
+msgstr "Emeği geçenler"
 
 #: src/pages/settings/playback.tsx
 msgid "Credits that end an episode are left to the next episode prompt when it shows."
@@ -1287,7 +1287,7 @@ msgstr ""
 #: src/components/version-picker.tsx
 #: src/pages/item.tsx
 msgid "Details"
-msgstr ""
+msgstr "Detaylar"
 
 #: src/pages/settings/cache.tsx
 msgid "Details, seasons and episodes of what you open."
@@ -1353,7 +1353,7 @@ msgstr ""
 
 #: src/pages/settings/interface.tsx
 msgid "Docked"
-msgstr ""
+msgstr "Sabitlenmiş"
 
 #: src/pages/settings/interface.tsx
 msgid "Docked keeps it in a column of its own. Floating hovers it over the page, a little in from the edge. Corner button shrinks it to the current page's button in the top corner, which opens into the whole menu."
@@ -1361,7 +1361,7 @@ msgstr ""
 
 #: src/pages/settings/about.tsx
 msgid "Documentation"
-msgstr ""
+msgstr "Dökümentasyon"
 
 #: src/components/player/options.tsx
 msgid "Doesn't match the video's own subtitles"
@@ -1413,12 +1413,12 @@ msgstr ""
 #: src/components/download-button.tsx
 #: src/pages/downloads.tsx
 msgid "Downloaded"
-msgstr ""
+msgstr "İndirildi"
 
 #: src/components/download-button.tsx
 #: src/pages/downloads.tsx
 msgid "Downloading"
-msgstr ""
+msgstr "İndiriliyor"
 
 #: src/lib/hosts/shell/index.ts
 msgid "Downloading version {version}…"
@@ -1432,7 +1432,7 @@ msgstr ""
 #: src/pages/downloads.tsx
 #: src/pages/settings/index.tsx
 msgid "Downloads"
-msgstr ""
+msgstr "İndirilenler"
 
 #: src/pages/settings/downloads.tsx
 msgid "Downloads at once"
@@ -1444,7 +1444,7 @@ msgstr ""
 
 #: src/lib/i18n.ts
 msgid "Drawer"
-msgstr ""
+msgstr "Çekmece"
 
 #: src/pages/item.tsx
 msgid "Drop show"
@@ -1457,7 +1457,7 @@ msgstr ""
 #. An episode number, as in E04
 #: src/lib/format.ts
 msgid "E{e}"
-msgstr ""
+msgstr "{e}B"
 
 #: src/components/version-settings.tsx
 msgid "Each filter shows as a pill above the version list. Its search is words that must all appear, or a regular expression between slashes, such as /2160p|4k/. Case never matters."
@@ -1465,7 +1465,7 @@ msgstr ""
 
 #: src/components/version-settings.tsx
 msgid "Edit"
-msgstr ""
+msgstr "Düzenle"
 
 #: src/components/player/controls.tsx
 msgid "Ends at {endsAt}"
@@ -1473,11 +1473,11 @@ msgstr ""
 
 #: src/pages/settings/playback.tsx
 msgid "Engine"
-msgstr ""
+msgstr "Motor"
 
 #: src/lib/input/keys.ts
 msgid "Enter"
-msgstr ""
+msgstr "Enter"
 
 #: src/components/party/party-sheet.tsx
 msgid "Enter an invite link, or a code and its relay"
@@ -1565,7 +1565,7 @@ msgstr ""
 
 #: src/pages/settings/interface.tsx
 msgid "Fade"
-msgstr ""
+msgstr "Solma"
 
 #: src/pages/downloads.tsx
 msgid "Failed"
@@ -1775,7 +1775,7 @@ msgstr ""
 
 #: src/components/player/next-episode.tsx
 msgid "Hide"
-msgstr ""
+msgstr "Gizle"
 
 #: src/pages/history.tsx
 msgid "Hide episodes"
@@ -1788,13 +1788,13 @@ msgstr ""
 #. Holding the next key down, as in Hold + Enter
 #: src/lib/input/keys.ts
 msgid "Hold"
-msgstr ""
+msgstr "Basılı tut"
 
 #: src/components/layout.tsx
 #: src/lib/input/actions.ts
 #: src/pages/settings/apps.tsx
 msgid "Home"
-msgstr ""
+msgstr "Ana sayfa"
 
 #: src/pages/settings/interface.tsx
 msgid "Home and grids"
@@ -1806,7 +1806,7 @@ msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "Host"
-msgstr ""
+msgstr "Sunucu"
 
 #: src/pages/settings/subtitles.tsx
 msgid "How far subtitles sit above their usual place near the bottom, or below it down to the edge."
@@ -1846,15 +1846,15 @@ msgstr ""
 
 #: src/lib/subtitles/style.ts
 msgid "Huge"
-msgstr ""
+msgstr "Kocaman"
 
 #: src/components/version-settings.tsx
 msgid "Image"
-msgstr ""
+msgstr "Resim"
 
 #: src/components/version-settings.tsx
 msgid "Import"
-msgstr ""
+msgstr "İçe aktar"
 
 #: src/lib/discord.ts
 msgid "In Activity"
@@ -1884,7 +1884,7 @@ msgstr ""
 
 #: src/lib/hosts/shell/index.ts
 msgid "Install"
-msgstr ""
+msgstr "Yükle"
 
 #: src/components/no-catalogs.tsx
 msgid "Install catalog addons from Addons → Marketplace. For one that isn't listed, use the Custom addon there."
@@ -1892,15 +1892,15 @@ msgstr ""
 
 #: src/pages/settings/index.tsx
 msgid "Interface"
-msgstr ""
+msgstr "Arayüz"
 
 #: src/pages/settings/playback.tsx
 msgid "Intros"
-msgstr ""
+msgstr "Girişler"
 
 #: src/components/party/party-sheet.tsx
 msgid "Invite"
-msgstr ""
+msgstr "Davet et"
 
 #: src/components/party/party-sheet.tsx
 msgid "Invite code or link"
@@ -1928,7 +1928,7 @@ msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "Join"
-msgstr ""
+msgstr "Katıl"
 
 #: src/components/party/party-sheet.tsx
 msgid "Join a party"
@@ -1952,7 +1952,7 @@ msgstr ""
 
 #: src/pages/settings/theme.tsx
 msgid "Keep"
-msgstr ""
+msgstr "Sakla"
 
 #: src/pages/settings/playback.tsx
 msgid "Keep in step by changing speed"
@@ -1993,14 +1993,14 @@ msgstr ""
 
 #: src/components/version-settings.tsx
 msgid "Label"
-msgstr ""
+msgstr "Etiket"
 
 #: src/pages/settings/audio.tsx
 #: src/pages/settings/index.tsx
 #: src/pages/settings/interface.tsx
 #: src/pages/settings/subtitles.tsx
 msgid "Language"
-msgstr ""
+msgstr "Dil"
 
 #: src/pages/settings/index.tsx
 msgid "Language and how subtitles look"
@@ -2017,11 +2017,11 @@ msgstr ""
 #: src/lib/subtitles/style.ts
 #: src/pages/settings/interface.tsx
 msgid "Large"
-msgstr ""
+msgstr "Büyük"
 
 #: src/components/update-prompt.tsx
 msgid "Later"
-msgstr ""
+msgstr "Sonra"
 
 #: src/app.tsx
 msgid "Leave {from} to add {adding}?"
@@ -2045,7 +2045,7 @@ msgstr ""
 
 #: src/lib/input/actions.ts
 msgid "Left"
-msgstr ""
+msgstr "Sol"
 
 #: src/pages/settings/interface.tsx
 msgid "Left empty, posters stand alone. A poster without artwork still shows its title."
@@ -2077,7 +2077,7 @@ msgstr ""
 
 #: src/pages/settings/interface.tsx
 msgid "List"
-msgstr ""
+msgstr "Liste"
 
 #: src/pages/settings/subtitles.tsx
 msgid "List only my languages"
@@ -2085,15 +2085,15 @@ msgstr ""
 
 #: src/pages/search.tsx
 msgid "Listening…"
-msgstr ""
+msgstr "Dinleniyor…"
 
 #: src/components/party/party-sheet.tsx
 msgid "Loading"
-msgstr ""
+msgstr "Yükleniyor"
 
 #: src/components/version-settings.tsx
 msgid "Loading…"
-msgstr ""
+msgstr "Yükleniyor…"
 
 #: src/components/player/controls.tsx
 msgid "Lock screen"
@@ -2101,7 +2101,7 @@ msgstr ""
 
 #: src/pages/settings/apps.tsx
 msgid "Logs"
-msgstr ""
+msgstr "Kayıtlar"
 
 #: src/components/party/party-sheet.tsx
 msgid "Looking for the party…"
@@ -2122,11 +2122,11 @@ msgstr ""
 
 #: src/lib/i18n.ts
 msgid "Magenta"
-msgstr ""
+msgstr "Majenta"
 
 #: src/pages/settings/audio.tsx
 msgid "Main"
-msgstr ""
+msgstr "Ana"
 
 #: src/components/version-picker.tsx
 msgid "Mark as watched"
@@ -2163,11 +2163,11 @@ msgstr ""
 
 #: src/components/window-controls.tsx
 msgid "Maximise"
-msgstr ""
+msgstr "Büyüt"
 
 #: src/pages/settings/interface.tsx
 msgid "Medium"
-msgstr ""
+msgstr "Orta"
 
 #: src/lib/input/keys.ts
 msgid "Menu key"
@@ -2179,34 +2179,34 @@ msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "Message"
-msgstr ""
+msgstr "Mesaj"
 
 #: src/components/party/party-sheet.tsx
 msgid "Messages"
-msgstr ""
+msgstr "Mesajlar"
 
 #: src/pages/settings/theme.tsx
 msgid "Midnight"
-msgstr ""
+msgstr "Gece yarısı"
 
 #: src/components/window-controls.tsx
 msgid "Minimise"
-msgstr ""
+msgstr "Küçült"
 
 #: src/lib/format.ts
 msgid "Missing"
-msgstr ""
+msgstr "Eksik"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Monospace"
-msgstr ""
+msgstr "Sabit genişlikli"
 
 #: src/components/overview.tsx
 #: src/components/playlists.tsx
 #: src/components/version-picker.tsx
 #: src/pages/downloads.tsx
 msgid "More"
-msgstr ""
+msgstr "Daha fazla"
 
 #: src/components/party/party-sheet.tsx
 msgid "More can be sent once the party is back."
@@ -2257,7 +2257,7 @@ msgstr ""
 #: src/pages/favourites.tsx
 #: src/pages/search.tsx
 msgid "Movies"
-msgstr ""
+msgstr "Filmler"
 
 #: src/pages/search.tsx
 msgid "Movies, shows and people"
@@ -2379,7 +2379,7 @@ msgstr ""
 
 #: src/pages/settings/apps.tsx
 msgid "Nightly"
-msgstr "En son sürüm (Nightly)"
+msgstr "Beta (Nightly)"
 
 #: src/pages/settings/apps.tsx
 msgid "Nightly builds come from every change, ahead of releases, and can break."
@@ -2452,13 +2452,13 @@ msgstr ""
 #: src/pages/settings/audio.tsx
 #: src/pages/settings/subtitles.tsx
 msgid "None"
-msgstr ""
+msgstr "Yok"
 
 #: src/components/player/keys.ts
 #: src/lib/subtitles/style.ts
 #: src/pages/settings/subtitles.tsx
 msgid "Normal"
-msgstr ""
+msgstr "Normal"
 
 #: src/components/player/keys.ts
 #: src/lib/input/actions.ts
@@ -2487,7 +2487,7 @@ msgstr ""
 
 #: src/pages/settings/interface.tsx
 msgid "Nothing"
-msgstr ""
+msgstr "Hiçbiri"
 
 #: src/pages/calendar.tsx
 msgid "Nothing airs this month from your shows or watchlist."
@@ -2548,7 +2548,7 @@ msgstr ""
 
 #: src/app.tsx
 msgid "Notifications"
-msgstr ""
+msgstr "Bildirimler"
 
 #: src/components/sessions.tsx
 msgid "Now playing"
@@ -2568,7 +2568,7 @@ msgstr ""
 
 #: src/pages/settings/theme.tsx
 msgid "Ocean"
-msgstr ""
+msgstr "Okyanus"
 
 #: src/components/player/options.tsx
 #: src/components/remote-sheet.tsx
@@ -2576,7 +2576,7 @@ msgstr ""
 #: src/pages/settings/audio.tsx
 #: src/pages/settings/subtitles.tsx
 msgid "Off"
-msgstr ""
+msgstr "Kapalı"
 
 #: src/pages/settings/theme.tsx
 msgid "Off for this visit, since the address ends in <0>?safe</0>. Fix or clear it here, then open the app without it."
@@ -2648,7 +2648,7 @@ msgstr ""
 
 #: src/lib/i18n.ts
 msgid "Oops!"
-msgstr ""
+msgstr "Eyvah!"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Opacity: {backgroundOpacity}%"
@@ -2662,7 +2662,7 @@ msgstr ""
 #: src/pages/settings/apps.tsx
 #: src/pages/settings/downloads.tsx
 msgid "Open"
-msgstr ""
+msgstr "Aç"
 
 #: src/pages/downloads.tsx
 #: src/pages/settings/apps.tsx
@@ -2703,7 +2703,7 @@ msgstr ""
 
 #: src/components/send-report.tsx
 msgid "Optional."
-msgstr ""
+msgstr "İsteğe bağlı."
 
 #: src/components/version-settings.tsx
 msgid "Optional. An image address, shown in place of the label."
@@ -2719,7 +2719,7 @@ msgstr ""
 
 #: src/lib/input/actions.ts
 msgid "Options"
-msgstr ""
+msgstr "Ayarlar"
 
 #: src/pages/servers.tsx
 msgid "Options for {name}"
@@ -2848,7 +2848,7 @@ msgstr ""
 #: src/lib/input/keys.ts
 #: src/pages/downloads.tsx
 msgid "Pause"
-msgstr ""
+msgstr "Duraklat"
 
 #: src/pages/downloads.tsx
 msgid "Pause all"
@@ -2856,7 +2856,7 @@ msgstr ""
 
 #: src/components/sessions.tsx
 msgid "Paused"
-msgstr ""
+msgstr "Duraklatıldı"
 
 #: src/pages/downloads.tsx
 msgid "Paused · {of}"
@@ -2912,7 +2912,7 @@ msgstr ""
 
 #: src/pages/settings/apps.tsx
 msgid "Picture-in-picture"
-msgstr ""
+msgstr "Küçük pencere (PiP)"
 
 #: src/components/player/options.tsx
 msgid "Picture: {coming}"
@@ -3034,12 +3034,12 @@ msgstr ""
 
 #: src/lib/input/keys.ts
 msgid "Play/Pause"
-msgstr ""
+msgstr "Oynat/Duraklat"
 
 #: src/lib/hosts/shell/player.ts
 #: src/pages/settings/index.tsx
 msgid "Playback"
-msgstr ""
+msgstr "Oynatma"
 
 #: src/pages/player.tsx
 msgid "Playback failed: {failure}"
@@ -3053,7 +3053,7 @@ msgstr ""
 #: src/pages/settings/about.tsx
 #: src/pages/settings/playback.tsx
 msgid "Player"
-msgstr ""
+msgstr "Oynatıcı"
 
 #: src/pages/settings/playback.tsx
 msgid "Player link"
@@ -3065,7 +3065,7 @@ msgstr ""
 #: src/components/sessions.tsx
 #: src/components/version-picker.tsx
 msgid "Playing"
-msgstr ""
+msgstr "Oynatılıyor"
 
 #: src/pages/player.tsx
 msgid "Playing in {launchedName}"
@@ -3253,7 +3253,7 @@ msgstr ""
 
 #: src/pages/settings/playback.tsx
 msgid "Recaps"
-msgstr ""
+msgstr "Özetler"
 
 #: src/pages/search.tsx
 msgid "Recent searches"
@@ -3265,23 +3265,23 @@ msgstr ""
 
 #: src/components/layout.tsx
 msgid "Reconnecting…"
-msgstr ""
+msgstr "Yeniden bağlanılıyor…"
 
 #: src/lib/i18n.ts
 msgid "Red"
-msgstr ""
+msgstr "Kırmızı"
 
 #: src/components/no-catalogs.tsx
 msgid "Refresh"
-msgstr ""
+msgstr "Yenile"
 
 #: src/lib/hosts/shell/player.ts
 msgid "refused"
-msgstr ""
+msgstr "reddedildi"
 
 #: src/components/party/party-sheet.tsx
 msgid "Relay"
-msgstr ""
+msgstr "Ara sunucu"
 
 #: src/components/party/party-sheet.tsx
 msgid "Relay address"
@@ -3524,7 +3524,7 @@ msgstr ""
 
 #: src/pages/settings/apps.tsx
 msgid "Saved"
-msgstr ""
+msgstr "Kaydedildi"
 
 #: src/pages/downloads.tsx
 msgid "Saved to {folder}"
@@ -3544,7 +3544,7 @@ msgstr ""
 
 #: src/components/player/subtitle-sync.tsx
 msgid "Saw"
-msgstr ""
+msgstr "Görüldü"
 
 #: src/lib/input/actions.ts
 msgid "Saw its subtitle"
@@ -3561,7 +3561,7 @@ msgstr ""
 #: src/pages/search.tsx
 #: src/pages/settings/apps.tsx
 msgid "Search"
-msgstr ""
+msgstr "Ara"
 
 #: src/components/version-picker.tsx
 msgid "Search again"
@@ -3577,11 +3577,11 @@ msgstr ""
 
 #: src/pages/settings/cache.tsx
 msgid "Searches"
-msgstr ""
+msgstr "Arama sonuçları"
 
 #: src/lib/discord.ts
 msgid "Searching"
-msgstr ""
+msgstr "Aranıyor"
 
 #: src/components/item-menu.tsx
 msgid "See the download"
@@ -3819,7 +3819,7 @@ msgstr ""
 
 #: src/components/player/segments.ts
 msgid "Skip"
-msgstr ""
+msgstr "Atla"
 
 #: src/components/player/segments.ts
 msgid "Skip ad"
@@ -3899,7 +3899,7 @@ msgstr ""
 
 #: src/pages/settings/playback.tsx
 msgid "Skipping"
-msgstr ""
+msgstr "Atlanıyor"
 
 #: src/components/party/reaction-setting.tsx
 msgid "Slot {n}: {emoji}"
@@ -3907,12 +3907,12 @@ msgstr ""
 
 #: src/lib/input/actions.ts
 msgid "Slower"
-msgstr ""
+msgstr "Daha yavaş"
 
 #: src/lib/subtitles/style.ts
 #: src/pages/settings/interface.tsx
 msgid "Small"
-msgstr ""
+msgstr "Küçük"
 
 #: src/components/version-settings.tsx
 msgid "Small labels on each version for what it has, from packs you link or badges you make."
@@ -3925,12 +3925,12 @@ msgstr ""
 
 #: src/pages/settings/interface.tsx
 msgid "Solid"
-msgstr ""
+msgstr "Düz"
 
 #: src/lib/party/actions.ts
 #: src/lib/party/party.ts
 msgid "Someone"
-msgstr ""
+msgstr "Birisi"
 
 #: src/lib/party/party.ts
 msgid "something this device cannot read"
@@ -3943,11 +3943,11 @@ msgstr ""
 #: src/components/player/options.tsx
 #: src/pages/settings/audio.tsx
 msgid "Sound"
-msgstr ""
+msgstr "Ses"
 
 #: src/pages/history.tsx
 msgid "Source"
-msgstr ""
+msgstr "Kaynak"
 
 #: src/pages/settings/about.tsx
 msgid "Source code"
@@ -3955,7 +3955,7 @@ msgstr ""
 
 #: src/lib/input/keys.ts
 msgid "Space"
-msgstr ""
+msgstr "Boşluk"
 
 #: src/pages/settings/cache.tsx
 msgid "Space to use"
@@ -3963,7 +3963,7 @@ msgstr ""
 
 #: src/components/player/options.tsx
 msgid "Speed"
-msgstr ""
+msgstr "Hız"
 
 #: src/components/player/keys.ts
 msgid "Speed {shown}×"
@@ -3975,7 +3975,7 @@ msgstr ""
 
 #: src/pages/settings/apps.tsx
 msgid "Stable"
-msgstr ""
+msgstr "Kararlı"
 
 #: src/components/party/party-sheet.tsx
 msgid "Start a party"
@@ -3983,7 +3983,7 @@ msgstr ""
 
 #: src/components/remote-sheet.tsx
 msgid "Starting…"
-msgstr ""
+msgstr "Başlatılıyor…"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Starts without subtitles."
@@ -3992,22 +3992,22 @@ msgstr ""
 #: src/components/player/options.tsx
 #: src/lib/input/actions.ts
 msgid "Statistics"
-msgstr ""
+msgstr "İstatistikler"
 
 #: src/pages/history.tsx
 #: src/pages/settings/apps.tsx
 msgid "Status"
-msgstr ""
+msgstr "Durum"
 
 #: src/pages/settings/audio.tsx
 msgid "Stereo"
-msgstr ""
+msgstr "Stereo"
 
 #: src/components/remote-sheet.tsx
 #: src/lib/input/actions.ts
 #: src/lib/input/keys.ts
 msgid "Stop"
-msgstr ""
+msgstr "Dur"
 
 #: src/pages/search.tsx
 msgid "Stop listening"
@@ -4024,12 +4024,12 @@ msgstr "Uzat"
 
 #: src/pages/item.tsx
 msgid "Studios"
-msgstr ""
+msgstr "Stüdyolar"
 
 #: src/components/player/options.tsx
 #: src/pages/settings/interface.tsx
 msgid "Style"
-msgstr ""
+msgstr "Stil"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Styled subtitles, common in anime, keep their own fonts and colours unless this is on. Blu-ray and DVD subtitles always keep their look and size. Only in the desktop app."
@@ -4060,7 +4060,7 @@ msgstr ""
 #: src/pages/settings/index.tsx
 #: src/pages/settings/subtitles.tsx
 msgid "Subtitles"
-msgstr ""
+msgstr "Altyazılar"
 
 #: src/lib/subtitles/delay.ts
 msgid "Subtitles {amount}"
@@ -4191,7 +4191,7 @@ msgstr ""
 
 #: src/pages/history.tsx
 msgid "Table"
-msgstr ""
+msgstr "Tablo"
 
 #: src/components/player/lock.tsx
 msgid "Tap to unlock"
@@ -4204,7 +4204,7 @@ msgstr ""
 #: src/components/version-settings.tsx
 #: src/pages/settings/subtitles.tsx
 msgid "Text"
-msgstr ""
+msgstr "Yazı"
 
 #: src/components/version-badges.tsx
 msgid "That address answered {status}."
@@ -4434,7 +4434,7 @@ msgstr ""
 #: src/pages/settings/index.tsx
 #: src/pages/settings/theme.tsx
 msgid "Theme"
-msgstr ""
+msgstr "Tema"
 
 #: src/components/version-badges.tsx
 msgid "There are no badges this app can read at that address."
@@ -4462,11 +4462,11 @@ msgstr ""
 
 #: src/pages/settings/subtitles.tsx
 msgid "Thick"
-msgstr ""
+msgstr "Kalın"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Thin"
-msgstr ""
+msgstr "İnce"
 
 #: src/pages/settings/audio.tsx
 msgid "This app decodes Dolby and DTS audio itself, which loses Atmos."
@@ -4567,12 +4567,12 @@ msgstr ""
 
 #: src/components/player/options.tsx
 msgid "Timing"
-msgstr ""
+msgstr "Zamanlama"
 
 #: src/pages/history.tsx
 #: src/pages/settings/interface.tsx
 msgid "Title"
-msgstr ""
+msgstr "Başlık"
 
 #: src/pages/settings/apps.tsx
 #: src/pages/settings/cache.tsx
@@ -4585,7 +4585,7 @@ msgstr ""
 
 #: src/pages/calendar.tsx
 msgid "Today"
-msgstr ""
+msgstr "Bugün"
 
 #: src/lib/hosts/shell/player.ts
 msgid "too many requests"
@@ -4737,7 +4737,7 @@ msgstr ""
 
 #: src/pages/settings/apps.tsx
 msgid "Updates"
-msgstr ""
+msgstr "Güncellemeler"
 
 #: src/pages/settings/index.tsx
 msgid "Updates, Discord, mpv and troubleshooting"
@@ -4789,7 +4789,7 @@ msgstr ""
 
 #: src/pages/history.tsx
 msgid "User"
-msgstr ""
+msgstr "Kullanıcı"
 
 #: src/pages/sign-in.tsx
 msgid "User name"
@@ -4805,7 +4805,7 @@ msgstr ""
 
 #: src/lib/downloads/index.ts
 msgid "Version"
-msgstr ""
+msgstr "Sürüm"
 
 #: src/lib/hosts/shell/index.ts
 msgid "Version {version} installs on the next start."
@@ -4823,7 +4823,7 @@ msgstr ""
 #: src/components/version-picker.tsx
 #: src/pages/settings/playback.tsx
 msgid "Versions"
-msgstr ""
+msgstr "Sürümler"
 
 #: src/pages/settings/index.tsx
 msgid "Versions and links"
@@ -4934,7 +4934,7 @@ msgstr ""
 
 #: src/pages/history.tsx
 msgid "Watched"
-msgstr ""
+msgstr "İzlendi"
 
 #: src/pages/history.tsx
 msgid "Watched ×{playCount}"
@@ -4947,7 +4947,7 @@ msgstr ""
 #: src/components/party/party-sheet.tsx
 #: src/pages/settings/index.tsx
 msgid "Watching"
-msgstr ""
+msgstr "İzleniyor"
 
 #: src/components/party/party-sheet.tsx
 msgid "Watching ({watching})"
@@ -5079,7 +5079,7 @@ msgstr ""
 
 #: src/lib/i18n.ts
 msgid "White"
-msgstr ""
+msgstr "Beyaz"
 
 #: src/pages/settings/index.tsx
 msgid "Who you are signed in as"
@@ -5099,11 +5099,11 @@ msgstr "Kim izliyor?"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Width"
-msgstr ""
+msgstr "Genişlik"
 
 #: src/lib/input/keys.ts
 msgid "Win"
-msgstr ""
+msgstr "Win"
 
 #: src/components/party/party-sheet.tsx
 msgid "With {names}"
@@ -5115,19 +5115,19 @@ msgstr ""
 
 #: src/components/people.tsx
 msgid "Writer"
-msgstr ""
+msgstr "Yazar"
 
 #: src/pages/settings/interface.tsx
 msgid "Year"
-msgstr ""
+msgstr "Yıl"
 
 #: src/lib/i18n.ts
 msgid "Yellow"
-msgstr ""
+msgstr "Sarı"
 
 #: src/components/layout.tsx
 msgid "You"
-msgstr ""
+msgstr "Siz"
 
 #: src/lib/party/party.ts
 msgid "You left the party."
