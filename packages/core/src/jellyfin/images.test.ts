@@ -17,8 +17,14 @@ describe('jellyfin images', () => {
     assert.ok(tags.ImageTags.Thumb);
     assert.equal(tags.BackdropImageTags.length, 1);
 
-    assert.equal(decodeImageTag(tags.ImageTags.Primary!), 'https://example.com/poster.jpg');
-    assert.equal(decodeImageTag(tags.BackdropImageTags[0]), 'http://example.com/fanart.jpg');
+    assert.equal(
+      decodeImageTag(tags.ImageTags.Primary!),
+      'https://example.com/poster.jpg'
+    );
+    assert.equal(
+      decodeImageTag(tags.BackdropImageTags[0]),
+      'http://example.com/fanart.jpg'
+    );
   });
 
   it('rejects non-HTTP placeholder strings from ImageTags', () => {
@@ -27,6 +33,20 @@ describe('jellyfin images', () => {
       Backdrop: 'null',
       Logo: 'not-a-url',
       Thumb: '',
+    });
+
+    assert.equal(tags.ImageTags.Primary, undefined);
+    assert.equal(tags.ImageTags.Logo, undefined);
+    assert.equal(tags.ImageTags.Thumb, undefined);
+    assert.deepEqual(tags.BackdropImageTags, []);
+  });
+
+  it('rejects malformed HTTP(S) values without a host from ImageTags', () => {
+    const tags = imageTagsFor({
+      Primary: 'http://',
+      Backdrop: 'https://',
+      Logo: 'http:// ',
+      Thumb: 'https://:8080',
     });
 
     assert.equal(tags.ImageTags.Primary, undefined);

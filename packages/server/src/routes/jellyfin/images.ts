@@ -193,8 +193,21 @@ function sized(url: string, width: number): string {
  * a socket open for as long as the upstream takes. */
 let liveRelays = 0;
 
+function isHttpUrl(value?: string | null): value is string {
+  if (typeof value !== 'string') return false;
+  try {
+    const url = new URL(value);
+    return (
+      (url.protocol === 'http:' || url.protocol === 'https:') &&
+      url.hostname !== ''
+    );
+  } catch {
+    return false;
+  }
+}
+
 async function relay(req: Request, res: Response, url: string) {
-  if (!/^https?:\/\//i.test(url)) {
+  if (!isHttpUrl(url)) {
     res.status(404).end();
     return;
   }
@@ -245,7 +258,7 @@ async function relay(req: Request, res: Response, url: string) {
       'image relay failed'
     );
     if (!res.headersSent) {
-      if (/^https?:\/\//i.test(url)) {
+      if (isHttpUrl(url)) {
         res.redirect(302, url);
       } else {
         res.status(404).end();
@@ -263,7 +276,7 @@ async function itemImage(req: Request, res: Response) {
     param(req, 'itemId'),
     param(req, 'type')
   ).catch(() => null);
-  if (!url || !/^https?:\/\//i.test(url)) {
+  if (!url || !isHttpUrl(url)) {
     res.status(404).end();
     return;
   }

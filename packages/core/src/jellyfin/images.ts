@@ -79,12 +79,21 @@ export function decodeImageTag(tag: string): string | null {
     code === '0'
       ? rest
       : (HOST_PREFIXES.find(([c]) => c === code)?.[1] ?? '') + rest;
-  if (!/^https?:\/\//i.test(url)) return null;
+  if (!isHttp(url)) return null;
   return url;
 }
 
 function isHttp(url?: string): url is string {
-  return typeof url === 'string' && /^https?:\/\//i.test(url);
+  if (typeof url !== 'string') return false;
+  try {
+    const parsed = new URL(url);
+    return (
+      (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
+      parsed.hostname !== ''
+    );
+  } catch {
+    return false;
+  }
 }
 
 export function imageTagsFor(images: ItemImages): {
@@ -92,7 +101,8 @@ export function imageTagsFor(images: ItemImages): {
   BackdropImageTags: string[];
 } {
   const ImageTags: Partial<Record<ImageKind, string>> = {};
-  if (isHttp(images.Primary)) ImageTags.Primary = encodeImageTag(images.Primary);
+  if (isHttp(images.Primary))
+    ImageTags.Primary = encodeImageTag(images.Primary);
   if (isHttp(images.Logo)) ImageTags.Logo = encodeImageTag(images.Logo);
   if (isHttp(images.Thumb)) ImageTags.Thumb = encodeImageTag(images.Thumb);
   return {
@@ -111,8 +121,7 @@ export function rememberImages(itemId: string, images: ItemImages): void {
     Logo: isHttp(images.Logo) ? images.Logo : undefined,
     Thumb: isHttp(images.Thumb) ? images.Thumb : undefined,
   };
-  if (!clean.Primary && !clean.Backdrop && !clean.Logo && !clean.Thumb)
-    return;
+  if (!clean.Primary && !clean.Backdrop && !clean.Logo && !clean.Thumb) return;
   if (!firstWriteOf(`img:${itemId}`)) return;
   void imageCache.set(itemId, clean, IMAGE_TTL).catch(() => undefined);
 }
