@@ -20,7 +20,7 @@ export enum TrbCategory {
 }
 
 // some posts omit the "tt" prefix
-const normaliseImdbId = (id: string | null) =>
+export const normaliseImdbId = (id: string | null | undefined) =>
   id && /^\d+$/.test(id) ? `tt${id}` : id;
 
 const TrbSearchResultSchema = z
@@ -132,6 +132,7 @@ export class TrbAPI {
           });
 
           if (!response.ok) {
+            await response.body?.cancel().catch(() => {});
             throw new Error(
               `${this.site.name} API error (${response.status}): ${response.statusText}`
             );

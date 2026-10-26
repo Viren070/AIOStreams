@@ -6,7 +6,7 @@ import {
   getTimeTakenSincePoint,
   ParsedId,
 } from '../../utils/index.js';
-import { TrbAPI, TrbCategory, TrbSite } from './trb-api.js';
+import { TrbAPI, TrbCategory, TrbSite, normaliseImdbId } from './trb-api.js';
 import { NZB, UnprocessedTorrent } from '../../debrid/utils.js';
 import { validateInfoHash } from '../utils/debrid.js';
 import { createQueryLimit, getTitleLanguagesForUrl } from '../utils/general.js';
@@ -52,8 +52,9 @@ export abstract class TrbBaseAddon<
         this.id
       ),
     });
-    if (metadata.imdbId) {
-      queries.push(metadata.imdbId);
+    const imdbId = normaliseImdbId(metadata.imdbId);
+    if (imdbId) {
+      queries.push(imdbId);
     }
 
     if (queries.length === 0) {
@@ -143,10 +144,7 @@ export abstract class TrbBaseAddon<
     const results = allResults
       .flat()
       .filter(
-        (result) =>
-          !result.imdbId ||
-          !metadata.imdbId ||
-          result.imdbId === metadata.imdbId
+        (result) => !result.imdbId || !imdbId || result.imdbId === imdbId
       );
 
     const seenTorrents = new Set<string>();
