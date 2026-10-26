@@ -179,7 +179,8 @@ export async function resolveServiceWrappedStreams(
     context.id,
     metadata,
     userData.ip,
-    userData.checkOwned
+    userData.checkOwned,
+    userData.serviceWrap.timeout
   );
 
   // Collect debrid processing errors
@@ -191,6 +192,31 @@ export async function resolveServiceWrappedStreams(
   }
 
   const serviceTimings = processedTorrents.serviceTimings;
+
+  // Every processing service failed (e.g. its API is down): optionally fall
+  // back to the original P2P results so the user still gets playable streams.
+  const failedServices = new Set(
+    processedTorrents.errors.map((e) => e.serviceId)
+  );
+  const allServicesFailed = torrentServices.every((s) =>
+    failedServices.has(s.id)
+  );
+  if (
+    allServicesFailed &&
+    userData.serviceWrap.onServiceFailure === 'p2p' &&
+    wrappedP2PStreams.length > 0
+  ) {
+    logger.warn(
+      { wrapped: wrappedP2PStreams.length },
+      'all processing services failed, returning unwrapped P2P results'
+    );
+    return {
+      streams: [...otherStreams, ...wrappedP2PStreams],
+      errors,
+      hasNewStreams: false,
+      serviceTimings,
+    };
+  }
 
   if (processedTorrents.results.length === 0) {
     return {

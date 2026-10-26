@@ -133,7 +133,8 @@ export async function processTorrents(
   stremioId: string,
   metadata?: Metadata,
   clientIp?: string,
-  checkOwned: boolean = true
+  checkOwned: boolean = true,
+  serviceTimeoutMs?: number
 ): Promise<{
   results: TorrentWithSelectedFile[];
   errors: { serviceId: BuiltinServiceId; error: Error }[];
@@ -166,8 +167,9 @@ export async function processTorrents(
 
   // Run all service checks in parallel and collect both results and errors
   const servicePromises = debridServices.map(async (service) => {
+    let timer: NodeJS.Timeout | undefined;
     try {
-      const serviceResult = await processTorrentsForDebridService(
+      const work = processTorrentsForDebridService(
         torrents,
         service,
         stremioId,
@@ -176,6 +178,24 @@ export async function processTorrents(
         checkOwned,
         sharedParsedTitlesMap
       );
+      // Optional overall limit for this service, on top of the per-request
+      // timeouts, so a hanging API fails fast instead of stalling the request.
+      const serviceResult = serviceTimeoutMs
+        ? await Promise.race([
+            work,
+            new Promise<never>((_, reject) => {
+              timer = setTimeout(
+                () =>
+                  reject(
+                    new Error(
+                      `${service.id} did not respond within ${serviceTimeoutMs}ms`
+                    )
+                  ),
+                serviceTimeoutMs
+              );
+            }),
+          ])
+        : await work;
       return { serviceId: service.id, ...serviceResult, error: null };
     } catch (error) {
       if (error instanceof Error && error.stack) {
@@ -193,6 +213,8 @@ export async function processTorrents(
         uncachedCount: 0,
         torrentsIn: torrents.length,
       };
+    } finally {
+      clearTimeout(timer);
     }
   });
 
