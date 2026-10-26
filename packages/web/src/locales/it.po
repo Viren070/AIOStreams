@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-26 22:57+0000\n"
-"Last-Translator: Nicola Bortoletto <translate@nicolabortoletto.com>\n"
+"PO-Revision-Date: 2026-10-26 23:35+0000\n"
+"Last-Translator: Viren070 <viren070@protonmail.com>\n"
 "Language-Team: Italian <https://hosted.weblate.org/projects/aiostreams/web-app/it/>\n"
 "Language: it\n"
 "MIME-Version: 1.0\n"
@@ -45,7 +45,7 @@ msgstr "{count, plural, one {# titolo} other {# titoli}}"
 
 #: src/components/party/party-sheet.tsx
 msgid "{count, plural, one {# watching · on {on}} other {# watching · on {on}}}"
-msgstr "{conto, plurale, uno {# watching · su {on}} altro {# watching · su {on}}}"
+msgstr "{count, plural, one {# spettatore · su {on}} other {# spettatori · su {on}}}"
 
 #: src/components/version-settings.tsx
 msgid "{count, plural, one {Added # badge} other {Added # badges}}"
