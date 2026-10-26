@@ -1833,6 +1833,14 @@ export class StreamSelector extends StreamExpressionEngine {
       selectedStreams = selectedStreams ? streams : [];
     }
 
+    // Streams taken from the input were already validated when built.
+    if (Array.isArray(selectedStreams)) {
+      const inputs = new Set(streams);
+      if (selectedStreams.every((stream) => inputs.has(stream))) {
+        return selectedStreams;
+      }
+    }
+
     // attempt to parse the result
     try {
       selectedStreams = ParsedStreams.parse(selectedStreams);
