@@ -13,15 +13,15 @@ export const HEADER_PRESETS: Record<string, Record<string, string>> = {
   },
   sonarr: {
     Accept: 'application/rss+xml, text/rss+xml, application/xml, text/xml',
-    'User-Agent': 'Sonarr/4.0.20.3014 (alpine 3.24.2)',
+    'User-Agent': 'Sonarr/4.0.20.3014 (alpine 3.24.3)',
   },
   radarr: {
     Accept: 'application/rss+xml, text/rss+xml, application/xml, text/xml',
-    'User-Agent': 'Radarr/6.4.4.10685 (alpine 3.24.2)',
+    'User-Agent': 'Radarr/6.4.4.10685 (alpine 3.24.3)',
   },
   prowlarr: {
     Accept: 'application/rss+xml, text/rss+xml, application/xml, text/xml',
-    'User-Agent': 'Prowlarr/2.6.5.5623 (alpine 3.24.2)',
+    'User-Agent': 'Prowlarr/2.6.5.5623 (alpine 3.24.3)',
   },
   nzbhydra2: {
     Accept: 'application/xml',
@@ -30,13 +30,13 @@ export const HEADER_PRESETS: Record<string, Record<string, string>> = {
   },
   chrome: {
     'User-Agent':
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36',
     Accept:
       'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
     'Accept-Language': 'en-US,en;q=0.9',
     Priority: 'u=0, i',
     'Sec-Ch-Ua':
-      '"Google Chrome";v="155", "Chromium";v="155", "Not(A:Brand";v="24"',
+      '"Not:A-Brand";v="8", "Chromium";v="156", "Google Chrome";v="156"',
     'Sec-Ch-Ua-Mobile': '?0',
     'Sec-Ch-Ua-Platform': '"macOS"',
     'Sec-Fetch-Dest': 'document',
