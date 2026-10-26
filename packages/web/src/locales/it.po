@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-26 15:22+0000\n"
+"PO-Revision-Date: 2026-10-26 22:57+0000\n"
 "Last-Translator: Nicola Bortoletto <translate@nicolabortoletto.com>\n"
 "Language-Team: Italian <https://hosted.weblate.org/projects/aiostreams/web-app/it/>\n"
 "Language: it\n"
@@ -1484,9 +1484,8 @@ msgid "Everything"
 msgstr "Tutto"
 
 #: src/components/download-button.tsx
-#, fuzzy
 msgid "Everything unwatched"
-msgstr "Tutto non guardato"
+msgstr "Tutti i non visti"
 
 #: src/components/player/options.tsx src/components/window-controls.tsx
 msgid "Exit full screen"
@@ -1659,7 +1658,6 @@ msgid "Grey"
 msgstr "Grigio"
 
 #: src/components/version-settings.tsx
-#, fuzzy
 msgid "Group"
 msgstr "Raggruppa"
 
@@ -2982,7 +2980,7 @@ msgstr "Riproduce il video ad una velocità leggermente maggiore o minore per ri
 
 #: src/pages/settings/playback.tsx
 msgid "Plays Dolby Vision where the screen shows it. Turn it off to play the HDR10 picture most of these videos also carry, if Dolby Vision looks dim or flickers. Videos with no HDR10 picture still play in Dolby Vision."
-msgstr ""
+msgstr "Riproduce in Dolby Vision se lo schermo lo supporta. Disattiva questa opzione per riprodurre il video in HDR10, incluso nella maggior parte di questi video, se il Dolby Vision appare cupo o sfarfalla. I video senza HDR10 verranno comunque riprodotti in Dolby Vision."
 
 #: src/lib/input/actions.ts
 msgid "Plays faster for as long as the key is held, at the speed set in Playback settings."
@@ -3333,29 +3331,29 @@ msgstr "Righe, cataloghi e calendario."
 
 #: src/components/player/options.tsx
 msgid "Runs at a different speed to the video"
-msgstr ""
+msgstr "Esegue a una velocità diversa rispetto al video"
 
 #. A season and episode number, as in S01E04
 #: src/lib/format.ts
 msgid "S{s}E{e}"
-msgstr ""
+msgstr "S{s}E{e}"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Sans serif"
-msgstr ""
+msgstr "Senza grazie"
 
 #: src/components/playlists.tsx src/components/version-settings.tsx
 #: src/pages/settings/apps.tsx
 msgid "Save"
-msgstr ""
+msgstr "Salva"
 
 #: src/pages/settings/cache.tsx
 msgid "Save account and server"
-msgstr ""
+msgstr "Salva account e server"
 
 #: src/pages/settings/cache.tsx
 msgid "Save activity"
-msgstr ""
+msgstr "Salva attività"
 
 #: src/pages/settings/cache.tsx
 msgid "Save artwork"
@@ -3363,35 +3361,36 @@ msgstr "Salva copertina"
 
 #: src/pages/settings/cache.tsx
 msgid "Save home and libraries"
-msgstr ""
+msgstr "Salva home e librerie"
 
 #: src/components/crash-report.tsx
 msgid "Save report"
-msgstr ""
+msgstr "Salva segnalazione"
 
 #: src/pages/settings/cache.tsx
 msgid "Save searches"
-msgstr ""
+msgstr "Salva ricerche"
 
 #: src/pages/settings/downloads.tsx
 msgid "Save subtitles"
-msgstr ""
+msgstr "Salva sottotitoli"
 
 #: src/pages/settings/cache.tsx
 msgid "Save title pages"
-msgstr ""
+msgstr "Salva pagine dei titoli"
 
 #: src/pages/settings/cache.tsx
+#, fuzzy
 msgid "Save what you browse"
-msgstr ""
+msgstr "Salva cosa sfogli"
 
 #: src/pages/settings/apps.tsx
 msgid "Saved"
-msgstr ""
+msgstr "Salvato"
 
 #: src/pages/downloads.tsx
 msgid "Saved to {folder}"
-msgstr ""
+msgstr "Salvato in {folder}"
 
 #: src/pages/settings/common.tsx
 msgid "Saved to your account, so it follows you to every device."
@@ -3403,7 +3402,7 @@ msgstr "Salvato nel tuo account, così gli altri dispositivi e l'app Jellyfin lo
 
 #: src/lib/playback/external-return.ts
 msgid "Saved your place at {at}"
-msgstr ""
+msgstr "Posizionata salvata in {at}"
 
 #: src/components/player/subtitle-sync.tsx
 msgid "Saw"
@@ -3415,7 +3414,7 @@ msgstr "Sottotitolo rilevato"
 
 #: src/pages/settings/subtitles.tsx
 msgid "SDH, with sounds described"
-msgstr ""
+msgstr "SDH, con descrizione dei suoni"
 
 #: src/components/layout.tsx src/components/version-settings.tsx
 #: src/lib/input/actions.ts src/pages/discover.tsx src/pages/search.tsx
@@ -3457,7 +3456,7 @@ msgstr "Anteprime barra di riproduzione"
 
 #: src/lib/i18n.ts src/lib/input/actions.ts src/pages/history.tsx
 msgid "Select"
-msgstr ""
+msgstr "Seleziona"
 
 #: src/pages/history.tsx
 msgid "Select all"
@@ -3513,11 +3512,11 @@ msgstr "Indirizzo del server"
 
 #: src/lib/hosts/shell/player.ts
 msgid "server error"
-msgstr ""
+msgstr "errore del server"
 
 #: src/components/player/options.tsx
 msgid "Set by hand"
-msgstr ""
+msgstr "Imposta a mano"
 
 #: src/components/layout.tsx src/pages/settings/index.tsx
 msgid "Settings"
@@ -3542,7 +3541,7 @@ msgstr "Scorciatoie"
 #. A dot under the banner that brings this title up
 #: src/components/hero.tsx
 msgid "Show {name}"
-msgstr ""
+msgstr "Mostra {name}"
 
 #: src/pages/settings/playback.tsx
 msgid "Show a skip button"
@@ -3776,15 +3775,15 @@ msgstr "Pieno"
 
 #: src/lib/party/actions.ts src/lib/party/party.ts
 msgid "Someone"
-msgstr ""
+msgstr "Qualcuno"
 
 #: src/lib/party/party.ts
 msgid "something this device cannot read"
-msgstr ""
+msgstr "contenuto non leggibile da questo dispositivo"
 
 #: src/components/party/party-sheet.tsx
 msgid "Something this device cannot read"
-msgstr ""
+msgstr "Contenuto non leggibile da questo dispositivo"
 
 #: src/components/player/options.tsx src/pages/settings/audio.tsx
 msgid "Sound"
@@ -3800,7 +3799,7 @@ msgstr "Codice sorgente"
 
 #: src/lib/input/keys.ts
 msgid "Space"
-msgstr ""
+msgstr "Spazio"
 
 #: src/pages/settings/cache.tsx
 msgid "Space to use"
@@ -3816,7 +3815,7 @@ msgstr "Velocità {shown}×"
 
 #: src/lib/input/actions.ts
 msgid "Speed up while held"
-msgstr ""
+msgstr "Velocizza mentre è mantenuto"
 
 #: src/pages/settings/apps.tsx
 msgid "Stable"
@@ -3873,11 +3872,11 @@ msgstr "Stile"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Styled subtitles, common in anime, keep their own fonts and colours unless this is on. Blu-ray and DVD subtitles always keep their look and size. Only in the desktop app."
-msgstr ""
+msgstr "I sottotitoli con stili personalizzati, comuni negli anime, mantengono i propri font e colori a meno che questa opzione non sia attiva. I sottotitoli di Blu-ray e DVD mantengono sempre il loro aspetto e la loro dimensione. Disponibile solo nell'app per desktop."
 
 #: src/pages/settings/downloads.tsx
 msgid "Subtitle files go next to the video, named so players find them."
-msgstr ""
+msgstr "I file dei sottotitoli vanno inseriti accanto al video, rinominati in modo che i lettori possano trovarli."
 
 #: src/components/player/keys.ts
 msgid "Subtitle height {height}%"
@@ -3902,11 +3901,11 @@ msgstr "Sottotitoli"
 
 #: src/lib/subtitles/delay.ts
 msgid "Subtitles {amount}"
-msgstr ""
+msgstr "{amount} sottotitoli"
 
 #: src/components/player/subtitle-sync.tsx
 msgid "Subtitles back in sync. Another line refines it."
-msgstr ""
+msgstr "Sottotitoli sincronizzati. Un'altra battuta ne perfeziona la precisione."
 
 #: src/lib/input/actions.ts
 msgid "Subtitles earlier"
@@ -3938,7 +3937,7 @@ msgstr "Sottotitoli riallineati alla velocità del video"
 
 #: src/components/player/subtitle-sync.tsx
 msgid "Subtitles set to {amount}. Another line refines it."
-msgstr ""
+msgstr "Sottotitoli impostati su {amount}. Un'altra battuta ne perfeziona la precisione."
 
 #: src/lib/subtitles/delay.ts
 msgid "Subtitles synced: {amount}"
@@ -3946,11 +3945,11 @@ msgstr "Sottotitoli sincronizzati: {amount}"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Subtitles the version marks as default or forced, in your language when it has them."
-msgstr ""
+msgstr "Sottotitoli contrassegnati dalla versione come predefiniti o forzati, nella tua lingua se disponibili."
 
 #: src/pages/settings/subtitles.tsx
 msgid "Subtitles you pick or turn off while watching a show stay that way for its other episodes. Picking what the settings above would show forgets it."
-msgstr ""
+msgstr "I sottotitoli scelti o disattivati durante la visione di una serie rimangono impostati così anche per gli altri episodi. Selezionando ciò che verrebbe mostrato dalle impostazioni precedenti, la scelta verrà dimenticata."
 
 #: src/components/player/keys.ts
 msgid "Subtitles: {label}"
@@ -3979,7 +3978,7 @@ msgstr "Cambia utente"
 
 #: src/pages/settings/playback.tsx
 msgid "Switches the TV to a refresh rate that suits each video, so motion plays smoothly, and back when you stop. The screen goes blank for a moment as it switches."
-msgstr ""
+msgstr "Imposta la TV sulla frequenza di aggiornamento più adatta a ciascun video per una riproduzione fluida dei movimenti, e la ripristina quando interrompi la visione. Lo schermo diventerà nero per un istante durante il cambio."
 
 #: src/components/player/options.tsx
 msgid "Sync automatically"
@@ -4035,7 +4034,7 @@ msgstr "Tocca per sbloccare"
 
 #: src/components/player/subtitle-sync.tsx
 msgid "Tap when you hear a line and when its subtitle shows, in either order."
-msgstr ""
+msgstr "Tocca quando senti una battuta e quando compare il relativo sottotitolo, in qualsiasi ordine."
 
 #: src/components/version-settings.tsx src/pages/settings/subtitles.tsx
 msgid "Text"
@@ -4055,19 +4054,19 @@ msgstr "Quel file è troppo grande"
 
 #: src/components/version-settings.tsx
 msgid "That has no badges this app can read."
-msgstr ""
+msgstr "Nessun badge rilevato che questa app sia in grado di leggere."
 
 #: src/components/version-settings.tsx
 msgid "That has no quick filters this app can read."
-msgstr ""
+msgstr "Nessun filtro rapido rilevato che questa app sia in grado di leggere."
 
 #: src/lib/servers.ts
 msgid "That is not a valid address."
-msgstr ""
+msgstr "Questo indirizzo non è valido."
 
 #: src/components/version-settings.tsx
 msgid "That is not a valid regular expression."
-msgstr ""
+msgstr "Questa espressione regolare non è valida."
 
 #: src/lib/party/party.ts
 msgid "That party has ended."
@@ -4083,11 +4082,11 @@ msgstr "Quel watch party non accetta nuovi partecipanti."
 
 #: src/components/version-picker.tsx
 msgid "That pattern is not a valid regular expression."
-msgstr ""
+msgstr "Questo pattern non è un'espressione regolare valida."
 
 #: src/lib/party/party.ts
 msgid "That relay doesn't let you in."
-msgstr ""
+msgstr "Questo relay non consente l'accesso."
 
 #: src/lib/party/party.ts
 msgid "That relay is too busy for another party."
@@ -4095,23 +4094,23 @@ msgstr "Quel relay è troppo carico per ospitare un altro watch party."
 
 #: src/lib/party/party.ts
 msgid "That relay runs a different version of watch parties."
-msgstr ""
+msgstr "Questo replay esegue una versione diversa rispetto a quella dei watch party."
 
 #: src/components/remote-target.tsx
 msgid "That title could not be opened"
-msgstr ""
+msgstr "Impossibile aprire questo titolo"
 
 #: src/pages/settings/apps.tsx
 msgid "That you are searching, not what for."
-msgstr ""
+msgstr "Che stai effettuando una ricerca, non cosa stai cercando."
 
 #: src/pages/settings/playback.tsx
 msgid "The {name} installed on this computer, in a window of its own with its own controls and configuration. This app still saves your place, marks what you watched and plays the next episode. Compared with the built-in player, you lose:<0><1>The controls, skip buttons and next episode card over the video. They stay in this window, which works as a remote.</1><2>This app's subtitle style, video fit, hardware decoding and audio output settings.</2></0>"
-msgstr ""
+msgstr "Il {name} installato su questo computer, in una finestra indipendente con i propri controlli e la propria configurazione. Questa app continua a salvare il punto in cui hai interrotto la visione, contrassegnare i contenuti visti e riprodurre l'episodio successivo. Rispetto al lettore integrato, perderai:<0><1>I controlli, i pulsanti di salto e la scheda dell'episodio successivo in sovrimpressione al video. Rimarranno in questa finestra, che funzionerà come un telecomando.</1><2>Lo stile dei sottotitoli di questa app, l'adattamento video, la decodifica hardware e le impostazioni dell'uscita audio.</2></0>"
 
 #: src/lib/servers.ts
 msgid "The address must start with http:// or https://."
-msgstr ""
+msgstr "L'indirizzo deve iniziare con http:// o https://."
 
 #: src/pages/servers.tsx
 msgid "The address of the AIOStreams instance where you set up your addon. Other Jellyfin servers work too."
@@ -4119,39 +4118,39 @@ msgstr "L'indirizzo dell'istanza AIOStreams in cui hai configurato il tuo addon.
 
 #: src/pages/settings/about.tsx
 msgid "The API this app speaks."
-msgstr ""
+msgstr "L'API con cui comunica questa app."
 
 #: src/app.tsx
 msgid "The app cannot open that link"
-msgstr ""
+msgstr "L'app non può aprire questo link"
 
 #: src/components/crash-report.tsx
 msgid "The app closed unexpectedly"
-msgstr ""
+msgstr "L'app si è chiusa inaspettatamente"
 
 #: src/lib/hosts/shell/bridge.ts
 msgid "The app did not answer"
-msgstr ""
+msgstr "L'app non ha risposto"
 
 #: src/pages/settings/downloads.tsx
 msgid "The app saves what you download and plays it without a connection."
-msgstr ""
+msgstr "L'app salva cosa scarichi e riproduci senza una connessione."
 
 #: src/pages/settings/downloads.tsx
 msgid "The app's downloads"
-msgstr ""
+msgstr "I download dell'app"
 
 #: src/lib/hosts/native-shell.ts
 msgid "The app's own settings"
-msgstr ""
+msgstr "Le impostazioni dell'app"
 
 #: src/lib/hosts/jellyfin-android.ts
 msgid "The app's player"
-msgstr ""
+msgstr "Il lettore dell'app"
 
 #: src/lib/hosts/jellyfin-android.ts
 msgid "The app's player and its options, such as starting videos in landscape."
-msgstr ""
+msgstr "Il lettore dell'app e le sue opzioni, come l'avvio dei video in modalità orizzontale."
 
 #: src/lib/party/party.ts
 msgid "The host removed you from the party."
@@ -4159,27 +4158,27 @@ msgstr "L'host ti ha rimosso dal watch party."
 
 #: src/pages/settings/about.tsx
 msgid "The interface is built on its components."
-msgstr ""
+msgstr "L'interfaccia è costruita sui suoi componenti."
 
 #: src/lib/hosts/shell/player.ts
 msgid "the link answered HTTP {status}"
-msgstr ""
+msgstr "il link ha risposto HTTP {status}"
 
 #: src/lib/hosts/shell/player.ts
 msgid "the link answered HTTP {status} ({meaning})"
-msgstr ""
+msgstr "il link ha risposto HTTP {status} ({meaning})"
 
 #: src/router.tsx
 msgid "The link may be old, or the page moved."
-msgstr ""
+msgstr "Il link potrebbe essere scaduto, o la pagina essere spostata."
 
 #: src/lib/hosts/shell/player.ts
 msgid "the link returned something other than a video"
-msgstr ""
+msgstr "il link ha restituito altro rispetto ad un video"
 
 #: src/pages/settings/apps.tsx
 msgid "The movie or show whose page is open."
-msgstr ""
+msgstr "Il film o la serie di cui è aperta la pagina."
 
 #: src/pages/settings/apps.tsx
 msgid "The older way mpv draws, for Macs where the others fail. Some Dolby Vision videos show the wrong colours."
@@ -4187,11 +4186,11 @@ msgstr ""
 
 #: src/components/remote-sheet.tsx
 msgid "The other device could not be reached"
-msgstr ""
+msgstr "L'altro dispositivo non è raggiungibile"
 
 #: src/components/crash-report.tsx
 msgid "The page restarted unexpectedly"
-msgstr ""
+msgstr "La pagina si è riavviata inaspettatamente"
 
 #: src/lib/party/party.ts
 msgid "The party ended after a long time with nothing playing."
@@ -4211,11 +4210,11 @@ msgstr "Il watch party sta guardando <0>{title}</0>"
 
 #: src/lib/hosts/shell/player.ts
 msgid "the player could not play this version"
-msgstr ""
+msgstr "il lettore non può riprodurre questa versione"
 
 #: src/pages/settings/subtitles.tsx
 msgid "The player's subtitle menu lists subtitles in your languages, ones without a language and the one on. The rest wait under More languages."
-msgstr ""
+msgstr "Il menu dei sottotitoli del lettore mostra i sottotitoli nelle tue lingue, quelli senza lingua specificata e quello attivo. Gli altri sono disponibili in Altre lingue."
 
 #: src/components/playlists.tsx
 msgid "The playlist goes; the titles in it stay."
@@ -4223,11 +4222,11 @@ msgstr ""
 
 #: src/lib/party/party.ts
 msgid "The relay could not read that."
-msgstr ""
+msgstr "Il relay non può leggere questo elemento."
 
 #: src/pages/settings/downloads.tsx
 msgid "The rest wait their turn."
-msgstr ""
+msgstr " "
 
 #: src/pages/settings/playback.tsx
 msgid "The same for episodes marked as a recap."
