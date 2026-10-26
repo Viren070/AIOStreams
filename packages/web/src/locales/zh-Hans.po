@@ -4,59 +4,60 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: @lingui/cli\n"
-"Language: zh_Hans\n"
-"Last-Translator: Automatically generated\n"
-"Language-Team: none\n"
+"X-Generator: Weblate 2026.11.dev0\n"
+"Language: zh-Hans\n"
+"Last-Translator: yhh-1213 <yhh-1213@users.noreply.hosted.weblate.org>\n"
+"Language-Team: Chinese (Simplified Han script) <https://hosted.weblate.org/projects/aiostreams/web-app/zh_Hans/>\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
+"PO-Revision-Date: 2026-10-26 05:12+0000\n"
 
 #: src/components/party/party-sheet.tsx
 msgid "(you)"
-msgstr ""
+msgstr "(你)"
 
 #: src/pages/sign-in.tsx
 msgid "{address} did not answer. Check that it is running, then try again."
-msgstr ""
+msgstr "{address} 无响应。请检查其是否正在运行，然后重试。"
 
 #: src/components/version-settings.tsx
 msgid "{badgeCount, plural, one {# badge of your own} other {# badges of your own}}"
-msgstr ""
+msgstr "{badgeCount, plural, one {你拥有 # 个标签} other {你拥有 # 个标签}}"
 
 #: src/pages/history.tsx
 msgid "{cleared, plural, one {Removed # title from the history} other {Removed # titles from the history}}"
-msgstr ""
+msgstr "{cleared, plural, one {已从观看历史中移除 # 部影片} other {已从观看历史中移除 # 部影片}}"
 
 #: src/components/version-settings.tsx
 msgid "{count, plural, one {# badge} other {# badges}}"
-msgstr ""
+msgstr "{count, plural, one {# 个标签} other {# 个标签}}"
 
 #: src/pages/settings/playback.tsx
 msgid "{count, plural, one {# minute} other {# minutes}}"
-msgstr ""
+msgstr "{count, plural, one {# 分钟} other {# 分钟}}"
 
 #: src/pages/settings/playback.tsx
 msgid "{count, plural, one {# second} other {# seconds}}"
-msgstr ""
+msgstr "{count, plural, one {# 秒} other {# 秒}}"
 
 #: src/components/playlists.tsx
 msgid "{count, plural, one {# title} other {# titles}}"
-msgstr ""
+msgstr "{count, plural, one {# 个内容} other {# 个内容}}"
 
 #: src/components/party/party-sheet.tsx
 msgid "{count, plural, one {# watching · on {on}} other {# watching · on {on}}}"
-msgstr ""
+msgstr "{count, plural, one {# 人正在一起观看 · {on}} other {# 人正在一起观看 · {on}}}"
 
 #: src/components/version-settings.tsx
 msgid "{count, plural, one {Added # badge} other {Added # badges}}"
-msgstr ""
+msgstr "{count, plural, one {已添加 # 个标签} other {已添加 # 个标签}}"
 
 #: src/components/version-settings.tsx
 msgid "{count, plural, one {Added # quick filter} other {Added # quick filters}}"
-msgstr ""
+msgstr "{count, plural, one {已添加 # 个快捷筛选条件} other {已添加 # 个快捷筛选条件}}"
 
 #: src/lib/downloads/index.ts
 msgid "{count, plural, one {Download added} other {# downloads added}}"
-msgstr ""
+msgstr "{count, plural, one {已添加下载任务} other {已添加 # 个下载任务}}"
 
 #: src/components/trailers.tsx
 msgid "{count, plural, one {Trailer} other {Trailers}}"
@@ -64,7 +65,7 @@ msgstr ""
 
 #: src/pages/downloads.tsx
 msgid "{downloaded} downloaded"
-msgstr ""
+msgstr "{downloaded} 已下载"
 
 #: src/pages/history.tsx
 msgid "{episodeCount, plural, one {# episode watched} other {# episodes watched}}"
