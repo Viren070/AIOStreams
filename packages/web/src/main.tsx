@@ -36,15 +36,16 @@ const queryClient = new QueryClient({
 
 const container = document.getElementById('root')!;
 // React listens at its root and at the body, where portals go, for every event
-// it knows, so the browser would build and send one for each CSS transition and
-// animation, which nothing uses.
+// it knows, so the browser would build and send one as each CSS transition and
+// animation starts, which nothing uses. Their ends are used.
+const UNUSED = /^(transition(run|start|cancel)|animation(start|iteration))$/;
 for (const el of [container, document.body]) {
   const listen = el.addEventListener;
   el.addEventListener = function (
     this: HTMLElement,
     ...args: Parameters<HTMLElement['addEventListener']>
   ) {
-    if (!/^(transition|animation)/.test(args[0])) listen.apply(this, args);
+    if (!UNUSED.test(args[0])) listen.apply(this, args);
   };
 }
 
