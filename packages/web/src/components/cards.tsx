@@ -11,6 +11,7 @@ import {
   onDrawn,
   shrinkArtwork,
 } from '../lib/artwork';
+import { drawnRatio, zoom } from '../lib/images';
 import { settings, useSetting } from '../lib/settings';
 import { CachedImage } from './cached-image';
 import { Anchor } from './anchor';
@@ -28,12 +29,13 @@ interface Box {
 
 function deviceSize(entry: ResizeObserverEntry) {
   const box = entry.devicePixelContentBoxSize?.[0];
-  return box
-    ? { width: box.inlineSize, height: box.blockSize }
-    : {
-        width: Math.round(entry.contentRect.width * devicePixelRatio),
-        height: Math.round(entry.contentRect.height * devicePixelRatio),
-      };
+  const scale = box ? zoom() : drawnRatio();
+  const width = box ? box.inlineSize : entry.contentRect.width;
+  const height = box ? box.blockSize : entry.contentRect.height;
+  return {
+    width: Math.round(width * scale),
+    height: Math.round(height * scale),
+  };
 }
 
 const near = (a: number, b: number) => Math.abs(a - b) <= a * 0.1;

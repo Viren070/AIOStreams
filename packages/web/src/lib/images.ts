@@ -10,8 +10,34 @@ const STEPS = [
 
 /** In device pixels, rounded up to a step so the same URLs come back. */
 function deviceWidth(css: number): number {
-  const px = css * (window.devicePixelRatio || 1);
+  const px = css * drawnRatio();
   return STEPS.find((step) => step >= px) ?? Math.ceil(px);
+}
+
+const RESOLUTIONS = [1, 1.25, 1.5, 1.75, 2, 2.5, 3, 3.5, 4];
+
+let resolution: { reported: number; ratio: number } | undefined;
+
+/** Under 1 while the page is zoomed out to fit, as on a TV. */
+export const zoom = () => Math.min(1, window.visualViewport?.scale ?? 1);
+
+/**
+ * Device pixels per CSS pixel, as the page is drawn. Amazon's WebView reports
+ * twice its ratio, which CSS resolution gets right.
+ */
+export function drawnRatio(): number {
+  const reported = window.devicePixelRatio || 1;
+  if (resolution?.reported !== reported) {
+    let ratio = reported;
+    // Only when far below the reported one, so fractional ratios stand.
+    if (matchMedia(`(max-resolution: ${reported / 1.5}dppx)`).matches) {
+      ratio = 1;
+      for (const r of RESOLUTIONS)
+        if (matchMedia(`(min-resolution: ${r}dppx)`).matches) ratio = r;
+    }
+    resolution = { reported, ratio };
+  }
+  return resolution.ratio * zoom();
 }
 
 function image(
