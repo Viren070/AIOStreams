@@ -79,7 +79,7 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Settings {
-            width: 320,
+            width: 480,
             workers: 2,
             samples: 2,
             quality: 75,
