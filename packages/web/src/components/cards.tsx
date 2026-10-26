@@ -11,7 +11,8 @@ import {
   onDrawn,
   shrinkArtwork,
 } from '../lib/artwork';
-import { drawnRatio, zoom } from '../lib/images';
+import { currentHost } from '../lib/hosts';
+import { drawnRatio } from '../lib/images';
 import { settings, useSetting } from '../lib/settings';
 import { CachedImage } from './cached-image';
 import { Anchor } from './anchor';
@@ -28,14 +29,15 @@ interface Box {
 }
 
 function deviceSize(entry: ResizeObserverEntry) {
-  const box = entry.devicePixelContentBoxSize?.[0];
-  const scale = box ? zoom() : drawnRatio();
-  const width = box ? box.inlineSize : entry.contentRect.width;
-  const height = box ? box.blockSize : entry.contentRect.height;
-  return {
-    width: Math.round(width * scale),
-    height: Math.round(height * scale),
-  };
+  // The device-pixel box leaves out a TV's fit to its screen.
+  const box = !currentHost().tv && entry.devicePixelContentBoxSize?.[0];
+  const ratio = drawnRatio();
+  return box
+    ? { width: box.inlineSize, height: box.blockSize }
+    : {
+        width: Math.round(entry.contentRect.width * ratio),
+        height: Math.round(entry.contentRect.height * ratio),
+      };
 }
 
 const near = (a: number, b: number) => Math.abs(a - b) <= a * 0.1;

@@ -1,4 +1,5 @@
 import type { JellyfinClient } from './client';
+import { currentHost } from './hosts';
 import type { BaseItemDto } from './types';
 
 /** `maxWidth` is the widest the image is drawn at, in CSS pixels. */
@@ -8,37 +9,57 @@ const STEPS = [
   120, 160, 240, 320, 400, 480, 640, 800, 960, 1280, 1600, 1920, 2560, 3840,
 ];
 
-/** In device pixels, rounded up to a step so the same URLs come back. */
+/**
+ * In device pixels, rounded up to a step so the same URLs come back, and no
+ * wider than the screen.
+ */
 function deviceWidth(css: number): number {
-  const px = css * drawnRatio();
-  return STEPS.find((step) => step >= px) ?? Math.ceil(px);
+  const { ratio, screenPx } = drawn();
+  const px = Math.min(css * ratio, screenPx);
+  const step = STEPS.find((s) => s >= px) ?? Math.ceil(px);
+  // A step can round past the screen, as 1366 does to 1600.
+  return Math.min(step, Math.ceil(screenPx));
 }
 
 const RESOLUTIONS = [1, 1.25, 1.5, 1.75, 2, 2.5, 3, 3.5, 4];
+/** As decoding bigger artwork stutters a TV. */
+const TV_MAX_RATIO = 2;
 
-let resolution: { reported: number; ratio: number } | undefined;
-
-/** Under 1 while the page is zoomed out to fit, as on a TV. */
-export const zoom = () => Math.min(1, window.visualViewport?.scale ?? 1);
-
-/**
- * Device pixels per CSS pixel, as the page is drawn. Amazon's WebView reports
- * twice its ratio, which CSS resolution gets right.
- */
-export function drawnRatio(): number {
-  const reported = window.devicePixelRatio || 1;
-  if (resolution?.reported !== reported) {
-    let ratio = reported;
-    // Only when far below the reported one, so fractional ratios stand.
-    if (matchMedia(`(max-resolution: ${reported / 1.5}dppx)`).matches) {
-      ratio = 1;
-      for (const r of RESOLUTIONS)
-        if (matchMedia(`(min-resolution: ${r}dppx)`).matches) ratio = r;
-    }
-    resolution = { reported, ratio };
-  }
-  return resolution.ratio * zoom();
+/** Amazon's WebView reports twice its ratio, which CSS resolution gets right. */
+function resolution(reported: number): number {
+  // Only when far below the reported one, so fractional ratios stand.
+  if (!matchMedia(`(max-resolution: ${reported / 1.5}dppx)`).matches)
+    return reported;
+  let ratio = 1;
+  for (const r of RESOLUTIONS)
+    if (matchMedia(`(min-resolution: ${r}dppx)`).matches) ratio = r;
+  return ratio;
 }
+
+// Read again on resize only: reading innerWidth lays the page out, which a TV
+// pays for on every card.
+let measured: { reported: number; ratio: number; screenPx: number } | null =
+  null;
+addEventListener('resize', () => (measured = null));
+
+function drawn() {
+  const reported = window.devicePixelRatio || 1;
+  if (measured?.reported !== reported) {
+    const dppx = resolution(reported);
+    measured = {
+      reported,
+      // A TV lays the page out 1280 wide and fits it to its screen, up or down.
+      ratio: currentHost().tv
+        ? Math.min(TV_MAX_RATIO, (screen.width * dppx) / innerWidth || dppx)
+        : dppx,
+      screenPx: Math.max(screen.width, screen.height) * dppx || Infinity,
+    };
+  }
+  return measured;
+}
+
+/** Device pixels per CSS pixel, as the page is drawn. */
+export const drawnRatio = () => drawn().ratio;
 
 function image(
   client: JellyfinClient,
