@@ -45,6 +45,7 @@ import { useBurstSeek, useFileDrop, useIdle, usePositionClock } from './hooks';
 import { usePlayerKeys } from './keys';
 import { ScreenLock } from './lock';
 import { fitLabel, OptionButtons } from './options';
+import { ScrubStrip } from './scrub-strip';
 import { SeekBar } from './seek-bar';
 import { skipLabel, useSegmentSkip } from './segments';
 import { useHeldSpeed } from './speed';
@@ -53,6 +54,12 @@ import { Volume } from './volume';
 import { usePlayhead, type Playhead } from '../../lib/playback/playhead';
 
 const IDLE_MS = 5000;
+
+/** Presses closer than this are a held key's repeats. */
+const HELD_GAP_MS = 250;
+/** A held key's steps grow by one step every this many repeats, up to `MAX_STEPS`. */
+const REPEATS_PER_STEP = 10;
+const MAX_STEPS = 4;
 
 interface Transport {
   name: string;
@@ -117,6 +124,8 @@ export function PlayerControls({
   const [scrub, setScrub] = React.useState<{
     fromMs: number;
     toMs: number;
+    /** Set on a remote's scrub only: whether dropping it plays again. */
+    resume?: boolean;
   } | null>(null);
   const scrubbing = React.useRef(scrub);
   // Until the first frame only Back works; a player in its own window is watched there.
@@ -162,6 +171,41 @@ export function PlayerControls({
     setSeekPicture(picture);
     burstSeek(deltaMs);
     showSeekFlash(deltaMs);
+  };
+  // A remote scrubs paused, with the picture there, until Select plays from
+  // it or Back drops it, so nothing seeks on the way.
+  const held = React.useRef({ at: 0, repeats: 0 });
+  const scrubBy = (deltaMs: number) => {
+    const { state, playhead, togglePlay } = latest.current;
+    const now = performance.now();
+    const h = held.current;
+    h.repeats = now - h.at < HELD_GAP_MS ? h.repeats + 1 : 0;
+    h.at = now;
+    const steps = Math.min(
+      MAX_STEPS,
+      1 + Math.floor(h.repeats / REPEATS_PER_STEP)
+    );
+    const last = scrubbing.current;
+    if (!last && !state.paused) togglePlay();
+    const fromMs = last?.fromMs ?? playhead.positionMs;
+    const to = Math.max(0, (last?.toMs ?? fromMs) + deltaMs * steps);
+    scrubbing.current = {
+      fromMs,
+      toMs: state.durationMs ? Math.min(state.durationMs, to) : to,
+      resume: last ? last.resume : !state.paused,
+    };
+    setScrub(scrubbing.current);
+  };
+  /** Plays from a remote's scrub, or drops it; false without one. */
+  const endScrub = (commit: boolean) => {
+    const s = scrubbing.current;
+    if (s?.resume === undefined) return false;
+    scrubbing.current = null;
+    setScrub(null);
+    if (commit) latest.current.seek(s.toMs);
+    if ((commit || s.resume) && latest.current.state.paused)
+      latest.current.togglePlay();
+    return true;
   };
   const { segments, segment, fresh, skip } = useSegmentSkip({
     items: segmentItems,
@@ -251,7 +295,8 @@ export function PlayerControls({
     hide,
     notice: showNotice,
     togglePlay,
-    seekBy: (deltaMs) => seekBy(deltaMs, tv),
+    seekBy: (deltaMs) => (tv ? scrubBy(deltaMs) : seekBy(deltaMs, false)),
+    endScrub,
     onBack,
     onPrevious,
     onNext,
@@ -341,6 +386,8 @@ export function PlayerControls({
       </ControlButton>
     );
   const shownAt = scrub?.toMs ?? seekingTo;
+  // A remote's scrub shows its pictures in a row rather than over the bar.
+  const strip = scrub?.resume !== undefined && player.thumbnails;
   const timeProps = { playhead: player.playhead, live: visible, atMs: shownAt };
 
   if (!ready)
@@ -455,7 +502,7 @@ export function PlayerControls({
       {seekFlash}
       {notice ||
         (player.autoSync?.waiting && <Notice text={t`Syncing subtitles…`} />)}
-      {scrub && (
+      {scrub && !tv && (
         <ScrubReadout
           fromMs={scrub.fromMs}
           toMs={scrub.toMs}
@@ -544,6 +591,14 @@ export function PlayerControls({
           barFade
         )}
       >
+        {scrub && strip && (
+          <ScrubStrip
+            feed={strip}
+            atMs={scrub.toMs}
+            stepMs={seekStep * 1000}
+            durationMs={state.durationMs}
+          />
+        )}
         <div
           data-ui="player-info"
           className="flex items-center justify-between gap-3 px-0.5 pb-1"
@@ -562,12 +617,16 @@ export function PlayerControls({
           segments={segments}
           chapters={player.chapters ?? []}
           previewMs={shownAt}
-          previewPicture={!!scrub || seekPicture}
+          previewPicture={!strip && (!!scrub || seekPicture)}
           handle={touch}
           thumbnails={player.thumbnails}
           onSeek={player.seek}
-          onStep={(direction) => seekBy(direction * seekStep * 1000, tv)}
-          onTogglePlay={togglePlay}
+          onStep={(direction) =>
+            tv
+              ? scrubBy(direction * seekStep * 1000)
+              : seekBy(direction * seekStep * 1000, false)
+          }
+          onTogglePlay={() => endScrub(true) || togglePlay()}
         />
         <div className="flex items-center gap-1">
           <div className={cn('hidden items-center gap-1', inBar)}>
@@ -695,8 +754,14 @@ function useLiftSubtitles(
     };
     lift();
     if (!visible) return;
+    // The bar grows with what opens in it, such as a remote's scrub.
+    const grows = new ResizeObserver(lift);
+    if (bottomBar.current) grows.observe(bottomBar.current);
     window.addEventListener('resize', lift);
-    return () => window.removeEventListener('resize', lift);
+    return () => {
+      grows.disconnect();
+      window.removeEventListener('resize', lift);
+    };
   }, [visible, latest, bottomBar]);
   React.useEffect(() => () => latest.current.liftSubtitles?.(0), [latest]);
 }

@@ -45,6 +45,8 @@ interface PlayerKeys {
   notice(text: string): void;
   togglePlay(): void;
   seekBy(deltaMs: number): void;
+  /** Plays from a remote's scrub, or drops it; false without one. */
+  endScrub(commit: boolean): boolean;
   onBack(): void;
   onPrevious?: () => void;
   onNext?: () => void;
@@ -152,6 +154,7 @@ export function usePlayerKeys(keys: PlayerKeys): void {
     const actions: Partial<Record<ActionId, ActionHandler>> = {
       'player.controls': () => {
         if (keyboardFocus()) return false;
+        if (k().endScrub(true)) return;
         if (
           k().root.current?.querySelector(
             '[data-ui=skip-segment][data-visible]'
@@ -160,9 +163,11 @@ export function usePlayerKeys(keys: PlayerKeys): void {
           return call(k().skipSegment);
         focusControls();
       },
-      'player.playPause': () => k().togglePlay(),
+      'player.playPause': () => {
+        if (!k().endScrub(true)) k().togglePlay();
+      },
       'player.play': () => {
-        if (player().state.paused) k().togglePlay();
+        if (!k().endScrub(true) && player().state.paused) k().togglePlay();
       },
       'player.pause': () => {
         if (!player().state.paused) k().togglePlay();
@@ -244,6 +249,7 @@ export function usePlayerKeys(keys: PlayerKeys): void {
     );
     stops.push(
       onAction('back', () => {
+        if (k().endScrub(false)) return;
         const el = keyboardFocus();
         if (el && k().root.current?.contains(el)) {
           el.blur();
