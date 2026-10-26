@@ -10,7 +10,13 @@ import { storage } from './storage';
 export const SOURCE_LOCALE = 'en-GB';
 
 /** Test languages: longer accented text, and the same laid out right to left. */
-export const PSEUDO_LOCALES = ['en-XA', 'ar-XB'];
+const PSEUDO_LOCALES = ['en-XA', 'ar-XB'];
+
+/**
+ * Listed in development or to whoever already chose one, and never followed
+ * from the system: the test languages, and those too little translated.
+ */
+export const HIDDEN_LOCALES = [...PSEUDO_LOCALES, ...__UNFINISHED_LOCALES__];
 
 // Each catalog loads on its own when chosen; English is in the bundle.
 const catalogs = import.meta.webpackContext('../locales', {
@@ -50,12 +56,12 @@ export const isRtl = (locale: string) => RTL.has(languageOf(locale));
 
 /** The catalog for a language tag: its own, else one in the same language. */
 function catalogFor(tag: string): string | undefined {
-  const real = LOCALES.filter((l) => !PSEUDO_LOCALES.includes(l));
+  const offered = LOCALES.filter((l) => !HIDDEN_LOCALES.includes(l));
   const lower = tag.toLowerCase();
   return (
-    real.find((l) => l.toLowerCase() === lower) ??
-    real.find((l) => l.toLowerCase() === languageOf(tag)) ??
-    real.find((l) => languageOf(l) === languageOf(tag))
+    offered.find((l) => l.toLowerCase() === lower) ??
+    offered.find((l) => l.toLowerCase() === languageOf(tag)) ??
+    offered.find((l) => languageOf(l) === languageOf(tag))
   );
 }
 

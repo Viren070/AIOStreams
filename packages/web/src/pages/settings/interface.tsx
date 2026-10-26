@@ -6,8 +6,8 @@ import { useViews } from '../../lib/queries';
 import { libraryLabel } from '../../lib/format';
 import { currentHost } from '../../lib/hosts';
 import {
+  HIDDEN_LOCALES,
   LOCALES,
-  PSEUDO_LOCALES,
   localeName,
   systemLocale,
 } from '../../lib/i18n';
@@ -155,11 +155,11 @@ function NavigationCard() {
   );
 }
 
-/** The app's own language, each user's; test languages are listed in development only. */
+/** The app's own language, each user's. */
 function LanguageCard() {
   const [language, setLanguage] = useSetting(settings.interface.language);
   const listed = LOCALES.filter(
-    (l) => !PSEUDO_LOCALES.includes(l) || import.meta.env.DEV || l === language
+    (l) => !HIDDEN_LOCALES.includes(l) || import.meta.env.DEV || l === language
   )
     .map((l) => ({ value: l, label: localeName(l) }))
     .sort((a, b) => a.label.localeCompare(b.label));
