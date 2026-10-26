@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-24 00:24+0000\n"
-"Last-Translator: hamburgercowgoldfish <242998989+hamburgercowgoldfish@users.noreply.github.com>\n"
+"PO-Revision-Date: 2026-10-26 23:35+0000\n"
+"Last-Translator: Viren070 <viren070@protonmail.com>\n"
 "Language-Team: German <https://hosted.weblate.org/projects/aiostreams/web-app/de/>\n"
 "Language: de\n"
 "MIME-Version: 1.0\n"
@@ -45,7 +45,7 @@ msgstr "{count, plural, one {# Titel} other {# Titel}}"
 
 #: src/components/party/party-sheet.tsx
 msgid "{count, plural, one {# watching · on {on}} other {# watching · on {on}}}"
-msgstr "{count, plural, one {# schaut zu · auf {on}} other {# schauen zu · auf{on}}}"
+msgstr "{count, plural, one {# schaut zu · auf {on}} other {# schauen zu · auf {on}}}"
 
 #: src/components/version-settings.tsx
 msgid "{count, plural, one {Added # badge} other {Added # badges}}"
