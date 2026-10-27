@@ -67,6 +67,7 @@ class MpvEngine(private val context: Context) : Engine {
     // Used on the calls thread only.
     private var filters: SoundFilters? = null
     private var subtitleScale: Double? = null
+    private var hwdec: String? = null
     private var ownFont = ""
     private val styled = HashMap<String, String>()
     private var statsPage: String? = null
@@ -216,14 +217,16 @@ class MpvEngine(private val context: Context) : Engine {
 
     // TVs copy MediaCodec's frames back: some draw direct ones wrong, and they have no battery to save.
     override fun setSettings(settings: PlayerSettings) = calls.execute {
-        set(
-            "hwdec",
-            when {
-                !settings.hardwareDecoding -> "no"
-                tv -> "mediacodec-copy"
-                else -> "mediacodec,mediacodec-copy"
-            },
-        )
+        val hwdec = when {
+            !settings.hardwareDecoding -> "no"
+            tv -> "mediacodec-copy"
+            else -> "mediacodec,mediacodec-copy"
+        }
+        // Any setting sends them all, and setting it mid-file overrides the file's own choice.
+        if (hwdec != this.hwdec) {
+            this.hwdec = hwdec
+            set("hwdec", hwdec)
+        }
         set("audio-channels", settings.audioChannels.takeIf { it in setOf("stereo", "5.1", "7.1") } ?: "auto-safe")
         set("audio-spdif", settings.passthrough.joinToString(","))
         set("audio-delay", seconds(settings.audioDelayMs))
