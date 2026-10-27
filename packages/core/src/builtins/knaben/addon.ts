@@ -31,6 +31,39 @@ const BLACKLISTED_CATEGORIES = [
   KnabenCategory.AnimeMusicVideo,
 ];
 
+const MOVIE_CATEGORIES = [
+  KnabenCategory.Movies,
+  KnabenCategory.MoviesHD,
+  KnabenCategory.MoviesSD,
+  KnabenCategory.MoviesUHD,
+  KnabenCategory.MoviesDVD,
+  KnabenCategory.MoviesForeign,
+  KnabenCategory.MoviesBollywood,
+  KnabenCategory.Movies3D,
+  KnabenCategory.MoviesOther,
+];
+
+const TV_CATEGORIES = [
+  KnabenCategory.TV,
+  KnabenCategory.TVHD,
+  KnabenCategory.TVSD,
+  KnabenCategory.TVUHD,
+  KnabenCategory.TVDocumentary,
+  KnabenCategory.TVForeign,
+  KnabenCategory.TVSport,
+  KnabenCategory.TVCartoon,
+  KnabenCategory.TVOther,
+];
+
+const ANIME_CATEGORIES = [
+  KnabenCategory.Anime,
+  KnabenCategory.AnimeSubbed,
+  KnabenCategory.AnimeDubbed,
+  KnabenCategory.AnimeDualAudio,
+  KnabenCategory.AnimeRaw,
+  KnabenCategory.AnimeNonEnglishTranslated,
+];
+
 export class KnabenAddon extends BaseDebridAddon<KnabenAddonConfig> {
   readonly id = 'knaben';
   readonly name = 'Knaben';
@@ -66,11 +99,11 @@ export class KnabenAddon extends BaseDebridAddon<KnabenAddonConfig> {
     }
 
     categories = [
-      ...(parsedId.mediaType === 'movie' ? [KnabenCategory.Movies] : []),
+      ...(parsedId.mediaType === 'movie' ? MOVIE_CATEGORIES : []),
       ...(parsedId.mediaType === 'series' || metadata.isAnime
-        ? [KnabenCategory.TV]
+        ? TV_CATEGORIES
         : []),
-      ...(metadata.isAnime ? [KnabenCategory.Anime] : []),
+      ...(metadata.isAnime ? ANIME_CATEGORIES : []),
     ];
 
     logger.info(`Performing knaben search`, { queries, categories });
