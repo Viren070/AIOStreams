@@ -709,6 +709,10 @@ export const settings = {
       EPISODE_LAYOUTS,
       ['aiostreams-web-episode-layout']
     ),
+    cardPreviews: device<boolean>(
+      'aiostreams-web-interface-card-previews',
+      true
+    ),
     /** Where a touch screen wide enough for the sidebar keeps the navigation. */
     touchNavigation: device<TouchNavigation>(
       'aiostreams-web-interface-touch-navigation',

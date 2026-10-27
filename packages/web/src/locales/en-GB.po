@@ -122,6 +122,7 @@ msgstr "{inProgress, plural, one {# in progress} other {# in progress}}"
 msgid "{key} is taken by {taken}"
 msgstr "{key} is taken by {taken}"
 
+#: src/components/card-preview.tsx
 #: src/pages/downloads.tsx
 msgid "{left} left"
 msgstr "{left} left"
@@ -303,6 +304,10 @@ msgstr "7.1 surround"
 #: src/components/version-settings.tsx
 msgid "A badge shows on each version whose text matches its pattern: the name and description your formatter writes, the file name, and the tags read from it."
 msgstr "A badge shows on each version whose text matches its pattern: the name and description your formatter writes, the file name, and the tags read from it."
+
+#: src/pages/settings/interface.tsx
+msgid "A card you rest on grows into a bigger preview with its details, while the hero rotates."
+msgstr "A card you rest on grows into a bigger preview with its details, while the hero rotates."
 
 #: src/components/party/party-sheet.tsx
 msgid "A code is looked up on the relay picked above."
@@ -787,6 +792,10 @@ msgstr "Can’t reach the server"
 #: src/pages/downloads.tsx
 msgid "Cancel"
 msgstr "Cancel"
+
+#: src/pages/settings/interface.tsx
+msgid "Cards"
+msgstr "Cards"
 
 #: src/components/people.tsx
 msgid "Cast"
@@ -3139,6 +3148,7 @@ msgstr "Press Back again to leave"
 msgid "Preview"
 msgstr "Preview"
 
+#: src/pages/settings/interface.tsx
 #: src/pages/settings/playback.tsx
 msgid "Previews"
 msgstr "Previews"

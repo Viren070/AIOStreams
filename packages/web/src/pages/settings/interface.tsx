@@ -238,6 +238,10 @@ export function InterfaceSection() {
   const [episodeLayout, setEpisodeLayout] = useSetting(
     settings.interface.episodeLayout
   );
+  const [cardPreviews, setCardPreviews] = useSetting(
+    settings.interface.cardPreviews
+  );
+  const touch = !currentHost().tv && matchMedia('(pointer: coarse)').matches;
 
   const option = (value: string, label: string) => ({
     value,
@@ -344,6 +348,17 @@ export function InterfaceSection() {
           onValueChange={(value) => setPosterLines(value as PosterLine[])}
         />
       </SettingsCard>
+      {!touch && (
+        <SettingsCard name="cards" title={t`Cards`} description={onDevice()}>
+          <Switch
+            side="right"
+            label={t`Previews`}
+            help={t`A card you rest on grows into a bigger preview with its details, while the hero rotates.`}
+            value={cardPreviews}
+            onValueChange={setCardPreviews}
+          />
+        </SettingsCard>
+      )}
       <SettingsCard
         name="episodes"
         title={t`Episodes`}

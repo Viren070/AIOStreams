@@ -121,6 +121,7 @@ msgstr ""
 msgid "{key} is taken by {taken}"
 msgstr ""
 
+#: src/components/card-preview.tsx
 #: src/pages/downloads.tsx
 msgid "{left} left"
 msgstr ""
@@ -301,6 +302,10 @@ msgstr ""
 
 #: src/components/version-settings.tsx
 msgid "A badge shows on each version whose text matches its pattern: the name and description your formatter writes, the file name, and the tags read from it."
+msgstr ""
+
+#: src/pages/settings/interface.tsx
+msgid "A card you rest on grows into a bigger preview with its details, while the hero rotates."
 msgstr ""
 
 #: src/components/party/party-sheet.tsx
@@ -785,6 +790,10 @@ msgstr ""
 #: src/lib/i18n.ts
 #: src/pages/downloads.tsx
 msgid "Cancel"
+msgstr ""
+
+#: src/pages/settings/interface.tsx
+msgid "Cards"
 msgstr ""
 
 #: src/components/people.tsx
@@ -3138,6 +3147,7 @@ msgstr ""
 msgid "Preview"
 msgstr ""
 
+#: src/pages/settings/interface.tsx
 #: src/pages/settings/playback.tsx
 msgid "Previews"
 msgstr ""

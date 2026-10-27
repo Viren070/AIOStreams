@@ -41,6 +41,7 @@ import { settings, useSetting, type FeaturedSource } from '../lib/settings';
 import { useFeature } from '../lib/server-info';
 import { useNear } from '../lib/use-in-view';
 import { FollowHero, Hero } from '../components/hero';
+import { CardPreviewHost } from '../components/card-preview';
 import { MediaRow } from '../components/media-row';
 import { PosterCard, WideCard } from '../components/cards';
 import { ItemMenu } from '../components/item-menu';
@@ -138,6 +139,7 @@ export function HomePage() {
     '(min-width: 1024px) and (hover: hover) and (pointer: fine)'
   );
   const canFollow = pointer || !!currentHost().tv;
+  const [cardPreviews] = useSetting(settings.interface.cardPreviews);
   const follow = heroMode !== 'rotate' && canFollow;
 
   const rows = (
@@ -208,7 +210,12 @@ export function HomePage() {
           noCatalogs && 'flex flex-1 flex-col'
         )}
       >
-        {rows}
+        {/* A card rested on grows into a preview, as the hero doesn't follow it. */}
+        {canFollow && cardPreviews ? (
+          <CardPreviewHost>{rows}</CardPreviewHost>
+        ) : (
+          rows
+        )}
       </div>
     </div>
   );
