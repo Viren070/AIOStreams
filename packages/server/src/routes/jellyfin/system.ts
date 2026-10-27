@@ -54,8 +54,6 @@ const FEATURES = {
   parties: 1,
   /** CORS lets the `X-AIOStreams-*` headers through. */
   clientHints: 1,
-  /** Jellyfin's `/Playlists` API. */
-  playlists: 1,
 } as const;
 
 export async function publicInfo(req: Request) {
