@@ -7,7 +7,7 @@ import {
 } from '@tanstack/react-query';
 import { JellyfinError } from './client';
 import { useSession } from './session';
-import { storage } from './storage';
+import { storage, storedMap } from './storage';
 import { useAdjacentEpisodes, useEpisodesAfter } from './queries';
 import type { BaseItemDto, BaseItemDtoQueryResult } from './types';
 
@@ -16,8 +16,68 @@ export const playable = (item: BaseItemDto) =>
   (item.Type === 'Movie' || item.Type === 'Episode') &&
   item.LocationType !== 'Virtual';
 
+const bare = (id: string) => id.replace(/-/g, '');
+
 const sameId = (a?: string | null, b?: string | null) =>
-  !!a && !!b && a.replace(/-/g, '') === b.replace(/-/g, '');
+  !!a && !!b && bare(a) === bare(b);
+
+export interface PlayOrder {
+  seed?: number;
+  repeat?: boolean;
+}
+
+const MAX_ORDERS = 200;
+const playOrders = (userId: string) =>
+  storedMap<PlayOrder>(`aiostreams-web-playlist-order:${userId}`, MAX_ORDERS);
+const orderListeners = new Set<() => void>();
+
+function subscribeOrders(listener: () => void) {
+  orderListeners.add(listener);
+  return () => void orderListeners.delete(listener);
+}
+
+export const newSeed = () => Math.floor(Math.random() * 2 ** 31);
+
+export function usePlayOrder(
+  playlist: string | undefined
+): [PlayOrder, (next: PlayOrder) => void] {
+  const { user } = useSession();
+  const stored = React.useMemo(() => playOrders(user.Id!), [user.Id]);
+  const raw = React.useSyncExternalStore(
+    subscribeOrders,
+    () => (playlist && JSON.stringify(stored.get(bare(playlist)))) || '{}'
+  );
+  const order = React.useMemo(() => JSON.parse(raw) as PlayOrder, [raw]);
+  const set = React.useCallback(
+    ({ seed, repeat }: PlayOrder) => {
+      if (!playlist) return;
+      stored.set(
+        bare(playlist),
+        seed === undefined && !repeat ? undefined : { seed, repeat }
+      );
+      orderListeners.forEach((listener) => listener());
+    },
+    [stored, playlist]
+  );
+  return [order, set];
+}
+
+/** Hashed rather than drawn, so a shuffle keeps its order as entries come and go. */
+function rank(seed: number, id: string): number {
+  const text = `${seed}:${bare(id)}`;
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++)
+    h = Math.imul(h ^ text.charCodeAt(i), 0x01000193);
+  h = Math.imul(h ^ (h >>> 16), 0x85ebca6b);
+  h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
+  return (h ^ (h >>> 16)) >>> 0;
+}
+
+export function inPlayOrder(list: BaseItemDto[], seed?: number) {
+  if (seed === undefined) return list;
+  const ranks = new Map(list.map((e) => [e, rank(seed, e.Id ?? '')]));
+  return [...list].sort((a, b) => ranks.get(a)! - ranks.get(b)!);
+}
 
 function usePlaylistOptions() {
   const { client, user } = useSession();
@@ -192,6 +252,7 @@ export function usePlaylistEdits() {
  * its show's next episodes.
  */
 export function useFollowing() {
+  const { user } = useSession();
   const queryClient = useQueryClient();
   const { entries } = usePlaylistOptions();
   const episodesAfter = useEpisodesAfter();
@@ -200,9 +261,15 @@ export function useFollowing() {
     playlist?: string
   ): Promise<BaseItemDto[]> => {
     if (!playlist) return episodesAfter(item);
-    const list = await queryClient.fetchQuery(entries(playlist));
+    const { seed, repeat } = playOrders(user.Id!).get(bare(playlist)) ?? {};
+    const list = inPlayOrder(
+      await queryClient.fetchQuery(entries(playlist)),
+      seed
+    );
     const at = list.findIndex((e) => sameId(e.Id, item.Id));
-    return at < 0 ? [] : list.slice(at + 1).filter(playable);
+    if (at < 0) return [];
+    const after = list.slice(at + 1);
+    return (repeat ? [...after, ...list.slice(0, at)] : after).filter(playable);
   };
 }
 
@@ -221,10 +288,14 @@ export interface UpNext {
  */
 export function useUpNext(item: BaseItemDto, playlist?: string): UpNext {
   const entries = usePlaylistEntries(playlist);
+  const [{ seed, repeat }] = usePlayOrder(playlist);
   // A deleted playlist leaves the title as if it was never in one.
   const gone =
     entries.error instanceof JellyfinError && entries.error.status === 404;
-  const listed = gone ? undefined : entries.data;
+  const listed = React.useMemo(
+    () => (gone || !entries.data ? undefined : inPlayOrder(entries.data, seed)),
+    [gone, entries.data, seed]
+  );
   const found = listed?.findIndex((e) => sameId(e.Id, item.Id)) ?? -1;
   // Taken out while it plays, a title still leads on to what followed it.
   const key = `${playlist}:${item.Id}`;
@@ -238,12 +309,17 @@ export function useUpNext(item: BaseItemDto, playlist?: string): UpNext {
     !playlist || gone || (!!listed && !inPlaylist)
   ).data;
   if (playlist && !listed && !gone) return { next: null, previous: null };
-  if (inPlaylist)
+  if (inPlaylist) {
+    const before = listed!.slice(0, at);
+    const after = listed!.slice(found >= 0 ? at + 1 : at);
+    // Never round onto the title playing: its page would not start it again.
+    const round = (part: BaseItemDto[]) => (repeat ? part : []);
     return {
-      next: listed!.slice(found >= 0 ? at + 1 : at).find(playable) ?? null,
-      previous: listed!.slice(0, at).reverse().find(playable) ?? null,
+      next: [...after, ...round(before)].find(playable) ?? null,
+      previous: [...round(after), ...before].reverse().find(playable) ?? null,
       playlist,
     };
+  }
   return {
     next: episodes?.next ?? null,
     previous: episodes?.previous ?? null,

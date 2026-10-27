@@ -3363,6 +3363,10 @@ msgstr ""
 msgid "Rename"
 msgstr ""
 
+#: src/components/playlists.tsx
+msgid "Repeat"
+msgstr ""
+
 #: src/pages/settings/apps.tsx
 msgid "Report a problem"
 msgstr ""
@@ -3788,6 +3792,10 @@ msgstr ""
 
 #: src/pages/settings/subtitles.tsx
 msgid "Shows subtitles in your language unless the audio already is."
+msgstr ""
+
+#: src/components/playlists.tsx
+msgid "Shuffle"
 msgstr ""
 
 #: src/pages/settings/interface.tsx

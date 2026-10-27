@@ -12,6 +12,8 @@ import {
   LuPencil,
   LuPlay,
   LuPlus,
+  LuRepeat,
+  LuShuffle,
   LuTrash2,
 } from 'react-icons/lu';
 import { Button, IconButton } from '@aiostreams/ui/button';
@@ -29,8 +31,11 @@ import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '../lib/session';
 import { mergeRows, useNextUp, useResume } from '../lib/queries';
 import {
+  inPlayOrder,
   lastPlaylist,
+  newSeed,
   playable,
+  usePlayOrder,
   usePlaylistEdits,
   usePlaylistEntries,
   usePlaylists,
@@ -455,14 +460,18 @@ function PlaylistView({
   const playlists = usePlaylists();
   const entries = usePlaylistEntries(id);
   const edits = usePlaylistEdits();
+  const [order, setOrder] = usePlayOrder(id);
   const [renaming, setRenaming] = React.useState(false);
   const name = playlists.data?.find((p) => p.Id === id)?.Name ?? '';
   const list = entries.data ?? [];
   const runtime = duration(
     list.reduce((ms, e) => ms + ticksToMs(e.RunTimeTicks), 0)
   );
+  const ordered = inPlayOrder(list, order.seed);
   const first =
-    list.find((e) => playable(e) && !e.UserData?.Played) ?? list.find(playable);
+    ordered.find((e) => playable(e) && !e.UserData?.Played) ??
+    ordered.find(playable);
+  const shuffled = order.seed !== undefined;
   const confirmDelete = useConfirmationDialog({
     title: t`Delete ${name}`,
     description: t`The playlist goes; the titles in it stay.`,
@@ -519,6 +528,47 @@ function PlaylistView({
             >
               <Trans>Play</Trans>
             </Button>
+            <Tooltip
+              trigger={
+                <IconButton
+                  data-ui="playlist-action"
+                  data-name="shuffle"
+                  data-active={shuffled || undefined}
+                  size="sm"
+                  intent={shuffled ? 'primary' : 'gray-subtle'}
+                  className="rounded-full"
+                  icon={<LuShuffle />}
+                  aria-label={t`Shuffle`}
+                  aria-pressed={shuffled}
+                  onClick={() =>
+                    setOrder({
+                      ...order,
+                      seed: shuffled ? undefined : newSeed(),
+                    })
+                  }
+                />
+              }
+            >
+              <Trans>Shuffle</Trans>
+            </Tooltip>
+            <Tooltip
+              trigger={
+                <IconButton
+                  data-ui="playlist-action"
+                  data-name="repeat"
+                  data-active={order.repeat || undefined}
+                  size="sm"
+                  intent={order.repeat ? 'primary' : 'gray-subtle'}
+                  className="rounded-full"
+                  icon={<LuRepeat />}
+                  aria-label={t`Repeat`}
+                  aria-pressed={!!order.repeat}
+                  onClick={() => setOrder({ ...order, repeat: !order.repeat })}
+                />
+              }
+            >
+              <Trans>Repeat</Trans>
+            </Tooltip>
             <p className="me-auto truncate text-sm text-[--muted]">
               {entries.data &&
                 [countLabel(list.length), runtime].filter(Boolean).join(' · ')}

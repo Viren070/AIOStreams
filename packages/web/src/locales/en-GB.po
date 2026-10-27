@@ -3363,6 +3363,10 @@ msgstr "Removed from history"
 msgid "Rename"
 msgstr "Rename"
 
+#: src/components/playlists.tsx
+msgid "Repeat"
+msgstr "Repeat"
+
 #: src/pages/settings/apps.tsx
 msgid "Report a problem"
 msgstr "Report a problem"
@@ -3789,6 +3793,10 @@ msgstr "Shows search results in one grid instead of a row each for movies and sh
 #: src/pages/settings/subtitles.tsx
 msgid "Shows subtitles in your language unless the audio already is."
 msgstr "Shows subtitles in your language unless the audio already is."
+
+#: src/components/playlists.tsx
+msgid "Shuffle"
+msgstr "Shuffle"
 
 #: src/pages/settings/interface.tsx
 msgid "Side rail"
