@@ -59,6 +59,9 @@ const UNTITLED = /^(chapter)?$/;
 const SONG_MIN_MS = 85_000;
 const SONG_MAX_MS = 110_000;
 
+/** Past this a named chapter also holds the programme, except credits, which run long on films. */
+const NAMED_MAX_MS = 180_000;
+
 function plainTitle(title: string): string {
   return title
     .toLowerCase()
@@ -102,6 +105,7 @@ export function chapterSegments(
         : undefined);
     const endMs = chapters[i + 1]?.startMs ?? durationMs;
     if (!type || !(endMs > chapter.startMs)) return [];
+    if (type !== 'Outro' && endMs - chapter.startMs > NAMED_MAX_MS) return [];
     return [segment(type, chapter.startMs, endMs)];
   });
 }
