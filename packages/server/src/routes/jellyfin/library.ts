@@ -24,6 +24,8 @@ import {
   getCatalogPage,
   getWatchStateProvider,
   isLeafEntry,
+  isPlaceholderItem,
+  itemIdsForProviderIds,
   knownCatalogKinds,
   latestSpellings,
   listResult,
@@ -444,12 +446,25 @@ async function handleItems(
   const wantsResumable = filters.includes('isresumable');
   const recursive = qb(req, 'Recursive') ?? false;
   const personIds = qlist(req, 'PersonIds');
+  const providerIds = qlist(req, 'AnyProviderIdEquals');
 
-  if (ids.length) {
+  if (ids.length || providerIds.length) {
+    // A provider id names its item's id outright; one nothing serves a meta for
+    // would build a placeholder, which is not a match.
+    const byProvider = !ids.length;
+    const wanted = byProvider
+      ? itemIdsForProviderIds(
+          providerIds,
+          searchKindsFor(types) ?? ['movie', 'series']
+        )
+      : ids;
     // Resolving runs the stream pipeline, so a lookup of several ids never does.
-    const resolve = ids.length === 1 && (wantsVersions(req) ?? false);
-    const built = await mapLimited(ids.slice(0, 200), ROW_CONCURRENCY, (id) =>
-      itemForId(req, ctx, id, { resolve, listed: true }).catch(() => null)
+    const resolve = wanted.length === 1 && (wantsVersions(req) ?? false);
+    const built = await mapLimited(
+      wanted.slice(0, 200),
+      ROW_CONCURRENCY,
+      (id) =>
+        itemForId(req, ctx, id, { resolve, listed: true }).catch(() => null)
     );
     const items = applySort(
       req,
@@ -458,7 +473,10 @@ async function handleItems(
         applyUserFilters(
           req,
           filterByType(
-            built.filter((item): item is JellyfinItem => !!item),
+            built.filter(
+              (item): item is JellyfinItem =>
+                !!item && !(byProvider && isPlaceholderItem(item))
+            ),
             types
           )
         )

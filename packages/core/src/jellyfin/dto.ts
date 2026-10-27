@@ -88,6 +88,14 @@ export function descriptorOf(
     ?.descriptor;
 }
 
+/** An item built for an id no addon served a meta for: named after the id, with no images. */
+export function isPlaceholderItem(item: JellyfinItem): boolean {
+  const d = descriptorOf(item);
+  if (!d || !('i' in d) || item.Name !== d.i) return false;
+  const tags = item.ImageTags as Record<string, string> | undefined;
+  return !tags || !Object.keys(tags).length;
+}
+
 /** Set even when the episode is not sent as `Virtual`. */
 export function isUnairedEpisode(item: JellyfinItem): boolean {
   return !!(item as { _aio?: { unaired?: boolean } })._aio?.unaired;
