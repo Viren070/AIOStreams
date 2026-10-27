@@ -129,13 +129,9 @@ export class KnabenAddon extends BaseDebridAddon<KnabenAddonConfig> {
       if (hit.magnetUrl) {
         sources = extractTrackersFromMagnet(hit.magnetUrl);
       }
-      let age = undefined;
-      if (hit.lastSeen) {
-        const lastSeenDate = new Date(hit.lastSeen);
-        const now = new Date();
-        const diffMs = now.getTime() - lastSeenDate.getTime();
-        age = Math.floor(diffMs / (1000 * 60 * 60));
-      }
+      const age = Math.floor(
+        (Date.now() - new Date(hit.date).getTime()) / (1000 * 60 * 60)
+      );
       torrents.push({
         hash: hash ?? undefined,
         downloadUrl: hit.link ?? undefined,
