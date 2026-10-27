@@ -2,7 +2,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import '../index.js';
 import type { MetaPreview } from '../db/schemas.js';
-import { buildContentItem, isPlaceholderItem } from './dto.js';
+import { buildContentItem, isBareMeta, isPlaceholderItem } from './dto.js';
 import { decodeItemId, encodeItemId, itemIdsForProviderIds } from './ids.js';
 
 const ctx = {
@@ -99,24 +99,35 @@ describe('isPlaceholderItem', () => {
       type: 'movie',
       name: 'tt0111161',
     };
-    assert.equal(isPlaceholderItem(buildContentItem(ctx, stub)), true);
-
-    const real: MetaPreview = {
-      id: 'tt0111161',
-      type: 'movie',
-      name: 'The Shawshank Redemption',
-      poster: 'https://images.example/tt0111161.jpg',
-    };
-    assert.equal(isPlaceholderItem(buildContentItem(ctx, real)), false);
+    assert.equal(
+      isPlaceholderItem(buildContentItem(ctx, stub, { placeholder: true })),
+      true
+    );
+    assert.equal(isPlaceholderItem(buildContentItem(ctx, stub)), false);
   });
 
-  test('keeps a title that happens to be named after its id when it has images', () => {
-    const named: MetaPreview = {
+  test('tells a bare meta from one that carries anything of its own', () => {
+    assert.equal(isBareMeta({ id: 'tt0000000', type: 'movie' }), true);
+    assert.equal(isBareMeta({ name: 'The Shawshank Redemption' }), false);
+    assert.equal(
+      isBareMeta({ background: 'https://images.example/backdrop.jpg' }),
+      false
+    );
+    assert.equal(
+      isBareMeta({ description: 'A banker is sent to prison.' }),
+      false
+    );
+  });
+
+  test('keeps a served meta that has no name and only a background', () => {
+    const bare: MetaPreview = {
       id: 'tt0111161',
       type: 'movie',
-      name: 'tt0111161',
-      poster: 'https://images.example/tt0111161.jpg',
+      background: 'https://images.example/tt0111161-backdrop.jpg',
     };
-    assert.equal(isPlaceholderItem(buildContentItem(ctx, named)), false);
+    const item = buildContentItem(ctx, bare);
+    assert.equal(item.Name, 'tt0111161');
+    assert.deepEqual(item.ImageTags, {});
+    assert.equal(isPlaceholderItem(item), false);
   });
 });

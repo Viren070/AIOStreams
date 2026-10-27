@@ -4,6 +4,7 @@ import '../index.js';
 import { buildContentItem } from './dto.js';
 import { encodeItemId } from './ids.js';
 import { providerLookup } from './library.js';
+import type { JellyfinItem } from './types.js';
 
 const ctx = {
   serverId: 'server',
@@ -15,6 +16,8 @@ const ctx = {
 
 const movieId = encodeItemId({ k: 'movie', t: 'movie', i: 'tt0111161' });
 const seriesId = encodeItemId({ k: 'series', t: 'series', i: 'tt0111161' });
+const otherId = encodeItemId({ k: 'movie', t: 'movie', i: 'tt0068646' });
+const all = (items: JellyfinItem[]) => items;
 
 type Call = { id: string; resolve: boolean };
 
@@ -32,10 +35,18 @@ function fakeBuild(calls: Call[]) {
       return { ...item, MediaSourceCount: resolve ? 1 : 2 };
     }
     if (id === seriesId) {
+      return buildContentItem(
+        ctx,
+        { id: 'tt0111161', type: 'series', name: 'tt0111161' },
+        { placeholder: true }
+      );
+    }
+    if (id === otherId) {
       return buildContentItem(ctx, {
-        id: 'tt0111161',
-        type: 'series',
-        name: 'tt0111161',
+        id: 'tt0068646',
+        type: 'movie',
+        name: 'The Godfather',
+        poster: 'https://images.example/tt0068646.jpg',
       });
     }
     return null;
@@ -48,7 +59,8 @@ describe('providerLookup', () => {
     const found = await providerLookup(
       [movieId, seriesId],
       false,
-      fakeBuild(calls)
+      fakeBuild(calls),
+      all
     );
     assert.deepEqual(
       found.map((i) => i.Id),
@@ -62,7 +74,8 @@ describe('providerLookup', () => {
     const found = await providerLookup(
       [movieId, seriesId],
       true,
-      fakeBuild(calls)
+      fakeBuild(calls),
+      all
     );
     assert.deepEqual(
       found.map((i) => i.Id),
@@ -77,14 +90,38 @@ describe('providerLookup', () => {
 
   test('never resolves versions for several hits', async () => {
     const calls: Call[] = [];
-    const twice = (id: string, resolve: boolean) =>
-      fakeBuild(calls)(id === 'other' ? movieId : id, resolve);
-    const found = await providerLookup([movieId, 'other'], true, twice);
+    const found = await providerLookup(
+      [movieId, otherId],
+      true,
+      fakeBuild(calls),
+      all
+    );
     assert.equal(found.length, 2);
     assert.ok(calls.every((c) => !c.resolve));
   });
 
+  test('resolves the one hit the response keeps', async () => {
+    const calls: Call[] = [];
+    const found = await providerLookup(
+      [movieId, otherId],
+      true,
+      fakeBuild(calls),
+      (items) => items.filter((i) => i.Id === otherId)
+    );
+    assert.deepEqual(
+      found.map((i) => i.Id),
+      [otherId]
+    );
+    assert.deepEqual(
+      calls.filter((c) => c.resolve),
+      [{ id: otherId, resolve: true }]
+    );
+  });
+
   test('answers nothing when every candidate is a placeholder', async () => {
-    assert.deepEqual(await providerLookup([seriesId], true, fakeBuild([])), []);
+    assert.deepEqual(
+      await providerLookup([seriesId], true, fakeBuild([]), all),
+      []
+    );
   });
 });

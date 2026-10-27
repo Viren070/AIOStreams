@@ -452,36 +452,28 @@ async function handleItems(
     const versions = wantsVersions(req) ?? false;
     const build = (id: string, resolve: boolean) =>
       itemForId(req, ctx, id, { resolve, listed: true }).catch(() => null);
-    let built: (JellyfinItem | null)[];
+    const select = (items: JellyfinItem[]) =>
+      excludeTypes(req, applyUserFilters(req, filterByType(items, types)));
+    let found: JellyfinItem[];
     if (ids.length) {
       // Resolving runs the stream pipeline, so a lookup of several ids never does.
       const resolve = ids.length === 1 && versions;
-      built = await mapLimited(ids.slice(0, 200), ROW_CONCURRENCY, (id) =>
+      const built = await mapLimited(ids.slice(0, 200), ROW_CONCURRENCY, (id) =>
         build(id, resolve)
       );
+      found = select(built.filter((item): item is JellyfinItem => !!item));
     } else {
-      built = await providerLookup(
+      found = await providerLookup(
         itemIdsForProviderIds(
           providerIds,
           searchKindsFor(types) ?? ['movie', 'series']
         ).slice(0, 200),
         versions,
-        build
+        build,
+        select
       );
     }
-    const items = applySort(
-      req,
-      excludeTypes(
-        req,
-        applyUserFilters(
-          req,
-          filterByType(
-            built.filter((item): item is JellyfinItem => !!item),
-            types
-          )
-        )
-      )
-    );
+    const items = applySort(req, found);
     const end = qs(req, 'Limit') ? startIndex + limit : items.length;
     send(req, res, items.slice(startIndex, end), items.length, startIndex);
     return;

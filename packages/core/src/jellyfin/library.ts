@@ -846,20 +846,24 @@ const LOOKUP_CONCURRENCY = 6;
 /**
  * The items an `AnyProviderIdEquals` lookup finds. A provider id names its
  * item's id outright, but an id nothing serves a meta for builds a placeholder,
- * which is not a match. Which candidate is real is only known once built, so
- * versions are resolved afterwards, for the one hit, as a lookup of one id does.
+ * which is not a match. Which candidate is real is only known once built, and
+ * `select` applies the response's own filters, so versions are resolved
+ * afterwards, for the one item answered, as a lookup of one id does.
  */
 export async function providerLookup(
   ids: string[],
   versions: boolean,
-  build: (id: string, resolve: boolean) => Promise<JellyfinItem | null>
+  build: (id: string, resolve: boolean) => Promise<JellyfinItem | null>,
+  select: (items: JellyfinItem[]) => JellyfinItem[]
 ): Promise<JellyfinItem[]> {
   const pool = pLimit(LOOKUP_CONCURRENCY);
   const built = await Promise.all(
     ids.map((id) => pool(() => build(id, false)))
   );
-  const found = built.filter(
-    (item): item is JellyfinItem => !!item && !isPlaceholderItem(item)
+  const found = select(
+    built.filter(
+      (item): item is JellyfinItem => !!item && !isPlaceholderItem(item)
+    )
   );
   if (found.length !== 1 || !versions) return found;
   return [(await build(found[0].Id, true)) ?? found[0]];
