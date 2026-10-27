@@ -412,10 +412,14 @@ const PROVIDER_ID_TYPES: Record<string, string> = {
   simkl: 'simklId',
 };
 
+/* Catalogs serve these under `anime` as well as under the kind's own type. */
+const ANIME_ID_TYPES = new Set(['kitsuId', 'malId', 'anilistId', 'anidbId']);
+
 /**
  * The ids an `AnyProviderIdEquals` lookup stands for: one per `provider.id`
- * pair and kind. A pair naming a provider no id is packed from, or a value
- * its parser rejects, stands for nothing.
+ * pair, kind and media type the pair's provider is served under. A pair
+ * naming a provider no id is packed from, or a value its parser rejects,
+ * stands for nothing.
  */
 export function itemIdsForProviderIds(
   pairs: string[],
@@ -431,8 +435,10 @@ export function itemIdsForProviderIds(
     if (!idType || !/^\d+$/.test(digits)) continue;
     const i = rebuildBaseId(idType, Number(digits));
     for (const k of kinds) {
-      const packed = tryPack({ k, t: k, i });
-      if (packed) out.add(packed);
+      for (const t of ANIME_ID_TYPES.has(idType) ? [k, 'anime'] : [k]) {
+        const packed = tryPack({ k, t, i });
+        if (packed) out.add(packed);
+      }
     }
   }
   return [...out];

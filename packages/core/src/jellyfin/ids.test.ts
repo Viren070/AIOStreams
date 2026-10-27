@@ -52,6 +52,20 @@ describe('itemIdsForProviderIds', () => {
     );
   });
 
+  test('looks for an anime id under anime as well', () => {
+    assert.deepEqual(itemIdsForProviderIds(['kitsu.1'], ['series']), [
+      encodeItemId({ k: 'series', t: 'series', i: 'kitsu:1' }),
+      encodeItemId({ k: 'series', t: 'anime', i: 'kitsu:1' }),
+    ]);
+    assert.deepEqual(itemIdsForProviderIds(['MyAnimeList.1'], ['movie']), [
+      encodeItemId({ k: 'movie', t: 'movie', i: 'mal:1' }),
+      encodeItemId({ k: 'movie', t: 'anime', i: 'mal:1' }),
+    ]);
+    assert.deepEqual(itemIdsForProviderIds(['imdb.tt0111161'], ['series']), [
+      encodeItemId({ k: 'series', t: 'series', i: 'tt0111161' }),
+    ]);
+  });
+
   test('ignores provider case and a bare IMDb number', () => {
     const expected = itemIdsForProviderIds(['imdb.tt0111161'], ['movie']);
     assert.deepEqual(

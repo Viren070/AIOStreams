@@ -24,12 +24,12 @@ import {
   getCatalogPage,
   getWatchStateProvider,
   isLeafEntry,
-  isPlaceholderItem,
   itemIdsForProviderIds,
   knownCatalogKinds,
   latestSpellings,
   listResult,
   listViews,
+  providerLookup,
   requiresGenre,
   searchCatalogs,
   seriesIdOf,
@@ -449,23 +449,26 @@ async function handleItems(
   const providerIds = qlist(req, 'AnyProviderIdEquals');
 
   if (ids.length || providerIds.length) {
-    // A provider id names its item's id outright; one nothing serves a meta for
-    // would build a placeholder, which is not a match.
-    const byProvider = !ids.length;
-    const wanted = byProvider
-      ? itemIdsForProviderIds(
+    const versions = wantsVersions(req) ?? false;
+    const build = (id: string, resolve: boolean) =>
+      itemForId(req, ctx, id, { resolve, listed: true }).catch(() => null);
+    let built: (JellyfinItem | null)[];
+    if (ids.length) {
+      // Resolving runs the stream pipeline, so a lookup of several ids never does.
+      const resolve = ids.length === 1 && versions;
+      built = await mapLimited(ids.slice(0, 200), ROW_CONCURRENCY, (id) =>
+        build(id, resolve)
+      );
+    } else {
+      built = await providerLookup(
+        itemIdsForProviderIds(
           providerIds,
           searchKindsFor(types) ?? ['movie', 'series']
-        )
-      : ids;
-    // Resolving runs the stream pipeline, so a lookup of several ids never does.
-    const resolve = wanted.length === 1 && (wantsVersions(req) ?? false);
-    const built = await mapLimited(
-      wanted.slice(0, 200),
-      ROW_CONCURRENCY,
-      (id) =>
-        itemForId(req, ctx, id, { resolve, listed: true }).catch(() => null)
-    );
+        ).slice(0, 200),
+        versions,
+        build
+      );
+    }
     const items = applySort(
       req,
       excludeTypes(
@@ -473,10 +476,7 @@ async function handleItems(
         applyUserFilters(
           req,
           filterByType(
-            built.filter(
-              (item): item is JellyfinItem =>
-                !!item && !(byProvider && isPlaceholderItem(item))
-            ),
+            built.filter((item): item is JellyfinItem => !!item),
             types
           )
         )
