@@ -168,6 +168,9 @@ export async function processTorrents(
   // Run all service checks in parallel and collect both results and errors
   const servicePromises = debridServices.map(async (service) => {
     let timer: NodeJS.Timeout | undefined;
+    // Aborted when the service timeout fires, so in-flight requests are
+    // cancelled instead of running on in the background.
+    const controller = serviceTimeoutMs ? new AbortController() : undefined;
     try {
       const work = processTorrentsForDebridService(
         torrents,
@@ -176,7 +179,8 @@ export async function processTorrents(
         metadata,
         clientIp,
         checkOwned,
-        sharedParsedTitlesMap
+        sharedParsedTitlesMap,
+        controller?.signal
       );
       // Optional overall limit for this service, on top of the per-request
       // timeouts, so a hanging API fails fast instead of stalling the request.
@@ -184,15 +188,13 @@ export async function processTorrents(
         ? await Promise.race([
             work,
             new Promise<never>((_, reject) => {
-              timer = setTimeout(
-                () =>
-                  reject(
-                    new Error(
-                      `${service.id} did not respond within ${serviceTimeoutMs}ms`
-                    )
-                  ),
-                serviceTimeoutMs
-              );
+              timer = setTimeout(() => {
+                const error = new Error(
+                  `${service.id} did not respond within ${serviceTimeoutMs}ms`
+                );
+                controller?.abort(error);
+                reject(error);
+              }, serviceTimeoutMs);
             }),
           ])
         : await work;
@@ -271,7 +273,8 @@ async function processTorrentsForDebridService(
   metadata?: Metadata,
   clientIp?: string,
   checkOwned: boolean = true,
-  sharedParsedTitlesMap?: Map<string, ParsedResult>
+  sharedParsedTitlesMap?: Map<string, ParsedResult>,
+  signal?: AbortSignal
 ): Promise<{
   results: TorrentWithSelectedFile[];
   magnetCheckMs: number;
@@ -324,7 +327,8 @@ async function processTorrentsForDebridService(
   const magnetCheckResults = await debridService.checkMagnets(
     torrents.map((torrent) => torrent.hash),
     stremioId,
-    checkOwned
+    checkOwned,
+    signal
   );
   const magnetCheckMs = Date.now() - startTime;
   const magnetCheckTime = getTimeTakenSincePoint(startTime);

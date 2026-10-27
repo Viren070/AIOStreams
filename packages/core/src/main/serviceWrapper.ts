@@ -195,12 +195,11 @@ export async function resolveServiceWrappedStreams(
 
   // Every processing service failed (e.g. its API is down): optionally fall
   // back to the original P2P results so the user still gets playable streams.
-  const failedServices = new Set(
-    processedTorrents.errors.map((e) => e.serviceId)
-  );
-  const allServicesFailed = torrentServices.every((s) =>
-    failedServices.has(s.id)
-  );
+  // Count failed attempts rather than distinct IDs: two entries can share an
+  // ID, and one of them may still have succeeded.
+  const allServicesFailed =
+    processedTorrents.errors.length >= torrentServices.length &&
+    processedTorrents.results.length === 0;
   if (
     allServicesFailed &&
     userData.serviceWrap.onServiceFailure === 'p2p' &&

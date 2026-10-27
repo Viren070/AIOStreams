@@ -1198,7 +1198,8 @@ export const UserDataSchema = z.object({
       onServiceFailure: z.enum(['error', 'p2p']).optional(),
       /** Overall time limit (ms) for each processing service. A service that
        *  takes longer counts as failed. Absent or 0 means no extra limit. */
-      timeout: z.number().min(0).optional(),
+      // Capped at the largest delay setTimeout supports (~24.8 days).
+      timeout: z.number().int().min(0).max(2_147_483_647).optional(),
     })
     .optional(),
   jellyfin: JellyfinSettings.optional(),

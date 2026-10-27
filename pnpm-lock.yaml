@@ -5,7 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
-  stremthru: 5d59636029f2455cfc103c8b8206ce24ff67c7f7f77e6fb8ea3f65dca52105dd
+  stremthru: aada4055d451165cd5a6c3f17387cef0aecabe356d5f1bc20a5f517980b120d5
   yencode@1.2.4: 789de3a1a93eb2db8c8833260e74c663adee24df0e3dff0bddd220a6f4c4b31f
 
 importers:
@@ -104,7 +104,7 @@ importers:
         version: 3.7.0
       stremthru:
         specifier: ^0.11.0
-        version: 0.11.0(patch_hash=5d59636029f2455cfc103c8b8206ce24ff67c7f7f77e6fb8ea3f65dca52105dd)
+        version: 0.11.0(patch_hash=aada4055d451165cd5a6c3f17387cef0aecabe356d5f1bc20a5f517980b120d5)
       undici:
         specifier: ^7.30.0
         version: 7.30.0
@@ -15417,7 +15417,7 @@ snapshots:
 
   streamsearch@1.1.0: {}
 
-  stremthru@0.11.0(patch_hash=5d59636029f2455cfc103c8b8206ce24ff67c7f7f77e6fb8ea3f65dca52105dd): {}
+  stremthru@0.11.0(patch_hash=aada4055d451165cd5a6c3f17387cef0aecabe356d5f1bc20a5f517980b120d5): {}
 
   string-width@4.2.3:
     dependencies:

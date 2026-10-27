@@ -8,9 +8,14 @@ import type { StreamContext } from '../streams/context.js';
 // A stand-in StremThru that fails every request, or never answers.
 let mode: 'error' | 'hang' = 'error';
 const hanging: http.ServerResponse[] = [];
-const server = http.createServer((_req, res) => {
+const aborted: string[] = [];
+const server = http.createServer((req, res) => {
   if (mode === 'hang') {
     hanging.push(res);
+    // Fires when the client drops the request before we answer.
+    res.on('close', () => {
+      if (!res.writableEnded) aborted.push(req.url ?? '');
+    });
     return;
   }
   res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -52,9 +57,11 @@ function makeP2PStream(i: number): ParsedStream {
 }
 
 function makeUserData(
-  serviceWrap: NonNullable<UserData['serviceWrap']>
+  serviceWrap: NonNullable<UserData['serviceWrap']>,
+  extra: Partial<UserData> = {}
 ): UserData {
   return {
+    ...extra,
     services: [
       { id: 'torbox', enabled: true, credentials: { apiKey: 'test-key' } },
     ],
@@ -118,6 +125,25 @@ describe('resolveServiceWrappedStreams with a service timeout', () => {
     assert.ok(
       result.errors.some((e) => e.description.includes('300ms')),
       'reports the timeout'
+    );
+  });
+
+  it('cancels the hanging request when the timeout fires', async () => {
+    aborted.length = 0;
+    await resolveServiceWrappedStreams(
+      streams,
+      context,
+      makeUserData(
+        { onServiceFailure: 'p2p', timeout: 300 },
+        { checkOwned: false }
+      ),
+      addons
+    );
+    // Give the socket a moment to close on the server side.
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    assert.ok(
+      aborted.some((url) => url.startsWith('/v0/store/magnets/check')),
+      `magnet check should be aborted, got ${JSON.stringify(aborted)}`
     );
   });
 });
