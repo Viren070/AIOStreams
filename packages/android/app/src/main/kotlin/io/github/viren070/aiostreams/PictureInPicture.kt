@@ -23,7 +23,11 @@ class PictureInPicture(private val activity: Activity, private val video: View) 
         if (!supported || (allowed == this.allowed && size == this.size)) return
         this.allowed = allowed
         this.size = size
-        activity.setPictureInPictureParams(params())
+        try {
+            activity.setPictureInPictureParams(params())
+        } catch (_: IllegalStateException) {
+            // Closing the window removes the activity before the pause it causes gets here.
+        }
     }
 
     /** Android 12 and later enter on their own. */
