@@ -1,19 +1,8 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { DndContext } from '@dnd-kit/core';
 import {
-  DndContext,
-  KeyboardSensor,
-  MouseSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from '@dnd-kit/core';
-import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
-import {
-  arrayMove,
   SortableContext,
-  sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
@@ -24,6 +13,7 @@ import { watchStateTrackersQuery } from '@/lib/queries';
 import type { WatchStateTrackerOption } from '@/lib/api';
 import { cn } from '@aiostreams/ui/core/styling';
 import { pill, VariantPills } from '../shared/variant-pills';
+import { useSortableRows } from '../shared/sortable-rows';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
@@ -480,41 +470,6 @@ export function JellyfinPersonas() {
   const [draft, setDraft] = useState<Persona | null>(null);
   const [primaryDraft, setPrimaryDraft] = useState<Primary | null>(null);
   const [pendingRemoval, setPendingRemoval] = useState<number | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-
-  const sensors = useSensors(
-    useSensor(MouseSensor),
-    useSensor(TouchSensor, {
-      activationConstraint: { delay: 150, tolerance: 8 },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
-  // Stop the page scrolling out from under a touch drag.
-  React.useEffect(() => {
-    function preventTouchMove(e: TouchEvent) {
-      if (isDragging) e.preventDefault();
-    }
-    function handleDragEndDoc() {
-      setIsDragging(false);
-    }
-    if (isDragging) {
-      document.body.addEventListener('touchmove', preventTouchMove, {
-        passive: false,
-      });
-      document.addEventListener('pointerup', handleDragEndDoc);
-      document.addEventListener('touchend', handleDragEndDoc);
-    } else {
-      document.body.removeEventListener('touchmove', preventTouchMove);
-    }
-    return () => {
-      document.body.removeEventListener('touchmove', preventTouchMove);
-      document.removeEventListener('pointerup', handleDragEndDoc);
-      document.removeEventListener('touchend', handleDragEndDoc);
-    };
-  }, [isDragging]);
 
   const shared = new Set(
     trackerOptions.filter((o) => o.viewers).map((o) => o.presetId)
@@ -556,6 +511,8 @@ export function JellyfinPersonas() {
       ...prev,
       jellyfin: { ...prev.jellyfin, ...values },
     }));
+
+  const rows = useSortableRows(personas, (next) => patch({ personas: next }));
 
   const close = () => {
     setEditing(null);
@@ -684,23 +641,9 @@ export function JellyfinPersonas() {
   };
 
   const remove = (index: number) => {
-    patch({
-      personas:
-        personas.length > 1
-          ? personas.filter((_, i) => i !== index)
-          : undefined,
-    });
+    if (personas.length > 1) rows.removeAt(index);
+    else patch({ personas: undefined });
     toast.info('Removed. A user with the same name gets its history back.');
-  };
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    setIsDragging(false);
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const from = personas.findIndex((p) => p.id === active.id);
-    const to = personas.findIndex((p) => p.id === over.id);
-    if (from < 0 || to < 0) return;
-    patch({ personas: arrayMove(personas, from, to) });
   };
 
   const removalTarget =
@@ -734,13 +677,7 @@ export function JellyfinPersonas() {
           ` On the sign-in picker address, a user with a PIN of ${PIN_ONLY_LENGTH} or more digits can sign in with that PIN alone, so each person needs only their own PIN.`}
       </p>
 
-      <DndContext
-        modifiers={[restrictToVerticalAxis]}
-        sensors={sensors}
-        onDragStart={() => setIsDragging(true)}
-        onDragEnd={handleDragEnd}
-        onDragCancel={() => setIsDragging(false)}
-      >
+      <DndContext {...rows.dndProps}>
         <ul className="divide-y divide-gray-800 rounded-md border border-gray-800">
           <li>
             <UserRow
@@ -761,13 +698,13 @@ export function JellyfinPersonas() {
             />
           </li>
           <SortableContext
-            items={personas.map((p) => p.id)}
+            items={rows.sortableIds}
             strategy={verticalListSortingStrategy}
           >
             {personas.map((persona, index) => (
               <SortableUserRow
-                key={persona.id}
-                id={persona.id}
+                key={rows.keyAt(index)}
+                id={rows.keyAt(index)}
                 name={persona.name}
                 avatar={persona.avatar}
                 summary={[
