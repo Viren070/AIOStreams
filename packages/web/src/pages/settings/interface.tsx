@@ -18,11 +18,13 @@ import {
   MAX_FEATURED,
   type EpisodeLayout,
   type BarBackground,
+  type DesktopNavigation,
   type RailNames,
   type RailShape,
+  type TopBar,
+  type TopNames,
   type TouchNavigation,
   type TvNavigation,
-  type TvTopBar,
   type HeroMode,
   type PosterLine,
   type PosterSize,
@@ -42,7 +44,11 @@ function NavigationCard() {
   const [tvNavigation, setTvNavigation] = useSetting(
     settings.interface.tvNavigation
   );
-  const [tvTopBar, setTvTopBar] = useSetting(settings.interface.tvTopBar);
+  const [desktopNavigation, setDesktopNavigation] = useSetting(
+    settings.interface.desktopNavigation
+  );
+  const [topBar, setTopBar] = useSetting(settings.interface.topBar);
+  const [topNames, setTopNames] = useSetting(settings.interface.topNames);
   const [railShape, setRailShape] = useSetting(settings.interface.railShape);
   const [railNames, setRailNames] = useSetting(settings.interface.railNames);
   const [background, setBackground] = useSetting(
@@ -51,8 +57,10 @@ function NavigationCard() {
   const rail = tv
     ? tvNavigation === 'rail'
     : touch && touchNavigation === 'rail';
+  const topTabs =
+    (tv ? tvNavigation : touch ? touchNavigation : desktopNavigation) === 'top';
   // A TV's docked rail and fade sit on nothing.
-  const onBar = !tv || (rail ? railShape !== 'docked' : tvTopBar !== 'fade');
+  const onBar = !tv || (rail ? railShape !== 'docked' : topBar !== 'fade');
   return (
     <SettingsCard
       name="navigation"
@@ -78,10 +86,25 @@ function NavigationCard() {
           options={[
             { value: 'rail', label: t`Side rail` },
             { value: 'bar', label: t`Bottom bar` },
+            { value: 'top', label: t`Top tabs` },
           ]}
           value={touchNavigation}
           onValueChange={(value) =>
             setTouchNavigation(value as TouchNavigation)
+          }
+        />
+      )}
+      {!tv && !touch && (
+        <Select
+          label={t`On wide screens`}
+          help={t`Where the navigation goes when the window is wide enough for a sidebar.`}
+          options={[
+            { value: 'sidebar', label: t`Sidebar` },
+            { value: 'top', label: t`Top tabs` },
+          ]}
+          value={desktopNavigation}
+          onValueChange={(value) =>
+            setDesktopNavigation(value as DesktopNavigation)
           }
         />
       )}
@@ -121,7 +144,7 @@ function NavigationCard() {
           onValueChange={(value) => setRailNames(value as RailNames)}
         />
       )}
-      {tv && tvNavigation === 'top' && (
+      {topTabs && (
         <Select
           label={t`Top bar`}
           help={t`How the tabs sit over the page: as floating pills, on a bar across the top, or on nothing but a fade down from the top edge.`}
@@ -130,8 +153,20 @@ function NavigationCard() {
             { value: 'bar', label: t`Bar` },
             { value: 'fade', label: t`Fade` },
           ]}
-          value={tvTopBar}
-          onValueChange={(value) => setTvTopBar(value as TvTopBar)}
+          value={topBar}
+          onValueChange={(value) => setTopBar(value as TopBar)}
+        />
+      )}
+      {topTabs && (
+        <Select
+          label={t`Page names`}
+          help={t`Whether the tabs name each page beside its icon.`}
+          options={[
+            { value: 'shown', label: t`Shown` },
+            { value: 'hidden', label: t`Hidden` },
+          ]}
+          value={topNames}
+          onValueChange={(value) => setTopNames(value as TopNames)}
         />
       )}
       {onBar && (

@@ -3775,6 +3775,10 @@ msgstr "Side rail"
 msgid "Side rail runs down the side of the screen; Top tabs sit along the top of each page."
 msgstr "Side rail runs down the side of the screen; Top tabs sit along the top of each page."
 
+#: src/pages/settings/interface.tsx
+msgid "Sidebar"
+msgstr "Sidebar"
+
 #: src/pages/sign-in.tsx
 msgid "Sign in"
 msgstr "Sign in"
@@ -5053,6 +5057,10 @@ msgstr "Where the app is made, and where to report a problem."
 msgid "Where the navigation goes when the screen is wide enough for a sidebar, such as a tablet held sideways."
 msgstr "Where the navigation goes when the screen is wide enough for a sidebar, such as a tablet held sideways."
 
+#: src/pages/settings/interface.tsx
+msgid "Where the navigation goes when the window is wide enough for a sidebar."
+msgstr "Where the navigation goes when the window is wide enough for a sidebar."
+
 #: src/pages/settings/index.tsx
 msgid "Where they go and how many run at once"
 msgstr "Where they go and how many run at once"
@@ -5064,6 +5072,10 @@ msgstr "Whether the rail names each page only while you're in it, or all the tim
 #: src/pages/settings/interface.tsx
 msgid "Whether the rail names each page under its icon."
 msgstr "Whether the rail names each page under its icon."
+
+#: src/pages/settings/interface.tsx
+msgid "Whether the tabs name each page beside its icon."
+msgstr "Whether the tabs name each page beside its icon."
 
 #: src/components/shortcut-settings.tsx
 msgid "While syncing subtitles by ear."

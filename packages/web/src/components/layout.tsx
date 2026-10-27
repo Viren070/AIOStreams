@@ -39,6 +39,7 @@ import {
   type DropdownMenuProps,
 } from '@aiostreams/ui/dropdown-menu';
 import { LuCircleArrowLeft, LuCircleArrowRight } from 'react-icons/lu';
+import { BarWindowButtons, pageDrawsWindowButtons } from './window-controls';
 import { VerticalMenu } from '@aiostreams/ui/vertical-menu';
 import { HoverCard } from '@aiostreams/ui/hover-card';
 import { Tooltip } from '@aiostreams/ui/tooltip';
@@ -63,7 +64,7 @@ import {
   useDownloadRunner,
 } from '../lib/downloads';
 import { usePendingStops } from '../lib/playback/reporter';
-import { settings, useSetting, type TvTopBar } from '../lib/settings';
+import { settings, useSetting, type TopBar } from '../lib/settings';
 import { useAction, usingKeys } from '../lib/input';
 import { UserAvatar } from './user-avatar';
 import { BrandLogo } from './brand-logo';
@@ -321,7 +322,7 @@ function HistoryButton({
 }
 
 /** Back, and forward on hover, where no browser around the app has them. */
-function HistoryButtons() {
+function HistoryButtons({ top = false }: { top?: boolean }) {
   useRouterState({ select: (s) => s.location.href });
   if (
     currentHost().name === 'browser' &&
@@ -341,19 +342,24 @@ function HistoryButtons() {
   );
   return (
     <div
-      data-ui="sidebar-history"
-      className="flex w-full flex-col items-center gap-3 px-4 pt-3"
+      data-ui={top ? 'top-history' : 'sidebar-history'}
+      className={
+        top ? 'flex' : 'flex w-full flex-col items-center gap-3 px-4 pt-3'
+      }
     >
-      <span aria-hidden className="h-px w-8 bg-white/10" />
+      {!top && <span aria-hidden className="h-px w-8 bg-white/10" />}
       {nav?.canGoForward === false ? (
         back
       ) : (
         <HoverCard
-          side={pageRtl() ? 'left' : 'right'}
+          side={top ? 'bottom' : pageRtl() ? 'left' : 'right'}
           sideOffset={0}
           openDelay={150}
           closeDelay={150}
-          className="w-auto border-none bg-transparent p-0 ps-1.5 shadow-none"
+          className={cn(
+            'w-auto border-none bg-transparent p-0 shadow-none',
+            top ? 'pt-1.5' : 'ps-1.5'
+          )}
           trigger={<span className="flex">{back}</span>}
         >
           <HistoryButton
@@ -498,7 +504,9 @@ export function WebLayout() {
   const touch = useMediaQuery('(pointer: coarse)');
   const [touchNavigation] = useSetting(settings.interface.touchNavigation);
   const [tvNavigation] = useSetting(settings.interface.tvNavigation);
-  const [tvTopBar] = useSetting(settings.interface.tvTopBar);
+  const [desktopNavigation] = useSetting(settings.interface.desktopNavigation);
+  const [topBar] = useSetting(settings.interface.topBar);
+  const [topNames] = useSetting(settings.interface.topNames);
   const [railShape] = useSetting(settings.interface.railShape);
   const [railNames] = useSetting(settings.interface.railNames);
   // What wide screens show; narrow ones always have the bar.
@@ -506,7 +514,8 @@ export function WebLayout() {
     ? (`tv-${tvNavigation}` as const)
     : touch
       ? touchNavigation
-      : 'sidebar';
+      : desktopNavigation;
+  const top = nav === 'tv-top' || nav === 'top';
   const shape = nav === 'rail' || nav === 'tv-rail' ? railShape : undefined;
   const side = nav === 'sidebar' || shape === 'docked';
   const named =
@@ -599,7 +608,7 @@ export function WebLayout() {
   const page = cn(
     'relative pb-[var(--nav-bar)] ps-[env(safe-area-inset-left)] pe-[env(safe-area-inset-right)] pt-[var(--top-bar,0px)]',
     // In place of the sidebar's gutter, which pages leave to it.
-    (nav === 'bar' || nav === 'tv-top' || shape === 'corner') &&
+    (nav === 'bar' || top || shape === 'corner') &&
       'lg:ps-[calc(2.5rem+env(safe-area-inset-left))]',
     shape === 'floating' &&
       'lg:ps-[calc(var(--side-bar)+env(safe-area-inset-left))]'
@@ -666,9 +675,11 @@ export function WebLayout() {
             <AppLayout>
               <AppLayoutContent
                 style={
-                  nav === 'tv-top'
+                  top
                     ? ({
-                        '--top-bar': TOP_BAR_HEIGHT[tvTopBar],
+                        // Narrow windows have the bottom bar instead, but a TV's web view may be narrower still.
+                        [nav === 'top' ? '--top-bar-wide' : '--top-bar']:
+                          TOP_BAR_HEIGHT[topBar],
                       } as React.CSSProperties)
                     : shape === 'floating'
                       ? ({
@@ -683,7 +694,8 @@ export function WebLayout() {
                   shape === 'corner' &&
                     (nav === 'rail'
                       ? 'lg:[--top-bar:calc(1rem+3.875rem)]'
-                      : '[--top-bar:calc(1.5rem+3.875rem)]')
+                      : '[--top-bar:calc(1.5rem+3.875rem)]'),
+                  nav === 'top' && 'lg:[--top-bar:var(--top-bar-wide)]'
                 )}
               >
                 {shape === 'corner' && (
@@ -694,9 +706,11 @@ export function WebLayout() {
                     tv={nav === 'tv-rail'}
                   />
                 )}
-                {nav === 'tv-top' && (
-                  <TvTabs
-                    style={tvTopBar}
+                {top && (
+                  <TopTabs
+                    style={topBar}
+                    names={topNames === 'shown'}
+                    tv={nav === 'tv-top'}
                     // A row of named tabs fills up; these sit with the icons at its end.
                     items={items.filter(
                       (i) => i !== together && i !== playlists
@@ -1256,76 +1270,148 @@ function CornerMenu({
 }
 
 /**
- * How much of the page a TV's top bar covers: pages start below it and their
+ * How much of the page the top bar covers: pages start below it and their
  * heroes reach up under it.
  */
-const TOP_BAR_HEIGHT: Record<TvTopBar, string> = {
+const TOP_BAR_HEIGHT: Record<TopBar, string> = {
   pill: 'calc(5.75rem + 2px)',
   bar: 'calc(5rem + 1px)',
   fade: '5.5rem',
 };
 
-/** A TV's navigation along the top, over the page. */
-function TvTabs({
+/** Scroll needed before a change of direction counts, so a trackpad's settling doesn't flicker it. */
+const SCROLL_TURN_PX = 4;
+
+/** Out of the way while the page scrolls down past `bar`, and back as it scrolls up. */
+function useScrollAway(
+  bar: React.RefObject<HTMLElement | null>,
+  on: boolean
+): [boolean, () => void] {
+  const [away, setAway] = React.useState(false);
+  React.useEffect(() => {
+    setAway(false);
+    if (!on) return;
+    let last = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      if (y <= (bar.current?.offsetHeight ?? 0)) setAway(false);
+      else if (Math.abs(y - last) < SCROLL_TURN_PX) return;
+      else setAway(y > last);
+      last = y;
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [bar, on]);
+  const show = React.useCallback(() => setAway(false), []);
+  return [away, show];
+}
+
+/** The navigation along the top, over the page. */
+function TopTabs({
   style,
+  names,
+  tv,
   items,
   footerItems,
   you,
 }: {
-  style: TvTopBar;
+  style: TopBar;
+  names: boolean;
+  tv: boolean;
   items: SidebarItem[];
   footerItems: SidebarItem[];
   you: SidebarItem;
 }) {
-  const tab = (item: SidebarItem) => {
-    const Icon = item.iconType;
-    return (
+  const entry = (
+    item: Pick<SidebarItem, 'id' | 'name' | 'isCurrent'>,
+    icon: React.ReactNode,
+    onClick: React.MouseEventHandler<HTMLButtonElement>,
+    named = false
+  ) => {
+    const button = (
       <NavEntry
         key={item.id}
+        aria-label={named ? undefined : item.name}
         item={item}
-        icon={Icon && <Icon />}
-        onClick={select(item)}
-        className="pe-5"
+        icon={icon}
+        onClick={onClick}
+        labelClassName={named ? undefined : 'hidden'}
+        className={cn(named && 'pe-5', !tv && 'hover:text-white')}
       />
     );
+    return tv || named ? (
+      button
+    ) : (
+      <Tooltip key={item.id} side="bottom" trigger={button}>
+        {item.name}
+      </Tooltip>
+    );
   };
-  const logo = <BrandLogo className="h-8 w-6 flex-none object-contain" />;
+  const tab = (item: SidebarItem) => {
+    const Icon = item.iconType;
+    return entry(item, Icon && <Icon />, select(item), names);
+  };
+  const logo = (
+    <div className="flex flex-none items-center gap-3">
+      <BrandLogo className="h-8 w-6 flex-none object-contain" />
+      {!tv && <HistoryButtons top />}
+    </div>
+  );
   const tabs = items.map(tab);
+  // Equal sides keep the tabs centred on the window, however wide each end is.
+  const row = 'relative grid grid-cols-[1fr_auto_1fr] items-center gap-6 px-10';
+  const endClass = 'flex items-center justify-self-end';
+  const nav = React.useRef<HTMLElement>(null);
+  const [away, show] = useScrollAway(nav, !tv);
+  const windowButtons = !tv && pageDrawsWindowButtons();
+  const holding = windowButtons && !away;
+  React.useEffect(() => {
+    if (!holding) return;
+    const root = document.documentElement;
+    root.dataset.windowButtons = 'bar';
+    return () => {
+      delete root.dataset.windowButtons;
+    };
+  }, [holding]);
+  // Grouped so CSS can also split the window buttons into a pill of their own.
   const end = (
     <>
-      {footerItems.map((item) => {
-        const Icon = item.iconType;
-        return (
-          <NavEntry
-            key={item.id}
-            aria-label={item.name}
-            item={item}
-            icon={Icon && <Icon />}
-            onClick={select(item)}
-            labelClassName="hidden"
+      <div data-ui="top-tabs-actions" className="flex items-center gap-1">
+        {footerItems.map((item) => {
+          const Icon = item.iconType;
+          return entry(item, Icon && <Icon />, select(item));
+        })}
+        {entry({ id: 'account', name: you.name }, <YouIcon />, select(you))}
+      </div>
+      {windowButtons && (
+        <>
+          <span
+            aria-hidden
+            data-ui="top-tabs-divider"
+            className="mx-1 h-6 w-px bg-white/15"
           />
-        );
-      })}
-      <NavEntry
-        aria-label={you.name}
-        item={{ id: 'account', name: t`You` }}
-        icon={<YouIcon />}
-        onClick={select(you)}
-        labelClassName="hidden"
-      />
+          <div data-ui="top-window-buttons" className="flex items-center gap-1">
+            <BarWindowButtons />
+          </div>
+        </>
+      )}
     </>
   );
   return (
     <nav
-      data-ui="tv-tabs"
+      ref={nav}
+      data-ui="top-tabs"
       data-style={style}
+      data-away={away || undefined}
       data-nav-enter={ENTER_CURRENT}
       data-nav-back="up"
+      onFocus={show}
       className={cn(
-        'absolute inset-x-0 top-0 z-40 transition-transform duration-200 ease-out will-change-transform',
+        'inset-x-0 top-0 z-40 transition-transform duration-200 ease-out will-change-transform',
+        tv ? 'absolute' : 'fixed hidden lg:block',
         // Past its scrim too. A slide rather than a fade, as fading would stop
         // its glass blurring the page.
-        '[[data-in-rows]_&]:-translate-y-[180%]'
+        '[[data-in-rows]_&]:-translate-y-[180%] data-[away]:-translate-y-[180%]'
       )}
     >
       {style !== 'bar' && (
@@ -1339,32 +1425,35 @@ function TvTabs({
         />
       )}
       {style === 'bar' ? (
-        <BarSurface className="relative flex items-center gap-6 rounded-none border-x-0 border-t-0 px-10 py-4">
+        <BarSurface
+          className={cn(row, 'rounded-none border-x-0 border-t-0 py-4')}
+        >
           {logo}
-          <div className="flex flex-1 items-center justify-center gap-1">
-            {tabs}
+          <div className="flex items-center gap-1">{tabs}</div>
+          <div data-ui="top-tabs-end" className={cn(endClass, 'gap-1')}>
+            {end}
           </div>
-          <div className="flex items-center gap-1">{end}</div>
         </BarSurface>
       ) : style === 'pill' ? (
-        <div className="relative flex items-center gap-6 px-10 pb-2 pt-6">
+        <div className={cn(row, 'pb-2 pt-6')}>
           {logo}
-          <div className="flex flex-1 justify-center">
-            <BarSurface className="flex items-center gap-1 rounded-full p-1.5">
-              {tabs}
-            </BarSurface>
-          </div>
           <BarSurface className="flex items-center gap-1 rounded-full p-1.5">
+            {tabs}
+          </BarSurface>
+          <BarSurface
+            data-ui="top-tabs-end"
+            className={cn(endClass, 'gap-1 rounded-full p-1.5')}
+          >
             {end}
           </BarSurface>
         </div>
       ) : (
-        <div className="relative flex items-center gap-6 px-10 pb-2 pt-8">
+        <div className={cn(row, 'pb-2 pt-8')}>
           {logo}
-          <div className="flex flex-1 items-center justify-center gap-1">
-            {tabs}
+          <div className="flex items-center gap-1">{tabs}</div>
+          <div data-ui="top-tabs-end" className={cn(endClass, 'gap-1')}>
+            {end}
           </div>
-          <div className="flex items-center gap-1">{end}</div>
         </div>
       )}
     </nav>
