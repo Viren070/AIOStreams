@@ -17,8 +17,7 @@ export type Feature =
   | 'fillers'
   | 'parties'
   | 'reports'
-  | 'clientHints'
-  | 'playlists';
+  | 'clientHints';
 
 /** What a server's public info says about it. */
 export interface ServerInfo extends Branding {

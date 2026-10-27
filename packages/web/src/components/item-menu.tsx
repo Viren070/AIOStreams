@@ -48,7 +48,7 @@ import { useStraightPlay, useVersionPicker } from './version-picker';
 import { useHeroTarget } from './hero';
 import { useCardPreview } from './card-preview';
 import { openAddToPlaylist } from './playlists';
-import { playable as canPlay, usePlaylistsOffered } from '../lib/playlists';
+import { playable as canPlay } from '../lib/playlists';
 import type { BaseItemDto } from '../lib/types';
 
 function PlayEntries({ item }: { item: BaseItemDto }) {
@@ -241,7 +241,6 @@ function ItemMenuContent({ item, onPage, onDetails }: MenuTarget) {
   const setPlayedUpTo = useSetPlayedUpTo();
   const clearResume = useClearResume();
   const setFavorite = useSetFavorite();
-  const playlists = usePlaylistsOffered();
   const playable = canPlay(item);
   const played = !!item.UserData?.Played;
   const favorite = !!item.UserData?.IsFavorite;
@@ -253,7 +252,7 @@ function ItemMenuContent({ item, onPage, onDetails }: MenuTarget) {
         {onPage ? item.Name : itemTitle(item)}
       </ContextMenuLabel>
       {playable && <PlayEntries item={item} />}
-      {playable && playlists && (
+      {playable && (
         <ContextMenuItem
           data-name="add-to-playlist"
           onSelect={() => openAddToPlaylist([item])}

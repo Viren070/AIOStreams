@@ -7,16 +7,9 @@ import {
 } from '@tanstack/react-query';
 import { JellyfinError } from './client';
 import { useSession } from './session';
-import { useServerInfo } from './server-info';
 import { storage } from './storage';
 import { useAdjacentEpisodes, useEpisodesAfter } from './queries';
 import type { BaseItemDto, BaseItemDtoQueryResult } from './types';
-
-/** Stock Jellyfin has playlists; a server with extensions has them with the feature. */
-export function usePlaylistsOffered(): boolean {
-  const info = useServerInfo();
-  return !!info.features.playlists || info.stock;
-}
 
 /** Jellyfin cannot play a virtual item, such as an episode not yet aired. */
 export const playable = (item: BaseItemDto) =>

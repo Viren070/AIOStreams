@@ -82,7 +82,6 @@ import { UpdatePrompt } from './update-prompt';
 import { PartyHost } from './party/party-host';
 import { openPartySheet } from './party/party-sheet';
 import { openPlaylists, PlaylistsHost } from './playlists';
-import { usePlaylistsOffered } from '../lib/playlists';
 import { useParty } from '../lib/party/party';
 
 // Kept mounted under every page, so it skips the layout's render on each route change.
@@ -537,15 +536,12 @@ export function WebLayout() {
     iconType: BiGroup,
     onClick: () => openPartySheet(),
   };
-  const offersPlaylists = usePlaylistsOffered();
-  const playlists: SidebarItem | null = offersPlaylists
-    ? {
-        id: 'playlists',
-        name: t`Playlists`,
-        iconType: BiListUl,
-        onClick: () => openPlaylists(),
-      }
-    : null;
+  const playlists: SidebarItem = {
+    id: 'playlists',
+    name: t`Playlists`,
+    iconType: BiListUl,
+    onClick: () => openPlaylists(),
+  };
   const items: SidebarItem[] = [
     {
       id: 'home',
@@ -578,7 +574,7 @@ export function WebLayout() {
     },
     calendar,
     activity,
-    ...(playlists ? [playlists] : []),
+    playlists,
     together,
     ...(downloads ? [downloads] : []),
   ];
@@ -715,18 +711,14 @@ export function WebLayout() {
                     items={items.filter(
                       (i) => i !== together && i !== playlists
                     )}
-                    footerItems={[
-                      ...(playlists ? [playlists] : []),
-                      together,
-                      settingsItem,
-                    ]}
+                    footerItems={[playlists, together, settingsItem]}
                     you={you}
                   />
                 )}
                 <VersionPickerProvider>
                   <RemoteTarget />
                   <RandomPick />
-                  {offersPlaylists && <PlaylistsHost />}
+                  <PlaylistsHost />
                   {currentHost().watchNext && <WatchNextSync />}
                   <ItemMenuHost>
                     <GlideLayers name="page">
@@ -779,7 +771,7 @@ export function WebLayout() {
                 ...(downloads ? [downloads] : []),
                 activity,
                 calendar,
-                ...(playlists ? [playlists] : []),
+                playlists,
                 together,
               ]}
               menuItems={several ? [settingsItem, switchItem] : [settingsItem]}

@@ -87,7 +87,7 @@ import { CastAndCrew } from '../components/people';
 import { KINDS, KindTabs } from '../components/kind-tabs';
 import { PickOnArrival, useVersionPicker } from '../components/version-picker';
 import { openAddToPlaylist } from '../components/playlists';
-import { playable, usePlaylistsOffered } from '../lib/playlists';
+import { playable } from '../lib/playlists';
 import { BackdropFrame } from '../components/hero';
 import type { BaseItemDto } from '../lib/types';
 import { useHold } from '../lib/use-hold';
@@ -370,7 +370,6 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
   );
   const inParty = !!useParty();
   const devices = useRemoteDevices();
-  const playlists = usePlaylistsOffered();
   const holdRestart = useHold(
     target ? () => picker.play(target, { startMs: 0, held: true }) : undefined
   );
@@ -558,7 +557,7 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
               <Trans>Play on another device</Trans>
             </Tooltip>
           )}
-          {playlists && item.Type === 'Movie' && playable(item) && (
+          {item.Type === 'Movie' && playable(item) && (
             <Tooltip
               trigger={
                 <IconButton
