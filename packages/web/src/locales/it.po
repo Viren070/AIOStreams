@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-27 18:01+0000\n"
+"PO-Revision-Date: 2026-10-27 23:58+0000\n"
 "Last-Translator: Nicola Bortoletto <translate@nicolabortoletto.com>\n"
 "Language-Team: Italian <https://hosted.weblate.org/projects/aiostreams/web-app/it/>\n"
 "Language: it\n"
@@ -309,7 +309,7 @@ msgstr "Un badge viene mostrato su ogni versione il cui testo corrisponde al mod
 
 #: src/pages/settings/interface.tsx
 msgid "A card you rest on grows into a bigger preview with its details, while the hero rotates."
-msgstr ""
+msgstr "Al passaggio del mouse su un riquadro, questo si espande in un'anteprima più grande con i relativi dettagli, mentre l'elemento principale ruota."
 
 #: src/components/party/party-sheet.tsx
 msgid "A code is looked up on the relay picked above."
@@ -765,7 +765,7 @@ msgstr "Annulla"
 
 #: src/pages/settings/interface.tsx
 msgid "Cards"
-msgstr ""
+msgstr "Riquadri"
 
 #: src/components/people.tsx
 msgid "Cast"
@@ -1591,15 +1591,15 @@ msgstr "Cartella"
 
 #: src/pages/settings/interface.tsx
 msgid "Following pins it above the rows and shows the card the pointer, keyboard or remote is on, starting with a featured title, behind the whole page or in its top corner. Touch screens and narrow windows keep it rotating."
-msgstr "Segui selezione lo fissa sopra le righe e mostra la scheda su cui si trovano il puntatore, la tastiera o il telecomando, partendo da un titolo in evidenza, dietro l'intera pagina o nell'angolo in alto. Gli schermi touch e le finestre strette lo mantengono a rotazione."
+msgstr "Segui selezione lo fissa sopra le righe e mostra il riquadro su cui si trovano il puntatore, la tastiera o il telecomando, partendo da un titolo in evidenza, dietro l'intera pagina o nell'angolo in alto. Gli schermi touch e le finestre strette lo mantengono a rotazione."
 
 #: src/pages/settings/interface.tsx
 msgid "Follows the selected card"
-msgstr "Segue la scheda selezionata"
+msgstr "Segue il riquadro selezionato"
 
 #: src/pages/settings/interface.tsx
 msgid "Follows the selected card, in the corner"
-msgstr "Segue la scheda selezionata, nell'angolo"
+msgstr "Segue il riquadro selezionato, nell'angolo"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Font"
@@ -1761,7 +1761,7 @@ msgstr "Velocità di riproduzione quando tieni premuto il video, Space o Select.
 
 #: src/pages/settings/interface.tsx
 msgid "How large cards are in a grid."
-msgstr "Grandezza delle schede in una griglia."
+msgstr "Grandezza dei riquadri in una griglia."
 
 #: src/pages/settings/playback.tsx
 msgid "How much of the video the player holds in memory: ahead, to ride out a slow connection, and behind, to seek back at once. Automatic sizes it from this device's memory."
@@ -2144,7 +2144,7 @@ msgstr "Più amplificazione dialoghi"
 
 #: src/components/hero.tsx
 msgid "More info"
-msgstr "Altre informazioni"
+msgstr "Altre info"
 
 #: src/components/player/options.tsx
 msgid "More languages ({hidden})"
@@ -3117,9 +3117,8 @@ msgid "Rate season"
 msgstr "Valuta stagione"
 
 #: src/components/scores.tsx
-#, fuzzy
 msgid "Rating"
-msgstr "In attesa"
+msgstr "Valutazione"
 
 #: src/components/party/party-sheet.tsx
 msgid "React with {emoji}"
@@ -3336,7 +3335,7 @@ msgstr "Scorre tra i titoli in evidenza"
 
 #: src/components/scores.tsx
 msgid "Rotten Tomatoes audience"
-msgstr ""
+msgstr "Pubblico di Rotten Tomatoes"
 
 #: src/pages/settings/interface.tsx
 msgid "Row"
@@ -3459,9 +3458,8 @@ msgid "Searching"
 msgstr "Ricerca"
 
 #: src/components/player/pause-screen.tsx
-#, fuzzy
 msgid "Season {season}"
-msgstr "Valuta stagione"
+msgstr "Stagione {season}"
 
 #: src/components/item-menu.tsx
 msgid "See the download"
@@ -3651,7 +3649,6 @@ msgid "Side rail runs down the side of the screen; Top tabs sit along the top of
 msgstr "La barra laterale si estende lungo il lato dello schermo; le schede superiori si trovano in alto su ogni pagina."
 
 #: src/pages/settings/interface.tsx
-#, fuzzy
 msgid "Sidebar"
 msgstr "Barra laterale"
 
@@ -3833,7 +3830,7 @@ msgstr "Spazio da utilizzare"
 
 #: src/components/player/pause-screen.tsx
 msgid "Specials"
-msgstr ""
+msgstr "Speciali"
 
 #: src/components/player/options.tsx
 msgid "Speed"
@@ -4055,9 +4052,8 @@ msgid "Tab"
 msgstr "Scheda"
 
 #: src/pages/settings/interface.tsx
-#, fuzzy
 msgid "Tab names"
-msgstr "Nomi delle pagine"
+msgstr "Nomi delle schede"
 
 #: src/pages/history.tsx
 msgid "Table"
@@ -4915,9 +4911,8 @@ msgid "Where the navigation goes when the screen is wide enough for a sidebar, s
 msgstr "La posizione della navigazione quando lo schermo è abbastanza largo da mostrare una barra laterale, ad esempio su un tablet tenuto in orizzontale."
 
 #: src/pages/settings/interface.tsx
-#, fuzzy
 msgid "Where the navigation goes when the window is wide enough for a sidebar."
-msgstr "La posizione della navigazione quando lo schermo è abbastanza largo da mostrare una barra laterale, ad esempio su un tablet tenuto in orizzontale."
+msgstr "La posizione della navigazione quando lo schermo è abbastanza largo da mostrare una barra laterale."
 
 #: src/pages/settings/index.tsx
 msgid "Where they go and how many run at once"
@@ -4925,7 +4920,7 @@ msgstr "Destinazione e numero di processi simultanei"
 
 #: src/pages/settings/interface.tsx
 msgid "Whether the bar at the bottom, and tabs along the top, name each page."
-msgstr ""
+msgstr "Sia la barra in basso che le schede in alto assegnano un nome a ciascuna pagina."
 
 #: src/pages/settings/interface.tsx
 msgid "Whether the rail names each page only while you're in it, or all the time."
@@ -4936,9 +4931,8 @@ msgid "Whether the rail names each page under its icon."
 msgstr "Mostra il nome di ogni pagina sotto la rispettiva icona."
 
 #: src/pages/settings/interface.tsx
-#, fuzzy
 msgid "Whether the tabs name each page beside its icon."
-msgstr "Mostra il nome di ogni pagina sotto la rispettiva icona."
+msgstr "Le schede mostrano il nome di ciascuna pagina accanto alla relativa icona."
 
 #: src/components/shortcut-settings.tsx
 msgid "While syncing subtitles by ear."
