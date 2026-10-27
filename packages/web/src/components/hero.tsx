@@ -2,7 +2,7 @@ import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { flushSync } from 'react-dom';
-import { BiInfoCircle, BiPlay, BiSolidStar } from 'react-icons/bi';
+import { BiInfoCircle, BiPlay } from 'react-icons/bi';
 import { Button } from '@aiostreams/ui/button';
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import { cn } from '@aiostreams/ui/core/styling';
@@ -16,6 +16,7 @@ import { backdropUrl, landscapeUrl, logoUrl } from '../lib/images';
 import { itemSubtitle, itemTitle, ticksToMs } from '../lib/format';
 import { itemPath, navigate } from '../lib/paths';
 import { useVersionPicker } from './version-picker';
+import { Scores, scoresOf } from './scores';
 import type { JellyfinClient } from '../lib/client';
 import type { BaseItemDto } from '../lib/types';
 import { pageRtl } from '../lib/direction';
@@ -249,15 +250,7 @@ function HeroDetails({
     item.Type === 'Episode'
       ? ['episode', itemSubtitle(item)]
       : ['year', item.ProductionYear],
-    [
-      'score',
-      item.CommunityRating ? (
-        <span className="inline-flex items-center gap-1">
-          <BiSolidStar className="text-yellow-400" />
-          {item.CommunityRating.toFixed(1)}
-        </span>
-      ) : null,
-    ],
+    ['score', scoresOf(item).length ? <Scores item={item} max={3} /> : null],
     ['genres', item.Genres?.slice(0, 3).join(', ')],
   ];
   const meta = parts.filter(([, part]) => part);

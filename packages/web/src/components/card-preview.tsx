@@ -1,7 +1,6 @@
 import { t } from '@lingui/core/macro';
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { BiSolidStar } from 'react-icons/bi';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '../lib/session';
 import { useItem } from '../lib/queries';
@@ -17,6 +16,7 @@ import {
 } from '../lib/format';
 import { Artwork, ProgressBar } from './cards';
 import { CachedImage } from './cached-image';
+import { Scores, scoresOf } from './scores';
 import type { BaseItemDto } from '../lib/types';
 
 const POINTER_REST_MS = 500;
@@ -212,15 +212,7 @@ function PreviewBody({ listed }: { listed: BaseItemDto }) {
   const runtime = series ? '' : duration(ticksToMs(item.RunTimeTicks));
   const parts: [string, React.ReactNode][] = [
     ['year', !episode && item.ProductionYear],
-    [
-      'score',
-      item.CommunityRating ? (
-        <span className="inline-flex items-center gap-1">
-          <BiSolidStar className="text-yellow-400" />
-          {item.CommunityRating.toFixed(1)}
-        </span>
-      ) : null,
-    ],
+    ['score', scoresOf(item).length ? <Scores item={item} max={3} /> : null],
     ['length', left ? t`${left} left` : runtime],
     ['rating', item.OfficialRating],
   ];

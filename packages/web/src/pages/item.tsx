@@ -15,7 +15,6 @@ import {
   BiShuffle,
   BiSolidDislike,
   BiSolidHeart,
-  BiSolidStar,
 } from 'react-icons/bi';
 import { Badge } from '@aiostreams/ui/badge';
 import { Button, IconButton } from '@aiostreams/ui/button';
@@ -82,6 +81,7 @@ import {
 import { ItemMenu } from '../components/item-menu';
 import { SeasonPills } from '../components/season-pills';
 import { RatingButton } from '../components/rating';
+import { Scores, scoresOf } from '../components/scores';
 import { ExternalLinks } from '../components/external-links';
 import { CastAndCrew } from '../components/people';
 import { KINDS, KindTabs } from '../components/kind-tabs';
@@ -297,15 +297,7 @@ const MetaRow = React.memo(function MetaRow({ item }: { item: BaseItemDto }) {
   if (runtime && item.Type !== 'Series') {
     parts.push(['runtime', duration(runtime)]);
   }
-  if (item.CommunityRating) {
-    parts.push([
-      'score',
-      <span className="inline-flex items-center gap-1">
-        <BiSolidStar className="text-yellow-400" />
-        {item.CommunityRating.toFixed(1)}
-      </span>,
-    ]);
-  }
+  if (scoresOf(item).length) parts.push(['score', <Scores item={item} />]);
   if (item.Type === 'Series' && item.Status) {
     parts.push(['status', item.Status]);
   }

@@ -3245,6 +3245,10 @@ msgstr "Rate"
 msgid "Rate season"
 msgstr "Rate season"
 
+#: src/components/scores.tsx
+msgid "Rating"
+msgstr "Rating"
+
 #: src/components/party/party-sheet.tsx
 msgid "React with {emoji}"
 msgstr "React with {emoji}"
@@ -3465,6 +3469,10 @@ msgstr "Right"
 #: src/pages/settings/interface.tsx
 msgid "Rotates through featured titles"
 msgstr "Rotates through featured titles"
+
+#: src/components/scores.tsx
+msgid "Rotten Tomatoes audience"
+msgstr "Rotten Tomatoes audience"
 
 #: src/pages/settings/interface.tsx
 msgid "Row"
