@@ -1627,6 +1627,12 @@ const MetaPersonSchema = z.object({
 
 export type MetaPerson = z.infer<typeof MetaPersonSchema>;
 
+const ScoreSchema = z.object({
+  source: z.string(),
+  value: z.number(),
+  scale: z.number().nullish(),
+});
+
 const EntrySchema = z.looseObject({ id: z.string(), type: z.string() });
 
 const CollectionSchema = z.object({
@@ -1655,6 +1661,8 @@ const metaExtensionFields = {
   certification: z.string().nullish(),
   certificationLocal: z.string().nullish(),
   criticRating: z.number().or(z.string()).nullish(),
+  // Some addons send certifications here instead.
+  ratings: z.array(ScoreSchema).nullish().catch(undefined),
   studios: z.array(z.string()).nullish(),
   networks: z.array(z.string()).nullish(),
   countries: z.array(z.string()).nullish(),

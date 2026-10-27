@@ -8,6 +8,7 @@ import {
   parseYear,
   readEnrichment,
   readVideoEnrichment,
+  scoreOutOf,
   toIso,
   type EnrichedPerson,
   type Enrichment,
@@ -588,7 +589,8 @@ export function buildContentItem(
     ProductionYear: year,
     PremiereDate: premiere,
     EndDate: jellyfinType === 'Movie' ? undefined : enrichment.endDate,
-    CommunityRating: imdbRatingOf(input),
+    CommunityRating:
+      imdbRatingOf(input) ?? scoreOutOf(enrichment.ratings, 'imdb', 10),
     CriticRating: enrichment.criticRating,
     OfficialRating: enrichment.certification,
     CustomRating: enrichment.customRating,
@@ -635,11 +637,16 @@ export function buildContentItem(
   if (typeof meta.language === 'string')
     item.PreferredMetadataLanguage = meta.language;
   if (typeof meta.website === 'string') item.HomePageUrl = meta.website;
-  if (
+  const animatedPoster =
     typeof meta.animatedPoster === 'string' &&
     /^https?:\/\//i.test(meta.animatedPoster)
-  )
-    item.aiostreams = { animatedPoster: meta.animatedPoster };
+      ? meta.animatedPoster
+      : undefined;
+  if (animatedPoster || enrichment.ratings.length)
+    item.aiostreams = {
+      ...(animatedPoster && { animatedPoster }),
+      ...(enrichment.ratings.length && { ratings: enrichment.ratings }),
+    };
   if (jellyfinType === 'Movie' && ctx.listVersions) {
     item.EnableMediaSourceDisplay = true;
     item.MediaSources = listPlaceholderSources(

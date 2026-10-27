@@ -22,6 +22,25 @@ export interface EnrichedPerson {
   id?: string;
 }
 
+/** Each source's own scale, which a score without `scale` is on. */
+const SCORE_SCALES = {
+  imdb: 10,
+  tomatoes: 100,
+  tomatoesAudience: 100,
+  metacritic: 100,
+  letterboxd: 5,
+  rogerebert: 4,
+  trakt: 100,
+  tmdb: 10,
+  mal: 10,
+};
+
+export interface Score {
+  source: keyof typeof SCORE_SCALES;
+  value: number;
+  scale: number;
+}
+
 export interface SeasonDetails {
   name?: string;
   overview?: string;
@@ -41,6 +60,7 @@ export interface Enrichment {
   certification?: string;
   customRating?: string;
   criticRating?: number;
+  ratings: Score[];
   studios: string[];
   countries: string[];
   tags: string[];
@@ -299,17 +319,33 @@ export function statusFrom(meta: AnyMeta): 'Continuing' | 'Ended' | undefined {
   return undefined;
 }
 
-/** In `app_extras.ratings`, `tomatoes` is the critic score. */
-function criticRatingFrom(
-  meta: AnyMeta,
-  extras: AnyObject
+/** Known sources only, each once, as the apps have nothing to name another by. */
+function scoresFrom(list: unknown): Score[] {
+  const out: Score[] = [];
+  for (const entry of Array.isArray(list) ? list : []) {
+    const source = isObject(entry) ? str(entry.source) : undefined;
+    if (
+      !source ||
+      !Object.hasOwn(SCORE_SCALES, source) ||
+      out.some((s) => s.source === source)
+    )
+      continue;
+    const known = source as Score['source'];
+    const scale = num(entry.scale) ?? SCORE_SCALES[known];
+    const value =
+      scale > 0 ? upTo(scale, entry.value ?? entry.score) : undefined;
+    if (value !== undefined) out.push({ source: known, value, scale });
+  }
+  return out;
+}
+
+export function scoreOutOf(
+  ratings: Score[],
+  source: Score['source'],
+  max: number
 ): number | undefined {
-  const declared = upTo(100, meta.criticRating);
-  if (declared !== undefined || !Array.isArray(extras.ratings)) return declared;
-  const tomatoes = extras.ratings.find(
-    (r): r is AnyObject => isObject(r) && r.source === 'tomatoes'
-  );
-  return upTo(100, tomatoes?.value ?? tomatoes?.score);
+  const score = ratings.find((s) => s.source === source);
+  return score && Math.round((score.value / score.scale) * max * 10) / 10;
 }
 
 function genreTargetsFrom(
@@ -433,6 +469,10 @@ export function readEnrichment(input: MetaPreview | Meta): Enrichment {
   const extras = isObject(meta.app_extras) ? meta.app_extras : {};
   const stability = isObject(meta._stability) ? meta._stability : {};
   const country = str(meta.country);
+  const declaredRatings = scoresFrom(meta.ratings);
+  const ratings = declaredRatings.length
+    ? declaredRatings
+    : scoresFrom(extras.ratings);
   // Whole first, as ISO names hold commas ("Korea, Republic of").
   const countries = meta.countries?.length
     ? meta.countries
@@ -454,7 +494,9 @@ export function readEnrichment(input: MetaPreview | Meta): Enrichment {
       str(extras.certification),
     customRating:
       str(meta.certificationLocal) ?? str(extras.certificationLocal),
-    criticRating: criticRatingFrom(meta, extras),
+    criticRating:
+      upTo(100, meta.criticRating) ?? scoreOutOf(ratings, 'tomatoes', 100),
+    ratings,
     studios: strings([...(meta.studios ?? []), ...(meta.networks ?? [])]),
     countries: strings(strings(countries).map((c) => countryName(c) ?? c)),
     tags: strings(meta.tags),
