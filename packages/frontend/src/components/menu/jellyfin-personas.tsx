@@ -1,11 +1,19 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { DndContext } from '@dnd-kit/core';
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useUserData } from '@/context/userData';
 import { useStatus } from '@/context/status';
 import { watchStateTrackersQuery } from '@/lib/queries';
 import type { WatchStateTrackerOption } from '@/lib/api';
 import { cn } from '@aiostreams/ui/core/styling';
 import { pill, VariantPills } from '../shared/variant-pills';
+import { useSortableRows } from '../shared/sortable-rows';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
@@ -137,21 +145,35 @@ function Avatar({ name, avatar }: { name: string; avatar?: string }) {
   );
 }
 
+interface UserRowProps {
+  name: string;
+  avatar?: string;
+  summary: string;
+  dragHandleProps?: { attributes: any; listeners: any } | null;
+  onEdit: () => void;
+  onDelete?: () => void;
+}
+
 function UserRow({
   name,
   avatar,
   summary,
+  dragHandleProps,
   onEdit,
   onDelete,
-}: {
-  name: string;
-  avatar?: string;
-  summary: string;
-  onEdit: () => void;
-  onDelete?: () => void;
-}) {
+}: UserRowProps) {
   return (
-    <li className="flex items-center gap-3 px-3 py-2">
+    <div className="flex items-center gap-3 px-3 py-2">
+      {dragHandleProps ? (
+        <div
+          className="w-6 shrink-0 touch-manipulation cursor-move self-stretch rounded-full bg-[--muted] md:bg-[--subtle] md:hover:bg-[--subtle-highlight]"
+          aria-label={`Move ${name}`}
+          {...dragHandleProps.attributes}
+          {...dragHandleProps.listeners}
+        />
+      ) : (
+        <div className="w-6 shrink-0" />
+      )}
       <Avatar name={name} avatar={avatar} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm text-white">{name}</p>
@@ -173,6 +195,32 @@ function UserRow({
           onClick={onDelete}
         />
       )}
+    </div>
+  );
+}
+
+function SortableUserRow({
+  id,
+  ...row
+}: Omit<UserRowProps, 'dragHandleProps'> & { id: string }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+  return (
+    <li
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+      }}
+    >
+      <UserRow {...row} dragHandleProps={{ attributes, listeners }} />
     </li>
   );
 }
@@ -464,6 +512,8 @@ export function JellyfinPersonas() {
       jellyfin: { ...prev.jellyfin, ...values },
     }));
 
+  const rows = useSortableRows(personas, (next) => patch({ personas: next }));
+
   const close = () => {
     setEditing(null);
     setDraft(null);
@@ -591,12 +641,8 @@ export function JellyfinPersonas() {
   };
 
   const remove = (index: number) => {
-    patch({
-      personas:
-        personas.length > 1
-          ? personas.filter((_, i) => i !== index)
-          : undefined,
-    });
+    if (personas.length > 1) rows.removeAt(index);
+    else patch({ personas: undefined });
     toast.info('Removed. A user with the same name gets its history back.');
   };
 
@@ -625,66 +671,77 @@ export function JellyfinPersonas() {
         configuration&apos;s password, and a user with a PIN also needs that,
         typed after the password as password/PIN. The primary user is this
         configuration itself; each other user can keep a history and trackers of
-        its own.
+        its own. Drag a user to change where it sits on the sign-in picker; the
+        primary user is always listed first.
         {pinSignIn &&
           ` On the sign-in picker address, a user with a PIN of ${PIN_ONLY_LENGTH} or more digits can sign in with that PIN alone, so each person needs only their own PIN.`}
       </p>
 
-      <ul className="divide-y divide-gray-800 rounded-md border border-gray-800">
-        <UserRow
-          name={primaryName}
-          avatar={primary?.avatar}
-          summary={[
-            'Primary user',
-            variantsLabel(primary?.variants),
-            primary?.trackers
-              ? trackersLabel(primary.trackers)
-              : 'all trackers',
-            primary?.hidden ? 'hidden from the picker' : null,
-            primary?.lock ? 'PIN' : null,
-          ]
-            .filter(Boolean)
-            .join(' · ')}
-          onEdit={() => setPrimaryDraft({ ...primary })}
-        />
-        {personas.map((persona, index) => (
-          <UserRow
-            key={persona.id}
-            name={persona.name}
-            avatar={persona.avatar}
-            summary={[
-              variantsLabel(persona.variants),
-              persona.history === 'shared'
-                ? "shares the primary user's history"
-                : 'own history',
-              persona.history !== 'shared' && persona.trackers
-                ? trackersLabel(persona.trackers)
-                : null,
-              persona.history !== 'shared' &&
-              persona.id !== slugOf(persona.name)
-                ? `tracker id ${persona.id}`
-                : null,
-              persona.hidden ? 'kept separate' : null,
-              persona.lock ? 'PIN' : null,
-            ]
-              .filter(Boolean)
-              .join(' · ')}
-            onEdit={() => {
-              setDraft({
-                ...persona,
-                address: persona.hidden
-                  ? (persona.address ?? newAddress())
-                  : undefined,
-              });
-              setEditing(index);
-            }}
-            onDelete={() => {
-              setPendingRemoval(index);
-              removeDialog.open();
-            }}
-          />
-        ))}
-      </ul>
+      <DndContext {...rows.dndProps}>
+        <ul className="divide-y divide-gray-800 rounded-md border border-gray-800">
+          <li>
+            <UserRow
+              name={primaryName}
+              avatar={primary?.avatar}
+              summary={[
+                'Primary user',
+                variantsLabel(primary?.variants),
+                primary?.trackers
+                  ? trackersLabel(primary.trackers)
+                  : 'all trackers',
+                primary?.hidden ? 'hidden from the picker' : null,
+                primary?.lock ? 'PIN' : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+              onEdit={() => setPrimaryDraft({ ...primary })}
+            />
+          </li>
+          <SortableContext
+            items={rows.sortableIds}
+            strategy={verticalListSortingStrategy}
+          >
+            {personas.map((persona, index) => (
+              <SortableUserRow
+                key={rows.keyAt(index)}
+                id={rows.keyAt(index)}
+                name={persona.name}
+                avatar={persona.avatar}
+                summary={[
+                  variantsLabel(persona.variants),
+                  persona.history === 'shared'
+                    ? "shares the primary user's history"
+                    : 'own history',
+                  persona.history !== 'shared' && persona.trackers
+                    ? trackersLabel(persona.trackers)
+                    : null,
+                  persona.history !== 'shared' &&
+                  persona.id !== slugOf(persona.name)
+                    ? `tracker id ${persona.id}`
+                    : null,
+                  persona.hidden ? 'kept separate' : null,
+                  persona.lock ? 'PIN' : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+                onEdit={() => {
+                  setDraft({
+                    ...persona,
+                    address: persona.hidden
+                      ? (persona.address ?? newAddress())
+                      : undefined,
+                  });
+                  setEditing(index);
+                }}
+                onDelete={() => {
+                  setPendingRemoval(index);
+                  removeDialog.open();
+                }}
+              />
+            ))}
+          </SortableContext>
+        </ul>
+      </DndContext>
 
       <div className="flex flex-wrap items-center gap-3">
         {maxPersonas > 0 ? (
