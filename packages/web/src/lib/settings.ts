@@ -42,8 +42,8 @@ export type RailNames = (typeof RAIL_NAMES)[number];
 export const TOP_BARS = ['pill', 'bar', 'fade'] as const;
 export type TopBar = (typeof TOP_BARS)[number];
 
-export const TOP_NAMES = ['shown', 'hidden'] as const;
-export type TopNames = (typeof TOP_NAMES)[number];
+export const TAB_NAMES = ['shown', 'hidden'] as const;
+export type TabNames = (typeof TAB_NAMES)[number];
 
 export const BAR_BACKGROUNDS = ['solid', 'frosted', 'liquid'] as const;
 export type BarBackground = (typeof BAR_BACKGROUNDS)[number];
@@ -753,10 +753,10 @@ export const settings = {
       TOP_BARS,
       ['aiostreams-web-interface-tv-top-bar', 'aiostreams-web-tv-top-bar']
     ),
-    topNames: device<TopNames>(
-      'aiostreams-web-interface-top-names',
+    tabNames: device<TabNames>(
+      'aiostreams-web-interface-tab-names',
       'shown',
-      TOP_NAMES
+      TAB_NAMES
     ),
     /** What the navigation bars over the page sit on. */
     barBackground: device<BarBackground>(

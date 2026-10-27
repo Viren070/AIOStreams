@@ -506,7 +506,7 @@ export function WebLayout() {
   const [tvNavigation] = useSetting(settings.interface.tvNavigation);
   const [desktopNavigation] = useSetting(settings.interface.desktopNavigation);
   const [topBar] = useSetting(settings.interface.topBar);
-  const [topNames] = useSetting(settings.interface.topNames);
+  const [tabNames] = useSetting(settings.interface.tabNames);
   const [railShape] = useSetting(settings.interface.railShape);
   const [railNames] = useSetting(settings.interface.railNames);
   // What wide screens show; narrow ones always have the bar.
@@ -709,7 +709,7 @@ export function WebLayout() {
                 {top && (
                   <TopTabs
                     style={topBar}
-                    names={topNames === 'shown'}
+                    names={tabNames === 'shown'}
                     tv={nav === 'tv-top'}
                     // A row of named tabs fills up; these sit with the icons at its end.
                     items={items.filter(
@@ -784,6 +784,7 @@ export function WebLayout() {
               ]}
               menuItems={several ? [settingsItem, switchItem] : [settingsItem]}
               wide={nav === 'bar'}
+              named={tabNames === 'shown'}
             />
           )}
           <ConnectionNote />
@@ -818,15 +819,21 @@ function MobileNav({
   places,
   menuItems,
   wide,
+  named,
 }: {
   items: SidebarItem[];
   places: SidebarItem[];
   menuItems: SidebarItem[];
   /** Shown on wide screens too, in place of the sidebar. */
   wide: boolean;
+  named: boolean;
 }) {
   const inMenu = [...places, ...menuItems].some((item) => item.isCurrent);
-  const tab = 'flex-1 gap-0.5 rounded-full px-1 py-1.5 text-[0.65rem]';
+  // The same height either way, as pages keep the bar's room free.
+  const tab = cn(
+    'flex-1 gap-0.5 rounded-full px-1 text-[0.65rem]',
+    named ? 'py-1.5' : 'py-3.5'
+  );
   return (
     <nav
       data-ui="mobile-nav"
@@ -845,6 +852,7 @@ function MobileNav({
               item={item}
               icon={Icon && <Icon className="text-xl" />}
               onClick={select(item)}
+              named={named}
               className={tab}
             />
           );
@@ -861,6 +869,7 @@ function MobileNav({
               aria-label={t`Account`}
               item={{ id: 'account', name: t`You`, isCurrent: inMenu }}
               icon={<YouIcon />}
+              named={named}
               className={tab}
             />
           }

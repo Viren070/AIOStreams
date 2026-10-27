@@ -22,7 +22,7 @@ import {
   type RailNames,
   type RailShape,
   type TopBar,
-  type TopNames,
+  type TabNames,
   type TouchNavigation,
   type TvNavigation,
   type HeroMode,
@@ -48,7 +48,7 @@ function NavigationCard() {
     settings.interface.desktopNavigation
   );
   const [topBar, setTopBar] = useSetting(settings.interface.topBar);
-  const [topNames, setTopNames] = useSetting(settings.interface.topNames);
+  const [tabNames, setTabNames] = useSetting(settings.interface.tabNames);
   const [railShape, setRailShape] = useSetting(settings.interface.railShape);
   const [railNames, setRailNames] = useSetting(settings.interface.railNames);
   const [background, setBackground] = useSetting(
@@ -157,16 +157,21 @@ function NavigationCard() {
           onValueChange={(value) => setTopBar(value as TopBar)}
         />
       )}
-      {topTabs && (
+      {/* Narrow screens other than a TV always have the bottom bar. */}
+      {(!tv || topTabs) && (
         <Select
-          label={t`Page names`}
-          help={t`Whether the tabs name each page beside its icon.`}
+          label={t`Tab names`}
+          help={
+            tv
+              ? t`Whether the tabs name each page beside its icon.`
+              : t`Whether the bar at the bottom, and tabs along the top, name each page.`
+          }
           options={[
             { value: 'shown', label: t`Shown` },
             { value: 'hidden', label: t`Hidden` },
           ]}
-          value={topNames}
-          onValueChange={(value) => setTopNames(value as TopNames)}
+          value={tabNames}
+          onValueChange={(value) => setTabNames(value as TabNames)}
         />
       )}
       {onBar && (

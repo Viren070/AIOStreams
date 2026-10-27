@@ -4198,6 +4198,10 @@ msgstr ""
 msgid "Tab"
 msgstr ""
 
+#: src/pages/settings/interface.tsx
+msgid "Tab names"
+msgstr ""
+
 #: src/pages/history.tsx
 msgid "Table"
 msgstr ""
@@ -5072,6 +5076,10 @@ msgstr ""
 
 #: src/pages/settings/index.tsx
 msgid "Where they go and how many run at once"
+msgstr ""
+
+#: src/pages/settings/interface.tsx
+msgid "Whether the bar at the bottom, and tabs along the top, name each page."
 msgstr ""
 
 #: src/pages/settings/interface.tsx

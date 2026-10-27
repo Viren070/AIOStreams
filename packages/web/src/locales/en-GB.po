@@ -4198,6 +4198,10 @@ msgstr "System default"
 msgid "Tab"
 msgstr "Tab"
 
+#: src/pages/settings/interface.tsx
+msgid "Tab names"
+msgstr "Tab names"
+
 #: src/pages/history.tsx
 msgid "Table"
 msgstr "Table"
@@ -5073,6 +5077,10 @@ msgstr "Where the navigation goes when the window is wide enough for a sidebar."
 #: src/pages/settings/index.tsx
 msgid "Where they go and how many run at once"
 msgstr "Where they go and how many run at once"
+
+#: src/pages/settings/interface.tsx
+msgid "Whether the bar at the bottom, and tabs along the top, name each page."
+msgstr "Whether the bar at the bottom, and tabs along the top, name each page."
 
 #: src/pages/settings/interface.tsx
 msgid "Whether the rail names each page only while you're in it, or all the time."
