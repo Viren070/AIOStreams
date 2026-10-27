@@ -120,9 +120,11 @@ export class KnabenAddon extends BaseDebridAddon<KnabenAddonConfig> {
       if (!hash && hit.link && !appConfig.builtins.knaben.downloadTorrents) {
         continue;
       }
-      if (seenTorrents.has(hash ?? hit.link ?? '')) {
+      const key = hash ?? hit.link ?? '';
+      if (seenTorrents.has(key)) {
         continue;
       }
+      seenTorrents.add(key);
       let sources: string[] = [];
       if (hit.magnetUrl) {
         sources = extractTrackersFromMagnet(hit.magnetUrl);
