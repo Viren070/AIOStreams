@@ -8,7 +8,7 @@ import { TextInput } from '@aiostreams/ui/text-input';
 import { LoadingSpinner } from '@aiostreams/ui/loading-spinner';
 import { cn } from '@aiostreams/ui/core/styling';
 import { clock } from '../../lib/format';
-import { useAction, useKeys } from '../../lib/input';
+import { focusOn, useAction, useKeys, usingKeys } from '../../lib/input';
 import { KeyCaps } from '../key-caps';
 import {
   delayForLine,
@@ -74,8 +74,21 @@ export function SyncByEar({
   const keys = { heard: useKeys('sync.heard')[0], saw: useKeys('sync.saw')[0] };
   const shown = delayLabel(delayMs);
 
+  // Arrows can't reach it from the player's bar, so keys start on it, once
+  // the menu that opened it lets focus go.
+  const panel = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      const heard =
+        panel.current?.querySelector<HTMLElement>('[data-name=heard]');
+      if (heard && usingKeys()) focusOn(heard);
+    });
+    return () => clearTimeout(timer);
+  }, []);
+
   const button = (kind: Tap, label: string, icon: React.ReactNode) => (
     <Button
+      data-name={kind}
       intent={first?.tap === kind ? 'white' : 'gray-subtle'}
       rounded
       leftIcon={icon}
@@ -94,6 +107,7 @@ export function SyncByEar({
   return (
     <div className="pointer-events-none absolute inset-x-0 top-20 z-20 flex justify-center px-4">
       <div
+        ref={panel}
         data-ui="sync-by-ear"
         className="pointer-events-auto w-full max-w-md rounded-2xl border border-white/10 bg-black/80 p-4 shadow-lg backdrop-blur"
       >

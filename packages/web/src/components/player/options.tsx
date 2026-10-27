@@ -157,6 +157,11 @@ function Menu({
         e.preventDefault();
         setPageName(null);
       }}
+      // Focus stays on what an item opened, rather than going back to the button.
+      onCloseAutoFocus={(e) => {
+        const at = document.activeElement;
+        if (at && at !== document.body) e.preventDefault();
+      }}
       className="flex max-h-[60vh] min-w-[12rem] max-w-[min(22rem,90vw)] flex-col bg-gray-950/95"
       trigger={
         <ControlButton name={name} label={label}>
