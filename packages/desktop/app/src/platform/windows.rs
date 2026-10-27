@@ -313,6 +313,7 @@ pub fn mpv_options(video: &VideoSurface) -> Vec<(&'static str, String)> {
         ("vo", "gpu-next,gpu,".into()),
         ("gpu-context", "d3d11".into()),
         ("hwdec", "auto-safe".into()),
+        ("tone-mapping", "bt.2390".into()),
     ]
 }
 
