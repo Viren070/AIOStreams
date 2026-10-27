@@ -9,7 +9,7 @@ msgstr ""
 "Last-Translator: Sebastian Porta <spg76@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Spanish <https://hosted.weblate.org/projects/aiostreams/web-app/es/>\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"PO-Revision-Date: 2026-10-26 22:57+0000\n"
+"PO-Revision-Date: 2026-10-27 18:01+0000\n"
 
 #: src/components/party/party-sheet.tsx
 msgid "(you)"
@@ -421,7 +421,7 @@ msgstr "Agregar favorito"
 
 #: src/components/playlists.tsx
 msgid "Add from Continue watching"
-msgstr "Agregar desde Continuar viendo"
+msgstr "Agregar desde Seguir viendo"
 
 #: src/components/item-menu.tsx
 #: src/components/playlists.tsx
@@ -984,7 +984,7 @@ msgstr "Continuar"
 #: src/pages/home.tsx
 #: src/pages/settings/interface.tsx
 msgid "Continue watching"
-msgstr "Continuar viendo"
+msgstr "Seguir viendo"
 
 #: src/pages/settings/playback.tsx
 msgid "Controls"
@@ -1955,56 +1955,56 @@ msgstr "Unirse al grupo…"
 
 #: src/lib/input/actions.ts
 msgid "Jump through the video"
-msgstr ""
+msgstr "Salta a través del video"
 
 #: src/lib/format.ts
 msgid "just now"
-msgstr ""
+msgstr "ahora mismo"
 
 #: src/pages/settings/theme.tsx
 msgid "Keep"
-msgstr ""
+msgstr "Mantener"
 
 #: src/pages/settings/playback.tsx
 msgid "Keep in step by changing speed"
-msgstr ""
+msgstr "Mantén el ritmo cambiando de velocidad.(Editado)Recuperar original"
 
 #: src/components/party/party-sheet.tsx
 msgid "Keeping in step"
-msgstr ""
+msgstr "Manteniendo el ritmo"
 
 #: src/pages/settings/apps.tsx
 msgid "Keeps the sound going with the screen off, or when you leave the app."
-msgstr ""
+msgstr "Mantiene el sonido activo con la pantalla apagada o al salir de la aplicación."
 
 #: src/pages/settings/apps.tsx
 msgid "Keeps the sound going with the screen off, or when you leave without picture-in-picture."
-msgstr ""
+msgstr "Mantiene el sonido activo con la pantalla apagada, o cuando sales de la aplicación sin usar la función imagen en imagen."
 
 #: src/pages/settings/apps.tsx
 msgid "Keeps the video playing in a small window when you leave the app."
-msgstr ""
+msgstr "Mantiene el vídeo reproduciéndose en una ventana pequeña cuando sales de la aplicación."
 
 #: src/pages/settings/common.tsx
 msgid "Kept on this device."
-msgstr ""
+msgstr "Se conserva en este dispositivo."
 
 #: src/components/shortcut-settings.tsx
 msgid "Kept on this device. Select + and press a key to add it; a remote, a gamepad or the scroll wheel works too."
-msgstr ""
+msgstr "Se conserva en este dispositivo. Selecciona + y pulsa una tecla para añadirlo; también puedes usar un control remoto, un mando de juego o la rueda de desplazamiento."
 
 #: src/components/input-setup.tsx
 #: src/lib/input/actions.ts
 msgid "Keyboard shortcuts"
-msgstr ""
+msgstr "Atajos de teclado"
 
 #: src/pages/settings/index.tsx
 msgid "Keys, remotes and gamepads"
-msgstr ""
+msgstr "Teclas, controles remotos y mandos de juego"
 
 #: src/components/version-settings.tsx
 msgid "Label"
-msgstr ""
+msgstr "Etiqueta"
 
 #: src/pages/settings/audio.tsx
 #: src/pages/settings/index.tsx
@@ -2015,32 +2015,32 @@ msgstr "Idioma"
 
 #: src/pages/settings/index.tsx
 msgid "Language and how subtitles look"
-msgstr ""
+msgstr "Idioma y aspecto de los subtítulos"
 
 #: src/pages/settings/index.tsx
 msgid "Language and output"
-msgstr ""
+msgstr "Idioma y salida"
 
 #: src/pages/settings/index.tsx
 msgid "Language, home, grids and episodes"
-msgstr ""
+msgstr "Idioma, inicio, cuadrículas y episodios"
 
 #: src/lib/subtitles/style.ts
 #: src/pages/settings/interface.tsx
 msgid "Large"
-msgstr ""
+msgstr "Grande"
 
 #: src/components/update-prompt.tsx
 msgid "Later"
-msgstr ""
+msgstr "Más tarde"
 
 #: src/app.tsx
 msgid "Leave {from} to add {adding}?"
-msgstr ""
+msgstr "¿Salir {from} para agregar {adding}?"
 
 #: src/app.tsx
 msgid "Leave {from} to open this on {target}?"
-msgstr ""
+msgstr "¿Salir de {from} para abrir esto en {target}?"
 
 #: src/components/party/party-sheet.tsx
 msgid "Leave the party"
@@ -2048,71 +2048,72 @@ msgstr "Abandonar el grupo"
 
 #: src/app.tsx
 msgid "Leave this server to add {adding}?"
-msgstr ""
+msgstr "¿Salir de este servidor para agregar {adding}?"
 
 #: src/pages/settings/apps.tsx
 msgid "Leaving the app"
-msgstr ""
+msgstr "Salir de la aplicación"
 
 #: src/lib/input/actions.ts
 msgid "Left"
-msgstr ""
+msgstr "Izquierda"
 
 #: src/pages/settings/interface.tsx
 msgid "Left empty, posters stand alone. A poster without artwork still shows its title."
-msgstr ""
+msgstr "Si se dejan vacíos, los pósters quedan solos. Un póster sin arte sigue mostrando su título."
 
 #: src/components/player/options.tsx
 msgid "Less dialogue boost"
-msgstr ""
+msgstr "Menor realce de diálogos"
 
 #: src/components/party/party-sheet.tsx
 msgid "Let new people join"
-msgstr ""
+msgstr "Permitir que se unan personas nuevas"
 
 #: src/pages/settings/playback.tsx
 msgid "Lets the TV's decoder keep picture and sound in step itself, which plays 4K and HDR more smoothly on some TVs. Only for videos ExoPlayer plays. Turn it off if video stutters or stays black."
-msgstr ""
+msgstr "Permite que el decodificador del televisor mantenga sincronizados por sí mismo la imagen y el sonido, lo que, en algunos televisores, hace que la reproducción de contenido 4K y HDR sea más fluida. Solo se aplica a los videos reproducidos mediante ExoPlayer. Desactiva esta opción si el video presenta tirones o se queda en negro."
 
 #: src/pages/settings/playback.tsx
 msgid "Lets the TV's decoder keep picture and sound in step itself, which plays 4K and HDR more smoothly on some TVs. Turn it off if video stutters or stays black."
-msgstr ""
+msgstr "Permite que el decodificador del televisor mantenga sincronizados por sí mismo la imagen y el sonido, lo que, en algunos televisores, hace que la reproducción de contenido 4K y HDR sea más fluida. Desactiva esta opción si el video presenta tirones o se queda en negro."
 
 #: src/components/version-settings.tsx
 msgid "Link a pack someone shares, in this app's format or the one Fusion and Nuvio use. It stays up to date with its author's changes."
-msgstr ""
+msgstr "Enlaza un paquete compartido por alguien, ya sea en el formato de esta aplicación o en el que utilizan Fusion y Nuvio. El contenido se mantiene actualizado conforme a los cambios realizados por su autor."
 
 #: src/pages/settings/interface.tsx
+#, fuzzy
 msgid "Liquid glass"
-msgstr ""
+msgstr "Liquid glass"
 
 #: src/pages/settings/interface.tsx
 msgid "List"
-msgstr ""
+msgstr "Lista"
 
 #: src/pages/settings/subtitles.tsx
 msgid "List only my languages"
-msgstr ""
+msgstr "Listar solo mis idiomas"
 
 #: src/pages/search.tsx
 msgid "Listening…"
-msgstr ""
+msgstr "Escuchando…"
 
 #: src/components/party/party-sheet.tsx
 msgid "Loading"
-msgstr ""
+msgstr "Cargando"
 
 #: src/components/version-settings.tsx
 msgid "Loading…"
-msgstr ""
+msgstr "Cargando…"
 
 #: src/components/player/controls.tsx
 msgid "Lock screen"
-msgstr ""
+msgstr "Pantalla de bloqueo"
 
 #: src/pages/settings/apps.tsx
 msgid "Logs"
-msgstr ""
+msgstr "Registros"
 
 #: src/components/party/party-sheet.tsx
 msgid "Looking for the party…"
@@ -2120,65 +2121,65 @@ msgstr "Buscando el grupo…"
 
 #: src/components/party/party-sheet.tsx
 msgid "Lost the connection to {relay}. Reconnecting… Your player carries on, and gets back in step once it's back."
-msgstr ""
+msgstr "Se ha perdido la conexión con {relay}. Reconectando… Tu reproductor sigue funcionando y retoma el ritmo en cuanto se restablece la conexión."
 
 #: src/components/player/options.tsx
 #: src/lib/input/actions.ts
 msgid "Lower subtitles"
-msgstr ""
+msgstr "Bajar subtítulos"
 
 #: src/pages/settings/apps.tsx
 msgid "macOS draws the video, using less power, and shows Dolby Vision itself. Shaders and mpv's picture options do not apply."
-msgstr ""
+msgstr "macOS procesa el video consumiendo menos energía y muestra Dolby Vision de forma nativa. Los shaders y las opciones de imagen de mpv no se aplican."
 
 #: src/lib/i18n.ts
 msgid "Magenta"
-msgstr ""
+msgstr "Magenta"
 
 #: src/pages/settings/audio.tsx
 msgid "Main"
-msgstr ""
+msgstr "Principal"
 
 #: src/components/version-picker.tsx
 msgid "Mark as watched"
-msgstr ""
+msgstr "Marcar como visto"
 
 #: src/components/episodes.tsx
 #: src/components/item-menu.tsx
 #: src/pages/history.tsx
 #: src/pages/item.tsx
 msgid "Mark unwatched"
-msgstr ""
+msgstr "Marcar como no visto"
 
 #: src/components/episodes.tsx
 #: src/components/item-menu.tsx
 #: src/pages/item.tsx
 msgid "Mark watched"
-msgstr ""
+msgstr "Marcar visto"
 
 #: src/components/item-menu.tsx
 msgid "Mark watched up to here"
-msgstr ""
+msgstr "Marcar visto hasta aquí"
 
 #: src/lib/playback/external-return.ts
 msgid "Marked as watched"
-msgstr ""
+msgstr "Marcado como visto"
 
 #: src/pages/history.tsx
 msgid "Marked unwatched"
-msgstr ""
+msgstr "Marcado como no visto"
 
 #: src/pages/settings/playback.tsx
 msgid "Match the video's frame rate"
-msgstr ""
+msgstr "Ajustar a la frecuencia de fotogramas del video"
 
 #: src/components/window-controls.tsx
 msgid "Maximise"
-msgstr ""
+msgstr "Maximizar"
 
 #: src/pages/settings/interface.tsx
 msgid "Medium"
-msgstr ""
+msgstr "Mediano"
 
 #: src/lib/input/keys.ts
 msgid "Menu key"
@@ -2186,15 +2187,15 @@ msgstr ""
 
 #: src/pages/settings/interface.tsx
 msgid "Merge continue watching and next up"
-msgstr ""
+msgstr "Combinar seguir viendo y a continuación"
 
 #: src/components/party/party-sheet.tsx
 msgid "Message"
-msgstr ""
+msgstr "Mensaje"
 
 #: src/components/party/party-sheet.tsx
 msgid "Messages"
-msgstr ""
+msgstr "Mensajes"
 
 #: src/pages/settings/theme.tsx
 msgid "Midnight"
@@ -2202,22 +2203,22 @@ msgstr "Medianoche"
 
 #: src/components/window-controls.tsx
 msgid "Minimise"
-msgstr ""
+msgstr "Minimizar"
 
 #: src/lib/format.ts
 msgid "Missing"
-msgstr ""
+msgstr "Ausente"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Monospace"
-msgstr ""
+msgstr "Monoespaciada"
 
 #: src/components/overview.tsx
 #: src/components/playlists.tsx
 #: src/components/version-picker.tsx
 #: src/pages/downloads.tsx
 msgid "More"
-msgstr ""
+msgstr "Más"
 
 #: src/components/party/party-sheet.tsx
 msgid "More can be sent once the party is back."
@@ -2225,37 +2226,37 @@ msgstr "Se pueden enviar más una vez que el grupo regrese."
 
 #: src/components/player/options.tsx
 msgid "More dialogue boost"
-msgstr ""
+msgstr "Mayor realce de los diálogos"
 
 #: src/components/hero.tsx
 msgid "More info"
-msgstr ""
+msgstr "Más información"
 
 #: src/components/player/options.tsx
 msgid "More languages ({hidden})"
-msgstr ""
+msgstr "Más idiomas ({hidden})"
 
 #: src/pages/item.tsx
 msgid "More like this"
-msgstr ""
+msgstr "Más como esto"
 
 #: src/pages/settings/common.tsx
 msgid "Move {name} down"
-msgstr ""
+msgstr "Mover {name} hacia abajo"
 
 #: src/pages/settings/common.tsx
 msgid "Move {name} up"
-msgstr ""
+msgstr "Mover {name} hacia arriba"
 
 #: src/components/playlists.tsx
 #: src/components/version-settings.tsx
 msgid "Move down"
-msgstr ""
+msgstr "Mover abajo"
 
 #: src/components/playlists.tsx
 #: src/components/version-settings.tsx
 msgid "Move up"
-msgstr ""
+msgstr "Mover arriba"
 
 #: src/components/shortcut-settings.tsx
 msgid "Moves between what's on screen, and to Search and Home. A gamepad's d-pad and left stick move too."
@@ -3337,7 +3338,7 @@ msgstr "Eliminar favorito"
 
 #: src/components/item-menu.tsx
 msgid "Remove from continue watching"
-msgstr ""
+msgstr "Eliminar de seguir viendo"
 
 #: src/pages/history.tsx
 msgid "Remove from history"
@@ -3772,7 +3773,7 @@ msgstr ""
 
 #: src/pages/settings/interface.tsx
 msgid "Shows next episodes in the continue watching row, after what you are partway through."
-msgstr ""
+msgstr "Muestra los siguientes episodios en la fila Seguir viendo, después del que estás viendo actualmente."
 
 #: src/pages/settings/interface.tsx
 msgid "Shows search results in one grid instead of a row each for movies and shows."
