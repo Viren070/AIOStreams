@@ -33,8 +33,7 @@ Standard Jellyfin clients ignore all of these, so offering them never breaks one
       "genreRequired": 1,
       "fillers": 1,
       "parties": 1,
-      "reports": 1,
-      "playlists": 1
+      "reports": 1
     },
     "css": null,
     "parties": { "relay": "off", "defaultRelay": null },
@@ -75,7 +74,6 @@ value is that feature's version.
 | `fillers`         | [A filler or recap episode says so](#episodes)                                            |
 | `parties`         | [SyncPlay, and a watch party relay](#watch-parties) on the server's origin                |
 | `reports`         | [`POST /AIOStreams/Reports`](#reports), while `aiostreams.reports` isn't `null`           |
-| `playlists`       | [Jellyfin's `/Playlists` API](#playlists)                                                 |
 
 Every `/AIOStreams/*` endpoint takes the same authorization as the rest of the API. AIOStreams
 refuses them to API keys, which belong to other tools.
@@ -298,9 +296,7 @@ ciphertext of their JSON, so a relay keeps only timing. The messages themselves 
 ## Playlists
 
 The web app keeps playlists with Jellyfin's standard `/Playlists` API, and lists them with
-`/Items?IncludeItemTypes=Playlist&Recursive=true`. Stock Jellyfin has it, so the app offers
-playlists on a server that sends no `aiostreams` object; one that does lists `playlists` in its
-features for the app to offer them.
+`/Items?IncludeItemTypes=Playlist&Recursive=true`.
 
 Before adding, the app reads the playlist's `ItemIds` and leaves out what is already there, as
 Jellyfin keeps a title twice. It removes and moves entries by their `PlaylistItemId`.
