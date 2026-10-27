@@ -19,6 +19,7 @@ import {
   SUBTITLE_DELAY_LIMIT_MS,
 } from '../subtitles/delay';
 import { subtitleUrl, textSubtitles } from '../subtitles/tracks';
+import { subtitleHeight } from '../subtitles/style';
 import type { MediaStream, SourceInfo } from '../types';
 import { useLatest } from '../use-latest';
 import type { Chapter } from './chapters';
@@ -53,6 +54,8 @@ const EARLY_END_MS = 30_000;
 
 /** Late enough after the start that reading the file's index for thumbnails doesn't slow it. */
 const THUMBNAIL_INDEX_MS = 5_000;
+
+const LIFT_MS = 300;
 
 function serverSubtitles(
   client: JellyfinClient,
@@ -293,8 +296,35 @@ export function usePlayer(
   };
 
   const { subtitleStyle } = opts;
+  // Subtitles slide to a new lift, in the controls' time, rather than jump.
+  const shownLift = React.useRef(lift);
   React.useEffect(() => {
-    engine.setStyle?.({ subtitleStyle, fit, lift });
+    if (!engine.setStyle) return;
+    const set = engine.setStyle;
+    const from = shownLift.current;
+    if (
+      from === lift ||
+      matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
+      shownLift.current = lift;
+      set({ subtitleStyle, fit, lift });
+      return;
+    }
+    const start = performance.now();
+    let sent: number | null = null;
+    let frame = requestAnimationFrame(function step(now) {
+      const done = Math.min(1, (now - start) / LIFT_MS);
+      const value = from + (lift - from) * (1 - (1 - done) ** 3);
+      shownLift.current = value;
+      // The players place subtitles by whole percents.
+      const height = subtitleHeight(subtitleStyle, value);
+      if (height !== sent) {
+        sent = height;
+        set({ subtitleStyle, fit, lift: value });
+      }
+      if (done < 1) frame = requestAnimationFrame(step);
+    });
+    return () => cancelAnimationFrame(frame);
   }, [engine, subtitleStyle, fit, lift]);
 
   React.useEffect(() => {
