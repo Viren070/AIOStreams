@@ -44,6 +44,7 @@ import { usePlayerGestures } from './gestures';
 import { useBurstSeek, useFileDrop, useIdle, usePositionClock } from './hooks';
 import { usePlayerKeys } from './keys';
 import { ScreenLock } from './lock';
+import { PauseScreen } from './pause-screen';
 import { fitLabel, OptionButtons } from './options';
 import { ScrubStrip } from './scrub-strip';
 import { SeekBar } from './seek-bar';
@@ -130,19 +131,30 @@ export function PlayerControls({
   const scrubbing = React.useRef(scrub);
   // Until the first frame only Back works; a player in its own window is watched there.
   const ready = state.started || !!player.external;
+  const busy =
+    menus > 0 ||
+    picking !== null ||
+    byEar ||
+    episodes ||
+    listing ||
+    scrub !== null;
+  // Paused and left alone, the controls give way to what's playing.
+  const pauseScreen =
+    ready &&
+    !player.external &&
+    !locked &&
+    state.paused &&
+    idle &&
+    !busy &&
+    !state.error &&
+    !offeringNext &&
+    steps !== 'trailer';
   const visible =
     !!player.external ||
     (ready &&
       !locked &&
       !hidden &&
-      (!idle ||
-        state.paused ||
-        menus > 0 ||
-        picking !== null ||
-        byEar ||
-        episodes ||
-        listing ||
-        scrub !== null));
+      (!idle || busy || (state.paused && !pauseScreen)));
   // The video appears without the controls, unless it opens paused.
   React.useEffect(() => {
     if (ready && !latest.current.state.paused) hide();
@@ -431,6 +443,7 @@ export function PlayerControls({
       }}
     >
       <div className="absolute inset-0 touch-none" {...gestures} />
+      {state.paused && <PauseScreen item={item} shown={pauseScreen} />}
 
       <div
         data-ui="player-top-bar"

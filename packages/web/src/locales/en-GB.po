@@ -1496,6 +1496,7 @@ msgid "Enter your password."
 msgstr "Enter your password."
 
 #: src/components/episodes.tsx
+#: src/components/player/pause-screen.tsx
 msgid "Episode {number}"
 msgstr "Episode {number}"
 
@@ -3579,6 +3580,10 @@ msgstr "Searches"
 msgid "Searching"
 msgstr "Searching"
 
+#: src/components/player/pause-screen.tsx
+msgid "Season {season}"
+msgstr "Season {season}"
+
 #: src/components/item-menu.tsx
 msgid "See the download"
 msgstr "See the download"
@@ -3960,6 +3965,10 @@ msgstr "Space"
 #: src/pages/settings/cache.tsx
 msgid "Space to use"
 msgstr "Space to use"
+
+#: src/components/player/pause-screen.tsx
+msgid "Specials"
+msgstr "Specials"
 
 #: src/components/player/options.tsx
 msgid "Speed"
