@@ -125,7 +125,7 @@ msgstr "{inProgress, plural, one {# w trakcie} other {# w trakcie}}"
 msgid "{key} is taken by {taken}"
 msgstr "{key} jest zajęte przez {taken}"
 
-#: src/pages/downloads.tsx
+#: src/components/card-preview.tsx src/pages/downloads.tsx
 msgid "{left} left"
 msgstr "Pozostało {left}"
 
@@ -306,6 +306,10 @@ msgstr "Dźwięk przestrzenny 7.1"
 #: src/components/version-settings.tsx
 msgid "A badge shows on each version whose text matches its pattern: the name and description your formatter writes, the file name, and the tags read from it."
 msgstr "Na każdej wersji wyświetla się etykieta, której tekst pasuje do jej wzorca: nazwa i opis utworzone przez Twój formatter, nazwa pliku oraz odczytane z niego tagi."
+
+#: src/pages/settings/interface.tsx
+msgid "A card you rest on grows into a bigger preview with its details, while the hero rotates."
+msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "A code is looked up on the relay picked above."
@@ -758,6 +762,10 @@ msgstr "Brak połączenia z serwerem"
 #: src/components/version-settings.tsx src/lib/i18n.ts src/pages/downloads.tsx
 msgid "Cancel"
 msgstr "Anuluj"
+
+#: src/pages/settings/interface.tsx
+msgid "Cards"
+msgstr ""
 
 #: src/components/people.tsx
 msgid "Cast"
@@ -1438,7 +1446,7 @@ msgstr "Wpisz ten kod w sekcji Szybkie łączenie (Quick Connect) w zalogowanej 
 msgid "Enter your password."
 msgstr "Wprowadź hasło."
 
-#: src/components/episodes.tsx
+#: src/components/episodes.tsx src/components/player/pause-screen.tsx
 msgid "Episode {number}"
 msgstr "Odcinek {number}"
 
@@ -3018,7 +3026,7 @@ msgstr "Naciśnij Wstecz ponownie, aby wyjść"
 msgid "Preview"
 msgstr "Podgląd"
 
-#: src/pages/settings/playback.tsx
+#: src/pages/settings/interface.tsx src/pages/settings/playback.tsx
 msgid "Previews"
 msgstr "Zapowiedzi"
 
@@ -3107,6 +3115,11 @@ msgstr "Oceń"
 #: src/pages/item.tsx
 msgid "Rate season"
 msgstr "Oceń sezon"
+
+#: src/components/scores.tsx
+#, fuzzy
+msgid "Rating"
+msgstr "Oczekiwanie"
 
 #: src/components/party/party-sheet.tsx
 msgid "React with {emoji}"
@@ -3321,6 +3334,10 @@ msgstr "W prawo"
 msgid "Rotates through featured titles"
 msgstr "Przełącza rotacyjnie polecane tytuły"
 
+#: src/components/scores.tsx
+msgid "Rotten Tomatoes audience"
+msgstr ""
+
 #: src/pages/settings/interface.tsx
 msgid "Row"
 msgstr "Rząd"
@@ -3440,6 +3457,11 @@ msgstr "Wyszukiwania"
 #: src/lib/discord.ts
 msgid "Searching"
 msgstr "Wyszukiwanie"
+
+#: src/components/player/pause-screen.tsx
+#, fuzzy
+msgid "Season {season}"
+msgstr "Oceń sezon"
 
 #: src/components/item-menu.tsx
 msgid "See the download"
@@ -3628,6 +3650,11 @@ msgstr "Pasek boczny"
 msgid "Side rail runs down the side of the screen; Top tabs sit along the top of each page."
 msgstr "Pasek boczny biegnie wzdłuż boku ekranu; Górne karty znajdują się na górze każdej strony."
 
+#: src/pages/settings/interface.tsx
+#, fuzzy
+msgid "Sidebar"
+msgstr "Pasek boczny"
+
 #: src/pages/sign-in.tsx
 msgid "Sign in"
 msgstr "Zaloguj się"
@@ -3803,6 +3830,10 @@ msgstr "Spacja"
 #: src/pages/settings/cache.tsx
 msgid "Space to use"
 msgstr "Miejsce do wykorzystania"
+
+#: src/components/player/pause-screen.tsx
+msgid "Specials"
+msgstr ""
 
 #: src/components/player/options.tsx
 msgid "Speed"
@@ -4022,6 +4053,11 @@ msgstr "Domyślne systemowe"
 #: src/lib/input/keys.ts
 msgid "Tab"
 msgstr "Tab"
+
+#: src/pages/settings/interface.tsx
+#, fuzzy
+msgid "Tab names"
+msgstr "Nazwy stron"
 
 #: src/pages/history.tsx
 msgid "Table"
@@ -4878,9 +4914,18 @@ msgstr "Gdzie powstaje aplikacja i gdzie można zgłosić problem."
 msgid "Where the navigation goes when the screen is wide enough for a sidebar, such as a tablet held sideways."
 msgstr "Gdzie umieszczana jest nawigacja, gdy ekran jest wystarczająco szeroki na pasek boczny (np. na tablecie trzymanym poziomo)."
 
+#: src/pages/settings/interface.tsx
+#, fuzzy
+msgid "Where the navigation goes when the window is wide enough for a sidebar."
+msgstr "Gdzie umieszczana jest nawigacja, gdy ekran jest wystarczająco szeroki na pasek boczny (np. na tablecie trzymanym poziomo)."
+
 #: src/pages/settings/index.tsx
 msgid "Where they go and how many run at once"
 msgstr "Gdzie trafiają i ile pobiera się jednocześnie"
+
+#: src/pages/settings/interface.tsx
+msgid "Whether the bar at the bottom, and tabs along the top, name each page."
+msgstr ""
 
 #: src/pages/settings/interface.tsx
 msgid "Whether the rail names each page only while you're in it, or all the time."
@@ -4888,6 +4933,11 @@ msgstr "Czy pasek boczny pokazuje nazwę każdej strony tylko wtedy, gdy na niej
 
 #: src/pages/settings/interface.tsx
 msgid "Whether the rail names each page under its icon."
+msgstr "Czy pasek boczny wyświetla nazwę każdej strony pod jej ikoną."
+
+#: src/pages/settings/interface.tsx
+#, fuzzy
+msgid "Whether the tabs name each page beside its icon."
 msgstr "Czy pasek boczny wyświetla nazwę każdej strony pod jej ikoną."
 
 #: src/components/shortcut-settings.tsx

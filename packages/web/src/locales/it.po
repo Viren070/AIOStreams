@@ -125,7 +125,7 @@ msgstr "{inProgress, plural, one {# in corso} other {# in corso}}"
 msgid "{key} is taken by {taken}"
 msgstr "{key} è già assegnato a {taken}"
 
-#: src/pages/downloads.tsx
+#: src/components/card-preview.tsx src/pages/downloads.tsx
 msgid "{left} left"
 msgstr "{left} rimanenti"
 
@@ -306,6 +306,10 @@ msgstr "7.1 surround"
 #: src/components/version-settings.tsx
 msgid "A badge shows on each version whose text matches its pattern: the name and description your formatter writes, the file name, and the tags read from it."
 msgstr "Un badge viene mostrato su ogni versione il cui testo corrisponde al modello: il nome e la descrizione generati dal formatter, il nome del file e i tag letti dal file."
+
+#: src/pages/settings/interface.tsx
+msgid "A card you rest on grows into a bigger preview with its details, while the hero rotates."
+msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "A code is looked up on the relay picked above."
@@ -758,6 +762,10 @@ msgstr "Impossibile raggiungere il server"
 #: src/components/version-settings.tsx src/lib/i18n.ts src/pages/downloads.tsx
 msgid "Cancel"
 msgstr "Annulla"
+
+#: src/pages/settings/interface.tsx
+msgid "Cards"
+msgstr ""
 
 #: src/components/people.tsx
 msgid "Cast"
@@ -1438,7 +1446,7 @@ msgstr "Inserisci questo codice in Connessione rapida, in un'app con l'accesso g
 msgid "Enter your password."
 msgstr "Inserisci la tua password."
 
-#: src/components/episodes.tsx
+#: src/components/episodes.tsx src/components/player/pause-screen.tsx
 msgid "Episode {number}"
 msgstr "Episodio {number}"
 
@@ -3018,7 +3026,7 @@ msgstr "Premi Indietro di nuovo per uscire"
 msgid "Preview"
 msgstr "Anteprima"
 
-#: src/pages/settings/playback.tsx
+#: src/pages/settings/interface.tsx src/pages/settings/playback.tsx
 msgid "Previews"
 msgstr "Anteprime"
 
@@ -3107,6 +3115,11 @@ msgstr "Valuta"
 #: src/pages/item.tsx
 msgid "Rate season"
 msgstr "Valuta stagione"
+
+#: src/components/scores.tsx
+#, fuzzy
+msgid "Rating"
+msgstr "In attesa"
 
 #: src/components/party/party-sheet.tsx
 msgid "React with {emoji}"
@@ -3321,6 +3334,10 @@ msgstr "Destra"
 msgid "Rotates through featured titles"
 msgstr "Scorre tra i titoli in evidenza"
 
+#: src/components/scores.tsx
+msgid "Rotten Tomatoes audience"
+msgstr ""
+
 #: src/pages/settings/interface.tsx
 msgid "Row"
 msgstr "Riga"
@@ -3440,6 +3457,11 @@ msgstr "Ricerche"
 #: src/lib/discord.ts
 msgid "Searching"
 msgstr "Ricerca"
+
+#: src/components/player/pause-screen.tsx
+#, fuzzy
+msgid "Season {season}"
+msgstr "Valuta stagione"
 
 #: src/components/item-menu.tsx
 msgid "See the download"
@@ -3628,6 +3650,11 @@ msgstr "Barra laterale"
 msgid "Side rail runs down the side of the screen; Top tabs sit along the top of each page."
 msgstr "La barra laterale si estende lungo il lato dello schermo; le schede superiori si trovano in alto su ogni pagina."
 
+#: src/pages/settings/interface.tsx
+#, fuzzy
+msgid "Sidebar"
+msgstr "Barra laterale"
+
 #: src/pages/sign-in.tsx
 msgid "Sign in"
 msgstr "Accedi"
@@ -3803,6 +3830,10 @@ msgstr "Spazio"
 #: src/pages/settings/cache.tsx
 msgid "Space to use"
 msgstr "Spazio da utilizzare"
+
+#: src/components/player/pause-screen.tsx
+msgid "Specials"
+msgstr ""
 
 #: src/components/player/options.tsx
 msgid "Speed"
@@ -4022,6 +4053,11 @@ msgstr "Predefinito di sistema"
 #: src/lib/input/keys.ts
 msgid "Tab"
 msgstr "Scheda"
+
+#: src/pages/settings/interface.tsx
+#, fuzzy
+msgid "Tab names"
+msgstr "Nomi delle pagine"
 
 #: src/pages/history.tsx
 msgid "Table"
@@ -4878,9 +4914,18 @@ msgstr "Dove viene creata l'app e dove segnalare un problema."
 msgid "Where the navigation goes when the screen is wide enough for a sidebar, such as a tablet held sideways."
 msgstr "La posizione della navigazione quando lo schermo è abbastanza largo da mostrare una barra laterale, ad esempio su un tablet tenuto in orizzontale."
 
+#: src/pages/settings/interface.tsx
+#, fuzzy
+msgid "Where the navigation goes when the window is wide enough for a sidebar."
+msgstr "La posizione della navigazione quando lo schermo è abbastanza largo da mostrare una barra laterale, ad esempio su un tablet tenuto in orizzontale."
+
 #: src/pages/settings/index.tsx
 msgid "Where they go and how many run at once"
 msgstr "Destinazione e numero di processi simultanei"
+
+#: src/pages/settings/interface.tsx
+msgid "Whether the bar at the bottom, and tabs along the top, name each page."
+msgstr ""
 
 #: src/pages/settings/interface.tsx
 msgid "Whether the rail names each page only while you're in it, or all the time."
@@ -4888,6 +4933,11 @@ msgstr "Mostra i nomi delle categorie solo sulla pagina attiva o sempre."
 
 #: src/pages/settings/interface.tsx
 msgid "Whether the rail names each page under its icon."
+msgstr "Mostra il nome di ogni pagina sotto la rispettiva icona."
+
+#: src/pages/settings/interface.tsx
+#, fuzzy
+msgid "Whether the tabs name each page beside its icon."
 msgstr "Mostra il nome di ogni pagina sotto la rispettiva icona."
 
 #: src/components/shortcut-settings.tsx
