@@ -211,6 +211,16 @@ Blur the text inside an episode's title rather than the title itself: the title 
 }
 ```
 
+### Only some ratings
+
+Keep IMDb and the Rotten Tomatoes critics' score, wherever a title's ratings show:
+
+```css
+[data-ui='score']:not([data-source='imdb'], [data-source='tomatoes']) {
+  display: none;
+}
+```
+
 ### Square cast photos
 
 ```css
@@ -474,6 +484,7 @@ States are attributes set only while true, such as `data-watched`. Match them wi
 | `item-menu`                                                                                                                                      | The menu a card opens on right-click or a long press; its items have `data-name`: `play`, `play-now`, `choose-version`, `details`, `open`, `watched`, `watched-up-to`, `remove-resume`, `favourite`, `download`, `downloads`                                                                                     |
 | `card-preview`                                                                                                                                   | The bigger preview a card on the home page grows into while the pointer or focus rests on it; `data-type` says what it is. Hide it with `display: none`, or turn it off under **Settings → Interface → Cards**                                                                                                   |
 | `card-preview-logo`, `card-preview-title`, `card-preview-episode`, `card-preview-genres`, `card-preview-overview`                                | Its logo or title, the episode, the genres and the description                                                                                                                                                                                                                                                   |
+| `score`                                                                                                                                          | One rating in a line of facts, on title pages, the featured banner and card previews. `data-source` is `imdb`, `tomatoes`, `tomatoesAudience`, `metacritic`, `letterboxd`, `rogerebert`, `trakt`, `tmdb`, `mal`, or `community` for the server's own rating                                                      |
 | `card-preview-meta`                                                                                                                              | Its line of facts; each has `data-name` (`year`, `score`, `length`, `rating`), with a `meta-separator` between                                                                                                                                                                                                   |
 
 ### The featured banner

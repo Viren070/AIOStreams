@@ -140,6 +140,12 @@ carries `"aiostreams": { "animatedPoster": "…" }`, the image's own address. Th
 poster while the card is focused or hovered, and not when the device asks for reduced motion. The
 poster stays the still that everything else shows.
 
+A title whose addon sends [`ratings`](/reference/addon-protocol/metadata#ratings) carries them as
+`"aiostreams": { "ratings": [{ "source": "imdb", "value": 8.1, "scale": 10 }, …] }`, each on its
+source's scale, in the addon's order. The app shows a badge for each, in place of the
+`CommunityRating` star. That star, and the Rotten Tomatoes `CriticRating`, are still filled from the
+list for other clients.
+
 ## Episodes
 
 With `fillers`, a filler episode carries `"aiostreams": { "filler": true }` and a recap

@@ -9,27 +9,28 @@ title.
 
 ## Meta and catalog entry fields
 
-| Field                | Shape                                                     | Shown in Jellyfin as                                      |
-| -------------------- | --------------------------------------------------------- | --------------------------------------------------------- |
-| `ids`                | object of [provider ids](#ids)                            | Provider ids and external links                           |
-| `landscapePoster`    | image URL                                                 | The wide card on Continue Watching, Next Up and home rows |
+| Field                | Shape                                                     | Shown in Jellyfin as                                                                |
+| -------------------- | --------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `ids`                | object of [provider ids](#ids)                            | Provider ids and external links                                                     |
+| `landscapePoster`    | image URL                                                 | The wide card on Continue Watching, Next Up and home rows                           |
 | `animatedPoster`     | image URL, animated (GIF, animated WebP or APNG)          | Played over the poster while its card is focused or hovered, in the AIOStreams apps |
-| `originalTitle`      | string                                                    | The original title, under the name when they differ       |
-| `tagline`            | string                                                    | The tagline on the detail page                            |
-| `people`             | list of [people](#people)                                 | Cast and crew rows, with photos and characters            |
-| `certification`      | string, e.g. `"PG-13"`                                    | The age rating                                            |
-| `certificationLocal` | string, the rating in the viewer's country                | The local rating, where a client shows one                |
-| `criticRating`       | number, 0 to 100                                          | The critic score                                          |
-| `studios`            | list of strings                                           | Studios                                                   |
-| `networks`           | list of strings                                           | Studios, after `studios`                                  |
-| `countries`          | list of names or ISO 3166 codes                           | Production countries, by their English names              |
-| `tags`               | list of strings                                           | Tags                                                      |
-| `endDate`            | date, a series' last air date                             | The end of a series' year range                           |
-| `airDays`            | list of `"Sunday"` … `"Saturday"`                         | When a series airs                                        |
-| `airTime`            | string, e.g. `"21:00"`                                    | As above                                                  |
-| `seasons`            | list of [seasons](#seasons)                               | Season names, overviews, posters and premiere dates       |
-| `collection`         | [collection block](/reference/addon-protocol/collections) | A collection                                              |
-| `trailers`           | list of [trailers](#trailers)                             | The title's trailers, by name                             |
+| `originalTitle`      | string                                                    | The original title, under the name when they differ                                 |
+| `tagline`            | string                                                    | The tagline on the detail page                                                      |
+| `people`             | list of [people](#people)                                 | Cast and crew rows, with photos and characters                                      |
+| `certification`      | string, e.g. `"PG-13"`                                    | The age rating                                                                      |
+| `certificationLocal` | string, the rating in the viewer's country                | The local rating, where a client shows one                                          |
+| `criticRating`       | number, 0 to 100                                          | The critic score                                                                    |
+| `ratings`            | list of [ratings](#ratings)                               | Each source's score, in the AIOStreams apps                                         |
+| `studios`            | list of strings                                           | Studios                                                                             |
+| `networks`           | list of strings                                           | Studios, after `studios`                                                            |
+| `countries`          | list of names or ISO 3166 codes                           | Production countries, by their English names                                        |
+| `tags`               | list of strings                                           | Tags                                                                                |
+| `endDate`            | date, a series' last air date                             | The end of a series' year range                                                     |
+| `airDays`            | list of `"Sunday"` … `"Saturday"`                         | When a series airs                                                                  |
+| `airTime`            | string, e.g. `"21:00"`                                    | As above                                                                            |
+| `seasons`            | list of [seasons](#seasons)                               | Season names, overviews, posters and premiere dates                                 |
+| `collection`         | [collection block](/reference/addon-protocol/collections) | A collection                                                                        |
+| `trailers`           | list of [trailers](#trailers)                             | The title's trailers, by name                                                       |
 
 ### People
 
@@ -44,6 +45,35 @@ title.
 | `character` | Who an actor plays.                                                                                                        |
 | `photo`     | A portrait URL.                                                                                                            |
 | `id`        | The person's [meta id](/reference/addon-protocol/people).                                                                  |
+
+### Ratings
+
+```json
+{ "source": "tomatoes", "value": 92, "scale": 100 }
+```
+
+| Field    | Meaning                                                             |
+| -------- | ------------------------------------------------------------------- |
+| `source` | Required. One of the sources below; any other is ignored.           |
+| `value`  | Required. The score, from 0 up to `scale`.                          |
+| `scale`  | What `value` is out of. The source's own scale, below, when absent. |
+
+| Source             | What it is                              | Scale |
+| ------------------ | --------------------------------------- | ----- |
+| `imdb`             | IMDb rating                             | 10    |
+| `tomatoes`         | Rotten Tomatoes critics (Tomatometer)   | 100   |
+| `tomatoesAudience` | Rotten Tomatoes audience (Popcornmeter) | 100   |
+| `metacritic`       | Metascore                               | 100   |
+| `letterboxd`       | Letterboxd average                      | 5     |
+| `rogerebert`       | RogerEbert.com stars                    | 4     |
+| `trakt`            | Trakt rating                            | 100   |
+| `tmdb`             | TMDB user score                         | 10    |
+| `mal`              | MyAnimeList score                       | 10    |
+
+List them in the order to show them: where room is short, the apps show the first three. A source
+listed twice keeps its first entry. The IMDb score is also a title's community rating, and Rotten
+Tomatoes' its critic score, so other Jellyfin clients show those two; `imdbRating` and
+`criticRating` win where you send them. Episodes keep their own `rating`.
 
 ### Trailers
 
@@ -126,7 +156,10 @@ events. Values are strings; numbers are accepted.
     "tagline": "Remember my name",
     "ids": { "imdb": "tt0903747", "tmdb": "1396", "tvdb": "81189" },
     "certification": "TV-MA",
-    "criticRating": 96,
+    "ratings": [
+      { "source": "imdb", "value": 9.5, "scale": 10 },
+      { "source": "tomatoes", "value": 96, "scale": 100 }
+    ],
     "networks": ["AMC"],
     "countries": ["United States"],
     "airDays": ["Sunday"],
