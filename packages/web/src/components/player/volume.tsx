@@ -6,6 +6,8 @@ import type { PlayerController } from '../../lib/playback/controller';
 import { ControlButton } from './buttons';
 import { arrowDirection } from './seek-bar';
 
+const SNAP_PX = 2;
+
 function VolumeBar({
   level,
   max,
@@ -22,6 +24,8 @@ function VolumeBar({
     const rect = bar.current?.getBoundingClientRect();
     if (!rect) return 0;
     const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+    // A pixel is more than a percent, so full volume is a few pixels wide.
+    if (Math.abs(ratio * max - 1) * (rect.width / max) < SNAP_PX) return 1;
     return Math.round(ratio * max * 100) / 100;
   };
   const share = (volume: number) => (Math.min(volume, max) / max) * 100;
