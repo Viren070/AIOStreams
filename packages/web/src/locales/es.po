@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-27 18:01+0000\n"
+"PO-Revision-Date: 2026-10-28 21:59+0000\n"
 "Last-Translator: Sebastian Porta <spg76@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Spanish <https://hosted.weblate.org/projects/aiostreams/web-app/es/>\n"
 "Language: es\n"
@@ -61,7 +61,7 @@ msgstr "{count, plural, one {Descarga agregada} other {# descargas agregadas}}"
 
 #: src/components/trailers.tsx
 msgid "{count, plural, one {Trailer} other {Trailers}}"
-msgstr "{count, plural, one {Trailer} other {Trailers}}"
+msgstr "{count, plural, one {Tráiler} other {Tráilers}}"
 
 #: src/pages/downloads.tsx
 msgid "{downloaded} downloaded"
@@ -2111,7 +2111,7 @@ msgstr "Mediano"
 
 #: src/lib/input/keys.ts
 msgid "Menu key"
-msgstr ""
+msgstr "Tecla de menú"
 
 #: src/pages/settings/interface.tsx
 msgid "Merge continue watching and next up"
@@ -2184,86 +2184,86 @@ msgstr "Mover arriba"
 
 #: src/components/shortcut-settings.tsx
 msgid "Moves between what's on screen, and to Search and Home. A gamepad's d-pad and left stick move too."
-msgstr ""
+msgstr "Desplazarse entre los elementos que aparecen en pantalla, así como a Buscar e Iinicio. La cruceta y el joystick izquierdo de un mando también permiten realizar estos desplazamientos."
 
 #: src/components/kind-tabs.tsx src/components/random-pick.tsx
 #: src/lib/format.ts src/pages/discover.tsx src/pages/favourites.tsx
 #: src/pages/search.tsx
 msgid "Movies"
-msgstr ""
+msgstr "Películas"
 
 #: src/pages/search.tsx
 msgid "Movies, shows and people"
-msgstr ""
+msgstr "Películas, series y personas"
 
 #: src/lib/input/actions.ts
 msgid "Moving around"
-msgstr ""
+msgstr "Desplazarse"
 
 #: src/pages/settings/apps.tsx
 msgid "mpv configuration"
-msgstr ""
+msgstr "Configuración de mpv"
 
 #: src/pages/settings/apps.tsx
 msgid "mpv draws the video, with your mpv.conf and shaders."
-msgstr ""
+msgstr "mpv renderiza el video, utilizando tu archivo mpv.conf y shaders."
 
 #: src/pages/settings/playback.tsx
 msgid "mpv inside this window, with this app's controls and playback settings. Your own mpv.conf, scripts and shaders work here too: put them in its mpv folder under Desktop app."
-msgstr ""
+msgstr "mpv dentro de esta ventana, con los controles y la configuración de reproducción de esta aplicación. Tus propios archivos mpv.conf, scripts y shaders también funcionan aquí: colócalos en la carpeta mpv correspondiente dentro de la aplicación de escritorio."
 
 #: src/pages/settings/apps.tsx
 msgid "mpv.conf, input.conf, scripts and shaders in this folder apply to the built-in mpv."
-msgstr ""
+msgstr "Los archivos mpv.conf, input.conf, así como los scripts y shaders contenidos en esta carpeta, se aplican al mpv integrado."
 
 #: src/components/player/volume.tsx src/lib/input/actions.ts
 msgid "Mute"
-msgstr ""
+msgstr "Silenciar"
 
 #: src/lib/input/keys.ts
 msgid "Mute key"
-msgstr ""
+msgstr "Tecla de silencio"
 
 #: src/components/playlists.tsx src/components/version-settings.tsx
 msgid "Name"
-msgstr ""
+msgstr "Nombre"
 
 #: src/pages/settings/interface.tsx
 msgid "Navigation"
-msgstr ""
+msgstr "Navegación"
 
 #: src/pages/sign-in.tsx
 msgid "Needed to switch to this user."
-msgstr ""
+msgstr "Necesario cambiar a este usuario."
 
 #: src/pages/downloads.tsx
 msgid "Needs attention"
-msgstr ""
+msgstr "Necesita atención"
 
 #: src/pages/settings/playback.tsx
 msgid "Never"
-msgstr ""
+msgstr "Nunca"
 
 #: src/pages/sign-in.tsx
 msgid "New code"
-msgstr ""
+msgstr "Nuevo código"
 
 #: src/components/playlists.tsx
 msgid "New playlist"
-msgstr ""
+msgstr "Nueva lista de reproducción"
 
 #: src/components/player/controls.tsx src/components/remote-sheet.tsx
 #: src/lib/i18n.ts
 msgid "Next"
-msgstr ""
+msgstr "Siguiente"
 
 #: src/lib/input/actions.ts
 msgid "Next audio track"
-msgstr ""
+msgstr "Siguiente pisto de audio"
 
 #: src/lib/input/actions.ts
 msgid "Next chapter"
-msgstr ""
+msgstr "Siguiente capítulo"
 
 #: src/components/player/controls.tsx src/components/player/next-episode.tsx
 #: src/lib/input/actions.ts src/pages/settings/playback.tsx
@@ -2272,71 +2272,72 @@ msgstr "Siguiente capítulo"
 
 #: src/pages/settings/index.tsx
 msgid "Next episode, controls and players"
-msgstr ""
+msgstr "Siguiente episodio, controles y reproductores"
 
 #: src/components/player/next-episode.tsx
 msgid "Next in {playlistName}"
-msgstr ""
+msgstr "A continuación en {playlistName}"
 
 #: src/pages/calendar.tsx
 msgid "Next month"
-msgstr ""
+msgstr "Mes próximo"
 
 #: src/lib/input/actions.ts
 msgid "Next subtitles"
-msgstr ""
+msgstr "Siguientes subtítulos"
 
 #: src/lib/input/keys.ts
 msgid "Next track"
-msgstr ""
+msgstr "Siguiente pista"
 
 #: src/components/player/controls.tsx src/pages/trailer.tsx
 msgid "Next trailer"
-msgstr ""
+msgstr "Siguiente tráiler"
 
 #: src/pages/home.tsx src/pages/settings/interface.tsx
 msgid "Next up"
-msgstr ""
+msgstr "A continuación"
 
 #: src/components/player/options.tsx src/pages/settings/audio.tsx
 msgid "Night mode"
-msgstr ""
+msgstr "Modo noche"
 
 #: src/pages/settings/apps.tsx
+#, fuzzy
 msgid "Nightly"
-msgstr ""
+msgstr "Nightly"
 
 #: src/pages/settings/apps.tsx
 msgid "Nightly builds come from every change, ahead of releases, and can break."
-msgstr ""
+msgstr "Las versiones nightly se generan a partir de cada cambio, antes de los lanzamientos, y pueden presentar fallos."
 
 #: src/components/version-settings.tsx
 msgid "No badges match."
-msgstr ""
+msgstr "No hay insignias que coincidan."
 
 #: src/components/no-catalogs.tsx
 msgid "No catalogs yet"
-msgstr ""
+msgstr "Aún no hay catálogos"
 
 #: src/components/download-button.tsx
 msgid "No episodes to download there"
-msgstr ""
+msgstr "No hay episodios para descargar ahí"
 
 #: src/pages/settings/cache.tsx
 msgid "No limit"
-msgstr ""
+msgstr "Sin límite"
 
 #: src/components/player/subtitle-sync.tsx
 msgid "No line matches."
-msgstr ""
+msgstr "Ninguna línea coincide."
 
 #: src/components/party/party-sheet.tsx
 msgid "No messages yet. Say hello."
-msgstr ""
+msgstr "Aún no hay mensajes. Di hola."
 
 #: src/components/remote-sheet.tsx
 msgid "No other device is ready. Open the app on another device signed in here, and it shows up."
-msgstr ""
+msgstr "No hay ningún otro dispositivo listo. Abre la aplicación en otro dispositivo que haya iniciado sesión aquí, y aparecerá."
 
 #: src/lib/party/party.ts
 msgid "No party has that code on {relay}."
@@ -2344,129 +2345,129 @@ msgstr "Ningún grupo tiene ese código en {relay}."
 
 #: src/lib/playback/play.ts
 msgid "No playable version was found"
-msgstr ""
+msgstr "No se encontró ninguna versión que se pueda reproducir"
 
 #: src/components/playlists.tsx
 msgid "No playlists yet. Make one here, or add a title to one from its menu."
-msgstr ""
+msgstr "Aún no hay listas de reproducción. Crea una aquí, o agrega un título a alguna desde su menú."
 
 #: src/lib/servers.ts
 msgid "No server answered at that address."
-msgstr ""
+msgstr "Ningún servidor respondió en esa dirección."
 
 #: src/lib/subtitles/files.ts
 msgid "No subtitles were found in that file"
-msgstr ""
+msgstr "No se encontraron subtítulos en ese archivo"
 
 #: src/lib/party/follow.ts
 msgid "No version of {title} plays here."
-msgstr ""
+msgstr "Ninguna versión de {title} se reproduce aquí."
 
 #: src/pages/downloads.tsx
 msgid "No version was found to match. Pick one."
-msgstr ""
+msgstr "No se encontró ninguna versión que coincida. Elige una."
 
 #: src/components/version-picker.tsx
 msgid "No versions match."
-msgstr ""
+msgstr "No hay versiones que coincidan."
 
 #: src/components/version-picker.tsx
 msgid "No versions were found."
-msgstr ""
+msgstr "No se encontraron versiones."
 
 #: src/pages/settings/audio.tsx src/pages/settings/subtitles.tsx
 msgid "None"
-msgstr ""
+msgstr "Ninguno"
 
 #: src/components/player/keys.ts src/lib/subtitles/style.ts
 #: src/pages/settings/subtitles.tsx
 msgid "Normal"
-msgstr ""
+msgstr "Normal"
 
 #: src/components/player/keys.ts src/lib/input/actions.ts
 msgid "Normal speed"
-msgstr ""
+msgstr "Velocidad normal"
 
 #: src/lib/hosts/shell/index.ts
 msgid "Not checked yet."
-msgstr ""
+msgstr "Aún no se ha comprobado."
 
 #: src/lib/hosts/shell/player.ts
 msgid "not found"
-msgstr ""
+msgstr "no se encontró"
 
 #: src/pages/settings/playback.tsx
 msgid "Not found on this computer. Choose where {name} is installed."
-msgstr ""
+msgstr "No se encuentra en este equipo. Elige dónde está instalado {name}."
 
 #: src/components/version-picker.tsx
 msgid "Not now"
-msgstr ""
+msgstr "Ahora no"
 
 #: src/components/party/party-sheet.tsx
 msgid "Not sent. Try again"
-msgstr ""
+msgstr "No se envió. Inténtalo de nuevo"
 
 #: src/pages/settings/interface.tsx
 msgid "Nothing"
-msgstr ""
+msgstr "Nada"
 
 #: src/pages/calendar.tsx
 msgid "Nothing airs this month from your shows or watchlist."
-msgstr ""
+msgstr "Este mes no se emite ninguna de tus series o de tu lista de seguimiento."
 
 #: src/pages/downloads.tsx
 msgid "Nothing downloaded yet. Download a movie or episode from its page, or a whole season from the show's."
-msgstr ""
+msgstr "Aún no se ha descargado nada. Descarga una película o un episodio desde su página, o una temporada completa desde la página de la serie."
 
 #: src/pages/search.tsx
 msgid "Nothing found for “{query}”."
-msgstr ""
+msgstr "No se encontró nada para «{query}»."
 
 #: src/pages/person.tsx
 msgid "Nothing found."
-msgstr ""
+msgstr "No se encontró nada."
 
 #: src/components/playlists.tsx
 msgid "Nothing here yet. Add titles from their menu, or from the suggestions below."
-msgstr ""
+msgstr "Todavía no hay nada aquí. Agrega títulos desde su menú o a partir de las sugerencias que aparecen más abajo."
 
 #: src/pages/discover.tsx src/pages/item.tsx
 msgid "Nothing here."
-msgstr ""
+msgstr "Nada aquí."
 
 #: src/components/remote-sheet.tsx
 msgid "Nothing is playing there."
-msgstr ""
+msgstr "No se está reproduciendo nada ahí."
 
 #: src/components/random-pick.tsx src/pages/favourites.tsx
 msgid "Nothing marked as a favourite yet."
-msgstr ""
+msgstr "Todavía no hay nada marcado como favorito."
 
 #: src/components/version-settings.tsx src/pages/discover.tsx
 #: src/pages/settings/audio.tsx src/pages/settings/interface.tsx
 msgid "Nothing matches."
-msgstr ""
+msgstr "No hay coincidencias."
 
 #: src/components/party/party-sheet.tsx
 msgid "Nothing playing yet."
-msgstr ""
+msgstr "Todavía no hay nada en reproducción."
 
 #: src/lib/hosts/shell/android.ts
 msgid "Nothing was heard"
-msgstr ""
+msgstr "No se escuchó nada"
 
 #: src/pages/history.tsx
 msgid "Nothing watched yet."
-msgstr ""
+msgstr "Todavía no se ha visto nada."
 
 #: src/components/party/party-sheet.tsx
 msgid "Nothing yet. Anything anyone plays now plays for everyone."
-msgstr ""
+msgstr "Todavía nada. Cualquier cosa que alguien reproduzca ahora se reproduce para todos."
 
 #: src/app.tsx
 msgid "Notifications"
-msgstr ""
+msgstr "Notificaciones"
 
 #: src/components/sessions.tsx
 msgid "Now playing"
@@ -2474,25 +2475,25 @@ msgstr "Reproduciendo ahora"
 
 #: src/components/player/subtitle-sync.tsx
 msgid "Now tap Heard when that line is spoken."
-msgstr ""
+msgstr "Ahora pulsa Escuchar cuando se pronuncie esa línea."
 
 #: src/components/player/subtitle-sync.tsx
 msgid "Now tap Saw when that line shows."
-msgstr ""
+msgstr "Ahora pulsa Vista cuando se muestre esa línea."
 
 #: src/components/player/subtitle-sync.tsx
 msgid "Now: {shown}"
-msgstr ""
+msgstr "Ahora: {shown}"
 
 #: src/pages/settings/theme.tsx
 msgid "Ocean"
-msgstr ""
+msgstr "Océano"
 
 #: src/components/player/options.tsx src/components/remote-sheet.tsx
 #: src/lib/playback/sound.ts src/pages/settings/audio.tsx
 #: src/pages/settings/subtitles.tsx
 msgid "Off"
-msgstr ""
+msgstr "Desactivado"
 
 #: src/pages/settings/theme.tsx
 msgid "Off for this visit, since the address ends in <0>?safe</0>. Fix or clear it here, then open the app without it."
@@ -2813,7 +2814,7 @@ msgstr ""
 
 #: src/components/player/subtitle-sync.tsx
 msgid "Pick the line you heard at {heardAt}."
-msgstr ""
+msgstr "Elige la línea que escuchaste en {heardAt}."
 
 #: src/components/version-picker.tsx
 msgid "Pick the version to download."
@@ -3434,11 +3435,11 @@ msgstr ""
 
 #: src/components/player/subtitle-sync.tsx
 msgid "Saw"
-msgstr ""
+msgstr "Vista"
 
 #: src/lib/input/actions.ts
 msgid "Saw its subtitle"
-msgstr ""
+msgstr "Ver su subtítulo"
 
 #: src/pages/settings/subtitles.tsx
 msgid "SDH, with sounds described"
