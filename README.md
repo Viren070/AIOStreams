@@ -280,4 +280,5 @@ AIOStreams builds on the work of many others, especially the developers of the a
   [Sanket9225/UsenetStreamer](https://github.com/Sanket9225/UsenetStreamer/).
 - [sleeyax/stremio-easynews-addon](https://github.com/sleeyax/stremio-easynews-addon), the project's initial structure.
 - The formatter, inspired by and adapted from [diced/zipline](https://github.com/diced/zipline).
-- The Stream Expression Language, powered by [silentmatt/expr-eval](https://github.com/silentmatt/expr-eval).
+- The Stream Expression Language, powered by [silentmatt/expr-eval](https://github.com/silentmatt/expr-eval), via the patched
+  [jorenbroekema/expr-eval](https://github.com/jorenbroekema/expr-eval) fork.
