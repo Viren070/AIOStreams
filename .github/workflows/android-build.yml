@@ -50,7 +50,7 @@ jobs:
           targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
       - uses: taiki-e/install-action@v2
         with:
-          tool: cargo-ndk
+          tool: cargo-ndk,cargo-about@0.9.2
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: packages/native

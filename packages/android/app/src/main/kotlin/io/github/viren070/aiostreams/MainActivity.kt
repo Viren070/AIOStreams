@@ -283,6 +283,10 @@ class MainActivity : ComponentActivity() {
                     }
                 }.start()
             }
+            "licenses" -> Thread {
+                val answer = Licenses.answer(this)
+                runOnUiThread { bridge.send(answer) }
+            }.start()
             "crash-report" -> Thread {
                 val report = runCatching { Crashes.last(this) }.getOrNull()
                 runOnUiThread {

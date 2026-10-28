@@ -59,11 +59,11 @@ abstract class CargoNdkBuild @Inject constructor(private val exec: ExecOperation
             )
         }
     }
+}
 
-    /** rustup's cargo, which has the Android targets, ahead of any other Rust on the PATH. */
-    private fun cargo(): String {
-        val home = System.getenv("CARGO_HOME")?.let(::File) ?: File(System.getProperty("user.home"), ".cargo")
-        val name = if (System.getProperty("os.name").startsWith("Windows")) "cargo.exe" else "cargo"
-        return File(home, "bin/$name").takeIf { it.exists() }?.path ?: "cargo"
-    }
+/** rustup's cargo, which has the Android targets, ahead of any other Rust on the PATH. */
+internal fun cargo(): String {
+    val home = System.getenv("CARGO_HOME")?.let(::File) ?: File(System.getProperty("user.home"), ".cargo")
+    val name = if (System.getProperty("os.name").startsWith("Windows")) "cargo.exe" else "cargo"
+    return File(home, "bin/$name").takeIf { it.exists() }?.path ?: "cargo"
 }
