@@ -50,7 +50,7 @@ import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.video.VideoFrameMetadataListener
 import androidx.media3.extractor.SeekMap
 import androidx.media3.extractor.metadata.Chapter
-import io.github.viren070.aiostreams.mpv.MpvEngine
+import io.github.viren070.aiostreams.libs.FallbackFont
 import io.github.viren070.aiostreams.playback.CacheBudget
 import io.github.viren070.aiostreams.playback.Change
 import io.github.viren070.aiostreams.playback.Engine
@@ -93,7 +93,7 @@ class ExoEngine(private val context: Context) :
     private val cache = StreamCache(context, http, link)
     private val data = DefaultDataSource.Factory(context, cache.factory)
     private val frames = VideoFrames()
-    private val ass = AssSurface(context, frames) { MpvEngine.fallbackFont(context) }
+    private val ass = AssSurface(context, frames) { FallbackFont.file(context) }
     private val fontsDir = File(context.cacheDir, "attached-fonts")
     private val player: ExoPlayer
     private val tracks = ExoTracks()

@@ -22,6 +22,6 @@ dependencies {
     api(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.exoplayer.hls)
     implementation(libs.androidx.media3.ui)
-    // libmpv's libass draws the subtitles, with mpv's fallback font.
-    implementation(project(":mpv"))
+    // libass for the subtitles, and FFmpeg for the sound the device can't decode.
+    implementation(project(":libs"))
 }
