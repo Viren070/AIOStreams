@@ -91,9 +91,10 @@ modules:
     config-opts:
       - --libdir=lib
     sources:
-      - type: archive
-        url: https://github.com/libass/libass/archive/0.17.4.tar.gz
-        sha256: c287d180d93dc9c9021872574b618ac49027e84cc90e1289318b1ee68bb42251
+      - type: git
+        url: https://github.com/AIOStreams/libass.git
+        tag: aiostreams-20261028
+        commit: 4edfaf6eedd36892d38e278d832d442e91ec613b
 
   - name: libmpv
     buildsystem: meson
