@@ -621,10 +621,11 @@ msgstr "Automatycznie"
 msgid "Automatic lists episodes on narrow screens and puts them in a row on wide ones."
 msgstr "Automatycznie układa odcinki w pionowej liście na wąskich ekranach i w rzędzie na szerokich."
 
-#: src/components/layout.tsx src/components/party/party-sheet.tsx
-#: src/components/player/controls.tsx src/components/player/next-episode.tsx
-#: src/lib/input/actions.ts src/pages/player.tsx src/pages/servers.tsx
-#: src/pages/sign-in.tsx src/pages/trailer.tsx
+#: src/components/layout.tsx src/components/licenses.tsx
+#: src/components/party/party-sheet.tsx src/components/player/controls.tsx
+#: src/components/player/next-episode.tsx src/lib/input/actions.ts
+#: src/pages/player.tsx src/pages/servers.tsx src/pages/sign-in.tsx
+#: src/pages/trailer.tsx
 msgid "Back"
 msgstr "Cofnij"
 
@@ -716,10 +717,6 @@ msgstr "Browser Search"
 #: src/lib/discord.ts
 msgid "Browsing"
 msgstr "Przeglądanie"
-
-#: src/pages/settings/about.tsx
-msgid "Builds the mpv library this app ships with."
-msgstr "Kompiluje bibliotekę mpv dołączoną do tej aplikacji."
 
 #: src/lib/playback/player-choice.ts
 msgid "Built-in mpv"
@@ -1847,6 +1844,10 @@ msgstr "Kod lub link z zaproszeniem"
 msgid "Invite link copied"
 msgstr "Skopiowano link z zaproszeniem"
 
+#: src/components/licenses.tsx
+msgid "It came with no licence text."
+msgstr ""
+
 #: src/components/send-report.tsx
 msgid "It carries this device's details and the app's recent log. Passwords and tokens are left out."
 msgstr "Zawiera informacje o tym urządzeniu i ostatnie dzienniki aplikacji. Hasła i tokeny są pomijane."
@@ -1858,6 +1859,10 @@ msgstr "Nie dotarło do twórcy, a jedynie do tego serwera: {forwardError}"
 #: src/pages/settings/theme.tsx
 msgid "It will be undone unless you keep it."
 msgstr "Zmiana zostanie cofnięta, jeśli jej nie zachowasz."
+
+#: src/pages/settings/about.tsx
+msgid "Its Metal and AVFoundation video outputs."
+msgstr ""
 
 #: src/pages/settings/about.tsx
 msgid "Jellyfin API"
@@ -1999,6 +2004,10 @@ msgstr "Pozwala dekoderowi telewizora samodzielnie synchronizować obraz i dźwi
 #: src/pages/settings/playback.tsx
 msgid "Lets the TV's decoder keep picture and sound in step itself, which plays 4K and HDR more smoothly on some TVs. Turn it off if video stutters or stays black."
 msgstr "Pozwala dekoderowi telewizora samodzielnie synchronizować obraz i dźwięk, co zapewnia płynniejsze odtwarzanie 4K i HDR na niektórych telewizorach. Wyłącz, jeśli wideo się zacina lub ekran pozostaje czarny."
+
+#: src/components/licenses.tsx
+msgid "Licences"
+msgstr ""
 
 #: src/components/version-settings.tsx
 msgid "Link a pack someone shares, in this app's format or the one Fusion and Nuvio use. It stays up to date with its author's changes."
@@ -2431,8 +2440,9 @@ msgstr "Nic nie jest tam teraz odtwarzane."
 msgid "Nothing marked as a favourite yet."
 msgstr "Nie oznaczono jeszcze niczego jako ulubione."
 
-#: src/components/version-settings.tsx src/pages/discover.tsx
-#: src/pages/settings/audio.tsx src/pages/settings/interface.tsx
+#: src/components/licenses.tsx src/components/version-settings.tsx
+#: src/pages/discover.tsx src/pages/settings/audio.tsx
+#: src/pages/settings/interface.tsx
 msgid "Nothing matches."
 msgstr "Brak pasujących wyników."
 
@@ -3230,6 +3240,10 @@ msgstr "Usunięto z historii"
 msgid "Rename"
 msgstr "Zmień nazwę"
 
+#: src/components/playlists.tsx
+msgid "Repeat"
+msgstr ""
+
 #: src/pages/settings/apps.tsx
 msgid "Report a problem"
 msgstr "Zgłoś problem"
@@ -3431,9 +3445,9 @@ msgstr "Zobaczyłem napisy"
 msgid "SDH, with sounds described"
 msgstr "SDH, z opisem dźwięków (dla niesłyszących)"
 
-#: src/components/layout.tsx src/components/version-settings.tsx
-#: src/lib/input/actions.ts src/pages/discover.tsx src/pages/search.tsx
-#: src/pages/settings/apps.tsx
+#: src/components/layout.tsx src/components/licenses.tsx
+#: src/components/version-settings.tsx src/lib/input/actions.ts
+#: src/pages/discover.tsx src/pages/search.tsx src/pages/settings/apps.tsx
 msgid "Search"
 msgstr "Szukaj"
 
@@ -3639,6 +3653,10 @@ msgstr "Pokazuje wyniki wyszukiwania w jednej siatce zamiast w osobnych rzędach
 #: src/pages/settings/subtitles.tsx
 msgid "Shows subtitles in your language unless the audio already is."
 msgstr "Pokazuje napisy w Twoim języku, chyba że ścieżka dźwiękowa już w nim jest."
+
+#: src/components/playlists.tsx
+msgid "Shuffle"
+msgstr ""
 
 #: src/pages/settings/interface.tsx
 msgid "Side rail"
@@ -4191,6 +4209,11 @@ msgstr "Gospodarz usunął Cię ze wspólnego oglądania."
 msgid "The interface is built on its components."
 msgstr "Interfejs jest zbudowany na bazie jego komponentów."
 
+#: src/components/licenses.tsx
+#, fuzzy
+msgid "The licences couldn't be loaded."
+msgstr "Nie udało się odczytać kwestii z tych napisów."
+
 #: src/lib/hosts/shell/player.ts
 msgid "the link answered HTTP {status}"
 msgstr "link odpowiedział kodem HTTP {status}"
@@ -4214,6 +4237,10 @@ msgstr "Film lub serial, którego strona jest obecnie otwarta."
 #: src/pages/settings/apps.tsx
 msgid "The older way mpv draws, for Macs where the others fail. Some Dolby Vision videos show the wrong colours."
 msgstr "Starsza metoda renderowania mpv dla komputerów Mac, na których inne zawodzą. Niektóre filmy w Dolby Vision mogą wyświetlać nieprawidłowe kolory."
+
+#: src/components/licenses.tsx
+msgid "The open-source software in this app, and the licence of each."
+msgstr ""
 
 #: src/components/remote-sheet.tsx
 msgid "The other device could not be reached"
@@ -4712,7 +4739,11 @@ msgstr "Wideo"
 msgid "Video output"
 msgstr "Wyjście wideo"
 
-#: src/pages/settings/about.tsx
+#: src/components/licenses.tsx
+msgid "View"
+msgstr ""
+
+#: src/components/licenses.tsx src/pages/settings/about.tsx
 msgid "Visit"
 msgstr "Odwiedź"
 
