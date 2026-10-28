@@ -16,6 +16,9 @@ import {
   settings,
   useSetting,
   MAX_FEATURED,
+  LAUNCH_PAGES,
+  MENU_ITEMS,
+  type LaunchPage,
   type EpisodeLayout,
   type BarBackground,
   type DesktopNavigation,
@@ -54,6 +57,19 @@ function NavigationCard() {
   const [background, setBackground] = useSetting(
     settings.interface.barBackground
   );
+  const [hiddenMenu, setHiddenMenu] = useSetting(settings.interface.hiddenMenu);
+  const [launchPage, setLaunchPage] = useSetting(settings.interface.launchPage);
+  const menuLabels: Record<(typeof MENU_ITEMS)[number], string> = {
+    home: t`Home`,
+    discover: t`Discover`,
+    search: t`Search`,
+    favourites: t`Favourites`,
+    calendar: t`Calendar`,
+    activity: t`Activity`,
+    playlists: t`Playlists`,
+    party: t`Watch together`,
+    downloads: t`Downloads`,
+  };
   const rail = tv
     ? tvNavigation === 'rail'
     : touch && touchNavigation === 'rail';
@@ -191,6 +207,30 @@ function NavigationCard() {
           onValueChange={(value) => setBackground(value as BarBackground)}
         />
       )}
+      <Select
+        label={t`Open on`}
+        help={t`The page the app opens to when it starts. Links that open a title still go straight to it.`}
+        options={LAUNCH_PAGES.map((page) => ({
+          value: page,
+          label: menuLabels[page],
+        }))}
+        value={launchPage}
+        onValueChange={(value) => setLaunchPage(value as LaunchPage)}
+      />
+      <Combobox
+        multiple
+        label={t`Hidden menu items`}
+        help={t`Left out of the navigation. Settings always stays.`}
+        placeholder={t`None`}
+        emptyMessage={t`Nothing matches.`}
+        options={MENU_ITEMS.map((item) => ({
+          value: item,
+          label: menuLabels[item],
+          textValue: menuLabels[item],
+        }))}
+        value={hiddenMenu.split(',').filter(Boolean)}
+        onValueChange={(next) => setHiddenMenu(next.join(','))}
+      />
     </SettingsCard>
   );
 }
@@ -227,6 +267,15 @@ export function InterfaceSection() {
   const [heroMode, setHeroMode] = useSetting(settings.interface.heroMode);
   const [mergeNextUp, setMergeNextUp] = useSetting(
     settings.interface.mergeNextUp
+  );
+  const [hideContinue, setHideContinue] = useSetting(
+    settings.interface.hideContinueWatching
+  );
+  const [trackProgress, setTrackProgress] = useSetting(
+    settings.playback.trackProgress
+  );
+  const [discoverSplit, setDiscoverSplit] = useSetting(
+    settings.interface.discoverSplit
   );
   const [combineSearch, setCombineSearch] = useSetting(
     settings.interface.combineSearch
@@ -318,6 +367,27 @@ export function InterfaceSection() {
           help={t`Shows next episodes in the continue watching row, after what you are partway through.`}
           value={mergeNextUp}
           onValueChange={setMergeNextUp}
+        />
+        <Switch
+          side="right"
+          label={t`Hide continue watching`}
+          help={t`Removes the continue watching row from home.`}
+          value={hideContinue}
+          onValueChange={setHideContinue}
+        />
+        <Switch
+          side="right"
+          label={t`Track watch progress`}
+          help={t`Off, nothing you play is reported to the server, so it never appears in continue watching, activity or your trackers.`}
+          value={trackProgress}
+          onValueChange={setTrackProgress}
+        />
+        <Switch
+          side="right"
+          label={t`Split Discover by movies and shows`}
+          help={t`Off, Discover has no Movies and Shows tabs and its picker lists every catalog.`}
+          value={discoverSplit}
+          onValueChange={setDiscoverSplit}
         />
         <Switch
           side="right"

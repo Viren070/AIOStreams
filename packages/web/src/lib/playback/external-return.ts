@@ -7,6 +7,7 @@ import { itemPath } from '../paths';
 import { PlaybackReporter } from './reporter';
 import { useRefreshAll } from '../queries';
 import { useSession } from '../session';
+import { settings } from '../settings';
 import { clock } from '../format';
 import type { BaseItemDto, SourceInfo } from '../types';
 
@@ -63,6 +64,7 @@ export function useExternalReturn() {
       '',
       `${window.location.pathname}${hashPath}${rest ? `?${rest}` : ''}`
     );
+    if (!settings.playback.trackProgress.read()) return;
     if (finished) {
       void client
         .post(`/UserPlayedItems/${itemId}`, undefined, { userId: user.Id })

@@ -50,6 +50,30 @@ export type BarBackground = (typeof BAR_BACKGROUNDS)[number];
 
 const POSTER_LINES: PosterLine[] = ['title', 'year'];
 
+/** Menu entries that can be hidden; Settings always stays. */
+export const MENU_ITEMS = [
+  'home',
+  'discover',
+  'search',
+  'favourites',
+  'calendar',
+  'activity',
+  'playlists',
+  'party',
+  'downloads',
+] as const;
+
+/** Where the app opens. */
+export const LAUNCH_PAGES = [
+  'home',
+  'discover',
+  'search',
+  'favourites',
+  'calendar',
+  'activity',
+] as const;
+export type LaunchPage = (typeof LAUNCH_PAGES)[number];
+
 /** A stored value; `read` returns the same reference until it changes. */
 export interface Setting<T> {
   read(): T;
@@ -701,6 +725,16 @@ export const settings = {
       }
     ),
     mergeNextUp: syncedFlag('mergeNextUp'),
+    hideContinueWatching: syncedFlag('hideContinueWatching'),
+    /** Off, Discover lists every catalog together instead of a tab per type. */
+    discoverSplit: syncedFlag('discoverSplit', true),
+    /** Comma-separated `MENU_ITEMS` this device's navigation leaves out. */
+    hiddenMenu: device<string>('aiostreams-web-interface-hidden-menu', ''),
+    launchPage: device<LaunchPage>(
+      'aiostreams-web-interface-launch-page',
+      'home',
+      LAUNCH_PAGES
+    ),
     combineSearch: syncedFlag('combineSearch'),
     heroMode: syncedChoice<HeroMode>('heroMode', HERO_MODES, 'rotate'),
     episodeLayout: device<EpisodeLayout>(
@@ -784,6 +818,8 @@ export const settings = {
     serverCss: syncedFlag('serverCss', true),
   },
   playback: {
+    /** Off, nothing is reported to the server: no resume points, history or trackers. */
+    trackProgress: syncedFlag('trackProgress', true),
     autoPlayFirst: syncedFlag('autoPlayFirst', false, [
       'aiostreams-web-skip-versions',
     ]),

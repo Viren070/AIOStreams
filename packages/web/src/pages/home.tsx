@@ -90,6 +90,7 @@ export function HomePage() {
   const views = useViews();
   const [featured] = useSetting(settings.interface.featured);
   const [mergeNextUp] = useSetting(settings.interface.mergeNextUp);
+  const [hideContinue] = useSetting(settings.interface.hideContinueWatching);
   const continueItems = React.useMemo(
     () =>
       mergeRows(resume.data?.Items, mergeNextUp ? nextUp.data?.Items : null),
@@ -144,23 +145,25 @@ export function HomePage() {
 
   const rows = (
     <>
-      <EpisodeRow
-        id="resume"
-        title={t`Continue watching`}
-        items={continueItems}
-        loading={continueLoading}
-        action={
-          <Button
-            size="sm"
-            intent="gray-subtle"
-            className="rounded-full"
-            leftIcon={<BiHistory />}
-            onClick={() => navigate(to.history)}
-          >
-            <Trans>Activity</Trans>
-          </Button>
-        }
-      />
+      {!hideContinue && (
+        <EpisodeRow
+          id="resume"
+          title={t`Continue watching`}
+          items={continueItems}
+          loading={continueLoading}
+          action={
+            <Button
+              size="sm"
+              intent="gray-subtle"
+              className="rounded-full"
+              leftIcon={<BiHistory />}
+              onClick={() => navigate(to.history)}
+            >
+              <Trans>Activity</Trans>
+            </Button>
+          }
+        />
+      )}
       {!mergeNextUp && (
         <EpisodeRow
           id="next-up"
