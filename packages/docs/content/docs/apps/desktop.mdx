@@ -203,7 +203,7 @@ The Linux Flatpak does not update itself yet. To update it, download the newer f
 ## Credits
 
 - **[Seanime](https://github.com/5rahim/seanime)** by 5rahim. The app's interface is built on its UI components.
-- **[mpv](https://mpv.io)** and **[FFmpeg](https://ffmpeg.org)** play the video. The libmpv the app ships comes from [shinchiro](https://github.com/shinchiro/mpv-winbuild-cmake) on Windows and [IINA](https://iina.io) on Mac; the Flatpak builds its own.
+- **[mpv](https://mpv.io)** and **[FFmpeg](https://ffmpeg.org)** play the video. On Windows and Mac the app ships libmpv from [AIOStreams/libs](https://github.com/AIOStreams/libs), whose mpv and FFmpeg carry [edde746's MPVKit](https://github.com/edde746/MPVKit) patches; the Flatpak builds its own.
 - **[Jellyfin](https://jellyfin.org)**, whose API the app speaks.
 
 The app's **Settings → About** lists these too. The licences of everything it ships are in `third-party-licenses.html`, beside the app on Windows and in the app's `Contents/Resources` on a Mac.
