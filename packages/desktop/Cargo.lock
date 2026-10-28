@@ -20,6 +20,7 @@ dependencies = [
 [[package]]
 name = "aiostreams-container"
 version = "0.1.0"
+source = "git+https://github.com/AIOStreams/media?rev=87dee2ccd7c39aa9baf1e739292e14fa9f0d8ec7#87dee2ccd7c39aa9baf1e739292e14fa9f0d8ec7"
 dependencies = [
  "ureq",
 ]
@@ -75,6 +76,7 @@ dependencies = [
 [[package]]
 name = "aiostreams-thumbs"
 version = "0.1.0"
+source = "git+https://github.com/AIOStreams/media?rev=87dee2ccd7c39aa9baf1e739292e14fa9f0d8ec7#87dee2ccd7c39aa9baf1e739292e14fa9f0d8ec7"
 dependencies = [
  "aiostreams-container",
  "dolby_vision",

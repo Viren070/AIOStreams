@@ -7,8 +7,8 @@ license.workspace = true
 publish.workspace = true
 
 [dependencies]
-aiostreams-container = { path = "../../native/container" }
-aiostreams-thumbs = { path = "../../native/thumbs" }
+aiostreams-container = { git = "https://github.com/AIOStreams/media", rev = "87dee2ccd7c39aa9baf1e739292e14fa9f0d8ec7" }
+aiostreams-thumbs = { git = "https://github.com/AIOStreams/media", rev = "87dee2ccd7c39aa9baf1e739292e14fa9f0d8ec7" }
 libloading.workspace = true
 log.workspace = true
 serde.workspace = true

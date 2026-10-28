@@ -177,12 +177,6 @@ modules:
           - linux/repo
           - linux/.flatpak-builder
           - linux/screenshots
-      # Where the desktop crates' path dependencies point.
-      - type: dir
-        path: ../../native
-        dest: native
-        skip:
-          - target
       - type: dir
         path: ../../web/dist-standalone
         dest: web
