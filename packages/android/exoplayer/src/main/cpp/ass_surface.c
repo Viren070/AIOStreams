@@ -1,12 +1,22 @@
-// libass, owned by one thread: the file's fonts and subtitle tracks, and each
-// moment's images blended into one premultiplied picture in a window buffer,
-// so the compositor lays a single layer over the video.
+// libass, owned by one thread, which renders moments ahead of the video into
+// a queue: each moment's images are copied, as libass keeps them only until it
+// renders again. Another thread takes the moment each video frame shows and
+// blends its images into one premultiplied picture, which the compositor lays
+// over the video as a single layer. The picture goes to the window through GL,
+// so each buffer carries the time its video frame shows at, as MediaCodec gives
+// the video's; without GL, the window's buffers are drawn directly.
 
 #include <dlfcn.h>
+#include <errno.h>
 #include <jni.h>
+#include <pthread.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#include <GLES2/gl2.h>
 #include <android/log.h>
 #include <android/native_window.h>
 #include <android/native_window_jni.h>
@@ -36,21 +46,111 @@ static int load_libass(void) {
     return 1;
 }
 
+// A rendered moment's images, copied, which consecutive moments share while nothing changes.
 typedef struct {
+    int refs;
+    size_t bytes;
+    ASS_Image *images;
+} Picture;
+
+typedef struct {
+    long long time_ms;
+    Picture *picture;
+} Moment;
+
+#define QUEUE_SIZE 128
+
+typedef struct {
+    // The rendering thread's.
     ASS_Library *library;
     ASS_Renderer *renderer;
-    ANativeWindow *window;
-    ASS_Image *images;
-    // What the last posted buffer drew on, which the next one has to clear.
-    ARect drawn;
-    ANativeWindow_Buffer buffer;
-    int locked;
     char *bundled;
     char *font;
     int width;
     int height;
     int cache_mb;
+    Picture *last;  // what it rendered last, which an unchanged moment shares
+
+    // The showing thread's.
+    ANativeWindow *window;
+    int window_width;
+    int window_height;
+    Picture *shown;
+    // What the picture holds images on, which the next one has to clear.
+    ARect drawn;
+    ANativeWindow_Buffer buffer;
+    int pending;  // drawn, not yet posted
+    // With GL: the rectangle the picture's images cover, blended into `scratch` and drawn from a
+    // texture that grows to the largest yet.
+    EGLDisplay display;
+    EGLContext context;
+    EGLSurface surface;
+    PFNEGLPRESENTATIONTIMEANDROIDPROC presentation_time;
+    GLuint program;
+    GLint extent;
+    GLuint texture;
+    int texture_width;
+    int texture_height;
+    uint32_t *scratch;
+    size_t scratch_pixels;
+
+    // Shared, under the lock: the moments rendered ahead, oldest first.
+    pthread_mutex_t lock;
+    pthread_cond_t queued;
+    Moment queue[QUEUE_SIZE];
+    int first;
+    int count;
+    size_t bytes;   // of all pictures alive
 } Surface;
+
+static Picture *copy_images(Surface *surface, const ASS_Image *images) {
+    int count = 0;
+    size_t pixels = 0;
+    for (const ASS_Image *image = images; image; image = image->next) {
+        if (image->w <= 0 || image->h <= 0) continue;
+        count++;
+        pixels += (size_t) image->w * image->h;
+    }
+    size_t bytes = sizeof(Picture) + count * sizeof(ASS_Image) + pixels;
+    Picture *picture = malloc(bytes);
+    if (!picture) return NULL;
+    picture->refs = 1;
+    picture->bytes = bytes;
+    picture->images = count ? (ASS_Image *) (picture + 1) : NULL;
+    uint8_t *data = (uint8_t *) (picture->images + count);
+    ASS_Image *copy = picture->images;
+    for (const ASS_Image *image = images; image; image = image->next) {
+        if (image->w <= 0 || image->h <= 0) continue;
+        *copy = *image;
+        copy->bitmap = data;
+        copy->stride = image->w;
+        for (int y = 0; y < image->h; y++) memcpy(data + y * image->w, image->bitmap + y * image->stride, image->w);
+        data += (size_t) image->w * image->h;
+        copy->next = --count ? copy + 1 : NULL;
+        copy++;
+    }
+    pthread_mutex_lock(&surface->lock);
+    surface->bytes += bytes;
+    pthread_mutex_unlock(&surface->lock);
+    return picture;
+}
+
+// Under the lock.
+static void release(Surface *surface, Picture *picture) {
+    if (!picture || --picture->refs) return;
+    surface->bytes -= picture->bytes;
+    free(picture);
+}
+
+// Under the lock: drops the queued moments from `time_ms` on.
+static void drop_from(Surface *surface, long long time_ms) {
+    while (surface->count) {
+        Moment *last = &surface->queue[(surface->first + surface->count - 1) % QUEUE_SIZE];
+        if (last->time_ms < time_ms) break;
+        release(surface, last->picture);
+        surface->count--;
+    }
+}
 
 static void message(int level, const char *format, va_list args, void *data) {
     if (level <= 1) __android_log_vprint(ANDROID_LOG_WARN, "libass", format, args);
@@ -161,6 +261,8 @@ static void start_renderer(Surface *surface) {
 JNIEXPORT jlong JNICALL METHOD(nativeCreate)(JNIEnv *env, jclass clazz, jstring font) {
     if (!load_libass()) return 0;
     Surface *surface = calloc(1, sizeof(Surface));
+    pthread_mutex_init(&surface->lock, NULL);
+    pthread_cond_init(&surface->queued, NULL);
     surface->library = libass.library_init();
     libass.set_message_cb(surface->library, message, NULL);
     libass.set_extract_fonts(surface->library, 1);
@@ -184,7 +286,6 @@ JNIEXPORT void JNICALL METHOD(nativeAddFont)(JNIEnv *env, jclass clazz, jlong ha
 // libass frees a library's fonts safely only once no renderer uses them, so the renderer starts over.
 JNIEXPORT void JNICALL METHOD(nativeClearFonts)(JNIEnv *env, jclass clazz, jlong handle) {
     Surface *surface = (Surface *) handle;
-    surface->images = NULL;
     libass.renderer_done(surface->renderer);
     libass.clear_fonts(surface->library);
     start_renderer(surface);
@@ -193,7 +294,6 @@ JNIEXPORT void JNICALL METHOD(nativeClearFonts)(JNIEnv *env, jclass clazz, jlong
 // libass keeps the font it picked for each name, so fonts added later need a new renderer.
 JNIEXPORT void JNICALL METHOD(nativeReloadFonts)(JNIEnv *env, jclass clazz, jlong handle) {
     Surface *surface = (Surface *) handle;
-    surface->images = NULL;
     libass.renderer_done(surface->renderer);
     start_renderer(surface);
 }
@@ -243,19 +343,143 @@ JNIEXPORT void JNICALL METHOD(nativeSetCacheLimit)(JNIEnv *env, jclass clazz, jl
     libass.set_cache_limits(surface->renderer, 0, mb);
 }
 
+// The texture's `extent` over the viewport, texel for pixel: highp reaches every texel.
+static const char *VERTEX =
+    "attribute vec2 corner;\n"
+    "uniform vec2 extent;\n"
+    "varying vec2 at;\n"
+    "void main() {\n"
+    "    at = vec2(corner.x + 1.0, 1.0 - corner.y) * 0.5 * extent;\n"
+    "    gl_Position = vec4(corner, 0.0, 1.0);\n"
+    "}\n";
+static const char *FRAGMENT =
+    "#ifdef GL_FRAGMENT_PRECISION_HIGH\n"
+    "precision highp float;\n"
+    "#else\n"
+    "precision mediump float;\n"
+    "#endif\n"
+    "varying vec2 at;\n"
+    "uniform sampler2D picture;\n"
+    "void main() {\n"
+    "    gl_FragColor = texture2D(picture, at);\n"
+    "}\n";
+
+static GLuint compile(GLenum type, const char *source) {
+    GLuint shader = glCreateShader(type);
+    glShaderSource(shader, 1, &source, NULL);
+    glCompileShader(shader);
+    GLint compiled = 0;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
+    if (compiled) return shader;
+    glDeleteShader(shader);
+    return 0;
+}
+
+static void stop_gl(Surface *surface) {
+    if (surface->display == EGL_NO_DISPLAY) return;
+    if (surface->context != EGL_NO_CONTEXT && eglGetCurrentContext() == surface->context) {
+        glDeleteTextures(1, &surface->texture);
+        glDeleteProgram(surface->program);
+    }
+    eglMakeCurrent(surface->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+    if (surface->surface != EGL_NO_SURFACE) eglDestroySurface(surface->display, surface->surface);
+    if (surface->context != EGL_NO_CONTEXT) eglDestroyContext(surface->display, surface->context);
+    // The display stays initialised, as the app's own drawing uses it.
+    surface->display = EGL_NO_DISPLAY;
+    surface->surface = EGL_NO_SURFACE;
+    surface->context = EGL_NO_CONTEXT;
+    surface->presentation_time = NULL;
+    surface->program = surface->texture = 0;
+    surface->texture_width = surface->texture_height = 0;
+    free(surface->scratch);
+    surface->scratch = NULL;
+    surface->scratch_pixels = 0;
+}
+
+static int start_gl(Surface *surface, int width, int height) {
+    EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    if (display == EGL_NO_DISPLAY || !eglInitialize(display, NULL, NULL)) return 0;
+    surface->display = display;
+    const EGLint attributes[] = {
+        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT, EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+        EGL_RED_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_BLUE_SIZE, 8, EGL_ALPHA_SIZE, 8, EGL_NONE,
+    };
+    const EGLint version[] = {EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE};
+    EGLConfig config;
+    EGLint configs = 0;
+    if (!eglChooseConfig(display, attributes, &config, 1, &configs) || configs < 1) return stop_gl(surface), 0;
+    surface->context = eglCreateContext(display, config, EGL_NO_CONTEXT, version);
+    if (surface->context == EGL_NO_CONTEXT) return stop_gl(surface), 0;
+    ANativeWindow_setBuffersGeometry(surface->window, width, height, WINDOW_FORMAT_RGBA_8888);
+    surface->surface = eglCreateWindowSurface(display, config, surface->window, NULL);
+    if (surface->surface == EGL_NO_SURFACE ||
+        !eglMakeCurrent(display, surface->surface, surface->surface, surface->context)) {
+        return stop_gl(surface), 0;
+    }
+    const char *extensions = eglQueryString(display, EGL_EXTENSIONS);
+    if (extensions && strstr(extensions, "EGL_ANDROID_presentation_time")) {
+        surface->presentation_time = (PFNEGLPRESENTATIONTIMEANDROIDPROC) eglGetProcAddress("eglPresentationTimeANDROID");
+    }
+
+    GLuint vertex = compile(GL_VERTEX_SHADER, VERTEX), fragment = compile(GL_FRAGMENT_SHADER, FRAGMENT);
+    surface->program = glCreateProgram();
+    if (vertex) glAttachShader(surface->program, vertex);
+    if (fragment) glAttachShader(surface->program, fragment);
+    glBindAttribLocation(surface->program, 0, "corner");
+    glLinkProgram(surface->program);
+    glDeleteShader(vertex);
+    glDeleteShader(fragment);
+    GLint linked = 0;
+    glGetProgramiv(surface->program, GL_LINK_STATUS, &linked);
+    if (!vertex || !fragment || !linked) return stop_gl(surface), 0;
+    glUseProgram(surface->program);
+    surface->extent = glGetUniformLocation(surface->program, "extent");
+    static const GLfloat corners[] = {-1, -1, 1, -1, -1, 1, 1, 1};
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, corners);
+    glEnableVertexAttribArray(0);
+
+    glGenTextures(1, &surface->texture);
+    glBindTexture(GL_TEXTURE_2D, surface->texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+    glDisable(GL_DITHER);
+    glDisable(GL_BLEND);
+    glClearColor(0, 0, 0, 0);
+    if (glGetError() != GL_NO_ERROR) return stop_gl(surface), 0;
+    return 1;
+}
+
+// The showing thread's window, drawn through GL when it can be.
 JNIEXPORT void JNICALL METHOD(nativeSetWindow)(
         JNIEnv *env, jclass clazz, jlong handle, jobject view, jint width, jint height) {
     Surface *surface = (Surface *) handle;
+    stop_gl(surface);
     if (surface->window) ANativeWindow_release(surface->window);
     surface->window = view ? ANativeWindow_fromSurface(env, view) : NULL;
     surface->drawn = (ARect) {0, 0, 0, 0};
-    surface->images = NULL;
-    if (surface->window) {
-        surface->width = width;
-        surface->height = height;
-        ANativeWindow_setBuffersGeometry(surface->window, width, height, WINDOW_FORMAT_RGBA_8888);
-        libass.set_frame_size(surface->renderer, width, height);
-    }
+    surface->pending = 0;
+    if (!surface->window) return;
+    surface->window_width = width;
+    surface->window_height = height;
+    if (start_gl(surface, width, height)) return;
+    __android_log_print(ANDROID_LOG_WARN, "libass", "drawing subtitles without GL");
+    ANativeWindow_setBuffersGeometry(surface->window, width, height, WINDOW_FORMAT_RGBA_8888);
+}
+
+// Whether a posted picture carries the time its video frame shows at.
+JNIEXPORT jboolean JNICALL METHOD(nativeStamped)(JNIEnv *env, jclass clazz, jlong handle) {
+    return ((Surface *) handle)->presentation_time != NULL;
+}
+
+// The size the rendering thread renders at.
+JNIEXPORT void JNICALL METHOD(nativeSetFrameSize)(JNIEnv *env, jclass clazz, jlong handle, jint width, jint height) {
+    Surface *surface = (Surface *) handle;
+    surface->width = width;
+    surface->height = height;
+    libass.set_frame_size(surface->renderer, width, height);
 }
 
 // The video's place in the frame: margins are negative where it is cropped.
@@ -320,29 +544,138 @@ JNIEXPORT void JNICALL METHOD(nativeSetStyle)(
     libass.set_selective_style_override(renderer, &style);
 }
 
-// Renders the track at `timeMs`; true when the picture changed and needs drawing.
-JNIEXPORT jboolean JNICALL METHOD(nativeRender)(
-        JNIEnv *env, jclass clazz, jlong handle, jlong track, jlong timeMs, jboolean force) {
+// Renders the track at `timeMs` onto the end of the queue, which is to have room.
+JNIEXPORT void JNICALL METHOD(nativeQueue)(JNIEnv *env, jclass clazz, jlong handle, jlong track, jlong timeMs) {
     Surface *surface = (Surface *) handle;
-    if (!surface->window) return JNI_FALSE;
-    int changed = 0;
-    surface->images = track ? libass.render_frame(surface->renderer, (ASS_Track *) track, timeMs, &changed) : NULL;
-    if (!surface->images && empty(&surface->drawn)) return JNI_FALSE;
-    return changed || force;
+    int changed = 1;
+    ASS_Image *images = track ? libass.render_frame(surface->renderer, (ASS_Track *) track, timeMs, &changed) : NULL;
+    Picture *picture = NULL;
+    if (changed || !surface->last) {
+        picture = copy_images(surface, images);
+        if (!picture) return;
+    }
+    pthread_mutex_lock(&surface->lock);
+    if (picture) {
+        release(surface, surface->last);
+        surface->last = picture;
+    }
+    surface->last->refs++;
+    drop_from(surface, timeMs);
+    surface->queue[(surface->first + surface->count++) % QUEUE_SIZE] = (Moment) {timeMs, surface->last};
+    pthread_cond_broadcast(&surface->queued);
+    pthread_mutex_unlock(&surface->lock);
 }
 
-// Blends the rendered images into the next buffer, clearing only what changed.
+// Whether the queue holds fewer moments and pictures than these.
+JNIEXPORT jboolean JNICALL METHOD(nativeRoom)(JNIEnv *env, jclass clazz, jlong handle, jint moments, jlong bytes) {
+    Surface *surface = (Surface *) handle;
+    pthread_mutex_lock(&surface->lock);
+    int room = surface->count < moments && surface->count < QUEUE_SIZE && surface->bytes < (size_t) bytes;
+    pthread_mutex_unlock(&surface->lock);
+    return room;
+}
+
+// Drops the queued moments from `timeMs` on, whose subtitles changed.
+JNIEXPORT void JNICALL METHOD(nativeDropFrom)(JNIEnv *env, jclass clazz, jlong handle, jlong timeMs) {
+    Surface *surface = (Surface *) handle;
+    pthread_mutex_lock(&surface->lock);
+    drop_from(surface, timeMs);
+    pthread_mutex_unlock(&surface->lock);
+}
+
+// Takes the queued moment for `timeMs` to show, dropping those before it: -1 when it isn't
+// queued, 1 when it differs from what shows, 0 when it doesn't. With `waitMs`, waits that long
+// for the moment to be queued.
+JNIEXPORT jint JNICALL METHOD(nativeTake)(JNIEnv *env, jclass clazz, jlong handle, jlong timeMs, jint waitMs) {
+    Surface *surface = (Surface *) handle;
+    struct timespec until;
+    clock_gettime(CLOCK_REALTIME, &until);
+    until.tv_nsec += (long) waitMs * 1000000;
+    until.tv_sec += until.tv_nsec / 1000000000;
+    until.tv_nsec %= 1000000000;
+    pthread_mutex_lock(&surface->lock);
+    int taken = -1;
+    for (;;) {
+        while (surface->count && surface->queue[surface->first].time_ms < timeMs) {
+            release(surface, surface->queue[surface->first].picture);
+            surface->first = (surface->first + 1) % QUEUE_SIZE;
+            surface->count--;
+        }
+        if (surface->count && surface->queue[surface->first].time_ms == timeMs) {
+            Picture *picture = surface->queue[surface->first].picture;
+            surface->first = (surface->first + 1) % QUEUE_SIZE;
+            surface->count--;
+            taken = picture != surface->shown;
+            release(surface, surface->shown);
+            surface->shown = picture;
+            break;
+        }
+        // Later moments queued before an earlier one was asked for go once it comes.
+        if (!waitMs || pthread_cond_timedwait(&surface->queued, &surface->lock, &until) == ETIMEDOUT) break;
+    }
+    pthread_mutex_unlock(&surface->lock);
+    return taken;
+}
+
+// Whether an image is drawn: libass places them within the frame, which is the window's size but for a moment
+// after it changes.
+static int drawn_image(const Surface *surface, const ASS_Image *image) {
+    return image->w > 0 && image->h > 0 && image->dst_x + image->w <= surface->window_width &&
+           image->dst_y + image->h <= surface->window_height;
+}
+
+// Blends the shown moment's images into the next buffer: with GL only their rectangle, otherwise
+// clearing only what changed.
 JNIEXPORT jboolean JNICALL METHOD(nativeDraw)(JNIEnv *env, jclass clazz, jlong handle) {
     Surface *surface = (Surface *) handle;
+    if (!surface->window) return JNI_FALSE;
+    ASS_Image *images = surface->shown ? surface->shown->images : NULL;
     ARect next = {0, 0, 0, 0};
-    for (ASS_Image *image = surface->images; image; image = image->next) {
-        if (image->w > 0 && image->h > 0) {
+    for (ASS_Image *image = images; image; image = image->next) {
+        if (drawn_image(surface, image)) {
             include(&next, image->dst_x, image->dst_y, image->dst_x + image->w, image->dst_y + image->h);
         }
     }
+    if (empty(&next) && empty(&surface->drawn)) return JNI_FALSE;
+    if (surface->context != EGL_NO_CONTEXT) {
+        // A clear costs a tiled GPU nothing.
+        glClear(GL_COLOR_BUFFER_BIT);
+        if (!empty(&next)) {
+            int width = next.right - next.left, height = next.bottom - next.top;
+            size_t pixels = (size_t) width * height;
+            if (pixels > surface->scratch_pixels) {
+                uint32_t *scratch = realloc(surface->scratch, pixels * 4);
+                if (!scratch) return JNI_FALSE;
+                surface->scratch = scratch;
+                surface->scratch_pixels = pixels;
+            }
+            memset(surface->scratch, 0, pixels * 4);
+            for (ASS_Image *image = images; image; image = image->next) {
+                if (!drawn_image(surface, image)) continue;
+                ASS_Image moved = *image;
+                moved.dst_x -= next.left;
+                moved.dst_y -= next.top;
+                blend(&moved, surface->scratch, width);
+            }
+            if (width > surface->texture_width || height > surface->texture_height) {
+                if (width > surface->texture_width) surface->texture_width = width;
+                if (height > surface->texture_height) surface->texture_height = height;
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->texture_width, surface->texture_height, 0, GL_RGBA,
+                             GL_UNSIGNED_BYTE, NULL);
+            }
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, surface->scratch);
+            glUniform2f(surface->extent, (float) width / surface->texture_width,
+                        (float) height / surface->texture_height);
+            // GL counts rows from the bottom.
+            glViewport(next.left, surface->window_height - next.bottom, width, height);
+            glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        }
+        surface->drawn = next;
+        surface->pending = 1;
+        return JNI_TRUE;
+    }
     ARect dirty = surface->drawn;
     if (!empty(&next)) include(&dirty, next.left, next.top, next.right, next.bottom);
-    if (empty(&dirty)) return JNI_FALSE;
     // The window copies the rest from the buffer before, and may widen the rectangle.
     if (ANativeWindow_lock(surface->window, &surface->buffer, &dirty) != 0) return JNI_FALSE;
     ANativeWindow_Buffer *buffer = &surface->buffer;
@@ -352,27 +685,48 @@ JNIEXPORT jboolean JNICALL METHOD(nativeDraw)(JNIEnv *env, jclass clazz, jlong h
     for (int y = dirty.top; y < dirty.bottom; y++) {
         memset(bits + y * buffer->stride + dirty.left, 0, (dirty.right - dirty.left) * 4);
     }
-    for (ASS_Image *image = surface->images; image; image = image->next) {
+    for (ASS_Image *image = images; image; image = image->next) {
         if (image->w > 0 && image->h > 0 &&
             image->dst_x + image->w <= buffer->width && image->dst_y + image->h <= buffer->height) {
             blend(image, bits, buffer->stride);
         }
     }
     surface->drawn = next;
-    surface->locked = 1;
+    surface->pending = 1;
     return JNI_TRUE;
 }
 
-JNIEXPORT void JNICALL METHOD(nativePost)(JNIEnv *env, jclass clazz, jlong handle) {
+// Posts the drawn picture, with GL for the compositor to show at `atNanos`, or at once when 0.
+JNIEXPORT void JNICALL METHOD(nativePost)(JNIEnv *env, jclass clazz, jlong handle, jlong atNanos) {
     Surface *surface = (Surface *) handle;
-    if (!surface->locked) return;
-    surface->locked = 0;
-    ANativeWindow_unlockAndPost(surface->window);
+    if (!surface->pending) return;
+    surface->pending = 0;
+    if (surface->context == EGL_NO_CONTEXT) {
+        ANativeWindow_unlockAndPost(surface->window);
+        return;
+    }
+    if (surface->presentation_time) {
+        // The window keeps the last time it was given: a picture for no frame shows now.
+        if (!atNanos) {
+            struct timespec now;
+            clock_gettime(CLOCK_MONOTONIC, &now);
+            atNanos = now.tv_sec * 1000000000LL + now.tv_nsec;
+        }
+        surface->presentation_time(surface->display, surface->surface, atNanos);
+    }
+    eglSwapBuffers(surface->display, surface->surface);
 }
 
+// Once neither thread uses it any more.
 JNIEXPORT void JNICALL METHOD(nativeRelease)(JNIEnv *env, jclass clazz, jlong handle) {
     Surface *surface = (Surface *) handle;
+    stop_gl(surface);
     if (surface->window) ANativeWindow_release(surface->window);
+    drop_from(surface, INT64_MIN);
+    release(surface, surface->last);
+    release(surface, surface->shown);
+    pthread_cond_destroy(&surface->queued);
+    pthread_mutex_destroy(&surface->lock);
     libass.renderer_done(surface->renderer);
     libass.library_done(surface->library);
     free(surface->bundled);

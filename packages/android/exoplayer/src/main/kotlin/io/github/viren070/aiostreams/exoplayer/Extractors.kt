@@ -2,12 +2,14 @@ package io.github.viren070.aiostreams.exoplayer
 
 import android.net.Uri
 import androidx.annotation.OptIn
+import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.Extractor
 import androidx.media3.extractor.ExtractorOutput
 import androidx.media3.extractor.ExtractorsFactory
 import androidx.media3.extractor.SeekMap
+import androidx.media3.extractor.TrackOutput
 import androidx.media3.extractor.mkv.MatroskaExtractor
 import androidx.media3.extractor.text.SubtitleParser
 
@@ -25,6 +27,7 @@ internal class Extractors(
     private val onRoute: (codecs: String, DolbyVisionRoute) -> Unit,
     private val onSeekMap: (SeekMap) -> Unit,
     private val events: MatroskaEvents,
+    private val frames: VideoFrames,
 ) : ExtractorsFactory {
     private val defaults = DefaultExtractorsFactory()
 
@@ -45,7 +48,7 @@ internal class Extractors(
 
     private fun wrapped(extractors: Array<Extractor>, uri: Uri?) = extractors.map<Extractor, Extractor> {
         val reader = if (it is MatroskaExtractor) MatroskaReader(sink(), readBack, uri, events) else it
-        SeekMapTap(DolbyVisionExtractor(reader, route, onRoute), onSeekMap)
+        Tap(DolbyVisionExtractor(reader, route, onRoute), onSeekMap, frames)
     }.toTypedArray()
 
     companion object {
@@ -53,14 +56,31 @@ internal class Extractors(
     }
 }
 
+/** Tells [onSeekMap] the extractor's seek map and [frames] its video frames' times. */
 @OptIn(UnstableApi::class)
-private class SeekMapTap(private val extractor: Extractor, private val onSeekMap: (SeekMap) -> Unit) :
-    Extractor by extractor {
+private class Tap(
+    private val extractor: Extractor,
+    private val onSeekMap: (SeekMap) -> Unit,
+    private val frames: VideoFrames,
+) : Extractor by extractor {
     override fun init(output: ExtractorOutput) = extractor.init(
         object : ExtractorOutput by output {
             override fun seekMap(seekMap: SeekMap) {
                 onSeekMap(seekMap)
                 output.seekMap(seekMap)
+            }
+
+            override fun track(id: Int, type: Int): TrackOutput {
+                val track = output.track(id, type)
+                if (type != C.TRACK_TYPE_VIDEO) return track
+                return object : TrackOutput by track {
+                    override fun sampleMetadata(
+                        timeUs: Long, flags: Int, size: Int, offset: Int, cryptoData: TrackOutput.CryptoData?,
+                    ) {
+                        frames.add(timeUs)
+                        track.sampleMetadata(timeUs, flags, size, offset, cryptoData)
+                    }
+                }
             }
         },
     )

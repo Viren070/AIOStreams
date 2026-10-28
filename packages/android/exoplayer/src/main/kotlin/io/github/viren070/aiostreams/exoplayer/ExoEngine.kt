@@ -92,7 +92,8 @@ class ExoEngine(private val context: Context) :
     private val link = DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true).setReadTimeoutMs(0)
     private val cache = StreamCache(context, http, link)
     private val data = DefaultDataSource.Factory(context, cache.factory)
-    private val ass = AssSurface(context) { MpvEngine.fallbackFont(context) }
+    private val frames = VideoFrames()
+    private val ass = AssSurface(context, frames) { MpvEngine.fallbackFont(context) }
     private val fontsDir = File(context.cacheDir, "attached-fonts")
     private val player: ExoPlayer
     private val tracks = ExoTracks()
@@ -192,6 +193,7 @@ class ExoEngine(private val context: Context) :
                     main.post { loadFonts(uri, position, length) }
                 }
             },
+            frames = frames,
         )
         val sources = DefaultMediaSourceFactory(data, extractors)
         val renderers = object : DefaultRenderersFactory(context) {
@@ -298,6 +300,7 @@ class ExoEngine(private val context: Context) :
         change.subtitle?.let { selectSubtitle(it.id?.toIntOrNull()) }
         change.subtitleDelayMs?.let {
             delayUs = (it * 1000).toLong()
+            ass.delayUs = delayUs
             redrawSubtitles()
         }
     }
@@ -425,6 +428,7 @@ class ExoEngine(private val context: Context) :
         shown = false
         skips = emptyList()
         seekMap = null
+        frames.clear()
         ass.reset()
         texts.reset()
         subtitleLines.reset()
@@ -589,7 +593,7 @@ class ExoEngine(private val context: Context) :
     ) {
         lastFrameUs = presentationTimeUs
         lastFrameAtNs = System.nanoTime()
-        ass.render(presentationTimeUs - delayUs, releaseTimeNs)
+        ass.render(presentationTimeUs, releaseTimeNs)
         if (text != null) main.post { showCues(presentationTimeUs) }
     }
 
@@ -623,7 +627,7 @@ class ExoEngine(private val context: Context) :
             if (System.nanoTime() - lastFrameAtNs > FRAMES_STOPPED_NS) {
                 val us = player.currentPosition * 1000
                 lastFrameUs = us
-                ass.render(us - delayUs, frameTimeNanos)
+                ass.render(frames.at(us) ?: us, frameTimeNanos)
                 showCues(us)
             }
             Choreographer.getInstance().postFrameCallback(this)
