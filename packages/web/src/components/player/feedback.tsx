@@ -1,4 +1,5 @@
 import React from 'react';
+import { t } from '@lingui/core/macro';
 import { motion } from 'motion/react';
 import { PiPauseDuotone, PiPlayDuotone } from 'react-icons/pi';
 import { LuFastForward, LuRotateCcw, LuRotateCw } from 'react-icons/lu';
@@ -75,6 +76,7 @@ export function useSeekFlash(): [React.ReactNode, (deltaMs: number) => void] {
     timer.current = setTimeout(() => setFlash(null), 700);
   }, []);
   const back = !!flash && flash.ms < 0;
+  const seconds = Math.abs(flash?.ms ?? 0) / 1000;
   const Icon = back ? LuRotateCcw : LuRotateCw;
   const node = flash && (
     <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
@@ -95,7 +97,10 @@ export function useSeekFlash(): [React.ReactNode, (deltaMs: number) => void] {
         >
           <Icon className="size-8 lg:size-10" />
           <span className="text-sm font-semibold tabular-nums lg:text-base">
-            {Math.abs(flash.ms) / 1000}s
+            {t({
+              comment: 'Seconds shown after skipping in the player',
+              message: `${seconds}s`,
+            })}
           </span>
         </motion.div>
       </div>

@@ -73,7 +73,12 @@ msgstr ""
 
 #: src/pages/downloads.tsx
 #: src/pages/history.tsx
+#: src/pages/item.tsx
 msgid "{episodeCount, plural, one {# episode} other {# episodes}}"
+msgstr ""
+
+#: src/pages/calendar.tsx
+msgid "{extra, plural, one {# more} other {# more}}"
 msgstr ""
 
 #: src/pages/history.tsx
@@ -126,7 +131,9 @@ msgstr ""
 msgid "{key} is taken by {taken}"
 msgstr ""
 
+#: src/components/card-preview.tsx
 #: src/pages/downloads.tsx
+#: src/pages/home.tsx
 msgid "{left} left"
 msgstr ""
 
@@ -195,6 +202,11 @@ msgstr ""
 msgid "{s}%"
 msgstr ""
 
+#. Seconds shown after skipping in the player
+#: src/components/player/feedback.tsx
+msgid "{seconds}s"
+msgstr ""
+
 #: src/components/party/party-sheet.tsx
 msgid "{seconds}s ahead"
 msgstr ""
@@ -229,6 +241,10 @@ msgstr ""
 
 #: src/pages/discover.tsx
 msgid "{total, plural, one {# title} other {# titles}}"
+msgstr ""
+
+#: src/pages/item.tsx
+msgid "{unaired, plural, one {# unaired} other {# unaired}}"
 msgstr ""
 
 #: src/components/player/options.tsx
@@ -306,6 +322,10 @@ msgstr ""
 
 #: src/components/version-settings.tsx
 msgid "A badge shows on each version whose text matches its pattern: the name and description your formatter writes, the file name, and the tags read from it."
+msgstr ""
+
+#: src/pages/settings/interface.tsx
+msgid "A card you rest on grows into a bigger preview with its details, while the hero rotates."
 msgstr ""
 
 #: src/components/party/party-sheet.tsx
@@ -467,6 +487,7 @@ msgid "Airs {day} · {until}"
 msgstr ""
 
 #: src/components/episodes.tsx
+#: src/pages/item.tsx
 msgid "Airs {until}"
 msgstr ""
 
@@ -792,6 +813,10 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
+#: src/pages/settings/interface.tsx
+msgid "Cards"
+msgstr ""
+
 #: src/components/people.tsx
 msgid "Cast"
 msgstr ""
@@ -868,12 +893,20 @@ msgstr ""
 msgid "Choose"
 msgstr ""
 
+#: src/lib/hosts/shell/index.ts
+msgid "Choose {name}"
+msgstr ""
+
 #: src/pages/servers.tsx
 msgid "Choose a server"
 msgstr ""
 
 #: src/components/item-menu.tsx
 msgid "Choose a version"
+msgstr ""
+
+#: src/lib/hosts/shell/desktop.ts
+msgid "Choose where downloads go"
 msgstr ""
 
 #: src/pages/settings/cache.tsx
@@ -1500,6 +1533,7 @@ msgid "Enter your password."
 msgstr ""
 
 #: src/components/episodes.tsx
+#: src/components/player/pause-screen.tsx
 msgid "Episode {number}"
 msgstr ""
 
@@ -3142,6 +3176,7 @@ msgstr ""
 msgid "Preview"
 msgstr ""
 
+#: src/pages/settings/interface.tsx
 #: src/pages/settings/playback.tsx
 msgid "Previews"
 msgstr ""
@@ -3236,6 +3271,10 @@ msgstr ""
 
 #: src/pages/item.tsx
 msgid "Rate season"
+msgstr ""
+
+#: src/components/scores.tsx
+msgid "Rating"
 msgstr ""
 
 #: src/components/party/party-sheet.tsx
@@ -3459,6 +3498,10 @@ msgstr ""
 msgid "Rotates through featured titles"
 msgstr ""
 
+#: src/components/scores.tsx
+msgid "Rotten Tomatoes audience"
+msgstr ""
+
 #: src/pages/settings/interface.tsx
 msgid "Row"
 msgstr ""
@@ -3581,6 +3624,10 @@ msgstr ""
 
 #: src/lib/discord.ts
 msgid "Searching"
+msgstr ""
+
+#: src/components/player/pause-screen.tsx
+msgid "Season {season}"
 msgstr ""
 
 #: src/components/item-menu.tsx
@@ -3779,6 +3826,10 @@ msgstr ""
 msgid "Side rail runs down the side of the screen; Top tabs sit along the top of each page."
 msgstr ""
 
+#: src/pages/settings/interface.tsx
+msgid "Sidebar"
+msgstr ""
+
 #: src/pages/sign-in.tsx
 msgid "Sign in"
 msgstr ""
@@ -3959,6 +4010,10 @@ msgstr ""
 
 #: src/pages/settings/cache.tsx
 msgid "Space to use"
+msgstr ""
+
+#: src/components/player/pause-screen.tsx
+msgid "Specials"
 msgstr ""
 
 #: src/components/player/options.tsx
@@ -4187,6 +4242,10 @@ msgstr ""
 
 #: src/lib/input/keys.ts
 msgid "Tab"
+msgstr ""
+
+#: src/pages/settings/interface.tsx
+msgid "Tab names"
 msgstr ""
 
 #: src/pages/history.tsx
@@ -5057,8 +5116,16 @@ msgstr ""
 msgid "Where the navigation goes when the screen is wide enough for a sidebar, such as a tablet held sideways."
 msgstr ""
 
+#: src/pages/settings/interface.tsx
+msgid "Where the navigation goes when the window is wide enough for a sidebar."
+msgstr ""
+
 #: src/pages/settings/index.tsx
 msgid "Where they go and how many run at once"
+msgstr ""
+
+#: src/pages/settings/interface.tsx
+msgid "Whether the bar at the bottom, and tabs along the top, name each page."
 msgstr ""
 
 #: src/pages/settings/interface.tsx
@@ -5067,6 +5134,10 @@ msgstr ""
 
 #: src/pages/settings/interface.tsx
 msgid "Whether the rail names each page under its icon."
+msgstr ""
+
+#: src/pages/settings/interface.tsx
+msgid "Whether the tabs name each page beside its icon."
 msgstr ""
 
 #: src/components/shortcut-settings.tsx

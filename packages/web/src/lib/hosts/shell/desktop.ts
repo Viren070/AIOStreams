@@ -1,4 +1,5 @@
 import React from 'react';
+import { t } from '@lingui/core/macro';
 import type { Host } from '..';
 import {
   appBridge,
@@ -92,7 +93,11 @@ export const desktopHost: Host = {
   downloads: {
     ...shellDownloads,
     folder: {
-      choose: () => appBridge()?.send({ type: 'download-folder' }),
+      choose: () =>
+        appBridge()?.send({
+          type: 'download-folder',
+          title: t`Choose where downloads go`,
+        }),
       open: (id) =>
         appBridge()?.send({ type: 'download-open', id: id ?? null }),
     },

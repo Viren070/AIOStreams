@@ -69,7 +69,12 @@ msgstr ""
 
 #: src/pages/downloads.tsx
 #: src/pages/history.tsx
+#: src/pages/item.tsx
 msgid "{episodeCount, plural, one {# episode} other {# episodes}}"
+msgstr ""
+
+#: src/pages/calendar.tsx
+msgid "{extra, plural, one {# more} other {# more}}"
 msgstr ""
 
 #: src/pages/history.tsx
@@ -124,6 +129,7 @@ msgstr ""
 
 #: src/components/card-preview.tsx
 #: src/pages/downloads.tsx
+#: src/pages/home.tsx
 msgid "{left} left"
 msgstr ""
 
@@ -192,6 +198,11 @@ msgstr ""
 msgid "{s}%"
 msgstr ""
 
+#. Seconds shown after skipping in the player
+#: src/components/player/feedback.tsx
+msgid "{seconds}s"
+msgstr ""
+
 #: src/components/party/party-sheet.tsx
 msgid "{seconds}s ahead"
 msgstr ""
@@ -226,6 +237,10 @@ msgstr ""
 
 #: src/pages/discover.tsx
 msgid "{total, plural, one {# title} other {# titles}}"
+msgstr ""
+
+#: src/pages/item.tsx
+msgid "{unaired, plural, one {# unaired} other {# unaired}}"
 msgstr ""
 
 #: src/components/player/options.tsx
@@ -468,6 +483,7 @@ msgid "Airs {day} · {until}"
 msgstr ""
 
 #: src/components/episodes.tsx
+#: src/pages/item.tsx
 msgid "Airs {until}"
 msgstr ""
 
@@ -873,12 +889,20 @@ msgstr ""
 msgid "Choose"
 msgstr ""
 
+#: src/lib/hosts/shell/index.ts
+msgid "Choose {name}"
+msgstr ""
+
 #: src/pages/servers.tsx
 msgid "Choose a server"
 msgstr ""
 
 #: src/components/item-menu.tsx
 msgid "Choose a version"
+msgstr ""
+
+#: src/lib/hosts/shell/desktop.ts
+msgid "Choose where downloads go"
 msgstr ""
 
 #: src/pages/settings/cache.tsx

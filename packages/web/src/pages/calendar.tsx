@@ -1,4 +1,4 @@
-import { t } from '@lingui/core/macro';
+import { plural, t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { useElementScrollRestoration, useRouter } from '@tanstack/react-router';
@@ -217,7 +217,9 @@ function DayCell({
           </li>
         ))}
         {extra > 0 && (
-          <li className="px-1 text-xs text-[--muted]">+{extra} more</li>
+          <li className="px-1 text-xs text-[--muted]">
+            +{plural(extra, { one: '# more', other: '# more' })}
+          </li>
         )}
       </ol>
     </div>

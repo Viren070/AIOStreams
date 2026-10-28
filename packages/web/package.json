@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "preview": "rsbuild preview",
     "lint": "eslint src",
-    "i18n:extract": "lingui extract --clean && lingui extract-template"
+    "i18n:extract": "lingui extract --clean && lingui extract-template",
+    "test:i18n:tr": "node --test test/turkish.test.mjs"
   },
   "browserslist": [
     "chrome >= 94",

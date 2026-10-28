@@ -197,9 +197,9 @@ impl Shell {
                     self.emit(Outbound::Link { url: link });
                 }
             }
-            UserEvent::ChoosePlayer(kind) => {
+            UserEvent::ChoosePlayer(kind, title) => {
                 let dialog = gtk4::FileDialog::builder()
-                    .title(format!("Choose {}", kind.id()))
+                    .title(title.unwrap_or_else(|| format!("Choose {}", kind.id())))
                     .modal(true)
                     .build();
                 let external = self.external.clone();
@@ -212,9 +212,9 @@ impl Shell {
                     }
                 });
             }
-            UserEvent::ChooseDownloadFolder => {
+            UserEvent::ChooseDownloadFolder(title) => {
                 let dialog = gtk4::FileDialog::builder()
-                    .title("Choose where downloads go")
+                    .title(title.as_deref().unwrap_or("Choose where downloads go"))
                     .modal(true)
                     .build();
                 let downloads = self.downloads.clone();
