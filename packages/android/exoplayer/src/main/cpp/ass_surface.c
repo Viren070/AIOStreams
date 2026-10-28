@@ -22,7 +22,7 @@
 #include <android/native_window_jni.h>
 #include "ass/ass.h"
 
-// The libass linked into libmpv.so, which the app ships for mpv anyway.
+// The libs AAR's libass.so.
 #define LIBASS(X) \
     X(library_init) X(library_done) X(set_message_cb) X(set_extract_fonts) X(add_font) X(clear_fonts) \
     X(renderer_init) X(renderer_done) X(set_fonts) X(set_frame_size) X(set_storage_size) X(set_margins) \
@@ -38,9 +38,9 @@ static struct {
 
 static int load_libass(void) {
     if (libass.render_frame) return 1;
-    void *mpv = dlopen("libmpv.so", RTLD_NOW);
-    if (!mpv) return 0;
-#define RESOLVE(name) if (!(libass.name = dlsym(mpv, "ass_" #name))) return 0;
+    void *lib = dlopen("libass.so", RTLD_NOW);
+    if (!lib) return 0;
+#define RESOLVE(name) if (!(libass.name = dlsym(lib, "ass_" #name))) return 0;
     LIBASS(RESOLVE)
 #undef RESOLVE
     return 1;
@@ -257,7 +257,7 @@ static void start_renderer(Surface *surface) {
     if (surface->width) libass.set_frame_size(surface->renderer, surface->width, surface->height);
 }
 
-// Zero when libmpv can't be loaded. `font` is drawn where a script's fonts are missing, as mpv does.
+// Zero when libass can't be loaded. `font` is drawn where a script's fonts are missing, as mpv does.
 JNIEXPORT jlong JNICALL METHOD(nativeCreate)(JNIEnv *env, jclass clazz, jstring font) {
     if (!load_libass()) return 0;
     Surface *surface = calloc(1, sizeof(Surface));

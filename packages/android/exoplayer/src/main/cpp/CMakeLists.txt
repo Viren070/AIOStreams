@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.22.1)
 project(aiostreams_exoplayer C)
 
-# ass/ holds the public headers of the libass linked into libmpv.so, which the library is loaded from.
+# ass/ holds the public headers of the libs AAR's libass.so, which the library loads.
 add_library(aiostreams_ass SHARED ass_surface.c)
 target_compile_options(aiostreams_ass PRIVATE -O3 -Wall)
 target_link_libraries(aiostreams_ass PRIVATE android dl log EGL GLESv2)

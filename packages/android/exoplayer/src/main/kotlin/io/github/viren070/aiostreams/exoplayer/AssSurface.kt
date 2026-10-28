@@ -147,7 +147,7 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
     init {
         worker.post {
             native = nativeCreate(font().path)
-            if (native == 0L) Log.e(TAG, "libass is missing from libmpv")
+            if (native == 0L) Log.e(TAG, "libass.so can't be loaded")
             // The surface may have come first.
             shower.post(::attachWindow)
         }
