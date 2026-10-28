@@ -9,7 +9,7 @@ android {
     }
 }
 
-val native = rootProject.layout.projectDirectory.dir("../native")
+val native = layout.projectDirectory.dir("rust")
 val rust = tasks.register<CargoNdkBuild>("buildRust") {
     workspace = native
     sources.from(fileTree(native) { exclude("target/**", "**/*.md") })

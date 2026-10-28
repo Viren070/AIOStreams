@@ -7,12 +7,12 @@ app's bridge as `window.aiostreamsApp`, so `src/lib/hosts/shell` in the web app 
 ## Building
 
 Needs JDK 17 or later (Android Studio's own works) and the Android SDK with platform 37.2, found
-through `ANDROID_HOME`. The Rust code in `packages/native` builds with rustup's toolchain, its Android
-targets and cargo-ndk:
+through `ANDROID_HOME`. The Rust code in `natives/rust` builds with rustup's toolchain, its Android
+targets and cargo-ndk, and cargo-about lists its crates' licences, which a build without it leaves out:
 
 ```sh
 rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
-cargo install cargo-ndk
+cargo install cargo-ndk cargo-about
 ```
 
 ```sh
@@ -64,7 +64,7 @@ Keep a copy of the keystore: installed copies only update to builds signed with 
 | `mpv`         | The mpv engine                                                               |
 | `exoplayer`   | Media3 ExoPlayer, with libmpv's libass drawing ASS subtitles                 |
 | `downloads`   | The download queue and its foreground service                                |
-| `natives`     | The Rust library from `packages/native`, built with cargo-ndk                |
+| `natives`     | The Rust library in `natives/rust`, on AIOStreams/media's crates             |
 | `build-logic` | Shared SDK levels, NDK, ABIs and Java version; the libs fetch, cargo-ndk     |
 
 ## Debugging

@@ -11,6 +11,7 @@ checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 [[package]]
 name = "aiostreams-container"
 version = "0.1.0"
+source = "git+https://github.com/AIOStreams/media?rev=87dee2ccd7c39aa9baf1e739292e14fa9f0d8ec7#87dee2ccd7c39aa9baf1e739292e14fa9f0d8ec7"
 dependencies = [
  "ureq",
 ]
@@ -29,6 +30,7 @@ dependencies = [
 [[package]]
 name = "aiostreams-thumbs"
 version = "0.1.0"
+source = "git+https://github.com/AIOStreams/media?rev=87dee2ccd7c39aa9baf1e739292e14fa9f0d8ec7#87dee2ccd7c39aa9baf1e739292e14fa9f0d8ec7"
 dependencies = [
  "aiostreams-container",
  "dolby_vision",
@@ -36,8 +38,6 @@ dependencies = [
  "libc",
  "libloading",
  "log",
- "serde",
- "serde_json",
  "windows-sys 0.61.2",
 ]
 
@@ -412,7 +412,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4148590afebada386688f18773da617792bf2ef03ffc1e4cbd2b1d45b023e0ba"
 dependencies = [
  "serde_core",
- "serde_derive",
 ]
 
 [[package]]

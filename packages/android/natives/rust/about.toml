@@ -24,6 +24,6 @@ targets = [
 ignore-build-dependencies = true
 ignore-dev-dependencies = true
 
-# The crates of this workspace, which are not published.
+# The app's own crates, which are not published.
 [private]
 ignore = true
