@@ -34,14 +34,12 @@ export function stepSubtitleSize(sign: number): SubtitleSize | null {
   return next;
 }
 
-const HEIGHT_STEP = 2;
-
-/** A little higher or lower; null at either end. */
+/** A percent higher or lower; null at either end. */
 export function stepSubtitleHeight(sign: number): number | null {
   const height = settings.subtitle.position.read();
   const next = Math.min(
     SUBTITLE_POSITION_MAX,
-    Math.max(SUBTITLE_POSITION_MIN, height + sign * HEIGHT_STEP)
+    Math.max(SUBTITLE_POSITION_MIN, height + sign)
   );
   if (next === height) return null;
   settings.subtitle.position.write(next);
