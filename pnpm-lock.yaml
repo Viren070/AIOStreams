@@ -106,8 +106,8 @@ importers:
         specifier: ^0.11.0
         version: 0.11.0(patch_hash=5d59636029f2455cfc103c8b8206ce24ff67c7f7f77e6fb8ea3f65dca52105dd)
       undici:
-        specifier: ^7.30.0
-        version: 7.30.0
+        specifier: ^7.30.1
+        version: 7.30.1
       user-agents:
         specifier: ^2.1.211
         version: 2.1.211
@@ -397,8 +397,8 @@ importers:
         specifier: ^8.7.1
         version: 8.7.1(express@5.3.0)
       multer:
-        specifier: ^2.4.0
-        version: 2.4.0
+        specifier: ^2.5.0
+        version: 2.5.0
       proxy-addr:
         specifier: ^2.0.8
         version: 2.0.8
@@ -406,8 +406,8 @@ importers:
         specifier: ^6.0.1
         version: 6.0.1(express-rate-limit@8.7.1(express@5.3.0))
       undici:
-        specifier: ^7.30.0
-        version: 7.30.0
+        specifier: ^7.30.1
+        version: 7.30.1
       ws:
         specifier: ^8.22.0
         version: 8.22.0
@@ -6170,8 +6170,8 @@ packages:
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
 
-  multer@2.4.0:
-    resolution: {integrity: sha512-7dqa0ZcFfzbefdTuIkzOSMvZWC0J7FLqBOjJUZvDCXShIURWKxAyTT1wHhnE5q19c7jOJf43IYYKjBmZVZmvhg==}
+  multer@2.5.0:
+    resolution: {integrity: sha512-BsqOzYGVq49JcW2IzoSAxeKYRevb+dGGPPWleOR8Lrlk4igwxu1/9pwSXlByhCb7MVZDrNJFC0IBP5/O5nLYRw==}
     engines: {node: '>= 10.16.0'}
 
   mute-stream@0.0.8:
@@ -7694,8 +7694,8 @@ packages:
   undici-types@7.24.6:
     resolution: {integrity: sha512-WRNW+sJgj5OBN4/0JpHFqtqzhpbnV0GuB+OozA9gCL7a993SmU+1JBZCzLNxYsbMfIeDL+lTsphD5jN5N+n0zg==}
 
-  undici@7.30.0:
-    resolution: {integrity: sha512-dkrQXeHSaoamnItlYbmzG0wFYrM0ZwDxCIg0A7aKjTyyhh9svRzCNFEzV+Vm05/yehjCzjDZ31KXfGEjYSztDQ==}
+  undici@7.30.1:
+    resolution: {integrity: sha512-03KrMbjIFDWQR5RNPrSw3bd1r12JpyFQl9/yxjUbJtqkjmllqC5lFjZh6ujeuJCKr8EOQvRW872Oy/az+nLYxg==}
     engines: {node: '>=20.18.1'}
 
   undici@8.11.2:
@@ -12459,7 +12459,7 @@ snapshots:
   fetch-socks@1.3.3:
     dependencies:
       socks: 2.8.10
-      undici: 7.30.0
+      undici: 7.30.1
 
   fflate@0.8.3: {}
 
@@ -14000,7 +14000,7 @@ snapshots:
 
   ms@2.1.3: {}
 
-  multer@2.4.0:
+  multer@2.5.0:
     dependencies:
       append-field: 1.0.0
       busboy: 1.6.0
@@ -15821,7 +15821,7 @@ snapshots:
 
   undici-types@7.24.6: {}
 
-  undici@7.30.0: {}
+  undici@7.30.1: {}
 
   undici@8.11.2: {}
 

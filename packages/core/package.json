@@ -34,7 +34,7 @@
     "redis": "^5.12.1",
     "stream-json": "^3.7.0",
     "stremthru": "^0.11.0",
-    "undici": "^7.30.0",
+    "undici": "^7.30.1",
     "user-agents": "^2.1.211",
     "webdav": "^5.11.0",
     "yencode": "^1.2.4",
