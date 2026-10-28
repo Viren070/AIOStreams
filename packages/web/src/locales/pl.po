@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-23 19:56+0000\n"
+"PO-Revision-Date: 2026-10-28 21:58+0000\n"
 "Last-Translator: Krzysztof <krzysiek@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Polish <https://hosted.weblate.org/projects/aiostreams/web-app/pl/>\n"
 "Language: pl\n"
@@ -309,7 +309,7 @@ msgstr "Na każdej wersji wyświetla się etykieta, której tekst pasuje do jej 
 
 #: src/pages/settings/interface.tsx
 msgid "A card you rest on grows into a bigger preview with its details, while the hero rotates."
-msgstr ""
+msgstr "Karta po zatrzymaniu na niej powiększa się i wyświetla szczegóły, a główny baner zmienia się automatycznie."
 
 #: src/components/party/party-sheet.tsx
 msgid "A code is looked up on the relay picked above."
@@ -765,7 +765,7 @@ msgstr "Anuluj"
 
 #: src/pages/settings/interface.tsx
 msgid "Cards"
-msgstr ""
+msgstr "Karty"
 
 #: src/components/people.tsx
 msgid "Cast"
@@ -3117,9 +3117,8 @@ msgid "Rate season"
 msgstr "Oceń sezon"
 
 #: src/components/scores.tsx
-#, fuzzy
 msgid "Rating"
-msgstr "Oczekiwanie"
+msgstr "Ocena"
 
 #: src/components/party/party-sheet.tsx
 msgid "React with {emoji}"
@@ -3336,7 +3335,7 @@ msgstr "Przełącza rotacyjnie polecane tytuły"
 
 #: src/components/scores.tsx
 msgid "Rotten Tomatoes audience"
-msgstr ""
+msgstr "Rotten Tomatoes (widzowie)"
 
 #: src/pages/settings/interface.tsx
 msgid "Row"
@@ -3459,9 +3458,8 @@ msgid "Searching"
 msgstr "Wyszukiwanie"
 
 #: src/components/player/pause-screen.tsx
-#, fuzzy
 msgid "Season {season}"
-msgstr "Oceń sezon"
+msgstr "Sezon {season}"
 
 #: src/components/item-menu.tsx
 msgid "See the download"
@@ -3651,7 +3649,6 @@ msgid "Side rail runs down the side of the screen; Top tabs sit along the top of
 msgstr "Pasek boczny biegnie wzdłuż boku ekranu; Górne karty znajdują się na górze każdej strony."
 
 #: src/pages/settings/interface.tsx
-#, fuzzy
 msgid "Sidebar"
 msgstr "Pasek boczny"
 
@@ -3833,7 +3830,7 @@ msgstr "Miejsce do wykorzystania"
 
 #: src/components/player/pause-screen.tsx
 msgid "Specials"
-msgstr ""
+msgstr "Specjalne"
 
 #: src/components/player/options.tsx
 msgid "Speed"
@@ -4055,9 +4052,8 @@ msgid "Tab"
 msgstr "Tab"
 
 #: src/pages/settings/interface.tsx
-#, fuzzy
 msgid "Tab names"
-msgstr "Nazwy stron"
+msgstr "Nazwy kart"
 
 #: src/pages/history.tsx
 msgid "Table"
@@ -4915,9 +4911,8 @@ msgid "Where the navigation goes when the screen is wide enough for a sidebar, s
 msgstr "Gdzie umieszczana jest nawigacja, gdy ekran jest wystarczająco szeroki na pasek boczny (np. na tablecie trzymanym poziomo)."
 
 #: src/pages/settings/interface.tsx
-#, fuzzy
 msgid "Where the navigation goes when the window is wide enough for a sidebar."
-msgstr "Gdzie umieszczana jest nawigacja, gdy ekran jest wystarczająco szeroki na pasek boczny (np. na tablecie trzymanym poziomo)."
+msgstr "Miejsce wyświetlania nawigacji, gdy okno jest wystarczająco szerokie dla paska bocznego."
 
 #: src/pages/settings/index.tsx
 msgid "Where they go and how many run at once"
@@ -4925,7 +4920,7 @@ msgstr "Gdzie trafiają i ile pobiera się jednocześnie"
 
 #: src/pages/settings/interface.tsx
 msgid "Whether the bar at the bottom, and tabs along the top, name each page."
-msgstr ""
+msgstr "Określa, czy dolny pasek oraz górne karty wyświetlają nazwy poszczególnych stron."
 
 #: src/pages/settings/interface.tsx
 msgid "Whether the rail names each page only while you're in it, or all the time."
@@ -4936,9 +4931,8 @@ msgid "Whether the rail names each page under its icon."
 msgstr "Czy pasek boczny wyświetla nazwę każdej strony pod jej ikoną."
 
 #: src/pages/settings/interface.tsx
-#, fuzzy
 msgid "Whether the tabs name each page beside its icon."
-msgstr "Czy pasek boczny wyświetla nazwę każdej strony pod jej ikoną."
+msgstr "Określa, czy karty wyświetlają nazwę każdej strony obok jej ikony."
 
 #: src/components/shortcut-settings.tsx
 msgid "While syncing subtitles by ear."
