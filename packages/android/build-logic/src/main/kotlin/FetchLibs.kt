@@ -13,7 +13,7 @@ import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 
-/** Downloads the libmpv AAR `libs.pin` names, checks its SHA-256, and unpacks what the module builds with. */
+/** Downloads the libs AAR `libs.pin` names, checks its SHA-256, and unpacks what the module builds with. */
 abstract class FetchLibs : DefaultTask() {
     @get:InputFile
     @get:PathSensitive(PathSensitivity.NONE)
@@ -35,7 +35,7 @@ abstract class FetchLibs : DefaultTask() {
             .associate { it.substringBefore('=') to it.substringAfter('=') }
         val url = values.getValue("url")
         val expected = values.getValue("sha256")
-        val aar = File(temporaryDir, "libmpv.aar")
+        val aar = File(temporaryDir, "libs.aar")
         val digest = MessageDigest.getInstance("SHA-256")
         DigestInputStream(URI(url).toURL().openStream(), digest).use { input ->
             aar.outputStream().use { input.copyTo(it) }

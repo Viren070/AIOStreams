@@ -20,6 +20,7 @@ rootProject.name = "aiostreams-android"
 include(":app")
 include(":bridge")
 include(":playback")
+include(":libs")
 include(":mpv")
 include(":exoplayer")
 include(":downloads")

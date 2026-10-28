@@ -48,7 +48,7 @@ private val DUAL_LAYER = setOf(4, 7)
 internal fun dolbyVisionProfile(format: Format): Int? =
     format.codecs?.split('.')?.getOrNull(1)?.toIntOrNull()
 
-/** Dolby Vision units dropped or rewritten natively, with libdovi when the libmpv AAR carries it. */
+/** Dolby Vision units dropped or rewritten natively, with libdovi when the libs AAR carries it. */
 internal object DolbyVisionNative {
     init {
         System.loadLibrary("aiostreams_dolby_vision")
