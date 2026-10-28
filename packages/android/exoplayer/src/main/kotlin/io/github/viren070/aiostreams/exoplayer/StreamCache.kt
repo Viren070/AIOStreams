@@ -37,7 +37,7 @@ import kotlin.math.min
  * fetched ahead on one connection, so seeks inside it, track changes and the
  * extractor's jumps read memory instead of opening the link again. [link]
  * opens the cache's own connections without a read timeout, as one costs a
- * wakeup per read: the cache closes a stalled one itself.
+ * wakeup per read: the cache leaves a stalled one and fetches on another.
  */
 @OptIn(UnstableApi::class)
 internal class StreamCache(
@@ -329,12 +329,21 @@ internal class StreamCache(
         /** Where the link redirected, which later requests go to directly. */
         private var resolved: Uri? = null
 
-        /** Connections waiting on the link, since when. */
-        private val waiting = ConcurrentHashMap<DataSource, Long>()
+        /** Connections waiting on the link, since when, and whose. */
+        private val waiting = ConcurrentHashMap<DataSource, Waiting>()
+
+        private var fetcher: Task? = null
+        private var sideTask: Task? = null
 
         init {
-            Thread(::fetch, "stream-cache").apply { isDaemon = true }.start()
+            lock.withLock { startFetch(0) }
             Thread(::watch, "stream-cache-watch").apply { isDaemon = true }.start()
+        }
+
+        private fun startFetch(failures: Int) {
+            val task = Task(failures)
+            fetcher = task
+            Thread({ fetch(task) }, "stream-cache").apply { isDaemon = true }.start()
         }
 
         fun close() = lock.withLock {
@@ -462,24 +471,24 @@ internal class StreamCache(
             }
         }
 
-        private fun fetch() {
+        private fun fetch(task: Task) {
             val scratch = ByteArray(CHUNK)
             var source: DataSource? = null
             // Where the open connection reads next.
             var at = 0L
-            var failures = 0
+            if (task.failures > 0 && !failed(task, IOException("the link stalled"))) return
             while (true) {
-                val from = lock.withLock { next(source?.let { at }) } ?: break
+                val from = lock.withLock { next(source?.let { at }, task) } ?: break
                 if (waited) meter.pause()
                 try {
                     if (source == null || at != from) {
                         retire(source)
                         source = null
-                        source = connect(from)
+                        source = connect(from, task)
                         at = from
                         meter.pause()
                     }
-                    val n = watched(source) { source.read(scratch, 0, CHUNK) }
+                    val n = watched(source, task) { source.read(scratch, 0, CHUNK) }
                     if (n == C.RESULT_END_OF_INPUT) {
                         lock.withLock {
                             if (length != C.LENGTH_UNSET.toLong() && at < length) throw EOFException("the link ended early")
@@ -491,39 +500,44 @@ internal class StreamCache(
                         continue
                     }
                     lock.withLock {
+                        if (task.abandoned) throw Abandoned()
                         // A side connection's share of the link isn't the link slowing.
                         if (side == null) meter.add(n) else meter.pause()
                         write(at, scratch, n)
                     }
                     at += n
-                    failures = 0
+                    task.failures = 0
                     if (!indexChecked) checkIndex()
                 } catch (e: Exception) {
+                    if (task.abandoned) break
                     retire(source)
                     source = null
                     if (closed) break
-                    failures++
-                    Log.w(TAG, "fetch failed ($failures)", e)
-                    val retry = e !is HttpDataSource.InvalidResponseCodeException && failures <= RETRIES
-                    lock.withLock {
-                        if (retry) {
-                            changed.awaitNanos(RETRY_NS shl (failures - 1))
-                        } else {
-                            // A connection closed under its read can fail as other than an IOException.
-                            failure = e as? IOException ?: IOException(e)
-                            failures = 0
-                            changed.signalAll()
-                        }
-                    }
+                    task.failures++
+                    Log.w(TAG, "fetch failed (${task.failures})", e)
+                    if (!failed(task, e)) break
                 }
             }
-            retire(source)
+            if (task.abandoned) source?.closeQuietly() else retire(source)
         }
 
-        /** Where to fetch next, after waiting while enough is ahead; null once closed. */
-        private fun next(at: Long?): Long? {
+        /** False once the fetch should end. */
+        private fun failed(task: Task, e: Exception): Boolean = lock.withLock {
+            if (task.abandoned || closed) return false
+            if (e !is HttpDataSource.InvalidResponseCodeException && task.failures <= RETRIES) {
+                changed.awaitNanos(RETRY_NS shl (task.failures - 1))
+            } else {
+                failure = e as? IOException ?: IOException(e)
+                task.failures = 0
+                changed.signalAll()
+            }
+            true
+        }
+
+        /** Where to fetch next, after waiting while enough is ahead; null once closed or left. */
+        private fun next(at: Long?, task: Task): Long? {
             waited = false
-            while (!closed) {
+            while (!closed && !task.abandoned) {
                 if (failure != null) {
                     await()
                     continue
@@ -596,24 +610,27 @@ internal class StreamCache(
 
         /** [yields] stops it once the player runs dry or opens what isn't held. */
         private fun fetchSide(range: LongRange, name: String, yields: Boolean) {
+            val task = Task()
             val missed = lock.withLock {
                 if (side != null) return
                 side = range
+                sideTask = task
                 misses
             }
-            Thread({ readSide(range, yields, missed) }, name).apply { isDaemon = true }.start()
+            Thread({ readSide(range, yields, missed, task) }, name).apply { isDaemon = true }.start()
         }
 
-        private fun readSide(range: LongRange, yields: Boolean, missed: Int) {
+        private fun readSide(range: LongRange, yields: Boolean, missed: Int, task: Task) {
             val scratch = ByteArray(CHUNK)
             var source: DataSource? = null
             try {
-                source = connect(range.first)
+                source = connect(range.first, task)
                 var at = range.first
                 while (at <= range.last && !closed) {
-                    val n = watched(source) { source.read(scratch, 0, min(CHUNK.toLong(), range.last + 1 - at).toInt()) }
+                    val n = watched(source, task) { source.read(scratch, 0, min(CHUNK.toLong(), range.last + 1 - at).toInt()) }
                     if (n == C.RESULT_END_OF_INPUT) break
                     val stop = lock.withLock {
+                        if (task.abandoned) throw Abandoned()
                         write(at, scratch, n)
                         yields && (misses != missed || runningDry())
                     }
@@ -622,26 +639,45 @@ internal class StreamCache(
                 }
             } catch (e: Exception) {
                 // The main connection fetches what the extractor reads.
-                Log.w(TAG, "side fetch failed", e)
+                if (!task.abandoned) Log.w(TAG, "side fetch failed", e)
             } finally {
-                retire(source)
+                if (task.abandoned) source?.closeQuietly() else retire(source)
                 lock.withLock {
-                    side = null
+                    if (sideTask === task) {
+                        side = null
+                        sideTask = null
+                    }
                     changed.signalAll()
                 }
             }
         }
 
-        private inline fun <T> watched(source: DataSource, call: () -> T): T {
-            waiting[source] = SystemClock.elapsedRealtimeNanos()
+        private inline fun <T> watched(source: DataSource, task: Task, call: () -> T): T {
+            waiting[source] = Waiting(SystemClock.elapsedRealtimeNanos(), task)
             try {
-                return call()
+                val result = call()
+                if (task.abandoned) {
+                    source.closeQuietly()
+                    throw Abandoned()
+                }
+                return result
             } finally {
                 waiting.remove(source)
             }
         }
 
-        /** Closes a connection that waits too long on the link, which fails its call, starts landings, and shrinks the cache as memory runs short. */
+        /** Closing the connection here would race its read on the fetch thread and corrupt okhttp's buffers. */
+        private fun abandon(task: Task) = lock.withLock {
+            task.abandoned = true
+            if (task === sideTask) {
+                side = null
+                sideTask = null
+            }
+            if (task === fetcher && !closed) startFetch(task.failures + 1)
+            changed.signalAll()
+        }
+
+        /** Leaves fetches that wait too long on the link, starts landings, and shrinks the cache as memory runs short. */
         private fun watch() {
             var ticks = 0
             while (!closed) {
@@ -649,26 +685,26 @@ internal class StreamCache(
                 fetchLanding()
                 if (++ticks % MEMORY_TICKS == 0 && memoryShort() && !shrink()) onMemoryShort?.invoke()
                 val now = SystemClock.elapsedRealtimeNanos()
-                for ((source, since) in waiting) {
-                    if (now - since < STALL_NS || waiting.remove(source) == null) continue
-                    Log.w(TAG, "the link stalled")
-                    source.closeQuietly()
+                for ((source, waited) in waiting) {
+                    if (now - waited.since < STALL_NS || waiting.remove(source) == null) continue
+                    Log.w(TAG, "the link stalled, so a new connection takes over")
+                    abandon(waited.task)
                 }
             }
         }
 
-        private fun connect(from: Long): DataSource {
+        private fun connect(from: Long, task: Task): DataSource {
             val source = link.createDataSource()
             val target = lock.withLock { resolved } ?: uri
             val startNs = SystemClock.elapsedRealtimeNanos()
             val opened = try {
-                watched(source) { source.open(DataSpec.Builder().setUri(target).setPosition(from).build()) }
+                watched(source, task) { source.open(DataSpec.Builder().setUri(target).setPosition(from).build()) }
             } catch (e: IOException) {
                 source.closeQuietly()
                 // A redirect's link may expire; the original one makes a new one.
-                if (target != uri) {
+                if (target != uri && !task.abandoned) {
                     lock.withLock { resolved = null }
-                    return connect(from)
+                    return connect(from, task)
                 }
                 throw e
             }
@@ -757,6 +793,15 @@ internal class StreamCache(
             return true
         }
     }
+
+    private class Task(@Volatile var failures: Int = 0) {
+        @Volatile
+        var abandoned = false
+    }
+
+    private class Waiting(val since: Long, val task: Task)
+
+    private class Abandoned : Exception()
 
     /** The cache for the file playing, the link itself for anything else. */
     private inner class CachedDataSource : BaseDataSource(true) {
