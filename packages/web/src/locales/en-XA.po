@@ -739,10 +739,6 @@ msgstr ""
 msgid "Browsing"
 msgstr ""
 
-#: src/pages/settings/about.tsx
-msgid "Builds the mpv library this app ships with."
-msgstr ""
-
 #: src/lib/playback/player-choice.ts
 msgid "Built-in mpv"
 msgstr ""
@@ -1926,6 +1922,10 @@ msgstr ""
 
 #: src/pages/settings/theme.tsx
 msgid "It will be undone unless you keep it."
+msgstr ""
+
+#: src/pages/settings/about.tsx
+msgid "Its Metal and AVFoundation video outputs."
 msgstr ""
 
 #: src/pages/settings/about.tsx

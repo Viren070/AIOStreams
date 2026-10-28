@@ -739,10 +739,6 @@ msgstr "Browser Search"
 msgid "Browsing"
 msgstr "Browsing"
 
-#: src/pages/settings/about.tsx
-msgid "Builds the mpv library this app ships with."
-msgstr "Builds the mpv library this app ships with."
-
 #: src/lib/playback/player-choice.ts
 msgid "Built-in mpv"
 msgstr "Built-in mpv"
@@ -1927,6 +1923,10 @@ msgstr "It didn't reach the developer, only this server: {forwardError}"
 #: src/pages/settings/theme.tsx
 msgid "It will be undone unless you keep it."
 msgstr "It will be undone unless you keep it."
+
+#: src/pages/settings/about.tsx
+msgid "Its Metal and AVFoundation video outputs."
+msgstr "Its Metal and AVFoundation video outputs."
 
 #: src/pages/settings/about.tsx
 msgid "Jellyfin API"

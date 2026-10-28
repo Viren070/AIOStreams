@@ -127,19 +127,9 @@ export function AboutSection() {
   );
 }
 
-/** The Linux app builds its own libmpv, so only these ship someone else's. */
-const LIBMPV_BUILDS: Record<string, { name: string; url: string }> = {
-  windows: {
-    name: 'shinchiro',
-    url: 'https://github.com/shinchiro/mpv-winbuild-cmake',
-  },
-  macos: { name: 'IINA', url: 'https://iina.io' },
-};
-
 function credits(
   shell: ShellInfo | null
 ): { name: string; help: string; url: string }[] {
-  const build = shell ? LIBMPV_BUILDS[shell.platform] : undefined;
   return [
     {
       name: 'Seanime',
@@ -161,8 +151,14 @@ function credits(
           },
         ]
       : []),
-    ...(build
-      ? [{ ...build, help: t`Builds the mpv library this app ships with.` }]
+    ...(shell?.platform === 'macos'
+      ? [
+          {
+            name: 'MPVKit',
+            help: t`Its Metal and AVFoundation video outputs.`,
+            url: 'https://github.com/edde746/MPVKit',
+          },
+        ]
       : []),
   ];
 }

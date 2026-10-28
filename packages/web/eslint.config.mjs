@@ -32,7 +32,7 @@ export default tseslint.config(
             '^MediaBrowser ',
             '^\\w+="',
             // Names of programs and services.
-            '^(AIOStreams|Jellyfin|Seanime|FFmpeg|ExoPlayer|Discord|IINA)$',
+            '^(AIOStreams|Jellyfin|Seanime|FFmpeg|ExoPlayer|Discord|IINA|MPVKit)$',
           ],
           ignoreNames: [
             { regex: { pattern: 'class', flags: 'i' } },
