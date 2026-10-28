@@ -1,5 +1,5 @@
 import { Router, type Response } from 'express';
-import { handleWebdav } from '@viren070/fsmux';
+import { handleWebdav } from '@aiostreams/fsmux';
 import {
   createLogger,
   config as appConfig,

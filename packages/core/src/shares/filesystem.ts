@@ -7,7 +7,7 @@ import {
   type FsOpenedStream,
   type FsRemoveOutcome,
   type SharedFilesystem,
-} from '@viren070/fsmux';
+} from '@aiostreams/fsmux';
 import { ShareError, assertNever } from './errors.js';
 import { openShareFileHandle } from './handle.js';
 import { shareNodeStat } from './stat.js';

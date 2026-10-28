@@ -4,7 +4,7 @@ import {
   probeFuse,
   type FuseMount,
   type FuseMountStats,
-} from '@viren070/fsmux-fuse';
+} from '@aiostreams/fsmux-fuse';
 import {
   config as appConfig,
   createLogger,

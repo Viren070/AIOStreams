@@ -12,8 +12,8 @@
   "description": "Combine all your streams into one addon and display them with consistent formatting, sorting, and filtering.",
   "dependencies": {
     "@aiostreams/crypto": "workspace:*",
+    "@aiostreams/fsmux": "^0.3.0",
     "@torbox/torbox-api": "github:viren070/torbox-sdk-js#dist",
-    "@viren070/fsmux": "^0.3.0",
     "@viren070/parse-torrent-title": "^0.9.2",
     "bcrypt": "^6.0.0",
     "better-sqlite3": "^13.0.3",

@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { JsonFileHandleStore, NfsServer } from '@viren070/fsmux';
+import { JsonFileHandleStore, NfsServer } from '@aiostreams/fsmux';
 import {
   config as appConfig,
   createLogger,

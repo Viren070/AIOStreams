@@ -13,9 +13,9 @@
   "description": "Combine all your streams into one addon and display them with consistent formatting, sorting, and filtering.",
   "dependencies": {
     "@aiostreams/core": "workspace:*",
+    "@aiostreams/fsmux": "^0.3.0",
+    "@aiostreams/fsmux-fuse": "^0.3.0",
     "@aiostreams/seanime-extensions": "^0.10.2",
-    "@viren070/fsmux": "^0.3.0",
-    "@viren070/fsmux-fuse": "^0.3.0",
     "express": "^5.3.0",
     "express-rate-limit": "^8.7.1",
     "multer": "^2.4.0",
