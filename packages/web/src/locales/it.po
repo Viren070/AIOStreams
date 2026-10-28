@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-27 23:58+0000\n"
+"PO-Revision-Date: 2026-10-28 21:58+0000\n"
 "Last-Translator: Nicola Bortoletto <translate@nicolabortoletto.com>\n"
 "Language-Team: Italian <https://hosted.weblate.org/projects/aiostreams/web-app/it/>\n"
 "Language: it\n"
@@ -1994,11 +1994,11 @@ msgstr "Permetti a nuove persone di unirsi"
 
 #: src/pages/settings/playback.tsx
 msgid "Lets the TV's decoder keep picture and sound in step itself, which plays 4K and HDR more smoothly on some TVs. Only for videos ExoPlayer plays. Turn it off if video stutters or stays black."
-msgstr "Consente al decoder della TV di mantenere autonomamente sincronizzati audio e video, migliorando la fluidità di 4K e HDR su alcuni televisori. Valido solo per i video riprodotti da ExoPlayer. Disattiva questa opzione se il video scatta o lo schermo rimane nero."
+msgstr "Consente al decoder del TV di mantenere autonomamente sincronizzati audio e video, migliorando la fluidità di 4K e HDR su alcuni televisori. Valido solo per i video riprodotti da ExoPlayer. Disattiva questa opzione se il video scatta o lo schermo rimane nero."
 
 #: src/pages/settings/playback.tsx
 msgid "Lets the TV's decoder keep picture and sound in step itself, which plays 4K and HDR more smoothly on some TVs. Turn it off if video stutters or stays black."
-msgstr "Consente al decoder della TV di mantenere autonomamente sincronizzati audio e video, migliorando la fluidità di 4K e HDR su alcuni televisori. Disattiva questa opzione se il video scatta o lo schermo rimane nero."
+msgstr "Consente al decoder del TV di mantenere autonomamente sincronizzati audio e video, migliorando la fluidità di 4K e HDR su alcuni televisori. Disattiva questa opzione se il video scatta o lo schermo rimane nero."
 
 #: src/components/version-settings.tsx
 msgid "Link a pack someone shares, in this app's format or the one Fusion and Nuvio use. It stays up to date with its author's changes."
@@ -2548,7 +2548,7 @@ msgstr "Solo l'host controlla la riproduzione."
 
 #: src/pages/settings/audio.tsx
 msgid "Only the ones your TV or receiver decodes; this app decodes the rest. DTS-HD needs DTS too."
-msgstr "Solo i formati che la TV o il ricevitore riescono a decodificare; l'app si occuperà del resto. Nota: il DTS-HD ha bisogno anche del DTS."
+msgstr "Solo i formati che il TV o il ricevitore riescono a decodificare; l'app si occuperà del resto. Nota: il DTS-HD ha bisogno anche del DTS."
 
 #: src/lib/i18n.ts
 msgid "Oops!"
@@ -3499,11 +3499,11 @@ msgstr "Invio…"
 
 #: src/pages/settings/audio.tsx
 msgid "Sends Dolby and DTS audio as it is even when your TV or receiver does not say it decodes them, as some do without saying so."
-msgstr "Invia l'audio Dolby e DTS così com'è anche se la TV o il ricevitore non indicano di decodificarlo, in quanto alcuni lo fanno senza specificarlo."
+msgstr "Invia l'audio Dolby e DTS così com'è anche se il TV o il ricevitore non indicano di decodificarlo, in quanto alcuni lo fanno senza specificarlo."
 
 #: src/pages/settings/audio.tsx
 msgid "Sends Dolby and DTS audio as it is when your TV or receiver says it decodes them, which keeps Atmos. Otherwise this app decodes it."
-msgstr "Invia l'audio Dolby e DTS così com'è se la TV o il ricevitore indicano di decodificarlo, mantenendo l'Atmos. In caso contrario, l'app lo decodificherà."
+msgstr "Invia l'audio Dolby e DTS così com'è se il TV o il ricevitore indicano di decodificarlo, mantenendo l'Atmos. In caso contrario, l'app lo decodificherà."
 
 #: src/pages/settings/audio.tsx
 msgid "Sends Dolby and DTS audio to your receiver as it is. Only turn this on if your receiver decodes them."
@@ -4005,7 +4005,7 @@ msgstr "Cambia utente"
 
 #: src/pages/settings/playback.tsx
 msgid "Switches the TV to a refresh rate that suits each video, so motion plays smoothly, and back when you stop. The screen goes blank for a moment as it switches."
-msgstr "Imposta la TV sulla frequenza di aggiornamento più adatta a ciascun video per una riproduzione fluida dei movimenti, e la ripristina quando interrompi la visione. Lo schermo diventerà nero per un istante durante il cambio."
+msgstr "Imposta il TV sulla frequenza di aggiornamento più adatta a ciascun video per una riproduzione fluida dei movimenti, e la ripristina quando interrompi la visione. Lo schermo diventerà nero per un istante durante il cambio."
 
 #: src/components/player/options.tsx
 msgid "Sync automatically"
@@ -4379,7 +4379,7 @@ msgstr "Questo server non può mostrare i contenuti che hai guardato."
 
 #: src/components/no-catalogs.tsx
 msgid "This server shares no movie or show catalogs with this account."
-msgstr "Questo server non condivide cataloghi di film o serie TV con questo account."
+msgstr "Questo server non condivide cataloghi di film o serie con questo account."
 
 #: src/pages/settings/theme.tsx
 msgid "This server styles the app for everyone. Your own CSS applies on top of it."
