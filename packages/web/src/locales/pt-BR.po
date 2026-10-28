@@ -9,7 +9,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Weblate 2026.11.dev0\n"
 "Plural-Forms: nplurals=2; plural=n > 1;\n"
-"PO-Revision-Date: 2026-10-27 23:58+0000\n"
+"PO-Revision-Date: 2026-10-28 00:16+0000\n"
 
 #: src/components/party/party-sheet.tsx
 msgid "(you)"
@@ -204,128 +204,128 @@ msgstr "{seconds}s atrás"
 
 #: src/pages/history.tsx
 msgid "{selected, plural, one {# selected} other {# selected}}"
-msgstr ""
+msgstr "{selected, plural, one {# selecionado} other {# selecionados}}"
 
 #: src/components/player/keys.ts
 msgid "{shown}×"
-msgstr ""
+msgstr "{shown}×"
 
 #: src/components/player/controls.tsx
 msgid "{stepSeconds, plural, one {Back # second} other {Back # seconds}}"
-msgstr ""
+msgstr "{stepSeconds, plural, one {Voltar # segundo} other {Voltar # segundos}}"
 
 #: src/components/player/controls.tsx
 msgid "{stepSeconds, plural, one {Forward # second} other {Forward # seconds}}"
-msgstr ""
+msgstr "{stepSeconds, plural, one {Avançar # segundo} other {Avançar # segundos}}"
 
 #: src/pages/history.tsx
 msgid "{time} watched"
-msgstr ""
+msgstr "{time} assistidos"
 
 #: src/lib/party/follow.ts
 msgid "{title} isn't on your server."
-msgstr ""
+msgstr "{title} não está no seu servidor."
 
 #: src/pages/discover.tsx
 msgid "{total, plural, one {# title} other {# titles}}"
-msgstr ""
+msgstr "{total, plural, one {# título} other {# títulos}}"
 
 #: src/components/player/options.tsx
 msgid "{unread, plural, one {Watch party, # new message} other {Watch party, # new messages}}"
-msgstr ""
+msgstr "{unread, plural, one {Sessão compartilhada, # nova mensagem} other {Sessão compartilhada, # novas mensagens}}"
 
 #. Each {name} is written in the player link as it is here.
 #: src/pages/settings/playback.tsx
 msgid "{url} is the stream address, {encodedUrl} the same address URL-encoded, {scheme} its scheme, {filename} the file's name, {subtitles} each external subtitle (its parameter repeats per file), {title} the title with the episode, {position} the second to start at ({positionMs} in milliseconds), and {returnUrl} a link back here for a player that reports where it stopped. Values other than {url} are URL-encoded. After intent://, {url} goes without its scheme."
-msgstr ""
+msgstr "{url} é o endereço do stream, {encodedUrl} é o mesmo endereço codificado para URL, {scheme} é o protocolo do endereço, {filename} é o nome do arquivo, {subtitles} representa cada legenda externa (o parâmetro se repete para cada arquivo), {title} é o título com o episódio, {position} é o segundo em que a reprodução deve começar ({positionMs} em milissegundos) e {returnUrl} é um link de retorno para esta página, usado por um player que informa onde a reprodução foi interrompida. Todos os valores, exceto {url}, são codificados para URL. Após intent://, {url} é usado sem o protocolo."
 
 #: src/pages/settings/cache.tsx
 msgid "{used} used. Past this, what was used longest ago goes first."
-msgstr ""
+msgstr "{used} utilizados. Acima desse limite, o que foi usado há mais tempo é removido primeiro."
 
 #: src/components/party/party-layer.tsx
 msgid "{who} jumped to {to}"
-msgstr ""
+msgstr "{who} avançou para {to}"
 
 #: src/components/party/party-layer.tsx
 msgid "{who} paused"
-msgstr ""
+msgstr "{who} pausou"
 
 #: src/components/party/party-layer.tsx
 msgid "{who} resumed"
-msgstr ""
+msgstr "{who} retomou a reprodução"
 
 #: src/components/party/party-layer.tsx
 msgid "{who} started {title}"
-msgstr ""
+msgstr "{who} começou a assistir {title}"
 
 #: src/lib/playback/sound.ts
 msgid "+{amount} ms"
-msgstr ""
+msgstr "+{amount} ms"
 
 #: src/lib/playback/sound.ts
 msgid "+{db} dB"
-msgstr ""
+msgstr "+{db} dB"
 
 #: src/lib/subtitles/delay.ts
 msgid "+{seconds}s"
-msgstr ""
+msgstr "+{seconds}s"
 
 #: src/lib/subtitles/delay.ts
 msgid "+{time}"
-msgstr ""
+msgstr "+{time}"
 
 #: src/lib/playback/sound.ts
 msgid "−{amount} ms"
-msgstr ""
+msgstr "−{amount} ms"
 
 #: src/lib/subtitles/delay.ts
 msgid "−{seconds}s"
-msgstr ""
+msgstr "−{seconds}s"
 
 #: src/lib/subtitles/delay.ts
 msgid "−{time}"
-msgstr ""
+msgstr "−{time}"
 
 #: src/lib/input/actions.ts
 msgid "0 to 9"
-msgstr ""
+msgstr "0 a 9"
 
 #: src/lib/input/actions.ts
 msgid "1 jumps a tenth of the way in, 5 halfway and 0 back to the start."
-msgstr ""
+msgstr "1 avança para 10% do vídeo, 5 vai para a metade e 0 volta ao início."
 
 #: src/pages/settings/audio.tsx
 msgid "5.1 surround"
-msgstr ""
+msgstr "Som surround 5.1"
 
 #: src/pages/settings/audio.tsx
 msgid "7.1 surround"
-msgstr ""
+msgstr "Som surround 7.1"
 
 #: src/components/version-settings.tsx
 msgid "A badge shows on each version whose text matches its pattern: the name and description your formatter writes, the file name, and the tags read from it."
-msgstr ""
+msgstr "Um selo é exibido em cada versão cujo texto corresponda ao padrão: o nome e a descrição gerados pelo seu formatador, o nome do arquivo e as tags extraídas dele."
 
 #: src/pages/settings/interface.tsx
 msgid "A card you rest on grows into a bigger preview with its details, while the hero rotates."
-msgstr ""
+msgstr "O cartão sobre o qual você mantém o cursor se expande em uma prévia maior com detalhes, enquanto o destaque principal alterna."
 
 #: src/components/party/party-sheet.tsx
 msgid "A code is looked up on the relay picked above."
-msgstr ""
+msgstr "Um código é consultado no relay selecionado acima."
 
 #: src/pages/settings/cache.tsx
 msgid "A day"
-msgstr ""
+msgstr "Um dia"
 
 #: src/pages/settings/cache.tsx
 msgid "A month"
-msgstr ""
+msgstr "Um mês"
 
 #: src/components/version-settings.tsx
 msgid "A regular expression. Case never matters."
-msgstr ""
+msgstr "Uma expressão regular. Diferenciação entre maiúsculas e minúsculas não importa."
 
 #: src/components/party/party-sheet.tsx
 msgid "A relay someone else runs, for people on other servers."
