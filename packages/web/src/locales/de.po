@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-26 23:35+0000\n"
-"Last-Translator: Viren070 <viren070@protonmail.com>\n"
+"PO-Revision-Date: 2026-10-29 16:33+0000\n"
+"Last-Translator: Florian Otto <solilord@users.noreply.hosted.weblate.org>\n"
 "Language-Team: German <https://hosted.weblate.org/projects/aiostreams/web-app/de/>\n"
 "Language: de\n"
 "MIME-Version: 1.0\n"
@@ -119,7 +119,7 @@ msgstr "{hours} Std. {rest} Min."
 
 #: src/pages/history.tsx
 msgid "{inProgress, plural, one {# in progress} other {# in progress}}"
-msgstr "{inProgress, plural, one {# wird ausgeführt} other {# werden ausgeführt}}"
+msgstr "{inProgress, plural, one {# angefangen} other {# angefangen}}"
 
 #: src/components/shortcut-settings.tsx
 msgid "{key} is taken by {taken}"
@@ -374,7 +374,7 @@ msgstr "Aktionen"
 #: src/components/layout.tsx src/pages/history.tsx src/pages/home.tsx
 #: src/pages/settings/apps.tsx src/pages/settings/cache.tsx
 msgid "Activity"
-msgstr "Verlauf"
+msgstr "Aktivität"
 
 #: src/components/version-settings.tsx
 msgid "Add"
@@ -569,7 +569,7 @@ msgstr "Möchtest du wirklich fortfahren?"
 
 #: src/pages/settings/cache.tsx
 msgid "Artwork"
-msgstr "Grafiken"
+msgstr "Bilder"
 
 #: src/components/party/party-sheet.tsx
 msgid "As the host"
@@ -944,7 +944,7 @@ msgstr "Weiter"
 #: src/components/player/next-episode.tsx src/pages/home.tsx
 #: src/pages/settings/interface.tsx
 msgid "Continue watching"
-msgstr "Wiedergabe fortsetzen"
+msgstr "Weiterschauen"
 
 #: src/pages/settings/playback.tsx
 msgid "Controls"
@@ -1137,7 +1137,7 @@ msgstr "Danksagung"
 
 #: src/pages/settings/playback.tsx
 msgid "Credits that end an episode are left to the next episode prompt when it shows."
-msgstr "Bei Abspannen beginnt automatisch die Einblendung für die nächste Folge."
+msgstr "Endet eine Folge mit dem Abspann, übernimmt die Abfrage zur nächsten Folge das Überspringen, sobald sie erscheint."
 
 #: src/components/people.tsx
 msgid "Crew"
