@@ -1,15 +1,15 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
-"Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Weblate 2026.11.dev0\n"
-"Language: zh-Hans\n"
+"PO-Revision-Date: 2026-10-26 15:22+0000\n"
 "Last-Translator: h9wrd <h9wrd@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Chinese (Simplified Han script) <https://hosted.weblate.org/projects/aiostreams/web-app/zh_Hans/>\n"
+"Language: zh-Hans\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Weblate 2026.11.dev0\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
-"PO-Revision-Date: 2026-10-26 15:22+0000\n"
 
 #: src/components/party/party-sheet.tsx
 msgid "(you)"
@@ -71,8 +71,7 @@ msgstr "{downloaded} 已下载"
 msgid "{episodeCount, plural, one {# episode watched} other {# episodes watched}}"
 msgstr "{episodeCount, plural, one {已观看 # 集} other {已观看 # 集}}"
 
-#: src/pages/downloads.tsx
-#: src/pages/history.tsx
+#: src/pages/downloads.tsx src/pages/history.tsx
 msgid "{episodeCount, plural, one {# episode} other {# episodes}}"
 msgstr "{episodeCount, plural, one {# 集} other {# 集}}"
 
@@ -126,7 +125,7 @@ msgstr "{inProgress, plural, one {进行中 # 项} other {进行中 # 项}}"
 msgid "{key} is taken by {taken}"
 msgstr "{key} 已被 {taken} 占用"
 
-#: src/pages/downloads.tsx
+#: src/components/card-preview.tsx src/pages/downloads.tsx
 msgid "{left} left"
 msgstr "剩余 {left}"
 
@@ -308,6 +307,10 @@ msgstr "7.1 环绕声"
 msgid "A badge shows on each version whose text matches its pattern: the name and description your formatter writes, the file name, and the tags read from it."
 msgstr "当某个版本的文本符合标签的匹配规则时，就会显示该标签。匹配内容包括格式化器生成的名称和描述、文件名，以及从文件中读取的标签。"
 
+#: src/pages/settings/interface.tsx
+msgid "A card you rest on grows into a bigger preview with its details, while the hero rotates."
+msgstr ""
+
 #: src/components/party/party-sheet.tsx
 msgid "A code is looked up on the relay picked above."
 msgstr "代码会在上方选择的中继服务器中查询。"
@@ -356,8 +359,7 @@ msgstr "关于"
 msgid "Accent"
 msgstr "强调色"
 
-#: src/components/layout.tsx
-#: src/pages/settings/index.tsx
+#: src/components/layout.tsx src/pages/settings/index.tsx
 msgid "Account"
 msgstr "账户"
 
@@ -369,11 +371,8 @@ msgstr "账户与服务器"
 msgid "Actions"
 msgstr "操作"
 
-#: src/components/layout.tsx
-#: src/pages/history.tsx
-#: src/pages/home.tsx
-#: src/pages/settings/apps.tsx
-#: src/pages/settings/cache.tsx
+#: src/components/layout.tsx src/pages/history.tsx src/pages/home.tsx
+#: src/pages/settings/apps.tsx src/pages/settings/cache.tsx
 msgid "Activity"
 msgstr "活动"
 
@@ -401,8 +400,7 @@ msgstr "为 {label} 添加按键"
 msgid "Add a language"
 msgstr "添加语言"
 
-#: src/app.tsx
-#: src/pages/servers.tsx
+#: src/app.tsx src/pages/servers.tsx
 msgid "Add a server"
 msgstr "添加服务器"
 
@@ -414,8 +412,7 @@ msgstr "添加另一种语言"
 msgid "Add catalogs to your configuration, then refresh."
 msgstr "在配置中添加目录，然后刷新。"
 
-#: src/components/item-menu.tsx
-#: src/pages/item.tsx
+#: src/components/item-menu.tsx src/pages/item.tsx
 msgid "Add favourite"
 msgstr "添加收藏"
 
@@ -423,9 +420,7 @@ msgstr "添加收藏"
 msgid "Add from Continue watching"
 msgstr "从「继续观看」添加"
 
-#: src/components/item-menu.tsx
-#: src/components/playlists.tsx
-#: src/pages/item.tsx
+#: src/components/item-menu.tsx src/components/playlists.tsx src/pages/item.tsx
 msgid "Add to playlist"
 msgstr "添加到播放列表"
 
@@ -437,8 +432,7 @@ msgstr "添加到此播放列表"
 msgid "Added {name}"
 msgstr "已添加 {name}"
 
-#: src/components/playlists.tsx
-#: src/pages/player.tsx
+#: src/components/playlists.tsx src/pages/player.tsx
 msgid "Added to {name}"
 msgstr "已添加到 {name}"
 
@@ -470,10 +464,8 @@ msgstr "{day} 播出 · 至 {until}"
 msgid "Airs {until}"
 msgstr "播出至 {until}"
 
-#: src/components/kind-tabs.tsx
-#: src/components/version-picker.tsx
-#: src/pages/discover.tsx
-#: src/pages/favourites.tsx
+#: src/components/kind-tabs.tsx src/components/version-picker.tsx
+#: src/pages/discover.tsx src/pages/favourites.tsx
 msgid "All"
 msgstr "全部"
 
@@ -509,8 +501,7 @@ msgstr "即使你在半小时后重新打开应用也会询问。继续观看的
 msgid "Alt"
 msgstr "Alt"
 
-#: src/pages/settings/audio.tsx
-#: src/pages/settings/interface.tsx
+#: src/pages/settings/audio.tsx src/pages/settings/interface.tsx
 #: src/pages/settings/subtitles.tsx
 msgid "Always"
 msgstr "始终"
@@ -523,8 +514,7 @@ msgstr "始终显示字幕；如果该版本提供你所用语言的字幕，则
 msgid "An audio track you pick while watching a show sets the language for its other episodes. Picking what the settings above would play forgets it."
 msgstr "观看剧集时手动选择的音轨语言会应用于该剧的其他集数。若选择与上述设置自动选择的音轨相同，则会清除这项手动选择。"
 
-#: src/lib/hosts/jellyfin-android.ts
-#: src/pages/settings/about.tsx
+#: src/lib/hosts/jellyfin-android.ts src/pages/settings/about.tsx
 #: src/pages/settings/index.tsx
 msgid "Android app"
 msgstr "Android 应用"
@@ -541,8 +531,7 @@ msgstr "其他中继服务器"
 msgid "Anyone with the invite can join, from any server."
 msgstr "任何服务器上的用户都可以凭邀请加入。"
 
-#: src/lib/hosts/native-shell.ts
-#: src/pages/settings/index.tsx
+#: src/lib/hosts/native-shell.ts src/pages/settings/index.tsx
 msgid "App"
 msgstr "应用"
 
@@ -598,8 +587,7 @@ msgstr "应用打开时询问"
 msgid "At 0% there is no background."
 msgstr "设为 0% 时不显示背景。"
 
-#: src/components/player/options.tsx
-#: src/components/remote-sheet.tsx
+#: src/components/player/options.tsx src/components/remote-sheet.tsx
 #: src/pages/settings/index.tsx
 msgid "Audio"
 msgstr "音频"
@@ -624,8 +612,7 @@ msgstr "音频：{label}"
 msgid "Auto-play the first version"
 msgstr "自动播放第一个版本"
 
-#: src/pages/settings/audio.tsx
-#: src/pages/settings/interface.tsx
+#: src/pages/settings/audio.tsx src/pages/settings/interface.tsx
 #: src/pages/settings/playback.tsx
 msgid "Automatic"
 msgstr "自动"
@@ -634,14 +621,10 @@ msgstr "自动"
 msgid "Automatic lists episodes on narrow screens and puts them in a row on wide ones."
 msgstr "在窄屏上自动以列表显示剧集，在宽屏上则将剧集横向排列。"
 
-#: src/components/layout.tsx
-#: src/components/party/party-sheet.tsx
-#: src/components/player/controls.tsx
-#: src/components/player/next-episode.tsx
-#: src/lib/input/actions.ts
-#: src/pages/player.tsx
-#: src/pages/servers.tsx
-#: src/pages/sign-in.tsx
+#: src/components/layout.tsx src/components/licenses.tsx
+#: src/components/party/party-sheet.tsx src/components/player/controls.tsx
+#: src/components/player/next-episode.tsx src/lib/input/actions.ts
+#: src/pages/player.tsx src/pages/servers.tsx src/pages/sign-in.tsx
 #: src/pages/trailer.tsx
 msgid "Back"
 msgstr "返回"
@@ -650,10 +633,8 @@ msgstr "返回"
 msgid "Back button"
 msgstr "返回按钮"
 
-#: src/components/version-settings.tsx
-#: src/pages/settings/interface.tsx
-#: src/pages/settings/subtitles.tsx
-#: src/pages/settings/theme.tsx
+#: src/components/version-settings.tsx src/pages/settings/interface.tsx
+#: src/pages/settings/subtitles.tsx src/pages/settings/theme.tsx
 msgid "Background"
 msgstr "背景"
 
@@ -677,8 +658,7 @@ msgstr "结束前"
 msgid "Below zero plays the sound earlier, as for wireless headphones that lag behind the picture."
 msgstr "设为负值会让声音提前播放，适用于声音比画面延迟的无线耳机。"
 
-#: src/components/player/options.tsx
-#: src/lib/input/actions.ts
+#: src/components/player/options.tsx src/lib/input/actions.ts
 msgid "Bigger subtitles"
 msgstr "更大的字幕"
 
@@ -738,10 +718,6 @@ msgstr "浏览器搜索"
 msgid "Browsing"
 msgstr "浏览中"
 
-#: src/pages/settings/about.tsx
-msgid "Builds the mpv library this app ships with."
-msgstr "构建此应用内置的 mpv 库。"
-
 #: src/lib/playback/player-choice.ts
 msgid "Built-in mpv"
 msgstr "内置 mpv"
@@ -754,8 +730,7 @@ msgstr "内置播放器"
 msgid "Buttons, progress bars and highlights."
 msgstr "按钮、进度条和高亮效果。"
 
-#: src/lib/hosts/shell/player.ts
-#: src/pages/settings/index.tsx
+#: src/lib/hosts/shell/player.ts src/pages/settings/index.tsx
 msgid "Cache"
 msgstr "缓存"
 
@@ -763,9 +738,7 @@ msgstr "缓存"
 msgid "Cache size"
 msgstr "缓存大小"
 
-#: src/components/layout.tsx
-#: src/pages/calendar.tsx
-#: src/pages/home.tsx
+#: src/components/layout.tsx src/pages/calendar.tsx src/pages/home.tsx
 #: src/pages/settings/apps.tsx
 msgid "Calendar"
 msgstr "日历"
@@ -774,9 +747,7 @@ msgstr "日历"
 msgid "Can’t reach"
 msgstr "无法连接"
 
-#: src/components/layout.tsx
-#: src/lib/client.ts
-#: src/pages/sign-in.tsx
+#: src/components/layout.tsx src/lib/client.ts src/pages/sign-in.tsx
 msgid "Can't reach the server"
 msgstr "无法连接到服务器"
 
@@ -784,13 +755,14 @@ msgstr "无法连接到服务器"
 msgid "Can’t reach the server"
 msgstr "无法连接到服务器"
 
-#: src/components/playlists.tsx
-#: src/components/send-report.tsx
-#: src/components/version-settings.tsx
-#: src/lib/i18n.ts
-#: src/pages/downloads.tsx
+#: src/components/playlists.tsx src/components/send-report.tsx
+#: src/components/version-settings.tsx src/lib/i18n.ts src/pages/downloads.tsx
 msgid "Cancel"
 msgstr "取消"
+
+#: src/pages/settings/interface.tsx
+msgid "Cards"
+msgstr ""
 
 #: src/components/people.tsx
 msgid "Cast"
@@ -816,8 +788,7 @@ msgstr "更改文件夹"
 msgid "Change reactions"
 msgstr "更改回应"
 
-#: src/components/no-catalogs.tsx
-#: src/pages/settings/account.tsx
+#: src/components/no-catalogs.tsx src/pages/settings/account.tsx
 #: src/pages/sign-in.tsx
 msgid "Change server"
 msgstr "更改服务器"
@@ -842,8 +813,7 @@ msgstr "频道"
 msgid "Channels"
 msgstr "频道"
 
-#: src/components/player/keys.ts
-#: src/components/player/options.tsx
+#: src/components/player/keys.ts src/components/player/options.tsx
 msgid "Chapter {number}"
 msgstr "第 {number} 章"
 
@@ -859,8 +829,7 @@ msgstr "聊天"
 msgid "Check now"
 msgstr "立即检查"
 
-#: src/lib/hosts/shell/index.ts
-#: src/pages/settings/apps.tsx
+#: src/lib/hosts/shell/index.ts src/pages/settings/apps.tsx
 msgid "Checking…"
 msgstr "正在检查…"
 
@@ -896,8 +865,7 @@ msgstr "清除评分"
 msgid "Clear selection"
 msgstr "清除选择"
 
-#: src/components/crash-report.tsx
-#: src/components/window-controls.tsx
+#: src/components/crash-report.tsx src/components/window-controls.tsx
 msgid "Close"
 msgstr "关闭"
 
@@ -909,9 +877,7 @@ msgstr "已复制代码"
 msgid "Code or invite link"
 msgstr "代码或邀请链接"
 
-#: src/lib/format.ts
-#: src/pages/discover.tsx
-#: src/pages/item.tsx
+#: src/lib/format.ts src/pages/discover.tsx src/pages/item.tsx
 msgid "Collections"
 msgstr "合集"
 
@@ -971,13 +937,11 @@ msgstr "已连接到 Discord。"
 msgid "Connection lost"
 msgstr "连接已断开"
 
-#: src/app.tsx
-#: src/pages/sign-in.tsx
+#: src/app.tsx src/pages/sign-in.tsx
 msgid "Continue"
 msgstr "继续"
 
-#: src/components/player/next-episode.tsx
-#: src/pages/home.tsx
+#: src/components/player/next-episode.tsx src/pages/home.tsx
 #: src/pages/settings/interface.tsx
 msgid "Continue watching"
 msgstr "继续观看"
@@ -990,8 +954,7 @@ msgstr "控制项"
 msgid "Copied as JSON"
 msgstr "已复制为 JSON"
 
-#: src/components/crash-report.tsx
-#: src/pages/settings/apps.tsx
+#: src/components/crash-report.tsx src/pages/settings/apps.tsx
 msgid "Copy"
 msgstr "复制"
 
@@ -1003,8 +966,7 @@ msgstr "复制为 JSON"
 msgid "Copy code"
 msgstr "复制代码"
 
-#: src/components/party/party-sheet.tsx
-#: src/pages/player.tsx
+#: src/components/party/party-sheet.tsx src/pages/player.tsx
 msgid "Copy link"
 msgstr "复制链接"
 
@@ -1016,8 +978,7 @@ msgstr "复制串流链接"
 msgid "Corner button"
 msgstr "角落按钮"
 
-#: src/components/playlists.tsx
-#: src/pages/player.tsx
+#: src/components/playlists.tsx src/pages/player.tsx
 msgid "Could not add to {name}"
 msgstr "无法添加到 {name}"
 
@@ -1041,13 +1002,11 @@ msgstr "无法复制代码"
 msgid "Could not copy the invite link"
 msgstr "无法复制邀请链接"
 
-#: src/components/version-picker.tsx
-#: src/pages/player.tsx
+#: src/components/version-picker.tsx src/pages/player.tsx
 msgid "Could not copy the link"
 msgstr "无法复制链接"
 
-#: src/components/version-settings.tsx
-#: src/pages/settings/apps.tsx
+#: src/components/version-settings.tsx src/pages/settings/apps.tsx
 msgid "Could not copy them"
 msgstr "无法复制这些内容"
 
@@ -1067,8 +1026,7 @@ msgstr "找不到可用版本：{message}"
 msgid "Could not join"
 msgstr "无法加入"
 
-#: src/components/download-button.tsx
-#: src/components/item-menu.tsx
+#: src/components/download-button.tsx src/components/item-menu.tsx
 msgid "Could not list the episodes"
 msgstr "无法列出剧集"
 
@@ -1242,10 +1200,8 @@ msgid "Deep purple"
 msgstr "深紫色"
 
 #. No colour of its own
-#: src/components/version-settings.tsx
-#: src/lib/i18n.ts
-#: src/pages/settings/subtitles.tsx
-#: src/pages/settings/theme.tsx
+#: src/components/version-settings.tsx src/lib/i18n.ts
+#: src/pages/settings/subtitles.tsx src/pages/settings/theme.tsx
 msgid "Default"
 msgstr "默认"
 
@@ -1257,8 +1213,7 @@ msgstr "延迟"
 msgid "Delay: {delayLabel}"
 msgstr "延迟：{delayLabel}"
 
-#: src/components/playlists.tsx
-#: src/pages/downloads.tsx
+#: src/components/playlists.tsx src/pages/downloads.tsx
 msgid "Delete"
 msgstr "删除"
 
@@ -1278,13 +1233,11 @@ msgstr "删除播放列表"
 msgid "Desert"
 msgstr "沙漠"
 
-#: src/pages/settings/about.tsx
-#: src/pages/settings/index.tsx
+#: src/pages/settings/about.tsx src/pages/settings/index.tsx
 msgid "Desktop app"
 msgstr "桌面应用"
 
-#: src/components/item-menu.tsx
-#: src/components/version-picker.tsx
+#: src/components/item-menu.tsx src/components/version-picker.tsx
 #: src/pages/item.tsx
 msgid "Details"
 msgstr "详情"
@@ -1337,9 +1290,7 @@ msgstr "此电脑上未运行 Discord。"
 msgid "Discord refused the status: {message}"
 msgstr "Discord 拒绝了状态更新：{message}"
 
-#: src/components/layout.tsx
-#: src/pages/discover.tsx
-#: src/pages/settings/apps.tsx
+#: src/components/layout.tsx src/pages/discover.tsx src/pages/settings/apps.tsx
 msgid "Discover"
 msgstr "发现"
 
@@ -1380,10 +1331,8 @@ msgid "Donate to Me"
 msgstr "向我捐赠"
 
 #: src/components/party/reaction-setting.tsx
-#: src/components/player/subtitle-sync.tsx
-#: src/components/playlists.tsx
-#: src/components/send-report.tsx
-#: src/components/version-settings.tsx
+#: src/components/player/subtitle-sync.tsx src/components/playlists.tsx
+#: src/components/send-report.tsx src/components/version-settings.tsx
 msgid "Done"
 msgstr "完成"
 
@@ -1391,10 +1340,8 @@ msgstr "完成"
 msgid "Down"
 msgstr "向下"
 
-#: src/components/download-button.tsx
-#: src/components/item-menu.tsx
-#: src/components/version-picker.tsx
-#: src/pages/settings/about.tsx
+#: src/components/download-button.tsx src/components/item-menu.tsx
+#: src/components/version-picker.tsx src/pages/settings/about.tsx
 msgid "Download"
 msgstr "下载"
 
@@ -1410,13 +1357,11 @@ msgstr "下载已暂停"
 msgid "Download the show"
 msgstr "下载此剧集"
 
-#: src/components/download-button.tsx
-#: src/pages/downloads.tsx
+#: src/components/download-button.tsx src/pages/downloads.tsx
 msgid "Downloaded"
 msgstr "已下载"
 
-#: src/components/download-button.tsx
-#: src/pages/downloads.tsx
+#: src/components/download-button.tsx src/pages/downloads.tsx
 msgid "Downloading"
 msgstr "正在下载"
 
@@ -1428,8 +1373,7 @@ msgstr "正在下载版本 {version}…"
 msgid "Downloading, {percent}%"
 msgstr "正在下载，{percent}%"
 
-#: src/components/layout.tsx
-#: src/pages/downloads.tsx
+#: src/components/layout.tsx src/pages/downloads.tsx
 #: src/pages/settings/index.tsx
 msgid "Downloads"
 msgstr "下载"
@@ -1499,7 +1443,7 @@ msgstr "在已登录的应用中前往「快速连接」并输入此代码，或
 msgid "Enter your password."
 msgstr "请输入密码。"
 
-#: src/components/episodes.tsx
+#: src/components/episodes.tsx src/components/player/pause-screen.tsx
 msgid "Episode {number}"
 msgstr "第 {number} 集"
 
@@ -1511,10 +1455,8 @@ msgstr "剧集详情"
 msgid "Episode layout"
 msgstr "剧集布局"
 
-#: src/components/player/episodes.tsx
-#: src/components/player/options.tsx
-#: src/pages/item.tsx
-#: src/pages/settings/interface.tsx
+#: src/components/player/episodes.tsx src/components/player/options.tsx
+#: src/pages/item.tsx src/pages/settings/interface.tsx
 msgid "Episodes"
 msgstr "剧集"
 
@@ -1550,8 +1492,7 @@ msgstr "全部内容"
 msgid "Everything unwatched"
 msgstr "所有未观看内容"
 
-#: src/components/player/options.tsx
-#: src/components/window-controls.tsx
+#: src/components/player/options.tsx src/components/window-controls.tsx
 msgid "Exit full screen"
 msgstr "退出全屏"
 
@@ -1571,8 +1512,7 @@ msgstr "渐隐"
 msgid "Failed"
 msgstr "失败"
 
-#: src/components/remote-sheet.tsx
-#: src/lib/input/keys.ts
+#: src/components/remote-sheet.tsx src/lib/input/keys.ts
 msgid "Fast forward"
 msgstr "快进"
 
@@ -1580,8 +1520,7 @@ msgstr "快进"
 msgid "Faster"
 msgstr "更快"
 
-#: src/components/layout.tsx
-#: src/pages/favourites.tsx
+#: src/components/layout.tsx src/pages/favourites.tsx
 #: src/pages/settings/apps.tsx
 msgid "Favourites"
 msgstr "收藏"
@@ -1614,8 +1553,7 @@ msgstr "筛选版本"
 msgid "Finding a version to download"
 msgstr "正在查找要下载的版本"
 
-#: src/components/version-picker.tsx
-#: src/pages/downloads.tsx
+#: src/components/version-picker.tsx src/pages/downloads.tsx
 #: src/pages/player.tsx
 msgid "Finding a version…"
 msgstr "正在查找版本…"
@@ -1696,8 +1634,7 @@ msgstr "磨砂玻璃"
 msgid "Full"
 msgstr "完整"
 
-#: src/components/player/options.tsx
-#: src/lib/input/actions.ts
+#: src/components/player/options.tsx src/lib/input/actions.ts
 msgid "Full screen"
 msgstr "全屏"
 
@@ -1790,8 +1727,7 @@ msgstr "隐藏二维码"
 msgid "Hold"
 msgstr "按住"
 
-#: src/components/layout.tsx
-#: src/lib/input/actions.ts
+#: src/components/layout.tsx src/lib/input/actions.ts
 #: src/pages/settings/apps.tsx
 msgid "Home"
 msgstr "首页"
@@ -1868,13 +1804,11 @@ msgstr "在「发现」中"
 msgid "In Favourites"
 msgstr "在收藏中"
 
-#: src/lib/playback/sound.ts
-#: src/lib/subtitles/delay.ts
+#: src/lib/playback/sound.ts src/lib/subtitles/delay.ts
 msgid "In sync"
 msgstr "同步中"
 
-#: src/components/download-button.tsx
-#: src/pages/downloads.tsx
+#: src/components/download-button.tsx src/pages/downloads.tsx
 msgid "In the app's downloads"
 msgstr "在应用的下载中"
 
@@ -1910,6 +1844,10 @@ msgstr "邀请码或邀请链接"
 msgid "Invite link copied"
 msgstr "已复制邀请链接"
 
+#: src/components/licenses.tsx
+msgid "It came with no licence text."
+msgstr ""
+
 #: src/components/send-report.tsx
 msgid "It carries this device's details and the app's recent log. Passwords and tokens are left out."
 msgstr "其中包含此设备的详细信息和应用近期日志，不会包含密码或令牌。"
@@ -1921,6 +1859,10 @@ msgstr "未能发送给开发者，仅发送到了此服务器：{forwardError}"
 #: src/pages/settings/theme.tsx
 msgid "It will be undone unless you keep it."
 msgstr "除非选择保留，否则此操作将被撤销。"
+
+#: src/pages/settings/about.tsx
+msgid "Its Metal and AVFoundation video outputs."
+msgstr ""
 
 #: src/pages/settings/about.tsx
 msgid "Jellyfin API"
@@ -1982,8 +1924,7 @@ msgstr "已保存在此设备上。"
 msgid "Kept on this device. Select + and press a key to add it; a remote, a gamepad or the scroll wheel works too."
 msgstr "已保存在此设备上。选择「+」后按下要添加的按键；也可以使用遥控器、游戏手柄或滚轮。"
 
-#: src/components/input-setup.tsx
-#: src/lib/input/actions.ts
+#: src/components/input-setup.tsx src/lib/input/actions.ts
 msgid "Keyboard shortcuts"
 msgstr "键盘快捷键"
 
@@ -1995,10 +1936,8 @@ msgstr "按键、遥控器和游戏手柄"
 msgid "Label"
 msgstr "标签"
 
-#: src/pages/settings/audio.tsx
-#: src/pages/settings/index.tsx
-#: src/pages/settings/interface.tsx
-#: src/pages/settings/subtitles.tsx
+#: src/pages/settings/audio.tsx src/pages/settings/index.tsx
+#: src/pages/settings/interface.tsx src/pages/settings/subtitles.tsx
 msgid "Language"
 msgstr "语言"
 
@@ -2014,8 +1953,7 @@ msgstr "语言与输出"
 msgid "Language, home, grids and episodes"
 msgstr "语言、首页、网格和剧集"
 
-#: src/lib/subtitles/style.ts
-#: src/pages/settings/interface.tsx
+#: src/lib/subtitles/style.ts src/pages/settings/interface.tsx
 msgid "Large"
 msgstr "大"
 
@@ -2067,6 +2005,10 @@ msgstr "让电视的解码器自行同步画面和声音，在部分电视上可
 msgid "Lets the TV's decoder keep picture and sound in step itself, which plays 4K and HDR more smoothly on some TVs. Turn it off if video stutters or stays black."
 msgstr "让电视的解码器自行同步画面和声音，在部分电视上可更流畅地播放 4K 和 HDR。如果画面卡顿或黑屏，请关闭此选项。"
 
+#: src/components/licenses.tsx
+msgid "Licences"
+msgstr ""
+
 #: src/components/version-settings.tsx
 msgid "Link a pack someone shares, in this app's format or the one Fusion and Nuvio use. It stays up to date with its author's changes."
 msgstr "导入他人分享的配置包，支持本应用格式以及 Fusion 和 Nuvio 使用的格式。作者更新后，配置包也会保持同步。"
@@ -2111,8 +2053,7 @@ msgstr "正在查找房间…"
 msgid "Lost the connection to {relay}. Reconnecting… Your player carries on, and gets back in step once it's back."
 msgstr "与 {relay} 的连接已断开，正在重新连接…播放器会继续播放，连接恢复后将重新同步。"
 
-#: src/components/player/options.tsx
-#: src/lib/input/actions.ts
+#: src/components/player/options.tsx src/lib/input/actions.ts
 msgid "Lower subtitles"
 msgstr "降低字幕"
 
@@ -2132,16 +2073,12 @@ msgstr "主要"
 msgid "Mark as watched"
 msgstr "标记为已观看"
 
-#: src/components/episodes.tsx
-#: src/components/item-menu.tsx
-#: src/pages/history.tsx
-#: src/pages/item.tsx
+#: src/components/episodes.tsx src/components/item-menu.tsx
+#: src/pages/history.tsx src/pages/item.tsx
 msgid "Mark unwatched"
 msgstr "标记为未观看"
 
-#: src/components/episodes.tsx
-#: src/components/item-menu.tsx
-#: src/pages/item.tsx
+#: src/components/episodes.tsx src/components/item-menu.tsx src/pages/item.tsx
 msgid "Mark watched"
 msgstr "标记为已观看"
 
@@ -2201,10 +2138,8 @@ msgstr "缺失"
 msgid "Monospace"
 msgstr "等宽字体"
 
-#: src/components/overview.tsx
-#: src/components/playlists.tsx
-#: src/components/version-picker.tsx
-#: src/pages/downloads.tsx
+#: src/components/overview.tsx src/components/playlists.tsx
+#: src/components/version-picker.tsx src/pages/downloads.tsx
 msgid "More"
 msgstr "更多"
 
@@ -2236,13 +2171,11 @@ msgstr "将 {name} 下移"
 msgid "Move {name} up"
 msgstr "将 {name} 上移"
 
-#: src/components/playlists.tsx
-#: src/components/version-settings.tsx
+#: src/components/playlists.tsx src/components/version-settings.tsx
 msgid "Move down"
 msgstr "下移"
 
-#: src/components/playlists.tsx
-#: src/components/version-settings.tsx
+#: src/components/playlists.tsx src/components/version-settings.tsx
 msgid "Move up"
 msgstr "上移"
 
@@ -2250,11 +2183,8 @@ msgstr "上移"
 msgid "Moves between what's on screen, and to Search and Home. A gamepad's d-pad and left stick move too."
 msgstr "可在屏幕上的项目之间移动，也可前往「搜索」和「首页」。游戏手柄的方向键和左摇杆也可用于导航。"
 
-#: src/components/kind-tabs.tsx
-#: src/components/random-pick.tsx
-#: src/lib/format.ts
-#: src/pages/discover.tsx
-#: src/pages/favourites.tsx
+#: src/components/kind-tabs.tsx src/components/random-pick.tsx
+#: src/lib/format.ts src/pages/discover.tsx src/pages/favourites.tsx
 #: src/pages/search.tsx
 msgid "Movies"
 msgstr "电影"
@@ -2283,8 +2213,7 @@ msgstr "在此窗口中使用 mpv 播放视频，并使用本应用的控制项�
 msgid "mpv.conf, input.conf, scripts and shaders in this folder apply to the built-in mpv."
 msgstr "此文件夹中的 mpv.conf、input.conf、脚本和着色器会应用于内置 mpv。"
 
-#: src/components/player/volume.tsx
-#: src/lib/input/actions.ts
+#: src/components/player/volume.tsx src/lib/input/actions.ts
 msgid "Mute"
 msgstr "静音"
 
@@ -2292,8 +2221,7 @@ msgstr "静音"
 msgid "Mute key"
 msgstr "静音键"
 
-#: src/components/playlists.tsx
-#: src/components/version-settings.tsx
+#: src/components/playlists.tsx src/components/version-settings.tsx
 msgid "Name"
 msgstr "名称"
 
@@ -2321,8 +2249,7 @@ msgstr "新代码"
 msgid "New playlist"
 msgstr "新建播放列表"
 
-#: src/components/player/controls.tsx
-#: src/components/remote-sheet.tsx
+#: src/components/player/controls.tsx src/components/remote-sheet.tsx
 #: src/lib/i18n.ts
 msgid "Next"
 msgstr "下一项"
@@ -2335,10 +2262,8 @@ msgstr "下一条音轨"
 msgid "Next chapter"
 msgstr "下一章"
 
-#: src/components/player/controls.tsx
-#: src/components/player/next-episode.tsx
-#: src/lib/input/actions.ts
-#: src/pages/settings/playback.tsx
+#: src/components/player/controls.tsx src/components/player/next-episode.tsx
+#: src/lib/input/actions.ts src/pages/settings/playback.tsx
 msgid "Next episode"
 msgstr "下一集"
 
@@ -2362,18 +2287,15 @@ msgstr "下一条字幕"
 msgid "Next track"
 msgstr "下一条音轨"
 
-#: src/components/player/controls.tsx
-#: src/pages/trailer.tsx
+#: src/components/player/controls.tsx src/pages/trailer.tsx
 msgid "Next trailer"
 msgstr "下一个预告片"
 
-#: src/pages/home.tsx
-#: src/pages/settings/interface.tsx
+#: src/pages/home.tsx src/pages/settings/interface.tsx
 msgid "Next up"
 msgstr "接下来播放"
 
-#: src/components/player/options.tsx
-#: src/pages/settings/audio.tsx
+#: src/components/player/options.tsx src/pages/settings/audio.tsx
 msgid "Night mode"
 msgstr "夜间模式"
 
@@ -2449,19 +2371,16 @@ msgstr "没有匹配的版本。"
 msgid "No versions were found."
 msgstr "未找到任何版本。"
 
-#: src/pages/settings/audio.tsx
-#: src/pages/settings/subtitles.tsx
+#: src/pages/settings/audio.tsx src/pages/settings/subtitles.tsx
 msgid "None"
 msgstr "无"
 
-#: src/components/player/keys.ts
-#: src/lib/subtitles/style.ts
+#: src/components/player/keys.ts src/lib/subtitles/style.ts
 #: src/pages/settings/subtitles.tsx
 msgid "Normal"
 msgstr "普通"
 
-#: src/components/player/keys.ts
-#: src/lib/input/actions.ts
+#: src/components/player/keys.ts src/lib/input/actions.ts
 msgid "Normal speed"
 msgstr "正常速度"
 
@@ -2509,8 +2428,7 @@ msgstr "未找到内容。"
 msgid "Nothing here yet. Add titles from their menu, or from the suggestions below."
 msgstr "这里还没有内容。可从内容菜单添加，或从下方建议中选择。"
 
-#: src/pages/discover.tsx
-#: src/pages/item.tsx
+#: src/pages/discover.tsx src/pages/item.tsx
 msgid "Nothing here."
 msgstr "这里没有内容。"
 
@@ -2518,14 +2436,12 @@ msgstr "这里没有内容。"
 msgid "Nothing is playing there."
 msgstr "那里没有正在播放的内容。"
 
-#: src/components/random-pick.tsx
-#: src/pages/favourites.tsx
+#: src/components/random-pick.tsx src/pages/favourites.tsx
 msgid "Nothing marked as a favourite yet."
 msgstr "还没有收藏任何内容。"
 
-#: src/components/version-settings.tsx
-#: src/pages/discover.tsx
-#: src/pages/settings/audio.tsx
+#: src/components/licenses.tsx src/components/version-settings.tsx
+#: src/pages/discover.tsx src/pages/settings/audio.tsx
 #: src/pages/settings/interface.tsx
 msgid "Nothing matches."
 msgstr "没有符合条件的内容。"
@@ -2570,10 +2486,8 @@ msgstr "当前：{shown}"
 msgid "Ocean"
 msgstr "海洋"
 
-#: src/components/player/options.tsx
-#: src/components/remote-sheet.tsx
-#: src/lib/playback/sound.ts
-#: src/pages/settings/audio.tsx
+#: src/components/player/options.tsx src/components/remote-sheet.tsx
+#: src/lib/playback/sound.ts src/pages/settings/audio.tsx
 #: src/pages/settings/subtitles.tsx
 msgid "Off"
 msgstr "关闭"
@@ -2654,18 +2568,14 @@ msgstr "哎呀！"
 msgid "Opacity: {backgroundOpacity}%"
 msgstr "不透明度：{backgroundOpacity}%"
 
-#: src/components/hero.tsx
-#: src/components/item-menu.tsx
-#: src/components/random-pick.tsx
-#: src/pages/history.tsx
-#: src/pages/settings/account.tsx
-#: src/pages/settings/apps.tsx
+#: src/components/hero.tsx src/components/item-menu.tsx
+#: src/components/random-pick.tsx src/pages/history.tsx
+#: src/pages/settings/account.tsx src/pages/settings/apps.tsx
 #: src/pages/settings/downloads.tsx
 msgid "Open"
 msgstr "打开"
 
-#: src/pages/downloads.tsx
-#: src/pages/settings/apps.tsx
+#: src/pages/downloads.tsx src/pages/settings/apps.tsx
 msgid "Open folder"
 msgstr "打开文件夹"
 
@@ -2842,11 +2752,8 @@ msgstr "粘贴快捷筛选条件的 JSON，或包含这些条件的文件地址�
 msgid "Pattern"
 msgstr "匹配模式"
 
-#: src/components/player/controls.tsx
-#: src/components/remote-sheet.tsx
-#: src/lib/input/actions.ts
-#: src/lib/input/keys.ts
-#: src/pages/downloads.tsx
+#: src/components/player/controls.tsx src/components/remote-sheet.tsx
+#: src/lib/input/actions.ts src/lib/input/keys.ts src/pages/downloads.tsx
 msgid "Pause"
 msgstr "暂停"
 
@@ -2942,15 +2849,10 @@ msgstr "PIN 码或密码"
 msgid "Pink"
 msgstr "粉色"
 
-#: src/components/hero.tsx
-#: src/components/item-menu.tsx
-#: src/components/player/controls.tsx
-#: src/components/playlists.tsx
-#: src/components/random-pick.tsx
-#: src/components/remote-sheet.tsx
-#: src/lib/input/actions.ts
-#: src/lib/input/keys.ts
-#: src/pages/item.tsx
+#: src/components/hero.tsx src/components/item-menu.tsx
+#: src/components/player/controls.tsx src/components/playlists.tsx
+#: src/components/random-pick.tsx src/components/remote-sheet.tsx
+#: src/lib/input/actions.ts src/lib/input/keys.ts src/pages/item.tsx
 msgid "Play"
 msgstr "播放"
 
@@ -2982,8 +2884,7 @@ msgstr "按下「播放」会列出可选版本，但继续播放时会返回你
 msgid "Play now"
 msgstr "立即播放"
 
-#: src/components/item-menu.tsx
-#: src/components/remote-sheet.tsx
+#: src/components/item-menu.tsx src/components/remote-sheet.tsx
 #: src/pages/item.tsx
 msgid "Play on another device"
 msgstr "在其他设备上播放"
@@ -3036,8 +2937,7 @@ msgstr "使用 mpv 播放"
 msgid "Play/Pause"
 msgstr "播放/暂停"
 
-#: src/lib/hosts/shell/player.ts
-#: src/pages/settings/index.tsx
+#: src/lib/hosts/shell/player.ts src/pages/settings/index.tsx
 msgid "Playback"
 msgstr "播放"
 
@@ -3049,8 +2949,7 @@ msgstr "播放失败：{failure}"
 msgid "Played here"
 msgstr "在此处播放"
 
-#: src/lib/input/actions.ts
-#: src/pages/settings/about.tsx
+#: src/lib/input/actions.ts src/pages/settings/about.tsx
 #: src/pages/settings/playback.tsx
 msgid "Player"
 msgstr "播放器"
@@ -3059,10 +2958,8 @@ msgstr "播放器"
 msgid "Player link"
 msgstr "播放器链接"
 
-#: src/components/party/party-sheet.tsx
-#: src/components/player/episodes.tsx
-#: src/components/playlists.tsx
-#: src/components/sessions.tsx
+#: src/components/party/party-sheet.tsx src/components/player/episodes.tsx
+#: src/components/playlists.tsx src/components/sessions.tsx
 #: src/components/version-picker.tsx
 msgid "Playing"
 msgstr "正在播放"
@@ -3083,13 +2980,11 @@ msgstr "正在 {name} 上播放"
 msgid "Playing on and the next and previous buttons pass over episodes marked as filler. You can still play one yourself."
 msgstr "播放时，下一集和上一集按钮会跳过标记为填充内容的剧集。你仍可手动播放这些剧集。"
 
-#: src/components/player/options.tsx
-#: src/components/playlists.tsx
+#: src/components/player/options.tsx src/components/playlists.tsx
 msgid "Playlist"
 msgstr "播放列表"
 
-#: src/components/layout.tsx
-#: src/components/playlists.tsx
+#: src/components/layout.tsx src/components/playlists.tsx
 msgid "Playlists"
 msgstr "播放列表"
 
@@ -3137,17 +3032,15 @@ msgstr "按下一个按键"
 msgid "Press Back again to leave"
 msgstr "再次按返回键退出"
 
-#: src/components/version-settings.tsx
-#: src/pages/settings/subtitles.tsx
+#: src/components/version-settings.tsx src/pages/settings/subtitles.tsx
 msgid "Preview"
 msgstr "预览"
 
-#: src/pages/settings/playback.tsx
+#: src/pages/settings/interface.tsx src/pages/settings/playback.tsx
 msgid "Previews"
 msgstr "预览片段"
 
-#: src/components/player/controls.tsx
-#: src/components/remote-sheet.tsx
+#: src/components/player/controls.tsx src/components/remote-sheet.tsx
 #: src/lib/i18n.ts
 msgid "Previous"
 msgstr "上一项"
@@ -3156,8 +3049,7 @@ msgstr "上一项"
 msgid "Previous chapter"
 msgstr "上一章"
 
-#: src/components/player/controls.tsx
-#: src/lib/input/actions.ts
+#: src/components/player/controls.tsx src/lib/input/actions.ts
 msgid "Previous episode"
 msgstr "上一集"
 
@@ -3169,8 +3061,7 @@ msgstr "上个月"
 msgid "Previous track"
 msgstr "上一条音轨"
 
-#: src/components/player/controls.tsx
-#: src/pages/trailer.tsx
+#: src/components/player/controls.tsx src/pages/trailer.tsx
 msgid "Previous trailer"
 msgstr "上一个预告片"
 
@@ -3194,8 +3085,7 @@ msgstr "快速连接"
 msgid "Quick Connect is unavailable: {message}"
 msgstr "快速连接不可用：{message}"
 
-#: src/components/version-picker.tsx
-#: src/components/version-settings.tsx
+#: src/components/version-picker.tsx src/components/version-settings.tsx
 msgid "Quick filters"
 msgstr "快捷筛选"
 
@@ -3207,8 +3097,7 @@ msgstr "侧栏"
 msgid "Rainforest"
 msgstr "热带雨林"
 
-#: src/components/player/options.tsx
-#: src/lib/input/actions.ts
+#: src/components/player/options.tsx src/lib/input/actions.ts
 msgid "Raise subtitles"
 msgstr "提高字幕"
 
@@ -3216,8 +3105,7 @@ msgstr "提高字幕"
 msgid "Raises the centre channel, where surround sound puts dialogue. Not for sound passed through."
 msgstr "提高中置声道音量；环绕声通常会将对白放在中置声道。不适用于直通音频。"
 
-#: src/components/item-menu.tsx
-#: src/components/random-pick.tsx
+#: src/components/item-menu.tsx src/components/random-pick.tsx
 #: src/pages/item.tsx
 msgid "Random episode"
 msgstr "随机一集"
@@ -3237,6 +3125,11 @@ msgstr "评分"
 #: src/pages/item.tsx
 msgid "Rate season"
 msgstr "为整季评分"
+
+#: src/components/scores.tsx
+#, fuzzy
+msgid "Rating"
+msgstr "等待中"
 
 #: src/components/party/party-sheet.tsx
 msgid "React with {emoji}"
@@ -3291,13 +3184,11 @@ msgstr "中继服务器地址"
 msgid "Released"
 msgstr "上映日期"
 
-#: src/pages/settings/audio.tsx
-#: src/pages/settings/subtitles.tsx
+#: src/pages/settings/audio.tsx src/pages/settings/subtitles.tsx
 msgid "Remember picks per show"
 msgstr "为每部剧集记住选择"
 
-#: src/components/version-settings.tsx
-#: src/pages/search.tsx
+#: src/components/version-settings.tsx src/pages/search.tsx
 #: src/pages/servers.tsx
 msgid "Remove"
 msgstr "移除"
@@ -3306,8 +3197,7 @@ msgstr "移除"
 msgid "Remove {key}"
 msgstr "移除 {key}"
 
-#: src/components/party/party-sheet.tsx
-#: src/pages/settings/common.tsx
+#: src/components/party/party-sheet.tsx src/pages/settings/common.tsx
 msgid "Remove {name}"
 msgstr "移除 {name}"
 
@@ -3319,8 +3209,7 @@ msgstr "要从此设备移除 {targetName} 吗？之后需要重新添加并登�
 msgid "Remove {term}"
 msgstr "移除 {term}"
 
-#: src/components/item-menu.tsx
-#: src/pages/item.tsx
+#: src/components/item-menu.tsx src/pages/item.tsx
 msgid "Remove favourite"
 msgstr "取消收藏"
 
@@ -3352,6 +3241,10 @@ msgstr "已从观看历史中移除"
 msgid "Rename"
 msgstr "重命名"
 
+#: src/components/playlists.tsx
+msgid "Repeat"
+msgstr ""
+
 #: src/pages/settings/apps.tsx
 msgid "Report a problem"
 msgstr "报告问题"
@@ -3364,8 +3257,7 @@ msgstr "已复制报告"
 msgid "Request failed ({status})"
 msgstr "请求失败（{status}）"
 
-#: src/components/party/reaction-setting.tsx
-#: src/components/player/options.tsx
+#: src/components/party/reaction-setting.tsx src/components/player/options.tsx
 #: src/pages/history.tsx
 msgid "Reset"
 msgstr "重置"
@@ -3418,8 +3310,7 @@ msgstr "恢复"
 msgid "Results of what you searched for."
 msgstr "搜索结果。"
 
-#: src/components/item-menu.tsx
-#: src/components/random-pick.tsx
+#: src/components/item-menu.tsx src/components/random-pick.tsx
 #: src/pages/downloads.tsx
 msgid "Resume"
 msgstr "继续播放"
@@ -3432,8 +3323,7 @@ msgstr "继续播放 {code}"
 msgid "Resume all"
 msgstr "全部继续"
 
-#: src/components/version-picker.tsx
-#: src/lib/playback/use-player.ts
+#: src/components/version-picker.tsx src/lib/playback/use-player.ts
 #: src/pages/item.tsx
 msgid "Resume from {resumeAt}"
 msgstr "从 {resumeAt} 继续播放"
@@ -3446,8 +3336,7 @@ msgstr "已自动调整时间并同步"
 msgid "Retry"
 msgstr "重试"
 
-#: src/components/remote-sheet.tsx
-#: src/lib/input/keys.ts
+#: src/components/remote-sheet.tsx src/lib/input/keys.ts
 msgid "Rewind"
 msgstr "快退"
 
@@ -3458,6 +3347,10 @@ msgstr "向右"
 #: src/pages/settings/interface.tsx
 msgid "Rotates through featured titles"
 msgstr "轮播精选内容"
+
+#: src/components/scores.tsx
+msgid "Rotten Tomatoes audience"
+msgstr ""
 
 #: src/pages/settings/interface.tsx
 msgid "Row"
@@ -3480,8 +3373,7 @@ msgstr "第 {s} 季第 {e} 集"
 msgid "Sans serif"
 msgstr "无衬线体"
 
-#: src/components/playlists.tsx
-#: src/components/version-settings.tsx
+#: src/components/playlists.tsx src/components/version-settings.tsx
 #: src/pages/settings/apps.tsx
 msgid "Save"
 msgstr "保存"
@@ -3554,12 +3446,9 @@ msgstr "已看到对应字幕"
 msgid "SDH, with sounds described"
 msgstr "SDH 字幕（包含声音描述）"
 
-#: src/components/layout.tsx
-#: src/components/version-settings.tsx
-#: src/lib/input/actions.ts
-#: src/pages/discover.tsx
-#: src/pages/search.tsx
-#: src/pages/settings/apps.tsx
+#: src/components/layout.tsx src/components/licenses.tsx
+#: src/components/version-settings.tsx src/lib/input/actions.ts
+#: src/pages/discover.tsx src/pages/search.tsx src/pages/settings/apps.tsx
 msgid "Search"
 msgstr "搜索"
 
@@ -3583,6 +3472,11 @@ msgstr "搜索"
 msgid "Searching"
 msgstr "正在搜索"
 
+#: src/components/player/pause-screen.tsx
+#, fuzzy
+msgid "Season {season}"
+msgstr "为整季评分"
+
 #: src/components/item-menu.tsx
 msgid "See the download"
 msgstr "查看下载"
@@ -3595,9 +3489,7 @@ msgstr "跳转"
 msgid "Seek bar previews"
 msgstr "进度条预览"
 
-#: src/lib/i18n.ts
-#: src/lib/input/actions.ts
-#: src/pages/history.tsx
+#: src/lib/i18n.ts src/lib/input/actions.ts src/pages/history.tsx
 msgid "Select"
 msgstr "选择"
 
@@ -3605,8 +3497,7 @@ msgstr "选择"
 msgid "Select all"
 msgstr "全选"
 
-#: src/components/party/party-sheet.tsx
-#: src/components/send-report.tsx
+#: src/components/party/party-sheet.tsx src/components/send-report.tsx
 msgid "Send"
 msgstr "发送"
 
@@ -3614,8 +3505,7 @@ msgstr "发送"
 msgid "Send a report"
 msgstr "发送报告"
 
-#: src/components/crash-report.tsx
-#: src/pages/settings/apps.tsx
+#: src/components/crash-report.tsx src/pages/settings/apps.tsx
 msgid "Send report"
 msgstr "发送报告"
 
@@ -3647,8 +3537,7 @@ msgstr "将此设备的详细信息和应用近期日志发送到服务器，并
 msgid "Serif"
 msgstr "衬线体"
 
-#: src/pages/settings/about.tsx
-#: src/pages/settings/account.tsx
+#: src/pages/settings/about.tsx src/pages/settings/account.tsx
 msgid "Server"
 msgstr "服务器"
 
@@ -3664,8 +3553,7 @@ msgstr "服务器错误"
 msgid "Set by hand"
 msgstr "手动设置"
 
-#: src/components/layout.tsx
-#: src/pages/settings/index.tsx
+#: src/components/layout.tsx src/pages/settings/index.tsx
 msgid "Settings"
 msgstr "设置"
 
@@ -3746,11 +3634,8 @@ msgstr "正在显示已保存的页面"
 msgid "Shown"
 msgstr "已显示"
 
-#: src/components/kind-tabs.tsx
-#: src/components/random-pick.tsx
-#: src/lib/format.ts
-#: src/pages/discover.tsx
-#: src/pages/favourites.tsx
+#: src/components/kind-tabs.tsx src/components/random-pick.tsx
+#: src/lib/format.ts src/pages/discover.tsx src/pages/favourites.tsx
 #: src/pages/search.tsx
 msgid "Shows"
 msgstr "剧集"
@@ -3771,6 +3656,10 @@ msgstr "将搜索结果合并到一个网格中，而不是分别为电影和剧
 msgid "Shows subtitles in your language unless the audio already is."
 msgstr "除非音频本身已是你的语言，否则显示对应语言的字幕。"
 
+#: src/components/playlists.tsx
+msgid "Shuffle"
+msgstr ""
+
 #: src/pages/settings/interface.tsx
 msgid "Side rail"
 msgstr "侧边栏"
@@ -3778,6 +3667,11 @@ msgstr "侧边栏"
 #: src/pages/settings/interface.tsx
 msgid "Side rail runs down the side of the screen; Top tabs sit along the top of each page."
 msgstr "侧边栏沿屏幕侧边排列；顶部标签页则显示在每个页面的顶部。"
+
+#: src/pages/settings/interface.tsx
+#, fuzzy
+msgid "Sidebar"
+msgstr "侧边栏"
 
 #: src/pages/sign-in.tsx
 msgid "Sign in"
@@ -3787,8 +3681,7 @@ msgstr "登录"
 msgid "Sign in failed"
 msgstr "登录失败"
 
-#: src/pages/servers.tsx
-#: src/pages/settings/account.tsx
+#: src/pages/servers.tsx src/pages/settings/account.tsx
 msgid "Sign out"
 msgstr "退出登录"
 
@@ -3812,8 +3705,7 @@ msgstr "已退出登录"
 msgid "Signs and songs"
 msgstr "标志与歌曲"
 
-#: src/components/player/options.tsx
-#: src/pages/settings/subtitles.tsx
+#: src/components/player/options.tsx src/pages/settings/subtitles.tsx
 msgid "Size"
 msgstr "大小"
 
@@ -3909,8 +3801,7 @@ msgstr "位置 {n}：{emoji}"
 msgid "Slower"
 msgstr "更慢"
 
-#: src/lib/subtitles/style.ts
-#: src/pages/settings/interface.tsx
+#: src/lib/subtitles/style.ts src/pages/settings/interface.tsx
 msgid "Small"
 msgstr "小"
 
@@ -3918,8 +3809,7 @@ msgstr "小"
 msgid "Small labels on each version for what it has, from packs you link or badges you make."
 msgstr "在每个版本上显示其所包含内容的小标签，来源可以是你关联的配置包或自行创建的标签。"
 
-#: src/components/player/options.tsx
-#: src/lib/input/actions.ts
+#: src/components/player/options.tsx src/lib/input/actions.ts
 msgid "Smaller subtitles"
 msgstr "更小的字幕"
 
@@ -3927,8 +3817,7 @@ msgstr "更小的字幕"
 msgid "Solid"
 msgstr "纯色"
 
-#: src/lib/party/actions.ts
-#: src/lib/party/party.ts
+#: src/lib/party/actions.ts src/lib/party/party.ts
 msgid "Someone"
 msgstr "某人"
 
@@ -3940,8 +3829,7 @@ msgstr "此设备无法读取的内容"
 msgid "Something this device cannot read"
 msgstr "此设备无法读取的内容"
 
-#: src/components/player/options.tsx
-#: src/pages/settings/audio.tsx
+#: src/components/player/options.tsx src/pages/settings/audio.tsx
 msgid "Sound"
 msgstr "声音"
 
@@ -3960,6 +3848,10 @@ msgstr "空格键"
 #: src/pages/settings/cache.tsx
 msgid "Space to use"
 msgstr "可用空间"
+
+#: src/components/player/pause-screen.tsx
+msgid "Specials"
+msgstr ""
 
 #: src/components/player/options.tsx
 msgid "Speed"
@@ -3989,13 +3881,11 @@ msgstr "正在启动…"
 msgid "Starts without subtitles."
 msgstr "启动时不显示字幕。"
 
-#: src/components/player/options.tsx
-#: src/lib/input/actions.ts
+#: src/components/player/options.tsx src/lib/input/actions.ts
 msgid "Statistics"
 msgstr "统计"
 
-#: src/pages/history.tsx
-#: src/pages/settings/apps.tsx
+#: src/pages/history.tsx src/pages/settings/apps.tsx
 msgid "Status"
 msgstr "状态"
 
@@ -4003,8 +3893,7 @@ msgstr "状态"
 msgid "Stereo"
 msgstr "立体声"
 
-#: src/components/remote-sheet.tsx
-#: src/lib/input/actions.ts
+#: src/components/remote-sheet.tsx src/lib/input/actions.ts
 #: src/lib/input/keys.ts
 msgid "Stop"
 msgstr "停止"
@@ -4013,8 +3902,7 @@ msgstr "停止"
 msgid "Stop listening"
 msgstr "停止聆听"
 
-#: src/components/version-picker.tsx
-#: src/pages/player.tsx
+#: src/components/version-picker.tsx src/pages/player.tsx
 msgid "Stream link copied"
 msgstr "已复制串流链接"
 
@@ -4026,8 +3914,7 @@ msgstr "拉伸"
 msgid "Studios"
 msgstr "制片公司"
 
-#: src/components/player/options.tsx
-#: src/pages/settings/interface.tsx
+#: src/components/player/options.tsx src/pages/settings/interface.tsx
 msgid "Style"
 msgstr "样式"
 
@@ -4055,10 +3942,8 @@ msgstr "字幕大小：{label}"
 msgid "Subtitle types"
 msgstr "字幕类型"
 
-#: src/components/player/options.tsx
-#: src/components/remote-sheet.tsx
-#: src/pages/settings/index.tsx
-#: src/pages/settings/subtitles.tsx
+#: src/components/player/options.tsx src/components/remote-sheet.tsx
+#: src/pages/settings/index.tsx src/pages/settings/subtitles.tsx
 msgid "Subtitles"
 msgstr "字幕"
 
@@ -4134,8 +4019,7 @@ msgstr "切换"
 msgid "Switch server"
 msgstr "切换服务器"
 
-#: src/components/layout.tsx
-#: src/components/no-catalogs.tsx
+#: src/components/layout.tsx src/components/no-catalogs.tsx
 #: src/pages/settings/account.tsx
 msgid "Switch user"
 msgstr "切换用户"
@@ -4148,8 +4032,7 @@ msgstr "根据视频切换电视的刷新率，以获得更流畅的动态画面
 msgid "Sync automatically"
 msgstr "自动同步"
 
-#: src/components/player/subtitle-sync.tsx
-#: src/lib/input/actions.ts
+#: src/components/player/subtitle-sync.tsx src/lib/input/actions.ts
 msgid "Sync by ear"
 msgstr "通过听觉同步"
 
@@ -4189,6 +4072,11 @@ msgstr "系统默认"
 msgid "Tab"
 msgstr "Tab 键"
 
+#: src/pages/settings/interface.tsx
+#, fuzzy
+msgid "Tab names"
+msgstr "页面名称"
+
 #: src/pages/history.tsx
 msgid "Table"
 msgstr "表格"
@@ -4201,8 +4089,7 @@ msgstr "点击解锁"
 msgid "Tap when you hear a line and when its subtitle shows, in either order."
 msgstr "听到某句台词时点击一次，看到对应字幕时再点击一次，先后顺序不限。"
 
-#: src/components/version-settings.tsx
-#: src/pages/settings/subtitles.tsx
+#: src/components/version-settings.tsx src/pages/settings/subtitles.tsx
 msgid "Text"
 msgstr "文本"
 
@@ -4326,6 +4213,11 @@ msgstr "主持人已将你移出一起观看。"
 msgid "The interface is built on its components."
 msgstr "界面基于这些组件构建。"
 
+#: src/components/licenses.tsx
+#, fuzzy
+msgid "The licences couldn't be loaded."
+msgstr "无法读取这些字幕的台词。"
+
 #: src/lib/hosts/shell/player.ts
 msgid "the link answered HTTP {status}"
 msgstr "链接返回 HTTP {status}"
@@ -4349,6 +4241,10 @@ msgstr "当前打开页面的电影或剧集。"
 #: src/pages/settings/apps.tsx
 msgid "The older way mpv draws, for Macs where the others fail. Some Dolby Vision videos show the wrong colours."
 msgstr "mpv 的旧式渲染方式，适用于其他方式无法正常工作的 Mac。部分杜比视界视频可能会显示错误的颜色。"
+
+#: src/components/licenses.tsx
+msgid "The open-source software in this app, and the licence of each."
+msgstr ""
 
 #: src/components/remote-sheet.tsx
 msgid "The other device could not be reached"
@@ -4431,8 +4327,7 @@ msgstr "下次打开应用时，视频输出设置会生效。"
 msgid "The whole show"
 msgstr "整部剧集"
 
-#: src/pages/settings/index.tsx
-#: src/pages/settings/theme.tsx
+#: src/pages/settings/index.tsx src/pages/settings/theme.tsx
 msgid "Theme"
 msgstr "主题"
 
@@ -4569,13 +4464,11 @@ msgstr "三天"
 msgid "Timing"
 msgstr "时间设置"
 
-#: src/pages/history.tsx
-#: src/pages/settings/interface.tsx
+#: src/pages/history.tsx src/pages/settings/interface.tsx
 msgid "Title"
 msgstr "标题"
 
-#: src/pages/settings/apps.tsx
-#: src/pages/settings/cache.tsx
+#: src/pages/settings/apps.tsx src/pages/settings/cache.tsx
 msgid "Title pages"
 msgstr "内容详情页"
 
@@ -4631,10 +4524,8 @@ msgstr "按下方设置的顺序尝试选择字幕。"
 msgid "Troubleshooting"
 msgstr "故障排查"
 
-#: src/components/party/party-sheet.tsx
-#: src/components/random-pick.tsx
-#: src/components/version-picker.tsx
-#: src/pages/downloads.tsx
+#: src/components/party/party-sheet.tsx src/components/random-pick.tsx
+#: src/components/version-picker.tsx src/pages/downloads.tsx
 #: src/pages/sign-in.tsx
 msgid "Try again"
 msgstr "重试"
@@ -4819,8 +4710,7 @@ msgstr "版本 {version} 已准备好安装。"
 msgid "Version searches at once"
 msgstr "同时搜索的版本数"
 
-#: src/components/player/options.tsx
-#: src/components/version-picker.tsx
+#: src/components/player/options.tsx src/components/version-picker.tsx
 #: src/pages/settings/playback.tsx
 msgid "Versions"
 msgstr "版本"
@@ -4853,7 +4743,11 @@ msgstr "视频"
 msgid "Video output"
 msgstr "视频输出"
 
-#: src/pages/settings/about.tsx
+#: src/components/licenses.tsx
+msgid "View"
+msgstr ""
+
+#: src/components/licenses.tsx src/pages/settings/about.tsx
 msgid "Visit"
 msgstr "访问"
 
@@ -4865,8 +4759,7 @@ msgstr "语音搜索失败"
 msgid "Volume"
 msgstr "音量"
 
-#: src/components/player/gestures.ts
-#: src/components/player/keys.ts
+#: src/components/player/gestures.ts src/components/player/keys.ts
 msgid "Volume {percent}%"
 msgstr "音量 {percent}%"
 
@@ -4918,17 +4811,13 @@ msgstr "以此配置中的其他用户身份观看。设置了 PIN 码的用户�
 msgid "Watch parties"
 msgstr "一起观看"
 
-#: src/components/layout.tsx
-#: src/components/party/party-sheet.tsx
-#: src/components/player/options.tsx
-#: src/pages/item.tsx
+#: src/components/layout.tsx src/components/party/party-sheet.tsx
+#: src/components/player/options.tsx src/pages/item.tsx
 msgid "Watch party"
 msgstr "一起看"
 
-#: src/components/layout.tsx
-#: src/components/party/party-sheet.tsx
-#: src/components/player/options.tsx
-#: src/pages/item.tsx
+#: src/components/layout.tsx src/components/party/party-sheet.tsx
+#: src/components/player/options.tsx src/pages/item.tsx
 msgid "Watch together"
 msgstr "一起观看"
 
@@ -4944,8 +4833,7 @@ msgstr "已观看 ×{playCount}"
 msgid "Watched marks and resume points are removed from this server. Favourites stay. Titles a tracker still lists come back when it next syncs."
 msgstr "此服务器上的已观看标记和续播位置将被移除，收藏会保留。追踪器仍列出的内容会在下次同步时重新出现。"
 
-#: src/components/party/party-sheet.tsx
-#: src/pages/settings/index.tsx
+#: src/components/party/party-sheet.tsx src/pages/settings/index.tsx
 msgid "Watching"
 msgstr "正在观看"
 
@@ -5057,9 +4945,18 @@ msgstr "了解应用的开发来源，以及如何报告问题。"
 msgid "Where the navigation goes when the screen is wide enough for a sidebar, such as a tablet held sideways."
 msgstr "当屏幕足够宽、可以显示侧边栏时（例如横屏平板），设置导航栏的位置。"
 
+#: src/pages/settings/interface.tsx
+#, fuzzy
+msgid "Where the navigation goes when the window is wide enough for a sidebar."
+msgstr "当屏幕足够宽、可以显示侧边栏时（例如横屏平板），设置导航栏的位置。"
+
 #: src/pages/settings/index.tsx
 msgid "Where they go and how many run at once"
 msgstr "设置保存位置及同时运行的数量"
+
+#: src/pages/settings/interface.tsx
+msgid "Whether the bar at the bottom, and tabs along the top, name each page."
+msgstr ""
 
 #: src/pages/settings/interface.tsx
 msgid "Whether the rail names each page only while you're in it, or all the time."
@@ -5067,6 +4964,11 @@ msgstr "设置侧栏是否仅在当前页面显示页面名称，还是始终显
 
 #: src/pages/settings/interface.tsx
 msgid "Whether the rail names each page under its icon."
+msgstr "设置是否在侧栏图标下方显示页面名称。"
+
+#: src/pages/settings/interface.tsx
+#, fuzzy
+msgid "Whether the tabs name each page beside its icon."
 msgstr "设置是否在侧栏图标下方显示页面名称。"
 
 #: src/components/shortcut-settings.tsx

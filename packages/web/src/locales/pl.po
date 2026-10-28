@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-23 19:56+0000\n"
+"PO-Revision-Date: 2026-10-28 21:58+0000\n"
 "Last-Translator: Krzysztof <krzysiek@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Polish <https://hosted.weblate.org/projects/aiostreams/web-app/pl/>\n"
 "Language: pl\n"
@@ -125,7 +125,7 @@ msgstr "{inProgress, plural, one {# w trakcie} other {# w trakcie}}"
 msgid "{key} is taken by {taken}"
 msgstr "{key} jest zajęte przez {taken}"
 
-#: src/pages/downloads.tsx
+#: src/components/card-preview.tsx src/pages/downloads.tsx
 msgid "{left} left"
 msgstr "Pozostało {left}"
 
@@ -306,6 +306,10 @@ msgstr "Dźwięk przestrzenny 7.1"
 #: src/components/version-settings.tsx
 msgid "A badge shows on each version whose text matches its pattern: the name and description your formatter writes, the file name, and the tags read from it."
 msgstr "Na każdej wersji wyświetla się etykieta, której tekst pasuje do jej wzorca: nazwa i opis utworzone przez Twój formatter, nazwa pliku oraz odczytane z niego tagi."
+
+#: src/pages/settings/interface.tsx
+msgid "A card you rest on grows into a bigger preview with its details, while the hero rotates."
+msgstr "Karta po zatrzymaniu na niej powiększa się i wyświetla szczegóły, a główny baner zmienia się automatycznie."
 
 #: src/components/party/party-sheet.tsx
 msgid "A code is looked up on the relay picked above."
@@ -617,10 +621,11 @@ msgstr "Automatycznie"
 msgid "Automatic lists episodes on narrow screens and puts them in a row on wide ones."
 msgstr "Automatycznie układa odcinki w pionowej liście na wąskich ekranach i w rzędzie na szerokich."
 
-#: src/components/layout.tsx src/components/party/party-sheet.tsx
-#: src/components/player/controls.tsx src/components/player/next-episode.tsx
-#: src/lib/input/actions.ts src/pages/player.tsx src/pages/servers.tsx
-#: src/pages/sign-in.tsx src/pages/trailer.tsx
+#: src/components/layout.tsx src/components/licenses.tsx
+#: src/components/party/party-sheet.tsx src/components/player/controls.tsx
+#: src/components/player/next-episode.tsx src/lib/input/actions.ts
+#: src/pages/player.tsx src/pages/servers.tsx src/pages/sign-in.tsx
+#: src/pages/trailer.tsx
 msgid "Back"
 msgstr "Cofnij"
 
@@ -713,10 +718,6 @@ msgstr "Browser Search"
 msgid "Browsing"
 msgstr "Przeglądanie"
 
-#: src/pages/settings/about.tsx
-msgid "Builds the mpv library this app ships with."
-msgstr "Kompiluje bibliotekę mpv dołączoną do tej aplikacji."
-
 #: src/lib/playback/player-choice.ts
 msgid "Built-in mpv"
 msgstr "Wbudowany mpv"
@@ -758,6 +759,10 @@ msgstr "Brak połączenia z serwerem"
 #: src/components/version-settings.tsx src/lib/i18n.ts src/pages/downloads.tsx
 msgid "Cancel"
 msgstr "Anuluj"
+
+#: src/pages/settings/interface.tsx
+msgid "Cards"
+msgstr "Karty"
 
 #: src/components/people.tsx
 msgid "Cast"
@@ -1438,7 +1443,7 @@ msgstr "Wpisz ten kod w sekcji Szybkie łączenie (Quick Connect) w zalogowanej 
 msgid "Enter your password."
 msgstr "Wprowadź hasło."
 
-#: src/components/episodes.tsx
+#: src/components/episodes.tsx src/components/player/pause-screen.tsx
 msgid "Episode {number}"
 msgstr "Odcinek {number}"
 
@@ -1839,6 +1844,10 @@ msgstr "Kod lub link z zaproszeniem"
 msgid "Invite link copied"
 msgstr "Skopiowano link z zaproszeniem"
 
+#: src/components/licenses.tsx
+msgid "It came with no licence text."
+msgstr ""
+
 #: src/components/send-report.tsx
 msgid "It carries this device's details and the app's recent log. Passwords and tokens are left out."
 msgstr "Zawiera informacje o tym urządzeniu i ostatnie dzienniki aplikacji. Hasła i tokeny są pomijane."
@@ -1850,6 +1859,10 @@ msgstr "Nie dotarło do twórcy, a jedynie do tego serwera: {forwardError}"
 #: src/pages/settings/theme.tsx
 msgid "It will be undone unless you keep it."
 msgstr "Zmiana zostanie cofnięta, jeśli jej nie zachowasz."
+
+#: src/pages/settings/about.tsx
+msgid "Its Metal and AVFoundation video outputs."
+msgstr ""
 
 #: src/pages/settings/about.tsx
 msgid "Jellyfin API"
@@ -1991,6 +2004,10 @@ msgstr "Pozwala dekoderowi telewizora samodzielnie synchronizować obraz i dźwi
 #: src/pages/settings/playback.tsx
 msgid "Lets the TV's decoder keep picture and sound in step itself, which plays 4K and HDR more smoothly on some TVs. Turn it off if video stutters or stays black."
 msgstr "Pozwala dekoderowi telewizora samodzielnie synchronizować obraz i dźwięk, co zapewnia płynniejsze odtwarzanie 4K i HDR na niektórych telewizorach. Wyłącz, jeśli wideo się zacina lub ekran pozostaje czarny."
+
+#: src/components/licenses.tsx
+msgid "Licences"
+msgstr ""
 
 #: src/components/version-settings.tsx
 msgid "Link a pack someone shares, in this app's format or the one Fusion and Nuvio use. It stays up to date with its author's changes."
@@ -2423,8 +2440,9 @@ msgstr "Nic nie jest tam teraz odtwarzane."
 msgid "Nothing marked as a favourite yet."
 msgstr "Nie oznaczono jeszcze niczego jako ulubione."
 
-#: src/components/version-settings.tsx src/pages/discover.tsx
-#: src/pages/settings/audio.tsx src/pages/settings/interface.tsx
+#: src/components/licenses.tsx src/components/version-settings.tsx
+#: src/pages/discover.tsx src/pages/settings/audio.tsx
+#: src/pages/settings/interface.tsx
 msgid "Nothing matches."
 msgstr "Brak pasujących wyników."
 
@@ -3018,7 +3036,7 @@ msgstr "Naciśnij Wstecz ponownie, aby wyjść"
 msgid "Preview"
 msgstr "Podgląd"
 
-#: src/pages/settings/playback.tsx
+#: src/pages/settings/interface.tsx src/pages/settings/playback.tsx
 msgid "Previews"
 msgstr "Zapowiedzi"
 
@@ -3107,6 +3125,10 @@ msgstr "Oceń"
 #: src/pages/item.tsx
 msgid "Rate season"
 msgstr "Oceń sezon"
+
+#: src/components/scores.tsx
+msgid "Rating"
+msgstr "Ocena"
 
 #: src/components/party/party-sheet.tsx
 msgid "React with {emoji}"
@@ -3218,6 +3240,10 @@ msgstr "Usunięto z historii"
 msgid "Rename"
 msgstr "Zmień nazwę"
 
+#: src/components/playlists.tsx
+msgid "Repeat"
+msgstr ""
+
 #: src/pages/settings/apps.tsx
 msgid "Report a problem"
 msgstr "Zgłoś problem"
@@ -3321,6 +3347,10 @@ msgstr "W prawo"
 msgid "Rotates through featured titles"
 msgstr "Przełącza rotacyjnie polecane tytuły"
 
+#: src/components/scores.tsx
+msgid "Rotten Tomatoes audience"
+msgstr "Rotten Tomatoes (widzowie)"
+
 #: src/pages/settings/interface.tsx
 msgid "Row"
 msgstr "Rząd"
@@ -3415,9 +3445,9 @@ msgstr "Zobaczyłem napisy"
 msgid "SDH, with sounds described"
 msgstr "SDH, z opisem dźwięków (dla niesłyszących)"
 
-#: src/components/layout.tsx src/components/version-settings.tsx
-#: src/lib/input/actions.ts src/pages/discover.tsx src/pages/search.tsx
-#: src/pages/settings/apps.tsx
+#: src/components/layout.tsx src/components/licenses.tsx
+#: src/components/version-settings.tsx src/lib/input/actions.ts
+#: src/pages/discover.tsx src/pages/search.tsx src/pages/settings/apps.tsx
 msgid "Search"
 msgstr "Szukaj"
 
@@ -3440,6 +3470,10 @@ msgstr "Wyszukiwania"
 #: src/lib/discord.ts
 msgid "Searching"
 msgstr "Wyszukiwanie"
+
+#: src/components/player/pause-screen.tsx
+msgid "Season {season}"
+msgstr "Sezon {season}"
 
 #: src/components/item-menu.tsx
 msgid "See the download"
@@ -3620,6 +3654,10 @@ msgstr "Pokazuje wyniki wyszukiwania w jednej siatce zamiast w osobnych rzędach
 msgid "Shows subtitles in your language unless the audio already is."
 msgstr "Pokazuje napisy w Twoim języku, chyba że ścieżka dźwiękowa już w nim jest."
 
+#: src/components/playlists.tsx
+msgid "Shuffle"
+msgstr ""
+
 #: src/pages/settings/interface.tsx
 msgid "Side rail"
 msgstr "Pasek boczny"
@@ -3627,6 +3665,10 @@ msgstr "Pasek boczny"
 #: src/pages/settings/interface.tsx
 msgid "Side rail runs down the side of the screen; Top tabs sit along the top of each page."
 msgstr "Pasek boczny biegnie wzdłuż boku ekranu; Górne karty znajdują się na górze każdej strony."
+
+#: src/pages/settings/interface.tsx
+msgid "Sidebar"
+msgstr "Pasek boczny"
 
 #: src/pages/sign-in.tsx
 msgid "Sign in"
@@ -3803,6 +3845,10 @@ msgstr "Spacja"
 #: src/pages/settings/cache.tsx
 msgid "Space to use"
 msgstr "Miejsce do wykorzystania"
+
+#: src/components/player/pause-screen.tsx
+msgid "Specials"
+msgstr "Specjalne"
 
 #: src/components/player/options.tsx
 msgid "Speed"
@@ -4023,6 +4069,10 @@ msgstr "Domyślne systemowe"
 msgid "Tab"
 msgstr "Tab"
 
+#: src/pages/settings/interface.tsx
+msgid "Tab names"
+msgstr "Nazwy kart"
+
 #: src/pages/history.tsx
 msgid "Table"
 msgstr "Tabela"
@@ -4159,6 +4209,11 @@ msgstr "Gospodarz usunął Cię ze wspólnego oglądania."
 msgid "The interface is built on its components."
 msgstr "Interfejs jest zbudowany na bazie jego komponentów."
 
+#: src/components/licenses.tsx
+#, fuzzy
+msgid "The licences couldn't be loaded."
+msgstr "Nie udało się odczytać kwestii z tych napisów."
+
 #: src/lib/hosts/shell/player.ts
 msgid "the link answered HTTP {status}"
 msgstr "link odpowiedział kodem HTTP {status}"
@@ -4182,6 +4237,10 @@ msgstr "Film lub serial, którego strona jest obecnie otwarta."
 #: src/pages/settings/apps.tsx
 msgid "The older way mpv draws, for Macs where the others fail. Some Dolby Vision videos show the wrong colours."
 msgstr "Starsza metoda renderowania mpv dla komputerów Mac, na których inne zawodzą. Niektóre filmy w Dolby Vision mogą wyświetlać nieprawidłowe kolory."
+
+#: src/components/licenses.tsx
+msgid "The open-source software in this app, and the licence of each."
+msgstr ""
 
 #: src/components/remote-sheet.tsx
 msgid "The other device could not be reached"
@@ -4680,7 +4739,11 @@ msgstr "Wideo"
 msgid "Video output"
 msgstr "Wyjście wideo"
 
-#: src/pages/settings/about.tsx
+#: src/components/licenses.tsx
+msgid "View"
+msgstr ""
+
+#: src/components/licenses.tsx src/pages/settings/about.tsx
 msgid "Visit"
 msgstr "Odwiedź"
 
@@ -4878,9 +4941,17 @@ msgstr "Gdzie powstaje aplikacja i gdzie można zgłosić problem."
 msgid "Where the navigation goes when the screen is wide enough for a sidebar, such as a tablet held sideways."
 msgstr "Gdzie umieszczana jest nawigacja, gdy ekran jest wystarczająco szeroki na pasek boczny (np. na tablecie trzymanym poziomo)."
 
+#: src/pages/settings/interface.tsx
+msgid "Where the navigation goes when the window is wide enough for a sidebar."
+msgstr "Miejsce wyświetlania nawigacji, gdy okno jest wystarczająco szerokie dla paska bocznego."
+
 #: src/pages/settings/index.tsx
 msgid "Where they go and how many run at once"
 msgstr "Gdzie trafiają i ile pobiera się jednocześnie"
+
+#: src/pages/settings/interface.tsx
+msgid "Whether the bar at the bottom, and tabs along the top, name each page."
+msgstr "Określa, czy dolny pasek oraz górne karty wyświetlają nazwy poszczególnych stron."
 
 #: src/pages/settings/interface.tsx
 msgid "Whether the rail names each page only while you're in it, or all the time."
@@ -4889,6 +4960,10 @@ msgstr "Czy pasek boczny pokazuje nazwę każdej strony tylko wtedy, gdy na niej
 #: src/pages/settings/interface.tsx
 msgid "Whether the rail names each page under its icon."
 msgstr "Czy pasek boczny wyświetla nazwę każdej strony pod jej ikoną."
+
+#: src/pages/settings/interface.tsx
+msgid "Whether the tabs name each page beside its icon."
+msgstr "Określa, czy karty wyświetlają nazwę każdej strony obok jej ikony."
 
 #: src/components/shortcut-settings.tsx
 msgid "While syncing subtitles by ear."

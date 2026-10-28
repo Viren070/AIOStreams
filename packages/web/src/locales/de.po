@@ -125,7 +125,7 @@ msgstr "{inProgress, plural, one {# wird ausgeführt} other {# werden ausgeführ
 msgid "{key} is taken by {taken}"
 msgstr "{key} ist bereits für \"{taken}\" belegt"
 
-#: src/pages/downloads.tsx
+#: src/components/card-preview.tsx src/pages/downloads.tsx
 msgid "{left} left"
 msgstr "{left} verbleibend"
 
@@ -306,6 +306,10 @@ msgstr "7.1-Surround"
 #: src/components/version-settings.tsx
 msgid "A badge shows on each version whose text matches its pattern: the name and description your formatter writes, the file name, and the tags read from it."
 msgstr "Ein Abzeichen erscheint bei jeder Version, deren Text dem Muster entspricht. Geprüft werden der Name und die Beschreibung aus deinem Formatierer, der Dateiname und die daraus erkannten Tags."
+
+#: src/pages/settings/interface.tsx
+msgid "A card you rest on grows into a bigger preview with its details, while the hero rotates."
+msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "A code is looked up on the relay picked above."
@@ -617,10 +621,11 @@ msgstr "Automatisch"
 msgid "Automatic lists episodes on narrow screens and puts them in a row on wide ones."
 msgstr "\"Automatisch\" zeigt Episoden auf schmalen Bildschirmen als Liste an und ordnet sie auf breiten Displays in einer Reihe an."
 
-#: src/components/layout.tsx src/components/party/party-sheet.tsx
-#: src/components/player/controls.tsx src/components/player/next-episode.tsx
-#: src/lib/input/actions.ts src/pages/player.tsx src/pages/servers.tsx
-#: src/pages/sign-in.tsx src/pages/trailer.tsx
+#: src/components/layout.tsx src/components/licenses.tsx
+#: src/components/party/party-sheet.tsx src/components/player/controls.tsx
+#: src/components/player/next-episode.tsx src/lib/input/actions.ts
+#: src/pages/player.tsx src/pages/servers.tsx src/pages/sign-in.tsx
+#: src/pages/trailer.tsx
 msgid "Back"
 msgstr "Zurückhttps://hosted.weblate.org/js/ignore-check/84995064/"
 
@@ -713,10 +718,6 @@ msgstr "Browser-Suche"
 msgid "Browsing"
 msgstr "Stöbern"
 
-#: src/pages/settings/about.tsx
-msgid "Builds the mpv library this app ships with."
-msgstr "Baut die mitgelieferte mpv-Bibliothek der App."
-
 #: src/lib/playback/player-choice.ts
 msgid "Built-in mpv"
 msgstr "Integriertes mpv"
@@ -758,6 +759,10 @@ msgstr "Server nicht erreichbar"
 #: src/components/version-settings.tsx src/lib/i18n.ts src/pages/downloads.tsx
 msgid "Cancel"
 msgstr "Abbrechen"
+
+#: src/pages/settings/interface.tsx
+msgid "Cards"
+msgstr ""
 
 #: src/components/people.tsx
 msgid "Cast"
@@ -1438,7 +1443,7 @@ msgstr "Gib diesen Code unter \"Quick Connect\" in einer bereits angemeldeten Ap
 msgid "Enter your password."
 msgstr "Gib dein Passwort ein."
 
-#: src/components/episodes.tsx
+#: src/components/episodes.tsx src/components/player/pause-screen.tsx
 msgid "Episode {number}"
 msgstr "Folge {number}"
 
@@ -1839,6 +1844,10 @@ msgstr "Einladungscode oder Link"
 msgid "Invite link copied"
 msgstr "Einladungslink kopiert"
 
+#: src/components/licenses.tsx
+msgid "It came with no licence text."
+msgstr ""
+
 #: src/components/send-report.tsx
 msgid "It carries this device's details and the app's recent log. Passwords and tokens are left out."
 msgstr "Enthält Angaben zu diesem Gerät und das aktuelle App-Protokoll. Passwörter und Tokens werden entfernt."
@@ -1850,6 +1859,10 @@ msgstr "Der Bericht hat nur diesen Server erreicht, nicht den Entwickler: {forwa
 #: src/pages/settings/theme.tsx
 msgid "It will be undone unless you keep it."
 msgstr "Wird automatisch zurückgesetzt, sofern du die Änderung nicht beibehältst."
+
+#: src/pages/settings/about.tsx
+msgid "Its Metal and AVFoundation video outputs."
+msgstr ""
 
 #: src/pages/settings/about.tsx
 msgid "Jellyfin API"
@@ -1991,6 +2004,10 @@ msgstr "Lässt den TV-Decoder Bild und Ton selbst synchron halten. Dadurch laufe
 #: src/pages/settings/playback.tsx
 msgid "Lets the TV's decoder keep picture and sound in step itself, which plays 4K and HDR more smoothly on some TVs. Turn it off if video stutters or stays black."
 msgstr "Lässt den TV-Decoder Bild und Ton selbst synchron halten. Dadurch laufen 4K und HDR auf manchen Fernsehern flüssiger. Deaktiviere dies, wenn das Bild ruckelt oder schwarz bleibt."
+
+#: src/components/licenses.tsx
+msgid "Licences"
+msgstr ""
 
 #: src/components/version-settings.tsx
 msgid "Link a pack someone shares, in this app's format or the one Fusion and Nuvio use. It stays up to date with its author's changes."
@@ -2423,8 +2440,9 @@ msgstr "Dort wird nichts abgespielt."
 msgid "Nothing marked as a favourite yet."
 msgstr "Noch keine Favoriten hinzugefügt."
 
-#: src/components/version-settings.tsx src/pages/discover.tsx
-#: src/pages/settings/audio.tsx src/pages/settings/interface.tsx
+#: src/components/licenses.tsx src/components/version-settings.tsx
+#: src/pages/discover.tsx src/pages/settings/audio.tsx
+#: src/pages/settings/interface.tsx
 msgid "Nothing matches."
 msgstr "Keine passenden Ergebnisse."
 
@@ -3018,7 +3036,7 @@ msgstr "Erneut \"Zurück\" drücken zum Beenden"
 msgid "Preview"
 msgstr "Vorschau"
 
-#: src/pages/settings/playback.tsx
+#: src/pages/settings/interface.tsx src/pages/settings/playback.tsx
 msgid "Previews"
 msgstr "Vorschauen"
 
@@ -3107,6 +3125,11 @@ msgstr "Bewerten"
 #: src/pages/item.tsx
 msgid "Rate season"
 msgstr "Staffel bewerten"
+
+#: src/components/scores.tsx
+#, fuzzy
+msgid "Rating"
+msgstr "Wartet"
 
 #: src/components/party/party-sheet.tsx
 msgid "React with {emoji}"
@@ -3218,6 +3241,10 @@ msgstr "Aus Verlauf entfernt"
 msgid "Rename"
 msgstr "Umbenennen"
 
+#: src/components/playlists.tsx
+msgid "Repeat"
+msgstr ""
+
 #: src/pages/settings/apps.tsx
 msgid "Report a problem"
 msgstr "Problem melden"
@@ -3321,6 +3348,10 @@ msgstr "Rechts"
 msgid "Rotates through featured titles"
 msgstr "Wechselt zwischen hervorgehobenen Titeln"
 
+#: src/components/scores.tsx
+msgid "Rotten Tomatoes audience"
+msgstr ""
+
 #: src/pages/settings/interface.tsx
 msgid "Row"
 msgstr "Reihe"
@@ -3415,9 +3446,9 @@ msgstr "Untertitelzeile gesehen"
 msgid "SDH, with sounds described"
 msgstr "SDH, mit Beschreibung von Geräuschen"
 
-#: src/components/layout.tsx src/components/version-settings.tsx
-#: src/lib/input/actions.ts src/pages/discover.tsx src/pages/search.tsx
-#: src/pages/settings/apps.tsx
+#: src/components/layout.tsx src/components/licenses.tsx
+#: src/components/version-settings.tsx src/lib/input/actions.ts
+#: src/pages/discover.tsx src/pages/search.tsx src/pages/settings/apps.tsx
 msgid "Search"
 msgstr "Suche"
 
@@ -3440,6 +3471,11 @@ msgstr "Suchergebnisse"
 #: src/lib/discord.ts
 msgid "Searching"
 msgstr "Suche läuft"
+
+#: src/components/player/pause-screen.tsx
+#, fuzzy
+msgid "Season {season}"
+msgstr "Staffel bewerten"
 
 #: src/components/item-menu.tsx
 msgid "See the download"
@@ -3620,6 +3656,10 @@ msgstr "Zeigt Suchergebnisse in einem gemeinsamen Raster statt in getrennten Rei
 msgid "Shows subtitles in your language unless the audio already is."
 msgstr "Zeigt Untertitel in deiner Sprache an, sofern der Ton nicht bereits in dieser Sprache ist."
 
+#: src/components/playlists.tsx
+msgid "Shuffle"
+msgstr ""
+
 #: src/pages/settings/interface.tsx
 msgid "Side rail"
 msgstr "Seitliche Navigationsleiste"
@@ -3627,6 +3667,11 @@ msgstr "Seitliche Navigationsleiste"
 #: src/pages/settings/interface.tsx
 msgid "Side rail runs down the side of the screen; Top tabs sit along the top of each page."
 msgstr "Die seitliche Navigationsleiste verläuft am Bildschirmrand. Obere Registerkarten befinden sich am oberen Rand jeder Seite."
+
+#: src/pages/settings/interface.tsx
+#, fuzzy
+msgid "Sidebar"
+msgstr "Seitliche Navigationsleiste"
 
 #: src/pages/sign-in.tsx
 msgid "Sign in"
@@ -3803,6 +3848,10 @@ msgstr "Leertaste"
 #: src/pages/settings/cache.tsx
 msgid "Space to use"
 msgstr "Speicherplatz"
+
+#: src/components/player/pause-screen.tsx
+msgid "Specials"
+msgstr ""
 
 #: src/components/player/options.tsx
 msgid "Speed"
@@ -4023,6 +4072,11 @@ msgstr "Systemstandard"
 msgid "Tab"
 msgstr "Tab"
 
+#: src/pages/settings/interface.tsx
+#, fuzzy
+msgid "Tab names"
+msgstr "Seitennamen"
+
 #: src/pages/history.tsx
 msgid "Table"
 msgstr "Tabelle"
@@ -4159,6 +4213,11 @@ msgstr "Der Gastgeber hat dich aus der Watch-Party entfernt."
 msgid "The interface is built on its components."
 msgstr "Die Oberfläche basiert auf diesen Komponenten."
 
+#: src/components/licenses.tsx
+#, fuzzy
+msgid "The licences couldn't be loaded."
+msgstr "Die Zeilen dieser Untertitel konnten nicht gelesen werden."
+
 #: src/lib/hosts/shell/player.ts
 msgid "the link answered HTTP {status}"
 msgstr "der Link hat mit HTTP {status} geantwortet"
@@ -4182,6 +4241,10 @@ msgstr "Der Film oder die Serie, deren Seite geöffnet ist."
 #: src/pages/settings/apps.tsx
 msgid "The older way mpv draws, for Macs where the others fail. Some Dolby Vision videos show the wrong colours."
 msgstr "Die ältere Videoausgabe von mpv für Macs, auf denen die anderen Verfahren nicht funktionieren. Manche Dolby-Vision-Videos werden mit falschen Farben dargestellt."
+
+#: src/components/licenses.tsx
+msgid "The open-source software in this app, and the licence of each."
+msgstr ""
 
 #: src/components/remote-sheet.tsx
 msgid "The other device could not be reached"
@@ -4680,7 +4743,11 @@ msgstr "Video"
 msgid "Video output"
 msgstr "Videoausgabe"
 
-#: src/pages/settings/about.tsx
+#: src/components/licenses.tsx
+msgid "View"
+msgstr ""
+
+#: src/components/licenses.tsx src/pages/settings/about.tsx
 msgid "Visit"
 msgstr "Öffnen"
 
@@ -4878,9 +4945,18 @@ msgstr "Hier wird die App entwickelt und du kannst Probleme melden."
 msgid "Where the navigation goes when the screen is wide enough for a sidebar, such as a tablet held sideways."
 msgstr "Position der Navigation, wenn der Bildschirm breit genug für eine Seitenleiste ist, etwa auf einem Tablet im Querformat."
 
+#: src/pages/settings/interface.tsx
+#, fuzzy
+msgid "Where the navigation goes when the window is wide enough for a sidebar."
+msgstr "Position der Navigation, wenn der Bildschirm breit genug für eine Seitenleiste ist, etwa auf einem Tablet im Querformat."
+
 #: src/pages/settings/index.tsx
 msgid "Where they go and how many run at once"
 msgstr "Speicherort und Anzahl gleichzeitiger Downloads"
+
+#: src/pages/settings/interface.tsx
+msgid "Whether the bar at the bottom, and tabs along the top, name each page."
+msgstr ""
 
 #: src/pages/settings/interface.tsx
 msgid "Whether the rail names each page only while you're in it, or all the time."
@@ -4888,6 +4964,11 @@ msgstr "Seitennamen in der Navigationsleiste nur auf der aktuellen Seite oder im
 
 #: src/pages/settings/interface.tsx
 msgid "Whether the rail names each page under its icon."
+msgstr "Seitennamen unter den Symbolen der Navigationsleiste anzeigen."
+
+#: src/pages/settings/interface.tsx
+#, fuzzy
+msgid "Whether the tabs name each page beside its icon."
 msgstr "Seitennamen unter den Symbolen der Navigationsleiste anzeigen."
 
 #: src/components/shortcut-settings.tsx
