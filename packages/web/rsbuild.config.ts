@@ -3,6 +3,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { formatter } from '@lingui/format-po';
 import { defineConfig, loadEnv, type RsbuildConfig } from '@rsbuild/core';
 import { pluginReact } from '@rsbuild/plugin-react';
+import { LICENSES_FILE, pluginLicenses } from './licenses-plugin';
 
 const { parsed } = loadEnv({ prefixes: ['PUBLIC_'] });
 
@@ -96,6 +97,7 @@ export default defineConfig(async ({ envMode }) => {
     __STANDALONE__: JSON.stringify(standalone),
     __APP_COMMIT__: JSON.stringify(buildCommit()),
     __UNFINISHED_LOCALES__: JSON.stringify(await unfinishedLocales()),
+    __LICENSES_FILE__: JSON.stringify(LICENSES_FILE),
   };
   const source = {
     entry: { index: './src/main.tsx' },
@@ -112,7 +114,7 @@ export default defineConfig(async ({ envMode }) => {
   };
   if (standalone) {
     return {
-      plugins: [pluginReact()],
+      plugins: [pluginReact(), pluginLicenses()],
       source,
       tools,
       html: {
@@ -129,7 +131,7 @@ export default defineConfig(async ({ envMode }) => {
     };
   }
   return {
-    plugins: [pluginReact()],
+    plugins: [pluginReact(), pluginLicenses()],
     source,
     tools,
     html: {

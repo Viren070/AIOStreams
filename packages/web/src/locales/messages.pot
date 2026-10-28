@@ -635,6 +635,7 @@ msgid "Automatic lists episodes on narrow screens and puts them in a row on wide
 msgstr ""
 
 #: src/components/layout.tsx
+#: src/components/licenses.tsx
 #: src/components/party/party-sheet.tsx
 #: src/components/player/controls.tsx
 #: src/components/player/next-episode.tsx
@@ -1911,6 +1912,10 @@ msgstr ""
 msgid "Invite link copied"
 msgstr ""
 
+#: src/components/licenses.tsx
+msgid "It came with no licence text."
+msgstr ""
+
 #: src/components/send-report.tsx
 msgid "It carries this device's details and the app's recent log. Passwords and tokens are left out."
 msgstr ""
@@ -2070,6 +2075,10 @@ msgstr ""
 
 #: src/pages/settings/playback.tsx
 msgid "Lets the TV's decoder keep picture and sound in step itself, which plays 4K and HDR more smoothly on some TVs. Turn it off if video stutters or stays black."
+msgstr ""
+
+#: src/components/licenses.tsx
+msgid "Licences"
 msgstr ""
 
 #: src/components/version-settings.tsx
@@ -2528,6 +2537,7 @@ msgstr ""
 msgid "Nothing marked as a favourite yet."
 msgstr ""
 
+#: src/components/licenses.tsx
 #: src/components/version-settings.tsx
 #: src/pages/discover.tsx
 #: src/pages/settings/audio.tsx
@@ -3573,6 +3583,7 @@ msgid "SDH, with sounds described"
 msgstr ""
 
 #: src/components/layout.tsx
+#: src/components/licenses.tsx
 #: src/components/version-settings.tsx
 #: src/lib/input/actions.ts
 #: src/pages/discover.tsx
@@ -4364,6 +4375,10 @@ msgstr ""
 msgid "The interface is built on its components."
 msgstr ""
 
+#: src/components/licenses.tsx
+msgid "The licences couldn't be loaded."
+msgstr ""
+
 #: src/lib/hosts/shell/player.ts
 msgid "the link answered HTTP {status}"
 msgstr ""
@@ -4386,6 +4401,10 @@ msgstr ""
 
 #: src/pages/settings/apps.tsx
 msgid "The older way mpv draws, for Macs where the others fail. Some Dolby Vision videos show the wrong colours."
+msgstr ""
+
+#: src/components/licenses.tsx
+msgid "The open-source software in this app, and the licence of each."
 msgstr ""
 
 #: src/components/remote-sheet.tsx
@@ -4891,6 +4910,11 @@ msgstr ""
 msgid "Video output"
 msgstr ""
 
+#: src/components/licenses.tsx
+msgid "View"
+msgstr ""
+
+#: src/components/licenses.tsx
 #: src/pages/settings/about.tsx
 msgid "Visit"
 msgstr ""

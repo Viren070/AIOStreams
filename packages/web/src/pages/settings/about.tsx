@@ -7,6 +7,7 @@ import { currentHost } from '../../lib/hosts';
 import { useShellInfo, type ShellInfo } from '../../lib/hosts/shell';
 import { serverAddress } from '../../lib/servers';
 import { useServerInfo } from '../../lib/server-info';
+import { LicensesSetting } from '../../components/licenses';
 import { SettingsCard, SettingsRow } from '../../components/settings-card';
 import { DOCS_URL } from './common';
 
@@ -122,6 +123,7 @@ export function AboutSection() {
             </Button>
           </SettingsRow>
         ))}
+        <LicensesSetting />
       </SettingsCard>
     </>
   );

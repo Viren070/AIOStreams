@@ -1,6 +1,7 @@
 import { t } from '@lingui/core/macro';
 import React from 'react';
 import type { HostEvent } from '../../downloads/types';
+import type { LicenseList } from '../../licenses';
 import type { TimeRange } from '../../playback/playhead';
 import type { Span } from '../../subtitles/align';
 
@@ -119,6 +120,8 @@ export type ShellMessage =
       chosen: VideoOutput;
     }
   | { type: 'diagnostics'; text: string }
+  /** What the app ships besides the page, in the shape of the page's own list. */
+  | ({ type: 'licenses' } & LicenseList)
   /** Empty when the last run ended normally or was already shown. */
   | {
       type: 'crash-report';

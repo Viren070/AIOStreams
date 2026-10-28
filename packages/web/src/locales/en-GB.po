@@ -636,6 +636,7 @@ msgid "Automatic lists episodes on narrow screens and puts them in a row on wide
 msgstr "Automatic lists episodes on narrow screens and puts them in a row on wide ones."
 
 #: src/components/layout.tsx
+#: src/components/licenses.tsx
 #: src/components/party/party-sheet.tsx
 #: src/components/player/controls.tsx
 #: src/components/player/next-episode.tsx
@@ -1912,6 +1913,10 @@ msgstr "Invite code or link"
 msgid "Invite link copied"
 msgstr "Invite link copied"
 
+#: src/components/licenses.tsx
+msgid "It came with no licence text."
+msgstr "It came with no licence text."
+
 #: src/components/send-report.tsx
 msgid "It carries this device's details and the app's recent log. Passwords and tokens are left out."
 msgstr "It carries this device's details and the app's recent log. Passwords and tokens are left out."
@@ -2072,6 +2077,10 @@ msgstr "Lets the TV's decoder keep picture and sound in step itself, which plays
 #: src/pages/settings/playback.tsx
 msgid "Lets the TV's decoder keep picture and sound in step itself, which plays 4K and HDR more smoothly on some TVs. Turn it off if video stutters or stays black."
 msgstr "Lets the TV's decoder keep picture and sound in step itself, which plays 4K and HDR more smoothly on some TVs. Turn it off if video stutters or stays black."
+
+#: src/components/licenses.tsx
+msgid "Licences"
+msgstr "Licences"
 
 #: src/components/version-settings.tsx
 msgid "Link a pack someone shares, in this app's format or the one Fusion and Nuvio use. It stays up to date with its author's changes."
@@ -2529,6 +2538,7 @@ msgstr "Nothing is playing there."
 msgid "Nothing marked as a favourite yet."
 msgstr "Nothing marked as a favourite yet."
 
+#: src/components/licenses.tsx
 #: src/components/version-settings.tsx
 #: src/pages/discover.tsx
 #: src/pages/settings/audio.tsx
@@ -3574,6 +3584,7 @@ msgid "SDH, with sounds described"
 msgstr "SDH, with sounds described"
 
 #: src/components/layout.tsx
+#: src/components/licenses.tsx
 #: src/components/version-settings.tsx
 #: src/lib/input/actions.ts
 #: src/pages/discover.tsx
@@ -4365,6 +4376,10 @@ msgstr "The host removed you from the party."
 msgid "The interface is built on its components."
 msgstr "The interface is built on its components."
 
+#: src/components/licenses.tsx
+msgid "The licences couldn't be loaded."
+msgstr "The licences couldn't be loaded."
+
 #: src/lib/hosts/shell/player.ts
 msgid "the link answered HTTP {status}"
 msgstr "the link answered HTTP {status}"
@@ -4388,6 +4403,10 @@ msgstr "The movie or show whose page is open."
 #: src/pages/settings/apps.tsx
 msgid "The older way mpv draws, for Macs where the others fail. Some Dolby Vision videos show the wrong colours."
 msgstr "The older way mpv draws, for Macs where the others fail. Some Dolby Vision videos show the wrong colours."
+
+#: src/components/licenses.tsx
+msgid "The open-source software in this app, and the licence of each."
+msgstr "The open-source software in this app, and the licence of each."
 
 #: src/components/remote-sheet.tsx
 msgid "The other device could not be reached"
@@ -4892,6 +4911,11 @@ msgstr "Video"
 msgid "Video output"
 msgstr "Video output"
 
+#: src/components/licenses.tsx
+msgid "View"
+msgstr "View"
+
+#: src/components/licenses.tsx
 #: src/pages/settings/about.tsx
 msgid "Visit"
 msgstr "Visit"

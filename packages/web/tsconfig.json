@@ -11,5 +11,5 @@
     "declaration": false,
     "noEmit": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "rsbuild.config.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "rsbuild.config.ts", "licenses-plugin.ts"]
 }

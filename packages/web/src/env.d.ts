@@ -6,6 +6,11 @@ declare const __STANDALONE__: boolean;
 /** The commit this build comes from, with its date. */
 declare const __APP_COMMIT__: string;
 
+/** The list of the npm packages in the bundle and their licences, under the public path. */
+declare const __LICENSES_FILE__: string;
+
+declare let __webpack_public_path__: string;
+
 /** Languages with a catalog too little translated to offer. */
 declare const __UNFINISHED_LOCALES__: string[];
 
