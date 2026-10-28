@@ -22,7 +22,7 @@
 #include <android/native_window_jni.h>
 #include "ass/ass.h"
 
-// libass as libmpv carries it: the app ships it for mpv anyway, built optimised.
+// The libass linked into libmpv.so, which the app ships for mpv anyway.
 #define LIBASS(X) \
     X(library_init) X(library_done) X(set_message_cb) X(set_extract_fonts) X(add_font) X(clear_fonts) \
     X(renderer_init) X(renderer_done) X(set_fonts) X(set_frame_size) X(set_storage_size) X(set_margins) \
