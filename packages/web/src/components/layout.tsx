@@ -823,8 +823,8 @@ function MobileNav({
   const inMenu = [...places, ...menuItems].some((item) => item.isCurrent);
   // The same height either way, as pages keep the bar's room free.
   const tab = cn(
-    'flex-1 gap-0.5 rounded-full px-1 text-[0.65rem]',
-    named ? 'py-1.5' : 'py-3.5'
+    'gap-0.5 rounded-full px-1 text-[0.65rem]',
+    named ? 'flex-1 py-1.5' : 'w-14 py-3.5'
   );
   return (
     <nav
@@ -834,7 +834,12 @@ function MobileNav({
         !wide && 'lg:hidden'
       )}
     >
-      <BarSurface className="pointer-events-auto flex w-full max-w-md items-center gap-1 rounded-full p-1.5">
+      <BarSurface
+        className={cn(
+          'pointer-events-auto flex items-center gap-1 rounded-full p-1.5',
+          named && 'w-full max-w-md'
+        )}
+      >
         {items.map((item) => {
           const Icon = item.iconType;
           return (
