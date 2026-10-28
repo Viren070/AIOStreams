@@ -75,22 +75,19 @@ the executable: the page in a `web` folder, and libmpv beside it.
 Needs Rust (MSVC toolchain), the WebView2 runtime (part of Windows 10 and 11) and 7-Zip on `PATH`.
 
 ```powershell
-./scripts/fetch-libs.ps1   # libmpv-2.dll, vulkan/ and FFmpeg into vendor/x86_64 (-Arch aarch64 for ARM)
+./scripts/fetch-libs.ps1   # libmpv-2.dll, FFmpeg and vulkan/ into vendor/x86_64 (-Arch aarch64 for ARM)
 cargo run
 ```
 
-`libs.pin` names the libmpv build the app ships and each archive's checksum, and the script checks
-them. shinchiro keeps about four months of builds, so bump the pin when its tag disappears.
+`libs.pin` names the [AIOStreams/libs](https://github.com/AIOStreams/libs) release the app
+takes libmpv from and each archive's checksum, and the script checks them. The release's zip holds
+`libmpv-2.dll`, FFmpeg's DLLs, which the seek bar's thumbnails decode with too, and each library's
+licence in `licenses`.
 
 libmpv links the Vulkan loader, `vulkan-1.dll`, which GPU drivers install, so older machines may not
 have one. The pin also names a [LunarG Vulkan Runtime](https://vulkan.lunarg.com/sdk/home) release,
 whose `vulkan-1.dll` ships in a `vulkan` folder beside libmpv. The app loads it only when Windows has
 none, so a driver's own loader always wins.
-
-The seek bar's thumbnails decode keyframes with FFmpeg, which this libmpv keeps to itself. The pin
-names an [aiostreams-libs](https://github.com/Viren070/aiostreams-libs) release too, whose
-decoder-only `avcodec` and `avutil` DLLs ship beside libmpv. Without them the app plays as before,
-with no thumbnails.
 
 ### Linux
 
@@ -113,24 +110,19 @@ on a Windows drive. Install the bundle it prints with `flatpak install --user`.
 
 ### macOS
 
-Needs Rust and Xcode 26 or later.
+Needs Rust and the Xcode command line tools.
 
 ```sh
 ./scripts/fetch-libs-macos.sh   # into vendor/macos-<arch>
 cargo run
 ```
 
-The app ships two libmpv builds. The compatibility output and the seek bar's thumbnails use the
-one IINA builds and publishes for its releases: mpv with FFmpeg and its libraries, built for macOS
-11 and ready to sit in an app bundle. `libs-macos.pin` names the IINA release and a checksum of
-each architecture's libraries, and the script checks it. A debug build also finds Homebrew's or
-MacPorts' libmpv.
-
-The other outputs need mpv's MoltenVK and AVFoundation outputs, which upstream mpv lacks. The
-script links them into `libmpv-mpvkit.dylib` from the static libraries of
-[edde746's MPVKit](https://github.com/edde746/MPVKit), whose Swift needs Xcode 26;
-`mpvkit-macos.pin` names each archive and its checksum. `scripts/make-app-macos.sh` assembles
-`AIOStreams.app` from a release build.
+`libs-macos.pin` names the [AIOStreams/libs](https://github.com/AIOStreams/libs) release the app
+takes libmpv from and each architecture's checksum, and the script checks it. Its zip holds
+`libmpv.2.dylib`, built for macOS 11 with the MoltenVK and AVFoundation outputs upstream mpv lacks,
+FFmpeg's dylibs, which the seek bar's thumbnails decode with too, MoltenVK and each library's
+licence. A debug build also finds Homebrew's or MacPorts' libmpv. `scripts/make-app-macos.sh`
+assembles `AIOStreams.app` from a release build.
 `scripts/check-macos.sh` lints the macOS code for both architectures from Linux, without a Mac.
 
 ### Flags

@@ -70,7 +70,7 @@ pub fn running() -> Output {
     get(&RUNNING)
 }
 
-/// Below macOS 14, or without the MPVKit libmpv, only the render API.
+/// Below macOS 14, only the render API.
 fn choices() -> &'static [Output] {
     static CHOICES: OnceLock<&'static [Output]> = OnceLock::new();
     CHOICES.get_or_init(|| {
@@ -79,9 +79,7 @@ fn choices() -> &'static [Output] {
             minorVersion: 0,
             patchVersion: 0,
         };
-        if NSProcessInfo::processInfo().isOperatingSystemAtLeastVersion(version)
-            && mpvkit_library().is_some()
-        {
+        if NSProcessInfo::processInfo().isOperatingSystemAtLeastVersion(version) {
             &Output::ALL
         } else {
             &[Output::Compatibility]
@@ -129,28 +127,6 @@ pub fn choose(id: &str) {
     {
         log::warn!("saving the video output: {e}");
     }
-}
-
-/// The libmpv the Metal and AVFoundation outputs draw with.
-pub fn mpvkit_library() -> Option<PathBuf> {
-    let exe = std::env::current_exe().ok()?;
-    let dir = exe.parent()?;
-    let mut candidates = vec![
-        dir.join("../Frameworks/libmpv-mpvkit.dylib"),
-        dir.join("libmpv-mpvkit.dylib"),
-    ];
-    if cfg!(debug_assertions) {
-        let arch = if cfg!(target_arch = "aarch64") {
-            "arm64"
-        } else {
-            "x86_64"
-        };
-        candidates.push(PathBuf::from(format!(
-            "{}/../vendor/macos-{arch}/libmpv-mpvkit.dylib",
-            env!("CARGO_MANIFEST_DIR")
-        )));
-    }
-    candidates.into_iter().find(|p| p.exists())
 }
 
 /// Opens the app again once this copy has quit, as one copy runs per data folder.

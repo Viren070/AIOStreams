@@ -849,9 +849,6 @@ pub fn libmpv_candidates() -> Vec<PathBuf> {
     if let Ok(p) = std::env::var("AIOSTREAMS_LIBMPV") {
         paths.push(PathBuf::from(p));
     }
-    if video::running() != Output::Compatibility {
-        paths.extend(video::mpvkit_library());
-    }
     if let Some(dir) = std::env::current_exe()
         .ok()
         .and_then(|e| e.parent().map(PathBuf::from))

@@ -69,10 +69,23 @@ struct Api {
     lib: Library,
 }
 
+// SAFETY (both loaders): loading libmpv runs no initialisers that depend on us.
+/// FFmpeg's DLLs beside libmpv satisfy its imports.
+#[cfg(windows)]
+fn open(path: &Path) -> Result<Library, libloading::Error> {
+    use libloading::os::windows;
+    unsafe { windows::Library::load_with_flags(path, windows::LOAD_WITH_ALTERED_SEARCH_PATH) }
+        .map(Into::into)
+}
+
+#[cfg(not(windows))]
+fn open(path: &Path) -> Result<Library, libloading::Error> {
+    unsafe { Library::new(path) }
+}
+
 impl Api {
     fn load(path: &Path) -> Result<Self, String> {
-        // SAFETY: loading libmpv runs no initialisers that depend on us.
-        let lib = unsafe { Library::new(path) }.map_err(|e| {
+        let lib = open(path).map_err(|e| {
             // libloading keeps the loader's own reason in the source.
             let reason = std::error::Error::source(&e)
                 .map(|s| format!(": {s}"))

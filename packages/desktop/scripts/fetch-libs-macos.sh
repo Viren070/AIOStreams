@@ -7,29 +7,18 @@ set -euo pipefail
 arch=${1:-$(uname -m)}
 desktop=$(cd "$(dirname "$0")/.." && pwd)
 pin() { sed -n "s/^$1=//p" "$desktop/libs-macos.pin"; }
-version=$(pin version)
-expected=$(pin "$arch")
+libs=$(pin libs)
+expected=$(pin "libs_$arch")
 [ -n "$expected" ] || { echo "libs-macos.pin has no $arch" >&2 && exit 1; }
 
-base="https://iina.io/dylibs/$version/$arch"
+zip=$(mktemp)
+trap 'rm -f "$zip"' EXIT
+curl -fsSL --retry 3 -o "$zip" \
+  "https://github.com/AIOStreams/libs/releases/download/$libs/libs-macos-$arch.zip"
+echo "$expected  $zip" | shasum -a 256 -c --quiet - ||
+  { echo "libs-macos-$arch.zip from $libs isn't the pinned file" >&2 && exit 1; }
 vendor="$desktop/vendor/macos-$arch"
 rm -rf "$vendor"
 mkdir -p "$vendor"
-files=$(curl -fsS --retry 3 "$base/filelist.txt" | tr -d '\r' | grep . | LC_ALL=C sort)
-for file in $files; do
-  curl -fsS --retry 3 -o "$vendor/$file" "$base/$file"
-done
-
-actual=$(
-  cd "$vendor"
-  for file in $files; do
-    printf '%s  %s\n' "$(shasum -a 256 "$file" | cut -d' ' -f1)" "$file"
-  done | shasum -a 256 | cut -d' ' -f1
-)
-if [ "$actual" != "$expected" ]; then
-  echo "IINA's $version libraries for $arch hash to $actual, not the pinned $expected" >&2
-  exit 1
-fi
-echo "$(echo "$files" | wc -l | tr -d ' ') libraries in $vendor"
-
-"$desktop/scripts/link-mpvkit-macos.sh" "$arch"
+ditto -x -k "$zip" "$vendor"
+echo "libmpv ($libs) for $arch is in $vendor"

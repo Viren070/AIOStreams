@@ -189,8 +189,8 @@ jobs:
         run: |
           $stage = New-Item -ItemType Directory -Force stage
           Copy-Item packages/desktop/target/release/aiostreams-desktop.exe $stage
-          Copy-Item packages/desktop/vendor/${{ matrix.mpv }}/libmpv-2.dll $stage
-          Copy-Item packages/desktop/vendor/${{ matrix.mpv }}/av*.dll, packages/desktop/vendor/${{ matrix.mpv }}/*-COPYING* $stage
+          Copy-Item packages/desktop/vendor/${{ matrix.mpv }}/*.dll $stage
+          Copy-Item packages/desktop/vendor/${{ matrix.mpv }}/licenses "$stage/licenses" -Recurse
           Copy-Item packages/desktop/vendor/${{ matrix.mpv }}/vulkan "$stage/vulkan" -Recurse
           Copy-Item packages/desktop/THIRD-PARTY.md $stage
           Copy-Item packages/web/dist-standalone "$stage/web" -Recurse
@@ -266,13 +266,6 @@ jobs:
         with:
           name: licences
           path: packages/desktop/licences
-
-      # MPVKit's libmpv carries Swift built by Xcode 26, whose runtime libraries the link needs.
-      - name: Use Xcode 26
-        run: |
-          xcode=$(ls -d /Applications/Xcode_26*.app | grep -iv beta | sort -V | tail -1)
-          sudo xcode-select -s "$xcode"
-          xcodebuild -version
 
       - uses: dtolnay/rust-toolchain@stable
 
