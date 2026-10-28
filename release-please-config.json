@@ -15,36 +15,11 @@
         ".release-please-manifest.json",
         "compose.yaml",
         "release-please-config.json",
-        "packages/seanime-extensions",
-        "packages/seanime-extension",
         "packages/desktop",
         "packages/smart-tv",
         "packages/android"
       ],
       "pull-request-title-pattern": "chore: release ${version}"
-    },
-    "packages/seanime-extensions": {
-      "release-type": "node",
-      "include-component-in-tag": true,
-      "include-v-in-tag": true,
-      "pull-request-title-pattern": "chore(seanime-extensions): release ${version}",
-      "extra-files": [
-        {
-          "type": "json",
-          "path": "src/extensions/aiostreams-plugin/manifest.json",
-          "jsonpath": "$.version"
-        },
-        {
-          "type": "json",
-          "path": "src/extensions/aiostreams-torrent-provider/manifest.json",
-          "jsonpath": "$.version"
-        },
-        {
-          "type": "json",
-          "path": "src/extensions/stremio-custom-source/manifest.json",
-          "jsonpath": "$.version"
-        }
-      ]
     },
     "packages/desktop": {
       "release-type": "simple",

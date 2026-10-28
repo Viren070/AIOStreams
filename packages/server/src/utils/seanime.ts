@@ -1,13 +1,14 @@
 import fs from 'fs';
+import { createRequire } from 'module';
 import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const seanimeExtDistRoot = path.join(
-  __dirname,
-  '../../../seanime-extensions/dist'
+  path.dirname(
+    createRequire(import.meta.url).resolve(
+      '@aiostreams/seanime-extensions/package.json'
+    )
+  ),
+  'dist'
 );
 
 interface SeanimeExtensionManifest {

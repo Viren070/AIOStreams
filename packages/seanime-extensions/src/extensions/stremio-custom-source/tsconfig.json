@@ -1,5 +1,0 @@
-{
-  "extends": "../../../tsconfig.base.json",
-  "files": ["../../types/bundles/custom-source.d.ts"],
-  "include": ["./main.ts"]
-}

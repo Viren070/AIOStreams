@@ -13,7 +13,7 @@ Requires Node `>=24` and pnpm `>=11` (enforced in root `package.json` engines).
 All commands run from the repo root. The repo is a pnpm workspace with packages under `packages/*`.
 
 - `pnpm install` — install everything (pnpm workspaces).
-- `pnpm build` — build `core` → `server` → `frontend` → `web` → `seanime-extensions` in that order (the order matters; later packages depend on `@aiostreams/core`).
+- `pnpm build` — build `core` → `server` → `frontend` → `web` in that order (the order matters; later packages depend on `@aiostreams/core`).
 - `pnpm dev` — run `core`, `server`, `frontend` and `web` in parallel watch mode.
 - `pnpm start:dev` — `tsx watch` of `packages/server/src/server.ts` with `NODE_ENV=development` (use this when you only need the backend to reload).
 - `pnpm start` — run the built server (`node packages/server/dist/server`). Requires `pnpm build` first.
@@ -40,7 +40,6 @@ The frontend uses rsbuild (not Vite/webpack directly) — `pnpm -F frontend dev`
 - `packages/desktop` — the desktop app (Windows, Linux and macOS): a Cargo workspace, outside the pnpm build, that serves `web`'s standalone build in a transparent web view (WebView2 via tao/wry on Windows, WebKitGTK 6 via GTK 4 on Linux, WKWebView via tao/wry on macOS) over libmpv and exposes a checked JSON bridge to mpv as `window.aiostreamsApp`. See its README.
 - `packages/android` — the Android app: a Gradle project, outside the pnpm build, that serves `web`'s standalone build from its APK in a WebView over libmpv and speaks the desktop app's bridge as `window.aiostreamsApp`. See its README.
 - `packages/smart-tv` — packages `web`'s standalone build (relative asset paths) as an LG webOS `.ipk` and a Samsung Tizen `.wgt`; manifests and icons only, outside the root `pnpm build`. The web app detects the TVs at runtime (`src/lib/hosts/webos.ts`, `tizen/`). See its README.
-- `packages/seanime-extensions` — separate Seanime extension bundles, built independently.
 - `packages/docs` — the docs site (separate build).
 
 ### Request flow
