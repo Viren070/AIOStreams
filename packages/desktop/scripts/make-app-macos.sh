@@ -16,7 +16,7 @@ cp -R "$desktop/../web/dist-standalone" "$app/Contents/Resources/web"
 cp "$desktop/THIRD-PARTY.md" "$app/Contents/Resources/"
 # From `cargo about`, when the caller generated it.
 if [ -f "$desktop/target/third-party-licenses.html" ]; then
-  cp "$desktop/target/third-party-licenses.html" "$app/Contents/Resources/"
+  cp "$desktop/target/third-party-licenses."{html,json} "$app/Contents/Resources/"
 fi
 
 # libmpv and the libraries it loads, which find each other through the app's run path.

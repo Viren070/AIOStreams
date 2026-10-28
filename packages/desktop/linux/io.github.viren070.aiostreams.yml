@@ -45,6 +45,7 @@ modules:
     build-commands:
       - make -j$FLATPAK_BUILDER_N_JOBS PREFIX=/app
       - make install PREFIX=/app
+      - install -Dm644 COPYRIGHT -t /app/lib/aiostreams-desktop/licenses/luajit
     sources:
       - type: git
         url: https://github.com/LuaJIT/LuaJIT.git
@@ -52,6 +53,8 @@ modules:
 
   - name: libXpresent
     buildsystem: autotools
+    post-install:
+      - install -Dm644 $FLATPAK_BUILDER_BUILDDIR/COPYING -t /app/lib/aiostreams-desktop/licenses/libXpresent
     sources:
       - type: git
         url: https://gitlab.freedesktop.org/xorg/lib/libxpresent.git
@@ -64,6 +67,8 @@ modules:
       - --libdir=lib
       - -Dvulkan=enabled
       - -Ddemos=false
+    post-install:
+      - install -Dm644 $FLATPAK_BUILDER_BUILDDIR/LICENSE -t /app/lib/aiostreams-desktop/licenses/libplacebo
     sources:
       - type: git
         url: https://github.com/haasn/libplacebo.git
@@ -79,6 +84,8 @@ modules:
       - -DBUILD_STATIC=OFF
       # uchardet 0.0.8 declares a CMake version this SDK no longer accepts.
       - -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+    post-install:
+      - install -Dm644 $FLATPAK_BUILDER_BUILDDIR/COPYING -t /app/lib/aiostreams-desktop/licenses/uchardet
     sources:
       # freedesktop.org's site refuses downloads from CI runners; its GitLab lets git through.
       - type: git
@@ -90,6 +97,8 @@ modules:
     buildsystem: meson
     config-opts:
       - --libdir=lib
+    post-install:
+      - install -Dm644 $FLATPAK_BUILDER_BUILDDIR/COPYING -t /app/lib/aiostreams-desktop/licenses/libass
     sources:
       - type: git
         url: https://github.com/AIOStreams/libass.git
@@ -123,6 +132,8 @@ modules:
       - -Dcuda-interop=enabled
       - -Dvdpau=enabled
       - -Dvdpau-gl-x11=enabled
+    post-install:
+      - cd $FLATPAK_BUILDER_BUILDDIR && install -Dm644 Copyright LICENSE.GPL LICENSE.LGPL -t /app/lib/aiostreams-desktop/licenses/mpv
     sources:
       - type: archive
         url: https://github.com/mpv-player/mpv/archive/v0.41.0.tar.gz
@@ -148,6 +159,13 @@ modules:
       - install -Dm644 desktop/linux/io.github.viren070.aiostreams.metainfo.xml -t /app/share/metainfo
       - install -Dm644 desktop/app/icons/aiostreams.png /app/share/icons/hicolor/512x512/apps/io.github.viren070.aiostreams.png
       - install -Dm644 LICENSE desktop/THIRD-PARTY.md -t /app/share/licenses/io.github.viren070.aiostreams
+      - python3 desktop/linux/license-index.py /app/lib/aiostreams-desktop/licenses
+      # The crates' licences, which CI makes beforehand.
+      - crates=desktop/licences/$(uname -m)-unknown-linux-gnu;
+        if [ -f "$crates.json" ]; then
+          install -Dm644 "$crates.json" /app/lib/aiostreams-desktop/third-party-licenses.json &&
+          install -Dm644 "$crates.html" /app/share/licenses/io.github.viren070.aiostreams/third-party-licenses.html;
+        fi
     sources:
       - type: dir
         path: ..

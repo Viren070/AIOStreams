@@ -49,21 +49,20 @@ jobs:
           path: packages/web/dist-standalone
           retention-days: 1
 
-  # The Rust crates' licences, a page per target, made once for every build;
-  # cargo-about fails on a licence that about.toml does not accept.
+  # The Rust crates' licences, a page and a list for the app per target, made once for
+  # every build; cargo-about fails on a licence that about.toml does not accept.
   licences:
-    if: inputs.platforms != 'linux'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-      # Scanning every crate's files takes minutes, and the pages change only with
+      # Scanning every crate's files takes minutes, and the files change only with
       # the crates, the config or the template.
       - id: cache
         uses: actions/cache@v6
         with:
           path: packages/desktop/licences
-          key: licences-${{ inputs.platforms }}-${{ env.CARGO_ABOUT_VERSION }}-${{ hashFiles('packages/desktop/Cargo.lock', 'packages/desktop/about.toml', 'packages/desktop/about.hbs') }}
+          key: licences-json-${{ inputs.platforms }}-${{ env.CARGO_ABOUT_VERSION }}-${{ hashFiles('packages/desktop/Cargo.lock', 'packages/desktop/about.toml', 'packages/desktop/about.hbs') }}
       # Only Cargo's downloads: cargo-about reads the crates, it builds nothing.
       - if: steps.cache.outputs.cache-hit != 'true'
         uses: Swatinem/rust-cache@v2
@@ -86,10 +85,15 @@ jobs:
           if [ "$PLATFORMS" = all ] || [ "$PLATFORMS" = macos ]; then
             targets+=(aarch64-apple-darwin x86_64-apple-darwin)
           fi
+          if [ "$PLATFORMS" = all ] || [ "$PLATFORMS" = linux ]; then
+            targets+=(x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu)
+          fi
           mkdir -p licences
           for target in "${targets[@]}"; do
             cargo about generate --config about.toml --target "$target" \
               about.hbs -o "licences/$target.html"
+            cargo about generate --config about.toml --target "$target" \
+              --format json -o "licences/$target.json"
           done
       - uses: actions/upload-artifact@v7
         with:
@@ -195,6 +199,7 @@ jobs:
           Copy-Item packages/desktop/THIRD-PARTY.md $stage
           Copy-Item packages/web/dist-standalone "$stage/web" -Recurse
           Copy-Item packages/desktop/licences/${{ matrix.target }}.html "$stage/third-party-licenses.html"
+          Copy-Item packages/desktop/licences/${{ matrix.target }}.json "$stage/third-party-licenses.json"
 
       - name: Pack
         run: |
@@ -284,6 +289,7 @@ jobs:
           grep -q "^version = \"$VERSION\"" Cargo.toml
           cargo build --release
           cp licences/${{ matrix.target }}.html target/third-party-licenses.html
+          cp licences/${{ matrix.target }}.json target/third-party-licenses.json
 
       - name: Assemble the app bundle
         run: ./packages/desktop/scripts/make-app-macos.sh "$VERSION" stage
@@ -361,7 +367,7 @@ jobs:
 
   linux:
     name: Linux ${{ matrix.arch }}
-    needs: [web, feed]
+    needs: [web, feed, licences]
     if: inputs.platforms == 'all' || inputs.platforms == 'linux'
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
@@ -386,6 +392,11 @@ jobs:
         with:
           name: web
           path: packages/web/dist-standalone
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: licences
+          path: packages/desktop/licences
 
       - name: Install Flatpak
         run: |
