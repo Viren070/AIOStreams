@@ -351,7 +351,10 @@ export class LocalSegmentFetcher implements SegmentFetcher {
         }
         // Failover attempts run sequentially, so re-decoding a retry into the
         // same target is safe: only the resolving attempt's bytes survive.
-        const decoded = decodeArticle(raw, out?.(), this.decodeOpts);
+        const decoded = decodeArticle(raw, out?.(), {
+          ...this.decodeOpts,
+          expectedPart: segment.number,
+        });
         const data: SegmentData = {
           body: decoded.body,
           byteRange: decoded.byteRange,
@@ -379,7 +382,7 @@ export class LocalSegmentFetcher implements SegmentFetcher {
       priority,
       async (conn) => {
         onWireStart?.();
-        const capture = new YencHeadCapture(want);
+        const capture = new YencHeadCapture(want, segment.number);
         const rawBytes = await conn.bodyStreaming(
           segment.messageId,
           (chunk) => capture.push(chunk),

@@ -65,6 +65,7 @@ export class SegmentIntegrityError extends Error {
 export interface DecodeArticleOptions {
   /** Check the `=yend` pcrc32/crc32. The size checks always run. */
   verifyCrc?: boolean;
+  expectedPart?: number;
 }
 
 const CR = 0x0d;
@@ -79,7 +80,7 @@ const YEND_LINE_CAP = 256;
 const YEND_SIZE_RE = /(?:^|\s)size=(\d+)/;
 const YEND_PCRC32_RE = /(?:^|\s)pcrc32=([0-9a-fA-F]{1,8})/;
 const YEND_CRC32_RE = /(?:^|\s)crc32=([0-9a-fA-F]{1,8})/;
-const YBEGIN_PART_RE = /(?:^|\s)part=\d+/;
+const YBEGIN_PART_RE = /(?:^|\s)part=(\d+)/;
 
 /**
  * Decode a complete article body (raw, possibly dot-stuffed NNTP payload) into
@@ -148,7 +149,9 @@ export function decodeArticle(
       fileSize = toInt(/(?:^|\s)size=(\d+)/.exec(line)?.[1]);
       totalParts = toInt(/(?:^|\s)total=(\d+)/.exec(line)?.[1]);
       name = /(?:^|\s)name=(.*)$/.exec(line)?.[1];
-      multipart = YBEGIN_PART_RE.test(line);
+      const part = YBEGIN_PART_RE.exec(line)?.[1];
+      multipart = part !== undefined;
+      checkPart(toInt(part), opts?.expectedPart);
       first = false;
     } else if (line.startsWith('=ypart ')) {
       multipart = true;
@@ -191,6 +194,20 @@ export function decodeArticle(
   verifyTrailer(raw, dataEnd + 2, body, multipart, opts?.verifyCrc === true);
 
   return { body, byteRange, fileSize, totalParts, name, size: written };
+}
+
+/** A reused Message-ID can serve another post's article. */
+function checkPart(
+  part: number | undefined,
+  expected: number | undefined
+): void {
+  if (part === undefined || expected === undefined || part === expected) {
+    return;
+  }
+  throw new YencDecodeError(
+    'wrong_part',
+    `yEnc decode failed: wrong_part (=ybegin part=${part}, NZB segment ${expected})`
+  );
 }
 
 /**
@@ -339,8 +356,12 @@ export class YencHeadCapture {
   fileSize?: number;
   totalParts?: number;
   name?: string;
+  private part?: number;
 
-  constructor(private want: number) {}
+  constructor(
+    private want: number,
+    private expectedPart?: number
+  ) {}
 
   push(raw: Buffer): void {
     if (this.headerParsed) {
@@ -362,6 +383,7 @@ export class YencHeadCapture {
     name?: string;
     size?: number;
   } {
+    checkPart(this.part, this.expectedPart);
     const head = Buffer.concat(this.headChunks).subarray(0, this.want);
     let size: number | undefined;
     if (this.byteRange) {
@@ -425,7 +447,8 @@ export class YencHeadCapture {
     }
     const attrs = begin[2].replace(/\r$/, '');
     let dataStart = begin.index! + begin[0].length;
-    const isMultipart = / part=\d+/.test(` ${attrs}`);
+    this.part = toInt(/ part=(\d+)/.exec(` ${attrs}`)?.[1]);
+    const isMultipart = this.part !== undefined;
     let byteRange: [number, number] | undefined;
     if (isMultipart) {
       const part = text.slice(dataStart).match(/^=ypart ([^\r\n]*)\r?\n/);

@@ -403,6 +403,8 @@ function holeHooksFor(
         return fail(info, 'padded-bytes share of target');
       }
       if (info.segmentIndex !== undefined) {
+        // Zeros there would wipe the container's header.
+        if (info.segmentIndex === 0) return fail(info, 'first article');
         // Plain path: segment space, exact run tracking, persisted map.
         acc.add(info.nzbFileIndex, info.segmentIndex);
         const run = acc.runAt(info.nzbFileIndex, info.segmentIndex);
@@ -631,6 +633,15 @@ async function getStreamSession(
             nzbContentKey(hash)
           );
         }
+      } else if (definitiveLossKind(err) === 'undecodable') {
+        UsenetLibraryRepository.markFailed(
+          hash,
+          'Articles unreadable on every provider',
+          decoded.filename,
+          'undecodable_on_providers'
+        ).catch(() => {});
+        condemnArrDownload(hash, 'failed');
+        markReleaseDead(decoded.releaseKey, nzbContentKey(hash));
       }
       throw err;
     }
