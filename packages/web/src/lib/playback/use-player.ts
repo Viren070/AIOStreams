@@ -55,6 +55,9 @@ const EARLY_END_MS = 30_000;
 /** Late enough after the start that reading the file's index for thumbnails doesn't slow it. */
 const THUMBNAIL_INDEX_MS = 5_000;
 
+/** How long subtitles stay at a newly picked height while the controls show. */
+const PLACING_MS = 3_000;
+
 function serverSubtitles(
   client: JellyfinClient,
   source: SourceInfo,
@@ -294,9 +297,23 @@ export function usePlayer(
   };
 
   const { subtitleStyle } = opts;
+  // A new subtitle height shows where it puts them for a while, under the
+  // controls too, which would otherwise keep them above it.
+  const position = subtitleStyle?.position;
+  const [placing, setPlacing] = React.useState(false);
+  const placedAt = React.useRef(position);
+  React.useEffect(() => {
+    if (position === placedAt.current) return;
+    placedAt.current = position;
+    setPlacing(true);
+    const timer = setTimeout(() => setPlacing(false), PLACING_MS);
+    return () => clearTimeout(timer);
+  }, [position]);
+  const lifted = placing ? 0 : lift;
+
   // Subtitles slide to a new height, in the controls' time, rather than jump:
   // a new one every frame, which the players move to at once.
-  const height = subtitleHeight(subtitleStyle, lift);
+  const height = subtitleHeight(subtitleStyle, lifted);
   const shownHeight = React.useRef(height);
   React.useEffect(() => {
     if (!engine.setStyle) return;
@@ -539,7 +556,7 @@ export function usePlayer(
         .map((t) => ({ ...asTrack(t), facts: trackFacts(t) })),
     ],
     subtitleText,
-    subtitleLift: lift,
+    subtitleLift: lifted,
     thumbnails,
     togglePlay: () => engine.setPaused(!live.current.paused),
     setPaused: (paused) => engine.setPaused(paused),
