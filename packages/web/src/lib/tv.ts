@@ -11,7 +11,8 @@ export function setupTv(): void {
   document
     .querySelector('meta[name="viewport"]')
     ?.setAttribute('content', 'width=1280, viewport-fit=cover');
-  keyboardOnSelect();
+  // webOS opens its keyboard on Select, and a read-only field never gets that.
+  if (currentHost().name !== 'webos') keyboardOnSelect();
 }
 
 type Field = HTMLInputElement | HTMLTextAreaElement;
