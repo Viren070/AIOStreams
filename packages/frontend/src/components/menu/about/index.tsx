@@ -70,7 +70,7 @@ function Content() {
     userData.addonName || status?.settings?.addonName || 'AIOStreams';
   const addonDescription =
     userData.addonDescription ||
-    'AIOStreams consolidates multiple Stremio addons and debrid services — including its own suite of exclusive built-in addons — into a single, highly customisable super-addon.';
+    'AIOStreams brings your Stremio addons, debrid services and Usenet together into one list, filtered, sorted and formatted your way, and plays it in Stremio or in its own apps for every screen.';
   const version = status?.tag || 'Unknown';
   const channel: ReleaseChannel =
     status?.channel ?? (version.startsWith('v') ? 'stable' : 'nightly');
