@@ -1,6 +1,11 @@
 import * as constants from '../../../../../../../core/src/utils/constants';
 import { formatBytes, formatBitrate } from '@aiostreams/ui/core/format';
-import { deriveBitrate, isValidUrl, PreviewInput } from '../state';
+import {
+  deriveBitrate,
+  isValidUrl,
+  MAX_PREVIEW_FAILOVERS,
+  PreviewInput,
+} from '../state';
 import {
   AdvancedFields,
   FieldGrid,
@@ -112,6 +117,22 @@ export function StreamTab({
           onChange={(folderSize) => patch({ folderSize })}
           min={0}
           step={1000000000}
+        />
+        <NumberField
+          field="stream.failovers"
+          label="Failover variants"
+          value={input.failovers}
+          onChange={(failovers) =>
+            patch({
+              failovers: Math.min(
+                Math.max(Math.floor(failovers ?? 0), 0),
+                MAX_PREVIEW_FAILOVERS
+              ),
+            })
+          }
+          min={0}
+          max={MAX_PREVIEW_FAILOVERS}
+          step={1}
         />
       </FieldGrid>
 
