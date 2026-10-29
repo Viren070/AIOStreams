@@ -66,7 +66,7 @@ internal object Silent : SubtitleParser.Factory {
 /** Parses a file track's samples, timed as Media3's own transcoder times them. */
 @OptIn(UnstableApi::class)
 internal class SampleParser(format: Format) {
-    private val parser = parsers.create(format)
+    private val parser = if (format.sampleMimeType == MimeTypes.APPLICATION_PGS) Pgs() else parsers.create(format)
     private val offsetUs = format.subsampleOffsetUs
 
     /** Whether each line takes the place of the one before, as in bitmap subtitles. */
