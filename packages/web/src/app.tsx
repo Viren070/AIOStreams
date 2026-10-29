@@ -174,7 +174,13 @@ function Standalone() {
   useShellLinks((raw) => {
     const link = parseAppLink(raw);
     if (!link) return void toast.error(t`The app cannot open that link`);
-    if (link.kind === 'route') return navigate(link.path);
+    if (link.kind === 'route') {
+      // A player's return link names the page it left; pushed again, it would
+      // take a Back of its own to leave.
+      const page = (path: string) => path.split('?')[0];
+      const here = page(location.hash.slice(1));
+      return navigate(link.path, { replace: page(link.path) === here });
+    }
     if (link.kind === 'party') return party.hold(link.invite);
     if (link.kind === 'remote') {
       const { command, server } = link;
