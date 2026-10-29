@@ -3045,7 +3045,13 @@ msgstr "Premi Indietro di nuovo per uscire"
 msgid "Preview"
 msgstr "Anteprima"
 
-#: src/pages/settings/interface.tsx src/pages/settings/playback.tsx
+#: src/pages/settings/interface.tsx
+msgid "Previews"
+msgstr "Anteprime"
+
+#: src/pages/settings/playback.tsx
+#, fuzzy
+msgctxt "Episode segments showing the next episode"
 msgid "Previews"
 msgstr "Anteprime"
 

@@ -3043,7 +3043,12 @@ msgstr ""
 msgid "Preview"
 msgstr ""
 
-#: src/pages/settings/interface.tsx src/pages/settings/playback.tsx
+#: src/pages/settings/interface.tsx
+msgid "Previews"
+msgstr ""
+
+#: src/pages/settings/playback.tsx
+msgctxt "Episode segments showing the next episode"
 msgid "Previews"
 msgstr ""
 

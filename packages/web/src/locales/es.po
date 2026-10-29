@@ -3070,7 +3070,13 @@ msgstr "Pulsa Atrás de nuevo para salir"
 msgid "Preview"
 msgstr "Previsualización"
 
-#: src/pages/settings/interface.tsx src/pages/settings/playback.tsx
+#: src/pages/settings/interface.tsx
+msgid "Previews"
+msgstr "Previstas"
+
+#: src/pages/settings/playback.tsx
+#, fuzzy
+msgctxt "Episode segments showing the next episode"
 msgid "Previews"
 msgstr "Previstas"
 

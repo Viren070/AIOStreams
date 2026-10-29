@@ -3045,7 +3045,13 @@ msgstr "Erneut \"Zurück\" drücken zum Beenden"
 msgid "Preview"
 msgstr "Vorschau"
 
-#: src/pages/settings/interface.tsx src/pages/settings/playback.tsx
+#: src/pages/settings/interface.tsx
+msgid "Previews"
+msgstr "Vorschauen"
+
+#: src/pages/settings/playback.tsx
+#, fuzzy
+msgctxt "Episode segments showing the next episode"
 msgid "Previews"
 msgstr "Vorschauen"
 

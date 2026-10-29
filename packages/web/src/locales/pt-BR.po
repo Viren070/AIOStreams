@@ -3045,7 +3045,13 @@ msgstr "Pressione Voltar novamente para sair"
 msgid "Preview"
 msgstr "Prévia"
 
-#: src/pages/settings/interface.tsx src/pages/settings/playback.tsx
+#: src/pages/settings/interface.tsx
+msgid "Previews"
+msgstr "Prévias"
+
+#: src/pages/settings/playback.tsx
+#, fuzzy
+msgctxt "Episode segments showing the next episode"
 msgid "Previews"
 msgstr "Prévias"
 
