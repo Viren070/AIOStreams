@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-28 21:58+0000\n"
+"PO-Revision-Date: 2026-10-29 16:33+0000\n"
 "Last-Translator: Nicola Bortoletto <translate@nicolabortoletto.com>\n"
 "Language-Team: Italian <https://hosted.weblate.org/projects/aiostreams/web-app/it/>\n"
 "Language: it\n"
@@ -1846,7 +1846,7 @@ msgstr "Link di invito copiato"
 
 #: src/components/licenses.tsx
 msgid "It came with no licence text."
-msgstr ""
+msgstr "Fornito senza il testo della licenza."
 
 #: src/components/send-report.tsx
 msgid "It carries this device's details and the app's recent log. Passwords and tokens are left out."
@@ -1862,7 +1862,7 @@ msgstr "Verrà annullato se non decidi di mantenerlo."
 
 #: src/pages/settings/about.tsx
 msgid "Its Metal and AVFoundation video outputs."
-msgstr ""
+msgstr "Le sue uscite video Metal e AVFoundation."
 
 #: src/pages/settings/about.tsx
 msgid "Jellyfin API"
@@ -2007,7 +2007,7 @@ msgstr "Consente al decoder del TV di mantenere autonomamente sincronizzati audi
 
 #: src/components/licenses.tsx
 msgid "Licences"
-msgstr ""
+msgstr "Licenze"
 
 #: src/components/version-settings.tsx
 msgid "Link a pack someone shares, in this app's format or the one Fusion and Nuvio use. It stays up to date with its author's changes."
@@ -3242,7 +3242,7 @@ msgstr "Rinomina"
 
 #: src/components/playlists.tsx
 msgid "Repeat"
-msgstr ""
+msgstr "Ripeti"
 
 #: src/pages/settings/apps.tsx
 msgid "Report a problem"
@@ -3656,7 +3656,7 @@ msgstr "Mostra i sottotitoli nella tua lingua a meno che l'audio non lo sia già
 
 #: src/components/playlists.tsx
 msgid "Shuffle"
-msgstr ""
+msgstr "Casuale"
 
 #: src/pages/settings/interface.tsx
 msgid "Side rail"
@@ -4210,9 +4210,8 @@ msgid "The interface is built on its components."
 msgstr "L'interfaccia è costruita sui suoi componenti."
 
 #: src/components/licenses.tsx
-#, fuzzy
 msgid "The licences couldn't be loaded."
-msgstr "Impossibile leggere queste battute dei sottotitoli."
+msgstr "Impossibile caricare la licenza."
 
 #: src/lib/hosts/shell/player.ts
 msgid "the link answered HTTP {status}"
@@ -4240,7 +4239,7 @@ msgstr "Il vecchio metodo di rendering di mpv, pensato per i Mac su cui le altre
 
 #: src/components/licenses.tsx
 msgid "The open-source software in this app, and the licence of each."
-msgstr ""
+msgstr "Software open-source in questa app e le relative licenze."
 
 #: src/components/remote-sheet.tsx
 msgid "The other device could not be reached"
@@ -4741,7 +4740,7 @@ msgstr "Uscita video"
 
 #: src/components/licenses.tsx
 msgid "View"
-msgstr ""
+msgstr "Visualizza"
 
 #: src/components/licenses.tsx src/pages/settings/about.tsx
 msgid "Visit"
