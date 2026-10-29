@@ -1,4 +1,4 @@
-package io.github.viren070.aiostreams.exoplayer
+package io.github.viren070.aiostreams.exoplayer.cache
 
 /**
  * Where a file keeps the index its extractor reads before it plays, when that

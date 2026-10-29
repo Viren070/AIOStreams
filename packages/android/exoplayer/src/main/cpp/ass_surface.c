@@ -248,7 +248,7 @@ static void include(ARect *rect, int left, int top, int right, int bottom) {
     if (bottom > rect->bottom) rect->bottom = bottom;
 }
 
-#define METHOD(name) Java_io_github_viren070_aiostreams_exoplayer_AssSurface_##name
+#define METHOD(name) Java_io_github_viren070_aiostreams_exoplayer_subtitles_ass_AssSurface_##name
 
 static void start_renderer(Surface *surface) {
     surface->renderer = libass.renderer_init(surface->library);

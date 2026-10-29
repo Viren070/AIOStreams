@@ -1,4 +1,4 @@
-package io.github.viren070.aiostreams.exoplayer
+package io.github.viren070.aiostreams.exoplayer.cache
 
 import android.app.ActivityManager
 import android.content.ComponentCallbacks2

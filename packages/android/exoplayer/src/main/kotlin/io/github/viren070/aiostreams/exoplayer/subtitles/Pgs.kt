@@ -1,4 +1,4 @@
-package io.github.viren070.aiostreams.exoplayer
+package io.github.viren070.aiostreams.exoplayer.subtitles
 
 import android.graphics.Bitmap
 import androidx.annotation.OptIn

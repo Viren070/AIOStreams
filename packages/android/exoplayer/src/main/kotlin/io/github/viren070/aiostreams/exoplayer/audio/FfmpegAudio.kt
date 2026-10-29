@@ -1,4 +1,4 @@
-package io.github.viren070.aiostreams.exoplayer
+package io.github.viren070.aiostreams.exoplayer.audio
 
 import android.os.Handler
 import androidx.annotation.OptIn

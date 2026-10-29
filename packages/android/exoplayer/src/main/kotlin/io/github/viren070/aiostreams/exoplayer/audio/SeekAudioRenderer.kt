@@ -1,4 +1,4 @@
-package io.github.viren070.aiostreams.exoplayer
+package io.github.viren070.aiostreams.exoplayer.audio
 
 import android.content.Context
 import android.os.Handler

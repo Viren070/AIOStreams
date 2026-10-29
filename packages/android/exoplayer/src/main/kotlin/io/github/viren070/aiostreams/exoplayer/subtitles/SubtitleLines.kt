@@ -1,4 +1,4 @@
-package io.github.viren070.aiostreams.exoplayer
+package io.github.viren070.aiostreams.exoplayer.subtitles
 
 import io.github.viren070.aiostreams.playback.SubtitleLine
 import java.util.TreeMap

@@ -1,4 +1,4 @@
-package io.github.viren070.aiostreams.exoplayer
+package io.github.viren070.aiostreams.exoplayer.video
 
 import android.content.Context
 import android.hardware.display.DisplayManager

@@ -66,7 +66,7 @@ static int mix_matrix(int channels, int outputs, float matrix[][MAX_CHANNELS]) {
     return 1;
 }
 
-JNIEXPORT jboolean JNICALL Java_io_github_viren070_aiostreams_exoplayer_SoundShaper_nativeShape(
+JNIEXPORT jboolean JNICALL Java_io_github_viren070_aiostreams_exoplayer_audio_SoundShaper_nativeShape(
         JNIEnv *env, jclass cls, jobject input, jint input_offset, jint frames, jint input_channels, jintArray map_array,
         jint rate, jobject output, jint output_offset, jint outputs, jboolean float_output, jfloat centre,
         jboolean night, jfloat gain, jfloatArray state_array) {

@@ -1,4 +1,4 @@
-package io.github.viren070.aiostreams.exoplayer
+package io.github.viren070.aiostreams.exoplayer.extractor
 
 import android.net.Uri
 import androidx.annotation.OptIn
@@ -20,6 +20,9 @@ import androidx.media3.extractor.mkv.EbmlProcessor
 import androidx.media3.extractor.mkv.MatroskaExtractor
 import androidx.media3.extractor.text.SubtitleParser
 import androidx.media3.extractor.text.SubtitleTranscodingExtractorOutput
+import io.github.viren070.aiostreams.exoplayer.subtitles.Silent
+import io.github.viren070.aiostreams.exoplayer.subtitles.SubtitleSink
+import io.github.viren070.aiostreams.exoplayer.subtitles.Subtitles
 import java.io.ByteArrayOutputStream
 import java.io.EOFException
 import java.util.zip.DataFormatException

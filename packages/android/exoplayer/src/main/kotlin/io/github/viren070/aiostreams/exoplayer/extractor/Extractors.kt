@@ -1,4 +1,4 @@
-package io.github.viren070.aiostreams.exoplayer
+package io.github.viren070.aiostreams.exoplayer.extractor
 
 import android.net.Uri
 import androidx.annotation.OptIn
@@ -12,6 +12,10 @@ import androidx.media3.extractor.SeekMap
 import androidx.media3.extractor.TrackOutput
 import androidx.media3.extractor.mkv.MatroskaExtractor
 import androidx.media3.extractor.text.SubtitleParser
+import io.github.viren070.aiostreams.exoplayer.subtitles.SubtitleSink
+import io.github.viren070.aiostreams.exoplayer.video.DolbyVisionExtractor
+import io.github.viren070.aiostreams.exoplayer.video.DolbyVisionRoute
+import io.github.viren070.aiostreams.exoplayer.video.VideoFrames
 
 /**
  * Media3's extractors, with Matroska's sending its subtitles to the file's

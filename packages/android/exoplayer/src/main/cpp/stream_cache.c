@@ -1,7 +1,7 @@
 #include <jni.h>
 #include <stdlib.h>
 
-#define METHOD(name) Java_io_github_viren070_aiostreams_exoplayer_StreamCache_##name
+#define METHOD(name) Java_io_github_viren070_aiostreams_exoplayer_cache_StreamCache_##name
 
 JNIEXPORT jobject JNICALL METHOD(nativeAllocate)(JNIEnv *env, jclass clazz, jint size) {
     void *block = malloc((size_t) size);

@@ -1,4 +1,4 @@
-package io.github.viren070.aiostreams.exoplayer
+package io.github.viren070.aiostreams.exoplayer.subtitles
 
 import android.graphics.Color
 import android.graphics.Typeface
@@ -10,11 +10,12 @@ import androidx.media3.common.text.Cue
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.extractor.text.CuesWithTiming
 import androidx.media3.extractor.text.DefaultSubtitleParserFactory
-import io.github.viren070.aiostreams.playback.SubtitleFont
-import io.github.viren070.aiostreams.playback.SubtitleLook
 import androidx.media3.extractor.text.SubtitleParser
 import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.SubtitleView
+import io.github.viren070.aiostreams.exoplayer.subtitles.ass.AssStyle
+import io.github.viren070.aiostreams.playback.SubtitleFont
+import io.github.viren070.aiostreams.playback.SubtitleLook
 import java.util.TreeMap
 import java.util.concurrent.ConcurrentHashMap
 

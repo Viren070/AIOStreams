@@ -7,7 +7,7 @@ import android.os.Build
 import android.os.Debug
 import androidx.annotation.RequiresApi
 import androidx.webkit.WebViewCompat
-import io.github.viren070.aiostreams.exoplayer.mediaCapsLine
+import io.github.viren070.aiostreams.exoplayer.video.mediaCapsLine
 import java.io.File
 import java.text.DateFormat
 import java.util.Date

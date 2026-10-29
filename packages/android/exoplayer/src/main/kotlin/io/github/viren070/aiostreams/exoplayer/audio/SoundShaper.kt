@@ -1,4 +1,4 @@
-package io.github.viren070.aiostreams.exoplayer
+package io.github.viren070.aiostreams.exoplayer.audio
 
 import java.nio.ByteBuffer
 import java.nio.ByteOrder

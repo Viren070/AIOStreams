@@ -1,4 +1,4 @@
-package io.github.viren070.aiostreams.exoplayer
+package io.github.viren070.aiostreams.exoplayer.cache
 
 import androidx.annotation.OptIn
 import androidx.media3.common.C
