@@ -196,7 +196,7 @@ internal class Subtitles(
         view?.setCues(cues.map(style::placed))
     }
 
-    fun trim(positionUs: Long) = texts.trimHidden(text, positionUs)
+    fun trim(positionUs: Long) = texts.trim(positionUs)
 
     fun watchLines(track: String?) = lines.watch(track)
 
