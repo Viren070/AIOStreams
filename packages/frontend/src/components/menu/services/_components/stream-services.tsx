@@ -1,5 +1,6 @@
 import { useStatus } from '@/context/status';
 import { useUserData } from '@/context/userData';
+import { useMode } from '@/context/mode';
 import { useState, useEffect } from 'react';
 import { ServiceId } from '../../../../../../core/src/utils/constants';
 import { isDualService, isUsenetService } from '@/lib/services';
@@ -28,7 +29,7 @@ import { Modal } from '@aiostreams/ui/modal';
 import { Alert } from '@aiostreams/ui/alert';
 import TemplateOption from '../../../shared/template-option';
 import MarkdownLite from '../../../shared/markdown-lite';
-import { StatusResponse, UserData } from '@aiostreams/core';
+import { DebridCapability, StatusResponse, UserData } from '@aiostreams/core';
 
 export function StreamServices() {
   const { status } = useStatus();
@@ -37,6 +38,9 @@ export function StreamServices() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalService, setModalService] = useState<ServiceId | null>(null);
   const [modalValues, setModalValues] = useState<Record<string, any>>({});
+  const [modalDisabledCapabilities, setModalDisabledCapabilities] = useState<
+    DebridCapability[]
+  >([]);
   const [isDragging, setIsDragging] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<
@@ -66,6 +70,7 @@ export function StreamServices() {
     setModalService(service);
     const svc = userData.services?.find((s) => s.id === service);
     setModalValues(svc?.credentials || {});
+    setModalDisabledCapabilities(svc?.disabledCapabilities ?? []);
     setModalOpen(true);
   };
 
@@ -73,14 +78,25 @@ export function StreamServices() {
     setModalOpen(false);
     setModalService(null);
     setModalValues({});
+    setModalDisabledCapabilities([]);
   };
 
-  const handleModalSubmit = (values: Record<string, any>) => {
+  const handleModalSubmit = (
+    values: Record<string, any>,
+    disabledCapabilities: DebridCapability[]
+  ) => {
     setUserData((prev) => {
       const newUserData = { ...prev };
       newUserData.services = (newUserData.services ?? []).map((service) => {
         if (service.id === modalService) {
-          return { ...service, enabled: true, credentials: values };
+          return {
+            ...service,
+            enabled: true,
+            credentials: values,
+            disabledCapabilities: disabledCapabilities.length
+              ? disabledCapabilities
+              : undefined,
+          };
         }
         return service;
       });
@@ -351,6 +367,7 @@ export function StreamServices() {
         onOpenChange={setModalOpen}
         serviceId={modalService}
         values={modalValues}
+        disabledCapabilities={modalDisabledCapabilities}
         onSubmit={handleModalSubmit}
         onClose={handleModalClose}
       />
@@ -487,11 +504,14 @@ function SortableServiceItem({
   );
 }
 
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
 function ServiceModal({
   open,
   onOpenChange,
   serviceId,
   values,
+  disabledCapabilities,
   onSubmit,
   onClose,
 }: {
@@ -499,15 +519,26 @@ function ServiceModal({
   onOpenChange: (v: boolean) => void;
   serviceId: ServiceId | null;
   values: Record<string, any>;
-  onSubmit: (v: Record<string, any>) => void;
+  disabledCapabilities: DebridCapability[];
+  onSubmit: (
+    v: Record<string, any>,
+    disabledCapabilities: DebridCapability[]
+  ) => void;
   onClose: () => void;
 }) {
   const { status } = useStatus();
+  const { mode } = useMode();
   const [localValues, setLocalValues] = useState<Record<string, any>>({});
+  const [localDisabledCapabilities, setLocalDisabledCapabilities] = useState<
+    DebridCapability[]
+  >([]);
 
   useEffect(() => {
-    if (open) setLocalValues(values);
-  }, [open, values]);
+    if (open) {
+      setLocalValues(values);
+      setLocalDisabledCapabilities(disabledCapabilities);
+    }
+  }, [open, values, disabledCapabilities]);
 
   if (!status || !serviceId) return null;
   const meta = status.settings.services[serviceId]!;
@@ -523,7 +554,7 @@ function ServiceModal({
         className="space-y-4"
         onSubmit={(e) => {
           e.preventDefault();
-          onSubmit(localValues);
+          onSubmit(localValues, localDisabledCapabilities);
         }}
       >
         {credentials.map((opt) => (
@@ -536,6 +567,30 @@ function ServiceModal({
             }
           />
         ))}
+        {mode === 'pro' &&
+          meta.capabilities &&
+          meta.capabilities.length > 1 && (
+            <div className="space-y-2">
+              {meta.capabilities.map(({ id: cap, note }) => (
+                <div key={cap}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">{capitalize(cap)}</span>
+                    <Switch
+                      value={!localDisabledCapabilities.includes(cap)}
+                      onValueChange={(v: boolean) =>
+                        setLocalDisabledCapabilities((prev) =>
+                          v ? prev.filter((c) => c !== cap) : [...prev, cap]
+                        )
+                      }
+                    />
+                  </div>
+                  {note && (
+                    <p className="text-xs text-[--muted] mt-0.5">{note}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         <div className="flex gap-2">
           <Button
             type="button"

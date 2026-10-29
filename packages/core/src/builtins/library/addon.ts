@@ -138,7 +138,8 @@ export class LibraryAddon extends BaseDebridAddon<LibraryAddonConfig> {
       sort,
       sortDirection,
       genre,
-      search
+      search,
+      service.disabledCapabilities
     );
   }
 
@@ -170,7 +171,8 @@ export class LibraryAddon extends BaseDebridAddon<LibraryAddonConfig> {
             serviceId,
             service.credential,
             this.clientIp,
-            this.userData.sources
+            this.userData.sources,
+            service.disabledCapabilities
           );
           return {
             id,
@@ -216,7 +218,8 @@ export class LibraryAddon extends BaseDebridAddon<LibraryAddonConfig> {
       service.credential,
       narrowedItemType,
       itemId,
-      this.clientIp
+      this.clientIp,
+      service.disabledCapabilities
     );
 
     return buildMeta(id, item, service, narrowedItemType);
@@ -299,7 +302,8 @@ export class LibraryAddon extends BaseDebridAddon<LibraryAddonConfig> {
       service.credential,
       narrowedItemType,
       itemId,
-      this.clientIp
+      this.clientIp,
+      service.disabledCapabilities
     );
 
     // Determine which file to resolve

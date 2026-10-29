@@ -10,6 +10,7 @@ import {
 import { StreamParser } from '../parser/index.js';
 import { ServiceId, constants, toUrlSafeBase64 } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
+import { DebridCapability } from '../debrid/base.js';
 /**
  *
  * What modifications are needed for each preset:
@@ -186,6 +187,32 @@ export abstract class Preset {
     return encode ? encodeURIComponent(string) : string;
   }
 
+  private static get neededCapabilities(): DebridCapability[] {
+    const streamTypes = this.METADATA.SUPPORTED_STREAM_TYPES;
+    const needed: DebridCapability[] = [];
+    if (streamTypes.includes(constants.DEBRID_STREAM_TYPE)) {
+      needed.push('torrents');
+    }
+    if (streamTypes.includes(constants.USENET_STREAM_TYPE)) {
+      needed.push('usenet');
+    }
+    return needed;
+  }
+
+  private static isCapabilityUsable(service: {
+    disabledCapabilities?: DebridCapability[];
+  }): boolean {
+    const needed = this.neededCapabilities;
+    if (!needed.length || !service.disabledCapabilities?.length) return true;
+    return needed.some((cap) => !service.disabledCapabilities!.includes(cap));
+  }
+
+  private static get neededCapabilitiesLabel(): string {
+    return this.neededCapabilities
+      .map((cap) => cap[0].toUpperCase() + cap.slice(1))
+      .join('/');
+  }
+
   protected static getUsableServices(
     userData: UserData,
     specifiedServices?: ServiceId[],
@@ -193,7 +220,9 @@ export abstract class Preset {
   ) {
     let usableServices = userData.services?.filter(
       (service) =>
-        this.METADATA.SUPPORTED_SERVICES.includes(service.id) && service.enabled
+        this.METADATA.SUPPORTED_SERVICES.includes(service.id) &&
+        service.enabled &&
+        this.isCapabilityUsable(service)
     );
 
     if (specifiedServices) {
@@ -203,7 +232,12 @@ export abstract class Preset {
         const meta = Object.values(constants.SERVICE_DETAILS).find(
           (s) => s.id === service
         );
-        if (!userService || !userService.enabled || !userService.credentials) {
+        if (
+          !userService ||
+          !userService.enabled ||
+          !userService.credentials ||
+          !this.isCapabilityUsable(userService)
+        ) {
           const sameTypeCount =
             userData.presets?.filter((p) => p.type === this.METADATA.ID)
               .length ?? 0;
@@ -211,8 +245,16 @@ export abstract class Preset {
           // prefer the user-configured name so the error identifies which one.
           const displayName =
             sameTypeCount > 1 && addonName ? addonName : this.METADATA.NAME;
+          const capabilityBlocked = !!(
+            userService?.enabled &&
+            userService.credentials &&
+            !this.isCapabilityUsable(userService)
+          );
+          const reason = capabilityBlocked
+            ? `its ${this.neededCapabilitiesLabel} capability is disabled`
+            : 'it is not enabled or has missing credentials';
           throw new Error(
-            `You have specified ${meta?.name || service} in your configuration for ${displayName}, but it is not enabled or has missing credentials`
+            `You have specified ${meta?.name || service} in your configuration for ${displayName}, but ${reason}`
           );
         }
       }
