@@ -236,6 +236,10 @@ class MainActivity : ComponentActivity() {
             }
             "player-engine" -> message["name"]?.jsonPrimitive?.contentOrNull?.let { playback.choose(it, player) }
             "player-retry" -> message["name"]?.jsonPrimitive?.contentOrNull?.let { playback.retry(it, player) }
+            // A TV would blank to switch modes.
+            "player-controls" -> if (!onTv()) {
+                message["shown"]?.jsonPrimitive?.booleanOrNull?.let { runOnUiThread { frameRates.controls(it) } }
+            }
             "player-settings" -> {
                 player.setSettings(PlayerProtocol.settings(message))
                 message["frameRate"]?.jsonPrimitive?.booleanOrNull?.let { frameRates.enabled = it }

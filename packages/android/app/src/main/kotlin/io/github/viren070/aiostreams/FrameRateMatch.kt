@@ -46,6 +46,16 @@ class FrameRateMatch(
         original = null
     }
 
+    /** The screen's fastest rate while the page's controls show: playing, an adaptive screen runs at the video's. */
+    fun controls(shown: Boolean) {
+        val display = activity.window.decorView.display ?: return
+        val rate = if (shown) display.supportedModes.filter { it.sameSize(display.mode) }.maxOf { it.refreshRate } else 0f
+        val params = activity.window.attributes
+        if (params.preferredRefreshRate == rate) return
+        params.preferredRefreshRate = rate
+        activity.window.attributes = params
+    }
+
     private fun prefer(modeId: Int) {
         val params = activity.window.attributes
         params.preferredDisplayModeId = modeId
