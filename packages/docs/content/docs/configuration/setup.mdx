@@ -3,7 +3,7 @@ title: Setup Guide
 description: Get AIOStreams up and running from scratch using Tamtaro's complete setup.
 ---
 
-This guide walks you through a complete AIOStreams setup — from installing your media client to having a fully configured addon ready to use. It uses a curated community template that handles the bulk of the configuration so you only need to fill in your credentials.
+This guide walks you through a complete AIOStreams setup, from choosing where you'll watch to a configuration ready to use in Stremio and the AIOStreams app. It uses a community template that does most of the configuration for you, so you mostly pick options and fill in your keys.
 
 <Callout type="info">
   **Template Credits**
@@ -27,11 +27,11 @@ If you find this useful, consider supporting them:
   [Configure Options](/configuration/options).
 </Callout>
 
-## Step 1 — Install a Media Client
+## Step 1: Choose where you'll watch
 
-AIOStreams is primarily designed and maintained for Stremio, but works with other Stremio addon compatible clients as well
+One configuration serves all of these at once, so you can start with one and add another later.
 
-<Tabs items={['Stremio', 'Other Clients']}>
+<Tabs items={['Stremio', 'AIOStreams app', 'Other apps']}>
   <Tab value="Stremio">
     <Steps>
       <Step>
@@ -41,41 +41,45 @@ AIOStreams is primarily designed and maintained for Stremio, but works with othe
       <Step>Open Stremio and create a free account, or sign in.</Step>
       <Step>
         Go to the **Addons** page (puzzle-piece icon) and uninstall
-        **Watchhub** — it serves ads and is not useful for most setups.
+        **Watchhub**. It serves ads and is not useful for most setups.
       </Step>
     </Steps>
 
     <Callout type="tip">
-      Stremio is account-based — your addons, watch history, and continue
+      Stremio is account-based: your addons, watch history, and continue
       watching all sync automatically. You can do this initial setup on your
       PC or laptop and then just sign in to the same account on your TV,
       phone, or any other device and everything will already be there.
     </Callout>
 
   </Tab>
-  <Tab value="Other Clients">
-    The following clients also work with AIOStreams — most via Stremio addon
-    compatibility, and Chillio via its own direct protocol. This guide does not
-    cover their individual setup — refer to each client's own documentation /
-    Discord for help getting started.
+  <Tab value="AIOStreams app">
+    The [AIOStreams app](/apps) signs in to your configuration, with your catalogs as libraries and your streams as versions of each title. There's nothing to install to start: once your configuration is saved in step 6, **Open in browser** opens it. There are also apps for Windows, Mac, Linux, Android phones and tablets, Android TV, Fire TV, and LG and Samsung TVs: see [Get the app](/apps#get-the-app).
 
-    | Client                                            | Platforms                              | Discord                                         |
-    | ------------------------------------------------- | -------------------------------------- | ----------------------------------------------- |
-    | [Fusion](https://fusionapp.dev)                   | iPhone, iPad, Mac, Apple TV            | [Join](https://discord.gg/CuwDRSKbCW)           |
-    | [Omni](https://omni.stkc.win/)                    | iPhone, iPad, Apple TV                 | [Join](https://discord.gg/hdPAnA3fck)           |
-    | [RealStream](https://rstream.app/)                | Android TV, Desktop _(coming soon)_    | [Join](https://discord.gg/pn6UBHwHDq)           |
-    | [Nuvio](https://nuvioapp.space/)                  | Android, Android TV, iOS               | [Join](https://discord.gg/JvAPmadRgX)           |
-    | [Seanime](https://seanime.app/)                   | Windows, macOS, Linux, <br /> (and Android, Android TV, iOS, iPadOS [coming soon](https://seanime.app/tenji))  | [Join](https://discord.gg/GRMQ8yG4NG)   |
-    | [Chillio](https://chillio.app/)                   | iPhone, iPad, Apple TV                 | —                                               |
+    Two things work differently from Stremio:
 
+    - **It plays streams with a link**: debrid, Usenet and direct links. P2P torrents stay in Stremio, so get a service in step 2.
+    - **It only sees what your configuration provides**, so it needs catalogs and metadata from an addon inside AIOStreams. Step 7 adds one.
+
+  </Tab>
+  <Tab value="Other apps">
+    These apps also work with AIOStreams, most through Stremio addon support. This guide doesn't cover their own setup: see each app's documentation or Discord.
+
+    | App                              | Platforms                                                                                                     | Discord                               |
+    | -------------------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+    | [Fusion](https://fusionapp.dev)  | iPhone, iPad, Mac, Apple TV                                                                                   | [Join](https://discord.gg/CuwDRSKbCW) |
+    | [Omni](https://omni.stkc.win/)   | iPhone, iPad, Apple TV                                                                                        | [Join](https://discord.gg/hdPAnA3fck) |
+    | [RealStream](https://rstream.app/) | Android TV, Desktop _(coming soon)_                                                                         | [Join](https://discord.gg/pn6UBHwHDq) |
+    | [Nuvio](https://nuvioapp.space/) | Android, Android TV, iOS                                                                                      | [Join](https://discord.gg/JvAPmadRgX) |
+    | [Seanime](https://seanime.app/)  | Windows, macOS, Linux, <br /> (and Android, Android TV, iOS, iPadOS [coming soon](https://seanime.app/tenji)) | [Join](https://discord.gg/GRMQ8yG4NG) |
+    | [Chillio](https://chillio.app/)  | iPhone, iPad, Apple TV                                                                                        | —                                     |
+
+    Jellyfin apps such as Infuse and Swiftfin sign in to your configuration as a server: see [Jellyfin apps](/apps/jellyfin).
 
     <Callout type="info">
-      **Chillio users:** when installing AIOStreams, select **Chill Link
-      Protocol** (not Stremio) in the install modal.
-    </Callout>
-    <Callout type="info">
-      **Seanime users:** AIOStreams provides dedicated extensions for Seanime.
-      See the [Seanime Extensions guide](/guides/seanime) for setup instructions.
+      **Chillio, Seanime and Aniyomi** each have a card under **Other apps** on
+      the Save & Install page with their own instructions. Seanime also has a
+      [guide](/guides/seanime).
     </Callout>
 
   </Tab>
@@ -83,17 +87,19 @@ AIOStreams is primarily designed and maintained for Stremio, but works with othe
 
 ---
 
-## Step 2 — Get a Debrid Service (Optional)
+## Step 2: Get a debrid or Usenet service
 
-A **debrid service** is a paid service that maintains a large cache of torrents on its own servers. When a torrent is first requested, the debrid service downloads it once and keeps it cached — subsequent requests for the same torrent are served instantly from the cache at high speeds over HTTPS, with no P2P involved on your end.
+A **debrid service** is a paid service that maintains a large cache of torrents on its own servers. When a torrent is first requested, the debrid service downloads it once and keeps it cached. Later requests for the same torrent are served instantly from the cache at high speeds over HTTPS, with no P2P involved on your end.
 
-In Stremio, streams from debrid-enabled addons are labelled as either **cached** (available instantly) or **uncached** (needs to be downloaded to the debrid service first before you can stream it). For popular content, the vast majority of results will already be cached.
+Streams from debrid-enabled addons are labelled as either **cached** (available instantly) or **uncached** (needs to be downloaded to the debrid service first before you can stream it). For popular content, the vast majority of results will already be cached.
 
-**A debrid service is optional, but recommended.** P2P streams work without one — provided there are enough seeders — but in many countries (including Germany and the United States) torrenting without a VPN exposes you to ISP warnings, throttling, or fines. A debrid service eliminates this risk entirely, since you stream over HTTPS from the debrid provider's servers. Using one also gives you:
+**In Stremio, a service is optional but recommended. The AIOStreams app needs one**, since it doesn't play P2P torrents. P2P streams work without one, provided there are enough seeders, but in many countries (including Germany and the United States) torrenting without a VPN exposes you to ISP warnings, throttling, or fines. A debrid service avoids this, since you stream over HTTPS from the debrid provider's servers. Using one also gives you:
 
 - Instant streaming of cached content at high speeds (4K, HDR, Dolby Atmos without buffering)
 - No reliance on seeders
 - No VPN required
+
+**Usenet** works too, through Easynews, TorBox or your own Usenet provider: see the [Usenet guide](/guides/usenet).
 
 <Callout type="warn">
   If you choose to use P2P streams **without** a debrid service and without a
@@ -112,16 +118,16 @@ In Stremio, streams from debrid-enabled addons are labelled as either **cached**
 
         TorBox is the best value option: affordable, no IP restrictions (use on
         as many devices as you want) and accurate cache indicators. The main trade-off is a smaller cache than Real
-        Debrid — very popular content is always cached, but obscure titles may
+        Debrid: very popular content is always cached, but obscure titles may
         not be.
 
         TorBox also offers a **free** 24-hour trial
         of the Pro plan, so you can test it before committing.
 
-        **Referral links — get 7 free days per month purchased (first purchase only):**
+        **Referral links: get 7 free days per month purchased (first purchase only)**
 
         Using a referral link gives you **7 free days per month purchased**, on your first
-        purchase only — subsequent purchases get nothing. For example, buying 12 months = 84 free days.
+        purchase only; later purchases get nothing. For example, buying 12 months = 84 free days.
         Either click the link and/or enter the code manually at the bottom of [torbox.app/subscription](https://torbox.app/subscription).
         You can use either:
 
@@ -144,11 +150,11 @@ In Stremio, streams from debrid-enabled addons are labelled as either **cached**
           <Step>
             Open the
             [Subscription page](https://torbox.app/subscription?referral=f1cdd3f8-aeee-48f1-849b-64fc7e5aeb3c)
-            (referral link — gives 7 free days per month on your first purchase)
+            (referral link: gives 7 free days per month on your first purchase)
             and choose a plan. A yearly subscription offers the best value.
           </Step>
           <Step>
-            Go to **Settings → API** and copy your **API Key** — you'll need
+            Go to **Settings → API** and copy your **API Key**. You'll need
             it during AIOStreams configuration.
           </Step>
         </Steps>
@@ -161,14 +167,14 @@ In Stremio, streams from debrid-enabled addons are labelled as either **cached**
         anything popular will already be cached and ready to stream instantly.
         It has a one-IP-at-a-time restriction (so you can only use it in one
         location at once) and its cache indicators are less accurate since a
-        2024 API change — but for popular content this rarely matters.
+        2024 API change, but for popular content this rarely matters.
 
         **Setup:**
 
         <Steps>
           <Step>
             Go to [real-debrid.com](https://real-debrid.com/?id=9483829)
-            (referral link — supports the guide at no extra cost) and click
+            (referral link: supports the guide at no extra cost) and click
             **Sign Up**.
           </Step>
           <Step>Go to **Premium Offers** and choose a package.</Step>
@@ -206,9 +212,9 @@ In Stremio, streams from debrid-enabled addons are labelled as either **cached**
 
 ---
 
-## Step 3 — Obtain API Keys
+## Step 3: Get a TMDB API key
 
-The template uses two free API keys for title and season/episode matching — these filter out incorrectly matched streams.
+The template uses a TMDB key for title and season/episode matching, which filters out streams for the wrong title or episode. A TVDB key is optional. Some instances provide a TMDB key of their own: the template then says so, and you can leave the field blank.
 
 ### TMDB (The Movie Database)
 
@@ -223,17 +229,18 @@ The template uses two free API keys for title and season/episode matching — th
 
     <Callout type="tip">
       None of the information on the form needs to be accurate. You can use a
-      temporary email address, a fake name, and a made-up phone number — none
+      temporary email address, a fake name, and a made-up phone number. None
       of it is verified.
     </Callout>
 
   </Step>
   <Step>
-    Copy your **API Key** from the API settings page.
+    Copy your **API Key** from the API settings page: the 32-character key, not
+    the Read Access Token.
   </Step>
 </Steps>
 
-### TVDB (The TV Database)
+### TVDB (The TV Database, optional)
 
 <Steps>
   <Step>
@@ -249,7 +256,7 @@ The template uses two free API keys for title and season/episode matching — th
 
 ---
 
-## Step 4 — Open the Template
+## Step 4: Open the template
 
 Select a public instance below and click **Open Template**. This takes you directly to that instance's configuration page with the template pre-loaded.
 
@@ -258,7 +265,7 @@ Select a public instance below and click **Open Template**. This takes you direc
   [Public Instances](/getting-started/public-instances) for a comparison.
   **Yeb's** is the recommended starting point for most users. **ElfHosted** is
   a reliable and reputable option but the public instance disables P2P, HTTP,
-  and Live stream types — if you need those, consider a
+  and Live stream types. If you need those, consider a
   [private ElfHosted instance](/getting-started/deployment#elfhosted-paid-managed)
   (paid, no restrictions, relaxed rate limits, direct ElfHosted support, and
   33% of your subscription goes to the developer).
@@ -276,7 +283,7 @@ Select a public instance below and click **Open Template**. This takes you direc
     Optionally, if your instance is access-controlled (login required via
     `AIOSTREAMS_AUTH` / `AIOSTREAMS_AUTH_REQUIRED`) and you want to avoid
     per-user URL restrictions, you can also set the **SEL sync access** and
-    **Regex filter access** to `all`. These (and `TEMPLATE_URLS`) are now
+    **Regex filter access** to `all`. These (and `TEMPLATE_URLS`) are
     runtime settings configurable from the dashboard Settings page, or via the
     matching environment variables:
 
@@ -292,46 +299,46 @@ Select a public instance below and click **Open Template**. This takes you direc
 
 ---
 
-## Step 5 — Import the Template
+## Step 5: Import the template
 
-After clicking **Open Template** you will be walked through a short import wizard.
+After clicking **Open Template**, the configure page opens with a short setup that follows the steps on its left.
 
 <Steps>
   <Step>
-    **Select a template** — You will see two options: **Tamtaro Complete SEL
-    Setup** and **Tamtaro Partial SEL Setup**. Select **Complete**. The Partial
-    option is intended for users who already have an existing setup they want to
-    retain parts of. Click **Use Selected** to continue.
+    **Confirm Import**: because the template comes from a link, AIOStreams
+    asks first. Check it is **Tamtaro Complete SEL Setup** by Tamtaro, then
+    click **Use This Template Now**.
   </Step>
   <Step>
-    **Select services** — Choose the debrid service(s) you have (e.g. Real
-    Debrid, TorBox). If you are not using any debrid service, click **Skip**.
-    Otherwise select your service(s) and click **Next**.
+    **Services**: tick the services you have, under **Debrid** and **Usenet**,
+    then click **Continue**. Without a service, click **I don't use any of
+    these** and the template sets itself up for P2P.
   </Step>
   <Step>
-    **Template inputs** — This step lets you customise the template before it
-    is applied. Every option has a description — read through them and adjust
-    anything you want. Nothing here is required and the defaults are sensible
-    for most users. A few options worth noting:
+    **Options**: every option has a description, and the defaults suit most
+    people. A few worth a look:
 
-    - **Preferred Language** — Select your preferred stream language(s). These
-      are placed first in the language ranking. You can fine-tune the full
-      order in Filters → Language after import.
-    - **TorBox Tier** _(TorBox users only)_ — Select your TorBox plan:
-      **Essential**, **Standard**, or **Pro**. This applies the correct size
-      limit for uncached downloads. If you are not on TorBox this option will
-      not appear.
-    - **Core Filtering Engine** — The default (**Standard SEL**) is tuned to
-      remove clutter and show a minimal but sufficient set of results across
-      all scenarios. If you prefer more results, switch to **Extended SEL**.
+    - **Required Languages**: the languages you watch in. Streams in other
+      languages are left out, apart from ones tagged Original, Dual Audio,
+      Multi, Dubbed or Unknown, unless you also turn on **Strict Language
+      Filtering**.
+    - **Formatter Style**: how streams are named. Pick the style made for your
+      app if there is one, such as AppleTV or Chillio.
+    - **TorBox Tier** _(TorBox only, required)_: your plan, which sets the size
+      limit for uncached downloads.
+    - **Setup Variants**: **Include Variants** adds extra install links on the
+      Save & Install page, such as Debrid Only and Usenet Only.
 
-    Once you are happy with the inputs, click **Next**.
+    **Show 10 advanced options** has the finer controls. Click **Continue**.
 
   </Step>
   <Step>
-    **Credential inputs** — Enter the API keys for any debrid services you
-    selected, plus the TMDB and TVDB API keys from Step 3. Click **Load
-    Template** when done.
+    **Credentials**: the API key for each service you picked and your TMDB key
+    from step 3. TVDB is optional. Click **Continue**.
+  </Step>
+  <Step>
+    **Review**: the addons, services and credentials the setup will apply.
+    Click **Apply setup**. Nothing is saved until the next step.
   </Step>
 </Steps>
 
@@ -342,58 +349,49 @@ After clicking **Open Template** you will be walked through a short import wizar
 
 ---
 
-## Step 6 — Save and Install
+## Step 6: Save and install
 
-After the template loads you will land on the **Save & Install** page.
+After the setup is applied you land on the **Save & Install** page.
 
 <Steps>
   <Step>
-    Under **Create Configuration**, enter a password and click **Create**. If
-    successful you will see **Configuration created successfully** and a UUID
-    will be shown. **Save both your UUID and password somewhere safe — there is
-    no way to recover them if lost.**
+    Under **Create Configuration**, enter a password twice and click
+    **Create**. Your UUID appears under **Save Configuration**. **Save both
+    your UUID and password somewhere safe: there is no way to recover them if
+    lost.**
 
     <Callout type="warn">
       If you see an error like **"Failed to fetch manifest for &lt;addon&gt;"**,
       go to the **Addons** menu and disable the addon mentioned in the error,
       then try clicking **Create** again. This is usually a temporary issue
-      with that addon — you can re-enable it and save again later once it
+      with that addon: you can re-enable it and save again later once it
       recovers.
 
-      If you see **"Failed to validate TMDB API Key" / 401 Unauthorized**,
-      double-check your TMDB API key is correct. You can review it in the
-      **Services** menu under the **Metadata** section.
+      If you see **"Failed to validate TMDB API Key"**, double-check your TMDB
+      API key is correct. You can review it in the **Services** menu under the
+      **Metadata** section.
     </Callout>
 
   </Step>
   <Step>
-    An **Installation Options** card will appear.
-
-    There will be a section for Stremio (and Stremio addon compatible clients), containing three methods of installation:
-    - **Install to Stremio** — Opens the Stremio app and installs the addon directly. Use
-      this if Stremio is installed on the device you are currently on.
-    - **Install to Stremio Web** — Installs via the Stremio web player. Only use this if
-      you are already signed in to Stremio Web — otherwise it will install to
-      a guest account and your progress won't sync.
-    - **Manifest URL** — A text box with a copy button. Use this to install
-      manually on Stremio or for other Stremio addon compatible clients.
-
-    <Callout type="info">
-      If you are using a client that doesn't directly support Stremio addons (e.g Seanime, Chillio), there is an
-      `Other Apps` section next to the Stremio section. Find your client there and click on it for instructions.
-    </Callout>
-
-    <Callout type="tip">
-      To watch without Stremio, the **AIOStreams app** section opens your
-      configuration in a browser, or gets the app for your computer, phone or
-      TV. See the [AIOStreams app guide](/apps).
-    </Callout>
-
+    **Install to Stremio?** opens next. Sign in with your Stremio account (an
+    email and password, or an auth key) and AIOStreams installs itself there
+    and updates itself whenever you save. It's optional: **Not now** closes it.
   </Step>
   <Step>
-    A Stremio pop-up will ask whether to install the addon. Click **Install**.
-    You are now set up — click on any title in Stremio and results should
-    appear.
+    **Installation Options** has everything else:
+
+    - **Stremio**: **Install to Stremio** opens the Stremio app on this device,
+      **Install to Stremio Web** installs through Stremio Web (only if you are
+      signed in there, or it installs to a guest account), and **Direct
+      Manifest URL** is the link for installing by hand, in Stremio or any app
+      that supports Stremio addons.
+    - **AIOStreams app**: **Open in browser** opens the app right away, and the
+      buttons beside it get the app for your computer, Android device or TV.
+      See the [AIOStreams app guide](/apps).
+    - **Other apps**: Seanime, Jellyfin apps, Chillio and Aniyomi, each with
+      its own instructions.
+
   </Step>
 </Steps>
 
@@ -404,12 +402,47 @@ After the template loads you will land on the **Save & Install** page.
 
 ---
 
-## Making Changes
+## Step 7: Add catalogs and metadata
+
+The template brings streams but no catalogs. **[AIOMetadata](https://github.com/cedya77/aiometadata)** adds them, along with each title's details. Configure it first: [Tamtaro's AIOMetadata guide](https://github.com/Tam-Taro/SEL-Filtering-and-Sorting/tree/main?tab=readme-ov-file#%EF%B8%8F-whats-included-for-aiometadata) has ready-made configurations to start from. Where it goes depends on where you watch.
+
+<Tabs items={['Stremio', 'AIOStreams app']}>
+  <Tab value="Stremio">
+    Install AIOMetadata in Stremio on its own, next to AIOStreams, as Tamtaro's guide describes.
+
+    Stremio then asks AIOMetadata directly, so your changes there show up straight away. Inside AIOStreams, its catalogs would pass through AIOStreams' cache, which on a public instance the instance's owner controls, not you.
+
+  </Tab>
+  <Tab value="AIOStreams app">
+    The app only shows what your configuration provides, so AIOMetadata goes inside AIOStreams:
+
+    <Steps>
+      <Step>
+        Copy AIOMetadata's manifest URL. In AIOStreams, go to **Addons →
+        Installed**, click **Add by URL** and paste it.
+      </Step>
+      <Step>
+        Move AIOMetadata to the top of **My Addons** with the reorder button, so
+        its metadata is used first.
+      </Step>
+      <Step>Go to **Save & Install** and click **Save**.</Step>
+    </Steps>
+
+    After you change AIOMetadata's catalogs, press the refresh button on the **Catalogs** card (**Addons → Installed → Catalogs**) and save, so AIOStreams picks up the new list.
+
+    Using Stremio too? Keep AIOMetadata out of your Stremio install with a variant, so its catalogs don't show twice there: see [Different addons for the apps and Stremio](/apps/media-server#different-addons-for-the-apps-and-stremio).
+
+  </Tab>
+</Tabs>
+
+---
+
+## Making changes
 
 To edit your configuration after installation:
 
 - In **Stremio**, click **Configure** next to the AIOStreams addon.
-- Or navigate to `https://your-instance/stremio/configure` and log in with your UUID and password.
+- Or go to `https://your-instance/stremio/configure`, click **Sign In** and enter your UUID and password.
 
 Once you've made your changes, go to **Save & Install** and click **Save**.
 
@@ -420,19 +453,24 @@ Once you've made your changes, go to **Save & Install** and click **Save**.
 
 ---
 
-## Getting Help
+## Getting help
 
 Run into something not covered here? Come join the [Discord server](https://discord.viren070.me).
 
-- **#support** — General AIOStreams questions and issues.
-- **#setups** — Tam is active on the server and has a [dedicated forum](https://discord.com/channels/1225024298490662974/1485044483857846324) for questions specifically about this template.
+- **#support**: general AIOStreams questions and issues.
+- **#setups**: Tam is active on the server and has a [dedicated forum](https://discord.com/channels/1225024298490662974/1485044483857846324) for questions specifically about this template.
   If you're stuck on something with this setup, this is the best place to ask.
 
 ---
 
-## Next Steps
+## Next steps
 
 <Cards>
+  <Card
+    title="AIOStreams app"
+    href="/apps"
+    description="Get the app for your computer, phone or TV."
+  />
   <Card
     title="Configure Options"
     href="/configuration/options"
