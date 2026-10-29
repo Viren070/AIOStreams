@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-24 23:08+0000\n"
+"PO-Revision-Date: 2026-10-29 23:12+0000\n"
 "Last-Translator: D4rk <dark56100@users.noreply.hosted.weblate.org>\n"
 "Language-Team: French <https://hosted.weblate.org/projects/aiostreams/web-app/fr/>\n"
 "Language: fr\n"
@@ -13,7 +13,7 @@ msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "(you)"
-msgstr "(vous)"
+msgstr "(toi)"
 
 #: src/pages/sign-in.tsx
 msgid "{address} did not answer. Check that it is running, then try again."
@@ -309,7 +309,7 @@ msgstr "Un badge s'affiche sur chaque version dont le texte correspond à son mo
 
 #: src/pages/settings/interface.tsx
 msgid "A card you rest on grows into a bigger preview with its details, while the hero rotates."
-msgstr ""
+msgstr "Une carte que vous reposez pousse dans un plus grand aperçu avec ses détails, tandis que le héros tourne."
 
 #: src/components/party/party-sheet.tsx
 msgid "A code is looked up on the relay picked above."
@@ -762,7 +762,7 @@ msgstr "Annuler"
 
 #: src/pages/settings/interface.tsx
 msgid "Cards"
-msgstr ""
+msgstr "Cartes"
 
 #: src/components/people.tsx
 msgid "Cast"
@@ -1550,9 +1550,8 @@ msgid "Filter versions"
 msgstr "Filtrer les versions"
 
 #: src/pages/settings/playback.tsx
-#, fuzzy
 msgid "Find versions when a title opens"
-msgstr "Impossible de trouver des versions de ce titre"
+msgstr "Trouver des versions quand un titre s'ouvre"
 
 #: src/components/download-button.tsx
 msgid "Finding a version to download"
@@ -1851,7 +1850,7 @@ msgstr "Lien d'invitation copié"
 
 #: src/components/licenses.tsx
 msgid "It came with no licence text."
-msgstr ""
+msgstr "Il n'a pas de texte de licence."
 
 #: src/components/send-report.tsx
 msgid "It carries this device's details and the app's recent log. Passwords and tokens are left out."
@@ -1867,7 +1866,7 @@ msgstr "Ce sera annulé sauf si vous le conservez."
 
 #: src/pages/settings/about.tsx
 msgid "Its Metal and AVFoundation video outputs."
-msgstr ""
+msgstr "Ses sorties vidéo Metal et AVFoundation."
 
 #: src/pages/settings/about.tsx
 msgid "Jellyfin API"
@@ -2012,7 +2011,7 @@ msgstr "Permet au décodeur du téléviseur de synchroniser lui-même l'image et
 
 #: src/components/licenses.tsx
 msgid "Licences"
-msgstr ""
+msgstr "Licences"
 
 #: src/components/version-settings.tsx
 msgid "Link a pack someone shares, in this app's format or the one Fusion and Nuvio use. It stays up to date with its author's changes."
@@ -2056,7 +2055,7 @@ msgstr "Recherche de la session…"
 
 #: src/pages/settings/playback.tsx
 msgid "Looks for versions as soon as a title's page opens, so Play and the version list don't wait. Each title you open is looked up, even if you don't play it."
-msgstr ""
+msgstr "La recherche des versions s'effectue dès l'ouverture de la page d'un titre, ce qui évite tout temps d'attente pour la lecture et l'affichage de la liste des versions. Chaque titre que vous ouvrez fait l'objet d'une recherche, même si vous ne le lancez pas."
 
 #: src/components/party/party-sheet.tsx
 msgid "Lost the connection to {relay}. Reconnecting… Your player carries on, and gets back in step once it's back."
@@ -3050,7 +3049,6 @@ msgid "Previews"
 msgstr "Aperçus"
 
 #: src/pages/settings/playback.tsx
-#, fuzzy
 msgctxt "Episode segments showing the next episode"
 msgid "Previews"
 msgstr "Aperçus"
@@ -3142,9 +3140,8 @@ msgid "Rate season"
 msgstr "Noter la saison"
 
 #: src/components/scores.tsx
-#, fuzzy
 msgid "Rating"
-msgstr "En attente"
+msgstr "Note"
 
 #: src/components/party/party-sheet.tsx
 msgid "React with {emoji}"
@@ -3258,7 +3255,7 @@ msgstr "Renommer"
 
 #: src/components/playlists.tsx
 msgid "Repeat"
-msgstr ""
+msgstr "Répéter"
 
 #: src/pages/settings/apps.tsx
 msgid "Report a problem"
@@ -3365,7 +3362,7 @@ msgstr "Fait défiler les titres à la une"
 
 #: src/components/scores.tsx
 msgid "Rotten Tomatoes audience"
-msgstr ""
+msgstr "Rotten Tomatoes public"
 
 #: src/pages/settings/interface.tsx
 msgid "Row"
@@ -3488,9 +3485,8 @@ msgid "Searching"
 msgstr "Recherche en cours"
 
 #: src/components/player/pause-screen.tsx
-#, fuzzy
 msgid "Season {season}"
-msgstr "Noter la saison"
+msgstr "Saison {season}"
 
 #: src/components/item-menu.tsx
 msgid "See the download"
@@ -3673,7 +3669,7 @@ msgstr "Affiche les sous-titres dans votre langue sauf si l'audio y est déjà."
 
 #: src/components/playlists.tsx
 msgid "Shuffle"
-msgstr ""
+msgstr "Lecture aléatoire"
 
 #: src/pages/settings/interface.tsx
 msgid "Side rail"
@@ -3684,7 +3680,6 @@ msgid "Side rail runs down the side of the screen; Top tabs sit along the top of
 msgstr "La barre latérale longe le côté de l'écran ; les onglets supérieurs s'affichent en haut de chaque page."
 
 #: src/pages/settings/interface.tsx
-#, fuzzy
 msgid "Sidebar"
 msgstr "Barre latérale"
 
@@ -3866,7 +3861,7 @@ msgstr "Espace à allouer"
 
 #: src/components/player/pause-screen.tsx
 msgid "Specials"
-msgstr ""
+msgstr "Spéciales"
 
 #: src/components/player/options.tsx
 msgid "Speed"
@@ -4088,9 +4083,8 @@ msgid "Tab"
 msgstr "Tab"
 
 #: src/pages/settings/interface.tsx
-#, fuzzy
 msgid "Tab names"
-msgstr "Noms des pages"
+msgstr "Noms d ' onglet"
 
 #: src/pages/history.tsx
 msgid "Table"
@@ -4229,9 +4223,8 @@ msgid "The interface is built on its components."
 msgstr "L'interface repose sur ses composants."
 
 #: src/components/licenses.tsx
-#, fuzzy
 msgid "The licences couldn't be loaded."
-msgstr "Les répliques de ces sous-titres n'ont pas pu être lues."
+msgstr "Les licences n'ont pas pu être chargées."
 
 #: src/lib/hosts/shell/player.ts
 msgid "the link answered HTTP {status}"
@@ -4259,7 +4252,7 @@ msgstr "L'ancienne méthode de rendu de mpv, pour les Mac où les autres échoue
 
 #: src/components/licenses.tsx
 msgid "The open-source software in this app, and the licence of each."
-msgstr ""
+msgstr "Le logiciel open-source dans cette application, et la licence de chacun."
 
 #: src/components/remote-sheet.tsx
 msgid "The other device could not be reached"
@@ -4760,7 +4753,7 @@ msgstr "Sortie vidéo"
 
 #: src/components/licenses.tsx
 msgid "View"
-msgstr ""
+msgstr "Vue"
 
 #: src/components/licenses.tsx src/pages/settings/about.tsx
 msgid "Visit"
@@ -4961,9 +4954,8 @@ msgid "Where the navigation goes when the screen is wide enough for a sidebar, s
 msgstr "Emplacement de la navigation lorsque l'écran est assez large pour une barre latérale, comme une tablette en mode paysage."
 
 #: src/pages/settings/interface.tsx
-#, fuzzy
 msgid "Where the navigation goes when the window is wide enough for a sidebar."
-msgstr "Emplacement de la navigation lorsque l'écran est assez large pour une barre latérale, comme une tablette en mode paysage."
+msgstr "Emplacement de la barre de navigation lorsque la fenêtre est suffisamment large pour afficher une barre latérale."
 
 #: src/pages/settings/index.tsx
 msgid "Where they go and how many run at once"
@@ -4971,7 +4963,7 @@ msgstr "Emplacement de stockage et nombre de téléchargements simultanés"
 
 #: src/pages/settings/interface.tsx
 msgid "Whether the bar at the bottom, and tabs along the top, name each page."
-msgstr ""
+msgstr "Que ce soit la barre en bas ou les onglets en haut, donnez un nom à chaque page."
 
 #: src/pages/settings/interface.tsx
 msgid "Whether the rail names each page only while you're in it, or all the time."
@@ -4982,9 +4974,8 @@ msgid "Whether the rail names each page under its icon."
 msgstr "Indique si la barre latérale affiche le nom de chaque page sous son icône."
 
 #: src/pages/settings/interface.tsx
-#, fuzzy
 msgid "Whether the tabs name each page beside its icon."
-msgstr "Indique si la barre latérale affiche le nom de chaque page sous son icône."
+msgstr "Que les onglets nomment chaque page à côté de son icône."
 
 #: src/components/shortcut-settings.tsx
 msgid "While syncing subtitles by ear."
