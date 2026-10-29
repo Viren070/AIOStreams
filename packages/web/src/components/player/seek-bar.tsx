@@ -2,6 +2,7 @@ import { t } from '@lingui/core/macro';
 import React from 'react';
 import { cn } from '@aiostreams/ui/core/styling';
 import { clock } from '../../lib/format';
+import { isRepeat } from '../../lib/input';
 import { chapterAt, type Chapter } from '../../lib/playback/chapters';
 import { usePlayhead, type Playhead } from '../../lib/playback/playhead';
 import type { ThumbnailFeed } from '../../lib/playback/thumbnails';
@@ -42,7 +43,7 @@ export function SeekBar({
   handle: boolean;
   thumbnails?: ThumbnailFeed;
   onSeek(ms: number): void;
-  onStep(direction: number): void;
+  onStep(direction: number, held: boolean): void;
   onTogglePlay(): void;
 }) {
   const positionMs = usePlayhead(playhead, (h) => h.positionMs, live);
@@ -96,7 +97,7 @@ export function SeekBar({
         const direction = arrowDirection(e.key);
         if (!direction && e.key !== 'Enter') return;
         e.preventDefault();
-        if (direction) onStep(direction);
+        if (direction) onStep(direction, isRepeat(e.nativeEvent));
         else onTogglePlay();
       }}
       onPointerDown={(e) => {

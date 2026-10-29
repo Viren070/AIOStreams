@@ -44,7 +44,7 @@ interface PlayerKeys {
   hide(): void;
   notice(text: string): void;
   togglePlay(): void;
-  seekBy(deltaMs: number): void;
+  seekBy(deltaMs: number, held: boolean): void;
   /** Plays from a remote's scrub, or drops it; false without one. */
   endScrub(commit: boolean): boolean;
   onBack(): void;
@@ -173,10 +173,10 @@ export function usePlayerKeys(keys: PlayerKeys): void {
         if (!player().state.paused) k().togglePlay();
       },
       'player.stop': () => k().onBack(),
-      'player.skipBack': () =>
-        k().seekBy(-settings.controls.seekStep.read() * 1000),
-      'player.skipForward': () =>
-        k().seekBy(settings.controls.seekStep.read() * 1000),
+      'player.skipBack': (_, repeat) =>
+        k().seekBy(-settings.controls.seekStep.read() * 1000, repeat),
+      'player.skipForward': (_, repeat) =>
+        k().seekBy(settings.controls.seekStep.read() * 1000, repeat),
       'player.jump': (input) => {
         const { state, seek } = player();
         if (!state.durationMs) return false;
@@ -233,11 +233,11 @@ export function usePlayerKeys(keys: PlayerKeys): void {
     };
 
     const stops = Object.entries(actions).map(([id, run]) =>
-      onAction(id as ActionId, (input) => {
+      onAction(id as ActionId, (input, repeat) => {
         if (!k().ready) return id === 'player.stop' ? k().onBack() : undefined;
         // A control with keyboard focus moves on to the next with the arrows.
         if (keyboardFocus() && movesFocus(input)) return false;
-        if (run(input) === false) return false;
+        if (run(input, repeat) === false) return false;
         k().wake();
       })
     );

@@ -14,6 +14,7 @@ export {
 } from './actions';
 export {
   inputCount,
+  isRepeat,
   mediaKeyJustTaken,
   movesFocus,
   noteInput,

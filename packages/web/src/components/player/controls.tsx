@@ -184,11 +184,12 @@ export function PlayerControls({
     burstSeek(deltaMs);
     showSeekFlash(deltaMs);
   };
-  // A remote scrubs paused, with the picture there, until Select plays from
-  // it or Back drops it, so nothing seeks on the way.
+  // A remote's press skips. Held, or pressed while paused, it scrubs paused
+  // through pictures until Select plays from one or Back drops it.
   const held = React.useRef({ at: 0, repeats: 0 });
-  const scrubBy = (deltaMs: number) => {
-    const { state, playhead, togglePlay } = latest.current;
+  const skippedFrom = React.useRef(0);
+  const remoteStep = (deltaMs: number, repeat: boolean) => {
+    const { state, playhead, thumbnails, togglePlay } = latest.current;
     const now = performance.now();
     const h = held.current;
     h.repeats = now - h.at < HELD_GAP_MS ? h.repeats + 1 : 0;
@@ -198,9 +199,18 @@ export function PlayerControls({
       1 + Math.floor(h.repeats / REPEATS_PER_STEP)
     );
     const last = scrubbing.current;
+    if (!last && !(thumbnails?.row() && (repeat || state.paused))) {
+      if (seekingTo === null) skippedFrom.current = playhead.positionMs;
+      return seekBy(deltaMs * steps, false);
+    }
     if (!last && !state.paused) togglePlay();
-    const fromMs = last?.fromMs ?? playhead.positionMs;
-    const to = Math.max(0, (last?.toMs ?? fromMs) + deltaMs * steps);
+    const fromMs =
+      last?.fromMs ??
+      (state.paused ? playhead.positionMs : skippedFrom.current);
+    const to = Math.max(
+      0,
+      (last?.toMs ?? seekingTo ?? playhead.positionMs) + deltaMs * steps
+    );
     scrubbing.current = {
       fromMs,
       toMs: state.durationMs ? Math.min(state.durationMs, to) : to,
@@ -215,6 +225,8 @@ export function PlayerControls({
     scrubbing.current = null;
     setScrub(null);
     if (commit) latest.current.seek(s.toMs);
+    // Only a hold scrubs from playing, after its first press skipped.
+    else if (s.resume) latest.current.seek(s.fromMs);
     if ((commit || s.resume) && latest.current.state.paused)
       latest.current.togglePlay();
     return true;
@@ -307,7 +319,8 @@ export function PlayerControls({
     hide,
     notice: showNotice,
     togglePlay,
-    seekBy: (deltaMs) => (tv ? scrubBy(deltaMs) : seekBy(deltaMs, false)),
+    seekBy: (deltaMs, held) =>
+      tv ? remoteStep(deltaMs, held) : seekBy(deltaMs, false),
     endScrub,
     onBack,
     onPrevious,
@@ -634,9 +647,9 @@ export function PlayerControls({
           handle={touch}
           thumbnails={player.thumbnails}
           onSeek={player.seek}
-          onStep={(direction) =>
+          onStep={(direction, held) =>
             tv
-              ? scrubBy(direction * seekStep * 1000)
+              ? remoteStep(direction * seekStep * 1000, held)
               : seekBy(direction * seekStep * 1000, false)
           }
           onTogglePlay={() => endScrub(true) || togglePlay()}
