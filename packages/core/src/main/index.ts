@@ -18,6 +18,7 @@ import {
   StreamContext,
 } from '../streams/index.js';
 import type { AIOStreamsContext, AIOStreamsOptions } from './types.js';
+import type { MetaHint } from '../metadata/hint.js';
 import {
   applyPresets,
   assignPublicIps,
@@ -94,9 +95,10 @@ export class AIOStreams {
   public async getStreams(
     id: string,
     type: string,
-    preCaching: boolean = false
+    preCaching: boolean = false,
+    metaHint?: MetaHint
   ) {
-    return _getStreams(this.ctx, id, type, preCaching);
+    return _getStreams(this.ctx, id, type, preCaching, metaHint);
   }
 
   public async getCatalog(type: string, id: string, extras?: string) {

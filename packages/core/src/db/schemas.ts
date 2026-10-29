@@ -1763,6 +1763,7 @@ export const MetaSchema = MetaPreviewSchema.extend({
   language: z.string().or(z.null()).optional(),
   country: z.string().or(z.null()).optional(),
   awards: z.string().or(z.null()).optional(),
+  released: z.string().or(z.null()).optional(),
   website: z.string().url().or(z.null()).optional(),
   behaviorHints: z
     .object({
