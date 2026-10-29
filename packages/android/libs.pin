@@ -1,4 +1,4 @@
 # The libs AAR the app ships: a release of github.com/AIOStreams/libs, which pins every source
 # it builds, and the AAR's SHA-256.
-url=https://github.com/AIOStreams/libs/releases/download/20261028-07bb2bc/libs-android.aar
-sha256=71700471f5383c8315b37dd355962b4e0ba7a5740fd5d3b2536d20281f2deccb
+url=https://github.com/AIOStreams/libs/releases/download/20261029-fe27405/libs-android.aar
+sha256=a3b04118184e1f3d244cc66f4904f4010c402476db41111177788207f5cd8e42
