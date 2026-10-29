@@ -3,7 +3,7 @@
     <string name="channel_downloads">Téléchargements</string>
     <plurals name="downloading_items">
         <item quantity="one">Téléchargement de %d élément</item>
-        <item quantity="many">Téléchargement de %d élément</item>
+        <item quantity="many">Téléchargement de %d éléments</item>
         <item quantity="other">Téléchargement de %d éléments</item>
     </plurals>
     <string name="channel_updates">Mises à jour</string>
