@@ -16,7 +16,11 @@ import {
   extractTrackersFromMagnet,
   validateInfoHash,
 } from '../utils/debrid.js';
-import { createQueryLimit, getTitleLanguagesForUrl } from '../utils/general.js';
+import {
+  createQueryLimit,
+  getTitleLanguagesForUrl,
+  proxyNzbs,
+} from '../utils/general.js';
 import { hashNzbUrl } from '../../debrid/utils.js';
 
 export const ProwlarrAddonConfigSchema = BaseDebridConfigSchema.extend({
@@ -25,6 +29,7 @@ export const ProwlarrAddonConfigSchema = BaseDebridConfigSchema.extend({
   indexers: z.array(z.string()),
   tags: z.array(z.string()),
   sources: z.array(z.string()).optional(),
+  proxyAuth: z.string().optional(),
 });
 
 export type ProwlarrAddonConfig = z.infer<typeof ProwlarrAddonConfigSchema>;
@@ -294,6 +299,9 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
         type: 'usenet',
         infoUrl: result.infoUrl,
       });
+    }
+    if (this.userData.proxyAuth) {
+      await proxyNzbs(nzbs, this.userData.proxyAuth);
     }
     return nzbs;
   }
