@@ -185,6 +185,9 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
     /** Lets go of the last file's tracks and fonts, before the next file's reader queues its own. */
     fun reset() {
         file++
+        // The next file's lines arrive before its first frame, and are kept by its time.
+        frameUs = 0
+        atNanos = 0
         queue {
             freeTracks()
             nativeClearFonts(native)
