@@ -55,7 +55,10 @@ const segmentLabel = (type: SegmentType) =>
     Intro: t`Intros`,
     Recap: t`Recaps`,
     Outro: t`Credits`,
-    Preview: t`Previews`,
+    Preview: t({
+      context: 'Episode segments showing the next episode',
+      message: 'Previews',
+    }),
     Commercial: t`Ads`,
   })[type];
 
