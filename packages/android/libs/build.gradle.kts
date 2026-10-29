@@ -18,6 +18,7 @@ androidComponents {
     onVariants { variant ->
         variant.sources.jniLibs?.addGeneratedSourceDirectory(aar, FetchLibs::jniLibs)
         variant.sources.assets?.addGeneratedSourceDirectory(aar, FetchLibs::assets)
+        variant.sources.res?.addGeneratedSourceDirectory(aar, FetchLibs::res)
     }
 }
 
