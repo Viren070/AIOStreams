@@ -1,15 +1,15 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
-"Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Weblate 2026.11.dev0\n"
-"Language: ms\n"
+"PO-Revision-Date: 2026-10-29 20:58+0000\n"
 "Last-Translator: AIO sama <aio-sama@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Malay <https://hosted.weblate.org/projects/aiostreams/web-app/ms/>\n"
+"Language: ms\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Weblate 2026.11.dev0\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
-"PO-Revision-Date: 2026-10-29 20:58+0000\n"
 
 #: src/components/party/party-sheet.tsx
 msgid "(you)"
@@ -71,8 +71,7 @@ msgstr "{downloaded} dimuat turun"
 msgid "{episodeCount, plural, one {# episode watched} other {# episodes watched}}"
 msgstr "{episodeCount, plural, other {# episod ditonton}}"
 
-#: src/pages/downloads.tsx
-#: src/pages/history.tsx
+#: src/pages/downloads.tsx src/pages/history.tsx
 msgid "{episodeCount, plural, one {# episode} other {# episodes}}"
 msgstr "{episodeCount, plural, other {# episod}}"
 
@@ -126,8 +125,7 @@ msgstr "{inProgress, plural, other {# sedang berlangsung}}"
 msgid "{key} is taken by {taken}"
 msgstr "{key} telah digunakan oleh {taken}"
 
-#: src/components/card-preview.tsx
-#: src/pages/downloads.tsx
+#: src/components/card-preview.tsx src/pages/downloads.tsx
 msgid "{left} left"
 msgstr "tinggal {left}"
 
@@ -361,8 +359,7 @@ msgstr "Perihal"
 msgid "Accent"
 msgstr "Penyerlah"
 
-#: src/components/layout.tsx
-#: src/pages/settings/index.tsx
+#: src/components/layout.tsx src/pages/settings/index.tsx
 msgid "Account"
 msgstr "Akaun"
 
@@ -374,11 +371,8 @@ msgstr "Akaun dan pelayan"
 msgid "Actions"
 msgstr "Tindakan"
 
-#: src/components/layout.tsx
-#: src/pages/history.tsx
-#: src/pages/home.tsx
-#: src/pages/settings/apps.tsx
-#: src/pages/settings/cache.tsx
+#: src/components/layout.tsx src/pages/history.tsx src/pages/home.tsx
+#: src/pages/settings/apps.tsx src/pages/settings/cache.tsx
 msgid "Activity"
 msgstr "Aktiviti"
 
@@ -406,8 +400,7 @@ msgstr "Tambah kekunci untuk {label}"
 msgid "Add a language"
 msgstr "Tambah bahasa"
 
-#: src/app.tsx
-#: src/pages/servers.tsx
+#: src/app.tsx src/pages/servers.tsx
 msgid "Add a server"
 msgstr "Tambah pelayan"
 
@@ -419,8 +412,7 @@ msgstr "Tambah bahasa lain"
 msgid "Add catalogs to your configuration, then refresh."
 msgstr "Tambah katalog pada konfigurasi anda, kemudian segar semula."
 
-#: src/components/item-menu.tsx
-#: src/pages/item.tsx
+#: src/components/item-menu.tsx src/pages/item.tsx
 msgid "Add favourite"
 msgstr "Tambah kegemaran"
 
@@ -428,9 +420,7 @@ msgstr "Tambah kegemaran"
 msgid "Add from Continue watching"
 msgstr "Tambah daripada Teruskan menonton"
 
-#: src/components/item-menu.tsx
-#: src/components/playlists.tsx
-#: src/pages/item.tsx
+#: src/components/item-menu.tsx src/components/playlists.tsx src/pages/item.tsx
 msgid "Add to playlist"
 msgstr "Tambah ke senarai main"
 
@@ -442,8 +432,7 @@ msgstr "Tambah ke senarai main ini"
 msgid "Added {name}"
 msgstr "Menambah {name}"
 
-#: src/components/playlists.tsx
-#: src/pages/player.tsx
+#: src/components/playlists.tsx src/pages/player.tsx
 msgid "Added to {name}"
 msgstr "Ditambah ke {name}"
 
@@ -475,10 +464,8 @@ msgstr "Bersiaran {day} · {until}"
 msgid "Airs {until}"
 msgstr "Bersiaran {until}"
 
-#: src/components/kind-tabs.tsx
-#: src/components/version-picker.tsx
-#: src/pages/discover.tsx
-#: src/pages/favourites.tsx
+#: src/components/kind-tabs.tsx src/components/version-picker.tsx
+#: src/pages/discover.tsx src/pages/favourites.tsx
 msgid "All"
 msgstr "Semua"
 
@@ -514,8 +501,7 @@ msgstr "Juga apabila anda kembali selepas setengah jam. Sesiapa yang menonton bo
 msgid "Alt"
 msgstr "Alt"
 
-#: src/pages/settings/audio.tsx
-#: src/pages/settings/interface.tsx
+#: src/pages/settings/audio.tsx src/pages/settings/interface.tsx
 #: src/pages/settings/subtitles.tsx
 msgid "Always"
 msgstr "Sentiasa"
@@ -528,8 +514,7 @@ msgstr "Sentiasa memaparkan sarikata, dalam bahasa anda apabila versi memilikiny
 msgid "An audio track you pick while watching a show sets the language for its other episodes. Picking what the settings above would play forgets it."
 msgstr "Trek audio yang anda pilih semasa menonton rancangan menetapkan bahasa untuk episod yang lain. Memilih semula tetapan asal akan memadamkan ingatan pilihan tersebut."
 
-#: src/lib/hosts/jellyfin-android.ts
-#: src/pages/settings/about.tsx
+#: src/lib/hosts/jellyfin-android.ts src/pages/settings/about.tsx
 #: src/pages/settings/index.tsx
 msgid "Android app"
 msgstr "Aplikasi Android"
@@ -546,8 +531,7 @@ msgstr "Geganti lain"
 msgid "Anyone with the invite can join, from any server."
 msgstr "Sesiapa sahaja yang mempunyai jemputan boleh menyertai, dari mana-mana pelayan."
 
-#: src/lib/hosts/native-shell.ts
-#: src/pages/settings/index.tsx
+#: src/lib/hosts/native-shell.ts src/pages/settings/index.tsx
 msgid "App"
 msgstr "Aplikasi"
 
@@ -603,8 +587,7 @@ msgstr "Tanya apabila aplikasi dibuka"
 msgid "At 0% there is no background."
 msgstr "Pada 0% tiada latar belakang."
 
-#: src/components/player/options.tsx
-#: src/components/remote-sheet.tsx
+#: src/components/player/options.tsx src/components/remote-sheet.tsx
 #: src/pages/settings/index.tsx
 msgid "Audio"
 msgstr "Audio"
@@ -629,8 +612,7 @@ msgstr "Audio: {label}"
 msgid "Auto-play the first version"
 msgstr "Main secara automatik versi pertama"
 
-#: src/pages/settings/audio.tsx
-#: src/pages/settings/interface.tsx
+#: src/pages/settings/audio.tsx src/pages/settings/interface.tsx
 #: src/pages/settings/playback.tsx
 msgid "Automatic"
 msgstr "Automatiks"
@@ -639,15 +621,10 @@ msgstr "Automatiks"
 msgid "Automatic lists episodes on narrow screens and puts them in a row on wide ones."
 msgstr "Automatik menyenaraikan episod pada skrin sempit dan meletakkannya dalam barisan pada skrin lebar."
 
-#: src/components/layout.tsx
-#: src/components/licenses.tsx
-#: src/components/party/party-sheet.tsx
-#: src/components/player/controls.tsx
-#: src/components/player/next-episode.tsx
-#: src/lib/input/actions.ts
-#: src/pages/player.tsx
-#: src/pages/servers.tsx
-#: src/pages/sign-in.tsx
+#: src/components/layout.tsx src/components/licenses.tsx
+#: src/components/party/party-sheet.tsx src/components/player/controls.tsx
+#: src/components/player/next-episode.tsx src/lib/input/actions.ts
+#: src/pages/player.tsx src/pages/servers.tsx src/pages/sign-in.tsx
 #: src/pages/trailer.tsx
 msgid "Back"
 msgstr "Kembali"
@@ -656,10 +633,8 @@ msgstr "Kembali"
 msgid "Back button"
 msgstr "Butang kembali"
 
-#: src/components/version-settings.tsx
-#: src/pages/settings/interface.tsx
-#: src/pages/settings/subtitles.tsx
-#: src/pages/settings/theme.tsx
+#: src/components/version-settings.tsx src/pages/settings/interface.tsx
+#: src/pages/settings/subtitles.tsx src/pages/settings/theme.tsx
 msgid "Background"
 msgstr "Latar Belakang"
 
@@ -683,8 +658,7 @@ msgstr "Sebelum penamat"
 msgid "Below zero plays the sound earlier, as for wireless headphones that lag behind the picture."
 msgstr "Nilai bawah kosong memainkan bunyi lebih awal, sesuai untuk fon kepala tanpa wayar yang mengalami lengah masa."
 
-#: src/components/player/options.tsx
-#: src/lib/input/actions.ts
+#: src/components/player/options.tsx src/lib/input/actions.ts
 msgid "Bigger subtitles"
 msgstr "Sarikata lebih besar"
 
@@ -756,8 +730,7 @@ msgstr "Pemain terbina dalam"
 msgid "Buttons, progress bars and highlights."
 msgstr "Butang, bar kemajuan dan penyerlah."
 
-#: src/lib/hosts/shell/player.ts
-#: src/pages/settings/index.tsx
+#: src/lib/hosts/shell/player.ts src/pages/settings/index.tsx
 msgid "Cache"
 msgstr "Cache"
 
@@ -765,9 +738,7 @@ msgstr "Cache"
 msgid "Cache size"
 msgstr "Saiz cache"
 
-#: src/components/layout.tsx
-#: src/pages/calendar.tsx
-#: src/pages/home.tsx
+#: src/components/layout.tsx src/pages/calendar.tsx src/pages/home.tsx
 #: src/pages/settings/apps.tsx
 msgid "Calendar"
 msgstr "Kalendar"
@@ -776,9 +747,7 @@ msgstr "Kalendar"
 msgid "Can’t reach"
 msgstr "Tidak dapat mencapai"
 
-#: src/components/layout.tsx
-#: src/lib/client.ts
-#: src/pages/sign-in.tsx
+#: src/components/layout.tsx src/lib/client.ts src/pages/sign-in.tsx
 msgid "Can't reach the server"
 msgstr "Tidak dapat mencapai pelayan"
 
@@ -786,11 +755,8 @@ msgstr "Tidak dapat mencapai pelayan"
 msgid "Can’t reach the server"
 msgstr "Tidak dapat mencapai pelayan"
 
-#: src/components/playlists.tsx
-#: src/components/send-report.tsx
-#: src/components/version-settings.tsx
-#: src/lib/i18n.ts
-#: src/pages/downloads.tsx
+#: src/components/playlists.tsx src/components/send-report.tsx
+#: src/components/version-settings.tsx src/lib/i18n.ts src/pages/downloads.tsx
 msgid "Cancel"
 msgstr "Batal"
 
@@ -822,8 +788,7 @@ msgstr "Tukar folder"
 msgid "Change reactions"
 msgstr "Tukar reaksi"
 
-#: src/components/no-catalogs.tsx
-#: src/pages/settings/account.tsx
+#: src/components/no-catalogs.tsx src/pages/settings/account.tsx
 #: src/pages/sign-in.tsx
 msgid "Change server"
 msgstr "Tukar pelayan"
@@ -848,8 +813,7 @@ msgstr "Saluran"
 msgid "Channels"
 msgstr "Saluran"
 
-#: src/components/player/keys.ts
-#: src/components/player/options.tsx
+#: src/components/player/keys.ts src/components/player/options.tsx
 msgid "Chapter {number}"
 msgstr "Bab {number}"
 
@@ -865,8 +829,7 @@ msgstr "Sembang"
 msgid "Check now"
 msgstr "Semak sekarang"
 
-#: src/lib/hosts/shell/index.ts
-#: src/pages/settings/apps.tsx
+#: src/lib/hosts/shell/index.ts src/pages/settings/apps.tsx
 msgid "Checking…"
 msgstr "Menyemak…"
 
@@ -902,8 +865,7 @@ msgstr "Kosongkan penilaian"
 msgid "Clear selection"
 msgstr "Kosongkan pilihan"
 
-#: src/components/crash-report.tsx
-#: src/components/window-controls.tsx
+#: src/components/crash-report.tsx src/components/window-controls.tsx
 msgid "Close"
 msgstr "Tutup"
 
@@ -915,9 +877,7 @@ msgstr "Kod disalin"
 msgid "Code or invite link"
 msgstr "Kod atau pautan jemputan"
 
-#: src/lib/format.ts
-#: src/pages/discover.tsx
-#: src/pages/item.tsx
+#: src/lib/format.ts src/pages/discover.tsx src/pages/item.tsx
 msgid "Collections"
 msgstr "Koleksi"
 
@@ -977,13 +937,11 @@ msgstr "Bersambung ke Discord."
 msgid "Connection lost"
 msgstr "Sambungan terputus"
 
-#: src/app.tsx
-#: src/pages/sign-in.tsx
+#: src/app.tsx src/pages/sign-in.tsx
 msgid "Continue"
 msgstr "Teruskan"
 
-#: src/components/player/next-episode.tsx
-#: src/pages/home.tsx
+#: src/components/player/next-episode.tsx src/pages/home.tsx
 #: src/pages/settings/interface.tsx
 msgid "Continue watching"
 msgstr "Teruskan menonton"
@@ -996,8 +954,7 @@ msgstr "Kawalan"
 msgid "Copied as JSON"
 msgstr "Disalin sebagai JSON"
 
-#: src/components/crash-report.tsx
-#: src/pages/settings/apps.tsx
+#: src/components/crash-report.tsx src/pages/settings/apps.tsx
 msgid "Copy"
 msgstr "Salin"
 
@@ -1009,8 +966,7 @@ msgstr "Salin sebagai JSON"
 msgid "Copy code"
 msgstr "Salin kod"
 
-#: src/components/party/party-sheet.tsx
-#: src/pages/player.tsx
+#: src/components/party/party-sheet.tsx src/pages/player.tsx
 msgid "Copy link"
 msgstr "Salin pautan"
 
@@ -1022,8 +978,7 @@ msgstr "Salin pautan penstriman"
 msgid "Corner button"
 msgstr "Butang penjuru"
 
-#: src/components/playlists.tsx
-#: src/pages/player.tsx
+#: src/components/playlists.tsx src/pages/player.tsx
 msgid "Could not add to {name}"
 msgstr "Tidak dapat menambah ke {name}"
 
@@ -1047,13 +1002,11 @@ msgstr "Tidak dapat menyalin kod"
 msgid "Could not copy the invite link"
 msgstr "Tidak dapat menyalin pautan jemputan"
 
-#: src/components/version-picker.tsx
-#: src/pages/player.tsx
+#: src/components/version-picker.tsx src/pages/player.tsx
 msgid "Could not copy the link"
 msgstr "Tidak dapat menyalin pautan"
 
-#: src/components/version-settings.tsx
-#: src/pages/settings/apps.tsx
+#: src/components/version-settings.tsx src/pages/settings/apps.tsx
 msgid "Could not copy them"
 msgstr "Tidak dapat menyalinnya"
 
@@ -1073,8 +1026,7 @@ msgstr "Tidak dapat mencari versi: {message}"
 msgid "Could not join"
 msgstr "Tidak dapat menyertai"
 
-#: src/components/download-button.tsx
-#: src/components/item-menu.tsx
+#: src/components/download-button.tsx src/components/item-menu.tsx
 msgid "Could not list the episodes"
 msgstr "Tidak dapat menyenaraikan episod"
 
@@ -1248,10 +1200,8 @@ msgid "Deep purple"
 msgstr "Ungu Gelap"
 
 #. No colour of its own
-#: src/components/version-settings.tsx
-#: src/lib/i18n.ts
-#: src/pages/settings/subtitles.tsx
-#: src/pages/settings/theme.tsx
+#: src/components/version-settings.tsx src/lib/i18n.ts
+#: src/pages/settings/subtitles.tsx src/pages/settings/theme.tsx
 msgid "Default"
 msgstr "Lalai"
 
@@ -1263,8 +1213,7 @@ msgstr "Lengah masa"
 msgid "Delay: {delayLabel}"
 msgstr "Lengah masa: {delayLabel}"
 
-#: src/components/playlists.tsx
-#: src/pages/downloads.tsx
+#: src/components/playlists.tsx src/pages/downloads.tsx
 msgid "Delete"
 msgstr "Padam"
 
@@ -1284,13 +1233,11 @@ msgstr "Padam senarai main"
 msgid "Desert"
 msgstr "Gurun"
 
-#: src/pages/settings/about.tsx
-#: src/pages/settings/index.tsx
+#: src/pages/settings/about.tsx src/pages/settings/index.tsx
 msgid "Desktop app"
 msgstr "Aplikasi Desktop"
 
-#: src/components/item-menu.tsx
-#: src/components/version-picker.tsx
+#: src/components/item-menu.tsx src/components/version-picker.tsx
 #: src/pages/item.tsx
 msgid "Details"
 msgstr "Butiran"
@@ -1343,9 +1290,7 @@ msgstr "Discord tidak berjalan pada komputer ini."
 msgid "Discord refused the status: {message}"
 msgstr "Discord menolak status: {message}"
 
-#: src/components/layout.tsx
-#: src/pages/discover.tsx
-#: src/pages/settings/apps.tsx
+#: src/components/layout.tsx src/pages/discover.tsx src/pages/settings/apps.tsx
 msgid "Discover"
 msgstr "Teroka"
 
@@ -1386,10 +1331,8 @@ msgid "Donate to Me"
 msgstr "Sumbang kepada Saya"
 
 #: src/components/party/reaction-setting.tsx
-#: src/components/player/subtitle-sync.tsx
-#: src/components/playlists.tsx
-#: src/components/send-report.tsx
-#: src/components/version-settings.tsx
+#: src/components/player/subtitle-sync.tsx src/components/playlists.tsx
+#: src/components/send-report.tsx src/components/version-settings.tsx
 msgid "Done"
 msgstr "Selesai"
 
@@ -1397,10 +1340,8 @@ msgstr "Selesai"
 msgid "Down"
 msgstr "Bawah"
 
-#: src/components/download-button.tsx
-#: src/components/item-menu.tsx
-#: src/components/version-picker.tsx
-#: src/pages/settings/about.tsx
+#: src/components/download-button.tsx src/components/item-menu.tsx
+#: src/components/version-picker.tsx src/pages/settings/about.tsx
 msgid "Download"
 msgstr "Muat turun"
 
@@ -1416,13 +1357,11 @@ msgstr "Muat turun dijeda"
 msgid "Download the show"
 msgstr "Muat turun rancangan"
 
-#: src/components/download-button.tsx
-#: src/pages/downloads.tsx
+#: src/components/download-button.tsx src/pages/downloads.tsx
 msgid "Downloaded"
 msgstr "Dimuat turun"
 
-#: src/components/download-button.tsx
-#: src/pages/downloads.tsx
+#: src/components/download-button.tsx src/pages/downloads.tsx
 msgid "Downloading"
 msgstr "Memuat turun"
 
@@ -1434,8 +1373,7 @@ msgstr "Memuat turun versi {version}…"
 msgid "Downloading, {percent}%"
 msgstr "Memuat turun, {percent}%"
 
-#: src/components/layout.tsx
-#: src/pages/downloads.tsx
+#: src/components/layout.tsx src/pages/downloads.tsx
 #: src/pages/settings/index.tsx
 msgid "Downloads"
 msgstr "Muat turun"
@@ -1505,8 +1443,7 @@ msgstr "Masukkan kod ini di bawah Sambungan Pantas pada aplikasi yang sudah log 
 msgid "Enter your password."
 msgstr "Masukkan kata laluan anda."
 
-#: src/components/episodes.tsx
-#: src/components/player/pause-screen.tsx
+#: src/components/episodes.tsx src/components/player/pause-screen.tsx
 msgid "Episode {number}"
 msgstr "Episod {number}"
 
@@ -1518,10 +1455,8 @@ msgstr "Butiran episod"
 msgid "Episode layout"
 msgstr "Susun atur episod"
 
-#: src/components/player/episodes.tsx
-#: src/components/player/options.tsx
-#: src/pages/item.tsx
-#: src/pages/settings/interface.tsx
+#: src/components/player/episodes.tsx src/components/player/options.tsx
+#: src/pages/item.tsx src/pages/settings/interface.tsx
 msgid "Episodes"
 msgstr "Episod"
 
@@ -1557,8 +1492,7 @@ msgstr "Semua benda"
 msgid "Everything unwatched"
 msgstr "Semua yang belum ditonton"
 
-#: src/components/player/options.tsx
-#: src/components/window-controls.tsx
+#: src/components/player/options.tsx src/components/window-controls.tsx
 msgid "Exit full screen"
 msgstr "Keluar daripada skrin penuh"
 
@@ -1578,8 +1512,7 @@ msgstr "Pudar"
 msgid "Failed"
 msgstr "Gagal"
 
-#: src/components/remote-sheet.tsx
-#: src/lib/input/keys.ts
+#: src/components/remote-sheet.tsx src/lib/input/keys.ts
 msgid "Fast forward"
 msgstr "Maju pantas"
 
@@ -1587,8 +1520,7 @@ msgstr "Maju pantas"
 msgid "Faster"
 msgstr "Lebih pantas"
 
-#: src/components/layout.tsx
-#: src/pages/favourites.tsx
+#: src/components/layout.tsx src/pages/favourites.tsx
 #: src/pages/settings/apps.tsx
 msgid "Favourites"
 msgstr "Kegemaran"
@@ -1617,12 +1549,16 @@ msgstr "Tapis"
 msgid "Filter versions"
 msgstr "Tapis versi"
 
+#: src/pages/settings/playback.tsx
+#, fuzzy
+msgid "Find versions when a title opens"
+msgstr "Tidak dapat mencari versi tajuk tersebut"
+
 #: src/components/download-button.tsx
 msgid "Finding a version to download"
 msgstr "Mencari versi untuk dimuat turun"
 
-#: src/components/version-picker.tsx
-#: src/pages/downloads.tsx
+#: src/components/version-picker.tsx src/pages/downloads.tsx
 #: src/pages/player.tsx
 msgid "Finding a version…"
 msgstr "Mencari versi…"
@@ -1703,8 +1639,7 @@ msgstr "Kaca pudar"
 msgid "Full"
 msgstr "Penuh"
 
-#: src/components/player/options.tsx
-#: src/lib/input/actions.ts
+#: src/components/player/options.tsx src/lib/input/actions.ts
 msgid "Full screen"
 msgstr "Skrin penuh"
 
@@ -1797,8 +1732,7 @@ msgstr "Sembunyikan kod QR"
 msgid "Hold"
 msgstr "Tahan"
 
-#: src/components/layout.tsx
-#: src/lib/input/actions.ts
+#: src/components/layout.tsx src/lib/input/actions.ts
 #: src/pages/settings/apps.tsx
 msgid "Home"
 msgstr "Laman Utama"
@@ -1875,13 +1809,11 @@ msgstr "Dalam Teroka"
 msgid "In Favourites"
 msgstr "Dalam Kegemaran"
 
-#: src/lib/playback/sound.ts
-#: src/lib/subtitles/delay.ts
+#: src/lib/playback/sound.ts src/lib/subtitles/delay.ts
 msgid "In sync"
 msgstr "Sekata"
 
-#: src/components/download-button.tsx
-#: src/pages/downloads.tsx
+#: src/components/download-button.tsx src/pages/downloads.tsx
 msgid "In the app's downloads"
 msgstr "Dalam muat turun aplikasi"
 
@@ -1997,8 +1929,7 @@ msgstr "Disimpan pada peranti ini."
 msgid "Kept on this device. Select + and press a key to add it; a remote, a gamepad or the scroll wheel works too."
 msgstr "Disimpan pada peranti ini. Pilih + dan tekan kekunci untuk menambahnya."
 
-#: src/components/input-setup.tsx
-#: src/lib/input/actions.ts
+#: src/components/input-setup.tsx src/lib/input/actions.ts
 msgid "Keyboard shortcuts"
 msgstr "Pintasan papan kekunci"
 
@@ -2010,10 +1941,8 @@ msgstr "Kekunci, kawalan jauh dan pad permainan"
 msgid "Label"
 msgstr "Label"
 
-#: src/pages/settings/audio.tsx
-#: src/pages/settings/index.tsx
-#: src/pages/settings/interface.tsx
-#: src/pages/settings/subtitles.tsx
+#: src/pages/settings/audio.tsx src/pages/settings/index.tsx
+#: src/pages/settings/interface.tsx src/pages/settings/subtitles.tsx
 msgid "Language"
 msgstr "Bahasa"
 
@@ -2029,8 +1958,7 @@ msgstr "Bahasa dan output"
 msgid "Language, home, grids and episodes"
 msgstr "Bahasa, laman utama, kisi dan episod"
 
-#: src/lib/subtitles/style.ts
-#: src/pages/settings/interface.tsx
+#: src/lib/subtitles/style.ts src/pages/settings/interface.tsx
 msgid "Large"
 msgstr "Besar"
 
@@ -2126,12 +2054,15 @@ msgstr "Log"
 msgid "Looking for the party…"
 msgstr "Mencari sesi…"
 
+#: src/pages/settings/playback.tsx
+msgid "Looks for versions as soon as a title's page opens, so Play and the version list don't wait. Each title you open is looked up, even if you don't play it."
+msgstr ""
+
 #: src/components/party/party-sheet.tsx
 msgid "Lost the connection to {relay}. Reconnecting… Your player carries on, and gets back in step once it's back."
 msgstr "Terputus sambungan ke {relay}. Menyambung semula… Pemain anda terus berjalan, dan akan diselaraskan semula apabila kembali."
 
-#: src/components/player/options.tsx
-#: src/lib/input/actions.ts
+#: src/components/player/options.tsx src/lib/input/actions.ts
 msgid "Lower subtitles"
 msgstr "Rendahkan sarikata"
 
@@ -2151,16 +2082,12 @@ msgstr "Utama"
 msgid "Mark as watched"
 msgstr "Tanda sebagai telah ditonton"
 
-#: src/components/episodes.tsx
-#: src/components/item-menu.tsx
-#: src/pages/history.tsx
-#: src/pages/item.tsx
+#: src/components/episodes.tsx src/components/item-menu.tsx
+#: src/pages/history.tsx src/pages/item.tsx
 msgid "Mark unwatched"
 msgstr "Tanda belum ditonton"
 
-#: src/components/episodes.tsx
-#: src/components/item-menu.tsx
-#: src/pages/item.tsx
+#: src/components/episodes.tsx src/components/item-menu.tsx src/pages/item.tsx
 msgid "Mark watched"
 msgstr "Tanda telah ditonton"
 
@@ -2220,10 +2147,8 @@ msgstr "Hilang / Tiada"
 msgid "Monospace"
 msgstr "Monospace"
 
-#: src/components/overview.tsx
-#: src/components/playlists.tsx
-#: src/components/version-picker.tsx
-#: src/pages/downloads.tsx
+#: src/components/overview.tsx src/components/playlists.tsx
+#: src/components/version-picker.tsx src/pages/downloads.tsx
 msgid "More"
 msgstr "Lagi"
 
@@ -2255,13 +2180,11 @@ msgstr "Alihkan {name} ke bawah"
 msgid "Move {name} up"
 msgstr "Alihkan {name} ke atas"
 
-#: src/components/playlists.tsx
-#: src/components/version-settings.tsx
+#: src/components/playlists.tsx src/components/version-settings.tsx
 msgid "Move down"
 msgstr "Alih ke bawah"
 
-#: src/components/playlists.tsx
-#: src/components/version-settings.tsx
+#: src/components/playlists.tsx src/components/version-settings.tsx
 msgid "Move up"
 msgstr "Alih ke atas"
 
@@ -2269,11 +2192,8 @@ msgstr "Alih ke atas"
 msgid "Moves between what's on screen, and to Search and Home. A gamepad's d-pad and left stick move too."
 msgstr "Bergerak di antara elemen pada skrin, serta ke Carian dan Laman Utama."
 
-#: src/components/kind-tabs.tsx
-#: src/components/random-pick.tsx
-#: src/lib/format.ts
-#: src/pages/discover.tsx
-#: src/pages/favourites.tsx
+#: src/components/kind-tabs.tsx src/components/random-pick.tsx
+#: src/lib/format.ts src/pages/discover.tsx src/pages/favourites.tsx
 #: src/pages/search.tsx
 msgid "Movies"
 msgstr "Filem"
@@ -2302,8 +2222,7 @@ msgstr "mpv dalam tetingkap ini, dengan kawalan dan tetapan main balik aplikasi 
 msgid "mpv.conf, input.conf, scripts and shaders in this folder apply to the built-in mpv."
 msgstr "mpv.conf, input.conf, skrip dan 'shader' dalam pemegang ini terpakai untuk mpv terbina dalam."
 
-#: src/components/player/volume.tsx
-#: src/lib/input/actions.ts
+#: src/components/player/volume.tsx src/lib/input/actions.ts
 msgid "Mute"
 msgstr "Senyap"
 
@@ -2311,8 +2230,7 @@ msgstr "Senyap"
 msgid "Mute key"
 msgstr "Kekunci senyap"
 
-#: src/components/playlists.tsx
-#: src/components/version-settings.tsx
+#: src/components/playlists.tsx src/components/version-settings.tsx
 msgid "Name"
 msgstr "Nama"
 
@@ -2340,8 +2258,7 @@ msgstr "Kod baharu"
 msgid "New playlist"
 msgstr "Senarai main baharu"
 
-#: src/components/player/controls.tsx
-#: src/components/remote-sheet.tsx
+#: src/components/player/controls.tsx src/components/remote-sheet.tsx
 #: src/lib/i18n.ts
 msgid "Next"
 msgstr "Seterusnya"
@@ -2354,10 +2271,8 @@ msgstr "Trek audio seterusnya"
 msgid "Next chapter"
 msgstr "Bab seterusnya"
 
-#: src/components/player/controls.tsx
-#: src/components/player/next-episode.tsx
-#: src/lib/input/actions.ts
-#: src/pages/settings/playback.tsx
+#: src/components/player/controls.tsx src/components/player/next-episode.tsx
+#: src/lib/input/actions.ts src/pages/settings/playback.tsx
 msgid "Next episode"
 msgstr "Episod seterusnya"
 
@@ -2381,18 +2296,15 @@ msgstr "Sarikata seterusnya"
 msgid "Next track"
 msgstr "Trek seterusnya"
 
-#: src/components/player/controls.tsx
-#: src/pages/trailer.tsx
+#: src/components/player/controls.tsx src/pages/trailer.tsx
 msgid "Next trailer"
 msgstr "Treler seterusnya"
 
-#: src/pages/home.tsx
-#: src/pages/settings/interface.tsx
+#: src/pages/home.tsx src/pages/settings/interface.tsx
 msgid "Next up"
 msgstr "Akan datang"
 
-#: src/components/player/options.tsx
-#: src/pages/settings/audio.tsx
+#: src/components/player/options.tsx src/pages/settings/audio.tsx
 msgid "Night mode"
 msgstr "Mod malam"
 
@@ -2468,19 +2380,16 @@ msgstr "Tiada versi yang sepadan."
 msgid "No versions were found."
 msgstr "Tiada versi ditemui."
 
-#: src/pages/settings/audio.tsx
-#: src/pages/settings/subtitles.tsx
+#: src/pages/settings/audio.tsx src/pages/settings/subtitles.tsx
 msgid "None"
 msgstr "Tiada"
 
-#: src/components/player/keys.ts
-#: src/lib/subtitles/style.ts
+#: src/components/player/keys.ts src/lib/subtitles/style.ts
 #: src/pages/settings/subtitles.tsx
 msgid "Normal"
 msgstr "Biasa"
 
-#: src/components/player/keys.ts
-#: src/lib/input/actions.ts
+#: src/components/player/keys.ts src/lib/input/actions.ts
 msgid "Normal speed"
 msgstr "Kelajuan biasa"
 
@@ -2528,8 +2437,7 @@ msgstr "Tiada apa-apa ditemui."
 msgid "Nothing here yet. Add titles from their menu, or from the suggestions below."
 msgstr "Belum ada apa-apa di sini. Tambah tajuk daripada menu atau cadangan di bawah."
 
-#: src/pages/discover.tsx
-#: src/pages/item.tsx
+#: src/pages/discover.tsx src/pages/item.tsx
 msgid "Nothing here."
 msgstr "Tiada apa-apa di sini."
 
@@ -2537,15 +2445,12 @@ msgstr "Tiada apa-apa di sini."
 msgid "Nothing is playing there."
 msgstr "Tiada apa-apa dimainkan di sana."
 
-#: src/components/random-pick.tsx
-#: src/pages/favourites.tsx
+#: src/components/random-pick.tsx src/pages/favourites.tsx
 msgid "Nothing marked as a favourite yet."
 msgstr "Belum ada yang ditandakan sebagai kegemaran."
 
-#: src/components/licenses.tsx
-#: src/components/version-settings.tsx
-#: src/pages/discover.tsx
-#: src/pages/settings/audio.tsx
+#: src/components/licenses.tsx src/components/version-settings.tsx
+#: src/pages/discover.tsx src/pages/settings/audio.tsx
 #: src/pages/settings/interface.tsx
 msgid "Nothing matches."
 msgstr "Tiada yang sepadan."
@@ -2590,10 +2495,8 @@ msgstr "Kini: {shown}"
 msgid "Ocean"
 msgstr "Lautan (Ocean)"
 
-#: src/components/player/options.tsx
-#: src/components/remote-sheet.tsx
-#: src/lib/playback/sound.ts
-#: src/pages/settings/audio.tsx
+#: src/components/player/options.tsx src/components/remote-sheet.tsx
+#: src/lib/playback/sound.ts src/pages/settings/audio.tsx
 #: src/pages/settings/subtitles.tsx
 msgid "Off"
 msgstr "Mati"
@@ -2674,18 +2577,14 @@ msgstr "Alamak!"
 msgid "Opacity: {backgroundOpacity}%"
 msgstr "Kelegapan: {backgroundOpacity}%"
 
-#: src/components/hero.tsx
-#: src/components/item-menu.tsx
-#: src/components/random-pick.tsx
-#: src/pages/history.tsx
-#: src/pages/settings/account.tsx
-#: src/pages/settings/apps.tsx
+#: src/components/hero.tsx src/components/item-menu.tsx
+#: src/components/random-pick.tsx src/pages/history.tsx
+#: src/pages/settings/account.tsx src/pages/settings/apps.tsx
 #: src/pages/settings/downloads.tsx
 msgid "Open"
 msgstr "Buka"
 
-#: src/pages/downloads.tsx
-#: src/pages/settings/apps.tsx
+#: src/pages/downloads.tsx src/pages/settings/apps.tsx
 msgid "Open folder"
 msgstr "Buka pemegang"
 
@@ -2862,11 +2761,8 @@ msgstr "Tampal penapis pantas sebagai JSON, atau alamat fail dengannya, untuk me
 msgid "Pattern"
 msgstr "Corak"
 
-#: src/components/player/controls.tsx
-#: src/components/remote-sheet.tsx
-#: src/lib/input/actions.ts
-#: src/lib/input/keys.ts
-#: src/pages/downloads.tsx
+#: src/components/player/controls.tsx src/components/remote-sheet.tsx
+#: src/lib/input/actions.ts src/lib/input/keys.ts src/pages/downloads.tsx
 msgid "Pause"
 msgstr "Jeda"
 
@@ -2962,15 +2858,10 @@ msgstr "PIN atau kata laluan"
 msgid "Pink"
 msgstr "Merah Jambu"
 
-#: src/components/hero.tsx
-#: src/components/item-menu.tsx
-#: src/components/player/controls.tsx
-#: src/components/playlists.tsx
-#: src/components/random-pick.tsx
-#: src/components/remote-sheet.tsx
-#: src/lib/input/actions.ts
-#: src/lib/input/keys.ts
-#: src/pages/item.tsx
+#: src/components/hero.tsx src/components/item-menu.tsx
+#: src/components/player/controls.tsx src/components/playlists.tsx
+#: src/components/random-pick.tsx src/components/remote-sheet.tsx
+#: src/lib/input/actions.ts src/lib/input/keys.ts src/pages/item.tsx
 msgid "Play"
 msgstr "Main"
 
@@ -3002,8 +2893,7 @@ msgstr "Butang Main menyenaraikan versi untuk dipilih. Tahan 'Main' untuk menuka
 msgid "Play now"
 msgstr "Main sekarang"
 
-#: src/components/item-menu.tsx
-#: src/components/remote-sheet.tsx
+#: src/components/item-menu.tsx src/components/remote-sheet.tsx
 #: src/pages/item.tsx
 msgid "Play on another device"
 msgstr "Main pada peranti lain"
@@ -3056,8 +2946,7 @@ msgstr "Main dengan mpv"
 msgid "Play/Pause"
 msgstr "Main/Jeda"
 
-#: src/lib/hosts/shell/player.ts
-#: src/pages/settings/index.tsx
+#: src/lib/hosts/shell/player.ts src/pages/settings/index.tsx
 msgid "Playback"
 msgstr "Main Balik"
 
@@ -3069,8 +2958,7 @@ msgstr "Main balik gagal: {failure}"
 msgid "Played here"
 msgstr "Dimainkan di sini"
 
-#: src/lib/input/actions.ts
-#: src/pages/settings/about.tsx
+#: src/lib/input/actions.ts src/pages/settings/about.tsx
 #: src/pages/settings/playback.tsx
 msgid "Player"
 msgstr "Pemain"
@@ -3079,10 +2967,8 @@ msgstr "Pemain"
 msgid "Player link"
 msgstr "Pautan pemain"
 
-#: src/components/party/party-sheet.tsx
-#: src/components/player/episodes.tsx
-#: src/components/playlists.tsx
-#: src/components/sessions.tsx
+#: src/components/party/party-sheet.tsx src/components/player/episodes.tsx
+#: src/components/playlists.tsx src/components/sessions.tsx
 #: src/components/version-picker.tsx
 msgid "Playing"
 msgstr "Sedang Memainkan"
@@ -3103,13 +2989,11 @@ msgstr "Dimainkan pada {name}"
 msgid "Playing on and the next and previous buttons pass over episodes marked as filler. You can still play one yourself."
 msgstr "Main balik automatik dan butang episod akan melangkau episod pengisi (filler)."
 
-#: src/components/player/options.tsx
-#: src/components/playlists.tsx
+#: src/components/player/options.tsx src/components/playlists.tsx
 msgid "Playlist"
 msgstr "Senarai main"
 
-#: src/components/layout.tsx
-#: src/components/playlists.tsx
+#: src/components/layout.tsx src/components/playlists.tsx
 msgid "Playlists"
 msgstr "Senarai main"
 
@@ -3157,18 +3041,15 @@ msgstr "Tekan kekunci"
 msgid "Press Back again to leave"
 msgstr "Tekan Kembali sekali lagi untuk keluar"
 
-#: src/components/version-settings.tsx
-#: src/pages/settings/subtitles.tsx
+#: src/components/version-settings.tsx src/pages/settings/subtitles.tsx
 msgid "Preview"
 msgstr "Pratonton"
 
-#: src/pages/settings/interface.tsx
-#: src/pages/settings/playback.tsx
+#: src/pages/settings/interface.tsx src/pages/settings/playback.tsx
 msgid "Previews"
 msgstr "Pratonton"
 
-#: src/components/player/controls.tsx
-#: src/components/remote-sheet.tsx
+#: src/components/player/controls.tsx src/components/remote-sheet.tsx
 #: src/lib/i18n.ts
 msgid "Previous"
 msgstr "Sebelumnya"
@@ -3177,8 +3058,7 @@ msgstr "Sebelumnya"
 msgid "Previous chapter"
 msgstr "Bab sebelumnya"
 
-#: src/components/player/controls.tsx
-#: src/lib/input/actions.ts
+#: src/components/player/controls.tsx src/lib/input/actions.ts
 msgid "Previous episode"
 msgstr "Episod sebelumnya"
 
@@ -3190,8 +3070,7 @@ msgstr "Bulan lepas"
 msgid "Previous track"
 msgstr "Trek sebelumnya"
 
-#: src/components/player/controls.tsx
-#: src/pages/trailer.tsx
+#: src/components/player/controls.tsx src/pages/trailer.tsx
 msgid "Previous trailer"
 msgstr "Treler sebelumnya"
 
@@ -3215,8 +3094,7 @@ msgstr "Sambungan Pantas"
 msgid "Quick Connect is unavailable: {message}"
 msgstr "Sambungan Pantas tidak tersedia: {message}"
 
-#: src/components/version-picker.tsx
-#: src/components/version-settings.tsx
+#: src/components/version-picker.tsx src/components/version-settings.tsx
 msgid "Quick filters"
 msgstr "Penapis pantas"
 
@@ -3228,8 +3106,7 @@ msgstr "Rel (Rail)"
 msgid "Rainforest"
 msgstr "Hutan Hujan (Rainforest)"
 
-#: src/components/player/options.tsx
-#: src/lib/input/actions.ts
+#: src/components/player/options.tsx src/lib/input/actions.ts
 msgid "Raise subtitles"
 msgstr "Tinggikan sarikata"
 
@@ -3237,8 +3114,7 @@ msgstr "Tinggikan sarikata"
 msgid "Raises the centre channel, where surround sound puts dialogue. Not for sound passed through."
 msgstr "Meningkatkan saluran tengah, di mana bunyi sekeliling meletakkan dialog."
 
-#: src/components/item-menu.tsx
-#: src/components/random-pick.tsx
+#: src/components/item-menu.tsx src/components/random-pick.tsx
 #: src/pages/item.tsx
 msgid "Random episode"
 msgstr "Episod rawak"
@@ -3316,13 +3192,11 @@ msgstr "Alamat geganti"
 msgid "Released"
 msgstr "Dikeluarkan"
 
-#: src/pages/settings/audio.tsx
-#: src/pages/settings/subtitles.tsx
+#: src/pages/settings/audio.tsx src/pages/settings/subtitles.tsx
 msgid "Remember picks per show"
 msgstr "Ingat pilihan mengikut rancangan"
 
-#: src/components/version-settings.tsx
-#: src/pages/search.tsx
+#: src/components/version-settings.tsx src/pages/search.tsx
 #: src/pages/servers.tsx
 msgid "Remove"
 msgstr "Keluarkan"
@@ -3331,8 +3205,7 @@ msgstr "Keluarkan"
 msgid "Remove {key}"
 msgstr "Keluarkan {key}"
 
-#: src/components/party/party-sheet.tsx
-#: src/pages/settings/common.tsx
+#: src/components/party/party-sheet.tsx src/pages/settings/common.tsx
 msgid "Remove {name}"
 msgstr "Keluarkan {name}"
 
@@ -3344,8 +3217,7 @@ msgstr "Keluarkan {targetName} daripada peranti ini? Anda perlu menambah dan log
 msgid "Remove {term}"
 msgstr "Keluarkan {term}"
 
-#: src/components/item-menu.tsx
-#: src/pages/item.tsx
+#: src/components/item-menu.tsx src/pages/item.tsx
 msgid "Remove favourite"
 msgstr "Keluarkan kegemaran"
 
@@ -3393,8 +3265,7 @@ msgstr "Laporan disalin"
 msgid "Request failed ({status})"
 msgstr "Permintaan gagal ({status})"
 
-#: src/components/party/reaction-setting.tsx
-#: src/components/player/options.tsx
+#: src/components/party/reaction-setting.tsx src/components/player/options.tsx
 #: src/pages/history.tsx
 msgid "Reset"
 msgstr "Tetap semula"
@@ -3447,8 +3318,7 @@ msgstr "Pulihkan"
 msgid "Results of what you searched for."
 msgstr "Hasil carian anda."
 
-#: src/components/item-menu.tsx
-#: src/components/random-pick.tsx
+#: src/components/item-menu.tsx src/components/random-pick.tsx
 #: src/pages/downloads.tsx
 msgid "Resume"
 msgstr "Sambung semula"
@@ -3461,8 +3331,7 @@ msgstr "Sambung {code}"
 msgid "Resume all"
 msgstr "Sambung semua"
 
-#: src/components/version-picker.tsx
-#: src/lib/playback/use-player.ts
+#: src/components/version-picker.tsx src/lib/playback/use-player.ts
 #: src/pages/item.tsx
 msgid "Resume from {resumeAt}"
 msgstr "Sambung dari {resumeAt}"
@@ -3475,8 +3344,7 @@ msgstr "Diselaraskan semula secara automatik"
 msgid "Retry"
 msgstr "Cuba lagi"
 
-#: src/components/remote-sheet.tsx
-#: src/lib/input/keys.ts
+#: src/components/remote-sheet.tsx src/lib/input/keys.ts
 msgid "Rewind"
 msgstr "Guling semula (Rewind)"
 
@@ -3513,8 +3381,7 @@ msgstr "S{s}E{e}"
 msgid "Sans serif"
 msgstr "Sans serif"
 
-#: src/components/playlists.tsx
-#: src/components/version-settings.tsx
+#: src/components/playlists.tsx src/components/version-settings.tsx
 #: src/pages/settings/apps.tsx
 msgid "Save"
 msgstr "Simpan"
@@ -3587,13 +3454,9 @@ msgstr "Melihat sarikatanya"
 msgid "SDH, with sounds described"
 msgstr "SDH, dengan penerangan bunyi"
 
-#: src/components/layout.tsx
-#: src/components/licenses.tsx
-#: src/components/version-settings.tsx
-#: src/lib/input/actions.ts
-#: src/pages/discover.tsx
-#: src/pages/search.tsx
-#: src/pages/settings/apps.tsx
+#: src/components/layout.tsx src/components/licenses.tsx
+#: src/components/version-settings.tsx src/lib/input/actions.ts
+#: src/pages/discover.tsx src/pages/search.tsx src/pages/settings/apps.tsx
 msgid "Search"
 msgstr "Cari"
 
@@ -3633,9 +3496,7 @@ msgstr "Cari Kedudukan (Seek)"
 msgid "Seek bar previews"
 msgstr "Pratonton bar kedudukan"
 
-#: src/lib/i18n.ts
-#: src/lib/input/actions.ts
-#: src/pages/history.tsx
+#: src/lib/i18n.ts src/lib/input/actions.ts src/pages/history.tsx
 msgid "Select"
 msgstr "Pilih"
 
@@ -3643,8 +3504,7 @@ msgstr "Pilih"
 msgid "Select all"
 msgstr "Pilih semua"
 
-#: src/components/party/party-sheet.tsx
-#: src/components/send-report.tsx
+#: src/components/party/party-sheet.tsx src/components/send-report.tsx
 msgid "Send"
 msgstr "Hantar"
 
@@ -3652,8 +3512,7 @@ msgstr "Hantar"
 msgid "Send a report"
 msgstr "Hantar laporan"
 
-#: src/components/crash-report.tsx
-#: src/pages/settings/apps.tsx
+#: src/components/crash-report.tsx src/pages/settings/apps.tsx
 msgid "Send report"
 msgstr "Hantar laporan"
 
@@ -3685,8 +3544,7 @@ msgstr "Menghantar butiran peranti dan log terkini aplikasi ke pelayan, bersama 
 msgid "Serif"
 msgstr "Serif"
 
-#: src/pages/settings/about.tsx
-#: src/pages/settings/account.tsx
+#: src/pages/settings/about.tsx src/pages/settings/account.tsx
 msgid "Server"
 msgstr "Pelayan"
 
@@ -3702,8 +3560,7 @@ msgstr "Ralat Pelayan"
 msgid "Set by hand"
 msgstr "Tetap secara manual"
 
-#: src/components/layout.tsx
-#: src/pages/settings/index.tsx
+#: src/components/layout.tsx src/pages/settings/index.tsx
 msgid "Settings"
 msgstr "Tetapan"
 
@@ -3784,11 +3641,8 @@ msgstr "Memaparkan halaman disimpan"
 msgid "Shown"
 msgstr "Dipaparkan"
 
-#: src/components/kind-tabs.tsx
-#: src/components/random-pick.tsx
-#: src/lib/format.ts
-#: src/pages/discover.tsx
-#: src/pages/favourites.tsx
+#: src/components/kind-tabs.tsx src/components/random-pick.tsx
+#: src/lib/format.ts src/pages/discover.tsx src/pages/favourites.tsx
 #: src/pages/search.tsx
 msgid "Shows"
 msgstr "Rancangan"
@@ -3833,8 +3687,7 @@ msgstr "Log masuk"
 msgid "Sign in failed"
 msgstr "Log masuk gagal"
 
-#: src/pages/servers.tsx
-#: src/pages/settings/account.tsx
+#: src/pages/servers.tsx src/pages/settings/account.tsx
 msgid "Sign out"
 msgstr "Log keluar"
 
@@ -3858,8 +3711,7 @@ msgstr "Telah log keluar"
 msgid "Signs and songs"
 msgstr "Tanda dan lagu"
 
-#: src/components/player/options.tsx
-#: src/pages/settings/subtitles.tsx
+#: src/components/player/options.tsx src/pages/settings/subtitles.tsx
 msgid "Size"
 msgstr "Saiz"
 
@@ -3955,8 +3807,7 @@ msgstr "Slot {n}: {emoji}"
 msgid "Slower"
 msgstr "Lebih perlahan"
 
-#: src/lib/subtitles/style.ts
-#: src/pages/settings/interface.tsx
+#: src/lib/subtitles/style.ts src/pages/settings/interface.tsx
 msgid "Small"
 msgstr "Kecil"
 
@@ -3964,8 +3815,7 @@ msgstr "Kecil"
 msgid "Small labels on each version for what it has, from packs you link or badges you make."
 msgstr "Label kecil pada setiap versi untuk kandungannya."
 
-#: src/components/player/options.tsx
-#: src/lib/input/actions.ts
+#: src/components/player/options.tsx src/lib/input/actions.ts
 msgid "Smaller subtitles"
 msgstr "Sarikata lebih kecil"
 
@@ -3973,8 +3823,7 @@ msgstr "Sarikata lebih kecil"
 msgid "Solid"
 msgstr "Padu"
 
-#: src/lib/party/actions.ts
-#: src/lib/party/party.ts
+#: src/lib/party/actions.ts src/lib/party/party.ts
 msgid "Someone"
 msgstr "Seseorang"
 
@@ -3986,8 +3835,7 @@ msgstr "sesuatu yang tidak dapat dibaca oleh peranti ini"
 msgid "Something this device cannot read"
 msgstr "Sesuatu yang tidak dapat dibaca oleh peranti ini"
 
-#: src/components/player/options.tsx
-#: src/pages/settings/audio.tsx
+#: src/components/player/options.tsx src/pages/settings/audio.tsx
 msgid "Sound"
 msgstr "Bunyi"
 
@@ -4039,13 +3887,11 @@ msgstr "Memulakan…"
 msgid "Starts without subtitles."
 msgstr "Bermula tanpa sarikata."
 
-#: src/components/player/options.tsx
-#: src/lib/input/actions.ts
+#: src/components/player/options.tsx src/lib/input/actions.ts
 msgid "Statistics"
 msgstr "Statistik"
 
-#: src/pages/history.tsx
-#: src/pages/settings/apps.tsx
+#: src/pages/history.tsx src/pages/settings/apps.tsx
 msgid "Status"
 msgstr "Status"
 
@@ -4053,8 +3899,7 @@ msgstr "Status"
 msgid "Stereo"
 msgstr "Stereo"
 
-#: src/components/remote-sheet.tsx
-#: src/lib/input/actions.ts
+#: src/components/remote-sheet.tsx src/lib/input/actions.ts
 #: src/lib/input/keys.ts
 msgid "Stop"
 msgstr "Henti"
@@ -4063,8 +3908,7 @@ msgstr "Henti"
 msgid "Stop listening"
 msgstr "Berhenti mendengar"
 
-#: src/components/version-picker.tsx
-#: src/pages/player.tsx
+#: src/components/version-picker.tsx src/pages/player.tsx
 msgid "Stream link copied"
 msgstr "Pautan penstriman disalin"
 
@@ -4076,8 +3920,7 @@ msgstr "Regangkan"
 msgid "Studios"
 msgstr "Studio"
 
-#: src/components/player/options.tsx
-#: src/pages/settings/interface.tsx
+#: src/components/player/options.tsx src/pages/settings/interface.tsx
 msgid "Style"
 msgstr "Gaya"
 
@@ -4105,10 +3948,8 @@ msgstr "Saiz sarikata: {label}"
 msgid "Subtitle types"
 msgstr "Jenis sarikata"
 
-#: src/components/player/options.tsx
-#: src/components/remote-sheet.tsx
-#: src/pages/settings/index.tsx
-#: src/pages/settings/subtitles.tsx
+#: src/components/player/options.tsx src/components/remote-sheet.tsx
+#: src/pages/settings/index.tsx src/pages/settings/subtitles.tsx
 msgid "Subtitles"
 msgstr "Sarikata"
 
@@ -4184,8 +4025,7 @@ msgstr "Beralih"
 msgid "Switch server"
 msgstr "Beralih pelayan"
 
-#: src/components/layout.tsx
-#: src/components/no-catalogs.tsx
+#: src/components/layout.tsx src/components/no-catalogs.tsx
 #: src/pages/settings/account.tsx
 msgid "Switch user"
 msgstr "Beralih pengguna"
@@ -4198,8 +4038,7 @@ msgstr "Menukar TV ke kadar segar semula yang sesuai dengan setiap video untuk p
 msgid "Sync automatically"
 msgstr "Sekatakan secara automatik"
 
-#: src/components/player/subtitle-sync.tsx
-#: src/lib/input/actions.ts
+#: src/components/player/subtitle-sync.tsx src/lib/input/actions.ts
 msgid "Sync by ear"
 msgstr "Sekatakan melalui pendengaran"
 
@@ -4255,8 +4094,7 @@ msgstr "Ketik untuk membuka kunci"
 msgid "Tap when you hear a line and when its subtitle shows, in either order."
 msgstr "Ketik apabila anda mendengar dialog dan apabila sarikata dipaparkan."
 
-#: src/components/version-settings.tsx
-#: src/pages/settings/subtitles.tsx
+#: src/components/version-settings.tsx src/pages/settings/subtitles.tsx
 msgid "Text"
 msgstr "Teks"
 
@@ -4493,8 +4331,7 @@ msgstr "Output video bertukar apabila aplikasi dibuka semula."
 msgid "The whole show"
 msgstr "Keseluruhan rancangan"
 
-#: src/pages/settings/index.tsx
-#: src/pages/settings/theme.tsx
+#: src/pages/settings/index.tsx src/pages/settings/theme.tsx
 msgid "Theme"
 msgstr "Tema"
 
@@ -4631,13 +4468,11 @@ msgstr "Tiga hari"
 msgid "Timing"
 msgstr "Peneptan Masa"
 
-#: src/pages/history.tsx
-#: src/pages/settings/interface.tsx
+#: src/pages/history.tsx src/pages/settings/interface.tsx
 msgid "Title"
 msgstr "Tajuk"
 
-#: src/pages/settings/apps.tsx
-#: src/pages/settings/cache.tsx
+#: src/pages/settings/apps.tsx src/pages/settings/cache.tsx
 msgid "Title pages"
 msgstr "Halaman tajuk"
 
@@ -4693,10 +4528,8 @@ msgstr "Dicuba mengikut urutan untuk sarikata yang ditunjukkan oleh tetapan di b
 msgid "Troubleshooting"
 msgstr "Penyelesaian Masalah"
 
-#: src/components/party/party-sheet.tsx
-#: src/components/random-pick.tsx
-#: src/components/version-picker.tsx
-#: src/pages/downloads.tsx
+#: src/components/party/party-sheet.tsx src/components/random-pick.tsx
+#: src/components/version-picker.tsx src/pages/downloads.tsx
 #: src/pages/sign-in.tsx
 msgid "Try again"
 msgstr "Cuba lagi"
@@ -4881,8 +4714,7 @@ msgstr "Versi {version} sedia untuk dipasang."
 msgid "Version searches at once"
 msgstr "Carian versi serentak"
 
-#: src/components/player/options.tsx
-#: src/components/version-picker.tsx
+#: src/components/player/options.tsx src/components/version-picker.tsx
 #: src/pages/settings/playback.tsx
 msgid "Versions"
 msgstr "Versi"
@@ -4919,8 +4751,7 @@ msgstr "Output video"
 msgid "View"
 msgstr "Lihat"
 
-#: src/components/licenses.tsx
-#: src/pages/settings/about.tsx
+#: src/components/licenses.tsx src/pages/settings/about.tsx
 msgid "Visit"
 msgstr "Lawati"
 
@@ -4932,8 +4763,7 @@ msgstr "Carian suara gagal"
 msgid "Volume"
 msgstr "Kelantangan"
 
-#: src/components/player/gestures.ts
-#: src/components/player/keys.ts
+#: src/components/player/gestures.ts src/components/player/keys.ts
 msgid "Volume {percent}%"
 msgstr "Kelantangan {percent}%"
 
@@ -4985,17 +4815,13 @@ msgstr "Tonton sebagai pengguna lain pada konfigurasi ini."
 msgid "Watch parties"
 msgstr "Sesi tontonan"
 
-#: src/components/layout.tsx
-#: src/components/party/party-sheet.tsx
-#: src/components/player/options.tsx
-#: src/pages/item.tsx
+#: src/components/layout.tsx src/components/party/party-sheet.tsx
+#: src/components/player/options.tsx src/pages/item.tsx
 msgid "Watch party"
 msgstr "Sesi tontonan"
 
-#: src/components/layout.tsx
-#: src/components/party/party-sheet.tsx
-#: src/components/player/options.tsx
-#: src/pages/item.tsx
+#: src/components/layout.tsx src/components/party/party-sheet.tsx
+#: src/components/player/options.tsx src/pages/item.tsx
 msgid "Watch together"
 msgstr "Tonton bersama"
 
@@ -5011,8 +4837,7 @@ msgstr "Ditonton ×{playCount}"
 msgid "Watched marks and resume points are removed from this server. Favourites stay. Titles a tracker still lists come back when it next syncs."
 msgstr "Tanda telah ditonton dan kedudukan sambungan dipadamkan daripada pelayan ini."
 
-#: src/components/party/party-sheet.tsx
-#: src/pages/settings/index.tsx
+#: src/components/party/party-sheet.tsx src/pages/settings/index.tsx
 msgid "Watching"
 msgstr "Menonton"
 
