@@ -1,5 +1,46 @@
 # Changelog
 
+## [0.8.0](https://github.com/Viren070/AIOStreams/compare/smart-tv-v0.7.0...smart-tv-v0.8.0) (2026-10-29)
+
+
+### Features
+
+* **web:** add a licences list to the About page ([7e31b76](https://github.com/Viren070/AIOStreams/commit/7e31b766aa993053bf0f84b0288e1e11cc543622))
+* **web:** add a setting to preload a title's versions as its page opens ([7e31b76](https://github.com/Viren070/AIOStreams/commit/7e31b766aa993053bf0f84b0288e1e11cc543622))
+* **web:** add shuffle and repeat to playlists ([7e31b76](https://github.com/Viren070/AIOStreams/commit/7e31b766aa993053bf0f84b0288e1e11cc543622))
+* **web:** drag the hero's titles with the mouse too ([7e31b76](https://github.com/Viren070/AIOStreams/commit/7e31b766aa993053bf0f84b0288e1e11cc543622))
+* **web:** ease subtitles to a new height rather than jump ([7e31b76](https://github.com/Viren070/AIOStreams/commit/7e31b766aa993053bf0f84b0288e1e11cc543622))
+* **web:** ease the subtitle height every frame ([7e31b76](https://github.com/Viren070/AIOStreams/commit/7e31b766aa993053bf0f84b0288e1e11cc543622))
+* **web:** hide languages under half translated ([7e31b76](https://github.com/Viren070/AIOStreams/commit/7e31b766aa993053bf0f84b0288e1e11cc543622))
+* **web:** hold a new subtitle height under the controls for a while ([7e31b76](https://github.com/Viren070/AIOStreams/commit/7e31b766aa993053bf0f84b0288e1e11cc543622))
+* **web:** let tab names hide on the bottom bar too ([7e31b76](https://github.com/Viren070/AIOStreams/commit/7e31b766aa993053bf0f84b0288e1e11cc543622))
+* **web:** move a player menu's page rows above its list ([7e31b76](https://github.com/Viren070/AIOStreams/commit/7e31b766aa993053bf0f84b0288e1e11cc543622))
+* **web:** offer top tabs on desktops and tablets ([7e31b76](https://github.com/Viren070/AIOStreams/commit/7e31b766aa993053bf0f84b0288e1e11cc543622))
+* **web:** open a preview over the home card the pointer or focus rests on ([7e31b76](https://github.com/Viren070/AIOStreams/commit/7e31b766aa993053bf0f84b0288e1e11cc543622))
+* **web:** scrub with a TV remote through a row of pictures ([7e31b76](https://github.com/Viren070/AIOStreams/commit/7e31b766aa993053bf0f84b0288e1e11cc543622))
+* **web:** show a badge for each rating source ([7e31b76](https://github.com/Viren070/AIOStreams/commit/7e31b766aa993053bf0f84b0288e1e11cc543622))
+* **web:** show what's playing over the picture once paused for a while ([7e31b76](https://github.com/Viren070/AIOStreams/commit/7e31b766aa993053bf0f84b0288e1e11cc543622))
+* **web:** skip on a remote's press and scrub through pictures on a hold ([7e31b76](https://github.com/Viren070/AIOStreams/commit/7e31b766aa993053bf0f84b0288e1e11cc543622))
+* **web:** slide the subtitle the page draws above the controls ([7e31b76](https://github.com/Viren070/AIOStreams/commit/7e31b766aa993053bf0f84b0288e1e11cc543622))
+* **web:** tell the Android app when the controls show ([7e31b76](https://github.com/Viren070/AIOStreams/commit/7e31b766aa993053bf0f84b0288e1e11cc543622))
+
+
+### Bug Fixes
+
+* **web:** drop chapter-named openings, recaps and previews over three minutes ([7e31b76](https://github.com/Viren070/AIOStreams/commit/7e31b766aa993053bf0f84b0288e1e11cc543622))
+* **web:** fit the bottom bar to its icons when tab names are hidden ([7e31b76](https://github.com/Viren070/AIOStreams/commit/7e31b766aa993053bf0f84b0288e1e11cc543622))
+* **web:** give the skipping settings' Previews label its own context ([7e31b76](https://github.com/Viren070/AIOStreams/commit/7e31b766aa993053bf0f84b0288e1e11cc543622))
+* **web:** let React listen for transition and animation ends ([7e31b76](https://github.com/Viren070/AIOStreams/commit/7e31b766aa993053bf0f84b0288e1e11cc543622))
+* **web:** raise and lower subtitles a percent at a time ([7e31b76](https://github.com/Viren070/AIOStreams/commit/7e31b766aa993053bf0f84b0288e1e11cc543622))
+* **web:** size TV artwork from the screen and layout widths ([7e31b76](https://github.com/Viren070/AIOStreams/commit/7e31b766aa993053bf0f84b0288e1e11cc543622))
+* **web:** snap the volume bar to full volume ([7e31b76](https://github.com/Viren070/AIOStreams/commit/7e31b766aa993053bf0f84b0288e1e11cc543622))
+* **web:** start keys on the sync-by-ear panel's Heard button ([7e31b76](https://github.com/Viren070/AIOStreams/commit/7e31b766aa993053bf0f84b0288e1e11cc543622))
+
+
+### Performance Improvements
+
+* **web:** size artwork for the pixels the page is drawn at ([7e31b76](https://github.com/Viren070/AIOStreams/commit/7e31b766aa993053bf0f84b0288e1e11cc543622))
+
 ## [0.7.0](https://github.com/Viren070/AIOStreams/compare/smart-tv-v0.6.0...smart-tv-v0.7.0) (2026-10-23)
 
 
