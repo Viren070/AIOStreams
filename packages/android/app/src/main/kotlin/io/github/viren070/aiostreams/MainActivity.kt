@@ -64,7 +64,7 @@ import kotlinx.serialization.json.put
 
 /** The video beneath, the page over it, and the bridge between them. */
 class MainActivity : ComponentActivity() {
-    private lateinit var web: CompletingWebView
+    private lateinit var web: AppWebView
     private lateinit var bridge: AppBridge
     private lateinit var playback: Playback
     private lateinit var player: PlayerChannel
@@ -124,7 +124,7 @@ class MainActivity : ComponentActivity() {
             })
         }
         // Edge to edge: the page keeps clear of the system bars with its own safe-area insets.
-        web = CompletingWebView(this, onTv())
+        web = AppWebView(this, onTv())
         setContentView(FrameLayout(this).apply {
             addView(playback.stage, MATCH_PARENT, MATCH_PARENT)
             addView(web, MATCH_PARENT, MATCH_PARENT)

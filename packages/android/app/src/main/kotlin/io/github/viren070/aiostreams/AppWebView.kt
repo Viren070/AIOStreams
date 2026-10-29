@@ -9,8 +9,8 @@ import android.view.inputmethod.InputConnectionWrapper
 import android.view.inputmethod.InputMethodManager
 import android.webkit.WebView
 
-/** A WebView whose focused field can offer the keyboard completions to show above its keys. */
-class CompletingWebView(context: Context, private val tv: Boolean) : WebView(context) {
+/** The page's WebView: keyboard completions for its focused field, and native field types on a TV. */
+class AppWebView(context: Context, private val tv: Boolean) : WebView(context) {
     fun showCompletions(names: List<String>) {
         val completions = names.mapIndexed { i, name -> CompletionInfo(i.toLong(), i, name) }.toTypedArray()
         context.getSystemService(InputMethodManager::class.java).displayCompletions(this, completions)
