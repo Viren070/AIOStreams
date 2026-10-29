@@ -3045,7 +3045,13 @@ msgstr "Appuyez à nouveau sur Retour pour quitter"
 msgid "Preview"
 msgstr "Aperçu"
 
-#: src/pages/settings/interface.tsx src/pages/settings/playback.tsx
+#: src/pages/settings/interface.tsx
+msgid "Previews"
+msgstr "Aperçus"
+
+#: src/pages/settings/playback.tsx
+#, fuzzy
+msgctxt "Episode segments showing the next episode"
 msgid "Previews"
 msgstr "Aperçus"
 

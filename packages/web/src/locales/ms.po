@@ -3045,7 +3045,13 @@ msgstr "Tekan Kembali sekali lagi untuk keluar"
 msgid "Preview"
 msgstr "Pratonton"
 
-#: src/pages/settings/interface.tsx src/pages/settings/playback.tsx
+#: src/pages/settings/interface.tsx
+msgid "Previews"
+msgstr "Pratonton"
+
+#: src/pages/settings/playback.tsx
+#, fuzzy
+msgctxt "Episode segments showing the next episode"
 msgid "Previews"
 msgstr "Pratonton"
 

@@ -3045,7 +3045,13 @@ msgstr "再次按返回键退出"
 msgid "Preview"
 msgstr "预览"
 
-#: src/pages/settings/interface.tsx src/pages/settings/playback.tsx
+#: src/pages/settings/interface.tsx
+msgid "Previews"
+msgstr "预览片段"
+
+#: src/pages/settings/playback.tsx
+#, fuzzy
+msgctxt "Episode segments showing the next episode"
 msgid "Previews"
 msgstr "预览片段"
 
