@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-29 16:33+0000\n"
+"PO-Revision-Date: 2026-10-29 20:57+0000\n"
 "Last-Translator: Sebastian Porta <spg76@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Spanish <https://hosted.weblate.org/projects/aiostreams/web-app/es/>\n"
 "Language: es\n"
@@ -45,7 +45,7 @@ msgstr "{count, plural, one {# título} other {# títulos}}"
 
 #: src/components/party/party-sheet.tsx
 msgid "{count, plural, one {# watching · on {on}} other {# watching · on {on}}}"
-msgstr ""
+msgstr "{count, plural, one {# viendo · en {on}} other {# viendo · en {on}}}"
 
 #: src/components/version-settings.tsx
 msgid "{count, plural, one {Added # badge} other {Added # badges}}"
@@ -89,19 +89,21 @@ msgstr "{found, plural, one {# versión} other {# versiones}}"
 
 #: src/components/version-picker.tsx
 msgid "{found, plural, one {Filter # version} other {Filter # versions}}"
-msgstr ""
+msgstr "{found, plural, one {Filtrar # versión} other {Filtrar # versiones}}"
 
 #: src/pages/downloads.tsx
 msgid "{got} of {size}"
-msgstr ""
+msgstr "{got} de {size}"
 
 #: src/components/player/options.tsx
+#, fuzzy
 msgid "{height}%"
-msgstr ""
+msgstr "{height}%"
 
 #: src/pages/settings/cache.tsx
+#, fuzzy
 msgid "{help} {bytes}."
-msgstr ""
+msgstr "{help} {bytes}."
 
 #: src/components/party/party-sheet.tsx
 msgid "{host}'s party"
@@ -127,7 +129,7 @@ msgstr "{key} está tomada por {taken}"
 
 #: src/components/card-preview.tsx src/pages/downloads.tsx
 msgid "{left} left"
-msgstr ""
+msgstr "{left} restante"
 
 #: src/components/party/party-sheet.tsx
 msgid "{members, plural, one {# watching} other {# watching}}"
@@ -168,15 +170,16 @@ msgstr "{others, plural, one {Elige la versión que deseas descargar. El otro ep
 
 #: src/components/version-settings.tsx
 msgid "{packCount, plural, one {# pack} other {# packs}}"
-msgstr ""
+msgstr "{packCount, plural, one {# paquete} other {# paquetes}}"
 
 #: src/components/version-settings.tsx
 msgid "{packs} and {own}"
 msgstr "{packs} y {own}"
 
 #: src/pages/settings/playback.tsx
+#, fuzzy
 msgid "{r}×"
-msgstr ""
+msgstr "{r}×"
 
 #: src/lib/party/party.ts
 msgid "{relay} didn't answer."
@@ -191,32 +194,34 @@ msgid "{rest, plural, one {# more} other {# more}}"
 msgstr "{rest, plural, one {# más} other {# más}}"
 
 #: src/pages/settings/playback.tsx
+#, fuzzy
 msgid "{s}%"
-msgstr ""
+msgstr "{s}%"
 
 #: src/components/party/party-sheet.tsx
 msgid "{seconds}s ahead"
-msgstr ""
+msgstr "{seconds}s por delante"
 
 #: src/components/party/party-sheet.tsx
 msgid "{seconds}s behind"
-msgstr ""
+msgstr "{seconds}s por detrás"
 
 #: src/pages/history.tsx
 msgid "{selected, plural, one {# selected} other {# selected}}"
 msgstr "{selected, plural, one {# seleccionado} other {# seleccionados}}"
 
 #: src/components/player/keys.ts
+#, fuzzy
 msgid "{shown}×"
-msgstr ""
+msgstr "{shown}×"
 
 #: src/components/player/controls.tsx
 msgid "{stepSeconds, plural, one {Back # second} other {Back # seconds}}"
-msgstr ""
+msgstr "{stepSeconds, plural, one {Retroceder # segundo} other {Retroceder # segundos}}"
 
 #: src/components/player/controls.tsx
 msgid "{stepSeconds, plural, one {Forward # second} other {Forward # seconds}}"
-msgstr ""
+msgstr "{stepSeconds, plural, one {Avanzar # segundo} other {Avanzar # segundos}}"
 
 #: src/pages/history.tsx
 msgid "{time} watched"
@@ -232,7 +237,7 @@ msgstr "{total, plural, one {# título} other {# títulos}}"
 
 #: src/components/player/options.tsx
 msgid "{unread, plural, one {Watch party, # new message} other {Watch party, # new messages}}"
-msgstr ""
+msgstr "{unread, plural, one {Ver en grupo, # mensaje nuevo} other {Ver en grupo, # mensajes nuevos}}"
 
 #. Each {name} is written in the player link as it is here.
 #: src/pages/settings/playback.tsx
@@ -260,32 +265,39 @@ msgid "{who} started {title}"
 msgstr "{who} inició {title}"
 
 #: src/lib/playback/sound.ts
+#, fuzzy
 msgid "+{amount} ms"
-msgstr ""
+msgstr "+{amount} ms"
 
 #: src/lib/playback/sound.ts
+#, fuzzy
 msgid "+{db} dB"
-msgstr ""
+msgstr "+{db} dB"
 
 #: src/lib/subtitles/delay.ts
+#, fuzzy
 msgid "+{seconds}s"
-msgstr ""
+msgstr "+{seconds}s"
 
 #: src/lib/subtitles/delay.ts
+#, fuzzy
 msgid "+{time}"
-msgstr ""
+msgstr "+{time}"
 
 #: src/lib/playback/sound.ts
+#, fuzzy
 msgid "−{amount} ms"
-msgstr ""
+msgstr "−{amount} ms"
 
 #: src/lib/subtitles/delay.ts
+#, fuzzy
 msgid "−{seconds}s"
-msgstr ""
+msgstr "−{seconds}s"
 
 #: src/lib/subtitles/delay.ts
+#, fuzzy
 msgid "−{time}"
-msgstr ""
+msgstr "−{time}"
 
 #: src/lib/input/actions.ts
 msgid "0 to 9"
@@ -296,12 +308,10 @@ msgid "1 jumps a tenth of the way in, 5 halfway and 0 back to the start."
 msgstr "1 salta a una décima parte del recorrido, 5 a la mitad y 0 regresa al inicio."
 
 #: src/pages/settings/audio.tsx
-#, fuzzy
 msgid "5.1 surround"
 msgstr "5.1 surround"
 
 #: src/pages/settings/audio.tsx
-#, fuzzy
 msgid "7.1 surround"
 msgstr "7.1 surround"
 
@@ -500,7 +510,6 @@ msgid "Also when you come back to it after half an hour. Whoever was watching ca
 msgstr "Además cuando vuelves después de media hora. Quien estuviera mirando puede continuar sin necesidad de introducir su PIN."
 
 #: src/lib/input/keys.ts
-#, fuzzy
 msgid "Alt"
 msgstr "Alt"
 
@@ -4091,51 +4100,51 @@ msgstr "Tab"
 
 #: src/pages/settings/interface.tsx
 msgid "Tab names"
-msgstr ""
+msgstr "Nombres en las pestañas"
 
 #: src/pages/history.tsx
 msgid "Table"
-msgstr ""
+msgstr "Tabla"
 
 #: src/components/player/lock.tsx
 msgid "Tap to unlock"
-msgstr ""
+msgstr "Tocar para desbloquear"
 
 #: src/components/player/subtitle-sync.tsx
 msgid "Tap when you hear a line and when its subtitle shows, in either order."
-msgstr ""
+msgstr "Tocar cuando escuches una línea y cuando su subtítulo aparezca, en cualquier orden."
 
 #: src/components/version-settings.tsx src/pages/settings/subtitles.tsx
 msgid "Text"
-msgstr ""
+msgstr "Texto"
 
 #: src/components/version-badges.tsx
 msgid "That address answered {status}."
-msgstr ""
+msgstr "Esa dirección respondió {status}."
 
 #: src/pages/sign-in.tsx
 msgid "That did not match. Try again."
-msgstr ""
+msgstr "Eso no coincidió. Inténtalo de nuevo."
 
 #: src/lib/subtitles/files.ts
 msgid "That file is too big"
-msgstr ""
+msgstr "Ese archivo es demasiado grande"
 
 #: src/components/version-settings.tsx
 msgid "That has no badges this app can read."
-msgstr ""
+msgstr "Eso no tiene insignias que esta aplicación pueda leer."
 
 #: src/components/version-settings.tsx
 msgid "That has no quick filters this app can read."
-msgstr ""
+msgstr "Eso no tiene filtros rápidos que esta aplicación pueda leer."
 
 #: src/lib/servers.ts
 msgid "That is not a valid address."
-msgstr ""
+msgstr "Esa no es una dirección válida."
 
 #: src/components/version-settings.tsx
 msgid "That is not a valid regular expression."
-msgstr ""
+msgstr "Esa no es una expresión regular válida."
 
 #: src/lib/party/party.ts
 msgid "That party has ended."
@@ -4151,11 +4160,11 @@ msgstr "Ese grupo no permite entrar a nadie nuevo."
 
 #: src/components/version-picker.tsx
 msgid "That pattern is not a valid regular expression."
-msgstr ""
+msgstr "Ese patrón no es una expresión regular válida."
 
 #: src/lib/party/party.ts
 msgid "That relay doesn't let you in."
-msgstr ""
+msgstr "Ese retransmisión no te deja entrar."
 
 #: src/lib/party/party.ts
 msgid "That relay is too busy for another party."
@@ -4167,59 +4176,59 @@ msgstr "Esa retransmisión ejecuta una versión distinta para ver en grupo."
 
 #: src/components/remote-target.tsx
 msgid "That title could not be opened"
-msgstr ""
+msgstr "Ese título no se puede abrir"
 
 #: src/pages/settings/apps.tsx
 msgid "That you are searching, not what for."
-msgstr ""
+msgstr "Lo que estás buscando, no para que."
 
 #: src/pages/settings/playback.tsx
 msgid "The {name} installed on this computer, in a window of its own with its own controls and configuration. This app still saves your place, marks what you watched and plays the next episode. Compared with the built-in player, you lose:<0><1>The controls, skip buttons and next episode card over the video. They stay in this window, which works as a remote.</1><2>This app's subtitle style, video fit, hardware decoding and audio output settings.</2></0>"
-msgstr ""
+msgstr "La aplicación {name} instalada en este equipo se ejecuta en su propia ventana, con sus propios controles y configuración. Esta aplicación sigue guardando el punto en el que dejaste la reproducción, marca lo que ya has visto y reproduce el siguiente episodio. En comparación con el reproductor integrado, pierdes:<0><1>Los controles, los botones para saltar y la tarjeta del siguiente episodio que aparecen sobre el video. Estos elementos permanecen en esta ventana, que funciona a modo de control remoto.</1><2>La configuración de esta aplicación relativa al estilo de los subtítulos, el ajuste del video, la decodificación por hardware y la salida de audio.</2></0>"
 
 #: src/lib/servers.ts
 msgid "The address must start with http:// or https://."
-msgstr ""
+msgstr "La dirección debe comenzar con http:// o https://."
 
 #: src/pages/servers.tsx
 msgid "The address of the AIOStreams instance where you set up your addon. Other Jellyfin servers work too."
-msgstr ""
+msgstr "La dirección de la instancia de AIOStreams donde configuraste tu complemento. También funcionan otros servidores Jellyfin."
 
 #: src/pages/settings/about.tsx
 msgid "The API this app speaks."
-msgstr ""
+msgstr "La API con la que se comunica esta aplicación."
 
 #: src/app.tsx
 msgid "The app cannot open that link"
-msgstr ""
+msgstr "La aplicación no puede abrir ese enlace."
 
 #: src/components/crash-report.tsx
 msgid "The app closed unexpectedly"
-msgstr ""
+msgstr "La aplicación se cerró inesperadamente"
 
 #: src/lib/hosts/shell/bridge.ts
 msgid "The app did not answer"
-msgstr ""
+msgstr "La aplicación no respondió"
 
 #: src/pages/settings/downloads.tsx
 msgid "The app saves what you download and plays it without a connection."
-msgstr ""
+msgstr "La aplicación guarda lo que descargas y lo reproduce sin conexión."
 
 #: src/pages/settings/downloads.tsx
 msgid "The app's downloads"
-msgstr ""
+msgstr "Las descargas de la aplicación"
 
 #: src/lib/hosts/native-shell.ts
 msgid "The app's own settings"
-msgstr ""
+msgstr "La propia configuración de la aplicación"
 
 #: src/lib/hosts/jellyfin-android.ts
 msgid "The app's player"
-msgstr ""
+msgstr "El reproductor de la aplicación"
 
 #: src/lib/hosts/jellyfin-android.ts
 msgid "The app's player and its options, such as starting videos in landscape."
-msgstr ""
+msgstr "El reproductor de la aplicación y sus opciones, como la de iniciar los videos en orientación horizontal."
 
 #: src/lib/party/party.ts
 msgid "The host removed you from the party."
@@ -4227,47 +4236,47 @@ msgstr "El anfitrión te sacó del grupo."
 
 #: src/pages/settings/about.tsx
 msgid "The interface is built on its components."
-msgstr ""
+msgstr "La interfaz se construye a partir de sus componentes."
 
 #: src/components/licenses.tsx
 msgid "The licences couldn't be loaded."
-msgstr ""
+msgstr "No se pudieron cargar las licencias."
 
 #: src/lib/hosts/shell/player.ts
 msgid "the link answered HTTP {status}"
-msgstr ""
+msgstr "el enlace respondió con HTTP {status}"
 
 #: src/lib/hosts/shell/player.ts
 msgid "the link answered HTTP {status} ({meaning})"
-msgstr ""
+msgstr "el enlace respondió con HTTP {status} ({meaning})"
 
 #: src/router.tsx
 msgid "The link may be old, or the page moved."
-msgstr ""
+msgstr "Es posible que el enlace sea antiguo o que la página se haya movido."
 
 #: src/lib/hosts/shell/player.ts
 msgid "the link returned something other than a video"
-msgstr ""
+msgstr "el enlace devolvió algo distinto a un video"
 
 #: src/pages/settings/apps.tsx
 msgid "The movie or show whose page is open."
-msgstr ""
+msgstr "La película o la serie cuya página está abierta."
 
 #: src/pages/settings/apps.tsx
 msgid "The older way mpv draws, for Macs where the others fail. Some Dolby Vision videos show the wrong colours."
-msgstr ""
+msgstr "El método de renderizado más antiguo de mpv, pensado para equipos Mac en los que los otros fallan. Algunos videos en Dolby Vision muestran colores incorrectos."
 
 #: src/components/licenses.tsx
 msgid "The open-source software in this app, and the licence of each."
-msgstr ""
+msgstr "El software de código abierto presente en esta aplicación, así como la licencia de cada uno."
 
 #: src/components/remote-sheet.tsx
 msgid "The other device could not be reached"
-msgstr ""
+msgstr "No se pudo contactar con el otro dispositivo"
 
 #: src/components/crash-report.tsx
 msgid "The page restarted unexpectedly"
-msgstr ""
+msgstr "La página se reinició de forma inesperada"
 
 #: src/lib/party/party.ts
 msgid "The party ended after a long time with nothing playing."
@@ -4287,68 +4296,68 @@ msgstr "El grupo está viendo <0>{title}</0>"
 
 #: src/lib/hosts/shell/player.ts
 msgid "the player could not play this version"
-msgstr ""
+msgstr "el reproductor no puede reproducir esta versión"
 
 #: src/pages/settings/subtitles.tsx
 msgid "The player's subtitle menu lists subtitles in your languages, ones without a language and the one on. The rest wait under More languages."
-msgstr ""
+msgstr "El menú de subtítulos del reproductor enumera los subtítulos en tus idiomas, aquellos que no tienen idioma asignado y el que está activado actualmente. El resto se encuentra en la sección Más idiomas."
 
 #: src/components/playlists.tsx
 msgid "The playlist goes; the titles in it stay."
-msgstr ""
+msgstr "La lista de reproducción desaparece; los títulos que contiene permanecen."
 
 #: src/lib/party/party.ts
 msgid "The relay could not read that."
-msgstr ""
+msgstr "El retransmisor no pudo leer eso."
 
 #: src/pages/settings/downloads.tsx
 msgid "The rest wait their turn."
-msgstr ""
+msgstr "El resto espera su turno."
 
 #: src/pages/settings/playback.tsx
 msgid "The same for episodes marked as a recap."
-msgstr ""
+msgstr "Lo mismo con los episodios marcados como resumen."
 
 #. Follows "Playback failed:"
 #: src/lib/playback/use-player.ts
 msgid "the stream ended early"
-msgstr ""
+msgstr "la transmisión terminó antes de tiempo"
 
 #: src/pages/settings/apps.tsx
 msgid "The title, the episode and the time left."
-msgstr ""
+msgstr "El título, el episodio y el tiempo restante."
 
 #: src/lib/hosts/tizen/player.ts
 msgid "the TV cannot play this format"
-msgstr ""
+msgstr "el televisor no puede reproducir este formato"
 
 #: src/lib/hosts/tizen/player.ts
 msgid "the TV could not load the stream"
-msgstr ""
+msgstr "el televisor no pudo cargar la transmisión"
 
 #: src/lib/hosts/tizen/player.ts
 msgid "the TV's player failed ({code})"
-msgstr ""
+msgstr "el reproductor del televisor falló ({code})"
 
 #: src/lib/playback/player-choice.ts
 msgid "the video app Android picks"
-msgstr ""
+msgstr "la aplicación de video que Android elige"
 
 #: src/pages/settings/apps.tsx
 msgid "The video output changes when the app opens again."
-msgstr ""
+msgstr "La salida de video cambia cuando la aplicación se abre de nuevo."
 
 #: src/components/download-button.tsx
 msgid "The whole show"
-msgstr ""
+msgstr "Toda la serie"
 
 #: src/pages/settings/index.tsx src/pages/settings/theme.tsx
 msgid "Theme"
-msgstr ""
+msgstr "Tema"
 
 #: src/components/version-badges.tsx
 msgid "There are no badges this app can read at that address."
-msgstr ""
+msgstr "No hay insignias que esta aplicación pueda leer en esa dirección."
 
 #: src/router.tsx
 msgid "There is nothing here"
@@ -4356,36 +4365,36 @@ msgstr "No hay nada aquí"
 
 #: src/components/version-settings.tsx
 msgid "These come before the packs' badges. Badges that share a group are alternatives: only the first that matches shows."
-msgstr ""
+msgstr "Estos aparecen antes que las insignias de los paquetes. Las insignias que comparten un mismo grupo son alternativas: solo se muestra la primera que coincide."
 
 #: src/lib/subtitles/delay.ts
 msgid "These subtitles don't match the video's own"
-msgstr ""
+msgstr "Estos subtítulos no coinciden con los del propio video"
 
 #: src/lib/subtitles/delay.ts
 msgid "These subtitles run at a different speed to the video"
-msgstr ""
+msgstr "Estos subtítulos van a una velocidad distinta a la del video"
 
 #: src/components/player/subtitle-sync.tsx
 msgid "These subtitles' lines could not be read."
-msgstr ""
+msgstr "Las líneas de estos subtítulos no se pueden leer."
 
 #: src/pages/settings/subtitles.tsx
 msgid "Thick"
-msgstr ""
+msgstr "Grueso"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Thin"
-msgstr ""
+msgstr "Fino"
 
 #: src/pages/settings/audio.tsx
 msgid "This app decodes Dolby and DTS audio itself, which loses Atmos."
-msgstr ""
+msgstr "Esta aplicación decodifica por sí misma el audio Dolby y DTS, lo que conlleva la pérdida de Atmos."
 
 #. Follows "Playback failed:"
 #: src/lib/playback/video.ts
 msgid "this browser cannot play this version. Nothing is converted on the server, so try another version, an external player or the desktop app."
-msgstr ""
+msgstr "Este navegador no puede reproducir esta versión. No se realiza ninguna conversión en el servidor, prueba con otra versión, un reproductor externo o la aplicación de escritorio."
 
 #: src/pages/sign-in.tsx
 msgid "This code has expired."
@@ -4393,7 +4402,7 @@ msgstr "Este código se caducó."
 
 #: src/lib/hosts/shell/index.ts
 msgid "This copy does not update itself."
-msgstr ""
+msgstr "Esta copia no se actualiza por sí sola."
 
 #: src/lib/party/follow.ts
 msgid "This device couldn't read what the party is playing."
@@ -4401,7 +4410,7 @@ msgstr "Este dispositivo no puede leer lo que el grupo está reproduciendo."
 
 #: src/pages/settings/subtitles.tsx
 msgid "This is how subtitles will look."
-msgstr ""
+msgstr "Así es como se verán los subtítulos."
 
 #: src/components/crash-report.tsx
 msgid "This is what the device recorded about it. Sending or saving the report helps get it fixed."
