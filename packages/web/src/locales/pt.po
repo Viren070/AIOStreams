@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-28 21:59+0000\n"
-"Last-Translator: Miguel Santiago <miguelsantiago1102@users.noreply.hosted.weblate.org>\n"
+"PO-Revision-Date: 2026-10-29 16:33+0000\n"
+"Last-Translator: IsThisOn <thisisito@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Portuguese <https://hosted.weblate.org/projects/aiostreams/web-app/pt/>\n"
 "Language: pt\n"
 "MIME-Version: 1.0\n"
@@ -1549,6 +1549,11 @@ msgstr "Filtrar"
 msgid "Filter versions"
 msgstr "Filtrar versões"
 
+#: src/pages/settings/playback.tsx
+#, fuzzy
+msgid "Find versions when a title opens"
+msgstr "Não foram encontradas versões desse título"
+
 #: src/components/download-button.tsx
 msgid "Finding a version to download"
 msgstr "A procurar uma versão para transferir"
@@ -1846,11 +1851,11 @@ msgstr "Ligação de convite copiada"
 
 #: src/components/licenses.tsx
 msgid "It came with no licence text."
-msgstr ""
+msgstr "Não foi fornecido texto de licença."
 
 #: src/components/send-report.tsx
 msgid "It carries this device's details and the app's recent log. Passwords and tokens are left out."
-msgstr "Inclui os detalhes deste dispositivo e o registo recente da app. As palavras-passe e os tokens ficam de fora."
+msgstr "Inclui os detalhes deste dispositivo e o registo recente da app. Exclui palavras-passe e tokens."
 
 #: src/components/send-report.tsx
 msgid "It didn't reach the developer, only this server: {forwardError}"
@@ -1862,7 +1867,7 @@ msgstr "Será anulado, a menos que o mantenha."
 
 #: src/pages/settings/about.tsx
 msgid "Its Metal and AVFoundation video outputs."
-msgstr ""
+msgstr "As respetivas saídas de vídeo Metal e AVFoundation."
 
 #: src/pages/settings/about.tsx
 msgid "Jellyfin API"
@@ -1878,7 +1883,7 @@ msgstr "Entrar numa sessão"
 
 #: src/components/party/party-sheet.tsx
 msgid "Joining leaves the party you're in."
-msgstr "Entrar faz com que saia da sessão em que está."
+msgstr "Entrar faz com que saia da sessão em que se encontra."
 
 #: src/components/party/party-sheet.tsx
 msgid "Joining the party…"
@@ -1898,19 +1903,19 @@ msgstr "Manter"
 
 #: src/pages/settings/playback.tsx
 msgid "Keep in step by changing speed"
-msgstr "Manter o passo alterando a velocidade"
+msgstr "Manter-se sincronizado ao ajustar a velocidade"
 
 #: src/components/party/party-sheet.tsx
 msgid "Keeping in step"
-msgstr "A manter o passo"
+msgstr "A sincronizar"
 
 #: src/pages/settings/apps.tsx
 msgid "Keeps the sound going with the screen off, or when you leave the app."
-msgstr "Mantém o som com o ecrã desligado, ou quando sai da app."
+msgstr "Continua a reproduzir o áudio com o ecrã desligado ou ao sair da app."
 
 #: src/pages/settings/apps.tsx
 msgid "Keeps the sound going with the screen off, or when you leave without picture-in-picture."
-msgstr "Mantém o som com o ecrã desligado, ou quando sai sem imagem na imagem."
+msgstr "Continua a reproduzir áudio com o ecrã desligado ou ao sair da app sem picture-in-picture."
 
 #: src/pages/settings/apps.tsx
 msgid "Keeps the video playing in a small window when you leave the app."
@@ -2007,7 +2012,7 @@ msgstr "Deixa o descodificador da TV manter a imagem e o som sincronizados, o qu
 
 #: src/components/licenses.tsx
 msgid "Licences"
-msgstr ""
+msgstr "Licenças"
 
 #: src/components/version-settings.tsx
 msgid "Link a pack someone shares, in this app's format or the one Fusion and Nuvio use. It stays up to date with its author's changes."
@@ -2048,6 +2053,10 @@ msgstr "Registos"
 #: src/components/party/party-sheet.tsx
 msgid "Looking for the party…"
 msgstr "A procurar a sessão…"
+
+#: src/pages/settings/playback.tsx
+msgid "Looks for versions as soon as a title's page opens, so Play and the version list don't wait. Each title you open is looked up, even if you don't play it."
+msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "Lost the connection to {relay}. Reconnecting… Your player carries on, and gets back in step once it's back."
@@ -3242,7 +3251,7 @@ msgstr "Mudar o nome"
 
 #: src/components/playlists.tsx
 msgid "Repeat"
-msgstr ""
+msgstr "Repetir"
 
 #: src/pages/settings/apps.tsx
 msgid "Report a problem"
@@ -3656,7 +3665,7 @@ msgstr "Mostra legendas no seu idioma, a não ser que o áudio já esteja nele."
 
 #: src/components/playlists.tsx
 msgid "Shuffle"
-msgstr ""
+msgstr "Modo aleatório"
 
 #: src/pages/settings/interface.tsx
 msgid "Side rail"
@@ -4210,9 +4219,8 @@ msgid "The interface is built on its components."
 msgstr "A interface é construída com os seus componentes."
 
 #: src/components/licenses.tsx
-#, fuzzy
 msgid "The licences couldn't be loaded."
-msgstr "Não foi possível ler as falas destas legendas."
+msgstr "Não foi possível obter as licenças."
 
 #: src/lib/hosts/shell/player.ts
 msgid "the link answered HTTP {status}"
@@ -4240,7 +4248,7 @@ msgstr "A forma mais antiga de o mpv desenhar, para os Mac em que as outras falh
 
 #: src/components/licenses.tsx
 msgid "The open-source software in this app, and the licence of each."
-msgstr ""
+msgstr "O software de código aberto usado nesta app e as respetivas licenças."
 
 #: src/components/remote-sheet.tsx
 msgid "The other device could not be reached"
@@ -4741,7 +4749,7 @@ msgstr "Saída de vídeo"
 
 #: src/components/licenses.tsx
 msgid "View"
-msgstr ""
+msgstr "Ver"
 
 #: src/components/licenses.tsx src/pages/settings/about.tsx
 msgid "Visit"
@@ -4761,23 +4769,23 @@ msgstr "Volume {percent}%"
 
 #: src/lib/input/actions.ts
 msgid "Volume down"
-msgstr "Baixar volume"
+msgstr "Diminuir volume"
 
 #: src/lib/input/keys.ts
 msgid "Volume down key"
-msgstr "Tecla de baixar volume"
+msgstr "Tecla de diminuir volume"
 
 #: src/pages/settings/playback.tsx
 msgid "Volume step"
-msgstr "Passo do volume"
+msgstr "Incremento de volume"
 
 #: src/lib/input/actions.ts
 msgid "Volume up"
-msgstr "Subir volume"
+msgstr "Aumentar volume"
 
 #: src/lib/input/keys.ts
 msgid "Volume up key"
-msgstr "Tecla de subir volume"
+msgstr "Tecla de aumentar volume"
 
 #: src/pages/downloads.tsx
 msgid "Waiting"
@@ -4801,7 +4809,7 @@ msgstr "Ver em conjunto"
 
 #: src/pages/settings/account.tsx
 msgid "Watch as someone else on this configuration. A user with a PIN needs it again after switching away."
-msgstr "Veja como outra pessoa nesta configuração. Um utilizador com PIN precisa dele novamente depois de mudar."
+msgstr "Veja como se fosse outro utilizador nesta configuração. Um utilizador com PIN tem de voltar a introduzi-lo depois de mudar."
 
 #: src/pages/settings/playback.tsx
 msgid "Watch parties"
@@ -4827,7 +4835,7 @@ msgstr "Visto ×{playCount}"
 
 #: src/pages/history.tsx
 msgid "Watched marks and resume points are removed from this server. Favourites stay. Titles a tracker still lists come back when it next syncs."
-msgstr "As marcas de visto e os pontos de retoma são removidos deste servidor. Os favoritos ficam. Os títulos que um tracker ainda liste voltam na próxima sincronização."
+msgstr "O estado de visualização e os pontos para continuar a ver são removidos deste servidor. Os favoritos mantêm-se. Os títulos que um tracker ainda lista voltam na próxima sincronização."
 
 #: src/components/party/party-sheet.tsx src/pages/settings/index.tsx
 msgid "Watching"
@@ -4863,7 +4871,7 @@ msgstr "O que a app fez em cada dia, guardado durante uma semana."
 
 #: src/pages/settings/interface.tsx
 msgid "What the navigation sits on over the page: the app's own colour, or glass that shows the page through it. Liquid glass also bends what's behind its edges, which costs more on a slow device."
-msgstr "Sobre o que fica a navegação por cima da página: a cor da própria app, ou vidro que deixa ver a página através dele. O vidro líquido também curva o que está por trás das margens, o que pesa mais num dispositivo lento."
+msgstr "O fundo da barra de navegação sobre a página: a cor da própria app, ou vidro através do qual se vê a página. O Liquid Glass também distorce o que está por trás dos contornos, o que consome mais recursos num dispositivo lento."
 
 #: src/components/party/party-sheet.tsx
 msgid "What the others say shows here."
@@ -4871,7 +4879,7 @@ msgstr "O que os outros dizem aparece aqui."
 
 #: src/pages/settings/playback.tsx
 msgid "What the people you watch with say shows for a few seconds. It always stays in the party's chat."
-msgstr "O que dizem as pessoas com quem está a ver aparece durante alguns segundos. Fica sempre no chat da sessão."
+msgstr "As mensagens das pessoas com quem está a ver aparecem no ecrã durante alguns segundos. Ficam sempre guardadas no chat da sessão."
 
 #: src/pages/settings/cache.tsx
 msgid "What to save"
@@ -4931,15 +4939,15 @@ msgstr "Quando a TV ou o recetor o descodifica"
 
 #: src/pages/settings/playback.tsx
 msgid "Where a file names its intro, credits, recap or preview chapters, skipping uses them instead of the server's times, since they fit that exact file. The rest still come from the server."
-msgstr "Quando um ficheiro dá nome aos capítulos do genérico, créditos, resumo ou antevisão, os saltos usam-nos em vez dos tempos do servidor, porque se ajustam exatamente a esse ficheiro. Os restantes continuam a vir do servidor."
+msgstr "Quando o ficheiro tem capítulos identificados como genérico, créditos, resumo ou antevisão, são usados os respetivos tempos para saltar essas partes, em vez dos do servidor, por corresponderem exatamente ao ficheiro. Nos restantes capítulos, usam-se os tempos do servidor."
 
 #: src/pages/settings/about.tsx
 msgid "Where the app is made, and where to report a problem."
-msgstr "Onde a app é feita e onde comunicar um problema."
+msgstr "Onde a app é desenvolvida e onde comunicar um problema."
 
 #: src/pages/settings/interface.tsx
 msgid "Where the navigation goes when the screen is wide enough for a sidebar, such as a tablet held sideways."
-msgstr "Onde fica a navegação quando o ecrã é largo o suficiente para uma barra lateral, como um tablet na horizontal."
+msgstr "Onde fica a navegação quando o ecrã é largo o suficiente para uma barra lateral, como num tablet na horizontal."
 
 #: src/pages/settings/interface.tsx
 msgid "Where the navigation goes when the window is wide enough for a sidebar."
@@ -4971,7 +4979,7 @@ msgstr "Ao sincronizar legendas de ouvido."
 
 #: src/pages/settings/interface.tsx
 msgid "While you're in it"
-msgstr "Quando está nela"
+msgstr "Apenas na página atual"
 
 #: src/lib/i18n.ts
 msgid "White"
@@ -4979,11 +4987,11 @@ msgstr "Branco"
 
 #: src/pages/settings/index.tsx
 msgid "Who you are signed in as"
-msgstr "Com quem iniciou sessão"
+msgstr "A conta com que iniciou sessão"
 
 #: src/pages/settings/cache.tsx
 msgid "Who you are signed in as and the server’s details, which opening without a connection needs."
-msgstr "Com quem iniciou sessão e os detalhes do servidor, que são precisos para abrir sem ligação."
+msgstr "A conta com que iniciou sessão e os dados do servidor, de que a app precisa para abrir sem ligação."
 
 #: src/pages/settings/account.tsx
 msgid "Who's watching"
@@ -5047,11 +5055,11 @@ msgstr "o seu leitor"
 
 #: src/lib/party/follow.ts
 msgid "Your player can't follow a watch party. Pick the app's player in settings to watch along."
-msgstr "O seu leitor não consegue acompanhar uma sessão conjunta. Escolha o leitor da app nas definições para ver em conjunto."
+msgstr "O seu leitor não permite acompanhar uma sessão conjunta. Escolha o leitor da app nas definições para participar."
 
 #: src/components/version-picker.tsx
 msgid "Your player does not report back, so mark it as watched once you finish."
-msgstr "O seu leitor não informa a app, por isso marque como visto quando terminar."
+msgstr "O seu leitor não envia informações sobre o progresso à app, por isso marque como visto quando terminar."
 
 #: src/components/party/party-sheet.tsx
 msgid "Your player plays in another app, which can't follow a party. Choose the app's own player in settings to watch along."

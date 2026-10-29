@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-26 23:35+0000\n"
-"Last-Translator: Viren070 <viren070@protonmail.com>\n"
+"PO-Revision-Date: 2026-10-29 16:33+0000\n"
+"Last-Translator: hamburgercowgoldfish <242998989+hamburgercowgoldfish@users.noreply.github.com>\n"
 "Language-Team: German <https://hosted.weblate.org/projects/aiostreams/web-app/de/>\n"
 "Language: de\n"
 "MIME-Version: 1.0\n"
@@ -45,7 +45,7 @@ msgstr "{count, plural, one {# Titel} other {# Titel}}"
 
 #: src/components/party/party-sheet.tsx
 msgid "{count, plural, one {# watching · on {on}} other {# watching · on {on}}}"
-msgstr "{count, plural, one {# schaut zu · auf {on}} other {# schauen zu · auf {on}}}"
+msgstr "{count, plural, one {# Zuschauer · auf {on}} other {# Zuschauer · auf {on}}}"
 
 #: src/components/version-settings.tsx
 msgid "{count, plural, one {Added # badge} other {Added # badges}}"
@@ -119,7 +119,7 @@ msgstr "{hours} Std. {rest} Min."
 
 #: src/pages/history.tsx
 msgid "{inProgress, plural, one {# in progress} other {# in progress}}"
-msgstr "{inProgress, plural, one {# wird ausgeführt} other {# werden ausgeführt}}"
+msgstr "{inProgress, plural, one {# angefangen} other {# angefangen}}"
 
 #: src/components/shortcut-settings.tsx
 msgid "{key} is taken by {taken}"
@@ -309,7 +309,7 @@ msgstr "Ein Abzeichen erscheint bei jeder Version, deren Text dem Muster entspri
 
 #: src/pages/settings/interface.tsx
 msgid "A card you rest on grows into a bigger preview with its details, while the hero rotates."
-msgstr ""
+msgstr "Eine Kachel, auf der der Fokus verweilt, vergrößert sich zu einer Detailvorschau, während das Hero-Banner weiterrotiert."
 
 #: src/components/party/party-sheet.tsx
 msgid "A code is looked up on the relay picked above."
@@ -374,7 +374,7 @@ msgstr "Aktionen"
 #: src/components/layout.tsx src/pages/history.tsx src/pages/home.tsx
 #: src/pages/settings/apps.tsx src/pages/settings/cache.tsx
 msgid "Activity"
-msgstr "Verlauf"
+msgstr "Aktivität"
 
 #: src/components/version-settings.tsx
 msgid "Add"
@@ -569,7 +569,7 @@ msgstr "Möchtest du wirklich fortfahren?"
 
 #: src/pages/settings/cache.tsx
 msgid "Artwork"
-msgstr "Grafiken"
+msgstr "Bilder"
 
 #: src/components/party/party-sheet.tsx
 msgid "As the host"
@@ -762,7 +762,7 @@ msgstr "Abbrechen"
 
 #: src/pages/settings/interface.tsx
 msgid "Cards"
-msgstr ""
+msgstr "Kacheln"
 
 #: src/components/people.tsx
 msgid "Cast"
@@ -944,7 +944,7 @@ msgstr "Weiter"
 #: src/components/player/next-episode.tsx src/pages/home.tsx
 #: src/pages/settings/interface.tsx
 msgid "Continue watching"
-msgstr "Wiedergabe fortsetzen"
+msgstr "Weiterschauen"
 
 #: src/pages/settings/playback.tsx
 msgid "Controls"
@@ -1137,7 +1137,7 @@ msgstr "Danksagung"
 
 #: src/pages/settings/playback.tsx
 msgid "Credits that end an episode are left to the next episode prompt when it shows."
-msgstr "Bei Abspannen beginnt automatisch die Einblendung für die nächste Folge."
+msgstr "Das Überspringen von Abspannen am Episodenende wird dem Hinweis für die nächste Folge überlassen, sobald dieser erscheint."
 
 #: src/components/people.tsx
 msgid "Crew"
@@ -1185,7 +1185,7 @@ msgstr "Datum unbekannt"
 
 #: src/pages/settings/playback.tsx
 msgid "Decodes nearly any video, in software where the device has no decoder for it. Takes your mpv.conf under Android app."
-msgstr "Dekodiert nahezu jedes Video per Software, falls das Gerät keinen passenden Decoder besitzt. Verwendet deine mpv.conf in den Android-App Einstellungen."
+msgstr "Dekodiert nahezu jedes Video (per Software, falls kein Hardware-Decoder vorhanden ist). Nutzt deine mpv.conf aus den Android-App-Einstellungen."
 
 #: src/pages/settings/playback.tsx
 msgid "Decodes on the graphics card. Turn it off if video shows artefacts or stays black."
@@ -1549,6 +1549,11 @@ msgstr "Filter"
 msgid "Filter versions"
 msgstr "Versionen filtern"
 
+#: src/pages/settings/playback.tsx
+#, fuzzy
+msgid "Find versions when a title opens"
+msgstr "Für diesen Titel wurden keine Versionen gefunden"
+
 #: src/components/download-button.tsx
 msgid "Finding a version to download"
 msgstr "Suche Version zum Herunterladen"
@@ -1846,7 +1851,7 @@ msgstr "Einladungslink kopiert"
 
 #: src/components/licenses.tsx
 msgid "It came with no licence text."
-msgstr ""
+msgstr "Kein Lizenztext vorhanden."
 
 #: src/components/send-report.tsx
 msgid "It carries this device's details and the app's recent log. Passwords and tokens are left out."
@@ -1862,7 +1867,7 @@ msgstr "Wird automatisch zurückgesetzt, sofern du die Änderung nicht beibehäl
 
 #: src/pages/settings/about.tsx
 msgid "Its Metal and AVFoundation video outputs."
-msgstr ""
+msgstr "Videoausgabe über Metal und AVFoundation."
 
 #: src/pages/settings/about.tsx
 msgid "Jellyfin API"
@@ -2007,7 +2012,7 @@ msgstr "Lässt den TV-Decoder Bild und Ton selbst synchron halten. Dadurch laufe
 
 #: src/components/licenses.tsx
 msgid "Licences"
-msgstr ""
+msgstr "Lizenzen"
 
 #: src/components/version-settings.tsx
 msgid "Link a pack someone shares, in this app's format or the one Fusion and Nuvio use. It stays up to date with its author's changes."
@@ -2049,6 +2054,10 @@ msgstr "Protokolle"
 msgid "Looking for the party…"
 msgstr "Watch-Party wird gesucht…"
 
+#: src/pages/settings/playback.tsx
+msgid "Looks for versions as soon as a title's page opens, so Play and the version list don't wait. Each title you open is looked up, even if you don't play it."
+msgstr ""
+
 #: src/components/party/party-sheet.tsx
 msgid "Lost the connection to {relay}. Reconnecting… Your player carries on, and gets back in step once it's back."
 msgstr "Verbindung zu {relay} verloren. Verbindung wird wiederhergestellt… Dein Player spielt weiter und wird nach der Wiederverbindung erneut synchronisiert."
@@ -2067,7 +2076,7 @@ msgstr "Magenta"
 
 #: src/pages/settings/audio.tsx
 msgid "Main"
-msgstr "Hauptprofil"
+msgstr "Hauptspur"
 
 #: src/components/version-picker.tsx
 msgid "Mark as watched"
@@ -3127,9 +3136,8 @@ msgid "Rate season"
 msgstr "Staffel bewerten"
 
 #: src/components/scores.tsx
-#, fuzzy
 msgid "Rating"
-msgstr "Wartet"
+msgstr "Bewertung"
 
 #: src/components/party/party-sheet.tsx
 msgid "React with {emoji}"
@@ -3243,7 +3251,7 @@ msgstr "Umbenennen"
 
 #: src/components/playlists.tsx
 msgid "Repeat"
-msgstr ""
+msgstr "Wiederholen"
 
 #: src/pages/settings/apps.tsx
 msgid "Report a problem"
@@ -3350,7 +3358,7 @@ msgstr "Wechselt zwischen hervorgehobenen Titeln"
 
 #: src/components/scores.tsx
 msgid "Rotten Tomatoes audience"
-msgstr ""
+msgstr "Rotten Tomatoes Publikum"
 
 #: src/pages/settings/interface.tsx
 msgid "Row"
@@ -3473,9 +3481,8 @@ msgid "Searching"
 msgstr "Suche läuft"
 
 #: src/components/player/pause-screen.tsx
-#, fuzzy
 msgid "Season {season}"
-msgstr "Staffel bewerten"
+msgstr "Staffel {season}"
 
 #: src/components/item-menu.tsx
 msgid "See the download"
@@ -3658,7 +3665,7 @@ msgstr "Zeigt Untertitel in deiner Sprache an, sofern der Ton nicht bereits in d
 
 #: src/components/playlists.tsx
 msgid "Shuffle"
-msgstr ""
+msgstr "Zufallswiedergabe"
 
 #: src/pages/settings/interface.tsx
 msgid "Side rail"
@@ -3669,9 +3676,8 @@ msgid "Side rail runs down the side of the screen; Top tabs sit along the top of
 msgstr "Die seitliche Navigationsleiste verläuft am Bildschirmrand. Obere Registerkarten befinden sich am oberen Rand jeder Seite."
 
 #: src/pages/settings/interface.tsx
-#, fuzzy
 msgid "Sidebar"
-msgstr "Seitliche Navigationsleiste"
+msgstr "Seitenleiste"
 
 #: src/pages/sign-in.tsx
 msgid "Sign in"
@@ -3851,7 +3857,7 @@ msgstr "Speicherplatz"
 
 #: src/components/player/pause-screen.tsx
 msgid "Specials"
-msgstr ""
+msgstr "Specials"
 
 #: src/components/player/options.tsx
 msgid "Speed"
@@ -4073,9 +4079,8 @@ msgid "Tab"
 msgstr "Tab"
 
 #: src/pages/settings/interface.tsx
-#, fuzzy
 msgid "Tab names"
-msgstr "Seitennamen"
+msgstr "Tab-Namen"
 
 #: src/pages/history.tsx
 msgid "Table"
@@ -4214,9 +4219,8 @@ msgid "The interface is built on its components."
 msgstr "Die Oberfläche basiert auf diesen Komponenten."
 
 #: src/components/licenses.tsx
-#, fuzzy
 msgid "The licences couldn't be loaded."
-msgstr "Die Zeilen dieser Untertitel konnten nicht gelesen werden."
+msgstr "Lizenzen konnten nicht geladen werden."
 
 #: src/lib/hosts/shell/player.ts
 msgid "the link answered HTTP {status}"
@@ -4244,7 +4248,7 @@ msgstr "Die ältere Videoausgabe von mpv für Macs, auf denen die anderen Verfah
 
 #: src/components/licenses.tsx
 msgid "The open-source software in this app, and the licence of each."
-msgstr ""
+msgstr "Die in dieser App genutzte Open-Source-Software und deren jeweilige Lizenzen."
 
 #: src/components/remote-sheet.tsx
 msgid "The other device could not be reached"
@@ -4745,7 +4749,7 @@ msgstr "Videoausgabe"
 
 #: src/components/licenses.tsx
 msgid "View"
-msgstr ""
+msgstr "Anzeigen"
 
 #: src/components/licenses.tsx src/pages/settings/about.tsx
 msgid "Visit"
@@ -4946,9 +4950,8 @@ msgid "Where the navigation goes when the screen is wide enough for a sidebar, s
 msgstr "Position der Navigation, wenn der Bildschirm breit genug für eine Seitenleiste ist, etwa auf einem Tablet im Querformat."
 
 #: src/pages/settings/interface.tsx
-#, fuzzy
 msgid "Where the navigation goes when the window is wide enough for a sidebar."
-msgstr "Position der Navigation, wenn der Bildschirm breit genug für eine Seitenleiste ist, etwa auf einem Tablet im Querformat."
+msgstr "Position der Navigation, sobald das Fenster breit genug für eine Seitenleiste ist."
 
 #: src/pages/settings/index.tsx
 msgid "Where they go and how many run at once"
@@ -4956,7 +4959,7 @@ msgstr "Speicherort und Anzahl gleichzeitiger Downloads"
 
 #: src/pages/settings/interface.tsx
 msgid "Whether the bar at the bottom, and tabs along the top, name each page."
-msgstr ""
+msgstr "Seitenbeschriftungen in der unteren Leiste und den oberen Tabs anzeigen."
 
 #: src/pages/settings/interface.tsx
 msgid "Whether the rail names each page only while you're in it, or all the time."
@@ -4967,9 +4970,8 @@ msgid "Whether the rail names each page under its icon."
 msgstr "Seitennamen unter den Symbolen der Navigationsleiste anzeigen."
 
 #: src/pages/settings/interface.tsx
-#, fuzzy
 msgid "Whether the tabs name each page beside its icon."
-msgstr "Seitennamen unter den Symbolen der Navigationsleiste anzeigen."
+msgstr "Seitennamen neben dem Symbol in Tabs anzeigen."
 
 #: src/components/shortcut-settings.tsx
 msgid "While syncing subtitles by ear."
