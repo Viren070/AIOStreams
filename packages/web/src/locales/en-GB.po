@@ -1613,6 +1613,10 @@ msgstr "Filter"
 msgid "Filter versions"
 msgstr "Filter versions"
 
+#: src/pages/settings/playback.tsx
+msgid "Find versions when a title opens"
+msgstr "Find versions when a title opens"
+
 #: src/components/download-button.tsx
 msgid "Finding a version to download"
 msgstr "Finding a version to download"
@@ -2121,6 +2125,10 @@ msgstr "Logs"
 #: src/components/party/party-sheet.tsx
 msgid "Looking for the party…"
 msgstr "Looking for the party…"
+
+#: src/pages/settings/playback.tsx
+msgid "Looks for versions as soon as a title's page opens, so Play and the version list don't wait. Each title you open is looked up, even if you don't play it."
+msgstr "Looks for versions as soon as a title's page opens, so Play and the version list don't wait. Each title you open is looked up, even if you don't play it."
 
 #: src/components/party/party-sheet.tsx
 msgid "Lost the connection to {relay}. Reconnecting… Your player carries on, and gets back in step once it's back."

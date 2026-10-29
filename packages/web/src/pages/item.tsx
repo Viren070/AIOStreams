@@ -85,7 +85,11 @@ import { Scores, scoresOf } from '../components/scores';
 import { ExternalLinks } from '../components/external-links';
 import { CastAndCrew } from '../components/people';
 import { KINDS, KindTabs } from '../components/kind-tabs';
-import { PickOnArrival, useVersionPicker } from '../components/version-picker';
+import {
+  PickOnArrival,
+  usePreloadVersions,
+  useVersionPicker,
+} from '../components/version-picker';
 import { openAddToPlaylist } from '../components/playlists';
 import { playable } from '../lib/playlists';
 import { BackdropFrame } from '../components/hero';
@@ -350,6 +354,7 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
       : item.Type === 'Movie'
         ? item
         : undefined;
+  usePreloadVersions(target);
   const resumeMs = ticksToMs(target?.UserData?.PlaybackPositionTicks);
   const code =
     target?.Type === 'Episode'

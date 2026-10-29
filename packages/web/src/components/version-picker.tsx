@@ -28,6 +28,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useSession } from '../lib/session';
 import { useFeature } from '../lib/server-info';
 import {
+  PRELOADED_MS,
   useItem,
   usePlaybackInfo,
   usePlaybackInfoOptions,
@@ -147,6 +148,23 @@ export function PickOnArrival({
     navigate(itemPath(item.data), { replace: true });
   }, [item.data, picker, playlist]);
   return null;
+}
+
+/** With the setting on, asks for the item's versions before Play does. */
+export function usePreloadVersions(item: BaseItemDto | undefined) {
+  const [preload] = useSetting(settings.playback.preloadVersions);
+  const queryClient = useQueryClient();
+  const infoOptions = usePlaybackInfoOptions();
+  const downloaded = useFindDownloaded();
+  const id = item?.Id;
+  const local = !!item && !!downloaded(item);
+  React.useEffect(() => {
+    if (preload && id && !local)
+      void queryClient.prefetchQuery({
+        ...infoOptions(id),
+        staleTime: PRELOADED_MS,
+      });
+  }, [preload, id, local, queryClient, infoOptions]);
 }
 
 export function useVersionPicker(): PickerValue {
@@ -366,9 +384,12 @@ function Versions({
   const { client } = useSession();
   const { item } = request;
   const purpose = request.download ? 'download' : undefined;
+  const [preloaded] = useSetting(settings.playback.preloadVersions);
   const info = usePlaybackInfo(
     item.Id!,
-    request.playing ? { kept: true } : { listing: true, purpose }
+    request.playing
+      ? { kept: true }
+      : { listing: true, preloaded: preloaded && !purpose, purpose }
   );
   const refresh = useRefreshPlaybackInfo(item.Id!, purpose);
   const refreshing = info.isFetching || refresh.isPending;

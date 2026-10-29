@@ -99,6 +99,7 @@ export function PlaybackSection() {
   const [holdRate, setHoldRate] = useSetting(settings.controls.holdRate);
   const [thumbnails, setThumbnails] = useSetting(settings.controls.thumbnails);
   const [autoPlay, setAutoPlay] = useSetting(settings.playback.autoPlayFirst);
+  const [preload, setPreload] = useSetting(settings.playback.preloadVersions);
   const [nextPrompt, setNextPrompt] = useSetting(settings.next.prompt);
   const [nextLead, setNextLead] = useSetting(settings.next.lead);
   const [nextCountdown, setNextCountdown] = useSetting(settings.next.countdown);
@@ -153,6 +154,13 @@ export function PlaybackSection() {
           }
           value={autoPlay}
           onValueChange={setAutoPlay}
+        />
+        <Switch
+          side="right"
+          label={t`Find versions when a title opens`}
+          help={t`Looks for versions as soon as a title's page opens, so Play and the version list don't wait. Each title you open is looked up, even if you don't play it.`}
+          value={preload}
+          onValueChange={setPreload}
         />
         <QuickFiltersRow />
         <BadgesRow />

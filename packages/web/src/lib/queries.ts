@@ -668,6 +668,9 @@ export function usePlaybackInfoOptions() {
   );
 }
 
+/** About as long as the server reuses a list by default. */
+export const PRELOADED_MS = 3 * 60_000;
+
 /**
  * The version list asks on every open, as the server decides when a result is
  * too old; the player reuses whatever the list showed. The player's own list
@@ -677,6 +680,8 @@ export function usePlaybackInfo(
   itemId: string,
   opts: {
     listing?: boolean;
+    /** The list takes one asked for in the last `PRELOADED_MS`. */
+    preloaded?: boolean;
     kept?: boolean;
     sourceId?: string;
     enabled?: boolean;
@@ -691,7 +696,13 @@ export function usePlaybackInfo(
       queryFn: () => request(itemId, { kept: true }),
       staleTime: Infinity,
     }),
-    refetchOnMount: opts.listing ? 'always' : true,
+    refetchOnMount: opts.listing
+      ? (query) =>
+          opts.preloaded &&
+          Date.now() - query.state.dataUpdatedAt < PRELOADED_MS
+            ? false
+            : 'always'
+      : true,
     enabled: opts.enabled ?? true,
   });
 }

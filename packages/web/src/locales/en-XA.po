@@ -1613,6 +1613,10 @@ msgstr ""
 msgid "Filter versions"
 msgstr ""
 
+#: src/pages/settings/playback.tsx
+msgid "Find versions when a title opens"
+msgstr ""
+
 #: src/components/download-button.tsx
 msgid "Finding a version to download"
 msgstr ""
@@ -2120,6 +2124,10 @@ msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "Looking for the party…"
+msgstr ""
+
+#: src/pages/settings/playback.tsx
+msgid "Looks for versions as soon as a title's page opens, so Play and the version list don't wait. Each title you open is looked up, even if you don't play it."
 msgstr ""
 
 #: src/components/party/party-sheet.tsx
