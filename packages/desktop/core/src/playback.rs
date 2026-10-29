@@ -563,7 +563,7 @@ pub fn style(style: &Style, own_font: &str) -> Result<Vec<(&'static str, String)
             }
             .into(),
         ),
-        ("sub-pos", s.position.round().to_string()),
+        ("sub-pos", s.position.to_string()),
     ])
 }
 
