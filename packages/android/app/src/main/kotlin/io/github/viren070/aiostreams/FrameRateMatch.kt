@@ -31,7 +31,11 @@ class FrameRateMatch(
         val display = activity.window.decorView.display ?: return
         val active = display.mode
         val fastest = display.supportedModes.filter { it.sameSize(active) }.maxByOrNull { it.refreshRate } ?: return
-        if (activity.window.attributes.preferredDisplayModeId != fastest.modeId) prefer(fastest.modeId)
+        val params = activity.window.attributes
+        if (params.preferredDisplayModeId == fastest.modeId && params.preferredRefreshRate == fastest.refreshRate) return
+        params.preferredDisplayModeId = fastest.modeId
+        params.preferredRefreshRate = fastest.refreshRate
+        activity.window.attributes = params
     }
 
     fun match(frameRate: Double?) {
