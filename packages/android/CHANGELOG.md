@@ -1,5 +1,61 @@
 # Changelog
 
+## [0.11.0](https://github.com/Viren070/AIOStreams/compare/android-v0.10.0...android-v0.11.0) (2026-10-29)
+
+
+### Features
+
+* **android:** answer the page's licences request ([4d394c2](https://github.com/Viren070/AIOStreams/commit/4d394c23d906ddf30d083d09bc14793639e9367e))
+* **android:** draw ExoPlayer's text subtitles with libass ([544a3d7](https://github.com/Viren070/AIOStreams/commit/544a3d70df0a33548dbf37fa5afe8123a9e05146))
+* **android:** move ExoPlayer's subtitles without restyling them ([0ef3ac7](https://github.com/Viren070/AIOStreams/commit/0ef3ac7e6e54f8528d579d6300b5297c3b0bbe95))
+* **android:** prefer the fastest refresh rate while the page's controls show ([aac2d5f](https://github.com/Viren070/AIOStreams/commit/aac2d5fec19b47a086d128510223f9a6fb03cb36))
+* **android:** set mpv's sub-pos unrounded ([6cee1b9](https://github.com/Viren070/AIOStreams/commit/6cee1b919f5462156a17b7f571720476420b8b92))
+* **web:** add a licences list to the About page ([3b5c742](https://github.com/Viren070/AIOStreams/commit/3b5c742b1bfb06cd4dbe206c53b82c8e88c3ee3e))
+* **web:** add a setting to preload a title's versions as its page opens ([3b5c742](https://github.com/Viren070/AIOStreams/commit/3b5c742b1bfb06cd4dbe206c53b82c8e88c3ee3e))
+* **web:** add shuffle and repeat to playlists ([3b5c742](https://github.com/Viren070/AIOStreams/commit/3b5c742b1bfb06cd4dbe206c53b82c8e88c3ee3e))
+* **web:** drag the hero's titles with the mouse too ([3b5c742](https://github.com/Viren070/AIOStreams/commit/3b5c742b1bfb06cd4dbe206c53b82c8e88c3ee3e))
+* **web:** ease subtitles to a new height rather than jump ([3b5c742](https://github.com/Viren070/AIOStreams/commit/3b5c742b1bfb06cd4dbe206c53b82c8e88c3ee3e))
+* **web:** ease the subtitle height every frame ([3b5c742](https://github.com/Viren070/AIOStreams/commit/3b5c742b1bfb06cd4dbe206c53b82c8e88c3ee3e))
+* **web:** hide languages under half translated ([3b5c742](https://github.com/Viren070/AIOStreams/commit/3b5c742b1bfb06cd4dbe206c53b82c8e88c3ee3e))
+* **web:** hold a new subtitle height under the controls for a while ([3b5c742](https://github.com/Viren070/AIOStreams/commit/3b5c742b1bfb06cd4dbe206c53b82c8e88c3ee3e))
+* **web:** let tab names hide on the bottom bar too ([3b5c742](https://github.com/Viren070/AIOStreams/commit/3b5c742b1bfb06cd4dbe206c53b82c8e88c3ee3e))
+* **web:** move a player menu's page rows above its list ([3b5c742](https://github.com/Viren070/AIOStreams/commit/3b5c742b1bfb06cd4dbe206c53b82c8e88c3ee3e))
+* **web:** offer top tabs on desktops and tablets ([3b5c742](https://github.com/Viren070/AIOStreams/commit/3b5c742b1bfb06cd4dbe206c53b82c8e88c3ee3e))
+* **web:** open a preview over the home card the pointer or focus rests on ([3b5c742](https://github.com/Viren070/AIOStreams/commit/3b5c742b1bfb06cd4dbe206c53b82c8e88c3ee3e))
+* **web:** scrub with a TV remote through a row of pictures ([3b5c742](https://github.com/Viren070/AIOStreams/commit/3b5c742b1bfb06cd4dbe206c53b82c8e88c3ee3e))
+* **web:** show a badge for each rating source ([3b5c742](https://github.com/Viren070/AIOStreams/commit/3b5c742b1bfb06cd4dbe206c53b82c8e88c3ee3e))
+* **web:** show what's playing over the picture once paused for a while ([3b5c742](https://github.com/Viren070/AIOStreams/commit/3b5c742b1bfb06cd4dbe206c53b82c8e88c3ee3e))
+* **web:** skip on a remote's press and scrub through pictures on a hold ([3b5c742](https://github.com/Viren070/AIOStreams/commit/3b5c742b1bfb06cd4dbe206c53b82c8e88c3ee3e))
+* **web:** slide the subtitle the page draws above the controls ([3b5c742](https://github.com/Viren070/AIOStreams/commit/3b5c742b1bfb06cd4dbe206c53b82c8e88c3ee3e))
+* **web:** tell the Android app when the controls show ([3b5c742](https://github.com/Viren070/AIOStreams/commit/3b5c742b1bfb06cd4dbe206c53b82c8e88c3ee3e))
+
+
+### Bug Fixes
+
+* **android:** ignore picture-in-picture updates after the window closes ([b6e6314](https://github.com/Viren070/AIOStreams/commit/b6e63145f767c32eaab3f99b398e4e0dcf792cb5))
+* **android:** leave a stalled stream cache fetch instead of closing it ([79cdbf5](https://github.com/Viren070/AIOStreams/commit/79cdbf5044298ba716cfeafa77bcf8c602eed4e9)), closes [#1663](https://github.com/Viren070/AIOStreams/issues/1663)
+* **android:** move the fallback subtitle font out of assets ([7742dfb](https://github.com/Viren070/AIOStreams/commit/7742dfb5919b8addde586004f47f2514aa85a4ac))
+* **android:** read every object of a PGS display set ([a6151ed](https://github.com/Viren070/AIOStreams/commit/a6151ed8e1add0d07b5d7d3abace2fc731c7fde6))
+* **android:** render ASS subtitles ahead on their own thread ([c15dabd](https://github.com/Viren070/AIOStreams/commit/c15dabd340eb0a807f6fd5e71e9facf7f14a9bdc))
+* **android:** reset libass's frame time for each file ([1a06f52](https://github.com/Viren070/AIOStreams/commit/1a06f52e87907a7eefcb58df82597d89abda049c))
+* **android:** set mpv's hwdec only when the setting changes ([70cdc3c](https://github.com/Viren070/AIOStreams/commit/70cdc3cbf5a2803fb072a7ce5b48b55a487927f2))
+* **android:** trim the subtitle view's lines by the playhead ([3b7623e](https://github.com/Viren070/AIOStreams/commit/3b7623eec995d10945541094efb131b9a2cb964d))
+* **web:** drop chapter-named openings, recaps and previews over three minutes ([3b5c742](https://github.com/Viren070/AIOStreams/commit/3b5c742b1bfb06cd4dbe206c53b82c8e88c3ee3e))
+* **web:** fit the bottom bar to its icons when tab names are hidden ([3b5c742](https://github.com/Viren070/AIOStreams/commit/3b5c742b1bfb06cd4dbe206c53b82c8e88c3ee3e))
+* **web:** give the skipping settings' Previews label its own context ([3b5c742](https://github.com/Viren070/AIOStreams/commit/3b5c742b1bfb06cd4dbe206c53b82c8e88c3ee3e))
+* **web:** let React listen for transition and animation ends ([3b5c742](https://github.com/Viren070/AIOStreams/commit/3b5c742b1bfb06cd4dbe206c53b82c8e88c3ee3e))
+* **web:** raise and lower subtitles a percent at a time ([3b5c742](https://github.com/Viren070/AIOStreams/commit/3b5c742b1bfb06cd4dbe206c53b82c8e88c3ee3e))
+* **web:** size TV artwork from the screen and layout widths ([3b5c742](https://github.com/Viren070/AIOStreams/commit/3b5c742b1bfb06cd4dbe206c53b82c8e88c3ee3e))
+* **web:** snap the volume bar to full volume ([3b5c742](https://github.com/Viren070/AIOStreams/commit/3b5c742b1bfb06cd4dbe206c53b82c8e88c3ee3e))
+* **web:** start keys on the sync-by-ear panel's Heard button ([3b5c742](https://github.com/Viren070/AIOStreams/commit/3b5c742b1bfb06cd4dbe206c53b82c8e88c3ee3e))
+
+
+### Performance Improvements
+
+* **android:** load libass.so rather than libmpv for ExoPlayer's subtitles ([adf6d59](https://github.com/Viren070/AIOStreams/commit/adf6d59be110636cfbe6ddad81b516bf1e1a7ada))
+* **android:** update libmpv for libass's helper threads ([b0c3ca3](https://github.com/Viren070/AIOStreams/commit/b0c3ca3ff3b0b219e19872e7e710646d14e38b61))
+* **web:** size artwork for the pixels the page is drawn at ([3b5c742](https://github.com/Viren070/AIOStreams/commit/3b5c742b1bfb06cd4dbe206c53b82c8e88c3ee3e))
+
 ## [0.10.0](https://github.com/Viren070/AIOStreams/compare/android-v0.9.0...android-v0.10.0) (2026-10-23)
 
 
