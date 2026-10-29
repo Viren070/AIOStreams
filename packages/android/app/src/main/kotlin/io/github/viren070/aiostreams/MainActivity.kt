@@ -139,6 +139,7 @@ class MainActivity : ComponentActivity() {
         downloads = DownloadChannel(queue, onAdd = { askForNotifications() })
         frameRates = FrameRateMatch(
             this,
+            onTv(),
             hold = {
                 val playing = !player.paused
                 if (playing) player.change(Change(paused = true))
@@ -498,7 +499,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (started) updater.onResume()
+        if (!started) return
+        updater.onResume()
+        window.decorView.post { frameRates.preferFastest() }
     }
 
     override fun onUserLeaveHint() {
