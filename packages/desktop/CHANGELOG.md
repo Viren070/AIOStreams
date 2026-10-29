@@ -1,5 +1,51 @@
 # Changelog
 
+## [0.21.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.20.0...desktop-v0.21.0) (2026-10-29)
+
+
+### Features
+
+* **desktop:** answer the page's licences request ([837bfd9](https://github.com/Viren070/AIOStreams/commit/837bfd9ccfc0492b97025074d41a24363b3ea10a))
+* **desktop:** set mpv's sub-pos unrounded ([95d0521](https://github.com/Viren070/AIOStreams/commit/95d0521d4b3d3bb54b463a7b1b45c4f3b6638145))
+* **web:** add a licences list to the About page ([bd2f39c](https://github.com/Viren070/AIOStreams/commit/bd2f39c25c8e10529afff3dcc56055498d5f80b6))
+* **web:** add a setting to preload a title's versions as its page opens ([bd2f39c](https://github.com/Viren070/AIOStreams/commit/bd2f39c25c8e10529afff3dcc56055498d5f80b6))
+* **web:** add shuffle and repeat to playlists ([bd2f39c](https://github.com/Viren070/AIOStreams/commit/bd2f39c25c8e10529afff3dcc56055498d5f80b6))
+* **web:** drag the hero's titles with the mouse too ([bd2f39c](https://github.com/Viren070/AIOStreams/commit/bd2f39c25c8e10529afff3dcc56055498d5f80b6))
+* **web:** ease subtitles to a new height rather than jump ([bd2f39c](https://github.com/Viren070/AIOStreams/commit/bd2f39c25c8e10529afff3dcc56055498d5f80b6))
+* **web:** ease the subtitle height every frame ([bd2f39c](https://github.com/Viren070/AIOStreams/commit/bd2f39c25c8e10529afff3dcc56055498d5f80b6))
+* **web:** hide languages under half translated ([bd2f39c](https://github.com/Viren070/AIOStreams/commit/bd2f39c25c8e10529afff3dcc56055498d5f80b6))
+* **web:** hold a new subtitle height under the controls for a while ([bd2f39c](https://github.com/Viren070/AIOStreams/commit/bd2f39c25c8e10529afff3dcc56055498d5f80b6))
+* **web:** let tab names hide on the bottom bar too ([bd2f39c](https://github.com/Viren070/AIOStreams/commit/bd2f39c25c8e10529afff3dcc56055498d5f80b6))
+* **web:** move a player menu's page rows above its list ([bd2f39c](https://github.com/Viren070/AIOStreams/commit/bd2f39c25c8e10529afff3dcc56055498d5f80b6))
+* **web:** offer top tabs on desktops and tablets ([bd2f39c](https://github.com/Viren070/AIOStreams/commit/bd2f39c25c8e10529afff3dcc56055498d5f80b6))
+* **web:** open a preview over the home card the pointer or focus rests on ([bd2f39c](https://github.com/Viren070/AIOStreams/commit/bd2f39c25c8e10529afff3dcc56055498d5f80b6))
+* **web:** scrub with a TV remote through a row of pictures ([bd2f39c](https://github.com/Viren070/AIOStreams/commit/bd2f39c25c8e10529afff3dcc56055498d5f80b6))
+* **web:** show a badge for each rating source ([bd2f39c](https://github.com/Viren070/AIOStreams/commit/bd2f39c25c8e10529afff3dcc56055498d5f80b6))
+* **web:** show what's playing over the picture once paused for a while ([bd2f39c](https://github.com/Viren070/AIOStreams/commit/bd2f39c25c8e10529afff3dcc56055498d5f80b6))
+* **web:** skip on a remote's press and scrub through pictures on a hold ([bd2f39c](https://github.com/Viren070/AIOStreams/commit/bd2f39c25c8e10529afff3dcc56055498d5f80b6))
+* **web:** slide the subtitle the page draws above the controls ([bd2f39c](https://github.com/Viren070/AIOStreams/commit/bd2f39c25c8e10529afff3dcc56055498d5f80b6))
+* **web:** tell the Android app when the controls show ([bd2f39c](https://github.com/Viren070/AIOStreams/commit/bd2f39c25c8e10529afff3dcc56055498d5f80b6))
+
+
+### Bug Fixes
+
+* **desktop:** pass FFmpeg's HTTP reader its reconnect options ([9f6e0f2](https://github.com/Viren070/AIOStreams/commit/9f6e0f2546c9cdd215703847a25945066e0e54f8))
+* **desktop:** tone map HDR with bt.2390 on Windows ([d208475](https://github.com/Viren070/AIOStreams/commit/d20847542584509f10dc474cd5c75f0fffa4415d))
+* **web:** drop chapter-named openings, recaps and previews over three minutes ([bd2f39c](https://github.com/Viren070/AIOStreams/commit/bd2f39c25c8e10529afff3dcc56055498d5f80b6))
+* **web:** fit the bottom bar to its icons when tab names are hidden ([bd2f39c](https://github.com/Viren070/AIOStreams/commit/bd2f39c25c8e10529afff3dcc56055498d5f80b6))
+* **web:** give the skipping settings' Previews label its own context ([bd2f39c](https://github.com/Viren070/AIOStreams/commit/bd2f39c25c8e10529afff3dcc56055498d5f80b6))
+* **web:** let React listen for transition and animation ends ([bd2f39c](https://github.com/Viren070/AIOStreams/commit/bd2f39c25c8e10529afff3dcc56055498d5f80b6))
+* **web:** raise and lower subtitles a percent at a time ([bd2f39c](https://github.com/Viren070/AIOStreams/commit/bd2f39c25c8e10529afff3dcc56055498d5f80b6))
+* **web:** size TV artwork from the screen and layout widths ([bd2f39c](https://github.com/Viren070/AIOStreams/commit/bd2f39c25c8e10529afff3dcc56055498d5f80b6))
+* **web:** snap the volume bar to full volume ([bd2f39c](https://github.com/Viren070/AIOStreams/commit/bd2f39c25c8e10529afff3dcc56055498d5f80b6))
+* **web:** start keys on the sync-by-ear panel's Heard button ([bd2f39c](https://github.com/Viren070/AIOStreams/commit/bd2f39c25c8e10529afff3dcc56055498d5f80b6))
+
+
+### Performance Improvements
+
+* **desktop:** build the Flatpak's libass from AIOStreams/libass ([deecaff](https://github.com/Viren070/AIOStreams/commit/deecaff21564caa4e80e4742ca1c5eef2f3e258b))
+* **web:** size artwork for the pixels the page is drawn at ([bd2f39c](https://github.com/Viren070/AIOStreams/commit/bd2f39c25c8e10529afff3dcc56055498d5f80b6))
+
 ## [0.20.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.19.0...desktop-v0.20.0) (2026-10-23)
 
 

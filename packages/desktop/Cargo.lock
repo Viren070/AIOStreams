@@ -27,7 +27,7 @@ dependencies = [
 
 [[package]]
 name = "aiostreams-desktop"
-version = "0.20.0"
+version = "0.21.0"
 dependencies = [
  "aiostreams-desktop-core",
  "base64 0.22.1",
@@ -61,7 +61,7 @@ dependencies = [
 
 [[package]]
 name = "aiostreams-desktop-core"
-version = "0.20.0"
+version = "0.21.0"
 dependencies = [
  "aiostreams-container",
  "aiostreams-thumbs",
