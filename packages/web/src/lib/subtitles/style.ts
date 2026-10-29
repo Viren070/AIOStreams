@@ -81,6 +81,9 @@ export const subtitleScale = (style: SubtitleStyle) => SCALE[style.size];
 /** How long subtitles take to slide above the controls, or back. */
 export const SUBTITLE_LIFT_MS = 300;
 
+/** The slide's 1 - (1 - t)³ for CSS. */
+export const SUBTITLE_LIFT_EASE = 'cubic-bezier(0.33, 1, 0.68, 1)';
+
 /** How high subtitles sit, in percent: the chosen height, or above what covers the bottom. */
 export function subtitleHeight(style?: SubtitleStyle, lift = 0): number {
   const height = style?.position ?? 0;

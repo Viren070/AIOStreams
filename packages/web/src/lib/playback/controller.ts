@@ -97,6 +97,8 @@ export interface PlayerController {
   };
   /** The subtitle the page draws, for a player that draws none itself. */
   subtitleText?: string;
+  /** The share `liftSubtitles` last asked for, which the page's own subtitle slides to. */
+  subtitleLift: number;
   /** Missing where the player has no pictures for the seek bar. */
   thumbnails?: ThumbnailFeed;
   /** Missing where the page always fills the screen. */

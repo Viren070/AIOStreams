@@ -523,6 +523,7 @@ export function usePlayer(
         .map((t) => ({ ...asTrack(t), facts: trackFacts(t) })),
     ],
     subtitleText,
+    subtitleLift: lift,
     thumbnails,
     togglePlay: () => engine.setPaused(!live.current.paused),
     setPaused: (paused) => engine.setPaused(paused),
@@ -551,7 +552,8 @@ export function usePlayer(
         patch({ subtitleDelayMs: delay });
       }),
     skipAhead: engine.skipAhead && ((skips) => engine.skipAhead!(skips)),
-    liftSubtitles: engine.setStyle && setLift,
+    // Also for players without styles: the page lifts the subtitle it draws for them.
+    liftSubtitles: setLift,
     canReadSubtitle: (id) =>
       servers.some((s) => s.id === id) || !!engine.ownText?.(id),
     subtitleLines: async () => {

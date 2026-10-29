@@ -43,7 +43,10 @@ import {
   type VideoFit,
 } from '../lib/settings';
 import {
+  SUBTITLE_LIFT_EASE,
+  SUBTITLE_LIFT_MS,
   subtitleCss,
+  subtitleHeight,
   subtitleLine,
   subtitleScale,
 } from '../lib/subtitles/style';
@@ -458,14 +461,28 @@ function cueCss(style: SubtitleStyle): string {
 }
 
 /** For a player that draws no subtitles, placed and sized as the page's own video draws cues. */
-function SubtitleText({ text, style }: { text: string; style: SubtitleStyle }) {
+function SubtitleText({
+  text,
+  style,
+  lift,
+}: {
+  text: string;
+  style: SubtitleStyle;
+  lift: number;
+}) {
   const { fontWeight, fontFamily, color, backgroundColor, textShadow } =
     subtitleCss(style);
+  const raise = subtitleHeight(style, lift) - subtitleHeight(style);
   return (
     <div
       data-ui="player-subtitle"
-      className="pointer-events-none fixed inset-x-0 flex justify-center px-[5%] text-center"
-      style={{ bottom: `${100 - subtitleLine(style)}%` }}
+      className="pointer-events-none fixed inset-x-0 flex justify-center px-[5%] text-center transition-transform motion-reduce:transition-none"
+      style={{
+        bottom: `${100 - subtitleLine(style)}%`,
+        transform: `translateY(${-raise}vh)`,
+        transitionDuration: `${SUBTITLE_LIFT_MS}ms`,
+        transitionTimingFunction: SUBTITLE_LIFT_EASE,
+      }}
     >
       <span
         className="whitespace-pre-line px-2"
@@ -700,7 +717,11 @@ function Player({
         </>
       )}
       {player.subtitleText && (
-        <SubtitleText text={player.subtitleText} style={subtitleStyle} />
+        <SubtitleText
+          text={player.subtitleText}
+          style={subtitleStyle}
+          lift={player.subtitleLift}
+        />
       )}
       {player.stats?.text && (
         <pre
