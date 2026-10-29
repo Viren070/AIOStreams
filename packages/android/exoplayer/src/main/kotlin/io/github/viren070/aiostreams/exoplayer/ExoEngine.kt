@@ -80,8 +80,8 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 /**
- * ExoPlayer. libass draws ASS subtitles over the video; the player's subtitle
- * view draws the rest.
+ * ExoPlayer. libass draws ASS and text subtitles over the video; the player's
+ * subtitle view draws pictures and captions.
  */
 @OptIn(UnstableApi::class)
 class ExoEngine(private val context: Context) :
@@ -177,7 +177,7 @@ class ExoEngine(private val context: Context) :
         cache.onMemoryShort = { ass.setCacheLimit(SHORT_ASS_CACHE_MB) }
         val extractors = Extractors(
             readBack = { readBack },
-            sink = { subtitleLines.sink(SubtitleSink(ass.sink(), texts.sink())) },
+            sink = { subtitleLines.sink(SubtitleSink(ass.sink(), TextRoute(ass.textSink(), texts.sink()))) },
             route = { dolbyVisionRoute(it, caps, useDolbyVision) },
             onRoute = { codecs, route -> dolbyVision = codecs to route },
             onSeekMap = { map ->
@@ -525,7 +525,7 @@ class ExoEngine(private val context: Context) :
                     if (this.url != file) return@post
                     val id = maxOf(tracks.count("sub"), externals.maxOfOrNull { it.id } ?: 0) + 1
                     val added = ExternalSubtitle.parse(id, url, title, lang, bytes)
-                    added.script?.let { ass.addScript(added.key, it) }
+                    ass.addScript(added.key, added.script, added.converted)
                     externals += added
                     if (flags == "select") selectSubtitle(id) else reportTracks()
                 }
@@ -562,15 +562,14 @@ class ExoEngine(private val context: Context) :
         ass.select(
             when {
                 !style.visible -> null
-                added != null -> added.key.takeIf { added.script != null }
-                format != null && isAss(format) -> id
+                added != null -> added.key
+                format != null && drawnByLibass(format) -> id
                 else -> null
             },
         )
         text = when {
-            !style.visible -> null
-            added != null -> added.text
-            format != null && !isAss(format) -> id?.let(texts::get)
+            !style.visible || added != null -> null
+            format != null && !drawnByLibass(format) -> id?.let(texts::get)
             else -> null
         }
         if (chosen) readBack = id.takeIf { style.visible && added == null }

@@ -10,6 +10,9 @@ import android.view.Surface
 import android.view.SurfaceHolder
 import android.util.Log
 import android.view.SurfaceView
+import androidx.annotation.OptIn
+import androidx.media3.common.C
+import androidx.media3.common.util.UnstableApi
 import java.io.File
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.CountDownLatch
@@ -64,6 +67,7 @@ internal data class AssStyle(
  * shows each frame's moment. The file's reader only queues what it finds for
  * libass's thread.
  */
+@OptIn(UnstableApi::class)
 internal class AssSurface(context: Context, private val frames: VideoFrames, font: () -> File) : SurfaceHolder.Callback {
     val view = SurfaceView(context).apply {
         setZOrderMediaOverlay(true)
@@ -119,6 +123,12 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
     private val scripts = HashSet<String>()
     private var shown: String? = null
 
+    /** Tracks made from text, which take the user's look whole. */
+    private val converted = HashSet<String>()
+    private val parsers = HashMap<String, SampleParser>()
+    private val readOrders = HashMap<String, Int>()
+    private val seen = HashMap<String, HashSet<String>>()
+
     /** Each file track's latest lines, which libass gets once the track shows; it holds only the shown one's. */
     private val recent = HashMap<String, ArrayDeque<Line>>()
 
@@ -169,16 +179,52 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
             }
 
             override fun line(track: String, startMs: Long, durationMs: Long, line: ByteArray) = queue(opened) {
-                val lines = recent.getOrPut(track) { ArrayDeque() }
-                lines += Line(startMs, durationMs, line)
-                while (lines.isNotEmpty() && lines.first().endMs < frameUs / 1000 - KEPT_MS) lines.removeFirst()
-                if (track == shown) tracks[track]?.let {
-                    nativeAddLine(it, line, startMs, durationMs)
-                    linesFrom(startMs)
-                }
+                addLine(track, Line(startMs, durationMs, line))
                 // What's rendered from the line's start went in linesFrom(), so its own fonts need no wipe.
                 if (overrideFonts(line, wanted.getOrPut(track) { HashSet() }) && track == shown) giveFonts()
             }
+        }
+    }
+
+    /** The reader's way in for text subtitles, which become ASS as they arrive. */
+    fun textSink(): TextSink {
+        val opened = file
+        return object : TextSink {
+            override fun track(track: String, parser: SampleParser) = queue(opened) {
+                tracks.getOrPut(track) { nativeNewTrack(native, AssText.header) }
+                parsers[track] = parser
+                // Picked before the reader reached it, it showed without the forced look.
+                if (converted.add(track) && track == shown) {
+                    applyLayout()
+                    stale = true
+                }
+            }
+
+            override fun sample(track: String, timeUs: Long, data: ByteArray) = queue(opened) {
+                val parser = parsers[track] ?: return@queue
+                val seen = seen.getOrPut(track) { HashSet() }
+                runCatching { parser.parse(timeUs, data) { cues ->
+                    if (cues.durationUs == C.TIME_UNSET) return@parse
+                    val startMs = cues.startTimeUs / 1000
+                    val durationMs = cues.durationUs / 1000
+                    for (event in AssText.events(cues.cues)) {
+                        // Reading a stretch again after a seek gives the same lines again.
+                        if (!seen.add("$startMs $durationMs $event")) continue
+                        val order = readOrders.merge(track, 1, Int::plus)!!
+                        addLine(track, Line(startMs, durationMs, "$order,$event".toByteArray()))
+                    }
+                } }.onFailure { Log.w(TAG, "couldn't read a subtitle line", it) }
+            }
+        }
+    }
+
+    private fun addLine(track: String, line: Line) {
+        val lines = recent.getOrPut(track) { ArrayDeque() }
+        lines += line
+        while (lines.isNotEmpty() && lines.first().endMs < frameUs / 1000 - KEPT_MS) lines.removeFirst()
+        if (track == shown) tracks[track]?.let {
+            nativeAddLine(it, line.bytes, line.startMs, line.durationMs)
+            linesFrom(line.startMs)
         }
     }
 
@@ -195,24 +241,32 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
             fonts = emptyList()
             given.clear()
             wanted.clear()
-            applyLayout()
+            parsers.clear()
+            readOrders.clear()
+            seen.clear()
             shown = null
+            applyLayout()
             stale = true
         }
     }
 
-    /** A whole script from outside the file, which [select] shows as `key`. */
-    fun addScript(key: String, script: ByteArray) = queue {
+    /** A whole script from outside the file, which [select] shows as `key`; `converted` from text. */
+    fun addScript(key: String, script: ByteArray, converted: Boolean) = queue {
         tracks.remove(key)?.let(::nativeFreeTrack)
         tracks[key] = nativeReadScript(native, script)
         scripts += key
-        if (key == shown) stale = true
+        if (converted) this.converted += key else this.converted -= key
+        if (key == shown) {
+            applyLayout()
+            stale = true
+        }
     }
 
     fun removeScript(key: String) = queue {
         if (shown == key) shown = null
         tracks.remove(key)?.let(::nativeFreeTrack)
         scripts -= key
+        converted -= key
         stale = true
     }
 
@@ -222,8 +276,9 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
             shown?.takeIf { it !in scripts }?.let(tracks::get)?.let(::nativeFlushTrack)
             tracks[key]?.let { track -> recent[key]?.forEach { nativeAddLine(track, it.bytes, it.startMs, it.durationMs) } }
         }
+        val restyle = (key in converted) != (shown in converted)
         shown = key
-        giveFonts()
+        if (!giveFonts() && restyle) applyLayout()
         stale = true
     }
 
@@ -327,6 +382,7 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
         tracks.values.forEach(::nativeFreeTrack)
         tracks.clear()
         scripts.clear()
+        converted.clear()
     }
 
     /** Hands libass the fonts the shown track asks for; true when it had new ones. */
@@ -462,9 +518,9 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
         val sx = width.toDouble() / stage.stageWidth
         val sy = height.toDouble() / stage.stageHeight
         val style = stage.style
-        val force = style.override == AssStyle.FORCE
+        val force = style.override == AssStyle.FORCE || shown in converted
         val useMargins = force || stage.forceMargins
-        var fontScale = if (style.override == AssStyle.NONE) 1.0 else stage.scale
+        var fontScale = if (style.override == AssStyle.NONE && !force) 1.0 else stage.scale
         if (force) {
             // Sized to the screen rather than the video, as mpv's sub-scale-with-window does.
             val videoWidth = stage.video.width() * sx
@@ -475,10 +531,10 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
             native, stage.videoWidth, stage.videoHeight,
             (stage.video.top * sy).roundToInt(), ((stage.stageHeight - stage.video.bottom) * sy).roundToInt(),
             (stage.video.left * sx).roundToInt(), ((stage.stageWidth - stage.video.right) * sx).roundToInt(),
-            useMargins, fontScale.toFloat(), if (style.override == AssStyle.NONE) 0.0 else 100 - stage.position,
+            useMargins, fontScale.toFloat(), if (style.override == AssStyle.NONE && !force) 0.0 else 100 - stage.position,
         )
         nativeSetStyle(
-            native, style.override, style.color, style.outlineColor, style.backColor,
+            native, if (force) AssStyle.FORCE else style.override, style.color, style.outlineColor, style.backColor,
             style.outlineSize, style.borderStyle, style.bold, style.shadowSize,
             style.fontFile.takeIf { force },
         )

@@ -107,59 +107,49 @@ internal fun unplaced(cue: Cue): Cue =
         cue
     }
 
-/** A text subtitle's lines, which the engine shows on the video's frames so its delay applies. */
+/**
+ * A subtitle whose each line takes the place of the one before, as pictures
+ * do, which the subtitle view shows on the video's frames so its delay applies.
+ */
 @OptIn(UnstableApi::class)
 internal class TextTimeline(
-    private val replace: Boolean,
-    private val parser: SampleParser? = null,
+    private val parser: SampleParser,
     /** How late the engine shows lines, which keeps that much older ones. */
-    private val delayUs: () -> Long = { 0 },
+    private val delayUs: () -> Long,
 ) {
-    private val lines = TreeMap<Long, MutableList<CuesWithTiming>>()
-    private var longestUs = 0L
+    private val lines = TreeMap<Long, CuesWithTiming>()
 
-    /** A file track's samples, parsed only once a frame showing the track reaches them. */
+    /** The track's samples, parsed only once a frame showing the track reaches them. */
     private val samples = TreeMap<Long, MutableList<ByteArray>>()
 
-    @Synchronized
-    fun add(cues: CuesWithTiming) {
-        val starting = lines.getOrPut(cues.startTimeUs) { mutableListOf() }
-        // Reading a file again after a seek gives the same lines again.
-        if (replace) starting.clear() else if (starting.any { it.durationUs == cues.durationUs && it.cues == cues.cues }) return
-        starting += cues
-        if (cues.durationUs != C.TIME_UNSET) longestUs = maxOf(longestUs, cues.durationUs)
+    private fun add(cues: CuesWithTiming) {
+        lines[cues.startTimeUs] = cues
     }
 
     @Synchronized
     fun sample(timeUs: Long, data: ByteArray) {
         val starting = samples.getOrPut(timeUs) { mutableListOf() }
         if (starting.none { it.contentEquals(data) }) starting += data
-        val from = timeUs - KEPT_US - delayUs().coerceAtLeast(0)
-        samples.headMap(samples.floorKey(from) ?: from).clear()
-        lines.headMap(if (replace) lines.floorKey(from) ?: from else from - longestUs).clear()
+        trim(timeUs - KEPT_US - delayUs().coerceAtLeast(0))
     }
 
+    /** Keeps the line showing at `beforeUs` and later ones. */
     @Synchronized
     fun trim(beforeUs: Long) {
         samples.headMap(samples.floorKey(beforeUs) ?: beforeUs).clear()
-        lines.headMap(if (replace) lines.floorKey(beforeUs) ?: beforeUs else beforeUs - longestUs).clear()
+        lines.headMap(lines.floorKey(beforeUs) ?: beforeUs).clear()
     }
 
     @Synchronized
     fun cuesAt(timeUs: Long): List<Cue> {
-        if (replace) samples.floorKey(timeUs)?.let { samples.headMap(it).clear() }
+        samples.floorKey(timeUs)?.let { samples.headMap(it).clear() }
         while (true) {
             val due = samples.firstEntry()?.takeIf { it.key <= timeUs } ?: break
             samples.pollFirstEntry()
-            for (data in due.value) parser?.parse(due.key, data, ::add)
+            for (data in due.value) parser.parse(due.key, data, ::add)
         }
-        if (replace) {
-            val line = lines.floorEntry(timeUs)?.value?.last() ?: return emptyList()
-            return if (line.durationUs == C.TIME_UNSET || timeUs < line.endTimeUs) line.cues else emptyList()
-        }
-        return lines.subMap(timeUs - longestUs, true, timeUs, true).values.flatten()
-            .filter { timeUs < it.endTimeUs }
-            .flatMap { it.cues }
+        val line = lines.floorEntry(timeUs)?.value ?: return emptyList()
+        return if (line.durationUs == C.TIME_UNSET || timeUs < line.endTimeUs) line.cues else emptyList()
     }
 
     private companion object {
@@ -168,7 +158,7 @@ internal class TextTimeline(
     }
 }
 
-/** The file's text subtitles, as its reader takes them. */
+/** The file's subtitles the subtitle view draws, as its reader takes them. */
 internal class TextTracks(private val delayUs: () -> Long) {
     private val timelines = ConcurrentHashMap<String, TextTimeline>()
 
@@ -197,7 +187,7 @@ internal class TextTracks(private val delayUs: () -> Long) {
         val opened = file
         return object : TextSink {
             override fun track(track: String, parser: SampleParser) {
-                if (opened == file) timelines.putIfAbsent(track, TextTimeline(parser.replace, parser, delayUs))
+                if (opened == file) timelines.putIfAbsent(track, TextTimeline(parser, delayUs))
             }
 
             override fun sample(track: String, timeUs: Long, data: ByteArray) {
@@ -207,7 +197,7 @@ internal class TextTracks(private val delayUs: () -> Long) {
     }
 }
 
-/** A subtitle file the page added, which the engine draws itself rather than reloading the video. */
+/** A subtitle file the page added, which libass draws rather than the video reloading. */
 @OptIn(UnstableApi::class)
 internal class ExternalSubtitle(
     val id: Int,
@@ -215,26 +205,27 @@ internal class ExternalSubtitle(
     val title: String?,
     val lang: String?,
     val codec: String,
-    /** An ASS script, which libass draws. */
-    val script: ByteArray?,
-    /** Anything else, which the subtitle view draws. */
-    val text: TextTimeline?,
+    /** An ASS script: the file's own, or SubRip or WebVTT made one. */
+    val script: ByteArray,
 ) {
     /** What libass knows the script as. */
     val key = "+$id"
+
+    /** Made from text rather than the file's own ASS. */
+    val converted get() = codec != "ass"
 
     companion object {
         fun parse(id: Int, url: String, title: String?, lang: String?, bytes: ByteArray): ExternalSubtitle {
             val text = String(bytes, Charsets.UTF_8).trimStart('\uFEFF', ' ', '\r', '\n')
             if (text.startsWith("[Script Info]", ignoreCase = true)) {
-                return ExternalSubtitle(id, url, title, lang, "ass", bytes, null)
+                return ExternalSubtitle(id, url, title, lang, "ass", bytes)
             }
             val mime = if (text.startsWith("WEBVTT")) MimeTypes.TEXT_VTT else MimeTypes.APPLICATION_SUBRIP
             val parser = DefaultSubtitleParserFactory().create(Format.Builder().setSampleMimeType(mime).build())
-            val timeline = TextTimeline(replace = false)
-            parser.parse(bytes, SubtitleParser.OutputOptions.allCues()) { timeline.add(it) }
+            val lines = mutableListOf<CuesWithTiming>()
+            parser.parse(bytes, SubtitleParser.OutputOptions.allCues()) { lines += it }
             val codec = if (mime == MimeTypes.TEXT_VTT) "webvtt" else "subrip"
-            return ExternalSubtitle(id, url, title, lang, codec, null, timeline)
+            return ExternalSubtitle(id, url, title, lang, codec, AssText.script(lines))
         }
     }
 }

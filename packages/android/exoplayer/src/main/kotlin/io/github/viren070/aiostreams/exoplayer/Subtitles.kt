@@ -15,6 +15,7 @@ import androidx.media3.extractor.text.DefaultSubtitleParserFactory
 import androidx.media3.extractor.text.SubtitleParser
 import java.io.EOFException
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 
 /** A font the file carries, on disk, and the names it answers to, null where it couldn't be read. */
 internal class FontFile(val file: File, val names: Set<String>?)
@@ -40,6 +41,33 @@ internal class SubtitleSink(val ass: AssSink, val text: TextSink)
 internal fun isAss(format: Format) = format.sampleMimeType == MimeTypes.TEXT_SSA || format.codecs == MimeTypes.TEXT_SSA
 
 private val parsers = DefaultSubtitleParserFactory()
+
+/** ASS, and text whose lines don't take each other's place, which libass draws; the subtitle view draws the rest. */
+@OptIn(UnstableApi::class)
+internal fun drawnByLibass(format: Format): Boolean {
+    if (isAss(format)) return true
+    // The player's format, once Media3 has made the samples cues, keeps the file's own in its codecs.
+    val own = if (format.sampleMimeType == MimeTypes.APPLICATION_MEDIA3_CUES) {
+        format.buildUpon().setSampleMimeType(format.codecs).build()
+    } else {
+        format
+    }
+    return parsers.supportsFormat(own) && parsers.getCueReplacementBehavior(own) == Format.CUE_REPLACEMENT_BEHAVIOR_MERGE
+}
+
+/** Sends each text track where [drawnByLibass] says it's drawn. */
+internal class TextRoute(private val libass: TextSink, private val view: TextSink) : TextSink {
+    private val drawn = ConcurrentHashMap.newKeySet<String>()
+
+    override fun track(track: String, parser: SampleParser) {
+        if (parser.replace) return view.track(track, parser)
+        drawn += track
+        libass.track(track, parser)
+    }
+
+    override fun sample(track: String, timeUs: Long, data: ByteArray) =
+        if (track in drawn) libass.sample(track, timeUs, data) else view.sample(track, timeUs, data)
+}
 
 /** Media3's subtitle formats, which here give the player no cues. */
 @OptIn(UnstableApi::class)
