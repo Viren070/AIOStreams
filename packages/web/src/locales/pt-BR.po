@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-28 21:59+0000\n"
+"PO-Revision-Date: 2026-10-29 16:33+0000\n"
 "Last-Translator: Bruno <procopio@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/aiostreams/web-app/pt_BR/>\n"
 "Language: pt-BR\n"
@@ -1846,7 +1846,7 @@ msgstr "Link de convite copiado"
 
 #: src/components/licenses.tsx
 msgid "It came with no licence text."
-msgstr ""
+msgstr "O texto da licença não foi incluído."
 
 #: src/components/send-report.tsx
 msgid "It carries this device's details and the app's recent log. Passwords and tokens are left out."
@@ -1862,7 +1862,7 @@ msgstr "Se você não escolher “Manter”, a alteração será desfeita."
 
 #: src/pages/settings/about.tsx
 msgid "Its Metal and AVFoundation video outputs."
-msgstr ""
+msgstr "Fornece as saídas de vídeo Metal e AVFoundation para o mpv."
 
 #: src/pages/settings/about.tsx
 msgid "Jellyfin API"
@@ -2007,7 +2007,7 @@ msgstr "Permite que o decodificador da TV sincronize imagem e som, deixando víd
 
 #: src/components/licenses.tsx
 msgid "Licences"
-msgstr ""
+msgstr "Licenças"
 
 #: src/components/version-settings.tsx
 msgid "Link a pack someone shares, in this app's format or the one Fusion and Nuvio use. It stays up to date with its author's changes."
@@ -2698,307 +2698,307 @@ msgstr "Pacotes"
 #. A button on a gamepad, as in Pad A
 #: src/lib/input/keys.ts
 msgid "Pad {button}"
-msgstr ""
+msgstr "Botão {button}"
 
 #: src/lib/input/keys.ts
 msgid "Page Down"
-msgstr ""
+msgstr "Avançar página"
 
 #: src/pages/settings/interface.tsx
 msgid "Page names"
-msgstr ""
+msgstr "Nomes das páginas"
 
 #: src/lib/input/keys.ts
 msgid "Page Up"
-msgstr ""
+msgstr "Subir página"
 
 #: src/pages/settings/cache.tsx
 msgid "Pages and artwork open straight away from this device, then refresh. Without a connection, whatever was saved can still be browsed."
-msgstr ""
+msgstr "As páginas e as imagens são carregadas imediatamente do dispositivo e atualizadas em segundo plano. Sem conexão, ainda é possível navegar pelas páginas e imagens salvas."
 
 #: src/pages/settings/index.tsx
 msgid "Pages and artwork saved on this device"
-msgstr ""
+msgstr "Páginas e imagens salvas neste dispositivo"
 
 #: src/pages/settings/theme.tsx
 msgid "Pages and panels take their shades from it. Dark colours read best."
-msgstr ""
+msgstr "As páginas e os painéis usam variações dessa cor. Tons escuros proporcionam melhor legibilidade."
 
 #: src/pages/settings/cache.tsx
 msgid "Pages load from the server again until they are saved anew."
-msgstr ""
+msgstr "As páginas voltarão a ser carregadas do servidor até serem salvas novamente."
 
 #: src/pages/settings/audio.tsx
 msgid "Pass surround audio through"
-msgstr ""
+msgstr "Repassar áudio surround"
 
 #: src/pages/sign-in.tsx
 msgid "Password"
-msgstr ""
+msgstr "Senha"
 
 #: src/pages/settings/cache.tsx
 msgid "Past this, what was used longest ago goes first."
-msgstr ""
+msgstr "Quando o cache ultrapassar esse limite, os itens que estão há mais tempo sem uso serão removidos primeiro."
 
 #: src/components/version-settings.tsx
 msgid "Paste badges as JSON to add them to yours, or paste a pack's address to link it."
-msgstr ""
+msgstr "Cole os selos em formato JSON para adicioná-los à sua lista de selos ou cole o endereço de um pacote para vinculá-lo."
 
 #: src/components/version-settings.tsx
 msgid "Paste quick filters as JSON, or the address of a file with them, to add them to these."
-msgstr ""
+msgstr "Cole os filtros rápidos em formato JSON ou o link de um arquivo que os contenha para adicioná-los à lista atual."
 
 #: src/components/version-settings.tsx
 msgid "Pattern"
-msgstr ""
+msgstr "Padrão"
 
 #: src/components/player/controls.tsx src/components/remote-sheet.tsx
 #: src/lib/input/actions.ts src/lib/input/keys.ts src/pages/downloads.tsx
 msgid "Pause"
-msgstr ""
+msgstr "Pausar"
 
 #: src/pages/downloads.tsx
 msgid "Pause all"
-msgstr ""
+msgstr "Pausar tudo"
 
 #: src/components/sessions.tsx
 msgid "Paused"
-msgstr ""
+msgstr "Pausado"
 
 #: src/pages/downloads.tsx
 msgid "Paused · {of}"
-msgstr ""
+msgstr "Pausado · {of}"
 
 #: src/components/party/party-sheet.tsx
 msgid "Paused on {name}"
-msgstr ""
+msgstr "Reprodução pausada: {name}"
 
 #: src/components/party/party-sheet.tsx
 msgid "Paused on {name}, {at} in"
-msgstr ""
+msgstr "Pausado em {name}, na marca de {at}"
 
 #: src/pages/settings/playback.tsx
 msgid "Pauses and asks before the next episode once this many have played in a row without a key, click or button press."
-msgstr ""
+msgstr "Após a reprodução automática dessa quantidade de episódios em sequência, sem que você pressione uma tecla, clique ou aperte um botão, a reprodução é pausada e o app pergunta se você ainda está assistindo, antes de iniciar o próximo episódio."
 
 #: src/pages/search.tsx
 msgid "People"
-msgstr ""
+msgstr "Pessoas"
 
 #: src/components/party/party-sheet.tsx
 msgid "People and invite"
-msgstr ""
+msgstr "Participantes e convite"
 
 #: src/lib/i18n.ts
 msgid "Pick a colour"
-msgstr ""
+msgstr "Escolha uma cor"
 
 #: src/components/party/reaction-setting.tsx
 msgid "Pick a slot, then what goes in it."
-msgstr ""
+msgstr "Escolha uma posição e depois selecione o emoji que ficará nela."
 
 #: src/pages/downloads.tsx
 msgid "Pick a version"
-msgstr ""
+msgstr "Selecionar uma versão"
 
 #: src/components/random-pick.tsx
 msgid "Pick again"
-msgstr ""
+msgstr "Sortear novamente"
 
 #: src/components/version-settings.tsx
 msgid "Pick fields to search only those parts of a version."
-msgstr ""
+msgstr "Selecione os campos para limitar a busca a essas partes da versão."
 
 #: src/components/player/subtitle-sync.tsx
 msgid "Pick the line you heard at {heardAt}."
-msgstr ""
+msgstr "Selecione a linha da legenda correspondente à fala que você ouviu em {heardAt}."
 
 #: src/components/version-picker.tsx
 msgid "Pick the version to download."
-msgstr ""
+msgstr "Escolha a versão para baixar."
 
 #: src/pages/settings/apps.tsx
 msgid "Picture-in-picture"
-msgstr ""
+msgstr "Modo picture-in-picture (PiP)"
 
 #: src/components/player/options.tsx
 msgid "Picture: {coming}"
-msgstr ""
+msgstr "Enquadramento: {coming}"
 
 #: src/components/player/options.tsx
 msgid "Picture: {current}"
-msgstr ""
+msgstr "Enquadramento: {current}"
 
 #: src/components/player/controls.tsx
 msgid "Picture: {label}"
-msgstr ""
+msgstr "Enquadramento: {label}"
 
 #: src/components/version-settings.tsx
 msgid "Pills above the version list that each apply a search you save, such as one for 4K versions."
-msgstr ""
+msgstr "Botões arredondados acima da lista de versões; cada um aplica uma busca salva, como uma busca por versões em 4K."
 
 #: src/pages/sign-in.tsx
 msgid "PIN"
-msgstr ""
+msgstr "PIN"
 
 #: src/pages/sign-in.tsx
 msgid "PIN or password"
-msgstr ""
+msgstr "PIN ou senha"
 
 #: src/pages/settings/theme.tsx
 msgid "Pink"
-msgstr ""
+msgstr "Rosa"
 
 #: src/components/hero.tsx src/components/item-menu.tsx
 #: src/components/player/controls.tsx src/components/playlists.tsx
 #: src/components/random-pick.tsx src/components/remote-sheet.tsx
 #: src/lib/input/actions.ts src/lib/input/keys.ts src/pages/item.tsx
 msgid "Play"
-msgstr ""
+msgstr "Reproduzir"
 
 #: src/pages/item.tsx
 msgid "Play {code}"
-msgstr ""
+msgstr "Reproduzir {code}"
 
 #: src/pages/item.tsx
 msgid "Play from the start"
-msgstr ""
+msgstr "Reproduzir do início"
 
 #: src/components/player/next-episode.tsx
 msgid "Play in {seconds}s"
-msgstr ""
+msgstr "Reproduzir em {seconds}s"
 
 #: src/pages/settings/apps.tsx
 msgid "Play in the background"
-msgstr ""
+msgstr "Reproduzir em segundo plano"
 
 #: src/pages/settings/playback.tsx
 msgid "Play it automatically"
-msgstr ""
+msgstr "Reproduzir automaticamente"
 
 #: src/pages/settings/playback.tsx
 msgid "Play lists the versions to choose from, but resuming goes back to the version you were watching. Hold Play to do the other: start the first version, or list them when resuming."
-msgstr ""
+msgstr "Ao selecionar Reproduzir, a lista de versões é exibida para você escolher. Ao retomar, a reprodução continua na versão que você estava assistindo. Mantenha o botão Reproduzir pressionado para inverter esse comportamento: iniciar pela primeira versão ou exibir a lista de versões ao retomar."
 
 #: src/components/player/next-episode.tsx
 msgid "Play now"
-msgstr ""
+msgstr "Reproduzir agora"
 
 #: src/components/item-menu.tsx src/components/remote-sheet.tsx
 #: src/pages/item.tsx
 msgid "Play on another device"
-msgstr ""
+msgstr "Assistir em outro dispositivo"
 
 #: src/lib/input/actions.ts
 msgid "Play or pause"
-msgstr ""
+msgstr "Reproduzir ou pausar"
 
 #: src/pages/settings/playback.tsx
 msgid "Play starts the first version, and resuming goes back to the version you were watching. Hold Play to choose instead."
-msgstr ""
+msgstr "Reproduzir inicia a primeira versão e, ao retomar, você volta à versão que estava assistindo. Mantenha o botão Reproduzir pressionado para abrir a lista e escolher uma versão."
 
 #: src/components/item-menu.tsx
 msgid "Play straight away"
-msgstr ""
+msgstr "Reproduzir diretamente"
 
 #: src/pages/settings/playback.tsx
 msgid "Play the first version"
-msgstr ""
+msgstr "Reproduzir a primeira versão"
 
 #: src/pages/settings/playback.tsx
 msgid "Play the first version when none matches"
-msgstr ""
+msgstr "Reproduzir a primeira versão quando nenhuma corresponder à atual"
 
 #: src/components/player/options.tsx
 msgid "Play the sound earlier"
-msgstr ""
+msgstr "Adiantar o áudio"
 
 #: src/components/player/options.tsx
 msgid "Play the sound later"
-msgstr ""
+msgstr "Atrasar o áudio"
 
 #: src/pages/settings/audio.tsx
 msgid "Play the version's default track first"
-msgstr ""
+msgstr "Priorizar a faixa de áudio padrão da versão"
 
 #: src/pages/settings/playback.tsx
 msgid "Play versions in"
-msgstr ""
+msgstr "Reproduzir versões usando"
 
 #: src/lib/hosts/shell/player.ts
 msgid "Play with ExoPlayer"
-msgstr ""
+msgstr "Tentar reproduzir com o ExoPlayer"
 
 #: src/lib/hosts/shell/player.ts
 msgid "Play with mpv"
-msgstr ""
+msgstr "Tentar reproduzir com o mpv"
 
 #: src/lib/input/keys.ts
 msgid "Play/Pause"
-msgstr ""
+msgstr "Reproduzir/Pausar"
 
 #: src/lib/hosts/shell/player.ts src/pages/settings/index.tsx
 msgid "Playback"
-msgstr ""
+msgstr "Reprodução"
 
 #: src/pages/player.tsx
 msgid "Playback failed: {failure}"
-msgstr ""
+msgstr "Falha na reprodução: {failure}"
 
 #: src/pages/history.tsx
 msgid "Played here"
-msgstr ""
+msgstr "Reproduzido aqui"
 
 #: src/lib/input/actions.ts src/pages/settings/about.tsx
 #: src/pages/settings/playback.tsx
 msgid "Player"
-msgstr ""
+msgstr "Reprodutor"
 
 #: src/pages/settings/playback.tsx
 msgid "Player link"
-msgstr ""
+msgstr "Link para o reprodutor"
 
 #: src/components/party/party-sheet.tsx src/components/player/episodes.tsx
 #: src/components/playlists.tsx src/components/sessions.tsx
 #: src/components/version-picker.tsx
 msgid "Playing"
-msgstr ""
+msgstr "Assistindo agora"
 
 #: src/pages/player.tsx
 msgid "Playing in {launchedName}"
-msgstr ""
+msgstr "Assistindo no {launchedName}"
 
 #: src/components/version-picker.tsx
 msgid "Playing in your player"
-msgstr ""
+msgstr "Assistindo no seu player"
 
 #: src/components/remote-sheet.tsx
 msgid "Playing on {name}"
-msgstr ""
+msgstr "Reproduzindo em {name}"
 
 #: src/pages/settings/playback.tsx
 msgid "Playing on and the next and previous buttons pass over episodes marked as filler. You can still play one yourself."
-msgstr ""
+msgstr "A reprodução contínua e os botões Próximo e Anterior pulam os episódios marcados como filler. Você ainda pode reproduzi-los manualmente."
 
 #: src/components/player/options.tsx src/components/playlists.tsx
 msgid "Playlist"
-msgstr ""
+msgstr "Lista de reprodução"
 
 #: src/components/layout.tsx src/components/playlists.tsx
 msgid "Playlists"
-msgstr ""
+msgstr "Listas de reprodução"
 
 #: src/components/party/party-sheet.tsx
 msgid "Plays <0>{title}</0> for everyone who joins."
-msgstr ""
+msgstr "O título <0>{title}</0> será reproduzido para todos que entrarem na sessão."
 
 #: src/pages/settings/playback.tsx
 msgid "Plays a little faster or slower to catch up with the party. Off, the video jumps instead."
-msgstr ""
+msgstr "O vídeo acelera ou desacelera um pouco para acompanhar a sessão. Se a opção estiver desativada, ele salta para ajustar a sincronização."
 
 #: src/pages/settings/playback.tsx
 msgid "Plays Dolby Vision where the screen shows it. Turn it off to play the HDR10 picture most of these videos also carry, if Dolby Vision looks dim or flickers. Videos with no HDR10 picture still play in Dolby Vision."
-msgstr ""
+msgstr "Reproduz em Dolby Vision quando a tela é compatível. Se a imagem em Dolby Vision ficar escura ou apresentar cintilação, desative esta opção para reproduzir a imagem HDR10 que acompanha a maioria desses vídeos. Os vídeos sem imagem HDR10 continuarão sendo reproduzidos em Dolby Vision."
 
 #: src/lib/input/actions.ts
 msgid "Plays faster for as long as the key is held, at the speed set in Playback settings."
