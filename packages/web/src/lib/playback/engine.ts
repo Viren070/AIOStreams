@@ -45,8 +45,8 @@ export interface EngineFile {
 export interface EngineStyle {
   subtitleStyle?: SubtitleStyle;
   fit: VideoFit;
-  /** The share of the height the controls cover. */
-  lift: number;
+  /** Percent of the height subtitles sit at: the chosen one or above the controls, or on the way between. */
+  height: number;
 }
 
 export type EngineState = Partial<

@@ -12,7 +12,6 @@ import {
   MPV_OUTLINE,
   MPV_SHADOW,
   mpvColor,
-  subtitleHeight,
   subtitleScale,
 } from '../../subtitles/style';
 import { parseChapters } from '../../playback/chapters';
@@ -472,12 +471,12 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
       ? undefined
       : (skips) => send('player-skips', { segments: skips }),
     // The user's own player keeps its own look.
-    setStyle({ subtitleStyle, fit, lift }) {
+    setStyle({ subtitleStyle, fit, height }) {
       if (external || !subtitleStyle) return;
       shell.send({
         type: 'player-style',
         fit,
-        subtitles: subtitleLook(subtitleStyle, lift),
+        subtitles: subtitleLook(subtitleStyle, height),
       });
     },
     toggleFullscreen: external
@@ -624,7 +623,7 @@ function failure(
 }
 
 /** The user's subtitle style in the units mpv and libass share. */
-function subtitleLook(style: SubtitleStyle, lift: number) {
+function subtitleLook(style: SubtitleStyle, height: number) {
   return {
     scale: subtitleScale(style),
     bold: style.bold,
@@ -636,7 +635,7 @@ function subtitleLook(style: SubtitleStyle, lift: number) {
     backColor: mpvColor(style.backgroundColor, style.backgroundOpacity),
     box: style.backgroundOpacity > 0,
     override: style.overrideStyled ? 'force' : 'scale',
-    position: 100 - subtitleHeight(style, lift),
+    position: 100 - height,
   };
 }
 
