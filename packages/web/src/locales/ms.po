@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-29 20:58+0000\n"
+"PO-Revision-Date: 2026-10-29 22:02+0000\n"
 "Last-Translator: AIO sama <aio-sama@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Malay <https://hosted.weblate.org/projects/aiostreams/web-app/ms/>\n"
 "Language: ms\n"
@@ -341,7 +341,7 @@ msgstr "Masa tetapan sebelum penamat."
 
 #: src/pages/settings/audio.tsx
 msgid "A track the version marks as its default plays even when another is in one of your languages. Turn this off for your languages to always win."
-msgstr "Trek yang ditandakan oleh versi sebagai lalai akan dimainkan walaupun terdapat trek lain dalam bahasa anda. Matikan ini supaya bahasa anda sentiasa diutamakan."
+msgstr "Trek yang ditandakan oleh versi sebagai lalai dimainkan walaupun trek lain ada dalam salah satu bahasa anda. Matikan tetapan ini supaya bahasa anda sentiasa diutamakan."
 
 #: src/pages/settings/audio.tsx
 msgid "A version plays the first of these it has, otherwise its own default. Original language is the one the title was made in."
@@ -615,7 +615,7 @@ msgstr "Main secara automatik versi pertama"
 #: src/pages/settings/audio.tsx src/pages/settings/interface.tsx
 #: src/pages/settings/playback.tsx
 msgid "Automatic"
-msgstr "Automatiks"
+msgstr "Automatik"
 
 #: src/pages/settings/interface.tsx
 msgid "Automatic lists episodes on narrow screens and puts them in a row on wide ones."
@@ -2020,7 +2020,7 @@ msgstr "Pautkan pek yang dikongsi oleh seseorang, dalam format aplikasi ini atau
 
 #: src/pages/settings/interface.tsx
 msgid "Liquid glass"
-msgstr "Kaca cecair (Liquid glass)"
+msgstr "Kaca cecair"
 
 #: src/pages/settings/interface.tsx
 msgid "List"
@@ -2056,7 +2056,7 @@ msgstr "Mencari sesi…"
 
 #: src/pages/settings/playback.tsx
 msgid "Looks for versions as soon as a title's page opens, so Play and the version list don't wait. Each title you open is looked up, even if you don't play it."
-msgstr ""
+msgstr "Mencari versi sebaik sahaja halaman tajuk dibuka, supaya Main dan senarai versi tidak menunggu. Setiap tajuk yang anda buka dicari, walaupun anda tidak memainkannya."
 
 #: src/components/party/party-sheet.tsx
 msgid "Lost the connection to {relay}. Reconnecting… Your player carries on, and gets back in step once it's back."
@@ -2302,7 +2302,7 @@ msgstr "Treler seterusnya"
 
 #: src/pages/home.tsx src/pages/settings/interface.tsx
 msgid "Next up"
-msgstr "Akan datang"
+msgstr "Seterusnya"
 
 #: src/components/player/options.tsx src/pages/settings/audio.tsx
 msgid "Night mode"
@@ -2310,11 +2310,11 @@ msgstr "Mod malam"
 
 #: src/pages/settings/apps.tsx
 msgid "Nightly"
-msgstr "Binaan Harian (Nightly)"
+msgstr "Nightly"
 
 #: src/pages/settings/apps.tsx
 msgid "Nightly builds come from every change, ahead of releases, and can break."
-msgstr "Binaan harian terhasil daripada setiap perubahan, lebih awal daripada keluaran rasmi, dan mungkin tidak stabil."
+msgstr "Binaan Nightly datang daripada setiap perubahan, mendahului keluaran rasmi, dan mungkin tidak stabil."
 
 #: src/components/version-settings.tsx
 msgid "No badges match."
@@ -4034,7 +4034,7 @@ msgstr "Beralih pelayan"
 #: src/components/layout.tsx src/components/no-catalogs.tsx
 #: src/pages/settings/account.tsx
 msgid "Switch user"
-msgstr "Beralih pengguna"
+msgstr "Tukar pengguna"
 
 #: src/pages/settings/playback.tsx
 msgid "Switches the TV to a refresh rate that suits each video, so motion plays smoothly, and back when you stop. The screen goes blank for a moment as it switches."
@@ -4550,7 +4550,7 @@ msgstr "Cuba mereka"
 
 #: src/pages/settings/playback.tsx
 msgid "Tunneled playback"
-msgstr "Main balik terowong (Tunneled playback)"
+msgstr "Main balik terowong"
 
 #: src/pages/settings/audio.tsx
 msgid "Turn other surround sound into Dolby Digital"
@@ -4743,7 +4743,7 @@ msgstr "Versi dimainkan dalam aplikasi, dengan kawalan dan tetapan main baliknya
 
 #: src/pages/settings/playback.tsx
 msgid "Versions play in this browser. Choose another player to open them in it instead."
-msgstr "Versi dimainkan dalam pelayar ini. Pilih pemain lain jika mahu."
+msgstr "Versi dimainkan dalam pelayar ini. Pilih pemain lain untuk membukanya di dalam pemain tersebut."
 
 #: src/pages/settings/playback.tsx
 msgid "Video"
@@ -4815,7 +4815,7 @@ msgstr "Tonton bersama"
 
 #: src/pages/settings/account.tsx
 msgid "Watch as someone else on this configuration. A user with a PIN needs it again after switching away."
-msgstr "Tonton sebagai pengguna lain pada konfigurasi ini."
+msgstr "Tonton sebagai pengguna lain pada konfigurasi ini. Pengguna yang mempunyai PIN memerlukannya semula selepas bertukar."
 
 #: src/pages/settings/playback.tsx
 msgid "Watch parties"
@@ -4997,7 +4997,7 @@ msgstr "Identiti anda yang sedang log masuk"
 
 #: src/pages/settings/cache.tsx
 msgid "Who you are signed in as and the server’s details, which opening without a connection needs."
-msgstr "Identiti akaun anda yang log masuk dan butiran pelayan."
+msgstr "Siapa anda log masuk sebagai dan butiran pelayan, yang diperlukan untuk membukanya tanpa sambungan."
 
 #: src/pages/settings/account.tsx
 msgid "Who's watching"
