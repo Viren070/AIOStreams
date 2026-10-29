@@ -1,5 +1,15 @@
 package io.github.viren070.aiostreams.exoplayer.cache
 
+import io.github.viren070.aiostreams.exoplayer.extractor.MatroskaIds.CLUSTER
+import io.github.viren070.aiostreams.exoplayer.extractor.MatroskaIds.CUES
+import io.github.viren070.aiostreams.exoplayer.extractor.MatroskaIds.EBML
+import io.github.viren070.aiostreams.exoplayer.extractor.MatroskaIds.SEEK
+import io.github.viren070.aiostreams.exoplayer.extractor.MatroskaIds.SEEK_HEAD
+import io.github.viren070.aiostreams.exoplayer.extractor.MatroskaIds.SEEK_ID
+import io.github.viren070.aiostreams.exoplayer.extractor.MatroskaIds.SEEK_POSITION
+import io.github.viren070.aiostreams.exoplayer.extractor.MatroskaIds.SEGMENT
+import io.github.viren070.aiostreams.exoplayer.extractor.vintLength
+
 /**
  * Where a file keeps the index its extractor reads before it plays, when that
  * comes after the start: a Matroska file's Cues, an MP4's moov after its mdat.
@@ -44,7 +54,7 @@ internal object FileIndex {
                 }
                 if (entry != SEEK || position < 0) continue
                 positions += segment + position
-                if (target == CUES) cues = segment + position
+                if (target == CUES.toLong()) cues = segment + position
             }
             return cues?.let { start -> start to positions.filter { it > start }.minOrNull() }
         }
@@ -76,7 +86,7 @@ internal object FileIndex {
         var at = 0L
             private set
 
-        fun id(): Long = vint(keepMarker = true)
+        fun id(): Int = vint(keepMarker = true).let { if (it > Int.MAX_VALUE) -1 else it.toInt() }
 
         fun size(): Long = vint(keepMarker = false)
 
@@ -92,7 +102,7 @@ internal object FileIndex {
 
         private fun vint(keepMarker: Boolean): Long {
             val first = bytes[at.toInt()].toInt() and 0xFF
-            val length = Integer.numberOfLeadingZeros(first) - 23
+            val length = vintLength(first.toByte())
             require(length in 1..8) { "not a Matroska number" }
             var value = (if (keepMarker) first else first and (0xFF shr length)).toLong()
             for (i in 1 until length) value = (value shl 8) or (bytes[at.toInt() + i].toLong() and 0xFF)
@@ -103,13 +113,4 @@ internal object FileIndex {
 
     /** Past a long film's moov, whose size the start doesn't give; the extractor reads on from the link if there's more. */
     private const val MAX_BYTES = 8L shl 20
-
-    private const val EBML = 0x1A45DFA3L
-    private const val SEGMENT = 0x18538067L
-    private const val SEEK_HEAD = 0x114D9B74L
-    private const val SEEK = 0x4DBBL
-    private const val SEEK_ID = 0x53ABL
-    private const val SEEK_POSITION = 0x53ACL
-    private const val CUES = 0x1C53BB6BL
-    private const val CLUSTER = 0x1F43B675L
 }

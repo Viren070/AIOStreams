@@ -15,15 +15,15 @@ import java.nio.ByteBuffer
 @OptIn(UnstableApi::class)
 internal class SoundProcessor(private val levels: SoundLevels) : BaseAudioProcessor() {
     private val shaper = SoundShaper(levels)
-    private var channels = IntArray(0)
+    private var channels = 0
     private var outputs = 0
-    private var sampleRate = 0
 
     override fun onConfigure(inputAudioFormat: AudioFormat): AudioFormat {
         if (inputAudioFormat.encoding != C.ENCODING_PCM_16BIT) return AudioFormat.NOT_SET
-        channels = IntArray(inputAudioFormat.channelCount) { it }
-        outputs = levels.outputs(channels.size)
-        sampleRate = inputAudioFormat.sampleRate
+        channels = inputAudioFormat.channelCount
+        outputs = levels.outputs(channels)
+        val sampleRate = inputAudioFormat.sampleRate
+        shaper.configure(channels, IntArray(channels) { it }, sampleRate, outputs, floatOutput = false)
         return AudioFormat(sampleRate, outputs, C.ENCODING_PCM_16BIT)
     }
 
@@ -31,13 +31,13 @@ internal class SoundProcessor(private val levels: SoundLevels) : BaseAudioProces
         val size = inputBuffer.remaining()
         if (size == 0) return
         val output = replaceOutputBuffer(size)
-        if (outputs == channels.size && !levels.shape(outputs)) {
+        if (outputs == channels && !levels.shape(outputs)) {
             shaper.reset()
             output.put(inputBuffer).flip()
             return
         }
-        val frames = size / (channels.size * 2)
-        shaper.shape(inputBuffer, frames, channels.size, channels, sampleRate, output, 0, outputs, false)
+        val frames = size / (channels * 2)
+        shaper.shape(inputBuffer, frames, output, 0)
         inputBuffer.position(inputBuffer.limit())
         output.limit(frames * outputs * 2)
     }

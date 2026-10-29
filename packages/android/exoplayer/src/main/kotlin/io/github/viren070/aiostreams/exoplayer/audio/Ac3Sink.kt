@@ -26,9 +26,6 @@ internal class Ac3Sink(sink: AudioSink, levels: SoundLevels) : ForwardingAudioSi
     private val shaper = SoundShaper(levels)
     private var encoder: AudioEncoder? = null
     private var inputChannels = 0
-
-    /** The input channel each channel takes, as some decoders' order differs. */
-    private var mapping = IntArray(0)
     private var encodedChannels = 0
     private var sampleRate = 0
 
@@ -63,10 +60,11 @@ internal class Ac3Sink(sink: AudioSink, levels: SoundLevels) : ForwardingAudioSi
         if (!encodes) return super.configure(audioSinkConfig)
         val encoder = AudioEncoder(CODEC, LAYOUTS.getValue(target.channelCount), format.sampleRate, BIT_RATE)
         inputChannels = format.channelCount
-        this.mapping = mapping ?: IntArray(channels) { it }
         encodedChannels = target.channelCount
         sampleRate = format.sampleRate
         frame = ByteBuffer.allocateDirect(encoder.frameSize * encodedChannels * 4).order(ByteOrder.nativeOrder())
+        // Some decoders' channel order differs from Android's.
+        shaper.configure(inputChannels, mapping ?: IntArray(channels) { it }, sampleRate, encodedChannels, floatOutput = true)
         super.configure(
             AudioSinkConfig.Builder(target)
                 .setTimeline(audioSinkConfig.timeline)
@@ -103,7 +101,7 @@ internal class Ac3Sink(sink: AudioSink, levels: SoundLevels) : ForwardingAudioSi
         val bytes = inputChannels * 2
         val count = min(buffer.remaining() / bytes, frameSize - framed)
         if (framed == 0) framedFromUs = currentUs + (buffer.position() - currentStart) / bytes * 1_000_000L / sampleRate
-        shaper.shape(buffer, count, inputChannels, mapping, sampleRate, frame, framed * encodedChannels, encodedChannels, true)
+        shaper.shape(buffer, count, frame, framed * encodedChannels)
         buffer.position(buffer.position() + count * bytes)
         framed += count
     }

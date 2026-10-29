@@ -45,9 +45,23 @@ internal class SoundShaper(private val levels: SoundLevels) {
     /** The compressor's level and gain and the limiter's gain, between calls. */
     private val state = FloatArray(3)
     private var copy: ByteBuffer? = null
+    private var inputChannels = 0
+    private var map = IntArray(0)
+    private var sampleRate = 0
+    private var outputChannels = 0
+    private var floatOutput = false
 
     init {
         reset()
+    }
+
+    /** Input channel `map[c]` plays as channel `c`, mixed down where [outputChannels] are fewer. */
+    fun configure(inputChannels: Int, map: IntArray, sampleRate: Int, outputChannels: Int, floatOutput: Boolean) {
+        this.inputChannels = inputChannels
+        this.map = map
+        this.sampleRate = sampleRate
+        this.outputChannels = outputChannels
+        this.floatOutput = floatOutput
     }
 
     fun reset() {
@@ -56,21 +70,7 @@ internal class SoundShaper(private val levels: SoundLevels) {
         state[2] = 1f
     }
 
-    /**
-     * Shapes [frames] frames from [input]'s position, its channel `map[c]` as channel `c`, into
-     * [output] from sample [outputAt], 16-bit or float, mixed down to [outputChannels] where fewer.
-     */
-    fun shape(
-        input: ByteBuffer,
-        frames: Int,
-        inputChannels: Int,
-        map: IntArray,
-        sampleRate: Int,
-        output: ByteBuffer,
-        outputAt: Int,
-        outputChannels: Int,
-        floatOutput: Boolean,
-    ) {
+    fun shape(input: ByteBuffer, frames: Int, output: ByteBuffer, outputAt: Int) {
         val (source, offset) = if (input.isDirect) input to input.position() else direct(input) to 0
         val shaped = nativeShape(
             source, offset, frames, inputChannels, map, sampleRate, output, outputAt, outputChannels, floatOutput,

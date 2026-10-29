@@ -1,12 +1,14 @@
 package io.github.viren070.aiostreams.exoplayer.subtitles.ass
 
-import android.net.Uri
 import android.util.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
+import io.github.viren070.aiostreams.exoplayer.extractor.Attachments
+import io.github.viren070.aiostreams.exoplayer.extractor.MatroskaIds
+import io.github.viren070.aiostreams.exoplayer.extractor.vintLength
 import io.github.viren070.aiostreams.exoplayer.subtitles.AssSink
 import io.github.viren070.aiostreams.exoplayer.subtitles.FontFile
 import java.io.EOFException
@@ -22,13 +24,10 @@ import java.io.InterruptedIOException
  */
 @OptIn(UnstableApi::class)
 internal class AttachedFonts(
+    private val attachments: Attachments,
     private val source: DataSource.Factory,
-    private val uri: Uri,
-    /** The Attachments element, or its content when [length] is known. */
-    private val position: Long,
-    private val length: Long?,
-    private val sink: AssSink,
     private val dir: File,
+    private val sink: AssSink,
     /** Whether fonts this many bytes in all may be read now, rather than leave the link to playback. */
     private val mayLoad: (Long) -> Boolean,
 ) {
@@ -45,6 +44,7 @@ internal class AttachedFonts(
 
     private fun load() {
         try {
+            val (_, position, length) = attachments
             val content = if (length != null) position until position + length else content() ?: return
             // No connection stays open meanwhile, which the server would fill.
             while (!mayLoad(content.last + 1 - content.first)) {
@@ -57,7 +57,7 @@ internal class AttachedFonts(
                 while (input.at <= content.last) {
                     val id = input.id()
                     val size = input.size()
-                    if (id == ATTACHED_FILE) file(input, input.at + size, fonts.size)?.let(fonts::add) else input.skip(size)
+                    if (id == MatroskaIds.ATTACHED_FILE) file(input, input.at + size, fonts.size)?.let(fonts::add) else input.skip(size)
                 }
                 fonts
             }
@@ -70,8 +70,8 @@ internal class AttachedFonts(
     }
 
     /** The Attachments element's content, from its header. */
-    private fun content(): LongRange? = read(position until position + HEADER_BYTES) { input ->
-        if (input.id() != ATTACHMENTS) return@read null
+    private fun content(): LongRange? = read(attachments.position until attachments.position + HEADER_BYTES) { input ->
+        if (input.id() != MatroskaIds.ATTACHMENTS) return@read null
         val size = input.size()
         input.at until input.at + size
     }
@@ -79,7 +79,8 @@ internal class AttachedFonts(
     private fun <T> read(range: LongRange, block: (Input) -> T): T {
         val data = source.createDataSource()
         try {
-            data.open(DataSpec.Builder().setUri(uri).setPosition(range.first).setLength(range.last + 1 - range.first).build())
+            val spec = DataSpec.Builder().setUri(attachments.uri).setPosition(range.first).setLength(range.last + 1 - range.first)
+            data.open(spec.build())
             return block(Input(data, range.first))
         } finally {
             runCatching { data.close() }
@@ -95,9 +96,9 @@ internal class AttachedFonts(
             val id = input.id()
             val size = input.size()
             when (id) {
-                FILE_NAME -> name = input.text(size)
-                FILE_MIME_TYPE -> mime = input.text(size)
-                FILE_DATA -> bytes = input.bytes(size)
+                MatroskaIds.FILE_NAME -> name = input.text(size)
+                MatroskaIds.FILE_MIME_TYPE -> mime = input.text(size)
+                MatroskaIds.FILE_DATA -> bytes = input.bytes(size)
                 else -> input.skip(size)
             }
         }
@@ -113,7 +114,7 @@ internal class AttachedFonts(
         private var filled = 0
         private var next = 0
 
-        fun id(): Long = vint(keepMarker = true)
+        fun id(): Int = vint(keepMarker = true).let { if (it > Int.MAX_VALUE) -1 else it.toInt() }
 
         fun size(): Long = vint(keepMarker = false).also { if (it == UNKNOWN_SIZE) throw IOException("an attachment of unknown size") }
 
@@ -153,7 +154,7 @@ internal class AttachedFonts(
 
         private fun vint(keepMarker: Boolean): Long {
             val first = byte()
-            val length = Integer.numberOfLeadingZeros(first) - 23
+            val length = vintLength(first.toByte())
             if (length !in 1..8) throw IOException("not a Matroska number")
             var value = (if (keepMarker) first else first and (0xFF shr length)).toLong()
             repeat(length - 1) { value = (value shl 8) or byte().toLong() }
@@ -170,19 +171,14 @@ internal class AttachedFonts(
         }
     }
 
-    companion object {
-        private const val TAG = "attached-fonts"
-        private const val WAIT_MS = 250L
-        private val UNSAFE = Regex("[^A-Za-z0-9._-]")
+    private companion object {
+        const val TAG = "attached-fonts"
+        const val WAIT_MS = 250L
+        val UNSAFE = Regex("[^A-Za-z0-9._-]")
 
         /** An element's id and size. */
-        private const val HEADER_BYTES = 12L
-        private const val UNKNOWN_SIZE = -1L
-        const val ATTACHMENTS = 0x1941A469L
-        private const val ATTACHED_FILE = 0x61A7L
-        private const val FILE_NAME = 0x466EL
-        private const val FILE_MIME_TYPE = 0x4660L
-        private const val FILE_DATA = 0x465CL
+        const val HEADER_BYTES = 12L
+        const val UNKNOWN_SIZE = -1L
 
         fun isFont(name: String, mime: String?) =
             mime?.let { "font" in it || "truetype" in it || "opentype" in it } == true ||

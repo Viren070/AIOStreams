@@ -1,4 +1,4 @@
-package io.github.viren070.aiostreams.exoplayer.subtitles
+package io.github.viren070.aiostreams.exoplayer.subtitles.ass
 
 import android.graphics.Color
 import android.graphics.Typeface
@@ -13,6 +13,7 @@ import androidx.media3.common.C
 import androidx.media3.common.text.Cue
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.extractor.text.CuesWithTiming
+import io.github.viren070.aiostreams.exoplayer.subtitles.SampleParser
 import java.util.Locale
 
 /**
@@ -185,5 +186,22 @@ internal object AssText {
             }
         }
         return out.toString()
+    }
+}
+
+/** A text track's samples as ASS lines, each once however often it's read, numbered in the order read. */
+@OptIn(UnstableApi::class)
+internal class AssTextTrack(var parser: SampleParser) {
+    private var readOrder = 0
+    private val seen = HashSet<String>()
+
+    fun read(timeUs: Long, data: ByteArray, line: (AssLine) -> Unit) = parser.parse(timeUs, data) { cues ->
+        if (cues.durationUs == C.TIME_UNSET) return@parse
+        val startMs = cues.startTimeUs / 1000
+        val durationMs = cues.durationUs / 1000
+        for (event in AssText.events(cues.cues)) {
+            // Reading a stretch again after a seek gives the same lines again.
+            if (seen.add("$startMs $durationMs $event")) line(AssLine(startMs, durationMs, "${++readOrder},$event".toByteArray()))
+        }
     }
 }

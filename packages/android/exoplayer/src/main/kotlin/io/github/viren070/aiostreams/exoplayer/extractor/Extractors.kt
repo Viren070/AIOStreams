@@ -12,33 +12,25 @@ import androidx.media3.extractor.SeekMap
 import androidx.media3.extractor.TrackOutput
 import androidx.media3.extractor.mkv.MatroskaExtractor
 import androidx.media3.extractor.text.SubtitleParser
-import io.github.viren070.aiostreams.exoplayer.subtitles.SubtitleSink
-import io.github.viren070.aiostreams.exoplayer.video.DolbyVisionExtractor
-import io.github.viren070.aiostreams.exoplayer.video.DolbyVisionRoute
-import io.github.viren070.aiostreams.exoplayer.video.VideoFrames
+import io.github.viren070.aiostreams.exoplayer.video.DolbyVisionRouter
+import io.github.viren070.aiostreams.exoplayer.video.DolbyVisionTrack
 
-/**
- * Media3's extractors, with Matroska's sending its subtitles to the file's
- * [SubtitleSink] and its skips and attachments to [events], every one's Dolby
- * Vision tracks routed for the device, and its seek map told to [onSeekMap].
- */
+/** What the extractors reading the engine's file ask of it and tell it, on the loader's thread. */
+internal interface ExtractorHost : MatroskaHost, DolbyVisionRouter {
+    fun seekMap(map: SeekMap)
+
+    fun videoFrame(timeUs: Long)
+}
+
+/** Media3's extractors, with Matroska's read by [MatroskaReader] and every one's tracks and seek map told to [host]. */
 @OptIn(UnstableApi::class)
-internal class Extractors(
-    /** The subtitle track whose lines a seek reads back for, or [ANY_TRACK] before the engine picks one. */
-    private val readBack: () -> String?,
-    private val sink: () -> SubtitleSink,
-    private val route: (Int) -> DolbyVisionRoute,
-    private val onRoute: (codecs: String, DolbyVisionRoute) -> Unit,
-    private val onSeekMap: (SeekMap) -> Unit,
-    private val events: MatroskaEvents,
-    private val frames: VideoFrames,
-) : ExtractorsFactory {
+internal class Extractors(private val host: ExtractorHost) : ExtractorsFactory {
     private val defaults = DefaultExtractorsFactory()
 
-    override fun createExtractors() = wrapped(defaults.createExtractors(), null)
+    override fun createExtractors() = tapped(defaults.createExtractors(), null)
 
     override fun createExtractors(uri: Uri, responseHeaders: Map<String, List<String>>) =
-        wrapped(defaults.createExtractors(uri, responseHeaders), uri)
+        tapped(defaults.createExtractors(uri, responseHeaders), uri)
 
     override fun setSubtitleParserFactory(subtitleParserFactory: SubtitleParser.Factory) = apply {
         defaults.setSubtitleParserFactory(subtitleParserFactory)
@@ -50,44 +42,30 @@ internal class Extractors(
         defaults.setTextTrackTranscodingEnabled(textTrackTranscodingEnabled)
     }
 
-    private fun wrapped(extractors: Array<Extractor>, uri: Uri?) = extractors.map<Extractor, Extractor> {
-        val reader = if (it is MatroskaExtractor) MatroskaReader(sink(), readBack, uri, events) else it
-        Tap(DolbyVisionExtractor(reader, route, onRoute), onSeekMap, frames)
-    }.toTypedArray()
-
-    companion object {
-        const val ANY_TRACK = "*"
+    private fun tapped(extractors: Array<Extractor>, uri: Uri?) = Array<Extractor>(extractors.size) { i ->
+        val extractor = extractors[i]
+        Tapped(if (extractor is MatroskaExtractor) MatroskaReader(host, uri) else extractor, host)
     }
 }
 
-/** Tells [onSeekMap] the extractor's seek map and [frames] its video frames' times. */
 @OptIn(UnstableApi::class)
-private class Tap(
-    private val extractor: Extractor,
-    private val onSeekMap: (SeekMap) -> Unit,
-    private val frames: VideoFrames,
-) : Extractor by extractor {
-    override fun init(output: ExtractorOutput) = extractor.init(
-        object : ExtractorOutput by output {
+private class Tapped(private val extractor: Extractor, private val host: ExtractorHost) : Extractor by extractor {
+    override fun init(output: ExtractorOutput) {
+        val told = object : ExtractorOutput by output {
             override fun seekMap(seekMap: SeekMap) {
-                onSeekMap(seekMap)
+                host.seekMap(seekMap)
                 output.seekMap(seekMap)
             }
-
-            override fun track(id: Int, type: Int): TrackOutput {
-                val track = output.track(id, type)
-                if (type != C.TRACK_TYPE_VIDEO) return track
-                return object : TrackOutput by track {
-                    override fun sampleMetadata(
-                        timeUs: Long, flags: Int, size: Int, offset: Int, cryptoData: TrackOutput.CryptoData?,
-                    ) {
-                        frames.add(timeUs)
-                        track.sampleMetadata(timeUs, flags, size, offset, cryptoData)
-                    }
-                }
-            }
-        },
-    )
+        }
+        extractor.init(told.filterTracks(C.TRACK_TYPE_VIDEO) { _, track -> DolbyVisionTrack(FrameTimes(track), host) })
+    }
 
     override fun getUnderlyingImplementation(): Extractor = extractor.underlyingImplementation
+
+    private inner class FrameTimes(private val track: TrackOutput) : TrackOutput by track {
+        override fun sampleMetadata(timeUs: Long, flags: Int, size: Int, offset: Int, cryptoData: TrackOutput.CryptoData?) {
+            host.videoFrame(timeUs)
+            track.sampleMetadata(timeUs, flags, size, offset, cryptoData)
+        }
+    }
 }

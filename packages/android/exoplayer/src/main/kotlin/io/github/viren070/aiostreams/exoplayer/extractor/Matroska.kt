@@ -1,116 +1,42 @@
 package io.github.viren070.aiostreams.exoplayer.extractor
 
-import android.net.Uri
 import androidx.annotation.OptIn
 import androidx.media3.common.C
 import androidx.media3.common.DataReader
-import androidx.media3.common.Format
 import androidx.media3.common.ParserException
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.util.Util
 import androidx.media3.extractor.DefaultExtractorInput
-import androidx.media3.extractor.Extractor
 import androidx.media3.extractor.ExtractorInput
-import androidx.media3.extractor.ExtractorOutput
-import androidx.media3.extractor.PositionHolder
-import androidx.media3.extractor.SeekMap
-import androidx.media3.extractor.SeekPoint
-import androidx.media3.extractor.TrackOutput
 import androidx.media3.extractor.mkv.EbmlProcessor
 import androidx.media3.extractor.mkv.MatroskaExtractor
 import androidx.media3.extractor.text.SubtitleParser
-import androidx.media3.extractor.text.SubtitleTranscodingExtractorOutput
-import io.github.viren070.aiostreams.exoplayer.subtitles.Silent
-import io.github.viren070.aiostreams.exoplayer.subtitles.SubtitleSink
-import io.github.viren070.aiostreams.exoplayer.subtitles.Subtitles
+import io.github.viren070.aiostreams.exoplayer.extractor.MatroskaIds.ATTACHMENTS
+import io.github.viren070.aiostreams.exoplayer.extractor.MatroskaIds.BLOCK
+import io.github.viren070.aiostreams.exoplayer.extractor.MatroskaIds.CLUSTER
+import io.github.viren070.aiostreams.exoplayer.extractor.MatroskaIds.CONTENT_COMPRESSION
+import io.github.viren070.aiostreams.exoplayer.extractor.MatroskaIds.CONTENT_COMPRESSION_ALGORITHM
+import io.github.viren070.aiostreams.exoplayer.extractor.MatroskaIds.CONTENT_COMPRESSION_SETTINGS
+import io.github.viren070.aiostreams.exoplayer.extractor.MatroskaIds.CUES
+import io.github.viren070.aiostreams.exoplayer.extractor.MatroskaIds.CUE_CLUSTER_POSITION
+import io.github.viren070.aiostreams.exoplayer.extractor.MatroskaIds.CUE_DURATION
+import io.github.viren070.aiostreams.exoplayer.extractor.MatroskaIds.CUE_POINT
+import io.github.viren070.aiostreams.exoplayer.extractor.MatroskaIds.CUE_TIME
+import io.github.viren070.aiostreams.exoplayer.extractor.MatroskaIds.CUE_TRACK
+import io.github.viren070.aiostreams.exoplayer.extractor.MatroskaIds.CUE_TRACK_POSITIONS
+import io.github.viren070.aiostreams.exoplayer.extractor.MatroskaIds.DEFAULT_DURATION
+import io.github.viren070.aiostreams.exoplayer.extractor.MatroskaIds.SEEK
+import io.github.viren070.aiostreams.exoplayer.extractor.MatroskaIds.SEEK_ID
+import io.github.viren070.aiostreams.exoplayer.extractor.MatroskaIds.SEEK_POSITION
+import io.github.viren070.aiostreams.exoplayer.extractor.MatroskaIds.SEGMENT
+import io.github.viren070.aiostreams.exoplayer.extractor.MatroskaIds.SIMPLE_BLOCK
+import io.github.viren070.aiostreams.exoplayer.extractor.MatroskaIds.TIMECODE_SCALE
+import io.github.viren070.aiostreams.exoplayer.extractor.MatroskaIds.TRACK_ENTRY
+import io.github.viren070.aiostreams.exoplayer.extractor.MatroskaIds.TRACK_NUMBER
 import java.io.ByteArrayOutputStream
 import java.io.EOFException
 import java.util.zip.DataFormatException
 import java.util.zip.Inflater
-
-/** Skips the cache serves without fetching. */
-private const val LARGE_SKIP = 1 shl 20
-
-internal interface MatroskaEvents {
-    fun skipping(uri: Uri, position: Long, length: Long)
-
-    /** Where the attachments are: their element, or their content and its length. */
-    fun attachments(uri: Uri, position: Long, length: Long?)
-}
-
-/**
- * Matroska, read by Media3, with its subtitles taken on the way, before Media3
- * parses them and drops their timing. The player gets no cues for them: the
- * engine times them itself, so its delay applies to them.
- */
-@OptIn(UnstableApi::class)
-internal class MatroskaReader(
-    private val sink: SubtitleSink,
-    private val readBack: () -> String?,
-    private val uri: Uri?,
-    private val events: MatroskaEvents,
-) : Extractor {
-    private val matroska = Matroska { position, length -> uri?.let { events.attachments(it, position, length) } }
-    private var transcoder: SubtitleTranscodingExtractorOutput? = null
-
-    @Volatile
-    private var seekMap: SeekMap? = null
-
-    override fun sniff(input: ExtractorInput) = matroska.sniff(input)
-
-    override fun init(output: ExtractorOutput) {
-        val transcoder = SubtitleTranscodingExtractorOutput(output, Silent).also { transcoder = it }
-        val seeking = object : ExtractorOutput by transcoder {
-            override fun seekMap(seekMap: SeekMap) {
-                this@MatroskaReader.seekMap = seekMap
-                transcoder.seekMap(ReadBack(seekMap))
-            }
-        }
-        matroska.init(Subtitles(FrameRates(SampleDependencies(seeking), matroska::frameDurationNs), sink))
-    }
-
-    override fun read(input: ExtractorInput, seekPosition: PositionHolder) = matroska.read(Skips(input), seekPosition)
-
-    override fun seek(position: Long, timeUs: Long) {
-        transcoder?.resetSubtitleParsers()
-        matroska.seek(position, timeUs)
-        // Media3 itself starts at the keyframe's cluster, so starting earlier is a read-back.
-        val keyframe = seekMap?.getSeekPoints(timeUs)?.first?.position ?: return
-        matroska.readBack(if (position < keyframe) keyframe else -1, readBack())
-    }
-
-    override fun release() = matroska.release()
-
-    override fun getUnderlyingImplementation(): Extractor = matroska
-
-    private inner class Skips(private val input: ExtractorInput) : ExtractorInput by input {
-        override fun skipFully(length: Int) {
-            skipping(length)
-            input.skipFully(length)
-        }
-
-        override fun skipFully(length: Int, allowEndOfInput: Boolean): Boolean {
-            skipping(length)
-            return input.skipFully(length, allowEndOfInput)
-        }
-
-        private fun skipping(length: Int) {
-            matroska.skipping(input.position, length.toLong())
-            if (length >= LARGE_SKIP) uri?.let { events.skipping(it, input.position, length.toLong()) }
-        }
-    }
-
-    /** Media3's seek map, starting each seek early enough to read the subtitle lines already showing at its target. */
-    private inner class ReadBack(private val map: SeekMap) : SeekMap by map {
-        override fun getSeekPoints(timeUs: Long): SeekMap.SeekPoints {
-            val points = map.getSeekPoints(timeUs)
-            val from = matroska.index.earliest(readBack(), timeUs)
-            if (from == null || from >= points.first.position) return points
-            val first = SeekPoint(points.first.timeUs, from)
-            return if (points.second == points.first) SeekMap.SeekPoints(first) else SeekMap.SeekPoints(first, points.second)
-        }
-    }
-}
 
 /**
  * Matroska's extractor, which also reads where its index puts the subtitle
@@ -118,44 +44,38 @@ internal class MatroskaReader(
  * zlib-compressed tracks Media3 rejects.
  */
 @OptIn(UnstableApi::class)
-private class Matroska(private val attachments: (position: Long, length: Long?) -> Unit) :
+internal class Matroska(private val attachments: (position: Long, length: Long?) -> Unit) :
     MatroskaExtractor(SubtitleParser.Factory.UNSUPPORTED, FLAG_EMIT_RAW_SUBTITLE_DATA) {
     val index = SubtitleIndex()
     private var segment = 0L
-    private var seekId = 0L
-    private var seekPosition = -1L
-    private var attachmentsFound = false
-    private var attachmentsNext = false
     private var timecodeScale = 1_000_000L
+    private var attachmentsFound = false
+
+    /** The reader skips the Attachments element's content next. */
+    private var attachmentsNext = false
+
+    private var seek = SeekEntry()
+    private var entry = TrackEntry()
+    private var algorithm = ZLIB
     private var cueTime = -1L
-    private var cueTrack = -1L
-    private var cuePosition = -1L
-    private var cueDuration = -1L
+    private var cue = CueEntry()
+
+    private val zlibTracks = HashSet<Long>()
+
+    /** Each track's DefaultDuration, which Media3 makes no frame rate of. */
+    private val frameDurations = HashMap<Long, Long>()
 
     /** Before this cluster, only [readBackTrack]'s blocks are read. */
     private var readBackUntil = -1L
     private var readBackTrack: String? = null
     private var readingBack = false
-    private val varint = ByteArray(8)
-
-    private val zlibTracks = HashSet<Long>()
-    private var entryNumber = -1L
-    private var entryZlib = false
-    private var algorithm = ZLIB
-
-    /** Each track's DefaultDuration, which Media3 makes no frame rate of. */
-    private val frameDurations = HashMap<Long, Long>()
-    private var entryDuration = -1L
-
-    fun frameDurationNs(track: Int): Long? = frameDurations[track.toLong()]
 
     // A read error can stop a block part way, and the next read carries on in it.
     private var inMedia3Block = false
-    private var takeSize = -1
-    private var taken = 0
+    private var taking: TakenBlock? = null
+    private val varint = ByteArray(8)
 
-    /** The block being read here to inflate, or null while skipping one. */
-    private var takeData: ByteArray? = null
+    fun frameDurationNs(track: Int): Long? = frameDurations[track.toLong()]
 
     fun readBack(until: Long, track: String?) {
         readBackUntil = until
@@ -163,10 +83,16 @@ private class Matroska(private val attachments: (position: Long, length: Long?) 
         readingBack = false
     }
 
+    /** Reports the attachments' content as the reader skips it. */
+    fun skipping(position: Long, length: Long) {
+        if (!attachmentsNext) return
+        attachmentsNext = false
+        foundAttachments(position, length)
+    }
+
     override fun seek(position: Long, timeUs: Long) {
         inMedia3Block = false
-        takeSize = -1
-        takeData = null
+        taking = null
         super.seek(position, timeUs)
     }
 
@@ -176,58 +102,34 @@ private class Matroska(private val attachments: (position: Long, length: Long?) 
         else -> super.getElementType(id)
     }
 
-    /** Reports the attachments' content as the reader skips it. */
-    fun skipping(position: Long, length: Long) {
-        if (!attachmentsNext) return
-        attachmentsNext = false
-        if (!attachmentsFound) {
-            attachmentsFound = true
-            attachments(position, length)
-        }
-    }
-
     override fun isLevel1Element(id: Int) = id == ATTACHMENTS || super.isLevel1Element(id)
 
     override fun startMasterElement(id: Int, contentPosition: Long, contentSize: Long) {
         when (id) {
             SEGMENT -> segment = contentPosition
-            SEEK -> {
-                seekId = 0
-                seekPosition = -1
-            }
-            TRACK_ENTRY -> {
-                entryNumber = -1
-                entryZlib = false
-                entryDuration = -1
-            }
+            SEEK -> seek = SeekEntry()
+            TRACK_ENTRY -> entry = TrackEntry()
             // Matroska's default when the file leaves it out, which Media3 then takes as no compression.
             CONTENT_COMPRESSION -> algorithm = ZLIB
             CLUSTER -> readingBack = contentPosition < readBackUntil
             CUE_POINT -> cueTime = -1
-            CUE_TRACK_POSITIONS -> {
-                cueTrack = -1
-                cuePosition = -1
-                cueDuration = -1
-            }
+            CUE_TRACK_POSITIONS -> cue = CueEntry()
         }
         super.startMasterElement(id, contentPosition, contentSize)
     }
 
     override fun endMasterElement(id: Int) {
         when (id) {
-            CUE_TRACK_POSITIONS -> if (cueTime >= 0 && cueTrack >= 0 && cuePosition >= 0 && cueDuration > 0) {
-                index.add(cueTrack, scale(cueTime), scale(cueDuration), segment + cuePosition)
+            CUE_TRACK_POSITIONS -> if (cueTime >= 0 && cue.complete) {
+                index.add(cue.track, scale(cueTime), scale(cue.duration), segment + cue.cluster)
             }
             // Before Media3 sends the seek map that reads it.
             CUES -> index.finish()
-            SEEK -> if (seekId == ATTACHMENTS.toLong() && seekPosition >= 0 && !attachmentsFound) {
-                attachmentsFound = true
-                attachments(segment + seekPosition, null)
-            }
-            CONTENT_COMPRESSION -> if (algorithm == ZLIB) entryZlib = true
-            TRACK_ENTRY -> if (entryNumber >= 0) {
-                if (entryZlib) zlibTracks += entryNumber
-                if (entryDuration > 0) frameDurations[entryNumber] = entryDuration
+            SEEK -> if (seek.id == ATTACHMENTS.toLong() && seek.position >= 0) foundAttachments(segment + seek.position, null)
+            CONTENT_COMPRESSION -> if (algorithm == ZLIB) entry.zlib = true
+            TRACK_ENTRY -> if (entry.number >= 0) {
+                if (entry.zlib) zlibTracks += entry.number
+                if (entry.frameDurationNs > 0) frameDurations[entry.number] = entry.frameDurationNs
             }
         }
         super.endMasterElement(id)
@@ -236,18 +138,18 @@ private class Matroska(private val attachments: (position: Long, length: Long?) 
     override fun integerElement(id: Int, value: Long) {
         when (id) {
             TIMECODE_SCALE -> timecodeScale = value
-            TRACK_NUMBER -> entryNumber = value
-            DEFAULT_DURATION -> entryDuration = value
+            TRACK_NUMBER -> entry.number = value
+            DEFAULT_DURATION -> entry.frameDurationNs = value
             CONTENT_COMPRESSION_ALGORITHM -> {
                 algorithm = value
                 // Media3 rejects it.
                 if (value == ZLIB) return
             }
             CUE_TIME -> cueTime = value
-            CUE_TRACK -> cueTrack = value
-            CUE_CLUSTER_POSITION -> cuePosition = value
-            CUE_DURATION -> return run { cueDuration = value }
-            SEEK_POSITION -> seekPosition = value
+            CUE_TRACK -> cue.track = value
+            CUE_CLUSTER_POSITION -> cue.cluster = value
+            CUE_DURATION -> return run { cue.duration = value }
+            SEEK_POSITION -> seek.position = value
         }
         super.integerElement(id, value)
     }
@@ -256,51 +158,53 @@ private class Matroska(private val attachments: (position: Long, length: Long?) 
         if (id == SEEK_ID && contentSize in 1..4) {
             input.peekFully(varint, 0, contentSize)
             input.resetPeekPosition()
-            seekId = (0 until contentSize).fold(0L) { value, i -> (value shl 8) or (varint[i].toLong() and 0xFF) }
+            seek.id = (0 until contentSize).fold(0L) { value, i -> (value shl 8) or (varint[i].toLong() and 0xFF) }
         }
-        // zlib takes no settings; Media3 would take them as stripped header bytes.
-        if (id == CONTENT_COMPRESSION_SETTINGS && entryZlib) return input.skipFully(contentSize)
-        if (id != SIMPLE_BLOCK && id != BLOCK) return super.binaryElement(id, contentSize, input)
-        if (!inMedia3Block && takeSize < 0 && (readingBack || zlibTracks.isNotEmpty())) {
+        when {
+            // zlib takes no settings; Media3 would take them as stripped header bytes.
+            id == CONTENT_COMPRESSION_SETTINGS && entry.zlib -> input.skipFully(contentSize)
+            id == SIMPLE_BLOCK || id == BLOCK -> block(id, contentSize, input)
+            else -> super.binaryElement(id, contentSize, input)
+        }
+    }
+
+    private fun block(id: Int, size: Int, input: ExtractorInput) {
+        if (!inMedia3Block && taking == null && (readingBack || zlibTracks.isNotEmpty())) {
             val track = trackOf(input)
-            when {
-                track == null -> {}
-                readingBack && !readsBack(track) -> startTaking(contentSize, keep = false)
-                track in zlibTracks -> startTaking(contentSize, keep = true)
+            taking = when {
+                track == null -> null
+                readingBack && !readsBack(track) -> TakenBlock(size, keep = false)
+                track in zlibTracks -> TakenBlock(size, keep = true)
+                else -> null
             }
         }
-        if (takeSize < 0) {
+        val block = taking
+        if (block == null) {
             inMedia3Block = true
-            super.binaryElement(id, contentSize, input)
+            super.binaryElement(id, size, input)
             inMedia3Block = false
             return
         }
-        val block = take(input) ?: return
-        super.binaryElement(id, block.size, DefaultExtractorInput(Bytes(block), 0, block.size.toLong()))
-    }
-
-    private fun startTaking(size: Int, keep: Boolean) {
-        takeSize = size
-        taken = 0
-        takeData = if (keep) ByteArray(size) else null
+        val inflated = take(block, input) ?: return
+        super.binaryElement(id, inflated.size, DefaultExtractorInput(Bytes(inflated), 0, inflated.size.toLong()))
     }
 
     /** The rest of the block being taken, inflated, or null once a skipped one is past. */
-    private fun take(input: ExtractorInput): ByteArray? {
-        val data = takeData
-        while (taken < takeSize) {
-            val read = if (data == null) input.skip(takeSize - taken) else input.read(data, taken, takeSize - taken)
+    private fun take(block: TakenBlock, input: ExtractorInput): ByteArray? {
+        val data = block.data
+        while (block.taken < block.size) {
+            val left = block.size - block.taken
+            val read = if (data == null) input.skip(left) else input.read(data, block.taken, left)
             if (read == C.RESULT_END_OF_INPUT) throw EOFException()
-            taken += read
+            block.taken += read
         }
-        takeSize = -1
-        takeData = null
+        taking = null
         return data?.let(::inflated)
     }
 
     /** The block with its frame inflated: its track number, timecode and flags, then the frame. */
     private fun inflated(block: ByteArray): ByteArray {
-        val header = varintLength(block[0]) + 3
+        val header = vintLength(block[0]) + 3
         if (header !in 4..11 || block.size < header) {
             throw ParserException.createForMalformedContainer("Bad block header", null)
         }
@@ -331,7 +235,7 @@ private class Matroska(private val attachments: (position: Long, length: Long?) 
     /** The track number the block about to be read starts with. */
     private fun trackOf(input: ExtractorInput): Long? {
         input.peekFully(varint, 0, 1)
-        val length = varintLength(varint[0])
+        val length = vintLength(varint[0])
         if (length !in 1..8) return null.also { input.resetPeekPosition() }
         if (length > 1) input.peekFully(varint, 1, length - 1)
         input.resetPeekPosition()
@@ -340,41 +244,46 @@ private class Matroska(private val attachments: (position: Long, length: Long?) 
         return track
     }
 
-    /** Whether a block of `track`'s is one of [readBackTrack]'s. */
     private fun readsBack(track: Long) = when (val showing = readBackTrack) {
-        Extractors.ANY_TRACK -> index.has(track)
+        MatroskaHost.ANY_TRACK -> index.has(track)
         else -> track.toString() == showing
     }
 
-    private fun varintLength(first: Byte) = Integer.numberOfLeadingZeros(first.toInt() and 0xFF) - 23
+    private fun foundAttachments(position: Long, length: Long?) {
+        if (attachmentsFound) return
+        attachmentsFound = true
+        attachments(position, length)
+    }
 
     private fun scale(timecode: Long) = Util.scaleLargeTimestamp(timecode, timecodeScale, 1000)
 
+    private class SeekEntry {
+        var id = 0L
+        var position = -1L
+    }
+
+    private class TrackEntry {
+        var number = -1L
+        var zlib = false
+        var frameDurationNs = -1L
+    }
+
+    private class CueEntry {
+        var track = -1L
+        var cluster = -1L
+        var duration = -1L
+        val complete get() = track >= 0 && cluster >= 0 && duration > 0
+    }
+
+    private class TakenBlock(val size: Int, keep: Boolean) {
+        /** Null for a block skipped rather than kept to inflate. */
+        val data = if (keep) ByteArray(size) else null
+        var taken = 0
+    }
+
     private companion object {
-        const val SEGMENT = 0x18538067
-        const val TIMECODE_SCALE = 0x2AD7B1
-        const val TRACK_ENTRY = 0xAE
-        const val TRACK_NUMBER = 0xD7
-        const val DEFAULT_DURATION = 0x23E383
-        const val CONTENT_COMPRESSION = 0x5034
-        const val CONTENT_COMPRESSION_ALGORITHM = 0x4254
-        const val CONTENT_COMPRESSION_SETTINGS = 0x4255
         const val ZLIB = 0L
         const val LACING = 0x06
-        const val CLUSTER = 0x1F43B675
-        const val SIMPLE_BLOCK = 0xA3
-        const val BLOCK = 0xA1
-        const val CUES = 0x1C53BB6B
-        const val CUE_POINT = 0xBB
-        const val CUE_TIME = 0xB3
-        const val CUE_TRACK_POSITIONS = 0xB7
-        const val CUE_TRACK = 0xF7
-        const val CUE_CLUSTER_POSITION = 0xF1
-        const val CUE_DURATION = 0xB2
-        const val ATTACHMENTS = 0x1941A469
-        const val SEEK = 0x4DBB
-        const val SEEK_ID = 0x53AB
-        const val SEEK_POSITION = 0x53AC
     }
 }
 
@@ -388,74 +297,5 @@ private class Bytes(private val data: ByteArray) : DataReader {
         System.arraycopy(data, at, buffer, offset, read)
         at += read
         return read
-    }
-}
-
-/** Where the subtitle lines with a duration in Matroska's index sit in the file. */
-private class SubtitleIndex {
-    private class Line(val startUs: Long, val endUs: Long, val position: Long)
-
-    private val reading = HashMap<Long, MutableList<Line>>()
-
-    @Volatile
-    private var tracks: Map<Long, List<Line>>? = null
-
-    fun add(track: Long, startUs: Long, durationUs: Long, position: Long) {
-        if (tracks == null) reading.getOrPut(track) { mutableListOf() } += Line(startUs, startUs + durationUs, position)
-    }
-
-    fun finish() {
-        if (tracks == null) tracks = reading.mapValues { (_, lines) -> lines.sortedBy { it.startUs } }
-        reading.clear()
-    }
-
-    fun has(track: Long) = tracks?.containsKey(track) == true
-
-    /** Where the first of `track`'s lines showing at `timeUs` sits, of those begun up to [READ_BACK_US] before. */
-    fun earliest(track: String?, timeUs: Long): Long? {
-        val tracks = tracks ?: return null
-        val lines = when (track) {
-            null -> return null
-            Extractors.ANY_TRACK -> tracks.values
-            else -> listOfNotNull(track.toLongOrNull()?.let(tracks::get))
-        }
-        var earliest: Long? = null
-        for (list in lines) {
-            var i = firstFrom(list, timeUs - READ_BACK_US)
-            while (i < list.size && list[i].startUs <= timeUs) {
-                val line = list[i++]
-                if (line.endUs > timeUs && line.position < (earliest ?: Long.MAX_VALUE)) earliest = line.position
-            }
-        }
-        return earliest
-    }
-
-    private fun firstFrom(lines: List<Line>, timeUs: Long): Int {
-        var low = 0
-        var high = lines.size
-        while (low < high) {
-            val mid = (low + high) ushr 1
-            if (lines[mid].startUs < timeUs) low = mid + 1 else high = mid
-        }
-        return low
-    }
-
-    private companion object {
-        // mpv's demuxer-mkv-subtitle-preroll-secs-index.
-        const val READ_BACK_US = 10_000_000L
-    }
-}
-
-@OptIn(UnstableApi::class)
-private class FrameRates(private val output: ExtractorOutput, private val durationNs: (Int) -> Long?) :
-    ExtractorOutput by output {
-    override fun track(id: Int, type: Int): TrackOutput {
-        val track = output.track(id, type)
-        val ns = durationNs(id)?.takeIf { type == C.TRACK_TYPE_VIDEO } ?: return track
-        return object : TrackOutput by track {
-            override fun format(format: Format) = track.format(
-                if (format.frameRate > 0) format else format.buildUpon().setFrameRate(1e9f / ns).build(),
-            )
-        }
     }
 }

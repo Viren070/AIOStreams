@@ -18,8 +18,8 @@ internal class OutputSink(sink: AudioSink) : ForwardingAudioSink(sink) {
     @Volatile
     var delayUs = 0L
 
-    fun setSpdif(list: String) {
-        passthrough = list.split(',').flatMapTo(mutableSetOf()) { SPDIF[it].orEmpty() }
+    fun setSpdif(names: List<String>) {
+        passthrough = names.flatMapTo(mutableSetOf()) { SPDIF[it].orEmpty() }
     }
 
     private fun allowed(format: Format) = format.sampleMimeType == MimeTypes.AUDIO_RAW || format.sampleMimeType in passthrough

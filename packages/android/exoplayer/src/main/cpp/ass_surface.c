@@ -248,7 +248,7 @@ static void include(ARect *rect, int left, int top, int right, int bottom) {
     if (bottom > rect->bottom) rect->bottom = bottom;
 }
 
-#define METHOD(name) Java_io_github_viren070_aiostreams_exoplayer_subtitles_ass_AssSurface_##name
+#define METHOD(name) Java_io_github_viren070_aiostreams_exoplayer_subtitles_ass_AssNative_##name
 
 static void start_renderer(Surface *surface) {
     surface->renderer = libass.renderer_init(surface->library);
@@ -258,7 +258,7 @@ static void start_renderer(Surface *surface) {
 }
 
 // Zero when libass can't be loaded. `font` is drawn where a script's fonts are missing, as mpv does.
-JNIEXPORT jlong JNICALL METHOD(nativeCreate)(JNIEnv *env, jclass clazz, jstring font) {
+JNIEXPORT jlong JNICALL METHOD(create)(JNIEnv *env, jclass clazz, jstring font) {
     if (!load_libass()) return 0;
     Surface *surface = calloc(1, sizeof(Surface));
     pthread_mutex_init(&surface->lock, NULL);
@@ -274,7 +274,7 @@ JNIEXPORT jlong JNICALL METHOD(nativeCreate)(JNIEnv *env, jclass clazz, jstring 
     return (jlong) surface;
 }
 
-JNIEXPORT void JNICALL METHOD(nativeAddFont)(JNIEnv *env, jclass clazz, jlong handle, jstring name, jbyteArray data) {
+JNIEXPORT void JNICALL METHOD(addFont)(JNIEnv *env, jclass clazz, jlong handle, jstring name, jbyteArray data) {
     Surface *surface = (Surface *) handle;
     const char *chars = (*env)->GetStringUTFChars(env, name, NULL);
     jbyte *bytes = (*env)->GetByteArrayElements(env, data, NULL);
@@ -284,7 +284,7 @@ JNIEXPORT void JNICALL METHOD(nativeAddFont)(JNIEnv *env, jclass clazz, jlong ha
 }
 
 // libass frees a library's fonts safely only once no renderer uses them, so the renderer starts over.
-JNIEXPORT void JNICALL METHOD(nativeClearFonts)(JNIEnv *env, jclass clazz, jlong handle) {
+JNIEXPORT void JNICALL METHOD(clearFonts)(JNIEnv *env, jclass clazz, jlong handle) {
     Surface *surface = (Surface *) handle;
     libass.renderer_done(surface->renderer);
     libass.clear_fonts(surface->library);
@@ -292,14 +292,14 @@ JNIEXPORT void JNICALL METHOD(nativeClearFonts)(JNIEnv *env, jclass clazz, jlong
 }
 
 // libass keeps the font it picked for each name, so fonts added later need a new renderer.
-JNIEXPORT void JNICALL METHOD(nativeReloadFonts)(JNIEnv *env, jclass clazz, jlong handle) {
+JNIEXPORT void JNICALL METHOD(reloadFonts)(JNIEnv *env, jclass clazz, jlong handle) {
     Surface *surface = (Surface *) handle;
     libass.renderer_done(surface->renderer);
     start_renderer(surface);
 }
 
 // A track of the file's, from its header; Matroska sends its lines one by one.
-JNIEXPORT jlong JNICALL METHOD(nativeNewTrack)(JNIEnv *env, jclass clazz, jlong handle, jbyteArray header) {
+JNIEXPORT jlong JNICALL METHOD(newTrack)(JNIEnv *env, jclass clazz, jlong handle, jbyteArray header) {
     ASS_Track *track = libass.new_track(((Surface *) handle)->library);
     jsize size = (*env)->GetArrayLength(env, header);
     jbyte *bytes = (*env)->GetByteArrayElements(env, header, NULL);
@@ -311,7 +311,7 @@ JNIEXPORT jlong JNICALL METHOD(nativeNewTrack)(JNIEnv *env, jclass clazz, jlong 
 }
 
 // A whole script, as a file added from outside holds it.
-JNIEXPORT jlong JNICALL METHOD(nativeReadScript)(JNIEnv *env, jclass clazz, jlong handle, jbyteArray script) {
+JNIEXPORT jlong JNICALL METHOD(readScript)(JNIEnv *env, jclass clazz, jlong handle, jbyteArray script) {
     jsize size = (*env)->GetArrayLength(env, script);
     char *copy = malloc(size + 1);
     (*env)->GetByteArrayRegion(env, script, 0, size, (jbyte *) copy);
@@ -321,7 +321,7 @@ JNIEXPORT jlong JNICALL METHOD(nativeReadScript)(JNIEnv *env, jclass clazz, jlon
     return (jlong) track;
 }
 
-JNIEXPORT void JNICALL METHOD(nativeAddLine)(
+JNIEXPORT void JNICALL METHOD(addLine)(
         JNIEnv *env, jclass clazz, jlong track, jbyteArray line, jlong startMs, jlong durationMs) {
     jsize size = (*env)->GetArrayLength(env, line);
     void *bytes = (*env)->GetPrimitiveArrayCritical(env, line, NULL);
@@ -329,15 +329,15 @@ JNIEXPORT void JNICALL METHOD(nativeAddLine)(
     (*env)->ReleasePrimitiveArrayCritical(env, line, bytes, JNI_ABORT);
 }
 
-JNIEXPORT void JNICALL METHOD(nativeFreeTrack)(JNIEnv *env, jclass clazz, jlong track) {
+JNIEXPORT void JNICALL METHOD(freeTrack)(JNIEnv *env, jclass clazz, jlong track) {
     libass.free_track((ASS_Track *) track);
 }
 
-JNIEXPORT void JNICALL METHOD(nativeFlushTrack)(JNIEnv *env, jclass clazz, jlong track) {
+JNIEXPORT void JNICALL METHOD(flushTrack)(JNIEnv *env, jclass clazz, jlong track) {
     libass.flush_events((ASS_Track *) track);
 }
 
-JNIEXPORT void JNICALL METHOD(nativeSetCacheLimit)(JNIEnv *env, jclass clazz, jlong handle, jint mb) {
+JNIEXPORT void JNICALL METHOD(setCacheLimit)(JNIEnv *env, jclass clazz, jlong handle, jint mb) {
     Surface *surface = (Surface *) handle;
     surface->cache_mb = mb;
     libass.set_cache_limits(surface->renderer, 0, mb);
@@ -453,7 +453,7 @@ static int start_gl(Surface *surface, int width, int height) {
 }
 
 // The showing thread's window, drawn through GL when it can be.
-JNIEXPORT void JNICALL METHOD(nativeSetWindow)(
+JNIEXPORT void JNICALL METHOD(setWindow)(
         JNIEnv *env, jclass clazz, jlong handle, jobject view, jint width, jint height) {
     Surface *surface = (Surface *) handle;
     stop_gl(surface);
@@ -470,12 +470,12 @@ JNIEXPORT void JNICALL METHOD(nativeSetWindow)(
 }
 
 // Whether a posted picture carries the time its video frame shows at.
-JNIEXPORT jboolean JNICALL METHOD(nativeStamped)(JNIEnv *env, jclass clazz, jlong handle) {
+JNIEXPORT jboolean JNICALL METHOD(stamped)(JNIEnv *env, jclass clazz, jlong handle) {
     return ((Surface *) handle)->presentation_time != NULL;
 }
 
 // The size the rendering thread renders at.
-JNIEXPORT void JNICALL METHOD(nativeSetFrameSize)(JNIEnv *env, jclass clazz, jlong handle, jint width, jint height) {
+JNIEXPORT void JNICALL METHOD(setFrameSize)(JNIEnv *env, jclass clazz, jlong handle, jint width, jint height) {
     Surface *surface = (Surface *) handle;
     surface->width = width;
     surface->height = height;
@@ -483,7 +483,7 @@ JNIEXPORT void JNICALL METHOD(nativeSetFrameSize)(JNIEnv *env, jclass clazz, jlo
 }
 
 // The video's place in the frame: margins are negative where it is cropped.
-JNIEXPORT void JNICALL METHOD(nativeSetLayout)(
+JNIEXPORT void JNICALL METHOD(setLayout)(
         JNIEnv *env, jclass clazz, jlong handle, jint videoWidth, jint videoHeight,
         jint top, jint bottom, jint left, jint right, jboolean useMargins,
         jfloat fontScale, jdouble linePosition) {
@@ -503,7 +503,7 @@ static void use_font(Surface *surface, const char *path) {
 }
 
 // `override` is AssStyle's NONE, SCALE or FORCE.
-JNIEXPORT void JNICALL METHOD(nativeSetStyle)(
+JNIEXPORT void JNICALL METHOD(setStyle)(
         JNIEnv *env, jclass clazz, jlong handle, jint override, jint color, jint outlineColor,
         jint backColor, jdouble outlineSize, jint borderStyle, jboolean bold, jdouble shadowSize, jstring fontFile) {
     Surface *surface = (Surface *) handle;
@@ -545,7 +545,7 @@ JNIEXPORT void JNICALL METHOD(nativeSetStyle)(
 }
 
 // Renders the track at `timeMs` onto the end of the queue, which is to have room.
-JNIEXPORT void JNICALL METHOD(nativeQueue)(JNIEnv *env, jclass clazz, jlong handle, jlong track, jlong timeMs) {
+JNIEXPORT void JNICALL METHOD(queue)(JNIEnv *env, jclass clazz, jlong handle, jlong track, jlong timeMs) {
     Surface *surface = (Surface *) handle;
     int changed = 1;
     ASS_Image *images = track ? libass.render_frame(surface->renderer, (ASS_Track *) track, timeMs, &changed) : NULL;
@@ -567,7 +567,7 @@ JNIEXPORT void JNICALL METHOD(nativeQueue)(JNIEnv *env, jclass clazz, jlong hand
 }
 
 // Whether the queue holds fewer moments and pictures than these.
-JNIEXPORT jboolean JNICALL METHOD(nativeRoom)(JNIEnv *env, jclass clazz, jlong handle, jint moments, jlong bytes) {
+JNIEXPORT jboolean JNICALL METHOD(room)(JNIEnv *env, jclass clazz, jlong handle, jint moments, jlong bytes) {
     Surface *surface = (Surface *) handle;
     pthread_mutex_lock(&surface->lock);
     int room = surface->count < moments && surface->count < QUEUE_SIZE && surface->bytes < (size_t) bytes;
@@ -576,7 +576,7 @@ JNIEXPORT jboolean JNICALL METHOD(nativeRoom)(JNIEnv *env, jclass clazz, jlong h
 }
 
 // Drops the queued moments from `timeMs` on, whose subtitles changed.
-JNIEXPORT void JNICALL METHOD(nativeDropFrom)(JNIEnv *env, jclass clazz, jlong handle, jlong timeMs) {
+JNIEXPORT void JNICALL METHOD(dropFrom)(JNIEnv *env, jclass clazz, jlong handle, jlong timeMs) {
     Surface *surface = (Surface *) handle;
     pthread_mutex_lock(&surface->lock);
     drop_from(surface, timeMs);
@@ -586,7 +586,7 @@ JNIEXPORT void JNICALL METHOD(nativeDropFrom)(JNIEnv *env, jclass clazz, jlong h
 // Takes the queued moment for `timeMs` to show, dropping those before it: -1 when it isn't
 // queued, 1 when it differs from what shows, 0 when it doesn't. With `waitMs`, waits that long
 // for the moment to be queued.
-JNIEXPORT jint JNICALL METHOD(nativeTake)(JNIEnv *env, jclass clazz, jlong handle, jlong timeMs, jint waitMs) {
+JNIEXPORT jint JNICALL METHOD(take)(JNIEnv *env, jclass clazz, jlong handle, jlong timeMs, jint waitMs) {
     Surface *surface = (Surface *) handle;
     struct timespec until;
     clock_gettime(CLOCK_REALTIME, &until);
@@ -626,7 +626,7 @@ static int drawn_image(const Surface *surface, const ASS_Image *image) {
 
 // Blends the shown moment's images into the next buffer: with GL only their rectangle, otherwise
 // clearing only what changed.
-JNIEXPORT jboolean JNICALL METHOD(nativeDraw)(JNIEnv *env, jclass clazz, jlong handle) {
+JNIEXPORT jboolean JNICALL METHOD(draw)(JNIEnv *env, jclass clazz, jlong handle) {
     Surface *surface = (Surface *) handle;
     if (!surface->window) return JNI_FALSE;
     ASS_Image *images = surface->shown ? surface->shown->images : NULL;
@@ -697,7 +697,7 @@ JNIEXPORT jboolean JNICALL METHOD(nativeDraw)(JNIEnv *env, jclass clazz, jlong h
 }
 
 // Posts the drawn picture, with GL for the compositor to show at `atNanos`, or at once when 0.
-JNIEXPORT void JNICALL METHOD(nativePost)(JNIEnv *env, jclass clazz, jlong handle, jlong atNanos) {
+JNIEXPORT void JNICALL METHOD(post)(JNIEnv *env, jclass clazz, jlong handle, jlong atNanos) {
     Surface *surface = (Surface *) handle;
     if (!surface->pending) return;
     surface->pending = 0;
@@ -718,7 +718,7 @@ JNIEXPORT void JNICALL METHOD(nativePost)(JNIEnv *env, jclass clazz, jlong handl
 }
 
 // Once neither thread uses it any more.
-JNIEXPORT void JNICALL METHOD(nativeRelease)(JNIEnv *env, jclass clazz, jlong handle) {
+JNIEXPORT void JNICALL METHOD(release)(JNIEnv *env, jclass clazz, jlong handle) {
     Surface *surface = (Surface *) handle;
     stop_gl(surface);
     if (surface->window) ANativeWindow_release(surface->window);

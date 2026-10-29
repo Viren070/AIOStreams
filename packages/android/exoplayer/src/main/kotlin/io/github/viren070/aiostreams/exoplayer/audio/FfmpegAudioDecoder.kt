@@ -1,69 +1,18 @@
 package io.github.viren070.aiostreams.exoplayer.audio
 
-import android.os.Handler
 import androidx.annotation.OptIn
 import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.common.util.Util
-import androidx.media3.decoder.CryptoConfig
 import androidx.media3.decoder.DecoderException
 import androidx.media3.decoder.DecoderInputBuffer
 import androidx.media3.decoder.SimpleDecoder
 import androidx.media3.decoder.SimpleDecoderOutputBuffer
-import androidx.media3.exoplayer.audio.AudioRendererEventListener
-import androidx.media3.exoplayer.audio.AudioSink
-import androidx.media3.exoplayer.audio.DecoderAudioRenderer
 import `is`.xyz.mpv.AudioDecoder
 import java.nio.ByteBuffer
 
-/*
- * The sound the device can't decode, decoded by libmpv's FFmpeg. Adapted from
- * Media3's FFmpeg extension (Apache 2.0).
- */
-
-@OptIn(UnstableApi::class)
-internal class FfmpegAudioRenderer(handler: Handler?, listener: AudioRendererEventListener?, sink: AudioSink) :
-    DecoderAudioRenderer<FfmpegAudioDecoder>(handler, listener, sink) {
-    override fun getName() = "FfmpegAudioRenderer"
-
-    override fun supportsFormatInternal(format: Format): Int {
-        val mime = format.sampleMimeType
-        if (mime == null || !MimeTypes.isAudio(mime)) return C.FORMAT_UNSUPPORTED_TYPE
-        val codec = codecOf(mime)
-        return when {
-            codec == null || !AudioDecoder.has(codec) -> C.FORMAT_UNSUPPORTED_SUBTYPE
-            !sinkTakes(format, C.ENCODING_PCM_16BIT) && !sinkTakes(format, C.ENCODING_PCM_FLOAT) ->
-                C.FORMAT_UNSUPPORTED_SUBTYPE
-            format.cryptoType != C.CRYPTO_TYPE_NONE -> C.FORMAT_UNSUPPORTED_DRM
-            else -> C.FORMAT_HANDLED
-        }
-    }
-
-    override fun supportsMixedMimeTypeAdaptation() = ADAPTIVE_NOT_SEAMLESS
-
-    override fun createDecoder(format: Format, cryptoConfig: CryptoConfig?) = FfmpegAudioDecoder(format, outputsFloat(format))
-
-    override fun getOutputFormat(decoder: FfmpegAudioDecoder): Format = Format.Builder()
-        .setSampleMimeType(MimeTypes.AUDIO_RAW)
-        .setChannelCount(decoder.channels)
-        .setSampleRate(decoder.sampleRate)
-        .setPcmEncoding(decoder.encoding)
-        .build()
-
-    private fun sinkTakes(format: Format, encoding: Int) =
-        sinkSupportsFormat(Util.getPcmFormat(encoding, format.channelCount, format.sampleRate))
-
-    /** Float where the sink plays it as it is; AC-3 is 16-bit whatever the sink. */
-    private fun outputsFloat(format: Format): Boolean {
-        if (!sinkTakes(format, C.ENCODING_PCM_16BIT)) return true
-        val float = Util.getPcmFormat(C.ENCODING_PCM_FLOAT, format.channelCount, format.sampleRate)
-        return getSinkFormatSupport(float) == AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY &&
-            format.sampleMimeType != MimeTypes.AUDIO_AC3
-    }
-}
-
+/** Adapted from Media3's FFmpeg extension (Apache 2.0). */
 @OptIn(UnstableApi::class)
 internal class FfmpegAudioDecoder(format: Format, float: Boolean) :
     SimpleDecoder<DecoderInputBuffer, SimpleDecoderOutputBuffer, DecoderException>(
@@ -112,29 +61,29 @@ internal class FfmpegAudioDecoder(format: Format, float: Boolean) :
         decoder.close()
     }
 
-    private companion object {
-        const val BUFFERS = 16
-        const val INPUT_SIZE = 960 * 6
-    }
-}
+    companion object {
+        private const val BUFFERS = 16
+        private const val INPUT_SIZE = 960 * 6
 
-/** FFmpeg's decoder for a sound type. */
-private fun codecOf(mime: String) = when (mime) {
-    MimeTypes.AUDIO_AAC -> "aac"
-    MimeTypes.AUDIO_MPEG, MimeTypes.AUDIO_MPEG_L1, MimeTypes.AUDIO_MPEG_L2 -> "mp3"
-    MimeTypes.AUDIO_AC3 -> "ac3"
-    MimeTypes.AUDIO_E_AC3, MimeTypes.AUDIO_E_AC3_JOC -> "eac3"
-    MimeTypes.AUDIO_TRUEHD -> "truehd"
-    MimeTypes.AUDIO_DTS, MimeTypes.AUDIO_DTS_EXPRESS, MimeTypes.AUDIO_DTS_HD -> "dca"
-    MimeTypes.AUDIO_VORBIS -> "vorbis"
-    MimeTypes.AUDIO_OPUS -> "opus"
-    MimeTypes.AUDIO_AMR_NB -> "amrnb"
-    MimeTypes.AUDIO_AMR_WB -> "amrwb"
-    MimeTypes.AUDIO_FLAC -> "flac"
-    MimeTypes.AUDIO_ALAC -> "alac"
-    MimeTypes.AUDIO_MLAW -> "pcm_mulaw"
-    MimeTypes.AUDIO_ALAW -> "pcm_alaw"
-    else -> null
+        /** FFmpeg's decoder for a sound type. */
+        fun codecOf(mime: String) = when (mime) {
+            MimeTypes.AUDIO_AAC -> "aac"
+            MimeTypes.AUDIO_MPEG, MimeTypes.AUDIO_MPEG_L1, MimeTypes.AUDIO_MPEG_L2 -> "mp3"
+            MimeTypes.AUDIO_AC3 -> "ac3"
+            MimeTypes.AUDIO_E_AC3, MimeTypes.AUDIO_E_AC3_JOC -> "eac3"
+            MimeTypes.AUDIO_TRUEHD -> "truehd"
+            MimeTypes.AUDIO_DTS, MimeTypes.AUDIO_DTS_EXPRESS, MimeTypes.AUDIO_DTS_HD -> "dca"
+            MimeTypes.AUDIO_VORBIS -> "vorbis"
+            MimeTypes.AUDIO_OPUS -> "opus"
+            MimeTypes.AUDIO_AMR_NB -> "amrnb"
+            MimeTypes.AUDIO_AMR_WB -> "amrwb"
+            MimeTypes.AUDIO_FLAC -> "flac"
+            MimeTypes.AUDIO_ALAC -> "alac"
+            MimeTypes.AUDIO_MLAW -> "pcm_mulaw"
+            MimeTypes.AUDIO_ALAW -> "pcm_alaw"
+            else -> null
+        }
+    }
 }
 
 /** The setup FFmpeg's decoder takes from the container, in its own shape. */

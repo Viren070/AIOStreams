@@ -2,7 +2,6 @@ package io.github.viren070.aiostreams.exoplayer.subtitles.ass
 
 import android.content.Context
 import android.graphics.PixelFormat
-import android.graphics.Rect
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.SystemClock
@@ -10,13 +9,10 @@ import android.util.Log
 import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.SurfaceView
-import androidx.annotation.OptIn
-import androidx.media3.common.C
-import androidx.media3.common.util.UnstableApi
 import io.github.viren070.aiostreams.exoplayer.subtitles.AssSink
-import io.github.viren070.aiostreams.exoplayer.subtitles.AssText
 import io.github.viren070.aiostreams.exoplayer.subtitles.FontFile
 import io.github.viren070.aiostreams.exoplayer.subtitles.SampleParser
+import io.github.viren070.aiostreams.exoplayer.subtitles.SubtitleStyle
 import io.github.viren070.aiostreams.exoplayer.subtitles.TextSink
 import io.github.viren070.aiostreams.exoplayer.video.VideoFrames
 import java.io.File
@@ -27,42 +23,12 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
-import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
-/** Where the video sits on the stage, and the page's `sub-*` options for ASS. */
-internal data class AssLayout(
-    val stageWidth: Int = 0,
-    val stageHeight: Int = 0,
-    val video: Rect = Rect(),
-    val videoWidth: Int = 0,
-    val videoHeight: Int = 0,
-    val scale: Double = 1.0,
-    /** mpv's `sub-pos`. */
-    val position: Double = 100.0,
-    val forceMargins: Boolean = false,
-    val style: AssStyle = AssStyle(),
-)
-
-/** mpv's `sub-ass-override`, and the look it forces on dialogue. Colours are ASS's RGBA. */
-internal data class AssStyle(
-    val override: Int = SCALE,
-    val color: Int = 0xFFFFFF00.toInt(),
-    val outlineColor: Int = 0x00000000,
-    val backColor: Int = 0x00000050,
-    val outlineSize: Double = 1.65,
-    val borderStyle: Int = 1,
-    val bold: Boolean = false,
-    val shadowSize: Double = 0.0,
-    /** Drawn in place of the bundled font where the style is forced; null keeps it. */
-    val fontFile: String? = null,
-) {
-    companion object {
-        const val NONE = 0
-        const val SCALE = 1
-        const val FORCE = 2
-    }
+/** A line for libass: its start and duration, and its event as Matroska carries ASS. */
+internal class AssLine(val startMs: Long, val durationMs: Long, val bytes: ByteArray) {
+    val endMs get() = startMs + durationMs
 }
 
 /**
@@ -73,7 +39,6 @@ internal data class AssStyle(
  * shows each frame's moment. The file's reader only queues what it finds for
  * libass's thread.
  */
-@OptIn(UnstableApi::class)
 internal class AssSurface(context: Context, private val frames: VideoFrames, font: () -> File) : SurfaceHolder.Callback {
     val view = SurfaceView(context).apply {
         setZOrderMediaOverlay(true)
@@ -88,19 +53,14 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
     private val queued = ConcurrentLinkedQueue<Runnable>()
     private val scheduled = AtomicBoolean(false)
     private val stepping = AtomicBoolean(false)
-    private val frameCount = AtomicLong()
-    private val late = AtomicLong()
-    private val missed = AtomicLong()
-    private val skipped = AtomicLong()
-    private val renders = Timings()
-    private val blends = Timings()
+    private val counts = Counts()
 
     /** Counts files, so a file's reader can't reach the next one's tracks. */
     @Volatile
     private var file = 0
 
     @Volatile
-    private var native = 0L
+    private var handle = 0L
 
     /** The video frame showing, and when the screen shows it. */
     @Volatile
@@ -127,29 +87,23 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
     // Touched on libass's thread only.
     private val tracks = HashMap<String, Long>()
     private val scripts = HashSet<String>()
-    private var shown: String? = null
 
     /** Tracks made from text, which take the user's look whole. */
     private val converted = HashSet<String>()
-    private val parsers = HashMap<String, SampleParser>()
-    private val readOrders = HashMap<String, Int>()
-    private val seen = HashMap<String, HashSet<String>>()
-
-    /** The style the renderer has; null for a new renderer. */
-    private var styled: Pair<AssStyle, Boolean>? = null
-
-    private var movedAt = 0L
+    private val textTracks = HashMap<String, AssTextTrack>()
 
     /** Each file track's latest lines, which libass gets once the track shows; it holds only the shown one's. */
-    private val recent = HashMap<String, ArrayDeque<Line>>()
-
-    /** The file's fonts, those libass has, and the names each track's styles and lines ask for. */
-    private var fonts: List<FontFile> = emptyList()
-    private val given = HashSet<File>()
-    private val wanted = HashMap<String, MutableSet<String>>()
+    private val recent = HashMap<String, ArrayDeque<AssLine>>()
+    private val fonts = AssFonts()
+    private var shown: String? = null
     private var width = 0
     private var height = 0
-    private var layout = AssLayout()
+    private var stage = StageLayout()
+    private var style = SubtitleStyle()
+
+    /** The style libass has; null for a new renderer. */
+    private var styled: AssStyle? = null
+    private var movedAt = 0L
 
     /** The last video frame rendered ahead, and the most the moments ahead may take. */
     private var aheadUs = Long.MIN_VALUE
@@ -167,8 +121,8 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
 
     init {
         worker.post {
-            native = nativeCreate(font().path)
-            if (native == 0L) Log.e(TAG, "libass.so can't be loaded")
+            handle = AssNative.create(font().path)
+            if (handle == 0L) Log.e(TAG, "libass.so can't be loaded")
             // The surface may have come first.
             shower.post(::attachWindow)
         }
@@ -179,20 +133,20 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
         val opened = file
         return object : AssSink {
             override fun fonts(fonts: List<FontFile>) = queue(opened) {
-                this@AssSurface.fonts = fonts
+                this@AssSurface.fonts.found(fonts)
                 if (giveFonts()) stale = true
             }
 
             override fun header(track: String, header: ByteArray) = queue(opened) {
-                tracks.getOrPut(track) { nativeNewTrack(native, header) }
-                wanted.getOrPut(track) { HashSet() } += styleFonts(header)
+                tracks.getOrPut(track) { AssNative.newTrack(handle, header) }
+                fonts.header(track, header)
                 if (track == shown && giveFonts()) stale = true
             }
 
             override fun line(track: String, startMs: Long, durationMs: Long, line: ByteArray) = queue(opened) {
-                addLine(track, Line(startMs, durationMs, line))
+                addLine(track, AssLine(startMs, durationMs, line))
                 // What's rendered from the line's start went in linesFrom(), so its own fonts need no wipe.
-                if (overrideFonts(line, wanted.getOrPut(track) { HashSet() }) && track == shown) giveFonts()
+                if (fonts.line(track, line) && track == shown) giveFonts()
             }
         }
     }
@@ -202,8 +156,8 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
         val opened = file
         return object : TextSink {
             override fun track(track: String, parser: SampleParser) = queue(opened) {
-                tracks.getOrPut(track) { nativeNewTrack(native, AssText.header) }
-                parsers[track] = parser
+                tracks.getOrPut(track) { AssNative.newTrack(handle, AssText.header) }
+                textTracks.getOrPut(track) { AssTextTrack(parser) }.parser = parser
                 // Picked before the reader reached it, it showed without the forced look.
                 if (converted.add(track) && track == shown) {
                     applyLayout()
@@ -212,30 +166,10 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
             }
 
             override fun sample(track: String, timeUs: Long, data: ByteArray) = queue(opened) {
-                val parser = parsers[track] ?: return@queue
-                val seen = seen.getOrPut(track) { HashSet() }
-                runCatching { parser.parse(timeUs, data) { cues ->
-                    if (cues.durationUs == C.TIME_UNSET) return@parse
-                    val startMs = cues.startTimeUs / 1000
-                    val durationMs = cues.durationUs / 1000
-                    for (event in AssText.events(cues.cues)) {
-                        // Reading a stretch again after a seek gives the same lines again.
-                        if (!seen.add("$startMs $durationMs $event")) continue
-                        val order = readOrders.merge(track, 1, Int::plus)!!
-                        addLine(track, Line(startMs, durationMs, "$order,$event".toByteArray()))
-                    }
-                } }.onFailure { Log.w(TAG, "couldn't read a subtitle line", it) }
+                val text = textTracks[track] ?: return@queue
+                runCatching { text.read(timeUs, data) { addLine(track, it) } }
+                    .onFailure { Log.w(TAG, "couldn't read a subtitle line", it) }
             }
-        }
-    }
-
-    private fun addLine(track: String, line: Line) {
-        val lines = recent.getOrPut(track) { ArrayDeque() }
-        lines += line
-        while (lines.isNotEmpty() && lines.first().endMs < frameUs / 1000 - KEPT_MS) lines.removeFirst()
-        if (track == shown) tracks[track]?.let {
-            nativeAddLine(it, line.bytes, line.startMs, line.durationMs)
-            linesFrom(line.startMs)
         }
     }
 
@@ -247,15 +181,11 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
         atNanos = 0
         queue {
             freeTracks()
-            nativeClearFonts(native)
+            AssNative.clearFonts(handle)
             styled = null
             recent.clear()
-            fonts = emptyList()
-            given.clear()
-            wanted.clear()
-            parsers.clear()
-            readOrders.clear()
-            seen.clear()
+            fonts.clear()
+            textTracks.clear()
             shown = null
             applyLayout()
             stale = true
@@ -264,8 +194,8 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
 
     /** A whole script from outside the file, which [select] shows as `key`; `converted` from text. */
     fun addScript(key: String, script: ByteArray, converted: Boolean) = queue {
-        tracks.remove(key)?.let(::nativeFreeTrack)
-        tracks[key] = nativeReadScript(native, script)
+        tracks.remove(key)?.let(AssNative::freeTrack)
+        tracks[key] = AssNative.readScript(handle, script)
         scripts += key
         if (converted) this.converted += key else this.converted -= key
         if (key == shown) {
@@ -276,7 +206,7 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
 
     fun removeScript(key: String) = queue {
         if (shown == key) shown = null
-        tracks.remove(key)?.let(::nativeFreeTrack)
+        tracks.remove(key)?.let(AssNative::freeTrack)
         scripts -= key
         converted -= key
         stale = true
@@ -285,8 +215,8 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
     /** Shows the file's track or the script with `key`, or nothing. */
     fun select(key: String?) = queue {
         if (key != shown) {
-            shown?.takeIf { it !in scripts }?.let(tracks::get)?.let(::nativeFlushTrack)
-            tracks[key]?.let { track -> recent[key]?.forEach { nativeAddLine(track, it.bytes, it.startMs, it.durationMs) } }
+            shown?.takeIf { it !in scripts }?.let(tracks::get)?.let(AssNative::flushTrack)
+            tracks[key]?.let { track -> recent[key]?.forEach { AssNative.addLine(track, it.bytes, it.startMs, it.durationMs) } }
         }
         val restyle = (key in converted) != (shown in converted)
         shown = key
@@ -296,15 +226,33 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
 
     /** Megabytes of drawn subtitles libass keeps, 0 for its own limit; what's rendered ahead keeps half as many. */
     fun setCacheLimit(mb: Int) = queue {
-        nativeSetCacheLimit(native, mb)
+        AssNative.setCacheLimit(handle, mb)
         aheadBytes = if (mb > 0) (mb.toLong() shl 20) / 2 else AHEAD_BYTES
+    }
+
+    fun setStage(stage: StageLayout) = queue {
+        this.stage = stage
+        applyLayout()
+        stale = true
+    }
+
+    fun setStyle(style: SubtitleStyle) = queue {
+        // Lifted above the page's controls, the position changes every display frame.
+        if (style.looksLike(this.style)) {
+            movedAt = SystemClock.uptimeMillis()
+            worker.removeCallbacks(settled)
+            worker.postDelayed(settled, SETTLE_MS)
+        }
+        this.style = style
+        applyLayout()
+        stale = true
     }
 
     /** Shows the subtitles for the video frame at `frameUs`, which the screen shows at `atNanos`. */
     fun render(frameUs: Long, atNanos: Long) {
         this.frameUs = frameUs
         this.atNanos = atNanos
-        frameCount.incrementAndGet()
+        counts.frames.incrementAndGet()
         frames.trim(frameUs - KEPT_FRAMES_US)
         if (active && scheduled.compareAndSet(false, true)) shower.post(show)
     }
@@ -315,28 +263,7 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
         queue { stale = true }
     }
 
-    fun setLayout(layout: AssLayout) = queue {
-        // Lifted above the page's controls, the position changes every display frame.
-        if (layout.copy(position = this.layout.position) == this.layout) {
-            movedAt = SystemClock.uptimeMillis()
-            worker.removeCallbacks(settled)
-            worker.postDelayed(settled, SETTLE_MS)
-        }
-        this.layout = layout
-        applyLayout()
-        stale = true
-    }
-
-    private val settled = Runnable { step() }
-
-    fun stats() = buildJsonObject {
-        put("subtitleFrames", frameCount.get())
-        put("latePosts", late.get())
-        put("missedMoments", missed.get())
-        put("skippedMoments", skipped.get())
-        for ((key, value) in renders.stats()) put(key, value)
-        for ((key, value) in blends.stats()) put("blend" + key.replaceFirstChar(Char::uppercase), value)
-    }
+    fun stats() = counts.stats()
 
     override fun surfaceCreated(holder: SurfaceHolder) {}
 
@@ -354,7 +281,7 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
         queue {
             this.width = scaledWidth
             this.height = scaledHeight
-            nativeSetFrameSize(native, scaledWidth, scaledHeight)
+            AssNative.setFrameSize(handle, scaledWidth, scaledHeight)
             applyLayout()
             stale = true
         }
@@ -365,7 +292,7 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
         val done = CountDownLatch(1)
         shower.post {
             window = null
-            if (native != 0L) nativeSetWindow(native, null, 0, 0)
+            if (handle != 0L) AssNative.setWindow(handle, null, 0, 0)
             done.countDown()
         }
         done.await(2, TimeUnit.SECONDS)
@@ -373,21 +300,21 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
 
     fun release() {
         shower.post {
-            if (native != 0L) nativeSetWindow(native, null, 0, 0)
+            if (handle != 0L) AssNative.setWindow(handle, null, 0, 0)
             showing.quitSafely()
         }
         worker.post {
             showing.join()
             freeTracks()
-            nativeRelease(native)
-            native = 0L
+            AssNative.release(handle)
+            handle = 0L
             rendering.quitSafely()
         }
     }
 
     private fun attachWindow() {
-        if (native == 0L || window == null) return
-        nativeSetWindow(native, window, windowWidth, windowHeight)
+        if (handle == 0L || window == null) return
+        AssNative.setWindow(handle, window, windowWidth, windowHeight)
         mustDraw = true
     }
 
@@ -398,8 +325,18 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
         step(front = false)
     }
 
+    private fun addLine(track: String, line: AssLine) {
+        val lines = recent.getOrPut(track) { ArrayDeque() }
+        lines += line
+        while (lines.isNotEmpty() && lines.first().endMs < frameUs / 1000 - KEPT_MS) lines.removeFirst()
+        if (track == shown) tracks[track]?.let {
+            AssNative.addLine(it, line.bytes, line.startMs, line.durationMs)
+            linesFrom(line.startMs)
+        }
+    }
+
     private fun freeTracks() {
-        tracks.values.forEach(::nativeFreeTrack)
+        tracks.values.forEach(AssNative::freeTrack)
         tracks.clear()
         scripts.clear()
         converted.clear()
@@ -407,15 +344,13 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
 
     /** Hands libass the fonts the shown track asks for; true when it had new ones. */
     private fun giveFonts(): Boolean {
-        val names = shown?.let(wanted::get) ?: return false
-        val giving = fonts.filter { font -> font.file !in given && font.names?.any(names::contains) != false }
+        val giving = fonts.take(shown)
         if (giving.isEmpty()) return false
         for (font in giving) {
-            runCatching { nativeAddFont(native, font.file.name, font.file.readBytes()) }
+            runCatching { AssNative.addFont(handle, font.file.name, font.file.readBytes()) }
                 .onFailure { Log.w(TAG, "couldn't read ${font.file.name}", it) }
-            given += font.file
         }
-        nativeReloadFonts(native)
+        AssNative.reloadFonts(handle)
         styled = null
         applyLayout()
         return true
@@ -427,12 +362,24 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
             stale = true
             return
         }
-        nativeDropFrom(native, startMs)
+        AssNative.dropFrom(handle, startMs)
         aheadUs = minOf(aheadUs, startMs * 1000 + delayUs - 1)
     }
 
-    private fun apply() {
-        while (true) queued.poll()?.run() ?: return
+    private fun applyLayout() {
+        if (handle == 0L || stage.width == 0 || width == 0) return
+        val layout = AssLayout(stage, style, width, height, converted = shown in converted)
+        AssNative.setLayout(
+            handle, stage.videoWidth, stage.videoHeight, layout.top, layout.bottom, layout.left, layout.right,
+            layout.useMargins, layout.fontScale, layout.linePosition,
+        )
+        val style = layout.assStyle
+        if (styled == style) return
+        styled = style
+        AssNative.setStyle(
+            handle, style.override, style.color, style.outlineColor, style.backColor,
+            style.outlineSize, style.borderStyle, style.bold, style.shadowSize, style.fontFile,
+        )
     }
 
     private val ahead = Runnable {
@@ -441,6 +388,8 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
     }
 
     private val asap = Runnable { step() }
+
+    private val settled = Runnable { step() }
 
     /** Runs [step] on libass's thread soon, or before its other work when the showing thread waits. */
     private fun step(front: Boolean) {
@@ -453,14 +402,14 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
      * the next frame's ahead if the queue has room.
      */
     private fun step() {
-        if (native == 0L) return
-        apply()
+        if (handle == 0L) return
+        while (true) queued.poll()?.run() ?: break
         val track = shown?.let(tracks::get) ?: 0L
         active = track != 0L
         val nowUs = frameUs
         if (stale) {
             stale = false
-            nativeDropFrom(native, Long.MIN_VALUE)
+            AssNative.dropFrom(handle, Long.MIN_VALUE)
             aheadUs = Long.MIN_VALUE
             queueMoment(track, momentMs(nowUs))
             shower.post { show(force = true) }
@@ -473,7 +422,7 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
         }
         // Moments rendered ahead would be thrown away at the next position.
         if (SystemClock.uptimeMillis() - movedAt < SETTLE_MS) return
-        if (track == 0L || !nativeRoom(native, AHEAD_MOMENTS, aheadBytes)) return
+        if (track == 0L || !AssNative.room(handle, AHEAD_MOMENTS, aheadBytes)) return
         // Behind, from the frame showing, which the showing thread may not have taken yet.
         val next = frames.after(maxOf(aheadUs, nowUs - 1)) ?: return
         if (next - nowUs > AHEAD_US) return
@@ -484,8 +433,8 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
 
     private fun queueMoment(track: Long, ms: Long) {
         val start = System.nanoTime()
-        nativeQueue(native, track, ms)
-        renders.add(System.nanoTime() - start)
+        AssNative.queue(handle, track, ms)
+        counts.renders.add(System.nanoTime() - start)
     }
 
     private fun momentMs(videoUs: Long) = (videoUs - delayUs) / 1000
@@ -497,20 +446,20 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
 
     /** Shows the moment of the frame showing, rendered ahead or asked for now. */
     private fun show(force: Boolean) {
-        if (native == 0L || window == null) return
+        if (handle == 0L || window == null) return
         val ms = momentMs(frameUs)
         // Tunneled, the frame showing comes from the clock, on every refresh.
         if (ms == shownMs && !force && !mustDraw) return
-        var taken = nativeTake(native, ms, 0)
+        var taken = AssNative.take(handle, ms, 0)
         if (taken < 0) {
-            missed.incrementAndGet()
+            counts.missed.incrementAndGet()
             asked.set(ms)
             step(front = true)
-            taken = nativeTake(native, ms, ASK_WAIT_MS)
+            taken = AssNative.take(handle, ms, ASK_WAIT_MS)
             // Rendered ahead meanwhile, it needn't be again.
             asked.compareAndSet(ms, NONE)
             if (taken < 0) {
-                skipped.incrementAndGet()
+                counts.skipped.incrementAndGet()
                 return
             }
         }
@@ -521,57 +470,40 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
         // Something other than time changed: held for the next video frame, a slide would move by frames.
         val at = if (force) 0L else atNanos
         val start = System.nanoTime()
-        if (!nativeDraw(native)) return
+        if (!AssNative.draw(handle)) return
         val now = System.nanoTime()
-        blends.add(now - start)
-        if (nativeStamped(native)) {
+        counts.blends.add(now - start)
+        if (AssNative.stamped(handle)) {
             // The compositor holds it for the video frame's time.
-            if (at != 0L && now > at) late.incrementAndGet()
+            if (at != 0L && now > at) counts.late.incrementAndGet()
         } else {
             // Posted a refresh ahead of the video frame, so both show together.
             val wait = at - now - REFRESH_NANOS
             if (wait > 0) SystemClock.sleep(wait / 1_000_000)
-            else if (at != 0L && wait < -REFRESH_NANOS) late.incrementAndGet()
+            else if (at != 0L && wait < -REFRESH_NANOS) counts.late.incrementAndGet()
         }
-        nativePost(native, at)
+        AssNative.post(handle, at)
     }
 
-    // mpv's configure_ass(): its own options reach ASS only as far as the override allows.
-    private fun applyLayout() {
-        val stage = layout
-        if (native == 0L || stage.stageWidth == 0 || width == 0) return
-        val sx = width.toDouble() / stage.stageWidth
-        val sy = height.toDouble() / stage.stageHeight
-        val style = stage.style
-        val force = style.override == AssStyle.FORCE || shown in converted
-        val useMargins = force || stage.forceMargins
-        var fontScale = if (style.override == AssStyle.NONE && !force) 1.0 else stage.scale
-        if (force) {
-            // Sized to the screen rather than the video, as mpv's sub-scale-with-window does.
-            val videoWidth = stage.video.width() * sx
-            val videoHeight = stage.video.height() * sy
-            if (videoWidth >= 1) fontScale *= height / minOf(height.toDouble(), width / videoWidth * videoHeight)
+    private class Counts {
+        val frames = AtomicLong()
+        val late = AtomicLong()
+        val missed = AtomicLong()
+        val skipped = AtomicLong()
+        val renders = Timings()
+        val blends = Timings()
+
+        fun stats() = buildJsonObject {
+            put("subtitleFrames", frames.get())
+            put("latePosts", late.get())
+            put("missedMoments", missed.get())
+            put("skippedMoments", skipped.get())
+            for ((key, value) in renders.stats()) put(key, value)
+            for ((key, value) in blends.stats()) put("blend" + key.replaceFirstChar(Char::uppercase), value)
         }
-        nativeSetLayout(
-            native, stage.videoWidth, stage.videoHeight,
-            (stage.video.top * sy).roundToInt(), ((stage.stageHeight - stage.video.bottom) * sy).roundToInt(),
-            (stage.video.left * sx).roundToInt(), ((stage.stageWidth - stage.video.right) * sx).roundToInt(),
-            useMargins, fontScale.toFloat(), if (style.override == AssStyle.NONE && !force) 0.0 else 100 - stage.position,
-        )
-        if (styled == style to force) return
-        styled = style to force
-        nativeSetStyle(
-            native, if (force) AssStyle.FORCE else style.override, style.color, style.outlineColor, style.backColor,
-            style.outlineSize, style.borderStyle, style.bold, style.shadowSize,
-            style.fontFile.takeIf { force },
-        )
     }
 
     private companion object {
-        init {
-            System.loadLibrary("aiostreams_ass")
-        }
-
         const val TAG = "ass"
         const val NONE = Long.MIN_VALUE
 
@@ -595,144 +527,5 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
 
         /** Lines a track keeps from before the playhead, for one it shows later; signs can stay up a while. */
         const val KEPT_MS = 30_000L
-
-        @JvmStatic
-        external fun nativeCreate(font: String): Long
-
-        @JvmStatic
-        external fun nativeAddFont(handle: Long, name: String, data: ByteArray)
-
-        @JvmStatic
-        external fun nativeClearFonts(handle: Long)
-
-        @JvmStatic
-        external fun nativeReloadFonts(handle: Long)
-
-        @JvmStatic
-        external fun nativeNewTrack(handle: Long, header: ByteArray): Long
-
-        @JvmStatic
-        external fun nativeReadScript(handle: Long, script: ByteArray): Long
-
-        @JvmStatic
-        external fun nativeAddLine(track: Long, line: ByteArray, startMs: Long, durationMs: Long)
-
-        @JvmStatic
-        external fun nativeFreeTrack(track: Long)
-
-        @JvmStatic
-        external fun nativeFlushTrack(track: Long)
-
-        @JvmStatic
-        external fun nativeSetCacheLimit(handle: Long, mb: Int)
-
-        @JvmStatic
-        external fun nativeSetWindow(handle: Long, surface: Surface?, width: Int, height: Int)
-
-        @JvmStatic
-        external fun nativeSetFrameSize(handle: Long, width: Int, height: Int)
-
-        @JvmStatic
-        external fun nativeSetLayout(
-            handle: Long, videoWidth: Int, videoHeight: Int, top: Int, bottom: Int, left: Int, right: Int,
-            useMargins: Boolean, fontScale: Float, linePosition: Double,
-        )
-
-        @JvmStatic
-        external fun nativeSetStyle(
-            handle: Long, override: Int, color: Int, outlineColor: Int, backColor: Int,
-            outlineSize: Double, borderStyle: Int, bold: Boolean, shadowSize: Double, fontFile: String?,
-        )
-
-        @JvmStatic
-        external fun nativeQueue(handle: Long, track: Long, timeMs: Long)
-
-        @JvmStatic
-        external fun nativeRoom(handle: Long, moments: Int, bytes: Long): Boolean
-
-        @JvmStatic
-        external fun nativeDropFrom(handle: Long, timeMs: Long)
-
-        @JvmStatic
-        external fun nativeTake(handle: Long, timeMs: Long, waitMs: Int): Int
-
-        @JvmStatic
-        external fun nativeDraw(handle: Long): Boolean
-
-        @JvmStatic
-        external fun nativeStamped(handle: Long): Boolean
-
-        @JvmStatic
-        external fun nativePost(handle: Long, atNanos: Long)
-
-        @JvmStatic
-        external fun nativeRelease(handle: Long)
-    }
-}
-
-private class Line(val startMs: Long, val durationMs: Long, val bytes: ByteArray) {
-    val endMs get() = startMs + durationMs
-}
-
-private fun styleFonts(header: ByteArray): Set<String> {
-    val names = HashSet<String>()
-    var styles = false
-    var column = 1
-    for (raw in String(header, Charsets.UTF_8).lineSequence()) {
-        val line = raw.trim()
-        when {
-            line.startsWith("[") -> styles = line.contains("Styles", ignoreCase = true)
-            !styles -> {}
-            line.startsWith("Format:") -> column = line.substringAfter(':').split(',').indexOfFirst { it.trim().equals("Fontname", ignoreCase = true) }.coerceAtLeast(0)
-            line.startsWith("Style:") -> line.substringAfter(':').split(',').getOrNull(column)?.let(::fontKey)?.takeIf { it.isNotEmpty() }?.let(names::add)
-        }
-    }
-    return names
-}
-
-/** Adds the fonts a line's `\fn` tags name; true when one was new. */
-private fun overrideFonts(line: ByteArray, names: MutableSet<String>): Boolean {
-    var added = false
-    var i = 0
-    while (i + 3 <= line.size) {
-        if (line[i] != BACKSLASH || line[i + 1] != 'f'.code.toByte() || line[i + 2] != 'n'.code.toByte()) {
-            i++
-            continue
-        }
-        var end = i + 3
-        while (end < line.size && line[end] != BACKSLASH && line[end] != '}'.code.toByte()) end++
-        val name = fontKey(String(line, i + 3, end - i - 3, Charsets.UTF_8))
-        if (name.isNotEmpty() && names.add(name)) added = true
-        i = end
-    }
-    return added
-}
-
-private const val BACKSLASH = '\\'.code.toByte()
-
-/** How long renders took, kept for the last few thousand. */
-internal class Timings {
-    private val samples = LongArray(4096)
-    private var count = 0
-
-    @Synchronized
-    fun add(nanos: Long) {
-        samples[count % samples.size] = nanos
-        count++
-    }
-
-    @Synchronized
-    fun stats(): JsonObject {
-        val kept = samples.copyOf(minOf(count, samples.size)).sorted()
-        fun ms(nanos: Long) = nanos / 1e6
-        return buildJsonObject {
-            put("renders", count)
-            if (kept.isNotEmpty()) {
-                put("renderMedianMs", ms(kept[kept.size / 2]))
-                put("renderP95Ms", ms(kept[(kept.size * 95 / 100).coerceAtMost(kept.size - 1)]))
-                put("renderMaxMs", ms(kept.last()))
-                put("renderMeanMs", ms(kept.sum() / kept.size))
-            }
-        }
     }
 }

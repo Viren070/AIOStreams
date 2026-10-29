@@ -13,12 +13,12 @@ import androidx.media3.exoplayer.mediacodec.MediaCodecAdapter
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 
 /**
- * Media3's audio renderer, decoding Opus and Vorbis from just before a seek's
- * position rather than from the video's keyframe: Media3 skips the earlier
- * samples only for formats whose every sample decodes alone.
+ * Media3's renderer for the device's own audio decoders. Opus and Vorbis decode
+ * from just before a seek's position rather than from the video's keyframe:
+ * Media3 skips the earlier samples only for formats whose every sample decodes alone.
  */
 @OptIn(UnstableApi::class)
-internal class SeekAudioRenderer(
+internal class DeviceAudioRenderer(
     context: Context,
     codecAdapterFactory: MediaCodecAdapter.Factory,
     codecSelector: MediaCodecSelector,

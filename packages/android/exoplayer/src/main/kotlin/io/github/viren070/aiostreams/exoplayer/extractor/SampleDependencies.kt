@@ -9,78 +9,64 @@ import androidx.media3.common.util.ParsableByteArray
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.container.NalUnitUtil
 import androidx.media3.extractor.ExtractorInput
-import androidx.media3.extractor.ExtractorOutput
 import androidx.media3.extractor.TrackOutput
 
 /**
  * Marks the Matroska H.264 and H.265 frames no other frame decodes from, which
- * Media3 skips rather than decodes on its way to a seek's exact frame.
+ * Media3 skips rather than decodes on its way to a seek's exact frame. The
+ * extractor writes a start code before each NAL unit, whose header follows.
  */
 @OptIn(UnstableApi::class)
-internal class SampleDependencies(private val output: ExtractorOutput) : ExtractorOutput by output {
-    override fun track(id: Int, type: Int): TrackOutput {
-        val track = output.track(id, type)
-        return if (type == C.TRACK_TYPE_VIDEO) Track(track) else track
+internal class SampleDependencies(track: TrackOutput) : FilteringTrackOutput(track) {
+    private var format: Format? = null
+    private var headerBytes = 0
+    private val header = ByteArray(2)
+    private var atUnit = false
+    private var units = 0
+    private var dependedOn = false
+
+    override fun format(format: Format) {
+        this.format = withSubLayers(format)
+        headerBytes = NalUnitUtil.numberOfBytesInNalUnitHeader(format)
+        track.format(format)
     }
 
-    /** The extractor writes a start code before each NAL unit, whose header follows. */
-    private class Track(private val track: TrackOutput) : TrackOutput by track {
-        private var format: Format? = null
-        private var headerBytes = 0
-        private val header = ByteArray(2)
-        private var atUnit = false
-        private var units = 0
-        private var dependedOn = false
-
-        override fun format(format: Format) {
-            this.format = withSubLayers(format)
-            headerBytes = NalUnitUtil.numberOfBytesInNalUnitHeader(format)
-            track.format(format)
-        }
-
-        override fun sampleData(input: DataReader, length: Int, allowEndOfInput: Boolean) =
-            sampleData(input, length, allowEndOfInput, TrackOutput.SAMPLE_DATA_PART_MAIN)
-
-        override fun sampleData(input: DataReader, length: Int, allowEndOfInput: Boolean, sampleDataPart: Int): Int {
-            if (atUnit) {
-                atUnit = false
-                val read = input is ExtractorInput && length >= headerBytes && input.peekFully(header, 0, headerBytes, true)
-                if (read) (input as ExtractorInput).resetPeekPosition()
-                unit(read && !NalUnitUtil.isDependedOn(header, 0, headerBytes, format!!))
-            }
-            return track.sampleData(input, length, allowEndOfInput, sampleDataPart)
-        }
-
-        override fun sampleData(data: ParsableByteArray, length: Int) =
-            sampleData(data, length, TrackOutput.SAMPLE_DATA_PART_MAIN)
-
-        override fun sampleData(data: ParsableByteArray, length: Int, sampleDataPart: Int) {
-            when {
-                atUnit -> {
-                    atUnit = false
-                    unit(length >= headerBytes && !NalUnitUtil.isDependedOn(data.data, data.position, headerBytes, format!!))
-                }
-                headerBytes > 0 && length == START_CODE.size && data.startsWithStartCode() -> atUnit = true
-            }
-            track.sampleData(data, length, sampleDataPart)
-        }
-
-        override fun sampleMetadata(timeUs: Long, flags: Int, size: Int, offset: Int, cryptoData: TrackOutput.CryptoData?) {
-            val skippable = units > 0 && !dependedOn && offset == 0 && flags and C.BUFFER_FLAG_KEY_FRAME == 0
-            track.sampleMetadata(timeUs, if (skippable) flags or C.BUFFER_FLAG_NOT_DEPENDED_ON else flags, size, offset, cryptoData)
-            units = 0
-            dependedOn = false
+    override fun sampleData(input: DataReader, length: Int, allowEndOfInput: Boolean, sampleDataPart: Int): Int {
+        if (atUnit) {
             atUnit = false
+            val read = input is ExtractorInput && length >= headerBytes && input.peekFully(header, 0, headerBytes, true)
+            if (read) (input as ExtractorInput).resetPeekPosition()
+            unit(read && !NalUnitUtil.isDependedOn(header, 0, headerBytes, format!!))
         }
-
-        private fun unit(skippable: Boolean) {
-            units++
-            if (!skippable) dependedOn = true
-        }
-
-        private fun ParsableByteArray.startsWithStartCode() =
-            bytesLeft() >= START_CODE.size && START_CODE.indices.all { data[position + it] == START_CODE[it] }
+        return track.sampleData(input, length, allowEndOfInput, sampleDataPart)
     }
+
+    override fun sampleData(data: ParsableByteArray, length: Int, sampleDataPart: Int) {
+        when {
+            atUnit -> {
+                atUnit = false
+                unit(length >= headerBytes && !NalUnitUtil.isDependedOn(data.data, data.position, headerBytes, format!!))
+            }
+            headerBytes > 0 && length == START_CODE.size && data.startsWithStartCode() -> atUnit = true
+        }
+        track.sampleData(data, length, sampleDataPart)
+    }
+
+    override fun sampleMetadata(timeUs: Long, flags: Int, size: Int, offset: Int, cryptoData: TrackOutput.CryptoData?) {
+        val skippable = units > 0 && !dependedOn && offset == 0 && flags and C.BUFFER_FLAG_KEY_FRAME == 0
+        track.sampleMetadata(timeUs, if (skippable) flags or C.BUFFER_FLAG_NOT_DEPENDED_ON else flags, size, offset, cryptoData)
+        units = 0
+        dependedOn = false
+        atUnit = false
+    }
+
+    private fun unit(skippable: Boolean) {
+        units++
+        if (!skippable) dependedOn = true
+    }
+
+    private fun ParsableByteArray.startsWithStartCode() =
+        bytesLeft() >= START_CODE.size && START_CODE.indices.all { data[position + it] == START_CODE[it] }
 
     private companion object {
         val START_CODE = NalUnitUtil.NAL_START_CODE
