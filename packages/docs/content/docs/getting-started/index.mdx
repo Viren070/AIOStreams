@@ -1,79 +1,92 @@
 ---
 title: Introduction
-description: An overview of AIOStreams and how to get started.
+description: What AIOStreams is, the ideas behind it, and how to get started.
 ---
 
-AIOStreams is a single Stremio addon that sits in front of every source you use — your other addons, your debrid and Usenet services, and a suite of search addons built into AIOStreams itself. Everything comes back as one list, deduplicated, filtered, sorted and formatted to your rules.
+AIOStreams brings your Stremio addons, debrid services and Usenet together into one list, filtered, sorted and formatted your way, and plays it in Stremio or in its own apps for every screen.
+
+You configure it once. When you open a title, it asks every source you've added, removes the duplicates, filters and sorts what comes back by your rules, and names each result with your format. Stremio gets that list through the addon; the AIOStreams app and Jellyfin apps get the same list as versions of the title.
 
 ## How would you like to get started?
 
 <Cards>
   <Card
-    title="Use a Public Instance"
+    title="Use a public instance"
     href="/configuration/setup"
-    description="The quickest path. No server required — pick a community-hosted instance and import a ready-made template."
+    description="The quickest way in. Nothing to host: pick a community-run instance and import a ready-made template."
   />
   <Card
-    title="Self-Host"
+    title="Host your own"
     href="/getting-started/deployment"
-    description="Run AIOStreams on your own server, NAS, or VPS for full control over your setup."
+    description="Run AIOStreams on your own server, NAS or VPS, with the Usenet engine and the dashboard."
   />
 </Cards>
 
-## What is AIOStreams?
+## The ideas behind it
 
-AIOStreams is a **super-addon**: one addon in Stremio in place of the pile you would otherwise install, configure and keep in sync separately. It fetches from every source you configure and returns a single, unified list with:
-
-- **Deduplication** across all addons and debrid services
-- **Consistent sorting** by quality, resolution, cache status, and more
-- **Powerful filters** — resolution, size, visual tags, regex, stream expressions, and more
-- **Custom formatting** so results look exactly how you want in Stremio
-- **Built-in addons** exclusive to AIOStreams (Usenet indexers, SeaDex, AnimeTosho, TorrentGalaxy, and more)
-- **A built-in Usenet engine** that streams straight from your own NNTP provider with no external tool in between — see the [Usenet guide](/guides/usenet)
+| Idea | What it means |
+| --- | --- |
+| **Instance** | An AIOStreams server: a [public one](/getting-started/public-instances), [your own](/getting-started/deployment), or ElfHosted. |
+| **Configuration** | Your setup on an instance, saved with a password. You open it with its UUID and password, or from a [profile](/guides/config-profiles) when you sign in. |
+| **Sources** | Where results come from: Stremio addons from the marketplace or by URL, AIOStreams' built-in addons, and your debrid and Usenet services, which you enter once for every addon. |
+| **Rules** | What every result goes through: deduplication, [filters](/configuration/options), sorting (including [scored sorting](/guides/scored-sorting)), and the [formatter](/reference/custom-formatter). [Groups](/guides/groups) and [variants](/reference/config-expressions) decide which sources are asked and how. |
+| **Where you watch** | Stremio, through the addon; the [AIOStreams app](/apps) and [Jellyfin apps](/apps/jellyfin), through your configuration's [media server](/apps/media-server); and Seanime, Chillio or Aniyomi. |
 
 ## Where to watch
-
-Install it in Stremio, or watch without Stremio: every configuration is also a [media server](/apps/media-server) that runs on your instance, with nothing extra to host.
 
 <Cards>
   <Card
     title="Stremio"
     href="/configuration/setup"
-    description="Install AIOStreams as an addon in Stremio, or any app that supports Stremio addons."
+    description="Install AIOStreams as an addon in Stremio, or in any app that supports Stremio addons."
   />
   <Card
     title="AIOStreams app"
     href="/apps"
-    description="Browse and play in a browser, or in the apps for Windows, Mac, Linux, Android, Fire TV and smart TVs."
+    description="Your catalogs as libraries and your streams as versions, in a browser or the apps for Windows, Mac, Linux, Android, Fire TV and smart TVs."
   />
   <Card
     title="Jellyfin apps"
     href="/apps/jellyfin"
-    description="Sign in from Swiftfin, Findroid, Infuse, Kodi or Android TV. No Jellyfin install needed."
+    description="Sign in from Infuse, Swiftfin, Findroid, Kodi or Android TV. No Jellyfin install needed."
+  />
+  <Card
+    title="Seanime"
+    href="/guides/seanime"
+    description="A plugin, a torrent provider and a custom source for Seanime."
   />
 </Cards>
 
-## Other Resources
+## On your own instance
+
+Everything above works on a public instance. Hosting AIOStreams yourself adds:
+
+- the [built-in Usenet engine](/guides/usenet#the-built-in-engine-aiostreams), which streams straight from your NNTP provider, archives included;
+- [Sonarr and Radarr](/guides/sonarr-radarr) support, with the engine as their download client and AIOStreams as their indexer;
+- the [release blocklist](/guides/release-blocklist), shared between instances if you like;
+- the dashboard, with live streams, analytics, logs, users and every runtime setting, and [SSO](/guides/sso) for signing in to it.
+
+## Other resources
 
 <Cards>
   <Card
-    title="Public Instances"
+    title="Public instances"
     href="/getting-started/public-instances"
-    description="Compare community-hosted instances and find one that suits your needs."
+    description="Compare community-run instances and find one that suits you."
   />
   <Card
-    title="Configure Options"
+    title="Configure options"
     href="/configuration/options"
-    description="A full reference for every option on the configure page."
+    description="Every option on the configure page."
   />
   <Card
     title="FAQ"
     href="/faq"
-    description="Answers to the most common questions about AIOStreams."
+    description="Answers to the most common questions."
   />
   <Card
     title="Troubleshooting"
     href="/troubleshooting"
-    description="Step-by-step fixes for common errors and issues."
+    description="Fixes for common errors and issues."
   />
 </Cards>

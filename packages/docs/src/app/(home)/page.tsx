@@ -1,10 +1,11 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import {
   FaRocket,
   FaBook,
-  FaCode,
+  FaTv,
   FaFileCode,
   FaSlidersH,
   FaQuestionCircle,
@@ -33,6 +34,13 @@ const SECTIONS: Array<{
     icon: <FaRocket />,
   },
   {
+    href: '/apps',
+    title: 'Apps',
+    description:
+      'The AIOStreams app in a browser, on computers, phones and TVs, and in Jellyfin apps.',
+    icon: <FaTv />,
+  },
+  {
     href: '/configuration/setup',
     title: 'Configuration',
     description:
@@ -49,14 +57,8 @@ const SECTIONS: Array<{
     href: '/reference/stream-expressions',
     title: 'Reference',
     description:
-      'Stream and config expressions, the custom formatter, templates.',
+      'Stream and config expressions, the formatter, templates and the HTTP API.',
     icon: <FaFileCode />,
-  },
-  {
-    href: '/apis',
-    title: 'API',
-    description: 'HTTP API for search, user data and anime lookups.',
-    icon: <FaCode />,
   },
   {
     href: '/faq',
@@ -91,15 +93,16 @@ export default function HomePage() {
           </Link>
         ) : (
           <div className="inline-flex items-center rounded-full border border-fd-border bg-fd-muted/50 px-3 py-1 text-xs font-medium text-fd-muted-foreground">
-            Stremio Addon Aggregator
+            Stremio addon and apps
           </div>
         )}
         <h1 className="text-5xl font-bold tracking-tight md:text-6xl">
           AIOStreams
         </h1>
         <p className="text-fd-muted-foreground max-w-xl text-lg">
-          Combine, filter, sort, and customise streams from every source — all
-          in one place.
+          Your Stremio addons, debrid services and Usenet in one list, filtered,
+          sorted and formatted your way, in Stremio or AIOStreams&apos; own
+          apps.
         </p>
         <div className="flex gap-3 flex-wrap justify-center">
           <Link
@@ -116,6 +119,14 @@ export default function HomePage() {
           </Link>
           <DonateButton className="inline-flex items-center gap-2 rounded-md border border-fd-border px-4 py-2 text-sm font-medium transition-colors hover:bg-fd-muted" />
         </div>
+        <Image
+          src="/apps/hero.webp"
+          alt="The AIOStreams app on a TV, a computer and a phone"
+          width={2880}
+          height={1764}
+          priority
+          className="mt-4 h-auto w-full max-w-4xl"
+        />
       </div>
 
       {/* Nav cards */}

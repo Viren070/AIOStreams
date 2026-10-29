@@ -6,7 +6,7 @@ import Script from 'next/script';
 import './global.css';
 
 const DESCRIPTION =
-  'A single Stremio super-addon: your addons, debrid and usenet services, built-in indexers and a native usenet engine, all deduplicated, filtered and sorted.';
+  "Your Stremio addons, debrid services and Usenet in one list, filtered, sorted and formatted your way, in Stremio or AIOStreams' own apps.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
