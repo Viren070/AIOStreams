@@ -10,6 +10,7 @@ import kotlin.math.max
 
 class FrameRateMatch(
     private val activity: Activity,
+    private val tv: Boolean,
     /** Pauses what plays while a TV blanks to switch modes; false when it was already paused. */
     private val hold: () -> Boolean,
     private val resume: () -> Unit,
@@ -25,13 +26,21 @@ class FrameRateMatch(
     private var original: Int? = null
     private var waiting: Runnable? = null
 
+    fun preferFastest() {
+        if (tv || original != null) return
+        val display = activity.window.decorView.display ?: return
+        val active = display.mode
+        val fastest = display.supportedModes.filter { it.sameSize(active) }.maxByOrNull { it.refreshRate } ?: return
+        if (activity.window.attributes.preferredDisplayModeId != fastest.modeId) prefer(fastest.modeId)
+    }
+
     fun match(frameRate: Double?) {
         if (frameRate == null || !enabled) return restore()
         if (abs(frameRate - matched) < 0.01) return
         matched = frameRate
         val display = activity.window.decorView.display ?: return
         val active = display.mode
-        val best = choose(display.supportedModes.filter { it.sameSize(active) }, frameRate.toFloat()) ?: return
+        val best = choose(display.supportedModes.filter { it.sameSize(active) }, frameRate.toFloat(), tv) ?: return
         if (best.modeId == active.modeId) return
         if (original == null) original = activity.window.attributes.preferredDisplayModeId
         prefer(best.modeId)
@@ -84,11 +93,19 @@ class FrameRateMatch(
 
         fun Float.near(target: Float) = abs(this - target) <= max(0.08f, target * 0.003f)
 
+        const val MAX_TIMES = 6
+
         // 2.5 times is 3:2 pulldown.
-        fun choose(modes: List<Display.Mode>, fps: Float): Display.Mode? =
-            listOf(1f, 2f, 2.5f).firstNotNullOfOrNull { times ->
+        fun choose(modes: List<Display.Mode>, fps: Float, tv: Boolean): Display.Mode? {
+            if (!tv) {
+                modes.filter { mode -> (1..MAX_TIMES).any { mode.refreshRate.near(fps * it) } }
+                    .maxByOrNull { it.refreshRate }
+                    ?.let { return it }
+            }
+            return listOf(1f, 2f, 2.5f).firstNotNullOfOrNull { times ->
                 val target = fps * times
                 modes.filter { it.refreshRate.near(target) }.minByOrNull { abs(it.refreshRate - target) }
             }
+        }
     }
 }
