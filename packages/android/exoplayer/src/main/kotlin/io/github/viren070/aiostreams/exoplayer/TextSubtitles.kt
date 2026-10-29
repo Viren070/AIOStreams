@@ -36,7 +36,9 @@ internal class SubtitleStyle {
     private var bold = false
     private var override = AssStyle.SCALE
 
-    fun apply(look: SubtitleLook, forceMargins: Boolean) {
+    /** False when only the position changed. */
+    fun apply(look: SubtitleLook, forceMargins: Boolean): Boolean {
+        val before = listOf(scale, this.forceMargins, color, outlineColor, outlineSize, shadowSize, font, backColor, box, bold, override)
         scale = look.scale
         position = look.position
         this.forceMargins = forceMargins
@@ -49,6 +51,14 @@ internal class SubtitleStyle {
         box = look.box
         bold = look.bold
         override = if (look.forceStyle) AssStyle.FORCE else AssStyle.SCALE
+        return before != listOf(scale, this.forceMargins, color, outlineColor, outlineSize, shadowSize, font, backColor, box, bold, override)
+    }
+
+    /** The share of the height the subtitles are raised by. */
+    val lift get() = ((100 - position) / 100).toFloat()
+
+    fun place(view: SubtitleView) {
+        view.setBottomPaddingFraction(BOTTOM_PADDING + lift)
     }
 
     fun apply(view: SubtitleView) {
@@ -73,7 +83,7 @@ internal class SubtitleStyle {
         view.setApplyEmbeddedStyles(override != AssStyle.FORCE)
         view.setApplyEmbeddedFontSizes(override != AssStyle.FORCE)
         view.setFractionalTextSize(SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * scale.toFloat())
-        view.setBottomPaddingFraction(BOTTOM_PADDING + (100 - position.toFloat()) / 100)
+        place(view)
     }
 
     fun assStyle() = AssStyle(
@@ -99,13 +109,17 @@ internal class SubtitleStyle {
     }
 }
 
-/** WebVTT's automatic line arrives as the last line, which the view's bottom padding never moves. */
-internal fun unplaced(cue: Cue): Cue =
-    if (cue.verticalType == Cue.TYPE_UNSET && cue.lineType == Cue.LINE_TYPE_NUMBER && cue.line == -1f) {
+/**
+ * A cue as the subtitle view draws it: WebVTT's automatic line arrives as the last line, which the view's
+ * bottom padding never moves, and pictures in the lower half rise by `lift`, no higher than the top.
+ */
+internal fun placed(cue: Cue, lift: Float): Cue = when {
+    cue.verticalType == Cue.TYPE_UNSET && cue.lineType == Cue.LINE_TYPE_NUMBER && cue.line == -1f ->
         cue.buildUpon().setLine(Cue.DIMEN_UNSET, Cue.TYPE_UNSET).build()
-    } else {
-        cue
-    }
+    cue.bitmap != null && lift > 0 && cue.lineType == Cue.LINE_TYPE_FRACTION && cue.line >= 0.5f ->
+        cue.buildUpon().setLine(maxOf(0f, cue.line - lift), Cue.LINE_TYPE_FRACTION).build()
+    else -> cue
+}
 
 /**
  * A subtitle whose each line takes the place of the one before, as pictures

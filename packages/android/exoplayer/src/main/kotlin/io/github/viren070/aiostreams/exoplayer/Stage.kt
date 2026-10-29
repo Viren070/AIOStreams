@@ -30,6 +30,7 @@ internal class Stage(context: Context, private val onLayout: (width: Int, height
     /** mpv's `keepaspect`: off stretches the picture to the screen. */
     var keepAspect = true
         set(value) {
+            if (value == field) return
             field = value
             requestLayout()
         }
@@ -37,6 +38,7 @@ internal class Stage(context: Context, private val onLayout: (width: Int, height
     /** mpv's `panscan`: from fitting the picture inside the screen (0) to filling it (1). */
     var panscan = 0.0
         set(value) {
+            if (value == field) return
             field = value
             requestLayout()
         }

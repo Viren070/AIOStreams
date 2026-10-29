@@ -329,10 +329,17 @@ class ExoEngine(private val context: Context) :
     override fun setStyle(style: Style) = post {
         stage?.keepAspect = style.fit != Fit.STRETCH
         stage?.panscan = if (style.fit == Fit.CROP) 1.0 else 0.0
-        this.style.apply(style.subtitles, forceMargins = style.fit == Fit.CROP)
-        stage?.let { this.style.apply(it.subtitles) }
+        val restyled = this.style.apply(style.subtitles, forceMargins = style.fit == Fit.CROP)
         updateLayout()
-        showSubtitles()
+        val view = stage?.subtitles ?: return@post
+        if (restyled) {
+            this.style.apply(view)
+            showSubtitles()
+        } else {
+            // Only moved: the view's lines and pictures follow.
+            this.style.place(view)
+            if (shownCues.isNotEmpty()) view.setCues(shownCues.map { placed(it, this.style.lift) })
+        }
     }
 
     override fun setSettings(settings: PlayerSettings) = post {
@@ -650,11 +657,13 @@ class ExoEngine(private val context: Context) :
         val cues = text?.cuesAt(frameUs - delayUs) ?: return
         if (cues == shownCues) return
         shownCues = cues
-        stage?.subtitles?.setCues(cues.map(::unplaced))
+        stage?.subtitles?.setCues(cues.map { placed(it, style.lift) })
     }
 
     override fun onCues(cueGroup: CueGroup) {
-        if (text == null && external == null) stage?.subtitles?.setCues(if (style.visible) cueGroup.cues.map(::unplaced) else emptyList())
+        if (text != null || external != null) return
+        shownCues = if (style.visible) cueGroup.cues else emptyList()
+        stage?.subtitles?.setCues(shownCues.map { placed(it, style.lift) })
     }
 
     private fun onStageLayout(width: Int, height: Int, video: Rect) {

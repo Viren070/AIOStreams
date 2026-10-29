@@ -129,6 +129,11 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
     private val readOrders = HashMap<String, Int>()
     private val seen = HashMap<String, HashSet<String>>()
 
+    /** The style the renderer has; null for a new renderer. */
+    private var styled: Pair<AssStyle, Boolean>? = null
+
+    private var movedAt = 0L
+
     /** Each file track's latest lines, which libass gets once the track shows; it holds only the shown one's. */
     private val recent = HashMap<String, ArrayDeque<Line>>()
 
@@ -237,6 +242,7 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
         queue {
             freeTracks()
             nativeClearFonts(native)
+            styled = null
             recent.clear()
             fonts = emptyList()
             given.clear()
@@ -304,10 +310,18 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
     }
 
     fun setLayout(layout: AssLayout) = queue {
+        // Lifted above the page's controls, the position changes every display frame.
+        if (layout.copy(position = this.layout.position) == this.layout) {
+            movedAt = SystemClock.uptimeMillis()
+            worker.removeCallbacks(settled)
+            worker.postDelayed(settled, SETTLE_MS)
+        }
         this.layout = layout
         applyLayout()
         stale = true
     }
+
+    private val settled = Runnable { step() }
 
     fun stats() = buildJsonObject {
         put("subtitleFrames", frameCount.get())
@@ -396,6 +410,7 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
             given += font.file
         }
         nativeReloadFonts(native)
+        styled = null
         applyLayout()
         return true
     }
@@ -450,6 +465,8 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
             queueMoment(track, asked)
             aheadUs = nowUs
         }
+        // Moments rendered ahead would be thrown away at the next position.
+        if (SystemClock.uptimeMillis() - movedAt < SETTLE_MS) return
         if (track == 0L || !nativeRoom(native, AHEAD_MOMENTS, aheadBytes)) return
         // Behind, from the frame showing, which the showing thread may not have taken yet.
         val next = frames.after(maxOf(aheadUs, nowUs - 1)) ?: return
@@ -495,20 +512,22 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
         step(front = false)
         if (taken == 0 && !force && !mustDraw) return
         mustDraw = false
+        // Something other than time changed: held for the next video frame, a slide would move by frames.
+        val at = if (force) 0L else atNanos
         val start = System.nanoTime()
         if (!nativeDraw(native)) return
         val now = System.nanoTime()
         blends.add(now - start)
         if (nativeStamped(native)) {
             // The compositor holds it for the video frame's time.
-            if (atNanos != 0L && now > atNanos) late.incrementAndGet()
+            if (at != 0L && now > at) late.incrementAndGet()
         } else {
             // Posted a refresh ahead of the video frame, so both show together.
-            val wait = atNanos - now - REFRESH_NANOS
+            val wait = at - now - REFRESH_NANOS
             if (wait > 0) SystemClock.sleep(wait / 1_000_000)
-            else if (atNanos != 0L && wait < -REFRESH_NANOS) late.incrementAndGet()
+            else if (at != 0L && wait < -REFRESH_NANOS) late.incrementAndGet()
         }
-        nativePost(native, atNanos)
+        nativePost(native, at)
     }
 
     // mpv's configure_ass(): its own options reach ASS only as far as the override allows.
@@ -533,6 +552,8 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
             (stage.video.left * sx).roundToInt(), ((stage.stageWidth - stage.video.right) * sx).roundToInt(),
             useMargins, fontScale.toFloat(), if (style.override == AssStyle.NONE && !force) 0.0 else 100 - stage.position,
         )
+        if (styled == style to force) return
+        styled = style to force
         nativeSetStyle(
             native, if (force) AssStyle.FORCE else style.override, style.color, style.outlineColor, style.backColor,
             style.outlineSize, style.borderStyle, style.bold, style.shadowSize,
@@ -559,6 +580,9 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
 
         /** How long the showing thread waits for a moment it asked for, as a frame shows. */
         const val ASK_WAIT_MS = 1000
+
+        /** Past a 24 Hz display's frame, so a slide counts as one move. */
+        const val SETTLE_MS = 120L
 
         /** Frames' times kept from before the one showing, for a seek back. */
         const val KEPT_FRAMES_US = 5_000_000L
