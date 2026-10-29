@@ -209,7 +209,7 @@ class MpvEngine(private val context: Context) : Engine {
         put("sub-back-color", s.backColor)
         put("sub-border-style", if (s.box) "background-box" else "outline-and-shadow")
         put("sub-ass-override", if (s.forceStyle) "force" else "scale")
-        put("sub-pos", Math.round(s.position).toString())
+        put("sub-pos", s.position.toString())
         if (subtitleScale != s.scale) {
             subtitleScale = s.scale
             set("sub-scale", if (picture) "1" else s.scale.toString())
