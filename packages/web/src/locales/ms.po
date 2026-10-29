@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-29 22:02+0000\n"
+"PO-Revision-Date: 2026-10-29 23:12+0000\n"
 "Last-Translator: AIO sama <aio-sama@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Malay <https://hosted.weblate.org/projects/aiostreams/web-app/ms/>\n"
 "Language: ms\n"
@@ -512,7 +512,7 @@ msgstr "Sentiasa memaparkan sarikata, dalam bahasa anda apabila versi memilikiny
 
 #: src/pages/settings/audio.tsx
 msgid "An audio track you pick while watching a show sets the language for its other episodes. Picking what the settings above would play forgets it."
-msgstr "Trek audio yang anda pilih semasa menonton rancangan menetapkan bahasa untuk episod yang lain. Memilih semula tetapan asal akan memadamkan ingatan pilihan tersebut."
+msgstr "Trek audio yang anda pilih semasa menonton rancangan menetapkan bahasa untuk episod yang lain. Pemilihan tetapan di atas akan melupakannya."
 
 #: src/lib/hosts/jellyfin-android.ts src/pages/settings/about.tsx
 #: src/pages/settings/index.tsx
@@ -1244,7 +1244,7 @@ msgstr "Butiran"
 
 #: src/pages/settings/cache.tsx
 msgid "Details, seasons and episodes of what you open."
-msgstr "Butiran, musim dan episod daripada apa yang anda buka."
+msgstr "Butiran, musim dan episod bagi apa yang anda buka."
 
 #: src/pages/settings/audio.tsx
 msgid "Device"
@@ -1550,7 +1550,6 @@ msgid "Filter versions"
 msgstr "Tapis versi"
 
 #: src/pages/settings/playback.tsx
-#, fuzzy
 msgid "Find versions when a title opens"
 msgstr "Tidak dapat mencari versi tajuk tersebut"
 
@@ -1589,7 +1588,7 @@ msgstr "Pil terapung"
 
 #: src/pages/settings/downloads.tsx
 msgid "Folder"
-msgstr "Pemegang"
+msgstr "Folder"
 
 #: src/pages/settings/interface.tsx
 msgid "Following pins it above the rows and shows the card the pointer, keyboard or remote is on, starting with a featured title, behind the whole page or in its top corner. Touch screens and narrow windows keep it rotating."
@@ -1739,7 +1738,7 @@ msgstr "Laman Utama"
 
 #: src/pages/settings/interface.tsx
 msgid "Home and grids"
-msgstr "Laman Utama dan kisi"
+msgstr "Laman Utama dan grid"
 
 #: src/pages/settings/cache.tsx
 msgid "Home and libraries"
@@ -1956,7 +1955,7 @@ msgstr "Bahasa dan output"
 
 #: src/pages/settings/index.tsx
 msgid "Language, home, grids and episodes"
-msgstr "Bahasa, laman utama, kisi dan episod"
+msgstr "Bahasa, laman utama, grid dan episod"
 
 #: src/lib/subtitles/style.ts src/pages/settings/interface.tsx
 msgid "Large"
@@ -2068,7 +2067,7 @@ msgstr "Rendahkan sarikata"
 
 #: src/pages/settings/apps.tsx
 msgid "macOS draws the video, using less power, and shows Dolby Vision itself. Shaders and mpv's picture options do not apply."
-msgstr "macOS memaparkan video dengan penggunaan tenaga lebih rendah, dan menyokong Dolby Vision secara terus."
+msgstr "macOS memaparkan video dengan penggunaan tenaga lebih rendah, dan menyokong Dolby Vision secara terus. Shader dan pilihan gambar mpv tidak terpakai."
 
 #: src/lib/i18n.ts
 msgid "Magenta"
@@ -2170,7 +2169,7 @@ msgstr "Bahasa lain ({hidden})"
 
 #: src/pages/item.tsx
 msgid "More like this"
-msgstr "Serupa seperti ini"
+msgstr "Lagi seperti ini"
 
 #: src/pages/settings/common.tsx
 msgid "Move {name} down"
@@ -2190,7 +2189,7 @@ msgstr "Alih ke atas"
 
 #: src/components/shortcut-settings.tsx
 msgid "Moves between what's on screen, and to Search and Home. A gamepad's d-pad and left stick move too."
-msgstr "Bergerak di antara elemen pada skrin, serta ke Carian dan Laman Utama."
+msgstr "Bergerak antara kandungan pada skrin, serta ke Carian dan Laman Utama. D-pad pad permainan dan stereng kiri turut bergerak."
 
 #: src/components/kind-tabs.tsx src/components/random-pick.tsx
 #: src/lib/format.ts src/pages/discover.tsx src/pages/favourites.tsx
@@ -2216,11 +2215,11 @@ msgstr "mpv paparkan video, dengan mpv.conf dan 'shader' anda."
 
 #: src/pages/settings/playback.tsx
 msgid "mpv inside this window, with this app's controls and playback settings. Your own mpv.conf, scripts and shaders work here too: put them in its mpv folder under Desktop app."
-msgstr "mpv dalam tetingkap ini, dengan kawalan dan tetapan main balik aplikasi ini."
+msgstr "mpv di dalam tetingkap ini, dengan kawalan dan tetapan main balik aplikasi ini. mpv.conf, skrip dan shader anda sendiri juga berfungsi di sini: letakkannya dalam folder mpv di bawah Aplikasi Desktop."
 
 #: src/pages/settings/apps.tsx
 msgid "mpv.conf, input.conf, scripts and shaders in this folder apply to the built-in mpv."
-msgstr "mpv.conf, input.conf, skrip dan 'shader' dalam pemegang ini terpakai untuk mpv terbina dalam."
+msgstr "mpv.conf, input.conf, skrip dan shader dalam folder ini terpakai untuk mpv terbina dalam."
 
 #: src/components/player/volume.tsx src/lib/input/actions.ts
 msgid "Mute"
@@ -2469,7 +2468,7 @@ msgstr "Belum ada yang ditonton."
 
 #: src/components/party/party-sheet.tsx
 msgid "Nothing yet. Anything anyone plays now plays for everyone."
-msgstr "Belum ada apa-apa. Sesiapa sahaja yang memainkan media sekarang akan memainkannya untuk semua."
+msgstr "Belum ada apa-apa. Apa sahaja yang dimainkan sesiapa sekarang akan dimainkan untuk semua orang."
 
 #: src/app.tsx
 msgid "Notifications"
@@ -2586,7 +2585,7 @@ msgstr "Buka"
 
 #: src/pages/downloads.tsx src/pages/settings/apps.tsx
 msgid "Open folder"
-msgstr "Buka pemegang"
+msgstr "Buka folder"
 
 #: src/pages/trailer.tsx
 msgid "Open its page"
@@ -2887,7 +2886,7 @@ msgstr "Mainkan secara automatik"
 
 #: src/pages/settings/playback.tsx
 msgid "Play lists the versions to choose from, but resuming goes back to the version you were watching. Hold Play to do the other: start the first version, or list them when resuming."
-msgstr "Butang Main menyenaraikan versi untuk dipilih. Tahan 'Main' untuk menukar tindakan lalai."
+msgstr "Mainkan menyenaraikan versi untuk dipilih, tetapi menyambung semula akan kembali ke versi yang anda sedang tonton. Tahan Mainkan untuk melakukan sebaliknya: mulakan versi pertama, atau senaraikannya apabila menyambung semula."
 
 #: src/components/player/next-episode.tsx
 msgid "Play now"
@@ -3007,7 +3006,7 @@ msgstr "Memainkan sedikit lebih pantas atau lambat untuk menyelaraskan dengan se
 
 #: src/pages/settings/playback.tsx
 msgid "Plays Dolby Vision where the screen shows it. Turn it off to play the HDR10 picture most of these videos also carry, if Dolby Vision looks dim or flickers. Videos with no HDR10 picture still play in Dolby Vision."
-msgstr "Memainkan Dolby Vision jika skrin menyokongnya. Matikan untuk memainkan format HDR10 jika Dolby Vision kelihatan malap atau terkelip-kelip."
+msgstr "Memainkan Dolby Vision di mana-mana skrin memaparkannya. Matikan fungsi ini untuk memainkan gambar HDR10 yang turut disertakan kebanyakan video ini, jika Dolby Vision kelihatan malap atau berkedip. Video tanpa gambar HDR10 akan tetap dimainkan dalam Dolby Vision."
 
 #: src/lib/input/actions.ts
 msgid "Plays faster for as long as the key is held, at the speed set in Playback settings."
@@ -3050,7 +3049,6 @@ msgid "Previews"
 msgstr "Pratonton"
 
 #: src/pages/settings/playback.tsx
-#, fuzzy
 msgctxt "Episode segments showing the next episode"
 msgid "Previews"
 msgstr "Pratonton"
@@ -3106,11 +3104,11 @@ msgstr "Penapis pantas"
 
 #: src/pages/settings/interface.tsx
 msgid "Rail"
-msgstr "Rel (Rail)"
+msgstr "Rel"
 
 #: src/pages/settings/theme.tsx
 msgid "Rainforest"
-msgstr "Hutan Hujan (Rainforest)"
+msgstr "Hutan hujan"
 
 #: src/components/player/options.tsx src/lib/input/actions.ts
 msgid "Raise subtitles"
@@ -3118,7 +3116,7 @@ msgstr "Tinggikan sarikata"
 
 #: src/pages/settings/audio.tsx
 msgid "Raises the centre channel, where surround sound puts dialogue. Not for sound passed through."
-msgstr "Meningkatkan saluran tengah, di mana bunyi sekeliling meletakkan dialog."
+msgstr "Menaikkan saluran tengah, tempat bunyi keliling meletakkan dialog. Tidak terpakai untuk bunyi yang dilalui terus (passthrough)."
 
 #: src/components/item-menu.tsx src/components/random-pick.tsx
 #: src/pages/item.tsx
@@ -3352,7 +3350,7 @@ msgstr "Cuba lagi"
 
 #: src/components/remote-sheet.tsx src/lib/input/keys.ts
 msgid "Rewind"
-msgstr "Guling semula (Rewind)"
+msgstr "Putar balik"
 
 #: src/lib/input/actions.ts
 msgid "Right"
@@ -3601,7 +3599,7 @@ msgstr "Paparkan episod"
 
 #: src/pages/downloads.tsx
 msgid "Show in folder"
-msgstr "Tunjukkan dalam pemegang"
+msgstr "Papar dalam folder"
 
 #: src/pages/settings/playback.tsx
 msgid "Show messages over the video"
@@ -3659,7 +3657,7 @@ msgstr "Memaparkan gambar pratonton video pada bar kedudukan. Matikan untuk menj
 
 #: src/pages/settings/interface.tsx
 msgid "Shows next episodes in the continue watching row, after what you are partway through."
-msgstr "Memaparkan episod seterusnya dalam baris teruskan menonton."
+msgstr "Menunjukkan episod seterusnya dalam baris teruskan menonton, selepas kandungan yang anda sedang tonton separuh jalan."
 
 #: src/pages/settings/interface.tsx
 msgid "Shows search results in one grid instead of a row each for movies and shows."
@@ -4009,7 +4007,7 @@ msgstr "Sarikata yang ditandakan sebagai lalai atau paksaan oleh versi."
 
 #: src/pages/settings/subtitles.tsx
 msgid "Subtitles you pick or turn off while watching a show stay that way for its other episodes. Picking what the settings above would show forgets it."
-msgstr "Sarikata yang anda pilih atau matikan semasa menonton akan kekal untuk episod lain."
+msgstr "Sari kata yang anda pilih atau matikan semasa menonton rancangan akan kekal sedemikian untuk episod yang lain. Pemilihan tetapan di atas akan melupakannya."
 
 #: src/components/player/keys.ts
 msgid "Subtitles: {label}"
@@ -4841,7 +4839,7 @@ msgstr "Ditonton ×{playCount}"
 
 #: src/pages/history.tsx
 msgid "Watched marks and resume points are removed from this server. Favourites stay. Titles a tracker still lists come back when it next syncs."
-msgstr "Tanda telah ditonton dan kedudukan sambungan dipadamkan daripada pelayan ini."
+msgstr "Tanda tontonan dan titik sambung dialih keluar daripada pelayan ini. Kegemaran kekal. Tajuk yang masih disenaraikan oleh penjejak akan kembali apabila ia disegerakkan seterusnya."
 
 #: src/components/party/party-sheet.tsx src/pages/settings/index.tsx
 msgid "Watching"
@@ -4877,19 +4875,19 @@ msgstr "Aktiviti harian aplikasi, disimpan selama seminggu."
 
 #: src/pages/settings/interface.tsx
 msgid "What the navigation sits on over the page: the app's own colour, or glass that shows the page through it. Liquid glass also bends what's behind its edges, which costs more on a slow device."
-msgstr "Gaya paparan navigasi di atas halaman."
+msgstr "Latar navigasi di atas halaman: warna apl itu sendiri, atau kaca yang menampakkan halaman di sebaliknya. Kaca cecair juga membengkokkan apa yang ada di sebalik tepinya, yang lebih membebankan peranti perlahan."
 
 #: src/components/party/party-sheet.tsx
 msgid "What the others say shows here."
-msgstr "Mesej daripada pengguna lain dipaparkan di sini."
+msgstr "Apa yang dikatakan oleh orang lain dipaparkan di sini."
 
 #: src/pages/settings/playback.tsx
 msgid "What the people you watch with say shows for a few seconds. It always stays in the party's chat."
-msgstr "Mesej daripada peserta lain dipaparkan selama beberapa saat."
+msgstr "Perkara yang dikatakan oleh orang yang anda tonton bersama dipaparkan selama beberapa saat. Ia sentiasa kekal dalam sembang kumpulan."
 
 #: src/pages/settings/cache.tsx
 msgid "What to save"
-msgstr "Apa yang hendak disimpan"
+msgstr "Perkara untuk disimpan"
 
 #: src/components/party/reaction-setting.tsx
 msgid "What you can send from a party's chat."
@@ -4905,7 +4903,7 @@ msgstr "Kapasiti pembesar suara atau penerima anda."
 
 #: src/pages/settings/apps.tsx
 msgid "What's playing"
-msgstr "Apa yang sedang dimainkan"
+msgstr "Sedang dimainkan"
 
 #: src/lib/input/keys.ts
 msgid "Wheel down"
@@ -4945,15 +4943,15 @@ msgstr "Apabila TV atau penerima mendekodkannya"
 
 #: src/pages/settings/playback.tsx
 msgid "Where a file names its intro, credits, recap or preview chapters, skipping uses them instead of the server's times, since they fit that exact file. The rest still come from the server."
-msgstr "Apabila fail menamakan bab intro, kredit, atau imbas kembali, pelangkauan menggunakan bab tersebut."
+msgstr "Apabila fail menamakan intro, kredit, ringkasan atau bab pratonton, pelangkauan menggunakan butiran tersebut dan bukannya masa pelayan, kerana ia sepadan dengan fail itu. Selebihnya tetap daripada pelayan."
 
 #: src/pages/settings/about.tsx
 msgid "Where the app is made, and where to report a problem."
-msgstr "Lokasi aplikasi dibangunkan dan tempat melaporkan masalah."
+msgstr "Tempat aplikasi ini dihasilkan, dan tempat untuk melaporkan masalah."
 
 #: src/pages/settings/interface.tsx
 msgid "Where the navigation goes when the screen is wide enough for a sidebar, such as a tablet held sideways."
-msgstr "Kedudukan navigasi apabila skrin cukup lebar untuk bar sisi."
+msgstr "Tempat navigasi diletakkan apabila skrin cukup lebar untuk jalur sisi, seperti tablet yang dipegang secara melintang."
 
 #: src/pages/settings/interface.tsx
 msgid "Where the navigation goes when the window is wide enough for a sidebar."
