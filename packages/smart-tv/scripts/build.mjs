@@ -15,6 +15,8 @@ import { zipSync } from 'fflate';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const platform = process.argv[2];
+// webOS draws at 1280x720 unless the package asks for more.
+const fullHd = process.argv.includes('--1080p');
 const { version } = JSON.parse(
   readFileSync(join(root, 'package.json'), 'utf8')
 );
@@ -74,6 +76,7 @@ function writeUnsigned(stage, file) {
 if (platform === 'webos') {
   const stage = stageApp('appinfo.json', (text) => {
     const { id, ...rest } = JSON.parse(text);
+    if (fullHd) rest.resolution = '1920x1080';
     return JSON.stringify({ id, version, ...rest }, null, 2);
   });
   const cli = dirname(
@@ -83,7 +86,7 @@ if (platform === 'webos') {
     join(cli, 'bin/ares-package.js'),
     stage,
     '--outdir',
-    out,
+    fullHd ? join(out, '1080p') : out,
     '--no-minify',
   ]);
 } else if (platform === 'tizen') {
@@ -96,6 +99,6 @@ if (platform === 'webos') {
   if (profile) sign(stage, profile);
   else writeUnsigned(stage, join(out, 'AIOStreams.wgt'));
 } else {
-  console.error('Usage: node scripts/build.mjs <webos|tizen>');
+  console.error('Usage: node scripts/build.mjs <webos [--1080p]|tizen>');
   process.exit(1);
 }
