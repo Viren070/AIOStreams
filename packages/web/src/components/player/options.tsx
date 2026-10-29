@@ -112,11 +112,17 @@ function Menu({
   const back = React.useRef<HTMLDivElement>(null);
   const rows = React.useRef(new Map<string, HTMLDivElement>());
   const left = React.useRef<string | null>(null);
+  const selected = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
     if (open) return;
     setExpanded(false);
     setPageName(null);
     left.current = null;
+  }, [open]);
+  // Opens on the row in use rather than the first: a chapter list is long,
+  // and the chapter playing is seldom at its top.
+  React.useEffect(() => {
+    if (open) selected.current?.focus();
   }, [open]);
   React.useEffect(() => {
     if (expanded) firstMore.current?.focus();
@@ -129,7 +135,7 @@ function Menu({
   const item = (option: Track, ref?: React.Ref<HTMLDivElement>) => (
     <DropdownMenuItem
       key={option.id}
-      ref={ref}
+      ref={ref ?? ((value ?? '') === option.id ? selected : undefined)}
       data-ui="player-menu-item"
       data-selected={(value ?? '') === option.id || undefined}
       onClick={() => onSelect(option.id === '' ? null : option.id)}
