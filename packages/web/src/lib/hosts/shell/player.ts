@@ -470,6 +470,11 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
     skipAhead: external
       ? undefined
       : (skips) => send('player-skips', { segments: skips }),
+    // The Android app draws the screen faster while they show.
+    showControls:
+      external || appBridge()?.platform !== 'android'
+        ? undefined
+        : (shown) => shell.send({ type: 'player-controls', shown }),
     // The user's own player keeps its own look.
     setStyle({ subtitleStyle, fit, height }) {
       if (external || !subtitleStyle) return;

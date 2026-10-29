@@ -113,6 +113,8 @@ export interface PlayerEngine {
   /** Stretches the page skips, which a player fetching ahead can leave out, or offers to, which it can fetch past early. */
   skipAhead?(skips: PlannedSkip[]): void;
   setStyle?(style: EngineStyle): void;
+  /** The page's controls showing over the video, or hidden again. */
+  showControls?(shown: boolean): void;
   toggleFullscreen?(): void;
   /** The text of a subtitle file it was given, null for one it can't read; server ones are read from their address. */
   ownText?(id: string): string | null;

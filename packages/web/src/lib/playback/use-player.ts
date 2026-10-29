@@ -321,6 +321,22 @@ export function usePlayer(
     return () => cancelAnimationFrame(frame);
   }, [engine, subtitleStyle, fit, height]);
 
+  // The controls lift the subtitles exactly while they show; hiding, both
+  // still move for a while.
+  const controlsShown = lift > 0;
+  React.useEffect(() => {
+    if (controlsShown) {
+      engine.showControls?.(true);
+      return;
+    }
+    const timer = setTimeout(
+      () => engine.showControls?.(false),
+      SUBTITLE_LIFT_MS + 100
+    );
+    return () => clearTimeout(timer);
+  }, [engine, controlsShown]);
+  React.useEffect(() => () => engine.showControls?.(false), [engine]);
+
   React.useEffect(() => {
     setRetry(undefined);
     setStatsPage(null);
