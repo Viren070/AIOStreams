@@ -276,8 +276,8 @@ export const builtinsSchema = {
       default: false,
       label: 'Scrape with alternative titles',
       description: {
-        ui: 'Use alternative titles when scraping built-in addons. Either a boolean or a comma-separated hostname list.',
-        env: 'By default, built-in addons only use the primary title for text-based queries. `true` enables all alternative titles for every indexer; `false` (default) uses the primary title only; a comma-separated hostname list (e.g. `jackett,knaben.org`) enables it only for those indexers.',
+        ui: 'Use alternative titles when scraping built-in addons. Either a boolean or a comma-separated hostname list. Anime always uses its alternative titles, whatever this is set to, because anime seasons are released under their own names.',
+        env: 'By default, built-in addons only use the primary title for text-based queries. `true` enables all alternative titles for every indexer; `false` (default) uses the primary title only; a comma-separated hostname list (e.g. `jackett,knaben.org`) enables it only for those indexers. Anime is exempt: its alternative titles are always used, because anime seasons are released under their own names rather than the series title plus a season number.',
       },
       deprecated:
         'Superseded by "Title languages" (`BUILTIN_SCRAPE_TITLE_LANGUAGES`), which controls titles per indexer.',
@@ -310,7 +310,7 @@ export const builtinsSchema = {
     },
     titleLimit: {
       schema: positiveInt,
-      default: 3,
+      default: 6,
       label: 'Title limit',
       description: 'Maximum alternative titles used per scrape.',
       env: 'BUILTIN_SCRAPE_TITLE_LIMIT',
