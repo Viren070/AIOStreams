@@ -23,6 +23,7 @@ export * from './community/index.js';
 export * from './app-reports/index.js';
 export * from './watch-state/index.js';
 export * from './jellyfin/index.js';
+export { metaHintFromMeta, type MetaHint } from './metadata/hint.js';
 export * from './sync/index.js';
 export { requestTitleMetadata } from './media-info/lookup.js';
 export {
