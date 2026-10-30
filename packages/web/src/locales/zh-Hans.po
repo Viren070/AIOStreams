@@ -813,11 +813,11 @@ msgstr "频道"
 msgid "Channels"
 msgstr "频道"
 
-#: src/components/player/keys.ts src/components/player/options.tsx
+#: src/components/player/chapters.tsx src/components/player/keys.ts
 msgid "Chapter {number}"
 msgstr "第 {number} 章"
 
-#: src/components/player/options.tsx
+#: src/components/player/chapters.tsx src/components/player/options.tsx
 msgid "Chapters"
 msgstr "章节"
 
@@ -2967,9 +2967,9 @@ msgstr "播放器"
 msgid "Player link"
 msgstr "播放器链接"
 
-#: src/components/party/party-sheet.tsx src/components/player/episodes.tsx
-#: src/components/playlists.tsx src/components/sessions.tsx
-#: src/components/version-picker.tsx
+#: src/components/party/party-sheet.tsx src/components/player/chapters.tsx
+#: src/components/player/episodes.tsx src/components/playlists.tsx
+#: src/components/sessions.tsx src/components/version-picker.tsx
 msgid "Playing"
 msgstr "正在播放"
 
