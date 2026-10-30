@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-29 16:33+0000\n"
+"PO-Revision-Date: 2026-10-30 19:55+0000\n"
 "Last-Translator: hamburgercowgoldfish <242998989+hamburgercowgoldfish@users.noreply.github.com>\n"
 "Language-Team: German <https://hosted.weblate.org/projects/aiostreams/web-app/de/>\n"
 "Language: de\n"
@@ -1550,9 +1550,8 @@ msgid "Filter versions"
 msgstr "Versionen filtern"
 
 #: src/pages/settings/playback.tsx
-#, fuzzy
 msgid "Find versions when a title opens"
-msgstr "Für diesen Titel wurden keine Versionen gefunden"
+msgstr "Versionen beim Öffnen eines Titels suchen"
 
 #: src/components/download-button.tsx
 msgid "Finding a version to download"
@@ -2056,7 +2055,7 @@ msgstr "Watch-Party wird gesucht…"
 
 #: src/pages/settings/playback.tsx
 msgid "Looks for versions as soon as a title's page opens, so Play and the version list don't wait. Each title you open is looked up, even if you don't play it."
-msgstr ""
+msgstr "Sucht bereits beim Aufrufen der Seite eines Titels nach Versionen, um Wartezeiten beim Abspielen oder in der Versionsliste zu vermeiden. Es wird jeder geöffnete Titel abgefragt, selbst wenn keine Wiedergabe erfolgt."
 
 #: src/components/party/party-sheet.tsx
 msgid "Lost the connection to {relay}. Reconnecting… Your player carries on, and gets back in step once it's back."
@@ -3050,7 +3049,6 @@ msgid "Previews"
 msgstr "Vorschauen"
 
 #: src/pages/settings/playback.tsx
-#, fuzzy
 msgctxt "Episode segments showing the next episode"
 msgid "Previews"
 msgstr "Vorschauen"
