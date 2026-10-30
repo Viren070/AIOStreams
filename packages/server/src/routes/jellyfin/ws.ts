@@ -7,6 +7,8 @@ import {
   extractAuth,
   getWatchStateProvider,
   itemIdForWatchRow,
+  sharedBackend,
+  SharedTx,
   userDataFromRow,
   type WatchScope,
 } from '@aiostreams/core';
@@ -110,16 +112,41 @@ export function attachJellyfinWebSocket(server: HttpServer): void {
     return count;
   };
 
+  // Each replica hears every write and tells the sockets it holds.
+  const changes = sharedBackend().records<never>({
+    name: 'user-data',
+    save: () => null,
+    load: () => {
+      throw new Error('user data changes keep no records');
+    },
+    due: () => null,
+    tags: () => [],
+    receive: (_id, messages) => {
+      for (const { to, data } of messages) {
+        for (const key of to) {
+          const sockets = byScope.get(key);
+          if (!sockets?.size) continue;
+          const UserDataList = JSON.parse(data.toString()) as unknown[];
+          for (const [ws, userId] of sockets) {
+            send(ws, 'UserDataChanged', { UserId: userId, UserDataList });
+          }
+        }
+      }
+    },
+    lapse: () => undefined,
+  });
+  const replicated = !!appConfig.bootstrap.redisUri;
+
   getWatchStateProvider().onChange((scope, rows) => {
-    const sockets = byScope.get(scopeKey(scope));
-    if (!sockets?.size) return;
+    const key = scopeKey(scope);
+    if (!replicated && !byScope.get(key)?.size) return;
     const UserDataList = rows.map((row) => {
       const id = itemIdForWatchRow(row);
       return userDataFromRow(id, row, row.snapshot?.runtimeMs);
     });
-    for (const [ws, userId] of sockets) {
-      send(ws, 'UserDataChanged', { UserId: userId, UserDataList });
-    }
+    const tx = new SharedTx();
+    tx.send([key], Buffer.from(JSON.stringify(UserDataList)));
+    changes.broadcast(tx);
   });
 
   wss.on(
