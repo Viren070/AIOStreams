@@ -16,6 +16,7 @@ import {
   type PlayingTracks,
   type SessionContext,
   type WatchEvent,
+  type WatchProgressEvent,
   type WatchSnapshot,
 } from '@aiostreams/core';
 import {
@@ -178,6 +179,8 @@ function tracksOf(req: Request): PlayingTracks {
   };
 }
 
+const LATE_TICK_MS = 30_000;
+
 async function record(
   ctx: JellyfinRequestContext,
   rawId: string,
@@ -190,6 +193,8 @@ async function record(
     tracks?: PlayingTracks;
   } = {}
 ): Promise<void> {
+  // Before any await, so a tick still in flight when a stop is written is older.
+  const at = Date.now();
   const d = await descriptorFor(ctx, rawId);
   if (!d || (d.k !== 'movie' && d.k !== 'episode')) return;
   const { tracks } = opts;
@@ -213,6 +218,17 @@ async function record(
   const ref = contentRefOf(d);
   const identity = await watchIdentityFor(ref);
   const session = sessionOf(ctx, opts.playSessionId);
+  if (type === 'progress') {
+    await progressed(
+      ctx,
+      session,
+      ref,
+      { type, identity, positionMs, at },
+      opts.paused,
+      tracks
+    );
+    return;
+  }
   const provider = getWatchStateProvider();
   if (type === 'stop' && positionMs == null)
     positionMs =
@@ -221,14 +237,8 @@ async function record(
       )?.positionMs ?? 0;
 
   // one meta call on start and stop, none on the 5-10 s progress ticks
-  const item =
-    type === 'progress'
-      ? null
-      : await itemFromDescriptor(ctx, d).catch(() => null);
-  const durationMs =
-    type === 'progress'
-      ? undefined
-      : await durationFor(ctx, d, rawId, item, opts.mediaSourceId);
+  const item = await itemFromDescriptor(ctx, d).catch(() => null);
+  const durationMs = await durationFor(ctx, d, rawId, item, opts.mediaSourceId);
   const event: WatchEvent = {
     type,
     identity,
@@ -266,21 +276,16 @@ async function record(
     return;
   }
 
-  if (type === 'stop') {
-    const closed = await closeWatchSession(session);
-    await reportPlayback(ctx, 'stop', ref, {
-      row,
-      item,
-      positionMs,
-      durationMs,
-      played: playedThrough(positionMs ?? 0, durationMs || row?.durationMs),
-      sessionStartedAt:
-        closed?.itemKey === identity.itemKey ? closed.startedAt : undefined,
-    });
-    return;
-  }
-
-  await progressed(ctx, session, ref, positionMs, opts.paused, row, tracks);
+  const closed = await closeWatchSession(session);
+  await reportPlayback(ctx, 'stop', ref, {
+    row,
+    item,
+    positionMs,
+    durationMs,
+    played: playedThrough(positionMs ?? 0, durationMs || row?.durationMs),
+    sessionStartedAt:
+      closed?.itemKey === identity.itemKey ? closed.startedAt : undefined,
+  });
 }
 
 /** A tick keeps the session alive; only the pause edge is worth reporting. */
@@ -288,16 +293,24 @@ async function progressed(
   ctx: JellyfinRequestContext,
   session: SessionContext,
   ref: ContentRef,
-  positionMs: number | undefined,
+  event: WatchProgressEvent,
   paused: boolean | undefined,
-  row: Awaited<ReturnType<ReturnType<typeof getWatchStateProvider>['record']>>,
   tracks: PlayingTracks | undefined
 ): Promise<void> {
+  const { positionMs } = event;
   const { transition, row: existing } = await checkInWatchSession(session, {
     positionMs,
     paused,
     ...tracks,
   });
+  // Sent before the stop that closed this playback, and handled after it.
+  if (
+    existing?.endedAt != null &&
+    existing.itemKey === event.identity.itemKey &&
+    Date.now() - existing.endedAt < LATE_TICK_MS
+  )
+    return;
+  await getWatchStateProvider().record(ctx.watch, event);
 
   // No row means no sweep could ever close it.
   if (!existing) {
@@ -305,11 +318,10 @@ async function progressed(
     return;
   }
 
-  // The runtime comes off the session: a tick is buffered, so `row` is null and
-  // an event without a duration has the receiver store the position as zero.
+  // The runtime comes off the session: a tick carries none, and an event
+  // without a duration has the receiver store the position as zero.
   if (transition)
     await reportPlayback(ctx, transition, ref, {
-      row,
       positionMs,
       durationMs: existing.durationMs || undefined,
       sessionStartedAt: existing.startedAt,
