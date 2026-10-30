@@ -76,6 +76,8 @@ import { WatchNextSync } from './watch-next';
 import { RandomPick } from './random-pick';
 import { ItemMenuHost } from './item-menu';
 import { HomePage } from '../pages/home';
+import { PlayerSlot } from '../pages/player';
+import type { MiniPlay } from '../lib/playback/mini-player';
 import { PageShown } from '../lib/page-shown';
 import { GlideLayers } from './glide-layers';
 import { UpdatePrompt } from './update-prompt';
@@ -478,6 +480,33 @@ export function WebLayout() {
   const playing = useChildMatches({
     select: (matches) => !!matches[0]?.pathname.startsWith('/play/'),
   });
+  const routedPlay = useChildMatches({
+    select: (matches) => {
+      const match = matches[0];
+      if (
+        !match?.pathname.startsWith('/play/') ||
+        match.pathname.startsWith('/play/trailer/')
+      )
+        return null;
+      const { itemId } = match.params as { itemId?: string };
+      const { source, start, playlist } = match.search as {
+        source?: string;
+        start?: number;
+        playlist?: string;
+      };
+      if (!itemId) return null;
+      return JSON.stringify({
+        itemId,
+        sourceId: source ?? '',
+        startMs: start ?? 0,
+        playlist,
+      });
+    },
+  });
+  const routed = React.useMemo<MiniPlay | null>(
+    () => (routedPlay ? (JSON.parse(routedPlay) as MiniPlay) : null),
+    [routedPlay]
+  );
   useServerEvents(playing);
   // Home stays, hidden, while other pages and the player are open: going back
   // to its entry shows it again rather than building it anew. Any other visit
@@ -783,6 +812,7 @@ export function WebLayout() {
         </AppSidebarProvider>
       </div>
       {playing && <Outlet />}
+      <PlayerSlot routed={routed} playing={playing} />
       <PartyHost />
       <RemoteSheet />
     </>
