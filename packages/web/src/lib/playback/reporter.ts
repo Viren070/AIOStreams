@@ -4,6 +4,7 @@ import { useReachable } from '../connection';
 import { TICKS_PER_MS } from '../format';
 import { useRefreshWatchState } from '../queries';
 import { useSession } from '../session';
+import { settings } from '../settings';
 import { storage } from '../storage';
 
 const PROGRESS_EVERY_MS = 10_000;
@@ -27,6 +28,8 @@ const pendingStops = () => storage.get<PendingStop[]>(PENDING_KEY) ?? [];
 export class PlaybackReporter {
   private timer: ReturnType<typeof setInterval> | null = null;
   private stopped = false;
+  /** Fixed per playback, so a start that was sent is always followed by its stop. */
+  private readonly tracking = settings.playback.trackProgress.read();
 
   constructor(
     private readonly client: JellyfinClient,
@@ -62,6 +65,7 @@ export class PlaybackReporter {
   }
 
   start(): void {
+    if (!this.tracking) return;
     void this.client.post('/Sessions/Playing', this.body()).catch(() => {});
     this.timer = setInterval(
       () => this.progress('TimeUpdate'),
@@ -77,7 +81,7 @@ export class PlaybackReporter {
       | 'AudioTrackChange'
       | 'SubtitleTrackChange'
   ): void {
-    if (this.stopped) return;
+    if (this.stopped || !this.tracking) return;
     void this.client
       .post('/Sessions/Playing/Progress', this.body({ EventName: event }))
       .catch(() => {});
@@ -87,6 +91,7 @@ export class PlaybackReporter {
     if (this.stopped) return Promise.resolve();
     this.stopped = true;
     if (this.timer) clearInterval(this.timer);
+    if (!this.tracking) return Promise.resolve();
     // keepalive lets the report leave while the page is closing.
     return this.client
       .request('POST', '/Sessions/Playing/Stopped', {

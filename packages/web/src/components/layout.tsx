@@ -64,7 +64,12 @@ import {
   useDownloadRunner,
 } from '../lib/downloads';
 import { usePendingStops } from '../lib/playback/reporter';
-import { settings, useSetting, type TopBar } from '../lib/settings';
+import {
+  settings,
+  useSetting,
+  type LaunchPage,
+  type TopBar,
+} from '../lib/settings';
 import { useAction, usingKeys } from '../lib/input';
 import { UserAvatar } from './user-avatar';
 import { BrandLogo } from './brand-logo';
@@ -465,6 +470,18 @@ function Unreachable() {
   );
 }
 
+const LAUNCH_PATHS: Record<LaunchPage, string> = {
+  home: to.home,
+  discover: to.discover(),
+  search: to.search(),
+  favourites: to.favourites(),
+  calendar: to.calendar(),
+  activity: to.history,
+};
+
+/** The launch page applies once per app start, and only to a bare open. */
+let launched = false;
+
 export function WebLayout() {
   const { switchUser } = useSession();
   const users = usePickableUsers();
@@ -474,6 +491,18 @@ export function WebLayout() {
     select: (s) => s.location.state.__TSR_key ?? s.location.href,
   });
   const onHome = pathname === '/';
+  const [launchPage] = useSetting(settings.interface.launchPage);
+  const [hidden] = useSetting(settings.interface.hiddenMenu);
+  const [hideContinue] = useSetting(settings.interface.hideContinueWatching);
+  const hiddenIds = hidden.split(',').filter(Boolean);
+  const show = (item: SidebarItem) => !hiddenIds.includes(item.id ?? '');
+  React.useEffect(() => {
+    if (launched) return;
+    launched = true;
+    if (pathname === '/' && launchPage !== 'home')
+      navigate(LAUNCH_PATHS[launchPage], { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // From the match the outlet shows, which can trail the location for a render.
   const playing = useChildMatches({
     select: (matches) => !!matches[0]?.pathname.startsWith('/play/'),
@@ -577,7 +606,7 @@ export function WebLayout() {
     playlists,
     together,
     ...(downloads ? [downloads] : []),
-  ];
+  ].filter(show);
 
   const settingsItem: SidebarItem = {
     id: 'settings',
@@ -711,7 +740,7 @@ export function WebLayout() {
                     items={items.filter(
                       (i) => i !== together && i !== playlists
                     )}
-                    footerItems={[playlists, together, settingsItem]}
+                    footerItems={[playlists, together, settingsItem].filter(show)}
                     you={you}
                   />
                 )}
@@ -719,7 +748,7 @@ export function WebLayout() {
                   <RemoteTarget />
                   <RandomPick />
                   <PlaylistsHost />
-                  {currentHost().watchNext && <WatchNextSync />}
+                  {currentHost().watchNext && !hideContinue && <WatchNextSync />}
                   <ItemMenuHost>
                     <GlideLayers name="page">
                       {kept && (
@@ -773,7 +802,7 @@ export function WebLayout() {
                 calendar,
                 playlists,
                 together,
-              ]}
+              ].filter(show)}
               menuItems={several ? [settingsItem, switchItem] : [settingsItem]}
               wide={nav === 'bar'}
               named={tabNames === 'shown'}

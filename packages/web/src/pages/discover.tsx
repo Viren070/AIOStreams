@@ -18,7 +18,12 @@ import {
 import { useInView } from '../lib/use-in-view';
 import { libraryLabel } from '../lib/format';
 import { navigate, to } from '../lib/paths';
-import { lastCatalog, rememberCatalog } from '../lib/settings';
+import {
+  lastCatalog,
+  rememberCatalog,
+  settings,
+  useSetting,
+} from '../lib/settings';
 import { useFeature } from '../lib/server-info';
 import { tab, tabList } from '../lib/input';
 import { PillTabs } from '../components/pill-tabs';
@@ -192,6 +197,7 @@ export function DiscoverPage({
   const all = views.data?.Items ?? [];
   const view = all.find((v) => v.Id === viewId);
   const [filter, setFilter] = React.useState<ItemFilter | undefined>();
+  const [split] = useSetting(settings.interface.discoverSplit);
 
   const current: Kind = (KINDS.find((k) => k.kind === kind)?.kind ??
     kindOf(view) ??
@@ -199,15 +205,18 @@ export function DiscoverPage({
   // A catalog with no kind of its own holds any kind, so every tab offers it
   // and filters it.
   const untyped = all.some((v) => !kindOf(v));
-  const siblings = all.filter(
-    (v) => kindOf(v) === current || !kindOf(v) || v.Id === viewId
-  );
-  const offered = KINDS.filter(
-    (k) =>
-      k.kind === current ||
-      all.some((v) => kindOf(v) === k.kind) ||
-      (untyped && k.kind !== 'BoxSet')
-  );
+  // Without the split there are no type tabs and one picker lists every catalog.
+  const siblings = split
+    ? all.filter((v) => kindOf(v) === current || !kindOf(v) || v.Id === viewId)
+    : all;
+  const offered = split
+    ? KINDS.filter(
+        (k) =>
+          k.kind === current ||
+          all.some((v) => kindOf(v) === k.kind) ||
+          (untyped && k.kind !== 'BoxSet')
+      )
+    : [];
 
   const required = useFeature('genreRequired') && needsGenre(view);
   const opening = defaultGenre(genres.data?.Items, required);
@@ -225,7 +234,10 @@ export function DiscoverPage({
     : opening;
   const pages = useItemPages(viewId, {
     filter,
-    types: view && kindOf(view) === current ? libraryTypes(view) : current,
+    types:
+      view && (!split || kindOf(view) === current)
+        ? libraryTypes(view)
+        : current,
     genreId: genreItem?.Id,
     recursive: true,
     enabled: !!view && !genres.isLoading,
