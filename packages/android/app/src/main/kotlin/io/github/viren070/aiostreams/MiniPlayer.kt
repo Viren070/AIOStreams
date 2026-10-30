@@ -8,10 +8,13 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.widget.FrameLayout
+import kotlin.math.abs
 
-class MiniPlayer(private val stage: FrameLayout) {
+class MiniPlayer(private val stage: FrameLayout, private val page: View) {
     private var rect: Rect? = null
     private var hidden = false
+    private var viewportWidth = 0
+    private var viewportHeight = 0
     private var pictureInPicture = false
     private var raised: SurfaceView? = null
 
@@ -25,14 +28,26 @@ class MiniPlayer(private val stage: FrameLayout) {
                 if (raised?.let { it === child || !it.isAttachedToWindow } == true) raised = null
             }
         })
+        page.addOnLayoutChangeListener { _, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
+            if (right - left != oldRight - oldLeft || bottom - top != oldBottom - oldTop) page.post { refresh() }
+        }
     }
 
-    fun show(rect: Rect?, hidden: Boolean) {
-        if (rect == this.rect && hidden == this.hidden) return
+    fun show(rect: Rect?, hidden: Boolean, viewportWidth: Int, viewportHeight: Int) {
+        if (rect == this.rect && hidden == this.hidden &&
+            viewportWidth == this.viewportWidth && viewportHeight == this.viewportHeight
+        ) {
+            return
+        }
         this.rect = rect
         this.hidden = hidden
+        this.viewportWidth = viewportWidth
+        this.viewportHeight = viewportHeight
         refresh()
     }
+
+    private fun laidOut() =
+        abs(viewportWidth - page.width) <= SLACK && abs(viewportHeight - page.height) <= SLACK
 
     fun pictureInPicture(on: Boolean) {
         if (on == pictureInPicture) return
@@ -55,7 +70,7 @@ class MiniPlayer(private val stage: FrameLayout) {
             params.topMargin = top
             stage.layoutParams = params
         }
-        val target = if (rect != null && (pictureInPicture || !hidden)) firstSurface(stage) else null
+        val target = if (rect != null && (pictureInPicture || (!hidden && laidOut()))) firstSurface(stage) else null
         if (target === raised) return
         raised?.let { setOnTop(it, false) }
         target?.let { setOnTop(it, true) }
@@ -81,5 +96,9 @@ class MiniPlayer(private val stage: FrameLayout) {
         parent.removeView(view)
         view.setZOrderOnTop(onTop)
         parent.addView(view, index, params)
+    }
+
+    private companion object {
+        const val SLACK = 8
     }
 }
