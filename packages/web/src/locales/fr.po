@@ -813,11 +813,11 @@ msgstr "Canal"
 msgid "Channels"
 msgstr "Canaux"
 
-#: src/components/player/keys.ts src/components/player/options.tsx
+#: src/components/player/chapters.tsx src/components/player/keys.ts
 msgid "Chapter {number}"
 msgstr "Chapitre {number}"
 
-#: src/components/player/options.tsx
+#: src/components/player/chapters.tsx src/components/player/options.tsx
 msgid "Chapters"
 msgstr "Chapitres"
 
@@ -2966,9 +2966,9 @@ msgstr "Lecteur"
 msgid "Player link"
 msgstr "Lien du lecteur"
 
-#: src/components/party/party-sheet.tsx src/components/player/episodes.tsx
-#: src/components/playlists.tsx src/components/sessions.tsx
-#: src/components/version-picker.tsx
+#: src/components/party/party-sheet.tsx src/components/player/chapters.tsx
+#: src/components/player/episodes.tsx src/components/playlists.tsx
+#: src/components/sessions.tsx src/components/version-picker.tsx
 msgid "Playing"
 msgstr "Lecture en cours"
 

@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-29 16:33+0000\n"
+"PO-Revision-Date: 2026-10-30 19:55+0000\n"
 "Last-Translator: Nicola Bortoletto <translate@nicolabortoletto.com>\n"
 "Language-Team: Italian <https://hosted.weblate.org/projects/aiostreams/web-app/it/>\n"
 "Language: it\n"
@@ -813,11 +813,11 @@ msgstr "Canale"
 msgid "Channels"
 msgstr "Canali"
 
-#: src/components/player/keys.ts src/components/player/options.tsx
+#: src/components/player/chapters.tsx src/components/player/keys.ts
 msgid "Chapter {number}"
 msgstr "Capitolo {number}"
 
-#: src/components/player/options.tsx
+#: src/components/player/chapters.tsx src/components/player/options.tsx
 msgid "Chapters"
 msgstr "Capitoli"
 
@@ -1304,11 +1304,11 @@ msgstr "Non fare nulla"
 
 #: src/pages/settings/interface.tsx
 msgid "Docked"
-msgstr "Ancorato"
+msgstr "Ancorata"
 
 #: src/pages/settings/interface.tsx
 msgid "Docked keeps it in a column of its own. Floating hovers it over the page, a little in from the edge. Corner button shrinks it to the current page's button in the top corner, which opens into the whole menu."
-msgstr "Ancorato lo mantiene in una colonna a parte. Fluttuante lo fa comparire sopra la pagina, leggermente staccato dal bordo. Pulsante nell'angolo lo riduce al pulsante della pagina corrente, in alto nell'angolo, che si apre nel menu completo."
+msgstr "Ancorata la mantiene in una colonna a parte. Fluttuante la fa comparire sopra la pagina, leggermente staccata dal bordo. Pulsante nell'angolo la riduce al pulsante della pagina corrente, in alto nell'angolo, che si apre nel menu completo."
 
 #: src/pages/settings/about.tsx
 msgid "Documentation"
@@ -1550,9 +1550,8 @@ msgid "Filter versions"
 msgstr "Filtra versioni"
 
 #: src/pages/settings/playback.tsx
-#, fuzzy
 msgid "Find versions when a title opens"
-msgstr "Impossibile trovare una versione di questo titolo"
+msgstr "Trova le versioni quando si apre un titolo"
 
 #: src/components/download-button.tsx
 msgid "Finding a version to download"
@@ -1992,7 +1991,7 @@ msgstr "Sinistra"
 
 #: src/pages/settings/interface.tsx
 msgid "Left empty, posters stand alone. A poster without artwork still shows its title."
-msgstr "Se lasciato vuoto, verranno mostrate solo i poster. Un poster privo di copertina mostrerà comunque il suo titolo."
+msgstr "Se lasciato vuoto, verranno mostrati solo i poster. Un poster privo di copertina mostrerà comunque il suo titolo."
 
 #: src/components/player/options.tsx
 msgid "Less dialogue boost"
@@ -2056,7 +2055,7 @@ msgstr "Ricerca del watch party…"
 
 #: src/pages/settings/playback.tsx
 msgid "Looks for versions as soon as a title's page opens, so Play and the version list don't wait. Each title you open is looked up, even if you don't play it."
-msgstr ""
+msgstr "Cerca le versioni non appena si apre la pagina di un titolo, così da azzerare i tempi di attesa per la riproduzione e per l'elenco delle versioni. La ricerca viene avviata per ogni titolo aperto, anche se non viene riprodotto."
 
 #: src/components/party/party-sheet.tsx
 msgid "Lost the connection to {relay}. Reconnecting… Your player carries on, and gets back in step once it's back."
@@ -2306,7 +2305,7 @@ msgstr "In arrivo"
 
 #: src/components/player/options.tsx src/pages/settings/audio.tsx
 msgid "Night mode"
-msgstr "Modalità scura"
+msgstr "Modalità notte"
 
 #: src/pages/settings/apps.tsx
 msgid "Nightly"
@@ -2499,7 +2498,7 @@ msgstr "Oceano"
 #: src/lib/playback/sound.ts src/pages/settings/audio.tsx
 #: src/pages/settings/subtitles.tsx
 msgid "Off"
-msgstr "Disattivati"
+msgstr "Disattivato"
 
 #: src/pages/settings/theme.tsx
 msgid "Off for this visit, since the address ends in <0>?safe</0>. Fix or clear it here, then open the app without it."
@@ -2967,9 +2966,9 @@ msgstr "Lettore"
 msgid "Player link"
 msgstr "Link del riproduttore"
 
-#: src/components/party/party-sheet.tsx src/components/player/episodes.tsx
-#: src/components/playlists.tsx src/components/sessions.tsx
-#: src/components/version-picker.tsx
+#: src/components/party/party-sheet.tsx src/components/player/chapters.tsx
+#: src/components/player/episodes.tsx src/components/playlists.tsx
+#: src/components/sessions.tsx src/components/version-picker.tsx
 msgid "Playing"
 msgstr "In riproduzione"
 
@@ -3050,7 +3049,6 @@ msgid "Previews"
 msgstr "Anteprime"
 
 #: src/pages/settings/playback.tsx
-#, fuzzy
 msgctxt "Episode segments showing the next episode"
 msgid "Previews"
 msgstr "Anteprime"
@@ -3771,7 +3769,7 @@ msgstr "Salta riassunto"
 
 #: src/pages/settings/playback.tsx
 msgid "Skip recap episodes"
-msgstr "Salta episodi riassuntivi"
+msgstr "Salta gli episodi riassuntivi"
 
 #: src/lib/input/actions.ts
 msgid "Skip the intro or credits"
