@@ -260,6 +260,9 @@ define_class!(
             if size.width > 1.0 && size.height > 1.0 {
                 // SAFETY: the superclass's setter, with the same argument.
                 let _: () = unsafe { msg_send![super(self), setDrawableSize: size] };
+                // A new drawable size comes with a new swapchain, which clears the
+                // layer's colours; the video state tags them again.
+                video::retag();
             }
         }
 
@@ -682,8 +685,10 @@ pub fn mpv_options(video: &VideoSurface) -> Vec<(&'static str, String)> {
             ("gpu-context", "moltenvk".into()),
             ("wid", wid(layer)),
             ("hwdec", "auto-safe".into()),
-            // Only read when mpv starts.
-            ("target-colorspace-hint", "yes".into()),
+            // No target colorspace hint: the moltenvk context reports none, so a
+            // hint would render to the video's own range. The app drives the target
+            // and the layer itself, like the compatibility output.
+            ("target-colorspace-hint", "no".into()),
             ("sub-hdr-peak", video::REFERENCE_WHITE.to_string()),
             ("image-subs-hdr-peak", video::REFERENCE_WHITE.to_string()),
         ],
