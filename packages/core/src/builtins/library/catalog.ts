@@ -11,7 +11,7 @@ import {
 } from '../../debrid/index.js';
 import { Manifest, MetaPreview } from '../../db/schemas.js';
 import { formatBytes } from '../../formatters/utils.js';
-import { ParsedResult } from '@viren070/parse-torrent-title';
+import { ParsedResult } from '@aiostreams/release-parser';
 import { parseTorrentTitleCached } from '../../parser/title.js';
 import { normaliseTitle } from '../../parser/utils.js';
 import { token_set_ratio } from 'fuzzball';

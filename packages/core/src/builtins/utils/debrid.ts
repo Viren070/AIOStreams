@@ -30,7 +30,7 @@ import {
   sentNzbHash,
   parseFileNames,
 } from '../../debrid/index.js';
-import { ParsedResult } from '@viren070/parse-torrent-title';
+import { ParsedResult } from '@aiostreams/release-parser';
 import { parseTorrentTitleCached } from '../../parser/title.js';
 import {
   preprocessTitle,

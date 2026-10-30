@@ -42,12 +42,12 @@ importers:
       '@aiostreams/fsmux':
         specifier: ^0.3.1
         version: 0.3.1
+      '@aiostreams/release-parser':
+        specifier: ^1.0.1
+        version: 1.0.1
       '@torbox/torbox-api':
         specifier: github:viren070/torbox-sdk-js#dist
         version: https://codeload.github.com/viren070/torbox-sdk-js/tar.gz/82fb4eb14ccd3a0372fb445f796fa49527960cdd
-      '@viren070/parse-torrent-title':
-        specifier: ^0.9.2
-        version: 0.9.2
       bcrypt:
         specifier: ^6.0.0
         version: 6.0.0
@@ -719,6 +719,9 @@ packages:
   '@aiostreams/fsmux@0.3.1':
     resolution: {integrity: sha512-bgt7dSU1HufSKO7hqE7SuyGJ7BPOXUx6/S2lH4UMkwTlHHiRlGtOWFaXLlUOYi7iLJRcEnGvdxKu5kwO+Qu8Yw==}
     engines: {node: '>=24.0.0', pnpm: '>=11.0.0'}
+
+  '@aiostreams/release-parser@1.0.1':
+    resolution: {integrity: sha512-gWkU+TOtOCHa28lR7pYUtEpi5XLAVzedfotrehdLjaAUnYFwRewG10DwdPWjAmY1Xn5i2+VNXxa5C/eWZhhREQ==}
 
   '@aiostreams/seanime-extensions@0.10.3':
     resolution: {integrity: sha512-1yoLXMz6DPyVRaeR8gY/mGYLQR3DdhcYOcPCI32vj8VJY0GfOdZxzMP+bCoU4EHY0lZmsa821P/ZZk95hG944Q==}
@@ -3527,9 +3530,6 @@ packages:
     resolution: {integrity: sha512-nAB74NfSNKknqQ1RrYj6uz8FcXEomu/MATJZxh/x+BArzN2U3JbOYC0APYzUIGhVY3m5hRxA8VPNdPBoG8txlA==}
     cpu: [x64]
     os: [win32]
-
-  '@viren070/parse-torrent-title@0.9.2':
-    resolution: {integrity: sha512-YSIFA2788yQ9lPcP73JySTKuvCugmhwS72198EAH8AZXIGWP6h0xcQe1vV3wPhcBqvEp1NPcfbRmCDdyzlvJew==}
 
   '@vitest/mocker@5.0.5':
     resolution: {integrity: sha512-xLL3lkDegJZw+MGoGaCCsFayDZthGgpAtr3Vziyfc4p7xH89K7KRPcRBBh/kEYm0Aqkt5DtTmkYpBtRV/FrHZg==}
@@ -8139,6 +8139,8 @@ snapshots:
 
   '@aiostreams/fsmux@0.3.1': {}
 
+  '@aiostreams/release-parser@1.0.1': {}
+
   '@aiostreams/seanime-extensions@0.10.3': {}
 
   '@alloc/quick-lru@5.3.0': {}
@@ -10850,8 +10852,6 @@ snapshots:
   '@unrs/resolver-binding-win32-x64-msvc@1.12.2':
     optional: true
 
-  '@viren070/parse-torrent-title@0.9.2': {}
-
   '@vitest/mocker@5.0.5(vite@8.3.5(@types/node@25.9.9)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.48.0)(tsx@4.23.15)(yaml@2.9.1))':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
@@ -12139,7 +12139,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-plugin-import@2.32.0(eslint-import-resolver-typescript@3.10.1)(eslint@10.13.0(jiti@2.7.0)):
+  eslint-plugin-import@2.32.0(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(eslint@10.13.0(jiti@2.7.0)))(eslint@10.13.0(jiti@2.7.0)))(eslint@10.13.0(jiti@2.7.0)):
     dependencies:
       '@rtsao/scc': 1.1.0
       array-includes: 3.2.0
