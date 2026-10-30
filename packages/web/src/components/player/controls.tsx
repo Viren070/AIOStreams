@@ -7,6 +7,7 @@ import {
   LuLoaderCircle,
   LuLock,
   LuPause,
+  LuPictureInPicture2,
   LuPlay,
   LuRotateCcw,
   LuRotateCw,
@@ -84,6 +85,7 @@ export function PlayerControls({
   steps,
   playlist,
   onParty,
+  onMinimize,
 }: {
   item: BaseItemDto;
   player: PlayerController;
@@ -101,6 +103,7 @@ export function PlayerControls({
   steps?: 'episode' | 'trailer' | 'playlist';
   playlist?: { id: string; onPlay(entry: BaseItemDto, playlist: string): void };
   onParty?: () => void;
+  onMinimize?: () => void;
 }) {
   const { state } = player;
   const latest = useLatest(player);
@@ -495,6 +498,16 @@ export function PlayerControls({
             }}
           >
             <LuLock />
+          </ControlButton>
+        )}
+        {onMinimize && !tv && (
+          <ControlButton
+            name="mini-player"
+            label={t`Mini player`}
+            className={touch ? undefined : 'ms-auto'}
+            onClick={onMinimize}
+          >
+            <LuPictureInPicture2 />
           </ControlButton>
         )}
       </div>
