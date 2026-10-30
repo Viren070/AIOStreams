@@ -149,6 +149,7 @@ export function useUpNextPrompt({
   onBack,
   group,
   playlist,
+  minimized = false,
 }: {
   item: BaseItemDto;
   source: SourceInfo;
@@ -163,6 +164,7 @@ export function useUpNextPrompt({
   };
   /** The playlist it was started from. */
   playlist?: string;
+  minimized?: boolean;
 }) {
   const { client } = useSession();
   const queryClient = useQueryClient();
@@ -199,7 +201,7 @@ export function useUpNextPrompt({
     playhead,
     (h) => h.positionMs >= (at ?? durationMs - OPEN_LEAD_MS)
   );
-  const due = !!next && pastPrompt;
+  const due = !minimized && !!next && pastPrompt;
   const [dismissed, setDismissed] = React.useState(false);
   // Seeking back before the prompt brings it back next time.
   if (!due && dismissed) setDismissed(false);
