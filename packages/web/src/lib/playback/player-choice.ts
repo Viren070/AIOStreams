@@ -9,12 +9,19 @@ type Platform = 'ios' | 'android' | 'macos';
 /** Players the desktop app starts and drives itself, as it names them. */
 export const LAUNCHED_PLAYERS = [{ id: 'mpv', name: 'mpv' }] as const;
 
-/** Extras the Android players read (a title, where to start in ms) and the return link the app answers with. */
+/** Extras most Android players read (a title, where to start in ms) and the return link the app answers with. */
 const ANDROID_EXTRAS =
   'S.title={title};i.position={positionMs};S.aiostreams.return={returnUrl}';
 
-const androidIntent = (target: string) =>
-  `intent://{url}#Intent;${target};type=video/*;scheme={scheme};${ANDROID_EXTRAS};end`;
+/**
+ * Vimu reads extras of its own: the start in ms, as an int, and `forceresume`
+ * off, so it keeps no place of its own for the address to win over that start.
+ */
+const VIMU_EXTRAS =
+  'S.forcename={title};i.startfrom={positionMs};B.forceresume=false;S.aiostreams.return={returnUrl}';
+
+const androidIntent = (target: string, extras = ANDROID_EXTRAS) =>
+  `intent://{url}#Intent;${target};type=video/*;scheme={scheme};${extras};end`;
 
 /**
  * Players opened by a link, on the platforms whose apps take one. An id can
@@ -27,6 +34,8 @@ export const LINK_PLAYERS: readonly {
   target?: string;
   template: string;
   platforms: readonly Platform[];
+  /** Made for TVs only, so offered on one. */
+  tvOnly?: boolean;
 }[] = [
   {
     id: 'vlc',
@@ -52,6 +61,14 @@ export const LINK_PLAYERS: readonly {
     name: 'mpv',
     template: androidIntent('package=is.xyz.mpv'),
     platforms: ['android'],
+  },
+  {
+    id: 'vimu',
+    // eslint-disable-next-line lingui/no-unlocalized-strings -- an app's name
+    name: 'Vimu',
+    template: androidIntent('package=net.gtvbox.videoplayer', VIMU_EXTRAS),
+    platforms: ['android'],
+    tvOnly: true,
   },
   {
     id: 'android-app',
@@ -182,7 +199,8 @@ export function playerOptions(
     ...LINK_PLAYERS.filter(
       (p) =>
         p === linkPreset(p.id) &&
-        (p.id === current || (os && p.platforms.includes(os)))
+        (p.id === current ||
+          (os && p.platforms.includes(os) && (!p.tvOnly || !!currentHost().tv)))
     ).map((p) => ({ value: p.id, label: p.name })),
     { value: CUSTOM_LINK, label: t`Custom link` },
   ];
