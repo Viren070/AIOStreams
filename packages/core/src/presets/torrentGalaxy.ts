@@ -1,4 +1,4 @@
-﻿import { Option, UserData } from '../db/index.js';
+import { Option, UserData } from '../db/index.js';
 import { appConfig, constants } from '../utils/index.js';
 import { StremThruPreset } from './stremthru.js';
 import { TorznabPreset } from './torznab.js';
@@ -90,7 +90,8 @@ export class TorrentGalaxyPreset extends TorznabPreset {
         appConfig.presets.defaultTimeout,
       USER_AGENT: appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: StremThruPreset.supportedServices,
-      DESCRIPTION: 'An addon to get debrid results from TorrentGalaxy.',
+      DESCRIPTION:
+        'A public torrent indexer for movies, TV and anime. Searches by title and, when available, by IMDB ID. Serves the same results as TheRARBG, so there is no need to enable both.',
       OPTIONS: options,
       SUPPORTED_STREAM_TYPES: [constants.DEBRID_STREAM_TYPE],
       SUPPORTED_RESOURCES: supportedResources,
