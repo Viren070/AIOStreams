@@ -378,8 +378,9 @@ export class WatchStateRepository {
   static async upsert(
     scope: WatchScope,
     identity: WatchIdentity,
-    patch: WatchStatePatch
-  ): Promise<WatchStateRow> {
+    patch: WatchStatePatch,
+    opts: { unlessPlayedAfter?: number } = {}
+  ): Promise<WatchStateRow | null> {
     const now = Date.now();
     const pos = patch.positionMs == null ? null : Math.round(patch.positionMs);
     const dur = patch.durationMs == null ? null : Math.round(patch.durationMs);
@@ -409,6 +410,11 @@ export class WatchStateRepository {
     const origin = patch.origin ?? 'local';
     const sinkId = patch.sinkId ?? null;
     const externalAt = patch.externalAt ?? null;
+    const guarded = opts.unlessPlayedAfter != null;
+    const guard = guarded
+      ? sql`WHERE watch_state.last_played_at IS NULL
+               OR watch_state.last_played_at <= ${opts.unlessPlayedAfter}`
+      : raw('');
 
     const row = await getDb().maybeOne<DbRow>(
       sql`INSERT INTO watch_state
@@ -465,9 +471,11 @@ export class WatchStateRepository {
             external_at = excluded.external_at,
             snapshot = COALESCE(${snapshot}, watch_state.snapshot),
             match_key = COALESCE(excluded.match_key, watch_state.match_key)
+          ${guard}
           RETURNING *`
     );
     if (row) return toRow(row);
+    if (guarded) return null;
     return {
       uuid: scope.uuid,
       persona: scope.persona,
