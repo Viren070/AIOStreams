@@ -1328,10 +1328,8 @@ export const SubtitleResponseSchema = z.object({
 export type SubtitleResponse = z.infer<typeof SubtitleResponseSchema>;
 export type Subtitle = z.infer<typeof SubtitleSchema>;
 
-export const SourceSchema = z.object({
-  url: z.string(),
-  bytes: z.number().nullable().optional(),
-});
+/** An archive part as `[url, bytes]`: Stremio drops a stream whose parts are objects. */
+export const SourceSchema = z.tuple([z.string(), z.number().nullish()]);
 
 const NNTPServerSchema = z.object({
   username: z.string(),
