@@ -24,10 +24,12 @@ import {
   getCatalogPage,
   getWatchStateProvider,
   isLeafEntry,
+  itemIdsForProviderIds,
   knownCatalogKinds,
   latestSpellings,
   listResult,
   listViews,
+  providerLookup,
   requiresGenre,
   searchCatalogs,
   seriesIdOf,
@@ -444,26 +446,34 @@ async function handleItems(
   const wantsResumable = filters.includes('isresumable');
   const recursive = qb(req, 'Recursive') ?? false;
   const personIds = qlist(req, 'PersonIds');
+  const providerIds = qlist(req, 'AnyProviderIdEquals');
 
-  if (ids.length) {
-    // Resolving runs the stream pipeline, so a lookup of several ids never does.
-    const resolve = ids.length === 1 && (wantsVersions(req) ?? false);
-    const built = await mapLimited(ids.slice(0, 200), ROW_CONCURRENCY, (id) =>
-      itemForId(req, ctx, id, { resolve, listed: true }).catch(() => null)
-    );
-    const items = applySort(
-      req,
-      excludeTypes(
-        req,
-        applyUserFilters(
-          req,
-          filterByType(
-            built.filter((item): item is JellyfinItem => !!item),
-            types
-          )
-        )
-      )
-    );
+  if (ids.length || providerIds.length) {
+    const versions = wantsVersions(req) ?? false;
+    const build = (id: string, resolve: boolean) =>
+      itemForId(req, ctx, id, { resolve, listed: true }).catch(() => null);
+    const select = (items: JellyfinItem[]) =>
+      excludeTypes(req, applyUserFilters(req, filterByType(items, types)));
+    let found: JellyfinItem[];
+    if (ids.length) {
+      // Resolving runs the stream pipeline, so a lookup of several ids never does.
+      const resolve = ids.length === 1 && versions;
+      const built = await mapLimited(ids.slice(0, 200), ROW_CONCURRENCY, (id) =>
+        build(id, resolve)
+      );
+      found = select(built.filter((item): item is JellyfinItem => !!item));
+    } else {
+      found = await providerLookup(
+        itemIdsForProviderIds(
+          providerIds,
+          searchKindsFor(types) ?? ['movie', 'series']
+        ).slice(0, 200),
+        versions,
+        build,
+        select
+      );
+    }
+    const items = applySort(req, found);
     const end = qs(req, 'Limit') ? startIndex + limit : items.length;
     send(req, res, items.slice(startIndex, end), items.length, startIndex);
     return;
