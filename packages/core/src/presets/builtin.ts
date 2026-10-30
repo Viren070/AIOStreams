@@ -14,6 +14,7 @@ import {
   toUrlSafeBase64,
 } from '../utils/index.js';
 import { Preset } from './preset.js';
+import { encodeQbittorrentCredential } from '../debrid/qbittorrent/client.js';
 import { releaseKeyKind } from '../release-blocklist/keys.js';
 import { stremthruSpecialCases } from './stremthru.js';
 
@@ -268,6 +269,14 @@ export class BuiltinAddonPreset extends Preset {
             aiostreamsAuth: credentials.aiostreamsAuth,
           })
         ),
+      [constants.QBITTORRENT_SERVICE]: (credentials: any) =>
+        encodeQbittorrentCredential({
+          url: credentials.url,
+          username: credentials.username,
+          password: credentials.password,
+          skipOtherFiles: credentials.skipOtherFiles,
+          pathMappings: credentials.pathMappings,
+        }),
     };
     const altmountSpecialCase: Partial<
       Record<ServiceId, (credentials: any) => any>
