@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-30 19:55+0000\n"
+"PO-Revision-Date: 2026-10-31 13:46+0000\n"
 "Last-Translator: AIO sama <aio-sama@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Malay <https://hosted.weblate.org/projects/aiostreams/web-app/ms/>\n"
 "Language: ms\n"
@@ -2492,7 +2492,7 @@ msgstr "Kini: {shown}"
 
 #: src/pages/settings/theme.tsx
 msgid "Ocean"
-msgstr "Lautan (Ocean)"
+msgstr "Lautan"
 
 #: src/components/player/options.tsx src/components/remote-sheet.tsx
 #: src/lib/playback/sound.ts src/pages/settings/audio.tsx
@@ -4015,7 +4015,7 @@ msgstr "Sarikata: {label}"
 
 #: src/pages/settings/theme.tsx
 msgid "Sun"
-msgstr "Cahaya Matahari (Sun)"
+msgstr "Matahari"
 
 #: src/lib/i18n.ts
 msgid "Support AIOStreams"
