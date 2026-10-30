@@ -37,9 +37,7 @@ import {
   DropdownMenuLabel,
 } from '@aiostreams/ui/dropdown-menu';
 import { cn } from '@aiostreams/ui/core/styling';
-import { clock } from '../../lib/format';
 import { currentHost } from '../../lib/hosts';
-import { chapterAt } from '../../lib/playback/chapters';
 import type { PlayerController, Track } from '../../lib/playback/controller';
 import {
   settings,
@@ -68,7 +66,6 @@ import { subtitleLanguages, usePlaybackPrefs } from '../../lib/user-config';
 import { ControlButton } from './buttons';
 import { useParty } from '../../lib/party/party';
 import { RATES, rateLabel } from './keys';
-import { usePlayhead } from '../../lib/playback/playhead';
 import { useLatest } from '../../lib/use-latest';
 
 /** Opens in the menu's place from a row under its list. */
@@ -546,6 +543,7 @@ export function OptionButtons({
   onMenu,
   onVersions,
   onEpisodes,
+  onChapters,
   onPlaylist,
   onAddFile,
   onSyncByEar,
@@ -558,6 +556,7 @@ export function OptionButtons({
   onParty?: () => void;
   onVersions?: () => void;
   onEpisodes?: () => void;
+  onChapters?: () => void;
   onPlaylist?: () => void;
   onAddFile(): void;
   onSyncByEar(): void;
@@ -575,10 +574,6 @@ export function OptionButtons({
           subtitleLanguages(prefs),
           state.subtitle
         );
-  const chapters = player.chapters ?? [];
-  const chapter = usePlayhead(player.playhead, (h) =>
-    chapterAt(chapters, h.positionMs)
-  );
   const tv = !!currentHost().tv;
   const unread = useParty()?.unread ?? 0;
   const hidden = subtitles.hidden.length;
@@ -610,20 +605,10 @@ export function OptionButtons({
           <LuGalleryVerticalEnd />
         </ControlButton>
       )}
-      {chapters.length > 1 && (
-        <Menu
-          name="chapters"
-          label={t`Chapters`}
-          icon={<LuListOrdered />}
-          options={chapters.map((c, i) => {
-            const number = i + 1;
-            const title = c.title || t`Chapter ${number}`;
-            return { id: String(i), label: `${title} · ${clock(c.startMs)}` };
-          })}
-          value={String(chapter)}
-          onSelect={(id) => id && player.seek(chapters[Number(id)].startMs)}
-          {...menuState('chapters')}
-        />
+      {onChapters && (
+        <ControlButton name="chapters" label={t`Chapters`} onClick={onChapters}>
+          <LuListOrdered />
+        </ControlButton>
       )}
       {onVersions && (
         <ControlButton name="versions" label={t`Versions`} onClick={onVersions}>

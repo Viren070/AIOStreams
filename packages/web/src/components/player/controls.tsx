@@ -30,6 +30,7 @@ import {
   MiddleButton,
   PlayerAction,
 } from './buttons';
+import { ChaptersSheet } from './chapters';
 import { EpisodesSheet } from './episodes';
 import { PlaylistSheet } from '../playlists';
 import {
@@ -121,6 +122,7 @@ export function PlayerControls({
   } | null>(null);
   const [byEar, setByEar] = React.useState(false);
   const [episodes, setEpisodes] = React.useState(false);
+  const [chapters, setChapters] = React.useState(false);
   const [listing, setListing] = React.useState(false);
   const [scrub, setScrub] = React.useState<{
     fromMs: number;
@@ -136,6 +138,7 @@ export function PlayerControls({
     picking !== null ||
     byEar ||
     episodes ||
+    chapters ||
     listing ||
     scrub !== null;
   // Paused and left alone, the controls give way to what's playing.
@@ -255,6 +258,7 @@ export function PlayerControls({
     setPicking(null);
   };
   const closeByEar = React.useCallback(() => setByEar(false), []);
+  const closeChapters = React.useCallback(() => setChapters(false), []);
 
   const fileInput = React.useRef<HTMLInputElement>(null);
   const addSubtitleFile = (file: File) =>
@@ -336,6 +340,7 @@ export function PlayerControls({
   );
   const isEpisode = item.Type === 'Episode';
   const listsEpisodes = isEpisode && !!item.SeriesId && !!onEpisode;
+  const listsChapters = (player.chapters?.length ?? 0) > 1;
   const stepping = steps ?? (isEpisode ? 'episode' : undefined);
   const stepLabels = {
     episode: [t`Previous episode`, t`Next episode`],
@@ -674,6 +679,7 @@ export function PlayerControls({
             onMenu={onMenu}
             onVersions={onVersions}
             onEpisodes={listsEpisodes ? () => setEpisodes(true) : undefined}
+            onChapters={listsChapters ? () => setChapters(true) : undefined}
             onPlaylist={playlist ? () => setListing(true) : undefined}
             onAddFile={() => fileInput.current?.click()}
             onSyncByEar={() => setByEar(true)}
@@ -691,6 +697,15 @@ export function PlayerControls({
           loadingId={loadingEpisode}
           onPlay={onEpisode}
           onClose={() => setEpisodes(false)}
+        />
+      )}
+
+      {listsChapters && (
+        <ChaptersSheet
+          item={item}
+          player={player}
+          open={chapters}
+          onClose={closeChapters}
         />
       )}
 

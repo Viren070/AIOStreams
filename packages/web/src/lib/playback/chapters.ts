@@ -1,4 +1,5 @@
 import type { MediaSegmentDto } from '../types';
+import type { ThumbnailFeed } from './thumbnails';
 
 type Kind = MediaSegmentDto['Type'];
 
@@ -27,6 +28,21 @@ export function chapterAt(chapters: Chapter[], ms: number): number {
     if (c.startMs <= ms) index = i;
   });
   return index;
+}
+
+/** How far before a chapter a seek to it may land. */
+export const CHAPTER_SNAP_MS = 1000;
+
+/** Its picture's keyframe when close, which the player shows without decoding up to it, else its start. */
+export function chapterSeekMs(
+  startMs: number,
+  thumbnails: ThumbnailFeed | undefined
+): number {
+  const keyframe = thumbnails?.kept()?.get(startMs)?.positionMs;
+  return keyframe !== undefined &&
+    Math.abs(startMs - keyframe) <= CHAPTER_SNAP_MS
+    ? keyframe
+    : startMs;
 }
 
 // A whole title, or the words before its first punctuation mark, once

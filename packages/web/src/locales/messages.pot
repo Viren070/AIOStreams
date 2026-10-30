@@ -843,11 +843,12 @@ msgstr ""
 msgid "Channels"
 msgstr ""
 
+#: src/components/player/chapters.tsx
 #: src/components/player/keys.ts
-#: src/components/player/options.tsx
 msgid "Chapter {number}"
 msgstr ""
 
+#: src/components/player/chapters.tsx
 #: src/components/player/options.tsx
 msgid "Chapters"
 msgstr ""
@@ -3083,6 +3084,7 @@ msgid "Player link"
 msgstr ""
 
 #: src/components/party/party-sheet.tsx
+#: src/components/player/chapters.tsx
 #: src/components/player/episodes.tsx
 #: src/components/playlists.tsx
 #: src/components/sessions.tsx

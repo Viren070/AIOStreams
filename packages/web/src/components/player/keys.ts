@@ -1,6 +1,10 @@
 import { t } from '@lingui/core/macro';
 import React from 'react';
-import { chapterAt } from '../../lib/playback/chapters';
+import {
+  CHAPTER_SNAP_MS,
+  chapterAt,
+  chapterSeekMs,
+} from '../../lib/playback/chapters';
 import { currentHost } from '../../lib/hosts';
 import {
   focusOn,
@@ -120,9 +124,9 @@ export function usePlayerKeys(keys: PlayerKeys): void {
       k().notice(label ? t`Subtitles: ${label}` : t`Subtitles off`);
     };
     const chapterStep = (sign: number) => {
-      const { chapters, playhead, seek } = player();
+      const { chapters, playhead, seek, thumbnails } = player();
       if (!chapters?.length) return false;
-      const at = chapterAt(chapters, playhead.positionMs);
+      const at = chapterAt(chapters, playhead.positionMs + CHAPTER_SNAP_MS);
       const into = playhead.positionMs - (chapters[at]?.startMs ?? 0);
       const to =
         sign > 0
@@ -132,7 +136,7 @@ export function usePlayerKeys(keys: PlayerKeys): void {
             : Math.max(0, at - 1);
       const chapter = chapters[to];
       if (!chapter) return false;
-      seek(chapter.startMs);
+      seek(chapterSeekMs(chapter.startMs, thumbnails));
       const number = to + 1;
       k().notice(chapter.title || t`Chapter ${number}`);
     };
