@@ -39,6 +39,8 @@ function useNativeVideoArea(
         y: Math.round(box.top * scale),
         width: Math.round(box.width * scale),
         height: Math.round(box.height * scale),
+        viewportWidth: Math.round(window.innerWidth * scale),
+        viewportHeight: Math.round(window.innerHeight * scale),
         hidden: overlayOpen(),
       };
       const next = JSON.stringify(message);
