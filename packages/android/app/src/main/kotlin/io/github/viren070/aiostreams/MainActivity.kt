@@ -131,7 +131,7 @@ class MainActivity : ComponentActivity() {
             addView(playback.stage, MATCH_PARENT, MATCH_PARENT)
             addView(web, MATCH_PARENT, MATCH_PARENT)
         })
-        mini = MiniPlayer(playback.stage)
+        mini = MiniPlayer(playback.stage, web)
 
         val app = WebApp(BuildConfig.WEB_URL.ifEmpty { null })
         app.configure(web, ::chooseFiles, players::open, ::onRendererGone) { path ->
@@ -251,7 +251,9 @@ class MainActivity : ComponentActivity() {
                     null
                 }
                 val hidden = message["hidden"]?.jsonPrimitive?.booleanOrNull == true
-                runOnUiThread { mini.show(rect, hidden) }
+                val viewportWidth = message["viewportWidth"]?.jsonPrimitive?.intOrNull ?: 0
+                val viewportHeight = message["viewportHeight"]?.jsonPrimitive?.intOrNull ?: 0
+                runOnUiThread { mini.show(rect, hidden, viewportWidth, viewportHeight) }
             }
             // A TV would blank to switch modes.
             "player-controls" -> if (!onTv()) {
