@@ -210,6 +210,9 @@ export function PlayerPage({
   usePlayerPage(!mini);
   const host = currentHost();
   usePlayerFullscreen((!host.player || !!host.fullscreen) && !mini);
+  React.useEffect(() => {
+    if (mini && isFullscreen()) toggleDocumentFullscreen();
+  }, [mini]);
 
   // Pinned once found: a refreshed version list must not restart playback.
   const [playing, setPlaying] = React.useState<Omit<
@@ -777,10 +780,7 @@ function Player({
   React.useLayoutEffect(() => onCovered(covered), [covered, onCovered]);
   const shrink =
     onMinimize && !launched && !playlistItemId && !inParty
-      ? () => {
-          if (isFullscreen()) toggleDocumentFullscreen();
-          onMinimize();
-        }
+      ? onMinimize
       : undefined;
 
   if (player.state.pictureInPicture && !mini)
