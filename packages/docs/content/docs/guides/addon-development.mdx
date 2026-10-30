@@ -1,0 +1,187 @@
+---
+title: Addon Development
+description: Build an addon for AIOStreams and Stremio, try it on your own instance and host it.
+---
+
+An addon is a web service that answers a few JSON routes. AIOStreams adds one by its manifest URL,
+as Stremio does, so an addon written for one works in the other. The fields AIOStreams reads beyond
+Stremio's are on the [Addon Protocol](/reference/addon-protocol) pages.
+
+## With the SDK
+
+[`@aiostreams/addon-sdk`](https://github.com/AIOStreams/addon-sdk) handles the routing, the
+configuration in the URL, a configure page built from your settings schema, and checks of every answer
+against what clients accept. It types every field on the Addon Protocol pages and runs on Node, Bun,
+Deno and Cloudflare Workers.
+
+```sh
+npm install @aiostreams/addon-sdk zod
+```
+
+```ts
+import { defineAddon } from '@aiostreams/addon-sdk';
+import { serve } from '@aiostreams/addon-sdk/node';
+
+const addon = defineAddon({
+  manifest: {
+    id: 'com.example.hello',
+    version: '1.0.0',
+    name: 'Hello',
+    types: ['movie'],
+    idPrefixes: ['tt'],
+    resources: ['stream'],
+  },
+  stream: ({ id }) => {
+    if (id !== 'tt1375666') return { streams: [] };
+    return {
+      streams: [{ name: 'Example\n1080p', url: 'https://cdn.example.com/inception.mkv' }],
+      cacheMaxAge: 3600,
+    };
+  },
+});
+
+await serve(addon);
+```
+
+Its [README](https://github.com/AIOStreams/addon-sdk#readme) covers configuration, environment
+variables, logging, watch state and deploying, and its
+[examples](https://github.com/AIOStreams/addon-sdk/tree/main/examples) include a catalog addon, a
+watch history tracker and a Cloudflare Worker.
+
+The rest of this page describes the protocol itself, for an addon in any language.
+
+## Routes
+
+Every route is a `GET` of a `.json` path under the addon's base URL, which is the manifest URL
+without `manifest.json`:
+
+| Path                                                             | Answer                                                                |
+| ---------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `/manifest.json`                                                 | What the addon is and serves                                          |
+| `/catalog/{type}/{id}.json`, `/catalog/{type}/{id}/{extra}.json` | `{ "metas": [...] }`                                                  |
+| `/meta/{type}/{id}.json`                                         | `{ "meta": {...} }`                                                   |
+| `/stream/{type}/{id}.json`                                       | `{ "streams": [...] }`                                                |
+| `/subtitles/{type}/{id}/{extra}.json`                            | `{ "subtitles": [...] }`                                              |
+| `/addon_catalog/{type}/{id}.json`                                | `{ "addons": [...] }`                                                 |
+| `/watch_state/...`                                               | [Watch state](/reference/addon-protocol/watch-state), AIOStreams only |
+
+Each path part is URL-encoded. An episode's id is `{show}:{season}:{episode}`, such as
+`tt0903747:3:7`. `{extra}` holds a catalog's options as a query string, such as
+`search=tom%20%26%20jerry&skip=100`: split it on `&` and `=` before decoding each part, or a value
+holding `&` comes apart.
+
+## The manifest
+
+```json
+{
+  "id": "com.example.hello",
+  "version": "1.0.0",
+  "name": "Hello",
+  "description": "Streams for a few films.",
+  "types": ["movie", "series"],
+  "idPrefixes": ["tt"],
+  "resources": ["stream", { "name": "meta", "types": ["series"], "idPrefixes": ["hello:"] }],
+  "catalogs": [{ "type": "series", "id": "new", "name": "New", "extra": [{ "name": "skip" }] }],
+  "behaviorHints": { "configurable": true, "configurationRequired": false }
+}
+```
+
+| Field           | Meaning                                                                                                                 |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `id`            | Stays the same for the addon's whole life                                                                               |
+| `version`       | Semver, such as `1.0.0`. Stremio won't install an addon whose version doesn't parse                                     |
+| `types`         | The content types the addon serves                                                                                      |
+| `idPrefixes`    | Only ids starting with one of these are asked for. Leave it out to be asked for every id                                |
+| `resources`     | What the addon answers. An object entry narrows one resource to its own `types` and `idPrefixes`                        |
+| `catalogs`      | The catalogs it lists, each with the `extra` options it takes                                                           |
+| `behaviorHints` | `configurable` offers a configure page; `configurationRequired` means the addon can't work until it has been configured |
+
+## Configuration
+
+Neither Stremio nor AIOStreams sends an addon the user's settings, so everything it needs comes in
+the URL. Put the settings in the first path segment, and every request carries them:
+
+```
+https://addon.example/{config}/manifest.json
+https://addon.example/{config}/stream/movie/tt1375666.json
+```
+
+The URL is the user's credential: whoever has it uses the addon as them. Encrypt API keys and
+passwords in it rather than only encoding them, and keep the encryption key fixed, since changing it
+breaks every URL made with the old one.
+
+Serve the settings page at `/configure`, and at `/{config}/configure` for changing them. Stremio's
+configure button opens it; AIOStreams users paste the manifest URL it gives them.
+
+## Answering
+
+- **Nothing found:** answer an empty list, such as `{ "streams": [] }`. AIOStreams shows any error
+  status in the stream list as a failed addon. A `meta` request for a title the addon doesn't know
+  answers 404, and AIOStreams asks the next addon with metadata for that id.
+- **Time:** AIOStreams waits 7 seconds for an addon by default, then moves on without it. Users can
+  change that in the addon's **Timeout** option, within limits the instance sets.
+- **CORS:** send `Access-Control-Allow-Origin: *`. Stremio's web apps fetch addons from the browser;
+  AIOStreams fetches them from its server.
+- **Caching:** send a `Cache-Control` header for answers that can be cached. AIOStreams caches
+  answers for times its operator sets, whatever the header says.
+
+Both Stremio and AIOStreams check each answer against the protocol:
+
+- An entry in `metas`, `streams`, `subtitles` or `addons` that doesn't fit is left out, and the rest
+  still show.
+- A `meta` that doesn't fit fails as a whole. In Stremio, a `poster`, `background` or `logo` that
+  isn't a full URL is enough, as is a `released` that isn't a date-time with its zone
+  (`2010-07-16T00:00:00Z`) or epoch milliseconds.
+- Archive parts in `rarUrls`, `zipUrls`, `7zipUrls`, `tgzUrls` and `tarUrls` are `[url, bytes]`
+  pairs. A stream that lists them any other way is dropped.
+
+The SDK runs these checks for you, and its `validation: 'strict'` option turns each problem into an
+error while you develop.
+
+## Trying it in AIOStreams
+
+<Steps>
+  <Step>Start the addon and open its manifest URL in a browser to check it answers.</Step>
+  <Step>
+    In AIOStreams, go to **Addons → Installed**, click **Add by URL** and paste the manifest URL.
+  </Step>
+  <Step>Go to **Save & Install** and click **Save**.</Step>
+</Steps>
+
+Its streams then appear among the others, filtered, sorted and formatted by your settings. The
+addon's **Format Passthrough** option keeps its own names and descriptions, and **Result
+Passthrough** keeps every result past your filters.
+
+An instance you run yourself can reach an addon on `localhost` or on the same Docker network. Inside
+a container, `localhost` is the container itself, so use the host's address or
+`host.docker.internal`. A public instance can't reach your machine, and many refuse private
+addresses, so give the addon a public URL to try it there, with a tunnel such as
+`cloudflared tunnel --url http://localhost:7000`.
+
+## Hosting
+
+Any host that runs a web server works: Render, Railway, Fly.io, a VPS or Docker, or Cloudflare
+Workers with the SDK, whose [README](https://github.com/AIOStreams/addon-sdk#deploying) has a
+Dockerfile and Compose file. Serve it over HTTPS, since browsers block an `http` addon from
+Stremio's web app.
+
+Free plans that put an idle service to sleep are a poor fit. Render's free web services sleep after
+15 minutes without traffic and take about a minute to wake, far longer than AIOStreams waits, so
+the first request after a quiet spell fails. Cloudflare Workers' free plan has no such wait.
+
+Keep the URL stable. Users install the exact manifest URL, so moving the addon to a new address
+means every user adds it again.
+
+## Playback and history
+
+AIOStreams and Stremio report playback to addons in different ways:
+
+- **AIOStreams** sends playback from its apps and other Jellyfin clients through the
+  [`watch_state`](/reference/addon-protocol/watch-state) resource, and reads an addon's watch
+  history back the same way.
+- **Stremio** sends its own playback to addons that declare its `player` resource, as
+  `/player/{type}/{videoId}/action=start&currentTime=…&duration=….json` with times in milliseconds,
+  when playback starts, resumes, pauses or stops. Its `library` resource gets
+  `action=libraryAdd`, `libraryRemove`, `watched` and `unwatched`, with the videos marked in
+  `videoId`, comma-separated. Recent Stremio versions send both. AIOStreams doesn't pass them on, so
+  an addon only gets them when it is installed in Stremio itself.
