@@ -19,7 +19,6 @@ import { ItemPage } from './pages/item';
 import { PersonPage } from './pages/person';
 import { HistoryPage } from './pages/history';
 import { DownloadsPage } from './pages/downloads';
-import { PlayerPage } from './pages/player';
 import { TrailerPage } from './pages/trailer';
 import { Button } from '@aiostreams/ui/button';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
@@ -216,18 +215,8 @@ function TrailerRouteView(): React.ReactElement {
   );
 }
 
-function PlayRouteView(): React.ReactElement {
-  const { itemId } = playRoute.useParams();
-  const { source, start, playlist } = playRoute.useSearch();
-  return (
-    <PlayerPage
-      key={`${itemId}|${source}`}
-      itemId={itemId}
-      sourceId={source}
-      startMs={start}
-      playlist={playlist}
-    />
-  );
+function PlayRouteView(): React.ReactElement | null {
+  return null;
 }
 
 const routeTree = rootRoute.addChildren([
