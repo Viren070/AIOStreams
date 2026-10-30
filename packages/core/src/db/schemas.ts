@@ -1192,6 +1192,14 @@ export const UserDataSchema = z.object({
       /** Re-process debrid results from external addons that include torrent info hashes through
        *  additional/different debrid services. Only applies to addons selected in the wrap addons list. */
       reconfigureService: z.boolean().optional(),
+      /** What to return when every processing service fails (e.g. API down or timing out):
+       *  'error' (default) drops the wrapped results and only reports the error,
+       *  'p2p' returns the original P2P results unwrapped, so they stay playable. */
+      onServiceFailure: z.enum(['error', 'p2p']).optional(),
+      /** Overall time limit (ms) for each processing service. A service that
+       *  takes longer counts as failed. Absent or 0 means no extra limit. */
+      // Capped at the largest delay setTimeout supports (~24.8 days).
+      timeout: z.number().int().min(0).max(2_147_483_647).optional(),
     })
     .optional(),
   jellyfin: JellyfinSettings.optional(),
