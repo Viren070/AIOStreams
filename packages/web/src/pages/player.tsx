@@ -23,7 +23,11 @@ import {
 import { PlaybackReporter } from '../lib/playback/reporter';
 import { currentHost } from '../lib/hosts';
 import { useFeature } from '../lib/server-info';
-import { usePlayerFullscreen } from '../lib/playback/fullscreen';
+import {
+  isFullscreen,
+  toggleDocumentFullscreen,
+  usePlayerFullscreen,
+} from '../lib/playback/fullscreen';
 import { usePlayer } from '../lib/playback/use-player';
 import { videoEngine } from '../lib/playback/video';
 import { useNowPlaying } from '../lib/playback/now-playing';
@@ -86,6 +90,17 @@ import { indexForTrack } from '../lib/remote/tracks';
 import { useLatest } from '../lib/use-latest';
 import { openPartySheet } from '../components/party/party-sheet';
 import { usePlaylistEdits, usePlaylistName } from '../lib/playlists';
+import {
+  miniPlayer,
+  miniPlayerSupported,
+  playKey,
+  type MiniPlay,
+} from '../lib/playback/mini-player';
+import {
+  MINI_CARD,
+  MINI_VIDEO,
+  MiniPlayerBar,
+} from '../components/player/mini-player';
 
 interface PlayerProps {
   item: BaseItemDto;
@@ -101,14 +116,18 @@ interface PlayerProps {
   onCovered(covered: boolean): void;
   /** The playlist it was started from. */
   playlist?: string;
+  mini?: boolean;
+  onMinimize?: () => void;
+  onExpand?: () => void;
 }
 
 /**
  * The page keeps no scrollbar, or the space reserved for one, over the video,
  * and no backdrop (see PageBackground).
  */
-export function usePlayerPage() {
+export function usePlayerPage(active = true) {
   React.useLayoutEffect(() => {
+    if (!active) return;
     const html = document.documentElement;
     const previous = [html.style.overflowY, html.style.scrollbarGutter];
     html.style.overflowY = 'hidden';
@@ -118,7 +137,7 @@ export function usePlayerPage() {
       [html.style.overflowY, html.style.scrollbarGutter] = previous;
       html.classList.remove('playing');
     };
-  }, []);
+  }, [active]);
 }
 
 export const OBJECT_FIT: Record<VideoFit, string> = {
@@ -127,16 +146,47 @@ export const OBJECT_FIT: Record<VideoFit, string> = {
   stretch: 'object-fill',
 };
 
+export function PlayerSlot({
+  routed,
+  playing,
+}: {
+  routed: MiniPlay | null;
+  playing: boolean;
+}) {
+  const stored = miniPlayer.use();
+  const play = routed ?? (playing ? null : stored);
+  React.useEffect(() => {
+    if (!stored) return;
+    const replaced = routed
+      ? stored.expanded || playKey(routed) !== playKey(stored)
+      : playing;
+    if (replaced) miniPlayer.close();
+  }, [routed, stored, playing]);
+  if (!play) return null;
+  return (
+    <PlayerPage
+      key={playKey(play)}
+      itemId={play.itemId}
+      sourceId={play.sourceId}
+      startMs={play.startMs}
+      playlist={play.playlist}
+      mini={!routed}
+    />
+  );
+}
+
 export function PlayerPage({
   itemId,
   sourceId,
   startMs,
   playlist,
+  mini = false,
 }: {
   itemId: string;
   sourceId: string;
   startMs: number;
   playlist?: string;
+  mini?: boolean;
 }) {
   const download = useDownloadOf(itemId);
   // A finished download plays its own file, with or without the server.
@@ -157,14 +207,14 @@ export function PlayerPage({
   });
   const playback = usePlaybackPrefs();
   const picks = useShowPicks();
-  usePlayerPage();
+  usePlayerPage(!mini);
   const host = currentHost();
-  usePlayerFullscreen(!host.player || !!host.fullscreen);
+  usePlayerFullscreen((!host.player || !!host.fullscreen) && !mini);
 
   // Pinned once found: a refreshed version list must not restart playback.
   const [playing, setPlaying] = React.useState<Omit<
     PlayerProps,
-    'startMs' | 'onCovered' | 'playlist'
+    'startMs' | 'onCovered' | 'playlist' | 'mini' | 'onMinimize' | 'onExpand'
   > | null>(null);
   const [covered, setCovered] = React.useState(true);
   const sources = local ? [local.source!] : playableSources(info.data);
@@ -178,8 +228,9 @@ export function PlayerPage({
   React.useEffect(() => {
     if (!missing || !item.data) return;
     lastVersions.set(itemId, undefined);
-    navigate(versionsPath(item.data, playlist), { replace: true });
-  }, [missing, item.data, itemId, playlist]);
+    if (mini) miniPlayer.close();
+    else navigate(versionsPath(item.data, playlist), { replace: true });
+  }, [missing, item.data, itemId, playlist, mini]);
   React.useEffect(() => {
     if (playing) noteLastPlayed(playing.item, playing.source);
   }, [playing]);
@@ -211,15 +262,27 @@ export function PlayerPage({
     picks.isLoading ||
     youTube.isLoading ||
     missing;
+  const minimize = () => {
+    miniPlayer.shrink({ itemId, sourceId, startMs, playlist });
+    goBack(to.item(itemId));
+  };
+  const expand = () => {
+    miniPlayer.expand();
+    navigate(to.play(itemId, sourceId, startMs, playlist));
+  };
   return (
     <>
-      <Cover
-        item={item.data}
-        hidden={!!playing && !covered}
-        status={
-          !sourceId && !playing && loading ? t`Finding a version…` : undefined
-        }
-      />
+      {!mini && (
+        <Cover
+          item={item.data}
+          hidden={!!playing && !covered}
+          status={
+            !sourceId && !playing && loading
+              ? t`Finding a version…`
+              : undefined
+          }
+        />
+      )}
       {playing ? (
         <VersionPickerProvider>
           <Player
@@ -227,9 +290,12 @@ export function PlayerPage({
             startMs={startMs}
             playlist={playlist}
             onCovered={setCovered}
+            mini={mini}
+            onMinimize={miniPlayerSupported() ? minimize : undefined}
+            onExpand={expand}
           />
         </VersionPickerProvider>
-      ) : loading ? null : (
+      ) : loading || mini ? null : (
         <Failure
           itemId={itemId}
           message={
@@ -248,18 +314,20 @@ export function PlayerPage({
  * handler before the prompt that decides it exists. Going back closes a player
  * in its own window, which playing on keeps.
  */
-function useEnded(item: BaseItemDto, close?: () => void) {
+function useEnded(item: BaseItemDto, close?: () => void, mini = false) {
   const latestClose = React.useRef(close);
   latestClose.current = close;
+  const latestMini = useLatest(mini);
   const back = React.useCallback(() => {
     latestClose.current?.();
-    goBack(to.item(item.Id!));
-  }, [item.Id]);
+    if (latestMini.current) miniPlayer.close();
+    else goBack(to.item(item.Id!));
+  }, [item.Id, latestMini]);
   const ended = React.useRef(back);
   const onEnded = React.useCallback(() => ended.current(), []);
   const connect = (next: ReturnType<typeof useUpNextPrompt>) => {
     ended.current = () => {
-      if (!next.autoplay || !next.next) return back();
+      if (latestMini.current || !next.autoplay || !next.next) return back();
       void next.playOn().then((ok) => {
         if (!ok) back();
       });
@@ -569,12 +637,15 @@ function Player({
   youTube,
   onCovered,
   playlist,
+  mini = false,
+  onMinimize,
+  onExpand,
 }: PlayerProps) {
   const { client } = useSession();
   const video = React.useRef<HTMLVideoElement>(null);
   const [hostPlayer] = React.useState(() => currentHost().player);
   const close = React.useRef<() => void>(undefined);
-  const ended = useEnded(item, () => close.current?.());
+  const ended = useEnded(item, () => close.current?.(), mini);
   const { connect } = ended;
   const playlistItemId = usePartyBinding(item.Id!);
   // What the party plays opens paused, until the party starts it.
@@ -617,10 +688,18 @@ function Player({
     onClosed: back,
     onAdvance: (next) => {
       countPlayedOn();
-      navigate(
-        to.play(next.itemId, next.source.Id!, next.startMs, next.playlist),
-        { replace: true }
-      );
+      if (mini)
+        miniPlayer.shrink({
+          itemId: next.itemId,
+          sourceId: next.source.Id!,
+          startMs: next.startMs,
+          playlist: next.playlist,
+        });
+      else
+        navigate(
+          to.play(next.itemId, next.source.Id!, next.startMs, next.playlist),
+          { replace: true }
+        );
     },
     prefs,
     subtitleStyle,
@@ -658,6 +737,7 @@ function Player({
     onBack: back,
     group,
     playlist,
+    minimized: mini,
   });
   connect(next);
   const switchVersion = useSwitchVersion(item, source, player, next.playlist);
@@ -695,11 +775,22 @@ function Player({
   const covered =
     !player.state.pictureInPicture && (!player.state.started || !!launched);
   React.useLayoutEffect(() => onCovered(covered), [covered, onCovered]);
+  const shrink =
+    onMinimize && !launched && !playlistItemId && !inParty
+      ? () => {
+          if (isFullscreen()) toggleDocumentFullscreen();
+          onMinimize();
+        }
+      : undefined;
 
-  if (player.state.pictureInPicture)
+  if (player.state.pictureInPicture && !mini)
     return <div data-page="player" className="fixed inset-0" />;
   return (
-    <div data-page="player" className="fixed inset-0">
+    <div
+      data-page="player"
+      data-mini={mini || undefined}
+      className={mini ? MINI_CARD : 'fixed inset-0'}
+    >
       {!hostPlayer && (
         <>
           <style>{cueCss(subtitleStyle)}</style>
@@ -707,72 +798,90 @@ function Player({
             ref={video}
             data-ui="video"
             className={cn(
-              'h-full w-full bg-black transition-opacity duration-700 ease-out',
+              mini
+                ? cn(MINI_VIDEO, 'cursor-pointer')
+                : 'h-full w-full bg-black',
+              'transition-opacity duration-700 ease-out',
               OBJECT_FIT[fit],
               !player.state.started && 'opacity-0'
             )}
+            onClick={mini ? onExpand : undefined}
             autoPlay
             playsInline
           />
         </>
       )}
-      {player.subtitleText && (
-        <SubtitleText
-          text={player.subtitleText}
-          style={subtitleStyle}
-          lift={player.subtitleLift}
-        />
-      )}
-      {player.stats?.text && (
-        <pre
-          data-ui="player-stats"
-          className="pointer-events-none fixed start-[calc(1rem+env(safe-area-inset-left))] top-[calc(4.5rem+env(safe-area-inset-top))] rounded-lg bg-black/60 px-3 py-2 font-mono text-xs leading-relaxed text-white/90"
-        >
-          {player.stats.text}
-        </pre>
-      )}
-      {launched && (
-        <p
-          data-ui="player-external"
-          className="pointer-events-none fixed inset-x-0 top-1/4 text-center text-lg font-medium text-white/80"
-        >
-          <Trans>Playing in {launchedName}</Trans>
-        </p>
-      )}
-      {player.state.error ? (
-        <Failure
-          itemId={item.Id!}
+      {mini ? (
+        <MiniPlayerBar
           item={item}
-          source={source}
-          message={t`Playback failed: ${failure}`}
-          onVersions={switchVersion}
-          retry={player.retry}
+          player={player}
+          hostPlayer={!!hostPlayer}
+          failure={player.state.error ? failure : undefined}
+          onExpand={() => onExpand?.()}
+          onClose={back}
         />
       ) : (
         <>
-          {!next.asking && (
-            <PlayerControls
-              item={item}
-              player={controls}
-              segments={segments}
-              onBack={back}
-              offeringNext={!!next.element}
-              onVersions={switchVersion}
-              onPrevious={next.previous ? next.playPrevious : undefined}
-              onNext={next.next ? next.playNext : undefined}
-              onEpisode={next.playEpisode}
-              loadingEpisode={next.loading}
-              steps={next.listed ? 'playlist' : undefined}
-              playlist={
-                next.playlist
-                  ? { id: next.playlist, onPlay: next.playEntry }
-                  : undefined
-              }
-              onParty={together}
+          {player.subtitleText && (
+            <SubtitleText
+              text={player.subtitleText}
+              style={subtitleStyle}
+              lift={player.subtitleLift}
             />
           )}
-          {inParty && <PartyLayer />}
-          {next.element}
+          {player.stats?.text && (
+            <pre
+              data-ui="player-stats"
+              className="pointer-events-none fixed start-[calc(1rem+env(safe-area-inset-left))] top-[calc(4.5rem+env(safe-area-inset-top))] rounded-lg bg-black/60 px-3 py-2 font-mono text-xs leading-relaxed text-white/90"
+            >
+              {player.stats.text}
+            </pre>
+          )}
+          {launched && (
+            <p
+              data-ui="player-external"
+              className="pointer-events-none fixed inset-x-0 top-1/4 text-center text-lg font-medium text-white/80"
+            >
+              <Trans>Playing in {launchedName}</Trans>
+            </p>
+          )}
+          {player.state.error ? (
+            <Failure
+              itemId={item.Id!}
+              item={item}
+              source={source}
+              message={t`Playback failed: ${failure}`}
+              onVersions={switchVersion}
+              retry={player.retry}
+            />
+          ) : (
+            <>
+              {!next.asking && (
+                <PlayerControls
+                  item={item}
+                  player={controls}
+                  segments={segments}
+                  onBack={back}
+                  offeringNext={!!next.element}
+                  onVersions={switchVersion}
+                  onPrevious={next.previous ? next.playPrevious : undefined}
+                  onNext={next.next ? next.playNext : undefined}
+                  onEpisode={next.playEpisode}
+                  loadingEpisode={next.loading}
+                  steps={next.listed ? 'playlist' : undefined}
+                  playlist={
+                    next.playlist
+                      ? { id: next.playlist, onPlay: next.playEntry }
+                      : undefined
+                  }
+                  onParty={together}
+                  onMinimize={shrink}
+                />
+              )}
+              {inParty && <PartyLayer />}
+              {next.element}
+            </>
+          )}
         </>
       )}
     </div>
