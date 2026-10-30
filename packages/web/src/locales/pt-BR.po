@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-29 20:57+0000\n"
+"PO-Revision-Date: 2026-10-30 19:55+0000\n"
 "Last-Translator: Bruno <procopio@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/aiostreams/web-app/pt_BR/>\n"
 "Language: pt-BR\n"
@@ -517,7 +517,7 @@ msgstr "A faixa de áudio escolhida durante a reprodução de uma série define 
 #: src/lib/hosts/jellyfin-android.ts src/pages/settings/about.tsx
 #: src/pages/settings/index.tsx
 msgid "Android app"
-msgstr "Aplicativo Android"
+msgstr "App Android"
 
 #: src/pages/settings/playback.tsx
 msgid "Android's own player, which uses less battery: the screen shows the video as the device decodes it, at the video's frame rate. Plays video the device can decode. Styled subtitles look as they do in mpv."
@@ -1363,7 +1363,7 @@ msgstr "Baixado"
 
 #: src/components/download-button.tsx src/pages/downloads.tsx
 msgid "Downloading"
-msgstr "Baixando…"
+msgstr "Baixando"
 
 #: src/lib/hosts/shell/index.ts
 msgid "Downloading version {version}…"
@@ -1376,7 +1376,7 @@ msgstr "Baixando: {percent}%"
 #: src/components/layout.tsx src/pages/downloads.tsx
 #: src/pages/settings/index.tsx
 msgid "Downloads"
-msgstr "Arquivos baixados"
+msgstr "Downloads"
 
 #: src/pages/settings/downloads.tsx
 msgid "Downloads at once"
@@ -1550,9 +1550,8 @@ msgid "Filter versions"
 msgstr "Filtrar versões"
 
 #: src/pages/settings/playback.tsx
-#, fuzzy
 msgid "Find versions when a title opens"
-msgstr "Não foi possível encontrar versões desse título"
+msgstr "Buscar versões ao abrir um título"
 
 #: src/components/download-button.tsx
 msgid "Finding a version to download"
@@ -1739,7 +1738,7 @@ msgstr "Início"
 
 #: src/pages/settings/interface.tsx
 msgid "Home and grids"
-msgstr "Início e fileiras"
+msgstr "Página inicial e layout"
 
 #: src/pages/settings/cache.tsx
 msgid "Home and libraries"
@@ -1907,7 +1906,7 @@ msgstr "Manter a sincronia ajustando a velocidade"
 
 #: src/components/party/party-sheet.tsx
 msgid "Keeping in step"
-msgstr "Sincronização"
+msgstr "Sincronização da sessão"
 
 #: src/pages/settings/apps.tsx
 msgid "Keeps the sound going with the screen off, or when you leave the app."
@@ -2056,7 +2055,7 @@ msgstr "Procurando a sessão…"
 
 #: src/pages/settings/playback.tsx
 msgid "Looks for versions as soon as a title's page opens, so Play and the version list don't wait. Each title you open is looked up, even if you don't play it."
-msgstr ""
+msgstr "Busca as versões assim que a página de um título é aberta, para que você não precise esperar pela busca ao selecionar Reproduzir ou abrir a lista de versões. Isso é feito para cada título aberto, mesmo que você não inicie a reprodução."
 
 #: src/components/party/party-sheet.tsx
 msgid "Lost the connection to {relay}. Reconnecting… Your player carries on, and gets back in step once it's back."
@@ -3050,7 +3049,6 @@ msgid "Previews"
 msgstr "Prévias"
 
 #: src/pages/settings/playback.tsx
-#, fuzzy
 msgctxt "Episode segments showing the next episode"
 msgid "Previews"
 msgstr "Prévias"
@@ -3188,7 +3186,7 @@ msgstr "recusado"
 
 #: src/components/party/party-sheet.tsx
 msgid "Relay"
-msgstr "Relay"
+msgstr "Servidor de retransmissão"
 
 #: src/components/party/party-sheet.tsx
 msgid "Relay address"
@@ -4034,7 +4032,7 @@ msgstr "Trocar de servidor"
 #: src/components/layout.tsx src/components/no-catalogs.tsx
 #: src/pages/settings/account.tsx
 msgid "Switch user"
-msgstr "Trocar de usuário"
+msgstr "Mudar de perfil"
 
 #: src/pages/settings/playback.tsx
 msgid "Switches the TV to a refresh rate that suits each video, so motion plays smoothly, and back when you stop. The screen goes blank for a moment as it switches."
