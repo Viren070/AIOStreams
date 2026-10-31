@@ -23,6 +23,7 @@ const androidDownloads = {
  */
 export function setupAndroid(): () => void {
   const bridge = appBridge();
+  bridge?.send({ type: 'player-mini' });
   let engine: PlayerEngine | null = null;
   const sendEngine = () => {
     if (settings.player.engine.read() === engine) return;

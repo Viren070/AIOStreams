@@ -11,6 +11,7 @@ import android.app.UiModeManager
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Color
+import android.graphics.Rect
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -71,6 +72,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var downloads: DownloadChannel
     private lateinit var updater: Updater
     private lateinit var pip: PictureInPicture
+    private lateinit var mini: MiniPlayer
     private lateinit var focus: AudioFocus
     private lateinit var passthrough: Passthrough
     private val youtube = YouTube { message -> runOnUiThread { bridge.send(message) } }
@@ -129,6 +131,7 @@ class MainActivity : ComponentActivity() {
             addView(playback.stage, MATCH_PARENT, MATCH_PARENT)
             addView(web, MATCH_PARENT, MATCH_PARENT)
         })
+        mini = MiniPlayer(playback.stage, web)
 
         val app = WebApp(BuildConfig.WEB_URL.ifEmpty { null })
         app.configure(web, ::chooseFiles, players::open, ::onRendererGone) { path ->
@@ -169,6 +172,7 @@ class MainActivity : ComponentActivity() {
             voice.available,
             gamepads,
             PictureInPicture.supported(this),
+            true,
         )
         bridge = AppBridge(web, app.origins, identity, ::onMessage)
         updater = Updater(this, ::askForNotifications) { bridge.send(it) }
@@ -236,6 +240,21 @@ class MainActivity : ComponentActivity() {
             }
             "player-engine" -> message["name"]?.jsonPrimitive?.contentOrNull?.let { playback.choose(it, player) }
             "player-retry" -> message["name"]?.jsonPrimitive?.contentOrNull?.let { playback.retry(it, player) }
+            "player-mini" -> {
+                val x = message["x"]?.jsonPrimitive?.intOrNull
+                val y = message["y"]?.jsonPrimitive?.intOrNull
+                val width = message["width"]?.jsonPrimitive?.intOrNull
+                val height = message["height"]?.jsonPrimitive?.intOrNull
+                val rect = if (x != null && y != null && width != null && height != null && width > 0 && height > 0) {
+                    Rect(x, y, x + width, y + height)
+                } else {
+                    null
+                }
+                val hidden = message["hidden"]?.jsonPrimitive?.booleanOrNull == true
+                val viewportWidth = message["viewportWidth"]?.jsonPrimitive?.intOrNull ?: 0
+                val viewportHeight = message["viewportHeight"]?.jsonPrimitive?.intOrNull ?: 0
+                runOnUiThread { mini.show(rect, hidden, viewportWidth, viewportHeight) }
+            }
             // A TV would blank to switch modes.
             "player-controls" -> if (!onTv()) {
                 message["shown"]?.jsonPrimitive?.booleanOrNull?.let { runOnUiThread { frameRates.controls(it) } }
@@ -516,6 +535,7 @@ class MainActivity : ComponentActivity() {
             put("type", "pip")
             put("value", isInPictureInPictureMode)
         })
+        mini.pictureInPicture(isInPictureInPictureMode)
         // Closing the window, rather than opening it full size, stops playback.
         if (!isInPictureInPictureMode && lifecycle.currentState == Lifecycle.State.CREATED) {
             player.change(Change(paused = true))

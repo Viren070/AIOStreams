@@ -22,6 +22,7 @@ data class AppIdentity(
     val gamepads: Boolean,
     /** Picture-in-picture, which many TVs leave out. */
     val pip: Boolean,
+    val miniPlayer: Boolean,
 )
 
 /**
@@ -95,6 +96,7 @@ class AppBridge(
             voice: ${identity.voice},
             gamepads: ${identity.gamepads},
             pip: ${identity.pip},
+            miniPlayer: ${identity.miniPlayer},
             device: ${JsonPrimitive(identity.device)},
             deviceId: ${JsonPrimitive(identity.deviceId)},
             send,

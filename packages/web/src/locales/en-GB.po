@@ -2213,6 +2213,10 @@ msgstr "Messages"
 msgid "Midnight"
 msgstr "Midnight"
 
+#: src/components/player/controls.tsx
+msgid "Mini player"
+msgstr "Mini player"
+
 #: src/components/window-controls.tsx
 msgid "Minimise"
 msgstr "Minimise"
@@ -2705,6 +2709,10 @@ msgstr "Open link"
 #: src/lib/i18n.ts
 msgid "Open main menu"
 msgstr "Open main menu"
+
+#: src/components/player/mini-player.tsx
+msgid "Open player"
+msgstr "Open player"
 
 #: src/components/playlists.tsx
 msgid "Open playlist"
