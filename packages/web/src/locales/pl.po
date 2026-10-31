@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-30 19:55+0000\n"
+"PO-Revision-Date: 2026-10-31 13:46+0000\n"
 "Last-Translator: Krzysztof <krzysiek@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Polish <https://hosted.weblate.org/projects/aiostreams/web-app/pl/>\n"
 "Language: pl\n"
@@ -1550,9 +1550,8 @@ msgid "Filter versions"
 msgstr "Filtruj wersje"
 
 #: src/pages/settings/playback.tsx
-#, fuzzy
 msgid "Find versions when a title opens"
-msgstr "Nie udało się znaleźć wersji tego tytułu"
+msgstr "Wyszukiwanie wersji przy otwieraniu tytułu"
 
 #: src/components/download-button.tsx
 msgid "Finding a version to download"
@@ -2056,7 +2055,7 @@ msgstr "Szukanie wspólnego oglądania…"
 
 #: src/pages/settings/playback.tsx
 msgid "Looks for versions as soon as a title's page opens, so Play and the version list don't wait. Each title you open is looked up, even if you don't play it."
-msgstr ""
+msgstr "Wyszukuje wersje od razu po otwarciu strony tytułu, dzięki czemu przycisk Odtwórz i lista wersji są dostępne bez czekania. Wersje są wyszukiwane dla każdego otwartego tytułu, nawet jeśli go nie odtworzysz."
 
 #: src/components/party/party-sheet.tsx
 msgid "Lost the connection to {relay}. Reconnecting… Your player carries on, and gets back in step once it's back."
