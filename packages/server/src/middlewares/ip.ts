@@ -37,11 +37,11 @@ export function isTrustedIp(addr: string | undefined): boolean {
   return compiledTrust(addr, 0);
 }
 
-const isPrivateIp = (ip?: string) => {
+export const isPrivateIp = (ip?: string) => {
   if (!ip) {
     return false;
   }
-  return /^(10\.|(::ffff:)?127\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.|::1)/.test(
+  return /^(?:(::ffff:)?(10\.|127\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.|169\.254\.)|::1$|f[cd][0-9a-f]{2}:|fe[89ab][0-9a-f]:)/i.test(
     ip
   );
 };
