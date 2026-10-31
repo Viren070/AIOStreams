@@ -1,12 +1,15 @@
 import { describe, it, vi } from 'vitest';
 import assert from 'node:assert/strict';
 
-vi.hoisted(() => {
-  process.env.NODE_ENV ??= 'test';
-  process.env.SECRET_KEY ??= '0'.repeat(64);
-  process.env.BASE_URL ??= 'http://localhost:3000';
-  process.env.LOG_LEVEL ??= 'error';
-});
+vi.mock('@aiostreams/core', () => ({
+  config: { api: { trustedIps: [] } },
+  createLogger: () => ({
+    warn: () => {},
+    debug: () => {},
+    info: () => {},
+    error: () => {},
+  }),
+}));
 
 import { isPrivateIp, ipMiddleware } from './ip.js';
 
