@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-30 19:55+0000\n"
+"PO-Revision-Date: 2026-10-31 13:46+0000\n"
 "Last-Translator: Bruno <procopio@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/aiostreams/web-app/pt_BR/>\n"
 "Language: pt-BR\n"
@@ -81,7 +81,7 @@ msgstr "{favorites, plural, one {# favorito} other {# favoritos}}"
 
 #: src/pages/settings/downloads.tsx
 msgid "{folder}. New downloads go here; ones already saved stay where they are."
-msgstr "{folder}. Os novos downloads serão salvos aqui; os que já foram salvos permanecerão onde estão."
+msgstr "{folder}. Seus próximos downloads serão salvos nesta pasta. Os que você já baixou continuarão onde estão."
 
 #: src/components/version-picker.tsx
 msgid "{found, plural, one {# version} other {# versions}}"
@@ -766,7 +766,7 @@ msgstr "Cartões"
 
 #: src/components/people.tsx
 msgid "Cast"
-msgstr "Transmitir"
+msgstr "Elenco"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Casual"
@@ -1235,7 +1235,7 @@ msgstr "Deserto"
 
 #: src/pages/settings/about.tsx src/pages/settings/index.tsx
 msgid "Desktop app"
-msgstr "Aplicativo para desktop"
+msgstr "App para desktop"
 
 #: src/components/item-menu.tsx src/components/version-picker.tsx
 #: src/pages/item.tsx
@@ -1592,7 +1592,7 @@ msgstr "Pasta de downloads"
 
 #: src/pages/settings/interface.tsx
 msgid "Following pins it above the rows and shows the card the pointer, keyboard or remote is on, starting with a featured title, behind the whole page or in its top corner. Touch screens and narrow windows keep it rotating."
-msgstr "No modo Seguir, o destaque fica acima das fileiras e acompanha o cartão selecionado pelo cursor, teclado ou controle remoto. Ele começa com um título em destaque e pode aparecer como plano de fundo da página inteira ou no canto superior. Em telas sensíveis ao toque e janelas estreitas, os títulos continuam alternando."
+msgstr "Nesse modo, o destaque fica fixo acima das fileiras e acompanha o conteúdo selecionado pelo mouse, teclado ou controle remoto. Ele começa exibindo um título em destaque e pode aparecer como plano de fundo da página inteira ou no canto superior. Em telas sensíveis ao toque e janelas estreitas, os títulos continuam alternando automaticamente."
 
 #: src/pages/settings/interface.tsx
 msgid "Follows the selected card"
