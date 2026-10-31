@@ -5130,6 +5130,10 @@ msgstr "When the TV or receiver decodes it"
 msgid "When this app decodes DTS-HD or DTS:X, it plays the DTS sound inside, which is lossy but far lighter. For TVs that play them slowly or stutter."
 msgstr "When this app decodes DTS-HD or DTS:X, it plays the DTS sound inside, which is lossy but far lighter. For TVs that play them slowly or stutter."
 
+#: src/pages/settings/audio.tsx
+msgid "When this app decodes DTS-HD or DTS:X, it plays the DTS sound inside, which is lossy but far lighter. For TVs that play them slowly or stutter. Only for videos ExoPlayer plays."
+msgstr "When this app decodes DTS-HD or DTS:X, it plays the DTS sound inside, which is lossy but far lighter. For TVs that play them slowly or stutter. Only for videos ExoPlayer plays."
+
 #: src/pages/settings/playback.tsx
 msgid "Where a file names its intro, credits, recap or preview chapters, skipping uses them instead of the server's times, since they fit that exact file. The rest still come from the server."
 msgstr "Where a file names its intro, credits, recap or preview chapters, skipping uses them instead of the server's times, since they fit that exact file. The rest still come from the server."
