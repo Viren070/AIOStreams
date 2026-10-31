@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-31 13:46+0000\n"
+"PO-Revision-Date: 2026-11-01 14:51+0000\n"
 "Last-Translator: AIO sama <aio-sama@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Malay <https://hosted.weblate.org/projects/aiostreams/web-app/ms/>\n"
 "Language: ms\n"
@@ -127,7 +127,7 @@ msgstr "{key} telah digunakan oleh {taken}"
 
 #: src/components/card-preview.tsx src/pages/downloads.tsx
 msgid "{left} left"
-msgstr "Tinggal {left}"
+msgstr "Baki {left}"
 
 #: src/components/party/party-sheet.tsx
 msgid "{members, plural, one {# watching} other {# watching}}"
