@@ -1228,6 +1228,10 @@ msgstr "Cyan"
 msgid "Date not known"
 msgstr "Date not known"
 
+#: src/pages/settings/audio.tsx
+msgid "Decode DTS-HD as DTS"
+msgstr "Decode DTS-HD as DTS"
+
 #: src/pages/settings/playback.tsx
 msgid "Decodes nearly any video, in software where the device has no decoder for it. Takes your mpv.conf under Android app."
 msgstr "Decodes nearly any video, in software where the device has no decoder for it. Takes your mpv.conf under Android app."
@@ -5121,6 +5125,10 @@ msgstr "When the credits start, if they run to the end; otherwise a set time bef
 #: src/pages/settings/audio.tsx
 msgid "When the TV or receiver decodes it"
 msgstr "When the TV or receiver decodes it"
+
+#: src/pages/settings/audio.tsx
+msgid "When this app decodes DTS-HD or DTS:X, it plays the DTS sound inside, which is lossy but far lighter. For TVs that play them slowly or stutter."
+msgstr "When this app decodes DTS-HD or DTS:X, it plays the DTS sound inside, which is lossy but far lighter. For TVs that play them slowly or stutter."
 
 #: src/pages/settings/playback.tsx
 msgid "Where a file names its intro, credits, recap or preview chapters, skipping uses them instead of the server's times, since they fit that exact file. The rest still come from the server."

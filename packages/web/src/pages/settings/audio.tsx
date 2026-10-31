@@ -130,8 +130,12 @@ function OutputCard() {
   const [passthrough, setPassthrough] = useSetting(settings.audio.passthrough);
   const [formats, setFormats] = useSetting(settings.audio.passthroughFormats);
   const [ac3Encode, setAc3Encode] = useSetting(settings.audio.ac3Encode);
+  const [dtsCore, setDtsCore] = useSetting(settings.audio.dtsCore);
   const info = useShellInfo();
   const passing = passthrough !== 'off';
+  // DTS-HD that always passes through never reaches this app's decoder.
+  const decodesDtsHd =
+    passthrough !== 'always' || !formats.dts || !formats['dts-hd'];
   return (
     <SettingsCard name="output" title={t`Output`} description={onDevice()}>
       {!android && <AudioDeviceSelect />}
@@ -191,6 +195,15 @@ function OutputCard() {
           help={t`For a receiver on an optical or ARC link, which gets other surround formats as stereo otherwise.`}
           value={ac3Encode}
           onValueChange={setAc3Encode}
+        />
+      )}
+      {android && decodesDtsHd && (
+        <Switch
+          side="right"
+          label={t`Decode DTS-HD as DTS`}
+          help={t`When this app decodes DTS-HD or DTS:X, it plays the DTS sound inside, which is lossy but far lighter. For TVs that play them slowly or stutter.`}
+          value={dtsCore}
+          onValueChange={setDtsCore}
         />
       )}
     </SettingsCard>

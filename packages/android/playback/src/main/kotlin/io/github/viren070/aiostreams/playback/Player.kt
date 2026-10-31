@@ -96,6 +96,8 @@ data class PlayerSettings(
     /** Only those of [passthrough] the audio output decodes itself. */
     val passthroughAuto: Boolean = false,
     val audioDelayMs: Double = 0.0,
+    /** DTS-HD and DTS:X the app decodes play as their DTS core alone, which is far lighter. */
+    val dtsCore: Boolean = false,
     /** Megabytes of the stream to hold, 0 to size it from the device's memory. */
     val cacheMb: Int = 0,
 )
@@ -245,6 +247,7 @@ object PlayerProtocol {
         passthrough = (message["passthrough"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }.orEmpty(),
         passthroughAuto = message.flag("passthroughAuto") == true,
         audioDelayMs = message.number("audioDelayMs") ?: 0.0,
+        dtsCore = message.flag("dtsCore") == true,
         cacheMb = message.number("cacheMb")?.toInt() ?: 0,
     )
 

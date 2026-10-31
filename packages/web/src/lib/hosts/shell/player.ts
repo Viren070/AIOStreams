@@ -662,6 +662,7 @@ export function playerSettings() {
       ? {
           frameRate: video.frameRate.read(),
           tunneling: video.tunneling.read(),
+          dtsCore: audio.dtsCore.read(),
         }
       : { audioDevice: audio.device.read() }),
   };

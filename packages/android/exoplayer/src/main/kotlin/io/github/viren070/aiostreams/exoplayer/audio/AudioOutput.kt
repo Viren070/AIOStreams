@@ -19,6 +19,11 @@ internal class AudioOutput {
     private lateinit var ac3: Ac3Sink
     private var ac3Encode = false
 
+    /** Whether DTS-HD and DTS:X decode as their DTS core alone. */
+    @Volatile
+    var dtsCore = false
+        private set
+
     /** Built once, as the player is made. */
     fun sink(context: Context, enableFloatOutput: Boolean, enablePlaybackParameters: Boolean): AudioSink {
         val sink = DefaultAudioSink.Builder(context)
@@ -35,6 +40,7 @@ internal class AudioOutput {
         output.setSpdif(settings.passthrough)
         output.delayUs = (settings.audioDelayMs * 1000).toLong()
         levels.maxChannels = CHANNELS[settings.audioChannels] ?: 0
+        dtsCore = settings.dtsCore
         updateEncoding()
     }
 
