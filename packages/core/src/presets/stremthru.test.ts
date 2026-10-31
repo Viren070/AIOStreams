@@ -4,6 +4,7 @@ import '../index.js';
 import { settingsStore } from '../config/index.js';
 import { SettingsRepository } from '../db/repositories/settings.js';
 import { stremthruSpecialCases, StremThruPreset } from './stremthru.js';
+import { BuiltinAddonPreset } from './builtin.js';
 import { StreamFusionPreset } from './streamfusion.js';
 import { getServiceCredential } from '../main/serviceWrapper.js';
 import { constants } from '../utils/index.js';
@@ -47,6 +48,12 @@ describe('Offcloud and PikPak StremThru credentials', () => {
       stremthruSpecialCases
     );
     assert.equal(cred, 'oc-secret-api-key');
+
+    const builtinCred = (BuiltinAddonPreset as any).getServiceCredential(
+      constants.OFFCLOUD_SERVICE,
+      userData
+    );
+    assert.equal(builtinCred, 'oc-secret-api-key');
   });
 
   it('formats PikPak credentials as email:password in serviceWrapper and stremthruSpecialCases', () => {
@@ -61,6 +68,13 @@ describe('Offcloud and PikPak StremThru credentials', () => {
       getServiceCredential({
         id: constants.PIKPAK_SERVICE,
         credentials: { email: 'user@example.com', password: 'secret' },
+      }),
+      'user@example.com:secret'
+    );
+    assert.equal(
+      stremthruSpecialCases[constants.PIKPAK_SERVICE]?.({
+        email: 'user@example.com',
+        password: 'secret',
       }),
       'user@example.com:secret'
     );
@@ -87,6 +101,24 @@ describe('Offcloud and PikPak StremThru credentials', () => {
     await assert.rejects(
       () =>
         StreamFusionPreset.generateAddons(userDataMissingEmail, {
+          streamFusionApiKey: 'sf-key',
+        }),
+      /Offcloud email and password are required for StreamFusion/
+    );
+
+    const userDataMissingPassword = {
+      services: [
+        {
+          id: constants.OFFCLOUD_SERVICE,
+          enabled: true,
+          credentials: { apiKey: 'oc-key', email: 'user@example.com' },
+        },
+      ],
+    } as any;
+
+    await assert.rejects(
+      () =>
+        StreamFusionPreset.generateAddons(userDataMissingPassword, {
           streamFusionApiKey: 'sf-key',
         }),
       /Offcloud email and password are required for StreamFusion/
