@@ -1,4 +1,4 @@
-﻿import type { Logger } from '../../logging/logger.js';
+import type { Logger } from '../../logging/logger.js';
 import { Cache } from '../../utils/cache.js';
 import { createLogger } from '../../utils/index.js';
 import { config as appConfig } from '../../config/index.js';
@@ -70,20 +70,69 @@ export function isNonAnimeAbsoluteEligible(
   );
 }
 
+/**
+ * Compute the 1-based absolute episode number across non-special seasons.
+ * When `season` is absent from `seasons` (such as a split-cour TMDB/TVDB
+ * season request against Cinemeta's collapsed season list), falls back to an
+ * anime-database `fromEpisode` offset anchored on a season present in `seasons`,
+ * or returns `undefined` instead of summing every season.
+ */
 export function calculateAbsoluteEpisode(
   season: string,
   episode: string,
-  seasons: { number: string; episodes: number }[]
-): string {
+  seasons: { number: string; episodes: number }[],
+  animeEntry?: {
+    imdb?: { seasonNumber?: number | null; fromEpisode?: number | null } | null;
+    tmdb?: { seasonNumber?: number | null; fromEpisode?: number | null } | null;
+    tvdb?: {
+      seasonNumber?: number | 'a' | null;
+      fromEpisode?: number | null;
+    } | null;
+  } | null
+): string | undefined {
   const episodeNumber = Number(episode);
-  let totalEpisodesBeforeSeason = 0;
+  const nonSpecialSeasons = seasons.filter((s) => s.number !== '0');
 
-  for (const s of seasons.filter((s) => s.number !== '0')) {
-    if (s.number === season) break;
-    totalEpisodesBeforeSeason += s.episodes;
+  if (nonSpecialSeasons.some((s) => s.number === season)) {
+    let totalEpisodesBeforeSeason = 0;
+    for (const s of nonSpecialSeasons) {
+      if (s.number === season) break;
+      totalEpisodesBeforeSeason += s.episodes;
+    }
+    return (totalEpisodesBeforeSeason + episodeNumber).toString();
   }
 
-  return (totalEpisodesBeforeSeason + episodeNumber).toString();
+  const mappedSources = [
+    animeEntry?.imdb,
+    animeEntry?.tmdb,
+    animeEntry?.tvdb,
+  ];
+  for (const source of mappedSources) {
+    if (
+      typeof source?.seasonNumber !== 'number' ||
+      typeof source.fromEpisode !== 'number' ||
+      source.fromEpisode < 1
+    ) {
+      continue;
+    }
+    const targetSeason = source.seasonNumber.toString();
+    if (!nonSpecialSeasons.some((s) => s.number === targetSeason)) {
+      continue;
+    }
+    let totalEpisodesBeforeSeason = 0;
+    for (const s of nonSpecialSeasons) {
+      if (s.number === targetSeason) break;
+      totalEpisodesBeforeSeason += s.episodes;
+    }
+    return (
+      totalEpisodesBeforeSeason +
+      source.fromEpisode -
+      1 +
+      episodeNumber
+    ).toString();
+  }
+
+  return undefined;
 }
 
 /**

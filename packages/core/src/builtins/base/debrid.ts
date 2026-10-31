@@ -1,4 +1,4 @@
-﻿import {
+import {
   CacheAndPlaySchema,
   Manifest,
   Meta,
@@ -683,6 +683,9 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
   ): Promise<UnprocessedTorrent[]>;
   protected abstract _searchNzbs(parsedId: ParsedId): Promise<NZB[]>;
 
+  /**
+   * Resolve title, season/episode, and absolute episode metadata for built-in searches.
+   */
   protected async _getSearchMetadata(
     parsedId: ParsedId,
     type: string
@@ -735,9 +738,16 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
           `Calculating absolute episode with current season and episode: ${parsedId.season}, ${parsedId.episode} and seasons: ${JSON.stringify(seasons)}`
         );
         // Calculate base absolute episode
-        absoluteEpisode = Number(
-          calculateAbsoluteEpisode(parsedId.season, parsedId.episode, seasons)
+        const calculatedAbsolute = calculateAbsoluteEpisode(
+          parsedId.season,
+          parsedId.episode,
+          seasons,
+          animeEntry
         );
+        absoluteEpisode =
+          calculatedAbsolute !== undefined
+            ? Number(calculatedAbsolute)
+            : undefined;
       }
     }
     if (animeEntry && parsedId.season && parsedId.episode && metadata.seasons) {
@@ -747,6 +757,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
           episodes: episode_count,
         })
       );
+      const nonSpecialSeasons = seasons.filter((s) => s.number !== '0');
 
       // Calculate relative absolute episode (within current AniDB entry)
       // Find the first season of this AniDB entry
@@ -756,13 +767,15 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         animeEntry.trakt?.seasonNumber ??
         animeEntry.tmdb?.seasonNumber;
 
-      if (startingSeason) {
+      if (
+        startingSeason &&
+        nonSpecialSeasons.some((s) => s.number === parsedId.season)
+      ) {
         // Calculate absolute episode from the starting season (AniDB episode number)
-        const currentSeasonNum = Number(parsedId.season);
         const episodeNum = Number(parsedId.episode);
         let totalEpisodesBeforeCurrentSeason = 0;
 
-        for (const s of seasons.filter((s) => s.number !== '0')) {
+        for (const s of nonSpecialSeasons) {
           const seasonNum = Number(s.number);
           if (seasonNum < startingSeason) continue; // Skip seasons before this AniDB entry
           if (s.number === parsedId.season) break;
