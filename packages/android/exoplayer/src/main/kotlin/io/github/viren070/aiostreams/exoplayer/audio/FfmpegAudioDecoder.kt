@@ -15,13 +15,14 @@ import java.nio.ByteBuffer
 
 /** Adapted from Media3's FFmpeg extension (Apache 2.0). */
 @OptIn(UnstableApi::class)
-internal class FfmpegAudioDecoder(format: Format, float: Boolean) :
+internal class FfmpegAudioDecoder(format: Format, float: Boolean, dtsCore: Boolean) :
     SimpleDecoder<DecoderInputBuffer, SimpleDecoderOutputBuffer, DecoderException>(
         arrayOfNulls(BUFFERS),
         arrayOfNulls(BUFFERS),
     ) {
     private val codec = checkNotNull(codecOf(checkNotNull(format.sampleMimeType)))
     private val decoder = AudioDecoder(codec, extraDataOf(format), format.sampleRate, format.channelCount, float)
+    private val dtsCore = dtsCore && codec == "dca"
 
     val encoding = if (float) C.ENCODING_PCM_FLOAT else C.ENCODING_PCM_16BIT
     val channels get() = decoder.channels
@@ -47,7 +48,10 @@ internal class FfmpegAudioDecoder(format: Format, float: Boolean) :
     ): DecoderException? {
         if (reset) decoder.flush()
         val input = checkNotNull(inputBuffer.data)
-        val size = decoder.decode(input, input.limit())
+        // DTS-HD and DTS:X lead with a DTS core: decoding it alone is far lighter than the lossless extension,
+        // which some TVs can't decode as fast as it plays.
+        val length = if (dtsCore) dtsCoreSize(input) ?: input.limit() else input.limit()
+        val size = decoder.decode(input, length)
         // Bad data plays nothing, as with the device's own decoders.
         if (size <= 0) {
             outputBuffer.shouldBeSkipped = true
@@ -109,4 +113,16 @@ private fun extraDataOf(format: Format): ByteArray? {
     }
 }
 
+/** The size of the DTS core frame [data] starts with, from its FSIZE field; null when it starts with none. */
+private fun dtsCoreSize(data: ByteBuffer): Int? {
+    if (data.limit() < 8) return null
+    val byte = { i: Int -> data.get(i).toInt() and 0xFF }
+    val sync = (byte(0) shl 24) or (byte(1) shl 16) or (byte(2) shl 8) or byte(3)
+    if (sync != DTS_CORE_SYNC) return null
+    val size = ((byte(5) and 0x03) shl 12 or (byte(6) shl 4) or (byte(7) shr 4)) + 1
+    return size.takeIf { it in DTS_MIN_FRAME..data.limit() }
+}
+
 private const val ALAC = 0x616c6163
+private const val DTS_CORE_SYNC = 0x7FFE8001
+private const val DTS_MIN_FRAME = 96
