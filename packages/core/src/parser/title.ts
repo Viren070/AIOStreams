@@ -45,6 +45,10 @@ const turkishEpisodeHandlers: Handler[] = [
   },
 ];
 
+/**
+ * Builds a release-title {@link Parser} instance with default handlers and
+ * additional Turkish season/episode handlers inserted in handler priority order.
+ */
 function createReleaseParser(): Parser {
   const list = [...defaultHandlers];
   const firstSeasonIdx = list.findIndex((h) => h.field === 'seasons');

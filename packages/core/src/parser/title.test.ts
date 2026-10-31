@@ -8,6 +8,8 @@ import { parseTorrentTitleCached } from './title.js';
 import { isEpisodeWrong, isTitleWrong } from '../debrid/utils.js';
 import { isNonAnimeAbsoluteEligible } from '../builtins/utils/general.js';
 import { BaseDebridAddon } from '../builtins/base/debrid.js';
+import { MetadataService } from '../metadata/service.js';
+import { AnimeDatabase } from '../utils/index.js';
 
 before(async () => {
   mock.method(SettingsRepository, 'getAll', async () => []);
@@ -73,35 +75,49 @@ describe('Turkish episode format (Blm / Bölüm / Bolum) & series search', () =>
     );
   });
 
-  it('enables absolute episode search and bare padded episode query for Turkish series', () => {
+  it('enables absolute episode search and bare padded episode query for Turkish series', async () => {
     assert.equal(isNonAnimeAbsoluteEligible({ originalLanguage: 'tr' }), true);
+
+    mock.method(AnimeDatabase, 'getInstance', () => ({
+      getEntryById: async () => null,
+    }));
+    mock.method(MetadataService.prototype, 'getMetadata', async () => ({
+      title: 'Tuzlu Kahve',
+      titles: [{ title: 'Tuzlu Kahve', language: 'tr' }],
+      originalLanguage: 'tr',
+      seasons: [
+        { season_number: 1, episode_count: 10 },
+        { season_number: 2, episode_count: 10 },
+      ],
+    }));
 
     const addon = Object.assign(Object.create(BaseDebridAddon.prototype), {
       name: 'Test',
       userData: {},
+      logger: {
+        debug: () => {},
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+      },
     }) as any;
 
-    const queries: string[] = addon.buildQueries(
-      {
-        type: 'imdbId',
-        value: 'tt1234567',
-        mediaType: 'series',
-        season: '1',
-        episode: '7',
-      },
-      {
-        primaryTitle: 'Tuzlu Kahve',
-        titles: ['Tuzlu Kahve'],
-        originalLanguage: 'tr',
-        season: 1,
-        episode: 7,
-        absoluteEpisode: 7,
-        isAnime: false,
-      }
-    );
+    const parsedId = {
+      type: 'imdbId' as const,
+      value: 'tt1234567',
+      fullId: 'tt1234567:2:7',
+      mediaType: 'series' as const,
+      season: '2',
+      episode: '7',
+    };
 
-    assert.ok(queries.includes('Tuzlu Kahve 07'));
-    assert.ok(queries.includes('Tuzlu Kahve E07'));
-    assert.ok(queries.includes('Tuzlu Kahve S01E07'));
+    const searchMetadata = await addon._getSearchMetadata(parsedId, 'series');
+    assert.equal(searchMetadata.absoluteEpisode, 17);
+
+    const queries: string[] = addon.buildQueries(parsedId, searchMetadata);
+
+    assert.ok(queries.includes('Tuzlu Kahve 17'));
+    assert.ok(queries.includes('Tuzlu Kahve E17'));
+    assert.ok(queries.includes('Tuzlu Kahve S02E07'));
   });
 });
