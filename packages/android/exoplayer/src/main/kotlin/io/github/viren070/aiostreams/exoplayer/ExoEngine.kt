@@ -99,6 +99,9 @@ class ExoEngine(private val context: Context) : Engine {
         .setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(), false)
         .setHandleAudioBecomingNoisy(false)
         .setLoadControl(BufferControl(cache))
+        // A TV's own decoder for passed-through sound can take several seconds to start after a load or seek
+        // (DTS:X on MediaTek), and the default 10 s reads that as stuck and moves to mpv.
+        .setStuckPlayingDetectionTimeoutMs(STUCK_PLAYING_MS)
         .build()
 
     private var listener: Engine.Listener? = null
@@ -674,5 +677,6 @@ class ExoEngine(private val context: Context) : Engine {
         const val VOLUME_MAX = 130.0
         const val LANDING_MS = 10_000.0
         const val SKIP_REACTION_MS = 2_000.0
+        const val STUCK_PLAYING_MS = 30_000
     }
 }
