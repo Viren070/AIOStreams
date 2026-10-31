@@ -123,5 +123,32 @@ describe('Offcloud and PikPak StremThru credentials', () => {
         }),
       /Offcloud email and password are required for StreamFusion/
     );
+
+    const userDataComplete = {
+      services: [
+        {
+          id: constants.OFFCLOUD_SERVICE,
+          enabled: true,
+          credentials: {
+            apiKey: 'oc-key',
+            email: 'user@example.com',
+            password: 'secret',
+          },
+        },
+      ],
+    } as any;
+
+    const addons = await StreamFusionPreset.generateAddons(userDataComplete, {
+      streamFusionApiKey: 'sf-key',
+      url: 'https://streamfusion.example.com',
+    });
+    assert.equal(addons.length, 1);
+    const encodedSegment = addons[0].manifestUrl
+      .replace('https://streamfusion.example.com/', '')
+      .replace('/manifest.json', '');
+    const decoded = JSON.parse(
+      Buffer.from(encodedSegment, 'base64url').toString('utf8')
+    );
+    assert.equal(decoded.offcloudCredentials, 'user@example.com:secret');
   });
 });
