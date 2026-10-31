@@ -49,6 +49,14 @@ describe('FileParser quality detection (HDDVD REMUX vs DVD REMUX)', () => {
       'DVD REMUX'
     );
     assert.equal(
+      FileParser.parse('Movie.2007.DVD5.REMUX-GROUP').quality,
+      'DVD REMUX'
+    );
+    assert.equal(
+      FileParser.parse('Movie.2007.REMUX.DVD9-GROUP').quality,
+      'DVD REMUX'
+    );
+    assert.equal(
       FileParser.parse('Movie.2005.DVDRip.XviD-GROUP').quality,
       'DVDRip'
     );

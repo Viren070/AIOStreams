@@ -15,7 +15,7 @@ const createLanguageRegex = (pattern: string): RegExp =>
   createRegex(`${pattern}(?![ .\\-_]?sub(title)?s?)`);
 
 const nonHdDvd =
-  '(?<![^\\s\\[(_\\-.,]|(?<![^\\s\\[(_\\-.,])hd[ .\\-_]?)dvd(?=[\\s\\[(\\)\\]_.\\-,]|$)';
+  '(?<![^\\s\\[(_\\-.,]|(?<![^\\s\\[(_\\-.,])hd[ .\\-_]?)dvd(?:[ .\\-_]?(?:5|9|r|full))?(?=[\\s\\[(\\)\\]_.\\-,]|$)';
 
 type PARSE_REGEX = {
   resolutions: Omit<
