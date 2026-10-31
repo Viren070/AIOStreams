@@ -75,5 +75,13 @@ describe('Issue #1525: isPrivateIp and ipMiddleware with IPv4-mapped IPv6 addres
     };
     ipMiddleware(reqPublic, {} as any, () => {});
     assert.equal(reqPublic.userIp, '93.184.216.34');
+
+    const reqPrivateForwarded: any = {
+      ip: '8.8.8.8',
+      get: (header: string) =>
+        header === 'X-Forwarded-For' ? '::ffff:10.0.0.5' : undefined,
+    };
+    ipMiddleware(reqPrivateForwarded, {} as any, () => {});
+    assert.equal(reqPrivateForwarded.userIp, undefined);
   });
 });
