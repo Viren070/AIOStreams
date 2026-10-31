@@ -223,9 +223,10 @@ export class TorboxDebridService
   public async checkMagnets(
     magnets: string[],
     sid?: string,
-    checkOwned: boolean = true
+    checkOwned: boolean = true,
+    signal?: AbortSignal
   ) {
-    return this.stremthru.checkMagnets(magnets, sid, checkOwned);
+    return this.stremthru.checkMagnets(magnets, sid, checkOwned, signal);
   }
 
   public async addMagnet(magnet: string): Promise<DebridDownload> {

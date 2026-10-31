@@ -294,7 +294,8 @@ export class StremThruService
   public async checkMagnets(
     magnets: string[],
     sid?: string,
-    checkOwned: boolean = true
+    checkOwned: boolean = true,
+    signal?: AbortSignal
   ): Promise<DebridDownload[]> {
     let libraryHashes = new Set<string>();
     let failedHashes = new Set<string>();
@@ -329,6 +330,9 @@ export class StremThruService
       }
     });
 
+    // The caller may have given up while the library was being listed.
+    signal?.throwIfAborted();
+
     if (magnetsToCheck.length > 0) {
       const BATCH_SIZE = 500;
       const batches: string[][] = [];
@@ -342,6 +346,7 @@ export class StremThruService
             const result = await this.stremthru.store.checkMagnet({
               magnet: batch,
               sid,
+              signal,
             });
 
             assert.ok(

@@ -1,8 +1,8 @@
 diff --git a/dist/index.cjs b/dist/index.cjs
-index ba4052dca3d5b5e0d8687533478d6e0e315ba584..1e568218d9105c322e95d7c40ee99c968d511ef9 100644
+index ba4052dca3d5b5e0d8687533478d6e0e315ba584..e3bc8e2e7838766a890d1ba372a931fbb7bd3dcf 100644
 --- a/dist/index.cjs
 +++ b/dist/index.cjs
-@@ -60,13 +60,15 @@ class StremThruStore {
+@@ -60,13 +60,16 @@ class StremThruStore {
      return await this.#client.request("/v0/store/magnets", {
        body,
        method: "POST",
@@ -11,16 +11,18 @@ index ba4052dca3d5b5e0d8687533478d6e0e315ba584..1e568218d9105c322e95d7c40ee99c96
 +      methodName: "addMagnet"
      });
    }
-   async checkMagnet(params) {
+-  async checkMagnet(params) {
++  async checkMagnet({ signal, ...params }) {
      return await this.#client.request("/v0/store/magnets/check", {
        method: "GET",
 -      params
 +      params,
-+      methodName: "checkMagnet"
++      methodName: "checkMagnet",
++      signal
      });
    }
    async generateLink({
-@@ -76,14 +78,15 @@ class StremThruStore {
+@@ -76,14 +79,15 @@ class StremThruStore {
      return await this.#client.request(`/v0/store/link/generate`, {
        body: { link },
        method: "POST",
@@ -39,7 +41,7 @@ index ba4052dca3d5b5e0d8687533478d6e0e315ba584..1e568218d9105c322e95d7c40ee99c96
    }
    async listMagnets({
      limit,
-@@ -96,11 +99,71 @@ class StremThruStore {
+@@ -96,11 +100,71 @@ class StremThruStore {
      if (offset) {
        params["offset"] = String(offset);
      }
@@ -113,7 +115,7 @@ index ba4052dca3d5b5e0d8687533478d6e0e315ba584..1e568218d9105c322e95d7c40ee99c96
      });
    }
  }
-@@ -115,7 +178,7 @@ class StremThru {
+@@ -115,7 +179,7 @@ class StremThru {
        "User-Agent": [USER_AGENT, config.userAgent].filter(Boolean).join(" ")
      };
      if (config.timeout) {
@@ -122,7 +124,7 @@ index ba4052dca3d5b5e0d8687533478d6e0e315ba584..1e568218d9105c322e95d7c40ee99c96
      }
      if (config.auth) {
        if (typeof config.auth === "object" && "user" in config.auth) {
-@@ -134,13 +197,14 @@ class StremThru {
+@@ -134,13 +198,14 @@ class StremThru {
      this.store = new StremThruStore(this, config.clientIp);
    }
    async health() {
@@ -138,20 +140,21 @@ index ba4052dca3d5b5e0d8687533478d6e0e315ba584..1e568218d9105c322e95d7c40ee99c96
      ...options
    } = {}) {
      const url = new URL(endpoint, this.baseUrl);
-@@ -158,7 +222,10 @@ class StremThru {
+@@ -158,7 +223,11 @@ class StremThru {
        method
      };
      if (this.#timeout) {
 -      req.signal = AbortSignal.timeout(this.#timeout);
 +      const effectiveTimeout = (methodName && this.#timeout[methodName]) ?? this.#timeout.global;
 +      if (effectiveTimeout) {
-+        req.signal = AbortSignal.timeout(effectiveTimeout);
++        const timeoutSignal = AbortSignal.timeout(effectiveTimeout);
++        req.signal = options.signal ? AbortSignal.any([options.signal, timeoutSignal]) : timeoutSignal;
 +      }
      }
      if (body instanceof URLSearchParams) {
        headers.set("Content-Type", "application/x-www-form-urlencoded");
 diff --git a/dist/index.d.ts b/dist/index.d.ts
-index c57456a18d2415b15af91a664fcabb3589fcd645..5700208c3c22517e0c6b7c96057ed6c66404aa37 100644
+index c57456a18d2415b15af91a664fcabb3589fcd645..7af7bd288b04a476e319a3028d82e6025e76a390 100644
 --- a/dist/index.d.ts
 +++ b/dist/index.d.ts
 @@ -1,6 +1,9 @@
@@ -175,7 +178,15 @@ index c57456a18d2415b15af91a664fcabb3589fcd645..5700208c3c22517e0c6b7c96057ed6c6
      userAgent?: string;
  };
  type ResponseMeta = {
-@@ -128,6 +133,90 @@ declare class StremThruStore {
+@@ -54,6 +59,7 @@ declare class StremThruStore {
+     checkMagnet(params: {
+         magnet: string[];
+         sid?: string;
++        signal?: AbortSignal;
+     }): Promise<{
+         data: {
+             items: Array<{
+@@ -128,6 +134,90 @@ declare class StremThruStore {
          data: null;
          meta: ResponseMeta;
      }>;
@@ -266,7 +277,7 @@ index c57456a18d2415b15af91a664fcabb3589fcd645..5700208c3c22517e0c6b7c96057ed6c6
  }
  declare class StremThru {
      #private;
-@@ -140,9 +229,10 @@ declare class StremThru {
+@@ -140,9 +230,10 @@ declare class StremThru {
          };
          meta: ResponseMeta;
      }>;
@@ -278,17 +289,17 @@ index c57456a18d2415b15af91a664fcabb3589fcd645..5700208c3c22517e0c6b7c96057ed6c6
      }): Promise<{
          data: T;
          meta: ResponseMeta;
-@@ -163,4 +253,4 @@ declare class StremThruError extends Error {
+@@ -163,4 +254,4 @@ declare class StremThruError extends Error {
      });
  }
  
 -export { type ErrorCode, type ErrorType, type StoreMagnetStatus, type StoreUserSubscriptionStatus, StremThru, type StremThruConfig, StremThruError };
 +export { type ErrorCode, type ErrorType, type StoreMagnetStatus, type StoreNewzStatus, type StoreUserSubscriptionStatus, StremThru, type StremThruConfig, StremThruError, type StremThruMethodName };
 diff --git a/dist/index.mjs b/dist/index.mjs
-index 967875150536c2753269cace3b4cc9882a261b37..1a275cc2756679fe89031c135abbbdcedfdbe9ef 100644
+index 967875150536c2753269cace3b4cc9882a261b37..f84c4aa9f59d3db869d294eb1bad1b7bc6e1eba2 100644
 --- a/dist/index.mjs
 +++ b/dist/index.mjs
-@@ -58,13 +58,15 @@ class StremThruStore {
+@@ -58,13 +58,16 @@ class StremThruStore {
      return await this.#client.request("/v0/store/magnets", {
        body,
        method: "POST",
@@ -297,16 +308,18 @@ index 967875150536c2753269cace3b4cc9882a261b37..1a275cc2756679fe89031c135abbbdce
 +      methodName: "addMagnet"
      });
    }
-   async checkMagnet(params) {
+-  async checkMagnet(params) {
++  async checkMagnet({ signal, ...params }) {
      return await this.#client.request("/v0/store/magnets/check", {
        method: "GET",
 -      params
 +      params,
-+      methodName: "checkMagnet"
++      methodName: "checkMagnet",
++      signal
      });
    }
    async generateLink({
-@@ -74,14 +76,15 @@ class StremThruStore {
+@@ -74,14 +77,15 @@ class StremThruStore {
      return await this.#client.request(`/v0/store/link/generate`, {
        body: { link },
        method: "POST",
@@ -325,7 +338,7 @@ index 967875150536c2753269cace3b4cc9882a261b37..1a275cc2756679fe89031c135abbbdce
    }
    async listMagnets({
      limit,
-@@ -94,11 +97,71 @@ class StremThruStore {
+@@ -94,11 +98,71 @@ class StremThruStore {
      if (offset) {
        params["offset"] = String(offset);
      }
@@ -399,7 +412,7 @@ index 967875150536c2753269cace3b4cc9882a261b37..1a275cc2756679fe89031c135abbbdce
      });
    }
  }
-@@ -113,7 +176,7 @@ class StremThru {
+@@ -113,7 +177,7 @@ class StremThru {
        "User-Agent": [USER_AGENT, config.userAgent].filter(Boolean).join(" ")
      };
      if (config.timeout) {
@@ -408,7 +421,7 @@ index 967875150536c2753269cace3b4cc9882a261b37..1a275cc2756679fe89031c135abbbdce
      }
      if (config.auth) {
        if (typeof config.auth === "object" && "user" in config.auth) {
-@@ -132,13 +195,14 @@ class StremThru {
+@@ -132,13 +196,14 @@ class StremThru {
      this.store = new StremThruStore(this, config.clientIp);
    }
    async health() {
@@ -424,14 +437,15 @@ index 967875150536c2753269cace3b4cc9882a261b37..1a275cc2756679fe89031c135abbbdce
      ...options
    } = {}) {
      const url = new URL(endpoint, this.baseUrl);
-@@ -156,7 +220,10 @@ class StremThru {
+@@ -156,7 +221,11 @@ class StremThru {
        method
      };
      if (this.#timeout) {
 -      req.signal = AbortSignal.timeout(this.#timeout);
 +      const effectiveTimeout = (methodName && this.#timeout[methodName]) ?? this.#timeout.global;
 +      if (effectiveTimeout) {
-+        req.signal = AbortSignal.timeout(effectiveTimeout);
++        const timeoutSignal = AbortSignal.timeout(effectiveTimeout);
++        req.signal = options.signal ? AbortSignal.any([options.signal, timeoutSignal]) : timeoutSignal;
 +      }
      }
      if (body instanceof URLSearchParams) {

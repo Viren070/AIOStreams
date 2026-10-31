@@ -314,7 +314,9 @@ export interface TorrentDebridService extends BaseDebridService {
   checkMagnets(
     magnets: string[],
     sid?: string,
-    checkOwned?: boolean
+    checkOwned?: boolean,
+    /** Optional abort signal, e.g. when the caller gives up after a timeout. */
+    signal?: AbortSignal
   ): Promise<DebridDownload[]>;
   listMagnets(): Promise<DebridDownload[]>;
   addMagnet(magnet: string): Promise<DebridDownload>;

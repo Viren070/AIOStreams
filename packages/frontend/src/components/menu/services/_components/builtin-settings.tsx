@@ -54,6 +54,39 @@ export function BuiltinSettings() {
               help="Re-processes debrid results from selected addons through your configured services. Useful if the addon doesn't support returning P2P results."
               moreHelp="Only works when the torrent hash can be extracted from the stream - not all debrid results will be eligible."
             />
+            <Select
+              label="On Service Failure"
+              help="What to return when all processing services fail, for example when a debrid API is down or timing out."
+              moreHelp="Only applies when every processing service fails for a request. 'Show P2P results' returns the original torrents unwrapped, so they can still be played through Stremio's own torrent client."
+              options={[
+                { label: 'Show errors only (default)', value: 'error' },
+                { label: 'Show P2P results', value: 'p2p' },
+              ]}
+              value={userData.serviceWrap?.onServiceFailure ?? 'error'}
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  serviceWrap: {
+                    ...prev.serviceWrap,
+                    onServiceFailure: value === 'p2p' ? 'p2p' : undefined,
+                  },
+                }));
+              }}
+            />
+            <DurationInput
+              label="Service Timeout"
+              help="Overall time limit for each processing service. A service that takes longer counts as failed, so a hanging debrid API doesn't stall the whole request. Use 0 for no limit. Accepts values like 8s or 5000ms."
+              value={userData.serviceWrap?.timeout ?? 0}
+              onValueChange={(ms) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  serviceWrap: {
+                    ...prev.serviceWrap,
+                    timeout: ms > 0 ? ms : undefined,
+                  },
+                }));
+              }}
+            />
             <Combobox
               label="Wrap Addons"
               help="Select which addons to wrap. Leave empty to wrap all applicable addons."
