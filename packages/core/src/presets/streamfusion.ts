@@ -231,8 +231,14 @@ export class StreamFusionPreset extends Preset {
     }
 
     const specialCases = {
-      [constants.OFFCLOUD_SERVICE]: (credentials: any) =>
-        `${credentials.email}:${credentials.password}`,
+      [constants.OFFCLOUD_SERVICE]: (credentials: any) => {
+        if (!credentials.email || !credentials.password) {
+          throw new Error(
+            'Offcloud email and password are required for StreamFusion'
+          );
+        }
+        return `${credentials.email}:${credentials.password}`;
+      },
       [constants.PIKPAK_SERVICE]: (credentials: any) =>
         `${credentials.email}:${credentials.password}`,
     };
