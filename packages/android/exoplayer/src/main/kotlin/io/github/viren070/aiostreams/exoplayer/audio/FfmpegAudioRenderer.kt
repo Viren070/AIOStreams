@@ -18,8 +18,13 @@ import `is`.xyz.mpv.AudioDecoder
  * Media3's FFmpeg extension (Apache 2.0).
  */
 @OptIn(UnstableApi::class)
-internal class FfmpegAudioRenderer(handler: Handler?, listener: AudioRendererEventListener?, sink: AudioSink) :
-    DecoderAudioRenderer<FfmpegAudioDecoder>(handler, listener, sink) {
+internal class FfmpegAudioRenderer(
+    handler: Handler?,
+    listener: AudioRendererEventListener?,
+    sink: AudioSink,
+    /** Whether DTS-HD and DTS:X decode as their DTS core alone, read as each decoder opens. */
+    private val dtsCore: () -> Boolean,
+) : DecoderAudioRenderer<FfmpegAudioDecoder>(handler, listener, sink) {
     override fun getName() = "FfmpegAudioRenderer"
 
     override fun supportsFormatInternal(format: Format): Int {
@@ -37,7 +42,8 @@ internal class FfmpegAudioRenderer(handler: Handler?, listener: AudioRendererEve
 
     override fun supportsMixedMimeTypeAdaptation() = ADAPTIVE_NOT_SEAMLESS
 
-    override fun createDecoder(format: Format, cryptoConfig: CryptoConfig?) = FfmpegAudioDecoder(format, outputsFloat(format))
+    override fun createDecoder(format: Format, cryptoConfig: CryptoConfig?) =
+        FfmpegAudioDecoder(format, outputsFloat(format), dtsCore())
 
     override fun getOutputFormat(decoder: FfmpegAudioDecoder): Format = Format.Builder()
         .setSampleMimeType(MimeTypes.AUDIO_RAW)

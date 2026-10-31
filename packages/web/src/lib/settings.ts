@@ -963,6 +963,8 @@ export const settings = {
       undefined,
       ['aiostreams-app-ac3-encode']
     ),
+    /** The Android app decodes DTS-HD and DTS:X as their DTS core alone. */
+    dtsCore: device<boolean>('aiostreams-web-audio-dts-core', false),
   },
   subtitle: {
     ...subtitleLook,

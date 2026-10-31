@@ -38,7 +38,7 @@ internal class Renderers(context: Context, private val audio: AudioOutput) : Def
             if (mime in DTS) emptyList() else mediaCodecSelector.getDecoderInfos(mime, secure, tunneling)
         }
         out += DeviceAudioRenderer(context, codecAdapterFactory, decoders, enableDecoderFallback, eventHandler, eventListener, audioSink)
-        out += FfmpegAudioRenderer(eventHandler, eventListener, audioSink)
+        out += FfmpegAudioRenderer(eventHandler, eventListener, audioSink) { audio.dtsCore }
     }
 
     private companion object {

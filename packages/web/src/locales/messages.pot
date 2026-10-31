@@ -1227,6 +1227,10 @@ msgstr ""
 msgid "Date not known"
 msgstr ""
 
+#: src/pages/settings/audio.tsx
+msgid "Decode DTS-HD as DTS"
+msgstr ""
+
 #: src/pages/settings/playback.tsx
 msgid "Decodes nearly any video, in software where the device has no decoder for it. Takes your mpv.conf under Android app."
 msgstr ""
@@ -5119,6 +5123,14 @@ msgstr ""
 
 #: src/pages/settings/audio.tsx
 msgid "When the TV or receiver decodes it"
+msgstr ""
+
+#: src/pages/settings/audio.tsx
+msgid "When this app decodes DTS-HD or DTS:X, it plays the DTS sound inside, which is lossy but far lighter. For TVs that play them slowly or stutter."
+msgstr ""
+
+#: src/pages/settings/audio.tsx
+msgid "When this app decodes DTS-HD or DTS:X, it plays the DTS sound inside, which is lossy but far lighter. For TVs that play them slowly or stutter. Only for videos ExoPlayer plays."
 msgstr ""
 
 #: src/pages/settings/playback.tsx
