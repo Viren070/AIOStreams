@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-30 19:55+0000\n"
+"PO-Revision-Date: 2026-10-31 13:46+0000\n"
 "Last-Translator: Sebastian Porta <spg76@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Spanish <https://hosted.weblate.org/projects/aiostreams/web-app/es/>\n"
 "Language: es\n"
@@ -1902,7 +1902,7 @@ msgstr "Mantener"
 
 #: src/pages/settings/playback.tsx
 msgid "Keep in step by changing speed"
-msgstr "Mantén el ritmo cambiando de velocidad.(Editado)Recuperar original"
+msgstr "Mantén el ritmo cambiando de velocidad"
 
 #: src/components/party/party-sheet.tsx
 msgid "Keeping in step"
