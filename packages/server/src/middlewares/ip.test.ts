@@ -1,5 +1,13 @@
-import { describe, it } from 'node:test';
+import { describe, it, vi } from 'vitest';
 import assert from 'node:assert/strict';
+
+vi.hoisted(() => {
+  process.env.NODE_ENV ??= 'test';
+  process.env.SECRET_KEY ??= '0'.repeat(64);
+  process.env.BASE_URL ??= 'http://localhost:3000';
+  process.env.LOG_LEVEL ??= 'error';
+});
+
 import { isPrivateIp, ipMiddleware } from './ip.js';
 
 describe('Issue #1525: isPrivateIp and ipMiddleware with IPv4-mapped IPv6 addresses', () => {
@@ -15,6 +23,8 @@ describe('Issue #1525: isPrivateIp and ipMiddleware with IPv4-mapped IPv6 addres
 
   it('identifies IPv4-mapped IPv6 private, loopback, and link-local addresses as private', () => {
     assert.equal(isPrivateIp('::ffff:10.0.0.5'), true);
+    assert.equal(isPrivateIp('::ffff:a00:5'), true);
+    assert.equal(isPrivateIp('0:0:0:0:0:ffff:a00:5'), true);
     assert.equal(isPrivateIp('::ffff:127.0.0.1'), true);
     assert.equal(isPrivateIp('::ffff:172.17.0.1'), true);
     assert.equal(isPrivateIp('::ffff:172.31.0.1'), true);
@@ -36,6 +46,7 @@ describe('Issue #1525: isPrivateIp and ipMiddleware with IPv4-mapped IPv6 addres
     assert.equal(isPrivateIp('172.15.0.1'), false);
     assert.equal(isPrivateIp('172.32.0.1'), false);
     assert.equal(isPrivateIp('::ffff:8.8.8.8'), false);
+    assert.equal(isPrivateIp('::ffff:808:808'), false);
     assert.equal(isPrivateIp('::ffff:93.184.216.34'), false);
     assert.equal(isPrivateIp('2001:4860:4860::8888'), false);
     assert.equal(isPrivateIp('2606:4700:4700::1111'), false);
