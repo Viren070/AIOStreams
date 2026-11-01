@@ -31,7 +31,7 @@ msgstr "{count, plural, one {# badge} other {# badges}}"
 msgid "{count, plural, one {# minute} other {# minutes}}"
 msgstr "{count, plural, one {# minute} other {# minutes}}"
 
-#: src/pages/settings/playback.tsx
+#: src/pages/settings/common.tsx
 msgid "{count, plural, one {# second} other {# seconds}}"
 msgstr "{count, plural, one {# second} other {# seconds}}"
 
@@ -1831,6 +1831,10 @@ msgstr "How fast playback runs while you press and hold the video, or hold Space
 #: src/pages/settings/interface.tsx
 msgid "How large cards are in a grid."
 msgstr "How large cards are in a grid."
+
+#: src/pages/settings/interface.tsx
+msgid "How long the hero stays on a featured title while it rotates."
+msgstr "How long the hero stays on a featured title while it rotates."
 
 #: src/pages/settings/playback.tsx
 msgid "How much of the video the player holds in memory: ahead, to ride out a slow connection, and behind, to seek back at once. Automatic sizes it from this device's memory."
@@ -4652,6 +4656,10 @@ msgstr "Those were too far apart to be one line. Try another line."
 #: src/pages/settings/cache.tsx
 msgid "Three days"
 msgstr "Three days"
+
+#: src/pages/settings/interface.tsx
+msgid "Time on each title"
+msgstr "Time on each title"
 
 #: src/components/player/options.tsx
 msgid "Timing"

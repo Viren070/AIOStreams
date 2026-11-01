@@ -1,5 +1,5 @@
 import React from 'react';
-import { t } from '@lingui/core/macro';
+import { plural, t } from '@lingui/core/macro';
 import { LuArrowDown, LuArrowUp, LuX } from 'react-icons/lu';
 import { Select } from '@aiostreams/ui/select';
 import { IconButton } from '@aiostreams/ui/button';
@@ -15,6 +15,9 @@ export const followsYou = () =>
   t`Saved to your account, so it follows you to every device.`;
 
 export const DOCS_URL = 'https://docs.aiostreams.viren070.me';
+
+export const seconds = (count: number) =>
+  plural(count, { one: '# second', other: '# seconds' });
 
 export const languageOptions = () =>
   LANGUAGES.map((l) => ({ value: l.code, label: languageName(l) }));

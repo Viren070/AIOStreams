@@ -25,12 +25,13 @@ import {
   type TabNames,
   type TouchNavigation,
   type TvNavigation,
+  HERO_SECONDS,
   type HeroMode,
   type PosterLine,
   type PosterSize,
 } from '../../lib/settings';
 import { SettingsCard } from '../../components/settings-card';
-import { onDevice, followsYou } from './common';
+import { onDevice, followsYou, seconds } from './common';
 
 const NOTHING = 'none';
 
@@ -225,6 +226,9 @@ export function InterfaceSection() {
   const views = useViews();
   const [featured, setFeatured] = useSetting(settings.interface.featured);
   const [heroMode, setHeroMode] = useSetting(settings.interface.heroMode);
+  const [heroSeconds, setHeroSeconds] = useSetting(
+    settings.interface.heroSeconds
+  );
   const [mergeNextUp, setMergeNextUp] = useSetting(
     settings.interface.mergeNextUp
   );
@@ -311,6 +315,16 @@ export function InterfaceSection() {
           ]}
           value={heroMode}
           onValueChange={(value) => setHeroMode(value as HeroMode)}
+        />
+        <Select
+          label={t`Time on each title`}
+          help={t`How long the hero stays on a featured title while it rotates.`}
+          options={HERO_SECONDS.map((s) => ({
+            value: String(s),
+            label: seconds(s),
+          }))}
+          value={String(heroSeconds)}
+          onValueChange={(v) => setHeroSeconds(Number(v))}
         />
         <Switch
           side="right"

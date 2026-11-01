@@ -31,7 +31,7 @@ msgstr ""
 msgid "{count, plural, one {# minute} other {# minutes}}"
 msgstr ""
 
-#: src/pages/settings/playback.tsx
+#: src/pages/settings/common.tsx
 msgid "{count, plural, one {# second} other {# seconds}}"
 msgstr ""
 
@@ -1830,6 +1830,10 @@ msgstr ""
 
 #: src/pages/settings/interface.tsx
 msgid "How large cards are in a grid."
+msgstr ""
+
+#: src/pages/settings/interface.tsx
+msgid "How long the hero stays on a featured title while it rotates."
 msgstr ""
 
 #: src/pages/settings/playback.tsx
@@ -4651,6 +4655,10 @@ msgstr ""
 
 #: src/pages/settings/cache.tsx
 msgid "Three days"
+msgstr ""
+
+#: src/pages/settings/interface.tsx
+msgid "Time on each title"
 msgstr ""
 
 #: src/components/player/options.tsx

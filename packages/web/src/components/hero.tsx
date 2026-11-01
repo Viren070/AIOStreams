@@ -7,6 +7,7 @@ import { Button } from '@aiostreams/ui/button';
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '../lib/session';
+import { settings, useSetting } from '../lib/settings';
 import { currentHost } from '../lib/hosts';
 import { usePageShown } from '../lib/page-shown';
 import { useItem } from '../lib/queries';
@@ -25,7 +26,6 @@ import { useLatest } from '../lib/use-latest';
 import { CachedImage } from './cached-image';
 import { GlideLayers } from './glide-layers';
 
-const ROTATE_MS = 9000;
 const DRAG_SLOP_PX = 8;
 const LAND_SHARE = 0.35;
 const FLICK_PX_MS = 0.4;
@@ -518,6 +518,7 @@ export function Hero({
   const { client } = useSession();
   const featured = items.filter((i) => backdropSrc(client, i));
   const [index, setIndex] = React.useState(0);
+  const [seconds] = useSetting(settings.interface.heroSeconds);
   const [paused, setPaused] = React.useState(false);
   const [dragging, setDragging] = React.useState(false);
   // Keys of the previous, current and next slides, passed round as a swipe
@@ -553,10 +554,19 @@ export function Hero({
       return;
     const timer = setTimeout(
       () => setIndex((i) => (i + 1) % featured.length),
-      ROTATE_MS
+      seconds * 1000
     );
     return () => clearTimeout(timer);
-  }, [index, paused, focused, dragging, shown, inSight, featured.length]);
+  }, [
+    index,
+    paused,
+    focused,
+    dragging,
+    shown,
+    inSight,
+    featured.length,
+    seconds,
+  ]);
 
   const landing = React.useRef<'first' | 'last' | null>(null);
   const turn = (step: 1 | -1) => {

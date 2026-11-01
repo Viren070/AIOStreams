@@ -40,7 +40,7 @@ import {
 import { useFeature } from '../../lib/server-info';
 import { SettingsCard, SettingsRow } from '../../components/settings-card';
 import { BadgesRow, QuickFiltersRow } from '../../components/version-settings';
-import { onDevice, followsYou } from './common';
+import { onDevice, followsYou, seconds } from './common';
 import { ReactionSetting } from '../../components/party/reaction-setting';
 
 const nextPromptHelp = (prompt: NextPrompt) =>
@@ -68,9 +68,6 @@ const segmentActionLabel = (action: SegmentAction) =>
     skip: t`Skip automatically`,
     none: t`Do nothing`,
   })[action];
-
-const seconds = (count: number) =>
-  plural(count, { one: '# second', other: '# seconds' });
 
 const minutes = (count: number) =>
   plural(count, { one: '# minute', other: '# minutes' });
