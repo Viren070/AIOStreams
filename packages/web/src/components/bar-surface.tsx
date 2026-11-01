@@ -8,15 +8,18 @@ export const canRefract =
   CSS.supports('backdrop-filter', 'url(#a)') &&
   /Chrome\//.test(navigator.userAgent);
 
-/** How wide the bent rim is, and how far at most it moves what's behind, in CSS pixels. */
-const RIM = 30;
-const BEND = 45;
-
 const maps = new Map<string, string>();
 
+/** How much of its distance from the middle a point keeps in what it shows, by depth (0 at the edge, 1 at the middle). */
+const pull = (depth: number) =>
+  (1 - 2.3 * Math.pow(5.2 * Math.E, -6.9 * depth - 0.7)) ** 3;
+
+/** The filter's scale, as the map's red and green span the box's longer side. */
+const span = (width: number, height: number) => Math.max(width, height);
+
 /**
- * A displacement map for a rounded box: red and green move each point of the
- * rim toward the middle, as a lens's edge bends light, and leave the middle.
+ * A displacement map for a rounded box: each point shows what lies nearer the
+ * middle, the more so toward the rim, as a lens does.
  */
 function displacementMap(width: number, height: number, radius: number) {
   const key = `${width}x${height}/${radius}`;
@@ -29,36 +32,22 @@ function displacementMap(width: number, height: number, radius: number) {
   if (!ctx) return null;
   const image = ctx.createImageData(width, height);
   const r = Math.min(radius, width / 2, height / 2);
-  const rim = Math.min(RIM, width / 2, height / 2);
   const cx = width / 2;
   const cy = height / 2;
+  const short = Math.min(cx, cy);
+  const scale = 255 / span(width, height);
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const px = x + 0.5 - cx;
       const py = y + 0.5 - cy;
       const qx = Math.abs(px) - (cx - r);
       const qy = Math.abs(py) - (cy - r);
-      // How far in from the edge, and which way is out.
-      let depth: number;
-      let nx = 0;
-      let ny = 0;
-      if (qx > 0 && qy > 0) {
-        const out = Math.hypot(qx, qy);
-        depth = r - out;
-        nx = qx / out;
-        ny = qy / out;
-      } else if (qx > qy) {
-        depth = r - qx;
-        nx = 1;
-      } else {
-        depth = r - qy;
-        ny = 1;
-      }
-      const t = Math.min(1, Math.max(0, 1 - depth / rim));
-      const bend = t * t * (3 - 2 * t) * 127;
+      const depth =
+        qx > 0 && qy > 0 ? r - Math.hypot(qx, qy) : r - Math.max(qx, qy);
+      const moved = pull(Math.max(0, depth) / short) - 1;
       const i = (y * width + x) * 4;
-      image.data[i] = 128 - Math.sign(px) * nx * bend;
-      image.data[i + 1] = 128 - Math.sign(py) * ny * bend;
+      image.data[i] = 127.5 + px * moved * scale;
+      image.data[i + 1] = 127.5 + py * moved * scale;
       image.data[i + 2] = 128;
       image.data[i + 3] = 255;
     }
@@ -176,7 +165,7 @@ export function BarSurface({
             <feDisplacementMap
               in="SourceGraphic"
               in2="map"
-              scale={BEND * 2}
+              scale={span(size.width, size.height)}
               xChannelSelector="R"
               yChannelSelector="G"
             />
