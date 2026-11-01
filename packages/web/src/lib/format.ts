@@ -158,7 +158,7 @@ export const markLabel = (mark: EpisodeMark) =>
 
 /** `20 Jan 2008` */
 export function shortDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(formatLocale(), {
+  return airDay(iso).toLocaleDateString(formatLocale(), {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
