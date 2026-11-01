@@ -33,7 +33,7 @@ internal class SoundLevels {
 
     private companion object {
         /** Android's layouts with a centre channel, which each have it third. */
-        val CENTRED = setOf(3, 5, 6, 7, 8)
+        val CENTRED = setOf(3, 5, 6, 7, 8, 10, 12)
     }
 }
 
@@ -76,7 +76,7 @@ internal class SoundShaper(private val levels: SoundLevels) {
             source, offset, frames, inputChannels, map, sampleRate, output, outputAt, outputChannels, floatOutput,
             levels.centreGain(map.size), levels.nightMode, levels.gain, state,
         )
-        check(shaped) { "couldn't shape the sound" }
+        check(shaped) { "couldn't shape $inputChannels channels as ${map.size} to $outputChannels" }
     }
 
     /** Decoders hand over direct buffers; this is for one that doesn't. */

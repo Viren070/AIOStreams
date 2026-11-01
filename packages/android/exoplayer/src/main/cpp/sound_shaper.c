@@ -13,11 +13,11 @@
 #define THRESHOLD_DB -24.0f
 #define RATIO 6.0f
 #define MAKEUP_DB 12.0f
-#define MAX_CHANNELS 8
+#define MAX_CHANNELS 12
 
 enum { LEVEL, COMPRESSION, LIMITING, STATE_SIZE };
 
-enum { L, R, C, LFE, LS, RS, BC };
+enum { L, R, C, LFE, LS, RS, BC, TFL, TFR, TBL, TBR };
 
 // What each channel of Android's layouts is, by channel count.
 static const int ROLES[MAX_CHANNELS + 1][MAX_CHANNELS] = {
@@ -27,6 +27,8 @@ static const int ROLES[MAX_CHANNELS + 1][MAX_CHANNELS] = {
     [6] = {L, R, C, LFE, LS, RS},
     [7] = {L, R, C, LFE, LS, RS, BC},
     [8] = {L, R, C, LFE, LS, RS, LS, RS},
+    [10] = {L, R, C, LFE, LS, RS, TFL, TFR, TBL, TBR},
+    [12] = {L, R, C, LFE, LS, RS, LS, RS, TFL, TFR, TBL, TBR},
 };
 
 static float coefficient(float ms, int rate) {
@@ -38,7 +40,7 @@ static float compressor_gain(float mean_square) {
     return powf(10.0f, (MAKEUP_DB - fmaxf(over, 0.0f) * (1.0f - 1.0f / RATIO)) / 20.0f);
 }
 
-// Stereo, or 5.1 from 6.1 and 7.1, at equal power and without the LFE in stereo.
+// Stereo, or 5.1 from 6.1 and up, at equal power and without the LFE in stereo.
 static int mix_matrix(int channels, int outputs, float matrix[][MAX_CHANNELS]) {
     if (outputs != 2 && outputs != 6) return 0;
     memset(matrix, 0, sizeof(float) * MAX_CHANNELS * MAX_CHANNELS);
@@ -61,6 +63,10 @@ static int mix_matrix(int channels, int outputs, float matrix[][MAX_CHANNELS]) {
                 matrix[five ? 4 : 0][c] = five ? HALF_POWER : 0.5f;
                 matrix[five ? 5 : 1][c] = five ? HALF_POWER : 0.5f;
                 break;
+            case TFL: matrix[0][c] = HALF_POWER; break;
+            case TFR: matrix[1][c] = HALF_POWER; break;
+            case TBL: matrix[five ? 4 : 0][c] = five ? HALF_POWER : 0.5f; break;
+            case TBR: matrix[five ? 5 : 1][c] = five ? HALF_POWER : 0.5f; break;
         }
     }
     return 1;
