@@ -474,6 +474,9 @@ function findVideo(
   return null;
 }
 
+const NO_META_OVERVIEW =
+  'None of the addons in your configuration has details for this title. Add a metadata addon that covers it, then refresh.';
+
 export async function itemFromDescriptor(
   ctx: JellyfinRequestContext,
   d: JellyfinDescriptor,
@@ -539,7 +542,12 @@ export async function itemFromDescriptor(
       }
       const base = meta
         ? { ...meta, id: d.i, type: d.t }
-        : ({ id: d.i, type: d.t, name: d.i } as MetaPreview);
+        : ({
+            id: d.i,
+            type: d.t,
+            name: d.i,
+            description: NO_META_OVERVIEW,
+          } as MetaPreview);
       const asBoxset =
         !(d.k === 'movie' && d.p) &&
         (!!meta?.collection ||
@@ -557,6 +565,7 @@ export async function itemFromDescriptor(
             : undefined,
       });
       if (asBoxset) item.Id = encodeItemId(d);
+      if (!meta) item.aiostreams = { noMeta: true };
       // A show is played by its episodes, which its own row does not hold.
       if (!opts.bare && (!opts.playstate || d.k === 'series'))
         await attachUserData(ctx, [item]);
