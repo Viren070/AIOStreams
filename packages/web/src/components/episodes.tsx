@@ -88,7 +88,7 @@ function EpisodeNumber({
     >
       <span
         className={cn(
-          'font-bold tabular-nums text-white/90 drop-shadow-lg transition-opacity group-hover/episode:opacity-0',
+          'font-bold tabular-nums text-white/90 drop-shadow-lg transition-opacity [@media(hover:hover)]:group-hover/episode:opacity-0',
           className
         )}
       >
@@ -150,16 +150,16 @@ export function EpisodeThumb({
         own={ownImages(episode)}
         standIn={<EpisodeNumber episode={episode} className={numberClass} />}
         className={cn(
-          playable && 'group-hover/episode:scale-[1.03]',
+          playable && '[@media(hover:hover)]:group-hover/episode:scale-[1.03]',
           unavailable && 'opacity-40 grayscale'
         )}
       />
       {playable && (
         <div
           data-ui="episode-play"
-          className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover/episode:bg-black/30"
+          className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors [@media(hover:hover)]:group-hover/episode:bg-black/30"
         >
-          <BiPlay className="text-4xl text-white opacity-0 drop-shadow transition-opacity group-hover/episode:opacity-90" />
+          <BiPlay className="text-4xl text-white opacity-0 drop-shadow transition-opacity [@media(hover:hover)]:group-hover/episode:opacity-90" />
         </div>
       )}
       {labels.length > 0 && (
@@ -475,7 +475,7 @@ function EpisodeListItem({
           data-nav-box
           {...episodeState(episode)}
           data-highlighted={highlighted || undefined}
-          className="group/episode relative grid grid-cols-[40%_minmax(0,1fr)] gap-x-3 gap-y-2 rounded-xl p-2 transition-colors focus-within:bg-white/10 hover:bg-white/[0.04] sm:grid-cols-[13rem_minmax(0,1fr)] sm:grid-rows-[auto_1fr] sm:gap-x-4 sm:gap-y-1"
+          className="group/episode relative grid grid-cols-[40%_minmax(0,1fr)] gap-x-3 gap-y-2 rounded-xl p-2 transition-colors sm:grid-cols-[13rem_minmax(0,1fr)] sm:grid-rows-[auto_1fr] sm:gap-x-4 sm:gap-y-1 [@media(hover:hover)]:hover:bg-white/[0.04] [html:not([data-pointer-focus])_&]:focus-within:bg-white/10"
         >
           {highlighted && <OpenedPulse />}
           <EpisodeThumb
