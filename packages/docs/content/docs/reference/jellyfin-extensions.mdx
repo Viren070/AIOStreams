@@ -94,13 +94,13 @@ object:
 
 The [version search, quick filters and badges](/reference/version-badges) also read these, all optional:
 
-| Field                                                                                                   | Shape             | What it is                                                         |
-| ------------------------------------------------------------------------------------------------------- | ----------------- | ------------------------------------------------------------------ |
-| `filename`, `folderName`, `resolution`, `quality`, `encode`, `releaseGroup`, `indexer`, `addon`, `service` | string            | Read from the release, as the formatter has them                   |
-| `visualTags`, `audioTags`, `audioChannels`, `languages`, `editions`                                     | string[]          | The same                                                           |
-| `seMatched`, `regexMatched`                                                                             | string            | The stream expression and regex it matched first, by name          |
-| `rseMatched`, `rankedRegexMatched`                                                                      | string[]          | The ranked stream expressions and ranked regexes it matched        |
-| `seadex`                                                                                                | `best` or `alt`   | Listed on SeaDex, as a best or an alternative release              |
+| Field                                                                                                      | Shape           | What it is                                                  |
+| ---------------------------------------------------------------------------------------------------------- | --------------- | ----------------------------------------------------------- |
+| `filename`, `folderName`, `resolution`, `quality`, `encode`, `releaseGroup`, `indexer`, `addon`, `service` | string          | Read from the release, as the formatter has them            |
+| `visualTags`, `audioTags`, `audioChannels`, `languages`, `editions`                                        | string[]        | The same                                                    |
+| `seMatched`, `regexMatched`                                                                                | string          | The stream expression and regex it matched first, by name   |
+| `rseMatched`, `rankedRegexMatched`                                                                         | string[]        | The ranked stream expressions and ranked regexes it matched |
+| `seadex`                                                                                                   | `best` or `alt` | Listed on SeaDex, as a best or an alternative release       |
 
 The first version's `Id` is the item's own id, as in standard Jellyfin, so `id` is how the app tells
 versions apart across listings. Without the feature, the next episode settings say nothing of
@@ -143,6 +143,10 @@ A title whose addon sends [`ratings`](/reference/addon-protocol/metadata#ratings
 source's scale, in the addon's order. The app shows a badge for each, in place of the
 `CommunityRating` star. That star, and the Rotten Tomatoes `CriticRating`, are still filled from the
 list for other clients.
+
+A title no addon in the configuration has details for still opens, named by its id, with an
+`Overview` saying so, and carries `"aiostreams": { "noMeta": true }`. The app shows a page asking for
+a metadata addon in place of the title's own, with Play kept for a movie.
 
 ## Episodes
 
