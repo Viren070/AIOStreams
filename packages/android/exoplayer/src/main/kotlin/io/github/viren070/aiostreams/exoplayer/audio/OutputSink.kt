@@ -10,7 +10,7 @@ import androidx.media3.exoplayer.audio.ForwardingAudioSink
 /** Passes through only the formats the page allows, and delays the sound against the picture. */
 @OptIn(UnstableApi::class)
 internal class OutputSink(sink: AudioSink) : ForwardingAudioSink(sink) {
-    /** The sample types passed through, from mpv's `audio-spdif` list; read from the next track picked. */
+    /** The sample types passed through, from mpv's `audio-spdif` list. */
     @Volatile
     var passthrough: Set<String> = emptySet()
         private set
@@ -18,8 +18,20 @@ internal class OutputSink(sink: AudioSink) : ForwardingAudioSink(sink) {
     @Volatile
     var delayUs = 0L
 
+    @Volatile
+    private var listener: AudioSink.Listener? = null
+
+    override fun setListener(listener: AudioSink.Listener) {
+        this.listener = listener
+        super.setListener(listener)
+    }
+
     fun setSpdif(names: List<String>) {
-        passthrough = names.flatMapTo(mutableSetOf()) { SPDIF[it].orEmpty() }
+        val next = names.flatMapTo(mutableSetOf()) { SPDIF[it].orEmpty() }
+        if (next == passthrough) return
+        passthrough = next
+        // Picks the track's output again: a mode switch changes this and the device's formats in either order.
+        listener?.onAudioCapabilitiesChanged()
     }
 
     private fun allowed(format: Format) = format.sampleMimeType == MimeTypes.AUDIO_RAW || format.sampleMimeType in passthrough
