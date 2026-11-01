@@ -10,7 +10,7 @@ import { useSession } from '../lib/session';
 import { settings, useSetting } from '../lib/settings';
 import { currentHost } from '../lib/hosts';
 import { usePageShown } from '../lib/page-shown';
-import { useItem } from '../lib/queries';
+import { useFetchNextUp, useItem } from '../lib/queries';
 import { focusOn, keyboardFocus, useAction } from '../lib/input';
 import { ScrollRoot, watch } from '../lib/use-in-view';
 import { backdropUrl, landscapeUrl, logoUrl } from '../lib/images';
@@ -233,19 +233,30 @@ function HeroDetails({
 }) {
   const { client } = useSession();
   const picker = useVersionPicker();
+  const fetchNextUp = useFetchNextUp();
   const logo = logoUrl(client, item, { maxWidth: 384 });
   // By address, since the hero swaps items under the same details.
   const [failedLogo, setFailedLogo] = React.useState<string>();
   // Jellyfin cannot play a virtual item, such as an episode not yet aired.
   const playable =
-    (item.Type === 'Movie' || item.Type === 'Episode') &&
-    item.LocationType !== 'Virtual';
-  const holdPlay = useHold(() =>
-    picker.play(item, {
-      startMs: ticksToMs(item.UserData?.PlaybackPositionTicks),
-      held: true,
-    })
-  );
+    item.Type === 'Series' ||
+    ((item.Type === 'Movie' || item.Type === 'Episode') &&
+      item.LocationType !== 'Virtual');
+  const play = (held?: boolean) =>
+    item.Type === 'Series'
+      ? void fetchNextUp(item.Id!).then((episode) =>
+          episode
+            ? picker.play(episode, {
+                startMs: ticksToMs(episode.UserData?.PlaybackPositionTicks),
+                held,
+              })
+            : navigate(itemPath(item))
+        )
+      : picker.play(item, {
+          startMs: ticksToMs(item.UserData?.PlaybackPositionTicks),
+          held,
+        });
+  const holdPlay = useHold(() => play(true));
   const parts: [string, React.ReactNode][] = [
     item.Type === 'Episode'
       ? ['episode', itemSubtitle(item)]
@@ -307,11 +318,7 @@ function HeroDetails({
               intent="white"
               className="rounded-full"
               leftIcon={<BiPlay className="text-xl" />}
-              onClick={() =>
-                picker.play(item, {
-                  startMs: ticksToMs(item.UserData?.PlaybackPositionTicks),
-                })
-              }
+              onClick={() => play()}
               {...holdPlay}
             >
               <Trans>Play</Trans>
@@ -325,7 +332,7 @@ function HeroDetails({
             leftIcon={<BiInfoCircle className="text-xl" />}
             onClick={() => navigate(itemPath(item))}
           >
-            {playable ? t`More info` : t`Open`}
+            <Trans>More info</Trans>
           </Button>
         </div>
       )}
