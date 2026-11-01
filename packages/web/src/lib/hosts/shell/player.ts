@@ -467,9 +467,10 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
     },
     setSubtitleDelay: (subtitleDelayMs) =>
       send('player-set', { subtitleDelayMs }),
-    skipAhead: external
-      ? undefined
-      : (skips) => send('player-skips', { segments: skips }),
+    skipAhead:
+      external || appBridge()?.platform !== 'android'
+        ? undefined
+        : (skips) => send('player-skips', { segments: skips }),
     // The Android app draws the screen faster while they show.
     showControls:
       external || appBridge()?.platform !== 'android'
