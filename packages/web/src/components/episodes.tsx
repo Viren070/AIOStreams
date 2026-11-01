@@ -1,32 +1,37 @@
 import { t } from '@lingui/core/macro';
 import React from 'react';
-import { BiCheck, BiInfoCircle, BiPlay, BiSolidStar } from 'react-icons/bi';
+import {
+  BiDotsVerticalRounded,
+  BiInfoCircle,
+  BiPlay,
+  BiSolidStar,
+} from 'react-icons/bi';
 import { Badge } from '@aiostreams/ui/badge';
 import { IconButton } from '@aiostreams/ui/button';
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import { cn } from '@aiostreams/ui/core/styling';
 import { currentHost } from '../lib/hosts';
 import { useSession } from '../lib/session';
-import { useSetPlayed } from '../lib/queries';
 import { landscapeUrls } from '../lib/images';
 import {
-  dayLabel,
+  airedLabel,
   duration,
   episodeMarks,
   progressOf,
-  shortDate,
+  remainingMs,
   ticksToMs,
   markLabel,
   unavailableKind,
   unavailableLabel,
-  untilLabel,
 } from '../lib/format';
 import { Artwork, OpenedPulse, ProgressBar, WatchedMark } from './cards';
 import { OverviewInfo } from './overview';
 import { ItemMenu } from './item-menu';
 import { useVersionPicker } from './version-picker';
 import { DownloadButton } from './download-button';
+import { useDownloadOf } from '../lib/downloads';
 import { useHold } from '../lib/use-hold';
+import { fadeIn } from './media-row';
 import type { BaseItemDto } from '../lib/types';
 
 function episodeNumber(episode: BaseItemDto): string | null {
@@ -43,16 +48,14 @@ export function seasonEpisodeTitle(episode: BaseItemDto): string {
   return episode.Name ? `${number}. ${episode.Name}` : t`Episode ${number}`;
 }
 
-/** When an episode aired and how long it runs, or when it will air. */
+function lengthLabel(episode: BaseItemDto): string {
+  const left = progressOf(episode) ? duration(remainingMs(episode)) : '';
+  return left ? t`${left} left` : duration(ticksToMs(episode.RunTimeTicks));
+}
+
+/** When an episode aired or will, and how long it runs. */
 export function episodeLine(episode: BaseItemDto): string {
-  const date = episode.PremiereDate;
-  if (unavailableKind(episode) === 'unaired' && date) {
-    const day = dayLabel(date);
-    const until = untilLabel(date);
-    return t`Airs ${day} · ${until}`;
-  }
-  const runtime = ticksToMs(episode.RunTimeTicks);
-  return [date && shortDate(date), runtime && duration(runtime)]
+  return [airedLabel(episode), lengthLabel(episode)]
     .filter(Boolean)
     .join(' · ');
 }
@@ -98,9 +101,6 @@ function EpisodeNumber({
 function ownImages(episode: BaseItemDto): number {
   return episode.ImageTags?.Primary ? 1 : 0;
 }
-
-/** A TV's remote can't reach a playable episode's buttons, and its menu has them. */
-const hasButtons = (play: unknown) => !(play && currentHost().tv);
 
 function usePlay(
   episode: BaseItemDto
@@ -181,32 +181,105 @@ export function EpisodeThumb({
   );
 }
 
-function Kicker({ episode }: { episode: BaseItemDto }) {
-  const number = episodeNumber(episode);
-  const date = episode.PremiereDate;
-  const runtime = ticksToMs(episode.RunTimeTicks);
-  const until = date ? untilLabel(date) : '';
-  const when =
-    unavailableKind(episode) === 'unaired' && date
-      ? t`Airs ${until}`
-      : runtime
-        ? duration(runtime)
-        : null;
-  const text = [number != null ? t`Episode ${number}` : null, when]
-    .filter(Boolean)
-    .join(' · ');
+function EpisodeMeta({ episode }: { episode: BaseItemDto }) {
   const rating = episode.CommunityRating;
+  const parts = (
+    [
+      ['aired', airedLabel(episode)],
+      ['length', lengthLabel(episode)],
+      [
+        'rating',
+        rating ? (
+          <>
+            <BiSolidStar className="-mt-0.5 inline text-yellow-400" />{' '}
+            {rating.toFixed(1)}
+          </>
+        ) : null,
+      ],
+    ] as [string, React.ReactNode][]
+  ).filter(([, part]) => part);
   return (
-    <>
-      {text}
-      {rating ? (
+    <p
+      data-ui="episode-meta"
+      className="mt-0.5 truncate text-xs text-[--muted] sm:text-sm"
+    >
+      {parts.map(([name, part], i) => (
+        <React.Fragment key={name}>
+          {i > 0 && <span data-ui="meta-separator"> · </span>}
+          <span data-name={name}>{part}</span>
+        </React.Fragment>
+      ))}
+      {/* Keeps a row's cards level. */}
+      {!parts.length && '\u00a0'}
+    </p>
+  );
+}
+
+/** A remote holds Select for a playable episode's menu; elsewhere this opens it. */
+function EpisodeActions({
+  episode,
+  play,
+}: {
+  episode: BaseItemDto;
+  play: (() => void) | undefined;
+}) {
+  const { client } = useSession();
+  const download = useDownloadOf(episode.Id);
+  const tv = !!currentHost().tv;
+  if (tv && play) return null;
+  return (
+    <div
+      data-ui="episode-actions"
+      className="relative z-[1] -my-1 -me-1.5 flex flex-none items-center"
+    >
+      {tv ? (
+        <OverviewInfo
+          title={seasonEpisodeTitle(episode)}
+          line={episodeLine(episode)}
+          overview={episode.Overview}
+          image={landscapeUrls(client, episode, { maxWidth: 480 })}
+          trigger={
+            <IconButton
+              data-ui="episode-action"
+              data-name="details"
+              size="sm"
+              intent="gray-subtle"
+              className="size-8 rounded-full"
+              icon={<BiInfoCircle />}
+              aria-label={t`Episode details`}
+              title={t`Episode details`}
+            />
+          }
+        />
+      ) : (
         <>
-          {text && ' · '}
-          <BiSolidStar className="-mt-0.5 inline text-yellow-400" />{' '}
-          {rating.toFixed(1)}
+          {download && <DownloadButton item={episode} className="size-8" />}
+          <IconButton
+            data-ui="episode-action"
+            data-name="menu"
+            // A playable episode is one stop, and its menu has the rest.
+            data-nav={play ? 'skip' : undefined}
+            size="sm"
+            intent="gray-basic"
+            className="size-8 rounded-full text-xl text-white/70"
+            icon={<BiDotsVerticalRounded />}
+            aria-label={t`More`}
+            title={t`More`}
+            onClick={(e) => {
+              const at = e.currentTarget.getBoundingClientRect();
+              e.currentTarget.dispatchEvent(
+                new MouseEvent('contextmenu', {
+                  bubbles: true,
+                  cancelable: true,
+                  clientX: at.right,
+                  clientY: at.bottom,
+                })
+              );
+            }}
+          />
         </>
-      ) : null}
-    </>
+      )}
+    </div>
   );
 }
 
@@ -228,97 +301,46 @@ function Head({
   /** Focus rings a card's thumbnail, as other cards do; a list's row marks it itself. */
   thumbRing?: boolean;
 }) {
-  const { client } = useSession();
   const hold = useHold(onHold, { menu: true });
-  const setPlayed = useSetPlayed();
-  const title = episode.Name || seasonEpisodeTitle(episode);
-  const played = !!episode.UserData?.Played;
+  const title = seasonEpisodeTitle(episode);
   const clamp = oneLine ? 'line-clamp-1' : 'line-clamp-2';
   return (
     <div data-ui="episode-head" className={cn('min-w-0', className)}>
-      <div className="flex items-center gap-2">
-        <p
-          data-ui="episode-kicker"
-          className="min-w-0 flex-1 truncate text-xs text-[--muted] sm:text-sm"
-        >
-          <Kicker episode={episode} />
-        </p>
-        {hasButtons(play) && (
-          <div
-            data-ui="episode-actions"
-            className="relative z-[1] flex flex-none items-center gap-1.5"
-          >
-            <OverviewInfo
-              title={seasonEpisodeTitle(episode)}
-              line={episodeLine(episode)}
-              overview={episode.Overview}
-              image={landscapeUrls(client, episode, { maxWidth: 480 })}
-              trigger={
-                <IconButton
-                  data-ui="episode-action"
-                  data-name="details"
-                  // A playable episode is one stop, and its menu has the rest.
-                  data-nav={play ? 'skip' : undefined}
-                  size="sm"
-                  intent="gray-subtle"
-                  className="size-8 rounded-full"
-                  icon={<BiInfoCircle />}
-                  aria-label={t`Episode details`}
-                  title={t`Episode details`}
-                />
-              }
-            />
-            {play && <DownloadButton item={episode} className="size-8" />}
-            {play && (
-              <IconButton
-                data-ui="episode-action"
-                data-name="watched"
-                data-active={played || undefined}
-                data-nav="skip"
-                size="sm"
-                intent={played ? 'primary' : 'gray-subtle'}
-                className="size-8 rounded-full"
-                icon={<BiCheck />}
-                aria-label={played ? t`Mark unwatched` : t`Mark watched`}
-                title={played ? t`Mark unwatched` : t`Mark watched`}
-                aria-pressed={played}
-                loading={setPlayed.isPending}
-                onClick={() =>
-                  setPlayed.mutate({ itemId: episode.Id!, played: !played })
-                }
-              />
+      <div className="flex items-start gap-2">
+        {/* Its overlay makes the whole episode the play button. */}
+        {play ? (
+          <button
+            type="button"
+            data-ui="episode-title"
+            onClick={() => play()}
+            {...hold}
+            data-focus="own"
+            data-nav-card
+            className={cn(
+              "min-w-0 flex-1 text-start text-sm font-semibold after:absolute after:inset-0 after:rounded-xl after:content-[''] sm:text-base",
+              thumbRing &&
+                "before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:z-[1] before:aspect-video before:rounded-xl before:content-[''] focus-visible:before:ring-2 focus-visible:before:ring-inset focus-visible:before:ring-[--ring] [[data-tv]_&]:focus-visible:before:ring-[3px]"
             )}
-          </div>
-        )}
-      </div>
-      {/* Its overlay makes the whole episode the play button. */}
-      {play ? (
-        <button
-          type="button"
-          data-ui="episode-title"
-          onClick={() => play()}
-          {...hold}
-          data-focus="own"
-          data-nav-card
-          className={cn(
-            "mt-0.5 text-start text-sm font-semibold after:absolute after:inset-0 after:rounded-xl after:content-[''] sm:text-base",
-            thumbRing &&
-              "before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:z-[1] before:aspect-video before:rounded-xl before:content-[''] focus-visible:before:ring-2 focus-visible:before:ring-inset focus-visible:before:ring-[--ring] [[data-tv]_&]:focus-visible:before:ring-[3px]"
-          )}
-        >
-          <span className={clamp} title={oneLine ? title : undefined}>
+          >
+            <span className={clamp} title={oneLine ? title : undefined}>
+              {title}
+            </span>
+          </button>
+        ) : (
+          <p
+            data-ui="episode-title"
+            className={cn(
+              'min-w-0 flex-1 text-sm font-semibold sm:text-base',
+              clamp
+            )}
+            title={oneLine ? title : undefined}
+          >
             {title}
-          </span>
-        </button>
-      ) : (
-        <p
-          data-ui="episode-title"
-          className={cn('mt-0.5 text-sm font-semibold sm:text-base', clamp)}
-          title={oneLine ? title : undefined}
-        >
-          {title}
-        </p>
-      )}
+          </p>
+        )}
+        <EpisodeActions episode={episode} play={play} />
+      </div>
+      <EpisodeMeta episode={episode} />
     </div>
   );
 }
@@ -375,7 +397,7 @@ export function EpisodeCard({
           <EpisodeThumb
             episode={episode}
             playable={!!play}
-            watched={!hasButtons(play) && !!episode.UserData?.Played}
+            watched={!!episode.UserData?.Played}
             highlighted={highlighted}
             className="rounded-xl"
             numberClass="text-5xl"
@@ -459,7 +481,7 @@ function EpisodeListItem({
           <EpisodeThumb
             episode={episode}
             playable={!!play}
-            watched={!hasButtons(play) && !!episode.UserData?.Played}
+            watched={!!episode.UserData?.Played}
             className="rounded-lg sm:row-span-2"
             numberClass="text-3xl sm:text-4xl"
           />
@@ -505,15 +527,17 @@ export function EpisodeList({
         columns && 'xl:grid-cols-2 min-[1800px]:grid-cols-3'
       )}
     >
-      {episodes.map((episode) => (
+      {episodes.map((episode, i) => (
         <div
           key={episode.Id}
           ref={episode.Id === anchorId ? anchorRef : undefined}
         >
-          <EpisodeListItem
-            episode={episode}
-            highlighted={episode.Id === highlightId}
-          />
+          <div {...fadeIn(i)}>
+            <EpisodeListItem
+              episode={episode}
+              highlighted={episode.Id === highlightId}
+            />
+          </div>
         </div>
       ))}
     </div>
@@ -535,8 +559,8 @@ export function EpisodeListSkeleton({ columns }: { columns?: boolean }) {
         >
           <Skeleton className="aspect-video h-auto w-full rounded-lg sm:row-span-2" />
           <div className="space-y-2 self-center sm:self-start sm:pt-1">
-            <Skeleton className="h-3 w-1/3 rounded" />
             <Skeleton className="h-4 w-3/4 rounded" />
+            <Skeleton className="h-3 w-1/3 rounded" />
           </div>
           <Skeleton className="col-span-2 h-3 w-full rounded sm:col-span-1 sm:col-start-2" />
         </div>

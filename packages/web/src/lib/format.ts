@@ -213,6 +213,15 @@ export function untilLabel(iso: string): string {
     : format.format(Math.round(days / 7), 'week');
 }
 
+export function airedLabel(item: BaseItemDto): string {
+  const date = item.PremiereDate;
+  if (!date) return '';
+  if (unavailableKind(item) !== 'unaired') return shortDate(date);
+  const day = dayLabel(date);
+  const until = untilLabel(date);
+  return t`Airs ${day} · ${until}`;
+}
+
 /** Whole years from one date to another, or to today. */
 export function yearsBetween(fromIso: string, toIso?: string | null): number {
   const from = new Date(fromIso);

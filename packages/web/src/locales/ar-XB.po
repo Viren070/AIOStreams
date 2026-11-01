@@ -123,6 +123,7 @@ msgid "{key} is taken by {taken}"
 msgstr ""
 
 #: src/components/card-preview.tsx
+#: src/components/episodes.tsx
 #: src/pages/downloads.tsx
 msgid "{left} left"
 msgstr ""
@@ -463,12 +464,8 @@ msgstr ""
 msgid "Airs"
 msgstr ""
 
-#: src/components/episodes.tsx
+#: src/lib/format.ts
 msgid "Airs {day} · {until}"
-msgstr ""
-
-#: src/components/episodes.tsx
-msgid "Airs {until}"
 msgstr ""
 
 #: src/components/kind-tabs.tsx
@@ -2174,14 +2171,12 @@ msgstr ""
 msgid "Mark as watched"
 msgstr ""
 
-#: src/components/episodes.tsx
 #: src/components/item-menu.tsx
 #: src/pages/history.tsx
 #: src/pages/item.tsx
 msgid "Mark unwatched"
 msgstr ""
 
-#: src/components/episodes.tsx
 #: src/components/item-menu.tsx
 #: src/pages/item.tsx
 msgid "Mark watched"
@@ -2243,6 +2238,7 @@ msgstr ""
 msgid "Monospace"
 msgstr ""
 
+#: src/components/episodes.tsx
 #: src/components/overview.tsx
 #: src/components/playlists.tsx
 #: src/components/version-picker.tsx

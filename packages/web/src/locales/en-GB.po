@@ -123,6 +123,7 @@ msgid "{key} is taken by {taken}"
 msgstr "{key} is taken by {taken}"
 
 #: src/components/card-preview.tsx
+#: src/components/episodes.tsx
 #: src/pages/downloads.tsx
 msgid "{left} left"
 msgstr "{left} left"
@@ -463,13 +464,9 @@ msgstr "AIOStreams is a solo project built and maintained by me in my free time.
 msgid "Airs"
 msgstr "Airs"
 
-#: src/components/episodes.tsx
+#: src/lib/format.ts
 msgid "Airs {day} · {until}"
 msgstr "Airs {day} · {until}"
-
-#: src/components/episodes.tsx
-msgid "Airs {until}"
-msgstr "Airs {until}"
 
 #: src/components/kind-tabs.tsx
 #: src/components/version-picker.tsx
@@ -2174,14 +2171,12 @@ msgstr "Main"
 msgid "Mark as watched"
 msgstr "Mark as watched"
 
-#: src/components/episodes.tsx
 #: src/components/item-menu.tsx
 #: src/pages/history.tsx
 #: src/pages/item.tsx
 msgid "Mark unwatched"
 msgstr "Mark unwatched"
 
-#: src/components/episodes.tsx
 #: src/components/item-menu.tsx
 #: src/pages/item.tsx
 msgid "Mark watched"
@@ -2243,6 +2238,7 @@ msgstr "Missing"
 msgid "Monospace"
 msgstr "Monospace"
 
+#: src/components/episodes.tsx
 #: src/components/overview.tsx
 #: src/components/playlists.tsx
 #: src/components/version-picker.tsx

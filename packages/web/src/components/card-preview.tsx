@@ -7,6 +7,7 @@ import { useItem } from '../lib/queries';
 import { currentHost } from '../lib/hosts';
 import { backdropUrls, landscapeUrls, logoUrl } from '../lib/images';
 import {
+  airedLabel,
   duration,
   itemSubtitle,
   itemTitle,
@@ -212,6 +213,7 @@ function PreviewBody({ listed }: { listed: BaseItemDto }) {
   const runtime = series ? '' : duration(ticksToMs(item.RunTimeTicks));
   const parts: [string, React.ReactNode][] = [
     ['year', !episode && item.ProductionYear],
+    ['aired', episode && airedLabel(item)],
     ['score', scoresOf(item).length ? <Scores item={item} max={3} /> : null],
     ['length', left ? t`${left} left` : runtime],
     ['rating', item.OfficialRating],
