@@ -251,6 +251,28 @@ page:
 }
 ```
 
+### Episodes without their air dates
+
+```css
+[data-ui='episode-meta'] [data-name='aired'],
+[data-ui='episode-meta'] [data-name='aired'] + [data-ui='meta-separator'] {
+  display: none;
+}
+```
+
+### Seasons without the bar
+
+Mark the open season by its brighter poster and bolder name alone:
+
+```css
+[data-ui='season-indicator'] {
+  display: none;
+}
+[data-ui='season-poster'][data-selected] [data-ui='season-name'] {
+  font-weight: 600;
+}
+```
+
 ### Only some ratings
 
 Keep IMDb and the Rotten Tomatoes critics' score, wherever a title's ratings show:
@@ -404,7 +426,8 @@ On a phone they stay at the top, where they span the screen.
 ```css
 [data-page],
 [data-ui='media-row-item'] > div,
-[data-ui='card-grid'] > div {
+[data-ui='card-grid'] > div,
+[data-ui='episode-list'] > div > div {
   opacity: 1 !important;
   transform: none !important;
   top: 0 !important;
@@ -525,7 +548,7 @@ States are attributes set only while true, such as `data-watched`. Match them wi
 | `card-preview`                                                                                                                                   | The bigger preview a card on the home page grows into while the pointer or focus rests on it; `data-type` says what it is. Hide it with `display: none`, or turn it off under **Settings → Interface → Cards**                                                                                                   |
 | `card-preview-logo`, `card-preview-title`, `card-preview-episode`, `card-preview-genres`, `card-preview-overview`                                | Its logo or title, the episode, the genres and the description                                                                                                                                                                                                                                                   |
 | `score`                                                                                                                                          | One rating in a line of facts, on title pages, the featured banner and card previews. `data-source` is `imdb`, `tomatoes`, `tomatoesAudience`, `metacritic`, `letterboxd`, `rogerebert`, `trakt`, `tmdb`, `mal`, or `community` for the server's own rating                                                      |
-| `card-preview-meta`                                                                                                                              | Its line of facts; each has `data-name` (`year`, `score`, `length`, `rating`), with a `meta-separator` between                                                                                                                                                                                                   |
+| `card-preview-meta`                                                                                                                              | Its line of facts; each has `data-name` (`year`, or `aired` for an episode, `score`, `length`, `rating`), with a `meta-separator` between                                                                                                                                                                                                   |
 
 ### The featured banner
 
@@ -557,11 +580,12 @@ States are attributes set only while true, such as `data-watched`. Match them wi
 | `item-actions-divider`                                                                                                                     | The line before the links to other sites                                                                                                                                                                                                            |
 | `overview`, `overview-more`, `overview-popover`, `overview-banner`, `overview-text`                                                        | A description, its **More** link and the full text it opens                                                                                                                                                                                         |
 | `external-links`, `external-link`                                                                                                          | The links to other sites, and each link; `data-name` is the site, such as `imdb`, `tmdb`, `thetvdb`, `trakt`, `anidb` or `myanimelist`                                                                                                              |
-| `season-poster`, `season-pills`, `season-pill`                                                                                             | A season to pick, and the row of season buttons; `data-selected` marks the open one                                                                                                                                                                 |
+| `season-poster`, `season-name`, `season-indicator`, `season-pills`, `season-pill`                                                          | A season to pick, its name and the bar under the open one's, and the row of season buttons; `data-selected` marks the open one                                                                                                                      |
 | `season-summary`, `season-overview`                                                                                                        | The season's year and episode count, and its description                                                                                                                                                                                            |
 | `episode-card`, `episode-list-item`, `episode-list`                                                                                        | An episode in a row or a list. States: `data-watched`, `data-in-progress`, `data-highlighted` (the one you came to), and `data-unavailable` (`unaired` or `missing`)                                                                                |
-| `episode-image`, `episode-play`, `episode-number`, `episode-status`, `episode-head`, `episode-kicker`, `episode-title`, `episode-synopsis` | The parts of an episode                                                                                                                                                                                                                             |
-| `episode-actions`, `episode-action`                                                                                                        | An episode's buttons; `data-name` is `details` or `watched`, and `data-active` marks a watched one                                                                                                                                                  |
+| `episode-image`, `episode-play`, `episode-number`, `episode-status`, `episode-head`, `episode-title`, `episode-synopsis`                   | The parts of an episode                                                                                                                                                                                                                             |
+| `episode-meta`                                                                                                                             | The line of facts under its title; each has `data-name` (`aired`, `length`, `rating`), with a `meta-separator` between                                                                                                                              |
+| `episode-actions`, `episode-action`                                                                                                        | The button beside an episode's title that opens its menu (`data-name` is `menu`), with its `download-button` once it has a download. On a TV, an episode that can't play yet has `details` instead                                                  |
 | `person-card`, `person-card-image`, `person-card-name`, `person-card-role`                                                                 | Someone in the cast or crew                                                                                                                                                                                                                         |
 | `person-header`, `person-photo`, `person-dates`                                                                                            | A person's page                                                                                                                                                                                                                                     |
 
