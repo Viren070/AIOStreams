@@ -14,22 +14,32 @@ export function useIdle(ms: number) {
   const [idle, setIdle] = React.useState(false);
   const [hidden, setHidden] = React.useState(false);
   const timer = React.useRef<ReturnType<typeof setTimeout>>(undefined);
+  /** Set while they show only until `soon` hides them. */
+  const brief = React.useRef(false);
   const wake = React.useCallback(() => {
     setIdle(false);
     setHidden(false);
     clearTimeout(timer.current);
+    brief.current = false;
     timer.current = setTimeout(() => setIdle(true), ms);
   }, [ms]);
   const hide = React.useCallback(() => {
     clearTimeout(timer.current);
+    brief.current = false;
     setIdle(true);
     setHidden(true);
+  }, []);
+  /** Brings forward the controls going idle, without showing them. */
+  const soon = React.useCallback((after: number) => {
+    clearTimeout(timer.current);
+    brief.current = true;
+    timer.current = setTimeout(() => setIdle(true), after);
   }, []);
   React.useEffect(() => {
     wake();
     return () => clearTimeout(timer.current);
   }, [wake]);
-  return { idle, hidden, wake, hide };
+  return { idle, hidden, wake, hide, soon, brief };
 }
 
 /** The position at this moment, between the player's few reports a second. */

@@ -102,6 +102,9 @@ export function PlaybackSection() {
   const [holdRate, setHoldRate] = useSetting(settings.controls.holdRate);
   const [thumbnails, setThumbnails] = useSetting(settings.controls.thumbnails);
   const [clock, setClock] = useSetting(settings.controls.clock);
+  const [showOnPauseAndSkip, setShowOnPauseAndSkip] = useSetting(
+    settings.controls.showOnPauseAndSkip
+  );
   const [autoPlay, setAutoPlay] = useSetting(settings.playback.autoPlayFirst);
   const [preload, setPreload] = useSetting(settings.playback.preloadVersions);
   const [nextPrompt, setNextPrompt] = useSetting(settings.next.prompt);
@@ -355,6 +358,13 @@ export function PlaybackSection() {
           }))}
           value={String(holdRate)}
           onValueChange={(v) => setHoldRate(Number(v))}
+        />
+        <Switch
+          side="right"
+          label={t`Show the controls on pause and skip`}
+          help={t`Pausing, playing or skipping with a remote or the keyboard brings the controls up, for a moment after a skip. Turned off, only a brief icon shows.`}
+          value={showOnPauseAndSkip}
+          onValueChange={setShowOnPauseAndSkip}
         />
         <Switch
           side="right"

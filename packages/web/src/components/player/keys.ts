@@ -11,7 +11,6 @@ import {
   keyboardFocus,
   movesFocus,
   onAction,
-  type ActionHandler,
   type ActionId,
 } from '../../lib/input';
 import { useLatest } from '../../lib/use-latest';
@@ -36,6 +35,9 @@ export function rateLabel(rate: number): string {
 /** Back to a chapter's start, or the one before when it has only just begun. */
 const RESTART_CHAPTER_MS = 3000;
 
+/** `quiet` leaves the controls hidden, `brief` shows them for a moment. */
+type Outcome = boolean | void | 'quiet' | 'brief';
+
 interface PlayerKeys {
   player: PlayerController;
   /** The controls, which Back leaves before it leaves the player. */
@@ -45,10 +47,14 @@ interface PlayerKeys {
   /** Whether the controls show, which Back hides first on a TV. */
   visible: boolean;
   wake(): void;
+  /** Shows the controls for a moment. */
+  glance(): void;
+  glancing(): boolean;
   hide(): void;
   notice(text: string): void;
   togglePlay(): void;
-  seekBy(deltaMs: number, held: boolean): void;
+  /** True when it scrubs, which shows the controls whatever the setting. */
+  seekBy(deltaMs: number, held: boolean): boolean;
   /** Plays from a remote's scrub, or drops it; false without one. */
   endScrub(commit: boolean): boolean;
   onBack(): void;
@@ -155,7 +161,24 @@ export function usePlayerKeys(keys: PlayerKeys): void {
       if (target) focusOn(target);
     };
 
-    const actions: Partial<Record<ActionId, ActionHandler>> = {
+    const quietly = () =>
+      !k().visible && !settings.controls.showOnPauseAndSkip.read();
+    const playKey = (toggle: () => void): Outcome => {
+      const quiet = quietly();
+      toggle();
+      if (quiet) return 'quiet';
+    };
+    const skip = (sign: number, repeat: boolean): Outcome => {
+      const hidden = !k().visible || k().glancing();
+      const quiet = quietly();
+      const ms = sign * settings.controls.seekStep.read() * 1000;
+      if (k().seekBy(ms, repeat) || !hidden) return;
+      return quiet ? 'quiet' : 'brief';
+    };
+
+    const actions: Partial<
+      Record<ActionId, (input: string, repeat: boolean) => Outcome>
+    > = {
       'player.controls': () => {
         if (keyboardFocus()) return false;
         if (k().endScrub(true)) return;
@@ -165,22 +188,27 @@ export function usePlayerKeys(keys: PlayerKeys): void {
           )
         )
           return call(k().skipSegment);
-        focusControls();
+        if (k().visible) return focusControls();
+        return playKey(() => {
+          k().togglePlay();
+          if (settings.controls.showOnPauseAndSkip.read()) focusControls();
+        });
       },
-      'player.playPause': () => {
-        if (!k().endScrub(true)) k().togglePlay();
-      },
-      'player.play': () => {
-        if (!k().endScrub(true) && player().state.paused) k().togglePlay();
-      },
-      'player.pause': () => {
-        if (!player().state.paused) k().togglePlay();
-      },
+      'player.playPause': () =>
+        playKey(() => {
+          if (!k().endScrub(true)) k().togglePlay();
+        }),
+      'player.play': () =>
+        playKey(() => {
+          if (!k().endScrub(true) && player().state.paused) k().togglePlay();
+        }),
+      'player.pause': () =>
+        playKey(() => {
+          if (!player().state.paused) k().togglePlay();
+        }),
       'player.stop': () => k().onBack(),
-      'player.skipBack': (_, repeat) =>
-        k().seekBy(-settings.controls.seekStep.read() * 1000, repeat),
-      'player.skipForward': (_, repeat) =>
-        k().seekBy(settings.controls.seekStep.read() * 1000, repeat),
+      'player.skipBack': (_, repeat) => skip(-1, repeat),
+      'player.skipForward': (_, repeat) => skip(1, repeat),
       'player.jump': (input) => {
         const { state, seek } = player();
         if (!state.durationMs) return false;
@@ -241,8 +269,10 @@ export function usePlayerKeys(keys: PlayerKeys): void {
         if (!k().ready) return id === 'player.stop' ? k().onBack() : undefined;
         // A control with keyboard focus moves on to the next with the arrows.
         if (keyboardFocus() && movesFocus(input)) return false;
-        if (run(input, repeat) === false) return false;
-        k().wake();
+        const outcome = run(input, repeat);
+        if (outcome === false) return false;
+        if (outcome === 'brief') k().glance();
+        else if (outcome !== 'quiet') k().wake();
       })
     );
     // A focused control keeps its key.

@@ -79,7 +79,7 @@ export const ACTIONS = {
   home: { label: msg`Home`, group: 'navigation', keys: ['H', 'BrowserHome'] },
 
   'player.controls': {
-    label: msg`Show the controls`,
+    label: msg`Play or pause, or go to the controls`,
     group: 'player',
     keys: ['Enter', 'GamepadA'],
   },

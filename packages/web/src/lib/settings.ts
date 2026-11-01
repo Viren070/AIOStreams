@@ -867,6 +867,10 @@ export const settings = {
     thumbnails: device<boolean>('aiostreams-web-controls-thumbnails', true),
     timeLeft: device<boolean>('aiostreams-web-controls-time-left', false),
     clock: device<boolean>('aiostreams-web-controls-clock', true),
+    showOnPauseAndSkip: device<boolean>(
+      'aiostreams-web-controls-show-on-pause-and-skip',
+      true
+    ),
   },
   player: {
     /** `app`, a player's id, or `custom` for `link`. */

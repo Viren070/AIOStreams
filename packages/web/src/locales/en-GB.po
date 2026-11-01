@@ -2899,6 +2899,10 @@ msgstr "Paused on {name}, {at} in"
 msgid "Pauses and asks before the next episode once this many have played in a row without a key, click or button press."
 msgstr "Pauses and asks before the next episode once this many have played in a row without a key, click or button press."
 
+#: src/pages/settings/playback.tsx
+msgid "Pausing, playing or skipping with a remote or the keyboard brings the controls up, for a moment after a skip. Turned off, only a brief icon shows."
+msgstr "Pausing, playing or skipping with a remote or the keyboard brings the controls up, for a moment after a skip. Turned off, only a brief icon shows."
+
 #: src/pages/search.tsx
 msgid "People"
 msgstr "People"
@@ -3016,6 +3020,10 @@ msgstr "Play on another device"
 #: src/lib/input/actions.ts
 msgid "Play or pause"
 msgstr "Play or pause"
+
+#: src/lib/input/actions.ts
+msgid "Play or pause, or go to the controls"
+msgstr "Play or pause, or go to the controls"
 
 #: src/pages/settings/playback.tsx
 msgid "Play starts the first version, and resuming goes back to the version you were watching. Hold Play to choose instead."
@@ -3770,9 +3778,9 @@ msgstr "Show subtitles earlier"
 msgid "Show subtitles later"
 msgstr "Show subtitles later"
 
-#: src/lib/input/actions.ts
-msgid "Show the controls"
-msgstr "Show the controls"
+#: src/pages/settings/playback.tsx
+msgid "Show the controls on pause and skip"
+msgstr "Show the controls on pause and skip"
 
 #: src/pages/settings/playback.tsx
 msgid "Show the prompt"
