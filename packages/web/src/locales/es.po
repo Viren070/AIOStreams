@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-31 13:46+0000\n"
+"PO-Revision-Date: 2026-11-01 14:51+0000\n"
 "Last-Translator: Sebastian Porta <spg76@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Spanish <https://hosted.weblate.org/projects/aiostreams/web-app/es/>\n"
 "Language: es\n"
@@ -1712,7 +1712,7 @@ msgstr "Encabezado"
 
 #: src/pages/settings/interface.tsx
 msgid "Hidden"
-msgstr "Oculto"
+msgstr "Ocultos"
 
 #: src/components/player/next-episode.tsx
 msgid "Hide"
@@ -4959,7 +4959,7 @@ msgstr "Adónde va la navegación cuando la ventana es lo suficientemente ancha 
 
 #: src/pages/settings/index.tsx
 msgid "Where they go and how many run at once"
-msgstr "A dónde van y cuántos corren a la vez"
+msgstr "A dónde van y cuántas corren a la vez"
 
 #: src/pages/settings/interface.tsx
 msgid "Whether the bar at the bottom, and tabs along the top, name each page."
