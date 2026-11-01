@@ -217,6 +217,20 @@ lists every action. To bring another one out, name it: `random`, `party`, `play-
 }
 ```
 
+### Smaller icons in the bottom bar
+
+Without names, the bar's icons are a little bigger. For the smaller ones, spaced further apart:
+
+```css
+[data-ui='mobile-nav'][data-names='hidden'] [data-ui='mobile-nav-item'] {
+  width: 3.5rem;
+  padding-block: 0.875rem;
+}
+[data-ui='mobile-nav'][data-names='hidden'] [data-ui='mobile-nav-item'] svg {
+  font-size: 1.25rem;
+}
+```
+
 ### Hide the score, and the dot before it
 
 ```css
@@ -466,7 +480,7 @@ States are attributes set only while true, such as `data-watched`. Match them wi
 | `sidebar`                                                                    | The sidebar. Its items are `.UI-VerticalMenu__item`, with `data-name` (`home`, `discover`, `search`, `favourites`, `calendar`, `activity`, `downloads`, `party`, `settings`, `account`) and `data-current="true"` on the page you're on                                                  |
 | `sidebar-logo`, `brand-logo`                                                 | The logo in the sidebar, and the logo itself (also on the sign-in screens)                                                                                                                                                                                                               |
 | `sidebar-history`                                                            | The back and forward buttons in the sidebar, where the browser has none; `data-name` is `back` or `forward`                                                                                                                                                                              |
-| `mobile-nav`, `mobile-nav-item`                                              | The bar at the bottom on a phone, and on a touch screen set to it; items have `data-name` as in the sidebar, and `aria-current` on the page you're on                                                                                                                                    |
+| `mobile-nav`, `mobile-nav-item`                                              | The bar at the bottom on a phone, and on a touch screen set to it; `data-names` is `shown` or `hidden`, items have `data-name` as in the sidebar, and `aria-current` on the page you're on                                                                                               |
 | `touch-rail`, `rail-item`                                                    | The rail down the side on a touch screen, and its items; `data-shape="floating"` when it floats over the page                                                                                                                                                                            |
 | `tv-rail`                                                                    | A TV's navigation down the side; `data-shape="floating"` when it floats over the page                                                                                                                                                                                                    |
 | `top-tabs`, `top-history`                                                    | The navigation along the top, on a TV or a wide window set to it; `data-style` is `pill`, `bar` or `fade`. `top-history` holds its back and forward buttons, where no browser has them                                                                                                   |
