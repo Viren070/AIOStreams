@@ -17,6 +17,16 @@
   }
 }
 
+/* A title's actions on a touch screen: the rest are under More, and custom CSS can show them here by name. */
+[data-ui='item-quick-action']:not(
+  [data-name='trailer'],
+  [data-name='watched'],
+  [data-name='favourite'],
+  [data-name='more']
+) {
+  display: none;
+}
+
 /* see index.html; the page's background is then drawn by an element */
 html.see-through,
 html.see-through body {

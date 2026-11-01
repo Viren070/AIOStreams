@@ -15,9 +15,11 @@ import {
   BiShuffle,
   BiSolidDislike,
   BiSolidHeart,
+  BiDotsHorizontalRounded,
 } from 'react-icons/bi';
 import { Badge } from '@aiostreams/ui/badge';
 import { Button, IconButton } from '@aiostreams/ui/button';
+import { Drawer } from '@aiostreams/ui/drawer';
 import { Modal } from '@aiostreams/ui/modal';
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import { Tooltip } from '@aiostreams/ui/tooltip';
@@ -98,9 +100,10 @@ import { BackdropFrame } from '../components/hero';
 import type { BaseItemDto } from '../lib/types';
 import { useHold } from '../lib/use-hold';
 import { useExternalReturn } from '../lib/playback/external-return';
-import { tab, tabList } from '../lib/input';
+import { focusDialog, tab, tabList, useDialogStart } from '../lib/input';
 import { CachedImage } from '../components/cached-image';
 import { TrailerButton } from '../components/trailers';
+import { trailersOf } from '../lib/playback/trailers';
 import { openPartySheet } from '../components/party/party-sheet';
 import { openRemote } from '../components/remote-sheet';
 import { openRandom } from '../components/random-pick';
@@ -386,8 +389,16 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
       ? () => picker.play(target, { startMs: resumeMs, held: true })
       : undefined
   );
-  const inParty = !!useParty();
-  const devices = useRemoteDevices();
+  const quick = useMediaQuery('(pointer: coarse)') && !currentHost().tv;
+  // A collection may offer nothing besides its links, which then stay in line.
+  const labelled =
+    quick &&
+    (item.Type !== 'BoxSet' ||
+      offersFavourite(item.Type, !!item.UserData?.IsFavorite) ||
+      !!trailersOf(item).length);
+  const [more, setMore] = React.useState(false);
+  const moreBox = React.useRef<HTMLDivElement>(null);
+  useDialogStart(moreBox, more);
   const holdRestart = useHold(
     target ? () => picker.play(target, { startMs: 0, held: true }) : undefined
   );
@@ -469,7 +480,8 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
                 intent="white"
                 className={cn(
                   'flex-1 rounded-full sm:flex-none',
-                  item.Type === 'Series' && 'sm:min-w-[9.5rem]'
+                  item.Type === 'Series' && 'sm:min-w-[9.5rem]',
+                  quick && 'h-12 text-base'
                 )}
                 leftIcon={<BiPlay className="text-xl" />}
                 onClick={() =>
@@ -509,118 +521,253 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
               )}
             </div>
           )}
-          <TrailerButton item={item} />
-          {item.Type === 'Series' && (
-            <Tooltip
-              trigger={
-                <IconButton
-                  data-ui="item-action"
-                  data-name="random"
-                  intent="gray-subtle"
-                  className="rounded-full"
-                  icon={<BiShuffle />}
-                  aria-label={t`Random episode`}
-                  onClick={() => openRandom({ kind: 'episode', series: item })}
-                />
-              }
-            >
-              <Trans>Random episode</Trans>
-            </Tooltip>
+          {!labelled && (
+            <SecondaryActions
+              item={item}
+              season={season}
+              target={target}
+              resumeMs={resumeMs}
+            />
           )}
-          {item.Type !== 'BoxSet' && (
-            <Tooltip
-              trigger={
-                <IconButton
-                  data-ui="item-action"
-                  data-name="party"
-                  intent="gray-subtle"
-                  className="rounded-full"
-                  icon={<BiGroup />}
-                  aria-label={inParty ? t`Watch party` : t`Watch together`}
-                  onClick={() =>
-                    openPartySheet(
-                      target && !inParty
-                        ? {
-                            play: {
-                              title: fullTitle(target),
-                              run: () =>
-                                picker.play(target, { startMs: resumeMs }),
-                            },
-                          }
-                        : {}
-                    )
-                  }
-                />
-              }
-            >
-              {inParty ? t`Watch party` : t`Watch together`}
-            </Tooltip>
-          )}
-          {target && !!devices.data?.length && (
-            <Tooltip
-              trigger={
-                <IconButton
-                  data-ui="item-action"
-                  data-name="play-on"
-                  intent="gray-subtle"
-                  className="rounded-full"
-                  icon={<BiCast />}
-                  aria-label={t`Play on another device`}
-                  onClick={() =>
-                    openRemote({ play: { item: target, startMs: resumeMs } })
-                  }
-                />
-              }
-            >
-              <Trans>Play on another device</Trans>
-            </Tooltip>
-          )}
-          {item.Type === 'Movie' && playable(item) && (
-            <Tooltip
-              trigger={
-                <IconButton
-                  data-ui="item-action"
-                  data-name="add-to-playlist"
-                  intent="gray-subtle"
-                  className="rounded-full"
-                  icon={<BiListPlus />}
-                  aria-label={t`Add to playlist`}
-                  onClick={() => openAddToPlaylist([item])}
-                />
-              }
-            >
-              <Trans>Add to playlist</Trans>
-            </Tooltip>
-          )}
-          <ItemToggles
-            itemId={item.Id!}
-            type={item.Type}
-            played={!!item.UserData?.Played}
-            favorite={!!item.UserData?.IsFavorite}
-            dropped={item.UserData?.Likes === false}
-          />
-          {(item.Type === 'Movie' || item.Type === 'Series') && (
-            <RatingButton item={item} />
-          )}
-          {item.Type === 'Movie' && item.LocationType !== 'Virtual' && (
-            <DownloadButton item={item} className="size-10 text-lg" />
-          )}
-          {item.Type === 'Series' && (
-            <ShowDownloadMenu series={item} season={season} />
-          )}
-          {!!links?.length && (
+          {!labelled && !!links?.length && (
             <span
               data-ui="item-actions-divider"
               className="mx-1 hidden h-6 w-px bg-white/10 sm:block"
               aria-hidden
             />
           )}
-          <div className="basis-full sm:basis-auto">
-            <ExternalLinks links={links} />
-          </div>
+          {!labelled && (
+            <div className="basis-full sm:basis-auto">
+              <ExternalLinks links={links} />
+            </div>
+          )}
         </div>
+        {labelled && (
+          <div
+            data-ui="item-quick-actions"
+            className="grid auto-cols-fr grid-flow-col gap-1 sm:flex sm:gap-2"
+          >
+            <SecondaryActions
+              item={item}
+              season={season}
+              target={target}
+              resumeMs={resumeMs}
+              caption="item-quick-action"
+            />
+            <Captioned ui="item-quick-action" name="more" label={t`More`}>
+              <IconButton
+                data-ui="item-action"
+                data-name="more"
+                intent="gray-subtle"
+                className="rounded-full"
+                icon={<BiDotsHorizontalRounded />}
+                aria-label={t`More`}
+                onClick={() => setMore(true)}
+              />
+            </Captioned>
+          </div>
+        )}
+        {labelled && (
+          <Drawer
+            data-ui="dialog"
+            data-name="item-more"
+            open={more}
+            onOpenChange={setMore}
+            onOpenAutoFocus={focusDialog}
+            title={item.Name ?? ''}
+            side="bottom"
+          >
+            <div
+              ref={moreBox}
+              data-nav-start
+              className="grid grid-cols-4 gap-x-1 gap-y-4 py-2"
+            >
+              <SecondaryActions
+                item={item}
+                season={season}
+                target={target}
+                resumeMs={resumeMs}
+                caption="item-more-action"
+              />
+            </div>
+            {!!links?.length && (
+              <div className="mt-4 border-t border-white/10 pt-4">
+                <ExternalLinks links={links} />
+              </div>
+            )}
+          </Drawer>
+        )}
       </div>
     </div>
+  );
+}
+
+function Captioned({
+  ui,
+  name,
+  label,
+  children,
+}: {
+  ui?: string;
+  name: string;
+  label: string;
+  children: React.ReactNode;
+}) {
+  if (!ui) return children;
+  return (
+    <div
+      data-ui={ui}
+      data-name={name}
+      className="flex min-w-0 flex-col items-center gap-1.5 text-center text-xs text-gray-300 sm:w-[4.5rem]"
+    >
+      {children}
+      <span className="w-full truncate">{label}</span>
+    </div>
+  );
+}
+
+function SecondaryActions({
+  item,
+  season,
+  target,
+  resumeMs,
+  caption,
+}: {
+  item: BaseItemDto;
+  season?: BaseItemDto;
+  target?: BaseItemDto;
+  resumeMs: number;
+  caption?: string;
+}) {
+  const picker = useVersionPicker();
+  const inParty = !!useParty();
+  const devices = useRemoteDevices();
+  const trailers = !!trailersOf(item).length;
+  return (
+    <>
+      {trailers && (
+        <Captioned ui={caption} name="trailer" label={t`Trailer`}>
+          <TrailerButton item={item} compact={!!caption} />
+        </Captioned>
+      )}
+      {item.Type === 'Series' && (
+        <Captioned ui={caption} name="random" label={t`Random`}>
+          <Tooltip
+            trigger={
+              <IconButton
+                data-ui="item-action"
+                data-name="random"
+                intent="gray-subtle"
+                className="rounded-full"
+                icon={<BiShuffle />}
+                aria-label={t`Random episode`}
+                onClick={() => openRandom({ kind: 'episode', series: item })}
+              />
+            }
+          >
+            <Trans>Random episode</Trans>
+          </Tooltip>
+        </Captioned>
+      )}
+      {item.Type !== 'BoxSet' && (
+        <Captioned
+          ui={caption}
+          name="party"
+          label={inParty ? t`Watch party` : t`Watch together`}
+        >
+          <Tooltip
+            trigger={
+              <IconButton
+                data-ui="item-action"
+                data-name="party"
+                intent="gray-subtle"
+                className="rounded-full"
+                icon={<BiGroup />}
+                aria-label={inParty ? t`Watch party` : t`Watch together`}
+                onClick={() =>
+                  openPartySheet(
+                    target && !inParty
+                      ? {
+                          play: {
+                            title: fullTitle(target),
+                            run: () =>
+                              picker.play(target, { startMs: resumeMs }),
+                          },
+                        }
+                      : {}
+                  )
+                }
+              />
+            }
+          >
+            {inParty ? t`Watch party` : t`Watch together`}
+          </Tooltip>
+        </Captioned>
+      )}
+      {target && !!devices.data?.length && (
+        <Captioned ui={caption} name="play-on" label={t`Play on`}>
+          <Tooltip
+            trigger={
+              <IconButton
+                data-ui="item-action"
+                data-name="play-on"
+                intent="gray-subtle"
+                className="rounded-full"
+                icon={<BiCast />}
+                aria-label={t`Play on another device`}
+                onClick={() =>
+                  openRemote({ play: { item: target, startMs: resumeMs } })
+                }
+              />
+            }
+          >
+            <Trans>Play on another device</Trans>
+          </Tooltip>
+        </Captioned>
+      )}
+      {item.Type === 'Movie' && playable(item) && (
+        <Captioned ui={caption} name="add-to-playlist" label={t`Playlist`}>
+          <Tooltip
+            trigger={
+              <IconButton
+                data-ui="item-action"
+                data-name="add-to-playlist"
+                intent="gray-subtle"
+                className="rounded-full"
+                icon={<BiListPlus />}
+                aria-label={t`Add to playlist`}
+                onClick={() => openAddToPlaylist([item])}
+              />
+            }
+          >
+            <Trans>Add to playlist</Trans>
+          </Tooltip>
+        </Captioned>
+      )}
+      <ItemToggles
+        itemId={item.Id!}
+        type={item.Type}
+        played={!!item.UserData?.Played}
+        favorite={!!item.UserData?.IsFavorite}
+        dropped={item.UserData?.Likes === false}
+        caption={caption}
+      />
+      {(item.Type === 'Movie' || item.Type === 'Series') && (
+        <Captioned ui={caption} name="rating" label={t`Rate`}>
+          <RatingButton item={item} />
+        </Captioned>
+      )}
+      {item.Type === 'Movie' && item.LocationType !== 'Virtual' && (
+        <Captioned ui={caption} name="download" label={t`Download`}>
+          <DownloadButton item={item} className="size-10 text-lg" />
+        </Captioned>
+      )}
+      {item.Type === 'Series' && (
+        <Captioned ui={caption} name="download" label={t`Download`}>
+          <ShowDownloadMenu series={item} season={season} />
+        </Captioned>
+      )}
+    </>
   );
 }
 
@@ -631,12 +778,14 @@ const ItemToggles = React.memo(function ItemToggles({
   played,
   favorite,
   dropped,
+  caption,
 }: {
   itemId: string;
   type: BaseItemDto['Type'];
   played: boolean;
   favorite: boolean;
   dropped: boolean;
+  caption?: string;
 }) {
   const setPlayed = useSetPlayed();
   const setFavorite = useSetFavorite();
@@ -645,63 +794,69 @@ const ItemToggles = React.memo(function ItemToggles({
   return (
     <>
       {type !== 'BoxSet' && (
-        <Tooltip
-          trigger={
-            <IconButton
-              data-ui="item-action"
-              data-name="watched"
-              data-active={played || undefined}
-              intent={played ? 'primary-subtle' : 'gray-subtle'}
-              className="rounded-full"
-              icon={<BiCheck />}
-              aria-label={played ? t`Mark unwatched` : t`Mark watched`}
-              loading={setPlayed.isPending}
-              onClick={() => setPlayed.mutate({ itemId, played: !played })}
-            />
-          }
-        >
-          {played ? t`Mark unwatched` : t`Mark watched`}
-        </Tooltip>
+        <Captioned ui={caption} name="watched" label={t`Watched`}>
+          <Tooltip
+            trigger={
+              <IconButton
+                data-ui="item-action"
+                data-name="watched"
+                data-active={played || undefined}
+                intent={played ? 'primary-subtle' : 'gray-subtle'}
+                className="rounded-full"
+                icon={<BiCheck />}
+                aria-label={played ? t`Mark unwatched` : t`Mark watched`}
+                loading={setPlayed.isPending}
+                onClick={() => setPlayed.mutate({ itemId, played: !played })}
+              />
+            }
+          >
+            {played ? t`Mark unwatched` : t`Mark watched`}
+          </Tooltip>
+        </Captioned>
       )}
       {offersFavourite(type, favorite) && (
-        <Tooltip
-          trigger={
-            <IconButton
-              data-ui="item-action"
-              data-name="favourite"
-              data-active={favorite || undefined}
-              intent={favorite ? 'alert-subtle' : 'gray-subtle'}
-              className="rounded-full"
-              icon={favorite ? <BiSolidHeart /> : <BiHeart />}
-              aria-label={favorite ? t`Remove favourite` : t`Add favourite`}
-              loading={setFavorite.isPending}
-              onClick={() =>
-                setFavorite.mutate({ itemId, favorite: !favorite })
-              }
-            />
-          }
-        >
-          {favorite ? t`Remove favourite` : t`Add favourite`}
-        </Tooltip>
+        <Captioned ui={caption} name="favourite" label={t`Favourite`}>
+          <Tooltip
+            trigger={
+              <IconButton
+                data-ui="item-action"
+                data-name="favourite"
+                data-active={favorite || undefined}
+                intent={favorite ? 'alert-subtle' : 'gray-subtle'}
+                className="rounded-full"
+                icon={favorite ? <BiSolidHeart /> : <BiHeart />}
+                aria-label={favorite ? t`Remove favourite` : t`Add favourite`}
+                loading={setFavorite.isPending}
+                onClick={() =>
+                  setFavorite.mutate({ itemId, favorite: !favorite })
+                }
+              />
+            }
+          >
+            {favorite ? t`Remove favourite` : t`Add favourite`}
+          </Tooltip>
+        </Captioned>
       )}
       {canDrop && type === 'Series' && (
-        <Tooltip
-          trigger={
-            <IconButton
-              data-ui="item-action"
-              data-name="drop"
-              data-active={dropped || undefined}
-              intent={dropped ? 'warning-subtle' : 'gray-subtle'}
-              className="rounded-full"
-              icon={dropped ? <BiSolidDislike /> : <BiDislike />}
-              aria-label={dropped ? t`Undrop show` : t`Drop show`}
-              loading={setDropped.isPending}
-              onClick={() => setDropped.mutate({ itemId, dropped: !dropped })}
-            />
-          }
-        >
-          {dropped ? t`Undrop show` : t`Drop show`}
-        </Tooltip>
+        <Captioned ui={caption} name="drop" label={t`Drop`}>
+          <Tooltip
+            trigger={
+              <IconButton
+                data-ui="item-action"
+                data-name="drop"
+                data-active={dropped || undefined}
+                intent={dropped ? 'warning-subtle' : 'gray-subtle'}
+                className="rounded-full"
+                icon={dropped ? <BiSolidDislike /> : <BiDislike />}
+                aria-label={dropped ? t`Undrop show` : t`Drop show`}
+                loading={setDropped.isPending}
+                onClick={() => setDropped.mutate({ itemId, dropped: !dropped })}
+              />
+            }
+          >
+            {dropped ? t`Undrop show` : t`Drop show`}
+          </Tooltip>
+        </Captioned>
       )}
     </>
   );

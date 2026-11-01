@@ -1398,6 +1398,7 @@ msgstr "Down"
 #: src/components/download-button.tsx
 #: src/components/item-menu.tsx
 #: src/components/version-picker.tsx
+#: src/pages/item.tsx
 #: src/pages/settings/about.tsx
 msgid "Download"
 msgstr "Download"
@@ -1449,6 +1450,10 @@ msgstr "Downloads wait for Wi-Fi or another unmetered network rather than use mo
 #: src/lib/i18n.ts
 msgid "Drawer"
 msgstr "Drawer"
+
+#: src/pages/item.tsx
+msgid "Drop"
+msgstr "Drop"
 
 #: src/pages/item.tsx
 msgid "Drop show"
@@ -1584,6 +1589,10 @@ msgstr "Fast forward"
 #: src/lib/input/actions.ts
 msgid "Faster"
 msgstr "Faster"
+
+#: src/pages/item.tsx
+msgid "Favourite"
+msgstr "Favourite"
 
 #: src/components/layout.tsx
 #: src/pages/favourites.tsx
@@ -2238,6 +2247,7 @@ msgstr "Monospace"
 #: src/components/playlists.tsx
 #: src/components/version-picker.tsx
 #: src/pages/downloads.tsx
+#: src/pages/item.tsx
 msgid "More"
 msgstr "More"
 
@@ -3028,6 +3038,10 @@ msgstr "Play lists the versions to choose from, but resuming goes back to the ve
 msgid "Play now"
 msgstr "Play now"
 
+#: src/pages/item.tsx
+msgid "Play on"
+msgstr "Play on"
+
 #: src/components/item-menu.tsx
 #: src/components/remote-sheet.tsx
 #: src/pages/item.tsx
@@ -3136,6 +3150,7 @@ msgstr "Playing on and the next and previous buttons pass over episodes marked a
 
 #: src/components/player/options.tsx
 #: src/components/playlists.tsx
+#: src/pages/item.tsx
 msgid "Playlist"
 msgstr "Playlist"
 
@@ -3272,6 +3287,10 @@ msgstr "Raise subtitles"
 msgid "Raises the centre channel, where surround sound puts dialogue. Not for sound passed through."
 msgstr "Raises the centre channel, where surround sound puts dialogue. Not for sound passed through."
 
+#: src/pages/item.tsx
+msgid "Random"
+msgstr "Random"
+
 #: src/components/item-menu.tsx
 #: src/components/random-pick.tsx
 #: src/pages/item.tsx
@@ -3287,6 +3306,7 @@ msgid "Random pick"
 msgstr "Random pick"
 
 #: src/components/rating.tsx
+#: src/pages/item.tsx
 msgid "Rate"
 msgstr "Rate"
 
@@ -4730,6 +4750,7 @@ msgid "Tracks"
 msgstr "Tracks"
 
 #: src/lib/playback/trailers.ts
+#: src/pages/item.tsx
 msgid "Trailer"
 msgstr "Trailer"
 
@@ -5052,6 +5073,7 @@ msgid "Watch together"
 msgstr "Watch together"
 
 #: src/pages/history.tsx
+#: src/pages/item.tsx
 msgid "Watched"
 msgstr "Watched"
 

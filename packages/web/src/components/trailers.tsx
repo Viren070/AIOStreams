@@ -3,7 +3,7 @@ import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { BiMoviePlay } from 'react-icons/bi';
 import { LuPlay } from 'react-icons/lu';
-import { Button } from '@aiostreams/ui/button';
+import { Button, IconButton } from '@aiostreams/ui/button';
 import { Drawer } from '@aiostreams/ui/drawer';
 import { focusOn, keyboardFocus, useRestoreFocus } from '../lib/input';
 import { useSession } from '../lib/session';
@@ -17,27 +17,47 @@ import {
 } from '../lib/playback/trailers';
 import type { BaseItemDto } from '../lib/types';
 
-export function TrailerButton({ item }: { item: BaseItemDto }) {
+export function TrailerButton({
+  item,
+  compact,
+}: {
+  item: BaseItemDto;
+  compact?: boolean;
+}) {
   const trailers = React.useMemo(() => trailersOf(item), [item]);
   const [listing, setListing] = React.useState(false);
   const prefetch = usePrefetchTrailer();
   if (!trailers.length) return null;
   const play = (index: number) => navigate(to.trailer(item.Id!, index));
   const count = trailers.length;
+  const label = plural(count, { one: 'Trailer', other: 'Trailers' });
+  const open = () => (trailers.length > 1 ? setListing(true) : play(0));
   return (
     <>
-      <Button
-        data-ui="item-action"
-        data-name="trailer"
-        intent="gray-outline"
-        className="rounded-full"
-        leftIcon={<BiMoviePlay className="text-lg" />}
-        onFocus={() => prefetch(trailers[0].url)}
-        onPointerEnter={() => prefetch(trailers[0].url)}
-        onClick={() => (trailers.length > 1 ? setListing(true) : play(0))}
-      >
-        {plural(count, { one: 'Trailer', other: 'Trailers' })}
-      </Button>
+      {compact ? (
+        <IconButton
+          data-ui="item-action"
+          data-name="trailer"
+          intent="gray-subtle"
+          className="rounded-full"
+          icon={<BiMoviePlay />}
+          aria-label={label}
+          onClick={open}
+        />
+      ) : (
+        <Button
+          data-ui="item-action"
+          data-name="trailer"
+          intent="gray-outline"
+          className="rounded-full"
+          leftIcon={<BiMoviePlay className="text-lg" />}
+          onFocus={() => prefetch(trailers[0].url)}
+          onPointerEnter={() => prefetch(trailers[0].url)}
+          onClick={open}
+        >
+          {label}
+        </Button>
+      )}
       {trailers.length > 1 && (
         <TrailersSheet
           item={item}

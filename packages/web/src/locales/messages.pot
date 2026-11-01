@@ -1397,6 +1397,7 @@ msgstr ""
 #: src/components/download-button.tsx
 #: src/components/item-menu.tsx
 #: src/components/version-picker.tsx
+#: src/pages/item.tsx
 #: src/pages/settings/about.tsx
 msgid "Download"
 msgstr ""
@@ -1447,6 +1448,10 @@ msgstr ""
 
 #: src/lib/i18n.ts
 msgid "Drawer"
+msgstr ""
+
+#: src/pages/item.tsx
+msgid "Drop"
 msgstr ""
 
 #: src/pages/item.tsx
@@ -1582,6 +1587,10 @@ msgstr ""
 
 #: src/lib/input/actions.ts
 msgid "Faster"
+msgstr ""
+
+#: src/pages/item.tsx
+msgid "Favourite"
 msgstr ""
 
 #: src/components/layout.tsx
@@ -2237,6 +2246,7 @@ msgstr ""
 #: src/components/playlists.tsx
 #: src/components/version-picker.tsx
 #: src/pages/downloads.tsx
+#: src/pages/item.tsx
 msgid "More"
 msgstr ""
 
@@ -3027,6 +3037,10 @@ msgstr ""
 msgid "Play now"
 msgstr ""
 
+#: src/pages/item.tsx
+msgid "Play on"
+msgstr ""
+
 #: src/components/item-menu.tsx
 #: src/components/remote-sheet.tsx
 #: src/pages/item.tsx
@@ -3135,6 +3149,7 @@ msgstr ""
 
 #: src/components/player/options.tsx
 #: src/components/playlists.tsx
+#: src/pages/item.tsx
 msgid "Playlist"
 msgstr ""
 
@@ -3271,6 +3286,10 @@ msgstr ""
 msgid "Raises the centre channel, where surround sound puts dialogue. Not for sound passed through."
 msgstr ""
 
+#: src/pages/item.tsx
+msgid "Random"
+msgstr ""
+
 #: src/components/item-menu.tsx
 #: src/components/random-pick.tsx
 #: src/pages/item.tsx
@@ -3286,6 +3305,7 @@ msgid "Random pick"
 msgstr ""
 
 #: src/components/rating.tsx
+#: src/pages/item.tsx
 msgid "Rate"
 msgstr ""
 
@@ -4729,6 +4749,7 @@ msgid "Tracks"
 msgstr ""
 
 #: src/lib/playback/trailers.ts
+#: src/pages/item.tsx
 msgid "Trailer"
 msgstr ""
 
@@ -5051,6 +5072,7 @@ msgid "Watch together"
 msgstr ""
 
 #: src/pages/history.tsx
+#: src/pages/item.tsx
 msgid "Watched"
 msgstr ""
 
