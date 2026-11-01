@@ -1,9 +1,12 @@
 package io.github.viren070.aiostreams
 
 import android.content.Context
+import android.view.SurfaceView
 import android.view.View
+import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.widget.FrameLayout
+import androidx.core.view.children
 import io.github.viren070.aiostreams.exoplayer.ExoEngine
 import io.github.viren070.aiostreams.mpv.MpvEngine
 import io.github.viren070.aiostreams.playback.Engine
@@ -49,7 +52,16 @@ class Playback(private val context: Context, private val announce: (engine: Stri
 
     /** Hidden while nothing plays: a surface keeps showing its last frame, and an HDR one keeps the display in HDR. */
     fun showVideo(shown: Boolean) {
-        stage.visibility = if (shown) View.VISIBLE else View.INVISIBLE
+        val visibility = if (shown) View.VISIBLE else View.INVISIBLE
+        stage.visibility = visibility
+        // A SurfaceView keeps its surface while only a parent hides.
+        surfaces(stage).forEach { it.visibility = visibility }
+    }
+
+    private fun surfaces(view: View): Sequence<SurfaceView> = when (view) {
+        is SurfaceView -> sequenceOf(view)
+        is ViewGroup -> view.children.flatMap(::surfaces)
+        else -> emptySequence()
     }
 
     /** The page's pick, which the next start keeps too. */
