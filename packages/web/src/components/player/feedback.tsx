@@ -68,10 +68,12 @@ export function useSeekFlash(): [React.ReactNode, (deltaMs: number) => void] {
   React.useEffect(() => () => clearTimeout(timer.current), []);
   const show = React.useCallback((deltaMs: number) => {
     clearTimeout(timer.current);
-    setFlash((f) => ({
-      key: Date.now(),
-      ms: f && f.ms < 0 === deltaMs < 0 ? f.ms + deltaMs : deltaMs,
-    }));
+    // Another skip that way adds to the one showing, which stays put.
+    setFlash((f) =>
+      f && f.ms < 0 === deltaMs < 0
+        ? { key: f.key, ms: f.ms + deltaMs }
+        : { key: Date.now(), ms: deltaMs }
+    );
     timer.current = setTimeout(() => setFlash(null), 700);
   }, []);
   const back = !!flash && flash.ms < 0;
