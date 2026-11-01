@@ -86,6 +86,27 @@ describe('collectionTypeFor', () => {
     assert.equal(collectionTypeFor(seriesCatalog, []), 'tvshows');
   });
 
+  it('guesses boxsets when unsniffed for catalogs with collection in ID', () => {
+    const idCollectionCatalog: Catalog = {
+      type: 'other',
+      id: 'addon.collections.list',
+      name: 'Featured Lists',
+    };
+    assert.equal(collectionTypeFor(idCollectionCatalog, []), 'boxsets');
+  });
+
+  it('retains unrecognised entry types so mixed catalogs fall through to declared type', () => {
+    const mixedCatalog: Catalog = {
+      type: 'movie',
+      id: 'addon.mixed',
+      name: 'Mixed Content',
+    };
+    assert.equal(
+      collectionTypeFor(mixedCatalog, ['movie', 'channel']),
+      'movies'
+    );
+  });
+
   it('guesses boxsets when unsniffed only for declared collection types or non-standard catalogs', () => {
     const collectionCatalog: Catalog = {
       type: 'collection',
@@ -176,12 +197,22 @@ describe('isBoxsetEntry', () => {
     assert.equal(isBoxsetEntry({ type: 'movie' }, catalog), false);
   });
 
-  it('returns true for movies in genuine boxset catalogs', () => {
+  it('returns true for movies in genuine boxset catalogs when unsniffed or holdsCollections is true', () => {
     const catalog = {
       type: 'collections',
       id: 'tmdb.collections',
       name: 'Franchises',
     };
     assert.equal(isBoxsetEntry({ type: 'movie' }, catalog), true);
+    assert.equal(isBoxsetEntry({ type: 'movie' }, catalog, true), true);
+  });
+
+  it('returns false for movies in boxset catalogs when holdsCollections is false', () => {
+    const catalog = {
+      type: 'collections',
+      id: 'tmdb.collections',
+      name: 'Franchises',
+    };
+    assert.equal(isBoxsetEntry({ type: 'movie' }, catalog, false), false);
   });
 });

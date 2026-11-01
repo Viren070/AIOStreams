@@ -642,7 +642,7 @@ function sniffedKind(type: string, leaves: string[]): ContentKind {
 }
 
 /** What a sweep already learned about this catalog; never a fresh fetch. */
-async function cachedEvidence(
+export async function cachedEvidence(
   userData: UserData,
   catalog: Catalog
 ): Promise<ViewEvidence | undefined> {

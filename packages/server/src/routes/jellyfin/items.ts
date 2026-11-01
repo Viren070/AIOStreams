@@ -229,13 +229,14 @@ export async function itemsFromPreviews(
   opts: {
     parentId?: string;
     catalog?: { type: string; id: string; name: string };
+    holdsCollections?: boolean;
   } = {}
 ): Promise<JellyfinItem[]> {
   const evidence = await ctx.leafEvidence();
   const items = previews.map((p) =>
     buildContentItem(ctx.build, p, {
       parentId: opts.parentId,
-      boxset: isBoxsetEntry(p, opts.catalog),
+      boxset: isBoxsetEntry(p, opts.catalog, opts.holdsCollections),
       leaf: isLeafEntry(p, evidence),
       childCount: p.collection ? knownMemberCount(p) : undefined,
       genreCatalog: opts.catalog

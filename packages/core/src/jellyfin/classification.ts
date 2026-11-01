@@ -29,16 +29,17 @@ export function isBoxsetCatalog(
  *
  * @param preview - Entry preview metadata.
  * @param catalog - Optional containing catalog descriptor.
+ * @param holdsCollections - Optional evidence indicator. If false, movies in the catalog are not marked as boxsets.
  * @returns True if the preview is a boxset entry.
  */
 export function isBoxsetEntry(
   preview: { type: string; collection?: unknown },
-  catalog?: { type: string; id: string; name?: string }
+  catalog?: { type: string; id: string; name?: string },
+  holdsCollections?: boolean
 ): boolean {
-  return (
-    !!preview.collection ||
-    (isBoxsetCatalog(catalog) && preview.type === 'movie')
-  );
+  if (preview.collection) return true;
+  if (!isBoxsetCatalog(catalog) || preview.type !== 'movie') return false;
+  return holdsCollections !== false;
 }
 
 /**
@@ -54,12 +55,8 @@ export function collectionTypeFor(
   entryTypes: string[]
 ): ViewKind {
   const boxsets =
-    /collections?/i.test(catalog.name) ||
-    /^(collections?|boxsets?)$/i.test(catalog.type);
-  const playable = entryTypes.filter(
-    (t) =>
-      t === 'movie' || t === 'series' || t === 'anime' || t === COLLECTION_ENTRY
-  );
+    isBoxsetCatalog(catalog) || /collections?/i.test(catalog.name);
+  const playable = [...new Set(entryTypes)];
   if (playable.length) {
     if (playable.every((t) => t === COLLECTION_ENTRY)) return 'boxsets';
     if (
