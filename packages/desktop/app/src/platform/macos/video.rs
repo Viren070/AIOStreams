@@ -8,7 +8,7 @@ use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
-use aiostreams_desktop_core::mpv::Mpv;
+use aiostreams_desktop_core::mpv::{Kind, Mpv};
 use aiostreams_desktop_core::playback::Fit;
 use block2::RcBlock;
 use dispatch2::{DispatchQueue, DispatchTime};
@@ -176,6 +176,8 @@ struct State {
     view: Option<Retained<NSView>>,
     video: Option<Video>,
     applied: Option<Applied>,
+    /// The user's mpv.conf sets target-peak, which the app then leaves alone.
+    own_peak: bool,
     off_pending: u32,
     refresh_pending: bool,
     observer: Option<Retained<ProtocolObject<dyn NSObjectProtocol>>>,
@@ -196,10 +198,14 @@ pub fn attach(layer: Retained<CALayer>, view: Retained<NSView>, mpv: Arc<Mpv>) {
             &block,
         )
     };
+    let own_peak = mpv
+        .get_property("target-peak", Kind::String)
+        .is_some_and(|v| v.as_str() != Some("auto"));
     STATE.with_borrow_mut(|s| {
         s.layer = Some(layer);
         s.view = Some(view);
         s.mpv = Some(mpv);
+        s.own_peak = own_peak;
         s.observer = Some(observer);
     });
 }
@@ -276,7 +282,7 @@ fn apply() {
 impl State {
     fn switch_on(&mut self, video: Video, headroom: f64) {
         let output = running();
-        let target_peak = (output != Output::System).then(|| {
+        let target_peak = (output != Output::System && !self.own_peak).then(|| {
             let peak = (headroom * REFERENCE_WHITE).round() as u32;
             match self.applied.as_ref().and_then(|a| a.target_peak) {
                 // Each change rebuilds mpv's shaders, so small drifts are left alone.
@@ -320,7 +326,10 @@ impl State {
         log::info!(
             "hdr on primaries={} target-peak={} headroom={headroom:.2}",
             want.video.primaries,
-            target_peak.map_or("system".into(), |p| p.to_string()),
+            target_peak.map_or_else(
+                || if self.own_peak { "mpv.conf" } else { "system" }.into(),
+                |p| p.to_string()
+            ),
         );
         self.applied = Some(want);
     }
@@ -339,12 +348,16 @@ impl State {
                     layer.setColorspace(None);
                 }
                 for name in ["target-prim", "target-trc", "target-peak"] {
-                    set(mpv, name, "auto");
+                    if name != "target-peak" || !self.own_peak {
+                        set(mpv, name, "auto");
+                    }
                 }
             }
             Output::Mpv => {
                 layer.setWantsExtendedDynamicRangeContent(false);
-                set(mpv, "target-peak", "auto");
+                if !self.own_peak {
+                    set(mpv, "target-peak", "auto");
+                }
             }
             Output::System => set_dynamic_range(layer, false),
         }

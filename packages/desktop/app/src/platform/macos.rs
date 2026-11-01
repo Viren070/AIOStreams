@@ -505,15 +505,15 @@ impl VideoSurface {
 
     pub fn attach(&self, mpv: Arc<Mpv>) {
         let edr = match &self.drawn {
-            Drawn::OpenGl(layer) => {
-                *layer.ivars().mpv.borrow_mut() = Some(mpv.clone());
-                layer.start();
-                self.root.clone()
-            }
-            Drawn::Metal(_) => self.root.clone(),
+            Drawn::OpenGl(_) | Drawn::Metal(_) => self.root.clone(),
             Drawn::SampleBuffer(display) => display.clone(),
         };
-        video::attach(edr, self.view.clone(), mpv);
+        // Before rendering starts, as it reads mpv's options on this thread.
+        video::attach(edr, self.view.clone(), mpv.clone());
+        if let Drawn::OpenGl(layer) = &self.drawn {
+            *layer.ivars().mpv.borrow_mut() = Some(mpv);
+            layer.start();
+        }
     }
 
     /// The render context goes before mpv, with its OpenGL context current.
