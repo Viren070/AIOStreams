@@ -517,8 +517,8 @@ function waitsFor(
 function entry(to: HTMLElement, from: HTMLElement): HTMLElement {
   const box = to.closest<HTMLElement>('[data-nav-enter]');
   if (box && !box.contains(from)) {
-    const named = box.querySelector<HTMLElement>(box.dataset.navEnter!);
-    if (named && canFocus(named)) return named;
+    const named = enterAt(box);
+    if (named) return named;
   }
   const group = to.closest(GROUP);
   if (!group || group.contains(from)) return to;
@@ -623,14 +623,19 @@ function first(root: Element): HTMLElement | null {
   if (start) return start;
   const area = root.querySelector('main') ?? root;
   const all = (el: Element) => [...el.querySelectorAll<HTMLElement>(FOCUSABLE)];
-  return (
+  const el =
     all(area).find(
       (el) => onScreen(el) && canFocus(el) && !el.closest('nav')
     ) ??
     all(area).find((el) => onScreen(el) && canFocus(el)) ??
-    all(root).find((el) => canFocus(el)) ??
-    null
-  );
+    all(root).find((el) => canFocus(el));
+  const box = el?.closest<HTMLElement>('[data-nav-enter]');
+  return (box && enterAt(box)) ?? el ?? null;
+}
+
+function enterAt(box: HTMLElement): HTMLElement | null {
+  const named = box.querySelector<HTMLElement>(box.dataset.navEnter!);
+  return named && canFocus(named) ? named : null;
 }
 
 /** How far a box must scroll to show `rect` with some room around it. */
