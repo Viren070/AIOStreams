@@ -30,6 +30,8 @@ pub enum UserEvent {
     Fullscreen(Option<bool>),
     Minimize,
     Close,
+    /// The player closed after the window did.
+    Closed,
     Sync,
     Drag,
     Resize(Edge),

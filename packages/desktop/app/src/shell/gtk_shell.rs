@@ -150,6 +150,7 @@ impl Shell {
             }
             UserEvent::Minimize => self.window.minimize(),
             UserEvent::Close => self.close(),
+            UserEvent::Closed => {}
             UserEvent::Sync => {
                 if let Some(p) = self.player.borrow().as_ref() {
                     p.sync();

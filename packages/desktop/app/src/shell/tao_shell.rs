@@ -28,6 +28,9 @@ use crate::{
 };
 use aiostreams_desktop_core::downloads::Command as DownloadCommand;
 
+#[cfg(target_os = "macos")]
+const CLOSE_WAIT: std::time::Duration = std::time::Duration::from_secs(3);
+
 pub fn webview_version() -> String {
     wry::webview_version().unwrap_or_else(|_| "missing".into())
 }
@@ -308,6 +311,8 @@ pub fn run(app: App) {
     let mut maximized = window.is_maximized();
     let mut remaximize = false;
     let mut save_at: Option<Instant> = None;
+    #[cfg(target_os = "macos")]
+    let mut exit_at: Option<Instant> = None;
     event_loop.run(move |event, _, flow| {
         if save_at.is_some_and(|at| Instant::now() >= at) {
             save_at = None;
@@ -315,6 +320,14 @@ pub fn run(app: App) {
             placement::save(&data_dir, &placement);
         }
         *flow = save_at.map_or(ControlFlow::Wait, ControlFlow::WaitUntil);
+        #[cfg(target_os = "macos")]
+        if let Some(at) = exit_at {
+            *flow = if Instant::now() >= at {
+                ControlFlow::Exit
+            } else {
+                ControlFlow::WaitUntil(at)
+            };
+        }
         let emit = |message: Outbound| {
             let _ = webview.evaluate_script(&receive_script(&message));
         };
@@ -364,19 +377,37 @@ pub fn run(app: App) {
                 ..
             }
             | Event::UserEvent(UserEvent::Close) => {
+                #[cfg(target_os = "macos")]
+                if exit_at.is_some() {
+                    return;
+                }
                 log::info!("closing");
                 record(&window, &mut placement);
                 placement::save(&data_dir, &placement);
                 video.shutdown();
                 let player = player.borrow_mut().take();
-                // mpv's AVFoundation output tears down on the main thread, which must not wait for it.
+                // mpv's AVFoundation output tears down on the main thread, so the loop runs until it has.
                 #[cfg(target_os = "macos")]
-                std::thread::spawn(move || drop(player));
+                {
+                    window.set_visible(false);
+                    let proxy = proxy.clone();
+                    std::thread::spawn(move || {
+                        drop(player);
+                        let _ = proxy.send_event(UserEvent::Closed);
+                    });
+                    external.close();
+                    let at = Instant::now() + CLOSE_WAIT;
+                    exit_at = Some(at);
+                    *flow = ControlFlow::WaitUntil(at);
+                }
                 #[cfg(not(target_os = "macos"))]
-                drop(player);
-                external.close();
-                *flow = ControlFlow::Exit;
+                {
+                    drop(player);
+                    external.close();
+                    *flow = ControlFlow::Exit;
+                }
             }
+            Event::UserEvent(UserEvent::Closed) => *flow = ControlFlow::Exit,
             Event::UserEvent(UserEvent::Emit(script)) => {
                 let _ = webview.evaluate_script(&script);
             }
