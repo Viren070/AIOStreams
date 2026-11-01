@@ -49,6 +49,8 @@ export function setRepeating(on: boolean): void {
   repeating = on;
 }
 
+export const isRepeating = () => repeating;
+
 /**
  * Draws `outer`'s layers back over a jump of `moved` px along `axis`, then eases
  * them home on the compositor. A press eases out. A held key's repeat eases in
