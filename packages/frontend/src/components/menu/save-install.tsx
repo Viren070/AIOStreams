@@ -3366,10 +3366,10 @@ function Content() {
                     <Switch
                       label="Mark unaired episodes"
                       help="Clients show upcoming episodes as unaired and won't offer to play them."
-                      moreHelp="Turn off if your client hides unaired episodes."
+                      moreHelp="Some clients hide them altogether. When this is off, clients list them as normal episodes, and the AIOStreams app still marks them and asks before playing one."
                       side="right"
-                      value={userData.jellyfin?.markUnaired ?? true}
-                      defaultValue={true}
+                      value={userData.jellyfin?.markUnaired ?? false}
+                      defaultValue={false}
                       onValueChange={(value) =>
                         setUserData((prev) => ({
                           ...prev,
