@@ -955,6 +955,7 @@ msgid "Configuration password"
 msgstr ""
 
 #: src/components/no-catalogs.tsx
+#: src/components/no-details.tsx
 msgid "Configure"
 msgstr ""
 
@@ -1898,6 +1899,10 @@ msgstr ""
 msgid "Install"
 msgstr ""
 
+#: src/components/no-details.tsx
+msgid "Install a metadata addon from Addons → Marketplace. For one that isn't listed, use the Custom addon there."
+msgstr ""
+
 #: src/components/no-catalogs.tsx
 msgid "Install catalog addons from Addons → Marketplace. For one that isn't listed, use the Custom addon there."
 msgstr ""
@@ -2421,6 +2426,10 @@ msgstr ""
 msgid "No catalogs yet"
 msgstr ""
 
+#: src/components/no-details.tsx
+msgid "No details for this title"
+msgstr ""
+
 #: src/components/download-button.tsx
 msgid "No episodes to download there"
 msgstr ""
@@ -2480,6 +2489,10 @@ msgstr ""
 #: src/pages/settings/audio.tsx
 #: src/pages/settings/subtitles.tsx
 msgid "None"
+msgstr ""
+
+#: src/components/no-details.tsx
+msgid "None of your addons has details for {id}. Add a metadata addon to your configuration, then refresh."
 msgstr ""
 
 #: src/components/player/keys.ts
@@ -2683,7 +2696,6 @@ msgstr ""
 msgid "Opacity: {backgroundOpacity}%"
 msgstr ""
 
-#: src/components/hero.tsx
 #: src/components/item-menu.tsx
 #: src/components/random-pick.tsx
 #: src/pages/history.tsx
@@ -2977,6 +2989,7 @@ msgstr ""
 
 #: src/components/hero.tsx
 #: src/components/item-menu.tsx
+#: src/components/no-details.tsx
 #: src/components/player/controls.tsx
 #: src/components/playlists.tsx
 #: src/components/random-pick.tsx
@@ -3319,6 +3332,7 @@ msgid "Red"
 msgstr ""
 
 #: src/components/no-catalogs.tsx
+#: src/components/no-details.tsx
 msgid "Refresh"
 msgstr ""
 
@@ -4603,6 +4617,10 @@ msgstr ""
 
 #: src/pages/history.tsx
 msgid "This server can't list what you've watched."
+msgstr ""
+
+#: src/components/no-details.tsx
+msgid "This server has no details for {id}."
 msgstr ""
 
 #: src/components/no-catalogs.tsx

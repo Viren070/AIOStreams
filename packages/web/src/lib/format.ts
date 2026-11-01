@@ -134,6 +134,13 @@ export function unavailableLabel(item: BaseItemDto): string | null {
   return kind === 'unaired' ? t`Unaired` : kind && t`Missing`;
 }
 
+/** A title no addon has details for, which the server names by its id. */
+export function lacksDetails(item: BaseItemDto): boolean {
+  return (
+    (item as { aiostreams?: { noMeta?: boolean } }).aiostreams?.noMeta === true
+  );
+}
+
 export type EpisodeMark = 'filler' | 'recap';
 
 /** Marks a server with the `fillers` feature puts on an episode. */

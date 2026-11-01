@@ -14,7 +14,12 @@ import type { JellyfinClient, Purpose } from './client';
 import { useSession } from './session';
 import { useFeature } from './server-info';
 import { settings, useSetting } from './settings';
-import { episodeMarks, ticksToMs, unavailableKind } from './format';
+import {
+  episodeMarks,
+  lacksDetails,
+  ticksToMs,
+  unavailableKind,
+} from './format';
 import { playerSupport } from './playback/player-choice';
 import type {
   BaseItemDto,
@@ -446,7 +451,10 @@ function useItemOptions() {
   return (itemId: string) =>
     queryOptions({
       queryKey: [...key, 'item', itemId],
-      meta: { cache: 'titles' },
+      meta: {
+        cache: 'titles',
+        keep: (item) => !lacksDetails(item as BaseItemDto),
+      },
       // Dropped once nothing shows it, as the hero asks for each card it passes.
       queryFn: ({ signal }) => requestItem(client, user.Id!, itemId, signal),
     });

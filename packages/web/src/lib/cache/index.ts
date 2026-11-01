@@ -26,6 +26,8 @@ declare module '@tanstack/react-query' {
     queryMeta: {
       /** Saved on the device under this category; unsaved without it. */
       cache?: CacheCategory;
+      /** False for an answer that isn't saved. */
+      keep?: (data: unknown) => boolean;
     };
   }
 }
@@ -135,10 +137,12 @@ export async function persister(
   if (!category || !saving(category) || signedOut.has(scope))
     return queryFn(context);
   const shown = query.state;
-  const save = (data: unknown) =>
+  const save = (data: unknown) => {
+    if (query.meta?.keep?.(data) === false) return;
     void writeQuery({ id: query.queryHash, category, scope }, Date.now(), data)
       .then(schedulePrune)
       .catch(() => undefined);
+  };
   // Sent before the read, whose answer waits for the main thread to finish drawing.
   // Behind a saved copy it outlives TanStack's own fetch, so it is dropped here
   // once nothing shows the query.

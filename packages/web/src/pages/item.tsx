@@ -60,6 +60,7 @@ import {
   episodeCode,
   fullTitle,
   itemSubtitle,
+  lacksDetails,
   ticksToMs,
   unavailableKind,
   untilLabel,
@@ -69,6 +70,7 @@ import { settings, useSetting } from '../lib/settings';
 import { useInView, useNear } from '../lib/use-in-view';
 import { MediaRow } from '../components/media-row';
 import { PageMessage } from '../components/layout';
+import { NoDetails } from '../components/no-details';
 import { MixedGrid } from '../components/mixed-grid';
 import { PosterCard } from '../components/cards';
 import { Overview } from '../components/overview';
@@ -140,6 +142,17 @@ export function ItemPage({
     return (
       <PageMessage>
         <LuffyError title={t`Could not load this title`} className="mt-0" />
+      </PageMessage>
+    );
+  }
+  if (data && lacksDetails(data)) {
+    return (
+      <PageMessage>
+        <NoDetails
+          item={data}
+          refreshing={item.isFetching}
+          onRefresh={() => void item.refetch()}
+        />
       </PageMessage>
     );
   }

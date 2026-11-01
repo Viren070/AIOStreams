@@ -955,6 +955,7 @@ msgid "Configuration password"
 msgstr "Configuration password"
 
 #: src/components/no-catalogs.tsx
+#: src/components/no-details.tsx
 msgid "Configure"
 msgstr "Configure"
 
@@ -1898,6 +1899,10 @@ msgstr "In this collection"
 msgid "Install"
 msgstr "Install"
 
+#: src/components/no-details.tsx
+msgid "Install a metadata addon from Addons → Marketplace. For one that isn't listed, use the Custom addon there."
+msgstr "Install a metadata addon from Addons → Marketplace. For one that isn't listed, use the Custom addon there."
+
 #: src/components/no-catalogs.tsx
 msgid "Install catalog addons from Addons → Marketplace. For one that isn't listed, use the Custom addon there."
 msgstr "Install catalog addons from Addons → Marketplace. For one that isn't listed, use the Custom addon there."
@@ -2421,6 +2426,10 @@ msgstr "No badges match."
 msgid "No catalogs yet"
 msgstr "No catalogs yet"
 
+#: src/components/no-details.tsx
+msgid "No details for this title"
+msgstr "No details for this title"
+
 #: src/components/download-button.tsx
 msgid "No episodes to download there"
 msgstr "No episodes to download there"
@@ -2481,6 +2490,10 @@ msgstr "No versions were found."
 #: src/pages/settings/subtitles.tsx
 msgid "None"
 msgstr "None"
+
+#: src/components/no-details.tsx
+msgid "None of your addons has details for {id}. Add a metadata addon to your configuration, then refresh."
+msgstr "None of your addons has details for {id}. Add a metadata addon to your configuration, then refresh."
 
 #: src/components/player/keys.ts
 #: src/lib/subtitles/style.ts
@@ -2683,7 +2696,6 @@ msgstr "Oops!"
 msgid "Opacity: {backgroundOpacity}%"
 msgstr "Opacity: {backgroundOpacity}%"
 
-#: src/components/hero.tsx
 #: src/components/item-menu.tsx
 #: src/components/random-pick.tsx
 #: src/pages/history.tsx
@@ -2977,6 +2989,7 @@ msgstr "Pink"
 
 #: src/components/hero.tsx
 #: src/components/item-menu.tsx
+#: src/components/no-details.tsx
 #: src/components/player/controls.tsx
 #: src/components/playlists.tsx
 #: src/components/random-pick.tsx
@@ -3319,6 +3332,7 @@ msgid "Red"
 msgstr "Red"
 
 #: src/components/no-catalogs.tsx
+#: src/components/no-details.tsx
 msgid "Refresh"
 msgstr "Refresh"
 
@@ -4604,6 +4618,10 @@ msgstr "This server"
 #: src/pages/history.tsx
 msgid "This server can't list what you've watched."
 msgstr "This server can't list what you've watched."
+
+#: src/components/no-details.tsx
+msgid "This server has no details for {id}."
+msgstr "This server has no details for {id}."
 
 #: src/components/no-catalogs.tsx
 msgid "This server shares no movie or show catalogs with this account."
