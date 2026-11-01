@@ -1071,6 +1071,28 @@ function Seasons({
 const ROW_WIDTH =
   'basis-[85%] sm:basis-[20rem] lg:basis-[22rem] 2xl:basis-[24rem]';
 
+function useSlidingBar(selected: string | undefined) {
+  const bars = React.useRef(new Map<string, HTMLElement>());
+  const last = React.useRef(selected);
+  React.useLayoutEffect(() => {
+    const from = last.current && bars.current.get(last.current);
+    const to = selected && bars.current.get(selected);
+    last.current = selected;
+    if (!from || !to || from === to) return;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const dx =
+      from.getBoundingClientRect().left - to.getBoundingClientRect().left;
+    to.animate(
+      { transform: [`translateX(${dx}px)`, 'none'] },
+      { duration: 300, easing: 'cubic-bezier(0.2, 0, 0, 1)' }
+    );
+  }, [selected]);
+  return (id: string) => (el: HTMLElement | null) => {
+    if (el) bars.current.set(id, el);
+    else bars.current.delete(id);
+  };
+}
+
 // Apart from the episodes below, which redraw as they arrive and as the season settles.
 const SeasonPosters = React.memo(function SeasonPosters({
   seasons,
@@ -1082,6 +1104,7 @@ const SeasonPosters = React.memo(function SeasonPosters({
   onSelect: (id: string) => void;
 }) {
   const { client } = useSession();
+  const bar = useSlidingBar(selected);
   return (
     <div {...tabList}>
       <MediaRow
@@ -1116,17 +1139,12 @@ const SeasonPosters = React.memo(function SeasonPosters({
                       className={cn(
                         'absolute inset-0 h-full w-full object-cover transition-opacity [transition-duration:250ms]',
                         !isSelected &&
-                          'opacity-60 group-hover/season:opacity-100 group-focus-visible/season:opacity-100'
+                          'opacity-40 group-hover/season:opacity-100 group-focus-visible/season:opacity-100'
                       )}
                     />
                   )}
                   {/* Drawn inside, since the row clips anything outside it. */}
-                  <span
-                    className={cn(
-                      'pointer-events-none absolute inset-0 rounded-lg ring-inset',
-                      isSelected ? 'ring-2 ring-white' : 'ring-1 ring-white/10'
-                    )}
-                  />
+                  <span className="pointer-events-none absolute inset-0 rounded-lg ring-1 ring-inset ring-white/10" />
                   {s.UserData?.Played && (
                     <span
                       data-ui="watched-badge"
@@ -1137,15 +1155,25 @@ const SeasonPosters = React.memo(function SeasonPosters({
                   )}
                 </div>
                 <p
+                  data-ui="season-name"
                   className={cn(
-                    'truncate text-sm',
+                    'truncate text-sm font-medium transition-colors [transition-duration:250ms]',
                     isSelected
-                      ? 'font-semibold text-white'
+                      ? 'text-white'
                       : 'text-[--muted] group-hover/season:text-white group-focus-visible/season:text-white'
                   )}
                 >
                   {s.Name}
                 </p>
+                <span
+                  ref={bar(s.Id!)}
+                  data-ui="season-indicator"
+                  aria-hidden
+                  className={cn(
+                    '-mt-1 block h-0.5 w-6 rounded-full bg-brand-500',
+                    !isSelected && 'opacity-0'
+                  )}
+                />
               </button>
             </ItemMenu>
           );
