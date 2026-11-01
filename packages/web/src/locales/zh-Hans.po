@@ -35,7 +35,7 @@ msgstr "{count, plural, one {# 个标签} other {# 个标签}}"
 msgid "{count, plural, one {# minute} other {# minutes}}"
 msgstr "{count, plural, one {# 分钟} other {# 分钟}}"
 
-#: src/pages/settings/playback.tsx
+#: src/pages/settings/common.tsx
 msgid "{count, plural, one {# second} other {# seconds}}"
 msgstr "{count, plural, one {# 秒} other {# 秒}}"
 
@@ -71,7 +71,7 @@ msgstr "{downloaded} 已下载"
 msgid "{episodeCount, plural, one {# episode watched} other {# episodes watched}}"
 msgstr "{episodeCount, plural, one {已观看 # 集} other {已观看 # 集}}"
 
-#: src/pages/downloads.tsx src/pages/history.tsx
+#: src/pages/downloads.tsx src/pages/history.tsx src/pages/item.tsx
 msgid "{episodeCount, plural, one {# episode} other {# episodes}}"
 msgstr "{episodeCount, plural, one {# 集} other {# 集}}"
 
@@ -125,7 +125,8 @@ msgstr "{inProgress, plural, one {进行中 # 项} other {进行中 # 项}}"
 msgid "{key} is taken by {taken}"
 msgstr "{key} 已被 {taken} 占用"
 
-#: src/components/card-preview.tsx src/pages/downloads.tsx
+#: src/components/card-preview.tsx src/components/episodes.tsx
+#: src/pages/downloads.tsx
 msgid "{left} left"
 msgstr "剩余 {left}"
 
@@ -153,6 +154,14 @@ msgstr "已观看 {movies} 部电影和 {episodes} 集剧集"
 #: src/pages/settings/playback.tsx
 msgid "{n, plural, one {After # episode} other {After # episodes}}"
 msgstr "{n, plural, one {第 # 集后} other {第 # 集后}}"
+
+#: src/components/version-picker.tsx
+msgid "{name} airs {day} ({until}). Download it anyway?"
+msgstr ""
+
+#: src/components/version-picker.tsx
+msgid "{name} airs {day} ({until}). Play it anyway?"
+msgstr ""
 
 #: src/components/party/party-host.tsx
 msgid "{name} joined the party"
@@ -229,6 +238,11 @@ msgstr "你的服务器上没有《{title}》。"
 #: src/pages/discover.tsx
 msgid "{total, plural, one {# title} other {# titles}}"
 msgstr "{total, plural, one {# 个内容} other {# 个内容}}"
+
+#: src/pages/item.tsx
+#, fuzzy
+msgid "{unairedCount, plural, one {# unaired} other {# unaired}}"
+msgstr "{movieCount, plural, one {# 部电影} other {# 部电影}}"
 
 #: src/components/player/options.tsx
 msgid "{unread, plural, one {Watch party, # new message} other {Watch party, # new messages}}"
@@ -456,13 +470,9 @@ msgstr "AIOStreams 是我利用业余时间独立开发和维护的项目。如�
 msgid "Airs"
 msgstr "播出时间"
 
-#: src/components/episodes.tsx
+#: src/lib/format.ts
 msgid "Airs {day} · {until}"
 msgstr "{day} 播出 · 至 {until}"
-
-#: src/components/episodes.tsx
-msgid "Airs {until}"
-msgstr "播出至 {until}"
 
 #: src/components/kind-tabs.tsx src/components/version-picker.tsx
 #: src/pages/discover.tsx src/pages/favourites.tsx
@@ -917,7 +927,7 @@ msgstr "复制时也会排除配置 ID。"
 msgid "Configuration password"
 msgstr "配置密码"
 
-#: src/components/no-catalogs.tsx
+#: src/components/no-catalogs.tsx src/components/no-details.tsx
 msgid "Configure"
 msgstr "配置"
 
@@ -1341,8 +1351,14 @@ msgid "Down"
 msgstr "向下"
 
 #: src/components/download-button.tsx src/components/item-menu.tsx
-#: src/components/version-picker.tsx src/pages/settings/about.tsx
+#: src/components/version-picker.tsx src/pages/item.tsx
+#: src/pages/settings/about.tsx
 msgid "Download"
+msgstr "下载"
+
+#: src/components/version-picker.tsx
+#, fuzzy
+msgid "Download anyway"
 msgstr "下载"
 
 #: src/components/download-button.tsx
@@ -1389,6 +1405,11 @@ msgstr "下载任务会等待 Wi-Fi 或其他不按流量计费的网络，不�
 #: src/lib/i18n.ts
 msgid "Drawer"
 msgstr "抽屉菜单"
+
+#: src/pages/item.tsx
+#, fuzzy
+msgid "Drop"
+msgstr "移除剧集"
 
 #: src/pages/item.tsx
 msgid "Drop show"
@@ -1464,6 +1485,10 @@ msgstr "剧集"
 msgid "Episodes end without offering the next one."
 msgstr "剧集结束后不会提示播放下一集。"
 
+#: src/pages/settings/playback.tsx
+msgid "Episodes that haven't aired yet show as unaired, ask before playing, and are passed over when playing on or downloading a season. Turn off if their air dates are often wrong."
+msgstr ""
+
 #: src/lib/input/keys.ts
 msgid "Esc"
 msgstr "Esc"
@@ -1519,6 +1544,11 @@ msgstr "快进"
 #: src/lib/input/actions.ts
 msgid "Faster"
 msgstr "更快"
+
+#: src/pages/item.tsx
+#, fuzzy
+msgid "Favourite"
+msgstr "收藏"
 
 #: src/components/layout.tsx src/pages/favourites.tsx
 #: src/pages/settings/apps.tsx
@@ -1765,6 +1795,10 @@ msgstr "设置按住视频画面、空格键或 Select 键时的播放速度。"
 msgid "How large cards are in a grid."
 msgstr "设置网格中卡片的大小。"
 
+#: src/pages/settings/interface.tsx
+msgid "How long the hero stays on a featured title while it rotates."
+msgstr ""
+
 #: src/pages/settings/playback.tsx
 msgid "How much of the video the player holds in memory: ahead, to ride out a slow connection, and behind, to seek back at once. Automatic sizes it from this device's memory."
 msgstr "设置播放器在内存中缓存的视频量：前方缓存可应对网络缓慢，后方缓存可便于立即回退。自动模式会根据此设备的内存调整大小。"
@@ -1824,6 +1858,11 @@ msgstr "在此合集内"
 #: src/lib/hosts/shell/index.ts
 msgid "Install"
 msgstr "安装"
+
+#: src/components/no-details.tsx
+#, fuzzy
+msgid "Install a metadata addon from Addons → Marketplace. For one that isn't listed, use the Custom addon there."
+msgstr "前往「插件 → 市场」安装目录插件。若列表中没有所需插件，请使用其中的自定义插件。"
 
 #: src/components/no-catalogs.tsx
 msgid "Install catalog addons from Addons → Marketplace. For one that isn't listed, use the Custom addon there."
@@ -2082,12 +2121,16 @@ msgstr "主要"
 msgid "Mark as watched"
 msgstr "标记为已观看"
 
-#: src/components/episodes.tsx src/components/item-menu.tsx
-#: src/pages/history.tsx src/pages/item.tsx
+#: src/pages/settings/playback.tsx
+#, fuzzy
+msgid "Mark unaired episodes"
+msgstr "跳过剧情回顾集"
+
+#: src/components/item-menu.tsx src/pages/history.tsx src/pages/item.tsx
 msgid "Mark unwatched"
 msgstr "标记为未观看"
 
-#: src/components/episodes.tsx src/components/item-menu.tsx src/pages/item.tsx
+#: src/components/item-menu.tsx src/pages/item.tsx
 msgid "Mark watched"
 msgstr "标记为已观看"
 
@@ -2147,8 +2190,9 @@ msgstr "缺失"
 msgid "Monospace"
 msgstr "等宽字体"
 
-#: src/components/overview.tsx src/components/playlists.tsx
-#: src/components/version-picker.tsx src/pages/downloads.tsx
+#: src/components/episodes.tsx src/components/overview.tsx
+#: src/components/playlists.tsx src/components/version-picker.tsx
+#: src/pages/downloads.tsx src/pages/item.tsx
 msgid "More"
 msgstr "更多"
 
@@ -2324,6 +2368,11 @@ msgstr "没有符合条件的标签。"
 msgid "No catalogs yet"
 msgstr "还没有目录"
 
+#: src/components/no-details.tsx
+#, fuzzy
+msgid "No details for this title"
+msgstr "无法加载此内容"
+
 #: src/components/download-button.tsx
 msgid "No episodes to download there"
 msgstr "此处没有可下载的剧集"
@@ -2384,6 +2433,11 @@ msgstr "未找到任何版本。"
 msgid "None"
 msgstr "无"
 
+#: src/components/no-details.tsx
+#, fuzzy
+msgid "None of your addons has details for {id}. Add a metadata addon to your configuration, then refresh."
+msgstr "在配置中添加目录，然后刷新。"
+
 #: src/components/player/keys.ts src/lib/subtitles/style.ts
 #: src/pages/settings/subtitles.tsx
 msgid "Normal"
@@ -2392,6 +2446,11 @@ msgstr "普通"
 #: src/components/player/keys.ts src/lib/input/actions.ts
 msgid "Normal speed"
 msgstr "正常速度"
+
+#: src/components/version-picker.tsx
+#, fuzzy
+msgid "Not aired yet"
+msgstr "尚未检查。"
 
 #: src/lib/hosts/shell/index.ts
 msgid "Not checked yet."
@@ -2577,10 +2636,9 @@ msgstr "哎呀！"
 msgid "Opacity: {backgroundOpacity}%"
 msgstr "不透明度：{backgroundOpacity}%"
 
-#: src/components/hero.tsx src/components/item-menu.tsx
-#: src/components/random-pick.tsx src/pages/history.tsx
-#: src/pages/settings/account.tsx src/pages/settings/apps.tsx
-#: src/pages/settings/downloads.tsx
+#: src/components/item-menu.tsx src/components/random-pick.tsx
+#: src/pages/history.tsx src/pages/settings/account.tsx
+#: src/pages/settings/apps.tsx src/pages/settings/downloads.tsx
 msgid "Open"
 msgstr "打开"
 
@@ -2790,6 +2848,10 @@ msgstr "已在 {name} 处暂停，播放至 {at}"
 msgid "Pauses and asks before the next episode once this many have played in a row without a key, click or button press."
 msgstr "连续播放达到此集数且期间没有按键、点击或按下按钮后，会暂停并在播放下一集前询问。"
 
+#: src/pages/settings/playback.tsx
+msgid "Pausing, playing or skipping with a remote or the keyboard brings the controls up, for a moment after a skip. Turned off, only a brief icon shows."
+msgstr ""
+
 #: src/pages/search.tsx
 msgid "People"
 msgstr "人物"
@@ -2859,15 +2921,21 @@ msgid "Pink"
 msgstr "粉色"
 
 #: src/components/hero.tsx src/components/item-menu.tsx
-#: src/components/player/controls.tsx src/components/playlists.tsx
-#: src/components/random-pick.tsx src/components/remote-sheet.tsx
-#: src/lib/input/actions.ts src/lib/input/keys.ts src/pages/item.tsx
+#: src/components/no-details.tsx src/components/player/controls.tsx
+#: src/components/playlists.tsx src/components/random-pick.tsx
+#: src/components/remote-sheet.tsx src/lib/input/actions.ts
+#: src/lib/input/keys.ts src/pages/item.tsx
 msgid "Play"
 msgstr "播放"
 
 #: src/pages/item.tsx
 msgid "Play {code}"
 msgstr "播放 {code}"
+
+#: src/components/version-picker.tsx
+#, fuzzy
+msgid "Play anyway"
+msgstr "立即播放"
 
 #: src/pages/item.tsx
 msgid "Play from the start"
@@ -2893,6 +2961,11 @@ msgstr "按下「播放」会列出可选版本，但继续播放时会返回你
 msgid "Play now"
 msgstr "立即播放"
 
+#: src/pages/item.tsx
+#, fuzzy
+msgid "Play on"
+msgstr "立即播放"
+
 #: src/components/item-menu.tsx src/components/remote-sheet.tsx
 #: src/pages/item.tsx
 msgid "Play on another device"
@@ -2901,6 +2974,10 @@ msgstr "在其他设备上播放"
 #: src/lib/input/actions.ts
 msgid "Play or pause"
 msgstr "播放或暂停"
+
+#: src/lib/input/actions.ts
+msgid "Play or pause, or go to the controls"
+msgstr ""
 
 #: src/pages/settings/playback.tsx
 msgid "Play starts the first version, and resuming goes back to the version you were watching. Hold Play to choose instead."
@@ -2990,6 +3067,7 @@ msgid "Playing on and the next and previous buttons pass over episodes marked as
 msgstr "播放时，下一集和上一集按钮会跳过标记为填充内容的剧集。你仍可手动播放这些剧集。"
 
 #: src/components/player/options.tsx src/components/playlists.tsx
+#: src/pages/item.tsx
 msgid "Playlist"
 msgstr "播放列表"
 
@@ -3120,6 +3198,11 @@ msgstr "提高字幕"
 msgid "Raises the centre channel, where surround sound puts dialogue. Not for sound passed through."
 msgstr "提高中置声道音量；环绕声通常会将对白放在中置声道。不适用于直通音频。"
 
+#: src/pages/item.tsx
+#, fuzzy
+msgid "Random"
+msgstr "随机选择"
+
 #: src/components/item-menu.tsx src/components/random-pick.tsx
 #: src/pages/item.tsx
 msgid "Random episode"
@@ -3133,7 +3216,7 @@ msgstr "随机收藏"
 msgid "Random pick"
 msgstr "随机选择"
 
-#: src/components/rating.tsx
+#: src/components/rating.tsx src/pages/item.tsx
 msgid "Rate"
 msgstr "评分"
 
@@ -3179,7 +3262,7 @@ msgstr "正在重新连接…"
 msgid "Red"
 msgstr "红色"
 
-#: src/components/no-catalogs.tsx
+#: src/components/no-catalogs.tsx src/components/no-details.tsx
 msgid "Refresh"
 msgstr "刷新"
 
@@ -3625,12 +3708,18 @@ msgstr "提前显示字幕"
 msgid "Show subtitles later"
 msgstr "延后显示字幕"
 
-#: src/lib/input/actions.ts
-msgid "Show the controls"
+#: src/pages/settings/playback.tsx
+#, fuzzy
+msgid "Show the controls on pause and skip"
 msgstr "显示控制项"
 
 #: src/pages/settings/playback.tsx
 msgid "Show the prompt"
+msgstr "显示提示"
+
+#: src/pages/settings/playback.tsx
+#, fuzzy
+msgid "Show the time"
 msgstr "显示提示"
 
 #: src/components/player/controls.tsx
@@ -3670,6 +3759,10 @@ msgstr "将搜索结果合并到一个网格中，而不是分别为电影和剧
 #: src/pages/settings/subtitles.tsx
 msgid "Shows subtitles in your language unless the audio already is."
 msgstr "除非音频本身已是你的语言，否则显示对应语言的字幕。"
+
+#: src/pages/settings/playback.tsx
+msgid "Shows the time of day at the top of the player with the controls."
+msgstr ""
 
 #: src/components/playlists.tsx
 msgid "Shuffle"
@@ -4423,6 +4516,10 @@ msgstr "此服务器"
 msgid "This server can't list what you've watched."
 msgstr "此服务器无法列出你已观看的内容。"
 
+#: src/components/no-details.tsx
+msgid "This server has no details for {id}."
+msgstr ""
+
 #: src/components/no-catalogs.tsx
 msgid "This server shares no movie or show catalogs with this account."
 msgstr "此服务器未向此账户共享任何电影或剧集目录。"
@@ -4475,6 +4572,10 @@ msgstr "这两句间隔太远，无法视为同一句台词。请尝试其他台
 msgid "Three days"
 msgstr "三天"
 
+#: src/pages/settings/interface.tsx
+msgid "Time on each title"
+msgstr ""
+
 #: src/components/player/options.tsx
 msgid "Timing"
 msgstr "时间设置"
@@ -4523,7 +4624,7 @@ msgstr "音轨 {n}"
 msgid "Tracks"
 msgstr "音轨"
 
-#: src/lib/playback/trailers.ts
+#: src/lib/playback/trailers.ts src/pages/item.tsx
 msgid "Trailer"
 msgstr "预告片"
 
@@ -4577,7 +4678,7 @@ msgstr "输入发行版本名称，查看它会匹配哪些标签。"
 msgid "Typewriter"
 msgstr "打字机"
 
-#: src/lib/format.ts
+#: src/components/episodes.tsx src/lib/format.ts
 msgid "Unaired"
 msgstr "尚未播出"
 
@@ -4836,7 +4937,7 @@ msgstr "一起看"
 msgid "Watch together"
 msgstr "一起观看"
 
-#: src/pages/history.tsx
+#: src/pages/history.tsx src/pages/item.tsx
 msgid "Watched"
 msgstr "已观看"
 
