@@ -137,7 +137,17 @@ function Menu({
           (value ?? '') === option.id ? 'opacity-100' : 'opacity-0'
         )}
       />
-      <span className="[overflow-wrap:anywhere]">{option.label}</span>
+      <span className="min-w-0 [overflow-wrap:anywhere]">
+        {option.label}
+        {option.detail && (
+          <span
+            data-name="detail"
+            className="block truncate text-[0.8em] text-gray-400"
+          >
+            {option.detail}
+          </span>
+        )}
+      </span>
     </DropdownMenuItem>
   );
   return (

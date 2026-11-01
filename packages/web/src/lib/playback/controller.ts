@@ -14,6 +14,8 @@ import type { BaseItemDto, MediaStream, SourceInfo } from '../types';
 export interface Track {
   id: string;
   label: string;
+  /** A smaller line under the label. */
+  detail?: string;
   lang?: string;
   /** One of the file's own, rather than one loaded beside it. */
   file?: boolean;
