@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-31 13:46+0000\n"
+"PO-Revision-Date: 2026-11-01 23:44+0000\n"
 "Last-Translator: Bruno <procopio@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/aiostreams/web-app/pt_BR/>\n"
 "Language: pt-BR\n"
@@ -157,11 +157,11 @@ msgstr "{n, plural, one {Após # episódio} other {Após # episódios}}"
 
 #: src/components/version-picker.tsx
 msgid "{name} airs {day} ({until}). Download it anyway?"
-msgstr ""
+msgstr "O episódio {name} estreia {day} ({until}). Quer baixar mesmo assim?"
 
 #: src/components/version-picker.tsx
 msgid "{name} airs {day} ({until}). Play it anyway?"
-msgstr ""
+msgstr "O episódio {name} estreia {day} ({until}). Quer assistir mesmo assim?"
 
 #: src/components/party/party-host.tsx
 msgid "{name} joined the party"
