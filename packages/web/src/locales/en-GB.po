@@ -3778,6 +3778,10 @@ msgstr "Show the controls"
 msgid "Show the prompt"
 msgstr "Show the prompt"
 
+#: src/pages/settings/playback.tsx
+msgid "Show the time"
+msgstr "Show the time"
+
 #: src/components/player/controls.tsx
 msgid "Show time left"
 msgstr "Show time left"
@@ -3818,6 +3822,10 @@ msgstr "Shows search results in one grid instead of a row each for movies and sh
 #: src/pages/settings/subtitles.tsx
 msgid "Shows subtitles in your language unless the audio already is."
 msgstr "Shows subtitles in your language unless the audio already is."
+
+#: src/pages/settings/playback.tsx
+msgid "Shows the time of day at the top of the player with the controls."
+msgstr "Shows the time of day at the top of the player with the controls."
 
 #: src/components/playlists.tsx
 msgid "Shuffle"

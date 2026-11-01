@@ -101,6 +101,7 @@ export function PlaybackSection() {
   const [volumeStep, setVolumeStep] = useSetting(settings.controls.volumeStep);
   const [holdRate, setHoldRate] = useSetting(settings.controls.holdRate);
   const [thumbnails, setThumbnails] = useSetting(settings.controls.thumbnails);
+  const [clock, setClock] = useSetting(settings.controls.clock);
   const [autoPlay, setAutoPlay] = useSetting(settings.playback.autoPlayFirst);
   const [preload, setPreload] = useSetting(settings.playback.preloadVersions);
   const [nextPrompt, setNextPrompt] = useSetting(settings.next.prompt);
@@ -354,6 +355,13 @@ export function PlaybackSection() {
           }))}
           value={String(holdRate)}
           onValueChange={(v) => setHoldRate(Number(v))}
+        />
+        <Switch
+          side="right"
+          label={t`Show the time`}
+          help={t`Shows the time of day at the top of the player with the controls.`}
+          value={clock}
+          onValueChange={setClock}
         />
         {shell && (
           <Switch

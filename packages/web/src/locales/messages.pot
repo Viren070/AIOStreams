@@ -3777,6 +3777,10 @@ msgstr ""
 msgid "Show the prompt"
 msgstr ""
 
+#: src/pages/settings/playback.tsx
+msgid "Show the time"
+msgstr ""
+
 #: src/components/player/controls.tsx
 msgid "Show time left"
 msgstr ""
@@ -3816,6 +3820,10 @@ msgstr ""
 
 #: src/pages/settings/subtitles.tsx
 msgid "Shows subtitles in your language unless the audio already is."
+msgstr ""
+
+#: src/pages/settings/playback.tsx
+msgid "Shows the time of day at the top of the player with the controls."
 msgstr ""
 
 #: src/components/playlists.tsx

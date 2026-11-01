@@ -180,6 +180,7 @@ export function PlayerControls({
   };
 
   const [seekStep] = useSetting(settings.controls.seekStep);
+  const [clock] = useSetting(settings.controls.clock);
   const [burstSeek, seekingTo] = useBurstSeek(player);
   const [seekPicture, setSeekPicture] = React.useState(true);
   const seekBy = (deltaMs: number, picture = true) => {
@@ -489,11 +490,12 @@ export function PlayerControls({
             </p>
           )}
         </div>
+        {clock && <PlayerClock />}
         {touch && !tv && (
           <ControlButton
             name="lock"
             label={t`Lock screen`}
-            className="ms-auto"
+            className={clock ? undefined : 'ms-auto'}
             onClick={() => {
               setLocked(true);
               hide();
@@ -854,6 +856,30 @@ function PlayerTime({
         <span className="text-gray-400"> / {clock(durationMs)}</span>
       )}
     </button>
+  );
+}
+
+function PlayerClock() {
+  const [now, setNow] = React.useState(() => new Date());
+  React.useEffect(() => {
+    let timer = 0;
+    const next = () => {
+      setNow(new Date());
+      timer = window.setTimeout(next, 60_000 - (Date.now() % 60_000));
+    };
+    timer = window.setTimeout(next, 60_000 - (Date.now() % 60_000));
+    return () => window.clearTimeout(timer);
+  }, []);
+  return (
+    <p
+      data-ui="player-clock"
+      className="ms-auto whitespace-nowrap text-[length:var(--title)] font-semibold tabular-nums"
+    >
+      {now.toLocaleTimeString(formatLocale(), {
+        hour: 'numeric',
+        minute: '2-digit',
+      })}
+    </p>
   );
 }
 
