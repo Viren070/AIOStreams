@@ -69,6 +69,7 @@ msgstr "{episodeCount, plural, one {# episode watched} other {# episodes watched
 
 #: src/pages/downloads.tsx
 #: src/pages/history.tsx
+#: src/pages/item.tsx
 msgid "{episodeCount, plural, one {# episode} other {# episodes}}"
 msgstr "{episodeCount, plural, one {# episode} other {# episodes}}"
 
@@ -153,6 +154,14 @@ msgstr "{movies} and {episodes} watched"
 msgid "{n, plural, one {After # episode} other {After # episodes}}"
 msgstr "{n, plural, one {After # episode} other {After # episodes}}"
 
+#: src/components/version-picker.tsx
+msgid "{name} airs {day} ({until}). Download it anyway?"
+msgstr "{name} airs {day} ({until}). Download it anyway?"
+
+#: src/components/version-picker.tsx
+msgid "{name} airs {day} ({until}). Play it anyway?"
+msgstr "{name} airs {day} ({until}). Play it anyway?"
+
 #: src/components/party/party-host.tsx
 msgid "{name} joined the party"
 msgstr "{name} joined the party"
@@ -228,6 +237,10 @@ msgstr "{title} isn't on your server."
 #: src/pages/discover.tsx
 msgid "{total, plural, one {# title} other {# titles}}"
 msgstr "{total, plural, one {# title} other {# titles}}"
+
+#: src/pages/item.tsx
+msgid "{unairedCount, plural, one {# unaired} other {# unaired}}"
+msgstr "{unairedCount, plural, one {# unaired} other {# unaired}}"
 
 #: src/components/player/options.tsx
 msgid "{unread, plural, one {Watch party, # new message} other {Watch party, # new messages}}"
@@ -1400,6 +1413,10 @@ msgstr "Down"
 msgid "Download"
 msgstr "Download"
 
+#: src/components/version-picker.tsx
+msgid "Download anyway"
+msgstr "Download anyway"
+
 #: src/components/download-button.tsx
 msgid "Download needs attention"
 msgstr "Download needs attention"
@@ -1528,6 +1545,10 @@ msgstr "Episodes"
 #: src/pages/settings/playback.tsx
 msgid "Episodes end without offering the next one."
 msgstr "Episodes end without offering the next one."
+
+#: src/pages/settings/playback.tsx
+msgid "Episodes that haven't aired yet show as unaired, ask before playing, and are passed over when playing on or downloading a season. Turn off if their air dates are often wrong."
+msgstr "Episodes that haven't aired yet show as unaired, ask before playing, and are passed over when playing on or downloading a season. Turn off if their air dates are often wrong."
 
 #: src/lib/input/keys.ts
 msgid "Esc"
@@ -2171,6 +2192,10 @@ msgstr "Main"
 msgid "Mark as watched"
 msgstr "Mark as watched"
 
+#: src/pages/settings/playback.tsx
+msgid "Mark unaired episodes"
+msgstr "Mark unaired episodes"
+
 #: src/components/item-menu.tsx
 #: src/pages/history.tsx
 #: src/pages/item.tsx
@@ -2511,6 +2536,10 @@ msgstr "Normal"
 #: src/lib/input/actions.ts
 msgid "Normal speed"
 msgstr "Normal speed"
+
+#: src/components/version-picker.tsx
+msgid "Not aired yet"
+msgstr "Not aired yet"
 
 #: src/lib/hosts/shell/index.ts
 msgid "Not checked yet."
@@ -3009,6 +3038,10 @@ msgstr "Play"
 #: src/pages/item.tsx
 msgid "Play {code}"
 msgstr "Play {code}"
+
+#: src/components/version-picker.tsx
+msgid "Play anyway"
+msgstr "Play anyway"
 
 #: src/pages/item.tsx
 msgid "Play from the start"
@@ -4802,6 +4835,7 @@ msgstr "Type a release name to see the badges it gets."
 msgid "Typewriter"
 msgstr "Typewriter"
 
+#: src/components/episodes.tsx
 #: src/lib/format.ts
 msgid "Unaired"
 msgstr "Unaired"

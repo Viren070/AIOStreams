@@ -1,5 +1,5 @@
 import React from 'react';
-import { t } from '@lingui/core/macro';
+import { plural, t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import {
   BiCalendarAlt,
@@ -64,7 +64,7 @@ import {
   itemSubtitle,
   lacksDetails,
   ticksToMs,
-  unavailableKind,
+  isUnaired,
   untilLabel,
 } from '../lib/format';
 import { href, itemPath, navigate, to } from '../lib/paths';
@@ -1233,13 +1233,14 @@ function seasonSummary(
   const first = episodes.find((e) => e.PremiereDate)?.PremiereDate;
   // A season without its own year carries the show's.
   const year = first ? new Date(first).getFullYear() : season.ProductionYear;
-  const unaired = episodes.filter(
-    (e) => unavailableKind(e) === 'unaired'
-  ).length;
+  const episodeCount = episodes.length;
+  const unairedCount = episodes.filter(isUnaired).length;
   return [
     year,
-    `${episodes.length} episode${episodes.length === 1 ? '' : 's'}`,
-    unaired ? `${unaired} unaired` : null,
+    plural(episodeCount, { one: '# episode', other: '# episodes' }),
+    unairedCount
+      ? plural(unairedCount, { one: '# unaired', other: '# unaired' })
+      : null,
   ]
     .filter(Boolean)
     .join(' · ');

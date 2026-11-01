@@ -9,7 +9,7 @@ import { requestItem, requestPlaybackInfo } from '../queries';
 import { textSubtitles } from '../subtitles/tracks';
 import { useSession } from '../session';
 import { onSettingsChange, settings } from '../settings';
-import { unavailableKind } from '../format';
+import { pickable } from '../format';
 import type { BaseItemDto, BaseItemDtoQueryResult, SourceInfo } from '../types';
 import { useLatest } from '../use-latest';
 import { hostJob, versionDetails } from './files';
@@ -276,7 +276,7 @@ export function useEpisodesToDownload() {
         { userId: user.Id, SeasonId: opts.seasonId }
       );
       return Items.filter(
-        (e) => !unavailableKind(e) && (!opts.unwatched || !e.UserData?.Played)
+        (e) => pickable(e) && (!opts.unwatched || !e.UserData?.Played)
       );
     },
     [client, user.Id]

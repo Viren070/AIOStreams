@@ -35,6 +35,7 @@ import {
   lastPlaylist,
   newSeed,
   playable,
+  playsOn,
   usePlayOrder,
   usePlaylistEdits,
   usePlaylistEntries,
@@ -469,7 +470,7 @@ function PlaylistView({
   );
   const ordered = inPlayOrder(list, order.seed);
   const first =
-    ordered.find((e) => playable(e) && !e.UserData?.Played) ??
+    ordered.find((e) => playsOn(e) && !e.UserData?.Played) ??
     ordered.find(playable);
   const shuffled = order.seed !== undefined;
   const confirmDelete = useConfirmationDialog({

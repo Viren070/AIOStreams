@@ -9,12 +9,16 @@ import { JellyfinError } from './client';
 import { useSession } from './session';
 import { storage, storedMap } from './storage';
 import { useAdjacentEpisodes, useEpisodesAfter } from './queries';
+import { airsLater } from './format';
 import type { BaseItemDto, BaseItemDtoQueryResult } from './types';
 
 /** Jellyfin cannot play a virtual item, such as an episode not yet aired. */
 export const playable = (item: BaseItemDto) =>
   (item.Type === 'Movie' || item.Type === 'Episode') &&
   item.LocationType !== 'Virtual';
+
+export const playsOn = (item: BaseItemDto) =>
+  playable(item) && !airsLater(item);
 
 const bare = (id: string) => id.replace(/-/g, '');
 
@@ -269,7 +273,7 @@ export function useFollowing() {
     const at = list.findIndex((e) => sameId(e.Id, item.Id));
     if (at < 0) return [];
     const after = list.slice(at + 1);
-    return (repeat ? [...after, ...list.slice(0, at)] : after).filter(playable);
+    return (repeat ? [...after, ...list.slice(0, at)] : after).filter(playsOn);
   };
 }
 
@@ -315,8 +319,8 @@ export function useUpNext(item: BaseItemDto, playlist?: string): UpNext {
     // Never round onto the title playing: its page would not start it again.
     const round = (part: BaseItemDto[]) => (repeat ? part : []);
     return {
-      next: [...after, ...round(before)].find(playable) ?? null,
-      previous: [...round(after), ...before].reverse().find(playable) ?? null,
+      next: [...after, ...round(before)].find(playsOn) ?? null,
+      previous: [...round(after), ...before].reverse().find(playsOn) ?? null,
       playlist,
     };
   }

@@ -115,6 +115,7 @@ export function PlaybackSection() {
   );
   const [skipFillers, setSkipFillers] = useSetting(settings.next.skipFillers);
   const [skipRecaps, setSkipRecaps] = useSetting(settings.next.skipRecaps);
+  const [markUnaired, setMarkUnaired] = useSetting(settings.next.markUnaired);
   const marked = useFeature('fillers');
   const [partyMessages, setPartyMessages] = useSetting(settings.party.messages);
   const [partyReactions, setPartyReactions] = useSetting(
@@ -256,6 +257,13 @@ export function PlaybackSection() {
             onValueChange={setSkipRecaps}
           />
         )}
+        <Switch
+          side="right"
+          label={t`Mark unaired episodes`}
+          help={t`Episodes that haven't aired yet show as unaired, ask before playing, and are passed over when playing on or downloading a season. Turn off if their air dates are often wrong.`}
+          value={markUnaired}
+          onValueChange={setMarkUnaired}
+        />
         {autoplay && (
           <Select
             label={t`Ask if you are still watching`}

@@ -69,6 +69,7 @@ msgstr ""
 
 #: src/pages/downloads.tsx
 #: src/pages/history.tsx
+#: src/pages/item.tsx
 msgid "{episodeCount, plural, one {# episode} other {# episodes}}"
 msgstr ""
 
@@ -153,6 +154,14 @@ msgstr ""
 msgid "{n, plural, one {After # episode} other {After # episodes}}"
 msgstr ""
 
+#: src/components/version-picker.tsx
+msgid "{name} airs {day} ({until}). Download it anyway?"
+msgstr ""
+
+#: src/components/version-picker.tsx
+msgid "{name} airs {day} ({until}). Play it anyway?"
+msgstr ""
+
 #: src/components/party/party-host.tsx
 msgid "{name} joined the party"
 msgstr ""
@@ -227,6 +236,10 @@ msgstr ""
 
 #: src/pages/discover.tsx
 msgid "{total, plural, one {# title} other {# titles}}"
+msgstr ""
+
+#: src/pages/item.tsx
+msgid "{unairedCount, plural, one {# unaired} other {# unaired}}"
 msgstr ""
 
 #: src/components/player/options.tsx
@@ -1400,6 +1413,10 @@ msgstr ""
 msgid "Download"
 msgstr ""
 
+#: src/components/version-picker.tsx
+msgid "Download anyway"
+msgstr ""
+
 #: src/components/download-button.tsx
 msgid "Download needs attention"
 msgstr ""
@@ -1527,6 +1544,10 @@ msgstr ""
 
 #: src/pages/settings/playback.tsx
 msgid "Episodes end without offering the next one."
+msgstr ""
+
+#: src/pages/settings/playback.tsx
+msgid "Episodes that haven't aired yet show as unaired, ask before playing, and are passed over when playing on or downloading a season. Turn off if their air dates are often wrong."
 msgstr ""
 
 #: src/lib/input/keys.ts
@@ -2171,6 +2192,10 @@ msgstr ""
 msgid "Mark as watched"
 msgstr ""
 
+#: src/pages/settings/playback.tsx
+msgid "Mark unaired episodes"
+msgstr ""
+
 #: src/components/item-menu.tsx
 #: src/pages/history.tsx
 #: src/pages/item.tsx
@@ -2510,6 +2535,10 @@ msgstr ""
 #: src/components/player/keys.ts
 #: src/lib/input/actions.ts
 msgid "Normal speed"
+msgstr ""
+
+#: src/components/version-picker.tsx
+msgid "Not aired yet"
 msgstr ""
 
 #: src/lib/hosts/shell/index.ts
@@ -3008,6 +3037,10 @@ msgstr ""
 
 #: src/pages/item.tsx
 msgid "Play {code}"
+msgstr ""
+
+#: src/components/version-picker.tsx
+msgid "Play anyway"
 msgstr ""
 
 #: src/pages/item.tsx
@@ -4802,6 +4835,7 @@ msgstr ""
 msgid "Typewriter"
 msgstr ""
 
+#: src/components/episodes.tsx
 #: src/lib/format.ts
 msgid "Unaired"
 msgstr ""

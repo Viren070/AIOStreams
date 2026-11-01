@@ -7,6 +7,7 @@ import { Skeleton } from '@aiostreams/ui/skeleton';
 import { cn } from '@aiostreams/ui/core/styling';
 import { focusOn, keyboardFocus, useRestoreFocus } from '../../lib/input';
 import { unavailableKind } from '../../lib/format';
+import { useVersionPicker } from '../version-picker';
 import { useEpisodes, useSeasons } from '../../lib/queries';
 import type { BaseItemDto } from '../../lib/types';
 import { EpisodeThumb, episodeLine, seasonEpisodeTitle } from '../episodes';
@@ -32,6 +33,7 @@ export function EpisodesSheet({
   const episodes = useEpisodes(seriesId, open ? seasonId : undefined);
   const list = React.useRef<HTMLDivElement>(null);
   const restoreFocus = useRestoreFocus(open);
+  const picker = useVersionPicker();
 
   const items = episodes.data?.Items ?? [];
   const playing = items.some((e) => e.Id === item.Id);
@@ -123,7 +125,9 @@ export function EpisodesSheet({
               current={episode.Id === item.Id}
               loading={loadingId === episode.Id}
               onPick={() =>
-                episode.Id === item.Id ? onClose() : onPlay(episode)
+                episode.Id === item.Id
+                  ? onClose()
+                  : picker.askIfUnaired([episode], () => onPlay(episode))
               }
             />
           ))}

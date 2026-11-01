@@ -19,6 +19,10 @@ import { Button, IconButton } from '@aiostreams/ui/button';
 import { DropdownMenu, DropdownMenuItem } from '@aiostreams/ui/dropdown-menu';
 import { Drawer } from '@aiostreams/ui/drawer';
 import { Modal } from '@aiostreams/ui/modal';
+import {
+  ConfirmationDialog,
+  useConfirmationDialog,
+} from '@aiostreams/ui/shared/confirmation-dialog';
 import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import { TextInput } from '@aiostreams/ui/text-input';
@@ -61,7 +65,15 @@ import {
   tabList,
   useRestoreFocus,
 } from '../lib/input';
-import { clock, itemSubtitle, itemTitle, ticksToMs } from '../lib/format';
+import {
+  airsLater,
+  clock,
+  dayLabel,
+  itemSubtitle,
+  itemTitle,
+  ticksToMs,
+  untilLabel,
+} from '../lib/format';
 import { cn } from '@aiostreams/ui/core/styling';
 import { backdropUrl, landscapeUrl } from '../lib/images';
 import { itemPath, navigate, to } from '../lib/paths';
@@ -109,6 +121,12 @@ interface PickerValue {
    * `replace` gives that download another version.
    */
   download(items: BaseItemDto[], opts?: { replace?: Download }): void;
+  /** Runs `go`, asking first about an episode that hasn't aired yet. */
+  askIfUnaired(
+    items: BaseItemDto[],
+    go: () => void,
+    action?: Unaired['action']
+  ): void;
 }
 
 const PickerContext = React.createContext<PickerValue | null>(null);
@@ -180,6 +198,7 @@ export function VersionPickerProvider({
 }) {
   const [request, setRequest] = React.useState<Request | null>(null);
   const [external, setExternal] = React.useState<BaseItemDto | null>(null);
+  const [unaired, setUnaired] = React.useState<Unaired | null>(null);
   const straight = useStraightPlay();
   const queryClient = useQueryClient();
   const infoOptions = usePlaybackInfoOptions();
@@ -247,14 +266,26 @@ export function VersionPickerProvider({
         setTimeout(() => toast.dismiss(notice));
       }
     };
+    const askIfUnaired = (
+      items: BaseItemDto[],
+      go: () => void,
+      action: Unaired['action'] = 'play'
+    ) => {
+      const item = items.find(airsLater);
+      if (item) setUnaired({ item, go, action });
+      else go();
+    };
     return {
+      askIfUnaired,
       open: (item, opts) =>
-        setRequest({
-          item,
-          startMs: opts?.startMs ?? 0,
-          playing: opts?.playing,
-          playlist: opts?.playlist,
-        }),
+        askIfUnaired(opts?.playing ? [] : [item], () =>
+          setRequest({
+            item,
+            startMs: opts?.startMs ?? 0,
+            playing: opts?.playing,
+            playlist: opts?.playlist,
+          })
+        ),
       play: (item, opts) => {
         const startMs = opts?.startMs ?? 0;
         const version = opts?.version;
@@ -272,21 +303,32 @@ export function VersionPickerProvider({
           });
           return;
         }
-        if (version || latest.current.straight(item, startMs) !== !!opts?.held)
-          void playStraight(item, startMs, { version, replace, playlist });
-        else setRequest({ item, startMs, replace, playlist });
+        askIfUnaired([item], () => {
+          if (
+            version ||
+            latest.current.straight(item, startMs) !== !!opts?.held
+          )
+            void playStraight(item, startMs, { version, replace, playlist });
+          else setRequest({ item, startMs, replace, playlist });
+        });
       },
       download: (items, opts) => {
         if (!items.length || !downloadsHost()) return;
-        // As Play does, the setting skips the list and takes the first version.
-        if (latest.current.autoPick && !opts?.replace)
-          void latest.current.addDownloads(items);
-        else
-          setRequest({
-            item: items[0],
-            startMs: 0,
-            download: { items, replace: opts?.replace },
-          });
+        askIfUnaired(
+          opts?.replace ? [] : items,
+          () => {
+            // As Play does, the setting skips the list and takes the first version.
+            if (latest.current.autoPick && !opts?.replace)
+              void latest.current.addDownloads(items);
+            else
+              setRequest({
+                item: items[0],
+                startMs: 0,
+                download: { items, replace: opts?.replace },
+              });
+          },
+          'download'
+        );
       },
     };
   }, []);
@@ -354,7 +396,49 @@ export function VersionPickerProvider({
         </Modal>
       )}
       <ExternalPrompt item={external} onClose={() => setExternal(null)} />
+      <UnairedQuestion asking={unaired} onClose={() => setUnaired(null)} />
     </PickerContext.Provider>
+  );
+}
+
+interface Unaired {
+  item: BaseItemDto;
+  go: () => void;
+  action: 'play' | 'download';
+}
+
+function UnairedQuestion({
+  asking,
+  onClose,
+}: {
+  asking: Unaired | null;
+  onClose: () => void;
+}) {
+  const item = asking?.item;
+  const date = item?.PremiereDate;
+  const name = item?.Name ?? '';
+  const day = date ? dayLabel(date) : '';
+  const until = date ? untilLabel(date) : '';
+  const restoreFocus = useRestoreFocus(!!asking);
+  const question = useConfirmationDialog({
+    title: t`Not aired yet`,
+    description:
+      asking?.action === 'download'
+        ? t`${name} airs ${day} (${until}). Download it anyway?`
+        : t`${name} airs ${day} (${until}). Play it anyway?`,
+    actionText:
+      asking?.action === 'download' ? t`Download anyway` : t`Play anyway`,
+    // Once this dialog has handed focus back, so the next one keeps it.
+    onConfirm: () => asking && setTimeout(asking.go),
+  });
+  return (
+    <ConfirmationDialog
+      {...question}
+      name="unaired"
+      onCloseAutoFocus={restoreFocus}
+      isOpen={!!asking}
+      close={onClose}
+    />
   );
 }
 

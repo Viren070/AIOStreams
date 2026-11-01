@@ -833,6 +833,7 @@ export const settings = {
       'aiostreams-web-skip-fillers',
     ]),
     skipRecaps: syncedFlag('skipRecaps', true, ['aiostreams-web-skip-recaps']),
+    markUnaired: syncedFlag('markUnaired', true),
   },
   party: {
     /** What other members send shows over the video. */

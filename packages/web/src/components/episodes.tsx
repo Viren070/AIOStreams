@@ -15,12 +15,15 @@ import { useSession } from '../lib/session';
 import { landscapeUrls } from '../lib/images';
 import {
   airedLabel,
+  airsLater,
   duration,
   episodeMarks,
   progressOf,
   remainingMs,
   ticksToMs,
+  isUnaired,
   markLabel,
+  pickable,
   unavailableKind,
   unavailableLabel,
 } from '../lib/format';
@@ -65,9 +68,7 @@ export function upToIndex(episodes: BaseItemDto[]): number {
     (e) => !e.UserData?.Played && !!progressOf(e)
   );
   if (resume >= 0) return resume;
-  const next = episodes.findIndex(
-    (e) => !e.UserData?.Played && !unavailableKind(e)
-  );
+  const next = episodes.findIndex((e) => !e.UserData?.Played && pickable(e));
   return Math.max(0, next);
 }
 
@@ -131,8 +132,9 @@ export function EpisodeThumb({
 }) {
   const { client } = useSession();
   const unavailable = unavailableLabel(episode);
+  const status = unavailable ?? (airsLater(episode) ? t`Unaired` : null);
   const labels = [
-    ...(unavailable ? [unavailable] : []),
+    ...(status ? [status] : []),
     ...episodeMarks(episode).map(markLabel),
   ];
   const progress = progressOf(episode);
@@ -371,6 +373,7 @@ function episodeState(episode: BaseItemDto) {
     'data-watched': episode.UserData?.Played || undefined,
     'data-in-progress': (progressOf(episode) ?? 0) > 0 || undefined,
     'data-unavailable': unavailableKind(episode) ?? undefined,
+    'data-unaired': isUnaired(episode) || undefined,
   };
 }
 

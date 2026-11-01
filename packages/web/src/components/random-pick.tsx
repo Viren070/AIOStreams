@@ -12,7 +12,7 @@ import {
   episodeCode,
   itemSubtitle,
   ticksToMs,
-  unavailableKind,
+  pickable,
 } from '../lib/format';
 import { landscapeUrl, posterUrl } from '../lib/images';
 import { useRestoreFocus } from '../lib/input';
@@ -109,9 +109,7 @@ function useRoll(source: RandomSource) {
             `/Shows/${source.series.Id}/Episodes`,
             { userId: user.Id }
           );
-          pool = Items.filter(
-            (e) => !unavailableKind(e) && e.ParentIndexNumber !== 0
-          );
+          pool = Items.filter((e) => pickable(e) && e.ParentIndexNumber !== 0);
         } else {
           const first = await favourites(0);
           total = first.TotalRecordCount ?? first.Items?.length ?? 0;

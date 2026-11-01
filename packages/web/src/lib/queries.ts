@@ -14,12 +14,7 @@ import type { JellyfinClient, Purpose } from './client';
 import { useSession } from './session';
 import { useFeature } from './server-info';
 import { settings, useSetting } from './settings';
-import {
-  episodeMarks,
-  lacksDetails,
-  ticksToMs,
-  unavailableKind,
-} from './format';
+import { episodeMarks, lacksDetails, ticksToMs, pickable } from './format';
 import { playerSupport } from './playback/player-choice';
 import type {
   BaseItemDto,
@@ -1122,8 +1117,16 @@ export function useAdjacentEpisodes(item: BaseItemDto, enabled = true) {
   const seriesId = item.Type === 'Episode' ? item.SeriesId : undefined;
   const skip = useSkippedMarks();
   const { fillers, recaps } = skip;
+  const [unaired] = useSetting(settings.next.markUnaired);
   return useQuery({
-    queryKey: [...useKey(), 'adjacent-episodes', item.Id, fillers, recaps],
+    queryKey: [
+      ...useKey(),
+      'adjacent-episodes',
+      item.Id,
+      fillers,
+      recaps,
+      unaired,
+    ],
     meta: { cache: 'titles' },
     queryFn: async () => {
       const skipped = (e: BaseItemDto) =>
@@ -1145,7 +1148,7 @@ export function useAdjacentEpisodes(item: BaseItemDto, enabled = true) {
           at >= 0 && i >= 0 && i < items.length;
           i += step
         ) {
-          if (unavailableKind(items[i])) return null;
+          if (!pickable(items[i])) return null;
           if (!skipped(items[i])) return items[i];
         }
         return null;
@@ -1177,7 +1180,7 @@ export function useEpisodesAfter() {
     if (at < 0) return [];
     const after: BaseItemDto[] = [];
     for (const episode of Items.slice(at + 1)) {
-      if (unavailableKind(episode)) break;
+      if (!pickable(episode)) break;
       if (!isSkipped(episode, skip)) after.push(episode);
     }
     return after;
