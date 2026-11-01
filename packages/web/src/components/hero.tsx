@@ -633,7 +633,7 @@ export function Hero({
       }
       {...(swipeable ? swipe : {})}
     >
-      <div className="absolute inset-0 isolate">
+      <div data-ui="hero-backdrops" className="absolute inset-0 isolate">
         {slides.map(({ key, role, item }) => (
           <div
             key={key}

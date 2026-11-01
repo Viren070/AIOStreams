@@ -17,6 +17,23 @@
   }
 }
 
+/* A title's backdrop and the rotating hero scroll away at half the page's speed. */
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    :where(:root:not([data-tv]))
+      :is([data-ui='item-backdrop'], [data-ui='hero-backdrops']) {
+      animation: scroll-lag linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 100vh;
+    }
+  }
+}
+@keyframes scroll-lag {
+  to {
+    transform: translateY(50vh);
+  }
+}
+
 /* A title's actions on a touch screen: the rest are under More, and custom CSS can show them here by name. */
 [data-ui='item-quick-action']:not(
   [data-name='trailer'],
