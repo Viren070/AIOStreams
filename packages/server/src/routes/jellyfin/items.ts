@@ -20,6 +20,8 @@ import {
   Cache,
   collectionMembers,
   viewCollectionType,
+  isBoxsetCatalog,
+  isBoxsetEntry,
   config as appConfig,
   contentDescriptor,
   decodeItemId,
@@ -210,25 +212,7 @@ export async function attachUserData(
   return items;
 }
 
-export function isBoxsetCatalog(
-  catalog: { type: string; id: string; name: string } | undefined
-): boolean {
-  return (
-    !!catalog &&
-    /collection/i.test(`${catalog.type} ${catalog.id} ${catalog.name}`)
-  );
-}
-
-/** A `collection` entry, or a movie in a catalog named for collections. */
-export function isBoxsetEntry(
-  preview: Pick<MetaPreview, 'type' | 'collection'>,
-  catalog?: { type: string; id: string; name: string }
-): boolean {
-  return (
-    !!preview.collection ||
-    (isBoxsetCatalog(catalog) && preview.type === 'movie')
-  );
-}
+export { isBoxsetCatalog, isBoxsetEntry };
 
 /** A collection's `ChildCount`, when the meta alone says it. */
 function knownMemberCount(

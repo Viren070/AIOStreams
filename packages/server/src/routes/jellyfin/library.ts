@@ -526,14 +526,24 @@ async function handleItems(
   ) {
     const meta = await getMeta(ctx, pd.t, pd.i).catch(() => null);
     if (meta?.collection) {
+      const sourcesHoldCollections = await Promise.all(
+        (meta.collection.sources ?? []).map(async (s) => {
+          const cat = findCatalog(engine, s.type, s.catalogId);
+          return cat ? catalogHasCollections(ctx.userData, cat) : false;
+        })
+      );
+      const anySourceHoldsCollections = sourcesHoldCollections.some(Boolean);
+      const effectiveTypes =
+        isBoxsetOnly(types) && !anySourceHoldsCollections ? null : types;
+      const collectionsOnly = isBoxsetOnly(types) && anySourceHoldsCollections;
       const page = await collectionMembers(engine, meta, {
         startIndex,
         limit,
         exactTotal: isKodi(ctx) && wantsTotal(req),
-        cursorKey: `${ctx.scope()}|${filterShape(req, types)}|${pd.t}|${pd.i}`,
-        select: pageFilter(req, ctx, types, { parentId }),
-        kinds: searchKindsFor(types),
-        collectionsOnly: isBoxsetOnly(types),
+        cursorKey: `${ctx.scope()}|${filterShape(req, effectiveTypes)}|${pd.t}|${pd.i}`,
+        select: pageFilter(req, ctx, effectiveTypes, { parentId }),
+        kinds: searchKindsFor(effectiveTypes),
+        collectionsOnly,
       });
       const items = await itemsFromPreviews(ctx, page.items, { parentId });
       send(req, res, applySort(req, items), page.total, startIndex);
@@ -676,9 +686,12 @@ async function handleItems(
       send(req, res, [], 0, startIndex);
       return;
     }
+    const holdsCollections = await catalogHasCollections(ctx.userData, catalog);
+    const effectiveTypes =
+      isBoxsetOnly(types) && !holdsCollections ? null : types;
     if (searchTerm && !supportsExtra(catalog, 'search')) {
       const kinds = narrowKinds(
-        searchKindsFor(types),
+        searchKindsFor(effectiveTypes),
         await knownCatalogKinds(ctx.userData, catalog)
       );
       const previews = await searchCatalogs(
@@ -688,7 +701,10 @@ async function handleItems(
         kinds,
         ctx.userData
       );
-      const items = filterByType(await itemsFromPreviews(ctx, previews), types);
+      const items = filterByType(
+        await itemsFromPreviews(ctx, previews),
+        effectiveTypes
+      );
       send(
         req,
         res,
@@ -704,8 +720,8 @@ async function handleItems(
       genre: genreFromId,
       search: searchTerm,
       exactTotal: isKodi(ctx) && wantsTotal(req),
-      cursorKey: `${ctx.scope()}|${filterShape(req, types)}`,
-      select: pageFilter(req, ctx, types, { parentId, catalog }),
+      cursorKey: `${ctx.scope()}|${filterShape(req, effectiveTypes)}`,
+      select: pageFilter(req, ctx, effectiveTypes, { parentId, catalog }),
     });
     const items = await itemsFromPreviews(ctx, page.items, {
       parentId,
