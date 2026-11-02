@@ -19,7 +19,8 @@ class PlaybackService : MediaSessionService() {
     @OptIn(UnstableApi::class)
     override fun onCreate() {
         super.onCreate()
-        val player = player ?: return stopSelf()
+        // Started for a media key with nothing playing: Media3 stops it after the foreground start Android requires.
+        val player = player ?: return
         // Leaving the player ends playback, and its notification goes with it.
         setShowNotificationForIdlePlayer(SHOW_NOTIFICATION_FOR_IDLE_PLAYER_NEVER)
         val open = PendingIntent.getActivity(
