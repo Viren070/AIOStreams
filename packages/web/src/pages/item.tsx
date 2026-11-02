@@ -96,6 +96,7 @@ import {
 } from '../components/version-picker';
 import { openAddToPlaylist } from '../components/playlists';
 import { playable } from '../lib/playlists';
+import { downloadsHost } from '../lib/downloads';
 import { BackdropFrame } from '../components/hero';
 import type { BaseItemDto } from '../lib/types';
 import { useHold } from '../lib/use-hold';
@@ -389,13 +390,16 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
       ? () => picker.play(target, { startMs: resumeMs, held: true })
       : undefined
   );
-  const quick = useMediaQuery('(pointer: coarse)') && !currentHost().tv;
+  const quick =
+    useMediaQuery('(pointer: coarse) and (max-width: 639px)') &&
+    !currentHost().tv;
   // A collection may offer nothing besides its links, which then stay in line.
   const labelled =
     quick &&
     (item.Type !== 'BoxSet' ||
       offersFavourite(item.Type, !!item.UserData?.IsFavorite) ||
       !!trailersOf(item).length);
+  const shown = useQuickActions(item, target);
   const [more, setMore] = React.useState(false);
   const moreBox = React.useRef<HTMLDivElement>(null);
   useDialogStart(moreBox, more);
@@ -545,16 +549,23 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
         {labelled && (
           <div
             data-ui="item-quick-actions"
-            className="grid auto-cols-fr grid-flow-col gap-1 sm:flex sm:gap-2"
+            className="grid auto-cols-fr grid-flow-col gap-1"
           >
-            <SecondaryActions
-              item={item}
-              season={season}
-              target={target}
-              resumeMs={resumeMs}
-              caption="item-quick-action"
-            />
-            <Captioned ui="item-quick-action" name="more" label={t`More`}>
+            <QuickShown.Provider value={shown}>
+              <SecondaryActions
+                item={item}
+                season={season}
+                target={target}
+                resumeMs={resumeMs}
+                caption="item-quick-action"
+              />
+            </QuickShown.Provider>
+            <Captioned
+              ui="item-quick-action"
+              name="more"
+              label={t`More`}
+              order={shown.length}
+            >
               <IconButton
                 data-ui="item-action"
                 data-name="more"
@@ -602,23 +613,71 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
   );
 }
 
+const QuickShown = React.createContext<string[] | null>(null);
+
+/** What the phone row fills its three places from, in this order. */
+const QUICK = [
+  'trailer',
+  'watched',
+  'favourite',
+  'download',
+  'rating',
+  'add-to-playlist',
+  'random',
+  'party',
+  'play-on',
+  'drop',
+] as const;
+
+function useOffered(item: BaseItemDto, target?: BaseItemDto) {
+  const devices = useRemoteDevices();
+  const canDrop = useFeature('dropped');
+  const type = item.Type;
+  return {
+    trailer: !!trailersOf(item).length,
+    watched: type !== 'BoxSet',
+    favourite: offersFavourite(type, !!item.UserData?.IsFavorite),
+    download:
+      !!downloadsHost() &&
+      ((type === 'Movie' && item.LocationType !== 'Virtual') ||
+        type === 'Series'),
+    rating: type === 'Movie' || type === 'Series',
+    'add-to-playlist': type === 'Movie' && playable(item),
+    random: type === 'Series',
+    party: type !== 'BoxSet',
+    'play-on': !!target && !!devices.data?.length,
+    drop: canDrop && type === 'Series',
+  } satisfies Record<(typeof QUICK)[number], boolean>;
+}
+
+function useQuickActions(item: BaseItemDto, target?: BaseItemDto): string[] {
+  const offered = useOffered(item, target);
+  return QUICK.filter((name) => offered[name]).slice(0, 3);
+}
+
 function Captioned({
   ui,
   name,
   label,
+  order,
   children,
 }: {
   ui?: string;
   name: string;
   label: string;
+  order?: number;
   children: React.ReactNode;
 }) {
+  const shown = React.useContext(QuickShown);
   if (!ui) return children;
+  const at = shown?.indexOf(name) ?? -1;
   return (
     <div
       data-ui={ui}
       data-name={name}
-      className="flex min-w-0 flex-col items-center gap-1.5 text-center text-xs text-gray-300 sm:w-[4.5rem]"
+      data-shown={at >= 0 || undefined}
+      style={{ order: at >= 0 ? at : order }}
+      className="flex min-w-0 flex-col items-center gap-1.5 text-center text-xs text-gray-300"
     >
       {children}
       <span className="w-full truncate">{label}</span>
@@ -641,16 +700,15 @@ function SecondaryActions({
 }) {
   const picker = useVersionPicker();
   const inParty = !!useParty();
-  const devices = useRemoteDevices();
-  const trailers = !!trailersOf(item).length;
+  const offered = useOffered(item, target);
   return (
     <>
-      {trailers && (
+      {offered.trailer && (
         <Captioned ui={caption} name="trailer" label={t`Trailer`}>
           <TrailerButton item={item} compact={!!caption} />
         </Captioned>
       )}
-      {item.Type === 'Series' && (
+      {offered.random && (
         <Captioned ui={caption} name="random" label={t`Random`}>
           <Tooltip
             trigger={
@@ -669,7 +727,7 @@ function SecondaryActions({
           </Tooltip>
         </Captioned>
       )}
-      {item.Type !== 'BoxSet' && (
+      {offered.party && (
         <Captioned
           ui={caption}
           name="party"
@@ -704,7 +762,7 @@ function SecondaryActions({
           </Tooltip>
         </Captioned>
       )}
-      {target && !!devices.data?.length && (
+      {target && offered['play-on'] && (
         <Captioned ui={caption} name="play-on" label={t`Play on`}>
           <Tooltip
             trigger={
@@ -725,7 +783,7 @@ function SecondaryActions({
           </Tooltip>
         </Captioned>
       )}
-      {item.Type === 'Movie' && playable(item) && (
+      {offered['add-to-playlist'] && (
         <Captioned ui={caption} name="add-to-playlist" label={t`Playlist`}>
           <Tooltip
             trigger={
@@ -752,17 +810,17 @@ function SecondaryActions({
         dropped={item.UserData?.Likes === false}
         caption={caption}
       />
-      {(item.Type === 'Movie' || item.Type === 'Series') && (
+      {offered.rating && (
         <Captioned ui={caption} name="rating" label={t`Rate`}>
           <RatingButton item={item} />
         </Captioned>
       )}
-      {item.Type === 'Movie' && item.LocationType !== 'Virtual' && (
+      {offered.download && item.Type === 'Movie' && (
         <Captioned ui={caption} name="download" label={t`Download`}>
           <DownloadButton item={item} className="size-10 text-lg" />
         </Captioned>
       )}
-      {item.Type === 'Series' && (
+      {offered.download && item.Type === 'Series' && (
         <Captioned ui={caption} name="download" label={t`Download`}>
           <ShowDownloadMenu series={item} season={season} />
         </Captioned>
