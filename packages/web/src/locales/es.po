@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-01 14:51+0000\n"
-"Last-Translator: Sebastian Porta <spg76@users.noreply.hosted.weblate.org>\n"
+"PO-Revision-Date: 2026-11-02 16:17+0000\n"
+"Last-Translator: Nathan Lowe <njlowe21@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Spanish <https://hosted.weblate.org/projects/aiostreams/web-app/es/>\n"
 "Language: es\n"
 "MIME-Version: 1.0\n"
@@ -1357,9 +1357,8 @@ msgid "Download"
 msgstr "Descargar"
 
 #: src/components/version-picker.tsx
-#, fuzzy
 msgid "Download anyway"
-msgstr "Descargar"
+msgstr "Descargar de todos modos"
 
 #: src/components/download-button.tsx
 msgid "Download needs attention"
@@ -1546,9 +1545,8 @@ msgid "Faster"
 msgstr "Más rápido"
 
 #: src/pages/item.tsx
-#, fuzzy
 msgid "Favourite"
-msgstr "Favoritos"
+msgstr "Favorito"
 
 #: src/components/layout.tsx src/pages/favourites.tsx
 #: src/pages/settings/apps.tsx
@@ -2447,9 +2445,8 @@ msgid "Normal speed"
 msgstr "Velocidad normal"
 
 #: src/components/version-picker.tsx
-#, fuzzy
 msgid "Not aired yet"
-msgstr "Aún no se ha comprobado."
+msgstr "Aún no se ha transmitido"
 
 #: src/lib/hosts/shell/index.ts
 msgid "Not checked yet."
@@ -2932,9 +2929,8 @@ msgid "Play {code}"
 msgstr "Reproducir {code}"
 
 #: src/components/version-picker.tsx
-#, fuzzy
 msgid "Play anyway"
-msgstr "Reproducir ahora"
+msgstr "Reproducir de todos modos"
 
 #: src/pages/item.tsx
 msgid "Play from the start"
@@ -2976,7 +2972,7 @@ msgstr "Reproducir o pausar"
 
 #: src/lib/input/actions.ts
 msgid "Play or pause, or go to the controls"
-msgstr ""
+msgstr "Reproducir o pausar, o ir al control"
 
 #: src/pages/settings/playback.tsx
 msgid "Play starts the first version, and resuming goes back to the version you were watching. Hold Play to choose instead."
@@ -3714,9 +3710,8 @@ msgid "Show the prompt"
 msgstr "Mostrar la notificación"
 
 #: src/pages/settings/playback.tsx
-#, fuzzy
 msgid "Show the time"
-msgstr "Mostrar la notificación"
+msgstr "Mostrar la hora"
 
 #: src/components/player/controls.tsx
 msgid "Show time left"
