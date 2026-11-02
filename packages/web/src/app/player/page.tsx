@@ -77,7 +77,7 @@ import {
   usePlaybackPrefs,
   type PlaybackPrefs,
 } from '@/lib/jellyfin/user-config';
-import { fullTitle } from '@/lib/format';
+import { fullTitle, TICKS_PER_MS } from '@/lib/format';
 import { navigate, to, versionsPath } from '@/lib/paths';
 import {
   canMinimise,
@@ -824,9 +824,17 @@ function Player({
   });
   const player = usePartyPlayer(own, playlistItemId);
   close.current = player.close;
+  // The file's length at the first frame, or 0 if the player kept the server's.
+  // Kept, as a later change would refetch.
+  const [fileMs, setFileMs] = React.useState<number>();
+  if (fileMs === undefined && player.state.started) {
+    const { durationMs } = player.state;
+    const sent = (source.RunTimeTicks ?? 0) / TICKS_PER_MS;
+    setFileMs(durationMs === sent ? 0 : durationMs);
+  }
   const segments = useShownSegments(
     item,
-    useSegments(item.Id!).data?.Items,
+    useSegments(item.Id!, source.Id, fileMs).data?.Items,
     player
   );
   const group = React.useMemo(

@@ -140,6 +140,14 @@ judges how much was watched against it, so a title is marked played at the right
 its runtime from metadata is minutes off the file's. Without it, the server uses the runtime it
 knows for that version, or the title's.
 
+## Intro and credits times
+
+The app adds `RunTimeTicks`, the length of the file as its player measured it, and `MediaSourceId`
+to the query of `GET /MediaSegments/{id}`. Timestamps are submitted per title, so a provider whose
+credits end far from the file's end timed another cut, such as an extended one, and its timestamps
+are left out. Without `RunTimeTicks`, the server uses the length it knows for the version named, or
+for the first one offered.
+
 ## Libraries
 
 With `genreRequired`, a library (a `CollectionFolder`) whose items only list once a genre is picked

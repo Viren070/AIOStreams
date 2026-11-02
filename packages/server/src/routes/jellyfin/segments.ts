@@ -5,12 +5,13 @@ import {
   msToTicks,
   segmentsEnabled,
   segmentsFor,
+  TICKS_PER_MS,
   type Segment,
   type SegmentType,
   type UserData,
 } from '@aiostreams/core';
-import { jfOptional, param } from './context.js';
-import { locate } from './playback.js';
+import { jfOptional, param, qs } from './context.js';
+import { locate, pickSource } from './playback.js';
 
 const router: Router = Router({ mergeParams: true });
 
@@ -44,6 +45,12 @@ function requestedTypes(req: Request): Set<string> | null {
   return values.length ? new Set(values) : null;
 }
 
+/** The file's length as the player measured it. */
+function measuredMs(req: Request): number | undefined {
+  const ms = Number(qs(req, 'RunTimeTicks')) / TICKS_PER_MS;
+  return Number.isFinite(ms) && ms > 0 ? ms : undefined;
+}
+
 async function mediaSegments(req: Request, res: Response) {
   if (!segmentsEnabled()) {
     res.json(EMPTY);
@@ -56,8 +63,13 @@ async function mediaSegments(req: Request, res: Response) {
     return;
   }
 
+  const source = loc.memo && pickSource(loc.memo, loc.requestedMsid);
   // The memo is the only place a real runtime is on hand.
-  const lookup = lookupFor(loc.descriptor, loc.memo?.runtimeMs);
+  const lookup = lookupFor(
+    loc.descriptor,
+    loc.memo?.runtimeMs,
+    measuredMs(req) ?? source?.durationMs
+  );
   if (!lookup) {
     res.json(EMPTY);
     return;

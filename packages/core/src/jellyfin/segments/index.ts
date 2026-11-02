@@ -230,7 +230,8 @@ async function fillIds(
 
 export function lookupFor(
   descriptor: ContentDescriptor,
-  runtimeMs?: number
+  runtimeMs?: number,
+  fileMs?: number
 ): SegmentLookup | null {
   if (descriptor.k !== 'episode' && descriptor.k !== 'movie') return null;
   return {
@@ -239,6 +240,7 @@ export function lookupFor(
     season: descriptor.k === 'episode' ? descriptor.s : undefined,
     episode: descriptor.k === 'episode' ? descriptor.e : undefined,
     runtimeMs,
+    fileMs,
   };
 }
 
@@ -250,8 +252,8 @@ function cacheKey(id: SegmentProviderId, lookup: SegmentLookup) {
 
 /**
  * Timestamps are submitted per title while a file is one particular release, and
- * clients decide for themselves whether to auto-skip, so rejecting what cannot
- * fit the runtime is the only guard there is.
+ * clients decide for themselves whether to auto-skip, so what cannot fit the
+ * runtime is rejected.
  */
 function sanitise(segments: Segment[], runtimeMs?: number): Segment[] {
   const out: Segment[] = [];
@@ -274,15 +276,43 @@ function sanitise(segments: Segment[], runtimeMs?: number): Segment[] {
   return out;
 }
 
+/** Releases of one cut differ by a few percent, and credits can end before a closing scene. */
+const CUT_TOLERANCE = 0.15;
+
+/** Credits end with the cut they were timed on, so ones far from the file's end are another cut's. */
+function forFile(segments: Segment[], fileMs?: number): Segment[] {
+  const creditsEndMs = segments.find(
+    (s) =>
+      s.type === 'Outro' &&
+      Number.isFinite(s.endMs) &&
+      s.endMs - s.startMs >= MIN_SEGMENT_MS
+  )?.endMs;
+  if (!fileMs || creditsEndMs === undefined) return segments;
+  return Math.abs(fileMs - creditsEndMs) > fileMs * CUT_TOLERANCE
+    ? []
+    : segments;
+}
+
+function usable(
+  results: Map<SegmentProviderId, Segment[]>,
+  id: SegmentProviderId,
+  lookup: SegmentLookup
+): Segment[] {
+  return sanitise(
+    forFile(results.get(id) ?? [], lookup.fileMs),
+    lookup.fileMs || lookup.runtimeMs
+  );
+}
+
 /** First provider in the operator's order with a usable entry for a type wins it. */
 function merge(
   results: Map<SegmentProviderId, Segment[]>,
   providers: SegmentProviderId[],
-  runtimeMs?: number
+  lookup: SegmentLookup
 ): Segment[] {
   const chosen = new Map<SegmentType, Segment>();
   for (const id of providers) {
-    for (const segment of sanitise(results.get(id) ?? [], runtimeMs)) {
+    for (const segment of usable(results, id, lookup)) {
       if (!chosen.has(segment.type)) chosen.set(segment.type, segment);
     }
   }
@@ -315,15 +345,12 @@ function decided(
   providers: SegmentProviderId[],
   results: Map<SegmentProviderId, Segment[]>,
   settled: Set<SegmentProviderId>,
-  runtimeMs?: number
+  lookup: SegmentLookup
 ): boolean {
   return types.every((type) => {
     for (const id of providers) {
       if (!settled.has(id)) return false;
-      if (
-        sanitise(results.get(id) ?? [], runtimeMs).some((s) => s.type === type)
-      )
-        return true;
+      if (usable(results, id, lookup).some((s) => s.type === type)) return true;
     }
     return true;
   });
@@ -403,8 +430,7 @@ export async function segmentsFor(
     if (types?.length) {
       await new Promise<void>((resolve) => {
         const check = () => {
-          if (decided(types, providers, results, settled, lookup.runtimeMs))
-            resolve();
+          if (decided(types, providers, results, settled, lookup)) resolve();
         };
         check();
         for (const fetch of fetches) void fetch.then(check);
@@ -415,5 +441,5 @@ export async function segmentsFor(
     }
   }
 
-  return merge(results, providers, lookup.runtimeMs);
+  return merge(results, providers, lookup);
 }

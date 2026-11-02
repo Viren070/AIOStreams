@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-query';
 import type { JellyfinClient, Purpose } from './client';
 import { useSession } from './session';
+import { TICKS_PER_MS } from '@/lib/format';
 import { playerSupport } from '@/lib/playback/player-choice';
 import type {
   MediaSegmentDtoQueryResult,
@@ -180,13 +181,24 @@ export function useRefreshPlaybackInfo(itemId: string, purpose?: Purpose) {
 }
 
 /** Intro, recap and credits times, looked up once the server has a runtime. */
-export function useSegments(itemId: string) {
+export function useSegments(
+  itemId: string,
+  mediaSourceId: string | null | undefined,
+  fileMs: number | undefined
+) {
   const { client } = useSession();
   return useQuery({
-    queryKey: [...useKey(), 'segments', itemId],
+    queryKey: [...useKey(), 'segments', itemId, mediaSourceId, fileMs],
     meta: { cache: 'titles' },
+    enabled: fileMs !== undefined,
     queryFn: () =>
-      client.get<MediaSegmentDtoQueryResult>(`/MediaSegments/${itemId}`),
+      client.get<MediaSegmentDtoQueryResult>(`/MediaSegments/${itemId}`, {
+        MediaSourceId: mediaSourceId,
+        RunTimeTicks:
+          fileMs && Number.isFinite(fileMs)
+            ? Math.round(fileMs * TICKS_PER_MS)
+            : undefined,
+      }),
     staleTime: 60 * 60_000,
   });
 }
