@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-02 18:36+0000\n"
+"PO-Revision-Date: 2026-11-02 19:12+0000\n"
 "Last-Translator: Bruno <procopio@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/aiostreams/web-app/pt_BR/>\n"
 "Language: pt-BR\n"
@@ -4682,9 +4682,8 @@ msgid "Unfinished"
 msgstr "Incompleto"
 
 #: src/lib/playback/controller.ts
-#, fuzzy
 msgid "Unknown language"
-msgstr "Idiomas de áudio"
+msgstr "Idioma desconhecido"
 
 #: src/components/player/volume.tsx
 msgid "Unmute"
