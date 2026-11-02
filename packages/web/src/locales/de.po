@@ -1,14 +1,14 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-30 19:55+0000\n"
+"PO-Revision-Date: 2026-11-03 18:00+0000\n"
 "Last-Translator: hamburgercowgoldfish <242998989+hamburgercowgoldfish@users.noreply.github.com>\n"
 "Language-Team: German <https://hosted.weblate.org/projects/aiostreams/web-app/de/>\n"
 "Language: de\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Weblate 2026.11.dev0\n"
+"X-Generator: Weblate 2026.11.1.dev0\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
 
 #: src/components/party/party-sheet.tsx
@@ -157,11 +157,11 @@ msgstr "{n, plural, one {Nach # Folge} other {Nach # Folgen}}"
 
 #: src/components/version-picker.tsx
 msgid "{name} airs {day} ({until}). Download it anyway?"
-msgstr ""
+msgstr "\"{name}\" wird {day} ({until}) ausgestrahlt. Trotzdem herunterladen?"
 
 #: src/components/version-picker.tsx
 msgid "{name} airs {day} ({until}). Play it anyway?"
-msgstr ""
+msgstr "\"{name}\" wird {day} ({until}) ausgestrahlt. Trotzdem abspielen?"
 
 #: src/components/party/party-host.tsx
 msgid "{name} joined the party"
@@ -240,9 +240,8 @@ msgid "{total, plural, one {# title} other {# titles}}"
 msgstr "{total, plural, one {# Titel} other {# Titel}}"
 
 #: src/pages/item.tsx
-#, fuzzy
 msgid "{unairedCount, plural, one {# unaired} other {# unaired}}"
-msgstr "{movieCount, plural, one {# Film} other {# Filme}}"
+msgstr "{unairedCount, plural, one {# noch nicht ausgestrahlt} other {# noch nicht ausgestrahlt}}"
 
 #: src/components/player/options.tsx
 msgid "{unread, plural, one {Watch party, # new message} other {Watch party, # new messages}}"
@@ -1357,9 +1356,8 @@ msgid "Download"
 msgstr "Herunterladen"
 
 #: src/components/version-picker.tsx
-#, fuzzy
 msgid "Download anyway"
-msgstr "Herunterladen"
+msgstr "Trotzdem herunterladen"
 
 #: src/components/download-button.tsx
 msgid "Download needs attention"
@@ -1407,9 +1405,8 @@ msgid "Drawer"
 msgstr "Seitenmenü"
 
 #: src/pages/item.tsx
-#, fuzzy
 msgid "Drop"
-msgstr "Serie nicht weiterverfolgen"
+msgstr "Serie abbrechen"
 
 #: src/pages/item.tsx
 msgid "Drop show"
@@ -1487,7 +1484,7 @@ msgstr "Folgen enden ohne Vorschlag für die nächste Folge."
 
 #: src/pages/settings/playback.tsx
 msgid "Episodes that haven't aired yet show as unaired, ask before playing, and are passed over when playing on or downloading a season. Turn off if their air dates are often wrong."
-msgstr ""
+msgstr "Noch nicht ausgestrahlte Episoden werden entsprechend gekennzeichnet, erfordern eine Bestätigung vor dem Abspielen und werden beim Weiterspielen oder Herunterladen einer Staffel übersprungen. Deaktiviere diese Option, falls Ausstrahlungsdaten häufig fehlerhaft sind."
 
 #: src/lib/input/keys.ts
 msgid "Esc"
@@ -1546,9 +1543,8 @@ msgid "Faster"
 msgstr "Schneller"
 
 #: src/pages/item.tsx
-#, fuzzy
 msgid "Favourite"
-msgstr "Favoriten"
+msgstr "Favorisieren"
 
 #: src/components/layout.tsx src/pages/favourites.tsx
 #: src/pages/settings/apps.tsx
@@ -1642,7 +1638,7 @@ msgstr "Für AV-Receiver über optisches Kabel oder ARC, die andere Surround-For
 
 #: src/lib/playback/controller.ts
 msgid "Forced"
-msgstr ""
+msgstr "Erzwungen"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Forced, for foreign parts only"
@@ -1800,7 +1796,7 @@ msgstr "Größe der Kacheln in der Rasteransicht."
 
 #: src/pages/settings/interface.tsx
 msgid "How long the hero stays on a featured title while it rotates."
-msgstr ""
+msgstr "Legt fest, wie lange das Hero-Banner bei einem vorgestellten Titel verweilt, bevor es weiterrotiert."
 
 #: src/pages/settings/playback.tsx
 msgid "How much of the video the player holds in memory: ahead, to ride out a slow connection, and behind, to seek back at once. Automatic sizes it from this device's memory."
@@ -1863,9 +1859,8 @@ msgid "Install"
 msgstr "Installieren"
 
 #: src/components/no-details.tsx
-#, fuzzy
 msgid "Install a metadata addon from Addons → Marketplace. For one that isn't listed, use the Custom addon there."
-msgstr "Installiere Katalog-Add-ons unter \"Addons\" → \"Marketplace\". Für Add-ons, die dort nicht gelistet sind, kannst du dort \"Custom\" nutzen."
+msgstr "Installiere ein Metadaten-Add-on unter \"Addons\" → \"Marketplace\". Für Add-ons, die dort nicht gelistet sind, kannst du dort \"Custom\" nutzen."
 
 #: src/components/no-catalogs.tsx
 msgid "Install catalog addons from Addons → Marketplace. For one that isn't listed, use the Custom addon there."
@@ -2125,9 +2120,8 @@ msgid "Mark as watched"
 msgstr "Als gesehen markieren"
 
 #: src/pages/settings/playback.tsx
-#, fuzzy
 msgid "Mark unaired episodes"
-msgstr "Rückblickfolgen überspringen"
+msgstr "Unveröffentlichte Episoden markieren"
 
 #: src/components/item-menu.tsx src/pages/history.tsx src/pages/item.tsx
 msgid "Mark unwatched"
@@ -2372,9 +2366,8 @@ msgid "No catalogs yet"
 msgstr "Noch keine Kataloge"
 
 #: src/components/no-details.tsx
-#, fuzzy
 msgid "No details for this title"
-msgstr "Titel konnte nicht geladen werden"
+msgstr "Keine Details für diesen Titel vorhanden"
 
 #: src/components/download-button.tsx
 msgid "No episodes to download there"
@@ -2437,9 +2430,8 @@ msgid "None"
 msgstr "Keine"
 
 #: src/components/no-details.tsx
-#, fuzzy
 msgid "None of your addons has details for {id}. Add a metadata addon to your configuration, then refresh."
-msgstr "Füge deiner Konfiguration Kataloge hinzu und aktualisiere anschließend die Ansicht."
+msgstr "Keines deiner Add-ons liefert Details für \"{id}\". Füge deiner Konfiguration ein Metadaten-Add-on hinzu und lade die Seite neu."
 
 #: src/components/player/keys.ts src/lib/subtitles/style.ts
 #: src/pages/settings/subtitles.tsx
@@ -2451,9 +2443,8 @@ msgid "Normal speed"
 msgstr "Normale Geschwindigkeit"
 
 #: src/components/version-picker.tsx
-#, fuzzy
 msgid "Not aired yet"
-msgstr "Noch nicht geprüft."
+msgstr "Noch nicht ausgestrahlt"
 
 #: src/lib/hosts/shell/index.ts
 msgid "Not checked yet."
@@ -2853,7 +2844,7 @@ msgstr "Pausiert vor der nächsten Folge und fragt nach, sobald so viele Folgen 
 
 #: src/pages/settings/playback.tsx
 msgid "Pausing, playing or skipping with a remote or the keyboard brings the controls up, for a moment after a skip. Turned off, only a brief icon shows."
-msgstr ""
+msgstr "Pausieren, Abspielen oder Springen per Fernbedienung oder Tastatur blendet die Bedienelemente ein. Ausgeschaltet wird nach einem Sprung nur kurz ein Symbol angezeigt."
 
 #: src/pages/search.tsx
 msgid "People"
@@ -2936,9 +2927,8 @@ msgid "Play {code}"
 msgstr "{code} abspielen"
 
 #: src/components/version-picker.tsx
-#, fuzzy
 msgid "Play anyway"
-msgstr "Jetzt abspielen"
+msgstr "Trotzdem abspielen"
 
 #: src/pages/item.tsx
 msgid "Play from the start"
@@ -2965,9 +2955,8 @@ msgid "Play now"
 msgstr "Jetzt abspielen"
 
 #: src/pages/item.tsx
-#, fuzzy
 msgid "Play on"
-msgstr "Jetzt abspielen"
+msgstr "Weiterspielen"
 
 #: src/components/item-menu.tsx src/components/remote-sheet.tsx
 #: src/pages/item.tsx
@@ -2980,7 +2969,7 @@ msgstr "Abspielen oder pausieren"
 
 #: src/lib/input/actions.ts
 msgid "Play or pause, or go to the controls"
-msgstr ""
+msgstr "Wiedergabe/Pause oder zur Steuerung navigieren"
 
 #: src/pages/settings/playback.tsx
 msgid "Play starts the first version, and resuming goes back to the version you were watching. Hold Play to choose instead."
@@ -3201,9 +3190,8 @@ msgid "Raises the centre channel, where surround sound puts dialogue. Not for so
 msgstr "Verstärkt den Center-Kanal, über den bei Surround-Ton die Dialoge ausgegeben werden. Gilt nicht bei Audio-Passthrough."
 
 #: src/pages/item.tsx
-#, fuzzy
 msgid "Random"
-msgstr "Zufällig auswählen"
+msgstr "Zufällig"
 
 #: src/components/item-menu.tsx src/components/random-pick.tsx
 #: src/pages/item.tsx
@@ -3543,7 +3531,7 @@ msgstr "Untertitelzeile gesehen"
 
 #: src/lib/playback/controller.ts
 msgid "SDH"
-msgstr ""
+msgstr "Untertitel für Gehörlose"
 
 #: src/pages/settings/subtitles.tsx
 msgid "SDH, with sounds described"
@@ -3713,18 +3701,16 @@ msgid "Show subtitles later"
 msgstr "Untertitel später anzeigen"
 
 #: src/pages/settings/playback.tsx
-#, fuzzy
 msgid "Show the controls on pause and skip"
-msgstr "Bedienelemente anzeigen"
+msgstr "Bedienelemente beim Pausieren und Überspringen einblenden"
 
 #: src/pages/settings/playback.tsx
 msgid "Show the prompt"
 msgstr "Abfrage anzeigen"
 
 #: src/pages/settings/playback.tsx
-#, fuzzy
 msgid "Show the time"
-msgstr "Abfrage anzeigen"
+msgstr "Uhrzeit anzeigen"
 
 #: src/components/player/controls.tsx
 msgid "Show time left"
@@ -3766,7 +3752,7 @@ msgstr "Zeigt Untertitel in deiner Sprache an, sofern der Ton nicht bereits in d
 
 #: src/pages/settings/playback.tsx
 msgid "Shows the time of day at the top of the player with the controls."
-msgstr ""
+msgstr "Zeigt die aktuelle Uhrzeit oben im Player an, sobald die Bedienelemente eingeblendet werden."
 
 #: src/components/playlists.tsx
 msgid "Shuffle"
@@ -4519,7 +4505,7 @@ msgstr "Dieser Server kann deinen Wiedergabeverlauf nicht auflisten."
 
 #: src/components/no-details.tsx
 msgid "This server has no details for {id}."
-msgstr ""
+msgstr "Auf diesem Server sind keine Details für \"{id}\" verfügbar."
 
 #: src/components/no-catalogs.tsx
 msgid "This server shares no movie or show catalogs with this account."
@@ -4575,7 +4561,7 @@ msgstr "Drei Tage"
 
 #: src/pages/settings/interface.tsx
 msgid "Time on each title"
-msgstr ""
+msgstr "Laufzeit auf jedem Titel"
 
 #: src/components/player/options.tsx
 msgid "Timing"
@@ -4681,7 +4667,7 @@ msgstr "Schreibmaschine"
 
 #: src/components/episodes.tsx src/lib/format.ts
 msgid "Unaired"
-msgstr "Noch nicht ausgestrahlt"
+msgstr "Nicht ausgestrahlt"
 
 #: src/pages/settings/interface.tsx
 msgid "Under posters"
@@ -4696,9 +4682,8 @@ msgid "Unfinished"
 msgstr "Unfertig"
 
 #: src/lib/playback/controller.ts
-#, fuzzy
 msgid "Unknown language"
-msgstr "Audiosprachen"
+msgstr "Unbekannte Sprache"
 
 #: src/components/player/volume.tsx
 msgid "Unmute"
