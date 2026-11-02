@@ -8,16 +8,21 @@ export interface Chapter {
   startMs: number;
 }
 
+const CLOCK = /^\d+(?::\d{1,2})+(?:[.,]\d+)?$/;
+
 /** The app's chapters, in order. */
 export function parseChapters(
   chapters: { title?: string; startMs: number }[]
 ): Chapter[] {
   return chapters
     .filter((c) => Number.isFinite(c.startMs))
-    .map((c) => ({
-      title: c.title?.trim() ?? '',
-      startMs: Math.max(0, c.startMs),
-    }))
+    .map((c) => {
+      const title = c.title?.trim() ?? '';
+      return {
+        title: CLOCK.test(title) ? '' : title,
+        startMs: Math.max(0, c.startMs),
+      };
+    })
     .sort((a, b) => a.startMs - b.startMs);
 }
 
