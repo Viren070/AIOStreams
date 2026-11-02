@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-30 19:55+0000\n"
+"PO-Revision-Date: 2026-11-02 16:17+0000\n"
 "Last-Translator: Nicola Bortoletto <translate@nicolabortoletto.com>\n"
 "Language-Team: Italian <https://hosted.weblate.org/projects/aiostreams/web-app/it/>\n"
 "Language: it\n"
@@ -1357,9 +1357,8 @@ msgid "Download"
 msgstr "Scarica"
 
 #: src/components/version-picker.tsx
-#, fuzzy
 msgid "Download anyway"
-msgstr "Scarica"
+msgstr "Scarica comunque"
 
 #: src/components/download-button.tsx
 msgid "Download needs attention"
