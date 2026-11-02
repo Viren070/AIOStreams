@@ -3,9 +3,12 @@ package io.github.viren070.aiostreams.exoplayer.audio
 import android.content.Context
 import android.os.Handler
 import androidx.annotation.OptIn
+import androidx.media3.common.C
+import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.decoder.DecoderInputBuffer
+import androidx.media3.exoplayer.RendererCapabilities
 import androidx.media3.exoplayer.audio.AudioRendererEventListener
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.MediaCodecAudioRenderer
@@ -26,7 +29,15 @@ internal class DeviceAudioRenderer(
     eventHandler: Handler,
     eventListener: AudioRendererEventListener,
     audioSink: AudioSink,
+    private val audio: AudioOutput,
 ) : MediaCodecAudioRenderer(context, codecAdapterFactory, codecSelector, enableDecoderFallback, eventHandler, eventListener, audioSink) {
+    override fun supportsFormat(mediaCodecSelector: MediaCodecSelector, format: Format) =
+        if (audio.decodesForSpeed(format)) {
+            RendererCapabilities.create(C.FORMAT_UNSUPPORTED_SUBTYPE)
+        } else {
+            super.supportsFormat(mediaCodecSelector, format)
+        }
+
     override fun shouldSkipDecoderInputBuffer(buffer: DecoderInputBuffer) =
         codecInfo?.mimeType in SETTLING && buffer.timeUs < lastResetPositionUs - SETTLE_US
 

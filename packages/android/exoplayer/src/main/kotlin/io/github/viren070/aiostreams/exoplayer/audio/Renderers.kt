@@ -37,7 +37,7 @@ internal class Renderers(context: Context, private val audio: AudioOutput) : Def
         val decoders = MediaCodecSelector { mime, secure, tunneling ->
             if (mime in DTS) emptyList() else mediaCodecSelector.getDecoderInfos(mime, secure, tunneling)
         }
-        out += DeviceAudioRenderer(context, codecAdapterFactory, decoders, enableDecoderFallback, eventHandler, eventListener, audioSink)
+        out += DeviceAudioRenderer(context, codecAdapterFactory, decoders, enableDecoderFallback, eventHandler, eventListener, audioSink, audio)
         out += FfmpegAudioRenderer(eventHandler, eventListener, audioSink)
     }
 
