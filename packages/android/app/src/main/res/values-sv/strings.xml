@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The app's own words outside the web app, in British English. Weblate adds the values-* copies. --><resources>
+    <string name="channel_downloads">Nedladdningar</string>
+    <plurals name="downloading_items">
+        <item quantity="one">Laddar ned %d objekt</item>
+        <item quantity="other">Laddar ned %d objekt</item>
+    </plurals>
+    <string name="channel_updates">Uppdateringar</string>
+    <string name="updated_to">Uppdaterad till %1$s</string>
+    <string name="tap_to_open">Tryck för att öppna</string>
+    <string name="update_no_build">Ingen version finns för enhetens processor</string>
+    <string name="update_damaged">Den nedladdade filen är skadad</string>
+    <string name="update_install_failed">Installationen misslyckades: %1$s</string>
+    <string name="update_feed_answered">Flödet svarade med %1$d</string>
+    <string name="download_folder_title">Välj var nedladdningar ska sparas</string>
+    <string name="download_folder_free">%1$s · %2$s ledigt</string>
+    <string name="file_saved">%1$s har sparats i Nedladdningar</string>
+    <string name="file_not_saved">Kunde inte spara %1$s</string>
+    <string name="webview_version_unknown">okänd</string>
+    <string name="webview_too_old">Enhetens WebView-version är för gammal för appen: version %1$s. Appen kräver version %2$d eller senare.</string>
+    <string name="webview_update">Uppdatera Android System WebView eller systemet och öppna sedan appen igen.</string>
+</resources>
