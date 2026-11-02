@@ -30,7 +30,7 @@ internal class OutputSink(sink: AudioSink) : ForwardingAudioSink(sink) {
         val next = names.flatMapTo(mutableSetOf()) { SPDIF[it].orEmpty() }
         if (next == passthrough) return
         passthrough = next
-        // Picks the track's output again: a mode switch changes this and the device's formats in either order.
+        // Picks the track's output again, so a changed setting applies at once.
         listener?.onAudioCapabilitiesChanged()
     }
 

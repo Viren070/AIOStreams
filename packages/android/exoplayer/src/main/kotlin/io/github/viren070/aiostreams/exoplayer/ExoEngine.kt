@@ -250,6 +250,8 @@ class ExoEngine(private val context: Context) : Engine {
         cache.limitMb = settings.cacheMb
     }
 
+    override val checksOutput = true
+
     override fun setDolbyVision(on: Boolean) {
         useDolbyVision = on
     }

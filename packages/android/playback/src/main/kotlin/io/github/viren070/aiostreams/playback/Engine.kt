@@ -28,8 +28,11 @@ interface Engine {
     /** Stretches the page skips or offers to, which an engine fetching ahead can leave out or fetch past early. */
     fun setSkips(skips: List<Skip>) {}
 
-    /** [PlayerSettings.passthrough] is already the formats the output takes. */
+    /** [PlayerSettings.passthrough] is already the formats the output takes, unless [checksOutput]. */
     fun setSettings(settings: PlayerSettings)
+
+    /** Passes through only what the audio output takes, following its changes itself. */
+    val checksOutput: Boolean get() = false
 
     /** Reports the lines of one of the file's own subtitles as it reads them, or stops with null. */
     fun watchSubtitleLines(track: String?) {}

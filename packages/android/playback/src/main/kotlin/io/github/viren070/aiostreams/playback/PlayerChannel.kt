@@ -105,11 +105,15 @@ class PlayerChannel(
 
     /** The audio output now decodes other formats. */
     fun outputChanged() {
-        settings?.takeIf { it.passthroughAuto }?.let { engine.setSettings(applied(it)) }
+        settings?.takeIf { it.passthroughAuto && !engine.checksOutput }?.let { engine.setSettings(applied(it)) }
     }
 
     private fun applied(settings: PlayerSettings) =
-        if (settings.passthroughAuto) settings.copy(passthrough = passthrough(settings.passthrough)) else settings
+        if (settings.passthroughAuto && !engine.checksOutput) {
+            settings.copy(passthrough = passthrough(settings.passthrough))
+        } else {
+            settings
+        }
 
     val paused get() = state.paused != false
 
