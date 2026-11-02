@@ -240,9 +240,14 @@ html[data-pointer-focus] :focus-visible [data-focus-frame] {
   backdrop-filter: blur(24px) saturate(1.8);
 }
 .bar-surface[data-surface='liquid'] {
-  background-color: rgb(14 14 18 / 0.34);
+  background-color: rgb(14 14 18 / 0.12);
   border-color: rgb(255 255 255 / 0.14);
-  box-shadow: 0 12px 32px -12px rgb(0 0 0 / 0.6);
+  box-shadow:
+    inset 1px 1px 0.5px rgb(255 255 255 / 0.4),
+    inset -1px -1px 0.5px rgb(255 255 255 / 0.14),
+    inset 12px 12px 24px -16px rgb(255 255 255 / 0.16),
+    inset -12px -12px 24px -16px rgb(0 0 0 / 0.32),
+    0 12px 32px -12px rgb(0 0 0 / 0.6);
 }
 /* Over a bright picture, grey labels are lost. */
 :is(.bar-surface:not([data-surface='solid']), [data-ui='top-tabs'])

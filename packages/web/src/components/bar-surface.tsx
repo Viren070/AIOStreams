@@ -8,61 +8,126 @@ export const canRefract =
   CSS.supports('backdrop-filter', 'url(#a)') &&
   /Chrome\//.test(navigator.userAgent);
 
-const maps = new Map<string, string>();
-
-/** How much of its distance from the middle a point keeps in what it shows, by depth (0 at the edge, 1 at the middle). */
-const pull = (depth: number) =>
-  (1 - 2.3 * Math.pow(5.2 * Math.E, -6.9 * depth - 0.7)) ** 3;
-
-/** The filter's scale, as the map's red and green span the box's longer side. */
-const span = (width: number, height: number) => Math.max(width, height);
-
-/**
- * A displacement map for a rounded box: each point shows what lies nearer the
- * middle, the more so toward the rim, as a lens does.
- */
-function displacementMap(width: number, height: number, radius: number) {
-  const key = `${width}x${height}/${radius}`;
-  const known = maps.get(key);
-  if (known) return known;
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return null;
-  const image = ctx.createImageData(width, height);
-  const r = Math.min(radius, width / 2, height / 2);
-  const cx = width / 2;
-  const cy = height / 2;
-  const short = Math.min(cx, cy);
-  const scale = 255 / span(width, height);
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const px = x + 0.5 - cx;
-      const py = y + 0.5 - cy;
-      const qx = Math.abs(px) - (cx - r);
-      const qy = Math.abs(py) - (cy - r);
-      const depth =
-        qx > 0 && qy > 0 ? r - Math.hypot(qx, qy) : r - Math.max(qx, qy);
-      const moved = pull(Math.max(0, depth) / short) - 1;
-      const i = (y * width + x) * 4;
-      image.data[i] = 127.5 + px * moved * scale;
-      image.data[i + 1] = 127.5 + py * moved * scale;
-      image.data[i + 2] = 128;
-      image.data[i + 3] = 255;
-    }
-  }
-  ctx.putImageData(image, 0, 0);
-  const url = canvas.toDataURL();
-  maps.set(key, url);
-  return url;
+interface Lens {
+  start: string;
+  end: string;
+  middle: string;
+  scale: number;
 }
 
-interface Size {
+const lenses = new Map<string, Lens | null>();
+
+/** Chromium sends a filter's images with every frame, so a lens is drawn at most this many points across. */
+const SAMPLES = 64;
+
+/** How much of its distance from the middle a point keeps, by depth into the glass (0 at the rim). */
+const keepAt = (depth: number) =>
+  1 - 2.3 * Math.pow(5.2 * Math.E, -6.9 * depth - 0.7);
+
+interface Piece {
+  width: number;
+  height: number;
+  moves: [number, number][];
+}
+
+function sample(
+  width: number,
+  height: number,
+  move: (x: number, y: number) => [number, number]
+): Piece {
+  const moves: [number, number][] = [];
+  for (let y = 0; y < height; y++)
+    for (let x = 0; x < width; x++) moves.push(move(x, y));
+  return { width, height, moves };
+}
+
+function draw(piece: Piece, scale: number): string | null {
+  const canvas = document.createElement('canvas');
+  canvas.width = piece.width;
+  canvas.height = piece.height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  const image = ctx.createImageData(piece.width, piece.height);
+  piece.moves.forEach(([x, y], i) => {
+    image.data[i * 4] = 127.5 + (x / scale) * 255;
+    image.data[i * 4 + 1] = 127.5 + (y / scale) * 255;
+    image.data[i * 4 + 2] = 128;
+    image.data[i * 4 + 3] = 255;
+  });
+  ctx.putImageData(image, 0, 0);
+  return canvas.toDataURL();
+}
+
+/**
+ * Each point of a rounded box shows what lies nearer its middle line, the
+ * more so toward the rim. The halves of a square lens cap the box's ends, and
+ * its middle line repeats between them.
+ */
+function lens(width: number, height: number, radius: number): Lens | null {
+  const wide = width >= height;
+  const short = Math.min(width, height);
+  const half = short / 2;
+  const r = Math.min(radius, half);
+  const key = `${short}/${r}/${wide}`;
+  if (lenses.has(key)) return lenses.get(key)!;
+  const n = 2 * Math.ceil(Math.min(short, SAMPLES) / 2);
+  const at = (i: number) => ((i + 0.5) * short) / n - half;
+  let most = 0;
+  const move = (px: number, py: number): [number, number] => {
+    const qx = Math.abs(px) - (half - r);
+    const qy = Math.abs(py) - (half - r);
+    const inset = Math.max(
+      0,
+      qx > 0 && qy > 0 ? r - Math.hypot(qx, qy) : r - Math.max(qx, qy)
+    );
+    // A wide rim and a slightly magnified middle, so small glass still reads as a lens.
+    const keep = keepAt((inset / half) * 0.6) * 0.87;
+    most = Math.max(most, Math.abs(px * (1 - keep)), Math.abs(py * (1 - keep)));
+    return [px * (keep - 1), py * (keep - 1)];
+  };
+  const pieces = wide
+    ? [
+        sample(n / 2, n, (x, y) => move(at(x), at(y))),
+        sample(n / 2, n, (x, y) => move(at(x + n / 2), at(y))),
+        sample(1, n, (_, y) => move(0, at(y))),
+      ]
+    : [
+        sample(n, n / 2, (x, y) => move(at(x), at(y))),
+        sample(n, n / 2, (x, y) => move(at(x), at(y + n / 2))),
+        sample(n, 1, (x) => move(at(x), 0)),
+      ];
+  const scale = Math.ceil(most * 2) || 1;
+  const [start, end, middle] = pieces.map((piece) => draw(piece, scale));
+  const made = start && end && middle ? { start, end, middle, scale } : null;
+  lenses.set(key, made);
+  return made;
+}
+
+function endSize(el: HTMLElement): { width: number; height: number } | null {
+  let width: number | undefined;
+  let height: number | undefined;
+  for (const animation of el.getAnimations()) {
+    if (!(animation.effect instanceof KeyframeEffect)) continue;
+    const end = animation.effect.getKeyframes().at(-1);
+    if (typeof end?.width === 'string') width = parseFloat(end.width);
+    if (typeof end?.height === 'string') height = parseFloat(end.height);
+  }
+  if (width === undefined && height === undefined) return null;
+  return {
+    width: Math.round(width ?? el.offsetWidth),
+    height: Math.round(height ?? el.offsetHeight),
+  };
+}
+
+/** The box a lens is drawn for, which it stretches from while the box resizes. */
+interface Shape {
   width: number;
   height: number;
   radius: number;
 }
+
+const sameShape = (a: Shape, b: Shape) =>
+  a.width === b.width && a.height === b.height && a.radius === b.radius;
 
 /**
  * What a navigation bar sits on: the app's own background, or glass, frosted
@@ -77,95 +142,91 @@ export function BarSurface({
   const [look] = useSetting(settings.interface.barBackground);
   const liquid = look === 'liquid' && canRefract;
   const ref = React.useRef<HTMLDivElement>(null);
-  const [size, setSize] = React.useState<Size>();
-  // Only blurred while its size changes, as a bend drawn for one size leaves
-  // the rest of another unblurred.
-  const [moving, setMoving] = React.useState(false);
+  const [shape, setShape] = React.useState<Shape>();
   const id = `lens-${React.useId().replace(/[^\w-]/g, '')}`;
   React.useLayoutEffect(() => {
     const el = ref.current;
-    if (!liquid || !el) return setSize(undefined);
+    if (!liquid || !el) return setShape(undefined);
     const measure = () => {
+      const end = endSize(el);
       const next = {
-        width: Math.round(el.offsetWidth),
-        height: Math.round(el.offsetHeight),
+        width: end?.width ?? Math.round(el.offsetWidth),
+        height: end?.height ?? Math.round(el.offsetHeight),
         radius: parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0,
       };
-      setSize((was) =>
-        was &&
-        was.width === next.width &&
-        was.height === next.height &&
-        was.radius === next.radius
-          ? was
-          : next
-      );
-    };
-    let waiting = false;
-    const settle = () => {
-      const running = el.getAnimations();
-      if (!running.length) {
-        setMoving(false);
-        return measure();
-      }
-      setMoving(true);
-      if (waiting) return;
-      waiting = true;
-      void Promise.allSettled(running.map((a) => a.finished)).then(() => {
-        waiting = false;
-        settle();
-      });
+      setShape((was) => (was && sameShape(was, next) ? was : next));
     };
     measure();
-    const observer = new ResizeObserver(settle);
+    const observer = new ResizeObserver(measure);
     observer.observe(el);
     return () => observer.disconnect();
   }, [liquid]);
   const map =
-    liquid && !moving && size?.width && size.height
-      ? displacementMap(size.width, size.height, size.radius)
+    liquid && shape?.width && shape.height
+      ? lens(shape.width, shape.height, shape.radius)
       : null;
-  const glass = !!map || (liquid && moving);
+  const wide = shape && shape.width >= shape.height;
+  const cap = shape
+    ? Math.min(shape.width, shape.height) /
+      2 /
+      Math.max(shape.width, shape.height)
+    : 0;
+  const piece = (from: number) =>
+    wide
+      ? { x: from, y: 0, width: cap, height: 1 }
+      : { x: 0, y: from, width: 1, height: cap };
   return (
     <div
       ref={ref}
-      data-surface={glass ? 'liquid' : look === 'solid' ? 'solid' : 'frosted'}
+      data-surface={map ? 'liquid' : look === 'solid' ? 'solid' : 'frosted'}
       className={cn('bar-surface', className)}
       style={
-        glass
-          ? {
-              ...style,
-              // Blurred before bending: enough that text behind doesn't fight the
-              // labels, and the bent rim doesn't fray into streaks.
-              backdropFilter: `blur(4px)${map ? ` url(#${id})` : ''} saturate(1.8)`,
-            }
-          : style
+        map ? { ...style, backdropFilter: `blur(2px) url(#${id})` } : style
       }
       {...props}
     >
-      {map && size && (
+      {map && shape && (
         <svg aria-hidden className="pointer-events-none absolute size-0">
           <filter
             id={id}
-            filterUnits="userSpaceOnUse"
             x="0"
             y="0"
-            width={size.width}
-            height={size.height}
+            width="1"
+            height="1"
+            primitiveUnits="objectBoundingBox"
             colorInterpolationFilters="sRGB"
           >
             <feImage
-              href={map}
+              href={map.middle}
               x="0"
               y="0"
-              width={size.width}
-              height={size.height}
+              width="1"
+              height="1"
               preserveAspectRatio="none"
-              result="map"
+              result="middle"
             />
+            <feImage
+              href={map.start}
+              {...piece(0)}
+              preserveAspectRatio="none"
+              result="start"
+            />
+            <feImage
+              href={map.end}
+              {...piece(1 - cap)}
+              preserveAspectRatio="none"
+              result="end"
+            />
+            <feMerge result="bend">
+              <feMergeNode in="middle" />
+              <feMergeNode in="start" />
+              <feMergeNode in="end" />
+            </feMerge>
+            {/* In the box's units, the scale is a share of its width. */}
             <feDisplacementMap
               in="SourceGraphic"
-              in2="map"
-              scale={span(size.width, size.height)}
+              in2="bend"
+              scale={map.scale / shape.width}
               xChannelSelector="R"
               yChannelSelector="G"
             />
