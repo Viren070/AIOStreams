@@ -375,6 +375,24 @@ class MainActivity : ComponentActivity() {
         screen.keepAwake(playing)
         focus.update(playing)
         pip.update(playing && session.item?.pip == true, session.videoSize)
+        noteDoing()
+    }
+
+    private fun noteDoing() {
+        if (!started) return
+        val session = player.session
+        val shown = lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
+        val what = when {
+            session.playbackState == Player.STATE_IDLE -> if (shown) "browsing" else "nothing playing"
+            session.playWhenReady -> "playing"
+            else -> "paused"
+        }
+        val where = when {
+            isInPictureInPictureMode -> " in picture-in-picture"
+            !shown -> " in the background"
+            else -> ""
+        }
+        Crashes.doing(this, what + where)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -503,6 +521,8 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         if (started) updater.onResume()
+        // Not in onStart, which runs before the lifecycle reaches STARTED.
+        noteDoing()
     }
 
     override fun onUserLeaveHint() {
@@ -520,6 +540,7 @@ class MainActivity : ComponentActivity() {
         if (!isInPictureInPictureMode && lifecycle.currentState == Lifecycle.State.CREATED) {
             player.change(Change(paused = true))
         }
+        noteDoing()
     }
 
     override fun onStop() {
@@ -527,6 +548,7 @@ class MainActivity : ComponentActivity() {
         if (!started) return
         val background = player.session.item?.background == true
         if (!isChangingConfigurations && !isInPictureInPictureMode && !background) player.change(Change(paused = true))
+        noteDoing()
     }
 
     override fun onDestroy() {
