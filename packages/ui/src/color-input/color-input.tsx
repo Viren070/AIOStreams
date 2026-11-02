@@ -51,8 +51,9 @@ const PREVIEW = cn(
 );
 
 function stored(text: string, allowEmpty?: boolean): string | undefined {
-  if (allowEmpty && !text.trim()) return '';
-  const color = colord(text);
+  const trimmed = text.trim();
+  if (allowEmpty && !trimmed) return '';
+  const color = colord(/^[\da-f]{3,8}$/i.test(trimmed) ? `#${trimmed}` : text);
   if (!color.isValid()) return undefined;
   return allowEmpty ? color.toHex() : color.toHex().slice(0, 7);
 }
