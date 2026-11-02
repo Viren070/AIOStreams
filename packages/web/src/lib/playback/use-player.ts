@@ -27,6 +27,7 @@ import {
   initialState,
   storedVolume,
   trackLabel,
+  trackRow,
   VOLUME_KEY,
   type PlayerController,
   type PlayerOptions,
@@ -82,22 +83,26 @@ function serverSubtitles(
     });
 }
 
-const asTrack = ({ id, label, lang }: Track): Track => ({ id, label, lang });
+const asTrack = (track: EngineTrack): Track => ({
+  id: track.id,
+  lang: track.lang,
+  ...trackRow(track, track.type, track.label),
+});
 
-/** The server's name for a subtitle, with its title, often a release name, moved to a line of its own. */
-function titleApart({
-  label,
-  stream,
-}: ServerSubtitle): Pick<Track, 'label' | 'detail'> {
-  const title = stream.Title?.trim();
-  const at = title ? label.indexOf(title) : -1;
-  if (!title || at <= 0) return { label };
-  const rest = (label.slice(0, at) + label.slice(at + title.length))
-    .replace(/\s+-\s+-\s+/g, ' - ')
-    .replace(/^\s*-\s*|\s*-\s*$/g, '')
-    .trim();
-  return rest ? { label: rest, detail: title } : { label };
-}
+const serverTrack = (s: ServerSubtitle): Track => ({
+  id: s.id,
+  lang: s.lang,
+  ...trackRow(
+    {
+      lang: s.stream.Language,
+      title: s.stream.Title,
+      forced: s.stream.IsForced,
+      hearingImpaired: s.stream.IsHearingImpaired,
+    },
+    'subtitle',
+    s.label
+  ),
+});
 
 /** A subtitle's copy stretched to the video's frame rate, which shows in its place. */
 interface Retimed {
@@ -560,11 +565,7 @@ export function usePlayer(
       ...subtitleTracks
         .filter((t) => !t.external)
         .map((t) => ({ ...asTrack(t), file: true, facts: trackFacts(t) })),
-      ...servers.map((s) => ({
-        ...asTrack(s),
-        ...titleApart(s),
-        facts: serverFacts(s),
-      })),
+      ...servers.map((s) => ({ ...serverTrack(s), facts: serverFacts(s) })),
       ...subtitleTracks
         .filter(
           (t) =>

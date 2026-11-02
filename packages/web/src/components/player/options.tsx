@@ -142,7 +142,7 @@ function Menu({
         {option.detail && (
           <span
             data-name="detail"
-            className="block truncate text-[0.8em] text-gray-400"
+            className="line-clamp-2 text-[0.8em] text-gray-400"
           >
             {option.detail}
           </span>

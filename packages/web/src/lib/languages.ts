@@ -67,6 +67,11 @@ export function languageName(language: Language): string {
   }
 }
 
+export function tagName(tag: string): string | undefined {
+  const name = tagLanguage(tag);
+  return name && languageName({ code: languageCode(tag), name });
+}
+
 /** A code or tag's language by the addon's mapping, else the tag itself. */
 const languageOf = (tag: string) => tagLanguage(tag) ?? tag.toLowerCase();
 

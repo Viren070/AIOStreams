@@ -4,7 +4,8 @@ import type { JellyfinClient } from '../client';
 import type { Chapter } from './chapters';
 import type { SubtitleStyle } from '../settings';
 import type { SubtitleLine } from '../subtitles/cues';
-import type { SubtitleFacts } from '../subtitles/tracks';
+import { subtitleType, type SubtitleFacts } from '../subtitles/tracks';
+import { tagName } from '../languages';
 import type { Playhead } from './playhead';
 import type { ThumbnailFeed } from './thumbnails';
 import type { PlannedSkip } from './engine';
@@ -198,6 +199,43 @@ export function trackLabel(stream: MediaStream, n: number): string {
   return (
     stream.DisplayTitle || stream.Title || stream.Language || t`Track ${n}`
   );
+}
+
+interface RowFacts extends SubtitleFacts {
+  lang?: string | null;
+}
+
+export function trackRow(
+  track: RowFacts,
+  kind: 'audio' | 'subtitle',
+  fallback: string
+): Pick<Track, 'label' | 'detail'> {
+  const language = track.lang ? tagName(track.lang) : undefined;
+  const title = track.title?.trim();
+  const own =
+    title &&
+    ![language, track.lang].some(
+      (name) => name?.toLowerCase() === title.toLowerCase()
+    )
+      ? title
+      : undefined;
+  const type = kind === 'subtitle' ? subtitleType(track) : undefined;
+  const typeLabel =
+    type === 'sdh'
+      ? t`SDH`
+      : type === 'forced'
+        ? t`Forced`
+        : type === 'signs'
+          ? t`Signs and songs`
+          : type === 'commentary'
+            ? t`Commentary`
+            : undefined;
+  return {
+    label: [language ?? t`Unknown language`, typeLabel]
+      .filter(Boolean)
+      .join(' · '),
+    detail: own ?? (language ? undefined : fallback),
+  };
 }
 
 /** A track as the player itself lists it. */

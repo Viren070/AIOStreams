@@ -939,6 +939,7 @@ msgstr ""
 msgid "Combine movie and show results"
 msgstr ""
 
+#: src/lib/playback/controller.ts
 #: src/pages/settings/audio.tsx
 msgid "Commentary"
 msgstr ""
@@ -1701,6 +1702,10 @@ msgstr ""
 
 #: src/pages/settings/audio.tsx
 msgid "For a receiver on an optical or ARC link, which gets other surround formats as stereo otherwise."
+msgstr ""
+
+#: src/lib/playback/controller.ts
+msgid "Forced"
 msgstr ""
 
 #: src/pages/settings/subtitles.tsx
@@ -3667,6 +3672,10 @@ msgstr ""
 msgid "Saw its subtitle"
 msgstr ""
 
+#: src/lib/playback/controller.ts
+msgid "SDH"
+msgstr ""
+
 #: src/pages/settings/subtitles.tsx
 msgid "SDH, with sounds described"
 msgstr ""
@@ -3946,6 +3955,7 @@ msgstr ""
 msgid "Signed out"
 msgstr ""
 
+#: src/lib/playback/controller.ts
 #: src/pages/settings/subtitles.tsx
 msgid "Signs and songs"
 msgstr ""
@@ -4849,6 +4859,10 @@ msgstr ""
 
 #: src/components/version-settings.tsx
 msgid "Unfinished"
+msgstr ""
+
+#: src/lib/playback/controller.ts
+msgid "Unknown language"
 msgstr ""
 
 #: src/components/player/volume.tsx
