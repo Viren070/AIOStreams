@@ -1,5 +1,46 @@
 # Changelog
 
+## [0.22.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.21.0...desktop-v0.22.0) (2026-11-02)
+
+
+### Features
+
+* **desktop:** leave a target-peak set in mpv.conf alone on macOS ([f9b4fbf](https://github.com/Viren070/AIOStreams/commit/f9b4fbf6378f7c26f9d29ba7534022d664f4d282))
+* **ui:** give confirmation dialogs a name and a focus return ([bcd1575](https://github.com/Viren070/AIOStreams/commit/bcd15756c1ef39e2ae77093ab113de2358b23ff1))
+* **ui:** take a colour typed without its # ([bcd1575](https://github.com/Viren070/AIOStreams/commit/bcd15756c1ef39e2ae77093ab113de2358b23ff1))
+* **web:** add a setting for how long the hero stays on each title ([bcd1575](https://github.com/Viren070/AIOStreams/commit/bcd15756c1ef39e2ae77093ab113de2358b23ff1))
+* **web:** ask for a metadata addon on a title without details ([bcd1575](https://github.com/Viren070/AIOStreams/commit/bcd15756c1ef39e2ae77093ab113de2358b23ff1))
+* **web:** bend the liquid glass bar's backdrop toward its middle like a lens ([bcd1575](https://github.com/Viren070/AIOStreams/commit/bcd15756c1ef39e2ae77093ab113de2358b23ff1))
+* **web:** bigger icons in the bottom bar without names ([bcd1575](https://github.com/Viren070/AIOStreams/commit/bcd15756c1ef39e2ae77093ab113de2358b23ff1))
+* **web:** draw liquid glass as a lens around its middle line, with a lit rim ([bcd1575](https://github.com/Viren070/AIOStreams/commit/bcd15756c1ef39e2ae77093ab113de2358b23ff1))
+* **web:** fill the phone's title row in a set order, and keep tablets on the inline row ([bcd1575](https://github.com/Viren070/AIOStreams/commit/bcd15756c1ef39e2ae77093ab113de2358b23ff1))
+* **web:** give shows Play and More info in the rotating hero ([bcd1575](https://github.com/Viren070/AIOStreams/commit/bcd15756c1ef39e2ae77093ab113de2358b23ff1))
+* **web:** mark the open season with a sliding bar ([bcd1575](https://github.com/Viren070/AIOStreams/commit/bcd15756c1ef39e2ae77093ab113de2358b23ff1))
+* **web:** mark unaired episodes the server still lets play, and ask before playing one ([bcd1575](https://github.com/Viren070/AIOStreams/commit/bcd15756c1ef39e2ae77093ab113de2358b23ff1))
+* **web:** pick a tab on a press, waiting only out a held key ([bcd1575](https://github.com/Viren070/AIOStreams/commit/bcd15756c1ef39e2ae77093ab113de2358b23ff1))
+* **web:** play or pause with Select while the player's controls are hidden ([bcd1575](https://github.com/Viren070/AIOStreams/commit/bcd15756c1ef39e2ae77093ab113de2358b23ff1))
+* **web:** put a server subtitle's title on a line of its own ([bcd1575](https://github.com/Viren070/AIOStreams/commit/bcd15756c1ef39e2ae77093ab113de2358b23ff1))
+* **web:** put a title's actions in a labelled row and a More sheet on touch screens ([bcd1575](https://github.com/Viren070/AIOStreams/commit/bcd15756c1ef39e2ae77093ab113de2358b23ff1))
+* **web:** scroll a title's backdrop and the rotating hero at half speed ([bcd1575](https://github.com/Viren070/AIOStreams/commit/bcd15756c1ef39e2ae77093ab113de2358b23ff1))
+* **web:** show episodes title first, with their air date and a menu button ([bcd1575](https://github.com/Viren070/AIOStreams/commit/bcd15756c1ef39e2ae77093ab113de2358b23ff1))
+* **web:** show the player's chapters in a sheet with pictures ([bcd1575](https://github.com/Viren070/AIOStreams/commit/bcd15756c1ef39e2ae77093ab113de2358b23ff1))
+* **web:** show the time in the player's top bar ([bcd1575](https://github.com/Viren070/AIOStreams/commit/bcd15756c1ef39e2ae77093ab113de2358b23ff1))
+* **web:** slide the bottom bar away while scrolling down ([bcd1575](https://github.com/Viren070/AIOStreams/commit/bcd15756c1ef39e2ae77093ab113de2358b23ff1))
+
+
+### Bug Fixes
+
+* **desktop:** keep the macOS main loop running until the player closes ([3f4a5da](https://github.com/Viren070/AIOStreams/commit/3f4a5da2f603e1fb08d58a324a406f674bb70170))
+* **ui:** keep typed colour text while it names the stored colour ([bcd1575](https://github.com/Viren070/AIOStreams/commit/bcd15756c1ef39e2ae77093ab113de2358b23ff1))
+* **web:** drop chapter titles that are only a timestamp ([bcd1575](https://github.com/Viren070/AIOStreams/commit/bcd15756c1ef39e2ae77093ab113de2358b23ff1))
+* **web:** format date-only air dates on their own day ([bcd1575](https://github.com/Viren070/AIOStreams/commit/bcd15756c1ef39e2ae77093ab113de2358b23ff1))
+* **web:** hide the side rails' scrollbars ([bcd1575](https://github.com/Viren070/AIOStreams/commit/bcd15756c1ef39e2ae77093ab113de2358b23ff1))
+* **web:** keep the skip flash in place while skips add up ([bcd1575](https://github.com/Viren070/AIOStreams/commit/bcd15756c1ef39e2ae77093ab113de2358b23ff1))
+* **web:** limit episode highlights to key focus and pointers that hover ([bcd1575](https://github.com/Viren070/AIOStreams/commit/bcd15756c1ef39e2ae77093ab113de2358b23ff1))
+* **web:** name tracks by language and kind, with their own title on a line below ([bcd1575](https://github.com/Viren070/AIOStreams/commit/bcd15756c1ef39e2ae77093ab113de2358b23ff1))
+* **web:** send planned skips to the Android app only ([bcd1575](https://github.com/Viren070/AIOStreams/commit/bcd15756c1ef39e2ae77093ab113de2358b23ff1))
+* **web:** start keys on a tab list's selected tab when nothing is focused ([bcd1575](https://github.com/Viren070/AIOStreams/commit/bcd15756c1ef39e2ae77093ab113de2358b23ff1))
+
 ## [0.21.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.20.0...desktop-v0.21.0) (2026-10-29)
 
 
