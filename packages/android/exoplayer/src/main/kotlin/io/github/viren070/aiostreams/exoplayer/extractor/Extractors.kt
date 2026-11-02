@@ -12,6 +12,8 @@ import androidx.media3.extractor.SeekMap
 import androidx.media3.extractor.TrackOutput
 import androidx.media3.extractor.mkv.MatroskaExtractor
 import androidx.media3.extractor.text.SubtitleParser
+import androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory
+import androidx.media3.extractor.ts.TsExtractor
 import io.github.viren070.aiostreams.exoplayer.video.DolbyVisionRouter
 import io.github.viren070.aiostreams.exoplayer.video.DolbyVisionTrack
 
@@ -26,6 +28,9 @@ internal interface ExtractorHost : MatroskaHost, DolbyVisionRouter {
 @OptIn(UnstableApi::class)
 internal class Extractors(private val host: ExtractorHost) : ExtractorsFactory {
     private val defaults = DefaultExtractorsFactory()
+        .setTsExtractorFlags(DefaultTsPayloadReaderFactory.FLAG_ENABLE_HDMV_DTS_AUDIO_STREAMS)
+        // Far enough into a high-bitrate file to find its first and last timestamps, for its length.
+        .setTsExtractorTimestampSearchBytes(1500 * TsExtractor.TS_PACKET_SIZE)
 
     override fun createExtractors() = tapped(defaults.createExtractors(), null)
 
