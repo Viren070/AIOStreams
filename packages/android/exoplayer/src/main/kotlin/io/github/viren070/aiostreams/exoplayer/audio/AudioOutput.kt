@@ -26,7 +26,7 @@ internal class AudioOutput {
             .setEnableAudioOutputPlaybackParameters(enablePlaybackParameters)
             .setAudioProcessors(arrayOf(SoundProcessor(levels)))
             .build()
-        ac3 = Ac3Sink(sink, levels)
+        ac3 = Ac3Sink(TrueHdSink(sink), levels)
         output = OutputSink(ac3)
         return output
     }
