@@ -202,11 +202,12 @@ Blur the text inside an episode's title rather than the title itself: the title 
 }
 ```
 
-### More buttons beside Play on a phone or tablet
+### More buttons beside Play on a phone
 
-On a touch screen, a title's page shows the trailer, watched and favourite buttons beside More, which
-lists every action. To bring another one out, name it: `random`, `party`, `play-on`,
-`add-to-playlist`, `drop`, `rating` or `download`.
+On a phone, a title's page shows three actions beside More, which lists every action. They are the
+first three the title offers of `trailer`, `watched`, `favourite`, `download`, `rating`,
+`add-to-playlist`, `random`, `party`, `play-on` and `drop`, and carry `data-shown`. To bring another
+one out, name it:
 
 ```css
 [data-ui='item-quick-action'][data-name='party'] {
@@ -574,7 +575,7 @@ States are attributes set only while true, such as `data-watched`. Match them wi
 | `item-poster`, `item-logo`, `item-title`, `item-tagline`, `item-next-airing`, `item-genres`, `item-genre`, `item-details`, `item-detail` | The parts of the header, and the details list; each detail has `data-name` (`studios`, `released`, `airs`, `country`)                                                                                                                                |
 | `item-meta`                                                                                                                              | The line of facts; each has `data-name` (`year`, `age-rating`, `runtime`, `score`, `status`), with a `meta-separator` between                                                                                                                        |
 | `item-actions`, `item-action`                                                                                                            | The buttons; `data-name` is `play`, `restart`, `trailer`, `random`, `party`, `play-on`, `add-to-playlist`, `watched`, `favourite`, `drop`, `rating`, `download` (a show's) or `more`, and `data-active` marks watched, favourited, dropped or rated  |
-| `item-quick-actions`, `item-quick-action`, `item-more-action`                                                                            | On a touch screen, the row under Play and each labelled action in it, by the same `data-name`, and the actions in More's list                                                                                                                        |
+| `item-quick-actions`, `item-quick-action`, `item-more-action`                                                                            | On a phone, the row under Play and each labelled action in it, by the same `data-name` (`data-shown` on the three it shows), and the actions in More's list                                                                                                                        |
 | `download-button`, `download-menu`                                                                                                       | A movie's or an episode's download button, and a show's download menu. `data-state` on the button is `finding`, `needs-version`, `queued`, `downloading`, `paused`, `failed`, `done` or `sent` once there is a download                              |
 | `rating-picker`, `inline-rating`                                                                                                         | The box to rate a title, and a season's rating beside its summary; `data-active` once rated                                                                                                                                                          |
 | `item-actions-divider`                                                                                                                   | The line before the links to other sites                                                                                                                                                                                                             |
@@ -614,7 +615,7 @@ States are attributes set only while true, such as `data-watched`. Match them wi
 | `player-top-bar`, `player-title`, `player-bottom-bar`, `player-middle`, `player-time`, `player-clock`        | The bars and the middle buttons, and the time of day in the top bar. The title's lines have `data-name`: `name`, and `detail` under it for an episode or a trailer                                                            |
 | `player-button`                                                                                              | A button in the bars; `data-name` is `exit`, `lock`, `play`, `back`, `forward`, `previous`, `next`, `mute`, `episodes`, `subtitles`, `chapters`, `versions`, `audio`, `speed`, `fit`, `statistics`, `party` or `fullscreen`   |
 | `player-middle-button`                                                                                       | A button in the middle, on phones and touch screens; `data-name` as above                                                                                                                                                     |
-| `player-menu`, `player-menu-item`                                                                            | The list a button opens; `data-name` says which (`subtitles`, `audio`, `speed`, `statistics`), and `data-selected` marks the chosen item. A subtitle's own title, often a release name, is the line with `data-name="detail"` |
+| `player-menu`, `player-menu-item`                                                                            | The list a button opens; `data-name` says which (`subtitles`, `audio`, `speed`, `statistics`), and `data-selected` marks the chosen item. An audio or subtitle track shows its language and kind, and its own title, often a release name, is the line with `data-name="detail"` |
 | `player-menu-action`, `player-menu-pages`                                                                    | An item beside a list's choices (`data-name` is `add-file`, `more` for the languages not in your settings, or the page it opens), and the rows of pages above the list                                                        |
 | `player-menu-page`                                                                                           | A page a list opens into; `data-name` is `timing` or `style` for the subtitles, `sound` for the audio. Its back button is `player-menu-action` with `data-name="back"`                                                        |
 | `player-sync-status`                                                                                         | How the subtitles were synced, on their timing page; `data-status` is `hand`, `synced`, `retimed`, `unmatched` or `speed`                                                                                                     |
