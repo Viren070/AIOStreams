@@ -903,7 +903,7 @@ msgstr "Warna dan CSS tersuai"
 msgid "Combine movie and show results"
 msgstr "Gabungkan hasil filem dan rancangan"
 
-#: src/pages/settings/audio.tsx
+#: src/lib/playback/controller.ts src/pages/settings/audio.tsx
 msgid "Commentary"
 msgstr "Ulasan"
 
@@ -1639,6 +1639,10 @@ msgstr "Fon"
 #: src/pages/settings/audio.tsx
 msgid "For a receiver on an optical or ARC link, which gets other surround formats as stereo otherwise."
 msgstr "Untuk penerima pada pautan optik atau ARC."
+
+#: src/lib/playback/controller.ts
+msgid "Forced"
+msgstr ""
 
 #: src/pages/settings/subtitles.tsx
 msgid "Forced, for foreign parts only"
@@ -3537,6 +3541,10 @@ msgstr "Dilihat"
 msgid "Saw its subtitle"
 msgstr "Melihat sarikatanya"
 
+#: src/lib/playback/controller.ts
+msgid "SDH"
+msgstr ""
+
 #: src/pages/settings/subtitles.tsx
 msgid "SDH, with sounds described"
 msgstr "SDH, dengan penerangan bunyi"
@@ -3804,7 +3812,7 @@ msgstr "Log keluar daripada pelayan ini?"
 msgid "Signed out"
 msgstr "Telah log keluar"
 
-#: src/pages/settings/subtitles.tsx
+#: src/lib/playback/controller.ts src/pages/settings/subtitles.tsx
 msgid "Signs and songs"
 msgstr "Tanda dan lagu"
 
@@ -4686,6 +4694,11 @@ msgstr "Batal gugur rancangan"
 #: src/components/version-settings.tsx
 msgid "Unfinished"
 msgstr "Belum selesai"
+
+#: src/lib/playback/controller.ts
+#, fuzzy
+msgid "Unknown language"
+msgstr "Bahasa audio"
 
 #: src/components/player/volume.tsx
 msgid "Unmute"

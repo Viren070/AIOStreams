@@ -903,7 +903,7 @@ msgstr "Colori e CSS personalizzato"
 msgid "Combine movie and show results"
 msgstr "Unisci i risultati di film e serie"
 
-#: src/pages/settings/audio.tsx
+#: src/lib/playback/controller.ts src/pages/settings/audio.tsx
 msgid "Commentary"
 msgstr "Commento"
 
@@ -1638,6 +1638,10 @@ msgstr "Font"
 #: src/pages/settings/audio.tsx
 msgid "For a receiver on an optical or ARC link, which gets other surround formats as stereo otherwise."
 msgstr "Per un ricevitore collegato tramite ottico o ARC, che altrimenti riceve gli altri formati surround come stereo."
+
+#: src/lib/playback/controller.ts
+msgid "Forced"
+msgstr ""
 
 #: src/pages/settings/subtitles.tsx
 msgid "Forced, for foreign parts only"
@@ -3536,6 +3540,10 @@ msgstr "Rilevato"
 msgid "Saw its subtitle"
 msgstr "Sottotitolo rilevato"
 
+#: src/lib/playback/controller.ts
+msgid "SDH"
+msgstr ""
+
 #: src/pages/settings/subtitles.tsx
 msgid "SDH, with sounds described"
 msgstr "SDH, con descrizione dei suoni"
@@ -3803,7 +3811,7 @@ msgstr "Disconnettersi da questo server?"
 msgid "Signed out"
 msgstr "Disconnesso"
 
-#: src/pages/settings/subtitles.tsx
+#: src/lib/playback/controller.ts src/pages/settings/subtitles.tsx
 msgid "Signs and songs"
 msgstr "Cartelli e brani"
 
@@ -4685,6 +4693,11 @@ msgstr "Ripristina serie"
 #: src/components/version-settings.tsx
 msgid "Unfinished"
 msgstr "Non completata"
+
+#: src/lib/playback/controller.ts
+#, fuzzy
+msgid "Unknown language"
+msgstr "Lingue audio"
 
 #: src/components/player/volume.tsx
 msgid "Unmute"

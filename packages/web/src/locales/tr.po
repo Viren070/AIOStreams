@@ -903,7 +903,7 @@ msgstr "Renkler ve özel CSS"
 msgid "Combine movie and show results"
 msgstr "Film ve dizi sonuçlarını birleştir"
 
-#: src/pages/settings/audio.tsx
+#: src/lib/playback/controller.ts src/pages/settings/audio.tsx
 msgid "Commentary"
 msgstr "Yorum parçası"
 
@@ -1639,6 +1639,10 @@ msgstr "Yazı tipi"
 #: src/pages/settings/audio.tsx
 msgid "For a receiver on an optical or ARC link, which gets other surround formats as stereo otherwise."
 msgstr "Optik veya ARC bağlantısı kullanan, diğer çevresel ses biçimlerini stereo olarak alan alıcılar için."
+
+#: src/lib/playback/controller.ts
+msgid "Forced"
+msgstr ""
 
 #: src/pages/settings/subtitles.tsx
 msgid "Forced, for foreign parts only"
@@ -3537,6 +3541,10 @@ msgstr "Görüldü"
 msgid "Saw its subtitle"
 msgstr "Altyazısını gördüm"
 
+#: src/lib/playback/controller.ts
+msgid "SDH"
+msgstr ""
+
 #: src/pages/settings/subtitles.tsx
 msgid "SDH, with sounds described"
 msgstr "SDH, sesleri betimleyen altyazı"
@@ -3804,7 +3812,7 @@ msgstr "Bu sunucudaki oturum kapatılsın mı?"
 msgid "Signed out"
 msgstr "Oturum kapatıldı"
 
-#: src/pages/settings/subtitles.tsx
+#: src/lib/playback/controller.ts src/pages/settings/subtitles.tsx
 msgid "Signs and songs"
 msgstr "Yazılar ve şarkılar"
 
@@ -4686,6 +4694,11 @@ msgstr "Diziyi yeniden takip et"
 #: src/components/version-settings.tsx
 msgid "Unfinished"
 msgstr "Yarım kalanlar"
+
+#: src/lib/playback/controller.ts
+#, fuzzy
+msgid "Unknown language"
+msgstr "Ses dilleri"
 
 #: src/components/player/volume.tsx
 msgid "Unmute"

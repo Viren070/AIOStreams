@@ -903,7 +903,7 @@ msgstr "颜色和自定义 CSS"
 msgid "Combine movie and show results"
 msgstr "合并电影和剧集的搜索结果"
 
-#: src/pages/settings/audio.tsx
+#: src/lib/playback/controller.ts src/pages/settings/audio.tsx
 msgid "Commentary"
 msgstr "评论音轨"
 
@@ -1640,6 +1640,10 @@ msgstr "字体"
 #: src/pages/settings/audio.tsx
 msgid "For a receiver on an optical or ARC link, which gets other surround formats as stereo otherwise."
 msgstr "适用于通过光纤或 ARC 连接的接收设备，否则其他环绕声格式可能会以立体声输出。"
+
+#: src/lib/playback/controller.ts
+msgid "Forced"
+msgstr ""
 
 #: src/pages/settings/subtitles.tsx
 msgid "Forced, for foreign parts only"
@@ -3540,6 +3544,10 @@ msgstr "已看到"
 msgid "Saw its subtitle"
 msgstr "已看到对应字幕"
 
+#: src/lib/playback/controller.ts
+msgid "SDH"
+msgstr ""
+
 #: src/pages/settings/subtitles.tsx
 msgid "SDH, with sounds described"
 msgstr "SDH 字幕（包含声音描述）"
@@ -3809,7 +3817,7 @@ msgstr "要退出此服务器的登录吗？"
 msgid "Signed out"
 msgstr "已退出登录"
 
-#: src/pages/settings/subtitles.tsx
+#: src/lib/playback/controller.ts src/pages/settings/subtitles.tsx
 msgid "Signs and songs"
 msgstr "标志与歌曲"
 
@@ -4693,6 +4701,11 @@ msgstr "恢复剧集"
 #: src/components/version-settings.tsx
 msgid "Unfinished"
 msgstr "未完成"
+
+#: src/lib/playback/controller.ts
+#, fuzzy
+msgid "Unknown language"
+msgstr "音频语言"
 
 #: src/components/player/volume.tsx
 msgid "Unmute"
