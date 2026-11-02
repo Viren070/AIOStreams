@@ -934,7 +934,7 @@ function TouchRail({
       >
         <BarSurface
           className={cn(
-            'pointer-events-auto flex max-h-full flex-col gap-1 overflow-y-auto rounded-[1.375rem] p-1.5',
+            'pointer-events-auto flex max-h-full flex-col gap-1 overflow-y-auto rounded-[1.375rem] p-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
             named ? 'w-[calc(4.75rem+2px)]' : 'w-[calc(3.75rem+2px)]'
           )}
         >
@@ -949,7 +949,7 @@ function TouchRail({
   return (
     <nav
       data-ui="touch-rail"
-      className="flex h-full flex-col items-center gap-1 overflow-y-auto px-1 pb-[calc(0.75rem+env(safe-area-inset-bottom))]"
+      className="flex h-full flex-col items-center gap-1 overflow-y-auto px-1 pb-[calc(0.75rem+env(safe-area-inset-bottom))] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       <Logo />
       {items.map(railItem)}
