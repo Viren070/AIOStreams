@@ -358,6 +358,7 @@ class ExoEngine(private val context: Context) : Engine {
         caps = MediaCaps.read(context)
         dolbyVision = null
         audioTrack = null
+        decoders.clear()
         loaded = false
         chosen = false
         restarting = true
@@ -683,7 +684,9 @@ class ExoEngine(private val context: Context) : Engine {
 
         override fun onAudioTrackInitialized(eventTime: AnalyticsListener.EventTime, audioTrackConfig: AudioSink.AudioTrackConfig) {
             audioTrack = audioTrackConfig
-            state(PlayerState(passthrough = !Util.isEncodingLinearPcm(audioTrackConfig.encoding)))
+            val passthrough = !Util.isEncodingLinearPcm(audioTrackConfig.encoding)
+            if (passthrough) decoders.remove("audio")
+            state(PlayerState(passthrough = passthrough))
         }
     }
 
