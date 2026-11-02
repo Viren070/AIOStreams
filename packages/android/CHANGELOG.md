@@ -1,5 +1,56 @@
 # Changelog
 
+## [0.12.0](https://github.com/Viren070/AIOStreams/compare/android-v0.11.0...android-v0.12.0) (2026-11-02)
+
+
+### Features
+
+* **android:** add what the app was doing to crash and manual reports ([dd0773a](https://github.com/Viren070/AIOStreams/commit/dd0773a177e2a50522f28d2db23931fc8d770a09))
+* **ui:** give confirmation dialogs a name and a focus return ([cacd937](https://github.com/Viren070/AIOStreams/commit/cacd93722984460d5ae100c959ab87a57782fab9))
+* **ui:** take a colour typed without its # ([cacd937](https://github.com/Viren070/AIOStreams/commit/cacd93722984460d5ae100c959ab87a57782fab9))
+* **web:** add a setting for how long the hero stays on each title ([cacd937](https://github.com/Viren070/AIOStreams/commit/cacd93722984460d5ae100c959ab87a57782fab9))
+* **web:** ask for a metadata addon on a title without details ([cacd937](https://github.com/Viren070/AIOStreams/commit/cacd93722984460d5ae100c959ab87a57782fab9))
+* **web:** bend the liquid glass bar's backdrop toward its middle like a lens ([cacd937](https://github.com/Viren070/AIOStreams/commit/cacd93722984460d5ae100c959ab87a57782fab9))
+* **web:** bigger icons in the bottom bar without names ([cacd937](https://github.com/Viren070/AIOStreams/commit/cacd93722984460d5ae100c959ab87a57782fab9))
+* **web:** draw liquid glass as a lens around its middle line, with a lit rim ([cacd937](https://github.com/Viren070/AIOStreams/commit/cacd93722984460d5ae100c959ab87a57782fab9))
+* **web:** fill the phone's title row in a set order, and keep tablets on the inline row ([cacd937](https://github.com/Viren070/AIOStreams/commit/cacd93722984460d5ae100c959ab87a57782fab9))
+* **web:** give shows Play and More info in the rotating hero ([cacd937](https://github.com/Viren070/AIOStreams/commit/cacd93722984460d5ae100c959ab87a57782fab9))
+* **web:** mark the open season with a sliding bar ([cacd937](https://github.com/Viren070/AIOStreams/commit/cacd93722984460d5ae100c959ab87a57782fab9))
+* **web:** mark unaired episodes the server still lets play, and ask before playing one ([cacd937](https://github.com/Viren070/AIOStreams/commit/cacd93722984460d5ae100c959ab87a57782fab9))
+* **web:** pick a tab on a press, waiting only out a held key ([cacd937](https://github.com/Viren070/AIOStreams/commit/cacd93722984460d5ae100c959ab87a57782fab9))
+* **web:** play or pause with Select while the player's controls are hidden ([cacd937](https://github.com/Viren070/AIOStreams/commit/cacd93722984460d5ae100c959ab87a57782fab9))
+* **web:** put a server subtitle's title on a line of its own ([cacd937](https://github.com/Viren070/AIOStreams/commit/cacd93722984460d5ae100c959ab87a57782fab9))
+* **web:** put a title's actions in a labelled row and a More sheet on touch screens ([cacd937](https://github.com/Viren070/AIOStreams/commit/cacd93722984460d5ae100c959ab87a57782fab9))
+* **web:** scroll a title's backdrop and the rotating hero at half speed ([cacd937](https://github.com/Viren070/AIOStreams/commit/cacd93722984460d5ae100c959ab87a57782fab9))
+* **web:** show episodes title first, with their air date and a menu button ([cacd937](https://github.com/Viren070/AIOStreams/commit/cacd93722984460d5ae100c959ab87a57782fab9))
+* **web:** show the player's chapters in a sheet with pictures ([cacd937](https://github.com/Viren070/AIOStreams/commit/cacd93722984460d5ae100c959ab87a57782fab9))
+* **web:** show the time in the player's top bar ([cacd937](https://github.com/Viren070/AIOStreams/commit/cacd93722984460d5ae100c959ab87a57782fab9))
+* **web:** slide the bottom bar away while scrolling down ([cacd937](https://github.com/Viren070/AIOStreams/commit/cacd93722984460d5ae100c959ab87a57782fab9))
+
+
+### Bug Fixes
+
+* **android:** clear the decoders a report names between files ([2f9585b](https://github.com/Viren070/AIOStreams/commit/2f9585ba519db8a4061f978e8ba988fb7947a3f4))
+* **android:** decode passed-through sound while the speed isn't normal ([5b8f416](https://github.com/Viren070/AIOStreams/commit/5b8f4160fe91a0ca4bc3785c4555b693a609934b))
+* **android:** hide the video SurfaceView itself once the player closes ([2764a8a](https://github.com/Viren070/AIOStreams/commit/2764a8aefb0bd58a4f51daf61ef7bcf0f91636f1))
+* **android:** leave the passthrough formats to ExoPlayer's own output check ([a495250](https://github.com/Viren070/AIOStreams/commit/a4952505d6431d0311ccb951964360f3a1665c1a))
+* **android:** let Media3 stop the playback service a media key starts with nothing playing ([8a8b2ca](https://github.com/Viren070/AIOStreams/commit/8a8b2cae19a8ef7d9d0652b17d952b77fadd8836))
+* **android:** pick a track's audio output again when the passthrough formats change ([0b56aa1](https://github.com/Viren070/AIOStreams/commit/0b56aa18782fd1aab47f23609839de681bcc1122))
+* **android:** pick the sound's output again when the output's formats change ([ede4b94](https://github.com/Viren070/AIOStreams/commit/ede4b94aa429621001e20163b04df49be1fa6349))
+* **android:** re-time TrueHD at its first sync frame after a seek ([9672c1f](https://github.com/Viren070/AIOStreams/commit/9672c1fd3ce659fe9c7efb5421342007b8d0c3f2))
+* **android:** read HDMV DTS audio in TS files ([eadfce4](https://github.com/Viren070/AIOStreams/commit/eadfce41b3c248bcb1af7228f6ca04c918cd0ad5))
+* **android:** shape and mix down 5.1.4 and 7.1.4 sound ([42a7f1b](https://github.com/Viren070/AIOStreams/commit/42a7f1b96ad5aad4e8f6cc1b9c72db2916c38f53))
+* **android:** turn off Auto Backup ([a098738](https://github.com/Viren070/AIOStreams/commit/a098738b757539e1b1a98f8188156d35b535da85))
+* **ui:** keep typed colour text while it names the stored colour ([cacd937](https://github.com/Viren070/AIOStreams/commit/cacd93722984460d5ae100c959ab87a57782fab9))
+* **web:** drop chapter titles that are only a timestamp ([cacd937](https://github.com/Viren070/AIOStreams/commit/cacd93722984460d5ae100c959ab87a57782fab9))
+* **web:** format date-only air dates on their own day ([cacd937](https://github.com/Viren070/AIOStreams/commit/cacd93722984460d5ae100c959ab87a57782fab9))
+* **web:** hide the side rails' scrollbars ([cacd937](https://github.com/Viren070/AIOStreams/commit/cacd93722984460d5ae100c959ab87a57782fab9))
+* **web:** keep the skip flash in place while skips add up ([cacd937](https://github.com/Viren070/AIOStreams/commit/cacd93722984460d5ae100c959ab87a57782fab9))
+* **web:** limit episode highlights to key focus and pointers that hover ([cacd937](https://github.com/Viren070/AIOStreams/commit/cacd93722984460d5ae100c959ab87a57782fab9))
+* **web:** name tracks by language and kind, with their own title on a line below ([cacd937](https://github.com/Viren070/AIOStreams/commit/cacd93722984460d5ae100c959ab87a57782fab9))
+* **web:** send planned skips to the Android app only ([cacd937](https://github.com/Viren070/AIOStreams/commit/cacd93722984460d5ae100c959ab87a57782fab9))
+* **web:** start keys on a tab list's selected tab when nothing is focused ([cacd937](https://github.com/Viren070/AIOStreams/commit/cacd93722984460d5ae100c959ab87a57782fab9))
+
 ## [0.11.0](https://github.com/Viren070/AIOStreams/compare/android-v0.10.0...android-v0.11.0) (2026-10-29)
 
 
