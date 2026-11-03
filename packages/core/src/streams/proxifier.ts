@@ -28,16 +28,6 @@ export function evaluateProxyStream(
   if (stream.proxied) {
     return 'skip';
   }
-  // Native usenet and qBittorrent streams are served from this instance's
-  // byte endpoint and must never be proxied.
-  if (
-    stream.service &&
-    [constants.AIOSTREAMS_SERVICE, constants.QBITTORRENT_SERVICE].includes(
-      stream.service.id
-    )
-  ) {
-    return 'skip';
-  }
   let streamUrl: URL;
   let proxyUrl: URL;
   try {
@@ -50,6 +40,20 @@ export function evaluateProxyStream(
       },
       'failed to parse url for proxy check'
     );
+    return 'skip';
+  }
+  // Native usenet and qBittorrent streams are served from this instance's
+  // byte endpoint and must never be proxied. The service tag alone is not
+  // proof, it comes from the stream title and an external addon can carry
+  // the same name, so check the url is really ours.
+  if (
+    stream.service &&
+    [constants.AIOSTREAMS_SERVICE, constants.QBITTORRENT_SERVICE].includes(
+      stream.service.id
+    ) &&
+    (streamUrl.host === new URL(appConfig.bootstrap.internalUrl).host ||
+      streamUrl.host === new URL(appConfig.bootstrap.baseUrl).host)
+  ) {
     return 'skip';
   }
   // do not proxy the stream if it is a nzbdav/altmount stream from a built-in addon and the proxy is not the built-in proxy (i.e. only allow using built-in proxy for these)
