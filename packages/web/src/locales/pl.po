@@ -1,14 +1,14 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-01 20:02+0000\n"
+"PO-Revision-Date: 2026-11-03 18:00+0000\n"
 "Last-Translator: Krzysztof <krzysiek@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Polish <https://hosted.weblate.org/projects/aiostreams/web-app/pl/>\n"
 "Language: pl\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Weblate 2026.11.dev0\n"
+"X-Generator: Weblate 2026.11.1.dev0\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 
 #: src/components/party/party-sheet.tsx
@@ -1638,7 +1638,7 @@ msgstr "Dla odbiornika podłączonego przez złącze optyczne lub ARC, który w 
 
 #: src/lib/playback/controller.ts
 msgid "Forced"
-msgstr ""
+msgstr "Wymuszony"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Forced, for foreign parts only"
@@ -3531,7 +3531,7 @@ msgstr "Zobaczyłem napisy"
 
 #: src/lib/playback/controller.ts
 msgid "SDH"
-msgstr ""
+msgstr "SDH"
 
 #: src/pages/settings/subtitles.tsx
 msgid "SDH, with sounds described"
@@ -4682,9 +4682,8 @@ msgid "Unfinished"
 msgstr "Niedokończone"
 
 #: src/lib/playback/controller.ts
-#, fuzzy
 msgid "Unknown language"
-msgstr "Języki audio"
+msgstr "Nieznany język"
 
 #: src/components/player/volume.tsx
 msgid "Unmute"
