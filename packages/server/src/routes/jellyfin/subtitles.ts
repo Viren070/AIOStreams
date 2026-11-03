@@ -31,9 +31,14 @@ function formatOf(raw: string): SubtitleFormat {
   return 'vtt';
 }
 
-async function fetchSubtitle(
+/**
+ * The subtitle, or the status to answer with. A provider that refuses the file
+ * (a missing API key, a dead link) answers the same on a retry, so that is a
+ * 404 and clients move on; one that is down or busy is a 502 worth retrying.
+ */
+export async function fetchSubtitle(
   url: string
-): Promise<{ raw: string; cacheable: boolean } | null> {
+): Promise<{ raw: string; cacheable: boolean } | { status: number }> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
@@ -41,7 +46,12 @@ async function fetchSubtitle(
       signal: controller.signal,
       redirect: 'follow',
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      logger.debug({ url, status: res.status }, 'subtitle fetch refused');
+      const transient =
+        res.status >= 500 || res.status === 408 || res.status === 429;
+      return { status: transient ? 502 : 404 };
+    }
 
     return {
       raw: (await readBodyCapped(res, MAX_BYTES)).toString('utf8'),
@@ -54,7 +64,7 @@ async function fetchSubtitle(
       { url, err: error instanceof Error ? error.message : String(error) },
       'subtitle fetch failed'
     );
-    return null;
+    return { status: 502 };
   } finally {
     clearTimeout(timer);
   }
@@ -89,8 +99,8 @@ async function subtitleHandler(req: Request, res: Response) {
   let cacheable = true;
   if (!converted) {
     const fetched = await fetchSubtitle(track.url);
-    if (!fetched) {
-      res.status(502).end();
+    if ('status' in fetched) {
+      res.status(fetched.status).end();
       return;
     }
     converted = convertSubtitle(
