@@ -6,6 +6,7 @@ import android.content.Context
 import android.os.Build
 import android.os.Debug
 import android.os.Process
+import android.os.SystemClock
 import androidx.annotation.RequiresApi
 import androidx.webkit.WebViewCompat
 import io.github.viren070.aiostreams.exoplayer.video.mediaCapsLine
@@ -190,7 +191,7 @@ object Crashes {
                 summary += "Closed by Android: $why" + described(exit)
             }
         }
-        val notes = listOfNotNull("Importance: ${importance(exit)}", doingOf(context, exit.pid)?.let { "Doing: $it" })
+        val notes = listOfNotNull("Importance: ${importance(exit)}", doingOf(context, exit.pid, exit.timestamp)?.let { "Doing: $it" })
         return assemble(
             context, exit.timestamp, uptimeS, exit.pss.takeIf { it > 0 } ?: exit.rss, summary, details,
             log ?: logOf(exit.pid), notes = notes,
@@ -268,24 +269,30 @@ object Crashes {
 
     private fun date(at: Long): String = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(at))
 
-    fun doing(context: Context, what: String) {
-        val prefs = prefs(context)
-        val mine = "${Process.myPid()}|"
-        val noted = prefs.getString(DOING, null)
-        if (noted != null && noted.startsWith(mine) && noted.substringAfterLast('|') == what) return
-        val edit = prefs.edit()
-        // Kept for the report of how the last run ended.
-        if (noted != null && !noted.startsWith(mine)) edit.putString(DOING_BEFORE, noted)
-        edit.putString(DOING, "$mine${System.currentTimeMillis()}|$what").apply()
+    private class Note(val pid: Int, val since: Long, val what: String)
+
+    private fun note(value: String?): Note? {
+        val (pid, since, what) = value?.split('|', limit = 3)?.takeIf { it.size == 3 } ?: return null
+        return Note(pid.toIntOrNull() ?: return null, since.toLongOrNull() ?: return null, what)
     }
 
-    fun doingOf(context: Context, pid: Int): String? = listOf(DOING, DOING_BEFORE)
-        .firstNotNullOfOrNull { key ->
-            prefs(context).getString(key, null)?.split('|', limit = 3)?.takeIf { it.size == 3 && it[0] == "$pid" }
-        }
-        ?.let { (_, since, what) ->
-            "$what since ${DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(since.toLong()))}"
-        }
+    // Android reuses pids, even for the next run.
+    private val started = System.currentTimeMillis() - SystemClock.elapsedRealtime() + Process.getStartElapsedRealtime()
+
+    fun doing(context: Context, what: String) {
+        val prefs = prefs(context)
+        val noted = prefs.getString(DOING, null)
+        val mine = note(noted)?.let { it.pid == Process.myPid() && it.since >= started } == true
+        if (mine && noted?.substringAfterLast('|') == what) return
+        val edit = prefs.edit()
+        // Kept for the report of how the last run ended.
+        if (noted != null && !mine) edit.putString(DOING_BEFORE, noted)
+        edit.putString(DOING, "${Process.myPid()}|${System.currentTimeMillis()}|$what").apply()
+    }
+
+    fun doingOf(context: Context, pid: Int, at: Long = Long.MAX_VALUE): String? = listOf(DOING, DOING_BEFORE)
+        .firstNotNullOfOrNull { key -> note(prefs(context).getString(key, null))?.takeIf { it.pid == pid && it.since <= at } }
+        ?.let { "${it.what} since ${DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(it.since))}" }
 
     @RequiresApi(Build.VERSION_CODES.R)
     private fun importance(exit: ApplicationExitInfo) = when {
