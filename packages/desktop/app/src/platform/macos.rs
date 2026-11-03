@@ -8,6 +8,7 @@ use std::ptr::{self, NonNull};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
+use aiostreams_desktop_core::bridge::{Outbound, VideoFrame};
 use aiostreams_desktop_core::mpv::Mpv;
 use aiostreams_desktop_core::playback::Fit;
 use aiostreams_desktop_core::render::RenderContext;
@@ -20,20 +21,20 @@ use objc2::{
     AllocAnyThread, DefinedClass, MainThreadMarker, MainThreadOnly, Message, define_class, msg_send,
 };
 use objc2_app_kit::{
-    NSAutoresizingMaskOptions, NSModalResponseOK, NSOpenPanel, NSView, NSWindow, NSWindowButton,
-    NSWindowOrderingMode,
+    NSAutoresizingMaskOptions, NSEvent, NSModalResponseOK, NSOpenPanel, NSResponder, NSView,
+    NSWindow, NSWindowButton, NSWindowOrderingMode,
 };
-use objc2_core_foundation::{CFString, CFTimeInterval, CGSize};
+use objc2_core_foundation::{CFString, CFTimeInterval, CGPoint, CGRect, CGSize};
 use objc2_core_graphics::CGColor;
 use objc2_core_video::CVTimeStamp;
-use objc2_foundation::{NSObject, NSString};
+use objc2_foundation::{NSObject, NSPoint, NSRect, NSString};
 use objc2_open_gl::{
     CGLChoosePixelFormat, CGLContextObj, CGLContextParameter, CGLCreateContext, CGLError,
     CGLLockContext, CGLOpenGLProfile, CGLPixelFormatAttribute, CGLPixelFormatObj, CGLRetainContext,
     CGLRetainPixelFormat, CGLSetCurrentContext, CGLSetParameter, CGLUnlockContext,
 };
 use objc2_quartz_core::{
-    CAAutoresizingMask, CALayer, CAMetalLayer, CAOpenGLLayer, CATransaction,
+    CAAutoresizingMask, CACornerMask, CALayer, CAMetalLayer, CAOpenGLLayer, CATransaction,
     kCAContentsFormatRGBA16Float,
 };
 use tao::platform::macos::WindowExtMacOS;
@@ -41,6 +42,7 @@ use tao::window::{Icon, Window};
 
 mod video;
 
+use super::small::{Small, event};
 use video::Output;
 
 /// Custom protocols are served from `<scheme>://localhost` on macOS.
@@ -308,8 +310,163 @@ fn sample_buffer_layer() -> Result<Retained<CALayer>, String> {
     Ok(unsafe { msg_send![class, new] })
 }
 
+type OnInput = Box<dyn Fn(Outbound)>;
+
 thread_local! {
     static LAYER: RefCell<Option<Retained<VideoLayer>>> = const { RefCell::new(None) };
+    static VIEW: RefCell<Option<Retained<VideoView>>> = const { RefCell::new(None) };
+    static SMALL: RefCell<Option<Small>> = const { RefCell::new(None) };
+    static GLIDING: Cell<bool> = const { Cell::new(false) };
+    static ON_INPUT: RefCell<Option<OnInput>> = const { RefCell::new(None) };
+}
+
+fn emit(message: Outbound) {
+    ON_INPUT.with_borrow(|on_input| {
+        if let Some(on_input) = on_input {
+            on_input(message);
+        }
+    });
+}
+
+/// In the page's pixels, which run down: the window's points run up.
+fn cursor(e: &NSEvent) -> (f64, f64) {
+    let at = e.locationInWindow();
+    (at.x, -at.y)
+}
+
+fn glide() {
+    let going = SMALL.with_borrow_mut(|small| small.as_mut().is_some_and(Small::step));
+    VIEW.with_borrow(|view| {
+        if let Some(view) = view {
+            view.place();
+        }
+    });
+    if going {
+        video::after(Duration::from_millis(8), glide);
+    } else {
+        GLIDING.set(false);
+    }
+}
+
+pub struct ViewIvars {
+    video: Retained<CALayer>,
+}
+
+define_class!(
+    /// Holds the video's layer, small where the page's mini player leaves room for it, and
+    /// takes clicks and drags on it while it sits over the page.
+    #[unsafe(super(NSView, NSResponder, NSObject))]
+    #[thread_kind = MainThreadOnly]
+    #[name = "AIOStreamsVideoView"]
+    #[ivars = ViewIvars]
+    pub struct VideoView;
+
+    impl VideoView {
+        /// Only the small video takes clicks; the page beneath gets the rest.
+        #[unsafe(method_id(hitTest:))]
+        fn hit_test(&self, point: NSPoint) -> Option<Retained<NSView>> {
+            // SAFETY: the window's content view, which holds this one.
+            let content = unsafe { self.superview() };
+            let inside = content.is_some_and(|content| {
+                let y = if content.isFlipped() {
+                    point.y
+                } else {
+                    content.bounds().size.height - point.y
+                };
+                SMALL.with_borrow(|small| {
+                    small.as_ref().is_some_and(|s| {
+                        !s.hidden
+                            && (s.at.0..s.at.0 + s.size.0).contains(&point.x)
+                            && (s.at.1..s.at.1 + s.size.1).contains(&y)
+                    })
+                })
+            });
+            inside.then(|| Retained::into_super(self.retain()))
+        }
+
+        #[unsafe(method(acceptsFirstMouse:))]
+        fn accepts_first_mouse(&self, _event: Option<&NSEvent>) -> bool {
+            true
+        }
+
+        #[unsafe(method(mouseDown:))]
+        fn mouse_down(&self, e: &NSEvent) {
+            SMALL.with_borrow_mut(|small| {
+                if let Some(small) = small.as_mut() {
+                    small.press(cursor(e));
+                }
+            });
+        }
+
+        #[unsafe(method(mouseDragged:))]
+        fn mouse_dragged(&self, e: &NSEvent) {
+            let room = self.bounds().size;
+            let moved = SMALL.with_borrow_mut(|small| {
+                let small = small.as_mut()?;
+                let grabbed = small.drag(cursor(e), (room.width, room.height))?;
+                Some((grabbed, small.at))
+            });
+            let Some((grabbed, at)) = moved else {
+                return;
+            };
+            self.place();
+            if grabbed {
+                emit(event("grabbed", None));
+            }
+            emit(event("moving", Some(at)));
+        }
+
+        #[unsafe(method(mouseUp:))]
+        fn mouse_up(&self, _e: &NSEvent) {
+            let heard = SMALL.with_borrow_mut(|small| small.as_mut()?.release(true));
+            if let Some(heard) = heard {
+                emit(heard);
+            }
+        }
+    }
+);
+
+impl VideoView {
+    fn create(mtm: MainThreadMarker, frame: NSRect, video: Retained<CALayer>) -> Retained<Self> {
+        let this = Self::alloc(mtm).set_ivars(ViewIvars { video });
+        // SAFETY: NSView's designated initializer, on a freshly allocated instance.
+        unsafe { msg_send![super(this), initWithFrame: frame] }
+    }
+
+    /// The video's layer where the page last placed it, or over the whole view.
+    fn place(&self) {
+        let (Some(holder), video) = (self.layer(), &self.ivars().video) else {
+            return;
+        };
+        let bounds = holder.bounds();
+        let (frame, radii) = SMALL.with_borrow(|small| match small {
+            Some(s) => {
+                // Whichever way the layers above run.
+                let y = if holder.contentsAreFlipped() {
+                    s.at.1
+                } else {
+                    bounds.size.height - s.at.1 - s.size.1
+                };
+                let at = CGRect::new(CGPoint::new(s.at.0, y), CGSize::new(s.size.0, s.size.1));
+                (at, s.radii)
+            }
+            None => (bounds, (0.0, 0.0)),
+        });
+        let top = CACornerMask::LayerMinXMaxYCorner | CACornerMask::LayerMaxXMaxYCorner;
+        let bottom = CACornerMask::LayerMinXMinYCorner | CACornerMask::LayerMaxXMinYCorner;
+        let (top, bottom) = if video.contentsAreFlipped() {
+            (bottom, top)
+        } else {
+            (top, bottom)
+        };
+        CATransaction::begin();
+        CATransaction::setDisableActions(true);
+        video.setFrame(frame);
+        video.setCornerRadius(radii.0);
+        video.setMaskedCorners(if radii.1 > 0.0 { top | bottom } else { top });
+        video.setMasksToBounds(radii.0 > 0.0);
+        CATransaction::commit();
+    }
 }
 
 impl VideoLayer {
@@ -451,11 +608,13 @@ enum Drawn {
     SampleBuffer(Retained<CALayer>),
 }
 
-/// A view under the web view, holding the video's layer.
+/// A view under the web view, holding the video's layer, or over it where the page's
+/// mini player leaves room.
 pub struct VideoSurface {
-    view: Retained<NSView>,
+    view: Retained<VideoView>,
     root: Retained<CALayer>,
     drawn: Drawn,
+    lifted: Cell<bool>,
 }
 
 impl VideoSurface {
@@ -464,11 +623,6 @@ impl VideoSurface {
         // SAFETY: tao's content view, alive as long as the window.
         let content: &NSView = unsafe { &*window.ns_view().cast::<NSView>() };
         let bounds = content.bounds();
-        let view = NSView::initWithFrame(NSView::alloc(mtm), bounds);
-        view.setAutoresizingMask(
-            NSAutoresizingMaskOptions::ViewWidthSizable
-                | NSAutoresizingMaskOptions::ViewHeightSizable,
-        );
         let sizable =
             CAAutoresizingMask::LayerWidthSizable | CAAutoresizingMask::LayerHeightSizable;
         let (root, drawn) = match video::running() {
@@ -494,13 +648,27 @@ impl VideoSurface {
                 (root, Drawn::SampleBuffer(display))
             }
         };
-        root.setAutoresizingMask(sizable);
         root.setContentsScale(window.scale_factor());
+        // The view stays the window's size, so the layer it hosts does too; the video's moves inside it.
+        let holder = CALayer::layer();
+        holder.addSublayer(&root);
+        let view = VideoView::create(mtm, bounds, root.clone());
+        view.setAutoresizingMask(
+            NSAutoresizingMaskOptions::ViewWidthSizable
+                | NSAutoresizingMaskOptions::ViewHeightSizable,
+        );
         // A layer-hosting view: the layer is set before the view asks for one.
-        view.setLayer(Some(&root));
+        view.setLayer(Some(&holder));
         view.setWantsLayer(true);
         content.addSubview_positioned_relativeTo(&view, NSWindowOrderingMode::Below, None);
-        Ok(Self { view, root, drawn })
+        view.place();
+        VIEW.with(|v| *v.borrow_mut() = Some(view.clone()));
+        Ok(Self {
+            view,
+            root,
+            drawn,
+            lifted: Cell::new(false),
+        })
     }
 
     pub fn attach(&self, mpv: Arc<Mpv>) {
@@ -509,7 +677,7 @@ impl VideoSurface {
             Drawn::SampleBuffer(display) => display.clone(),
         };
         // Before rendering starts, as it reads mpv's options on this thread.
-        video::attach(edr, self.view.clone(), mpv.clone());
+        video::attach(edr, Retained::into_super(self.view.clone()), mpv.clone());
         if let Drawn::OpenGl(layer) = &self.drawn {
             *layer.ivars().mpv.borrow_mut() = Some(mpv);
             layer.start();
@@ -524,13 +692,50 @@ impl VideoSurface {
         LAYER.with(|l| l.borrow_mut().take());
     }
 
+    /// Hears clicks and drags on the small video, for the page.
+    pub fn on_input(&self, on_input: impl Fn(Outbound) + 'static) {
+        ON_INPUT.set(Some(Box::new(on_input)));
+    }
+
+    /// Over the page in `frame`, in the page's pixels; none puts it back beneath, filling the window.
+    pub fn frame(&self, frame: Option<VideoFrame>, _scale: f64) {
+        let next = frame.map(|frame| SMALL.with_borrow(|last| Small::new(&frame, last.as_ref())));
+        let lifted = next.as_ref().is_some_and(|s| !s.hidden);
+        let gliding = next.as_ref().is_some_and(Small::gliding);
+        SMALL.set(next);
+        // SAFETY: the window's content view, which holds the video's.
+        if lifted != self.lifted.replace(lifted)
+            && let Some(content) = unsafe { self.view.superview() }
+        {
+            let order = if lifted {
+                NSWindowOrderingMode::Above
+            } else {
+                NSWindowOrderingMode::Below
+            };
+            content.addSubview_positioned_relativeTo(&self.view, order, None);
+        }
+        self.fit();
+        if gliding && !GLIDING.replace(true) {
+            glide();
+        }
+    }
+
     pub fn resize(&self, width: u32, _height: u32) {
         let bounds = self.view.bounds();
-        self.root.setFrame(bounds);
+        if let Some(holder) = self.view.layer() {
+            holder.setFrame(bounds);
+        }
         if bounds.size.width > 0.0 {
             self.root
                 .setContentsScale(f64::from(width) / bounds.size.width);
         }
+        self.fit();
+    }
+
+    /// The video's layer placed, and what draws into it sized to match.
+    fn fit(&self) {
+        self.view.place();
+        let bounds = self.root.bounds();
         match &self.drawn {
             Drawn::OpenGl(layer) => layer.setNeedsDisplay(),
             Drawn::Metal(layer) => {
@@ -543,7 +748,7 @@ impl VideoSurface {
             Drawn::SampleBuffer(display) => {
                 CATransaction::begin();
                 CATransaction::setDisableActions(true);
-                display.setFrame(self.root.bounds());
+                display.setFrame(bounds);
                 CATransaction::commit();
             }
         }

@@ -1,17 +1,23 @@
+use std::cell::{Cell, RefCell};
 use std::ffi::OsString;
 use std::os::windows::ffi::OsStringExt;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, OnceLock};
 
+use super::small::{Small, event};
+use aiostreams_desktop_core::bridge::{Outbound, VideoFrame};
 use aiostreams_desktop_core::mpv::Mpv;
 use tao::platform::windows::{IconExtWindows, WindowExtWindows};
 use tao::window::{Icon, Window};
 
 use windows_sys::Win32::Foundation::SYSTEMTIME;
 use windows_sys::Win32::Foundation::{
-    CloseHandle, ERROR_ALREADY_EXISTS, GetLastError, HANDLE, HWND, LPARAM, LRESULT, WPARAM,
+    CloseHandle, ERROR_ALREADY_EXISTS, GetLastError, HANDLE, HWND, LPARAM, LRESULT, POINT, RECT,
+    WPARAM,
 };
-use windows_sys::Win32::Graphics::Gdi::{BLACK_BRUSH, GetStockObject};
+use windows_sys::Win32::Graphics::Gdi::{
+    BLACK_BRUSH, CreateRoundRectRgn, GetStockObject, SetWindowRgn,
+};
 use windows_sys::Win32::System::DataExchange::COPYDATASTRUCT;
 use windows_sys::Win32::System::LibraryLoader::{GetModuleHandleW, LoadLibraryW};
 use windows_sys::Win32::System::Registry::{
@@ -25,12 +31,15 @@ use windows_sys::Win32::System::Threading::CreateMutexW;
 use windows_sys::Win32::UI::Controls::Dialogs::{
     GetOpenFileNameW, OFN_FILEMUSTEXIST, OFN_NOCHANGEDIR, OFN_PATHMUSTEXIST, OPENFILENAMEW,
 };
+use windows_sys::Win32::UI::Input::KeyboardAndMouse::{ReleaseCapture, SetCapture};
 use windows_sys::Win32::UI::Shell::{SetCurrentProcessExplicitAppUserModelID, ShellExecuteW};
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, DefWindowProcW, FindWindowExW, FindWindowW, HWND_BOTTOM, HWND_MESSAGE,
-    IsIconic, MB_ICONERROR, MB_OK, MessageBoxW, RegisterClassW, SMTO_ABORTIFHUNG, SW_RESTORE,
-    SW_SHOWNORMAL, SWP_NOACTIVATE, SendMessageTimeoutW, SetForegroundWindow, SetWindowPos,
-    ShowWindow, WM_COPYDATA, WNDCLASSW, WS_CHILD, WS_VISIBLE,
+    CreateWindowExW, DefWindowProcW, FindWindowExW, FindWindowW, GetClientRect, GetCursorPos,
+    GetParent, HWND_BOTTOM, HWND_MESSAGE, HWND_TOP, IsIconic, KillTimer, MB_ICONERROR, MB_OK,
+    MessageBoxW, RegisterClassW, SMTO_ABORTIFHUNG, SW_RESTORE, SW_SHOWNORMAL, SWP_NOACTIVATE,
+    SWP_NOSIZE, SendMessageTimeoutW, SetForegroundWindow, SetTimer, SetWindowPos, ShowWindow,
+    WM_CAPTURECHANGED, WM_COPYDATA, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEMOVE, WM_TIMER,
+    WNDCLASSW, WS_CHILD, WS_VISIBLE,
 };
 
 /// The id on the Start menu shortcut Velopack makes, which gives the system's
@@ -232,18 +241,147 @@ pub fn unregister_links() {
     unsafe { RegDeleteTreeW(HKEY_CURRENT_USER, wide(&scheme_key()).as_ptr()) };
 }
 
+type OnInput = Box<dyn Fn(Outbound)>;
+
+thread_local! {
+    static SMALL: RefCell<Option<Small>> = const { RefCell::new(None) };
+    /// The window's pixels to the page's.
+    static SCALE: Cell<f64> = const { Cell::new(1.0) };
+    static ON_INPUT: RefCell<Option<OnInput>> = const { RefCell::new(None) };
+}
+
+const MOVE_TIMER: usize = 1;
+
+fn emit(message: Outbound) {
+    ON_INPUT.with_borrow(|on_input| {
+        if let Some(on_input) = on_input {
+            on_input(message);
+        }
+    });
+}
+
+fn px(v: f64) -> i32 {
+    (v * SCALE.get()).round() as i32
+}
+
+fn cursor() -> (f64, f64) {
+    let mut point = POINT { x: 0, y: 0 };
+    unsafe { GetCursorPos(&mut point) };
+    let scale = SCALE.get();
+    (f64::from(point.x) / scale, f64::from(point.y) / scale)
+}
+
+/// The system can't smooth a child window's edge, so the curve is stepped.
+fn round(hwnd: HWND, size: (f64, f64), radii: (f64, f64)) {
+    let (width, height) = (px(size.0), px(size.1));
+    let (top, bottom) = (px(radii.0), px(radii.1));
+    let region = unsafe {
+        match (top, bottom) {
+            (0, 0) => std::ptr::null_mut(),
+            // Square below: the bottom corners fall outside the window.
+            (_, 0) => CreateRoundRectRgn(0, 0, width + 1, height + 2 * top, 2 * top, 2 * top),
+            _ => CreateRoundRectRgn(0, 0, width + 1, height + 1, 2 * top, 2 * top),
+        }
+    };
+    unsafe { SetWindowRgn(hwnd, region, 1) };
+}
+
+fn move_to(hwnd: HWND, (x, y): (f64, f64)) {
+    unsafe {
+        SetWindowPos(
+            hwnd,
+            HWND_TOP,
+            px(x),
+            px(y),
+            0,
+            0,
+            SWP_NOSIZE | SWP_NOACTIVATE,
+        )
+    };
+}
+
+/// Clicks and drags on the small video, which sits over the page and so gets them itself.
+/// Capture changes call back in here, so no state is borrowed across them.
 unsafe extern "system" fn video_proc(
     hwnd: HWND,
     msg: u32,
     wparam: WPARAM,
     lparam: LPARAM,
 ) -> LRESULT {
+    match msg {
+        WM_LBUTTONDOWN => {
+            let at = cursor();
+            if SMALL.with_borrow_mut(|small| small.as_mut().is_some_and(|s| s.press(at))) {
+                unsafe {
+                    KillTimer(hwnd, MOVE_TIMER);
+                    SetCapture(hwnd);
+                }
+                return 0;
+            }
+        }
+        WM_MOUSEMOVE => {
+            let at = cursor();
+            let mut client = RECT {
+                left: 0,
+                top: 0,
+                right: 0,
+                bottom: 0,
+            };
+            unsafe { GetClientRect(GetParent(hwnd), &mut client) };
+            let scale = SCALE.get();
+            let room = (
+                f64::from(client.right) / scale,
+                f64::from(client.bottom) / scale,
+            );
+            let moved = SMALL.with_borrow_mut(|small| {
+                let small = small.as_mut()?;
+                let grabbed = small.drag(at, room)?;
+                Some((grabbed, small.at, small.size, small.radii))
+            });
+            if let Some((grabbed, at, size, radii)) = moved {
+                if grabbed {
+                    round(hwnd, size, radii);
+                    emit(event("grabbed", None));
+                }
+                move_to(hwnd, at);
+                emit(event("moving", Some(at)));
+                return 0;
+            }
+        }
+        WM_LBUTTONUP | WM_CAPTURECHANGED => {
+            let heard = SMALL.with_borrow_mut(|small| small.as_mut()?.release(msg == WM_LBUTTONUP));
+            if msg == WM_LBUTTONUP {
+                unsafe { ReleaseCapture() };
+            }
+            if let Some(heard) = heard {
+                emit(heard);
+                return 0;
+            }
+        }
+        WM_TIMER if wparam == MOVE_TIMER => {
+            let step = SMALL.with_borrow_mut(|small| {
+                let small = small.as_mut()?;
+                let going = small.step();
+                Some((small.at, going))
+            });
+            if let Some((at, _)) = step {
+                move_to(hwnd, at);
+            }
+            if step.is_none_or(|(_, going)| !going) {
+                unsafe { KillTimer(hwnd, MOVE_TIMER) };
+            }
+            return 0;
+        }
+        _ => {}
+    }
     unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
 }
 
-/// The child window mpv draws into, kept beneath the web view.
+/// The child window mpv draws into, kept beneath the web view, or over it where
+/// the page's mini player leaves room.
 pub struct VideoSurface {
     hwnd: HWND,
+    size: Cell<(u32, u32)>,
 }
 
 impl VideoSurface {
@@ -278,7 +416,10 @@ impl VideoSurface {
             if hwnd.is_null() {
                 return Err("could not create the video window".into());
             }
-            Ok(Self { hwnd })
+            Ok(Self {
+                hwnd,
+                size: Cell::new((width, height)),
+            })
         }
     }
 
@@ -287,7 +428,20 @@ impl VideoSurface {
 
     pub fn shutdown(&self) {}
 
+    /// Hears clicks and drags on the small video, for the page.
+    pub fn on_input(&self, on_input: impl Fn(Outbound) + 'static) {
+        ON_INPUT.set(Some(Box::new(on_input)));
+    }
+
     pub fn resize(&self, width: u32, height: u32) {
+        self.size.set((width, height));
+        if SMALL.with_borrow(Option::is_none) {
+            self.fill();
+        }
+    }
+
+    fn fill(&self) {
+        let (width, height) = self.size.get();
         unsafe {
             SetWindowPos(
                 self.hwnd,
@@ -298,6 +452,38 @@ impl VideoSurface {
                 height as i32,
                 SWP_NOACTIVATE,
             );
+        }
+    }
+
+    /// Over the page in `frame`, in the page's pixels; none puts it back beneath, filling the window.
+    pub fn frame(&self, frame: Option<VideoFrame>, scale: f64) {
+        unsafe { KillTimer(self.hwnd, MOVE_TIMER) };
+        let Some(frame) = frame else {
+            SMALL.set(None);
+            unsafe { SetWindowRgn(self.hwnd, std::ptr::null_mut(), 1) };
+            return self.fill();
+        };
+        SCALE.set(scale);
+        let small = Small::new(&frame, SMALL.take().as_ref());
+        round(self.hwnd, small.size, small.radii);
+        let (at, size) = (small.at, small.size);
+        // Hidden, it goes beneath the page, which covers it.
+        let after = if small.hidden { HWND_BOTTOM } else { HWND_TOP };
+        let gliding = small.gliding();
+        SMALL.set(Some(small));
+        unsafe {
+            SetWindowPos(
+                self.hwnd,
+                after,
+                px(at.0),
+                px(at.1),
+                px(size.0),
+                px(size.1),
+                SWP_NOACTIVATE,
+            );
+            if gliding {
+                SetTimer(self.hwnd, MOVE_TIMER, 8, None);
+            }
         }
     }
 }

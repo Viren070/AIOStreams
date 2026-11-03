@@ -252,7 +252,7 @@ pub fn refresh() {
     }
 }
 
-fn after(delay: Duration, work: impl FnOnce() + Send + 'static) {
+pub(super) fn after(delay: Duration, work: impl FnOnce() + Send + 'static) {
     if let Ok(when) = DispatchTime::try_from(delay) {
         let _ = DispatchQueue::main().after(when, work);
     }

@@ -182,6 +182,12 @@ pub fn run(app: App) {
         }
     });
     video.attach(started.mpv());
+    video.on_input({
+        let proxy = proxy.clone();
+        move |message: Outbound| {
+            let _ = proxy.send_event(UserEvent::Emit(receive_script(&message)));
+        }
+    });
     let player = Rc::new(RefCell::new(Some(started)));
     let external = Rc::new(start_external(&paths, {
         let proxy = proxy.clone();
@@ -415,6 +421,9 @@ pub fn run(app: App) {
                 set_fullscreen(&window, value, &mut remaximize)
             }
             Event::UserEvent(UserEvent::Minimize) => window.set_minimized(true),
+            Event::UserEvent(UserEvent::VideoFrame(frame)) => {
+                video.frame(frame, window.scale_factor());
+            }
             Event::UserEvent(UserEvent::Drag) => {
                 let _ = window.drag_window();
             }

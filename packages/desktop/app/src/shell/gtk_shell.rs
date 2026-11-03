@@ -184,6 +184,7 @@ impl Shell {
             UserEvent::WindowState => self.emit(Outbound::WindowState {
                 maximized: self.window.is_maximized(),
             }),
+            UserEvent::VideoFrame(frame) => self.video.frame(frame),
             UserEvent::WindowButtons(_) => {}
             UserEvent::Link(link) => {
                 self.window.present();
@@ -299,6 +300,7 @@ pub fn run(app: App) {
         post(UserEvent::Emit(receive_script(&message)))
     });
     video.attach(started.mpv());
+    video.on_input(|message| post(UserEvent::Emit(receive_script(&message))));
     let player = Rc::new(RefCell::new(Some(started)));
     let external = Rc::new(start_external(&paths, |message| {
         post(UserEvent::Emit(receive_script(&message)))
@@ -345,7 +347,7 @@ pub fn run(app: App) {
         .settings(&settings)
         .build();
     webview.set_background_color(&gdk::RGBA::new(0.0, 0.0, 0.0, 0.0));
-    video.widget().add_overlay(&webview);
+    video.set_page(&webview);
 
     content.connect_script_message_received(Some("ipc"), {
         let (webview, player, app_origin) =
