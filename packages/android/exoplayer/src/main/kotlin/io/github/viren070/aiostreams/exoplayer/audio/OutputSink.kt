@@ -6,6 +6,7 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.audio.AudioSink.AudioSinkConfig
 import androidx.media3.exoplayer.audio.ForwardingAudioSink
 
 /** Passes through only the formats the page allows, and delays the sound against the picture. */
@@ -36,17 +37,29 @@ internal class OutputSink(sink: AudioSink) : ForwardingAudioSink(sink) {
     }
 
     private var stretching = false
+    private var passingThrough = false
+    private var decodedForSpeed = false
+
+    override fun configure(audioSinkConfig: AudioSinkConfig) {
+        passingThrough = audioSinkConfig.format.sampleMimeType != MimeTypes.AUDIO_RAW
+        super.configure(audioSinkConfig)
+    }
 
     override fun setPlaybackParameters(playbackParameters: PlaybackParameters) {
         super.setPlaybackParameters(playbackParameters)
         val next = playbackParameters.speed != 1f
         if (next == stretching) return
         stretching = next
-        listener?.onAudioCapabilitiesChanged()
+        // Picking again seeks the file.
+        if (if (next) passingThrough else decodedForSpeed) {
+            decodedForSpeed = false
+            listener?.onAudioCapabilitiesChanged()
+        }
     }
 
     /** Sound the output would take as it is, which the app decodes instead while the speed isn't normal: encoded sound can't change speed. */
-    fun decodesForSpeed(format: Format) = stretching && format.sampleMimeType in passthrough && super.supportsFormat(format)
+    fun decodesForSpeed(format: Format) =
+        (stretching && format.sampleMimeType in passthrough && super.supportsFormat(format)).also { if (it) decodedForSpeed = true }
 
     private fun allowed(format: Format) = format.sampleMimeType == MimeTypes.AUDIO_RAW || format.sampleMimeType in passthrough
 
