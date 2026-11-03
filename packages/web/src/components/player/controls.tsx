@@ -30,6 +30,7 @@ import {
   MiddleButton,
   PlayerAction,
 } from './buttons';
+import { BarWindowButtons, pageDrawsWindowButtons } from '../window-controls';
 import { ChaptersSheet } from './chapters';
 import { EpisodesSheet } from './episodes';
 import { PlaylistSheet } from '../playlists';
@@ -507,20 +508,32 @@ export function PlayerControls({
             </p>
           )}
         </div>
-        {clock && <PlayerClock />}
-        {touch && !tv && (
-          <ControlButton
-            name="lock"
-            label={t`Lock screen`}
-            className={clock ? undefined : 'ms-auto'}
-            onClick={() => {
-              setLocked(true);
-              hide();
-            }}
-          >
-            <LuLock />
-          </ControlButton>
-        )}
+        <div
+          data-ui="player-top-end"
+          className="ms-auto flex items-center gap-3"
+        >
+          {clock && <PlayerClock />}
+          {touch && !tv && (
+            <ControlButton
+              name="lock"
+              label={t`Lock screen`}
+              onClick={() => {
+                setLocked(true);
+                hide();
+              }}
+            >
+              <LuLock />
+            </ControlButton>
+          )}
+          {pageDrawsWindowButtons() && !state.fullscreen && (
+            <div
+              data-ui="player-window-buttons"
+              className="flex items-center gap-1"
+            >
+              <BarWindowButtons />
+            </div>
+          )}
+        </div>
       </div>
 
       <div

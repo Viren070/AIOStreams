@@ -65,6 +65,13 @@ html.playing:has([data-ui='player-controls'][data-visible])
 html.playing [data-ui='window-controls'][data-fullscreen] {
   display: none;
 }
+/* So does the player's top bar, unless a dialog covers it. */
+html:has([data-ui='player-window-buttons']):not(
+    :has([role='dialog'][data-state='open'])
+  )
+  [data-ui='window-controls'] {
+  display: none;
+}
 /* The top bar holds them while it shows, where nothing covers it. */
 @media (min-width: 1024px) {
   html[data-window-buttons='bar']:not(.playing):not(
