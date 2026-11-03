@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-02 21:56+0000\n"
+"PO-Revision-Date: 2026-11-03 18:00+0000\n"
 "Last-Translator: Sebastian Porta <spg76@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Spanish <https://hosted.weblate.org/projects/aiostreams/web-app/es/>\n"
 "Language: es\n"
@@ -241,7 +241,7 @@ msgstr "{total, plural, one {# título} other {# títulos}}"
 
 #: src/pages/item.tsx
 msgid "{unairedCount, plural, one {# unaired} other {# unaired}}"
-msgstr "{movieCount, plural, one {# película} other {# películas}}"
+msgstr "{unairedCount, plural, one {# no emitido} other {# no emitidos}}"
 
 #: src/components/player/options.tsx
 msgid "{unread, plural, one {Watch party, # new message} other {Watch party, # new messages}}"
@@ -1406,7 +1406,7 @@ msgstr "Cajón"
 
 #: src/pages/item.tsx
 msgid "Drop"
-msgstr "Dejar serie"
+msgstr "Dejar"
 
 #: src/pages/item.tsx
 msgid "Drop show"
@@ -1860,7 +1860,7 @@ msgstr "Instalar"
 
 #: src/components/no-details.tsx
 msgid "Install a metadata addon from Addons → Marketplace. For one that isn't listed, use the Custom addon there."
-msgstr "Instala complementos de catálogo desde Addons → Marketplace. Para aquellos que no aparezcan en la lista, utiliza la opción de addon personalizado disponible allí."
+msgstr "Instala complementos de metadata desde Addons → Marketplace. Para aquellos que no aparezcan en la lista, utiliza la opción de addon personalizado disponible allí."
 
 #: src/components/no-catalogs.tsx
 msgid "Install catalog addons from Addons → Marketplace. For one that isn't listed, use the Custom addon there."
@@ -2816,7 +2816,7 @@ msgstr "Patrón"
 #: src/components/player/controls.tsx src/components/remote-sheet.tsx
 #: src/lib/input/actions.ts src/lib/input/keys.ts src/pages/downloads.tsx
 msgid "Pause"
-msgstr "Pausa"
+msgstr "Pausar"
 
 #: src/pages/downloads.tsx
 msgid "Pause all"
@@ -2824,19 +2824,19 @@ msgstr "Pausar todo"
 
 #: src/components/sessions.tsx
 msgid "Paused"
-msgstr "Pausado"
+msgstr "Pausada"
 
 #: src/pages/downloads.tsx
 msgid "Paused · {of}"
-msgstr "Pausado · {of}"
+msgstr "Pausada · {of}"
 
 #: src/components/party/party-sheet.tsx
 msgid "Paused on {name}"
-msgstr "Pausado en {name}"
+msgstr "Pausada en {name}"
 
 #: src/components/party/party-sheet.tsx
 msgid "Paused on {name}, {at} in"
-msgstr "Pausado en {name}, {at} en"
+msgstr "Pausada en {name}, {at} en"
 
 #: src/pages/settings/playback.tsx
 msgid "Pauses and asks before the next episode once this many have played in a row without a key, click or button press."
@@ -2969,7 +2969,7 @@ msgstr "Reproducir o pausar"
 
 #: src/lib/input/actions.ts
 msgid "Play or pause, or go to the controls"
-msgstr "Reproducir o pausar, o ir al control"
+msgstr "Reproducir o pausar, o ir a los controles"
 
 #: src/pages/settings/playback.tsx
 msgid "Play starts the first version, and resuming goes back to the version you were watching. Hold Play to choose instead."
@@ -2985,7 +2985,7 @@ msgstr "Reproducir la primera versión"
 
 #: src/pages/settings/playback.tsx
 msgid "Play the first version when none matches"
-msgstr "Reproducir la primera versión cuando ninguna coincida."
+msgstr "Reproducir la primera versión cuando ninguna coincida"
 
 #: src/components/player/options.tsx
 msgid "Play the sound earlier"
@@ -4271,7 +4271,7 @@ msgstr "La API con la que se comunica esta aplicación."
 
 #: src/app.tsx
 msgid "The app cannot open that link"
-msgstr "La aplicación no puede abrir ese enlace."
+msgstr "La aplicación no puede abrir ese enlace"
 
 #: src/components/crash-report.tsx
 msgid "The app closed unexpectedly"
