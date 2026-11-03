@@ -20,6 +20,37 @@ pub enum UpdateChannel {
     Nightly,
 }
 
+/// Where the page's mini player leaves room for the video, in the page's pixels.
+#[derive(Debug, Clone, Copy, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VideoFrame {
+    pub x: f64,
+    pub y: f64,
+    pub width: f64,
+    pub height: f64,
+    /// Dragged by the app, which then says where it let go.
+    #[serde(default)]
+    pub draggable: bool,
+    /// Under something the page shows over it.
+    #[serde(default)]
+    pub hidden: bool,
+    /// Moves there as the page's card does.
+    #[serde(default)]
+    pub animate: bool,
+    /// The top corners' and the bottom corners'.
+    #[serde(default)]
+    pub radius: f64,
+    #[serde(default)]
+    pub bottom_radius: f64,
+    /// Subtitles show while small.
+    #[serde(default = "shown")]
+    pub subtitles: bool,
+}
+
+fn shown() -> bool {
+    true
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(
     tag = "type",
@@ -125,6 +156,11 @@ pub enum Inbound {
     ExternalClose,
     Fullscreen {
         value: Option<bool>,
+    },
+    /// The video small over the page, where its mini player leaves room; none fills the window
+    /// behind the page again.
+    PlayerFrame {
+        frame: Option<VideoFrame>,
     },
     Minimize,
     Close,
@@ -325,6 +361,15 @@ pub enum Outbound {
     },
     Fullscreen {
         value: bool,
+    },
+    /// A click on the small video (`tap`), a drag of it starting (`grabbed`), where it is as it
+    /// drags (`moving`), or where the drag let go (`moved`), in the page's pixels.
+    PlayerFrame {
+        event: &'static str,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        x: Option<f64>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        y: Option<f64>,
     },
     WindowState {
         maximized: bool,

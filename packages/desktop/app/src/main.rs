@@ -14,7 +14,7 @@ use std::rc::Rc;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 
-use aiostreams_desktop_core::bridge::{Inbound, Outbound, PROTOCOL_VERSION, origin};
+use aiostreams_desktop_core::bridge::{Inbound, Outbound, PROTOCOL_VERSION, VideoFrame, origin};
 use aiostreams_desktop_core::downloads::{self, Downloads};
 use aiostreams_desktop_core::external::{self, External};
 use aiostreams_desktop_core::playback::{self, PlayerState};
@@ -28,6 +28,7 @@ use updates::{Command, Updater};
 pub enum UserEvent {
     Emit(String),
     Fullscreen(Option<bool>),
+    VideoFrame(Option<VideoFrame>),
     Minimize,
     Close,
     /// The player closed after the window did.
@@ -663,6 +664,15 @@ pub fn handle(
         },
         Inbound::ExternalClose => external.close(),
         Inbound::Fullscreen { value } => send(UserEvent::Fullscreen(value)),
+        Inbound::PlayerFrame { frame } => {
+            if let Some(p) = player.as_ref() {
+                let shown = frame.is_none_or(|frame| frame.subtitles);
+                let _ = p
+                    .mpv()
+                    .set_property_async("sub-visibility", if shown { "yes" } else { "no" });
+            }
+            send(UserEvent::VideoFrame(frame));
+        }
         Inbound::Minimize => send(UserEvent::Minimize),
         Inbound::WindowDrag => send(UserEvent::Drag),
         Inbound::WindowResize { edge } => match edge.as_str() {
