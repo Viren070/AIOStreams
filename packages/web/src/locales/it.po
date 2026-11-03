@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-03 18:00+0000\n"
+"PO-Revision-Date: 2026-11-04 13:52+0000\n"
 "Last-Translator: Nicola Bortoletto <translate@nicolabortoletto.com>\n"
 "Language-Team: Italian <https://hosted.weblate.org/projects/aiostreams/web-app/it/>\n"
 "Language: it\n"
@@ -530,7 +530,7 @@ msgstr "App Android"
 
 #: src/pages/settings/playback.tsx
 msgid "Android's own player, which uses less battery: the screen shows the video as the device decodes it, at the video's frame rate. Plays video the device can decode. Styled subtitles look as they do in mpv."
-msgstr "Il player integrato di Android, che consuma meno batteria: lo schermo mostra il video così come lo decodifica il dispositivo, alla frequenza di fotogrammi del video. Riproduce i video che il dispositivo è in grado di decodificare. I sottotitoli con stile hanno lo stesso aspetto che hanno in mpv."
+msgstr "Il lettore integrato di Android, che consuma meno batteria: lo schermo mostra il video così come lo decodifica il dispositivo, alla frequenza di fotogrammi del video. Riproduce i video che il dispositivo è in grado di decodificare. I sottotitoli con stile hanno lo stesso aspetto che hanno in mpv."
 
 #: src/components/party/party-sheet.tsx
 msgid "Another relay"
@@ -643,9 +643,8 @@ msgid "Back button"
 msgstr "Pulsante indietro"
 
 #: src/pages/settings/playback.tsx
-#, fuzzy
 msgid "Back in the player"
-msgstr "Player integrato"
+msgstr "Torna al lettore"
 
 #: src/components/version-settings.tsx src/pages/settings/interface.tsx
 #: src/pages/settings/subtitles.tsx src/pages/settings/theme.tsx
@@ -738,7 +737,7 @@ msgstr "mpv integrato"
 
 #: src/lib/playback/player-choice.ts
 msgid "Built-in player"
-msgstr "Player integrato"
+msgstr "Lettore integrato"
 
 #: src/pages/settings/theme.tsx
 msgid "Buttons, progress bars and highlights."
@@ -1806,7 +1805,7 @@ msgstr "Durata di permanenza del banner in evidenza su ciascun titolo durante la
 
 #: src/pages/settings/playback.tsx
 msgid "How much of the video the player holds in memory: ahead, to ride out a slow connection, and behind, to seek back at once. Automatic sizes it from this device's memory."
-msgstr "Quantità di video che il player mantiene in memoria: in avanti, per superare una connessione lenta, e all'indietro, per tornare subito dietro. La modalità automatica la calcola in base alla memoria del dispositivo."
+msgstr "Quantità di video che il lettore mantiene in memoria: in avanti, per superare una connessione lenta, e all'indietro, per tornare subito dietro. La modalità automatica la calcola in base alla memoria del dispositivo."
 
 #: src/pages/settings/playback.tsx
 msgid "How much the volume keys and the scroll wheel change the volume."
@@ -2182,9 +2181,8 @@ msgid "Midnight"
 msgstr "Mezzanotte"
 
 #: src/components/player/controls.tsx
-#, fuzzy
 msgid "Mini player"
-msgstr "Player integrato"
+msgstr "Mini lettore"
 
 #: src/components/window-controls.tsx
 msgid "Minimise"
@@ -2330,7 +2328,7 @@ msgstr "Episodio successivo"
 
 #: src/pages/settings/index.tsx
 msgid "Next episode, controls and players"
-msgstr "Episodio successivo, controlli e player"
+msgstr "Episodio successivo, controlli e lettori"
 
 #: src/components/player/next-episode.tsx
 msgid "Next in {playlistName}"
@@ -2676,9 +2674,8 @@ msgid "Opens the menu of what is selected, as a right click does."
 msgstr "Apre il menu dell'elemento selezionato, come fosse un click destro."
 
 #: src/pages/settings/playback.tsx
-#, fuzzy
 msgid "Opens the mini player"
-msgstr "Sulla pagina home"
+msgstr "Apre il mini lettore"
 
 #: src/pages/settings/playback.tsx
 msgid "Opens versions in {target}, which brings you back here with your place saved."
@@ -3037,9 +3034,8 @@ msgid "Playback"
 msgstr "Riproduzione"
 
 #: src/components/player/mini-player.tsx
-#, fuzzy
 msgid "Playback failed"
-msgstr "Riproduzione non riuscita: {failure}"
+msgstr "Riproduzione non riuscita"
 
 #: src/pages/player.tsx
 msgid "Playback failed: {failure}"
@@ -3056,7 +3052,7 @@ msgstr "Lettore"
 
 #: src/pages/settings/playback.tsx
 msgid "Player link"
-msgstr "Link del riproduttore"
+msgstr "Link del lettore"
 
 #: src/components/party/party-sheet.tsx src/components/player/chapters.tsx
 #: src/components/player/episodes.tsx src/components/playlists.tsx
@@ -4022,9 +4018,8 @@ msgid "Stop listening"
 msgstr "Interrompi ascolto"
 
 #: src/pages/settings/playback.tsx
-#, fuzzy
 msgid "Stops playing"
-msgstr "In riproduzione"
+msgstr "Interrompe la riproduzione"
 
 #: src/components/version-picker.tsx src/pages/player.tsx
 msgid "Stream link copied"
@@ -4358,7 +4353,7 @@ msgstr "il link ha restituito altro rispetto ad un video"
 
 #: src/pages/settings/playback.tsx
 msgid "The mini player keeps the video going over the pages while you look around. Tap it to open the player again, or close it with its cross."
-msgstr ""
+msgstr "Il mini lettore mantiene attivo il video sopra le pagine mentre navighi nell'app. Toccalo per riaprire il lettore, oppure chiudilo con la sua X."
 
 #: src/pages/settings/apps.tsx
 msgid "The movie or show whose page is open."
@@ -4939,7 +4934,7 @@ msgstr "In attesa di approvazione …"
 
 #: src/components/party/party-sheet.tsx
 msgid "Watch along"
-msgstr "Guarda insieme"
+msgstr "Guarda in compagnia"
 
 #: src/pages/settings/account.tsx
 msgid "Watch as someone else on this configuration. A user with a PIN needs it again after switching away."
@@ -4957,7 +4952,7 @@ msgstr "Watch party"
 #: src/components/layout.tsx src/components/party/party-sheet.tsx
 #: src/components/player/options.tsx src/pages/item.tsx
 msgid "Watch together"
-msgstr "Guarda insieme"
+msgstr "Visione condivisa"
 
 #: src/pages/history.tsx src/pages/item.tsx
 msgid "Watched"
@@ -5189,15 +5184,15 @@ msgstr "il tuo lettore"
 
 #: src/lib/party/follow.ts
 msgid "Your player can't follow a watch party. Pick the app's player in settings to watch along."
-msgstr "Il tuo lettore non può seguire un watch party. Seleziona il lettore dell'app nelle impostazioni per guardare insieme."
+msgstr "Il tuo lettore non può seguire un watch party. Seleziona il lettore dell'app nelle impostazioni per guardare insieme ad altri."
 
 #: src/components/version-picker.tsx
 msgid "Your player does not report back, so mark it as watched once you finish."
-msgstr "Il player non comunica lo stato, ricordati di contrassegnarlo come visto alla fine."
+msgstr "Il lettore non comunica lo stato, ricordati di contrassegnarlo come visto alla fine."
 
 #: src/components/party/party-sheet.tsx
 msgid "Your player plays in another app, which can't follow a party. Choose the app's own player in settings to watch along."
-msgstr "Il tuo lettore viene eseguito in un'altra app, che non può seguire i watch party. Seleziona il lettore interno nelle impostazioni per guardare insieme."
+msgstr "Il tuo lettore viene eseguito in un'altra app, che non può seguire i watch party. Seleziona il lettore interno nelle impostazioni per guardare insieme ad altri."
 
 #: src/components/rating.tsx
 msgid "Your rating"
