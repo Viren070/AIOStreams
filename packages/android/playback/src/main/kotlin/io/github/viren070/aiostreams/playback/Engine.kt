@@ -54,6 +54,9 @@ interface Engine {
 
     fun setSound(sound: Sound)
 
+    /** Subtitles over the video, which the mini player's bar leaves out. */
+    fun setSubtitlesShown(shown: Boolean) {}
+
     fun release()
 
     interface Listener {
