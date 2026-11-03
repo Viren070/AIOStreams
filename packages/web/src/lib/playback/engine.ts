@@ -90,6 +90,25 @@ export interface Thumbnail {
   src: string;
 }
 
+/** Where the video shows in the mini player, in the page's pixels. */
+export interface VideoFrame {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  /** Dragged by the app under a finger or the mouse, which then says where it let go. */
+  draggable: boolean;
+  /** Under something the page shows over it, such as a dialog. */
+  hidden: boolean;
+  /** Moves there as the page's card does, rather than at once. */
+  animate: boolean;
+  /** The top corners' and the bottom corners', in the page's pixels. */
+  radius: number;
+  bottomRadius: number;
+  /** Subtitles show in the mini player. */
+  subtitles: boolean;
+}
+
 /** A stretch the page offers to skip; `auto` when it skips it unasked. */
 export interface PlannedSkip {
   startMs: number;
@@ -115,6 +134,8 @@ export interface PlayerEngine {
   setStyle?(style: EngineStyle): void;
   /** The page's controls showing over the video, or hidden again. */
   showControls?(shown: boolean): void;
+  /** Draws the video in `frame` over the page, or back behind it filling the window. */
+  setFrame?(frame: VideoFrame | null): void;
   toggleFullscreen?(): void;
   /** The text of a subtitle file it was given, null for one it can't read; server ones are read from their address. */
   ownText?(id: string): string | null;

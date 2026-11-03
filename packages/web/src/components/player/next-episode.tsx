@@ -16,7 +16,11 @@ import {
   itemTitle,
   ticksToMs,
 } from '../../lib/format';
-import { navigate, to, versionsPath } from '../../lib/paths';
+import { versionsPath } from '../../lib/paths';
+import {
+  listVersionsFromPlayer,
+  playOn as moveOn,
+} from '../../lib/playback/session';
 import { playableSources } from '../../lib/playback/play';
 import { playerUrl, requiredHeaders } from '../../lib/playback/stream';
 import { useFindDownloaded } from '../../lib/downloads';
@@ -222,8 +226,11 @@ export function useUpNextPrompt({
       if (wanted.current === key) return true;
       wanted.current = key;
       const go = (sourceId: string) =>
-        navigate(to.play(target.Id!, sourceId, resumeMs(target), playlist), {
-          replace: true,
+        moveOn({
+          itemId: target.Id!,
+          sourceId,
+          startMs: resumeMs(target),
+          playlist,
         });
       // A downloaded title plays its own file, as Play does.
       const local = downloaded(target);
@@ -244,7 +251,7 @@ export function useUpNextPrompt({
         leaving.current = true;
         const version = carryOn(playableSources(info), source, fallbackFirst);
         if (version) go(version.Id!);
-        else navigate(versionsPath(target, playlist), { replace: true });
+        else listVersionsFromPlayer(versionsPath(target, playlist));
         return true;
       } catch {
         if (wanted.current !== key) return true;

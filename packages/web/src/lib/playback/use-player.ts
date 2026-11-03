@@ -627,6 +627,7 @@ export function usePlayer(
     subtitleFiles: engine.subtitleFiles,
     toggleFullscreen:
       engine.toggleFullscreen && (() => engine.toggleFullscreen!()),
+    setFrame: engine.setFrame && ((frame) => engine.setFrame!(frame)),
     chapters,
     stats: stats && {
       pages: stats.pages,

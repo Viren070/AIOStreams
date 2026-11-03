@@ -1,5 +1,6 @@
 import React from 'react';
 import { currentHost } from '../hosts';
+import { leaveWindowFullscreen } from '../hosts/shell/desktop';
 
 function isPhone(): boolean {
   return (
@@ -26,6 +27,11 @@ async function exitFullscreen(): Promise<void> {
   const app = currentHost().fullscreen;
   if (app?.active()) app.set(false);
   else await document.exitFullscreen();
+}
+
+export function leaveFullscreen(): void {
+  if (isFullscreen()) void exitFullscreen().catch(() => {});
+  else leaveWindowFullscreen();
 }
 
 export function toggleDocumentFullscreen(): void {

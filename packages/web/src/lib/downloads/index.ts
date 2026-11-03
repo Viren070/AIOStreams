@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { JellyfinError, type JellyfinClient } from '../client';
 import { currentHost } from '../hosts';
 import { playableSources } from '../playback/play';
+import { closePlayback, playbackNow } from '../playback/session';
 import { requiredHeaders } from '../playback/stream';
 import { requestItem, requestPlaybackInfo } from '../queries';
 import { textSubtitles } from '../subtitles/tracks';
@@ -230,8 +231,19 @@ export function retryDownload(download: Download): void {
     ]);
 }
 
-/** `files` also deletes what it saved. */
+/** `files` also deletes what it saved, which the mini player may be playing. */
 export function removeDownloads(downloads: Download[], files: boolean): void {
+  const now = playbackNow();
+  if (
+    files &&
+    now &&
+    downloads.some(
+      (d) =>
+        d.item?.Id === now.itemId &&
+        (!now.sourceId || d.source?.Id === now.sourceId)
+    )
+  )
+    closePlayback();
   for (const d of downloads) if (d.job) downloadsHost()?.remove(d.id, files);
   deleteDownloads(downloads.map((d) => d.id));
 }
@@ -323,7 +335,7 @@ export function useDownloadOf(
   );
 }
 
-function onHostEvent(event: HostEvent, readded: Set<string>) {
+function onHostEvent(event: HostEvent, readded: Set<string>, paused: boolean) {
   if (event.type === 'progress') {
     setProgress(event.id, event.bytes, event.total ?? undefined, event.speed);
     return;
@@ -358,7 +370,7 @@ function onHostEvent(event: HostEvent, readded: Set<string>) {
   }
   updateDownloads(changes);
   // The app lost them, as after its queue file was deleted.
-  if (missing.length) {
+  if (missing.length && !paused) {
     missing.forEach((d) => readded.add(d.id));
     downloadsHost()?.add(missing.map((d) => d.job!));
   }
@@ -369,12 +381,14 @@ const RATE_LIMITED_MS = 15_000;
 
 /**
  * Keeps the page's downloads and the app's in step, and finds versions for
- * this server's downloads, a few at a time.
+ * this server's downloads, a few at a time; `paused`, it starts none.
  */
-export function useDownloadRunner(): void {
+export function useDownloadRunner(paused: boolean): void {
   const { client, user } = useSession();
   const list = useDownloadList();
   const host = downloadsHost();
+  const latestPaused = React.useRef(paused);
+  latestPaused.current = paused;
   const active = React.useRef(new Set<string>());
   const [ready, setReady] = React.useState(false);
   // Searches the server turned away wait until it takes them again.
@@ -388,7 +402,9 @@ export function useDownloadRunner(): void {
     let live = true;
     void loaded.then(() => {
       if (!live) return;
-      unsubscribe = host.subscribe((e) => onHostEvent(e, readded));
+      unsubscribe = host.subscribe((e) =>
+        onHostEvent(e, readded, latestPaused.current)
+      );
       host.list();
       setReady(true);
     });
@@ -405,6 +421,13 @@ export function useDownloadRunner(): void {
       unsubscribeSettings();
     };
   }, [host]);
+
+  // Jobs the app lost meanwhile are added back.
+  const wasPaused = React.useRef(paused);
+  React.useEffect(() => {
+    if (wasPaused.current && !paused && ready) host?.list();
+    wasPaused.current = paused;
+  }, [paused, ready, host]);
 
   const resolve = useLatest(async (download: Download) => {
     try {
@@ -455,7 +478,7 @@ export function useDownloadRunner(): void {
   });
 
   React.useEffect(() => {
-    if (!host || !ready) return;
+    if (!host || !ready || paused) return;
     const wait = limitedUntil.current - Date.now();
     if (wait > 0) {
       const timer = setTimeout(() => setRetry((n) => n + 1), wait);
@@ -480,5 +503,5 @@ export function useDownloadRunner(): void {
         updateDownloads([{ id: d.id, patch: {} }], false);
       });
     }
-  }, [host, ready, list, client.base, user.Id, resolve, retry]);
+  }, [host, ready, paused, list, client.base, user.Id, resolve, retry]);
 }

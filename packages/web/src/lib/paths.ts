@@ -104,3 +104,9 @@ export function goBack(fallback: string): void {
   if (window.history.length > 1) window.history.back();
   else navigate(fallback, { replace: true });
 }
+
+/** As `goBack`, but to `fallback` where back would leave the app, as after a link from another site. */
+export function goBackInApp(fallback: string): void {
+  if ((window.history.state?.__TSR_index ?? 0) > 0) window.history.back();
+  else navigate(fallback, { replace: true });
+}

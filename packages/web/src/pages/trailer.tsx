@@ -15,6 +15,7 @@ import { useAction } from '../lib/input';
 import { settings, useSetting } from '../lib/settings';
 import { usePlaybackPrefs, type PlaybackPrefs } from '../lib/user-config';
 import { goBack, navigate, to } from '../lib/paths';
+import { closePlayback } from '../lib/playback/session';
 import {
   trailersOf,
   useTrailerPlayback,
@@ -47,6 +48,8 @@ export function TrailerPage({
   usePlayerPage();
   const host = currentHost();
   usePlayerFullscreen(!host.player || !!host.fullscreen);
+  // The one player can't play both.
+  React.useEffect(closePlayback, []);
   const trailers = item.data ? trailersOf(item.data) : [];
   const trailer = trailers[index];
   const playback = useTrailerPlayback(trailer?.url);
