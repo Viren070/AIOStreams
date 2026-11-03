@@ -10,7 +10,7 @@ import {
   type UserData,
 } from '@aiostreams/core';
 import { jfOptional, param } from './context.js';
-import { locate } from './playback.js';
+import { locate, pickSource } from './playback.js';
 
 const router: Router = Router({ mergeParams: true });
 
@@ -57,7 +57,12 @@ async function mediaSegments(req: Request, res: Response) {
   }
 
   // The memo is the only place a real runtime is on hand.
-  const lookup = lookupFor(loc.descriptor, loc.memo?.runtimeMs);
+  const source = loc.memo && pickSource(loc.memo, loc.requestedMsid);
+  const lookup = lookupFor(
+    loc.descriptor,
+    loc.memo?.runtimeMs,
+    source?.durationMs
+  );
   if (!lookup) {
     res.json(EMPTY);
     return;

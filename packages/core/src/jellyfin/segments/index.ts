@@ -21,6 +21,7 @@ import type {
   SegmentProviderStatus,
   SegmentType,
 } from './types.js';
+import { isRuntimeMismatch } from './runtime-mismatch.js';
 
 export * from './types.js';
 export { SEGMENT_PROVIDER_REGISTRY } from './providers/index.js';
@@ -230,7 +231,8 @@ async function fillIds(
 
 export function lookupFor(
   descriptor: ContentDescriptor,
-  runtimeMs?: number
+  runtimeMs?: number,
+  fileMs?: number
 ): SegmentLookup | null {
   if (descriptor.k !== 'episode' && descriptor.k !== 'movie') return null;
   return {
@@ -239,6 +241,7 @@ export function lookupFor(
     season: descriptor.k === 'episode' ? descriptor.s : undefined,
     episode: descriptor.k === 'episode' ? descriptor.e : undefined,
     runtimeMs,
+    fileMs,
   };
 }
 
@@ -339,7 +342,9 @@ export async function segmentsFor(
   types?: SegmentType[]
 ): Promise<Segment[]> {
   const providers = providersFor(lookup, credentials);
-  if (!providers.length) return [];
+  if (!providers.length || isRuntimeMismatch(lookup.runtimeMs, lookup.fileMs))
+    return [];
+  const lengthMs = lookup.fileMs || lookup.runtimeMs;
 
   // Keys come from the stated ids, before filling adds any.
   const keys = new Map(providers.map((id) => [id, cacheKey(id, lookup)]));
@@ -403,8 +408,7 @@ export async function segmentsFor(
     if (types?.length) {
       await new Promise<void>((resolve) => {
         const check = () => {
-          if (decided(types, providers, results, settled, lookup.runtimeMs))
-            resolve();
+          if (decided(types, providers, results, settled, lengthMs)) resolve();
         };
         check();
         for (const fetch of fetches) void fetch.then(check);
@@ -415,5 +419,5 @@ export async function segmentsFor(
     }
   }
 
-  return merge(results, providers, lookup.runtimeMs);
+  return merge(results, providers, lengthMs);
 }

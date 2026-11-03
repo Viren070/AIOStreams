@@ -6,6 +6,7 @@ import { BiArrowBack, BiCopy, BiLayer, BiRefresh } from 'react-icons/bi';
 import { Button } from '@aiostreams/ui/button';
 import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
 import { cn } from '@aiostreams/ui/core/styling';
+import { isRuntimeMismatch } from '@aiostreams/core/src/jellyfin/segments/runtime-mismatch';
 import { useSession } from '../lib/session';
 import {
   useItem,
@@ -51,7 +52,7 @@ import {
   subtitleScale,
 } from '../lib/subtitles/style';
 import { usePlaybackPrefs, type PlaybackPrefs } from '../lib/user-config';
-import { fullTitle } from '../lib/format';
+import { fullTitle, ticksToMs } from '../lib/format';
 import { goBack, navigate, to, versionsPath } from '../lib/paths';
 import { noteLastPlayed } from '../lib/last-played';
 import { PlayerControls } from '../components/player/controls';
@@ -526,7 +527,8 @@ function useKeepAwake(player: PlayerController, own: boolean) {
 /**
  * The server's segments and the ones the file's chapters name: where both have
  * a kind, the chapters' when preferred, else the server's. Guesses from
- * chapter lengths fill the kinds neither has.
+ * chapter lengths fill the kinds neither has. The server's are dropped on a
+ * runtime mismatch.
  */
 function useShownSegments(
   item: BaseItemDto,
@@ -537,9 +539,10 @@ function useShownSegments(
   const { durationMs } = player.state;
   const [preferChapters] = useSetting(settings.playback.chapterSkips);
   const episode = item.Type === 'Episode';
+  const mismatch = isRuntimeMismatch(ticksToMs(item.RunTimeTicks), durationMs);
   return React.useMemo(() => {
     const named = chapterSegments(chapters ?? [], durationMs);
-    const server = segments ?? [];
+    const server = mismatch ? [] : (segments ?? []);
     const guessed = episode ? guessedSegments(chapters ?? [], durationMs) : [];
     const kinds = new Set<string>();
     return (
@@ -549,7 +552,7 @@ function useShownSegments(
       added.forEach((s) => kinds.add(String(s.Type)));
       return added;
     });
-  }, [segments, chapters, durationMs, preferChapters, episode]);
+  }, [segments, mismatch, chapters, durationMs, preferChapters, episode]);
 }
 
 /**
@@ -631,7 +634,7 @@ function Player({
   close.current = player.close;
   const segments = useShownSegments(
     item,
-    useSegments(item.Id!).data?.Items,
+    useSegments(item.Id!, source.Id).data?.Items,
     player
   );
   const group = React.useMemo(

@@ -724,14 +724,16 @@ export function useRefreshPlaybackInfo(itemId: string, purpose?: Purpose) {
   });
 }
 
-/** Intro, recap and credits times, looked up once the server has a runtime. */
-export function useSegments(itemId: string) {
+/** Intro, recap and credits times for the version being played. */
+export function useSegments(itemId: string, mediaSourceId?: string | null) {
   const { client } = useSession();
   return useQuery({
-    queryKey: [...useKey(), 'segments', itemId],
+    queryKey: [...useKey(), 'segments', itemId, mediaSourceId],
     meta: { cache: 'titles' },
     queryFn: () =>
-      client.get<MediaSegmentDtoQueryResult>(`/MediaSegments/${itemId}`),
+      client.get<MediaSegmentDtoQueryResult>(`/MediaSegments/${itemId}`, {
+        MediaSourceId: mediaSourceId,
+      }),
     staleTime: 60 * 60_000,
   });
 }
