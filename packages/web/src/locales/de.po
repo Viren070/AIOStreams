@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-03 18:00+0000\n"
+"PO-Revision-Date: 2026-11-04 13:52+0000\n"
 "Last-Translator: hamburgercowgoldfish <242998989+hamburgercowgoldfish@users.noreply.github.com>\n"
 "Language-Team: German <https://hosted.weblate.org/projects/aiostreams/web-app/de/>\n"
 "Language: de\n"
@@ -643,9 +643,8 @@ msgid "Back button"
 msgstr "Zurück-Taste"
 
 #: src/pages/settings/playback.tsx
-#, fuzzy
 msgid "Back in the player"
-msgstr "Integrierter Player"
+msgstr "\"Zurück\" im Player"
 
 #: src/components/version-settings.tsx src/pages/settings/interface.tsx
 #: src/pages/settings/subtitles.tsx src/pages/settings/theme.tsx
@@ -2182,9 +2181,8 @@ msgid "Midnight"
 msgstr "Mitternacht"
 
 #: src/components/player/controls.tsx
-#, fuzzy
 msgid "Mini player"
-msgstr "Integrierter Player"
+msgstr "Mini-Player"
 
 #: src/components/window-controls.tsx
 msgid "Minimise"
@@ -2676,9 +2674,8 @@ msgid "Opens the menu of what is selected, as a right click does."
 msgstr "Öffnet das Menü des ausgewählten Elements, wie ein Rechtsklick."
 
 #: src/pages/settings/playback.tsx
-#, fuzzy
 msgid "Opens the mini player"
-msgstr "Auf der Startseite"
+msgstr "Öffnet den Mini-PlayerAuf der Startseite"
 
 #: src/pages/settings/playback.tsx
 msgid "Opens versions in {target}, which brings you back here with your place saved."
@@ -3037,9 +3034,8 @@ msgid "Playback"
 msgstr "Wiedergabe"
 
 #: src/components/player/mini-player.tsx
-#, fuzzy
 msgid "Playback failed"
-msgstr "Wiedergabe fehlgeschlagen: {failure}"
+msgstr "Wiedergabe fehlgeschlagen"
 
 #: src/pages/player.tsx
 msgid "Playback failed: {failure}"
@@ -4022,9 +4018,8 @@ msgid "Stop listening"
 msgstr "Aufnahme beenden"
 
 #: src/pages/settings/playback.tsx
-#, fuzzy
 msgid "Stops playing"
-msgstr "Aktuelle Wiedergabe"
+msgstr "Beendet die Wiedergabe"
 
 #: src/components/version-picker.tsx src/pages/player.tsx
 msgid "Stream link copied"
@@ -4358,7 +4353,7 @@ msgstr "der Link hat etwas anderes als ein Video zurückgegeben"
 
 #: src/pages/settings/playback.tsx
 msgid "The mini player keeps the video going over the pages while you look around. Tap it to open the player again, or close it with its cross."
-msgstr ""
+msgstr "Der Mini-Player spielt das Video im Vordergrund weiter, während du dich in der App umsiehst. Klicke oder tippe darauf, um den Player wieder zu vergrößern, oder schließe ihn über das Kreuz."
 
 #: src/pages/settings/apps.tsx
 msgid "The movie or show whose page is open."
@@ -5033,7 +5028,7 @@ msgstr "Kanalanzahl, die deine Lautsprecher oder dein Receiver unterstützen. Su
 
 #: src/pages/settings/apps.tsx
 msgid "What's playing"
-msgstr "Aktuelle Wiedergabe"
+msgstr "Was gerade läuft"
 
 #: src/lib/input/keys.ts
 msgid "Wheel down"
