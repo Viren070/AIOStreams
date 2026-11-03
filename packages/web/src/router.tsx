@@ -19,7 +19,7 @@ import { ItemPage } from './pages/item';
 import { PersonPage } from './pages/person';
 import { HistoryPage } from './pages/history';
 import { DownloadsPage } from './pages/downloads';
-import { PlayerPage } from './pages/player';
+import { openPlayback } from './lib/playback/session';
 import { TrailerPage } from './pages/trailer';
 import { Button } from '@aiostreams/ui/button';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
@@ -216,18 +216,14 @@ function TrailerRouteView(): React.ReactElement {
   );
 }
 
-function PlayRouteView(): React.ReactElement {
+/** The layout draws the player, which plays on in the mini player after its page closes. */
+function PlayRouteView(): null {
   const { itemId } = playRoute.useParams();
   const { source, start, playlist } = playRoute.useSearch();
-  return (
-    <PlayerPage
-      key={`${itemId}|${source}`}
-      itemId={itemId}
-      sourceId={source}
-      startMs={start}
-      playlist={playlist}
-    />
-  );
+  React.useLayoutEffect(() => {
+    openPlayback({ itemId, sourceId: source, startMs: start, playlist });
+  }, [itemId, source, start, playlist]);
+  return null;
 }
 
 const routeTree = rootRoute.addChildren([

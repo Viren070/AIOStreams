@@ -64,6 +64,11 @@ import {
   useDownloadRunner,
 } from '../lib/downloads';
 import { usePendingStops } from '../lib/playback/reporter';
+import {
+  closePlayback,
+  leftPlayback,
+  usePlayback,
+} from '../lib/playback/session';
 import { settings, useSetting, type TopBar } from '../lib/settings';
 import { useAction, usingKeys } from '../lib/input';
 import { UserAvatar } from './user-avatar';
@@ -76,6 +81,7 @@ import { WatchNextSync } from './watch-next';
 import { RandomPick } from './random-pick';
 import { ItemMenuHost } from './item-menu';
 import { HomePage } from '../pages/home';
+import { PlayerPage } from '../pages/player';
 import { PageShown } from '../lib/page-shown';
 import { GlideLayers } from './glide-layers';
 import { UpdatePrompt } from './update-prompt';
@@ -385,7 +391,7 @@ function ConnectionNote() {
 }
 
 const NOTE_PLACE =
-  'fixed bottom-[max(1rem,calc(var(--nav-bar)+0.5rem))] end-4 z-[100] border border-white/10 bg-gray-950/90 shadow-lg backdrop-blur';
+  'fixed bottom-[max(1rem,calc(var(--nav-bar)+var(--mini-bar,0px)+0.5rem))] end-4 z-[100] border border-white/10 bg-gray-950/90 shadow-lg backdrop-blur';
 
 function Unreachable() {
   const [saved] = useSetting(settings.cache.enabled);
@@ -466,7 +472,7 @@ function Unreachable() {
 }
 
 export function WebLayout() {
-  const { switchUser } = useSession();
+  const { switchUser, user } = useSession();
   const users = usePickableUsers();
   const several = (users.data?.length ?? 0) > 1;
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -479,6 +485,10 @@ export function WebLayout() {
     select: (matches) => !!matches[0]?.pathname.startsWith('/play/'),
   });
   useServerEvents(playing);
+  const playback = usePlayback();
+  usePlayerLeaving();
+  // Another user, or signing out, takes what played with the pages.
+  React.useEffect(() => closePlayback, [user.Id]);
   // Home stays, hidden, while other pages and the player are open: going back
   // to its entry shows it again rather than building it anew. Any other visit
   // starts afresh.
@@ -602,7 +612,7 @@ export function WebLayout() {
       };
 
   const page = cn(
-    'relative pb-[var(--nav-bar)] ps-[env(safe-area-inset-left)] pe-[env(safe-area-inset-right)] pt-[var(--top-bar,0px)]',
+    'relative pb-[calc(var(--nav-bar)+var(--mini-bar,0px))] ps-[env(safe-area-inset-left)] pe-[env(safe-area-inset-right)] pt-[var(--top-bar,0px)]',
     // In place of the sidebar's gutter, which pages leave to it.
     (nav === 'bar' || top || shape === 'corner') &&
       'lg:ps-[calc(2.5rem+env(safe-area-inset-left))]',
@@ -612,7 +622,7 @@ export function WebLayout() {
 
   return (
     <>
-      {!playing && <PagesWork pathname={pathname} />}
+      {!playing && <PagesWork pathname={pathname} playing={!!playback} />}
       <div
         data-ui="shell"
         inert={playing}
@@ -783,20 +793,72 @@ export function WebLayout() {
         </AppSidebarProvider>
       </div>
       {playing && <Outlet />}
+      {playback && (
+        <PlayerPage
+          key={`${playback.itemId}|${playback.sourceId}|${playback.playlist ?? ''}`}
+          itemId={playback.itemId}
+          sourceId={playback.sourceId}
+          startMs={playback.startMs}
+          playlist={playback.playlist}
+          mini={playback.mini}
+        />
+      )}
       <PartyHost />
       <RemoteSheet />
     </>
   );
 }
 
-/** What runs while pages are open, and stops while the player is. */
-function PagesWork({ pathname }: { pathname: string }) {
+/**
+ * Tells the playback which way its page closed, by the history entry it left
+ * for: an earlier one is Back.
+ */
+function usePlayerLeaving() {
+  const onPlayer = useChildMatches({
+    select: (matches) =>
+      /^\/play\/(?!trailer\/)/.test(matches[0]?.pathname ?? ''),
+  });
+  const index = useRouterState({
+    select: (s) => s.location.state.__TSR_index ?? 0,
+  });
+  const was = React.useRef({ onPlayer, index });
+  React.useLayoutEffect(() => {
+    const before = was.current;
+    was.current = { onPlayer, index };
+    if (!before.onPlayer || onPlayer) return;
+    leftPlayback(
+      index < before.index
+        ? 'back'
+        : index > before.index
+          ? 'forward'
+          : 'replace'
+    );
+  }, [onPlayer, index]);
+}
+
+/** What runs while pages are open, and stops while the player is; downloads start nothing new while the mini player plays. */
+function PagesWork({
+  pathname,
+  playing,
+}: {
+  pathname: string;
+  playing: boolean;
+}) {
   useDiscordBrowsing(pathname);
-  useDownloadRunner();
   usePendingStops();
   useAction('search', () => navigate(to.search()));
   useAction('home', () => navigate(to.home));
-  return shellHost() ? <UpdatePrompt /> : null;
+  return (
+    <>
+      <DownloadRunner paused={playing} />
+      {shellHost() && <UpdatePrompt />}
+    </>
+  );
+}
+
+function DownloadRunner({ paused }: { paused: boolean }) {
+  useDownloadRunner(paused);
+  return null;
 }
 
 function select(item: SidebarItem) {
@@ -1485,7 +1547,8 @@ export function PageBody({ children }: { children: React.ReactNode }) {
 }
 
 /** The window's height less the phone nav bar, which pages are padded for. */
-export const FILL_WINDOW = 'min-h-[calc(100dvh-var(--nav-bar))]';
+export const FILL_WINDOW =
+  'min-h-[calc(100dvh-var(--nav-bar)-var(--mini-bar,0px))]';
 
 export function PageMessage({ children }: { children: React.ReactNode }) {
   return (

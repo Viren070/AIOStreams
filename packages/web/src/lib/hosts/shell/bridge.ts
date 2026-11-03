@@ -88,6 +88,9 @@ export type ShellMessage =
     }
   | { type: 'fullscreen'; value: boolean }
   | { type: 'pip'; value: boolean }
+  /** A tap on the small video, a drag of it starting, where it is as it drags, or where it let go, in the page's pixels. */
+  | { type: 'player-frame'; event: 'tap' | 'grabbed' }
+  | { type: 'player-frame'; event: 'moving' | 'moved'; x: number; y: number }
   | { type: 'back' }
   /** The engine the Android app plays with now. */
   | { type: 'player-engine'; name: string }
@@ -185,6 +188,8 @@ interface ShellBridge {
   gamepads?: boolean;
   /** The Android app on a device with picture-in-picture. */
   pip?: boolean;
+  /** The app can draw its video small over the page, with `player-frame`. */
+  miniPlayer?: boolean;
   /** The device's name. */
   device: string;
   /** The app's own id for this device, where it keeps one. */

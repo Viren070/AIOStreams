@@ -438,7 +438,7 @@ function FollowingPill({
       type="button"
       data-ui="remote-pill"
       onClick={() => openRemote({ device: session.Id! })}
-      className="fixed inset-x-0 bottom-[max(1rem,calc(var(--nav-bar)+0.5rem))] z-[90] mx-auto flex w-fit max-w-[calc(100%-2rem)] items-center gap-2 rounded-full border border-white/10 bg-gray-950/90 px-4 py-2 text-sm shadow-lg backdrop-blur duration-300 animate-in fade-in-0"
+      className="fixed inset-x-0 bottom-[max(1rem,calc(var(--nav-bar)+var(--mini-bar,0px)+0.5rem))] z-[90] mx-auto flex w-fit max-w-[calc(100%-2rem)] items-center gap-2 rounded-full border border-white/10 bg-gray-950/90 px-4 py-2 text-sm shadow-lg backdrop-blur duration-300 animate-in fade-in-0"
     >
       <LuCast className="flex-none" />
       <span className="truncate">

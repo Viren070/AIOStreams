@@ -32,12 +32,14 @@ import {
   SEGMENT_TYPES,
   CACHE_SIZES,
   type CacheSize,
+  type PlayerBack,
   type PlayerEngine,
   type NextPrompt,
   type SegmentAction,
   type SegmentType,
 } from '../../lib/settings';
 import { useFeature } from '../../lib/server-info';
+import { canMinimise } from '../../lib/playback/session';
 import { SettingsCard, SettingsRow } from '../../components/settings-card';
 import { BadgesRow, QuickFiltersRow } from '../../components/version-settings';
 import { onDevice, followsYou, seconds } from './common';
@@ -435,6 +437,11 @@ export function PlaybackSection() {
   );
 }
 
+const backOptions = (): { value: PlayerBack; label: string }[] => [
+  { value: 'stop', label: t`Stops playing` },
+  { value: 'minimise', label: t`Opens the mini player` },
+];
+
 const engineOptions = (): { value: PlayerEngine; label: string }[] => [
   { value: 'auto', label: t`Automatic` },
   { value: 'exoplayer', label: 'ExoPlayer' },
@@ -472,6 +479,7 @@ function PlayerCard() {
   const [link, setLink] = useSetting(settings.player.link);
   const [engine, setEngine] = useSetting(settings.player.engine);
   const [cacheSize, setCacheSize] = useSetting(settings.player.cacheSize);
+  const [back, setBack] = useSetting(settings.player.back);
   const found = useExternalPlayers();
   const launched = LAUNCHED_PLAYERS.find((p) => p.id === player);
   const preset = linkPreset(player);
@@ -532,6 +540,15 @@ function PlayerCard() {
         value={player}
         onValueChange={setPlayer}
       />
+      {canMinimise() && !launched && !preset && player !== CUSTOM_LINK && (
+        <Select
+          label={t`Back in the player`}
+          help={t`The mini player keeps the video going over the pages while you look around. Tap it to open the player again, or close it with its cross.`}
+          options={backOptions()}
+          value={back}
+          onValueChange={(v) => setBack(v as PlayerBack)}
+        />
+      )}
       {shellHost() && !launched && !preset && player !== CUSTOM_LINK && (
         <>
           {currentHost().name === 'android-app' && (

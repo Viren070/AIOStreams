@@ -7,6 +7,7 @@ import {
   LuLoaderCircle,
   LuLock,
   LuPause,
+  LuPictureInPicture2,
   LuPlay,
   LuRotateCcw,
   LuRotateCw,
@@ -77,6 +78,7 @@ export function PlayerControls({
   player,
   segments: segmentItems,
   onBack,
+  onMinimise,
   onVersions,
   onPrevious,
   onNext,
@@ -92,6 +94,7 @@ export function PlayerControls({
   player: PlayerController;
   segments: MediaSegmentDto[] | null | undefined;
   onBack(): void;
+  onMinimise?: () => void;
   onVersions?: () => void;
   onPrevious?: () => void;
   onNext?: () => void;
@@ -513,6 +516,15 @@ export function PlayerControls({
           className="ms-auto flex items-center gap-3"
         >
           {clock && <PlayerClock />}
+          {onMinimise && (
+            <ControlButton
+              name="mini-player"
+              label={t`Mini player`}
+              onClick={onMinimise}
+            >
+              <LuPictureInPicture2 />
+            </ControlButton>
+          )}
           {touch && !tv && (
             <ControlButton
               name="lock"

@@ -476,6 +476,10 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
       external || appBridge()?.platform !== 'android'
         ? undefined
         : (shown) => shell.send({ type: 'player-controls', shown }),
+    setFrame:
+      external || !shell.miniPlayer
+        ? undefined
+        : (frame) => shell.send({ type: 'player-frame', frame }),
     // The user's own player keeps its own look.
     setStyle({ subtitleStyle, fit, height }) {
       if (external || !subtitleStyle) return;

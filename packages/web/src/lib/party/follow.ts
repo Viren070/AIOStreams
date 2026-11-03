@@ -4,7 +4,13 @@ import { toast } from 'sonner';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
 import type { JellyfinClient } from '../client';
 import { currentHost } from '../hosts';
-import { goBack, navigate, to } from '../paths';
+import { navigate, to } from '../paths';
+import {
+  closePlayback,
+  playbackNow,
+  playOn,
+  stopPlayback,
+} from '../playback/session';
 import { playableSources } from '../playback/play';
 import { chosenPlayer } from '../playback/player-choice';
 import { requestItem, usePlaybackInfoOptions } from '../queries';
@@ -106,14 +112,10 @@ function sitOut(entry: PartyEntry, message: string): void {
 
 const onPlayer = () => /^#\/play\//.test(window.location.hash);
 
-/** The player page open now, if it plays this version. */
+/** The player, on its page or in the mini player, if it plays this version. */
 function playingNow(itemId: string, sourceId: string): boolean {
-  const match = /^#\/play\/([^/?]+)\?(.*)$/.exec(window.location.hash);
-  return (
-    !!match &&
-    match[1] === itemId &&
-    new URLSearchParams(match[2]).get('source') === sourceId
-  );
+  const now = playbackNow();
+  return now?.itemId === itemId && now.sourceId === sourceId;
 }
 
 /**
@@ -136,7 +138,10 @@ export function usePartyFollow(onOpen: () => void): void {
       if (binding && state?.status !== 'reconnecting') {
         followed.binding = null;
         changed();
-        if (onPlayer()) goBack(to.item(binding.itemId));
+        if (playingNow(binding.itemId, binding.source.Id!)) {
+          if (onPlayer()) stopPlayback(to.item(binding.itemId));
+          else closePlayback();
+        }
       }
       return;
     }
@@ -192,9 +197,12 @@ export function usePartyFollow(onOpen: () => void): void {
         changed();
         // A party started from the player takes over what it already plays.
         if (!playingNow(local.Id!, source.Id)) {
-          navigate(to.play(local.Id!, source.Id, startMs), {
-            replace: onPlayer(),
-          });
+          const next = { itemId: local.Id!, sourceId: source.Id, startMs };
+          if (playbackNow()?.mini) playOn(next);
+          else
+            navigate(to.play(local.Id!, source.Id, startMs), {
+              replace: onPlayer(),
+            });
           onOpen();
         }
       } catch {

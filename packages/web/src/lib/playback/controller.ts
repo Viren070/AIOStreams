@@ -8,7 +8,7 @@ import { subtitleType, type SubtitleFacts } from '../subtitles/tracks';
 import { tagName } from '../languages';
 import type { Playhead } from './playhead';
 import type { ThumbnailFeed } from './thumbnails';
-import type { PlannedSkip } from './engine';
+import type { PlannedSkip, VideoFrame } from './engine';
 import type { PlaybackPrefs } from '../user-config';
 import type { BaseItemDto, MediaStream, SourceInfo } from '../types';
 
@@ -106,6 +106,7 @@ export interface PlayerController {
   thumbnails?: ThumbnailFeed;
   /** Missing where the page always fills the screen. */
   toggleFullscreen?: () => void;
+  setFrame?: (frame: VideoFrame | null) => void;
   /** The file's chapters, where the player reads them. */
   chapters?: Chapter[];
   /** Playback statistics over the video, as `text` the page draws for a player that draws none. */

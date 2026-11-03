@@ -63,6 +63,8 @@ export function ShellSetup() {
   React.useEffect(() => {
     const shell = appBridge();
     if (!shell) return;
+    // A page that loaded again doesn't know the mini player was open.
+    if (shell.miniPlayer) shell.send({ type: 'player-frame', frame: null });
     const { updateChannel } = settings.app;
     let channel = updateChannel.read();
     let sent = '';

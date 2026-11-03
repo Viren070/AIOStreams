@@ -531,6 +531,16 @@ export type AudioChannels = (typeof AUDIO_CHANNELS)[number];
 /** What plays versions inside the Android app. */
 export const PLAYER_ENGINES = ['auto', 'mpv', 'exoplayer'] as const;
 export type PlayerEngine = (typeof PLAYER_ENGINES)[number];
+/** What Back does in the player: stop, or play on in the mini player. */
+export const PLAYER_BACKS = ['stop', 'minimise'] as const;
+export type PlayerBack = (typeof PLAYER_BACKS)[number];
+export const MINI_CORNERS = [
+  'top-start',
+  'top-end',
+  'bottom-start',
+  'bottom-end',
+] as const;
+export type MiniCorner = (typeof MINI_CORNERS)[number];
 /** Megabytes, or `auto` to size it from the device's memory. */
 export const PARTY_REACTIONS = ['👍', '😂', '😮', '😢', '❤️', '🔥'] as const;
 
@@ -891,6 +901,17 @@ export const settings = {
       'aiostreams-web-player-cache-size',
       'auto',
       CACHE_SIZES
+    ),
+    back: device<PlayerBack>(
+      'aiostreams-web-player-back',
+      'stop',
+      PLAYER_BACKS
+    ),
+    /** Where the mini player was left. */
+    miniCorner: device<MiniCorner>(
+      'aiostreams-web-mini-corner',
+      'bottom-end',
+      MINI_CORNERS
     ),
   },
   video: {
