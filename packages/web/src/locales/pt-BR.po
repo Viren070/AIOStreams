@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-03 18:00+0000\n"
+"PO-Revision-Date: 2026-11-04 13:52+0000\n"
 "Last-Translator: Bruno <procopio@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/aiostreams/web-app/pt_BR/>\n"
 "Language: pt-BR\n"
@@ -643,9 +643,8 @@ msgid "Back button"
 msgstr "Botão Voltar"
 
 #: src/pages/settings/playback.tsx
-#, fuzzy
 msgid "Back in the player"
-msgstr "Reprodutor integrado"
+msgstr "Ao sair do player"
 
 #: src/components/version-settings.tsx src/pages/settings/interface.tsx
 #: src/pages/settings/subtitles.tsx src/pages/settings/theme.tsx
@@ -2182,9 +2181,8 @@ msgid "Midnight"
 msgstr "Meia-noite"
 
 #: src/components/player/controls.tsx
-#, fuzzy
 msgid "Mini player"
-msgstr "Reprodutor integrado"
+msgstr "Miniplayer"
 
 #: src/components/window-controls.tsx
 msgid "Minimise"
@@ -2676,9 +2674,8 @@ msgid "Opens the menu of what is selected, as a right click does."
 msgstr "Abre o menu do item selecionado, como ao clicar com o botão direito do mouse."
 
 #: src/pages/settings/playback.tsx
-#, fuzzy
 msgid "Opens the mini player"
-msgstr "Na página inicial"
+msgstr "Abre o miniplayer"
 
 #: src/pages/settings/playback.tsx
 msgid "Opens versions in {target}, which brings you back here with your place saved."
@@ -3037,9 +3034,8 @@ msgid "Playback"
 msgstr "Reprodução"
 
 #: src/components/player/mini-player.tsx
-#, fuzzy
 msgid "Playback failed"
-msgstr "Falha na reprodução: {failure}"
+msgstr "Falha na reprodução"
 
 #: src/pages/player.tsx
 msgid "Playback failed: {failure}"
@@ -4022,9 +4018,8 @@ msgid "Stop listening"
 msgstr "Parar de ouvir"
 
 #: src/pages/settings/playback.tsx
-#, fuzzy
 msgid "Stops playing"
-msgstr "Reproduzindo agora"
+msgstr "Interrompe a reprodução"
 
 #: src/components/version-picker.tsx src/pages/player.tsx
 msgid "Stream link copied"
@@ -4358,7 +4353,7 @@ msgstr "o link retornou algo diferente de um vídeo"
 
 #: src/pages/settings/playback.tsx
 msgid "The mini player keeps the video going over the pages while you look around. Tap it to open the player again, or close it with its cross."
-msgstr ""
+msgstr "O miniplayer mantém o vídeo tocando enquanto você navega pelo app. Toque nele para voltar ao player ou no X para fechá-lo."
 
 #: src/pages/settings/apps.tsx
 msgid "The movie or show whose page is open."
