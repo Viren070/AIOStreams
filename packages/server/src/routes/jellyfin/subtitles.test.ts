@@ -66,7 +66,7 @@ describe('fetchSubtitle', () => {
   });
 
   // A client retries a 5xx, and these answers won't change on a retry.
-  for (const status of [401, 403, 404, 410]) {
+  for (const status of [400, 401, 403, 404, 410, 422]) {
     it(`answers 404 when the provider answers ${status}`, async () => {
       expect(await fetchSubtitle(`${base}/${status}`)).toEqual({ status: 404 });
     });
