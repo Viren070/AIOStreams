@@ -261,6 +261,8 @@ class ExoEngine(private val context: Context) : Engine {
         subtitles.setStyle(style.subtitles, forceMargins = style.fit == Fit.CROP)
     }
 
+    override fun setSubtitlesShown(shown: Boolean) = post { subtitles.setShown(shown) }
+
     override fun setSettings(settings: PlayerSettings) = post {
         audio.setSettings(settings)
         cache.limitMb = settings.cacheMb

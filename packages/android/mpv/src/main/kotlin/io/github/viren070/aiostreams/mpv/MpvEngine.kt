@@ -259,6 +259,10 @@ class MpvEngine(private val context: Context) : Engine {
         }
     }
 
+    override fun setSubtitlesShown(shown: Boolean) = calls.execute {
+        set("sub-visibility", if (shown) "yes" else "no")
+    }
+
     override fun showStatsOverlay(page: String?) = calls.execute {
         if (page != null && page !in STATS_PAGES) return@execute
         if (statsPage != null) mpv.command("script-binding", "stats/display-stats-toggle")

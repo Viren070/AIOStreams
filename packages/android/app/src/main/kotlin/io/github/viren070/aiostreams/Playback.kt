@@ -43,6 +43,12 @@ class Playback(private val context: Context, private val announce: (engine: Stri
             engine.setSound(value)
         }
 
+    var subtitlesShown = true
+        set(value) {
+            field = value
+            engine.setSubtitlesShown(value)
+        }
+
     var engine: Engine = create(name)
         private set
 
@@ -69,7 +75,8 @@ class Playback(private val context: Context, private val announce: (engine: Stri
         if (choice !in CHOICES) return
         this.choice = choice
         saved.edit().putString("engine", choice).apply()
-        use(engineFor(choice), player, reload = false)
+        // Settings open while the mini player plays; the next file starts on the pick.
+        if (!player.hasFile) use(engineFor(choice), player, reload = false)
         announce(name)
     }
 
@@ -106,6 +113,7 @@ class Playback(private val context: Context, private val announce: (engine: Stri
     }.also {
         it.setDolbyVision(dolbyVision)
         it.setSound(sound)
+        it.setSubtitlesShown(subtitlesShown)
     }
 
     private companion object {

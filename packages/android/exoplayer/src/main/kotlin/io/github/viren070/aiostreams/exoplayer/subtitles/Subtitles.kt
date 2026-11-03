@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Rect
 import android.os.Handler
 import android.os.Looper
+import android.view.View
 import androidx.annotation.OptIn
 import androidx.media3.common.Format
 import androidx.media3.common.text.Cue
@@ -113,6 +114,12 @@ internal class Subtitles(
         if (fonts != null) return
         val dir = File(fontsDir, System.nanoTime().toString())
         fonts = AttachedFonts(found, fontSource, dir, ass.sink(), ::fontsMayLoad).also { it.start() }
+    }
+
+    fun setShown(shown: Boolean) {
+        val visibility = if (shown) View.VISIBLE else View.INVISIBLE
+        ass.view.visibility = visibility
+        view?.visibility = visibility
     }
 
     fun firstFrameShown() {

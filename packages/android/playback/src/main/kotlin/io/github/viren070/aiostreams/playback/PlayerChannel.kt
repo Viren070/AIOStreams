@@ -77,6 +77,9 @@ class PlayerChannel(
     /** The file playing, which a new engine loads again. */
     private var loaded: LoadRequest? = null
 
+    /** A file is open, which swapping the engine would stop. */
+    val hasFile get() = loaded != null
+
     val session = SessionPlayer(send)
 
     fun start() = engine.start(this)

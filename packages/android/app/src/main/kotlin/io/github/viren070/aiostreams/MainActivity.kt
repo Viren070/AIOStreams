@@ -22,6 +22,7 @@ import android.text.format.Formatter
 import android.util.Log
 import android.hardware.input.InputManager
 import android.view.InputDevice
+import android.view.MotionEvent
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.webkit.ValueCallback
@@ -71,6 +72,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var downloads: DownloadChannel
     private lateinit var updater: Updater
     private lateinit var pip: PictureInPicture
+    private lateinit var mini: MiniPlayer
     private lateinit var focus: AudioFocus
     private lateinit var passthrough: Passthrough
     private val youtube = YouTube { message -> runOnUiThread { bridge.send(message) } }
@@ -129,6 +131,7 @@ class MainActivity : ComponentActivity() {
             addView(playback.stage, MATCH_PARENT, MATCH_PARENT)
             addView(web, MATCH_PARENT, MATCH_PARENT)
         })
+        mini = MiniPlayer(playback.stage, web, send = { bridge.send(it) }) { playback.subtitlesShown = it }
 
         val app = WebApp(BuildConfig.WEB_URL.ifEmpty { null })
         app.configure(web, ::chooseFiles, players::open, ::onRendererGone) { path ->
@@ -169,6 +172,7 @@ class MainActivity : ComponentActivity() {
             voice.available,
             gamepads,
             PictureInPicture.supported(this),
+            miniPlayer = !onTv(),
         )
         bridge = AppBridge(web, app.origins, identity, ::onMessage)
         updater = Updater(this, ::askForNotifications) { bridge.send(it) }
@@ -236,6 +240,7 @@ class MainActivity : ComponentActivity() {
             }
             "player-engine" -> message["name"]?.jsonPrimitive?.contentOrNull?.let { playback.choose(it, player) }
             "player-retry" -> message["name"]?.jsonPrimitive?.contentOrNull?.let { playback.retry(it, player) }
+            "player-frame" -> runOnUiThread { mini.place(message) }
             // A TV would blank to switch modes.
             "player-controls" -> if (!onTv()) {
                 message["shown"]?.jsonPrimitive?.booleanOrNull?.let { runOnUiThread { frameRates.controls(it) } }
@@ -530,8 +535,12 @@ class MainActivity : ComponentActivity() {
         if (started) pip.onUserLeaveHint()
     }
 
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean =
+        (started && mini.onTouch(event)) || super.dispatchTouchEvent(event)
+
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        mini.pictureInPicture(isInPictureInPictureMode)
         bridge.send(buildJsonObject {
             put("type", "pip")
             put("value", isInPictureInPictureMode)
