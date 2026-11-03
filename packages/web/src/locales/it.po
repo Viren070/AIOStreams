@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-02 18:36+0000\n"
+"PO-Revision-Date: 2026-11-03 18:00+0000\n"
 "Last-Translator: Nicola Bortoletto <translate@nicolabortoletto.com>\n"
 "Language-Team: Italian <https://hosted.weblate.org/projects/aiostreams/web-app/it/>\n"
 "Language: it\n"
@@ -156,12 +156,10 @@ msgid "{n, plural, one {After # episode} other {After # episodes}}"
 msgstr "{n, plural, one {Dopo # episodio} other {Dopo # episodi}}"
 
 #: src/components/version-picker.tsx
-#, fuzzy
 msgid "{name} airs {day} ({until}). Download it anyway?"
 msgstr "{name} va in onda il {day} ({until}). Scaricare comunque?"
 
 #: src/components/version-picker.tsx
-#, fuzzy
 msgid "{name} airs {day} ({until}). Play it anyway?"
 msgstr "{name} va in onda il {day} ({until}). Riprodurre comunque?"
 
@@ -243,7 +241,7 @@ msgstr "{total, plural, one {# titolo} other {# titoli}}"
 
 #: src/pages/item.tsx
 msgid "{unairedCount, plural, one {# unaired} other {# unaired}}"
-msgstr ""
+msgstr "{unairedCount, plural, one {# non ancora trasmesso} other {# non ancora trasmessi}}"
 
 #: src/components/player/options.tsx
 msgid "{unread, plural, one {Watch party, # new message} other {Watch party, # new messages}}"
@@ -1486,7 +1484,7 @@ msgstr "Gli episodi finiscono senza proporre il successivo."
 
 #: src/pages/settings/playback.tsx
 msgid "Episodes that haven't aired yet show as unaired, ask before playing, and are passed over when playing on or downloading a season. Turn off if their air dates are often wrong."
-msgstr ""
+msgstr "Gli episodi non ancora trasmessi vengono contrassegnati come tali, chiedono conferma prima della riproduzione e vengono saltati quando si prosegue la riproduzione o si scarica una stagione. Disattiva se le date di messa in onda sono spesso errate."
 
 #: src/lib/input/keys.ts
 msgid "Esc"
@@ -1640,7 +1638,7 @@ msgstr "Per un ricevitore collegato tramite ottico o ARC, che altrimenti riceve 
 
 #: src/lib/playback/controller.ts
 msgid "Forced"
-msgstr ""
+msgstr "Forzato"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Forced, for foreign parts only"
@@ -1798,7 +1796,7 @@ msgstr "Grandezza dei riquadri in una griglia."
 
 #: src/pages/settings/interface.tsx
 msgid "How long the hero stays on a featured title while it rotates."
-msgstr ""
+msgstr "Durata di permanenza del banner in evidenza su ciascun titolo durante la rotazione."
 
 #: src/pages/settings/playback.tsx
 msgid "How much of the video the player holds in memory: ahead, to ride out a slow connection, and behind, to seek back at once. Automatic sizes it from this device's memory."
