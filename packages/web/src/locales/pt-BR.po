@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-02 19:12+0000\n"
+"PO-Revision-Date: 2026-11-03 18:00+0000\n"
 "Last-Translator: Bruno <procopio@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/aiostreams/web-app/pt_BR/>\n"
 "Language: pt-BR\n"
@@ -5034,7 +5034,7 @@ msgstr "Quando os créditos começam"
 
 #: src/pages/settings/playback.tsx
 msgid "When the credits start, if they run to the end; otherwise a set time before the end."
-msgstr "Quando os créditos começam, se forem até o fim; caso contrário, um tempo definido antes do fim."
+msgstr "No início dos créditos, se forem até o fim; caso contrário, um tempo antes do fim."
 
 #: src/pages/settings/audio.tsx
 msgid "When the TV or receiver decodes it"
