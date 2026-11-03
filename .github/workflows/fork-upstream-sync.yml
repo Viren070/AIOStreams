@@ -1,0 +1,144 @@
+name: Fork upstream sync
+
+on:
+  schedule:
+    - cron: '23 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fork-upstream-sync
+  cancel-in-progress: false
+
+env:
+  FORK_BASE: ${{ github.event.repository.default_branch }}
+  SYNC_BRANCH: automation/upstream-sync
+  UPSTREAM: https://github.com/Viren070/AIOStreams.git
+
+jobs:
+  verify:
+    if: github.repository != 'Viren070/AIOStreams'
+    runs-on: ubuntu-latest
+    outputs:
+      tree: ${{ steps.merge.outputs.tree }}
+      base: ${{ steps.merge.outputs.base }}
+      head: ${{ steps.merge.outputs.head }}
+      upstream: ${{ steps.merge.outputs.upstream }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Prepare merge
+        id: merge
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          gh auth setup-git
+          if [ "$FORK_BASE" = "$SYNC_BRANCH" ]; then
+            echo 'The sync branch must be separate from the fork default branch.' >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          base=$(git rev-parse HEAD)
+          head=$(git ls-remote origin "refs/heads/$SYNC_BRANCH" | cut -f1)
+          git fetch --no-tags "$UPSTREAM" HEAD
+          upstream=$(git rev-parse FETCH_HEAD)
+          if git merge-base --is-ancestor "$upstream" "$base"; then
+            echo 'The fork default branch already contains upstream HEAD.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if [ -n "$head" ]; then
+            git fetch origin "refs/heads/$SYNC_BRANCH"
+            git checkout --detach "$head"
+          fi
+          for target in "$base" "$upstream"; do
+            if ! git merge --no-edit "$target"; then
+              echo '### Upstream sync conflict' >> "$GITHUB_STEP_SUMMARY"
+              git diff --name-only --diff-filter=U >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
+          done
+          tree=$(git rev-parse HEAD^{tree})
+          if [ "$tree" = "$(git rev-parse "$base^{tree}")" ]; then
+            echo 'The merged tree matches the fork default branch.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+          echo "head=$head" >> "$GITHUB_OUTPUT"
+          echo "upstream=$upstream" >> "$GITHUB_OUTPUT"
+          echo "tree=$tree" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@v7
+        if: steps.merge.outputs.tree != ''
+        with:
+          node-version: 24
+      - name: Install
+        if: steps.merge.outputs.tree != ''
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+      - name: Build and test
+        if: steps.merge.outputs.tree != ''
+        run: |
+          pnpm run metadata
+          pnpm run build
+          pnpm -F core run test
+          pnpm -F server run test
+          pnpm -F frontend run test
+          pnpm -F frontend run typecheck
+          pnpm -F web run typecheck
+          pnpm -F frontend run lint
+          pnpm -F web run lint
+      - name: Report failed verification
+        if: failure() && steps.merge.outputs.tree != ''
+        run: echo 'Build or verification failed. The sync branch was left untouched.' >> "$GITHUB_STEP_SUMMARY"
+
+  propose:
+    needs: verify
+    if: needs.verify.outputs.tree != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+      - name: Publish verified merge and update review PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERIFIED_BASE: ${{ needs.verify.outputs.base }}
+          VERIFIED_HEAD: ${{ needs.verify.outputs.head }}
+          VERIFIED_UPSTREAM: ${{ needs.verify.outputs.upstream }}
+          VERIFIED_TREE: ${{ needs.verify.outputs.tree }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch origin "refs/heads/$FORK_BASE"
+          test "$(git rev-parse FETCH_HEAD)" = "$VERIFIED_BASE"
+          test "$(git ls-remote origin "refs/heads/$SYNC_BRANCH" | cut -f1)" = "$VERIFIED_HEAD"
+          git fetch --no-tags "$UPSTREAM" HEAD
+          test "$(git rev-parse FETCH_HEAD)" = "$VERIFIED_UPSTREAM"
+          if [ -n "$VERIFIED_HEAD" ]; then
+            git fetch origin "refs/heads/$SYNC_BRANCH"
+          fi
+          git checkout --detach "${VERIFIED_HEAD:-$VERIFIED_BASE}"
+          git merge --no-edit "$VERIFIED_BASE"
+          git merge --no-edit "$VERIFIED_UPSTREAM"
+          test "$(git rev-parse HEAD^{tree})" = "$VERIFIED_TREE"
+          git push origin "HEAD:refs/heads/$SYNC_BRANCH"
+          printf 'Sync official AIOStreams default branch at %s.\n\nBuild, tests and type checks passed in %s/%s/actions/runs/%s. Review before merging. Use a tested upstream stable release for production.\n' \
+            "$VERIFIED_UPSTREAM" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > "$RUNNER_TEMP/sync-pr.md"
+          pr=$(gh pr list --head "$SYNC_BRANCH" --base "$FORK_BASE" --json number --jq '.[0].number // empty')
+          if [ -n "$pr" ]; then
+            gh pr edit "$pr" --body-file "$RUNNER_TEMP/sync-pr.md"
+          else
+            gh pr create --base "$FORK_BASE" --head "$SYNC_BRANCH" --title 'Sync official AIOStreams upstream' --body-file "$RUNNER_TEMP/sync-pr.md"
+          fi
