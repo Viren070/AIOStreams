@@ -642,6 +642,11 @@ msgstr "Kembali"
 msgid "Back button"
 msgstr "Butang kembali"
 
+#: src/pages/settings/playback.tsx
+#, fuzzy
+msgid "Back in the player"
+msgstr "Pemain terbina dalam"
+
 #: src/components/version-settings.tsx src/pages/settings/interface.tsx
 #: src/pages/settings/subtitles.tsx src/pages/settings/theme.tsx
 msgid "Background"
@@ -874,7 +879,8 @@ msgstr "Kosongkan penilaian"
 msgid "Clear selection"
 msgstr "Kosongkan pilihan"
 
-#: src/components/crash-report.tsx src/components/window-controls.tsx
+#: src/components/crash-report.tsx src/components/player/mini-player.tsx
+#: src/components/window-controls.tsx
 msgid "Close"
 msgstr "Tutup"
 
@@ -2175,6 +2181,11 @@ msgstr "Mesej"
 msgid "Midnight"
 msgstr "Tengah Malam"
 
+#: src/components/player/controls.tsx
+#, fuzzy
+msgid "Mini player"
+msgstr "Pemain terbina dalam"
+
 #: src/components/window-controls.tsx
 msgid "Minimise"
 msgstr "Minimumkan"
@@ -2665,6 +2676,11 @@ msgid "Opens the menu of what is selected, as a right click does."
 msgstr "Membuka menu item yang dipilih, sama seperti klik kanan."
 
 #: src/pages/settings/playback.tsx
+#, fuzzy
+msgid "Opens the mini player"
+msgstr "Di Laman Utama"
+
+#: src/pages/settings/playback.tsx
 msgid "Opens versions in {target}, which brings you back here with your place saved."
 msgstr "Membuka versi dalam {target}, yang membawa anda kembali ke sini dengan kedudukan terakhir disimpan."
 
@@ -2813,8 +2829,9 @@ msgstr "Tampal penapis pantas sebagai JSON, atau alamat fail dengannya, untuk me
 msgid "Pattern"
 msgstr "Corak"
 
-#: src/components/player/controls.tsx src/components/remote-sheet.tsx
-#: src/lib/input/actions.ts src/lib/input/keys.ts src/pages/downloads.tsx
+#: src/components/player/controls.tsx src/components/player/mini-player.tsx
+#: src/components/remote-sheet.tsx src/lib/input/actions.ts
+#: src/lib/input/keys.ts src/pages/downloads.tsx
 msgid "Pause"
 msgstr "Jeda"
 
@@ -2916,9 +2933,9 @@ msgstr "Merah Jambu"
 
 #: src/components/hero.tsx src/components/item-menu.tsx
 #: src/components/no-details.tsx src/components/player/controls.tsx
-#: src/components/playlists.tsx src/components/random-pick.tsx
-#: src/components/remote-sheet.tsx src/lib/input/actions.ts
-#: src/lib/input/keys.ts src/pages/item.tsx
+#: src/components/player/mini-player.tsx src/components/playlists.tsx
+#: src/components/random-pick.tsx src/components/remote-sheet.tsx
+#: src/lib/input/actions.ts src/lib/input/keys.ts src/pages/item.tsx
 msgid "Play"
 msgstr "Main"
 
@@ -3018,6 +3035,11 @@ msgstr "Main/Jeda"
 #: src/lib/hosts/shell/player.ts src/pages/settings/index.tsx
 msgid "Playback"
 msgstr "Main Balik"
+
+#: src/components/player/mini-player.tsx
+#, fuzzy
+msgid "Playback failed"
+msgstr "Main balik gagal: {failure}"
 
 #: src/pages/player.tsx
 msgid "Playback failed: {failure}"
@@ -3999,6 +4021,11 @@ msgstr "Henti"
 msgid "Stop listening"
 msgstr "Berhenti mendengar"
 
+#: src/pages/settings/playback.tsx
+#, fuzzy
+msgid "Stops playing"
+msgstr "Sedang dimainkan"
+
 #: src/components/version-picker.tsx src/pages/player.tsx
 msgid "Stream link copied"
 msgstr "Pautan penstriman disalin"
@@ -4328,6 +4355,10 @@ msgstr "Pautan mungkin sudah lama, atau halaman telah dipindahkan."
 #: src/lib/hosts/shell/player.ts
 msgid "the link returned something other than a video"
 msgstr "pautan mengembalikan sesuatu selain daripada video"
+
+#: src/pages/settings/playback.tsx
+msgid "The mini player keeps the video going over the pages while you look around. Tap it to open the player again, or close it with its cross."
+msgstr ""
 
 #: src/pages/settings/apps.tsx
 msgid "The movie or show whose page is open."

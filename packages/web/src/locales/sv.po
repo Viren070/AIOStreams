@@ -642,6 +642,10 @@ msgstr ""
 msgid "Back button"
 msgstr ""
 
+#: src/pages/settings/playback.tsx
+msgid "Back in the player"
+msgstr ""
+
 #: src/components/version-settings.tsx src/pages/settings/interface.tsx
 #: src/pages/settings/subtitles.tsx src/pages/settings/theme.tsx
 msgid "Background"
@@ -874,7 +878,8 @@ msgstr ""
 msgid "Clear selection"
 msgstr ""
 
-#: src/components/crash-report.tsx src/components/window-controls.tsx
+#: src/components/crash-report.tsx src/components/player/mini-player.tsx
+#: src/components/window-controls.tsx
 msgid "Close"
 msgstr ""
 
@@ -2175,6 +2180,10 @@ msgstr ""
 msgid "Midnight"
 msgstr ""
 
+#: src/components/player/controls.tsx
+msgid "Mini player"
+msgstr ""
+
 #: src/components/window-controls.tsx
 msgid "Minimise"
 msgstr ""
@@ -2665,6 +2674,10 @@ msgid "Opens the menu of what is selected, as a right click does."
 msgstr ""
 
 #: src/pages/settings/playback.tsx
+msgid "Opens the mini player"
+msgstr ""
+
+#: src/pages/settings/playback.tsx
 msgid "Opens versions in {target}, which brings you back here with your place saved."
 msgstr ""
 
@@ -2813,8 +2826,9 @@ msgstr ""
 msgid "Pattern"
 msgstr ""
 
-#: src/components/player/controls.tsx src/components/remote-sheet.tsx
-#: src/lib/input/actions.ts src/lib/input/keys.ts src/pages/downloads.tsx
+#: src/components/player/controls.tsx src/components/player/mini-player.tsx
+#: src/components/remote-sheet.tsx src/lib/input/actions.ts
+#: src/lib/input/keys.ts src/pages/downloads.tsx
 msgid "Pause"
 msgstr ""
 
@@ -2916,9 +2930,9 @@ msgstr ""
 
 #: src/components/hero.tsx src/components/item-menu.tsx
 #: src/components/no-details.tsx src/components/player/controls.tsx
-#: src/components/playlists.tsx src/components/random-pick.tsx
-#: src/components/remote-sheet.tsx src/lib/input/actions.ts
-#: src/lib/input/keys.ts src/pages/item.tsx
+#: src/components/player/mini-player.tsx src/components/playlists.tsx
+#: src/components/random-pick.tsx src/components/remote-sheet.tsx
+#: src/lib/input/actions.ts src/lib/input/keys.ts src/pages/item.tsx
 msgid "Play"
 msgstr ""
 
@@ -3017,6 +3031,10 @@ msgstr ""
 
 #: src/lib/hosts/shell/player.ts src/pages/settings/index.tsx
 msgid "Playback"
+msgstr ""
+
+#: src/components/player/mini-player.tsx
+msgid "Playback failed"
 msgstr ""
 
 #: src/pages/player.tsx
@@ -3999,6 +4017,10 @@ msgstr ""
 msgid "Stop listening"
 msgstr ""
 
+#: src/pages/settings/playback.tsx
+msgid "Stops playing"
+msgstr ""
+
 #: src/components/version-picker.tsx src/pages/player.tsx
 msgid "Stream link copied"
 msgstr ""
@@ -4327,6 +4349,10 @@ msgstr ""
 
 #: src/lib/hosts/shell/player.ts
 msgid "the link returned something other than a video"
+msgstr ""
+
+#: src/pages/settings/playback.tsx
+msgid "The mini player keeps the video going over the pages while you look around. Tap it to open the player again, or close it with its cross."
 msgstr ""
 
 #: src/pages/settings/apps.tsx

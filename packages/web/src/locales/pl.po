@@ -642,6 +642,11 @@ msgstr "Cofnij"
 msgid "Back button"
 msgstr "Przycisk cofnij"
 
+#: src/pages/settings/playback.tsx
+#, fuzzy
+msgid "Back in the player"
+msgstr "Wbudowany odtwarzacz"
+
 #: src/components/version-settings.tsx src/pages/settings/interface.tsx
 #: src/pages/settings/subtitles.tsx src/pages/settings/theme.tsx
 msgid "Background"
@@ -874,7 +879,8 @@ msgstr "Wyczyść ocenę"
 msgid "Clear selection"
 msgstr "Wyczyść zaznaczenie"
 
-#: src/components/crash-report.tsx src/components/window-controls.tsx
+#: src/components/crash-report.tsx src/components/player/mini-player.tsx
+#: src/components/window-controls.tsx
 msgid "Close"
 msgstr "Zamknij"
 
@@ -2175,6 +2181,11 @@ msgstr "Wiadomości"
 msgid "Midnight"
 msgstr "Północ"
 
+#: src/components/player/controls.tsx
+#, fuzzy
+msgid "Mini player"
+msgstr "Wbudowany odtwarzacz"
+
 #: src/components/window-controls.tsx
 msgid "Minimise"
 msgstr "Minimalizuj"
@@ -2665,6 +2676,11 @@ msgid "Opens the menu of what is selected, as a right click does."
 msgstr "Otwiera menu wybranego elementu, tak jak kliknięcie prawym przyciskiem myszy."
 
 #: src/pages/settings/playback.tsx
+#, fuzzy
+msgid "Opens the mini player"
+msgstr "Na stronie głównej"
+
+#: src/pages/settings/playback.tsx
 msgid "Opens versions in {target}, which brings you back here with your place saved."
 msgstr "Otwiera wersje w {target}, która po zakończeniu przywraca Cię tutaj z zapisanym postępem."
 
@@ -2813,8 +2829,9 @@ msgstr "Wklej szybkie filtry jako JSON lub adres pliku z nimi, aby dodać je do 
 msgid "Pattern"
 msgstr "Wzorzec"
 
-#: src/components/player/controls.tsx src/components/remote-sheet.tsx
-#: src/lib/input/actions.ts src/lib/input/keys.ts src/pages/downloads.tsx
+#: src/components/player/controls.tsx src/components/player/mini-player.tsx
+#: src/components/remote-sheet.tsx src/lib/input/actions.ts
+#: src/lib/input/keys.ts src/pages/downloads.tsx
 msgid "Pause"
 msgstr "Wstrzymaj"
 
@@ -2916,9 +2933,9 @@ msgstr "Różowy"
 
 #: src/components/hero.tsx src/components/item-menu.tsx
 #: src/components/no-details.tsx src/components/player/controls.tsx
-#: src/components/playlists.tsx src/components/random-pick.tsx
-#: src/components/remote-sheet.tsx src/lib/input/actions.ts
-#: src/lib/input/keys.ts src/pages/item.tsx
+#: src/components/player/mini-player.tsx src/components/playlists.tsx
+#: src/components/random-pick.tsx src/components/remote-sheet.tsx
+#: src/lib/input/actions.ts src/lib/input/keys.ts src/pages/item.tsx
 msgid "Play"
 msgstr "Odtwórz"
 
@@ -3018,6 +3035,11 @@ msgstr "Odtwórz/Wstrzymaj"
 #: src/lib/hosts/shell/player.ts src/pages/settings/index.tsx
 msgid "Playback"
 msgstr "Odtwarzanie"
+
+#: src/components/player/mini-player.tsx
+#, fuzzy
+msgid "Playback failed"
+msgstr "Błąd odtwarzania: {failure}"
 
 #: src/pages/player.tsx
 msgid "Playback failed: {failure}"
@@ -3999,6 +4021,11 @@ msgstr "Zatrzymaj"
 msgid "Stop listening"
 msgstr "Zakończ nasłuchiwanie"
 
+#: src/pages/settings/playback.tsx
+#, fuzzy
+msgid "Stops playing"
+msgstr "Teraz odtwarzane"
+
 #: src/components/version-picker.tsx src/pages/player.tsx
 msgid "Stream link copied"
 msgstr "Skopiowano link do strumienia"
@@ -4328,6 +4355,10 @@ msgstr "Link może być nieaktualny lub strona została przeniesiona."
 #: src/lib/hosts/shell/player.ts
 msgid "the link returned something other than a video"
 msgstr "link zwrócił coś innego niż wideo"
+
+#: src/pages/settings/playback.tsx
+msgid "The mini player keeps the video going over the pages while you look around. Tap it to open the player again, or close it with its cross."
+msgstr ""
 
 #: src/pages/settings/apps.tsx
 msgid "The movie or show whose page is open."
