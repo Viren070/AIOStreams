@@ -102,8 +102,15 @@ export function remainingMs(item: BaseItemDto): number {
   return total > pos ? total - pos : 0;
 }
 
+/** A catalog of Stremio's anime type, whatever library type it is served as. */
+export function isAnime(view: BaseItemDto | undefined): boolean {
+  const extension = view as { aiostreams?: { anime?: boolean } } | undefined;
+  return extension?.aiostreams?.anime === true;
+}
+
 /** Tells apart libraries that share a name, such as two "Popular" catalogs. */
 export function libraryLabel(view: BaseItemDto): string | undefined {
+  if (isAnime(view)) return t`Anime`;
   switch (view.CollectionType) {
     case 'movies':
       return t`Movies`;
