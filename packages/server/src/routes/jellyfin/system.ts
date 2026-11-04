@@ -48,6 +48,8 @@ const FEATURES = {
   versions: 1,
   /** A library that needs a genre picked says so, as `aiostreams.genreRequired`. */
   genreRequired: 1,
+  /** A library of Stremio's `anime` type says so, as `aiostreams.anime`. */
+  anime: 1,
   /** A filler or recap episode says so, as `aiostreams.filler` or `aiostreams.recap`. */
   fillers: 1,
   /** SyncPlay, and a watch party relay at `/party/v1`; `aiostreams.parties` says who it admits. */
