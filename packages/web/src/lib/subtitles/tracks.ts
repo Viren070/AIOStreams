@@ -1,5 +1,5 @@
 import type { JellyfinClient } from '../client';
-import { firstInLanguages, sameLanguage } from '../languages';
+import { firstInLanguages, languageCode, sameLanguage } from '../languages';
 import type { MediaStream, SourceInfo } from '../types';
 import { subtitleLanguages, type PlaybackPrefs } from '../user-config';
 
@@ -101,6 +101,33 @@ export function splitByLanguage<T extends { id: string; lang?: string }>(
     shown: tracks.filter(mine),
     hidden: tracks.filter((t) => !mine(t)),
   };
+}
+
+/**
+ * Tracks in their own order, each language's gathered where its first one is.
+ * A track with no language stays on its own.
+ */
+export function groupByLanguage<T extends { lang?: string }>(
+  tracks: T[]
+): { lang: string | null; tracks: T[] }[] {
+  const groups: { lang: string | null; tracks: T[] }[] = [];
+  const byCode = new Map<string, T[]>();
+  for (const track of tracks) {
+    if (!track.lang || track.lang === 'und') {
+      groups.push({ lang: null, tracks: [track] });
+      continue;
+    }
+    const code = languageCode(track.lang);
+    const group = byCode.get(code);
+    if (group) {
+      group.push(track);
+      continue;
+    }
+    const own = [track];
+    byCode.set(code, own);
+    groups.push({ lang: track.lang, tracks: own });
+  }
+  return groups;
 }
 
 /** The subtitle the user's languages, subtitle mode and subtitle types start with. */
