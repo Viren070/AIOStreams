@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-02 21:56+0000\n"
+"PO-Revision-Date: 2026-11-04 13:52+0000\n"
 "Last-Translator: AIO sama <aio-sama@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Malay <https://hosted.weblate.org/projects/aiostreams/web-app/ms/>\n"
 "Language: ms\n"
@@ -643,9 +643,8 @@ msgid "Back button"
 msgstr "Butang kembali"
 
 #: src/pages/settings/playback.tsx
-#, fuzzy
 msgid "Back in the player"
-msgstr "Pemain terbina dalam"
+msgstr "Kembali dalam pemain"
 
 #: src/components/version-settings.tsx src/pages/settings/interface.tsx
 #: src/pages/settings/subtitles.tsx src/pages/settings/theme.tsx
@@ -2182,9 +2181,8 @@ msgid "Midnight"
 msgstr "Tengah Malam"
 
 #: src/components/player/controls.tsx
-#, fuzzy
 msgid "Mini player"
-msgstr "Pemain terbina dalam"
+msgstr "Pemain mini"
 
 #: src/components/window-controls.tsx
 msgid "Minimise"
@@ -2676,9 +2674,8 @@ msgid "Opens the menu of what is selected, as a right click does."
 msgstr "Membuka menu item yang dipilih, sama seperti klik kanan."
 
 #: src/pages/settings/playback.tsx
-#, fuzzy
 msgid "Opens the mini player"
-msgstr "Di Laman Utama"
+msgstr "Membuka pemain mini"
 
 #: src/pages/settings/playback.tsx
 msgid "Opens versions in {target}, which brings you back here with your place saved."
@@ -3037,9 +3034,8 @@ msgid "Playback"
 msgstr "Main Balik"
 
 #: src/components/player/mini-player.tsx
-#, fuzzy
 msgid "Playback failed"
-msgstr "Main balik gagal: {failure}"
+msgstr "Main semula gagal"
 
 #: src/pages/player.tsx
 msgid "Playback failed: {failure}"
@@ -4022,9 +4018,8 @@ msgid "Stop listening"
 msgstr "Berhenti mendengar"
 
 #: src/pages/settings/playback.tsx
-#, fuzzy
 msgid "Stops playing"
-msgstr "Sedang dimainkan"
+msgstr "Hentikan main"
 
 #: src/components/version-picker.tsx src/pages/player.tsx
 msgid "Stream link copied"
@@ -4358,7 +4353,7 @@ msgstr "pautan mengembalikan sesuatu selain daripada video"
 
 #: src/pages/settings/playback.tsx
 msgid "The mini player keeps the video going over the pages while you look around. Tap it to open the player again, or close it with its cross."
-msgstr ""
+msgstr "Pemain mini memastikan video terus dimainkan melintasi halaman semasa anda melihat-lihat. Ketik padanya untuk membuka semula pemain, atau tutup menggunakan simbol pangkah."
 
 #: src/pages/settings/apps.tsx
 msgid "The movie or show whose page is open."
