@@ -643,6 +643,11 @@ msgstr "Geri"
 msgid "Back button"
 msgstr "Geri tuşu"
 
+#: src/pages/settings/playback.tsx
+#, fuzzy
+msgid "Back in the player"
+msgstr "Yerleşik oynatıcı"
+
 #: src/components/version-settings.tsx src/pages/settings/interface.tsx
 #: src/pages/settings/subtitles.tsx src/pages/settings/theme.tsx
 msgid "Background"
@@ -875,7 +880,8 @@ msgstr "Puanı kaldır"
 msgid "Clear selection"
 msgstr "Seçimi temizle"
 
-#: src/components/crash-report.tsx src/components/window-controls.tsx
+#: src/components/crash-report.tsx src/components/player/mini-player.tsx
+#: src/components/window-controls.tsx
 msgid "Close"
 msgstr "Kapat"
 
@@ -903,7 +909,7 @@ msgstr "Renkler ve özel CSS"
 msgid "Combine movie and show results"
 msgstr "Film ve dizi sonuçlarını birleştir"
 
-#: src/pages/settings/audio.tsx
+#: src/lib/playback/controller.ts src/pages/settings/audio.tsx
 msgid "Commentary"
 msgstr "Yorum parçası"
 
@@ -1640,6 +1646,10 @@ msgstr "Yazı tipi"
 msgid "For a receiver on an optical or ARC link, which gets other surround formats as stereo otherwise."
 msgstr "Optik veya ARC bağlantısı kullanan, diğer çevresel ses biçimlerini stereo olarak alan alıcılar için."
 
+#: src/lib/playback/controller.ts
+msgid "Forced"
+msgstr ""
+
 #: src/pages/settings/subtitles.tsx
 msgid "Forced, for foreign parts only"
 msgstr "Zorunlu, yalnızca yabancı dildeki kısımlar"
@@ -2177,6 +2187,11 @@ msgstr "Mesajlar"
 msgid "Midnight"
 msgstr "Gece yarısı"
 
+#: src/components/player/controls.tsx
+#, fuzzy
+msgid "Mini player"
+msgstr "Yerleşik oynatıcı"
+
 #: src/components/window-controls.tsx
 msgid "Minimise"
 msgstr "Küçült"
@@ -2670,6 +2685,11 @@ msgid "Opens the menu of what is selected, as a right click does."
 msgstr "Sağ tıklama gibi, seçili öğenin menüsünü açar."
 
 #: src/pages/settings/playback.tsx
+#, fuzzy
+msgid "Opens the mini player"
+msgstr "Ana sayfada"
+
+#: src/pages/settings/playback.tsx
 msgid "Opens versions in {target}, which brings you back here with your place saved."
 msgstr "Sürümleri {target} ile açar; izleme konumun kaydedilerek buraya dönülür."
 
@@ -2818,8 +2838,9 @@ msgstr "Bu listeye eklemek için hızlı filtreleri JSON olarak veya filtrelerin
 msgid "Pattern"
 msgstr "Desen"
 
-#: src/components/player/controls.tsx src/components/remote-sheet.tsx
-#: src/lib/input/actions.ts src/lib/input/keys.ts src/pages/downloads.tsx
+#: src/components/player/controls.tsx src/components/player/mini-player.tsx
+#: src/components/remote-sheet.tsx src/lib/input/actions.ts
+#: src/lib/input/keys.ts src/pages/downloads.tsx
 msgid "Pause"
 msgstr "Duraklat"
 
@@ -2921,9 +2942,9 @@ msgstr "Pembe"
 
 #: src/components/hero.tsx src/components/item-menu.tsx
 #: src/components/no-details.tsx src/components/player/controls.tsx
-#: src/components/playlists.tsx src/components/random-pick.tsx
-#: src/components/remote-sheet.tsx src/lib/input/actions.ts
-#: src/lib/input/keys.ts src/pages/item.tsx
+#: src/components/player/mini-player.tsx src/components/playlists.tsx
+#: src/components/random-pick.tsx src/components/remote-sheet.tsx
+#: src/lib/input/actions.ts src/lib/input/keys.ts src/pages/item.tsx
 msgid "Play"
 msgstr "Oynat"
 
@@ -3025,6 +3046,11 @@ msgstr "Oynat/Duraklat"
 #: src/lib/hosts/shell/player.ts src/pages/settings/index.tsx
 msgid "Playback"
 msgstr "Oynatma"
+
+#: src/components/player/mini-player.tsx
+#, fuzzy
+msgid "Playback failed"
+msgstr "Oynatılamadı: {failure}"
 
 #: src/pages/player.tsx
 msgid "Playback failed: {failure}"
@@ -3537,6 +3563,10 @@ msgstr "Görüldü"
 msgid "Saw its subtitle"
 msgstr "Altyazısını gördüm"
 
+#: src/lib/playback/controller.ts
+msgid "SDH"
+msgstr ""
+
 #: src/pages/settings/subtitles.tsx
 msgid "SDH, with sounds described"
 msgstr "SDH, sesleri betimleyen altyazı"
@@ -3804,7 +3834,7 @@ msgstr "Bu sunucudaki oturum kapatılsın mı?"
 msgid "Signed out"
 msgstr "Oturum kapatıldı"
 
-#: src/pages/settings/subtitles.tsx
+#: src/lib/playback/controller.ts src/pages/settings/subtitles.tsx
 msgid "Signs and songs"
 msgstr "Yazılar ve şarkılar"
 
@@ -4004,6 +4034,11 @@ msgstr "Dur"
 #: src/pages/search.tsx
 msgid "Stop listening"
 msgstr "Dinlemeyi durdur"
+
+#: src/pages/settings/playback.tsx
+#, fuzzy
+msgid "Stops playing"
+msgstr "Şimdi oynatılıyor"
 
 #: src/components/version-picker.tsx src/pages/player.tsx
 msgid "Stream link copied"
@@ -4334,6 +4369,10 @@ msgstr "Bağlantı eski olabilir veya sayfa taşınmış olabilir."
 #: src/lib/hosts/shell/player.ts
 msgid "the link returned something other than a video"
 msgstr "bağlantı video dışında bir içerik döndürdü"
+
+#: src/pages/settings/playback.tsx
+msgid "The mini player keeps the video going over the pages while you look around. Tap it to open the player again, or close it with its cross."
+msgstr ""
 
 #: src/pages/settings/apps.tsx
 msgid "The movie or show whose page is open."
@@ -4686,6 +4725,11 @@ msgstr "Diziyi yeniden takip et"
 #: src/components/version-settings.tsx
 msgid "Unfinished"
 msgstr "Yarım kalanlar"
+
+#: src/lib/playback/controller.ts
+#, fuzzy
+msgid "Unknown language"
+msgstr "Ses dilleri"
 
 #: src/components/player/volume.tsx
 msgid "Unmute"

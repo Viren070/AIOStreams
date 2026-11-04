@@ -643,6 +643,11 @@ msgstr "返回"
 msgid "Back button"
 msgstr "返回按钮"
 
+#: src/pages/settings/playback.tsx
+#, fuzzy
+msgid "Back in the player"
+msgstr "内置播放器"
+
 #: src/components/version-settings.tsx src/pages/settings/interface.tsx
 #: src/pages/settings/subtitles.tsx src/pages/settings/theme.tsx
 msgid "Background"
@@ -875,7 +880,8 @@ msgstr "清除评分"
 msgid "Clear selection"
 msgstr "清除选择"
 
-#: src/components/crash-report.tsx src/components/window-controls.tsx
+#: src/components/crash-report.tsx src/components/player/mini-player.tsx
+#: src/components/window-controls.tsx
 msgid "Close"
 msgstr "关闭"
 
@@ -903,7 +909,7 @@ msgstr "颜色和自定义 CSS"
 msgid "Combine movie and show results"
 msgstr "合并电影和剧集的搜索结果"
 
-#: src/pages/settings/audio.tsx
+#: src/lib/playback/controller.ts src/pages/settings/audio.tsx
 msgid "Commentary"
 msgstr "评论音轨"
 
@@ -1641,6 +1647,10 @@ msgstr "字体"
 msgid "For a receiver on an optical or ARC link, which gets other surround formats as stereo otherwise."
 msgstr "适用于通过光纤或 ARC 连接的接收设备，否则其他环绕声格式可能会以立体声输出。"
 
+#: src/lib/playback/controller.ts
+msgid "Forced"
+msgstr ""
+
 #: src/pages/settings/subtitles.tsx
 msgid "Forced, for foreign parts only"
 msgstr "强制字幕，仅显示外语片段"
@@ -2178,6 +2188,11 @@ msgstr "消息"
 msgid "Midnight"
 msgstr "午夜"
 
+#: src/components/player/controls.tsx
+#, fuzzy
+msgid "Mini player"
+msgstr "内置播放器"
+
 #: src/components/window-controls.tsx
 msgid "Minimise"
 msgstr "最小化"
@@ -2671,6 +2686,11 @@ msgid "Opens the menu of what is selected, as a right click does."
 msgstr "打开当前选中项目的菜单，效果与右键单击相同。"
 
 #: src/pages/settings/playback.tsx
+#, fuzzy
+msgid "Opens the mini player"
+msgstr "在首页"
+
+#: src/pages/settings/playback.tsx
 msgid "Opens versions in {target}, which brings you back here with your place saved."
 msgstr "在 {target} 中打开版本，并保存播放位置以便返回此处继续。"
 
@@ -2819,8 +2839,9 @@ msgstr "粘贴快捷筛选条件的 JSON，或包含这些条件的文件地址�
 msgid "Pattern"
 msgstr "匹配模式"
 
-#: src/components/player/controls.tsx src/components/remote-sheet.tsx
-#: src/lib/input/actions.ts src/lib/input/keys.ts src/pages/downloads.tsx
+#: src/components/player/controls.tsx src/components/player/mini-player.tsx
+#: src/components/remote-sheet.tsx src/lib/input/actions.ts
+#: src/lib/input/keys.ts src/pages/downloads.tsx
 msgid "Pause"
 msgstr "暂停"
 
@@ -2922,9 +2943,9 @@ msgstr "粉色"
 
 #: src/components/hero.tsx src/components/item-menu.tsx
 #: src/components/no-details.tsx src/components/player/controls.tsx
-#: src/components/playlists.tsx src/components/random-pick.tsx
-#: src/components/remote-sheet.tsx src/lib/input/actions.ts
-#: src/lib/input/keys.ts src/pages/item.tsx
+#: src/components/player/mini-player.tsx src/components/playlists.tsx
+#: src/components/random-pick.tsx src/components/remote-sheet.tsx
+#: src/lib/input/actions.ts src/lib/input/keys.ts src/pages/item.tsx
 msgid "Play"
 msgstr "播放"
 
@@ -3026,6 +3047,11 @@ msgstr "播放/暂停"
 #: src/lib/hosts/shell/player.ts src/pages/settings/index.tsx
 msgid "Playback"
 msgstr "播放"
+
+#: src/components/player/mini-player.tsx
+#, fuzzy
+msgid "Playback failed"
+msgstr "播放失败：{failure}"
 
 #: src/pages/player.tsx
 msgid "Playback failed: {failure}"
@@ -3540,6 +3566,10 @@ msgstr "已看到"
 msgid "Saw its subtitle"
 msgstr "已看到对应字幕"
 
+#: src/lib/playback/controller.ts
+msgid "SDH"
+msgstr ""
+
 #: src/pages/settings/subtitles.tsx
 msgid "SDH, with sounds described"
 msgstr "SDH 字幕（包含声音描述）"
@@ -3809,7 +3839,7 @@ msgstr "要退出此服务器的登录吗？"
 msgid "Signed out"
 msgstr "已退出登录"
 
-#: src/pages/settings/subtitles.tsx
+#: src/lib/playback/controller.ts src/pages/settings/subtitles.tsx
 msgid "Signs and songs"
 msgstr "标志与歌曲"
 
@@ -4009,6 +4039,11 @@ msgstr "停止"
 #: src/pages/search.tsx
 msgid "Stop listening"
 msgstr "停止聆听"
+
+#: src/pages/settings/playback.tsx
+#, fuzzy
+msgid "Stops playing"
+msgstr "正在播放"
 
 #: src/components/version-picker.tsx src/pages/player.tsx
 msgid "Stream link copied"
@@ -4341,6 +4376,10 @@ msgstr "链接可能已过期，或页面地址已更改。"
 #: src/lib/hosts/shell/player.ts
 msgid "the link returned something other than a video"
 msgstr "链接返回的内容不是视频"
+
+#: src/pages/settings/playback.tsx
+msgid "The mini player keeps the video going over the pages while you look around. Tap it to open the player again, or close it with its cross."
+msgstr ""
 
 #: src/pages/settings/apps.tsx
 msgid "The movie or show whose page is open."
@@ -4693,6 +4732,11 @@ msgstr "恢复剧集"
 #: src/components/version-settings.tsx
 msgid "Unfinished"
 msgstr "未完成"
+
+#: src/lib/playback/controller.ts
+#, fuzzy
+msgid "Unknown language"
+msgstr "音频语言"
 
 #: src/components/player/volume.tsx
 msgid "Unmute"

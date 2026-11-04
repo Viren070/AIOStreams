@@ -1,14 +1,14 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-02 16:17+0000\n"
+"PO-Revision-Date: 2026-11-04 13:52+0000\n"
 "Last-Translator: Nicola Bortoletto <translate@nicolabortoletto.com>\n"
 "Language-Team: Italian <https://hosted.weblate.org/projects/aiostreams/web-app/it/>\n"
 "Language: it\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Weblate 2026.11.dev0\n"
+"X-Generator: Weblate 2026.11.1.dev0\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
 
 #: src/components/party/party-sheet.tsx
@@ -157,11 +157,11 @@ msgstr "{n, plural, one {Dopo # episodio} other {Dopo # episodi}}"
 
 #: src/components/version-picker.tsx
 msgid "{name} airs {day} ({until}). Download it anyway?"
-msgstr ""
+msgstr "{name} va in onda il {day} ({until}). Scaricare comunque?"
 
 #: src/components/version-picker.tsx
 msgid "{name} airs {day} ({until}). Play it anyway?"
-msgstr ""
+msgstr "{name} va in onda il {day} ({until}). Riprodurre comunque?"
 
 #: src/components/party/party-host.tsx
 msgid "{name} joined the party"
@@ -240,9 +240,8 @@ msgid "{total, plural, one {# title} other {# titles}}"
 msgstr "{total, plural, one {# titolo} other {# titoli}}"
 
 #: src/pages/item.tsx
-#, fuzzy
 msgid "{unairedCount, plural, one {# unaired} other {# unaired}}"
-msgstr "{movieCount, plural, one {# film} other {# film}}"
+msgstr "{unairedCount, plural, one {# non ancora trasmesso} other {# non ancora trasmessi}}"
 
 #: src/components/player/options.tsx
 msgid "{unread, plural, one {Watch party, # new message} other {Watch party, # new messages}}"
@@ -531,7 +530,7 @@ msgstr "App Android"
 
 #: src/pages/settings/playback.tsx
 msgid "Android's own player, which uses less battery: the screen shows the video as the device decodes it, at the video's frame rate. Plays video the device can decode. Styled subtitles look as they do in mpv."
-msgstr "Il player integrato di Android, che consuma meno batteria: lo schermo mostra il video così come lo decodifica il dispositivo, alla frequenza di fotogrammi del video. Riproduce i video che il dispositivo è in grado di decodificare. I sottotitoli con stile hanno lo stesso aspetto che hanno in mpv."
+msgstr "Il lettore integrato di Android, che consuma meno batteria: lo schermo mostra il video così come lo decodifica il dispositivo, alla frequenza di fotogrammi del video. Riproduce i video che il dispositivo è in grado di decodificare. I sottotitoli con stile hanno lo stesso aspetto che hanno in mpv."
 
 #: src/components/party/party-sheet.tsx
 msgid "Another relay"
@@ -643,6 +642,10 @@ msgstr "Indietro"
 msgid "Back button"
 msgstr "Pulsante indietro"
 
+#: src/pages/settings/playback.tsx
+msgid "Back in the player"
+msgstr "Torna al lettore"
+
 #: src/components/version-settings.tsx src/pages/settings/interface.tsx
 #: src/pages/settings/subtitles.tsx src/pages/settings/theme.tsx
 msgid "Background"
@@ -734,7 +737,7 @@ msgstr "mpv integrato"
 
 #: src/lib/playback/player-choice.ts
 msgid "Built-in player"
-msgstr "Player integrato"
+msgstr "Lettore integrato"
 
 #: src/pages/settings/theme.tsx
 msgid "Buttons, progress bars and highlights."
@@ -875,7 +878,8 @@ msgstr "Cancella valutazione"
 msgid "Clear selection"
 msgstr "Cancella selezione"
 
-#: src/components/crash-report.tsx src/components/window-controls.tsx
+#: src/components/crash-report.tsx src/components/player/mini-player.tsx
+#: src/components/window-controls.tsx
 msgid "Close"
 msgstr "Chiudi"
 
@@ -903,7 +907,7 @@ msgstr "Colori e CSS personalizzato"
 msgid "Combine movie and show results"
 msgstr "Unisci i risultati di film e serie"
 
-#: src/pages/settings/audio.tsx
+#: src/lib/playback/controller.ts src/pages/settings/audio.tsx
 msgid "Commentary"
 msgstr "Commento"
 
@@ -1406,9 +1410,8 @@ msgid "Drawer"
 msgstr "Menu laterale"
 
 #: src/pages/item.tsx
-#, fuzzy
 msgid "Drop"
-msgstr "Abbandona serie"
+msgstr "Abbandona"
 
 #: src/pages/item.tsx
 msgid "Drop show"
@@ -1486,7 +1489,7 @@ msgstr "Gli episodi finiscono senza proporre il successivo."
 
 #: src/pages/settings/playback.tsx
 msgid "Episodes that haven't aired yet show as unaired, ask before playing, and are passed over when playing on or downloading a season. Turn off if their air dates are often wrong."
-msgstr ""
+msgstr "Gli episodi non ancora trasmessi vengono contrassegnati come tali, chiedono conferma prima della riproduzione e vengono saltati quando si prosegue la riproduzione o si scarica una stagione. Disattiva se le date di messa in onda sono spesso errate."
 
 #: src/lib/input/keys.ts
 msgid "Esc"
@@ -1545,9 +1548,8 @@ msgid "Faster"
 msgstr "Più veloce"
 
 #: src/pages/item.tsx
-#, fuzzy
 msgid "Favourite"
-msgstr "Preferiti"
+msgstr "Preferito"
 
 #: src/components/layout.tsx src/pages/favourites.tsx
 #: src/pages/settings/apps.tsx
@@ -1638,6 +1640,10 @@ msgstr "Font"
 #: src/pages/settings/audio.tsx
 msgid "For a receiver on an optical or ARC link, which gets other surround formats as stereo otherwise."
 msgstr "Per un ricevitore collegato tramite ottico o ARC, che altrimenti riceve gli altri formati surround come stereo."
+
+#: src/lib/playback/controller.ts
+msgid "Forced"
+msgstr "Forzato"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Forced, for foreign parts only"
@@ -1795,11 +1801,11 @@ msgstr "Grandezza dei riquadri in una griglia."
 
 #: src/pages/settings/interface.tsx
 msgid "How long the hero stays on a featured title while it rotates."
-msgstr ""
+msgstr "Durata di permanenza del banner in evidenza su ciascun titolo durante la rotazione."
 
 #: src/pages/settings/playback.tsx
 msgid "How much of the video the player holds in memory: ahead, to ride out a slow connection, and behind, to seek back at once. Automatic sizes it from this device's memory."
-msgstr "Quantità di video che il player mantiene in memoria: in avanti, per superare una connessione lenta, e all'indietro, per tornare subito dietro. La modalità automatica la calcola in base alla memoria del dispositivo."
+msgstr "Quantità di video che il lettore mantiene in memoria: in avanti, per superare una connessione lenta, e all'indietro, per tornare subito dietro. La modalità automatica la calcola in base alla memoria del dispositivo."
 
 #: src/pages/settings/playback.tsx
 msgid "How much the volume keys and the scroll wheel change the volume."
@@ -1858,9 +1864,8 @@ msgid "Install"
 msgstr "Installa"
 
 #: src/components/no-details.tsx
-#, fuzzy
 msgid "Install a metadata addon from Addons → Marketplace. For one that isn't listed, use the Custom addon there."
-msgstr "Installa gli addon dei cataloghi da Addon → Marketplace. Per quelli non inclusi nell'elenco, usa l'opzione Addon personalizzato in quella sezione."
+msgstr "Installa un addon di metadati da Addon → Marketplace. Per uno non presente nell'elenco, usa l'addon Personalizzato nella stessa sezione."
 
 #: src/components/no-catalogs.tsx
 msgid "Install catalog addons from Addons → Marketplace. For one that isn't listed, use the Custom addon there."
@@ -2120,9 +2125,8 @@ msgid "Mark as watched"
 msgstr "Segna come visto"
 
 #: src/pages/settings/playback.tsx
-#, fuzzy
 msgid "Mark unaired episodes"
-msgstr "Salta gli episodi riassuntivi"
+msgstr "Contrassegna gli episodi non ancora trasmessi"
 
 #: src/components/item-menu.tsx src/pages/history.tsx src/pages/item.tsx
 msgid "Mark unwatched"
@@ -2175,6 +2179,10 @@ msgstr "Messaggi"
 #: src/pages/settings/theme.tsx
 msgid "Midnight"
 msgstr "Mezzanotte"
+
+#: src/components/player/controls.tsx
+msgid "Mini player"
+msgstr "Mini lettore"
 
 #: src/components/window-controls.tsx
 msgid "Minimise"
@@ -2320,7 +2328,7 @@ msgstr "Episodio successivo"
 
 #: src/pages/settings/index.tsx
 msgid "Next episode, controls and players"
-msgstr "Episodio successivo, controlli e player"
+msgstr "Episodio successivo, controlli e lettori"
 
 #: src/components/player/next-episode.tsx
 msgid "Next in {playlistName}"
@@ -2367,9 +2375,8 @@ msgid "No catalogs yet"
 msgstr "Nessun catalogo presente"
 
 #: src/components/no-details.tsx
-#, fuzzy
 msgid "No details for this title"
-msgstr "Impossibile caricare questo titolo"
+msgstr "Nessun dettaglio per questo titolo"
 
 #: src/components/download-button.tsx
 msgid "No episodes to download there"
@@ -2432,9 +2439,8 @@ msgid "None"
 msgstr "Nessuno"
 
 #: src/components/no-details.tsx
-#, fuzzy
 msgid "None of your addons has details for {id}. Add a metadata addon to your configuration, then refresh."
-msgstr "Aggiungi cataloghi alla tua configurazione, poi ricarica."
+msgstr "Nessuno dei tuoi addon ha dettagli per {id}. Aggiungi un addon di metadati alla tua configurazione, poi aggiorna."
 
 #: src/components/player/keys.ts src/lib/subtitles/style.ts
 #: src/pages/settings/subtitles.tsx
@@ -2446,9 +2452,8 @@ msgid "Normal speed"
 msgstr "Velocità normale"
 
 #: src/components/version-picker.tsx
-#, fuzzy
 msgid "Not aired yet"
-msgstr "Non ancora verificato."
+msgstr "Non ancora trasmesso."
 
 #: src/lib/hosts/shell/index.ts
 msgid "Not checked yet."
@@ -2669,6 +2674,10 @@ msgid "Opens the menu of what is selected, as a right click does."
 msgstr "Apre il menu dell'elemento selezionato, come fosse un click destro."
 
 #: src/pages/settings/playback.tsx
+msgid "Opens the mini player"
+msgstr "Apre il mini lettore"
+
+#: src/pages/settings/playback.tsx
 msgid "Opens versions in {target}, which brings you back here with your place saved."
 msgstr "Apre le versioni in {target}, mantenendo memorizzata la tua posizione attuale al ritorno."
 
@@ -2817,8 +2826,9 @@ msgstr "Incolla i filtri rapidi in formato JSON, oppure l'indirizzo di un file c
 msgid "Pattern"
 msgstr "Pattern"
 
-#: src/components/player/controls.tsx src/components/remote-sheet.tsx
-#: src/lib/input/actions.ts src/lib/input/keys.ts src/pages/downloads.tsx
+#: src/components/player/controls.tsx src/components/player/mini-player.tsx
+#: src/components/remote-sheet.tsx src/lib/input/actions.ts
+#: src/lib/input/keys.ts src/pages/downloads.tsx
 msgid "Pause"
 msgstr "Sospendi"
 
@@ -2848,7 +2858,7 @@ msgstr "Mette in pausa e chiede conferma prima dell'episodio successivo dopo che
 
 #: src/pages/settings/playback.tsx
 msgid "Pausing, playing or skipping with a remote or the keyboard brings the controls up, for a moment after a skip. Turned off, only a brief icon shows."
-msgstr ""
+msgstr "Mettere in pausa, riprodurre o saltare con un telecomando o con la tastiera fa comparire i controlli, per un istante dopo un salto. Se disattivato, compare solo una breve icona."
 
 #: src/pages/search.tsx
 msgid "People"
@@ -2920,9 +2930,9 @@ msgstr "Rosa"
 
 #: src/components/hero.tsx src/components/item-menu.tsx
 #: src/components/no-details.tsx src/components/player/controls.tsx
-#: src/components/playlists.tsx src/components/random-pick.tsx
-#: src/components/remote-sheet.tsx src/lib/input/actions.ts
-#: src/lib/input/keys.ts src/pages/item.tsx
+#: src/components/player/mini-player.tsx src/components/playlists.tsx
+#: src/components/random-pick.tsx src/components/remote-sheet.tsx
+#: src/lib/input/actions.ts src/lib/input/keys.ts src/pages/item.tsx
 msgid "Play"
 msgstr "Riproduci"
 
@@ -2931,9 +2941,8 @@ msgid "Play {code}"
 msgstr "Riproduci {code}"
 
 #: src/components/version-picker.tsx
-#, fuzzy
 msgid "Play anyway"
-msgstr "Riproduci ora"
+msgstr "Riproduci comunque"
 
 #: src/pages/item.tsx
 msgid "Play from the start"
@@ -2960,9 +2969,8 @@ msgid "Play now"
 msgstr "Riproduci ora"
 
 #: src/pages/item.tsx
-#, fuzzy
 msgid "Play on"
-msgstr "Riproduci ora"
+msgstr "Riproduci su"
 
 #: src/components/item-menu.tsx src/components/remote-sheet.tsx
 #: src/pages/item.tsx
@@ -2975,7 +2983,7 @@ msgstr "Riproduci o metti in pausa"
 
 #: src/lib/input/actions.ts
 msgid "Play or pause, or go to the controls"
-msgstr ""
+msgstr "Riproduci o metti in pausa, oppure vai ai controlli"
 
 #: src/pages/settings/playback.tsx
 msgid "Play starts the first version, and resuming goes back to the version you were watching. Hold Play to choose instead."
@@ -3025,6 +3033,10 @@ msgstr "Riproducibile/Pausa"
 msgid "Playback"
 msgstr "Riproduzione"
 
+#: src/components/player/mini-player.tsx
+msgid "Playback failed"
+msgstr "Riproduzione non riuscita"
+
 #: src/pages/player.tsx
 msgid "Playback failed: {failure}"
 msgstr "Riproduzione non riuscita: {failure}"
@@ -3040,7 +3052,7 @@ msgstr "Lettore"
 
 #: src/pages/settings/playback.tsx
 msgid "Player link"
-msgstr "Link del riproduttore"
+msgstr "Link del lettore"
 
 #: src/components/party/party-sheet.tsx src/components/player/chapters.tsx
 #: src/components/player/episodes.tsx src/components/playlists.tsx
@@ -3196,9 +3208,8 @@ msgid "Raises the centre channel, where surround sound puts dialogue. Not for so
 msgstr "Alza il canale centrale, usato dall'audio surround per i dialoghi. Non si applica in modalità pass-through."
 
 #: src/pages/item.tsx
-#, fuzzy
 msgid "Random"
-msgstr "Scelta casuale"
+msgstr "Casuale"
 
 #: src/components/item-menu.tsx src/components/random-pick.tsx
 #: src/pages/item.tsx
@@ -3536,6 +3547,10 @@ msgstr "Rilevato"
 msgid "Saw its subtitle"
 msgstr "Sottotitolo rilevato"
 
+#: src/lib/playback/controller.ts
+msgid "SDH"
+msgstr "SDH"
+
 #: src/pages/settings/subtitles.tsx
 msgid "SDH, with sounds described"
 msgstr "SDH, con descrizione dei suoni"
@@ -3704,18 +3719,16 @@ msgid "Show subtitles later"
 msgstr "Mostra i sottotitoli in ritardo"
 
 #: src/pages/settings/playback.tsx
-#, fuzzy
 msgid "Show the controls on pause and skip"
-msgstr "Mostra i controlli"
+msgstr "Mostra i controlli in pausa o durante i salti"
 
 #: src/pages/settings/playback.tsx
 msgid "Show the prompt"
 msgstr "Mostra la richiesta"
 
 #: src/pages/settings/playback.tsx
-#, fuzzy
 msgid "Show the time"
-msgstr "Mostra la richiesta"
+msgstr "Mostra l'ora"
 
 #: src/components/player/controls.tsx
 msgid "Show time left"
@@ -3757,7 +3770,7 @@ msgstr "Mostra i sottotitoli nella tua lingua a meno che l'audio non lo sia già
 
 #: src/pages/settings/playback.tsx
 msgid "Shows the time of day at the top of the player with the controls."
-msgstr ""
+msgstr "Mostra l'ora del giorno in cima al lettore, assieme ai controlli."
 
 #: src/components/playlists.tsx
 msgid "Shuffle"
@@ -3803,7 +3816,7 @@ msgstr "Disconnettersi da questo server?"
 msgid "Signed out"
 msgstr "Disconnesso"
 
-#: src/pages/settings/subtitles.tsx
+#: src/lib/playback/controller.ts src/pages/settings/subtitles.tsx
 msgid "Signs and songs"
 msgstr "Cartelli e brani"
 
@@ -4003,6 +4016,10 @@ msgstr "Interrompi"
 #: src/pages/search.tsx
 msgid "Stop listening"
 msgstr "Interrompi ascolto"
+
+#: src/pages/settings/playback.tsx
+msgid "Stops playing"
+msgstr "Interrompe la riproduzione"
 
 #: src/components/version-picker.tsx src/pages/player.tsx
 msgid "Stream link copied"
@@ -4334,6 +4351,10 @@ msgstr "Il link potrebbe essere scaduto, o la pagina essere spostata."
 msgid "the link returned something other than a video"
 msgstr "il link ha restituito altro rispetto ad un video"
 
+#: src/pages/settings/playback.tsx
+msgid "The mini player keeps the video going over the pages while you look around. Tap it to open the player again, or close it with its cross."
+msgstr "Il mini lettore mantiene attivo il video sopra le pagine mentre navighi nell'app. Toccalo per riaprire il lettore, oppure chiudilo con la sua X."
+
 #: src/pages/settings/apps.tsx
 msgid "The movie or show whose page is open."
 msgstr "Il film o la serie di cui è aperta la pagina."
@@ -4510,7 +4531,7 @@ msgstr "Questo server non può mostrare i contenuti che hai guardato."
 
 #: src/components/no-details.tsx
 msgid "This server has no details for {id}."
-msgstr ""
+msgstr "Nessun dettaglio presente nel server per {id}."
 
 #: src/components/no-catalogs.tsx
 msgid "This server shares no movie or show catalogs with this account."
@@ -4566,7 +4587,7 @@ msgstr "Tre giorni"
 
 #: src/pages/settings/interface.tsx
 msgid "Time on each title"
-msgstr ""
+msgstr "Durata di ogni titolo"
 
 #: src/components/player/options.tsx
 msgid "Timing"
@@ -4685,6 +4706,10 @@ msgstr "Ripristina serie"
 #: src/components/version-settings.tsx
 msgid "Unfinished"
 msgstr "Non completata"
+
+#: src/lib/playback/controller.ts
+msgid "Unknown language"
+msgstr "Lingua sconosciuta"
 
 #: src/components/player/volume.tsx
 msgid "Unmute"
@@ -4909,7 +4934,7 @@ msgstr "In attesa di approvazione …"
 
 #: src/components/party/party-sheet.tsx
 msgid "Watch along"
-msgstr "Guarda insieme"
+msgstr "Guarda in compagnia"
 
 #: src/pages/settings/account.tsx
 msgid "Watch as someone else on this configuration. A user with a PIN needs it again after switching away."
@@ -4927,7 +4952,7 @@ msgstr "Watch party"
 #: src/components/layout.tsx src/components/party/party-sheet.tsx
 #: src/components/player/options.tsx src/pages/item.tsx
 msgid "Watch together"
-msgstr "Guarda insieme"
+msgstr "Visione condivisa"
 
 #: src/pages/history.tsx src/pages/item.tsx
 msgid "Watched"
@@ -5159,15 +5184,15 @@ msgstr "il tuo lettore"
 
 #: src/lib/party/follow.ts
 msgid "Your player can't follow a watch party. Pick the app's player in settings to watch along."
-msgstr "Il tuo lettore non può seguire un watch party. Seleziona il lettore dell'app nelle impostazioni per guardare insieme."
+msgstr "Il tuo lettore non può seguire un watch party. Seleziona il lettore dell'app nelle impostazioni per guardare insieme ad altri."
 
 #: src/components/version-picker.tsx
 msgid "Your player does not report back, so mark it as watched once you finish."
-msgstr "Il player non comunica lo stato, ricordati di contrassegnarlo come visto alla fine."
+msgstr "Il lettore non comunica lo stato, ricordati di contrassegnarlo come visto alla fine."
 
 #: src/components/party/party-sheet.tsx
 msgid "Your player plays in another app, which can't follow a party. Choose the app's own player in settings to watch along."
-msgstr "Il tuo lettore viene eseguito in un'altra app, che non può seguire i watch party. Seleziona il lettore interno nelle impostazioni per guardare insieme."
+msgstr "Il tuo lettore viene eseguito in un'altra app, che non può seguire i watch party. Seleziona il lettore interno nelle impostazioni per guardare insieme ad altri."
 
 #: src/components/rating.tsx
 msgid "Your rating"

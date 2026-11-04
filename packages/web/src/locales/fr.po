@@ -1,14 +1,14 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-10-29 23:12+0000\n"
+"PO-Revision-Date: 2026-11-02 21:56+0000\n"
 "Last-Translator: D4rk <dark56100@users.noreply.hosted.weblate.org>\n"
 "Language-Team: French <https://hosted.weblate.org/projects/aiostreams/web-app/fr/>\n"
 "Language: fr\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Weblate 2026.11.dev0\n"
+"X-Generator: Weblate 2026.11.1.dev0\n"
 "Plural-Forms: nplurals=2; plural=n > 1;\n"
 
 #: src/components/party/party-sheet.tsx
@@ -643,6 +643,11 @@ msgstr "Retour"
 msgid "Back button"
 msgstr "Bouton Retour"
 
+#: src/pages/settings/playback.tsx
+#, fuzzy
+msgid "Back in the player"
+msgstr "Lecteur intégré"
+
 #: src/components/version-settings.tsx src/pages/settings/interface.tsx
 #: src/pages/settings/subtitles.tsx src/pages/settings/theme.tsx
 msgid "Background"
@@ -875,7 +880,8 @@ msgstr "Effacer la note"
 msgid "Clear selection"
 msgstr "Effacer la sélection"
 
-#: src/components/crash-report.tsx src/components/window-controls.tsx
+#: src/components/crash-report.tsx src/components/player/mini-player.tsx
+#: src/components/window-controls.tsx
 msgid "Close"
 msgstr "Fermer"
 
@@ -903,7 +909,7 @@ msgstr "Couleurs et CSS personnalisé"
 msgid "Combine movie and show results"
 msgstr "Combiner les résultats de films et séries"
 
-#: src/pages/settings/audio.tsx
+#: src/lib/playback/controller.ts src/pages/settings/audio.tsx
 msgid "Commentary"
 msgstr "Commentaires"
 
@@ -1357,9 +1363,8 @@ msgid "Download"
 msgstr "Télécharger"
 
 #: src/components/version-picker.tsx
-#, fuzzy
 msgid "Download anyway"
-msgstr "Télécharger"
+msgstr "Télécharger quand même"
 
 #: src/components/download-button.tsx
 msgid "Download needs attention"
@@ -1486,8 +1491,9 @@ msgid "Episodes end without offering the next one."
 msgstr "Les épisodes se terminent sans proposer le suivant."
 
 #: src/pages/settings/playback.tsx
+#, fuzzy
 msgid "Episodes that haven't aired yet show as unaired, ask before playing, and are passed over when playing on or downloading a season. Turn off if their air dates are often wrong."
-msgstr ""
+msgstr "Les épisodes non encore diffusés s'affichent comme \"non diffusés\", requièrent une confirmation avant lecture, et sont ignorés lors de la lecture ou du téléchargement d'une saison. Désactivez cette fonction si les dates de diffusion sont souvent erronées."
 
 #: src/lib/input/keys.ts
 msgid "Esc"
@@ -1639,6 +1645,11 @@ msgstr "Police"
 #: src/pages/settings/audio.tsx
 msgid "For a receiver on an optical or ARC link, which gets other surround formats as stereo otherwise."
 msgstr "Pour un ampli sur liaison optique ou ARC, qui recevrait autrement les autres formats surround en stéréo."
+
+#: src/lib/playback/controller.ts
+#, fuzzy
+msgid "Forced"
+msgstr "Forcé"
 
 #: src/pages/settings/subtitles.tsx
 msgid "Forced, for foreign parts only"
@@ -2177,6 +2188,11 @@ msgstr "Messages"
 msgid "Midnight"
 msgstr "Minuit"
 
+#: src/components/player/controls.tsx
+#, fuzzy
+msgid "Mini player"
+msgstr "Lecteur intégré"
+
 #: src/components/window-controls.tsx
 msgid "Minimise"
 msgstr "Réduire"
@@ -2670,6 +2686,11 @@ msgid "Opens the menu of what is selected, as a right click does."
 msgstr "Ouvre le menu contextuel de la sélection, comme un clic droit."
 
 #: src/pages/settings/playback.tsx
+#, fuzzy
+msgid "Opens the mini player"
+msgstr "Sur la page d'accueil"
+
+#: src/pages/settings/playback.tsx
 msgid "Opens versions in {target}, which brings you back here with your place saved."
 msgstr "Ouvre les versions dans {target}, puis vous ramène ici en conservant votre progression."
 
@@ -2818,8 +2839,9 @@ msgstr "Collez des filtres rapides au format JSON, ou l'adresse d'un fichier les
 msgid "Pattern"
 msgstr "Motif"
 
-#: src/components/player/controls.tsx src/components/remote-sheet.tsx
-#: src/lib/input/actions.ts src/lib/input/keys.ts src/pages/downloads.tsx
+#: src/components/player/controls.tsx src/components/player/mini-player.tsx
+#: src/components/remote-sheet.tsx src/lib/input/actions.ts
+#: src/lib/input/keys.ts src/pages/downloads.tsx
 msgid "Pause"
 msgstr "Pause"
 
@@ -2921,9 +2943,9 @@ msgstr "Rose"
 
 #: src/components/hero.tsx src/components/item-menu.tsx
 #: src/components/no-details.tsx src/components/player/controls.tsx
-#: src/components/playlists.tsx src/components/random-pick.tsx
-#: src/components/remote-sheet.tsx src/lib/input/actions.ts
-#: src/lib/input/keys.ts src/pages/item.tsx
+#: src/components/player/mini-player.tsx src/components/playlists.tsx
+#: src/components/random-pick.tsx src/components/remote-sheet.tsx
+#: src/lib/input/actions.ts src/lib/input/keys.ts src/pages/item.tsx
 msgid "Play"
 msgstr "Lecture"
 
@@ -3025,6 +3047,11 @@ msgstr "Lecture/Pause"
 #: src/lib/hosts/shell/player.ts src/pages/settings/index.tsx
 msgid "Playback"
 msgstr "Lecture"
+
+#: src/components/player/mini-player.tsx
+#, fuzzy
+msgid "Playback failed"
+msgstr "Échec de la lecture : {failure}"
 
 #: src/pages/player.tsx
 msgid "Playback failed: {failure}"
@@ -3537,6 +3564,10 @@ msgstr "Vu"
 msgid "Saw its subtitle"
 msgstr "Sous-titre vu"
 
+#: src/lib/playback/controller.ts
+msgid "SDH"
+msgstr ""
+
 #: src/pages/settings/subtitles.tsx
 msgid "SDH, with sounds described"
 msgstr "SME / SDH, avec description des sons"
@@ -3804,7 +3835,7 @@ msgstr "Se déconnecter de ce serveur ?"
 msgid "Signed out"
 msgstr "Déconnecté"
 
-#: src/pages/settings/subtitles.tsx
+#: src/lib/playback/controller.ts src/pages/settings/subtitles.tsx
 msgid "Signs and songs"
 msgstr "Panneaux et chansons"
 
@@ -4004,6 +4035,11 @@ msgstr "Arrêter"
 #: src/pages/search.tsx
 msgid "Stop listening"
 msgstr "Arrêter l'écoute"
+
+#: src/pages/settings/playback.tsx
+#, fuzzy
+msgid "Stops playing"
+msgstr "En cours de lecture"
 
 #: src/components/version-picker.tsx src/pages/player.tsx
 msgid "Stream link copied"
@@ -4334,6 +4370,10 @@ msgstr "Le lien est peut-être obsolète ou la page a été déplacée."
 #: src/lib/hosts/shell/player.ts
 msgid "the link returned something other than a video"
 msgstr "le lien a renvoyé autre chose qu'une vidéo"
+
+#: src/pages/settings/playback.tsx
+msgid "The mini player keeps the video going over the pages while you look around. Tap it to open the player again, or close it with its cross."
+msgstr ""
 
 #: src/pages/settings/apps.tsx
 msgid "The movie or show whose page is open."
@@ -4686,6 +4726,11 @@ msgstr "Reprendre la série"
 #: src/components/version-settings.tsx
 msgid "Unfinished"
 msgstr "Non terminé"
+
+#: src/lib/playback/controller.ts
+#, fuzzy
+msgid "Unknown language"
+msgstr "Langues audio"
 
 #: src/components/player/volume.tsx
 msgid "Unmute"

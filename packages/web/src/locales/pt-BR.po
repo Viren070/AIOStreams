@@ -1,14 +1,14 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-02 16:17+0000\n"
+"PO-Revision-Date: 2026-11-04 13:52+0000\n"
 "Last-Translator: Bruno <procopio@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/aiostreams/web-app/pt_BR/>\n"
 "Language: pt-BR\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Weblate 2026.11.dev0\n"
+"X-Generator: Weblate 2026.11.1.dev0\n"
 "Plural-Forms: nplurals=2; plural=n > 1;\n"
 
 #: src/components/party/party-sheet.tsx
@@ -642,6 +642,10 @@ msgstr "Voltar"
 msgid "Back button"
 msgstr "Botão Voltar"
 
+#: src/pages/settings/playback.tsx
+msgid "Back in the player"
+msgstr "Ao sair do player"
+
 #: src/components/version-settings.tsx src/pages/settings/interface.tsx
 #: src/pages/settings/subtitles.tsx src/pages/settings/theme.tsx
 msgid "Background"
@@ -874,7 +878,8 @@ msgstr "Remover avaliação"
 msgid "Clear selection"
 msgstr "Limpar seleção"
 
-#: src/components/crash-report.tsx src/components/window-controls.tsx
+#: src/components/crash-report.tsx src/components/player/mini-player.tsx
+#: src/components/window-controls.tsx
 msgid "Close"
 msgstr "Fechar"
 
@@ -902,7 +907,7 @@ msgstr "Cores e CSS personalizado"
 msgid "Combine movie and show results"
 msgstr "Combinar resultados de filmes e séries"
 
-#: src/pages/settings/audio.tsx
+#: src/lib/playback/controller.ts src/pages/settings/audio.tsx
 msgid "Commentary"
 msgstr "Comentário"
 
@@ -1636,6 +1641,10 @@ msgstr "Fonte"
 msgid "For a receiver on an optical or ARC link, which gets other surround formats as stereo otherwise."
 msgstr "Use esta opção com um receiver conectado por cabo óptico ou HDMI ARC. Sem ela, os outros formatos de som surround serão reproduzidos em estéreo."
 
+#: src/lib/playback/controller.ts
+msgid "Forced"
+msgstr "Forçada"
+
 #: src/pages/settings/subtitles.tsx
 msgid "Forced, for foreign parts only"
 msgstr "Forçadas (apenas para trechos em outros idiomas)"
@@ -2171,6 +2180,10 @@ msgstr "Mensagens"
 msgid "Midnight"
 msgstr "Meia-noite"
 
+#: src/components/player/controls.tsx
+msgid "Mini player"
+msgstr "Miniplayer"
+
 #: src/components/window-controls.tsx
 msgid "Minimise"
 msgstr "Minimizar"
@@ -2661,6 +2674,10 @@ msgid "Opens the menu of what is selected, as a right click does."
 msgstr "Abre o menu do item selecionado, como ao clicar com o botão direito do mouse."
 
 #: src/pages/settings/playback.tsx
+msgid "Opens the mini player"
+msgstr "Abre o miniplayer"
+
+#: src/pages/settings/playback.tsx
 msgid "Opens versions in {target}, which brings you back here with your place saved."
 msgstr "Abre as versões no {target}, permitindo que você volte para cá e continue de onde parou."
 
@@ -2809,8 +2826,9 @@ msgstr "Cole os filtros rápidos em formato JSON ou o link de um arquivo que os 
 msgid "Pattern"
 msgstr "Padrão"
 
-#: src/components/player/controls.tsx src/components/remote-sheet.tsx
-#: src/lib/input/actions.ts src/lib/input/keys.ts src/pages/downloads.tsx
+#: src/components/player/controls.tsx src/components/player/mini-player.tsx
+#: src/components/remote-sheet.tsx src/lib/input/actions.ts
+#: src/lib/input/keys.ts src/pages/downloads.tsx
 msgid "Pause"
 msgstr "Pausar"
 
@@ -2912,9 +2930,9 @@ msgstr "Rosa"
 
 #: src/components/hero.tsx src/components/item-menu.tsx
 #: src/components/no-details.tsx src/components/player/controls.tsx
-#: src/components/playlists.tsx src/components/random-pick.tsx
-#: src/components/remote-sheet.tsx src/lib/input/actions.ts
-#: src/lib/input/keys.ts src/pages/item.tsx
+#: src/components/player/mini-player.tsx src/components/playlists.tsx
+#: src/components/random-pick.tsx src/components/remote-sheet.tsx
+#: src/lib/input/actions.ts src/lib/input/keys.ts src/pages/item.tsx
 msgid "Play"
 msgstr "Reproduzir"
 
@@ -3014,6 +3032,10 @@ msgstr "Reproduzir/Pausar"
 #: src/lib/hosts/shell/player.ts src/pages/settings/index.tsx
 msgid "Playback"
 msgstr "Reprodução"
+
+#: src/components/player/mini-player.tsx
+msgid "Playback failed"
+msgstr "Falha na reprodução"
 
 #: src/pages/player.tsx
 msgid "Playback failed: {failure}"
@@ -3525,6 +3547,10 @@ msgstr "Vi"
 msgid "Saw its subtitle"
 msgstr "Vi a legenda"
 
+#: src/lib/playback/controller.ts
+msgid "SDH"
+msgstr "LSE"
+
 #: src/pages/settings/subtitles.tsx
 msgid "SDH, with sounds described"
 msgstr "SDH, com sons descritos"
@@ -3790,7 +3816,7 @@ msgstr "Sair deste servidor?"
 msgid "Signed out"
 msgstr "Desconectado"
 
-#: src/pages/settings/subtitles.tsx
+#: src/lib/playback/controller.ts src/pages/settings/subtitles.tsx
 msgid "Signs and songs"
 msgstr "Placas e músicas"
 
@@ -3990,6 +4016,10 @@ msgstr "Parar"
 #: src/pages/search.tsx
 msgid "Stop listening"
 msgstr "Parar de ouvir"
+
+#: src/pages/settings/playback.tsx
+msgid "Stops playing"
+msgstr "Interrompe a reprodução"
 
 #: src/components/version-picker.tsx src/pages/player.tsx
 msgid "Stream link copied"
@@ -4320,6 +4350,10 @@ msgstr "O link pode estar desatualizado ou a página foi movida."
 #: src/lib/hosts/shell/player.ts
 msgid "the link returned something other than a video"
 msgstr "o link retornou algo diferente de um vídeo"
+
+#: src/pages/settings/playback.tsx
+msgid "The mini player keeps the video going over the pages while you look around. Tap it to open the player again, or close it with its cross."
+msgstr "O miniplayer mantém o vídeo tocando enquanto você navega pelo app. Toque nele para voltar ao player ou no X para fechá-lo."
 
 #: src/pages/settings/apps.tsx
 msgid "The movie or show whose page is open."
@@ -4673,6 +4707,10 @@ msgstr "Desfazer remoção da série"
 msgid "Unfinished"
 msgstr "Incompleto"
 
+#: src/lib/playback/controller.ts
+msgid "Unknown language"
+msgstr "Idioma desconhecido"
+
 #: src/components/player/volume.tsx
 msgid "Unmute"
 msgstr "Ativar som"
@@ -5022,7 +5060,7 @@ msgstr "Quando os créditos começam"
 
 #: src/pages/settings/playback.tsx
 msgid "When the credits start, if they run to the end; otherwise a set time before the end."
-msgstr "Quando os créditos começam, se forem até o fim; caso contrário, um tempo definido antes do fim."
+msgstr "No início dos créditos, se forem até o fim; caso contrário, um tempo antes do fim."
 
 #: src/pages/settings/audio.tsx
 msgid "When the TV or receiver decodes it"

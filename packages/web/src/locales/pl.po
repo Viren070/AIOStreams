@@ -1,14 +1,14 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-01 20:02+0000\n"
+"PO-Revision-Date: 2026-11-04 13:52+0000\n"
 "Last-Translator: Krzysztof <krzysiek@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Polish <https://hosted.weblate.org/projects/aiostreams/web-app/pl/>\n"
 "Language: pl\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Weblate 2026.11.dev0\n"
+"X-Generator: Weblate 2026.11.1.dev0\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 
 #: src/components/party/party-sheet.tsx
@@ -642,6 +642,10 @@ msgstr "Cofnij"
 msgid "Back button"
 msgstr "Przycisk cofnij"
 
+#: src/pages/settings/playback.tsx
+msgid "Back in the player"
+msgstr "„Wstecz” w odtwarzaczu"
+
 #: src/components/version-settings.tsx src/pages/settings/interface.tsx
 #: src/pages/settings/subtitles.tsx src/pages/settings/theme.tsx
 msgid "Background"
@@ -874,7 +878,8 @@ msgstr "Wyczyść ocenę"
 msgid "Clear selection"
 msgstr "Wyczyść zaznaczenie"
 
-#: src/components/crash-report.tsx src/components/window-controls.tsx
+#: src/components/crash-report.tsx src/components/player/mini-player.tsx
+#: src/components/window-controls.tsx
 msgid "Close"
 msgstr "Zamknij"
 
@@ -902,7 +907,7 @@ msgstr "Kolory i własny CSS"
 msgid "Combine movie and show results"
 msgstr "Połącz wyniki filmów i seriali"
 
-#: src/pages/settings/audio.tsx
+#: src/lib/playback/controller.ts src/pages/settings/audio.tsx
 msgid "Commentary"
 msgstr "Ścieżka z komentarzem"
 
@@ -1636,6 +1641,10 @@ msgstr "Czcionka"
 msgid "For a receiver on an optical or ARC link, which gets other surround formats as stereo otherwise."
 msgstr "Dla odbiornika podłączonego przez złącze optyczne lub ARC, który w przeciwnym razie odbiera inne formaty dźwięku przestrzennego jako stereo."
 
+#: src/lib/playback/controller.ts
+msgid "Forced"
+msgstr "Wymuszony"
+
 #: src/pages/settings/subtitles.tsx
 msgid "Forced, for foreign parts only"
 msgstr "Wymuszone, tylko dla fragmentów obcojęzycznych"
@@ -2171,6 +2180,10 @@ msgstr "Wiadomości"
 msgid "Midnight"
 msgstr "Północ"
 
+#: src/components/player/controls.tsx
+msgid "Mini player"
+msgstr "Miniodtwarzacz"
+
 #: src/components/window-controls.tsx
 msgid "Minimise"
 msgstr "Minimalizuj"
@@ -2661,6 +2674,10 @@ msgid "Opens the menu of what is selected, as a right click does."
 msgstr "Otwiera menu wybranego elementu, tak jak kliknięcie prawym przyciskiem myszy."
 
 #: src/pages/settings/playback.tsx
+msgid "Opens the mini player"
+msgstr "Otwiera miniodtwarzacz"
+
+#: src/pages/settings/playback.tsx
 msgid "Opens versions in {target}, which brings you back here with your place saved."
 msgstr "Otwiera wersje w {target}, która po zakończeniu przywraca Cię tutaj z zapisanym postępem."
 
@@ -2809,8 +2826,9 @@ msgstr "Wklej szybkie filtry jako JSON lub adres pliku z nimi, aby dodać je do 
 msgid "Pattern"
 msgstr "Wzorzec"
 
-#: src/components/player/controls.tsx src/components/remote-sheet.tsx
-#: src/lib/input/actions.ts src/lib/input/keys.ts src/pages/downloads.tsx
+#: src/components/player/controls.tsx src/components/player/mini-player.tsx
+#: src/components/remote-sheet.tsx src/lib/input/actions.ts
+#: src/lib/input/keys.ts src/pages/downloads.tsx
 msgid "Pause"
 msgstr "Wstrzymaj"
 
@@ -2912,9 +2930,9 @@ msgstr "Różowy"
 
 #: src/components/hero.tsx src/components/item-menu.tsx
 #: src/components/no-details.tsx src/components/player/controls.tsx
-#: src/components/playlists.tsx src/components/random-pick.tsx
-#: src/components/remote-sheet.tsx src/lib/input/actions.ts
-#: src/lib/input/keys.ts src/pages/item.tsx
+#: src/components/player/mini-player.tsx src/components/playlists.tsx
+#: src/components/random-pick.tsx src/components/remote-sheet.tsx
+#: src/lib/input/actions.ts src/lib/input/keys.ts src/pages/item.tsx
 msgid "Play"
 msgstr "Odtwórz"
 
@@ -3014,6 +3032,10 @@ msgstr "Odtwórz/Wstrzymaj"
 #: src/lib/hosts/shell/player.ts src/pages/settings/index.tsx
 msgid "Playback"
 msgstr "Odtwarzanie"
+
+#: src/components/player/mini-player.tsx
+msgid "Playback failed"
+msgstr "Błąd odtwarzania"
 
 #: src/pages/player.tsx
 msgid "Playback failed: {failure}"
@@ -3525,6 +3547,10 @@ msgstr "Zobaczyłem"
 msgid "Saw its subtitle"
 msgstr "Zobaczyłem napisy"
 
+#: src/lib/playback/controller.ts
+msgid "SDH"
+msgstr "SDH"
+
 #: src/pages/settings/subtitles.tsx
 msgid "SDH, with sounds described"
 msgstr "SDH, z opisem dźwięków (dla niesłyszących)"
@@ -3790,7 +3816,7 @@ msgstr "Wylogować się z tego serwera?"
 msgid "Signed out"
 msgstr "Wylogowano"
 
-#: src/pages/settings/subtitles.tsx
+#: src/lib/playback/controller.ts src/pages/settings/subtitles.tsx
 msgid "Signs and songs"
 msgstr "Napisy ekranowe i piosenki"
 
@@ -3990,6 +4016,10 @@ msgstr "Zatrzymaj"
 #: src/pages/search.tsx
 msgid "Stop listening"
 msgstr "Zakończ nasłuchiwanie"
+
+#: src/pages/settings/playback.tsx
+msgid "Stops playing"
+msgstr "Zatrzymuje odtwarzanie"
 
 #: src/components/version-picker.tsx src/pages/player.tsx
 msgid "Stream link copied"
@@ -4320,6 +4350,10 @@ msgstr "Link może być nieaktualny lub strona została przeniesiona."
 #: src/lib/hosts/shell/player.ts
 msgid "the link returned something other than a video"
 msgstr "link zwrócił coś innego niż wideo"
+
+#: src/pages/settings/playback.tsx
+msgid "The mini player keeps the video going over the pages while you look around. Tap it to open the player again, or close it with its cross."
+msgstr "Miniodtwarzacz kontynuuje odtwarzanie wideo nad stronami podczas przeglądania aplikacji. Stuknij go, aby ponownie otworzyć odtwarzacz, lub zamknij krzyżykiem."
 
 #: src/pages/settings/apps.tsx
 msgid "The movie or show whose page is open."
@@ -4672,6 +4706,10 @@ msgstr "Wznów śledzenie serialu"
 #: src/components/version-settings.tsx
 msgid "Unfinished"
 msgstr "Niedokończone"
+
+#: src/lib/playback/controller.ts
+msgid "Unknown language"
+msgstr "Nieznany język"
 
 #: src/components/player/volume.tsx
 msgid "Unmute"

@@ -643,6 +643,11 @@ msgstr "Voltar"
 msgid "Back button"
 msgstr "Botão de voltar"
 
+#: src/pages/settings/playback.tsx
+#, fuzzy
+msgid "Back in the player"
+msgstr "Leitor integrado"
+
 #: src/components/version-settings.tsx src/pages/settings/interface.tsx
 #: src/pages/settings/subtitles.tsx src/pages/settings/theme.tsx
 msgid "Background"
@@ -875,7 +880,8 @@ msgstr "Limpar classificação"
 msgid "Clear selection"
 msgstr "Limpar seleção"
 
-#: src/components/crash-report.tsx src/components/window-controls.tsx
+#: src/components/crash-report.tsx src/components/player/mini-player.tsx
+#: src/components/window-controls.tsx
 msgid "Close"
 msgstr "Fechar"
 
@@ -903,7 +909,7 @@ msgstr "Cores e CSS personalizado"
 msgid "Combine movie and show results"
 msgstr "Combinar resultados de filmes e séries"
 
-#: src/pages/settings/audio.tsx
+#: src/lib/playback/controller.ts src/pages/settings/audio.tsx
 msgid "Commentary"
 msgstr "Comentários"
 
@@ -1641,6 +1647,10 @@ msgstr "Tipo de letra"
 msgid "For a receiver on an optical or ARC link, which gets other surround formats as stereo otherwise."
 msgstr "Para um recetor ligado por ótico ou ARC, que de outra forma recebe os outros formatos surround em estéreo."
 
+#: src/lib/playback/controller.ts
+msgid "Forced"
+msgstr ""
+
 #: src/pages/settings/subtitles.tsx
 msgid "Forced, for foreign parts only"
 msgstr "Forçadas, só para as partes estrangeiras"
@@ -2178,6 +2188,11 @@ msgstr "Mensagens"
 msgid "Midnight"
 msgstr "Meia-noite"
 
+#: src/components/player/controls.tsx
+#, fuzzy
+msgid "Mini player"
+msgstr "Leitor integrado"
+
 #: src/components/window-controls.tsx
 msgid "Minimise"
 msgstr "Minimizar"
@@ -2671,6 +2686,11 @@ msgid "Opens the menu of what is selected, as a right click does."
 msgstr "Abre o menu do que está selecionado, como faz um clique com o botão direito."
 
 #: src/pages/settings/playback.tsx
+#, fuzzy
+msgid "Opens the mini player"
+msgstr "Na página inicial"
+
+#: src/pages/settings/playback.tsx
 msgid "Opens versions in {target}, which brings you back here with your place saved."
 msgstr "Abre as versões em {target}, que o traz de volta para aqui com a sua posição guardada."
 
@@ -2819,8 +2839,9 @@ msgstr "Cole filtros rápidos em JSON, ou o endereço de um ficheiro que os tenh
 msgid "Pattern"
 msgstr "Padrão"
 
-#: src/components/player/controls.tsx src/components/remote-sheet.tsx
-#: src/lib/input/actions.ts src/lib/input/keys.ts src/pages/downloads.tsx
+#: src/components/player/controls.tsx src/components/player/mini-player.tsx
+#: src/components/remote-sheet.tsx src/lib/input/actions.ts
+#: src/lib/input/keys.ts src/pages/downloads.tsx
 msgid "Pause"
 msgstr "Pausa"
 
@@ -2922,9 +2943,9 @@ msgstr "Rosa"
 
 #: src/components/hero.tsx src/components/item-menu.tsx
 #: src/components/no-details.tsx src/components/player/controls.tsx
-#: src/components/playlists.tsx src/components/random-pick.tsx
-#: src/components/remote-sheet.tsx src/lib/input/actions.ts
-#: src/lib/input/keys.ts src/pages/item.tsx
+#: src/components/player/mini-player.tsx src/components/playlists.tsx
+#: src/components/random-pick.tsx src/components/remote-sheet.tsx
+#: src/lib/input/actions.ts src/lib/input/keys.ts src/pages/item.tsx
 msgid "Play"
 msgstr "Reproduzir"
 
@@ -3026,6 +3047,11 @@ msgstr "Reproduzir/Pausar"
 #: src/lib/hosts/shell/player.ts src/pages/settings/index.tsx
 msgid "Playback"
 msgstr "Reprodução"
+
+#: src/components/player/mini-player.tsx
+#, fuzzy
+msgid "Playback failed"
+msgstr "A reprodução falhou: {failure}"
 
 #: src/pages/player.tsx
 msgid "Playback failed: {failure}"
@@ -3539,6 +3565,10 @@ msgstr "Vi"
 msgid "Saw its subtitle"
 msgstr "Vi a legenda"
 
+#: src/lib/playback/controller.ts
+msgid "SDH"
+msgstr ""
+
 #: src/pages/settings/subtitles.tsx
 msgid "SDH, with sounds described"
 msgstr "SDH, com os sons descritos"
@@ -3806,7 +3836,7 @@ msgstr "Terminar sessão neste servidor?"
 msgid "Signed out"
 msgstr "Sessão terminada"
 
-#: src/pages/settings/subtitles.tsx
+#: src/lib/playback/controller.ts src/pages/settings/subtitles.tsx
 msgid "Signs and songs"
 msgstr "Sinais e canções"
 
@@ -4006,6 +4036,11 @@ msgstr "Parar"
 #: src/pages/search.tsx
 msgid "Stop listening"
 msgstr "Parar de ouvir"
+
+#: src/pages/settings/playback.tsx
+#, fuzzy
+msgid "Stops playing"
+msgstr "A reproduzir"
 
 #: src/components/version-picker.tsx src/pages/player.tsx
 msgid "Stream link copied"
@@ -4336,6 +4371,10 @@ msgstr "A ligação pode ser antiga, ou a página mudou de sítio."
 #: src/lib/hosts/shell/player.ts
 msgid "the link returned something other than a video"
 msgstr "a ligação devolveu algo que não é um vídeo"
+
+#: src/pages/settings/playback.tsx
+msgid "The mini player keeps the video going over the pages while you look around. Tap it to open the player again, or close it with its cross."
+msgstr ""
 
 #: src/pages/settings/apps.tsx
 msgid "The movie or show whose page is open."
@@ -4688,6 +4727,11 @@ msgstr "Retomar série"
 #: src/components/version-settings.tsx
 msgid "Unfinished"
 msgstr "Por terminar"
+
+#: src/lib/playback/controller.ts
+#, fuzzy
+msgid "Unknown language"
+msgstr "Idiomas do áudio"
 
 #: src/components/player/volume.tsx
 msgid "Unmute"
