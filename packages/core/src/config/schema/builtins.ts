@@ -1001,7 +1001,7 @@ export const builtinsSchema = {
   torrentGalaxy: {
     url: {
       schema: urlString,
-      default: 'https://torrentgalaxy.one',
+      default: 'https://torrentgalaxy.online',
       label: 'Torrent Galaxy URL',
       env: 'BUILTIN_TORRENT_GALAXY_URL',
       description: 'Base URL for the Torrent Galaxy built-in addon.',
