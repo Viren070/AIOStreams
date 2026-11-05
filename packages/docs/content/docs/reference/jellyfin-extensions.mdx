@@ -143,6 +143,10 @@ group's channels with `/LiveTv/Channels?GenreIds={genre}`, which Jellyfin itself
 a server without groups lists no genres there, and the app shows all its channels together.
 Favourite channels come from `/LiveTv/Channels?IsFavorite=true`.
 
+A programme its channel keeps carries `"aiostreams": { "catchup": true }`, and plays from its start
+by its own id: `PlaybackInfo` and the stream answer with its archive rather than the channel live.
+`/LiveTv/GuideInfo` then starts as many days back as channels keep their programmes.
+
 ## Titles
 
 A title or collection whose addon sends an [`animatedPoster`](/reference/addon-protocol/metadata)

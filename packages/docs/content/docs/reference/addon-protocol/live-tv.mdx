@@ -36,11 +36,12 @@ meta has `behaviorHints.isLive: true`, or every one of its videos has a `startTi
 
 Channels are ordinary catalog entries and metas, with these fields read as well:
 
-| Field           | Type             | Meaning                                                                                   |
-| --------------- | ---------------- | ----------------------------------------------------------------------------------------- |
-| `channelNumber` | string or number | The channel's number. Without one, channels are numbered by their place in the whole list |
-| `logo`          | URL              | The channel's picture in lists and the guide, in place of `poster`                        |
-| `videos`        | array            | The channel's programmes, in a [guide](#guides) answer                                    |
+| Field                       | Type             | Meaning                                                                                     |
+| --------------------------- | ---------------- | ------------------------------------------------------------------------------------------- |
+| `channelNumber`             | string or number | The channel's number. Without one, channels are numbered by their place in the whole list   |
+| `logo`                      | URL              | The channel's picture in lists and the guide, in place of `poster`                          |
+| `videos`                    | array            | The channel's programmes, in a [guide](#guides) answer                                      |
+| `behaviorHints.catchupDays` | number           | How many days back the channel's programmes play from their start, as [catch-up](#catch-up) |
 
 A channel's streams are its sources, each a version the user can switch to. The apps reopen a
 source that drops, and move on to the next one when it keeps failing.
@@ -109,5 +110,23 @@ Stremio also asks without `date` to list the channels alone; answer that as usua
 | `cast`, `directors`    | Names, shown as its people                                                         |
 | `imdbId`               | Its IMDb id                                                                        |
 
-The guide covers a week from today. Programmes are asked for from the same catalog, group and page
-a channel was listed on, so keep a channel on the same page of every day's answer.
+The guide covers a week from today, and as far back as channels keep their programmes. Programmes
+are asked for from the same catalog, group and page a channel was listed on, so keep a channel on
+the same page of every day's answer.
+
+## Catch-up
+
+A channel with `behaviorHints.catchupDays` keeps its programmes that long. Any programme of its
+that has begun within those days plays from its start: AIOStreams asks for the programme's own
+video id as the stream, and plays what you answer as a recording rather than live.
+
+```http
+GET {addonBase}/stream/tv/mytv:bbc-news:1762300800.json
+```
+
+```json
+{ "streams": [{ "url": "https://…/archive/bbc-news/2026-11-05T00-00/60.ts", "name": "Catch-up" }] }
+```
+
+Answer with the programme from its start to its end, or no streams where it's gone. A stream that
+can be seeked plays best; an Xtream archive (`/timeshift/…`) only plays from where it starts.
