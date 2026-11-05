@@ -154,6 +154,8 @@ class MpvEngine(private val context: Context) : Engine {
     override fun load(request: LoadRequest) = calls.execute {
         val options = buildList {
             if (request.startMs > 0) add("start=${seconds(request.startMs)}")
+            // FFmpeg reconnects at the clean end of every chunked playlist a live stream fetches.
+            if (request.live) add("stream-lavf-o=[reconnect=0,reconnect_on_network_error=1]")
             addAll(listOption("alang", request.audioLanguages))
             val slang = listOption("slang", request.subtitleLanguages)
             when (request.subtitleMode) {

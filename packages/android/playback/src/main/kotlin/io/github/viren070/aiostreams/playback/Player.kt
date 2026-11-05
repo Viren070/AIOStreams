@@ -26,6 +26,7 @@ data class LoadRequest(
     val url: String,
     val headers: Map<String, String>,
     val startMs: Double,
+    val live: Boolean,
     /** Plays after the current file rather than in its place. */
     val append: Boolean,
     val audioLanguages: List<String>,
@@ -183,6 +184,7 @@ object PlayerProtocol {
             url = url,
             headers = headers(message["headers"]),
             startMs = message.number("startMs") ?: 0.0,
+            live = message.flag("live") == true,
             append = message.flag("append") == true,
             audioLanguages = languages(message["audioLanguages"]),
             subtitleLanguages = languages(message["subtitleLanguages"]),

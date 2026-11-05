@@ -97,7 +97,8 @@ class PlayerChannel(
         next.change(settled)
         reference?.let(next::watchSubtitleLines)
         if (reload) loaded?.let { load ->
-            next.load(load.copy(startMs = at?.takeIf { it > 0 } ?: load.startMs, append = false))
+            val from = if (load.live) null else at?.takeIf { it > 0 }
+            next.load(load.copy(startMs = from ?: load.startMs, append = false))
         }
     }
 

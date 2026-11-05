@@ -108,7 +108,9 @@ class ExoEngine(private val context: Context) : Engine {
             if (tracksKnown) super.onRendererCapabilitiesChanged(renderer)
         }
     }
-    private val player = ExoPlayer.Builder(context, Renderers(context, audio), DefaultMediaSourceFactory(data, Extractors(Reading())))
+    private val loadErrors = LoadErrorPolicy()
+    private val sources = DefaultMediaSourceFactory(data, Extractors(Reading())).setLoadErrorHandlingPolicy(loadErrors)
+    private val player = ExoPlayer.Builder(context, Renderers(context, audio), sources)
         .setTrackSelector(selector)
         // The app keeps audio focus and pauses for noise itself.
         .setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(), false)
@@ -128,6 +130,7 @@ class ExoEngine(private val context: Context) : Engine {
     private var options = TrackOptions(null)
     private var loaded = false
     private var chosen = false
+    private var opens = 0
     private var seeking = false
 
     /** A load or seek waits for its first frame, which mpv reports as `playback-restart`. */
@@ -378,7 +381,22 @@ class ExoEngine(private val context: Context) : Engine {
             .setPreferredAudioLanguages(*options.alang.toTypedArray())
             .setPreferredTextLanguages(*options.slang.toTypedArray())
             .build()
-        player.setMediaItem(MediaItem.fromUri(request.url), request.startMs.toLong())
+        loadErrors.live = request.live
+        val opening = ++opens
+        if (request.live && Util.inferContentType(Uri.parse(request.url)) == C.CONTENT_TYPE_OTHER) {
+            loader.execute {
+                val type = ManifestType.of(http.createDataSource(), request.url)
+                main.post { if (opens == opening) prepare(request, type) }
+            }
+        } else {
+            prepare(request, null)
+        }
+    }
+
+    private fun prepare(request: LoadRequest, mimeType: String?) {
+        val item = MediaItem.Builder().setUri(request.url).setMimeType(mimeType).build()
+        // Any start position, 0 too, moves a live stream off its live edge.
+        if (request.live) player.setMediaItem(item) else player.setMediaItem(item, request.startMs.toLong())
         player.prepare()
         updatePolling()
     }
@@ -641,6 +659,11 @@ class ExoEngine(private val context: Context) : Engine {
         override fun onRenderedFirstFrame() = subtitles.firstFrameShown()
 
         override fun onPlayerError(error: PlaybackException) {
+            if (error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW) {
+                player.seekToDefaultPosition()
+                player.prepare()
+                return
+            }
             url = null
             selector.tracksKnown = false
             Log.w(TAG, "playback failed", error)
