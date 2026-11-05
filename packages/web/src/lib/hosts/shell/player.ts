@@ -245,6 +245,7 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
       url: played.url,
       headers: played.headers,
       startMs: played.startMs,
+      live: !!played.source.IsInfiniteStream,
       append,
       audioLanguages: audioCodes(prefs, played.source),
       subtitleLanguages: subtitleLanguages(prefs),
