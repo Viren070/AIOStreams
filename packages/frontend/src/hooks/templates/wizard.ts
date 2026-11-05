@@ -480,6 +480,7 @@ export function useTemplateWizard({
 
   const executeLoadTemplate = (template: Template) => {
     pushHistory();
+    setKeepChoices({});
 
     const options: Option[] = template.metadata.inputs || [];
     if (options.length > 0) {

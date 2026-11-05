@@ -176,7 +176,7 @@ export function ReviewStep({
         intent="info"
         description={
           updatePlan
-            ? 'Nothing is saved to your account until you save on the Save & Install page.'
+            ? 'Your services are replaced with the ones picked in this setup. Nothing is saved to your account until you save on the Save & Install page.'
             : 'Applying this replaces the matching parts of your current configuration. Nothing is saved to your account until you save on the Save & Install page.'
         }
       />
