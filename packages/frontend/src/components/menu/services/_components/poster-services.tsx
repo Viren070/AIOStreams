@@ -21,6 +21,7 @@ export function PosterServices() {
           { label: 'TOP Posters', value: 'top-poster' },
           { label: 'AIOratings', value: 'aioratings' },
           { label: 'OpenPosterDB', value: 'openposterdb' },
+          { label: 'Custom URL', value: 'custom' },
         ]}
         value={userData.posterService || 'rpdb'}
         onValueChange={(v) => {
@@ -31,6 +32,7 @@ export function PosterServices() {
               | 'top-poster'
               | 'aioratings'
               | 'openposterdb'
+              | 'custom'
               | 'none',
           }));
         }}
@@ -201,6 +203,29 @@ export function PosterServices() {
         </>
       )}
 
+      {userData.posterService === 'custom' && (
+        <TextInput
+          label="Custom Poster URL"
+          help={
+            <span>
+              Poster URL with placeholders: <code>{'{id}'}</code> (Stremio ID),{' '}
+              <code>{'{type}'}</code>, <code>{'{shape}'}</code>,{' '}
+              <code>{'{imdb_id}'}</code>, <code>{'{tmdb_id}'}</code>,{' '}
+              <code>{'{tvdb_id}'}</code>, <code>{'{mal_id}'}</code>,{' '}
+              <code>{'{kitsu_id}'}</code>, <code>{'{anilist_id}'}</code>,{' '}
+              <code>{'{anidb_id}'}</code>. A missing ID skips the poster;{' '}
+              <code>{'{tmdb_id?}'}</code> blanks it instead and{' '}
+              <code>{'{imdb_id|tmdb_id}'}</code> uses the first available.
+            </span>
+          }
+          value={userData.customPosterUrl || ''}
+          placeholder="https://example.com/poster?stremio_id={id}&type={type}"
+          onValueChange={(v) => {
+            setUserData((prev) => ({ ...prev, customPosterUrl: v }));
+          }}
+        />
+      )}
+
       <Switch
         label="Use Poster Service for Library/Continue Watching"
         side="right"
@@ -213,7 +238,8 @@ export function PosterServices() {
           (!userData.rpdbApiKey &&
             !userData.topPosterApiKey &&
             !userData.aioratingsApiKey &&
-            !userData.openposterdbApiKey)
+            !userData.openposterdbApiKey &&
+            !userData.customPosterUrl)
         }
         help={
           <span>
@@ -232,7 +258,8 @@ export function PosterServices() {
           (!userData.rpdbApiKey &&
             !userData.topPosterApiKey &&
             !userData.aioratingsApiKey &&
-            !userData.openposterdbApiKey)
+            !userData.openposterdbApiKey &&
+            !userData.customPosterUrl)
         }
         help={
           <span>

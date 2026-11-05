@@ -136,11 +136,8 @@ export abstract class BasePosterService {
       return cached;
     }
 
-    const parsed = await this.parseId(type, id);
-    if (!parsed) return null;
-    const { idType, idValue } = parsed;
-
-    const posterUrl = this.buildPosterUrl(idType, idValue);
+    const posterUrl = await this.resolvePosterUrl(type, id);
+    if (!posterUrl) return null;
     if (!checkExists) {
       return posterUrl;
     }
@@ -160,6 +157,16 @@ export abstract class BasePosterService {
 
     this.posterCheckCache.set(cacheKey, posterUrl, 24 * 60 * 60);
     return posterUrl;
+  }
+
+  /** Poster URL for an item, or null if this service can't identify it. */
+  protected async resolvePosterUrl(
+    type: string,
+    id: string
+  ): Promise<string | null> {
+    const parsed = await this.parseId(type, id);
+    if (!parsed) return null;
+    return this.buildPosterUrl(parsed.idType, parsed.idValue);
   }
 
   /** Build the cache key. Override for services that need extra params. */

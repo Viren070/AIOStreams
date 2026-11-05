@@ -1038,8 +1038,19 @@ export const UserDataSchema = z.object({
     (v) => (v === '' ? undefined : v),
     z.string().optional()
   ),
+  customPosterUrl: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z.string().optional()
+  ),
   posterService: z
-    .enum(['rpdb', 'top-poster', 'aioratings', 'openposterdb', 'none'])
+    .enum([
+      'rpdb',
+      'top-poster',
+      'aioratings',
+      'openposterdb',
+      'custom',
+      'none',
+    ])
     .optional(),
   usePosterRedirectApi: z.boolean().optional(),
   usePosterServiceForMeta: z.boolean().optional(),
