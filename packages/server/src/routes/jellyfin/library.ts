@@ -28,6 +28,7 @@ import {
   latestSpellings,
   listResult,
   listChannels,
+  searchChannels,
   liveCatalogs,
   listViews,
   requiresGenre,
@@ -729,7 +730,7 @@ async function handleItems(
   }
 
   if (searchTerm) {
-    const [previews, people] = await Promise.all([
+    const [previews, people, channels] = await Promise.all([
       searchCatalogs(
         engine,
         searchTerm,
@@ -740,10 +741,14 @@ async function handleItems(
       types?.has('person')
         ? personResults(ctx, searchTerm, startIndex + limit)
         : [],
+      types?.has('tvchannel')
+        ? searchChannels(engine, ctx.scope(), searchTerm, startIndex + limit)
+        : [],
     ]);
     const items = [
       ...filterByType(await itemsFromPreviews(ctx, previews), types),
       ...people,
+      ...(await channelListItems(ctx, channels)),
     ];
     send(
       req,
