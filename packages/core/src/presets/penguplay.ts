@@ -70,6 +70,14 @@ function toLanguage(entry: string): string | undefined {
   );
 }
 
+function audioLanguages(description: string | null | undefined): string[] {
+  return languages(line(description, AUDIO_LINE, 'Audio:'));
+}
+
+function subtitleLanguages(description: string | null | undefined): string[] {
+  return languages(line(description, SUBTITLE_LINE, 'Subtitles:'));
+}
+
 /**
  * Reads PenguPlay's default stream templates, which render as:
  *
@@ -139,7 +147,7 @@ class PenguPlayStreamParser extends StreamParser {
   ): string[] {
     return arrayMerge(
       super.getLanguages(stream, currentParsedStream),
-      languages(line(stream.description, AUDIO_LINE, 'Audio:'))
+      audioLanguages(stream.description)
     );
   }
 
@@ -148,7 +156,7 @@ class PenguPlayStreamParser extends StreamParser {
     _currentParsedStream: ParsedStream
   ): string[] {
     return arrayMerge(
-      languages(line(stream.description, SUBTITLE_LINE, 'Subtitles:')),
+      subtitleLanguages(stream.description),
       this.attachedSubtitleLanguages(stream)
     );
   }
@@ -181,6 +189,12 @@ class PenguPlayStreamParser extends StreamParser {
         parsedFile.audioChannels,
         parsedSpecs.audioChannels
       );
+    }
+
+    if (
+      audioLanguages(stream.description).length ||
+      subtitleLanguages(stream.description).length
+    ) {
       parsedFile.mediaInfoQuality ??= 'addon';
     }
 
