@@ -75,16 +75,28 @@ function useOpenLink() {
     const languages = subtitleLanguages(prefs);
     const rank = (language: string | null | undefined) =>
       languages.findIndex((l) => sameLanguage(l, language));
-    const subtitles = textSubtitles(source)
+    const ranked = textSubtitles(source)
       .filter((s) => !languages.length || rank(s.Language) >= 0)
       .sort((a, b) => rank(a.Language) - rank(b.Language))
-      .slice(0, MAX_EXTERNAL_SUBTITLES)
+      .slice(0, MAX_EXTERNAL_SUBTITLES);
+    const subtitles = ranked
       .map((s) => subtitleUrl(client, s, { original: true }))
       .filter((u): u is string => !!u);
+    // A player that takes one subtitle gets the preferred one, as SRT.
+    const subtitle =
+      (ranked[0] && subtitleUrl(client, ranked[0], { format: 'srt' })) ??
+      undefined;
     window.location.href = playerLink(
       template,
       directUrl(client, item.Id!, source),
-      { startMs, title: fullTitle(item), returnUrl, filename, subtitles }
+      {
+        startMs,
+        title: fullTitle(item),
+        returnUrl,
+        filename,
+        subtitles,
+        subtitle,
+      }
     );
     return !!returnUrl;
   };
