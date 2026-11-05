@@ -4,6 +4,8 @@ import {
   createLogger,
 } from '../../utils/index.js';
 import {
+  BuiltinDebridServices,
+  DebridCapability,
   DebridDownload,
   getDebridService,
   isTorrentDebridService,
@@ -122,7 +124,8 @@ export async function fetchCatalog(
   sort: CatalogSort,
   sortDirection: 'asc' | 'desc',
   genre?: string,
-  search?: string
+  search?: string,
+  disabledCapabilities?: DebridCapability[]
 ): Promise<MetaPreview[]> {
   if (genre === Genre.ACTIONS) {
     if (skip > 0) {
@@ -143,7 +146,8 @@ export async function fetchCatalog(
   const debridService = getDebridService(
     serviceId,
     serviceCredential,
-    clientIp
+    clientIp,
+    disabledCapabilities
   );
   const items: CatalogItem[] = [];
 
@@ -423,7 +427,7 @@ function createMetaPreview(entry: ParsedCatalogItem): MetaPreview {
  * on a cache miss or serve stale data while refreshing in the background.
  */
 export function preWarmLibraryCaches(
-  services: { id: BuiltinServiceId; credential: string }[],
+  services: BuiltinDebridServices,
   clientIp?: string,
   sources?: ('torrent' | 'nzb')[]
 ): void {
@@ -436,7 +440,8 @@ export function preWarmLibraryCaches(
     const debridService = getDebridService(
       service.id,
       service.credential,
-      clientIp
+      clientIp,
+      service.disabledCapabilities
     );
     if (includeTorrents && isTorrentDebridService(debridService)) {
       debridService.listMagnets().catch((err: any) =>
@@ -464,12 +469,14 @@ export async function refreshLibraryCacheForService(
   serviceId: BuiltinServiceId,
   serviceCredential: string,
   clientIp?: string,
-  sources?: ('torrent' | 'nzb')[]
+  sources?: ('torrent' | 'nzb')[],
+  disabledCapabilities?: DebridCapability[]
 ): Promise<void> {
   const debridService = getDebridService(
     serviceId,
     serviceCredential,
-    clientIp
+    clientIp,
+    disabledCapabilities
   );
 
   if (!debridService.refreshLibraryCache) {

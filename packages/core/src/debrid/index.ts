@@ -13,7 +13,13 @@ import {
   fromUrlSafeBase64,
   resolveServiceTime,
 } from '../utils/index.js';
-import { DebridService, DebridServiceConfig, DebridError } from './base.js';
+import {
+  DebridService,
+  DebridServiceConfig,
+  DebridError,
+  DebridCapability,
+  resolveCapabilities,
+} from './base.js';
 import { StremThruService } from './stremthru.js';
 import { TorboxDebridService } from './torbox.js';
 import { StremThruPreset } from '../presets/stremthru.js';
@@ -26,11 +32,13 @@ import { NativeUsenetService } from './aiostreams.js';
 export function getDebridService(
   serviceName: ServiceId,
   token: string,
-  clientIp?: string
+  clientIp?: string,
+  disabledCapabilities?: DebridCapability[]
 ): DebridService {
   const config: DebridServiceConfig = {
     token,
     clientIp,
+    disabledCapabilities,
   };
 
   const pollInterval = resolveServiceTime(
@@ -53,7 +61,7 @@ export function getDebridService(
             store: 'torbox',
             token: config.token,
           },
-          capabilities: { torrents: true, usenet: true },
+          capabilities: resolveCapabilities(disabledCapabilities),
           cacheAndPlayOptions: {
             pollingInterval: pollInterval,
             maxWaitTime: maxWaitTime,
