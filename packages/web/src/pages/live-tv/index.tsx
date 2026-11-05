@@ -13,12 +13,15 @@ import {
   airingAt,
   endOf,
   lastGroup,
+  lastChannelId,
   lastView,
+  rememberChannel,
   rememberGroup,
   rememberView,
   setLineup,
   startOf,
   caughtUp,
+  useChannelByNumber,
   useChannelGroups,
   useGuideRange,
   useReminders,
@@ -55,7 +58,7 @@ import { Guide, programmeAt } from './guide';
 
 const WIDE = '(min-width: 1024px)';
 const OWN_GROUPS = new Set([FAVOURITES, RECENT, ALL]);
-/** How many more pages a typed number loads to find its channel. */
+/** How many more pages a typed number, or a return, loads to find its channel. */
 const NUMBER_PAGES = 20;
 const DAY_MS = 86_400_000;
 /** The days ahead the guide offers, as far as servers keep programmes. */
@@ -150,6 +153,7 @@ export function LiveTvPage({
       ? wanted
       : ALL;
   const pages = useChannelPages(group, { enabled: !!view.data });
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = pages;
   const channels = React.useMemo(
     () => pages.data?.pages.flatMap((p) => p.Items ?? []) ?? [],
     [pages.data]
@@ -183,20 +187,52 @@ export function LiveTvPage({
   const [at, setAt] = React.useState(now);
 
   const [active, setActive] = React.useState(0);
-  // A group opens on the channel playing, where it is listed.
+  const choose = (index: number) => {
+    setActive(index);
+    rememberChannel(channels[index]?.Id);
+  };
+
+  /** The channel's index, loading on to it with `pages` left to read. */
+  const indexOf = async (match: (c: BaseItemDto) => boolean, pages = 0) => {
+    let list = channels;
+    let more = hasNextPage;
+    let index = list.findIndex(match);
+    for (let page = 0; index < 0 && more && page < pages; page++) {
+      const next = await fetchNextPage();
+      list = next.data?.pages.flatMap((p) => p.Items ?? []) ?? list;
+      more = next.hasNextPage;
+      index = list.findIndex(match);
+    }
+    return index;
+  };
+  const focusChannels = () => {
+    const grid = document.querySelector<HTMLElement>(
+      '[data-ui=guide], [data-ui=channel-list]'
+    );
+    if (grid) focusOn(grid);
+  };
+  // Back from the player, the page opens on the channel it was left on, loading
+  // on to it; another group looks among what it has, unless a number sent it there.
   const placed = React.useRef<string | null>(null);
+  const seeking = React.useRef(false);
   React.useEffect(() => {
     if (!pages.data || placed.current === group) return;
+    const far = placed.current === null || seeking.current;
+    const typed = seeking.current;
     placed.current = group;
-    const index = channels.findIndex((c) => c.Id === playingId);
-    setActive(Math.max(0, index));
-  }, [pages.data, group, channels, playingId]);
+    seeking.current = false;
+    const id = lastChannelId() ?? playingId;
+    void indexOf((c) => c.Id === id, far ? NUMBER_PAGES : 0).then((index) => {
+      setActive(Math.max(0, index));
+      if (typed) focusChannels();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per group
+  }, [pages.data, group]);
 
   const { schedules, onRange, range } = useRowSchedules(channels, {
     ...(guide && { from: dayStart, to: dayStart + DAY_MS }),
     pinned: active,
   });
-  const { hasNextPage, isFetchingNextPage, fetchNextPage } = pages;
   React.useEffect(() => {
     if (
       hasNextPage &&
@@ -242,22 +278,25 @@ export function LiveTvPage({
     if (target) focusOn(target);
   };
   // A remote's digits go to the channel with that number, loading on to it.
+  // Numbers run through the whole lineup, so one outside the group opens All
+  // channels on it.
+  const byNumber = useChannelByNumber();
   const goToNumber = async (number: string) => {
-    let list = channels;
-    let more = pages.hasNextPage;
-    let index = list.findIndex((c) => c.ChannelNumber === number);
-    for (let page = 0; index < 0 && more && page < NUMBER_PAGES; page++) {
-      const next = await pages.fetchNextPage();
-      list = next.data?.pages.flatMap((p) => p.Items ?? []) ?? list;
-      more = next.hasNextPage;
-      index = list.findIndex((c) => c.ChannelNumber === number);
-    }
-    if (index < 0) return false;
-    setActive(index);
-    const grid = document.querySelector<HTMLElement>(
-      '[data-ui=guide], [data-ui=channel-list]'
+    const index = await indexOf(
+      (c) => c.ChannelNumber === number,
+      NUMBER_PAGES
     );
-    if (grid) focusOn(grid);
+    if (index >= 0) {
+      choose(index);
+      focusChannels();
+      return true;
+    }
+    if (group === ALL) return false;
+    const channel = await byNumber(number);
+    if (!channel) return false;
+    rememberChannel(channel.Id);
+    seeking.current = true;
+    chooseGroup(ALL);
     return true;
   };
   const numbers = useNumberEntry(goToNumber, (text) => toast(text));
@@ -457,7 +496,7 @@ export function LiveTvPage({
                 focus={{ row: Math.min(active, channels.length - 1), at }}
                 playingId={playingId}
                 onFocus={(next) => {
-                  setActive(next.row);
+                  choose(next.row);
                   setAt(next.at);
                 }}
                 onPlay={playFromGuide}
@@ -488,7 +527,7 @@ export function LiveTvPage({
         now={now}
         active={Math.min(active, channels.length - 1)}
         playingId={playingId}
-        onActive={setActive}
+        onActive={choose}
         onPlay={watch}
         onRange={onRange}
       />

@@ -5,7 +5,12 @@ import { BiPlay } from 'react-icons/bi';
 import { Button } from '@aiostreams/ui/button';
 import { Modal } from '@aiostreams/ui/modal';
 import { useSession } from '../lib/session';
-import { remindersOf, setReminders, type Reminder } from '../lib/live-tv';
+import {
+  rememberChannel,
+  remindersOf,
+  setReminders,
+  type Reminder,
+} from '../lib/live-tv';
 import { playbackNow } from '../lib/playback/session';
 import { formatLocale } from '../lib/i18n';
 import type { BaseItemDto } from '../lib/types';
@@ -59,6 +64,7 @@ export function ReminderHost() {
       Type: 'TvChannel',
     } as BaseItemDto;
     setDue(null);
+    rememberChannel(due.channelId);
     picker.play(channel);
   };
   return (

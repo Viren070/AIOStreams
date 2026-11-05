@@ -8,7 +8,9 @@ import {
   airedShare,
   airingAt,
   caughtUp,
+  rememberChannel,
   startOf,
+  useChannelByNumber,
   useLineup,
   useNow,
   useSchedules,
@@ -26,14 +28,15 @@ let previousChannel: string | null = null;
 
 function zap(from: string, to: string) {
   previousChannel = from;
+  rememberChannel(to);
   zapTo({ itemId: to, sourceId: lastVersions.get(to) ?? '', startMs: 0 });
 }
 
 export interface Zap {
   /** Missing where the channel isn't in the list the live page showed. */
   step?: (sign: number) => void;
-  /** False when no listed channel has that number. */
-  toNumber(number: string): boolean;
+  /** False when no channel has that number. */
+  toNumber(number: string): Promise<boolean>;
   lineup: BaseItemDto[];
   play(channel: BaseItemDto): void;
   previous?: () => void;
@@ -42,6 +45,7 @@ export interface Zap {
 /** The channels around the playing one, from the live page's list. */
 export function useZap(itemId: string, enabled: boolean): Zap | undefined {
   const lineup = useLineup();
+  const byNumber = useChannelByNumber();
   if (!enabled) return undefined;
   // A party plays one title for everyone.
   const solo = party.state()?.status !== 'live';
@@ -54,8 +58,11 @@ export function useZap(itemId: string, enabled: boolean): Zap | undefined {
       solo && at >= 0 && lineup.length > 1
         ? (sign) => play(lineup[(at + sign + lineup.length) % lineup.length])
         : undefined,
-    toNumber: (number) => {
-      const found = lineup.find((c) => c.ChannelNumber === number);
+    // The list is the live page's group; numbers run through the whole lineup.
+    toNumber: async (number) => {
+      const found =
+        lineup.find((c) => c.ChannelNumber === number) ??
+        (await byNumber(number));
       if (found) play(found);
       return !!found;
     },

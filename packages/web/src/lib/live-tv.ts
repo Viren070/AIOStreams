@@ -122,6 +122,15 @@ export function useReminders() {
   };
 }
 
+/** The channel last moved to, played or zapped to, which the live page opens on again. */
+let lastChannel: string | null = null;
+
+export const lastChannelId = () => lastChannel;
+
+export function rememberChannel(id: string | null | undefined): void {
+  if (id) lastChannel = id;
+}
+
 const GROUP_KEY = 'aiostreams-web-live-group';
 
 export const lastGroup = (): string => storage.get<string>(GROUP_KEY) ?? ALL;
@@ -212,6 +221,24 @@ export function useChannelPages(
     enabled: opts.enabled ?? true,
     staleTime: 5 * 60_000,
   });
+}
+
+/** Finds a channel by its number in the whole lineup, which a group shows only part of. */
+export function useChannelByNumber() {
+  const { client, user } = useSession();
+  return React.useCallback(
+    async (number: string) => {
+      const found = await client.get<BaseItemDtoQueryResult>('/Items', {
+        userId: user.Id,
+        SearchTerm: number,
+        Recursive: true,
+        IncludeItemTypes: 'TvChannel',
+        Limit: 1,
+      });
+      return found.Items?.find((c) => c.ChannelNumber === number);
+    },
+    [client, user.Id]
+  );
 }
 
 /** Plays from its start, as its channel keeps it. */
