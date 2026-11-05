@@ -218,6 +218,27 @@ one out, name it:
 }
 ```
 
+### Pages in the bottom bar
+
+The bar shows Home, Discover, Search and Favourites and lists the other pages under You. Every page is
+in both, with `data-shown` on the ones the bar shows. To swap Favourites for Calendar:
+
+```css
+[data-ui='mobile-nav-item'][data-name='calendar'] {
+  display: flex;
+}
+[data-ui='mobile-nav-item'][data-name='favourites'],
+[data-ui='account-menu-page'][data-name='calendar'] {
+  display: none;
+}
+[data-ui='account-menu-page'][data-name='favourites'] {
+  display: flex;
+}
+```
+
+The pages are `home`, `discover`, `search`, `favourites`, `calendar`, `activity`, `playlists`, `party` and
+`downloads`.
+
 ### Smaller icons in the bottom bar
 
 Without names, the bar's icons are a little bigger. For the smaller ones, spaced further apart:
@@ -516,7 +537,7 @@ States are attributes set only while true, such as `data-watched`. Match them wi
 | `sidebar`                                                                    | The sidebar. Its items are `.UI-VerticalMenu__item`, with `data-name` (`home`, `discover`, `search`, `favourites`, `calendar`, `activity`, `downloads`, `party`, `settings`, `account`) and `data-current="true"` on the page you're on                                                                                                                        |
 | `sidebar-logo`, `brand-logo`                                                 | The logo in the sidebar, and the logo itself (also on the sign-in screens)                                                                                                                                                                                                                                                                                     |
 | `sidebar-history`                                                            | The back and forward buttons in the sidebar, where the browser has none; `data-name` is `back` or `forward`                                                                                                                                                                                                                                                    |
-| `mobile-nav`, `mobile-nav-item`                                              | The bar at the bottom on a phone, and on a touch screen set to it; `data-names` is `shown` or `hidden`, items have `data-name` as in the sidebar, and `aria-current` on the page you're on                                                                                                                                                                     |
+| `mobile-nav`, `mobile-nav-item`                                              | The bar at the bottom on a phone, and on a touch screen set to it; `data-names` is `shown` or `hidden`. Every page is an item, with `data-name` as in the sidebar, `data-shown` on those the bar shows and `aria-current` on the page you're on                                                                                                                |
 | `touch-rail`, `rail-item`                                                    | The rail down the side on a touch screen, and its items; `data-shape="floating"` when it floats over the page                                                                                                                                                                                                                                                  |
 | `tv-rail`                                                                    | A TV's navigation down the side; `data-shape="floating"` when it floats over the page                                                                                                                                                                                                                                                                          |
 | `top-tabs`, `top-history`                                                    | The navigation along the top, on a TV or a wide window set to it; `data-style` is `pill`, `bar` or `fade`. `top-history` holds its back and forward buttons, where no browser has them                                                                                                                                                                         |
@@ -524,7 +545,7 @@ States are attributes set only while true, such as `data-watched`. Match them wi
 | `corner-menu`                                                                | The navigation shrunk to a button in the top corner; `data-open` while it's open                                                                                                                                                                                                                                                                               |
 | `nav-item`                                                                   | An item in `tv-rail`, `top-tabs` and `corner-menu`; `data-name` as in the sidebar, and `aria-current` on the page you're on                                                                                                                                                                                                                                    |
 | `download-ring`                                                              | The ring around your picture while downloads run                                                                                                                                                                                                                                                                                                               |
-| `account-menu`                                                               | The menu under your picture; its items have `data-name`: `activity`, `downloads`, `calendar`, `settings`, `switch-user`, `configure`, `change-server`, `sign-out`                                                                                                                                                                                              |
+| `account-menu`                                                               | The menu under your picture; its items have `data-name`: `settings`, `switch-user`, `configure`, `change-server`, `sign-out`. From the bottom bar it also lists every page as `account-menu-page`, `data-shown` on those the bar shows                                                                                                                         |
 | `connection-note`, `connection-note-downloads`, `connection-note-dismiss`    | The note while the server can't be reached, its **Downloads** button and its close button; `data-state="small"` once it's shrunk to an icon                                                                                                                                                                                                                    |
 | `update-toast`                                                               | The message that an app update is ready. On a TV it's a dialog instead                                                                                                                                                                                                                                                                                         |
 | `window-controls`                                                            | The window buttons in the desktop app; each has `data-name`: `minimise`, `maximise`, `fullscreen` or `close`, and `data-fullscreen` is set while the window is full screen                                                                                                                                                                                     |
