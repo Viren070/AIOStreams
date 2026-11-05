@@ -5,7 +5,12 @@ import { LuLoaderCircle } from 'react-icons/lu';
 import { Drawer } from '@aiostreams/ui/drawer';
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import { cn } from '@aiostreams/ui/core/styling';
-import { focusOn, keyboardFocus, useRestoreFocus } from '../../lib/input';
+import {
+  focusOn,
+  keyboardFocus,
+  navWait,
+  useRestoreFocus,
+} from '../../lib/input';
 import { unavailableKind } from '../../lib/format';
 import { useVersionPicker } from '../version-picker';
 import { useEpisodes, useSeasons } from '../../lib/queries';
@@ -92,7 +97,7 @@ export function EpisodesSheet({
       </div>
       {episodes.isLoading || !seasonId ? (
         <div
-          data-nav-wait
+          ref={navWait}
           className="min-h-0 flex-1 space-y-1 overflow-hidden border-t border-white/5 p-2"
         >
           {Array.from({ length: 8 }, (_, i) => (

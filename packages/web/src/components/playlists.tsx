@@ -50,7 +50,12 @@ import {
   progressOf,
   ticksToMs,
 } from '../lib/format';
-import { focusDialog, useDialogStart, useRestoreFocus } from '../lib/input';
+import {
+  focusDialog,
+  navWait,
+  useDialogStart,
+  useRestoreFocus,
+} from '../lib/input';
 import type { BaseItemDto } from '../lib/types';
 import { Artwork, ProgressBar, WatchedMark } from './cards';
 import { useVersionPicker } from './version-picker';
@@ -232,7 +237,7 @@ function Header({
 
 function ListSkeleton() {
   return (
-    <div data-nav-wait className="space-y-1 p-2">
+    <div ref={navWait} className="space-y-1 p-2">
       {Array.from({ length: 6 }, (_, i) => (
         <div key={i} className="flex gap-3 p-2">
           <Skeleton className="aspect-video h-auto w-28 flex-none rounded-lg sm:w-32" />

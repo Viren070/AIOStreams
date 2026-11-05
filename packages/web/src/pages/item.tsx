@@ -101,7 +101,13 @@ import { BackdropFrame } from '../components/hero';
 import type { BaseItemDto } from '../lib/types';
 import { useHold } from '../lib/use-hold';
 import { useExternalReturn } from '../lib/playback/external-return';
-import { focusDialog, tab, tabList, useDialogStart } from '../lib/input';
+import {
+  focusDialog,
+  navWait,
+  tab,
+  tabList,
+  useDialogStart,
+} from '../lib/input';
 import { CachedImage } from '../components/cached-image';
 import { TrailerButton } from '../components/trailers';
 import { trailersOf } from '../lib/playback/trailers';
@@ -1071,7 +1077,7 @@ function Seasons({
       {layout === 'list' && summaryLine}
       {layout === 'row' ? (
         loading ? (
-          <div data-nav-wait>
+          <div ref={navWait}>
             <MediaRow
               key="loading"
               shape="wide"
@@ -1110,7 +1116,7 @@ function Seasons({
           </div>
         )
       ) : loading ? (
-        <div data-nav-wait>
+        <div ref={navWait}>
           <EpisodeListSkeleton columns />
         </div>
       ) : (
