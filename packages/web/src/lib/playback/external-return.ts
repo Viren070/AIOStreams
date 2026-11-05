@@ -32,7 +32,14 @@ export function externalReturnUrl(
   return `${origin}${pathname}#${marked}`;
 }
 
-const MARKS = ['played', 'source', 'position', 'finished', 'lastPlayedUrl'];
+const MARKS = [
+  'played',
+  'source',
+  'position',
+  'finished',
+  'lost',
+  'lastPlayedUrl',
+];
 
 /** Saves the position a player sent back, which lands before or after the hash depending on the player. */
 export function useExternalReturn() {
@@ -55,6 +62,8 @@ export function useExternalReturn() {
     const ms = Number(read('position')) * 1000;
     // A player that played to the end may not say where that was.
     const finished = read('finished') === '1';
+    // A player whose clock ran off the end of the video said nothing usable.
+    const lost = read('lost') === '1';
 
     for (const key of MARKS) inHash.delete(key);
     const rest = inHash.toString();
@@ -63,6 +72,12 @@ export function useExternalReturn() {
       '',
       `${window.location.pathname}${hashPath}${rest ? `?${rest}` : ''}`
     );
+    if (lost) {
+      toast.warning(
+        t`The player lost track of where you stopped, so your place is as it was.`
+      );
+      return;
+    }
     if (finished) {
       void client
         .post(`/UserPlayedItems/${itemId}`, undefined, { userId: user.Id })

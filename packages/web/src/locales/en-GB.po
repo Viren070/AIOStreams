@@ -4436,6 +4436,10 @@ msgstr "The party is watching <0>{title}</0>"
 msgid "the player could not play this version"
 msgstr "the player could not play this version"
 
+#: src/lib/playback/external-return.ts
+msgid "The player lost track of where you stopped, so your place is as it was."
+msgstr "The player lost track of where you stopped, so your place is as it was."
+
 #: src/pages/settings/subtitles.tsx
 msgid "The player's subtitle menu lists subtitles in your languages, ones without a language and the one on. The rest wait under More languages."
 msgstr "The player's subtitle menu lists subtitles in your languages, ones without a language and the one on. The rest wait under More languages."

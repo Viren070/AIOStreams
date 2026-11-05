@@ -72,11 +72,13 @@ class ExternalPlayers(private val activity: ComponentActivity, private val onRet
         // after playing to the end.
         val position = millis(extras, "position") ?: millis(extras, "extra_position")
         // Vimu's `duration` is -1 when it never got going and missing when it crashed, and a
-        // stream it can't time puts its position past the end: none is a place worth keeping.
+        // stream it can't time puts its position past the end: none is a place worth keeping,
+        // but the last is worth a word, since the page would otherwise look as if nothing played.
         val duration = millis(extras, "duration")
         val mark = when {
             vimu && result.resultCode == VIMU_COMPLETED -> "finished=1"
-            vimu && (duration == null || duration <= 0 || position == null || position > duration) -> return
+            vimu && duration != null && duration > 0 && position != null && position > duration -> "lost=1"
+            vimu && (duration == null || duration <= 0 || position == null) -> return
             extras.getString("end_by") == "playback_completion" -> "finished=1"
             position != null && position > 0 -> "position=${position / 1000.0}"
             else -> return
