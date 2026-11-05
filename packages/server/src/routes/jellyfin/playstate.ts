@@ -1,7 +1,9 @@
 import { Router, type Request } from 'express';
 import {
+  channelOf,
   checkInWatchSession,
   closeWatchSession,
+  encodeItemId,
   getWatchStateProvider,
   watchIdentityFor,
   openWatchSession,
@@ -200,10 +202,13 @@ async function record(
 ): Promise<void> {
   // Before any await, so a tick still in flight when a stop is written is older.
   const at = Date.now();
-  const d = await descriptorFor(ctx, rawId);
+  const found = await decodeItemForRequest(ctx, rawId);
+  // A programme reports the channel it played (playback.ts).
+  const d = found?.k === 'program' ? channelOf(found) : found;
   if (!d || (d.k !== 'movie' && d.k !== 'episode')) return;
+  const itemId = found?.k === 'program' ? encodeItemId(d) : rawId;
   const { tracks } = opts;
-  if (await playingLive(ctx, d, rawId, opts.mediaSourceId)) {
+  if (await playingLive(ctx, d, itemId, opts.mediaSourceId)) {
     // The session still tracks what is on; only the history is skipped.
     const session = sessionOf(ctx, opts.playSessionId);
     if (type === 'start')
@@ -243,7 +248,13 @@ async function record(
 
   // one meta call on start and stop, none on the 5-10 s progress ticks
   const item = await itemFromDescriptor(ctx, d).catch(() => null);
-  const durationMs = await durationFor(ctx, d, rawId, item, opts.mediaSourceId);
+  const durationMs = await durationFor(
+    ctx,
+    d,
+    itemId,
+    item,
+    opts.mediaSourceId
+  );
   const event: WatchEvent = {
     type,
     identity,

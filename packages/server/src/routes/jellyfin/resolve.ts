@@ -8,6 +8,7 @@ import {
   createLogger,
   DistributedLock,
   hasProgrammeVideos,
+  isChannel,
   encodeItemId,
   FULL_SUPPORT,
   requestLockType,
@@ -98,8 +99,7 @@ export async function playTargetFor(
   if (d.k === 'episode') {
     const meta = await getMeta(ctx, d.t, d.i).catch(() => null);
     const video = meta?.videos?.find((v) => v.id === d.v) as
-      | MetaVideo
-      | undefined;
+      MetaVideo | undefined;
     return {
       type: d.t,
       videoId: d.v,
@@ -114,8 +114,7 @@ export async function playTargetFor(
     const hinted = d.p ? undefined : meta?.behaviorHints?.defaultVideoId;
     const videoId = typeof hinted === 'string' && hinted ? hinted : d.i;
     const video = meta?.videos?.find((v) => v.id === videoId) as
-      | MetaVideo
-      | undefined;
+      MetaVideo | undefined;
     const runtimeMs =
       parseRuntimeMs(video?.runtime) ??
       (d.p
@@ -248,11 +247,6 @@ function keepEnrichedSubtitles(
   }
 }
 
-/** Live by the content when the url says nothing: a channel, or a schedule. */
-function isLiveContent(type: string, meta: ParsedMeta | null): boolean {
-  return type === 'tv' || type === 'channel' || hasProgrammeVideos(meta);
-}
-
 async function resolveUncached(
   ctx: JellyfinRequestContext,
   d: ContentDescriptor,
@@ -263,7 +257,7 @@ async function resolveUncached(
   if (!target) return null;
 
   const engine = await ctx.engine();
-  const liveContent = isLiveContent(
+  const liveContent = isChannel(
     target.type,
     await getMeta(ctx, d.t, d.k === 'movie' ? (d.p ?? d.i) : d.i).catch(
       () => null
