@@ -1,7 +1,12 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Template, Option, StatusResponse, ServiceId } from '@aiostreams/core';
 import { applyMigrations, useUserData } from '@/context/userData';
+import {
+  mergeTemplateUpdate,
+  planTemplateUpdate,
+  type TemplateUpdatePlan,
+} from '@/lib/templates/merge';
 import {
   applyTemplateConditionals,
   resolveCredentialRefs,
@@ -16,6 +21,7 @@ import {
 import {
   getLocalStorageTemplateInputs,
   saveLocalStorageTemplateInputs,
+  templateSnapshot,
 } from '@/lib/templates/storage';
 import {
   processTemplate,
@@ -52,6 +58,11 @@ export interface UseTemplateWizard {
   templateInputValues: Record<string, any>;
   wizardHistory: WizardSnapshot[];
   isLoading: boolean;
+  /** What an update to an already-applied template changes, or null on a first apply. */
+  updatePlan: TemplateUpdatePlan | null;
+  /** Conflicting fields the user has chosen to keep as they are. */
+  keepMine: ReadonlySet<string>;
+  setKeepMine(field: string, keep: boolean): void;
   // Setters exposed to sub-components
   setSelectedServices: React.Dispatch<React.SetStateAction<string[]>>;
   setInputValues: React.Dispatch<React.SetStateAction<Record<string, string>>>;
@@ -109,6 +120,8 @@ export function useTemplateWizard({
   >({});
   const [wizardHistory, setWizardHistory] = useState<WizardSnapshot[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  // Explicit keep/take choices on update conflicts; unset fields use the default.
+  const [keepChoices, setKeepChoices] = useState<Record<string, boolean>>({});
 
   /**
    * Push a deep snapshot of the current wizard state onto the history stack
@@ -263,6 +276,53 @@ export function useTemplateWizard({
   };
 
   /**
+   * The built config, plus how it relates to the template as the user last
+   * applied it. `baseline` is the template's own config before the user's
+   * inputs are stamped in, so it never holds credentials.
+   */
+  const planUpdate = ({
+    config,
+    inputs,
+    resolvedValues,
+    selectedSvcs,
+    templateId,
+  }: {
+    config: any;
+    inputs: TemplateInput[];
+    resolvedValues: Record<string, string>;
+    selectedSvcs: string[];
+    templateId?: string;
+  }) => {
+    const incoming = buildTemplateConfig({
+      config,
+      inputs,
+      resolvedValues,
+      selectedSvcs,
+    });
+    const baseline = templateSnapshot(
+      applyMigrations(JSON.parse(JSON.stringify(config)))
+    );
+    const applied = templateId
+      ? ((userData?.appliedTemplates ?? []) as any[]).find(
+          (t: any) => t.id === templateId
+        )
+      : undefined;
+    const base = applied?.config;
+    const plan = applied
+      ? planTemplateUpdate(base, userData ?? {}, incoming)
+      : null;
+    return { incoming, plan, base, baseline };
+  };
+
+  /** Conflicts default to the user's value when we can tell it was their change. */
+  const keepSet = (plan: TemplateUpdatePlan | null): Set<string> =>
+    new Set(
+      (plan?.conflicts ?? [])
+        .map((c) => c.field)
+        .filter((field) => keepChoices[field] ?? plan!.hasBaseline)
+    );
+
+  /**
    * Applies the built config to userData, then resets wizard state.
    */
   const applyTemplate = async ({
@@ -288,13 +348,22 @@ export function useTemplateWizard({
   }) => {
     setIsLoading(true);
     try {
-      const migratedData = buildTemplateConfig({
+      const {
+        incoming: migratedData,
+        plan,
+        base,
+        baseline,
+      } = planUpdate({
         config,
         inputs,
         resolvedValues,
         selectedSvcs,
+        templateId,
       });
-      setUserData((prev: any) => ({ ...prev, ...migratedData }));
+      const keep = keepSet(plan);
+      setUserData((prev: any) =>
+        mergeTemplateUpdate(prev, migratedData, plan, keep, base)
+      );
 
       if (templateId && templateVersion) {
         setUserData((prev: any) => ({
@@ -306,6 +375,7 @@ export function useTemplateWizard({
             {
               id: templateId,
               version: templateVersion,
+              config: baseline,
               ...(templateSourceUrl ? { url: templateSourceUrl } : {}),
             },
           ],
@@ -330,6 +400,7 @@ export function useTemplateWizard({
       }
 
       setProcessedTemplate(null);
+      setKeepChoices({});
       setCurrentStep(initialStepRef.current);
       setSelectedServices([]);
       setInputValues({});
@@ -706,6 +777,7 @@ export function useTemplateWizard({
     setInputValues({});
     setWizardHistory([]);
     setPlannedSteps(['browse', 'review']);
+    setKeepChoices({});
     onOpenChange(false);
   };
 
@@ -716,15 +788,14 @@ export function useTemplateWizard({
   const previewUserData = () => {
     if (!processedTemplate) return null;
     try {
-      return {
-        ...userData,
-        ...buildTemplateConfig({
-          config: processedTemplate.template.config,
-          inputs: processedTemplate.inputs,
-          resolvedValues: inputValues,
-          selectedSvcs: selectedServices,
-        }),
-      };
+      const { incoming, plan, base } = planUpdate({
+        config: processedTemplate.template.config,
+        inputs: processedTemplate.inputs,
+        resolvedValues: inputValues,
+        selectedSvcs: selectedServices,
+        templateId: processedTemplate.template.metadata.id,
+      });
+      return mergeTemplateUpdate(userData, incoming, plan, keepSet(plan), base);
     } catch (err) {
       console.error('Failed to preview template changes:', err);
       return null;
@@ -741,6 +812,7 @@ export function useTemplateWizard({
     setInputValues({});
     setWizardHistory([]);
     setPlannedSteps(['browse', 'review']);
+    setKeepChoices({});
     setCurrentStep(step);
   };
 
@@ -750,9 +822,38 @@ export function useTemplateWizard({
     setCurrentStep(step);
   };
 
+  const updatePlan = useMemo(() => {
+    if (!processedTemplate || currentStep !== 'review') return null;
+    try {
+      return planUpdate({
+        config: processedTemplate.template.config,
+        inputs: processedTemplate.inputs,
+        resolvedValues: inputValues,
+        selectedSvcs: selectedServices,
+        templateId: processedTemplate.template.metadata.id,
+      }).plan;
+    } catch (err) {
+      console.error('Failed to plan the template update:', err);
+      return null;
+    }
+    // planUpdate reads only these values and userData.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [processedTemplate, currentStep, inputValues, selectedServices, userData]);
+
+  const keepMine = useMemo(
+    () => keepSet(updatePlan),
+    [updatePlan, keepChoices]
+  ); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const setKeepMine = (field: string, keep: boolean) =>
+    setKeepChoices((prev) => ({ ...prev, [field]: keep }));
+
   return {
     currentStep,
     plannedSteps,
+    updatePlan,
+    keepMine,
+    setKeepMine,
     processedTemplate,
     selectedServices,
     inputValues,
