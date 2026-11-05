@@ -339,7 +339,11 @@ function NativeRow({
       className={cn(
         CarouselAnatomy.content(),
         // Room for a focused card's ring, which the scroller clips; the row pads its start.
-        'relative -mb-1.5 -me-4 -ms-1.5 overflow-x-auto overflow-y-hidden pb-1.5 [scrollbar-width:none] lg:-me-10 [&::-webkit-scrollbar]:hidden'
+        'relative -mb-1.5 -me-4 -ms-1.5 pb-1.5 lg:-me-10',
+        // TV rows move only with focus, so they just clip: a scroller is a
+        // layer of its own, rebuilt with every frame's layers.
+        !currentHost().tv &&
+          'overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
       )}
     >
       {Array.from({ length: GLIDE_LAYERS }).reduceRight<React.ReactNode>(
