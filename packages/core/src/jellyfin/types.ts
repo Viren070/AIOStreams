@@ -15,7 +15,12 @@ export type JellyfinDescriptor =
   | { k: 'season'; t: string; i: string; s: number }
   | { k: 'episode'; t: string; i: string; s: number; e: number; v: string }
   | { k: 'person'; n: string; i?: string }
-  | { k: 'source'; h: string };
+  | { k: 'source'; h: string }
+  | { k: 'livetv' }
+  /** A channel's programme by its start, in epoch milliseconds. */
+  | { k: 'program'; t: string; i: string; at: number };
+
+export type ProgramDescriptor = Extract<JellyfinDescriptor, { k: 'program' }>;
 
 export type PersonDescriptor = Extract<JellyfinDescriptor, { k: 'person' }>;
 

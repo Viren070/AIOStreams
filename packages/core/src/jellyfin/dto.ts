@@ -301,7 +301,7 @@ function aspectRatioFor(shape: unknown): number {
   return shape === 'landscape' ? 1.7777 : shape === 'square' ? 1 : 0.6666;
 }
 
-function baseItem(
+export function baseItem(
   ctx: ItemBuildContext,
   id: string,
   name: string,

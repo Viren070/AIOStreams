@@ -20,11 +20,11 @@ const logger = createLogger('jellyfin');
  * 16-byte ids, rendered as 32 lowercase hex. Byte 0 says what follows:
  *   a1 packed content (kind, id type, media type, numeric id, season, episode)
  *   a2 view    a3 genre    a5 person    a6 media source    a7 studio
- *   a8 playlist    b2 hashed content
+ *   a8 playlist    a9 programme (channel key, start minute)    b2 hashed content
  * Packed ids need no storage. Views and genres are found by scanning the
  * config's catalogs, persons live in a cache, media sources in the playback
  * memo, playlists in their own table, and hashed content in a small durable
- * table.
+ * table, which also holds one row per channel for its programmes.
  */
 const MARK_PACKED = 0xa1;
 const MARK_VIEW = 0xa2;
@@ -34,6 +34,7 @@ const MARK_SOURCE = 0xa6;
 /* Never decoded: a studio has nothing to browse. */
 const MARK_STUDIO = 0xa7;
 const MARK_PLAYLIST = 0xa8;
+const MARK_PROGRAM = 0xa9;
 const MARK_HASHED = 0xb2;
 
 const KIND_CODES: Record<ContentDescriptor['k'], number> = {
@@ -294,6 +295,10 @@ export function canonicalDescriptor(d: JellyfinDescriptor): string {
       return d.i ? `person|${d.n}|${d.i}` : `person|${d.n}`;
     case 'source':
       return `source|${d.h}`;
+    case 'livetv':
+      return 'livetv';
+    case 'program':
+      return `program|${d.t}|${d.i}|${d.at}`;
   }
 }
 
@@ -340,6 +345,25 @@ function rememberHashed(id: string, d: JellyfinDescriptor) {
 
 export function viewId(type: string, catalogId: string): string {
   return marked(MARK_VIEW, `view|${type}|${catalogId}`);
+}
+
+export const LIVE_TV_VIEW_ID = marked(MARK_VIEW, 'livetv');
+
+const MINUTE_MS = 60_000;
+
+/** The stored row a channel's programme ids point back to: theirs, with no start. */
+function programKeyId(id: string): string {
+  return `${id.slice(0, 24)}00000000`;
+}
+
+function programId(d: Extract<JellyfinDescriptor, { k: 'program' }>): string {
+  const buf = Buffer.alloc(16);
+  buf[0] = MARK_PROGRAM;
+  sha(`program|${d.t}|${d.i}`).copy(buf, 1, 0, 11);
+  buf.writeUInt32BE(Math.floor(d.at / MINUTE_MS), 12);
+  const id = buf.toString('hex');
+  rememberHashed(programKeyId(id), { k: 'program', t: d.t, i: d.i, at: 0 });
+  return id;
 }
 
 export function genreId(
@@ -390,6 +414,10 @@ export function encodeItemId(d: JellyfinDescriptor): string {
       return personId(d);
     case 'source':
       return d.h;
+    case 'livetv':
+      return LIVE_TV_VIEW_ID;
+    case 'program':
+      return programId(d);
     default: {
       const packed = tryPack(d);
       if (packed) return packed;
@@ -421,6 +449,17 @@ export function idNeedsCatalogs(raw: string): boolean {
   return mark === MARK_VIEW || mark === MARK_GENRE;
 }
 
+async function storedDescriptor(
+  hex: string
+): Promise<JellyfinDescriptor | undefined> {
+  const cached = await idCache.get(hex).catch(() => undefined);
+  if (cached) return cached;
+  const stored = await JellyfinRepository.lookupId<JellyfinDescriptor>(hex);
+  if (stored)
+    void idCache.set(hex, stored, ID_CACHE_TTL).catch(() => undefined);
+  return stored ?? undefined;
+}
+
 export async function decodeItemId(
   raw: string,
   scope: DecodeScope = {}
@@ -434,6 +473,8 @@ export async function decodeItemId(
       return d ? { kind: 'descriptor', descriptor: d } : null;
     }
     case MARK_VIEW: {
+      if (hex === LIVE_TV_VIEW_ID)
+        return { kind: 'descriptor', descriptor: { k: 'livetv' } };
       for (const c of scope.catalogs ?? []) {
         if (viewId(c.type, c.id) === hex) {
           return {
@@ -476,12 +517,14 @@ export async function decodeItemId(
         ? { kind: 'playlists' }
         : { kind: 'playlist', id: hex };
     case MARK_HASHED: {
-      const cached = await idCache.get(hex).catch(() => undefined);
-      if (cached) return { kind: 'descriptor', descriptor: cached };
-      const stored = await JellyfinRepository.lookupId<JellyfinDescriptor>(hex);
-      if (!stored) return null;
-      void idCache.set(hex, stored, ID_CACHE_TTL).catch(() => undefined);
-      return { kind: 'descriptor', descriptor: stored };
+      const stored = await storedDescriptor(hex);
+      return stored ? { kind: 'descriptor', descriptor: stored } : null;
+    }
+    case MARK_PROGRAM: {
+      const channel = await storedDescriptor(programKeyId(hex));
+      if (channel?.k !== 'program') return null;
+      const at = buf.readUInt32BE(12) * MINUTE_MS;
+      return { kind: 'descriptor', descriptor: { ...channel, at } };
     }
     default:
       return null;
