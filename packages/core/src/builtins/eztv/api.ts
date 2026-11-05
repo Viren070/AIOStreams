@@ -1,12 +1,8 @@
 import { Cache } from '../../utils/cache.js';
 import { config as appConfig } from '../../config/index.js';
-import {
-  formatZodError,
-  makeRequest,
-  DistributedLock,
-} from '../../utils/index.js';
 import { createLogger } from '../../utils/index.js';
 import { searchWithBackgroundRefresh } from '../utils/general.js';
+import { MirrorPool } from '../utils/mirror-pool.js';
 
 import { z } from 'zod';
 
@@ -62,7 +58,7 @@ const EztvGetTorrentsOptions = z.object({
 
 type EztvGetTorrentsOptions = z.infer<typeof EztvGetTorrentsOptions>;
 
-const getApiBaseUrl = () => appConfig.builtins.eztv.url;
+const mirrorPool = MirrorPool.for('eztv', () => appConfig.builtins.eztv.url);
 
 class EztvAPI {
   private headers: Record<string, string>;
@@ -114,75 +110,17 @@ class EztvAPI {
       queryParams?: URLSearchParams;
     }
   ): Promise<T> {
-    const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    const url = new URL(path, getApiBaseUrl());
-    if (options.queryParams) {
-      url.search = options.queryParams.toString();
-    }
+    const search = options.queryParams ? `?${options.queryParams}` : '';
+    const path = `${endpoint.startsWith('/') ? '' : '/'}${endpoint}${search}`;
+    const timeout = options.timeout ?? appConfig.userLimits.timeouts.maxTimeout;
 
-    const lockKey = url.toString();
-    const { result } = await DistributedLock.getInstance().withLock(
-      lockKey,
-      () => this._request(endpoint, options),
-      {
-        timeout: options.timeout ?? appConfig.userLimits.timeouts.maxTimeout,
-        ttl:
-          (options.timeout ?? appConfig.userLimits.timeouts.maxTimeout) + 1000,
-      }
-    );
-    return result;
-  }
-
-  private async _request<T>(
-    endpoint: string,
-    options: {
-      schema: z.ZodSchema<T>;
-      timeout?: number;
-      queryParams?: URLSearchParams;
-    }
-  ): Promise<T> {
-    const { schema } = options;
-    const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    const url = new URL(path, getApiBaseUrl());
-    if (options.queryParams) {
-      url.search = options.queryParams.toString();
-    }
-
-    logger.debug(`Making GET request to ${path}`);
-
-    try {
-      const response = await makeRequest(url.toString(), {
-        method: 'GET',
-        headers: this.headers,
-        timeout: options.timeout ?? appConfig.userLimits.timeouts.maxTimeout,
-      });
-
-      if (!response.ok) {
-        throw new Error(
-          `EZTV API error (${response.status}): ${response.statusText}`
-        );
-      }
-
-      const data = (await response.json()) as unknown;
-
-      try {
-        return schema.parse(data);
-      } catch (error) {
-        throw new Error(
-          `Failed to parse EZTV API response: ${formatZodError(error as z.ZodError)}`
-        );
-      }
-    } catch (error) {
-      logger.error(
-        `Request to ${path} failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-      throw error instanceof Error
-        ? error
-        : new Error('Unknown error occurred');
-    }
+    return mirrorPool.getJson(path, {
+      schema: options.schema,
+      headers: this.headers,
+      timeout,
+    });
   }
 }
 
-export { getApiBaseUrl as getEztvApiUrl };
 export type { EztvGetTorrentsOptions, EztvGetTorrentsResponse, EztvTorrent };
 export default EztvAPI;
