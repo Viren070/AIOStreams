@@ -1,7 +1,13 @@
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import React from 'react';
-import { BiExpand, BiHeart, BiPlay, BiSolidHeart } from 'react-icons/bi';
+import {
+  BiExpand,
+  BiHeart,
+  BiPlay,
+  BiReset,
+  BiSolidHeart,
+} from 'react-icons/bi';
 import { Button, IconButton } from '@aiostreams/ui/button';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '../../lib/session';
@@ -9,7 +15,13 @@ import { posterUrl } from '../../lib/images';
 import { airTime, dayLabel, duration, episodeCode } from '../../lib/format';
 import { useSetFavorite } from '../../lib/queries';
 import { useDockRef } from '../../lib/playback/dock';
-import { airedShare, airingAt, endOf, startOf } from '../../lib/live-tv';
+import {
+  airedShare,
+  airingAt,
+  caughtUp,
+  endOf,
+  startOf,
+} from '../../lib/live-tv';
 import type { BaseItemDto } from '../../lib/types';
 import { CachedImage } from '../../components/cached-image';
 
@@ -198,6 +210,7 @@ export function ProgrammeDetails({
   now,
   playing,
   onWatch,
+  onFromStart,
   className,
 }: {
   channel: BaseItemDto;
@@ -205,6 +218,8 @@ export function ProgrammeDetails({
   now: number;
   playing: boolean;
   onWatch(): void;
+  /** Plays the programme from its start, where the channel keeps it. */
+  onFromStart(): void;
   className?: string;
 }) {
   const airing =
@@ -255,17 +270,30 @@ export function ProgrammeDetails({
           {programme.Overview}
         </p>
       )}
-      {airing && (
-        <div className="mt-1">
-          <Button
-            data-ui="live-watch"
-            intent="white"
-            className="rounded-full"
-            leftIcon={playing ? <BiExpand /> : <BiPlay />}
-            onClick={onWatch}
-          >
-            {playing ? <Trans>Full screen</Trans> : <Trans>Watch</Trans>}
-          </Button>
+      {(airing || caughtUp(programme)) && (
+        <div className="mt-1 flex flex-wrap gap-2">
+          {airing && (
+            <Button
+              data-ui="live-watch"
+              intent="white"
+              className="rounded-full"
+              leftIcon={playing ? <BiExpand /> : <BiPlay />}
+              onClick={onWatch}
+            >
+              {playing ? <Trans>Full screen</Trans> : <Trans>Watch</Trans>}
+            </Button>
+          )}
+          {caughtUp(programme) && (
+            <Button
+              data-ui="live-from-start"
+              intent={airing ? 'gray-subtle' : 'white'}
+              className="rounded-full"
+              leftIcon={airing ? <BiReset /> : <BiPlay />}
+              onClick={onFromStart}
+            >
+              {airing ? <Trans>From the start</Trans> : <Trans>Play</Trans>}
+            </Button>
+          )}
         </div>
       )}
     </section>

@@ -18,7 +18,9 @@ import {
   rememberView,
   setLineup,
   startOf,
+  caughtUp,
   useChannelGroups,
+  useGuideRange,
   useChannelPages,
   useNow,
   type LiveView,
@@ -38,6 +40,7 @@ import type { BaseItemDto } from '../../lib/types';
 import { PageMessage } from '../../components/layout';
 import { fitsAsPills, PillTabs } from '../../components/pill-tabs';
 import { Combobox } from '@aiostreams/ui/combobox';
+import { Select } from '@aiostreams/ui/select';
 import { useVersionPicker } from '../../components/version-picker';
 import {
   BATCH,
@@ -77,7 +80,53 @@ const midnight = (at: number) => new Date(at).setHours(0, 0, 0, 0);
 function dayName(offset: number, dayStart: number): string {
   if (offset === 0) return t`Today`;
   if (offset === 1) return t`Tomorrow`;
+  if (offset === -1) return t`Yesterday`;
   return dayLabel(new Date(dayStart).toISOString());
+}
+
+/** Days from today the guide covers, by the server's range where it has one. */
+function dayOffsets(
+  today: number,
+  range: { from: number; to: number } | undefined
+): number[] {
+  const count = (from: number, to: number) => Math.round((to - from) / DAY_MS);
+  const back =
+    range && range.from < today ? count(midnight(range.from), today) : 0;
+  const ahead = range && range.to > today ? count(today, range.to) : GUIDE_DAYS;
+  return Array.from({ length: back + ahead }, (_, i) => i - back);
+}
+
+/** A few days are pills; a week back and ahead is a list. */
+function DayPicker({
+  days,
+  value,
+  onChange,
+}: {
+  days: { value: number; label: string }[];
+  value: number;
+  onChange(offset: number): void;
+}) {
+  if (fitsAsPills(days.map((d) => d.label)))
+    return (
+      <PillTabs
+        name="live-day"
+        options={days}
+        value={value}
+        onChange={onChange}
+      />
+    );
+  return (
+    <div className="w-44">
+      <Select
+        data-ui="live-day-picker"
+        aria-label={t`Day`}
+        className="rounded-full"
+        options={days.map((d) => ({ value: String(d.value), label: d.label }))}
+        value={String(value)}
+        onValueChange={(next) => next && onChange(Number(next))}
+      />
+    </div>
+  );
 }
 
 export function LiveTvPage({
@@ -115,6 +164,7 @@ export function LiveTvPage({
       ? requestedView
       : (lastView() ?? (currentHost().tv ? 'list' : 'guide'));
   const guide = wide && shownView === 'guide';
+  const guideRange = useGuideRange().data;
   const [dayOffset, setDayOffset] = React.useState(0);
   const today = midnight(now);
   const dayStart = new Date(today).setDate(
@@ -181,10 +231,17 @@ export function LiveTvPage({
       );
     if (target) focusOn(target);
   };
-  // A programme on later waits for reminders; one on now plays its channel.
+  const fromStart = (programme: BaseItemDto) => {
+    if (canPreview())
+      playDocked({ itemId: programme.Id!, sourceId: '', startMs: 0 });
+    else picker.play(programme);
+  };
+  // One on now plays its channel, an earlier one from its start where the
+  // channel keeps it, and a later one waits for reminders.
   const playFromGuide = (channel: BaseItemDto, programme?: BaseItemDto) => {
     if (!programme || (startOf(programme) <= now && now < endOf(programme)))
       watch(channel);
+    else if (caughtUp(programme)) fromStart(programme);
   };
 
   if (view.isError)
@@ -207,6 +264,13 @@ export function LiveTvPage({
     );
 
   const loading = pages.isLoading || view.isLoading;
+  const days = dayOffsets(today, guideRange).map((offset) => ({
+    value: offset,
+    label: dayName(
+      offset,
+      new Date(today).setDate(new Date(today).getDate() + offset)
+    ),
+  }));
   const ownGroups = groups.filter((g) => OWN_GROUPS.has(g.id));
   const addonGroups = groups.filter((g) => !OWN_GROUPS.has(g.id));
   // Many groups go in a searchable picker, after the app's own.
@@ -229,15 +293,8 @@ export function LiveTvPage({
           <Trans>Live TV</Trans>
         </h1>
         {guide && (
-          <PillTabs
-            name="live-day"
-            options={Array.from({ length: GUIDE_DAYS }, (_, i) => ({
-              value: i,
-              label: dayName(
-                i,
-                new Date(today).setDate(new Date(today).getDate() + i)
-              ),
-            }))}
+          <DayPicker
+            days={days}
             value={dayOffset}
             onChange={(offset) => {
               setDayOffset(offset);
@@ -313,6 +370,7 @@ export function LiveTvPage({
               now={now}
               playing={docked && playingId === shown.Id}
               onWatch={() => watch(shown)}
+              onFromStart={() => programme && fromStart(programme)}
             />
           ) : (
             <div className="flex-1" />

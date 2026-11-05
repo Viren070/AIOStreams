@@ -4,6 +4,7 @@ import {
   keepPreviousData,
   useInfiniteQuery,
   useQueries,
+  useQuery,
 } from '@tanstack/react-query';
 import { useSession } from './session';
 import { useGenres, useKey, useLiveTvView } from './queries';
@@ -144,6 +145,29 @@ export function useChannelPages(
     },
     enabled: opts.enabled ?? true,
     staleTime: 5 * 60_000,
+  });
+}
+
+/** Plays from its start, as its channel keeps it. */
+export const caughtUp = (p: BaseItemDto | undefined) =>
+  !!(p as { aiostreams?: { catchup?: boolean } } | undefined)?.aiostreams
+    ?.catchup;
+
+/** The days the server's guide covers, back as far as channels keep programmes. */
+export function useGuideRange() {
+  const { client } = useSession();
+  return useQuery({
+    queryKey: [...useKey(), 'live-guide-range'],
+    queryFn: async () => {
+      const info = await client.get<{ StartDate?: string; EndDate?: string }>(
+        '/LiveTv/GuideInfo'
+      );
+      return {
+        from: Date.parse(info.StartDate ?? ''),
+        to: Date.parse(info.EndDate ?? ''),
+      };
+    },
+    staleTime: 60 * 60_000,
   });
 }
 

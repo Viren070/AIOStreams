@@ -69,6 +69,10 @@ export function episodeCode(
 
 /** The line under a title: the episode for an episode, the year otherwise. */
 export function itemSubtitle(item: BaseItemDto): string {
+  if (item.Type === 'Program') {
+    const at = item.StartDate ? airTime(item.StartDate) : null;
+    return [item.ChannelName, at].filter(Boolean).join(' · ');
+  }
   if (item.Type === 'Episode') {
     const code = episodeCode(item.ParentIndexNumber, item.IndexNumber);
     return [code, item.Name].filter(Boolean).join(' · ');

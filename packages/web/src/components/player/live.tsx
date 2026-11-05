@@ -7,6 +7,7 @@ import { airTime, clock } from '../../lib/format';
 import {
   airedShare,
   airingAt,
+  caughtUp,
   startOf,
   useLineup,
   useNow,
@@ -75,6 +76,8 @@ export function useZap(itemId: string, enabled: boolean): Zap | undefined {
 export interface LiveChannel extends Zap {
   programme?: BaseItemDto;
   next?: BaseItemDto;
+  /** Plays a programme from its start, where its channel keeps it. */
+  fromStart(programme: BaseItemDto): void;
 }
 
 /** What is on the playing channel, and the channels to zap to. */
@@ -89,6 +92,8 @@ export function useLiveChannel(
   const programmes = schedules.get(item.Id!) ?? [];
   return {
     ...zapping,
+    fromStart: (programme) =>
+      zapTo({ itemId: programme.Id!, sourceId: '', startMs: 0 }),
     programme:
       airingAt(programmes, now) ??
       (item.CurrentProgram && airingAt([item.CurrentProgram], now)),
@@ -179,6 +184,16 @@ export function LiveBar({
           <span data-name="programme" className="min-w-0 truncate">
             {programme.Name}
           </span>
+        )}
+        {caughtUp(programme) && (
+          <button
+            type="button"
+            data-ui="live-from-start"
+            className="flex-none rounded-md bg-white/20 px-2 py-0.5 text-xs font-semibold hover:bg-white/30"
+            onClick={() => channel.fromStart(programme!)}
+          >
+            <Trans>From the start</Trans>
+          </button>
         )}
         {from && to && (
           <span className="ms-auto flex-none tabular-nums text-gray-300">

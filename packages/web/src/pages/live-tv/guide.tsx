@@ -6,7 +6,7 @@ import { posterUrl } from '../../lib/images';
 import { airTime } from '../../lib/format';
 import { formatLocale } from '../../lib/i18n';
 import { move, runAction } from '../../lib/input';
-import { endOf, startOf } from '../../lib/live-tv';
+import { caughtUp, endOf, startOf } from '../../lib/live-tv';
 import type { BaseItemDto } from '../../lib/types';
 import { CachedImage } from '../../components/cached-image';
 import { OVERSCAN } from '../../components/channel-list';
@@ -371,6 +371,7 @@ const GuideRow = React.memo(function GuideRow({
     const w = xOf(end, dayStart) - x;
     if (x + w < left || x > right) continue;
     const airing = startOf(p) <= now && now < endOf(p);
+    const gone = endOf(p) <= now && !caughtUp(p);
     const focused = focusAt === start;
     cells.push(
       <div
@@ -381,6 +382,7 @@ const GuideRow = React.memo(function GuideRow({
         data-row={index}
         data-at={start}
         data-airing={airing || undefined}
+        data-catchup={caughtUp(p) || undefined}
         data-active={focused || undefined}
         data-focus-frame={focused || undefined}
         className={cn(
@@ -389,7 +391,8 @@ const GuideRow = React.memo(function GuideRow({
             ? 'bg-white text-black'
             : airing
               ? 'bg-white/15 hover:bg-white/20'
-              : 'bg-white/[0.07] hover:bg-white/15'
+              : 'bg-white/[0.07] hover:bg-white/15',
+          gone && !focused && 'text-[--muted] opacity-60'
         )}
         style={
           {
