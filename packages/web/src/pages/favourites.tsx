@@ -6,12 +6,21 @@ import { Button } from '@aiostreams/ui/button';
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import { useSession } from '../lib/session';
-import { useItemPages } from '../lib/queries';
+import { useItemPages, useLiveTvView } from '../lib/queries';
+import {
+  FAVOURITES,
+  useChannelPages,
+  useNow,
+  useSchedules,
+} from '../lib/live-tv';
 import { useInView } from '../lib/use-in-view';
 import { navigate, to } from '../lib/paths';
 import { PageBody } from '../components/layout';
 import { PillTabs } from '../components/pill-tabs';
 import { MixedGrid } from '../components/mixed-grid';
+import { CardGrid } from '../components/media-row';
+import { ChannelCard } from '../components/channel-card';
+import { BATCH } from '../components/channel-list';
 import { openRandom } from '../components/random-pick';
 
 const KINDS = [
@@ -35,13 +44,22 @@ const KINDS = [
   },
 ];
 
+/* eslint-disable-next-line lingui/no-unlocalized-strings -- Jellyfin's item type */
+const CHANNELS = 'TvChannel';
+
 export function FavouritesPage({ kind }: { kind?: string }) {
   const { client } = useSession();
-  const types = KINDS.find((k) => k.value === kind)?.value ?? KINDS[0].value;
+  const live = !!useLiveTvView().data;
+  const kinds = live
+    ? [...KINDS, { value: CHANNELS, label: t`Channels` }]
+    : KINDS;
+  const types = kinds.find((k) => k.value === kind)?.value ?? KINDS[0].value;
+  const channels = types === CHANNELS;
   const pages = useItemPages('', {
     filter: 'favorite',
     types,
     recursive: true,
+    enabled: !channels,
   });
   const items = pages.data?.pages.flatMap((p) => p.Items ?? []) ?? [];
   const sentinel = useInView<HTMLDivElement>(
@@ -62,7 +80,7 @@ export function FavouritesPage({ kind }: { kind?: string }) {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <PillTabs
             name="kind"
-            options={KINDS}
+            options={kinds}
             value={types}
             onChange={(next) =>
               navigate(
@@ -73,7 +91,7 @@ export function FavouritesPage({ kind }: { kind?: string }) {
               )
             }
           />
-          {!!items.length && (
+          {!!items.length && !channels && (
             <Button
               data-ui="random-pick"
               size="sm"
@@ -86,7 +104,9 @@ export function FavouritesPage({ kind }: { kind?: string }) {
             </Button>
           )}
         </div>
-        {pages.isError ? (
+        {channels ? (
+          <FavouriteChannels />
+        ) : pages.isError ? (
           <LuffyError title={t`Could not load your favourites`} />
         ) : (
           <>
@@ -110,5 +130,53 @@ export function FavouritesPage({ kind }: { kind?: string }) {
         <div ref={sentinel} />
       </div>
     </PageBody>
+  );
+}
+
+function FavouriteChannels() {
+  const pages = useChannelPages(FAVOURITES);
+  const channels = React.useMemo(
+    () => pages.data?.pages.flatMap((p) => p.Items ?? []) ?? [],
+    [pages.data]
+  );
+  const batches = React.useMemo(() => {
+    const ids = channels.map((c) => c.Id!);
+    return Array.from({ length: Math.ceil(ids.length / BATCH) }, (_, i) =>
+      ids.slice(i * BATCH, (i + 1) * BATCH)
+    );
+  }, [channels]);
+  const schedules = useSchedules(batches);
+  const now = useNow();
+  const sentinel = useInView<HTMLDivElement>(
+    () => {
+      if (pages.hasNextPage && !pages.isFetchingNextPage)
+        void pages.fetchNextPage();
+    },
+    '800px',
+    [channels.length]
+  );
+  if (pages.isError)
+    return <LuffyError title={t`Could not load your favourites`} />;
+  return (
+    <>
+      <div data-nav-start>
+        <CardGrid shape="wide">
+          {channels.map((channel) => (
+            <ChannelCard
+              key={channel.Id}
+              channel={channel}
+              programmes={schedules.get(channel.Id!)}
+              now={now}
+            />
+          ))}
+        </CardGrid>
+      </div>
+      {!pages.isLoading && !channels.length && (
+        <p className="text-[--muted]">
+          <Trans>No favourite channels yet.</Trans>
+        </p>
+      )}
+      <div ref={sentinel} />
+    </>
   );
 }

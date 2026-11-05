@@ -502,6 +502,8 @@ export interface WideCardProps {
   dimmed?: boolean;
   /** Shown over the image's top left corner. */
   badge?: React.ReactNode;
+  /** Drawn when there is no image, in place of the title. */
+  standIn?: React.ReactNode;
   className?: string;
 }
 
@@ -520,6 +522,7 @@ export function WideCard(props: WideCardProps) {
     unavailable,
     dimmed,
     badge,
+    standIn,
   } = props;
   const body = (
     <>
@@ -534,6 +537,7 @@ export function WideCard(props: WideCardProps) {
         <Artwork
           src={image}
           alt={title}
+          standIn={standIn}
           className={cn(
             'group-hover/wide:scale-[1.03] group-focus-visible/wide-link:scale-[1.03]',
             dimmed && 'opacity-40 grayscale'

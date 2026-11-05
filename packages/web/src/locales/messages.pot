@@ -491,6 +491,7 @@ msgid "All"
 msgstr ""
 
 #: src/lib/live-tv.ts
+#: src/pages/home.tsx
 msgid "All channels"
 msgstr ""
 
@@ -872,6 +873,7 @@ msgstr ""
 #: src/components/channel-list.tsx
 #: src/components/player/live.tsx
 #: src/components/player/options.tsx
+#: src/pages/favourites.tsx
 #: src/pages/settings/audio.tsx
 msgid "Channels"
 msgstr ""
@@ -2197,6 +2199,7 @@ msgstr ""
 
 #: src/components/layout.tsx
 #: src/lib/input/actions.ts
+#: src/pages/home.tsx
 #: src/pages/live-tv/index.tsx
 #: src/pages/settings/interface.tsx
 msgid "Live TV"
@@ -2540,6 +2543,10 @@ msgstr ""
 
 #: src/components/download-button.tsx
 msgid "No episodes to download there"
+msgstr ""
+
+#: src/pages/favourites.tsx
+msgid "No favourite channels yet."
 msgstr ""
 
 #: src/pages/settings/cache.tsx
