@@ -1,13 +1,9 @@
 // Shared by therarbg and torrent-galaxy, which run the same TRB backend.
 import { Cache } from '../../utils/cache.js';
-import {
-  formatZodError,
-  makeRequest,
-  DistributedLock,
-  createLogger,
-} from '../../utils/index.js';
+import { createLogger } from '../../utils/index.js';
 import type { Logger } from '../../logging/logger.js';
 import { searchWithBackgroundRefresh } from '../utils/general.js';
+import { MirrorPool } from '../utils/mirror-pool.js';
 
 import { z } from 'zod';
 
@@ -61,7 +57,7 @@ export interface TrbSite {
   name: string;
   indexerLabel: string;
   getConfig: () => {
-    url: string;
+    url: string[];
     searchTimeout: number;
     searchCacheTtl: number;
     pageLimit: number;
@@ -71,12 +67,14 @@ export interface TrbSite {
 export class TrbAPI {
   private readonly logger: Logger;
   private readonly searchCache: Cache<string, TrbSearchResponse>;
+  private readonly mirrorPool: MirrorPool;
 
   constructor(private readonly site: TrbSite) {
     this.logger = createLogger(site.id);
     this.searchCache = Cache.getInstance<string, TrbSearchResponse>(
       `${site.id}:search`
     );
+    this.mirrorPool = MirrorPool.for(site.id, () => site.getConfig().url);
   }
 
   async search(options: {
@@ -106,51 +104,11 @@ export class TrbAPI {
     categories: string[]
   ): Promise<TrbSearchResponse> {
     const categorySegments = categories.map((c) => `:category:${c}`).join('');
-    const url = new URL(
-      `/get-posts/keywords:${encodeURIComponent(query)}:order:-a${categorySegments}:format:json/`,
-      this.site.getConfig().url
-    );
-    url.searchParams.set('page', page.toString());
-    const timeout = this.site.getConfig().searchTimeout;
-
-    const { result } = await DistributedLock.getInstance().withLock(
-      url.toString(),
-      async () => {
-        this.logger.debug(`Making GET request to ${url.pathname}`);
-        try {
-          const response = await makeRequest(url.toString(), {
-            method: 'GET',
-            preset: 'chrome',
-            timeout,
-          });
-
-          if (!response.ok) {
-            await response.body?.cancel().catch(() => {});
-            throw new Error(
-              `${this.site.name} API error (${response.status}): ${response.statusText}`
-            );
-          }
-
-          const data = (await response.json()) as unknown;
-
-          try {
-            return TrbSearchResponse.parse(data);
-          } catch (error) {
-            throw new Error(
-              `Failed to parse ${this.site.name} API response: ${formatZodError(error as z.ZodError)}`
-            );
-          }
-        } catch (error) {
-          this.logger.error(
-            `Request to ${url.pathname} failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-          );
-          throw error instanceof Error
-            ? error
-            : new Error('Unknown error occurred');
-        }
-      },
-      { timeout, ttl: timeout + 1000 }
-    );
-    return result;
+    const path = `/get-posts/keywords:${encodeURIComponent(query)}:order:-a${categorySegments}:format:json/?page=${page}`;
+    return this.mirrorPool.getJson(path, {
+      schema: TrbSearchResponse,
+      preset: 'chrome',
+      timeout: this.site.getConfig().searchTimeout,
+    });
   }
 }
