@@ -15,7 +15,7 @@ export class CinemetaPreset extends Preset {
       supportedResources,
       appConfig.presets.cinemeta.defaultTimeout ??
         appConfig.presets.defaultTimeout
-    );
+    ).filter((option) => option.id !== 'url');
 
     return {
       ID: 'cinemeta',
@@ -49,12 +49,9 @@ export class CinemetaPreset extends Preset {
     userData: UserData,
     options: Record<string, any>
   ): Addon {
-    const baseUrl = options.url
-      ? new URL(options.url).origin
-      : this.DEFAULT_URL;
     return {
       name: options.name || this.METADATA.NAME,
-      manifestUrl: `${baseUrl}/manifest.json`,
+      manifestUrl: `${this.DEFAULT_URL}/manifest.json`,
       enabled: true,
       library: false,
       resources: options.resources || this.METADATA.SUPPORTED_RESOURCES,
