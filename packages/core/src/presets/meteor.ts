@@ -70,6 +70,11 @@ class MeteorStreamParser extends StreamParser {
     return stream.name?.includes('📫') ?? false;
   }
 
+  // Meteor's "no results" placeholder, not a stream.
+  protected override shouldSkip(stream: Stream): boolean {
+    return stream.externalUrl?.includes('/status/video/no_results') ?? false;
+  }
+
   protected override getTorrentFile(stream: Stream): string | undefined {
     return stream.behaviorHints?.filename ?? undefined;
   }
