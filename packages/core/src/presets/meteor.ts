@@ -8,13 +8,59 @@ import {
   ParsedFile,
 } from '../db/index.js';
 import { baseOptions, Preset } from './preset.js';
-import { constants, ServiceId } from '../utils/index.js';
+import { constants, normaliseLanguage, ServiceId } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
-import { StreamParser, getLanguagesAfterMarker } from '../parser/index.js';
+import {
+  StreamParser,
+  FileParser,
+  getLanguagesAfterMarker,
+  getRegexForTextAfterEmojis,
+} from '../parser/index.js';
+import { arrayMerge } from '../parser/merge.js';
+
+// Meteor-only tokens (`lat` is Latin in ISO 639-2, not Latino).
+const LANGUAGE_ALIASES: Record<string, string> = {
+  dual: 'Dual Audio',
+  dub: 'Dubbed',
+  lat: 'Latino',
+};
+
+/** Text after `marker` on its line, e.g. `2160p | remux` after `📺`. */
+function lineAfter(
+  description: string | null | undefined,
+  marker: string
+): string {
+  return (
+    description?.match(getRegexForTextAfterEmojis([marker]))?.[1]?.trim() ?? ''
+  );
+}
+
+/** Lower-case codes after `marker`, e.g. `['en', 'ja', 'dual']` after `🌐`. */
+function codesAfter(
+  description: string | null | undefined,
+  marker: string
+): string[] {
+  return lineAfter(description, marker)
+    .toLowerCase()
+    .split(/[\s,]+/);
+}
+
+/** Languages after `marker`: codes, or flags on self-configured URLs. */
+function languagesAfter(
+  description: string | null | undefined,
+  marker: string
+): string[] {
+  const flags = getLanguagesAfterMarker(description, marker);
+  if (flags?.length) return flags;
+  const languages = codesAfter(description, marker).map(
+    (code) => LANGUAGE_ALIASES[code] ?? normaliseLanguage(code)
+  );
+  return [...new Set(languages)].filter((l): l is string => !!l);
+}
 
 class MeteorStreamParser extends StreamParser {
   protected get indexerEmojis(): string[] {
-    return ['🔗', '📰'];
+    return ['🔗'];
   }
 
   protected getInLibrary(
@@ -24,23 +70,46 @@ class MeteorStreamParser extends StreamParser {
     return stream.name?.includes('📫') ?? false;
   }
 
-  protected getStreamType(
-    stream: Stream,
-    service: ParsedStream['service'],
-    currentParsedStream: ParsedStream
-  ): ParsedStream['type'] {
-    const type = super.getStreamType(stream, service, currentParsedStream);
-    if (currentParsedStream.indexer?.startsWith('Usenet')) {
-      currentParsedStream.indexer = currentParsedStream.indexer
-        .replace('Usenet ·', '')
-        .trim();
-      return constants.USENET_STREAM_TYPE;
-    }
-    return type;
-  }
-
   protected override getTorrentFile(stream: Stream): string | undefined {
     return stream.behaviorHints?.filename ?? undefined;
+  }
+
+  // Merged with the filename's, as Meteor may only guess them.
+  protected override getLanguages(stream: Stream): string[] {
+    return languagesAfter(stream.description, '🌐');
+  }
+
+  // Merge in the 📺 video and 🔊 audio lines; the filename wins on scalars.
+  protected override getParsedFile(
+    stream: Stream,
+    parsedStream: ParsedStream
+  ): ParsedFile | undefined {
+    const parsedFile = super.getParsedFile(stream, parsedStream);
+    const specs = [
+      lineAfter(stream.description, '📺'),
+      lineAfter(stream.description, '🔊'),
+    ]
+      .join(' ')
+      .trim();
+    if (!parsedFile || !specs) return parsedFile;
+
+    const parsedSpecs = FileParser.parse(specs);
+    parsedFile.resolution ||= parsedSpecs.resolution;
+    parsedFile.quality ||= parsedSpecs.quality;
+    parsedFile.encode ||= parsedSpecs.encode;
+    parsedFile.visualTags = arrayMerge(
+      parsedFile.visualTags,
+      parsedSpecs.visualTags
+    );
+    parsedFile.audioTags = arrayMerge(
+      parsedFile.audioTags,
+      parsedSpecs.audioTags
+    );
+    parsedFile.audioChannels = arrayMerge(
+      parsedFile.audioChannels,
+      parsedSpecs.audioChannels
+    );
+    return parsedFile;
   }
 
   protected getParsedFileMergeOverrides(
@@ -49,15 +118,14 @@ class MeteorStreamParser extends StreamParser {
   ): Partial<ParsedFile> {
     const overrides: Partial<ParsedFile> = {};
 
-    const audioLangs = getLanguagesAfterMarker(stream.description, '🌐');
-    if (audioLangs && audioLangs.length > 0) {
-      overrides.languages = audioLangs;
-      overrides.mediaInfoQuality = 'addon';
-    }
+    const audioCodes = codesAfter(stream.description, '🌐');
+    if (audioCodes.includes('dub')) overrides.dubbed = true;
+    if (audioCodes.includes('sub')) overrides.subbed = true;
 
-    const subtitleLangs = getLanguagesAfterMarker(stream.description, '💬');
-    if (subtitleLangs && subtitleLangs.length > 0) {
-      overrides.subtitles = subtitleLangs;
+    const audioLangs = languagesAfter(stream.description, '🌐');
+    const subtitleLangs = languagesAfter(stream.description, '💬');
+    if (subtitleLangs.length > 0) overrides.subtitles = subtitleLangs;
+    if (audioLangs.length > 0 || subtitleLangs.length > 0) {
       overrides.mediaInfoQuality = 'addon';
     }
 
@@ -79,6 +147,7 @@ export class MeteorPreset extends Preset {
       constants.DEBRIDER_SERVICE,
       constants.EASYDEBRID_SERVICE,
       constants.OFFCLOUD_SERVICE,
+      constants.TORRIN_SERVICE,
     ];
 
     const supportedResources = [
@@ -173,39 +242,6 @@ export class MeteorPreset extends Preset {
         ],
       },
       {
-        id: 'usenet',
-        type: 'subsection',
-        subsectionIntent: 'pill',
-        name: 'Usenet',
-        description: '',
-        showInSimpleMode: false,
-        subOptions: [
-          {
-            id: 'usenetAlerts',
-            name: 'TorBox Pro Only',
-            description: 'Requires TorBox Pro subscription',
-            type: 'alert',
-            intent: 'info',
-          },
-          {
-            id: 'enabled',
-            name: 'Enabled',
-            description: 'Enable Usenet results',
-            type: 'boolean',
-            default: false,
-          },
-          {
-            id: 'customSearchEngines',
-            name: 'Custom Search Engines',
-            description:
-              'Enable the use of custom user search engines that you have added to your TorBox account',
-            type: 'boolean',
-            default: false,
-            showInSimpleMode: false,
-          },
-        ],
-      },
-      {
         id: 'includeP2P',
         name: 'Include P2P',
         description: 'Include P2P results, even if a debrid service is enabled',
@@ -250,7 +286,6 @@ export class MeteorPreset extends Preset {
       SUPPORTED_STREAM_TYPES: [
         constants.P2P_STREAM_TYPE,
         constants.DEBRID_STREAM_TYPE,
-        constants.USENET_STREAM_TYPE,
       ],
       SUPPORTED_RESOURCES: supportedResources,
     };
@@ -349,42 +384,35 @@ export class MeteorPreset extends Preset {
     }
     url = url.replace(/\/$/, '');
 
-    const debridServices: { service: string; apiKey: string }[] = services.map(
-      (serviceId) => ({
-        service: serviceId,
-        apiKey: this.getServiceCredential(serviceId, userData),
-      })
-    );
-
-    if (services.length === 0) {
-      debridServices.push({ service: 'torrent', apiKey: '' });
-    }
+    const debridServices = services.map((serviceId) => ({
+      name: serviceId,
+      apiKey: this.getServiceCredential(serviceId, userData),
+    }));
 
     const configString = this.base64EncodeJSON(
       {
-        debridService:
-          debridServices.length === 1 ? debridServices[0].service : undefined,
-        debridApiKey:
-          debridServices.length === 1 ? debridServices[0].apiKey : undefined,
-        debridServices: debridServices.length > 1 ? debridServices : undefined,
+        services: debridServices.length > 0 ? debridServices : undefined,
+        allowP2P: debridServices.length === 0,
         cachedOnly: false,
+        skipReleaseFilter: true,
         removeTrash: options.removeTrash ?? false,
-        enableYourMedia: options.yourMedia?.enabled ?? false,
-        yourMediaLegacyMode: options.yourMedia?.legacyMode ?? false,
-        showYourMediaStreams: options.yourMedia?.showStreams ?? false,
-        yourMediaSources: options.yourMedia?.sources ?? ['torrent'],
-        enableUsenet: options.usenet?.enabled ?? false,
-        usenetCustomEngines: options.usenet?.customSearchEngines ?? false,
         removeSamples: false,
-        removeAdult: false,
+        allowAdult: true,
         exclude3D: false,
         enableSeaDex: false,
+        showYourMedia: options.yourMedia?.enabled ?? false,
+        hideYourMediaStreams: !options.yourMedia?.showStreams,
+        yourMediaSources: options.yourMedia?.sources ?? ['torrent'],
+        yourMediaLegacyMode: options.yourMedia?.legacyMode ?? false,
         minSeeders: 0,
         maxResults: 0,
-        maxResultsPerRes: 0,
-        maxSize: 0,
+        maxPerResolution: 0,
         resolutions: [],
-        languages: { preferred: [], required: [], exclude: [] },
+        preferredLangs: [],
+        languages: [],
+        excludedLangs: [],
+        excludedSources: [],
+        // MeteorStreamParser reads these lines in this format
         resultFormat: [
           'title',
           'quality',
@@ -395,6 +423,7 @@ export class MeteorPreset extends Preset {
           'sublang',
           'audiolang',
         ],
+        languageFormat: 'codes',
         sortOrder: [
           'pack',
           'cached',
