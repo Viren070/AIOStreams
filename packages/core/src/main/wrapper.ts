@@ -411,7 +411,12 @@ export class Wrapper {
     extras?: string
   ): Promise<MetaPreview[]> {
     const validator = (data: any): MetaPreview[] => {
-      return this.validateArray(data.metas, MetaPreviewSchema, 'catalog items');
+      // A guide catalog asked for a date answers with whole metas, programmes included.
+      return this.validateArray(
+        data.metasDetailed ?? data.metas,
+        MetaPreviewSchema,
+        'catalog items'
+      );
     };
 
     const catalogTtl = resolveTtl(

@@ -261,9 +261,11 @@ export class StremioTransformer {
     };
   }
 
+  /** A guide asked for a `date` takes `metasDetailed`; Stremio drops the programmes from `metas`. */
   transformCatalog(
-    response: AIOStreamsResponse<MetaPreview[]>
-  ): CatalogResponse {
+    response: AIOStreamsResponse<MetaPreview[]>,
+    dated = false
+  ): CatalogResponse | { metasDetailed: MetaPreview[] } {
     const { data: metas, errors } = response;
 
     if (this.showError('catalog', errors)) {
@@ -277,9 +279,7 @@ export class StremioTransformer {
       );
     }
 
-    return {
-      metas,
-    };
+    return dated ? { metasDetailed: metas } : { metas };
   }
 
   async transformMeta(
