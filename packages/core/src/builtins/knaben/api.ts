@@ -43,28 +43,6 @@ enum KnabenCategory {
   AnimeNonEnglishTranslated = 6008000,
 }
 
-/** Every field Knaben returns, so `searchField`/`orderBy` stay unrestricted. */
-const KNABEN_HIT_FIELDS = [
-  'bytes',
-  'cachedOrigin',
-  'category',
-  'categoryId',
-  'date',
-  'details',
-  'hash',
-  'id',
-  'lastSeen',
-  'magnetUrl',
-  'link',
-  'peers',
-  'seeders',
-  'score',
-  'title',
-  'tracker',
-  'trackerId',
-  'virusDetection',
-] as const;
-
 // Strict, and only what the addon reads: the response was a passthrough
 // object, so every extra field Knaben adds got cached for a week as well.
 const KnabenSearchHitSchema = z.object({
@@ -92,46 +70,14 @@ const KnabenSearchResponse = z.object({
 
 type KnabenSearchResponse = z.infer<typeof KnabenSearchResponse>;
 
-const KnabenSearchOptions = z.object({
-  searchType: z
-    .union([
-      z.literal('score'),
-      z.string().regex(/^(100|[1-9]?\d)%$/, {
-        message: 'Must be "score" or a percentage string like "80%"',
-      }),
-    ])
-    .default('100%')
-    .optional(),
-  searchField: z.enum(KNABEN_HIT_FIELDS).default('title').optional(),
-  query: z.string(),
-  orderBy: z.enum(KNABEN_HIT_FIELDS).optional(),
-  orderDirection: z.enum(['asc', 'desc']).default('desc').optional(),
-  categories: z.array(z.number()).optional(),
-  from: z.number().default(0).optional(),
-  size: z.number().min(1).max(300).default(150).optional(),
-  hideUnsafe: z.boolean().default(false).optional(),
-  hideXXX: z.boolean().default(true).optional(),
-  secondsSinceLastSeen: z.number().optional(),
-});
+interface KnabenSearchOptions {
+  query: string;
+  categories?: number[];
+}
 
-type KnabenSearchOptions = z.infer<typeof KnabenSearchOptions>;
-
-const KnabenSearchOptionsRequest = KnabenSearchOptions.transform((data) => ({
-  search_type: data['searchType'],
-  search_field: data['searchField'],
-  query: data['query'],
-  order_by: data['orderBy'],
-  order_direction: data['orderDirection'],
-  categories: data['categories'],
-  from: data['from'],
-  size: data['size'],
-  hide_unsafe: data['hideUnsafe'],
-  hide_xxx: data['hideXXX'],
-  seconds_since_last_seen: data['secondsSinceLastSeen'],
-}));
-
+// https://knaben.org/api/v2/
 const API_BASE_URL = 'https://api.knaben.org';
-const API_VERSION = '1';
+const API_VERSION = '2';
 
 class KnabenAPI {
   private headers: Record<string, string>;
@@ -143,14 +89,22 @@ class KnabenAPI {
 
   constructor() {
     this.headers = {
-      'Content-Type': 'application/json',
       'User-Agent': HEADER_PRESETS.chrome['User-Agent'],
       Accept: 'application/json',
     };
   }
 
   async search(options: KnabenSearchOptions): Promise<KnabenSearchResponse> {
-    const body = KnabenSearchOptionsRequest.parse(options);
+    const queryParams = new URLSearchParams({
+      q: options.query,
+      s: '300',
+      // include 0-seeder and unsafe hits, hidden by default
+      dead: '',
+      unsafe: '',
+    });
+    if (options.categories?.length) {
+      queryParams.set('c', options.categories.join(','));
+    }
     const cacheKey = JSON.stringify(options);
 
     return searchWithBackgroundRefresh({
@@ -159,11 +113,10 @@ class KnabenAPI {
       bgCacheKey: `knaben:${cacheKey}`,
       cacheTTL: appConfig.builtins.knaben.searchCacheTtl,
       fetchFn: () =>
-        this.request<KnabenSearchResponse>('', {
+        this.request<KnabenSearchResponse>('search', {
           schema: KnabenSearchResponse,
-          method: 'POST',
           timeout: appConfig.builtins.knaben.searchTimeout,
-          body,
+          queryParams,
         }),
       isEmptyResult: (result) => result.hits.length === 0,
       logger,
@@ -174,8 +127,7 @@ class KnabenAPI {
     endpoint: string,
     options: {
       schema: z.ZodSchema<T>;
-      body?: unknown;
-      method?: string;
+      queryParams?: URLSearchParams;
       timeout?: number;
     }
   ): Promise<T> {
@@ -184,8 +136,11 @@ class KnabenAPI {
       path += `/${endpoint.startsWith('/') ? endpoint.slice(1) : endpoint}`;
     }
     const url = new URL(path, API_BASE_URL);
+    if (options.queryParams) {
+      url.search = options.queryParams.toString();
+    }
 
-    const lockKey = `${url.toString()}:${JSON.stringify(options.body)}`;
+    const lockKey = url.toString();
     const { result } = await DistributedLock.getInstance().withLock(
       lockKey,
       () => this._request(endpoint, options),
@@ -202,25 +157,26 @@ class KnabenAPI {
     endpoint: string,
     options: {
       schema: z.ZodSchema<T>;
-      body?: unknown;
-      method?: string;
+      queryParams?: URLSearchParams;
       timeout?: number;
     }
   ): Promise<T> {
-    const { schema, body, method = 'GET' } = options;
+    const { schema } = options;
     let path = `/v${API_VERSION}`;
     if (endpoint) {
       path += `/${endpoint.startsWith('/') ? endpoint.slice(1) : endpoint}`;
     }
     const url = new URL(path, API_BASE_URL);
+    if (options.queryParams) {
+      url.search = options.queryParams.toString();
+    }
 
-    logger.debug(`Making ${method} request to ${path}`);
+    logger.debug(`Making GET request to ${path}`);
 
     try {
       const response = await makeRequest(url.toString(), {
-        method,
+        method: 'GET',
         headers: this.headers,
-        body: body ? JSON.stringify(body) : undefined,
         timeout: options.timeout ?? appConfig.userLimits.timeouts.maxTimeout,
       });
 

@@ -114,8 +114,6 @@ export class KnabenAddon extends BaseDebridAddon<KnabenAddonConfig> {
         const { hits } = await this.api.search({
           query: q,
           categories,
-          size: 300,
-          hideUnsafe: false,
         });
         logger.info(
           `Knaben search for ${q} took ${getTimeTakenSincePoint(start)}`,
