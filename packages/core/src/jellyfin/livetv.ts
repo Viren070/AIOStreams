@@ -287,6 +287,33 @@ export async function listChannels(
   return { channels, total: complete ? offset : Math.max(offset, end) + 1 };
 }
 
+/** How far a search reads the channel list, which it holds an hour. */
+const SEARCHED = 5_000;
+
+/** Channels whose names hold every word of the term, in list order. */
+export async function searchChannels(
+  engine: AIOStreams,
+  scope: string,
+  term: string,
+  limit: number
+): Promise<ListedChannel[]> {
+  const words = term.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return [];
+  const { channels } = await listChannels(engine, scope, {
+    startIndex: 0,
+    limit: SEARCHED,
+  });
+  const named = channels.filter(({ meta }) => {
+    const name = (meta.name ?? '').toLowerCase();
+    return words.every((w) => name.includes(w));
+  });
+  // A channel's number finds it too, ahead of names holding the digits.
+  const numbered = channels.find(({ number }) => number === term.trim());
+  return (
+    numbered ? [numbered, ...named.filter((c) => c !== numbered)] : named
+  ).slice(0, limit);
+}
+
 export async function channelNumberOf(
   scope: string,
   channel: { type: string; id: string }
