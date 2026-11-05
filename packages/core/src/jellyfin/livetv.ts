@@ -127,6 +127,8 @@ export function airingAt(
 }
 
 const DAY_MS = 86_400_000;
+const GUIDE_SAMPLE = 100;
+const MAX_DAYS_BACK = 14;
 
 /** The UTC days a window touches, as the guide's `date` extra names them. */
 export function utcDays(from: number, to: number): string[] {
@@ -406,9 +408,62 @@ export async function programmesFor(
   return found;
 }
 
-/** A programme plays its channel live. */
 export function channelOf(d: ProgramDescriptor): ContentDescriptor {
   return { k: 'movie', t: d.t, i: d.i };
+}
+
+/** The days back a channel's addon plays its programmes from, by `behaviorHints.catchupDays`. */
+export function catchupDaysOf(meta: unknown): number {
+  const days = (meta as { behaviorHints?: { catchupDays?: unknown } } | null)
+    ?.behaviorHints?.catchupDays;
+  return typeof days === 'number' && days > 0 ? days : 0;
+}
+
+/** Whether a programme that has begun is still within its channel's catch-up. */
+export function caughtUp(meta: unknown, start: number, now = Date.now()) {
+  const days = catchupDaysOf(meta);
+  return days > 0 && start <= now && start >= now - days * DAY_MS;
+}
+
+/**
+ * What a programme's id plays: the programme from its start, as an episode of
+ * its channel, where the channel keeps it; else the channel live.
+ */
+export async function programmeTarget(
+  engine: AIOStreams,
+  scope: string,
+  d: ProgramDescriptor
+): Promise<ContentDescriptor> {
+  if (d.at <= Date.now()) {
+    const guide = (
+      await programmesFor(
+        engine,
+        scope,
+        [{ type: d.t, id: d.i }],
+        d.at,
+        d.at + 1
+      )
+    ).get(`${d.t}|${d.i}`);
+    const programme = guide?.programmes.find((p) => p.start === d.at);
+    if (programme && caughtUp(guide?.meta, programme.start))
+      return { k: 'episode', t: d.t, i: d.i, s: 0, e: 0, v: programme.id };
+  }
+  return channelOf(d);
+}
+
+/** How far back the guide goes: the longest catch-up of the first channels listed. */
+export async function guideDaysBack(
+  engine: AIOStreams,
+  scope: string
+): Promise<number> {
+  const { channels } = await listChannels(engine, scope, {
+    startIndex: 0,
+    limit: GUIDE_SAMPLE,
+  });
+  return Math.min(
+    MAX_DAYS_BACK,
+    Math.max(0, ...channels.map(({ meta }) => catchupDaysOf(meta)))
+  );
 }
 
 /** Built on the entry's content item, so the channel keeps the id favourites and history know. */
@@ -449,7 +504,7 @@ const FLAG_GENRES: [string, RegExp][] = [
 
 export function buildProgramItem(
   ctx: ItemBuildContext,
-  channelMeta: Pick<MetaPreview, 'type' | 'id'>,
+  channelMeta: Pick<MetaPreview, 'type' | 'id'> & { behaviorHints?: unknown },
   programme: Programme,
   channel: JellyfinItem
 ): JellyfinItem {
@@ -492,6 +547,9 @@ export function buildProgramItem(
       Id: personId({ k: 'person', n: name }),
     })),
     ProviderIds: programme.imdbId ? { Imdb: programme.imdbId } : {},
+    ...(caughtUp(channelMeta, programme.start) && {
+      aiostreams: { catchup: true },
+    }),
     ...imageTagsFor(images),
     ...Object.fromEntries(
       FLAG_GENRES.map(([flag, re]) => [flag, re.test(genre)])
