@@ -1,11 +1,11 @@
 import { Router, type Request, type Response } from 'express';
 import {
-  channelOf,
   config as appConfig,
   createLogger,
   encodeItemId,
   lookupFor,
   couldHaveSegments,
+  programmeTarget,
   isMemoFresh,
   offeredSources,
   playableSources,
@@ -116,8 +116,9 @@ async function locate(
   let d = decoded.descriptor;
   let playedId = itemId;
   if (d.k === 'program') {
-    d = channelOf(d);
-    playedId = encodeItemId(d);
+    d = await programmeTarget(await ctx.engine(), ctx.scope(), d);
+    // Live, it shares the channel's memo, so either id finds the same session.
+    if (d.k !== 'episode') playedId = encodeItemId(d);
   }
   if (
     d.k !== 'movie' &&

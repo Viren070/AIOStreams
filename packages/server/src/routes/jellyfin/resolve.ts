@@ -100,11 +100,15 @@ export async function playTargetFor(
     const meta = await getMeta(ctx, d.t, d.i).catch(() => null);
     const video = meta?.videos?.find((v) => v.id === d.v) as
       MetaVideo | undefined;
+    // A channel's programme runs from its start to its end.
+    const aired =
+      Date.parse(String(video?.endTime)) - Date.parse(String(video?.startTime));
     return {
       type: d.t,
       videoId: d.v,
       runtimeMs:
-        parseRuntimeMs(video?.runtime) ?? parseRuntimeMs(meta?.runtime),
+        parseRuntimeMs(video?.runtime) ??
+        (aired > 0 ? aired : parseRuntimeMs(meta?.runtime)),
       streams: video?.streams ?? undefined,
     };
   }
@@ -257,12 +261,13 @@ async function resolveUncached(
   if (!target) return null;
 
   const engine = await ctx.engine();
-  const liveContent = isChannel(
-    target.type,
-    await getMeta(ctx, d.t, d.k === 'movie' ? (d.p ?? d.i) : d.i).catch(
-      () => null
-    )
-  );
+  // A channel's programme plays from its archive, which is not live.
+  const liveContent =
+    d.k === 'movie' &&
+    isChannel(
+      target.type,
+      await getMeta(ctx, d.t, d.p ?? d.i).catch(() => null)
+    );
   /* Copied, not marked in place: the pipeline result is cached and shared. */
   const asLive = (stream: ParsedStream): ParsedStream =>
     liveContent && stream.type !== 'live'

@@ -203,12 +203,13 @@ async function record(
   // Before any await, so a tick still in flight when a stop is written is older.
   const at = Date.now();
   const found = await decodeItemForRequest(ctx, rawId);
-  // A programme reports the channel it played (playback.ts).
-  const d = found?.k === 'program' ? channelOf(found) : found;
+  // A programme, live or from its start, reports as its channel and keeps no history.
+  const programme = found?.k === 'program';
+  const d = programme ? channelOf(found) : found;
   if (!d || (d.k !== 'movie' && d.k !== 'episode')) return;
-  const itemId = found?.k === 'program' ? encodeItemId(d) : rawId;
+  const itemId = programme ? encodeItemId(d) : rawId;
   const { tracks } = opts;
-  if (await playingLive(ctx, d, itemId, opts.mediaSourceId)) {
+  if (programme || (await playingLive(ctx, d, itemId, opts.mediaSourceId))) {
     // The session still tracks what is on; only the history is skipped.
     const session = sessionOf(ctx, opts.playSessionId);
     if (type === 'start')
