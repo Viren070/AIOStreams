@@ -21,6 +21,7 @@ import {
   type DesktopNavigation,
   type RailNames,
   type RailShape,
+  type StartPage,
   type TopBar,
   type TabNames,
   type TouchNavigation,
@@ -31,9 +32,27 @@ import {
   type PosterSize,
 } from '../../lib/settings';
 import { SettingsCard } from '../../components/settings-card';
+import { startPages } from '../../lib/start-page';
 import { onDevice, followsYou, seconds } from './common';
 
 const NOTHING = 'none';
+
+function startPageName(page: StartPage): string {
+  switch (page) {
+    case 'home':
+      return t`Home`;
+    case 'discover':
+      return t`Discover`;
+    case 'favourites':
+      return t`Favourites`;
+    case 'calendar':
+      return t`Calendar`;
+    case 'activity':
+      return t`Activity`;
+    case 'downloads':
+      return t`Downloads`;
+  }
+}
 
 /** How the navigation looks, with only what this device shows. */
 function NavigationCard() {
@@ -55,6 +74,7 @@ function NavigationCard() {
   const [background, setBackground] = useSetting(
     settings.interface.barBackground
   );
+  const [startPage, setStartPage] = useSetting(settings.interface.startPage);
   const rail = tv
     ? tvNavigation === 'rail'
     : touch && touchNavigation === 'rail';
@@ -68,6 +88,16 @@ function NavigationCard() {
       title={t`Navigation`}
       description={onDevice()}
     >
+      <Select
+        label={t`Start on`}
+        help={t`The page the app opens on. A link still opens what it points to.`}
+        options={startPages().map((page) => ({
+          value: page,
+          label: startPageName(page),
+        }))}
+        value={startPage}
+        onValueChange={(value) => setStartPage(value as StartPage)}
+      />
       {tv && (
         <Select
           label={t`Style`}

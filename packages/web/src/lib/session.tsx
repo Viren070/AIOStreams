@@ -14,7 +14,8 @@ import { settings, syncPreferences } from './settings';
 import { useLatest } from './use-latest';
 import { forgetSavedUser, forgetUser, savedUser, saveUser } from './cache';
 import { watchServer } from './connection';
-import { startOver, to } from './paths';
+import { startOver } from './paths';
+import { startPath } from './start-page';
 import type {
   AuthenticationResult,
   Branding,
@@ -142,12 +143,12 @@ export function useSessionPhase(base: string) {
 
   /**
    * `stay`, still signed in here, carries on without a PIN. Whoever is picked
-   * starts on Home, with no way back to the pages before.
+   * starts on the start page, with no way back to the pages before.
    */
   const pick = React.useCallback(
     async (proof: JellyfinClient, users: PickableUser[], stay?: UserDto) => {
       // Before the session's router unmounts: mounted again, it doesn't load a place it moved to meanwhile.
-      await startOver(to.home);
+      await startOver(startPath());
       setPhase({
         kind: 'picking',
         client: proof,
@@ -257,7 +258,7 @@ export function useSessionPhase(base: string) {
           return;
         }
         forgetSavedUser(base);
-        await startOver(to.home);
+        await startOver(startPath());
       }
       if (!__STANDALONE__ && hasConfigSessionCookie() && !signedOut(base)) {
         const auth = await configSessionToken<WebTokenResult>().catch(
@@ -364,7 +365,7 @@ export function useSessionPhase(base: string) {
   }, [latest]);
 
   const signOut = React.useCallback(async () => {
-    await startOver(to.home);
+    await startOver(startPath());
     endSession(base, phase.kind === 'ready' ? phase.client.token : null);
     queryClient.removeQueries({ queryKey: ['jf'] });
     setPhase({ kind: 'signed-out' });

@@ -389,6 +389,7 @@ msgstr "Actions"
 #: src/pages/home.tsx
 #: src/pages/settings/apps.tsx
 #: src/pages/settings/cache.tsx
+#: src/pages/settings/interface.tsx
 msgid "Activity"
 msgstr "Activity"
 
@@ -779,6 +780,7 @@ msgstr "Cache size"
 #: src/pages/calendar.tsx
 #: src/pages/home.tsx
 #: src/pages/settings/apps.tsx
+#: src/pages/settings/interface.tsx
 msgid "Calendar"
 msgstr "Calendar"
 
@@ -1360,6 +1362,7 @@ msgstr "Discord refused the status: {message}"
 #: src/components/layout.tsx
 #: src/pages/discover.tsx
 #: src/pages/settings/apps.tsx
+#: src/pages/settings/interface.tsx
 msgid "Discover"
 msgstr "Discover"
 
@@ -1456,6 +1459,7 @@ msgstr "Downloading, {percent}%"
 #: src/components/layout.tsx
 #: src/pages/downloads.tsx
 #: src/pages/settings/index.tsx
+#: src/pages/settings/interface.tsx
 msgid "Downloads"
 msgstr "Downloads"
 
@@ -1621,6 +1625,7 @@ msgstr "Favourite"
 #: src/components/layout.tsx
 #: src/pages/favourites.tsx
 #: src/pages/settings/apps.tsx
+#: src/pages/settings/interface.tsx
 msgid "Favourites"
 msgstr "Favourites"
 
@@ -1839,6 +1844,7 @@ msgstr "Hold"
 #: src/components/layout.tsx
 #: src/lib/input/actions.ts
 #: src/pages/settings/apps.tsx
+#: src/pages/settings/interface.tsx
 msgid "Home"
 msgstr "Home"
 
@@ -4154,6 +4160,10 @@ msgstr "Stable"
 msgid "Start a party"
 msgstr "Start a party"
 
+#: src/pages/settings/interface.tsx
+msgid "Start on"
+msgstr "Start on"
+
 #: src/components/remote-sheet.tsx
 msgid "Starting…"
 msgstr "Starting…"
@@ -4555,6 +4565,10 @@ msgstr "The other device could not be reached"
 #: src/components/crash-report.tsx
 msgid "The page restarted unexpectedly"
 msgstr "The page restarted unexpectedly"
+
+#: src/pages/settings/interface.tsx
+msgid "The page the app opens on. A link still opens what it points to."
+msgstr "The page the app opens on. A link still opens what it points to."
 
 #: src/lib/party/party.ts
 msgid "The party ended after a long time with nothing playing."

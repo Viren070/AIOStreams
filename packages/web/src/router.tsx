@@ -11,6 +11,7 @@ import {
 import { PageMessage, WebLayout } from './components/layout';
 import { navigate, setNavigator, to } from './lib/paths';
 import { lastCatalog } from './lib/settings';
+import { openStartPage } from './lib/start-page';
 import { DiscoverIndex, DiscoverPage } from './pages/discover';
 import { FavouritesPage } from './pages/favourites';
 import { CalendarPage } from './pages/calendar';
@@ -263,6 +264,8 @@ function NotFoundPage(): React.ReactElement {
     </PageMessage>
   );
 }
+
+openStartPage();
 
 export const webRouter = createRouter({
   routeTree,

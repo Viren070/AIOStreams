@@ -28,6 +28,16 @@ export const HERO_SECONDS = [5, 7, 9, 12, 15, 20, 30] as const;
 export const TOUCH_NAVIGATIONS = ['rail', 'bar', 'top'] as const;
 export type TouchNavigation = (typeof TOUCH_NAVIGATIONS)[number];
 
+export const START_PAGES = [
+  'home',
+  'discover',
+  'favourites',
+  'calendar',
+  'activity',
+  'downloads',
+] as const;
+export type StartPage = (typeof START_PAGES)[number];
+
 export const TV_NAVIGATIONS = ['rail', 'top'] as const;
 export type TvNavigation = (typeof TV_NAVIGATIONS)[number];
 
@@ -724,6 +734,11 @@ export const settings = {
     cardPreviews: device<boolean>(
       'aiostreams-web-interface-card-previews',
       true
+    ),
+    startPage: device<StartPage>(
+      'aiostreams-web-interface-start-page',
+      'home',
+      START_PAGES
     ),
     /** Where a touch screen wide enough for the sidebar keeps the navigation. */
     touchNavigation: device<TouchNavigation>(

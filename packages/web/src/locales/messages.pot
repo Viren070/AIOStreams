@@ -388,6 +388,7 @@ msgstr ""
 #: src/pages/home.tsx
 #: src/pages/settings/apps.tsx
 #: src/pages/settings/cache.tsx
+#: src/pages/settings/interface.tsx
 msgid "Activity"
 msgstr ""
 
@@ -778,6 +779,7 @@ msgstr ""
 #: src/pages/calendar.tsx
 #: src/pages/home.tsx
 #: src/pages/settings/apps.tsx
+#: src/pages/settings/interface.tsx
 msgid "Calendar"
 msgstr ""
 
@@ -1359,6 +1361,7 @@ msgstr ""
 #: src/components/layout.tsx
 #: src/pages/discover.tsx
 #: src/pages/settings/apps.tsx
+#: src/pages/settings/interface.tsx
 msgid "Discover"
 msgstr ""
 
@@ -1455,6 +1458,7 @@ msgstr ""
 #: src/components/layout.tsx
 #: src/pages/downloads.tsx
 #: src/pages/settings/index.tsx
+#: src/pages/settings/interface.tsx
 msgid "Downloads"
 msgstr ""
 
@@ -1620,6 +1624,7 @@ msgstr ""
 #: src/components/layout.tsx
 #: src/pages/favourites.tsx
 #: src/pages/settings/apps.tsx
+#: src/pages/settings/interface.tsx
 msgid "Favourites"
 msgstr ""
 
@@ -1838,6 +1843,7 @@ msgstr ""
 #: src/components/layout.tsx
 #: src/lib/input/actions.ts
 #: src/pages/settings/apps.tsx
+#: src/pages/settings/interface.tsx
 msgid "Home"
 msgstr ""
 
@@ -4153,6 +4159,10 @@ msgstr ""
 msgid "Start a party"
 msgstr ""
 
+#: src/pages/settings/interface.tsx
+msgid "Start on"
+msgstr ""
+
 #: src/components/remote-sheet.tsx
 msgid "Starting…"
 msgstr ""
@@ -4553,6 +4563,10 @@ msgstr ""
 
 #: src/components/crash-report.tsx
 msgid "The page restarted unexpectedly"
+msgstr ""
+
+#: src/pages/settings/interface.tsx
+msgid "The page the app opens on. A link still opens what it points to."
 msgstr ""
 
 #: src/lib/party/party.ts
