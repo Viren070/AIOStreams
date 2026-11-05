@@ -374,6 +374,7 @@ function useReporting(
     if (started && lasting) lastVersions.set(item.Id!, source.Id!);
   }, [started, lasting, item.Id, source.Id]);
 
+  const live = !!source.IsInfiniteStream;
   React.useEffect(() => {
     if (!started) return;
     const current = new PlaybackReporter(
@@ -383,6 +384,7 @@ function useReporting(
         mediaSourceId: source.Id!,
         playSessionId,
         userId: user.Id,
+        live,
       },
       () => ({
         ms: player.playhead.positionMs,
@@ -400,7 +402,7 @@ function useReporting(
       void current.stop().then(() => refresh.current());
       reporter.current = null;
     };
-  }, [started, client, user.Id, item.Id, source.Id, playSessionId]);
+  }, [started, client, user.Id, item.Id, source.Id, playSessionId, live]);
 
   React.useEffect(() => {
     reporter.current?.progress(paused ? 'Pause' : 'Unpause');

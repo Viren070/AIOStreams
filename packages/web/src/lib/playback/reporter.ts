@@ -35,6 +35,7 @@ export class PlaybackReporter {
       mediaSourceId: string;
       playSessionId?: string | null;
       userId?: string;
+      live?: boolean;
     },
     private readonly position: () => {
       ms: number;
@@ -96,7 +97,8 @@ export class PlaybackReporter {
       .then(
         () => {},
         (error: unknown) => {
-          if (!(error instanceof ConnectionError)) return;
+          // Sent later it would save a position, which a live stream has none of.
+          if (!(error instanceof ConnectionError) || this.info.live) return;
           const { PositionTicks } = this.body();
           storage.set(PENDING_KEY, [
             ...pendingStops(),
