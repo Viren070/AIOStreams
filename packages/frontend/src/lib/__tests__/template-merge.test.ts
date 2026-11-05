@@ -188,3 +188,66 @@ describe('mergeTemplateUpdate', () => {
     ]);
   });
 });
+
+describe('addon updates', () => {
+  it('keeps the user edit to an addon the update leaves alone', () => {
+    const base = [preset('a'), preset('b')];
+    const mine = [preset('a', { options: { mine: true } }), preset('b')];
+    const theirs = [preset('a'), preset('b', { enabled: false })];
+    expect(mergePresets(base, mine, theirs)).toEqual([
+      preset('a', { options: { mine: true } }),
+      preset('b', { enabled: false }),
+    ]);
+  });
+
+  it('applies a reorder from the template', () => {
+    const base = [preset('a'), preset('b')];
+    const theirs = [preset('b'), preset('a')];
+    const plan = planTemplateUpdate(
+      { presets: base } as any,
+      { presets: base } as any,
+      { presets: theirs } as any
+    );
+    expect(plan.changed).toEqual(['presets']);
+    expect(
+      (mergePresets(base, base, theirs) as any[]).map((p) => p.instanceId)
+    ).toEqual(['b', 'a']);
+  });
+
+  it('keeps the user order when the template does not reorder', () => {
+    const base = [preset('a'), preset('b')];
+    const mine = [preset('b'), preset('a')];
+    const theirs = [preset('a'), preset('b'), preset('c')];
+    expect(
+      (mergePresets(base, mine, theirs) as any[]).map((p) => p.instanceId)
+    ).toEqual(['b', 'a', 'c']);
+  });
+
+  it('does not conflict when the user removed one addon and the update added another', () => {
+    const base = [preset('a'), preset('b')];
+    const plan = planTemplateUpdate(
+      { presets: base } as any,
+      { presets: [preset('a')] } as any,
+      { presets: [...base, preset('c')] } as any
+    );
+    expect(plan.conflicts).toEqual([]);
+  });
+
+  it('conflicts when the update adds an addon under an id the user already uses', () => {
+    const plan = planTemplateUpdate(
+      { presets: [preset('a')] } as any,
+      { presets: [preset('a'), preset('x', { type: 'mine' })] } as any,
+      { presets: [preset('a'), preset('x', { type: 'theirs' })] } as any
+    );
+    expect(plan.conflicts.map((c) => c.field)).toEqual(['presets']);
+  });
+
+  it('treats variants as a setting', () => {
+    const plan = planTemplateUpdate(
+      { variants: [] } as any,
+      { variants: [] } as any,
+      { variants: [{ id: 'v1', script: 'x' }] } as any
+    );
+    expect(plan.changed).toEqual(['variants']);
+  });
+});

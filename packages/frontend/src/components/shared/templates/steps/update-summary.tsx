@@ -3,6 +3,7 @@ import { ListChecksIcon } from 'lucide-react';
 import { Button } from '@aiostreams/ui/button';
 import { Checkbox } from '@aiostreams/ui/checkbox';
 import { Modal } from '@aiostreams/ui/modal';
+import * as constants from '@aiostreams/core/src/utils/constants';
 import type {
   TemplateUpdateChange,
   TemplateUpdatePlan,
@@ -18,6 +19,16 @@ export function settingName(field: string): string {
   if (SETTING_NAMES[field]) return SETTING_NAMES[field];
   const words = field.replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase();
   return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+const SECRET_KEY = /(api)?key$|token|password|secret|credential/i;
+
+/** Secrets render masked, the same as the inputs that hold them. */
+function isSecret(field: string): boolean {
+  const detail = (
+    constants.TOP_LEVEL_OPTION_DETAILS as Record<string, { type: string }>
+  )[field];
+  return detail?.type === 'password' || SECRET_KEY.test(field);
 }
 
 const isEmpty = (value: unknown) =>
@@ -88,6 +99,7 @@ export function ValueView({
   highlight?: Highlight;
 }) {
   if (isEmpty(value)) return <span className="text-gray-500">None</span>;
+  if (isSecret(field)) return <span className="font-mono">••••••••</span>;
   if (typeof value === 'boolean') return <span>{value ? 'On' : 'Off'}</span>;
   if (typeof value !== 'object') return <span>{String(value)}</span>;
 
@@ -167,10 +179,18 @@ function ListDifference({
   if (!before || !after) return null;
   const added = after.filter((v) => !before.includes(v));
   const removed = before.filter((v) => !after.includes(v));
-  if (added.length === 0 && removed.length === 0)
+  if (added.length === 0 && removed.length === 0) {
+    const sameOrder = before.join('\u0000') === after.join('\u0000');
     return (
-      <p className="text-sm text-gray-400">Same items, in a different order.</p>
+      <p className="text-sm text-gray-400">
+        {sameOrder
+          ? field === 'presets'
+            ? 'Same addons, with some of their settings changed.'
+            : 'Same items.'
+          : 'Same items, in a different order.'}
+      </p>
     );
+  }
   return (
     <p className="text-sm text-gray-300">
       Compared with yours, the update’s version
@@ -232,7 +252,7 @@ export function UpdateSummary({
       {plan.conflicts.length > 0 && (
         <p className="text-xs text-gray-400 mb-3">
           {plan.hasBaseline
-            ? 'Settings marked "You changed this" are ones you edited yourself. Tick them to keep yours.'
+            ? 'Settings marked "You changed this" are ones you edited yourself. They stay as yours; untick one to take the update instead.'
             : 'This setup was applied before AIOStreams kept a copy of it, so it cannot tell your edits from the update. Tick any setting you want to keep as yours.'}
         </p>
       )}
