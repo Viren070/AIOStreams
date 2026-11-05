@@ -37,6 +37,10 @@
 [data-ui='item-quick-action']:not([data-shown], [data-name='more']) {
   display: none;
 }
+[data-ui='mobile-nav-item']:not([data-shown], [data-name='account']),
+[data-ui='account-menu-page'][data-shown] {
+  display: none;
+}
 
 /* see index.html; the page's background is then drawn by an element */
 html.see-through,

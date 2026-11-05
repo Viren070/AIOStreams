@@ -237,7 +237,9 @@ function AccountMenu({
               return (
                 <DropdownMenuItem
                   key={item.name}
+                  data-ui={group === places ? 'account-menu-page' : undefined}
                   data-name={item.id}
+                  data-shown={(group === places && onBar(item)) || undefined}
                   onClick={item.onClick}
                 >
                   {Icon && <Icon className="text-lg" />}
@@ -769,20 +771,14 @@ export function WebLayout() {
           </AppLayout>
           {!currentHost().tv && (
             <MobileNav
-              items={items.filter(
-                (i) =>
-                  i !== calendar &&
-                  i !== activity &&
-                  i !== downloads &&
-                  i !== playlists &&
-                  i !== together
-              )}
+              items={items}
               places={[
                 ...(downloads ? [downloads] : []),
                 activity,
                 calendar,
                 playlists,
                 together,
+                ...items.filter(onBar),
               ]}
               menuItems={several ? [settingsItem, switchItem] : [settingsItem]}
               wide={nav === 'bar'}
@@ -868,6 +864,16 @@ function select(item: SidebarItem) {
   };
 }
 
+/** Pages the bottom bar shows; every page is in the bar and its menu, so a stylesheet can move any. */
+const BAR_PAGES: ReadonlySet<string> = new Set([
+  'home',
+  'discover',
+  'search',
+  'favourites',
+]);
+const onBar = (item: Pick<SidebarItem, 'id'>) =>
+  !!item.id && BAR_PAGES.has(item.id);
+
 function MobileNav({
   items,
   places,
@@ -882,7 +888,9 @@ function MobileNav({
   wide: boolean;
   named: boolean;
 }) {
-  const inMenu = [...places, ...menuItems].some((item) => item.isCurrent);
+  const inMenu = [...places.filter((item) => !onBar(item)), ...menuItems].some(
+    (item) => item.isCurrent
+  );
   // The same height either way, as pages keep the bar's room free.
   const tab = cn(
     'gap-0.5 rounded-full px-1 text-[0.65rem]',
@@ -914,6 +922,7 @@ function MobileNav({
             <NavTab
               key={item.id}
               data-ui="mobile-nav-item"
+              data-shown={onBar(item) || undefined}
               item={item}
               icon={Icon && <Icon className={named ? 'text-xl' : 'text-2xl'} />}
               onClick={select(item)}
