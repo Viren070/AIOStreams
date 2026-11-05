@@ -2,6 +2,14 @@ import { Button } from '@aiostreams/ui/button';
 import { cn } from '@aiostreams/ui/core/styling';
 import { tab, tabList } from '../lib/input';
 
+const PILL_LIMIT = 12;
+const PILL_CHARACTERS = 120;
+
+/** A few short options read as pills; a long list wants a searchable picker. */
+export const fitsAsPills = (labels: string[]) =>
+  labels.length <= PILL_LIMIT &&
+  labels.reduce((n, label) => n + label.length, 0) <= PILL_CHARACTERS;
+
 /** A row of pills picking one option; `name` tells rows apart for custom CSS. */
 export function PillTabs<T>({
   name,

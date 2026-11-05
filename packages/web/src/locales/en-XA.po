@@ -1813,11 +1813,16 @@ msgid "Grey"
 msgstr ""
 
 #: src/components/version-settings.tsx
+#: src/pages/live-tv/index.tsx
 msgid "Group"
 msgstr ""
 
 #: src/pages/history.tsx
 msgid "Group by day"
+msgstr ""
+
+#: src/pages/live-tv/index.tsx
+msgid "Groups"
 msgstr ""
 
 #: src/pages/live-tv/guide.tsx
@@ -2698,6 +2703,7 @@ msgstr ""
 #: src/components/licenses.tsx
 #: src/components/version-settings.tsx
 #: src/pages/discover.tsx
+#: src/pages/live-tv/index.tsx
 #: src/pages/settings/audio.tsx
 #: src/pages/settings/interface.tsx
 msgid "Nothing matches."

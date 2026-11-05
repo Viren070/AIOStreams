@@ -21,7 +21,7 @@ import { navigate, to } from '../lib/paths';
 import { lastCatalog, rememberCatalog } from '../lib/settings';
 import { useFeature } from '../lib/server-info';
 import { tab, tabList } from '../lib/input';
-import { PillTabs } from '../components/pill-tabs';
+import { fitsAsPills, PillTabs } from '../components/pill-tabs';
 import { MixedGrid } from '../components/mixed-grid';
 import { NoCatalogs } from '../components/no-catalogs';
 import { PageMessage } from '../components/layout';
@@ -68,8 +68,6 @@ const KINDS: { kind: Kind; label: string; collectionType: string }[] = [
   },
 ];
 
-const PILL_LIMIT = 12;
-const PILL_CHARACTERS = 120;
 /** Stands for "no filter" in the picker, which has no empty option. */
 const ALL = '\u0000all';
 
@@ -93,8 +91,7 @@ function GenreFilter({
   value: string | null;
   onChange(name: string | null): void;
 }) {
-  const characters = genres.reduce((n, g) => n + (g.Name?.length ?? 0), 0);
-  if (genres.length > PILL_LIMIT || characters > PILL_CHARACTERS) {
+  if (!fitsAsPills(genres.map((g) => g.Name ?? ''))) {
     return (
       <Combobox
         data-ui="genre-picker"

@@ -8,6 +8,8 @@ import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import { useLiveTvView } from '../../lib/queries';
 import {
   ALL,
+  FAVOURITES,
+  RECENT,
   airingAt,
   endOf,
   lastGroup,
@@ -34,7 +36,8 @@ import { navigate, to } from '../../lib/paths';
 import { focusOn } from '../../lib/input';
 import type { BaseItemDto } from '../../lib/types';
 import { PageMessage } from '../../components/layout';
-import { PillTabs } from '../../components/pill-tabs';
+import { fitsAsPills, PillTabs } from '../../components/pill-tabs';
+import { Combobox } from '@aiostreams/ui/combobox';
 import { useVersionPicker } from '../../components/version-picker';
 import {
   BATCH,
@@ -45,6 +48,7 @@ import { ChannelDetails, Preview, ProgrammeDetails } from './channel-details';
 import { Guide, programmeAt } from './guide';
 
 const WIDE = '(min-width: 1024px)';
+const OWN_GROUPS = new Set([FAVOURITES, RECENT, ALL]);
 const DAY_MS = 86_400_000;
 /** The days ahead the guide offers, as far as servers keep programmes. */
 const GUIDE_DAYS = 7;
@@ -203,6 +207,16 @@ export function LiveTvPage({
     );
 
   const loading = pages.isLoading || view.isLoading;
+  const ownGroups = groups.filter((g) => OWN_GROUPS.has(g.id));
+  const addonGroups = groups.filter((g) => !OWN_GROUPS.has(g.id));
+  // Many groups go in a searchable picker, after the app's own.
+  const picked = !fitsAsPills(addonGroups.map((g) => g.name));
+  const chooseGroup = (next: string) => {
+    rememberGroup(next);
+    navigate(to.live({ group: next, view: requestedView }), {
+      replace: true,
+    });
+  };
   const empty = !loading && !channels.length && (
     <p className="p-4 text-[--muted]">
       <Trans>No channels in this group.</Trans>
@@ -249,17 +263,36 @@ export function LiveTvPage({
           />
         )}
       </div>
-      <PillTabs
-        name="live-group"
-        options={groups.map((g) => ({ value: g.id, label: g.name }))}
-        value={group}
-        onChange={(next) => {
-          rememberGroup(next);
-          navigate(to.live({ group: next, view: requestedView }), {
-            replace: true,
-          });
-        }}
-      />
+      <div className="flex flex-wrap items-center gap-2">
+        <PillTabs
+          name="live-group"
+          options={(picked ? ownGroups : groups).map((g) => ({
+            value: g.id,
+            label: g.name,
+          }))}
+          value={group}
+          onChange={chooseGroup}
+        />
+        {picked && (
+          <div className="w-full sm:w-64">
+            <Combobox
+              data-ui="live-group-picker"
+              aria-label={t`Group`}
+              placeholder={t`Groups`}
+              emptyMessage={t`Nothing matches.`}
+              keepOpenOnSelect={false}
+              className="rounded-full"
+              options={addonGroups.map((g) => ({
+                value: g.id,
+                label: g.name,
+                textValue: g.name,
+              }))}
+              value={addonGroups.some((g) => g.id === group) ? [group] : []}
+              onValueChange={(next) => next[0] && chooseGroup(next[0])}
+            />
+          </div>
+        )}
+      </div>
     </header>
   );
 

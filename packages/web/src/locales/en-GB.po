@@ -1813,12 +1813,17 @@ msgid "Grey"
 msgstr "Grey"
 
 #: src/components/version-settings.tsx
+#: src/pages/live-tv/index.tsx
 msgid "Group"
 msgstr "Group"
 
 #: src/pages/history.tsx
 msgid "Group by day"
 msgstr "Group by day"
+
+#: src/pages/live-tv/index.tsx
+msgid "Groups"
+msgstr "Groups"
 
 #: src/pages/live-tv/guide.tsx
 #: src/pages/live-tv/index.tsx
@@ -2698,6 +2703,7 @@ msgstr "Nothing marked as a favourite yet."
 #: src/components/licenses.tsx
 #: src/components/version-settings.tsx
 #: src/pages/discover.tsx
+#: src/pages/live-tv/index.tsx
 #: src/pages/settings/audio.tsx
 #: src/pages/settings/interface.tsx
 msgid "Nothing matches."
