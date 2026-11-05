@@ -636,7 +636,13 @@ export async function summaryItem(
   ctx: JellyfinRequestContext,
   row: Pick<
     WatchStateRow,
-    'itemKey' | 'mediaType' | 'baseId' | 'season' | 'episode' | 'videoId'
+    | 'itemKey'
+    | 'kind'
+    | 'mediaType'
+    | 'baseId'
+    | 'season'
+    | 'episode'
+    | 'videoId'
   > & { durationMs: number }
 ): Promise<JellyfinItem | null> {
   const key = `${ctx.userId}|${ctx.scope()}|${row.itemKey}|${row.durationMs}`;

@@ -539,7 +539,13 @@ export function watchRowEpisode(
 export function descriptorForWatchRow(
   row: Pick<
     WatchStateRow,
-    'mediaType' | 'baseId' | 'season' | 'episode' | 'videoId' | 'matchKey'
+    | 'kind'
+    | 'mediaType'
+    | 'baseId'
+    | 'season'
+    | 'episode'
+    | 'videoId'
+    | 'matchKey'
   >
 ): ContentDescriptor {
   const at = watchRowEpisode(row);
@@ -553,7 +559,7 @@ export function descriptorForWatchRow(
       v: row.videoId ?? row.baseId,
     };
   }
-  return row.mediaType === 'movie'
+  return row.mediaType === 'movie' || row.kind === 'movie'
     ? { k: 'movie', t: row.mediaType, i: row.baseId }
     : { k: 'series', t: row.mediaType, i: row.baseId };
 }
