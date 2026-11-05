@@ -17,7 +17,8 @@ import { currentHost, type Hearing } from '../lib/hosts';
 import { useAction } from '../lib/input';
 import { useSession } from '../lib/session';
 import type { JellyfinClient } from '../lib/client';
-import { useSearch, useSearchSuggestions } from '../lib/queries';
+import { useLiveTvView, useSearch, useSearchSuggestions } from '../lib/queries';
+import { useNow, useSchedules } from '../lib/live-tv';
 import { settings, useSetting } from '../lib/settings';
 import { useSearchHistory } from '../lib/search-history';
 import { cardImages, cardShape, animatedPosterOf } from '../lib/images';
@@ -26,6 +27,8 @@ import { href, itemPath, navigate, to } from '../lib/paths';
 import type { BaseItemDto } from '../lib/types';
 import { PageBody } from '../components/layout';
 import { MixedGrid } from '../components/mixed-grid';
+import { ChannelCard } from '../components/channel-card';
+import { BATCH } from '../components/channel-list';
 import { MediaRow } from '../components/media-row';
 import { PosterCard } from '../components/cards';
 import { ItemMenu } from '../components/item-menu';
@@ -57,6 +60,8 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
   const movies = useSearch(query, 'Movie', !combine);
   const shows = useSearch(query, 'Series', !combine);
   const people = useSearch(query, 'Person');
+  const live = !!useLiveTvView().data;
+  const channels = useSearch(query, 'TvChannel', live);
   const suggesting = typed !== chosen;
   const suggestions = useSearchSuggestions(
     useDebounce(typed, 200),
@@ -115,13 +120,18 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
       }))}
     />
   );
+  const channelItems = channels.isPlaceholderData
+    ? []
+    : (channels.data?.Items ?? []);
   const loading =
     (combine ? mixed.isLoading : moviesLoading || showsLoading) ||
     people.isLoading ||
     people.isPlaceholderData;
-  const found = combine
-    ? !!mixed.data?.Items?.length || !!named.length
-    : !!movieItems.length || !!showItems.length || !!named.length;
+  const found =
+    (combine
+      ? !!mixed.data?.Items?.length || !!named.length
+      : !!movieItems.length || !!showItems.length || !!named.length) ||
+    !!channelItems.length;
 
   return (
     <PageBody>
@@ -252,6 +262,12 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
             </>
           )}
           {!peopleFirst && peopleRow}
+          {live && (
+            <ChannelRow
+              items={channelItems}
+              loading={channels.isLoading || channels.isPlaceholderData}
+            />
+          )}
         </div>
       )}
       {searching && !loading && !found && (
@@ -260,6 +276,34 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
         </p>
       )}
     </PageBody>
+  );
+}
+
+function ChannelRow({
+  items,
+  loading,
+}: {
+  items: BaseItemDto[];
+  loading: boolean;
+}) {
+  const schedules = useSchedules([items.slice(0, BATCH).map((c) => c.Id!)]);
+  const now = useNow();
+  return (
+    <MediaRow
+      id="search:channels"
+      title={t`Channels`}
+      shape="wide"
+      loading={loading}
+    >
+      {items.map((channel) => (
+        <ChannelCard
+          key={channel.Id}
+          channel={channel}
+          programmes={schedules.get(channel.Id!)}
+          now={now}
+        />
+      ))}
+    </MediaRow>
   );
 }
 

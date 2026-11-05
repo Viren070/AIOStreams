@@ -875,6 +875,7 @@ msgstr ""
 #: src/components/player/live.tsx
 #: src/components/player/options.tsx
 #: src/pages/favourites.tsx
+#: src/pages/search.tsx
 #: src/pages/settings/audio.tsx
 msgid "Channels"
 msgstr ""
