@@ -239,9 +239,10 @@ function ShrunkImage({
   done.current = { onLoad, onPlain };
 
   React.useEffect(() => {
-    if (!src || !visible || !size) return;
+    const el = view.current;
+    if (!src || !visible || !size || !el) return;
     let live = true;
-    const job = shrinkArtwork(src, size.width, size.height, !sight);
+    const job = shrinkArtwork(src, size.width, size.height, el, !sight);
     void job.promise.then((result) => {
       if ('bitmap' in result) return setBitmap(result.bitmap);
       if (!('src' in result)) return done.current.onPlain();
@@ -259,7 +260,7 @@ function ShrunkImage({
       live = false;
       job.cancel();
     };
-  }, [visible, sight, size, src]);
+  }, [visible, sight, size, src, view]);
 
   // A canvas holds its pixels for good, so it gives way to the image's small
   // copy once the worker has made one.

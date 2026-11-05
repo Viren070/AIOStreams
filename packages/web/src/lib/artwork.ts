@@ -165,6 +165,11 @@ export const canShrink =
   typeof createImageBitmap === 'function';
 
 const IN_FLIGHT = 4;
+/**
+ * A job still running after this long, as a huge image or a slow host's is,
+ * gives its place to the next, up to as many again.
+ */
+const SLOW_MS = 1500;
 /** One core is left to the page. */
 const WORKERS = Math.max(
   1,
@@ -179,11 +184,20 @@ interface Pending extends Omit<
   cancelled: boolean;
   /** Only coming up, as a row's next cards are, so it waits for a free worker. */
   ahead: boolean;
+  /** The element the image is for, nearer the screen going first. */
+  box: Element;
+  distance: number;
+  /** The scroll count it was measured at. */
+  at: number;
+  slowTimer?: ReturnType<typeof setTimeout>;
+  released?: boolean;
 }
 
 interface Slot {
   worker: Worker;
   busy: number;
+  /** Jobs that gave their place up. */
+  slow: number;
 }
 
 const slots: Slot[] = [];
@@ -277,7 +291,7 @@ function start(): Slot | null {
     broken = true;
     return null;
   }
-  const slot = { worker, busy: 0 };
+  const slot = { worker, busy: 0, slow: 0 };
   worker.onmessage = (e: MessageEvent<ShrinkReply>) => {
     if (e.data.unsupported) broken = true;
     if (e.data.saved) {
@@ -302,7 +316,9 @@ function start(): Slot | null {
     const entry = running.get(e.data.id);
     if (!entry) return;
     running.delete(e.data.id);
-    slot.busy--;
+    clearTimeout(entry.job.slowTimer);
+    if (entry.job.released) slot.slow--;
+    else slot.busy--;
     settle(entry.job, e.data, worker);
     pump();
   };
@@ -339,28 +355,81 @@ function freeSlot(ahead: boolean): Slot | null {
   return least.busy < (ahead ? 1 : IN_FLIGHT) ? least : null;
 }
 
+let scrolls = 0;
+document.addEventListener('scroll', () => scrolls++, {
+  capture: true,
+  passive: true,
+});
+
+function distance(box: Element, width: number, height: number): number {
+  if (!box.isConnected || box.closest('[inert]')) return Infinity;
+  const r = box.getBoundingClientRect();
+  return (
+    Math.max(0, r.left - width, -r.right) +
+    Math.max(0, r.top - height, -r.bottom)
+  );
+}
+
+/** Orders the queue nearest the screen first, measuring what moved since. */
+function rank() {
+  if (queue.length < 2) return;
+  const width = innerWidth;
+  const height = innerHeight;
+  for (const job of queue) {
+    if (job.at === scrolls) continue;
+    job.at = scrolls;
+    job.distance = distance(job.box, width, height);
+  }
+  queue.sort(
+    (a, b) =>
+      Number(a.ahead) - Number(b.ahead) ||
+      a.distance - b.distance ||
+      a.id - b.id
+  );
+}
+
+let pumping = false;
+
+/** Hands jobs out after the next frame, when the page's layout is clean to measure. */
 function pump() {
+  if (pumping || !queue.length) return;
+  pumping = true;
+  requestAnimationFrame(() =>
+    setTimeout(() => {
+      pumping = false;
+      dispatch();
+    })
+  );
+}
+
+function dispatch() {
+  rank();
   while (queue.length) {
-    const sooner = queue.findIndex((j) => !j.ahead);
-    const at = sooner >= 0 ? sooner : 0;
-    const job = queue[at];
+    const job = queue[0];
     if (refused(job.url)) {
-      queue.splice(at, 1);
+      queue.shift();
       job.resolve({ plain: true });
       continue;
     }
     const slot = freeSlot(job.ahead);
     if (!slot) {
       if (broken) {
-        queue.splice(at, 1);
+        queue.shift();
         // eslint-disable-next-line lingui/no-unlocalized-strings -- only logged
         settle(job, { id: job.id, error: 'no worker' });
       } else return;
       continue;
     }
-    queue.splice(at, 1);
+    queue.shift();
     slot.busy++;
     running.set(job.id, { job, slot });
+    job.slowTimer = setTimeout(() => {
+      if (!running.has(job.id) || slot.slow >= IN_FLIGHT) return;
+      job.released = true;
+      slot.busy--;
+      slot.slow++;
+      pump();
+    }, SLOW_MS);
     const { id, url, width, height } = job;
     const save = saving('artwork');
     const copy = `${artworkKey(url)}#${width}x${height}`;
@@ -386,6 +455,7 @@ export function shrinkArtwork(
   url: string,
   width: number,
   height: number,
+  box: Element,
   ahead = false
 ): { promise: Promise<Shrunk>; cancel: () => void } {
   let job!: Pending;
@@ -398,6 +468,9 @@ export function shrinkArtwork(
       resolve,
       cancelled: false,
       ahead,
+      box,
+      distance: 0,
+      at: -1,
     };
   });
   const kept = drawnArtwork(url);
