@@ -461,6 +461,9 @@ function Failure({
 }) {
   const { client } = useSession();
   const step = zap?.step;
+  const leave = () => stopPlayback(to.item(itemId));
+  // A TV's Back would look for the navigation, which the player covers.
+  useAction('back', leave);
   useAction('live.channelUp', () => step?.(1) ?? false, !!step);
   useAction('live.channelDown', () => step?.(-1) ?? false, !!step);
   const link =
@@ -482,7 +485,7 @@ function Failure({
             className="rounded-full"
             leftIcon={<BiArrowBack className="rtl:-scale-x-100" />}
             autoFocus={!onVersions && !retry && !step}
-            onClick={() => stopPlayback(to.item(itemId))}
+            onClick={leave}
           >
             <Trans>Back</Trans>
           </Button>
