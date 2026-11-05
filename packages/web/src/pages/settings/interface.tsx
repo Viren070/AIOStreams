@@ -43,6 +43,8 @@ function startPageName(page: StartPage): string {
       return t`Home`;
     case 'discover':
       return t`Discover`;
+    case 'live':
+      return t`Live TV`;
     case 'favourites':
       return t`Favourites`;
     case 'calendar':

@@ -138,6 +138,9 @@ const OpenMenu = React.createContext<
   ((target: MenuTarget, at: Point) => void) | null
 >(null);
 
+/** Opens the menu from a list that draws its own rows. */
+export const useOpenItemMenu = () => React.useContext(OpenMenu);
+
 /** A phone's menu width, as `max-sm:w-60`, and the room kept beside it. */
 const PHONE_MENU = 240 + 8;
 
@@ -242,6 +245,8 @@ function ItemMenuContent({ item, onPage, onDetails }: MenuTarget) {
   const clearResume = useClearResume();
   const setFavorite = useSetFavorite();
   const playable = canPlay(item);
+  // A channel keeps no watch state, and has no page or download of its own.
+  const channel = item.Type === 'TvChannel';
   const played = !!item.UserData?.Played;
   const favorite = !!item.UserData?.IsFavorite;
   const resumeMs = ticksToMs(item.UserData?.PlaybackPositionTicks);
@@ -252,7 +257,7 @@ function ItemMenuContent({ item, onPage, onDetails }: MenuTarget) {
         {onPage ? item.Name : itemTitle(item)}
       </ContextMenuLabel>
       {playable && <PlayEntries item={item} />}
-      {playable && (
+      {playable && !channel && (
         <ContextMenuItem
           data-name="add-to-playlist"
           onSelect={() => openAddToPlaylist([item])}
@@ -273,8 +278,8 @@ function ItemMenuContent({ item, onPage, onDetails }: MenuTarget) {
           <BiShuffle /> <Trans>Random episode</Trans>
         </ContextMenuItem>
       )}
-      <DownloadEntry item={item} playable={playable} />
-      {!onPage && (
+      <DownloadEntry item={item} playable={playable && !channel} />
+      {!onPage && !channel && (
         <ContextMenuItem
           data-name="open"
           onSelect={() => navigate(itemPath(item))}
@@ -290,7 +295,7 @@ function ItemMenuContent({ item, onPage, onDetails }: MenuTarget) {
           )}
         </ContextMenuItem>
       )}
-      {item.Type !== 'BoxSet' && (
+      {item.Type !== 'BoxSet' && !channel && (
         <>
           {(playable || !onPage) && <ContextMenuSeparator />}
           <ContextMenuItem

@@ -5,6 +5,7 @@ import { settings, type StartPage } from './settings';
 const PATHS: Record<StartPage, () => string> = {
   home: () => to.home,
   discover: () => to.discover(),
+  live: () => to.live(),
   favourites: () => to.favourites(),
   calendar: () => to.calendar(),
   activity: () => to.history,

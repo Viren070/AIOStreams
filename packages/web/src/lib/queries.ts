@@ -33,7 +33,7 @@ import type {
 const PAGE = 60;
 
 /** Every key starts here, so a user switch or sign-out drops them all. */
-function useKey() {
+export function useKey() {
   const { client, user } = useSession();
   return React.useMemo(
     () => ['jf', client.base, user.Id] as const,
@@ -55,16 +55,27 @@ function shownLibraries(
   };
 }
 
-export function useViews() {
+function useViewsOptions() {
   const { client, user } = useSession();
-  return useQuery({
+  return queryOptions({
     queryKey: [...useKey(), 'views'],
     meta: { cache: 'home' },
     queryFn: () =>
       client.get<BaseItemDtoQueryResult>('/UserViews', { userId: user.Id }),
-    select: shownLibraries,
     staleTime: 5 * 60_000,
   });
+}
+
+export function useViews() {
+  return useQuery({ ...useViewsOptions(), select: shownLibraries });
+}
+
+const liveTvView = (result: BaseItemDtoQueryResult) =>
+  result.Items?.find((v) => v.CollectionType === 'livetv') ?? null;
+
+/** The server's Live TV, which only servers with channels list. */
+export function useLiveTvView() {
+  return useQuery({ ...useViewsOptions(), select: liveTvView });
 }
 
 /** What a library holds by its type; one without a type holds both. */
@@ -308,7 +319,7 @@ function useGenresOptions() {
 }
 
 export function useGenres(viewId: string) {
-  return useQuery(useGenresOptions()(viewId));
+  return useQuery({ ...useGenresOptions()(viewId), enabled: !!viewId });
 }
 
 export function needsGenre(view: BaseItemDto | undefined): boolean {
@@ -1030,11 +1041,11 @@ export function useSetPlayedUpTo() {
 }
 
 /**
- * Only movies and shows are listed as favourites, and kept on trackers'
- * watchlists; anything else already one can still be taken off.
+ * Only movies, shows and channels are listed as favourites; anything else
+ * already one can still be taken off.
  */
 export const offersFavourite = (type: BaseItemDto['Type'], favorite: boolean) =>
-  favorite || type === 'Movie' || type === 'Series';
+  favorite || type === 'Movie' || type === 'Series' || type === 'TvChannel';
 
 export function useSetFavorite() {
   const { client, user } = useSession();

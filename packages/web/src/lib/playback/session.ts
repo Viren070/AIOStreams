@@ -3,6 +3,7 @@ import { currentHost } from '../hosts';
 import { appBridge } from '../hosts/shell/bridge';
 import { goBack, goBackInApp, navigate, to } from '../paths';
 import { settings } from '../settings';
+import { chosenPlayer } from './player-choice';
 
 /** The title the player plays, which plays on in the mini player while pages open over it. */
 export interface Playback {
@@ -12,7 +13,8 @@ export interface Playback {
   playlist?: string;
 }
 
-let current: (Playback & { mini: boolean }) | null = null;
+/** `docked` when it plays in a page's preview, which Back from the player returns to. */
+let current: (Playback & { mini: boolean; docked?: boolean }) | null = null;
 /** What leaving the player's page does, when the player itself chose. */
 let leaving: 'keep' | 'stop' | null = null;
 const listeners = new Set<() => void>();
@@ -35,11 +37,16 @@ export const playbackNow = () => current;
 const onPlayerPage = () => /^#\/play\/(?!trailer\/)/.test(window.location.hash);
 
 /** Apps that can draw their video small over the page, and the page's own video. */
-export function canMinimise(): boolean {
+function framed(): boolean {
   const host = currentHost();
-  if (host.tv) return false;
   return host.player ? !!appBridge()?.miniPlayer : !host.play;
 }
+
+export const canMinimise = (): boolean => !currentHost().tv && framed();
+
+/** A page's preview, which TVs show too, needs the app's own player. */
+export const canPreview = (): boolean =>
+  framed() && chosenPlayer().kind === 'app';
 
 /** The player's page opened: the same title grows back, any other starts afresh. */
 export function openPlayback(next: Playback): void {
@@ -65,6 +72,7 @@ export function leftPlayback(how: 'back' | 'forward' | 'replace'): void {
   if (!current) return;
   const keep =
     chosen === 'keep' ||
+    (chosen === null && !launched && how === 'back' && !!current.docked) ||
     (chosen === null &&
       canMinimise() &&
       !launched &&
@@ -107,11 +115,18 @@ export function listVersionsFromPlayer(path: string): void {
   else closePlayback();
 }
 
+/** Plays in the page's preview; the title already there opens full screen. */
+export function playDocked(next: Playback): void {
+  if (current?.docked && current.itemId === next.itemId)
+    return expandPlayback();
+  set({ ...next, mini: true, docked: true });
+}
+
 /** A title the player moves on to: its page shows it, or the mini player plays it on. */
 export function playOn(next: Playback): void {
   if (onPlayerPage())
     navigate(to.play(next.itemId, next.sourceId, next.startMs, next.playlist), {
       replace: true,
     });
-  else set({ ...next, mini: true });
+  else set({ ...next, mini: true, docked: current?.docked });
 }

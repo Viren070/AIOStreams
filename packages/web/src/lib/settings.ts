@@ -31,6 +31,7 @@ export type TouchNavigation = (typeof TOUCH_NAVIGATIONS)[number];
 export const START_PAGES = [
   'home',
   'discover',
+  'live',
   'favourites',
   'calendar',
   'activity',

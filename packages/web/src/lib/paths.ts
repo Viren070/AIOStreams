@@ -14,6 +14,8 @@ export const to = {
     month ? `/calendar?month=${month}` : '/calendar',
   favourites: (kind?: string) =>
     kind ? `/favourites?kind=${kind}` : '/favourites',
+  live: (group?: string) =>
+    group ? `/live?group=${encodeURIComponent(group)}` : '/live',
   settings: (tab?: string) => (tab ? `/settings?tab=${tab}` : '/settings'),
   search: (term?: string) =>
     term ? `/search?q=${encodeURIComponent(term)}` : '/search',

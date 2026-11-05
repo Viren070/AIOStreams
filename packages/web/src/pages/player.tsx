@@ -66,7 +66,9 @@ import {
   playOn,
   setLaunched,
   stopPlayback,
+  usePlayback,
 } from '../lib/playback/session';
+import { noteChannelPlayed } from '../lib/live-tv';
 import {
   MiniPlayer,
   type MiniVideoPlace,
@@ -373,6 +375,10 @@ function useReporting(
   React.useEffect(() => {
     if (started && lasting) lastVersions.set(item.Id!, source.Id!);
   }, [started, lasting, item.Id, source.Id]);
+  React.useEffect(() => {
+    if (started && item.Type === 'TvChannel')
+      noteChannelPlayed(user.Id!, item.Id!);
+  }, [started, user.Id, item.Type, item.Id]);
 
   const live = !!source.IsInfiniteStream;
   React.useEffect(() => {
@@ -398,8 +404,10 @@ function useReporting(
     window.addEventListener('pagehide', onHide);
     return () => {
       window.removeEventListener('pagehide', onHide);
-      // The position it leaves is what the pages behind offer to resume.
-      void current.stop().then(() => refresh.current());
+      // The position it leaves is what the pages behind offer to resume; live keeps none.
+      void current.stop().then(() => {
+        if (!live) refresh.current();
+      });
       reporter.current = null;
     };
   }, [started, client, user.Id, item.Id, source.Id, playSessionId, live]);
@@ -648,9 +656,11 @@ function Player({
     setLaunched(!!launched);
     return () => setLaunched(false);
   }, [launched]);
-  // A party's player stops, whatever the setting.
+  const docked = !!usePlayback()?.docked;
+  // A party's player stops, whatever the setting; a preview's goes back to it.
   const back = () => {
-    if (
+    if (docked && !playlistItemId && !launched) minimisePlayback(to.live());
+    else if (
       minimise &&
       !playlistItemId &&
       settings.player.back.read() === 'minimise'

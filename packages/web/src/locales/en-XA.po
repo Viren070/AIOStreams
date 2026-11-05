@@ -126,6 +126,7 @@ msgstr ""
 #: src/components/card-preview.tsx
 #: src/components/episodes.tsx
 #: src/pages/downloads.tsx
+#: src/pages/live-tv/channel-details.tsx
 msgid "{left} left"
 msgstr ""
 
@@ -432,6 +433,7 @@ msgstr ""
 
 #: src/components/item-menu.tsx
 #: src/pages/item.tsx
+#: src/pages/live-tv/channel-details.tsx
 msgid "Add favourite"
 msgstr ""
 
@@ -487,6 +489,10 @@ msgstr ""
 #: src/pages/discover.tsx
 #: src/pages/favourites.tsx
 msgid "All"
+msgstr ""
+
+#: src/lib/live-tv.ts
+msgid "All channels"
 msgstr ""
 
 #: src/pages/item.tsx
@@ -856,8 +862,13 @@ msgstr ""
 msgid "Channel"
 msgstr ""
 
+#: src/pages/live-tv/channel-list.tsx
 #: src/pages/settings/audio.tsx
 msgid "Channels"
+msgstr ""
+
+#: src/pages/live-tv/index.tsx
+msgid "Channels show here once your setup has an addon with live TV."
 msgstr ""
 
 #: src/components/player/chapters.tsx
@@ -1092,6 +1103,10 @@ msgstr ""
 #: src/components/download-button.tsx
 #: src/components/item-menu.tsx
 msgid "Could not list the episodes"
+msgstr ""
+
+#: src/pages/live-tv/index.tsx
+msgid "Could not load Live TV"
 msgstr ""
 
 #: src/pages/calendar.tsx
@@ -1619,10 +1634,12 @@ msgid "Faster"
 msgstr ""
 
 #: src/pages/item.tsx
+#: src/pages/live-tv/channel-list.tsx
 msgid "Favourite"
 msgstr ""
 
 #: src/components/layout.tsx
+#: src/lib/live-tv.ts
 #: src/pages/favourites.tsx
 #: src/pages/settings/apps.tsx
 #: src/pages/settings/interface.tsx
@@ -1749,6 +1766,7 @@ msgstr ""
 
 #: src/components/player/options.tsx
 #: src/lib/input/actions.ts
+#: src/pages/live-tv/channel-details.tsx
 msgid "Full screen"
 msgstr ""
 
@@ -2088,6 +2106,7 @@ msgid "Large"
 msgstr ""
 
 #: src/components/update-prompt.tsx
+#: src/pages/live-tv/channel-details.tsx
 msgid "Later"
 msgstr ""
 
@@ -2157,6 +2176,12 @@ msgstr ""
 
 #: src/pages/search.tsx
 msgid "Listening…"
+msgstr ""
+
+#: src/components/layout.tsx
+#: src/pages/live-tv/index.tsx
+#: src/pages/settings/interface.tsx
+msgid "Live TV"
 msgstr ""
 
 #: src/components/party/party-sheet.tsx
@@ -2477,6 +2502,10 @@ msgstr ""
 msgid "No catalogs yet"
 msgstr ""
 
+#: src/pages/live-tv/index.tsx
+msgid "No channels in this group."
+msgstr ""
+
 #: src/components/no-details.tsx
 msgid "No details for this title"
 msgstr ""
@@ -2491,6 +2520,10 @@ msgstr ""
 
 #: src/components/player/subtitle-sync.tsx
 msgid "No line matches."
+msgstr ""
+
+#: src/pages/live-tv/index.tsx
+msgid "No live TV here"
 msgstr ""
 
 #: src/components/party/party-sheet.tsx
@@ -3394,6 +3427,10 @@ msgstr ""
 msgid "Recaps"
 msgstr ""
 
+#: src/lib/live-tv.ts
+msgid "Recent"
+msgstr ""
+
 #: src/pages/search.tsx
 msgid "Recent searches"
 msgstr ""
@@ -3462,6 +3499,7 @@ msgstr ""
 
 #: src/components/item-menu.tsx
 #: src/pages/item.tsx
+#: src/pages/live-tv/channel-details.tsx
 msgid "Remove favourite"
 msgstr ""
 
@@ -5136,6 +5174,10 @@ msgstr ""
 
 #: src/pages/sign-in.tsx
 msgid "Waiting for approval…"
+msgstr ""
+
+#: src/pages/live-tv/channel-details.tsx
+msgid "Watch"
 msgstr ""
 
 #: src/components/party/party-sheet.tsx

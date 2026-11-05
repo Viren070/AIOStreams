@@ -10,6 +10,7 @@ import {
 } from '@tanstack/react-router';
 import {
   BiCalendar,
+  BiTv,
   BiGroup,
   BiDownload,
   BiCompass,
@@ -48,7 +49,7 @@ import { Sidebar, type SidebarItem } from '@aiostreams/ui/shared/sidebar';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
 import { useSession } from '../lib/session';
-import { useOwnAvatar, usePickableUsers } from '../lib/queries';
+import { useLiveTvView, useOwnAvatar, usePickableUsers } from '../lib/queries';
 import { navigate, to } from '../lib/paths';
 import { currentHost } from '../lib/hosts';
 import { pageRtl } from '../lib/direction';
@@ -534,6 +535,15 @@ export function WebLayout() {
   React.useEffect(() => {
     document.documentElement.dataset.nav = nav;
   }, [nav]);
+  const live: SidebarItem | null = useLiveTvView().data
+    ? {
+        id: 'live',
+        name: t`Live TV`,
+        iconType: BiTv,
+        isCurrent: pathname.startsWith('/live'),
+        onClick: () => navigate(to.live()),
+      }
+    : null;
   const calendar: SidebarItem = {
     id: 'calendar',
     name: t`Calendar`,
@@ -584,6 +594,7 @@ export function WebLayout() {
       isCurrent: pathname.startsWith('/favourites'),
       onClick: () => navigate(to.favourites()),
     },
+    ...(live ? [live] : []),
     calendar,
     activity,
     playlists,
@@ -773,6 +784,7 @@ export function WebLayout() {
             <MobileNav
               items={items}
               places={[
+                ...(live ? [live] : []),
                 ...(downloads ? [downloads] : []),
                 activity,
                 calendar,
