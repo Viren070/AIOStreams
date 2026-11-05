@@ -26,6 +26,7 @@ import type {
   EngineFile,
   EngineState,
   EngineTrack,
+  VideoFrame,
 } from '../../playback/engine';
 import { audioCodes } from '../../playback/track-picks';
 import { currentHost } from '..';
@@ -218,6 +219,25 @@ const fromPlayer = (m: ShellMessage) =>
  * the user's own player in its own window. The server's subtitles are
  * downloaded only once picked: a version can carry dozens.
  */
+
+/**
+ * In the app's own measure: a TV lays the page out zoomed to fit its width
+ * (lib/tv.ts), which the app's pixels don't follow.
+ */
+function unzoomed(frame: VideoFrame): VideoFrame {
+  const zoom = window.visualViewport?.scale ?? 1;
+  if (zoom === 1) return frame;
+  return {
+    ...frame,
+    x: frame.x * zoom,
+    y: frame.y * zoom,
+    width: frame.width * zoom,
+    height: frame.height * zoom,
+    radius: frame.radius * zoom,
+    bottomRadius: frame.bottomRadius * zoom,
+  };
+}
+
 export const appEngine: EngineFactory = (emit, { launched }) => {
   const external = !!launched;
   const shell = appBridge()!;
@@ -480,7 +500,11 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
     setFrame:
       external || !shell.miniPlayer
         ? undefined
-        : (frame) => shell.send({ type: 'player-frame', frame }),
+        : (frame) =>
+            shell.send({
+              type: 'player-frame',
+              frame: frame && unzoomed(frame),
+            }),
     // The user's own player keeps its own look.
     setStyle({ subtitleStyle, fit, height }) {
       if (external || !subtitleStyle) return;
