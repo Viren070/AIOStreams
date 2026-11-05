@@ -1056,6 +1056,7 @@ export const UserDataSchema = z.object({
     .object({
       enabled: z.boolean().optional(),
       position: z.enum(['top', 'bottom']).optional(),
+      errorPosition: z.enum(['default', 'top', 'bottom']).optional(),
       statsToShow: z.array(z.enum(['addon', 'filter', 'timing'])).optional(),
       showFilterStatsOnNoStreams: z.boolean().optional(),
     })

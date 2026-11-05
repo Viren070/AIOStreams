@@ -41,6 +41,7 @@ export type StatEntry = {
   title: string;
   description: string;
   forced?: boolean;
+  kind?: 'error';
 };
 
 export type PipelineTimings = {
