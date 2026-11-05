@@ -767,7 +767,7 @@ const SERVICE_DETAILS: Record<
         description:
           'Your Offcloud email. (These credentials are necessary for some addons)',
         type: 'password',
-        required: true,
+        required: false,
       },
       {
         id: 'password',
@@ -775,7 +775,7 @@ const SERVICE_DETAILS: Record<
         description:
           'Your Offcloud password. (These credentials are necessary for some addons)',
         type: 'password',
-        required: true,
+        required: false,
       },
     ],
   },
