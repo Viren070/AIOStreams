@@ -8,14 +8,21 @@ import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import { useLiveTvView } from '../../lib/queries';
 import {
   ALL,
+  airingAt,
+  endOf,
   lastGroup,
+  lastView,
   rememberGroup,
+  rememberView,
   setLineup,
+  startOf,
   useChannelGroups,
   useChannelPages,
   useNow,
-  airingAt,
+  type LiveView,
 } from '../../lib/live-tv';
+import { currentHost } from '../../lib/hosts';
+import { dayLabel } from '../../lib/format';
 import { lastVersions } from '../../lib/playback/play';
 import {
   canPreview,
@@ -24,6 +31,7 @@ import {
   usePlayback,
 } from '../../lib/playback/session';
 import { navigate, to } from '../../lib/paths';
+import { focusOn } from '../../lib/input';
 import type { BaseItemDto } from '../../lib/types';
 import { PageMessage } from '../../components/layout';
 import { PillTabs } from '../../components/pill-tabs';
@@ -33,15 +41,23 @@ import {
   ChannelList,
   useRowSchedules,
 } from '../../components/channel-list';
-import { ChannelDetails, Preview } from './channel-details';
+import { ChannelDetails, Preview, ProgrammeDetails } from './channel-details';
+import { Guide, programmeAt } from './guide';
 
 const WIDE = '(min-width: 1024px)';
+const DAY_MS = 86_400_000;
+/** The days ahead the guide offers, as far as servers keep programmes. */
+const GUIDE_DAYS = 7;
 /** Moving through the list waits this long before the details follow. */
 const DETAILS_DELAY_MS = 150;
 
 /** The window less the bars around the page, so only the list scrolls. */
 const PAGE_HEIGHT =
   'h-[calc(100dvh-var(--nav-bar)-var(--mini-bar,0px)-var(--top-bar,0px))]';
+const PAGE = cn(
+  'relative z-[1] flex flex-col gap-4 px-4 pt-[calc(1rem+env(safe-area-inset-top))] lg:ps-0 lg:pe-10 lg:pt-[calc(2rem+env(safe-area-inset-top))]',
+  PAGE_HEIGHT
+);
 
 function useSettled<T>(value: T, delayMs: number): T {
   const [settled, setSettled] = React.useState(value);
@@ -52,7 +68,21 @@ function useSettled<T>(value: T, delayMs: number): T {
   return settled;
 }
 
-export function LiveTvPage({ group: requested }: { group?: string }) {
+const midnight = (at: number) => new Date(at).setHours(0, 0, 0, 0);
+
+function dayName(offset: number, dayStart: number): string {
+  if (offset === 0) return t`Today`;
+  if (offset === 1) return t`Tomorrow`;
+  return dayLabel(new Date(dayStart).toISOString());
+}
+
+export function LiveTvPage({
+  group: requested,
+  view: requestedView,
+}: {
+  group?: string;
+  view?: string;
+}) {
   const view = useLiveTvView();
   const { groups, isLoading: groupsLoading } = useChannelGroups();
   const wanted = requested ?? lastGroup();
@@ -75,17 +105,33 @@ export function LiveTvPage({ group: requested }: { group?: string }) {
   const wide = useMediaQuery(WIDE);
   const picker = useVersionPicker();
 
+  // The grid wants a wide screen, and is a TV's only once measured on one.
+  const shownView: LiveView =
+    requestedView === 'guide' || requestedView === 'list'
+      ? requestedView
+      : (lastView() ?? (currentHost().tv ? 'list' : 'guide'));
+  const guide = wide && shownView === 'guide';
+  const [dayOffset, setDayOffset] = React.useState(0);
+  const today = midnight(now);
+  const dayStart = new Date(today).setDate(
+    new Date(today).getDate() + dayOffset
+  );
+  const [at, setAt] = React.useState(now);
+
   const [active, setActive] = React.useState(0);
   // A group opens on the channel playing, where it is listed.
   const placed = React.useRef<string | null>(null);
   React.useEffect(() => {
     if (!pages.data || placed.current === group) return;
     placed.current = group;
-    const at = channels.findIndex((c) => c.Id === playingId);
-    setActive(Math.max(0, at));
+    const index = channels.findIndex((c) => c.Id === playingId);
+    setActive(Math.max(0, index));
   }, [pages.data, group, channels, playingId]);
 
-  const { schedules, onRange, range } = useRowSchedules(channels);
+  const { schedules, onRange, range } = useRowSchedules(channels, {
+    ...(guide && { from: dayStart, to: dayStart + DAY_MS }),
+    pinned: active,
+  });
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = pages;
   React.useEffect(() => {
     if (
@@ -105,6 +151,7 @@ export function LiveTvPage({ group: requested }: { group?: string }) {
 
   const shown = useSettled(channels[active], DETAILS_DELAY_MS);
   const shownProgrammes = shown ? schedules.get(shown.Id!) : undefined;
+  const shownAt = useSettled(at, DETAILS_DELAY_MS);
 
   const play = (channel: BaseItemDto) => {
     if (canPreview())
@@ -115,10 +162,25 @@ export function LiveTvPage({ group: requested }: { group?: string }) {
       });
     else picker.play(channel);
   };
-  const watchShown = () => {
-    if (!shown) return;
-    if (docked && playingId === shown.Id) expandPlayback();
-    else play(shown);
+  const watch = (channel: BaseItemDto) => {
+    if (docked && playingId === channel.Id) expandPlayback();
+    else play(channel);
+  };
+  // Up out of the guide lands on the programme's buttons, and then the groups above them.
+  const leaveGuide = () => {
+    const target =
+      document.querySelector<HTMLElement>(
+        '[data-ui=programme-details] button'
+      ) ??
+      document.querySelector<HTMLElement>(
+        '[data-name=live-group] [data-selected]'
+      );
+    if (target) focusOn(target);
+  };
+  // A programme on later waits for reminders; one on now plays its channel.
+  const playFromGuide = (channel: BaseItemDto, programme?: BaseItemDto) => {
+    if (!programme || (startOf(programme) <= now && now < endOf(programme)))
+      watch(channel);
   };
 
   if (view.isError)
@@ -140,14 +202,133 @@ export function LiveTvPage({ group: requested }: { group?: string }) {
       </PageMessage>
     );
 
-  const list =
-    pages.isLoading || view.isLoading ? (
-      <div className="space-y-2 p-1">
-        {Array.from({ length: 8 }, (_, i) => (
-          <Skeleton key={i} className="h-[68px] w-full rounded-xl" />
-        ))}
+  const loading = pages.isLoading || view.isLoading;
+  const empty = !loading && !channels.length && (
+    <p className="p-4 text-[--muted]">
+      <Trans>No channels in this group.</Trans>
+    </p>
+  );
+  const header = (
+    <header className="flex flex-none flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <h1 data-ui="page-title" className="me-auto text-3xl font-bold">
+          <Trans>Live TV</Trans>
+        </h1>
+        {guide && (
+          <PillTabs
+            name="live-day"
+            options={Array.from({ length: GUIDE_DAYS }, (_, i) => ({
+              value: i,
+              label: dayName(
+                i,
+                new Date(today).setDate(new Date(today).getDate() + i)
+              ),
+            }))}
+            value={dayOffset}
+            onChange={(offset) => {
+              setDayOffset(offset);
+              // Another day opens at the same time of day.
+              setAt(new Date(now).setDate(new Date(now).getDate() + offset));
+            }}
+          />
+        )}
+        {wide && (
+          <PillTabs
+            name="live-view"
+            options={[
+              { value: 'guide' as const, label: t`Guide` },
+              { value: 'list' as const, label: t`Channels` },
+            ]}
+            value={shownView}
+            onChange={(next) => {
+              rememberView(next);
+              navigate(to.live({ group: requested, view: next }), {
+                replace: true,
+              });
+            }}
+          />
+        )}
       </div>
-    ) : channels.length ? (
+      <PillTabs
+        name="live-group"
+        options={groups.map((g) => ({ value: g.id, label: g.name }))}
+        value={group}
+        onChange={(next) => {
+          rememberGroup(next);
+          navigate(to.live({ group: next, view: requestedView }), {
+            replace: true,
+          });
+        }}
+      />
+    </header>
+  );
+
+  if (guide) {
+    const programme = programmeAt(shownProgrammes, shownAt);
+    return (
+      <div data-ui="live-tv" data-view="guide" className={PAGE}>
+        {header}
+        <div
+          data-ui="live-top"
+          className="flex h-[min(34%,20rem)] flex-none gap-6"
+        >
+          {shown ? (
+            <ProgrammeDetails
+              className="flex-1"
+              channel={shown}
+              programme={programme}
+              now={now}
+              playing={docked && playingId === shown.Id}
+              onWatch={() => watch(shown)}
+            />
+          ) : (
+            <div className="flex-1" />
+          )}
+          <Preview
+            channel={shown}
+            programme={programme}
+            playing={docked}
+            onPress={() => (docked ? expandPlayback() : shown && watch(shown))}
+            className="h-full w-auto flex-none"
+          />
+        </div>
+        {loading ? (
+          <Skeleton className="min-h-0 flex-1 rounded-xl" />
+        ) : (
+          empty || (
+            <div data-nav-start className="flex min-h-0 flex-1 flex-col pb-4">
+              <Guide
+                className="min-h-0 flex-1"
+                channels={channels}
+                total={Math.max(total, channels.length)}
+                schedules={schedules}
+                dayStart={dayStart}
+                now={now}
+                focus={{ row: Math.min(active, channels.length - 1), at }}
+                playingId={playingId}
+                onFocus={(next) => {
+                  setActive(next.row);
+                  setAt(next.at);
+                }}
+                onPlay={playFromGuide}
+                onRange={onRange}
+                onLeaveUp={leaveGuide}
+              />
+            </div>
+          )
+        )}
+      </div>
+    );
+  }
+
+  const list = loading ? (
+    <div className="space-y-2 p-1">
+      {Array.from({ length: 8 }, (_, i) => (
+        <Skeleton key={i} className="h-[68px] w-full rounded-xl" />
+      ))}
+    </div>
+  ) : (
+    empty || (
       <ChannelList
         className="min-h-0 flex-1"
         channels={channels}
@@ -157,39 +338,15 @@ export function LiveTvPage({ group: requested }: { group?: string }) {
         active={Math.min(active, channels.length - 1)}
         playingId={playingId}
         onActive={setActive}
-        onPlay={(channel) =>
-          docked && channel.Id === playingId ? expandPlayback() : play(channel)
-        }
+        onPlay={watch}
         onRange={onRange}
       />
-    ) : (
-      <p className="p-4 text-[--muted]">
-        <Trans>No channels in this group.</Trans>
-      </p>
-    );
+    )
+  );
 
   return (
-    <div
-      data-ui="live-tv"
-      className={cn(
-        'relative z-[1] flex flex-col gap-4 px-4 pt-[calc(1rem+env(safe-area-inset-top))] lg:ps-0 lg:pe-10 lg:pt-[calc(2rem+env(safe-area-inset-top))]',
-        PAGE_HEIGHT
-      )}
-    >
-      <header className="flex flex-none flex-col gap-3">
-        <h1 data-ui="page-title" className="text-3xl font-bold">
-          <Trans>Live TV</Trans>
-        </h1>
-        <PillTabs
-          name="live-group"
-          options={groups.map((g) => ({ value: g.id, label: g.name }))}
-          value={group}
-          onChange={(next) => {
-            rememberGroup(next);
-            navigate(to.live(next), { replace: true });
-          }}
-        />
-      </header>
+    <div data-ui="live-tv" data-view="list" className={PAGE}>
+      {header}
       {!wide && docked && (
         <Preview playing onPress={expandPlayback} className="flex-none" />
       )}
@@ -211,7 +368,9 @@ export function LiveTvPage({ group: requested }: { group?: string }) {
                 shownProgrammes ? airingAt(shownProgrammes, now) : undefined
               }
               playing={docked}
-              onPress={docked ? expandPlayback : watchShown}
+              onPress={() =>
+                docked ? expandPlayback() : shown && watch(shown)
+              }
               // A short window keeps room for the programme under it.
               className="w-[min(100%,64dvh)] flex-none"
             />
@@ -221,7 +380,7 @@ export function LiveTvPage({ group: requested }: { group?: string }) {
                 programmes={shownProgrammes}
                 now={now}
                 playing={docked && playingId === shown.Id}
-                onWatch={watchShown}
+                onWatch={() => watch(shown)}
               />
             )}
           </aside>

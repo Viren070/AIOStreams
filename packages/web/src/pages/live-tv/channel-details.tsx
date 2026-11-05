@@ -6,7 +6,7 @@ import { Button, IconButton } from '@aiostreams/ui/button';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '../../lib/session';
 import { posterUrl } from '../../lib/images';
-import { airTime, duration, episodeCode } from '../../lib/format';
+import { airTime, dayLabel, duration, episodeCode } from '../../lib/format';
 import { useSetFavorite } from '../../lib/queries';
 import { useDockRef } from '../../lib/playback/dock';
 import { airedShare, airingAt, endOf, startOf } from '../../lib/live-tv';
@@ -182,6 +182,90 @@ export function ChannelDetails({
               <span className="truncate">{p.Name}</span>
             </p>
           ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+const sameDay = (a: number, b: number) =>
+  new Date(a).toDateString() === new Date(b).toDateString();
+
+/** The programme the guide is on, which may air later. */
+export function ProgrammeDetails({
+  channel,
+  programme,
+  now,
+  playing,
+  onWatch,
+  className,
+}: {
+  channel: BaseItemDto;
+  programme: BaseItemDto | undefined;
+  now: number;
+  playing: boolean;
+  onWatch(): void;
+  className?: string;
+}) {
+  const airing =
+    !programme || (startOf(programme) <= now && now < endOf(programme));
+  const code = programme?.IsSeries
+    ? episodeCode(programme.ParentIndexNumber, programme.IndexNumber)
+    : '';
+  const day =
+    programme?.StartDate && !sameDay(startOf(programme), now)
+      ? dayLabel(programme.StartDate)
+      : '';
+  const left = programme && airing ? duration(endOf(programme) - now) : '';
+  return (
+    <section
+      data-ui="programme-details"
+      data-airing={airing || undefined}
+      className={cn('flex min-h-0 min-w-0 flex-col gap-2', className)}
+    >
+      <p
+        data-name="channel"
+        className="truncate text-sm font-semibold text-[--muted]"
+      >
+        {channel.ChannelNumber && (
+          <span className="tabular-nums">{channel.ChannelNumber} · </span>
+        )}
+        {channel.Name}
+      </p>
+      <h2 data-name="programme" className="line-clamp-2 text-2xl font-bold">
+        {programme?.Name ?? channel.Name}
+      </h2>
+      {programme && (
+        <p className="text-sm text-gray-300">
+          {[code, day, timeRange(programme), left && t`${left} left`]
+            .filter(Boolean)
+            .join(' · ')}
+        </p>
+      )}
+      {programme && airing && (
+        <div className="h-1 max-w-md overflow-hidden rounded-full bg-white/10">
+          <div
+            className="h-full bg-white"
+            style={{ width: `${airedShare(programme, now) * 100}%` }}
+          />
+        </div>
+      )}
+      {programme?.Overview && (
+        <p className="line-clamp-3 max-w-2xl text-sm text-gray-300">
+          {programme.Overview}
+        </p>
+      )}
+      {airing && (
+        <div className="mt-1">
+          <Button
+            data-ui="live-watch"
+            intent="white"
+            className="rounded-full"
+            leftIcon={playing ? <BiExpand /> : <BiPlay />}
+            onClick={onWatch}
+          >
+            {playing ? <Trans>Full screen</Trans> : <Trans>Watch</Trans>}
+          </Button>
         </div>
       )}
     </section>

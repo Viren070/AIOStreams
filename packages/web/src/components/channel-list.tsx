@@ -13,7 +13,7 @@ import { useOpenItemMenu } from './item-menu';
 
 export const ROW_HEIGHT = 76;
 /** Rows drawn past each edge, so a quick scroll shows no gap. */
-const OVERSCAN = 6;
+export const OVERSCAN = 6;
 /** Rows of programmes asked for together. */
 export const BATCH = 20;
 /** Rows kept between the active row and an edge as keys move it. */
@@ -26,18 +26,32 @@ function batchesOf(channels: BaseItemDto[], first: number, last: number) {
   return batches.filter((ids) => ids.length);
 }
 
-/** The programmes of the rows in sight, asked for a batch of rows at a time. */
-export function useRowSchedules(channels: BaseItemDto[]) {
+/**
+ * The programmes of the rows in sight, asked for a batch of rows at a time,
+ * and of the `pinned` row's batch, which a page shows the details of.
+ */
+export function useRowSchedules(
+  channels: BaseItemDto[],
+  window: { from?: number; to?: number; pinned?: number } = {}
+) {
   const [range, setRange] = React.useState({ first: 0, last: 0 });
   const onRange = React.useCallback(
     (first: number, last: number) => setRange({ first, last }),
     []
   );
-  const batches = React.useMemo(
-    () => batchesOf(channels, range.first, range.last),
-    [channels, range.first, range.last]
-  );
-  return { schedules: useSchedules(batches), onRange, range };
+  const pinned = window.pinned ?? range.first;
+  const batches = React.useMemo(() => {
+    const shown = batchesOf(channels, range.first, range.last);
+    const held = batchesOf(channels, pinned, pinned)[0];
+    return held && !shown.some((ids) => ids[0] === held[0])
+      ? [...shown, held]
+      : shown;
+  }, [channels, range.first, range.last, pinned]);
+  const schedules = useSchedules(batches, {
+    from: window.from,
+    to: window.to,
+  });
+  return { schedules, onRange, range };
 }
 
 function visibleRows(scrollTop: number, height: number, total: number) {

@@ -83,7 +83,7 @@ export function useLiveChannel(
   enabled: boolean
 ): LiveChannel | undefined {
   const now = useNow();
-  const schedules = useSchedules([[item.Id!]], enabled);
+  const schedules = useSchedules([[item.Id!]], { enabled });
   const zapping = useZap(item.Id!, enabled);
   if (!zapping) return undefined;
   const programmes = schedules.get(item.Id!) ?? [];

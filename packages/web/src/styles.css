@@ -211,6 +211,15 @@ html[data-pointer-focus] :focus-visible [data-focus-frame] {
   outline-offset: -2px;
 }
 
+/* A guide programme's title moves with the day's scroll to stay beside the
+   channels, until its cell's end leaves no room. */
+[data-ui='guide-cell'] > [data-name='text'] {
+  padding-inline-start: max(
+    0.5rem,
+    min(calc(var(--guide-scroll, 0px) - var(--x) + 0.5rem), calc(var(--w) - 3rem))
+  );
+}
+
 [data-ui='player-controls'] {
   --control: 2.5rem;
   --icon: 1.4rem;

@@ -874,6 +874,7 @@ msgstr ""
 #: src/components/player/live.tsx
 #: src/components/player/options.tsx
 #: src/pages/favourites.tsx
+#: src/pages/live-tv/index.tsx
 #: src/pages/search.tsx
 #: src/pages/settings/audio.tsx
 msgid "Channels"
@@ -1816,6 +1817,11 @@ msgstr ""
 
 #: src/pages/history.tsx
 msgid "Group by day"
+msgstr ""
+
+#: src/pages/live-tv/guide.tsx
+#: src/pages/live-tv/index.tsx
+msgid "Guide"
 msgstr ""
 
 #: src/pages/settings/playback.tsx
@@ -4889,7 +4895,12 @@ msgid "Titles, synopses and stream names stay in the language your addons send."
 msgstr ""
 
 #: src/pages/calendar.tsx
+#: src/pages/live-tv/index.tsx
 msgid "Today"
+msgstr ""
+
+#: src/pages/live-tv/index.tsx
+msgid "Tomorrow"
 msgstr ""
 
 #: src/lib/hosts/shell/player.ts

@@ -875,6 +875,7 @@ msgstr "Channel up"
 #: src/components/player/live.tsx
 #: src/components/player/options.tsx
 #: src/pages/favourites.tsx
+#: src/pages/live-tv/index.tsx
 #: src/pages/search.tsx
 #: src/pages/settings/audio.tsx
 msgid "Channels"
@@ -1818,6 +1819,11 @@ msgstr "Group"
 #: src/pages/history.tsx
 msgid "Group by day"
 msgstr "Group by day"
+
+#: src/pages/live-tv/guide.tsx
+#: src/pages/live-tv/index.tsx
+msgid "Guide"
+msgstr "Guide"
 
 #: src/pages/settings/playback.tsx
 msgid "Hardware decoding"
@@ -4890,8 +4896,13 @@ msgid "Titles, synopses and stream names stay in the language your addons send."
 msgstr "Titles, synopses and stream names stay in the language your addons send."
 
 #: src/pages/calendar.tsx
+#: src/pages/live-tv/index.tsx
 msgid "Today"
 msgstr "Today"
+
+#: src/pages/live-tv/index.tsx
+msgid "Tomorrow"
+msgstr "Tomorrow"
 
 #: src/lib/hosts/shell/player.ts
 msgid "too many requests"

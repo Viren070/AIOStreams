@@ -73,13 +73,14 @@ const liveRoute = createRoute({
   path: '/live',
   validateSearch: (search: Record<string, unknown>) => ({
     group: search.group == null ? undefined : String(search.group),
+    view: search.view == null ? undefined : String(search.view),
   }),
   component: LiveRouteView,
 });
 
 function LiveRouteView(): React.ReactElement {
-  const { group } = liveRoute.useSearch();
-  return <LiveTvPage group={group} />;
+  const { group, view } = liveRoute.useSearch();
+  return <LiveTvPage group={group} view={view} />;
 }
 
 const calendarRoute = createRoute({

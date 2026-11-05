@@ -63,6 +63,15 @@ export function rememberGroup(id: string): void {
   storage.set(GROUP_KEY, id);
 }
 
+export type LiveView = 'list' | 'guide';
+const VIEW_KEY = 'aiostreams-web-live-view';
+
+export const lastView = (): LiveView | null => storage.get<LiveView>(VIEW_KEY);
+
+export function rememberView(view: LiveView): void {
+  storage.set(VIEW_KEY, view);
+}
+
 export function useChannelGroups(): {
   groups: ChannelGroup[];
   isLoading: boolean;
@@ -154,27 +163,32 @@ const SCHEDULE_AHEAD_MS = 6 * 3_600_000;
 /** Windows start on the half hour, so one asked for a little later is the same. */
 const WINDOW_STEP_MS = 30 * 60_000;
 
-/** Programmes from now, by channel; a batch two lists share is asked for once. */
+/**
+ * Programmes by channel, from now unless a window is given; a batch two lists
+ * share is asked for once.
+ */
 export function useSchedules(
   batches: string[][],
-  enabled = true
+  opts: { from?: number; to?: number; enabled?: boolean } = {}
 ): Map<string, BaseItemDto[]> {
   const { client, user } = useSession();
   const key = useKey();
-  const from = Math.floor(Date.now() / WINDOW_STEP_MS) * WINDOW_STEP_MS;
+  const from =
+    opts.from ?? Math.floor(Date.now() / WINDOW_STEP_MS) * WINDOW_STEP_MS;
+  const to = opts.to ?? from + SCHEDULE_AHEAD_MS;
   return useQueries({
     queries: batches.map((ids) => ({
-      queryKey: [...key, 'live-schedules', ids.join(), from],
+      queryKey: [...key, 'live-schedules', ids.join(), from, to],
       queryFn: () =>
         client.post<BaseItemDtoQueryResult>('/LiveTv/Programs', {
           UserId: user.Id,
           ChannelIds: ids,
           MinEndDate: new Date(from).toISOString(),
-          MaxStartDate: new Date(from + SCHEDULE_AHEAD_MS).toISOString(),
+          MaxStartDate: new Date(to).toISOString(),
           SortBy: ['StartDate'],
           Fields: ['Overview', 'Genres'],
         }),
-      enabled: enabled && ids.length > 0,
+      enabled: (opts.enabled ?? true) && ids.length > 0,
       placeholderData: keepPreviousData,
       staleTime: 10 * 60_000,
     })),

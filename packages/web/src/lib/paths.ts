@@ -14,8 +14,13 @@ export const to = {
     month ? `/calendar?month=${month}` : '/calendar',
   favourites: (kind?: string) =>
     kind ? `/favourites?kind=${kind}` : '/favourites',
-  live: (group?: string) =>
-    group ? `/live?group=${encodeURIComponent(group)}` : '/live',
+  live: (opts: { group?: string; view?: string } = {}) => {
+    const params = new URLSearchParams();
+    if (opts.group) params.set('group', opts.group);
+    if (opts.view) params.set('view', opts.view);
+    const query = params.toString();
+    return `/live${query ? `?${query}` : ''}`;
+  },
   settings: (tab?: string) => (tab ? `/settings?tab=${tab}` : '/settings'),
   search: (term?: string) =>
     term ? `/search?q=${encodeURIComponent(term)}` : '/search',
