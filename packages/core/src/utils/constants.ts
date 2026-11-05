@@ -1042,7 +1042,7 @@ const TOP_LEVEL_OPTION_DETAILS: Record<
     name: 'Custom Poster URL',
     type: 'string',
     description:
-      'Poster URL pattern with placeholders: `{id}` (Stremio ID), `{type}`, `{shape}`, `{imdb_id}`, `{tmdb_id}`, `{tvdb_id}`, `{mal_id}`, `{kitsu_id}`, `{anilist_id}`, `{anidb_id}`. Add `?` (e.g. `{tmdb_id?}`) to blank a missing ID instead of skipping the poster; `{imdb_id|tmdb_id}` uses the first available.',
+      "Poster URL pattern with placeholders: `{id}` (the item's ID, its IMDb ID when the catalog provides one), `{type}`, `{shape}`, `{imdb_id}`, `{tmdb_id}`, `{tvdb_id}`, `{mal_id}`, `{kitsu_id}`, `{anilist_id}`, `{anidb_id}`. Add `?` (e.g. `{tmdb_id?}`) to blank a missing ID instead of skipping the poster; `{imdb_id|tmdb_id}` uses the first available.",
   },
   pmdbApiKey: {
     name: 'PublicMetaDB API Key',

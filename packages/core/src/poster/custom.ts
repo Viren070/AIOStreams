@@ -66,6 +66,11 @@ export class CustomPoster extends BasePosterService {
         `Unknown placeholder(s) in custom poster URL: ${unknown.map((n) => `{${n}}`).join(', ')}`
       );
     }
+    if (/[{}]/.test(this.apiKey.replace(PLACEHOLDER_REGEX, ''))) {
+      throw new Error(
+        'Custom poster URL has braces outside a valid placeholder, e.g. {imdbId} instead of {imdb_id}'
+      );
+    }
     if (!names.some((n) => n === 'id' || Object.hasOwn(ID_PLACEHOLDERS, n))) {
       throw new Error(
         'Custom poster URL must contain an ID placeholder, e.g. {id} or {imdb_id}'
