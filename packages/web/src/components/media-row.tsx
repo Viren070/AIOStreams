@@ -170,12 +170,30 @@ function useEntryKey(id: string | undefined) {
   return id ? `${entry}|${id}` : undefined;
 }
 
-/** A row's card, as Embla's slide or a TV row's. */
-function Slide({
+const slideClasses = new Map<string, string>();
+
+function slideClass(width: string): string {
+  let merged = slideClasses.get(width);
+  if (!merged)
+    slideClasses.set(
+      width,
+      (merged = cn(CarouselAnatomy.item({ gap: 'md' }), width))
+    );
+  return merged;
+}
+
+/**
+ * A row's card, as Embla's slide or a TV row's. Left alone as the row renders
+ * again, as a long row has hundreds.
+ */
+const Slide = React.memo(function Slide({
   className,
+  fade,
   children,
 }: {
   className: string;
+  /** Where the card is among those fading in. */
+  fade?: number;
   children?: React.ReactNode;
 }) {
   return (
@@ -184,12 +202,14 @@ function Slide({
       aria-roledescription="slide"
       aria-hidden={children ? undefined : true}
       data-ui="media-row-item"
-      className={cn(CarouselAnatomy.item({ gap: 'md' }), className)}
+      className={slideClass(className)}
     >
-      {children}
+      {children && (
+        <div {...(fade === undefined ? {} : fadeIn(fade))}>{children}</div>
+      )}
     </div>
   );
-}
+});
 
 /**
  * Marks the cards in `box` out of sight of `root` (and `rootMargin` around it)
@@ -411,7 +431,10 @@ export function MediaRow({
   const [start] = React.useState(startIndex ?? 0);
   const [lines] = useSetting(settings.interface.posterLines);
   const width = itemClass ?? ITEM_WIDTH[shape];
-  const items = React.Children.toArray(children);
+  const items = React.useMemo(
+    () => React.Children.toArray(children),
+    [children]
+  );
   const { drawn, fades, onView } = useWindow(items.length, start, !!loading);
   // A finger scrolls a plain scroller on the compositor; Embla is for a mouse to drag.
   const touch = useMediaQuery('(pointer: coarse)');
@@ -434,8 +457,8 @@ export function MediaRow({
       ? skeletons(waiting ? 1 : 8)
       : items.map((child, i) =>
           drawn(i) ? (
-            <Slide key={i} className={width}>
-              <div {...(fades(i) ? fadeIn(i) : {})}>{child}</div>
+            <Slide key={i} className={width} fade={fades(i) ? i : undefined}>
+              {child}
             </Slide>
           ) : (
             <Slide key={i} className={width} />

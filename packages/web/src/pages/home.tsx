@@ -399,10 +399,43 @@ function LibraryRow({ view, first }: { view: BaseItemDto; first: boolean }) {
     pageSize: ROW_PAGE,
     enabled: near,
   });
-  const items = pages.data?.pages.flatMap((p) => p.Items ?? []) ?? [];
+  const items = React.useMemo(
+    () => pages.data?.pages.flatMap((p) => p.Items ?? []) ?? [],
+    [pages.data]
+  );
   const landscape =
     items.length > 0 &&
     items.filter((i) => cardShape(i) === 'landscape').length > items.length / 2;
+  // Made again only with the items, as the row renders for its paging too.
+  const cards = React.useMemo(
+    () =>
+      near &&
+      items.map((item) => (
+        <ItemMenu key={item.Id} item={item}>
+          <PosterCard
+            href={href(itemPath(item))}
+            shape={landscape ? 'landscape' : cardShape(item)}
+            image={(width) =>
+              cardImages(
+                client,
+                item,
+                landscape ? 'landscape' : cardShape(item),
+                { maxWidth: width }
+              )
+            }
+            animated={animatedPosterOf(item)}
+            title={item.Name ?? ''}
+            subtitle={itemSubtitle(item)}
+            itemType={item.Type}
+            watched={item.UserData?.Played}
+            favourite={item.UserData?.IsFavorite}
+            unwatched={item.UserData?.UnplayedItemCount ?? undefined}
+            progress={progressOf(item)}
+          />
+        </ItemMenu>
+      )),
+    [near, items, landscape, client]
+  );
   const label = libraryLabel(view);
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = pages;
   const more = React.useCallback(() => {
@@ -432,31 +465,7 @@ function LibraryRow({ view, first }: { view: BaseItemDto; first: boolean }) {
       loadingMore={isFetchingNextPage}
       onEndReached={more}
     >
-      {near &&
-        items.map((item) => (
-          <ItemMenu key={item.Id} item={item}>
-            <PosterCard
-              href={href(itemPath(item))}
-              shape={landscape ? 'landscape' : cardShape(item)}
-              image={(width) =>
-                cardImages(
-                  client,
-                  item,
-                  landscape ? 'landscape' : cardShape(item),
-                  { maxWidth: width }
-                )
-              }
-              animated={animatedPosterOf(item)}
-              title={item.Name ?? ''}
-              subtitle={itemSubtitle(item)}
-              itemType={item.Type}
-              watched={item.UserData?.Played}
-              favourite={item.UserData?.IsFavorite}
-              unwatched={item.UserData?.UnplayedItemCount ?? undefined}
-              progress={progressOf(item)}
-            />
-          </ItemMenu>
-        ))}
+      {cards}
     </MediaRow>
   );
 }
