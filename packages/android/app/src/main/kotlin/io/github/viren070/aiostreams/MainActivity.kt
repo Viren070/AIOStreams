@@ -173,7 +173,7 @@ class MainActivity : ComponentActivity() {
             voice.available,
             gamepads,
             PictureInPicture.supported(this),
-            miniPlayer = !onTv(),
+            miniPlayer = true,
         )
         bridge = AppBridge(web, app.origins, identity, ::onMessage)
         updater = Updater(this, ::askForNotifications) { bridge.send(it) }

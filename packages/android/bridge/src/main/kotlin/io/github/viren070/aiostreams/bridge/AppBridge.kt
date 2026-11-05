@@ -22,7 +22,7 @@ data class AppIdentity(
     val gamepads: Boolean,
     /** Picture-in-picture, which many TVs leave out. */
     val pip: Boolean,
-    /** The video small over the page, which a TV's remote couldn't move or close. */
+    /** The video drawn small where the page leaves room, for its mini player and previews. */
     val miniPlayer: Boolean,
 )
 
