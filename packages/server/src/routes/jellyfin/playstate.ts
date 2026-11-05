@@ -103,18 +103,23 @@ function snapshotOf(item: JellyfinItem | null): WatchSnapshot | undefined {
 /** A channel has no position worth keeping, so live playback writes no history. */
 async function playingLive(
   ctx: JellyfinRequestContext,
+  d: ContentDescriptor,
   itemId: string,
   mediaSourceId: string | undefined
 ): Promise<boolean> {
   const memo = await resolveByItem(ctx.uuid, ctx.scope(), itemId).catch(
     () => null
   );
-  if (!memo) return false;
-  const source = pickSource(
-    memo,
-    mediaSourceId === itemId ? undefined : mediaSourceId
+  const source =
+    memo &&
+    pickSource(memo, mediaSourceId === itemId ? undefined : mediaSourceId);
+  if (source) return !!source.live;
+  // The memo expires under a channel left on, and misses versions from a newer list.
+  return (
+    d.t === 'tv' ||
+    d.t === 'channel' ||
+    (!!memo?.sources.length && memo.sources.every((s) => s.live))
   );
-  return !!source?.live;
 }
 
 /** Jellyfin takes the runtime from the source being played, then the item. */
@@ -198,7 +203,7 @@ async function record(
   const d = await descriptorFor(ctx, rawId);
   if (!d || (d.k !== 'movie' && d.k !== 'episode')) return;
   const { tracks } = opts;
-  if (await playingLive(ctx, rawId, opts.mediaSourceId)) {
+  if (await playingLive(ctx, d, rawId, opts.mediaSourceId)) {
     // The session still tracks what is on; only the history is skipped.
     const session = sessionOf(ctx, opts.playSessionId);
     if (type === 'start')
