@@ -2,14 +2,14 @@ import { t } from '@lingui/core/macro';
 import React from 'react';
 import { BiSolidHeart } from 'react-icons/bi';
 import { cn } from '@aiostreams/ui/core/styling';
-import { useSession } from '../../lib/session';
-import { posterUrl } from '../../lib/images';
-import { airTime } from '../../lib/format';
-import { move, runAction } from '../../lib/input';
-import { airedShare, airingAt, startOf } from '../../lib/live-tv';
-import type { BaseItemDto } from '../../lib/types';
-import { CachedImage } from '../../components/cached-image';
-import { useOpenItemMenu } from '../../components/item-menu';
+import { useSession } from '../lib/session';
+import { posterUrl } from '../lib/images';
+import { airTime } from '../lib/format';
+import { move, runAction } from '../lib/input';
+import { airedShare, airingAt, startOf, useSchedules } from '../lib/live-tv';
+import type { BaseItemDto } from '../lib/types';
+import { CachedImage } from './cached-image';
+import { useOpenItemMenu } from './item-menu';
 
 export const ROW_HEIGHT = 76;
 /** Rows drawn past each edge, so a quick scroll shows no gap. */
@@ -19,7 +19,28 @@ export const BATCH = 20;
 /** Rows kept between the active row and an edge as keys move it. */
 const EDGE_ROWS = 2;
 
-export function visibleRows(scrollTop: number, height: number, total: number) {
+function batchesOf(channels: BaseItemDto[], first: number, last: number) {
+  const batches: string[][] = [];
+  for (let b = Math.floor(first / BATCH); b <= Math.floor(last / BATCH); b++)
+    batches.push(channels.slice(b * BATCH, (b + 1) * BATCH).map((c) => c.Id!));
+  return batches.filter((ids) => ids.length);
+}
+
+/** The programmes of the rows in sight, asked for a batch of rows at a time. */
+export function useRowSchedules(channels: BaseItemDto[]) {
+  const [range, setRange] = React.useState({ first: 0, last: 0 });
+  const onRange = React.useCallback(
+    (first: number, last: number) => setRange({ first, last }),
+    []
+  );
+  const batches = React.useMemo(
+    () => batchesOf(channels, range.first, range.last),
+    [channels, range.first, range.last]
+  );
+  return { schedules: useSchedules(batches), onRange, range };
+}
+
+function visibleRows(scrollTop: number, height: number, total: number) {
   const first = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - OVERSCAN);
   const last = Math.min(
     total - 1,

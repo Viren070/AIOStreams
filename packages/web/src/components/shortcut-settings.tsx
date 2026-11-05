@@ -43,6 +43,11 @@ const groups = (): {
     description: t`Once one of the controls is selected, the arrow keys move between the controls instead.`,
   },
   {
+    group: 'live',
+    name: 'live-tv',
+    description: t`While a channel plays. On a TV, up and down change channel too, and the number keys pick one by its number.`,
+  },
+  {
     group: 'sync',
     name: 'sync-by-ear',
     description: t`While syncing subtitles by ear.`,

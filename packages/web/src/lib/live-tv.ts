@@ -37,6 +37,24 @@ export function noteChannelPlayed(userId: string, channelId: string): void {
 export const recentChannels = (userId: string): string[] =>
   recents.get(userId) ?? [];
 
+/** The channels the live page lists, which the player steps through. */
+let lineup: BaseItemDto[] = [];
+const lineupListeners = new Set<() => void>();
+
+export function setLineup(channels: BaseItemDto[]): void {
+  if (channels === lineup) return;
+  lineup = channels;
+  for (const listener of lineupListeners) listener();
+}
+
+const subscribeLineup = (listener: () => void) => {
+  lineupListeners.add(listener);
+  return () => void lineupListeners.delete(listener);
+};
+
+export const useLineup = () =>
+  React.useSyncExternalStore(subscribeLineup, () => lineup);
+
 const GROUP_KEY = 'aiostreams-web-live-group';
 
 export const lastGroup = (): string => storage.get<string>(GROUP_KEY) ?? ALL;
@@ -178,9 +196,11 @@ function mergeSchedules(
   return byChannel;
 }
 
-export function useNow(stepMs = 30_000): number {
+export function useNow(stepMs = 30_000, enabled = true): number {
   const [now, setNow] = React.useState(Date.now);
   React.useEffect(() => {
+    if (!enabled) return;
+    setNow(Date.now());
     let timer = 0;
     const tick = () => {
       setNow(Date.now());
@@ -188,6 +208,6 @@ export function useNow(stepMs = 30_000): number {
     };
     timer = window.setTimeout(tick, stepMs - (Date.now() % stepMs));
     return () => window.clearTimeout(timer);
-  }, [stepMs]);
+  }, [stepMs, enabled]);
   return now;
 }

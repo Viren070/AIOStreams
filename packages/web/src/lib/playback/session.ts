@@ -15,6 +15,8 @@ export interface Playback {
 
 /** `docked` when it plays in a page's preview, which Back from the player returns to. */
 let current: (Playback & { mini: boolean; docked?: boolean }) | null = null;
+/** A channel zapped to in the player keeps the preview Back returns to. */
+let zapping = false;
 /** What leaving the player's page does, when the player itself chose. */
 let leaving: 'keep' | 'stop' | null = null;
 const listeners = new Set<() => void>();
@@ -58,7 +60,8 @@ export function openPlayback(next: Playback): void {
     if (current.mini) set({ ...current, mini: false });
     return;
   }
-  set({ ...next, mini: false });
+  set({ ...next, mini: false, docked: zapping || undefined });
+  zapping = false;
 }
 
 /**
@@ -120,6 +123,11 @@ export function playDocked(next: Playback): void {
   if (current?.docked && current.itemId === next.itemId)
     return expandPlayback();
   set({ ...next, mini: true, docked: true });
+}
+
+export function zapTo(next: Playback): void {
+  zapping = !!current?.docked && onPlayerPage();
+  playOn(next);
 }
 
 /** A title the player moves on to: its page shows it, or the mini player plays it on. */

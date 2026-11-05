@@ -4,13 +4,14 @@ import type { Host } from '../hosts';
 import { browserFeatures, type PlayerFeature } from '../playback/controller';
 import { settings, useSetting } from '../settings';
 
-export type ActionGroup = 'general' | 'navigation' | 'player' | 'sync';
+export type ActionGroup = 'general' | 'navigation' | 'player' | 'live' | 'sync';
 
 export const groupLabel = (group: ActionGroup) =>
   ({
     general: t`General`,
     navigation: t`Moving around`,
     player: t`Player`,
+    live: t`Live TV`,
     sync: t`Sync by ear`,
   })[group];
 
@@ -226,6 +227,17 @@ export const ACTIONS = {
     needs: 'stats',
   },
 
+  'live.channelUp': {
+    label: msg`Next channel`,
+    group: 'live',
+    keys: ['PageUp', 'ChannelUp'],
+  },
+  'live.channelDown': {
+    label: msg`Previous channel`,
+    group: 'live',
+    keys: ['PageDown', 'ChannelDown'],
+  },
+
   'sync.heard': { label: msg`Heard the line`, group: 'sync', keys: ['H'] },
   'sync.saw': { label: msg`Saw its subtitle`, group: 'sync', keys: ['S'] },
 } satisfies Record<string, Action>;
@@ -280,7 +292,8 @@ export function actionsFor(input: string): readonly ActionId[] {
 /** Whether it does anything here: an app's own player takes no keys, and some lack a feature. */
 export function worksOn(id: ActionId, host: Host): boolean {
   const { group, needs } = action(id);
-  if ((group === 'player' || group === 'sync') && host.play) return false;
+  if ((group === 'player' || group === 'live' || group === 'sync') && host.play)
+    return false;
   const features = host.player ? host.playerFeatures : browserFeatures;
   return !needs || !!features?.includes(needs);
 }

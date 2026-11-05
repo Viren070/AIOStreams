@@ -59,7 +59,10 @@ declare global {
 }
 
 /** The remote sends these to the page only once they are registered. */
-const MEDIA_KEYS = [
+const REMOTE_KEYS = [
+  'ChannelUp',
+  'ChannelDown',
+  ...'0123456789',
   'MediaPlayPause',
   'MediaPlay',
   'MediaPause',
@@ -75,7 +78,7 @@ function registerMediaKeys(): () => void {
   if (!input) return () => undefined;
   try {
     const supported = new Set(input.getSupportedKeys().map((k) => k.name));
-    const keys = MEDIA_KEYS.filter((key) => supported.has(key));
+    const keys = REMOTE_KEYS.filter((key) => supported.has(key));
     for (const key of keys) input.registerKey(key);
     return () => keys.forEach((key) => input.unregisterKey(key));
   } catch {

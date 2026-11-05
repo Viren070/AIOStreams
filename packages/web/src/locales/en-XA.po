@@ -862,7 +862,17 @@ msgstr ""
 msgid "Channel"
 msgstr ""
 
-#: src/pages/live-tv/channel-list.tsx
+#: src/lib/input/keys.ts
+msgid "Channel down"
+msgstr ""
+
+#: src/lib/input/keys.ts
+msgid "Channel up"
+msgstr ""
+
+#: src/components/channel-list.tsx
+#: src/components/player/live.tsx
+#: src/components/player/options.tsx
 #: src/pages/settings/audio.tsx
 msgid "Channels"
 msgstr ""
@@ -1633,8 +1643,8 @@ msgstr ""
 msgid "Faster"
 msgstr ""
 
+#: src/components/channel-list.tsx
 #: src/pages/item.tsx
-#: src/pages/live-tv/channel-list.tsx
 msgid "Favourite"
 msgstr ""
 
@@ -1780,6 +1790,10 @@ msgstr ""
 
 #: src/router.tsx
 msgid "Go home"
+msgstr ""
+
+#: src/components/player/live.tsx
+msgid "Go live"
 msgstr ""
 
 #: src/components/item-menu.tsx
@@ -2178,7 +2192,12 @@ msgstr ""
 msgid "Listening…"
 msgstr ""
 
+#: src/components/player/live.tsx
+msgid "Live"
+msgstr ""
+
 #: src/components/layout.tsx
+#: src/lib/input/actions.ts
 #: src/pages/live-tv/index.tsx
 #: src/pages/settings/interface.tsx
 msgid "Live TV"
@@ -2440,6 +2459,12 @@ msgstr ""
 msgid "Next audio track"
 msgstr ""
 
+#: src/components/player/controls.tsx
+#: src/lib/input/actions.ts
+#: src/pages/player.tsx
+msgid "Next channel"
+msgstr ""
+
 #: src/lib/input/actions.ts
 msgid "Next chapter"
 msgstr ""
@@ -2500,6 +2525,10 @@ msgstr ""
 
 #: src/components/no-catalogs.tsx
 msgid "No catalogs yet"
+msgstr ""
+
+#: src/components/player/live.tsx
+msgid "No channel {typed}"
 msgstr ""
 
 #: src/pages/live-tv/index.tsx
@@ -2662,6 +2691,10 @@ msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "Nothing playing yet."
+msgstr ""
+
+#: src/pages/player.tsx
+msgid "Nothing plays on this channel right now."
 msgstr ""
 
 #: src/lib/hosts/shell/android.ts
@@ -3313,6 +3346,13 @@ msgstr ""
 #: src/components/remote-sheet.tsx
 #: src/lib/i18n.ts
 msgid "Previous"
+msgstr ""
+
+#: src/components/player/controls.tsx
+#: src/components/player/live.tsx
+#: src/lib/input/actions.ts
+#: src/pages/player.tsx
+msgid "Previous channel"
 msgstr ""
 
 #: src/lib/input/actions.ts
@@ -5354,6 +5394,10 @@ msgstr ""
 
 #: src/pages/settings/interface.tsx
 msgid "Whether the tabs name each page beside its icon."
+msgstr ""
+
+#: src/components/shortcut-settings.tsx
+msgid "While a channel plays. On a TV, up and down change channel too, and the number keys pick one by its number."
 msgstr ""
 
 #: src/components/shortcut-settings.tsx

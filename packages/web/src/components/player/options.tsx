@@ -26,6 +26,7 @@ import {
   LuSlidersHorizontal,
   LuStretchHorizontal,
   LuTimer,
+  LuTv,
   LuType,
   LuUndo2,
   LuUsers,
@@ -554,6 +555,7 @@ export function OptionButtons({
   onVersions,
   onEpisodes,
   onChapters,
+  onChannels,
   onPlaylist,
   onAddFile,
   onSyncByEar,
@@ -567,6 +569,7 @@ export function OptionButtons({
   onVersions?: () => void;
   onEpisodes?: () => void;
   onChapters?: () => void;
+  onChannels?: () => void;
   onPlaylist?: () => void;
   onAddFile(): void;
   onSyncByEar(): void;
@@ -608,6 +611,11 @@ export function OptionButtons({
       {onPlaylist && (
         <ControlButton name="playlist" label={t`Playlist`} onClick={onPlaylist}>
           <LuListVideo />
+        </ControlButton>
+      )}
+      {onChannels && (
+        <ControlButton name="channels" label={t`Channels`} onClick={onChannels}>
+          <LuTv />
         </ControlButton>
       )}
       {onEpisodes && (

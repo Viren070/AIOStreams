@@ -862,7 +862,17 @@ msgstr "Change these on a phone, a computer or in a browser."
 msgid "Channel"
 msgstr "Channel"
 
-#: src/pages/live-tv/channel-list.tsx
+#: src/lib/input/keys.ts
+msgid "Channel down"
+msgstr "Channel down"
+
+#: src/lib/input/keys.ts
+msgid "Channel up"
+msgstr "Channel up"
+
+#: src/components/channel-list.tsx
+#: src/components/player/live.tsx
+#: src/components/player/options.tsx
 #: src/pages/settings/audio.tsx
 msgid "Channels"
 msgstr "Channels"
@@ -1633,8 +1643,8 @@ msgstr "Fast forward"
 msgid "Faster"
 msgstr "Faster"
 
+#: src/components/channel-list.tsx
 #: src/pages/item.tsx
-#: src/pages/live-tv/channel-list.tsx
 msgid "Favourite"
 msgstr "Favourite"
 
@@ -1781,6 +1791,10 @@ msgstr "Give this code to whoever looks into it."
 #: src/router.tsx
 msgid "Go home"
 msgstr "Go home"
+
+#: src/components/player/live.tsx
+msgid "Go live"
+msgstr "Go live"
 
 #: src/components/item-menu.tsx
 msgid "Go to show"
@@ -2178,7 +2192,12 @@ msgstr "List only my languages"
 msgid "Listening…"
 msgstr "Listening…"
 
+#: src/components/player/live.tsx
+msgid "Live"
+msgstr "Live"
+
 #: src/components/layout.tsx
+#: src/lib/input/actions.ts
 #: src/pages/live-tv/index.tsx
 #: src/pages/settings/interface.tsx
 msgid "Live TV"
@@ -2440,6 +2459,12 @@ msgstr "Next"
 msgid "Next audio track"
 msgstr "Next audio track"
 
+#: src/components/player/controls.tsx
+#: src/lib/input/actions.ts
+#: src/pages/player.tsx
+msgid "Next channel"
+msgstr "Next channel"
+
 #: src/lib/input/actions.ts
 msgid "Next chapter"
 msgstr "Next chapter"
@@ -2501,6 +2526,10 @@ msgstr "No badges match."
 #: src/components/no-catalogs.tsx
 msgid "No catalogs yet"
 msgstr "No catalogs yet"
+
+#: src/components/player/live.tsx
+msgid "No channel {typed}"
+msgstr "No channel {typed}"
 
 #: src/pages/live-tv/index.tsx
 msgid "No channels in this group."
@@ -2663,6 +2692,10 @@ msgstr "Nothing matches."
 #: src/components/party/party-sheet.tsx
 msgid "Nothing playing yet."
 msgstr "Nothing playing yet."
+
+#: src/pages/player.tsx
+msgid "Nothing plays on this channel right now."
+msgstr "Nothing plays on this channel right now."
 
 #: src/lib/hosts/shell/android.ts
 msgid "Nothing was heard"
@@ -3314,6 +3347,13 @@ msgstr "Previews"
 #: src/lib/i18n.ts
 msgid "Previous"
 msgstr "Previous"
+
+#: src/components/player/controls.tsx
+#: src/components/player/live.tsx
+#: src/lib/input/actions.ts
+#: src/pages/player.tsx
+msgid "Previous channel"
+msgstr "Previous channel"
 
 #: src/lib/input/actions.ts
 msgid "Previous chapter"
@@ -5355,6 +5395,10 @@ msgstr "Whether the rail names each page under its icon."
 #: src/pages/settings/interface.tsx
 msgid "Whether the tabs name each page beside its icon."
 msgstr "Whether the tabs name each page beside its icon."
+
+#: src/components/shortcut-settings.tsx
+msgid "While a channel plays. On a TV, up and down change channel too, and the number keys pick one by its number."
+msgstr "While a channel plays. On a TV, up and down change channel too, and the number keys pick one by its number."
 
 #: src/components/shortcut-settings.tsx
 msgid "While syncing subtitles by ear."

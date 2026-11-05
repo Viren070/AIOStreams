@@ -10,10 +10,10 @@ import {
   ALL,
   lastGroup,
   rememberGroup,
+  setLineup,
   useChannelGroups,
   useChannelPages,
   useNow,
-  useSchedules,
   airingAt,
 } from '../../lib/live-tv';
 import { lastVersions } from '../../lib/playback/play';
@@ -28,7 +28,11 @@ import type { BaseItemDto } from '../../lib/types';
 import { PageMessage } from '../../components/layout';
 import { PillTabs } from '../../components/pill-tabs';
 import { useVersionPicker } from '../../components/version-picker';
-import { BATCH, ChannelList } from './channel-list';
+import {
+  BATCH,
+  ChannelList,
+  useRowSchedules,
+} from '../../components/channel-list';
 import { ChannelDetails, Preview } from './channel-details';
 
 const WIDE = '(min-width: 1024px)';
@@ -48,13 +52,6 @@ function useSettled<T>(value: T, delayMs: number): T {
   return settled;
 }
 
-function batchesOf(channels: BaseItemDto[], first: number, last: number) {
-  const batches: string[][] = [];
-  for (let b = Math.floor(first / BATCH); b <= Math.floor(last / BATCH); b++)
-    batches.push(channels.slice(b * BATCH, (b + 1) * BATCH).map((c) => c.Id!));
-  return batches.filter((ids) => ids.length);
-}
-
 export function LiveTvPage({ group: requested }: { group?: string }) {
   const view = useLiveTvView();
   const { groups, isLoading: groupsLoading } = useChannelGroups();
@@ -70,6 +67,7 @@ export function LiveTvPage({ group: requested }: { group?: string }) {
     [pages.data]
   );
   const total = pages.data?.pages.at(-1)?.TotalRecordCount ?? channels.length;
+  React.useEffect(() => setLineup(channels), [channels]);
   const now = useNow();
   const playback = usePlayback();
   const docked = !!playback?.mini;
@@ -87,11 +85,7 @@ export function LiveTvPage({ group: requested }: { group?: string }) {
     setActive(Math.max(0, at));
   }, [pages.data, group, channels, playingId]);
 
-  const [range, setRange] = React.useState({ first: 0, last: 0 });
-  const onRange = React.useCallback(
-    (first: number, last: number) => setRange({ first, last }),
-    []
-  );
+  const { schedules, onRange, range } = useRowSchedules(channels);
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = pages;
   React.useEffect(() => {
     if (
@@ -108,11 +102,6 @@ export function LiveTvPage({ group: requested }: { group?: string }) {
     isFetchingNextPage,
     fetchNextPage,
   ]);
-  const batches = React.useMemo(
-    () => batchesOf(channels, range.first, range.last),
-    [channels, range.first, range.last]
-  );
-  const schedules = useSchedules(batches);
 
   const shown = useSettled(channels[active], DETAILS_DELAY_MS);
   const shownProgrammes = shown ? schedules.get(shown.Id!) : undefined;

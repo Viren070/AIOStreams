@@ -98,7 +98,13 @@ export function InputSetup({ router }: { router: AnyRouter }) {
   return <ShortcutsHelp open={help} onOpenChange={setHelp} />;
 }
 
-const GROUPS: ActionGroup[] = ['general', 'navigation', 'player', 'sync'];
+const GROUPS: ActionGroup[] = [
+  'general',
+  'navigation',
+  'player',
+  'live',
+  'sync',
+];
 
 function ShortcutsHelp({
   open,

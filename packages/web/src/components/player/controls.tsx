@@ -34,6 +34,14 @@ import {
 import { BarWindowButtons, pageDrawsWindowButtons } from '../window-controls';
 import { ChaptersSheet } from './chapters';
 import { EpisodesSheet } from './episodes';
+import {
+  ChannelsSheet,
+  LiveBar,
+  NumberEntry,
+  useBehindLive,
+  useLiveChannel,
+  useNumberEntry,
+} from './live';
 import { PlaylistSheet } from '../playlists';
 import {
   Notice,
@@ -89,6 +97,7 @@ export function PlayerControls({
   steps,
   playlist,
   onParty,
+  live = false,
 }: {
   item: BaseItemDto;
   player: PlayerController;
@@ -107,6 +116,8 @@ export function PlayerControls({
   steps?: 'episode' | 'trailer' | 'playlist';
   playlist?: { id: string; onPlay(entry: BaseItemDto, playlist: string): void };
   onParty?: () => void;
+  /** A channel: the programme in place of the seek bar, and zapping. */
+  live?: boolean;
 }) {
   const { state } = player;
   const latest = useLatest(player);
@@ -129,6 +140,9 @@ export function PlayerControls({
   const [episodes, setEpisodes] = React.useState(false);
   const [chapters, setChapters] = React.useState(false);
   const [listing, setListing] = React.useState(false);
+  const [channels, setChannels] = React.useState(false);
+  const channel = useLiveChannel(item, live);
+  const behind = useBehindLive(player);
   const [scrub, setScrub] = React.useState<{
     fromMs: number;
     toMs: number;
@@ -145,6 +159,7 @@ export function PlayerControls({
     episodes ||
     chapters ||
     listing ||
+    channels ||
     scrub !== null;
   // Paused and left alone, the controls give way to what's playing.
   const pauseScreen =
@@ -180,6 +195,7 @@ export function PlayerControls({
   const [flash, showFlash] = useToggleFlash();
   const [seekFlash, showSeekFlash] = useSeekFlash();
   const [notice, showNotice] = useNotice();
+  const numbers = useNumberEntry(channel, showNotice);
   const syncOutcome = player.autoSync?.outcome;
   React.useEffect(() => {
     const text = syncOutcome && syncNotice(syncOutcome);
@@ -195,6 +211,7 @@ export function PlayerControls({
   const [burstSeek, seekingTo] = useBurstSeek(player);
   const [seekPicture, setSeekPicture] = React.useState(true);
   const seekBy = (deltaMs: number, picture = true) => {
+    if (live) return;
     setSeekPicture(picture);
     burstSeek(deltaMs);
     showSeekFlash(deltaMs);
@@ -353,6 +370,7 @@ export function PlayerControls({
     onNext,
     skipSegment: skip,
     speedUp: speed.start,
+    zap: channel && { step: channel.step, type: numbers.type },
   });
 
   const fade = visible ? 'opacity-100' : 'pointer-events-none opacity-0';
@@ -363,25 +381,35 @@ export function PlayerControls({
   const isEpisode = item.Type === 'Episode';
   const listsEpisodes = isEpisode && !!item.SeriesId && !!onEpisode;
   const listsChapters = (player.chapters?.length ?? 0) > 1;
-  const stepping = steps ?? (isEpisode ? 'episode' : undefined);
+  const step = channel?.step;
+  const stepping =
+    steps ?? (isEpisode ? 'episode' : step ? 'channel' : undefined);
   const stepLabels = {
     episode: [t`Previous episode`, t`Next episode`],
+    channel: [t`Previous channel`, t`Next channel`],
     trailer: [t`Previous trailer`, t`Next trailer`],
     playlist: [t`Previous`, t`Next`],
   };
   const stepSeconds = seekStep;
-  const subtitle = caption ?? (isEpisode ? itemSubtitle(item) : undefined);
+  const subtitle =
+    caption ??
+    (channel
+      ? channel.programme?.Name
+      : isEpisode
+        ? itemSubtitle(item)
+        : undefined);
   const spinner = <LuLoaderCircle className="animate-spin" />;
   const buttons: Record<string, Transport | false> = {
     previous: !!stepping && {
       name: 'previous',
       label: stepLabels[stepping][0],
       icon: loadingEpisode === 'previous' ? spinner : <LuSkipBack />,
-      onClick: onPrevious,
+      onClick: step ? () => step(-1) : onPrevious,
     },
     // A remote's arrows skip with the controls hidden, and the seek bar's with them up.
     back: !touch &&
-      !tv && {
+      !tv &&
+      !live && {
         name: 'back',
         label: plural(stepSeconds, {
           one: 'Back # second',
@@ -391,7 +419,8 @@ export function PlayerControls({
         onClick: () => seekBy(-seekStep * 1000),
       },
     forward: !touch &&
-      !tv && {
+      !tv &&
+      !live && {
         name: 'forward',
         label: plural(stepSeconds, {
           one: 'Forward # second',
@@ -404,7 +433,7 @@ export function PlayerControls({
       name: 'next',
       label: stepLabels[stepping][1],
       icon: loadingEpisode === 'next' ? spinner : <LuSkipForward />,
-      onClick: onNext,
+      onClick: step ? () => step(1) : onNext,
     },
   };
   // Where the middle buttons don't show.
@@ -586,6 +615,7 @@ export function PlayerControls({
         />
       )}
       {speed.held && <SpeedPill rate={speed.held} />}
+      {numbers.typed && <NumberEntry typed={numbers.typed} />}
       {dragging && (
         <div
           data-ui="subtitle-drop"
@@ -675,35 +705,45 @@ export function PlayerControls({
             durationMs={state.durationMs}
           />
         )}
-        <div
-          data-ui="player-info"
-          className="flex items-center justify-between gap-3 px-0.5 pb-1"
-        >
-          <PlayerTime {...timeProps} durationMs={state.durationMs} />
-          <EndsAt
-            {...timeProps}
-            durationMs={state.durationMs}
-            rate={state.rate}
+        {channel ? (
+          <LiveBar
+            channel={channel}
+            behindMs={behind.behindMs}
+            onGoLive={behind.goLive}
           />
-        </div>
-        <SeekBar
-          playhead={player.playhead}
-          live={visible}
-          durationMs={state.durationMs}
-          segments={segments}
-          chapters={player.chapters ?? []}
-          previewMs={shownAt}
-          previewPicture={!strip && (!!scrub || seekPicture)}
-          handle={touch}
-          thumbnails={player.thumbnails}
-          onSeek={player.seek}
-          onStep={(direction, held) =>
-            tv
-              ? remoteStep(direction * seekStep * 1000, held)
-              : seekBy(direction * seekStep * 1000, false)
-          }
-          onTogglePlay={() => endScrub(true) || togglePlay()}
-        />
+        ) : (
+          <>
+            <div
+              data-ui="player-info"
+              className="flex items-center justify-between gap-3 px-0.5 pb-1"
+            >
+              <PlayerTime {...timeProps} durationMs={state.durationMs} />
+              <EndsAt
+                {...timeProps}
+                durationMs={state.durationMs}
+                rate={state.rate}
+              />
+            </div>
+            <SeekBar
+              playhead={player.playhead}
+              live={visible}
+              durationMs={state.durationMs}
+              segments={segments}
+              chapters={player.chapters ?? []}
+              previewMs={shownAt}
+              previewPicture={!strip && (!!scrub || seekPicture)}
+              handle={touch}
+              thumbnails={player.thumbnails}
+              onSeek={player.seek}
+              onStep={(direction, held) =>
+                tv
+                  ? remoteStep(direction * seekStep * 1000, held)
+                  : seekBy(direction * seekStep * 1000, false)
+              }
+              onTogglePlay={() => endScrub(true) || togglePlay()}
+            />
+          </>
+        )}
         <div className="flex items-center gap-1">
           <div className={cn('hidden items-center gap-1', inBar)}>
             <ControlButton
@@ -725,6 +765,11 @@ export function PlayerControls({
             onVersions={onVersions}
             onEpisodes={listsEpisodes ? () => setEpisodes(true) : undefined}
             onChapters={listsChapters ? () => setChapters(true) : undefined}
+            onChannels={
+              channel && channel.lineup.length > 1
+                ? () => setChannels(true)
+                : undefined
+            }
             onPlaylist={playlist ? () => setListing(true) : undefined}
             onAddFile={() => fileInput.current?.click()}
             onSyncByEar={() => setByEar(true)}
@@ -742,6 +787,15 @@ export function PlayerControls({
           loadingId={loadingEpisode}
           onPlay={onEpisode}
           onClose={() => setEpisodes(false)}
+        />
+      )}
+
+      {channel && (
+        <ChannelsSheet
+          item={item}
+          channel={channel}
+          open={channels}
+          onClose={() => setChannels(false)}
         />
       )}
 

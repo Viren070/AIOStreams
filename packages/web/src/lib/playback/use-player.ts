@@ -255,12 +255,14 @@ export function usePlayer(
   };
 
   // Reopening keeps the last picture and the controls up, unlike a restart.
-  const recovery = useLiveRecovery(!!source.IsInfiniteStream, url, state, {
-    reopen: () => {
-      setRetry(undefined);
-      patch({ error: null, waiting: true });
-      engine.load({ ...latestFile.current(0), paused: false });
-    },
+  const reopen = () => {
+    setRetry(undefined);
+    patch({ error: null, waiting: true });
+    engine.load({ ...latestFile.current(0), paused: false });
+  };
+  const liveSource = !!source.IsInfiniteStream;
+  const recovery = useLiveRecovery(liveSource, url, state, {
+    reopen,
     failed: async (retry) => {
       if (await latest.current.onLiveFailed?.()) return;
       patch({
@@ -678,5 +680,6 @@ export function usePlayer(
     sound: engine.sound,
     fit: engine.fits,
     retry,
+    goLive: liveSource ? reopen : undefined,
   };
 }

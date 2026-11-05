@@ -63,6 +63,8 @@ interface PlayerKeys {
   /** Set while the skip button shows. */
   skipSegment?: () => void;
   speedUp(): (() => void) | false;
+  /** A channel's: digits pick one by its number, and `step` moves along the list. */
+  zap?: { step?: (sign: number) => void; type(digit: string): void };
 }
 
 /** The player's shortcuts, each of which also shows the controls. */
@@ -150,6 +152,19 @@ export function usePlayerKeys(keys: PlayerKeys): void {
       if (!fn) return false;
       fn();
     };
+    const zapStep = (sign: number): Outcome => {
+      const step = k().zap?.step;
+      if (!step) return false;
+      step(sign);
+      return 'quiet';
+    };
+    // A remote's own volume keys set a TV's volume, so Up and Down change channel or bring the controls back.
+    const upDown = (sign: number): Outcome => {
+      if (!currentHost().tv) return nudgeVolume(sign);
+      // Down moves down the list, to the next channel.
+      if (!k().visible && k().zap?.step) return zapStep(-sign);
+      focusControls();
+    };
     /** The skip button while it shows, else play. */
     const focusControls = () => {
       const root = k().root.current;
@@ -210,6 +225,11 @@ export function usePlayerKeys(keys: PlayerKeys): void {
       'player.skipBack': (_, repeat) => skip(-1, repeat),
       'player.skipForward': (_, repeat) => skip(1, repeat),
       'player.jump': (input) => {
+        const { zap } = k();
+        if (zap) {
+          zap.type(input);
+          return 'quiet';
+        }
         const { state, seek } = player();
         if (!state.durationMs) return false;
         seek((state.durationMs * Number(input)) / 10);
@@ -219,11 +239,10 @@ export function usePlayerKeys(keys: PlayerKeys): void {
       'player.skipSegment': () => call(k().skipSegment),
       'player.previous': () => call(k().onPrevious),
       'player.next': () => call(k().onNext),
-      // A remote's own volume keys set a TV's volume, so Up and Down bring the controls back.
-      'player.volumeUp': () =>
-        currentHost().tv ? focusControls() : nudgeVolume(1),
-      'player.volumeDown': () =>
-        currentHost().tv ? focusControls() : nudgeVolume(-1),
+      'player.volumeUp': () => upDown(1),
+      'player.volumeDown': () => upDown(-1),
+      'live.channelUp': () => zapStep(1),
+      'live.channelDown': () => zapStep(-1),
       'player.mute': () => player().toggleMute(),
       'player.audio': () => {
         const { audioTracks, state, setAudio } = player();
