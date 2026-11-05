@@ -131,6 +131,18 @@ nothing. Its genres come from `/Genres?ParentId={library}` as usual, and a genre
 for all of it. The app opens it on `None` where that is offered and on its first genre otherwise, and
 offers All only where `None` is there to send.
 
+## Live TV
+
+The app shows Live TV when the user's views include one with `CollectionType` `livetv`, and reads it
+with Jellyfin's standard Live TV API: `/LiveTv/Channels`, `POST /LiveTv/Programs` for a guide, and
+`/Items?SearchTerm=…&IncludeItemTypes=TvChannel` for search. A channel plays and reports as any title
+does.
+
+Its groups are the genres of the Live TV view, from `/Genres?ParentId={view}`. The app asks for a
+group's channels with `/LiveTv/Channels?GenreIds={genre}`, which Jellyfin itself doesn't filter by;
+a server without groups lists no genres there, and the app shows all its channels together.
+Favourite channels come from `/LiveTv/Channels?IsFavorite=true`.
+
 ## Titles
 
 A title or collection whose addon sends an [`animatedPoster`](/reference/addon-protocol/metadata)
