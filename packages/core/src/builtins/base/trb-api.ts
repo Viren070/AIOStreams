@@ -1,26 +1,29 @@
+// Shared by therarbg and torrent-galaxy, which run the same TRB backend.
 import { Cache } from '../../utils/cache.js';
-import { config as appConfig } from '../../config/index.js';
 import {
   formatZodError,
   makeRequest,
   DistributedLock,
   HEADER_PRESETS,
+  createLogger,
 } from '../../utils/index.js';
-import { createLogger } from '../../utils/index.js';
+import type { Logger } from '../../logging/logger.js';
 import { searchWithBackgroundRefresh } from '../utils/general.js';
 
 import { z } from 'zod';
 
-const logger = createLogger('therarbg');
-
-enum TheRARBGCategory {
+export enum TrbCategory {
   Movies = 'Movies',
   TV = 'TV',
   TVShows = 'TV shows',
   Anime = 'Anime',
 }
 
-const TheRARBGSearchResultSchema = z
+// some posts omit the "tt" prefix
+export const normaliseImdbId = (id: string | null | undefined) =>
+  id && /^\d+$/.test(id) ? `tt${id}` : id;
+
+const TrbSearchResultSchema = z
   .looseObject({
     n: z.string(), // name
     a: z.number(), // unix timestamp i.e. age
@@ -36,15 +39,15 @@ const TheRARBGSearchResultSchema = z
     size: data.s,
     user: data.u,
     seeders: data.se,
-    imdbId: data.i,
+    imdbId: normaliseImdbId(data.i),
     hash: data.h,
   }));
 
-const TheRARBGSearchResponse = z
+const TrbSearchResponse = z
   .object({
     page_size: z.number(),
     total: z.number(),
-    results: z.array(TheRARBGSearchResultSchema),
+    results: z.array(TrbSearchResultSchema),
   })
   .transform((data) => ({
     pageSize: data.page_size,
@@ -52,19 +55,30 @@ const TheRARBGSearchResponse = z
     results: data.results,
   }));
 
-type TheRARBGSearchResponse = z.infer<typeof TheRARBGSearchResponse>;
+type TrbSearchResponse = z.infer<typeof TrbSearchResponse>;
 
-const getApiBaseUrl = () => appConfig.builtins.therarbg.url;
+export interface TrbSite {
+  id: string;
+  name: string;
+  indexerLabel: string;
+  getConfig: () => {
+    url: string;
+    searchTimeout: number;
+    searchCacheTtl: number;
+    pageLimit: number;
+  };
+}
 
-class TheRARBGAPI {
+export class TrbAPI {
   private headers: Record<string, string>;
+  private readonly logger: Logger;
+  private readonly searchCache: Cache<string, TrbSearchResponse>;
 
-  private readonly searchCache = Cache.getInstance<
-    string,
-    TheRARBGSearchResponse
-  >('therarbg:search');
-
-  constructor() {
+  constructor(private readonly site: TrbSite) {
+    this.logger = createLogger(site.id);
+    this.searchCache = Cache.getInstance<string, TrbSearchResponse>(
+      `${site.id}:search`
+    );
     this.headers = {
       'Content-Type': 'application/json',
       'User-Agent': HEADER_PRESETS.chrome['User-Agent'],
@@ -76,7 +90,7 @@ class TheRARBGAPI {
     query: string;
     page?: number;
     categories?: string[];
-  }): Promise<TheRARBGSearchResponse> {
+  }): Promise<TrbSearchResponse> {
     const query = options.query;
     const page = options.page ?? 1;
     const categories = options.categories ?? [];
@@ -85,11 +99,11 @@ class TheRARBGAPI {
     return searchWithBackgroundRefresh({
       searchCache: this.searchCache,
       searchCacheKey: cacheKey,
-      bgCacheKey: `therarbg:${cacheKey}`,
-      cacheTTL: appConfig.builtins.therarbg.searchCacheTtl,
+      bgCacheKey: `${this.site.id}:${cacheKey}`,
+      cacheTTL: this.site.getConfig().searchCacheTtl,
       fetchFn: () => this.request(query, page, categories),
       isEmptyResult: (result) => result.results.length === 0,
-      logger,
+      logger: this.logger,
     });
   }
 
@@ -97,19 +111,19 @@ class TheRARBGAPI {
     query: string,
     page: number,
     categories: string[]
-  ): Promise<TheRARBGSearchResponse> {
+  ): Promise<TrbSearchResponse> {
     const categorySegments = categories.map((c) => `:category:${c}`).join('');
     const url = new URL(
-      `/get-posts/order:-a${categorySegments}:keywords:${encodeURIComponent(query)}:format:json/`,
-      getApiBaseUrl()
+      `/get-posts/keywords:${encodeURIComponent(query)}:order:-a${categorySegments}:format:json/`,
+      this.site.getConfig().url
     );
     url.searchParams.set('page', page.toString());
-    const timeout = appConfig.builtins.therarbg.searchTimeout;
+    const timeout = this.site.getConfig().searchTimeout;
 
     const { result } = await DistributedLock.getInstance().withLock(
       url.toString(),
       async () => {
-        logger.debug(`Making GET request to ${url.pathname}`);
+        this.logger.debug(`Making GET request to ${url.pathname}`);
         try {
           const response = await makeRequest(url.toString(), {
             method: 'GET',
@@ -117,23 +131,24 @@ class TheRARBGAPI {
             timeout,
           });
 
-          const data = (await response.json()) as unknown;
-
           if (!response.ok) {
+            await response.body?.cancel().catch(() => {});
             throw new Error(
-              `TheRARBG API error (${response.status}): ${response.statusText}`
+              `${this.site.name} API error (${response.status}): ${response.statusText}`
             );
           }
 
+          const data = (await response.json()) as unknown;
+
           try {
-            return TheRARBGSearchResponse.parse(data);
+            return TrbSearchResponse.parse(data);
           } catch (error) {
             throw new Error(
-              `Failed to parse TheRARBG API response: ${formatZodError(error as z.ZodError)}`
+              `Failed to parse ${this.site.name} API response: ${formatZodError(error as z.ZodError)}`
             );
           }
         } catch (error) {
-          logger.error(
+          this.logger.error(
             `Request to ${url.pathname} failed: ${error instanceof Error ? error.message : 'Unknown error'}`
           );
           throw error instanceof Error
@@ -146,6 +161,3 @@ class TheRARBGAPI {
     return result;
   }
 }
-
-export { TheRARBGCategory, getApiBaseUrl as getTheRARBGUrl };
-export default TheRARBGAPI;
