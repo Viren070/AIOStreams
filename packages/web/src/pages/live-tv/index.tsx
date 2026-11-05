@@ -37,7 +37,8 @@ import {
   usePlayback,
 } from '../../lib/playback/session';
 import { navigate, to } from '../../lib/paths';
-import { focusOn } from '../../lib/input';
+import { focusOn, isTextField, useAction } from '../../lib/input';
+import { NumberEntry, useNumberEntry } from '../../components/channel-number';
 import type { BaseItemDto } from '../../lib/types';
 import { PageMessage } from '../../components/layout';
 import { fitsAsPills, PillTabs } from '../../components/pill-tabs';
@@ -54,6 +55,8 @@ import { Guide, programmeAt } from './guide';
 
 const WIDE = '(min-width: 1024px)';
 const OWN_GROUPS = new Set([FAVOURITES, RECENT, ALL]);
+/** How many more pages a typed number loads to find its channel. */
+const NUMBER_PAGES = 20;
 const DAY_MS = 86_400_000;
 /** The days ahead the guide offers, as far as servers keep programmes. */
 const GUIDE_DAYS = 7;
@@ -238,6 +241,37 @@ export function LiveTvPage({
       );
     if (target) focusOn(target);
   };
+  // A remote's digits go to the channel with that number, loading on to it.
+  const goToNumber = async (number: string) => {
+    let list = channels;
+    let more = pages.hasNextPage;
+    let index = list.findIndex((c) => c.ChannelNumber === number);
+    for (let page = 0; index < 0 && more && page < NUMBER_PAGES; page++) {
+      const next = await pages.fetchNextPage();
+      list = next.data?.pages.flatMap((p) => p.Items ?? []) ?? list;
+      more = next.hasNextPage;
+      index = list.findIndex((c) => c.ChannelNumber === number);
+    }
+    if (index < 0) return false;
+    setActive(index);
+    const grid = document.querySelector<HTMLElement>(
+      '[data-ui=guide], [data-ui=channel-list]'
+    );
+    if (grid) focusOn(grid);
+    return true;
+  };
+  const numbers = useNumberEntry(goToNumber, (text) => toast(text));
+  useAction('player.jump', (digit) => {
+    if (isTextField(document.activeElement)) return false;
+    numbers.type(digit);
+  });
+  // The guide and the list keep their keys from the actions, digits with them.
+  const onDigit = (e: React.KeyboardEvent) => {
+    const keyed = (e.target as Element).closest('[role=grid], [role=listbox]');
+    if (!keyed || !/^[0-9]$/.test(e.key)) return;
+    e.preventDefault();
+    numbers.type(e.key);
+  };
   const fromStart = (programme: BaseItemDto) => {
     if (canPreview())
       playDocked({ itemId: programme.Id!, sourceId: '', startMs: 0 });
@@ -299,6 +333,9 @@ export function LiveTvPage({
     <p className="p-4 text-[--muted]">
       <Trans>No channels in this group.</Trans>
     </p>
+  );
+  const numberShown = numbers.typed && (
+    <NumberEntry typed={numbers.typed} className="fixed z-50" />
   );
   const header = (
     <header className="flex flex-none flex-col gap-3">
@@ -370,7 +407,13 @@ export function LiveTvPage({
   if (guide) {
     const programme = programmeAt(shownProgrammes, shownAt);
     return (
-      <div data-ui="live-tv" data-view="guide" className={PAGE}>
+      <div
+        data-ui="live-tv"
+        data-view="guide"
+        className={PAGE}
+        onKeyDown={onDigit}
+      >
+        {numberShown}
         {header}
         <div
           data-ui="live-top"
@@ -453,7 +496,13 @@ export function LiveTvPage({
   );
 
   return (
-    <div data-ui="live-tv" data-view="list" className={PAGE}>
+    <div
+      data-ui="live-tv"
+      data-view="list"
+      className={PAGE}
+      onKeyDown={onDigit}
+    >
+      {numberShown}
       {header}
       {!wide && docked && (
         <Preview playing onPress={expandPlayback} className="flex-none" />

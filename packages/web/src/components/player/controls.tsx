@@ -34,14 +34,8 @@ import {
 import { BarWindowButtons, pageDrawsWindowButtons } from '../window-controls';
 import { ChaptersSheet } from './chapters';
 import { EpisodesSheet } from './episodes';
-import {
-  ChannelsSheet,
-  LiveBar,
-  NumberEntry,
-  useBehindLive,
-  useLiveChannel,
-  useNumberEntry,
-} from './live';
+import { NumberEntry, useNumberEntry } from '../channel-number';
+import { ChannelsSheet, LiveBar, useBehindLive, useLiveChannel } from './live';
 import { PlaylistSheet } from '../playlists';
 import {
   Notice,
@@ -195,7 +189,7 @@ export function PlayerControls({
   const [flash, showFlash] = useToggleFlash();
   const [seekFlash, showSeekFlash] = useSeekFlash();
   const [notice, showNotice] = useNotice();
-  const numbers = useNumberEntry(channel, showNotice);
+  const numbers = useNumberEntry(channel?.toNumber, showNotice);
   const syncOutcome = player.autoSync?.outcome;
   React.useEffect(() => {
     const text = syncOutcome && syncNotice(syncOutcome);

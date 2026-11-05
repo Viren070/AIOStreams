@@ -18,13 +18,8 @@ import { lastVersions } from '../../lib/playback/play';
 import { zapTo } from '../../lib/playback/session';
 import type { PlayerController } from '../../lib/playback/controller';
 import { useRestoreFocus } from '../../lib/input';
-import { useLatest } from '../../lib/use-latest';
 import type { BaseItemDto } from '../../lib/types';
 import { ChannelList, useRowSchedules } from '../channel-list';
-
-/** Digits typed for a channel number wait this long for the next. */
-const NUMBER_WAIT_MS = 1500;
-const MAX_DIGITS = 4;
 
 /** The channel zapped away from, which the sheet offers to go back to. */
 let previousChannel: string | null = null;
@@ -209,38 +204,6 @@ export function LiveBar({
           }}
         />
       </div>
-    </div>
-  );
-}
-
-export function useNumberEntry(
-  channel: LiveChannel | undefined,
-  notice: (text: string) => void
-) {
-  const [typed, setTyped] = React.useState('');
-  // Each render builds the channel anew, which must not restart the wait.
-  const latest = useLatest({ channel, notice });
-  React.useEffect(() => {
-    if (!typed) return;
-    const timer = setTimeout(() => {
-      setTyped('');
-      const { channel, notice } = latest.current;
-      if (!channel?.toNumber(typed)) notice(t`No channel ${typed}`);
-    }, NUMBER_WAIT_MS);
-    return () => clearTimeout(timer);
-  }, [typed, latest]);
-  const type = (digit: string) =>
-    setTyped((last) => (last + digit).slice(-MAX_DIGITS));
-  return { typed, type };
-}
-
-export function NumberEntry({ typed }: { typed: string }) {
-  return (
-    <div
-      data-ui="channel-number"
-      className="pointer-events-none absolute end-[max(1.5rem,env(safe-area-inset-right))] top-[calc(5rem+env(safe-area-inset-top))] z-20 rounded-xl bg-black/70 px-4 py-2 text-4xl font-bold tabular-nums"
-    >
-      {typed}
     </div>
   );
 }

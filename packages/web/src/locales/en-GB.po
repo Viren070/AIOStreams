@@ -2553,7 +2553,7 @@ msgstr "No badges match."
 msgid "No catalogs yet"
 msgstr "No catalogs yet"
 
-#: src/components/player/live.tsx
+#: src/components/channel-number.tsx
 msgid "No channel {typed}"
 msgstr "No channel {typed}"
 
