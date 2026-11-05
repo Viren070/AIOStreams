@@ -3,6 +3,7 @@ import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import { BiArrowBack, BiCopy, BiLayer, BiRefresh } from 'react-icons/bi';
 import { Button } from '@aiostreams/ui/button';
 import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
@@ -11,6 +12,7 @@ import { useSession } from '../lib/session';
 import {
   useItem,
   usePlaybackInfo,
+  usePlaybackInfoOptions,
   useRefreshAll,
   useSegments,
 } from '../lib/queries';
@@ -310,6 +312,25 @@ function useSwitchVersion(
       playing: source.Id ?? undefined,
       playlist,
     });
+}
+
+function useNextLiveVersion(
+  item: BaseItemDto,
+  source: SourceInfo,
+  playlist?: string
+) {
+  const queryClient = useQueryClient();
+  const infoOptions = usePlaybackInfoOptions();
+  return async (): Promise<boolean> => {
+    const info = await queryClient
+      .fetchQuery(infoOptions(item.Id!))
+      .catch(() => undefined);
+    const versions = playableSources(info);
+    const next = versions[versions.findIndex((v) => v.Id === source.Id) + 1];
+    if (!next) return false;
+    playOn({ itemId: item.Id!, sourceId: next.Id!, startMs: 0, playlist });
+    return true;
+  };
 }
 
 /** Reports the playback the way a Jellyfin client does once it starts. */
@@ -643,6 +664,7 @@ function Player({
       more ? { type: 'NextItem', playlistItemId } : { type: 'Stop' }
     );
   }, [playlistItemId, ended]);
+  const nextLiveVersion = useNextLiveVersion(item, source, playlist);
   const [subtitleStyle] = useSetting(settings.subtitle.style);
   const [fit] = useSetting(settings.video.fit);
   const localSubtitle = React.useCallback(
@@ -673,6 +695,8 @@ function Player({
         playlist: next.playlist,
       });
     },
+    // A party plays one version for everyone.
+    onLiveFailed: playlistItemId ? undefined : nextLiveVersion,
     prefs,
     subtitleStyle,
     launched,

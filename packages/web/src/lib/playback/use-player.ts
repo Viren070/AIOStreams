@@ -24,6 +24,7 @@ import { SUBTITLE_LIFT_MS, subtitleHeight } from '../subtitles/style';
 import type { MediaStream, SourceInfo } from '../types';
 import { useLatest } from '../use-latest';
 import type { Chapter } from './chapters';
+import { useLiveRecovery } from './live-recovery';
 import {
   initialState,
   storedVolume,
@@ -253,6 +254,28 @@ export function usePlayer(
     patch({ error: null, started: false, loaded: false, waiting: true });
   };
 
+  // Reopening keeps the last picture and the controls up, unlike a restart.
+  const recovery = useLiveRecovery(!!source.IsInfiniteStream, url, state, {
+    reopen: () => {
+      setRetry(undefined);
+      patch({ error: null, waiting: true });
+      engine.load({ ...latestFile.current(0), paused: false });
+    },
+    failed: async (retry) => {
+      if (await latest.current.onLiveFailed?.()) return;
+      patch({
+        waiting: false,
+        error: t({
+          comment: 'Follows "Playback failed:"',
+          message: 'the live stream stopped',
+        }),
+      });
+      setRetry({ label: t`Try again`, run: retry });
+    },
+    showNotice: (shown) => patch({ reconnecting: shown }),
+    positionMs: () => playhead.positionMs,
+  });
+
   handle.current = (event) => {
     switch (event.type) {
       case 'state':
@@ -281,6 +304,7 @@ export function usePlayer(
         return;
       }
       case 'ended': {
+        if (recovery) return recovery.dropped();
         const at = playhead.positionMs;
         if (live.current.durationMs - at <= EARLY_END_MS)
           return latest.current.onEnded();
@@ -300,6 +324,9 @@ export function usePlayer(
         });
       }
       case 'failed': {
+        // Another engine's offer comes first for a source that never played here.
+        if (recovery && (!event.retry || recovery.played))
+          return recovery.dropped();
         patch({ error: event.error });
         const again = event.retry;
         return setRetry(

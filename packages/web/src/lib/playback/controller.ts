@@ -44,6 +44,7 @@ export interface PlayerState {
   /** Positive shows subtitles later. */
   subtitleDelayMs: number;
   error: string | null;
+  reconnecting?: boolean;
   /** The video plays in a small window of its own, with nothing over it. */
   pictureInPicture?: boolean;
   /** The sound goes out undecoded, which a change of speed can't stretch. */
@@ -166,6 +167,8 @@ export interface PlayerOptions {
   onClosed?: () => void;
   /** That player moved on to what it was given with `queueNext`. */
   onAdvance?: (next: QueuedItem) => void;
+  /** Moves on from a live source that kept failing; false when there is nothing else to play. */
+  onLiveFailed?: () => Promise<boolean>;
   startPaused?: boolean;
 }
 

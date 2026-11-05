@@ -3397,6 +3397,7 @@ msgid "Reconnecting to the party…"
 msgstr "Reconnecting to the party…"
 
 #: src/components/layout.tsx
+#: src/components/player/controls.tsx
 msgid "Reconnecting…"
 msgstr "Reconnecting…"
 
@@ -4526,6 +4527,11 @@ msgstr "The link may be old, or the page moved."
 msgid "the link returned something other than a video"
 msgstr "the link returned something other than a video"
 
+#. Follows "Playback failed:"
+#: src/lib/playback/use-player.ts
+msgid "the live stream stopped"
+msgstr "the live stream stopped"
+
 #: src/pages/settings/playback.tsx
 msgid "The mini player keeps the video going over the pages while you look around. Tap it to open the player again, or close it with its cross."
 msgstr "The mini player keeps the video going over the pages while you look around. Tap it to open the player again, or close it with its cross."
@@ -4835,6 +4841,7 @@ msgstr "Troubleshooting"
 #: src/components/party/party-sheet.tsx
 #: src/components/random-pick.tsx
 #: src/components/version-picker.tsx
+#: src/lib/playback/use-player.ts
 #: src/pages/downloads.tsx
 #: src/pages/sign-in.tsx
 msgid "Try again"
