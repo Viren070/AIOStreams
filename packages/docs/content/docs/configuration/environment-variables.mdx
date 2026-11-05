@@ -668,6 +668,14 @@ neither the environment variable nor a stored value is present.
 | `DEFAULT_STAR_WARS_UNIVERSE_TIMEOUT`    | Star Wars Universe › Default Timeout    | number | —                                               | Default timeout for the Star Wars Universe addon (milliseconds). Falls back to the global default when unset. |
 | `DEFAULT_STAR_WARS_UNIVERSE_USER_AGENT` | Star Wars Universe › Default User Agent | string | —                                               | Default User-Agent for the Star Wars Universe addon. Supports `{version}`/`{random}` placeholders.            |
 
+#### Cinemeta
+
+| Environment Variable          | UI Setting                    | Type   | Default                            | Description                                                                                         |
+| ----------------------------- | ----------------------------- | ------ | ---------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `CINEMETA_URL`                | Cinemeta › URL                | list   | `["https://v3-cinemeta.strem.io"]` | Upstream URL(s) for the Cinemeta addon.                                                             |
+| `DEFAULT_CINEMETA_TIMEOUT`    | Cinemeta › Default Timeout    | number | —                                  | Default timeout for the Cinemeta addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_CINEMETA_USER_AGENT` | Cinemeta › Default User Agent | string | —                                  | Default User-Agent for the Cinemeta addon. Supports `{version}`/`{random}` placeholders.            |
+
 #### Anime Kitsu
 
 | Environment Variable             | UI Setting                       | Type   | Default                             | Description                                                                                            |
