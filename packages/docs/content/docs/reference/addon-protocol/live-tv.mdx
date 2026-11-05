@@ -1,0 +1,113 @@
+---
+title: Live TV
+description: Channel catalogs, programme guides and channel numbers, which Jellyfin clients show as Live TV.
+---
+
+Catalogs of channels don't show as libraries in Jellyfin clients. Together they make up **Live TV**:
+one list of channels, their groups, and a programme guide. The guide uses Stremio's own format, so
+the same catalog fills Stremio's guide too.
+
+## Channel catalogs
+
+A catalog is a live one when its `type` is `tv` or `channel`, or when it declares the `date` extra
+of a [guide](#guides). Its entries are the channels, in the catalog's order, one catalog after
+another in the configuration's catalog order.
+
+```json
+"catalogs": [
+  {
+    "type": "tv",
+    "id": "channels",
+    "name": "Channels",
+    "extra": [{ "name": "genre", "options": ["News", "Sports", "Kids"] }, { "name": "skip" }]
+  }
+]
+```
+
+| Field   | Meaning                                                                                         |
+| ------- | ----------------------------------------------------------------------------------------------- |
+| `genre` | The channel groups. Clients list them as Live TV's groups and ask for one group's channels      |
+| `skip`  | Paging. Clients page through long lists, so a catalog with hundreds of channels should allow it |
+
+An entry also opens as a channel outside a live catalog when its type is `tv` or `channel`, its
+meta has `behaviorHints.isLive: true`, or every one of its videos has a `startTime`.
+
+## Channels
+
+Channels are ordinary catalog entries and metas, with these fields read as well:
+
+| Field           | Type             | Meaning                                                                                   |
+| --------------- | ---------------- | ----------------------------------------------------------------------------------------- |
+| `channelNumber` | string or number | The channel's number. Without one, channels are numbered by their place in the whole list |
+| `logo`          | URL              | The channel's picture in lists and the guide, in place of `poster`                        |
+| `videos`        | array            | The channel's programmes, in a [guide](#guides) answer                                    |
+
+A channel's streams are its sources, each a version the user can switch to. The apps reopen a
+source that drops, and move on to the next one when it keeps failing.
+
+## Guides
+
+A guide catalog declares the `date` extra; set `behaviorHints.epgProvider` in the manifest too for
+Stremio to show it. It is asked for one UTC day at a time, and answers with its channels and each
+channel's programmes that day. Stremio reads the answer from `metasDetailed`, so send the entries
+there rather than in `metas`.
+
+```json
+{
+  "behaviorHints": { "epgProvider": true },
+  "catalogs": [
+    {
+      "type": "tv",
+      "id": "guide",
+      "name": "Guide",
+      "extra": [{ "name": "date" }, { "name": "genre", "options": ["News", "Sports"] }, { "name": "skip" }]
+    }
+  ]
+}
+```
+
+```http
+GET {addonBase}/catalog/tv/guide/date=2026-11-05&skip=100.json
+```
+
+```json
+{
+  "metasDetailed": [
+    {
+      "id": "mytv:bbc-news",
+      "type": "tv",
+      "name": "BBC News",
+      "logo": "https://…",
+      "channelNumber": 231,
+      "videos": [
+        {
+          "id": "mytv:bbc-news:1762300800",
+          "title": "Newsday",
+          "startTime": "2026-11-05T00:00:00Z",
+          "endTime": "2026-11-05T01:00:00Z",
+          "overview": "The latest news from around the world.",
+          "thumbnail": "https://…",
+          "genres": ["News"]
+        }
+      ]
+    }
+  ]
+}
+```
+
+Stremio also asks without `date` to list the channels alone; answer that as usual, in `metas`.
+
+| Programme field        | Meaning                                                                            |
+| ---------------------- | ---------------------------------------------------------------------------------- |
+| `startTime`, `endTime` | When it airs, as ISO dates. A programme without both is left out of the guide      |
+| `title`                | Its title; `name` is read when there is no `title`                                 |
+| `overview`             | Its description                                                                    |
+| `thumbnail`            | Its picture                                                                        |
+| `background`           | A wide picture for its page                                                        |
+| `genres`               | Its genres. Movie, news, kids and sports genres mark it as one in Jellyfin's guide |
+| `season`, `episode`    | Its season and episode numbers, for an episode of a show                           |
+| `cast`, `directors`    | Names, shown as its people                                                         |
+| `imdbId`               | Its IMDb id                                                                        |
+
+The guide covers a week from today. Programmes are asked for from the same catalog, group and page
+a channel was listed on, so keep a channel on the same page of every day's answer.
