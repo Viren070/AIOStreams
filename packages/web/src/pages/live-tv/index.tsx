@@ -104,7 +104,6 @@ function dayOffsets(
   return Array.from({ length: back + ahead }, (_, i) => i - back);
 }
 
-/** A few days are pills; a week back and ahead is a list. */
 function DayPicker({
   days,
   value,
@@ -114,15 +113,6 @@ function DayPicker({
   value: number;
   onChange(offset: number): void;
 }) {
-  if (fitsAsPills(days.map((d) => d.label)))
-    return (
-      <PillTabs
-        name="live-day"
-        options={days}
-        value={value}
-        onChange={onChange}
-      />
-    );
   return (
     <div className="w-44">
       <Select
@@ -266,15 +256,13 @@ export function LiveTvPage({
     if (docked && playingId === channel.Id) expandPlayback();
     else play(channel);
   };
-  // Up out of the guide lands on the programme's buttons, and then the groups above them.
-  const leaveGuide = () => {
+  // Up from the channels lands on the group they are from, which a pill
+  // focused on the way would pick instead.
+  const leaveUp = () => {
     const target =
       document.querySelector<HTMLElement>(
-        '[data-ui=programme-details] button'
-      ) ??
-      document.querySelector<HTMLElement>(
-        '[data-name=live-group] [data-selected]'
-      );
+        '[data-name=live-group] [aria-selected=true]'
+      ) ?? document.querySelector<HTMLElement>('[data-ui=live-group-picker]');
     if (target) focusOn(target);
   };
   // A remote's digits go to the channel with that number, loading on to it.
@@ -376,41 +364,16 @@ export function LiveTvPage({
   const numberShown = numbers.typed && (
     <NumberEntry typed={numbers.typed} className="fixed z-50" />
   );
+  // One row of controls, so the day and the view are a few presses on from the group.
   const header = (
     <header className="flex flex-none flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <h1 data-ui="page-title" className="me-auto text-3xl font-bold">
-          <Trans>Live TV</Trans>
-        </h1>
-        {guide && (
-          <DayPicker
-            days={days}
-            value={dayOffset}
-            onChange={(offset) => {
-              setDayOffset(offset);
-              // Another day opens at the same time of day.
-              setAt(new Date(now).setDate(new Date(now).getDate() + offset));
-            }}
-          />
-        )}
-        {wide && (
-          <PillTabs
-            name="live-view"
-            options={[
-              { value: 'guide' as const, label: t`Guide` },
-              { value: 'list' as const, label: t`Channels` },
-            ]}
-            value={shownView}
-            onChange={(next) => {
-              rememberView(next);
-              navigate(to.live({ group: requested, view: next }), {
-                replace: true,
-              });
-            }}
-          />
-        )}
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
+      <h1 data-ui="page-title" className="text-3xl font-bold">
+        <Trans>Live TV</Trans>
+      </h1>
+      <div
+        data-ui="live-controls"
+        className="flex flex-wrap items-center gap-x-4 gap-y-2"
+      >
         <PillTabs
           name="live-group"
           options={(picked ? ownGroups : groups).map((g) => ({
@@ -438,6 +401,34 @@ export function LiveTvPage({
               onValueChange={(next) => next[0] && chooseGroup(next[0])}
             />
           </div>
+        )}
+        <div className="ms-auto" />
+        {guide && (
+          <DayPicker
+            days={days}
+            value={dayOffset}
+            onChange={(offset) => {
+              setDayOffset(offset);
+              // Another day opens at the same time of day.
+              setAt(new Date(now).setDate(new Date(now).getDate() + offset));
+            }}
+          />
+        )}
+        {wide && (
+          <PillTabs
+            name="live-view"
+            options={[
+              { value: 'guide' as const, label: t`Guide` },
+              { value: 'list' as const, label: t`Channels` },
+            ]}
+            value={shownView}
+            onChange={(next) => {
+              rememberView(next);
+              navigate(to.live({ group: requested, view: next }), {
+                replace: true,
+              });
+            }}
+          />
         )}
       </div>
     </header>
@@ -501,7 +492,7 @@ export function LiveTvPage({
                 }}
                 onPlay={playFromGuide}
                 onRange={onRange}
-                onLeaveUp={leaveGuide}
+                onLeaveUp={leaveUp}
                 reminded={reminded}
               />
             </div>
@@ -528,6 +519,7 @@ export function LiveTvPage({
         active={Math.min(active, channels.length - 1)}
         playingId={playingId}
         onActive={choose}
+        onLeaveUp={leaveUp}
         onPlay={watch}
         onRange={onRange}
       />

@@ -78,6 +78,7 @@ export function ChannelList({
   onActive,
   onPlay,
   onRange,
+  onLeaveUp = () => void move('up'),
   className,
 }: {
   channels: BaseItemDto[];
@@ -90,6 +91,8 @@ export function ChannelList({
   onActive(index: number): void;
   onPlay(channel: BaseItemDto): void;
   onRange(first: number, last: number): void;
+  /** Up from the first row, which goes to what is above where not given. */
+  onLeaveUp?: () => void;
   className?: string;
 }) {
   const scroller = React.useRef<HTMLDivElement>(null);
@@ -144,7 +147,7 @@ export function ChannelList({
         break;
       case 'ArrowUp':
         if (active > 0) go(active - 1);
-        else move('up');
+        else onLeaveUp();
         break;
       case 'ArrowLeft':
       case 'ArrowRight':
