@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
 import {
   AIOStreams,
-  CatalogResponse,
   createLogger,
+  ExtrasParser,
   StremioTransformer,
 } from '@aiostreams/core';
 import { trackResource } from '../../middlewares/analytics.js';
@@ -21,7 +21,11 @@ interface CatalogParams {
 
 router.get(
   '/:type/:id{/:extras}.json',
-  async (req: Request<CatalogParams>, res: Response<CatalogResponse>, next) => {
+  async (
+    req: Request<CatalogParams>,
+    res: Response<ReturnType<StremioTransformer['transformCatalog']>>,
+    next
+  ) => {
     if (!req.userData) {
       res.status(200).json(
         StremioTransformer.createDynamicError('catalog', {
@@ -42,7 +46,8 @@ router.get(
           transformer.transformCatalog(
             await (
               await new AIOStreams(req.userData).initialise()
-            ).getCatalog(type, id, extras)
+            ).getCatalog(type, id, extras),
+            new ExtrasParser(extras).has('date')
           )
         );
     } catch (error) {
