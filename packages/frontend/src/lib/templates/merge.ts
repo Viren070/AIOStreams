@@ -2,8 +2,8 @@ import type { UserData } from '@aiostreams/core';
 
 /**
  * Fields an update never asks about. Identity and server state, this feature's
- * own bookkeeping, the user's saved variants, and `services`, which the wizard
- * has the user pick again on every apply.
+ * own bookkeeping, and `services`, which the wizard has the user pick again on
+ * every apply.
  */
 const NOT_A_SETTING = new Set([
   'uuid',
@@ -12,7 +12,6 @@ const NOT_A_SETTING = new Set([
   'trusted',
   'parentConfig',
   'appliedTemplates',
-  'variants',
   'services',
 ]);
 
@@ -43,31 +42,35 @@ export interface TemplateUpdatePlan {
   hasBaseline: boolean;
 }
 
-const instanceIds = (presets: unknown): Set<string> =>
-  new Set(
+const comparable = (value: unknown) => JSON.stringify(value ?? null);
+
+const byInstance = (presets: unknown): Map<string, unknown> =>
+  new Map(
     (Array.isArray(presets) ? presets : [])
-      .map((p: any) => p?.instanceId)
-      .filter((id: unknown): id is string => typeof id === 'string')
+      .filter((p: any) => typeof p?.instanceId === 'string')
+      .map((p: any) => [p.instanceId, p])
   );
 
-/** Presets compare by instanceId, not position. */
-function comparable(field: string, value: unknown): string {
-  if (field === 'presets' && Array.isArray(value)) {
-    return JSON.stringify(
-      [...value].sort((a: any, b: any) =>
-        String(a?.instanceId).localeCompare(String(b?.instanceId))
-      )
-    );
+/**
+ * True when an addon was changed both by the user and by the update, or when
+ * the update adds an addon under an id the user already uses.
+ */
+function presetsConflict(base: unknown, mine: unknown, theirs: unknown) {
+  const b = byInstance(base);
+  const m = byInstance(mine);
+  const t = byInstance(theirs);
+  for (const id of new Set([...b.keys(), ...t.keys()])) {
+    const ours = comparable(m.get(id));
+    const incoming = comparable(t.get(id));
+    if (!b.has(id)) {
+      if (m.has(id) && t.has(id) && ours !== incoming) return true;
+      continue;
+    }
+    const original = comparable(b.get(id));
+    if (original !== ours && original !== incoming && ours !== incoming)
+      return true;
   }
-  return JSON.stringify(value ?? null);
-}
-
-/** The user's presets limited to the ones the template supplied. */
-function templateOwnedPresets(mine: unknown, base: unknown): unknown {
-  const owned = instanceIds(base);
-  return (Array.isArray(mine) ? mine : []).filter((p: any) =>
-    owned.has(p?.instanceId)
-  );
+  return false;
 }
 
 /**
@@ -92,30 +95,21 @@ export function planTemplateUpdate(
   for (const field of Object.keys(theirs)) {
     if (NOT_A_SETTING.has(field)) continue;
     const incoming = (theirs as any)[field];
-    let ours = (mine as any)?.[field];
-    if (comparable(field, ours) === comparable(field, incoming)) continue;
-
-    if (base) {
-      const original = (base as any)[field];
-      if (comparable(field, original) === comparable(field, incoming)) continue;
-      changed.push(field);
-      // Addons the user added are kept by mergeTemplateUpdate, so only the
-      // template's own addons can conflict.
-      if (field === 'presets') ours = templateOwnedPresets(ours, original);
-    } else {
-      changed.push(field);
-    }
-
     const current = (mine as any)?.[field];
+    if (comparable(current) === comparable(incoming)) continue;
+    const original = base ? (base as any)[field] : undefined;
+    if (base && comparable(original) === comparable(incoming)) continue;
+    changed.push(field);
+
     const after =
       field === 'presets' && base
-        ? mergePresets((base as any).presets, current, incoming)
+        ? mergePresets(original, current, incoming)
         : incoming;
-    const userMoved = base
-      ? comparable(field, (base as any)[field]) !== comparable(field, ours)
-      : true;
-    const conflict =
-      userMoved && comparable(field, ours) !== comparable(field, incoming);
+    const conflict = !base
+      ? true
+      : field === 'presets'
+        ? presetsConflict(original, current, incoming)
+        : comparable(original) !== comparable(current);
     changes.push({ field, mine: current, theirs: after, conflict });
     if (conflict) conflicts.push({ field, mine: current, theirs: incoming });
   }
@@ -124,28 +118,52 @@ export function planTemplateUpdate(
 }
 
 /**
- * The template's addons as updated, plus the addons the user added, minus the
- * template addons the user removed.
+ * The template's addons as updated, keeping the user's edits to addons the
+ * update leaves alone, the addons the user added, and their removals. Keeps the
+ * user's order unless the update reorders the template's addons.
  */
 export function mergePresets(
   base: unknown,
   mine: unknown,
   theirs: unknown
 ): unknown[] {
-  const baseIds = instanceIds(base);
-  const mineList = Array.isArray(mine) ? mine : [];
-  const mineIds = instanceIds(mineList);
+  const b = byInstance(base);
+  const m = byInstance(mine);
   const theirList = Array.isArray(theirs) ? theirs : [];
-  const theirIds = instanceIds(theirList);
+  const mineList = Array.isArray(mine) ? mine : [];
+  const t = byInstance(theirList);
 
-  const removedByUser = new Set([...baseIds].filter((id) => !mineIds.has(id)));
-  const updated = theirList.filter(
-    (p: any) => !removedByUser.has(p?.instanceId)
-  );
+  const pick = (p: any) => {
+    const id = p?.instanceId;
+    if (b.has(id) && !m.has(id))
+      return comparable(b.get(id)) === comparable(p) ? null : p;
+    if (b.has(id) && m.has(id) && comparable(b.get(id)) === comparable(p))
+      return m.get(id);
+    return p;
+  };
+
+  const sharedOrder = (list: unknown[]) =>
+    list
+      .map((p: any) => p?.instanceId)
+      .filter((id) => b.has(id) && t.has(id))
+      .join(',');
+  const reordered =
+    sharedOrder(Array.isArray(base) ? base : []) !== sharedOrder(theirList);
+
   const addedByUser = mineList.filter(
-    (p: any) => !baseIds.has(p?.instanceId) && !theirIds.has(p?.instanceId)
+    (p: any) => !b.has(p?.instanceId) && !t.has(p?.instanceId)
   );
-  return [...updated, ...addedByUser];
+  const fromTemplate = theirList.map(pick).filter((p) => p !== null);
+  if (reordered) return [...fromTemplate, ...addedByUser];
+
+  const newFromTemplate = fromTemplate.filter(
+    (p: any) => !m.has(p?.instanceId) || !b.has(p?.instanceId)
+  );
+  const kept = mineList
+    .filter((p: any) => t.has(p?.instanceId) && b.has(p?.instanceId))
+    .map((p: any) => pick(t.get(p.instanceId)))
+    .filter((p) => p !== null);
+  return [...kept, ...newFromTemplate, ...addedByUser];
 }
 
 /** Keeps the user's credentials wherever the incoming service leaves one blank. */
