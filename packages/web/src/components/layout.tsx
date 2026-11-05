@@ -79,6 +79,7 @@ import { VersionPickerProvider } from './version-picker';
 import { RemoteTarget } from './remote-target';
 import { RemoteSheet } from './remote-sheet';
 import { WatchNextSync } from './watch-next';
+import { ReminderHost } from './live-reminders';
 import { RandomPick } from './random-pick';
 import { ItemMenuHost } from './item-menu';
 import { HomePage } from '../pages/home';
@@ -740,6 +741,7 @@ export function WebLayout() {
                 )}
                 <VersionPickerProvider>
                   <RemoteTarget />
+                  <ReminderHost />
                   <RandomPick />
                   <PlaylistsHost />
                   {currentHost().watchNext && <WatchNextSync />}

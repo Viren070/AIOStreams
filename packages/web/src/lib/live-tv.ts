@@ -56,6 +56,72 @@ const subscribeLineup = (listener: () => void) => {
 export const useLineup = () =>
   React.useSyncExternalStore(subscribeLineup, () => lineup);
 
+/** A later programme to be told about as it starts. */
+export interface Reminder {
+  id: string;
+  title: string;
+  start: number;
+  channelId: string;
+  channelName: string;
+}
+
+/** Reminders on this device, by user. */
+const reminders = storedMap<Reminder[]>('aiostreams-web-live-reminders', 20);
+const reminderListeners = new Set<() => void>();
+let remindersVersion = 0;
+
+export const remindersOf = (userId: string): Reminder[] =>
+  reminders.get(userId) ?? [];
+
+export function setReminders(userId: string, list: Reminder[]): void {
+  reminders.set(userId, list.length ? list : undefined);
+  remindersVersion++;
+  for (const listener of reminderListeners) listener();
+}
+
+const subscribeReminders = (listener: () => void) => {
+  reminderListeners.add(listener);
+  return () => void reminderListeners.delete(listener);
+};
+
+export function useReminders() {
+  const { user } = useSession();
+  const userId = user.Id!;
+  const version = React.useSyncExternalStore(
+    subscribeReminders,
+    () => remindersVersion
+  );
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- read again on each change
+  const list = React.useMemo(() => remindersOf(userId), [userId, version]);
+  return {
+    list,
+    has: (programmeId: string | undefined) =>
+      !!programmeId && list.some((r) => r.id === programmeId),
+    /** True when it now has one. */
+    toggle(programme: BaseItemDto): boolean {
+      const current = remindersOf(userId);
+      if (current.some((r) => r.id === programme.Id)) {
+        setReminders(
+          userId,
+          current.filter((r) => r.id !== programme.Id)
+        );
+        return false;
+      }
+      setReminders(userId, [
+        ...current,
+        {
+          id: programme.Id!,
+          title: programme.Name ?? '',
+          start: startOf(programme),
+          channelId: programme.ChannelId!,
+          channelName: programme.ChannelName ?? '',
+        },
+      ]);
+      return true;
+    },
+  };
+}
+
 const GROUP_KEY = 'aiostreams-web-live-group';
 
 export const lastGroup = (): string => storage.get<string>(GROUP_KEY) ?? ALL;

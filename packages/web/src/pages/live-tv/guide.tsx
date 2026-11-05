@@ -1,5 +1,6 @@
 import { t } from '@lingui/core/macro';
 import React from 'react';
+import { BiBell } from 'react-icons/bi';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '../../lib/session';
 import { posterUrl } from '../../lib/images';
@@ -58,6 +59,7 @@ export function Guide({
   onPlay,
   onRange,
   onLeaveUp,
+  reminded,
   className,
 }: {
   channels: BaseItemDto[];
@@ -72,6 +74,7 @@ export function Guide({
   onRange(first: number, last: number): void;
   /** Up from the first row, which the page sends on to what is above. */
   onLeaveUp(): void;
+  reminded: ReadonlySet<string>;
   className?: string;
 }) {
   const scroller = React.useRef<HTMLDivElement>(null);
@@ -240,6 +243,7 @@ export function Guide({
         now={now}
         focusAt={i === focus.row ? focusStart : undefined}
         playing={!!channel && channel.Id === playingId}
+        reminded={reminded}
       />
     );
   }
@@ -347,6 +351,7 @@ const GuideRow = React.memo(function GuideRow({
   now,
   focusAt,
   playing,
+  reminded,
 }: {
   index: number;
   channel: BaseItemDto | undefined;
@@ -358,6 +363,7 @@ const GuideRow = React.memo(function GuideRow({
   /** The start of the programme the keys are on, in this row. */
   focusAt?: number;
   playing: boolean;
+  reminded: ReadonlySet<string>;
 }) {
   const { client } = useSession();
   const dayEnd = dayStart + DAY;
@@ -383,6 +389,7 @@ const GuideRow = React.memo(function GuideRow({
         data-at={start}
         data-airing={airing || undefined}
         data-catchup={caughtUp(p) || undefined}
+        data-reminder={reminded.has(p.Id!) || undefined}
         data-active={focused || undefined}
         data-focus-frame={focused || undefined}
         className={cn(
@@ -411,6 +418,9 @@ const GuideRow = React.memo(function GuideRow({
               focused ? 'text-black/70' : 'text-[--muted]'
             )}
           >
+            {reminded.has(p.Id!) && (
+              <BiBell aria-label={t`Reminder`} className="me-1 inline" />
+            )}
             {p.StartDate && airTime(p.StartDate)}
           </p>
         </div>

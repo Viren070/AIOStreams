@@ -2,10 +2,12 @@ import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import {
+  BiBell,
   BiExpand,
   BiHeart,
   BiPlay,
   BiReset,
+  BiSolidBell,
   BiSolidHeart,
 } from 'react-icons/bi';
 import { Button, IconButton } from '@aiostreams/ui/button';
@@ -211,6 +213,8 @@ export function ProgrammeDetails({
   playing,
   onWatch,
   onFromStart,
+  reminded,
+  onRemind,
   className,
 }: {
   channel: BaseItemDto;
@@ -220,6 +224,8 @@ export function ProgrammeDetails({
   onWatch(): void;
   /** Plays the programme from its start, where the channel keeps it. */
   onFromStart(): void;
+  reminded: boolean;
+  onRemind(): void;
   className?: string;
 }) {
   const airing =
@@ -269,6 +275,20 @@ export function ProgrammeDetails({
         <p className="line-clamp-3 max-w-2xl text-sm text-gray-300">
           {programme.Overview}
         </p>
+      )}
+      {programme && startOf(programme) > now && (
+        <div className="mt-1">
+          <Button
+            data-ui="live-remind"
+            data-active={reminded || undefined}
+            intent={reminded ? 'white' : 'gray-subtle'}
+            className="rounded-full"
+            leftIcon={reminded ? <BiSolidBell /> : <BiBell />}
+            onClick={onRemind}
+          >
+            {reminded ? <Trans>Reminder set</Trans> : <Trans>Remind me</Trans>}
+          </Button>
+        </div>
       )}
       {(airing || caughtUp(programme)) && (
         <div className="mt-1 flex flex-wrap gap-2">

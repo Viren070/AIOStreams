@@ -21,12 +21,14 @@ import {
   caughtUp,
   useChannelGroups,
   useGuideRange,
+  useReminders,
   useChannelPages,
   useNow,
   type LiveView,
 } from '../../lib/live-tv';
 import { currentHost } from '../../lib/hosts';
-import { dayLabel } from '../../lib/format';
+import { airTime, dayLabel } from '../../lib/format';
+import { toast } from 'sonner';
 import { lastVersions } from '../../lib/playback/play';
 import {
   canPreview,
@@ -165,6 +167,11 @@ export function LiveTvPage({
       : (lastView() ?? (currentHost().tv ? 'list' : 'guide'));
   const guide = wide && shownView === 'guide';
   const guideRange = useGuideRange().data;
+  const reminders = useReminders();
+  const reminded = React.useMemo(
+    () => new Set(reminders.list.map((r) => r.id)),
+    [reminders.list]
+  );
   const [dayOffset, setDayOffset] = React.useState(0);
   const today = midnight(now);
   const dayStart = new Date(today).setDate(
@@ -236,11 +243,18 @@ export function LiveTvPage({
       playDocked({ itemId: programme.Id!, sourceId: '', startMs: 0 });
     else picker.play(programme);
   };
+  const remind = (programme: BaseItemDto) => {
+    const time = (programme.StartDate && airTime(programme.StartDate)) ?? '';
+    if (reminders.toggle(programme))
+      toast.success(t`You'll be reminded at ${time}`);
+    else toast(t`Reminder removed`);
+  };
   // One on now plays its channel, an earlier one from its start where the
-  // channel keeps it, and a later one waits for reminders.
+  // channel keeps it, and a later one sets a reminder.
   const playFromGuide = (channel: BaseItemDto, programme?: BaseItemDto) => {
     if (!programme || (startOf(programme) <= now && now < endOf(programme)))
       watch(channel);
+    else if (startOf(programme) > now) remind(programme);
     else if (caughtUp(programme)) fromStart(programme);
   };
 
@@ -371,6 +385,8 @@ export function LiveTvPage({
               playing={docked && playingId === shown.Id}
               onWatch={() => watch(shown)}
               onFromStart={() => programme && fromStart(programme)}
+              reminded={reminders.has(programme?.Id)}
+              onRemind={() => programme && remind(programme)}
             />
           ) : (
             <div className="flex-1" />
@@ -404,6 +420,7 @@ export function LiveTvPage({
                 onPlay={playFromGuide}
                 onRange={onRange}
                 onLeaveUp={leaveGuide}
+                reminded={reminded}
               />
             </div>
           )

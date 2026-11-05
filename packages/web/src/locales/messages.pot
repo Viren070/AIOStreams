@@ -14,6 +14,10 @@ msgstr ""
 msgid "{address} did not answer. Check that it is running, then try again."
 msgstr ""
 
+#: src/components/live-reminders.tsx
+msgid "{at} on {channelName}"
+msgstr ""
+
 #: src/components/version-settings.tsx
 msgid "{badgeCount, plural, one {# badge of your own} other {# badges of your own}}"
 msgstr ""
@@ -1399,6 +1403,7 @@ msgid "Discover"
 msgstr ""
 
 #: src/components/layout.tsx
+#: src/components/live-reminders.tsx
 msgid "Dismiss"
 msgstr ""
 
@@ -3540,6 +3545,22 @@ msgstr ""
 msgid "Remember picks per show"
 msgstr ""
 
+#: src/pages/live-tv/channel-details.tsx
+msgid "Remind me"
+msgstr ""
+
+#: src/pages/live-tv/guide.tsx
+msgid "Reminder"
+msgstr ""
+
+#: src/pages/live-tv/index.tsx
+msgid "Reminder removed"
+msgstr ""
+
+#: src/pages/live-tv/channel-details.tsx
+msgid "Reminder set"
+msgstr ""
+
 #: src/components/version-settings.tsx
 #: src/pages/search.tsx
 #: src/pages/servers.tsx
@@ -5247,6 +5268,7 @@ msgstr ""
 msgid "Waiting for approval…"
 msgstr ""
 
+#: src/components/live-reminders.tsx
 #: src/pages/live-tv/channel-details.tsx
 msgid "Watch"
 msgstr ""
@@ -5497,6 +5519,10 @@ msgstr ""
 
 #: src/lib/party/party.ts
 msgid "You left the party."
+msgstr ""
+
+#: src/pages/live-tv/index.tsx
+msgid "You'll be reminded at {time}"
 msgstr ""
 
 #: src/pages/settings/playback.tsx
