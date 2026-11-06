@@ -5,6 +5,7 @@ import { constants, appConfig } from '@aiostreams/core';
 // browser-reachable builtin paths; each gates itself instead
 const WHIELIST = [
   '/easynews/nzb',
+  '/jackett/indexers',
   '/library/refresh',
   '/newznab/test',
   '/torznab/test',

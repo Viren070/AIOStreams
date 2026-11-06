@@ -22,7 +22,7 @@ import {
   FaServer,
   FaTrashCan,
 } from 'react-icons/fa6';
-import { BiTestTube } from 'react-icons/bi';
+import { BiRefresh, BiTestTube } from 'react-icons/bi';
 import { Modal } from '@aiostreams/ui/modal';
 import { Tooltip } from '@aiostreams/ui/tooltip';
 import { toast } from 'sonner';
@@ -249,6 +249,8 @@ interface TemplateOptionProps {
   disabled?: boolean;
   trusted?: boolean;
   onChange: (value: any) => void;
+  /** The other options' values, for options that depend on them. */
+  siblingValues?: Record<string, any>;
 }
 
 const TemplateOption: React.FC<TemplateOptionProps> = ({
@@ -257,6 +259,7 @@ const TemplateOption: React.FC<TemplateOptionProps> = ({
   trusted,
   onChange,
   disabled,
+  siblingValues,
 }) => {
   const {
     id,
@@ -673,10 +676,186 @@ const TemplateOption: React.FC<TemplateOptionProps> = ({
         />
       );
     }
+    case 'indexer-select': {
+      return (
+        <IndexerSelectInput
+          option={option}
+          value={forcedValue ?? value ?? defaultValue}
+          onChange={onChange}
+          disabled={isDisabled}
+          siblingValues={siblingValues}
+        />
+      );
+    }
     default:
       return null;
   }
 };
+
+interface RemoteIndexer {
+  id: string;
+  title: string;
+}
+
+export interface IndexerSelectInputProps {
+  option: Option;
+  value: string[] | undefined;
+  onChange: (value: string[]) => void;
+  disabled?: boolean;
+  siblingValues?: Record<string, any>;
+}
+
+/** Multi-select over the indexers of the instance set in sibling options. */
+export function IndexerSelectInput({
+  option,
+  value,
+  onChange,
+  disabled,
+  siblingValues,
+}: IndexerSelectInputProps) {
+  const source = option.indexerSource;
+  const url: string | undefined = source
+    ? siblingValues?.[source.urlOption]
+    : undefined;
+  const apiKey: string | undefined = source
+    ? siblingValues?.[source.apiKeyOption]
+    : undefined;
+  const selected = Array.isArray(value) ? value : [];
+
+  const [loading, setLoading] = useState(false);
+  const instance = `${url ?? ''}\n${apiKey ?? ''}`;
+  const [loaded, setLoaded] = useState<{
+    instance: string;
+    indexers: RemoteIndexer[];
+  } | null>(null);
+  // a list from before the url or api key changed is not this instance's
+  const indexers = loaded?.instance === instance ? loaded.indexers : null;
+
+  const load = async (silent: boolean) => {
+    if (!source) return;
+    setLoading(true);
+    try {
+      const response = await fetch(`/builtins/${source.provider}/indexers`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, apiKey }),
+      });
+      const json = await response.json();
+      if (!json.success) {
+        throw new Error(
+          json.detail || json.error?.message || 'Could not load indexers'
+        );
+      }
+      const list = (json.data?.indexers ?? []) as RemoteIndexer[];
+      setLoaded({ instance, indexers: list });
+      if (!silent) {
+        toast.success(
+          `Loaded ${list.length} indexer${list.length === 1 ? '' : 's'}`
+        );
+      }
+    } catch (error) {
+      if (!silent) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not load indexers'
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // quietly, since the instance may not be filled in yet
+  useEffect(() => {
+    void load(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const known = new Set((indexers ?? []).map((indexer) => indexer.id));
+  const options = [
+    ...(indexers ?? []).map((indexer) => ({
+      label: indexer.title,
+      value: indexer.id,
+      textValue: indexer.title,
+    })),
+    // selections not (or no longer) listed, so they stay removable
+    ...selected
+      .filter((id) => !known.has(id))
+      .map((id) => ({ label: id, value: id })),
+  ];
+
+  return (
+    <div>
+      <div className="flex items-end gap-2">
+        <div className="flex-1 min-w-0">
+          <Combobox
+            label={option.name}
+            value={selected}
+            onValueChange={onChange}
+            options={options}
+            multiple
+            emptyMessage={
+              indexers ? 'No indexers found' : 'Load the indexers first'
+            }
+            disabled={disabled}
+            required={option.required}
+          />
+        </div>
+        <Tooltip
+          trigger={
+            <IconButton
+              intent="gray-subtle"
+              icon={<BiRefresh />}
+              onClick={() => load(false)}
+              loading={loading}
+              disabled={disabled || loading || !source}
+              aria-label="Load indexers"
+              className="shrink-0"
+            />
+          }
+        >
+          Load indexers
+        </Tooltip>
+      </div>
+      {option.description && (
+        <div className="text-xs text-[--muted] mt-1">
+          <MarkdownLite>{option.description}</MarkdownLite>
+        </div>
+      )}
+      {indexers && indexers.length > 0 && (
+        <div className="flex gap-2 mt-2">
+          <Button
+            type="button"
+            size="sm"
+            intent="gray-subtle"
+            disabled={disabled}
+            onClick={() => onChange(indexers.map((indexer) => indexer.id))}
+          >
+            Select all
+          </Button>
+          {selected.length > 0 && (
+            <Button
+              type="button"
+              size="sm"
+              intent="gray-subtle"
+              disabled={disabled}
+              onClick={() => onChange([])}
+            >
+              Clear
+            </Button>
+          )}
+        </div>
+      )}
+      {selected.length === 0 && source?.emptyWarning && (
+        <Alert
+          intent="warning-basic"
+          className="mt-2"
+          description={<MarkdownLite>{source.emptyWarning}</MarkdownLite>}
+        />
+      )}
+    </div>
+  );
+}
 
 interface NabEndpointValue {
   url?: string;

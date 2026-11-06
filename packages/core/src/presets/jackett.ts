@@ -1,7 +1,11 @@
-﻿import { Option, UserData } from '../db/index.js';
+﻿import { Addon, Option, UserData } from '../db/index.js';
 import { appConfig, constants } from '../utils/index.js';
 import { StremThruPreset } from './stremthru.js';
 import { TorznabPreset } from './torznab.js';
+import {
+  jackettTorznabUrl,
+  resolveJackettCredentials,
+} from '../builtins/torznab/jackett.js';
 
 export class JackettPreset extends TorznabPreset {
   static override get METADATA() {
@@ -83,6 +87,56 @@ export class JackettPreset extends TorznabPreset {
             : undefined,
       },
       {
+        id: 'indexers',
+        name: 'Indexers',
+        description:
+          "Each selected indexer is searched separately, so a slow one cannot hold up the others, and uses ID search where it supports it. **Each one counts as an addon** towards the instance's addon limit.",
+        type: 'indexer-select',
+        required: false,
+        default: [],
+        indexerSource: {
+          provider: 'jackett',
+          urlOption: 'jackettUrl',
+          apiKeyOption: 'jackettApiKey',
+          emptyWarning:
+            "Nothing selected, so Jackett's combined `all` indexer is used: one slow indexer delays every result, and only title search is used, whatever the search mode.",
+        },
+      },
+      {
+        id: 'searchMode',
+        name: 'Search Mode',
+        description:
+          '`Auto` searches by ID (TVDB/IMDb/TMDB + season/episode) when the indexer supports it; `Forced Query` always searches by title text instead. **Note**: `Both` creates two separate addons, one per mode.',
+        type: 'select',
+        required: false,
+        showInSimpleMode: false,
+        default: 'auto',
+        options: [
+          { label: 'Auto', value: 'auto' },
+          { label: 'Forced Query', value: 'query' },
+          { label: 'Both', value: 'both' },
+        ],
+      },
+      {
+        id: 'seasonEpisodeStrategy',
+        name: 'Season/Episode Search Strategy',
+        description:
+          "Controls whether series searches in `Auto` mode query at the episode level, the season level, or both - useful for private trackers where season packs replace individual episodes. A season-level search may return season packs, individual episodes, or both, depending on the indexer. `Dynamic` decides based on whether the season is still airing. Pair with `Season/Episode Matching` in Filters to filter out results that don't match.",
+        type: 'select',
+        required: false,
+        showInSimpleMode: false,
+        default: 'episode',
+        options: [
+          { label: 'Episode', value: 'episode' },
+          { label: 'Season', value: 'season' },
+          { label: 'Dynamic (Season Preferred)', value: 'dynamic' },
+          {
+            label: 'Episode First, Season Fallback',
+            value: 'episodeFirst',
+          },
+        ],
+      },
+      {
         id: 'mediaTypes',
         name: 'Media Types',
         description:
@@ -105,6 +159,16 @@ export class JackettPreset extends TorznabPreset {
             value: 'anime',
           },
         ],
+      },
+      {
+        id: 'resultPassthrough',
+        name: 'Result Passthrough',
+        description:
+          'If enabled, all results from this addon will never be filtered out and always included in the final stream list.',
+        type: 'boolean',
+        required: false,
+        default: false,
+        showInSimpleMode: false,
       },
       {
         id: 'useMultipleInstances',
@@ -134,35 +198,53 @@ export class JackettPreset extends TorznabPreset {
     };
   }
 
+  static override async generateAddons(
+    userData: UserData,
+    options: Record<string, any>
+  ): Promise<Addon[]> {
+    const indexers: string[] = Array.isArray(options.indexers)
+      ? [...new Set<string>(options.indexers)].filter(
+          (id) => typeof id === 'string' && id
+        )
+      : [];
+    if (indexers.length === 0) {
+      // `auto` keeps a single `all` addon with its pre-selection identifier
+      return super.generateAddons(userData, { ...options, searchMode: 'auto' });
+    }
+    const addons = await Promise.all(
+      indexers.map(async (indexer) =>
+        (await super.generateAddons(userData, { ...options, indexer })).map(
+          (addon) => ({
+            ...addon,
+            identifier: `${indexer}_${addon.identifier}`,
+            displayIdentifier: `${indexer} · ${addon.displayIdentifier}`,
+          })
+        )
+      )
+    );
+    return addons.flat();
+  }
+
   protected static override generateManifestUrl(
     userData: UserData,
     services: constants.ServiceId[],
     options: Record<string, any>
   ): string {
-    let jackettUrl = undefined;
-    let jackettApiKey = undefined;
-
-    if (options.jackettUrl || options.jackettApiKey) {
-      jackettUrl = options.jackettUrl;
-      jackettApiKey = options.jackettApiKey;
-    } else {
-      jackettUrl = appConfig.builtins.jackett.url;
-      jackettApiKey = appConfig.builtins.jackett.apiKey;
-    }
-
-    if (!jackettUrl || !jackettApiKey) {
+    const credentials = resolveJackettCredentials({
+      url: options.jackettUrl,
+      apiKey: options.jackettApiKey,
+    });
+    if (!credentials) {
       throw new Error('Jackett URL and API Key are required');
     }
-
-    const config = {
-      ...this.getBaseConfig(userData, services),
-      url: `${jackettUrl.replace(/\/$/, '')}/api/v2.0/indexers/all/results/torznab`,
-      apiPath: '/api',
-      apiKey: jackettApiKey,
-      forceQuerySearch: true,
-    };
-
-    const configString = this.base64EncodeJSON(config, 'urlSafe');
-    return `${appConfig.bootstrap.internalUrl}/builtins/torznab/${configString}/manifest.json`;
+    return super.generateManifestUrl(userData, services, {
+      ...options,
+      api: {
+        url: jackettTorznabUrl(credentials.url, options.indexer ?? 'all'),
+        apiKey: credentials.apiKey,
+      },
+      // `all` mixes every indexer's caps, so only a text query is reliable
+      forceQuerySearch: options.indexer ? options.forceQuerySearch : true,
+    });
   }
 }

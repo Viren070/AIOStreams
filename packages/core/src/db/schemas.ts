@@ -474,7 +474,19 @@ const OptionDefinition = z.looseObject({
     'subsection',
     'custom-nntp-servers',
     'nab-endpoint',
+    'indexer-select',
   ]),
+  // for 'indexer-select'
+  indexerSource: z
+    .object({
+      provider: z.enum(['jackett']),
+      // ids of the sibling options holding the instance url and api key
+      urlOption: z.string().min(1),
+      apiKeyOption: z.string().min(1),
+      // shown while nothing is selected
+      emptyWarning: z.string().optional(),
+    })
+    .optional(),
   nab: z
     .object({
       namespace: z.enum(['newznab', 'torznab']),

@@ -352,7 +352,16 @@ export function MyAddons({
       const metadata = presetMetadataMap.get(preset.type);
       if (!metadata?.OPTIONS) continue;
       for (const opt of metadata.OPTIONS as Option[]) {
-        if (['alert', 'socials', 'oauth', 'subsection'].includes(opt.type))
+        if (
+          [
+            'alert',
+            'socials',
+            'oauth',
+            'subsection',
+            // options come from each addon's own other fields, unavailable here
+            'indexer-select',
+          ].includes(opt.type)
+        )
           continue;
         const existing = optionFrequency.get(opt.id);
         if (existing) existing.count++;

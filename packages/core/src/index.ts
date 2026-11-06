@@ -76,6 +76,8 @@ export {
   refreshLibraryCacheForService,
   testNabEndpoint,
   type NabNamespaceId,
+  fetchJackettIndexers,
+  resolveJackettCredentials,
 } from './builtins/index.js';
 export { PresetManager } from './presets/index.js';
 export {

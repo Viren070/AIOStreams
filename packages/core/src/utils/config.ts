@@ -1273,7 +1273,7 @@ export function validateOption(
     }
     return value;
   }
-  if (option.type === 'multi-select') {
+  if (option.type === 'multi-select' || option.type === 'indexer-select') {
     if (!Array.isArray(value)) {
       throw new Error(
         `Option ${option.id} must be an array, got ${typeof value}`
