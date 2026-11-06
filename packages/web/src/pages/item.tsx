@@ -10,13 +10,13 @@ import {
   BiGroup,
   BiHeart,
   BiListPlus,
-  BiPlay,
-  BiRevision,
   BiShuffle,
   BiSolidDislike,
   BiSolidHeart,
   BiDotsHorizontalRounded,
 } from 'react-icons/bi';
+import { IoPlay } from 'react-icons/io5';
+import { LuRotateCcw } from 'react-icons/lu';
 import { Badge } from '@aiostreams/ui/badge';
 import { Button, IconButton } from '@aiostreams/ui/button';
 import { Drawer } from '@aiostreams/ui/drawer';
@@ -535,7 +535,7 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
                   item.Type === 'Series' && 'sm:min-w-[9.5rem]',
                   quick && 'h-12 text-base'
                 )}
-                leftIcon={<BiPlay className="text-xl" />}
+                leftIcon={<IoPlay className="text-xl" />}
                 onClick={() =>
                   target
                     ? picker.play(target, { startMs: resumeMs })
@@ -560,8 +560,9 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
                       data-ui="item-action"
                       data-name="restart"
                       intent="gray-subtle"
-                      className="rounded-full"
-                      icon={<BiRevision />}
+                      size={quick ? 'lg' : 'md'}
+                      className="rounded-full text-2xl"
+                      icon={<LuRotateCcw />}
                       aria-label={t`Play from the start`}
                       onClick={() => picker.play(target, { startMs: 0 })}
                       {...holdRestart}

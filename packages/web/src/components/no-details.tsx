@@ -1,6 +1,6 @@
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
-import { BiPlay } from 'react-icons/bi';
+import { IoPlay } from 'react-icons/io5';
 import { Alert } from '@aiostreams/ui/alert';
 import { Button } from '@aiostreams/ui/button';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
@@ -41,7 +41,7 @@ export function NoDetails({
             <Button
               intent="white"
               className={button}
-              leftIcon={<BiPlay className="text-xl" />}
+              leftIcon={<IoPlay className="text-xl" />}
               onClick={() =>
                 picker.play(item, {
                   startMs: ticksToMs(item.UserData?.PlaybackPositionTicks),

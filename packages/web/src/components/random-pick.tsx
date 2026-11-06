@@ -2,7 +2,8 @@ import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { motion, useReducedMotion } from 'motion/react';
-import { BiInfoCircle, BiPlay, BiShuffle } from 'react-icons/bi';
+import { BiInfoCircle, BiShuffle } from 'react-icons/bi';
+import { IoPlay } from 'react-icons/io5';
 import { Button } from '@aiostreams/ui/button';
 import { Modal } from '@aiostreams/ui/modal';
 import { LoadingSpinner } from '@aiostreams/ui/loading-spinner';
@@ -410,7 +411,7 @@ function Picker({
           data-name="play"
           intent="white"
           className="rounded-full"
-          leftIcon={<BiPlay className="text-lg" />}
+          leftIcon={<IoPlay className="text-lg" />}
           disabled={!target}
           onClick={onPlay}
         >

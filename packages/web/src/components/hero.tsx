@@ -2,7 +2,8 @@ import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { flushSync } from 'react-dom';
-import { BiInfoCircle, BiPlay } from 'react-icons/bi';
+import { BiInfoCircle } from 'react-icons/bi';
+import { IoPlay } from 'react-icons/io5';
 import { Button, IconButton } from '@aiostreams/ui/button';
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import { cn } from '@aiostreams/ui/core/styling';
@@ -323,7 +324,7 @@ function HeroDetails({
               data-name="play"
               intent="white"
               className="rounded-full max-sm:min-w-40"
-              leftIcon={<BiPlay className="text-xl" />}
+              leftIcon={<IoPlay className="text-xl" />}
               onClick={() => play()}
               {...holdPlay}
             >
