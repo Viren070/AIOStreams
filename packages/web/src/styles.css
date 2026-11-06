@@ -26,11 +26,41 @@
       animation-timeline: scroll(root);
       animation-range: 0 100vh;
     }
+    /* What's over a phone's hero or a title's art fades as it scrolls away. */
+    @media (max-width: 639px) {
+      :where(:root:not([data-tv]))
+        :is(
+          [data-ui='hero-content'],
+          [data-ui='hero-dots'],
+          [data-ui='item-heading']
+        ) {
+        /* Longhands: the minifier turns a list in the shorthand into 0s durations. */
+        animation-name: scroll-fade, scroll-gone;
+        animation-timing-function: linear;
+        animation-fill-mode: both;
+        animation-timeline: scroll(root);
+        animation-range: 10vh 50vh;
+      }
+      [data-ui='item-heading'] {
+        animation-range: 25vh 60vh;
+      }
+    }
   }
 }
 @keyframes scroll-lag {
   to {
     transform: translateY(50vh);
+  }
+}
+@keyframes scroll-fade {
+  to {
+    opacity: 0;
+  }
+}
+/* Stops a faded button being tapped; apart, as visibility would keep the fade off the compositor. */
+@keyframes scroll-gone {
+  to {
+    visibility: hidden;
   }
 }
 

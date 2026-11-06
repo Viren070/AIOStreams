@@ -271,7 +271,7 @@ function Backdrop({
       <div
         data-ui="item-backdrop-shade"
         data-name="bottom"
-        className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-[--background] via-[--background]/70 to-transparent"
+        className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-[--background] via-[--background]/70 to-transparent max-sm:h-1/2"
       />
     </div>
   );
@@ -433,56 +433,63 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
         />
       )}
       <div className="min-w-0 max-w-3xl flex-1 space-y-4">
-        {logo && !logoFailed ? (
-          <CachedImage
-            data-ui="item-logo"
-            src={logo}
-            alt={item.Name ?? ''}
-            onError={() => setLogoFailed(true)}
-            className="max-h-24 max-w-[min(26rem,85%)] object-contain object-left max-sm:mx-auto max-sm:object-center lg:max-h-32"
+        <div data-ui="item-heading" className="space-y-4">
+          {logo && !logoFailed ? (
+            <CachedImage
+              data-ui="item-logo"
+              src={logo}
+              alt={item.Name ?? ''}
+              onError={() => setLogoFailed(true)}
+              className="max-h-24 max-w-[min(26rem,85%)] object-contain object-left max-sm:mx-auto max-sm:object-center lg:max-h-32"
+            />
+          ) : (
+            <h1
+              data-ui="item-title"
+              className="text-3xl font-bold leading-tight max-sm:text-center sm:text-4xl lg:text-5xl"
+            >
+              {item.Name}
+            </h1>
+          )}
+          {item.Taglines?.[0] && (
+            <p
+              data-ui="item-tagline"
+              className="text-base italic text-gray-300 max-sm:text-center"
+            >
+              {item.Taglines[0]}
+            </p>
+          )}
+          <MetaRow item={item} />
+          {item.Type === 'Series' && item.Status === 'Continuing' && (
+            <NextAiring series={item} />
+          )}
+          {!!item.Genres?.length && (
+            <div
+              data-ui="item-genres"
+              className="flex flex-wrap gap-1.5 max-sm:justify-center"
+            >
+              {item.Genres.map((genre) => (
+                <Badge
+                  key={genre}
+                  data-ui="item-genre"
+                  intent="white"
+                  size="md"
+                >
+                  {genre}
+                </Badge>
+              ))}
+            </div>
+          )}
+          <Overview
+            title={item.Name ?? ''}
+            line={[item.ProductionYear, item.Genres?.slice(0, 3).join(', ')]
+              .filter(Boolean)
+              .join(' · ')}
+            overview={item.Overview}
+            image={overviewImage}
+            clampClass="max-h-[4lh]"
+            className="text-sm leading-relaxed text-gray-300 sm:text-base"
           />
-        ) : (
-          <h1
-            data-ui="item-title"
-            className="text-3xl font-bold leading-tight max-sm:text-center sm:text-4xl lg:text-5xl"
-          >
-            {item.Name}
-          </h1>
-        )}
-        {item.Taglines?.[0] && (
-          <p
-            data-ui="item-tagline"
-            className="text-base italic text-gray-300 max-sm:text-center"
-          >
-            {item.Taglines[0]}
-          </p>
-        )}
-        <MetaRow item={item} />
-        {item.Type === 'Series' && item.Status === 'Continuing' && (
-          <NextAiring series={item} />
-        )}
-        {!!item.Genres?.length && (
-          <div
-            data-ui="item-genres"
-            className="flex flex-wrap gap-1.5 max-sm:justify-center"
-          >
-            {item.Genres.map((genre) => (
-              <Badge key={genre} data-ui="item-genre" intent="white" size="md">
-                {genre}
-              </Badge>
-            ))}
-          </div>
-        )}
-        <Overview
-          title={item.Name ?? ''}
-          line={[item.ProductionYear, item.Genres?.slice(0, 3).join(', ')]
-            .filter(Boolean)
-            .join(' · ')}
-          overview={item.Overview}
-          image={overviewImage}
-          clampClass="max-h-[4lh]"
-          className="text-sm leading-relaxed text-gray-300 sm:text-base"
-        />
+        </div>
         <div
           data-ui="item-actions"
           className="flex flex-wrap items-center gap-2 max-sm:justify-center"
