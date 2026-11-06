@@ -30,6 +30,7 @@ import { formatBitrate, formatBytes } from '../formatters/utils.js';
 import { iso6391ToLanguage, languageToCode } from '../utils/languages.js';
 import { ReleaseDate } from '../metadata/tmdb.js';
 import { StreamContext, ExtendedMetadata } from './context.js';
+import type { RejectedTorrent } from '../builtins/utils/debrid.js';
 
 const logger = createLogger('filterer');
 
@@ -97,6 +98,7 @@ export interface FilterStatistics {
     size: Reason;
     bitrate: Reason;
     blocklisted: Reason;
+    serviceWrapMatching: Reason;
   };
   included: {
     passthrough: Reason;
@@ -215,6 +217,7 @@ class StreamFilterer {
         size: { total: 0, details: {} },
         bitrate: { total: 0, details: {} },
         blocklisted: { total: 0, details: {} },
+        serviceWrapMatching: { total: 0, details: {} },
       },
       included: {
         passthrough: { total: 0, details: {} },
@@ -287,6 +290,16 @@ class StreamFilterer {
     return applyReleaseBlocklist(streams, (_stream, verdict) =>
       this.incrementRemovalReason('blocklisted', verdict.verdict ?? 'flagged')
     );
+  }
+
+  /** Counts wrapped torrents that never became streams. */
+  public recordServiceWrapRejections(rejected: RejectedTorrent[]): void {
+    for (const { title, reason } of rejected) {
+      this.incrementRemovalReason(
+        'serviceWrapMatching',
+        `${title} (${reason})`
+      );
+    }
   }
 
   public getFilterTimings(): FilterTimings {

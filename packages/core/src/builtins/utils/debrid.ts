@@ -127,6 +127,13 @@ export function filterUnprocessedTorrentsPreDownload<
   return filtered;
 }
 
+/** A torrent processTorrents dropped in validation, and why. */
+export interface RejectedTorrent {
+  hash: string;
+  title: string;
+  reason: 'country' | 'title' | 'season' | 'episode';
+}
+
 export async function processTorrents(
   torrents: Torrent[],
   debridServices: BuiltinDebridServices,
@@ -137,6 +144,7 @@ export async function processTorrents(
 ): Promise<{
   results: TorrentWithSelectedFile[];
   errors: { serviceId: BuiltinServiceId; error: Error }[];
+  rejected: RejectedTorrent[];
   serviceTimings: Record<
     string,
     {
@@ -150,10 +158,11 @@ export async function processTorrents(
   >;
 }> {
   if (torrents.length === 0) {
-    return { results: [], errors: [], serviceTimings: {} };
+    return { results: [], errors: [], rejected: [], serviceTimings: {} };
   }
   const results: TorrentWithSelectedFile[] = [];
   const errors: { serviceId: BuiltinServiceId; error: Error }[] = [];
+  const rejectedByHash = new Map<string, RejectedTorrent>();
 
   // Pre-compute title parsing once, shared across all parallel service calls.
   const sharedParsedTitlesMap = new Map<string, ParsedResult>();
@@ -186,6 +195,7 @@ export async function processTorrents(
         serviceId: service.id,
         results: [],
         error,
+        rejected: [],
         magnetCheckMs: 0,
         processingMs: 0,
         totalMs: 0,
@@ -214,6 +224,7 @@ export async function processTorrents(
   for (const {
     results: serviceResults,
     error,
+    rejected,
     serviceId,
     magnetCheckMs,
     processingMs,
@@ -228,6 +239,7 @@ export async function processTorrents(
     if (error instanceof Error) {
       errors.push({ serviceId, error });
     }
+    for (const r of rejected) rejectedByHash.set(r.hash, r);
     serviceTimings[serviceId] = {
       magnetCheckMs,
       processingMs,
@@ -239,7 +251,12 @@ export async function processTorrents(
     };
   }
 
-  return { results, errors, serviceTimings };
+  return {
+    results,
+    errors,
+    rejected: [...rejectedByHash.values()],
+    serviceTimings,
+  };
 }
 
 async function processTorrentsForDebridService(
@@ -252,6 +269,7 @@ async function processTorrentsForDebridService(
   sharedParsedTitlesMap?: Map<string, ParsedResult>
 ): Promise<{
   results: TorrentWithSelectedFile[];
+  rejected: RejectedTorrent[];
   magnetCheckMs: number;
   processingMs: number;
   totalMs: number;
@@ -271,6 +289,7 @@ async function processTorrentsForDebridService(
     );
     return {
       results: [],
+      rejected: [],
       magnetCheckMs: 0,
       processingMs: 0,
       totalMs: 0,
@@ -288,6 +307,7 @@ async function processTorrentsForDebridService(
   if (torrents.length === 0) {
     return {
       results: [],
+      rejected: [],
       magnetCheckMs: 0,
       processingMs: 0,
       totalMs: 0,
@@ -338,21 +358,15 @@ async function processTorrentsForDebridService(
     : null;
 
   // Filter torrents that pass validation checks
-  let filteredFailed = 0,
-    filteredTitle = 0,
-    filteredSeason = 0,
-    filteredEpisode = 0;
   const validTorrents: {
     torrent: Torrent;
     magnetCheckResult: DebridDownload | undefined;
     parsedTitle: ParsedResult;
   }[] = [];
+  const rejected: RejectedTorrent[] = [];
   for (const torrent of torrents) {
     const magnetCheckResult = magnetCheckMap.get(torrent.hash);
-    if (magnetCheckResult?.status === 'failed') {
-      filteredFailed++;
-      continue;
-    }
+    if (magnetCheckResult?.status === 'failed') continue;
     const parsedTorrent = parsedTitlesMap.get(
       torrent.title ?? magnetCheckResult?.name ?? ''
     );
@@ -365,16 +379,12 @@ async function processTorrentsForDebridService(
         torrent.confirmed,
         normTitles
       );
-      if (reason === 'country' || reason === 'title') {
-        filteredTitle++;
-        continue;
-      }
-      if (reason === 'season') {
-        filteredSeason++;
-        continue;
-      }
-      if (reason === 'episode') {
-        filteredEpisode++;
+      if (reason) {
+        rejected.push({
+          hash: torrent.hash,
+          title: parsedTorrent.title || 'Unknown Title',
+          reason,
+        });
         continue;
       }
     }
@@ -475,6 +485,7 @@ async function processTorrentsForDebridService(
   ).length;
   return {
     results,
+    rejected,
     magnetCheckMs,
     processingMs: totalMs - magnetCheckMs,
     totalMs,
