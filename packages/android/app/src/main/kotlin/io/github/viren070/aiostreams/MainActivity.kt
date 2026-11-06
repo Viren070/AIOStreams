@@ -22,6 +22,7 @@ import android.text.format.Formatter
 import android.util.Log
 import android.hardware.input.InputManager
 import android.view.InputDevice
+import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
@@ -476,16 +477,20 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * A real game controller: a joystick device with a stick or a d-pad hat. The joystick source
-     * alone isn't enough: TV remotes claim it for one stray axis (the Xiaomi TV remote's
-     * "Consumer Control" device maps ABS_VOLUME to GENERIC_1), and a false "controller" makes the
-     * page poll gamepads on every animation frame for as long as it runs, which on a slow TV
-     * stick keeps the web view busy even during playback and makes the remote feel laggy.
+     * A real game controller: a joystick device with a stick, a d-pad hat or gamepad buttons.
+     * The joystick source alone isn't enough: TV remotes claim it for one stray axis (the Xiaomi
+     * TV remote's "Consumer Control" device maps ABS_VOLUME to GENERIC_1), and a false
+     * "controller" makes the page poll gamepads on every animation frame for as long as it runs,
+     * which on a slow TV stick keeps the web view busy even during playback and makes the remote
+     * feel laggy.
      */
     private fun hasGamepad() = InputDevice.getDeviceIds().any { id ->
         InputDevice.getDevice(id)?.let { d ->
             !d.isVirtual && d.supportsSource(InputDevice.SOURCE_JOYSTICK) &&
-                (d.hasAxes(MotionEvent.AXIS_X, MotionEvent.AXIS_Y) || d.hasAxes(MotionEvent.AXIS_HAT_X, MotionEvent.AXIS_HAT_Y))
+                (d.hasAxes(MotionEvent.AXIS_X, MotionEvent.AXIS_Y) ||
+                    d.hasAxes(MotionEvent.AXIS_HAT_X, MotionEvent.AXIS_HAT_Y) ||
+                    // A pad without a recognised axis pair: its gamepad buttons, which a remote lacks.
+                    (d.supportsSource(InputDevice.SOURCE_GAMEPAD) && d.hasKeys(KeyEvent.KEYCODE_BUTTON_A)[0]))
         } == true
     }
 
