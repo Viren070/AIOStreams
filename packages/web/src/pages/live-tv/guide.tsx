@@ -4,8 +4,7 @@ import { BiBell } from 'react-icons/bi';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '../../lib/session';
 import { posterUrl } from '../../lib/images';
-import { airTime } from '../../lib/format';
-import { formatLocale } from '../../lib/i18n';
+import { airTime, clockTime } from '../../lib/format';
 import { move, runAction } from '../../lib/input';
 import { caughtUp, endOf, startOf } from '../../lib/live-tv';
 import type { BaseItemDto } from '../../lib/types';
@@ -319,10 +318,7 @@ function Ruler({
         className="absolute top-0 flex h-full items-center border-s border-white/10 ps-2 text-xs tabular-nums text-[--muted]"
         style={{ left: CHANNEL_COLUMN + x }}
       >
-        {new Date(at).toLocaleTimeString(formatLocale(), {
-          hour: 'numeric',
-          minute: '2-digit',
-        })}
+        {clockTime(at)}
       </span>
     );
   }

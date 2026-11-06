@@ -12,7 +12,7 @@ import {
   type Reminder,
 } from '../lib/live-tv';
 import { playbackNow } from '../lib/playback/session';
-import { formatLocale } from '../lib/i18n';
+import { clockTime } from '../lib/format';
 import type { BaseItemDto } from '../lib/types';
 import { useVersionPicker } from './version-picker';
 
@@ -49,12 +49,7 @@ export function ReminderHost() {
     return () => clearInterval(timer);
   }, [userId]);
 
-  const at = due
-    ? new Date(due.start).toLocaleTimeString(formatLocale(), {
-        hour: 'numeric',
-        minute: '2-digit',
-      })
-    : '';
+  const at = due ? clockTime(due.start) : '';
   const channelName = due?.channelName ?? '';
   const watch = () => {
     if (!due) return;

@@ -16,9 +16,8 @@ import {
 } from 'react-icons/lu';
 import { LoadingSpinner } from '@aiostreams/ui/loading-spinner';
 import { cn } from '@aiostreams/ui/core/styling';
-import { clock, itemSubtitle, itemTitle } from '../../lib/format';
+import { clock, clockTime, itemSubtitle, itemTitle } from '../../lib/format';
 import { currentHost } from '../../lib/hosts';
-import { formatLocale } from '../../lib/i18n';
 import { appBridge } from '../../lib/hosts/shell/bridge';
 import type { PlayerController } from '../../lib/playback/controller';
 import { settings, useSetting } from '../../lib/settings';
@@ -966,10 +965,7 @@ function PlayerClock() {
       data-ui="player-clock"
       className="ms-auto whitespace-nowrap text-[length:var(--title)] font-semibold tabular-nums"
     >
-      {now.toLocaleTimeString(formatLocale(), {
-        hour: 'numeric',
-        minute: '2-digit',
-      })}
+      {clockTime(now)}
     </p>
   );
 }
@@ -988,9 +984,9 @@ function EndsAt({
     return () => window.clearInterval(timer);
   }, [props.live]);
   if (durationMs <= 0) return null;
-  const endsAt = new Date(
+  const endsAt = clockTime(
     Date.now() + Math.max(0, durationMs - at) / (rate || 1)
-  ).toLocaleTimeString(formatLocale(), { hour: 'numeric', minute: '2-digit' });
+  );
   return (
     <p
       data-ui="player-ends"

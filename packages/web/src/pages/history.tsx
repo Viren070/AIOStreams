@@ -22,7 +22,6 @@ import {
   useConfirmationDialog,
 } from '@aiostreams/ui/shared/confirmation-dialog';
 import { cn } from '@aiostreams/ui/core/styling';
-import { formatLocale } from '../lib/i18n';
 import { useSession } from '../lib/session';
 import { useFeature } from '../lib/server-info';
 import {
@@ -35,7 +34,13 @@ import {
   useSetPlayed,
 } from '../lib/queries';
 import { posterUrl, landscapeUrls } from '../lib/images';
-import { clock, duration, episodeCode, relativeTime } from '../lib/format';
+import {
+  clock,
+  dateFormat,
+  duration,
+  episodeCode,
+  relativeTime,
+} from '../lib/format';
 import { href, itemPath, navigate, to } from '../lib/paths';
 import { currentHost } from '../lib/hosts';
 import { PageBody } from '../components/layout';
@@ -326,12 +331,14 @@ function Days({
         <section key={day.key} data-ui="history-day" className="space-y-3">
           <div className="flex flex-wrap items-baseline gap-x-3">
             <h2 data-ui="section-title" className="text-lg font-semibold">
-              {day.date?.toLocaleDateString(formatLocale(), {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
-              }) ?? t`Date not known`}
+              {(day.date &&
+                dateFormat({
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                }).format(day.date)) ??
+                t`Date not known`}
             </h2>
             {day.runtimeMs > 0 && (
               <span className="text-sm text-[--muted]">
@@ -852,10 +859,10 @@ function HistoryTable({
                   </td>
                   <td className="hidden whitespace-nowrap p-3 text-xs text-[--muted] md:table-cell">
                     {at(entry)
-                      ? new Date(at(entry)!).toLocaleString(formatLocale(), {
+                      ? dateFormat({
                           dateStyle: 'medium',
                           timeStyle: 'short',
-                        })
+                        }).format(at(entry)!)
                       : '—'}
                   </td>
                   {full && (

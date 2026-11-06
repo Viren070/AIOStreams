@@ -5,6 +5,22 @@ import type { BaseItemDto } from './types';
 
 export const TICKS_PER_MS = 10_000;
 
+const dateFormats = new Map<string, Intl.DateTimeFormat>();
+
+/** Made once per locale and options, as making one is far slower than using it. */
+export function dateFormat(
+  options?: Intl.DateTimeFormatOptions
+): Intl.DateTimeFormat {
+  const locale = formatLocale();
+  const key = `${locale} ${JSON.stringify(options)}`;
+  let format = dateFormats.get(key);
+  if (!format) {
+    format = new Intl.DateTimeFormat(locale, options);
+    dateFormats.set(key, format);
+  }
+  return format;
+}
+
 export function ticksToMs(ticks: number | null | undefined): number {
   return ticks ? Math.round(ticks / TICKS_PER_MS) : 0;
 }
@@ -48,7 +64,7 @@ export function relativeTime(at: number | null | undefined): string {
     return format.format(-Math.floor(diff / 3_600_000), 'hour');
   if (diff < 7 * 86_400_000)
     return format.format(-Math.floor(diff / 86_400_000), 'day');
-  return new Date(at).toLocaleDateString(formatLocale());
+  return dateFormat().format(at);
 }
 
 /** `S01E04`, or `E04` for absolute numbering. */
@@ -178,11 +194,9 @@ export const markLabel = (mark: EpisodeMark) =>
 
 /** `20 Jan 2008` */
 export function shortDate(iso: string): string {
-  return airDay(iso).toLocaleDateString(formatLocale(), {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
+  return dateFormat({ day: 'numeric', month: 'short', year: 'numeric' }).format(
+    airDay(iso)
+  );
 }
 
 /**
@@ -203,19 +217,20 @@ export function airDay(iso: string): Date {
 
 export function airTime(iso: string): string | null {
   if (dateOnly(iso)) return null;
-  return new Date(iso).toLocaleTimeString(formatLocale(), {
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+  return clockTime(new Date(iso));
 }
+
+/** `7:30 PM` */
+export const clockTime = (at: Date | number) =>
+  dateFormat({ hour: 'numeric', minute: '2-digit' }).format(at);
 
 /** `Sun, 28 Sep` */
 export function dayLabel(iso: string): string {
-  return airDay(iso).toLocaleDateString(formatLocale(), {
+  return dateFormat({
     weekday: 'short',
     day: 'numeric',
     month: 'short',
-  });
+  }).format(airDay(iso));
 }
 
 /** `today`, `tomorrow`, `in 6 days` or `in 3 weeks`, counted in calendar days. */

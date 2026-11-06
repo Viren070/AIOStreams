@@ -14,6 +14,7 @@ import { useCalendar } from '../lib/queries';
 import {
   airDay,
   airTime,
+  dateFormat,
   episodeCode,
   itemSubtitle,
   itemTitle,
@@ -70,11 +71,9 @@ function gridDays(first: Date, startDay: number): Date[] {
 }
 
 function longDay(d: Date): string {
-  return d.toLocaleDateString(formatLocale(), {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  });
+  return dateFormat({ weekday: 'long', day: 'numeric', month: 'long' }).format(
+    d
+  );
 }
 
 function EpisodeRow({ item }: { item: BaseItemDto }) {
@@ -247,7 +246,7 @@ function MonthGrid({
             key={d.getDay()}
             className="py-1 text-center text-xs font-semibold uppercase tracking-wide text-[--muted]"
           >
-            {d.toLocaleDateString(formatLocale(), { weekday: 'short' })}
+            {dateFormat({ weekday: 'short' }).format(d)}
           </div>
         ))}
       </div>
@@ -410,10 +409,7 @@ export function CalendarPage({ month }: { month?: string }) {
               data-ui="calendar-month"
               className="ms-2 text-lg font-semibold"
             >
-              {first.toLocaleDateString(formatLocale(), {
-                month: 'long',
-                year: 'numeric',
-              })}
+              {dateFormat({ month: 'long', year: 'numeric' }).format(first)}
             </span>
           </div>
           {!current && (

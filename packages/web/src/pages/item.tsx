@@ -57,14 +57,15 @@ import {
 } from '../lib/images';
 import {
   clock,
+  dateFormat,
   dayLabel,
   duration,
   episodeCode,
   fullTitle,
+  isUnaired,
   itemSubtitle,
   lacksDetails,
   ticksToMs,
-  isUnaired,
   untilLabel,
 } from '../lib/format';
 import { href, itemPath, navigate, to } from '../lib/paths';
@@ -1458,9 +1459,8 @@ function airsLine(
   if (!days?.length) return null;
   const names = days.map((day) =>
     // 1 January 2023 was a Sunday.
-    new Date(2023, 0, 1 + WEEKDAYS.indexOf(day)).toLocaleDateString(
-      formatLocale(),
-      { weekday: 'long' }
+    dateFormat({ weekday: 'long' }).format(
+      new Date(2023, 0, 1 + WEEKDAYS.indexOf(day))
     )
   );
   const list = new Intl.ListFormat(formatLocale(), {
@@ -1472,11 +1472,9 @@ function airsLine(
 function Details({ item }: { item: BaseItemDto }) {
   const airs = airsLine(item.AirDays, item.AirTime);
   const released = item.PremiereDate
-    ? new Date(item.PremiereDate).toLocaleDateString(formatLocale(), {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-      })
+    ? dateFormat({ day: 'numeric', month: 'long', year: 'numeric' }).format(
+        new Date(item.PremiereDate)
+      )
     : null;
   const rows: [string, string, React.ReactNode][] = (
     [
