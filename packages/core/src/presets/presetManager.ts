@@ -20,6 +20,7 @@ import { JackettioPreset } from './jackettio.js';
 import { OrionPreset } from './orion.js';
 import { StreamFusionPreset } from './streamfusion.js';
 import { AnimeKitsuPreset } from './animeKitsu.js';
+import { CinemetaPreset } from './cinemeta.js';
 import { NuvioStreamsPreset } from './nuviostreams.js';
 import { RpdbCatalogsPreset } from './rpdbCatalogs.js';
 import { TmdbCollectionsPreset } from './tmdbCollections.js';
@@ -148,6 +149,7 @@ let PRESET_LIST: string[] = [
   'argentina-tv',
   'debridio-tv',
   'debridio-watchtower',
+  'cinemeta',
   'tmdb-addon',
   'debridio-tmdb',
   'debridio-tvdb',
@@ -253,6 +255,8 @@ export class PresetManager {
         return PenguPlayPreset;
       case 'anime-kitsu':
         return AnimeKitsuPreset;
+      case 'cinemeta':
+        return CinemetaPreset;
       case 'nuvio-streams':
         return NuvioStreamsPreset;
       case 'webstreamr':
