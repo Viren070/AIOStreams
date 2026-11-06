@@ -74,15 +74,6 @@ const PAGE = cn(
   PAGE_HEIGHT
 );
 
-function useSettled<T>(value: T, delayMs: number): T {
-  const [settled, setSettled] = React.useState(value);
-  React.useEffect(() => {
-    const timer = setTimeout(() => setSettled(value), delayMs);
-    return () => clearTimeout(timer);
-  }, [value, delayMs]);
-  return settled;
-}
-
 const midnight = (at: number) => new Date(at).setHours(0, 0, 0, 0);
 
 function dayName(offset: number, dayStart: number): string {
@@ -183,9 +174,28 @@ export function LiveTvPage({
   const [at, setAt] = React.useState(now);
 
   const [active, setActive] = React.useState(0);
-  const choose = (index: number) => {
-    setActive(index);
-    rememberChannel(channels[index]?.Id);
+  // The guide and the list move the keys themselves, and the page follows
+  // once they rest, so a press redraws only them.
+  const following = React.useRef<ReturnType<typeof setTimeout>>(undefined);
+  React.useEffect(() => () => clearTimeout(following.current), []);
+  // The page puts the keys somewhere on opening, on a typed number and on
+  // another day; a view opens where the page last followed them to.
+  const [jumps, setJumps] = React.useState(0);
+  const place = (row: number, time = at) => {
+    clearTimeout(following.current);
+    setActive(row);
+    setAt(time);
+    setJumps((n) => n + 1);
+  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- only a jump or another view moves the keys
+  const focusFrom = React.useMemo(() => ({ row: active, at }), [jumps, guide]);
+  const follow = (row: number, time = at) => {
+    rememberChannel(channels[row]?.Id);
+    clearTimeout(following.current);
+    following.current = setTimeout(() => {
+      setActive(row);
+      setAt(time);
+    }, DETAILS_DELAY_MS);
   };
 
   /** The channel's index, loading on to it with `pages` left to read. */
@@ -219,7 +229,7 @@ export function LiveTvPage({
     seeking.current = false;
     const id = lastChannelId() ?? playingId;
     void indexOf((c) => c.Id === id, far ? NUMBER_PAGES : 0).then((index) => {
-      setActive(Math.max(0, index));
+      place(Math.max(0, index));
       if (typed) focusChannels();
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per group
@@ -245,9 +255,8 @@ export function LiveTvPage({
     fetchNextPage,
   ]);
 
-  const shown = useSettled(channels[active], DETAILS_DELAY_MS);
+  const shown = channels[active] as BaseItemDto | undefined;
   const shownProgrammes = shown ? schedules.get(shown.Id!) : undefined;
-  const shownAt = useSettled(at, DETAILS_DELAY_MS);
 
   const play = (channel: BaseItemDto) => {
     if (canPreview())
@@ -281,7 +290,8 @@ export function LiveTvPage({
       NUMBER_PAGES
     );
     if (index >= 0) {
-      choose(index);
+      rememberChannel(channels[index]?.Id);
+      place(index);
       focusChannels();
       return true;
     }
@@ -416,7 +426,10 @@ export function LiveTvPage({
             onChange={(offset) => {
               setDayOffset(offset);
               // Another day opens at the same time of day.
-              setAt(new Date(now).setDate(new Date(now).getDate() + offset));
+              place(
+                active,
+                new Date(now).setDate(new Date(now).getDate() + offset)
+              );
             }}
           />
         )}
@@ -441,7 +454,7 @@ export function LiveTvPage({
   );
 
   if (guide) {
-    const programme = programmeAt(shownProgrammes, shownAt);
+    const programme = programmeAt(shownProgrammes, at);
     return (
       <div
         data-ui="live-tv"
@@ -490,12 +503,9 @@ export function LiveTvPage({
                 schedules={schedules}
                 dayStart={dayStart}
                 now={now}
-                focus={{ row: Math.min(active, channels.length - 1), at }}
+                placed={focusFrom}
                 playingId={playingId}
-                onFocus={(next) => {
-                  choose(next.row);
-                  setAt(next.at);
-                }}
+                onFocus={(next) => follow(next.row, next.at)}
                 onPlay={playFromGuide}
                 onRange={onRange}
                 onLeaveUp={leaveUp}
@@ -522,9 +532,9 @@ export function LiveTvPage({
         total={Math.max(total, channels.length)}
         schedules={schedules}
         now={now}
-        active={Math.min(active, channels.length - 1)}
+        placed={focusFrom}
         playingId={playingId}
-        onActive={choose}
+        onActive={follow}
         onLeaveUp={leaveUp}
         onPlay={watch}
         onRange={onRange}

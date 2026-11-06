@@ -235,10 +235,7 @@ export function ChannelsSheet({
     0,
     lineup.findIndex((c) => c.Id === item.Id)
   );
-  const [active, setActive] = React.useState(playingAt);
-  React.useEffect(() => {
-    if (open) setActive(playingAt);
-  }, [open, playingAt]);
+  const placed = React.useMemo(() => ({ row: playingAt }), [playingAt]);
   return (
     <Drawer
       data-ui="dialog"
@@ -278,9 +275,8 @@ export function ChannelsSheet({
           total={lineup.length}
           schedules={schedules}
           now={now}
-          active={Math.min(active, lineup.length - 1)}
+          placed={placed}
           playingId={item.Id}
-          onActive={setActive}
           onPlay={(picked) => {
             onClose();
             channel.play(picked);

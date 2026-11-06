@@ -35,10 +35,14 @@ export function useRowSchedules(
   window: { from?: number; to?: number; pinned?: number } = {}
 ) {
   const [range, setRange] = React.useState({ first: 0, last: 0 });
-  const onRange = React.useCallback(
-    (first: number, last: number) => setRange({ first, last }),
-    []
-  );
+  // Whole batches, so scrolling within one redraws nothing above the list.
+  const onRange = React.useCallback((first: number, last: number) => {
+    const from = Math.floor(first / BATCH) * BATCH;
+    const to = (Math.floor(last / BATCH) + 1) * BATCH - 1;
+    setRange((was) =>
+      was.first === from && was.last === to ? was : { first: from, last: to }
+    );
+  }, []);
   const pinned = window.pinned ?? range.first;
   const batches = React.useMemo(() => {
     const shown = batchesOf(channels, range.first, range.last);
@@ -52,6 +56,27 @@ export function useRowSchedules(
     to: window.to,
   });
   return { schedules, onRange, range };
+}
+
+/**
+ * The row the keys are on, kept here so a press redraws only the list: a new
+ * `placed` puts them there, and `onMove` hears each move from it.
+ */
+export function useKeyFocus<T extends { row: number }>(
+  placed: T,
+  onMove: (next: T) => void
+) {
+  const [focus, setFocus] = React.useState(placed);
+  const [from, setFrom] = React.useState(placed);
+  if (placed !== from) {
+    setFrom(placed);
+    setFocus(placed);
+  }
+  const go = (next: T) => {
+    setFocus(next);
+    onMove(next);
+  };
+  return [focus, go] as const;
 }
 
 function visibleRows(scrollTop: number, height: number, total: number) {
@@ -73,7 +98,7 @@ export function ChannelList({
   total,
   schedules,
   now,
-  active,
+  placed,
   playingId,
   onActive,
   onPlay,
@@ -86,9 +111,9 @@ export function ChannelList({
   total: number;
   schedules: Map<string, BaseItemDto[]>;
   now: number;
-  active: number;
+  placed: { row: number };
   playingId?: string;
-  onActive(index: number): void;
+  onActive?(index: number): void;
   onPlay(channel: BaseItemDto): void;
   onRange(first: number, last: number): void;
   /** Up from the first row, which goes to what is above where not given. */
@@ -98,6 +123,8 @@ export function ChannelList({
   const scroller = React.useRef<HTMLDivElement>(null);
   const [view, setView] = React.useState({ top: 0, height: 0 });
   const openMenu = useOpenItemMenu();
+  const [focus, setFocus] = useKeyFocus(placed, (next) => onActive?.(next.row));
+  const active = Math.min(focus.row, channels.length - 1);
 
   React.useLayoutEffect(() => {
     const el = scroller.current;
@@ -137,7 +164,7 @@ export function ChannelList({
 
   const pageRows = Math.max(1, Math.floor(view.height / ROW_HEIGHT) - 1);
   const go = (index: number) =>
-    onActive(Math.max(0, Math.min(total - 1, index)));
+    setFocus({ row: Math.max(0, Math.min(total - 1, index)) });
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.altKey || e.ctrlKey || e.metaKey) return;
     const channel = channels[active];

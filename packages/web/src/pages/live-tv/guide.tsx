@@ -9,7 +9,7 @@ import { move, runAction } from '../../lib/input';
 import { caughtUp, endOf, startOf } from '../../lib/live-tv';
 import type { BaseItemDto } from '../../lib/types';
 import { CachedImage } from '../../components/cached-image';
-import { OVERSCAN } from '../../components/channel-list';
+import { OVERSCAN, useKeyFocus } from '../../components/channel-list';
 import { useOpenItemMenu } from '../../components/item-menu';
 
 const ROW = 64;
@@ -52,7 +52,7 @@ export function Guide({
   schedules,
   dayStart,
   now,
-  focus,
+  placed,
   playingId,
   onFocus,
   onPlay,
@@ -66,7 +66,7 @@ export function Guide({
   schedules: Map<string, BaseItemDto[]>;
   dayStart: number;
   now: number;
-  focus: GuideFocus;
+  placed: GuideFocus;
   playingId?: string;
   onFocus(focus: GuideFocus): void;
   onPlay(channel: BaseItemDto, programme?: BaseItemDto): void;
@@ -86,6 +86,8 @@ export function Guide({
   const openMenu = useOpenItemMenu();
   const dayEnd = dayStart + DAY;
   const width = CHANNEL_COLUMN + xOf(dayEnd, dayStart);
+  const [keys, setFocus] = useKeyFocus(placed, onFocus);
+  const focus = { row: Math.min(keys.row, channels.length - 1), at: keys.at };
 
   React.useLayoutEffect(() => {
     const el = scroller.current;
@@ -164,7 +166,7 @@ export function Guide({
   }, [focus.row, focus.at, dayStart]);
 
   const go = (row: number, at = focus.at) =>
-    onFocus({ row: Math.max(0, Math.min(total - 1, row)), at });
+    setFocus({ row: Math.max(0, Math.min(total - 1, row)), at });
   const step = (sign: number) => {
     const programmes = focusChannel && schedules.get(focusChannel.Id!);
     if (!programmes?.length || !focused) {
@@ -299,7 +301,7 @@ export function Guide({
   );
 }
 
-function Ruler({
+const Ruler = React.memo(function Ruler({
   dayStart,
   left,
   right,
@@ -335,7 +337,7 @@ function Ruler({
       />
     </div>
   );
-}
+});
 
 const GuideRow = React.memo(function GuideRow({
   index,
