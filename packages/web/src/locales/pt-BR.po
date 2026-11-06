@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-06 10:51+0000\n"
-"Last-Translator: Bruno <procopio@users.noreply.hosted.weblate.org>\n"
+"PO-Revision-Date: 2026-11-06 22:46+0000\n"
+"Last-Translator: Daniel Sterzeck Dian <sterzeck@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/aiostreams/web-app/pt_BR/>\n"
 "Language: pt-BR\n"
 "MIME-Version: 1.0\n"
@@ -21,7 +21,7 @@ msgstr "{address} não respondeu. Verifique se está em execução e tente novam
 
 #: src/components/live-reminders.tsx
 msgid "{at} on {channelName}"
-msgstr ""
+msgstr "{at} em {channelName}"
 
 #: src/components/version-settings.tsx
 msgid "{badgeCount, plural, one {# badge of your own} other {# badges of your own}}"
@@ -852,7 +852,7 @@ msgstr "Canais"
 
 #: src/pages/live-tv/index.tsx
 msgid "Channels show here once your setup has an addon with live TV."
-msgstr ""
+msgstr "Os canais aparecerão aqui assim que a sua configuração tiver um addon com TV ao vivo."
 
 #: src/components/player/chapters.tsx src/components/player/keys.ts
 msgid "Chapter {number}"
@@ -1732,7 +1732,7 @@ msgstr "Ir para o início"
 
 #: src/components/player/live.tsx
 msgid "Go live"
-msgstr ""
+msgstr "Ao vivo"
 
 #: src/components/item-menu.tsx
 msgid "Go to show"
@@ -1761,7 +1761,7 @@ msgstr "Agrupar"
 
 #: src/pages/live-tv/guide.tsx src/pages/live-tv/index.tsx
 msgid "Guide"
-msgstr ""
+msgstr "Guia"
 
 #: src/pages/settings/playback.tsx
 msgid "Hardware decoding"
@@ -2132,7 +2132,7 @@ msgstr "Ouvindo…"
 
 #: src/components/player/live.tsx
 msgid "Live"
-msgstr ""
+msgstr "Ao vivo"
 
 #: src/components/layout.tsx src/lib/input/actions.ts src/pages/home.tsx
 #: src/pages/live-tv/index.tsx src/pages/settings/interface.tsx
