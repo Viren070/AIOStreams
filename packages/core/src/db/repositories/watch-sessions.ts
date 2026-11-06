@@ -39,6 +39,8 @@ export interface WatchSessionRow extends Required<PlayingTracks> {
   startedAt: number;
   lastCheckinAt: number;
   endedAt: number | null;
+  /** A channel, which keeps no history. */
+  live: boolean;
 }
 
 export interface WatchSessionUpsert extends PlayingTracks {
@@ -58,6 +60,7 @@ export interface WatchSessionUpsert extends PlayingTracks {
   positionMs?: number;
   durationMs?: number;
   paused?: boolean;
+  live?: boolean;
 }
 
 interface DbRow {
@@ -86,6 +89,7 @@ interface DbRow {
   started_at: number | string;
   last_checkin_at: number | string;
   ended_at: number | string | null;
+  live: number | string;
   [k: string]: unknown;
 }
 
@@ -120,6 +124,7 @@ function toRow(r: DbRow): WatchSessionRow {
     startedAt: Number(r.started_at),
     lastCheckinAt: Number(r.last_checkin_at),
     endedAt: optionalNumber(r.ended_at),
+    live: Boolean(Number(r.live)),
   };
 }
 
@@ -163,7 +168,7 @@ export class WatchSessionRepository {
              media_type, base_id, season, episode, video_id, play_session_id,
              device_id, client, device_name, app_version, media_source_id,
              audio_stream_index, subtitle_stream_index, position_ms,
-             duration_ms, paused, started_at, last_checkin_at, ended_at)
+             duration_ms, paused, started_at, last_checkin_at, ended_at, live)
           VALUES (${scope.uuid}, ${scope.persona}, ${sessionKey},
                   ${input.userPersona ?? null},
                   ${input.itemKey}, ${input.kind}, ${input.mediaType},
@@ -176,7 +181,7 @@ export class WatchSessionRepository {
                   ${input.subtitleStreamIndex ?? null},
                   ${Math.round(input.positionMs ?? 0)},
                   ${Math.round(input.durationMs ?? 0)}, ${input.paused ? 1 : 0},
-                  ${now}, ${now}, NULL)
+                  ${now}, ${now}, NULL, ${input.live ? 1 : 0})
           ON CONFLICT(uuid, persona, session_key) DO UPDATE SET
             user_persona = excluded.user_persona,
             item_key = excluded.item_key,
@@ -202,7 +207,8 @@ export class WatchSessionRepository {
                                    AND watch_sessions.ended_at IS NULL
                               THEN watch_sessions.started_at ELSE excluded.started_at END,
             last_checkin_at = excluded.last_checkin_at,
-            ended_at = NULL
+            ended_at = NULL,
+            live = excluded.live
           RETURNING *`
     );
     return row ? toRow(row) : null;
