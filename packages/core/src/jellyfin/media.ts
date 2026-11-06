@@ -211,12 +211,17 @@ export function extensionFor(
 export async function applyStoredMediaInfo(
   record: MediaSourceRecord,
   metadata: TitleMetadata | undefined,
-  opts: { waitMs?: number; clientIp?: string; ids?: ContributionIds } = {}
+  opts: {
+    movie?: boolean;
+    waitMs?: number;
+    clientIp?: string;
+    ids?: ContributionIds;
+  } = {}
 ): Promise<boolean> {
   if (record.notice || hasTrackLists(record.parsedFile)) return false;
   const stored = () =>
     record.mediaInfo
-      ? storedMediaInfoFor(record.mediaInfo, metadata)
+      ? storedMediaInfoFor(record.mediaInfo, metadata, opts.movie === true)
       : Promise.resolve(undefined);
   let info = await stored();
   // The prober can't send headers or open a YouTube video.

@@ -14,6 +14,8 @@ export interface MediaInfoIdentity {
   fileIdx?: number;
   filename?: string;
   title?: string;
+  /** Exact bytes advertised by the addon, when it provides a video size. */
+  videoSize?: number;
 }
 
 /**
@@ -61,12 +63,17 @@ function torrentIdentity(stream: ParsedStream): MediaInfoIdentity | undefined {
   if (!isTrustedAddon(stream.addon)) return undefined;
   const key = torrentKey(stream.torrent?.infoHash);
   if (!key) return undefined;
+  const size = stream.otherBehaviorHints?.videoSize;
   return {
     releaseKeys: [key],
     file: stream.torrent?.file,
     fileIdx: stream.torrent?.fileIdx,
     filename: stream.filename,
     title: stream.torrent?.title ?? stream.folderName ?? stream.filename,
+    videoSize:
+      typeof size === 'number' && size > 0 && Number.isSafeInteger(size)
+        ? size
+        : undefined,
   };
 }
 
